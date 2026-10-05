@@ -108,6 +108,9 @@
     <div class="card">
       <div style="font-weight:600;margin-bottom:8px" id="newTitle">Connect to a server</div>
       <div class="row">
+        <label class="f">Name<input id="sName" placeholder="how it shows in your list, e.g. Friends server (optional)"></label>
+      </div>
+      <div class="row">
         <label class="f">Server address<input id="sHost" placeholder="my.server.com or 203.0.113.10"></label>
         <label class="f" style="max-width:110px">SSH port<input id="sPort" type="number" value="22"></label>
       </div>
@@ -135,7 +138,6 @@
       <details>
         <summary>More options</summary>
         <div class="row" style="margin-top:8px">
-          <label class="f">Name in the list<input id="sName" placeholder="(the address)"></label>
           <label class="f">Key passphrase<input id="sPhrase" type="password"></label>
           <label class="f" style="max-width:130px">Plugin port<input id="sBridge" type="number" placeholder="5182"></label>
         </div>

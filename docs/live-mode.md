@@ -53,7 +53,7 @@ it, the editor reads the plugin's port from `BepInEx/config/local.worldeditorbri
 the token), and when the plugin does not answer it checks that folder and says what is missing: the
 folder, BepInEx, the plugin in `BepInEx/plugins`, or a server not started with BepInEx.
 
-**More options** on the form: a name for the list, the key's passphrase, the plugin's port (when it
+**More options** on the form: the key's passphrase, the plugin's port (when it
 is not 5182 and no folder is given), and **I made my own tunnel** (address + token) for a tunnel made
 with `ssh -L` or PuTTY.
 
