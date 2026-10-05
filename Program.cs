@@ -411,7 +411,8 @@ app.MapPost("/api/reset-zones", (ResetRequest req) =>
 // Mark objects (ids from /api/pieces and /api/objects) as deleted, or bring them back (undo).
 app.MapPost("/api/delete", (DeleteRequest req) =>
 {
-	edits.SetDeleted(req.Ids.Where(id => id >= 0 && id < world.ObjectRefs.Count), !req.Restore);
+	// Negative ids are objects added in this session.
+	edits.SetDeleted(req.Ids.Where(id => id < world.ObjectRefs.Count), !req.Restore);
 	return Results.Ok(Pending());
 });
 
