@@ -250,6 +250,7 @@ import { OrbitControls } from './lib/OrbitControls.js';
 import { saveWorld, discardChanges } from './world-actions.js';
 import { createLook, DAY } from './terrain/look.js';
 import { pieceModel, setSeeThrough } from './terrain/pieces.js';
+import { createObjects, stableHash } from './editor/objects.js';
 
 const params = new URLSearchParams(location.search);
 const czx = parseInt(params.get('zx') ?? '0'), czz = parseInt(params.get('zz') ?? '0');
@@ -268,7 +269,7 @@ const WATER = world.waterLevel;
 const W = size * 64 + 1, H = size * 64 + 1, N = W * H;
 const originX = X0 * 64 - 32, originZ = Z0 * 64 - 32;
 const base = new Float32Array(N), level = new Float32Array(N), smooth = new Float32Array(N), mod = new Uint8Array(N);
-const paint = new Float32Array(N * 4), pmod = new Uint8Array(N), biomeOf = new Array(N);
+const paint = new Float32Array(N * 4), pmod = new Uint8Array(N), biomeOf = new Array(N), vbiome = new Int32Array(N);
 // Game look inputs: the biome colour the game puts in the mesh vertex colours (corner biomes blended
 // like Heightmap.GetBiomeColor) and the base paint mask of unedited ground.
 const biomeCol = new Uint8Array(N * 4), baseMask = new Uint8Array(N * 4);
@@ -282,6 +283,7 @@ for (const z of region.zones) {
     base[g] = z.baseHeights[i]; level[g] = z.level[i]; smooth[g] = z.smooth[i]; mod[g] = z.modified[i] ? 1 : 0;
     pmod[g] = z.paintModified[i] ? 1 : 0; for (let c = 0; c < 4; c++) paint[g * 4 + c] = z.paint[i * 4 + c];
     biomeOf[g] = z.biome;
+    if (z.biomes) vbiome[g] = z.biomes[i];
     const cb = (z.cornerBiomes ?? [1, 1, 1, 1]).map(b => BIOME_COL[b] ?? [0, 0, 0, 0]);
     const ix = smoothStep01(l / 64), iy = smoothStep01(k / 64);
     biomeCol.set(lerp32(lerp32(cb[0], cb[1], ix), lerp32(cb[2], cb[3], ix), iy), g * 4);
@@ -440,6 +442,8 @@ const TOOLS = {
   select: ['Select', 'Click trees, rocks or buildings to select them, then press Del to remove them from the world.', 'M5 3l14 8-6 2-2 6z'],
   move: ['Move view', 'Drag to slide the view. WASD and arrow keys also move it.', 'M12 3v18M3 12h18M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3']
 };
+// Option panels added by the feature modules: { el, tools }.
+const toolPanels = [];
 const BRUSH_TOOLS = ['raise', 'lower', 'flatten', 'smooth', 'natural', 'restore', 'paint-dirt', 'paint-cultivated', 'paint-paved', 'paint-natural'];
 document.querySelectorAll('#rail [data-tool]').forEach(b => {
   const [name, , icon, swatch] = TOOLS[b.dataset.tool];
@@ -454,6 +458,7 @@ function syncToolPanel() {
   document.querySelector('[data-for-tools="flatten"]').hidden = tool !== 'flatten';
   $('naturalBox').hidden = !(tool === 'natural' || (tool === 'path' && $('pNatural').checked));
   $('selectPanel').hidden = tool !== 'select';
+  for (const p of toolPanels) p.el.hidden = !p.tools.includes(tool);
 }
 function setTool(t) {
   tool = t; document.querySelectorAll('[data-tool]').forEach(b => b.classList.toggle('on', b.dataset.tool === t));
@@ -565,8 +570,9 @@ function applyBrush(dt) {
     if (locked(gx, gz)) continue;
     const dist = Math.hypot(gx - hover.gx, gz - hover.gz);
     if (dist > r) continue;
-    const f = 1 - dist / r, w = f * f * (3 - 2 * f);   // smooth falloff
-    const g = gz * W + gx, h = height(g);
+    const f = 1 - dist / r, g = gz * W + gx, w = f * f * (3 - 2 * f) * ed.mask(g);   // smooth falloff, mask
+    if (w <= 0) continue;
+    const h = height(g);
     stroke.touched.add(g);
     switch (tool) {
       case 'raise': setHeight(g, h + 6 * rate * w); break;
@@ -624,15 +630,16 @@ async function upload(zoneList) {
     const r = await fetch('/api/zones', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     if (!r.ok) throw new Error(await r.text());
     const res = await r.json();
-    showPending(res.changedZones, res.deletedObjects);
+    showPendingFrom(res);
   } catch (err) {
     $('sMsg').innerHTML = `<span class="warn">Could not send edits to the editor: ${err.message}</span>`;
   }
 }
-let pending = { zones: world.changedZones, deleted: world.deletedObjects ?? 0 };
-function showPending(zones = pending.zones, deleted = pending.deleted) {
-  pending = { zones, deleted };
-  const parts = [zones ? `${zones} zone${zones > 1 ? 's' : ''}` : '', deleted ? `${deleted} deleted` : ''].filter(Boolean);
+let pending = { zones: world.changedZones, deleted: world.deletedObjects ?? 0, added: world.addedObjects ?? 0, resets: world.resetZones ?? 0 };
+function showPendingFrom(res) { if (res) showPending(res.changedZones, res.deletedObjects, res.addedObjects ?? 0, res.resetZones ?? 0); }
+function showPending(zones = pending.zones, deleted = pending.deleted, added = pending.added, resets = pending.resets) {
+  pending = { zones, deleted, added, resets };
+  const parts = [zones ? `${zones} zone${zones > 1 ? 's' : ''}` : '', deleted ? `${deleted} deleted` : '', added ? `${added} added` : '', resets ? `${resets} reset` : ''].filter(Boolean);
   $('pending').textContent = parts.length ? `Unsaved: ${parts.join(', ')}` : 'All saved';
   $('pending').classList.toggle('dirty', parts.length > 0);
   $('saveBtn').disabled = $('discardBtn').disabled = !parts.length;
@@ -654,18 +661,23 @@ if (region.locations.length) {
   }
 }
 function updateHistoryButtons() { $('undo').disabled = !undoStack.length; $('redo').disabled = !redoStack.length; }
-function undo() {
-  const e = undoStack.pop(); if (!e) return;
-  if (e.deleted) { setDeleted(e.deleted, false); redoStack.push(e); updateHistoryButtons(); return; }
-  redoStack.push({ state: snapshotState(), zones: e.zones });
-  restoreState(e.state); upload(e.zones); updateHistoryButtons();
+// History entries can combine: terrain (state = before, zones), deleted object ids, added object
+// ids and zone resets. Undo and redo apply the parts in opposite directions.
+function applyHistory(e, forward) {
+  const out = { ...e };
+  if (e.state) { out.state = snapshotState(); restoreState(e.state); upload(e.zones); }
+  if (e.deleted) setDeleted(e.deleted, forward);
+  if (e.added) setDeleted(e.added, !forward);
+  if (e.resets) ed.setResets?.(e.resets, forward);
+  return out;
 }
-function redo() {
-  const e = redoStack.pop(); if (!e) return;
-  if (e.deleted) { setDeleted(e.deleted, true); undoStack.push(e); updateHistoryButtons(); return; }
-  undoStack.push({ state: snapshotState(), zones: e.zones });
-  restoreState(e.state); upload(e.zones); updateHistoryButtons();
+function pushHistory(entry) {
+  undoStack.push(entry); if (undoStack.length > 40) undoStack.shift();
+  redoStack.length = 0; updateHistoryButtons();
 }
+function undo() { const e = undoStack.pop(); if (!e) return; redoStack.push(applyHistory(e, false)); updateHistoryButtons(); }
+function redo() { const e = redoStack.pop(); if (!e) return; undoStack.push(applyHistory(e, true)); updateHistoryButtons(); }
+function msg(text, warn = false) { $('sMsg').innerHTML = warn ? `<span class="warn">${text}</span>` : text; }
 $('undo').onclick = undo; $('redo').onclick = redo; updateHistoryButtons();
 
 // ---- Player-built pieces with the game's own models (exported into models/). Pieces without a model
@@ -674,6 +686,19 @@ $('undo').onclick = undo; $('redo').onclick = redo; updateHistoryButtons();
 const PIECE_COLORS = { 0: 0xb0582a, 1: 0x9a4430, 2: 0x7a5636, 3: 0x8f8a82, 4: 0xa47a4c };
 const buildingMat = new THREE.MeshLambertMaterial({ color: 0xffffff, transparent: true, opacity: 1 });
 const buildings = new THREE.Group(); scene.add(buildings);
+// Each kind of world object gets its own group so it can be shown or hidden on its own.
+const objectGroups = Object.fromEntries(['ruins', 'trees', 'rocks', 'ore', 'bushes', 'pickables', 'other'].map(k => { const g = new THREE.Group(); scene.add(g); return [k, g]; }));
+// Shared context for the feature modules in editor/.
+const ed = {
+  THREE, scene, camera, renderer, el: renderer.domElement, $, W, H, N, originX, originZ, cx, cz, X0, Z0, X1, Z1, size, WATER,
+  base, level, smooth, mod, paint, pmod, vbiome, region, world, PAINT, mesh, buildings, objectGroups,
+  height, setHeight, locked, refresh, snapshotState, zonesOf, upload, pushHistory, msg, showPendingFrom, pieceModel,
+  register, unregister, pick, sampleHeight, worldNoise, fbm, nAmp, nSize, setDeleted,
+  get tool() { return tool; }, setTool: t => setTool(t), get radius() { return radius; }, get strength() { return strength; },
+  handlers: {}, panels: toolPanels, mask: g => 1
+};
+const objects = createObjects(ed); ed.objects = objects;
+window.__ed = ed; // for automated tests
 Promise.all([fetch('/api/pieces').then(r => r.arrayBuffer()), fetch('/api/piece-types').then(r => r.json())]).then(async ([buf, types]) => {
   const p = new Float32Array(buf), S = 13, byType = new Map();
   let total = 0;
@@ -681,6 +706,7 @@ Promise.all([fetch('/api/pieces').then(r => r.arrayBuffer()), fetch('/api/piece-
     const gx = p[i] - originX, gz = p[i + 2] - originZ;
     if (gx < -4 || gz < -4 || gx > W + 3 || gz > H + 3) continue;
     const t = p[i + 11];
+    objects.addPieceRecord(p[i + 12], types[t], p[i], p[i + 1], p[i + 2], p[i + 3]);
     if (!byType.has(t)) byType.set(t, []);
     byType.get(t).push(i); total++;
   }
@@ -727,58 +753,20 @@ function syncBuildings() {
 }
 $('seeThrough').addEventListener('change', syncBuildings);
 
-// ---- Trees, rocks, bushes and other world objects stored in the save, with the game's models.
-// Rotations are Unity Euler angles (applied z, x, y); mirroring z for three.js negates the
-// quaternion's x and y.
-// Each kind gets its own group so it can be shown or hidden on its own.
-const objectGroups = Object.fromEntries(['ruins', 'trees', 'rocks', 'ore', 'bushes', 'pickables', 'other'].map(k => { const g = new THREE.Group(); scene.add(g); return [k, g]; }));
-function objectKind(name, pieceNames) {
-  if (pieceNames.has(name) || /^goblin_|^shipwreck_|^Statue|^BossStone_|^dungeon_|crypt_gate|^CastleKit_|^StartPlatform|^Beehive|^CargoCrate|^barrell|^RockDolmen|^TreasureChest/i.test(name)) return 'ruins';
-  if (/^Pickable_|^Pickable|mushroom|Dandelion|Thistle/i.test(name)) return 'pickables';
-  if (/tree|beech|birch|oak|^fir|pine|stub|log|root|yggdrasil|ashwood|sapling/i.test(name)) return 'trees';
-  if (/tombstone/i.test(name)) return 'other';
-  if (/minerock|copper|tin|silver|vein|obsidian|mudpile|guck|leviathan|tar|flametal/i.test(name)) return 'ore';
-  if (/rock|stone|ice|boulder|cliff|pillar/i.test(name)) return 'rocks';
-  if (/bush|shrub|fern|ormbunke|vines|cloudberry/i.test(name)) return 'bushes';
-  return 'other';
-}
-const objectCounts = {};
+// ---- Trees, rocks, bushes and other world objects stored in the save, with the game's models
+// (editor/objects.js keeps one record per object and draws one instanced batch per prefab).
 Promise.all([
   fetch(`/api/objects?x0=${X0}&z0=${Z0}&x1=${X1}&z1=${Z1}`).then(r => r.json()),
   fetch('./models/objects.json').then(r => r.ok ? r.json() : {}).catch(() => ({})),
-  fetch('/api/piece-types').then(r => r.json()).catch(() => [])
-]).then(async ([objs, names, pieceTypes]) => {
-  const pieceNames = new Set(pieceTypes);
-  const S = 11, d = objs.data, byType = new Map();
-  for (let i = 0; i < d.length; i += S) {
-    const t = d[i + 9];
-    if (!byType.has(t)) byType.set(t, []);
-    byType.get(t).push(i);
-  }
-  const e = new THREE.Euler(), q = new THREE.Quaternion(), pos = new THREE.Vector3(), sc = new THREE.Vector3(), m = new THREE.Matrix4(), place = new THREE.Matrix4();
-  const D = Math.PI / 180;
-  let shown = 0;
-  await Promise.all([...byType].map(async ([t, list]) => {
-    const name = names[objs.types[t]];
-    if (!name || !$('gameLook').checked) return;
-    const parts = await pieceModel(name).catch(() => null);
-    if (!parts?.length) return;
-    const kind = objectKind(name, pieceNames);
-    objectCounts[kind] = (objectCounts[kind] ?? 0) + list.length;
-    for (const part of parts) {
-      const im = new THREE.InstancedMesh(part.geometry, part.material, list.length);
-      list.forEach((i, k) => {
-        q.setFromEuler(e.set(d[i + 3] * D, d[i + 4] * D, d[i + 5] * D, 'YXZ'));
-        q.set(-q.x, -q.y, q.z, q.w);
-        place.compose(pos.set(d[i] - originX - cx, d[i + 1], -(d[i + 2] - originZ - cz)), q, d[i + 6] ? sc.set(d[i + 6], d[i + 7], d[i + 8]) : sc.fromArray(parts.rootScale));
-        im.setMatrixAt(k, m.multiplyMatrices(place, part.matrix));
-      });
-      im.instanceMatrix.needsUpdate = true; im.computeBoundingSphere();
-      register(im, list.map(i => d[i + 10]), name);
-      objectGroups[kind].add(im);
-    }
-  }));
-  for (const el of document.querySelectorAll('[data-count]')) el.textContent = objectCounts[el.dataset.count] ? `(${objectCounts[el.dataset.count]})` : '(0)';
+  fetch('/api/piece-types').then(r => r.json()).catch(() => []),
+  fetch('/api/templates').then(r => r.json()).catch(() => [])
+]).then(async ([objs, names, pieceTypes, templates]) => {
+  const all = { ...names };
+  for (const n of pieceTypes) all[stableHash(n)] ??= n;
+  if (!$('gameLook').checked) { for (const el of document.querySelectorAll('[data-count]')) el.textContent = ''; return; }
+  const counts = await objects.load(objs, all, new Set(pieceTypes), templates);
+  for (const el of document.querySelectorAll('[data-count]')) el.textContent = `(${counts[el.dataset.count] ?? 0})`;
+  for (const f of ed.onObjects ?? []) f();
 });
 
 // ---- Show / hide: one switch per kind of thing, remembered in this browser.
@@ -888,9 +876,9 @@ function applyPath() {
       bump = nAmp() * worldNoise(gx + 500, gz - 300);
     }
     if (dEff > halfEff + soft) continue;
-    const f = dEff <= halfEff ? 1 : soft > 0 ? 1 - (dEff - halfEff) / soft : 0, w = f * f * (3 - 2 * f);
+    const f = dEff <= halfEff ? 1 : soft > 0 ? 1 - (dEff - halfEff) / soft : 0, g = gz * W + gx, w = f * f * (3 - 2 * f) * ed.mask(g);
     if (w <= 0) continue;
-    const g = gz * W + gx, h = height(g);
+    const h = height(g);
     touched.add(g);
     switch (action) {
       case 'raise': setHeight(g, h + (pv('pAmount') + bump) * w); break;
@@ -928,6 +916,7 @@ syncNatural();
 const el = renderer.domElement;
 el.addEventListener('contextmenu', e => e.preventDefault());
 el.addEventListener('pointermove', e => {
+  if (ed.handlers[tool]?.move) { hover = pick(e); ed.handlers[tool].move(e, hover); return; }
   if (tool === 'select') { hoverSelect(e); return; }
   hover = pick(e); updateRing(); showStatus();
   if (drawingPath && hover) {
@@ -935,10 +924,11 @@ el.addEventListener('pointermove', e => {
     if (!last || Math.hypot(hover.gx - last.gx, hover.gz - last.gz) >= 2) { pathPts.push({ gx: hover.gx, gz: hover.gz }); updatePathPreview(); }
   }
 });
-el.addEventListener('dblclick', () => { if (tool === 'path') applyPath(); });
+el.addEventListener('dblclick', e => { if (tool === 'path') applyPath(); ed.handlers[tool]?.dblclick?.(e); });
 el.addEventListener('pointerleave', () => { hover = null; updateRing(); showStatus(); });
 el.addEventListener('pointerdown', e => {
   if (e.button !== 0 || panning()) return;
+  if (ed.handlers[tool]?.down) { hover = pick(e); ed.handlers[tool].down(e, hover); return; }
   if (tool === 'select') { clickSelect(e); return; }
   hover = pick(e);
   if (!hover) return;
@@ -960,6 +950,7 @@ el.addEventListener('pointerdown', e => {
   clampedThisStroke = false;
 });
 el.addEventListener('pointerup', e => {
+  if (e.button === 0 && ed.handlers[tool]?.up) { ed.handlers[tool].up(e); return; }
   if (e.button === 0) drawingPath = false;
   if (e.button !== 0 || !stroke) return;
   const zones = zonesOf(stroke.touched);
@@ -981,6 +972,8 @@ addEventListener('keydown', e => {
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
   if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code) && !e.ctrlKey) { held.add(e.code); e.preventDefault(); return; }
   if (e.code === 'Space') { spaceDown = true; e.preventDefault(); return; }
+  if (ed.handlers[tool]?.key?.(e)) { e.preventDefault(); return; }
+  for (const k of ed.keys ?? []) if (k(e)) { e.preventDefault(); return; }
   if (e.key.toLowerCase() === 'h') { setTool('move'); return; }
   if (e.key.toLowerCase() === 'p') { setTool('path'); return; }
   if (e.key.toLowerCase() === 'e') { setTool('select'); return; }
@@ -1073,6 +1066,7 @@ function register(im, ids, nameOf) {
     entities.get(id).inst.push({ im, k });
   });
 }
+function unregister(ids) { for (const id of ids) { const ent = entities.get(id); if (ent) ent.inst = []; } }
 const pickRay = new THREE.Raycaster(), pickMouse = new THREE.Vector2();
 function pickEntity(e) {
   const r = el.getBoundingClientRect();
@@ -1131,6 +1125,7 @@ function hoverSelect(e) {
 function clearSelection() { selection.clear(); drawSelection(); }
 const ZERO = new THREE.Matrix4().makeScale(0, 0, 0);
 async function setDeleted(ids, deleted) {
+  objects.markDeleted(ids, deleted);
   for (const id of ids) {
     const ent = entities.get(id); if (!ent) continue;
     if (deleted && !ent.saved) {
@@ -1143,7 +1138,7 @@ async function setDeleted(ids, deleted) {
   try {
     const r = await fetch('/api/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ids, restore: !deleted }) });
     const res = await r.json();
-    showPending(res.changedZones, res.deletedObjects);
+    showPendingFrom(res);
   } catch (err) {
     $('sMsg').innerHTML = `<span class="warn">Could not send the deletion to the editor: ${err.message}</span>`;
   }
@@ -1152,8 +1147,7 @@ function deleteSelection() {
   if (!selection.size) return;
   const ids = [...selection];
   setDeleted(ids, true);
-  undoStack.push({ deleted: ids }); if (undoStack.length > 40) undoStack.shift();
-  redoStack.length = 0; updateHistoryButtons();
+  pushHistory({ deleted: ids });
   $('sMsg').textContent = `Deleted ${ids.length} object(s). Ctrl+Z brings them back; Save writes it to the world.`;
   clearSelection();
 }
