@@ -4,14 +4,16 @@ In live mode the editor works on the world of a **running** game instead of a sa
 Players can stay connected while you edit, and they see the changes as soon as you apply them. The
 game then saves them like any other change.
 
-It needs the **WorldEditorBridge** plugin (BepInEx) in the game that hosts the world: normally the
-dedicated server, or your own game when you play single player or host.
+It needs **BepInEx** (the mod loader, [BepInExPack for Valheim](https://thunderstore.io/c/valheim/p/denikson/BepInExPack_Valheim/)) and the **WorldEditorBridge** plugin
+in the game that hosts the world: normally the dedicated server, or your own game when you play
+single player or host. Players who join need neither, and offline mode does not use BepInEx.
 
 ## Setting it up
 
 See [Installation → Online (live) mode](../README.md#online-live-mode) for the steps. In short:
 
-1. `WorldEditorBridge.dll` in the server's `BepInEx/plugins/`, server restarted.
+1. BepInEx installed on the server, then `WorldEditorBridge.dll` in its `BepInEx/plugins/`, server
+   restarted.
 2. The token from `BepInEx/config/local.worldeditorbridge.cfg`.
 3. An SSH tunnel to the server: `ssh -N -L 5182:127.0.0.1:5182 user@server`.
 4. `ValheimTerrainEditor --live http://127.0.0.1:5182 --token <token> --port 5181`, then open

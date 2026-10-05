@@ -3,6 +3,23 @@
 All notable changes to the Valheim world editor. Dates are when the change was made; the project
 has no version numbers yet. Newest first.
 
+## v0.1.0 — 2026-10-05 (first release)
+
+Everything below, packaged: the editor for Linux and Windows (x64), and the WorldEditorBridge
+server plugin (0.3.0) for live mode. Game files are not included.
+
+### Added
+- **Release packages** (`tools/release.sh`): program, web page and export tool, without source
+  code or game files.
+- **`export_all.py`**: one command that copies the game's terrain shader and textures, map textures
+  and the models of every kind of object from your own Valheim install (a few minutes). Replaces
+  the separate scripts that had paths of the development machine written in.
+
+### Changed
+- Models are now exported for every placeable kind (about 800 world objects plus 689 building
+  pieces), not only the kinds one world happened to contain, so the Plant tool shows real models
+  for far more kinds.
+
 ## 2026-10-05 — Placing, selecting and moving
 
 ### Added
