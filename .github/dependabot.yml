@@ -1,0 +1,48 @@
+# Dependabot: weekly pull requests for outdated dependencies. Updates of the same kind are grouped
+# into one pull request; CircleCI runs the tests on each.
+version: 2
+updates:
+  # The app (TerrainEditor.csproj): ASP.NET, Photino (window), SSH.NET (tunnel).
+  - package-ecosystem: nuget
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      app:
+        patterns: ["*"]
+
+  # The C# tests (xUnit, test SDK, JUnit logger).
+  - package-ecosystem: nuget
+    directory: /tests/WorldEditor.Tests
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 3
+    groups:
+      tests:
+        patterns: ["*"]
+
+  # The browser tests (Puppeteer).
+  - package-ecosystem: npm
+    directory: /tests/browser
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 3
+    groups:
+      browser-tests:
+        patterns: ["*"]
+
+  # The game-look exporter's Python packages (also bundled in the release).
+  - package-ecosystem: pip
+    directory: /tools/asset-export
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 3
+    groups:
+      exporter:
+        patterns: ["*"]
+    ignore:
+      # The exporter relies on UnityPy 1.25's API: newer minor versions need checking against
+      # the game's files first (see docs/development.md).
+      - dependency-name: UnityPy
+        update-types: ["version-update:semver-minor", "version-update:semver-major"]
