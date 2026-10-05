@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Valheim World Editor</title>
+<link rel="icon" href="icon.png">
+<style>
+  :root {
+    --bg: #14171c; --panel: #1b1f26; --panel2: #1e232b; --line: #2e353f; --line2: #3c4552;
+    --text: #e6e9ee; --muted: #8e97a6; --accent: #e0a64b; --accent-ink: #1b1508; --warn: #e0604b; --ok: #7bc47f;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg) radial-gradient(1200px 500px at 20% -10%, #2a2416 0%, transparent 60%); color: var(--text);
+    font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; min-height: 100vh; }
+  main { max-width: 980px; margin: 0 auto; padding: 36px 20px 60px; }
+  header { display: flex; align-items: baseline; gap: 12px; margin-bottom: 6px; }
+  h1 { margin: 0; font-size: 26px; letter-spacing: .01em; }
+  h1 span { color: var(--accent); }
+  .ver { color: var(--muted); font-size: 12px; }
+  .lead { color: var(--muted); margin: 0 0 26px; max-width: 680px; }
+  h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 28px 0 10px; font-weight: 600; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+  .world { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; cursor: pointer; text-align: left;
+    color: inherit; font: inherit; display: flex; flex-direction: column; gap: 4px; transition: border-color .12s, transform .12s; }
+  .world:hover:not([disabled]) { border-color: var(--accent); transform: translateY(-1px); }
+  .world[disabled] { opacity: .55; cursor: default; }
+  .world .name { font-size: 17px; font-weight: 600; }
+  .world .meta { color: var(--muted); font-size: 12.5px; }
+  .world .path { color: #6f7887; font-size: 11.5px; overflow-wrap: anywhere; }
+  .world .tag { align-self: flex-start; font-size: 11px; color: var(--accent); border: 1px solid #5a4523; border-radius: 999px; padding: 0 8px; }
+  .world .problem { color: var(--warn); font-size: 12px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; }
+  input { flex: 1; min-width: 200px; background: var(--panel2); color: var(--text); border: 1px solid var(--line2); border-radius: 8px; padding: 9px 10px; font: inherit; }
+  button.b { background: #262b34; color: var(--text); border: 1px solid var(--line2); border-radius: 8px; padding: 9px 16px; font: inherit; cursor: pointer; }
+  button.b:hover { border-color: var(--accent); }
+  button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+  .hint { color: var(--muted); font-size: 12.5px; margin-top: 8px; }
+  .err { color: var(--warn); margin-top: 8px; min-height: 1em; }
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 760px) { .cols { grid-template-columns: 1fr; } }
+  code { background: #232830; border-radius: 4px; padding: 0 4px; font-size: 12px; }
+  a { color: var(--accent); }
+  #busy { position: fixed; inset: 0; background: rgba(10,12,15,.8); display: flex; align-items: center; justify-content: center; font-size: 18px; z-index: 60; }
+  #busy[hidden] { display: none; }
+  .empty { color: var(--muted); padding: 18px; border: 1px dashed var(--line2); border-radius: 12px; }
+  #lastError { background: #2a1714; border: 1px solid #6a2c22; color: #f2c5bd; border-radius: 10px; padding: 10px 14px; margin-bottom: 16px; }
+  #lastError[hidden] { display: none; }
+</style>
+</head>
+<body>
+<main>
+  <header><h1><span>Valheim</span> World Editor</h1><span class="ver" id="ver"></span></header>
+  <p class="lead">Shape the ground, paint it, build paths, place and move trees, rocks, crops and building pieces, copy and paste whole areas. Pick a world to start.</p>
+  <div id="lastError" hidden></div>
+  <div id="glHere"></div>
+
+  <h2>Your worlds</h2>
+  <div class="grid" id="worlds"><div class="empty">Looking for worlds…</div></div>
+  <div class="hint">Close Valheim (or stop the server) before you save changes into a world: a running game writes over the files. Saving always makes a full backup of the world first.</div>
+
+  <div class="cols">
+    <div>
+      <h2>Another world folder</h2>
+      <div class="card">
+        <div class="row"><input id="path" placeholder="Folder of the world (with _main.&lt;n&gt;.chunks files)"><button class="b" id="browse" hidden>Browse…</button><button class="b primary" id="openPath">Open</button></div>
+        <div class="err" id="pathErr"></div>
+        <div class="hint">For example a dedicated server's world: <code>&lt;savedir&gt;/worlds_local/&lt;World&gt;</code>.</div>
+      </div>
+    </div>
+    <div>
+      <h2>A running server (live)</h2>
+      <div class="card">
+        <div class="row"><input id="liveUrl" placeholder="Bridge address" value="127.0.0.1:5182"></div>
+        <div class="row" style="margin-top:8px"><input id="token" placeholder="Token (from BepInEx/config/local.worldeditorbridge.cfg)"><button class="b primary" id="connect">Connect</button></div>
+        <div class="err" id="liveErr"></div>
+        <div class="hint">Edit a world while people play: needs BepInEx and the WorldEditorBridge plugin on the server, and usually an SSH tunnel. <a href="https://github.com/Shuiei/valheim-world-editor/blob/main/docs/live-mode.md">How to set it up</a>.</div>
+      </div>
+    </div>
+  </div>
+  <p class="hint" style="margin-top:28px"><a href="https://github.com/Shuiei/valheim-world-editor#readme">Documentation</a> · settings and log: <code id="dataDir"></code></p>
+</main>
+<div id="busy" hidden>Opening…</div>
+<script type="module">
+import { gameLookBanner, pickFolder, isWindow } from './app.js';
+const $ = id => document.getElementById(id);
+gameLookBanner({ inline: $('glHere'), onReady: () => location.reload() });
+if (isWindow) $('browse').hidden = false;
+fetch('/api/app').then(r => r.json()).then(a => { $('ver').textContent = 'v' + a.version; $('dataDir').textContent = a.dataDir ?? ''; });
+fetch('/api/launcher/state').then(r => r.json()).then(s => {
+  if (s.error) { $('lastError').textContent = s.error; $('lastError').hidden = false; }
+  if (s.live) $('liveUrl').value = s.live.replace(/^https?:\/\//, '');
+});
+
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+function ago(t) {
+  const d = (Date.now() - new Date(t)) / 1000;
+  if (d < 90) return 'just now';
+  if (d < 3600 * 1.5) return `${Math.round(d / 60)} minutes ago`;
+  if (d < 86400 * 1.5) return `${Math.round(d / 3600)} hours ago`;
+  if (d < 86400 * 60) return `${Math.round(d / 86400)} days ago`;
+  return new Date(t).toLocaleDateString();
+}
+async function loadWorlds() {
+  const list = await (await fetch('/api/launcher/worlds')).json();
+  $('worlds').innerHTML = list.length ? list.map((w, i) => `<button class="world" data-i="${i}" ${w.usable ? '' : 'disabled'} title="${esc(w.path)}">
+      ${w.where === 'recent' ? '<span class="tag">recently opened</span>' : ''}
+      <span class="name">${esc(w.name)}</span>
+      <span class="meta">${w.saveNumber ? `Saved ${ago(w.saved)} · save #${w.saveNumber}` : ''}</span>
+      ${w.problem ? `<span class="problem">${esc(w.problem)}</span>` : ''}
+      <span class="path">${esc(w.path)}</span></button>`).join('')
+    : `<div class="empty">No world found in Valheim's usual folders. Open one below by its folder.</div>`;
+  $('worlds').querySelectorAll('.world').forEach(b => b.onclick = () => open({ path: list[+b.dataset.i].path }, null));
+}
+loadWorlds();
+
+async function open(body, errEl) {
+  $('busy').textContent = body.liveUrl ? 'Connecting to the server… (up to 10 s)' : 'Opening the world…'; $('busy').hidden = false;
+  let r;
+  try { r = await (await fetch('/api/launcher/open', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })).json(); }
+  catch { r = { ok: false, error: 'The editor did not answer.' }; }
+  if (!r.ok) { $('busy').hidden = true; (errEl ?? $('lastError')).textContent = r.error; if (!errEl) $('lastError').hidden = false; return; }
+  // The editor starts on the same address: wait for it (a big live world can take a while over the
+  // tunnel), then show the world map; after 4 minutes, give up and say so.
+  for (let i = 0; i < 600; i++) {
+    await new Promise(res => setTimeout(res, 400));
+    try { const s = await (await fetch('/api/launcher/state', { cache: 'no-store' })).json(); if (s.phase === 'editor') { location.href = '/index.html'; return; } if (s.phase === 'start' && i > 3) { location.reload(); return; } } catch { }
+    if (i === 25) $('busy').textContent += ' (still loading: a big world takes a moment)';
+  }
+  $('busy').hidden = true;
+  $('lastError').textContent = 'The world did not open within 4 minutes. Check the log (path at the bottom of this page) and try again.'; $('lastError').hidden = false;
+}
+$('openPath').onclick = () => open({ path: $('path').value }, $('pathErr'));
+$('path').onkeydown = e => { if (e.key === 'Enter') $('openPath').click(); };
+$('browse').onclick = async () => { const p = await pickFolder('Choose the world folder'); if (p) { $('path').value = p; $('openPath').click(); } };
+$('connect').onclick = () => { if (!$('token').value.trim()) { $('liveErr').textContent = 'Enter the token from the server.'; return; } open({ liveUrl: $('liveUrl').value, token: $('token').value }, $('liveErr')); };
+</script>
+</body>
+</html>
