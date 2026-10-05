@@ -49,12 +49,20 @@ export function createTransform(ed) {
     ed.msg(`Moving ${s.items.length} object(s): ${moved.toFixed(1)} m${s.turn ? `, turned ${s.turn}°` : ''}${s.dy ? `, ${s.dy > 0 ? '+' : ''}${s.dy.toFixed(2)} m` : ''}`);
   }
   function restore(s) { for (const it of s.items) for (const { im, k, m } of it.inst) { im.setMatrixAt(k, m); im.instanceMatrix.needsUpdate = true; } }
-  async function commit() {
+  // A move being written: new turns, lifts and drops wait for it, so they act on the new copies.
+  let committing = null;
+  const afterCommit = f => (...a) => committing ? committing.then(() => f(...a)) : f(...a);
+  function commit() {
     clearTimeout(commitTimer); commitTimer = null;
+    if (!session) return committing ?? Promise.resolve();
+    const p = commitNow().finally(() => { if (committing === p) committing = null; });
+    return committing = p;
+  }
+  async function commitNow() {
     const s = session; if (!s) return;
     session = null;
     restore(s);
-    if (Math.hypot(s.dgx, s.dgz) < 0.01 && !s.turn && Math.abs(s.dy) < 0.001) { ed.drawSelection(); return; }
+    if (Math.hypot(s.dgx, s.dgz) < 0.01 && !s.turn && Math.abs(s.dy) < 0.001 && !s.dropped) { ed.drawSelection(); return; }
     const copies = s.items.map(it => {
       const p = target(s, it), r = it.r;
       return { name: r.name, x: ed.originX + p.gx, y: p.y, z: ed.originZ + p.gz, rx: r.rx, ry: r.ry + s.turn, rz: r.rz, scale: r.scale,
@@ -68,8 +76,48 @@ export function createTransform(ed) {
     ed.msg(`Moved ${added.length} object(s). Ctrl+Z puts them back.`);
   }
   const later = () => { clearTimeout(commitTimer); commitTimer = setTimeout(commit, 700); };
-  function turn(deg) { if (!begin()) return; session.turn = ((session.turn + deg) % 360 + 360) % 360; if (session.turn > 180) session.turn -= 360; preview(); later(); }
-  function lift(m) { if (!begin()) return; session.dy += m; preview(); later(); }
+  const turn = afterCommit(deg => { if (!begin()) return; session.turn = ((session.turn + deg) % 360 + 360) % 360; if (session.turn > 180) session.turn -= 360; preview(); later(); });
+  const lift = afterCommit(m => { if (!begin()) return; session.dy += m; preview(); later(); });
+  // End: drop each selected object onto whatever is under it: the top of another object, or else the
+  // ground (its base at ground level, as the game places things).
+  const down = new THREE.Vector3(0, -1, 0), dropRay = new THREE.Raycaster(), bb = new THREE.Box3(), pb = new THREE.Box3(), pm = new THREE.Matrix4();
+  const drop = afterCommit(() => {
+    const s = begin(); if (!s) return;
+    const sel = ed.selection;
+    const groups = [ed.buildings, ed.newGroup, ...Object.values(ed.objectGroups)].filter(g => g.visible);
+    let onObjects = 0;
+    for (const it of s.items) {
+      const p = target(s, it);
+      // The object's current box (the instances already show any move in progress).
+      bb.makeEmpty();
+      for (const { im, k } of it.inst) { if (!im.geometry.boundingBox) im.geometry.computeBoundingBox(); im.getMatrixAt(k, pm); bb.union(pb.copy(im.geometry.boundingBox).applyMatrix4(pm)); }
+      if (bb.isEmpty()) bb.setFromCenterAndSize(new THREE.Vector3(p.gx - ed.cx, p.y, -(p.gz - ed.cz)), new THREE.Vector3(0.2, 0.2, 0.2));
+      const cx = (bb.min.x + bb.max.x) / 2, cz = (bb.min.z + bb.max.z) / 2, hx = (bb.max.x - bb.min.x) * 0.35, hz = (bb.max.z - bb.min.z) * 0.35;
+      // Highest thing under the middle and four points of the footprint.
+      let best = -Infinity;
+      for (const [ox, oz] of [[0, 0], [-hx, -hz], [hx, -hz], [-hx, hz], [hx, hz]]) {
+        dropRay.set(new THREE.Vector3(cx + ox, bb.max.y + 0.05, cz + oz), down);
+        dropRay.far = bb.max.y - p.y + 200;
+        const terrain = dropRay.intersectObject(ed.mesh, false)[0];
+        for (const h of dropRay.intersectObjects(groups, true)) {
+          if (terrain && h.distance > terrain.distance) break;
+          const id = h.object.userData.ids?.[h.instanceId];
+          // Hidden objects (deleted, or the originals of moved ones) are not there.
+          if (id == null || sel.has(id) || ed.objects.records.get(id)?.deleted) continue;
+          best = Math.max(best, h.point.y);
+          break;
+        }
+      }
+      const ground = groundAt(p.gx, p.gz);
+      // On an object: the bottom of the box rests on its top. Otherwise: the base on the ground.
+      const y = best > ground + 0.01 ? best - (bb.min.y - p.y) : ground;
+      if (best > ground + 0.01) onObjects++;
+      it.lift = y - ground - s.dy;
+    }
+    s.dropped = true;
+    preview(); later();
+    ed.msg(`Dropped ${s.items.length} object(s): ${onObjects} onto other objects, ${s.items.length - onObjects} onto the ground.`);
+  });
   ed.flushTransform = commit;
 
   // ---- Move arrows (like Blender's): red X (east), green Y (up), blue Z (north) at the selection's
@@ -177,6 +225,7 @@ export function createTransform(ed) {
     key(e) {
       if (!ed.selection.size) return false;
       if (e.key === ',' || e.key === '<' || e.key === '.' || e.key === '>') { turn((e.key === ',' || e.key === '<' ? -1 : 1) * (e.shiftKey ? 5 : 15)); return true; }
+      if (e.key === 'End') { drop(); return true; }
       if (e.key === 'PageUp' || e.key === 'PageDown') { lift((e.key === 'PageUp' ? 1 : -1) * (e.shiftKey ? 1 : 0.25)); return true; }
       if (e.key === 'Escape' && session) { axisDrag = null; restore(session); session = null; ed.drawSelection(); ed.msg('Move cancelled.'); return true; }
       return false;
