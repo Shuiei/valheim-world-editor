@@ -91,6 +91,10 @@
   .tag { font-size: 10px; border: 1px solid #2a6a4a; color: #8ff0b4; border-radius: 999px; padding: 0 5px; margin-left: 4px; }
   #viewPanel h3 { margin: 12px 0 4px; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; }
   #viewPanel h3:first-of-type { margin-top: 0; }
+  #viewPanel h3.fold { cursor: pointer; display: flex; align-items: center; gap: 6px; user-select: none; }
+  #viewPanel h3.fold::before { content: '▸'; font-size: 10px; transition: transform .12s; }
+  #viewPanel h3.fold.open::before { transform: rotate(90deg); }
+  #viewPanel h3.fold:hover { color: var(--text); }
   .toggle { display: flex; align-items: center; gap: 10px; padding: 5px 2px; cursor: pointer; border-radius: 6px; }
   .toggle:hover { background: rgba(255,255,255,.03); }
   .toggle input { appearance: none; width: 30px; height: 17px; border-radius: 999px; background: #3a414c; position: relative; flex: none; cursor: pointer; transition: background .15s; margin: 0; }
@@ -291,6 +295,24 @@ import { createArea } from './editor/area.js';
 import { createPlant } from './editor/plant.js';
 import { createMeasure } from './editor/measure.js';
 import { createTransform } from './editor/transform.js';
+
+// View panel: each section folds by clicking its title; folded sections are remembered (Look starts folded).
+{
+  let folded;
+  try { folded = new Set(JSON.parse(localStorage.getItem('viewFolded') ?? '["Look"]')); } catch { folded = new Set(['Look']); }
+  for (const h of document.querySelectorAll('#viewPanel > h3')) {
+    const body = document.createElement('div'), name = h.textContent.trim();
+    while (h.nextElementSibling && h.nextElementSibling.tagName !== 'H3' && !h.nextElementSibling.classList.contains('presets')) body.appendChild(h.nextElementSibling);
+    h.after(body); h.classList.add('fold');
+    const show = open => { body.hidden = !open; h.classList.toggle('open', open); };
+    show(!folded.has(name));
+    h.onclick = () => {
+      show(body.hidden);
+      body.hidden ? folded.add(name) : folded.delete(name);
+      try { localStorage.setItem('viewFolded', JSON.stringify([...folded])); } catch { }
+    };
+  }
+}
 
 const params = new URLSearchParams(location.search);
 const czx = parseInt(params.get('zx') ?? '0'), czz = parseInt(params.get('zz') ?? '0');
@@ -1203,6 +1225,7 @@ el.addEventListener('pointerdown', e => {
   if (e.altKey) { $('target').value = sampleHeight(hover.gx, hover.gz).toFixed(1); $('targetFromClick').checked = false; syncInputs(); setTool('flatten'); return; }
   el.setPointerCapture(e.pointerId);
   const startState = snapshotState();
+  ed.maskFreeze?.(true);
   stroke = { state: startState, touched: new Set(), natural: new Map(),
     startHeight: g => startState.mod[g] ? Math.max(base[g] - MAXL, Math.min(base[g] + MAXL, base[g] + startState.level[g] + startState.smooth[g])) : base[g] };
   // Flatten: level to the ground under the first click, shown in the Height box.
@@ -1213,11 +1236,13 @@ el.addEventListener('pointerup', e => {
   if (e.button === 0 && ed.handlers[tool]?.up) { ed.handlers[tool].up(e); return; }
   if (e.button === 0) drawingPath = false;
   if (e.button !== 0 || !stroke) return;
+  ed.maskFreeze?.(false);
   const zones = zonesOf(stroke.touched);
   if (zones.length) {
     upload(zones); pushHistory({ state: stroke.state, zones, label: TOOLS[tool]?.[0] ?? 'Brush' });
   }
-  $('sMsg').innerHTML = clampedThisStroke ? '<span class="warn">Reached the game limit: ground can only move 8 m from its original height (red points).</span>' : '';
+  $('sMsg').innerHTML = clampedThisStroke ? '<span class="warn">Reached the game limit: ground can only move 8 m from its original height (red points).</span>'
+    : !stroke.touched.size && ed.maskActive ? '<span class="warn">Nothing changed: the Mask leaves out all the ground under the brush (check its height, slope, biome and paint settings).</span>' : '';
   stroke = null; updateHistoryButtons();
 });
 const toolKeys = ['raise', 'lower', 'flatten', 'smooth', 'restore', 'paint-dirt', 'paint-cultivated', 'paint-paved', 'paint-natural'];
