@@ -280,10 +280,10 @@ for (const id of ['showPaint', 'showClouds']) document.getElementById(id).onchan
   resize(); requestAnimationFrame(frame);
   const w = await (await fetch('/api/world')).json();
   world = w; zones = w.zones;
-  const pendingChanges = { zones: w.changedZones, deleted: w.deletedObjects ?? 0 };
-  if (w.changedZones || pendingChanges.deleted) {
+  const pendingChanges = { zones: w.changedZones, deleted: w.deletedObjects ?? 0, added: w.addedObjects ?? 0, resets: w.resetZones ?? 0 };
+  if (w.changedZones || pendingChanges.deleted || pendingChanges.added || pendingChanges.resets) {
     document.getElementById('changes').hidden = false;
-    document.getElementById('changesText').textContent = [w.changedZones ? `${w.changedZones} zone(s) changed` : '', pendingChanges.deleted ? `${pendingChanges.deleted} object(s) deleted` : ''].filter(Boolean).join(', ') + ' — not saved yet.';
+    document.getElementById('changesText').textContent = [w.changedZones ? `${w.changedZones} zone(s) changed` : '', pendingChanges.deleted ? `${pendingChanges.deleted} object(s) deleted` : '', pendingChanges.added ? `${pendingChanges.added} object(s) added` : '', pendingChanges.resets ? `${pendingChanges.resets} zone(s) to reset` : ''].filter(Boolean).join(', ') + ' — not saved yet.';
   }
   document.getElementById('saveBtn').onclick = () => saveWorld(w, pendingChanges, res => { if (res.saved) location.reload(); });
   document.getElementById('discardBtn').onclick = () => discardChanges(pendingChanges, () => location.reload());
