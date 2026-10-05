@@ -80,6 +80,9 @@ export async function startApp() {
   const browser = await puppeteer.launch({ headless: true, args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--no-sandbox'] });
   const page = await browser.newPage();
   await page.setViewport({ width: 1400, height: 850 });
+  // CI machines are slower than a desktop (software 3D, 2 processors): generous limits.
+  page.setDefaultNavigationTimeout(120000);
+  page.setDefaultTimeout(120000);
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
   page.on('dialog', d => d.accept());

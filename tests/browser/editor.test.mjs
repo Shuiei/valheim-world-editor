@@ -1,5 +1,5 @@
 // End-to-end: the start page, the map and the 3D editor on the test world, as a user drives them.
-import { test, before, after } from 'node:test';
+import { describe, test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { startApp, waitPhase, screenOf, lookAt, sleep, stableHash } from './harness.mjs';
 
@@ -18,6 +18,8 @@ async function openEditor() {
 }
 const records = () => page().evaluate(() => [...window.__ed.objects.records.values()].filter(r => !r.deleted).map(r => ({ id: r.id, name: r.name, x: r.x, y: r.y, z: r.z, added: r.added })));
 
+describe('Valheim World Editor in the browser', () => {
+
 test('start page lists the test world and opens it', async () => {
   await page().goto(t.base + '/', { waitUntil: 'networkidle0' });
   await page().click('.mode[data-mode="offline"]');
@@ -31,8 +33,9 @@ test('start page lists the test world and opens it', async () => {
 });
 
 test('world map draws', async () => {
-  await page().goto(t.base + '/index.html', { waitUntil: 'networkidle0' });
-  await sleep(2500);
+  // Building the world map takes a while on a slow machine: wait for it rather than for the network.
+  await page().goto(t.base + '/index.html', { waitUntil: 'domcontentloaded' });
+  await page().waitForFunction(() => document.getElementById('loadingMap')?.hidden || document.getElementById('loadingMap')?.textContent.includes('failed'), { timeout: 180000 });
   const failed = await page().$eval('#loadingMap', e => !e.hidden && e.textContent.includes('failed'));
   assert.equal(failed, false, 'the map loads (plain colours without the game textures)');
   const w = await t.api('/api/world');
@@ -174,4 +177,6 @@ test('Worlds goes back to the start page', async () => {
 
 test('placed kinds have stable prefab ids', () => {
   assert.equal(stableHash('_TerrainCompiler'), -367065113);
+});
+
 });
