@@ -2,9 +2,10 @@
 # it needs in the save: persistent / distant flags and object type. Creatures and item drops are
 # marked, so the editor can leave them out of what it offers to place. Saplings (Plant) also get
 # their grow radius (free space they need to grow) and whether they need cultivated ground.
-# Usage: python scan_prefabs.py out.json
+# Usage: VWE_BUNDLES=<game>/valheim_Data/StreamingAssets/SoftRef/Bundles python scan_prefabs.py <out.json>
 import UnityPy, glob, json, sys
-B='/opt/Steam/steamapps/common/Valheim/valheim_Data/StreamingAssets/SoftRef/Bundles/'
+import os as _os
+B=_os.path.join(_os.environ.get('VWE_BUNDLES', '/opt/Steam/steamapps/common/Valheim/valheim_Data/StreamingAssets/SoftRef/Bundles'), '')
 out={}
 files=sorted(glob.glob(B+'*'))
 for fi,f in enumerate(files):

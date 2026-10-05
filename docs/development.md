@@ -43,32 +43,49 @@ The plugin: build `plugin/WorldEditorBridge/WorldEditorBridge.csproj` after poin
 
 ## Files extracted from the game
 
-The in-game look uses files that belong to the game, so they are not in git (see `.gitignore`):
+The in-game look uses files that belong to the game, so they are not in git (see `.gitignore`) or
+in the release packages:
 
 - `wwwroot/terrain/*.png` and `heightmap.frag.glsl`: terrain textures and the converted terrain shader;
 - `wwwroot/maptex/`: map textures;
 - `wwwroot/models/`: building, tree, rock and bush models, their textures and `objects.json`.
 
-The scripts in `tools/asset-export` (Python 3, [UnityPy](https://github.com/K0lb3/UnityPy), Pillow)
-are what these files were made with, but **they are not yet a pipeline you can rerun as is**: some
-have the game's install path and temporary output folders written in, and the terrain shader
-conversion and the map textures were done by steps that are not in the repo. Roughly:
+`tools/asset-export/export_all.py` makes all of them from a Valheim install (Python 3; `pip install
+-r tools/asset-export/requirements.txt`):
 
-1. `build_cab_index.py`: index of the game's asset bundles.
-2. `index_pieces.py <out.json>`, `index_objects.py <types.json> <out.json>`: which bundle holds each
-   piece and each world object (`types.json` lists the prefab hashes wanted, with counts).
-3. `export_pieces.py <wwwroot/models>` (with `INDEX=<object index>` for world objects): meshes,
-   textures, materials.
-4. `fix_normals.py <wwwroot/models>`, `fix_alpha.py <wwwroot/models>`: convert normal maps and clean
-   cut-out textures.
-5. `export_array.py`, `find_env.py`, `find_zs.py`, `probe_hm2.py`: terrain textures and shader
-   pieces (paths inside the scripts).
-6. `scan_prefabs.py <out.json>`: the prefab catalogue (`WorldGen/prefabs.json`, which is in git).
+```sh
+python3 tools/asset-export/export_all.py --valheim ~/.local/share/Steam/steamapps/common/Valheim --out wwwroot
+```
 
-Without the extracted files the editor still works: the world map uses plain colours, the 3D view
-uses flat colours (View → Look says it could not load the game look), buildings are boxes, and
-other objects are not drawn (so they cannot be clicked or selected), but they can still be planted,
-removed with the Area tool and saved.
+| Option | Meaning |
+|---|---|
+| `--valheim` | The game client's folder (with `valheim_Data`). |
+| `--out` | The editor's `wwwroot`. |
+| `--objects all` / `world` / `none` | Models for every placeable kind (default), only the kinds in the save given with `--world <world folder>`, or build pieces only. |
+| `--only terrain` / `map` / `models` | Run only some steps (repeatable). |
+| `--work` | Cache folder (default `<out>/../export-cache`). |
+
+What it does:
+
+1. Reads every asset bundle once and records where the terrain material, the terrain texture
+   arrays, the map material and each prefab's root object are (cached in `--work/scan.json`).
+2. **Terrain:** the textures of the `Heightmap` material, the diffuse and normal texture arrays
+   stacked into vertical strips, and the OpenGL core build of the `Custom/Heightmap` shader, one
+   deferred-pass fragment variant converted for WebGL 2 (`look.js` adds its own `main()`). If a game
+   update changes the shader, the converter stops with a message instead of writing a broken file.
+3. **Map:** the textures of the `minimap` material. The map shader itself is hand-ported in
+   `wwwroot/mapview.js`.
+4. **Models:** `export_pieces.py` (meshes, textures, materials; incremental, so an interrupted run
+   continues), then `fix_normals.py` (Unity's DXT5nm normal maps to plain RGB) and `fix_alpha.py`
+   (bleeds the colour of cut-out textures into their transparent pixels), then `objects.json`.
+
+A full run takes a few minutes and writes about 150 MB. The terrain and map output was checked to
+be byte-identical to the files made by hand during development.
+
+The catalogues that are in git are made by `scan_pieces.py` (`WorldGen/pieces.json`),
+`scan_modifiers.py` (`WorldGen/terrain-modifiers.json`) and `scan_prefabs.py`
+(`WorldGen/prefabs.json`); each takes the output file as argument and the bundle folder in
+`VWE_BUNDLES`.
 
 ## Tests
 

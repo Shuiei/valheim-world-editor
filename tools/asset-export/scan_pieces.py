@@ -1,5 +1,8 @@
+# Build-piece catalogue (WorldGen/pieces.json, in git): category and footprint of every piece.
+# Usage: VWE_BUNDLES=<game>/valheim_Data/StreamingAssets/SoftRef/Bundles python scan_pieces.py <out.json>
 import UnityPy, glob, json, sys
-B='/opt/Steam/steamapps/common/Valheim/valheim_Data/StreamingAssets/SoftRef/Bundles/'
+import os as _os
+B=_os.path.join(_os.environ.get('VWE_BUNDLES', '/opt/Steam/steamapps/common/Valheim/valheim_Data/StreamingAssets/SoftRef/Bundles'), '')
 def qmul(a,b):
     ax,ay,az,aw=a; bx,by,bz,bw=b
     return (aw*bx+ax*bw+ay*bz-az*by, aw*by-ax*bz+ay*bw+az*bx, aw*bz+ax*by-ay*bx+az*bw, aw*bw-ax*bx-ay*by-az*bz)
@@ -62,7 +65,7 @@ for fi,f in enumerate(files):
             entry['box']=[round(min(xs),3),round(max(xs),3),round(min(zs),3),round(max(zs),3),round(min(ys),3),round(max(ys),3)]
         out[go['m_Name']]=entry
     if fi%60==0: print('scanned',fi,'/',len(files),'pieces',len(out),file=sys.stderr)
-json.dump(out,open('/home/thibs/Desktop/Valheim_BepInEx/_src/TerrainEditor/WorldGen/pieces.json','w'))
+json.dump(out,open(sys.argv[1],'w'))
 print('pieces:',len(out),'with footprint:',sum(1 for v in out.values() if 'box' in v))
 for n in ['wood_floor','wood_wall_half','stone_wall_2x1','piece_workbench','wood_door','woodwall','wood_roof','portal_wood','fire_pit']:
     print(n,out.get(n))
