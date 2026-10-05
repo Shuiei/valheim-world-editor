@@ -85,11 +85,16 @@ export async function pieceModel(name) {
 }
 
 // See-through mode for every loaded piece material.
-export async function setSeeThrough(on) {
+// See-through mode for the given materials (those of buildings). The cut-out threshold is scaled
+// with the opacity, since three.js tests it after the opacity is applied.
+export async function setSeeThrough(on, materials) {
   for (const p of matCache.values()) {
     const m = await p;
-    m.transparent = on || m.userData.baseTransparent;
-    m.opacity = on ? 0.35 : m.userData.baseOpacity;
+    const active = on && (!materials || materials.has(m));
+    m.userData.baseAlphaTest ??= m.alphaTest;
+    m.transparent = active || m.userData.baseTransparent;
+    m.opacity = active ? 0.35 : m.userData.baseOpacity;
+    m.alphaTest = active ? m.userData.baseAlphaTest * 0.35 : m.userData.baseAlphaTest;
     m.depthWrite = !m.transparent;
     m.needsUpdate = true;
   }
