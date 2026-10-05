@@ -15,7 +15,13 @@
     <!-- The BepInEx bridge plugin and tools are separate projects. -->
     <Compile Remove="plugin/**" />
     <Compile Remove="tools/**" />
+    <Compile Remove="tests/**" />
+    <Content Remove="tests/**" />
+    <None Remove="tests/**" />
     <None Remove="plugin/**" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="WorldEditor.Tests" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Photino.NET" Version="4.0.16" />
