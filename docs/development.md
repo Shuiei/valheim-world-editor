@@ -95,16 +95,32 @@ The catalogues that are in git are made by `scan_pieces.py` (`WorldGen/pieces.js
 
 ## Tests
 
-The browser tests in `tools/tests` run against a running editor on a **copy** of a world, never the
-real one:
+CircleCI (`.circleci/config.yml`) runs everything below on every push and pull request.
+
+| Job | What it checks |
+|---|---|
+| `dotnet-tests` | `tests/WorldEditor.Tests` (xUnit): the save round trip on the test world (ground edits, deleted and new objects, blank prefabs, copies and moves, zone reset, the 8 m limit, zones that are not generated), the prefab catalogue, live-mode bookkeeping against a stand-in bridge (apply only the difference, undo after applying), the 10-second connection check, `servers.cfg`, plugin settings, world and folder discovery. |
+| `build-app` + `browser-tests` | `tests/browser`: the real app (`--browser`) on the test world in headless Chrome: start page, map, 3D editor, a brush stroke and Save, Plant line and grid, the move arrows and End, zone selection, copy and paste, undo, back to Worlds, and no JavaScript errors. Box models stand in for the game's. |
+| `packages` | Both release packages build, and `tools/check-package.sh` finds everything they need and no source code, debug files or game files. |
+
+Not covered by CI: building the plugin and the game-look export (both need Valheim's own files) and
+live mode against a real game.
+
+The **test world** is `tests/fixtures/CITest`: a brand-new world made by a dedicated server and
+filled live through the editor (ground edits, trees, rocks, bushes, pickables, a crop, floors, walls,
+chests). `tests/fixtures/CITest.snapshot` is the same world as the plugin sends it.
+
+Running them locally:
 
 ```sh
-cp -r ~/worlds/MyWorld /tmp/world-copy
-VWE_NO_OPEN=1 ./ValheimWorldEditor /tmp/world-copy --browser --port 5191 &
-node tools/tests/test-editor.mjs http://127.0.0.1:5191 /tmp/out
+dotnet test tests/WorldEditor.Tests
+dotnet publish TerrainEditor.csproj -c Release -r linux-x64 --self-contained -p:PublishSingleFile=true -o out
+cd tests/browser && npm ci && npm test        # APP=<program> to test another build
+SKIP_PLUGIN=1 tools/release.sh test /tmp/dist && tools/check-package.sh /tmp/dist/*.tar.gz --no-plugin
 ```
 
-They need `npm install puppeteer`; headless Chrome draws with SwiftShader, so they are slow.
+The older one-off scripts in `tools/tests/` were used during development and need a real world
+copy and the game files; the tests above replace them for checking changes.
 
 ## Screenshots
 
