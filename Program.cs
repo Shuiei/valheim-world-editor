@@ -194,7 +194,19 @@ app.UseDefaultFiles();
 var contentTypes = new Microsoft.AspNetCore.StaticFiles.FileExtensionContentTypeProvider();
 contentTypes.Mappings[".glsl"] = "text/plain";
 contentTypes.Mappings[".bin"] = "application/octet-stream";
-app.UseStaticFiles(new StaticFileOptions { ContentTypeProvider = contentTypes });
+// Page code is revalidated on every load (a cheap 304 when unchanged), so an updated editor is used
+// right away instead of a copy the browser kept; models keep the browser's normal caching.
+app.UseStaticFiles(new StaticFileOptions
+{
+	ContentTypeProvider = contentTypes,
+	OnPrepareResponse = ctx =>
+	{
+		if (!ctx.Context.Request.Path.StartsWithSegments("/models"))
+		{
+			ctx.Context.Response.Headers.CacheControl = "no-cache";
+		}
+	},
+});
 
 // Render the overview map in the background so the page opens immediately.
 _ = Task.Run(() => terrain.OverviewPng);
