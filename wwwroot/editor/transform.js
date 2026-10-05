@@ -125,8 +125,10 @@ export function createTransform(ed) {
   const AXES = { x: { dir: new THREE.Vector3(1, 0, 0), color: 0xff4d5e }, y: { dir: new THREE.Vector3(0, 1, 0), color: 0x6ee05a }, z: { dir: new THREE.Vector3(0, 0, -1), color: 0x4d8dff } };
   const gizmo = new THREE.Group(); gizmo.visible = false; gizmo.renderOrder = 30; ed.scene.add(gizmo);
   const hitMat = new THREE.MeshBasicMaterial({ visible: false });
-  const shaftGeo = new THREE.CylinderGeometry(0.025, 0.025, 1, 8).translate(0, 0.5, 0), headGeo = new THREE.ConeGeometry(0.08, 0.24, 16).translate(0, 1.1, 0);
-  const grabGeo = new THREE.CylinderGeometry(0.12, 0.12, 1.25, 8).translate(0, 0.62, 0);
+  // The arrows start a bit out from the middle, and only they catch the mouse, so the object itself
+  // can still be grabbed for a free move.
+  const shaftGeo = new THREE.CylinderGeometry(0.025, 0.025, 0.7, 8).translate(0, 0.65, 0), headGeo = new THREE.ConeGeometry(0.08, 0.24, 16).translate(0, 1.1, 0);
+  const grabGeo = new THREE.CylinderGeometry(0.09, 0.09, 0.95, 8).translate(0, 0.75, 0);
   for (const [key, a] of Object.entries(AXES)) {
     const arm = new THREE.Group();
     a.mat = new THREE.MeshBasicMaterial({ color: a.color, depthTest: false, transparent: true });
@@ -148,7 +150,7 @@ export function createTransform(ed) {
     if (!n) { gizmo.visible = false; return; }
     centre.set(x / n - ed.cx, y / n, -(z / n - ed.cz));
     gizmo.position.copy(centre);
-    gizmo.scale.setScalar(ed.camera.position.distanceTo(centre) * 0.12);
+    gizmo.scale.setScalar(ed.camera.position.distanceTo(centre) * 0.07);
     for (const [k, a] of Object.entries(AXES)) a.mat.color.setHex(k === (axisDrag?.axis ?? hoverAxis) ? 0xffe14a : a.color);
   }
   ed.frame.push(placeGizmo);
@@ -224,7 +226,7 @@ export function createTransform(ed) {
     },
     key(e) {
       if (!ed.selection.size) return false;
-      if (e.key === ',' || e.key === '<' || e.key === '.' || e.key === '>') { turn((e.key === ',' || e.key === '<' ? -1 : 1) * (e.shiftKey ? 5 : 15)); return true; }
+      if (e.key === ',' || e.key === '<' || e.key === '.' || e.key === '>') { turn((e.key === ',' || e.key === '<' ? -1 : 1) * ed.turnStep(e)); return true; }
       if (e.key === 'End') { drop(); return true; }
       if (e.key === 'PageUp' || e.key === 'PageDown') { lift((e.key === 'PageUp' ? 1 : -1) * (e.shiftKey ? 1 : 0.25)); return true; }
       if (e.key === 'Escape' && session) { axisDrag = null; restore(session); session = null; ed.drawSelection(); ed.msg('Move cancelled.'); return true; }
@@ -234,7 +236,7 @@ export function createTransform(ed) {
   ed.el.addEventListener('wheel', e => {
     if (ed.tool !== 'select' || !e.altKey || !ed.selection.size) return;
     e.preventDefault(); e.stopImmediatePropagation();
-    turn(Math.sign(e.deltaY) * (e.shiftKey ? 5 : 15));
+    turn(Math.sign(e.deltaY) * ed.turnStep(e));
   }, { capture: true, passive: false });
   ed.onToolChange.push(() => { if (session) commit(); });
 

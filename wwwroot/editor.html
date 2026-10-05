@@ -266,7 +266,7 @@
     <dt>1–9, 0</dt><dd>Sculpt and paint tools</dd>
     <dt>B / P / T</dt><dd>Area, Path, Plant</dd>
     <dt>E / M / H</dt><dd>Select, Measure, Move</dd>
-    <dt>Ctrl+C / Ctrl+V</dt><dd>Copy the area / paste it (R turns, F mirrors)</dd>
+    <dt>Ctrl+C / Ctrl+V</dt><dd>Copy the area / paste it (R turns 90°, , . turn 1°, F mirrors)</dd>
     <dt>[ &nbsp; ]</dt><dd>Brush size</dd>
     <dt>Plant: R · Alt+wheel</dt><dd>New layout · turn the preview (also , and .)</dd>
     <dt>Alt + click</dt><dd>Pick the ground height</dd>
@@ -481,7 +481,7 @@ const TOOLS = {
   'paint-natural': ['Clear paint', "Remove paint: back to the biome's own ground.", null, 'linear-gradient(135deg,#5e8a3a 50%,#7a6a4a 50%)'],
   path: ['Path', 'Draw a line, then flatten, ramp, raise, lower, smooth or paint along it.', 'M4 19c4 0 3-7 8-7s4-7 8-7M4 19h.01M20 5h.01'],
   area: ['Area', 'Select a box or polygon, then change the ground, remove or replace objects, copy it, or reset its zones.', 'M4 4h4M16 4h4v4M20 16v4h-4M8 20H4v-4M4 8v4M20 8v4M8 4h0M12 4h0M12 20h0'],
-  paste: ['Paste', 'Place the copied area. R turns it, F mirrors it.', 'M8 4h8v3H8zM6 6H5v14h14V6h-1'],
+  paste: ['Paste', 'Place the copied area. R turns it 90°, , . or Alt+wheel by 1° (Shift 15°); F mirrors it.', 'M8 4h8v3H8zM6 6H5v14h14V6h-1'],
   plant: ['Plant', 'Paint trees, rocks or bushes onto the ground. Shift + drag removes the chosen kinds.', 'M12 21v-7M12 14c-4 0-6-3-6-6 3 0 6 2 6 6zM12 12c0-4 2-7 6-7 0 4-2 7-6 7z'],
   measure: ['Measure', 'Click two points to see the distance, height difference and slope.', 'M3 17L17 3l4 4L7 21zM7 13l2 2M10 10l2 2M13 7l2 2'],
   select: ['Select', 'Click trees, rocks or buildings to select them, then press Del to remove them from the world.', 'M5 3l14 8-6 2-2 6z'],
@@ -938,6 +938,8 @@ const ed = {
   handlers: {}, panels: toolPanels, onToolChange: toolChangeHooks, mask: g => 1,
   pickEntity: e => pickEntity(e), clickSelect: e => clickSelect(e), hoverSelect: e => hoverSelect(e), drawSelection: () => drawSelection(), entityOf: id => entities.get(id),
   get selection() { return selection; }, selectIds: ids => { selection.clear(); for (const id of ids) if (entities.has(id)) selection.add(id); drawSelection(); }, clearSelection: () => clearSelection(),
+  // Turning step for , . and Alt+wheel everywhere: 1°, or 15° with Shift.
+  turnStep: e => e.shiftKey ? 15 : 1,
   showStatusFor: h => { hover = h; showStatus(); }, track: p => track(p), updateRing: () => updateRing(), frame: [], getLook: () => look
 };
 const objects = createObjects(ed); ed.objects = objects;
