@@ -27,5 +27,31 @@ public sealed class LiveBridge(string url, string token)
 
 	public async Task<string> Status() => await (await Get("status")).Content.ReadAsStringAsync();
 
+	// New terrain data for zones (TerrainComp.Save format), as a ZPackage: count, then x, z, byte array.
+	public async Task<string> ApplyTerrain(IReadOnlyList<(int X, int Z, byte[] Data)> zones)
+	{
+		using MemoryStream ms = new();
+		using (BinaryWriter w = new(ms, System.Text.Encoding.UTF8, leaveOpen: true))
+		{
+			w.Write(zones.Count);
+			foreach (var (x, z, data) in zones)
+			{
+				w.Write(x);
+				w.Write(z);
+				w.Write(data.Length);
+				w.Write(data);
+			}
+		}
+		using HttpRequestMessage req = new(HttpMethod.Post, "terrain") { Content = new ByteArrayContent(ms.ToArray()) };
+		req.Headers.Add("X-Bridge-Token", token);
+		HttpResponseMessage res = await _http.SendAsync(req);
+		string body = await res.Content.ReadAsStringAsync();
+		if (!res.IsSuccessStatusCode)
+		{
+			throw new InvalidOperationException($"bridge terrain: {(int)res.StatusCode} {body}");
+		}
+		return body;
+	}
+
 	public async Task<WorldSave> LoadWorld() => WorldSave.LoadLive(await Snapshot(), "live: " + Url);
 }

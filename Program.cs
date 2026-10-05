@@ -396,11 +396,28 @@ app.MapPost("/api/live/reload", async () =>
 app.MapGet("/api/piece-types", () => TerrainEditor.Terrain.PieceCatalog.Names);
 
 // Write all changed zones to the world files (with backup and verification), then reload.
-app.MapPost("/api/save", () =>
+app.MapPost("/api/save", async () =>
 {
-	if (world.IsLive)
+	if (world.IsLive && live != null)
 	{
-		return Results.Ok(new { saved = false, message = "This is a live view of the running world. Applying changes live comes in the next step; to save now, use the editor on the world files instead." });
+		// Live mode: push the changed zones' terrain into the running game.
+		var changedZones = edits.All().Where(e => e.Changed).ToList();
+		string objectsNote = edits.DeletedCount + edits.AddedCount + edits.ResetCount > 0 ? " Object changes and zone resets are not applied live yet; they stay pending." : "";
+		if (changedZones.Count == 0)
+		{
+			return Results.Ok(new { saved = false, live = true, message = "No ground changes to apply." + objectsNote, pending = Pending() });
+		}
+		try
+		{
+			string reply = await live.ApplyTerrain(changedZones.Select(e => (e.ZoneX, e.ZoneZ, WorldWriter.EncodeTerrain(e))).ToList());
+			edits.MarkApplied(changedZones.Select(e => (e.ZoneX, e.ZoneZ)));
+			Console.WriteLine($"Live: applied {changedZones.Count} zone(s): {reply}");
+			return Results.Ok(new { saved = true, live = true, message = $"Applied {changedZones.Count} zone(s) to the running game." + objectsNote, pending = Pending() });
+		}
+		catch (Exception ex)
+		{
+			return Results.Ok(new { saved = false, live = true, message = "Could not apply live: " + ex.Message, pending = Pending() });
+		}
 	}
 	lock (saveLock)
 	{

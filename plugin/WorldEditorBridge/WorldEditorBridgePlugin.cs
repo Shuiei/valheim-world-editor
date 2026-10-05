@@ -20,13 +20,15 @@ namespace WorldEditorBridge;
 //                   and every persistent object in the save file's chunk format, gzip-compressed
 //   GET /players    connected players and their positions (JSON)
 //   GET /status     plugin and world info (JSON)
+//   POST /terrain   new terrain data for zones: int count, then per zone int x, int z, int length + TCData
+//                   (TerrainComp.Save format); every player's game reloads those zones' ground
 // Game objects are only read on Unity's main thread; the HTTP thread waits for the answer.
 [BepInPlugin(Guid, "WorldEditorBridge", Version)]
 public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
 {
 	public const string Guid = "local.worldeditorbridge";
 
-	public const string Version = "0.1.0";
+	public const string Version = "0.2.0";
 
 	private const int SnapshotVersion = 1;
 
@@ -180,6 +182,12 @@ public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
 				Reply(res, 503, "text/plain", Encoding.UTF8.GetBytes("no world loaded yet"));
 				return;
 			}
+			// A client connected to someone else's server only knows the objects around it.
+			if (!ZNet.instance.IsServer())
+			{
+				Reply(res, 409, "text/plain", Encoding.UTF8.GetBytes("this game is connected to a server: install WorldEditorBridge on that server, or host the world yourself"));
+				return;
+			}
 			switch (ctx.Request.Url.AbsolutePath)
 			{
 			case "/status":
@@ -188,6 +196,17 @@ public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
 			case "/players":
 				Reply(res, 200, "application/json", OnMainThread(Players));
 				break;
+			case "/terrain":
+			{
+				if (ctx.Request.HttpMethod != "POST")
+				{
+					Reply(res, 405, "text/plain", Encoding.UTF8.GetBytes("POST only"));
+					break;
+				}
+				byte[] body = ReadAll(ctx.Request.InputStream);
+				Reply(res, 200, "application/json", OnMainThread(() => ApplyTerrain(body)));
+				break;
+			}
 			case "/snapshot":
 			{
 				byte[] raw = OnMainThread(Snapshot, 120000);
@@ -215,6 +234,67 @@ public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
 			{
 			}
 		}
+	}
+
+	private static byte[] ReadAll(Stream s)
+	{
+		using MemoryStream ms = new();
+		s.CopyTo(ms);
+		return ms.ToArray();
+	}
+
+	private static readonly int TerrainCompilerPrefab = "_TerrainCompiler".GetStableHashCode();
+
+	// Sets the terrain data of each zone's terrain compiler object (creating it when the zone has
+	// none). The game syncs the object to everyone, and TerrainComp reloads when its data changes.
+	private byte[] ApplyTerrain(byte[] body)
+	{
+		ZPackage pkg = new(body);
+		int count = pkg.ReadInt();
+		var dict = (Dictionary<ZDOID, ZDO>)ObjectsById.GetValue(ZDOMan.instance);
+		Dictionary<Vector2s, ZDO> compilers = new();
+		foreach (ZDO zdo in dict.Values)
+		{
+			if (zdo.GetPrefab() == TerrainCompilerPrefab)
+			{
+				Vector2s zone = ZoneSystem.GetZone(zdo.GetPosition());
+				// With duplicates (the game cleans them up itself), keep the one with data.
+				if (!compilers.TryGetValue(zone, out ZDO other) || other.GetByteArray(ZDOVars.s_TCData) == null)
+				{
+					compilers[zone] = zdo;
+				}
+			}
+		}
+		int applied = 0, created = 0;
+		for (int i = 0; i < count; i++)
+		{
+			int zx = pkg.ReadInt(), zz = pkg.ReadInt();
+			byte[] data = pkg.ReadByteArray();
+			Vector2s key = new((short)zx, (short)zz);
+			if (!compilers.TryGetValue(key, out ZDO tc))
+			{
+				tc = CreateTerrainCompiler(key);
+				compilers[key] = tc;
+				created++;
+			}
+			tc.Set(ZDOVars.s_TCData, data);
+			applied++;
+		}
+		Logger.LogInfo($"WorldEditorBridge: applied terrain to {applied} zone(s) ({created} new)");
+		return Encoding.UTF8.GetBytes($"{{\"applied\":{applied},\"created\":{created}}}");
+	}
+
+	// Like ZNetView.Awake for the _TerrainCompiler prefab, at the zone centre.
+	private static ZDO CreateTerrainCompiler(Vector2s zone)
+	{
+		GameObject prefab = ZNetScene.instance.GetPrefab(TerrainCompilerPrefab);
+		ZNetView view = prefab != null ? prefab.GetComponent<ZNetView>() : null;
+		ZDO zdo = ZDOMan.instance.CreateNewZDO(ZoneSystem.GetZonePos(zone), TerrainCompilerPrefab);
+		zdo.Persistent = view == null || view.m_persistent;
+		zdo.Type = view != null ? view.m_type : ZDO.ObjectType.Terrain;
+		zdo.Distant = view != null && view.m_distant;
+		zdo.SetPrefab(TerrainCompilerPrefab);
+		return zdo;
 	}
 
 	private static void Reply(HttpListenerResponse res, int code, string type, byte[] body)
