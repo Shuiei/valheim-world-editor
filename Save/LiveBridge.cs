@@ -53,5 +53,35 @@ public sealed class LiveBridge(string url, string token)
 		return body;
 	}
 
+	// Objects to destroy (live ZDOIDs) and to create (save-format bytes); returns the plugin's JSON.
+	public async Task<string> ApplyObjects(IReadOnlyList<(long User, uint Id)> destroy, IReadOnlyList<byte[]> create)
+	{
+		using MemoryStream ms = new();
+		using (BinaryWriter w = new(ms, System.Text.Encoding.UTF8, leaveOpen: true))
+		{
+			w.Write(destroy.Count);
+			foreach (var (user, id) in destroy)
+			{
+				w.Write(user);
+				w.Write(id);
+			}
+			w.Write(create.Count);
+			foreach (byte[] o in create)
+			{
+				w.Write(o.Length);
+				w.Write(o);
+			}
+		}
+		using HttpRequestMessage req = new(HttpMethod.Post, "objects") { Content = new ByteArrayContent(ms.ToArray()) };
+		req.Headers.Add("X-Bridge-Token", token);
+		HttpResponseMessage res = await _http.SendAsync(req);
+		string body = await res.Content.ReadAsStringAsync();
+		if (!res.IsSuccessStatusCode)
+		{
+			throw new InvalidOperationException($"bridge objects: {(int)res.StatusCode} {body}");
+		}
+		return body;
+	}
+
 	public async Task<WorldSave> LoadWorld() => WorldSave.LoadLive(await Snapshot(), "live: " + Url);
 }

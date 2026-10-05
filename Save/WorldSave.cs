@@ -154,6 +154,9 @@ public sealed class WorldSave
 	// True when the world came from the live bridge plugin instead of save files.
 	public bool IsLive { get; private set; }
 
+	// The decompressed live snapshot; object byte ranges (ObjectRef.Start .. End) point into it.
+	public byte[]? LiveBytes { get; private set; }
+
 	// A snapshot from the WorldEditorBridge plugin (gzip): world info, ZoneSystem data and every
 	// persistent object in the chunk file format, followed by each object's live ZDOID.
 	public static WorldSave LoadLive(byte[] gzipped, string source)
@@ -164,7 +167,7 @@ public sealed class WorldSave
 			gz.CopyTo(raw);
 		}
 		raw.Position = 0;
-		WorldSave save = new() { Directory = source, SaveNumber = 0, IsLive = true };
+		WorldSave save = new() { Directory = source, SaveNumber = 0, IsLive = true, LiveBytes = raw.ToArray() };
 		using ValheimReader pkg = new(raw);
 		if (pkg.ReadInt() != 0x42455756)
 		{

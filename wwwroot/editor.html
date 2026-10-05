@@ -663,7 +663,7 @@ function showPending(zones = pending.zones, deleted = pending.deleted, added = p
   $('pending').textContent = parts.length ? `${world.live ? 'Not applied' : 'Unsaved'}: ${parts.join(', ')}` : world.live ? 'All applied' : 'All saved';
   $('pending').classList.toggle('dirty', parts.length > 0);
   $('saveBtn').disabled = $('discardBtn').disabled = !parts.length;
-  if (world.live) $('saveBtn').disabled = !zones;
+  if (world.live) $('saveBtn').disabled = !(zones + deleted + added);
 }
 showPending();
 $('saveBtn').onclick = () => saveWorld(world, pending, res => { if (res.saved) location.reload(); });
@@ -777,6 +777,7 @@ const ed = {
   height, setHeight, locked, refresh, snapshotState, zonesOf, upload, pushHistory, msg, showPendingFrom, pieceModel,
   register, unregister, pick, sampleHeight, worldNoise, fbm, nAmp, nSize, setDeleted,
   get tool() { return tool; }, setTool: t => setTool(t), get radius() { return radius; }, get strength() { return strength; },
+  changed: () => afterUpload?.(),
   handlers: {}, panels: toolPanels, onToolChange: toolChangeHooks, mask: g => 1,
   get selection() { return selection; }, selectIds: ids => { selection.clear(); for (const id of ids) if (entities.has(id)) selection.add(id); drawSelection(); }, clearSelection: () => clearSelection(),
   showStatusFor: h => { hover = h; showStatus(); }, updateRing: () => updateRing(), frame: [], getLook: () => look
@@ -1234,6 +1235,7 @@ async function setDeleted(ids, deleted) {
     const r = await fetch('/api/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ids, restore: !deleted }) });
     const res = await r.json();
     showPendingFrom(res);
+    afterUpload?.();
   } catch (err) {
     $('sMsg').innerHTML = `<span class="warn">Could not send the deletion to the editor: ${err.message}</span>`;
   }
