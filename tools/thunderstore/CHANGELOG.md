@@ -2,6 +2,13 @@
 
 The editor's own changes: [CHANGELOG.md](https://github.com/Shuiei/valheim-world-editor/blob/main/CHANGELOG.md).
 
+## 0.3.2
+
+- Smaller: the editor's bundled Python keeps only what it uses (Windows: 74 → 48 MB, Linux:
+  117 → 87 MB unpacked), and the packages drop the `README.txt` files this page replaces.
+- Windows: carries `msvcp140.dll`, needed to copy the game's look on a PC without the Visual C++
+  runtime. The plugin is unchanged.
+
 ## 0.3.1
 
 - **Three packages**: `ValheimWorldEditor_Windows` and `ValheimWorldEditor_Linux` (the editor with

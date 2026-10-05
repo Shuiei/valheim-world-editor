@@ -57,5 +57,7 @@ package WorldEditorBridge bridge
 mkdir -p "$work/ValheimWorldEditor_Linux/plugins" "$work/ValheimWorldEditor_Windows/plugins"
 tar -xzf "$linux" -C "$work/ValheimWorldEditor_Linux/plugins"
 unzip -q "$windows" -d "$work/ValheimWorldEditor_Windows/plugins"
+# The mod page replaces the download's README.txt files.
+rm -f "$work"/ValheimWorldEditor_*/plugins/ValheimWorldEditor/README.txt "$work"/ValheimWorldEditor_*/plugins/ValheimWorldEditor/plugin/README.txt
 package ValheimWorldEditor_Linux linux
 package ValheimWorldEditor_Windows windows
