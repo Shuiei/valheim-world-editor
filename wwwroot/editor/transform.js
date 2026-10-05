@@ -175,6 +175,43 @@ export function createTransform(ed) {
   }
   let axisDrag = null, hoverAxis = null;
 
+  // ---- Lasso: drag on empty ground to draw a zone; everything shown inside it gets selected.
+  let lasso = null;
+  const lassoLine = new THREE.Line(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0xffc24a, depthTest: false }));
+  lassoLine.renderOrder = 23; lassoLine.frustumCulled = false; lassoLine.visible = false; ed.scene.add(lassoLine);
+  function drawLasso() {
+    const ring = lasso ? [...lasso.pts, lasso.pts[0]] : [], out = [];
+    for (let i = 1; i < ring.length; i++) {
+      const a = ring[i - 1], b = ring[i], n = Math.max(1, Math.ceil(Math.hypot(b.gx - a.gx, b.gz - a.gz)));
+      for (let k = 0; k <= n; k++) { const gx = a.gx + (b.gx - a.gx) * k / n, gz = a.gz + (b.gz - a.gz) * k / n; out.push(new THREE.Vector3(gx - ed.cx, groundAt(gx, gz) + 0.3, -(gz - ed.cz))); }
+    }
+    lassoLine.geometry.setFromPoints(out);
+    lassoLine.visible = out.length > 0;
+  }
+  function inside(poly, x, z) {
+    let c = false;
+    for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+      const a = poly[i], b = poly[j];
+      if ((a.gz > z) !== (b.gz > z) && x < (b.gx - a.gx) * (z - a.gz) / (b.gz - a.gz) + a.gx) c = !c;
+    }
+    return c;
+  }
+  // Only what is drawn can be picked, like a click (see View).
+  const shown = id => ed.entityOf(id)?.inst.some(({ im }) => im.visible && im.parent?.visible);
+  function finishLasso(add) {
+    const poly = lasso.pts; lasso = null; drawLasso();
+    if (poly.length < 3) return false;
+    const ids = [];
+    for (const r of ed.objects.records.values()) {
+      if (r.deleted) continue;
+      const g = toGrid(r);
+      if (inside(poly, g.gx, g.gz) && shown(r.id)) ids.push(r.id);
+    }
+    ed.selectIds(add ? [...ed.selection, ...ids] : ids);
+    ed.msg(ids.length ? `Selected ${ids.length} object(s) inside the zone${add ? ` (${ed.selection.size} in all)` : ''}.` : 'Nothing shown inside the zone.');
+    return true;
+  }
+
   // ---- Pointer: drag an arrow or a selected object to move the selection; otherwise the usual selecting.
   let drag = null;
   ed.handlers.select = {
@@ -189,10 +226,17 @@ export function createTransform(ed) {
         ed.el.setPointerCapture(e.pointerId);
         return;
       }
-      const ent = ed.pickEntity(e);
+      const ent = e.altKey ? null : ed.pickEntity(e);   // Alt: always draw a zone, even over objects
       if (ent && ed.selection.has(ent.id) && !e.shiftKey && hit) {
         drag = { x: e.clientX, y: e.clientY, from: hit, moving: false };
         ed.el.setPointerCapture(e.pointerId);
+        return;
+      }
+      if (!ent && hit) {
+        // Empty ground: a click deselects, a drag draws a zone to select.
+        lasso = { x: e.clientX, y: e.clientY, pts: [{ gx: hit.gx, gz: hit.gz }], drawing: false, add: e.shiftKey };
+        ed.el.setPointerCapture(e.pointerId);
+        commit();
         return;
       }
       commit().then(() => ed.clickSelect(e));
@@ -208,6 +252,12 @@ export function createTransform(ed) {
         preview();
         return;
       }
+      if (lasso) {
+        if (!lasso.drawing && Math.hypot(e.clientX - lasso.x, e.clientY - lasso.y) > 6) lasso.drawing = true;
+        const last = lasso.pts.at(-1);
+        if (lasso.drawing && hit && Math.hypot(hit.gx - last.gx, hit.gz - last.gz) >= 0.5) { lasso.pts.push({ gx: hit.gx, gz: hit.gz }); drawLasso(); }
+        return;
+      }
       if (!drag) {
         const a = gizmoAxis(e);
         if (a !== hoverAxis) { hoverAxis = a; ed.el.style.cursor = a ? 'grab' : ''; }
@@ -219,12 +269,18 @@ export function createTransform(ed) {
     },
     up(e) {
       if (axisDrag) { axisDrag = null; commit(); return; }
+      if (lasso) {
+        const l = lasso;
+        if (!l.drawing || !finishLasso(l.add)) { lasso = null; drawLasso(); if (!l.add) ed.clearSelection(); }
+        return;
+      }
       const d = drag; drag = null;
       if (!d) return;
       if (d.moving) commit();
       else commit().then(() => ed.clickSelect(e));   // a plain click on a selected object
     },
     key(e) {
+      if (e.key === 'Escape' && lasso) { lasso = null; drawLasso(); return true; }
       if (!ed.selection.size) return false;
       if (e.key === ',' || e.key === '<' || e.key === '.' || e.key === '>') { turn((e.key === ',' || e.key === '<' ? -1 : 1) * ed.turnStep(e)); return true; }
       if (e.key === 'End') { drop(); return true; }
