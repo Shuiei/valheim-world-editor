@@ -16,7 +16,7 @@ export function createPlant(ed) {
     <label class="field">Spacing <input id="plSpacing" type="range" min="0.5" max="15" step="0.5" value="4"><span id="plSpacingV"></span></label>
     <label class="field">Size <span class="pair"><input id="plSmin" type="number" min="10" max="300" step="5" value="80"><input id="plSmax" type="number" min="10" max="300" step="5" value="120"></span><span>%</span></label>
     <label class="field">Tilt <input id="plTilt" type="range" min="0" max="20" step="1" value="3"><span id="plTiltV"></span></label>
-    <label class="field">Rotation <input id="plRot" type="range" min="-180" max="180" step="5" value="0"><span id="plRotV"></span></label>
+    <label class="field">Rotation <input id="plRot" type="range" min="-180" max="180" step="1" value="0"><span id="plRotV"></span></label>
     <label class="check"><input type="checkbox" id="plRandomYaw" checked> Random facing (off: all face the rotation)</label>
     <label class="check"><input type="checkbox" id="plSingle"> One at a time, exactly at the cursor</label>
     <div id="plLineBox" hidden>
@@ -501,7 +501,7 @@ export function createPlant(ed) {
     },
     key(e) {
       if (e.key.toLowerCase() === 'r' && !e.ctrlKey) { makePattern(); updatePreview(); return true; }
-      if (e.key === ',' || e.key === '<' || e.key === '.' || e.key === '>') { turn((e.key === ',' || e.key === '<' ? -1 : 1) * (e.shiftKey ? 5 : 15)); return true; }
+      if (e.key === ',' || e.key === '<' || e.key === '.' || e.key === '>') { turn((e.key === ',' || e.key === '<' ? -1 : 1) * ed.turnStep(e)); return true; }
       return false;
     }
   };
@@ -549,7 +549,7 @@ export function createPlant(ed) {
       if (e.key === 'Enter') { placeShape(); return true; }
       if (e.key === 'Escape' && (linePts.length || gridA)) { clearShape(); return true; }
       if (e.key === 'Backspace' && pointed() && linePts.length) { linePts.pop(); drawShape(); updatePreview(); return true; }
-      if (turnable() && (e.key === ',' || e.key === '<' || e.key === '.' || e.key === '>')) { turnShape((e.key === ',' || e.key === '<' ? -1 : 1) * (e.shiftKey ? 5 : 15)); return true; }
+      if (turnable() && (e.key === ',' || e.key === '<' || e.key === '.' || e.key === '>')) { turnShape((e.key === ',' || e.key === '<' ? -1 : 1) * ed.turnStep(e)); return true; }
       return brush.key(e);
     }
   };
@@ -570,7 +570,7 @@ export function createPlant(ed) {
   ed.el.addEventListener('wheel', e => {
     if (ed.tool !== 'plant' || !e.altKey) return;
     e.preventDefault(); e.stopImmediatePropagation();
-    (turnable() ? turnShape : turn)(Math.sign(e.deltaY) * (e.shiftKey ? 5 : 15));
+    (turnable() ? turnShape : turn)(Math.sign(e.deltaY) * ed.turnStep(e));
   }, { capture: true, passive: false });
   ed.frame ??= [];
   ed.frame.push(step);

@@ -57,7 +57,7 @@ export function createArea(ed) {
     <label class="check"><input type="checkbox" id="psGround" checked> Ground shape and paint</label>
     <label class="check"><input type="checkbox" id="psObjects" checked> Objects</label>
     <label class="field">Height <input id="psOffset" type="number" step="0.5" value="0"><span>m</span></label>
-    <div class="row"><button id="psRot">Rotate <kbd>R</kbd></button><button id="psFlip">Mirror <kbd>F</kbd></button><button id="psDone">Done <kbd>Esc</kbd></button></div>
+    <div class="row"><button id="psRot" title="Quarter turn; , . or Alt+wheel turn by 1° (Shift: 15°)">Turn 90° <kbd>R</kbd></button><button id="psFlip">Mirror <kbd>F</kbd></button><button id="psDone">Done <kbd>Esc</kbd></button></div>
     <div class="hint">Click to place; the copied ground keeps its shape relative to the point you click. Height moves the paste up or down.</div>`;
   $('locWarn').before(pastePanel);
   ed.panels.push({ el: pastePanel, tools: ['paste'] });
@@ -279,7 +279,7 @@ export function createArea(ed) {
   $('selReplace').onclick = () => replace([...ed.selection], $('selTo').value).then(() => ed.clearSelection());
 
   // ---- Copy and paste.
-  let clip = null, rot = 0, flip = false;
+  let clip = null, rot = 0, flip = false;   // rot: degrees (counter-clockwise seen from above)
   try { const c = localStorage.getItem('editorClipboard'); if (c) clip = decodeClip(JSON.parse(c)); } catch { }
   function updateClipInfo() {
     $('aClip').textContent = clip ? `Clipboard: ${clip.w} × ${clip.h} m, ${clip.objects.length} object(s).` : 'Copies the ground (shape and paint) and the shown objects inside the selection.';
@@ -321,17 +321,19 @@ export function createArea(ed) {
     if (!clip) { ed.msg('Copy an area first (Area tool, Ctrl+C).', true); return; }
     ed.setTool('paste');
   }
-  // Source offset (from the clip centre) -> destination offset, for rot quarter turns and mirror.
+  // Source offset (from the clip centre) -> destination offset, for the turn and mirror.
   function xf(dx, dz) {
     if (flip) dx = -dx;
-    for (let k = 0; k < rot; k++) [dx, dz] = [-dz, dx];
-    return [dx, dz];
+    const t = rot * Math.PI / 180, c = Math.cos(t), s = Math.sin(t);
+    return [dx * c - dz * s, dx * s + dz * c];
   }
   function inv(dx, dz) {
-    for (let k = 0; k < rot; k++) [dx, dz] = [dz, -dx];
+    const t = -rot * Math.PI / 180, c = Math.cos(t), s = Math.sin(t);
+    [dx, dz] = [dx * c - dz * s, dx * s + dz * c];
     if (flip) dx = -dx;
     return [dx, dz];
   }
+  const turnPaste = deg => { rot = ((rot + deg) % 360 + 360) % 360; updateGhost(); };
   const ghost = new THREE.Points(new THREE.BufferGeometry(), new THREE.PointsMaterial({ color: 0xffc24a, size: 5, sizeAttenuation: false, depthTest: false }));
   ghost.renderOrder = 16; ghost.frustumCulled = false; ed.scene.add(ghost);
   let pasteAt = null;
@@ -342,7 +344,7 @@ export function createArea(ed) {
     drawOutline(clip.poly.map(p => { const [x, z] = xf(p.gx, p.gz); return { gx: pasteAt.gx + x, gz: pasteAt.gz + z }; }), false);
     const anchorH = ed.sampleHeight(pasteAt.gx, pasteAt.gz) + +$('psOffset').value;
     ghost.geometry.setFromPoints(clip.objects.map(o => { const [x, z] = xf(o.dx, o.dz); const y = o.follow ? ed.sampleHeight(pasteAt.gx + x, pasteAt.gz + z) + o.dy : anchorH + o.dy; return new THREE.Vector3(pasteAt.gx + x - ed.cx, y + 0.5, -(pasteAt.gz + z - ed.cz)); }));
-    $('psInfo').textContent = `${clip.w} × ${clip.h} m, ${clip.objects.length} object(s) · turned ${rot * 90}°${flip ? ', mirrored' : ''}.`;
+    $('psInfo').textContent = `${clip.w} × ${clip.h} m, ${clip.objects.length} object(s) · turned ${+rot.toFixed(1)}°${flip ? ', mirrored' : ''}.`;
   }
   async function paste(at) {
     const anchorH = ed.sampleHeight(at.gx, at.gz) + +$('psOffset').value;
@@ -373,13 +375,19 @@ export function createArea(ed) {
         const [x, z] = xf(o.dx, o.dz);
         // Objects copied with the Select tool keep their height above the ground where they land.
         const y = o.follow ? ed.sampleHeight(at.gx + x, at.gz + z) + o.dy : anchorH + o.dy;
-        return { name: o.name, x: ed.originX + at.gx + x, y, z: ed.originZ + at.gz + z, rx: flip ? -o.rx : o.rx, ry: (flip ? -o.ry : o.ry) - 90 * rot, rz: flip ? -o.rz : o.rz, scale: o.scale, sourceId: o.sourceId ?? null, fresh: true };
+        return { name: o.name, x: ed.originX + at.gx + x, y, z: ed.originZ + at.gz + z, rx: flip ? -o.rx : o.rx, ry: (flip ? -o.ry : o.ry) - rot, rz: flip ? -o.rz : o.rz, scale: o.scale, sourceId: o.sourceId ?? null, fresh: true };
       }));
     }
     commitTerrain(state, touched, { x0, x1, z0, z1 }, { label: 'Paste', ...(added.length ? { added } : {}) });
     ed.msg(`Pasted${touched.size ? ' the ground' : ''}${added.length ? ` and ${added.length} object(s)` : ''}. Click again to paste another copy, Esc when done.`);
   }
-  $('psRot').onclick = () => { rot = (rot + 1) % 4; updateGhost(); };
+  $('psRot').onclick = () => turnPaste(90);
+  // Alt + mouse wheel turns the paste in small steps.
+  ed.el.addEventListener('wheel', e => {
+    if (ed.tool !== 'paste' || !e.altKey) return;
+    e.preventDefault(); e.stopImmediatePropagation();
+    turnPaste(-Math.sign(e.deltaY) * ed.turnStep(e));
+  }, { capture: true, passive: false });
   $('psFlip').onclick = () => { flip = !flip; updateGhost(); };
   $('psDone').onclick = () => ed.setTool('area');
   $('psOffset').oninput = updateGhost;
@@ -481,7 +489,9 @@ export function createArea(ed) {
     move(e, hit) { ed.showStatusFor?.(hit); if (hit) { pasteAt = hit; updateGhost(); } },
     key(e) {
       const k = e.key.toLowerCase();
-      if (k === 'r') { rot = (rot + 1) % 4; updateGhost(); return true; }
+      if (k === 'r') { turnPaste(90); return true; }
+      // , . turn in small steps (. clockwise seen from above, like the other tools).
+      if (e.key === ',' || e.key === '<' || e.key === '.' || e.key === '>') { turnPaste((e.key === ',' || e.key === '<' ? 1 : -1) * ed.turnStep(e)); return true; }
       if (k === 'f') { flip = !flip; updateGhost(); return true; }
       if (e.key === 'Escape') { ed.setTool('area'); return true; }
       return false;
