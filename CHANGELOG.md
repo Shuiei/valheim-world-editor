@@ -3,6 +3,35 @@
 All notable changes to the Valheim world editor. Dates are when the change was made; the project
 has no version numbers yet. Newest first.
 
+## v0.2.0 — 2026-10-05 (desktop app)
+
+Download, unpack, double-click: no command line, no Python, nothing to install.
+
+### Added
+- **Its own window** on Windows and Linux (the system's web engine; the browser as fallback, or
+  with `--browser`), with an icon.
+- **Start page**: the worlds found on the computer (Valheim's usual folders, Proton included),
+  recently opened worlds, any other world folder (with a folder dialog), and a form to connect to
+  a running server. **Worlds** on the map page goes back to it.
+- **Automatic game look**: the editor finds Valheim in the Steam libraries and copies the game's
+  textures and models from it by itself, with progress on the page; it asks for the folder when
+  Valheim is not found, and copies again after a Valheim update. The copy lives in the per-user
+  data folder, next to the settings and a log.
+- **One download per system**, each with the server plugin in `server-plugin/` and instructions
+  for that system.
+
+### Changed
+- The program is now called `ValheimWorldEditor`. It picks the first free port from 5180, so a
+  second copy or another program never blocks it.
+- The game-look exporter comes with its own small Python runtime; its texture fixes need only
+  Pillow now (same visible result).
+
+### Fixed
+- Connecting to a server that does not answer gave up only after 3 minutes; the editor now checks
+  the bridge first (at most 10 seconds) and says what is wrong: no tunnel, wrong token, or a game
+  that does not host the world.
+- The app quits cleanly when the system asks it to (logout, shutdown), closing its window.
+
 ## v0.1.0 — 2026-10-05 (first release)
 
 Everything below, packaged: the editor for Linux and Windows (x64), and the WorldEditorBridge
