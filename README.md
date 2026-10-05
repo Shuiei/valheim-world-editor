@@ -116,6 +116,28 @@ have your own tunnel (`ssh -L`, PuTTY)? Use **More options → I made my own tun
 In every way, the [world map](docs/map.md) opens first: click a spot and choose **Edit in 3D**.
 **Worlds** (on the map page) goes back to the start page.
 
+### Game, plugin and worlds not where they usually are
+
+![Settings](docs/images/settings.jpg)
+
+The editor looks in the usual places by itself: Valheim in every Steam library (also Flatpak Steam
+and extra libraries), BepInEx in the Valheim folder and in the default r2modman / Thunderstore Mod
+Manager profiles, and worlds in Valheim's own world folders (Proton's too). When yours are
+elsewhere, set them in **⚙ Settings** on the start page:
+
+- **Valheim game folder**: the folder with `valheim_Data` (a copy outside Steam, a second install…).
+  **Automatic** goes back to searching the Steam libraries.
+- **BepInEx folders**: a `BepInEx` folder, a mod manager profile, or a folder of profiles (a mod
+  manager with its own data folder). Used to find the plugin for **My game**.
+- **World folders**: a world, or a folder of worlds (a server's `<savedir>/worlds_local` copy, a
+  backup folder…). Always listed under **A saved world**.
+
+For a **dedicated server**, the server form has an optional **Server's Valheim folder** (the
+folder with its `BepInEx`, for example `/home/valheim/server`). With it the editor reads the
+plugin's port from the server and, when the plugin does not answer, says exactly why: no BepInEx
+there, no plugin in `BepInEx/plugins`, or a server that is not running with BepInEx. It is saved
+with the server; **edit** next to a saved server changes it. (The token is still always typed.)
+
 ### Where things are kept
 
 Settings, saved servers (`servers.cfg`), the copied game files and a log are in `~/.local/share/ValheimWorldEditor` (Linux) or

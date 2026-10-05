@@ -22,6 +22,10 @@ Download, unpack, double-click: no command line, no Python, nothing to install.
   - **A saved world (offline)**: the worlds found on the computer (Valheim's usual folders, Proton
     included), recently opened ones, and any other folder (with a folder dialog).
   **Worlds** on the map page goes back to the start page.
+- **Settings** for folders that are not in the usual place: the Valheim game folder, extra BepInEx
+  folders or mod manager profiles, and world folders that are always listed. For a server, an
+  optional **Server's Valheim folder**: the plugin's port is read from it, and when the plugin does
+  not answer the editor says exactly what is missing there.
 - **Automatic game look**: the editor finds Valheim in the Steam libraries and copies the game's
   textures and models from it by itself, with progress on the page; it asks for the folder when
   Valheim is not found, and copies again after a Valheim update. The copy lives in the per-user
