@@ -122,6 +122,8 @@ public static class AppHost
 				end = SessionEnd.Failed;
 			}
 			_session = null;
+			// A tunnel belongs to the session that used it.
+			Tunnel.Close();
 			if (end == SessionEnd.Exit)
 			{
 				return;
@@ -156,7 +158,7 @@ public static class AppHost
 	}
 
 	// The first free port from `from` on, so a second copy (or another program) never blocks the start.
-	private static int FreePort(int from)
+	public static int FreePort(int from)
 	{
 		for (int p = from; p < from + 50; p++)
 		{

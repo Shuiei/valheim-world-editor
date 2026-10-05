@@ -19,6 +19,13 @@ export function pickFolder(title) {
   return new Promise(resolve => { waiting.set(id, resolve); window.external.sendMessage(`pick:${id}:${title}`); });
 }
 
+// A native "choose file" dialog in the app window; null in a browser.
+export function pickFile(title) {
+  if (!inWindow) return Promise.resolve(null);
+  const id = 'p' + Math.random().toString(36).slice(2);
+  return new Promise(resolve => { waiting.set(id, resolve); window.external.sendMessage(`pickfile:${id}:${title}`); });
+}
+
 // Links that leave the editor open in the user's browser, not inside the app window.
 export function openExternal(url) {
   if (inWindow) window.external.sendMessage('open:' + url); else window.open(url, '_blank', 'noopener');

@@ -50,13 +50,14 @@ public static class NativeWindow
 				{
 					AppHost.OpenBrowser(message[5..]);
 				}
-				else if (message.StartsWith("pick:", StringComparison.Ordinal))
+				else if (message.StartsWith("pick:", StringComparison.Ordinal) || message.StartsWith("pickfile:", StringComparison.Ordinal))
 				{
 					string[] parts = message.Split(':', 3);
+					string title = parts.Length > 2 ? parts[2] : "Choose";
 					string picked = "";
 					try
 					{
-						picked = w.ShowOpenFolder(parts.Length > 2 ? parts[2] : "Choose a folder")?.FirstOrDefault() ?? "";
+						picked = (parts[0] == "pickfile" ? w.ShowOpenFile(title) : w.ShowOpenFolder(title))?.FirstOrDefault() ?? "";
 					}
 					catch (Exception ex)
 					{

@@ -13,13 +13,26 @@
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg) radial-gradient(1200px 500px at 20% -10%, #2a2416 0%, transparent 60%); color: var(--text);
     font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; min-height: 100vh; }
-  main { max-width: 980px; margin: 0 auto; padding: 36px 20px 60px; }
-  header { display: flex; align-items: baseline; gap: 12px; margin-bottom: 6px; }
-  h1 { margin: 0; font-size: 26px; letter-spacing: .01em; }
+  main { max-width: 980px; margin: 0 auto; padding: 34px 20px 60px; }
+  header { display: flex; align-items: baseline; gap: 12px; margin-bottom: 4px; }
+  h1 { margin: 0; font-size: 26px; }
   h1 span { color: var(--accent); }
   .ver { color: var(--muted); font-size: 12px; }
-  .lead { color: var(--muted); margin: 0 0 26px; max-width: 680px; }
-  h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 28px 0 10px; font-weight: 600; }
+  .lead { color: var(--muted); margin: 0 0 22px; max-width: 700px; }
+  h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 22px 0 10px; font-weight: 600; }
+  .modes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  @media (max-width: 760px) { .modes { grid-template-columns: 1fr; } }
+  .mode { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; cursor: pointer; text-align: left; color: inherit; font: inherit; }
+  .mode:hover { border-color: var(--line2); }
+  .mode.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+  .mode .t { font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+  .mode .k { font-size: 10.5px; text-transform: uppercase; letter-spacing: .08em; padding: 1px 7px; border-radius: 999px; border: 1px solid #2a6a4a; color: #9fe0b8; }
+  .mode .k.off { border-color: #4a5260; color: var(--muted); }
+  .mode .d { color: var(--muted); font-size: 13px; margin-top: 4px; }
+  .panel { margin-top: 14px; }
+  .panel[hidden] { display: none; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
+  .card + .card { margin-top: 12px; }
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
   .world { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; cursor: pointer; text-align: left;
     color: inherit; font: inherit; display: flex; flex-direction: column; gap: 4px; transition: border-color .12s, transform .12s; }
@@ -30,19 +43,33 @@
   .world .path { color: #6f7887; font-size: 11.5px; overflow-wrap: anywhere; }
   .world .tag { align-self: flex-start; font-size: 11px; color: var(--accent); border: 1px solid #5a4523; border-radius: 999px; padding: 0 8px; }
   .world .problem { color: var(--warn); font-size: 12px; }
-  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
-  .row { display: flex; gap: 8px; flex-wrap: wrap; }
-  input { flex: 1; min-width: 200px; background: var(--panel2); color: var(--text); border: 1px solid var(--line2); border-radius: 8px; padding: 9px 10px; font: inherit; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .row + .row { margin-top: 8px; }
+  label.f { display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 160px; font-size: 12px; color: var(--muted); }
+  input[type=text], input[type=password], input[type=number], input:not([type]) { flex: 1; min-width: 0; background: var(--panel2); color: var(--text); border: 1px solid var(--line2); border-radius: 8px; padding: 9px 10px; font: inherit; }
+  label.check { display: flex; gap: 6px; align-items: center; font-size: 13px; color: var(--text); }
   button.b { background: #262b34; color: var(--text); border: 1px solid var(--line2); border-radius: 8px; padding: 9px 16px; font: inherit; cursor: pointer; }
   button.b:hover { border-color: var(--accent); }
   button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+  button.link { background: none; border: 0; color: var(--muted); cursor: pointer; font: inherit; font-size: 12px; text-decoration: underline; padding: 0; }
   .hint { color: var(--muted); font-size: 12.5px; margin-top: 8px; }
-  .err { color: var(--warn); margin-top: 8px; min-height: 1em; }
-  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  @media (max-width: 760px) { .cols { grid-template-columns: 1fr; } }
-  code { background: #232830; border-radius: 4px; padding: 0 4px; font-size: 12px; }
+  .err { color: var(--warn); margin-top: 8px; }
+  .err:empty { display: none; }
+  code { background: #232830; border-radius: 4px; padding: 0 4px; font-size: 12px; overflow-wrap: anywhere; }
   a { color: var(--accent); }
-  #busy { position: fixed; inset: 0; background: rgba(10,12,15,.8); display: flex; align-items: center; justify-content: center; font-size: 18px; z-index: 60; }
+  ol { margin: 8px 0 0; padding-left: 20px; } ol li { margin: 4px 0; }
+  .state { display: flex; gap: 12px; align-items: center; }
+  .state .big { font-size: 16px; font-weight: 600; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--muted); flex: none; }
+  .dot.ok { background: var(--ok); box-shadow: 0 0 8px var(--ok); }
+  .dot.wait { background: var(--accent); animation: pulse 1.4s infinite; }
+  @keyframes pulse { 50% { opacity: .3; } }
+  .server { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); }
+  .server:first-child { border-top: 0; padding-top: 0; }
+  .server .n { font-weight: 600; } .server .h { color: var(--muted); font-size: 12.5px; }
+  .server .grow { flex: 1; }
+  details summary { cursor: pointer; color: var(--muted); font-size: 12.5px; margin-top: 10px; }
+  #busy { position: fixed; inset: 0; background: rgba(10,12,15,.8); display: flex; align-items: center; justify-content: center; font-size: 18px; z-index: 60; text-align: center; padding: 20px; }
   #busy[hidden] { display: none; }
   .empty { color: var(--muted); padding: 18px; border: 1px dashed var(--line2); border-radius: 12px; }
   #lastError { background: #2a1714; border: 1px solid #6a2c22; color: #f2c5bd; border-radius: 10px; padding: 10px 14px; margin-bottom: 16px; }
@@ -52,48 +79,186 @@
 <body>
 <main>
   <header><h1><span>Valheim</span> World Editor</h1><span class="ver" id="ver"></span></header>
-  <p class="lead">Shape the ground, paint it, build paths, place and move trees, rocks, crops and building pieces, copy and paste whole areas. Pick a world to start.</p>
+  <p class="lead">Shape the ground, paint it, build paths, place and move trees, rocks, crops and building pieces, copy and paste whole areas.</p>
   <div id="lastError" hidden></div>
   <div id="glHere"></div>
 
-  <h2>Your worlds</h2>
-  <div class="grid" id="worlds"><div class="empty">Looking for worlds…</div></div>
-  <div class="hint">Close Valheim (or stop the server) before you save changes into a world: a running game writes over the files. Saving always makes a full backup of the world first.</div>
-
-  <div class="cols">
-    <div>
-      <h2>Another world folder</h2>
-      <div class="card">
-        <div class="row"><input id="path" placeholder="Folder of the world (with _main.&lt;n&gt;.chunks files)"><button class="b" id="browse" hidden>Browse…</button><button class="b primary" id="openPath">Open</button></div>
-        <div class="err" id="pathErr"></div>
-        <div class="hint">For example a dedicated server's world: <code>&lt;savedir&gt;/worlds_local/&lt;World&gt;</code>.</div>
-      </div>
-    </div>
-    <div>
-      <h2>A running server (live)</h2>
-      <div class="card">
-        <div class="row"><input id="liveUrl" placeholder="Bridge address" value="127.0.0.1:5182"></div>
-        <div class="row" style="margin-top:8px"><input id="token" placeholder="Token (from BepInEx/config/local.worldeditorbridge.cfg)"><button class="b primary" id="connect">Connect</button></div>
-        <div class="err" id="liveErr"></div>
-        <div class="hint">Edit a world while people play: needs BepInEx and the WorldEditorBridge plugin on the server, and usually an SSH tunnel. <a href="https://github.com/Shuiei/valheim-world-editor/blob/main/docs/live-mode.md">How to set it up</a>.</div>
-      </div>
-    </div>
+  <h2>How do you want to edit?</h2>
+  <div class="modes">
+    <button class="mode" data-mode="game"><span class="t">My game <span class="k">live</span></span><span class="d">Edit the world you are playing in, single player or the one you host. You see the changes in game right away.</span></button>
+    <button class="mode" data-mode="server"><span class="t">A dedicated server <span class="k">live</span></span><span class="d">Edit your server's world while people play. The editor connects to the server itself.</span></button>
+    <button class="mode" data-mode="offline"><span class="t">A saved world <span class="k off">offline</span></span><span class="d">Edit world files on this computer with the game closed, then start the game again.</span></button>
   </div>
-  <p class="hint" style="margin-top:28px"><a href="https://github.com/Shuiei/valheim-world-editor#readme">Documentation</a> · settings and log: <code id="dataDir"></code></p>
+
+  <!-- ---- My game (live) -->
+  <section class="panel" id="p-game" hidden>
+    <div class="card" id="gameState"><div class="state"><span class="dot wait"></span><span>Looking for Valheim…</span></div></div>
+    <div class="err" id="gameErr"></div>
+  </section>
+
+  <!-- ---- Dedicated server (live) -->
+  <section class="panel" id="p-server" hidden>
+    <div class="card" id="savedCard" hidden>
+      <div id="saved"></div>
+      <div class="err" id="savedErr"></div>
+    </div>
+    <div class="card">
+      <div style="font-weight:600;margin-bottom:8px" id="newTitle">Connect to a server</div>
+      <div class="row">
+        <label class="f">Server address<input id="sHost" placeholder="my.server.com or 203.0.113.10"></label>
+        <label class="f" style="max-width:110px">SSH port<input id="sPort" type="number" value="22"></label>
+      </div>
+      <div class="row">
+        <label class="f">User<input id="sUser" placeholder="the account you log in with"></label>
+        <label class="f">Password<input id="sPass" type="password" placeholder="or use a key file below"></label>
+      </div>
+      <div class="row">
+        <label class="f">SSH key file (optional)<input id="sKey" placeholder="~/.ssh/id_ed25519"></label>
+        <button class="b" id="sKeyBrowse" hidden style="align-self:flex-end">Browse…</button>
+      </div>
+      <div class="row">
+        <label class="f">Plugin token<input id="sToken" placeholder="the Token line in BepInEx/config/local.worldeditorbridge.cfg on the server"></label>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <label class="check"><input type="checkbox" id="sSave"> Save password</label>
+        <span class="grow" style="flex:1"></span>
+        <button class="b primary" id="sConnect">Connect</button>
+      </div>
+      <div class="err" id="serverErr"></div>
+      <div class="hint">The server needs BepInEx and the WorldEditorBridge plugin (in the <code>plugin</code> folder next to this program; see its README). The editor logs in with SSH and connects to the plugin through its own encrypted tunnel: no ssh command to type. After the first connection the server (with its token) is saved for one-click access.</div>
+      <details>
+        <summary>More options</summary>
+        <div class="row" style="margin-top:8px">
+          <label class="f">Name in the list<input id="sName" placeholder="(the address)"></label>
+          <label class="f">Key passphrase<input id="sPhrase" type="password"></label>
+          <label class="f" style="max-width:130px">Plugin port<input id="sBridge" type="number" placeholder="5182"></label>
+        </div>
+        <div style="font-weight:600;margin:14px 0 6px">I made my own tunnel</div>
+        <div class="row">
+          <label class="f">Bridge address<input id="liveUrl" value="127.0.0.1:5182"></label>
+          <label class="f">Token<input id="token" placeholder="from BepInEx/config/local.worldeditorbridge.cfg"></label>
+          <button class="b" id="connectUrl" style="align-self:flex-end">Connect</button>
+        </div>
+        <div class="err" id="urlErr"></div>
+      </details>
+    </div>
+  </section>
+
+  <!-- ---- Saved world (offline) -->
+  <section class="panel" id="p-offline" hidden>
+    <div class="grid" id="worlds"><div class="empty">Looking for worlds…</div></div>
+    <div class="hint">Close Valheim (or stop the server) before you save changes into a world: a running game writes over the files. Saving always makes a full backup of the world first.</div>
+    <div class="card" style="margin-top:12px">
+      <div style="font-weight:600;margin-bottom:8px">Another world folder</div>
+      <div class="row"><input id="path" placeholder="Folder of the world (with _main.&lt;n&gt;.chunks files)"><button class="b" id="browse" hidden>Browse…</button><button class="b primary" id="openPath">Open</button></div>
+      <div class="err" id="pathErr"></div>
+      <div class="hint">For example a copy of a dedicated server's world: <code>&lt;savedir&gt;/worlds_local/&lt;World&gt;</code>.</div>
+    </div>
+  </section>
+
+  <p class="hint" style="margin-top:28px"><a href="https://github.com/Shuiei/valheim-world-editor#readme">Documentation</a> · settings, saved servers and log: <code id="dataDir"></code></p>
 </main>
 <div id="busy" hidden>Opening…</div>
 <script type="module">
-import { gameLookBanner, pickFolder, isWindow } from './app.js';
+import { gameLookBanner, pickFolder, pickFile, isWindow } from './app.js';
 const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 gameLookBanner({ inline: $('glHere'), onReady: () => location.reload() });
-if (isWindow) $('browse').hidden = false;
-fetch('/api/app').then(r => r.json()).then(a => { $('ver').textContent = 'v' + a.version; $('dataDir').textContent = a.dataDir ?? ''; });
+if (isWindow) { $('browse').hidden = false; $('sKeyBrowse').hidden = false; }
+let app = {};
+fetch('/api/app').then(r => r.json()).then(a => { app = a; $('ver').textContent = 'v' + a.version; $('dataDir').textContent = a.dataDir ?? ''; });
+
+// ---- Choosing how to edit (remembered).
+let mode = null;
+function setMode(m) {
+  mode = m;
+  document.querySelectorAll('.mode').forEach(b => b.classList.toggle('on', b.dataset.mode === m));
+  for (const id of ['game', 'server', 'offline']) $('p-' + id).hidden = id !== m;
+  if (m === 'game') pollGame(); else clearTimeout(gameTimer);
+  if (m === 'server') loadServers();
+  if (m === 'offline') loadWorlds();
+}
+document.querySelectorAll('.mode').forEach(b => b.onclick = () => setMode(b.dataset.mode));
 fetch('/api/launcher/state').then(r => r.json()).then(s => {
   if (s.error) { $('lastError').textContent = s.error; $('lastError').hidden = false; }
   if (s.live) $('liveUrl').value = s.live.replace(/^https?:\/\//, '');
+  setMode(s.mode || 'game');
 });
 
-const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+// ---- Opening (all modes): the editor restarts on the same address, then shows the world map.
+async function open(body, errEl, what) {
+  $('busy').textContent = what; $('busy').hidden = false; errEl.textContent = '';
+  let r;
+  try { r = await (await fetch('/api/launcher/open', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })).json(); }
+  catch { r = { ok: false, error: 'The editor did not answer.' }; }
+  if (!r.ok) { $('busy').hidden = true; errEl.textContent = r.error; return r; }
+  $('busy').textContent = body.path ? 'Opening the world…' : 'Loading the world from the game…';
+  for (let i = 0; i < 600; i++) {
+    await new Promise(res => setTimeout(res, 400));
+    try { const s = await (await fetch('/api/launcher/state', { cache: 'no-store' })).json(); if (s.phase === 'editor') { location.href = '/index.html'; return r; } if (s.phase === 'start' && i > 3) { location.reload(); return r; } } catch { }
+    if (i === 25) $('busy').textContent += ' (a big world takes a moment)';
+  }
+  $('busy').hidden = true; errEl.textContent = 'The world did not open within 4 minutes. Check the log (path at the bottom of this page).';
+  return r;
+}
+
+// ---- My game: is Valheim running with the plugin?
+let gameTimer = null;
+const steps = `<ol>
+  <li><b>Install BepInEx</b> for Valheim: <a href="https://thunderstore.io/c/valheim/p/denikson/BepInExPack_Valheim/">BepInExPack for Valheim</a> (with a mod manager such as r2modman, or by hand into the Valheim folder: see its page).</li>
+  <li><b>Add the plugin</b>: copy <code>${esc('WorldEditorBridge.dll')}</code> from the <code>plugin</code> folder next to this program into <code>BepInEx/plugins</code> of your game (or of your mod manager profile).</li>
+  <li><b>Start Valheim</b> (with BepInEx) and load your world. This page notices it by itself.</li></ol>
+  <div class="hint"><a href="https://github.com/Shuiei/valheim-world-editor/blob/main/docs/live-mode.md#your-own-game">Step-by-step guide</a></div>`;
+async function pollGame() {
+  clearTimeout(gameTimer);
+  let s;
+  try { s = await (await fetch('/api/launcher/local')).json(); } catch { gameTimer = setTimeout(pollGame, 3000); return; }
+  const where = s.where ? ` <span class="hint">(${esc(s.where)})</span>` : '';
+  let html;
+  if (s.state === 'running') {
+    html = `<div class="state"><span class="dot ok"></span><div style="flex:1"><div class="big">Valheim is running with the world ${esc(s.world)}</div>
+      <div class="hint" style="margin:0">${s.players} player(s) connected${where}</div></div><button class="b primary" id="editGame">Edit live</button></div>`;
+  } else if (s.state === 'installed') {
+    html = `<div class="state"><span class="dot wait"></span><div><div class="big">Start Valheim and load your world</div>
+      <div class="hint" style="margin:0">Single player, or the world you host. This page notices it by itself.${where}</div></div></div>`;
+  } else if (s.state === 'plugin-not-started') {
+    html = `<div class="state"><span class="dot wait"></span><div><div class="big">Start Valheim once with BepInEx</div>
+      <div class="hint" style="margin:0">The plugin is installed; it makes its settings on the first start. Then load your world.</div></div></div>`;
+  } else {
+    html = `<div class="big">Your game needs BepInEx and the WorldEditorBridge plugin (once, about 5 minutes)</div>${s.state === 'no-plugin' ? '<div class="hint">BepInEx is installed: only steps 2 and 3 are left.</div>' : ''}${steps}`;
+  }
+  if ($('gameState').dataset.html !== html) { $('gameState').innerHTML = html; $('gameState').dataset.html = html; $('editGame')?.addEventListener('click', () => open({ mode: 'game' }, $('gameErr'), 'Connecting to your game…')); }
+  if (mode === 'game') gameTimer = setTimeout(pollGame, s.state === 'running' ? 5000 : 2500);
+}
+
+// ---- Dedicated servers: saved ones (one click) and a new one.
+async function loadServers() {
+  const list = await (await fetch('/api/launcher/servers')).json();
+  $('savedCard').hidden = !list.length;
+  $('newTitle').textContent = list.length ? 'Another server' : 'Connect to a server';
+  $('saved').innerHTML = list.map((s, i) => `<div class="server" data-i="${i}">
+      <div class="grow"><div class="n">${esc(s.name)}</div><div class="h">${esc(s.user)}@${esc(s.host)}${s.sshPort !== 22 ? ':' + s.sshPort : ''} · ${s.keyFile ? 'key file' : s.hasPassword ? 'password saved' : 'password asked'}</div></div>
+      ${!s.hasToken ? '<input class="tk" placeholder="Plugin token" style="max-width:180px">' : ''}
+      ${!s.hasPassword && !s.keyFile ? '<input class="pw" type="password" placeholder="Password" style="max-width:180px">' : ''}
+      <button class="b primary go">Connect</button><button class="link forget">forget</button></div>`).join('');
+  $('saved').querySelectorAll('.server').forEach(row => {
+    const s = list[+row.dataset.i];
+    row.querySelector('.go').onclick = () => open({ mode: 'saved', id: s.id, password: row.querySelector('.pw')?.value || null, token: row.querySelector('.tk')?.value || null }, $('savedErr'), `Connecting to ${s.name}…`);
+    row.querySelector('.pw')?.addEventListener('keydown', e => { if (e.key === 'Enter') row.querySelector('.go').click(); });
+    row.querySelector('.forget').onclick = async () => { if (confirm(`Forget ${s.name}?`)) { await fetch('/api/launcher/forget', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: s.id }) }); loadServers(); } };
+  });
+}
+$('sConnect').onclick = () => {
+  if (!$('sHost').value.trim()) { $('serverErr').textContent = 'Enter the server address.'; return; }
+  if (!$('sToken').value.trim()) { $('serverErr').textContent = "Enter the plugin's token (the Token line in BepInEx/config/local.worldeditorbridge.cfg on the server)."; return; }
+  open({ mode: 'server', host: $('sHost').value, sshPort: +$('sPort').value || 22, user: $('sUser').value, password: $('sPass').value || null, keyPath: $('sKey').value || null,
+    passphrase: $('sPhrase').value || null, savePassword: $('sSave').checked, name: $('sName').value || null, token: $('sToken').value, bridgePort: +$('sBridge').value || null }, $('serverErr'), 'Connecting to the server…');
+};
+$('sPass').onkeydown = e => { if (e.key === 'Enter') $('sConnect').click(); };
+$('sKeyBrowse').onclick = async () => { const p = await pickFile('Choose your SSH private key (often ~/.ssh/id_ed25519)'); if (p) $('sKey').value = p; };
+$('connectUrl').onclick = () => { if (!$('token').value.trim()) { $('urlErr').textContent = 'Enter the token from the server.'; return; } open({ liveUrl: $('liveUrl').value, token: $('token').value }, $('urlErr'), 'Connecting to the server… (up to 10 s)'); };
+
+// ---- Saved worlds (offline).
 function ago(t) {
   const d = (Date.now() - new Date(t)) / 1000;
   if (d < 90) return 'just now';
@@ -102,7 +267,9 @@ function ago(t) {
   if (d < 86400 * 60) return `${Math.round(d / 86400)} days ago`;
   return new Date(t).toLocaleDateString();
 }
+let worldsLoaded = false;
 async function loadWorlds() {
+  if (worldsLoaded) return; worldsLoaded = true;
   const list = await (await fetch('/api/launcher/worlds')).json();
   $('worlds').innerHTML = list.length ? list.map((w, i) => `<button class="world" data-i="${i}" ${w.usable ? '' : 'disabled'} title="${esc(w.path)}">
       ${w.where === 'recent' ? '<span class="tag">recently opened</span>' : ''}
@@ -111,30 +278,11 @@ async function loadWorlds() {
       ${w.problem ? `<span class="problem">${esc(w.problem)}</span>` : ''}
       <span class="path">${esc(w.path)}</span></button>`).join('')
     : `<div class="empty">No world found in Valheim's usual folders. Open one below by its folder.</div>`;
-  $('worlds').querySelectorAll('.world').forEach(b => b.onclick = () => open({ path: list[+b.dataset.i].path }, null));
+  $('worlds').querySelectorAll('.world').forEach(b => b.onclick = () => open({ path: list[+b.dataset.i].path }, $('pathErr'), 'Opening the world…'));
 }
-loadWorlds();
-
-async function open(body, errEl) {
-  $('busy').textContent = body.liveUrl ? 'Connecting to the server… (up to 10 s)' : 'Opening the world…'; $('busy').hidden = false;
-  let r;
-  try { r = await (await fetch('/api/launcher/open', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })).json(); }
-  catch { r = { ok: false, error: 'The editor did not answer.' }; }
-  if (!r.ok) { $('busy').hidden = true; (errEl ?? $('lastError')).textContent = r.error; if (!errEl) $('lastError').hidden = false; return; }
-  // The editor starts on the same address: wait for it (a big live world can take a while over the
-  // tunnel), then show the world map; after 4 minutes, give up and say so.
-  for (let i = 0; i < 600; i++) {
-    await new Promise(res => setTimeout(res, 400));
-    try { const s = await (await fetch('/api/launcher/state', { cache: 'no-store' })).json(); if (s.phase === 'editor') { location.href = '/index.html'; return; } if (s.phase === 'start' && i > 3) { location.reload(); return; } } catch { }
-    if (i === 25) $('busy').textContent += ' (still loading: a big world takes a moment)';
-  }
-  $('busy').hidden = true;
-  $('lastError').textContent = 'The world did not open within 4 minutes. Check the log (path at the bottom of this page) and try again.'; $('lastError').hidden = false;
-}
-$('openPath').onclick = () => open({ path: $('path').value }, $('pathErr'));
+$('openPath').onclick = () => open({ path: $('path').value }, $('pathErr'), 'Opening the world…');
 $('path').onkeydown = e => { if (e.key === 'Enter') $('openPath').click(); };
 $('browse').onclick = async () => { const p = await pickFolder('Choose the world folder'); if (p) { $('path').value = p; $('openPath').click(); } };
-$('connect').onclick = () => { if (!$('token').value.trim()) { $('liveErr').textContent = 'Enter the token from the server.'; return; } open({ liveUrl: $('liveUrl').value, token: $('token').value }, $('liveErr')); };
 </script>
 </body>
 </html>
