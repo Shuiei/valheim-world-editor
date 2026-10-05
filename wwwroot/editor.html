@@ -251,6 +251,7 @@ import { saveWorld, discardChanges } from './world-actions.js';
 import { createLook, DAY } from './terrain/look.js';
 import { pieceModel, setSeeThrough } from './terrain/pieces.js';
 import { createObjects, stableHash } from './editor/objects.js';
+import { createMasks } from './editor/masks.js';
 
 const params = new URLSearchParams(location.search);
 const czx = parseInt(params.get('zx') ?? '0'), czz = parseInt(params.get('zz') ?? '0');
@@ -699,6 +700,8 @@ const ed = {
 };
 const objects = createObjects(ed); ed.objects = objects;
 window.__ed = ed; // for automated tests
+createMasks(ed, [...BRUSH_TOOLS, 'path', 'area', 'plant']);
+syncToolPanel();
 Promise.all([fetch('/api/pieces').then(r => r.arrayBuffer()), fetch('/api/piece-types').then(r => r.json())]).then(async ([buf, types]) => {
   const p = new Float32Array(buf), S = 13, byType = new Map();
   let total = 0;
@@ -942,6 +945,7 @@ el.addEventListener('pointerdown', e => {
     pathPts.push({ gx: hover.gx, gz: hover.gz }); drawingPath = true; updatePathPreview();
     return;
   }
+  if (e.altKey && e.shiftKey) { ed.pickMaskHeight(sampleHeight(hover.gx, hover.gz)); return; }
   if (e.altKey) { $('target').value = sampleHeight(hover.gx, hover.gz).toFixed(1); syncInputs(); setTool('flatten'); return; }
   el.setPointerCapture(e.pointerId);
   const startState = snapshotState();
