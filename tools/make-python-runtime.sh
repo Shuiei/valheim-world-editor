@@ -25,6 +25,8 @@ if [ "$rid" = linux-x64 ]; then
   rm -rf "$py/include" "$py/share" "$py/lib/pkgconfig" "$py/lib/libpython3"* "$py/lib/libtcl"* "$py/lib/libtk"* "$py/lib/tcl"* "$py/lib/tk"* \
     "$py/lib/itcl"* "$py/lib/thread"* "$lib"/config-* "$lib"/lib-dynload/_tkinter*
   (cd "$py/bin" && rm -f 2to3* idle3* pip* pydoc3* python3*-config archspec)
+  # Zip files (Thunderstore) cannot hold the python and python3 links: the editor runs python3.12.
+  rm -f "$py/bin/python" "$py/bin/python3"
 else
   # Windows packages come as ready-made wheels; install them from here into the Windows tree.
   site="$py/Lib/site-packages"; lib="$py/Lib"

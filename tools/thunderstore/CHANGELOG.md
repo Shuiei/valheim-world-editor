@@ -2,6 +2,13 @@
 
 The editor's own changes: [CHANGELOG.md](https://github.com/Shuiei/valheim-world-editor/blob/main/CHANGELOG.md).
 
+## 0.3.1
+
+- **Three packages**: `ValheimWorldEditor_Windows` and `ValheimWorldEditor_Linux` (the editor with
+  the plugin) and `WorldEditorBridge` (the plugin alone, for servers). The plugin is unchanged.
+- The editor finds the mod manager profile it is installed in, and on Linux makes its bundled
+  Python runnable again after a mod manager unpacked it.
+
 ## 0.3.0
 
 First release on Thunderstore. From this version on, the plugin has the same version number as

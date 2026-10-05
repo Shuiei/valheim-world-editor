@@ -19,6 +19,11 @@ public static class LocalGame
 		{
 			yield return (Path.Combine(valheim, "BepInEx"), "Valheim folder");
 		}
+		// Installed by a mod manager (Thunderstore package): the editor sits in <profile>/BepInEx/plugins/...
+		if (InstalledIn() is string own)
+		{
+			yield return (own, "this mod manager profile");
+		}
 		// Folders added in Settings: a BepInEx folder itself, a profile holding one, or a folder of profiles.
 		foreach (string extra in settings.BepInExFolders)
 		{
@@ -65,6 +70,19 @@ public static class LocalGame
 				yield return (Path.Combine(profile, "BepInEx"), $"{name} profile \"{Path.GetFileName(profile)}\"");
 			}
 		}
+	}
+
+	// The BepInEx folder holding the editor, when a mod manager installed it into a profile's plugins.
+	public static string? InstalledIn(string? from = null)
+	{
+		for (var d = new DirectoryInfo(from ?? AppContext.BaseDirectory); d?.Parent != null; d = d.Parent)
+		{
+			if (d.Name.Equals("plugins", StringComparison.OrdinalIgnoreCase) && d.Parent.Name.Equals("BepInEx", StringComparison.OrdinalIgnoreCase))
+			{
+				return d.Parent.FullName;
+			}
+		}
+		return null;
 	}
 
 	public static List<Bridge> FindBridges(AppSettings settings, out bool bepInEx, out bool plugin)

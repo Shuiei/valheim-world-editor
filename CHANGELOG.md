@@ -3,6 +3,18 @@
 All notable changes to the Valheim world editor and its WorldEditorBridge plugin, which share one
 version number. Newest first.
 
+## v0.3.1 — 2026-10-05 (Thunderstore packages)
+
+### Added
+- **The editor on Thunderstore**: `ValheimWorldEditor_Windows` and `ValheimWorldEditor_Linux`, the
+  editor with the plugin, for r2modman and Thunderstore Mod Manager; `WorldEditorBridge` stays as
+  the plugin alone, for servers.
+- Installed by a mod manager, the editor finds its own profile for **My game**.
+
+### Fixed
+- Linux: the game-look export runs even when the bundled Python lost its run bit (mod managers
+  unpack without permissions). The release no longer holds the `python`/`python3` links.
+
 ## v0.3.0 — 2026-10-05 (Thunderstore)
 
 ### Added

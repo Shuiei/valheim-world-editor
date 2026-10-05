@@ -1,0 +1,9 @@
+{
+  "name": "ValheimWorldEditor_Windows",
+  "version_number": "@VERSION@",
+  "website_url": "https://github.com/Shuiei/valheim-world-editor",
+  "description": "A 3D world editor for Valheim (Windows program): sculpt terrain, build roads, plant, move and delete objects, live in your game or server, or offline. Includes the WorldEditorBridge plugin.",
+  "dependencies": [
+    "denikson-BepInExPack_Valheim-5.4.2351"
+  ]
+}

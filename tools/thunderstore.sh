@@ -1,43 +1,61 @@
 #!/usr/bin/env bash
-# Build the Thunderstore package of the WorldEditorBridge plugin into <dist>:
-#   <dist>/WorldEditorBridge-<version>.zip   manifest.json, icon.png, README.md, CHANGELOG.md and
-#                                            WorldEditorBridge.dll, all at the root of the zip
-# The version is the VERSION file's, shared by the editor and the plugin.
-# Usage: tools/thunderstore.sh <dist>   (needs dotnet 8, zip, python3 and the game's DLLs; see the
-# plugin's project file). Upload the zip at https://thunderstore.io/c/valheim/create/
+# Build the Thunderstore packages into <dist>, from tools/thunderstore/<package>/ (manifest.json and
+# the mod page's README.md), tools/thunderstore/CHANGELOG.md and wwwroot/icon.png:
+#   WorldEditorBridge-<version>.zip               the plugin alone (servers)
+#   ValheimWorldEditor_Windows-<version>.zip      the editor for Windows, with the plugin
+#   ValheimWorldEditor_Linux-<version>.zip        the editor for Linux, with the plugin
+# The editor packages are the release packages (tools/release.sh) with the ValheimWorldEditor folder
+# under plugins/: mod managers keep the folders inside plugins/ and flatten any other. The version
+# is the VERSION file's. Release packages of that version already in <dist> are reused.
+# Usage: tools/thunderstore.sh <dist>   (needs what tools/release.sh needs)
+# Upload each zip at https://thunderstore.io/c/valheim/create/
 set -euo pipefail
 dist=$(realpath -m "${1:?output folder}")
 repo=$(cd "$(dirname "$0")/.." && pwd)
-dotnet=${DOTNET:-dotnet}
+ts="$repo/tools/thunderstore"
 work=$(mktemp -d); trap 'rm -rf "$work"' EXIT
 mkdir -p "$dist"
 
 version=$(tr -d '[:space:]' < "$repo/VERSION")
 [[ $version =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "VERSION is not Major.Minor.Patch" >&2; exit 1; }
-
-"$dotnet" build "$repo/plugin/WorldEditorBridge/WorldEditorBridge.csproj" -c Release -p:DebugType=none -o "$work/build" >/dev/null
-rm -rf "$repo/plugin/WorldEditorBridge/bin" "$repo/plugin/WorldEditorBridge/obj"
-
-mkdir "$work/pkg"
-cp "$work/build/WorldEditorBridge.dll" "$repo/wwwroot/icon.png" "$repo/tools/thunderstore/README.md" "$work/pkg/"
-sed "s/@VERSION@/$version/" "$repo/tools/thunderstore/manifest.json" > "$work/pkg/manifest.json"
-cp "$repo/tools/thunderstore/CHANGELOG.md" "$work/pkg/CHANGELOG.md"
+linux="$dist/ValheimWorldEditor-v$version-linux-x64.tar.gz" windows="$dist/ValheimWorldEditor-v$version-win-x64.zip"
+[ -f "$linux" ] && [ -f "$windows" ] || "$repo/tools/release.sh" "$dist" >/dev/null
 
 # Thunderstore's rules: name a-z A-Z 0-9 _, description up to 250 characters, a 256x256 PNG icon.
-python3 - "$work/pkg" <<'PY'
+check() {
+  python3 - "$1" <<'PY'
 import json, re, struct, sys
 d = sys.argv[1]
 m = json.load(open(f"{d}/manifest.json", encoding="utf-8"))
 assert re.fullmatch(r"[A-Za-z0-9_]{1,128}", m["name"]), "name"
 assert len(m["description"]) <= 250, "description too long"
 assert re.fullmatch(r"\d+\.\d+\.\d+", m["version_number"]), "version"
-assert all(re.fullmatch(r"[\w]+-[\w]+-\d+\.\d+\.\d+", x) for x in m["dependencies"]), "dependencies"
+assert all(re.fullmatch(r"\w+-\w+-\d+\.\d+\.\d+", x) for x in m["dependencies"]), "dependencies"
 png = open(f"{d}/icon.png", "rb").read(24)
 assert png[:8] == b"\x89PNG\r\n\x1a\n" and struct.unpack(">II", png[16:24]) == (256, 256), "icon must be a 256x256 PNG"
 open(f"{d}/README.md", encoding="utf-8").read()
 PY
+}
 
-out="$dist/WorldEditorBridge-$version.zip"
-rm -f "$out"
-(cd "$work/pkg" && zip -q -X "$out" manifest.json icon.png README.md CHANGELOG.md WorldEditorBridge.dll)
-echo "$out"
+package() {   # $1 package name, $2 its folder in tools/thunderstore; the files are already in $work/$1
+  local name=$1 dir="$work/$1"
+  sed "s/@VERSION@/$version/" "$ts/$2/manifest.json" > "$dir/manifest.json"
+  cp "$ts/$2/README.md" "$ts/CHANGELOG.md" "$repo/wwwroot/icon.png" "$dir/"
+  check "$dir"
+  rm -f "$dist/$name-$version.zip"
+  (cd "$dir" && zip -qrX "$dist/$name-$version.zip" .)
+  echo "$dist/$name-$version.zip"
+}
+
+# The plugin alone: the same DLL as in the editor packages.
+mkdir -p "$work/WorldEditorBridge/plugins"
+tar -xzf "$linux" -C "$work" ValheimWorldEditor/plugin/WorldEditorBridge.dll
+mv "$work/ValheimWorldEditor/plugin/WorldEditorBridge.dll" "$work/WorldEditorBridge/plugins/"
+rm -rf "$work/ValheimWorldEditor"
+package WorldEditorBridge bridge
+
+mkdir -p "$work/ValheimWorldEditor_Linux/plugins" "$work/ValheimWorldEditor_Windows/plugins"
+tar -xzf "$linux" -C "$work/ValheimWorldEditor_Linux/plugins"
+unzip -q "$windows" -d "$work/ValheimWorldEditor_Windows/plugins"
+package ValheimWorldEditor_Linux linux
+package ValheimWorldEditor_Windows windows

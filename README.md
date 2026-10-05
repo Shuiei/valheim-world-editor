@@ -71,8 +71,9 @@ it into, with `valheim_Data`).
 1. **Install BepInEx** in your Valheim, once: [BepInExPack for Valheim](https://thunderstore.io/c/valheim/p/denikson/BepInExPack_Valheim/),
    either with a mod manager (r2modman, Thunderstore Mod Manager) or by hand into the Valheim folder,
    following its page.
-2. **Add the plugin:** with a mod manager, install **WorldEditorBridge** from Thunderstore (it
-   brings BepInEx with it). By hand: copy `plugin/WorldEditorBridge.dll` from the editor's folder
+2. **Add the plugin:** with a mod manager, install **ValheimWorldEditor_Windows** or
+   **ValheimWorldEditor_Linux** from Thunderstore: the editor and the plugin in one, BepInEx
+   included (start the editor from the profile's folder, see its page). By hand: copy `plugin/WorldEditorBridge.dll` from the editor's folder
    into `BepInEx/plugins` of your Valheim.
 3. **Start Valheim** with BepInEx and load your world (single player, or start a server from the
    game to host it).
