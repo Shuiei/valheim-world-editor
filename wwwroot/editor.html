@@ -59,7 +59,7 @@
   .field { display: grid; grid-template-columns: 74px 1fr 50px; align-items: center; gap: 8px; margin: 7px 0; color: var(--muted); }
   .field > span:last-child { text-align: right; color: var(--text); font-variant-numeric: tabular-nums; font-size: 12px; }
   input[type=range] { width: 100%; accent-color: var(--accent); }
-  input[type=number], select { width: 100%; background: var(--panel2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 4px 6px; font: inherit; }
+  input[type=number], input[type=search], select { width: 100%; background: var(--panel2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 4px 6px; font: inherit; }
   .field select { grid-column: span 2; }
   .hint { color: var(--muted); font-size: 11.5px; margin-top: 6px; }
   .sub { border-top: 1px solid var(--line); margin-top: 10px; padding-top: 8px; }
@@ -259,6 +259,7 @@ import { pieceModel, setSeeThrough } from './terrain/pieces.js';
 import { createObjects, stableHash } from './editor/objects.js';
 import { createMasks } from './editor/masks.js';
 import { createArea } from './editor/area.js';
+import { createPlant } from './editor/plant.js';
 
 const params = new URLSearchParams(location.search);
 const czx = parseInt(params.get('zx') ?? '0'), czz = parseInt(params.get('zz') ?? '0');
@@ -710,12 +711,13 @@ const ed = {
   get tool() { return tool; }, setTool: t => setTool(t), get radius() { return radius; }, get strength() { return strength; },
   handlers: {}, panels: toolPanels, onToolChange: toolChangeHooks, mask: g => 1,
   get selection() { return selection; }, selectIds: ids => { selection.clear(); for (const id of ids) if (entities.has(id)) selection.add(id); drawSelection(); }, clearSelection: () => clearSelection(),
-  showStatusFor: h => { hover = h; showStatus(); }
+  showStatusFor: h => { hover = h; showStatus(); }, updateRing: () => updateRing(), frame: []
 };
 const objects = createObjects(ed); ed.objects = objects;
 window.__ed = ed; // for automated tests
 createMasks(ed, [...BRUSH_TOOLS, 'path', 'area', 'plant']);
 createArea(ed);
+createPlant(ed);
 syncToolPanel();
 Promise.all([fetch('/api/pieces').then(r => r.arrayBuffer()), fetch('/api/piece-types').then(r => r.json())]).then(async ([buf, types]) => {
   const p = new Float32Array(buf), S = 13, byType = new Map();
@@ -1198,6 +1200,7 @@ toggleView(readPref('editorViewOpen', true));
 let last = performance.now();
 renderer.setAnimationLoop(now => {
   if (look) look.update(camera);
+  for (const f of ed.frame) f(Math.min((now - last) / 1000, 0.1));
   const dt = (now - last) / 1000; last = now;
   if (stroke) { applyBrush(dt); updateRing(); showStatus(); }
   moveWithKeys(dt);
