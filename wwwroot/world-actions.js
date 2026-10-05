@@ -25,10 +25,10 @@ export async function saveWorld(world, changes, onDone) {
   onDone?.(res);
 }
 
-export async function discardChanges(changes, onDone) {
+export async function discardChanges(changes, onDone, confirmed = false) {
   const what = describe(changes);
   if (!what) { alert('There are no unsaved changes.'); return; }
-  if (!confirm(`Discard the unsaved changes (${what})? The world is reloaded from disk.`)) return;
+  if (!confirmed && !confirm(`Discard the unsaved changes (${what})? The world is reloaded from disk.`)) return;
   await fetch('/api/discard', { method: 'POST' });
   onDone?.();
 }

@@ -457,6 +457,13 @@ app.MapPost("/api/discard", async () =>
 	}
 });
 
+// The editor undid every pending change in these zones: they are back to the saved / applied state.
+app.MapPost("/api/zones/clean", (int[][] zones) =>
+{
+	edits.MarkUnchanged(zones.Select(z => (z[0], z[1])));
+	return Results.Ok(Pending());
+});
+
 // New objects placed in the editor (plant brush, paste, replace). Ids are negative and chosen by the browser.
 app.MapPost("/api/objects/add", (List<NewObjectUpload> list) =>
 {

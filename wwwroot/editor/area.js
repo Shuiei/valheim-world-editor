@@ -414,7 +414,7 @@ export function createArea(ed) {
     for (const [x, z] of zones) undo ? resetZones.delete(`${x},${z}`) : resetZones.set(`${x},${z}`, { keepBuildings, ground });
     drawResets(); ed.showPendingFrom(res);
   }
-  ed.setResets = (r, forward) => postResets(r.zones, r.keepBuildings, r.ground, !forward);
+  ed.setResets = (r, forward) => (ed.track ?? (p => p))(postResets(r.zones, r.keepBuildings, r.ground, !forward));
   $('aReset').onclick = async () => {
     const zones = zonesUnder();
     if (!zones.length) { ed.msg('Select an area first.', true); return; }

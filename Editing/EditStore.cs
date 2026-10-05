@@ -249,6 +249,22 @@ public sealed class EditStore
 		}
 	}
 
+	// Zones the editor has put back to their saved / applied state (discarding pending changes).
+	public void MarkUnchanged(IEnumerable<(int X, int Z)> zones)
+	{
+		lock (_lock)
+		{
+			foreach (var key in zones)
+			{
+				if (_zones.TryGetValue(key, out ZoneEdit? e))
+				{
+					e.Changed = false;
+				}
+			}
+			Version++;
+		}
+	}
+
 	public void Put(ZoneEdit incoming)
 	{
 		incoming.Sanitize();
