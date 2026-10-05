@@ -235,15 +235,38 @@ public static class GameLook
 
 	private static string? ScriptPath() => ExportDir() is string d ? Path.Combine(d, "export_all.py") : null;
 
+	// Mod managers unpack zips without Unix permissions: give the bundled Python back its run bit.
+	private static void MakeRunnable(string path)
+	{
+		if (OperatingSystem.IsWindows())
+		{
+			return;
+		}
+		try
+		{
+			UnixFileMode mode = File.GetUnixFileMode(path);
+			const UnixFileMode run = UnixFileMode.UserExecute | UnixFileMode.GroupExecute | UnixFileMode.OtherExecute;
+			if ((mode & UnixFileMode.UserExecute) == 0)
+			{
+				File.SetUnixFileMode(path, mode | run);
+			}
+		}
+		catch (Exception e)
+		{
+			Console.WriteLine($"could not make {path} runnable: {e.Message}");
+		}
+	}
+
 	// The bundled Python runtime, else one installed on the computer (development).
 	private static string? PythonPath()
 	{
 		if (ExportDir() is string d)
 		{
-			foreach (string p in new[] { Path.Combine(d, "python", "python.exe"), Path.Combine(d, "python", "bin", "python3") })
+			foreach (string p in new[] { Path.Combine(d, "python", "python.exe"), Path.Combine(d, "python", "bin", "python3.12"), Path.Combine(d, "python", "bin", "python3") })
 			{
 				if (File.Exists(p))
 				{
+					MakeRunnable(p);
 					return p;
 				}
 			}

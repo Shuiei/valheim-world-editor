@@ -42,10 +42,15 @@ Wine's networking; not tried on real Windows).
 The plugin: build `plugin/WorldEditorBridge/WorldEditorBridge.csproj` after pointing its
 `HintPath`s at your BepInEx `core` folder and the game's `*_Data/Managed` folder.
 
-Thunderstore: `tools/thunderstore.sh <folder>` builds `WorldEditorBridge-<version>.zip` from
-`tools/thunderstore/` (`manifest.json`, the mod page's `README.md`, the plugin's `CHANGELOG.md`)
-and `wwwroot/icon.png`. It checks Thunderstore's rules (name, 250-character description, 256x256
-icon). Upload the zip at https://thunderstore.io/c/valheim/create/.
+Thunderstore: `tools/thunderstore.sh <folder>` builds three packages: `WorldEditorBridge` (the
+plugin alone, for servers), `ValheimWorldEditor_Windows` and `ValheimWorldEditor_Linux` (the
+release packages, plugin included, under `plugins/`: mod managers flatten every other folder).
+Each takes `manifest.json` and its mod page `README.md` from `tools/thunderstore/<bridge|windows|linux>/`,
+plus the shared `tools/thunderstore/CHANGELOG.md` and `wwwroot/icon.png`. The script checks
+Thunderstore's rules (name, 250-character description, 256x256 icon) and reuses release packages
+of the same version already in the folder. Upload each zip at https://thunderstore.io/c/valheim/create/.
+Installed by a mod manager, the editor sits in `<profile>/BepInEx/plugins/...`: it finds that
+profile by itself, and gives its bundled Python back the run bit that unpacking loses on Linux.
 
 ## Versions
 
@@ -56,7 +61,7 @@ version and its `/status`), and both release scripts name their packages after i
 1. Raise `VERSION` (Major.Minor.Patch).
 2. Add a `## v<version>` section to `CHANGELOG.md` and a `## <version>` section to
    `tools/thunderstore/CHANGELOG.md` (a test checks both).
-3. Keep the BepInExPack dependency in `tools/thunderstore/manifest.json` current.
+3. Keep the BepInExPack dependency in the three `tools/thunderstore/*/manifest.json` current.
 4. `tools/release.sh <folder>` and `tools/thunderstore.sh <folder>`; tag `v<version>`, publish the
    GitHub release, upload the Thunderstore zip (Thunderstore refuses a version it already has).
 

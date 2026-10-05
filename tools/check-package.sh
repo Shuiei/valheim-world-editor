@@ -4,7 +4,7 @@
 set -euo pipefail
 pkg=${1:?package}; plugin=${2:-}
 case "$pkg" in
-  *.tar.gz) list=$(tar -tzf "$pkg"); exe=ValheimWorldEditor/ValheimWorldEditor; py=ValheimWorldEditor/export-game-files/python/bin/python3 ;;
+  *.tar.gz) list=$(tar -tzf "$pkg"); exe=ValheimWorldEditor/ValheimWorldEditor; py=ValheimWorldEditor/export-game-files/python/bin/python3.12 ;;
   *.zip) list=$(unzip -Z1 "$pkg"); exe=ValheimWorldEditor/ValheimWorldEditor.exe; py=ValheimWorldEditor/export-game-files/python/python.exe ;;
   *) echo "unknown package type: $pkg" >&2; exit 2 ;;
 esac
