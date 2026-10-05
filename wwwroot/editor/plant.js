@@ -21,13 +21,24 @@ export function createPlant(ed) {
   ed.panels.push({ el: panel, tools: ['plant'] });
   const style = document.createElement('style');
   style.textContent = `
-    .plList { max-height: 210px; overflow-y: auto; border: 1px solid var(--line); border-radius: 7px; padding: 4px; }
-    .plList h4 { margin: 6px 4px 2px; font-size: 10.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; }
+    .plList { max-height: 300px; overflow-y: auto; border: 1px solid var(--line); border-radius: 7px; padding: 4px; }
+    .plList details + details { border-top: 1px solid var(--line); }
+    .plList summary { display: flex; align-items: center; gap: 6px; padding: 5px 4px; cursor: pointer; list-style: none; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; border-radius: 5px; }
+    .plList summary::-webkit-details-marker { display: none; }
+    .plList summary::before { content: '▸'; font-size: 10px; transition: transform .12s; }
+    .plList details[open] > summary::before { transform: rotate(90deg); }
+    .plList summary:hover { background: rgba(255,255,255,.04); color: var(--text); }
+    .plList summary .n { margin-left: auto; text-transform: none; letter-spacing: 0; font-weight: 500; }
+    .plList summary .n.sel { color: var(--accent); }
+    .plList details > div { padding: 0 0 4px 10px; }
     .plList label { display: flex; gap: 6px; align-items: center; padding: 2px 4px; border-radius: 5px; cursor: pointer; font-size: 12px; }
     .plList label:hover { background: rgba(255,255,255,.04); }`;
   document.head.appendChild(style);
 
-  const chosen = new Set(['Beech1']);
+  // Ticked kinds, remembered in this browser.
+  let chosen = new Set(['Beech1']);
+  try { const c = JSON.parse(localStorage.getItem('plantChosen') ?? 'null'); if (Array.isArray(c)) chosen = new Set(c); } catch { }
+  const saveChosen = () => { try { localStorage.setItem('plantChosen', JSON.stringify([...chosen])); } catch { } };
   const v = id => +$(id).value;
   function syncLabels() {
     $('plDensityV').textContent = v('plDensity').toFixed(1);
@@ -42,10 +53,28 @@ export function createPlant(ed) {
     const order = ['trees', 'rocks', 'bushes', 'pickables', 'ore', 'other', 'ruins', 'buildings'];
     const groups = {};
     for (const t of ed.objects.creatableTypes()) if (!q || t.name.toLowerCase().includes(q)) (groups[t.kind] ??= []).push(t);
-    $('plList').innerHTML = order.filter(k => groups[k]).map(k => `<h4>${KIND_LABEL[k]}</h4>` +
-      groups[k].map(t => `<label><input type="checkbox" value="${t.name}" ${chosen.has(t.name) ? 'checked' : ''}>${t.name}</label>`).join('')).join('') || '<div class="hint">Nothing matches.</div>';
-    $('plList').querySelectorAll('input').forEach(c => c.onchange = () => { c.checked ? chosen.add(c.value) : chosen.delete(c.value); syncLabels(); });
+    // One collapsible section per category; searching opens every category with a match.
+    $('plList').innerHTML = order.filter(k => groups[k]).map(k => `<details data-k="${k}" ${q || openKinds.has(k) ? 'open' : ''}>
+      <summary>${KIND_LABEL[k]}<span class="n"></span></summary>
+      <div>${groups[k].map(t => `<label><input type="checkbox" value="${t.name}" ${chosen.has(t.name) ? 'checked' : ''}>${t.name}</label>`).join('')}</div></details>`).join('') || '<div class="hint">Nothing matches.</div>';
+    $('plList').querySelectorAll('input').forEach(c => c.onchange = () => { c.checked ? chosen.add(c.value) : chosen.delete(c.value); saveChosen(); syncLabels(); countKinds(); });
+    $('plList').querySelectorAll('details').forEach(d => d.addEventListener('toggle', () => {
+      if (q) return;   // while searching, opening and closing is not remembered
+      d.open ? openKinds.add(d.dataset.k) : openKinds.delete(d.dataset.k);
+      try { localStorage.setItem('plantOpenKinds', JSON.stringify([...openKinds])); } catch { }
+    }));
+    countKinds();
   }
+  // "ticked / total" on each category header.
+  function countKinds() {
+    $('plList').querySelectorAll('details').forEach(d => {
+      const boxes = d.querySelectorAll('input'), on = [...boxes].filter(b => b.checked).length, n = d.querySelector('.n');
+      n.textContent = on ? `${on} / ${boxes.length}` : `${boxes.length}`;
+      n.classList.toggle('sel', on > 0);
+    });
+  }
+  let openKinds = new Set(['trees']);
+  try { const o = JSON.parse(localStorage.getItem('plantOpenKinds') ?? 'null'); if (Array.isArray(o)) openKinds = new Set(o); } catch { }
   $('plSearch').addEventListener('input', fillList);
   (ed.onObjects ??= []).push(fillList);
   syncLabels();
