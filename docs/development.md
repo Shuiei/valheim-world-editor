@@ -30,9 +30,13 @@ editing: `--summary`, `--inspect`, `--verify <dump>`, `--verify-ingame <file>`, 
 ## Building
 
 ```sh
-dotnet publish TerrainEditor.csproj -c Release -r linux-x64 --self-contained -p:PublishSingleFile=true -o out
-cp -r wwwroot out/
+dotnet publish TerrainEditor.csproj -c Release -r linux-x64 --self-contained -p:PublishSingleFile=true -o ../ValheimTerrainEditor
 ```
+
+The build copies `wwwroot` into the output. Publish outside the source folder: an output folder
+inside it is picked up as content by the next build. `-r win-x64` builds for Windows; it compiles,
+and under Wine editing and saving work, but the 58 MB world-map reply never arrived there (probably
+Wine's networking; not tried on real Windows).
 
 The plugin: build `plugin/WorldEditorBridge/WorldEditorBridge.csproj` after pointing its
 `HintPath`s at your BepInEx `core` folder and the game's `*_Data/Managed` folder.
@@ -45,19 +49,26 @@ The in-game look uses files that belong to the game, so they are not in git (see
 - `wwwroot/maptex/`: map textures;
 - `wwwroot/models/`: building, tree, rock and bush models, their textures and `objects.json`.
 
-They are made from a Valheim install with the scripts in `tools/asset-export` (Python 3,
-[UnityPy](https://github.com/K0lb3/UnityPy), Pillow). Each script says at the top what it reads and
-writes. The usual order:
+The scripts in `tools/asset-export` (Python 3, [UnityPy](https://github.com/K0lb3/UnityPy), Pillow)
+are what these files were made with, but **they are not yet a pipeline you can rerun as is**: some
+have the game's install path and temporary output folders written in, and the terrain shader
+conversion and the map textures were done by steps that are not in the repo. Roughly:
 
 1. `build_cab_index.py`: index of the game's asset bundles.
-2. `index_pieces.py`, `index_objects.py`: which bundle holds each piece and each world object.
-3. `export_pieces.py <out>` (with `INDEX=` the object index for world objects): meshes, textures,
-   materials.
-4. `fix_normals.py`, `fix_alpha.py`: convert normal maps and clean cut-out textures.
-5. `scan_prefabs.py <out.json>`: the prefab catalogue (`WorldGen/prefabs.json`, which is in git).
+2. `index_pieces.py <out.json>`, `index_objects.py <types.json> <out.json>`: which bundle holds each
+   piece and each world object (`types.json` lists the prefab hashes wanted, with counts).
+3. `export_pieces.py <wwwroot/models>` (with `INDEX=<object index>` for world objects): meshes,
+   textures, materials.
+4. `fix_normals.py <wwwroot/models>`, `fix_alpha.py <wwwroot/models>`: convert normal maps and clean
+   cut-out textures.
+5. `export_array.py`, `find_env.py`, `find_zs.py`, `probe_hm2.py`: terrain textures and shader
+   pieces (paths inside the scripts).
+6. `scan_prefabs.py <out.json>`: the prefab catalogue (`WorldGen/prefabs.json`, which is in git).
 
-Without the extracted files the 3D editor falls back to flat colours (View → Look says it could not
-load the game look) and objects have no models; the world map needs the map textures.
+Without the extracted files the editor still works: the world map uses plain colours, the 3D view
+uses flat colours (View → Look says it could not load the game look), buildings are boxes, and
+other objects are not drawn (so they cannot be clicked or selected), but they can still be planted,
+removed with the Area tool and saved.
 
 ## Tests
 
