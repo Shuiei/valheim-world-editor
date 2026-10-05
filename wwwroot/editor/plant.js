@@ -8,6 +8,7 @@ export function createPlant(ed) {
   const panel = document.createElement('div');
   panel.id = 'plantPanel';
   panel.innerHTML = `
+    <div class="seg" id="plModes"><button data-m="brush" class="on" title="Paint under the brush">Brush</button><button data-m="line" title="Objects along a line you draw">Line</button><button data-m="grid" title="One object in the middle of each grid cell">Grid</button></div>
     <input id="plSearch" type="search" placeholder="Search kinds (oak, rock, bush…)" style="width:100%;margin:2px 0 6px">
     <div id="plList" class="plList"></div>
     <div class="hint" id="plChosen"></div>
@@ -18,9 +19,21 @@ export function createPlant(ed) {
     <label class="field">Rotation <input id="plRot" type="range" min="-180" max="180" step="5" value="0"><span id="plRotV"></span></label>
     <label class="check"><input type="checkbox" id="plRandomYaw" checked> Random facing (off: all face the rotation)</label>
     <label class="check"><input type="checkbox" id="plSingle"> One at a time, exactly at the cursor</label>
+    <div id="plLineBox" hidden>
+      <label class="field">Every <input id="plEvery" type="range" min="0.5" max="30" step="0.5" value="4"><span id="plEveryV"></span></label>
+      <label class="field">Wiggle <input id="plWiggle" type="range" min="0" max="5" step="0.25" value="0"><span id="plWiggleV"></span></label>
+      <label class="check"><input type="checkbox" id="plAlong"> Face along the line (plus the rotation; replaces random facing)</label>
+      <label class="check"><input type="checkbox" id="plCurve" checked> Smooth curve through the points</label>
+      <div class="hint">Click points along the route, or hold and drag. Backspace removes the last point.</div>
+    </div>
+    <div id="plGridBox" hidden>
+      <label class="field">Cell <input id="plCell" type="range" min="1" max="30" step="0.5" value="4"><span id="plCellV"></span></label>
+      <div class="hint">Drag a box on the ground; one object goes in the middle of each cell.</div>
+    </div>
+    <div class="row" id="plPlaceRow" hidden><button id="plPlace" class="primary">Place <kbd>Enter</kbd></button><button id="plClearShape">Clear <kbd>Esc</kbd></button></div>
     <div class="row"><button id="plNewLayout">New layout <kbd>R</kbd></button></div>
     <div class="hint" id="plPreview" style="color:var(--text)"></div>
-    <div class="hint">Density is objects per 100 m². Spacing keeps them apart (also from what is already there). Shift + drag removes the chosen kinds. The Mask applies.</div>`;
+    <div class="hint" id="plBrushHint">Density is objects per 100 m². Spacing keeps them apart (also from what is already there). Shift + drag removes the chosen kinds. The Mask applies.</div>`;
   $('locWarn').before(panel);
   ed.panels.push({ el: panel, tools: ['plant'] });
   const style = document.createElement('style');
@@ -112,16 +125,17 @@ export function createPlant(ed) {
   // One placement at grid point (gx, gz) with the given random draws, or null when it may not go there.
   // Rotation of the preview (degrees, Unity yaw: clockwise seen from above).
   const rotation = () => v('plRot');
-  function placementAt(gx, gz, d, names, hash, cell) {
+  // yaw: an extra facing (degrees); null leaves the usual one. A fixed yaw replaces the random facing.
+  function placementAt(gx, gz, d, names, hash, cell, minDist = null, yaw = null) {
     if (gx < 1 || gz < 1 || gx > W - 2 || gz > H - 2) return null;
     if (!ed.mask(Math.round(gz) * W + Math.round(gx))) return null;
     // One at a time: you pick the spot, so only an object right on top (0.3 m) blocks it.
-    if (!free(hash, cell, gx, gz, $('plSingle').checked ? 0.3 : v('plSpacing'))) return null;
+    if (!free(hash, cell, gx, gz, minDist ?? ($('plSingle').checked ? 0.3 : v('plSpacing')))) return null;
     const y = heightAt(gx, gz);
     if (y < ed.WATER - 0.3 && !underwaterOk(names)) return null;  // not under water
     const smin = v('plSmin') / 100, smax = Math.max(smin, v('plSmax') / 100), tilt = v('plTilt');
     return { name: names[Math.floor(d.t * names.length) % names.length], x: ed.originX + gx, y: y - 0.05, z: ed.originZ + gz,
-      rx: d.rx * tilt, ry: ($('plRandomYaw').checked ? d.ry * 360 : 0) + rotation(), rz: d.rz * tilt, scale: smin + d.s * (smax - smin), gx, gz };
+      rx: d.rx * tilt, ry: (yaw != null ? yaw : $('plRandomYaw').checked ? d.ry * 360 : 0) + rotation(), rz: d.rz * tilt, scale: smin + d.s * (smax - smin), gx, gz };
   }
   const draw = () => ({ t: Math.random(), rx: Math.random() * 2 - 1, ry: Math.random(), rz: Math.random() * 2 - 1, s: Math.random() });
 
@@ -175,17 +189,118 @@ export function createPlant(ed) {
     }).catch(() => {});
     return null;
   }
+  // ---- Line and grid modes: placements follow a drawn line or fill the cells of a box.
+  let mode = 'brush', linePts = [], drawingLine = false, gridA = null, gridB = null;
+  const draws = [];   // random draws per placement index, stable until R
+  const drawAt = i => draws[i] ??= { ...draw(), w: Math.random() };
+  const shape = new THREE.Line(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0x9fe0ff, depthTest: false }));
+  shape.renderOrder = 15; shape.frustumCulled = false; ed.scene.add(shape);
+  const v3 = (gx, gz) => new THREE.Vector3(gx - ed.cx, ed.sampleHeight(gx, gz) + 0.3, -(gz - ed.cz));
+  function lineCurve() {
+    const p = linePts;
+    if (p.length < 2 || !$('plCurve').checked || p.length < 3) return p.slice();
+    const out = [];
+    for (let i = 0; i < p.length - 1; i++) {
+      const p0 = p[Math.max(0, i - 1)], p1 = p[i], p2 = p[i + 1], p3 = p[Math.min(p.length - 1, i + 2)];
+      const steps = Math.max(1, Math.ceil(Math.hypot(p2.gx - p1.gx, p2.gz - p1.gz)));
+      for (let k = 0; k < steps; k++) {
+        const t = k / steps, t2 = t * t, t3 = t2 * t;
+        const cr = (a, b, c, d) => 0.5 * (2 * b + (-a + c) * t + (2 * a - 5 * b + 4 * c - d) * t2 + (-a + 3 * b - 3 * c + d) * t3);
+        out.push({ gx: cr(p0.gx, p1.gx, p2.gx, p3.gx), gz: cr(p0.gz, p1.gz, p2.gz, p3.gz) });
+      }
+    }
+    out.push(p[p.length - 1]);
+    return out;
+  }
+  function shapePlacements(names, hash, cell) {
+    const out = [];
+    if (mode === 'line') {
+      const c = lineCurve();
+      if (c.length < 2) return out;
+      const every = v('plEvery'), wiggle = v('plWiggle');
+      let walked = 0, next = 0, i = 0;
+      for (let s = 1; s < c.length; s++) {
+        const a = c[s - 1], b = c[s], len = Math.hypot(b.gx - a.gx, b.gz - a.gz);
+        while (next <= walked + len + 1e-6) {
+          const t = len > 0 ? (next - walked) / len : 0, dx = (b.gx - a.gx) / (len || 1), dz = (b.gz - a.gz) / (len || 1);
+          const d = drawAt(i), side = (d.w - 0.5) * 2 * wiggle;
+          const gx = a.gx + (b.gx - a.gx) * t - dz * side, gz = a.gz + (b.gz - a.gz) * t + dx * side;
+          // Unity yaw: clockwise from north (+z), so the heading of (dx, dz) is atan2(dx, dz).
+          const yaw = $('plAlong').checked ? Math.atan2(dx, dz) * 180 / Math.PI : null;
+          const o = placementAt(gx, gz, d, names, hash, cell, 0.3, yaw);
+          if (o) out.push(o);
+          i++; next += every;
+          if (i > 2000) return out;
+        }
+        walked += len;
+      }
+    } else if (mode === 'grid' && gridA && gridB) {
+      const size = v('plCell');
+      const x0 = Math.min(gridA.gx, gridB.gx), x1 = Math.max(gridA.gx, gridB.gx), z0 = Math.min(gridA.gz, gridB.gz), z1 = Math.max(gridA.gz, gridB.gz);
+      const nx = Math.floor((x1 - x0) / size), nz = Math.floor((z1 - z0) / size);
+      let i = 0;
+      for (let iz = 0; iz < nz; iz++) for (let ix = 0; ix < nx; ix++) {
+        if (i > 2000) return out;
+        const o = placementAt(x0 + (ix + 0.5) * size, z0 + (iz + 0.5) * size, drawAt(i++), names, hash, cell, 0.3);
+        if (o) out.push(o);
+      }
+    }
+    return out;
+  }
+  function drawShape() {
+    const pts = [];
+    if (mode === 'line' && linePts.length) {
+      const c = lineCurve();
+      for (let s = 0; s < c.length; s++) {
+        if (s === 0) { pts.push(v3(c[0].gx, c[0].gz)); continue; }
+        const a = c[s - 1], b = c[s], n = Math.max(1, Math.ceil(Math.hypot(b.gx - a.gx, b.gz - a.gz)));
+        for (let k = 1; k <= n; k++) pts.push(v3(a.gx + (b.gx - a.gx) * k / n, a.gz + (b.gz - a.gz) * k / n));
+      }
+    } else if (mode === 'grid' && gridA && gridB) {
+      const ring = [[gridA.gx, gridA.gz], [gridB.gx, gridA.gz], [gridB.gx, gridB.gz], [gridA.gx, gridB.gz], [gridA.gx, gridA.gz]];
+      for (let s = 1; s < ring.length; s++) {
+        const [ax, az] = ring[s - 1], [bx, bz] = ring[s], n = Math.max(1, Math.ceil(Math.hypot(bx - ax, bz - az)));
+        for (let k = 0; k <= n; k++) pts.push(v3(ax + (bx - ax) * k / n, az + (bz - az) * k / n));
+      }
+    }
+    shape.geometry.setFromPoints(pts);
+    shape.visible = ed.tool === 'plant' && mode !== 'brush';
+  }
+  function setMode(m) {
+    mode = m;
+    $('plModes').querySelectorAll('[data-m]').forEach(b => b.classList.toggle('on', b.dataset.m === m));
+    $('plLineBox').hidden = m !== 'line'; $('plGridBox').hidden = m !== 'grid'; $('plPlaceRow').hidden = m === 'brush'; $('plBrushHint').hidden = m !== 'brush';
+    for (const id of ['plDensity', 'plSpacing', 'plSingle']) $(id).closest('label').hidden = m !== 'brush';
+    drawShape(); updatePreview();
+  }
+  $('plModes').querySelectorAll('[data-m]').forEach(b => b.onclick = () => setMode(b.dataset.m));
+  const syncShapeLabels = () => { $('plEveryV').textContent = `${v('plEvery')} m`; $('plWiggleV').textContent = `${v('plWiggle')} m`; $('plCellV').textContent = `${v('plCell')} m`; };
+  ['plEvery', 'plWiggle', 'plCell', 'plAlong', 'plCurve'].forEach(id => $(id).addEventListener('input', () => { syncShapeLabels(); drawShape(); updatePreview(); }));
+  syncShapeLabels();
+  function clearShape() { linePts = []; gridA = gridB = null; drawingLine = false; drawShape(); updatePreview(); }
+  async function placeShape() {
+    if (!preview.length) { ed.msg(mode === 'line' ? 'Draw a line first (click points on the ground).' : 'Drag a box on the ground first.', true); return; }
+    const list = preview.slice();
+    const added = await ed.objects.add(list.map(o => ({ ...o, fresh: true })));
+    hashStale = true;
+    ed.pushHistory({ added, label: `Planted ${added.length} ${mode === 'line' ? 'along a line' : 'in a grid'}` });
+    ed.msg(`Placed ${added.length} object(s). Ctrl+Z removes them.`);
+    updatePreview();
+  }
+  $('plPlace').onclick = placeShape; $('plClearShape').onclick = clearShape;
+
   function updatePreview() {
-    const show = ed.tool === 'plant' && at && !stroke && !held.shift && chosen.size > 0;
+    const shaped = mode !== 'brush';
+    const show = ed.tool === 'plant' && !stroke && (shaped || !held.shift) && chosen.size > 0 && (shaped || at);
     ghostGroup.visible = show;
     if (!show) { preview = []; info(); return; }
     if (settingsKey() !== patternKey) makePattern();
     const cell = Math.max(1, v('plSpacing'));
     if (hashStale || cell !== hashCell) { hash = buildHash(cell); hashCell = cell; hashStale = false; }
-    const names = [...chosen], local = new Map(), placed = [];
+    const names = [...chosen], placed = shaped ? shapePlacements(names, hash, cell) : [];
     // Turn the layout with the rotation (clockwise from above, like the objects' facing).
     const t = rotation() * Math.PI / 180, c = Math.cos(t), sn = Math.sin(t);
-    for (const p of pattern) {
+    if (!shaped) for (const p of pattern) {
       const o = placementAt(at.gx + p.dx * c + p.dz * sn, at.gz - p.dx * sn + p.dz * c, p.d, names, hash, cell);
       if (o) placed.push(o);
     }
@@ -209,7 +324,8 @@ export function createPlant(ed) {
   function info() {
     if (ed.tool !== 'plant') return;
     if (!chosen.size) { $('plPreview').textContent = 'Tick at least one kind to plant.'; return; }
-    if (held.shift) { $('plPreview').textContent = 'Shift: drag to remove the chosen kinds under the brush.'; return; }
+    if (held.shift && mode === 'brush') { $('plPreview').textContent = 'Shift: drag to remove the chosen kinds under the brush.'; return; }
+    if (mode !== 'brush') { $('plPreview').innerHTML = `<b>${preview.length}</b> object(s) ${mode === 'line' ? 'along the line' : 'in the grid'}. <kbd>Enter</kbd> places them${mode === 'line' ? ' (or double-click)' : ''} · <kbd>R</kbd> new random choices.`; return; }
     $('plPreview').innerHTML = at ? `<b>${preview.length}</b> object(s) shown under the cursor. Click places exactly these; drag paints more. <kbd>R</kbd> new layout · <kbd>Alt</kbd>+wheel or <kbd>,</kbd> <kbd>.</kbd> rotate.` : 'Move over the ground to see what a click would place.';
   }
   const held = { shift: false };
@@ -218,7 +334,7 @@ export function createPlant(ed) {
   ['plDensity', 'plSpacing', 'plSmin', 'plSmax', 'plTilt'].forEach(id => $(id).addEventListener('input', () => { if (id === 'plDensity' || id === 'plSpacing') patternKey = ''; else for (const p of pattern) p.d = { ...p.d }; updatePreview(); }));
   $('radius').addEventListener('input', () => updatePreview());
   $('plList').addEventListener('change', () => updatePreview());
-  ed.onToolChange.push(t => { if (t === 'plant') hashStale = true; updatePreview(); });
+  ed.onToolChange.push(t => { if (t === 'plant') hashStale = true; drawShape(); updatePreview(); });
 
   function step(dt) {
     if (!stroke || !at) return;
@@ -253,7 +369,7 @@ export function createPlant(ed) {
     }
     if (list.length) ed.objects.add(list, { post: false }).then(ids => stroke?.added.push(...ids));
   }
-  ed.handlers.plant = {
+  const brush = {
     down(e, hit) {
       if (!hit) return;
       ed.el.setPointerCapture(e.pointerId);
@@ -291,12 +407,65 @@ export function createPlant(ed) {
       return false;
     }
   };
+  // Line: click to add points, or hold and drag to draw freehand. Grid: drag a box.
+  let press = null;
+  const shaped = {
+    down(e, hit) {
+      if (!hit) return;
+      ed.el.setPointerCapture(e.pointerId);
+      press = { x: e.clientX, y: e.clientY, hit, drag: false };
+      if (mode === 'grid') { gridA = { gx: hit.gx, gz: hit.gz }; gridB = null; }
+    },
+    move(e, hit) {
+      at = hit; ed.showStatusFor?.(hit);
+      if (!hit) return;
+      if (press && !press.drag && Math.hypot(e.clientX - press.x, e.clientY - press.y) > 6) {
+        press.drag = true;
+        if (mode === 'line') { if (!linePts.length || Math.hypot(linePts.at(-1).gx - press.hit.gx, linePts.at(-1).gz - press.hit.gz) > 0.3) linePts.push({ gx: press.hit.gx, gz: press.hit.gz }); drawingLine = true; }
+      }
+      if (press?.drag) {
+        if (mode === 'grid') gridB = { gx: hit.gx, gz: hit.gz };
+        // Freehand: a point every 2 m, smoothed by the curve.
+        else if (Math.hypot(linePts.at(-1).gx - hit.gx, linePts.at(-1).gz - hit.gz) >= 2) linePts.push({ gx: hit.gx, gz: hit.gz });
+        drawShape(); updatePreview();
+      }
+    },
+    up(e, hit) {
+      const p = press; press = null;
+      if (!p) return;
+      if (mode === 'line') {
+        const h = hit ?? at ?? p.hit;
+        if (!p.drag) {
+          // Double-click on the last point places the line.
+          const last = linePts.at(-1);
+          if (last && e.detail >= 2 && Math.hypot(last.gx - h.gx, last.gz - h.gz) < 1.5) { placeShape(); return; }
+          linePts.push({ gx: h.gx, gz: h.gz });
+        } else if (Math.hypot(linePts.at(-1).gx - h.gx, linePts.at(-1).gz - h.gz) > 0.3) linePts.push({ gx: h.gx, gz: h.gz });
+        drawingLine = false;
+      } else if (!p.drag) { gridA = gridB = null; }
+      drawShape(); updatePreview();
+    },
+    key(e) {
+      const k = e.key.toLowerCase();
+      if (k === 'r' && !e.ctrlKey) { draws.length = 0; updatePreview(); return true; }
+      if (e.key === 'Enter') { placeShape(); return true; }
+      if (e.key === 'Escape' && (linePts.length || gridA)) { clearShape(); return true; }
+      if (e.key === 'Backspace' && mode === 'line' && linePts.length) { linePts.pop(); drawShape(); updatePreview(); return true; }
+      return brush.key(e);
+    }
+  };
+  ed.handlers.plant = {
+    down: (e, hit) => (mode === 'brush' ? brush : shaped).down(e, hit),
+    move: (e, hit) => (mode === 'brush' ? brush : shaped).move(e, hit),
+    up: (e, hit) => (mode === 'brush' ? brush : shaped).up(e, hit),
+    key: e => (mode === 'brush' ? brush : shaped).key(e)
+  };
   function turn(deg) {
     let r = v('plRot') + deg;
     r = ((r + 180) % 360 + 360) % 360 - 180;
     $('plRot').value = r; syncLabels(); updatePreview();
   }
-  $('plNewLayout').onclick = () => { makePattern(); updatePreview(); };
+  $('plNewLayout').onclick = () => { makePattern(); draws.length = 0; updatePreview(); };
   ['plRot', 'plRandomYaw', 'plSingle'].forEach(id => $(id).addEventListener('input', () => updatePreview()));
   // Alt + mouse wheel turns the preview instead of zooming.
   ed.el.addEventListener('wheel', e => {
