@@ -294,6 +294,16 @@ export class MapView {
     });
   }
 
+  // A map reply: heights (2 bytes a point) and 4-byte colour layers (2 global, 3 detail). A reply
+  // cut short (the session stopped, e.g. Worlds was pressed while it loaded) is an error, not data.
+  async fetchLayers(url, size, layers) {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`the map data did not arrive (${res.status})`);
+    const buf = await res.arrayBuffer();
+    if (buf.byteLength < size * size * (2 + 4 * layers)) throw new Error('the map data arrived incomplete');
+    return buf;
+  }
+
   uploadLayers(prefix, buffer, size) {
     const n = size * size;
     const heights = new Uint16Array(buffer, 0, n);
@@ -316,7 +326,7 @@ export class MapView {
     const textures = ['Background:background', 'FogLayer:foglayer', 'Water:water', 'lava:lava', 'Mountain:mountain', 'Cloud:cloud', 'Forest:forest', 'Space:space'];
     // The lava mask is data, every other map texture is a colour texture.
     await Promise.all(textures.map(t => { const [u, f] = t.split(':'); return this.loadImage(`_${u}Tex`, `maptex/${f}.png`, u !== 'lava'); }));
-    const buf = await (await fetch('/api/map/global')).arrayBuffer();
+    const buf = await this.fetchLayers('/api/map/global', this.world.mapSize, 2);
     this.uploadLayers('g', buf, this.world.mapSize);
     // Placeholders until a detail window is loaded.
     const empty = new ArrayBuffer(16 * 16 * 14);
@@ -327,7 +337,14 @@ export class MapView {
     const key = `${x0},${z0},${size},${version}`;
     if (this.detailKey === key || this.pendingKey === key) return;
     this.pendingKey = key;
-    const buf = await (await fetch(`/api/map/detail?x0=${x0}&z0=${z0}&size=${size}`)).arrayBuffer();
+    let buf;
+    try {
+      buf = await this.fetchLayers(`/api/map/detail?x0=${x0}&z0=${z0}&size=${size}`, size, 3);
+    } catch {
+      // Only the sharper close-up is missing: the next view change asks again.
+      if (this.pendingKey === key) this.pendingKey = null;
+      return;
+    }
     if (this.pendingKey !== key) return;
     this.uploadLayers('d', buf, size);
     this.detail = { x0, z0, size };
