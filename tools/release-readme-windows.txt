@@ -59,6 +59,8 @@ Documentation: https://github.com/Shuiei/valheim-world-editor
 
 Good to know
 ------------
+  - Game, BepInEx profile or worlds somewhere unusual? "Settings" on the start page. For a server,
+    "Server's Valheim folder" on its form gives precise errors when the plugin does not answer.
   - Every control explains itself when you hover it; "?" lists the keyboard shortcuts.
   - Settings, saved servers (servers.cfg), the copied game files and the log: %LOCALAPPDATA%\ValheimWorldEditor
   - The Windows version has only been tried under Wine so far. Reports welcome.
