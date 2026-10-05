@@ -72,10 +72,73 @@ export function createTransform(ed) {
   function lift(m) { if (!begin()) return; session.dy += m; preview(); later(); }
   ed.flushTransform = commit;
 
-  // ---- Pointer: drag a selected object to move the selection; otherwise the usual selecting.
+  // ---- Move arrows (like Blender's): red X (east), green Y (up), blue Z (north) at the selection's
+  // centre. Dragging one moves the selection along that axis only; X and Z keep following the ground.
+  const AXES = { x: { dir: new THREE.Vector3(1, 0, 0), color: 0xff4d5e }, y: { dir: new THREE.Vector3(0, 1, 0), color: 0x6ee05a }, z: { dir: new THREE.Vector3(0, 0, -1), color: 0x4d8dff } };
+  const gizmo = new THREE.Group(); gizmo.visible = false; gizmo.renderOrder = 30; ed.scene.add(gizmo);
+  const hitMat = new THREE.MeshBasicMaterial({ visible: false });
+  const shaftGeo = new THREE.CylinderGeometry(0.025, 0.025, 1, 8).translate(0, 0.5, 0), headGeo = new THREE.ConeGeometry(0.08, 0.24, 16).translate(0, 1.1, 0);
+  const grabGeo = new THREE.CylinderGeometry(0.12, 0.12, 1.25, 8).translate(0, 0.62, 0);
+  for (const [key, a] of Object.entries(AXES)) {
+    const arm = new THREE.Group();
+    a.mat = new THREE.MeshBasicMaterial({ color: a.color, depthTest: false, transparent: true });
+    for (const g of [shaftGeo, headGeo]) { const m = new THREE.Mesh(g, a.mat); m.renderOrder = 30; arm.add(m); }
+    const grab = new THREE.Mesh(grabGeo, hitMat); grab.userData.axis = key; arm.add(grab);
+    if (key === 'x') arm.rotation.z = -Math.PI / 2;
+    if (key === 'z') arm.rotation.x = -Math.PI / 2;
+    gizmo.add(arm);
+  }
+  const centre = new THREE.Vector3();
+  // Where the arrows go: the middle of the selection, following a move in progress.
+  function placeGizmo() {
+    const show = ed.tool === 'select' && ed.selection.size > 0;
+    gizmo.visible = show;
+    if (!show) return;
+    let x = 0, y = 0, z = 0, n = 0;
+    if (session) for (const it of session.items) { const p = target(session, it); x += p.gx; y += p.y; z += p.gz; n++; }
+    else for (const id of ed.selection) { const r = ed.objects.records.get(id); if (!r || r.deleted) continue; const g = toGrid(r); x += g.gx; y += r.y; z += g.gz; n++; }
+    if (!n) { gizmo.visible = false; return; }
+    centre.set(x / n - ed.cx, y / n, -(z / n - ed.cz));
+    gizmo.position.copy(centre);
+    gizmo.scale.setScalar(ed.camera.position.distanceTo(centre) * 0.12);
+    for (const [k, a] of Object.entries(AXES)) a.mat.color.setHex(k === (axisDrag?.axis ?? hoverAxis) ? 0xffe14a : a.color);
+  }
+  ed.frame.push(placeGizmo);
+  const ray = new THREE.Raycaster(), mouse = new THREE.Vector2();
+  function rayFor(e) {
+    const r = ed.el.getBoundingClientRect();
+    mouse.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+    ray.setFromCamera(mouse, ed.camera);
+    return ray;
+  }
+  function gizmoAxis(e) {
+    if (!gizmo.visible) return null;
+    gizmo.updateMatrixWorld(true);
+    return rayFor(e).intersectObject(gizmo, true).find(h => h.object.userData.axis)?.object.userData.axis ?? null;
+  }
+  // How far along the axis (through o) the mouse ray passes closest.
+  function along(e, o, a) {
+    const { origin: p, direction: d } = rayFor(e).ray;
+    const w = o.clone().sub(p), b = a.dot(d), den = 1 - b * b;
+    if (den < 1e-4) return null;   // looking straight down the axis
+    return (b * d.dot(w) - a.dot(w)) / den;
+  }
+  let axisDrag = null, hoverAxis = null;
+
+  // ---- Pointer: drag an arrow or a selected object to move the selection; otherwise the usual selecting.
   let drag = null;
   ed.handlers.select = {
     down(e, hit) {
+      const axis = gizmoAxis(e);
+      if (axis) {
+        clearTimeout(commitTimer);
+        const s = begin(); if (!s) return;
+        const o = centre.clone(), s0 = along(e, o, AXES[axis].dir);
+        if (s0 == null) return;
+        axisDrag = { axis, o, s0, dgx: s.dgx, dgz: s.dgz, dy: s.dy };
+        ed.el.setPointerCapture(e.pointerId);
+        return;
+      }
       const ent = ed.pickEntity(e);
       if (ent && ed.selection.has(ent.id) && !e.shiftKey && hit) {
         drag = { x: e.clientX, y: e.clientY, from: hit, moving: false };
@@ -85,11 +148,27 @@ export function createTransform(ed) {
       commit().then(() => ed.clickSelect(e));
     },
     move(e, hit) {
-      if (!drag) { ed.hoverSelect(e); return; }
+      if (axisDrag) {
+        const t = along(e, axisDrag.o, AXES[axisDrag.axis].dir);
+        if (t == null || !session) return;
+        let d = t - axisDrag.s0;
+        if (e.ctrlKey) d = Math.round(d / 0.5) * 0.5;   // Ctrl: half-metre steps
+        session.dgx = axisDrag.dgx; session.dgz = axisDrag.dgz; session.dy = axisDrag.dy;
+        if (axisDrag.axis === 'x') session.dgx += d; else if (axisDrag.axis === 'z') session.dgz += d; else session.dy += d;
+        preview();
+        return;
+      }
+      if (!drag) {
+        const a = gizmoAxis(e);
+        if (a !== hoverAxis) { hoverAxis = a; ed.el.style.cursor = a ? 'grab' : ''; }
+        if (!a) ed.hoverSelect(e);
+        return;
+      }
       if (!drag.moving && Math.hypot(e.clientX - drag.x, e.clientY - drag.y) > 5) { drag.moving = true; begin(); }
       if (drag.moving && hit && session) { session.dgx = hit.gx - drag.from.gx; session.dgz = hit.gz - drag.from.gz; preview(); }
     },
     up(e) {
+      if (axisDrag) { axisDrag = null; commit(); return; }
       const d = drag; drag = null;
       if (!d) return;
       if (d.moving) commit();
@@ -99,7 +178,7 @@ export function createTransform(ed) {
       if (!ed.selection.size) return false;
       if (e.key === ',' || e.key === '<' || e.key === '.' || e.key === '>') { turn((e.key === ',' || e.key === '<' ? -1 : 1) * (e.shiftKey ? 5 : 15)); return true; }
       if (e.key === 'PageUp' || e.key === 'PageDown') { lift((e.key === 'PageUp' ? 1 : -1) * (e.shiftKey ? 1 : 0.25)); return true; }
-      if (e.key === 'Escape' && session) { restore(session); session = null; ed.drawSelection(); ed.msg('Move cancelled.'); return true; }
+      if (e.key === 'Escape' && session) { axisDrag = null; restore(session); session = null; ed.drawSelection(); ed.msg('Move cancelled.'); return true; }
       return false;
     }
   };
