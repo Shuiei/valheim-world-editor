@@ -39,6 +39,8 @@
   .areaNav button { width: 30px; height: 30px; padding: 0; }
   .areaNav .lbl { color: var(--muted); font-size: 12px; margin-right: 2px; }
   #pending { font-size: 12px; padding: 4px 9px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
+  #liveBadge { font-size: 11.5px; font-weight: 700; letter-spacing: .06em; color: #8ff0b4; border: 1px solid #2a6a4a; background: #13261d; border-radius: 999px; padding: 4px 9px; display: inline-flex; gap: 6px; align-items: center; }
+  #liveBadge .dot { width: 7px; height: 7px; border-radius: 50%; background: #4be08a; box-shadow: 0 0 6px #4be08a; }
   #pending.dirty { color: #f3d29b; border-color: #7a5a2a; background: #2c2416; }
 
   /* Tool rail */
@@ -120,6 +122,8 @@
   </div>
   <div class="sep"></div>
   <div class="group">
+    <span id="liveBadge" hidden title="Connected to the running game through the WorldEditorBridge plugin"><span class="dot"></span>LIVE</span>
+    <button id="liveReload" class="ghost" hidden title="Load the world again from the game">Reload</button>
     <span id="pending"></span>
     <button id="discardBtn" class="ghost" title="Throw away all unsaved changes">Discard</button>
     <button id="saveBtn" class="primary" title="Write the changes into the world files (a backup is made first)">Save to world</button>
@@ -657,10 +661,51 @@ function showPending(zones = pending.zones, deleted = pending.deleted, added = p
   const parts = [zones ? `${zones} zone${zones > 1 ? 's' : ''}` : '', deleted ? `${deleted} deleted` : '', added ? `${added} added` : '', resets ? `${resets} reset` : ''].filter(Boolean);
   $('pending').textContent = parts.length ? `Unsaved: ${parts.join(', ')}` : 'All saved';
   $('pending').classList.toggle('dirty', parts.length > 0);
-  $('saveBtn').disabled = $('discardBtn').disabled = !parts.length;
+  $('saveBtn').disabled = $('discardBtn').disabled = !parts.length || world.live;
+  if (world.live) $('discardBtn').disabled = !parts.length;
 }
 showPending();
 $('saveBtn').onclick = () => saveWorld(world, pending, res => { if (res.saved) location.reload(); });
+// Live view (WorldEditorBridge): players are drawn and polled; saving is not available yet.
+const playerGroup = new THREE.Group(); scene.add(playerGroup);
+if (world.live) {
+  $('liveBadge').hidden = false; $('liveReload').hidden = false;
+  $('saveBtn').textContent = 'Apply live'; $('saveBtn').title = 'Applying changes to the running game comes in the next step';
+  $('liveReload').onclick = async () => {
+    if (pending.zones + pending.deleted + pending.added + pending.resets && !confirm('Reload the world from the game? Your unsaved changes here are dropped.')) return;
+    await fetch('/api/live/reload', { method: 'POST' }); location.reload();
+  };
+  const label = name => {
+    const c = document.createElement('canvas'); c.width = 256; c.height = 64;
+    const g = c.getContext('2d'); g.font = 'bold 30px system-ui'; g.textAlign = 'center'; g.lineWidth = 6; g.strokeStyle = 'rgba(0,0,0,.75)'; g.fillStyle = '#bfeaff';
+    g.strokeText(name, 128, 42); g.fillText(name, 128, 42);
+    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), depthTest: false }));
+    s.scale.set(8, 2, 1); s.renderOrder = 30; return s;
+  };
+  const marks = new Map();
+  const poll = async () => {
+    let list = [];
+    try { list = await (await fetch('/api/players')).json(); } catch { return; }
+    const seen = new Set();
+    for (const p of list) {
+      seen.add(p.name);
+      let m = marks.get(p.name);
+      if (!m) {
+        m = new THREE.Group();
+        const body = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.45, 1.9, 12), new THREE.MeshBasicMaterial({ color: 0x4fc3ff }));
+        body.position.y = 0.95; m.add(body);
+        const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 40, 6), new THREE.MeshBasicMaterial({ color: 0x4fc3ff, transparent: true, opacity: 0.35, depthWrite: false }));
+        beam.position.y = 20; m.add(beam);
+        const l = label(p.name); l.position.y = 4; m.add(l);
+        playerGroup.add(m); marks.set(p.name, m);
+      }
+      m.position.set(p.x - originX - cx, p.y, -(p.z - originZ - cz));
+    }
+    for (const [n, m] of marks) if (!seen.has(n)) { playerGroup.remove(m); marks.delete(n); }
+    $('sZone').title = list.map(p => `${p.name}: ${p.x.toFixed(0)}, ${p.z.toFixed(0)}`).join('\n');
+  };
+  poll(); setInterval(poll, 2000);
+}
 $('discardBtn').onclick = () => discardChanges(pending, () => location.reload());
 
 // Locations (villages, the trader, dungeon entrances...) flatten the ground around them while the

@@ -38,6 +38,7 @@
   .edit { display: flex; gap: 6px; align-items: center; margin: 10px 0 4px; }
   .edit a { background: var(--accent); color: #1a1a1a; text-decoration: none; font-weight: 600; padding: 6px 10px; border-radius: 5px; }
   .edit select { background: #262b34; color: var(--text); border: 1px solid var(--line); border-radius: 4px; padding: 4px; }
+  .changes.live { border-color: #2a6a4a; background: #13261d; color: #bfe8cf; }
 </style>
 </head>
 <body>
@@ -50,6 +51,10 @@
   <h1>Valheim Terrain Editor</h1>
   <div class="meta" id="meta">Loading…</div>
   <div class="hint">Drag to pan, scroll to zoom. Click any spot to open it in the 3D editor; edited zones also show their details.</div>
+  <div id="liveBox" class="changes live" hidden>
+    <div id="liveText">Live world</div>
+    <div class="row"><button id="liveReload">Reload from the game</button></div>
+  </div>
   <div id="changes" class="changes" hidden>
     <div id="changesText"></div>
     <div class="row"><button id="saveBtn" class="primary">Save to world…</button><button id="discardBtn">Discard</button></div>
@@ -93,6 +98,7 @@ let zones = [], selected = null, world = null, mapView = null, hoverWorld = null
 // Player-built pieces: x, y, z, rotY, minX, maxX, minZ, maxZ, top, category (PieceCatalog.Stride).
 let pieces = null, pieceOrder = [];
 const STRIDE = 13;
+let players = [];
 const PIECE_STYLE = {
   0: ['rgba(150,72,34,0.92)', 'rgba(60,25,10,0.9)'],    // misc: portals, fires, signs...
   1: ['rgba(128,56,40,0.9)', 'rgba(55,22,14,0.9)'],     // crafting stations
@@ -140,12 +146,20 @@ function drawBuildings() {
 
 function drawOverlay() {
   // Redraw only when something visible changed (buildings can be many thousands).
-  const key = [view.x, view.z, view.mpp, overlay.width, overlay.height, selected?.x, selected?.z, !!pieces,
+  const key = [view.x, view.z, view.mpp, overlay.width, overlay.height, selected?.x, selected?.z, !!pieces, JSON.stringify(players),
     ...['showBuildings', 'showEdited', 'showGrid'].map(id => document.getElementById(id).checked)].join('|');
   if (key === overlayKey) return;
   overlayKey = key;
   octx.clearRect(0, 0, overlay.width, overlay.height);
   drawBuildings();
+  // Live mode: connected players.
+  for (const p of players) {
+    const [sx, sy] = toScreen(p.x, p.z), r = 6 * devicePixelRatio;
+    octx.fillStyle = '#4fc3ff'; octx.strokeStyle = '#0b2030'; octx.lineWidth = 2 * devicePixelRatio;
+    octx.beginPath(); octx.arc(sx, sy, r, 0, Math.PI * 2); octx.fill(); octx.stroke();
+    octx.font = `${12 * devicePixelRatio}px system-ui`; octx.fillStyle = '#fff'; octx.strokeStyle = 'rgba(0,0,0,.7)'; octx.lineWidth = 3 * devicePixelRatio;
+    octx.strokeText(p.name, sx + r + 3, sy + 4); octx.fillText(p.name, sx + r + 3, sy + 4);
+  }
   const px = ZONE / view.mpp * devicePixelRatio;
   if (document.getElementById('showGrid').checked && px > 24) {
     octx.strokeStyle = 'rgba(40,30,20,0.18)'; octx.lineWidth = 1;
@@ -287,7 +301,14 @@ for (const id of ['showPaint', 'showClouds']) document.getElementById(id).onchan
   }
   document.getElementById('saveBtn').onclick = () => saveWorld(w, pendingChanges, res => { if (res.saved) location.reload(); });
   document.getElementById('discardBtn').onclick = () => discardChanges(pendingChanges, () => location.reload());
-  document.getElementById('meta').textContent = `${w.name} · seed ${w.seedName} · save #${w.saveNumber} · ${w.objects.toLocaleString()} objects · ${zones.length} edited zones` + (w.changedZones ? ` · ${w.changedZones} changed in this session (blue outline, not saved yet)` : '');
+  if (w.live) {
+    // Live view of the running world (WorldEditorBridge plugin): players, and Reload instead of Save.
+    document.getElementById('liveBox').hidden = false;
+    const poll = async () => { try { players = await (await fetch('/api/players')).json(); document.getElementById('liveText').textContent = `Live world · ${players.length} player(s) online${players.length ? ': ' + players.map(p => p.name).join(', ') : ''}`; } catch { } };
+    poll(); setInterval(poll, 3000);
+    document.getElementById('liveReload').onclick = async () => { await fetch('/api/live/reload', { method: 'POST' }); location.reload(); };
+  }
+  document.getElementById('meta').textContent = `${w.name} · seed ${w.seedName} · ${w.live ? 'live' : `save #${w.saveNumber}`} · ${w.objects.toLocaleString()} objects · ${zones.length} edited zones` + (w.changedZones ? ` · ${w.changedZones} changed in this session (blue outline, not saved yet)` : '');
   const list = document.getElementById('list');
   for (const z of [...zones].sort((a, b) => (b.heights + b.painted) - (a.heights + a.painted))) {
     const tr = document.createElement('tr');

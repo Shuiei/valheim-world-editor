@@ -8,6 +8,12 @@
     <InvariantGlobalization>true</InvariantGlobalization>
   </PropertyGroup>
   <ItemGroup>
+    <!-- The BepInEx bridge plugin and tools are separate projects. -->
+    <Compile Remove="plugin/**" />
+    <Compile Remove="tools/**" />
+    <None Remove="plugin/**" />
+  </ItemGroup>
+  <ItemGroup>
     <EmbeddedResource Include="WorldGen/terrain-modifiers.json" LogicalName="TerrainEditor.terrain-modifiers.json" />
     <EmbeddedResource Include="WorldGen/pieces.json" LogicalName="TerrainEditor.pieces.json" />
   </ItemGroup>
