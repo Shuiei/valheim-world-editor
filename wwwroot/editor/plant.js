@@ -19,6 +19,7 @@ export function createPlant(ed) {
     <label class="field">Rotation <input id="plRot" type="range" min="-180" max="180" step="1" value="0"><span id="plRotV"></span></label>
     <label class="check"><input type="checkbox" id="plRandomYaw" checked> Random facing (off: all face the rotation)</label>
     <label class="check"><input type="checkbox" id="plSingle"> One at a time, exactly at the cursor</label>
+    <label class="check" title="Saplings and crops need free space around them to grow (their grow radius in the game)"><input type="checkbox" id="plGrow" checked> Leave saplings room to grow</label>
     <div id="plLineBox" hidden>
       <label class="field">Every <input id="plEvery" type="range" min="0.5" max="30" step="0.5" value="4"><span id="plEveryV"></span></label>
       <label class="field">Wiggle <input id="plWiggle" type="range" min="0" max="5" step="0.25" value="0"><span id="plWiggleV"></span></label>
@@ -56,6 +57,8 @@ export function createPlant(ed) {
     .plList label:hover { background: rgba(255,255,255,.04); }`;
   document.head.appendChild(style);
 
+  // Saplings' grow radius and cultivated-ground need, by name (filled from /api/grow below).
+  let grow = {};
   // Ticked kinds, remembered in this browser.
   let chosen = new Set(['Beech1']);
   try { const c = JSON.parse(localStorage.getItem('plantChosen') ?? 'null'); if (Array.isArray(c)) chosen = new Set(c); } catch { }
@@ -67,6 +70,9 @@ export function createPlant(ed) {
     $('plTiltV').textContent = `${v('plTilt')}°`;
     $('plRotV').textContent = `${v('plRot')}°`;
     $('plChosen').textContent = chosen.size ? `Planting: ${[...chosen].join(', ')}` : 'Tick one or more kinds to plant.';
+    // Crops only grow on cultivated ground in the game.
+    const cult = [...chosen].filter(n => grow[n]?.[1]);
+    if (cult.length) $('plChosen').textContent += ` · ${cult.join(', ')} only grow${cult.length > 1 ? '' : 's'} on cultivated ground (paint it with Cultivate first).`;
   }
   ['plDensity', 'plSpacing', 'plTilt', 'plRot'].forEach(id => $(id).addEventListener('input', syncLabels));
   function fillList() {
@@ -120,9 +126,27 @@ export function createPlant(ed) {
     return map;
   }
   function free(hash, cell, gx, gz, spacing) {
-    const cx = Math.floor(gx / cell), cz = Math.floor(gz / cell);
-    for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) for (const [x, z] of hash.get(`${cx + dx},${cz + dz}`) ?? []) if (Math.hypot(x - gx, z - gz) < spacing) return false;
+    const cx = Math.floor(gx / cell), cz = Math.floor(gz / cell), n = Math.max(1, Math.ceil(spacing / cell));
+    for (let dz = -n; dz <= n; dz++) for (let dx = -n; dx <= n; dx++) for (const [x, z] of hash.get(`${cx + dx},${cz + dz}`) ?? []) if (Math.hypot(x - gx, z - gz) < spacing) return false;
     return true;
+  }
+  // Saplings and crops: the game only lets them grow with nothing within their grow radius
+  // (name -> [radius m, needs cultivated ground], from the game's prefabs).
+  fetch('/api/grow').then(r => r.json()).then(g => { grow = g; syncLabels(); updatePreview(); }).catch(() => { });
+  const growNeed = name => $('plGrow').checked ? (grow[name]?.[0] ?? 0) : 0;
+  // Keeps the grow radius between the placements themselves too (rocks or other objects included).
+  function roomToGrow(list) {
+    if (!$('plGrow').checked || !list.some(o => growNeed(o.name) > 0)) return list;
+    const h = new Map(), cell = 2, out = [];
+    for (const o of list) {
+      const need = growNeed(o.name), cx = Math.floor(o.gx / cell), cz = Math.floor(o.gz / cell);
+      let ok = true;
+      for (let dz = -2; dz <= 2 && ok; dz++) for (let dx = -2; dx <= 2 && ok; dx++) for (const [x, z, nd] of h.get(`${cx + dx},${cz + dz}`) ?? []) if (Math.hypot(x - o.gx, z - o.gz) < Math.max(need, nd)) { ok = false; break; }
+      if (!ok) continue;
+      const k = `${cx},${cz}`; (h.get(k) ?? h.set(k, []).get(k)).push([o.gx, o.gz, need]);
+      out.push(o);
+    }
+    return out;
   }
   const addToHash = (hash, cell, gx, gz) => { const k = `${Math.floor(gx / cell)},${Math.floor(gz / cell)}`; (hash.get(k) ?? hash.set(k, []).get(k)).push([gx, gz]); };
   const underwaterOk = names => names.some(nm => /kelp|seaweed/i.test(nm));
@@ -135,11 +159,12 @@ export function createPlant(ed) {
     if (gx < 1 || gz < 1 || gx > W - 2 || gz > H - 2) return null;
     if (!ed.mask(Math.round(gz) * W + Math.round(gx))) return null;
     // One at a time: you pick the spot, so only an object right on top (0.3 m) blocks it.
-    if (!free(hash, cell, gx, gz, minDist ?? ($('plSingle').checked ? 0.3 : v('plSpacing')))) return null;
+    const name = names[Math.floor(d.t * names.length) % names.length];
+    if (!free(hash, cell, gx, gz, Math.max(minDist ?? ($('plSingle').checked ? 0.3 : v('plSpacing')), growNeed(name)))) return null;
     const y = heightAt(gx, gz);
     if (y < ed.WATER - 0.3 && !underwaterOk(names)) return null;  // not under water
     const smin = v('plSmin') / 100, smax = Math.max(smin, v('plSmax') / 100), tilt = v('plTilt');
-    return { name: names[Math.floor(d.t * names.length) % names.length], x: ed.originX + gx, y: y - 0.05, z: ed.originZ + gz,
+    return { name, x: ed.originX + gx, y: y - 0.05, z: ed.originZ + gz,
       rx: d.rx * tilt, ry: (yaw != null ? yaw : $('plRandomYaw').checked ? d.ry * 360 : 0) + rotation(), rz: d.rz * tilt, scale: smin + d.s * (smax - smin), gx, gz };
   }
   const draw = () => ({ t: Math.random(), rx: Math.random() * 2 - 1, ry: Math.random(), rz: Math.random() * 2 - 1, s: Math.random() });
@@ -402,9 +427,9 @@ export function createPlant(ed) {
       const o = placementAt(at.gx + p.dx * c + p.dz * sn, at.gz - p.dx * sn + p.dz * c, p.d, names, hash, cell);
       if (o) placed.push(o);
     }
-    preview = placed;
+    preview = roomToGrow(placed);
     const byName = new Map();
-    for (const o of placed) (byName.get(o.name) ?? byName.set(o.name, []).get(o.name)).push(o);
+    for (const o of preview) (byName.get(o.name) ?? byName.set(o.name, []).get(o.name)).push(o);
     for (const [name, g] of ghosts) if (g && !byName.has(name)) for (const im of g.meshes) im.count = 0;
     const dotPts = [];
     for (const [name, list] of byName) {
@@ -565,7 +590,9 @@ export function createPlant(ed) {
     $('plRot').value = r; syncLabels(); updatePreview();
   }
   $('plNewLayout').onclick = () => { makePattern(); draws.length = 0; scatterSeed++; updatePreview(); };
-  ['plRot', 'plRandomYaw', 'plSingle'].forEach(id => $(id).addEventListener('input', () => updatePreview()));
+  ['plRot', 'plRandomYaw', 'plSingle', 'plGrow'].forEach(id => $(id).addEventListener('input', () => updatePreview()));
+  try { $('plGrow').checked = localStorage.getItem('plantGrowRoom') !== '0'; } catch { }
+  $('plGrow').addEventListener('change', () => { try { localStorage.setItem('plantGrowRoom', $('plGrow').checked ? '1' : '0'); } catch { } });
   // Alt + mouse wheel turns the preview instead of zooming.
   ed.el.addEventListener('wheel', e => {
     if (ed.tool !== 'plant' || !e.altKey) return;

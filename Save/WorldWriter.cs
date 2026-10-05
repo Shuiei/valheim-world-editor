@@ -105,23 +105,18 @@ public static class WorldWriter
 		foreach (NewObject n in added)
 		{
 			int zx = (int)MathF.Floor((n.Position.X + 32f) / 64f), zz = (int)MathF.Floor((n.Position.Z + 32f) / 64f);
-			ObjectRef? model = world.ModelFor(n.Prefab, n.SourceId);
-			if (model == null)
-			{
-				skipped.Add($"a new object at {n.Position.X:F0}, {n.Position.Z:F0}: no object of that kind in the world to copy");
-				continue;
-			}
 			ChunkFile? target = ChunkMath.Find(world.Chunks, zx, zz);
 			if (target == null)
 			{
 				skipped.Add($"a new object at {n.Position.X:F0}, {n.Position.Z:F0}: zone {zx}, {zz} is not generated yet");
 				continue;
 			}
-			if (!sources.TryGetValue(model.File, out byte[]? src))
+			byte[]? bytes = world.NewObjectBytes(n, m => sources.TryGetValue(m.File, out byte[]? src) ? src : sources[m.File] = File.ReadAllBytes(Path.Combine(world.Directory, m.File.FileName)));
+			if (bytes == null)
 			{
-				sources[model.File] = src = File.ReadAllBytes(Path.Combine(world.Directory, model.File.FileName));
+				skipped.Add($"a new object at {n.Position.X:F0}, {n.Position.Z:F0}: unknown kind of object");
+				continue;
 			}
-			byte[] bytes = ZdoBuilder.Build(src, model, model.File.WorldVersion, n.Position, n.Rotation, n.Scale, n.Fresh);
 			(additions.TryGetValue(target, out var list) ? list : additions[target] = new()).Add(bytes);
 			addedCount++;
 		}

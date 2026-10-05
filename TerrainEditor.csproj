@@ -16,6 +16,7 @@
   <ItemGroup>
     <EmbeddedResource Include="WorldGen/terrain-modifiers.json" LogicalName="TerrainEditor.terrain-modifiers.json" />
     <EmbeddedResource Include="WorldGen/pieces.json" LogicalName="TerrainEditor.pieces.json" />
+    <EmbeddedResource Include="WorldGen/prefabs.json" LogicalName="TerrainEditor.prefabs.json" />
   </ItemGroup>
   <ItemGroup>
     <Content Update="wwwroot/**" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />

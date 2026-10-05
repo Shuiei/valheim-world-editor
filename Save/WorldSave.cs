@@ -67,6 +67,7 @@ public sealed class WorldSave
 
 	// The object a new one is built from: its source object when given (and of the same prefab),
 	// else the prefab's template.
+	// null when the world has no object of the prefab: it is then built blank (NewObjectBytes).
 	public ObjectRef? ModelFor(int prefab, int? sourceId)
 	{
 		if (sourceId is int s && s >= 0 && s < ObjectRefs.Count && ObjectRefs[s].Prefab == prefab)
@@ -74,6 +75,24 @@ public sealed class WorldSave
 			return ObjectRefs[s];
 		}
 		return Templates.TryGetValue(prefab, out int t) ? ObjectRefs[t] : null;
+	}
+
+	public bool CanCreate(int prefab) => Templates.ContainsKey(prefab) || TerrainEditor.Terrain.PrefabCatalog.Get(prefab) != null;
+
+	// Prefabs that can be created: any object in the world, and every placeable game prefab.
+	public IEnumerable<int> Creatable => Templates.Keys.Concat(TerrainEditor.Terrain.PrefabCatalog.Placeable.Select(p => StableHash.Of(p.Name))).Distinct();
+
+	// The save bytes of a new object: a copy of its model when the world has one, else a blank object
+	// with the prefab's own flags from the game (what the game writes for a freshly placed object).
+	// readSource gives the chunk file bytes the model lives in.
+	public byte[]? NewObjectBytes(TerrainEditor.Editing.NewObject n, Func<ObjectRef, byte[]> readSource)
+	{
+		ObjectRef? model = ModelFor(n.Prefab, n.SourceId);
+		if (model != null)
+		{
+			return ZdoBuilder.Build(readSource(model), model, model.File.WorldVersion, n.Position, n.Rotation, n.Scale, n.Fresh);
+		}
+		return TerrainEditor.Terrain.PrefabCatalog.Get(n.Prefab) is { } info ? ZdoBuilder.Blank(n.Prefab, info.Flags, n.Position, n.Rotation, n.Scale) : null;
 	}
 
 	// Generated zones and location instances from the .db2 file (null if it could not be read).

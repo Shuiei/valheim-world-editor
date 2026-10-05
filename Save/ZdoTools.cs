@@ -108,6 +108,40 @@ public static class ZdoBuilder
 		return ms.ToArray();
 	}
 
+	// A new object with no data, for a prefab the world has no example of. baseFlags: the prefab's
+	// persistent / distant / type bits (PrefabCatalog); the game fills in the rest when it loads it.
+	public static byte[] Blank(int prefab, ushort baseFlags, Vector3 position, Vector3 euler, float scale)
+	{
+		euler = new Vector3(Wrap(euler.X), Wrap(euler.Y), Wrap(euler.Z));
+		bool rotated = euler.LengthSquared() > 1e-6f;
+		ushort flags = (ushort)(baseFlags & 0x0F00);
+		if (rotated)
+		{
+			flags |= RotationFlag;
+		}
+		if (scale > 0f && MathF.Abs(scale - 1f) > 1e-4f)
+		{
+			flags |= Vec3;
+		}
+		using MemoryStream ms = new();
+		using BinaryWriter w = new(ms);
+		w.Write(flags);
+		w.Write(position.X); w.Write(position.Y); w.Write(position.Z);
+		w.Write(prefab);
+		if (rotated)
+		{
+			WriteSmallRotation(w, euler);
+		}
+		if ((flags & Vec3) != 0)
+		{
+			WriteNumItems(w, 1);
+			w.Write(ScaleKey);
+			w.Write(scale); w.Write(scale); w.Write(scale);
+		}
+		w.Flush();
+		return ms.ToArray();
+	}
+
 	private static float Wrap(float a)
 	{
 		a %= 360f;
