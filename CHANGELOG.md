@@ -3,6 +3,14 @@
 All notable changes to the Valheim world editor and its WorldEditorBridge plugin, which share one
 version number. Newest first.
 
+## v0.3.3 — 2026-10-05 (Thunderstore dependency)
+
+### Changed
+- **Thunderstore**: the editor packages no longer carry their own copy of the plugin: they depend
+  on `Tie-WorldEditorBridge`, which mod managers install with them (one copy per profile; plugin
+  fixes no longer need a new editor package). The GitHub downloads keep it in `plugin/`.
+- The start page's plugin steps point to WorldEditorBridge on Thunderstore for mod manager users.
+
 ## v0.3.2 — 2026-10-05 (smaller packages)
 
 ### Changed

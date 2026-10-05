@@ -2,6 +2,12 @@
 
 The editor's own changes: [CHANGELOG.md](https://github.com/Shuiei/valheim-world-editor/blob/main/CHANGELOG.md).
 
+## 0.3.3
+
+- The editor packages depend on
+  [WorldEditorBridge](https://thunderstore.io/c/valheim/p/Tie/WorldEditorBridge/) instead of
+  carrying their own copy of it: mod managers install it with them. The plugin is unchanged.
+
 ## 0.3.2
 
 - Smaller: the editor's bundled Python keeps only what it uses (Windows: 74 → 48 MB, Linux:

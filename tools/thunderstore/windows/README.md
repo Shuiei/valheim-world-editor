@@ -1,9 +1,10 @@
 # Valheim World Editor (Windows)
 
 A world editor for Valheim, in the spirit of Minecraft's MCEdit and WorldPainter, drawn with the
-game's own terrain, textures and models. This package holds the editor program for **Windows** and
-the **WorldEditorBridge** plugin that lets it edit a world while the game runs. (On Linux: the
-ValheimWorldEditor_Linux package.)
+game's own terrain, textures and models. This package holds the editor program for **Windows**; the
+mod manager installs the [WorldEditorBridge](https://thunderstore.io/c/valheim/p/Tie/WorldEditorBridge/) plugin with it, which lets the editor change a
+world while the game runs. (On Linux:
+[ValheimWorldEditor_Linux](https://thunderstore.io/c/valheim/p/Tie/ValheimWorldEditor_Linux/).)
 
 ![The 3D editor showing a base](https://raw.githubusercontent.com/Shuiei/valheim-world-editor/main/docs/images/overview.jpg)
 
@@ -36,8 +37,8 @@ a few minutes. Valheim must be installed through Steam on the same computer.
 - **My game (live)**: start Valheim from the mod manager and load your world (single player, or
   hosting). On the start page, **My game** finds it and its plugin (also in this profile): click
   **Edit live**, then **Apply live**, and see the changes in game right away.
-- **A dedicated server (live)**: install this package or the plugin-only **WorldEditorBridge**
-  package on the server too. On the start page, **A dedicated server**: the server's address, your
+- **A dedicated server (live)**: install the [WorldEditorBridge](https://thunderstore.io/c/valheim/p/Tie/WorldEditorBridge/) package on the
+  server too (a mod manager's server profile, or its DLL in the server's `BepInEx/plugins`). On the start page, **A dedicated server**: the server's address, your
   SSH login and the plugin's Token (in `BepInEx/config/local.worldeditorbridge.cfg` on the
   server). The editor makes its own encrypted tunnel.
 - **A saved world (offline)**: with the game closed, open a world file; a full backup is made

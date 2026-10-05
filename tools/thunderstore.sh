@@ -2,8 +2,8 @@
 # Build the Thunderstore packages into <dist>, from tools/thunderstore/<package>/ (manifest.json and
 # the mod page's README.md), tools/thunderstore/CHANGELOG.md and wwwroot/icon.png:
 #   WorldEditorBridge-<version>.zip               the plugin alone (servers)
-#   ValheimWorldEditor_Windows-<version>.zip      the editor for Windows, with the plugin
-#   ValheimWorldEditor_Linux-<version>.zip        the editor for Linux, with the plugin
+#   ValheimWorldEditor_Windows-<version>.zip      the editor for Windows   } both depend on
+#   ValheimWorldEditor_Linux-<version>.zip        the editor for Linux     } WorldEditorBridge
 # The editor packages are the release packages (tools/release.sh) with the ValheimWorldEditor folder
 # under plugins/: mod managers keep the folders inside plugins/ and flatten any other. The version
 # is the VERSION file's. Release packages of that version already in <dist> are reused.
@@ -39,7 +39,7 @@ PY
 
 package() {   # $1 package name, $2 its folder in tools/thunderstore; the files are already in $work/$1
   local name=$1 dir="$work/$1"
-  sed "s/@VERSION@/$version/" "$ts/$2/manifest.json" > "$dir/manifest.json"
+  sed "s/@VERSION@/$version/g" "$ts/$2/manifest.json" > "$dir/manifest.json"
   cp "$ts/$2/README.md" "$ts/CHANGELOG.md" "$repo/wwwroot/icon.png" "$dir/"
   check "$dir"
   rm -f "$dist/$name-$version.zip"
@@ -57,7 +57,8 @@ package WorldEditorBridge bridge
 mkdir -p "$work/ValheimWorldEditor_Linux/plugins" "$work/ValheimWorldEditor_Windows/plugins"
 tar -xzf "$linux" -C "$work/ValheimWorldEditor_Linux/plugins"
 unzip -q "$windows" -d "$work/ValheimWorldEditor_Windows/plugins"
-# The mod page replaces the download's README.txt files.
-rm -f "$work"/ValheimWorldEditor_*/plugins/ValheimWorldEditor/README.txt "$work"/ValheimWorldEditor_*/plugins/ValheimWorldEditor/plugin/README.txt
+# The mod page replaces the download's README.txt; the plugin comes from the WorldEditorBridge
+# package, a dependency (Tie-WorldEditorBridge-<version>): upload that one first.
+rm -rf "$work"/ValheimWorldEditor_*/plugins/ValheimWorldEditor/{README.txt,plugin}
 package ValheimWorldEditor_Linux linux
 package ValheimWorldEditor_Windows windows

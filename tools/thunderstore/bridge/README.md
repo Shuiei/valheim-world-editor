@@ -8,8 +8,9 @@ players on your server) see the changes as soon as they are applied.
 ![The 3D editor showing a base](https://raw.githubusercontent.com/Shuiei/valheim-world-editor/main/docs/images/overview.jpg)
 
 **This plugin is only the bridge**, for dedicated servers and anyone who installs the editor
-separately. The editor itself, with this plugin included, is the **ValheimWorldEditor_Windows** or
-**ValheimWorldEditor_Linux** package (or a download from the
+separately. The editor itself is the
+[ValheimWorldEditor_Windows](https://thunderstore.io/c/valheim/p/Tie/ValheimWorldEditor_Windows/) or
+[ValheimWorldEditor_Linux](https://thunderstore.io/c/valheim/p/Tie/ValheimWorldEditor_Linux/) package, which installs this plugin with it (or a download from the
 [releases page](https://github.com/Shuiei/valheim-world-editor/releases/latest)).
 
 ## What the editor does
