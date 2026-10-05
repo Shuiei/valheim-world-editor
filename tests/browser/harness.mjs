@@ -114,8 +114,19 @@ export const screenOf = (page, x, z, lift = 0) => page.evaluate((x, z, lift) => 
   const r = ed.el.getBoundingClientRect(); return [r.left + (v.x + 1) / 2 * r.width, r.top + (1 - v.y) / 2 * r.height];
 }, x, z, lift);
 
-// Camera looking down at world point (x, z).
-export const lookAt = (page, x, z, dx = 0, up = 40, dz = 30) => page.evaluate((x, z, dx, up, dz) => {
-  const ed = window.__ed, gx = x - ed.originX, gz = z - ed.originZ, h = ed.sampleHeight(gx, gz), tx = gx - ed.cx, tz = -(gz - ed.cz);
-  window.__view(tx + dx, h + up, tz + dz, tx, h, tz);
-}, x, z, dx, up, dz);
+// Waits for the editor to draw n more frames. The camera's matrices (used to turn screen points
+// into ground points and back) and the selection arrows only follow a camera move when a frame
+// is drawn, and with software 3D under load one frame can take longer than any fixed pause.
+export const frames = (page, n = 2) => page.evaluate(n => new Promise(r => {
+  const next = k => k ? requestAnimationFrame(() => next(k - 1)) : r();
+  next(n);
+}), n);
+
+// Camera looking down at world point (x, z); returns once a frame shows the new view.
+export async function lookAt(page, x, z, dx = 0, up = 40, dz = 30) {
+  await page.evaluate((x, z, dx, up, dz) => {
+    const ed = window.__ed, gx = x - ed.originX, gz = z - ed.originZ, h = ed.sampleHeight(gx, gz), tx = gx - ed.cx, tz = -(gz - ed.cz);
+    window.__view(tx + dx, h + up, tz + dz, tx, h, tz);
+  }, x, z, dx, up, dz);
+  await frames(page);
+}
