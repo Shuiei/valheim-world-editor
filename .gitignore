@@ -1,0 +1,11 @@
+bin/
+obj/
+*.user
+# Extracted from the game's asset bundles (regenerate with tools/asset-export).
+wwwroot/models/
+wwwroot/maptex/
+wwwroot/terrain/*.png
+wwwroot/terrain/heightmap.frag.glsl
+tools/asset-export/cab_index.json
+tools/asset-export/*_index*.json
+tools/asset-export/__pycache__/
