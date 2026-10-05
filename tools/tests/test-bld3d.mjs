@@ -1,0 +1,23 @@
+import puppeteer from 'puppeteer';
+const base = process.argv[2], out = process.argv[3];
+const browser = await puppeteer.launch({ headless: true, args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--no-sandbox'] });
+const page = await browser.newPage();
+await page.setViewport({ width: 1400, height: 850 });
+const errors = []; page.on('pageerror', e => errors.push(e.message)); page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
+await page.goto(`${base}/editor.html?zx=0&zz=-5&size=3`, { waitUntil: 'networkidle0' });
+await page.waitForFunction(() => !document.getElementById('loading'), { timeout: 60000 });
+await new Promise(r => setTimeout(r, 1500));
+const count = await page.$eval('#bCount', e => e.textContent);
+await page.screenshot({ path: `${out}/bld3d-wide.png` });
+await page.mouse.move(700, 450);
+for (let i = 0; i < 5; i++) { await page.mouse.wheel({ deltaY: -250 }); await new Promise(r => setTimeout(r, 120)); }
+await new Promise(r => setTimeout(r, 800));
+await page.screenshot({ path: `${out}/bld3d-close.png` });
+await page.goto(`${base}/`, { waitUntil: 'domcontentloaded' });
+await page.evaluate(() => localStorage.setItem('mapView', JSON.stringify({ x: 20, z: -330, mpp: 0.35 })));
+await page.reload({ waitUntil: 'networkidle0' });
+await page.waitForFunction(() => document.getElementById('loadingMap')?.hidden === true, { timeout: 120000 });
+await new Promise(r => setTimeout(r, 5000));
+await page.screenshot({ path: `${out}/map-bld-check.png` });
+console.log(JSON.stringify({ count, errors }));
+await browser.close();

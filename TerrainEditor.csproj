@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>ValheimTerrainEditor</AssemblyName>
+    <RootNamespace>TerrainEditor</RootNamespace>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="WorldGen/terrain-modifiers.json" LogicalName="TerrainEditor.terrain-modifiers.json" />
+    <EmbeddedResource Include="WorldGen/pieces.json" LogicalName="TerrainEditor.pieces.json" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Update="wwwroot/**" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

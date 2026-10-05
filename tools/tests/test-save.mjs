@@ -1,0 +1,32 @@
+import puppeteer from 'puppeteer';
+const base = process.argv[2];
+const browser = await puppeteer.launch({ headless: true, args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--no-sandbox'] });
+const page = await browser.newPage();
+await page.setViewport({ width: 1400, height: 850 });
+const errors = [], dialogs = [];
+page.on('pageerror', e => errors.push('pageerror: ' + e.message));
+page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
+page.on('dialog', async d => { dialogs.push(d.message().split('\n')[0] + (d.message().includes('Backup:') ? ' [mentions backup]' : '')); await d.accept(); });
+await page.goto(`${base}/editor.html?zx=0&zz=-5&size=3`, { waitUntil: 'networkidle0' });
+await page.waitForFunction(() => !document.getElementById('loading'), { timeout: 60000 });
+await new Promise(r => setTimeout(r, 1000));
+const warn = await page.$eval('#locWarn', e => e.hidden ? '(no location warning)' : e.textContent.slice(0, 60));
+await page.mouse.move(700, 470); await new Promise(r => setTimeout(r, 300));
+const before = await page.$eval('#sHeight', e => e.textContent);
+await page.click('[data-tool="raise"]');
+await page.mouse.move(700, 470); await page.mouse.down();
+for (let i = 0; i < 15; i++) { await new Promise(r => setTimeout(r, 60)); }
+await page.mouse.up(); await new Promise(r => setTimeout(r, 800));
+await page.mouse.move(700, 470); await new Promise(r => setTimeout(r, 300));
+const edited = await page.$eval('#sHeight', e => e.textContent);
+await page.click('#saveBtn');
+await new Promise(r => setTimeout(r, 6000));
+const pendingAfterSave = await page.$eval('#pending', e => e.textContent);
+// Reload: the edit must come back from disk.
+await page.goto(`${base}/editor.html?zx=0&zz=-5&size=3`, { waitUntil: 'networkidle0' });
+await page.waitForFunction(() => !document.getElementById('loading'), { timeout: 60000 });
+await new Promise(r => setTimeout(r, 1000));
+await page.mouse.move(700, 470); await new Promise(r => setTimeout(r, 300));
+const afterReload = await page.$eval('#sHeight', e => e.textContent);
+console.log(JSON.stringify({ warn, before, edited, dialogs, pendingAfterSave, afterReload, errors }, null, 1));
+await browser.close();

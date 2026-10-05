@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<title>Valheim Terrain Editor</title>
+<style>
+  :root {
+    --bg: #14171c; --panel: #1c2027; --line: #2c323c; --text: #e4e7ec; --muted: #8b93a1;
+    --accent: #e0a64b; --raise: #e0604b; --lower: #4b8fe0;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; height: 100vh; display: grid; grid-template-columns: 1fr 360px; background: var(--bg); color: var(--text); font: 14px/1.4 system-ui, sans-serif; }
+  .mapwrap { position: relative; height: 100vh; overflow: hidden; background: #0e0f12; }
+  #map, #overlay { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  #overlay { cursor: grab; }
+  #overlay.dragging { cursor: grabbing; }
+  .floating { position: absolute; left: 12px; top: 12px; background: rgba(28,32,39,.9); border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; font-size: 12px; color: var(--muted); pointer-events: none; }
+  .floating.bottom { top: auto; bottom: 12px; }
+  .toggles label { display: block; color: var(--muted); font-size: 12px; margin: 3px 0; }
+  .changes { margin: 12px 0; padding: 10px; border: 1px solid #3a5a80; background: #1d2a3a; border-radius: 6px; font-size: 13px; }
+  .changes .row { display: flex; gap: 6px; margin-top: 8px; }
+  .changes button { flex: 1; background: #262b34; color: var(--text); border: 1px solid var(--line); border-radius: 5px; padding: 6px; cursor: pointer; font: inherit; }
+  .changes button.primary { background: var(--accent); color: #1a1a1a; font-weight: 600; border-color: var(--accent); }
+  aside { background: var(--panel); border-left: 1px solid var(--line); padding: 16px; overflow-y: auto; }
+  h1 { font-size: 16px; margin: 0 0 4px; }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 20px 0 8px; }
+  .meta { color: var(--muted); font-size: 12px; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  td, th { padding: 4px 6px; text-align: left; border-bottom: 1px solid var(--line); }
+  tr.zone { cursor: pointer; }
+  tr.zone:hover, tr.zone.sel { background: #2a303a; }
+  .detail canvas { width: 100%; image-rendering: pixelated; border: 1px solid var(--line); border-radius: 4px; }
+  .legend { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-top: 4px; }
+  .bar { height: 8px; border-radius: 4px; background: linear-gradient(90deg, var(--lower), #2a2f38, var(--raise)); }
+  .hint { color: var(--muted); font-size: 12px; margin-top: 8px; }
+  .edit { display: flex; gap: 6px; align-items: center; margin: 10px 0 4px; }
+  .edit a { background: var(--accent); color: #1a1a1a; text-decoration: none; font-weight: 600; padding: 6px 10px; border-radius: 5px; }
+  .edit select { background: #262b34; color: var(--text); border: 1px solid var(--line); border-radius: 4px; padding: 4px; }
+</style>
+</head>
+<body>
+<div class="mapwrap">
+  <canvas id="map"></canvas><canvas id="overlay"></canvas>
+  <div id="loadingMap" class="floating" hidden>Building the world map (same as the game does)…</div>
+  <div id="cursor" class="floating bottom"></div>
+</div>
+<aside>
+  <h1>Valheim Terrain Editor</h1>
+  <div class="meta" id="meta">Loading…</div>
+  <div class="hint">Drag to pan, scroll to zoom. Click any spot to open it in the 3D editor; edited zones also show their details.</div>
+  <div id="changes" class="changes" hidden>
+    <div id="changesText"></div>
+    <div class="row"><button id="saveBtn" class="primary">Save to world…</button><button id="discardBtn">Discard</button></div>
+  </div>
+  <div class="toggles">
+    <label><input type="checkbox" id="showBuildings" checked> Show buildings (player-built pieces)</label>
+    <label><input type="checkbox" id="showEdited" checked> Outline edited zones</label>
+    <label><input type="checkbox" id="showPaint" checked> Show painted ground (dirt, paved, fields) when zoomed in</label>
+    <label><input type="checkbox" id="showGrid"> Zone grid</label>
+    <label><input type="checkbox" id="showClouds"> Clouds (as in game)</label>
+  </div>
+  <div id="pick" hidden>
+    <h2 id="pickTitle"></h2>
+    <div class="edit"><a id="editLink" href="#">Edit in 3D</a>
+      <select id="editSize"><option value="3">3 × 3 zones (192 m)</option><option value="5">5 × 5 zones (320 m)</option><option value="7">7 × 7 zones (448 m)</option></select></div>
+  </div>
+  <div class="detail" id="detail" hidden>
+    <h2 id="detailTitle">Zone</h2>
+    <div class="meta" id="detailBiome"></div>
+    <h2>Terrain (with your edits)</h2>
+    <canvas id="terrain" width="65" height="65"></canvas>
+    <div class="legend"><span id="terrainLow"></span><span>shaded relief · blue = under water</span><span id="terrainHigh"></span></div>
+    <h2>Your height edits</h2>
+    <canvas id="heights" width="65" height="65"></canvas>
+    <div class="bar"></div>
+    <div class="legend"><span>−8 m (dug)</span><span>0</span><span>+8 m (raised)</span></div>
+    <h2>Paint</h2>
+    <canvas id="paint" width="65" height="65"></canvas>
+    <div class="legend"><span>red dirt · green cultivated · blue paved · olive natural · white snow · darker = grass cleared · grey = untouched</span></div>
+    <div class="meta" id="detailStats"></div>
+  </div>
+  <h2>Edited zones</h2>
+  <table><thead><tr><th>Zone</th><th>Edited</th><th>Range (m)</th></tr></thead><tbody id="list"></tbody></table>
+</aside>
+<script type="module">
+import { MapView } from './mapview.js';
+import { saveWorld, discardChanges } from './world-actions.js';
+const glCanvas = document.getElementById('map'), overlay = document.getElementById('overlay'), octx = overlay.getContext('2d');
+const ZONE = 64;
+let zones = [], selected = null, world = null, mapView = null, hoverWorld = null;
+// Player-built pieces: x, y, z, rotY, minX, maxX, minZ, maxZ, top, category (PieceCatalog.Stride).
+let pieces = null, pieceOrder = [];
+const STRIDE = 13;
+const PIECE_STYLE = {
+  0: ['rgba(150,72,34,0.92)', 'rgba(60,25,10,0.9)'],    // misc: portals, fires, signs...
+  1: ['rgba(128,56,40,0.9)', 'rgba(55,22,14,0.9)'],     // crafting stations
+  2: ['rgba(92,64,40,0.88)', 'rgba(38,24,14,0.9)'],     // wood building
+  3: ['rgba(110,104,96,0.92)', 'rgba(45,42,38,0.9)'],   // stone building
+  4: ['rgba(140,102,62,0.8)', 'rgba(60,40,22,0.85)'],   // furniture
+};
+let overlayKey = '';
+// metersPerPixel is per CSS pixel; the renderer works in device pixels.
+let view = { x: 0, z: -300, mpp: 2.5 };
+try { const saved = JSON.parse(localStorage.getItem('mapView') || 'null'); if (saved && isFinite(saved.x)) view = saved; } catch {}
+
+function resize() {
+  for (const c of [glCanvas, overlay]) { c.width = c.clientWidth * devicePixelRatio; c.height = c.clientHeight * devicePixelRatio; }
+}
+const toWorld = (cssX, cssY) => [view.x + (cssX - glCanvas.clientWidth / 2) * view.mpp, view.z - (cssY - glCanvas.clientHeight / 2) * view.mpp];
+const toScreen = (wx, wz) => [(glCanvas.clientWidth / 2 + (wx - view.x) / view.mpp) * devicePixelRatio, (glCanvas.clientHeight / 2 - (wz - view.z) / view.mpp) * devicePixelRatio];
+
+function drawBuildings() {
+  if (!pieces || !document.getElementById('showBuildings').checked || view.mpp > 10) return;
+  const [x0, z1] = toWorld(-40, -40), [x1, z0] = toWorld(glCanvas.clientWidth + 40, glCanvas.clientHeight + 40);
+  const detailed = view.mpp < 2.5, d = devicePixelRatio;
+  for (const i of pieceOrder) {
+    const o = i * STRIDE, px = pieces[o], pz = pieces[o + 2];
+    if (px < x0 || px > x1 || pz < z0 || pz > z1) continue;
+    const style = PIECE_STYLE[pieces[o + 9]] ?? PIECE_STYLE[0];
+    if (!detailed) {
+      const [sx, sy] = toScreen(px, pz);
+      octx.fillStyle = style[1]; octx.fillRect(sx - d, sy - d, 2 * d, 2 * d);
+      continue;
+    }
+    // Unity Y rotation (clockwise seen from above): local (x, z) -> world.
+    const a = pieces[o + 3] * Math.PI / 180, c = Math.cos(a), sn = Math.sin(a);
+    const corners = [[pieces[o + 4], pieces[o + 6]], [pieces[o + 5], pieces[o + 6]], [pieces[o + 5], pieces[o + 7]], [pieces[o + 4], pieces[o + 7]]];
+    octx.beginPath();
+    corners.forEach(([lx, lz], k) => {
+      const [sx, sy] = toScreen(px + lx * c + lz * sn, pz - lx * sn + lz * c);
+      if (k) octx.lineTo(sx, sy); else octx.moveTo(sx, sy);
+    });
+    octx.closePath();
+    octx.fillStyle = style[0]; octx.fill();
+    if (view.mpp < 0.8) { octx.strokeStyle = style[1]; octx.lineWidth = d; octx.stroke(); }
+  }
+}
+
+function drawOverlay() {
+  // Redraw only when something visible changed (buildings can be many thousands).
+  const key = [view.x, view.z, view.mpp, overlay.width, overlay.height, selected?.x, selected?.z, !!pieces,
+    ...['showBuildings', 'showEdited', 'showGrid'].map(id => document.getElementById(id).checked)].join('|');
+  if (key === overlayKey) return;
+  overlayKey = key;
+  octx.clearRect(0, 0, overlay.width, overlay.height);
+  drawBuildings();
+  const px = ZONE / view.mpp * devicePixelRatio;
+  if (document.getElementById('showGrid').checked && px > 24) {
+    octx.strokeStyle = 'rgba(40,30,20,0.18)'; octx.lineWidth = 1;
+    const [x0, z1] = toWorld(0, 0), [x1, z0] = toWorld(glCanvas.clientWidth, glCanvas.clientHeight);
+    for (let gx = Math.floor((x0 + 32) / ZONE) * ZONE - 32; gx < x1; gx += ZONE) { const [sx] = toScreen(gx, 0); octx.beginPath(); octx.moveTo(sx, 0); octx.lineTo(sx, overlay.height); octx.stroke(); }
+    for (let gz = Math.floor((z0 + 32) / ZONE) * ZONE - 32; gz < z1; gz += ZONE) { const [, sy] = toScreen(0, gz); octx.beginPath(); octx.moveTo(0, sy); octx.lineTo(overlay.width, sy); octx.stroke(); }
+  }
+  if (document.getElementById('showEdited').checked) {
+    for (const z of zones) {
+      const [sx, sy] = toScreen(z.centerX - ZONE / 2, z.centerZ + ZONE / 2), size = Math.max(4, px);
+      octx.strokeStyle = z.changed ? 'rgba(40,140,255,0.95)' : 'rgba(200,90,20,0.7)'; octx.lineWidth = z.changed ? 2.5 : 1.5;
+      octx.strokeRect(sx, sy, size, size);
+    }
+  }
+  if (selected) {
+    const [sx, sy] = toScreen(selected.centerX - ZONE / 2, selected.centerZ + ZONE / 2);
+    octx.strokeStyle = '#fff'; octx.lineWidth = 2.5; octx.setLineDash([6, 4]);
+    octx.strokeRect(sx, sy, Math.max(6, px), Math.max(6, px)); octx.setLineDash([]);
+  }
+}
+
+// Request a 1 m detail window (with terrain edits) around the view once zoomed in.
+function updateDetail() {
+  if (!mapView || view.mpp > 6) return;
+  const size = view.mpp > 2 ? 2048 : 1024;
+  const x0 = Math.round((view.x - size / 2) / 64) * 64, z0 = Math.round((view.z - size / 2) / 64) * 64;
+  const d = mapView.detail;
+  const inside = d && d.size === size && Math.abs(view.x - (d.x0 + size / 2)) < size / 4 && Math.abs(view.z - (d.z0 + size / 2)) < size / 4;
+  if (!inside || mapView.detailVersion !== world.editVersion) {
+    mapView.detailVersion = world.editVersion;
+    mapView.loadDetail(x0, z0, size, world.editVersion);
+  }
+}
+
+function frame() {
+  if (mapView) mapView.render({ x: view.x, z: view.z, metersPerPixel: view.mpp / devicePixelRatio });
+  drawOverlay();
+  requestAnimationFrame(frame);
+}
+
+function status() {
+  const el = document.getElementById('cursor');
+  if (!hoverWorld) { el.textContent = ''; return; }
+  const [wx, wz] = hoverWorld;
+  el.textContent = `x ${wx.toFixed(0)}, z ${wz.toFixed(0)} · zone ${Math.floor((wx + 32) / 64)}, ${Math.floor((wz + 32) / 64)}`;
+}
+
+function showPick(zx, zz) {
+  document.getElementById('pick').hidden = false;
+  document.getElementById('pickTitle').textContent = `Zone ${zx}, ${zz} · centre (${zx * 64}, ${zz * 64})`;
+  const link = document.getElementById('editLink'), sizeSel = document.getElementById('editSize');
+  const update = () => link.href = `editor.html?zx=${zx}&zz=${zz}&size=${sizeSel.value}`;
+  sizeSel.onchange = update; update();
+}
+async function selectZone(z) {
+  selected = z; showPick(z.x, z.z);
+  document.querySelectorAll('tr.zone').forEach(r => r.classList.toggle('sel', r.dataset.key === `${z.x},${z.z}`));
+  const d = await (await fetch(`/api/zone/${z.x}/${z.z}`)).json();
+  document.getElementById('detail').hidden = false;
+  document.getElementById('detailTitle').textContent = `Zone ${z.x}, ${z.z} · centre (${z.centerX.toFixed(0)}, ${z.centerZ.toFixed(0)})`;
+  const hs = d.heights, w = d.heightWidth, lo = Math.min(...hs), hi = Math.max(...hs);
+  document.getElementById('detailBiome').textContent = `${d.biome} · ground ${Math.min(...d.baseHeights).toFixed(1)}–${Math.max(...d.baseHeights).toFixed(1)} m originally, ${lo.toFixed(1)}–${hi.toFixed(1)} m now (sea level ${world.waterLevel} m)`;
+  document.getElementById('terrainLow').textContent = `${lo.toFixed(1)} m`;
+  document.getElementById('terrainHigh').textContent = `${hi.toFixed(1)} m`;
+  paintGrid('terrain', w, hs.map((h, i) => {
+    if (h < world.waterLevel) return mix([70, 120, 170], [30, 60, 110], Math.min(1, (world.waterLevel - h) / 4));
+    const x = i % w, y = Math.floor(i / w);
+    const dx = hs[y * w + Math.min(x + 1, w - 1)] - hs[y * w + Math.max(x - 1, 0)];
+    const dz = hs[Math.min(y + 1, w - 1) * w + x] - hs[Math.max(y - 1, 0) * w + x];
+    const shade = Math.max(0.45, Math.min(1.4, 1 - (dx - dz) * 0.25));
+    const t = hi > lo ? (h - lo) / (hi - lo) : 0.5;
+    return mix([96, 128, 70], [190, 180, 150], t).map(v => v * shade);
+  }));
+  paintGrid('heights', d.heightWidth, d.deltas.map(v => {
+    if (v === null) return [42, 47, 56];
+    const t = Math.max(-1, Math.min(1, v / 8));
+    return t >= 0 ? mix([42, 47, 56], [224, 96, 75], t) : mix([42, 47, 56], [75, 143, 224], -t);
+  }));
+  // Paint channels: r = dirt, g = cultivated, b = paved, a = vegetation allowed (0 = grass cleared).
+  paintGrid('paint', d.paintWidth, d.paint.map(p => {
+    if (!p) return [42, 47, 56];
+    let c = (p[0] + p[1] + p[2]) < 0.05 ? [96, 104, 88] : [p[0] * 255, p[1] * 255, p[2] * 255];
+    return p[3] < 0.5 ? c.map(v => v * 0.45) : c;
+  }));
+  document.getElementById('detailStats').textContent = `${z.heights} heights edited (${z.min.toFixed(2)} to ${z.max.toFixed(2)} m), ${z.painted} points painted, ${z.operations} edit operations.`;
+}
+function mix(a, b, t) { return a.map((v, i) => v + (b[i] - v) * t); }
+function paintGrid(id, w, colors) {
+  const c = document.getElementById(id), g = c.getContext('2d');
+  c.width = w; c.height = w;
+  const img = g.createImageData(w, w);
+  // Data is row-major with rows along +Z; flip so north is up.
+  colors.forEach((col, i) => { const x = i % w, y = w - 1 - Math.floor(i / w), o = (y * w + x) * 4; img.data[o] = col[0]; img.data[o + 1] = col[1]; img.data[o + 2] = col[2]; img.data[o + 3] = 255; });
+  g.putImageData(img, 0, 0);
+}
+
+
+let drag = null, saveTimer = 0;
+const remember = () => { clearTimeout(saveTimer); saveTimer = setTimeout(() => { try { localStorage.setItem('mapView', JSON.stringify(view)); } catch {} }, 300); };
+overlay.addEventListener('mousedown', e => { drag = { x: e.clientX, y: e.clientY, vx: view.x, vz: view.z, moved: false }; overlay.classList.add('dragging'); });
+window.addEventListener('mousemove', e => {
+  if (e.target === overlay) { hoverWorld = toWorld(e.offsetX, e.offsetY); status(); }
+  if (!drag) return;
+  const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+  if (Math.abs(dx) + Math.abs(dy) > 3) drag.moved = true;
+  view.x = drag.vx - dx * view.mpp; view.z = drag.vz + dy * view.mpp; updateDetail(); remember();
+});
+window.addEventListener('mouseup', e => {
+  if (drag && !drag.moved && e.target === overlay) {
+    const [wx, wz] = toWorld(e.offsetX, e.offsetY);
+    const hit = zones.find(z => Math.abs(wx - z.centerX) <= ZONE / 2 && Math.abs(wz - z.centerZ) <= ZONE / 2);
+    if (hit) selectZone(hit);
+    else {
+      const zx = Math.floor((wx + 32) / 64), zz = Math.floor((wz + 32) / 64);
+      selected = { x: zx, z: zz, centerX: zx * 64, centerZ: zz * 64 };
+      document.getElementById('detail').hidden = true; showPick(zx, zz);
+    }
+  }
+  drag = null; overlay.classList.remove('dragging');
+});
+overlay.addEventListener('wheel', e => {
+  e.preventDefault();
+  const [wx, wz] = toWorld(e.offsetX, e.offsetY);
+  view.mpp = Math.min(30, Math.max(0.15, view.mpp * (e.deltaY < 0 ? 1 / 1.2 : 1.2)));
+  const [nx, nz] = toWorld(e.offsetX, e.offsetY);
+  view.x += wx - nx; view.z += wz - nz; updateDetail(); remember();
+}, { passive: false });
+window.addEventListener('resize', resize);
+for (const id of ['showPaint', 'showClouds']) document.getElementById(id).onchange = () => { if (mapView) { mapView.showPaint = document.getElementById('showPaint').checked; mapView.showClouds = document.getElementById('showClouds').checked; } };
+
+(async () => {
+  resize(); requestAnimationFrame(frame);
+  const w = await (await fetch('/api/world')).json();
+  world = w; zones = w.zones;
+  const pendingChanges = { zones: w.changedZones, deleted: w.deletedObjects ?? 0 };
+  if (w.changedZones || pendingChanges.deleted) {
+    document.getElementById('changes').hidden = false;
+    document.getElementById('changesText').textContent = [w.changedZones ? `${w.changedZones} zone(s) changed` : '', pendingChanges.deleted ? `${pendingChanges.deleted} object(s) deleted` : ''].filter(Boolean).join(', ') + ' — not saved yet.';
+  }
+  document.getElementById('saveBtn').onclick = () => saveWorld(w, pendingChanges, res => { if (res.saved) location.reload(); });
+  document.getElementById('discardBtn').onclick = () => discardChanges(pendingChanges, () => location.reload());
+  document.getElementById('meta').textContent = `${w.name} · seed ${w.seedName} · save #${w.saveNumber} · ${w.objects.toLocaleString()} objects · ${zones.length} edited zones` + (w.changedZones ? ` · ${w.changedZones} changed in this session (blue outline, not saved yet)` : '');
+  const list = document.getElementById('list');
+  for (const z of [...zones].sort((a, b) => (b.heights + b.painted) - (a.heights + a.painted))) {
+    const tr = document.createElement('tr');
+    tr.className = 'zone'; tr.dataset.key = `${z.x},${z.z}`;
+    tr.innerHTML = `<td>${z.x}, ${z.z}</td><td>${z.heights} h · ${z.painted} p</td><td>${z.min.toFixed(1)} … ${z.max.toFixed(1)}</td>`;
+    tr.onclick = () => { view.x = z.centerX; view.z = z.centerZ; view.mpp = Math.min(view.mpp, 0.5); updateDetail(); remember(); selectZone(z); };
+    list.appendChild(tr);
+  }
+  fetch('/api/pieces').then(r => r.arrayBuffer()).then(buf => {
+    pieces = new Float32Array(buf);
+    const n = pieces.length / STRIDE;
+    // Lower pieces first so roofs end up on top, like looking down from above.
+    pieceOrder = Array.from({ length: n }, (_, i) => i).sort((a, b) => pieces[a * STRIDE + 8] - pieces[b * STRIDE + 8]);
+    const label = document.querySelector('#showBuildings').parentElement;
+    label.lastChild.textContent = ` Show buildings (${n.toLocaleString()} player-built pieces)`;
+  });
+  try {
+    mapView = new MapView(glCanvas, w);
+    document.getElementById('loadingMap').hidden = false;
+    await mapView.ready;
+    document.getElementById('loadingMap').hidden = true;
+    updateDetail();
+  } catch (err) {
+    document.getElementById('loadingMap').hidden = false;
+    document.getElementById('loadingMap').textContent = 'Map failed to load: ' + err.message;
+    console.error(err);
+  }
+})();
+</script>
+</body>
+</html>
