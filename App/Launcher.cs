@@ -10,8 +10,20 @@ public static class Launcher
 
 	// mode: "game" (live, own game), "server" (live, built-in SSH tunnel), "saved" (a saved server),
 	// "url" (live, a tunnel made elsewhere: LiveUrl + Token), or a world Path (offline).
+	public sealed record SettingsRequest(string? Valheim, List<string>? BepInEx, List<string>? Worlds);
+
+	private static string Expand(string path)
+	{
+		path = path.Trim().Trim('"');
+		if (path.StartsWith('~'))
+		{
+			path = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile) + path[1..];
+		}
+		return Path.GetFullPath(path);
+	}
+
 	public sealed record OpenRequest(string? Path, string? LiveUrl, string? Token, string? Mode = null, string? Host = null, int SshPort = 22,
-		string? User = null, string? Password = null, string? KeyPath = null, string? Passphrase = null, bool SavePassword = false, string? Name = null, string? Id = null, int? BridgePort = null);
+		string? User = null, string? Password = null, string? KeyPath = null, string? Passphrase = null, bool SavePassword = false, string? Name = null, string? Id = null, int? BridgePort = null, string? GameFolder = null);
 
 	public static async Task<Choice?> RunAsync(int port, AppSettings settings, string? lastError, CancellationToken quit)
 	{
@@ -41,8 +53,43 @@ public static class Launcher
 		Shared(app, settings);
 		app.MapGet("/api/launcher/state", () => new { phase = "start", error = lastError, live = settings.LiveUrl, mode = settings.LastMode });
 		app.MapGet("/api/launcher/worlds", () => FindWorlds(settings));
+		app.MapGet("/api/settings", () => new
+		{
+			valheim = settings.ValheimPath,
+			detected = GameLook.FindValheim(null),
+			bepInEx = settings.BepInExFolders,
+			worlds = settings.WorldFolders,
+			defaultWorlds = WorldRoots().Where(Directory.Exists),
+		});
+		app.MapPost("/api/settings", (SettingsRequest req) =>
+		{
+			var problems = new List<string>();
+			string? valheim = string.IsNullOrWhiteSpace(req.Valheim) ? null : Expand(req.Valheim);
+			if (valheim != null && GameLook.BundlesDir(valheim) == null)
+			{
+				problems.Add("The Valheim folder must be the game's folder, the one with valheim_Data.");
+			}
+			List<string> Clean(IEnumerable<string>? list, string what) => (list ?? Enumerable.Empty<string>()).Select(p => p.Trim()).Where(p => p.Length > 0).Select(Expand).Distinct()
+				.Where(p => { if (Directory.Exists(p)) return true; problems.Add($"{what} not found: {p}"); return false; }).ToList();
+			var bep = Clean(req.BepInEx, "BepInEx folder");
+			var worlds = Clean(req.Worlds, "World folder");
+			if (problems.Count > 0)
+			{
+				return Results.Ok(new { ok = false, error = string.Join(" ", problems) });
+			}
+			bool gameChanged = valheim != settings.ValheimPath;
+			settings.ValheimPath = valheim;
+			settings.BepInExFolders = bep;
+			settings.WorldFolders = worlds;
+			settings.Save();
+			if (gameChanged)
+			{
+				GameLook.Check(Path.Combine(AppContext.BaseDirectory, "wwwroot"), settings);
+			}
+			return Results.Ok(new { ok = true });
+		});
 		app.MapGet("/api/launcher/local", async () => await LocalGame.Status(settings));
-		app.MapGet("/api/launcher/servers", () => ServerConfig.Load().Select(s => new { id = s.Id, name = s.Name, host = s.Host, user = s.User, sshPort = s.SshPort, keyFile = s.KeyFile, hasPassword = s.Password != null, hasToken = s.Token != null }));
+		app.MapGet("/api/launcher/servers", () => ServerConfig.Load().Select(s => new { id = s.Id, name = s.Name, host = s.Host, user = s.User, sshPort = s.SshPort, keyFile = s.KeyFile, hasPassword = s.Password != null, hasToken = s.Token != null, gameFolder = s.GameFolder }));
 		app.MapPost("/api/launcher/forget", (OpenRequest req) => { if (req.Id != null) ServerConfig.Forget(req.Id); return Results.Ok(new { ok = true }); });
 		app.MapPost("/api/launcher/open", async (OpenRequest req) =>
 		{
@@ -75,8 +122,8 @@ public static class Launcher
 					return Results.Ok(new { ok = false, error = "That saved server is gone from servers.cfg." });
 				}
 				var t = s != null
-					? new Tunnel.Request(s.Host, s.SshPort, s.User, req.Password ?? s.Password, s.KeyFile, req.Passphrase, req.Token, null, s.Password != null || req.SavePassword, s.Name)
-					: new Tunnel.Request(req.Host ?? "", req.SshPort, req.User ?? "", req.Password, req.KeyPath, req.Passphrase, req.Token, req.BridgePort, req.SavePassword, req.Name);
+					? new Tunnel.Request(s.Host, s.SshPort, s.User, req.Password ?? s.Password, s.KeyFile, req.Passphrase, req.Token, null, s.Password != null || req.SavePassword, s.Name, s.GameFolder)
+					: new Tunnel.Request(req.Host ?? "", req.SshPort, req.User ?? "", req.Password, req.KeyPath, req.Passphrase, req.Token, req.BridgePort, req.SavePassword, req.Name, req.GameFolder);
 				Tunnel.Result tr = await Tunnel.Start(t);
 				if (tr.Error != null)
 				{
@@ -86,8 +133,14 @@ public static class Launcher
 				string? down = await TerrainEditor.Save.LiveBridge.Check(url, tr.Token, TimeSpan.FromSeconds(10));
 				if (down != null)
 				{
+					string? why = down.Contains("refused the token") ? null : Tunnel.Diagnose(t.GameFolder ?? ServerConfig.Load().FirstOrDefault(x => x.Id == $"{t.User}@{t.Host}:{(t.Port > 0 ? t.Port : 22)}")?.GameFolder);
 					Tunnel.Close();
-					return Results.Ok(new { ok = false, error = down.Contains("refused the token") ? down : "The tunnel is open, but the plugin does not answer on the server: is the server running with BepInEx and WorldEditorBridge? (" + down + ")" });
+					return Results.Ok(new { ok = false, error = down.Contains("refused the token") ? down : why ?? "The tunnel is open, but the plugin does not answer on the server: is the server running with BepInEx and WorldEditorBridge? Set the server's Valheim folder under \"More options\" for a precise check." });
+				}
+				// Saved only after a successful connection.
+				if (tr.Server != null)
+				{
+					ServerConfig.Remember(tr.Server);
 				}
 				chosen.TrySetResult(Live(url, tr.Token, "server " + t.Host, "server"));
 				return Results.Ok(new { ok = true });
@@ -179,6 +232,19 @@ public static class Launcher
 		foreach (var r in settings.Recent)
 		{
 			Add(r.Path, "recent");
+		}
+		// Folders added in Settings: a world, or a folder of worlds.
+		foreach (string folder in settings.WorldFolders.Where(Directory.Exists))
+		{
+			if (Directory.GetFiles(folder, "_main.*.chunks").Length > 0)
+			{
+				Add(folder, "yours");
+				continue;
+			}
+			foreach (string d in Directory.GetDirectories(folder).Where(d => Directory.GetFiles(d, "_main.*.chunks").Length > 0))
+			{
+				Add(d, "yours");
+			}
 		}
 		foreach (string root in WorldRoots())
 		{

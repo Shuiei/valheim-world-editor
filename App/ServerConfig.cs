@@ -27,6 +27,9 @@ public static class ServerConfig
 
 		public int BridgePort { get; set; } = 5182;
 
+		// The server's Valheim folder (with BepInEx), optional: for the plugin's port and precise errors.
+		public string? GameFolder { get; set; }
+
 		// The server's SSH host key, remembered on first connection: a different key is refused.
 		public string? HostKey { get; set; }
 
@@ -78,6 +81,7 @@ public static class ServerConfig
 					case "token": cur.Token = opt; break;
 					case "bridgeport": cur.BridgePort = int.TryParse(value, out int bp) ? bp : 5182; break;
 					case "hostkey": cur.HostKey = opt; break;
+					case "gamefolder": cur.GameFolder = opt; break;
 				}
 			}
 			return list.Where(s => s.Host.Length > 0 && s.User.Length > 0).ToList();
@@ -132,6 +136,7 @@ public static class ServerConfig
 			sb.AppendLine($"KeyFile = {s.KeyFile}");
 			sb.AppendLine($"Token = {s.Token}");
 			sb.AppendLine($"BridgePort = {s.BridgePort}");
+			sb.AppendLine($"GameFolder = {s.GameFolder}");
 			sb.AppendLine($"HostKey = {s.HostKey}");
 		}
 		File.WriteAllText(FilePath, sb.ToString());

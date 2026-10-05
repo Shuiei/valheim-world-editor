@@ -6,7 +6,16 @@ namespace TerrainEditor.App;
 // (~/.local/share/ValheimWorldEditor on Linux, %LOCALAPPDATA%\ValheimWorldEditor on Windows).
 public sealed class AppSettings
 {
+	// The Valheim game folder chosen in Settings (null: found automatically in the Steam libraries).
 	public string? ValheimPath { get; set; }
+
+	// Extra places to look for the game's BepInEx: a BepInEx folder, a mod manager profile, or a
+	// folder of profiles (a mod manager with a custom data folder).
+	public List<string> BepInExFolders { get; set; } = new();
+
+	// Extra places with worlds, always listed: a world folder, or a folder of worlds (a server's
+	// -savedir/worlds_local, a backup folder...).
+	public List<string> WorldFolders { get; set; } = new();
 
 	public List<RecentWorld> Recent { get; set; } = new();
 

@@ -69,6 +69,9 @@
   .server .n { font-weight: 600; } .server .h { color: var(--muted); font-size: 12.5px; }
   .server .grow { flex: 1; }
   details summary { cursor: pointer; color: var(--muted); font-size: 12.5px; margin-top: 10px; }
+  #settings { position: fixed; inset: 0; background: rgba(10,12,15,.75); display: flex; align-items: center; justify-content: center; z-index: 55; padding: 20px; }
+  #settings[hidden] { display: none; }
+  .frow { display: flex; gap: 6px; margin-bottom: 6px; }
   #busy { position: fixed; inset: 0; background: rgba(10,12,15,.8); display: flex; align-items: center; justify-content: center; font-size: 18px; z-index: 60; text-align: center; padding: 20px; }
   #busy[hidden] { display: none; }
   .empty { color: var(--muted); padding: 18px; border: 1px dashed var(--line2); border-radius: 12px; }
@@ -78,7 +81,7 @@
 </head>
 <body>
 <main>
-  <header><h1><span>Valheim</span> World Editor</h1><span class="ver" id="ver"></span></header>
+  <header><h1><span>Valheim</span> World Editor</h1><span class="ver" id="ver"></span><span style="flex:1"></span><button class="b" id="openSettings" title="Where the game, BepInEx and worlds are on this computer">⚙ Settings</button></header>
   <p class="lead">Shape the ground, paint it, build paths, place and move trees, rocks, crops and building pieces, copy and paste whole areas.</p>
   <div id="lastError" hidden></div>
   <div id="glHere"></div>
@@ -119,6 +122,9 @@
       <div class="row">
         <label class="f">Plugin token<input id="sToken" placeholder="the Token line in BepInEx/config/local.worldeditorbridge.cfg on the server"></label>
       </div>
+      <div class="row">
+        <label class="f">Server's Valheim folder (optional)<input id="sFolder" placeholder="/home/valheim/server, the folder with BepInEx (for the plugin's port and precise errors)"></label>
+      </div>
       <div class="row" style="margin-top:10px">
         <label class="check"><input type="checkbox" id="sSave"> Save password</label>
         <span class="grow" style="flex:1"></span>
@@ -158,6 +164,25 @@
 
   <p class="hint" style="margin-top:28px"><a href="https://github.com/Shuiei/valheim-world-editor#readme">Documentation</a> · settings, saved servers and log: <code id="dataDir"></code></p>
 </main>
+<div id="settings" hidden>
+  <div class="card" style="max-width:720px;width:100%;max-height:90vh;overflow:auto">
+    <div style="display:flex;align-items:center"><div style="font-size:17px;font-weight:600;flex:1">Settings: folders on this computer</div><button class="link" id="closeSettings">close</button></div>
+    <h2>Valheim game folder</h2>
+    <div class="hint" style="margin-top:0" id="detected"></div>
+    <div class="row"><input id="setValheim" placeholder="automatic (Steam libraries)"><button class="b" id="browseValheim" hidden>Browse…</button><button class="b" id="autoValheim">Automatic</button></div>
+    <div class="hint">The folder with <code>valheim_Data</code>. Used for the game's look, and to find BepInEx for "My game".</div>
+    <h2>BepInEx folders</h2>
+    <div id="setBep"></div>
+    <div class="row"><button class="b" id="addBep">Add a folder</button></div>
+    <div class="hint">Where else to look for the plugin for "My game": a <code>BepInEx</code> folder, a mod manager profile, or a folder of profiles (a mod manager with its own data folder). The Valheim folder and the default r2modman / Thunderstore Mod Manager profiles are always searched.</div>
+    <h2>World folders</h2>
+    <div id="setWorlds"></div>
+    <div class="row"><button class="b" id="addWorld">Add a folder</button></div>
+    <div class="hint">Always listed under "A saved world": a world folder, or a folder of worlds (a server's <code>&lt;savedir&gt;/worlds_local</code>, a backup folder…). Valheim's usual folders are always searched: <span id="defWorlds"></span></div>
+    <div class="err" id="setErr"></div>
+    <div class="row" style="margin-top:14px;justify-content:flex-end"><button class="b" id="cancelSettings">Cancel</button><button class="b primary" id="saveSettings">Save</button></div>
+  </div>
+</div>
 <div id="busy" hidden>Opening…</div>
 <script type="module">
 import { gameLookBanner, pickFolder, pickFile, isWindow } from './app.js';
@@ -237,14 +262,19 @@ async function loadServers() {
   $('savedCard').hidden = !list.length;
   $('newTitle').textContent = list.length ? 'Another server' : 'Connect to a server';
   $('saved').innerHTML = list.map((s, i) => `<div class="server" data-i="${i}">
-      <div class="grow"><div class="n">${esc(s.name)}</div><div class="h">${esc(s.user)}@${esc(s.host)}${s.sshPort !== 22 ? ':' + s.sshPort : ''} · ${s.keyFile ? 'key file' : s.hasPassword ? 'password saved' : 'password asked'}</div></div>
+      <div class="grow"><div class="n">${esc(s.name)}</div><div class="h">${esc(s.user)}@${esc(s.host)}${s.sshPort !== 22 ? ':' + s.sshPort : ''} · ${s.keyFile ? 'key file' : s.hasPassword ? 'password saved' : 'password asked'}${s.gameFolder ? ' · ' + esc(s.gameFolder) : ''}</div></div>
       ${!s.hasToken ? '<input class="tk" placeholder="Plugin token" style="max-width:180px">' : ''}
       ${!s.hasPassword && !s.keyFile ? '<input class="pw" type="password" placeholder="Password" style="max-width:180px">' : ''}
-      <button class="b primary go">Connect</button><button class="link forget">forget</button></div>`).join('');
+      <button class="b primary go">Connect</button><button class="link edit">edit</button><button class="link forget">forget</button></div>`).join('');
   $('saved').querySelectorAll('.server').forEach(row => {
     const s = list[+row.dataset.i];
     row.querySelector('.go').onclick = () => open({ mode: 'saved', id: s.id, password: row.querySelector('.pw')?.value || null, token: row.querySelector('.tk')?.value || null }, $('savedErr'), `Connecting to ${s.name}…`);
     row.querySelector('.pw')?.addEventListener('keydown', e => { if (e.key === 'Enter') row.querySelector('.go').click(); });
+    row.querySelector('.edit').onclick = () => {
+      $('sHost').value = s.host; $('sPort').value = s.sshPort; $('sUser').value = s.user; $('sKey').value = s.keyFile ?? ''; $('sFolder').value = s.gameFolder ?? ''; $('sName').value = s.name;
+      $('serverErr').textContent = 'Change what you need, enter the token and the password (unless saved or using a key), then Connect: the saved server is updated.';
+      $('sHost').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    };
     row.querySelector('.forget').onclick = async () => { if (confirm(`Forget ${s.name}?`)) { await fetch('/api/launcher/forget', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: s.id }) }); loadServers(); } };
   });
 }
@@ -252,11 +282,41 @@ $('sConnect').onclick = () => {
   if (!$('sHost').value.trim()) { $('serverErr').textContent = 'Enter the server address.'; return; }
   if (!$('sToken').value.trim()) { $('serverErr').textContent = "Enter the plugin's token (the Token line in BepInEx/config/local.worldeditorbridge.cfg on the server)."; return; }
   open({ mode: 'server', host: $('sHost').value, sshPort: +$('sPort').value || 22, user: $('sUser').value, password: $('sPass').value || null, keyPath: $('sKey').value || null,
-    passphrase: $('sPhrase').value || null, savePassword: $('sSave').checked, name: $('sName').value || null, token: $('sToken').value, bridgePort: +$('sBridge').value || null }, $('serverErr'), 'Connecting to the server…');
+    passphrase: $('sPhrase').value || null, savePassword: $('sSave').checked, name: $('sName').value || null, token: $('sToken').value, bridgePort: +$('sBridge').value || null, gameFolder: $('sFolder').value || null }, $('serverErr'), 'Connecting to the server…');
 };
 $('sPass').onkeydown = e => { if (e.key === 'Enter') $('sConnect').click(); };
 $('sKeyBrowse').onclick = async () => { const p = await pickFile('Choose your SSH private key (often ~/.ssh/id_ed25519)'); if (p) $('sKey').value = p; };
 $('connectUrl').onclick = () => { if (!$('token').value.trim()) { $('urlErr').textContent = 'Enter the token from the server.'; return; } open({ liveUrl: $('liveUrl').value, token: $('token').value }, $('urlErr'), 'Connecting to the server… (up to 10 s)'); };
+
+// ---- Settings: folders on this computer.
+function folderRow(list, value) {
+  const row = document.createElement('div'); row.className = 'frow';
+  row.innerHTML = `<input value="${esc(value)}" placeholder="folder"><button class="b pick" ${isWindow ? '' : 'hidden'}>Browse…</button><button class="b del" title="Remove">✕</button>`;
+  row.querySelector('.del').onclick = () => row.remove();
+  row.querySelector('.pick').onclick = async () => { const p = await pickFolder('Choose a folder'); if (p) row.querySelector('input').value = p; };
+  list.appendChild(row);
+}
+async function showSettings() {
+  const s = await (await fetch('/api/settings')).json();
+  $('setValheim').value = s.valheim ?? '';
+  $('detected').textContent = s.detected ? `Found automatically: ${s.detected}` : 'Not found automatically in the Steam libraries.';
+  $('setBep').innerHTML = ''; (s.bepInEx ?? []).forEach(p => folderRow($('setBep'), p));
+  $('setWorlds').innerHTML = ''; (s.worlds ?? []).forEach(p => folderRow($('setWorlds'), p));
+  $('defWorlds').innerHTML = (s.defaultWorlds ?? []).map(p => `<code>${esc(p)}</code>`).join(', ') || '(none on this computer)';
+  $('setErr').textContent = ''; $('browseValheim').hidden = !isWindow; $('settings').hidden = false;
+}
+$('openSettings').onclick = showSettings;
+$('closeSettings').onclick = $('cancelSettings').onclick = () => $('settings').hidden = true;
+$('autoValheim').onclick = () => $('setValheim').value = '';
+$('browseValheim').onclick = async () => { const p = await pickFolder('Choose the Valheim game folder (with valheim_Data)'); if (p) $('setValheim').value = p; };
+$('addBep').onclick = () => folderRow($('setBep'), '');
+$('addWorld').onclick = () => folderRow($('setWorlds'), '');
+$('saveSettings').onclick = async () => {
+  const vals = el => [...el.querySelectorAll('input')].map(i => i.value.trim()).filter(Boolean);
+  const r = await (await fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ valheim: $('setValheim').value.trim() || null, bepInEx: vals($('setBep')), worlds: vals($('setWorlds')) }) })).json();
+  if (!r.ok) { $('setErr').textContent = r.error; return; }
+  $('settings').hidden = true; worldsLoaded = false; setMode(mode);
+};
 
 // ---- Saved worlds (offline).
 function ago(t) {
@@ -272,7 +332,7 @@ async function loadWorlds() {
   if (worldsLoaded) return; worldsLoaded = true;
   const list = await (await fetch('/api/launcher/worlds')).json();
   $('worlds').innerHTML = list.length ? list.map((w, i) => `<button class="world" data-i="${i}" ${w.usable ? '' : 'disabled'} title="${esc(w.path)}">
-      ${w.where === 'recent' ? '<span class="tag">recently opened</span>' : ''}
+      ${w.where === 'recent' ? '<span class="tag">recently opened</span>' : w.where === 'yours' ? '<span class="tag">your folder</span>' : ''}
       <span class="name">${esc(w.name)}</span>
       <span class="meta">${w.saveNumber ? `Saved ${ago(w.saved)} · save #${w.saveNumber}` : ''}</span>
       ${w.problem ? `<span class="problem">${esc(w.problem)}</span>` : ''}

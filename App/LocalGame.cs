@@ -19,6 +19,29 @@ public static class LocalGame
 		{
 			yield return (Path.Combine(valheim, "BepInEx"), "Valheim folder");
 		}
+		// Folders added in Settings: a BepInEx folder itself, a profile holding one, or a folder of profiles.
+		foreach (string extra in settings.BepInExFolders)
+		{
+			if (!Directory.Exists(extra))
+			{
+				continue;
+			}
+			if (Path.GetFileName(extra.TrimEnd('/', '\\')).Equals("BepInEx", StringComparison.OrdinalIgnoreCase))
+			{
+				yield return (extra, "your folder");
+			}
+			else if (Directory.Exists(Path.Combine(extra, "BepInEx")))
+			{
+				yield return (Path.Combine(extra, "BepInEx"), $"\"{Path.GetFileName(extra.TrimEnd('/', '\\'))}\"");
+			}
+			else
+			{
+				foreach (string profile in Directory.GetDirectories(extra).Where(d => Directory.Exists(Path.Combine(d, "BepInEx"))))
+				{
+					yield return (Path.Combine(profile, "BepInEx"), $"profile \"{Path.GetFileName(profile)}\"");
+				}
+			}
+		}
 		string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
 		string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
 		var managers = new List<(string Root, string Name)>
