@@ -75,7 +75,7 @@ export function createArea(ed) {
   // ---- Selection shape.
   let shape = 'box', pts = [], dragging = false, closed = false;
   const outline = new THREE.Line(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0x5fd4ff, depthTest: false }));
-  outline.renderOrder = 15; ed.scene.add(outline);
+  outline.renderOrder = 15; outline.frustumCulled = false; ed.scene.add(outline);
   panel.querySelectorAll('[data-shape]').forEach(b => b.onclick = () => {
     shape = b.dataset.shape; panel.querySelectorAll('[data-shape]').forEach(x => x.classList.toggle('on', x === b));
     clear();
@@ -330,7 +330,7 @@ export function createArea(ed) {
     return [dx, dz];
   }
   const ghost = new THREE.Points(new THREE.BufferGeometry(), new THREE.PointsMaterial({ color: 0xffc24a, size: 5, sizeAttenuation: false, depthTest: false }));
-  ghost.renderOrder = 16; ed.scene.add(ghost);
+  ghost.renderOrder = 16; ghost.frustumCulled = false; ed.scene.add(ghost);
   let pasteAt = null;
   function updateGhost() {
     const show = ed.tool === 'paste' && clip && pasteAt;

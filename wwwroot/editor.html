@@ -434,6 +434,8 @@ window.__view = (px, py, pz, tx, ty, tz) => { camera.position.set(px, py, pz); c
 const ringPts = 72;
 const ring = new THREE.LineLoop(new THREE.BufferGeometry().setAttribute('position', new THREE.BufferAttribute(new Float32Array(ringPts * 3), 3)), new THREE.LineBasicMaterial({ color: 0xffd27a, depthTest: false }));
 ring.renderOrder = 10; scene.add(ring);
+// The ring moves every frame but its bounding sphere is never recomputed: never cull it.
+ring.frustumCulled = false;
 
 function resize() { renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); }
 addEventListener('resize', resize); resize();
@@ -888,6 +890,7 @@ let pathPts = [], drawingPath = false, rampEdited = false;
 const pathLine = new THREE.Line(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0xff3a3a, depthTest: false }));
 const pathEdges = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0xffb0a0, transparent: true, opacity: 0.6, depthTest: false }));
 pathLine.renderOrder = 12; pathEdges.renderOrder = 11; scene.add(pathLine); scene.add(pathEdges);
+pathLine.frustumCulled = pathEdges.frustumCulled = false;
 const pv = id => +$(id).value;
 function syncPathPanel() {
   $('pathPanel').hidden = tool !== 'path';
