@@ -53,7 +53,7 @@ export function createObjects(ed) {
 
   // Green markers on new objects that are not saved / applied yet.
   const markers = new THREE.Points(new THREE.BufferGeometry(), new THREE.PointsMaterial({ color: 0x5dff8a, size: 9, sizeAttenuation: false, depthTest: false }));
-  markers.renderOrder = 22; ed.newGroup.add(markers);
+  markers.renderOrder = 22; markers.frustumCulled = false; ed.newGroup.add(markers);
   function refreshMarkers() {
     const pts = [];
     for (const r of records.values()) if (r.added && !r.deleted && !r.applied) pts.push(new THREE.Vector3(r.x - ed.originX - ed.cx, r.y + 0.4, -(r.z - ed.originZ - ed.cz)));

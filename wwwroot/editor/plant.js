@@ -131,7 +131,7 @@ export function createPlant(ed) {
   const ghostGroup = new THREE.Group(); ed.scene.add(ghostGroup);
   // Kinds without a model (or still loading) show as dots, so every placement is visible.
   const dots = new THREE.Points(new THREE.BufferGeometry(), new THREE.PointsMaterial({ color: 0x9fe0ff, size: 7, sizeAttenuation: false, depthTest: false }));
-  dots.renderOrder = 6; ghostGroup.add(dots);
+  dots.renderOrder = 6; dots.frustumCulled = false; ghostGroup.add(dots);
   const ghosts = new Map();   // name -> { meshes, parts } (loading: null)
   const ghostMat = new Map(); // material -> see-through copy
   const m4 = new THREE.Matrix4();

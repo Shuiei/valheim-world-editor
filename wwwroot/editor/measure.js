@@ -38,8 +38,10 @@ export function createMeasure(ed) {
   let a = null, b = null, fixed = false;
   const line = new THREE.Line(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0xffe08a, depthTest: false }));
   line.renderOrder = 18; ed.scene.add(line);
+  line.frustumCulled = false;
   const dots = new THREE.Points(new THREE.BufferGeometry(), new THREE.PointsMaterial({ color: 0xffe08a, size: 9, sizeAttenuation: false, depthTest: false }));
   dots.renderOrder = 19; ed.scene.add(dots);
+  dots.frustumCulled = false;
   const v3 = p => new THREE.Vector3(p.gx - ed.cx, p.y + 0.2, -(p.gz - ed.cz));
   function draw() {
     const pts = [a, b].filter(Boolean);
