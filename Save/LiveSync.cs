@@ -72,7 +72,7 @@ public sealed class LiveSync
 					skipped.Add($"no object of that kind to copy at {n.Position.X:F0}, {n.Position.Z:F0}");
 					continue;
 				}
-				create.Add(ZdoBuilder.Build(world.LiveBytes!, model, model.File.WorldVersion, n.Position, n.Rotation, n.Scale));
+				create.Add(ZdoBuilder.Build(world.LiveBytes!, model, model.File.WorldVersion, n.Position, n.Rotation, n.Scale, n.Fresh));
 				createFor.Add(n.Id);
 			}
 			foreach (int id in _liveIds.Keys.Where(id => id < 0 && !added.ContainsKey(id)).ToList())

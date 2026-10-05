@@ -44,8 +44,13 @@ public static class ZdoBuilder
 
 	private static readonly int ScaleScalarKey = StableHash.Of("scaleScalar");
 
+	private static readonly int CreatorKey = StableHash.Of("creator");
+
 	// euler: Unity Euler angles in degrees. scale <= 0 keeps the template's scale data.
-	public static byte[] Build(byte[] source, ObjectRef template, int worldVersion, Vector3 position, Vector3 euler, float scale)
+	// fresh: a new, independent object of the same kind: only the builder (creator) and scale are kept,
+	// none of what made the source unique (chest contents, sign text, health, portal tag...).
+	// Otherwise (moving an object) all of its data is kept.
+	public static byte[] Build(byte[] source, ObjectRef template, int worldVersion, Vector3 position, Vector3 euler, float scale, bool fresh = false)
 	{
 		euler = new Vector3(Wrap(euler.X), Wrap(euler.Y), Wrap(euler.Z));
 		bool rotated = euler.LengthSquared() > 1e-6f;
@@ -55,6 +60,14 @@ public static class ZdoBuilder
 			flags |= RotationFlag;
 		}
 		List<Section> sections = ReadSections(source, template, worldVersion);
+		if (fresh)
+		{
+			sections.RemoveAll(s => s.Flag == Connections);
+			foreach (Section s in sections)
+			{
+				s.Items.RemoveAll(i => !(s.Flag == Longs && i.Key == CreatorKey) && !(s.Flag == Vec3 && i.Key == ScaleKey) && !(s.Flag == Floats && i.Key == ScaleScalarKey));
+			}
+		}
 		if (scale > 0f)
 		{
 			// The game stores a non-default scale as a Vector3 "scale" (ZNetView.SetLocalScale).

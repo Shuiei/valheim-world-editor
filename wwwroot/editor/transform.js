@@ -58,7 +58,7 @@ export function createTransform(ed) {
     const copies = s.items.map(it => {
       const p = target(s, it), r = it.r;
       return { name: r.name, x: ed.originX + p.gx, y: p.y, z: ed.originZ + p.gz, rx: r.rx, ry: r.ry + s.turn, rz: r.rz, scale: r.scale,
-        sourceId: r.added ? r.sourceId ?? null : r.id };
+        sourceId: r.added ? r.sourceId ?? null : r.id, fresh: r.added ? r.fresh ?? true : false };
     });
     const ids = s.items.map(it => it.id);
     await ed.setDeleted(ids, true);
@@ -118,7 +118,7 @@ export function createTransform(ed) {
     let cx = 0, cz = 0, x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity;
     for (const r of recs) { const g = toGrid(r); cx += g.gx; cz += g.gz; x0 = Math.min(x0, g.gx); x1 = Math.max(x1, g.gx); z0 = Math.min(z0, g.gz); z1 = Math.max(z1, g.gz); }
     cx /= recs.length; cz /= recs.length;
-    const objects = recs.map(r => { const g = toGrid(r); return { name: r.name, dx: g.gx - cx, dz: g.gz - cz, dy: r.y - groundAt(g.gx, g.gz), follow: true, rx: r.rx, ry: r.ry, rz: r.rz, scale: r.scale }; });
+    const objects = recs.map(r => { const g = toGrid(r); return { name: r.name, dx: g.gx - cx, dz: g.gz - cz, dy: r.y - groundAt(g.gx, g.gz), follow: true, rx: r.rx, ry: r.ry, rz: r.rz, scale: r.scale, sourceId: r.added ? r.sourceId ?? null : r.id }; });
     const pad = 1;
     ed.setClipboard({ w: 1, h: 1, rel: new Float32Array([NaN]), wt: new Float32Array(1), pnt: new Float32Array(4).fill(-1), objects,
       poly: [{ gx: x0 - cx - pad, gz: z0 - cz - pad }, { gx: x1 - cx + pad, gz: z0 - cz - pad }, { gx: x1 - cx + pad, gz: z1 - cz + pad }, { gx: x0 - cx - pad, gz: z1 - cz + pad }] });
