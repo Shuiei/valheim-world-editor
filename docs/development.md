@@ -42,9 +42,11 @@ Wine's networking; not tried on real Windows).
 The plugin: build `plugin/WorldEditorBridge/WorldEditorBridge.csproj` after pointing its
 `HintPath`s at your BepInEx `core` folder and the game's `*_Data/Managed` folder.
 
-Thunderstore: `tools/thunderstore.sh <folder>` builds three packages: `WorldEditorBridge` (the
-plugin alone, for servers), `ValheimWorldEditor_Windows` and `ValheimWorldEditor_Linux` (the
-release packages, plugin included, under `plugins/`: mod managers flatten every other folder).
+Thunderstore (team `Tie`): `tools/thunderstore.sh <folder>` builds three packages:
+`WorldEditorBridge` (the plugin), `ValheimWorldEditor_Windows` and `ValheimWorldEditor_Linux` (the
+release packages without the plugin, under `plugins/`: mod managers flatten every other folder).
+The editor packages depend on `Tie-WorldEditorBridge` of the same version, so upload that one
+first: Thunderstore refuses a dependency it does not have yet.
 Each takes `manifest.json` and its mod page `README.md` from `tools/thunderstore/<bridge|windows|linux>/`,
 plus the shared `tools/thunderstore/CHANGELOG.md` and `wwwroot/icon.png`. The script checks
 Thunderstore's rules (name, 250-character description, 256x256 icon) and reuses release packages

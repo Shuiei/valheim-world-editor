@@ -134,7 +134,7 @@
         <button class="b primary" id="sConnect">Connect</button>
       </div>
       <div class="err" id="serverErr"></div>
-      <div class="hint">The server needs BepInEx and the WorldEditorBridge plugin (in the <code>plugin</code> folder next to this program; <a href="https://github.com/Shuiei/valheim-world-editor/blob/main/docs/live-mode.md#a-dedicated-server">step-by-step guide</a>). The editor logs in with SSH and connects to the plugin through its own encrypted tunnel: no ssh command to type. After the first connection the server (with its token) is saved for one-click access.</div>
+      <div class="hint">The server needs BepInEx and the WorldEditorBridge plugin (<a href="https://thunderstore.io/c/valheim/p/Tie/WorldEditorBridge/">WorldEditorBridge</a> in a mod manager's server profile, or the <code>plugin</code> folder next to this program; <a href="https://github.com/Shuiei/valheim-world-editor/blob/main/docs/live-mode.md#a-dedicated-server">step-by-step guide</a>). The editor logs in with SSH and connects to the plugin through its own encrypted tunnel: no ssh command to type. After the first connection the server (with its token) is saved for one-click access.</div>
       <details>
         <summary>More options</summary>
         <div class="row" style="margin-top:8px">
@@ -233,7 +233,7 @@ async function open(body, errEl, what) {
 let gameTimer = null;
 const steps = `<ol>
   <li><b>Install BepInEx</b> for Valheim: <a href="https://thunderstore.io/c/valheim/p/denikson/BepInExPack_Valheim/">BepInExPack for Valheim</a> (with a mod manager such as r2modman, or by hand into the Valheim folder: see its page).</li>
-  <li><b>Add the plugin</b>: copy <code>${esc('WorldEditorBridge.dll')}</code> from the <code>plugin</code> folder next to this program into <code>BepInEx/plugins</code> of your game (or of your mod manager profile).</li>
+  <li><b>Add the plugin</b>: with a mod manager, install <a href="https://thunderstore.io/c/valheim/p/Tie/WorldEditorBridge/">WorldEditorBridge</a>; by hand, copy <code>${esc('WorldEditorBridge.dll')}</code> from the <code>plugin</code> folder next to this program into <code>BepInEx/plugins</code> of your game.</li>
   <li><b>Start Valheim</b> (with BepInEx) and load your world. This page notices it by itself.</li></ol>
   <div class="hint"><a href="https://github.com/Shuiei/valheim-world-editor/blob/main/docs/live-mode.md#your-own-game">Step-by-step guide</a></div>`;
 async function pollGame() {

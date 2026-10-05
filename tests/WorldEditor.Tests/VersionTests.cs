@@ -35,7 +35,7 @@ public class VersionTests
 		Assert.Equal("@VERSION@", m.RootElement.GetProperty("version_number").GetString());
 		Assert.Matches("^[A-Za-z0-9_]{1,128}$", m.RootElement.GetProperty("name").GetString());
 		Assert.True(m.RootElement.GetProperty("description").GetString()!.Length <= 250);
-		Assert.All(m.RootElement.GetProperty("dependencies").EnumerateArray(), d => Assert.Matches(@"^\w+-\w+-\d+\.\d+\.\d+$", d.GetString()));
+		Assert.All(m.RootElement.GetProperty("dependencies").EnumerateArray(), d => Assert.Matches(@"^\w+-\w+-\d+\.\d+\.\d+$", d.GetString()!.Replace("@VERSION@", Version)));
 	}
 
 	[Theory]
