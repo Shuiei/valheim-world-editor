@@ -1,7 +1,7 @@
 // End-to-end: the start page, the map and the 3D editor on the test world, as a user drives them.
 import { describe, test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { startApp, waitPhase, screenOf, lookAt, sleep, stableHash } from './harness.mjs';
+import { startApp, waitPhase, screenOf, lookAt, frames, sleep, stableHash } from './harness.mjs';
 
 let t;
 before(async () => { t = await startApp(); }, { timeout: 120000 });
@@ -15,6 +15,7 @@ async function openEditor() {
   await page().waitForFunction(() => window.__ed?.objects.records.size > 0 && !document.getElementById('loading'), { timeout: 120000 });
   await sleep(1000);
   await page().evaluate(() => { document.getElementById('viewPanel').hidden = true; document.activeElement?.blur(); });
+  await frames(page());
 }
 const records = () => page().evaluate(() => [...window.__ed.objects.records.values()].filter(r => !r.deleted).map(r => ({ id: r.id, name: r.name, x: r.x, y: r.y, z: r.z, added: r.added })));
 
