@@ -72,11 +72,11 @@ it into, with `valheim_Data`).
    either with a mod manager (r2modman, Thunderstore Mod Manager) or by hand into the Valheim folder,
    following its page.
 2. **Add the plugin:** with a mod manager, install
-   [ValheimWorldEditor_Windows](https://thunderstore.io/c/valheim/p/Tie/ValheimWorldEditor_Windows/) or
-   [ValheimWorldEditor_Linux](https://thunderstore.io/c/valheim/p/Tie/ValheimWorldEditor_Linux/)
-   from Thunderstore: the editor, with the plugin and BepInEx installed alongside (start the editor
-   from the profile's folder, see its page). By hand: copy `plugin/WorldEditorBridge.dll` from the
-   editor's folder into `BepInEx/plugins` of your Valheim.
+   [WorldEditorBridge](https://thunderstore.io/c/valheim/p/Tie/WorldEditorBridge/) from
+   Thunderstore (BepInEx comes with it). By hand: copy `plugin/WorldEditorBridge.dll` from the
+   editor's folder into `BepInEx/plugins` of your Valheim. The editor itself is only on the
+   [releases page](https://github.com/Shuiei/valheim-world-editor/releases): Thunderstore does not
+   host programs.
 3. **Start Valheim** with BepInEx and load your world (single player, or start a server from the
    game to host it).
 4. On the start page, **My game** shows "Valheim is running with the world …": click **Edit live**.
