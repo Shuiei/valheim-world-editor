@@ -10,15 +10,23 @@ Download, unpack, double-click: no command line, no Python, nothing to install.
 ### Added
 - **Its own window** on Windows and Linux (the system's web engine; the browser as fallback, or
   with `--browser`), with an icon.
-- **Start page**: the worlds found on the computer (Valheim's usual folders, Proton included),
-  recently opened worlds, any other world folder (with a folder dialog), and a form to connect to
-  a running server. **Worlds** on the map page goes back to it.
+- **Start page with three ways to edit**, each clearly separate:
+  - **My game (live)**: finds Valheim running with the plugin (also in r2modman / Thunderstore Mod
+    Manager profiles) and reads its token from your own game's settings; one click to edit live,
+    or the steps that are missing (BepInEx, the plugin, starting the game).
+  - **A dedicated server (live)**: the editor logs in over SSH (password or key, no `ssh` program
+    needed) and makes its own tunnel to the plugin. The plugin token is always typed by you.
+    Servers are saved in `servers.cfg` after the first connection for one-click access, with the
+    password only when "Save password" is ticked; the server's SSH identity is remembered and a
+    change is refused.
+  - **A saved world (offline)**: the worlds found on the computer (Valheim's usual folders, Proton
+    included), recently opened ones, and any other folder (with a folder dialog).
+  **Worlds** on the map page goes back to the start page.
 - **Automatic game look**: the editor finds Valheim in the Steam libraries and copies the game's
   textures and models from it by itself, with progress on the page; it asks for the folder when
   Valheim is not found, and copies again after a Valheim update. The copy lives in the per-user
   data folder, next to the settings and a log.
-- **One download per system**, each with the server plugin in `server-plugin/` and instructions
-  for that system.
+- **One download per system**, each with the plugin in `plugin/` and instructions for that system.
 
 ### Changed
 - The program is now called `ValheimWorldEditor`. It picks the first free port from 5180, so a

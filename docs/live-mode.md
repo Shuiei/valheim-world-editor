@@ -8,17 +8,71 @@ It needs **BepInEx** (the mod loader, [BepInExPack for Valheim](https://thunders
 in the game that hosts the world: normally the dedicated server, or your own game when you play
 single player or host. Players who join need neither, and offline mode does not use BepInEx.
 
-## Setting it up
+## Your own game
 
-See [Installation → Online (live) mode](../README.md#online-live-mode) for the steps. In short:
+For single player, or a world you host from the game.
 
-1. BepInEx installed on the server, then `WorldEditorBridge.dll` in its `BepInEx/plugins/`, server
-   restarted.
-2. The token from `BepInEx/config/local.worldeditorbridge.cfg`.
-3. An SSH tunnel to the server: `ssh -N -L 5182:127.0.0.1:5182 user@server`.
-4. On the start page, under **A running server (live)**: `127.0.0.1:5182`, the token, **Connect**.
-   The editor first checks the bridge (at most 10 seconds) and says what is wrong if it does not
-   answer: no tunnel, wrong token, or a game that does not host the world.
+1. **BepInEx in your Valheim**, once: install [BepInExPack for Valheim](https://thunderstore.io/c/valheim/p/denikson/BepInExPack_Valheim/)
+   with a mod manager (r2modman, Thunderstore Mod Manager) or by hand into the Valheim folder, as
+   its page explains. On Linux with the native game, BepInEx is started through the pack's start
+   script (its page shows the Steam launch option); a mod manager does that for you.
+2. **The plugin:** copy `plugin/WorldEditorBridge.dll` (in the editor's download) into
+   `BepInEx/plugins` of your Valheim, or of your mod manager profile.
+3. **Start Valheim** with BepInEx and load your world.
+4. Start page → **My game**. It shows what is missing, or "Valheim is running with the world …"
+   with an **Edit live** button. On your own computer the editor reads the plugin's settings (port
+   and token) itself, in the Valheim folder and in r2modman / Thunderstore Mod Manager profiles.
+   (For a server the token is always typed; see below.)
+
+The plugin listens on port 5182 of your computer. If something else uses that port (for example an
+`ssh -L 5182:…` tunnel you opened by hand), it cannot start: close that tunnel, or change `Port` in
+the plugin's settings (below).
+
+## A dedicated server
+
+1. **On the server, once:** BepInEx (BepInExPack for Valheim, following its dedicated-server
+   instructions), then `plugin/WorldEditorBridge.dll` in its `BepInEx/plugins/`, then restart the
+   server. Its log shows `WorldEditorBridge 0.3.0 listening on http://127.0.0.1:5182/`.
+2. Start page → **A dedicated server**: the server's address, the user you log in to it with over
+   SSH, the password or an SSH key file (without either, the usual keys in `~/.ssh` are tried), and
+   the **plugin token** (the `Token` line of `BepInEx/config/local.worldeditorbridge.cfg` on the
+   server). The token is always typed by you: the editor never reads it from the server, so an SSH
+   login alone is not enough to change the world. Tick **Save password** to keep the password (see
+   [Saved servers](#saved-servers)).
+3. **Connect.** The editor:
+   - logs in over SSH (no `ssh` program needed, it has its own);
+   - forwards a free port of your computer to the plugin through that encrypted connection;
+   - checks that the plugin answers and accepts the token, then loads the world.
+4. The server is saved in the list, with its token, for one-click access next time.
+
+**More options** on the form: a name for the list, the key's passphrase, the plugin's port (when it
+is not 5182), and **I made my own tunnel** (address + token) for a tunnel made with `ssh -L` or
+PuTTY.
+
+### Saved servers
+
+After the first successful connection the server is written to `servers.cfg` in the editor's data
+folder (`~/.local/share/ValheimWorldEditor` on Linux, `%LOCALAPPDATA%\ValheimWorldEditor` on
+Windows), one section per server, so it can also be edited by hand:
+
+```
+[My server]
+Host = my.server.com
+SshPort = 22
+User = valheim
+Password =
+KeyFile =
+Token = …
+BridgePort = 5182
+HostKey = SHA256:…
+```
+
+- `Password` is only filled when **Save password** was ticked. It is stored as plain text: on Linux
+  the file can only be read by you; prefer an SSH key where you can.
+- `HostKey` is the server's identity, remembered on the first connection (trust on first use). If
+  it ever changes the editor refuses to connect, because someone could be pretending to be your
+  server. If you reinstalled the server, empty that line to accept the new identity.
+- **forget** next to a saved server removes it.
 
 ### Plugin settings (`local.worldeditorbridge.cfg`)
 
@@ -26,7 +80,7 @@ See [Installation → Online (live) mode](../README.md#online-live-mode) for the
 |---|---|---|
 | `BindAddress` | `127.0.0.1` | Address the bridge listens on. Keep `127.0.0.1` and use an SSH tunnel; anything else exposes the bridge to the network. |
 | `Port` | `5182` | TCP port of the bridge. |
-| `Token` | generated | Secret the editor must send. Generated on first start when empty. Anyone with the token and access to the port can change the world, so keep it private. |
+| `Token` | generated | Secret the editor must send. Generated on first start when empty. Anyone with the token and access to the port can change the world, so keep it private. For your own game the editor reads it from this file by itself; for a server you type it in. |
 
 ## What changes in the editor
 
