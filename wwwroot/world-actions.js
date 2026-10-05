@@ -1,9 +1,9 @@
 // Save / discard actions shared by the map page and the 3D editor.
 
-// changes: a number of changed zones, or { zones, deleted } (deleted = objects removed in the editor).
+// changes: a number of changed zones, or { zones, deleted, added, resets } from the editor.
 function describe(changes) {
-  const { zones = 0, deleted = 0 } = typeof changes === 'number' ? { zones: changes } : (changes ?? {});
-  return [zones ? `${zones} changed zone(s)` : '', deleted ? `${deleted} deleted object(s)` : ''].filter(Boolean).join(' and ');
+  const { zones = 0, deleted = 0, added = 0, resets = 0 } = typeof changes === 'number' ? { zones: changes } : (changes ?? {});
+  return [zones ? `${zones} changed zone(s)` : '', deleted ? `${deleted} deleted object(s)` : '', added ? `${added} new object(s)` : '', resets ? `${resets} zone reset(s)` : ''].filter(Boolean).join(', ');
 }
 
 export async function saveWorld(world, changes, onDone) {
