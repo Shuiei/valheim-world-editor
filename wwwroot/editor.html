@@ -182,8 +182,9 @@
     <label class="field">Strength <input id="strength" type="range" min="0.05" max="1" step="0.05" value="0.4"><span id="strengthV"></span></label>
   </div>
   <div data-for-tools="flatten">
+    <label class="check"><input type="checkbox" id="targetFromClick" checked> Level to the height where the stroke starts</label>
     <label class="field" id="targetRow">Height <input id="target" type="number" step="0.1" value="35"><span>m</span></label>
-    <div class="hint">Alt + click the ground to pick its height.</div>
+    <div class="hint">Untick to level everything to the Height above instead; Alt + click the ground picks it.</div>
   </div>
 
   <div id="pathPanel" hidden>
@@ -512,8 +513,8 @@ function setTool(t) {
   if (typeof updateRing === 'function' && initialized) { updateRing(); syncPathPanel(); }
 }
 document.querySelectorAll('[data-tool]').forEach(b => b.onclick = () => setTool(b.dataset.tool));
-const syncInputs = () => { radius = +$('radius').value; strength = +$('strength').value; target = +$('target').value; $('radiusV').textContent = `${radius} m`; $('strengthV').textContent = strength.toFixed(2); };
-['radius', 'strength', 'target'].forEach(id => $(id).oninput = syncInputs);
+const syncInputs = () => { radius = +$('radius').value; strength = +$('strength').value; target = +$('target').value; $('target').disabled = $('targetFromClick').checked; $('radiusV').textContent = `${radius} m`; $('strengthV').textContent = strength.toFixed(2); };
+['radius', 'strength', 'target', 'targetFromClick'].forEach(id => $(id).oninput = syncInputs);
 let initialized = false;
 syncInputs(); setTool('raise');
 
@@ -623,7 +624,7 @@ function applyBrush(dt) {
     switch (tool) {
       case 'raise': setHeight(g, h + 6 * rate * w); break;
       case 'lower': setHeight(g, h - 6 * rate * w); break;
-      case 'flatten': setHeight(g, h + (target - h) * Math.min(1, 8 * rate * w)); break;
+      case 'flatten': setHeight(g, h + ((stroke.target ?? target) - h) * Math.min(1, 8 * rate * w)); break;
       case 'smooth': {
         let sum = 0, n = 0;
         for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) { sum += snapshot.get((gz + dz) * W + gx + dx); n++; }
@@ -1199,11 +1200,13 @@ el.addEventListener('pointerdown', e => {
     return;
   }
   if (e.altKey && e.shiftKey) { ed.pickMaskHeight(sampleHeight(hover.gx, hover.gz)); return; }
-  if (e.altKey) { $('target').value = sampleHeight(hover.gx, hover.gz).toFixed(1); syncInputs(); setTool('flatten'); return; }
+  if (e.altKey) { $('target').value = sampleHeight(hover.gx, hover.gz).toFixed(1); $('targetFromClick').checked = false; syncInputs(); setTool('flatten'); return; }
   el.setPointerCapture(e.pointerId);
   const startState = snapshotState();
   stroke = { state: startState, touched: new Set(), natural: new Map(),
     startHeight: g => startState.mod[g] ? Math.max(base[g] - MAXL, Math.min(base[g] + MAXL, base[g] + startState.level[g] + startState.smooth[g])) : base[g] };
+  // Flatten: level to the ground under the first click, shown in the Height box.
+  if (tool === 'flatten' && $('targetFromClick').checked) { stroke.target = sampleHeight(hover.gx, hover.gz); $('target').value = stroke.target.toFixed(1); }
   clampedThisStroke = false;
 });
 el.addEventListener('pointerup', e => {
