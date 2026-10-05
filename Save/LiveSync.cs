@@ -66,12 +66,12 @@ public sealed class LiveSync
 			// New objects not in the game yet, and ones that were removed again (undo, delete).
 			foreach (NewObject n in added.Values.Where(n => !_liveIds.ContainsKey(n.Id)))
 			{
-				if (!world.Templates.TryGetValue(n.Prefab, out int templateId))
+				ObjectRef? model = world.ModelFor(n.Prefab, n.SourceId);
+				if (model == null)
 				{
 					skipped.Add($"no object of that kind to copy at {n.Position.X:F0}, {n.Position.Z:F0}");
 					continue;
 				}
-				ObjectRef model = world.ObjectRefs[templateId];
 				create.Add(ZdoBuilder.Build(world.LiveBytes!, model, model.File.WorldVersion, n.Position, n.Rotation, n.Scale));
 				createFor.Add(n.Id);
 			}

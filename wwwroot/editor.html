@@ -208,6 +208,7 @@
     <div id="selInfo" class="hint">Nothing selected.</div>
     <div class="row"><button id="selDelete" disabled>Delete <kbd>Del</kbd></button><button id="selClear" disabled>Deselect</button></div>
     <div class="hint">Click an object to select it; Shift + click adds to the selection. Only things that are shown can be picked (see View).</div>
+    <div class="hint">Drag a selected object to move the selection · <kbd>Alt</kbd>+wheel or <kbd>,</kbd> <kbd>.</kbd> turn · <kbd>PgUp</kbd> <kbd>PgDn</kbd> lift · <kbd>Ctrl+C</kbd> copy, <kbd>Ctrl+V</kbd> paste.</div>
   </div>
 
   <div class="warnbox" id="locWarn" hidden></div>
@@ -268,6 +269,7 @@ import { createMasks } from './editor/masks.js';
 import { createArea } from './editor/area.js';
 import { createPlant } from './editor/plant.js';
 import { createMeasure } from './editor/measure.js';
+import { createTransform } from './editor/transform.js';
 
 const params = new URLSearchParams(location.search);
 const czx = parseInt(params.get('zx') ?? '0'), czz = parseInt(params.get('zz') ?? '0');
@@ -786,6 +788,7 @@ const ed = {
   get tool() { return tool; }, setTool: t => setTool(t), get radius() { return radius; }, get strength() { return strength; },
   changed: () => afterUpload?.(),
   handlers: {}, panels: toolPanels, onToolChange: toolChangeHooks, mask: g => 1,
+  pickEntity: e => pickEntity(e), clickSelect: e => clickSelect(e), hoverSelect: e => hoverSelect(e), drawSelection: () => drawSelection(), entityOf: id => entities.get(id),
   get selection() { return selection; }, selectIds: ids => { selection.clear(); for (const id of ids) if (entities.has(id)) selection.add(id); drawSelection(); }, clearSelection: () => clearSelection(),
   showStatusFor: h => { hover = h; showStatus(); }, updateRing: () => updateRing(), frame: [], getLook: () => look
 };
@@ -795,6 +798,7 @@ createMasks(ed, [...BRUSH_TOOLS, 'path', 'area', 'plant']);
 createArea(ed);
 createPlant(ed);
 createMeasure(ed);
+createTransform(ed);
 syncToolPanel();
 Promise.all([fetch('/api/pieces').then(r => r.arrayBuffer()), fetch('/api/piece-types').then(r => r.json())]).then(async ([buf, types]) => {
   const p = new Float32Array(buf), S = 13, byType = new Map();
@@ -1248,7 +1252,8 @@ async function setDeleted(ids, deleted) {
     $('sMsg').innerHTML = `<span class="warn">Could not send the deletion to the editor: ${err.message}</span>`;
   }
 }
-function deleteSelection() {
+async function deleteSelection() {
+  await ed.flushTransform?.();
   if (!selection.size) return;
   const ids = [...selection];
   setDeleted(ids, true);

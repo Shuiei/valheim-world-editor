@@ -105,7 +105,8 @@ public static class WorldWriter
 		foreach (NewObject n in added)
 		{
 			int zx = (int)MathF.Floor((n.Position.X + 32f) / 64f), zz = (int)MathF.Floor((n.Position.Z + 32f) / 64f);
-			if (!world.Templates.TryGetValue(n.Prefab, out int templateId))
+			ObjectRef? model = world.ModelFor(n.Prefab, n.SourceId);
+			if (model == null)
 			{
 				skipped.Add($"a new object at {n.Position.X:F0}, {n.Position.Z:F0}: no object of that kind in the world to copy");
 				continue;
@@ -116,7 +117,6 @@ public static class WorldWriter
 				skipped.Add($"a new object at {n.Position.X:F0}, {n.Position.Z:F0}: zone {zx}, {zz} is not generated yet");
 				continue;
 			}
-			ObjectRef model = world.ObjectRefs[templateId];
 			if (!sources.TryGetValue(model.File, out byte[]? src))
 			{
 				sources[model.File] = src = File.ReadAllBytes(Path.Combine(world.Directory, model.File.FileName));

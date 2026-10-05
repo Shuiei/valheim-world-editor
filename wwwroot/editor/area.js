@@ -314,6 +314,8 @@ export function createArea(ed) {
   }
   $('aCopy').onclick = copy;
   $('aPasteBtn').onclick = () => startPaste();
+  // The Select tool's copy puts its objects here too.
+  ed.setClipboard = c => { clip = c; try { localStorage.setItem('editorClipboard', JSON.stringify(encodeClip(clip))); } catch { } updateClipInfo(); };
   function startPaste() {
     if (!clip) { ed.msg('Copy an area first (Area tool, Ctrl+C).', true); return; }
     ed.setTool('paste');
@@ -338,7 +340,7 @@ export function createArea(ed) {
     if (!show) { if (ed.tool === 'paste') outline.geometry.setFromPoints([]); return; }
     drawOutline(clip.poly.map(p => { const [x, z] = xf(p.gx, p.gz); return { gx: pasteAt.gx + x, gz: pasteAt.gz + z }; }), false);
     const anchorH = ed.sampleHeight(pasteAt.gx, pasteAt.gz) + +$('psOffset').value;
-    ghost.geometry.setFromPoints(clip.objects.map(o => { const [x, z] = xf(o.dx, o.dz); return new THREE.Vector3(pasteAt.gx + x - ed.cx, anchorH + o.dy + 0.5, -(pasteAt.gz + z - ed.cz)); }));
+    ghost.geometry.setFromPoints(clip.objects.map(o => { const [x, z] = xf(o.dx, o.dz); const y = o.follow ? ed.sampleHeight(pasteAt.gx + x, pasteAt.gz + z) + o.dy : anchorH + o.dy; return new THREE.Vector3(pasteAt.gx + x - ed.cx, y + 0.5, -(pasteAt.gz + z - ed.cz)); }));
     $('psInfo').textContent = `${clip.w} × ${clip.h} m, ${clip.objects.length} object(s) · turned ${rot * 90}°${flip ? ', mirrored' : ''}.`;
   }
   async function paste(at) {
@@ -368,7 +370,9 @@ export function createArea(ed) {
     if ($('psObjects').checked && clip.objects.length) {
       added = await ed.objects.add(clip.objects.map(o => {
         const [x, z] = xf(o.dx, o.dz);
-        return { name: o.name, x: ed.originX + at.gx + x, y: anchorH + o.dy, z: ed.originZ + at.gz + z, rx: flip ? -o.rx : o.rx, ry: (flip ? -o.ry : o.ry) - 90 * rot, rz: flip ? -o.rz : o.rz, scale: o.scale };
+        // Objects copied with the Select tool keep their height above the ground where they land.
+        const y = o.follow ? ed.sampleHeight(at.gx + x, at.gz + z) + o.dy : anchorH + o.dy;
+        return { name: o.name, x: ed.originX + at.gx + x, y, z: ed.originZ + at.gz + z, rx: flip ? -o.rx : o.rx, ry: (flip ? -o.ry : o.ry) - 90 * rot, rz: flip ? -o.rz : o.rz, scale: o.scale };
       }));
     }
     commitTerrain(state, touched, { x0, x1, z0, z1 }, added.length ? { added } : {});
