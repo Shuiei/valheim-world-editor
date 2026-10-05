@@ -136,7 +136,7 @@ export function createObjects(ed) {
       if (!state.templates.has(prefab)) continue;
       const id = nextId--;
       const kind = state.pieceNames.has(o.name) ? 'buildings' : objectKind(o.name, state.pieceNames);
-      const r = { id, prefab, name: o.name, kind, x: o.x, y: o.y, z: o.z, rx: o.rx ?? 0, ry: o.ry ?? 0, rz: o.rz ?? 0, scale: o.scale ?? 0, deleted: false, added: true, sourceId: o.sourceId ?? null };
+      const r = { id, prefab, name: o.name, kind, x: o.x, y: o.y, z: o.z, rx: o.rx ?? 0, ry: o.ry ?? 0, rz: o.rz ?? 0, scale: o.scale ?? 0, deleted: false, added: true, sourceId: o.sourceId ?? null, fresh: o.fresh ?? true };
       records.set(id, r);
       ids.push(id);
       unsent.push(r);
@@ -152,7 +152,7 @@ export function createObjects(ed) {
 
   async function flush() {
     if (!unsent.length) return;
-    const body = unsent.splice(0).map(r => ({ id: r.id, prefab: r.prefab, x: r.x, y: r.y, z: r.z, rx: r.rx, ry: r.ry, rz: r.rz, scale: r.scale, sourceId: r.sourceId ?? null }));
+    const body = unsent.splice(0).map(r => ({ id: r.id, prefab: r.prefab, x: r.x, y: r.y, z: r.z, rx: r.rx, ry: r.ry, rz: r.rz, scale: r.scale, sourceId: r.sourceId ?? null, fresh: r.fresh ?? true }));
     try {
       const res = await (await fetch('/api/objects/add', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })).json();
       ed.showPendingFrom(res.pending);

@@ -298,7 +298,7 @@ export function createArea(ed) {
     const shown = new Set(KINDS.filter(k => (k === 'buildings' ? ed.buildings : ed.objectGroups[k]).visible));
     const objects = objectsInside(a.poly).filter(r => shown.has(r.kind) && ed.objects.state.templates.has(r.prefab)).map(r => {
       const { gx, gz } = toGrid(r.x, r.z);
-      return { name: r.name, dx: gx - cxs, dz: gz - czs, dy: r.y - ref, rx: r.rx, ry: r.ry, rz: r.rz, scale: r.scale };
+      return { name: r.name, dx: gx - cxs, dz: gz - czs, dy: r.y - ref, rx: r.rx, ry: r.ry, rz: r.rz, scale: r.scale, sourceId: r.added ? r.sourceId ?? null : r.id };
     });
     clip = { w, h, rel, wt, pnt, objects, poly: a.poly.map(p => ({ gx: p.gx - cxs, gz: p.gz - czs })) };
     try { localStorage.setItem('editorClipboard', JSON.stringify(encodeClip(clip))); } catch { }
@@ -372,7 +372,7 @@ export function createArea(ed) {
         const [x, z] = xf(o.dx, o.dz);
         // Objects copied with the Select tool keep their height above the ground where they land.
         const y = o.follow ? ed.sampleHeight(at.gx + x, at.gz + z) + o.dy : anchorH + o.dy;
-        return { name: o.name, x: ed.originX + at.gx + x, y, z: ed.originZ + at.gz + z, rx: flip ? -o.rx : o.rx, ry: (flip ? -o.ry : o.ry) - 90 * rot, rz: flip ? -o.rz : o.rz, scale: o.scale };
+        return { name: o.name, x: ed.originX + at.gx + x, y, z: ed.originZ + at.gz + z, rx: flip ? -o.rx : o.rx, ry: (flip ? -o.ry : o.ry) - 90 * rot, rz: flip ? -o.rz : o.rz, scale: o.scale, sourceId: o.sourceId ?? null, fresh: true };
       }));
     }
     commitTerrain(state, touched, { x0, x1, z0, z1 }, added.length ? { added } : {});

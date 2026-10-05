@@ -327,9 +327,10 @@ public sealed class ZoneEdit(int zoneX, int zoneZ)
 }
 
 // A new object: prefab hash, position, Unity Euler rotation (degrees) and uniform scale (0 = as the
-// template object). SourceId: copy this object's own data (a moved object keeps its chest contents,
-// health, builder...); otherwise the first object of the prefab is copied.
-public sealed record NewObject(int Id, int Prefab, System.Numerics.Vector3 Position, System.Numerics.Vector3 Rotation, float Scale, int? SourceId = null);
+// template object). SourceId: the object it comes from (else the first object of the prefab).
+// Fresh: a new independent object (only the builder is taken from the source); otherwise, for a
+// moved object, all of the source's data (chest contents, health, builder...) is kept.
+public sealed record NewObject(int Id, int Prefab, System.Numerics.Vector3 Position, System.Numerics.Vector3 Rotation, float Scale, int? SourceId = null, bool Fresh = true);
 
 // Give a zone back to the world generator. KeepBuildings keeps player-built pieces; Ground also
 // removes the terrain edits.

@@ -121,7 +121,7 @@ public static class WorldWriter
 			{
 				sources[model.File] = src = File.ReadAllBytes(Path.Combine(world.Directory, model.File.FileName));
 			}
-			byte[] bytes = ZdoBuilder.Build(src, model, model.File.WorldVersion, n.Position, n.Rotation, n.Scale);
+			byte[] bytes = ZdoBuilder.Build(src, model, model.File.WorldVersion, n.Position, n.Rotation, n.Scale, n.Fresh);
 			(additions.TryGetValue(target, out var list) ? list : additions[target] = new()).Add(bytes);
 			addedCount++;
 		}
