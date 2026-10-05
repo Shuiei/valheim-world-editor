@@ -11,3 +11,7 @@ tools/asset-export/*_index*.json
 tools/asset-export/__pycache__/
 # Build output placed inside the source folder by mistake
 out/
+# Test outputs
+tests/browser/node_modules/
+tests/browser/results/
+__pycache__/

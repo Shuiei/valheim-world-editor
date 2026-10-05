@@ -1,31 +1,110 @@
-# Use the latest 2.1 version of CircleCI pipeline process engine.
-# See: https://circleci.com/docs/reference/configuration-reference/
+# Valheim World Editor: tests and build checks on every push and pull request.
+#   dotnet-tests   C# tests (save round trip, new objects, zone reset, live mode bookkeeping,
+#                  settings and saved servers, world discovery, timeouts) on tests/fixtures/CITest
+#   build-app      the Linux program, for the browser tests
+#   browser-tests  the real app on the test world, driven by headless Chrome
+#   packages       the Windows and Linux release packages: they build, and hold no source code or
+#                  game files (the plugin is left out: it builds against the game's own DLLs)
+# What CI cannot cover: the plugin build and the game-look export (both need Valheim's files) and
+# live mode against a real game (tested here against a stand-in bridge).
 version: 2.1
 
-# Define a job to be invoked later in a workflow.
-# See: https://circleci.com/docs/guides/orchestrate/jobs-steps/#jobs-overview & https://circleci.com/docs/reference/configuration-reference/#jobs
-jobs:
-  say-hello:
-    # Specify the execution environment. You can specify an image from Docker Hub or use one of our convenience images from CircleCI's Developer Hub.
-    # See: https://circleci.com/docs/guides/execution-managed/executor-intro/ & https://circleci.com/docs/reference/configuration-reference/#executor-job
+executors:
+  dotnet:
     docker:
-      # Specify the version you desire here
-      # See: https://circleci.com/developer/images/image/cimg/base
-      - image: cimg/base:current
+      - image: mcr.microsoft.com/dotnet/sdk:8.0
+    resource_class: medium
 
-    # Add steps to the job
-    # See: https://circleci.com/docs/guides/orchestrate/jobs-steps/#steps-overview & https://circleci.com/docs/reference/configuration-reference/#steps
+jobs:
+  dotnet-tests:
+    executor: dotnet
     steps:
-      # Checkout the code as the first step.
+      - checkout
+      - restore_cache:
+          keys:
+            - nuget-v1-{{ checksum "TerrainEditor.csproj" }}-{{ checksum "tests/WorldEditor.Tests/WorldEditor.Tests.csproj" }}
+      - run:
+          name: dotnet test
+          command: |
+            dotnet test tests/WorldEditor.Tests/WorldEditor.Tests.csproj -c Release \
+              --logger "junit;LogFilePath=/tmp/test-results/dotnet/results.xml" --logger "console;verbosity=normal"
+      - save_cache:
+          key: nuget-v1-{{ checksum "TerrainEditor.csproj" }}-{{ checksum "tests/WorldEditor.Tests/WorldEditor.Tests.csproj" }}
+          paths:
+            - ~/.nuget/packages
+      - store_test_results:
+          path: /tmp/test-results
+
+  build-app:
+    executor: dotnet
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - nuget-v1-{{ checksum "TerrainEditor.csproj" }}-{{ checksum "tests/WorldEditor.Tests/WorldEditor.Tests.csproj" }}
+      - run:
+          name: Publish the Linux program
+          command: dotnet publish TerrainEditor.csproj -c Release -r linux-x64 --self-contained -p:PublishSingleFile=true -p:DebugType=none -o out
+      - persist_to_workspace:
+          root: .
+          paths:
+            - out
+
+  browser-tests:
+    docker:
+      - image: cimg/node:lts-browsers
+    resource_class: medium
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - restore_cache:
+          keys:
+            - npm-v1-{{ checksum "tests/browser/package-lock.json" }}
+      - run:
+          name: Install Puppeteer
+          working_directory: tests/browser
+          command: npm ci
+      - save_cache:
+          key: npm-v1-{{ checksum "tests/browser/package-lock.json" }}
+          paths:
+            - ~/.npm
+            - ~/.cache/puppeteer
+      - run:
+          name: Browser tests
+          working_directory: tests/browser
+          command: mkdir -p results && APP="$PWD/../../out/ValheimWorldEditor" npm test
+          no_output_timeout: 20m
+      - store_test_results:
+          path: tests/browser/results
+      - store_artifacts:
+          path: tests/browser/results
+
+  packages:
+    executor: dotnet
+    steps:
       - checkout
       - run:
-          name: "Say hello"
-          command: "echo Hello, World!"
+          name: Tools for packaging
+          command: apt-get update -qq && apt-get install -y -qq zip python3 python3-pip curl > /dev/null
+      - run:
+          name: Build the release packages (without the plugin)
+          environment:
+            SKIP_PLUGIN: "1"
+            PIP_BREAK_SYSTEM_PACKAGES: "1"
+          command: tools/release.sh ci-${CIRCLE_SHA1:0:7} /tmp/dist
+      - run:
+          name: Check what is in them
+          command: for p in /tmp/dist/*; do tools/check-package.sh "$p" --no-plugin; done
+      - store_artifacts:
+          path: /tmp/dist
 
-# Orchestrate jobs using workflows
-# See: https://circleci.com/docs/guides/orchestrate/workflows/ & https://circleci.com/docs/reference/configuration-reference/#workflows
 workflows:
-  say-hello-workflow: # This is the name of the workflow, feel free to change it to better match your workflow.
-    # Inside the workflow, you define the jobs you want to run.
+  test:
     jobs:
-      - say-hello
+      - dotnet-tests
+      - build-app
+      - browser-tests:
+          requires:
+            - build-app
+      - packages
