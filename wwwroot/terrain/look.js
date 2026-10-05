@@ -144,6 +144,8 @@ void main() {
 const terrainMain = /* glsl */`
 uniform vec3 uSunDir;
 uniform vec3 uSunColor;
+uniform float uSlope;
+uniform float uContour;
 in float vLimit;
 out vec4 fragColor;
 void main() {
@@ -165,6 +167,20 @@ void main() {
   float spec = max(0.0, vis * (a2 / (d * d + 1e-7)) * nl);
   vec3 fres = specColor + (1.0 - specColor) * pow(1.0 - lh, 5.0);
   vec3 col = ambient + (albedo * nl + spec * fres) * uSunColor;
+  // Measuring overlays: slope colours (from the mesh normal) and height lines.
+  if (uSlope > 0.5) {
+    vec3 ng = normalize(vec3(vs_TEXCOORD1.z, vs_TEXCOORD2.z, vs_TEXCOORD3.z));
+    float deg = degrees(acos(clamp(ng.y, 0.0, 1.0)));
+    vec3 c = deg < 10.0 ? vec3(0.25, 0.75, 0.3) : deg < 20.0 ? vec3(0.7, 0.8, 0.2) : deg < 30.0 ? vec3(0.95, 0.7, 0.15) : deg < 45.0 ? vec3(0.95, 0.4, 0.1) : vec3(0.85, 0.1, 0.1);
+    col = mix(col, c * (0.45 + 0.55 * max(dot(ng, uSunDir), 0.0)), 0.6);
+  }
+  if (uContour > 0.0) {
+    float hh = wp.y, fw = fwidth(hh) + 1e-4;
+    float minor = abs(fract(hh / uContour + 0.5) - 0.5) * uContour;
+    float major = abs(fract(hh / (uContour * 5.0) + 0.5) - 0.5) * uContour * 5.0;
+    float line = max((1.0 - smoothstep(0.0, fw * 1.2, minor)) * 0.45, (1.0 - smoothstep(0.0, fw * 2.0, major)) * 0.8);
+    col = mix(col, vec3(0.02), line);
+  }
   // Points at the game's +-8 m edit limit.
   col = mix(col, vec3(0.75, 0.06, 0.04), vLimit * 0.55);
   fragColor = vec4(toSRGB(applyFogDir(col, length(_WorldSpaceCameraPos - wp), -v, uSunDir)), 1.0);
@@ -203,6 +219,7 @@ export async function createLook(renderer, { offset, waterLevel }) {
       _Glossiness: { value: 0.1 }, _SnowGloss: { value: 1 }, _RockGloss: { value: 0.7 }, _Metallic: { value: 0 },
       _WaterLevel: { value: waterLevel }, _LodHideDistance: { value: 1e6 }, _LodHideModifier: { value: 0 },
       _UVScale: { value: 0.5 }, _BumpScale: { value: 1 }, _Wet: { value: 0 },
+      uSlope: { value: 0 }, uContour: { value: 0 },
       _NoiseTex: { value: noise }, _SkyAlphaTexture: { value: white }, _ClearedMaskTex: { value: null },
       _RockNormal: { value: rock }, _SnowNormal: { value: snow }, _CliffNormal: { value: cliff },
       _MistlandsCliffNormal: { value: mistCliff }, _ColorVarietyNoise: { value: variety },
@@ -216,6 +233,7 @@ export async function createLook(renderer, { offset, waterLevel }) {
   const t0 = performance.now();
   return {
     terrain, sky,
+    setOverlay({ slope, contour }) { terrain.uniforms.uSlope.value = slope ? 1 : 0; terrain.uniforms.uContour.value = contour || 0; },
     createWater: (size, heightTex, region) => createWater(shared, size, heightTex, region, waterLevel),
     update(camera) {
       camUnity.set(camera.position.x + offset.x, camera.position.y, offset.z - camera.position.z);

@@ -260,6 +260,7 @@ import { createObjects, stableHash } from './editor/objects.js';
 import { createMasks } from './editor/masks.js';
 import { createArea } from './editor/area.js';
 import { createPlant } from './editor/plant.js';
+import { createMeasure } from './editor/measure.js';
 
 const params = new URLSearchParams(location.search);
 const czx = parseInt(params.get('zx') ?? '0'), czz = parseInt(params.get('zz') ?? '0');
@@ -711,13 +712,14 @@ const ed = {
   get tool() { return tool; }, setTool: t => setTool(t), get radius() { return radius; }, get strength() { return strength; },
   handlers: {}, panels: toolPanels, onToolChange: toolChangeHooks, mask: g => 1,
   get selection() { return selection; }, selectIds: ids => { selection.clear(); for (const id of ids) if (entities.has(id)) selection.add(id); drawSelection(); }, clearSelection: () => clearSelection(),
-  showStatusFor: h => { hover = h; showStatus(); }, updateRing: () => updateRing(), frame: []
+  showStatusFor: h => { hover = h; showStatus(); }, updateRing: () => updateRing(), frame: [], getLook: () => look
 };
 const objects = createObjects(ed); ed.objects = objects;
 window.__ed = ed; // for automated tests
 createMasks(ed, [...BRUSH_TOOLS, 'path', 'area', 'plant']);
 createArea(ed);
 createPlant(ed);
+createMeasure(ed);
 syncToolPanel();
 Promise.all([fetch('/api/pieces').then(r => r.arrayBuffer()), fetch('/api/piece-types').then(r => r.json())]).then(async ([buf, types]) => {
   const p = new Float32Array(buf), S = 13, byType = new Map();
@@ -990,7 +992,8 @@ const panning = () => tool === 'move' || spaceDown;
 addEventListener('keyup', e => { held.delete(e.code); if (e.code === 'Space') spaceDown = false; });
 addEventListener('blur', () => { held.clear(); spaceDown = false; });
 addEventListener('keydown', e => {
-  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+  // Typing in a text or number box; switches and sliders keep the shortcuts working.
+  if (e.target.tagName === 'SELECT' || (e.target.tagName === 'INPUT' && !['checkbox', 'range', 'radio', 'button'].includes(e.target.type))) return;
   if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code) && !e.ctrlKey) { held.add(e.code); e.preventDefault(); return; }
   if (e.code === 'Space') { spaceDown = true; e.preventDefault(); return; }
   if (ed.handlers[tool]?.key?.(e)) { e.preventDefault(); return; }
@@ -1072,6 +1075,7 @@ syncShow(); // applies the saved switches, then syncLook()
 $('lookState').textContent = '(loading…)';
 createLook(renderer, { offset: { x: originX + cx, z: originZ + cz }, waterLevel: WATER }).then(l => {
   look = l;
+  ed.onLook?.();
   look.terrain.uniforms._ClearedMaskTex.value = maskTex;
   look.water = look.createWater(8000, heightTex, { x: originX, z: originZ, w: W, h: H });
   look.water.position.y = WATER;
