@@ -32,7 +32,9 @@ package() {   # $1 runtime id, $2 program file name (users start it by double-cl
   cp -r "$work/$rid/publish/wwwroot" "$dir/"
   # Never ship files extracted from the game, even if a local build folder had them.
   rm -rf "$dir/wwwroot/models" "$dir/wwwroot/maptex" "$dir/wwwroot/terrain/"*.png "$dir/wwwroot/terrain/heightmap.frag.glsl"
-  cp "$repo"/tools/asset-export/{export_all.py,assetlib.py,export_pieces.py,fix_normals.py,fix_alpha.py,requirements.txt} \
+  # The window icon: icon.ico on Windows, icon.png elsewhere (and as the pages' icon everywhere).
+  [ "$rid" = win-x64 ] || rm -f "$dir/wwwroot/icon.ico"
+  cp "$repo"/tools/asset-export/{export_all.py,assetlib.py,export_pieces.py,fix_normals.py,fix_alpha.py} \
      "$repo/tools/zdo_scan.py" "$repo/WorldGen/pieces.json" "$dir/export-game-files/"
   "$repo/tools/make-python-runtime.sh" "$rid" "$dir/export-game-files" >/dev/null
   cp "$repo/tools/$readme" "$dir/README.txt"

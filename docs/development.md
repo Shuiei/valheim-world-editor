@@ -77,7 +77,20 @@ in the release packages:
 The app runs the exporter by itself (`App/GameLook.cs`): it finds Valheim in the Steam libraries
 (or the folder the user chose), runs `export-game-files/export_all.py` with the bundled Python
 runtime into the per-user `game-look` folder (served after `wwwroot`), and runs it again when
-Steam's build id of the game changes. `tools/make-python-runtime.sh` builds that runtime.
+Steam's build id of the game changes. `tools/make-python-runtime.sh` builds that runtime, then
+`tools/python-runtime/trim.py` removes every file a full export does not use: the list of what stays
+is `tools/python-runtime/keep-<linux-x64|win-x64>.txt` (plus the `encodings` package, the used
+packages' Python files and licence files; see the top of `trim.py`). After changing
+`requirements.txt`, the Python version or the exporter, make the lists again and commit them:
+
+```sh
+python3 tools/python-runtime/trace.py linux-x64 ~/.local/share/Steam/steamapps/common/Valheim
+python3 tools/python-runtime/trace.py win-x64 ~/.local/share/Steam/steamapps/common/Valheim   # under Wine
+```
+
+Each runs a full export with the untrimmed runtime and logs what it opens and loads. The Windows
+runtime also carries `msvcp140.dll` (from Microsoft's `msvc-runtime` wheel), which UnityPy needs
+and Windows only has when a program installed the Visual C++ runtime.
 
 `tools/asset-export/export_all.py` can also be run by hand (Python 3; `pip install
 -r tools/asset-export/requirements.txt`):

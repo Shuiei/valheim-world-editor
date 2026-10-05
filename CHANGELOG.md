@@ -3,6 +3,18 @@
 All notable changes to the Valheim world editor and its WorldEditorBridge plugin, which share one
 version number. Newest first.
 
+## v0.3.2 — 2026-10-05 (smaller packages)
+
+### Changed
+- **Only what the editor needs**: the bundled Python keeps just the files a full game-look export
+  uses (traced on both systems; the export's output is byte-for-byte the same): 117 → 87 MB on
+  Linux, 74 → 48 MB on Windows. Gone with it: `requirements.txt`, the Linux copy of `icon.ico`,
+  and in the Thunderstore packages the `README.txt` files (the mod page replaces them).
+
+### Fixed
+- **Windows**: the bundled Python carries `msvcp140.dll`, which UnityPy needs; a Windows without
+  the Visual C++ runtime could not copy the game's look.
+
 ## v0.3.1 — 2026-10-05 (Thunderstore packages)
 
 ### Added
