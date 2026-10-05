@@ -76,6 +76,19 @@
   /* View panel */
   #viewPanel { position: fixed; right: 10px; top: 70px; width: 264px; padding: 12px 14px; max-height: calc(100vh - 120px); overflow-y: auto; }
   #viewPanel[hidden] { display: none; }
+  #historyPanel { position: fixed; right: 10px; top: 70px; width: 300px; padding: 12px 14px; max-height: calc(100vh - 120px); overflow-y: auto; }
+  #historyPanel h3 { margin: 0 0 6px; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; display: flex; align-items: center; }
+  #historyPanel h3 span { margin-left: auto; text-transform: none; letter-spacing: 0; font-weight: 400; }
+  .hrow { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; padding: 6px 6px; border-radius: 7px; border: 1px solid transparent; }
+  .hrow:hover { background: rgba(255,255,255,.035); border-color: var(--line); }
+  .hrow .what { font-size: 12.5px; }
+  .hrow .meta { color: var(--muted); font-size: 11px; grid-column: 1; }
+  .hrow .acts { grid-row: span 2; display: flex; gap: 4px; align-items: center; }
+  .hrow .acts button { padding: 3px 6px; font-size: 11px; }
+  .hrow.undone { opacity: .5; }
+  .hrow.removed .what { text-decoration: line-through; color: var(--muted); }
+  .hrow.current { border-color: var(--accent); }
+  .tag { font-size: 10px; border: 1px solid #2a6a4a; color: #8ff0b4; border-radius: 999px; padding: 0 5px; margin-left: 4px; }
   #viewPanel h3 { margin: 12px 0 4px; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; }
   #viewPanel h3:first-of-type { margin-top: 0; }
   .toggle { display: flex; align-items: center; gap: 10px; padding: 5px 2px; cursor: pointer; border-radius: 6px; }
@@ -132,6 +145,7 @@
   </div>
   <div class="sep"></div>
   <div class="group">
+    <button id="historyToggle" class="ghost" title="Every change made in this session (L)"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>History</button>
     <button id="viewToggle" class="ghost" title="Show / hide things in the world (V)"><svg class="i" viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>View</button>
     <button id="helpToggle" class="ghost" title="Controls and shortcuts (?)"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 015 .5c0 1.7-2.5 2-2.5 3.5"/><path d="M12 17h.01"/></svg></button>
   </div>
@@ -235,6 +249,12 @@
   <div class="presets"><button id="showDefaults">Defaults</button><button id="showAll">All</button><button id="terrainOnly">Ground</button></div>
 </aside>
 
+<aside id="historyPanel" class="card" hidden>
+  <h3>History <span id="histCount"></span></h3>
+  <div id="histList"></div>
+  <div class="hint">“Back to here” undoes every later change (they stay listed, greyed, to redo). “Remove” takes out only that change and keeps everything done after it.</div>
+</aside>
+
 <aside id="help" class="card" hidden>
   <h3>Controls <button class="ghost" id="helpClose" title="Close">✕</button></h3>
   <dl>
@@ -252,7 +272,7 @@
     <dt>Alt + click</dt><dd>Pick the ground height</dd>
     <dt>Del</dt><dd>Delete the selected objects</dd>
     <dt>Ctrl+Z / Ctrl+Y</dt><dd>Undo / redo</dd>
-    <dt>V / ?</dt><dd>View panel / this help</dd>
+    <dt>V / L / ?</dt><dd>View panel / history / this help</dd>
   </dl>
   <p>Edits stay within the game's limit of ±8 m from the original ground; points at the limit turn red.</p>
   <p>The outer line of points is locked so the area always joins its neighbours seamlessly.</p>
@@ -695,6 +715,7 @@ if (world.live) {
         const res = await (await fetch('/api/save', { method: 'POST' })).json();
         showPendingFrom(res.pending);
         if (res.saved && !res.pending?.addedObjects) objects.markApplied();
+        if (res.saved) { for (const e of undoStack) e.applied = true; renderHistory(); }
         $('sMsg').innerHTML = res.saved ? res.message : `<span class="warn">${res.message}</span>`;
       } while (applying.again);
     } finally { applying = null; }
@@ -750,23 +771,104 @@ if (region.locations.length) {
     markers.add(post);
   }
 }
-function updateHistoryButtons() { $('undo').disabled = !undoStack.length; $('redo').disabled = !redoStack.length; }
+function updateHistoryButtons() { $('undo').disabled = !undoStack.length; $('redo').disabled = !redoStack.length; renderHistory(); }
 // History entries can combine: terrain (state = before, zones), deleted object ids, added object
 // ids and zone resets. Undo and redo apply the parts in opposite directions.
-function applyHistory(e, forward) {
-  const out = { ...e };
-  if (e.state) { out.state = snapshotState(); restoreState(e.state); upload(e.zones); }
+// Terrain changes are kept as the points they touched, with their values before and after.
+function makeDelta(before) {
+  const idx = [];
+  for (let g = 0; g < N; g++) {
+    if (before.level[g] !== level[g] || before.smooth[g] !== smooth[g] || before.mod[g] !== mod[g] || before.pmod[g] !== pmod[g] ||
+      before.paint[g * 4] !== paint[g * 4] || before.paint[g * 4 + 1] !== paint[g * 4 + 1] || before.paint[g * 4 + 2] !== paint[g * 4 + 2] || before.paint[g * 4 + 3] !== paint[g * 4 + 3]) idx.push(g);
+  }
+  const n = idx.length, side = src => ({ level: Float32Array.from(idx, g => src.level[g]), smooth: Float32Array.from(idx, g => src.smooth[g]), mod: Uint8Array.from(idx, g => src.mod[g]), pmod: Uint8Array.from(idx, g => src.pmod[g]),
+    paint: Float32Array.from({ length: n * 4 }, (_, i) => src.paint[idx[i >> 2] * 4 + (i & 3)]) });
+  return { idx: Int32Array.from(idx), before: side(before), after: side({ level, smooth, mod, pmod, paint }) };
+}
+function setDelta(d, side) {
+  const s = d[side];
+  let x0 = W, x1 = 0, z0 = H, z1 = 0;
+  d.idx.forEach((g, k) => {
+    level[g] = s.level[k]; smooth[g] = s.smooth[k]; mod[g] = s.mod[k]; pmod[g] = s.pmod[k];
+    for (let c = 0; c < 4; c++) paint[g * 4 + c] = s.paint[k * 4 + c];
+    const gx = g % W, gz = (g - gx) / W; x0 = Math.min(x0, gx); x1 = Math.max(x1, gx); z0 = Math.min(z0, gz); z1 = Math.max(z1, gz);
+  });
+  if (d.idx.length) refresh(x0 - 1, z0 - 1, x1 + 1, z1 + 1);
+}
+// Object and reset parts of an entry, forwards (redo) or backwards (undo).
+function applyObjects(e, forward) {
   if (e.deleted) setDeleted(e.deleted, forward);
   if (e.added) setDeleted(e.added, !forward);
   if (e.resets) ed.setResets?.(e.resets, e.resetUndo ? !forward : forward);
-  return out;
+  // A "Remove" entry: undoing it brings the removed change back.
+  if (e.revertOf) { applyObjects(e.revertOf, !forward); e.revertOf.removed = forward; }
+}
+function applyHistory(e, forward) {
+  if (e.delta) { setDelta(e.delta, forward ? 'after' : 'before'); upload(e.zones); }
+  applyObjects(e, forward);
+  return e;
+}
+let historySeq = 0;
+function describeEntry(e) {
+  const parts = [];
+  if (e.zones?.length) parts.push(`${e.zones.length} zone${e.zones.length > 1 ? 's' : ''}`);
+  if (e.added?.length) parts.push(`${e.added.length} new`);
+  if (e.deleted?.length) parts.push(`${e.deleted.length} removed`);
+  if (e.resets) parts.push(`${e.resets.zones.length} zone reset`);
+  return parts.join(' · ');
 }
 function pushHistory(entry) {
-  undoStack.push(entry); if (undoStack.length > 40) undoStack.shift();
+  if (entry.state) { entry.delta = makeDelta(entry.state); delete entry.state; }
+  entry.id = ++historySeq; entry.time = new Date();
+  entry.label ??= entry.added && entry.deleted ? 'Replace' : entry.added ? `Added ${entry.added.length}` : entry.deleted ? `Deleted ${entry.deleted.length}` : (TOOLS[tool]?.[0] ?? 'Change');
+  undoStack.push(entry); if (undoStack.length > 200) undoStack.shift();
   redoStack.length = 0; updateHistoryButtons();
 }
 function undo() { const e = undoStack.pop(); if (!e) return; redoStack.push(applyHistory(e, false)); updateHistoryButtons(); }
 function redo() { const e = redoStack.pop(); if (!e) return; undoStack.push(applyHistory(e, true)); updateHistoryButtons(); }
+// Undo every change made after e (they move to the redo list).
+function backTo(e) { while (undoStack.length && undoStack[undoStack.length - 1] !== e) undo(); }
+// Redo up to and including e.
+function forwardTo(e) { while (redoStack.length && undoStack[undoStack.length - 1] !== e) redo(); }
+// Take out one change and keep everything done after it: its height change is subtracted from
+// the points it touched (later edits there stay), paint goes back where nothing repainted it since,
+// its objects are restored / removed. The removal is itself a change that can be undone.
+function removeChange(e) {
+  const before = snapshotState();
+  if (e.delta) {
+    const d = e.delta;
+    d.idx.forEach((g, k) => {
+      level[g] = Math.max(-MAXL, Math.min(MAXL, level[g] + d.before.level[k] - d.after.level[k]));
+      smooth[g] = Math.max(-MAXS, Math.min(MAXS, smooth[g] + d.before.smooth[k] - d.after.smooth[k]));
+      mod[g] = Math.abs(level[g]) + Math.abs(smooth[g]) > 1e-4 || (d.before.mod[k] && mod[g]) ? 1 : 0;
+      let samePaint = pmod[g] === d.after.pmod[k];
+      for (let c = 0; c < 4; c++) samePaint &&= Math.abs(paint[g * 4 + c] - d.after.paint[k * 4 + c]) < 1e-4;
+      if (samePaint) { pmod[g] = d.before.pmod[k]; for (let c = 0; c < 4; c++) paint[g * 4 + c] = d.before.paint[k * 4 + c]; }
+    });
+    refresh();
+  }
+  applyObjects(e, false); e.removed = true;
+  const entry = { state: before, zones: e.zones ?? [], label: `Removed: ${e.label}`, revertOf: e };
+  if (e.zones?.length) upload(e.zones);
+  pushHistory(entry);
+  msg(`Removed “${e.label}”; everything else is kept. Ctrl+Z brings it back.`);
+}
+function renderHistory() {
+  if ($('historyPanel').hidden) return;
+  const row = (e, undone, current) => `<div class="hrow${undone ? ' undone' : ''}${e.removed ? ' removed' : ''}${current ? ' current' : ''}" data-id="${e.id}">
+    <div class="what">${e.label}${e.applied ? '<span class="tag">applied</span>' : ''}</div>
+    <div class="acts">${undone ? `<button data-act="fwd" title="Redo up to this change">Redo to here</button>` : `${current ? '' : `<button data-act="back" title="Undo every change after this one">Back to here</button>`}${e.removed || e.revertOf ? '' : `<button data-act="rm" title="Take out only this change">Remove</button>`}`}</div>
+    <div class="meta">${e.time.toLocaleTimeString()}${describeEntry(e) ? ' · ' + describeEntry(e) : ''}</div></div>`;
+  const all = [...redoStack.map(e => row(e, true, false)), ...[...undoStack].reverse().map((e, i) => row(e, false, i === 0))];
+  $('histList').innerHTML = all.length ? all.join('') : '<div class="hint">No changes yet in this session.</div>';
+  $('histCount').textContent = undoStack.length ? `${undoStack.length} change(s)` : '';
+  $('histList').querySelectorAll('[data-act]').forEach(b => b.onclick = () => {
+    const id = +b.closest('.hrow').dataset.id, e = [...undoStack, ...redoStack].find(x => x.id === id);
+    if (!e) return;
+    if (b.dataset.act === 'back') backTo(e); else if (b.dataset.act === 'fwd') forwardTo(e); else removeChange(e);
+    updateHistoryButtons();
+  });
+}
 function msg(text, warn = false) { $('sMsg').innerHTML = warn ? `<span class="warn">${text}</span>` : text; }
 $('undo').onclick = undo; $('redo').onclick = redo; updateHistoryButtons();
 
@@ -1002,7 +1104,7 @@ function applyPath() {
   }
   refresh(x0 - 1, z0 - 1, x1 + 1, z1 + 1);
   const zones = zonesOf(touched);
-  if (zones.length) { undoStack.push({ state, zones }); if (undoStack.length > 40) undoStack.shift(); redoStack.length = 0; upload(zones); }
+  if (zones.length) { upload(zones); pushHistory({ state, zones, label: `Path: ${$('pAction').selectedOptions[0].text}` }); }
   updateHistoryButtons(); updatePathPreview();
   $('sMsg').innerHTML = clampedThisStroke
     ? '<span class="warn">Applied, but part of the path reached the game limit of ±8 m from the original ground (red points).</span>'
@@ -1058,8 +1160,7 @@ el.addEventListener('pointerup', e => {
   if (e.button !== 0 || !stroke) return;
   const zones = zonesOf(stroke.touched);
   if (zones.length) {
-    undoStack.push({ state: stroke.state, zones }); if (undoStack.length > 40) undoStack.shift();
-    redoStack.length = 0; upload(zones);
+    upload(zones); pushHistory({ state: stroke.state, zones, label: TOOLS[tool]?.[0] ?? 'Brush' });
   }
   $('sMsg').innerHTML = clampedThisStroke ? '<span class="warn">Reached the game limit: ground can only move 8 m from its original height (red points).</span>' : '';
   stroke = null; updateHistoryButtons();
@@ -1085,6 +1186,7 @@ addEventListener('keydown', e => {
   if (e.key.toLowerCase() === 't' && !e.ctrlKey) { setTool('plant'); return; }
   if (e.key.toLowerCase() === 'm' && !e.ctrlKey) { setTool('measure'); return; }
   if (e.key.toLowerCase() === 'v' && !e.ctrlKey) { toggleView(); return; }
+  if (e.key.toLowerCase() === 'l' && !e.ctrlKey) { toggleHistory(); return; }
   if (e.key === '?') { toggleHelp(); return; }
   if (e.key === 'Delete' && selection.size) { deleteSelection(); e.preventDefault(); return; }
   if (tool === 'select' && e.key === 'Escape') { clearSelection(); return; }
@@ -1257,7 +1359,7 @@ async function deleteSelection() {
   if (!selection.size) return;
   const ids = [...selection];
   setDeleted(ids, true);
-  pushHistory({ deleted: ids });
+  pushHistory({ deleted: ids, label: `Deleted ${ids.length} object(s)` });
   $('sMsg').textContent = `Deleted ${ids.length} object(s). Ctrl+Z brings them back; Save writes it to the world.`;
   clearSelection();
 }
@@ -1270,14 +1372,20 @@ function writePref(k, v) { try { localStorage.setItem(k, v ? '1' : '0'); } catch
 function toggleView(force) {
   const open = force ?? $('viewPanel').hidden;
   $('viewPanel').hidden = !open; $('viewToggle').classList.toggle('on', open);
-  if (open) $('help').hidden = true;
+  if (open) { $('help').hidden = true; if (typeof toggleHistory === 'function') toggleHistory(false); }
   writePref('editorViewOpen', open);
 }
 function toggleHelp(force) {
   const open = force ?? $('help').hidden;
   $('help').hidden = !open; $('helpToggle').classList.toggle('on', open);
-  if (open) { $('viewPanel').hidden = true; $('viewToggle').classList.remove('on'); }
+  if (open) { $('viewPanel').hidden = true; $('viewToggle').classList.remove('on'); toggleHistory(false); }
 }
+function toggleHistory(force) {
+  const open = force ?? $('historyPanel').hidden;
+  $('historyPanel').hidden = !open; $('historyToggle').classList.toggle('on', open);
+  if (open) { $('viewPanel').hidden = true; $('viewToggle').classList.remove('on'); $('help').hidden = true; $('helpToggle').classList.remove('on'); renderHistory(); }
+}
+$('historyToggle').onclick = () => toggleHistory();
 $('viewToggle').onclick = () => toggleView();
 $('helpToggle').onclick = () => toggleHelp();
 $('helpClose').onclick = () => toggleHelp(false);

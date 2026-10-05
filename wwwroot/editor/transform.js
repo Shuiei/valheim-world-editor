@@ -63,7 +63,7 @@ export function createTransform(ed) {
     const ids = s.items.map(it => it.id);
     await ed.setDeleted(ids, true);
     const added = await ed.objects.add(copies);
-    ed.pushHistory({ deleted: ids, added });
+    ed.pushHistory({ deleted: ids, added, label: `Moved ${added.length} object(s)` });
     ed.selectIds(added);
     ed.msg(`Moved ${added.length} object(s). Ctrl+Z puts them back.`);
   }
