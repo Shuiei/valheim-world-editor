@@ -16,8 +16,9 @@ See [Installation → Online (live) mode](../README.md#online-live-mode) for the
    restarted.
 2. The token from `BepInEx/config/local.worldeditorbridge.cfg`.
 3. An SSH tunnel to the server: `ssh -N -L 5182:127.0.0.1:5182 user@server`.
-4. `ValheimTerrainEditor --live http://127.0.0.1:5182 --token <token> --port 5181`, then open
-   http://127.0.0.1:5181.
+4. On the start page, under **A running server (live)**: `127.0.0.1:5182`, the token, **Connect**.
+   The editor first checks the bridge (at most 10 seconds) and says what is wrong if it does not
+   answer: no tunnel, wrong token, or a game that does not host the world.
 
 ### Plugin settings (`local.worldeditorbridge.cfg`)
 

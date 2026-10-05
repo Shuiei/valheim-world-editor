@@ -5,8 +5,7 @@
 ## What is this?
 
 A world editor for Valheim, in the spirit of Minecraft's MCEdit, WorldEdit and WorldPainter. It
-opens a Valheim world and shows it in your browser, drawn with the game's own terrain, textures and
-models. There you can:
+opens a Valheim world in its own window, drawn with the game's own terrain, textures and models. There you can:
 
 - **Shape the ground**: raise, lower, flatten, smooth, naturalize or restore it, and paint dirt,
   cultivated soil or paved stone.
@@ -26,111 +25,116 @@ It works in two ways:
 | **Offline** | A world save on disk (single player world, or a server's world folder). | The game or server is stopped. Changes are written as a new save, with a full backup first. |
 | **Online (live)** | The world of a running game or dedicated server, through the WorldEditorBridge plugin. | Players can stay connected; they see your changes as soon as you apply them. |
 
-The editor is a small program (C#, .NET 8) that serves the editing page on your own computer;
-nothing is sent anywhere else.
+It is a single program for Windows and Linux: download, unpack, double-click. Everything runs on
+your own computer; nothing is sent anywhere else.
 
 ## Installation
 
 ### What you need
 
-- **Linux x64** or **Windows x64**. The Windows build has only been tried under Wine, where editing
-  and saving work but the world map did not load.
-- A browser with WebGL 2 (any current Firefox, Chrome or Edge).
-- A Valheim world in the current chunked save format (world version 41: a world folder with
-  `_main.<n>.chunks` and `*.chunk` files). The older single `.db` file format is not supported.
-- For **live mode**: **BepInEx** installed in the game that hosts the world (normally the
-  dedicated server), using [BepInExPack for Valheim](https://thunderstore.io/c/valheim/p/denikson/BepInExPack_Valheim/). The WorldEditorBridge plugin runs inside the game
-  through BepInEx. Offline mode does not need BepInEx.
-- For the in-game look (optional): Python 3 and your own Valheim install, to copy the game's
-  textures and models (see step 2). They are not included because they belong to the game. Without
-  them the map and the 3D editor use plain colours, objects are not drawn (they can still be
-  planted and saved), and buildings are boxes.
+- **Windows 10/11 or Linux**, 64-bit.
+- **Valheim** installed through Steam on the same computer, for the game's look. The editor finds it
+  by itself and copies the textures and models it needs from it, once. Without it the editor still
+  works, with plain colours and no object models.
+- A world in the current save format (a world folder with `_main.<n>.chunks` and `*.chunk` files).
+  Worlds in the old single-file format are listed but greyed out: load them in Valheim once and
+  they are converted.
+- For **live mode** only: **BepInEx** on the server (or the game) that hosts the world, using
+  [BepInExPack for Valheim](https://thunderstore.io/c/valheim/p/denikson/BepInExPack_Valheim/),
+  plus the WorldEditorBridge plugin. Offline editing does not need BepInEx.
 
-### Offline mode
+Nothing else: no Python, no .NET, no browser setup. Everything the editor needs comes in the
+download. Its window uses the web engine of the system: Microsoft Edge WebView2 on Windows (part of
+Windows 11 and of an up-to-date Windows 10) and WebKitGTK on Linux (installed with most desktops).
+Without it, the editor opens in your web browser instead.
 
-1. **Get the editor.** Download `ValheimWorldEditor-<version>-linux-x64.tar.gz` (or `-win-x64.zip`)
-   from the [Releases](https://github.com/Shuiei/valheim-world-editor/releases) page and unpack it
-   anywhere. It holds the program, its `wwwroot` page and the `export-game-files` tool; or build it
-   from source.
-2. **Copy the game's look (once, optional).** From the unpacked `ValheimWorldEditor` folder:
+### Install and start
 
-   ```sh
-   python3 -m pip install -r export-game-files/requirements.txt
-   python3 export-game-files/export_all.py --valheim "/path/to/steamapps/common/Valheim" --out wwwroot
-   ```
+1. Download `ValheimWorldEditor-<version>-win-x64.zip` (Windows) or
+   `ValheimWorldEditor-<version>-linux-x64.tar.gz` (Linux) from the
+   [Releases](https://github.com/Shuiei/valheim-world-editor/releases) page.
+2. Unpack it anywhere (Desktop, Documents…).
+3. Double-click **ValheimWorldEditor** (`ValheimWorldEditor.exe` on Windows). It opens in its own
+   window.
 
-   It reads the game's asset bundles and writes the terrain shader and textures, the map textures
-   and the models of every kind of object into `wwwroot` (a few minutes, about 150 MB). Run it again
-   after a game update. Point `--valheim` at the game client's folder (the one with `valheim_Data`);
-   a dedicated server install has no models.
-3. **Close the game or stop the server** that uses the world. A running game saves over the files
+![The start page](docs/images/start.jpg)
+
+The first time, a bar at the top of the start page shows the editor copying the game's look from
+your Valheim install (a few minutes, about 150 MB). You can already open a world meanwhile; the look
+switches on when the copy is done. After a Valheim update it is copied again by itself. If Valheim is
+not found, the bar asks for its folder (the one Steam installed it into, with `valheim_Data`).
+
+### Edit a world saved on disk (offline)
+
+1. **Close Valheim, or stop the server** that uses the world. A running game saves over the files
    the editor writes.
-4. **Find the world folder.** It is the `<World>` folder that holds `_main.<n>.*` and `*.chunk`
-   files:
-   - Single player on Linux: `~/.config/unity3d/IronGate/Valheim/worlds_local/<World>`
-   - Single player on Windows: `%USERPROFILE%\AppData\LocalLow\IronGate\Valheim\worlds_local\<World>`
-   - Dedicated server: the `worlds_local/<World>` folder inside the server's `-savedir`.
-5. **Start the editor** with that folder:
-
-   ```sh
-   ./ValheimTerrainEditor "/path/to/worlds_local/MyWorld" --port 5180
-   ```
-
-6. **Open http://127.0.0.1:5180** in your browser. You get the [world map](docs/map.md); click a spot
-   and choose **Edit in 3D**.
-7. Edit, then press **Save to world**. The editor first copies the whole world folder to
+2. On the start page, click the world. Worlds in Valheim's usual folders are listed by themselves;
+   for another one (a dedicated server's world, a copy), use **Another world folder** with
+   **Browse…** or by typing the folder (`<savedir>/worlds_local/<World>` for a server).
+3. The [world map](docs/map.md) opens: click a spot and choose **Edit in 3D**.
+4. Edit, then press **Save to world**. The editor first copies the whole world folder to
    `<World>_backup_terraineditor-<date>`, then writes your changes as the next save number and reads
    them back to check them. Start the game or server again to see the result.
 
-### Online (live) mode
+**Worlds** (on the map page) goes back to the start page to open another world.
 
-Live mode edits the world of a running game. It needs **BepInEx** and the **WorldEditorBridge**
-plugin in the game that hosts the world (normally the dedicated server).
+### Edit a running server (live)
 
-0. **Install BepInEx** on the server if it does not have it yet: [BepInExPack for Valheim](https://thunderstore.io/c/valheim/p/denikson/BepInExPack_Valheim/) (follow its
-   instructions for dedicated servers, including how to start the server with BepInEx). Start the
-   server once so BepInEx creates its `plugins` and `config` folders.
+Players can stay connected while you edit; they see the changes as soon as you apply them, and the
+game saves them as usual.
 
-1. **Install the plugin.** Download `WorldEditorBridge.dll` from the
+1. **Install BepInEx** on the server if it does not have it yet:
+   [BepInExPack for Valheim](https://thunderstore.io/c/valheim/p/denikson/BepInExPack_Valheim/)
+   (follow its instructions for dedicated servers, including how to start the server with
+   BepInEx). Start the server once so BepInEx creates its `plugins` and `config` folders.
+2. **Install the plugin.** Download `WorldEditorBridge.dll` from the
    [Releases](https://github.com/Shuiei/valheim-world-editor/releases) page, copy it into the
    server's `BepInEx/plugins/` folder and restart the server.
-2. **Get the token.** On its first start the plugin writes
+3. **Get the token.** On its first start the plugin writes
    `BepInEx/config/local.worldeditorbridge.cfg` with a random `Token`. Keep it secret: anyone with the
-   token and access to the port can change the world. The same file sets the port (default 5182) and
-   the address (default `127.0.0.1`, reachable only from the server itself).
-3. **Open a tunnel** from your computer to the server, so the bridge stays private:
+   token and access to the port can change the world.
+4. **Open a tunnel** from your computer to the server. The plugin only listens on the server
+   itself (`127.0.0.1`), so it is never exposed to the internet:
 
    ```sh
    ssh -N -L 5182:127.0.0.1:5182 user@your-server
    ```
 
-   When the game runs on your own computer (single player, or host and play), skip this step.
-4. **Start the editor in live mode:**
+   On Windows 10/11 the same command works in PowerShell or the Command Prompt (if `ssh` is not
+   recognized, add "OpenSSH Client" in Settings → System → Optional features). With PuTTY: Connection →
+   SSH → Tunnels, source port `5182`, destination `127.0.0.1:5182`. When the game runs on your own
+   computer (single player, or host and play), skip this step.
+5. On the start page, under **A running server (live)**, enter `127.0.0.1:5182` and the token, then
+   **Connect**. If the server cannot be reached, the editor says why within 10 seconds.
 
-   ```sh
-   ./ValheimTerrainEditor --live http://127.0.0.1:5182 --token <token> --port 5181
-   ```
+A green **LIVE** badge shows in the top bar. Edit as usual, then press **Apply live** (or switch on
+**Auto** to apply every change right away). More in [docs/live-mode.md](docs/live-mode.md).
 
-   The token can also come from the `WORLD_BRIDGE_TOKEN` environment variable.
-5. **Open http://127.0.0.1:5181.** A green **LIVE** badge shows in the top bar. Edit as usual, then
-   press **Apply live** (or switch on **Auto** to apply every change right away). The game shows
-   the changes to every player and saves them as usual.
+### Where things are kept
 
-More in [docs/live-mode.md](docs/live-mode.md): what is applied, Reload, and limits.
+Settings, the copied game files and a log are in `~/.local/share/ValheimWorldEditor` (Linux) or
+`%LOCALAPPDATA%\ValheimWorldEditor` (Windows). The bottom of the start page shows the folder.
+
+### Command line (optional)
+
+The program also takes a world or a live server directly, which is handy for scripts:
+
+```sh
+ValheimWorldEditor "<world folder>"                                   # open that world
+ValheimWorldEditor --live http://127.0.0.1:5182 --token <token>       # connect to a server
+ValheimWorldEditor --browser                                          # use the web browser instead of a window
+ValheimWorldEditor --port 5190                                        # a fixed port (default: the first free one from 5180)
+```
 
 ### Building from source
 
 ```sh
-dotnet publish TerrainEditor.csproj -c Release -r linux-x64 --self-contained -p:PublishSingleFile=true -o ../ValheimTerrainEditor
+dotnet publish TerrainEditor.csproj -c Release -r linux-x64 --self-contained -p:PublishSingleFile=true -o ../ValheimWorldEditor
 ```
 
-`wwwroot` is copied into the output by the build. Publish outside the source folder (as above): a
-folder inside it would be packed into the next build. Use `-r win-x64` for Windows. Then run
-`tools/asset-export/export_all.py --valheim <game> --out <output>/wwwroot` for the game's look.
-`tools/release.sh <version> <folder>` builds the release packages.
-
-The plugin builds separately (`plugin/WorldEditorBridge`, .NET Framework 4.7.2, against the game's
-and BepInEx's DLLs; adjust the `HintPath`s in its project file).
+Use `-r win-x64` for Windows. Publish outside the source folder: a folder inside it would be packed
+into the next build. `tools/release.sh <version> <folder>` builds the complete release packages
+(program, page, the exporter and its Python runtime). See [docs/development.md](docs/development.md).
 
 ## Documentation
 

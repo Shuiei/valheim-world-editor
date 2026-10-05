@@ -4,7 +4,7 @@
 
 | Path | What it holds |
 |---|---|
-| `Program.cs` | Web server and HTTP API (`/api/world`, `/api/region`, `/api/objects`, `/api/save`, …), command line. |
+| `Program.cs`, `App/` | The app: window (`NativeWindow`, Photino), start page (`Launcher`), game-look setup (`GameLook`), settings, and the editor session with its HTTP API (`EditorSession`: `/api/world`, `/api/region`, `/api/objects`, `/api/save`, …). |
 | `Save/` | Save reader (`WorldSave`, `ValheimReader`), writer (`WorldWriter`), object building (`ZdoTools`: copies and blank objects), the `.db2` zone list, and live mode (`LiveBridge`, `LiveSync`). |
 | `Editing/` | Pending changes: terrain per zone, deleted and added objects, zone resets (`EditStore`). |
 | `WorldGen/` | Port of Valheim's world generator (bit-exact base terrain), map data, location flattening, the build-piece catalogue (`pieces.json`) and the prefab catalogue (`prefabs.json`). |
@@ -19,8 +19,9 @@
 ## Command line
 
 ```
-ValheimTerrainEditor [worldFolder] [--port 5180]
-ValheimTerrainEditor --live <bridge url> --token <token> [--port 5181]
+ValheimWorldEditor                                    start page (window, or the browser as fallback)
+ValheimWorldEditor [worldFolder] [--port 5180] [--browser]
+ValheimWorldEditor --live <bridge url> --token <token> [--port 5181] [--browser]
 ```
 
 Other options are for checking the world generator against the game and are not needed for
@@ -30,7 +31,7 @@ editing: `--summary`, `--inspect`, `--verify <dump>`, `--verify-ingame <file>`, 
 ## Building
 
 ```sh
-dotnet publish TerrainEditor.csproj -c Release -r linux-x64 --self-contained -p:PublishSingleFile=true -o ../ValheimTerrainEditor
+dotnet publish TerrainEditor.csproj -c Release -r linux-x64 --self-contained -p:PublishSingleFile=true -o ../ValheimWorldEditor
 ```
 
 The build copies `wwwroot` into the output. Publish outside the source folder: an output folder
@@ -50,7 +51,12 @@ in the release packages:
 - `wwwroot/maptex/`: map textures;
 - `wwwroot/models/`: building, tree, rock and bush models, their textures and `objects.json`.
 
-`tools/asset-export/export_all.py` makes all of them from a Valheim install (Python 3; `pip install
+The app runs the exporter by itself (`App/GameLook.cs`): it finds Valheim in the Steam libraries
+(or the folder the user chose), runs `export-game-files/export_all.py` with the bundled Python
+runtime into the per-user `game-look` folder (served after `wwwroot`), and runs it again when
+Steam's build id of the game changes. `tools/make-python-runtime.sh` builds that runtime.
+
+`tools/asset-export/export_all.py` can also be run by hand (Python 3; `pip install
 -r tools/asset-export/requirements.txt`):
 
 ```sh
@@ -94,7 +100,7 @@ real one:
 
 ```sh
 cp -r ~/worlds/MyWorld /tmp/world-copy
-./ValheimTerrainEditor /tmp/world-copy --port 5191 &
+VWE_NO_OPEN=1 ./ValheimWorldEditor /tmp/world-copy --browser --port 5191 &
 node tools/tests/test-editor.mjs http://127.0.0.1:5191 /tmp/out
 ```
 
