@@ -295,6 +295,7 @@ import { createArea } from './editor/area.js';
 import { createPlant } from './editor/plant.js';
 import { createMeasure } from './editor/measure.js';
 import { createTransform } from './editor/transform.js';
+import { applyTips } from './editor/tips.js';
 
 // View panel: each section folds by clicking its title; folded sections are remembered (Look starts folded).
 {
@@ -514,10 +515,10 @@ const TOOLS = {
 const toolPanels = [], toolChangeHooks = [];
 const BRUSH_TOOLS = ['raise', 'lower', 'flatten', 'smooth', 'natural', 'restore', 'paint-dirt', 'paint-cultivated', 'paint-paved', 'paint-natural'];
 document.querySelectorAll('#rail [data-tool]').forEach(b => {
-  const [name, , icon, swatch] = TOOLS[b.dataset.tool];
+  const [name, desc, icon, swatch] = TOOLS[b.dataset.tool];
   const label = b.textContent;
   b.innerHTML = (icon ? `<svg class="i" viewBox="0 0 24 24"><path d="${icon}"/></svg>` : `<span class="sw" style="background:${swatch}"></span>`) + `<span>${label}</span><span class="k">${b.dataset.key}</span>`;
-  b.title = `${name} (${b.dataset.key})`;
+  b.title = `${name} (${b.dataset.key}): ${desc}`;
 });
 function syncToolPanel() {
   const [name, desc] = TOOLS[tool];
@@ -972,6 +973,7 @@ createArea(ed);
 createPlant(ed);
 createMeasure(ed);
 createTransform(ed);
+applyTips();
 syncToolPanel();
 Promise.all([fetch('/api/pieces').then(r => r.arrayBuffer()), fetch('/api/piece-types').then(r => r.json())]).then(async ([buf, types]) => {
   const p = new Float32Array(buf), S = 13, byType = new Map();
