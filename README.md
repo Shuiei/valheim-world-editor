@@ -164,7 +164,7 @@ dotnet publish TerrainEditor.csproj -c Release -r linux-x64 --self-contained -p:
 ```
 
 Use `-r win-x64` for Windows. Publish outside the source folder: a folder inside it would be packed
-into the next build. `tools/release.sh <version> <folder>` builds the complete release packages
+into the next build. `tools/release.sh <folder>` builds the complete release packages
 (program, page, the exporter and its Python runtime). See [docs/development.md](docs/development.md).
 
 ## Documentation

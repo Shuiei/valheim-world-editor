@@ -42,13 +42,23 @@ Wine's networking; not tried on real Windows).
 The plugin: build `plugin/WorldEditorBridge/WorldEditorBridge.csproj` after pointing its
 `HintPath`s at your BepInEx `core` folder and the game's `*_Data/Managed` folder.
 
-Thunderstore: `tools/thunderstore.sh <folder>` builds `WorldEditorBridge-<version>.zip` (the
-version is `WorldEditorBridgePlugin.Version`) from `tools/thunderstore/`: `manifest.json`, the
-mod page's `README.md` and the plugin's `CHANGELOG.md`, with `wwwroot/icon.png`. It checks
-Thunderstore's rules (name, 250-character description, 256x256 icon). For a new plugin version:
-raise `Version` in the plugin, add a `CHANGELOG.md` section, keep the BepInExPack dependency
-current, build, and upload the zip at https://thunderstore.io/c/valheim/create/ (Thunderstore
-refuses a version number it already has).
+Thunderstore: `tools/thunderstore.sh <folder>` builds `WorldEditorBridge-<version>.zip` from
+`tools/thunderstore/` (`manifest.json`, the mod page's `README.md`, the plugin's `CHANGELOG.md`)
+and `wwwroot/icon.png`. It checks Thunderstore's rules (name, 250-character description, 256x256
+icon). Upload the zip at https://thunderstore.io/c/valheim/create/.
+
+## Versions
+
+One version number for everything: the `VERSION` file. `Directory.Build.props` reads it into the
+editor and the plugin (`BuildInfo.Version`: the start page, the window title, the plugin's BepInEx
+version and its `/status`), and both release scripts name their packages after it. For a release:
+
+1. Raise `VERSION` (Major.Minor.Patch).
+2. Add a `## v<version>` section to `CHANGELOG.md` and a `## <version>` section to
+   `tools/thunderstore/CHANGELOG.md` (a test checks both).
+3. Keep the BepInExPack dependency in `tools/thunderstore/manifest.json` current.
+4. `tools/release.sh <folder>` and `tools/thunderstore.sh <folder>`; tag `v<version>`, publish the
+   GitHub release, upload the Thunderstore zip (Thunderstore refuses a version it already has).
 
 ## Files extracted from the game
 
@@ -124,7 +134,7 @@ Running them locally:
 dotnet test tests/WorldEditor.Tests
 dotnet publish TerrainEditor.csproj -c Release -r linux-x64 --self-contained -p:PublishSingleFile=true -o out
 cd tests/browser && npm ci && npm test        # APP=<program> to test another build
-SKIP_PLUGIN=1 tools/release.sh test /tmp/dist && tools/check-package.sh /tmp/dist/*.tar.gz --no-plugin
+SKIP_PLUGIN=1 tools/release.sh /tmp/dist && tools/check-package.sh /tmp/dist/*.tar.gz --no-plugin
 ```
 
 The older one-off scripts in `tools/tests/` were used during development and need a real world

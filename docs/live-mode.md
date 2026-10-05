@@ -35,7 +35,7 @@ the plugin's settings (below).
 
 1. **On the server, once:** BepInEx (BepInExPack for Valheim, following its dedicated-server
    instructions), then `plugin/WorldEditorBridge.dll` in its `BepInEx/plugins/`, then restart the
-   server. Its log shows `WorldEditorBridge 0.3.0 listening on http://127.0.0.1:5182/`.
+   server. Its log shows `WorldEditorBridge <version> listening on http://127.0.0.1:5182/`.
 2. Start page → **A dedicated server**: the server's address, the user you log in to it with over
    SSH, the password or an SSH key file (without either, the usual keys in `~/.ssh` are tried), and
    the **plugin token** (the `Token` line of `BepInEx/config/local.worldeditorbridge.cfg` on the

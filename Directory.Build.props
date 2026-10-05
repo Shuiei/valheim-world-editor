@@ -1,0 +1,19 @@
+<!-- One version for the editor, the plugin and every package: the VERSION file. The editor and the
+     plugin read it as BuildInfo.Version (generated at build time). -->
+<Project>
+  <PropertyGroup>
+    <Version>$([System.IO.File]::ReadAllText('$(MSBuildThisFileDirectory)VERSION').Trim())</Version>
+  </PropertyGroup>
+  <Target Name="WriteBuildInfo" BeforeTargets="CoreCompile"
+          Condition="'$(MSBuildProjectName)' == 'TerrainEditor' Or '$(MSBuildProjectName)' == 'WorldEditorBridge'">
+    <PropertyGroup>
+      <BuildInfoFile>$(IntermediateOutputPath)BuildInfo.g.cs</BuildInfoFile>
+    </PropertyGroup>
+    <WriteLinesToFile File="$(BuildInfoFile)" Overwrite="true" WriteOnlyWhenDifferent="true"
+                      Lines="// Generated from VERSION.;internal static class BuildInfo { public const string Version = &quot;$(Version)&quot;%3B }" />
+    <ItemGroup>
+      <Compile Include="$(BuildInfoFile)" />
+      <FileWrites Include="$(BuildInfoFile)" />
+    </ItemGroup>
+  </Target>
+</Project>
