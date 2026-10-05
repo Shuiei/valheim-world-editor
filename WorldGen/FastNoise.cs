@@ -1,6 +1,5 @@
-using System;
 using System.Runtime.CompilerServices;
-// Decompiled from Valheim (assembly_utils, FastNoise) for the offline terrain editor. Personal use only; do not distribute.
+// FastNoise from Valheim (assembly_utils), decompiled so the editor generates terrain exactly like the game.
 #pragma warning disable
 namespace ValheimGen;
 

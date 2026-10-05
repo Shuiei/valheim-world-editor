@@ -1,4 +1,3 @@
-using System;
 
 // Re-implementations of the two Unity engine functions the world generator relies on that are
 // native code inside the engine: UnityEngine.Random (Xorshift128) and Mathf.PerlinNoise.

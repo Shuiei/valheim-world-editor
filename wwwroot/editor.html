@@ -676,7 +676,6 @@ function applyBrush(dt) {
 // ---- Undo / redo and syncing with the server.
 const undoStack = [], redoStack = [];
 const snapshotState = () => ({ level: level.slice(), smooth: smooth.slice(), mod: mod.slice(), paint: paint.slice(), pmod: pmod.slice() });
-function restoreState(s) { level.set(s.level); smooth.set(s.smooth); mod.set(s.mod); paint.set(s.paint); pmod.set(s.pmod); refresh(); }
 function zonesOf(vertices) {
   // Every zone containing one of the vertices (edge vertices belong to two or four zones).
   const set = new Set();

@@ -49,16 +49,6 @@ public sealed class ValheimReader(Stream stream) : IDisposable
 		return new Vector3(num & 0x3FF, (num >> 10) & 0x3FF, (num >> 20) & 0x3FF) * 0.5f;
 	}
 
-	// ZPackage.ReadSmallRotation: 2 bytes for a pure Y rotation, otherwise 4 bytes.
-	public void SkipSmallRotation()
-	{
-		ushort first = _reader.ReadUInt16();
-		if ((first & 0x8000) == 0)
-		{
-			_reader.ReadUInt16();
-		}
-	}
-
 	// ZPackage.ReadNumItems: 1 byte, or 2 bytes when the high bit is set (world version >= 33).
 	public int ReadNumItems(int worldVersion)
 	{
