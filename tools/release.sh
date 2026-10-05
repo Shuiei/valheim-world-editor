@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Build the release packages (no source code, no game files) into <dist>, one per system:
 #   ValheimWorldEditor-<version>-linux-x64.tar.gz   the app (window, web page, game-look exporter
-#   ValheimWorldEditor-<version>-win-x64.zip        with its own Python) and server-plugin/ with
+#   ValheimWorldEditor-<version>-win-x64.zip        with its own Python) and plugin/ with
 #                                                   WorldEditorBridge.dll for live mode
 # Usage: tools/release.sh <version> <dist>   (needs dotnet 8, tar, zip)
 set -euo pipefail
@@ -31,12 +31,12 @@ package() {   # $1 runtime id, $2 program file name (users start it by double-cl
      "$repo/tools/zdo_scan.py" "$repo/WorldGen/pieces.json" "$dir/export-game-files/"
   "$repo/tools/make-python-runtime.sh" "$rid" "$dir/export-game-files" >/dev/null
   cp "$repo/tools/$readme" "$dir/README.txt"
-  mkdir -p "$dir/server-plugin"
-  cp "$work/plugin/WorldEditorBridge.dll" "$dir/server-plugin/"
-  cp "$repo/tools/plugin-readme.txt" "$dir/server-plugin/README.txt"
-  sed -i "s/@VERSION@/$version/" "$dir/README.txt" "$dir/server-plugin/README.txt"
+  mkdir -p "$dir/plugin"
+  cp "$work/plugin/WorldEditorBridge.dll" "$dir/plugin/"
+  cp "$repo/tools/plugin-readme.txt" "$dir/plugin/README.txt"
+  sed -i "s/@VERSION@/$version/" "$dir/README.txt" "$dir/plugin/README.txt"
   # Windows readers get Windows line ends.
-  if [ "$rid" = win-x64 ]; then sed -i 's/$/\r/' "$dir/README.txt" "$dir/server-plugin/README.txt"; fi
+  if [ "$rid" = win-x64 ]; then sed -i 's/$/\r/' "$dir/README.txt" "$dir/plugin/README.txt"; fi
 }
 
 package linux-x64 ValheimWorldEditor release-readme-linux.txt

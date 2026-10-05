@@ -12,6 +12,9 @@ public sealed class AppSettings
 
 	public string? LiveUrl { get; set; }
 
+	// Which start-page choice was used last ("game", "server", "offline").
+	public string? LastMode { get; set; }
+
 	public sealed record RecentWorld(string Path, string Name, DateTime Opened);
 
 	public static string DataDir

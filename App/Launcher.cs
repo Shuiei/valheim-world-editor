@@ -8,7 +8,10 @@ public static class Launcher
 {
 	public sealed record Choice(string[] Args, string Label);
 
-	public sealed record OpenRequest(string? Path, string? LiveUrl, string? Token);
+	// mode: "game" (live, own game), "server" (live, built-in SSH tunnel), "saved" (a saved server),
+	// "url" (live, a tunnel made elsewhere: LiveUrl + Token), or a world Path (offline).
+	public sealed record OpenRequest(string? Path, string? LiveUrl, string? Token, string? Mode = null, string? Host = null, int SshPort = 22,
+		string? User = null, string? Password = null, string? KeyPath = null, string? Passphrase = null, bool SavePassword = false, string? Name = null, string? Id = null, int? BridgePort = null);
 
 	public static async Task<Choice?> RunAsync(int port, AppSettings settings, string? lastError, CancellationToken quit)
 	{
@@ -36,10 +39,59 @@ public static class Launcher
 		});
 		app.UseStaticFiles();
 		Shared(app, settings);
-		app.MapGet("/api/launcher/state", () => new { phase = "start", error = lastError, live = settings.LiveUrl });
+		app.MapGet("/api/launcher/state", () => new { phase = "start", error = lastError, live = settings.LiveUrl, mode = settings.LastMode });
 		app.MapGet("/api/launcher/worlds", () => FindWorlds(settings));
+		app.MapGet("/api/launcher/local", async () => await LocalGame.Status(settings));
+		app.MapGet("/api/launcher/servers", () => ServerConfig.Load().Select(s => new { id = s.Id, name = s.Name, host = s.Host, user = s.User, sshPort = s.SshPort, keyFile = s.KeyFile, hasPassword = s.Password != null, hasToken = s.Token != null }));
+		app.MapPost("/api/launcher/forget", (OpenRequest req) => { if (req.Id != null) ServerConfig.Forget(req.Id); return Results.Ok(new { ok = true }); });
 		app.MapPost("/api/launcher/open", async (OpenRequest req) =>
 		{
+			Choice Live(string url, string token, string label, string mode)
+			{
+				settings.LastMode = mode;
+				settings.Save();
+				return new Choice(new[] { "--live", url, "--token", token }, label);
+			}
+			if (req.Mode == "game")
+			{
+				List<LocalGame.Bridge> bridges = LocalGame.FindBridges(settings, out _, out _);
+				LocalGame.Running? run = await LocalGame.FindRunning(bridges);
+				if (run == null)
+				{
+					return Results.Ok(new { ok = false, error = "Valheim is not running with the WorldEditorBridge plugin (or no world is loaded yet). Start the game, load your world, then try again." });
+				}
+				chosen.TrySetResult(Live($"http://127.0.0.1:{run.Bridge.Port}", run.Bridge.Token, "my game", "game"));
+				return Results.Ok(new { ok = true });
+			}
+			if (req.Mode == "server" && string.IsNullOrWhiteSpace(req.Token))
+			{
+				return Results.Ok(new { ok = false, error = "Enter the plugin's token: the Token line in BepInEx/config/local.worldeditorbridge.cfg on the server." });
+			}
+			if (req.Mode is "server" or "saved")
+			{
+				ServerConfig.Server? s = req.Mode == "saved" ? ServerConfig.Load().FirstOrDefault(x => x.Id == req.Id) : null;
+				if (req.Mode == "saved" && s == null)
+				{
+					return Results.Ok(new { ok = false, error = "That saved server is gone from servers.cfg." });
+				}
+				var t = s != null
+					? new Tunnel.Request(s.Host, s.SshPort, s.User, req.Password ?? s.Password, s.KeyFile, req.Passphrase, req.Token, null, s.Password != null || req.SavePassword, s.Name)
+					: new Tunnel.Request(req.Host ?? "", req.SshPort, req.User ?? "", req.Password, req.KeyPath, req.Passphrase, req.Token, req.BridgePort, req.SavePassword, req.Name);
+				Tunnel.Result tr = await Tunnel.Start(t);
+				if (tr.Error != null)
+				{
+					return Results.Ok(new { ok = false, error = tr.Error, needPassword = s != null && s.Password == null && s.KeyFile == null });
+				}
+				string url = $"http://127.0.0.1:{tr.LocalPort}";
+				string? down = await TerrainEditor.Save.LiveBridge.Check(url, tr.Token, TimeSpan.FromSeconds(10));
+				if (down != null)
+				{
+					Tunnel.Close();
+					return Results.Ok(new { ok = false, error = down.Contains("refused the token") ? down : "The tunnel is open, but the plugin does not answer on the server: is the server running with BepInEx and WorldEditorBridge? (" + down + ")" });
+				}
+				chosen.TrySetResult(Live(url, tr.Token, "server " + t.Host, "server"));
+				return Results.Ok(new { ok = true });
+			}
 			if (!string.IsNullOrWhiteSpace(req.LiveUrl))
 			{
 				string url = req.LiveUrl.Trim();
@@ -54,8 +106,7 @@ public static class Launcher
 					return Results.Ok(new { ok = false, error = unreachable });
 				}
 				settings.LiveUrl = url;
-				settings.Save();
-				chosen.TrySetResult(new Choice(new[] { "--live", url, "--token", req.Token?.Trim() ?? "" }, "live " + url));
+				chosen.TrySetResult(Live(url, req.Token?.Trim() ?? "", "live " + url, "server"));
 				return Results.Ok(new { ok = true });
 			}
 			string path = (req.Path ?? "").Trim().Trim('"');
@@ -68,6 +119,7 @@ public static class Launcher
 			{
 				return Results.Ok(new { ok = false, error = problem });
 			}
+			settings.LastMode = "offline";
 			settings.AddRecent(Path.GetFullPath(path), WorldName(path));
 			chosen.TrySetResult(new Choice(new[] { Path.GetFullPath(path) }, WorldName(path)));
 			return Results.Ok(new { ok = true });
