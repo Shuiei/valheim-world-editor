@@ -461,7 +461,7 @@ app.MapPost("/api/discard", async () =>
 app.MapPost("/api/objects/add", (List<NewObjectUpload> list) =>
 {
 	var known = list.Where(o => world.Templates.ContainsKey(o.Prefab)).ToList();
-	edits.AddObjects(known.Select(o => new TerrainEditor.Editing.NewObject(o.Id, o.Prefab, new System.Numerics.Vector3(o.X, o.Y, o.Z), new System.Numerics.Vector3(o.Rx, o.Ry, o.Rz), o.Scale)));
+	edits.AddObjects(known.Select(o => new TerrainEditor.Editing.NewObject(o.Id, o.Prefab, new System.Numerics.Vector3(o.X, o.Y, o.Z), new System.Numerics.Vector3(o.Rx, o.Ry, o.Rz), o.Scale, o.SourceId)));
 	return Results.Ok(new { accepted = known.Count, rejected = list.Count - known.Count, pending = Pending() });
 });
 
@@ -519,5 +519,5 @@ app.Run();
 
 record ZoneUpload(int X, int Z, bool[] Modified, float[] Level, float[] Smooth, bool[] PaintModified, float[] Paint);
 record DeleteRequest(int[] Ids, bool Restore);
-record NewObjectUpload(int Id, int Prefab, float X, float Y, float Z, float Rx, float Ry, float Rz, float Scale);
+record NewObjectUpload(int Id, int Prefab, float X, float Y, float Z, float Rx, float Ry, float Rz, float Scale, int? SourceId);
 record ResetRequest(int[][] Zones, bool KeepBuildings, bool Ground, bool Undo);

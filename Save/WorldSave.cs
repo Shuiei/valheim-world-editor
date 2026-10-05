@@ -65,6 +65,17 @@ public sealed class WorldSave
 	// First object of each prefab: the template new objects of that prefab are copied from.
 	public Dictionary<int, int> Templates { get; } = new();
 
+	// The object a new one is built from: its source object when given (and of the same prefab),
+	// else the prefab's template.
+	public ObjectRef? ModelFor(int prefab, int? sourceId)
+	{
+		if (sourceId is int s && s >= 0 && s < ObjectRefs.Count && ObjectRefs[s].Prefab == prefab)
+		{
+			return ObjectRefs[s];
+		}
+		return Templates.TryGetValue(prefab, out int t) ? ObjectRefs[t] : null;
+	}
+
 	// Generated zones and location instances from the .db2 file (null if it could not be read).
 	public ZoneDb? Zones { get; private set; }
 
