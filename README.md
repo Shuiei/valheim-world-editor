@@ -33,14 +33,16 @@ nothing is sent anywhere else.
 
 ### What you need
 
-- **Linux x64** for the ready-made program. Other systems need a build from source (see
-  [Building from source](#building-from-source)); a Windows build has not been tested.
+- **Linux x64** for the ready-made program. For Windows, build it from source (see
+  [Building from source](#building-from-source)); the Windows build has only been tried under Wine,
+  where editing and saving work but the world map did not load.
 - A browser with WebGL 2 (any current Firefox, Chrome or Edge).
 - A Valheim world in the current chunked save format (world version 41: a world folder with
   `_main.<n>.chunks` and `*.chunk` files). The older single `.db` file format is not supported.
-- The files extracted from the game into `wwwroot/` (textures, shaders and models) for the in-game
-  look and the map. The ready-made `ValheimTerrainEditor` folder already contains them; they are
-  not in git because they belong to the game (see [docs/development.md](docs/development.md)).
+- Optional: the files extracted from the game into `wwwroot/` (textures, shaders and models) for the
+  in-game look. The ready-made `ValheimTerrainEditor` folder already contains them; they are not in
+  git because they belong to the game. Without them the map and the 3D editor use plain colours,
+  objects are not drawn (they can still be planted and saved), and buildings are boxes.
 
 ### Offline mode
 
@@ -99,9 +101,12 @@ More in [docs/live-mode.md](docs/live-mode.md): what is applied, Reload, and lim
 ### Building from source
 
 ```sh
-dotnet publish TerrainEditor.csproj -c Release -r linux-x64 --self-contained -p:PublishSingleFile=true -o out
-cp -r wwwroot out/   # then add the extracted game files, see docs/development.md
+dotnet publish TerrainEditor.csproj -c Release -r linux-x64 --self-contained -p:PublishSingleFile=true -o ../ValheimTerrainEditor
 ```
+
+`wwwroot` is copied into the output by the build. Publish outside the source folder (as above): a
+folder inside it would be packed into the next build. Use `-r win-x64` for Windows. Then copy the
+extracted game files into the output's `wwwroot` (see [docs/development.md](docs/development.md)).
 
 The plugin builds separately (`plugin/WorldEditorBridge`, .NET Framework 4.7.2, against the game's
 and BepInEx's DLLs; adjust the `HintPath`s in its project file).
