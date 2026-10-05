@@ -42,14 +42,15 @@
   #pending.dirty { color: #f3d29b; border-color: #7a5a2a; background: #2c2416; }
 
   /* Tool rail */
-  #rail { position: fixed; left: 10px; top: 70px; width: 64px; padding: 6px; display: flex; flex-direction: column; gap: 3px; max-height: calc(100vh - 120px); overflow-y: auto; }
-  #rail .cap { font-size: 9.5px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); text-align: center; margin: 6px 0 2px; }
+  #rail { position: fixed; left: 10px; top: 70px; width: 64px; padding: 5px; display: flex; flex-direction: column; gap: 1px; max-height: calc(100vh - 120px); overflow-y: auto; }
+  #rail .cap { font-size: 9px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); text-align: center; margin: 4px 0 1px; }
   #rail .cap:first-child { margin-top: 0; }
-  #rail button { flex-direction: column; gap: 2px; padding: 6px 2px 5px; border-color: transparent; background: transparent; font-size: 10.5px; position: relative; }
+  #rail button { flex-direction: column; gap: 1px; padding: 4px 2px 3px; border-color: transparent; background: transparent; font-size: 10.5px; position: relative; }
   #rail button:hover { background: var(--panel2); }
+  #rail button svg.i { width: 16px; height: 16px; }
   #rail button.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
   #rail button .k { position: absolute; top: 3px; right: 4px; font: 9px ui-monospace, monospace; opacity: .6; }
-  #rail .sw { width: 18px; height: 18px; border-radius: 5px; border: 1px solid rgba(255,255,255,.25); }
+  #rail .sw { width: 16px; height: 16px; border-radius: 5px; border: 1px solid rgba(255,255,255,.25); }
 
   /* Tool options */
   #toolPanel { position: fixed; left: 84px; top: 70px; width: 270px; padding: 12px 14px; max-height: calc(100vh - 120px); overflow-y: auto; }
@@ -144,8 +145,11 @@
   <button data-tool="paint-paved" data-key="8">Paved</button>
   <button data-tool="paint-natural" data-key="9">Clear</button>
   <div class="cap">Other</div>
+  <button data-tool="area" data-key="B">Area</button>
   <button data-tool="path" data-key="P">Path</button>
+  <button data-tool="plant" data-key="T">Plant</button>
   <button data-tool="select" data-key="E">Select</button>
+  <button data-tool="measure" data-key="M">Measure</button>
   <button data-tool="move" data-key="H">Move</button>
 </nav>
 
@@ -233,7 +237,9 @@
     <dt>Middle drag</dt><dd>Slide the view (also Space + left drag, Shift + right drag, Move tool)</dd>
     <dt>W A S D</dt><dd>Move around</dd>
     <dt>1–9, 0</dt><dd>Sculpt and paint tools</dd>
-    <dt>P / E / H</dt><dd>Path, Select, Move</dd>
+    <dt>B / P / T</dt><dd>Area, Path, Plant</dd>
+    <dt>E / M / H</dt><dd>Select, Measure, Move</dd>
+    <dt>Ctrl+C / Ctrl+V</dt><dd>Copy the area / paste it (R turns, F mirrors)</dd>
     <dt>[ &nbsp; ]</dt><dd>Brush size</dd>
     <dt>Alt + click</dt><dd>Pick the ground height</dd>
     <dt>Del</dt><dd>Delete the selected objects</dd>
@@ -252,6 +258,7 @@ import { createLook, DAY } from './terrain/look.js';
 import { pieceModel, setSeeThrough } from './terrain/pieces.js';
 import { createObjects, stableHash } from './editor/objects.js';
 import { createMasks } from './editor/masks.js';
+import { createArea } from './editor/area.js';
 
 const params = new URLSearchParams(location.search);
 const czx = parseInt(params.get('zx') ?? '0'), czz = parseInt(params.get('zz') ?? '0');
@@ -440,11 +447,15 @@ const TOOLS = {
   'paint-paved': ['Paved', 'Paint paved stone ground.', null, '#8d8d88'],
   'paint-natural': ['Clear paint', "Remove paint: back to the biome's own ground.", null, 'linear-gradient(135deg,#5e8a3a 50%,#7a6a4a 50%)'],
   path: ['Path', 'Draw a line, then flatten, ramp, raise, lower, smooth or paint along it.', 'M4 19c4 0 3-7 8-7s4-7 8-7M4 19h.01M20 5h.01'],
+  area: ['Area', 'Select a box or polygon, then change the ground, remove or replace objects, copy it, or reset its zones.', 'M4 4h4M16 4h4v4M20 16v4h-4M8 20H4v-4M4 8v4M20 8v4M8 4h0M12 4h0M12 20h0'],
+  paste: ['Paste', 'Place the copied area. R turns it, F mirrors it.', 'M8 4h8v3H8zM6 6H5v14h14V6h-1'],
+  plant: ['Plant', 'Paint trees, rocks or bushes onto the ground. Shift + drag removes the chosen kinds.', 'M12 21v-7M12 14c-4 0-6-3-6-6 3 0 6 2 6 6zM12 12c0-4 2-7 6-7 0 4-2 7-6 7z'],
+  measure: ['Measure', 'Click two points to see the distance, height difference and slope.', 'M3 17L17 3l4 4L7 21zM7 13l2 2M10 10l2 2M13 7l2 2'],
   select: ['Select', 'Click trees, rocks or buildings to select them, then press Del to remove them from the world.', 'M5 3l14 8-6 2-2 6z'],
   move: ['Move view', 'Drag to slide the view. WASD and arrow keys also move it.', 'M12 3v18M3 12h18M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3']
 };
-// Option panels added by the feature modules: { el, tools }.
-const toolPanels = [];
+// Option panels added by the feature modules: { el, tools }, and tool-change listeners.
+const toolPanels = [], toolChangeHooks = [];
 const BRUSH_TOOLS = ['raise', 'lower', 'flatten', 'smooth', 'natural', 'restore', 'paint-dirt', 'paint-cultivated', 'paint-paved', 'paint-natural'];
 document.querySelectorAll('#rail [data-tool]').forEach(b => {
   const [name, , icon, swatch] = TOOLS[b.dataset.tool];
@@ -455,7 +466,7 @@ document.querySelectorAll('#rail [data-tool]').forEach(b => {
 function syncToolPanel() {
   const [name, desc] = TOOLS[tool];
   $('toolName').textContent = name; $('toolDesc').textContent = desc;
-  document.querySelector('[data-for-tools="brush"]').hidden = !BRUSH_TOOLS.includes(tool);
+  document.querySelector('[data-for-tools="brush"]').hidden = !BRUSH_TOOLS.includes(tool) && tool !== 'plant';
   document.querySelector('[data-for-tools="flatten"]').hidden = tool !== 'flatten';
   $('naturalBox').hidden = !(tool === 'natural' || (tool === 'path' && $('pNatural').checked));
   $('selectPanel').hidden = tool !== 'select';
@@ -464,6 +475,7 @@ function syncToolPanel() {
 function setTool(t) {
   tool = t; document.querySelectorAll('[data-tool]').forEach(b => b.classList.toggle('on', b.dataset.tool === t));
   syncToolPanel();
+  for (const f of toolChangeHooks) f(t);
   if (typeof updateRing === 'function' && initialized) { updateRing(); syncPathPanel(); }
 }
 document.querySelectorAll('[data-tool]').forEach(b => b.onclick = () => setTool(b.dataset.tool));
@@ -490,7 +502,7 @@ function sampleHeight(fx, fz) {
   return height(gz * W + gx);
 }
 function updateRing() {
-  ring.visible = !!hover && tool !== 'move' && tool !== 'select';
+  ring.visible = !!hover && !['move', 'select', 'area', 'paste', 'measure'].includes(tool);
   if (!hover) return;
   const p = ring.geometry.attributes.position.array;
   for (let i = 0; i < ringPts; i++) {
@@ -669,7 +681,7 @@ function applyHistory(e, forward) {
   if (e.state) { out.state = snapshotState(); restoreState(e.state); upload(e.zones); }
   if (e.deleted) setDeleted(e.deleted, forward);
   if (e.added) setDeleted(e.added, !forward);
-  if (e.resets) ed.setResets?.(e.resets, forward);
+  if (e.resets) ed.setResets?.(e.resets, e.resetUndo ? !forward : forward);
   return out;
 }
 function pushHistory(entry) {
@@ -696,11 +708,14 @@ const ed = {
   height, setHeight, locked, refresh, snapshotState, zonesOf, upload, pushHistory, msg, showPendingFrom, pieceModel,
   register, unregister, pick, sampleHeight, worldNoise, fbm, nAmp, nSize, setDeleted,
   get tool() { return tool; }, setTool: t => setTool(t), get radius() { return radius; }, get strength() { return strength; },
-  handlers: {}, panels: toolPanels, mask: g => 1
+  handlers: {}, panels: toolPanels, onToolChange: toolChangeHooks, mask: g => 1,
+  get selection() { return selection; }, selectIds: ids => { selection.clear(); for (const id of ids) if (entities.has(id)) selection.add(id); drawSelection(); }, clearSelection: () => clearSelection(),
+  showStatusFor: h => { hover = h; showStatus(); }
 };
 const objects = createObjects(ed); ed.objects = objects;
 window.__ed = ed; // for automated tests
 createMasks(ed, [...BRUSH_TOOLS, 'path', 'area', 'plant']);
+createArea(ed);
 syncToolPanel();
 Promise.all([fetch('/api/pieces').then(r => r.arrayBuffer()), fetch('/api/piece-types').then(r => r.json())]).then(async ([buf, types]) => {
   const p = new Float32Array(buf), S = 13, byType = new Map();
@@ -981,6 +996,9 @@ addEventListener('keydown', e => {
   if (e.key.toLowerCase() === 'h') { setTool('move'); return; }
   if (e.key.toLowerCase() === 'p') { setTool('path'); return; }
   if (e.key.toLowerCase() === 'e') { setTool('select'); return; }
+  if (e.key.toLowerCase() === 'b' && !e.ctrlKey) { setTool('area'); return; }
+  if (e.key.toLowerCase() === 't' && !e.ctrlKey) { setTool('plant'); return; }
+  if (e.key.toLowerCase() === 'm' && !e.ctrlKey) { setTool('measure'); return; }
   if (e.key.toLowerCase() === 'v' && !e.ctrlKey) { toggleView(); return; }
   if (e.key === '?') { toggleHelp(); return; }
   if (e.key === 'Delete' && selection.size) { deleteSelection(); e.preventDefault(); return; }
