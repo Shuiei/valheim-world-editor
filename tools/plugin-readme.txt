@@ -1,5 +1,5 @@
-WorldEditorBridge 0.3.0: the plugin for live editing (Valheim World Editor @VERSION@)
-==================================================================================
+WorldEditorBridge @VERSION@: the plugin for live editing (Valheim World Editor @VERSION@)
+=================================================================================
 
 WorldEditorBridge lets the editor change a world while the game runs: you (and the players on your
 server) see the changes as soon as they are applied. It goes into the game that hosts the world:
@@ -24,7 +24,7 @@ this plugin nor BepInEx. Editing a saved world with the game closed does not use
   1. Copy WorldEditorBridge.dll (in this folder) into BepInEx/plugins (of your Valheim, of your mod
      manager profile, or of the server).
   2. Restart the game or server. BepInEx/LogOutput.log then shows
-     "WorldEditorBridge 0.3.0 listening on http://127.0.0.1:5182/".
+     "WorldEditorBridge @VERSION@ listening on http://127.0.0.1:5182/".
   3. The plugin wrote BepInEx/config/local.worldeditorbridge.cfg with a random Token. Keep it
      secret: anyone with it and access to the port can change the world.
 

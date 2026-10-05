@@ -2,7 +2,7 @@
 # Build the Thunderstore package of the WorldEditorBridge plugin into <dist>:
 #   <dist>/WorldEditorBridge-<version>.zip   manifest.json, icon.png, README.md, CHANGELOG.md and
 #                                            WorldEditorBridge.dll, all at the root of the zip
-# The version is the plugin's own (WorldEditorBridgePlugin.Version), not the editor's.
+# The version is the VERSION file's, shared by the editor and the plugin.
 # Usage: tools/thunderstore.sh <dist>   (needs dotnet 8, zip, python3 and the game's DLLs; see the
 # plugin's project file). Upload the zip at https://thunderstore.io/c/valheim/create/
 set -euo pipefail
@@ -12,8 +12,8 @@ dotnet=${DOTNET:-dotnet}
 work=$(mktemp -d); trap 'rm -rf "$work"' EXIT
 mkdir -p "$dist"
 
-version=$(sed -n 's/.*const string Version = "\([0-9.]*\)".*/\1/p' "$repo/plugin/WorldEditorBridge/WorldEditorBridgePlugin.cs")
-[[ $version =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "plugin version not found" >&2; exit 1; }
+version=$(tr -d '[:space:]' < "$repo/VERSION")
+[[ $version =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "VERSION is not Major.Minor.Patch" >&2; exit 1; }
 
 "$dotnet" build "$repo/plugin/WorldEditorBridge/WorldEditorBridge.csproj" -c Release -p:DebugType=none -o "$work/build" >/dev/null
 rm -rf "$repo/plugin/WorldEditorBridge/bin" "$repo/plugin/WorldEditorBridge/obj"

@@ -3,11 +3,13 @@
 #   ValheimWorldEditor-<version>-linux-x64.tar.gz   the app (window, web page, game-look exporter
 #   ValheimWorldEditor-<version>-win-x64.zip        with its own Python) and plugin/ with
 #                                                   WorldEditorBridge.dll for live mode
-# Usage: tools/release.sh <version> <dist>   (needs dotnet 8, tar, zip, curl, python3 with pip)
+# Usage: tools/release.sh <dist>   (needs dotnet 8, tar, zip, curl, python3 with pip)
+# The version is the VERSION file's (the editor's and the plugin's); the packages are named v<version>.
 #   SKIP_PLUGIN=1: leave out the plugin (it builds against the game's DLLs, which CI does not have).
 set -euo pipefail
-version=${1:?version, e.g. v0.1.0}; dist=$(realpath -m "${2:?output folder}")
+dist=$(realpath -m "${1:?output folder}")
 repo=$(cd "$(dirname "$0")/.." && pwd)
+version=v$(tr -d '[:space:]' < "$repo/VERSION")
 dotnet=${DOTNET:-dotnet}
 work=$(mktemp -d); trap 'rm -rf "$work"' EXIT
 mkdir -p "$dist"
@@ -39,7 +41,7 @@ package() {   # $1 runtime id, $2 program file name (users start it by double-cl
     mkdir -p "$dir/plugin"
     cp "$work/plugin/WorldEditorBridge.dll" "$dir/plugin/"
     cp "$repo/tools/plugin-readme.txt" "$dir/plugin/README.txt"
-    sed -i "s/@VERSION@/$version/" "$dir/plugin/README.txt"
+    sed -i "s/@VERSION@/${version#v}/g" "$dir/plugin/README.txt"
   fi
   # Windows readers get Windows line ends.
   if [ "$rid" = win-x64 ]; then find "$dir" -maxdepth 2 -name README.txt -exec sed -i 's/$/\r/' {} \;; fi

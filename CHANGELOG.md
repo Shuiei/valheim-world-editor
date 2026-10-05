@@ -1,7 +1,17 @@
 # Changelog
 
-All notable changes to the Valheim world editor. Dates are when the change was made; the project
-has no version numbers yet. Newest first.
+All notable changes to the Valheim world editor and its WorldEditorBridge plugin, which share one
+version number. Newest first.
+
+## v0.3.0 — 2026-10-05 (Thunderstore)
+
+### Added
+- **WorldEditorBridge on Thunderstore**: install the live-editing plugin with r2modman or
+  Thunderstore Mod Manager; BepInEx comes with it.
+
+### Changed
+- **One version number** for the editor and the plugin (0.3.0, the plugin's version until now),
+  kept in the `VERSION` file. The plugin DLL's file version said 0.1.0; it now says 0.3.0 too.
 
 ## v0.2.0 — 2026-10-05 (desktop app)
 

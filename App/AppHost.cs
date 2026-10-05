@@ -8,7 +8,7 @@ namespace TerrainEditor.App;
 // start page and the editor sessions in turn, and sets up the game's look in the background.
 public static class AppHost
 {
-	public const string Version = "0.2.0";
+	public const string Version = BuildInfo.Version;
 
 	public static bool InWindow { get; private set; }
 

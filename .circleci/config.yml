@@ -92,7 +92,7 @@ jobs:
           environment:
             SKIP_PLUGIN: "1"
             PIP_BREAK_SYSTEM_PACKAGES: "1"
-          command: tools/release.sh ci-${CIRCLE_SHA1:0:7} /tmp/dist
+          command: tools/release.sh /tmp/dist
       - run:
           name: Check what is in them
           command: for p in /tmp/dist/*; do tools/check-package.sh "$p" --no-plugin; done

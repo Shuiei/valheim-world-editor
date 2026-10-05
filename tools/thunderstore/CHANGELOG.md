@@ -4,7 +4,8 @@ The editor's own changes: [CHANGELOG.md](https://github.com/Shuiei/valheim-world
 
 ## 0.3.0
 
-First release on Thunderstore (works with Valheim World Editor 0.2.0 and later).
+First release on Thunderstore. From this version on, the plugin has the same version number as
+Valheim World Editor: use the two together.
 
 - **Objects live**: deleted, planted, pasted and moved objects are applied in the running world,
   and undoing after applying takes them back in the game too.

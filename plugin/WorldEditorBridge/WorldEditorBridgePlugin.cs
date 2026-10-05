@@ -30,7 +30,7 @@ public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
 {
 	public const string Guid = "local.worldeditorbridge";
 
-	public const string Version = "0.3.0";
+	public const string Version = BuildInfo.Version;
 
 	private const int SnapshotVersion = 1;
 
