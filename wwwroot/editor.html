@@ -952,7 +952,11 @@ function syncBuildings() {
   buildingMat.opacity = $('seeThrough').checked ? 0.4 : 1;
   buildingMat.depthWrite = !$('seeThrough').checked;
   buildingMat.needsUpdate = true;
-  setSeeThrough($('seeThrough').checked);
+  // Only buildings (yours and new pieces) become see-through, not trees or bushes.
+  const mats = new Set();
+  buildings.traverse(o => { if (o.isMesh && o.material) mats.add(o.material); });
+  newGroup.traverse(o => { if (o.isInstancedMesh && o.userData.ids?.some(id => objects.records.get(id)?.kind === 'buildings')) mats.add(o.material); });
+  setSeeThrough($('seeThrough').checked, mats);
 }
 $('seeThrough').addEventListener('change', syncBuildings);
 

@@ -160,6 +160,8 @@ export function createPlant(ed) {
         if (!ghostMat.has(part.material)) {
           const mm = part.material.clone();
           mm.transparent = true; mm.opacity = 0.5; mm.depthWrite = false;
+          // three.js tests the cut-out after applying the opacity: scale it, or leaves vanish.
+          if (mm.alphaTest) mm.alphaTest *= mm.opacity;
           mm.emissive?.setRGB(0.15, 0.25, 0.35);
           ghostMat.set(part.material, mm);
         }
