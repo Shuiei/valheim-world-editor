@@ -26,6 +26,7 @@ export function createMasks(ed, tools) {
         <option value="cultivated">Only cultivated</option>
         <option value="paved">Only paved</option>
       </select></label>
+      <div class="hint warn" id="mWarn" hidden></div>
       <div class="hint">No biome selected = all biomes. Leave a box empty for no limit. Alt + Shift + click the ground fills the height range around it (±2 m).</div>
     </div>`;
   $('locWarn').before(box);
@@ -36,7 +37,8 @@ export function createMasks(ed, tools) {
     .chips button.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
     .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
     .field:has(.pair) { grid-template-columns: 60px 1fr 16px; }
-    .maskHead { display: flex; } .maskHead .toggle { flex: 1; }`;
+    .maskHead { display: flex; } .maskHead .toggle { flex: 1; }
+    #mWarn { color: var(--warn); }`;
   document.head.appendChild(style);
   ed.panels.push({ el: box, tools });
 
@@ -57,6 +59,12 @@ export function createMasks(ed, tools) {
       hmin: num('mHmin'), hmax: num('mHmax'), smin: num('mSmin'), smax: num('mSmax'), paint: $('mPaint').value
     };
     ed.maskActive = !!cfg;
+    // Settings that let (almost) nothing through.
+    const w = [];
+    if (cfg?.smax != null && cfg.smax <= 0) w.push(`Slope max ${cfg.smax}° only lets perfectly flat ground through: empty the box for no limit.`);
+    if (cfg?.smin != null && cfg.smax != null && cfg.smin > cfg.smax) w.push('Slope min is above max: nothing matches.');
+    if (cfg?.hmin != null && cfg.hmax != null && cfg.hmin > cfg.hmax) w.push('Height min is above max: nothing matches.');
+    $('mWarn').hidden = !w.length; $('mWarn').textContent = w.join(' ');
   }
   ['mOn', 'mHmin', 'mHmax', 'mSmin', 'mSmax', 'mPaint'].forEach(id => $(id).addEventListener('input', sync));
   sync();
@@ -79,9 +87,17 @@ export function createMasks(ed, tools) {
     if (p === 'cultivated') return gr >= 0.5;
     return b >= 0.5;
   }
+  // During a brush stroke the mask judges the ground as it was when the stroke started, so raising
+  // past the height limit or changing the slope does not stop the stroke half-way.
+  let frozen = null;
+  ed.maskFreeze = on => { frozen = on && cfg ? new Map() : null; };
   // 1 where the ground passes the mask, 0 elsewhere.
   ed.mask = g => {
     if (!cfg) return 1;
+    if (frozen) { let v = frozen.get(g); if (v === undefined) frozen.set(g, v = test(g)); return v; }
+    return test(g);
+  };
+  function test(g) {
     if (cfg.biomes && !cfg.biomes.has(ed.vbiome[g])) return 0;
     if (cfg.hmin != null || cfg.hmax != null) {
       const h = ed.height(g);
@@ -92,7 +108,7 @@ export function createMasks(ed, tools) {
       if ((cfg.smin != null && s < cfg.smin) || (cfg.smax != null && s > cfg.smax)) return 0;
     }
     return paintOk(g) ? 1 : 0;
-  };
+  }
   // Alt + Shift + click: height range around the clicked ground.
   ed.pickMaskHeight = h => { $('mOn').checked = true; $('mHmin').value = (h - 2).toFixed(1); $('mHmax').value = (h + 2).toFixed(1); sync(); };
   return { sync };
