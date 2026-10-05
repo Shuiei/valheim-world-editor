@@ -3,6 +3,13 @@
 All notable changes to the Valheim world editor and its WorldEditorBridge plugin, which share one
 version number. Newest first.
 
+## v0.4.1 — 2026-10-05 (editor on GitHub only)
+
+### Changed
+- **Thunderstore carries only the plugin** (`Tie-WorldEditorBridge`): Thunderstore does not host
+  programs and rejected the `ValheimWorldEditor_Windows` and `_Linux` packages. The editor is
+  downloaded from the GitHub releases page, which the plugin's mod page now points to.
+
 ## v0.4.0 — 2026-10-05 (clean-up)
 
 ### Fixed

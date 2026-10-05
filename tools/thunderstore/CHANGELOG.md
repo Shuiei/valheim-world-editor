@@ -2,6 +2,12 @@
 
 The editor's own changes: [CHANGELOG.md](https://github.com/Shuiei/valheim-world-editor/blob/main/CHANGELOG.md).
 
+## 0.4.1
+
+- The editor is downloaded from the
+  [GitHub releases page](https://github.com/Shuiei/valheim-world-editor/releases/latest) (this page
+  now says so): Thunderstore carries only this plugin. The plugin is unchanged.
+
 ## 0.4.0
 
 - Fixed: leaving the world map with **Worlds** while it was still loading could raise an error.

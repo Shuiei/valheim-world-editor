@@ -1,14 +1,11 @@
 #!/usr/bin/env bash
-# Build the Thunderstore packages into <dist>, from tools/thunderstore/<package>/ (manifest.json and
-# the mod page's README.md), tools/thunderstore/CHANGELOG.md and wwwroot/icon.png:
-#   WorldEditorBridge-<version>.zip               the plugin alone (servers)
-#   ValheimWorldEditor_Windows-<version>.zip      the editor for Windows   } both depend on
-#   ValheimWorldEditor_Linux-<version>.zip        the editor for Linux     } WorldEditorBridge
-# The editor packages are the release packages (tools/release.sh) with the ValheimWorldEditor folder
-# under plugins/: mod managers keep the folders inside plugins/ and flatten any other. The version
-# is the VERSION file's. Release packages of that version already in <dist> are reused.
+# Build the Thunderstore package of the plugin into <dist>: WorldEditorBridge-<version>.zip, from
+# tools/thunderstore/bridge/ (manifest.json and the mod page's README.md),
+# tools/thunderstore/CHANGELOG.md, wwwroot/icon.png and the DLL of the release packages
+# (tools/release.sh; those of the VERSION file's version already in <dist> are reused). Only the
+# plugin goes to Thunderstore: it does not host programs, so the editor is on GitHub releases only.
 # Usage: tools/thunderstore.sh <dist>   (needs what tools/release.sh needs)
-# Upload each zip at https://thunderstore.io/c/valheim/create/
+# Upload the zip at https://thunderstore.io/c/valheim/create/
 set -euo pipefail
 dist=$(realpath -m "${1:?output folder}")
 repo=$(cd "$(dirname "$0")/.." && pwd)
@@ -47,18 +44,10 @@ package() {   # $1 package name, $2 its folder in tools/thunderstore; the files 
   echo "$dist/$name-$version.zip"
 }
 
-# The plugin alone: the same DLL as in the editor packages.
+# The same DLL as in the release packages' plugin/ folder.
 mkdir -p "$work/WorldEditorBridge/plugins"
 tar -xzf "$linux" -C "$work" ValheimWorldEditor/plugin/WorldEditorBridge.dll
 mv "$work/ValheimWorldEditor/plugin/WorldEditorBridge.dll" "$work/WorldEditorBridge/plugins/"
 rm -rf "$work/ValheimWorldEditor"
 package WorldEditorBridge bridge
 
-mkdir -p "$work/ValheimWorldEditor_Linux/plugins" "$work/ValheimWorldEditor_Windows/plugins"
-tar -xzf "$linux" -C "$work/ValheimWorldEditor_Linux/plugins"
-unzip -q "$windows" -d "$work/ValheimWorldEditor_Windows/plugins"
-# The mod page replaces the download's README.txt; the plugin comes from the WorldEditorBridge
-# package, a dependency (Tie-WorldEditorBridge-<version>): upload that one first.
-rm -rf "$work"/ValheimWorldEditor_*/plugins/ValheimWorldEditor/{README.txt,plugin}
-package ValheimWorldEditor_Linux linux
-package ValheimWorldEditor_Windows windows

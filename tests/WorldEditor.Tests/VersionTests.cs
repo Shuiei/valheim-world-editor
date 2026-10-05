@@ -27,8 +27,6 @@ public class VersionTests
 
 	[Theory]
 	[InlineData("bridge")]
-	[InlineData("windows")]
-	[InlineData("linux")]
 	public void ThunderstoreManifestsFollowTheRules(string package)
 	{
 		using var m = JsonDocument.Parse(File.ReadAllText(Path.Combine(Repo, "tools", "thunderstore", package, "manifest.json")));
