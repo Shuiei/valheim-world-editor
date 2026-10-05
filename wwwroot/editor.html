@@ -666,11 +666,27 @@ function zonesOf(vertices) {
 const inflight = new Set();
 function track(p) { inflight.add(p); p.finally(() => inflight.delete(p)); return p; }
 function upload(zoneList) { return track(uploadNow(zoneList)); }
+// Zones share their edge points, and saved zones do not always agree on them. A point that has
+// not changed since the page was opened is sent with this zone's own saved value, so an untouched
+// zone stays identical to what is saved (and is not counted as changed).
+const loadedState = snapshotState();
+const zoneOriginals = new Map(region.zones.map(z => [`${z.x},${z.z}`, z]));
+function unchangedSinceLoad(g) {
+  if (level[g] !== loadedState.level[g] || smooth[g] !== loadedState.smooth[g] || mod[g] !== loadedState.mod[g] || pmod[g] !== loadedState.pmod[g]) return false;
+  for (let c = 0; c < 4; c++) if (paint[g * 4 + c] !== loadedState.paint[g * 4 + c]) return false;
+  return true;
+}
 async function uploadNow(zoneList) {
   const body = zoneList.map(([zx, zz]) => {
     const z = { x: X0 + zx, z: Z0 + zz, modified: [], level: [], smooth: [], paintModified: [], paint: [] };
+    const own = zoneOriginals.get(`${z.x},${z.z}`);
     for (let k = 0; k < ZG; k++) for (let l = 0; l < ZG; l++) {
-      const g = (zz * 64 + k) * W + zx * 64 + l;
+      const g = (zz * 64 + k) * W + zx * 64 + l, i = k * ZG + l;
+      if (own && unchangedSinceLoad(g)) {
+        z.modified.push(own.modified[i]); z.level.push(own.level[i]); z.smooth.push(own.smooth[i]);
+        z.paintModified.push(own.paintModified[i]); for (let c = 0; c < 4; c++) z.paint.push(own.paint[i * 4 + c]);
+        continue;
+      }
       z.modified.push(!!mod[g]); z.level.push(level[g]); z.smooth.push(smooth[g]);
       z.paintModified.push(!!pmod[g]); for (let c = 0; c < 4; c++) z.paint.push(paint[g * 4 + c]);
     }

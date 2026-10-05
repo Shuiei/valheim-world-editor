@@ -33,6 +33,7 @@ public sealed class EditStore
 		lock (_lock)
 		{
 			_zones.Clear();
+			_baseline.Clear();
 			_deleted.Clear();
 			_added.Clear();
 			_addedTrash.Clear();
@@ -63,8 +64,13 @@ public sealed class EditStore
 				edit.Paint[i * 4 + 3] = z.Paint[i].W;
 			}
 			_zones[(z.ZoneX, z.ZoneZ)] = edit;
+			_baseline[(z.ZoneX, z.ZoneZ)] = edit.Clone();
 		}
 	}
+
+	// Each zone as saved / applied: a zone is pending only while it differs from this, so undoing back
+	// to it clears the change.
+	private readonly Dictionary<(int, int), ZoneEdit> _baseline = new();
 
 	public ZoneEdit? Get(int zx, int zz)
 	{
@@ -243,6 +249,7 @@ public sealed class EditStore
 				{
 					e.Changed = false;
 					e.ExistsInWorld = true;
+					_baseline[key] = e.Clone();
 				}
 			}
 			Version++;
@@ -272,7 +279,7 @@ public sealed class EditStore
 		{
 			bool exists = _zones.TryGetValue((incoming.ZoneX, incoming.ZoneZ), out ZoneEdit? old);
 			incoming.ExistsInWorld = exists && old!.ExistsInWorld;
-			incoming.Changed = true;
+			incoming.Changed = !_baseline.TryGetValue((incoming.ZoneX, incoming.ZoneZ), out ZoneEdit? baseline) ? !incoming.IsEmpty : !incoming.SameGround(baseline);
 			_zones[(incoming.ZoneX, incoming.ZoneZ)] = incoming;
 			Version++;
 		}
@@ -305,6 +312,32 @@ public sealed class ZoneEdit(int zoneX, int zoneZ)
 	public int HeightCount => Modified.Count(m => m);
 
 	public int PaintCount => PaintModified.Count(m => m);
+
+	public bool IsEmpty => !Modified.Any(m => m) && !PaintModified.Any(m => m);
+
+	// Same resulting ground and paint (how the height is split between level and smoothing aside).
+	public bool SameGround(ZoneEdit other)
+	{
+		for (int i = 0; i < EditStore.Cells; i++)
+		{
+			float a = Modified[i] ? Level[i] + Smooth[i] : 0f, b = other.Modified[i] ? other.Level[i] + other.Smooth[i] : 0f;
+			if (Math.Abs(a - b) > 1e-4f || PaintModified[i] != other.PaintModified[i])
+			{
+				return false;
+			}
+			if (PaintModified[i])
+			{
+				for (int c = 0; c < 4; c++)
+				{
+					if (Math.Abs(Paint[i * 4 + c] - other.Paint[i * 4 + c]) > 1e-4f)
+					{
+						return false;
+					}
+				}
+			}
+		}
+		return true;
+	}
 
 	public ZoneEdit Clone() => new(ZoneX, ZoneZ)
 	{
