@@ -28,5 +28,8 @@ in `BepInEx/config/local.worldeditorbridge.cfg`).
 2. Open a tunnel from your PC: `ssh -L 5182:127.0.0.1:5182 <user>@<server>`.
 3. Run the editor: `ValheimTerrainEditor --live http://127.0.0.1:5182 --token <token> --port 5181`.
 
-The editor then shows the live world and its players; "Reload" fetches a new snapshot. Applying
-changes to the running game is the next step; until then live mode is read-only.
+The editor then shows the live world and its players; "Reload" fetches a new snapshot.
+"Apply live" (or "Auto", after every stroke and undo) sends the changed zones' ground to the game,
+which syncs them to every player and saves them as usual. Object changes and zone resets are not
+applied live yet. The plugin also works in a game that hosts its own world (single player or
+host-and-play), with no tunnel; it refuses to run in a game that joined someone else's server.

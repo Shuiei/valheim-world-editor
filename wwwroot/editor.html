@@ -650,6 +650,7 @@ async function upload(zoneList) {
     if (!r.ok) throw new Error(await r.text());
     const res = await r.json();
     showPendingFrom(res);
+    afterUpload?.();
   } catch (err) {
     $('sMsg').innerHTML = `<span class="warn">Could not send edits to the editor: ${err.message}</span>`;
   }
@@ -659,18 +660,39 @@ function showPendingFrom(res) { if (res) showPending(res.changedZones, res.delet
 function showPending(zones = pending.zones, deleted = pending.deleted, added = pending.added, resets = pending.resets) {
   pending = { zones, deleted, added, resets };
   const parts = [zones ? `${zones} zone${zones > 1 ? 's' : ''}` : '', deleted ? `${deleted} deleted` : '', added ? `${added} added` : '', resets ? `${resets} reset` : ''].filter(Boolean);
-  $('pending').textContent = parts.length ? `Unsaved: ${parts.join(', ')}` : 'All saved';
+  $('pending').textContent = parts.length ? `${world.live ? 'Not applied' : 'Unsaved'}: ${parts.join(', ')}` : world.live ? 'All applied' : 'All saved';
   $('pending').classList.toggle('dirty', parts.length > 0);
-  $('saveBtn').disabled = $('discardBtn').disabled = !parts.length || world.live;
-  if (world.live) $('discardBtn').disabled = !parts.length;
+  $('saveBtn').disabled = $('discardBtn').disabled = !parts.length;
+  if (world.live) $('saveBtn').disabled = !zones;
 }
 showPending();
 $('saveBtn').onclick = () => saveWorld(world, pending, res => { if (res.saved) location.reload(); });
 // Live view (WorldEditorBridge): players are drawn and polled; saving is not available yet.
+// Called after every edit reaches the editor server (live auto-apply).
+let afterUpload = null;
 const playerGroup = new THREE.Group(); scene.add(playerGroup);
 if (world.live) {
   $('liveBadge').hidden = false; $('liveReload').hidden = false;
-  $('saveBtn').textContent = 'Apply live'; $('saveBtn').title = 'Applying changes to the running game comes in the next step';
+  $('saveBtn').textContent = 'Apply live'; $('saveBtn').title = 'Send the ground changes to the running game (everyone sees them at once)';
+  $('liveReload').insertAdjacentHTML('afterend', '<label class="toggle" title="Apply every stroke and undo right away" style="padding:0 4px"><input type="checkbox" id="autoApply"><span class="t" style="font-size:12px">Auto</span></label>');
+  try { $('autoApply').checked = localStorage.getItem('editorAutoApply') === '1'; } catch { }
+  $('autoApply').onchange = () => { try { localStorage.setItem('editorAutoApply', $('autoApply').checked ? '1' : '0'); } catch { } if ($('autoApply').checked) applyLive(); };
+  let applying = null;
+  // Push the changed zones to the game; repeated calls while one is running are merged.
+  async function applyLive() {
+    if (applying) { applying.again = true; return; }
+    applying = { again: false };
+    try {
+      do {
+        applying.again = false;
+        const res = await (await fetch('/api/save', { method: 'POST' })).json();
+        showPendingFrom(res.pending);
+        $('sMsg').innerHTML = res.saved ? res.message : `<span class="warn">${res.message}</span>`;
+      } while (applying.again);
+    } finally { applying = null; }
+  }
+  $('saveBtn').onclick = applyLive;
+  afterUpload = () => { if ($('autoApply').checked) applyLive(); };
   $('liveReload').onclick = async () => {
     if (pending.zones + pending.deleted + pending.added + pending.resets && !confirm('Reload the world from the game? Your unsaved changes here are dropped.')) return;
     await fetch('/api/live/reload', { method: 'POST' }); location.reload();

@@ -232,6 +232,23 @@ public sealed class EditStore
 		}
 	}
 
+	// Zones that were just applied to the running game: no longer pending.
+	public void MarkApplied(IEnumerable<(int X, int Z)> zones)
+	{
+		lock (_lock)
+		{
+			foreach (var key in zones)
+			{
+				if (_zones.TryGetValue(key, out ZoneEdit? e))
+				{
+					e.Changed = false;
+					e.ExistsInWorld = true;
+				}
+			}
+			Version++;
+		}
+	}
+
 	public void Put(ZoneEdit incoming)
 	{
 		incoming.Sanitize();
