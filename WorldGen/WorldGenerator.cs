@@ -1,7 +1,4 @@
-using System;
-using System.Collections.Generic;
-using System.Threading;
-// Decompiled from Valheim (assembly_valheim, WorldGenerator) for the offline terrain editor. Personal use only; do not distribute.
+// WorldGenerator from Valheim (assembly_valheim), decompiled so the editor generates terrain exactly like the game.
 #pragma warning disable
 namespace ValheimGen;
 

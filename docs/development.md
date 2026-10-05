@@ -13,7 +13,6 @@
 | `plugin/WorldEditorBridge/` | The BepInEx plugin for live mode (.NET Framework 4.7.2). |
 | `tools/asset-export/` | Python (UnityPy) scripts that extract textures, shaders, models and catalogues from the game. |
 | `tools/zdo_scan.py` | Minimal chunk reader, to check saved objects byte by byte. |
-| `tools/tests/` | Browser tests (Puppeteer). |
 | `tools/docs-screenshots/` | Scripts that take the screenshots in `docs/images/`. |
 
 ## Command line
@@ -156,9 +155,6 @@ dotnet publish TerrainEditor.csproj -c Release -r linux-x64 --self-contained -p:
 cd tests/browser && npm ci && npm test        # APP=<program> to test another build
 SKIP_PLUGIN=1 tools/release.sh /tmp/dist && tools/check-package.sh /tmp/dist/*.tar.gz --no-plugin
 ```
-
-The older one-off scripts in `tools/tests/` were used during development and need a real world
-copy and the game files; the tests above replace them for checking changes.
 
 ## Screenshots
 
