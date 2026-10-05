@@ -213,6 +213,11 @@ const MATERIAL = {
 const DAYLIGHT = { _SunDir: [-0.35, 0.86, 0.36], _SunColor: [1.0, 0.97, 0.9, 1], _AmbientColor: [0.36, 0.38, 0.44, 1], _SunFogColor: [0.9, 0.9, 1, 1] };
 
 // Unity's GammaToLinearSpace for colour properties (values above 1 are HDR and follow the same curve).
+// Plain stand-ins (RGBA) for the map textures when they were not extracted from the game.
+const FALLBACK = {
+  _BackgroundTex: [200, 186, 150, 255], _FogLayerTex: [255, 255, 255, 0], _WaterTex: [128, 128, 128, 255], _lavaTex: [128, 128, 128, 255],
+  _MountainTex: [255, 255, 255, 255], _CloudTex: [0, 0, 0, 0], _ForestTex: [128, 128, 128, 0], _SpaceTex: [10, 10, 16, 255],
+};
 const toLinear = c => c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
 
 export class MapView {
@@ -265,7 +270,20 @@ export class MapView {
   async loadImage(name, url, srgb = true, repeat = true) {
     const img = new Image();
     img.src = url;
-    await img.decode();
+    try {
+      await img.decode();
+    } catch {
+      // The map textures come from the game (tools/asset-export) and are not in git: without them
+      // the map is drawn with one plain colour per texture instead of failing.
+      this.missingTextures = (this.missingTextures ?? 0) + 1;
+      const c = FALLBACK[name] ?? [128, 128, 128, 255];
+      this.texture(name, gl => {
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array(c));
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      });
+      return;
+    }
     this.texture(name, gl => {
       gl.texImage2D(gl.TEXTURE_2D, 0, srgb ? gl.SRGB8_ALPHA8 : gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, img);
       gl.generateMipmap(gl.TEXTURE_2D);

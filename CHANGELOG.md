@@ -43,6 +43,9 @@ has no version numbers yet. Newest first.
   right away instead of an older cached copy.
 
 ### Fixed
+- With Game look off (or without the extracted game files) the world's objects were not loaded, so
+  nothing could be planted, placed or saved as an object; they now always load.
+- The world map no longer fails to load when the map textures are missing; it uses plain colours.
 - Pressing a second key (End, PgUp, turn) right after a move acted on the hidden original instead of
   the moved copy.
 
