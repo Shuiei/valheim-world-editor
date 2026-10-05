@@ -52,6 +52,8 @@ Console.WriteLine(world.IsLive
 stopwatch.Restart();
 // Serializes saving and replacing the loaded world.
 var saveLock = new object();
+// Live mode: which object changes the running game already has.
+var liveSync = new LiveSync();
 var modifiers = new TerrainEditor.Terrain.TerrainModifiers(world);
 var terrain = new ValheimGen.TerrainService(world, modifiers);
 Console.WriteLine($"Location flattening: {modifiers.Count} terrain modifiers from {modifiers.LocationsWithModifiers} of {world.Locations.Count} locations and {world.Placed.Count(p => p.Location == 0)} other objects.");
@@ -243,8 +245,8 @@ app.MapGet("/api/world", () => new
 	objects = world.ObjectCount,
 	chunks = world.ChunkCount,
 	changedZones = edits.ChangedZoneCount,
-	deletedObjects = edits.DeletedCount,
-	addedObjects = edits.AddedCount,
+	deletedObjects = world.IsLive ? liveSync.Pending(edits).Deleted : edits.DeletedCount,
+	addedObjects = world.IsLive ? liveSync.Pending(edits).Added : edits.AddedCount,
 	resetZones = edits.ResetCount,
 	resetList = edits.Resets.Select(r => new[] { r.X, r.Z }),
 	locations = world.Locations.Select(l => new { x = l.Position.X, z = l.Position.Z }),
@@ -388,6 +390,7 @@ app.MapPost("/api/live/reload", async () =>
 	{
 		world = fresh;
 		edits.ResetFrom(world);
+		liveSync.Reset();
 	}
 	return Results.Ok(new { objects = world.ObjectCount, pending = Pending() });
 });
@@ -402,17 +405,25 @@ app.MapPost("/api/save", async () =>
 	{
 		// Live mode: push the changed zones' terrain into the running game.
 		var changedZones = edits.All().Where(e => e.Changed).ToList();
-		string objectsNote = edits.DeletedCount + edits.AddedCount + edits.ResetCount > 0 ? " Object changes and zone resets are not applied live yet; they stay pending." : "";
-		if (changedZones.Count == 0)
-		{
-			return Results.Ok(new { saved = false, live = true, message = "No ground changes to apply." + objectsNote, pending = Pending() });
-		}
+		string resetNote = edits.ResetCount > 0 ? " Zone resets are not applied live yet; they stay pending." : "";
 		try
 		{
-			string reply = await live.ApplyTerrain(changedZones.Select(e => (e.ZoneX, e.ZoneZ, WorldWriter.EncodeTerrain(e))).ToList());
-			edits.MarkApplied(changedZones.Select(e => (e.ZoneX, e.ZoneZ)));
-			Console.WriteLine($"Live: applied {changedZones.Count} zone(s): {reply}");
-			return Results.Ok(new { saved = true, live = true, message = $"Applied {changedZones.Count} zone(s) to the running game." + objectsNote, pending = Pending() });
+			List<string> done = new();
+			if (changedZones.Count > 0)
+			{
+				string reply = await live.ApplyTerrain(changedZones.Select(e => (e.ZoneX, e.ZoneZ, WorldWriter.EncodeTerrain(e))).ToList());
+				edits.MarkApplied(changedZones.Select(e => (e.ZoneX, e.ZoneZ)));
+				Console.WriteLine($"Live: applied {changedZones.Count} zone(s): {reply}");
+				done.Add($"{changedZones.Count} zone(s) of ground");
+			}
+			string objects = await liveSync.Apply(world, edits, live);
+			if (objects != "")
+			{
+				Console.WriteLine($"Live: {objects}");
+				done.Add(objects);
+			}
+			string message = done.Count > 0 ? $"Applied to the running game: {string.Join("; ", done)}." : "Nothing to apply.";
+			return Results.Ok(new { saved = done.Count > 0, live = true, message = message + resetNote, pending = Pending() });
 		}
 		catch (Exception ex)
 		{
@@ -440,6 +451,7 @@ app.MapPost("/api/discard", async () =>
 	lock (saveLock)
 	{
 		world = fresh;
+		liveSync.Reset();
 		edits.ResetFrom(world);
 		return Results.Ok(Pending());
 	}
@@ -492,7 +504,15 @@ app.MapPost("/api/zones", (List<ZoneUpload> uploads) =>
 });
 
 // What is waiting to be saved.
-object Pending() => new { changedZones = edits.ChangedZoneCount, deletedObjects = edits.DeletedCount, addedObjects = edits.AddedCount, resetZones = edits.ResetCount };
+object Pending()
+{
+	if (world.IsLive)
+	{
+		var (d, a) = liveSync.Pending(edits);
+		return new { changedZones = edits.ChangedZoneCount, deletedObjects = d, addedObjects = a, resetZones = edits.ResetCount };
+	}
+	return new { changedZones = edits.ChangedZoneCount, deletedObjects = edits.DeletedCount, addedObjects = edits.AddedCount, resetZones = edits.ResetCount };
+}
 
 Console.WriteLine($"Open http://127.0.0.1:{port} in your browser (Ctrl+C to stop).");
 app.Run();

@@ -22,13 +22,15 @@ namespace WorldEditorBridge;
 //   GET /status     plugin and world info (JSON)
 //   POST /terrain   new terrain data for zones: int count, then per zone int x, int z, int length + TCData
 //                   (TerrainComp.Save format); every player's game reloads those zones' ground
+//   POST /objects   int n + n x (long user, uint id) objects to destroy, then int m + m x (int length +
+//                   object in save format) objects to create; answers with the new objects' ids
 // Game objects are only read on Unity's main thread; the HTTP thread waits for the answer.
 [BepInPlugin(Guid, "WorldEditorBridge", Version)]
 public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
 {
 	public const string Guid = "local.worldeditorbridge";
 
-	public const string Version = "0.2.0";
+	public const string Version = "0.3.0";
 
 	private const int SnapshotVersion = 1;
 
@@ -207,6 +209,17 @@ public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
 				Reply(res, 200, "application/json", OnMainThread(() => ApplyTerrain(body)));
 				break;
 			}
+			case "/objects":
+			{
+				if (ctx.Request.HttpMethod != "POST")
+				{
+					Reply(res, 405, "text/plain", Encoding.UTF8.GetBytes("POST only"));
+					break;
+				}
+				byte[] body = ReadAll(ctx.Request.InputStream);
+				Reply(res, 200, "application/json", OnMainThread(() => ApplyObjects(body)));
+				break;
+			}
 			case "/snapshot":
 			{
 				byte[] raw = OnMainThread(Snapshot, 120000);
@@ -282,6 +295,93 @@ public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
 		}
 		Logger.LogInfo($"WorldEditorBridge: applied terrain to {applied} zone(s) ({created} new)");
 		return Encoding.UTF8.GetBytes($"{{\"applied\":{applied},\"created\":{created}}}");
+	}
+
+	// Destroys objects (as their owner, so every peer drops them) and creates new ones from objects in
+	// the save file format (flags, position, prefab, rotation, data), like ZDO.Load but for a new object.
+	private byte[] ApplyObjects(byte[] body)
+	{
+		ZPackage pkg = new(body);
+		long session = ZDOMan.GetSessionID();
+		int destroyCount = pkg.ReadInt(), destroyed = 0, missing = 0;
+		for (int i = 0; i < destroyCount; i++)
+		{
+			ZDOID id = new(pkg.ReadLong(), pkg.ReadUInt());
+			ZDO zdo = ZDOMan.instance.GetZDO(id);
+			if (zdo == null)
+			{
+				missing++;
+				continue;
+			}
+			zdo.SetOwner(session);
+			ZDOMan.instance.DestroyZDO(zdo);
+			destroyed++;
+		}
+		int createCount = pkg.ReadInt();
+		StringBuilder ids = new();
+		for (int i = 0; i < createCount; i++)
+		{
+			ZDO zdo = CreateFromSaveFormat(new ZPackage(pkg.ReadByteArray()));
+			if (i > 0)
+			{
+				ids.Append(',');
+			}
+			ids.Append('"').Append(zdo.m_uid.UserID.ToString(CultureInfo.InvariantCulture)).Append(':').Append(zdo.m_uid.ID.ToString(CultureInfo.InvariantCulture)).Append('"');
+		}
+		Logger.LogInfo($"WorldEditorBridge: destroyed {destroyed} object(s) ({missing} already gone), created {createCount}");
+		return Encoding.UTF8.GetBytes($"{{\"destroyed\":{destroyed},\"missing\":{missing},\"created\":[{ids}]}}");
+	}
+
+	private static ZDO CreateFromSaveFormat(ZPackage p)
+	{
+		int flags = p.ReadUShort();
+		Vector3 pos;
+		if ((flags & 0x2000) != 0)
+		{
+			Vector2s v = p.ReadVector2s();
+			pos = new Vector3(v.x, 0f, v.y);
+		}
+		else
+		{
+			pos = p.ReadVector3();
+		}
+		int prefab = p.ReadInt();
+		Vector3 euler = (flags & 0x1000) != 0 ? p.ReadSmallRotation() : Vector3.zero;
+		ZDO zdo = ZDOMan.instance.CreateNewZDO(pos, prefab);
+		zdo.Persistent = (flags & 0x100) != 0;
+		zdo.Distant = (flags & 0x200) != 0;
+		zdo.Type = (ZDO.ObjectType)((flags >> 10) & 3);
+		zdo.SetPrefab(prefab);
+		zdo.SetRotation(Quaternion.Euler(euler));
+		if ((flags & 0xFF) == 0)
+		{
+			return zdo;
+		}
+		if ((flags & 0x1) != 0)
+		{
+			p.ReadByte();
+			p.ReadInt();
+		}
+		void Each(int flag, Action<int> read)
+		{
+			if ((flags & flag) == 0)
+			{
+				return;
+			}
+			int n = p.ReadNumItems();
+			for (int k = 0; k < n; k++)
+			{
+				read(p.ReadInt());
+			}
+		}
+		Each(0x2, key => zdo.Set(key, p.ReadSingle()));
+		Each(0x4, key => zdo.Set(key, p.ReadVector3()));
+		Each(0x8, key => zdo.Set(key, p.ReadQuaternion()));
+		Each(0x10, key => zdo.Set(key, p.ReadInt()));
+		Each(0x20, key => zdo.Set(key, p.ReadLong()));
+		Each(0x40, key => zdo.Set(key, p.ReadString()));
+		Each(0x80, key => zdo.Set(key, p.ReadByteArray()));
+		return zdo;
 	}
 
 	// Like ZNetView.Awake for the _TerrainCompiler prefab, at the zone centre.

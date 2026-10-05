@@ -140,6 +140,7 @@ export function createObjects(ed) {
     try {
       const res = await (await fetch('/api/objects/add', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })).json();
       ed.showPendingFrom(res.pending);
+      ed.changed?.();
     } catch (err) {
       ed.msg(`Could not send the new objects to the editor: ${err.message}`, true);
     }
