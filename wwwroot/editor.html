@@ -1063,6 +1063,18 @@ function syncShow() {
 const defaults = Object.fromEntries([...document.querySelectorAll('[data-show]')].map(c => [c.dataset.show, c.checked]));
 const saved = readShow();
 document.querySelectorAll('[data-show]').forEach(c => { if (c.dataset.show in saved) c.checked = !!saved[c.dataset.show]; c.addEventListener('change', syncShow); });
+// Placing a kind that is switched off: switch it on, so what was placed is still shown after a reload
+// (new objects are drawn whatever the switches say, saved ones follow them).
+ed.ensureShown = kinds => {
+  const turned = [];
+  for (const k of new Set(kinds)) {
+    const c = document.querySelector(`[data-show="${k}"]`);
+    if (c && !c.checked) { c.checked = true; turned.push(c.closest('label').querySelector('.t').textContent); }
+  }
+  if (!turned.length) return;
+  syncShow();
+  setTimeout(() => msg(`Switched on ${turned.join(', ')} in View, so what you placed stays visible.`), 50);
+};
 $('showDefaults').onclick = () => { document.querySelectorAll('[data-show]').forEach(c => c.checked = defaults[c.dataset.show]); syncShow(); };
 $('showAll').onclick = () => { document.querySelectorAll('[data-show]').forEach(c => c.checked = true); syncShow(); };
 $('terrainOnly').onclick = () => { document.querySelectorAll('[data-show]').forEach(c => c.checked = false); syncShow(); };
