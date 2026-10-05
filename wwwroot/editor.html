@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="icon" href="data:,">
-<title>Terrain Editor 3D</title>
+<link rel="icon" href="icon.png">
+<title>Valheim World Editor</title>
 <style>
   :root {
     --bg: #14171c; --panel: rgba(24,28,34,.95); --panel2: #1e232b; --line: #2e353f; --line2: #3c4552;
@@ -296,6 +296,8 @@ import { createPlant } from './editor/plant.js';
 import { createMeasure } from './editor/measure.js';
 import { createTransform } from './editor/transform.js';
 import { applyTips } from './editor/tips.js';
+import { gameLookBanner } from './app.js';
+gameLookBanner();
 
 // View panel: each section folds by clicking its title; folded sections are remembered (Look starts folded).
 {

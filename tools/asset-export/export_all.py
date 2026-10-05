@@ -305,7 +305,6 @@ def main():
     args = ap.parse_args()
     if args.objects == 'world' and not args.world: ap.error('--objects world needs --world')
     out = os.path.abspath(args.out)
-    if not os.path.isfile(os.path.join(out, 'editor.html')): ap.error(f'{out} does not look like the editor\'s wwwroot (no editor.html)')
     work = os.path.abspath(args.work or os.path.join(out, '..', 'export-cache')); os.makedirs(work, exist_ok=True)
     bundles = find_bundles(args.valheim)
     found = scan(bundles, work)

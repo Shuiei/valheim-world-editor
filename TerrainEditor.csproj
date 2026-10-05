@@ -3,7 +3,11 @@
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <AssemblyName>ValheimTerrainEditor</AssemblyName>
+    <AssemblyName>ValheimWorldEditor</AssemblyName>
+    <!-- A window app on Windows: no console window behind it (output goes to log.txt). -->
+    <OutputType Condition="'$(RuntimeIdentifier)' == 'win-x64'">WinExe</OutputType>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <ApplicationIcon>wwwroot/icon.ico</ApplicationIcon>
     <RootNamespace>TerrainEditor</RootNamespace>
     <InvariantGlobalization>true</InvariantGlobalization>
   </PropertyGroup>
@@ -12,6 +16,9 @@
     <Compile Remove="plugin/**" />
     <Compile Remove="tools/**" />
     <None Remove="plugin/**" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Photino.NET" Version="4.0.16" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="WorldGen/terrain-modifiers.json" LogicalName="TerrainEditor.terrain-modifiers.json" />

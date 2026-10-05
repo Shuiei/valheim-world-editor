@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="icon" href="data:,">
-<title>Valheim Terrain Editor</title>
+<link rel="icon" href="icon.png">
+<title>Valheim World Editor</title>
 <style>
   :root {
     --bg: #14171c; --panel: #1c2027; --line: #2c323c; --text: #e4e7ec; --muted: #8b93a1;
@@ -39,6 +39,8 @@
   .edit a { background: var(--accent); color: #1a1a1a; text-decoration: none; font-weight: 600; padding: 6px 10px; border-radius: 5px; }
   .edit select { background: #262b34; color: var(--text); border: 1px solid var(--line); border-radius: 4px; padding: 4px; }
   .changes.live { border-color: #2a6a4a; background: #13261d; color: #bfe8cf; }
+  .topRow { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .topRow h1 { margin: 0; }
 </style>
 </head>
 <body>
@@ -48,7 +50,7 @@
   <div id="cursor" class="floating bottom"></div>
 </div>
 <aside>
-  <h1>Valheim Terrain Editor</h1>
+  <div class="topRow"><h1>Valheim World Editor</h1><button id="worldsBtn" title="Back to the start page to open another world">Worlds</button></div>
   <div class="meta" id="meta">Loading…</div>
   <div class="hint">Drag to pan, scroll to zoom. Click any spot to open it in the 3D editor; edited zones also show their details.</div>
   <div id="liveBox" class="changes live" hidden>
@@ -92,6 +94,9 @@
 <script type="module">
 import { MapView } from './mapview.js';
 import { saveWorld, discardChanges } from './world-actions.js';
+import { gameLookBanner, backToWorlds } from './app.js';
+gameLookBanner({ onReady: () => location.reload() });
+document.getElementById('worldsBtn').onclick = () => backToWorlds();
 const glCanvas = document.getElementById('map'), overlay = document.getElementById('overlay'), octx = overlay.getContext('2d');
 const ZONE = 64;
 let zones = [], selected = null, world = null, mapView = null, hoverWorld = null;
