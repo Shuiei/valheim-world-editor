@@ -221,8 +221,9 @@ export function createArea(ed) {
           break;
       }
     }
-    commitTerrain(state, touched, a);
-    ed.msg(`${act[0].toUpperCase() + act.slice(1)} applied to ${touched.size} point(s).`);
+    const actName = act === 'paint' ? `Paint ${$('aPaint').selectedOptions[0].text.toLowerCase()}` : act[0].toUpperCase() + act.slice(1);
+    commitTerrain(state, touched, a, { label: `Area: ${actName}` });
+    ed.msg(`${actName} applied to ${touched.size} point(s).`);
   }
   function commitTerrain(state, touched, a, extra = {}) {
     ed.refresh(a.x0 - 1, a.z0 - 1, a.x1 + 1, a.z1 + 1);
@@ -249,7 +250,7 @@ export function createArea(ed) {
     const list = pickedObjects(); if (!list) return;
     if (!list.length) { ed.msg('No objects of the chosen kinds inside the selection.'); return; }
     const ids = list.map(r => r.id);
-    ed.setDeleted(ids, true); ed.pushHistory({ deleted: ids });
+    ed.setDeleted(ids, true); ed.pushHistory({ deleted: ids, label: `Area: removed ${ids.length} object(s)` });
     ed.msg(`Removed ${ids.length} object(s). Ctrl+Z brings them back.`); updateInfo();
   };
   $('aSelectObj').onclick = () => {
@@ -262,7 +263,7 @@ export function createArea(ed) {
     const added = await ed.objects.add(recs.map(r => ({ name: toName, x: r.x, y: r.y, z: r.z, rx: r.rx, ry: r.ry, rz: r.rz, scale: 0 })));
     const deleted = recs.map(r => r.id);
     await ed.setDeleted(deleted, true);
-    ed.pushHistory({ deleted, added });
+    ed.pushHistory({ deleted, added, label: `Replaced ${deleted.length} with ${toName}` });
     ed.msg(`Replaced ${deleted.length} object(s) with ${toName}.`); updateInfo();
   }
   $('aReplace').onclick = () => {
@@ -375,7 +376,7 @@ export function createArea(ed) {
         return { name: o.name, x: ed.originX + at.gx + x, y, z: ed.originZ + at.gz + z, rx: flip ? -o.rx : o.rx, ry: (flip ? -o.ry : o.ry) - 90 * rot, rz: flip ? -o.rz : o.rz, scale: o.scale, sourceId: o.sourceId ?? null, fresh: true };
       }));
     }
-    commitTerrain(state, touched, { x0, x1, z0, z1 }, added.length ? { added } : {});
+    commitTerrain(state, touched, { x0, x1, z0, z1 }, { label: 'Paste', ...(added.length ? { added } : {}) });
     ed.msg(`Pasted${touched.size ? ' the ground' : ''}${added.length ? ` and ${added.length} object(s)` : ''}. Click again to paste another copy, Esc when done.`);
   }
   $('psRot').onclick = () => { rot = (rot + 1) % 4; updateGhost(); };
@@ -421,7 +422,7 @@ export function createArea(ed) {
     if (!confirm(`Reset ${zones.length} zone(s) (${zones.map(z => z.join(', ')).join(' · ')}) when you save?\n\n` +
       `• Every tree, rock, ruin and dungeon entrance in them is removed${keep ? ' (your buildings stay)' : ', your buildings too'}.\n` +
       `${ground ? '• Their ground edits are undone.\n' : ''}• Valheim generates the zones again the next time a player goes there.`)) return;
-    const extra = { resets: { zones, keepBuildings: keep, ground } };
+    const extra = { resets: { zones, keepBuildings: keep, ground }, label: `Reset ${zones.length} zone(s)` };
     let state = null; const touched = new Set();
     if (ground) {
       state = ed.snapshotState();
@@ -444,7 +445,7 @@ export function createArea(ed) {
     if (!zones.length) { ed.msg('No zone marked for reset under the selection.'); return; }
     const r = resetZones.get(`${zones[0][0]},${zones[0][1]}`);
     await postResets(zones, r.keepBuildings, r.ground, true);
-    ed.pushHistory({ resets: { zones, keepBuildings: r.keepBuildings, ground: r.ground }, resetUndo: true });
+    ed.pushHistory({ resets: { zones, keepBuildings: r.keepBuildings, ground: r.ground }, resetUndo: true, label: `Cancelled reset of ${zones.length} zone(s)` });
     ed.msg(`Reset cancelled for ${zones.length} zone(s).`);
   };
 

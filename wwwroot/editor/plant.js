@@ -278,7 +278,7 @@ export function createPlant(ed) {
       hashStale = true;
       // Planted and removed again in the same stroke: nothing to remember.
       const added = s.added.filter(id => !s.unplanted.includes(id)), deleted = [...s.deleted, ...s.unplanted.filter(id => !s.added.includes(id))];
-      if (added.length || deleted.length) ed.pushHistory({ ...(added.length ? { added } : {}), ...(deleted.length ? { deleted } : {}) });
+      if (added.length || deleted.length) ed.pushHistory({ ...(added.length ? { added } : {}), ...(deleted.length ? { deleted } : {}), label: s.erase ? `Plant: removed ${deleted.length}` : `Planted ${added.length} (${[...new Set(added.map(id => ed.objects.records.get(id)?.name).filter(Boolean))].slice(0, 3).join(', ')})` });
       ed.msg(s.erase ? `Removed ${deleted.length} object(s).` : `Planted ${added.length} object(s). Ctrl+Z removes them; Save writes them to the world.`);
       makePattern();
       updatePreview();
