@@ -47,19 +47,31 @@ export function createObjects(ed) {
     return place.compose(pos, q, sc);
   }
 
-  function groupFor(kind) { return kind === 'buildings' ? ed.buildings : ed.objectGroups[kind]; }
+  // Objects added in the editor are drawn in their own group, shown whatever the View switches say,
+  // so newly placed bushes or pickables never vanish and get placed twice.
+  function groupFor(kind, isNew) { return isNew ? ed.newGroup : kind === 'buildings' ? ed.buildings : ed.objectGroups[kind]; }
 
-  async function batchFor(name, kind) {
-    if (batches.has(name)) return batches.get(name);
-    const b = { name, kind, parts: null, ids: [], meshes: [], ready: null };
-    batches.set(name, b);
+  // Green markers on new objects that are not saved / applied yet.
+  const markers = new THREE.Points(new THREE.BufferGeometry(), new THREE.PointsMaterial({ color: 0x5dff8a, size: 9, sizeAttenuation: false, depthTest: false }));
+  markers.renderOrder = 22; ed.newGroup.add(markers);
+  function refreshMarkers() {
+    const pts = [];
+    for (const r of records.values()) if (r.added && !r.deleted && !r.applied) pts.push(new THREE.Vector3(r.x - ed.originX - ed.cx, r.y + 0.4, -(r.z - ed.originZ - ed.cz)));
+    markers.geometry.setFromPoints(pts);
+  }
+
+  async function batchFor(name, kind, isNew = false) {
+    const key = isNew ? name + '#new' : name;
+    if (batches.has(key)) return batches.get(key);
+    const b = { name, kind, isNew, parts: null, ids: [], meshes: [], ready: null };
+    batches.set(key, b);
     b.ready = ed.pieceModel(name).catch(() => null).then(parts => { b.parts = parts?.length ? parts : null; });
     await b.ready;
     return b;
   }
 
   function rebuild(b) {
-    const group = groupFor(b.kind);
+    const group = groupFor(b.kind, b.isNew);
     for (const im of b.meshes) { group.remove(im); im.dispose(); }
     b.meshes = [];
     ed.unregister(b.ids);
@@ -89,14 +101,17 @@ export function createObjects(ed) {
       const kind = id < 0 && pieceNames.has(name) ? 'buildings' : objectKind(name, pieceNames);
       records.set(id, { id, prefab, name, kind, x: d[i], y: d[i + 1], z: d[i + 2], rx: d[i + 3], ry: d[i + 4], rz: d[i + 5], scale: d[i + 6], deleted: false, added: id < 0 });
       if (id <= nextId) nextId = id - 1;
-      if (!byName.has(name)) byName.set(name, []);
-      byName.get(name).push(id);
+      const key = id < 0 ? name + '#new' : name;
+      if (!byName.has(key)) byName.set(key, []);
+      byName.get(key).push(id);
     }
-    await Promise.all([...byName].map(async ([name, ids]) => {
-      const b = await batchFor(name, records.get(ids[0]).kind);
+    await Promise.all([...byName].map(async ([key, ids]) => {
+      const r0 = records.get(ids[0]);
+      const b = await batchFor(r0.name, r0.kind, r0.added);
       b.ids.push(...ids);
       rebuild(b);
     }));
+    refreshMarkers();
     return counts();
   }
 
@@ -125,11 +140,12 @@ export function createObjects(ed) {
       records.set(id, r);
       ids.push(id);
       unsent.push(r);
-      const b = await batchFor(o.name, kind);
+      const b = await batchFor(o.name, kind, true);
       b.ids.push(id);
       touched.add(b);
     }
     for (const b of touched) rebuild(b);
+    refreshMarkers();
     if (post) await flush();
     return ids;
   }
@@ -147,7 +163,10 @@ export function createObjects(ed) {
   }
 
   // Mark records deleted or not (the editor's setDeleted hides the instances and tells the server).
-  function markDeleted(ids, deleted) { for (const id of ids) { const r = records.get(id); if (r) r.deleted = deleted; } }
+  function markDeleted(ids, deleted) { for (const id of ids) { const r = records.get(id); if (r) r.deleted = deleted; } refreshMarkers(); }
+
+  // Live mode: the game has the new objects now; they stay drawn but lose their marker.
+  function markApplied() { for (const r of records.values()) if (r.added) r.applied = true; refreshMarkers(); }
 
   function alive() { return [...records.values()].filter(r => !r.deleted); }
 
@@ -164,5 +183,5 @@ export function createObjects(ed) {
   // Placement matrix (three.js space) of a record-like { x, y, z, rx, ry, rz, scale }, for previews.
   const matrixFor = (r, rootScale, out) => out.copy(placement(r, rootScale));
 
-  return { records, load, add, flush, counts, addPieceRecord, markDeleted, alive, creatableTypes, state, stableHash, matrixFor };
+  return { records, load, add, flush, counts, addPieceRecord, markDeleted, alive, creatableTypes, state, stableHash, matrixFor, markApplied };
 }

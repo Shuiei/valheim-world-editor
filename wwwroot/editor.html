@@ -247,6 +247,7 @@
     <dt>E / M / H</dt><dd>Select, Measure, Move</dd>
     <dt>Ctrl+C / Ctrl+V</dt><dd>Copy the area / paste it (R turns, F mirrors)</dd>
     <dt>[ &nbsp; ]</dt><dd>Brush size</dd>
+    <dt>Plant: R · Alt+wheel</dt><dd>New layout · turn the preview (also , and .)</dd>
     <dt>Alt + click</dt><dd>Pick the ground height</dd>
     <dt>Del</dt><dd>Delete the selected objects</dd>
     <dt>Ctrl+Z / Ctrl+Y</dt><dd>Undo / redo</dd>
@@ -689,6 +690,7 @@ if (world.live) {
         applying.again = false;
         const res = await (await fetch('/api/save', { method: 'POST' })).json();
         showPendingFrom(res.pending);
+        if (res.saved && !res.pending?.addedObjects) objects.markApplied();
         $('sMsg').innerHTML = res.saved ? res.message : `<span class="warn">${res.message}</span>`;
       } while (applying.again);
     } finally { applying = null; }
@@ -771,11 +773,12 @@ const PIECE_COLORS = { 0: 0xb0582a, 1: 0x9a4430, 2: 0x7a5636, 3: 0x8f8a82, 4: 0x
 const buildingMat = new THREE.MeshLambertMaterial({ color: 0xffffff, transparent: true, opacity: 1 });
 const buildings = new THREE.Group(); scene.add(buildings);
 // Each kind of world object gets its own group so it can be shown or hidden on its own.
+const newGroup = new THREE.Group(); scene.add(newGroup);
 const objectGroups = Object.fromEntries(['ruins', 'trees', 'rocks', 'ore', 'bushes', 'pickables', 'other'].map(k => { const g = new THREE.Group(); scene.add(g); return [k, g]; }));
 // Shared context for the feature modules in editor/.
 const ed = {
   THREE, scene, camera, renderer, el: renderer.domElement, $, W, H, N, originX, originZ, cx, cz, X0, Z0, X1, Z1, size, WATER,
-  base, level, smooth, mod, paint, pmod, vbiome, region, world, PAINT, mesh, buildings, objectGroups,
+  base, level, smooth, mod, paint, pmod, vbiome, region, world, PAINT, mesh, buildings, objectGroups, newGroup,
   height, setHeight, locked, refresh, snapshotState, zonesOf, upload, pushHistory, msg, showPendingFrom, pieceModel,
   register, unregister, pick, sampleHeight, worldNoise, fbm, nAmp, nSize, setDeleted,
   get tool() { return tool; }, setTool: t => setTool(t), get radius() { return radius; }, get strength() { return strength; },
@@ -1170,7 +1173,7 @@ function pickEntity(e) {
   const r = el.getBoundingClientRect();
   pickMouse.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
   pickRay.setFromCamera(pickMouse, camera);
-  const groups = [buildings, ...Object.values(objectGroups)].filter(g => g.visible);
+  const groups = [buildings, newGroup, ...Object.values(objectGroups)].filter(g => g.visible);
   const hits = pickRay.intersectObjects(groups, true);
   const terrainHit = pickRay.intersectObject(mesh, false)[0];
   for (const h of hits) {

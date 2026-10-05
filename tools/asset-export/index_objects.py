@@ -20,8 +20,10 @@ for fi,f in enumerate(sorted(glob.glob(B+'*'))):
         try: go=o.read_typetree()
         except Exception: continue
         h=sh(go['m_Name'])
-        if h not in want or str(h) in out: continue
-        kinds=[]; root=False
+        # Several root objects can share a name (a model asset and the game prefab built from it):
+        # keep scanning until the real prefab, the one with a ZNetView, is found.
+        if h not in want or out.get(str(h), {}).get('znv'): continue
+        kinds=[]; root=False; znv=False
         for c in go['m_Component']:
             t=byid.get(c['component']['m_PathID'])
             if not t: continue
@@ -30,11 +32,12 @@ for fi,f in enumerate(sorted(glob.glob(B+'*'))):
             elif t.type.name=='MonoBehaviour':
                 try:
                     tt=t.read_typetree()
+                    if 'm_persistent' in tt and 'm_type' in tt: znv=True
                     for k in ('m_health','m_minToolTier','m_itemData','m_runSpeed','m_respawnTimeMinutes','m_logPrefab','m_lodLevel','m_spawnOnHit'):
                         if k in tt: kinds.append(k)
                 except Exception: pass
             else: kinds.append(t.type.name)
-        if root: out[str(h)]={'name':go['m_Name'],'bundle':os.path.basename(f),'pid':o.path_id,'count':want[h],'kinds':kinds}
+        if root and (str(h) not in out or znv): out[str(h)]={'name':go['m_Name'],'bundle':os.path.basename(f),'pid':o.path_id,'count':want[h],'kinds':kinds,'znv':znv}
     if fi%100==0: print(fi,len(out),file=sys.stderr,flush=True)
 json.dump(out,open(sys.argv[2],'w'),indent=0)
 print('named',len(out),'of',len(want))
