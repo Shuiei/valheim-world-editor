@@ -146,6 +146,7 @@ export function createObjects(ed) {
     }
     for (const b of touched) rebuild(b);
     refreshMarkers();
+    ed.ensureShown?.([...touched].map(b => b.kind));
     if (post) await flush();
     return ids;
   }
