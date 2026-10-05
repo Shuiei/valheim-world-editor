@@ -42,6 +42,14 @@ Wine's networking; not tried on real Windows).
 The plugin: build `plugin/WorldEditorBridge/WorldEditorBridge.csproj` after pointing its
 `HintPath`s at your BepInEx `core` folder and the game's `*_Data/Managed` folder.
 
+Thunderstore: `tools/thunderstore.sh <folder>` builds `WorldEditorBridge-<version>.zip` (the
+version is `WorldEditorBridgePlugin.Version`) from `tools/thunderstore/`: `manifest.json`, the
+mod page's `README.md` and the plugin's `CHANGELOG.md`, with `wwwroot/icon.png`. It checks
+Thunderstore's rules (name, 250-character description, 256x256 icon). For a new plugin version:
+raise `Version` in the plugin, add a `CHANGELOG.md` section, keep the BepInExPack dependency
+current, build, and upload the zip at https://thunderstore.io/c/valheim/create/ (Thunderstore
+refuses a version number it already has).
+
 ## Files extracted from the game
 
 The in-game look uses files that belong to the game, so they are not in git (see `.gitignore`) or

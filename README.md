@@ -71,8 +71,9 @@ it into, with `valheim_Data`).
 1. **Install BepInEx** in your Valheim, once: [BepInExPack for Valheim](https://thunderstore.io/c/valheim/p/denikson/BepInExPack_Valheim/),
    either with a mod manager (r2modman, Thunderstore Mod Manager) or by hand into the Valheim folder,
    following its page.
-2. **Add the plugin:** copy `plugin/WorldEditorBridge.dll` from the editor's folder into
-   `BepInEx/plugins` of your Valheim (or of your mod manager profile).
+2. **Add the plugin:** with a mod manager, install **WorldEditorBridge** from Thunderstore (it
+   brings BepInEx with it). By hand: copy `plugin/WorldEditorBridge.dll` from the editor's folder
+   into `BepInEx/plugins` of your Valheim.
 3. **Start Valheim** with BepInEx and load your world (single player, or start a server from the
    game to host it).
 4. On the start page, **My game** shows "Valheim is running with the world …": click **Edit live**.
@@ -86,8 +87,8 @@ game at once, and the game saves it as usual.
 ![Connecting to a server](docs/images/start-server.jpg)
 
 1. **On the server, once:** install BepInEx (BepInExPack for Valheim, following its instructions
-   for dedicated servers), copy `plugin/WorldEditorBridge.dll` into its `BepInEx/plugins`, and
-   restart it. See `plugin/README.txt` in the download.
+   for dedicated servers), copy `plugin/WorldEditorBridge.dll` into its `BepInEx/plugins` (or
+   install WorldEditorBridge from Thunderstore in a mod manager's server profile), and restart it. See `plugin/README.txt` in the download.
 2. On the start page, **A dedicated server**: enter the server's address, the user you log in to it
    with (SSH), the password or an SSH key file, and the **plugin token**: the `Token` line of
    `BepInEx/config/local.worldeditorbridge.cfg` on the server. Tick **Save password** to not type the
