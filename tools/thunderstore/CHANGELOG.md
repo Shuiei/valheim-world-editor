@@ -2,6 +2,11 @@
 
 The editor's own changes: [CHANGELOG.md](https://github.com/Shuiei/valheim-world-editor/blob/main/CHANGELOG.md).
 
+## 0.4.0
+
+- Fixed: leaving the world map with **Worlds** while it was still loading could raise an error.
+- Unused code removed. The plugin is unchanged.
+
 ## 0.3.3
 
 - The editor packages depend on

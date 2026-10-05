@@ -3,11 +3,17 @@
 All notable changes to the Valheim world editor and its WorldEditorBridge plugin, which share one
 version number. Newest first.
 
-## Unreleased
+## v0.4.0 — 2026-10-05 (clean-up)
 
 ### Fixed
 - Leaving the world map with **Worlds** while it was still loading could raise an error on the
   page (a cut-off map reply was read as data).
+
+### Changed
+- Unused code removed, and the origin notes of the files ported from the game corrected.
+- Development: the old one-off test scripts are gone (the CI tests replace them), and the browser
+  tests wait for the 3D view to be drawn instead of fixed pauses, so they no longer fail at random
+  on a busy machine.
 
 ## v0.3.3 — 2026-10-05 (Thunderstore dependency)
 
