@@ -1,0 +1,12 @@
+{
+  "name": "valheim-world-editor-browser-tests",
+  "private": true,
+  "type": "module",
+  "description": "End-to-end tests: the real app (--browser) on the test world, driven by headless Chrome.",
+  "scripts": {
+    "test": "node --test --test-reporter=spec --test-reporter-destination=stdout --test-reporter=junit --test-reporter-destination=results/junit.xml editor.test.mjs"
+  },
+  "dependencies": {
+    "puppeteer": "^23.11.1"
+  }
+}
