@@ -150,7 +150,8 @@ export function createObjects(ed) {
     return ids;
   }
 
-  async function flush() {
+  function flush() { return ed.track ? ed.track(flushNow()) : flushNow(); }
+  async function flushNow() {
     if (!unsent.length) return;
     const body = unsent.splice(0).map(r => ({ id: r.id, prefab: r.prefab, x: r.x, y: r.y, z: r.z, rx: r.rx, ry: r.ry, rz: r.rz, scale: r.scale, sourceId: r.sourceId ?? null, fresh: r.fresh ?? true }));
     try {

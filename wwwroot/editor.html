@@ -662,7 +662,11 @@ function zonesOf(vertices) {
   }
   return [...set].map(s => s.split(',').map(Number));
 }
-async function upload(zoneList) {
+// Requests to the editor server still running (discard waits for them).
+const inflight = new Set();
+function track(p) { inflight.add(p); p.finally(() => inflight.delete(p)); return p; }
+function upload(zoneList) { return track(uploadNow(zoneList)); }
+async function uploadNow(zoneList) {
   const body = zoneList.map(([zx, zz]) => {
     const z = { x: X0 + zx, z: Z0 + zz, modified: [], level: [], smooth: [], paintModified: [], paint: [] };
     for (let k = 0; k < ZG; k++) for (let l = 0; l < ZG; l++) {
@@ -757,7 +761,33 @@ if (world.live) {
   };
   poll(); setInterval(poll, 2000);
 }
-$('discardBtn').onclick = () => discardChanges(pending, () => location.reload());
+// Discard: undo the changes that are not saved (offline) or not applied (live) yet, right here,
+// keeping the view, tool and the rest of the history. Changes made before the page was opened are
+// not in the history; only then does it fall back to reloading the world.
+$('discardBtn').onclick = discard;
+async function discard() {
+  const steps = undoStack.filter(e => !e.applied).length;
+  const what = [pending.zones ? `${pending.zones} zone(s)` : '', pending.deleted ? `${pending.deleted} deleted` : '', pending.added ? `${pending.added} added` : '', pending.resets ? `${pending.resets} reset` : ''].filter(Boolean).join(', ');
+  if (!confirm(`Discard the ${world.live ? 'changes not applied yet' : 'unsaved changes'} (${what})?${steps ? ` The last ${steps} step(s) in History are undone.` : ''}`)) return;
+  const zones = new Set();
+  while (undoStack.length && !undoStack[undoStack.length - 1].applied) {
+    const e = undoStack.pop();
+    for (const z of e.zones ?? []) zones.add(`${X0 + z[0]},${Z0 + z[1]}`);
+    applyHistory(e, false);
+  }
+  redoStack.length = 0;
+  await new Promise(r => setTimeout(r, 0));
+  await Promise.allSettled([...inflight]);
+  if (zones.size) {
+    const res = await (await fetch('/api/zones/clean', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify([...zones].map(k => k.split(',').map(Number))) })).json();
+    showPendingFrom(res);
+  }
+  updateHistoryButtons();
+  if (pending.zones + pending.deleted + pending.added + pending.resets === 0) { msg('Discarded. Everything else is kept.'); return; }
+  // Something pending is older than this page (no history for it): reload the world instead.
+  if (confirm('Some unsaved changes were made before this page was opened, so they can only be discarded by reloading the world. Reload now?'))
+    discardChanges(pending, () => location.reload(), true);
+}
 
 // Locations (villages, the trader, dungeon entrances...) flatten the ground around them while the
 // game runs. That flattening is not stored in the save, so heights near them can be off here.
@@ -892,7 +922,7 @@ const ed = {
   handlers: {}, panels: toolPanels, onToolChange: toolChangeHooks, mask: g => 1,
   pickEntity: e => pickEntity(e), clickSelect: e => clickSelect(e), hoverSelect: e => hoverSelect(e), drawSelection: () => drawSelection(), entityOf: id => entities.get(id),
   get selection() { return selection; }, selectIds: ids => { selection.clear(); for (const id of ids) if (entities.has(id)) selection.add(id); drawSelection(); }, clearSelection: () => clearSelection(),
-  showStatusFor: h => { hover = h; showStatus(); }, updateRing: () => updateRing(), frame: [], getLook: () => look
+  showStatusFor: h => { hover = h; showStatus(); }, track: p => track(p), updateRing: () => updateRing(), frame: [], getLook: () => look
 };
 const objects = createObjects(ed); ed.objects = objects;
 window.__ed = ed; // for automated tests
@@ -1338,7 +1368,8 @@ function hoverSelect(e) {
 }
 function clearSelection() { selection.clear(); drawSelection(); }
 const ZERO = new THREE.Matrix4().makeScale(0, 0, 0);
-async function setDeleted(ids, deleted) {
+function setDeleted(ids, deleted) { return track(setDeletedNow(ids, deleted)); }
+async function setDeletedNow(ids, deleted) {
   objects.markDeleted(ids, deleted);
   for (const id of ids) {
     const ent = entities.get(id); if (!ent) continue;
