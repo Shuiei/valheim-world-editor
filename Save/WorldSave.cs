@@ -151,9 +151,55 @@ public sealed class WorldSave
 		}
 	}
 
+	// True when the world came from the live bridge plugin instead of save files.
+	public bool IsLive { get; private set; }
+
+	// A snapshot from the WorldEditorBridge plugin (gzip): world info, ZoneSystem data and every
+	// persistent object in the chunk file format, followed by each object's live ZDOID.
+	public static WorldSave LoadLive(byte[] gzipped, string source)
+	{
+		using MemoryStream raw = new();
+		using (GZipStream gz = new(new MemoryStream(gzipped), CompressionMode.Decompress))
+		{
+			gz.CopyTo(raw);
+		}
+		raw.Position = 0;
+		WorldSave save = new() { Directory = source, SaveNumber = 0, IsLive = true };
+		using ValheimReader pkg = new(raw);
+		if (pkg.ReadInt() != 0x42455756)
+		{
+			throw new InvalidDataException("not a WorldEditorBridge snapshot");
+		}
+		int version = pkg.ReadInt();
+		if (version != 1)
+		{
+			throw new InvalidDataException($"snapshot version {version} is not supported (update the editor)");
+		}
+		save.Name = pkg.ReadString();
+		save.SeedName = pkg.ReadString();
+		save.Seed = pkg.ReadInt();
+		save.WorldGenVersion = pkg.ReadInt();
+		double netTime = BitConverter.Int64BitsToDouble(pkg.ReadLong());
+		save.Zones = ZoneDb.FromPackage(pkg.ReadBytes(pkg.ReadInt()), netTime);
+		ChunkFile file = new() { Chunk = 0, Size = 0, Version = 0, IndexCount = 0 };
+		save.ReadObjects(pkg, file);
+		save.Chunks.Add(file);
+		save.ChunkCount = 1;
+		foreach (ObjectRef o in save.ObjectRefs)
+		{
+			o.LiveId = (pkg.ReadLong(), pkg.ReadUInt());
+		}
+		return save;
+	}
+
 	private void LoadChunk(string path, ChunkFile file)
 	{
 		using ValheimReader pkg = new(new BufferedStream(File.OpenRead(path), 1 << 20));
+		ReadObjects(pkg, file);
+	}
+
+	private void ReadObjects(ValheimReader pkg, ChunkFile file)
+	{
 		file.WorldVersion = pkg.ReadShort();
 		file.Count = pkg.ReadInt();
 		for (int i = 0; i < file.Count; i++)

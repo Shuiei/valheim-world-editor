@@ -26,6 +26,9 @@ public sealed class ObjectRef
 
 	public bool IsTerrain { get; set; }
 
+	// The object's ZDOID in the running game (live snapshots only).
+	public (long User, uint Id) LiveId { get; set; }
+
 	public (int X, int Z) Zone => ((int)MathF.Floor((Position.X + 32f) / 64f), (int)MathF.Floor((Position.Z + 32f) / 64f));
 }
 
@@ -227,8 +230,22 @@ public sealed class ZoneDb
 		using GZipStream gz = new(new MemoryStream(packed), CompressionMode.Decompress);
 		using MemoryStream raw = new();
 		gz.CopyTo(raw);
-		raw.Position = 0;
-		using BinaryReader p = new(raw);
+		db.ReadPackage(raw.ToArray());
+		return db;
+	}
+
+	// The uncompressed ZoneSystem package, as the live bridge sends it.
+	public static ZoneDb FromPackage(byte[] package, double netTime)
+	{
+		ZoneDb db = new() { FileVersion = 41, NetTime = netTime };
+		db.ReadPackage(package);
+		return db;
+	}
+
+	private void ReadPackage(byte[] package)
+	{
+		ZoneDb db = this;
+		using BinaryReader p = new(new MemoryStream(package));
 		int n = p.ReadInt32();
 		for (int i = 0; i < n; i++)
 		{
@@ -246,7 +263,6 @@ public sealed class ZoneDb
 		{
 			db.Locations.Add((p.ReadInt32(), new Vector3(p.ReadSingle(), p.ReadSingle(), p.ReadSingle()), p.ReadBoolean()));
 		}
-		return db;
 	}
 
 	public void Save(string path)

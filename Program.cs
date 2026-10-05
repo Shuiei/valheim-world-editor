@@ -1,8 +1,9 @@
 using System.Globalization;
 using TerrainEditor.Save;
 
-// Valheim terrain editor, stage 1: read-only viewer of a world's terrain modifications.
+// Valheim world editor.
 // Usage: ValheimTerrainEditor [worldFolder] [--port 5180] [--summary]
+//        ValheimTerrainEditor --live http://127.0.0.1:5182 --token <token>   (WorldEditorBridge plugin)
 int verifyIndex = Array.IndexOf(args, "--verify");
 if (verifyIndex >= 0 && verifyIndex + 1 < args.Length)
 {
@@ -16,23 +17,41 @@ if (portIndex >= 0 && portIndex + 1 < args.Length)
 {
 	port = int.Parse(args[portIndex + 1], CultureInfo.InvariantCulture);
 }
+string? Option(string name) { int i = Array.IndexOf(args, name); return i >= 0 && i + 1 < args.Length ? args[i + 1] : null; }
+string[] valued = { "--port", "--live", "--token" };
 // The world folder is the first argument that is neither an option nor an option's value.
 string defaultWorld = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Desktop/Valheim_BepInEx/World20118");
-string? worldArg = args.Where((a, i) => !a.StartsWith("--") && !(portIndex >= 0 && i == portIndex + 1)).FirstOrDefault();
+string? worldArg = args.Where((a, i) => !a.StartsWith("--") && !(i > 0 && valued.Contains(args[i - 1]))).FirstOrDefault();
 string worldDir = worldArg ?? defaultWorld;
-if (!Directory.Exists(worldDir))
+string? liveUrl = Option("--live");
+LiveBridge? live = liveUrl == null ? null : new LiveBridge(liveUrl, Option("--token") ?? Environment.GetEnvironmentVariable("WORLD_BRIDGE_TOKEN") ?? "");
+if (live == null && !Directory.Exists(worldDir))
 {
 	Console.Error.WriteLine($"World folder not found: {worldDir}");
 	Console.Error.WriteLine("Usage: ValheimTerrainEditor [worldFolder] [--port 5180] [--summary]");
 	return;
 }
 
-Console.WriteLine($"Loading world from {worldDir} ...");
+Console.WriteLine(live != null ? $"Loading the live world from {live.Url} ..." : $"Loading world from {worldDir} ...");
 var stopwatch = System.Diagnostics.Stopwatch.StartNew();
 WorldSave.ModifierPrefabs = TerrainEditor.Terrain.TerrainModifiers.NetworkPrefabHashes.ToHashSet();
-WorldSave world = WorldSave.Load(worldDir);
-Console.WriteLine($"Loaded save #{world.SaveNumber}: {world.ObjectCount:N0} objects in {world.ChunkCount} chunks, {world.TerrainZones.Count} zones with terrain edits ({stopwatch.ElapsedMilliseconds} ms).");
+WorldSave world;
+try
+{
+	world = live != null ? await live.LoadWorld() : WorldSave.Load(worldDir);
+}
+catch (Exception ex) when (live != null)
+{
+	Console.Error.WriteLine($"Could not read the live world: {ex.Message}");
+	Console.Error.WriteLine("Is the server running with WorldEditorBridge, the SSH tunnel open, and the token right?");
+	return;
+}
+Console.WriteLine(world.IsLive
+	? $"Live world '{world.Name}': {world.ObjectCount:N0} objects, {world.TerrainZones.Count} zones with terrain edits ({stopwatch.ElapsedMilliseconds} ms)."
+	: $"Loaded save #{world.SaveNumber}: {world.ObjectCount:N0} objects in {world.ChunkCount} chunks, {world.TerrainZones.Count} zones with terrain edits ({stopwatch.ElapsedMilliseconds} ms).");
 stopwatch.Restart();
+// Serializes saving and replacing the loaded world.
+var saveLock = new object();
 var modifiers = new TerrainEditor.Terrain.TerrainModifiers(world);
 var terrain = new ValheimGen.TerrainService(world, modifiers);
 Console.WriteLine($"Location flattening: {modifiers.Count} terrain modifiers from {modifiers.LocationsWithModifiers} of {world.Locations.Count} locations and {world.Placed.Count(p => p.Location == 0)} other objects.");
@@ -214,6 +233,7 @@ object ZoneSummary(TerrainEditor.Editing.ZoneEdit e)
 app.MapGet("/api/world", () => new
 {
 	directory = world.Directory,
+	live = world.IsLive,
 	name = world.Name,
 	seedName = world.SeedName,
 	mapRadius = ValheimGen.TerrainService.MapRadius,
@@ -355,13 +375,33 @@ app.MapGet("/api/objects", (int x0, int z0, int x1, int z1) =>
 // How often each object prefab occurs in the whole world (for tooling).
 app.MapGet("/api/object-types", () => world.Objects.GroupBy(o => o.Prefab).Select(g => new { prefab = g.Key, count = g.Count() }).OrderByDescending(g => g.count));
 
+// Live mode: players in the running world (proxied from the bridge plugin), and a fresh snapshot.
+app.MapGet("/api/players", async () => live == null ? Results.Content("[]", "application/json") : Results.Content(await live.Players(), "application/json"));
+app.MapPost("/api/live/reload", async () =>
+{
+	if (live == null)
+	{
+		return Results.BadRequest("not in live mode");
+	}
+	WorldSave fresh = await live.LoadWorld();
+	lock (saveLock)
+	{
+		world = fresh;
+		edits.ResetFrom(world);
+	}
+	return Results.Ok(new { objects = world.ObjectCount, pending = Pending() });
+});
+
 // Prefab names for the last value of each /api/pieces entry.
 app.MapGet("/api/piece-types", () => TerrainEditor.Terrain.PieceCatalog.Names);
 
 // Write all changed zones to the world files (with backup and verification), then reload.
-var saveLock = new object();
 app.MapPost("/api/save", () =>
 {
+	if (world.IsLive)
+	{
+		return Results.Ok(new { saved = false, message = "This is a live view of the running world. Applying changes live comes in the next step; to save now, use the editor on the world files instead." });
+	}
 	lock (saveLock)
 	{
 		var changed = edits.All().Where(e => e.Changed).ToList();
@@ -377,11 +417,12 @@ app.MapPost("/api/save", () =>
 });
 
 // Throw away unsaved changes by reloading the world from disk.
-app.MapPost("/api/discard", () =>
+app.MapPost("/api/discard", async () =>
 {
+	WorldSave fresh = live != null ? await live.LoadWorld() : WorldSave.Load(world.Directory);
 	lock (saveLock)
 	{
-		world = WorldSave.Load(world.Directory);
+		world = fresh;
 		edits.ResetFrom(world);
 		return Results.Ok(Pending());
 	}
