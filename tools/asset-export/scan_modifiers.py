@@ -1,5 +1,8 @@
+# Terrain modifiers of locations and pieces (WorldGen/terrain-modifiers.json, in git).
+# Usage: VWE_BUNDLES=<game>/valheim_Data/StreamingAssets/SoftRef/Bundles python scan_modifiers.py <out.json>
 import UnityPy, glob, json, math, sys
-B='/opt/Steam/steamapps/common/Valheim/valheim_Data/StreamingAssets/SoftRef/Bundles/'
+import os as _os
+B=_os.path.join(_os.environ.get('VWE_BUNDLES', '/opt/Steam/steamapps/common/Valheim/valheim_Data/StreamingAssets/SoftRef/Bundles'), '')
 def qmul(a,b):
     ax,ay,az,aw=a; bx,by,bz,bw=b
     return (aw*bx+ax*bw+ay*bz-az*by, aw*by-ax*bz+ay*bw+az*bx, aw*bz+ax*by-ay*bx+az*bw, aw*bw-ax*bx-ay*by-az*bz)
@@ -61,7 +64,7 @@ for fi,f in enumerate(files):
         if mods:
             result[go['m_Name']]={'location':'loc' in kinds,'modifiers':mods}
     if fi%50==0: print('scanned',fi,'of',len(files),'found',len(result),file=sys.stderr)
-json.dump(result,open('/home/thibs/Desktop/Valheim_BepInEx/_src/TerrainEditor/WorldGen/terrain-modifiers.json','w'),indent=0)
+json.dump(result,open(sys.argv[1],'w'),indent=0)
 print('prefabs with terrain modifiers:',len(result),'locations:',sum(1 for v in result.values() if v['location']))
 for n,v in sorted(result.items())[:400]:
     if v['location']: print(' L', n, len(v['modifiers']), [ (m['levelRadius'] if m['level'] else 0, m['smoothRadius'] if m['smooth'] else 0) for m in v['modifiers']][:3])

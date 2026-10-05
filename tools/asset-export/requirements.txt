@@ -1,0 +1,4 @@
+UnityPy>=1.25,<1.26
+Pillow
+lz4
+numpy
