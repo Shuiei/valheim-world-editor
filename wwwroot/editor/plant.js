@@ -15,6 +15,10 @@ export function createPlant(ed) {
     <label class="field">Spacing <input id="plSpacing" type="range" min="0.5" max="15" step="0.5" value="4"><span id="plSpacingV"></span></label>
     <label class="field">Size <span class="pair"><input id="plSmin" type="number" min="10" max="300" step="5" value="80"><input id="plSmax" type="number" min="10" max="300" step="5" value="120"></span><span>%</span></label>
     <label class="field">Tilt <input id="plTilt" type="range" min="0" max="20" step="1" value="3"><span id="plTiltV"></span></label>
+    <label class="field">Rotation <input id="plRot" type="range" min="-180" max="180" step="5" value="0"><span id="plRotV"></span></label>
+    <label class="check"><input type="checkbox" id="plRandomYaw" checked> Random facing (off: all face the rotation)</label>
+    <label class="check"><input type="checkbox" id="plSingle"> One at a time, exactly at the cursor</label>
+    <div class="row"><button id="plNewLayout">New layout <kbd>R</kbd></button></div>
     <div class="hint" id="plPreview" style="color:var(--text)"></div>
     <div class="hint">Density is objects per 100 m². Spacing keeps them apart (also from what is already there). Shift + drag removes the chosen kinds. The Mask applies.</div>`;
   $('locWarn').before(panel);
@@ -44,9 +48,10 @@ export function createPlant(ed) {
     $('plDensityV').textContent = v('plDensity').toFixed(1);
     $('plSpacingV').textContent = `${v('plSpacing')} m`;
     $('plTiltV').textContent = `${v('plTilt')}°`;
+    $('plRotV').textContent = `${v('plRot')}°`;
     $('plChosen').textContent = chosen.size ? `Planting: ${[...chosen].join(', ')}` : 'Tick one or more kinds to plant.';
   }
-  ['plDensity', 'plSpacing', 'plTilt'].forEach(id => $(id).addEventListener('input', syncLabels));
+  ['plDensity', 'plSpacing', 'plTilt', 'plRot'].forEach(id => $(id).addEventListener('input', syncLabels));
   function fillList() {
     const q = $('plSearch').value.trim().toLowerCase();
     // Nature kinds first; pieces and spoilers can be planted too but are listed last.
@@ -105,15 +110,18 @@ export function createPlant(ed) {
   const addToHash = (hash, cell, gx, gz) => { const k = `${Math.floor(gx / cell)},${Math.floor(gz / cell)}`; (hash.get(k) ?? hash.set(k, []).get(k)).push([gx, gz]); };
   const underwaterOk = names => names.some(nm => /kelp|seaweed/i.test(nm));
   // One placement at grid point (gx, gz) with the given random draws, or null when it may not go there.
+  // Rotation of the preview (degrees, Unity yaw: clockwise seen from above).
+  const rotation = () => v('plRot');
   function placementAt(gx, gz, d, names, hash, cell) {
     if (gx < 1 || gz < 1 || gx > W - 2 || gz > H - 2) return null;
     if (!ed.mask(Math.round(gz) * W + Math.round(gx))) return null;
-    if (!free(hash, cell, gx, gz, v('plSpacing'))) return null;
+    // One at a time: you pick the spot, so only an object right on top (0.3 m) blocks it.
+    if (!free(hash, cell, gx, gz, $('plSingle').checked ? 0.3 : v('plSpacing'))) return null;
     const y = heightAt(gx, gz);
     if (y < ed.WATER - 0.3 && !underwaterOk(names)) return null;  // not under water
     const smin = v('plSmin') / 100, smax = Math.max(smin, v('plSmax') / 100), tilt = v('plTilt');
     return { name: names[Math.floor(d.t * names.length) % names.length], x: ed.originX + gx, y: y - 0.05, z: ed.originZ + gz,
-      rx: d.rx * tilt, ry: d.ry * 360, rz: d.rz * tilt, scale: smin + d.s * (smax - smin), gx, gz };
+      rx: d.rx * tilt, ry: ($('plRandomYaw').checked ? d.ry * 360 : 0) + rotation(), rz: d.rz * tilt, scale: smin + d.s * (smax - smin), gx, gz };
   }
   const draw = () => ({ t: Math.random(), rx: Math.random() * 2 - 1, ry: Math.random(), rz: Math.random() * 2 - 1, s: Math.random() });
 
@@ -128,11 +136,12 @@ export function createPlant(ed) {
   const ghostMat = new Map(); // material -> see-through copy
   const m4 = new THREE.Matrix4();
   (ed.onObjectsChanged ??= []).push(() => { hashStale = true; });
-  function settingsKey() { return [ed.radius, v('plDensity'), v('plSpacing'), [...chosen].join(',')].join('|'); }
+  function settingsKey() { return [ed.radius, v('plDensity'), v('plSpacing'), $('plSingle').checked, [...chosen].join(',')].join('|'); }
   function makePattern() {
     const r = ed.radius, spacing = v('plSpacing');
     const n = Math.min(400, Math.round(v('plDensity') / 100 * Math.PI * r * r));
     pattern = [];
+    if ($('plSingle').checked) { pattern.push({ dx: 0, dz: 0, d: draw() }); patternKey = settingsKey(); return; }
     // Dart throwing: random points in the disc, at least the spacing apart.
     for (let tries = 0; pattern.length < n && tries < n * 30; tries++) {
       const a = Math.random() * Math.PI * 2, d = Math.sqrt(Math.random()) * r;
@@ -172,8 +181,10 @@ export function createPlant(ed) {
     const cell = Math.max(1, v('plSpacing'));
     if (hashStale || cell !== hashCell) { hash = buildHash(cell); hashCell = cell; hashStale = false; }
     const names = [...chosen], local = new Map(), placed = [];
+    // Turn the layout with the rotation (clockwise from above, like the objects' facing).
+    const t = rotation() * Math.PI / 180, c = Math.cos(t), sn = Math.sin(t);
     for (const p of pattern) {
-      const o = placementAt(at.gx + p.dx, at.gz + p.dz, p.d, names, hash, cell);
+      const o = placementAt(at.gx + p.dx * c + p.dz * sn, at.gz - p.dx * sn + p.dz * c, p.d, names, hash, cell);
       if (o) placed.push(o);
     }
     preview = placed;
@@ -197,7 +208,7 @@ export function createPlant(ed) {
     if (ed.tool !== 'plant') return;
     if (!chosen.size) { $('plPreview').textContent = 'Tick at least one kind to plant.'; return; }
     if (held.shift) { $('plPreview').textContent = 'Shift: drag to remove the chosen kinds under the brush.'; return; }
-    $('plPreview').innerHTML = at ? `<b>${preview.length}</b> object(s) shown under the cursor. Click places exactly these; drag paints more. <kbd>R</kbd> new layout.` : 'Move over the ground to see what a click would place.';
+    $('plPreview').innerHTML = at ? `<b>${preview.length}</b> object(s) shown under the cursor. Click places exactly these; drag paints more. <kbd>R</kbd> new layout · <kbd>Alt</kbd>+wheel or <kbd>,</kbd> <kbd>.</kbd> rotate.` : 'Move over the ground to see what a click would place.';
   }
   const held = { shift: false };
   addEventListener('keydown', e => { if (e.key === 'Shift' && !held.shift) { held.shift = true; updatePreview(); } });
@@ -274,9 +285,23 @@ export function createPlant(ed) {
     },
     key(e) {
       if (e.key.toLowerCase() === 'r' && !e.ctrlKey) { makePattern(); updatePreview(); return true; }
+      if (e.key === ',' || e.key === '<' || e.key === '.' || e.key === '>') { turn((e.key === ',' || e.key === '<' ? -1 : 1) * (e.shiftKey ? 5 : 15)); return true; }
       return false;
     }
   };
+  function turn(deg) {
+    let r = v('plRot') + deg;
+    r = ((r + 180) % 360 + 360) % 360 - 180;
+    $('plRot').value = r; syncLabels(); updatePreview();
+  }
+  $('plNewLayout').onclick = () => { makePattern(); updatePreview(); };
+  ['plRot', 'plRandomYaw', 'plSingle'].forEach(id => $(id).addEventListener('input', () => updatePreview()));
+  // Alt + mouse wheel turns the preview instead of zooming.
+  ed.el.addEventListener('wheel', e => {
+    if (ed.tool !== 'plant' || !e.altKey) return;
+    e.preventDefault(); e.stopImmediatePropagation();
+    turn(Math.sign(e.deltaY) * (e.shiftKey ? 5 : 15));
+  }, { capture: true, passive: false });
   ed.frame ??= [];
   ed.frame.push(step);
 }

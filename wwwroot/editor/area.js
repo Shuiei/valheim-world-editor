@@ -170,7 +170,7 @@ export function createArea(ed) {
     for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) area += (poly[j].gx + poly[i].gx) * (poly[j].gz - poly[i].gz);
     // Kinds hidden in View (spoilers) are not counted or listed.
     const shown = k => (k === 'buildings' ? ed.buildings : ed.objectGroups[k]).visible;
-    const inObjs = objectsInside(poly).filter(r => shown(r.kind)), byKind = {}, byName = {};
+    const inObjs = objectsInside(poly).filter(r => r.added || shown(r.kind)), byKind = {}, byName = {};
     for (const r of inObjs) { byKind[r.kind] = (byKind[r.kind] ?? 0) + 1; byName[r.name] = (byName[r.name] ?? 0) + 1; }
     $('aInfo').textContent = `${Math.abs(area / 2).toFixed(0)} m² selected · ${inObjs.length} shown object(s) inside. Click outside to start a new selection.`;
     $('aKinds').innerHTML = KINDS.map(k => `<button data-k="${k}" class="${kindOn.has(k) ? 'on' : ''}">${KIND_LABEL[k]}<span class="n">${shown(k) ? byKind[k] ?? 0 : 'hidden'}</span></button>`).join('');
@@ -243,7 +243,7 @@ export function createArea(ed) {
   function pickedObjects() {
     const poly = polygon(); if (!poly) { ed.msg('Select an area first.', true); return null; }
     const shown = k => (k === 'buildings' ? ed.buildings : ed.objectGroups[k]).visible;
-    return objectsInside(poly).filter(r => kindOn.has(r.kind) && shown(r.kind) && ed.mask(Math.round(toGrid(r.x, r.z).gz) * W + Math.round(toGrid(r.x, r.z).gx)));
+    return objectsInside(poly).filter(r => kindOn.has(r.kind) && (r.added || shown(r.kind)) && ed.mask(Math.round(toGrid(r.x, r.z).gz) * W + Math.round(toGrid(r.x, r.z).gx)));
   }
   $('aRemove').onclick = () => {
     const list = pickedObjects(); if (!list) return;
