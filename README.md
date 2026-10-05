@@ -1,5 +1,7 @@
 # Valheim World Editor
 
+[![CircleCI](https://dl.circleci.com/status-badge/img/gh/Shuiei/valheim-world-editor/tree/main.svg?style=svg)](https://dl.circleci.com/status-badge/redirect/gh/Shuiei/valheim-world-editor/tree/main)
+
 ![The 3D editor showing a base, with the tool rail, tool panel and View panel](docs/images/overview.jpg)
 
 ## What is this?
