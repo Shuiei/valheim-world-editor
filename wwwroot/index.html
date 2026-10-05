@@ -53,23 +53,23 @@
   <div class="hint">Drag to pan, scroll to zoom. Click any spot to open it in the 3D editor; edited zones also show their details.</div>
   <div id="liveBox" class="changes live" hidden>
     <div id="liveText">Live world</div>
-    <div class="row"><button id="liveReload">Reload from the game</button></div>
+    <div class="row"><button id="liveReload" title="Load the world again from the running game">Reload from the game</button></div>
   </div>
   <div id="changes" class="changes" hidden>
     <div id="changesText"></div>
-    <div class="row"><button id="saveBtn" class="primary">Save to world…</button><button id="discardBtn">Discard</button></div>
+    <div class="row"><button id="saveBtn" class="primary" title="Write every pending change into the world files (a backup of the world folder is made first)">Save to world…</button><button id="discardBtn" title="Throw away every change that is not saved yet">Discard</button></div>
   </div>
   <div class="toggles">
-    <label><input type="checkbox" id="showBuildings" checked> Show buildings (player-built pieces)</label>
-    <label><input type="checkbox" id="showEdited" checked> Outline edited zones</label>
-    <label><input type="checkbox" id="showPaint" checked> Show painted ground (dirt, paved, fields) when zoomed in</label>
-    <label><input type="checkbox" id="showGrid"> Zone grid</label>
-    <label><input type="checkbox" id="showClouds"> Clouds (as in game)</label>
+    <label title="Draw the footprint of every player-built piece on the map"><input type="checkbox" id="showBuildings" checked> Show buildings (player-built pieces)</label>
+    <label title="Outline the zones whose ground was edited (in game or in the editor)"><input type="checkbox" id="showEdited" checked> Outline edited zones</label>
+    <label title="When zoomed in, draw dirt, paved and cultivated ground"><input type="checkbox" id="showPaint" checked> Show painted ground (dirt, paved, fields) when zoomed in</label>
+    <label title="Draw the 64 m zone grid"><input type="checkbox" id="showGrid"> Zone grid</label>
+    <label title="Draw the drifting cloud shadows of the in-game map"><input type="checkbox" id="showClouds"> Clouds (as in game)</label>
   </div>
   <div id="pick" hidden>
     <h2 id="pickTitle"></h2>
-    <div class="edit"><a id="editLink" href="#">Edit in 3D</a>
-      <select id="editSize"><option value="3">3 × 3 zones (192 m)</option><option value="5">5 × 5 zones (320 m)</option><option value="7">7 × 7 zones (448 m)</option></select></div>
+    <div class="edit"><a id="editLink" href="#" title="Open this spot in the 3D editor">Edit in 3D</a>
+      <select id="editSize" title="How much ground the 3D editor loads around the spot (bigger is slower)"><option value="3">3 × 3 zones (192 m)</option><option value="5">5 × 5 zones (320 m)</option><option value="7">7 × 7 zones (448 m)</option></select></div>
   </div>
   <div class="detail" id="detail" hidden>
     <h2 id="detailTitle">Zone</h2>
