@@ -18,12 +18,13 @@ opens a Valheim world in its own window, drawn with the game's own terrain, text
 - **Measure** distances and slopes, and see the ground coloured by steepness.
 - **Undo anything**, with a history panel that can roll back to any point or remove one change.
 
-It works in two ways:
+There are three ways to edit, all on the start page:
 
-| Mode | What it edits | When to use it |
+| Way | What it edits | Needs |
 |---|---|---|
-| **Offline** | A world save on disk (single player world, or a server's world folder). | The game or server is stopped. Changes are written as a new save, with a full backup first. |
-| **Online (live)** | The world of a running game or dedicated server, through the WorldEditorBridge plugin. | Players can stay connected; they see your changes as soon as you apply them. |
+| **My game** (live) | The world you are playing in: single player, or the one you host. You see the changes in game right away. | BepInEx and the WorldEditorBridge plugin in your Valheim. |
+| **A dedicated server** (live) | Your server's world while people play. The editor logs in to the server and makes its own tunnel. | BepInEx and the plugin on the server, and an SSH login to it. |
+| **A saved world** (offline) | World files on this computer, with the game closed. Saved as a new save, with a full backup first. | Nothing. |
 
 It is a single program for Windows and Linux: download, unpack, double-click. Everything runs on
 your own computer; nothing is sent anywhere else.
@@ -36,14 +37,11 @@ your own computer; nothing is sent anywhere else.
 - **Valheim** installed through Steam on the same computer, for the game's look. The editor finds it
   by itself and copies the textures and models it needs from it, once. Without it the editor still
   works, with plain colours and no object models.
-- A world in the current save format (a world folder with `_main.<n>.chunks` and `*.chunk` files).
-  Worlds in the old single-file format are listed but greyed out: load them in Valheim once and
-  they are converted.
-- For **live mode** only: **BepInEx** on the server (or the game) that hosts the world, using
-  [BepInExPack for Valheim](https://thunderstore.io/c/valheim/p/denikson/BepInExPack_Valheim/),
-  plus the WorldEditorBridge plugin. Offline editing does not need BepInEx.
+- For the **live** ways: **BepInEx** in the game that hosts the world (your Valheim, or the
+  server), using [BepInExPack for Valheim](https://thunderstore.io/c/valheim/p/denikson/BepInExPack_Valheim/),
+  plus the WorldEditorBridge plugin that comes with the editor. Players who join need neither.
 
-Nothing else: no Python, no .NET, no browser setup. Everything the editor needs comes in the
+Nothing else: no Python, no .NET, no `ssh` command. Everything the editor needs comes in the
 download. Its window uses the web engine of the system: Microsoft Edge WebView2 on Windows (part of
 Windows 11 and of an up-to-date Windows 10) and WebKitGTK on Linux (installed with most desktops).
 Without it, the editor opens in your web browser instead.
@@ -53,66 +51,74 @@ Without it, the editor opens in your web browser instead.
 1. Download `ValheimWorldEditor-<version>-win-x64.zip` (Windows) or
    `ValheimWorldEditor-<version>-linux-x64.tar.gz` (Linux) from the
    [Releases](https://github.com/Shuiei/valheim-world-editor/releases) page.
-2. Unpack it anywhere (Desktop, Documents…).
+2. Unpack it anywhere (Desktop, Documents…). It holds the editor, its `README.txt`, and a `plugin`
+   folder with `WorldEditorBridge.dll` and its own `README.txt`.
 3. Double-click **ValheimWorldEditor** (`ValheimWorldEditor.exe` on Windows). It opens in its own
-   window.
+   window, on the start page. (Windows may say "Windows protected your PC" the first time: the
+   program is not signed. Click "More info", then "Run anyway".)
 
-![The start page](docs/images/start.jpg)
+![The start page](docs/images/start-game.jpg)
 
-The first time, a bar at the top of the start page shows the editor copying the game's look from
-your Valheim install (a few minutes, about 150 MB). You can already open a world meanwhile; the look
-switches on when the copy is done. After a Valheim update it is copied again by itself. If Valheim is
-not found, the bar asks for its folder (the one Steam installed it into, with `valheim_Data`).
+The first time, a bar at the top shows the editor copying the game's look from your Valheim install
+(a few minutes, about 150 MB); you can already start editing meanwhile. After a Valheim update it is
+copied again by itself. If Valheim is not found, the bar asks for its folder (the one Steam installed
+it into, with `valheim_Data`).
 
-### Edit a world saved on disk (offline)
+### My game (live)
+
+1. **Install BepInEx** in your Valheim, once: [BepInExPack for Valheim](https://thunderstore.io/c/valheim/p/denikson/BepInExPack_Valheim/),
+   either with a mod manager (r2modman, Thunderstore Mod Manager) or by hand into the Valheim folder,
+   following its page.
+2. **Add the plugin:** copy `plugin/WorldEditorBridge.dll` from the editor's folder into
+   `BepInEx/plugins` of your Valheim (or of your mod manager profile).
+3. **Start Valheim** with BepInEx and load your world (single player, or start a server from the
+   game to host it).
+4. On the start page, **My game** shows "Valheim is running with the world …": click **Edit live**.
+   On your own computer it finds the plugin and its token by itself, also in mod manager profiles.
+
+Edit, then **Apply live** (or switch on **Auto** to apply every change right away): you see it in
+game at once, and the game saves it as usual.
+
+### A dedicated server (live)
+
+![Connecting to a server](docs/images/start-server.jpg)
+
+1. **On the server, once:** install BepInEx (BepInExPack for Valheim, following its instructions
+   for dedicated servers), copy `plugin/WorldEditorBridge.dll` into its `BepInEx/plugins`, and
+   restart it. See `plugin/README.txt` in the download.
+2. On the start page, **A dedicated server**: enter the server's address, the user you log in to it
+   with (SSH), the password or an SSH key file, and the **plugin token**: the `Token` line of
+   `BepInEx/config/local.worldeditorbridge.cfg` on the server. Tick **Save password** to not type the
+   password again.
+3. **Connect.** The editor logs in, opens its own encrypted tunnel to the plugin and loads the
+   world. The plugin only listens on the server itself, so it is never exposed to the internet.
+4. The server is then **saved** in the list, with its token: next time it is one click.
+
+If something is wrong, the editor says what: login refused, no answer, wrong token, plugin not
+running on the server, or a server whose identity changed since last time (it refuses to connect
+then). Already
+have your own tunnel (`ssh -L`, PuTTY)? Use **More options → I made my own tunnel**. More in
+[docs/live-mode.md](docs/live-mode.md).
+
+### A saved world (offline)
+
+![Saved worlds](docs/images/start-offline.jpg)
 
 1. **Close Valheim, or stop the server** that uses the world. A running game saves over the files
    the editor writes.
-2. On the start page, click the world. Worlds in Valheim's usual folders are listed by themselves;
-   for another one (a dedicated server's world, a copy), use **Another world folder** with
-   **Browse…** or by typing the folder (`<savedir>/worlds_local/<World>` for a server).
-3. The [world map](docs/map.md) opens: click a spot and choose **Edit in 3D**.
-4. Edit, then press **Save to world**. The editor first copies the whole world folder to
-   `<World>_backup_terraineditor-<date>`, then writes your changes as the next save number and reads
-   them back to check them. Start the game or server again to see the result.
+2. On the start page, **A saved world**: click the world. Worlds in Valheim's usual folders are listed
+   by themselves; for another one (a copy of a server's world, for example) use **Another world
+   folder** with **Browse…** or by typing it (`<savedir>/worlds_local/<World>` for a server).
+3. Edit, then **Save to world**. The editor first copies the whole world folder to
+   `<World>_backup_terraineditor-<date>`, then writes your changes as the next save and reads them
+   back to check them. Start the game or server again to see the result.
 
-**Worlds** (on the map page) goes back to the start page to open another world.
-
-### Edit a running server (live)
-
-Players can stay connected while you edit; they see the changes as soon as you apply them, and the
-game saves them as usual.
-
-1. **Install BepInEx** on the server if it does not have it yet:
-   [BepInExPack for Valheim](https://thunderstore.io/c/valheim/p/denikson/BepInExPack_Valheim/)
-   (follow its instructions for dedicated servers, including how to start the server with
-   BepInEx). Start the server once so BepInEx creates its `plugins` and `config` folders.
-2. **Install the plugin.** Download `WorldEditorBridge.dll` from the
-   [Releases](https://github.com/Shuiei/valheim-world-editor/releases) page, copy it into the
-   server's `BepInEx/plugins/` folder and restart the server.
-3. **Get the token.** On its first start the plugin writes
-   `BepInEx/config/local.worldeditorbridge.cfg` with a random `Token`. Keep it secret: anyone with the
-   token and access to the port can change the world.
-4. **Open a tunnel** from your computer to the server. The plugin only listens on the server
-   itself (`127.0.0.1`), so it is never exposed to the internet:
-
-   ```sh
-   ssh -N -L 5182:127.0.0.1:5182 user@your-server
-   ```
-
-   On Windows 10/11 the same command works in PowerShell or the Command Prompt (if `ssh` is not
-   recognized, add "OpenSSH Client" in Settings → System → Optional features). With PuTTY: Connection →
-   SSH → Tunnels, source port `5182`, destination `127.0.0.1:5182`. When the game runs on your own
-   computer (single player, or host and play), skip this step.
-5. On the start page, under **A running server (live)**, enter `127.0.0.1:5182` and the token, then
-   **Connect**. If the server cannot be reached, the editor says why within 10 seconds.
-
-A green **LIVE** badge shows in the top bar. Edit as usual, then press **Apply live** (or switch on
-**Auto** to apply every change right away). More in [docs/live-mode.md](docs/live-mode.md).
+In every way, the [world map](docs/map.md) opens first: click a spot and choose **Edit in 3D**.
+**Worlds** (on the map page) goes back to the start page.
 
 ### Where things are kept
 
-Settings, the copied game files and a log are in `~/.local/share/ValheimWorldEditor` (Linux) or
+Settings, saved servers (`servers.cfg`), the copied game files and a log are in `~/.local/share/ValheimWorldEditor` (Linux) or
 `%LOCALAPPDATA%\ValheimWorldEditor` (Windows). The bottom of the start page shows the folder.
 
 ### Command line (optional)
