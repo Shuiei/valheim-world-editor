@@ -1,0 +1,111 @@
+# Changelog
+
+All notable changes to the Valheim world editor. Dates are when the change was made; the project
+has no version numbers yet. Newest first.
+
+## 2026-10-05 — Placing, selecting and moving
+
+### Added
+- **Hover help on every control**: each slider, switch, button and list in the editor and on the map
+  explains exactly what it does; tool buttons also show what their tool does.
+- **Documentation**: a README with installation for offline and live mode, a page per feature in
+  `docs/` with screenshots, and this changelog.
+- **Select inside a zone.** In the Select tool, drag on empty ground (or Alt + drag anywhere, for
+  forests) to draw a zone; everything shown inside it is selected. Shift adds to the selection.
+- **Place any game object.** The editor now knows every network object in the game (about 1,500
+  placeable kinds), so you can plant or place things the world has none of yet, such as turnips.
+  Such objects are created exactly like the game creates a freshly placed one.
+- **Leave saplings room to grow** (Plant tool, on by default). Saplings and crops are never placed
+  closer than their in-game grow radius to anything; the panel also reminds you when a crop needs
+  cultivated ground.
+- **Drop to surface** (Select tool, `End`): drops the selection onto the object below it, or onto the
+  ground when there is none.
+- **Move arrows** (Select tool): red X, green Y, blue Z arrows at the selection; drag one to move along
+  that axis only, Ctrl snaps to 0.5 m.
+- **Plant: Line, Grid and Zone modes.** Place objects every N metres along a drawn line (optionally
+  smoothed, facing along it, with sideways wiggle), one per cell of a dragged box, or fill a freely
+  drawn zone by scatter or by an orderly grid. Zones and grids can be turned as a whole.
+- **Foldable View panel.** Click a section title (Look, Nature, Spoilers, Overlays) to fold it; Look
+  starts folded and your choice is remembered.
+
+### Changed
+- **Rotation in 1° steps everywhere** (`,` `.` and Alt+wheel), 15° with Shift: Select, Plant brush,
+  Plant zones/grids and Paste. Paste can now be turned to any angle, not only quarter turns.
+- **Flatten levels to the height where the stroke starts**, instead of a fixed 35 m that made it dig
+  like Lower on higher ground. A fixed height is still available (untick the option, or Alt + click).
+- **The Mask judges the ground as it was when the stroke started**, so raising past the mask's height
+  limit or changing the slope no longer stops a stroke half-way. Settings that let nothing through
+  (like a 0° maximum slope) are flagged, and an empty stroke says the Mask left everything out.
+- Placing a kind whose View switch is off now switches it on, so what you placed stays visible after
+  a reload.
+- The move arrows are smaller and leave the object's middle free for a free drag.
+- The editor tells the browser to revalidate its page files on every load, so an update is used
+  right away instead of an older cached copy.
+
+### Fixed
+- Pressing a second key (End, PgUp, turn) right after a move acted on the hidden original instead of
+  the moved copy.
+
+## 2026-10-05 — History, discard and live objects
+
+### Added
+- **History panel** (`L`): every change with its time; "Back to here" rolls back to any point, and
+  "Remove" takes out a single change while keeping everything done after it.
+- **Move, turn, lift, copy and paste selected objects** in the Select tool (drag, `,` `.`, PgUp/PgDn,
+  Ctrl+C / Ctrl+V).
+- **Plant preview**: see-through "ghosts" show exactly what a click will place, for every kind; `R`
+  rolls a new layout, Alt+wheel turns it; single placement mode; categories fold.
+- **Objects live** (WorldEditorBridge 0.3.0): deleted, planted, pasted and replaced objects are
+  applied to the running game; undo works after applying.
+- **Ground live** (WorldEditorBridge 0.2.0): "Apply live" and "Auto" send ground edits to the game.
+- **Live mode** (WorldEditorBridge plugin): the editor can open the running world of a server,
+  with its players, instead of a save on disk.
+
+### Changed
+- Copies, plants and pastes create **fresh, independent objects**: a copied chest is an empty chest;
+  moving an object keeps all of its data.
+- **Discard** undoes only the changes that are not saved or applied yet, in place, without reloading
+  the page (tool, view and zoom are kept).
+- The pending counter only counts zones that really differ from their saved state, so undoing back
+  to the start clears it.
+- Objects you placed but have not saved yet are always drawn (with a green marker), whatever the
+  View switches say.
+
+### Fixed
+- Raspberry bush leaves disappearing in the plant preview and with see-through buildings.
+- The brush ring and other moving overlays disappearing when zoomed in close.
+- A few kinds (Bush01, shrub_2 and others) drawn as boxes because the wrong model was matched.
+
+## 2026-10-05 — World-editor tools
+
+### Added
+- **Masks** for brushes, paths, area actions and planting: by biome, height range, slope range and
+  paint.
+- **Area tool** (`B`): box or polygon selection; flatten, raise, lower, smooth, naturalize, restore or
+  paint the ground inside; remove, select or replace objects inside; copy and paste ground and
+  objects (turn and mirror); reset zones so the game generates them again.
+- **Plant tool** (`T`): paint trees, rocks, bushes and more onto the ground with density and spacing;
+  Shift + drag removes the chosen kinds.
+- **Measure tool** (`M`): distance, height difference and slope between two points; slope colours
+  and height lines in View.
+- **Delete objects** (Select tool, `Del`), and a reworked interface: top bar, tool rail, tool panel
+  and View panel.
+
+## 2026-10-05 — In-game look
+
+### Added
+- The 3D editor draws the world like the game: the game's own terrain shader and textures, water
+  and sky, real models for buildings, trees, rocks and bushes, and show/hide switches per kind
+  (spoilers such as ore and ruins are off by default).
+
+## 2026-10-04 — First versions
+
+### Added
+- **World map** in the browser, drawn with the game's own map shader, with player buildings, painted
+  ground and edited zones.
+- **Base terrain from the seed**: a port of Valheim's world generator that matches the game bit for bit.
+- **3D terrain editor** with brushes (Raise, Lower, Flatten, Smooth, Naturalize, Restore), ground
+  paint (Dirt, Cultivate, Paved, Clear), the Path tool, undo/redo, and the game's ±8 m limit.
+- **Saving back to the world**: a new save number with a full backup and a read-back check.
+- **CrossplayJoinCodeFix** (separate plugin, own repository): keeps a crossplay server from appearing
+  offline when PlayFab answers the join-code check incompletely.
