@@ -1037,10 +1037,11 @@ Promise.all([
   fetch(`/api/objects?x0=${X0}&z0=${Z0}&x1=${X1}&z1=${Z1}`).then(r => r.json()),
   fetch('./models/objects.json').then(r => r.ok ? r.json() : {}).catch(() => ({})),
   fetch('/api/piece-types').then(r => r.json()).catch(() => []),
-  fetch('/api/templates').then(r => r.json()).catch(() => [])
-]).then(async ([objs, names, pieceTypes, templates]) => {
+  fetch('/api/templates').then(r => r.json()).catch(() => []),
+  fetch('/api/extra-names').then(r => r.json()).catch(() => [])
+]).then(async ([objs, names, pieceTypes, templates, extraNames]) => {
   const all = { ...names };
-  for (const n of pieceTypes) all[stableHash(n)] ??= n;
+  for (const n of [...pieceTypes, ...extraNames]) all[stableHash(n)] ??= n;
   if (!$('gameLook').checked) { for (const el of document.querySelectorAll('[data-count]')) el.textContent = ''; return; }
   const counts = await objects.load(objs, all, new Set(pieceTypes), templates);
   for (const el of document.querySelectorAll('[data-count]')) el.textContent = `(${counts[el.dataset.count] ?? 0})`;

@@ -479,13 +479,20 @@ app.MapPost("/api/zones/clean", (int[][] zones) =>
 // New objects placed in the editor (plant brush, paste, replace). Ids are negative and chosen by the browser.
 app.MapPost("/api/objects/add", (List<NewObjectUpload> list) =>
 {
-	var known = list.Where(o => world.Templates.ContainsKey(o.Prefab)).ToList();
+	var known = list.Where(o => world.CanCreate(o.Prefab)).ToList();
 	edits.AddObjects(known.Select(o => new TerrainEditor.Editing.NewObject(o.Id, o.Prefab, new System.Numerics.Vector3(o.X, o.Y, o.Z), new System.Numerics.Vector3(o.Rx, o.Ry, o.Rz), o.Scale, o.SourceId, o.Fresh ?? true)));
 	return Results.Ok(new { accepted = known.Count, rejected = list.Count - known.Count, pending = Pending() });
 });
 
-// Prefabs that have at least one object in the world to copy, so new ones can be created.
-app.MapGet("/api/templates", () => world.Templates.Keys);
+// Prefabs that can be created: an object of the kind (or a stand-in of its family) is in the world.
+app.MapGet("/api/templates", () => world.Creatable);
+
+// Names of every placeable game prefab, so the browser can offer kinds the world has none of yet.
+app.MapGet("/api/extra-names", () => TerrainEditor.Terrain.PrefabCatalog.Placeable.Select(p => p.Name));
+
+// Saplings and crops: name -> [grow radius (m), needs cultivated ground (0/1)].
+app.MapGet("/api/grow", () => TerrainEditor.Terrain.PrefabCatalog.Placeable.Where(p => p.GrowRadius > 0)
+	.ToDictionary(p => p.Name, p => new[] { p.GrowRadius, p.NeedsCultivated ? 1f : 0f }));
 
 // Hand zones back to the world generator on save (undo = false), or cancel that (undo = true).
 app.MapPost("/api/reset-zones", (ResetRequest req) =>
