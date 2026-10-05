@@ -161,5 +161,8 @@ export function createObjects(ed) {
     return out.sort((a, b) => a.name.localeCompare(b.name));
   }
 
-  return { records, load, add, flush, counts, addPieceRecord, markDeleted, alive, creatableTypes, state, stableHash };
+  // Placement matrix (three.js space) of a record-like { x, y, z, rx, ry, rz, scale }, for previews.
+  const matrixFor = (r, rootScale, out) => out.copy(placement(r, rootScale));
+
+  return { records, load, add, flush, counts, addPieceRecord, markDeleted, alive, creatableTypes, state, stableHash, matrixFor };
 }
