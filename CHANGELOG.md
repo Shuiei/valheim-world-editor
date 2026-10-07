@@ -36,6 +36,8 @@ version number. Newest first.
   and import a picture back into the selection or the whole area, between chosen heights.
 - **Erode** (sculpt tool `O`, and an Area action): thermal erosion settles slopes to a rest angle,
   water erosion cuts gullies and fills hollows.
+- **Shape** (tool `G`, like WorldEdit's `//generate`): one click puts a mound, cone, mesa, crater,
+  moat, bowl or ridged hill into the ground, or any shape written as a formula.
 
 ### Fixed
 - A zone reset also removed players' tombstones, with what they carried: they are always kept now.

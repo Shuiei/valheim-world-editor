@@ -103,3 +103,29 @@ what grows there; it does not change its height.
   around them while the game runs. The warning box in the tool panel counts them; the editor already
   shows the ground with that flattening.
 - **Status bar.** It shows the ground height under the cursor, its original height, and the change.
+
+## Shape (`G`)
+
+Like WorldEdit's `//generate`: a click puts a whole shape into the ground, centred where you click.
+The yellow circle shows its radius.
+
+| Control | What it does |
+|---|---|
+| **Shape** | **Mound**, **Cone**, **Mesa** (flat top), **Crater** (a hollow with a rim), **Moat** (a ring ditch), **Bowl**, **Ridged hill**, or **Formula…** for your own. Each preset is a formula, shown below, that you can change. |
+| **Radius** | Size of the shape (m). Only the ground within it changes. |
+| **Height** | How high it rises, or how deep craters, moats and bowls dig (m). It is `h` in the formula. |
+| **Formula** | How many metres to add to the ground at each point; negative digs. |
+
+In the formula:
+
+| Name | Meaning |
+|---|---|
+| `x`, `z` | Metres east and north of the click. |
+| `d`, `r`, `h` | Distance from the click, the radius, the height. |
+| `n(x, z)` | Smooth noise from -1 to 1 (use `n(x / 10, z / 10)` for wide bumps). |
+| Functions | `smooth(t)` (0 below 0, 1 above 1, smooth between), `bell(t)` (1 at 0, fading out by ±1), `sin`, `cos`, `tan`, `abs`, `sqrt`, `min`, `max`, `pow`, `clamp(v, a, b)`, `exp`, `log`, `floor`, `ceil`, `round`, `sign`, `atan2`, `pi`. |
+| Operators | `+ - * / % ^`, comparisons `< > <= >= == !=` (1 or 0), `&&`, `||`, `!`, and `a ? b : c`. |
+
+For example `h * smooth(1 - d / r) * (1 + 0.3 * n(x / 8, z / 8))` is a bumpy hill, and
+`abs(x) < 3 ? -h : 0` digs a 6 m wide trench through the circle. A mistake in the formula is shown
+under it. The Mask and the ±8 m limit apply; one click is one undo step.
