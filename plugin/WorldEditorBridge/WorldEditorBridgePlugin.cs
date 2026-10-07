@@ -24,6 +24,8 @@ namespace WorldEditorBridge;
 //                   (TerrainComp.Save format); every player's game reloads those zones' ground
 //   POST /objects   int n + n x (long user, uint id) objects to destroy, then int m + m x (int length +
 //                   object in save format) objects to create; answers with the new objects' ids
+//   POST /zones/reset  int n + n x (int x, int z, bool keep buildings, bool reset ground): the zones'
+//                   objects are removed and the zones are generated again (at once where players are)
 // Game objects are only read on Unity's main thread; the HTTP thread waits for the answer.
 [BepInPlugin(Guid, "WorldEditorBridge", Version)]
 public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
@@ -220,6 +222,17 @@ public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
 				Reply(res, 200, "application/json", OnMainThread(() => ApplyObjects(body)));
 				break;
 			}
+			case "/zones/reset":
+			{
+				if (ctx.Request.HttpMethod != "POST")
+				{
+					Reply(res, 405, "text/plain", Encoding.UTF8.GetBytes("POST only"));
+					break;
+				}
+				byte[] body = ReadAll(ctx.Request.InputStream);
+				Reply(res, 200, "application/json", OnMainThread(() => ResetZones(body)));
+				break;
+			}
 			case "/snapshot":
 			{
 				byte[] raw = OnMainThread(Snapshot, 120000);
@@ -330,6 +343,57 @@ public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
 		}
 		Logger.LogInfo($"WorldEditorBridge: destroyed {destroyed} object(s) ({missing} already gone), created {createCount}");
 		return Encoding.UTF8.GetBytes($"{{\"destroyed\":{destroyed},\"missing\":{missing},\"created\":[{ids}]}}");
+	}
+
+	private static readonly int TombstonePrefab = "Player_tombstone".GetStableHashCode();
+
+	// Like the editor's offline reset: every saved object of the zones goes (player-built pieces stay when
+	// asked, the ground edits only when asked, players' tombstones always stay), the zones are no longer
+	// marked as generated and their locations as not placed, so the game builds them again.
+	private byte[] ResetZones(byte[] body)
+	{
+		ZPackage pkg = new(body);
+		int count = pkg.ReadInt();
+		Dictionary<Vector2s, (bool Keep, bool Ground)> zones = new();
+		for (int i = 0; i < count; i++)
+		{
+			Vector2s key = new((short)pkg.ReadInt(), (short)pkg.ReadInt());
+			zones[key] = (pkg.ReadBool(), pkg.ReadBool());
+		}
+		var dict = (Dictionary<ZDOID, ZDO>)ObjectsById.GetValue(ZDOMan.instance);
+		long session = ZDOMan.GetSessionID();
+		int destroyed = 0;
+		foreach (ZDO zdo in new List<ZDO>(dict.Values))
+		{
+			if (!zdo.Persistent || !zones.TryGetValue(ZoneSystem.GetZone(zdo.GetPosition()), out var r))
+			{
+				continue;
+			}
+			int prefab = zdo.GetPrefab();
+			bool terrain = prefab == TerrainCompilerPrefab;
+			if (prefab == TombstonePrefab || (terrain && !r.Ground) || (!terrain && r.Keep && zdo.GetLong(ZDOVars.s_creator) != 0))
+			{
+				continue;
+			}
+			zdo.SetOwner(session);
+			ZDOMan.instance.DestroyZDO(zdo);
+			destroyed++;
+		}
+		ZoneSystem zs = ZoneSystem.instance;
+		var generated = (HashSet<Vector2s>)GeneratedZones.GetValue(zs);
+		int locations = 0;
+		foreach (Vector2s zone in zones.Keys)
+		{
+			generated.Remove(zone);
+			if (zs.m_locationInstances.TryGetValue(zone, out ZoneSystem.LocationInstance li) && li.m_placed)
+			{
+				li.m_placed = false;
+				zs.m_locationInstances[zone] = li;
+				locations++;
+			}
+		}
+		Logger.LogInfo($"WorldEditorBridge: reset {zones.Count} zone(s): {destroyed} object(s) removed, {locations} location(s) to place again");
+		return Encoding.UTF8.GetBytes($"{{\"zones\":{zones.Count},\"destroyed\":{destroyed},\"locations\":{locations}}}");
 	}
 
 	private static ZDO CreateFromSaveFormat(ZPackage p)

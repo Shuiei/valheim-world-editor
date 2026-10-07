@@ -23,6 +23,8 @@ public sealed class FakeBridge : IDisposable
 
 	public List<(long, uint)> Destroyed { get; } = new();
 
+	public List<(int X, int Z, bool Keep, bool Ground)> Resets { get; } = new();
+
 	private uint _next = 1000;
 
 	public FakeBridge()
@@ -72,6 +74,16 @@ public sealed class FakeBridge : IDisposable
 					ObjectCalls.Add((destroy, create));
 				}
 				body = $"{{\"destroyed\":{destroy},\"missing\":0,\"created\":[{string.Join(",", ids.Select(i => $"\"{i}\""))}]}}";
+			}
+			else if (status == 200 && ctx.Request.Url!.AbsolutePath == "/zones/reset")
+			{
+				using var r = new BinaryReader(ctx.Request.InputStream);
+				int n = r.ReadInt32();
+				for (int i = 0; i < n; i++)
+				{
+					Resets.Add((r.ReadInt32(), r.ReadInt32(), r.ReadBoolean(), r.ReadBoolean()));
+				}
+				body = $"{{\"zones\":{n},\"destroyed\":0,\"locations\":0}}";
 			}
 			byte[] bytes = Encoding.UTF8.GetBytes(body);
 			ctx.Response.StatusCode = status;
@@ -183,5 +195,15 @@ public class LiveTests
 		Assert.Equal((1, 1), bridge.ObjectCalls[1]);
 		Assert.Contains((77L, 1000u), bridge.Destroyed);
 		Assert.Equal((0, 0), sync.Pending(edits));
+	}
+
+	[Fact]
+	public async Task ZoneResetsAreSentToTheGame()
+	{
+		using var bridge = new FakeBridge();
+		var live = new LiveBridge($"http://127.0.0.1:{bridge.Port}", bridge.Token);
+		string reply = await live.ResetZones(new[] { new ZoneReset(3, -2, true, false), new ZoneReset(-7, 9, false, true) });
+		Assert.Contains("\"zones\":2", reply);
+		Assert.Equal(new[] { (3, -2, true, false), (-7, 9, false, true) }, bridge.Resets);
 	}
 }

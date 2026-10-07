@@ -43,6 +43,29 @@ pinned on the map in orange. Click one in the list to go there: the map centres 
 [data](select.md#inspecting-and-changing-an-objects-data) open). Objects deleted but not saved yet are
 not found; objects placed but not saved yet are.
 
+## Reset zones across the world
+
+Like Minecraft's MCA Selector: pick zones anywhere in the world by what they are, and have the game
+generate them again (new trees, ore, dungeons...), for example to get the new content of a Valheim
+update in places nobody has built.
+
+| Control | What it does |
+|---|---|
+| **Biome chips** | Only zones whose middle is in these biomes. None picked = every biome. |
+| **No buildings in the zone or within N zones** | Leaves out zones near player-built pieces. Zones that hold pieces are always left out: the map never resets buildings. |
+| **No ground edits** | Leaves out zones whose ground was edited (in game or in the editor). |
+| **Only zones the game generated** | Only zones a player has already visited (the game generated them). Off: also zones that only hold objects placed by the editor. |
+| **From the centre … to … m** | Only zones at this distance from the middle of the world. Empty = no limit. |
+| **Also undo their ground edits** | Resets the ground of the zones too (when No ground edits is off). |
+| **Show matching** | Colours the matching zones blue on the map and counts them and their objects. The filters update it as you change them. |
+| **Mark for reset…** | Marks every matching zone for reset (red), after asking. **Save to world** (or **Apply live**) does it, with a backup first offline. |
+| **Unmark all** | Cancels every zone reset that is marked, also those marked in the 3D editor. |
+
+A reset removes every object of the zone the game made (trees, rocks, ore, ruins, dungeon entrances)
+but never players' tombstones, and the game builds the zone again the next time a player comes near
+it. Only zones inside the world are listed: a dedicated server with nobody online also generates zones
+far outside the world, which are left out.
+
 ## Edited zones list
 
 The table lists every zone with ground edits: how many height points (`h`) and paint points (`p`)

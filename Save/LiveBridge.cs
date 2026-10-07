@@ -124,5 +124,34 @@ public sealed class LiveBridge(string url, string token)
 		return body;
 	}
 
+	// Zones to hand back to the world generator in the running game: int count, then per zone int x,
+	// int z, bool keep buildings, bool reset ground. Returns the plugin's JSON.
+	public async Task<string> ResetZones(IReadOnlyList<TerrainEditor.Editing.ZoneReset> zones)
+	{
+		using MemoryStream ms = new();
+		using (BinaryWriter w = new(ms, System.Text.Encoding.UTF8, leaveOpen: true))
+		{
+			w.Write(zones.Count);
+			foreach (var z in zones)
+			{
+				w.Write(z.X);
+				w.Write(z.Z);
+				w.Write(z.KeepBuildings);
+				w.Write(z.Ground);
+			}
+		}
+		using HttpRequestMessage req = new(HttpMethod.Post, "zones/reset") { Content = new ByteArrayContent(ms.ToArray()) };
+		req.Headers.Add("X-Bridge-Token", token);
+		HttpResponseMessage res = await _http.SendAsync(req);
+		string body = await res.Content.ReadAsStringAsync();
+		if (!res.IsSuccessStatusCode)
+		{
+			throw new InvalidOperationException(res.StatusCode == System.Net.HttpStatusCode.NotFound
+				? "the WorldEditorBridge plugin on the server is too old to reset zones live: update it"
+				: $"bridge zones/reset: {(int)res.StatusCode} {body}");
+		}
+		return body;
+	}
+
 	public async Task<WorldSave> LoadWorld() => WorldSave.LoadLive(await Snapshot(), "live: " + Url);
 }

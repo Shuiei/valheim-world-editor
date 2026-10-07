@@ -17,6 +17,8 @@ public static class WorldWriter
 {
 	private const int SaveFileVersion = 41;
 
+	public static readonly int TombstonePrefab = StableHash.Of("Player_tombstone");
+
 	public sealed record Result(bool Saved, string Message, string? BackupDirectory, int ZonesWritten, int ZonesCreated, List<string> Skipped, int ObjectsDeleted = 0, int ObjectsAdded = 0, int ZonesReset = 0);
 
 	// deleted: ids (WorldSave.ObjectRefs) of objects to leave out of the new save.
@@ -57,7 +59,8 @@ public static class WorldWriter
 		Dictionary<(int, int), ZoneReset> resetByZone = resets.ToDictionary(r => (r.X, r.Z));
 		foreach (ObjectRef o in world.ObjectRefs)
 		{
-			if (resetByZone.TryGetValue(o.Zone, out ZoneReset? r) && !(r.KeepBuildings && o.IsPiece) && !(o.IsTerrain && !r.Ground))
+			// Players' tombstones (with what they carried) are never cleared.
+			if (resetByZone.TryGetValue(o.Zone, out ZoneReset? r) && !(r.KeepBuildings && o.IsPiece) && !(o.IsTerrain && !r.Ground) && o.Prefab != TombstonePrefab)
 			{
 				Remove(o);
 			}
@@ -329,6 +332,11 @@ public static class WorldWriter
 	{
 		string trimmed = dir.TrimEnd(Path.DirectorySeparatorChar);
 		string backup = $"{trimmed}_backup_terraineditor-{DateTime.Now:yyyyMMdd-HHmmss}";
+		// Two saves in the same second each get their own backup.
+		for (int n = 2; Directory.Exists(backup); n++)
+		{
+			backup = $"{trimmed}_backup_terraineditor-{DateTime.Now:yyyyMMdd-HHmmss}-{n}";
+		}
 		Directory.CreateDirectory(backup);
 		foreach (string file in Directory.GetFiles(trimmed))
 		{

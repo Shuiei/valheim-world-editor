@@ -303,6 +303,7 @@ public static class EditorSession
 
 		BlueprintEndpoints.Map(app, () => world.Name, name => world.CanCreate(StableHash.Of(name)));
 		ObjectEndpoints.Map(app, () => world, edits, Pending);
+		app.MapGet("/api/zones/stats", () => new { stride = ZoneStats.Stride, data = ZoneStats.Compute(world, edits, (x, z) => (int)terrain.BiomeAt(x * 64f, z * 64f)), resets = edits.Resets.Select(r => new[] { r.X, r.Z }) });
 		app.MapGet("/api/search", (string q, string? what) => WorldSearch.Search(world, edits, q, what is "items" or "texts" ? what : "kinds"));
 
 		app.MapGet("/api/zone/{x:int}/{z:int}", (int x, int z) =>
@@ -457,7 +458,6 @@ public static class EditorSession
 			{
 				// Live mode: push the changed zones' terrain into the running game.
 				var changedZones = edits.All().Where(e => e.Changed).ToList();
-				string resetNote = edits.ResetCount > 0 ? " Zone resets are not applied live yet; they stay pending." : "";
 				try
 				{
 					List<string> done = new();
@@ -474,8 +474,26 @@ public static class EditorSession
 						Console.WriteLine($"Live: {objects}");
 						done.Add(objects);
 					}
+					// Zone resets last: the game regenerates them (at once where players are), so the world is
+					// read again from the game afterwards and the page reloads.
+					bool reloaded = false;
+					if (edits.ResetCount > 0)
+					{
+						var resets = edits.Resets;
+						string reply = await live.ResetZones(resets);
+						Console.WriteLine($"Live: reset {resets.Count} zone(s): {reply}");
+						done.Add($"{resets.Count} zone(s) reset");
+						WorldSave fresh = await live.LoadWorld();
+						lock (saveLock)
+						{
+							world = fresh;
+							edits.ResetFrom(world);
+							liveSync.Reset();
+						}
+						reloaded = true;
+					}
 					string message = done.Count > 0 ? $"Applied to the running game: {string.Join("; ", done)}." : "Nothing to apply.";
-					return Results.Ok(new { saved = done.Count > 0, live = true, message = message + resetNote, pending = Pending() });
+					return Results.Ok(new { saved = done.Count > 0, live = true, reloaded, message, pending = Pending() });
 				}
 				catch (Exception ex)
 				{
