@@ -23,6 +23,7 @@ public sealed class MainWindow : Window
 	internal ToolPanel Tools { get; } = new();
 	internal SelectPanel SelectPanel { get; }
 	internal MeasurePanel MeasurePanel { get; }
+	internal ShapePanel ShapePanel { get; } = new();
 
 	// The save bar (top middle): what is waiting to be saved, undo, redo, Save, and the last message.
 	private readonly TextBlock _pending = new() { FontSize = 12, VerticalAlignment = VerticalAlignment.Center, Text = "All saved" };
@@ -126,6 +127,25 @@ public sealed class MainWindow : Window
 		UpdateSaveBar();
 	}
 
+	// The Shape tool's click: the shape goes into the ground there (grid point).
+	internal void PutShape(float gx, float gz)
+	{
+		if (_session is not { } s)
+		{
+			return;
+		}
+		if (ShapePanel.Function is not { } f)
+		{
+			_message.Text = "Fix the formula first.";
+			return;
+		}
+		var (touched, clamped, bad) = s.Shape(gx, gz, f, ShapePanel.Radius, ShapePanel.Height, ShapePanel.Label);
+		_message.Text = touched == 0 ? "The formula gives 0 everywhere within the radius: nothing changed." + (bad > 0 ? $" ({bad} point(s) gave no number.)" : "")
+			: clamped ? "Placed, but part of the shape reached the game limit of ±8 m from the original ground (red points)."
+			: $"Placed the shape on {touched} point(s). Ctrl+Z undoes it.";
+		UpdateSaveBar();
+	}
+
 	private Control SaveBar()
 	{
 		UndoButton.Click += (_, _) => Undo();
@@ -191,7 +211,7 @@ public sealed class MainWindow : Window
 		{
 			Tools.Key("Escape");
 		}
-		else if (!ctrl && e.Key is Avalonia.Input.Key.E or Avalonia.Input.Key.M)
+		else if (!ctrl && e.Key is Avalonia.Input.Key.E or Avalonia.Input.Key.M or Avalonia.Input.Key.G)
 		{
 			Tools.Key(e.Key.ToString());
 		}
@@ -309,9 +329,11 @@ public sealed class MainWindow : Window
 			Margin = new Thickness(10),
 			HorizontalAlignment = HorizontalAlignment.Left,
 			VerticalAlignment = VerticalAlignment.Top,
-			Children = { Tools.Rail, Tools.Options, SelectPanel.Card, MeasurePanel.Card },
+			Children = { Tools.Rail, Tools.Options, SelectPanel.Card, MeasurePanel.Card, ShapePanel.Card },
 		};
-		SelectPanel.Card.IsVisible = MeasurePanel.Card.IsVisible = false;
+		SelectPanel.Card.IsVisible = MeasurePanel.Card.IsVisible = ShapePanel.Card.IsVisible = false;
+		ShapePanel.Changed += () => _view.ShapeRadius = ShapePanel.Radius;
+		_view.ShapeClicked += PutShape;
 		Tools.Options.VerticalAlignment = VerticalAlignment.Top;
 		Tools.Rail.VerticalAlignment = VerticalAlignment.Top;
 		Tools.ToolChanged += t =>
@@ -320,6 +342,7 @@ public sealed class MainWindow : Window
 			_view.Mode = Tools.Mode;
 			SelectPanel.Card.IsVisible = Tools.SelectMode;
 			MeasurePanel.Card.IsVisible = Tools.Mode == ToolMode.Measure;
+			ShapePanel.Card.IsVisible = Tools.Mode == ToolMode.Shape;
 		};
 		_view.SelectTool.Message += (text, _) => _message.Text = text;
 		_view.StrokeEnded += msg =>
@@ -395,6 +418,10 @@ public sealed class MainWindow : Window
 				else if (Options.StartTool is "measure")
 				{
 					Tools.ChooseMode(ToolMode.Measure);
+				}
+				else if (Options.StartTool is "shape")
+				{
+					Tools.ChooseMode(ToolMode.Shape);
 				}
 				else if (Enum.TryParse<BrushTool>(Options.StartTool, ignoreCase: true, out var startBrush))
 				{

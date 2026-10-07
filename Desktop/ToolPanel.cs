@@ -9,8 +9,8 @@ namespace TerrainEditor.Desktop;
 // (look around and pick objects), Select (move, turn and delete objects: see SelectPanel), the sculpt
 // brushes and the paint brushes. Keys as in the web editor: 1-9 and 0 pick the brushes, E selects,
 // Esc goes back to View.
-// Which tool is in use: View (look around, click picks), Select, Measure, or a brush (Tool says which).
-public enum ToolMode { View, Select, Measure, Brush }
+// Which tool is in use: View (look around, click picks), Select, Measure, Shape, or a brush (Tool says which).
+public enum ToolMode { View, Select, Measure, Shape, Brush }
 
 public sealed class ToolPanel
 {
@@ -25,7 +25,7 @@ public sealed class ToolPanel
 	public Control Options { get; }
 
 	private readonly Dictionary<BrushTool, Button> _buttons = new();
-	private readonly Button _viewButton, _selectButton, _measureButton;
+	private readonly Button _viewButton, _selectButton, _measureButton, _shapeButton;
 	internal Button SelectButton => _selectButton;
 	private readonly TextBlock _title = new() { FontSize = 14, FontWeight = FontWeight.SemiBold };
 	private readonly TextBlock _help = new() { FontSize = 12, Foreground = Brushes.LightGray, TextWrapping = TextWrapping.Wrap };
@@ -113,6 +113,9 @@ public sealed class ToolPanel
 		_measureButton = Make("Measure", "M");
 		ToolTip.SetTip(_measureButton, "Measure (M): click two points to see the distance, height difference and slope.");
 		_measureButton.Click += (_, _) => ChooseMode(ToolMode.Measure);
+		_shapeButton = Make("Shape", "G");
+		ToolTip.SetTip(_shapeButton, "Shape (G): click to put a mound, cone, mesa, crater, moat or bowl into the ground, or any shape you write as a formula.");
+		_shapeButton.Click += (_, _) => ChooseMode(ToolMode.Shape);
 		rail.Children.Add(new TextBlock { Text = "SCULPT", FontSize = 10, Foreground = Brushes.Gray, Margin = new Thickness(4, 6, 0, 0) });
 		foreach (var (t, key) in Keys)
 		{
@@ -190,6 +193,7 @@ public sealed class ToolPanel
 		_viewButton.Background = Mode == ToolMode.View ? On : Off;
 		_selectButton.Background = Mode == ToolMode.Select ? On : Off;
 		_measureButton.Background = Mode == ToolMode.Measure ? On : Off;
+		_shapeButton.Background = Mode == ToolMode.Shape ? On : Off;
 		foreach (var (k, b) in _buttons)
 		{
 			b.Background = k == t ? On : Off;
@@ -216,6 +220,11 @@ public sealed class ToolPanel
 		if (key == "E")
 		{
 			ChooseSelect();
+			return true;
+		}
+		if (key == "G")
+		{
+			ChooseMode(ToolMode.Shape);
 			return true;
 		}
 		if (key == "M")

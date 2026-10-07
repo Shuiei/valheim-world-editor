@@ -10,6 +10,9 @@ namespace TerrainEditor.Desktop.Tests;
 
 // Sculpting and painting the ground: the brushes' math (the web editor's applyBrush), undo and redo,
 // what goes to the edit store, and saving into a world.
+// Loads the test world: the world generator is the game's, with static state, so tests that read a
+// world never run at the same time (one collection).
+[Collection("World files")]
 public class EditTests
 {
 	// A flat block of size × size zones at 30 m, with nothing edited, and its edit session.
