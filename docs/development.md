@@ -150,11 +150,20 @@ CircleCI (`.circleci/config.yml`) runs everything below on every push and pull r
 | Job | What it checks |
 |---|---|
 | `dotnet-tests` | `tests/WorldEditor.Tests` (xUnit): the save round trip on the test world (ground edits, deleted and new objects, blank prefabs, copies and moves, zone reset, the 8 m limit, zones that are not generated), the prefab catalogue, live-mode bookkeeping against a stand-in bridge (apply only the difference, undo after applying), the 10-second connection check, `servers.cfg`, plugin settings, world and folder discovery. |
-| `build-app` + `browser-tests` | `tests/browser`: the real app (`--browser`) on the test world in headless Chrome: start page, map, 3D editor, a brush stroke and Save, Plant line and grid, the move arrows and End, zone selection, copy and paste, undo, back to Worlds, and no JavaScript errors. Box models stand in for the game's. |
+| `build-app` + `browser-tests` | `tests/browser`: the real app (`--browser`) on the test world in headless Chrome, driven like a user: every tool, saving, backups, history, the start page and map, and no JavaScript errors. Box models stand in for the game's. |
 | `packages` | Both release packages build, and `tools/check-package.sh` finds everything they need and no source code, debug files or game files. |
 
 Not covered by CI: building the plugin and the game-look export (both need Valheim's own files) and
 live mode against a real game.
+
+The browser tests are split by area (`start`, `save`, `select`, `area`, `sculpt`, `place`,
+`place2`, `view`): each file starts its own app on its own copy of the test world, so files run side
+by side (`npm test` runs two at a time; more starve each other of processor time, as Chrome draws the
+3D view without a graphics card there). `common.mjs` holds what they share: `openEditor(query,
+prepare)` (prepare sets saved settings before the editor loads, to load it only once), `records()`,
+`noErrors()`. A step fails after `VWE_TIMEOUT` ms (30 s; CI sets 120 s), and `VWE_COVERAGE=<folder>`
+records which parts of the page's scripts ran (`node coverage.mjs <folder> --lines` lists the lines
+no test reaches).
 
 The **test world** is `tests/fixtures/CITest`: a brand-new world made by a dedicated server and
 filled live through the editor (ground edits, trees, rocks, bushes, pickables, a crop, floors, walls,
@@ -166,6 +175,8 @@ Running them locally:
 dotnet test tests/WorldEditor.Tests
 dotnet publish TerrainEditor.csproj -c Release -r linux-x64 --self-contained -p:PublishSingleFile=true -o out
 cd tests/browser && npm ci && npm test        # APP=<program> to test another build
+cd tests/browser && npm run coverage          # which lines of the page's scripts the tests run
+dotnet test tests/WorldEditor.Tests --collect:"XPlat Code Coverage"   # the same for the C# tests
 SKIP_PLUGIN=1 tools/release.sh /tmp/dist && tools/check-package.sh /tmp/dist/*.tar.gz --no-plugin
 ```
 

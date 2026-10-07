@@ -73,7 +73,7 @@ jobs:
       - run:
           name: Browser tests
           working_directory: tests/browser
-          command: mkdir -p results && APP="$PWD/../../out/ValheimWorldEditor" npm test
+          command: mkdir -p results && APP="$PWD/../../out/ValheimWorldEditor" VWE_TIMEOUT=120000 npm run test:ci
           no_output_timeout: 20m
       - store_test_results:
           path: tests/browser/results

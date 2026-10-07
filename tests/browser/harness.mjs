@@ -77,20 +77,62 @@ export async function startApp() {
     if (i > 120 || proc.exitCode != null) throw new Error('the app did not start:\n' + log.join(''));
     await sleep(500);
   }
-  const browser = await puppeteer.launch({ headless: true, args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--no-sandbox'] });
+  // How long a step may take before the test fails (VWE_TIMEOUT, ms): short, so a broken step fails
+  // in seconds; CI machines (software 3D on 2 processors) set a longer one.
+  const timeout = +(process.env.VWE_TIMEOUT ?? 30000);
+  const browser = await puppeteer.launch({ headless: true, protocolTimeout: timeout + 10000, args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--no-sandbox'] });
   const page = await browser.newPage();
   await page.setViewport({ width: 1400, height: 850 });
-  // CI machines are slower than a desktop (software 3D, 2 processors): generous limits.
-  page.setDefaultNavigationTimeout(120000);
-  page.setDefaultTimeout(120000);
+  page.setDefaultNavigationTimeout(Math.max(timeout, 120000));
+  page.setDefaultTimeout(timeout);
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
   // Confirmations are accepted; prompts get their suggested answer.
   page.on('dialog', d => d.accept(d.type() === 'prompt' ? d.defaultValue() : undefined));
+  // VWE_COVERAGE=<folder>: which parts of the page's own scripts the tests ran, written there on stop
+  // (summed up by coverage.mjs). Taken before every navigation, since a page's counts go with it.
+  const coverDir = process.env.VWE_COVERAGE;
+  const cover = new Map();   // url -> { text, used: Uint8Array }
+  let cdp = null;
+  const sources = new Map();   // scriptId -> source text
+  // Never waits more than 30 s for the browser (a page stuck in a long task must not hang the run).
+  const within = p => Promise.race([p, new Promise((_, no) => setTimeout(() => no(new Error('timeout')), 30000))]);
+  async function takeCoverage() {
+    if (!cdp) return;
+    let res;
+    try { res = await within(cdp.send('Profiler.takePreciseCoverage')); } catch { return; }
+    for (const sc of res.result) {
+      if (!sc.url.startsWith(base) || sc.url.includes('/lib/')) continue;
+      let text = sources.get(sc.scriptId);
+      if (text == null) { try { text = (await within(cdp.send('Debugger.getScriptSource', { scriptId: sc.scriptId }))).scriptSource; } catch { continue; } sources.set(sc.scriptId, text); }
+      const url = sc.url.slice(base.length).split('?')[0];
+      let e = cover.get(url);
+      if (!e || e.text !== text) { if (e && e.text.length !== text.length) continue; e = e ?? { text, used: new Uint8Array(text.length) }; cover.set(url, e); }
+      // Block coverage: ranges nest, later (inner) ranges override outer ones.
+      const mark = new Int8Array(text.length).fill(-1);
+      for (const fn of sc.functions) for (const r of fn.ranges) mark.fill(r.count > 0 ? 1 : 0, r.startOffset, r.endOffset);
+      for (let i = 0; i < mark.length; i++) if (mark[i] === 1) e.used[i] = 1;
+    }
+  }
+  if (coverDir) {
+    cdp = await page.createCDPSession();
+    await cdp.send('Debugger.enable'); await cdp.send('Profiler.enable');
+    await cdp.send('Profiler.startPreciseCoverage', { callCount: false, detailed: true });
+    page.on('request', r => { if (r.isNavigationRequest() && r.frame() === page.mainFrame()) takeCoverage(); });
+    for (const m of ['goto', 'reload']) { const f = page[m].bind(page); page[m] = async (...a) => { await takeCoverage(); return f(...a); }; }
+  }
   return {
     base, home, worldDir, page, browser, errors, log,
     api: async (p, body) => (await fetch(base + p, body === undefined ? {} : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })).json(),
     async stop() {
+      if (coverDir) {
+        await takeCoverage();
+        fs.mkdirSync(coverDir, { recursive: true });
+        fs.writeFileSync(path.join(coverDir, `js-${Date.now()}.json`), JSON.stringify([...cover].map(([url, { text, used }]) => {
+          const ranges = []; for (let i = 0; i < used.length; i++) if (used[i]) { const st = i; while (i < used.length && used[i]) i++; ranges.push({ start: st, end: i }); }
+          return { url, text, ranges };
+        })));
+      }
       await browser.close();
       proc.kill('SIGTERM');
       await new Promise(r => { if (proc.exitCode != null) r(); else proc.on('exit', r); setTimeout(r, 10000); });
@@ -119,6 +161,7 @@ export const screenOf = (page, x, z, lift = 0) => page.evaluate((x, z, lift) => 
 // into ground points and back) and the selection arrows only follow a camera move when a frame
 // is drawn, and with software 3D under load one frame can take longer than any fixed pause.
 export const frames = (page, n = 2) => page.evaluate(n => new Promise(r => {
+  window.__ed?.wake?.();   // the editor draws only when something happens: these frames are drawn
   const next = k => k ? requestAnimationFrame(() => next(k - 1)) : r();
   next(n);
 }), n);
