@@ -15,6 +15,9 @@
     <ApplicationIcon>../wwwroot/icon.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
+    <InternalsVisibleTo Include="Desktop.Tests" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="../Core/ValheimWorldEditor.Core.csproj" />
   </ItemGroup>
   <ItemGroup>

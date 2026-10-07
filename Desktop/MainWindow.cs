@@ -14,7 +14,10 @@ public sealed class MainWindow : Window
 	private readonly TextBlock _fps = new() { FontSize = 13 }, _info = new() { FontSize = 12, Foreground = Brushes.LightGray, TextWrapping = TextWrapping.Wrap };
 	private readonly PerfLog _perf = new();
 
-	public MainWindow()
+	public GlView View => _view;
+
+	// load: false opens the window without a world (tests).
+	public MainWindow(bool load = true)
 	{
 		Title = "Valheim World Editor (native preview)";
 		Width = 1500;
@@ -36,7 +39,10 @@ public sealed class MainWindow : Window
 			VerticalAlignment = VerticalAlignment.Top,
 			Child = new StackPanel { Spacing = 6, Children = { _fps, _info, record } },
 		};
-		Content = new Grid { Children = { _view, panel } };
+		// Takes the mouse for the 3D view (see GlView.Attach).
+		var surface = new Border { Background = Brushes.Transparent };
+		Content = new Grid { Children = { _view, surface, panel } };
+		_view.Attach(surface, this);
 		_view.Perf = _perf;
 		_view.StatsChanged += s => _fps.Text = $"{s.Fps} frames/s · {s.WorkMs:0.0} ms of work each · {s.Objects:N0} objects ({s.Instances:N0} model parts in {s.Batches:N0} draws){(s.PendingModels > 0 ? $" · {s.PendingModels} kinds loading" : "")}";
 		_view.Status += t => { Options.Say(t); Dispatcher.UIThread.Post(() => _info.Text = t + "\n" + _info.Text); };
@@ -44,6 +50,10 @@ public sealed class MainWindow : Window
 		_info.Text = "Loading the world…";
 		Opened += async (_, _) =>
 		{
+			if (!load)
+			{
+				return;
+			}
 			Options.Say("window open");
 			try
 			{
