@@ -550,6 +550,11 @@ public sealed class MainWindow : Window
 			{
 				PlaceInput.Moved(at, size);
 				int shown = PlaceInput.Shown.Length;
+				if (Options.HoverOnly)
+				{
+					Options.Say($"place: {shown} shown, {string.Join(", ", PlaceTool.Chosen)} (hover only)");
+					return;
+				}
 				PlaceInput.Down(at, size, false, false, false, 1);
 				PlaceInput.Up(at, size);
 				Options.Say($"place: {shown} shown, {string.Join(", ", PlaceTool.Chosen)}: {_message.Text} {_session?.PendingText}");

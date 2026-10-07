@@ -476,6 +476,96 @@ public sealed class GlView : OpenGlControlBase
 		return g;
 	}
 
+	// A kind's group without things yet (the Place tool's ghosts), its model read if new.
+	private Group KindGroup(int prefab, bool piece)
+	{
+		lock (_groups)
+		{
+			if (!_groups.TryGetValue((prefab, piece), out var g))
+			{
+				g = _groups[(prefab, piece)] = new Group { Key = (prefab, piece), Kind = ObjectKinds.Of(NameOf(prefab), piece) };
+				Interlocked.Increment(ref _pending);
+				Load(g);
+			}
+			return g;
+		}
+	}
+
+	private uint _ghostVbo;
+	// The Place tool's preview drawn with the models, see-through. Kinds whose model is not there yet
+	// keep their posts (DrawPlace). Returns the prefabs drawn.
+	private unsafe HashSet<int> DrawGhosts(WorldScene s, Matrix4x4 vp)
+	{
+		var drawn = new HashSet<int>();
+		if (_mode != ToolMode.Place || Place is not { } pl || pl.Shown.Length == 0)
+		{
+			return drawn;
+		}
+		if (_ghostVbo == 0)
+		{
+			_ghostVbo = _gl.GenBuffer();
+		}
+		_gl.UseProgram(_objectProg);
+		_gl.Uniform1(_gl.GetUniformLocation(_objectProg, "uGhost"), 1f);
+		_gl.Enable(EnableCap.Blend);
+		_gl.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
+		_gl.DepthMask(false);
+		int uColor = _gl.GetUniformLocation(_objectProg, "uColor"), uCut = _gl.GetUniformLocation(_objectProg, "uCutoff"),
+			uHasMap = _gl.GetUniformLocation(_objectProg, "uHasMap"), uUv = _gl.GetUniformLocation(_objectProg, "uUv");
+		foreach (var byKind in pl.Shown.GroupBy(o => o.Name))
+		{
+			int prefab = TerrainEditor.Save.StableHash.Of(byKind.Key);
+			bool piece = TerrainEditor.Terrain.PieceCatalog.Get(prefab)?.Tool != null;
+			var g = KindGroup(prefab, piece);
+			if (!g.Ready || g.Batches.Count == 0)
+			{
+				continue;
+			}
+			drawn.Add(prefab);
+			var mats = byKind.Select(o => Placement(s, new WorldScene.Thing(0, prefab, o.Position, o.Rotation, o.Scale, piece), g.RootScale)).ToList();
+			foreach (var (b, pre) in g.Batches)
+			{
+				var data = mats.Select(m => pre * m).ToArray();
+				_gl.BindVertexArray(b.Vao);
+				_gl.BindBuffer(BufferTargetARB.ArrayBuffer, _ghostVbo);
+				fixed (Matrix4x4* p = data)
+				{
+					_gl.BufferData(BufferTargetARB.ArrayBuffer, (nuint)(data.Length * 64), p, BufferUsageARB.DynamicDraw);
+				}
+				for (uint c = 0; c < 4; c++)
+				{
+					_gl.VertexAttribPointer(3 + c, 4, VertexAttribPointerType.Float, false, 64, (void*)(c * 16));
+				}
+				var m = b.Material;
+				if (m.DoubleSided)
+				{
+					_gl.Disable(EnableCap.CullFace);
+				}
+				else
+				{
+					_gl.Enable(EnableCap.CullFace);
+				}
+				_gl.Uniform4(uColor, m.Color.X, m.Color.Y, m.Color.Z, m.Color.W);
+				_gl.Uniform1(uCut, m.Cutoff);
+				_gl.Uniform1(uHasMap, b.Texture != 0 ? 1 : 0);
+				_gl.Uniform4(uUv, m.UvTransform.X, m.UvTransform.Y, m.UvTransform.Z, m.UvTransform.W);
+				_gl.BindTexture(TextureTarget.Texture2D, b.Texture);
+				_gl.DrawElementsInstanced(PrimitiveType.Triangles, (uint)b.IndexCount, DrawElementsType.UnsignedInt, (void*)0, (uint)data.Length);
+				// The batch's own instances again.
+				_gl.BindBuffer(BufferTargetARB.ArrayBuffer, b.InstanceVbo);
+				for (uint c = 0; c < 4; c++)
+				{
+					_gl.VertexAttribPointer(3 + c, 4, VertexAttribPointerType.Float, false, 64, (void*)(c * 16));
+				}
+			}
+		}
+		_gl.Uniform1(_gl.GetUniformLocation(_objectProg, "uGhost"), 0f);
+		_gl.DepthMask(true);
+		_gl.Disable(EnableCap.Blend);
+		_gl.BindVertexArray(0);
+		return drawn;
+	}
+
 	private void EnsureSize(int n)
 	{
 		lock (_objLock)
@@ -1028,6 +1118,7 @@ public sealed class GlView : OpenGlControlBase
 				_gl.DrawElementsInstanced(PrimitiveType.Triangles, (uint)b.IndexCount, DrawElementsType.UnsignedInt, (void*)0, (uint)b.Instances);
 			}
 
+			_ghostsDrawn = DrawGhosts(s, vp);
 			DrawOverlays(vp);
 			DrawSelection(vp);
 			DrawBrush(s, vp);
@@ -1809,6 +1900,7 @@ public sealed class GlView : OpenGlControlBase
 	}
 
 	private uint _placeVao, _placeVbo, _placeShapeVao, _placeShapeVbo;
+	private HashSet<int> _ghostsDrawn = new();
 	// The Place tool: a post at each placement the preview (or a stroke) shows, and the line, zone or
 	// grid being drawn with its points.
 	private void DrawPlace(WorldScene s, Matrix4x4 vp)
@@ -1821,6 +1913,10 @@ public sealed class GlView : OpenGlControlBase
 		var posts = new List<float>();
 		foreach (var o in pl.Shown)
 		{
+			if (_ghostsDrawn.Contains(TerrainEditor.Save.StableHash.Of(o.Name)))
+			{
+				continue;
+			}
 			float x = o.Position.X - ox - (s.W - 1) / 2f, z = -(o.Position.Z - oz - (s.H - 1) / 2f), y = o.Position.Y;
 			posts.AddRange(new[] { x, y, z, x, y + 1.5f, z, x - 0.35f, y + 0.6f, z, x + 0.35f, y + 0.6f, z, x, y + 0.6f, z - 0.35f, x, y + 0.6f, z + 0.35f });
 		}
