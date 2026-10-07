@@ -206,6 +206,28 @@ test('blueprints: a PlanBuild file is imported, pasted and exported', async () =
   noErrors();
 });
 
+test('paste repeats: one click places a row of copies, one undo step', async () => {
+  await openEditor();
+  const tree = (await records()).find(r => r.name === 'Beech1' && !r.added);
+  await page().evaluate(id => { window.__ed.setTool('select'); window.__ed.selectIds([id]); document.activeElement?.blur(); }, tree.id);
+  await lookAt(page(), tree.x, tree.z, 0, 50, 40); await sleep(500);
+  await page().keyboard.down('Control'); await page().keyboard.press('c'); await page().keyboard.press('v'); await page().keyboard.up('Control');
+  await page().$eval('#psCount', e => { e.value = 4; e.dispatchEvent(new Event('input')); });
+  await page().$eval('#psGap', e => { e.value = 2; e.dispatchEvent(new Event('input')); });
+  const before = (await records()).filter(r => r.added && r.name === 'Beech1');
+  const [x, y] = await screenOf(page(), tree.x + 4, tree.z - 8);
+  await page().mouse.move(x, y); await sleep(300); await page().mouse.click(x, y); await sleep(1500);
+  const made = (await records()).filter(r => r.added && r.name === 'Beech1' && !before.some(b => b.id === r.id)).sort((a, b) => a.x - b.x);
+  assert.equal(made.length, 4, 'four copies');
+  // Width of a one-object copy is its 2 m outline, plus the 2 m gap.
+  assert.ok(Math.abs(made[1].x - made[0].x - 4) < 0.05, `4 m apart (${(made[1].x - made[0].x).toFixed(2)})`);
+  await page().keyboard.press('Escape');
+  await page().click('#undo'); await sleep(1200);
+  assert.equal((await records()).filter(r => r.added && r.name === 'Beech1').length, before.length, 'one undo removes all four');
+  await page().evaluate(() => { document.getElementById('psCount').value = 1; });
+  noErrors();
+});
+
 test('undo takes a change back and the counter clears', async () => {
   await openEditor();
   await page().keyboard.press('Escape');

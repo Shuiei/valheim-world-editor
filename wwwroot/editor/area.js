@@ -68,6 +68,11 @@ export function createArea(ed) {
     <label class="check"><input type="checkbox" id="psGround" checked> Ground shape and paint</label>
     <label class="check"><input type="checkbox" id="psObjects" checked> Objects</label>
     <label class="field">Height <input id="psOffset" type="number" step="0.5" value="0"><span>m</span></label>
+    <div class="sub"><h3>Repeat (stack)</h3>
+      <label class="field">Copies <input id="psCount" type="number" min="1" max="50" step="1" value="1"><span></span></label>
+      <label class="field">Along <select id="psDir"><option value="x">its width</option><option value="z">its depth</option><option value="y">upwards</option></select></label>
+      <label class="field">Gap <input id="psGap" type="number" step="0.25" value="0"><span>m</span></label>
+    </div>
     <div class="row"><button id="psRot" title="Quarter turn; , . or Alt+wheel turn by 1° (Shift: 15°)">Turn 90° <kbd>R</kbd></button><button id="psFlip">Mirror <kbd>F</kbd></button><button id="psDone">Done <kbd>Esc</kbd></button></div>
     <div class="hint">Click to place; the copied ground keeps its shape relative to the point you click. Height moves the paste up or down.</div>`;
   $('locWarn').before(pastePanel);
@@ -343,49 +348,90 @@ export function createArea(ed) {
   const ghost = new THREE.Points(new THREE.BufferGeometry(), new THREE.PointsMaterial({ color: 0xffc24a, size: 5, sizeAttenuation: false, depthTest: false }));
   ghost.renderOrder = 16; ghost.frustumCulled = false; ed.scene.add(ghost);
   let pasteAt = null;
+  // Repeat: the offset (from the clip centre, before turning) and height step between two copies.
+  // Each copy is the size of the copy plus the gap along the chosen direction, like WorldEdit's //stack.
+  function repeatStep() {
+    let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+    for (const p of clip.poly) { x0 = Math.min(x0, p.gx); x1 = Math.max(x1, p.gx); z0 = Math.min(z0, p.gz); z1 = Math.max(z1, p.gz); }
+    for (const o of clip.objects) { y0 = Math.min(y0, o.dy); y1 = Math.max(y1, o.dy); }
+    const gap = +$('psGap').value || 0, dir = $('psDir').value;
+    if (dir === 'y') return { dx: 0, dz: 0, dy: (isFinite(y0) ? Math.max(1, y1 - y0 + 1) : 2) + gap };
+    return dir === 'x' ? { dx: x1 - x0 + gap, dz: 0, dy: 0 } : { dx: 0, dz: z1 - z0 + gap, dy: 0 };
+  }
+  const copies = () => Math.max(1, Math.min(50, Math.round(+$('psCount').value || 1)));
+  // Where copy k goes: its anchor point on the ground and the height added to it.
+  function copyAt(at, k) {
+    const st = repeatStep(), [x, z] = xf(st.dx * k, st.dz * k);
+    return { gx: at.gx + x, gz: at.gz + z, up: st.dy * k };
+  }
+  const extraOutlines = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0x5fd4ff, transparent: true, opacity: 0.6, depthTest: false }));
+  extraOutlines.renderOrder = 15; extraOutlines.frustumCulled = false; ed.scene.add(extraOutlines);
   function updateGhost() {
     const show = ed.tool === 'paste' && clip && pasteAt;
-    ghost.visible = !!show;
+    ghost.visible = extraOutlines.visible = !!show;
     if (!show) { if (ed.tool === 'paste') outline.geometry.setFromPoints([]); return; }
     drawOutline(clip.poly.map(p => { const [x, z] = xf(p.gx, p.gz); return { gx: pasteAt.gx + x, gz: pasteAt.gz + z }; }), false);
-    const anchorH = ed.sampleHeight(pasteAt.gx, pasteAt.gz) + +$('psOffset').value;
-    ghost.geometry.setFromPoints(clip.objects.map(o => { const [x, z] = xf(o.dx, o.dz); const y = o.follow ? ed.sampleHeight(pasteAt.gx + x, pasteAt.gz + z) + o.dy : anchorH + o.dy; return new THREE.Vector3(pasteAt.gx + x - ed.cx, y + 0.5, -(pasteAt.gz + z - ed.cz)); }));
-    $('psInfo').textContent = `${clip.name ? clip.name + ': ' : ''}${clip.w} × ${clip.h} m, ${clip.objects.length} object(s) · turned ${+rot.toFixed(1)}°${flip ? ', mirrored' : ''}.`;
-  }
-  async function paste(at) {
-    const anchorH = ed.sampleHeight(at.gx, at.gz) + +$('psOffset').value;
-    const state = ed.snapshotState(), touched = new Set();
-    const half = Math.ceil(Math.hypot(clip.w, clip.h) / 2) + 1;
-    const x0 = Math.max(1, Math.floor(at.gx - half)), x1 = Math.min(W - 2, Math.ceil(at.gx + half)), z0 = Math.max(1, Math.floor(at.gz - half)), z1 = Math.min(H - 2, Math.ceil(at.gz + half));
-    if ($('psGround').checked) {
-      for (let gz = z0; gz <= z1; gz++) for (let gx = x0; gx <= x1; gx++) {
-        const [sx, sz] = inv(gx - at.gx, gz - at.gz);
-        const ix = Math.round(sx + (clip.w - 1) / 2), iz = Math.round(sz + (clip.h - 1) / 2);
-        if (ix < 0 || iz < 0 || ix >= clip.w || iz >= clip.h) continue;
-        const i = iz * clip.w + ix, rel = clip.rel[i];
-        if (Number.isNaN(rel)) continue;
-        const g = gz * W + gx, w = clip.wt[i] * ed.mask(g);
-        if (w <= 0 || ed.locked(gx, gz)) continue;
-        const h = ed.height(g);
-        ed.setHeight(g, h + (anchorH + rel - h) * w);
-        if (clip.pnt[i * 4] >= 0) {
-          if (!ed.pmod[g]) { ed.paint.set([0, 0, 0, 1], g * 4); ed.pmod[g] = 1; }
-          for (let c = 0; c < 4; c++) ed.paint[g * 4 + c] += (clip.pnt[i * 4 + c] - ed.paint[g * 4 + c]) * w;
-        }
-        touched.add(g);
+    const n = copies(), segs = [], dots = [], baseH = ed.sampleHeight(pasteAt.gx, pasteAt.gz) + +$('psOffset').value;
+    for (let k = 0; k < n; k++) {
+      const c = copyAt(pasteAt, k), up = $('psDir').value === 'y';
+      const anchorH = (up ? baseH : ed.sampleHeight(c.gx, c.gz) + +$('psOffset').value) + c.up;
+      for (const o of clip.objects) {
+        const [x, z] = xf(o.dx, o.dz);
+        const y = o.follow ? ed.sampleHeight(c.gx + x, c.gz + z) + o.dy + c.up : anchorH + o.dy;
+        dots.push(new THREE.Vector3(c.gx + x - ed.cx, y + 0.5, -(c.gz + z - ed.cz)));
       }
+      if (k === 0) continue;
+      const ring = clip.poly.map(p => { const [x, z] = xf(p.gx, p.gz); return [c.gx + x, c.gz + z]; });
+      ring.forEach(([ax, az], i) => {
+        const [bx, bz] = ring[(i + 1) % ring.length];
+        segs.push(new THREE.Vector3(ax - ed.cx, ed.sampleHeight(ax, az) + 0.3 + c.up, -(az - ed.cz)), new THREE.Vector3(bx - ed.cx, ed.sampleHeight(bx, bz) + 0.3 + c.up, -(bz - ed.cz)));
+      });
     }
-    let added = [];
-    if ($('psObjects').checked && clip.objects.length) {
-      added = await ed.objects.add(clip.objects.map(o => {
+    ghost.geometry.setFromPoints(dots);
+    extraOutlines.geometry.setFromPoints(segs);
+    $('psInfo').textContent = `${clip.name ? clip.name + ': ' : ''}${clip.w} × ${clip.h} m, ${clip.objects.length} object(s)${n > 1 ? `, ${n} copies` : ''} · turned ${+rot.toFixed(1)}°${flip ? ', mirrored' : ''}.`;
+  }
+  // One paste (with its repeats) is one undo step.
+  async function paste(at) {
+    const n = copies(), up = $('psDir').value === 'y';
+    const state = ed.snapshotState(), touched = new Set(), list = [];
+    const half = Math.ceil(Math.hypot(clip.w, clip.h) / 2) + 1;
+    let bx0 = W, bx1 = 0, bz0 = H, bz1 = 0;
+    const baseH = ed.sampleHeight(at.gx, at.gz) + +$('psOffset').value;
+    for (let k = 0; k < n; k++) {
+      const c = copyAt(at, k);
+      const anchorH = (up ? baseH : ed.sampleHeight(c.gx, c.gz) + +$('psOffset').value) + c.up;
+      const x0 = Math.max(1, Math.floor(c.gx - half)), x1 = Math.min(W - 2, Math.ceil(c.gx + half)), z0 = Math.max(1, Math.floor(c.gz - half)), z1 = Math.min(H - 2, Math.ceil(c.gz + half));
+      // Stacked upwards, only the first copy shapes the ground.
+      if ($('psGround').checked && !(up && k > 0)) {
+        bx0 = Math.min(bx0, x0); bx1 = Math.max(bx1, x1); bz0 = Math.min(bz0, z0); bz1 = Math.max(bz1, z1);
+        for (let gz = z0; gz <= z1; gz++) for (let gx = x0; gx <= x1; gx++) {
+          const [sx, sz] = inv(gx - c.gx, gz - c.gz);
+          const ix = Math.round(sx + (clip.w - 1) / 2), iz = Math.round(sz + (clip.h - 1) / 2);
+          if (ix < 0 || iz < 0 || ix >= clip.w || iz >= clip.h) continue;
+          const i = iz * clip.w + ix, rel = clip.rel[i];
+          if (Number.isNaN(rel)) continue;
+          const g = gz * W + gx, w = clip.wt[i] * ed.mask(g);
+          if (w <= 0 || ed.locked(gx, gz)) continue;
+          const h = ed.height(g);
+          ed.setHeight(g, h + (anchorH + rel - h) * w);
+          if (clip.pnt[i * 4] >= 0) {
+            if (!ed.pmod[g]) { ed.paint.set([0, 0, 0, 1], g * 4); ed.pmod[g] = 1; }
+            for (let ch = 0; ch < 4; ch++) ed.paint[g * 4 + ch] += (clip.pnt[i * 4 + ch] - ed.paint[g * 4 + ch]) * w;
+          }
+          touched.add(g);
+        }
+      }
+      if ($('psObjects').checked) for (const o of clip.objects) {
         const [x, z] = xf(o.dx, o.dz);
         // Objects copied with the Select tool keep their height above the ground where they land.
-        const y = o.follow ? ed.sampleHeight(at.gx + x, at.gz + z) + o.dy : anchorH + o.dy;
-        return { name: o.name, x: ed.originX + at.gx + x, y, z: ed.originZ + at.gz + z, rx: flip ? -o.rx : o.rx, ry: (flip ? -o.ry : o.ry) - rot, rz: flip ? -o.rz : o.rz, scale: o.scale, sourceId: o.sourceId ?? null, fresh: true };
-      }));
+        const y = o.follow ? ed.sampleHeight(c.gx + x, c.gz + z) + o.dy + c.up : anchorH + o.dy;
+        list.push({ name: o.name, x: ed.originX + c.gx + x, y, z: ed.originZ + c.gz + z, rx: flip ? -o.rx : o.rx, ry: (flip ? -o.ry : o.ry) - rot, rz: flip ? -o.rz : o.rz, scale: o.scale, sourceId: o.sourceId ?? null, fresh: true });
+      }
     }
-    commitTerrain(state, touched, { x0, x1, z0, z1 }, { label: 'Paste', ...(added.length ? { added } : {}) });
-    ed.msg(`Pasted${touched.size ? ' the ground' : ''}${added.length ? ` and ${added.length} object(s)` : ''}. Click again to paste another copy, Esc when done.`);
+    const added = list.length ? await ed.objects.add(list) : [];
+    commitTerrain(state, touched, { x0: Math.min(bx0, bx1), x1: bx1, z0: Math.min(bz0, bz1), z1: bz1 }, { label: n > 1 ? `Paste ×${n}` : 'Paste', ...(added.length ? { added } : {}) });
+    ed.msg(`Pasted${n > 1 ? ` ${n} copies` : ''}${touched.size ? ' with the ground' : ''}${added.length ? `, ${added.length} object(s)` : ''}. Click again to paste more, Esc when done.`);
   }
   $('psRot').onclick = () => turnPaste(90);
   // Alt + mouse wheel turns the paste in small steps.
@@ -396,7 +442,7 @@ export function createArea(ed) {
   }, { capture: true, passive: false });
   $('psFlip').onclick = () => { flip = !flip; updateGhost(); };
   $('psDone').onclick = () => ed.setTool('area');
-  $('psOffset').oninput = updateGhost;
+  for (const id of ['psOffset', 'psCount', 'psDir', 'psGap']) $(id).addEventListener('input', updateGhost);
 
   // ---- Reset zones.
   const resetGroup = new THREE.Group(); ed.scene.add(resetGroup);
@@ -511,7 +557,7 @@ export function createArea(ed) {
     return false;
   });
   ed.onToolChange ??= [];
-  ed.onToolChange.push(t => { outline.visible = t === 'area' || t === 'paste' || !!polygon(); if (t !== 'paste') ghost.visible = false; if (t === 'area') redraw(); });
+  ed.onToolChange.push(t => { outline.visible = t === 'area' || t === 'paste' || !!polygon(); if (t !== 'paste') ghost.visible = extraOutlines.visible = false; if (t === 'area') redraw(); });
   redraw();
   return { clear };
 }

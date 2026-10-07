@@ -11,6 +11,8 @@ version number. Newest first.
   folder of the editor's data folder.
 - **PlanBuild and .vbuild files**: import a PlanBuild `.blueprint` (its terrain marks become ground)
   or a `.vbuild` file into the blueprint list, and write any blueprint back out in either format.
+- **Repeat a paste** (like WorldEdit's `//stack`): one click places several copies in a row, along
+  the copy's width or depth or stacked upwards, with a gap; one undo step.
 
 ## v0.4.1 — 2026-10-05 (editor on GitHub only)
 
