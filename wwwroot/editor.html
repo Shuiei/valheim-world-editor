@@ -296,6 +296,7 @@ import { createBlueprints } from './editor/blueprints.js';
 import { createPlant } from './editor/plant.js';
 import { createMeasure } from './editor/measure.js';
 import { createTransform } from './editor/transform.js';
+import { createInspector } from './editor/inspector.js';
 import { applyTips } from './editor/tips.js';
 import { gameLookBanner } from './app.js';
 gameLookBanner();
@@ -976,6 +977,7 @@ createBlueprints(ed);
 createPlant(ed);
 createMeasure(ed);
 createTransform(ed);
+createInspector(ed);
 applyTips();
 syncToolPanel();
 Promise.all([fetch('/api/pieces').then(r => r.arrayBuffer()), fetch('/api/piece-types').then(r => r.json())]).then(async ([buf, types]) => {
@@ -1412,6 +1414,7 @@ function drawSelection() {
   const counts = {}; for (const n of names) counts[n] = (counts[n] ?? 0) + 1;
   $('selInfo').textContent = selection.size ? `${selection.size} selected: ` + Object.entries(counts).map(([n, c]) => c > 1 ? `${n} ×${c}` : n).join(', ') : 'Nothing selected.';
   $('selDelete').disabled = $('selClear').disabled = !selection.size;
+  for (const f of ed.onSelection ?? []) f();
 }
 function clickSelect(e) {
   const ent = pickEntity(e);

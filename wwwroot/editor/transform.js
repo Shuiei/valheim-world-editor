@@ -66,7 +66,7 @@ export function createTransform(ed) {
     const copies = s.items.map(it => {
       const p = target(s, it), r = it.r;
       return { name: r.name, x: ed.originX + p.gx, y: p.y, z: ed.originZ + p.gz, rx: r.rx, ry: r.ry + s.turn, rz: r.rz, scale: r.scale,
-        sourceId: r.added ? r.sourceId ?? null : r.id, fresh: r.added ? r.fresh ?? true : false };
+        sourceId: r.added ? r.sourceId ?? null : r.id, fresh: r.added ? r.fresh ?? true : false, rawOf: r.raw ? r.id : null };
     });
     const ids = s.items.map(it => it.id);
     await ed.setDeleted(ids, true);

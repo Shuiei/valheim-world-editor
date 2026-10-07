@@ -228,6 +228,33 @@ test('paste repeats: one click places a row of copies, one undo step', async () 
   noErrors();
 });
 
+test('inspector: a chest gets new contents and a text, undo puts the old one back', async () => {
+  await openEditor();
+  const chest = (await records()).find(r => r.name === 'piece_chest_wood' && !r.added);
+  await page().evaluate(id => { window.__ed.setTool('select'); window.__ed.selectIds([id]); document.activeElement?.blur(); }, chest.id);
+  await page().keyboard.press('i');
+  await page().waitForFunction(() => !document.getElementById('inspPanel').hidden && document.getElementById('inTitle').textContent === 'piece_chest_wood');
+  assert.match(await page().$eval('#inInv', e => e.textContent), /5 × 2 slots/);
+  await page().click('#inAddItem');
+  await page().$eval('#inInv .inItem[data-i] input[data-f="name"]', e => { e.value = 'Wood'; e.dispatchEvent(new Event('input')); });
+  await page().$eval('#inInv .inItem[data-i] input[data-f="stack"]', e => { e.value = '30'; e.dispatchEvent(new Event('input')); });
+  await page().select('#inAddSec', 'strings');
+  await page().type('#inAddKey', 'text'); await page().type('#inAddVal', 'Hello');
+  await page().click('#inAddBtn');
+  await page().click('#inApply'); await sleep(1200);
+  const newId = await page().evaluate(() => [...window.__ed.selection][0]);
+  assert.ok(newId < 0, 'the edited chest is a new object');
+  const d = await t.api(`/api/object/${newId}`);
+  assert.deepEqual(d.inventory.items.map(i => [i.name, i.stack]), [['Wood', 30]]);
+  assert.ok(d.fields.some(f => f.name === 'text' && f.value === 'Hello'));
+  assert.ok(Math.abs(d.x - chest.x) < 0.01, 'same place');
+  await page().click('#undo'); await sleep(1200);
+  const back = (await records()).filter(r => r.name === 'piece_chest_wood');
+  assert.ok(back.some(r => r.id === chest.id), 'the old chest is back');
+  assert.ok(!back.some(r => r.id === newId), 'the edited copy is gone');
+  noErrors();
+});
+
 test('undo takes a change back and the counter clears', async () => {
   await openEditor();
   await page().keyboard.press('Escape');

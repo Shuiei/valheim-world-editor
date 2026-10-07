@@ -87,12 +87,39 @@ public sealed class WorldSave
 	// readSource gives the chunk file bytes the model lives in.
 	public byte[]? NewObjectBytes(TerrainEditor.Editing.NewObject n, Func<ObjectRef, byte[]> readSource)
 	{
+		if (n.Raw != null)
+		{
+			ZdoData z = ZdoData.Parse(n.Raw);
+			z.Position = n.Position;
+			z.Rotation = n.Rotation;
+			if (n.Scale > 0f)
+			{
+				z.Set("vec3", ScaleKey, $"{n.Scale.ToString(CultureInfo.InvariantCulture)} {n.Scale.ToString(CultureInfo.InvariantCulture)} {n.Scale.ToString(CultureInfo.InvariantCulture)}");
+				z.Set("floats", ScaleScalarKey, null);
+			}
+			return z.Serialize();
+		}
 		ObjectRef? model = ModelFor(n.Prefab, n.SourceId);
 		if (model != null)
 		{
 			return ZdoBuilder.Build(readSource(model), model, model.File.WorldVersion, n.Position, n.Rotation, n.Scale, n.Fresh);
 		}
 		return TerrainEditor.Terrain.PrefabCatalog.Get(n.Prefab) is { } info ? ZdoBuilder.Blank(n.Prefab, info.Flags, n.Position, n.Rotation, n.Scale) : null;
+	}
+
+	// The saved bytes of an object of the save (id >= 0): from its chunk file, or from the live snapshot.
+	public byte[] ObjectBytes(int id)
+	{
+		ObjectRef o = ObjectRefs[id];
+		if (LiveBytes != null)
+		{
+			return LiveBytes[(int)o.Start..(int)o.End];
+		}
+		using FileStream fs = File.OpenRead(Path.Combine(Directory, o.File.FileName));
+		byte[] b = new byte[o.End - o.Start];
+		fs.Seek(o.Start, SeekOrigin.Begin);
+		fs.ReadExactly(b);
+		return b;
 	}
 
 	// Generated zones and location instances from the .db2 file (null if it could not be read).

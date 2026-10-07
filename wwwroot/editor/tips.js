@@ -53,6 +53,13 @@ export const TIPS = {
   selClear: 'Clear the selection (Esc).',
   selTo: 'The kind to put in place of each selected object.',
   selReplace: 'Replace every selected object by the chosen kind, at the same place and facing.',
+  selInspect: 'Show everything the selected object holds in the save (sign text, portal tag, chest contents, timers...) and change it (I).',
+  inApply: 'Replace the object by a copy with the changed data (one undo step). Save or Apply live writes it.',
+  inRevert: 'Forget the changes made here.',
+  inAddSec: 'What kind of value to add.',
+  inAddKey: 'The name of the value, as the game calls it (text for a sign, tag for a portal...), or its number.',
+  inAddVal: 'The value to add.',
+  inAddBtn: 'Add this value to the object (applied with Apply changes).',
 
   // Area
   '[data-shape="box"]': 'Drag a rectangle on the ground.',
