@@ -12,8 +12,8 @@ after(async () => { await t?.stop(); });
 const page = () => t.page;
 const noErrors = () => assert.deepEqual(t.errors, [], 'no JavaScript errors on the page');
 const pending = () => page().$eval('#pending', e => e.textContent);
-async function openEditor() {
-  await page().goto(`${t.base}/editor.html?zx=0&zz=0&size=3`, { waitUntil: 'networkidle0', timeout: 120000 });
+async function openEditor(q = 'zx=0&zz=0&size=3') {
+  await page().goto(`${t.base}/editor.html?${q}`, { waitUntil: 'networkidle0', timeout: 120000 });
   await page().waitForFunction(() => window.__ed?.objects.records.size > 0 && !document.getElementById('loading'), { timeout: 120000 });
   await sleep(1000);
   await page().evaluate(() => { document.getElementById('viewPanel').hidden = true; document.activeElement?.blur(); });
@@ -1143,7 +1143,8 @@ test('Regrow nature puts back the game\'s own vegetation inside the selection', 
   await page().mouse.move(ax, ay); await page().mouse.down(); await page().mouse.move(bx, by, { steps: 6 }); await page().mouse.up(); await sleep(300);
   const before = (await records()).length;
   await page().click('#aRegrow');
-  await page().waitForFunction(() => /Regrew|Nothing to regrow/.test(document.getElementById('sMsg').textContent), { timeout: 60000 });
+  await page().waitForFunction(() => /Regrew|Nothing to regrow/.test(document.getElementById('sMsg').textContent), { timeout: 60000 })
+    .catch(async e => { throw new Error(`no result: "${await page().$eval('#sMsg', e => e.textContent)}" poly ${JSON.stringify(await page().evaluate(() => window.__ed.area.polygon()))}`); });
   const msg = await page().$eval('#sMsg', e => e.textContent);
   const n = (await records()).length - before;
   assert.ok(n > 0, `objects regrown (${msg})`);
@@ -1151,10 +1152,38 @@ test('Regrow nature puts back the game\'s own vegetation inside the selection', 
   const fresh = (await records()).slice(-n);
   assert.ok(fresh.every(r => Math.abs(r.x - spot[0]) <= 30.5 && Math.abs(r.z - spot[1]) <= 30.5), 'inside the selection');
   // Again: everything is standing now, so nothing more is added.
+  // The long message above must not cover the panel (it used to grow over its last buttons).
   await page().click('#aRegrow');
-  await page().waitForFunction(() => /Nothing to regrow/.test(document.getElementById('sMsg').textContent), { timeout: 60000 });
+  await page().waitForFunction(() => /Nothing to regrow/.test(document.getElementById('sMsg').textContent), { timeout: 20000 })
+    .catch(async () => { throw new Error(`second regrow: "${await page().$eval('#sMsg', e => e.textContent)}"`); });
   await page().click('#undo'); await sleep(800);
   assert.equal((await records()).length, before, 'Ctrl+Z takes them back');
+  noErrors();
+});
+
+test('history survives a reload of the page and a move of the work area', async () => {
+  await openEditor();
+  await page().keyboard.press('Escape');
+  // The middle of zone (0, 0): inside both work areas below.
+  const c = { x: 15, z: -15 };
+  const start = await pending();
+  const h = () => page().evaluate(([x, z]) => { const ed = window.__ed; return ed.sampleHeight(x - ed.originX, z - ed.originZ); }, [c.x - 15, c.z + 15]);
+  const h0 = await h();
+  await lookAt(page(), c.x - 15, c.z + 15);
+  await page().keyboard.press('1');
+  const [x, y] = await screenOf(page(), c.x - 15, c.z + 15);
+  await page().mouse.move(x, y); await page().mouse.down(); await page().mouse.move(x + 3, y + 3, { steps: 20 }); await page().mouse.up(); await sleep(1500);
+  assert.ok(await h() > h0 + 0.05, 'raised');
+  // Reload: the change is still there, and so is its undo.
+  await openEditor();
+  assert.ok(await h() > h0 + 0.05, 'still raised after the reload');
+  assert.equal(await page().$eval('#undo', e => e.disabled), false, 'undo is available after the reload');
+  // Another work area (one zone east, still holding the spot): the change can still be undone.
+  await openEditor('zx=1&zz=0&size=3');
+  assert.equal(await page().$eval('#undo', e => e.disabled), false, 'undo is available in the moved area');
+  await page().click('#undo'); await sleep(1500);
+  assert.ok(Math.abs(await h() - h0) < 0.01, 'undone');
+  assert.equal(await pending(), start);
   noErrors();
 });
 

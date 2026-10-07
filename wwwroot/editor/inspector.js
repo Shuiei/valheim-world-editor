@@ -31,7 +31,7 @@ export function createInspector(ed) {
   document.body.appendChild(panel);
   const style = document.createElement('style');
   style.textContent = `
-    #inspPanel { position: fixed; right: 10px; top: 70px; width: 360px; padding: 12px 14px; max-height: calc(100vh - 120px); overflow-y: auto; overflow-x: hidden; z-index: 6; }
+    #inspPanel { position: fixed; right: 10px; top: 70px; width: 360px; padding: 12px 14px; max-height: calc(100vh - 136px); overflow-y: auto; overflow-x: hidden; z-index: 6; }
     #inspPanel input, #inspPanel select { min-width: 0; }
     #inspPanel h3 { margin: 0 0 6px; display: flex; justify-content: space-between; align-items: center; }
     #inspPanel > h3 { font-size: 14px; }

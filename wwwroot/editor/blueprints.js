@@ -60,7 +60,7 @@ export function createBlueprints(ed) {
   document.body.appendChild(panel);
   const style = document.createElement('style');
   style.textContent = `
-    #bpPanel { position: fixed; right: 10px; top: 70px; width: 320px; padding: 12px 14px; max-height: calc(100vh - 120px); overflow-y: auto; z-index: 6; }
+    #bpPanel { position: fixed; right: 10px; top: 70px; width: 320px; padding: 12px 14px; max-height: calc(100vh - 136px); overflow-y: auto; z-index: 6; }
     #bpPanel h3 { margin: 0 0 8px; font-size: 14px; display: flex; justify-content: space-between; align-items: center; }
     .bp { display: grid; grid-template-columns: 64px 1fr; gap: 4px 10px; padding: 6px; border: 1px solid transparent; border-radius: 8px; }
     .bp:hover { border-color: var(--line); background: rgba(255,255,255,.03); }

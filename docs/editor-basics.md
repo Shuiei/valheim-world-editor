@@ -52,8 +52,12 @@ touched.
 | **Back to here** | Undoes every change made after this one. The later changes stay in the list, greyed out; click a greyed one to redo up to it. |
 | **Remove** | Takes out only this change and keeps everything done after it (for example, remove a tree line you planted an hour ago without losing the ground work you did since). |
 
-Applied changes (live) and saved changes can still be undone; the next save or apply then writes
-the undo.
+Applied changes (live) can still be undone; the next apply then writes the undo.
+
+The history survives a reload of the page and a move of the work area (the Area arrows): the editor
+keeps it with the pending changes. A change that touched ground outside the new area is left out,
+with every change before it, since it could not be undone from there. Saving, Discard and reloading
+from the game start a new history (what it described is written or gone).
 
 ## View panel
 

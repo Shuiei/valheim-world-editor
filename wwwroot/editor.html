@@ -56,7 +56,7 @@
   #pending.dirty { color: #f3d29b; border-color: #7a5a2a; background: #2c2416; }
 
   /* Tool rail */
-  #rail { position: fixed; left: 10px; top: 70px; width: 64px; padding: 5px; display: flex; flex-direction: column; gap: 1px; max-height: calc(100vh - 120px); overflow-y: auto; }
+  #rail { position: fixed; left: 10px; top: 70px; width: 64px; padding: 5px; display: flex; flex-direction: column; gap: 1px; max-height: calc(100vh - 136px); overflow-y: auto; }
   #rail .cap { font-size: 9px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); text-align: center; margin: 4px 0 1px; }
   #rail .cap:first-child { margin-top: 0; }
   #rail button { flex-direction: column; gap: 1px; padding: 4px 2px 3px; border-color: transparent; background: transparent; font-size: 10.5px; position: relative; }
@@ -67,7 +67,7 @@
   #rail .sw { width: 16px; height: 16px; border-radius: 5px; border: 1px solid rgba(255,255,255,.25); }
 
   /* Tool options */
-  #toolPanel { position: fixed; left: 84px; top: 70px; width: 270px; padding: 12px 14px; max-height: calc(100vh - 120px); overflow-y: auto; }
+  #toolPanel { position: fixed; left: 84px; top: 70px; width: 270px; padding: 12px 14px; max-height: calc(100vh - 136px); overflow-y: auto; }
   #toolName { font-weight: 600; font-size: 14px; }
   #toolDesc { color: var(--muted); font-size: 12px; margin: 2px 0 10px; }
   .field { display: grid; grid-template-columns: 74px 1fr 50px; align-items: center; gap: 8px; margin: 7px 0; color: var(--muted); }
@@ -86,9 +86,9 @@
   .warnbox { margin-top: 10px; padding: 6px 8px; font-size: 11.5px; border: 1px solid #7a4a2a; background: #2e2119; border-radius: 7px; color: #e8c3a0; font-size: 12px; }
 
   /* View panel */
-  #viewPanel { position: fixed; right: 10px; top: 70px; width: 264px; padding: 12px 14px; max-height: calc(100vh - 120px); overflow-y: auto; }
+  #viewPanel { position: fixed; right: 10px; top: 70px; width: 264px; padding: 12px 14px; max-height: calc(100vh - 136px); overflow-y: auto; }
   #viewPanel[hidden] { display: none; }
-  #historyPanel { position: fixed; right: 10px; top: 70px; width: 300px; padding: 12px 14px; max-height: calc(100vh - 120px); overflow-y: auto; }
+  #historyPanel { position: fixed; right: 10px; top: 70px; width: 300px; padding: 12px 14px; max-height: calc(100vh - 136px); overflow-y: auto; }
   #historyPanel h3 { margin: 0 0 6px; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; display: flex; align-items: center; }
   #historyPanel h3 span { margin-left: auto; text-transform: none; letter-spacing: 0; font-weight: 400; }
   .hrow { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; padding: 6px 6px; border-radius: 7px; border: 1px solid transparent; }
@@ -130,6 +130,8 @@
   /* Status bar */
   #status { position: fixed; left: 10px; bottom: 10px; right: 10px; padding: 6px 12px; display: flex; gap: 18px; flex-wrap: wrap; align-items: center; font-variant-numeric: tabular-nums; }
   #status .warn { color: var(--warn); }
+  /* A long message keeps to two lines (the whole of it on hover): the bar must not grow over the panels. */
+  #sMsg { flex: 1 1 200px; min-width: 0; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
   #status .tips { margin-left: auto; color: var(--muted); font-size: 12px; }
 </style>
 <script type="importmap">{ "imports": { "three": "./lib/three.module.min.js" } }</script>
@@ -890,7 +892,7 @@ if (region.locations.length) {
     markers.add(post);
   }
 }
-function updateHistoryButtons() { $('undo').disabled = !undoStack.length; $('redo').disabled = !redoStack.length; renderHistory(); }
+function updateHistoryButtons() { $('undo').disabled = !undoStack.length; $('redo').disabled = !redoStack.length; renderHistory(); keepHistory(); }
 // History entries can combine: terrain (state = before, zones), deleted object ids, added object
 // ids and zone resets. Undo and redo apply the parts in opposite directions.
 // Terrain changes are kept as the points they touched, with their values before and after.
@@ -989,6 +991,69 @@ function renderHistory() {
   });
 }
 function msg(text, warn = false) { $('sMsg').innerHTML = warn ? `<span class="warn">${text}</span>` : text; }
+// The status message is cut to two lines: its whole text shows on hover.
+new MutationObserver(() => { $('sMsg').title = $('sMsg').textContent; }).observe($('sMsg'), { childList: true, subtree: true, characterData: true });
+// ---- The history survives a reload of the page and a move of the work area: the server keeps it with
+// the pending changes it describes (and drops it when they are saved, discarded or reloaded). Terrain
+// changes are stored by world position; on the way back they are fitted to the area shown. A change
+// that does not fit the area any more (and every one before it) is left out: it could not be undone.
+let historyLoaded = false, keepTimer = 0, historyGeneration = -1;
+const b64 = a => { const u = new Uint8Array(a.buffer, a.byteOffset, a.byteLength); let t = ''; for (let i = 0; i < u.length; i += 0x8000) t += String.fromCharCode(...u.subarray(i, i + 0x8000)); return btoa(t); };
+const unb64 = (t, T) => { const s = atob(t), u = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) u[i] = s.charCodeAt(i); return new T(u.buffer); };
+const sideOut = d => ({ level: b64(d.level), smooth: b64(d.smooth), mod: b64(d.mod), pmod: b64(d.pmod), paint: b64(d.paint) });
+const sideIn = d => ({ level: unb64(d.level, Float32Array), smooth: unb64(d.smooth, Float32Array), mod: unb64(d.mod, Uint8Array), pmod: unb64(d.pmod, Uint8Array), paint: unb64(d.paint, Float32Array) });
+function entryOut(e) {
+  const { delta, revertOf, time, ...rest } = e;
+  // Zones are counted from the area's first zone (X0, Z0): kept with it.
+  return { ...rest, time: time.toISOString(), revertOf: revertOf?.id, x0: X0, z0: Z0,
+    delta: delta && { ox: originX, oz: originZ, w: W, idx: b64(delta.idx), before: sideOut(delta.before), after: sideOut(delta.after) } };
+}
+// The entry fitted to this area, or null when one of its points is outside it.
+function entryIn(o) {
+  const e = { ...o, time: new Date(o.time) };
+  if (o.zones) {
+    e.zones = o.zones.map(([x, z]) => [x + o.x0 - X0, z + o.z0 - Z0]);
+    if (e.zones.some(([x, z]) => x < 0 || z < 0 || x > X1 - X0 || z > Z1 - Z0)) return null;
+  }
+  if (o.delta) {
+    const src = unb64(o.delta.idx, Int32Array), idx = new Int32Array(src.length);
+    for (let k = 0; k < src.length; k++) {
+      const g = src[k], gx = g % o.delta.w + o.delta.ox - originX, gz = Math.floor(g / o.delta.w) + o.delta.oz - originZ;
+      if (gx < 0 || gz < 0 || gx >= W || gz >= H) return null;
+      idx[k] = gz * W + gx;
+    }
+    e.delta = { idx, before: sideIn(o.delta.before), after: sideIn(o.delta.after) };
+  }
+  return e;
+}
+function keepHistory(now = false) {
+  if (!historyLoaded) return;
+  clearTimeout(keepTimer);
+  const send = () => {
+    const body = JSON.stringify({ seq: historySeq, undo: undoStack.map(entryOut), redo: redoStack.map(entryOut) });
+    fetch(`/api/history?generation=${historyGeneration}`, { method: 'POST', body, keepalive: body.length < 60000 }).catch(() => {});
+  };
+  if (now) send(); else keepTimer = setTimeout(send, 600);
+}
+addEventListener('pagehide', () => keepHistory(true));
+async function loadHistory() {
+  try {
+    const got = await fetch('/api/history').then(r => r.json()), h = got.history;
+    historyGeneration = got.generation;
+    if (h) {
+      const undo = h.undo.map(entryIn), redo = h.redo.map(entryIn);
+      // Keep the most recent changes that fit, back to the first one that does not.
+      let from = undo.length; while (from > 0 && undo[from - 1]) from--;
+      const kept = undo.slice(from), redoKept = redo.every(Boolean) ? redo : [];
+      const byId = new Map([...kept, ...redoKept].map(e => [e.id, e]));
+      for (const e of [...kept, ...redoKept]) e.revertOf = e.revertOf != null ? byId.get(e.revertOf) ?? null : undefined;
+      undoStack.push(...kept); redoStack.push(...redoKept); historySeq = h.seq;
+      if (from > 0) setTimeout(() => msg(`History: ${from} older change(s) are outside this area and cannot be undone from here.`), 0);
+    }
+  } catch { }
+  historyLoaded = true;
+  updateHistoryButtons();
+}
 $('undo').onclick = undo; $('redo').onclick = redo; updateHistoryButtons();
 
 // ---- Player-built pieces with the game's own models (exported into models/). Pieces without a model
@@ -1122,6 +1187,7 @@ Promise.all([
   const counts = await objects.load(objs, all, new Set(pieceTypes), templates);
   for (const el of document.querySelectorAll('[data-count]')) el.textContent = `(${counts[el.dataset.count] ?? 0})`;
   for (const f of ed.onObjects ?? []) f();
+  if (!historyLoaded) await loadHistory();
 });
 
 // ---- Show / hide: one switch per kind of thing, remembered in this browser.
@@ -1152,7 +1218,8 @@ ed.ensureShown = kinds => {
   }
   if (!turned.length) return;
   syncShow();
-  setTimeout(() => msg(`Switched on ${turned.join(', ')} in View, so what you placed stays visible.`), 50);
+  // Added to what the tool says about the placing (not instead of it).
+  setTimeout(() => { const said = $('sMsg').innerHTML; msg(`${said ? said + ' ' : ''}Switched on ${turned.join(', ')} in View, so what you placed stays visible.`); }, 50);
 };
 $('showDefaults').onclick = () => { document.querySelectorAll('[data-show]').forEach(c => c.checked = defaults[c.dataset.show]); syncShow(); };
 $('showAll').onclick = () => { document.querySelectorAll('[data-show]').forEach(c => c.checked = true); syncShow(); };

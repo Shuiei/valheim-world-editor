@@ -28,10 +28,20 @@ public sealed class EditStore
 	}
 
 	// Start over from a (re)loaded world: after saving, or to discard unsaved changes.
+	// The page's undo history (its own JSON), kept here so it survives reloads of the page and moves of
+	// the work area. It describes the pending changes, so it goes with them (ResetFrom).
+	public string? History { get; set; }
+
+	// Changes each time the pending changes are reset: history sent for an earlier generation (a page
+	// closing after a save, for example) is not kept.
+	public int HistoryGeneration { get; private set; }
+
 	public void ResetFrom(WorldSave world)
 	{
 		lock (_lock)
 		{
+			History = null;
+			HistoryGeneration++;
 			_zones.Clear();
 			_baseline.Clear();
 			_deleted.Clear();

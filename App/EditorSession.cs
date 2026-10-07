@@ -533,6 +533,21 @@ public static class EditorSession
 		});
 
 		// Throw away unsaved changes by reloading the world from disk.
+		// The page's undo history: kept with the pending changes it describes (cleared when they are
+		// saved, discarded or reloaded), so a reload or a move of the work area keeps it.
+		app.MapGet("/api/history", () => Results.Text($"{{\"generation\":{edits.HistoryGeneration},\"history\":{edits.History ?? "null"}}}", "application/json"));
+		app.MapPost("/api/history", async (HttpRequest req, int generation) =>
+		{
+			using StreamReader reader = new(req.Body);
+			string body = await reader.ReadToEndAsync();
+			if (generation != edits.HistoryGeneration)
+			{
+				return Results.Conflict("The changes this history describes were saved, discarded or reloaded.");
+			}
+			edits.History = body;
+			return Results.Ok();
+		});
+
 		app.MapPost("/api/discard", async () =>
 		{
 			WorldSave fresh = live != null ? await live.LoadWorld() : WorldSave.Load(world.Directory);
