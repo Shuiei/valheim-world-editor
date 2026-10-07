@@ -111,7 +111,15 @@ player built** (Select tool). Moving or editing an object keeps the builder it h
 
 The bottom of the Help panel says what draws the 3D view: the graphics card, or the processor
 (llvmpipe, SwiftShader), which is much slower (the app's own window cannot tell: WebKit hides the
-card's name), and the frame rate while the view moves, with the editor's own work per frame. The view is only drawn at full speed while something
+card's name), and the frame rate while the view moves, with the editor's own work per frame.
+
+The editor also writes its frame rate to a log in its data folder, a line every 0.2 s while the view
+is used: `perf-window.log` in the app's own window, `perf-browser.log` in a browser (`--browser`), so
+the two can be compared. A header line (`#`) gives the date, the version, the browser, the size of
+the 3D view and what is loaded (written again when one changes); then each line says whether the
+camera was **moving**, or stood **still** while something else happened (a stroke, the mouse), with
+the frames per second, the editor's work per frame and the longest gap between two frames. Idle
+moments are not written. Help gives the file's place. The view is only drawn at full speed while something
 happens (the view moves, a stroke, the mouse or keys in use); otherwise a few times a second.
 
 | Key | Action |

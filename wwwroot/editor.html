@@ -308,6 +308,7 @@
   <p>Edits stay within the game's limit of ±8 m from the original ground; points at the limit turn red.</p>
   <p>The outer line of points is locked so the area always joins its neighbours seamlessly.</p>
   <p id="gpuInfo"></p>
+  <p id="perfPath"></p>
 </aside>
 <div id="status" class="card"><span id="sPos">–</span><span id="sHeight"></span><span id="sZone"></span><span id="sMsg"></span><span class="tips">Right drag rotate · Wheel zoom · Middle drag slide · <kbd>?</kbd> help</span></div>
 <script type="module">
@@ -1814,6 +1815,7 @@ $('helpClose').onclick = () => toggleHelp(false);
 toggleView(readPref('editorViewOpen', true));
 
 const fps = { rate: 0, ms: 0 };
+fetch('/api/app').then(r => r.json()).then(a => { $('perfPath').textContent = `Frame rates are written (a line every 0.2 s while the view is used) to ${a.perfLog}.`; }).catch(() => { });
 // What draws the 3D view: the graphics card, or the processor (llvmpipe, SwiftShader: much slower).
 // WebKit (the app's own window, Safari) never says which card: it answers "Apple GPU" everywhere.
 {
@@ -1830,13 +1832,43 @@ const fps = { rate: 0, ms: 0 };
 // second), otherwise a few times a second (enough for models that finish loading, and for the game
 // look's water and sky): an idle editor leaves the processor alone. ed.wake() asks for full speed.
 let last = performance.now(), wokeAt = last, drawnAt = 0;
-// Frame rate while drawing at full speed (frames per second, and the editor's own work per frame),
-// over the last 60 such frames: shown in Help.
 const wake = () => { wokeAt = performance.now(); };
 ed.wake = wake;
 for (const ev of ['pointerdown', 'pointermove', 'pointerup', 'wheel', 'keydown', 'keyup', 'input', 'change', 'click', 'resize']) addEventListener(ev, wake, { capture: true, passive: true });
 const lastView = new THREE.Matrix4();
+// Frame rate while drawing at full speed (frames per second, and the editor's own work per frame),
+// over the last 60 such frames: shown in Help.
 const frameLog = [];
+// perf-window.log / perf-browser.log (the data folder, one per way the editor is opened): a sample every 0.2 s while the view is used: whether the camera moved,
+// stood still while something else happened (a stroke, the mouse, a panel) or nothing did (idle), the
+// frames drawn and the editor's work for them, and the longest gap between two frames (stutters).
+// A header line says what the samples are about: the browser, the view's size, what is loaded; it is
+// written again when one of those changes. Sent every 2 s. To compare the app's window with a browser.
+const perf = { t0: performance.now(), moved: false, busy: false, frames: 0, work: 0, gap: 0, lastFrame: 0, lines: [], header: '', sentAt: performance.now() };
+const clock = () => { const d = new Date(); return `${d.toTimeString().slice(0, 8)}.${String(d.getMilliseconds()).padStart(3, '0')}`; };
+function perfHeader() {
+  const ua = navigator.userAgent.match(/(Firefox|Edg|Chrome|Safari)\/[\d.]+/g)?.join(' ') ?? navigator.userAgent;
+  return `# view ${renderer.domElement.width}×${renderer.domElement.height} px (×${devicePixelRatio}) · ${ua}${/WebKit/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent) ? ' (WebKit)' : ''}`
+    + ` · GPU: ${ed.gpu?.name ?? '?'} · game look ${look ? 'on' : 'off'} · tool ${tool} · ${objects.records.size} objects · area ${size}×${size} zones`;
+}
+function perfSample(now) {
+  const span = now - perf.t0;
+  if (perf.moved || perf.busy) {
+    const h = perfHeader();
+    if (h !== perf.header) { perf.header = h; perf.lines.push(h); }
+    const state = perf.moved ? 'moving' : 'still ';
+    perf.lines.push(`${clock()}  ${state}  ${String(Math.round(perf.frames / (span / 1000))).padStart(3)} fps  ${String(perf.frames).padStart(2)} frames  ${(perf.frames ? perf.work / perf.frames : 0).toFixed(1).padStart(5)} ms work  longest gap ${Math.round(perf.gap)} ms`);
+  }
+  perf.t0 = now; perf.moved = perf.busy = false; perf.frames = 0; perf.work = 0; perf.gap = 0;
+  if (perf.lines.length && now - perf.sentAt > 2000) perfSend(now);
+}
+function perfSend(now = performance.now()) {
+  perf.sentAt = now;
+  if (!perf.lines.length) return;
+  const body = perf.lines.join('\n'); perf.lines = [];
+  fetch('/api/perflog', { method: 'POST', body, keepalive: true }).catch(() => { });
+}
+addEventListener('pagehide', () => perfSend());
 renderer.setAnimationLoop(now => {
   if (look) look.update(camera);
   for (const f of ed.frame) f(Math.min((now - last) / 1000, 0.1));
@@ -1849,11 +1881,16 @@ renderer.setAnimationLoop(now => {
   camera.updateMatrixWorld();
   const moved = !camera.matrixWorld.equals(lastView);
   if (moved) lastView.copy(camera.matrixWorld);
+  if (moved) perf.moved = true; else if (stroke || now - wokeAt <= 1000) perf.busy = true;
+  if (now - perf.t0 >= 200) perfSample(now);
   if (!moved && !stroke && now - wokeAt > 1000 && now - drawnAt < (look ? 50 : 250)) return;
   const busyFrame = now - drawnAt < 100;
   drawnAt = now;
   const t0 = performance.now();
   renderer.render(scene, camera);
+  perf.frames++; perf.work += performance.now() - now;
+  if (perf.lastFrame) perf.gap = Math.max(perf.gap, now - perf.lastFrame);
+  perf.lastFrame = now;
   if (busyFrame) {
     frameLog.push([now, performance.now() - t0 + (t0 - now)]);
     if (frameLog.length > 60) frameLog.shift();
