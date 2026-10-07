@@ -1,4 +1,4 @@
-# Terrain modifiers of locations and pieces (WorldGen/terrain-modifiers.json, in git).
+# Terrain modifiers of locations and pieces (Core/WorldGen/terrain-modifiers.json, in git).
 # Usage: VWE_BUNDLES=<game>/valheim_Data/StreamingAssets/SoftRef/Bundles python scan_modifiers.py <out.json>
 import UnityPy, glob, json, math, sys
 import os as _os

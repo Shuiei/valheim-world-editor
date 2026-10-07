@@ -35,7 +35,7 @@ package() {   # $1 runtime id, $2 program file name (users start it by double-cl
   # The window icon: icon.ico on Windows, icon.png elsewhere (and as the pages' icon everywhere).
   [ "$rid" = win-x64 ] || rm -f "$dir/wwwroot/icon.ico"
   cp "$repo"/tools/asset-export/{export_all.py,assetlib.py,export_pieces.py,fix_normals.py,fix_alpha.py} \
-     "$repo/tools/zdo_scan.py" "$repo/WorldGen/pieces.json" "$dir/export-game-files/"
+     "$repo/tools/zdo_scan.py" "$repo/Core/WorldGen/pieces.json" "$dir/export-game-files/"
   "$repo/tools/make-python-runtime.sh" "$rid" "$dir/export-game-files" >/dev/null
   cp "$repo/tools/$readme" "$dir/README.txt"
   sed -i "s/@VERSION@/$version/" "$dir/README.txt"

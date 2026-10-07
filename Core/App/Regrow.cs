@@ -85,7 +85,7 @@ public static class Regrow
 	public static List<Spot> Zones(TerrainService terrain, EditStore edits, int seed, int x0, int z0, int x1, int z1)
 	{
 		// The ground one zone around too: groups reach up to 20 m past their zone.
-		var (w, h, heights) = HeightmapEndpoints.Heights(terrain, edits, x0 - 1, z0 - 1, x1 + 1, z1 + 1);
+		var (w, h, heights) = HeightGrid.Read(terrain, edits, x0 - 1, z0 - 1, x1 + 1, z1 + 1);
 		Ground ground = new(heights, w, h, (x0 - 1) * 64f - 32f, (z0 - 1) * 64f - 32f);
 		List<Spot> spots = new();
 		lock (RandomLock)

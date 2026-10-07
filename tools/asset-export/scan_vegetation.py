@@ -1,4 +1,4 @@
-# The game's vegetation rules (WorldGen/vegetation.json): ZoneSystem's m_vegetation, then the
+# The game's vegetation rules (Core/WorldGen/vegetation.json): ZoneSystem's m_vegetation, then the
 # LocationLists' (in m_sortOrder), as ZoneSystem.SetupLocations merges them. "Regrow nature" places
 # by these rules like ZoneSystem.PlaceVegetation. Alt biomes' extra vegetation (Deep North parts the
 # editor's generator does not model) is left out.

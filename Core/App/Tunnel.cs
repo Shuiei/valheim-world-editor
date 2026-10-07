@@ -158,7 +158,7 @@ public static class Tunnel
 			client.Dispose();
 			return Fail("Enter the plugin's token: the Token line in BepInEx/config/local.worldeditorbridge.cfg on the server.");
 		}
-		int local = AppHost.FreePort(15182);
+		int local = Places.FreePort(15182);
 		var forward = new ForwardedPortLocal("127.0.0.1", (uint)local, "127.0.0.1", (uint)bridgePort);
 		client.AddForwardedPort(forward);
 		forward.Start();

@@ -1,4 +1,4 @@
-# Names of the data an object (ZDO) can hold (WorldGen/zdo-keys.json, in git): the save only stores
+# Names of the data an object (ZDO) can hold (Core/WorldGen/zdo-keys.json, in git): the save only stores
 # each name's hash (String.GetStableHashCode), so the editor's object inspector looks the hash up here.
 # Every string literal of the game code (the #US heap of assembly_valheim.dll) is a candidate, plus the
 # names the game builds at run time ("pu_id" + i for ward permissions, "{index}_item" for armor stands...).

@@ -16,6 +16,11 @@
     <Compile Remove="plugin/**" />
     <Compile Remove="tools/**" />
     <Compile Remove="tests/**" />
+    <!-- The shared library is its own project (Core/), referenced below. -->
+    <Compile Remove="Core/**" />
+    <None Remove="Core/**" />
+    <EmbeddedResource Remove="Core/**" />
+    <Content Remove="Core/**" />
     <Content Remove="tests/**" />
     <None Remove="tests/**" />
     <None Remove="plugin/**" />
@@ -25,14 +30,9 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Photino.NET" Version="4.0.16" />
-    <PackageReference Include="SSH.NET" Version="2026.0.0" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="WorldGen/terrain-modifiers.json" LogicalName="TerrainEditor.terrain-modifiers.json" />
-    <EmbeddedResource Include="WorldGen/pieces.json" LogicalName="TerrainEditor.pieces.json" />
-    <EmbeddedResource Include="WorldGen/prefabs.json" LogicalName="TerrainEditor.prefabs.json" />
-    <EmbeddedResource Include="WorldGen/vegetation.json" LogicalName="TerrainEditor.vegetation.json" />
-    <EmbeddedResource Include="WorldGen/zdo-keys.json" LogicalName="TerrainEditor.zdo-keys.json" />
+    <ProjectReference Include="Core/ValheimWorldEditor.Core.csproj" />
   </ItemGroup>
   <ItemGroup>
     <Content Update="wwwroot/**" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />

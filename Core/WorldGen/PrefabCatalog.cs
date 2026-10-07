@@ -9,6 +9,9 @@ namespace TerrainEditor.Terrain;
 // editor create any kind of object, also ones that do not exist anywhere in the world yet.
 public static class PrefabCatalog
 {
+	// The name of a prefab: a building piece's, or any other kind's from the game's list.
+	public static string? DisplayName(int prefab) => PieceCatalog.Get(prefab)?.Name ?? NameOf(prefab);
+
 	// GrowRadius: saplings and crops need this much free space to grow (0 for anything else).
 	// ContainerW x ContainerH: the grid of a container (0 when the prefab is none, or its container is
 	// on a child object, like carts and ships). WardRadius: area a ward protects. BuildRange: radius a

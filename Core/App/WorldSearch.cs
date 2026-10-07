@@ -49,7 +49,7 @@ public static class WorldSearch
 				{
 					continue;
 				}
-				string? name = ObjectEndpoints.PrefabName(o.Prefab);
+				string? name = PrefabCatalog.DisplayName(o.Prefab);
 				if (name != null && Shown(name) && Matches(name))
 				{
 					Found(id, name, o.Position, null, name);
@@ -57,7 +57,7 @@ public static class WorldSearch
 			}
 			foreach (NewObject n in edits.Added)
 			{
-				string? name = ObjectEndpoints.PrefabName(n.Prefab);
+				string? name = PrefabCatalog.DisplayName(n.Prefab);
 				if (name != null && Shown(name) && Matches(name))
 				{
 					Found(n.Id, name, n.Position, null, name);
@@ -101,7 +101,7 @@ public static class WorldSearch
 			{
 				continue;
 			}
-			string name = ObjectEndpoints.PrefabName(z.Prefab) ?? z.Prefab.ToString(CultureInfo.InvariantCulture);
+			string name = PrefabCatalog.DisplayName(z.Prefab) ?? z.Prefab.ToString(CultureInfo.InvariantCulture);
 			if (what == "items")
 			{
 				if (z.GetBytes(ItemsKey) is not byte[] items)

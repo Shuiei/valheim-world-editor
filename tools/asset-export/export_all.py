@@ -257,8 +257,8 @@ def world_prefabs(world):
 
 def export_models(found, args, work, out):
     mdir = os.path.join(out, 'models'); os.makedirs(mdir, exist_ok=True)
-    # The build-piece list: next to this script in a release, WorldGen/pieces.json in the source tree.
-    plist = next(p for p in (os.path.join(HERE, 'pieces.json'), os.path.join(REPO, 'WorldGen', 'pieces.json')) if os.path.exists(p))
+    # The build-piece list: next to this script in a release, Core/WorldGen/pieces.json in the source tree.
+    plist = next(p for p in (os.path.join(HERE, 'pieces.json'), os.path.join(REPO, 'Core', 'WorldGen', 'pieces.json')) if os.path.exists(p))
     pieces = set(json.load(open(plist)))
     roots = found['roots']
     index = {}

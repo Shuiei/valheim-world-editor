@@ -13,34 +13,7 @@ public static class HeightmapEndpoints
 
 	// The ground of zones x0..x1, z0..z1 (base terrain, location flattening and edits, as in game):
 	// width and height in points (64 per zone + 1), rows from south to north.
-	public static (int W, int H, float[] Heights) Heights(ValheimGen.TerrainService terrain, EditStore edits, int x0, int z0, int x1, int z1)
-	{
-		int w = (x1 - x0 + 1) * 64 + 1, h = (z1 - z0 + 1) * 64 + 1;
-		float[] heights = new float[w * h];
-		for (int zz = z0; zz <= z1; zz++)
-		{
-			for (int zx = x0; zx <= x1; zx++)
-			{
-				float[] b = terrain.BaseZone(zx, zz);
-				ZoneEdit? e = edits.Get(zx, zz);
-				int ox = (zx - x0) * 64, oz = (zz - z0) * 64;
-				for (int k = 0; k < EditStore.Grid; k++)
-				{
-					for (int l = 0; l < EditStore.Grid; l++)
-					{
-						int i = k * EditStore.Grid + l;
-						float v = b[i];
-						if (e != null && e.Modified[i])
-						{
-							v = Math.Clamp(b[i] + e.Level[i] + e.Smooth[i], b[i] - EditStore.MaxLevel, b[i] + EditStore.MaxLevel);
-						}
-						heights[(oz + k) * w + ox + l] = v;
-					}
-				}
-			}
-		}
-		return (w, h, heights);
-	}
+	public static (int W, int H, float[] Heights) Heights(ValheimGen.TerrainService terrain, EditStore edits, int x0, int z0, int x1, int z1) => HeightGrid.Read(terrain, edits, x0, z0, x1, z1);
 
 	public static byte[] Encode(int w, int h, float[] heights, string area, out float min, out float max)
 	{
