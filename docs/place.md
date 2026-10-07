@@ -82,6 +82,7 @@ tool, Flatten).
 | **Follow the line** | Line | On (the default): each object follows the line (plus the Rotation): a piece lies along it, end to end, other kinds face along it. Off: random facing. Circles and rectangles always follow their outline. |
 | **Smooth curve through the points** | Line | A smooth curve instead of straight segments. |
 | **Spacing** | Grid | Space between objects, centre to centre (m): the size of each cell. |
+| **fit** | Grid, Line, Brush, Zone | Shown when a ticked kind is wider than the spacing (its model at the largest Size), so they would overlap: a blueberry bush is about 3 m wide, so at 1 m apart the rows merge into one hedge. Sets the spacing to the widest ticked kind. |
 | **Place** (`Enter`) | Line, Grid, Zone | Places what the preview shows. |
 | **Clear** (`Esc`) | Line, Grid, Zone | Removes the drawn shape. |
 | **New layout** (`R`) | All | New random positions, kinds, sizes and facings for the preview. |

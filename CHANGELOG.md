@@ -4,6 +4,13 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v0.26.3 — 2026-10-07 (spacing that fits)
+
+### Added
+- **Place tool**: when a ticked kind is wider than the spacing, the panel says so and **fit** sets
+  the spacing to it. A blueberry bush is about 3 m wide: a 1 m grid of them was one big hedge
+  instead of rows.
+
 ## v0.26.2 — 2026-10-07 (editable zone points)
 
 ### Added

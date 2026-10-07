@@ -156,6 +156,7 @@ export const TIPS = {
   '[data-m="zone"]': 'Draw a zone freely, then fill it by scatter or by a grid.',
   plSearch: 'Filter the list of kinds by name.',
   plUndoPt: 'Remove the last point you clicked (Backspace). Ctrl + click any point to remove that one.',
+  plFit: 'Set the spacing to the widest ticked kind (its model at the largest Size), so they stand side by side without overlapping.',
   plNone: 'Untick every kind in the list.',
   plPick: 'Pick a kind from the world: click an object to place only that kind. Shift + click adds it to the ticked kinds. Esc cancels.',
   plFav: 'Starred kinds (☆ in the list). Click: tick or untick that kind. Shift + click: place only that kind. All / none: tick or untick them all.',

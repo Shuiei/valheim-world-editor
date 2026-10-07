@@ -1050,6 +1050,23 @@ test('Place zone: Ctrl + click removes a point, drag moves one, Remove last poin
   noErrors();
 });
 
+test('Place grid: a warning and fit when the kinds are wider than the spacing', async () => {
+  await openEditor();
+  await page().evaluate(() => localStorage.setItem('plantChosen', '["BlueberryBush"]'));
+  await openEditor();
+  await page().keyboard.press('t'); await sleep(300);
+  await page().click('#plModes [data-m="grid"]');
+  await page().$eval('#plCell', e => { e.value = 1; e.dispatchEvent(new Event('input')); });
+  // The test world has no models: give the bush the 3 m of the game's.
+  await page().evaluate(() => window.__plantWidth('BlueberryBush', 2.9));
+  await page().waitForFunction(() => !document.getElementById('plFitHint').hidden);
+  assert.match(await page().$eval('#plFitHint', e => e.textContent), /BlueberryBush is about 3\.5 m wide/);
+  await page().click('#plFit');
+  assert.equal(await page().$eval('#plCell', e => +e.value), 3.5, 'spacing set to the width at the largest size (120 %)');
+  assert.ok(await page().$eval('#plFitHint', e => e.hidden), 'no warning once they fit');
+  noErrors();
+});
+
 test('Worlds goes back to the start page', async () => {
   await page().goto(t.base + '/index.html', { waitUntil: 'networkidle0' });
   await page().click('#worldsBtn');
