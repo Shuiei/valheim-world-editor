@@ -302,6 +302,7 @@ public static class EditorSession
 		});
 
 		BlueprintEndpoints.Map(app, () => world.Name, name => world.CanCreate(StableHash.Of(name)));
+		ObjectEndpoints.Map(app, () => world, edits, Pending);
 
 		app.MapGet("/api/zone/{x:int}/{z:int}", (int x, int z) =>
 		{
@@ -403,7 +404,9 @@ public static class EditorSession
 				}
 				data.AddRange(new[] { p.X, p.Y, p.Z, r.X, r.Y, r.Z, s.X, s.Y, s.Z, t, id });
 			}
-			// Objects added in the editor and not saved yet (negative ids).
+			// Objects added in the editor and not saved yet (negative ids), with what a later move needs:
+			// the object they were copied from, whether they keep its data, whether they carry their own.
+			List<object> addedInfo = new();
 			foreach (var n in edits.Added)
 			{
 				var p = n.Position;
@@ -417,8 +420,9 @@ public static class EditorSession
 					types.Add(n.Prefab);
 				}
 				data.AddRange(new[] { p.X, p.Y, p.Z, n.Rotation.X, n.Rotation.Y, n.Rotation.Z, n.Scale, n.Scale, n.Scale, t, n.Id });
+				addedInfo.Add(new { id = n.Id, sourceId = n.SourceId, fresh = n.Fresh, raw = n.Raw != null });
 			}
-			return Results.Json(new { types, data });
+			return Results.Json(new { types, data, added = addedInfo });
 		});
 
 		// How often each object prefab occurs in the whole world (for tooling).
@@ -514,8 +518,10 @@ public static class EditorSession
 		// New objects placed in the editor (plant brush, paste, replace). Ids are negative and chosen by the browser.
 		app.MapPost("/api/objects/add", (List<NewObjectUpload> list) =>
 		{
-			var known = list.Where(o => world.CanCreate(o.Prefab)).ToList();
-			edits.AddObjects(known.Select(o => new TerrainEditor.Editing.NewObject(o.Id, o.Prefab, new System.Numerics.Vector3(o.X, o.Y, o.Z), new System.Numerics.Vector3(o.Rx, o.Ry, o.Rz), o.Scale, o.SourceId, o.Fresh ?? true)));
+			var known = list.Where(o => world.CanCreate(o.Prefab) || o.RawOf != null).ToList();
+			// RawOf: an object of this session with its own data (edited, restored) that is moved: the copy keeps that data.
+			edits.AddObjects(known.Select(o => new TerrainEditor.Editing.NewObject(o.Id, o.Prefab, new System.Numerics.Vector3(o.X, o.Y, o.Z), new System.Numerics.Vector3(o.Rx, o.Ry, o.Rz), o.Scale, o.SourceId, o.Fresh ?? true,
+				o.RawOf is int r && edits.FindAdded(r)?.Raw is byte[] raw ? raw : null)));
 			return Results.Ok(new { accepted = known.Count, rejected = list.Count - known.Count, pending = Pending() });
 		});
 
@@ -587,5 +593,5 @@ public static class EditorSession
 
 record ZoneUpload(int X, int Z, bool[] Modified, float[] Level, float[] Smooth, bool[] PaintModified, float[] Paint);
 record DeleteRequest(int[] Ids, bool Restore);
-record NewObjectUpload(int Id, int Prefab, float X, float Y, float Z, float Rx, float Ry, float Rz, float Scale, int? SourceId, bool? Fresh);
+record NewObjectUpload(int Id, int Prefab, float X, float Y, float Z, float Rx, float Ry, float Rz, float Scale, int? SourceId, bool? Fresh, int? RawOf = null);
 record ResetRequest(int[][] Zones, bool KeepBuildings, bool Ground, bool Undo);

@@ -124,8 +124,11 @@ be byte-identical to the files made by hand during development.
 
 The catalogues that are in git are made by `scan_pieces.py` (`WorldGen/pieces.json`),
 `scan_modifiers.py` (`WorldGen/terrain-modifiers.json`) and `scan_prefabs.py`
-(`WorldGen/prefabs.json`); each takes the output file as argument and the bundle folder in
-`VWE_BUNDLES`.
+(`WorldGen/prefabs.json`: also container sizes, ward radii and crafting station build ranges);
+each takes the output file as argument and the bundle folder in `VWE_BUNDLES`.
+`scan_zdo_keys.py <Valheim folder> WorldGen/zdo-keys.json` makes the names of object data keys for
+the object inspector, from the string literals of `assembly_valheim.dll` (the save only keeps their
+hashes).
 
 ## Tests
 

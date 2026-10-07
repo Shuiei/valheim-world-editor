@@ -13,6 +13,13 @@ version number. Newest first.
   or a `.vbuild` file into the blueprint list, and write any blueprint back out in either format.
 - **Repeat a paste** (like WorldEdit's `//stack`): one click places several copies in a row, along
   the copy's width or depth or stacked upwards, with a gap; one undo step.
+- **Object inspector** (Select tool, `I`): everything an object holds in the save, by name, and
+  editing it: chest contents (items, stacks, quality, slots), sign texts, portal tags, ward
+  permissions, timers... An edit is one undo step and is saved or applied live like any change.
+
+### Fixed
+- Objects placed or moved in this session lost what they were copied from after the page was
+  reloaded, so moving one again made a fresh copy (a moved chest lost its contents).
 
 ## v0.4.1 — 2026-10-05 (editor on GitHub only)
 

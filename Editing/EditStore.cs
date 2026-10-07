@@ -144,6 +144,15 @@ public sealed class EditStore
 		}
 	}
 
+	// An object added in this session (also one deleted again, which undo can bring back).
+	public NewObject? FindAdded(int id)
+	{
+		lock (_lock)
+		{
+			return _added.TryGetValue(id, out NewObject? o) ? o : _addedTrash.TryGetValue(id, out NewObject? t) ? t : null;
+		}
+	}
+
 	public void AddObjects(IEnumerable<NewObject> objects)
 	{
 		lock (_lock)
@@ -379,7 +388,9 @@ public sealed class ZoneEdit(int zoneX, int zoneZ)
 // template object). SourceId: the object it comes from (else the first object of the prefab).
 // Fresh: a new independent object (only the builder is taken from the source); otherwise, for a
 // moved object, all of the source's data (chest contents, health, builder...) is kept.
-public sealed record NewObject(int Id, int Prefab, System.Numerics.Vector3 Position, System.Numerics.Vector3 Rotation, float Scale, int? SourceId = null, bool Fresh = true);
+// Raw: the object's complete data in the save format (an object edited in the inspector, or restored
+// from a backup); it is written with this position, rotation and scale instead of copying a source.
+public sealed record NewObject(int Id, int Prefab, System.Numerics.Vector3 Position, System.Numerics.Vector3 Rotation, float Scale, int? SourceId = null, bool Fresh = true, byte[]? Raw = null);
 
 // Give a zone back to the world generator. KeepBuildings keeps player-built pieces; Ground also
 // removes the terrain edits.

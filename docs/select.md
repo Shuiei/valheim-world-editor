@@ -44,3 +44,20 @@ all of its data (a moved chest keeps its contents).
 | **Deselect** | Clears the selection. |
 | **Replace** + **go** | Replaces every selected object by the chosen kind, at the same place and facing. |
 | `Ctrl+C` | Copies the selection; `Ctrl+V` pastes it with the [paste tool](area.md#copy-and-paste). Copies are new, independent objects (a copied chest is empty). Pasted objects keep their height above the ground where they land. |
+
+## Inspecting and changing an object's data
+
+Like MCEdit's NBT editor: with one object selected, **Inspect data** (`I`) opens a panel with
+everything the object holds in the save.
+
+| Part | What it shows |
+|---|---|
+| **Contents** | For chests (and anything with an `items` value): every item with its stack, quality, durability (%) and slot (X, Y). The container's size comes from the game (a wood chest has 5 × 2 slots); carts and ships keep their container on a part, so their size is unknown. **Add item** puts a new item in the first free slot (type its name: `Wood`, `SwordIron`... the list suggests every item of the game); **✕** takes one out; **Tidy slots** moves every item to the first free slots, row by row. Items outside the slots would be hidden in game, so the editor asks before applying that. |
+| **Data** | Every value, by the name the game uses (with a readable label for the common ones: Text (sign), Tag (portal), Builder, Health, Planted at...). Numbers and texts can be changed in place; **✕** removes a value (the game then uses its default). Whole numbers that are the name of a prefab (an item on an item stand, for example) show that name. Other binary data is listed but not changed here. |
+| **Add** | Adds a value the object does not have yet: choose its kind, type its name as the game calls it (`text` for a sign, `tag` for a portal...) and the value. |
+| **Apply changes** | Replaces the object by a copy with the new data, at the same place: one step in History, so `Ctrl+Z` puts the old one back. Save or Apply live writes it. A changed object can still be moved, turned and changed again, and keeps its data. |
+| **Revert** | Forgets the changes made in the panel. |
+
+The names of the values come from the game's code (`WorldGen/zdo-keys.json`); a value whose name is
+not known is shown by its number. Change values only when you know what they do: the game may reset
+or ignore values it does not expect.

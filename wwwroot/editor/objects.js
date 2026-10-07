@@ -105,6 +105,7 @@ export function createObjects(ed) {
       if (!byName.has(key)) byName.set(key, []);
       byName.get(key).push(id);
     }
+    for (const a of objs.added ?? []) { const r = records.get(a.id); if (r) Object.assign(r, { sourceId: a.sourceId, fresh: a.fresh, raw: a.raw }); }
     await Promise.all([...byName].map(async ([key, ids]) => {
       const r0 = records.get(ids[0]);
       const b = await batchFor(r0.name, r0.kind, r0.added);
@@ -136,7 +137,7 @@ export function createObjects(ed) {
       if (!state.templates.has(prefab)) continue;
       const id = nextId--;
       const kind = state.pieceNames.has(o.name) ? 'buildings' : objectKind(o.name, state.pieceNames);
-      const r = { id, prefab, name: o.name, kind, x: o.x, y: o.y, z: o.z, rx: o.rx ?? 0, ry: o.ry ?? 0, rz: o.rz ?? 0, scale: o.scale ?? 0, deleted: false, added: true, sourceId: o.sourceId ?? null, fresh: o.fresh ?? true };
+      const r = { id, prefab, name: o.name, kind, x: o.x, y: o.y, z: o.z, rx: o.rx ?? 0, ry: o.ry ?? 0, rz: o.rz ?? 0, scale: o.scale ?? 0, deleted: false, added: true, sourceId: o.sourceId ?? null, fresh: o.fresh ?? true, rawOf: o.rawOf ?? null, raw: o.rawOf != null };
       records.set(id, r);
       ids.push(id);
       unsent.push(r);
@@ -154,7 +155,7 @@ export function createObjects(ed) {
   function flush() { return ed.track ? ed.track(flushNow()) : flushNow(); }
   async function flushNow() {
     if (!unsent.length) return;
-    const body = unsent.splice(0).map(r => ({ id: r.id, prefab: r.prefab, x: r.x, y: r.y, z: r.z, rx: r.rx, ry: r.ry, rz: r.rz, scale: r.scale, sourceId: r.sourceId ?? null, fresh: r.fresh ?? true }));
+    const body = unsent.splice(0).map(r => ({ id: r.id, prefab: r.prefab, x: r.x, y: r.y, z: r.z, rx: r.rx, ry: r.ry, rz: r.rz, scale: r.scale, sourceId: r.sourceId ?? null, fresh: r.fresh ?? true, rawOf: r.rawOf ?? null }));
     try {
       const res = await (await fetch('/api/objects/add', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })).json();
       ed.showPendingFrom(res.pending);
@@ -162,6 +163,21 @@ export function createObjects(ed) {
     } catch (err) {
       ed.msg(`Could not send the new objects to the editor: ${err.message}`, true);
     }
+  }
+
+  // An id for a new object the server makes itself (an edited copy, a restored object).
+  const reserveId = () => nextId--;
+  // Draws an object the server already has under a reserved id (raw: it carries its own data).
+  async function adopt(o) {
+    const name = o.name ?? state.names[o.prefab] ?? String(o.prefab);
+    const kind = state.pieceNames.has(name) ? 'buildings' : objectKind(name, state.pieceNames);
+    const r = { id: o.id, prefab: o.prefab, name, kind, x: o.x, y: o.y, z: o.z, rx: o.rx ?? 0, ry: o.ry ?? 0, rz: o.rz ?? 0, scale: o.scale ?? 0, deleted: false, added: true, sourceId: null, fresh: false, raw: true };
+    records.set(r.id, r);
+    const b = await batchFor(name, kind, true);
+    b.ids.push(r.id);
+    rebuild(b);
+    refreshMarkers();
+    return r;
   }
 
   // Mark records deleted or not (the editor's setDeleted hides the instances and tells the server).
@@ -185,5 +201,5 @@ export function createObjects(ed) {
   // Placement matrix (three.js space) of a record-like { x, y, z, rx, ry, rz, scale }, for previews.
   const matrixFor = (r, rootScale, out) => out.copy(placement(r, rootScale));
 
-  return { records, load, add, flush, counts, addPieceRecord, markDeleted, alive, creatableTypes, state, stableHash, matrixFor, markApplied };
+  return { records, load, add, flush, counts, addPieceRecord, markDeleted, alive, creatableTypes, state, stableHash, matrixFor, markApplied, reserveId, adopt };
 }

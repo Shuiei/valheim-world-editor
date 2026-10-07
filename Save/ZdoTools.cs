@@ -142,14 +142,14 @@ public static class ZdoBuilder
 		return ms.ToArray();
 	}
 
-	private static float Wrap(float a)
+	internal static float Wrap(float a)
 	{
 		a %= 360f;
 		return a < 0f ? a + 360f : a;
 	}
 
 	// Mirrors ZPackage.WriteSmallRotation / ReadSmallRotation (half degrees, 2 bytes for pure Y).
-	private static void WriteSmallRotation(BinaryWriter w, Vector3 e)
+	internal static void WriteSmallRotation(BinaryWriter w, Vector3 e)
 	{
 		uint x = (uint)MathF.Round(e.X * 2f) % 720, y = (uint)MathF.Round(e.Y * 2f) % 720, z = (uint)MathF.Round(e.Z * 2f) % 720;
 		if (x == 0 && z == 0)
@@ -162,7 +162,7 @@ public static class ZdoBuilder
 		w.Write((ushort)(v & 0xFFFF));
 	}
 
-	private static void WriteNumItems(BinaryWriter w, int n)
+	internal static void WriteNumItems(BinaryWriter w, int n)
 	{
 		if (n < 128)
 		{
