@@ -172,6 +172,7 @@
   <div class="cap">Other</div>
   <button data-tool="area" data-key="B">Area</button>
   <button data-tool="path" data-key="P">Path</button>
+  <button data-tool="shape" data-key="G">Shape</button>
   <button data-tool="plant" data-key="T">Plant</button>
   <button data-tool="select" data-key="E">Select</button>
   <button data-tool="measure" data-key="M">Measure</button>
@@ -270,7 +271,7 @@
     <dt>Middle drag</dt><dd>Slide the view (also Space + left drag, Shift + right drag, Move tool)</dd>
     <dt>W A S D</dt><dd>Move around</dd>
     <dt>1–9, 0, O</dt><dd>Sculpt and paint tools (O: Erode)</dd>
-    <dt>B / P / T</dt><dd>Area, Path, Plant</dd>
+    <dt>B / P / T / G</dt><dd>Area, Path, Plant, Shape</dd>
     <dt>E / M / H</dt><dd>Select, Measure, Move</dd>
     <dt>Ctrl+C / Ctrl+V</dt><dd>Copy the area / paste it (R turns 90°, , . turn 1°, F mirrors)</dd>
     <dt>[ &nbsp; ]</dt><dd>Brush size</dd>
@@ -295,6 +296,7 @@ import { createMasks } from './editor/masks.js';
 import { createBrushes } from './editor/brushes.js';
 import { createStamps } from './editor/stamps.js';
 import { createErosion } from './editor/erosion.js';
+import { createShapes } from './editor/shapes.js';
 import { createArea } from './editor/area.js';
 import { createBlueprints } from './editor/blueprints.js';
 import { createHeightmap } from './editor/heightmap.js';
@@ -513,6 +515,7 @@ const TOOLS = {
   'paint-cultivated': ['Cultivate', 'Paint cultivated soil for planting.', null, '#4e3622'],
   'paint-paved': ['Paved', 'Paint paved stone ground.', null, '#8d8d88'],
   'paint-natural': ['Clear paint', "Remove paint: back to the biome's own ground.", null, 'linear-gradient(135deg,#5e8a3a 50%,#7a6a4a 50%)'],
+  shape: ['Shape', 'Click to put a mound, cone, mesa, crater, moat or bowl into the ground, or any shape you write as a formula.', 'M3 19l6-11 4 6 2-3 6 8z'],
   path: ['Path', 'Draw a line, then flatten, ramp, raise, lower, smooth or paint along it.', 'M4 19c4 0 3-7 8-7s4-7 8-7M4 19h.01M20 5h.01'],
   area: ['Area', 'Select a box or polygon, then change the ground, remove or replace objects, copy it, or reset its zones.', 'M4 4h4M16 4h4v4M20 16v4h-4M8 20H4v-4M4 8v4M20 8v4M8 4h0M12 4h0M12 20h0'],
   paste: ['Paste', 'Place the copied area. R turns it 90°, , . or Alt+wheel by 1° (Shift 15°); F mirrors it.', 'M8 4h8v3H8zM6 6H5v14h14V6h-1'],
@@ -569,7 +572,7 @@ function sampleHeight(fx, fz) {
   return height(gz * W + gx);
 }
 function updateRing() {
-  ring.visible = !!hover && !['move', 'select', 'area', 'paste', 'measure'].includes(tool);
+  ring.visible = !!hover && !['move', 'select', 'area', 'paste', 'measure', 'shape'].includes(tool);
   if (!hover) return;
   const p = ring.geometry.attributes.position.array;
   // Sculpt and paint brushes show their shape; the path and the plant brush a circle.
@@ -987,7 +990,8 @@ window.__ed = ed; // for automated tests
 createBrushes(ed);
 createStamps(ed);
 createErosion(ed);
-createMasks(ed, [...BRUSH_TOOLS, 'path', 'area', 'plant']);
+createShapes(ed);
+createMasks(ed, [...BRUSH_TOOLS, 'path', 'area', 'plant', 'shape']);
 createArea(ed);
 createBlueprints(ed);
 createHeightmap(ed);
@@ -1320,6 +1324,7 @@ addEventListener('keydown', e => {
   if (e.key.toLowerCase() === 't' && !e.ctrlKey) { setTool('plant'); return; }
   if (e.key.toLowerCase() === 'm' && !e.ctrlKey) { setTool('measure'); return; }
   if (e.key.toLowerCase() === 'o' && !e.ctrlKey) { setTool('erode'); return; }
+  if (e.key.toLowerCase() === 'g' && !e.ctrlKey) { setTool('shape'); return; }
   if (e.key.toLowerCase() === 'v' && !e.ctrlKey) { toggleView(); return; }
   if (e.key.toLowerCase() === 'l' && !e.ctrlKey) { toggleHistory(); return; }
   if (e.key === '?') { toggleHelp(); return; }

@@ -81,7 +81,7 @@ lose sight of what you placed.
 | Key | Action |
 |---|---|
 | `1`–`9`, `0`, `O` | Raise, Lower, Flatten, Smooth, Restore, Dirt, Cultivate, Paved, Clear paint; Naturalize; Erode |
-| `B` `P` `T` | Area, Path, Plant |
+| `B` `P` `T` `G` | Area, Path, Plant, Shape |
 | `E` `M` `H` | Select, Measure, Move view |
 | `[` `]` | Brush size |
 | `,` `.` / Alt + wheel | Turn (1°, Shift: 15°) in Select, Plant and Paste |

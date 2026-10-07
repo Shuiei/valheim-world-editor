@@ -452,6 +452,31 @@ test('erosion: thermal settles a spike to its rest angle, the Area action erodes
   noErrors();
 });
 
+test('shapes: formulas are read safely, and a click puts a mesa in', async () => {
+  await openEditor();
+  const f = await page().evaluate(async () => {
+    const { compile } = await import('/editor/shapes.js');
+    const run = (src, env = {}) => compile(src, ['x', 'z', 'd', 'r', 'h'])({ x: 2, z: 3, d: 4, r: 10, h: 5, n: () => 0, ...env });
+    const err = src => { try { compile(src, ['x', 'z', 'd', 'r', 'h']); return null; } catch (e) { return e.message; } };
+    return { prec: run('1 + 2 * 3 ^ 2'), neg: run('-2 ^ 2'), fn: run('max(x, z) + smooth(0.5)'), tern: run('d < r ? h : 0'), cmp: run('x > z'),
+      unknown: err('foo + 1'), func: err('nope(1)'), open: err('(1 + 2'), code: err('alert(1)'), empty: err('  ') };
+  });
+  assert.equal(f.prec, 19); assert.equal(f.neg, -4); assert.equal(f.fn, 3.5); assert.equal(f.tern, 5); assert.equal(f.cmp, 0);
+  assert.match(f.unknown, /no “foo”/); assert.match(f.func, /no function/); assert.match(f.open, /“\)” expected/); assert.ok(f.code); assert.match(f.empty, /empty/);
+  await page().keyboard.press('g');
+  await page().evaluate(() => { const s = (id, v) => { const e = document.getElementById(id); e.value = v; e.dispatchEvent(new Event('input')); }; s('shPreset', 'mesa'); s('shRadius', 10); s('shHeight', 3); });
+  const c = (await records()).find(r => r.name === 'piece_chest_wood');
+  const spot = [c.x - 22, c.z - 22];
+  const h0 = await page().evaluate(([x, z]) => { const ed = window.__ed; return ed.sampleHeight(x - ed.originX, z - ed.originZ); }, spot);
+  await lookAt(page(), ...spot);
+  const [x, y] = await screenOf(page(), ...spot);
+  await page().mouse.click(x, y); await sleep(800);
+  const h1 = await page().evaluate(([x, z]) => { const ed = window.__ed; return ed.sampleHeight(x - ed.originX, z - ed.originZ); }, spot);
+  assert.ok(Math.abs(h1 - h0 - 3) < 0.2, `the mesa's top is 3 m up (${(h1 - h0).toFixed(2)})`);
+  await page().click('#undo'); await sleep(800);
+  noErrors();
+});
+
 test('undo takes a change back and the counter clears', async () => {
   await openEditor();
   await page().keyboard.press('Escape');
