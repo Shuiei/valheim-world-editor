@@ -292,6 +292,7 @@ import { pieceModel, setSeeThrough } from './terrain/pieces.js';
 import { createObjects, stableHash } from './editor/objects.js';
 import { createMasks } from './editor/masks.js';
 import { createBrushes } from './editor/brushes.js';
+import { createStamps } from './editor/stamps.js';
 import { createArea } from './editor/area.js';
 import { createBlueprints } from './editor/blueprints.js';
 import { createPlant } from './editor/plant.js';
@@ -978,6 +979,7 @@ const ed = {
 const objects = createObjects(ed); ed.objects = objects;
 window.__ed = ed; // for automated tests
 createBrushes(ed);
+createStamps(ed);
 createMasks(ed, [...BRUSH_TOOLS, 'path', 'area', 'plant']);
 createArea(ed);
 createBlueprints(ed);
@@ -1265,6 +1267,8 @@ el.addEventListener('pointerdown', e => {
   }
   if (e.altKey && e.shiftKey) { ed.pickMaskHeight(sampleHeight(hover.gx, hover.gz)); return; }
   if (e.altKey) { $('target').value = sampleHeight(hover.gx, hover.gz).toFixed(1); $('targetFromClick').checked = false; syncInputs(); setTool('flatten'); return; }
+  // Stamp once (editor/stamps.js): the click puts the whole stamp in, no stroke.
+  if (ed.stampOnce?.(hover)) { updateHistoryButtons(); return; }
   el.setPointerCapture(e.pointerId);
   const startState = snapshotState();
   ed.maskFreeze?.(true);

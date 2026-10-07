@@ -21,6 +21,10 @@ export const TIPS = {
   bShape: 'Shape of the brush: circle, square, ring (only a band around the middle, for rims and moats), ragged (a noisy edge for natural-looking strokes), or a picture (Stamps).',
   bFalloff: 'How the effect fades from the middle to the edge: smooth, linear, dome (round top), flat top (full strength almost to the edge), or peak (strong in the middle only).',
   bTurn: 'Turn of a square brush or a picture (degrees). , and . change it (Shift: 15°).',
+  stLoad: 'Load a picture (PNG, JPEG...) as a brush shape: white parts work fully, black parts not at all. It is kept in this browser.',
+  stRemove: 'Forget the loaded picture chosen as Shape.',
+  stOnce: 'With a stamp as Shape, a click of Raise or Lower puts the whole stamp into the ground at once, to the Height below, instead of painting.',
+  stHeight: 'How high (Raise) or deep (Lower) the white parts of the stamp go (m).',
   targetFromClick: 'On: Flatten levels to the height of the ground where you start the stroke. Off: it levels to the Height below.',
   target: 'The height (m) Flatten levels to when the option above is off. Alt + click the ground to pick its height.',
 

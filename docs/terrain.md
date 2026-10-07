@@ -45,6 +45,28 @@ hold and drag. The yellow ring on the ground is the brush. All of them work with
 
 The pattern is continuous across the world, so neighbouring strokes and areas match.
 
+## Stamps
+
+A stamp is a picture used as the brush shape, like WorldPainter's custom brushes: white parts work
+fully, grey parts partly, black parts not at all. Choose one in **Shape**:
+
+| Stamp | Shape |
+|---|---|
+| **Mountain** | A rough peak. |
+| **Mesa (flat top)** | A flat top with steep, slightly ragged sides. |
+| **Crater rim** | A ring wall, for craters (Lower inside it afterwards) and old earthworks. |
+| **Dunes** | Parallel ridges inside a round patch. |
+| **Rocky ground** | Lumpy, broken ground. |
+
+| Control | What it does |
+|---|---|
+| **Load stamp…** | Uses any picture (PNG, JPEG...) as a stamp: a heightmap from another tool, a logo, a hand-drawn shape. It is shrunk to 128 × 128 points and kept in this browser, under its file name. |
+| **Forget stamp** | Removes the loaded picture chosen as Shape (the built-in stamps stay). |
+| **Stamp once** | With Raise or Lower: one click puts the whole stamp into the ground at once, the white parts **Height** metres up (or down), instead of painting while the button is held. One undo step; the ±8 m limit and the Mask apply. |
+
+Stamps scale with **Size** and turn with **Turn** (`,` `.`). Without Stamp once they work like any
+brush shape, with every sculpt and paint tool.
+
 ## Paint tools
 
 ![Paved, dirt and cultivated paint](images/paint.jpg)

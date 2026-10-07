@@ -29,6 +29,9 @@ version number. Newest first.
   all their data.
 - **Brush shapes and falloff** (sculpt and paint tools, like WorldPainter): circle, square, ring or
   ragged brushes, with a smooth, linear, dome, flat-top or peak falloff; square brushes turn.
+- **Stamps**: pictures as brush shapes (built in: mountain, mesa, crater rim, dunes, rocky ground;
+  or any picture loaded from a file), and "Stamp once" to put a whole stamp into the ground with one
+  click, to a chosen height.
 
 ### Fixed
 - A zone reset also removed players' tombstones, with what they carried: they are always kept now.

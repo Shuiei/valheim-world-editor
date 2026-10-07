@@ -25,7 +25,9 @@ export function createBrushes(ed) {
     <label class="field" id="bTurnRow">Turn <input id="bTurn" type="range" min="-180" max="180" step="1" value="0"><span id="bTurnV"></span></label>`;
   document.querySelector('[data-for-tools="brush"]').appendChild(box);
   const pref = (k, d) => { try { return localStorage.getItem(k) ?? d; } catch { return d; } };
-  $('bShape').value = pref('brushShape', 'circle'); $('bFalloff').value = pref('brushFalloff', 'smooth');
+  // The shape chosen last; a stamp is only known once its module adds it (addShape picks it then).
+  const wanted = pref('brushShape', 'circle');
+  $('bShape').value = wanted; $('bFalloff').value = pref('brushFalloff', 'smooth');
   if (!$('bShape').value) $('bShape').value = 'circle';
   if (!$('bFalloff').value) $('bFalloff').value = 'smooth';
   // Shapes added by other modules (stamps): name -> { label, weight(u, v) for u, v in -1..1, turnable }.
@@ -89,6 +91,7 @@ export function createBrushes(ed) {
   function addShape(name, label, def) {
     extra[name] = def;
     if (![...$('bShape').options].some(o => o.value === name)) $('bShape').add(new Option(label, name));
+    if (name === wanted) $('bShape').value = name;
     sync();
   }
   function removeShape(name) {
