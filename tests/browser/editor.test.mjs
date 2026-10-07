@@ -773,6 +773,37 @@ test('select: a moved building keeps its shape, its base on the ground; a tree l
   noErrors();
 });
 
+test('lines can be fine-tuned: drag a point, drag the line to add one, Ctrl + click removes one', async () => {
+  await openEditor();
+  const c = (await records()).find(r => r.name === 'piece_chest_wood');
+  const A = [c.x - 30, c.z + 20], B = [c.x - 10, c.z + 20];
+  await lookAt(page(), c.x - 20, c.z + 22, 0, 40, 28);
+  for (const [tool, pts] of [['p', '__pathPoints'], ['t', '__plantLine']]) {
+    await page().keyboard.press(tool); await sleep(300);
+    if (tool === 't') await page().click('#plModes [data-m="line"]');
+    for (const q of [A, B]) { const [x, y] = await screenOf(page(), ...q, 0.6); await page().mouse.click(x, y); await sleep(150); }
+    const grid = () => page().evaluate(n => window[n](), pts);
+    const start = await grid();
+    assert.equal(start.length, 2, `${tool}: two points`);
+    // Drag the second point 6 m north.
+    { const [x, y] = await screenOf(page(), ...B, 0.6), [x2, y2] = await screenOf(page(), B[0], B[1] + 6, 0.6); await page().mouse.move(x, y); await page().mouse.down(); await page().mouse.move(x2, y2, { steps: 6 }); await page().mouse.up(); }
+    let now = await grid();
+    assert.equal(now.length, 2, `${tool}: still two points`);
+    assert.ok(Math.abs(now[1].gz - start[1].gz - 6) < 0.6, `${tool}: the point moved north (${(now[1].gz - start[1].gz).toFixed(2)} m)`);
+    // Drag the middle of the line: a third point between the two.
+    const mid = await page().evaluate(([a, b]) => { const ed = window.__ed; return [ed.originX + (a.gx + b.gx) / 2, ed.originZ + (a.gz + b.gz) / 2]; }, now);
+    { const [x, y] = await screenOf(page(), ...mid, 0.6), [x2, y2] = await screenOf(page(), mid[0], mid[1] - 4, 0.6); await page().mouse.move(x, y); await page().mouse.down(); await page().mouse.move(x2, y2, { steps: 6 }); await page().mouse.up(); }
+    now = await grid();
+    assert.equal(now.length, 3, `${tool}: a point was added on the line`);
+    // Ctrl + click the new point: removed.
+    { const p = await page().evaluate(q => [window.__ed.originX + q.gx, window.__ed.originZ + q.gz], now[1]); const [x, y] = await screenOf(page(), ...p, 0.6);
+      await page().keyboard.down('Control'); await page().mouse.click(x, y); await page().keyboard.up('Control'); }
+    assert.equal((await grid()).length, 2, `${tool}: Ctrl + click removed it`);
+    await page().keyboard.press('Escape');
+  }
+  noErrors();
+});
+
 test('undo takes a change back and the counter clears', async () => {
   await openEditor();
   await page().keyboard.press('Escape');

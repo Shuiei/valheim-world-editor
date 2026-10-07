@@ -229,7 +229,7 @@
     <label class="check"><input type="checkbox" id="pNatural"> Natural look (ragged edges, bumps)</label>
     <div class="row"><button id="pApply" class="primary">Apply <kbd>Enter</kbd></button><button id="pClear">Clear <kbd>Esc</kbd></button></div>
     <div class="hint" id="pInfo"></div>
-    <div class="hint">Click points along the route, or hold and drag. Backspace removes the last point. Alt + click picks the height (Alt + Shift: ramp end).</div>
+    <div class="hint">Click points along the route, or hold and drag. Then drag a point to move it, drag the line to add a point, Ctrl + click a point to remove it; Backspace removes the last one. Alt + click picks the height (Alt + Shift: ramp end).</div>
   </div>
 
   <div id="naturalBox" class="sub">
@@ -317,6 +317,7 @@ import { createHeightmap } from './editor/heightmap.js';
 import { createPlant } from './editor/plant.js';
 import { createMeasure } from './editor/measure.js';
 import { createTransform } from './editor/transform.js';
+import { createHandles } from './editor/handles.js';
 import { createInspector } from './editor/inspector.js';
 import { createSelecting } from './editor/selecting.js';
 import { applyTips } from './editor/tips.js';
@@ -1154,6 +1155,10 @@ const pathLine = new THREE.Line(new THREE.BufferGeometry(), new THREE.LineBasicM
 const pathEdges = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0xffb0a0, transparent: true, opacity: 0.6, depthTest: false }));
 pathLine.renderOrder = 12; pathEdges.renderOrder = 11; scene.add(pathLine); scene.add(pathEdges);
 pathLine.frustumCulled = pathEdges.frustumCulled = false;
+// The line's points can be dragged to fine-tune it (editor/handles.js); index of the one being dragged.
+const pathHandles = createHandles(ed, 0xffb0a0);
+window.__pathPoints = () => pathPts.map(p => ({ gx: p.gx, gz: p.gz }));
+let dragPathPt = null;
 const pv = id => +$(id).value;
 function syncPathPanel() {
   $('pathPanel').hidden = tool !== 'path';
@@ -1176,12 +1181,12 @@ function pathCurve() {
     const steps = Math.max(1, Math.ceil(Math.hypot(p2.gx - p1.gx, p2.gz - p1.gz)));
     for (let k = 0; k < steps; k++) {
       const t = k / steps, t2 = t * t, t3 = t2 * t;
-      if (!smooth) { out.push({ gx: p1.gx + (p2.gx - p1.gx) * t, gz: p1.gz + (p2.gz - p1.gz) * t }); continue; }
+      if (!smooth) { out.push({ gx: p1.gx + (p2.gx - p1.gx) * t, gz: p1.gz + (p2.gz - p1.gz) * t, seg: i }); continue; }
       const cr = (a, b, c, d) => 0.5 * (2 * b + (-a + c) * t + (2 * a - 5 * b + 4 * c - d) * t2 + (-a + 3 * b - 3 * c + d) * t3);
-      out.push({ gx: cr(p0.gx, p1.gx, p2.gx, p3.gx), gz: cr(p0.gz, p1.gz, p2.gz, p3.gz) });
+      out.push({ gx: cr(p0.gx, p1.gx, p2.gx, p3.gx), gz: cr(p0.gz, p1.gz, p2.gz, p3.gz), seg: i });
     }
   }
-  out.push(p[p.length - 1]);
+  out.push({ ...p[p.length - 1], seg: p.length - 2 });
   return out;
 }
 function pathLength(curve) { let L = 0; for (let i = 1; i < curve.length; i++) L += Math.hypot(curve[i].gx - curve[i - 1].gx, curve[i].gz - curve[i - 1].gz); return L; }
@@ -1197,6 +1202,7 @@ function updatePathPreview() {
     for (const sgn of [1, -1]) edges.push(at(a.gx + nx * sgn, a.gz + nz * sgn, 0.4), at(b.gx + nx * sgn, b.gz + nz * sgn, 0.4));
   }
   pathEdges.geometry.setFromPoints(edges);
+  pathHandles.draw(pathPts, tool === 'path');
   // Ramp defaults to the ground height at both ends until the user types values.
   if (pathPts.length && !rampEdited) {
     $('pStart').value = sampleHeight(pathPts[0].gx, pathPts[0].gz).toFixed(1);
@@ -1287,6 +1293,10 @@ el.addEventListener('pointermove', e => {
   if (ed.handlers[tool]?.move) { hover = pick(e); ed.handlers[tool].move(e, hover); return; }
   if (tool === 'select') { hoverSelect(e); return; }
   hover = pick(e); updateRing(); showStatus();
+  if (tool === 'path') {
+    if (dragPathPt != null) { if (hover) { pathPts[dragPathPt] = { gx: hover.gx, gz: hover.gz }; updatePathPreview(); } return; }
+    el.style.cursor = !drawingPath && pathHandles.point(e, pathPts) >= 0 ? 'grab' : '';
+  }
   if (drawingPath && hover) {
     const last = pathPts[pathPts.length - 1];
     if (!last || Math.hypot(hover.gx - last.gx, hover.gz - last.gz) >= 2) { pathPts.push({ gx: hover.gx, gz: hover.gz }); updatePathPreview(); }
@@ -1306,6 +1316,15 @@ el.addEventListener('pointerdown', e => {
       if ($('pAction').value === 'ramp') { $(e.shiftKey ? 'pEnd' : 'pStart').value = h; rampEdited = true; } else $('pHeight').value = h;
       return;
     }
+    // A point of the line: drag it (Ctrl + click removes it). The line between two points: a new point
+    // there, dragged. Elsewhere: the next point of the line.
+    const at = pathHandles.point(e, pathPts);
+    if (at >= 0) {
+      if (e.ctrlKey) { pathPts.splice(at, 1); updatePathPreview(); return; }
+      dragPathPt = at; el.setPointerCapture(e.pointerId); return;
+    }
+    const seg = pathPts.length >= 2 ? pathHandles.segment(e, pathCurve()) : -1;
+    if (seg >= 0) { pathPts.splice(seg + 1, 0, { gx: hover.gx, gz: hover.gz }); dragPathPt = seg + 1; el.setPointerCapture(e.pointerId); updatePathPreview(); return; }
     el.setPointerCapture(e.pointerId);
     pathPts.push({ gx: hover.gx, gz: hover.gz }); drawingPath = true; updatePathPreview();
     return;
@@ -1325,7 +1344,7 @@ el.addEventListener('pointerdown', e => {
 });
 el.addEventListener('pointerup', e => {
   if (e.button === 0 && ed.handlers[tool]?.up) { ed.handlers[tool].up(e); return; }
-  if (e.button === 0) drawingPath = false;
+  if (e.button === 0) { drawingPath = false; dragPathPt = null; }
   if (e.button !== 0 || !stroke) return;
   ed.maskFreeze?.(false);
   const zones = zonesOf(stroke.touched);

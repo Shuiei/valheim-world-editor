@@ -4,6 +4,12 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v0.22.0 — 2026-10-07 (fine-tune drawn lines)
+
+### Added
+- **Fine-tune drawn lines** (Path tool, and Plant lines): drag a point to move it, drag the line to
+  add a point there, Ctrl + click a point to remove it; the preview follows.
+
 ## v0.21.2 — 2026-10-07 (buildings keep their shape)
 
 ### Changed

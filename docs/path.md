@@ -10,10 +10,12 @@ ditch, or a painted track.
 1. Choose **Path** (`P`).
 2. **Click points** along the route, or **hold and drag** to draw it freely. The red line is the
    centre; the thin lines show the full width and the soft edges.
-3. Pick an **Action** and its settings.
-4. Press **Apply** (`Enter`). The line stays, so you can apply a second action to it (for example
-   flatten, then paint paved).
-5. **Clear** (`Esc`) removes the line. **Backspace** removes the last point.
+3. **Fine-tune it**: drag a point (the dots on the line) to move it, drag the line between two points
+   to add a point there and move it, **Ctrl + click** a point to remove it.
+4. Pick an **Action** and its settings.
+5. Press **Apply** (`Enter`). The line stays, so you can apply a second action to it (for example
+   flatten, then paint paved), or move its points and apply again.
+6. **Clear** (`Esc`) removes the line. **Backspace** removes the last point.
 
 ## Controls
 

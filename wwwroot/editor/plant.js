@@ -2,6 +2,7 @@
 // brush with a density and a minimum spacing; Shift + drag removes the chosen kinds again. New objects
 // are copies of an object of the same kind already in the world, made when the world is saved.
 import { KINDS, KIND_LABEL } from './objects.js';
+import { createHandles } from './handles.js';
 
 export function createPlant(ed) {
   const { $, W, H, THREE } = ed;
@@ -291,7 +292,7 @@ export function createPlant(ed) {
   const v3 = (gx, gz) => new THREE.Vector3(gx - ed.cx, ed.sampleHeight(gx, gz) + 0.3, -(gz - ed.cz));
   function lineCurve() {
     const p = linePts;
-    if (p.length < 2 || !$('plCurve').checked || p.length < 3) return p.slice();
+    if (p.length < 2 || !$('plCurve').checked || p.length < 3) return p.map((q, i) => ({ ...q, seg: Math.min(i, p.length - 2) }));
     const out = [];
     for (let i = 0; i < p.length - 1; i++) {
       const p0 = p[Math.max(0, i - 1)], p1 = p[i], p2 = p[i + 1], p3 = p[Math.min(p.length - 1, i + 2)];
@@ -299,10 +300,10 @@ export function createPlant(ed) {
       for (let k = 0; k < steps; k++) {
         const t = k / steps, t2 = t * t, t3 = t2 * t;
         const cr = (a, b, c, d) => 0.5 * (2 * b + (-a + c) * t + (2 * a - 5 * b + 4 * c - d) * t2 + (-a + 3 * b - 3 * c + d) * t3);
-        out.push({ gx: cr(p0.gx, p1.gx, p2.gx, p3.gx), gz: cr(p0.gz, p1.gz, p2.gz, p3.gz) });
+        out.push({ gx: cr(p0.gx, p1.gx, p2.gx, p3.gx), gz: cr(p0.gz, p1.gz, p2.gz, p3.gz), seg: i });
       }
     }
-    out.push(p[p.length - 1]);
+    out.push({ ...p[p.length - 1], seg: p.length - 2 });
     return out;
   }
   function shapePlacements(names, hash, cell) {
@@ -489,7 +490,11 @@ export function createPlant(ed) {
     return k;
   }
 
+  // A drawn line's points can be dragged (editor/handles.js), like the Path tool's.
+  const lineHandles = createHandles(ed, 0x9fe0ff);
+  let dragPt = null;
   function drawShape() {
+    lineHandles.draw(linePts, ed.tool === 'plant' && mode === 'line' && lineShape === 'points');
     const pts = [];
     if (mode === 'line' && (linePts.length || figA)) {
       const c = linePath();
@@ -689,12 +694,25 @@ export function createPlant(ed) {
       ed.el.setPointerCapture(e.pointerId);
       press = { x: e.clientX, y: e.clientY, hit, drag: false };
       if (mode === 'line' && lineShape !== 'points') { figA = { gx: hit.gx, gz: hit.gz }; figB = null; drawShape(); updatePreview(); return; }
+      // A point of the line: drag it (Ctrl + click removes it); the line between two points: a new point there.
+      if (mode === 'line' && linePts.length) {
+        const at = lineHandles.point(e, linePts);
+        if (at >= 0) {
+          press = null;
+          if (e.ctrlKey) { linePts.splice(at, 1); drawShape(); updatePreview(); return; }
+          dragPt = at; return;
+        }
+        const seg = linePts.length >= 2 ? lineHandles.segment(e, lineCurve()) : -1;
+        if (seg >= 0) { press = null; linePts.splice(seg + 1, 0, { gx: hit.gx, gz: hit.gz }); dragPt = seg + 1; drawShape(); updatePreview(); return; }
+      }
       if (mode === 'grid') { gridA = { gx: hit.gx, gz: hit.gz }; gridB = null; shapeTurn = 0; pivot = null; }
     },
     move(e, hit) {
       at = hit; ed.showStatusFor?.(hit);
       if (!hit) return;
       if (press && mode === 'line' && lineShape !== 'points') { figB = { gx: hit.gx, gz: hit.gz }; drawShape(); updatePreview(); return; }
+      if (dragPt != null) { linePts[dragPt] = { gx: hit.gx, gz: hit.gz }; drawShape(); updatePreview(); return; }
+      if (mode === 'line' && !press) ed.el.style.cursor = lineHandles.point(e, linePts) >= 0 ? 'grab' : '';
       if (press && !press.drag && Math.hypot(e.clientX - press.x, e.clientY - press.y) > 6) {
         press.drag = true;
         if (pointed()) { const q = local(press.hit); if (!linePts.length || Math.hypot(linePts.at(-1).gx - q.gx, linePts.at(-1).gz - q.gz) > 0.3) linePts.push(q); drawingLine = true; }
@@ -707,6 +725,7 @@ export function createPlant(ed) {
       }
     },
     up(e, hit) {
+      if (dragPt != null) { dragPt = null; return; }
       const p = press; press = null;
       if (!p) return;
       if (mode === 'line' && lineShape !== 'points') {
@@ -759,6 +778,7 @@ export function createPlant(ed) {
   }, { capture: true, passive: false });
   // For automated tests: what the preview would place.
   window.__plantPreview = () => preview.map(o => ({ ...o }));
+  window.__plantLine = () => linePts.map(p => ({ gx: p.gx, gz: p.gz }));
   ed.frame ??= [];
   ed.frame.push(step);
 }
