@@ -13,7 +13,7 @@ opens a Valheim world in its own window, drawn with the game's own terrain, text
   cultivated soil or paved stone.
 - **Build roads and ramps** along a line you draw.
 - **Work on whole areas**: level, paint, clear or copy and paste a box or polygon, or have the game
-  generate zones again from scratch.
+  generate zones again from scratch. Keep copies as **blueprints** to paste into any world.
 - **Place anything the game has**: trees, rocks, bushes, crops, building pieces and so on, with
   brush, line, grid and zone patterns that respect the game's growing rules.
 - **Select, move, turn, copy and delete objects**, including whole buildings.

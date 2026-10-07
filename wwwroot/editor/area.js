@@ -6,6 +6,16 @@ import { KINDS, KIND_LABEL } from './objects.js';
 const PAINTS = { dirt: [1, 0, 0, 1], cultivated: [0, 1, 0, 1], paved: [0, 0, 1, 1], natural: [0, 0, 0, 1] };
 const smooth01 = t => t * t * (3 - 2 * t);
 
+// The clipboard as JSON (browser storage, blueprint files): heights in cm (-32768 = no ground), edge
+// weights and paint in 1/255, objects and outline as they are.
+export function encodeClip(c) {
+  const q = Array.from(c.rel, v => Number.isNaN(v) ? -32768 : Math.max(-32767, Math.min(32767, Math.round(v * 100))));
+  return { w: c.w, h: c.h, rel: q, wt: Array.from(c.wt, v => Math.round(v * 255)), pnt: Array.from(c.pnt, v => Math.round(v * 255)), objects: c.objects, poly: c.poly, ...(c.name ? { name: c.name } : {}) };
+}
+export function decodeClip(o) {
+  return { w: o.w, h: o.h, rel: Float32Array.from(o.rel, v => v === -32768 ? NaN : v / 100), wt: Float32Array.from(o.wt, v => v / 255), pnt: Float32Array.from(o.pnt, v => v < 0 ? -1 : v / 255), objects: o.objects, poly: o.poly, ...(o.name ? { name: o.name } : {}) };
+}
+
 export function createArea(ed) {
   const { THREE, $, W, H, N } = ed;
   const toGrid = (x, z) => ({ gx: x - ed.originX, gz: z - ed.originZ });
@@ -39,6 +49,7 @@ export function createArea(ed) {
     </div>
     <div class="sub"><h3>Copy &amp; paste</h3>
       <div class="row"><button id="aCopy">Copy <kbd>Ctrl+C</kbd></button><button id="aPasteBtn">Paste <kbd>Ctrl+V</kbd></button></div>
+      <div class="row"><button id="aSaveBp">Save blueprint…</button><button id="aLibrary">Blueprints…</button></div>
       <div class="hint" id="aClip"></div>
     </div>
     <div class="sub"><h3>Reset zones</h3>
@@ -282,7 +293,7 @@ export function createArea(ed) {
   let clip = null, rot = 0, flip = false;   // rot: degrees (counter-clockwise seen from above)
   try { const c = localStorage.getItem('editorClipboard'); if (c) clip = decodeClip(JSON.parse(c)); } catch { }
   function updateClipInfo() {
-    $('aClip').textContent = clip ? `Clipboard: ${clip.w} × ${clip.h} m, ${clip.objects.length} object(s).` : 'Copies the ground (shape and paint) and the shown objects inside the selection.';
+    $('aClip').textContent = clip ? `Clipboard${clip.name ? ` (${clip.name})` : ''}: ${clip.w} × ${clip.h} m, ${clip.objects.length} object(s).` : 'Copies the ground (shape and paint) and the shown objects inside the selection.';
   }
   updateClipInfo();
   function copy() {
@@ -306,17 +317,12 @@ export function createArea(ed) {
     updateClipInfo();
     ed.msg(`Copied ${w} × ${h} m and ${objects.length} object(s). Ctrl+V to paste, here or in another area.`);
   }
-  function encodeClip(c) {
-    const q = Array.from(c.rel, v => Number.isNaN(v) ? -32768 : Math.max(-32767, Math.min(32767, Math.round(v * 100))));
-    return { w: c.w, h: c.h, rel: q, wt: Array.from(c.wt, v => Math.round(v * 255)), pnt: Array.from(c.pnt, v => Math.round(v * 255)), objects: c.objects, poly: c.poly };
-  }
-  function decodeClip(o) {
-    return { w: o.w, h: o.h, rel: Float32Array.from(o.rel, v => v === -32768 ? NaN : v / 100), wt: Float32Array.from(o.wt, v => v / 255), pnt: Float32Array.from(o.pnt, v => v < 0 ? -1 : v / 255), objects: o.objects, poly: o.poly };
-  }
   $('aCopy').onclick = copy;
   $('aPasteBtn').onclick = () => startPaste();
   // The Select tool's copy puts its objects here too.
   ed.setClipboard = c => { clip = c; try { localStorage.setItem('editorClipboard', JSON.stringify(encodeClip(clip))); } catch { } updateClipInfo(); };
+  ed.getClipboard = () => clip;
+  ed.startPaste = () => startPaste();
   function startPaste() {
     if (!clip) { ed.msg('Copy an area first (Area tool, Ctrl+C).', true); return; }
     ed.setTool('paste');
@@ -344,7 +350,7 @@ export function createArea(ed) {
     drawOutline(clip.poly.map(p => { const [x, z] = xf(p.gx, p.gz); return { gx: pasteAt.gx + x, gz: pasteAt.gz + z }; }), false);
     const anchorH = ed.sampleHeight(pasteAt.gx, pasteAt.gz) + +$('psOffset').value;
     ghost.geometry.setFromPoints(clip.objects.map(o => { const [x, z] = xf(o.dx, o.dz); const y = o.follow ? ed.sampleHeight(pasteAt.gx + x, pasteAt.gz + z) + o.dy : anchorH + o.dy; return new THREE.Vector3(pasteAt.gx + x - ed.cx, y + 0.5, -(pasteAt.gz + z - ed.cz)); }));
-    $('psInfo').textContent = `${clip.w} × ${clip.h} m, ${clip.objects.length} object(s) · turned ${+rot.toFixed(1)}°${flip ? ', mirrored' : ''}.`;
+    $('psInfo').textContent = `${clip.name ? clip.name + ': ' : ''}${clip.w} × ${clip.h} m, ${clip.objects.length} object(s) · turned ${+rot.toFixed(1)}°${flip ? ', mirrored' : ''}.`;
   }
   async function paste(at) {
     const anchorH = ed.sampleHeight(at.gx, at.gz) + +$('psOffset').value;

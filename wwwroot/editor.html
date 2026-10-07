@@ -292,6 +292,7 @@ import { pieceModel, setSeeThrough } from './terrain/pieces.js';
 import { createObjects, stableHash } from './editor/objects.js';
 import { createMasks } from './editor/masks.js';
 import { createArea } from './editor/area.js';
+import { createBlueprints } from './editor/blueprints.js';
 import { createPlant } from './editor/plant.js';
 import { createMeasure } from './editor/measure.js';
 import { createTransform } from './editor/transform.js';
@@ -971,6 +972,7 @@ const objects = createObjects(ed); ed.objects = objects;
 window.__ed = ed; // for automated tests
 createMasks(ed, [...BRUSH_TOOLS, 'path', 'area', 'plant']);
 createArea(ed);
+createBlueprints(ed);
 createPlant(ed);
 createMeasure(ed);
 createTransform(ed);
@@ -1465,23 +1467,25 @@ $('selDelete').onclick = deleteSelection;
 $('selClear').onclick = clearSelection;
 
 // ---- Panels: View (show / hide) and Help.
+// Floating panels added by the feature modules (blueprints...) share the right side with View, History and Help.
+function closeSidePanels() { for (const el of document.querySelectorAll('aside.side')) el.hidden = true; }
 function readPref(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : v === '1'; } catch { return d; } }
 function writePref(k, v) { try { localStorage.setItem(k, v ? '1' : '0'); } catch { } }
 function toggleView(force) {
   const open = force ?? $('viewPanel').hidden;
   $('viewPanel').hidden = !open; $('viewToggle').classList.toggle('on', open);
-  if (open) { $('help').hidden = true; if (typeof toggleHistory === 'function') toggleHistory(false); }
+  if (open) { $('help').hidden = true; if (typeof toggleHistory === 'function') toggleHistory(false); closeSidePanels(); }
   writePref('editorViewOpen', open);
 }
 function toggleHelp(force) {
   const open = force ?? $('help').hidden;
   $('help').hidden = !open; $('helpToggle').classList.toggle('on', open);
-  if (open) { $('viewPanel').hidden = true; $('viewToggle').classList.remove('on'); toggleHistory(false); }
+  if (open) { $('viewPanel').hidden = true; $('viewToggle').classList.remove('on'); toggleHistory(false); closeSidePanels(); }
 }
 function toggleHistory(force) {
   const open = force ?? $('historyPanel').hidden;
   $('historyPanel').hidden = !open; $('historyToggle').classList.toggle('on', open);
-  if (open) { $('viewPanel').hidden = true; $('viewToggle').classList.remove('on'); $('help').hidden = true; $('helpToggle').classList.remove('on'); renderHistory(); }
+  if (open) { $('viewPanel').hidden = true; $('viewToggle').classList.remove('on'); $('help').hidden = true; $('helpToggle').classList.remove('on'); closeSidePanels(); renderHistory(); }
 }
 $('historyToggle').onclick = () => toggleHistory();
 $('viewToggle').onclick = () => toggleView();

@@ -85,7 +85,8 @@ export async function startApp() {
   page.setDefaultTimeout(120000);
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
-  page.on('dialog', d => d.accept());
+  // Confirmations are accepted; prompts get their suggested answer.
+  page.on('dialog', d => d.accept(d.type() === 'prompt' ? d.defaultValue() : undefined));
   return {
     base, home, worldDir, page, browser, errors, log,
     api: async (p, body) => (await fetch(base + p, body === undefined ? {} : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })).json(),
