@@ -6,10 +6,17 @@ namespace TerrainEditor.Terrain;
 
 // Build pieces (prefabs with a Piece component) extracted from the game's asset bundles: category
 // and footprint (bounds of the non-trigger box colliders in the piece's own frame), so player-built
-// structures can be drawn on the map.
+// structures can be drawn on the map, and snap points (where the hammer snaps pieces together).
 public static class PieceCatalog
 {
-	public sealed record Info(string Name, int Index, int Category, float MinX, float MaxX, float MinZ, float MaxZ, float MinY, float MaxY);
+	public sealed record Info(string Name, int Index, int Category, float MinX, float MaxX, float MinZ, float MaxZ, float MinY, float MaxY)
+	{
+		// Snap points in the piece's own frame (x, y, z each); empty when it has none.
+		public float[][] Snaps { get; init; } = Array.Empty<float[]>();
+	}
+
+	// Every piece with snap points, by name.
+	public static IEnumerable<Info> WithSnaps => ByHash.Values.Where(i => i.Snaps.Length > 0);
 
 	private static readonly Dictionary<int, Info> ByHash = Load();
 
@@ -56,7 +63,8 @@ public static class PieceCatalog
 			int cat = p.Value.GetProperty("cat").GetInt32();
 			// Pieces without box colliders get a 1 m marker.
 			float[] box = p.Value.TryGetProperty("box", out JsonElement b) ? b.EnumerateArray().Select(e => e.GetSingle()).ToArray() : new[] { -0.5f, 0.5f, -0.5f, 0.5f, 0f, 1f };
-			result[StableHash.Of(p.Name)] = new Info(p.Name, names.Count, cat, box[0], box[1], box[2], box[3], box[4], box[5]);
+			float[][] snaps = p.Value.TryGetProperty("snap", out JsonElement sp) ? sp.EnumerateArray().Select(v => v.EnumerateArray().Select(e => e.GetSingle()).ToArray()).ToArray() : Array.Empty<float[]>();
+			result[StableHash.Of(p.Name)] = new Info(p.Name, names.Count, cat, box[0], box[1], box[2], box[3], box[4], box[5]) { Snaps = snaps };
 			names.Add(p.Name);
 		}
 		Names = names.ToArray();

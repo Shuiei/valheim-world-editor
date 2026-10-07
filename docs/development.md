@@ -122,7 +122,8 @@ What it does:
 A full run takes a few minutes and writes about 150 MB. The terrain and map output was checked to
 be byte-identical to the files made by hand during development.
 
-The catalogues that are in git are made by `scan_pieces.py` (`WorldGen/pieces.json`),
+The catalogues that are in git are made by `scan_pieces.py` (`WorldGen/pieces.json`, with each
+piece's snap points),
 `scan_modifiers.py` (`WorldGen/terrain-modifiers.json`) and `scan_prefabs.py`
 (`WorldGen/prefabs.json`: also container sizes, ward radii and crafting station build ranges);
 each takes the output file as argument and the bundle folder in `VWE_BUNDLES`.
