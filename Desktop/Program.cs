@@ -1,0 +1,100 @@
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Styling;
+using Avalonia.Themes.Fluent;
+
+namespace TerrainEditor.Desktop;
+
+// The native editor (prototype): an Avalonia window drawing an area of a world with OpenGL.
+//   ValheimWorldEditor.Desktop [--world <folder or name>] [--zone x,z] [--size n]
+// Without --world it opens the world saved most recently on this computer, around zone 0,0.
+// --bench <seconds>, --shot <file.png> and --report <file.txt> are for measuring (see Options).
+public static class Program
+{
+	[STAThread]
+	public static void Main(string[] args)
+	{
+		Options.Parse(args);
+		AppDomain.CurrentDomain.UnhandledException += (_, e) => Options.Say($"crash: {e.ExceptionObject}");
+		// Windows: ANGLE (OpenGL ES on Direct3D 11) first, the driver's own OpenGL if that fails.
+		AppBuilder.Configure<App>().UsePlatformDetect()
+			.With(new Win32PlatformOptions { RenderingMode = new[] { Win32RenderingMode.Wgl, Win32RenderingMode.AngleEgl, Win32RenderingMode.Software } })
+			.StartWithClassicDesktopLifetime(args);
+	}
+}
+
+public sealed class App : Application
+{
+	public override void Initialize()
+	{
+		Styles.Add(new FluentTheme());
+		RequestedThemeVariant = ThemeVariant.Dark;
+	}
+
+	public override void OnFrameworkInitializationCompleted()
+	{
+		if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+		{
+			desktop.MainWindow = new MainWindow();
+		}
+		base.OnFrameworkInitializationCompleted();
+	}
+}
+
+// Command line options.
+public static class Options
+{
+	public static string? World { get; private set; }
+	public static int ZoneX { get; private set; }
+	public static int ZoneZ { get; private set; }
+	public static int Size { get; private set; } = 5;
+	// For measuring: turn the camera on its own for this many seconds once loaded, print the frame
+	// rates, then close; and/or save a picture of the view once everything is loaded (PNG).
+	public static double Bench { get; private set; }
+	public static string? Shot { get; private set; }
+	// Where those results also go (a Windows window app has no console to print to).
+	public static string? Report { get; private set; }
+
+	public static void Say(string line)
+	{
+		Console.WriteLine(line);
+		if (Report != null)
+		{
+			File.AppendAllText(Report, line + Environment.NewLine);
+		}
+	}
+
+	public static void ClearShot() => Shot = null;
+	public static void ClearBench() => Bench = 0;
+
+	public static void Parse(string[] args)
+	{
+		for (int i = 0; i < args.Length - 1; i++)
+		{
+			switch (args[i])
+			{
+				case "--world":
+					World = args[++i];
+					break;
+				case "--zone":
+					var p = args[++i].Split(',');
+					ZoneX = int.Parse(p[0]);
+					ZoneZ = int.Parse(p[1]);
+					break;
+				case "--size":
+					Size = Math.Clamp(int.Parse(args[++i]), 1, 9);
+					break;
+				case "--bench":
+					Bench = double.Parse(args[++i], System.Globalization.CultureInfo.InvariantCulture);
+					break;
+				case "--shot":
+					Shot = Path.GetFullPath(args[++i]);
+					break;
+				case "--report":
+					Report = Path.GetFullPath(args[++i]);
+					break;
+			}
+		}
+	}
+}

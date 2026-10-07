@@ -18,6 +18,10 @@
     <Compile Remove="tests/**" />
     <!-- The shared library is its own project (Core/), referenced below. -->
     <Compile Remove="Core/**" />
+    <Compile Remove="Desktop/**" />
+    <None Remove="Desktop/**" />
+    <Content Remove="Desktop/**" />
+    <EmbeddedResource Remove="Desktop/**" />
     <None Remove="Core/**" />
     <EmbeddedResource Remove="Core/**" />
     <Content Remove="Core/**" />

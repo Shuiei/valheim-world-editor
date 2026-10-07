@@ -5,11 +5,12 @@
 | Path | What it holds |
 |---|---|
 | `Program.cs`, `App/` | The web app: window (`NativeWindow`, Photino), start page (`Launcher`), and the editor session with its HTTP API (`EditorSession`: `/api/world`, `/api/region`, `/api/objects`, `/api/save`, …) and the other `*Endpoints`. |
-| `Core/` | `ValheimWorldEditor.Core`, everything that is not web, shared with the native app to come (see the plan for it): |
+| `Core/` | `ValheimWorldEditor.Core`, everything that is not web, shared by the web app and the native app: |
 | `Core/App/` | Settings, game-look setup (`GameLook`), Regrow, search, blueprint formats, servers and SSH (`ServerConfig`, `Tunnel`), the local game (`LocalGame`), characters, zone statistics, folders (`Places`). |
 | `Core/Save/` | Save reader (`WorldSave`, `ValheimReader`), writer (`WorldWriter`), object building (`ZdoTools`: copies and blank objects), the `.db2` zone list, and live mode (`LiveBridge`, `LiveSync`). |
 | `Core/Editing/` | Pending changes: terrain per zone, deleted and added objects, zone resets (`EditStore`); heights of a block of zones (`HeightGrid`). |
 | `Core/WorldGen/` | Port of Valheim's world generator (bit-exact base terrain), map data, location flattening, the build-piece catalogue (`pieces.json`) and the prefab catalogue (`prefabs.json`). |
+| `Desktop/` | `ValheimWorldEditor.Desktop`, the native app being built to replace the web one (Avalonia window, 3D view drawn with OpenGL through Silk.NET): for now a preview that draws an area (`WorldScene`) with the game's models (`ModelStore`, `GlView`). `--world <name or folder> --zone x,z --size n` picks the area; `--bench <s>`, `--shot <file.png>` and `--report <file>` measure it. |
 | `wwwroot/` | The map (`index.html`, `mapview.js`) and the 3D editor (`editor.html`, `editor/*.js`, `terrain/*.js`, three.js in `lib/`). |
 | `wwwroot/editor/tips.js` | The hover text of every control. Keep it and the docs in step. |
 | `plugin/WorldEditorBridge/` | The BepInEx plugin for live mode (.NET Framework 4.7.2). |
