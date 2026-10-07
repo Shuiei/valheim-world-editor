@@ -16,9 +16,12 @@ async function openEditor(q = 'zx=0&zz=0&size=3') {
   await page().goto(`${t.base}/editor.html?${q}`, { waitUntil: 'networkidle0', timeout: 120000 });
   await page().waitForFunction(() => window.__ed?.objects.records.size > 0 && !document.getElementById('loading'), { timeout: 120000 });
   await sleep(1000);
-  await page().evaluate(() => { document.getElementById('viewPanel').hidden = true; document.activeElement?.blur(); });
+  // Every "more" fold open, so the tests reach the settings inside.
+  await page().evaluate(() => { document.getElementById('viewPanel').hidden = true; document.activeElement?.blur(); document.querySelectorAll('details.more').forEach(d => { d.open = true; }); window.__ed.plantDrawer(false); });
   await frames(page());
 }
+const areaAction = a => page().evaluate(a => window.__ed.areaAction(a), a);
+const applyArea = async a => { await areaAction(a); await page().click('#aApply'); };
 const records = () => page().evaluate(() => [...window.__ed.objects.records.values()].filter(r => !r.deleted).map(r => ({ id: r.id, name: r.name, x: r.x, y: r.y, z: r.z, added: r.added })));
 
 describe('Valheim World Editor in the browser', () => {
@@ -161,6 +164,7 @@ test('blueprints: the clipboard is saved as a file and pasted from the library',
   await lookAt(page(), tree.x, tree.z, 0, 40, 30); await sleep(500);
   await page().keyboard.down('Control'); await page().keyboard.press('c'); await page().keyboard.up('Control');
   await page().evaluate(() => window.__ed.setTool('area'));
+  await areaAction('copy');
   await page().click('#aSaveBp'); await sleep(1000);
   const { list } = await t.api('/api/blueprints');
   assert.ok(list.length >= 1, 'a blueprint file was written');
@@ -314,7 +318,7 @@ test('restore: a deleted tree comes back from the backup made when saving', asyn
   await page().mouse.move(ax, ay); await page().mouse.down(); await page().mouse.move(bx, by, { steps: 6 }); await page().mouse.up();
   await page().waitForFunction(() => document.querySelectorAll('#aBackup option').length > 2);
   await page().$eval('#aBackup', e => { e.selectedIndex = 1; e.dispatchEvent(new Event('change')); });
-  await page().click('#aBkRestore'); await sleep(2000);
+  await applyArea('backup'); await sleep(2000);
   const back = (await records()).find(r => r.name === 'Beech1' && Math.abs(r.x - tree.x) < 0.01 && Math.abs(r.z - tree.z) < 0.01);
   assert.ok(back?.added, 'the tree is back, as a restored object');
   assert.deepEqual((await records()).filter(outside).map(r => r.id).sort(), others, 'nothing outside the selection changed');
@@ -399,6 +403,7 @@ test('heightmap: an exported area imports back unchanged, a white picture lifts 
   const file = path.join(t.home, 'area.png'); fs.writeFileSync(file, png);
   const heightsNow = () => page().evaluate(() => { const ed = window.__ed, out = []; for (let g = 0; g < ed.N; g += 997) out.push(ed.height(g)); return out; });
   const before = await heightsNow();
+  await areaAction('heightmap');
   await (await page().$('#hmFile')).uploadFile(file);
   await page().waitForFunction(() => !document.getElementById('hmBox').hidden);
   await page().click('#hmApply'); await sleep(800);
@@ -416,6 +421,7 @@ test('heightmap: an exported area imports back unchanged, a white picture lifts 
   const white = await page().evaluate(() => { const cv = document.createElement('canvas'); cv.width = cv.height = 16; const g = cv.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, 16, 16); return cv.toDataURL('image/png'); });
   const wfile = path.join(t.home, 'white.png'); fs.writeFileSync(wfile, Buffer.from(white.split(',')[1], 'base64'));
   const h0 = await page().evaluate(([x, z]) => { const ed = window.__ed; return ed.sampleHeight(x - ed.originX, z - ed.originZ); }, spot);
+  await areaAction('heightmap');
   await (await page().$('#hmFile')).uploadFile(wfile);
   await page().waitForFunction(() => !document.getElementById('hmBox').hidden);
   await page().$eval('#hmMax', (e, v) => { e.value = v; }, (h0 + 2).toFixed(1));
@@ -453,7 +459,7 @@ test('erosion: thermal settles a spike to its rest angle, the Area action erodes
   const [ax, ay] = await screenOf(page(), spot[0] - 10, spot[1] - 10), [bx, by] = await screenOf(page(), spot[0] + 10, spot[1] + 10);
   await page().mouse.move(ax, ay); await page().mouse.down(); await page().mouse.move(bx, by, { steps: 6 }); await page().mouse.up();
   const start = await pending();
-  await page().click('[data-act="erode"]'); await sleep(1500);
+  await applyArea('erode'); await sleep(1500);
   assert.notEqual(await pending(), start, 'the ground changed');
   await page().click('#undo'); await sleep(1000);
   noErrors();
@@ -884,6 +890,7 @@ test('eyedropper, favourite and recent kinds', async () => {
   }, c.id);
   await lookAt(page(), c.x, c.z, 0, 10, 4);
   await page().keyboard.press('t'); await sleep(300);
+  await page().evaluate(() => window.__ed.plantDrawer(true));
   const before = (await records()).length;
   // Pick: the clicked object's kind becomes the only one ticked, and nothing is planted.
   await page().click('#plPick');
@@ -982,7 +989,8 @@ test('Place tool: named Place, the sapling option only shows for saplings and cr
   await openEditor();
   assert.match(await page().$eval('[data-tool="plant"]', e => e.textContent.trim()), /^Place/);
   await page().keyboard.press('t'); await sleep(300);
-  await page().waitForFunction(() => document.getElementById('plChosen').textContent.startsWith('Placing'));
+  await page().waitForFunction(() => document.querySelector('#plMix [data-w="woodwall"]'));
+  await page().evaluate(() => window.__ed.plantDrawer(true));
   assert.ok(await page().$eval('#plGrowRow', e => e.hidden), 'hidden for walls');
   await page().$eval('#plSearch', e => { e.value = 'sapling_turnip'; e.dispatchEvent(new Event('input')); });
   await page().click('#plList input[value="sapling_turnip"]');
@@ -1093,13 +1101,13 @@ test('Place mix: weights decide how often each kind is used; presets load and sa
   assert.equal(await page().$eval('#plDensity', e => +e.value), 3);
   // Save your own, load it back after changing things, delete it.
   await page().evaluate(() => { window.prompt = () => 'My woods'; });
-  await page().click('#plPresetSave');
+  await page().$eval('#plPresetSave', e => e.click());
   assert.equal(await page().$eval('#plPreset', e => e.value), 'own:My woods');
-  await page().click('#plNone');
+  await page().$eval('#plNone', e => e.click());
   await page().select('#plPreset', 'own:My woods');
   assert.deepEqual((await page().evaluate(() => JSON.parse(localStorage.getItem('plantChosen')))).sort(), chosen.slice().sort());
   await page().evaluate(() => { window.confirm = () => true; });
-  await page().click('#plPresetDel');
+  await page().$eval('#plPresetDel', e => e.click());
   assert.equal(await page().$$eval('#plPreset option[value^="own:"]', o => o.length), 0);
   await page().keyboard.press('Escape');
   noErrors();
@@ -1142,7 +1150,7 @@ test('Regrow nature puts back the game\'s own vegetation inside the selection', 
   const [ax, ay] = await screenOf(page(), spot[0] - 30, spot[1] - 30), [bx, by] = await screenOf(page(), spot[0] + 30, spot[1] + 30);
   await page().mouse.move(ax, ay); await page().mouse.down(); await page().mouse.move(bx, by, { steps: 6 }); await page().mouse.up(); await sleep(300);
   const before = (await records()).length;
-  await page().click('#aRegrow');
+  await applyArea('regrow');
   await page().waitForFunction(() => /Regrew|Nothing to regrow/.test(document.getElementById('sMsg').textContent), { timeout: 60000 })
     .catch(async e => { throw new Error(`no result: "${await page().$eval('#sMsg', e => e.textContent)}" poly ${JSON.stringify(await page().evaluate(() => window.__ed.area.polygon()))}`); });
   const msg = await page().$eval('#sMsg', e => e.textContent);
@@ -1153,7 +1161,7 @@ test('Regrow nature puts back the game\'s own vegetation inside the selection', 
   assert.ok(fresh.every(r => Math.abs(r.x - spot[0]) <= 30.5 && Math.abs(r.z - spot[1]) <= 30.5), 'inside the selection');
   // Again: everything is standing now, so nothing more is added.
   // The long message above must not cover the panel (it used to grow over its last buttons).
-  await page().click('#aRegrow');
+  await applyArea('regrow');
   await page().waitForFunction(() => /Nothing to regrow/.test(document.getElementById('sMsg').textContent), { timeout: 20000 })
     .catch(async () => { throw new Error(`second regrow: "${await page().$eval('#sMsg', e => e.textContent)}"`); });
   await page().click('#undo'); await sleep(800);
@@ -1273,16 +1281,17 @@ test('cut and fill: Flatten\'s estimate matches what it then does', async () => 
   const [ax, ay] = await screenOf(page(), spot[0] - 8, spot[1] - 8), [bx, by] = await screenOf(page(), spot[0] + 8, spot[1] + 8);
   await page().mouse.move(ax, ay); await page().mouse.down(); await page().mouse.move(bx, by, { steps: 6 }); await page().mouse.up(); await sleep(300);
   await page().$eval('#aSoft', e => { e.value = 0; e.dispatchEvent(new Event('input')); });
+  await areaAction('flatten');
   await page().click('#aAvg');
   await page().$eval('#aHeight', e => { e.value = (+e.value + 3).toFixed(1); e.dispatchEvent(new Event('input')); });
   const text = () => page().$eval('#aVolume', e => e.textContent);
   const num = (t, re) => { const m = t.match(re); return m ? parseFloat(m[1]) * (m[2] ? 1000 : 1) : NaN; };
   const before = await text();
-  const fill = num(before, /fill ([\d.]+)(k)? m³/), raised0 = num(before, /^Ground inside: ([\d.]+)(k)? m³ raised/);
+  const fill = num(before, /fill ([\d.]+)(k)? m³/), raised0 = num(before, /Ground inside: ([\d.]+)(k)? m³ raised/);
   assert.ok(fill > 100, `a fill is estimated (${before})`);
-  await page().click('[data-act="flatten"]'); await sleep(1200);
+  await page().click('#aApply'); await sleep(1200);
   const after = await text();
-  const raised = num(after, /^Ground inside: ([\d.]+)(k)? m³ raised/);
+  const raised = num(after, /Ground inside: ([\d.]+)(k)? m³ raised/);
   assert.ok(Math.abs(raised - raised0 - fill) <= Math.max(2, fill * 0.02), `raised by the estimate (${before} -> ${after})`);
   await page().click('#undo'); await sleep(800);
   noErrors();
@@ -1321,6 +1330,65 @@ vwe.log('raised', h);`;
   assert.match(await page().$eval('#scOut', e => e.textContent), /Select an area first/);
   assert.equal(await pending(), start, 'nothing changed');
   await page().click('#scClose');
+  noErrors();
+});
+
+test('tool panels: help behind ?, one Area action at a time, Place kinds in a drawer, folds remembered', async () => {
+  await openEditor();
+  await page().evaluate(() => { localStorage.removeItem('toolHelp'); localStorage.removeItem('toolMoreOpen'); localStorage.setItem('plantChosen', '[]'); localStorage.removeItem('plantDrawer'); localStorage.setItem('areaAction', 'raise'); });
+  await page().goto(`${t.base}/editor.html?zx=0&zz=0&size=3`, { waitUntil: 'networkidle0', timeout: 120000 });
+  await page().waitForFunction(() => window.__ed?.objects.records.size > 0 && !document.getElementById('loading'), { timeout: 120000 });
+  await sleep(800);
+  const shown = id => page().$eval(id, e => e.getClientRects().length > 0);
+  // Help: hidden until ? is clicked.
+  assert.equal(await shown('#toolDesc'), false, 'how-to text hidden at first');
+  await page().click('#toolHelpBtn');
+  assert.equal(await shown('#toolDesc'), true, '? shows it');
+  await page().click('#toolHelpBtn');
+  assert.equal(await shown('#toolDesc'), false, '? again hides it');
+  // Area: only the chosen action's settings; Enter applies it.
+  await page().keyboard.press('b'); await sleep(300);
+  assert.equal(await page().$eval('#aAction', e => e.value), 'raise', 'the action is remembered');
+  assert.equal(await shown('#aAmount'), true, 'Raise shows Amount');
+  assert.equal(await shown('#aHeight'), false, 'and not Height');
+  assert.equal(await shown('#aBackup'), false, 'nor the backup list');
+  assert.match(await page().$eval('#aApply', e => e.textContent), /^Raise/);
+  const c = (await records()).find(r => r.name === 'piece_chest_wood');
+  const spot = [c.x - 30, c.z - 30];
+  await lookAt(page(), ...spot, 0, 60, 0.01);
+  const [ax, ay] = await screenOf(page(), spot[0] - 6, spot[1] - 6), [bx, by] = await screenOf(page(), spot[0] + 6, spot[1] + 6);
+  await page().mouse.move(ax, ay); await page().mouse.down(); await page().mouse.move(bx, by, { steps: 6 }); await page().mouse.up(); await sleep(300);
+  const h0 = await page().evaluate(([x, z]) => { const ed = window.__ed; return ed.sampleHeight(x - ed.originX, z - ed.originZ); }, spot);
+  await page().keyboard.press('Enter'); await sleep(800);
+  const h1 = await page().evaluate(([x, z]) => { const ed = window.__ed; return ed.sampleHeight(x - ed.originX, z - ed.originZ); }, spot);
+  assert.ok(h1 - h0 > 1.5, `Enter raised the selection (${h0.toFixed(2)} -> ${h1.toFixed(2)})`);
+  await page().click('#undo'); await sleep(600);
+  await page().select('#aAction', 'backup');
+  assert.equal(await shown('#aBackup'), true, 'Restore from a backup shows its list');
+  assert.equal(await shown('#aAmount'), false);
+  // The Mask sits in the Area fold, which says when it is on, and the fold stays open once opened.
+  assert.ok(await page().$eval('[data-more="area"]', d => d.contains(document.getElementById('maskBox'))), 'mask in the Area fold');
+  await page().click('[data-more="area"] > summary');
+  await page().click('#mOn');
+  assert.match(await page().$eval('[data-more="area"] > summary', e => e.textContent), /mask on/);
+  await page().click('#mOn');
+  // Place: nothing chosen, so the drawer opens; a kind from it shows in the panel with a ✕.
+  await page().keyboard.press('t'); await sleep(300);
+  assert.equal(await shown('#plDrawer'), true, 'the kind drawer opens when nothing is chosen');
+  assert.ok(await page().$eval('[data-more="plant"]', d => d.contains(document.getElementById('maskBox'))), 'the mask follows the tool');
+  await page().$eval('#plSearch', e => { e.value = 'Beech1'; e.dispatchEvent(new Event('input')); });
+  await page().click('#plList input[value="Beech1"]');
+  assert.ok(await page().$('#plMix [data-w="Beech1"]'), 'chosen kind listed in the panel');
+  await page().click('#plDrawerClose');
+  assert.equal(await shown('#plDrawer'), false, '✕ closes the drawer');
+  await page().click('#plMix [data-w="Beech1"] .x');
+  assert.equal(await page().$('#plMix [data-w="Beech1"]'), null, 'its ✕ drops the kind');
+  // Select: Exact place waits for a selection; the folds keep their state across a reload.
+  await page().keyboard.press('e'); await sleep(300);
+  assert.equal(await shown('#selNum'), false, 'no Exact place without a selection');
+  await page().reload({ waitUntil: 'networkidle0' });
+  await page().waitForFunction(() => window.__ed?.objects.records.size > 0 && !document.getElementById('loading'), { timeout: 120000 });
+  assert.ok(await page().$eval('[data-more="area"]', d => d.open), 'the opened fold is remembered');
   noErrors();
 });
 

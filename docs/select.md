@@ -25,7 +25,11 @@ replace or delete them. Only objects that are shown can be picked; switch kinds 
 ![Drawing a selection zone](images/select-zone-drawing.jpg)
 ![Everything inside selected](images/select-zone.jpg)
 
-The panel lists what is selected, by kind.
+The panel lists what is selected, by kind. Under it come what you use most: **Delete**, **Deselect**,
+**Whole building**, **Same kind**, **Invert**, and **Exact place** once something is selected. Two
+folds at the bottom hold the rest, and stay open or closed as you left them: **More actions**
+(Replace with, Saved selections, Inspect data, Make player built) and **Moving** (the two switches
+below). The **?** next to the tool name shows how-to text in the panel.
 
 ## Moving and turning
 

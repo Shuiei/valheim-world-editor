@@ -6,8 +6,7 @@ import { isWindow, pickFile } from '../app.js';
 export function createHeightmap(ed) {
   const { $, W, H } = ed;
   const box = document.createElement('div');
-  box.className = 'sub';
-  box.innerHTML = `<h3>Heightmap</h3>
+  box.innerHTML = `
     <div class="row"><button id="hmExport" title="The ground of the whole area as a 16-bit grayscale picture">Export the area</button><button id="hmImport" title="A grayscale picture into the ground">Import…</button></div>
     <input id="hmFile" type="file" accept="image/png" hidden>
     <div id="hmBox" hidden>
@@ -16,8 +15,8 @@ export function createHeightmap(ed) {
       <label class="field">Highest <input id="hmMax" type="number" step="0.5"><span>m</span></label>
       <div class="row"><button id="hmApply" class="primary">Put it into the ground</button><button id="hmCancel">Cancel</button></div>
     </div>
-    <div class="hint">Black is the lowest height, white the highest; north is at the top of the picture, one pixel per metre when exported. An import fits the picture to the selection (or the whole area) and works within the game's ±8 m.</div>`;
-  $('areaPanel').appendChild(box);
+    <div class="hint help">Black is the lowest height, white the highest; north is at the top of the picture, one pixel per metre when exported. An import fits the picture to the selection (or the whole area) and works within the game's ±8 m.</div>`;
+  $('aHeightmap').appendChild(box);
 
   const area = () => `x0=${ed.X0}&z0=${ed.Z0}&x1=${ed.X1}&z1=${ed.Z1}`;
   $('hmExport').onclick = async () => {

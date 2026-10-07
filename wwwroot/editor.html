@@ -335,6 +335,7 @@ import { createBuilder } from './editor/builder.js';
 import { createOverlays } from './editor/overlays.js';
 import { createScript } from './editor/script.js';
 import { applyTips } from './editor/tips.js';
+import { applyLayout } from './editor/layout.js';
 import { gameLookBanner } from './app.js';
 gameLookBanner();
 
@@ -1121,6 +1122,7 @@ createMeasure(ed);
 createTransform(ed);
 createInspector(ed);
 createSelecting(ed);
+applyLayout(ed);
 // Opened from the map's search: select the object (and open the inspector) once it is loaded. Objects
 // and building pieces load separately, so wait for whichever brings it, for a while.
 if (params.get('select')) {

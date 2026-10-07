@@ -18,37 +18,48 @@ tool, and shown again when you come back.
 
 The panel shows the selected surface and how many shown objects are inside.
 
+## Actions
+
+The **Action** list holds everything the tool does, in four groups: Ground, Objects inside, Copy and
+Bring back (the sections below). The panel shows only the chosen action's settings, and its button
+at the bottom does it: **Flatten**, **Remove the objects**, **Restore the selection**... `Enter` does
+the same once there is a selection. The action is remembered. The [Mask](masks.md) is folded under
+**Mask** at the bottom; the fold says "mask on" while it is switched on. The **?** next to the tool
+name shows how-to text in the panel.
+
 ## Ground
 
 | Control | What it does |
 |---|---|
-| **Soft edge** | Ground actions fade out over this many metres inside the edge of the selection, so the result blends in. At **0** the edge is as sharp as the ground allows and follows the outline straight. |
+| **Soft edge** (above the Action list) | Ground actions fade out over this many metres inside the edge of the selection, so the result blends in. At **0** the edge is as sharp as the ground allows and follows the outline straight. |
 | **Flatten** | Levels the ground inside to **Height**. |
 | **Raise** / **Lower** | Lifts / digs the ground inside by **Amount**. |
 | **Smooth** | Evens out bumps inside. |
 | **Naturalize** | Natural-looking bumps inside (Bumps and Size of the Naturalize tool). |
-| **Restore** | Puts the ground inside back to how the world generated it, and removes paint. |
+| **Restore the ground** | Puts the ground inside back to how the world generated it, and removes paint. |
 | **Erode** | Weathers the ground inside: slopes settle (thermal, with the Erode tool's rest angle), then rain cuts gullies (water). |
 | **Height** | Height (m) used by Flatten. **avg** sets it to the average ground height inside. |
 | **Amount** | Metres used by Raise and Lower. |
-| Cut and fill | Under the settings: how much ground inside has been raised and dug compared to the generated ground, and what **Flatten** (to the Height), **Raise** and **Lower** (by the Amount) would move, in m³, before you click. Within the game's ±8 m limit: what Flatten could not reach is said. Follows the selection, the soft edge and the Mask. |
-| **Paint** + **apply** | Paints the ground inside with dirt, cultivated, paved, or clears the paint. |
+| Cut and fill | Under the settings of Flatten, Raise and Lower: how much ground inside has been raised and dug compared to the generated ground, and what **Flatten** (to the Height), **Raise** and **Lower** (by the Amount) would move, in m³, before you click. Within the game's ±8 m limit: what Flatten could not reach is said. Follows the selection, the soft edge and the Mask. |
+| **Paint** | Paints the ground inside with dirt, cultivated, paved, or clears the paint (chosen in the list under it). |
 
-Each button is one undo step.
+Each action is one undo step.
 
 ## Objects inside
 
 | Control | What it does |
 |---|---|
-| **Kind chips** | Which kinds the buttons act on, with how many are inside. "hidden" means the kind is switched off in View. |
-| **Remove** | Removes the objects of the ticked kinds inside the selection. |
-| **Select** | Selects them, to move, turn or copy them with the [Select tool](select.md). |
+| **Kind chips** | Which kinds the object actions (and Restore from a backup) act on, with how many are inside. "hidden" means the kind is switched off in View. |
+| **Remove objects** | Removes the objects of the ticked kinds inside the selection. |
+| **Select objects** | Selects them, to move, turn or copy them with the [Select tool](select.md). |
 | **Regrow nature** | Puts back what the game grows here: its own trees, rocks, bushes and pickables for the biome, by the game's vegetation rules (how many, how far apart, on which slopes, heights and biome edges, in groves), worked out like the game does for the zones under the selection, on the ground as it is now. Only the kinds chosen with the chips above, inside the selection and where the Mask allows. Spots where something already stands are skipped (a tree still there is not doubled), and so is the ground near buildings. Up to 16 zones (256 × 256 m) at once. One undo step. |
-| **Replace** … **with** … | Replaces every object of the first kind inside by the second kind, at the same place and facing. The first list only offers kinds that are inside; the second offers every kind the game has; its **pick** button fills it from the world (click an object to use its kind). |
+| **Replace objects**: **Replace** … **with** … | Replaces every object of the first kind inside by the second kind, at the same place and facing. The first list only offers kinds that are inside; the second offers every kind the game has; its **pick** button fills it from the world (click an object to use its kind). |
 
 ## Copy and paste
 
 ![Pasting a copy, turned](images/paste.jpg)
+
+The **Copy and paste** action shows these buttons; `Ctrl+C` and `Ctrl+V` work with any action.
 
 | Control | What it does |
 |---|---|
@@ -98,7 +109,7 @@ are left out, and the editor says which.
 
 ## Heightmap
 
-Like WorldPainter's heightmap import and export: the ground as a grayscale picture, to change in an
+The **Heightmap** action (Copy group), like WorldPainter's heightmap import and export: the ground as a grayscale picture, to change in an
 image editor (GIMP, Krita...) or a terrain tool (Gaea, World Machine...) and bring back.
 
 | Control | What it does |
@@ -112,15 +123,15 @@ Use 16 bits when you can: 8-bit pictures only have 256 steps between Lowest and 
 
 ## Restore from a backup
 
-Like WorldEdit's `//restore`: put the selection back as it was in a backup of this world, to undo
+The **Restore from a backup** action (Bring back group), like WorldEdit's `//restore`: put the selection back as it was in a backup of this world, to undo
 griefing, a bad raid or an edit you regret, without rolling back the whole world.
 
 | Control | What it does |
 |---|---|
 | **Backup** | The backups next to the world folder, newest first: the editor's (made before every save, `<World>_backup_terraineditor-<date>`) and the game's own (`<World>_backup_auto-<date>`). **Another folder…** picks any other copy of the same world, for example a server backup copied to this computer (in live mode the list is empty, so that is the way). A copy of another world (another seed) is refused. |
 | **Ground** | The height and paint inside the selection come back exactly as in the backup; within the **Soft edge** they blend into the ground around. The Mask applies. |
-| **Objects** | The objects of the kinds ticked under **Objects inside** (tick **Buildings** for buildings) come back as they were, with all their data: a restored chest has its contents, a sign its text. Objects that are in the selection now but were not in the backup are removed. Objects unchanged since the backup are left as they are. |
-| **Restore the selection** | Does it: one step in History. Save or Apply live writes it. |
+| **Objects** | The objects of the kinds chosen with the chips above (choose **Buildings** for buildings) come back as they were, with all their data: a restored chest has its contents, a sign its text. Objects that are in the selection now but were not in the backup are removed. Objects unchanged since the backup are left as they are. |
+| **Restore the selection** (the button at the bottom) | Does it: one step in History. Save or Apply live writes it. |
 
 ## Reset zones
 
@@ -128,7 +139,7 @@ griefing, a bad raid or an edit you regret, without rolling back the whole world
 |---|---|
 | **Keep my buildings** | Player-built pieces in the zones are kept. |
 | **Reset ground edits too** | Also undoes the ground edits in the zones (height and paint). |
-| **Reset zones…** | Marks every zone under the selection (red outline). On save, those zones lose their trees, rocks, ruins and dungeon entrances, and the game generates them again the next time a player goes there: new trees, new ore, new dungeons. You are asked to confirm first. |
+| **Reset zones…** (the button at the bottom) | Marks every zone under the selection (red outline). On save, those zones lose their trees, rocks, ruins and dungeon entrances, and the game generates them again the next time a player goes there: new trees, new ore, new dungeons. You are asked to confirm first. |
 | **Cancel reset** | Cancels the reset of the zones under the selection. |
 
 Resetting is applied when you save (offline) or apply live (with WorldEditorBridge 0.10.0 or newer).

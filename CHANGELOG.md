@@ -4,6 +4,23 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v0.36.0 — 2026-10-07 (tidier tool panels)
+
+### Changed
+- **Tool panels** show the settings you use most, and fold the rest under one line at the bottom
+  that says what is inside (shape, falloff, stamp, curve, clumping, tilt, facing...), open or closed
+  as you left it. The **Mask** moves into that fold, which says "mask on" while it is on.
+- **?** next to the tool name shows what the tool does and how to use it; the how-to text is hidden
+  otherwise (in every tool, until you click ? again).
+- **Area**: one **Action** list (Ground, Objects inside, Copy, Bring back) instead of six sections.
+  The panel shows only that action's settings, and one button at the bottom does it (`Enter` too).
+- **Place**: the panel lists the chosen kinds with their weights and a ✕ each; **+ Add kinds** opens
+  the list of every kind (search, favourites, recent, Pick from world) in a drawer beside the panel.
+- **Select**: Delete, Whole building, Same kind, Invert and Exact place first; Replace with, saved
+  selections, Inspect data and Make player built under **More actions**; the moving switches under
+  **Moving**.
+- **Path**: Soft edge, curve and natural look are folded; Apply and Clear stay at the bottom.
+
 ## v0.35.0 — 2026-10-07 (script console)
 
 ### Added

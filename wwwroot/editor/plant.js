@@ -12,15 +12,12 @@ export function createPlant(ed) {
   panel.id = 'plantPanel';
   panel.innerHTML = `
     <div class="seg" id="plModes"><button data-m="brush" class="on" title="Paint under the brush">Brush</button><button data-m="line" title="Objects along a line you draw">Line</button><button data-m="grid" title="One object in the middle of each grid cell">Grid</button><button data-m="zone" title="Fill a shape you draw freely">Zone</button></div>
-    <input id="plSearch" type="search" placeholder="Search kinds (oak, rock, bush…)" style="width:100%;margin:2px 0 4px">
-    <div class="row" style="margin:0 0 6px"><button id="plPick" title="Pick a kind from the world: click an object (Shift + click adds it to the ticked kinds)">Pick</button><button id="plNone" title="Untick every kind">Untick all</button></div>
-    <div id="plFavBox" hidden><div class="chipHead">Favourites<span><button class="link" data-all="plFav" title="Tick every favourite">all</button><button class="link" data-none="plFav" title="Untick every favourite">none</button></span></div><div class="chips" id="plFav"></div></div>
-    <div id="plRecentBox" hidden><div class="chipHead">Recent<span><button class="link" data-all="plRecent" title="Tick every recent kind">all</button><button class="link" data-none="plRecent" title="Untick every recent kind">none</button></span></div><div class="chips" id="plRecent"></div></div>
-    <div id="plList" class="plList"></div>
+    <label class="field">Preset <select id="plPreset"></select></label>
+    <div class="kindsHead">Kinds<button id="plKindsBtn" class="link" title="Open the list of kinds: search, favourites, recent, pick from the world">+ Add kinds</button></div>
     <div id="plMix"></div>
     <div class="hint" id="plChosen"></div>
-    <label class="field">Preset <select id="plPreset"></select></label>
-    <div class="row"><button id="plPresetSave" title="Save the ticked kinds, their weights and the Density, Spacing, Size, Tilt and facing settings under a name">Save as preset…</button><button id="plPresetDel" disabled title="Delete the chosen preset (only your own)">Delete</button></div>
+    <div class="row"><button id="plPresetSave" title="Save the chosen kinds, their weights and the Density, Spacing, Size, Tilt and facing settings under a name">Save as preset…</button><button id="plPresetDel" disabled title="Delete the chosen preset (only your own)">Delete</button></div>
+    <label class="check" id="plGrowRow" hidden title="Saplings and crops need free space around them to grow (their grow radius in the game)"><input type="checkbox" id="plGrow" checked> Leave saplings and crops room to grow</label>
     <label class="field">Density <input id="plDensity" type="range" min="0.2" max="20" step="0.2" value="3"><span id="plDensityV"></span></label>
     <label class="field">Spacing <input id="plSpacing" type="range" min="0.5" max="15" step="0.5" value="4"><span id="plSpacingV"></span></label>
     <label class="field">Clumping <input id="plClump" type="range" min="0" max="100" step="5" value="0"><span id="plClumpV"></span></label>
@@ -30,7 +27,6 @@ export function createPlant(ed) {
     <label class="field">Rotation <input id="plRot" type="range" min="-180" max="180" step="1" value="0"><span id="plRotV"></span></label>
     <label class="check"><input type="checkbox" id="plRandomYaw" checked> Random facing (off: all face the rotation)</label>
     <label class="check"><input type="checkbox" id="plSingle"> One at a time, exactly at the cursor</label>
-    <label class="check" id="plGrowRow" hidden title="Saplings and crops need free space around them to grow (their grow radius in the game)"><input type="checkbox" id="plGrow" checked> Leave saplings and crops room to grow</label>
     <div id="plLineBox" hidden>
       <div class="seg" id="plLineShape"><button data-ls="points" class="on" title="Click points along the way, or hold and drag to draw freely">Points</button><button data-ls="circle" title="Press at the centre and drag out to the size you want">Circle</button><button data-ls="rect" title="Press at one corner and drag to the opposite corner">Rectangle</button></div>
       <label class="check" title="Each piece starts where the last one ends, at the game's snap points, like the hammer snaps them"><input type="checkbox" id="plSnap"> End to end (snap together, like in game)</label>
@@ -49,15 +45,50 @@ export function createPlant(ed) {
     <div id="plGridBox" hidden>
       <div class="hint">Drag a box on the ground; one object goes in the middle of each cell. <kbd>,</kbd> <kbd>.</kbd> or Alt+wheel turn it.</div>
     </div>
-    <div class="row" id="plPlaceRow" hidden><button id="plPlace" class="primary">Place <kbd>Enter</kbd></button><button id="plClearShape">Clear <kbd>Esc</kbd></button></div>
+    <div class="row toolFoot" id="plPlaceRow" hidden><button id="plPlace" class="primary">Place <kbd>Enter</kbd></button><button id="plClearShape">Clear <kbd>Esc</kbd></button></div>
     <div class="row" id="plUndoRow" hidden><button id="plUndoPt" title="Remove the last point you clicked (Backspace)">Remove last point <kbd>Backspace</kbd></button></div>
     <div class="row"><button id="plNewLayout">New layout <kbd>R</kbd></button></div>
     <div class="hint" id="plPreview" style="color:var(--text)"></div>
     <div class="hint" id="plBrushHint">Density is objects per 100 m². Spacing keeps them apart (also from what is already there). Shift + drag removes the chosen kinds. The Mask applies.</div>`;
   $('locWarn').before(panel);
   ed.panels.push({ el: panel, tools: ['plant'] });
+  // The kinds to choose from open in a drawer beside the panel; the panel keeps only the chosen ones.
+  const drawer = document.createElement('aside');
+  drawer.id = 'plDrawer'; drawer.className = 'card'; drawer.hidden = true;
+  drawer.innerHTML = `
+    <div class="drawerHead">Choose kinds<button id="plDrawerClose" class="ghost" title="Close the list (the chosen kinds stay)">✕</button></div>
+    <input id="plSearch" type="search" placeholder="Search kinds (oak, rock, bush…)" style="width:100%;margin:2px 0 4px">
+    <div class="row" style="margin:0 0 6px"><button id="plPick" title="Pick a kind from the world: click an object (Shift + click adds it to the chosen kinds)">Pick from world</button><button id="plNone" title="Untick every kind">Untick all</button></div>
+    <div id="plFavBox" hidden><div class="chipHead">Favourites<span><button class="link" data-all="plFav" title="Tick every favourite">all</button><button class="link" data-none="plFav" title="Untick every favourite">none</button></span></div><div class="chips" id="plFav"></div></div>
+    <div id="plRecentBox" hidden><div class="chipHead">Recent<span><button class="link" data-all="plRecent" title="Tick every recent kind">all</button><button class="link" data-none="plRecent" title="Untick every recent kind">none</button></span></div><div class="chips" id="plRecent"></div></div>
+    <div id="plList" class="plList"></div>`;
+  document.body.appendChild(drawer);
+  let drawerOpen = null;
+  try { drawerOpen = localStorage.getItem('plantDrawer'); } catch { }
+  // Open at first while nothing is chosen; then as you left it.
+  const drawerShown = () => drawerOpen === '1' || (drawerOpen == null && !chosen.size);
+  function syncDrawer() {
+    const open = drawerShown();
+    drawer.hidden = !(open && ed.tool === 'plant');
+    $('plKindsBtn').textContent = open ? 'Done' : '+ Add kinds';
+  }
+  function showDrawer(open) {
+    drawerOpen = open ? '1' : '0';
+    try { localStorage.setItem('plantDrawer', drawerOpen); } catch { }
+    syncDrawer();
+  }
+  $('plKindsBtn').onclick = () => showDrawer(!drawerShown());
+  $('plDrawerClose').onclick = () => showDrawer(false);
+  ed.onToolChange.push(syncDrawer);
+  ed.plantDrawer = showDrawer;
   const style = document.createElement('style');
   style.textContent = `
+    #plDrawer { position: fixed; left: 362px; top: 70px; width: 260px; padding: 10px 12px 12px; max-height: calc(100vh - 136px); overflow-y: auto; z-index: 2; }
+    #plDrawer .plList { max-height: none; }
+    .drawerHead { display: flex; align-items: center; font-weight: 600; font-size: 14px; margin-bottom: 6px; }
+    .drawerHead button { margin-left: auto; padding: 2px 7px; }
+    .kindsHead { display: flex; align-items: center; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; margin: 10px 0 2px; }
+    .kindsHead .link { margin-left: auto; background: none; border: 0; padding: 0; color: var(--accent); font-size: 12px; text-transform: none; letter-spacing: 0; cursor: pointer; }
     .plList { max-height: 300px; overflow-y: auto; border: 1px solid var(--line); border-radius: 7px; padding: 4px; }
     .plList details + details { border-top: 1px solid var(--line); }
     .plList summary { display: flex; align-items: center; gap: 6px; padding: 5px 4px; cursor: pointer; list-style: none; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; border-radius: 5px; }
@@ -77,7 +108,9 @@ export function createPlant(ed) {
     .chipHead .link:hover { color: var(--accent); }
     #plFav, #plRecent { margin: 3px 0 6px; }
     #plMix { margin: 4px 0 2px; }
-    #plMix .mixRow { display: grid; grid-template-columns: minmax(0, 1fr) 90px 34px; gap: 6px; align-items: center; font-size: 12px; }
+    #plMix .mixRow { display: grid; grid-template-columns: minmax(0, 1fr) 80px 34px 18px; gap: 6px; align-items: center; font-size: 12px; padding: 3px 4px 3px 7px; border: 1px solid var(--line); border-radius: 7px; margin: 3px 0; }
+    #plMix .mixRow .x { background: none; border: 0; padding: 0; color: var(--muted); cursor: pointer; }
+    #plMix .mixRow .x:hover { color: var(--text); }
     #plMix .mixRow span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     #plMix .mixRow .pct { text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; }`;
   document.head.appendChild(style);
@@ -98,12 +131,12 @@ export function createPlant(ed) {
     $('plTiltV').textContent = `${v('plTilt')}°`;
     $('plRotV').textContent = `${v('plRot')}°`;
     renderMix();
-    $('plChosen').textContent = chosen.size ? (chosen.size > 1 ? 'Weights: how often each kind is used.' : `Placing: ${[...chosen][0]}`) : 'Tick one or more kinds to place.';
+    $('plChosen').textContent = chosen.size ? '' : 'Nothing to place yet: + Add kinds, or a preset.';
     // The grow room option only matters for saplings and crops: shown (and used) only when one is ticked.
     $('plGrowRow').hidden = ![...chosen].some(n => grow[n]?.[0] > 0);
     // Crops only grow on cultivated ground in the game.
     const cult = [...chosen].filter(n => grow[n]?.[1]);
-    if (cult.length) $('plChosen').textContent += ` · ${cult.join(', ')} only grow${cult.length > 1 ? '' : 's'} on cultivated ground (paint it with Cultivate first).`;
+    if (cult.length) $('plChosen').textContent = `${cult.join(', ')} only grow${cult.length > 1 ? '' : 's'} on cultivated ground (paint it with Cultivate first).`;
   }
   ['plDensity', 'plSpacing', 'plTilt', 'plRot', 'plClump', 'plPatch'].forEach(id => $(id).addEventListener('input', syncLabels));
   ['plClump', 'plPatch'].forEach(id => $(id).addEventListener('input', () => updatePreview()));
@@ -139,12 +172,14 @@ export function createPlant(ed) {
   let mixKey = '';
   function renderMix() {
     const names = [...chosen], total = names.reduce((a, n) => a + weightOf(n), 0);
-    const pct = n => `${Math.round(weightOf(n) / total * 100)}%`;
+    const pct = n => names.length > 1 ? `${Math.round(weightOf(n) / total * 100)}%` : '';
     if (names.join('|') === mixKey) { $('plMix').querySelectorAll('[data-w]').forEach(r => r.querySelector('.pct').textContent = pct(r.dataset.w)); return; }
     mixKey = names.join('|');
-    $('plMix').innerHTML = names.length < 2 ? '' : names.map(n => `<div class="mixRow" data-w="${n}" title="Weight of ${n}: how often it is used compared to the other ticked kinds"><span>${n}</span><input type="range" min="1" max="10" step="1" value="${weightOf(n)}"><span class="pct">${pct(n)}</span></div>`).join('');
-    $('plMix').querySelectorAll('[data-w]').forEach(r => r.querySelector('input').oninput = e => {
-      weights.set(r.dataset.w, +e.target.value); saveWeights(); renderMix(); markPreset(); updatePreview();
+    $('plMix').innerHTML = names.map(n => `<div class="mixRow" data-w="${n}" title="${names.length > 1 ? `Weight of ${n}: how often it is used compared to the other chosen kinds` : n}"><span>${n}</span>${names.length > 1 ? `<input type="range" min="1" max="10" step="1" value="${weightOf(n)}">` : '<span></span>'}<span class="pct">${pct(n)}</span><button class="x" title="Stop placing ${n}">✕</button></div>`).join('');
+    $('plMix').querySelectorAll('[data-w]').forEach(r => {
+      const inp = r.querySelector('input');
+      if (inp) inp.oninput = e => { weights.set(r.dataset.w, +e.target.value); saveWeights(); renderMix(); markPreset(); updatePreview(); };
+      r.querySelector('.x').onclick = () => { chosen.delete(r.dataset.w); chosenChanged(); markPreset(); };
     });
   }
   function fillList() {
@@ -245,8 +280,8 @@ export function createPlant(ed) {
   fillPresets();
   const chipNames = el => [...$(el).querySelectorAll('[data-chip]')].map(b => b.dataset.chip);
   $('plNone').onclick = () => { chosen.clear(); chosenChanged(); };
-  panel.querySelectorAll('[data-all]').forEach(b => b.onclick = () => { chipNames(b.dataset.all).forEach(n => chosen.add(n)); chosenChanged(); });
-  panel.querySelectorAll('[data-none]').forEach(b => b.onclick = () => { chipNames(b.dataset.none).forEach(n => chosen.delete(n)); chosenChanged(); });
+  drawer.querySelectorAll('[data-all]').forEach(b => b.onclick = () => { chipNames(b.dataset.all).forEach(n => chosen.add(n)); chosenChanged(); });
+  drawer.querySelectorAll('[data-none]').forEach(b => b.onclick = () => { chipNames(b.dataset.none).forEach(n => chosen.delete(n)); chosenChanged(); });
   function renderChips() {
     const known = new Set(ed.objects.creatableTypes().map(t => t.name));
     for (const [box, list, el] of [['plFavBox', favs, 'plFav'], ['plRecentBox', recent, 'plRecent']]) {
@@ -687,7 +722,7 @@ export function createPlant(ed) {
   function setMode(m) {
     mode = m;
     $('plModes').querySelectorAll('[data-m]').forEach(b => b.classList.toggle('on', b.dataset.m === m));
-    $('plLineBox').hidden = m !== 'line'; syncSnap(); $('plGridBox').hidden = m !== 'grid'; $('plZoneBox').hidden = m !== 'zone'; $('plPlaceRow').hidden = m === 'brush'; $('plBrushHint').hidden = m !== 'brush';
+    $('plLineBox').hidden = m !== 'line'; syncSnap(); $('plGridBox').hidden = m !== 'grid'; $('plZoneBox').hidden = m !== 'zone'; $('plPlaceRow').hidden = m === 'brush'; $('plBrushHint').hidden = m !== 'brush'; $('plLineHint').hidden = m !== 'line';
     syncFill(); drawShape();
   }
   // End to end: the piece's own length sets the spacing, facing and size are fixed.
