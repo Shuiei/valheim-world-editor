@@ -66,6 +66,13 @@ export const TIPS = {
 
   // Select
   selGround: 'On: every moved or turned object lands with its base on the ground where it ends up (PgUp / PgDn and the green arrow still lift it). Off: each keeps its height above the ground, which keeps buildings in shape.',
+  selSnapTo: 'While moving, a piece\'s snap point locks onto the nearest snap point of a piece around it (within 0.75 m), so walls, floors and fences join like with the hammer.',
+  nX: 'World position east-west (m) of the selection\'s middle (or of the one object).',
+  nY: 'Height (m) of the lowest selected object.',
+  nZ: 'World position north-south (m).',
+  nT: 'Turn (degrees, clockwise seen from above) of the first selected object; the others turn with it around the middle.',
+  nApply: 'Move and turn the selection to the typed values (one undo step). No snapping on top of typed values.',
+  nBy: 'Type amounts to move and turn by, instead of where to go.',
   selDelete: 'Remove the selected objects from the world (Del). Ctrl+Z brings them back.',
   selClear: 'Clear the selection (Esc).',
   selTo: 'The kind to put in place of each selected object.',

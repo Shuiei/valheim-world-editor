@@ -3,6 +3,19 @@
 All notable changes to the Valheim world editor and its WorldEditorBridge plugin, which share one
 version number. Newest first.
 
+## v0.21.0 — 2026-10-07 (exact moves and snapping)
+
+### Added
+- **Snap to other pieces** (Select tool, on by default): while moving, a piece's snap point locks
+  onto the nearest snap point of a piece around it, so walls, floors and fences join like with the
+  hammer.
+- **Turning ring** around the selection: drag it to turn, Ctrl for 15° steps.
+- **Exact place**: type the selection's position and turn, or how far to move and turn it.
+
+### Fixed
+- "Put each object on the ground" put a piece's middle on the ground for pieces whose origin is in
+  the middle (walls), sinking them; their bottom rests on the ground now.
+
 ## v0.20.5 — 2026-10-07 (pieces follow the line)
 
 ### Changed

@@ -32,6 +32,8 @@ The panel lists what is selected, by kind.
 | Action | What it does |
 |---|---|
 | **Put each object on the ground when moving** | On (the default): every moved or turned object lands with its base on the ground where it ends up. Off: each keeps its height above the ground, which keeps buildings with several levels in shape. Remembered in this browser. |
+| **Snap to other pieces when moving** | On (the default): while you move, a piece's snap point locks onto the nearest snap point of a piece around it (within 0.75 m), so walls, floors, beams and fences join exactly, like with the hammer. The status bar says what it snapped to. Off: free moves. |
+| **Drag the orange ring** | Turns the selection around its middle; hold **Ctrl** for 15° steps. |
 | **Drag a selected object** | Moves the whole selection freely, onto the ground (or at the same height above it, with the switch off). |
 | **Drag an arrow** | Moves the selection along one axis only: **red X** (east–west), **green Y** (up–down), **blue Z** (north–south). Hold **Ctrl** to move in 0.5 m steps. X and Z follow the ground as above; Y raises or sinks. |
 | `,` `.` or **Alt + wheel** | Turns the selection around its centre by 1° (Shift: 15°). |
@@ -41,6 +43,14 @@ The panel lists what is selected, by kind.
 
 Moves are combined: everything you do within a moment becomes one undo step. A moved object keeps
 all of its data (a moved chest keeps its contents).
+
+## Exact place
+
+The **Exact place** fields show where the selection is: **X** and **Z** are the world position of its
+middle (or of the one object), **Y** the height of its lowest object, **Turn** the first object's
+facing (degrees, clockwise seen from above). Type new values and press **Move there**; with **Move
+by**, type how far to move (east, up, north) and turn instead. It is one undo step, like a drag;
+typed values are exact, so nothing snaps on top of them.
 
 ## Other actions
 

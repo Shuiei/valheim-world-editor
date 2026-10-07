@@ -105,7 +105,7 @@ test('Select: an arrow moves along one axis, End drops onto the ground', async (
   await page().evaluate(id => { window.__ed.setTool('select'); window.__ed.selectIds([id]); }, chest.id);
   await lookAt(page(), chest.x, chest.z, 6, 8, 10); await sleep(600);
   const tip = (axis, f) => page().evaluate((axis, f) => {
-    const ed = window.__ed, g = ed.scene.children.find(c => c.isGroup && c.children.length === 3 && c.renderOrder === 30);
+    const ed = window.__ed, g = ed.scene.children.find(c => c.isGroup && c.children.length >= 3 && c.renderOrder === 30);
     const d = { x: [1, 0, 0], y: [0, 1, 0], z: [0, 0, -1] }[axis];
     const v = g.position.clone().add(new ed.THREE.Vector3(...d).multiplyScalar(g.scale.x * f)).project(ed.camera);
     const r = ed.el.getBoundingClientRect(); return [r.left + (v.x + 1) / 2 * r.width, r.top + (1 - v.y) / 2 * r.height];
@@ -572,7 +572,7 @@ test('select: with "on the ground", a moved object lands on the ground', async (
   await page().$eval('#selGround', e => { e.checked = true; e.dispatchEvent(new Event('change')); });
   await frames(page());
   const tip = f => page().evaluate(f => {
-    const ed = window.__ed, g = ed.scene.children.find(c => c.isGroup && c.children.length === 3 && c.renderOrder === 30);
+    const ed = window.__ed, g = ed.scene.children.find(c => c.isGroup && c.children.length >= 3 && c.renderOrder === 30);
     const v = g.position.clone().add(new ed.THREE.Vector3(1, 0, 0).multiplyScalar(g.scale.x * f)).project(ed.camera);
     const r = ed.el.getBoundingClientRect(); return [r.left + (v.x + 1) / 2 * r.width, r.top + (1 - v.y) / 2 * r.height];
   }, f);
@@ -683,6 +683,53 @@ test('plant line: walls switch End to end on, and every object follows a rectang
   assert.ok(Math.max(...off) < 4, `every wall follows a side (off by ${Math.max(...off).toFixed(1)}° at most, rotation and wiggle aside)`);
   await page().keyboard.press('Escape');
   await page().click('#plLineShape [data-ls="points"]');
+  noErrors();
+});
+
+test('transform: typed place and turn, snapping walls together, and the turning ring', async () => {
+  await openEditor();
+  const c = (await records()).find(r => r.name === 'piece_chest_wood');
+  const y0 = await page().evaluate(([x, z]) => { const ed = window.__ed; return ed.sampleHeight(x - ed.originX, z - ed.originZ); }, [c.x + 12, c.z - 30]);
+  // Two walls (2 m between their snap points), the second 0.3 m too far east.
+  const [a, b] = await page().evaluate(async (c, y) => window.__ed.objects.add([0, 2.3].map(dx => ({ name: 'woodwall', x: c.x + 12 + dx, y: y + 1, z: c.z - 30, rx: 0, ry: 0, rz: 0, scale: 0 }))), c, y0);
+  const rec = id => page().evaluate(id => { const r = window.__ed.objects.records.get(id); return r && { id: r.id, x: r.x, y: r.y, z: r.z, ry: r.ry }; }, id);
+  const sel = () => page().evaluate(() => [...window.__ed.selection][0]);
+  await page().evaluate(id => { window.__ed.setTool('select'); window.__ed.selectIds([id]); document.activeElement?.blur(); }, b);
+  await lookAt(page(), c.x + 13, c.z - 30, 4, 7, 9); await sleep(600);
+  // Drag the red arrow a little west: within 0.75 m the walls' snap points meet.
+  const tip = f => page().evaluate(f => {
+    const ed = window.__ed, g = ed.scene.children.find(o => o.isGroup && o.children.length >= 3 && o.renderOrder === 30);
+    const v = g.position.clone().add(new ed.THREE.Vector3(1, 0, 0).multiplyScalar(g.scale.x * f)).project(ed.camera);
+    const r = ed.el.getBoundingClientRect(); return [r.left + (v.x + 1) / 2 * r.width, r.top + (1 - v.y) / 2 * r.height];
+  }, f);
+  const [p0x, p0y] = await tip(1.0), [p1x, p1y] = await tip(0.85);
+  await page().mouse.move(p0x, p0y); await page().mouse.down(); await page().mouse.move(p1x, p1y, { steps: 5 }); await page().mouse.up();
+  await sleep(1500);
+  const A = await rec(a), B = await rec(await sel());
+  assert.ok(Math.abs(B.x - A.x - 2) < 0.01, `the walls' ends meet (${(B.x - A.x).toFixed(3)} m apart)`);
+  assert.ok(Math.abs(B.y - A.y) < 0.01, 'at the same height');
+  // Typed: 3 m north and a quarter turn.
+  await page().evaluate(() => { const s = (id, v) => { const e = document.getElementById(id); e.value = v; }; s('nZ', (+document.getElementById('nZ').value + 3).toFixed(2)); s('nT', 90); });
+  await page().click('#nApply'); await sleep(1500);
+  const T = await rec(await sel());
+  assert.ok(Math.abs(T.z - B.z - 3) < 0.01, `moved 3 m north (${(T.z - B.z).toFixed(3)})`);
+  assert.ok(Math.abs(((T.ry - 90) % 360 + 360) % 360) < 0.6, `turned to 90° (${T.ry})`);
+  // The ring, dragged a quarter round with Ctrl: a multiple of 15°.
+  await frames(page());
+  const ringAt = deg => page().evaluate(deg => {
+    const ed = window.__ed, g = ed.scene.children.find(o => o.isGroup && o.children.length >= 3 && o.renderOrder === 30), t = deg * Math.PI / 180;
+    const v = g.position.clone().add(new ed.THREE.Vector3(Math.sin(t), 0, -Math.cos(t)).multiplyScalar(g.scale.x * 1.45)).project(ed.camera);
+    const r = ed.el.getBoundingClientRect(); return [r.left + (v.x + 1) / 2 * r.width, r.top + (1 - v.y) / 2 * r.height];
+  }, deg);
+  const [r0x, r0y] = await ringAt(180), [r1x, r1y] = await ringAt(250);
+  await page().keyboard.down('Control');
+  await page().mouse.move(r0x, r0y); await page().mouse.down(); await page().mouse.move(r1x, r1y, { steps: 10 }); await page().mouse.up();
+  await page().keyboard.up('Control');
+  await sleep(1500);
+  const R = await rec(await sel());
+  const turned = ((R.ry - T.ry) % 360 + 360) % 360;
+  assert.ok(turned > 10 && Math.abs(turned / 15 - Math.round(turned / 15)) < 0.05, `turned by the ring in 15° steps (${turned.toFixed(1)}°)`);
+  await page().evaluate(ids => window.__ed.setDeleted(ids, true), [a, R.id]);
   noErrors();
 });
 

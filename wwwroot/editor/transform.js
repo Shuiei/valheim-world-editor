@@ -17,6 +17,25 @@ export function createTransform(ed) {
   try { $('selGround').checked = localStorage.getItem('selectOnGround') !== '0'; } catch { $('selGround').checked = true; }
   $('selGround').addEventListener('change', () => { try { localStorage.setItem('selectOnGround', $('selGround').checked ? '1' : '0'); } catch { } if (session) preview(); });
   const onGround = () => $('selGround').checked;
+  // "Snap to other pieces" (on by default): while moving, a piece's snap point locks onto the nearest
+  // snap point of a piece around it (within 0.75 m), like the game's hammer.
+  const sw2 = document.createElement('label');
+  sw2.className = 'check';
+  sw2.innerHTML = '<input type="checkbox" id="selSnapTo"> Snap to other pieces when moving';
+  sw.after(sw2);
+  try { $('selSnapTo').checked = localStorage.getItem('selectSnapTo') !== '0'; } catch { $('selSnapTo').checked = true; }
+  $('selSnapTo').addEventListener('change', () => { try { localStorage.setItem('selectSnapTo', $('selSnapTo').checked ? '1' : '0'); } catch { } if (session) preview(); });
+  let snapPoints = {};
+  fetch('/api/snappoints').then(r => r.json()).then(d => { snapPoints = d; }).catch(() => { });
+  // Unity's rotation (Euler degrees: z, then x, then y) of a local point.
+  function rotate([x, y, z], rx, ry, rz) {
+    const cz = Math.cos(rz * D), sz = Math.sin(rz * D), cx = Math.cos(rx * D), sx = Math.sin(rx * D), cy = Math.cos(ry * D), sy = Math.sin(ry * D);
+    [x, y] = [x * cz - y * sz, x * sz + y * cz];
+    [y, z] = [y * cx - z * sx, y * sx + z * cx];
+    return [x * cy + z * sy, y, -x * sy + z * cy];
+  }
+  // World snap points of an object (grid x, height, grid z), at a place and with an extra turn.
+  const snapsAt = (name, gx, y, gz, rx, ry, rz) => (snapPoints[name] ?? []).map(p => { const [a, b, c] = rotate(p, rx, ry, rz); return [gx + a, y + b, gz + c]; });
   const toGrid = r => ({ gx: r.x - ed.originX, gz: r.z - ed.originZ });
 
   function begin() {
@@ -29,9 +48,13 @@ export function createTransform(ed) {
       cx += g.gx; cz += g.gz;
       // Original instance matrices, to restore and to transform from.
       const inst = ed.entityOf(id)?.inst.map(({ im, k }) => { const m = new THREE.Matrix4(); im.getMatrixAt(k, m); return { im, k, m }; }) ?? [];
-      return { id, r, g, lift: r.y - groundAt(g.gx, g.gz), inst };
+      // A piece's bottom below its origin (walls have their origin in the middle), from its snap points:
+      // "on the ground" rests that bottom on the ground. Other kinds keep their origin on the ground, as
+      // the game places them (tree roots reach below it on purpose).
+      const sp = snapPoints[r.name], bottom = sp?.length ? Math.min(...sp.map(p => p[1])) : 0;
+      return { id, r, g, lift: r.y - groundAt(g.gx, g.gz), bottom, inst };
     });
-    session = { items, cx: cx / ids.length, cz: cz / ids.length, dgx: 0, dgz: 0, dy: 0, turn: 0 };
+    session = { items, cx: cx / ids.length, cz: cz / ids.length, dgx: 0, dgz: 0, dy: 0, turn: 0, sx: 0, sy: 0, sz: 0, others: null };
     return session;
   }
   // Where an item ends up: turned around the selection centre (clockwise from above, like Unity's
@@ -39,12 +62,47 @@ export function createTransform(ed) {
   // (PgUp, the green arrow) comes on top; after End each keeps the spot it was dropped onto.
   function target(s, it) {
     const t = s.turn * D, c = Math.cos(t), sn = Math.sin(t), ox = it.g.gx - s.cx, oz = it.g.gz - s.cz;
-    const gx = s.cx + ox * c + oz * sn + s.dgx, gz = s.cz - ox * sn + oz * c + s.dgz;
-    return { gx, gz, y: groundAt(gx, gz) + (s.dropped || !onGround() ? it.lift : 0) + s.dy };
+    const gx = s.cx + ox * c + oz * sn + s.dgx + s.sx, gz = s.cz - ox * sn + oz * c + s.dgz + s.sz;
+    return { gx, gz, y: groundAt(gx, gz) + (s.dropped || !onGround() ? it.lift : -it.bottom) + s.dy + s.sy };
+  }
+  // Snapping: the pair of snap points (one of a moved piece, one of a piece around) that is closest,
+  // within 0.75 m; the whole selection shifts so they meet. Recomputed at every step of a move.
+  function snap(s) {
+    s.sx = s.sy = s.sz = 0; s.snapped = null;
+    if (!$('selSnapTo').checked || s.noSnap || s.dropped || !s.items.some(it => snapPoints[it.r.name])) return;
+    if (!s.others) {
+      const sel = new Set(s.items.map(it => it.id));
+      s.others = [];
+      for (const r of ed.objects.records.values()) {
+        if (r.deleted || sel.has(r.id) || !snapPoints[r.name]) continue;
+        const g = toGrid(r);
+        if (Math.hypot(g.gx - s.cx - s.dgx, g.gz - s.cz - s.dgz) > 60) continue;
+        for (const p of snapsAt(r.name, g.gx, r.y, g.gz, r.rx, r.ry, r.rz)) s.others.push({ p, name: r.name });
+      }
+    }
+    let best = null;
+    const moving = [];
+    for (const it of s.items) {
+      if (!snapPoints[it.r.name]) continue;
+      const t = target(s, it);
+      for (const p of snapsAt(it.r.name, t.gx, t.y, t.gz, it.r.rx, it.r.ry + s.turn, it.r.rz)) moving.push(p);
+    }
+    for (const m of moving) for (const o of s.others) {
+      const d = Math.hypot(o.p[0] - m[0], o.p[1] - m[1], o.p[2] - m[2]);
+      if (d < 0.75 && (!best || d < best.d)) best = { d, m, o };
+    }
+    if (!best) return;
+    s.sx = best.o.p[0] - best.m[0]; s.sz = best.o.p[2] - best.m[2];
+    // Heights follow the ground where the pieces end up, so the height is matched after the shift.
+    const it = s.items.find(it => snapPoints[it.r.name]);
+    const before = target({ ...s, sx: 0, sz: 0 }, it).y, after = target(s, it).y;
+    s.sy = best.o.p[1] - best.m[1] - (after - before);
+    s.snapped = best.o.name;
   }
   const A = new THREE.Matrix4(), T1 = new THREE.Matrix4(), R = new THREE.Matrix4(), T2 = new THREE.Matrix4(), M = new THREE.Matrix4();
   function preview() {
     const s = session; if (!s) return;
+    snap(s);
     for (const it of s.items) {
       const p = target(s, it);
       // three.js space: x, y, -z; a Unity yaw of +a is a rotation of -a about y.
@@ -56,7 +114,7 @@ export function createTransform(ed) {
     }
     ed.drawSelection();
     const moved = Math.hypot(s.dgx, s.dgz);
-    ed.msg(`Moving ${s.items.length} object(s): ${moved.toFixed(1)} m${s.turn ? `, turned ${s.turn}°` : ''}${s.dy ? `, ${s.dy > 0 ? '+' : ''}${s.dy.toFixed(2)} m` : ''}`);
+    ed.msg(`Moving ${s.items.length} object(s): ${moved.toFixed(1)} m${s.turn ? `, turned ${+s.turn.toFixed(1)}°` : ''}${s.dy ? `, ${s.dy > 0 ? '+' : ''}${s.dy.toFixed(2)} m` : ''}${s.snapped ? ` · snapped to ${s.snapped}` : ''}`);
   }
   function restore(s) { for (const it of s.items) for (const { im, k, m } of it.inst) { im.setMatrixAt(k, m); im.instanceMatrix.needsUpdate = true; } }
   // A move being written: new turns, lifts and drops wait for it, so they act on the new copies.
@@ -130,6 +188,60 @@ export function createTransform(ed) {
   });
   ed.flushTransform = commit;
 
+  // ---- Exact place: the selection's middle (or the one object) and its turn, typed in. Applying moves
+  // and turns the selection like a drag would, in one undo step.
+  const num = document.createElement('div');
+  num.className = 'sub'; num.id = 'selNum';
+  num.innerHTML = `<h3>Exact place</h3>
+    <div class="numGrid"><label>X <input id="nX" type="number" step="0.1"></label><label>Y <input id="nY" type="number" step="0.1"></label>
+      <label>Z <input id="nZ" type="number" step="0.1"></label><label>Turn <input id="nT" type="number" step="1"></label></div>
+    <div class="row"><button id="nApply">Move there</button><button id="nBy" title="Move and turn by the typed amounts instead">Move by</button></div>
+    <div class="hint" id="nInfo"></div>`;
+  $('selectPanel').querySelector('.row').after(num);
+  const st = document.createElement('style');
+  st.textContent = `.numGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 8px; } .numGrid label { display: grid; grid-template-columns: 34px 1fr; align-items: center; color: var(--muted); } .numGrid input { min-width: 0; }`;
+  document.head.appendChild(st);
+  // The selection's middle in world coordinates (height: its lowest object) and the turn of the first object.
+  function where() {
+    const recs = [...ed.selection].map(id => ed.objects.records.get(id)).filter(r => r && !r.deleted);
+    if (!recs.length) return null;
+    return { x: recs.reduce((a, r) => a + r.x, 0) / recs.length, y: Math.min(...recs.map(r => r.y)), z: recs.reduce((a, r) => a + r.z, 0) / recs.length, t: recs[0].ry, n: recs.length };
+  }
+  let by = false;
+  function fillNum() {
+    const w = where();
+    num.hidden = !w;
+    if (!w || by) return;
+    $('nX').value = w.x.toFixed(2); $('nY').value = w.y.toFixed(2); $('nZ').value = w.z.toFixed(2); $('nT').value = (((w.t + 180) % 360 + 360) % 360 - 180).toFixed(1);
+    $('nInfo').textContent = w.n > 1 ? `The middle of the ${w.n} selected objects; Y is the lowest one, Turn the first one's. Turning turns them all around the middle.` : 'World position (m) and turn (degrees, clockwise seen from above).';
+  }
+  (ed.onSelection ??= []).push(fillNum);
+  $('nBy').onclick = () => {
+    by = !by;
+    $('nBy').classList.toggle('on', by);
+    $('nApply').textContent = by ? 'Move by these' : 'Move there';
+    if (by) { for (const id of ['nX', 'nY', 'nZ', 'nT']) $(id).value = 0; $('nInfo').textContent = 'Metres east (X), up (Y) and north (Z), and degrees to turn, from where the selection is now.'; }
+    else fillNum();
+  };
+  $('nApply').onclick = afterCommit(async () => {
+    const w = where(); if (!w) return;
+    const val = id => { const v = parseFloat($(id).value); return Number.isFinite(v) ? v : 0; };
+    const dx = by ? val('nX') : val('nX') - w.x, dz = by ? val('nZ') : val('nZ') - w.z, dyWant = by ? val('nY') : val('nY') - w.y;
+    const dt = by ? val('nT') : val('nT') - w.t;
+    const s = begin(); if (!s) return;
+    s.dgx += dx; s.dgz += dz; s.turn += dt;
+    // Height: what the move does to the lowest object (ground, snapping), then what is asked for on top.
+    snap(s);
+    const low = s.items.reduce((a, it) => it.r.y < a.r.y ? it : a), now = target(s, low).y;
+    s.dy += low.r.y + dyWant - now;
+    // Typed values are exact: no snapping on top of them.
+    s.noSnap = true;
+    preview();
+    await commit();
+    by = false; $('nBy').classList.remove('on'); $('nApply').textContent = 'Move there';
+    fillNum();
+  });
+
   // ---- Move arrows (like Blender's): red X (east), green Y (up), blue Z (north) at the selection's
   // centre. Dragging one moves the selection along that axis only; X and Z keep following the ground.
   const AXES = { x: { dir: new THREE.Vector3(1, 0, 0), color: 0xff4d5e }, y: { dir: new THREE.Vector3(0, 1, 0), color: 0x6ee05a }, z: { dir: new THREE.Vector3(0, 0, -1), color: 0x4d8dff } };
@@ -148,6 +260,12 @@ export function createTransform(ed) {
     if (key === 'z') arm.rotation.x = -Math.PI / 2;
     gizmo.add(arm);
   }
+  // The turning ring, flat around the middle: drag it to turn the selection (Ctrl: 15° steps).
+  const ringMat = new THREE.MeshBasicMaterial({ color: 0xffa64d, depthTest: false, transparent: true, opacity: 0.85 });
+  const ringMesh = new THREE.Mesh(new THREE.TorusGeometry(1.45, 0.022, 6, 96), ringMat);
+  ringMesh.rotation.x = Math.PI / 2; ringMesh.renderOrder = 30; gizmo.add(ringMesh);
+  const ringGrab = new THREE.Mesh(new THREE.TorusGeometry(1.45, 0.11, 6, 48), hitMat);
+  ringGrab.rotation.x = Math.PI / 2; ringGrab.userData.axis = 'ring'; gizmo.add(ringGrab);
   const centre = new THREE.Vector3();
   // Where the arrows go: the middle of the selection, following a move in progress.
   function placeGizmo() {
@@ -162,6 +280,7 @@ export function createTransform(ed) {
     gizmo.position.copy(centre);
     gizmo.scale.setScalar(ed.camera.position.distanceTo(centre) * 0.07);
     for (const [k, a] of Object.entries(AXES)) a.mat.color.setHex(k === (axisDrag?.axis ?? hoverAxis) ? 0xffe14a : a.color);
+    ringMat.color.setHex(ringDrag || hoverAxis === 'ring' ? 0xffe14a : 0xffa64d);
   }
   ed.frame.push(placeGizmo);
   const ray = new THREE.Raycaster(), mouse = new THREE.Vector2();
@@ -183,7 +302,13 @@ export function createTransform(ed) {
     if (den < 1e-4) return null;   // looking straight down the axis
     return (b * d.dot(w) - a.dot(w)) / den;
   }
-  let axisDrag = null, hoverAxis = null;
+  let axisDrag = null, hoverAxis = null, ringDrag = null;
+  // Heading (Unity yaw, degrees) from the middle of the gizmo to where the mouse meets its flat plane.
+  function headingAt(e) {
+    const p = new THREE.Vector3();
+    if (!rayFor(e).ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 1, 0), -centre.y), p)) return null;
+    return Math.atan2(p.x - centre.x, -(p.z - centre.z)) * 180 / Math.PI;
+  }
 
   // ---- Lasso: drag on empty ground to draw a zone; everything shown inside it gets selected.
   let lasso = null;
@@ -227,6 +352,13 @@ export function createTransform(ed) {
   ed.handlers.select = {
     down(e, hit) {
       const axis = gizmoAxis(e);
+      if (axis === 'ring') {
+        clearTimeout(commitTimer);
+        const s = begin(), h = headingAt(e); if (!s || h == null) return;
+        ringDrag = { h0: h, turn0: s.turn };
+        ed.el.setPointerCapture(e.pointerId);
+        return;
+      }
       if (axis) {
         clearTimeout(commitTimer);
         const s = begin(); if (!s) return;
@@ -252,6 +384,15 @@ export function createTransform(ed) {
       commit().then(() => ed.clickSelect(e));
     },
     move(e, hit) {
+      if (ringDrag) {
+        const h = headingAt(e);
+        if (h == null || !session) return;
+        let turn = ringDrag.turn0 + h - ringDrag.h0;
+        if (e.ctrlKey) turn = Math.round(turn / 15) * 15;
+        session.turn = ((turn + 180) % 360 + 360) % 360 - 180;
+        preview();
+        return;
+      }
       if (axisDrag) {
         const t = along(e, axisDrag.o, AXES[axisDrag.axis].dir);
         if (t == null || !session) return;
@@ -278,7 +419,7 @@ export function createTransform(ed) {
       if (drag.moving && hit && session) { session.dgx = hit.gx - drag.from.gx; session.dgz = hit.gz - drag.from.gz; preview(); }
     },
     up(e) {
-      if (axisDrag) { axisDrag = null; commit(); return; }
+      if (axisDrag || ringDrag) { axisDrag = ringDrag = null; commit(); return; }
       if (lasso) {
         const l = lasso;
         if (!l.drawing || !finishLasso(l.add)) { lasso = null; drawLasso(); if (!l.add) ed.clearSelection(); }
@@ -295,7 +436,7 @@ export function createTransform(ed) {
       if (e.key === ',' || e.key === '<' || e.key === '.' || e.key === '>') { turn((e.key === ',' || e.key === '<' ? -1 : 1) * ed.turnStep(e)); return true; }
       if (e.key === 'End') { drop(); return true; }
       if (e.key === 'PageUp' || e.key === 'PageDown') { lift((e.key === 'PageUp' ? 1 : -1) * (e.shiftKey ? 1 : 0.25)); return true; }
-      if (e.key === 'Escape' && session) { axisDrag = null; restore(session); session = null; ed.drawSelection(); ed.msg('Move cancelled.'); return true; }
+      if (e.key === 'Escape' && session) { axisDrag = ringDrag = null; restore(session); session = null; ed.drawSelection(); ed.msg('Move cancelled.'); return true; }
       return false;
     }
   };
