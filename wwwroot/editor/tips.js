@@ -15,6 +15,7 @@ export const TIPS = {
   '[data-show="stations"]': 'Rings on the ground where each workbench, forge or other crafting station lets you build and upgrade.',
   '[data-show="flatten"]': 'Where locations flatten the ground: a ring for the flat part, a fainter one where it blends into the land.',
   res3d: 'How many pixels the 3D view draws. Sharp: the screen\'s own (on a scaled screen, four times as many). Balanced: one per screen point. Fast: fewer still. Fewer pixels give more frames per second.',
+  perfOn: 'Write the frame rate to a log file, a line every 0.2 s while the view is used (the file is named below). Off each time the editor opens.',
   goPlayer: 'Live mode: the player to go to.',
   goPlayerBtn: 'Go to the player: right there when they are in the area, else the area moves to them.',
   scriptToggle: 'Run a script on the world: a few lines of JavaScript with a small API, for jobs the tools do not cover. One undo step per run.',
