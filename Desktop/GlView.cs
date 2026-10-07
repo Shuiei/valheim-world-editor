@@ -28,6 +28,58 @@ public sealed class GlView : OpenGlControlBase
 	private readonly object _camLock = new();
 	private Vector3 _target;
 	private float _distance = 140, _yaw = 0.8f, _pitch = 0.9f;
+	// Walk and Fly (F): the camera itself at _eyePos, looking along yaw and pitch (positive: down).
+	public enum EyeMode { Orbit, Walk, Fly }
+	private EyeMode _eye = EyeMode.Orbit;
+	private Vector3 _eyePos;
+	public EyeMode Eye { get { lock (_camLock) { return _eye; } } }
+	public event Action<EyeMode>? EyeChanged;
+	private const float EyeHeight = 1.8f;
+	private Vector3 Forward => new(-MathF.Sin(_yaw) * MathF.Cos(_pitch), -MathF.Sin(_pitch), -MathF.Cos(_yaw) * MathF.Cos(_pitch));
+
+	// F: the usual view, then walking at a player's eye height, then flying, then back.
+	internal void CycleEye()
+	{
+		lock (_camLock)
+		{
+			switch (_eye)
+			{
+				case EyeMode.Orbit:
+					_eye = EyeMode.Walk;
+					_eyePos = _target;
+					_pitch = 0.05f;
+					KeepOverGround(walk: true);
+					break;
+				case EyeMode.Walk:
+					_eye = EyeMode.Fly;
+					break;
+				default:
+					// Back around the point ahead, on the ground.
+					_eye = EyeMode.Orbit;
+					var ahead = _eyePos + new Vector3(-MathF.Sin(_yaw), 0, -MathF.Cos(_yaw)) * 20;
+					_target = ahead;
+					FollowGround();
+					_pitch = 0.9f;
+					_distance = Math.Max(20, Vector3.Distance(_eyePos, _target));
+					break;
+			}
+		}
+		var e = Eye;
+		Dispatcher.UIThread.Post(() => EyeChanged?.Invoke(e));
+		Wake();
+	}
+
+	// Walking: the eyes 1.8 m over the ground (or the water); flying: never below that.
+	private void KeepOverGround(bool walk)
+	{
+		var s = _scene;
+		if (s == null)
+		{
+			return;
+		}
+		float floor = Math.Max(Picking.HeightAt(s, _eyePos.X, _eyePos.Z), s.Water) + EyeHeight;
+		_eyePos.Y = walk ? floor : Math.Max(_eyePos.Y, floor);
+	}
 	private readonly HashSet<Key> _keys = new();
 	private Point? _dragFrom;
 	private PointerUpdateKind _dragButton;
@@ -56,8 +108,32 @@ public sealed class GlView : OpenGlControlBase
 	// How many objects of each kind the area has (once the models' names are known).
 	public event Action<Dictionary<ObjectKind, int>>? KindCounts;
 
+	// ---- Overlays (zone borders at first) and the ground's measuring colours (game look only).
+	private readonly bool[] _overlay = Overlays.All.Select(l => l == Overlays.Layer.Borders).ToArray();
+	public bool IsOverlayShown(Overlays.Layer l) => _overlay[(int)l];
+	public void SetOverlay(Overlays.Layer l, bool on)
+	{
+		_overlay[(int)l] = on;
+		if (l == Overlays.Layer.Flatten)
+		{
+			_overlay[(int)Overlays.Layer.FlattenEdge] = on;
+		}
+		Wake();
+	}
+	private volatile bool _slope;
+	private float _contour;
+	public bool SlopeColours { get => _slope; set { _slope = value; Wake(); } }
+	public float ContourStep { get => _contour; set { _contour = value; Wake(); } }
+	// How many wards, crafting stations, flattened places and locations the overlays show.
+	public event Action<Overlays.Built>? OverlaysBuilt;
+	private Overlays.Built? _overlays;
+	private readonly Dictionary<Overlays.Layer, (uint Vao, int Count)> _overlayGl = new();
+
 	// For tests: the camera, and the keys held.
 	internal (float Yaw, float Pitch, float Distance, Vector3 Target) Camera { get { lock (_camLock) { return (_yaw, _pitch, _distance, _target); } } }
+	internal Vector3 EyePosition { get { lock (_camLock) { return _eyePos; } } }
+	// For tests: move as if the keys were held for dt seconds.
+	internal bool Step(float dt) => MoveWithKeys(dt);
 	internal Key[] KeysHeld { get { lock (_keys) { return _keys.ToArray(); } } }
 
 	public GlView()
@@ -301,6 +377,10 @@ public sealed class GlView : OpenGlControlBase
 			}
 		}
 		Dispatcher.UIThread.Post(() => KindCounts?.Invoke(counts));
+		_overlays = Overlays.Build(s, s.Modifiers, i => _models?.NameOf(s.Things[i].Prefab) ?? TerrainEditor.Terrain.PrefabCatalog.DisplayName(s.Things[i].Prefab));
+		UploadOverlays(_overlays);
+		var built = _overlays;
+		Dispatcher.UIThread.Post(() => OverlaysBuilt?.Invoke(built));
 		Task.Run(() => Parallel.ForEach(byPrefab, new ParallelOptions { MaxDegreeOfParallelism = Math.Max(2, Environment.ProcessorCount / 2) }, group =>
 		{
 			try
@@ -571,8 +651,16 @@ public sealed class GlView : OpenGlControlBase
 		Vector3 eye;
 		lock (_camLock)
 		{
-			eye = _target + _distance * new Vector3(MathF.Cos(_pitch) * MathF.Sin(_yaw), MathF.Sin(_pitch), MathF.Cos(_pitch) * MathF.Cos(_yaw));
-			view = Matrix4x4.CreateLookAt(eye, _target, Vector3.UnitY);
+			if (_eye == EyeMode.Orbit)
+			{
+				eye = _target + _distance * new Vector3(MathF.Cos(_pitch) * MathF.Sin(_yaw), MathF.Sin(_pitch), MathF.Cos(_pitch) * MathF.Cos(_yaw));
+				view = Matrix4x4.CreateLookAt(eye, _target, Vector3.UnitY);
+			}
+			else
+			{
+				eye = _eyePos;
+				view = Matrix4x4.CreateLookAt(eye, eye + Forward, Vector3.UnitY);
+			}
 		}
 		proj = Perspective(60 * MathF.PI / 180, pw / (float)ph, 0.5f, 6000);
 		var vp = view * proj;
@@ -586,7 +674,7 @@ public sealed class GlView : OpenGlControlBase
 			if (_look != null)
 			{
 				_look.DrawSky(vp, eye, time);
-				_look.UseTerrain(vp, eye, time, slope: false, contour: 0);
+				_look.UseTerrain(vp, eye, time, slope: _slope, contour: _contour);
 				// The game's mesh is seen from both sides (look.js: DoubleSide).
 				_gl.Disable(EnableCap.CullFace);
 			}
@@ -645,6 +733,7 @@ public sealed class GlView : OpenGlControlBase
 				_gl.DrawElementsInstanced(PrimitiveType.Triangles, (uint)b.IndexCount, DrawElementsType.UnsignedInt, (void*)0, (uint)b.Instances);
 			}
 
+			DrawOverlays(vp);
 			DrawSelection(vp);
 			if (ShowWater)
 			{
@@ -795,23 +884,43 @@ public sealed class GlView : OpenGlControlBase
 	private bool MoveWithKeys(float dt)
 	{
 		Vector3 d = Vector3.Zero;
+		bool fast;
+		float up = 0;
 		lock (_keys)
 		{
 			if (_keys.Contains(Key.W) || _keys.Contains(Key.Up)) d.Z -= 1;
 			if (_keys.Contains(Key.S) || _keys.Contains(Key.Down)) d.Z += 1;
 			if (_keys.Contains(Key.A) || _keys.Contains(Key.Left)) d.X -= 1;
 			if (_keys.Contains(Key.D) || _keys.Contains(Key.Right)) d.X += 1;
-		}
-		if (d == Vector3.Zero || dt <= 0)
-		{
-			return false;
+			if (_keys.Contains(Key.Space)) up += 1;
+			if (_keys.Contains(Key.C)) up -= 1;
+			fast = _keys.Contains(Key.LeftShift) || _keys.Contains(Key.RightShift);
 		}
 		lock (_camLock)
 		{
-			float speed = Math.Max(10, _distance) * Math.Min(dt, 0.1f);
+			if (_eye == EyeMode.Fly && up != 0)
+			{
+				d.Y = up;
+			}
+			if (d == Vector3.Zero || dt <= 0)
+			{
+				return false;
+			}
+			dt = Math.Min(dt, 0.1f);
 			float c = MathF.Cos(_yaw), sn = MathF.Sin(_yaw);
-			_target += new Vector3(d.X * c + d.Z * sn, 0, -d.X * sn + d.Z * c) * speed;
-			FollowGround();
+			var flat = new Vector3(d.X * c + d.Z * sn, 0, -d.X * sn + d.Z * c);
+			if (_eye == EyeMode.Orbit)
+			{
+				_target += flat * Math.Max(10, _distance) * dt;
+				FollowGround();
+			}
+			else
+			{
+				// Walking 6 m/s (Shift: running 12); flying 15 (Shift: 45).
+				float speed = _eye == EyeMode.Walk ? (fast ? 12 : 6) : (fast ? 45 : 15);
+				_eyePos += (flat + new Vector3(0, d.Y, 0)) * speed * dt;
+				KeepOverGround(walk: _eye == EyeMode.Walk);
+			}
 		}
 		return true;
 	}
@@ -860,12 +969,20 @@ public sealed class GlView : OpenGlControlBase
 		{
 			lock (_camLock)
 			{
-				_distance = Math.Clamp(_distance * MathF.Pow(0.88f, (float)e.Delta.Y), 3, 3000);
+				if (_eye == EyeMode.Orbit)
+				{
+					_distance = Math.Clamp(_distance * MathF.Pow(0.88f, (float)e.Delta.Y), 3, 3000);
+				}
 			}
 			Wake();
 		};
 		window.KeyDown += (_, e) =>
 		{
+			if (e.Key == Key.F && e.KeyModifiers == KeyModifiers.None)
+			{
+				CycleEye();
+				return;
+			}
 			lock (_keys)
 			{
 				_keys.Add(e.Key);
@@ -951,6 +1068,61 @@ public sealed class GlView : OpenGlControlBase
 		Wake();
 	}
 
+	private unsafe void UploadOverlays(Overlays.Built o)
+	{
+		foreach (var (layer, data) in o.Lines)
+		{
+			uint vao = _gl.GenVertexArray(), vbo = _gl.GenBuffer();
+			_gl.BindVertexArray(vao);
+			_gl.BindBuffer(BufferTargetARB.ArrayBuffer, vbo);
+			fixed (float* p = data)
+			{
+				_gl.BufferData(BufferTargetARB.ArrayBuffer, (nuint)(data.Length * 4), p, BufferUsageARB.StaticDraw);
+			}
+			_gl.EnableVertexAttribArray(0);
+			_gl.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 12, (void*)0);
+			_overlayGl[layer] = (vao, data.Length / 3);
+		}
+		_gl.BindVertexArray(0);
+	}
+
+	private unsafe void DrawOverlays(Matrix4x4 vp)
+	{
+		if (_lineProg == 0)
+		{
+			_lineProg = Program(Shaders.LineVs, Shaders.LineFs);
+		}
+		_gl.UseProgram(_lineProg);
+		_gl.UniformMatrix4(_gl.GetUniformLocation(_lineProg, "uViewProj"), 1, false, (float*)&vp);
+		int uColor = _gl.GetUniformLocation(_lineProg, "uColor");
+		_gl.Enable(EnableCap.Blend);
+		_gl.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
+		_gl.DepthMask(false);
+		foreach (var (layer, (vao, count)) in _overlayGl)
+		{
+			if (!_overlay[(int)layer] || count == 0)
+			{
+				continue;
+			}
+			var (c, hidden) = Overlays.Style(layer);
+			if (hidden)
+			{
+				_gl.Enable(EnableCap.DepthTest);
+			}
+			else
+			{
+				// Rings show through what stands on them, like the web editor's.
+				_gl.Disable(EnableCap.DepthTest);
+			}
+			_gl.Uniform4(uColor, c.X, c.Y, c.Z, c.W);
+			_gl.BindVertexArray(vao);
+			_gl.DrawArrays(PrimitiveType.Lines, 0, (uint)count);
+		}
+		_gl.DepthMask(true);
+		_gl.Enable(EnableCap.DepthTest);
+		_gl.Disable(EnableCap.Blend);
+	}
+
 	private uint _lineProg, _lineVao, _lineVbo;
 	private int _lineCount;
 	private unsafe void DrawSelection(Matrix4x4 vp)
@@ -972,6 +1144,9 @@ public sealed class GlView : OpenGlControlBase
 			if (_lineProg == 0)
 			{
 				_lineProg = Program(Shaders.LineVs, Shaders.LineFs);
+			}
+			if (_lineVao == 0)
+			{
 				_lineVao = _gl.GenVertexArray();
 				_lineVbo = _gl.GenBuffer();
 				_gl.BindVertexArray(_lineVao);
@@ -1011,9 +1186,9 @@ public sealed class GlView : OpenGlControlBase
 				if (_dragButton == PointerUpdateKind.RightButtonPressed)
 				{
 					_yaw -= dx * 0.005f;
-					_pitch = Math.Clamp(_pitch + dy * 0.005f, 0.05f, 1.55f);
+					_pitch = _eye == EyeMode.Orbit ? Math.Clamp(_pitch + dy * 0.005f, 0.05f, 1.55f) : Math.Clamp(_pitch + dy * 0.005f, -1.45f, 1.45f);
 				}
-				else if (_dragButton is PointerUpdateKind.MiddleButtonPressed or PointerUpdateKind.LeftButtonPressed)
+				else if (_eye == EyeMode.Orbit && _dragButton is PointerUpdateKind.MiddleButtonPressed or PointerUpdateKind.LeftButtonPressed)
 				{
 					float k = _distance * 0.0015f, c = MathF.Cos(_yaw), sn = MathF.Sin(_yaw);
 					_target += new Vector3(-dx * c - dy * sn, 0, dx * sn - dy * c) * k;

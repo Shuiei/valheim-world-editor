@@ -64,6 +64,9 @@ public static class Options
 	public static double QuitAfter { get; private set; }
 	// Click this point of the view once loaded (fractions of its width and height), to check picking.
 	public static (double X, double Y)? PickAt { get; private set; }
+	// Start with every overlay and the measuring colours on, and/or walking or flying (to check them).
+	public static bool AllOverlays { get; private set; }
+	public static string? EyeStart { get; private set; }
 
 	public static void Say(string line)
 	{
@@ -104,6 +107,12 @@ public static class Options
 				case "--pick":
 					var f = args[++i].Split(',').Select(v => double.Parse(v, System.Globalization.CultureInfo.InvariantCulture)).ToArray();
 					PickAt = (f[0], f[1]);
+					break;
+				case "--overlays":
+					AllOverlays = args[++i] != "off";
+					break;
+				case "--eye":
+					EyeStart = args[++i];
 					break;
 				case "--quit-after":
 					QuitAfter = double.Parse(args[++i], System.Globalization.CultureInfo.InvariantCulture);

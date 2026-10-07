@@ -14,6 +14,7 @@ public sealed class MainWindow : Window
 	private readonly GlView _view = new();
 	private readonly TextBlock _fps = new() { FontSize = 13 }, _info = new() { FontSize = 12, Foreground = Brushes.LightGray, TextWrapping = TextWrapping.Wrap };
 	private readonly PerfLog _perf = new();
+	private readonly TextBlock _eye = new() { FontSize = 12, Foreground = new SolidColorBrush(Color.FromRgb(143, 240, 180)), TextWrapping = TextWrapping.Wrap };
 	private readonly TextBlock _selection = new() { FontSize = 12, Foreground = new SolidColorBrush(Color.FromRgb(224, 166, 75)), TextWrapping = TextWrapping.Wrap };
 	private ModelStore? _models;
 	private string Name(WorldScene.Thing t) => _models?.NameOf(t.Prefab) ?? TerrainEditor.Terrain.PrefabCatalog.DisplayName(t.Prefab) ?? t.Prefab.ToString();
@@ -24,6 +25,12 @@ public sealed class MainWindow : Window
 	private readonly Dictionary<ObjectKind, CheckBox> _kindBoxes = new();
 	internal IReadOnlyDictionary<ObjectKind, CheckBox> KindBoxes => _kindBoxes;
 	internal CheckBox WaterBox { get; } = new() { Content = "Water", IsChecked = true, FontSize = 12 };
+	private readonly Dictionary<Overlays.Layer, CheckBox> _overlayBoxes = new();
+	internal IReadOnlyDictionary<Overlays.Layer, CheckBox> OverlayBoxes => _overlayBoxes;
+	internal CheckBox SlopeBox { get; } = new() { Content = "Slope colours", FontSize = 12 };
+	internal CheckBox ContourBox { get; } = new() { Content = "Height lines every 2 m", FontSize = 12 };
+
+	private static TextBlock Heading(string t) => new() { Text = t, FontSize = 11, FontWeight = FontWeight.SemiBold, Foreground = Brushes.Gray, Margin = new Thickness(0, 8, 0, 2) };
 
 	private Control ViewPanel()
 	{
@@ -38,6 +45,28 @@ public sealed class MainWindow : Window
 		}
 		WaterBox.IsCheckedChanged += (_, _) => _view.ShowWater = WaterBox.IsChecked == true;
 		list.Children.Add(WaterBox);
+		list.Children.Add(Heading("OVERLAYS"));
+		foreach (var (layer, label) in new[] { (Overlays.Layer.Borders, "Zone borders"), (Overlays.Layer.Markers, "Location markers"), (Overlays.Layer.Wards, "Ward areas"),
+			(Overlays.Layer.Stations, "Build ranges"), (Overlays.Layer.Flatten, "Location flattening") })
+		{
+			var box = new CheckBox { Content = label, IsChecked = _view.IsOverlayShown(layer), FontSize = 12, Tag = label };
+			box.IsCheckedChanged += (_, _) => _view.SetOverlay(layer, box.IsChecked == true);
+			_overlayBoxes[layer] = box;
+			list.Children.Add(box);
+		}
+		_view.OverlaysBuilt += o =>
+		{
+			void Count(Overlays.Layer l, int n) => _overlayBoxes[l].Content = $"{_overlayBoxes[l].Tag}  ({n})";
+			Count(Overlays.Layer.Markers, o.Locations);
+			Count(Overlays.Layer.Wards, o.Wards);
+			Count(Overlays.Layer.Stations, o.Stations);
+			Count(Overlays.Layer.Flatten, o.Flattened);
+		};
+		list.Children.Add(Heading("LOOK (game look)"));
+		SlopeBox.IsCheckedChanged += (_, _) => _view.SlopeColours = SlopeBox.IsChecked == true;
+		ContourBox.IsCheckedChanged += (_, _) => _view.ContourStep = ContourBox.IsChecked == true ? 2 : 0;
+		list.Children.Add(SlopeBox);
+		list.Children.Add(ContourBox);
 		_view.KindCounts += counts =>
 		{
 			foreach (var (k, box) in _kindBoxes)
@@ -80,7 +109,7 @@ public sealed class MainWindow : Window
 			MaxWidth = 380,
 			HorizontalAlignment = HorizontalAlignment.Left,
 			VerticalAlignment = VerticalAlignment.Top,
-			Child = new StackPanel { Spacing = 6, Children = { _fps, _info, _selection, record } },
+			Child = new StackPanel { Spacing = 6, Children = { _fps, _info, _eye, _selection, record } },
 		};
 		// Takes the mouse for the 3D view (see GlView.Attach).
 		var surface = new Border { Background = Brushes.Transparent };
@@ -91,6 +120,12 @@ public sealed class MainWindow : Window
 		_view.SelectionChanged += things => _selection.Text = things.Count == 0 ? "" : things.Count == 1
 			? $"Selected: {Name(things[0])} at {things[0].Position.X:0.0}, {things[0].Position.Z:0.0} (height {things[0].Position.Y:0.0})"
 			: $"Selected: {things.Count} objects ({string.Join(", ", things.GroupBy(Name).OrderByDescending(g => g.Count()).Take(4).Select(g => $"{g.Key} ×{g.Count()}"))})";
+		_view.EyeChanged += e => _eye.Text = e switch
+		{
+			GlView.EyeMode.Walk => "Walking at eye height: WASD moves (Shift runs), right drag looks around · F flies",
+			GlView.EyeMode.Fly => "Flying: WASD moves, Space up, C down (Shift faster) · F back to the usual view",
+			_ => "",
+		};
 		_view.Status += t => { Options.Say(t); Dispatcher.UIThread.Post(() => _info.Text = t + "\n" + _info.Text); };
 		Closing += (_, _) => _perf.Flush();
 		_info.Text = "Loading the world…";
@@ -107,8 +142,14 @@ public sealed class MainWindow : Window
 				var models = await Task.Run(ModelStore.Open);
 				_models = models;
 				_info.Text = scene.LoadInfo + (models == null ? "\nNo game models copied yet: boxes stand in (open the web editor once to copy the game's look)." : "")
-					+ "\nClick picks an object (Shift adds) · right drag turns · middle or left drag slides · wheel zooms · WASD moves";
+					+ "\nClick picks an object (Shift adds) · right drag turns · middle or left drag slides · wheel zooms · WASD moves · F walks and flies";
 				_view.Show(scene, models);
+				if (Options.AllOverlays)
+				{
+					foreach (var b in _overlayBoxes.Values) b.IsChecked = true;
+					SlopeBox.IsChecked = ContourBox.IsChecked = true;
+				}
+				for (int n = Options.EyeStart == "fly" ? 2 : Options.EyeStart == "walk" ? 1 : 0; n > 0; n--) _view.CycleEye();
 			}
 			catch (Exception ex)
 			{

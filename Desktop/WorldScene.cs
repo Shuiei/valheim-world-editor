@@ -31,6 +31,8 @@ public sealed class WorldScene
 	public float Cz { get; init; }
 	public float Water => TerrainService.WaterLevel;
 	public required List<Thing> Things { get; init; }
+	// The ground the world's locations and pieces flatten (for the Location flattening overlay).
+	public TerrainModifiers? Modifiers { get; init; }
 	// For the game's terrain shader, per grid point: the biome colour the game puts in its mesh (corner
 	// biomes blended like Heightmap.GetBiomeColor, RGBA bytes), the paint mask (_ClearedMaskTex: the
 	// paint where it was edited, the generated ground's otherwise), the depth below sea level the game
@@ -75,7 +77,8 @@ public sealed class WorldScene
 		var world = WorldSave.Load(dir);
 		long readMs = watch.ElapsedMilliseconds;
 		var edits = new EditStore(world);
-		var terrain = new TerrainService(world, new TerrainModifiers(world));
+		var modifiers = new TerrainModifiers(world);
+		var terrain = new TerrainService(world, modifiers);
 		int x0 = zx - size / 2, z0 = zz - size / 2, x1 = x0 + size - 1, z1 = z0 + size - 1;
 		// The zones' generated ground in parallel (the slow part), then the grid with the edits.
 		var keys = (from z in Enumerable.Range(z0, size) from x in Enumerable.Range(x0, size) select (x, z)).ToArray();
@@ -150,7 +153,7 @@ public sealed class WorldScene
 		{
 			World = world, Name = world.Name, X0 = x0, Z0 = z0, Size = size, W = w, H = h, Heights = heights, Biomes = biomes,
 			Cx = minX + (w - 1) / 2f, Cz = minZ + (h - 1) / 2f, Things = things,
-			BiomeColor = biomeCol, Mask = mask, OceanDepth = ocean, Limit = limit,
+			BiomeColor = biomeCol, Mask = mask, OceanDepth = ocean, Limit = limit, Modifiers = modifiers,
 			LoadInfo = $"{world.Name}: read in {readMs} ms, {size}×{size} zones and {things.Count:N0} objects ready in {watch.ElapsedMilliseconds} ms",
 		};
 	}
