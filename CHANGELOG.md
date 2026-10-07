@@ -4,6 +4,22 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v0.37.0 — 2026-10-07 (pieces that snap, elevation)
+
+### Added
+- **Snap to pieces already there** (Place tool, building pieces): a wall, fence or floor locks onto
+  the pieces around it like the hammer, **Beside** (end to end, at their level) or **On top** of
+  the piece under the cursor, facing like it (Rotation turns it in quarter turns). Pieces are placed
+  one at a time under the cursor.
+- **Elevation** for everything placed: on the ground, a height **above the ground**, or **at one
+  height** for all; `PgUp` / `PgDn` change it, `Alt` + click takes the top of a piece or the ground.
+- **Layers** (Line, End to end): a line of walls or fences stacked several pieces high.
+- A line started next to a piece already there continues it, at its level.
+
+### Fixed
+- Walls and other pieces with their origin in the middle were half sunk into the ground when placed
+  one by one: they now stand on their bottom.
+
 ## v0.36.0 — 2026-10-07 (tidier tool panels)
 
 ### Changed
