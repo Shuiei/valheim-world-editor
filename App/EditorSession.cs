@@ -557,9 +557,18 @@ public static class EditorSession
 		// Names of every placeable game prefab, so the browser can offer kinds the world has none of yet.
 		app.MapGet("/api/extra-names", () => TerrainEditor.Terrain.PrefabCatalog.Placeable.Select(p => p.Name));
 
-		// Saplings and crops: name -> [grow radius (m), needs cultivated ground (0/1)].
-		app.MapGet("/api/grow", () => TerrainEditor.Terrain.PrefabCatalog.Placeable.Where(p => p.GrowRadius > 0)
-			.ToDictionary(p => p.Name, p => new[] { p.GrowRadius, p.NeedsCultivated ? 1f : 0f }));
+		// Saplings and crops: name -> [grow radius (m), needs cultivated ground (0/1)]; also what they grow
+		// into (grown crops, trees), with their sapling's radius and no ground need.
+		app.MapGet("/api/grow", () =>
+		{
+			var grow = TerrainEditor.Terrain.PrefabCatalog.Placeable.Where(p => p.GrowRadius > 0)
+				.ToDictionary(p => p.Name, p => new[] { p.GrowRadius, p.NeedsCultivated ? 1f : 0f });
+			foreach (var (name, g) in TerrainEditor.Terrain.PrefabCatalog.GrownFrom)
+			{
+				grow.TryAdd(name, new[] { g.Radius, 0f });
+			}
+			return grow;
+		});
 
 		// Hand zones back to the world generator on save (undo = false), or cancel that (undo = true).
 		app.MapPost("/api/reset-zones", (ResetRequest req) =>

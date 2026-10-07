@@ -38,13 +38,19 @@ public static class PrefabCatalog
 	// Container size, ward radius and build range, also for prefabs that are not offered for placing.
 	public static Info? Details(int prefab) => ByHash.TryGetValue(prefab, out var info) ? info : Extra.TryGetValue(prefab, out var e) ? e : null;
 
-	private sealed record Entry(int p, int d, int t, int c = 0, int i = 0, double gr = 0, int cult = 0, int cw = 0, int ch = 0, double ward = 0, double build = 0);
+	// What saplings grow into, with the sapling's grow radius: Pickable_Carrot -> 0.5 m (sapling_carrot),
+	// Beech1 -> 2 m (Beech_Sapling). Placed grown, they keep the room they would have grown in.
+	// Filled by Load (no initializer: it would run after the catalogue is loaded and empty it).
+	public static Dictionary<string, (float Radius, string Sapling)> GrownFrom { get; private set; }
+
+	private sealed record Entry(int p, int d, int t, int c = 0, int i = 0, double gr = 0, int cult = 0, int cw = 0, int ch = 0, double ward = 0, double build = 0, string[]? grows = null);
 
 	private static Dictionary<int, Info> Load()
 	{
 		using Stream s = Assembly.GetExecutingAssembly().GetManifestResourceStream("TerrainEditor.prefabs.json")
 			?? throw new InvalidOperationException("prefabs.json is not embedded");
 		var all = JsonSerializer.Deserialize<Dictionary<string, Entry>>(s)!;
+		GrownFrom = new();
 		Dictionary<int, Info> map = new();
 		foreach (var (name, e) in all)
 		{
@@ -57,6 +63,13 @@ public static class PrefabCatalog
 			// Save-file flags: persistent 0x100, distant 0x200, object type in bits 10-11.
 			ushort flags = (ushort)((e.p != 0 ? 0x100 : 0) | (e.d != 0 ? 0x200 : 0) | ((e.t & 3) << 10));
 			Info info = new(name, flags, (float)e.gr, e.cult != 0, e.cw, e.ch, (float)e.ward, (float)e.build);
+			foreach (string grown in e.grows ?? Array.Empty<string>())
+			{
+				if (!GrownFrom.TryGetValue(grown, out var g) || g.Radius < e.gr)
+				{
+					GrownFrom[grown] = ((float)e.gr, name);
+				}
+			}
 			if (e.p == 0 || e.c != 0 || e.i != 0 || name.EndsWith("_ragdoll", StringComparison.Ordinal))
 			{
 				Extra[hash] = info;
