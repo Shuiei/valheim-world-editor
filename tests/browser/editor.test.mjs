@@ -1288,6 +1288,42 @@ test('cut and fill: Flatten\'s estimate matches what it then does', async () => 
   noErrors();
 });
 
+test('script console: a run changes ground and objects, and is one undo step', async () => {
+  await openEditor();
+  const start = await pending();
+  const n0 = (await records()).length;
+  await page().click('#scriptToggle');
+  assert.equal(await page().$eval('#scriptPanel', e => e.hidden), false);
+  const code = `const c = vwe.objects({ name: 'piece_chest_wood' })[0];
+const h = vwe.ground(c.x + 20, c.z + 20);
+for (let dx = -3; dx <= 3; dx++) for (let dz = -3; dz <= 3; dz++) vwe.setGround(c.x + 20 + dx, c.z + 20 + dz, h + 2);
+await vwe.add([{ name: 'Beech1', x: c.x + 30, z: c.z + 30 }]);
+vwe.log('raised', h);`;
+  await page().$eval('#scCode', (e, v) => { e.value = v; }, code);
+  await page().click('#scRun'); await sleep(1500);
+  const out = await page().$eval('#scOut', e => e.textContent);
+  assert.match(out, /^raised \d/, `log shown (${out})`);
+  const c = (await records()).find(r => r.name === 'piece_chest_wood');
+  const h = await page().evaluate(([x, z]) => { const ed = window.__ed; return ed.sampleHeight(x - ed.originX, z - ed.originZ); }, [c.x + 20, c.z + 20]);
+  assert.ok(Math.abs(h - (parseFloat(out.split(' ')[1]) + 2)) < 0.05, `ground set (${h})`);
+  assert.equal((await records()).length, n0 + 1, 'one object added');
+  // An error is shown, and what ran before it is kept as a step too.
+  await page().$eval('#scCode', e => { e.value = 'vwe.log("before"); nope();'; });
+  await page().click('#scRun'); await sleep(500);
+  assert.match(await page().$eval('#scOut', e => e.textContent), /before\nReferenceError: nope is not defined/);
+  // One undo takes the whole first run back.
+  await page().click('#undo'); await sleep(1500);
+  assert.equal((await records()).length, n0, 'object gone');
+  assert.equal(await pending(), start);
+  // The examples work inside the selection: without one they stop and say so.
+  await page().select('#scPick', 'ex:Terraces');
+  await page().click('#scRun'); await sleep(500);
+  assert.match(await page().$eval('#scOut', e => e.textContent), /Select an area first/);
+  assert.equal(await pending(), start, 'nothing changed');
+  await page().click('#scClose');
+  noErrors();
+});
+
 test('Worlds goes back to the start page', async () => {
   await page().goto(t.base + '/index.html', { waitUntil: 'networkidle0' });
   await page().click('#worldsBtn');

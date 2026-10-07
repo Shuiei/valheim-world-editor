@@ -4,6 +4,15 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v0.35.0 — 2026-10-07 (script console)
+
+### Added
+- **Script console** (Script in the top bar, like MCEdit's filters): a few lines of JavaScript with
+  a small API (find, add and remove objects, read and set the ground, work inside the Area
+  selection) for jobs the tools do not cover. Each run is one undo step. Comes with examples (count
+  kinds, remove young beeches, rocks on steep slopes, terraces); your own scripts are kept in this
+  browser. See docs/script.md.
+
 ## v0.34.0 — 2026-10-07 (cut and fill)
 
 ### Added
