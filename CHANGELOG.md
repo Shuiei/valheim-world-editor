@@ -3,6 +3,12 @@
 All notable changes to the Valheim world editor and its WorldEditorBridge plugin, which share one
 version number. Newest first.
 
+## v0.20.2 — 2026-10-06 (dropdown labels)
+
+### Fixed
+- In the app window on Linux, the group headings of the Replace lists ("Trees & logs"...) could show
+  blank, with GTK warnings in the terminal: they read "Trees and logs" and so on now.
+
 ## v0.20.1 — 2026-10-06 (fences on slopes)
 
 ### Changed
