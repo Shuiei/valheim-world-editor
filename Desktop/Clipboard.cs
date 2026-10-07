@@ -169,7 +169,7 @@ public sealed class PasteTool
 	// Pastes at a grid point: the ground (shape and paint, with the copy's soft edge) and the objects,
 	// as new objects copied from the originals. Returns the ground points changed and their rectangle,
 	// and the objects to add (Piece: a player-built piece).
-	public (List<int> Touched, (int X0, int Z0, int X1, int Z1) Rect, List<(NewObject, bool)> Add) Apply(Ground g, Vector2 at)
+	public (List<int> Touched, (int X0, int Z0, int X1, int Z1) Rect, List<(NewObject, bool)> Add) Apply(Ground g, Vector2 at, Func<int, float>? mask = null)
 	{
 		var c = Clip!;
 		var touched = new List<int>();
@@ -204,12 +204,12 @@ public sealed class PasteTool
 						{
 							continue;
 						}
-						float w = c.Wt[i];
+						int p = gz * g.W + gx;
+						float w = c.Wt[i] * (mask?.Invoke(p) ?? 1);
 						if (w <= 0)
 						{
 							continue;
 						}
-						int p = gz * g.W + gx;
 						float h = g.HeightOf(p);
 						g.SetHeight(p, h + (anchor + c.Rel[i] - h) * w);
 						if (c.Pnt[i * 4] >= 0)

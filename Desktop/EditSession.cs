@@ -14,6 +14,12 @@ public sealed class EditSession
 	public EditStore Edits { get; }
 	// The window shares its brush settings with the session.
 	public Brush Brush { get; set; } = new();
+	// The window's Mask too.
+	public Mask Mask { get; set; } = new();
+	private Func<int, float>? _strokeMask;
+
+	// The mask over the ground as it is now (null when off).
+	public Func<int, float>? MaskNow() => Mask.For(Ground, Scene.Biomes);
 	private readonly object _lock = new();
 
 	// A change that can be undone: the ground points it changed, before and after, and the things it
@@ -71,6 +77,8 @@ public sealed class EditSession
 		lock (_lock)
 		{
 			_stroke = new Stroke { Tool = tool, Start = Ground.Snapshot() };
+			// Judged as the ground was when the stroke started.
+			_strokeMask = Mask.For(Ground, Scene.Biomes, frozen: true);
 			// Flatten: level to the ground under the first click.
 			if (tool == BrushTool.Flatten && Brush.TargetFromClick)
 			{
@@ -86,7 +94,7 @@ public sealed class EditSession
 	{
 		lock (_lock)
 		{
-			if (_stroke == null || Sculpt.Apply(Ground, Brush, _stroke, cx, cz, dt) is not { } rect)
+			if (_stroke == null || Sculpt.Apply(Ground, Brush, _stroke, cx, cz, dt, _strokeMask) is not { } rect)
 			{
 				return false;
 			}
@@ -114,7 +122,9 @@ public sealed class EditSession
 				Record(Brush.Label(s.Tool), s.Start, s.Touched, zones);
 				Send(zones);
 			}
-			message = s.Clamped ? "Reached the game limit: ground can only move 8 m from its original height (red points)." : "";
+			message = s.Clamped ? "Reached the game limit: ground can only move 8 m from its original height (red points)."
+				: s.Touched.Count == 0 && _strokeMask != null ? "Nothing changed: the Mask leaves out all the ground under the brush (check its height, slope, biome and paint settings)." : "";
+			_strokeMask = null;
 		}
 		Changed?.Invoke();
 		return message;
@@ -148,6 +158,7 @@ public sealed class EditSession
 	{
 		// The web editor gives shapes its fractal noise scaled to about -1..1.
 		var env = new Formula.Env { Noise = (x, z) => Brush.Noise.Fbm((float)x, (float)z) / 1.6 };
+		var mask = MaskNow();
 		int touchedCount, bad = 0;
 		bool clamped = false;
 		lock (_lock)
@@ -162,7 +173,9 @@ public sealed class EditSession
 				for (int gx = x0; gx <= x1; gx++)
 				{
 					float x = gx - cx, z = gz - cz, d = MathF.Sqrt(x * x + z * z);
-					if (d > r || g.Locked(gx, gz))
+					int p = gz * g.W + gx;
+					float w = mask?.Invoke(p) ?? 1;
+					if (d > r || g.Locked(gx, gz) || w <= 0)
 					{
 						continue;
 					}
@@ -190,8 +203,7 @@ public sealed class EditSession
 					{
 						continue;
 					}
-					int p = gz * g.W + gx;
-					clamped |= g.SetHeight(p, g.HeightOf(p) + (float)v);
+					clamped |= g.SetHeight(p, g.HeightOf(p) + (float)v * w);
 					touched.Add(p);
 				}
 			}

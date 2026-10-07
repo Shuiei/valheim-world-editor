@@ -167,7 +167,8 @@ public sealed class AreaTool
 	public sealed record Weights(List<Vector2> Poly, int X0, int Z0, int X1, int Z1, List<(int G, float W)> Cells);
 
 	// The grid points inside the selection and their weights (the soft edge going inwards).
-	public Weights? WeightsIn(int w, int h)
+	// mask: also times the Mask (null: not).
+	public Weights? WeightsIn(int w, int h, Func<int, float>? mask = null)
 	{
 		if (Polygon() is not { } poly)
 		{
@@ -198,6 +199,7 @@ public sealed class AreaTool
 					float d = EdgeDistance(poly, gx, gz);
 					wt = inPoly ? MathF.Min(1, 0.5f + d) : 0.5f - d;
 				}
+				wt *= mask?.Invoke(gz * w + gx) ?? 1;
 				if (wt > 0)
 				{
 					cells.Add((gz * w + gx, wt));
@@ -218,10 +220,10 @@ public sealed class AreaTool
 	};
 
 	// The action inside the selection. height: Flatten's; amount: Raise and Lower's; paint: the colour.
-	public (List<int> Touched, (int X0, int Z0, int X1, int Z1) Rect) Apply(Ground g, Brush b, GroundAction act, float height, float amount, float[] paint)
+	public (List<int> Touched, (int X0, int Z0, int X1, int Z1) Rect) Apply(Ground g, Brush b, GroundAction act, float height, float amount, float[] paint, Func<int, float>? mask = null)
 	{
 		var touched = new List<int>();
-		if (WeightsIn(g.W, g.H) is not { } a)
+		if (WeightsIn(g.W, g.H, mask) is not { } a)
 		{
 			return (touched, (0, 0, 0, 0));
 		}
@@ -318,9 +320,9 @@ public sealed class AreaTool
 	// Cut and fill (each point stands for 1 m²): what Flatten, Raise or Lower would move within the
 	// game's ±8 m limit (and what is out of its reach), and how much the ground inside has been raised
 	// and dug since it was generated.
-	public string Volume(Ground g, GroundAction act, float height, float amount)
+	public string Volume(Ground g, GroundAction act, float height, float amount, Func<int, float>? mask = null)
 	{
-		if (WeightsIn(g.W, g.H) is not { } a)
+		if (WeightsIn(g.W, g.H, mask) is not { } a)
 		{
 			return "";
 		}

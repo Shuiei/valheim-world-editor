@@ -24,6 +24,8 @@ public sealed class MainWindow : Window
 	internal SelectPanel SelectPanel { get; }
 	internal MeasurePanel MeasurePanel { get; }
 	internal ShapePanel ShapePanel { get; } = new();
+	internal Mask Mask { get; } = new();
+	internal MaskPanel MaskPanel { get; }
 	internal PathPanel PathPanel { get; }
 	internal AreaPanel AreaPanel { get; }
 	internal PastePanel PastePanel { get; }
@@ -48,6 +50,7 @@ public sealed class MainWindow : Window
 	{
 		_session = session;
 		session.Brush = Tools.Brush;
+		session.Mask = Mask;
 		session.Changed += () => Dispatcher.UIThread.Post(UpdateSaveBar);
 		UpdateSaveBar();
 	}
@@ -195,7 +198,7 @@ public sealed class MainWindow : Window
 		var label = paste.Count > 1 ? $"Paste ×{paste.Count}" : "Paste";
 		s.Commit(label, g =>
 		{
-			var (t, rect, a) = paste.Apply(g, at);
+			var (t, rect, a) = paste.Apply(g, at, s.MaskNow());
 			add.AddRange(a);
 			touched = t.Count;
 			return (t, rect);
@@ -220,7 +223,7 @@ public sealed class MainWindow : Window
 		bool clamped = false;
 		var touched = s.EditGround($"Path: {PathTool.Label(path.Act)}", g =>
 		{
-			var (t, rect, c) = path.Apply(g, s.Brush, s.Scene.Water);
+			var (t, rect, c) = path.Apply(g, s.Brush, s.Scene.Water, s.MaskNow());
 			clamped = c;
 			return (t, rect);
 		});
@@ -461,6 +464,20 @@ public sealed class MainWindow : Window
 	public MainWindow(bool load = true)
 	{
 		SelectPanel = new SelectPanel(_view.SelectTool);
+		MaskPanel = new MaskPanel(Mask);
+		_view.BrushAltClick += (h, shift) =>
+		{
+			if (shift)
+			{
+				Mask.PickHeight(h);
+				_message.Text = $"Mask: ground between {h - 2:0.0} and {h + 2:0.0} m.";
+			}
+			else
+			{
+				Tools.FlattenTo(h);
+				_message.Text = $"Flatten to {h:0.0} m.";
+			}
+		};
 		MeasurePanel = new MeasurePanel(_view);
 		PathPanel = new PathPanel(_view, Tools.Brush);
 		PathPanel.ApplyAsked += ApplyPath;
@@ -514,9 +531,9 @@ public sealed class MainWindow : Window
 			Margin = new Thickness(10),
 			HorizontalAlignment = HorizontalAlignment.Left,
 			VerticalAlignment = VerticalAlignment.Top,
-			Children = { Tools.Rail, Tools.Options, SelectPanel.Card, MeasurePanel.Card, ShapePanel.Card, PathPanel.Card, AreaPanel.Card, PastePanel.Card },
+			Children = { Tools.Rail, Tools.Options, SelectPanel.Card, MeasurePanel.Card, ShapePanel.Card, PathPanel.Card, AreaPanel.Card, PastePanel.Card, MaskPanel.Card },
 		};
-		SelectPanel.Card.IsVisible = MeasurePanel.Card.IsVisible = ShapePanel.Card.IsVisible = PathPanel.Card.IsVisible = AreaPanel.Card.IsVisible = PastePanel.Card.IsVisible = false;
+		SelectPanel.Card.IsVisible = MeasurePanel.Card.IsVisible = ShapePanel.Card.IsVisible = PathPanel.Card.IsVisible = AreaPanel.Card.IsVisible = PastePanel.Card.IsVisible = MaskPanel.Card.IsVisible = false;
 		ShapePanel.Changed += () => _view.ShapeRadius = ShapePanel.Radius;
 		_view.ShapeClicked += PutShape;
 		Tools.Options.VerticalAlignment = VerticalAlignment.Top;
@@ -531,6 +548,7 @@ public sealed class MainWindow : Window
 			PathPanel.Card.IsVisible = Tools.Mode == ToolMode.Path;
 			AreaPanel.Card.IsVisible = Tools.Mode == ToolMode.Area;
 			PastePanel.Card.IsVisible = Tools.Mode == ToolMode.Paste;
+			MaskPanel.Card.IsVisible = Tools.Mode is ToolMode.Brush or ToolMode.Path or ToolMode.Area or ToolMode.Shape;
 			if (Tools.Mode == ToolMode.Area)
 			{
 				AreaPanel.Refresh();

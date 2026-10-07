@@ -1362,7 +1362,17 @@ public sealed class GlView : OpenGlControlBase
 				Wake();
 				return;
 			}
-			// With a brush, the left button paints (the middle one still slides the view).
+			// With a brush, the left button paints (the middle one still slides the view); Alt + click picks
+			// the ground's height (Alt + Shift: for the Mask).
+			if (_dragButton == PointerUpdateKind.LeftButtonPressed && _tool is BrushTool && e.KeyModifiers.HasFlag(KeyModifiers.Alt))
+			{
+				_dragFrom = null;
+				if (WorldAt(p.Position, _surfaceSize) is { } w)
+				{
+					BrushAltClick?.Invoke(w.Y, e.KeyModifiers.HasFlag(KeyModifiers.Shift));
+				}
+				return;
+			}
 			if (_dragButton == PointerUpdateKind.LeftButtonPressed && _tool is BrushTool tool && _scene is { Session: { } session } s)
 			{
 				_dragFrom = null;
@@ -1493,6 +1503,8 @@ public sealed class GlView : OpenGlControlBase
 	public event Action<float, float>? ShapeClicked;
 	public float ShapeRadius { get; set; } = 16;
 	public PathTool Path { get; } = new();
+	// Alt + click with a brush: the ground's height there (shift: Alt + Shift).
+	public event Action<float, bool>? BrushAltClick;
 	public AreaTool Area { get; } = new();
 	public PasteTool Paste { get; } = new();
 	// Paste tool: a click on the ground (grid point).

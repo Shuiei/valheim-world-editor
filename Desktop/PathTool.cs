@@ -88,7 +88,7 @@ public sealed class PathTool
 
 	// The action along the line. heightAt: the ground's height at a grid point (for the ramp's ends).
 	// Returns the points changed, the rectangle around them, and whether the game's limit stopped some.
-	public (List<int> Touched, (int X0, int Z0, int X1, int Z1) Rect, bool Clamped) Apply(Ground g, Brush b, float water)
+	public (List<int> Touched, (int X0, int Z0, int X1, int Z1) Rect, bool Clamped) Apply(Ground g, Brush b, float water, Func<int, float>? mask = null)
 	{
 		var curve = Curve();
 		var touched = new List<int>();
@@ -168,12 +168,12 @@ public sealed class PathTool
 					continue;
 				}
 				float f = soft > 0 ? (dEff <= halfEff ? 1 : 1 - (dEff - halfEff) / soft) : Math.Clamp(halfEff + 0.5f - dEff, 0, 1);
-				float w = soft > 0 ? f * f * (3 - 2 * f) : f;
+				int p = gz * g.W + gx;
+				float w = (soft > 0 ? f * f * (3 - 2 * f) : f) * (mask?.Invoke(p) ?? 1);
 				if (w <= 0)
 				{
 					continue;
 				}
-				int p = gz * g.W + gx;
 				float h = g.HeightOf(p);
 				touched.Add(p);
 				switch (Act)
