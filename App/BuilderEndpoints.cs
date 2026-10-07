@@ -36,9 +36,10 @@ public static class BuilderEndpoints
 
 		app.MapPost("/api/builder", (BuilderChoice req) =>
 		{
-			if (!long.TryParse(req.Id, NumberStyles.Integer, CultureInfo.InvariantCulture, out long id) || id == 0)
+			// 0: nobody, new pieces get no builder (the game then takes them for parts of a ruin).
+			if (!long.TryParse(req.Id, NumberStyles.Integer, CultureInfo.InvariantCulture, out long id))
 			{
-				return Results.BadRequest("A player id (a whole number other than 0) is needed.");
+				return Results.BadRequest("A player id (a whole number) is needed.");
 			}
 			WorldSave.Builder = id;
 			return Results.Ok(new { builder = req.Id });
@@ -51,7 +52,7 @@ public static class BuilderEndpoints
 			WorldSave w = world();
 			if (WorldSave.Builder == 0)
 			{
-				return Results.BadRequest("Choose who builds first (View panel, Built by).");
+				return Results.BadRequest("Built by is set to Nobody: choose a player first (View panel, Building).");
 			}
 			List<object> changed = new();
 			foreach (IdPair p in req.Objects ?? new())

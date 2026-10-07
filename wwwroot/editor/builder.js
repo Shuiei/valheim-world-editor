@@ -10,8 +10,8 @@ export function createBuilder(ed) {
   const label = p => `${p.name ?? `Player ${p.id}`}${p.local ? ' (this computer)' : ''}${p.pieces ? ` · ${p.pieces} piece${p.pieces === 1 ? '' : 's'}` : ''}`;
   function fill(current) {
     $('builder').innerHTML = players.map(p => `<option value="${p.id}">${label(p)}</option>`).join('')
-      + '<option value="other">Other player id…</option>';
-    $('builder').value = players.some(p => p.id === current) ? current : players[0]?.id ?? '';
+      + '<option value="other">Other player id…</option><option value="0">Nobody (not player built)</option>';
+    $('builder').value = current === '0' || players.some(p => p.id === current) ? current : players[0]?.id ?? '0';
   }
   async function choose(id) {
     const r = await fetch('/api/builder', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
@@ -25,7 +25,7 @@ export function createBuilder(ed) {
     let current = res.builder;
     let saved = null; try { saved = localStorage.getItem(key); } catch { }
     if (saved && saved !== current && /^-?\d+$/.test(saved)) {
-      if (!players.some(p => p.id === saved)) players.push({ id: saved, name: null, pieces: 0 });
+      if (saved !== '0' && !players.some(p => p.id === saved)) players.push({ id: saved, name: null, pieces: 0 });
       if (await choose(saved)) current = saved;
     }
     fill(current);
@@ -39,7 +39,7 @@ export function createBuilder(ed) {
       if (!/^-?\d+$/.test(id) || /^-?0+$/.test(id)) { $('builder').value = last; if (id) ed.msg('A player id is a whole number other than 0.', true); return; }
       if (!players.some(p => p.id === id)) players.push({ id, name: null, pieces: 0 });
     }
-    if (await choose(id)) { fill(id); last = id; ed.msg(`New pieces are built by ${label(players.find(p => p.id === id))}.`); }
+    if (await choose(id)) { fill(id); last = id; ed.msg(id === '0' ? 'New pieces get no builder: the game takes them for parts of a ruin.' : `New pieces are built by ${label(players.find(p => p.id === id))}.`); }
     else $('builder').value = last;
   };
   load();

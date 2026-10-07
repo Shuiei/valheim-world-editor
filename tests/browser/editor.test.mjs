@@ -890,20 +890,33 @@ test('eyedropper, favourite and recent kinds', async () => {
   { const [x, y] = await onChest(); await page().mouse.click(x, y); await sleep(300); }
   assert.deepEqual(await chosen(), [c.name], await page().$eval('#sMsg', e => e.textContent));
   assert.equal((await records()).length, before, 'the picking click places nothing');
-  // A star adds a favourite chip (without ticking the kind); the chip plants only that kind.
+  // A star adds a favourite chip (without ticking the kind); a click on the chip ticks it, a second
+  // one unticks it, Shift + click places only it.
   await page().$eval('#plSearch', e => { e.value = 'Bush01'; e.dispatchEvent(new Event('input')); });
   await page().click('[data-star="Bush01"]'); await sleep(100);
   assert.deepEqual(await chosen(), [c.name], 'the star does not tick the box');
   assert.ok(await page().$('#plFav [data-chip="Bush01"]'), 'favourite chip shown');
   await page().click('#plFav [data-chip="Bush01"]');
+  assert.deepEqual((await chosen()).sort(), ['Bush01', c.name].sort());
+  await page().click('#plFav [data-chip="Bush01"]');
+  assert.deepEqual(await chosen(), [c.name]);
+  await page().keyboard.down('Shift'); await page().click('#plFav [data-chip="Bush01"]'); await page().keyboard.up('Shift');
   assert.deepEqual(await chosen(), ['Bush01']);
-  // Shift + click adds the kind to the ticked ones.
+  // Untick all, then all / none on a chip row.
+  await page().click('#plNone');
+  assert.deepEqual(await chosen(), []);
+  await page().click('[data-all="plFav"]');
+  assert.deepEqual(await chosen(), ['Bush01']);
+  await page().click('[data-none="plFav"]');
+  assert.deepEqual(await chosen(), []);
+  await page().click('#plFav [data-chip="Bush01"]');
+  // Shift + click with Pick adds the kind to the ticked ones.
   await page().keyboard.down('Shift'); await page().click('#plPick');
   { const [x, y] = await onChest(); await page().mouse.click(x, y); await sleep(300); }
   await page().keyboard.up('Shift');
   assert.deepEqual((await chosen()).sort(), ['Bush01', c.name].sort());
   // Placing remembers the kinds as recent.
-  await page().click('#plFav [data-chip="Bush01"]');
+  await page().keyboard.down('Shift'); await page().click('#plFav [data-chip="Bush01"]'); await page().keyboard.up('Shift');
   await page().click('#plModes [data-m="line"]');
   await lookAt(page(), c.x, c.z + 20, 0, 45, 30);
   for (const [dx, dz] of [[-6, 20], [6, 20]]) { const [x, y] = await screenOf(page(), c.x + dx, c.z + dz); await page().mouse.click(x, y); await sleep(150); }
@@ -955,6 +968,10 @@ test('placed pieces are player built, and Make player built fixes old ones', asy
   assert.equal(await creator(sel[0]), '4242424242');
   await page().click('#undo'); await sleep(800);
   await page().click('#undo'); await sleep(800);
+  // Nobody: new pieces get no builder.
+  await page().evaluate(() => { const s = document.getElementById('builder'); s.value = '0'; s.dispatchEvent(new Event('change')); });
+  await sleep(300);
+  assert.equal((await t.api('/api/builders')).builder, '0');
   await page().evaluate(() => localStorage.removeItem('builder:' + window.__ed.world.name));
   noErrors();
 });
@@ -972,6 +989,28 @@ test('Place tool: named Place, the sapling option only shows for saplings and cr
   await page().waitForFunction(() => !document.getElementById('plGrowRow').hidden);
   await page().click('#plList input[value="sapling_turnip"]');
   assert.ok(await page().$eval('#plGrowRow', e => e.hidden), 'hidden again once the sapling is unticked');
+  noErrors();
+});
+
+test('placed objects follow the View switches', async () => {
+  await openEditor();
+  await page().evaluate(() => localStorage.setItem('plantChosen', '["Beech1"]'));
+  await openEditor();
+  const c = (await records()).find(r => r.name === 'piece_chest_wood');
+  await lookAt(page(), c.x + 30, c.z + 30, 0, 40, 25);
+  await page().keyboard.press('t'); await sleep(300);
+  await page().click('#plModes [data-m="brush"]');
+  await page().click('#plSingle').catch(() => {});
+  { const [x, y] = await screenOf(page(), c.x + 30, c.z + 30); await page().mouse.move(x, y); await sleep(200); await page().mouse.click(x, y); await sleep(800); }
+  const id = await page().evaluate(() => Math.min(...[...window.__ed.objects.records.values()].filter(r => r.added && !r.deleted && r.name === 'Beech1').map(r => r.id)));
+  assert.ok(id < 0, 'a tree was placed');
+  const shown = () => page().evaluate(id => { const e = window.__ed.entityOf(id); let o = e.inst[0].im; while (o) { if (!o.visible) return false; o = o.parent; } return true; }, id);
+  assert.ok(await shown(), 'shown');
+  await page().$eval('[data-show="trees"]', e => { e.checked = false; e.dispatchEvent(new Event('change')); });
+  assert.equal(await shown(), false, 'hidden with Trees & logs off');
+  await page().$eval('[data-show="trees"]', e => { e.checked = true; e.dispatchEvent(new Event('change')); });
+  assert.ok(await shown(), 'shown again');
+  await page().click('#undo'); await sleep(800);
   noErrors();
 });
 

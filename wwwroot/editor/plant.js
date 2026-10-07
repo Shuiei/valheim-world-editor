@@ -12,9 +12,10 @@ export function createPlant(ed) {
   panel.id = 'plantPanel';
   panel.innerHTML = `
     <div class="seg" id="plModes"><button data-m="brush" class="on" title="Paint under the brush">Brush</button><button data-m="line" title="Objects along a line you draw">Line</button><button data-m="grid" title="One object in the middle of each grid cell">Grid</button><button data-m="zone" title="Fill a shape you draw freely">Zone</button></div>
-    <div class="row" style="margin:2px 0 6px"><input id="plSearch" type="search" placeholder="Search kinds (oak, rock, bush…)" style="flex:3;min-width:0"><button id="plPick" title="Pick a kind from the world: click an object (Shift + click adds it to the ticked kinds)">Pick</button></div>
-    <div id="plFavBox" hidden><div class="chipHead">Favourites</div><div class="chips" id="plFav"></div></div>
-    <div id="plRecentBox" hidden><div class="chipHead">Recent</div><div class="chips" id="plRecent"></div></div>
+    <input id="plSearch" type="search" placeholder="Search kinds (oak, rock, bush…)" style="width:100%;margin:2px 0 4px">
+    <div class="row" style="margin:0 0 6px"><button id="plPick" title="Pick a kind from the world: click an object (Shift + click adds it to the ticked kinds)">Pick</button><button id="plNone" title="Untick every kind">Untick all</button></div>
+    <div id="plFavBox" hidden><div class="chipHead">Favourites<span><button class="link" data-all="plFav" title="Tick every favourite">all</button><button class="link" data-none="plFav" title="Untick every favourite">none</button></span></div><div class="chips" id="plFav"></div></div>
+    <div id="plRecentBox" hidden><div class="chipHead">Recent<span><button class="link" data-all="plRecent" title="Tick every recent kind">all</button><button class="link" data-none="plRecent" title="Untick every recent kind">none</button></span></div><div class="chips" id="plRecent"></div></div>
     <div id="plList" class="plList"></div>
     <div class="hint" id="plChosen"></div>
     <label class="field">Density <input id="plDensity" type="range" min="0.2" max="20" step="0.2" value="3"><span id="plDensityV"></span></label>
@@ -65,7 +66,9 @@ export function createPlant(ed) {
     .plList label:hover { background: rgba(255,255,255,.04); }
     .plList .star { margin-left: auto; color: var(--muted); padding: 0 4px; cursor: pointer; font-size: 13px; line-height: 1; }
     .plList .star.on { color: var(--accent); }
-    .chipHead { font-size: 10.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-top: 2px; }
+    .chipHead { font-size: 10.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-top: 2px; display: flex; justify-content: space-between; align-items: center; }
+    .chipHead .link { background: none; border: 0; padding: 0 0 0 8px; color: var(--muted); font-size: 10.5px; text-transform: uppercase; letter-spacing: .06em; cursor: pointer; }
+    .chipHead .link:hover { color: var(--accent); }
     #plFav, #plRecent { margin: 3px 0 6px; }`;
   document.head.appendChild(style);
 
@@ -109,7 +112,7 @@ export function createPlant(ed) {
     countKinds();
   }
   // ---- Favourites (starred in the list) and recently placed kinds, as chips above the list: a click
-  // plants only that kind, Shift + click adds it to (or takes it out of) the ticked ones.
+  // ticks or unticks that kind, Shift + click places only it; all / none tick or untick the whole row.
   const readList = k => { try { const v = JSON.parse(localStorage.getItem(k) ?? '[]'); return Array.isArray(v) ? v : []; } catch { return []; } };
   const writeList = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch { } };
   let favs = readList('plantFavourites'), recent = readList('plantRecent');
@@ -125,15 +128,20 @@ export function createPlant(ed) {
   function choose(name, add) {
     if (add) chosen.has(name) ? chosen.delete(name) : chosen.add(name);
     else chosen = new Set([name]);
-    saveChosen(); fillList(); syncLabels(); renderChips(); autoSnap?.(); updatePreview();
+    chosenChanged();
   }
+  function chosenChanged() { saveChosen(); fillList(); syncLabels(); renderChips(); autoSnap?.(); updatePreview(); }
+  const chipNames = el => [...$(el).querySelectorAll('[data-chip]')].map(b => b.dataset.chip);
+  $('plNone').onclick = () => { chosen.clear(); chosenChanged(); };
+  panel.querySelectorAll('[data-all]').forEach(b => b.onclick = () => { chipNames(b.dataset.all).forEach(n => chosen.add(n)); chosenChanged(); });
+  panel.querySelectorAll('[data-none]').forEach(b => b.onclick = () => { chipNames(b.dataset.none).forEach(n => chosen.delete(n)); chosenChanged(); });
   function renderChips() {
     const known = new Set(ed.objects.creatableTypes().map(t => t.name));
     for (const [box, list, el] of [['plFavBox', favs, 'plFav'], ['plRecentBox', recent, 'plRecent']]) {
       const names = list.filter(n => known.has(n));
       $(box).hidden = !names.length;
-      $(el).innerHTML = names.map(n => `<button data-chip="${n}" class="${chosen.has(n) ? 'on' : ''}" title="Place only this kind (Shift + click: add it to the ticked kinds)">${n}</button>`).join('');
-      $(el).querySelectorAll('[data-chip]').forEach(b => b.onclick = e => choose(b.dataset.chip, e.shiftKey));
+      $(el).innerHTML = names.map(n => `<button data-chip="${n}" class="${chosen.has(n) ? 'on' : ''}" title="Tick or untick this kind (Shift + click: place only this kind)">${n}</button>`).join('');
+      $(el).querySelectorAll('[data-chip]').forEach(b => b.onclick = e => choose(b.dataset.chip, !e.shiftKey));
     }
   }
   (ed.onObjects ??= []).push(renderChips);

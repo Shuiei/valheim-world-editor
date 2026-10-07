@@ -71,9 +71,9 @@ folded.
 | | **Defaults** / **All** / **Ground** | Default switches / show everything / show only the ground. |
 | Building | **Built by** | The player written as the builder of every piece you place: see below. |
 
-Only what is shown can be picked or selected. Objects you placed but did not save yet are always
-drawn (with a green dot), and placing a kind that is switched off switches it on, so you never
-lose sight of what you placed.
+Only what is shown can be picked or selected. Objects you placed follow the switches too (the ones
+not saved yet have a green dot), and placing a kind that is switched off switches it on, so what you
+just placed is always in sight.
 
 ## Player-built pieces
 
@@ -87,7 +87,7 @@ or private chest answers to nobody.
 **Built by** lists the players who built in this world (the one with the most pieces comes first and
 is chosen at the start), the players named on beds, wards and tombstones, and the characters on this
 computer (your own player id, even in a world where you built nothing yet). **Other player id…**
-takes any id. The choice is remembered per world. With no player known at all, pieces get
+takes any id. **Nobody (not player built)** places pieces without a builder, as parts of a ruin. The choice is remembered per world. With no player known at all, pieces get
 **Unknown player** (id 1): they are player built, but wards and private chests answer to nobody, so
 choose your own id when you can.
 
