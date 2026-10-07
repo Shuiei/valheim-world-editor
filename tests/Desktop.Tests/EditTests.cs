@@ -13,7 +13,7 @@ namespace TerrainEditor.Desktop.Tests;
 public class EditTests
 {
 	// A flat block of size × size zones at 30 m, with nothing edited, and its edit session.
-	internal static EditSession Flat(int size = 2)
+	internal static EditSession Flat(int size = 2, params WorldScene.Thing[] things)
 	{
 		int w = size * 64 + 1;
 		var ground = new Ground(w, w, 0, 0, size);
@@ -21,7 +21,8 @@ public class EditTests
 		var scene = new WorldScene
 		{
 			World = new WorldSave { Directory = "none", SaveNumber = 1 }, Name = "test", X0 = 0, Z0 = 0, Size = size, W = w, H = w,
-			Heights = Enumerable.Repeat(30f, w * w).ToArray(), Biomes = new int[w * w], Things = new(), BiomeColor = new byte[w * w * 4],
+			Heights = Enumerable.Repeat(30f, w * w).ToArray(), Biomes = new int[w * w], Things = things.ToList(), BiomeColor = new byte[w * w * 4],
+			Cx = -32 + (w - 1) / 2f, Cz = -32 + (w - 1) / 2f,
 			Mask = new byte[w * w * 4], OceanDepth = new float[w * w], Limit = new float[w * w],
 		};
 		var session = new EditSession(scene, ground, new EditStore(scene.World));

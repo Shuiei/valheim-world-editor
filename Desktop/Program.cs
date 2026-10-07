@@ -70,6 +70,8 @@ public static class Options
 	// One stroke of this brush (raise, lower, flatten, smooth, natural, restore, paintdirt, …) at the
 	// middle of the view once loaded, to check sculpting (nothing is saved).
 	public static BrushTool? StrokeTool { get; private set; }
+	// Move what --pick selected by this much (metres east, north), to check moving (nothing is saved).
+	public static (float X, float Z)? MoveBy { get; private set; }
 
 	public static void Say(string line)
 	{
@@ -122,6 +124,10 @@ public static class Options
 					break;
 				case "--stroke":
 					StrokeTool = Enum.TryParse<BrushTool>(args[++i], ignoreCase: true, out var t) ? t : null;
+					break;
+				case "--move":
+					var m = args[++i].Split(',').Select(v => float.Parse(v, System.Globalization.CultureInfo.InvariantCulture)).ToArray();
+					MoveBy = (m[0], m[1]);
 					break;
 				case "--report":
 					Report = Path.GetFullPath(args[++i]);

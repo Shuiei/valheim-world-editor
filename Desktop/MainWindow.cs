@@ -21,6 +21,7 @@ public sealed class MainWindow : Window
 
 	public GlView View => _view;
 	internal ToolPanel Tools { get; } = new();
+	internal SelectPanel SelectPanel { get; }
 
 	// The save bar (top middle): what is waiting to be saved, undo, redo, Save, and the last message.
 	private readonly TextBlock _pending = new() { FontSize = 12, VerticalAlignment = VerticalAlignment.Center, Text = "All saved" };
@@ -64,12 +65,14 @@ public sealed class MainWindow : Window
 
 	internal void Undo()
 	{
+		_view.SelectTool.Commit();
 		_session?.Undo();
 		UpdateSaveBar();
 	}
 
 	internal void Redo()
 	{
+		_view.SelectTool.Commit();
 		_session?.Redo();
 		UpdateSaveBar();
 	}
@@ -82,6 +85,7 @@ public sealed class MainWindow : Window
 		{
 			return;
 		}
+		_view.SelectTool.Commit();
 		var (z, d, a, r) = s.Pending;
 		if (z + d + a + r == 0)
 		{
@@ -173,9 +177,17 @@ public sealed class MainWindow : Window
 			_ = Save();
 			e.Handled = true;
 		}
+		else if (Tools.SelectMode && _view.SelectTool.Key(e.Key, mods.HasFlag(Avalonia.Input.KeyModifiers.Shift), ctrl))
+		{
+			e.Handled = true;
+		}
 		else if (!ctrl && e.Key == Avalonia.Input.Key.Escape)
 		{
 			Tools.Key("Escape");
+		}
+		else if (!ctrl && e.Key == Avalonia.Input.Key.E)
+		{
+			Tools.Key("E");
 		}
 		else if (!ctrl && e.Key >= Avalonia.Input.Key.D0 && e.Key <= Avalonia.Input.Key.D9)
 		{
@@ -257,6 +269,7 @@ public sealed class MainWindow : Window
 	// load: false opens the window without a world (tests).
 	public MainWindow(bool load = true)
 	{
+		SelectPanel = new SelectPanel(_view.SelectTool);
 		Title = "Valheim World Editor (native preview)";
 		Width = 1500;
 		Height = 950;
@@ -286,11 +299,18 @@ public sealed class MainWindow : Window
 			Margin = new Thickness(10),
 			HorizontalAlignment = HorizontalAlignment.Left,
 			VerticalAlignment = VerticalAlignment.Top,
-			Children = { Tools.Rail, Tools.Options },
+			Children = { Tools.Rail, Tools.Options, SelectPanel.Card },
 		};
+		SelectPanel.Card.IsVisible = false;
 		Tools.Options.VerticalAlignment = VerticalAlignment.Top;
 		Tools.Rail.VerticalAlignment = VerticalAlignment.Top;
-		Tools.ToolChanged += t => _view.Tool = t;
+		Tools.ToolChanged += t =>
+		{
+			_view.Tool = t;
+			_view.SelectMode = Tools.SelectMode;
+			SelectPanel.Card.IsVisible = Tools.SelectMode;
+		};
+		_view.SelectTool.Message += (text, _) => _message.Text = text;
 		_view.StrokeEnded += msg =>
 		{
 			_message.Text = msg;
@@ -320,6 +340,7 @@ public sealed class MainWindow : Window
 		_view.Attach(surface, this);
 		_view.Perf = _perf;
 		_view.StatsChanged += s => _fps.Text = $"{s.Fps} frames/s · {s.WorkMs:0.0} ms of work each · {s.Objects:N0} objects ({s.Instances:N0} model parts in {s.Batches:N0} draws){(s.PendingModels > 0 ? $" · {s.PendingModels} kinds loading" : "")}";
+		_view.SelectionChanged += _ => SelectPanel.Refresh();
 		_view.SelectionChanged += things => _selection.Text = things.Count == 0 ? "" : things.Count == 1
 			? $"Selected: {Name(things[0])} at {things[0].Position.X:0.0}, {things[0].Position.Z:0.0} (height {things[0].Position.Y:0.0})"
 			: $"Selected: {things.Count} objects ({string.Join(", ", things.GroupBy(Name).OrderByDescending(g => g.Count()).Take(4).Select(g => $"{g.Key} ×{g.Count()}"))})";
@@ -345,7 +366,7 @@ public sealed class MainWindow : Window
 				var models = await Task.Run(ModelStore.Open);
 				_models = models;
 				_info.Text = scene.LoadInfo + (models == null ? "\nNo game models copied yet: boxes stand in (open the web editor once to copy the game's look)." : "")
-					+ "\nView: click picks an object (Shift adds) · right drag turns · middle or left drag slides · wheel zooms · WASD moves · F walks and flies · 1-9, 0: brushes";
+					+ "\nView: click picks an object (Shift adds) · right drag turns · middle or left drag slides · wheel zooms · WASD moves · F walks and flies · E: select and move · 1-9, 0: brushes";
 				_view.Show(scene, models);
 				if (scene.Session != null)
 				{

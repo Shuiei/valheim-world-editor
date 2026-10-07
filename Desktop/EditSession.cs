@@ -3,10 +3,10 @@ using TerrainEditor.Save;
 
 namespace TerrainEditor.Desktop;
 
-// Editing the ground of a scene: brush strokes, undo and redo, what is waiting to be saved, and
-// saving. Edits go to the EditStore and are written by WorldWriter, the same code the web editor's
+// Editing a scene: brush strokes on the ground, deleting and moving objects, undo and redo, what is
+// waiting to be saved, and saving. Edits go to the EditStore and are written by WorldWriter, the same code the web editor's
 // session uses (/api/zones, /api/save). Strokes run on the drawing thread, the buttons on the window's:
-// everything here takes the lock.
+// everything here takes the lock. Objects are changed on the window's thread only.
 public sealed class EditSession
 {
 	public WorldScene Scene { get; }
@@ -16,8 +16,13 @@ public sealed class EditSession
 	public Brush Brush { get; set; } = new();
 	private readonly object _lock = new();
 
-	// A change that can be undone: the points it changed, before and after.
-	public sealed record Change(string Label, int[] Points, Ground.State Before, Ground.State After, List<(int X, int Z)> Zones);
+	// A change that can be undone: the ground points it changed, before and after, and the things it
+	// took away or brought (index into the scene's things, gone before and after).
+	public sealed record Change(string Label, int[] Points, Ground.State Before, Ground.State After, List<(int X, int Z)> Zones)
+	{
+		public (int Index, bool Before, bool After)[] Things { get; init; } = Array.Empty<(int, bool, bool)>();
+	}
+	private static readonly Ground.State NoPoints = new(Array.Empty<float>(), Array.Empty<float>(), Array.Empty<byte>(), Array.Empty<float>(), Array.Empty<byte>());
 	private readonly List<Change> _undo = new(), _redo = new();
 	public const int HistoryLength = 200;
 
@@ -25,6 +30,12 @@ public sealed class EditSession
 	// The grid rectangle changed since the view last took it (to send to the graphics card).
 	private (int X0, int Z0, int X1, int Z1)? _dirty;
 	public event Action? Changed;
+	// Things that appeared, went or came back (indices into the scene's things); after a save, every
+	// thing is read again (ThingsReset).
+	public event Action<IReadOnlyList<int>>? ThingsChanged;
+	public event Action? ThingsReset;
+	// Ids for objects added in this session: negative, like the web editor's.
+	private int _nextId = -1;
 
 	public EditSession(WorldScene scene, Ground ground, EditStore edits)
 	{
@@ -128,13 +139,14 @@ public sealed class EditSession
 
 	private bool Step(List<Change> from, List<Change> to, bool after)
 	{
+		Change c;
 		lock (_lock)
 		{
 			if (_stroke != null || from.Count == 0)
 			{
 				return false;
 			}
-			var c = from[^1];
+			c = from[^1];
 			from.RemoveAt(from.Count - 1);
 			var v = after ? c.After : c.Before;
 			int x0 = int.MaxValue, z0 = int.MaxValue, x1 = 0, z1 = 0;
@@ -155,9 +167,95 @@ public sealed class EditSession
 				Touch((x0 - 1, z0 - 1, x1 + 1, z1 + 1));
 			}
 			Send(c.Zones);
+			SetGone(c.Things.Select(t => (t.Index, after ? t.After : t.Before)));
+		}
+		if (c.Things.Length > 0)
+		{
+			ThingsChanged?.Invoke(c.Things.Select(t => t.Index).ToList());
 		}
 		Changed?.Invoke();
 		return true;
+	}
+
+	// Takes things away or brings them back, in the scene and in the edit store (an object added in this
+	// session goes to its trash, so it can come back).
+	private void SetGone(IEnumerable<(int Index, bool Gone)> things)
+	{
+		var list = Scene.Things;
+		lock (list)
+		{
+			foreach (var (i, gone) in things)
+			{
+				list[i] = list[i] with { Gone = gone };
+				Edits.SetDeleted(new[] { list[i].Id }, gone);
+			}
+		}
+	}
+
+	private void AddChange(Change c)
+	{
+		lock (_lock)
+		{
+			_undo.Add(c);
+			if (_undo.Count > HistoryLength)
+			{
+				_undo.RemoveAt(0);
+			}
+			_redo.Clear();
+		}
+	}
+
+	// Removes things from the world (on the next save).
+	public void Delete(IReadOnlyCollection<int> indices)
+	{
+		var live = indices.Where(i => !Scene.Things[i].Gone).Distinct().ToArray();
+		if (live.Length == 0)
+		{
+			return;
+		}
+		SetGone(live.Select(i => (i, true)));
+		AddChange(new Change($"Deleted {live.Length}", Array.Empty<int>(), NoPoints, NoPoints, new()) { Things = live.Select(i => (i, false, true)).ToArray() });
+		ThingsChanged?.Invoke(live);
+		Changed?.Invoke();
+	}
+
+	// Moves (and turns) things: each is replaced by a copy at its new place that keeps its own data
+	// (chest contents, builder...), like the web editor's moves. Returns the copies' indices.
+	public List<int> Move(IReadOnlyList<(int Index, System.Numerics.Vector3 Position, System.Numerics.Vector3 Rotation)> moves, string? label = null)
+	{
+		var list = Scene.Things;
+		var added = new List<NewObject>();
+		var copies = new List<int>();
+		var changes = new List<(int, bool, bool)>();
+		lock (list)
+		{
+			foreach (var (i, pos, rot) in moves)
+			{
+				var t = list[i];
+				if (t.Gone)
+				{
+					continue;
+				}
+				// A copy of an object of this session keeps what that one was copied from.
+				var from = t.Id < 0 ? Edits.FindAdded(t.Id) : null;
+				var n = new NewObject(_nextId--, t.Prefab, pos, rot, t.Scale, t.Id < 0 ? from?.SourceId : t.Id, t.Id < 0 && (from?.Fresh ?? true), from?.Raw);
+				added.Add(n);
+				list.Add(new WorldScene.Thing(n.Id, t.Prefab, pos, rot, t.Scale, t.Piece));
+				copies.Add(list.Count - 1);
+				changes.Add((i, false, true));
+				changes.Add((list.Count - 1, true, false));
+			}
+		}
+		if (added.Count == 0)
+		{
+			return copies;
+		}
+		Edits.AddObjects(added);
+		SetGone(changes.Where(c => c.Item3).Select(c => (c.Item1, true)));
+		AddChange(new Change(label ?? $"Moved {added.Count}", Array.Empty<int>(), NoPoints, NoPoints, new()) { Things = changes.ToArray() });
+		ThingsChanged?.Invoke(changes.Select(c => c.Item1).ToList());
+		Changed?.Invoke();
+		return copies;
 	}
 
 	// The zones to the edit store, as the web page uploads them.
@@ -209,7 +307,19 @@ public sealed class EditSession
 				Ground.TakeEdits(Edits);
 				_undo.Clear();
 				_redo.Clear();
+				// Saving gives objects new ids: read them again.
+				var things = WorldScene.ReadThings(fresh, Scene.X0, Scene.Z0, Scene.Size, Edits.Deleted);
+				lock (Scene.Things)
+				{
+					Scene.Things.Clear();
+					Scene.Things.AddRange(things);
+				}
+				_nextId = -1;
 			}
+		}
+		if (result.Saved)
+		{
+			ThingsReset?.Invoke();
 		}
 		Changed?.Invoke();
 		return result;

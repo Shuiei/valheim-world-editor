@@ -124,6 +124,10 @@ public static class Overlays
 				continue;
 			}
 			var t = s.Things[i];
+			if (t.Gone)
+			{
+				continue;
+			}
 			if (r.WardRadius > 0)
 			{
 				Ring(Layer.Wards, t.Position.X, t.Position.Z, r.WardRadius);

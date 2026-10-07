@@ -46,7 +46,12 @@ public sealed class WorldScene
 	// Editing the ground (null in tests that only draw).
 	public EditSession? Session { get; set; }
 
-	public readonly record struct Thing(int Id, int Prefab, Vector3 Position, Vector3 Rotation, float Scale, bool Piece);
+	// An object or building piece. Things are only ever added to the list (indices stay valid): a
+	// deleted one is kept, Gone, so undo can bring it back; a moved one is a new thing (see EditSession).
+	public readonly record struct Thing(int Id, int Prefab, Vector3 Position, Vector3 Rotation, float Scale, bool Piece)
+	{
+		public bool Gone { get; init; }
+	}
 
 	// The game's biome colour for a biome (Heightmap.GetBiomeColor): which terrain textures it blends.
 	private static byte[] BiomeRgba(int biome) => biome switch
@@ -136,22 +141,7 @@ public sealed class WorldScene
 			}
 		}
 		float minX = x0 * 64f - 32f, maxX = x1 * 64f + 32f, minZ = z0 * 64f - 32f, maxZ = z1 * 64f + 32f;
-		bool Inside(Vector3 p) => p.X >= minX && p.X < maxX && p.Z >= minZ && p.Z < maxZ;
-		var things = new List<Thing>();
-		foreach (var (id, prefab, p, r, s) in world.Objects)
-		{
-			if (Inside(p) && !edits.Deleted.Contains(id))
-			{
-				things.Add(new Thing(id, prefab, p, r, s.X, false));
-			}
-		}
-		foreach (var (id, prefab, p, ry) in world.Pieces)
-		{
-			if (Inside(p) && !edits.Deleted.Contains(id))
-			{
-				things.Add(new Thing(id, prefab, p, new Vector3(0, ry, 0), 0, true));
-			}
-		}
+		var things = ReadThings(world, x0, z0, size, edits.Deleted);
 		var scene = new WorldScene
 		{
 			World = world, Name = world.Name, X0 = x0, Z0 = z0, Size = size, W = w, H = h, Heights = heights, Biomes = biomes,
@@ -161,6 +151,29 @@ public sealed class WorldScene
 		};
 		scene.Session = new EditSession(scene, Ground.Read(terrain, edits, x0, z0, size), edits);
 		return scene;
+	}
+
+	// The objects and building pieces of the block's zones (those not deleted).
+	public static List<Thing> ReadThings(WorldSave world, int x0, int z0, int size, ICollection<int> deleted)
+	{
+		float minX = x0 * 64f - 32f, maxX = (x0 + size - 1) * 64f + 32f, minZ = z0 * 64f - 32f, maxZ = (z0 + size - 1) * 64f + 32f;
+		bool Inside(Vector3 p) => p.X >= minX && p.X < maxX && p.Z >= minZ && p.Z < maxZ;
+		var things = new List<Thing>();
+		foreach (var (id, prefab, p, r, sc) in world.Objects)
+		{
+			if (Inside(p) && !deleted.Contains(id))
+			{
+				things.Add(new Thing(id, prefab, p, r, sc.X, false));
+			}
+		}
+		foreach (var (id, prefab, p, ry) in world.Pieces)
+		{
+			if (Inside(p) && !deleted.Contains(id))
+			{
+				things.Add(new Thing(id, prefab, p, new Vector3(0, ry, 0), 0, true));
+			}
+		}
+		return things;
 	}
 
 	// After an edit: the heights, paint mask and limit marks of a rectangle of grid points from the ground.

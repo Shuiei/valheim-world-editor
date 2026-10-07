@@ -6,19 +6,23 @@ using Avalonia.Media;
 namespace TerrainEditor.Desktop;
 
 // The tool rail (left edge) and the chosen tool's options next to it, like the web editor's: View
-// (look around and pick objects), the sculpt brushes and the paint brushes. Keys as in the web
-// editor: 1-9 and 0 pick the brushes, Esc goes back to View.
+// (look around and pick objects), Select (move, turn and delete objects: see SelectPanel), the sculpt
+// brushes and the paint brushes. Keys as in the web editor: 1-9 and 0 pick the brushes, E selects,
+// Esc goes back to View.
 public sealed class ToolPanel
 {
 	public Brush Brush { get; } = new();
 	public BrushTool? Tool { get; private set; }
+	public bool SelectMode { get; private set; }
+	// The tool changed (Tool and SelectMode say which).
 	public event Action<BrushTool?>? ToolChanged;
 
 	public Control Rail { get; }
 	public Control Options { get; }
 
 	private readonly Dictionary<BrushTool, Button> _buttons = new();
-	private readonly Button _viewButton;
+	private readonly Button _viewButton, _selectButton;
+	internal Button SelectButton => _selectButton;
 	private readonly TextBlock _title = new() { FontSize = 14, FontWeight = FontWeight.SemiBold };
 	private readonly TextBlock _help = new() { FontSize = 12, Foreground = Brushes.LightGray, TextWrapping = TextWrapping.Wrap };
 	private readonly Control _flattenRows, _naturalRows, _turnRow;
@@ -99,6 +103,9 @@ public sealed class ToolPanel
 		_viewButton = Make("View", "Esc");
 		ToolTip.SetTip(_viewButton, "Look around and click objects to select them.");
 		_viewButton.Click += (_, _) => Choose(null);
+		_selectButton = Make("Select", "E");
+		ToolTip.SetTip(_selectButton, "Select (E): click objects, or drag on the ground around them; then move, turn, lift or delete them.");
+		_selectButton.Click += (_, _) => ChooseSelect();
 		rail.Children.Add(new TextBlock { Text = "SCULPT", FontSize = 10, Foreground = Brushes.Gray, Margin = new Thickness(4, 6, 0, 0) });
 		foreach (var (t, key) in Keys)
 		{
@@ -164,10 +171,17 @@ public sealed class ToolPanel
 		Choose(null);
 	}
 
-	public void Choose(BrushTool? t)
+	public void ChooseSelect()
+	{
+		Choose(null, select: true);
+	}
+
+	public void Choose(BrushTool? t, bool select = false)
 	{
 		Tool = t;
-		_viewButton.Background = t == null ? On : Off;
+		SelectMode = t == null && select;
+		_viewButton.Background = t == null && !select ? On : Off;
+		_selectButton.Background = SelectMode ? On : Off;
 		foreach (var (k, b) in _buttons)
 		{
 			b.Background = k == t ? On : Off;
@@ -189,6 +203,11 @@ public sealed class ToolPanel
 		if (key == "Escape")
 		{
 			Choose(null);
+			return true;
+		}
+		if (key == "E")
+		{
+			ChooseSelect();
 			return true;
 		}
 		foreach (var (t, k) in Keys)
