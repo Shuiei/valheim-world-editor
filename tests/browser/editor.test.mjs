@@ -357,6 +357,34 @@ test('brush shapes: square, ring and falloff change where the brush works', asyn
   noErrors();
 });
 
+test('stamps: a mesa stamped once, and a picture loaded as a stamp', async () => {
+  await openEditor();
+  await page().keyboard.press('1');
+  const c = (await records()).find(r => r.name === 'piece_chest_wood');
+  const spot = [c.x + 22, c.z + 22];
+  await page().evaluate(() => {
+    const s = (id, v) => { const e = document.getElementById(id); e.value = v; e.dispatchEvent(new Event('input')); };
+    s('bShape', 'stamp:mesa'); s('radius', 8); document.getElementById('stOnce').checked = true; document.getElementById('stOnce').dispatchEvent(new Event('input')); s('stHeight', 3);
+  });
+  const before = await page().evaluate(([x, z]) => { const ed = window.__ed; return ed.sampleHeight(x - ed.originX, z - ed.originZ); }, spot);
+  await lookAt(page(), ...spot);
+  const [x, y] = await screenOf(page(), ...spot);
+  await page().mouse.click(x, y); await sleep(800);
+  const after = await page().evaluate(([x, z]) => { const ed = window.__ed; return ed.sampleHeight(x - ed.originX, z - ed.originZ); }, spot);
+  assert.ok(Math.abs(after - before - 3) < 0.3, `the mesa's flat top is 3 m up (${(after - before).toFixed(2)})`);
+  await page().click('#undo'); await sleep(800);
+  // A picture: a white square on black, loaded from a file.
+  const png = await page().evaluate(() => { const c = document.createElement('canvas'); c.width = c.height = 32; const g = c.getContext('2d'); g.fillStyle = '#000'; g.fillRect(0, 0, 32, 32); g.fillStyle = '#fff'; g.fillRect(8, 8, 16, 16); return c.toDataURL('image/png'); });
+  const file = path.join(t.home, 'square-stamp.png');
+  fs.writeFileSync(file, Buffer.from(png.split(',')[1], 'base64'));
+  await (await page().$('#stFile')).uploadFile(file);
+  await page().waitForFunction(() => document.getElementById('bShape').selectedOptions[0]?.text === 'Stamp: square-stamp');
+  const w = await page().evaluate(() => [window.__ed.brush.weight(0, 0, 10), window.__ed.brush.weight(9, 9, 10)]);
+  assert.ok(w[0] > 0.9 && w[1] < 0.05, `white middle works, black corner not (${w})`);
+  await page().evaluate(() => { const s = (id, v) => { const e = document.getElementById(id); e.value = v; e.dispatchEvent(new Event('input')); }; document.getElementById('stOnce').checked = false; s('bShape', 'circle'); });
+  noErrors();
+});
+
 test('undo takes a change back and the counter clears', async () => {
   await openEditor();
   await page().keyboard.press('Escape');
