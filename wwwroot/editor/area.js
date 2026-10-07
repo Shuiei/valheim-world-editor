@@ -164,12 +164,21 @@ export function createArea(ed) {
     if (!poly) return null;
     let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity;
     for (const p of poly) { x0 = Math.min(x0, p.gx); x1 = Math.max(x1, p.gx); z0 = Math.min(z0, p.gz); z1 = Math.max(z1, p.gz); }
-    x0 = Math.max(0, Math.floor(x0)); x1 = Math.min(W - 1, Math.ceil(x1)); z0 = Math.max(0, Math.floor(z0)); z1 = Math.min(H - 1, Math.ceil(z1));
+    x0 = Math.max(0, Math.floor(x0) - 1); x1 = Math.min(W - 1, Math.ceil(x1) + 1); z0 = Math.max(0, Math.floor(z0) - 1); z1 = Math.min(H - 1, Math.ceil(z1) + 1);
     const s = soft(), cells = [];
     for (let gz = z0; gz <= z1; gz++) for (let gx = x0; gx <= x1; gx++) {
-      if (!inside(poly, gx, gz)) continue;
-      const g = gz * W + gx;
-      let w = s > 0 ? smooth01(Math.min(1, edgeDist(poly, gx, gz) / s)) : 1;
+      const g = gz * W + gx, inPoly = inside(poly, gx, gz);
+      let w;
+      if (s > 0) {
+        if (!inPoly) continue;
+        w = smooth01(Math.min(1, edgeDist(poly, gx, gz) / s));
+      } else {
+        // No soft edge: the points the outline crosses (within half a metre) get a share, so the edge
+        // follows the outline straight instead of stepping from ground point to ground point.
+        const d = edgeDist(poly, gx, gz);
+        w = inPoly ? Math.min(1, 0.5 + d) : 0.5 - d;
+        if (w <= 0) continue;
+      }
       if (withMask) w *= ed.mask(g);
       if (w > 0) cells.push([g, w]);
     }
@@ -578,7 +587,8 @@ export function createArea(ed) {
   function zonesUnder() {
     const a = areaWeights(false); if (!a) return [];
     const set = new Set();
-    for (const [g] of a.cells) {
+    for (const [g, w] of a.cells) {
+      if (w < 0.5) continue;   // a point just outside the outline (its straight edge) does not count
       const gx = g % W, gz = (g - gx) / W;
       const zx = Math.min(ed.size - 1, Math.floor(gx / 64)), zz = Math.min(ed.size - 1, Math.floor(gz / 64));
       set.add(`${ed.X0 + zx},${ed.Z0 + zz}`);

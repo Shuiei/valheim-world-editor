@@ -25,7 +25,7 @@ hold and drag. The yellow ring on the ground is the brush. All of them work with
 | **Size** | Brush radius in metres (`[` and `]` change it). The effect fades out smoothly towards the edge of the ring. |
 | **Strength** | How fast the brush works while you hold the button. |
 | **Shape** | **Circle**; **Square**; **Ring** (only the band between 40% of the size and the edge, shown by a second, fainter outline inside: crater rims, moats, walls of earth); **Ragged** (a noisy, natural-looking edge); or a picture, see [Stamps](#stamps). The ring on the ground shows the shape. |
-| **Falloff** | How the effect fades from the middle to the edge: **Smooth** (the default), **Linear**, **Dome** (round top, steep sides), **Flat top** (full strength almost to the edge: pads and terraces), **Peak** (strong in the middle only: spires and pits). |
+| **Falloff** | How the effect fades from the middle to the edge: **Smooth** (the default), **Linear**, **Dome** (round top, steep sides), **Flat top** (full strength almost to the edge: pads and terraces), **Peak** (strong in the middle only: spires and pits), **Sharp edge** (full strength right to the edge and nothing beyond: steep walls, like the game's pickaxe). |
 | **Turn** | Turns a square brush or a picture (degrees); `,` and `.` change it by 1° (Shift: 15°). |
 | **Mask** | Limits the brush to some ground, see [Mask](masks.md). |
 
@@ -94,6 +94,12 @@ Paint uses the same Size, Strength and Mask settings. Paint changes only how the
 what grows there; it does not change its height.
 
 ## Things to know
+
+- **Steep walls.** The ground has one height point per metre, so a wall always spans about a metre:
+  it cannot be more vertical than that, in the editor or in game. Each square metre is drawn as two
+  triangles split along the same diagonal as in game (south-east to north-west corner), so an edge
+  running north-west to south-east comes out clean, and one running north-east to south-west shows
+  a small sawtooth, in game too.
 
 - **The 8 m limit.** The game stores ground changes as an offset from the generated ground and
   allows at most ±8 m. Points that reach it turn red and the status bar says so.

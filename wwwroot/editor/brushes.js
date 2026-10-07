@@ -9,6 +9,8 @@ const FALLOFF = {
   dome: t => Math.sqrt(Math.max(0, 1 - (1 - t) * (1 - t))),
   flat: t => t >= 0.2 ? 1 : (t / 0.2) * (t / 0.2) * (3 - 2 * t / 0.2),
   peak: t => t * t * t,
+  // Full strength right up to the edge, nothing beyond: steep walls, like the game's pickaxe.
+  sharp: t => t > 0 ? 1 : 0,
 };
 
 export function createBrushes(ed) {
@@ -20,7 +22,7 @@ export function createBrushes(ed) {
       <option value="circle">Circle</option><option value="square">Square</option><option value="ring">Ring</option><option value="noise">Ragged (noise)</option>
     </select></label>
     <label class="field">Falloff <select id="bFalloff">
-      <option value="smooth">Smooth</option><option value="linear">Linear</option><option value="dome">Dome</option><option value="flat">Flat top</option><option value="peak">Peak</option>
+      <option value="smooth">Smooth</option><option value="linear">Linear</option><option value="dome">Dome</option><option value="flat">Flat top</option><option value="peak">Peak</option><option value="sharp">Sharp edge (pickaxe)</option>
     </select></label>
     <label class="field" id="bTurnRow">Turn <input id="bTurn" type="range" min="-180" max="180" step="1" value="0"><span id="bTurnV"></span></label>`;
   document.querySelector('[data-for-tools="brush"]').appendChild(box);

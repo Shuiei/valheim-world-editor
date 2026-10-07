@@ -22,7 +22,7 @@ The panel shows the selected surface and how many shown objects are inside.
 
 | Control | What it does |
 |---|---|
-| **Soft edge** | Ground actions fade out over this many metres inside the edge of the selection, so the result blends in. |
+| **Soft edge** | Ground actions fade out over this many metres inside the edge of the selection, so the result blends in. At **0** the edge is as sharp as the ground allows and follows the outline straight. |
 | **Flatten** | Levels the ground inside to **Height**. |
 | **Raise** / **Lower** | Lifts / digs the ground inside by **Amount**. |
 | **Smooth** | Evens out bumps inside. |

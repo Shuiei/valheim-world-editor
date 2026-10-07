@@ -27,7 +27,7 @@ export const TIPS = {
   shHeight: 'Height of the shape (m), as h in the formula. Craters, moats and bowls dig this deep.',
   shExpr: 'Metres to add to the ground at each point. x, z: metres east and north of the click; d: distance from it; r: radius; h: height; n(x, z): noise from -1 to 1.',
   bShape: 'Shape of the brush: circle, square, ring (only a band around the middle, between the inner and outer outlines on the ground: rims and moats), ragged (a noisy edge for natural-looking strokes), or a picture (Stamps).',
-  bFalloff: 'How the effect fades from the middle to the edge: smooth, linear, dome (round top), flat top (full strength almost to the edge), or peak (strong in the middle only).',
+  bFalloff: 'How the effect fades from the middle to the edge: smooth, linear, dome (round top), flat top (full strength almost to the edge), peak (strong in the middle only), or sharp edge (full strength right to the edge: steep walls, like the pickaxe).',
   bTurn: 'Turn of a square brush or a picture (degrees). , and . change it (Shift: 15°).',
   stLoad: 'Load a picture (PNG, JPEG...) as a brush shape: white parts work fully, black parts not at all. It is kept in this browser.',
   stRemove: 'Forget the loaded picture chosen as Shape.',
