@@ -267,4 +267,26 @@ test('placed pieces are player built, and Make player built fixes old ones', asy
   noErrors();
 });
 
+test('Delete removes the selection, undo brings it back; Deselect clears it', async () => {
+  await openEditor();
+  const tree = (await records()).find(r => r.name === 'Beech1' && !r.added);
+  await page().evaluate(id => { window.__ed.setTool('select'); window.__ed.selectIds([id]); document.activeElement?.blur(); }, tree.id);
+  const deletedNow = async () => +((await pending()).match(/(\d+) deleted/)?.[1] ?? 0);
+  const d0 = await deletedNow();
+  await page().keyboard.press('Delete'); await sleep(500);
+  assert.ok(!(await records()).some(r => r.id === tree.id), 'deleted');
+  for (let i = 0; i < 40 && await deletedNow() !== d0 + 1; i++) await sleep(250);
+  assert.equal(await deletedNow(), d0 + 1, 'counted as one more deletion');
+  await page().click('#undo'); await sleep(500);
+  assert.ok((await records()).some(r => r.id === tree.id), 'back');
+  await page().evaluate(id => window.__ed.selectIds([id]), tree.id);
+  await page().click('#selDelete'); await sleep(500);
+  assert.ok(!(await records()).some(r => r.id === tree.id), 'the Delete button too');
+  await page().click('#undo'); await sleep(500);
+  await page().evaluate(id => window.__ed.selectIds([id]), tree.id);
+  await page().click('#selClear');
+  assert.equal(await page().evaluate(() => window.__ed.selection.size), 0, 'Deselect');
+  noErrors();
+});
+
 });

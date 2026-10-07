@@ -4,6 +4,12 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v0.38.1 — 2026-10-07 (fixes found by new tests)
+
+### Fixed
+- Area tool: after Undo or Redo, the counts of what is inside the selection and the Replace list
+  still showed what was there before (the Replace list could be empty while trees were back).
+
 ## v0.38.0 — 2026-10-07 (lighter 3D view)
 
 ### Changed

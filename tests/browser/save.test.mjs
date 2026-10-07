@@ -127,4 +127,44 @@ test('history survives a reload of the page and a move of the work area', async 
   noErrors();
 });
 
+test('history panel: redo, back to here, redo to here, remove one change; Discard undoes the rest', async () => {
+  await openEditor();
+  const c = (await records()).find(r => r.name === 'piece_chest_wood');
+  const spots = [[c.x + 20, c.z - 20], [c.x + 40, c.z - 20], [c.x + 60, c.z - 20]];
+  await lookAt(page(), c.x + 40, c.z - 20, 0, 70, 40);
+  const h = () => page().evaluate(ps => ps.map(([x, z]) => { const ed = window.__ed; return ed.sampleHeight(x - ed.originX, z - ed.originZ); }), spots);
+  const h0 = await h();
+  await page().keyboard.press('1');
+  for (const p of spots) { const [x, y] = await screenOf(page(), ...p); await page().mouse.move(x, y); await page().mouse.down(); await page().mouse.move(x + 2, y + 2, { steps: 20 }); await page().mouse.up(); await sleep(400); }
+  const up = (now, i) => now[i] > h0[i] + 0.05;
+  assert.ok((await h()).every((v, i) => v > h0[i] + 0.05), 'three raises');
+  await page().click('#historyToggle');
+  const rows = () => page().$$eval('#histList .hrow', r => r.map(x => x.className));
+  assert.equal((await rows()).length, 3);
+  // Ctrl+Z, then Redo.
+  await page().keyboard.down('Control'); await page().keyboard.press('z'); await page().keyboard.up('Control'); await sleep(400);
+  assert.ok(!up(await h(), 2), 'undo took the last one back');
+  await page().click('#redo'); await sleep(400);
+  assert.ok(up(await h(), 2), 'redo put it back');
+  // Back to here on the first change: the two after it are undone, and listed greyed.
+  await page().click('#histList .hrow:nth-child(3) [data-act="back"]'); await sleep(500);
+  let now = await h();
+  assert.ok(up(now, 0) && !up(now, 1) && !up(now, 2), 'back to the first change');
+  assert.equal((await rows()).filter(c => c.includes('undone')).length, 2);
+  // Redo to here on the newest: everything is back.
+  await page().click('#histList .hrow:nth-child(1) [data-act="fwd"]'); await sleep(500);
+  now = await h();
+  assert.ok(up(now, 0) && up(now, 1) && up(now, 2), 'redone up to the last');
+  // Remove the middle one only.
+  await page().click('#histList .hrow:nth-child(2) [data-act="rm"]'); await sleep(500);
+  now = await h();
+  assert.ok(up(now, 0) && !up(now, 1) && up(now, 2), 'only the middle change taken out');
+  // Discard: back to the saved world, in place.
+  await page().click('#discardBtn'); await sleep(1000);
+  now = await h();
+  assert.ok(now.every((v, i) => Math.abs(v - h0[i]) < 0.01), 'Discard undid the rest');
+  assert.match(await pending(), /saved/i);
+  noErrors();
+});
+
 });

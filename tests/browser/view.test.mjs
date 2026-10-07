@@ -112,4 +112,54 @@ test('the 3D view is drawn only while something happens, and Help says what draw
   noErrors();
 });
 
+test('measure: two clicks give the distance, heights and slope; Esc and Clear start over', async () => {
+  await openEditor();
+  const c = (await records()).find(r => r.name === 'piece_chest_wood');
+  const A = [c.x + 10, c.z - 10], B = [c.x + 30, c.z - 10];
+  await lookAt(page(), c.x + 20, c.z - 10, 0, 45, 30);
+  await page().keyboard.press('m'); await sleep(200);
+  assert.match(await page().$eval('#msHint', e => e.textContent), /first point/);
+  for (const p of [A, B]) { const [x, y] = await screenOf(page(), ...p); await page().mouse.click(x, y); await sleep(200); }
+  const out = await page().$eval('#msOut', e => e.textContent);
+  const dist = +out.match(/Distance\s*([\d.]+) m/)[1];
+  assert.ok(Math.abs(dist - 20) < 1, `about 20 m (${dist})`);
+  const hA = await page().evaluate(([x, z]) => { const ed = window.__ed; return ed.sampleHeight(x - ed.originX, z - ed.originZ); }, A);
+  const shownA = +out.match(/Height A → B\s*(-?[\d.]+) →/)[1];
+  assert.ok(Math.abs(shownA - hA) < 0.5, `height at A (${shownA} vs ${hA.toFixed(2)})`);
+  assert.match(out, /Slope\s*-?\d+ %/);
+  await page().keyboard.press('Escape'); await sleep(100);
+  assert.equal(await page().$eval('#msOut', e => e.textContent.trim()), '');
+  for (const p of [A, B]) { const [x, y] = await screenOf(page(), ...p); await page().mouse.click(x, y); await sleep(200); }
+  await page().click('#msClear');
+  assert.equal(await page().$eval('#msOut', e => e.textContent.trim()), '');
+  noErrors();
+});
+
+test('script console: keep and delete your own scripts, Ctrl+Enter runs, examples work inside the selection', async () => {
+  await openEditor();
+  await page().click('#scriptToggle');
+  await page().evaluate(() => { window.prompt = () => 'My count'; });
+  await page().$eval('#scCode', e => { e.value = 'vwe.log("hello", 1 + 1);'; });
+  await page().click('#scSave');
+  assert.equal(await page().$eval('#scPick', e => e.value), 'my:My count', 'kept under its name');
+  assert.equal(await page().$eval('#scDel', e => e.disabled), false);
+  await page().focus('#scCode');
+  await page().keyboard.down('Control'); await page().keyboard.press('Enter'); await page().keyboard.up('Control'); await sleep(400);
+  assert.match(await page().$eval('#scOut', e => e.textContent), /hello 2/, 'Ctrl+Enter ran it');
+  await page().click('#scDel');
+  assert.ok(!(await page().$$eval('#scPick option', o => o.map(x => x.value))).includes('my:My count'), 'deleted');
+  // An example inside an Area selection: the kinds counted there.
+  await page().click('#scriptToggle');
+  const tree = (await records()).find(r => r.name === 'Beech1' && !r.added);
+  await lookAt(page(), tree.x, tree.z, 0, 50, 35);
+  await page().keyboard.press('b'); await sleep(200);
+  const [ax, ay] = await screenOf(page(), tree.x - 5, tree.z - 5), [bx, by] = await screenOf(page(), tree.x + 5, tree.z + 5);
+  await page().mouse.move(ax, ay); await page().mouse.down(); await page().mouse.move(bx, by, { steps: 8 }); await page().mouse.up(); await sleep(300);
+  await page().click('#scriptToggle');
+  await page().select('#scPick', 'ex:Count the kinds in the selection');
+  await page().click('#scRun'); await sleep(800);
+  assert.match(await page().$eval('#scOut', e => e.textContent), /Beech1/, 'the beech inside is counted');
+  noErrors();
+});
+
 });

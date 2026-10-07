@@ -250,6 +250,8 @@ export function createArea(ed) {
     document.querySelectorAll('select.typeList').forEach(s => { const v = s.value; s.innerHTML = html; if (v) s.value = v; });
   }
   (ed.onObjects ??= []).push(() => { fillTypeLists(); updateInfo(); });
+  // Undo, redo, other tools: what is inside the selection changed, so do its counts and Replace list.
+  (ed.onObjectsChanged ??= []).push(() => { if (ed.tool === 'area' && polygon()) updateInfo(); });
 
   // ---- Ground actions.
   function groundAction(act) {

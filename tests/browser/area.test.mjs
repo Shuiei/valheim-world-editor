@@ -198,4 +198,77 @@ test('cut and fill: Flatten\'s estimate matches what it then does', async () => 
   noErrors();
 });
 
+test('area actions on objects: remove, select, replace; Ctrl+C copies; Lower; reset zones and cancel', async () => {
+  await openEditor();
+  const tree = (await records()).find(r => r.name === 'Beech1' && !r.added);
+  await lookAt(page(), tree.x, tree.z, 0, 50, 35);
+  await page().keyboard.press('b'); await sleep(200);
+  await page().$eval('#aSoft', e => { e.value = 0; e.dispatchEvent(new Event('input')); });
+  const [ax, ay] = await screenOf(page(), tree.x - 5, tree.z - 5), [bx, by] = await screenOf(page(), tree.x + 5, tree.z + 5);
+  await page().mouse.move(ax, ay); await page().mouse.down(); await page().mouse.move(bx, by, { steps: 8 }); await page().mouse.up(); await sleep(300);
+  const inside = async name => (await records()).filter(r => Math.abs(r.x - tree.x) <= 5 && Math.abs(r.z - tree.z) <= 5 && (!name || r.name === name));
+  const beeches = (await inside('Beech1')).length;
+  assert.ok(beeches >= 1, 'a beech inside');
+  // Remove objects (trees are among the chosen kinds), then undo.
+  await applyArea('remove'); await sleep(500);
+  assert.equal((await inside('Beech1')).length, 0, 'removed');
+  await page().click('#undo'); await sleep(500);
+  assert.equal((await inside('Beech1')).length, beeches, 'back');
+  // Replace Beech1 with Oak1.
+  await areaAction('replace');
+  const from = await page().$$eval('#aFrom option', o => o.map(x => x.value));
+  assert.ok(from.includes('Beech1'), `Beech1 offered (${from})`);
+  await page().select('#aFrom', 'Beech1'); await page().select('#aTo', 'Oak1');
+  await page().click('#aApply'); await sleep(800);
+  assert.equal((await inside('Beech1')).length, 0, 'no beech left');
+  assert.ok((await inside('Oak1')).length >= beeches, 'oaks in their place');
+  await page().click('#undo'); await sleep(800);
+  assert.equal((await inside('Beech1')).length, beeches, 'replace undone');
+  // Ctrl+C in the Area tool copies the shown objects inside.
+  await page().keyboard.down('Control'); await page().keyboard.press('c'); await page().keyboard.up('Control'); await sleep(300);
+  const clip = await page().evaluate(() => { const c = window.__ed.getClipboard(); return { w: c.w, n: c.objects.length }; });
+  assert.ok(clip.w >= 10 && clip.n >= beeches, `copied (${JSON.stringify(clip)})`);
+  // Lower by 2 m, undo.
+  const h = () => page().evaluate(([x, z]) => { const ed = window.__ed; return ed.sampleHeight(x - ed.originX, z - ed.originZ); }, [tree.x + 2, tree.z + 2]);
+  const h0 = await h();
+  await areaAction('lower');
+  await page().$eval('#aAmount', e => { e.value = 2; e.dispatchEvent(new Event('input')); });
+  await page().click('#aApply'); await sleep(500);
+  assert.ok(Math.abs((await h()) - (h0 - 2)) < 0.2, 'lowered 2 m');
+  await page().click('#undo'); await sleep(500);
+  // Reset zones (confirmed), then Cancel reset.
+  await applyArea('reset'); await sleep(800);
+  assert.match(await pending(), /reset/, 'a zone marked for reset');
+  await page().click('#aUnreset'); await sleep(800);
+  assert.doesNotMatch(await pending(), /reset/, 'reset cancelled');
+  // Select objects: the chosen kinds inside become the selection, in the Select tool.
+  await areaAction('select'); await page().click('#aApply'); await sleep(300);
+  assert.equal(await page().evaluate(() => window.__ed.tool), 'select');
+  assert.ok(await page().evaluate(() => window.__ed.selection.size) >= beeches, 'selected');
+  noErrors();
+});
+
+test('blueprints: written as .blueprint and .vbuild from the library, and deleted', async () => {
+  await openEditor();
+  const tree = (await records()).find(r => r.name === 'Beech1' && !r.added);
+  await page().evaluate(id => { window.__ed.setTool('select'); window.__ed.selectIds([id]); document.activeElement?.blur(); }, tree.id);
+  await page().keyboard.down('Control'); await page().keyboard.press('c'); await page().keyboard.up('Control');
+  await page().evaluate(() => { window.__ed.setTool('area'); window.prompt = () => 'export test'; });
+  await areaAction('copy');
+  await page().click('#aSaveBp');
+  let list = [];
+  for (let i = 0; i < 60 && !list.some(b => b.name === 'export test'); i++) { await sleep(250); ({ list } = await t.api('/api/blueprints')); }
+  const n = list.length, id = list.find(b => b.name === 'export test').id;
+  await page().click('#aLibrary');
+  await page().waitForSelector(`#bpList .bp[data-id="${id}"]`);
+  for (const f of ['blueprint', 'vbuild']) {
+    await page().click(`#bpList .bp[data-id="${id}"] [data-act="${f}"]`);
+    await page().waitForFunction(f => /Written to .*\.(blueprint|vbuild)/.test(document.getElementById('sMsg').textContent) && document.getElementById('sMsg').textContent.includes('.' + f), {}, f);
+  }
+  await page().click(`#bpList .bp[data-id="${id}"] [data-act="delete"]`);
+  for (let i = 0; i < 40 && list.length === n; i++) { await sleep(250); ({ list } = await t.api('/api/blueprints')); }
+  assert.equal(list.length, n - 1, 'deleted');
+  noErrors();
+});
+
 });
