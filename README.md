@@ -20,6 +20,8 @@ opens a Valheim world in its own window, drawn with the game's own terrain, text
   change what they hold**: chest contents, sign texts, portal tags...
 - **Search the whole world** for a kind of object, an item in any chest, or a sign's text.
 - **Measure** distances and slopes, and see the ground coloured by steepness.
+- **Restore an area from a backup**, ground and objects, to undo griefing without rolling back
+  the whole world.
 - **Undo anything**, with a history panel that can roll back to any point or remove one change.
 
 There are three ways to edit, all on the start page:

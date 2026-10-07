@@ -1,7 +1,8 @@
 // Area tool (WorldEdit-style selections): select a box or polygon of ground, then change the ground
 // inside it, remove / select / replace the objects in it, copy and paste it, or hand its zones back
 // to the world generator. Also the Paste tool and "Replace with" for the Select tool.
-import { KINDS, KIND_LABEL } from './objects.js';
+import { KINDS, KIND_LABEL, objectKind } from './objects.js';
+import { isWindow, pickFolder } from '../app.js';
 
 const PAINTS = { dirt: [1, 0, 0, 1], cultivated: [0, 1, 0, 1], paved: [0, 0, 1, 1], natural: [0, 0, 0, 1] };
 const smooth01 = t => t * t * (3 - 2 * t);
@@ -51,6 +52,13 @@ export function createArea(ed) {
       <div class="row"><button id="aCopy">Copy <kbd>Ctrl+C</kbd></button><button id="aPasteBtn">Paste <kbd>Ctrl+V</kbd></button></div>
       <div class="row"><button id="aSaveBp">Save blueprint…</button><button id="aLibrary">Blueprints…</button></div>
       <div class="hint" id="aClip"></div>
+    </div>
+    <div class="sub"><h3>Restore from a backup</h3>
+      <label class="field">Backup <select id="aBackup"><option value="">Choose a backup…</option></select></label>
+      <label class="check"><input type="checkbox" id="aBkGround" checked> Ground (height and paint)</label>
+      <label class="check"><input type="checkbox" id="aBkObjects" checked> Objects of the kinds ticked above</label>
+      <div class="row"><button id="aBkRestore">Restore the selection</button></div>
+      <div class="hint" id="aBkInfo">Puts the selection back as it was in a backup: the editor's backups and the game's own are listed. Tick Buildings above to bring buildings back too.</div>
     </div>
     <div class="sub"><h3>Reset zones</h3>
       <label class="check"><input type="checkbox" id="aKeepB" checked> Keep my buildings</label>
@@ -443,6 +451,101 @@ export function createArea(ed) {
   $('psFlip').onclick = () => { flip = !flip; updateGhost(); };
   $('psDone').onclick = () => ed.setTool('area');
   for (const id of ['psOffset', 'psCount', 'psDir', 'psGap']) $(id).addEventListener('input', updateGhost);
+
+  // ---- Restore from a backup (WorldEdit's //restore): the ground and objects inside the selection as
+  // they were in a backup of this world. Objects unchanged since then are left alone.
+  let backupOpen = null;
+  async function fillBackups() {
+    const list = await (await fetch('/api/backups')).json().catch(() => []);
+    const keep = $('aBackup').value;
+    $('aBackup').innerHTML = `<option value="">Choose a backup…</option>${list.map(b => `<option value="${b.path.replace(/"/g, '&quot;')}">${b.kind === 'game' ? 'Game' : 'Editor'} · ${new Date(b.date).toLocaleString()}</option>`).join('')}<option value="__other">Another folder…</option>`;
+    if (keep && [...$('aBackup').options].some(o => o.value === keep)) $('aBackup').value = keep;
+  }
+  $('aBackup').addEventListener('change', async () => {
+    if ($('aBackup').value !== '__other') return;
+    const path = isWindow ? await pickFolder('Choose a backup (or copy) of this world: the folder with _main.<n>.chunks') : prompt('Folder of a backup or copy of this world (with its _main.<n>.chunks file):');
+    if (!path) { $('aBackup').value = ''; return; }
+    const o = document.createElement('option'); o.value = path; o.textContent = path;
+    $('aBackup').insertBefore(o, $('aBackup').lastElementChild); $('aBackup').value = path;
+  });
+  ed.onToolChange.push(t => { if (t === 'area') fillBackups(); });
+  async function openBackup(path) {
+    if (backupOpen?.path === path) return backupOpen;
+    $('aBkInfo').textContent = 'Reading the backup…';
+    const r = await fetch('/api/backup/open', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path }) });
+    if (!r.ok) { const why = await r.text(); $('aBkInfo').textContent = why; ed.msg(why, true); return null; }
+    backupOpen = await r.json();
+    $('aBkInfo').textContent = `Backup: save #${backupOpen.saveNumber} of ${backupOpen.name}, ${backupOpen.objects.toLocaleString()} objects (${new Date(backupOpen.date).toLocaleString()}).`;
+    return backupOpen;
+  }
+  $('aBkRestore').onclick = async () => {
+    const poly = polygon();
+    if (!poly) { ed.msg('Select an area first.', true); return; }
+    const path = $('aBackup').value;
+    if (!path || path === '__other') { ed.msg('Choose a backup first.', true); return; }
+    if (!await openBackup(path)) return;
+    const box = `x0=${ed.X0}&z0=${ed.Z0}&x1=${ed.X1}&z1=${ed.Z1}`;
+    const state = ed.snapshotState(), touched = new Set();
+    let a = { x0: 0, x1: W - 1, z0: 0, z1: H - 1 };
+    if ($('aBkGround').checked) {
+      const { zones } = await (await fetch(`/api/backup/region?${box}`)).json();
+      const bmod = new Uint8Array(N), blevel = new Float32Array(N), bsmooth = new Float32Array(N), bpmod = new Uint8Array(N), bpaint = new Float32Array(N * 4);
+      for (const z of zones) {
+        const ox = (z.x - ed.X0) * 64, oz = (z.z - ed.Z0) * 64;
+        for (let k = 0; k < 65; k++) for (let l = 0; l < 65; l++) {
+          const i = k * 65 + l, g = (oz + k) * W + ox + l;
+          bmod[g] = z.modified[i] ? 1 : 0; blevel[g] = z.level[i]; bsmooth[g] = z.smooth[i]; bpmod[g] = z.paintModified[i] ? 1 : 0;
+          for (let c = 0; c < 4; c++) bpaint[g * 4 + c] = z.paint[i * 4 + c];
+        }
+      }
+      const aw = areaWeights(); a = aw;
+      for (const [g, w] of aw.cells) {
+        const gx = g % W, gz = (g - gx) / W;
+        if (ed.locked(gx, gz)) continue;
+        if (w > 0.999) {
+          // Inside the soft edge: exactly as in the backup.
+          ed.mod[g] = bmod[g]; ed.level[g] = blevel[g]; ed.smooth[g] = bsmooth[g]; ed.pmod[g] = bpmod[g];
+          for (let c = 0; c < 4; c++) ed.paint[g * 4 + c] = bpaint[g * 4 + c];
+        } else {
+          const hb = bmod[g] ? Math.max(ed.base[g] - 8, Math.min(ed.base[g] + 8, ed.base[g] + blevel[g] + bsmooth[g])) : ed.base[g], h = ed.height(g);
+          ed.setHeight(g, h + (hb - h) * w);
+          if (bpmod[g] || ed.pmod[g]) {
+            if (!ed.pmod[g]) { ed.paint.set([0, 0, 0, 1], g * 4); ed.pmod[g] = 1; }
+            const target = bpmod[g] ? [0, 1, 2, 3].map(c => bpaint[g * 4 + c]) : [0, 0, 0, 1];
+            for (let c = 0; c < 4; c++) ed.paint[g * 4 + c] += (target[c] - ed.paint[g * 4 + c]) * w;
+          }
+        }
+        touched.add(g);
+      }
+    }
+    let deleted = [], added = [];
+    if ($('aBkObjects').checked) {
+      const back = await (await fetch(`/api/backup/objects?${box}`)).json();
+      const pieceNames = ed.objects.state.pieceNames, nameOf = o => o.name ?? ed.objects.state.names[o.prefab] ?? String(o.prefab);
+      const kindOf = o => o.piece || pieceNames.has(nameOf(o)) ? 'buildings' : objectKind(nameOf(o), pieceNames);
+      const inPoly = o => inside(poly, o.x - ed.originX, o.z - ed.originZ);
+      const wanted = back.filter(o => inPoly(o) && kindOn.has(kindOf(o)));
+      const current = objectsInside(poly).filter(r => kindOn.has(r.kind));
+      // Unchanged since the backup (same kind, place and facing): kept as they are.
+      const same = (r, o) => r.prefab === o.prefab && Math.abs(r.x - o.x) < 0.01 && Math.abs(r.y - o.y) < 0.01 && Math.abs(r.z - o.z) < 0.01 && Math.abs(((r.ry - o.ry) % 360 + 540) % 360 - 180) < 0.6;
+      const keep = new Set(), bring = [];
+      for (const o of wanted) { const r = current.find(c => !keep.has(c.id) && same(c, o)); if (r) keep.add(r.id); else bring.push(o); }
+      deleted = current.filter(r => !keep.has(r.id)).map(r => r.id);
+      const pairs = bring.map(o => ({ backupId: o.id, newId: ed.objects.reserveId(), o }));
+      if (deleted.length) await ed.setDeleted(deleted, true);
+      if (pairs.length) {
+        const res = await (await fetch('/api/backup/restore', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pairs: pairs.map(p => ({ backupId: p.backupId, newId: p.newId })) }) })).json();
+        ed.showPendingFrom(res.pending);
+        for (const p of pairs) await ed.objects.adopt({ id: p.newId, prefab: p.o.prefab, name: nameOf(p.o), x: p.o.x, y: p.o.y, z: p.o.z, rx: p.o.rx, ry: p.o.ry, rz: p.o.rz, scale: 0 });
+        added = pairs.map(p => p.newId);
+        ed.changed?.();
+      }
+    }
+    if (!touched.size && !deleted.length && !added.length) { ed.msg('Nothing to restore: the selection is as it was in the backup.'); return; }
+    commitTerrain(state, touched, a, { label: 'Restored from backup', ...(deleted.length ? { deleted } : {}), ...(added.length ? { added } : {}) });
+    ed.msg(`Restored from the backup: ${touched.size ? 'the ground, ' : ''}${added.length} object(s) brought back, ${deleted.length} removed. Ctrl+Z undoes it.`);
+    updateInfo();
+  };
 
   // ---- Reset zones.
   const resetGroup = new THREE.Group(); ed.scene.add(resetGroup);
