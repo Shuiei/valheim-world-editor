@@ -256,6 +256,7 @@
   <h3>Look</h3>
   <label class="toggle"><input type="checkbox" id="gameLook" checked><span class="t">Game look</span><span class="meta" id="lookState"></span></label>
   <label class="toggle"><input type="checkbox" id="seeThrough"><span class="t">See-through buildings</span></label>
+  <label class="field">3D resolution <select id="res3d"><option value="sharp">Sharp (the screen's)</option><option value="balanced">Balanced</option><option value="fast">Fast</option></select></label>
   <h3>Nature</h3>
   <label class="toggle"><input type="checkbox" data-show="trees" checked><span class="t">Trees &amp; logs</span><span class="meta" data-count="trees"></span></label>
   <label class="toggle"><input type="checkbox" data-show="rocks" checked><span class="t">Rocks</span><span class="meta" data-count="rocks"></span></label>
@@ -405,7 +406,13 @@ const locked = (gx, gz) => gx === 0 || gz === 0 || gx === W - 1 || gz === H - 1;
 // ---- Scene. Unity is left-handed, three.js right-handed: world (x, y, z) -> (x, y, -z).
 const view = document.getElementById('view');
 const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setPixelRatio(devicePixelRatio);
+// 3D resolution: pixels drawn per screen point. Sharp: the screen's own (×2 on a scaled screen: four
+// times the pixels); Balanced: one; Fast: three quarters of that. Fewer pixels, more frames.
+const RES3D = { sharp: () => devicePixelRatio, balanced: () => Math.min(devicePixelRatio, 1), fast: () => Math.min(devicePixelRatio, 1) * 0.75 };
+const res3dEl = document.getElementById('res3d');
+const res3d = () => RES3D[res3dEl.value] ? res3dEl.value : 'sharp';
+try { const r = localStorage.getItem('view3dRes'); if (r && RES3D[r]) res3dEl.value = r; } catch { }
+renderer.setPixelRatio(RES3D[res3d()]());
 view.appendChild(renderer.domElement);
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(50, 1, 0.5, 3000);
@@ -540,6 +547,11 @@ const innerRing = new THREE.LineLoop(new THREE.BufferGeometry().setAttribute('po
 innerRing.renderOrder = 10; innerRing.frustumCulled = false; innerRing.visible = false; scene.add(innerRing);
 
 function resize() { renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); }
+res3dEl.addEventListener('change', () => {
+  renderer.setPixelRatio(RES3D[res3d()]()); resize();
+  try { localStorage.setItem('view3dRes', res3d()); } catch { }
+  msg(`3D resolution: ${res3dEl.selectedOptions[0].text}, ${renderer.domElement.width}×${renderer.domElement.height} pixels.`);
+});
 addEventListener('resize', resize); resize();
 document.getElementById('loading').remove();
 document.getElementById('title').textContent = `Zones ${X0}…${X1}, ${Z0}…${Z1}`;
@@ -1848,7 +1860,7 @@ const perf = { t0: performance.now(), moved: false, busy: false, frames: 0, work
 const clock = () => { const d = new Date(); return `${d.toTimeString().slice(0, 8)}.${String(d.getMilliseconds()).padStart(3, '0')}`; };
 function perfHeader() {
   const ua = navigator.userAgent.match(/(Firefox|Edg|Chrome|Safari)\/[\d.]+/g)?.join(' ') ?? navigator.userAgent;
-  return `# view ${renderer.domElement.width}×${renderer.domElement.height} px (×${devicePixelRatio}) · ${ua}${/WebKit/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent) ? ' (WebKit)' : ''}`
+  return `# view ${renderer.domElement.width}×${renderer.domElement.height} px (screen ×${+devicePixelRatio.toFixed(2)}, 3D resolution ${res3d()}) · ${ua}${/WebKit/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent) ? ' (WebKit)' : ''}`
     + ` · GPU: ${ed.gpu?.name ?? '?'} · game look ${look ? 'on' : 'off'} · tool ${tool} · ${objects.records.size} objects · area ${size}×${size} zones`;
 }
 function perfSample(now) {

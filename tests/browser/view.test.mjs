@@ -130,6 +130,12 @@ test('the 3D view is drawn only while something happens, and Help says what draw
   assert.match(log, /^# \d{4}-\d\d-\d\d \d\d:\d\d:\d\d  v[\d.]+  browser \(--browser\)  view \d+×\d+ px/m, `header line (${log.slice(0, 300)})`);
   assert.match(log, /^\d\d:\d\d:\d\d\.\d{3}  moving  +\d+ fps +\d+ frames +[\d.]+ ms work  longest gap \d+ ms$/m, 'a sample while the camera moved');
   assert.match(log, /^\d\d:\d\d:\d\d\.\d{3}  still   +\d+ fps/m, 'a sample with the camera still');
+  // 3D resolution: Fast draws three quarters of a pixel per screen point (remembered).
+  await page().evaluate(() => { document.getElementById('viewPanel').hidden = false; const e = document.getElementById('res3d'); e.value = 'fast'; e.dispatchEvent(new Event('change')); });
+  const w = await page().evaluate(() => [window.__ed.renderer.domElement.width, innerWidth]);
+  assert.ok(Math.abs(w[0] - w[1] * 0.75 * Math.min(1, 1)) <= 1, `three quarters wide (${w})`);
+  assert.equal(await page().evaluate(() => localStorage.getItem('view3dRes')), 'fast');
+  await page().evaluate(() => { const e = document.getElementById('res3d'); e.value = 'sharp'; e.dispatchEvent(new Event('change')); document.getElementById('viewPanel').hidden = true; });
   noErrors();
 });
 
