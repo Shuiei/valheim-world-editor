@@ -129,6 +129,11 @@ piece's snap points),
 `scan_modifiers.py` (`WorldGen/terrain-modifiers.json`) and `scan_prefabs.py`
 (`WorldGen/prefabs.json`: also container sizes, ward radii and crafting station build ranges);
 each takes the output file as argument and the bundle folder in `VWE_BUNDLES`.
+`scan_vegetation.py WorldGen/vegetation.json` makes the game's vegetation rules for Regrow nature
+(ZoneSystem's and the location lists', with the random draws each kind makes when it is created).
+`RegrowProbe` (with `REALWORLD=<world folder> OUT=<file>`) reports how many saved trees and rocks of a
+world the game generated sit where Regrow puts them (61 % on a played Meadows / Black Forest world;
+the rest is mostly the game's physics check against what it placed before, which the editor cannot do).
 `scan_grown.py WorldGen/prefabs.json` (run after `scan_prefabs.py`) adds what each sapling grows into
 (grown crops and trees keep their sapling's grow radius).
 `scan_build_tools.py WorldGen/pieces.json WorldGen/prefabs.json` (run after the other two) adds

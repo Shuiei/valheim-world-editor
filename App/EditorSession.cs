@@ -307,6 +307,17 @@ public static class EditorSession
 		BuilderEndpoints.Map(app, () => world, edits, Pending);
 		BackupEndpoints.Map(app, () => world, edits, Pending);
 		HeightmapEndpoints.Map(app, () => world, terrain, edits);
+		// Regrow nature: what the game's vegetation rules put in zones x0..x1, z0..z1, on the ground as it
+		// is now; only kinds the editor can create (16 zones at most, a few seconds each at worst).
+		app.MapGet("/api/regrow", (int x0, int z0, int x1, int z1) =>
+		{
+			if (x1 < x0 || z1 < z0 || (x1 - x0 + 1) * (z1 - z0 + 1) > 16)
+			{
+				return Results.BadRequest("Choose a smaller area: regrow works on up to 16 zones (256 x 256 m) at once.");
+			}
+			var spots = Regrow.Zones(terrain, edits, world.Seed, x0, z0, x1, z1).Where(s => world.CanCreate(StableHash.Of(s.Name)));
+			return Results.Json(spots.Select(s => new { name = s.Name, x = s.X, y = s.Y, z = s.Z, rx = s.Rx, ry = s.Ry, rz = s.Rz, scale = MathF.Abs(s.Scale - 1f) < 1e-4f ? 0f : s.Scale }));
+		});
 		app.MapGet("/api/zones/stats", () => new { stride = ZoneStats.Stride, data = ZoneStats.Compute(world, edits, (x, z) => (int)terrain.BiomeAt(x * 64f, z * 64f)), resets = edits.Resets.Select(r => new[] { r.X, r.Z }) });
 		app.MapGet("/api/search", (string q, string? what) => WorldSearch.Search(world, edits, q, what is "items" or "texts" ? what : "kinds"));
 

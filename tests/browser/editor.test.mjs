@@ -1133,6 +1133,31 @@ test('Place clumping: groves and clearings instead of an even spread', async () 
   noErrors();
 });
 
+test('Regrow nature puts back the game\'s own vegetation inside the selection', async () => {
+  await openEditor();
+  const c = (await records()).find(r => r.name === 'piece_chest_wood');
+  const spot = [c.x + 40, c.z + 40];
+  await lookAt(page(), ...spot, 0, 120, 0.01);
+  await page().keyboard.press('b'); await sleep(300);
+  const [ax, ay] = await screenOf(page(), spot[0] - 30, spot[1] - 30), [bx, by] = await screenOf(page(), spot[0] + 30, spot[1] + 30);
+  await page().mouse.move(ax, ay); await page().mouse.down(); await page().mouse.move(bx, by, { steps: 6 }); await page().mouse.up(); await sleep(300);
+  const before = (await records()).length;
+  await page().click('#aRegrow');
+  await page().waitForFunction(() => /Regrew|Nothing to regrow/.test(document.getElementById('sMsg').textContent), { timeout: 60000 });
+  const msg = await page().$eval('#sMsg', e => e.textContent);
+  const n = (await records()).length - before;
+  assert.ok(n > 0, `objects regrown (${msg})`);
+  // All inside the selection, none on top of another.
+  const fresh = (await records()).slice(-n);
+  assert.ok(fresh.every(r => Math.abs(r.x - spot[0]) <= 30.5 && Math.abs(r.z - spot[1]) <= 30.5), 'inside the selection');
+  // Again: everything is standing now, so nothing more is added.
+  await page().click('#aRegrow');
+  await page().waitForFunction(() => /Nothing to regrow/.test(document.getElementById('sMsg').textContent), { timeout: 60000 });
+  await page().click('#undo'); await sleep(800);
+  assert.equal((await records()).length, before, 'Ctrl+Z takes them back');
+  noErrors();
+});
+
 test('Worlds goes back to the start page', async () => {
   await page().goto(t.base + '/index.html', { waitUntil: 'networkidle0' });
   await page().click('#worldsBtn');

@@ -115,6 +115,7 @@ export const TIPS = {
   aRemove: 'Remove the objects of the ticked kinds inside the selection.',
   aSelectObj: 'Select the objects of the ticked kinds inside the selection (then use the Select tool on them).',
   aFrom: 'The kind of object to replace.',
+  aRegrow: 'Put back what the game grows here: its own trees, rocks, bushes and pickables for the biome, by its vegetation rules, for the kinds chosen with the chips. Skips spots where something stands and the ground near buildings.',
   aTo: 'The kind to put in its place.',
   aToPick: 'Pick the kind from the world: click an object to put its kind in the list (Esc cancels).',
   aReplace: 'Replace every object of the first kind inside the selection by the second kind.',
