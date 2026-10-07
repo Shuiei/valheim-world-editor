@@ -373,7 +373,7 @@ public sealed class MainWindow : Window
 		{
 			Tools.Key("Escape");
 		}
-		else if (!ctrl && e.Key is Avalonia.Input.Key.E or Avalonia.Input.Key.M or Avalonia.Input.Key.G or Avalonia.Input.Key.P or Avalonia.Input.Key.B)
+		else if (!ctrl && e.Key is Avalonia.Input.Key.E or Avalonia.Input.Key.M or Avalonia.Input.Key.G or Avalonia.Input.Key.P or Avalonia.Input.Key.B or Avalonia.Input.Key.O)
 		{
 			Tools.Key(e.Key.ToString());
 		}

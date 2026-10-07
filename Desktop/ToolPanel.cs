@@ -30,7 +30,10 @@ public sealed class ToolPanel
 	internal Button SelectButton => _selectButton;
 	private readonly TextBlock _title = new() { FontSize = 14, FontWeight = FontWeight.SemiBold };
 	private readonly TextBlock _help = new() { FontSize = 12, Foreground = Brushes.LightGray, TextWrapping = TextWrapping.Wrap };
-	private readonly Control _flattenRows, _naturalRows, _turnRow;
+	private readonly Control _flattenRows, _naturalRows, _turnRow, _erodeRows;
+	internal Button ThermalButton { get; } = new() { Content = "Thermal", FontSize = 12 };
+	internal Button WaterButton { get; } = new() { Content = "Water", FontSize = 12 };
+	internal Slider RestSlider { get; }
 
 	// For tests.
 	internal Slider SizeSlider { get; }
@@ -44,7 +47,7 @@ public sealed class ToolPanel
 	// The keys of the web editor's rail.
 	public static readonly (BrushTool Tool, string Key)[] Keys =
 	{
-		(BrushTool.Raise, "1"), (BrushTool.Lower, "2"), (BrushTool.Flatten, "3"), (BrushTool.Smooth, "4"), (BrushTool.Natural, "0"), (BrushTool.Restore, "5"),
+		(BrushTool.Raise, "1"), (BrushTool.Lower, "2"), (BrushTool.Flatten, "3"), (BrushTool.Smooth, "4"), (BrushTool.Natural, "0"), (BrushTool.Erode, "O"), (BrushTool.Restore, "5"),
 		(BrushTool.PaintDirt, "6"), (BrushTool.PaintCultivated, "7"), (BrushTool.PaintPaved, "8"), (BrushTool.PaintClear, "9"),
 	};
 
@@ -169,6 +172,22 @@ public sealed class ToolPanel
 			},
 		};
 
+		var restV = new TextBlock();
+		RestSlider = Slide(10, 60, 1, Brush.RestAngle, restV, v => $"{v:0}°", v => Brush.RestAngle = (float)v);
+		var restRow = Row("Rest angle", RestSlider, restV);
+		void Mode(bool water)
+		{
+			Brush.ErodeWater = water;
+			ThermalButton.Background = water ? Off : On;
+			WaterButton.Background = water ? On : Off;
+			restRow.IsVisible = !water;
+		}
+		ThermalButton.Click += (_, _) => Mode(false);
+		WaterButton.Click += (_, _) => Mode(true);
+		ToolTip.SetTip(ThermalButton, "Steep ground slides down to its resting angle");
+		ToolTip.SetTip(WaterButton, "Rain runs downhill, cutting gullies and filling hollows");
+		_erodeRows = new StackPanel { Spacing = 4, Children = { new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Children = { ThermalButton, WaterButton } }, restRow } };
+		Mode(false);
 		Options = Card(new StackPanel
 		{
 			Width = 280,
@@ -183,6 +202,7 @@ public sealed class ToolPanel
 				_turnRow,
 				_flattenRows,
 				_naturalRows,
+				_erodeRows,
 			},
 		});
 		Choose(null);
@@ -214,6 +234,7 @@ public sealed class ToolPanel
 			_help.Text = Brush.Help(tool) + " Hold the left button and move; Ctrl+Z undoes.";
 			_flattenRows.IsVisible = tool == BrushTool.Flatten;
 			_naturalRows.IsVisible = tool == BrushTool.Natural;
+			_erodeRows.IsVisible = tool == BrushTool.Erode;
 		}
 		ToolChanged?.Invoke(t);
 	}

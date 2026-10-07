@@ -17,12 +17,12 @@ namespace TerrainEditor.Desktop;
 // hands the zones under the selection back to the world generator when saving.
 public sealed class AreaPanel
 {
-	public enum Act { Flatten, Raise, Lower, Smooth, Natural, Restore, Paint, Remove, Select, Replace, Regrow, Backup, Reset }
+	public enum Act { Flatten, Raise, Lower, Smooth, Natural, Restore, Erode, Paint, Remove, Select, Replace, Regrow, Backup, Reset }
 
 	private static readonly (Act Act, string Label)[] Actions =
 	{
 		(Act.Flatten, "Flatten"), (Act.Raise, "Raise"), (Act.Lower, "Lower"), (Act.Smooth, "Smooth"), (Act.Natural, "Naturalize"),
-		(Act.Restore, "Restore the ground"), (Act.Paint, "Paint"),
+		(Act.Restore, "Restore the ground"), (Act.Erode, "Erode"), (Act.Paint, "Paint"),
 		(Act.Remove, "Remove objects"), (Act.Select, "Select objects"), (Act.Replace, "Replace objects"), (Act.Regrow, "Regrow nature"),
 		(Act.Backup, "Restore from a backup"), (Act.Reset, "Reset zones"),
 	};
@@ -175,6 +175,7 @@ public sealed class AreaPanel
 					For(Help("Evens out bumps inside the selection."), Act.Smooth),
 					For(Help("Natural-looking bumps, with the Bumps and Size of the Naturalize brush."), Act.Natural),
 					For(Help("Back to the ground the game generated, paint removed."), Act.Restore),
+					For(Help("Weathers the ground inside: slopes settle and rain cuts gullies (rest angle from the Erode brush)."), Act.Erode),
 					For(kinds, Act.Remove, Act.Select, Act.Replace, Act.Regrow, Act.Backup),
 					For(Row("Replace", FromBox), Act.Replace),
 					For(Row("with", ToBox), Act.Replace),
@@ -303,6 +304,7 @@ public sealed class AreaPanel
 		Act.Smooth => AreaTool.GroundAction.Smooth,
 		Act.Natural => AreaTool.GroundAction.Natural,
 		Act.Restore => AreaTool.GroundAction.Restore,
+		Act.Erode => AreaTool.GroundAction.Erode,
 		Act.Paint => AreaTool.GroundAction.Paint,
 		_ => null,
 	};
