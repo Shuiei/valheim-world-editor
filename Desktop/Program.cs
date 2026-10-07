@@ -74,6 +74,8 @@ public static class Options
 	public static string? StartTool { get; private set; }
 	// Measure between these two points of the view (fractions of its width and height) once loaded.
 	public static float[]? TapeAt { get; private set; }
+	// Path tool: a line through these points of the view (fractions: x1,y1,x2,y2,…), then apply (nothing is saved).
+	public static float[]? PathAt { get; private set; }
 	// Move what --pick selected by this much (metres east, north), to check moving (nothing is saved).
 	public static (float X, float Z)? MoveBy { get; private set; }
 
@@ -134,6 +136,9 @@ public static class Options
 					break;
 				case "--tape":
 					TapeAt = args[++i].Split(',').Select(v => float.Parse(v, System.Globalization.CultureInfo.InvariantCulture)).ToArray();
+					break;
+				case "--path":
+					PathAt = args[++i].Split(',').Select(v => float.Parse(v, System.Globalization.CultureInfo.InvariantCulture)).ToArray();
 					break;
 				case "--move":
 					var m = args[++i].Split(',').Select(v => float.Parse(v, System.Globalization.CultureInfo.InvariantCulture)).ToArray();
