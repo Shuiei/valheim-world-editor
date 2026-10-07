@@ -3,6 +3,13 @@
 All notable changes to the Valheim world editor and its WorldEditorBridge plugin, which share one
 version number. Newest first.
 
+## v0.19.2 — 2026-10-06 (moved objects on the ground)
+
+### Changed
+- **Moved objects land on the ground** (Select tool): each moved or turned object stands on the
+  ground where it ends up. A new switch, "Put each object on the ground when moving" (on by
+  default), turns it off to keep each object's height above the ground, as before (for buildings).
+
 ## v0.19.1 — 2026-10-06 (area selection)
 
 ### Added

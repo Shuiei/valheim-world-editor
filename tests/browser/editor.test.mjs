@@ -557,6 +557,35 @@ test('area: the selection outline hides in other tools, and Clear starts over', 
   noErrors();
 });
 
+test('select: with "on the ground", a moved object lands on the ground', async () => {
+  await openEditor();
+  const tree = (await records()).find(r => r.name === 'Beech1' && !r.added);
+  await page().evaluate(id => { window.__ed.setTool('select'); window.__ed.selectIds([id]); document.activeElement?.blur(); }, tree.id);
+  await lookAt(page(), tree.x, tree.z, 6, 9, 12); await sleep(500);
+  // Lifted 2 m with the switch off: it keeps that height.
+  await page().$eval('#selGround', e => { e.checked = false; e.dispatchEvent(new Event('change')); });
+  for (let i = 0; i < 8; i++) await page().keyboard.press('PageUp');
+  await sleep(1500);
+  const lifted = await page().evaluate(() => { const ed = window.__ed, r = ed.objects.records.get([...ed.selection][0]); return r.y - ed.sampleHeight(r.x - ed.originX, r.z - ed.originZ); });
+  assert.ok(Math.abs(lifted - 2) < 0.1, `lifted 2 m (${lifted.toFixed(2)})`);
+  // Switch on, then move it east with the red arrow: it lands on the ground.
+  await page().$eval('#selGround', e => { e.checked = true; e.dispatchEvent(new Event('change')); });
+  await frames(page());
+  const tip = f => page().evaluate(f => {
+    const ed = window.__ed, g = ed.scene.children.find(c => c.isGroup && c.children.length === 3 && c.renderOrder === 30);
+    const v = g.position.clone().add(new ed.THREE.Vector3(1, 0, 0).multiplyScalar(g.scale.x * f)).project(ed.camera);
+    const r = ed.el.getBoundingClientRect(); return [r.left + (v.x + 1) / 2 * r.width, r.top + (1 - v.y) / 2 * r.height];
+  }, f);
+  const [ax, ay] = await tip(0.8), [bx, by] = await tip(2);
+  await page().mouse.move(ax, ay); await page().mouse.down(); await page().mouse.move(bx, by, { steps: 8 }); await page().mouse.up();
+  await sleep(1500);
+  const after = await page().evaluate(() => { const ed = window.__ed, r = ed.objects.records.get([...ed.selection][0]); return { y: r.y, ground: ed.sampleHeight(r.x - ed.originX, r.z - ed.originZ), x: r.x }; });
+  assert.ok(after.x - tree.x > 0.2, 'it moved');
+  assert.ok(Math.abs(after.y - after.ground) < 0.05, `on the ground (${after.y.toFixed(2)} vs ${after.ground.toFixed(2)})`);
+  await page().evaluate(() => window.__ed.clearSelection());
+  noErrors();
+});
+
 test('undo takes a change back and the counter clears', async () => {
   await openEditor();
   await page().keyboard.press('Escape');

@@ -65,6 +65,7 @@ export const TIPS = {
   mPaint: 'Only ground with this paint.',
 
   // Select
+  selGround: 'On: every moved or turned object lands with its base on the ground where it ends up (PgUp / PgDn and the green arrow still lift it). Off: each keeps its height above the ground, which keeps buildings in shape.',
   selDelete: 'Remove the selected objects from the world (Del). Ctrl+Z brings them back.',
   selClear: 'Clear the selection (Esc).',
   selTo: 'The kind to put in place of each selected object.',
