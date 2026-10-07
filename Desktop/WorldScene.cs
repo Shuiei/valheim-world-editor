@@ -34,6 +34,8 @@ public sealed class WorldScene
 	public required List<Thing> Things { get; init; }
 	// The ground the world's locations and pieces flatten (for the Location flattening overlay).
 	public TerrainModifiers? Modifiers { get; init; }
+	// The world generator's ground (regrow asks it what grows where); null in tests that only draw.
+	public TerrainService? Terrain { get; init; }
 	// For the game's terrain shader, per grid point: the biome colour the game puts in its mesh (corner
 	// biomes blended like Heightmap.GetBiomeColor, RGBA bytes), the paint mask (_ClearedMaskTex: the
 	// paint where it was edited, the generated ground's otherwise), the depth below sea level the game
@@ -146,7 +148,7 @@ public sealed class WorldScene
 		{
 			World = world, Name = world.Name, X0 = x0, Z0 = z0, Size = size, W = w, H = h, Heights = heights, Biomes = biomes,
 			Cx = minX + (w - 1) / 2f, Cz = minZ + (h - 1) / 2f, Things = things,
-			BiomeColor = biomeCol, Mask = mask, OceanDepth = ocean, Limit = limit, Modifiers = modifiers,
+			BiomeColor = biomeCol, Mask = mask, OceanDepth = ocean, Limit = limit, Modifiers = modifiers, Terrain = terrain,
 			LoadInfo = $"{world.Name}: read in {readMs} ms, {size}×{size} zones and {things.Count:N0} objects ready in {watch.ElapsedMilliseconds} ms",
 		};
 		scene.Session = new EditSession(scene, Ground.Read(terrain, edits, x0, z0, size), edits);

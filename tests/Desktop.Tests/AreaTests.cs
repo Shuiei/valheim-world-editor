@@ -117,7 +117,7 @@ public class AreaTests
 	public async Task RemoveTakesTheChosenKindsOnly()
 	{
 		var (w, s) = Open();
-		w.AreaPanel.ActionBox.SelectedIndex = 7;
+		w.AreaPanel.Choose(AreaPanel.Act.Remove);
 		Assert.Equal(AreaPanel.Act.Remove, w.AreaPanel.Current);
 		w.AreaPanel.KindButtons[ObjectKind.Rocks].IsChecked = false;
 		await w.AreaPanel.Apply();
@@ -135,7 +135,7 @@ public class AreaTests
 	{
 		var (w, s) = Open();
 		var p = w.AreaPanel;
-		p.ActionBox.SelectedIndex = 9;
+		p.Choose(AreaPanel.Act.Replace);
 		Assert.StartsWith("Beech1 (2)", (string)p.FromBox.SelectedItem!);
 		// Headless there is no world file, so nothing to choose from: replace directly.
 		p.Replace(s, new[] { 0, 1 }, Rock);
@@ -157,7 +157,7 @@ public class AreaTests
 		string? asked = null;
 		p.Confirm = q => { asked = q; return Task.FromResult(true); };
 		s.Shape(60, 60, Formula.Compile("1", new string[0]), 3, 0, "x");
-		p.ActionBox.SelectedIndex = 10;
+		p.Choose(AreaPanel.Act.Reset);
 		await p.Apply();
 		Assert.Contains("Reset 4 zone(s)", asked);
 		Assert.Equal(4, s.Pending.Resets);
@@ -175,7 +175,7 @@ public class AreaTests
 	public async Task SelectObjectsSwitchesToTheSelectTool()
 	{
 		var (w, _) = Open();
-		w.AreaPanel.ActionBox.SelectedIndex = 8;
+		w.AreaPanel.Choose(AreaPanel.Act.Select);
 		await w.AreaPanel.Apply();
 		Assert.Equal(ToolMode.Select, w.View.Mode);
 		Assert.Equal(new[] { 0, 1, 2 }, w.View.Selected.Order());
@@ -203,5 +203,102 @@ public class AreaTests
 		Assert.Equal("Area: Flatten", s.UndoLabel);
 		w.KeyPress(Key.Escape, RawInputModifiers.None, PhysicalKey.Escape, null);
 		Assert.Null(w.View.Area.Polygon());
+	}
+}
+
+// Regrow and Restore from a backup, on a copy of the test world.
+[Collection("World files")]
+public class AreaWorldTests
+{
+	private static (MainWindow W, EditSession S, string Dir) Open()
+	{
+		string dir = EditTests.CopyFixture();
+		var scene = WorldScene.Load(dir, 0, 0, 1);
+		var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
+		w.Show();
+		w.View.Show(scene, null);
+		w.Edit(scene.Session!);
+		w.Tools.ChooseMode(ToolMode.Area);
+		// The whole zone (its outer line stays: it is locked).
+		w.View.Area.Points.Add(new Vector2(2, 2));
+		w.View.Area.Points.Add(new Vector2(62, 62));
+		w.View.Area.Notify();
+		return (w, scene.Session!, dir);
+	}
+
+	private static void Done(string dir) => Directory.Delete(Path.GetDirectoryName(dir)!, recursive: true);
+
+	[AvaloniaFact]
+	public async Task RegrowPutsBackWhatTheGameGrows()
+	{
+		var (w, s, dir) = Open();
+		try
+		{
+			var p = w.AreaPanel;
+			foreach (var k in p.KindButtons.Keys)
+			{
+				p.KindButtons[k].IsChecked = k == ObjectKind.Trees;
+			}
+			p.Choose(AreaPanel.Act.Remove);
+			await p.Apply();
+			int removed = s.Pending.Deleted;
+			Assert.True(removed > 0, "the test world has trees in zone 0, 0");
+			p.Choose(AreaPanel.Act.Regrow);
+			await p.Apply();
+			Assert.True(s.Pending.Added > 0, w.MessageText.Text);
+			Assert.StartsWith("Regrew", w.MessageText.Text);
+			// Only trees, and only inside.
+			var added = s.Scene.Things.Where(t => t.Id < 0 && !t.Gone).ToList();
+			Assert.All(added, t => Assert.Equal(ObjectKind.Trees, ObjectKinds.Of(TerrainEditor.Terrain.PrefabCatalog.DisplayName(t.Prefab), false)));
+			Assert.All(added, t => Assert.InRange(t.Position.X, -30, 30));
+			// Again: everything is standing now, so nothing is doubled.
+			int before = s.Pending.Added;
+			await p.Apply();
+			Assert.Equal(before, s.Pending.Added);
+		}
+		finally
+		{
+			Done(dir);
+		}
+	}
+
+	[AvaloniaFact]
+	public async Task RestoreFromTheBackupThatSavingMade()
+	{
+		var (w, s, dir) = Open();
+		try
+		{
+			var p = w.AreaPanel;
+			float H(int x, int z) => s.Scene.Heights[z * s.Scene.W + x];
+			float was = H(32, 32);
+			int tree = s.Scene.Things.FindIndex(t => !t.Piece);
+			var gone = s.Scene.Things[tree];
+			// Change the world and save: the save keeps a backup of how it was.
+			s.Shape(32, 32, Formula.Compile("3", new string[0]), 4, 0, "x");
+			s.Delete(new[] { tree });
+			Assert.True(s.Save().Saved);
+			var backup = Assert.Single(TerrainEditor.App.Backups.Find(dir));
+			Assert.Equal("editor", backup.Kind);
+			Assert.Equal(was + 3, H(32, 32), 2);
+
+			foreach (var k in p.KindButtons.Keys)
+			{
+				p.KindButtons[k].IsChecked = true;
+			}
+			p.Choose(AreaPanel.Act.Backup);
+			await p.RestoreBackup(s, w.View.Area.Polygon()!, backup.Path);
+			Assert.Equal(was, H(32, 32), 2);
+			Assert.Contains(s.Scene.Things, t => !t.Gone && t.Prefab == gone.Prefab && Vector3.Distance(t.Position, gone.Position) < 0.01f);
+			Assert.Equal(1, s.Pending.Added);
+			Assert.Equal(0, s.Pending.Deleted);
+			Assert.StartsWith("Restored from the backup: the ground, 1 object(s) brought back, 0 removed.", w.MessageText.Text);
+			// A second restore finds nothing to do.
+			await p.RestoreBackup(s, w.View.Area.Polygon()!, backup.Path);
+			Assert.StartsWith("Nothing to restore", w.MessageText.Text);
+		}
+		finally
+		{
+			Done(dir);
+		}
 	}
 }
