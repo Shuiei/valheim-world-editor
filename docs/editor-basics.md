@@ -72,6 +72,7 @@ folded.
 |---|---|---|
 | Look | **Game look** | Draws the world with the game's own textures, models, water and sky. Off: flat colours, faster on slow computers. |
 | | **See-through buildings** | Makes buildings half see-through, to see the ground and objects inside them. |
+| | **3D resolution** | How many pixels the 3D view draws: **Sharp** (the screen's own; on a scaled screen, ×2, that is four times as many), **Balanced** (one per screen point) or **Fast** (three quarters of that). Fewer pixels give more frames per second, notably in the app's window on Linux. Remembered. |
 | | **Slope colours**, **Height lines** | Ground overlays, see [Measure](measure.md). |
 | Nature | **Trees & logs**, **Rocks**, **Bushes & shrubs**, **Pickables** | Show or hide each kind. The number is how many there are in the area. |
 | Spoilers | **Ore & deposits**, **Ruins & structures**, **Location markers**, **Other objects** | Off by default, so the editor does not spoil what is still to be found. |

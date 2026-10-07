@@ -4,6 +4,13 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v0.40.0 — 2026-10-07 (3D resolution)
+
+### Added
+- **3D resolution** (View, Look): Sharp (the screen's own pixels), Balanced (one per screen point:
+  a quarter of the pixels on a screen scaled ×2) or Fast. Fewer pixels give more frames per
+  second; the frame rate logs say which one was used.
+
 ## v0.39.0 — 2026-10-07 (frame rate log)
 
 ### Added
