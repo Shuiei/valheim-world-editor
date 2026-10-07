@@ -155,6 +155,10 @@ public sealed class GlView : OpenGlControlBase
 		}
 		_sceneDirty = true;
 		_lookFiles = null;
+		if (scene.Session != null)
+		{
+			scene.Session.Changed += Wake;
+		}
 		Task.Run(() =>
 		{
 			try
@@ -190,7 +194,7 @@ public sealed class GlView : OpenGlControlBase
 
 	// ---------------------------------------------------------------- GL objects
 	private uint _terrainProg, _objectProg, _waterProg;
-	private uint _terrainVao, _terrainIndexCount, _waterVao;
+	private uint _terrainVao, _terrainIndexCount, _waterVao, _terrainVbo, _terrainExtraVbo;
 	private bool _sceneDirty;
 
 	private sealed class Batch
@@ -256,16 +260,17 @@ public sealed class GlView : OpenGlControlBase
 	}
 
 	// ---- The ground: one point per metre, normals from the neighbours, colour from the biome.
-	private unsafe void BuildTerrain(WorldScene s)
+	// Position, normal and colour of rows z0..z1 (9 floats a point).
+	private static float[] TerrainRows(WorldScene s, int z0, int z1)
 	{
 		int w = s.W, h = s.H;
-		float[] v = new float[w * h * 9];
-		for (int gz = 0; gz < h; gz++)
+		float[] v = new float[w * (z1 - z0 + 1) * 9];
+		float H(int x, int z) => s.Heights[Math.Clamp(z, 0, h - 1) * w + Math.Clamp(x, 0, w - 1)];
+		for (int gz = z0; gz <= z1; gz++)
 		{
 			for (int gx = 0; gx < w; gx++)
 			{
-				int g = gz * w + gx, o = g * 9;
-				float H(int x, int z) => s.Heights[Math.Clamp(z, 0, h - 1) * w + Math.Clamp(x, 0, w - 1)];
+				int g = gz * w + gx, o = ((gz - z0) * w + gx) * 9;
 				var n = Vector3.Normalize(new Vector3(H(gx - 1, gz) - H(gx + 1, gz), 2f, -(H(gx, gz - 1) - H(gx, gz + 1))));
 				var c = Shaders.BiomeColor(s.Biomes[g]);
 				v[o] = gx - (w - 1) / 2f; v[o + 1] = s.Heights[g]; v[o + 2] = -(gz - (h - 1) / 2f);
@@ -273,6 +278,47 @@ public sealed class GlView : OpenGlControlBase
 				v[o + 6] = c.X; v[o + 7] = c.Y; v[o + 8] = c.Z;
 			}
 		}
+		return v;
+	}
+
+	// Mask uv, ocean depth and limit tint of rows z0..z1 (4 floats a point).
+	private static float[] ExtraRows(WorldScene s, int z0, int z1)
+	{
+		int w = s.W, h = s.H;
+		float[] extra = new float[w * (z1 - z0 + 1) * 4];
+		for (int g = z0 * w, o = 0; g < (z1 + 1) * w; g++, o += 4)
+		{
+			extra[o] = (g % w + 0.5f) / w;
+			extra[o + 1] = (g / w + 0.5f) / h;
+			extra[o + 2] = s.OceanDepth[g];
+			extra[o + 3] = s.Limit[g];
+		}
+		return extra;
+	}
+
+	// After an edit: the changed rows (and their neighbours, whose normals move) to the graphics card.
+	private unsafe void UpdateTerrain(WorldScene s, int z0, int z1)
+	{
+		z0 = Math.Max(0, z0 - 1);
+		z1 = Math.Min(s.H - 1, z1 + 1);
+		float[] v = TerrainRows(s, z0, z1), extra = ExtraRows(s, z0, z1);
+		_gl.BindBuffer(BufferTargetARB.ArrayBuffer, _terrainVbo);
+		fixed (float* p = v)
+		{
+			_gl.BufferSubData(BufferTargetARB.ArrayBuffer, (nint)(z0 * s.W * 36), (nuint)(v.Length * 4), p);
+		}
+		_gl.BindBuffer(BufferTargetARB.ArrayBuffer, _terrainExtraVbo);
+		fixed (float* p = extra)
+		{
+			_gl.BufferSubData(BufferTargetARB.ArrayBuffer, (nint)(z0 * s.W * 16), (nuint)(extra.Length * 4), p);
+		}
+		_look?.UpdateRows(s, z0, z1);
+	}
+
+	private unsafe void BuildTerrain(WorldScene s)
+	{
+		int w = s.W, h = s.H;
+		float[] v = TerrainRows(s, 0, h - 1);
 		uint[] idx = new uint[(w - 1) * (h - 1) * 6];
 		int k = 0;
 		for (int gz = 0; gz < h - 1; gz++)
@@ -287,7 +333,7 @@ public sealed class GlView : OpenGlControlBase
 		}
 		_terrainVao = _gl.GenVertexArray();
 		_gl.BindVertexArray(_terrainVao);
-		uint vbo = _gl.GenBuffer();
+		uint vbo = _terrainVbo = _gl.GenBuffer();
 		_gl.BindBuffer(BufferTargetARB.ArrayBuffer, vbo);
 		fixed (float* p = v)
 		{
@@ -313,15 +359,8 @@ public sealed class GlView : OpenGlControlBase
 		}
 		_gl.EnableVertexAttribArray(3);
 		_gl.VertexAttribPointer(3, 4, VertexAttribPointerType.UnsignedByte, true, 4, (void*)0);
-		float[] extra = new float[w * h * 4];
-		for (int g = 0; g < w * h; g++)
-		{
-			extra[g * 4] = (g % w + 0.5f) / w;
-			extra[g * 4 + 1] = (g / w + 0.5f) / h;
-			extra[g * 4 + 2] = s.OceanDepth[g];
-			extra[g * 4 + 3] = s.Limit[g];
-		}
-		uint ex = _gl.GenBuffer();
+		float[] extra = ExtraRows(s, 0, h - 1);
+		uint ex = _terrainExtraVbo = _gl.GenBuffer();
 		_gl.BindBuffer(BufferTargetARB.ArrayBuffer, ex);
 		fixed (float* p = extra)
 		{
@@ -637,7 +676,8 @@ public sealed class GlView : OpenGlControlBase
 		{
 			Upload(r);
 		}
-		bool moving = MoveWithKeys((now - _lastFrame) / 1000f);
+		float dt = (now - _lastFrame) / 1000f;
+		bool moving = MoveWithKeys(dt);
 		_lastFrame = now;
 		double scaling = TopLevel.GetTopLevel(this)?.RenderScaling ?? 1;
 		int pw = Math.Max(1, (int)(Bounds.Width * scaling)), ph = Math.Max(1, (int)(Bounds.Height * scaling));
@@ -667,6 +707,20 @@ public sealed class GlView : OpenGlControlBase
 		_lastViewProj = vp;
 		bool camMoved = view != _lastView;
 		_lastView = view;
+		// The brush: where it is on the ground, a step of the stroke while the button is held, and the
+		// changed ground to the graphics card.
+		if (s != null)
+		{
+			_hover = _tool != null && _pointer is Point at ? GroundAt(s, vp, at, _surfaceSize) : null;
+			if (_brushDown && _hover is { } hv)
+			{
+				s.Session?.StrokeStep(hv.X, hv.Z, dt);
+			}
+			if (s.Session?.TakeDirty() is { } d && _terrainVao != 0)
+			{
+				UpdateTerrain(s, d.Z0, d.Z1);
+			}
+		}
 		var sun = GameLookGl.SunDirView;
 		float time = _clock.ElapsedMilliseconds / 1000f;
 		if (s != null && _terrainVao != 0)
@@ -735,6 +789,7 @@ public sealed class GlView : OpenGlControlBase
 
 			DrawOverlays(vp);
 			DrawSelection(vp);
+			DrawBrush(s, vp);
 			if (ShowWater)
 			{
 				if (_look != null)
@@ -762,7 +817,7 @@ public sealed class GlView : OpenGlControlBase
 		Measure(now, work, camMoved, pw, ph);
 		Automate(now, pw, ph);
 		// Full speed while something happens; the idle timer draws a few times a second otherwise.
-		if (camMoved || moving || now - _wokeAt < 1000 || !_ready.IsEmpty || _pending > 0)
+		if (camMoved || moving || _brushDown || now - _wokeAt < 1000 || !_ready.IsEmpty || _pending > 0)
 		{
 			RequestNextFrameRendering();
 		}
@@ -815,6 +870,25 @@ public sealed class GlView : OpenGlControlBase
 					Pick(new Point(px * size.Width, py * size.Height), size, add: false);
 					var sel = Selected;
 					Options.Say(sel.Count == 0 ? "picked: nothing" : $"picked: {string.Join(", ", sel.Select(i => $"{_models?.NameOf(_scene!.Things[i].Prefab)} ({_kinds[i]})"))}");
+				}
+				if (Options.StrokeTool is BrushTool tool && _scene.Session is { } session)
+				{
+					var size = Bounds.Size;
+					_tool = tool;
+					_pointer = new Point(size.Width / 2, size.Height / 2);
+					_surfaceSize = size;
+					if (GroundAt(_scene, _lastViewProj, _pointer.Value, size) is { } at)
+					{
+						int g = (int)MathF.Round(at.Z) * _scene.W + (int)MathF.Round(at.X);
+						float before = _scene.Heights[g];
+						session.BeginStroke(tool, at.X, at.Z);
+						for (int i = 0; i < 40; i++)
+						{
+							session.StrokeStep(at.X, at.Z, 1 / 30f);
+						}
+						string msg = session.EndStroke();
+						Options.Say($"stroke {tool} at {at.X:0.0}, {at.Z:0.0}: ground {before:0.00} → {_scene.Heights[g]:0.00} m, {session.PendingText} {msg}");
+					}
 				}
 				Options.Say($"loaded: {_scene.Things.Count} objects, {_batches.Sum(b => b.Instances)} model parts in {_batches.Count} draws, {_textures.Count} textures, view {pw}×{ph} px, {_gl.GetStringS(StringName.Renderer)}");
 			}
@@ -948,14 +1022,32 @@ public sealed class GlView : OpenGlControlBase
 			_pressAt = p.Position;
 			_dragFrom = p.Position;
 			_dragButton = p.Properties.PointerUpdateKind;
+			_pointer = p.Position;
+			_surfaceSize = surface.Bounds.Size;
 			e.Pointer.Capture(surface);
+			// With a brush, the left button paints (the middle one still slides the view).
+			if (_dragButton == PointerUpdateKind.LeftButtonPressed && _tool is BrushTool tool && _scene is { Session: { } session } s)
+			{
+				_dragFrom = null;
+				if (GroundAt(s, _lastViewProj, p.Position, _surfaceSize) is { } at)
+				{
+					session.BeginStroke(tool, at.X, at.Z);
+					_brushDown = true;
+				}
+			}
 			Wake();
 		};
 		surface.PointerReleased += (_, e) =>
 		{
 			// A left click (not a drag) picks the object under the pointer.
 			var at = e.GetPosition(surface);
-			if (_dragButton == PointerUpdateKind.LeftButtonPressed && _pressAt is Point from && Point.Distance(from, at) < 5)
+			if (_brushDown)
+			{
+				_brushDown = false;
+				string message = _scene?.Session?.EndStroke() ?? "";
+				StrokeEnded?.Invoke(message);
+			}
+			else if (_tool == null && _dragButton == PointerUpdateKind.LeftButtonPressed && _pressAt is Point from && Point.Distance(from, at) < 5)
 			{
 				Pick(at, surface.Bounds.Size, e.KeyModifiers.HasFlag(KeyModifiers.Shift));
 			}
@@ -964,7 +1056,17 @@ public sealed class GlView : OpenGlControlBase
 			e.Pointer.Capture(null);
 			Wake();
 		};
-		surface.PointerMoved += (_, e) => Drag(e.GetPosition(surface));
+		surface.PointerMoved += (_, e) =>
+		{
+			_pointer = e.GetPosition(surface);
+			_surfaceSize = surface.Bounds.Size;
+			Drag(_pointer.Value);
+		};
+		surface.PointerExited += (_, _) =>
+		{
+			_pointer = null;
+			Wake();
+		};
 		surface.PointerWheelChanged += (_, e) =>
 		{
 			lock (_camLock)
@@ -1002,6 +1104,89 @@ public sealed class GlView : OpenGlControlBase
 	}
 
 	private Point? _pressAt;
+
+	// ---- Tools: a sculpt or paint brush (null: looking around and picking objects).
+	private BrushTool? _tool;
+	public BrushTool? Tool { get => _tool; set { _tool = value; Wake(); } }
+	// A stroke finished, with what to say about it ("" when nothing).
+	public event Action<string>? StrokeEnded;
+	private Point? _pointer;
+	private Size _surfaceSize;
+	private volatile bool _brushDown;
+	private (float X, float Z)? _hover;
+	// For tests: the brush's grid point under the mouse, and whether it is painting.
+	internal (float X, float Z)? Hover => _hover;
+	internal bool BrushDown => _brushDown;
+
+	// The grid point (fractional) of the ground under a point of the view, or null.
+	private static (float X, float Z)? GroundAt(WorldScene s, Matrix4x4 vp, Point at, Size size)
+	{
+		if (size.Width <= 0 || size.Height <= 0)
+		{
+			return null;
+		}
+		var (o, d) = Picking.Ray(vp, (float)(at.X / size.Width * 2 - 1), (float)(1 - at.Y / size.Height * 2));
+		if (Picking.HitGround(s, o, d) is not float t)
+		{
+			return null;
+		}
+		var p = o + d * t;
+		return (p.X + (s.W - 1) / 2f, -p.Z + (s.H - 1) / 2f);
+	}
+
+	private uint _ringVao, _ringVbo;
+	// The brush's outline on the ground (and the Ring shape's inner edge), seen through what stands on it.
+	private unsafe void DrawBrush(WorldScene s, Matrix4x4 vp)
+	{
+		if (_tool == null || _hover is not { } h || s.Session is not { } session)
+		{
+			return;
+		}
+		const int n = 96;
+		var data = new List<float>();
+		void Loop(List<(float X, float Z)> pts)
+		{
+			for (int i = 0; i < pts.Count; i++)
+			{
+				foreach (var (ox, oz) in new[] { pts[i], pts[(i + 1) % pts.Count] })
+				{
+					float x = h.X + ox - (s.W - 1) / 2f, z = -(h.Z + oz - (s.H - 1) / 2f);
+					data.AddRange(new[] { x, Picking.HeightAt(s, x, z) + 0.3f, z });
+				}
+			}
+		}
+		Loop(session.Brush.Outline(n));
+		if (session.Brush.InnerOutline(n) is { } inner)
+		{
+			Loop(inner);
+		}
+		if (_lineProg == 0)
+		{
+			_lineProg = Program(Shaders.LineVs, Shaders.LineFs);
+		}
+		if (_ringVao == 0)
+		{
+			_ringVao = _gl.GenVertexArray();
+			_ringVbo = _gl.GenBuffer();
+			_gl.BindVertexArray(_ringVao);
+			_gl.BindBuffer(BufferTargetARB.ArrayBuffer, _ringVbo);
+			_gl.EnableVertexAttribArray(0);
+			_gl.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 12, (void*)0);
+		}
+		var arr = data.ToArray();
+		_gl.BindBuffer(BufferTargetARB.ArrayBuffer, _ringVbo);
+		fixed (float* p = arr)
+		{
+			_gl.BufferData(BufferTargetARB.ArrayBuffer, (nuint)(arr.Length * 4), p, BufferUsageARB.DynamicDraw);
+		}
+		_gl.Disable(EnableCap.DepthTest);
+		_gl.UseProgram(_lineProg);
+		_gl.UniformMatrix4(_gl.GetUniformLocation(_lineProg, "uViewProj"), 1, false, (float*)&vp);
+		_gl.Uniform4(_gl.GetUniformLocation(_lineProg, "uColor"), 1f, 1f, 1f, 1f);
+		_gl.BindVertexArray(_ringVao);
+		_gl.DrawArrays(PrimitiveType.Lines, 0, (uint)(arr.Length / 3));
+		_gl.Enable(EnableCap.DepthTest);
+	}
 
 	// ---- Selection: the objects picked (indices into the scene's things), drawn as orange boxes.
 	private (Vector3 Min, Vector3 Max)[] _bounds = Array.Empty<(Vector3, Vector3)>();

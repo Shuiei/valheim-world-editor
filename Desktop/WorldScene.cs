@@ -17,7 +17,8 @@ namespace TerrainEditor.Desktop;
 // Unity left-handed), like the web editor: view = (x - Cx, y, -(z - Cz)) in world metres.
 public sealed class WorldScene
 {
-	public required WorldSave World { get; init; }
+	// Replaced by a fresh read after saving.
+	public required WorldSave World { get; set; }
 	public required string Name { get; init; }
 	public int X0 { get; init; }
 	public int Z0 { get; init; }
@@ -42,6 +43,8 @@ public sealed class WorldScene
 	public required float[] OceanDepth { get; init; }
 	public required float[] Limit { get; init; }
 	public string LoadInfo { get; init; } = "";
+	// Editing the ground (null in tests that only draw).
+	public EditSession? Session { get; set; }
 
 	public readonly record struct Thing(int Id, int Prefab, Vector3 Position, Vector3 Rotation, float Scale, bool Piece);
 
@@ -149,12 +152,32 @@ public sealed class WorldScene
 				things.Add(new Thing(id, prefab, p, new Vector3(0, ry, 0), 0, true));
 			}
 		}
-		return new WorldScene
+		var scene = new WorldScene
 		{
 			World = world, Name = world.Name, X0 = x0, Z0 = z0, Size = size, W = w, H = h, Heights = heights, Biomes = biomes,
 			Cx = minX + (w - 1) / 2f, Cz = minZ + (h - 1) / 2f, Things = things,
 			BiomeColor = biomeCol, Mask = mask, OceanDepth = ocean, Limit = limit, Modifiers = modifiers,
 			LoadInfo = $"{world.Name}: read in {readMs} ms, {size}×{size} zones and {things.Count:N0} objects ready in {watch.ElapsedMilliseconds} ms",
 		};
+		scene.Session = new EditSession(scene, Ground.Read(terrain, edits, x0, z0, size), edits);
+		return scene;
+	}
+
+	// After an edit: the heights, paint mask and limit marks of a rectangle of grid points from the ground.
+	public void Refresh(Ground g, int x0, int z0, int x1, int z1)
+	{
+		for (int gz = z0; gz <= z1; gz++)
+		{
+			for (int gx = x0; gx <= x1; gx++)
+			{
+				int p = gz * W + gx;
+				Heights[p] = g.HeightOf(p);
+				Limit[p] = g.AtLimit(p) ? 1 : 0;
+				for (int c = 0; c < 4; c++)
+				{
+					Mask[p * 4 + c] = (byte)Math.Clamp((int)MathF.Round(g.MaskOf(p, c) * 255f), 0, 255);
+				}
+			}
+		}
 	}
 }

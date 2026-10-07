@@ -280,6 +280,8 @@ public sealed class GameLookGl
 	{
 		_gl = gl;
 		_scene = s;
+		// Rows of odd widths (the grid's 64n + 1 points, as half floats) are not padded to 4 bytes.
+		_gl.PixelStore(PixelStoreParameter.UnpackAlignment, 1);
 		// The extracted shader brings its own precision lines (GLSL ES); desktop OpenGL ignores them.
 		_terrain = program(TerrainVs, f.Fragment.Replace("#version 300 es", "") + Common + TerrainMain);
 		_sky = program(SkyVs, Common + SkyFs);
@@ -301,6 +303,28 @@ public sealed class GameLookGl
 		_heightTex = HeightTexture(s);
 		BuildSky();
 		BuildWater(s);
+	}
+
+	// After an edit: the paint mask and the heights (the water's depth) of rows z0..z1 again.
+	public unsafe void UpdateRows(WorldScene s, int z0, int z1)
+	{
+		int n = z1 - z0 + 1;
+		_gl.PixelStore(PixelStoreParameter.UnpackAlignment, 1);
+		_gl.BindTexture(TextureTarget.Texture2D, _maskTex);
+		fixed (byte* p = &s.Mask[z0 * s.W * 4])
+		{
+			_gl.TexSubImage2D(TextureTarget.Texture2D, 0, 0, z0, (uint)s.W, (uint)n, PixelFormat.Rgba, PixelType.UnsignedByte, p);
+		}
+		Half[] h = new Half[s.W * n];
+		for (int i = 0; i < h.Length; i++)
+		{
+			h[i] = (Half)s.Heights[z0 * s.W + i];
+		}
+		_gl.BindTexture(TextureTarget.Texture2D, _heightTex);
+		fixed (Half* p = h)
+		{
+			_gl.TexSubImage2D(TextureTarget.Texture2D, 0, 0, z0, (uint)s.W, (uint)n, PixelFormat.Red, PixelType.HalfFloat, p);
+		}
 	}
 
 	private unsafe uint Tex2D(Image img, bool mipmaps = true, bool repeat = true, bool srgb = false)

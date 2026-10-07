@@ -67,6 +67,9 @@ public static class Options
 	// Start with every overlay and the measuring colours on, and/or walking or flying (to check them).
 	public static bool AllOverlays { get; private set; }
 	public static string? EyeStart { get; private set; }
+	// One stroke of this brush (raise, lower, flatten, smooth, natural, restore, paintdirt, …) at the
+	// middle of the view once loaded, to check sculpting (nothing is saved).
+	public static BrushTool? StrokeTool { get; private set; }
 
 	public static void Say(string line)
 	{
@@ -116,6 +119,9 @@ public static class Options
 					break;
 				case "--quit-after":
 					QuitAfter = double.Parse(args[++i], System.Globalization.CultureInfo.InvariantCulture);
+					break;
+				case "--stroke":
+					StrokeTool = Enum.TryParse<BrushTool>(args[++i], ignoreCase: true, out var t) ? t : null;
 					break;
 				case "--report":
 					Report = Path.GetFullPath(args[++i]);

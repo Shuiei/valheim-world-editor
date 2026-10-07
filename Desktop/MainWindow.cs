@@ -20,6 +20,172 @@ public sealed class MainWindow : Window
 	private string Name(WorldScene.Thing t) => _models?.NameOf(t.Prefab) ?? TerrainEditor.Terrain.PrefabCatalog.DisplayName(t.Prefab) ?? t.Prefab.ToString();
 
 	public GlView View => _view;
+	internal ToolPanel Tools { get; } = new();
+
+	// The save bar (top middle): what is waiting to be saved, undo, redo, Save, and the last message.
+	private readonly TextBlock _pending = new() { FontSize = 12, VerticalAlignment = VerticalAlignment.Center, Text = "All saved" };
+	private readonly TextBlock _message = new() { FontSize = 12, Foreground = new SolidColorBrush(Color.FromRgb(240, 190, 90)), TextWrapping = TextWrapping.Wrap, MaxWidth = 520 };
+	internal Button UndoButton { get; } = new() { Content = "Undo", FontSize = 12, IsEnabled = false };
+	internal Button RedoButton { get; } = new() { Content = "Redo", FontSize = 12, IsEnabled = false };
+	internal Button SaveButton { get; } = new() { Content = "Save", FontSize = 12, IsEnabled = false };
+	internal TextBlock PendingText => _pending;
+	internal TextBlock MessageText => _message;
+	// Asks before writing into the world (replaced by tests).
+	internal Func<string, Task<bool>> ConfirmSave { get; set; }
+	internal Func<string, Task> Tell { get; set; }
+	private EditSession? _session;
+	internal EditSession? Session => _session;
+	private bool _closeAnyway;
+
+	// Starts editing a loaded scene (also used by tests with a scene of their own).
+	internal void Edit(EditSession session)
+	{
+		_session = session;
+		session.Brush = Tools.Brush;
+		session.Changed += () => Dispatcher.UIThread.Post(UpdateSaveBar);
+		UpdateSaveBar();
+	}
+
+	private void UpdateSaveBar()
+	{
+		var s = _session;
+		if (s == null)
+		{
+			return;
+		}
+		_pending.Text = s.PendingText;
+		var (z, d, a, r) = s.Pending;
+		SaveButton.IsEnabled = z + d + a + r > 0;
+		UndoButton.IsEnabled = s.CanUndo;
+		RedoButton.IsEnabled = s.CanRedo;
+		ToolTip.SetTip(UndoButton, s.UndoLabel is string u ? $"Undo {u} (Ctrl+Z)" : "Nothing to undo");
+		ToolTip.SetTip(RedoButton, s.RedoLabel is string rl ? $"Redo {rl} (Ctrl+Shift+Z)" : "Nothing to redo");
+	}
+
+	internal void Undo()
+	{
+		_session?.Undo();
+		UpdateSaveBar();
+	}
+
+	internal void Redo()
+	{
+		_session?.Redo();
+		UpdateSaveBar();
+	}
+
+	// Like the web editor's Save: asks first, writes (with a backup), then says what was done.
+	internal async Task Save()
+	{
+		var s = _session;
+		if (s == null)
+		{
+			return;
+		}
+		var (z, d, a, r) = s.Pending;
+		if (z + d + a + r == 0)
+		{
+			await Tell("There are no unsaved changes.");
+			return;
+		}
+		string what = s.PendingText.Replace("Unsaved: ", "");
+		if (!await ConfirmSave($"Write {what} into the world files?\n\nWorld folder: {s.Scene.World.Directory}\n\n"
+			+ "• A full backup of the folder is made first, next to it.\n"
+			+ "• Valheim (server or game) must NOT be running with this world, or it will overwrite these changes when it saves.\n"
+			+ "• Test on a copy first: open it as a local world, or upload it to a test server."))
+		{
+			return;
+		}
+		SaveButton.IsEnabled = false;
+		_message.Text = "Saving…";
+		try
+		{
+			var res = await Task.Run(s.Save);
+			string msg = res.Message;
+			if (res.BackupDirectory != null)
+			{
+				msg += $"\n\nBackup: {res.BackupDirectory}";
+			}
+			if (res.Skipped.Count > 0)
+			{
+				msg += "\n\nNot saved:\n• " + string.Join("\n• ", res.Skipped);
+			}
+			_message.Text = res.Message;
+			Options.Say("Save: " + res.Message);
+			await Tell(msg);
+		}
+		catch (Exception ex)
+		{
+			_message.Text = "Could not save: " + ex.Message;
+		}
+		UpdateSaveBar();
+	}
+
+	private Control SaveBar()
+	{
+		UndoButton.Click += (_, _) => Undo();
+		RedoButton.Click += (_, _) => Redo();
+		SaveButton.Click += async (_, _) => await Save();
+		ToolTip.SetTip(SaveButton, "Write the changes into the world's files (Ctrl+S)");
+		return new Border
+		{
+			Background = new SolidColorBrush(Color.FromArgb(235, 24, 28, 34)),
+			BorderBrush = new SolidColorBrush(Color.FromRgb(46, 53, 63)),
+			BorderThickness = new Thickness(1),
+			CornerRadius = new CornerRadius(10),
+			Padding = new Thickness(10, 6),
+			Margin = new Thickness(10),
+			HorizontalAlignment = HorizontalAlignment.Center,
+			VerticalAlignment = VerticalAlignment.Top,
+			Child = new StackPanel
+			{
+				Spacing = 4,
+				Children =
+				{
+					new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = { _pending, UndoButton, RedoButton, SaveButton } },
+					_message,
+				},
+			},
+		};
+	}
+
+	private void OnKey(object? sender, Avalonia.Input.KeyEventArgs e)
+	{
+		// Typing in a box: its keys are its own.
+		if (e.Source is TextBox)
+		{
+			return;
+		}
+		var mods = e.KeyModifiers;
+		bool ctrl = mods.HasFlag(Avalonia.Input.KeyModifiers.Control) || mods.HasFlag(Avalonia.Input.KeyModifiers.Meta);
+		if (ctrl && e.Key == Avalonia.Input.Key.Z)
+		{
+			if (mods.HasFlag(Avalonia.Input.KeyModifiers.Shift)) Redo(); else Undo();
+			e.Handled = true;
+		}
+		else if (ctrl && e.Key == Avalonia.Input.Key.Y)
+		{
+			Redo();
+			e.Handled = true;
+		}
+		else if (ctrl && e.Key == Avalonia.Input.Key.S)
+		{
+			_ = Save();
+			e.Handled = true;
+		}
+		else if (!ctrl && e.Key == Avalonia.Input.Key.Escape)
+		{
+			Tools.Key("Escape");
+		}
+		else if (!ctrl && e.Key >= Avalonia.Input.Key.D0 && e.Key <= Avalonia.Input.Key.D9)
+		{
+			Tools.Key(((int)(e.Key - Avalonia.Input.Key.D0)).ToString());
+		}
+		else if (!ctrl && e.Key >= Avalonia.Input.Key.NumPad0 && e.Key <= Avalonia.Input.Key.NumPad9)
+		{
+			Tools.Key(((int)(e.Key - Avalonia.Input.Key.NumPad0)).ToString());
+		}
+	}
 
 	// The View panel (top right): which kinds of objects are drawn, with how many the area has, and the water.
 	private readonly Dictionary<ObjectKind, CheckBox> _kindBoxes = new();
@@ -108,12 +274,49 @@ public sealed class MainWindow : Window
 			Margin = new Thickness(10),
 			MaxWidth = 380,
 			HorizontalAlignment = HorizontalAlignment.Left,
-			VerticalAlignment = VerticalAlignment.Top,
+			VerticalAlignment = VerticalAlignment.Bottom,
 			Child = new StackPanel { Spacing = 6, Children = { _fps, _info, _eye, _selection, record } },
+		};
+		ConfirmSave = text => Dialogs.Ask(this, "Save into the world", text, "Save");
+		Tell = text => Dialogs.Tell(this, "Save", text);
+		var tools = new StackPanel
+		{
+			Orientation = Orientation.Horizontal,
+			Spacing = 8,
+			Margin = new Thickness(10),
+			HorizontalAlignment = HorizontalAlignment.Left,
+			VerticalAlignment = VerticalAlignment.Top,
+			Children = { Tools.Rail, Tools.Options },
+		};
+		Tools.Options.VerticalAlignment = VerticalAlignment.Top;
+		Tools.Rail.VerticalAlignment = VerticalAlignment.Top;
+		Tools.ToolChanged += t => _view.Tool = t;
+		_view.StrokeEnded += msg =>
+		{
+			_message.Text = msg;
+			if (Tools.Tool == BrushTool.Flatten && Tools.Brush.TargetFromClick)
+			{
+				Tools.ShowTarget(Tools.Brush.Target);
+			}
+			UpdateSaveBar();
+		};
+		KeyDown += OnKey;
+		Closing += async (_, e) =>
+		{
+			if (_closeAnyway || _session == null || _session.Pending is (0, 0, 0, 0))
+			{
+				return;
+			}
+			e.Cancel = true;
+			if (await Dialogs.Ask(this, "Unsaved changes", $"{_session.PendingText}. Quit without saving them?", "Quit without saving", "Keep editing"))
+			{
+				_closeAnyway = true;
+				Close();
+			}
 		};
 		// Takes the mouse for the 3D view (see GlView.Attach).
 		var surface = new Border { Background = Brushes.Transparent };
-		Content = new Grid { Children = { _view, surface, panel, ViewPanel() } };
+		Content = new Grid { Children = { _view, surface, panel, ViewPanel(), tools, SaveBar() } };
 		_view.Attach(surface, this);
 		_view.Perf = _perf;
 		_view.StatsChanged += s => _fps.Text = $"{s.Fps} frames/s · {s.WorkMs:0.0} ms of work each · {s.Objects:N0} objects ({s.Instances:N0} model parts in {s.Batches:N0} draws){(s.PendingModels > 0 ? $" · {s.PendingModels} kinds loading" : "")}";
@@ -142,8 +345,12 @@ public sealed class MainWindow : Window
 				var models = await Task.Run(ModelStore.Open);
 				_models = models;
 				_info.Text = scene.LoadInfo + (models == null ? "\nNo game models copied yet: boxes stand in (open the web editor once to copy the game's look)." : "")
-					+ "\nClick picks an object (Shift adds) · right drag turns · middle or left drag slides · wheel zooms · WASD moves · F walks and flies";
+					+ "\nView: click picks an object (Shift adds) · right drag turns · middle or left drag slides · wheel zooms · WASD moves · F walks and flies · 1-9, 0: brushes";
 				_view.Show(scene, models);
+				if (scene.Session != null)
+				{
+					Edit(scene.Session);
+				}
 				if (Options.AllOverlays)
 				{
 					foreach (var b in _overlayBoxes.Values) b.IsChecked = true;
