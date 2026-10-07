@@ -9,56 +9,15 @@ namespace TerrainEditor.App;
 // World Machine...) and bring back. The lowest and highest heights are written into the picture.
 public static class HeightmapEndpoints
 {
-	public const string MinKey = "vwe-min", MaxKey = "vwe-max", AreaKey = "vwe-area";
+	public const string MinKey = Heightmaps.MinKey, MaxKey = Heightmaps.MaxKey, AreaKey = Heightmaps.AreaKey;
 
 	// The ground of zones x0..x1, z0..z1 (base terrain, location flattening and edits, as in game):
 	// width and height in points (64 per zone + 1), rows from south to north.
 	public static (int W, int H, float[] Heights) Heights(ValheimGen.TerrainService terrain, EditStore edits, int x0, int z0, int x1, int z1) => HeightGrid.Read(terrain, edits, x0, z0, x1, z1);
 
-	public static byte[] Encode(int w, int h, float[] heights, string area, out float min, out float max)
-	{
-		float lo = heights.Min(), hi = heights.Max();
-		if (hi - lo < 0.01f)
-		{
-			hi = lo + 0.01f;
-		}
-		ushort[] px = new ushort[w * h];
-		for (int y = 0; y < h; y++)
-		{
-			for (int x = 0; x < w; x++)
-			{
-				// Picture rows go from north (top) to south.
-				px[y * w + x] = (ushort)Math.Round((heights[(h - 1 - y) * w + x] - lo) / (hi - lo) * 65535f);
-			}
-		}
-		min = lo;
-		max = hi;
-		return Png.WriteGray16(w, h, px, new Dictionary<string, string>
-		{
-			[MinKey] = lo.ToString("R", CultureInfo.InvariantCulture),
-			[MaxKey] = hi.ToString("R", CultureInfo.InvariantCulture),
-			[AreaKey] = area,
-			["Software"] = "Valheim World Editor",
-		});
-	}
+	public static byte[] Encode(int w, int h, float[] heights, string area, out float min, out float max) => Heightmaps.Encode(w, h, heights, area, out min, out max);
 
-	// The picture resampled (between the four nearest pixels) to w x h points, rows from south to north.
-	public static float[] Resample(Png.Image img, int w, int h)
-	{
-		float[] o = new float[w * h];
-		for (int z = 0; z < h; z++)
-		{
-			for (int x = 0; x < w; x++)
-			{
-				float fx = w > 1 ? x / (float)(w - 1) * (img.Width - 1) : 0, fy = h > 1 ? (h - 1 - z) / (float)(h - 1) * (img.Height - 1) : 0;
-				int x0 = (int)fx, y0 = (int)fy, x1 = Math.Min(img.Width - 1, x0 + 1), y1 = Math.Min(img.Height - 1, y0 + 1);
-				float tx = fx - x0, ty = fy - y0;
-				float At(int a, int b) => img.Values[b * img.Width + a];
-				o[z * w + x] = (At(x0, y0) * (1 - tx) + At(x1, y0) * tx) * (1 - ty) + (At(x0, y1) * (1 - tx) + At(x1, y1) * tx) * ty;
-			}
-		}
-		return o;
-	}
+	public static float[] Resample(Png.Image img, int w, int h) => Heightmaps.Resample(img, w, h);
 
 	public static void Map(WebApplication app, Func<WorldSave> world, ValheimGen.TerrainService terrain, EditStore edits)
 	{
