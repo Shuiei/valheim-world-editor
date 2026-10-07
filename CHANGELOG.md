@@ -4,6 +4,16 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v0.29.0 — 2026-10-07 (regrow nature)
+
+### Added
+- **Regrow nature** (Area tool): puts back the game's own vegetation inside the selection, for the
+  kinds chosen with the chips: the trees, rocks, bushes and pickables its rules grow there (how
+  many, on which slopes, heights and biome edges, in groves), worked out like the game does
+  (its rules and random draws, per zone), on the ground as it is now. Spots where something
+  already stands are skipped, and so is the ground near buildings. On a world the game generated,
+  most of what it would place lands exactly where the game put it.
+
 ## v0.28.0 — 2026-10-07 (clumping)
 
 ### Added

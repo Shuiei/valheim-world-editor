@@ -42,6 +42,7 @@ Each button is one undo step.
 | **Kind chips** | Which kinds the buttons act on, with how many are inside. "hidden" means the kind is switched off in View. |
 | **Remove** | Removes the objects of the ticked kinds inside the selection. |
 | **Select** | Selects them, to move, turn or copy them with the [Select tool](select.md). |
+| **Regrow nature** | Puts back what the game grows here: its own trees, rocks, bushes and pickables for the biome, by the game's vegetation rules (how many, how far apart, on which slopes, heights and biome edges, in groves), worked out like the game does for the zones under the selection, on the ground as it is now. Only the kinds chosen with the chips above, inside the selection and where the Mask allows. Spots where something already stands are skipped (a tree still there is not doubled), and so is the ground near buildings. Up to 16 zones (256 × 256 m) at once. One undo step. |
 | **Replace** … **with** … | Replaces every object of the first kind inside by the second kind, at the same place and facing. The first list only offers kinds that are inside; the second offers every kind the game has; its **pick** button fills it from the world (click an object to use its kind). |
 
 ## Copy and paste

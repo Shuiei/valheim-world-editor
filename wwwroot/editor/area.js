@@ -45,6 +45,7 @@ export function createArea(ed) {
     <div class="sub"><h3>Objects inside</h3>
       <div class="chips" id="aKinds"></div>
       <div class="row"><button id="aRemove">Remove</button><button id="aSelectObj">Select</button></div>
+      <div class="row"><button id="aRegrow" title="Put back what the game grows here: its own trees, rocks, bushes and pickables for the biome, by its vegetation rules, for the kinds chosen above">Regrow nature</button></div>
       <label class="field">Replace <select id="aFrom"></select></label>
       <label class="field">with <select id="aTo" class="typeList"></select><span><button id="aToPick" class="mini" title="Pick the kind from the world: click an object">pick</button></span></label>
       <div class="row"><button id="aReplace">Replace</button></div>
@@ -296,6 +297,33 @@ export function createArea(ed) {
     const ids = list.map(r => r.id);
     ed.setDeleted(ids, true); ed.pushHistory({ deleted: ids, label: `Area: removed ${ids.length} object(s)` });
     ed.msg(`Removed ${ids.length} object(s). Ctrl+Z brings them back.`); updateInfo();
+  };
+  // Regrow nature: the game's own vegetation for the zones under the selection (by its rules, on the
+  // ground as it is now, /api/regrow), kept inside the selection, for the chosen kinds, where the Mask
+  // allows, and not where something already stands (a tree still there is not doubled) or near buildings.
+  $('aRegrow').onclick = async () => {
+    const poly = polygon(); if (!poly) { ed.msg('Select an area first.', true); return; }
+    const xs = poly.map(p => p.gx + ed.originX), zs = poly.map(p => p.gz + ed.originZ);
+    const zone = v => Math.floor((v + 32) / 64);
+    const q = `x0=${zone(Math.min(...xs))}&z0=${zone(Math.min(...zs))}&x1=${zone(Math.max(...xs))}&z1=${zone(Math.max(...zs))}`;
+    ed.msg('Working out what the game grows here…');
+    const r = await fetch(`/api/regrow?${q}`);
+    if (!r.ok) { ed.msg(await r.text(), true); return; }
+    const pieceNames = ed.objects.state.pieceNames;
+    const standing = ed.objects.alive().map(o => [o.x, o.z, o.name, o.kind]);
+    const near = (o, d, test) => standing.some(([x, z, name, kind]) => Math.abs(x - o.x) < d && Math.abs(z - o.z) < d && Math.hypot(x - o.x, z - o.z) < d && test(name, kind));
+    const spots = (await r.json()).filter(o => {
+      const { gx, gz } = toGrid(o.x, o.z);
+      if (!inside(poly, gx, gz) || !kindOn.has(objectKind(o.name, pieceNames))) return false;
+      if (!ed.mask(Math.round(gz) * W + Math.round(gx))) return false;
+      return !near(o, 1, () => true) && !near(o, 3, (n, k) => n === o.name) && !near(o, 4, (n, k) => k === 'buildings');
+    });
+    if (!spots.length) { ed.msg('Nothing to regrow: the game grows none of the chosen kinds here, or it is all still standing.'); return; }
+    const added = await ed.objects.add(spots.map(o => ({ ...o, fresh: true })));
+    ed.pushHistory({ added, label: `Area: regrew ${added.length} object(s)` });
+    const names = [...new Set(spots.map(o => o.name))];
+    ed.msg(`Regrew ${added.length} object(s): ${names.slice(0, 6).join(', ')}${names.length > 6 ? '…' : ''}. Ctrl+Z takes them back; Save or Apply live writes them.`);
+    updateInfo();
   };
   $('aSelectObj').onclick = () => {
     const list = pickedObjects(); if (!list) return;
