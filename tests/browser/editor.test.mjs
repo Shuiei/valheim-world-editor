@@ -535,6 +535,28 @@ test('selecting: same kind, invert, and a kept selection picked again', async ()
   noErrors();
 });
 
+test('area: the selection outline hides in other tools, and Clear starts over', async () => {
+  await openEditor();
+  await page().evaluate(() => window.__ed.setTool('area'));
+  await page().click('[data-shape="poly"]');
+  const c = (await records()).find(r => r.name === 'piece_chest_wood');
+  await lookAt(page(), c.x, c.z + 25, 0, 50, 30);
+  for (const [dx, dz] of [[-8, 20], [8, 20], [0, 32]]) { const [x, y] = await screenOf(page(), c.x + dx, c.z + dz); await page().mouse.click(x, y); await sleep(150); }
+  await page().keyboard.press('Enter');
+  const outlineShown = () => page().evaluate(() => window.__ed.scene.children.find(o => o.isLine && o.renderOrder === 15 && o.material.color.getHex() === 0x5fd4ff).visible);
+  assert.ok(await page().evaluate(() => !!window.__ed.area.polygon()), 'a polygon is selected');
+  assert.equal(await outlineShown(), true);
+  await page().keyboard.press('1');
+  assert.equal(await outlineShown(), false, 'hidden in another tool');
+  await page().keyboard.press('b');
+  assert.equal(await outlineShown(), true, 'back in the Area tool');
+  assert.ok(await page().evaluate(() => !!window.__ed.area.polygon()), 'the selection was kept');
+  await page().click('#aClear');
+  assert.equal(await page().evaluate(() => window.__ed.area.polygon()), null, 'Clear removes it');
+  await page().click('[data-shape="box"]');
+  noErrors();
+});
+
 test('undo takes a change back and the counter clears', async () => {
   await openEditor();
   await page().keyboard.press('Escape');

@@ -3,6 +3,15 @@
 All notable changes to the Valheim world editor and its WorldEditorBridge plugin, which share one
 version number. Newest first.
 
+## v0.19.1 — 2026-10-06 (area selection)
+
+### Added
+- **Clear** in the Area tool, next to Box and Polygon, to start a new selection (as `Esc` does).
+
+### Fixed
+- The Area tool's selection outline stayed on screen in every other tool; it is only drawn in the
+  Area and Paste tools now (the selection is kept for when you come back).
+
 ## v0.19.0 — 2026-10-06 (selection helpers)
 
 ### Added

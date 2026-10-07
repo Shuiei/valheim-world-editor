@@ -88,6 +88,7 @@ export const TIPS = {
   // Area
   '[data-shape="box"]': 'Drag a rectangle on the ground.',
   '[data-shape="poly"]': 'Click corners; double-click or Enter closes the shape. Backspace removes the last corner.',
+  aClear: 'Clear the selection, to start a new one (Esc).',
   aSoft: 'Ground actions fade out over this many metres inside the edge of the selection.',
   '[data-act="flatten"]': 'Level the ground inside to the Height below.',
   '[data-act="raise"]': 'Lift the ground inside by the Amount below.',

@@ -2,6 +2,10 @@
 
 The editor's own changes: [CHANGELOG.md](https://github.com/Shuiei/valheim-world-editor/blob/main/CHANGELOG.md).
 
+## 0.19.1
+
+- Editor changes only (area selection). The plugin is unchanged.
+
 ## 0.19.0
 
 - Editor changes only (selection helpers). The plugin is unchanged.
