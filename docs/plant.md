@@ -12,6 +12,10 @@ green dot.
 | Control | What it does |
 |---|---|
 | **Search** | Filters the list by name (oak, rock, turnip…). |
+| **Pick** | Eyedropper: click an object in the world to plant only its kind. **Shift + click** adds it to the ticked kinds instead. Esc cancels. |
+| **Favourites** | Click the ☆ after a kind in the list to star it; starred kinds show as buttons above the list. |
+| **Recent** | The last eight kinds you placed, newest first, as buttons above the list. |
+| Favourite and Recent buttons | A click plants only that kind; **Shift + click** adds it to (or takes it out of) the ticked kinds. Both lists are kept in this browser. |
 | **Category lists** | Click a category to fold or unfold it; the number is ticked / total. |
 | **Tick boxes** | Every ticked kind is used; each placement picks one of them at random. |
 

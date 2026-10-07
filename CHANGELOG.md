@@ -4,6 +4,18 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v0.24.0 — 2026-10-07 (eyedropper and favourite kinds)
+
+### Added
+- **Eyedropper**: the Plant tool's **Pick** button and the **pick** buttons next to the Replace lists
+  (Select tool, Area tool) take the kind of the object you click in the world.
+- **Favourites** and **Recent** kinds in the Plant tool: star kinds with ☆ in the list, and the last
+  eight kinds you placed come back as buttons above the list. A click plants only that kind, Shift +
+  click adds it to the ticked ones.
+
+### Changed
+- The Select tool's Replace row reads "Replace with", and its button is now "Replace the selection".
+
 ## v0.23.0 — 2026-10-07 (sharp edges)
 
 ### Added
