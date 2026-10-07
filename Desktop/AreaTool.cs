@@ -208,7 +208,7 @@ public sealed class AreaTool
 	}
 
 	// ---- Ground actions.
-	public enum GroundAction { Flatten, Raise, Lower, Smooth, Natural, Restore, Paint }
+	public enum GroundAction { Flatten, Raise, Lower, Smooth, Natural, Restore, Erode, Paint }
 
 	public static string Label(GroundAction a) => a switch
 	{
@@ -224,6 +224,12 @@ public sealed class AreaTool
 		if (WeightsIn(g.W, g.H) is not { } a)
 		{
 			return (touched, (0, 0, 0, 0));
+		}
+		if (act == GroundAction.Erode)
+		{
+			var set = new HashSet<int>();
+			var box = Erosion.Area(g, a, b.RestAngle, b.Random, set);
+			return (set.ToList(), (box.X0 - 1, box.Z0 - 1, box.X1 + 1, box.Z1 + 1));
 		}
 		var before = new float[g.W * g.H];
 		for (int i = 0; i < before.Length; i++)

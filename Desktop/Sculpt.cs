@@ -9,6 +9,7 @@ public enum BrushTool
 	Flatten,
 	Smooth,
 	Natural,
+	Erode,
 	Restore,
 	PaintDirt,
 	PaintCultivated,
@@ -35,6 +36,10 @@ public sealed class Brush
 	public float NoiseAmp { get; set; } = 1.2f;
 	public float NoiseSize { get; set; } = 16;
 	public Noise Noise { get; set; } = new(Random.Shared.Next());
+	// Erode: rain (Water) or sliding to the rest angle (Thermal, degrees).
+	public bool ErodeWater { get; set; }
+	public float RestAngle { get; set; } = 33;
+	public Random Random { get; set; } = new();
 
 	public static string Label(BrushTool t) => t switch
 	{
@@ -43,6 +48,7 @@ public sealed class Brush
 		BrushTool.Flatten => "Flatten",
 		BrushTool.Smooth => "Smooth",
 		BrushTool.Natural => "Naturalize",
+		BrushTool.Erode => "Erode",
 		BrushTool.Restore => "Restore",
 		BrushTool.PaintDirt => "Dirt",
 		BrushTool.PaintCultivated => "Cultivate",
@@ -57,6 +63,7 @@ public sealed class Brush
 		BrushTool.Flatten => "Level the ground to one height.",
 		BrushTool.Smooth => "Even out bumps and sharp edges.",
 		BrushTool.Natural => "Turn flat, tool-made ground into natural-looking bumps.",
+		BrushTool.Erode => "Weather the ground: steep slopes slide down to rest (Thermal), or rain cuts gullies and fills hollows (Water).",
 		BrushTool.Restore => "Bring the ground back to how the world generated it.",
 		BrushTool.PaintDirt => "Paint bare dirt, like a path.",
 		BrushTool.PaintCultivated => "Paint cultivated soil for planting.",
@@ -167,6 +174,27 @@ public static class Sculpt
 		}
 		float rate = b.Strength * MathF.Min(dt, 0.1f);
 		float ox = g.X0 * 64 - 32, oz = g.Z0 * 64 - 32;
+		// Erosion works on the neighbourhood of every point (Erosion).
+		if (s.Tool == BrushTool.Erode)
+		{
+			float r = b.Radius, er = reach + 2, talus = Erosion.Talus(b.RestAngle);
+			bool clamped = false;
+			var box = Erosion.Run(g, (int)MathF.Floor(cx - er), (int)MathF.Floor(cz - er), (int)MathF.Ceiling(cx + er), (int)MathF.Ceiling(cz + er),
+				(gx, gz, p) => b.Weight(gx - cx, gz - cz, ox + gx, oz + gz) * (mask?.Invoke(p) ?? 1),
+				(h, wt, w, d) =>
+				{
+					if (b.ErodeWater)
+					{
+						Erosion.Hydraulic(h, wt, w, d, (int)MathF.Ceiling(r * r * rate * 6), 1, b.Random);
+					}
+					else
+					{
+						Erosion.Thermal(h, wt, w, d, talus, MathF.Min(1, rate * 12), 2);
+					}
+				}, s.Touched, ref clamped);
+			s.Clamped |= clamped;
+			return (box.X0 - 1, box.Z0 - 1, box.X1 + 1, box.Z1 + 1);
+		}
 		// Smoothing reads the heights from before this frame.
 		Dictionary<int, float>? snapshot = null;
 		if (s.Tool == BrushTool.Smooth)
