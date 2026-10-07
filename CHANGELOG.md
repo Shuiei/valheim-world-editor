@@ -3,6 +3,16 @@
 All notable changes to the Valheim world editor and its WorldEditorBridge plugin, which share one
 version number. Newest first.
 
+## v0.20.0 — 2026-10-06 (fences end to end)
+
+### Added
+- **End to end** (Plant tool, Line mode): pieces placed so that each one starts where the last one
+  ends, turned along the line, like the game's hammer snaps them, from the pieces' own snap points
+  (now in the build-piece catalogue) or the model's length for other kinds.
+- **Circle and Rectangle lines** (Plant tool): press at the centre or a corner and drag to the size;
+  **Close the loop** for drawn lines. With End to end the sizes snap to whole pieces, so a fenced
+  ring or yard closes exactly.
+
 ## v0.19.2 — 2026-10-06 (moved objects on the ground)
 
 ### Changed

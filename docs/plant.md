@@ -24,7 +24,7 @@ dots in the preview.
 | Mode | How it works |
 |---|---|
 | **Brush** | The preview follows the cursor. A **click** places exactly what the preview shows; a **drag** keeps adding objects under the brush. **Shift + drag** removes the ticked kinds under the brush. |
-| **Line** | Click points along a route (or hold and drag). Objects go every *N* metres along it. |
+| **Line** | Click points along a route (or hold and drag), or draw a **Circle** or a **Rectangle**. Objects go every *N* metres along it, or **end to end** like the game's hammer snaps them. |
 | **Grid** | Drag a box. One object goes in the middle of each cell. |
 | **Zone** | Click points around a zone (or hold and drag to draw it freely); it closes by itself. Fill it by **Scatter** (random spots) or **Grid** (one per cell). |
 
@@ -34,6 +34,23 @@ zone); **Clear** (`Esc`) removes the shape, **Backspace** removes the last point
 ![Line mode](images/plant-line.jpg)
 ![Grid mode, turned 15°](images/plant-grid.jpg)
 ![Zone mode with a grid fill](images/plant-zone.jpg)
+
+## Fences and walls: end to end
+
+In **Line** mode, **End to end** places pieces so that each one starts exactly where the last one ends,
+turned along the line, like the game's hammer snaps them: a fence, a stake wall, a row of walls or
+floors in a few clicks. The pieces' own snap points (from the game) give their length; other kinds
+use the length of their model. Ticking several kinds alternates them.
+
+| Control | What it does |
+|---|---|
+| **Points** | Click points along the way, or hold and drag to draw freely. **Close the loop** goes back to the first point at the end. |
+| **Circle** | Press at the centre and drag out to the size. With End to end the size snaps so that whole pieces close the ring. |
+| **Rectangle** | Press at one corner and drag to the opposite one. With End to end the sides snap to whole pieces, and each side is filled from its corner, so the corners meet exactly. |
+
+The preview shows the pieces and the size; when a line does not end on a whole piece, it says how
+much of it is left. **Enter** places them (one undo step). Each piece sits on the lower of the ground
+at its two ends, and does not lean: on a slope, raise or flatten the ground first for a tidy fence.
 
 ## Settings
 

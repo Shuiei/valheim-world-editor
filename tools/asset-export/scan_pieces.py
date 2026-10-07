@@ -1,4 +1,5 @@
-# Build-piece catalogue (WorldGen/pieces.json, in git): category and footprint of every piece.
+# Build-piece catalogue (WorldGen/pieces.json, in git): category and footprint of every piece, and its
+# snap points (the children the game's hammer snaps pieces together by), in the piece's own frame.
 # Usage: VWE_BUNDLES=<game>/valheim_Data/StreamingAssets/SoftRef/Bundles python scan_pieces.py <out.json>
 import UnityPy, glob, json, sys
 import os as _os
@@ -32,10 +33,15 @@ for fi,f in enumerate(files):
         if not tr or tr[0][1]['m_Father']['m_PathID']!=0: continue
         piece=[c[1] for c in comps if c[0]=='MonoBehaviour' and 'm_category' in c[1] and 'm_resources' in c[1] and 'm_craftingStation' in c[1]]
         if not piece: continue
-        pts=[]
+        pts=[]; snaps=[]
         def walk(gopid,pos,rot,scale,root):
             t,g=tt(gopid)
-            if g is None or g.get('m_IsActive',1)!=1: return
+            if g is None: return
+            # Snap points: children with the game's "snappoint" tag (the first custom tag, 20000), named
+            # "$hud_snappoint_top 1" and so on. They are inactive, so they are read before inactive
+            # branches are skipped.
+            snap=g.get('m_Tag')==20000 or 'snappoint' in g.get('m_Name','').lower()
+            if g.get('m_IsActive',1)!=1 and not snap: return
             trc=None; boxes=[]
             for c in g['m_Component']:
                 ct,cm=tt(c['component']['m_PathID'])
@@ -47,6 +53,9 @@ for fi,f in enumerate(files):
                 lp=trc['m_LocalPosition']; lr=trc['m_LocalRotation']; ls=trc['m_LocalScale']
                 p=qrot(rot,(lp['x']*scale[0],lp['y']*scale[1],lp['z']*scale[2])); p=(p[0]+pos[0],p[1]+pos[1],p[2]+pos[2])
                 r=qmul(rot,(lr['x'],lr['y'],lr['z'],lr['w'])); s=(scale[0]*ls['x'],scale[1]*ls['y'],scale[2]*ls['z'])
+            if snap:
+                snaps.append([round(p[0],3),round(p[1],3),round(p[2],3)])
+                return
             for b in boxes:
                 c=b['m_Center']; z=b['m_Size']
                 for dx in (-0.5,0.5):
@@ -60,12 +69,13 @@ for fi,f in enumerate(files):
         walk(o.path_id,None,None,None,True)
         pc=piece[0]
         entry={'cat':pc['m_category'],'comfort':pc.get('m_comfort',0)}
+        if snaps: entry['snap']=snaps
         if pts:
             xs=[q[0] for q in pts]; ys=[q[1] for q in pts]; zs=[q[2] for q in pts]
             entry['box']=[round(min(xs),3),round(max(xs),3),round(min(zs),3),round(max(zs),3),round(min(ys),3),round(max(ys),3)]
         out[go['m_Name']]=entry
     if fi%60==0: print('scanned',fi,'/',len(files),'pieces',len(out),file=sys.stderr)
 json.dump(out,open(sys.argv[1],'w'))
-print('pieces:',len(out),'with footprint:',sum(1 for v in out.values() if 'box' in v))
+print('pieces:',len(out),'with footprint:',sum(1 for v in out.values() if 'box' in v),'with snap points:',sum(1 for v in out.values() if 'snap' in v))
 for n in ['wood_floor','wood_wall_half','stone_wall_2x1','piece_workbench','wood_door','woodwall','wood_roof','portal_wood','fire_pit']:
     print(n,out.get(n))

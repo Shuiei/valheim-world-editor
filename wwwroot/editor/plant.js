@@ -21,11 +21,14 @@ export function createPlant(ed) {
     <label class="check"><input type="checkbox" id="plSingle"> One at a time, exactly at the cursor</label>
     <label class="check" title="Saplings and crops need free space around them to grow (their grow radius in the game)"><input type="checkbox" id="plGrow" checked> Leave saplings room to grow</label>
     <div id="plLineBox" hidden>
+      <div class="seg" id="plLineShape"><button data-ls="points" class="on" title="Click points along the way, or hold and drag to draw freely">Points</button><button data-ls="circle" title="Press at the centre and drag out to the size you want">Circle</button><button data-ls="rect" title="Press at one corner and drag to the opposite corner">Rectangle</button></div>
+      <label class="check" title="Each piece starts where the last one ends, at the game's snap points, like the hammer snaps them"><input type="checkbox" id="plSnap"> End to end (snap together, like in game)</label>
+      <label class="check" id="plLoopRow"><input type="checkbox" id="plLoop"> Close the loop (back to the first point)</label>
       <label class="field">Every <input id="plEvery" type="range" min="0.5" max="30" step="0.5" value="4"><span id="plEveryV"></span></label>
       <label class="field">Wiggle <input id="plWiggle" type="range" min="0" max="5" step="0.25" value="0"><span id="plWiggleV"></span></label>
       <label class="check"><input type="checkbox" id="plAlong"> Face along the line (plus the rotation; replaces random facing)</label>
       <label class="check"><input type="checkbox" id="plCurve" checked> Smooth curve through the points</label>
-      <div class="hint">Click points along the route, or hold and drag. Backspace removes the last point.</div>
+      <div class="hint" id="plLineHint">Click points along the route, or hold and drag. Backspace removes the last point.</div>
     </div>
     <div id="plZoneBox" hidden>
       <div class="seg" id="plFill"><button data-f="scatter" class="on" title="Random spots, using Density and Spacing">Scatter</button><button data-f="grid" title="One object in the middle of each cell inside the shape">Grid</button></div>
@@ -322,8 +325,9 @@ export function createPlant(ed) {
       }
       return out;
     }
+    if (mode === 'line' && $('plSnap').checked) return snappedLine(names);
     if (mode === 'line') {
-      const c = lineCurve();
+      const c = linePath();
       if (c.length < 2) return out;
       const every = v('plEvery'), wiggle = v('plWiggle');
       let walked = 0, next = 0, i = 0;
@@ -355,10 +359,119 @@ export function createPlant(ed) {
     }
     return out;
   }
+  // ---- End to end: pieces placed so that each one's end meets the next one's start, like the game's
+  // hammer snaps them. A piece's two ends are the middles of the faces along its longer side, from its
+  // snap points (walls, fences, floors...) or, for kinds without any, from its model's box.
+  let snapPoints = null;
+  fetch('/api/snappoints').then(r => r.json()).then(d => { snapPoints = d; updatePreview(); }).catch(() => { snapPoints = {}; });
+  const endsCache = new Map();
+  function endsFrom(xs, ys, zs) {
+    const x0 = Math.min(...xs), x1 = Math.max(...xs), z0 = Math.min(...zs), z1 = Math.max(...zs), y = Math.min(...ys);
+    const alongX = x1 - x0 >= z1 - z0 - 1e-3, cx = (x0 + x1) / 2, cz = (z0 + z1) / 2;
+    const a = alongX ? [x0, y, cz] : [cx, y, z0], b = alongX ? [x1, y, cz] : [cx, y, z1];
+    const len = Math.hypot(b[0] - a[0], b[2] - a[2]);
+    return len > 0.05 ? { a, b, len, heading: Math.atan2(b[0] - a[0], b[2] - a[2]) } : null;
+  }
+  function endsOf(name) {
+    if (endsCache.has(name)) return endsCache.get(name);
+    const sp = snapPoints?.[name];
+    if (sp?.length >= 2) { const e = endsFrom(sp.map(p => p[0]), sp.map(p => p[1]), sp.map(p => p[2])); if (e) { endsCache.set(name, e); return e; } }
+    endsCache.set(name, null);
+    // No snap points: the model's box (three.js space has z mirrored).
+    ed.pieceModel(name).then(parts => {
+      if (!parts?.length) return;
+      const box = new THREE.Box3(), b = new THREE.Box3();
+      for (const part of parts) { if (!part.geometry.boundingBox) part.geometry.computeBoundingBox(); box.union(b.copy(part.geometry.boundingBox).applyMatrix4(part.matrix)); }
+      const sc = parts.rootScale ?? [1, 1, 1];
+      endsCache.set(name, endsFrom([box.min.x * sc[0], box.max.x * sc[0]], [box.min.y * sc[1], box.max.y * sc[1]], [-box.max.z * sc[2], -box.min.z * sc[2]]));
+      updatePreview();
+    }).catch(() => { });
+    return null;
+  }
+  // ---- Line shapes: points (clicked or drawn freely), a circle (centre, then drag the size) or a
+  // rectangle (a corner, then drag the opposite one). Circles and rectangles are closed.
+  let lineShape = 'points', figA = null, figB = null;
+  // End to end: the size snaps so that whole pieces close the shape.
+  function snapFigure(a, b) {
+    const e = $('plSnap').checked && chosen.size ? endsOf([...chosen][0]) : null;
+    if (!e) return b;
+    if (lineShape === 'rect') {
+      const fit = d => Math.sign(d || 1) * Math.max(1, Math.round(Math.abs(d) / e.len)) * e.len;
+      return { gx: a.gx + fit(b.gx - a.gx), gz: a.gz + fit(b.gz - a.gz) };
+    }
+    const r = Math.hypot(b.gx - a.gx, b.gz - a.gz), n = Math.max(3, Math.round(2 * Math.PI * r / e.len)), R = e.len / (2 * Math.sin(Math.PI / n));
+    const t = Math.atan2(b.gz - a.gz, b.gx - a.gx);
+    return { gx: a.gx + Math.cos(t) * R, gz: a.gz + Math.sin(t) * R };
+  }
+  // The line as runs of points: one run, or the four sides of a rectangle each on their own when
+  // placing end to end (so its corners stay exact).
+  function lineRuns() {
+    if (lineShape === 'points') {
+      const c = lineCurve();
+      if ($('plLoop').checked && c.length >= 3) c.push(c[0]);
+      return c.length >= 2 ? [c] : [];
+    }
+    if (!figA || !figB) return [];
+    const b = snapFigure(figA, figB);
+    if (lineShape === 'rect') {
+      const c = [{ gx: figA.gx, gz: figA.gz }, { gx: b.gx, gz: figA.gz }, { gx: b.gx, gz: b.gz }, { gx: figA.gx, gz: b.gz }];
+      if (Math.abs(b.gx - figA.gx) < 0.5 || Math.abs(b.gz - figA.gz) < 0.5) return [];
+      return $('plSnap').checked ? c.map((p, i) => [p, c[(i + 1) % 4]]) : [[...c, c[0]]];
+    }
+    const R = Math.hypot(b.gx - figA.gx, b.gz - figA.gz);
+    if (R < 0.5) return [];
+    // End to end: one point per piece, so the pieces meet at the corners of a regular polygon.
+    const e = $('plSnap').checked && chosen.size ? endsOf([...chosen][0]) : null;
+    const n = e ? Math.max(3, Math.round(2 * Math.PI * R / e.len)) : Math.max(16, Math.ceil(2 * Math.PI * R / 1.5));
+    const t0 = Math.atan2(b.gz - figA.gz, b.gx - figA.gx), c = [];
+    for (let i = 0; i <= n; i++) { const t = t0 + i / n * Math.PI * 2; c.push({ gx: figA.gx + Math.cos(t) * R, gz: figA.gz + Math.sin(t) * R }); }
+    return [c];
+  }
+  const linePath = () => lineRuns().flat();
+  let snapGap = null;
+  function snappedLine(names) {
+    const out = [];
+    snapGap = 0;
+    let k = 0;
+    for (const pts of lineRuns()) k = snappedRun(pts, names, k, out);
+    return out;
+  }
+  // Places pieces end to end along one run of points, from its start. k: pieces placed so far.
+  function snappedRun(pts, names, k, out) {
+    if (pts.length < 2) return k;
+    let s = { gx: pts[0].gx, gz: pts[0].gz }, seg = 0, t0 = 0, sSeg = 0;
+    for (; k < MAXSHAPE; k++) {
+      const name = names[k % names.length], e = endsOf(name);
+      sSeg = seg;
+      if (!e) break;
+      // The next point along the line exactly one piece length (straight) from this one.
+      let q = null;
+      for (; seg < pts.length - 1 && !q; seg++, t0 = 0) {
+        const a = pts[seg], b = pts[seg + 1], dx = b.gx - a.gx, dz = b.gz - a.gz, fx = a.gx - s.gx, fz = a.gz - s.gz;
+        const A = dx * dx + dz * dz, B = 2 * (fx * dx + fz * dz), C = fx * fx + fz * fz - e.len * e.len, disc = B * B - 4 * A * C;
+        if (A < 1e-9 || disc < 0) continue;
+        const t = (-B + Math.sqrt(disc)) / (2 * A);
+        if (t >= t0 - 1e-6 && t <= 1 + 1e-6) { q = { gx: a.gx + dx * t, gz: a.gz + dz * t }; t0 = t; break; }
+      }
+      if (!q) break;
+      // Turn so that the piece's start-to-end runs along s -> q (Unity yaw, clockwise seen from above).
+      const yaw = (Math.atan2(q.gx - s.gx, q.gz - s.gz) - e.heading) * 180 / Math.PI;
+      const r = yaw * Math.PI / 180, c = Math.cos(r), sn = Math.sin(r);
+      const ox = s.gx - (e.a[0] * c + e.a[2] * sn), oz = s.gz - (-e.a[0] * sn + e.a[2] * c);
+      const y = Math.min(heightAt(s.gx, s.gz), heightAt(q.gx, q.gz)) - e.a[1];
+      if (ox >= 1 && oz >= 1 && ox <= W - 2 && oz <= H - 2 && ed.mask(Math.round(oz) * W + Math.round(ox)))
+        out.push({ name, x: ed.originX + ox, y, z: ed.originZ + oz, rx: 0, ry: ((yaw % 360) + 360) % 360, rz: 0, scale: 0, gx: ox, gz: oz });
+      s = q;
+    }
+    // What is left of the line once no whole piece fits any more.
+    for (let i = sSeg; i < pts.length - 1; i++) { const a = i === sSeg ? s : pts[i], b = pts[i + 1]; snapGap += Math.hypot(b.gx - a.gx, b.gz - a.gz); }
+    return k;
+  }
+
   function drawShape() {
     const pts = [];
-    if (mode === 'line' && linePts.length) {
-      const c = lineCurve();
+    if (mode === 'line' && (linePts.length || figA)) {
+      const c = linePath();
       for (let s = 0; s < c.length; s++) {
         if (s === 0) { pts.push(v3(c[0].gx, c[0].gz)); continue; }
         const a = c[s - 1], b = c[s], n = Math.max(1, Math.ceil(Math.hypot(b.gx - a.gx, b.gz - a.gz)));
@@ -384,9 +497,23 @@ export function createPlant(ed) {
   function setMode(m) {
     mode = m;
     $('plModes').querySelectorAll('[data-m]').forEach(b => b.classList.toggle('on', b.dataset.m === m));
-    $('plLineBox').hidden = m !== 'line'; $('plGridBox').hidden = m !== 'grid'; $('plZoneBox').hidden = m !== 'zone'; $('plPlaceRow').hidden = m === 'brush'; $('plBrushHint').hidden = m !== 'brush';
+    $('plLineBox').hidden = m !== 'line'; syncSnap(); $('plGridBox').hidden = m !== 'grid'; $('plZoneBox').hidden = m !== 'zone'; $('plPlaceRow').hidden = m === 'brush'; $('plBrushHint').hidden = m !== 'brush';
     syncFill();
   }
+  // End to end: the piece's own length sets the spacing, facing and size are fixed.
+  function syncSnap() {
+    const on = mode === 'line' && $('plSnap').checked;
+    for (const id of ['plEvery', 'plWiggle', 'plAlong']) $(id).closest('label').hidden = on;
+    for (const id of ['plSmin', 'plTilt', 'plRot', 'plRandomYaw']) $(id).closest('label').hidden = on;
+    $('plLoopRow').hidden = mode !== 'line' || lineShape !== 'points';
+    $('plCurve').closest('label').hidden = lineShape !== 'points';
+  }
+  ['plSnap', 'plLoop'].forEach(id => $(id).addEventListener('input', () => { syncSnap(); drawShape(); updatePreview(); }));
+  $('plLineShape').querySelectorAll('[data-ls]').forEach(b => b.onclick = () => {
+    lineShape = b.dataset.ls; clearShape(); syncSnap();
+    $('plLineShape').querySelectorAll('[data-ls]').forEach(x => x.classList.toggle('on', x === b));
+    $('plLineHint').textContent = { points: 'Click points along the route, or hold and drag to draw freely. Backspace removes the last point.', circle: 'Press at the centre and drag out to the size; let go to see it, Enter places it. With End to end the size snaps so whole pieces close the ring.', rect: 'Press at one corner and drag to the opposite one; Enter places it. With End to end the sides snap to whole pieces.' }[lineShape];
+  });
   function syncFill() {
     const scatterFill = mode === 'zone' && fill === 'scatter';
     $('plFill').querySelectorAll('[data-f]').forEach(b => b.classList.toggle('on', b.dataset.f === fill));
@@ -400,7 +527,7 @@ export function createPlant(ed) {
   const syncShapeLabels = () => { $('plEveryV').textContent = `${v('plEvery')} m`; $('plWiggleV').textContent = `${v('plWiggle')} m`; $('plCellV').textContent = `${v('plCell')} m`; };
   ['plEvery', 'plWiggle', 'plCell', 'plAlong', 'plCurve'].forEach(id => $(id).addEventListener('input', () => { syncShapeLabels(); drawShape(); updatePreview(); }));
   syncShapeLabels();
-  function clearShape() { linePts = []; gridA = gridB = null; shapeTurn = 0; pivot = null; drawingLine = false; drawShape(); updatePreview(); }
+  function clearShape() { linePts = []; figA = figB = null; gridA = gridB = null; shapeTurn = 0; pivot = null; drawingLine = false; drawShape(); updatePreview(); }
   async function placeShape() {
     if (!preview.length) { ed.msg(mode === 'line' ? 'Draw a line first (click points on the ground).' : mode === 'zone' ? 'Draw a zone first (click points around it, or drag).' : 'Drag a box on the ground first.', true); return; }
     const list = preview.slice();
@@ -448,7 +575,7 @@ export function createPlant(ed) {
     if (ed.tool !== 'plant') return;
     if (!chosen.size) { $('plPreview').textContent = 'Tick at least one kind to plant.'; return; }
     if (held.shift && mode === 'brush') { $('plPreview').textContent = 'Shift: drag to remove the chosen kinds under the brush.'; return; }
-    if (mode !== 'brush') { $('plPreview').innerHTML = `<b>${preview.length}</b> object(s) ${mode === 'line' ? 'along the line' : mode === 'zone' ? 'in the zone' : 'in the grid'}. <kbd>Enter</kbd> places them${pointed() ? ' (or double-click)' : ''}${turnable() ? ` · <kbd>,</kbd> <kbd>.</kbd> or <kbd>Alt</kbd>+wheel turn the ${mode === 'zone' ? 'zone' : 'grid'}${shapeTurn ? ` (now ${shapeTurn}°)` : ''}` : ''} · <kbd>R</kbd> new random choices.`; return; }
+    if (mode !== 'brush') { $('plPreview').innerHTML = `<b>${preview.length}</b> object(s) ${mode === 'line' ? 'along the line' : mode === 'zone' ? 'in the zone' : 'in the grid'}${mode === 'line' && figA && figB ? (() => { const b = snapFigure(figA, figB); return lineShape === 'rect' ? ` (${Math.abs(b.gx - figA.gx).toFixed(1)} × ${Math.abs(b.gz - figA.gz).toFixed(1)} m)` : ` (radius ${Math.hypot(b.gx - figA.gx, b.gz - figA.gz).toFixed(1)} m)`; })() : ''}${mode === 'line' && $('plSnap').checked && snapGap > 0.05 && preview.length ? `, end to end (${snapGap.toFixed(1)} m of the line left at the end: move a point to close it)` : ''}. <kbd>Enter</kbd> places them${pointed() ? ' (or double-click)' : ''}${turnable() ? ` · <kbd>,</kbd> <kbd>.</kbd> or <kbd>Alt</kbd>+wheel turn the ${mode === 'zone' ? 'zone' : 'grid'}${shapeTurn ? ` (now ${shapeTurn}°)` : ''}` : ''} · <kbd>R</kbd> new random choices.`; return; }
     $('plPreview').innerHTML = at ? `<b>${preview.length}</b> object(s) shown under the cursor. Click places exactly these; drag paints more. <kbd>R</kbd> new layout · <kbd>Alt</kbd>+wheel or <kbd>,</kbd> <kbd>.</kbd> rotate.` : 'Move over the ground to see what a click would place.';
   }
   const held = { shift: false };
@@ -537,11 +664,13 @@ export function createPlant(ed) {
       if (!hit) return;
       ed.el.setPointerCapture(e.pointerId);
       press = { x: e.clientX, y: e.clientY, hit, drag: false };
+      if (mode === 'line' && lineShape !== 'points') { figA = { gx: hit.gx, gz: hit.gz }; figB = null; drawShape(); updatePreview(); return; }
       if (mode === 'grid') { gridA = { gx: hit.gx, gz: hit.gz }; gridB = null; shapeTurn = 0; pivot = null; }
     },
     move(e, hit) {
       at = hit; ed.showStatusFor?.(hit);
       if (!hit) return;
+      if (press && mode === 'line' && lineShape !== 'points') { figB = { gx: hit.gx, gz: hit.gz }; drawShape(); updatePreview(); return; }
       if (press && !press.drag && Math.hypot(e.clientX - press.x, e.clientY - press.y) > 6) {
         press.drag = true;
         if (pointed()) { const q = local(press.hit); if (!linePts.length || Math.hypot(linePts.at(-1).gx - q.gx, linePts.at(-1).gz - q.gz) > 0.3) linePts.push(q); drawingLine = true; }
@@ -556,6 +685,10 @@ export function createPlant(ed) {
     up(e, hit) {
       const p = press; press = null;
       if (!p) return;
+      if (mode === 'line' && lineShape !== 'points') {
+        if (!p.drag && !figB) { figA = null; ed.msg(lineShape === 'circle' ? 'Press at the centre and drag out to the size.' : 'Press at a corner and drag to the opposite one.'); }
+        drawShape(); updatePreview(); return;
+      }
       if (pointed()) {
         const h = local(hit ?? at ?? p.hit);
         if (!p.drag) {
@@ -572,7 +705,7 @@ export function createPlant(ed) {
       const k = e.key.toLowerCase();
       if (k === 'r' && !e.ctrlKey) { draws.length = 0; scatterSeed++; updatePreview(); return true; }
       if (e.key === 'Enter') { placeShape(); return true; }
-      if (e.key === 'Escape' && (linePts.length || gridA)) { clearShape(); return true; }
+      if (e.key === 'Escape' && (linePts.length || gridA || figA)) { clearShape(); return true; }
       if (e.key === 'Backspace' && pointed() && linePts.length) { linePts.pop(); drawShape(); updatePreview(); return true; }
       if (turnable() && (e.key === ',' || e.key === '<' || e.key === '.' || e.key === '>')) { turnShape((e.key === ',' || e.key === '<' ? -1 : 1) * ed.turnStep(e)); return true; }
       return brush.key(e);

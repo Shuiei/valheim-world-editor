@@ -586,6 +586,44 @@ test('select: with "on the ground", a moved object lands on the ground', async (
   noErrors();
 });
 
+test('plant end to end: a rectangle of walls snaps to whole pieces and closes, a ring too', async () => {
+  await openEditor();
+  await page().evaluate(() => localStorage.setItem('plantChosen', '["woodwall"]'));
+  await openEditor();
+  await page().keyboard.press('t'); await sleep(300);
+  await page().click('#plModes [data-m="line"]');
+  await page().click('#plSnap');
+  await page().click('#plLineShape [data-ls="rect"]');
+  const c = (await records()).find(r => r.name === 'piece_chest_wood');
+  const A = [c.x + 10, c.z + 10], B = [c.x + 19.3, c.z + 15.6];
+  await lookAt(page(), c.x + 15, c.z + 13, 0, 45, 30);
+  const [ax, ay] = await screenOf(page(), ...A), [bx, by] = await screenOf(page(), ...B);
+  await page().mouse.move(ax, ay); await page().mouse.down(); await page().mouse.move(bx, by, { steps: 8 }); await page().mouse.up(); await sleep(500);
+  assert.match(await page().$eval('#plPreview', e => e.textContent), /^16 object.*\(10\.0 × 6\.0 m\)/, 'snapped to 10 × 6 m: 16 walls of 2 m');
+  const before = (await records()).filter(r => r.added).map(r => r.id);
+  await page().keyboard.press('Enter'); await sleep(1200);
+  const walls = await page().evaluate(before => [...window.__ed.objects.records.values()].filter(r => r.added && !r.deleted && !before.includes(r.id)).map(r => ({ id: r.id, x: r.x, z: r.z, ry: r.ry })), before);
+  assert.equal(walls.length, 16);
+  // Each wall's ends (±1 m along its own x) meet another wall's end, or a corner.
+  const ends = walls.flatMap(w => { const t = w.ry * Math.PI / 180; return [-1, 1].map(s => [w.x + s * Math.cos(t), w.z - s * Math.sin(t)]); });
+  const lonely = ends.filter(([x, z]) => ends.filter(([u, v]) => Math.hypot(u - x, v - z) < 0.02).length < 2);
+  assert.equal(lonely.length, 0, 'every end meets another one: the fence is closed');
+  // A ring: one point per piece, closed.
+  await page().click('#plLineShape [data-ls="circle"]');
+  const O = [c.x - 15, c.z + 20];
+  await lookAt(page(), ...O, 0, 45, 30);
+  const [ox, oy] = await screenOf(page(), ...O), [rx, ry] = await screenOf(page(), O[0] + 6, O[1]);
+  await page().mouse.move(ox, oy); await page().mouse.down(); await page().mouse.move(rx, ry, { steps: 8 }); await page().mouse.up(); await sleep(500);
+  const ring = await page().$eval('#plPreview', e => e.textContent);
+  assert.match(ring, /^\d+ object/);
+  assert.doesNotMatch(ring, /left at the end/, 'no gap: whole pieces close the ring');
+  await page().keyboard.press('Escape');
+  await page().evaluate(ids => window.__ed.setDeleted(ids, true), walls.map(w => w.id));
+  await page().click('#plSnap');
+  await page().click('#plLineShape [data-ls="points"]');
+  noErrors();
+});
+
 test('undo takes a change back and the counter clears', async () => {
   await openEditor();
   await page().keyboard.press('Escape');

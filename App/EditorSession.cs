@@ -450,6 +450,9 @@ public static class EditorSession
 			return Results.Ok(new { objects = world.ObjectCount, pending = Pending() });
 		});
 
+		// Snap points of the building pieces (name -> [[x, y, z], ...]), to place them end to end.
+		app.MapGet("/api/snappoints", () => TerrainEditor.Terrain.PieceCatalog.WithSnaps.ToDictionary(i => i.Name, i => i.Snaps));
+
 		// Prefab names for the last value of each /api/pieces entry.
 		app.MapGet("/api/piece-types", () => TerrainEditor.Terrain.PieceCatalog.Names);
 

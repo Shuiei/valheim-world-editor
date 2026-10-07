@@ -154,6 +154,8 @@ export const TIPS = {
   plRandomYaw: 'On: each object faces a random direction. Off: they all face the Rotation.',
   plSingle: 'Place one object exactly under the cursor per click (only an object right on the spot blocks it).',
   plGrow: 'Keep saplings and crops at least their in-game grow radius away from everything, so they can grow.',
+  plSnap: 'Line: each object starts exactly where the last one ends, turned along the line, like the game\'s hammer snaps pieces (fences, walls, stakes, floors...). Uses the pieces\' own snap points, or the model\'s length for other kinds.',
+  plLoop: 'Line: go back to the first point at the end, to fence a zone in.',
   plEvery: 'Line: distance between two objects along the line (m).',
   plWiggle: 'Line: random sideways offset from the line, up to this many metres.',
   plAlong: 'Line: each object faces the direction of the line (plus the Rotation), instead of a random facing.',
