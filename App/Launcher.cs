@@ -6,6 +6,9 @@ namespace TerrainEditor.App;
 // running server (live mode). Serves until a choice is made, then hands back the editor's arguments.
 public static class Launcher
 {
+	private static readonly object PerfLogLock = new();
+	public static string PerfLogPath() => Path.Combine(AppSettings.DataDir, AppHost.InWindow ? "perf-window.log" : "perf-browser.log");
+
 	public sealed record Choice(string[] Args, string Label);
 
 	// mode: "game" (live, own game), "server" (live, built-in SSH tunnel), "saved" (a saved server),
@@ -201,7 +204,32 @@ public static class Launcher
 			string? problem = GameLook.Start(folder, settings);
 			return Results.Ok(new { ok = problem == null, error = problem });
 		});
-		app.MapGet("/api/app", () => new { version = AppHost.Version, window = AppHost.InWindow, dataDir = AppSettings.DataDir });
+		app.MapGet("/api/app", () => new { version = AppHost.Version, window = AppHost.InWindow, dataDir = AppSettings.DataDir, perfLog = PerfLogPath() });
+		// Frame rates measured by the 3D editor (a sample every 0.2 s while the view is used, sent in
+		// batches), in the data folder: perf-window.log in the app's window, perf-browser.log in a browser
+		// (--browser), to compare the two. Header lines (# ...) get the date and the version.
+		app.MapPost("/api/perflog", async (HttpRequest req) =>
+		{
+			using var reader = new StreamReader(req.Body);
+			string body = await reader.ReadToEndAsync();
+			if (body.Length == 0 || body.Length > 200_000) return Results.BadRequest();
+			string path = PerfLogPath();
+			string mode = AppHost.InWindow ? "app window" : "browser (--browser)";
+			var text = new System.Text.StringBuilder();
+			foreach (string line in body.Split('\n'))
+			{
+				string l = line.Trim();
+				if (l.Length == 0) continue;
+				text.AppendLine(l.StartsWith('#') ? $"# {DateTime.Now:yyyy-MM-dd HH:mm:ss}  v{AppHost.Version}  {mode}  {l[1..].Trim()}" : l);
+			}
+			lock (PerfLogLock)
+			{
+				// Kept small: past 5 MB the old lines move to <name>.old.
+				if (File.Exists(path) && new FileInfo(path).Length > 5_000_000) File.Move(path, path + ".old", overwrite: true);
+				File.AppendAllText(path, text.ToString());
+			}
+			return Results.Ok(new { path });
+		});
 	}
 
 	// ---- Worlds on this computer.

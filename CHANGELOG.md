@@ -4,6 +4,14 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v0.39.0 — 2026-10-07 (frame rate log)
+
+### Added
+- **Frame rate log**: a line every 0.2 s while the 3D view is used (camera moving, or still while
+  something else happens), with frames per second, the editor's work per frame and the longest gap
+  between frames, in `perf-window.log` (the app's window) or `perf-browser.log` (`--browser`) in the
+  data folder, to compare the two. Header lines give the browser, the view's size and what is loaded.
+
 ## v0.38.3 — 2026-10-07
 
 ### Fixed
