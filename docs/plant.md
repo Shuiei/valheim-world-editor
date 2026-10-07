@@ -40,7 +40,9 @@ zone); **Clear** (`Esc`) removes the shape, **Backspace** removes the last point
 In **Line** mode, **End to end** places pieces so that each one starts exactly where the last one ends,
 turned along the line, like the game's hammer snaps them: a fence, a stake wall, a row of walls or
 floors in a few clicks. The pieces' own snap points (from the game) give their length; other kinds
-use the length of their model. Ticking several kinds alternates them.
+use the length of their model. Ticking several kinds alternates them. End to end switches itself on
+when every ticked kind is a piece the game snaps (fences, walls, stakes, floors...) and off for other
+kinds, until you change it yourself.
 
 | Control | What it does |
 |---|---|
@@ -71,7 +73,7 @@ tool, Flatten).
 | **Leave saplings room to grow** | All | Keeps saplings and crops at least their in-game grow radius (0.5 m for crops, 2–3 m for tree saplings) away from everything, including each other, so they can grow. Off: place them as tightly as you like. |
 | **Every** | Line | Distance between two objects along the line (m). |
 | **Wiggle** | Line | Random sideways offset from the line, up to this many metres. |
-| **Face along the line** | Line | Each object faces the direction of the line (plus the Rotation) instead of a random facing. |
+| **Follow the line** | Line | On (the default): each object follows the line (plus the Rotation): a piece lies along it, end to end, other kinds face along it. Off: random facing. Circles and rectangles always follow their outline. |
 | **Smooth curve through the points** | Line | A smooth curve instead of straight segments. |
 | **Scatter** / **Grid** | Zone | How the zone is filled. |
 | **Cell** | Grid, Zone grid | Size of each cell (m). |

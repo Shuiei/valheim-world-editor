@@ -592,7 +592,7 @@ test('plant end to end: a rectangle of walls snaps to whole pieces and closes, a
   await openEditor();
   await page().keyboard.press('t'); await sleep(300);
   await page().click('#plModes [data-m="line"]');
-  await page().click('#plSnap');
+  await page().evaluate(() => { const e = document.getElementById('plSnap'); e.checked = true; e.dispatchEvent(new Event('input')); });
   await page().click('#plLineShape [data-ls="rect"]');
   const c = (await records()).find(r => r.name === 'piece_chest_wood');
   const A = [c.x + 10, c.z + 10], B = [c.x + 19.3, c.z + 15.6];
@@ -619,7 +619,7 @@ test('plant end to end: a rectangle of walls snaps to whole pieces and closes, a
   assert.doesNotMatch(ring, /left at the end/, 'no gap: whole pieces close the ring');
   await page().keyboard.press('Escape');
   await page().evaluate(ids => window.__ed.setDeleted(ids, true), walls.map(w => w.id));
-  await page().click('#plSnap');
+  await page().evaluate(() => { const e = document.getElementById('plSnap'); e.checked = false; e.dispatchEvent(new Event('input')); });
   await page().click('#plLineShape [data-ls="points"]');
   noErrors();
 });
@@ -630,7 +630,7 @@ test('plant end to end on a slope: level pieces, each on its own ground, touchin
   await openEditor();
   await page().keyboard.press('t'); await sleep(300);
   await page().click('#plModes [data-m="line"]');
-  await page().click('#plSnap');
+  await page().evaluate(() => { const e = document.getElementById('plSnap'); e.checked = true; e.dispatchEvent(new Event('input')); });
   const c = (await records()).find(r => r.name === 'piece_chest_wood');
   // Down the hill west of the chests (the test world's ground falls towards the east).
   const A = [c.x - 40, c.z + 6], B = [c.x - 4, c.z + 6];
@@ -657,7 +657,32 @@ test('plant end to end on a slope: level pieces, each on its own ground, touchin
   const heights = walls.map(w => w.bottom);
   assert.ok(Math.max(...heights) - Math.min(...heights) > 0.5, 'they step down the slope');
   await page().keyboard.press('Escape');
-  await page().click('#plSnap');
+  await page().evaluate(() => { const e = document.getElementById('plSnap'); e.checked = false; e.dispatchEvent(new Event('input')); });
+  noErrors();
+});
+
+test('plant line: walls switch End to end on, and every object follows a rectangle', async () => {
+  await openEditor();
+  await page().evaluate(() => localStorage.setItem('plantChosen', '["woodwall"]'));
+  await openEditor();
+  await page().keyboard.press('t'); await sleep(300);
+  await page().click('#plModes [data-m="line"]');
+  await page().waitForFunction(() => document.getElementById('plSnap').checked);
+  // Without End to end too, a rectangle's objects lie along its sides.
+  await page().evaluate(() => { const e = document.getElementById('plSnap'); e.checked = false; e.dispatchEvent(new Event('input')); });
+  await page().click('#plLineShape [data-ls="rect"]');
+  const c = (await records()).find(r => r.name === 'piece_chest_wood');
+  const A = [c.x + 10, c.z + 10], B = [c.x + 22, c.z + 18];
+  await lookAt(page(), c.x + 16, c.z + 14, 0, 45, 30);
+  const [ax, ay] = await screenOf(page(), ...A), [bx, by] = await screenOf(page(), ...B);
+  await page().mouse.move(ax, ay); await page().mouse.down(); await page().mouse.move(bx, by, { steps: 8 }); await page().mouse.up(); await sleep(500);
+  const yaws = await page().evaluate(() => window.__plantPreview().map(o => ((o.ry % 180) + 180) % 180));
+  assert.ok(yaws.length >= 8, `objects along the rectangle (${yaws.length})`);
+  // A wall lies along x: on east-west sides it is not turned (0), on north-south ones a quarter turn (90).
+  const off = yaws.map(y => Math.min(Math.abs(y), Math.abs(y - 90), Math.abs(y - 180)));
+  assert.ok(Math.max(...off) < 4, `every wall follows a side (off by ${Math.max(...off).toFixed(1)}° at most, rotation and wiggle aside)`);
+  await page().keyboard.press('Escape');
+  await page().click('#plLineShape [data-ls="points"]');
   noErrors();
 });
 

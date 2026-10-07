@@ -26,7 +26,7 @@ export function createPlant(ed) {
       <label class="check" id="plLoopRow"><input type="checkbox" id="plLoop"> Close the loop (back to the first point)</label>
       <label class="field">Every <input id="plEvery" type="range" min="0.5" max="30" step="0.5" value="4"><span id="plEveryV"></span></label>
       <label class="field">Wiggle <input id="plWiggle" type="range" min="0" max="5" step="0.25" value="0"><span id="plWiggleV"></span></label>
-      <label class="check"><input type="checkbox" id="plAlong"> Face along the line (plus the rotation; replaces random facing)</label>
+      <label class="check"><input type="checkbox" id="plAlong" checked> Follow the line (plus the rotation; replaces random facing)</label>
       <label class="check"><input type="checkbox" id="plCurve" checked> Smooth curve through the points</label>
       <div class="hint" id="plLineHint">Click points along the route, or hold and drag. Backspace removes the last point.</div>
     </div>
@@ -337,8 +337,11 @@ export function createPlant(ed) {
           const t = len > 0 ? (next - walked) / len : 0, dx = (b.gx - a.gx) / (len || 1), dz = (b.gz - a.gz) / (len || 1);
           const d = drawAt(i), side = (d.w - 0.5) * 2 * wiggle;
           const gx = a.gx + (b.gx - a.gx) * t - dz * side, gz = a.gz + (b.gz - a.gz) * t + dx * side;
-          // Unity yaw: clockwise from north (+z), so the heading of (dx, dz) is atan2(dx, dz).
-          const yaw = $('plAlong').checked ? Math.atan2(dx, dz) * 180 / Math.PI : null;
+          // Unity yaw: clockwise from north (+z), so the heading of (dx, dz) is atan2(dx, dz). Circles and
+          // rectangles always follow their outline. A kind with a known length (snap points, model)
+          // turns its length along the line; others face along it.
+          const name = names[Math.floor(d.t * names.length) % names.length], e = endsOf(name);
+          const yaw = $('plAlong').checked || lineShape !== 'points' ? (Math.atan2(dx, dz) - (e ? e.heading : 0)) * 180 / Math.PI : null;
           const o = placementAt(gx, gz, d, names, hash, cell, 0.3, yaw);
           if (o) out.push(o);
           i++; next += every;
@@ -363,7 +366,15 @@ export function createPlant(ed) {
   // hammer snaps them. A piece's two ends are the middles of the faces along its longer side, from its
   // snap points (walls, fences, floors...) or, for kinds without any, from its model's box.
   let snapPoints = null;
-  fetch('/api/snappoints').then(r => r.json()).then(d => { snapPoints = d; updatePreview(); }).catch(() => { snapPoints = {}; });
+  fetch('/api/snappoints').then(r => r.json()).then(d => { snapPoints = d; autoSnap(); updatePreview(); }).catch(() => { snapPoints = {}; });
+  // End to end switches itself on when every ticked kind is a piece the game snaps (fences, walls...)
+  // and off otherwise, until the switch is changed by hand.
+  let snapByHand = false;
+  function autoSnap() {
+    if (snapByHand || !snapPoints) return;
+    const pieces = chosen.size > 0 && [...chosen].every(n => snapPoints[n]?.length >= 2);
+    if ($('plSnap').checked !== pieces) { $('plSnap').checked = pieces; syncSnap(); drawShape(); }
+  }
   const endsCache = new Map();
   function endsFrom(xs, ys, zs) {
     const x0 = Math.min(...xs), x1 = Math.max(...xs), z0 = Math.min(...zs), z1 = Math.max(...zs), y = Math.min(...ys);
@@ -513,12 +524,15 @@ export function createPlant(ed) {
   // End to end: the piece's own length sets the spacing, facing and size are fixed.
   function syncSnap() {
     const on = mode === 'line' && $('plSnap').checked;
-    for (const id of ['plEvery', 'plWiggle', 'plAlong']) $(id).closest('label').hidden = on;
+    // Circles and rectangles always follow their outline.
+    $('plAlong').closest('label').hidden = on || lineShape !== 'points';
+    for (const id of ['plEvery', 'plWiggle']) $(id).closest('label').hidden = on;
     for (const id of ['plSmin', 'plTilt', 'plRot', 'plRandomYaw']) $(id).closest('label').hidden = on;
     $('plLoopRow').hidden = mode !== 'line' || lineShape !== 'points';
     $('plCurve').closest('label').hidden = lineShape !== 'points';
   }
   ['plSnap', 'plLoop'].forEach(id => $(id).addEventListener('input', () => { syncSnap(); drawShape(); updatePreview(); }));
+  $('plSnap').addEventListener('input', e => { if (e.isTrusted) snapByHand = true; });
   $('plLineShape').querySelectorAll('[data-ls]').forEach(b => b.onclick = () => {
     lineShape = b.dataset.ls; clearShape(); syncSnap();
     $('plLineShape').querySelectorAll('[data-ls]').forEach(x => x.classList.toggle('on', x === b));
@@ -593,7 +607,7 @@ export function createPlant(ed) {
   addEventListener('keyup', e => { if (e.key === 'Shift') { held.shift = false; updatePreview(); } });
   ['plDensity', 'plSpacing', 'plSmin', 'plSmax', 'plTilt'].forEach(id => $(id).addEventListener('input', () => { if (id === 'plDensity' || id === 'plSpacing') patternKey = ''; else for (const p of pattern) p.d = { ...p.d }; updatePreview(); }));
   $('radius').addEventListener('input', () => updatePreview());
-  $('plList').addEventListener('change', () => updatePreview());
+  $('plList').addEventListener('change', () => { autoSnap(); updatePreview(); });
   ed.onToolChange.push(t => { if (t === 'plant') hashStale = true; drawShape(); updatePreview(); });
 
   function step(dt) {
@@ -734,7 +748,8 @@ export function createPlant(ed) {
   }
   $('plNewLayout').onclick = () => { makePattern(); draws.length = 0; scatterSeed++; updatePreview(); };
   ['plRot', 'plRandomYaw', 'plSingle', 'plGrow'].forEach(id => $(id).addEventListener('input', () => updatePreview()));
-  try { $('plGrow').checked = localStorage.getItem('plantGrowRoom') !== '0'; } catch { }
+  try { $('plGrow').checked = localStorage.getItem('plantGrowRoom') !== '0'; $('plAlong').checked = localStorage.getItem('plantAlong') !== '0'; } catch { }
+  $('plAlong').addEventListener('change', () => { try { localStorage.setItem('plantAlong', $('plAlong').checked ? '1' : '0'); } catch { } });
   $('plGrow').addEventListener('change', () => { try { localStorage.setItem('plantGrowRoom', $('plGrow').checked ? '1' : '0'); } catch { } });
   // Alt + mouse wheel turns the preview instead of zooming.
   ed.el.addEventListener('wheel', e => {

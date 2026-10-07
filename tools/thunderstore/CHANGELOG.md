@@ -2,6 +2,10 @@
 
 The editor's own changes: [CHANGELOG.md](https://github.com/Shuiei/valheim-world-editor/blob/main/CHANGELOG.md).
 
+## 0.20.5
+
+- Editor changes only (pieces follow the line). The plugin is unchanged.
+
 ## 0.20.4
 
 - Editor changes only (dropdown boxes). The plugin is unchanged.
