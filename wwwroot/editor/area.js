@@ -40,6 +40,7 @@ export function createArea(ed) {
       </div>
       <label class="field">Height <input id="aHeight" type="number" step="0.1" value="35"><span><button id="aAvg" class="mini" title="Average height inside the selection">avg</button></span></label>
       <label class="field">Amount <input id="aAmount" type="number" step="0.1" value="2"><span>m</span></label>
+      <div class="hint" id="aVolume"></div>
       <label class="field">Paint <select id="aPaint"><option value="dirt">Dirt</option><option value="cultivated">Cultivated</option><option value="paved">Paved</option><option value="natural">Clear paint</option></select><span><button id="aPaintBtn" class="mini">apply</button></span></label>
     </div>
     <div class="sub"><h3>Objects inside</h3>
@@ -196,7 +197,33 @@ export function createArea(ed) {
 
   // ---- Info, object kinds and replace lists.
   const kindOn = new Set(['trees', 'rocks', 'bushes', 'pickables']);
+  // ---- Cut and fill (each ground point stands for 1 m²): how much the ground inside has been raised
+  // and dug compared to the generated ground, and what Flatten, Raise or Lower would move (within the
+  // game's ±8 m limit; what that leaves out is said).
+  const m3 = v => v >= 1000 ? `${(v / 1000).toFixed(1)}k m³` : `${Math.round(v)} m³`;
+  function updateVolume() {
+    const a = areaWeights();
+    if (!a) { $('aVolume').textContent = ''; return; }
+    const T = +$('aHeight').value, A = +$('aAmount').value;
+    let up = 0, down = 0, cut = 0, fill = 0, out = 0, raise = 0, lower = 0;
+    for (const [g, w] of a.cells) {
+      const gx = g % W, gz = (g - gx) / W;
+      if (ed.locked(gx, gz)) continue;
+      const h = ed.height(g), b = ed.base[g], d = (h - b) * w;
+      if (d > 0) up += d; else down -= d;
+      const want = h + (T - h) * w, got = Math.max(b - 8, Math.min(b + 8, want));
+      if (got > h) fill += got - h; else cut += h - got;
+      out += Math.abs(want - got);
+      raise += Math.max(0, Math.min(b + 8, h + A * w) - h);
+      lower += Math.max(0, h - Math.max(b - 8, h - A * w));
+    }
+    $('aVolume').innerHTML = `Ground inside: ${m3(up)} raised, ${m3(down)} dug since generated.<br>`
+      + `Flatten to ${T} m: dig ${m3(cut)}, fill ${m3(fill)}${out >= 1 ? ` (${m3(out)} out of reach: ±8 m limit)` : ''}. Raise: ${m3(raise)}, Lower: ${m3(lower)}.`;
+  }
+  ['aHeight', 'aAmount', 'aSoft'].forEach(id => $(id).addEventListener('input', updateVolume));
+  (ed.onTerrainChanged ??= []).push(() => { if (ed.tool === 'area') updateVolume(); });
   function updateInfo() {
+    updateVolume();
     const poly = polygon();
     if (!poly) {
       $('aInfo').textContent = shape === 'box' ? 'Drag on the ground to select a box.' : 'Click points around the area; double-click or Enter closes it. Backspace removes a point, Esc clears.';

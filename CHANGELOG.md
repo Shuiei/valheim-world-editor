@@ -4,6 +4,13 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v0.34.0 — 2026-10-07 (cut and fill)
+
+### Added
+- **Cut and fill** in the Area tool: how much ground inside the selection has been raised and dug
+  since it was generated, and what Flatten, Raise or Lower would dig and fill (m³) before you click,
+  with what the ±8 m limit leaves out.
+
 ## v0.33.0 — 2026-10-07 (overlays)
 
 ### Added

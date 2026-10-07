@@ -1264,6 +1264,30 @@ test('overlays: a workbench\'s build range and a ward\'s area are drawn as rings
   noErrors();
 });
 
+test('cut and fill: Flatten\'s estimate matches what it then does', async () => {
+  await openEditor();
+  const c = (await records()).find(r => r.name === 'piece_chest_wood');
+  const spot = [c.x - 30, c.z - 30];
+  await lookAt(page(), ...spot, 0, 60, 0.01);
+  await page().keyboard.press('b'); await sleep(300);
+  const [ax, ay] = await screenOf(page(), spot[0] - 8, spot[1] - 8), [bx, by] = await screenOf(page(), spot[0] + 8, spot[1] + 8);
+  await page().mouse.move(ax, ay); await page().mouse.down(); await page().mouse.move(bx, by, { steps: 6 }); await page().mouse.up(); await sleep(300);
+  await page().$eval('#aSoft', e => { e.value = 0; e.dispatchEvent(new Event('input')); });
+  await page().click('#aAvg');
+  await page().$eval('#aHeight', e => { e.value = (+e.value + 3).toFixed(1); e.dispatchEvent(new Event('input')); });
+  const text = () => page().$eval('#aVolume', e => e.textContent);
+  const num = (t, re) => { const m = t.match(re); return m ? parseFloat(m[1]) * (m[2] ? 1000 : 1) : NaN; };
+  const before = await text();
+  const fill = num(before, /fill ([\d.]+)(k)? m³/), raised0 = num(before, /^Ground inside: ([\d.]+)(k)? m³ raised/);
+  assert.ok(fill > 100, `a fill is estimated (${before})`);
+  await page().click('[data-act="flatten"]'); await sleep(1200);
+  const after = await text();
+  const raised = num(after, /^Ground inside: ([\d.]+)(k)? m³ raised/);
+  assert.ok(Math.abs(raised - raised0 - fill) <= Math.max(2, fill * 0.02), `raised by the estimate (${before} -> ${after})`);
+  await page().click('#undo'); await sleep(800);
+  noErrors();
+});
+
 test('Worlds goes back to the start page', async () => {
   await page().goto(t.base + '/index.html', { waitUntil: 'networkidle0' });
   await page().click('#worldsBtn');
