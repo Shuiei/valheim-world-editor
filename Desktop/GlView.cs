@@ -8,6 +8,7 @@ using Avalonia.OpenGL;
 using Avalonia.OpenGL.Controls;
 using Avalonia.Threading;
 using Silk.NET.OpenGL;
+using TerrainEditor.App;
 
 namespace TerrainEditor.Desktop;
 
@@ -41,6 +42,19 @@ public sealed class GlView : OpenGlControlBase
 	private readonly List<(long At, double Work)> _frames = new();
 	private long _statsAt;
 	public PerfLog? Perf { get; set; }
+
+	// ---- View switches: which kinds of objects are drawn, and the water.
+	private readonly bool[] _shown = ObjectKinds.All.Select(ObjectKinds.ShownAtFirst).ToArray();
+	public bool IsShown(ObjectKind k) => _shown[(int)k];
+	public void SetShown(ObjectKind k, bool on)
+	{
+		_shown[(int)k] = on;
+		Wake();
+	}
+	private volatile bool _showWater = true;
+	public bool ShowWater { get => _showWater; set { _showWater = value; Wake(); } }
+	// How many objects of each kind the area has (once the models' names are known).
+	public event Action<Dictionary<ObjectKind, int>>? KindCounts;
 
 	// For tests: the camera, and the keys held.
 	internal (float Yaw, float Pitch, float Distance, Vector3 Target) Camera { get { lock (_camLock) { return (_yaw, _pitch, _distance, _target); } } }
@@ -96,6 +110,7 @@ public sealed class GlView : OpenGlControlBase
 
 	private sealed class Batch
 	{
+		public ObjectKind Kind;
 		public uint Vao, InstanceVbo;
 		public int IndexCount, Instances;
 		public uint Texture;
@@ -105,7 +120,7 @@ public sealed class GlView : OpenGlControlBase
 	private readonly Dictionary<string, (uint Vbo, uint[] Ebos, int[] Counts)> _meshGl = new();
 	private readonly Dictionary<string, uint> _textures = new();
 	// Models read on worker threads, waiting to go to the graphics card (on the drawing thread).
-	private sealed record ReadyModel(ModelStore.Model? Model, List<Matrix4x4> Placements, Dictionary<string, ModelStore.MeshData> Meshes,
+	private sealed record ReadyModel(ObjectKind Kind, ModelStore.Model? Model, List<Matrix4x4> Placements, Dictionary<string, ModelStore.MeshData> Meshes,
 		Dictionary<string, ModelStore.MaterialData> Materials, Dictionary<string, ModelStore.ImageData?> Images);
 	private readonly ConcurrentQueue<ReadyModel> _ready = new();
 	private int _pending;
@@ -260,13 +275,22 @@ public sealed class GlView : OpenGlControlBase
 	// ---- Objects: read each kind's model on worker threads; the drawing thread uploads them.
 	private void StartModels(WorldScene s)
 	{
-		var byPrefab = s.Things.GroupBy(t => t.Prefab).ToList();
+		// One group per kind of object (a building piece a player placed apart from the same piece in a ruin).
+		var byPrefab = s.Things.GroupBy(t => (t.Prefab, t.Piece)).ToList();
 		_pending = byPrefab.Count;
+		var counts = new Dictionary<ObjectKind, int>();
+		foreach (var g in byPrefab)
+		{
+			var k = ObjectKinds.Of(_models?.NameOf(g.Key.Prefab) ?? TerrainEditor.Terrain.PrefabCatalog.DisplayName(g.Key.Prefab), g.Key.Piece);
+			counts[k] = counts.GetValueOrDefault(k) + g.Count();
+		}
+		Dispatcher.UIThread.Post(() => KindCounts?.Invoke(counts));
 		Task.Run(() => Parallel.ForEach(byPrefab, new ParallelOptions { MaxDegreeOfParallelism = Math.Max(2, Environment.ProcessorCount / 2) }, group =>
 		{
 			try
 			{
-				string? name = _models?.NameOf(group.Key);
+				string? name = _models?.NameOf(group.Key.Prefab) ?? TerrainEditor.Terrain.PrefabCatalog.DisplayName(group.Key.Prefab);
+				var kind = ObjectKinds.Of(name, group.Key.Piece);
 				var model = name != null ? _models!.LoadModel(name) : null;
 				var meshes = new Dictionary<string, ModelStore.MeshData>();
 				var mats = new Dictionary<string, ModelStore.MaterialData>();
@@ -300,11 +324,11 @@ public sealed class GlView : OpenGlControlBase
 				}
 				var root = model?.RootScale ?? Vector3.One;
 				var placements = group.Select(t => Placement(s, t, root)).ToList();
-				_ready.Enqueue(new ReadyModel(model, placements, meshes, mats, images));
+				_ready.Enqueue(new ReadyModel(kind, model, placements, meshes, mats, images));
 			}
 			catch (Exception ex)
 			{
-				Status?.Invoke($"Model of {group.Key}: {ex.Message}");
+				Status?.Invoke($"Model of {group.Key.Prefab}: {ex.Message}");
 				Interlocked.Decrement(ref _pending);
 			}
 		}));
@@ -350,7 +374,7 @@ public sealed class GlView : OpenGlControlBase
 		if (r.Model == null)
 		{
 			// No model copied for this kind: a box stands in, as in the web editor.
-			AddBatch(BoxMesh(), 0, new ModelStore.MaterialData(new Vector4(0.35f, 0.3f, 0.25f, 1), null, 0, false, new Vector4(1, 1, 0, 0)),
+			AddBatch(r.Kind, BoxMesh(), 0, new ModelStore.MaterialData(new Vector4(0.35f, 0.3f, 0.25f, 1), null, 0, false, new Vector4(1, 1, 0, 0)),
 				r.Placements.Select(p => Matrix4x4.CreateScale(1, 2, 1) * Matrix4x4.CreateTranslation(0, 1, 0) * p).ToList());
 		}
 		else
@@ -368,7 +392,7 @@ public sealed class GlView : OpenGlControlBase
 				{
 					continue;
 				}
-				AddBatch(mesh, part.Sub, r.Materials[part.Material], r.Placements.Select(p => part.Matrix * p).ToList());
+				AddBatch(r.Kind, mesh, part.Sub, r.Materials[part.Material], r.Placements.Select(p => part.Matrix * p).ToList());
 			}
 		}
 		Interlocked.Decrement(ref _pending);
@@ -427,9 +451,9 @@ public sealed class GlView : OpenGlControlBase
 		return MeshGl(id, new ModelStore.MeshData(verts.ToArray(), new[] { idx.ToArray() }));
 	}
 
-	private unsafe void AddBatch((uint Vbo, uint[] Ebos, int[] Counts) mesh, int sub, ModelStore.MaterialData mat, List<Matrix4x4> instances)
+	private unsafe void AddBatch(ObjectKind kind, (uint Vbo, uint[] Ebos, int[] Counts) mesh, int sub, ModelStore.MaterialData mat, List<Matrix4x4> instances)
 	{
-		var b = new Batch { Material = mat, IndexCount = mesh.Counts[sub], Instances = instances.Count };
+		var b = new Batch { Kind = kind, Material = mat, IndexCount = mesh.Counts[sub], Instances = instances.Count };
 		lock (_textures)
 		{
 			b.Texture = mat.Map != null && _textures.TryGetValue(mat.Map, out uint t) ? t : 0;
@@ -550,6 +574,10 @@ public sealed class GlView : OpenGlControlBase
 			_gl.ActiveTexture(TextureUnit.Texture0);
 			foreach (var b in _batches)
 			{
+				if (!_shown[(int)b.Kind])
+				{
+					continue;
+				}
 				var m = b.Material;
 				if (b.Texture == 0 && m.Map != null)
 				{
@@ -575,22 +603,25 @@ public sealed class GlView : OpenGlControlBase
 				_gl.DrawElementsInstanced(PrimitiveType.Triangles, (uint)b.IndexCount, DrawElementsType.UnsignedInt, (void*)0, (uint)b.Instances);
 			}
 
-			if (_look != null)
+			if (ShowWater)
 			{
-				_look.DrawWater(vp, eye, time);
-			}
-			else
-			{
-				_gl.Disable(EnableCap.CullFace);
-				_gl.Enable(EnableCap.Blend);
-				_gl.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
-				_gl.DepthMask(false);
-				_gl.UseProgram(_waterProg);
-				_gl.UniformMatrix4(_gl.GetUniformLocation(_waterProg, "uViewProj"), 1, false, (float*)&vp);
-				_gl.BindVertexArray(_waterVao);
-				_gl.DrawElements(PrimitiveType.Triangles, 6, DrawElementsType.UnsignedInt, (void*)0);
-				_gl.DepthMask(true);
-				_gl.Disable(EnableCap.Blend);
+				if (_look != null)
+				{
+					_look.DrawWater(vp, eye, time);
+				}
+				else
+				{
+					_gl.Disable(EnableCap.CullFace);
+					_gl.Enable(EnableCap.Blend);
+					_gl.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
+					_gl.DepthMask(false);
+					_gl.UseProgram(_waterProg);
+					_gl.UniformMatrix4(_gl.GetUniformLocation(_waterProg, "uViewProj"), 1, false, (float*)&vp);
+					_gl.BindVertexArray(_waterVao);
+					_gl.DrawElements(PrimitiveType.Triangles, 6, DrawElementsType.UnsignedInt, (void*)0);
+					_gl.DepthMask(true);
+					_gl.Disable(EnableCap.Blend);
+				}
 			}
 		}
 		_gl.BindVertexArray(0);
