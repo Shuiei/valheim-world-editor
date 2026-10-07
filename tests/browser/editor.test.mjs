@@ -353,7 +353,14 @@ test('brush shapes: square, ring and falloff change where the brush works', asyn
   await page().mouse.move(x, y); await page().mouse.down(); await page().mouse.move(x + 3, y + 3, { steps: 15 }); await page().mouse.up(); await sleep(800);
   assert.notEqual(await pending(), start, 'the square brush changed the ground');
   await page().click('#undo'); await sleep(1000);
+  // The Ring shape shows its inner edge too.
+  const inner = () => page().evaluate(() => window.__ed.scene.children.filter(o => o.isLineLoop && o.renderOrder === 10 && o.material.opacity < 1)[0]?.visible);
+  await page().evaluate(() => { const e = document.getElementById('bShape'); e.value = 'ring'; e.dispatchEvent(new Event('input')); });
+  await page().mouse.move(x + 1, y + 1); await frames(page());
+  assert.equal(await inner(), true, 'the ring brush draws its inner edge');
   await page().evaluate(() => { const e = document.getElementById('bShape'); e.value = 'circle'; e.dispatchEvent(new Event('input')); });
+  await page().mouse.move(x, y); await frames(page());
+  assert.equal(await inner(), false, 'a circle does not');
   noErrors();
 });
 

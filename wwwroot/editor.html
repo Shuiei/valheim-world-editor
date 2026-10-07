@@ -508,6 +508,9 @@ const ring = new THREE.LineLoop(new THREE.BufferGeometry().setAttribute('positio
 ring.renderOrder = 10; scene.add(ring);
 // The ring moves every frame but its bounding sphere is never recomputed: never cull it.
 ring.frustumCulled = false;
+// Inner edge of brushes that leave their middle alone (the Ring shape), drawn fainter.
+const innerRing = new THREE.LineLoop(new THREE.BufferGeometry().setAttribute('position', new THREE.BufferAttribute(new Float32Array(ringPts * 3), 3)), new THREE.LineBasicMaterial({ color: 0xffd27a, depthTest: false, transparent: true, opacity: 0.55 }));
+innerRing.renderOrder = 10; innerRing.frustumCulled = false; innerRing.visible = false; scene.add(innerRing);
 
 function resize() { renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); }
 addEventListener('resize', resize); resize();
@@ -588,7 +591,7 @@ function sampleHeight(fx, fz) {
 }
 function updateRing() {
   ring.visible = !!hover && !['move', 'select', 'area', 'paste', 'measure', 'shape'].includes(tool);
-  if (!hover) return;
+  if (!hover) { innerRing.visible = false; return; }
   const p = ring.geometry.attributes.position.array;
   // Sculpt and paint brushes show their shape; the path and the plant brush a circle.
   const shaped = BRUSH_TOOLS.includes(tool) && ed.brush ? ed.brush.outline(radius, ringPts) : null;
@@ -598,6 +601,13 @@ function updateRing() {
     p[i * 3] = fx - cx; p[i * 3 + 1] = sampleHeight(fx, fz) + 0.3; p[i * 3 + 2] = -(fz - cz);
   }
   ring.geometry.attributes.position.needsUpdate = true;
+  const inner = ring.visible && BRUSH_TOOLS.includes(tool) ? ed.brush?.innerOutline(radius, ringPts) : null;
+  innerRing.visible = !!inner;
+  if (inner) {
+    const q = innerRing.geometry.attributes.position.array;
+    inner.forEach(([ox, oz], i) => { const fx = hover.gx + ox, fz = hover.gz + oz; q[i * 3] = fx - cx; q[i * 3 + 1] = sampleHeight(fx, fz) + 0.3; q[i * 3 + 2] = -(fz - cz); });
+    innerRing.geometry.attributes.position.needsUpdate = true;
+  }
 }
 function showStatus() {
   if (!hover) { $('sPos').textContent = '–'; $('sHeight').textContent = ''; $('sZone').textContent = ''; return; }

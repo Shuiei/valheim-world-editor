@@ -4,6 +4,11 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v0.21.1 — 2026-10-07 (ring brush outline)
+
+### Changed
+- The Ring brush shape draws its inner edge too, so the untouched middle shows on the ground.
+
 ## v0.21.0 — 2026-10-07 (exact moves and snapping)
 
 ### Added
