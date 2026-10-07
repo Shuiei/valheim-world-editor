@@ -24,7 +24,7 @@ hold and drag. The yellow ring on the ground is the brush. All of them work with
 |---|---|
 | **Size** | Brush radius in metres (`[` and `]` change it). The effect fades out smoothly towards the edge of the ring. |
 | **Strength** | How fast the brush works while you hold the button. |
-| **Shape** | **Circle**; **Square**; **Ring** (only a band around the middle: crater rims, moats, walls of earth); **Ragged** (a noisy, natural-looking edge); or a picture, see [Stamps](#stamps). The ring on the ground shows the shape. |
+| **Shape** | **Circle**; **Square**; **Ring** (only the band between 40% of the size and the edge, shown by a second, fainter outline inside: crater rims, moats, walls of earth); **Ragged** (a noisy, natural-looking edge); or a picture, see [Stamps](#stamps). The ring on the ground shows the shape. |
 | **Falloff** | How the effect fades from the middle to the edge: **Smooth** (the default), **Linear**, **Dome** (round top, steep sides), **Flat top** (full strength almost to the edge: pads and terraces), **Peak** (strong in the middle only: spires and pits). |
 | **Turn** | Turns a square brush or a picture (degrees); `,` and `.` change it by 1° (Shift: 15°). |
 | **Mask** | Limits the brush to some ground, see [Mask](masks.md). |

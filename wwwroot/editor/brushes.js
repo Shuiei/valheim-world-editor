@@ -78,6 +78,8 @@ export function createBrushes(ed) {
     }
     return out;
   }
+  // The Ring shape works on a band from 40% of the radius to the edge: its inner edge, or null.
+  const innerOutline = (r, n) => $('bShape').value === 'ring' ? Array.from({ length: n }, (_, i) => { const t = i / n * Math.PI * 2; return [Math.cos(t) * r * 0.4, Math.sin(t) * r * 0.4]; }) : null;
   function turn(deg) {
     let t = +$('bTurn').value + deg; t = ((t + 180) % 360 + 360) % 360 - 180;
     $('bTurn').value = t; sync();
@@ -100,7 +102,7 @@ export function createBrushes(ed) {
     if (!$('bShape').value) $('bShape').value = 'circle';
     sync();
   }
-  ed.brush = { weight, reach, outline, addShape, removeShape, sync, get shape() { return $('bShape').value; }, set shape(v) { $('bShape').value = v; sync(); } };
+  ed.brush = { weight, reach, outline, innerOutline, addShape, removeShape, sync, get shape() { return $('bShape').value; }, set shape(v) { $('bShape').value = v; sync(); } };
   sync();
   return ed.brush;
 }
