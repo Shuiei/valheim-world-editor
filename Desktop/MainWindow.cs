@@ -24,6 +24,7 @@ public sealed class MainWindow : Window
 	internal SelectPanel SelectPanel { get; }
 	internal MeasurePanel MeasurePanel { get; }
 	internal ShapePanel ShapePanel { get; } = new();
+	internal PathPanel PathPanel { get; }
 
 	// The save bar (top middle): what is waiting to be saved, undo, redo, Save, and the last message.
 	private readonly TextBlock _pending = new() { FontSize = 12, VerticalAlignment = VerticalAlignment.Center, Text = "All saved" };
@@ -127,6 +128,34 @@ public sealed class MainWindow : Window
 		UpdateSaveBar();
 	}
 
+	// The Path tool's Apply: the action along the line, in one undo step. The line is kept.
+	internal void ApplyPath()
+	{
+		if (_session is not { } s)
+		{
+			return;
+		}
+		var path = _view.Path;
+		if (path.Points.Count < 2)
+		{
+			_message.Text = "Draw a line with at least two points first.";
+			return;
+		}
+		bool clamped = false;
+		var touched = s.EditGround($"Path: {PathTool.Label(path.Act)}", g =>
+		{
+			var (t, rect, c) = path.Apply(g, s.Brush, s.Scene.Water);
+			clamped = c;
+			return (t, rect);
+		});
+		float total = PathTool.Length(path.Curve());
+		_message.Text = touched.Count == 0 ? "Nothing changed along the line."
+			: clamped ? "Applied, but part of the path reached the game limit of ±8 m from the original ground (red points)."
+			: $"Applied “{PathTool.Label(path.Act)}” along {total:0} m. The line is kept, so you can apply another action (Clear to start over).";
+		PathPanel.Refresh();
+		UpdateSaveBar();
+	}
+
 	// The Shape tool's click: the shape goes into the ground there (grid point).
 	internal void PutShape(float gx, float gz)
 	{
@@ -202,6 +231,21 @@ public sealed class MainWindow : Window
 		{
 			e.Handled = true;
 		}
+		else if (Tools.Mode == ToolMode.Path && !ctrl && e.Key is Avalonia.Input.Key.Enter or Avalonia.Input.Key.Return)
+		{
+			ApplyPath();
+			e.Handled = true;
+		}
+		else if (Tools.Mode == ToolMode.Path && !ctrl && e.Key == Avalonia.Input.Key.Back)
+		{
+			_view.Path.RemoveLast();
+			e.Handled = true;
+		}
+		else if (Tools.Mode == ToolMode.Path && !ctrl && e.Key == Avalonia.Input.Key.Escape && _view.Path.Points.Count > 0)
+		{
+			_view.Path.Clear();
+			e.Handled = true;
+		}
 		else if (Tools.Mode == ToolMode.Measure && !ctrl && e.Key == Avalonia.Input.Key.Escape && _view.Tape.A != null)
 		{
 			_view.Tape.Clear();
@@ -211,7 +255,7 @@ public sealed class MainWindow : Window
 		{
 			Tools.Key("Escape");
 		}
-		else if (!ctrl && e.Key is Avalonia.Input.Key.E or Avalonia.Input.Key.M or Avalonia.Input.Key.G)
+		else if (!ctrl && e.Key is Avalonia.Input.Key.E or Avalonia.Input.Key.M or Avalonia.Input.Key.G or Avalonia.Input.Key.P)
 		{
 			Tools.Key(e.Key.ToString());
 		}
@@ -300,6 +344,14 @@ public sealed class MainWindow : Window
 	{
 		SelectPanel = new SelectPanel(_view.SelectTool);
 		MeasurePanel = new MeasurePanel(_view);
+		PathPanel = new PathPanel(_view, Tools.Brush);
+		PathPanel.ApplyAsked += ApplyPath;
+		_view.PathScripted += () =>
+		{
+			PathPanel.Refresh();
+			ApplyPath();
+			Options.Say($"path: {_view.Path.Points.Count} points, {PathPanel.Info.Text} {_message.Text} {_session?.PendingText}");
+		};
 		Title = "Valheim World Editor (native preview)";
 		Width = 1500;
 		Height = 950;
@@ -329,9 +381,9 @@ public sealed class MainWindow : Window
 			Margin = new Thickness(10),
 			HorizontalAlignment = HorizontalAlignment.Left,
 			VerticalAlignment = VerticalAlignment.Top,
-			Children = { Tools.Rail, Tools.Options, SelectPanel.Card, MeasurePanel.Card, ShapePanel.Card },
+			Children = { Tools.Rail, Tools.Options, SelectPanel.Card, MeasurePanel.Card, ShapePanel.Card, PathPanel.Card },
 		};
-		SelectPanel.Card.IsVisible = MeasurePanel.Card.IsVisible = ShapePanel.Card.IsVisible = false;
+		SelectPanel.Card.IsVisible = MeasurePanel.Card.IsVisible = ShapePanel.Card.IsVisible = PathPanel.Card.IsVisible = false;
 		ShapePanel.Changed += () => _view.ShapeRadius = ShapePanel.Radius;
 		_view.ShapeClicked += PutShape;
 		Tools.Options.VerticalAlignment = VerticalAlignment.Top;
@@ -343,6 +395,7 @@ public sealed class MainWindow : Window
 			SelectPanel.Card.IsVisible = Tools.SelectMode;
 			MeasurePanel.Card.IsVisible = Tools.Mode == ToolMode.Measure;
 			ShapePanel.Card.IsVisible = Tools.Mode == ToolMode.Shape;
+			PathPanel.Card.IsVisible = Tools.Mode == ToolMode.Path;
 		};
 		_view.SelectTool.Message += (text, _) => _message.Text = text;
 		_view.StrokeEnded += msg =>
@@ -422,6 +475,10 @@ public sealed class MainWindow : Window
 				else if (Options.StartTool is "shape")
 				{
 					Tools.ChooseMode(ToolMode.Shape);
+				}
+				else if (Options.StartTool is "path")
+				{
+					Tools.ChooseMode(ToolMode.Path);
 				}
 				else if (Enum.TryParse<BrushTool>(Options.StartTool, ignoreCase: true, out var startBrush))
 				{

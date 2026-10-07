@@ -1032,6 +1032,7 @@ public sealed class GlView : OpenGlControlBase
 			DrawLasso(s, vp);
 			DrawGizmo(s, vp);
 			DrawMeasure(s, vp);
+			DrawPath(s, vp);
 			if (ShowWater)
 			{
 				if (_look != null)
@@ -1122,6 +1123,18 @@ public sealed class GlView : OpenGlControlBase
 							Options.Say($"moved: {before.X:0.0} {before.Y:0.0} {before.Z:0.0} → {now.X:0.0} {now.Y:0.0} {now.Z:0.0}, {_scene.Session?.PendingText}");
 						});
 					}
+				}
+				if (Options.PathAt is { Length: >= 4 } pp)
+				{
+					var size = Bounds.Size;
+					for (int k = 0; k + 1 < pp.Length; k += 2)
+					{
+						if (GridAt(new Point(pp[k] * size.Width, pp[k + 1] * size.Height), size) is { } g)
+						{
+							Path.Points.Add(g);
+						}
+					}
+					Dispatcher.UIThread.Post(() => PathScripted?.Invoke());
 				}
 				if (Options.TapeAt is { Length: 4 } tp)
 				{
@@ -1290,6 +1303,16 @@ public sealed class GlView : OpenGlControlBase
 			_pointer = p.Position;
 			_surfaceSize = surface.Bounds.Size;
 			e.Pointer.Capture(surface);
+			if (_dragButton == PointerUpdateKind.LeftButtonPressed && _mode == ToolMode.Path)
+			{
+				_dragFrom = null;
+				_pathDown = true;
+				var mods = e.KeyModifiers;
+				Path.Down(GridAt(p.Position, _surfaceSize), p.Position, g => ScreenOfGrid(g), mods.HasFlag(KeyModifiers.Control), mods.HasFlag(KeyModifiers.Alt),
+					mods.HasFlag(KeyModifiers.Shift), GridHeight);
+				Wake();
+				return;
+			}
 			if (_dragButton == PointerUpdateKind.LeftButtonPressed && _mode == ToolMode.Shape)
 			{
 				_dragFrom = null;
@@ -1334,6 +1357,11 @@ public sealed class GlView : OpenGlControlBase
 		{
 			// A left click (not a drag) picks the object under the pointer.
 			var at = e.GetPosition(surface);
+			if (_pathDown)
+			{
+				_pathDown = false;
+				Path.Up();
+			}
 			if (_selectDown)
 			{
 				_selectDown = false;
@@ -1358,6 +1386,10 @@ public sealed class GlView : OpenGlControlBase
 		{
 			_pointer = e.GetPosition(surface);
 			_surfaceSize = surface.Bounds.Size;
+			if (_pathDown)
+			{
+				Path.Moved(GridAt(_pointer.Value, _surfaceSize));
+			}
 			if (_selectDown)
 			{
 				SelectTool.Moved(_pointer.Value, _surfaceSize, e.KeyModifiers.HasFlag(KeyModifiers.Control));
@@ -1426,6 +1458,37 @@ public sealed class GlView : OpenGlControlBase
 	// Shape tool: a click on the ground (grid point), and the radius its outline shows.
 	public event Action<float, float>? ShapeClicked;
 	public float ShapeRadius { get; set; } = 16;
+	public PathTool Path { get; } = new();
+	// --path: the line is drawn; the window applies it.
+	public event Action? PathScripted;
+	private bool _pathDown;
+
+	// Where a grid point (on the ground, lifted a little) is on the view, or null behind the camera.
+	internal Point? ScreenOfGrid(Vector2 g, float lift = 0.6f)
+	{
+		var s = _scene;
+		var size = _surfaceSize.Width > 0 ? _surfaceSize : Bounds.Size;
+		if (s == null || size.Width <= 0)
+		{
+			return null;
+		}
+		float x = g.X - (s.W - 1) / 2f, z = -(g.Y - (s.H - 1) / 2f);
+		var q = Vector4.Transform(new Vector4(x, Picking.HeightAt(s, x, z) + lift, z, 1), _lastViewProj);
+		if (q.W <= 0)
+		{
+			return null;
+		}
+		return new Point((q.X / q.W + 1) / 2 * size.Width, (1 - q.Y / q.W) / 2 * size.Height);
+	}
+
+	// The grid point of the ground under a point of the view (null: none).
+	internal Vector2? GridAt(Point at, Size size) => _scene is { } s && GroundAt(s, _lastViewProj, at, size) is { } g ? new Vector2(g.X, g.Z) : null;
+
+	internal float GridHeight(Vector2 g)
+	{
+		var s = _scene;
+		return s == null ? 0 : Picking.HeightAt(s, g.X - (s.W - 1) / 2f, -(g.Y - (s.H - 1) / 2f));
+	}
 	private bool _selectDown;
 
 	// The world point (x east, height, z north) of the ground under a point of the view, or null.
@@ -1610,6 +1673,57 @@ public sealed class GlView : OpenGlControlBase
 		_gl.BindVertexArray(vao);
 		_gl.DrawArrays(PrimitiveType.Lines, 0, (uint)(data.Length / 3));
 		_gl.Enable(EnableCap.DepthTest);
+	}
+
+	private uint _pathVao, _pathVbo, _pathEdgeVao, _pathEdgeVbo, _pathDotVao, _pathDotVbo;
+	// The Path tool's line (red, on the ground), its width (the line offset to both sides) and its points.
+	private void DrawPath(WorldScene s, Matrix4x4 vp)
+	{
+		if (_mode != ToolMode.Path)
+		{
+			return;
+		}
+		List<(Vector2 P, int Seg)> curve;
+		List<Vector2> pts;
+		lock (Path.Points)
+		{
+			curve = Path.Curve();
+			pts = Path.Points.ToList();
+		}
+		Vector3 V(Vector2 g, float lift)
+		{
+			float x = g.X - (s.W - 1) / 2f, z = -(g.Y - (s.H - 1) / 2f);
+			return new Vector3(x, Picking.HeightAt(s, x, z) + lift, z);
+		}
+		var line = new List<float>();
+		var edges = new List<float>();
+		void Seg(List<float> to, Vector3 a, Vector3 b) => to.AddRange(new[] { a.X, a.Y, a.Z, b.X, b.Y, b.Z });
+		float half = Path.Width / 2;
+		for (int i = 1; i < curve.Count; i++)
+		{
+			Vector2 a = curve[i - 1].P, b = curve[i].P;
+			Seg(line, V(a, 0.6f), V(b, 0.6f));
+			float len = MathF.Max(Vector2.Distance(a, b), 1e-6f);
+			var n = new Vector2(-(b.Y - a.Y), b.X - a.X) / len * half;
+			Seg(edges, V(a + n, 0.4f), V(b + n, 0.4f));
+			Seg(edges, V(a - n, 0.4f), V(b - n, 0.4f));
+		}
+		// Each point: a small square that keeps its size on screen.
+		var dots = new List<float>();
+		foreach (var p in pts)
+		{
+			var c = V(p, 0.6f);
+			float r = Vector3.Distance(_lastEye, c) * 0.008f;
+			Vector3[] k = { c + new Vector3(-r, 0, -r), c + new Vector3(r, 0, -r), c + new Vector3(r, 0, r), c + new Vector3(-r, 0, r) };
+			for (int j = 0; j < 4; j++)
+			{
+				Seg(dots, k[j], k[(j + 1) % 4]);
+			}
+			Seg(dots, c - new Vector3(0, r, 0), c + new Vector3(0, r, 0));
+		}
+		DrawLines(ref _pathEdgeVao, ref _pathEdgeVbo, edges.ToArray(), vp, new Vector4(1, 0.69f, 0.63f, 0.6f));
+		DrawLines(ref _pathVao, ref _pathVbo, line.ToArray(), vp, new Vector4(1, 0.23f, 0.23f, 1));
+		DrawLines(ref _pathDotVao, ref _pathDotVbo, dots.ToArray(), vp, new Vector4(1, 0.69f, 0.63f, 1));
 	}
 
 	private uint _measureVao, _measureVbo;

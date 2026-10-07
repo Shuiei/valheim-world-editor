@@ -118,6 +118,27 @@ public sealed class EditSession
 		return message;
 	}
 
+	// A change of the ground made all at once (a path, an area action): change gets the ground and returns
+	// the points it changed and the grid rectangle around them. One undo step.
+	public List<int> EditGround(string label, Func<Ground, (List<int> Touched, (int X0, int Z0, int X1, int Z1) Rect)> change)
+	{
+		List<int> touched;
+		lock (_lock)
+		{
+			var start = Ground.Snapshot();
+			(touched, var rect) = change(Ground);
+			if (touched.Count > 0)
+			{
+				Touch(rect);
+				var zones = Ground.ZonesOf(touched);
+				Record(label, start, touched, zones);
+				Send(zones);
+			}
+		}
+		Changed?.Invoke();
+		return touched;
+	}
+
 	// Puts a shape into the ground around grid point (cx, cz) (Shape tool): the formula gives the metres
 	// to add at each point within the radius (x, z metres east and north of the middle, d the distance,
 	// r the radius, h the height, n(x, z) the brushes' noise). One undo step.
