@@ -30,7 +30,7 @@ public sealed class GlView : OpenGlControlBase
 	private readonly HashSet<Key> _keys = new();
 	private Point? _dragFrom;
 	private PointerUpdateKind _dragButton;
-	private long _wokeAt, _lastFrame;
+	private long _wokeAt, _lastFrame, _idleAt;
 	private Matrix4x4 _lastView;
 
 	// ---- Frame rate: shown by the window, and sampled every 0.2 s for the log when it is on.
@@ -48,8 +48,9 @@ public sealed class GlView : OpenGlControlBase
 
 	public GlView()
 	{
-		var idle = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
-		idle.Tick += (_, _) => RequestNextFrameRendering();
+		// Idle: a few frames a second, 20 with the game look (its water and clouds move).
+		var idle = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(50) };
+		idle.Tick += (_, _) => { if (_look != null || _clock.ElapsedMilliseconds - _idleAt >= 250) { _idleAt = _clock.ElapsedMilliseconds; RequestNextFrameRendering(); } };
 		idle.Start();
 	}
 
@@ -63,8 +64,24 @@ public sealed class GlView : OpenGlControlBase
 			_target = new Vector3(0, scene.Heights[g], 0);
 		}
 		_sceneDirty = true;
+		_lookFiles = null;
+		Task.Run(() =>
+		{
+			try
+			{
+				_lookFiles = GameLookGl.Read();
+				Status?.Invoke(_lookFiles == null ? "Game look not copied yet: plain colours (open the web editor once to copy it)." : "Game look loaded.");
+			}
+			catch (Exception ex)
+			{
+				Status?.Invoke("Game look could not be read: " + ex.Message);
+			}
+			Wake();
+		});
 		Wake();
 	}
+	private volatile GameLookGl.Files? _lookFiles;
+	private GameLookGl? _look;
 
 	private void Wake()
 	{
@@ -187,6 +204,35 @@ public sealed class GlView : OpenGlControlBase
 			_gl.EnableVertexAttribArray(a);
 			_gl.VertexAttribPointer(a, 3, VertexAttribPointerType.Float, false, 36, (void*)(a * 12));
 		}
+		// For the game's terrain shader: biome colour (bytes), then mask uv, ocean depth, limit tint.
+		uint bc = _gl.GenBuffer();
+		_gl.BindBuffer(BufferTargetARB.ArrayBuffer, bc);
+		fixed (byte* p = s.BiomeColor)
+		{
+			_gl.BufferData(BufferTargetARB.ArrayBuffer, (nuint)s.BiomeColor.Length, p, BufferUsageARB.StaticDraw);
+		}
+		_gl.EnableVertexAttribArray(3);
+		_gl.VertexAttribPointer(3, 4, VertexAttribPointerType.UnsignedByte, true, 4, (void*)0);
+		float[] extra = new float[w * h * 4];
+		for (int g = 0; g < w * h; g++)
+		{
+			extra[g * 4] = (g % w + 0.5f) / w;
+			extra[g * 4 + 1] = (g / w + 0.5f) / h;
+			extra[g * 4 + 2] = s.OceanDepth[g];
+			extra[g * 4 + 3] = s.Limit[g];
+		}
+		uint ex = _gl.GenBuffer();
+		_gl.BindBuffer(BufferTargetARB.ArrayBuffer, ex);
+		fixed (float* p = extra)
+		{
+			_gl.BufferData(BufferTargetARB.ArrayBuffer, (nuint)(extra.Length * 4), p, BufferUsageARB.StaticDraw);
+		}
+		_gl.EnableVertexAttribArray(4);
+		_gl.VertexAttribPointer(4, 2, VertexAttribPointerType.Float, false, 16, (void*)0);
+		_gl.EnableVertexAttribArray(5);
+		_gl.VertexAttribPointer(5, 1, VertexAttribPointerType.Float, false, 16, (void*)8);
+		_gl.EnableVertexAttribArray(6);
+		_gl.VertexAttribPointer(6, 1, VertexAttribPointerType.Float, false, 16, (void*)12);
 		_terrainIndexCount = (uint)idx.Length;
 		// The sea: one quad over the area, at the water level.
 		float hw = w / 2f + 400, hh = h / 2f + 400, y = s.Water;
@@ -427,6 +473,20 @@ public sealed class GlView : OpenGlControlBase
 			BuildTerrain(s);
 			StartModels(s);
 		}
+		if (s != null && _look == null && _lookFiles is { } lf && _terrainVao != 0)
+		{
+			try
+			{
+				var look = new GameLookGl();
+				look.Init(_gl, Program, lf, s);
+				_look = look;
+			}
+			catch (Exception ex)
+			{
+				_lookFiles = null;
+				Status?.Invoke("Game look could not be set up: " + ex.Message);
+			}
+		}
 		// A few models per frame, so the view keeps moving while they arrive.
 		for (int i = 0; i < 12 && _ready.TryDequeue(out var r); i++)
 		{
@@ -453,19 +513,37 @@ public sealed class GlView : OpenGlControlBase
 		var vp = view * proj;
 		bool camMoved = view != _lastView;
 		_lastView = view;
-		var sun = Vector3.Normalize(new Vector3(0.4f, 0.8f, 0.3f));
+		var sun = GameLookGl.SunDirView;
+		float time = _clock.ElapsedMilliseconds / 1000f;
 		if (s != null && _terrainVao != 0)
 		{
-			_gl.Enable(EnableCap.CullFace);
-			_gl.UseProgram(_terrainProg);
-			_gl.UniformMatrix4(_gl.GetUniformLocation(_terrainProg, "uViewProj"), 1, false, (float*)&vp);
-			_gl.Uniform3(_gl.GetUniformLocation(_terrainProg, "uSun"), sun.X, sun.Y, sun.Z);
+			if (_look != null)
+			{
+				_look.DrawSky(vp, eye, time);
+				_look.UseTerrain(vp, eye, time, slope: false, contour: 0);
+				// The game's mesh is seen from both sides (look.js: DoubleSide).
+				_gl.Disable(EnableCap.CullFace);
+			}
+			else
+			{
+				_gl.Enable(EnableCap.CullFace);
+				_gl.UseProgram(_terrainProg);
+				_gl.UniformMatrix4(_gl.GetUniformLocation(_terrainProg, "uViewProj"), 1, false, (float*)&vp);
+				_gl.Uniform3(_gl.GetUniformLocation(_terrainProg, "uSun"), sun.X, sun.Y, sun.Z);
+			}
 			_gl.BindVertexArray(_terrainVao);
 			_gl.DrawElements(PrimitiveType.Triangles, _terrainIndexCount, DrawElementsType.UnsignedInt, (void*)0);
 
 			_gl.UseProgram(_objectProg);
 			_gl.UniformMatrix4(_gl.GetUniformLocation(_objectProg, "uViewProj"), 1, false, (float*)&vp);
 			_gl.Uniform3(_gl.GetUniformLocation(_objectProg, "uSun"), sun.X, sun.Y, sun.Z);
+			void V3(string n, Vector3 v) => _gl.Uniform3(_gl.GetUniformLocation(_objectProg, n), v.X, v.Y, v.Z);
+			V3("uSunColor", GameLookGl.SunColor);
+			V3("uAmbient", GameLookGl.Ambient);
+			V3("uFogColor", GameLookGl.FogColor);
+			V3("uSunFogColor", GameLookGl.SunFogColor);
+			_gl.Uniform1(_gl.GetUniformLocation(_objectProg, "uFogDensity"), GameLookGl.FogDensity);
+			V3("uEye", eye);
 			int uColor = _gl.GetUniformLocation(_objectProg, "uColor"), uCut = _gl.GetUniformLocation(_objectProg, "uCutoff"),
 				uHasMap = _gl.GetUniformLocation(_objectProg, "uHasMap"), uUv = _gl.GetUniformLocation(_objectProg, "uUv");
 			_gl.Uniform1(_gl.GetUniformLocation(_objectProg, "uMap"), 0);
@@ -497,16 +575,23 @@ public sealed class GlView : OpenGlControlBase
 				_gl.DrawElementsInstanced(PrimitiveType.Triangles, (uint)b.IndexCount, DrawElementsType.UnsignedInt, (void*)0, (uint)b.Instances);
 			}
 
-			_gl.Disable(EnableCap.CullFace);
-			_gl.Enable(EnableCap.Blend);
-			_gl.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
-			_gl.DepthMask(false);
-			_gl.UseProgram(_waterProg);
-			_gl.UniformMatrix4(_gl.GetUniformLocation(_waterProg, "uViewProj"), 1, false, (float*)&vp);
-			_gl.BindVertexArray(_waterVao);
-			_gl.DrawElements(PrimitiveType.Triangles, 6, DrawElementsType.UnsignedInt, (void*)0);
-			_gl.DepthMask(true);
-			_gl.Disable(EnableCap.Blend);
+			if (_look != null)
+			{
+				_look.DrawWater(vp, eye, time);
+			}
+			else
+			{
+				_gl.Disable(EnableCap.CullFace);
+				_gl.Enable(EnableCap.Blend);
+				_gl.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
+				_gl.DepthMask(false);
+				_gl.UseProgram(_waterProg);
+				_gl.UniformMatrix4(_gl.GetUniformLocation(_waterProg, "uViewProj"), 1, false, (float*)&vp);
+				_gl.BindVertexArray(_waterVao);
+				_gl.DrawElements(PrimitiveType.Triangles, 6, DrawElementsType.UnsignedInt, (void*)0);
+				_gl.DepthMask(true);
+				_gl.Disable(EnableCap.Blend);
+			}
 		}
 		_gl.BindVertexArray(0);
 		_gl.UseProgram(0);

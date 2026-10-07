@@ -31,17 +31,20 @@ public static class Shaders
 		layout(location = 2) in vec2 aUv;
 		layout(location = 3) in mat4 aModel;
 		uniform mat4 uViewProj;
-		out vec3 vNor; out vec2 vUv;
+		out vec3 vNor; out vec2 vUv; out vec3 vPos;
 		void main() {
-			vNor = mat3(aModel) * aNor; vUv = aUv;
-			gl_Position = uViewProj * (aModel * vec4(aPos, 1.0));
+			vec4 w = aModel * vec4(aPos, 1.0);
+			vNor = mat3(aModel) * aNor; vUv = aUv; vPos = w.xyz;
+			gl_Position = uViewProj * w;
 		}
 		""";
 
-	public const string ObjectFs = """
-		in vec3 vNor; in vec2 vUv;
+	// Lit like the game look's day (sun, flat ambient, fog), in view space (the sun's z mirrored).
+	public const string ObjectFs = GameLookGl.Common + """
+		in vec3 vNor; in vec2 vUv; in vec3 vPos;
 		uniform sampler2D uMap; uniform int uHasMap;
-		uniform vec4 uColor; uniform float uCutoff; uniform vec4 uUv; uniform vec3 uSun;
+		uniform vec4 uColor; uniform float uCutoff; uniform vec4 uUv;
+		uniform vec3 uSun, uSunColor, uAmbient, uEye;
 		out vec4 frag;
 		void main() {
 			vec4 c = uColor;
@@ -49,8 +52,10 @@ public static class Shaders
 			if (c.a < uCutoff) discard;
 			vec3 n = normalize(vNor);
 			if (!gl_FrontFacing) n = -n;
-			float l = 0.4 + 0.75 * max(dot(n, uSun), 0.0);
-			frag = vec4(pow(c.rgb * l, vec3(1.0 / 2.2)), 1.0);
+			vec3 col = c.rgb * (uAmbient + uSunColor * max(dot(n, uSun), 0.0));
+			vec3 toCam = uEye - vPos;
+			vec3 v = normalize(toCam);
+			frag = vec4(toSRGB(applyFogDir(col, length(toCam), -vec3(v.x, v.y, -v.z), vec3(uSun.x, uSun.y, -uSun.z))), 1.0);
 		}
 		""";
 
