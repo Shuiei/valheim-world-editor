@@ -4,6 +4,17 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v0.33.0 — 2026-10-07 (overlays)
+
+### Added
+- **Ward areas**, **Build ranges** and **Location flattening** in View, Overlays: rings on the
+  ground where wards protect, where crafting stations let you build (by kind: 10 to 40 m), and where
+  locations flatten the ground.
+- **Go to** a player (View, live mode): right there, or the area moves to them.
+
+### Fixed
+- After Undo or Redo in the Place tool, its spacing still counted the objects as they were before.
+
 ## v0.32.0 — 2026-10-07 (walk and fly)
 
 ### Added

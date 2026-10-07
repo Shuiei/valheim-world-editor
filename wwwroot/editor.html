@@ -270,6 +270,10 @@
   <label class="toggle"><input type="checkbox" data-show="buildings" checked><span class="t">Your buildings</span><span class="meta" id="bCount"></span></label>
   <label class="toggle"><input type="checkbox" data-show="water" checked><span class="t">Water</span></label>
   <label class="toggle"><input type="checkbox" data-show="borders" checked><span class="t">Zone borders</span></label>
+  <label class="toggle"><input type="checkbox" data-show="wards"><span class="t">Ward areas</span><span class="meta" data-count="wards"></span></label>
+  <label class="toggle"><input type="checkbox" data-show="stations"><span class="t">Build ranges</span><span class="meta" data-count="stations"></span></label>
+  <label class="toggle"><input type="checkbox" data-show="flatten"><span class="t">Location flattening</span><span class="meta" data-count="flatten"></span></label>
+  <div id="playersBox" hidden><label class="field">Go to <select id="goPlayer"></select><span><button id="goPlayerBtn" class="mini">go</button></span></label></div>
   <div class="presets"><button id="showDefaults">Defaults</button><button id="showAll">All</button><button id="terrainOnly">Ground</button></div>
   <h3>Building</h3>
   <label class="field">Built by <select id="builder"></select></label>
@@ -328,6 +332,7 @@ import { createInspector } from './editor/inspector.js';
 import { createSelecting } from './editor/selecting.js';
 import { createEyedropper } from './editor/eyedropper.js';
 import { createBuilder } from './editor/builder.js';
+import { createOverlays } from './editor/overlays.js';
 import { applyTips } from './editor/tips.js';
 import { gameLookBanner } from './app.js';
 gameLookBanner();
@@ -782,6 +787,7 @@ async function uploadNow(zoneList) {
     const res = await r.json();
     showPendingFrom(res);
     afterUpload?.();
+    for (const f of ed.onTerrainChanged ?? []) f();
   } catch (err) {
     $('sMsg').innerHTML = `<span class="warn">Could not send edits to the editor: ${err.message}</span>`;
   }
@@ -859,6 +865,7 @@ if (world.live) {
       m.position.set(p.x - originX - cx, p.y, -(p.z - originZ - cz));
     }
     for (const [n, m] of marks) if (!seen.has(n)) { playerGroup.remove(m); marks.delete(n); }
+    ed.players = list; for (const f of ed.onPlayers ?? []) f(list);
     $('sZone').title = list.map(p => `${p.name}: ${p.x.toFixed(0)}, ${p.z.toFixed(0)}`).join('\n');
   };
   poll(); setInterval(poll, 2000);
@@ -1100,6 +1107,7 @@ createShapes(ed);
 createMasks(ed, [...BRUSH_TOOLS, 'path', 'area', 'plant', 'shape']);
 createEyedropper(ed);
 createBuilder(ed);
+createOverlays(ed);
 // The tool carried over from the previous area (Area arrows, Follow).
 // After the rest of the page has started (the Path panel's parts are made further down).
 if (params.get('tool') && document.querySelector(`[data-tool="${params.get('tool')}"]`)) setTimeout(() => setTool(params.get('tool')), 0);
@@ -1216,6 +1224,7 @@ function syncShow() {
   objects.refreshMarkers();
   border.visible = on('borders');
   markers.visible = on('markers');
+  for (const [k, g] of Object.entries(ed.overlayGroups ?? {})) g.visible = on(k);
   syncLook();
   try { localStorage.setItem(SHOW_KEY, JSON.stringify(Object.fromEntries([...document.querySelectorAll('[data-show]')].map(c => [c.dataset.show, c.checked])))); } catch { }
 }
@@ -1595,6 +1604,19 @@ function areaUrl(zx, zz) {
   const w = v => [v.x + cx + originX, v.y, -v.z + cz + originZ].map(n => n.toFixed(2)).join(',');
   return `editor.html?zx=${zx}&zz=${zz}&size=${size}&tool=${tool}&cam=${w(camera.position)},${w(controls.target)}${eyeMode ? `&eye=${eyeMode}` : ''}`;
 }
+// Look at a world point: right here when it is in the area, else from the area around it.
+ed.gotoWorld = (x, z) => {
+  const gx = x - originX, gz = z - originZ;
+  if (gx > 2 && gz > 2 && gx < W - 3 && gz < H - 3) {
+    const h = sampleHeight(gx, gz), t = new THREE.Vector3(gx - cx, h, -(gz - cz));
+    if (eyeMode) { camera.position.set(t.x, eyeGround(t.x, t.z), t.z + 6); lookAhead(); }
+    else { camera.position.copy(t).add(new THREE.Vector3(0, 30, 30)); controls.target.copy(t); }
+    controls.update();
+    return;
+  }
+  const zx = Math.floor((x + 32) / 64), zz = Math.floor((z + 32) / 64), y = 40;
+  location.href = `editor.html?zx=${zx}&zz=${zz}&size=${size}&tool=${tool}&cam=${x.toFixed(1)},${y + 30},${(z - 30).toFixed(1)},${x.toFixed(1)},${y},${z.toFixed(1)}`;
+};
 document.querySelectorAll('[data-shift]').forEach(b => b.onclick = () => {
   const [dx, dz] = b.dataset.shift.split(',').map(Number);
   location.href = areaUrl(czx + dx, czz + dz);
