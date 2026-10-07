@@ -41,6 +41,17 @@
   .changes.live { border-color: #2a6a4a; background: #13261d; color: #bfe8cf; }
   .topRow { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
   .topRow h1 { margin: 0; }
+  .search { display: grid; grid-template-columns: 1fr auto; gap: 6px; }
+  .search input, .search select { background: #262b34; color: var(--text); border: 1px solid var(--line); border-radius: 5px; padding: 5px 6px; font: inherit; font-size: 13px; min-width: 0; }
+  .search select { grid-column: 1; }
+  .search button { grid-row: 1 / span 2; grid-column: 2; background: var(--accent); color: #1a1a1a; border: 0; border-radius: 5px; padding: 0 12px; font-weight: 600; cursor: pointer; }
+  .counts { display: flex; flex-wrap: wrap; gap: 4px; margin: 8px 0 4px; }
+  .counts span { font-size: 11.5px; border: 1px solid var(--line); border-radius: 999px; padding: 1px 7px; color: var(--muted); }
+  .counts b { color: var(--text); font-weight: 600; }
+  .hits { max-height: 260px; overflow-y: auto; }
+  .hit { display: grid; grid-template-columns: 1fr auto; padding: 4px 6px; border-radius: 5px; cursor: pointer; font-size: 12px; }
+  .hit:hover, .hit.sel { background: #2a303a; }
+  .hit .m { color: var(--muted); grid-column: 1 / -1; font-size: 11.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 </style>
 </head>
 <body>
@@ -68,6 +79,13 @@
     <label title="Draw the 64 m zone grid"><input type="checkbox" id="showGrid"> Zone grid</label>
     <label title="Draw the drifting cloud shadows of the in-game map"><input type="checkbox" id="showClouds"> Clouds (as in game)</label>
   </div>
+  <h2>Search the world</h2>
+  <div class="search">
+    <input id="sQuery" type="search" placeholder="Beech, Wood, a sign's text…" title="Part of a name or text; not case sensitive">
+    <select id="sWhat" title="What to look for"><option value="kinds">Objects (by kind)</option><option value="items">Items in containers</option><option value="texts">Texts (signs, portals, wards…)</option></select>
+    <button id="sGo" title="Search every object of the world (Enter)">Find</button>
+  </div>
+  <div id="sResults"></div>
   <div id="pick" hidden>
     <h2 id="pickTitle"></h2>
     <div class="edit"><a id="editLink" href="#" title="Open this spot in the 3D editor">Edit in 3D</a>
@@ -104,6 +122,8 @@ let zones = [], selected = null, world = null, mapView = null, hoverWorld = null
 let pieces = null, pieceOrder = [];
 const STRIDE = 13;
 let players = [];
+// Search results, pinned on the map; the one picked last is highlighted.
+let hits = [], hitSel = null;
 const PIECE_STYLE = {
   0: ['rgba(150,72,34,0.92)', 'rgba(60,25,10,0.9)'],    // misc: portals, fires, signs...
   1: ['rgba(128,56,40,0.9)', 'rgba(55,22,14,0.9)'],     // crafting stations
@@ -151,7 +171,7 @@ function drawBuildings() {
 
 function drawOverlay() {
   // Redraw only when something visible changed (buildings can be many thousands).
-  const key = [view.x, view.z, view.mpp, overlay.width, overlay.height, selected?.x, selected?.z, !!pieces, JSON.stringify(players),
+  const key = [view.x, view.z, view.mpp, overlay.width, overlay.height, selected?.x, selected?.z, !!pieces, JSON.stringify(players), hits.length, hitSel?.id,
     ...['showBuildings', 'showEdited', 'showGrid'].map(id => document.getElementById(id).checked)].join('|');
   if (key === overlayKey) return;
   overlayKey = key;
@@ -164,6 +184,13 @@ function drawOverlay() {
     octx.beginPath(); octx.arc(sx, sy, r, 0, Math.PI * 2); octx.fill(); octx.stroke();
     octx.font = `${12 * devicePixelRatio}px system-ui`; octx.fillStyle = '#fff'; octx.strokeStyle = 'rgba(0,0,0,.7)'; octx.lineWidth = 3 * devicePixelRatio;
     octx.strokeText(p.name, sx + r + 3, sy + 4); octx.fillText(p.name, sx + r + 3, sy + 4);
+  }
+  // Search results: orange pins, the picked one larger with a ring.
+  for (const h of hits) {
+    const [sx, sy] = toScreen(h.x, h.z), sel = h === hitSel, r = (sel ? 6 : 3.5) * devicePixelRatio;
+    octx.fillStyle = sel ? '#ffd27a' : '#ff8a2a'; octx.strokeStyle = 'rgba(30,15,5,.9)'; octx.lineWidth = 1.5 * devicePixelRatio;
+    octx.beginPath(); octx.arc(sx, sy, r, 0, Math.PI * 2); octx.fill(); octx.stroke();
+    if (sel) { octx.strokeStyle = '#ffd27a'; octx.beginPath(); octx.arc(sx, sy, r * 2.2, 0, Math.PI * 2); octx.stroke(); }
   }
   const px = ZONE / view.mpp * devicePixelRatio;
   if (document.getElementById('showGrid').checked && px > 24) {
@@ -212,11 +239,12 @@ function status() {
   el.textContent = `x ${wx.toFixed(0)}, z ${wz.toFixed(0)} · zone ${Math.floor((wx + 32) / 64)}, ${Math.floor((wz + 32) / 64)}`;
 }
 
-function showPick(zx, zz) {
+// extra: more editor.html parameters (an object to select, and whether to open the inspector on it).
+function showPick(zx, zz, extra = '') {
   document.getElementById('pick').hidden = false;
   document.getElementById('pickTitle').textContent = `Zone ${zx}, ${zz} · centre (${zx * 64}, ${zz * 64})`;
   const link = document.getElementById('editLink'), sizeSel = document.getElementById('editSize');
-  const update = () => link.href = `editor.html?zx=${zx}&zz=${zz}&size=${sizeSel.value}`;
+  const update = () => link.href = `editor.html?zx=${zx}&zz=${zz}&size=${sizeSel.value}${extra}`;
   sizeSel.onchange = update; update();
 }
 async function selectZone(z) {
@@ -293,6 +321,39 @@ overlay.addEventListener('wheel', e => {
   view.x += wx - nx; view.z += wz - nz; updateDetail(); remember();
 }, { passive: false });
 window.addEventListener('resize', resize);
+
+// ---- Search: every object of the world by kind, items in containers, or texts.
+const escHtml = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+async function runSearch() {
+  const q = document.getElementById('sQuery').value.trim(), what = document.getElementById('sWhat').value;
+  const box = document.getElementById('sResults');
+  if (!q) { hits = []; hitSel = null; box.innerHTML = ''; return; }
+  box.innerHTML = '<div class="hint">Searching…</div>';
+  let res;
+  try { res = await (await fetch(`/api/search?q=${encodeURIComponent(q)}&what=${what}`)).json(); }
+  catch (err) { box.innerHTML = `<div class="hint">Search failed: ${escHtml(err.message)}</div>`; return; }
+  hits = res.hits; hitSel = null;
+  const counts = Object.entries(res.counts).sort((a, b) => b[1] - a[1]);
+  const unit = what === 'items' ? ' in all' : '';
+  box.innerHTML = !res.total ? '<div class="hint">Nothing found.</div>' : `
+    <div class="counts">${counts.slice(0, 12).map(([n, c]) => `<span><b>${c.toLocaleString()}</b> ${escHtml(n)}</span>`).join('')}${counts.length > 12 ? `<span>+${counts.length - 12} more</span>` : ''}</div>
+    <div class="hint" style="margin-top:0">${res.total.toLocaleString()} found${unit}${res.truncated ? `, the first ${res.hits.length.toLocaleString()} pinned` : ''}. Click one to go there.</div>
+    <div class="hits">${res.hits.slice(0, 300).map((h, i) => `<div class="hit" data-i="${i}"><span>${escHtml(h.name)}</span><span class="meta">${h.x.toFixed(0)}, ${h.z.toFixed(0)}</span>${h.match ? `<span class="m">${escHtml(h.match)}</span>` : ''}</div>`).join('')}</div>`;
+  box.querySelectorAll('.hit').forEach(el => el.onclick = () => {
+    const h = hits[+el.dataset.i];
+    hitSel = h;
+    box.querySelectorAll('.hit').forEach(x => x.classList.toggle('sel', x === el));
+    view.x = h.x; view.z = h.z; view.mpp = Math.min(view.mpp, 0.6); updateDetail(); remember();
+    const zx = Math.floor((h.x + 32) / 64), zz = Math.floor((h.z + 32) / 64);
+    selected = { x: zx, z: zz, centerX: zx * 64, centerZ: zz * 64 };
+    document.getElementById('detail').hidden = true;
+    showPick(zx, zz, `&select=${h.id}${what !== 'kinds' ? '&inspect=1' : ''}`);
+    document.getElementById('pickTitle').textContent = `${h.name} at ${h.x.toFixed(0)}, ${h.z.toFixed(0)} · zone ${zx}, ${zz}`;
+  });
+}
+document.getElementById('sGo').onclick = runSearch;
+document.getElementById('sQuery').addEventListener('keydown', e => { if (e.key === 'Enter') runSearch(); });
+document.getElementById('sWhat').onchange = () => { if (document.getElementById('sQuery').value.trim()) runSearch(); };
 for (const id of ['showPaint', 'showClouds']) document.getElementById(id).onchange = () => { if (mapView) { mapView.showPaint = document.getElementById('showPaint').checked; mapView.showClouds = document.getElementById('showClouds').checked; } };
 
 (async () => {

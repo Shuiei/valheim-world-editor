@@ -17,6 +17,10 @@ version number. Newest first.
   editing it: chest contents (items, stacks, quality, slots), sign texts, portal tags, ward
   permissions, timers... An edit is one undo step and is saved or applied live like any change.
 
+- **Search the world** (map page): every object of a kind, every container holding an item, or every
+  sign, portal or ward whose text matches, counted and pinned on the map; a result opens the 3D
+  editor with that object selected.
+
 ### Fixed
 - Objects placed or moved in this session lost what they were copied from after the page was
   reloaded, so moving one again made a fresh copy (a moved chest lost its contents).

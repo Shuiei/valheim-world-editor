@@ -303,6 +303,7 @@ public static class EditorSession
 
 		BlueprintEndpoints.Map(app, () => world.Name, name => world.CanCreate(StableHash.Of(name)));
 		ObjectEndpoints.Map(app, () => world, edits, Pending);
+		app.MapGet("/api/search", (string q, string? what) => WorldSearch.Search(world, edits, q, what is "items" or "texts" ? what : "kinds"));
 
 		app.MapGet("/api/zone/{x:int}/{z:int}", (int x, int z) =>
 		{

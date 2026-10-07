@@ -255,6 +255,24 @@ test('inspector: a chest gets new contents and a text, undo puts the old one bac
   noErrors();
 });
 
+test('search: the map finds a kind, and its link selects the object in 3D', async () => {
+  await page().goto(t.base + '/index.html', { waitUntil: 'domcontentloaded' });
+  await page().waitForSelector('#sQuery');
+  await page().type('#sQuery', 'beech1');
+  await page().click('#sGo');
+  await page().waitForSelector('#sResults .hit');
+  const count = await page().$eval('#sResults .counts b', e => +e.textContent.replace(/[^0-9]/g, ''));
+  const api = await t.api('/api/search?q=beech1&what=kinds');
+  assert.equal(count, api.counts.Beech1, 'the count matches the world');
+  await page().click('#sResults .hit');
+  const href = await page().$eval('#editLink', e => e.href);
+  assert.match(href, /select=-?\d+/);
+  const id = +href.match(/select=(-?\d+)/)[1];
+  await page().goto(href, { waitUntil: 'networkidle0' });
+  await page().waitForFunction(id => window.__ed?.selection?.has(id), {}, id);
+  noErrors();
+});
+
 test('undo takes a change back and the counter clears', async () => {
   await openEditor();
   await page().keyboard.press('Escape');
