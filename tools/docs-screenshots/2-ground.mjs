@@ -32,13 +32,15 @@ await shot(p, dir, 'path');
 await p.keyboard.press('Escape');
 // Mask
 await key('1'); await look(p, X, Z, 0, 45, 38); await W(400);
-await p.$eval('#mOn', e => { e.checked = true; e.dispatchEvent(new Event('input')); });
+await p.click('[data-more="brush"] > summary'); await W(200);
+await p.$eval('#mOn', e => { e.checked = true; e.dispatchEvent(new Event('input')); e.dispatchEvent(new Event('change')); });
 await p.click('#mBiomes [data-b="1"]');
 await p.$eval('#mHmax', e => { e.value = 64; e.dispatchEvent(new Event('input')); });
 await p.$eval('#mSmax', e => { e.value = 25; e.dispatchEvent(new Event('input')); });
 const [mx, my] = await screen(p, X, Z); await p.mouse.move(mx, my); await W(400);
 await shot(p, dir, 'mask');
-await p.$eval('#mOn', e => { e.checked = false; e.dispatchEvent(new Event('input')); });
+await p.$eval('#mOn', e => { e.checked = false; e.dispatchEvent(new Event('input')); e.dispatchEvent(new Event('change')); });
+await p.click('[data-more="brush"] > summary'); await W(200);
 // Area box + panel
 await key('b'); await W(200);
 { const [a, b] = await screen(p, X - 16, Z - 4); const [c, d] = await screen(p, X + 6, Z + 14); await p.mouse.move(a, b); await p.mouse.down(); await p.mouse.move(c, d, { steps: 12 }); await p.mouse.up(); await W(400); }

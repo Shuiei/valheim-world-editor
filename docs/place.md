@@ -9,14 +9,18 @@ green dot.
 
 ## Choosing what to place
 
+The panel lists the kinds you chose, each with a ✕ to drop it. **+ Add kinds** opens the list of
+every kind in a drawer beside the panel (it opens by itself while nothing is chosen); **Done** or ✕
+closes it, and it stays as you left it.
+
 | Control | What it does |
 |---|---|
 | **Search** | Filters the list by name (oak, rock, turnip…). |
-| **Untick all** | Unticks every kind. |
-| **Weights** | With two or more kinds ticked, a slider per kind (1–10) sets how often it is used, with its share: Beech 3, Birch 1 gives three beeches for one birch. Remembered in this browser. |
+| **Untick all** (drawer) | Unticks every kind. |
+| **Weights** | In the panel, with two or more kinds chosen, a slider per kind (1–10) sets how often it is used, with its share: Beech 3, Birch 1 gives three beeches for one birch. Remembered in this browser. |
 | **Preset** | Loads a mix: its kinds with their weights, and its Density, Spacing, Clumping, Size, Tilt and facing. Built in: Meadows woods, Black forest, Swamp, Berry patch, Forest floor, Meadows rocks. Kinds a world cannot place are left out. |
-| **Save as preset…** / **Delete** | Saves the ticked kinds, weights and those settings under a name (kept in this browser); Delete removes one of yours. |
-| **Pick** | Eyedropper: click an object in the world to place only its kind. **Shift + click** adds it to the ticked kinds instead. Esc cancels. |
+| **Save as preset…** / **Delete** (under the fold at the bottom) | Saves the ticked kinds, weights and those settings under a name (kept in this browser); Delete removes one of yours. |
+| **Pick from world** (drawer) | Eyedropper: click an object in the world to place only its kind. **Shift + click** adds it to the ticked kinds instead. Esc cancels. |
 | **Favourites** | Click the ☆ after a kind in the list to star it; starred kinds show as buttons above the list. |
 | **Recent** | The last eight kinds you placed, newest first, as buttons above the list. |
 | Favourite and Recent buttons | A click ticks or unticks that kind; **Shift + click** places only that kind. **all** / **none** tick or untick the whole row. Both lists are kept in this browser. |
@@ -68,6 +72,11 @@ a fence going up a hill. For one straight, even fence, flatten the ground along 
 tool, Flatten).
 
 ## Settings
+
+Clumping, Patch size, Size (%), Tilt, Rotation, Random facing, One at a time, the preset buttons,
+New layout and the [Mask](masks.md) are folded under the line at the bottom of the panel ("Clumping,
+size, tilt, facing, presets, mask"); it stays open or closed as you left it. The **?** next to the tool
+name shows how-to text in the panel.
 
 | Control | Modes | What it does |
 |---|---|---|

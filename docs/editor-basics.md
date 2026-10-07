@@ -8,8 +8,10 @@ opened from the [world map](map.md). The screen has five parts:
 - **Top bar**: map link, area arrows, undo and redo, the pending counter, Save / Discard, and the
   History, View and Help buttons.
 - **Tool rail** (left): every tool, with its shortcut key in the corner.
-- **Tool panel** (next to the rail): the settings of the current tool. Its title and first line
-  say what the tool does.
+- **Tool panel** (next to the rail): the settings of the current tool, the ones you use most first.
+  Less used settings (and the [Mask](masks.md)) fold under a line at the bottom, which says what is
+  inside and stays open or closed as you left it. The **?** next to the tool name shows what the
+  tool does and how to use it, in every tool, until you click it again.
 - **View panel** (right, `V`): what is drawn.
 - **Status bar** (bottom): the position, ground height and zone under the cursor, and messages.
 

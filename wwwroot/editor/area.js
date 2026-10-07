@@ -28,46 +28,45 @@ export function createArea(ed) {
     <div class="row" style="margin:0 0 6px"><div class="seg" style="flex:2;margin:0"><button data-shape="box" class="on">Box</button><button data-shape="poly">Polygon</button></div><button id="aClear" title="Clear the selection (Esc)">Clear</button></div>
     <div class="hint" id="aInfo"></div>
     <label class="field">Soft edge <input id="aSoft" type="range" min="0" max="20" step="0.5" value="3"><span id="aSoftV"></span></label>
-    <div class="sub"><h3>Ground</h3>
-      <div class="actGrid">
-        <button data-act="flatten" title="Level everything to the height below">Flatten</button>
-        <button data-act="raise" title="Lift by the amount below">Raise</button>
-        <button data-act="lower" title="Dig down by the amount below">Lower</button>
-        <button data-act="smooth" title="Even out bumps">Smooth</button>
-        <button data-act="natural" title="Natural-looking bumps (settings in the Naturalize tool)">Naturalize</button>
-        <button data-act="restore" title="Back to the generated ground, paint removed">Restore</button>
-        <button data-act="erode" title="Weather the ground inside: slopes settle and rain cuts gullies (rest angle from the Erode tool)">Erode</button>
-      </div>
-      <label class="field">Height <input id="aHeight" type="number" step="0.1" value="35"><span><button id="aAvg" class="mini" title="Average height inside the selection">avg</button></span></label>
-      <label class="field">Amount <input id="aAmount" type="number" step="0.1" value="2"><span>m</span></label>
-      <div class="hint" id="aVolume"></div>
-      <label class="field">Paint <select id="aPaint"><option value="dirt">Dirt</option><option value="cultivated">Cultivated</option><option value="paved">Paved</option><option value="natural">Clear paint</option></select><span><button id="aPaintBtn" class="mini">apply</button></span></label>
-    </div>
-    <div class="sub"><h3>Objects inside</h3>
-      <div class="chips" id="aKinds"></div>
-      <div class="row"><button id="aRemove">Remove</button><button id="aSelectObj">Select</button></div>
-      <div class="row"><button id="aRegrow" title="Put back what the game grows here: its own trees, rocks, bushes and pickables for the biome, by its vegetation rules, for the kinds chosen above">Regrow nature</button></div>
+    <label class="field actPick">Action <select id="aAction">
+      <optgroup label="Ground"><option value="flatten">Flatten</option><option value="raise">Raise</option><option value="lower">Lower</option><option value="smooth">Smooth</option><option value="natural">Naturalize</option><option value="restore">Restore the ground</option><option value="erode">Erode</option><option value="paint">Paint</option></optgroup>
+      <optgroup label="Objects inside"><option value="remove">Remove objects</option><option value="select">Select objects</option><option value="replace">Replace objects</option><option value="regrow">Regrow nature</option></optgroup>
+      <optgroup label="Copy"><option value="copy">Copy and paste</option><option value="heightmap">Heightmap</option></optgroup>
+      <optgroup label="Bring back"><option value="backup">Restore from a backup</option><option value="reset">Reset zones</option></optgroup>
+    </select></label>
+    <div data-acts="flatten"><label class="field">Height <input id="aHeight" type="number" step="0.1" value="35"><span><button id="aAvg" class="mini" title="Average height inside the selection">avg</button></span></label></div>
+    <div data-acts="raise lower"><label class="field">Amount <input id="aAmount" type="number" step="0.1" value="2"><span>m</span></label></div>
+    <div data-acts="paint"><label class="field">Paint <select id="aPaint"><option value="dirt">Dirt</option><option value="cultivated">Cultivated</option><option value="paved">Paved</option><option value="natural">Clear paint</option></select></label></div>
+    <div class="hint" id="aVolume" data-acts="flatten raise lower"></div>
+    <div class="hint help" data-acts="smooth">Evens out bumps inside the selection.</div>
+    <div class="hint help" data-acts="natural">Natural-looking bumps, with the Bumps and Size of the Naturalize tool.</div>
+    <div class="hint help" data-acts="restore">Back to the ground the game generated, paint removed.</div>
+    <div class="hint help" data-acts="erode">Weathers the ground inside: slopes settle and rain cuts gullies (rest angle from the Erode tool).</div>
+    <div data-acts="remove select replace regrow backup"><div class="chips" id="aKinds"></div></div>
+    <div class="hint help" data-acts="regrow">Puts back what the game grows here: its own trees, rocks, bushes and pickables for the biome, by its vegetation rules, for the kinds chosen above.</div>
+    <div data-acts="replace">
       <label class="field">Replace <select id="aFrom"></select></label>
       <label class="field">with <select id="aTo" class="typeList"></select><span><button id="aToPick" class="mini" title="Pick the kind from the world: click an object">pick</button></span></label>
-      <div class="row"><button id="aReplace">Replace</button></div>
     </div>
-    <div class="sub"><h3>Copy &amp; paste</h3>
+    <div data-acts="copy">
       <div class="row"><button id="aCopy">Copy <kbd>Ctrl+C</kbd></button><button id="aPasteBtn">Paste <kbd>Ctrl+V</kbd></button></div>
       <div class="row"><button id="aSaveBp">Save blueprint…</button><button id="aLibrary">Blueprints…</button></div>
       <div class="hint" id="aClip"></div>
     </div>
-    <div class="sub"><h3>Restore from a backup</h3>
+    <div data-acts="heightmap" id="aHeightmap"></div>
+    <div data-acts="backup">
       <label class="field">Backup <select id="aBackup"><option value="">Choose a backup…</option></select></label>
       <label class="check"><input type="checkbox" id="aBkGround" checked> Ground (height and paint)</label>
-      <label class="check"><input type="checkbox" id="aBkObjects" checked> Objects of the kinds ticked above</label>
-      <div class="row"><button id="aBkRestore">Restore the selection</button></div>
-      <div class="hint" id="aBkInfo">Puts the selection back as it was in a backup: the editor's backups and the game's own are listed. Tick Buildings above to bring buildings back too.</div>
+      <label class="check"><input type="checkbox" id="aBkObjects" checked> Objects of the kinds chosen above</label>
+      <div class="hint" id="aBkInfo">Puts the selection back as it was in a backup: the editor's backups and the game's own are listed. Choose Buildings above to bring buildings back too.</div>
     </div>
-    <div class="sub"><h3>Reset zones</h3>
+    <div data-acts="reset">
       <label class="check"><input type="checkbox" id="aKeepB" checked> Keep my buildings</label>
       <label class="check"><input type="checkbox" id="aResetGround" checked> Reset ground edits too</label>
-      <div class="row"><button id="aReset">Reset zones…</button><button id="aUnreset">Cancel reset</button></div>
-      <div class="hint">On save, the zones under the selection lose their trees, rocks, ruins and dungeon entrances, and the game generates them again the next time someone goes there.</div>
+      <div class="hint help">On save, the zones under the selection lose their trees, rocks, ruins and dungeon entrances, and the game generates them again the next time someone goes there.</div>
+      <div class="row"><button id="aUnreset">Cancel reset</button></div>
+    </div>
+    <div class="row toolFoot" id="aApplyRow"><button id="aApply" class="primary"></button></div>
     </div>`;
   $('locWarn').before(panel);
   ed.panels.push({ el: panel, tools: ['area'] });
@@ -217,8 +216,10 @@ export function createArea(ed) {
       raise += Math.max(0, Math.min(b + 8, h + A * w) - h);
       lower += Math.max(0, h - Math.max(b - 8, h - A * w));
     }
-    $('aVolume').innerHTML = `Ground inside: ${m3(up)} raised, ${m3(down)} dug since generated.<br>`
-      + `Flatten to ${T} m: dig ${m3(cut)}, fill ${m3(fill)}${out >= 1 ? ` (${m3(out)} out of reach: ±8 m limit)` : ''}. Raise: ${m3(raise)}, Lower: ${m3(lower)}.`;
+    const act = $('aAction').value;
+    $('aVolume').innerHTML = (act === 'flatten' ? `Flatten to ${T} m: dig ${m3(cut)}, fill ${m3(fill)}${out >= 1 ? ` (${m3(out)} out of reach: ±8 m limit)` : ''}.`
+      : act === 'raise' ? `Raise ${A} m: fill ${m3(raise)}.` : `Lower ${A} m: dig ${m3(lower)}.`)
+      + `<br>Ground inside: ${m3(up)} raised, ${m3(down)} dug since generated.`;
   }
   ['aHeight', 'aAmount', 'aSoft'].forEach(id => $(id).addEventListener('input', updateVolume));
   (ed.onTerrainChanged ??= []).push(() => { if (ed.tool === 'area') updateVolume(); });
@@ -304,8 +305,6 @@ export function createArea(ed) {
     else if (Object.keys(extra).length) ed.pushHistory(extra);
     redraw();
   }
-  panel.querySelectorAll('[data-act]').forEach(b => b.onclick = () => groundAction(b.dataset.act));
-  $('aPaintBtn').onclick = () => groundAction('paint');
   $('aAvg').onclick = () => {
     const a = areaWeights(false); if (!a) return;
     let s = 0; for (const [g] of a.cells) s += ed.height(g);
@@ -318,7 +317,7 @@ export function createArea(ed) {
     const shown = k => (k === 'buildings' ? ed.buildings : ed.objectGroups[k]).visible;
     return objectsInside(poly).filter(r => kindOn.has(r.kind) && (r.added || shown(r.kind)) && ed.mask(Math.round(toGrid(r.x, r.z).gz) * W + Math.round(toGrid(r.x, r.z).gx)));
   }
-  $('aRemove').onclick = () => {
+  const removeObjects = () => {
     const list = pickedObjects(); if (!list) return;
     if (!list.length) { ed.msg('No objects of the chosen kinds inside the selection.'); return; }
     const ids = list.map(r => r.id);
@@ -328,7 +327,7 @@ export function createArea(ed) {
   // Regrow nature: the game's own vegetation for the zones under the selection (by its rules, on the
   // ground as it is now, /api/regrow), kept inside the selection, for the chosen kinds, where the Mask
   // allows, and not where something already stands (a tree still there is not doubled) or near buildings.
-  $('aRegrow').onclick = async () => {
+  const regrow = async () => {
     const poly = polygon(); if (!poly) { ed.msg('Select an area first.', true); return; }
     const xs = poly.map(p => p.gx + ed.originX), zs = poly.map(p => p.gz + ed.originZ);
     const zone = v => Math.floor((v + 32) / 64);
@@ -353,7 +352,7 @@ export function createArea(ed) {
     ed.msg(`Regrew ${added.length} object(s): ${names.slice(0, 6).join(', ')}${names.length > 6 ? '…' : ''}. Ctrl+Z takes them back; Save or Apply live writes them.`);
     updateInfo();
   };
-  $('aSelectObj').onclick = () => {
+  const selectObjects = () => {
     const list = pickedObjects(); if (!list) return;
     ed.selectIds(list.map(r => r.id)); ed.setTool('select');
   };
@@ -366,7 +365,7 @@ export function createArea(ed) {
     ed.pushHistory({ deleted, added, label: `Replaced ${deleted.length} with ${toName}` });
     ed.msg(`Replaced ${deleted.length} object(s) with ${toName}.`); updateInfo();
   }
-  $('aReplace').onclick = () => {
+  const replaceObjects = () => {
     const poly = polygon(); if (!poly) { ed.msg('Select an area first.', true); return; }
     const from = $('aFrom').value;
     const shown = k => (k === 'buildings' ? ed.buildings : ed.objectGroups[k]).visible;
@@ -567,7 +566,7 @@ export function createArea(ed) {
     $('aBkInfo').textContent = `Backup: save #${backupOpen.saveNumber} of ${backupOpen.name}, ${backupOpen.objects.toLocaleString()} objects (${new Date(backupOpen.date).toLocaleString()}).`;
     return backupOpen;
   }
-  $('aBkRestore').onclick = async () => {
+  const restoreBackup = async () => {
     const poly = polygon();
     if (!poly) { ed.msg('Select an area first.', true); return; }
     const path = $('aBackup').value;
@@ -668,7 +667,7 @@ export function createArea(ed) {
     drawResets(); ed.showPendingFrom(res);
   }
   ed.setResets = (r, forward) => (ed.track ?? (p => p))(postResets(r.zones, r.keepBuildings, r.ground, !forward));
-  $('aReset').onclick = async () => {
+  const resetZonesAct = async () => {
     const zones = zonesUnder();
     if (!zones.length) { ed.msg('Select an area first.', true); return; }
     const keep = $('aKeepB').checked, ground = $('aResetGround').checked;
@@ -702,6 +701,32 @@ export function createArea(ed) {
     ed.msg(`Reset cancelled for ${zones.length} zone(s).`);
   };
 
+  // ---- The action: one at a time, with only its own settings shown and one Apply button (Enter).
+  const ACTIONS = {
+    flatten: ['Flatten', () => groundAction('flatten')], raise: ['Raise', () => groundAction('raise')], lower: ['Lower', () => groundAction('lower')],
+    smooth: ['Smooth', () => groundAction('smooth')], natural: ['Naturalize', () => groundAction('natural')], restore: ['Restore the ground', () => groundAction('restore')],
+    erode: ['Erode', () => groundAction('erode')], paint: ['Paint', () => groundAction('paint')],
+    remove: ['Remove the objects', removeObjects], select: ['Select the objects', selectObjects], replace: ['Replace', replaceObjects], regrow: ['Regrow nature', regrow],
+    copy: null, heightmap: null,
+    backup: ['Restore the selection', restoreBackup], reset: ['Reset zones…', resetZonesAct],
+  };
+  function syncAction() {
+    let act = $('aAction').value;
+    if (!(act in ACTIONS)) { act = 'flatten'; $('aAction').value = act; }
+    try { localStorage.setItem('areaAction', act); } catch { }
+    panel.querySelectorAll('[data-acts]').forEach(el => el.hidden = !el.dataset.acts.split(' ').includes(act));
+    const a = ACTIONS[act];
+    $('aApplyRow').hidden = !a;
+    if (a) $('aApply').innerHTML = `${a[0]} <kbd>Enter</kbd>`;
+    updateVolume();
+  }
+  const applyAction = () => { const a = ACTIONS[$('aAction').value]; if (a) a[1](); };
+  $('aApply').onclick = applyAction;
+  $('aAction').onchange = syncAction;
+  try { const a = localStorage.getItem('areaAction'); if (a && a in ACTIONS) $('aAction').value = a; } catch { }
+  syncAction();
+  ed.areaAction = act => { $('aAction').value = act; syncAction(); };
+
   // ---- Pointer and keys.
   ed.handlers.area = {
     down(e, hit) {
@@ -724,7 +749,8 @@ export function createArea(ed) {
     dblclick() { if (shape === 'poly' && pts.length >= 3) { closed = true; redraw(); } },
     key(e) {
       if (e.key === 'Escape') { clear(); return true; }
-      if (shape === 'poly' && e.key === 'Enter' && pts.length >= 3) { closed = true; redraw(); return true; }
+      if (shape === 'poly' && e.key === 'Enter' && pts.length >= 3 && !closed) { closed = true; redraw(); return true; }
+      if (e.key === 'Enter' && polygon()) { applyAction(); return true; }
       if (shape === 'poly' && e.key === 'Backspace') { pts.pop(); redraw(); return true; }
       return false;
     }

@@ -4,7 +4,7 @@
 
 The Mask limits a tool to the ground that matches **all** of its settings, like WorldEdit masks or
 WorldPainter filters. It works with the ground brushes, Path, the Area tool's actions and Place.
-Switch it on with the **MASK** switch in the tool panel.
+Switch it on with the **MASK** switch, in the fold at the bottom of the tool panel (the fold says "mask on" while it is on).
 
 ## Controls
 

@@ -11,7 +11,9 @@ const set = (id, v) => p.$eval('#' + id, (e, v) => { e.value = v; e.dispatchEven
 await look(p, X, Z, 0, 34, 30); await W(800);
 await p.keyboard.press('t'); await W(300);
 await p.$eval('#radius', e => { e.value = 9; e.dispatchEvent(new Event('input')); }); await set('plDensity', 2.4);
+await p.click('#plKindsBtn'); await W(300);
 await at(X, Z); await shot(p, dir, 'plant-brush'); console.error('brush');
+await p.click('#plDrawerClose');
 // Line
 await p.click('#plModes [data-m="line"]'); await set('plEvery', 2.5); await p.click('#plAlong');
 for (const q of [[X - 20, Z + 6], [X - 7, Z - 3], [X + 7, Z + 5], [X + 20, Z - 4]]) await click(...q);
@@ -23,10 +25,9 @@ await p.click('#plModes [data-m="grid"]'); await set('plCell', 3);
 await p.keyboard.down('Shift'); await p.keyboard.press('>'); await p.keyboard.up('Shift'); await W(300);
 await at(X + 22, Z + 14); await shot(p, dir, 'plant-grid'); console.error('grid');
 await p.keyboard.press('Escape');
-// Zone (grid fill)
+// Zone
 await p.click('#plModes [data-m="zone"]');
 for (let a = 0; a < 360; a += 30) await click(X + Math.cos(a * Math.PI / 180) * (16 + (a % 60 ? 4 : 0)), Z + Math.sin(a * Math.PI / 180) * 11);
-await p.click('#plFill [data-f="grid"]'); await set('plCell', 3);
 await at(X + 22, Z + 14); await shot(p, dir, 'plant-zone'); console.error('zone');
 console.log(JSON.stringify(p.errors));
 await browser.close();
