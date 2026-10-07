@@ -950,7 +950,7 @@ public sealed class GlView : OpenGlControlBase
 		// changed ground to the graphics card.
 		if (s != null)
 		{
-			_hover = _tool != null && _pointer is Point at ? GroundAt(s, vp, at, _surfaceSize) : null;
+			_hover = (_tool != null || _mode == ToolMode.Shape) && _pointer is Point at ? GroundAt(s, vp, at, _surfaceSize) : null;
 			if (_brushDown && _hover is { } hv)
 			{
 				s.Session?.StrokeStep(hv.X, hv.Z, dt);
@@ -1290,6 +1290,16 @@ public sealed class GlView : OpenGlControlBase
 			_pointer = p.Position;
 			_surfaceSize = surface.Bounds.Size;
 			e.Pointer.Capture(surface);
+			if (_dragButton == PointerUpdateKind.LeftButtonPressed && _mode == ToolMode.Shape)
+			{
+				_dragFrom = null;
+				if (_scene is { } sc && GroundAt(sc, _lastViewProj, p.Position, _surfaceSize) is { } g)
+				{
+					ShapeClicked?.Invoke(g.X, g.Z);
+				}
+				Wake();
+				return;
+			}
 			if (_dragButton == PointerUpdateKind.LeftButtonPressed && _mode == ToolMode.Measure)
 			{
 				_dragFrom = null;
@@ -1413,6 +1423,9 @@ public sealed class GlView : OpenGlControlBase
 	public bool SelectMode => _mode == ToolMode.Select;
 	private bool _selectMode => _mode == ToolMode.Select;
 	public MeasureTool Tape { get; } = new();
+	// Shape tool: a click on the ground (grid point), and the radius its outline shows.
+	public event Action<float, float>? ShapeClicked;
+	public float ShapeRadius { get; set; } = 16;
 	private bool _selectDown;
 
 	// The world point (x east, height, z north) of the ground under a point of the view, or null.
@@ -1702,7 +1715,7 @@ public sealed class GlView : OpenGlControlBase
 	// The brush's outline on the ground (and the Ring shape's inner edge), seen through what stands on it.
 	private unsafe void DrawBrush(WorldScene s, Matrix4x4 vp)
 	{
-		if (_tool == null || _hover is not { } h || s.Session is not { } session)
+		if (_hover is not { } h || s.Session is not { } session || _tool == null && _mode != ToolMode.Shape)
 		{
 			return;
 		}
@@ -1719,8 +1732,8 @@ public sealed class GlView : OpenGlControlBase
 				}
 			}
 		}
-		Loop(session.Brush.Outline(n));
-		if (session.Brush.InnerOutline(n) is { } inner)
+		Loop(_tool == null ? Enumerable.Range(0, n).Select(i => (MathF.Cos(i * MathF.Tau / n) * ShapeRadius, MathF.Sin(i * MathF.Tau / n) * ShapeRadius)).ToList() : session.Brush.Outline(n));
+		if (_tool != null && session.Brush.InnerOutline(n) is { } inner)
 		{
 			Loop(inner);
 		}

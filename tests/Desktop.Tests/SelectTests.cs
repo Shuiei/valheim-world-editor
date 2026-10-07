@@ -9,6 +9,9 @@ namespace TerrainEditor.Desktop.Tests;
 
 // Deleting and moving objects: the edit session's changes (with undo), the Select tool's keys and
 // exact place, and a moved object saved into a world.
+// Loads the test world: the world generator is the game's, with static state, so tests that read a
+// world never run at the same time (one collection).
+[Collection("World files")]
 public class SelectTests
 {
 	private static readonly int Beech = StableHash.Of("Beech1");

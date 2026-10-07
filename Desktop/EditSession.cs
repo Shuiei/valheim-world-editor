@@ -118,6 +118,73 @@ public sealed class EditSession
 		return message;
 	}
 
+	// Puts a shape into the ground around grid point (cx, cz) (Shape tool): the formula gives the metres
+	// to add at each point within the radius (x, z metres east and north of the middle, d the distance,
+	// r the radius, h the height, n(x, z) the brushes' noise). One undo step.
+	public (int Touched, bool Clamped, int Bad) Shape(float cx, float cz, Func<Formula.Env, double> f, float r, float h, string label)
+	{
+		// The web editor gives shapes its fractal noise scaled to about -1..1.
+		var env = new Formula.Env { Noise = (x, z) => Brush.Noise.Fbm((float)x, (float)z) / 1.6 };
+		int touchedCount, bad = 0;
+		bool clamped = false;
+		lock (_lock)
+		{
+			var g = Ground;
+			var start = g.Snapshot();
+			var touched = new List<int>();
+			int x0 = Math.Max(1, (int)MathF.Floor(cx - r)), x1 = Math.Min(g.W - 2, (int)MathF.Ceiling(cx + r));
+			int z0 = Math.Max(1, (int)MathF.Floor(cz - r)), z1 = Math.Min(g.H - 2, (int)MathF.Ceiling(cz + r));
+			for (int gz = z0; gz <= z1; gz++)
+			{
+				for (int gx = x0; gx <= x1; gx++)
+				{
+					float x = gx - cx, z = gz - cz, d = MathF.Sqrt(x * x + z * z);
+					if (d > r || g.Locked(gx, gz))
+					{
+						continue;
+					}
+					env.Vars["x"] = x;
+					// North is up the grid.
+					env.Vars["z"] = z;
+					env.Vars["d"] = d;
+					env.Vars["r"] = r;
+					env.Vars["h"] = h;
+					double v;
+					try
+					{
+						v = f(env);
+					}
+					catch (Exception)
+					{
+						v = double.NaN;
+					}
+					if (!double.IsFinite(v))
+					{
+						bad++;
+						continue;
+					}
+					if (v == 0)
+					{
+						continue;
+					}
+					int p = gz * g.W + gx;
+					clamped |= g.SetHeight(p, g.HeightOf(p) + (float)v);
+					touched.Add(p);
+				}
+			}
+			touchedCount = touched.Count;
+			if (touched.Count > 0)
+			{
+				Touch((x0 - 1, z0 - 1, x1 + 1, z1 + 1));
+				var zones = g.ZonesOf(touched);
+				Record(label, start, touched, zones);
+				Send(zones);
+			}
+		}
+		Changed?.Invoke();
+		return (touchedCount, clamped, bad);
+	}
+
 	private void Record(string label, Ground.State start, IEnumerable<int> touched, List<(int X, int Z)> zones)
 	{
 		int[] pts = touched.Order().ToArray();
