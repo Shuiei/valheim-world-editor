@@ -72,6 +72,8 @@ public static class Options
 	public static BrushTool? StrokeTool { get; private set; }
 	// Start in this tool (select, or a brush: raise, paintdirt…).
 	public static string? StartTool { get; private set; }
+	// Measure between these two points of the view (fractions of its width and height) once loaded.
+	public static float[]? TapeAt { get; private set; }
 	// Move what --pick selected by this much (metres east, north), to check moving (nothing is saved).
 	public static (float X, float Z)? MoveBy { get; private set; }
 
@@ -129,6 +131,9 @@ public static class Options
 					break;
 				case "--tool":
 					StartTool = args[++i];
+					break;
+				case "--tape":
+					TapeAt = args[++i].Split(',').Select(v => float.Parse(v, System.Globalization.CultureInfo.InvariantCulture)).ToArray();
 					break;
 				case "--move":
 					var m = args[++i].Split(',').Select(v => float.Parse(v, System.Globalization.CultureInfo.InvariantCulture)).ToArray();

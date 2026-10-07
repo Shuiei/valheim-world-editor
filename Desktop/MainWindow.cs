@@ -22,6 +22,7 @@ public sealed class MainWindow : Window
 	public GlView View => _view;
 	internal ToolPanel Tools { get; } = new();
 	internal SelectPanel SelectPanel { get; }
+	internal MeasurePanel MeasurePanel { get; }
 
 	// The save bar (top middle): what is waiting to be saved, undo, redo, Save, and the last message.
 	private readonly TextBlock _pending = new() { FontSize = 12, VerticalAlignment = VerticalAlignment.Center, Text = "All saved" };
@@ -181,13 +182,18 @@ public sealed class MainWindow : Window
 		{
 			e.Handled = true;
 		}
+		else if (Tools.Mode == ToolMode.Measure && !ctrl && e.Key == Avalonia.Input.Key.Escape && _view.Tape.A != null)
+		{
+			_view.Tape.Clear();
+			e.Handled = true;
+		}
 		else if (!ctrl && e.Key == Avalonia.Input.Key.Escape)
 		{
 			Tools.Key("Escape");
 		}
-		else if (!ctrl && e.Key == Avalonia.Input.Key.E)
+		else if (!ctrl && e.Key is Avalonia.Input.Key.E or Avalonia.Input.Key.M)
 		{
-			Tools.Key("E");
+			Tools.Key(e.Key.ToString());
 		}
 		else if (!ctrl && e.Key >= Avalonia.Input.Key.D0 && e.Key <= Avalonia.Input.Key.D9)
 		{
@@ -206,7 +212,8 @@ public sealed class MainWindow : Window
 	private readonly Dictionary<Overlays.Layer, CheckBox> _overlayBoxes = new();
 	internal IReadOnlyDictionary<Overlays.Layer, CheckBox> OverlayBoxes => _overlayBoxes;
 	internal CheckBox SlopeBox { get; } = new() { Content = "Slope colours", FontSize = 12 };
-	internal CheckBox ContourBox { get; } = new() { Content = "Height lines every 2 m", FontSize = 12 };
+	internal CheckBox ContourBox { get; } = new() { Content = "Height lines every", FontSize = 12 };
+	internal ComboBox ContourStepBox { get; } = new() { ItemsSource = new[] { "1", "2", "5", "10" }, SelectedIndex = 1, FontSize = 12, MinWidth = 60 };
 
 	private static TextBlock Heading(string t) => new() { Text = t, FontSize = 11, FontWeight = FontWeight.SemiBold, Foreground = Brushes.Gray, Margin = new Thickness(0, 8, 0, 2) };
 
@@ -242,9 +249,11 @@ public sealed class MainWindow : Window
 		};
 		list.Children.Add(Heading("LOOK (game look)"));
 		SlopeBox.IsCheckedChanged += (_, _) => _view.SlopeColours = SlopeBox.IsChecked == true;
-		ContourBox.IsCheckedChanged += (_, _) => _view.ContourStep = ContourBox.IsChecked == true ? 2 : 0;
+		void Contour() => _view.ContourStep = ContourBox.IsChecked == true ? float.Parse((string)ContourStepBox.SelectedItem!) : 0;
+		ContourBox.IsCheckedChanged += (_, _) => Contour();
+		ContourStepBox.SelectionChanged += (_, _) => Contour();
 		list.Children.Add(SlopeBox);
-		list.Children.Add(ContourBox);
+		list.Children.Add(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { ContourBox, ContourStepBox, new TextBlock { Text = "m", FontSize = 12, VerticalAlignment = VerticalAlignment.Center } } });
 		_view.KindCounts += counts =>
 		{
 			foreach (var (k, box) in _kindBoxes)
@@ -270,6 +279,7 @@ public sealed class MainWindow : Window
 	public MainWindow(bool load = true)
 	{
 		SelectPanel = new SelectPanel(_view.SelectTool);
+		MeasurePanel = new MeasurePanel(_view);
 		Title = "Valheim World Editor (native preview)";
 		Width = 1500;
 		Height = 950;
@@ -299,16 +309,17 @@ public sealed class MainWindow : Window
 			Margin = new Thickness(10),
 			HorizontalAlignment = HorizontalAlignment.Left,
 			VerticalAlignment = VerticalAlignment.Top,
-			Children = { Tools.Rail, Tools.Options, SelectPanel.Card },
+			Children = { Tools.Rail, Tools.Options, SelectPanel.Card, MeasurePanel.Card },
 		};
-		SelectPanel.Card.IsVisible = false;
+		SelectPanel.Card.IsVisible = MeasurePanel.Card.IsVisible = false;
 		Tools.Options.VerticalAlignment = VerticalAlignment.Top;
 		Tools.Rail.VerticalAlignment = VerticalAlignment.Top;
 		Tools.ToolChanged += t =>
 		{
 			_view.Tool = t;
-			_view.SelectMode = Tools.SelectMode;
+			_view.Mode = Tools.Mode;
 			SelectPanel.Card.IsVisible = Tools.SelectMode;
+			MeasurePanel.Card.IsVisible = Tools.Mode == ToolMode.Measure;
 		};
 		_view.SelectTool.Message += (text, _) => _message.Text = text;
 		_view.StrokeEnded += msg =>
@@ -380,6 +391,10 @@ public sealed class MainWindow : Window
 				if (Options.StartTool is "select")
 				{
 					Tools.ChooseSelect();
+				}
+				else if (Options.StartTool is "measure")
+				{
+					Tools.ChooseMode(ToolMode.Measure);
 				}
 				else if (Enum.TryParse<BrushTool>(Options.StartTool, ignoreCase: true, out var startBrush))
 				{
