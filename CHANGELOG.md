@@ -3,6 +3,15 @@
 All notable changes to the Valheim world editor and its WorldEditorBridge plugin, which share one
 version number. Newest first.
 
+## v0.20.5 — 2026-10-07 (pieces follow the line)
+
+### Changed
+- **End to end switches itself on** in the Plant tool's Line mode when every ticked kind is a piece
+  the game snaps (fences, walls, stakes...), and off for other kinds, until it is changed by hand.
+- **Objects follow the line**: circles and rectangles always turn their objects along the outline,
+  and "Follow the line" (before: Face along the line) is on by default for drawn lines. A piece now
+  lies along the line (its length, not its front, follows it).
+
 ## v0.20.4 — 2026-10-06 (dropdown boxes)
 
 ### Fixed
