@@ -576,6 +576,15 @@ public sealed class MainWindow : Window
 		AreaPanel.Message += t => { _message.Text = t; UpdateSaveBar(); };
 		AreaPanel.SwitchToSelect += () => Tools.ChooseSelect();
 		AreaPanel.Confirm = text => Dialogs.Ask(this, "Reset zones", text, "Reset when saving");
+		AreaPanel.PickPicture = async () =>
+		{
+			var picked = await StorageProvider.OpenFilePickerAsync(new Avalonia.Platform.Storage.FilePickerOpenOptions
+			{
+				Title = "Import a heightmap (grayscale PNG)",
+				FileTypeFilter = new[] { new Avalonia.Platform.Storage.FilePickerFileType("PNG pictures") { Patterns = new[] { "*.png" } } },
+			});
+			return picked.Count > 0 && picked[0].Path.IsFile ? picked[0].Path.LocalPath : null;
+		};
 		AreaPanel.PickFolder = async () =>
 		{
 			var picked = await StorageProvider.OpenFolderPickerAsync(new Avalonia.Platform.Storage.FolderPickerOpenOptions

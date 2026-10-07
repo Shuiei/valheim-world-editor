@@ -17,13 +17,13 @@ namespace TerrainEditor.Desktop;
 // hands the zones under the selection back to the world generator when saving.
 public sealed class AreaPanel
 {
-	public enum Act { Flatten, Raise, Lower, Smooth, Natural, Restore, Erode, Paint, Remove, Select, Replace, Regrow, Backup, Reset }
+	public enum Act { Flatten, Raise, Lower, Smooth, Natural, Restore, Erode, Paint, Remove, Select, Replace, Regrow, Heightmap, Backup, Reset }
 
 	private static readonly (Act Act, string Label)[] Actions =
 	{
 		(Act.Flatten, "Flatten"), (Act.Raise, "Raise"), (Act.Lower, "Lower"), (Act.Smooth, "Smooth"), (Act.Natural, "Naturalize"),
 		(Act.Restore, "Restore the ground"), (Act.Erode, "Erode"), (Act.Paint, "Paint"),
-		(Act.Remove, "Remove objects"), (Act.Select, "Select objects"), (Act.Replace, "Replace objects"), (Act.Regrow, "Regrow nature"),
+		(Act.Remove, "Remove objects"), (Act.Select, "Select objects"), (Act.Replace, "Replace objects"), (Act.Regrow, "Regrow nature"), (Act.Heightmap, "Heightmap"),
 		(Act.Backup, "Restore from a backup"), (Act.Reset, "Reset zones"),
 	};
 
@@ -77,6 +77,18 @@ public sealed class AreaPanel
 	internal Func<Task<string?>> PickFolder { get; set; } = () => Task.FromResult<string?>(null);
 	private (string Path, WorldSave World, EditStore Edits)? _backup;
 
+	// Heightmap: export the area, or import a picture into the selection (or the whole area).
+	internal Button ExportButton { get; } = new() { Content = "Export the area", FontSize = 12 };
+	internal Button ImportButton { get; } = new() { Content = "Import…", FontSize = 12 };
+	internal NumericUpDown LowestBox { get; } = new() { Increment = 0.5m, FormatString = "0.###", FontSize = 12 };
+	internal NumericUpDown HighestBox { get; } = new() { Increment = 0.5m, FormatString = "0.###", FontSize = 12 };
+	internal Button PutButton { get; } = new() { Content = "Put it into the ground", FontSize = 12 };
+	internal Button CancelPictureButton { get; } = new() { Content = "Cancel", FontSize = 12 };
+	internal TextBlock PictureInfo { get; } = new() { FontSize = 11, Foreground = Brushes.LightGray, TextWrapping = TextWrapping.Wrap };
+	private Control _pictureBox = null!;
+	internal Func<Task<string?>> PickPicture { get; set; } = () => Task.FromResult<string?>(null);
+	private (float[] Values, int X0, int Z0, int W, int H, List<(int G, float W)> Cells)? _picture;
+
 	public AreaPanel(GlView view, Func<EditSession?> session, Func<int, string?> nameOf)
 	{
 		_view = view;
@@ -127,6 +139,12 @@ public sealed class AreaPanel
 			kinds.Children.Add(b);
 		}
 		ApplyButton.Click += async (_, _) => await Apply();
+		ExportButton.Click += (_, _) => Message?.Invoke(ExportHeightmap() ?? "");
+		ToolTip.SetTip(ExportButton, "The ground of the whole area as a 16-bit grayscale picture");
+		ImportButton.Click += async (_, _) => { if (await PickPicture() is string path) LoadPicture(path); };
+		ToolTip.SetTip(ImportButton, "A grayscale picture into the ground");
+		CancelPictureButton.Click += (_, _) => { _picture = null; _pictureBox.IsVisible = false; };
+		PutButton.Click += (_, _) => PutPicture();
 		UnresetButton.Click += (_, _) => CancelReset();
 		Area.Changed += Refresh;
 
@@ -180,6 +198,20 @@ public sealed class AreaPanel
 					For(Row("Replace", FromBox), Act.Replace),
 					For(Row("with", ToBox), Act.Replace),
 					For(Help("Puts back what the game grows here: its own trees, rocks, bushes and pickables for the biome, by its vegetation rules, for the kinds chosen above."), Act.Regrow),
+					For(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Children = { ExportButton, ImportButton } }, Act.Heightmap),
+					For(_pictureBox = new StackPanel
+					{
+						Spacing = 4,
+						IsVisible = false,
+						Children =
+						{
+							PictureInfo,
+							Row("Lowest", LowestBox, new TextBlock { Text = " m", FontSize = 12, VerticalAlignment = VerticalAlignment.Center }),
+							Row("Highest", HighestBox, new TextBlock { Text = " m", FontSize = 12, VerticalAlignment = VerticalAlignment.Center }),
+							new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Children = { PutButton, CancelPictureButton } },
+						},
+					}, Act.Heightmap),
+					For(Help("Black is the lowest height, white the highest; north is at the top of the picture, one pixel per metre when exported. An import fits the picture to the selection (or the whole area) and works within the game's ±8 m."), Act.Heightmap),
 					For(Row("Backup", BackupBox), Act.Backup),
 					For(BackupGroundBox, Act.Backup),
 					For(BackupObjectsBox, Act.Backup),
@@ -212,6 +244,7 @@ public sealed class AreaPanel
 		{
 			row.IsVisible = acts.Contains(act);
 		}
+		ApplyButton.IsVisible = act != Act.Heightmap;
 		ApplyButton.Content = act switch
 		{
 			Act.Remove => "Remove the objects (Enter)",
@@ -220,6 +253,7 @@ public sealed class AreaPanel
 			Act.Reset => "Reset zones… (Enter)",
 			Act.Regrow => "Regrow nature (Enter)",
 			Act.Backup => "Restore the selection (Enter)",
+			Act.Heightmap => "",
 			_ => $"{Actions.First(a => a.Act == act).Label} (Enter)",
 		};
 		Refresh();
@@ -396,6 +430,97 @@ public sealed class AreaPanel
 		var adds = things.Select(i => s.Things[i]).Select(t => (new NewObject(0, prefab, t.Position, t.Rotation, 0), piece)).ToList();
 		session.Commit($"Replaced {things.Count} with {NameOf(prefab)}", null, things, adds);
 		Message?.Invoke($"Replaced {things.Count} object(s) with {NameOf(prefab)}.");
+	}
+
+	// ---- Heightmaps: the area's ground as a 16-bit picture (with its lowest and highest heights), and a
+	// picture back into the ground, fitted to the selection or the whole area.
+	internal string? ExportHeightmap(string? folder = null)
+	{
+		if (_view.Scene is not { World: { } world } s)
+		{
+			return null;
+		}
+		int x1 = s.X0 + s.Size - 1, z1 = s.Z0 + s.Size - 1;
+		byte[] png = Heightmaps.Encode(s.W, s.H, s.Heights, $"{world.Name} zones {s.X0},{s.Z0} to {x1},{z1}", out float min, out float max);
+		string dir = folder ?? Path.Combine(AppSettings.DataDir, "heightmaps");
+		Directory.CreateDirectory(dir);
+		string safe = string.Concat(world.Name.Select(c => char.IsLetterOrDigit(c) || c is '-' or '_' ? c : '_'));
+		string path = Path.Combine(dir, $"{safe}_{s.X0}_{s.Z0}_{x1}_{z1}.png");
+		File.WriteAllBytes(path, png);
+		return $"Heightmap written to {path} ({s.W} × {s.H}, {min:0.0} to {max:0.0} m).";
+	}
+
+	internal void LoadPicture(string path)
+	{
+		if (_session() is not { } session)
+		{
+			return;
+		}
+		var g = session.Ground;
+		// Where it goes: the selection's box, or the whole area (as far as the Mask lets it).
+		List<(int G, float W)> cells;
+		int x0, z0, w, h;
+		var mask = session.MaskNow();
+		if (Area.WeightsIn(g.W, g.H, mask) is { } a)
+		{
+			(cells, x0, z0, w, h) = (a.Cells, a.X0, a.Z0, a.X1 - a.X0 + 1, a.Z1 - a.Z0 + 1);
+		}
+		else
+		{
+			cells = Enumerable.Range(0, g.W * g.H).Select(p => (p, mask?.Invoke(p) ?? 1f)).Where(c => c.Item2 > 0).ToList();
+			(x0, z0, w, h) = (0, 0, g.W, g.H);
+		}
+		Heightmaps.Picture pic;
+		try
+		{
+			pic = Heightmaps.Read(File.ReadAllBytes(path), w, h);
+		}
+		catch (Exception ex) when (ex is InvalidDataException or IOException or UnauthorizedAccessException)
+		{
+			Message?.Invoke($"That picture cannot be used: {ex.Message}");
+			return;
+		}
+		_picture = (pic.Values, x0, z0, w, h, cells);
+		// The heights written in the picture by the editor, else the range of the ground it covers now.
+		float lo = cells.Count > 0 ? cells.Min(c => g.HeightOf(c.G)) : 0, hi = cells.Count > 0 ? cells.Max(c => g.HeightOf(c.G)) : 0;
+		LowestBox.Value = (decimal)(pic.Min is float mn ? MathF.Round(mn, 3) : MathF.Round(lo, 1));
+		HighestBox.Value = (decimal)(pic.Max is float mx ? MathF.Round(mx, 3) : MathF.Round(hi, 1));
+		PictureInfo.Text = $"Picture {pic.Width} × {pic.Height} fitted to {w} × {h} m ({(Area.Polygon() != null ? "the selection" : "the whole area")}){(pic.Min != null ? ", with the heights it was exported with" : "")}.";
+		_pictureBox.IsVisible = true;
+	}
+
+	internal void PutPicture()
+	{
+		if (_picture is not { } p || _session() is not { } session)
+		{
+			return;
+		}
+		float lo = Value(LowestBox), hi = Value(HighestBox);
+		int clamped = 0;
+		var touched = session.EditGround("Heightmap import", g =>
+		{
+			var list = new List<int>();
+			foreach (var (pt, w) in p.Cells)
+			{
+				int gx = pt % g.W, gz = pt / g.W, ix = gx - p.X0, iz = gz - p.Z0;
+				if (g.Locked(gx, gz) || ix < 0 || iz < 0 || ix >= p.W || iz >= p.H)
+				{
+					continue;
+				}
+				float want = lo + p.Values[iz * p.W + ix] * (hi - lo), h = g.HeightOf(pt);
+				g.SetHeight(pt, h + (want - h) * w);
+				if (w > 0.999f && MathF.Abs(g.HeightOf(pt) - want) > 0.05f)
+				{
+					clamped++;
+				}
+				list.Add(pt);
+			}
+			return (list, (0, 0, g.W - 1, g.H - 1));
+		});
+		_picture = null;
+		_pictureBox.IsVisible = false;
+		Message?.Invoke(clamped > 0 ? $"Imported, but {clamped} point(s) could not reach their height: the game keeps the ground within ±8 m of the original (red points)."
+			: $"Imported the heightmap into {touched.Count} point(s). Ctrl+Z undoes it.");
 	}
 
 	// ---- Regrow nature: the game's own vegetation for the zones under the selection (by its rules, on
