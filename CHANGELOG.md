@@ -3,6 +3,17 @@
 All notable changes to the Valheim world editor and its WorldEditorBridge plugin, which share one
 version number. Newest first.
 
+## v0.20.1 — 2026-10-06 (fences on slopes)
+
+### Changed
+- **End to end on slopes**: every piece stays level and stands on the ground where it is, a little
+  higher or lower than the last one and touching it, like a fence going up a hill (before, each one
+  sat on the lower of its two ends, which could leave it floating at the middle of a bump).
+
+### Fixed
+- End to end placed nothing at all when one of the ticked kinds had no known length yet; such kinds
+  are now left out and the others are placed.
+
 ## v0.20.0 — 2026-10-06 (fences end to end)
 
 ### Added

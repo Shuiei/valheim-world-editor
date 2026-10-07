@@ -49,8 +49,12 @@ use the length of their model. Ticking several kinds alternates them.
 | **Rectangle** | Press at one corner and drag to the opposite one. With End to end the sides snap to whole pieces, and each side is filled from its corner, so the corners meet exactly. |
 
 The preview shows the pieces and the size; when a line does not end on a whole piece, it says how
-much of it is left. **Enter** places them (one undo step). Each piece sits on the lower of the ground
-at its two ends, and does not lean: on a slope, raise or flatten the ground first for a tidy fence.
+much of it is left. **Enter** places them (one undo step).
+
+On a slope the pieces stay level, each standing on the ground where it is (on the lowest point under
+it, so it never floats): every piece is a little higher or lower than the last one, touching it, like
+a fence going up a hill. For one straight, even fence, flatten the ground along the line first (Path
+tool, Flatten).
 
 ## Settings
 
