@@ -309,6 +309,7 @@
   <p>Edits stay within the game's limit of ±8 m from the original ground; points at the limit turn red.</p>
   <p>The outer line of points is locked so the area always joins its neighbours seamlessly.</p>
   <p id="gpuInfo"></p>
+  <label class="toggle"><input type="checkbox" id="perfOn"><span class="t">Record frame rates</span></label>
   <p id="perfPath"></p>
 </aside>
 <div id="status" class="card"><span id="sPos">–</span><span id="sHeight"></span><span id="sZone"></span><span id="sMsg"></span><span class="tips">Right drag rotate · Wheel zoom · Middle drag slide · <kbd>?</kbd> help</span></div>
@@ -1827,7 +1828,7 @@ $('helpClose').onclick = () => toggleHelp(false);
 toggleView(readPref('editorViewOpen', true));
 
 const fps = { rate: 0, ms: 0 };
-fetch('/api/app').then(r => r.json()).then(a => { $('perfPath').textContent = `Frame rates are written (a line every 0.2 s while the view is used) to ${a.perfLog}.`; }).catch(() => { });
+fetch('/api/app').then(r => r.json()).then(a => { $('perfPath').textContent = `When on, a line every 0.2 s while the view is used goes to ${a.perfLog}. Off each time the editor opens.`; }).catch(() => { });
 // What draws the 3D view: the graphics card, or the processor (llvmpipe, SwiftShader: much slower).
 // WebKit (the app's own window, Safari) never says which card: it answers "Apple GPU" everywhere.
 {
@@ -1851,7 +1852,8 @@ const lastView = new THREE.Matrix4();
 // Frame rate while drawing at full speed (frames per second, and the editor's own work per frame),
 // over the last 60 such frames: shown in Help.
 const frameLog = [];
-// perf-window.log / perf-browser.log (the data folder, one per way the editor is opened): a sample every 0.2 s while the view is used: whether the camera moved,
+// On demand (Help, Record frame rates; off each time the page opens, so the file only grows when
+// wanted): perf-window.log / perf-browser.log (the data folder, one per way the editor is opened): a sample every 0.2 s while the view is used: whether the camera moved,
 // stood still while something else happened (a stroke, the mouse, a panel) or nothing did (idle), the
 // frames drawn and the editor's work for them, and the longest gap between two frames (stutters).
 // A header line says what the samples are about: the browser, the view's size, what is loaded; it is
@@ -1865,7 +1867,7 @@ function perfHeader() {
 }
 function perfSample(now) {
   const span = now - perf.t0;
-  if (perf.moved || perf.busy) {
+  if ((perf.moved || perf.busy) && $('perfOn').checked) {
     const h = perfHeader();
     if (h !== perf.header) { perf.header = h; perf.lines.push(h); }
     const state = perf.moved ? 'moving' : 'still ';
@@ -1881,6 +1883,8 @@ function perfSend(now = performance.now()) {
   fetch('/api/perflog', { method: 'POST', body, keepalive: true }).catch(() => { });
 }
 addEventListener('pagehide', () => perfSend());
+// Switched on: the next sample starts with a header line again.
+$('perfOn').addEventListener('change', () => { perf.header = ''; if (!$('perfOn').checked) perfSend(); });
 renderer.setAnimationLoop(now => {
   if (look) look.update(camera);
   for (const f of ed.frame) f(Math.min((now - last) / 1000, 0.1));

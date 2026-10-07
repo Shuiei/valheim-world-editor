@@ -118,7 +118,12 @@ test('the 3D view is drawn only while something happens, and Help says what draw
   const text = await page().$eval('#gpuInfo', e => e.textContent);
   for (let i = 0; i < 40; i++) { await page().evaluate(() => window.__ed.wake()); await sleep(30); }
   assert.equal(await page().evaluate(() => getSelection().toString()), text, 'still selected, unchanged');
-  // perf-browser.log (opened with --browser): a header (the browser, the view) and a sample every 0.2 s.
+  // perf-browser.log (opened with --browser), on demand: off at first, nothing written.
+  const { perfLog: logPath } = await t.api('/api/app');
+  assert.equal(await page().$eval('#perfOn', e => e.checked), false, 'off at first');
+  assert.equal(fs.existsSync(logPath), false, 'nothing written while off');
+  // Switched on: a header (the browser, the view) and a sample every 0.2 s.
+  await page().$eval('#perfOn', e => e.click());
   await page().keyboard.press('?');
   { const [x, y] = [700, 450]; await page().mouse.move(x, y); await page().mouse.down({ button: 'right' }); await page().mouse.move(x + 150, y, { steps: 40 }); await page().mouse.up({ button: 'right' }); }
   for (let i = 0; i < 20; i++) { await page().mouse.move(500 + (i % 10) * 10, 380 + i); await sleep(30); }

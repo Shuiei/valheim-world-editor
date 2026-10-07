@@ -114,8 +114,8 @@ The bottom of the Help panel says what draws the 3D view: the graphics card, or 
 (llvmpipe, SwiftShader), which is much slower (the app's own window cannot tell: WebKit hides the
 card's name), and the frame rate while the view moves, with the editor's own work per frame.
 
-The editor also writes its frame rate to a log in its data folder, a line every 0.2 s while the view
-is used: `perf-window.log` in the app's own window, `perf-browser.log` in a browser (`--browser`), so
+With **Record frame rates** (Help; off each time the editor opens) the editor writes its frame rate
+to a log in its data folder, a line every 0.2 s while the view is used: `perf-window.log` in the app's own window, `perf-browser.log` in a browser (`--browser`), so
 the two can be compared. A header line (`#`) gives the date, the version, the browser, the size of
 the 3D view and what is loaded (written again when one changes); then each line says whether the
 camera was **moving**, or stood **still** while something else happened (a stroke, the mouse), with

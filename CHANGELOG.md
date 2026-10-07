@@ -4,6 +4,12 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v0.40.1 — 2026-10-07
+
+### Changed
+- The frame rate log is written only on demand: **Record frame rates** in Help, off each time the
+  editor opens.
+
 ## v0.40.0 — 2026-10-07 (3D resolution)
 
 ### Added
