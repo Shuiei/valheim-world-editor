@@ -9,19 +9,23 @@ namespace TerrainEditor.Desktop;
 // (look around and pick objects), Select (move, turn and delete objects: see SelectPanel), the sculpt
 // brushes and the paint brushes. Keys as in the web editor: 1-9 and 0 pick the brushes, E selects,
 // Esc goes back to View.
+// Which tool is in use: View (look around, click picks), Select, Measure, or a brush (Tool says which).
+public enum ToolMode { View, Select, Measure, Brush }
+
 public sealed class ToolPanel
 {
 	public Brush Brush { get; } = new();
 	public BrushTool? Tool { get; private set; }
-	public bool SelectMode { get; private set; }
-	// The tool changed (Tool and SelectMode say which).
+	public ToolMode Mode { get; private set; }
+	public bool SelectMode => Mode == ToolMode.Select;
+	// The tool changed (Mode and Tool say which).
 	public event Action<BrushTool?>? ToolChanged;
 
 	public Control Rail { get; }
 	public Control Options { get; }
 
 	private readonly Dictionary<BrushTool, Button> _buttons = new();
-	private readonly Button _viewButton, _selectButton;
+	private readonly Button _viewButton, _selectButton, _measureButton;
 	internal Button SelectButton => _selectButton;
 	private readonly TextBlock _title = new() { FontSize = 14, FontWeight = FontWeight.SemiBold };
 	private readonly TextBlock _help = new() { FontSize = 12, Foreground = Brushes.LightGray, TextWrapping = TextWrapping.Wrap };
@@ -106,6 +110,9 @@ public sealed class ToolPanel
 		_selectButton = Make("Select", "E");
 		ToolTip.SetTip(_selectButton, "Select (E): click objects, or drag on the ground around them; then move, turn, lift or delete them.");
 		_selectButton.Click += (_, _) => ChooseSelect();
+		_measureButton = Make("Measure", "M");
+		ToolTip.SetTip(_measureButton, "Measure (M): click two points to see the distance, height difference and slope.");
+		_measureButton.Click += (_, _) => ChooseMode(ToolMode.Measure);
 		rail.Children.Add(new TextBlock { Text = "SCULPT", FontSize = 10, Foreground = Brushes.Gray, Margin = new Thickness(4, 6, 0, 0) });
 		foreach (var (t, key) in Keys)
 		{
@@ -171,17 +178,18 @@ public sealed class ToolPanel
 		Choose(null);
 	}
 
-	public void ChooseSelect()
-	{
-		Choose(null, select: true);
-	}
+	public void ChooseSelect() => ChooseMode(ToolMode.Select);
 
-	public void Choose(BrushTool? t, bool select = false)
+	public void ChooseMode(ToolMode mode) => Choose(null, mode);
+
+	// A brush, or (null) the mode's tool.
+	public void Choose(BrushTool? t, ToolMode mode = ToolMode.View)
 	{
 		Tool = t;
-		SelectMode = t == null && select;
-		_viewButton.Background = t == null && !select ? On : Off;
-		_selectButton.Background = SelectMode ? On : Off;
+		Mode = t != null ? ToolMode.Brush : mode;
+		_viewButton.Background = Mode == ToolMode.View ? On : Off;
+		_selectButton.Background = Mode == ToolMode.Select ? On : Off;
+		_measureButton.Background = Mode == ToolMode.Measure ? On : Off;
 		foreach (var (k, b) in _buttons)
 		{
 			b.Background = k == t ? On : Off;
@@ -208,6 +216,11 @@ public sealed class ToolPanel
 		if (key == "E")
 		{
 			ChooseSelect();
+			return true;
+		}
+		if (key == "M")
+		{
+			ChooseMode(ToolMode.Measure);
 			return true;
 		}
 		foreach (var (t, k) in Keys)

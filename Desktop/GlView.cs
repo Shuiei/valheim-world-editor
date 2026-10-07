@@ -1031,6 +1031,7 @@ public sealed class GlView : OpenGlControlBase
 			DrawBrush(s, vp);
 			DrawLasso(s, vp);
 			DrawGizmo(s, vp);
+			DrawMeasure(s, vp);
 			if (ShowWater)
 			{
 				if (_look != null)
@@ -1120,6 +1121,19 @@ public sealed class GlView : OpenGlControlBase
 							var now = Selected.Select(i => _scene.Things[i].Position).FirstOrDefault();
 							Options.Say($"moved: {before.X:0.0} {before.Y:0.0} {before.Z:0.0} → {now.X:0.0} {now.Y:0.0} {now.Z:0.0}, {_scene.Session?.PendingText}");
 						});
+					}
+				}
+				if (Options.TapeAt is { Length: 4 } tp)
+				{
+					var size = Bounds.Size;
+					var ta = WorldAt(new Point(tp[0] * size.Width, tp[1] * size.Height), size);
+					var tb = WorldAt(new Point(tp[2] * size.Width, tp[3] * size.Height), size);
+					if (ta is { } pa && tb is { } pb)
+					{
+						Tape.Down(pa);
+						Tape.Down(pb);
+						var r = Tape.Measure(GroundHeight, _scene.Water)!;
+						Options.Say($"tape: {r.Distance:0.0} m, rise {r.Rise:0.0} m, slope {r.SlopeDegrees:0.0}°, lowest {r.Lowest:0.0}, highest {r.Highest:0.0}");
 					}
 				}
 				if (Options.StrokeTool is BrushTool tool && _scene.Session is { } session)
@@ -1276,6 +1290,16 @@ public sealed class GlView : OpenGlControlBase
 			_pointer = p.Position;
 			_surfaceSize = surface.Bounds.Size;
 			e.Pointer.Capture(surface);
+			if (_dragButton == PointerUpdateKind.LeftButtonPressed && _mode == ToolMode.Measure)
+			{
+				_dragFrom = null;
+				if (WorldAt(p.Position, _surfaceSize) is { } w)
+				{
+					Tape.Down(w);
+				}
+				Wake();
+				return;
+			}
 			if (_dragButton == PointerUpdateKind.LeftButtonPressed && _tool == null && _selectMode)
 			{
 				_dragFrom = null;
@@ -1311,7 +1335,7 @@ public sealed class GlView : OpenGlControlBase
 				string message = _scene?.Session?.EndStroke() ?? "";
 				StrokeEnded?.Invoke(message);
 			}
-			else if (_tool == null && !_selectMode && _dragButton == PointerUpdateKind.LeftButtonPressed && _pressAt is Point from && Point.Distance(from, at) < 5)
+			else if (_mode == ToolMode.View && _dragButton == PointerUpdateKind.LeftButtonPressed && _pressAt is Point from && Point.Distance(from, at) < 5)
 			{
 				Pick(at, surface.Bounds.Size, e.KeyModifiers.HasFlag(KeyModifiers.Shift));
 			}
@@ -1331,6 +1355,10 @@ public sealed class GlView : OpenGlControlBase
 			else if (_selectMode && _tool == null)
 			{
 				SelectTool.Hover(_pointer.Value, _surfaceSize);
+			}
+			else if (_mode == ToolMode.Measure && WorldAt(_pointer.Value, _surfaceSize) is { } w)
+			{
+				Tape.Move(w);
 			}
 			Drag(_pointer.Value);
 		};
@@ -1380,8 +1408,11 @@ public sealed class GlView : OpenGlControlBase
 	internal WorldScene? Scene => _scene;
 	// The Select tool takes the left button (see SelectTool); otherwise it slides the view and clicks pick.
 	public SelectTool SelectTool { get; }
-	private bool _selectMode;
-	public bool SelectMode { get => _selectMode; set { if (!value) SelectTool.Commit(); _selectMode = value; Wake(); } }
+	private ToolMode _mode;
+	public ToolMode Mode { get => _mode; set { if (value != ToolMode.Select) SelectTool.Commit(); _mode = value; Wake(); } }
+	public bool SelectMode => _mode == ToolMode.Select;
+	private bool _selectMode => _mode == ToolMode.Select;
+	public MeasureTool Tape { get; } = new();
 	private bool _selectDown;
 
 	// The world point (x east, height, z north) of the ground under a point of the view, or null.
@@ -1525,6 +1556,82 @@ public sealed class GlView : OpenGlControlBase
 		}
 		var p = o + d * t;
 		return (p.X + (s.W - 1) / 2f, -p.Z + (s.H - 1) / 2f);
+	}
+
+	// The ground's height at a world point.
+	internal float GroundHeight(float wx, float wz)
+	{
+		var s = _scene;
+		return s == null ? 0 : Picking.HeightAt(s, wx - s.Cx, -(wz - s.Cz));
+	}
+
+	// Lines (pairs of view-space points) drawn over everything in one colour, refilled every call.
+	private unsafe void DrawLines(ref uint vao, ref uint vbo, float[] data, Matrix4x4 vp, Vector4 color)
+	{
+		if (data.Length == 0)
+		{
+			return;
+		}
+		if (_lineProg == 0)
+		{
+			_lineProg = Program(Shaders.LineVs, Shaders.LineFs);
+		}
+		if (vao == 0)
+		{
+			vao = _gl.GenVertexArray();
+			vbo = _gl.GenBuffer();
+			_gl.BindVertexArray(vao);
+			_gl.BindBuffer(BufferTargetARB.ArrayBuffer, vbo);
+			_gl.EnableVertexAttribArray(0);
+			_gl.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 12, (void*)0);
+		}
+		_gl.BindBuffer(BufferTargetARB.ArrayBuffer, vbo);
+		fixed (float* p = data)
+		{
+			_gl.BufferData(BufferTargetARB.ArrayBuffer, (nuint)(data.Length * 4), p, BufferUsageARB.DynamicDraw);
+		}
+		_gl.Disable(EnableCap.DepthTest);
+		_gl.UseProgram(_lineProg);
+		_gl.UniformMatrix4(_gl.GetUniformLocation(_lineProg, "uViewProj"), 1, false, (float*)&vp);
+		_gl.Uniform4(_gl.GetUniformLocation(_lineProg, "uColor"), color.X, color.Y, color.Z, color.W);
+		_gl.BindVertexArray(vao);
+		_gl.DrawArrays(PrimitiveType.Lines, 0, (uint)(data.Length / 3));
+		_gl.Enable(EnableCap.DepthTest);
+	}
+
+	private uint _measureVao, _measureVbo;
+	// The tape: following the ground from A to B (its profile), and a cross at each end. Shown in the
+	// Measure tool, and kept once fixed.
+	private void DrawMeasure(WorldScene s, Matrix4x4 vp)
+	{
+		var (a, b) = (Tape.A, Tape.B);
+		if (a == null || _mode != ToolMode.Measure && !Tape.Fixed)
+		{
+			return;
+		}
+		var data = new List<float>();
+		Vector3 V(float wx, float wz) => new(wx - s.Cx, GroundHeight(wx, wz) + 0.2f, -(wz - s.Cz));
+		void Seg(Vector3 p, Vector3 q) => data.AddRange(new[] { p.X, p.Y, p.Z, q.X, q.Y, q.Z });
+		foreach (var e in new[] { a, b })
+		{
+			if (e is { } p)
+			{
+				var c = V(p.X, p.Z);
+				Seg(c - new Vector3(0.6f, 0, 0), c + new Vector3(0.6f, 0, 0));
+				Seg(c - new Vector3(0, 0, 0.6f), c + new Vector3(0, 0, 0.6f));
+				Seg(c, c + new Vector3(0, 1.5f, 0));
+			}
+		}
+		if (a is { } pa && b is { } pb)
+		{
+			int n = Math.Max(2, (int)MathF.Ceiling(Vector2.Distance(new Vector2(pa.X, pa.Z), new Vector2(pb.X, pb.Z))));
+			for (int i = 0; i < n; i++)
+			{
+				float t0 = i / (float)n, t1 = (i + 1) / (float)n;
+				Seg(V(pa.X + (pb.X - pa.X) * t0, pa.Z + (pb.Z - pa.Z) * t0), V(pa.X + (pb.X - pa.X) * t1, pa.Z + (pb.Z - pa.Z) * t1));
+			}
+		}
+		DrawLines(ref _measureVao, ref _measureVbo, data.ToArray(), vp, new Vector4(1, 0.88f, 0.54f, 1));
 	}
 
 	private uint _lassoVao, _lassoVbo;

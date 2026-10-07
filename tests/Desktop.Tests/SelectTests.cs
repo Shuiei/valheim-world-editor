@@ -87,10 +87,10 @@ public class SelectTests
 		w.Show();
 		w.KeyPress(Key.E, RawInputModifiers.None, PhysicalKey.E, "e");
 		Assert.True(w.Tools.SelectMode);
-		Assert.True(w.View.SelectMode);
+		Assert.Equal(ToolMode.Select, w.View.Mode);
 		Assert.True(w.SelectPanel.Card.IsVisible);
 		w.KeyPress(Key.D1, RawInputModifiers.None, PhysicalKey.Digit1, "1");
-		Assert.False(w.View.SelectMode);
+		Assert.Equal(ToolMode.Brush, w.View.Mode);
 		Assert.False(w.SelectPanel.Card.IsVisible);
 	}
 

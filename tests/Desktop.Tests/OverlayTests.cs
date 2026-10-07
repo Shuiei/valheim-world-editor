@@ -98,5 +98,9 @@ public class OverlayTests
 		Assert.True(w.View.SlopeColours);
 		w.ContourBox.IsChecked = true;
 		Assert.Equal(2, w.View.ContourStep);
+		w.ContourStepBox.SelectedIndex = 2;
+		Assert.Equal(5, w.View.ContourStep);
+		w.ContourBox.IsChecked = false;
+		Assert.Equal(0, w.View.ContourStep);
 	}
 }
