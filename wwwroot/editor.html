@@ -307,6 +307,7 @@
   </dl>
   <p>Edits stay within the game's limit of ±8 m from the original ground; points at the limit turn red.</p>
   <p>The outer line of points is locked so the area always joins its neighbours seamlessly.</p>
+  <p id="gpuInfo"></p>
 </aside>
 <div id="status" class="card"><span id="sPos">–</span><span id="sHeight"></span><span id="sZone"></span><span id="sMsg"></span><span class="tips">Right drag rotate · Wheel zoom · Middle drag slide · <kbd>?</kbd> help</span></div>
 <script type="module">
@@ -1812,7 +1813,23 @@ $('helpToggle').onclick = () => toggleHelp();
 $('helpClose').onclick = () => toggleHelp(false);
 toggleView(readPref('editorViewOpen', true));
 
-let last = performance.now();
+// What draws the 3D view: the graphics card, or the processor (llvmpipe, SwiftShader: much slower).
+{
+  const gl = renderer.getContext(), ext = gl.getExtension('WEBGL_debug_renderer_info');
+  const name = String(ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER));
+  const soft = /llvmpipe|swiftshader|softpipe|software/i.test(name);
+  ed.gpu = { name, soft };
+  $('gpuInfo').textContent = `3D drawn by: ${name}${soft ? ' (the processor, not the graphics card: slow).' : ' (the graphics card).'}`;
+  if (soft && !navigator.webdriver) setTimeout(() => msg('The 3D view is drawn by the processor, not the graphics card, so it is slow. Help (?) says more.', true), 4000);
+}
+// Drawing: every frame while something happens (the camera moves, a stroke, mouse or keys in the last
+// second), otherwise a few times a second (enough for models that finish loading, and for the game
+// look's water and sky): an idle editor leaves the processor alone. ed.wake() asks for full speed.
+let last = performance.now(), wokeAt = last, drawnAt = 0;
+const wake = () => { wokeAt = performance.now(); };
+ed.wake = wake;
+for (const ev of ['pointerdown', 'pointermove', 'pointerup', 'wheel', 'keydown', 'keyup', 'input', 'change', 'click', 'resize']) addEventListener(ev, wake, { capture: true, passive: true });
+const lastView = new THREE.Matrix4();
 renderer.setAnimationLoop(now => {
   if (look) look.update(camera);
   for (const f of ed.frame) f(Math.min((now - last) / 1000, 0.1));
@@ -1821,6 +1838,12 @@ renderer.setAnimationLoop(now => {
   moveWithKeys(dt);
   controls.update();
   keepOverTerrain();
+  // The camera's matrices follow it every frame (picking and screen positions use them), drawn or not.
+  camera.updateMatrixWorld();
+  const moved = !camera.matrixWorld.equals(lastView);
+  if (moved) lastView.copy(camera.matrixWorld);
+  if (!moved && !stroke && now - wokeAt > 1000 && now - drawnAt < (look ? 50 : 250)) return;
+  drawnAt = now;
   renderer.render(scene, camera);
 });
 </script>

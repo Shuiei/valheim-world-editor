@@ -97,4 +97,19 @@ vwe.log('raised', h);`;
   noErrors();
 });
 
+test('the 3D view is drawn only while something happens, and Help says what draws it', async () => {
+  await openEditor();
+  const drawn = () => page().evaluate(() => window.__ed.renderer.info.render.frame);
+  await sleep(1500);   // past the second of full speed after the last input
+  const a = await drawn(); await sleep(2000); const idle = (await drawn()) - a;
+  assert.ok(idle <= 12, `idle: a few frames a second (${idle} in 2 s)`);
+  // A camera move or the mouse: full speed again.
+  const b = await drawn();
+  for (let i = 0; i < 20; i++) { await page().mouse.move(600 + i * 5, 400); await sleep(50); }
+  const busy = (await drawn()) - b;
+  assert.ok(busy > idle, `drawn more while the mouse moves (${busy} vs ${idle} idle)`);
+  assert.match(await page().$eval('#gpuInfo', e => e.textContent), /^3D drawn by: .+\((the graphics card|the processor)/);
+  noErrors();
+});
+
 });
