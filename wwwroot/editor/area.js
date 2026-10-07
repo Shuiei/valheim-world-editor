@@ -25,7 +25,7 @@ export function createArea(ed) {
   const panel = document.createElement('div');
   panel.id = 'areaPanel';
   panel.innerHTML = `
-    <div class="seg"><button data-shape="box" class="on">Box</button><button data-shape="poly">Polygon</button></div>
+    <div class="row" style="margin:0 0 6px"><div class="seg" style="flex:2;margin:0"><button data-shape="box" class="on">Box</button><button data-shape="poly">Polygon</button></div><button id="aClear" title="Clear the selection (Esc)">Clear</button></div>
     <div class="hint" id="aInfo"></div>
     <label class="field">Soft edge <input id="aSoft" type="range" min="0" max="20" step="0.5" value="3"><span id="aSoftV"></span></label>
     <div class="sub"><h3>Ground</h3>
@@ -134,10 +134,12 @@ export function createArea(ed) {
     if (poly) drawOutline(poly, false);
     else if (pts.length) drawOutline(pts, true);
     else outline.geometry.setFromPoints([]);
-    outline.visible = ed.tool === 'area' || ed.tool === 'paste' ? true : !!poly;
+    // Only drawn in the Area and Paste tools; the selection is kept for when you come back.
+    outline.visible = ed.tool === 'area' || ed.tool === 'paste';
     updateInfo();
   }
   function clear() { pts = []; closed = false; dragging = false; redraw(); }
+  $('aClear').onclick = () => { clear(); ed.msg('Selection cleared.'); };
 
   function inside(poly, x, z) {
     let c = false;
@@ -670,7 +672,7 @@ export function createArea(ed) {
     return false;
   });
   ed.onToolChange ??= [];
-  ed.onToolChange.push(t => { outline.visible = t === 'area' || t === 'paste' || !!polygon(); if (t !== 'paste') ghost.visible = extraOutlines.visible = false; if (t === 'area') redraw(); });
+  ed.onToolChange.push(t => { outline.visible = t === 'area' || t === 'paste'; if (t !== 'paste') ghost.visible = extraOutlines.visible = false; if (t === 'area') redraw(); });
   redraw();
   return { clear };
 }

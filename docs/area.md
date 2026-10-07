@@ -11,7 +11,10 @@ zones themselves. The [Mask](masks.md) applies to the ground actions.
 |---|---|
 | **Box** | Drag a rectangle on the ground. |
 | **Polygon** | Click corners; double-click or `Enter` closes the shape, `Backspace` removes the last corner. |
-| `Esc` | Clears the selection. Clicking outside starts a new one. |
+| **Clear** / `Esc` | Clears the selection, to start a new one. With a box, dragging somewhere else also starts a new one; with a polygon, clicking after it is closed does. |
+
+The selection is only drawn in the Area tool (and while pasting); it is kept when you use another
+tool, and shown again when you come back.
 
 The panel shows the selected surface and how many shown objects are inside.
 
