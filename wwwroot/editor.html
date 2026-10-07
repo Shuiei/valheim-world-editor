@@ -1242,8 +1242,11 @@ function applyPath() {
       dEff = best + Math.max(soft, 2) * 0.6 * worldNoise(gx, gz, 0.6);
       bump = nAmp() * worldNoise(gx + 500, gz - 300);
     }
-    if (dEff > halfEff + soft) continue;
-    const f = dEff <= halfEff ? 1 : soft > 0 ? 1 - (dEff - halfEff) / soft : 0, g = gz * W + gx, w = f * f * (3 - 2 * f) * ed.mask(g);
+    // Without a soft edge, the points the edge line crosses (within half a metre) get a share, so the
+    // edge follows the line straight instead of stepping from ground point to ground point.
+    if (dEff > halfEff + (soft > 0 ? soft : 0.5)) continue;
+    const f = soft > 0 ? (dEff <= halfEff ? 1 : 1 - (dEff - halfEff) / soft) : Math.max(0, Math.min(1, halfEff + 0.5 - dEff));
+    const g = gz * W + gx, w = (soft > 0 ? f * f * (3 - 2 * f) : f) * ed.mask(g);
     if (w <= 0) continue;
     const h = height(g);
     touched.add(g);

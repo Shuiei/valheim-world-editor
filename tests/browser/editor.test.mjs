@@ -804,6 +804,52 @@ test('lines can be fine-tuned: drag a point, drag the line to add one, Ctrl + cl
   noErrors();
 });
 
+test('sharp edges: the pickaxe falloff, and a straight edge along a diagonal path with no soft edge', async () => {
+  await openEditor();
+  await page().keyboard.press('2');
+  const w = await page().evaluate(() => {
+    const ed = window.__ed, sel = (id, v) => { const e = document.getElementById(id); e.value = v; e.dispatchEvent(new Event('input')); };
+    sel('bShape', 'circle'); sel('bFalloff', 'sharp');
+    const r = [ed.brush.weight(0, 0, 10), ed.brush.weight(9.9, 0, 10), ed.brush.weight(10.1, 0, 10)];
+    sel('bFalloff', 'smooth');
+    return r;
+  });
+  assert.deepEqual(w, [1, 1, 0], 'full strength right to the edge, nothing beyond');
+  // A path lowered 2 m along a diagonal, no soft edge: along a line across the edge the depth goes
+  // from full to nothing within about a metre, with no ground point in between left at the step.
+  await page().keyboard.press('p');
+  await page().select('#pAction', 'lower');
+  await page().$eval('#pAmount', e => { e.value = 2; e.dispatchEvent(new Event('input')); });
+  await page().$eval('#pSoft', e => { e.value = 0; e.dispatchEvent(new Event('input')); });
+  await page().$eval('#pWidth', e => { e.value = 6; e.dispatchEvent(new Event('input')); });
+  const c = (await records()).find(r => r.name === 'piece_chest_wood');
+  const A = [c.x + 25, c.z + 5], B = [c.x + 45, c.z + 25];
+  await lookAt(page(), c.x + 35, c.z + 15, 0, 45, 30);
+  for (const p of [A, B]) { const [x, y] = await screenOf(page(), ...p); await page().mouse.click(x, y); await sleep(150); }
+  await page().evaluate(() => { window.__levelBefore = window.__ed.level.slice(); });
+  await page().keyboard.press('Enter'); await sleep(500);
+  const prof = await page().evaluate(([A, B]) => {
+    const before = window.__levelBefore;
+    const ed = window.__ed, mx = (A[0] + B[0]) / 2 - ed.originX, mz = (A[1] + B[1]) / 2 - ed.originZ;
+    // Ground points along the path's crosswise direction (-1, 1)/√2 near its edge (3 m from the line).
+    const out = [];
+    for (let k = -8; k <= 8; k++) {
+      const d = 3 + k * 0.25, gx = Math.round(mx - d / Math.SQRT2), gz = Math.round(mz + d / Math.SQRT2), g = gz * ed.W + gx;
+      out.push({ dist: Math.abs(-(gx - mx) + (gz - mz)) / Math.SQRT2, dug: before[g] - ed.level[g] });
+    }
+    return out;
+  }, [A, B]);
+  for (const p of prof) {
+    if (p.dist < 2.5) assert.ok(p.dug > 1.99, `full depth inside (${p.dist.toFixed(2)} m: ${p.dug.toFixed(2)})`);
+    if (p.dist > 3.5) assert.ok(p.dug < 0.01, `untouched outside (${p.dist.toFixed(2)} m: ${p.dug.toFixed(2)})`);
+    if (p.dist >= 2.5 && p.dist <= 3.5) assert.ok(Math.abs(p.dug - 2 * Math.max(0, Math.min(1, 3.5 - p.dist))) < 0.02, `the edge follows the line (${p.dist.toFixed(2)} m: ${p.dug.toFixed(2)})`);
+  }
+  await page().keyboard.press('Escape');
+  await page().click('#undo'); await sleep(800);
+  await page().$eval('#pSoft', e => { e.value = 4; e.dispatchEvent(new Event('input')); });
+  noErrors();
+});
+
 test('undo takes a change back and the counter clears', async () => {
   await openEditor();
   await page().keyboard.press('Escape');

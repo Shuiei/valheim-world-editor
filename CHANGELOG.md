@@ -4,6 +4,16 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v0.23.0 — 2026-10-07 (sharp edges)
+
+### Added
+- **Sharp edge** brush falloff: full strength right to the brush's edge and nothing beyond, for
+  steep walls like the game's pickaxe.
+
+### Changed
+- With **Soft edge 0**, Path and Area actions give the ground points their edge crosses a share of
+  the change, so a diagonal edge follows the line straight instead of stepping from point to point.
+
 ## v0.22.0 — 2026-10-07 (fine-tune drawn lines)
 
 ### Added

@@ -23,7 +23,7 @@ ditch, or a painted track.
 |---|---|
 | **Action** | What happens along the line: **Flatten to height**, **Ramp (start → end)**, **Raise by**, **Lower by**, **Smooth**, **River / canal**, **Paint dirt / paved / cultivated**, **Clear paint**. |
 | **Width** | Width of the path (m). |
-| **Soft edge** | Width of the blend on each side (m), so the path joins the ground around it smoothly. |
+| **Soft edge** | Width of the blend on each side (m), so the path joins the ground around it smoothly. At **0** the edge is as sharp as the ground allows, and the points the edge line crosses get a share of the change, so the edge follows the line straight (a trench with steep, straight sides). |
 | **Height** | Flatten to height: the height of the path (m). **Alt + click** the ground picks it. |
 | **Amount** | Raise by / Lower by: how much (m). |
 | **Start**, **End** | Ramp: the height at the first and at the last point (m). **Alt + click** picks the start, **Alt + Shift + click** the end. The ramp rises evenly along the length of the line. |
