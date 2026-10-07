@@ -1800,7 +1800,7 @@ function toggleView(force) {
 function toggleHelp(force) {
   const open = force ?? $('help').hidden;
   $('help').hidden = !open; $('helpToggle').classList.toggle('on', open);
-  if (open) { $('viewPanel').hidden = true; $('viewToggle').classList.remove('on'); toggleHistory(false); closeSidePanels(); }
+  if (open) { $('viewPanel').hidden = true; $('viewToggle').classList.remove('on'); toggleHistory(false); closeSidePanels(); $('gpuInfo').textContent = ed.gpuText?.() ?? ''; }
 }
 function toggleHistory(force) {
   const open = force ?? $('historyPanel').hidden;
@@ -1813,23 +1813,30 @@ $('helpToggle').onclick = () => toggleHelp();
 $('helpClose').onclick = () => toggleHelp(false);
 toggleView(readPref('editorViewOpen', true));
 
+const fps = { rate: 0, ms: 0 };
 // What draws the 3D view: the graphics card, or the processor (llvmpipe, SwiftShader: much slower).
+// WebKit (the app's own window, Safari) never says which card: it answers "Apple GPU" everywhere.
 {
   const gl = renderer.getContext(), ext = gl.getExtension('WEBGL_debug_renderer_info');
   const name = String(ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER));
-  const soft = /llvmpipe|swiftshader|softpipe|software/i.test(name);
-  ed.gpu = { name, soft };
-  $('gpuInfo').textContent = `3D drawn by: ${name}${soft ? ' (the processor, not the graphics card: slow).' : ' (the graphics card).'}`;
+  const soft = /llvmpipe|swiftshader|softpipe|software/i.test(name), hidden = /^Apple GPU$/i.test(name) && !/Mac/.test(navigator.platform);
+  ed.gpu = { name, soft, hidden };
+  ed.gpuText = () => `3D drawn by: ${hidden ? 'not said by this window (WebKit hides the graphics card)' : name + (soft ? ' (the processor, not the graphics card: slow)' : ' (the graphics card)')}`
+    + (fps.rate ? ` · ${fps.rate} frames/s while moving (${fps.ms} ms of work each)` : ' · move the view to measure the frame rate');
+  $('gpuInfo').textContent = ed.gpuText();
   if (soft && !navigator.webdriver) setTimeout(() => msg('The 3D view is drawn by the processor, not the graphics card, so it is slow. Help (?) says more.', true), 4000);
 }
 // Drawing: every frame while something happens (the camera moves, a stroke, mouse or keys in the last
 // second), otherwise a few times a second (enough for models that finish loading, and for the game
 // look's water and sky): an idle editor leaves the processor alone. ed.wake() asks for full speed.
 let last = performance.now(), wokeAt = last, drawnAt = 0;
+// Frame rate while drawing at full speed (frames per second, and the editor's own work per frame),
+// over the last 60 such frames: shown in Help.
 const wake = () => { wokeAt = performance.now(); };
 ed.wake = wake;
 for (const ev of ['pointerdown', 'pointermove', 'pointerup', 'wheel', 'keydown', 'keyup', 'input', 'change', 'click', 'resize']) addEventListener(ev, wake, { capture: true, passive: true });
 const lastView = new THREE.Matrix4();
+const frameLog = [];
 renderer.setAnimationLoop(now => {
   if (look) look.update(camera);
   for (const f of ed.frame) f(Math.min((now - last) / 1000, 0.1));
@@ -1843,8 +1850,19 @@ renderer.setAnimationLoop(now => {
   const moved = !camera.matrixWorld.equals(lastView);
   if (moved) lastView.copy(camera.matrixWorld);
   if (!moved && !stroke && now - wokeAt > 1000 && now - drawnAt < (look ? 50 : 250)) return;
+  const busyFrame = now - drawnAt < 100;
   drawnAt = now;
+  const t0 = performance.now();
   renderer.render(scene, camera);
+  if (busyFrame) {
+    frameLog.push([now, performance.now() - t0 + (t0 - now)]);
+    if (frameLog.length > 60) frameLog.shift();
+    if (frameLog.length >= 20) {
+      fps.rate = Math.round((frameLog.length - 1) / ((frameLog[frameLog.length - 1][0] - frameLog[0][0]) / 1000));
+      fps.ms = (frameLog.reduce((a, f) => a + f[1], 0) / frameLog.length).toFixed(1);
+      if (!$('help').hidden && frameLog.length % 10 === 0) $('gpuInfo').textContent = ed.gpuText();
+    }
+  }
 });
 </script>
 </body>
