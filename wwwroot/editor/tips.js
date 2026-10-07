@@ -161,6 +161,8 @@ export const TIPS = {
   plPreset: 'Load a mix: its kinds with their weights, and its Density, Spacing, Size, Tilt and facing. Built-in looks, and the ones you saved.',
   plPresetSave: 'Save the ticked kinds, their weights and the Density, Spacing, Size, Tilt and facing settings under a name (kept in this browser).',
   plPresetDel: 'Delete the chosen preset (only your own).',
+  plClump: 'Brush and Zone: gather the objects in groves with clearings between them, like natural forests. 0: an even spread; higher: smaller, fewer groves. New layout (R) moves them.',
+  plPatch: 'Clumping: the size of the groves and clearings (m).',
   plNone: 'Untick every kind in the list.',
   plPick: 'Pick a kind from the world: click an object to place only that kind. Shift + click adds it to the ticked kinds. Esc cancels.',
   plFav: 'Starred kinds (☆ in the list). Click: tick or untick that kind. Shift + click: place only that kind. All / none: tick or untick them all.',

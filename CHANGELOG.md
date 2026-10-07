@@ -4,6 +4,13 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v0.28.0 — 2026-10-07 (clumping)
+
+### Added
+- **Clumping** and **Patch size** in the Place tool (Brush, Zone): objects gather in groves with
+  clearings between them, following a noise pattern fixed to the world, instead of an even spread.
+  Presets keep them (Meadows woods, Black forest, Berry patch and Meadows rocks use some).
+
 ## v0.27.0 — 2026-10-07 (weighted mixes and presets)
 
 ### Added
