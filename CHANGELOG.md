@@ -4,6 +4,17 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v0.38.0 — 2026-10-07 (lighter 3D view)
+
+### Changed
+- The 3D view is drawn only while something happens (the view moves, a stroke, the mouse or keys
+  in use) and a few times a second otherwise (enough for the game look's water and sky): an idle
+  editor leaves the processor alone instead of drawing 60 times a second.
+
+### Added
+- **Help** (`?`) says what draws the 3D view: the graphics card, or the processor (llvmpipe,
+  SwiftShader), which is much slower; the editor says so once when it is the processor.
+
 ## v0.37.0 — 2026-10-07 (pieces that snap, elevation)
 
 ### Added
