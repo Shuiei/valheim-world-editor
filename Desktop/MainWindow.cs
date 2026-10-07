@@ -468,6 +468,14 @@ public sealed class MainWindow : Window
 		AreaPanel.Message += t => { _message.Text = t; UpdateSaveBar(); };
 		AreaPanel.SwitchToSelect += () => Tools.ChooseSelect();
 		AreaPanel.Confirm = text => Dialogs.Ask(this, "Reset zones", text, "Reset when saving");
+		AreaPanel.PickFolder = async () =>
+		{
+			var picked = await StorageProvider.OpenFolderPickerAsync(new Avalonia.Platform.Storage.FolderPickerOpenOptions
+			{
+				Title = "Choose a backup (or copy) of this world: the folder with _main.<n>.chunks",
+			});
+			return picked.Count > 0 && picked[0].Path.IsFile ? picked[0].Path.LocalPath : null;
+		};
 		PastePanel = new PastePanel(_view.Paste);
 		PastePanel.Done += () => Tools.ChooseMode(ToolMode.Area);
 		_view.PasteClicked += PasteAt;

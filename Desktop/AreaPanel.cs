@@ -6,6 +6,7 @@ using Avalonia.Layout;
 using Avalonia.Media;
 using TerrainEditor.App;
 using TerrainEditor.Editing;
+using TerrainEditor.Save;
 using TerrainEditor.Terrain;
 
 namespace TerrainEditor.Desktop;
@@ -16,14 +17,14 @@ namespace TerrainEditor.Desktop;
 // hands the zones under the selection back to the world generator when saving.
 public sealed class AreaPanel
 {
-	public enum Act { Flatten, Raise, Lower, Smooth, Natural, Restore, Paint, Remove, Select, Replace, Reset }
+	public enum Act { Flatten, Raise, Lower, Smooth, Natural, Restore, Paint, Remove, Select, Replace, Regrow, Backup, Reset }
 
 	private static readonly (Act Act, string Label)[] Actions =
 	{
 		(Act.Flatten, "Flatten"), (Act.Raise, "Raise"), (Act.Lower, "Lower"), (Act.Smooth, "Smooth"), (Act.Natural, "Naturalize"),
 		(Act.Restore, "Restore the ground"), (Act.Paint, "Paint"),
-		(Act.Remove, "Remove objects"), (Act.Select, "Select objects"), (Act.Replace, "Replace objects"),
-		(Act.Reset, "Reset zones"),
+		(Act.Remove, "Remove objects"), (Act.Select, "Select objects"), (Act.Replace, "Replace objects"), (Act.Regrow, "Regrow nature"),
+		(Act.Backup, "Restore from a backup"), (Act.Reset, "Reset zones"),
 	};
 
 	private static readonly (string Label, BrushTool Tool)[] Paints =
@@ -64,6 +65,18 @@ public sealed class AreaPanel
 
 	public Act Current => Actions[Math.Max(0, ActionBox.SelectedIndex)].Act;
 
+	internal void Choose(Act a) => ActionBox.SelectedIndex = Array.FindIndex(Actions, x => x.Act == a);
+
+	internal ComboBox BackupBox { get; } = new() { FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch };
+	internal CheckBox BackupGroundBox { get; } = new() { Content = "Ground (height and paint)", IsChecked = true, FontSize = 12 };
+	internal CheckBox BackupObjectsBox { get; } = new() { Content = "Objects of the kinds chosen above", IsChecked = true, FontSize = 12 };
+	internal TextBlock BackupInfo { get; } = new() { FontSize = 11, Foreground = Brushes.Gray, TextWrapping = TextWrapping.Wrap,
+		Text = "Puts the selection back as it was in a backup: the editor's backups and the game's own are listed. Choose Your buildings above to bring buildings back too." };
+	private List<string> _backupPaths = new();
+	// Asks for another backup folder (the window's folder picker).
+	internal Func<Task<string?>> PickFolder { get; set; } = () => Task.FromResult<string?>(null);
+	private (string Path, WorldSave World, EditStore Edits)? _backup;
+
 	public AreaPanel(GlView view, Func<EditSession?> session, Func<int, string?> nameOf)
 	{
 		_view = view;
@@ -78,7 +91,23 @@ public sealed class AreaPanel
 		BoxButton.Click += (_, _) => { Area.Box = true; Area.Clear(); ShowShape(); };
 		PolyButton.Click += (_, _) => { Area.Box = false; Area.Clear(); ShowShape(); };
 		ClearButton.Click += (_, _) => { Area.Clear(); Message?.Invoke("Selection cleared."); };
-		ActionBox.SelectionChanged += (_, _) => ShowRows();
+		ActionBox.SelectionChanged += (_, _) => { ShowRows(); if (Current == Act.Backup) FillBackups(); };
+		BackupBox.SelectionChanged += async (_, _) =>
+		{
+			// The last entry: another folder.
+			if (BackupBox.ItemCount > 0 && BackupBox.SelectedIndex == _backupPaths.Count)
+			{
+				if (await PickFolder() is string path)
+				{
+					_backupPaths.Add(path);
+					FillBackups(path);
+				}
+				else
+				{
+					BackupBox.SelectedIndex = -1;
+				}
+			}
+		};
 		HeightBox.ValueChanged += (_, _) => Refresh();
 		AmountBox.ValueChanged += (_, _) => Refresh();
 		AverageButton.Click += (_, _) =>
@@ -146,9 +175,14 @@ public sealed class AreaPanel
 					For(Help("Evens out bumps inside the selection."), Act.Smooth),
 					For(Help("Natural-looking bumps, with the Bumps and Size of the Naturalize brush."), Act.Natural),
 					For(Help("Back to the ground the game generated, paint removed."), Act.Restore),
-					For(kinds, Act.Remove, Act.Select, Act.Replace),
+					For(kinds, Act.Remove, Act.Select, Act.Replace, Act.Regrow, Act.Backup),
 					For(Row("Replace", FromBox), Act.Replace),
 					For(Row("with", ToBox), Act.Replace),
+					For(Help("Puts back what the game grows here: its own trees, rocks, bushes and pickables for the biome, by its vegetation rules, for the kinds chosen above."), Act.Regrow),
+					For(Row("Backup", BackupBox), Act.Backup),
+					For(BackupGroundBox, Act.Backup),
+					For(BackupObjectsBox, Act.Backup),
+					For(BackupInfo, Act.Backup),
 					For(KeepBuildingsBox, Act.Reset),
 					For(ResetGroundBox, Act.Reset),
 					For(Help("On save, the zones under the selection lose their trees, rocks, ruins and dungeon entrances, and the game generates them again the next time someone goes there."), Act.Reset),
@@ -183,6 +217,8 @@ public sealed class AreaPanel
 			Act.Select => "Select the objects (Enter)",
 			Act.Replace => "Replace (Enter)",
 			Act.Reset => "Reset zones… (Enter)",
+			Act.Regrow => "Regrow nature (Enter)",
+			Act.Backup => "Restore the selection (Enter)",
 			_ => $"{Actions.First(a => a.Act == act).Label} (Enter)",
 		};
 		Refresh();
@@ -191,7 +227,8 @@ public sealed class AreaPanel
 	private float Value(NumericUpDown b) => (float)(b.Value ?? 0);
 
 	// The things inside the selection (indices), not deleted, of shown kinds (or added in this session).
-	internal List<int> ThingsInside(List<Vector2> poly, bool chosenKindsOnly)
+	// includeHidden: also kinds switched off in View (a backup restore compares with everything there).
+	internal List<int> ThingsInside(List<Vector2> poly, bool chosenKindsOnly, bool includeHidden = false)
 	{
 		var out_ = new List<int>();
 		if (_view.Scene is not { } s)
@@ -209,7 +246,7 @@ public sealed class AreaPanel
 					continue;
 				}
 				var k = KindOf(t);
-				if ((t.Id < 0 || _view.IsShown(k)) && (!chosenKindsOnly || Area.Kinds.Contains(k)))
+				if ((includeHidden || t.Id < 0 || _view.IsShown(k)) && (!chosenKindsOnly || Area.Kinds.Contains(k)))
 				{
 					out_.Add(i);
 				}
@@ -328,6 +365,12 @@ public sealed class AreaPanel
 			case Act.Reset:
 				await ResetZones(session);
 				break;
+			case Act.Regrow:
+				await RegrowNature(session, poly);
+				break;
+			case Act.Backup:
+				await RestoreBackup(session, poly);
+				break;
 		}
 		Refresh();
 	}
@@ -340,6 +383,207 @@ public sealed class AreaPanel
 		var adds = things.Select(i => s.Things[i]).Select(t => (new NewObject(0, prefab, t.Position, t.Rotation, 0), piece)).ToList();
 		session.Commit($"Replaced {things.Count} with {NameOf(prefab)}", null, things, adds);
 		Message?.Invoke($"Replaced {things.Count} object(s) with {NameOf(prefab)}.");
+	}
+
+	// ---- Regrow nature: the game's own vegetation for the zones under the selection (by its rules, on
+	// the ground as it is now), kept inside the selection, for the chosen kinds, and not where something
+	// already stands (a tree still there is not doubled) or near buildings.
+	private async Task RegrowNature(EditSession session, List<Vector2> poly)
+	{
+		var s = session.Scene;
+		if (s.Terrain is not { } terrain || s.World == null)
+		{
+			Message?.Invoke("Regrow needs the world's generator (not available here).");
+			return;
+		}
+		float ox = s.X0 * 64f - 32f, oz = s.Z0 * 64f - 32f;
+		static int Zone(float v) => (int)MathF.Floor((v + 32) / 64);
+		int x0 = Zone(poly.Min(p => p.X) + ox), x1 = Zone(poly.Max(p => p.X) + ox), z0 = Zone(poly.Min(p => p.Y) + oz), z1 = Zone(poly.Max(p => p.Y) + oz);
+		if ((x1 - x0 + 1) * (z1 - z0 + 1) > 16)
+		{
+			Message?.Invoke("Choose a smaller area: regrow works on up to 16 zones (256 x 256 m) at once.");
+			return;
+		}
+		Message?.Invoke("Working out what the game grows here…");
+		var world = s.World;
+		var spots = await Task.Run(() => Regrow.Zones(terrain, session.Edits, world.Seed, x0, z0, x1, z1).Where(p => world.CanCreate(StableHash.Of(p.Name))).ToList());
+		List<(float X, float Z, string? Name, ObjectKind Kind)> standing;
+		lock (s.Things)
+		{
+			standing = s.Things.Where(t => !t.Gone).Select(t => (t.Position.X, t.Position.Z, _nameOf(t.Prefab), KindOf(t))).ToList();
+		}
+		bool Near(Regrow.Spot o, float d, Func<string?, ObjectKind, bool> test) =>
+			standing.Any(t => MathF.Abs(t.X - o.X) < d && MathF.Abs(t.Z - o.Z) < d && MathF.Sqrt((t.X - o.X) * (t.X - o.X) + (t.Z - o.Z) * (t.Z - o.Z)) < d && test(t.Name, t.Kind));
+		var keep = spots.Where(o => AreaTool.Inside(poly, o.X - ox, o.Z - oz) && Area.Kinds.Contains(ObjectKinds.Of(o.Name, false))
+			&& !Near(o, 1, (_, _) => true) && !Near(o, 3, (n, _) => n == o.Name) && !Near(o, 4, (_, k) => k == ObjectKind.Buildings)).ToList();
+		if (keep.Count == 0)
+		{
+			Message?.Invoke("Nothing to regrow: the game grows none of the chosen kinds here, or it is all still standing.");
+			return;
+		}
+		var adds = keep.Select(o => (new NewObject(0, StableHash.Of(o.Name), new Vector3(o.X, o.Y, o.Z), new Vector3(o.Rx, o.Ry, o.Rz), MathF.Abs(o.Scale - 1) < 1e-4f ? 0 : o.Scale), false)).ToList();
+		session.Commit($"Area: regrew {adds.Count} object(s)", null, Array.Empty<int>(), adds);
+		var names = keep.Select(o => o.Name).Distinct().ToList();
+		Message?.Invoke($"Regrew {adds.Count} object(s): {string.Join(", ", names.Take(6))}{(names.Count > 6 ? "…" : "")}. Ctrl+Z takes them back; Save writes them.");
+	}
+
+	// ---- Restore from a backup (WorldEdit's //restore): the ground and objects inside the selection as
+	// they were in a backup of this world. Objects unchanged since then are left alone.
+	private void FillBackups(string? select = null)
+	{
+		var s = _view.Scene;
+		if (s?.World == null || string.IsNullOrEmpty(s.World.Directory) || !Directory.Exists(s.World.Directory))
+		{
+			_backupPaths = new();
+			BackupBox.ItemsSource = new[] { "Another folder…" };
+			return;
+		}
+		var keep = select ?? (BackupBox.SelectedIndex >= 0 && BackupBox.SelectedIndex < _backupPaths.Count ? _backupPaths[BackupBox.SelectedIndex] : null);
+		var found = Backups.Find(s.World.Directory);
+		var extra = _backupPaths.Where(p => !found.Any(f => f.Path == p)).ToList();
+		_backupPaths = found.Select(b => b.Path).Concat(extra).ToList();
+		BackupBox.ItemsSource = found.Select(b => $"{(b.Kind == "game" ? "Game" : "Editor")} · {b.Date:g}").Concat(extra).Append("Another folder…").ToList();
+		BackupBox.SelectedIndex = keep != null ? _backupPaths.IndexOf(keep) : -1;
+	}
+
+	// A backup's world (read once; the last one is kept).
+	internal async Task<(WorldSave World, EditStore Edits)?> OpenBackup(string path, WorldSave current)
+	{
+		if (_backup is { } b && b.Path == path)
+		{
+			return (b.World, b.Edits);
+		}
+		BackupInfo.Text = "Reading the backup…";
+		try
+		{
+			var w = await Task.Run(() => WorldSave.Load(path));
+			if (w.Seed != current.Seed || w.SeedName != current.SeedName)
+			{
+				BackupInfo.Text = $"That is another world (seed {w.SeedName}, this one is {current.SeedName}).";
+				return null;
+			}
+			var edits = new EditStore(w);
+			_backup = (path, w, edits);
+			BackupInfo.Text = $"Backup: save #{w.SaveNumber} of {w.Name}, {w.ObjectCount:N0} objects ({Directory.GetLastWriteTime(path):g}).";
+			return (w, edits);
+		}
+		catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException)
+		{
+			BackupInfo.Text = $"That folder is not a world save that can be read: {ex.Message}";
+			return null;
+		}
+	}
+
+	internal async Task RestoreBackup(EditSession session, List<Vector2> poly, string? path = null)
+	{
+		var s = session.Scene;
+		path ??= BackupBox.SelectedIndex >= 0 && BackupBox.SelectedIndex < _backupPaths.Count ? _backupPaths[BackupBox.SelectedIndex] : null;
+		if (path == null)
+		{
+			Message?.Invoke("Choose a backup first.");
+			return;
+		}
+		if (await OpenBackup(path, s.World) is not var (bw, be))
+		{
+			Message?.Invoke(BackupInfo.Text ?? "");
+			return;
+		}
+		int groundPoints = 0;
+		Func<Ground, (List<int>, (int, int, int, int))>? ground = BackupGroundBox.IsChecked != true ? null : g =>
+		{
+			// The backup's ground edits over the block.
+			var bk = new Ground(g.W, g.H, g.X0, g.Z0, g.Size);
+			Array.Copy(g.Base, bk.Base, g.Base.Length);
+			bk.TakeEdits(be);
+			var touched = new List<int>();
+			if (Area.WeightsIn(g.W, g.H) is not { } a)
+			{
+				return (touched, (0, 0, 0, 0));
+			}
+			foreach (var (p, w) in a.Cells)
+			{
+				if (g.Locked(p % g.W, p / g.W))
+				{
+					continue;
+				}
+				bool same = g.Mod[p] == bk.Mod[p] && g.PMod[p] == bk.PMod[p] && MathF.Abs(g.HeightOf(p) - bk.HeightOf(p)) < 1e-4f
+					&& (g.PMod[p] == 0 || Enumerable.Range(0, 4).All(c => MathF.Abs(g.Paint[p * 4 + c] - bk.Paint[p * 4 + c]) < 1e-4f));
+				if (same)
+				{
+					continue;
+				}
+				if (w > 0.999f)
+				{
+					// Inside the soft edge: exactly as in the backup.
+					g.Mod[p] = bk.Mod[p];
+					g.Level[p] = bk.Level[p];
+					g.Smooth[p] = bk.Smooth[p];
+					g.PMod[p] = bk.PMod[p];
+					Array.Copy(bk.Paint, p * 4, g.Paint, p * 4, 4);
+				}
+				else
+				{
+					float h = g.HeightOf(p);
+					g.SetHeight(p, h + (bk.HeightOf(p) - h) * w);
+					if (bk.PMod[p] != 0 || g.PMod[p] != 0)
+					{
+						if (g.PMod[p] == 0)
+						{
+							g.Paint[p * 4] = g.Paint[p * 4 + 1] = g.Paint[p * 4 + 2] = 0;
+							g.Paint[p * 4 + 3] = 1;
+							g.PMod[p] = 1;
+						}
+						for (int c = 0; c < 4; c++)
+						{
+							float target = bk.PMod[p] != 0 ? bk.Paint[p * 4 + c] : c == 3 ? 1 : 0;
+							g.Paint[p * 4 + c] += (target - g.Paint[p * 4 + c]) * w;
+						}
+					}
+				}
+				touched.Add(p);
+			}
+			groundPoints = touched.Count;
+			return (touched, (a.X0 - 1, a.Z0 - 1, a.X1 + 1, a.Z1 + 1));
+		};
+		var remove = new List<int>();
+		var adds = new List<(NewObject, bool)>();
+		if (BackupObjectsBox.IsChecked == true)
+		{
+			float ox = s.X0 * 64f - 32f, oz = s.Z0 * 64f - 32f;
+			var wanted = WorldScene.ReadThings(bw, s.X0, s.Z0, s.Size, new HashSet<int>())
+				.Where(o => AreaTool.Inside(poly, o.Position.X - ox, o.Position.Z - oz) && Area.Kinds.Contains(KindOf(o))).ToList();
+			var current = ThingsInside(poly, chosenKindsOnly: true, includeHidden: true);
+			// Unchanged since the backup (same kind, place and facing): kept as they are.
+			bool Same(WorldScene.Thing r, WorldScene.Thing o) => r.Prefab == o.Prefab && MathF.Abs(r.Position.X - o.Position.X) < 0.01f
+				&& MathF.Abs(r.Position.Y - o.Position.Y) < 0.01f && MathF.Abs(r.Position.Z - o.Position.Z) < 0.01f
+				&& MathF.Abs(((r.Rotation.Y - o.Rotation.Y) % 360 + 540) % 360 - 180) < 0.6f;
+			var kept = new HashSet<int>();
+			foreach (var o in wanted)
+			{
+				int r = current.FirstOrDefault(i => !kept.Contains(i) && Same(s.Things[i], o), -1);
+				if (r >= 0)
+				{
+					kept.Add(r);
+					continue;
+				}
+				var raw = bw.ObjectBytes(o.Id);
+				var z = ZdoData.Parse(raw);
+				adds.Add((new NewObject(0, z.Prefab, z.Position, z.Rotation, 0, null, false, raw), o.Piece));
+			}
+			remove = current.Where(i => !kept.Contains(i)).ToList();
+		}
+		if (ground == null && remove.Count == 0 && adds.Count == 0)
+		{
+			Message?.Invoke("Nothing to restore: the selection is as it was in the backup.");
+			return;
+		}
+		var added = session.Commit("Restored from backup", ground, remove, adds);
+		if (groundPoints == 0 && remove.Count == 0 && added.Count == 0)
+		{
+			Message?.Invoke("Nothing to restore: the selection is as it was in the backup.");
+			return;
+		}
+		Message?.Invoke($"Restored from the backup: {(groundPoints > 0 ? "the ground, " : "")}{added.Count} object(s) brought back, {remove.Count} removed. Ctrl+Z undoes it.");
 	}
 
 	private async Task ResetZones(EditSession session)

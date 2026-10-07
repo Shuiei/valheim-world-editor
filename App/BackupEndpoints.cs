@@ -9,23 +9,8 @@ namespace TerrainEditor.App;
 // come back as they were in the backup, objects with all their data (chest contents, sign texts...).
 public static class BackupEndpoints
 {
-	public sealed record BackupInfo(string Path, string Name, DateTime Date, string Kind);
-
-	// The backups found next to a world folder, newest first.
-	public static List<BackupInfo> Find(string worldDir)
-	{
-		string trimmed = worldDir.TrimEnd(Path.DirectorySeparatorChar);
-		string? parent = Path.GetDirectoryName(trimmed);
-		if (parent == null || !Directory.Exists(parent))
-		{
-			return new();
-		}
-		string prefix = Path.GetFileName(trimmed) + "_backup_";
-		return Directory.GetDirectories(parent, prefix + "*")
-			.Where(d => Directory.GetFiles(d, "_main.*.chunks").Length > 0)
-			.Select(d => new BackupInfo(d, Path.GetFileName(d), Directory.GetLastWriteTime(d), Path.GetFileName(d)[prefix.Length..].StartsWith("auto", StringComparison.Ordinal) ? "game" : "editor"))
-			.OrderByDescending(b => b.Date).ToList();
-	}
+	// The backups found next to a world folder, newest first (Backups, in the shared library).
+	public static List<Backups.Info> Find(string worldDir) => Backups.Find(worldDir);
 
 	// The backup world last opened (one at a time: worlds can be large).
 	private sealed class Open
@@ -41,7 +26,7 @@ public static class BackupEndpoints
 
 	public static void Map(WebApplication app, Func<WorldSave> world, EditStore edits, Func<object> pending)
 	{
-		app.MapGet("/api/backups", () => world().IsLive ? new List<BackupInfo>() : Find(world().Directory));
+		app.MapGet("/api/backups", () => world().IsLive ? new List<Backups.Info>() : Find(world().Directory));
 
 		app.MapPost("/api/backup/open", (BackupOpen req) =>
 		{

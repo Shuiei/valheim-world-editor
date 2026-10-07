@@ -496,6 +496,8 @@ public sealed class GlView : OpenGlControlBase
 		var counts = new Dictionary<ObjectKind, int>();
 		lock (s.Things)
 		{
+			// The things may have been read again (after a save) before the view caught up.
+			EnsureSize(s.Things.Count);
 			lock (_objLock)
 			{
 				for (int i = 0; i < s.Things.Count; i++)
