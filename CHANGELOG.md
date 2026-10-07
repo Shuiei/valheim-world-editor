@@ -1,7 +1,8 @@
 # Changelog
 
 All notable changes to the Valheim world editor and its WorldEditorBridge plugin, which share one
-version number. Newest first.
+version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
+the plugin is unchanged in versions without that part.
 
 ## v0.21.0 — 2026-10-07 (exact moves and snapping)
 
@@ -153,6 +154,10 @@ version number. Newest first.
 - A zone reset also removed players' tombstones, with what they carried: they are always kept now.
 - Saving twice within the same second failed, because both backups got the same folder name.
 
+### WorldEditorBridge
+- New: `POST /zones/reset`, so the editor can reset zones in the running game (they are generated
+  again at once where players are). Players' tombstones are always kept.
+
 ## v0.9.0 — 2026-10-06 (search the world)
 
 ### Added
@@ -250,6 +255,17 @@ version number. Newest first.
 ### Changed
 - **One version number** for the editor and the plugin (0.3.0, the plugin's version until now),
   kept in the `VERSION` file. The plugin DLL's file version said 0.1.0; it now says 0.3.0 too.
+
+### WorldEditorBridge
+First release on Thunderstore; from here on the plugin has the editor's version number: use the two
+together.
+- **Objects live**: deleted, planted, pasted and moved objects are applied in the running world,
+  and undoing after applying takes them back in the game too.
+- **Ground live**: terrain edits (sculpt, paint, roads, areas) are sent to the game and shown to
+  every player at once.
+- **World snapshot**: the editor opens the running world as the game has it now, without a save.
+- Listens on `127.0.0.1:5182` only, with a random token in `BepInEx/config/local.worldeditorbridge.cfg`.
+
 
 ## v0.2.0 — 2026-10-05 (desktop app)
 
