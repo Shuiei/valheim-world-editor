@@ -2,6 +2,7 @@
 // a file in the app's data folder, listed with a picture, and pasted again in any area or world.
 import { encodeClip, decodeClip } from './area.js';
 import { objectKind } from './objects.js';
+import { isWindow, pickFile } from '../app.js';
 
 const KIND_COLOR = { buildings: '#c98a4b', ruins: '#a08cc8', trees: '#2f6b2a', rocks: '#9a9a9a', ore: '#e0803a', bushes: '#7cbf5a', pickables: '#e8d24a', other: '#e6e9ee' };
 
@@ -52,7 +53,8 @@ export function createBlueprints(ed) {
   panel.id = 'bpPanel'; panel.className = 'card side'; panel.hidden = true;
   panel.innerHTML = `
     <h3>Blueprints <button class="ghost" id="bpClose" title="Close">✕</button></h3>
-    <input id="bpSearch" type="search" placeholder="Search blueprints" style="width:100%;margin-bottom:6px">
+    <div class="row" style="margin:0 0 6px"><input id="bpSearch" type="search" placeholder="Search blueprints" style="flex:2"><button id="bpImport" title="Import a PlanBuild .blueprint or a .vbuild file">Import file…</button></div>
+    <input id="bpFile" type="file" accept=".blueprint,.vbuild" hidden>
     <div id="bpList"></div>
     <div class="hint" id="bpFolder"></div>`;
   document.body.appendChild(panel);
@@ -86,11 +88,13 @@ export function createBlueprints(ed) {
       <img alt="" src="${b.thumb ? esc(b.thumb) : 'data:,'}">
       <div><div class="nm" title="${esc(b.name)}">${esc(b.name)}</div>
         <div class="mt">${b.w} × ${b.h} m · ${b.objects} object(s)${b.ground ? ' · ground' : ''}${b.world ? ` · from ${esc(b.world)}` : ''}${b.source ? ` · ${esc(b.source)}` : ''}</div></div>
-      <div class="acts"><button data-act="paste" class="primary" title="Put this blueprint on the clipboard and start pasting it">Paste</button><button data-act="delete" title="Delete this blueprint file">Delete</button></div></div>`).join('')
+      <div class="acts"><button data-act="paste" class="primary" title="Put this blueprint on the clipboard and start pasting it">Paste</button><button data-act="blueprint" title="Write it as a PlanBuild .blueprint file">.blueprint</button><button data-act="vbuild" title="Write it as a .vbuild file">.vbuild</button><button data-act="delete" title="Delete this blueprint file">Delete</button></div></div>`).join('')
       : `<div class="hint">${list.length ? 'Nothing matches.' : 'No blueprints yet. Copy something (Area or Select tool, Ctrl+C), then “Save blueprint…”.'}</div>`;
     $('bpList').querySelectorAll('[data-act]').forEach(btn => btn.onclick = () => {
       const id = btn.closest('.bp').dataset.id;
-      if (btn.dataset.act === 'paste') pasteBlueprint(id); else removeBlueprint(id);
+      if (btn.dataset.act === 'paste') pasteBlueprint(id);
+      else if (btn.dataset.act === 'delete') removeBlueprint(id);
+      else exportBlueprint(id, btn.dataset.act);
     });
   }
   $('bpSearch').addEventListener('input', render);
@@ -134,6 +138,43 @@ export function createBlueprints(ed) {
     if (!panel.hidden) refresh();
     return name;
   }
+  // Other mods' blueprint files: read by the editor, then kept as a blueprint like any copy.
+  async function importFile(req) {
+    const r = await fetch('/api/blueprints/import', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(req) });
+    if (!r.ok) { ed.msg(`Could not import that file: ${await r.text()}`, true); return null; }
+    const res = await r.json();
+    const clip = decodeClip(res.clip);
+    let name = res.name || 'Imported';
+    for (let n = 2; (await (await fetch(`/api/blueprints/exists?name=${encodeURIComponent(name)}`)).json()).exists; n++) name = `${res.name} (${n})`;
+    const thumb = drawThumb(clip, ed.objects.state.pieceNames);
+    const source = (req.fileName ?? req.path ?? '').toLowerCase().endsWith('.vbuild') ? 'vbuild' : 'PlanBuild';
+    const save = await fetch('/api/blueprints', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, thumb, clip: encodeClip({ ...clip, name }), source }) });
+    if (!save.ok) { ed.msg(`Could not keep the imported blueprint: ${await save.text()}`, true); return null; }
+    await refresh();
+    const left = res.unknown.length ? ` ${res.unknown.length} kind(s) the game does not know were left out (mods?): ${res.unknown.slice(0, 5).join(', ')}${res.unknown.length > 5 ? '…' : ''}.` : '';
+    ed.msg(`Imported “${name}”: ${clip.objects.length} piece(s)${res.terrain ? `, ground from ${res.terrain} terrain mark(s)` : ''}.${left}${res.skipped ? ` ${res.skipped} unreadable line(s) skipped.` : ''}`, !!res.unknown.length);
+    return name;
+  }
+  $('bpImport').onclick = async () => {
+    if (isWindow) { const path = await pickFile('Import a PlanBuild .blueprint or .vbuild file'); if (path) importFile({ path }); return; }
+    $('bpFile').click();
+  };
+  $('bpFile').onchange = async () => {
+    const f = $('bpFile').files[0]; $('bpFile').value = '';
+    if (f) importFile({ fileName: f.name, text: await f.text() });
+  };
+  // Writes a blueprint for PlanBuild (or as .vbuild) into the export folder; in a browser it is also downloaded.
+  async function exportBlueprint(id, format) {
+    const r = await fetch(`/api/blueprints/${encodeURIComponent(id)}/export`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ format }) });
+    if (!r.ok) { ed.msg('Could not export that blueprint.', true); return; }
+    const res = await r.json();
+    if (!isWindow) {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([res.text], { type: 'text/plain' })); a.download = res.fileName; a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    }
+    ed.msg(`Written to ${res.path}.${format === 'blueprint' ? ' For PlanBuild, copy it into BepInEx/config/PlanBuild/blueprints.' : ''} Only the objects are written, not the ground.`);
+  }
   function toggle(open = panel.hidden) {
     panel.hidden = !open;
     if (open) {
@@ -145,6 +186,6 @@ export function createBlueprints(ed) {
   $('bpClose').onclick = () => toggle(false);
   $('aSaveBp').onclick = () => saveBlueprint();
   $('aLibrary').onclick = () => toggle();
-  ed.blueprints = { toggle, refresh, save: saveBlueprint, paste: pasteBlueprint };
+  ed.blueprints = { toggle, refresh, save: saveBlueprint, paste: pasteBlueprint, importFile, exportBlueprint };
   return ed.blueprints;
 }

@@ -70,6 +70,16 @@ and can be pasted into any world.
 | **Save blueprint…** | Saves the clipboard (what the Area or Select tool copied last) under a name you type. A blueprint with the same name is replaced, after asking. |
 | **Blueprints…** | Opens the list of saved blueprints, each with a picture seen from above (ground shaded by height, objects as dots), its size, its number of objects and the world it came from. **Paste** puts it on the clipboard and starts pasting; **Delete** removes its file. |
 
+### Other mods' blueprints
+
+| Control | What it does |
+|---|---|
+| **Import file…** | Reads a blueprint of the [PlanBuild](https://github.com/sirskunkalot/PlanBuild) mod (`.blueprint`) or a `.vbuild` file (BuildShare and older tools) and keeps it as a blueprint here. PlanBuild's terrain marks become copied ground: levelled to their height and painted. Pieces the game does not know (from other mods) are left out, and the editor says which. |
+| **.blueprint** / **.vbuild** | Writes the blueprint as a PlanBuild `.blueprint` or a `.vbuild` file into `blueprints/export` (in a browser it is downloaded too). For PlanBuild, copy it into `BepInEx/config/PlanBuild/blueprints`. Only the objects are written: those formats cannot hold free-form ground. |
+
+Sign texts and items on item stands in PlanBuild files are not carried over: pasted objects are always
+fresh ones.
+
 Blueprints are files in the `blueprints` folder of the editor's data folder
 (`~/.local/share/ValheimWorldEditor/blueprints` on Linux, `%LOCALAPPDATA%\ValheimWorldEditor\blueprints`
 on Windows), one `.json` file each, so they can be copied to another computer or shared. Pasted into
