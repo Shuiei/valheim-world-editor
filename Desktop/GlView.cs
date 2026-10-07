@@ -1036,6 +1036,7 @@ public sealed class GlView : OpenGlControlBase
 			DrawMeasure(s, vp);
 			DrawPath(s, vp);
 			DrawArea(s, vp);
+			DrawPlace(s, vp);
 			if (ShowWater)
 			{
 				if (_look != null)
@@ -1126,6 +1127,13 @@ public sealed class GlView : OpenGlControlBase
 							Options.Say($"moved: {before.X:0.0} {before.Y:0.0} {before.Z:0.0} → {now.X:0.0} {now.Y:0.0} {now.Z:0.0}, {_scene.Session?.PendingText}");
 						});
 					}
+				}
+				if (Options.ClickAt is var (cx, cy))
+				{
+					var size = Bounds.Size;
+					var at = new Point(cx * size.Width, cy * size.Height);
+					_surfaceSize = size;
+					Dispatcher.UIThread.Post(() => ScriptedClick?.Invoke(at, size));
 				}
 				if (Options.PathAt is { Length: >= 4 } pp)
 				{
@@ -1306,6 +1314,15 @@ public sealed class GlView : OpenGlControlBase
 			_pointer = p.Position;
 			_surfaceSize = surface.Bounds.Size;
 			e.Pointer.Capture(surface);
+			if (_dragButton == PointerUpdateKind.LeftButtonPressed && _mode == ToolMode.Place && Place != null)
+			{
+				_dragFrom = null;
+				_placeDown = true;
+				var m = e.KeyModifiers;
+				Place.Down(p.Position, _surfaceSize, m.HasFlag(KeyModifiers.Shift), m.HasFlag(KeyModifiers.Control), m.HasFlag(KeyModifiers.Alt), e.ClickCount);
+				Wake();
+				return;
+			}
 			if (_dragButton == PointerUpdateKind.LeftButtonPressed && _mode == ToolMode.Paste)
 			{
 				_dragFrom = null;
@@ -1398,6 +1415,11 @@ public sealed class GlView : OpenGlControlBase
 				_areaDown = false;
 				Area.Up();
 			}
+			if (_placeDown)
+			{
+				_placeDown = false;
+				Place?.Up(at, surface.Bounds.Size);
+			}
 			if (_selectDown)
 			{
 				_selectDown = false;
@@ -1433,6 +1455,10 @@ public sealed class GlView : OpenGlControlBase
 			if (_mode == ToolMode.Paste)
 			{
 				Paste.At = GridAt(_pointer.Value, _surfaceSize);
+			}
+			if (_mode == ToolMode.Place)
+			{
+				Place?.Moved(_pointer.Value, _surfaceSize);
 			}
 			if (_selectDown)
 			{
@@ -1506,12 +1532,17 @@ public sealed class GlView : OpenGlControlBase
 	// Alt + click with a brush: the ground's height there (shift: Alt + Shift).
 	public event Action<float, bool>? BrushAltClick;
 	public AreaTool Area { get; } = new();
+	// The Place tool's mouse (set by the window).
+	public PlaceInput? Place { get; set; }
+	private bool _placeDown;
 	public PasteTool Paste { get; } = new();
 	// Paste tool: a click on the ground (grid point).
 	public event Action<Vector2>? PasteClicked;
 	private bool _areaDown;
 	// --path: the line is drawn; the window applies it.
 	public event Action? PathScripted;
+	// --click: the window clicks there with its tool.
+	public event Action<Point, Size>? ScriptedClick;
 	private bool _pathDown;
 
 	// Where a grid point (on the ground, lifted a little) is on the view, or null behind the camera.
@@ -1775,6 +1806,74 @@ public sealed class GlView : OpenGlControlBase
 		DrawLines(ref _pathEdgeVao, ref _pathEdgeVbo, edges.ToArray(), vp, new Vector4(1, 0.69f, 0.63f, 0.6f));
 		DrawLines(ref _pathVao, ref _pathVbo, line.ToArray(), vp, new Vector4(1, 0.23f, 0.23f, 1));
 		DrawLines(ref _pathDotVao, ref _pathDotVbo, dots.ToArray(), vp, new Vector4(1, 0.69f, 0.63f, 1));
+	}
+
+	private uint _placeVao, _placeVbo, _placeShapeVao, _placeShapeVbo;
+	// The Place tool: a post at each placement the preview (or a stroke) shows, and the line, zone or
+	// grid being drawn with its points.
+	private void DrawPlace(WorldScene s, Matrix4x4 vp)
+	{
+		if (_mode != ToolMode.Place || Place is not { } pl)
+		{
+			return;
+		}
+		float ox = s.X0 * 64f - 32f, oz = s.Z0 * 64f - 32f;
+		var posts = new List<float>();
+		foreach (var o in pl.Shown)
+		{
+			float x = o.Position.X - ox - (s.W - 1) / 2f, z = -(o.Position.Z - oz - (s.H - 1) / 2f), y = o.Position.Y;
+			posts.AddRange(new[] { x, y, z, x, y + 1.5f, z, x - 0.35f, y + 0.6f, z, x + 0.35f, y + 0.6f, z, x, y + 0.6f, z - 0.35f, x, y + 0.6f, z + 0.35f });
+		}
+		DrawLines(ref _placeVao, ref _placeVbo, posts.ToArray(), vp, new Vector4(0.62f, 0.88f, 1, 1));
+		var t = pl.Tool;
+		Vector3 V(Vector2 g) { float x = g.X - (s.W - 1) / 2f, z = -(g.Y - (s.H - 1) / 2f); return new Vector3(x, Picking.HeightAt(s, x, z) + 0.3f, z); }
+		var data = new List<float>();
+		void Strip(IReadOnlyList<Vector2> pts)
+		{
+			for (int i = 1; i < pts.Count; i++)
+			{
+				int n = Math.Max(1, (int)MathF.Ceiling(Vector2.Distance(pts[i - 1], pts[i])));
+				for (int k = 0; k < n; k++)
+				{
+					var a = V(Vector2.Lerp(pts[i - 1], pts[i], k / (float)n));
+					var b = V(Vector2.Lerp(pts[i - 1], pts[i], (k + 1) / (float)n));
+					data.AddRange(new[] { a.X, a.Y, a.Z, b.X, b.Y, b.Z });
+				}
+			}
+		}
+		if (t.Mode == PlaceTool.Modes.Line)
+		{
+			foreach (var run in t.LineRuns())
+			{
+				Strip(run);
+			}
+		}
+		else if (t.Mode == PlaceTool.Modes.Zone)
+		{
+			var z = pl.ShownPoints();
+			if (z.Count > 1)
+			{
+				Strip(z.Append(z[0]).ToList());
+			}
+		}
+		else if (t.Mode == PlaceTool.Modes.Grid && t.GridA is { } a && t.GridB is { } b)
+		{
+			Strip(new[] { a, new Vector2(b.X, a.Y), b, new Vector2(a.X, b.Y), a }.Select(t.Xf).ToList());
+		}
+		if (t.Mode is PlaceTool.Modes.Line or PlaceTool.Modes.Zone)
+		{
+			foreach (var p in pl.ShownPoints())
+			{
+				var c = V(p);
+				float r = Vector3.Distance(_lastEye, c) * 0.008f;
+				Vector3[] k = { c + new Vector3(-r, 0, -r), c + new Vector3(r, 0, -r), c + new Vector3(r, 0, r), c + new Vector3(-r, 0, r) };
+				for (int j = 0; j < 4; j++)
+				{
+					data.AddRange(new[] { k[j].X, k[j].Y, k[j].Z, k[(j + 1) % 4].X, k[(j + 1) % 4].Y, k[(j + 1) % 4].Z });
+				}
+			}
+		}
+		DrawLines(ref _placeShapeVao, ref _placeShapeVbo, data.ToArray(), vp, new Vector4(0.62f, 0.88f, 1, 1));
 	}
 
 	private uint _areaVao, _areaVbo, _resetVao, _resetVbo;

@@ -76,6 +76,8 @@ public static class Options
 	public static float[]? TapeAt { get; private set; }
 	// Path tool: a line through these points of the view (fractions: x1,y1,x2,y2,…), then apply (nothing is saved).
 	public static float[]? PathAt { get; private set; }
+	// Click this point of the view (fractions) with the tool in use once loaded (--tool place…).
+	public static (double X, double Y)? ClickAt { get; private set; }
 	// Move what --pick selected by this much (metres east, north), to check moving (nothing is saved).
 	public static (float X, float Z)? MoveBy { get; private set; }
 
@@ -139,6 +141,10 @@ public static class Options
 					break;
 				case "--path":
 					PathAt = args[++i].Split(',').Select(v => float.Parse(v, System.Globalization.CultureInfo.InvariantCulture)).ToArray();
+					break;
+				case "--click":
+					var cf = args[++i].Split(',').Select(v => double.Parse(v, System.Globalization.CultureInfo.InvariantCulture)).ToArray();
+					ClickAt = (cf[0], cf[1]);
 					break;
 				case "--move":
 					var m = args[++i].Split(',').Select(v => float.Parse(v, System.Globalization.CultureInfo.InvariantCulture)).ToArray();
