@@ -80,7 +80,7 @@ lose sight of what you placed.
 
 | Key | Action |
 |---|---|
-| `1`–`9`, `0` | Raise, Lower, Flatten, Smooth, Restore, Dirt, Cultivate, Paved, Clear paint; Naturalize |
+| `1`–`9`, `0`, `O` | Raise, Lower, Flatten, Smooth, Restore, Dirt, Cultivate, Paved, Clear paint; Naturalize; Erode |
 | `B` `P` `T` | Area, Path, Plant |
 | `E` `M` `H` | Select, Measure, Move view |
 | `[` `]` | Brush size |

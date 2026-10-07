@@ -162,6 +162,7 @@
   <button data-tool="flatten" data-key="3">Flatten</button>
   <button data-tool="smooth" data-key="4">Smooth</button>
   <button data-tool="natural" data-key="0">Natural</button>
+  <button data-tool="erode" data-key="O">Erode</button>
   <button data-tool="restore" data-key="5">Restore</button>
   <div class="cap">Paint</div>
   <button data-tool="paint-dirt" data-key="6">Dirt</button>
@@ -268,7 +269,7 @@
     <dt>Wheel</dt><dd>Zoom</dd>
     <dt>Middle drag</dt><dd>Slide the view (also Space + left drag, Shift + right drag, Move tool)</dd>
     <dt>W A S D</dt><dd>Move around</dd>
-    <dt>1–9, 0</dt><dd>Sculpt and paint tools</dd>
+    <dt>1–9, 0, O</dt><dd>Sculpt and paint tools (O: Erode)</dd>
     <dt>B / P / T</dt><dd>Area, Path, Plant</dd>
     <dt>E / M / H</dt><dd>Select, Measure, Move</dd>
     <dt>Ctrl+C / Ctrl+V</dt><dd>Copy the area / paste it (R turns 90°, , . turn 1°, F mirrors)</dd>
@@ -293,6 +294,7 @@ import { createObjects, stableHash } from './editor/objects.js';
 import { createMasks } from './editor/masks.js';
 import { createBrushes } from './editor/brushes.js';
 import { createStamps } from './editor/stamps.js';
+import { createErosion } from './editor/erosion.js';
 import { createArea } from './editor/area.js';
 import { createBlueprints } from './editor/blueprints.js';
 import { createHeightmap } from './editor/heightmap.js';
@@ -506,6 +508,7 @@ const TOOLS = {
   smooth: ['Smooth', 'Even out bumps and sharp edges.', 'M3 14c3-4 6 4 9 0s6 4 9 0'],
   natural: ['Naturalize', 'Turn flat, tool-made ground into natural-looking bumps.', 'M3 18l5-8 4 5 3-4 6 7z'],
   restore: ['Restore', 'Bring the ground back to how the world generated it.', 'M4 12a8 8 0 108-8M4 4v5h5'],
+  erode: ['Erode', 'Weather the ground: steep slopes slide down to rest (Thermal), or rain cuts gullies and fills hollows (Water).', 'M3 6c3 0 4 3 7 3s4-3 7-3 4 2 4 2M3 12c3 0 4 3 7 3s4-3 7-3M8 18l2 3 2-3'],
   'paint-dirt': ['Dirt', 'Paint bare dirt, like a path.', null, '#8a6a46'],
   'paint-cultivated': ['Cultivate', 'Paint cultivated soil for planting.', null, '#4e3622'],
   'paint-paved': ['Paved', 'Paint paved stone ground.', null, '#8d8d88'],
@@ -520,7 +523,7 @@ const TOOLS = {
 };
 // Option panels added by the feature modules: { el, tools }, and tool-change listeners.
 const toolPanels = [], toolChangeHooks = [];
-const BRUSH_TOOLS = ['raise', 'lower', 'flatten', 'smooth', 'natural', 'restore', 'paint-dirt', 'paint-cultivated', 'paint-paved', 'paint-natural'];
+const BRUSH_TOOLS = ['raise', 'lower', 'flatten', 'smooth', 'natural', 'restore', 'erode', 'paint-dirt', 'paint-cultivated', 'paint-paved', 'paint-natural'];
 document.querySelectorAll('#rail [data-tool]').forEach(b => {
   const [name, desc, icon, swatch] = TOOLS[b.dataset.tool];
   const label = b.textContent;
@@ -642,6 +645,8 @@ function applyBrush(dt) {
   const z0 = Math.max(1, Math.floor(hover.gz - reach)), z1 = Math.min(H - 2, Math.ceil(hover.gz + reach));
   if (x0 > x1 || z0 > z1) return;
   const rate = strength * Math.min(dt, 0.1);
+  // Erosion works on the neighbourhood of every point (editor/erosion.js).
+  if (tool === 'erode') { ed.erosion.brushStep(hover, r, rate, stroke.touched); return; }
   // Smoothing reads the heights from before this frame.
   const snapshot = tool === 'smooth' ? new Map() : null;
   if (snapshot) for (let gz = z0 - 1; gz <= z1 + 1; gz++) for (let gx = x0 - 1; gx <= x1 + 1; gx++) snapshot.set(gz * W + gx, height(gz * W + gx));
@@ -981,6 +986,7 @@ const objects = createObjects(ed); ed.objects = objects;
 window.__ed = ed; // for automated tests
 createBrushes(ed);
 createStamps(ed);
+createErosion(ed);
 createMasks(ed, [...BRUSH_TOOLS, 'path', 'area', 'plant']);
 createArea(ed);
 createBlueprints(ed);
@@ -1313,6 +1319,7 @@ addEventListener('keydown', e => {
   if (e.key.toLowerCase() === 'b' && !e.ctrlKey) { setTool('area'); return; }
   if (e.key.toLowerCase() === 't' && !e.ctrlKey) { setTool('plant'); return; }
   if (e.key.toLowerCase() === 'm' && !e.ctrlKey) { setTool('measure'); return; }
+  if (e.key.toLowerCase() === 'o' && !e.ctrlKey) { setTool('erode'); return; }
   if (e.key.toLowerCase() === 'v' && !e.ctrlKey) { toggleView(); return; }
   if (e.key.toLowerCase() === 'l' && !e.ctrlKey) { toggleHistory(); return; }
   if (e.key === '?') { toggleHelp(); return; }

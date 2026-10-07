@@ -16,6 +16,7 @@ hold and drag. The yellow ring on the ground is the brush. All of them work with
 | **Smooth** | `4` | Evens out bumps and sharp edges. |
 | **Naturalize** | `0` | Turns flat, tool-made ground into natural-looking bumps (settings below). |
 | **Restore** | `5` | Brings the ground back to how the world generated it, and removes paint. |
+| **Erode** | `O` | Weathers the ground like rain and time do (settings below). |
 
 ### Brush settings (all brushes)
 
@@ -44,6 +45,17 @@ hold and drag. The yellow ring on the ground is the brush. All of them work with
 | **New pattern** | A new random bump pattern for the next stroke (and for natural paths). |
 
 The pattern is continuous across the world, so neighbouring strokes and areas match.
+
+### Erode settings
+
+| Control | What it does |
+|---|---|
+| **Thermal** | Where the ground is steeper than the **Rest angle**, material slides down to its lower neighbours until it rests: screes below cliffs, softened tool-made walls. No ground is lost, it only moves. |
+| **Water** | Drops of rain run downhill from random points under the brush, dig where they speed up and leave what they carry where they slow down: gullies down slopes, fans at their feet, smoother valleys. |
+| **Rest angle** | Thermal: the steepest slope that stays put (degrees). |
+
+Hold and drag like any brush; **Strength** sets how fast it works, and the shape, falloff and Mask
+apply. The Area tool has an **Erode** button that does both over a whole selection.
 
 ## Stamps
 
