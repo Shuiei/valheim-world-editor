@@ -291,6 +291,7 @@ import { createLook, DAY } from './terrain/look.js';
 import { pieceModel, setSeeThrough } from './terrain/pieces.js';
 import { createObjects, stableHash } from './editor/objects.js';
 import { createMasks } from './editor/masks.js';
+import { createBrushes } from './editor/brushes.js';
 import { createArea } from './editor/area.js';
 import { createBlueprints } from './editor/blueprints.js';
 import { createPlant } from './editor/plant.js';
@@ -566,9 +567,11 @@ function updateRing() {
   ring.visible = !!hover && !['move', 'select', 'area', 'paste', 'measure'].includes(tool);
   if (!hover) return;
   const p = ring.geometry.attributes.position.array;
+  // Sculpt and paint brushes show their shape; the path and the plant brush a circle.
+  const shaped = BRUSH_TOOLS.includes(tool) && ed.brush ? ed.brush.outline(radius, ringPts) : null;
   for (let i = 0; i < ringPts; i++) {
     const r = tool === 'path' ? pv('pWidth') / 2 : radius;
-    const a = i / ringPts * Math.PI * 2, fx = hover.gx + Math.cos(a) * r, fz = hover.gz + Math.sin(a) * r;
+    const a = i / ringPts * Math.PI * 2, [ox, oz] = shaped ? shaped[i] : [Math.cos(a) * r, Math.sin(a) * r], fx = hover.gx + ox, fz = hover.gz + oz;
     p[i * 3] = fx - cx; p[i * 3 + 1] = sampleHeight(fx, fz) + 0.3; p[i * 3 + 2] = -(fz - cz);
   }
   ring.geometry.attributes.position.needsUpdate = true;
@@ -633,8 +636,8 @@ function naturalTarget(g) {
 }
 function applyBrush(dt) {
   if (!hover) return;
-  const r = radius, x0 = Math.max(1, Math.floor(hover.gx - r)), x1 = Math.min(W - 2, Math.ceil(hover.gx + r));
-  const z0 = Math.max(1, Math.floor(hover.gz - r)), z1 = Math.min(H - 2, Math.ceil(hover.gz + r));
+  const r = radius, reach = ed.brush.reach(r), x0 = Math.max(1, Math.floor(hover.gx - reach)), x1 = Math.min(W - 2, Math.ceil(hover.gx + reach));
+  const z0 = Math.max(1, Math.floor(hover.gz - reach)), z1 = Math.min(H - 2, Math.ceil(hover.gz + reach));
   if (x0 > x1 || z0 > z1) return;
   const rate = strength * Math.min(dt, 0.1);
   // Smoothing reads the heights from before this frame.
@@ -642,9 +645,10 @@ function applyBrush(dt) {
   if (snapshot) for (let gz = z0 - 1; gz <= z1 + 1; gz++) for (let gx = x0 - 1; gx <= x1 + 1; gx++) snapshot.set(gz * W + gx, height(gz * W + gx));
   for (let gz = z0; gz <= z1; gz++) for (let gx = x0; gx <= x1; gx++) {
     if (locked(gx, gz)) continue;
-    const dist = Math.hypot(gx - hover.gx, gz - hover.gz);
-    if (dist > r) continue;
-    const f = 1 - dist / r, g = gz * W + gx, w = f * f * (3 - 2 * f) * ed.mask(g);   // smooth falloff, mask
+    // Brush shape and falloff (editor/brushes.js), times the mask.
+    const wb = ed.brush.weight(gx - hover.gx, gz - hover.gz, r, gx, gz);
+    if (wb <= 0) continue;
+    const g = gz * W + gx, w = wb * ed.mask(g);
     if (w <= 0) continue;
     const h = height(g);
     stroke.touched.add(g);
@@ -968,11 +972,12 @@ const ed = {
   pickEntity: e => pickEntity(e), clickSelect: e => clickSelect(e), hoverSelect: e => hoverSelect(e), drawSelection: () => drawSelection(), entityOf: id => entities.get(id),
   get selection() { return selection; }, selectIds: ids => { selection.clear(); for (const id of ids) if (entities.has(id)) selection.add(id); drawSelection(); }, clearSelection: () => clearSelection(),
   // Turning step for , . and Alt+wheel everywhere: 1°, or 15° with Shift.
-  turnStep: e => e.shiftKey ? 15 : 1,
+  turnStep: e => e.shiftKey ? 15 : 1, isBrushTool: t => BRUSH_TOOLS.includes(t),
   showStatusFor: h => { hover = h; showStatus(); }, track: p => track(p), updateRing: () => updateRing(), frame: [], getLook: () => look
 };
 const objects = createObjects(ed); ed.objects = objects;
 window.__ed = ed; // for automated tests
+createBrushes(ed);
 createMasks(ed, [...BRUSH_TOOLS, 'path', 'area', 'plant']);
 createArea(ed);
 createBlueprints(ed);

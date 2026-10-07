@@ -321,6 +321,42 @@ test('restore: a deleted tree comes back from the backup made when saving', asyn
   noErrors();
 });
 
+test('brush shapes: square, ring and falloff change where the brush works', async () => {
+  await openEditor();
+  await page().keyboard.press('1');
+  const w = await page().evaluate(() => {
+    const ed = window.__ed, sel = (id, v) => { const e = document.getElementById(id); e.value = v; e.dispatchEvent(new Event('input')); };
+    const at = (x, z) => ed.brush.weight(x, z, 10);
+    sel('bShape', 'circle'); sel('bFalloff', 'smooth');
+    const circleCorner = at(8, 8), circleMid = at(0, 0);
+    sel('bShape', 'square'); const squareCorner = at(8, 8);
+    sel('bShape', 'ring'); const ringMid = at(0, 0), ringBand = at(7, 0);
+    sel('bShape', 'circle'); sel('bFalloff', 'linear'); const linearHalf = at(5, 0);
+    sel('bFalloff', 'flat'); const flatNear = at(7.5, 0);
+    sel('bShape', 'square'); sel('bTurn', 45); const turnedCorner = at(8, 8);
+    sel('bTurn', 0); sel('bFalloff', 'smooth');
+    return { circleCorner, circleMid, squareCorner, ringMid, ringBand, linearHalf, flatNear, turnedCorner };
+  });
+  assert.equal(w.circleCorner, 0, 'a circle does not reach its box corners');
+  assert.equal(w.circleMid, 1);
+  assert.ok(w.squareCorner > 0, 'a square does');
+  assert.equal(w.ringMid, 0, 'a ring leaves its middle alone');
+  assert.equal(w.ringBand, 1);
+  assert.ok(Math.abs(w.linearHalf - 0.5) < 1e-6, 'linear falloff is half way at half the radius');
+  assert.equal(w.flatNear, 1, 'flat top is full strength near the edge');
+  assert.equal(w.turnedCorner, 0, 'turned 45°, the square no longer reaches that corner');
+  // A stroke with the square brush changes the ground.
+  const start = await pending();
+  const c = (await records()).find(r => r.name === 'piece_chest_wood');
+  await lookAt(page(), c.x + 20, c.z - 20);
+  const [x, y] = await screenOf(page(), c.x + 20, c.z - 20);
+  await page().mouse.move(x, y); await page().mouse.down(); await page().mouse.move(x + 3, y + 3, { steps: 15 }); await page().mouse.up(); await sleep(800);
+  assert.notEqual(await pending(), start, 'the square brush changed the ground');
+  await page().click('#undo'); await sleep(1000);
+  await page().evaluate(() => { const e = document.getElementById('bShape'); e.value = 'circle'; e.dispatchEvent(new Event('input')); });
+  noErrors();
+});
+
 test('undo takes a change back and the counter clears', async () => {
   await openEditor();
   await page().keyboard.press('Escape');

@@ -18,6 +18,9 @@ export const TIPS = {
   // Brush settings
   radius: 'Brush radius in metres. [ and ] change it.',
   strength: 'How fast the brush works while you hold the mouse button.',
+  bShape: 'Shape of the brush: circle, square, ring (only a band around the middle, for rims and moats), ragged (a noisy edge for natural-looking strokes), or a picture (Stamps).',
+  bFalloff: 'How the effect fades from the middle to the edge: smooth, linear, dome (round top), flat top (full strength almost to the edge), or peak (strong in the middle only).',
+  bTurn: 'Turn of a square brush or a picture (degrees). , and . change it (Shift: 15°).',
   targetFromClick: 'On: Flatten levels to the height of the ground where you start the stroke. Off: it levels to the Height below.',
   target: 'The height (m) Flatten levels to when the option above is off. Alt + click the ground to pick its height.',
 
