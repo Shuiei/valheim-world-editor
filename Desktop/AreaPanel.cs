@@ -17,13 +17,13 @@ namespace TerrainEditor.Desktop;
 // hands the zones under the selection back to the world generator when saving.
 public sealed class AreaPanel
 {
-	public enum Act { Flatten, Raise, Lower, Smooth, Natural, Restore, Erode, Paint, Remove, Select, Replace, Regrow, Heightmap, Backup, Reset }
+	public enum Act { Flatten, Raise, Lower, Smooth, Natural, Restore, Erode, Paint, Remove, Select, Replace, Regrow, Copy, Heightmap, Backup, Reset }
 
 	private static readonly (Act Act, string Label)[] Actions =
 	{
 		(Act.Flatten, "Flatten"), (Act.Raise, "Raise"), (Act.Lower, "Lower"), (Act.Smooth, "Smooth"), (Act.Natural, "Naturalize"),
 		(Act.Restore, "Restore the ground"), (Act.Erode, "Erode"), (Act.Paint, "Paint"),
-		(Act.Remove, "Remove objects"), (Act.Select, "Select objects"), (Act.Replace, "Replace objects"), (Act.Regrow, "Regrow nature"), (Act.Heightmap, "Heightmap"),
+		(Act.Remove, "Remove objects"), (Act.Select, "Select objects"), (Act.Replace, "Replace objects"), (Act.Regrow, "Regrow nature"), (Act.Copy, "Copy and paste"), (Act.Heightmap, "Heightmap"),
 		(Act.Backup, "Restore from a backup"), (Act.Reset, "Reset zones"),
 	};
 
@@ -76,6 +76,14 @@ public sealed class AreaPanel
 	// Asks for another backup folder (the window's folder picker).
 	internal Func<Task<string?>> PickFolder { get; set; } = () => Task.FromResult<string?>(null);
 	private (string Path, WorldSave World, EditStore Edits)? _backup;
+
+	// Copy and paste: the window copies, pastes and keeps blueprints.
+	internal Button CopyButton { get; } = new() { Content = "Copy (Ctrl+C)", FontSize = 12 };
+	internal Button PasteButton { get; } = new() { Content = "Paste (Ctrl+V)", FontSize = 12 };
+	internal Button SaveBlueprintButton { get; } = new() { Content = "Save blueprint…", FontSize = 12 };
+	internal Button LibraryButton { get; } = new() { Content = "Blueprints…", FontSize = 12 };
+	internal TextBlock ClipInfo { get; } = new() { FontSize = 11, Foreground = Brushes.Gray, TextWrapping = TextWrapping.Wrap };
+	public event Action? CopyAsked, PasteAsked, SaveBlueprintAsked, LibraryAsked;
 
 	// Heightmap: export the area, or import a picture into the selection (or the whole area).
 	internal Button ExportButton { get; } = new() { Content = "Export the area", FontSize = 12 };
@@ -139,6 +147,11 @@ public sealed class AreaPanel
 			kinds.Children.Add(b);
 		}
 		ApplyButton.Click += async (_, _) => await Apply();
+		CopyButton.Click += (_, _) => CopyAsked?.Invoke();
+		PasteButton.Click += (_, _) => PasteAsked?.Invoke();
+		SaveBlueprintButton.Click += (_, _) => SaveBlueprintAsked?.Invoke();
+		LibraryButton.Click += (_, _) => LibraryAsked?.Invoke();
+		ClipInfo.Text = "Copies the ground (shape and paint) and the shown objects inside the selection.";
 		ExportButton.Click += (_, _) => Message?.Invoke(ExportHeightmap() ?? "");
 		ToolTip.SetTip(ExportButton, "The ground of the whole area as a 16-bit grayscale picture");
 		ImportButton.Click += async (_, _) => { if (await PickPicture() is string path) LoadPicture(path); };
@@ -198,6 +211,9 @@ public sealed class AreaPanel
 					For(Row("Replace", FromBox), Act.Replace),
 					For(Row("with", ToBox), Act.Replace),
 					For(Help("Puts back what the game grows here: its own trees, rocks, bushes and pickables for the biome, by its vegetation rules, for the kinds chosen above."), Act.Regrow),
+					For(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Children = { CopyButton, PasteButton } }, Act.Copy),
+					For(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Children = { SaveBlueprintButton, LibraryButton } }, Act.Copy),
+					For(ClipInfo, Act.Copy),
 					For(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Children = { ExportButton, ImportButton } }, Act.Heightmap),
 					For(_pictureBox = new StackPanel
 					{
@@ -244,7 +260,7 @@ public sealed class AreaPanel
 		{
 			row.IsVisible = acts.Contains(act);
 		}
-		ApplyButton.IsVisible = act != Act.Heightmap;
+		ApplyButton.IsVisible = act is not (Act.Heightmap or Act.Copy);
 		ApplyButton.Content = act switch
 		{
 			Act.Remove => "Remove the objects (Enter)",
@@ -253,7 +269,7 @@ public sealed class AreaPanel
 			Act.Reset => "Reset zones… (Enter)",
 			Act.Regrow => "Regrow nature (Enter)",
 			Act.Backup => "Restore the selection (Enter)",
-			Act.Heightmap => "",
+			Act.Heightmap or Act.Copy => "",
 			_ => $"{Actions.First(a => a.Act == act).Label} (Enter)",
 		};
 		Refresh();

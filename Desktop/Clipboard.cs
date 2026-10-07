@@ -16,7 +16,7 @@ public sealed class CopyData
 	public required float[] Pnt { get; init; }
 	public required List<Obj> Objects { get; init; }
 	public required List<Vector2> Poly { get; init; }
-	public string? Name { get; init; }
+	public string? Name { get; set; }
 
 	// An object: offsets from the middle (east, north) and from the reference height (or, Follow, from
 	// the ground under it: objects copied with the Select tool), its turn and scale, and what it was

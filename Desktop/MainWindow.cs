@@ -42,6 +42,7 @@ public sealed class MainWindow : Window
 	internal Button HistoryButton { get; } = new() { Content = "History", FontSize = 12 };
 	internal HistoryPanel History { get; }
 	internal InspectorPanel Inspector { get; }
+	internal BlueprintsPanel Blueprints { get; }
 	private Control _viewPanel = null!;
 	internal TextBlock PendingText => _pending;
 	internal TextBlock MessageText => _message;
@@ -536,6 +537,20 @@ public sealed class MainWindow : Window
 		SelectPanel = new SelectPanel(_view.SelectTool);
 		History = new HistoryPanel(() => _session);
 		Inspector = new InspectorPanel(() => _session);
+		Blueprints = new BlueprintsPanel(_view.Paste, () => _view.Scene);
+		Blueprints.Message += t => _message.Text = t;
+		Blueprints.Pasting += () => { _viewPanel.IsVisible = true; StartPaste(); };
+		Blueprints.AskName = initial => Dialogs.AskText(this, "Save blueprint", "Name of the blueprint:", initial);
+		Blueprints.Confirm = text => Dialogs.Ask(this, "Blueprints", text, "Yes");
+		Blueprints.PickFile = async () =>
+		{
+			var picked = await StorageProvider.OpenFilePickerAsync(new Avalonia.Platform.Storage.FilePickerOpenOptions
+			{
+				Title = "Import a PlanBuild .blueprint or .vbuild file",
+				FileTypeFilter = new[] { new Avalonia.Platform.Storage.FilePickerFileType("Blueprints") { Patterns = new[] { "*.blueprint", "*.vbuild" } } },
+			});
+			return picked.Count > 0 && picked[0].Path.IsFile ? picked[0].Path.LocalPath : null;
+		};
 		Inspector.Message += t => { _message.Text = t; UpdateSaveBar(); };
 		Inspector.Replaced += i => _view.Select(new[] { i });
 		Inspector.Confirm = text => Dialogs.Ask(this, "Contents", text, "Apply anyway");
@@ -575,6 +590,22 @@ public sealed class MainWindow : Window
 		AreaPanel = new AreaPanel(_view, () => _session, prefab => _models?.NameOf(prefab) ?? TerrainEditor.Terrain.PrefabCatalog.DisplayName(prefab));
 		AreaPanel.Message += t => { _message.Text = t; UpdateSaveBar(); };
 		AreaPanel.SwitchToSelect += () => Tools.ChooseSelect();
+		AreaPanel.CopyAsked += Copy;
+		AreaPanel.PasteAsked += StartPaste;
+		AreaPanel.SaveBlueprintAsked += async () => await Blueprints.Save();
+		AreaPanel.LibraryAsked += () =>
+		{
+			// The View panel makes room for the list.
+			Inspector.Close();
+			Blueprints.Toggle();
+			_viewPanel.IsVisible = !Blueprints.Card.IsVisible;
+		};
+		_view.Paste.Changed += () =>
+		{
+			var c = _view.Paste.Clip;
+			AreaPanel.ClipInfo.Text = c == null ? "Copies the ground (shape and paint) and the shown objects inside the selection."
+				: $"Clipboard{(c.Name != null ? $" ({c.Name})" : "")}: {c.W} × {c.H} m, {c.Objects.Count} object(s).";
+		};
 		AreaPanel.Confirm = text => Dialogs.Ask(this, "Reset zones", text, "Reset when saving");
 		AreaPanel.PickPicture = async () =>
 		{
@@ -719,7 +750,7 @@ public sealed class MainWindow : Window
 		// Takes the mouse for the 3D view (see GlView.Attach).
 		var surface = new Border { Background = Brushes.Transparent };
 		_viewPanel = ViewPanel();
-		Content = new Grid { Children = { _view, surface, panel, _viewPanel, tools, SaveBar(), History.Card, Inspector.Card } };
+		Content = new Grid { Children = { _view, surface, panel, _viewPanel, tools, SaveBar(), History.Card, Inspector.Card, Blueprints.Card } };
 		_view.Attach(surface, this);
 		_view.Perf = _perf;
 		_view.StatsChanged += s => _fps.Text = $"{s.Fps} frames/s · {s.WorkMs:0.0} ms of work each · {s.Objects:N0} objects ({s.Instances:N0} model parts in {s.Batches:N0} draws){(s.PendingModels > 0 ? $" · {s.PendingModels} kinds loading" : "")}";
