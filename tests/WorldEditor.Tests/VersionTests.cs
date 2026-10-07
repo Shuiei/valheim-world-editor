@@ -19,10 +19,10 @@ public class VersionTests
 	public void TheEditorHasTheVersionOfTheVersionFile() => Assert.Equal(Version, AppHost.Version);
 
 	[Fact]
-	public void BothChangelogsHaveASectionForIt()
+	public void TheChangelogHasASectionForIt()
 	{
+		// The Thunderstore package's changelog is made from this one (tools/thunderstore/changelog.py).
 		Assert.Matches(new Regex($@"^## v{Regex.Escape(Version)}\b", RegexOptions.Multiline), File.ReadAllText(Path.Combine(Repo, "CHANGELOG.md")));
-		Assert.Matches(new Regex($@"^## {Regex.Escape(Version)}\b", RegexOptions.Multiline), File.ReadAllText(Path.Combine(Repo, "tools", "thunderstore", "CHANGELOG.md")));
 	}
 
 	[Theory]

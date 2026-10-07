@@ -45,7 +45,8 @@ Thunderstore (team `Tie`): only the plugin, `WorldEditorBridge`. Thunderstore do
 programs (it rejected the editor packages of 0.3.3), so the editor is only on the GitHub releases
 page, which the plugin's mod page points to. `tools/thunderstore.sh <folder>` builds
 `WorldEditorBridge-<version>.zip` from `tools/thunderstore/bridge/` (`manifest.json` and the mod
-page `README.md`), `tools/thunderstore/CHANGELOG.md` and `wwwroot/icon.png`, with the DLL of the
+page `README.md`), the editor's `CHANGELOG.md` (made into the plugin's changelog by
+`tools/thunderstore/changelog.py`, with links to the matching editor on GitHub) and `wwwroot/icon.png`, with the DLL of the
 release packages (reused when that version is already in the folder). It checks Thunderstore's
 rules (name, 250-character description, 256x256 icon). Upload the zip at
 https://thunderstore.io/c/valheim/create/.
@@ -57,8 +58,8 @@ editor and the plugin (`BuildInfo.Version`: the start page, the window title, th
 version and its `/status`), and both release scripts name their packages after it. For a release:
 
 1. Raise `VERSION` (Major.Minor.Patch).
-2. Add a `## v<version>` section to `CHANGELOG.md` and a `## <version>` section to
-   `tools/thunderstore/CHANGELOG.md` (a test checks both).
+2. Add a `## v<version>` section to `CHANGELOG.md` (a test checks it). The Thunderstore package's
+   changelog is made from it.
 3. Keep the BepInExPack dependency in the three `tools/thunderstore/*/manifest.json` current.
 4. `tools/release.sh <folder>` and `tools/thunderstore.sh <folder>`; tag `v<version>`, publish the
    GitHub release, upload the Thunderstore zip (Thunderstore refuses a version it already has).
