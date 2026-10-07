@@ -76,14 +76,9 @@ public static class BuilderEndpoints
 		});
 	}
 
-	// When no player is known: still a builder, so pieces are player built (wards and private chests
-	// answer to nobody until another one is chosen).
-	public const long Unknown = 1;
+	public const long Unknown = Builders.Unknown;
 
-	// The builder to start with: the world's main builder, else this computer's first character, else
-	// a player named in the world, else Unknown.
-	public static long Default(WorldSave w) =>
-		w.TopBuilder != 0 ? w.TopBuilder : Characters.Local().FirstOrDefault()?.Id ?? (w.PlayerNames.Count > 0 ? w.PlayerNames.Keys.First() : Unknown);
+	public static long Default(WorldSave w) => Builders.Default(w);
 }
 
 public sealed record BuilderChoice(string Id);

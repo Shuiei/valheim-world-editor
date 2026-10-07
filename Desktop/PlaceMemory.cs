@@ -12,6 +12,8 @@ public sealed class PlaceMemory
 	public List<string> Recent { get; set; } = new();
 	public List<string> Chosen { get; set; } = new();
 	public Dictionary<string, int> Weights { get; set; } = new();
+	// The builder chosen for each world (Built by, in the View panel).
+	public Dictionary<string, long> Builders { get; set; } = new();
 
 	private static string FilePath => Path.Combine(AppSettings.DataDir, "place.json");
 	// Tests keep theirs elsewhere.

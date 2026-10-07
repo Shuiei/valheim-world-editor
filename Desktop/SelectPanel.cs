@@ -28,6 +28,7 @@ public sealed class SelectPanel
 	internal NumericUpDown TurnBox { get; } = Num(1m);
 	internal Button ApplyButton { get; } = new() { Content = "Move there", FontSize = 12 };
 	internal Button InspectButton { get; } = new() { Content = "Inspect data (I)", FontSize = 12, IsEnabled = false };
+	internal Button ClaimButton { get; } = new() { Content = "Make player built", FontSize = 12, IsEnabled = false };
 	// Replace with: the kinds this world can make (filled by the window), and the button.
 	internal ComboBox ReplaceBox { get; } = new() { FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch, MaxDropDownHeight = 400 };
 	internal Button ReplaceButton { get; } = new() { Content = "Replace the selection", FontSize = 12 };
@@ -109,7 +110,7 @@ public sealed class SelectPanel
 				{
 					new TextBlock { Text = "Select", FontSize = 14, FontWeight = FontWeight.SemiBold },
 					new TextBlock { Text = "Click objects (Shift adds), or drag on the ground around them. Drag a selected object to move the selection.", FontSize = 12, Foreground = Brushes.LightGray, TextWrapping = TextWrapping.Wrap },
-					new WrapPanel { Children = { DeleteButton, BuildingButton, SameButton, InvertButton, InspectButton }, ItemSpacing = 4, LineSpacing = 4 },
+					new WrapPanel { Children = { DeleteButton, BuildingButton, SameButton, InvertButton, InspectButton, ClaimButton }, ItemSpacing = 4, LineSpacing = 4 },
 					new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*"), ColumnSpacing = 6, Children = { new TextBlock { Text = "Replace with", FontSize = 12, VerticalAlignment = VerticalAlignment.Center }, Col(ReplaceBox, 1) } },
 					ReplaceButton,
 					GroundBox,
@@ -162,6 +163,7 @@ public sealed class SelectPanel
 		_exact.IsVisible = w != null;
 		DeleteButton.IsEnabled = SameButton.IsEnabled = w != null;
 		InspectButton.IsEnabled = w is { Count: 1 };
+		ClaimButton.IsEnabled = w != null;
 		if (w is not { } at || _by)
 		{
 			return;
