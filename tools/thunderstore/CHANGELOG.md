@@ -2,10 +2,66 @@
 
 The editor's own changes: [CHANGELOG.md](https://github.com/Shuiei/valheim-world-editor/blob/main/CHANGELOG.md).
 
-## Unreleased
+## 0.19.0
+
+- Editor changes only (selection helpers). The plugin is unchanged.
+
+## 0.18.0
+
+- Editor changes only (select a whole building). The plugin is unchanged.
+
+## 0.17.0
+
+- Editor changes only (river and canal). The plugin is unchanged.
+
+## 0.16.0
+
+- Editor changes only (shape tool). The plugin is unchanged.
+
+## 0.15.0
+
+- Editor changes only (erosion). The plugin is unchanged.
+
+## 0.14.0
+
+- Editor changes only (heightmaps). The plugin is unchanged.
+
+## 0.13.0
+
+- Editor changes only (stamps). The plugin is unchanged.
+
+## 0.12.0
+
+- Editor changes only (brush shapes). The plugin is unchanged.
+
+## 0.11.0
+
+- Editor changes only (restore from a backup). The plugin is unchanged.
+
+## 0.10.0
 
 - New: `POST /zones/reset`, so the editor can reset zones in the running game (they are generated
   again at once where players are). Players' tombstones are always kept.
+
+## 0.9.0
+
+- Editor changes only (search the world). The plugin is unchanged.
+
+## 0.8.0
+
+- Editor changes only (object inspector). The plugin is unchanged.
+
+## 0.7.0
+
+- Editor changes only (repeat a paste). The plugin is unchanged.
+
+## 0.6.0
+
+- Editor changes only (PlanBuild files). The plugin is unchanged.
+
+## 0.5.0
+
+- Editor changes only (blueprints). The plugin is unchanged.
 
 ## 0.4.1
 
