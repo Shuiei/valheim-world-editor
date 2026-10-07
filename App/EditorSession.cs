@@ -64,6 +64,7 @@ public static class EditorSession
 		try
 		{
 			world = live != null ? await live.LoadWorld() : WorldSave.Load(worldDir);
+			WorldSave.Builder = BuilderEndpoints.Default(world);
 		}
 		catch (Exception ex) when (live != null)
 		{
@@ -303,6 +304,7 @@ public static class EditorSession
 
 		BlueprintEndpoints.Map(app, () => world.Name, name => world.CanCreate(StableHash.Of(name)));
 		ObjectEndpoints.Map(app, () => world, edits, Pending);
+		BuilderEndpoints.Map(app, () => world, edits, Pending);
 		BackupEndpoints.Map(app, () => world, edits, Pending);
 		HeightmapEndpoints.Map(app, () => world, terrain, edits);
 		app.MapGet("/api/zones/stats", () => new { stride = ZoneStats.Stride, data = ZoneStats.Compute(world, edits, (x, z) => (int)terrain.BiomeAt(x * 64f, z * 64f)), resets = edits.Resets.Select(r => new[] { r.X, r.Z }) });

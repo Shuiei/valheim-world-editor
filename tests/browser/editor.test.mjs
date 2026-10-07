@@ -921,6 +921,44 @@ test('eyedropper, favourite and recent kinds', async () => {
   noErrors();
 });
 
+test('placed pieces are player built, and Make player built fixes old ones', async () => {
+  await openEditor();
+  await page().evaluate(() => { localStorage.setItem('plantChosen', '["woodwall"]'); localStorage.removeItem('builder:' + window.__ed.world.name); });
+  await openEditor();
+  const creator = async id => (await t.api(`/api/object/${id}`)).fields.find(f => f.name === 'creator')?.value ?? '0';
+  // Built by: chosen at the start, here a player who built in the test world or this computer's character.
+  await page().waitForFunction(() => document.querySelectorAll('#builder option').length > 1);
+  const builder = await page().$eval('#builder', e => e.value);
+  assert.match(builder, /^-?[1-9]\d*$/, `a builder is chosen (${builder})`);
+  // A wall placed with the Plant tool gets it.
+  const c = (await records()).find(r => r.name === 'piece_chest_wood');
+  await lookAt(page(), c.x, c.z - 25, 0, 40, 25);
+  await page().keyboard.press('t'); await sleep(300);
+  await page().click('#plModes [data-m="line"]');
+  await page().click('#plLineShape [data-ls="points"]');
+  for (const [dx, dz] of [[-3, -25], [3, -25]]) { const [x, y] = await screenOf(page(), c.x + dx, c.z + dz); await page().mouse.click(x, y); await sleep(150); }
+  const known = new Set((await records()).map(r => r.id));
+  await page().keyboard.press('Enter'); await sleep(1000);
+  const walls = (await records()).filter(r => !known.has(r.id) && r.name === 'woodwall');
+  assert.ok(walls.length >= 1, 'walls placed');
+  assert.equal(await creator(walls[0].id), builder);
+  // Another id for the builder; the test chest has none, Make player built gives it the new one.
+  assert.equal(await creator(c.id), '0');
+  await page().keyboard.press('Escape');
+  await page().evaluate(() => { window.__ed.setTool('select'); });
+  await page().evaluate(id => window.__ed.selectIds([id]), c.id);
+  await page().evaluate(() => { window.prompt = () => '4242424242'; const s = document.getElementById('builder'); s.value = 'other'; s.dispatchEvent(new Event('change')); });
+  await page().waitForFunction(() => document.getElementById('builder').value === '4242424242');
+  await page().click('#selClaim'); await sleep(800);
+  const sel = await page().evaluate(() => [...window.__ed.selection]);
+  assert.equal(sel.length, 1); assert.ok(sel[0] < 0, 'the chest was replaced by a changed copy');
+  assert.equal(await creator(sel[0]), '4242424242');
+  await page().click('#undo'); await sleep(800);
+  await page().click('#undo'); await sleep(800);
+  await page().evaluate(() => localStorage.removeItem('builder:' + window.__ed.world.name));
+  noErrors();
+});
+
 test('Worlds goes back to the start page', async () => {
   await page().goto(t.base + '/index.html', { waitUntil: 'networkidle0' });
   await page().click('#worldsBtn');
