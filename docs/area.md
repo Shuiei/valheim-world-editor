@@ -31,6 +31,7 @@ The panel shows the selected surface and how many shown objects are inside.
 | **Erode** | Weathers the ground inside: slopes settle (thermal, with the Erode tool's rest angle), then rain cuts gullies (water). |
 | **Height** | Height (m) used by Flatten. **avg** sets it to the average ground height inside. |
 | **Amount** | Metres used by Raise and Lower. |
+| Cut and fill | Under the settings: how much ground inside has been raised and dug compared to the generated ground, and what **Flatten** (to the Height), **Raise** and **Lower** (by the Amount) would move, in m³, before you click. Within the game's ±8 m limit: what Flatten could not reach is said. Follows the selection, the soft edge and the Mask. |
 | **Paint** + **apply** | Paints the ground inside with dirt, cultivated, paved, or clears the paint. |
 
 Each button is one undo step.
