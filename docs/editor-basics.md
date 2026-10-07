@@ -110,7 +110,8 @@ player built** (Select tool). Moving or editing an object keeps the builder it h
 ![Help panel](images/help.jpg)
 
 The bottom of the Help panel says what draws the 3D view: the graphics card, or the processor
-(llvmpipe, SwiftShader), which is much slower. The view is only drawn at full speed while something
+(llvmpipe, SwiftShader), which is much slower (the app's own window cannot tell: WebKit hides the
+card's name), and the frame rate while the view moves, with the editor's own work per frame. The view is only drawn at full speed while something
 happens (the view moves, a stroke, the mouse or keys in use); otherwise a few times a second.
 
 | Key | Action |

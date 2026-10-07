@@ -4,6 +4,16 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v0.38.2 — 2026-10-07 (frame rate in Help)
+
+### Added
+- **Help** (`?`) shows the frame rate while the view moves, and how many milliseconds of work each
+  frame takes, to tell a slow graphics path from a busy editor.
+
+### Fixed
+- Help said "the graphics card" for the app's own window on Linux and Windows: WebKit answers "Apple
+  GPU" whatever draws the view, so the window now says it does not tell.
+
 ## v0.38.1 — 2026-10-07 (fixes found by new tests)
 
 ### Fixed

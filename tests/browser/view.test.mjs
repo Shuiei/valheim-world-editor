@@ -109,6 +109,10 @@ test('the 3D view is drawn only while something happens, and Help says what draw
   const busy = (await drawn()) - b;
   assert.ok(busy > idle, `drawn more while the mouse moves (${busy} vs ${idle} idle)`);
   assert.match(await page().$eval('#gpuInfo', e => e.textContent), /^3D drawn by: .+\((the graphics card|the processor)/);
+  // Moving the view measures the frame rate, shown in Help.
+  for (let i = 0; i < 40; i++) { await page().mouse.move(600 + (i % 10) * 8, 400 + i); await sleep(30); }
+  await page().keyboard.press('?'); await sleep(200);
+  assert.match(await page().$eval('#gpuInfo', e => e.textContent), /\d+ frames\/s while moving \([\d.]+ ms of work each\)/);
   noErrors();
 });
 
