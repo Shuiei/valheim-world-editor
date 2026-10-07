@@ -59,6 +59,18 @@ public static class Shaders
 		}
 		""";
 
+	public const string LineVs = """
+		layout(location = 0) in vec3 aPos;
+		uniform mat4 uViewProj;
+		void main() { gl_Position = uViewProj * vec4(aPos, 1.0); }
+		""";
+
+	public const string LineFs = """
+		uniform vec4 uColor;
+		out vec4 frag;
+		void main() { frag = uColor; }
+		""";
+
 	public const string WaterVs = """
 		layout(location = 0) in vec3 aPos;
 		uniform mat4 uViewProj;

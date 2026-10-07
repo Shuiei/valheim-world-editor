@@ -18,7 +18,12 @@ public static class Program
 		Options.Parse(args);
 		AppDomain.CurrentDomain.UnhandledException += (_, e) => Options.Say($"crash: {e.ExceptionObject}");
 		// Windows: ANGLE (OpenGL ES on Direct3D 11) first, the driver's own OpenGL if that fails.
-		AppBuilder.Configure<App>().UsePlatformDetect()
+		// VWE_TRACE=1: Avalonia's warnings on the console.
+		if (Environment.GetEnvironmentVariable("VWE_TRACE") == "1")
+		{
+			System.Diagnostics.Trace.Listeners.Add(new System.Diagnostics.ConsoleTraceListener());
+		}
+		AppBuilder.Configure<App>().UsePlatformDetect().LogToTrace(Avalonia.Logging.LogEventLevel.Warning)
 			.With(new Win32PlatformOptions { RenderingMode = new[] { Win32RenderingMode.Wgl, Win32RenderingMode.AngleEgl, Win32RenderingMode.Software } })
 			.StartWithClassicDesktopLifetime(args);
 	}
@@ -57,6 +62,8 @@ public static class Options
 	public static string? Report { get; private set; }
 	// Close after this many seconds, saying where the camera ended up (to check input from a script).
 	public static double QuitAfter { get; private set; }
+	// Click this point of the view once loaded (fractions of its width and height), to check picking.
+	public static (double X, double Y)? PickAt { get; private set; }
 
 	public static void Say(string line)
 	{
@@ -93,6 +100,10 @@ public static class Options
 					break;
 				case "--shot":
 					Shot = Path.GetFullPath(args[++i]);
+					break;
+				case "--pick":
+					var f = args[++i].Split(',').Select(v => double.Parse(v, System.Globalization.CultureInfo.InvariantCulture)).ToArray();
+					PickAt = (f[0], f[1]);
 					break;
 				case "--quit-after":
 					QuitAfter = double.Parse(args[++i], System.Globalization.CultureInfo.InvariantCulture);

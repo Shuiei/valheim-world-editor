@@ -97,10 +97,19 @@ public sealed class GlView : OpenGlControlBase
 	private volatile GameLookGl.Files? _lookFiles;
 	private GameLookGl? _look;
 
+	// Asks for frames at full speed for a second. Avalonia takes frame requests on its own (UI) thread
+	// only: from a worker thread (a model or the game look finished loading) the request goes there.
 	private void Wake()
 	{
 		_wokeAt = _clock.ElapsedMilliseconds;
-		RequestNextFrameRendering();
+		if (Dispatcher.UIThread.CheckAccess())
+		{
+			RequestNextFrameRendering();
+		}
+		else
+		{
+			Dispatcher.UIThread.Post(RequestNextFrameRendering);
+		}
 	}
 
 	// ---------------------------------------------------------------- GL objects
@@ -276,13 +285,20 @@ public sealed class GlView : OpenGlControlBase
 	private void StartModels(WorldScene s)
 	{
 		// One group per kind of object (a building piece a player placed apart from the same piece in a ruin).
-		var byPrefab = s.Things.GroupBy(t => (t.Prefab, t.Piece)).ToList();
+		var byPrefab = Enumerable.Range(0, s.Things.Count).GroupBy(i => (s.Things[i].Prefab, s.Things[i].Piece)).ToList();
+		_bounds = new (Vector3, Vector3)[s.Things.Count];
+		_known = new bool[s.Things.Count];
+		_kinds = new ObjectKind[s.Things.Count];
 		_pending = byPrefab.Count;
 		var counts = new Dictionary<ObjectKind, int>();
 		foreach (var g in byPrefab)
 		{
 			var k = ObjectKinds.Of(_models?.NameOf(g.Key.Prefab) ?? TerrainEditor.Terrain.PrefabCatalog.DisplayName(g.Key.Prefab), g.Key.Piece);
 			counts[k] = counts.GetValueOrDefault(k) + g.Count();
+			foreach (int i in g)
+			{
+				_kinds[i] = k;
+			}
 		}
 		Dispatcher.UIThread.Post(() => KindCounts?.Invoke(counts));
 		Task.Run(() => Parallel.ForEach(byPrefab, new ParallelOptions { MaxDegreeOfParallelism = Math.Max(2, Environment.ProcessorCount / 2) }, group =>
@@ -323,7 +339,32 @@ public sealed class GlView : OpenGlControlBase
 					}
 				}
 				var root = model?.RootScale ?? Vector3.One;
-				var placements = group.Select(t => Placement(s, t, root)).ToList();
+				var placements = group.Select(i => Placement(s, s.Things[i], root)).ToList();
+				// Each object's box, for picking: the parts' meshes, or the stand-in box.
+				Vector3 lo = new(float.MaxValue), hi = new(float.MinValue);
+				if (model != null)
+				{
+					foreach (var part in model.Parts)
+					{
+						if (_models!.LoadMesh(part.Mesh) is { } md)
+						{
+							var (a, b) = Picking.Transform(md.Bounds.Min, md.Bounds.Max, part.Matrix);
+							lo = Vector3.Min(lo, a);
+							hi = Vector3.Max(hi, b);
+						}
+					}
+				}
+				if (lo.X > hi.X)
+				{
+					(lo, hi) = (new Vector3(-0.5f, 0, -0.5f), new Vector3(0.5f, 2, 0.5f));
+				}
+				int n = 0;
+				foreach (int i in group)
+				{
+					_bounds[i] = Picking.Transform(lo, hi, placements[n++]);
+					_kinds[i] = kind;
+					_known[i] = true;
+				}
 				_ready.Enqueue(new ReadyModel(kind, model, placements, meshes, mats, images));
 			}
 			catch (Exception ex)
@@ -535,6 +576,7 @@ public sealed class GlView : OpenGlControlBase
 		}
 		proj = Perspective(60 * MathF.PI / 180, pw / (float)ph, 0.5f, 6000);
 		var vp = view * proj;
+		_lastViewProj = vp;
 		bool camMoved = view != _lastView;
 		_lastView = view;
 		var sun = GameLookGl.SunDirView;
@@ -603,6 +645,7 @@ public sealed class GlView : OpenGlControlBase
 				_gl.DrawElementsInstanced(PrimitiveType.Triangles, (uint)b.IndexCount, DrawElementsType.UnsignedInt, (void*)0, (uint)b.Instances);
 			}
 
+			DrawSelection(vp);
 			if (ShowWater)
 			{
 				if (_look != null)
@@ -677,6 +720,13 @@ public sealed class GlView : OpenGlControlBase
 			if (_scene != null && _terrainVao != 0 && _pending == 0 && _ready.IsEmpty)
 			{
 				_loadedAt = now;
+				if (Options.PickAt is var (px, py))
+				{
+					var size = Bounds.Size;
+					Pick(new Point(px * size.Width, py * size.Height), size, add: false);
+					var sel = Selected;
+					Options.Say(sel.Count == 0 ? "picked: nothing" : $"picked: {string.Join(", ", sel.Select(i => $"{_models?.NameOf(_scene!.Things[i].Prefab)} ({_kinds[i]})"))}");
+				}
 				Options.Say($"loaded: {_scene.Things.Count} objects, {_batches.Sum(b => b.Instances)} model parts in {_batches.Count} draws, {_textures.Count} textures, view {pw}×{ph} px, {_gl.GetStringS(StringName.Renderer)}");
 			}
 			RequestNextFrameRendering();
@@ -731,7 +781,7 @@ public sealed class GlView : OpenGlControlBase
 	}
 
 	// OpenGL's perspective (depth from -1 to 1), as a System.Numerics (row vector) matrix.
-	private static Matrix4x4 Perspective(float fovY, float aspect, float near, float far)
+	internal static Matrix4x4 Perspective(float fovY, float aspect, float near, float far)
 	{
 		float f = 1 / MathF.Tan(fovY / 2);
 		return new Matrix4x4(
@@ -786,6 +836,7 @@ public sealed class GlView : OpenGlControlBase
 		surface.PointerPressed += (_, e) =>
 		{
 			var p = e.GetCurrentPoint(surface);
+			_pressAt = p.Position;
 			_dragFrom = p.Position;
 			_dragButton = p.Properties.PointerUpdateKind;
 			e.Pointer.Capture(surface);
@@ -793,6 +844,13 @@ public sealed class GlView : OpenGlControlBase
 		};
 		surface.PointerReleased += (_, e) =>
 		{
+			// A left click (not a drag) picks the object under the pointer.
+			var at = e.GetPosition(surface);
+			if (_dragButton == PointerUpdateKind.LeftButtonPressed && _pressAt is Point from && Point.Distance(from, at) < 5)
+			{
+				Pick(at, surface.Bounds.Size, e.KeyModifiers.HasFlag(KeyModifiers.Shift));
+			}
+			_pressAt = null;
 			_dragFrom = null;
 			e.Pointer.Capture(null);
 			Wake();
@@ -824,6 +882,123 @@ public sealed class GlView : OpenGlControlBase
 		};
 		// Keys held when the window loses the focus would keep moving the camera.
 		window.Deactivated += (_, _) => { lock (_keys) { _keys.Clear(); } };
+	}
+
+	private Point? _pressAt;
+
+	// ---- Selection: the objects picked (indices into the scene's things), drawn as orange boxes.
+	private (Vector3 Min, Vector3 Max)[] _bounds = Array.Empty<(Vector3, Vector3)>();
+	private bool[] _known = Array.Empty<bool>();
+	private ObjectKind[] _kinds = Array.Empty<ObjectKind>();
+	private readonly HashSet<int> _selection = new();
+	private Matrix4x4 _lastViewProj;
+	private bool _selectionDirty;
+	public event Action<IReadOnlyList<WorldScene.Thing>>? SelectionChanged;
+	internal IReadOnlyCollection<int> Selected { get { lock (_selection) { return _selection.ToArray(); } } }
+
+	// The shown object under a point of the view (null: the ground or nothing is nearer), like the web
+	// editor: the nearest box the ray enters, unless the ground is hit first (half a metre of slack).
+	internal int? ObjectAt(Point at, Size size)
+	{
+		var s = _scene;
+		if (s == null || size.Width <= 0)
+		{
+			return null;
+		}
+		var (o, d) = Picking.Ray(_lastViewProj, (float)(at.X / size.Width * 2 - 1), (float)(1 - at.Y / size.Height * 2));
+		float best = float.MaxValue;
+		int? hit = null;
+		for (int i = 0; i < _bounds.Length; i++)
+		{
+			if (!_known[i] || !_shown[(int)_kinds[i]])
+			{
+				continue;
+			}
+			if (Picking.HitBox(o, d, _bounds[i].Min, _bounds[i].Max) is float t && t < best)
+			{
+				best = t;
+				hit = i;
+			}
+		}
+		if (hit != null && Picking.HitGround(s, o, d, best + 1) is float g && g + 0.5f < best)
+		{
+			return null;
+		}
+		return hit;
+	}
+
+	internal void Pick(Point at, Size size, bool add)
+	{
+		int? i = ObjectAt(at, size);
+		lock (_selection)
+		{
+			if (!add)
+			{
+				_selection.Clear();
+			}
+			if (i is int k && !_selection.Remove(k))
+			{
+				_selection.Add(k);
+			}
+		}
+		_selectionDirty = true;
+		var s = _scene;
+		if (s != null)
+		{
+			var things = Selected.Select(n => s.Things[n]).ToList();
+			Dispatcher.UIThread.Post(() => SelectionChanged?.Invoke(things));
+		}
+		Wake();
+	}
+
+	private uint _lineProg, _lineVao, _lineVbo;
+	private int _lineCount;
+	private unsafe void DrawSelection(Matrix4x4 vp)
+	{
+		if (_selectionDirty)
+		{
+			_selectionDirty = false;
+			var v = new List<float>();
+			foreach (int i in Selected)
+			{
+				var (lo, hi) = _bounds[i];
+				Vector3 C(int k) => new((k & 1) == 0 ? lo.X : hi.X, (k & 2) == 0 ? lo.Y : hi.Y, (k & 4) == 0 ? lo.Z : hi.Z);
+				foreach (var (a, b) in new[] { (0, 1), (2, 3), (4, 5), (6, 7), (0, 2), (1, 3), (4, 6), (5, 7), (0, 4), (1, 5), (2, 6), (3, 7) })
+				{
+					var p = C(a); var q = C(b);
+					v.AddRange(new[] { p.X, p.Y, p.Z, q.X, q.Y, q.Z });
+				}
+			}
+			if (_lineProg == 0)
+			{
+				_lineProg = Program(Shaders.LineVs, Shaders.LineFs);
+				_lineVao = _gl.GenVertexArray();
+				_lineVbo = _gl.GenBuffer();
+				_gl.BindVertexArray(_lineVao);
+				_gl.BindBuffer(BufferTargetARB.ArrayBuffer, _lineVbo);
+				_gl.EnableVertexAttribArray(0);
+				_gl.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 12, (void*)0);
+			}
+			_gl.BindBuffer(BufferTargetARB.ArrayBuffer, _lineVbo);
+			var data = v.ToArray();
+			fixed (float* p = data)
+			{
+				_gl.BufferData(BufferTargetARB.ArrayBuffer, (nuint)(data.Length * 4), p, BufferUsageARB.DynamicDraw);
+			}
+			_lineCount = data.Length / 3;
+		}
+		if (_lineCount == 0)
+		{
+			return;
+		}
+		// Seen through what is in front of it, like the web editor's selection.
+		_gl.Disable(EnableCap.DepthTest);
+		_gl.UseProgram(_lineProg);
+		_gl.UniformMatrix4(_gl.GetUniformLocation(_lineProg, "uViewProj"), 1, false, (float*)&vp);
+		_gl.Uniform4(_gl.GetUniformLocation(_lineProg, "uColor"), 1f, 0.66f, 0.2f, 1f);
+		_gl.BindVertexArray(_lineVao);
+		_gl.DrawArrays(PrimitiveType.Lines, 0, (uint)_lineCount);
+		_gl.Enable(EnableCap.DepthTest);
 	}
 
 	private void Drag(Point p)
