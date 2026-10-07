@@ -86,15 +86,34 @@ public static class Worlds
 		{
 			return "That folder does not exist.";
 		}
-		if (Directory.GetFiles(path, "_main.*.chunks").Length == 0)
+		// Folders that cannot be read (another user's, the system's) hold no world.
+		static bool HasWorld(string dir)
+		{
+			try
+			{
+				return Directory.GetFiles(dir, "_main.*.chunks").Length > 0;
+			}
+			catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
+			{
+				return false;
+			}
+		}
+		if (HasWorld(path))
+		{
+			return null;
+		}
+		try
 		{
 			// A worlds_local folder with one world in it: point at the world instead.
-			string[] inside = Directory.GetDirectories(path).Where(d => Directory.GetFiles(d, "_main.*.chunks").Length > 0).ToArray();
+			string[] inside = Directory.GetDirectories(path).Where(HasWorld).ToArray();
 			return inside.Length > 0
 				? $"That folder holds worlds; pick one of them ({string.Join(", ", inside.Select(System.IO.Path.GetFileName).Take(4))})."
 				: "No Valheim world in that folder (a world folder holds _main.<n>.chunks and *.chunk files).";
 		}
-		return null;
+		catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
+		{
+			return $"That folder cannot be read: {ex.Message}";
+		}
 	}
 
 	public static string WorldName(string path)

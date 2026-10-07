@@ -156,6 +156,8 @@ public sealed class GlView : OpenGlControlBase
 		}
 		_sceneDirty = true;
 		_lookFiles = null;
+		// The game look is set up for the area's own textures (mask, heights): again for a new one.
+		_look = null;
 		if (scene.Session != null)
 		{
 			scene.Session.Changed += Wake;
@@ -964,6 +966,8 @@ public sealed class GlView : OpenGlControlBase
 		if (s != null && _sceneDirty)
 		{
 			_sceneDirty = false;
+			// Another area: the last one's objects go (the models stay on the graphics card).
+			DropObjects();
 			BuildTerrain(s);
 			StartModels(s);
 		}
