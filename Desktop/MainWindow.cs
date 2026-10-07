@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Threading;
+using TerrainEditor.App;
 
 namespace TerrainEditor.Desktop;
 
@@ -15,6 +16,45 @@ public sealed class MainWindow : Window
 	private readonly PerfLog _perf = new();
 
 	public GlView View => _view;
+
+	// The View panel (top right): which kinds of objects are drawn, with how many the area has, and the water.
+	private readonly Dictionary<ObjectKind, CheckBox> _kindBoxes = new();
+	internal IReadOnlyDictionary<ObjectKind, CheckBox> KindBoxes => _kindBoxes;
+	internal CheckBox WaterBox { get; } = new() { Content = "Water", IsChecked = true, FontSize = 12 };
+
+	private Control ViewPanel()
+	{
+		var list = new StackPanel { Spacing = 2 };
+		list.Children.Add(new TextBlock { Text = "VIEW", FontSize = 11, FontWeight = FontWeight.SemiBold, Foreground = Brushes.Gray, Margin = new Thickness(0, 0, 0, 4) });
+		foreach (var k in ObjectKinds.All)
+		{
+			var box = new CheckBox { Content = ObjectKinds.Label(k), IsChecked = _view.IsShown(k), FontSize = 12 };
+			box.IsCheckedChanged += (_, _) => _view.SetShown(k, box.IsChecked == true);
+			_kindBoxes[k] = box;
+			list.Children.Add(box);
+		}
+		WaterBox.IsCheckedChanged += (_, _) => _view.ShowWater = WaterBox.IsChecked == true;
+		list.Children.Add(WaterBox);
+		_view.KindCounts += counts =>
+		{
+			foreach (var (k, box) in _kindBoxes)
+			{
+				box.Content = $"{ObjectKinds.Label(k)}  ({counts.GetValueOrDefault(k):N0})";
+			}
+		};
+		return new Border
+		{
+			Background = new SolidColorBrush(Color.FromArgb(235, 24, 28, 34)),
+			BorderBrush = new SolidColorBrush(Color.FromRgb(46, 53, 63)),
+			BorderThickness = new Thickness(1),
+			CornerRadius = new CornerRadius(10),
+			Padding = new Thickness(12, 10),
+			Margin = new Thickness(10),
+			HorizontalAlignment = HorizontalAlignment.Right,
+			VerticalAlignment = VerticalAlignment.Top,
+			Child = list,
+		};
+	}
 
 	// load: false opens the window without a world (tests).
 	public MainWindow(bool load = true)
@@ -41,7 +81,7 @@ public sealed class MainWindow : Window
 		};
 		// Takes the mouse for the 3D view (see GlView.Attach).
 		var surface = new Border { Background = Brushes.Transparent };
-		Content = new Grid { Children = { _view, surface, panel } };
+		Content = new Grid { Children = { _view, surface, panel, ViewPanel() } };
 		_view.Attach(surface, this);
 		_view.Perf = _perf;
 		_view.StatsChanged += s => _fps.Text = $"{s.Fps} frames/s · {s.WorkMs:0.0} ms of work each · {s.Objects:N0} objects ({s.Instances:N0} model parts in {s.Batches:N0} draws){(s.PendingModels > 0 ? $" · {s.PendingModels} kinds loading" : "")}";
