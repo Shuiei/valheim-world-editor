@@ -260,6 +260,7 @@ public sealed class SelectTool
 		}
 		_commitTimer.Stop();
 		_move = null;
+		_handleDrag = null;
 		_view.SetPreviews(null);
 		Message?.Invoke("Move cancelled.", false);
 		return true;
@@ -497,6 +498,31 @@ public sealed class SelectTool
 		Message?.Invoke($"Selected the whole building: {seen.Count} connected piece(s).", false);
 	}
 
+	// ---- The handles (Gizmo): the one under the mouse or being dragged is drawn highlighted.
+	private Gizmo.Handle? _hover;
+	private (Gizmo.Handle Handle, Vector3 Centre, float Start, float Dx, float Dz, float Dy, float Turn)? _handleDrag;
+	public Gizmo.Handle? HotHandle => _handleDrag?.Handle ?? _hover;
+
+	private Gizmo.Handle? HandleAt(Point at, Size size)
+	{
+		if (_view.GizmoAt() is not var (c, scale))
+		{
+			return null;
+		}
+		var (o, d) = _view.RayAt(at, size);
+		return Gizmo.Hit(o, d, c, scale);
+	}
+
+	public void Hover(Point at, Size size)
+	{
+		var h = HandleAt(at, size);
+		if (h != _hover)
+		{
+			_hover = h;
+			_view.LassoChanged();
+		}
+	}
+
 	// ---- The mouse (left button; the view passes it on in the Select tool).
 	private (Point At, Vector3 From)? _drag;
 	private bool _dragMoving;
@@ -509,6 +535,22 @@ public sealed class SelectTool
 		var s = Scene;
 		if (s == null)
 		{
+			return;
+		}
+		// A handle: drag along its axis, or around the ring.
+		if (HandleAt(at, size) is { } handle && _view.GizmoAt() is var (c, _))
+		{
+			_commitTimer.Stop();
+			if (Begin() is not { } mv)
+			{
+				return;
+			}
+			var (o, d) = _view.RayAt(at, size);
+			float? start = handle == Gizmo.Handle.Ring ? Gizmo.Heading(o, d, c) : Gizmo.Along(o, d, c, Gizmo.Axis(handle));
+			if (start is float st)
+			{
+				_handleDrag = (handle, c, st, mv.Dx, mv.Dz, mv.Dy, mv.Turn);
+			}
 			return;
 		}
 		int? hit = alt ? null : _view.ObjectAt(at, size);
@@ -534,8 +576,52 @@ public sealed class SelectTool
 		_view.Pick(at, size, shift);
 	}
 
-	public void Moved(Point at, Size size)
+	public void Moved(Point at, Size size, bool ctrl = false)
 	{
+		if (_handleDrag is { } hd)
+		{
+			if (_move is not { } mv)
+			{
+				return;
+			}
+			var (ro, rd) = _view.RayAt(at, size);
+			if (hd.Handle == Gizmo.Handle.Ring)
+			{
+				if (Gizmo.Heading(ro, rd, hd.Centre) is not float h)
+				{
+					return;
+				}
+				// Ctrl: 15° steps.
+				float turn = hd.Turn + h - hd.Start;
+				if (ctrl)
+				{
+					turn = MathF.Round(turn / 15) * 15;
+				}
+				mv.Turn = ((turn + 180) % 360 + 360) % 360 - 180;
+			}
+			else
+			{
+				if (Gizmo.Along(ro, rd, hd.Centre, Gizmo.Axis(hd.Handle)) is not float t)
+				{
+					return;
+				}
+				// Ctrl: half-metre steps. X and Z keep following the ground.
+				float by = t - hd.Start;
+				if (ctrl)
+				{
+					by = MathF.Round(by / 0.5f) * 0.5f;
+				}
+				(mv.Dx, mv.Dz, mv.Dy) = (hd.Dx, hd.Dz, hd.Dy);
+				switch (hd.Handle)
+				{
+					case Gizmo.Handle.X: mv.Dx += by; break;
+					case Gizmo.Handle.Z: mv.Dz += by; break;
+					default: mv.Dy += by; break;
+				}
+			}
+			Preview();
+			return;
+		}
 		if (_lasso is { } l)
 		{
 			bool drawing = l.Drawing || Point.Distance(at, l.At) > 6;
@@ -568,6 +654,12 @@ public sealed class SelectTool
 
 	public void Up(Point at, Size size, bool shift)
 	{
+		if (_handleDrag != null)
+		{
+			_handleDrag = null;
+			Commit();
+			return;
+		}
 		if (_lasso is { } l)
 		{
 			_lasso = null;

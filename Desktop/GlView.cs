@@ -943,6 +943,7 @@ public sealed class GlView : OpenGlControlBase
 		proj = Perspective(60 * MathF.PI / 180, pw / (float)ph, 0.5f, 6000);
 		var vp = view * proj;
 		_lastViewProj = vp;
+		_lastEye = eye;
 		bool camMoved = view != _lastView;
 		_lastView = view;
 		// The brush: where it is on the ground, a step of the stroke while the button is held, and the
@@ -1029,6 +1030,7 @@ public sealed class GlView : OpenGlControlBase
 			DrawSelection(vp);
 			DrawBrush(s, vp);
 			DrawLasso(s, vp);
+			DrawGizmo(s, vp);
 			if (ShowWater)
 			{
 				if (_look != null)
@@ -1324,7 +1326,11 @@ public sealed class GlView : OpenGlControlBase
 			_surfaceSize = surface.Bounds.Size;
 			if (_selectDown)
 			{
-				SelectTool.Moved(_pointer.Value, _surfaceSize);
+				SelectTool.Moved(_pointer.Value, _surfaceSize, e.KeyModifiers.HasFlag(KeyModifiers.Control));
+			}
+			else if (_selectMode && _tool == null)
+			{
+				SelectTool.Hover(_pointer.Value, _surfaceSize);
 			}
 			Drag(_pointer.Value);
 		};
@@ -1388,6 +1394,101 @@ public sealed class GlView : OpenGlControlBase
 		}
 		float wx = s.X0 * 64f - 32f + g.X, wz = s.Z0 * 64f - 32f + g.Z;
 		return new Vector3(wx, Picking.HeightAt(s, g.X - (s.W - 1) / 2f, -(g.Z - (s.H - 1) / 2f)), wz);
+	}
+
+	private Vector3 _lastEye;
+	// For tests (nothing is drawn headless): the camera the mouse is read with.
+	internal void SetCamera(Vector3 eye, Vector3 target, float aspect)
+	{
+		_lastEye = eye;
+		_lastViewProj = Matrix4x4.CreateLookAt(eye, target, Vector3.UnitY) * Perspective(60 * MathF.PI / 180, aspect, 0.5f, 6000);
+	}
+	internal Matrix4x4 ViewProj => _lastViewProj;
+
+	// The ray from the camera through a point of the view (view space).
+	internal (Vector3 O, Vector3 D) RayAt(Point at, Size size) =>
+		Picking.Ray(_lastViewProj, (float)(at.X / size.Width * 2 - 1), (float)(1 - at.Y / size.Height * 2));
+
+	// Where the Select tool's handles go: the middle of the selection (following a move in progress), in
+	// view space, and their scale (they keep their size on screen). Null when nothing is selected.
+	internal (Vector3 Centre, float Scale)? GizmoAt()
+	{
+		var s = _scene;
+		if (s == null || !_selectMode || _tool != null)
+		{
+			return null;
+		}
+		var previews = _previews;
+		Vector3 sum = Vector3.Zero;
+		int n = 0;
+		lock (s.Things)
+		{
+			foreach (int i in Selected)
+			{
+				var t = previews.TryGetValue(i, out var p) ? p : s.Things[i];
+				if (t.Gone)
+				{
+					continue;
+				}
+				sum += new Vector3(t.Position.X - s.Cx, t.Position.Y, -(t.Position.Z - s.Cz));
+				n++;
+			}
+		}
+		if (n == 0)
+		{
+			return null;
+		}
+		var c = sum / n;
+		return (c, Vector3.Distance(_lastEye, c) * 0.07f);
+	}
+
+	private readonly Dictionary<Gizmo.Handle, (uint Vao, int Count)> _gizmoGl = new();
+	private unsafe void DrawGizmo(WorldScene s, Matrix4x4 vp)
+	{
+		if (GizmoAt() is not var (c, scale))
+		{
+			return;
+		}
+		if (_lineProg == 0)
+		{
+			_lineProg = Program(Shaders.LineVs, Shaders.LineFs);
+		}
+		if (_gizmoGl.Count == 0)
+		{
+			foreach (var h in Enum.GetValues<Gizmo.Handle>())
+			{
+				var mesh = Gizmo.Mesh(h);
+				uint vao = _gl.GenVertexArray(), vbo = _gl.GenBuffer();
+				_gl.BindVertexArray(vao);
+				_gl.BindBuffer(BufferTargetARB.ArrayBuffer, vbo);
+				fixed (float* p = mesh)
+				{
+					_gl.BufferData(BufferTargetARB.ArrayBuffer, (nuint)(mesh.Length * 4), p, BufferUsageARB.StaticDraw);
+				}
+				_gl.EnableVertexAttribArray(0);
+				_gl.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 12, (void*)0);
+				_gizmoGl[h] = (vao, mesh.Length / 3);
+			}
+		}
+		// The unit handles placed and scaled by the matrix (the line shader only knows view × projection).
+		var m = Matrix4x4.CreateScale(scale) * Matrix4x4.CreateTranslation(c) * vp;
+		_gl.Disable(EnableCap.DepthTest);
+		_gl.Disable(EnableCap.CullFace);
+		_gl.Enable(EnableCap.Blend);
+		_gl.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
+		_gl.UseProgram(_lineProg);
+		_gl.UniformMatrix4(_gl.GetUniformLocation(_lineProg, "uViewProj"), 1, false, (float*)&m);
+		int uColor = _gl.GetUniformLocation(_lineProg, "uColor");
+		var hot = SelectTool.HotHandle;
+		foreach (var (h, (vao, count)) in _gizmoGl)
+		{
+			var col = Gizmo.Color(h, hot == h);
+			_gl.Uniform4(uColor, col.X, col.Y, col.Z, col.W);
+			_gl.BindVertexArray(vao);
+			_gl.DrawArrays(PrimitiveType.Triangles, 0, (uint)count);
+		}
+		_gl.Disable(EnableCap.Blend);
+		_gl.Enable(EnableCap.DepthTest);
 	}
 
 	private volatile bool _lassoDirty;
