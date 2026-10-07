@@ -147,6 +147,7 @@
   <div class="group areaNav" title="Move the editing area by one zone (64 m)">
     <span class="lbl">Area</span>
     <button data-shift="-1,0" title="West">◀</button><button data-shift="0,1" title="North">▲</button><button data-shift="0,-1" title="South">▼</button><button data-shift="1,0" title="East">▶</button>
+    <button id="follow" class="ghost" title="Follow the view: when you look near the edge of the area, it moves there by itself">Follow</button>
   </div>
   <div class="sep"></div>
   <div class="group">
@@ -506,8 +507,17 @@ controls.mouseButtons = { LEFT: -1, MIDDLE: THREE.MOUSE.PAN, RIGHT: THREE.MOUSE.
 controls.enableDamping = true;
 controls.maxPolarAngle = Math.PI * 0.49;
 controls.update();
+// A view carried over from the previous area (cam: camera and target in world coordinates).
+{
+  const cam = (params.get('cam') ?? '').split(',').map(Number);
+  if (cam.length === 6 && cam.every(Number.isFinite)) {
+    const sx = x => x - originX - cx, sz = z => -(z - originZ - cz);
+    camera.position.set(sx(cam[0]), cam[1], sz(cam[2])); controls.target.set(sx(cam[3]), cam[4], sz(cam[5])); controls.update();
+  }
+}
 // For automated screenshots: place the camera (three.js coordinates around the area centre).
 window.__view = (px, py, pz, tx, ty, tz) => { camera.position.set(px, py, pz); controls.target.set(tx, ty, tz); controls.update(); };
+window.__target = () => controls.target.clone();
 
 // Brush cursor: a ring that follows the ground.
 const ringPts = 72;
@@ -1089,6 +1099,9 @@ createShapes(ed);
 createMasks(ed, [...BRUSH_TOOLS, 'path', 'area', 'plant', 'shape']);
 createEyedropper(ed);
 createBuilder(ed);
+// The tool carried over from the previous area (Area arrows, Follow).
+// After the rest of the page has started (the Path panel's parts are made further down).
+if (params.get('tool') && document.querySelector(`[data-tool="${params.get('tool')}"]`)) setTimeout(() => setTool(params.get('tool')), 0);
 createArea(ed);
 createBlueprints(ed);
 createHeightmap(ed);
@@ -1501,11 +1514,43 @@ function keepOverTerrain() {
     controls.target.add(back); camera.position.add(back);
   }
 }
-// Shift the whole editing area by one zone. Edits are already kept by the editor, so nothing is lost.
+// Move the editing area (its centre zone to zx, zz). Edits and the history are kept by the editor,
+// so nothing is lost; the view and the tool come along.
+function areaUrl(zx, zz) {
+  const w = v => [v.x + cx + originX, v.y, -v.z + cz + originZ].map(n => n.toFixed(2)).join(',');
+  return `editor.html?zx=${zx}&zz=${zz}&size=${size}&tool=${tool}&cam=${w(camera.position)},${w(controls.target)}`;
+}
 document.querySelectorAll('[data-shift]').forEach(b => b.onclick = () => {
   const [dx, dz] = b.dataset.shift.split(',').map(Number);
-  location.href = `editor.html?zx=${czx + dx}&zz=${czz + dz}&size=${size}`;
+  location.href = areaUrl(czx + dx, czz + dz);
 });
+// Follow: when the view's centre comes within 12 m of the edge of the area, the area moves to the
+// zone under it (one zone on when that is the centre already). Not while something unfinished would
+// be lost: tools say what (ed.moveBlockers: functions returning a reason or nothing).
+ed.moveBlockers = [...(ed.moveBlockers ?? []), () => ed.selection.size ? 'objects are selected (Esc clears)' : '', () => stroke ? 'a stroke is on' : '', () => pathPts.length ? 'a path is drawn (apply or clear it)' : '', () => inflight.size ? 'changes are still being sent' : ''];
+let follow = false;
+try { follow = localStorage.getItem('areaFollow') === '1'; } catch { }
+const syncFollow = () => $('follow').classList.toggle('on', follow);
+$('follow').onclick = () => { follow = !follow; syncFollow(); try { localStorage.setItem('areaFollow', follow ? '1' : '0'); } catch { } msg(follow ? 'Follow: the area moves by itself when you look near its edge.' : 'Follow is off: move the area with the arrows.'); if (follow) checkFollow(); };
+syncFollow();
+let followTimer = 0, followSaid = '';
+function checkFollow() {
+  if (!follow) return;
+  const wx = controls.target.x + cx + originX, wz = -controls.target.z + cz + originZ;
+  const nearX = Math.abs(controls.target.x) > W / 2 - 12, nearZ = Math.abs(controls.target.z) > H / 2 - 12;
+  if (!nearX && !nearZ) { followSaid = ''; return; }
+  const why = ed.moveBlockers.map(f => f()).find(Boolean);
+  if (why) { if (followSaid !== why) msg(`Follow waits: ${why}.`); followSaid = why; return; }
+  let zx = Math.floor((wx + 32) / 64), zz = Math.floor((wz + 32) / 64);
+  if (nearX && zx === czx) zx += Math.sign(wx - czx * 64);
+  if (nearZ && zz === czz) zz += Math.sign(wz - czz * 64);
+  if (!nearX) zx = czx;
+  if (!nearZ) zz = czz;
+  if (zx === czx && zz === czz) return;
+  msg('Moving the area…');
+  location.href = areaUrl(zx, zz);
+}
+controls.addEventListener('change', () => { clearTimeout(followTimer); followTimer = setTimeout(checkFollow, 700); });
 
 // ---- Game look: Valheim's terrain shader and textures, its daylight, sky and sea. Falls back to the
 // simple colours if anything fails to load.

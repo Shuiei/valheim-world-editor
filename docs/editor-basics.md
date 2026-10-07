@@ -23,7 +23,8 @@ Every slider, switch and button explains itself when you hover it.
 | Zoom | Mouse wheel |
 | Slide the view | Middle mouse drag, Space + left drag, Shift + right drag, or the **Move** tool (`H`) |
 | Move around | `W` `A` `S` `D` or the arrow keys |
-| Go to the next area | The **◀ ▲ ▼ ▶** arrows next to "Area" (moves one zone, 64 m) |
+| Go to the next area | The **◀ ▲ ▼ ▶** arrows next to "Area" (moves one zone, 64 m). The view, the tool, your unsaved changes and the history come along. |
+| Let the area follow you | **Follow** (next to the arrows): when the point you look at comes within 12 m of the area's edge, the area moves there by itself. It waits (and says why) while something unfinished would be lost: a stroke, a path or Place shape being drawn, an Area selection, selected objects. Remembered in this browser. |
 | Back to the map | **Map** at the top left |
 
 ## Top bar
