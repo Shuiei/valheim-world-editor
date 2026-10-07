@@ -41,6 +41,8 @@ public sealed class MainWindow : Window
 	internal Button SaveButton { get; } = new() { Content = "Save", FontSize = 12, IsEnabled = false };
 	internal Button HistoryButton { get; } = new() { Content = "History", FontSize = 12 };
 	internal HistoryPanel History { get; }
+	internal InspectorPanel Inspector { get; }
+	private Control _viewPanel = null!;
 	internal TextBlock PendingText => _pending;
 	internal TextBlock MessageText => _message;
 	// Asks before writing into the world (replaced by tests).
@@ -57,6 +59,8 @@ public sealed class MainWindow : Window
 		session.Brush = Tools.Brush;
 		session.Mask = Mask;
 		session.Changed += () => Dispatcher.UIThread.Post(() => { UpdateSaveBar(); History.Refresh(); });
+		// Saved: the objects were read again, with new indices.
+		session.ThingsReset += () => Dispatcher.UIThread.Post(() => { if (Inspector.IsOpen) Inspector.Close(); });
 		// The kinds the Select tool can replace with.
 		var kinds = session.Scene.World?.Creatable.Where(p => NameOfPrefab(p) != null).OrderBy(p => NameOfPrefab(p), StringComparer.OrdinalIgnoreCase).ToList() ?? new();
 		SelectPanel.ReplaceKinds = kinds;
@@ -247,6 +251,16 @@ public sealed class MainWindow : Window
 		UpdateSaveBar();
 	}
 
+	// The inspector on the one selected object (the View panel makes room for it).
+	internal void Inspect()
+	{
+		_view.SelectTool.Commit();
+		if (_view.Selected.Count == 1 && Inspector.Open(_view.Selected.First()))
+		{
+			_viewPanel.IsVisible = false;
+		}
+	}
+
 	// The Path tool's Apply: the action along the line, in one undo step. The line is kept.
 	internal void ApplyPath()
 	{
@@ -370,6 +384,16 @@ public sealed class MainWindow : Window
 		else if (ctrl && e.Key == Avalonia.Input.Key.S)
 		{
 			_ = Save();
+			e.Handled = true;
+		}
+		else if (!ctrl && e.Key == Avalonia.Input.Key.Escape && Inspector.IsOpen)
+		{
+			Inspector.Close();
+			e.Handled = true;
+		}
+		else if (!ctrl && e.Key == Avalonia.Input.Key.I && Tools.SelectMode && _view.Selected.Count == 1)
+		{
+			Inspect();
 			e.Handled = true;
 		}
 		else if (Tools.Mode == ToolMode.Place && PlaceInput.Key(e.Key, mods.HasFlag(Avalonia.Input.KeyModifiers.Shift), ctrl))
@@ -511,6 +535,12 @@ public sealed class MainWindow : Window
 	{
 		SelectPanel = new SelectPanel(_view.SelectTool);
 		History = new HistoryPanel(() => _session);
+		Inspector = new InspectorPanel(() => _session);
+		Inspector.Message += t => { _message.Text = t; UpdateSaveBar(); };
+		Inspector.Replaced += i => _view.Select(new[] { i });
+		Inspector.Confirm = text => Dialogs.Ask(this, "Contents", text, "Apply anyway");
+		Inspector.Closed += () => _viewPanel.IsVisible = true;
+		SelectPanel.InspectButton.Click += (_, _) => Inspect();
 		History.Message += t => { _message.Text = t; UpdateSaveBar(); };
 		SelectPanel.ReplaceAsked += prefab =>
 		{
@@ -679,11 +709,21 @@ public sealed class MainWindow : Window
 		};
 		// Takes the mouse for the 3D view (see GlView.Attach).
 		var surface = new Border { Background = Brushes.Transparent };
-		Content = new Grid { Children = { _view, surface, panel, ViewPanel(), tools, SaveBar(), History.Card } };
+		_viewPanel = ViewPanel();
+		Content = new Grid { Children = { _view, surface, panel, _viewPanel, tools, SaveBar(), History.Card, Inspector.Card } };
 		_view.Attach(surface, this);
 		_view.Perf = _perf;
 		_view.StatsChanged += s => _fps.Text = $"{s.Fps} frames/s · {s.WorkMs:0.0} ms of work each · {s.Objects:N0} objects ({s.Instances:N0} model parts in {s.Batches:N0} draws){(s.PendingModels > 0 ? $" · {s.PendingModels} kinds loading" : "")}";
-		_view.SelectionChanged += _ => SelectPanel.Refresh();
+		_view.SelectionChanged += _ =>
+		{
+			SelectPanel.Refresh();
+			// Open: it follows the selection.
+			var sel = _view.Selected;
+			if (Inspector.IsOpen && sel.Count == 1 && sel.First() != Inspector.Index)
+			{
+				Inspect();
+			}
+		};
 		_view.SelectionChanged += things => _selection.Text = things.Count == 0 ? "" : things.Count == 1
 			? $"Selected: {Name(things[0])} at {things[0].Position.X:0.0}, {things[0].Position.Z:0.0} (height {things[0].Position.Y:0.0})"
 			: $"Selected: {things.Count} objects ({string.Join(", ", things.GroupBy(Name).OrderByDescending(g => g.Count()).Take(4).Select(g => $"{g.Key} ×{g.Count()}"))})";

@@ -160,7 +160,17 @@ public sealed class GlView : OpenGlControlBase
 		{
 			scene.Session.Changed += Wake;
 			scene.Session.ThingsChanged += OnThingsChanged;
-			scene.Session.ThingsReset += () => { _thingsReset = true; Wake(); };
+			// Read again after a save: new indices, so the selection goes at once (not at the next frame).
+			scene.Session.ThingsReset += () =>
+			{
+				lock (_selection)
+				{
+					_selection.Clear();
+				}
+				SelectionDone();
+				_thingsReset = true;
+				Wake();
+			};
 		}
 		Task.Run(() =>
 		{
