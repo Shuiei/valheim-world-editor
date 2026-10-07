@@ -64,6 +64,8 @@ export function createObjects(ed) {
     const pts = [];
     for (const r of records.values()) if (r.added && !r.deleted && !r.applied && newGroups[r.kind]?.visible !== false) pts.push(new THREE.Vector3(r.x - ed.originX - ed.cx, r.y + 0.4, -(r.z - ed.originZ - ed.cz)));
     markers.geometry.setFromPoints(pts);
+    // Every change of the objects comes through here: whoever keeps something about them updates it.
+    for (const f of ed.onObjectsChanged ?? []) f();
   }
 
   async function batchFor(name, kind, isNew = false) {

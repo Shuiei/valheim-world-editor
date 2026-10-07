@@ -74,6 +74,9 @@ folded.
 | Nature | **Trees & logs**, **Rocks**, **Bushes & shrubs**, **Pickables** | Show or hide each kind. The number is how many there are in the area. |
 | Spoilers | **Ore & deposits**, **Ruins & structures**, **Location markers**, **Other objects** | Off by default, so the editor does not spoil what is still to be found. |
 | Overlays | **Your buildings**, **Water**, **Zone borders** | Player-built pieces, the sea surface, the 64 m zone lines. |
+| | **Ward areas**, **Build ranges** | Rings on the ground: where each ward protects (32 m) and where each workbench, forge and other crafting station lets you build (10–40 m, by kind). |
+| | **Location flattening** | Where locations (villages, the trader, dungeon entrances...) flatten the ground: a ring for the flat part, a fainter one where it blends into the land. |
+| | **Go to** (live mode) | Jumps to a player: right there when they are in the area, else the area moves to them. |
 | | **Defaults** / **All** / **Ground** | Default switches / show everything / show only the ground. |
 | Building | **Built by** | The player written as the builder of every piece you place: see below. |
 

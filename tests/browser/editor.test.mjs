@@ -1238,6 +1238,32 @@ test('eye views: walk at 1.8 m over the ground, fly up and down, back to the usu
   noErrors();
 });
 
+test('overlays: a workbench\'s build range and a ward\'s area are drawn as rings', async () => {
+  await openEditor();
+  await page().evaluate(() => localStorage.setItem('plantChosen', '["piece_workbench","guard_stone"]'));
+  await openEditor();
+  const c = (await records()).find(r => r.name === 'piece_chest_wood');
+  await lookAt(page(), c.x + 10, c.z + 10, 0, 60, 30);
+  await page().keyboard.press('t'); await sleep(300);
+  await page().click('#plModes [data-m="line"]');
+  for (const [dx, dz] of [[5, 5], [15, 5]]) { const [x, y] = await screenOf(page(), c.x + dx, c.z + dz); await page().mouse.click(x, y); await sleep(150); }
+  await page().keyboard.press('Enter'); await sleep(1500);
+  const rings = () => page().evaluate(() => Object.fromEntries(Object.entries(window.__ed.overlayGroups).map(([k, g]) => [k, g.children.length])));
+  await page().waitForFunction(() => window.__ed.overlayGroups.stations.children.length > 0, { timeout: 5000 });
+  const r = await rings();
+  assert.ok(r.stations >= 1 && r.wards >= 1, `rings (${JSON.stringify(r)})`);
+  assert.equal(await page().evaluate(() => window.__ed.overlayGroups.wards.visible), false, 'off until switched on');
+  await page().evaluate(() => { document.getElementById('viewPanel').hidden = false; });
+  await page().$eval('[data-show="wards"]', e => { e.checked = true; e.dispatchEvent(new Event('change')); });
+  assert.equal(await page().evaluate(() => window.__ed.overlayGroups.wards.visible), true);
+  // The workbench ring is 20 m round its piece.
+  const radius = await page().evaluate(() => { const g = window.__ed.overlayGroups.stations.children[0], p = g.geometry.attributes.position; let mx = Infinity, Mx = -Infinity; for (let i = 0; i < p.count; i++) { mx = Math.min(mx, p.getX(i)); Mx = Math.max(Mx, p.getX(i)); } return (Mx - mx) / 2; });
+  assert.ok(Math.abs(radius - 20) < 0.5, `20 m build range (${radius.toFixed(2)})`);
+  await page().$eval('[data-show="wards"]', e => { e.checked = false; e.dispatchEvent(new Event('change')); });
+  await page().click('#undo'); await sleep(800);
+  noErrors();
+});
+
 test('Worlds goes back to the start page', async () => {
   await page().goto(t.base + '/index.html', { waitUntil: 'networkidle0' });
   await page().click('#worldsBtn');

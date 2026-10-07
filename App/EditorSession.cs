@@ -307,6 +307,28 @@ public static class EditorSession
 		BuilderEndpoints.Map(app, () => world, edits, Pending);
 		BackupEndpoints.Map(app, () => world, edits, Pending);
 		HeightmapEndpoints.Map(app, () => world, terrain, edits);
+		// Overlays: the ground the locations flatten (zones x0..x1, z0..z1) and, per kind, the range of
+		// wards (where they protect) and crafting stations (where they let you build).
+		app.MapGet("/api/overlays", (int x0, int z0, int x1, int z1) =>
+		{
+			var flatten = new HashSet<TerrainEditor.Terrain.TerrainModifiers.Modifier>();
+			for (int zz = z0; zz <= z1; zz++)
+			{
+				for (int zx = x0; zx <= x1; zx++)
+				{
+					foreach (var m in modifiers.InZone(zx, zz).Where(m => !m.Player && (m.Level || m.Smooth)))
+					{
+						flatten.Add(m);
+					}
+				}
+			}
+			return new
+			{
+				flatten = flatten.Select(m => new { x = m.Position.X, z = m.Position.Z, level = m.Level ? m.LevelRadius : 0f, smooth = m.Smooth ? m.SmoothRadius : 0f, square = m.Square }),
+				ranges = TerrainEditor.Terrain.PrefabCatalog.Placeable.Where(p => p.WardRadius > 0 || p.BuildRange > 0).ToDictionary(p => p.Name, p => new[] { p.WardRadius, p.BuildRange }),
+			};
+		});
+
 		// Regrow nature: what the game's vegetation rules put in zones x0..x1, z0..z1, on the ground as it
 		// is now; only kinds the editor can create (16 zones at most, a few seconds each at worst).
 		app.MapGet("/api/regrow", (int x0, int z0, int x1, int z1) =>
