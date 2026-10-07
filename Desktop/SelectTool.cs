@@ -354,7 +354,7 @@ public sealed class SelectTool
 		{
 			return null;
 		}
-		var things = _view.Selected.Select(i => s.Things[i]).Where(t => !t.Gone).ToList();
+		var things = _view.Selected.Where(i => i < s.Things.Count).Select(i => s.Things[i]).Where(t => !t.Gone).ToList();
 		if (things.Count == 0)
 		{
 			return null;
