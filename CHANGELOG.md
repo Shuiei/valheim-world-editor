@@ -3,51 +3,111 @@
 All notable changes to the Valheim world editor and its WorldEditorBridge plugin, which share one
 version number. Newest first.
 
-## Unreleased
+## v0.19.0 — 2026-10-06 (selection helpers)
+
+### Added
+- **Same kind, Invert and saved selections** (Select tool): select every object of the selected
+  kinds, the opposite of the selection, or a selection kept by name for the world.
+
+## v0.18.0 — 2026-10-06 (select a whole building)
+
+### Added
+- **Select a whole building** (Select tool, like Axiom's magic select): double-click a piece, or
+  press Whole building, to select every piece connected to it.
+
+## v0.17.0 — 2026-10-06 (river and canal)
+
+### Added
+- **River / canal** (Path tool): digs a U-shaped bed below sea level with sloped banks, so the sea
+  flows in.
+
+## v0.16.0 — 2026-10-06 (shape tool)
+
+### Added
+- **Shape** (tool `G`, like WorldEdit's `//generate`): one click puts a mound, cone, mesa, crater,
+  moat, bowl or ridged hill into the ground, or any shape written as a formula.
+
+## v0.15.0 — 2026-10-06 (erosion)
+
+### Added
+- **Erode** (sculpt tool `O`, and an Area action): thermal erosion settles slopes to a rest angle,
+  water erosion cuts gullies and fills hollows.
+
+## v0.14.0 — 2026-10-06 (heightmaps)
+
+### Added
+- **Heightmaps** (Area tool, like WorldPainter): export the area's ground as a 16-bit grayscale PNG
+  and import a picture back into the selection or the whole area, between chosen heights.
+
+## v0.13.0 — 2026-10-06 (stamps)
+
+### Added
+- **Stamps**: pictures as brush shapes (built in: mountain, mesa, crater rim, dunes, rocky ground;
+  or any picture loaded from a file), and "Stamp once" to put a whole stamp into the ground with one
+  click, to a chosen height.
+
+## v0.12.0 — 2026-10-06 (brush shapes)
+
+### Added
+- **Brush shapes and falloff** (sculpt and paint tools, like WorldPainter): circle, square, ring or
+  ragged brushes, with a smooth, linear, dome, flat-top or peak falloff; square brushes turn.
+
+## v0.11.0 — 2026-10-06 (restore from a backup)
+
+### Added
+- **Restore from a backup** (Area tool, like WorldEdit's `//restore`): the ground and objects of a
+  selection as they were in one of the world's backups (the editor's or the game's), objects with
+  all their data.
+
+## v0.10.0 — 2026-10-06 (reset zones across the world)
+
+### Added
+- **Reset zones across the world** (map page, like MCA Selector): pick zones by biome, distance
+  from buildings, ground edits and distance from the centre, and mark them all for the game to
+  generate again.
+- **Zone resets in live mode** (needs WorldEditorBridge 0.10.0 or newer): Apply live resets the
+  marked zones in the running game, which generates them again at once where players are.
+
+### Fixed
+- A zone reset also removed players' tombstones, with what they carried: they are always kept now.
+- Saving twice within the same second failed, because both backups got the same folder name.
+
+## v0.9.0 — 2026-10-06 (search the world)
+
+### Added
+- **Search the world** (map page): every object of a kind, every container holding an item, or every
+  sign, portal or ward whose text matches, counted and pinned on the map; a result opens the 3D
+  editor with that object selected.
+
+## v0.8.0 — 2026-10-06 (object inspector)
+
+### Added
+- **Object inspector** (Select tool, `I`): everything an object holds in the save, by name, and
+  editing it: chest contents (items, stacks, quality, slots), sign texts, portal tags, ward
+  permissions, timers... An edit is one undo step and is saved or applied live like any change.
+
+### Fixed
+- Objects placed or moved in this session lost what they were copied from after the page was
+  reloaded, so moving one again made a fresh copy (a moved chest lost its contents).
+
+## v0.7.0 — 2026-10-06 (repeat a paste)
+
+### Added
+- **Repeat a paste** (like WorldEdit's `//stack`): one click places several copies in a row, along
+  the copy's width or depth or stacked upwards, with a gap; one undo step.
+
+## v0.6.0 — 2026-10-06 (PlanBuild files)
+
+### Added
+- **PlanBuild and .vbuild files**: import a PlanBuild `.blueprint` (its terrain marks become ground)
+  or a `.vbuild` file into the blueprint list, and write any blueprint back out in either format.
+
+## v0.5.0 — 2026-10-06 (blueprints)
 
 ### Added
 - **Blueprints** (Area tool → Copy & paste): save the clipboard as a named file, browse the saved
   ones with a picture of each, and paste them into any world. They are kept in the `blueprints`
   folder of the editor's data folder.
-- **PlanBuild and .vbuild files**: import a PlanBuild `.blueprint` (its terrain marks become ground)
-  or a `.vbuild` file into the blueprint list, and write any blueprint back out in either format.
-- **Repeat a paste** (like WorldEdit's `//stack`): one click places several copies in a row, along
-  the copy's width or depth or stacked upwards, with a gap; one undo step.
-- **Object inspector** (Select tool, `I`): everything an object holds in the save, by name, and
-  editing it: chest contents (items, stacks, quality, slots), sign texts, portal tags, ward
-  permissions, timers... An edit is one undo step and is saved or applied live like any change.
-- **Search the world** (map page): every object of a kind, every container holding an item, or every
-  sign, portal or ward whose text matches, counted and pinned on the map; a result opens the 3D
-  editor with that object selected.
-- **Reset zones across the world** (map page, like MCA Selector): pick zones by biome, distance
-  from buildings, ground edits and distance from the centre, and mark them all for the game to
-  generate again.
-- **Zone resets in live mode** (needs the WorldEditorBridge of this version): Apply live resets the
-  marked zones in the running game, which generates them again at once where players are.
-- **Restore from a backup** (Area tool, like WorldEdit's `//restore`): the ground and objects of a
-  selection as they were in one of the world's backups (the editor's or the game's), objects with
-  all their data.
-- **Brush shapes and falloff** (sculpt and paint tools, like WorldPainter): circle, square, ring or
-  ragged brushes, with a smooth, linear, dome, flat-top or peak falloff; square brushes turn.
-- **Stamps**: pictures as brush shapes (built in: mountain, mesa, crater rim, dunes, rocky ground;
-  or any picture loaded from a file), and "Stamp once" to put a whole stamp into the ground with one
-  click, to a chosen height.
-- **Heightmaps** (Area tool, like WorldPainter): export the area's ground as a 16-bit grayscale PNG
-  and import a picture back into the selection or the whole area, between chosen heights.
-- **Erode** (sculpt tool `O`, and an Area action): thermal erosion settles slopes to a rest angle,
-  water erosion cuts gullies and fills hollows.
-- **Shape** (tool `G`, like WorldEdit's `//generate`): one click puts a mound, cone, mesa, crater,
-  moat, bowl or ridged hill into the ground, or any shape written as a formula.
-- **River / canal** (Path tool): digs a U-shaped bed below sea level with sloped banks, so the sea
-  flows in.
-- **Select a whole building** (Select tool, like Axiom's magic select): double-click a piece, or
-  press Whole building, to select every piece connected to it.
-
-### Fixed
-- A zone reset also removed players' tombstones, with what they carried: they are always kept now.
-- Saving twice within the same second failed, because both backups got the same folder name.
-- Objects placed or moved in this session lost what they were copied from after the page was
-  reloaded, so moving one again made a fresh copy (a moved chest lost its contents).
 
 ## v0.4.1 — 2026-10-05 (editor on GitHub only)
 

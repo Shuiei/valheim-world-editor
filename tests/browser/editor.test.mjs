@@ -514,6 +514,27 @@ test('magic select: a double click selects every connected piece, not the others
   noErrors();
 });
 
+test('selecting: same kind, invert, and a kept selection picked again', async () => {
+  await openEditor();
+  const tree = (await records()).find(r => r.name === 'Beech1');
+  await page().evaluate(id => { window.__ed.setTool('select'); window.__ed.selectIds([id]); }, tree.id);
+  await page().click('#selSame');
+  const shownBeeches = await page().evaluate(() => [...window.__ed.objects.records.values()].filter(r => !r.deleted && r.name === 'Beech1' && window.__ed.entityOf(r.id)?.inst.some(({ im }) => im.visible && im.parent?.visible)).map(r => r.id).sort());
+  const same = await page().evaluate(() => [...window.__ed.selection].sort());
+  assert.deepEqual(same, shownBeeches, 'every shown beech');
+  await page().click('#selInvert');
+  const inverted = await page().evaluate(() => [...window.__ed.selection].map(id => window.__ed.objects.records.get(id).name));
+  assert.ok(inverted.length > 0 && !inverted.includes('Beech1'), 'everything else');
+  await page().evaluate(ids => window.__ed.selectIds(ids), same);
+  await page().click('#selSaveBtn'); await sleep(300);
+  await page().evaluate(() => window.__ed.clearSelection());
+  await page().$eval('#selSaved', e => { e.value = '0'; e.dispatchEvent(new Event('change')); });
+  await page().click('#selLoad');
+  assert.deepEqual(await page().evaluate(() => [...window.__ed.selection].sort()), same, 'the kept selection comes back');
+  await page().evaluate(() => window.__ed.clearSelection());
+  noErrors();
+});
+
 test('undo takes a change back and the counter clears', async () => {
   await openEditor();
   await page().keyboard.press('Escape');

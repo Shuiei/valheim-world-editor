@@ -18,6 +18,9 @@ replace or delete them. Only objects that are shown can be picked; switch kinds 
 | **Click on empty ground** / `Esc` | Clears the selection. |
 | **Double-click a building piece** | Selects the whole building: every piece connected to it through pieces that touch (walls, floors, roofs, beams...). Pieces standing apart are not taken. |
 | **Whole building** | Adds every piece connected to the selected pieces. |
+| **Same kind** | Selects every shown object in the area of the kinds selected now (select one beech, then all the beeches). |
+| **Invert** | Selects every shown object in the area that is not selected now. |
+| **Saved** + **keep** | Keeps the selection under a name, for this world, in this browser. Pick it in the list, then **Select it** (or **Add it** to the current selection) to get it back, also after the world was saved; **Forget** removes it. Objects are found again by kind and position, so moved or deleted ones are counted as missing. |
 
 ![Drawing a selection zone](images/select-zone-drawing.jpg)
 ![Everything inside selected](images/select-zone.jpg)

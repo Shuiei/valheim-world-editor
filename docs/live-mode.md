@@ -114,7 +114,7 @@ the game again.
 
 ## Limits
 
-- **Zone resets** need a WorldEditorBridge newer than 0.4.1 on the server (the one that comes with this editor). The game generates a reset
+- **Zone resets** need WorldEditorBridge 0.10.0 or newer on the server. The game generates a reset
   zone again at once when a player is near it, otherwise the next time someone comes. A reset cannot
   be undone after it is applied.
 - The plugin only works in a game that **hosts** the world (server, single player or host). In a

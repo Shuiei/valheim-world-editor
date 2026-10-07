@@ -126,6 +126,6 @@ griefing, a bad raid or an edit you regret, without rolling back the whole world
 | **Reset zones…** | Marks every zone under the selection (red outline). On save, those zones lose their trees, rocks, ruins and dungeon entrances, and the game generates them again the next time a player goes there: new trees, new ore, new dungeons. You are asked to confirm first. |
 | **Cancel reset** | Cancels the reset of the zones under the selection. |
 
-Resetting is applied when you save (offline) or apply live (with a WorldEditorBridge newer than 0.4.1).
+Resetting is applied when you save (offline) or apply live (with WorldEditorBridge 0.10.0 or newer).
 Players' tombstones are never removed. To reset many zones across the whole world at once (by biome,
 away from buildings...), use the [zone filter on the world map](map.md#reset-zones-across-the-world).
