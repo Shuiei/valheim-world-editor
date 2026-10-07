@@ -26,6 +26,7 @@ public sealed class MainWindow : Window
 	internal ShapePanel ShapePanel { get; } = new();
 	internal PathPanel PathPanel { get; }
 	internal AreaPanel AreaPanel { get; }
+	internal PastePanel PastePanel { get; }
 
 	// The save bar (top middle): what is waiting to be saved, undo, redo, Save, and the last message.
 	private readonly TextBlock _pending = new() { FontSize = 12, VerticalAlignment = VerticalAlignment.Center, Text = "All saved" };
@@ -129,6 +130,80 @@ public sealed class MainWindow : Window
 		UpdateSaveBar();
 	}
 
+	private string? NameOfPrefab(int prefab) => _models?.NameOf(prefab) ?? TerrainEditor.Terrain.PrefabCatalog.DisplayName(prefab);
+
+	// Ctrl+C: the Area selection (ground and shown objects), or the Select tool's objects.
+	internal void Copy()
+	{
+		if (_session is not { } s)
+		{
+			return;
+		}
+		CopyData? clip;
+		if (Tools.Mode == ToolMode.Select)
+		{
+			_view.SelectTool.Commit();
+			clip = CopyData.FromThings(s.Scene, _view.Selected.ToList(), NameOfPrefab, _view.GroundHeight);
+			if (clip == null)
+			{
+				_message.Text = "Select objects to copy first.";
+				return;
+			}
+		}
+		else
+		{
+			var poly = _view.Area.Polygon();
+			var inside = poly == null ? new List<int>() : AreaPanel.ThingsInside(poly, chosenKindsOnly: false);
+			clip = CopyData.FromArea(_view.Area, s.Ground, s.Scene, inside, NameOfPrefab);
+			if (clip == null)
+			{
+				_message.Text = "Select an area first.";
+				return;
+			}
+		}
+		_view.Paste.Clip = clip;
+		_view.Paste.Notify();
+		_message.Text = Tools.Mode == ToolMode.Select ? $"Copied {clip.Objects.Count} object(s). Ctrl+V to paste (R turns, F mirrors)."
+			: $"Copied {clip.W} × {clip.H} m and {clip.Objects.Count} object(s). Ctrl+V to paste, here or in another area.";
+	}
+
+	// Ctrl+V: the Paste tool.
+	internal void StartPaste()
+	{
+		if (_view.Paste.Clip == null)
+		{
+			_message.Text = "Copy an area first (Area tool, Ctrl+C).";
+			return;
+		}
+		_view.SelectTool.Commit();
+		Tools.ChooseMode(ToolMode.Paste);
+		PastePanel.Refresh();
+	}
+
+	// A click in the Paste tool: one paste (with its repeats) is one undo step.
+	internal void PasteAt(System.Numerics.Vector2 at)
+	{
+		if (_session is not { } s || _view.Paste.Clip == null)
+		{
+			return;
+		}
+		// The objects' heights come from the ground as the paste leaves it: the ground step fills the list,
+		// which Commit reads after it (one undo step for both).
+		var add = new List<(TerrainEditor.Editing.NewObject, bool)>();
+		int touched = 0;
+		var paste = _view.Paste;
+		var label = paste.Count > 1 ? $"Paste ×{paste.Count}" : "Paste";
+		s.Commit(label, g =>
+		{
+			var (t, rect, a) = paste.Apply(g, at);
+			add.AddRange(a);
+			touched = t.Count;
+			return (t, rect);
+		}, Array.Empty<int>(), add);
+		_message.Text = $"Pasted{(paste.Count > 1 ? $" {paste.Count} copies" : "")}{(touched > 0 ? " with the ground" : "")}{(add.Count > 0 ? $", {add.Count} object(s)" : "")}. Click again to paste more, Esc when done.";
+		UpdateSaveBar();
+	}
+
 	// The Path tool's Apply: the action along the line, in one undo step. The line is kept.
 	internal void ApplyPath()
 	{
@@ -221,6 +296,30 @@ public sealed class MainWindow : Window
 		else if (ctrl && e.Key == Avalonia.Input.Key.Y)
 		{
 			Redo();
+			e.Handled = true;
+		}
+		else if (ctrl && e.Key == Avalonia.Input.Key.C && Tools.Mode is ToolMode.Area or ToolMode.Select)
+		{
+			Copy();
+			e.Handled = true;
+		}
+		else if (ctrl && e.Key == Avalonia.Input.Key.V)
+		{
+			StartPaste();
+			e.Handled = true;
+		}
+		else if (Tools.Mode == ToolMode.Paste && !ctrl && e.Key is Avalonia.Input.Key.R or Avalonia.Input.Key.F or Avalonia.Input.Key.OemComma or Avalonia.Input.Key.OemPeriod or Avalonia.Input.Key.Escape)
+		{
+			// , . turn by 1° (Shift: 15°); . is clockwise seen from above, like the other tools.
+			float step = mods.HasFlag(Avalonia.Input.KeyModifiers.Shift) ? 15 : 1;
+			switch (e.Key)
+			{
+				case Avalonia.Input.Key.R: _view.Paste.TurnBy(90); break;
+				case Avalonia.Input.Key.F: _view.Paste.Mirror = !_view.Paste.Mirror; _view.Paste.Notify(); break;
+				case Avalonia.Input.Key.OemComma: _view.Paste.TurnBy(step); break;
+				case Avalonia.Input.Key.OemPeriod: _view.Paste.TurnBy(-step); break;
+				default: Tools.ChooseMode(ToolMode.Area); break;
+			}
 			e.Handled = true;
 		}
 		else if (ctrl && e.Key == Avalonia.Input.Key.S)
@@ -369,6 +468,9 @@ public sealed class MainWindow : Window
 		AreaPanel.Message += t => { _message.Text = t; UpdateSaveBar(); };
 		AreaPanel.SwitchToSelect += () => Tools.ChooseSelect();
 		AreaPanel.Confirm = text => Dialogs.Ask(this, "Reset zones", text, "Reset when saving");
+		PastePanel = new PastePanel(_view.Paste);
+		PastePanel.Done += () => Tools.ChooseMode(ToolMode.Area);
+		_view.PasteClicked += PasteAt;
 		_view.PathScripted += () =>
 		{
 			PathPanel.Refresh();
@@ -404,9 +506,9 @@ public sealed class MainWindow : Window
 			Margin = new Thickness(10),
 			HorizontalAlignment = HorizontalAlignment.Left,
 			VerticalAlignment = VerticalAlignment.Top,
-			Children = { Tools.Rail, Tools.Options, SelectPanel.Card, MeasurePanel.Card, ShapePanel.Card, PathPanel.Card, AreaPanel.Card },
+			Children = { Tools.Rail, Tools.Options, SelectPanel.Card, MeasurePanel.Card, ShapePanel.Card, PathPanel.Card, AreaPanel.Card, PastePanel.Card },
 		};
-		SelectPanel.Card.IsVisible = MeasurePanel.Card.IsVisible = ShapePanel.Card.IsVisible = PathPanel.Card.IsVisible = AreaPanel.Card.IsVisible = false;
+		SelectPanel.Card.IsVisible = MeasurePanel.Card.IsVisible = ShapePanel.Card.IsVisible = PathPanel.Card.IsVisible = AreaPanel.Card.IsVisible = PastePanel.Card.IsVisible = false;
 		ShapePanel.Changed += () => _view.ShapeRadius = ShapePanel.Radius;
 		_view.ShapeClicked += PutShape;
 		Tools.Options.VerticalAlignment = VerticalAlignment.Top;
@@ -420,6 +522,7 @@ public sealed class MainWindow : Window
 			ShapePanel.Card.IsVisible = Tools.Mode == ToolMode.Shape;
 			PathPanel.Card.IsVisible = Tools.Mode == ToolMode.Path;
 			AreaPanel.Card.IsVisible = Tools.Mode == ToolMode.Area;
+			PastePanel.Card.IsVisible = Tools.Mode == ToolMode.Paste;
 			if (Tools.Mode == ToolMode.Area)
 			{
 				AreaPanel.Refresh();

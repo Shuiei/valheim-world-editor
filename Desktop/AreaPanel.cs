@@ -191,7 +191,7 @@ public sealed class AreaPanel
 	private float Value(NumericUpDown b) => (float)(b.Value ?? 0);
 
 	// The things inside the selection (indices), not deleted, of shown kinds (or added in this session).
-	private List<int> ThingsInside(List<Vector2> poly, bool chosenKindsOnly)
+	internal List<int> ThingsInside(List<Vector2> poly, bool chosenKindsOnly)
 	{
 		var out_ = new List<int>();
 		if (_view.Scene is not { } s)

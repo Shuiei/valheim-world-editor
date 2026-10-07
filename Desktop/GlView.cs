@@ -1304,6 +1304,16 @@ public sealed class GlView : OpenGlControlBase
 			_pointer = p.Position;
 			_surfaceSize = surface.Bounds.Size;
 			e.Pointer.Capture(surface);
+			if (_dragButton == PointerUpdateKind.LeftButtonPressed && _mode == ToolMode.Paste)
+			{
+				_dragFrom = null;
+				if (GridAt(p.Position, _surfaceSize) is { } at)
+				{
+					PasteClicked?.Invoke(at);
+				}
+				Wake();
+				return;
+			}
 			if (_dragButton == PointerUpdateKind.LeftButtonPressed && _mode == ToolMode.Area)
 			{
 				_dragFrom = null;
@@ -1408,6 +1418,10 @@ public sealed class GlView : OpenGlControlBase
 			{
 				Area.Moved(GridAt(_pointer.Value, _surfaceSize));
 			}
+			if (_mode == ToolMode.Paste)
+			{
+				Paste.At = GridAt(_pointer.Value, _surfaceSize);
+			}
 			if (_selectDown)
 			{
 				SelectTool.Moved(_pointer.Value, _surfaceSize, e.KeyModifiers.HasFlag(KeyModifiers.Control));
@@ -1478,6 +1492,9 @@ public sealed class GlView : OpenGlControlBase
 	public float ShapeRadius { get; set; } = 16;
 	public PathTool Path { get; } = new();
 	public AreaTool Area { get; } = new();
+	public PasteTool Paste { get; } = new();
+	// Paste tool: a click on the ground (grid point).
+	public event Action<Vector2>? PasteClicked;
 	private bool _areaDown;
 	// --path: the line is drawn; the window applies it.
 	public event Action? PathScripted;
@@ -1769,6 +1786,22 @@ public sealed class GlView : OpenGlControlBase
 					to.AddRange(new[] { p.X, p.Y, p.Z, q.X, q.Y, q.Z });
 				}
 			}
+		}
+		if (_mode == ToolMode.Paste && Paste.At is { } pat && Paste.Clip != null)
+		{
+			// Where the paste would go: its outlines and a small post at each object.
+			var (objs, outlines) = Paste.Preview(pat, GridHeight);
+			var data = new List<float>();
+			foreach (var o in outlines)
+			{
+				Ring(data, o, true, 0.3f);
+			}
+			foreach (var o in objs)
+			{
+				float x = o.X - (s.W - 1) / 2f, z = -(o.Z - (s.H - 1) / 2f);
+				data.AddRange(new[] { x, o.Y, z, x, o.Y + 1.2f, z, x - 0.3f, o.Y + 0.5f, z, x + 0.3f, o.Y + 0.5f, z });
+			}
+			DrawLines(ref _areaVao, ref _areaVbo, data.ToArray(), vp, new Vector4(1, 0.76f, 0.29f, 1));
 		}
 		if (_mode == ToolMode.Area)
 		{

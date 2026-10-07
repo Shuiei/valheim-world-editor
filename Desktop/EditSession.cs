@@ -331,8 +331,8 @@ public sealed class EditSession
 	}
 
 	// One undo step that may change the ground (ground: as EditGround), take things away (remove:
-	// indices) and add new objects (add: their ids are given here; Piece: a player-built piece). Returns
-	// the indices of the things added.
+	// indices) and add new objects (add: their ids are given here; Piece: a player-built piece; read after
+	// the ground step, which may fill it). Returns the indices of the things added.
 	public List<int> Commit(string label, Func<Ground, (List<int> Touched, (int X0, int Z0, int X1, int Z1) Rect)>? ground,
 		IReadOnlyCollection<int> remove, IReadOnlyList<(NewObject Object, bool Piece)> add, (ZoneReset Reset, bool Before, bool After)[]? resets = null)
 	{
