@@ -477,6 +477,27 @@ test('shapes: formulas are read safely, and a click puts a mesa in', async () =>
   noErrors();
 });
 
+test('path: a river digs its bed below sea level (down to the game limit)', async () => {
+  await openEditor();
+  await page().keyboard.press('p');
+  await page().select('#pAction', 'river');
+  await page().$eval('#pDepth', e => { e.value = 1.5; e.dispatchEvent(new Event('input')); });
+  const c = (await records()).find(r => r.name === 'piece_chest_wood');
+  const a = [c.x - 30, c.z + 30], b = [c.x - 10, c.z + 30], mid = [c.x - 20, c.z + 30];
+  await lookAt(page(), ...mid, 0, 50, 30);
+  const height = p => page().evaluate(([x, z]) => { const ed = window.__ed; return { h: ed.sampleHeight(x - ed.originX, z - ed.originZ), base: ed.base[Math.round(z - ed.originZ) * ed.W + Math.round(x - ed.originX)], water: ed.WATER }; }, p);
+  const before = await height(mid);
+  for (const p of [a, b]) { const [x, y] = await screenOf(page(), ...p); await page().mouse.click(x, y); await sleep(150); }
+  await page().keyboard.press('Enter'); await sleep(800);
+  const after = await height(mid);
+  const want = Math.max(before.water - 1.5, before.base - 8);
+  assert.ok(Math.abs(after.h - want) < 0.3, `the bed is at ${want.toFixed(2)} m (got ${after.h.toFixed(2)})`);
+  if (before.base - 8 > before.water - 1.5) assert.match(await page().$eval('#sMsg', e => e.textContent), /limit/);
+  await page().keyboard.press('Escape');
+  await page().click('#undo'); await sleep(800);
+  noErrors();
+});
+
 test('undo takes a change back and the counter clears', async () => {
   await openEditor();
   await page().keyboard.press('Escape');

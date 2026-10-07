@@ -38,6 +38,8 @@ version number. Newest first.
   water erosion cuts gullies and fills hollows.
 - **Shape** (tool `G`, like WorldEdit's `//generate`): one click puts a mound, cone, mesa, crater,
   moat, bowl or ridged hill into the ground, or any shape written as a formula.
+- **River / canal** (Path tool): digs a U-shaped bed below sea level with sloped banks, so the sea
+  flows in.
 
 ### Fixed
 - A zone reset also removed players' tombstones, with what they carried: they are always kept now.
