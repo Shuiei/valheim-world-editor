@@ -959,6 +959,22 @@ test('placed pieces are player built, and Make player built fixes old ones', asy
   noErrors();
 });
 
+test('Place tool: named Place, the sapling option only shows for saplings and crops', async () => {
+  await openEditor();
+  await page().evaluate(() => localStorage.setItem('plantChosen', '["woodwall"]'));
+  await openEditor();
+  assert.match(await page().$eval('[data-tool="plant"]', e => e.textContent.trim()), /^Place/);
+  await page().keyboard.press('t'); await sleep(300);
+  await page().waitForFunction(() => document.getElementById('plChosen').textContent.startsWith('Placing'));
+  assert.ok(await page().$eval('#plGrowRow', e => e.hidden), 'hidden for walls');
+  await page().$eval('#plSearch', e => { e.value = 'sapling_turnip'; e.dispatchEvent(new Event('input')); });
+  await page().click('#plList input[value="sapling_turnip"]');
+  await page().waitForFunction(() => !document.getElementById('plGrowRow').hidden);
+  await page().click('#plList input[value="sapling_turnip"]');
+  assert.ok(await page().$eval('#plGrowRow', e => e.hidden), 'hidden again once the sapling is unticked');
+  noErrors();
+});
+
 test('Worlds goes back to the start page', async () => {
   await page().goto(t.base + '/index.html', { waitUntil: 'networkidle0' });
   await page().click('#worldsBtn');

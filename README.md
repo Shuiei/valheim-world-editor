@@ -185,7 +185,7 @@ into the next build. `tools/release.sh <folder>` builds the complete release pac
 | [Path](docs/path.md) | Roads, ramps and paint along a line |
 | [Mask](docs/masks.md) | Limiting any tool by biome, height, slope or paint |
 | [Area, copy and paste](docs/area.md) | Box and polygon selections, bulk actions, paste, zone reset |
-| [Plant](docs/plant.md) | Brush, Line, Grid and Zone placement, any kind of object |
+| [Place](docs/place.md) | Any kind of object: trees and rocks with a brush, walls and fences end to end along lines, circles and rectangles, grids and zones |
 | [Select](docs/select.md) | Selecting, moving with arrows, turning, dropping, copying, deleting |
 | [Measure and overlays](docs/measure.md) | Distances, slopes, slope colours, height lines |
 | [Live mode](docs/live-mode.md) | Editing a running server |

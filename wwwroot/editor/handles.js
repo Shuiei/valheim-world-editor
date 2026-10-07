@@ -1,4 +1,4 @@
-// Point handles for drawn lines (Path tool, Plant lines): dots on the line's points that can be dragged
+// Point handles for drawn lines (Path tool, Place tool lines): dots on the line's points that can be dragged
 // to fine-tune it, a drag on the line between two points adds one there, Ctrl + click removes one.
 // The tool keeps its points ({ gx, gz } on the editor's grid); this draws the dots and tells which
 // point or which stretch of the line is under the mouse.
