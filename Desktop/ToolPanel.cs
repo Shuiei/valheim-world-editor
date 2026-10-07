@@ -9,8 +9,8 @@ namespace TerrainEditor.Desktop;
 // (look around and pick objects), Select (move, turn and delete objects: see SelectPanel), the sculpt
 // brushes and the paint brushes. Keys as in the web editor: 1-9 and 0 pick the brushes, E selects,
 // Esc goes back to View.
-// Which tool is in use: View (look around, click picks), Select, Measure, Shape, Path, or a brush (Tool says which).
-public enum ToolMode { View, Select, Measure, Shape, Path, Brush }
+// Which tool is in use: View (look around, click picks), Select, Measure, Shape, Path, Area, or a brush (Tool says which).
+public enum ToolMode { View, Select, Measure, Shape, Path, Area, Brush }
 
 public sealed class ToolPanel
 {
@@ -25,7 +25,7 @@ public sealed class ToolPanel
 	public Control Options { get; }
 
 	private readonly Dictionary<BrushTool, Button> _buttons = new();
-	private readonly Button _viewButton, _selectButton, _measureButton, _shapeButton, _pathButton;
+	private readonly Button _viewButton, _selectButton, _measureButton, _shapeButton, _pathButton, _areaButton;
 	internal Button SelectButton => _selectButton;
 	private readonly TextBlock _title = new() { FontSize = 14, FontWeight = FontWeight.SemiBold };
 	private readonly TextBlock _help = new() { FontSize = 12, Foreground = Brushes.LightGray, TextWrapping = TextWrapping.Wrap };
@@ -119,6 +119,9 @@ public sealed class ToolPanel
 		_pathButton = Make("Path", "P");
 		ToolTip.SetTip(_pathButton, "Path (P): draw a line, then flatten, ramp, raise, lower, smooth, dig a river or paint along it.");
 		_pathButton.Click += (_, _) => ChooseMode(ToolMode.Path);
+		_areaButton = Make("Area", "B");
+		ToolTip.SetTip(_areaButton, "Area (B): select a box or polygon, then change the ground, remove, select or replace objects, or reset its zones.");
+		_areaButton.Click += (_, _) => ChooseMode(ToolMode.Area);
 		rail.Children.Add(new TextBlock { Text = "SCULPT", FontSize = 10, Foreground = Brushes.Gray, Margin = new Thickness(4, 6, 0, 0) });
 		foreach (var (t, key) in Keys)
 		{
@@ -198,6 +201,7 @@ public sealed class ToolPanel
 		_measureButton.Background = Mode == ToolMode.Measure ? On : Off;
 		_shapeButton.Background = Mode == ToolMode.Shape ? On : Off;
 		_pathButton.Background = Mode == ToolMode.Path ? On : Off;
+		_areaButton.Background = Mode == ToolMode.Area ? On : Off;
 		foreach (var (k, b) in _buttons)
 		{
 			b.Background = k == t ? On : Off;
@@ -224,6 +228,11 @@ public sealed class ToolPanel
 		if (key == "E")
 		{
 			ChooseSelect();
+			return true;
+		}
+		if (key == "B")
+		{
+			ChooseMode(ToolMode.Area);
 			return true;
 		}
 		if (key == "P")
