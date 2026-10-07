@@ -23,6 +23,8 @@ export function createPlant(ed) {
     <div class="row"><button id="plPresetSave" title="Save the ticked kinds, their weights and the Density, Spacing, Size, Tilt and facing settings under a name">Save as preset…</button><button id="plPresetDel" disabled title="Delete the chosen preset (only your own)">Delete</button></div>
     <label class="field">Density <input id="plDensity" type="range" min="0.2" max="20" step="0.2" value="3"><span id="plDensityV"></span></label>
     <label class="field">Spacing <input id="plSpacing" type="range" min="0.5" max="15" step="0.5" value="4"><span id="plSpacingV"></span></label>
+    <label class="field">Clumping <input id="plClump" type="range" min="0" max="100" step="5" value="0"><span id="plClumpV"></span></label>
+    <label class="field" id="plPatchRow">Patch size <input id="plPatch" type="range" min="5" max="120" step="5" value="30"><span id="plPatchV"></span></label>
     <label class="field">Size <span class="pair"><input id="plSmin" type="number" min="10" max="300" step="5" value="80"><input id="plSmax" type="number" min="10" max="300" step="5" value="120"></span><span>%</span></label>
     <label class="field">Tilt <input id="plTilt" type="range" min="0" max="20" step="1" value="3"><span id="plTiltV"></span></label>
     <label class="field">Rotation <input id="plRot" type="range" min="-180" max="180" step="1" value="0"><span id="plRotV"></span></label>
@@ -90,6 +92,9 @@ export function createPlant(ed) {
   function syncLabels() {
     $('plDensityV').textContent = v('plDensity').toFixed(1);
     $('plSpacingV').textContent = `${v('plSpacing')} m`;
+    $('plClumpV').textContent = `${v('plClump')}%`;
+    $('plPatchV').textContent = `${v('plPatch')} m`;
+    $('plPatchRow').hidden = $('plClump').closest('label').hidden || v('plClump') === 0;
     $('plTiltV').textContent = `${v('plTilt')}°`;
     $('plRotV').textContent = `${v('plRot')}°`;
     renderMix();
@@ -100,7 +105,22 @@ export function createPlant(ed) {
     const cult = [...chosen].filter(n => grow[n]?.[1]);
     if (cult.length) $('plChosen').textContent += ` · ${cult.join(', ')} only grow${cult.length > 1 ? '' : 's'} on cultivated ground (paint it with Cultivate first).`;
   }
-  ['plDensity', 'plSpacing', 'plTilt', 'plRot'].forEach(id => $(id).addEventListener('input', syncLabels));
+  ['plDensity', 'plSpacing', 'plTilt', 'plRot', 'plClump', 'plPatch'].forEach(id => $(id).addEventListener('input', syncLabels));
+  ['plClump', 'plPatch'].forEach(id => $(id).addEventListener('input', () => updatePreview()));
+
+  // ---- Clumping (Brush and Zone): the density follows a noise pattern in world coordinates, so
+  // objects gather in groves and leave clearings, like the game's own forests. 0: even. Patch size:
+  // how big the groves are. New layout (R) moves them.
+  let clumpSeed = Math.random() * 1000;
+  function clumpKeeps(gx, gz, k) {
+    const c = v('plClump') / 100;
+    if (c <= 0) return true;
+    const size = v('plPatch');
+    const n = Math.min(1, Math.max(0, 0.5 + 0.5 * ed.fbm((ed.originX + gx) / size + clumpSeed, (ed.originZ + gz) / size - clumpSeed)));
+    // From all kept (0) to only the densest quarter of the pattern (100 %), with a soft edge.
+    const lo = c * 0.75 - 0.1, t = Math.min(1, Math.max(0, (n - lo) / 0.25));
+    return k < t * t * (3 - 2 * t);
+  }
 
   // ---- Mix: a weight per ticked kind (1-10), how often each one is used in random choices (Beech 3,
   // Birch 1: three beeches for one birch). Remembered in this browser.
@@ -170,12 +190,12 @@ export function createPlant(ed) {
   // ---- Presets: kinds with their weights and the scatter settings, by name. Built-in ones for common
   // looks, and your own (kept in this browser). Kinds the game does not have are left out on loading.
   const BUILT_IN = [
-    { name: 'Meadows woods', kinds: { Beech1: 4, Birch1: 1, Birch2: 1, Oak1: 1, Bush01: 2 }, density: 3, spacing: 4, smin: 80, smax: 120, tilt: 3 },
-    { name: 'Black forest', kinds: { FirTree: 3, Pinetree_01: 3, FirTree_big: 1, Bush01: 1 }, density: 4, spacing: 3.5, smin: 80, smax: 130, tilt: 2 },
+    { name: 'Meadows woods', kinds: { Beech1: 4, Birch1: 1, Birch2: 1, Oak1: 1, Bush01: 2 }, density: 3, spacing: 4, smin: 80, smax: 120, tilt: 3, clump: 50, patch: 35 },
+    { name: 'Black forest', kinds: { FirTree: 3, Pinetree_01: 3, FirTree_big: 1, Bush01: 1 }, density: 4, spacing: 3.5, smin: 80, smax: 130, tilt: 2, clump: 30, patch: 40 },
     { name: 'Swamp', kinds: { SwampTree1: 3, SwampTree2: 1 }, density: 2, spacing: 5, smin: 80, smax: 120, tilt: 4 },
-    { name: 'Berry patch', kinds: { RaspberryBush: 2, BlueberryBush: 1 }, density: 6, spacing: 3, smin: 90, smax: 110, tilt: 0 },
+    { name: 'Berry patch', kinds: { RaspberryBush: 2, BlueberryBush: 1 }, density: 6, spacing: 3, smin: 90, smax: 110, tilt: 0, clump: 70, patch: 15 },
     { name: 'Forest floor', kinds: { Pickable_Branch: 3, Pickable_Stone: 2, Pickable_Mushroom: 1, Pickable_Dandelion: 1 }, density: 2, spacing: 3, smin: 100, smax: 100, tilt: 0 },
-    { name: 'Meadows rocks', kinds: { Rock_3: 2, Rock_4: 1, Rock_7: 1 }, density: 1, spacing: 6, smin: 60, smax: 140, tilt: 10 },
+    { name: 'Meadows rocks', kinds: { Rock_3: 2, Rock_4: 1, Rock_7: 1 }, density: 1, spacing: 6, smin: 60, smax: 140, tilt: 10, clump: 40, patch: 25 },
   ];
   let own = readList('plantPresets');
   function fillPresets() {
@@ -195,7 +215,7 @@ export function createPlant(ed) {
     chosen = new Set(kinds.map(([n]) => n));
     for (const [n, w] of kinds) weights.set(n, w);
     saveWeights();
-    setInput('plDensity', p.density); setInput('plSpacing', p.spacing); setInput('plSmin', p.smin); setInput('plSmax', p.smax); setInput('plTilt', p.tilt); setInput('plRandomYaw', p.randomYaw ?? true);
+    setInput('plDensity', p.density); setInput('plSpacing', p.spacing); setInput('plSmin', p.smin); setInput('plSmax', p.smax); setInput('plTilt', p.tilt); setInput('plRandomYaw', p.randomYaw ?? true); setInput('plClump', p.clump ?? 0); setInput('plPatch', p.patch ?? 30);
     mixKey = ''; chosenChanged();
     const left = Object.keys(p.kinds).length - kinds.length;
     ed.msg(`Preset ${p.name}: ${kinds.map(([n, w]) => `${n} ${w}`).join(', ')}${left ? ` (${left} kind(s) this world cannot place left out)` : ''}.`);
@@ -211,7 +231,7 @@ export function createPlant(ed) {
     if (!chosen.size) { ed.msg('Tick one or more kinds first.', true); return; }
     const name = (prompt('Name of the preset:', '') ?? '').trim();
     if (!name) return;
-    const p = { name, kinds: Object.fromEntries([...chosen].map(n => [n, weightOf(n)])), density: v('plDensity'), spacing: v('plSpacing'), smin: v('plSmin'), smax: v('plSmax'), tilt: v('plTilt'), randomYaw: $('plRandomYaw').checked };
+    const p = { name, kinds: Object.fromEntries([...chosen].map(n => [n, weightOf(n)])), density: v('plDensity'), spacing: v('plSpacing'), smin: v('plSmin'), smax: v('plSmax'), tilt: v('plTilt'), randomYaw: $('plRandomYaw').checked, clump: v('plClump'), patch: v('plPatch') };
     own = [...own.filter(x => x.name !== name), p].sort((a, b) => a.name.localeCompare(b.name));
     writeList('plantPresets', own); fillPresets();
     $('plPreset').value = `own:${name}`; $('plPresetDel').disabled = false;
@@ -308,6 +328,7 @@ export function createPlant(ed) {
     if (gx < 1 || gz < 1 || gx > W - 2 || gz > H - 2) return null;
     if (!ed.mask(Math.round(gz) * W + Math.round(gx))) return null;
     // One at a time: you pick the spot, so only an object right on top (0.3 m) blocks it.
+    if ((mode === 'brush' || mode === 'zone') && !clumpKeeps(gx, gz, d.k ?? 0)) return null;
     const name = pickName(names, d.t);
     if (!free(hash, cell, gx, gz, Math.max(minDist ?? ($('plSingle').checked ? 0.3 : v('plSpacing')), growNeed(name)))) return null;
     const y = heightAt(gx, gz);
@@ -316,7 +337,7 @@ export function createPlant(ed) {
     return { name, x: ed.originX + gx, y: y - 0.05, z: ed.originZ + gz,
       rx: d.rx * tilt, ry: (yaw != null ? yaw : $('plRandomYaw').checked ? d.ry * 360 : 0) + rotation(), rz: d.rz * tilt, scale: smin + d.s * (smax - smin), gx, gz };
   }
-  const draw = () => ({ t: Math.random(), rx: Math.random() * 2 - 1, ry: Math.random(), rz: Math.random() * 2 - 1, s: Math.random() });
+  const draw = () => ({ t: Math.random(), k: Math.random(), rx: Math.random() * 2 - 1, ry: Math.random(), rz: Math.random() * 2 - 1, s: Math.random() });
 
   // ---- Preview: the objects one click would place under the cursor, drawn as see-through ghosts.
   // The layout (offsets from the cursor) stays the same while the cursor moves; R shuffles it.
@@ -688,7 +709,8 @@ export function createPlant(ed) {
   });
   function syncFill() {
     $('plSingle').closest('label').hidden = mode !== 'brush';
-    for (const id of ['plDensity', 'plSpacing']) $(id).closest('label').hidden = mode !== 'brush' && mode !== 'zone';
+    for (const id of ['plDensity', 'plSpacing', 'plClump']) $(id).closest('label').hidden = mode !== 'brush' && mode !== 'zone';
+    syncLabels();
     $('plCellRow').hidden = mode !== 'grid';
     drawShape(); updatePreview();
   }
@@ -860,7 +882,7 @@ export function createPlant(ed) {
       updatePreview();
     },
     key(e) {
-      if (e.key.toLowerCase() === 'r' && !e.ctrlKey) { makePattern(); updatePreview(); return true; }
+      if (e.key.toLowerCase() === 'r' && !e.ctrlKey) { makePattern(); clumpSeed = Math.random() * 1000; updatePreview(); return true; }
       if (e.key === ',' || e.key === '<' || e.key === '.' || e.key === '>') { turn((e.key === ',' || e.key === '<' ? -1 : 1) * ed.turnStep(e)); return true; }
       return false;
     }
@@ -926,7 +948,7 @@ export function createPlant(ed) {
     },
     key(e) {
       const k = e.key.toLowerCase();
-      if (k === 'r' && !e.ctrlKey) { draws.length = 0; scatterSeed++; updatePreview(); return true; }
+      if (k === 'r' && !e.ctrlKey) { draws.length = 0; scatterSeed++; clumpSeed = Math.random() * 1000; updatePreview(); return true; }
       if (e.key === 'Enter') { placeShape(); return true; }
       if (e.key === 'Escape' && (linePts.length || gridA || figA)) { clearShape(); return true; }
       if (e.key === 'Backspace' && pointed() && linePts.length) { removeLastPoint(); return true; }
@@ -945,7 +967,7 @@ export function createPlant(ed) {
     r = ((r + 180) % 360 + 360) % 360 - 180;
     $('plRot').value = r; syncLabels(); updatePreview();
   }
-  $('plNewLayout').onclick = () => { makePattern(); draws.length = 0; scatterSeed++; updatePreview(); };
+  $('plNewLayout').onclick = () => { makePattern(); draws.length = 0; scatterSeed++; clumpSeed = Math.random() * 1000; updatePreview(); };
   ['plRot', 'plRandomYaw', 'plSingle', 'plGrow'].forEach(id => $(id).addEventListener('input', () => updatePreview()));
   try { $('plGrow').checked = localStorage.getItem('plantGrowRoom') !== '0'; $('plAlong').checked = localStorage.getItem('plantAlong') !== '0'; } catch { }
   $('plAlong').addEventListener('change', () => { try { localStorage.setItem('plantAlong', $('plAlong').checked ? '1' : '0'); } catch { } });

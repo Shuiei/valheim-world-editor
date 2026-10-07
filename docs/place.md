@@ -14,7 +14,7 @@ green dot.
 | **Search** | Filters the list by name (oak, rock, turnip…). |
 | **Untick all** | Unticks every kind. |
 | **Weights** | With two or more kinds ticked, a slider per kind (1–10) sets how often it is used, with its share: Beech 3, Birch 1 gives three beeches for one birch. Remembered in this browser. |
-| **Preset** | Loads a mix: its kinds with their weights, and its Density, Spacing, Size, Tilt and facing. Built in: Meadows woods, Black forest, Swamp, Berry patch, Forest floor, Meadows rocks. Kinds a world cannot place are left out. |
+| **Preset** | Loads a mix: its kinds with their weights, and its Density, Spacing, Clumping, Size, Tilt and facing. Built in: Meadows woods, Black forest, Swamp, Berry patch, Forest floor, Meadows rocks. Kinds a world cannot place are left out. |
 | **Save as preset…** / **Delete** | Saves the ticked kinds, weights and those settings under a name (kept in this browser); Delete removes one of yours. |
 | **Pick** | Eyedropper: click an object in the world to place only its kind. **Shift + click** adds it to the ticked kinds instead. Esc cancels. |
 | **Favourites** | Click the ☆ after a kind in the list to star it; starred kinds show as buttons above the list. |
@@ -74,6 +74,8 @@ tool, Flatten).
 | **Size** (brush) | Brush | Brush radius (m). |
 | **Density** | Brush, Zone | Objects per 100 m². |
 | **Spacing** | Brush, Zone | Minimum distance between objects (m), also from objects already there. |
+| **Clumping** | Brush, Zone | Gathers the objects in groves with clearings between them, following a noise pattern fixed to the world (so strokes next to each other match). 0 %: an even spread; the higher, the fewer and smaller the groves. **New layout** (`R`) moves them. |
+| **Patch size** | Brush, Zone (with Clumping) | How big the groves and clearings are (m). |
 | **Size** min / max (%) | All | Each object gets a random size between the two, in % of its normal size. |
 | **Tilt** | All | Random lean of each object, up to this many degrees. |
 | **Rotation** | All | Turns the preview layout and every object's facing (degrees). `,` `.` or Alt + wheel change it by 1° (Shift: 15°). |

@@ -1105,6 +1105,34 @@ test('Place mix: weights decide how often each kind is used; presets load and sa
   noErrors();
 });
 
+test('Place clumping: groves and clearings instead of an even spread', async () => {
+  await openEditor();
+  await page().evaluate(() => localStorage.setItem('plantChosen', '["Beech1"]'));
+  await openEditor();
+  const c = (await records()).find(r => r.name === 'piece_chest_wood');
+  await lookAt(page(), c.x + 30, c.z + 30, 0, 90, 0.01);
+  await page().keyboard.press('t'); await sleep(300);
+  await page().click('#plModes [data-m="zone"]');
+  await page().$eval('#plDensity', e => { e.value = 4; e.dispatchEvent(new Event('input')); });
+  await page().$eval('#plSpacing', e => { e.value = 2; e.dispatchEvent(new Event('input')); });
+  assert.ok(await page().$eval('#plPatchRow', e => e.hidden), 'Patch size hidden while Clumping is 0');
+  for (const [dx, dz] of [[5, 5], [55, 5], [55, 55], [5, 55]]) { const [x, y] = await screenOf(page(), c.x + dx, c.z + dz); await page().mouse.click(x, y); await sleep(150); }
+  const even = (await page().evaluate(() => window.__plantPreview())).length;
+  await page().$eval('#plClump', e => { e.value = 80; e.dispatchEvent(new Event('input')); });
+  await page().$eval('#plPatch', e => { e.value = 20; e.dispatchEvent(new Event('input')); });
+  assert.ok(!(await page().$eval('#plPatchRow', e => e.hidden)), 'Patch size shown');
+  const pts = await page().evaluate(() => window.__plantPreview().map(o => [o.gx, o.gz]));
+  assert.ok(pts.length > 0 && pts.length < even * 0.6, `fewer objects, in patches (${pts.length} of ${even})`);
+  // Patches: the 10 m squares are far from evenly filled (some full, some empty).
+  const cells = new Map();
+  for (const [x, z] of pts) { const k = `${Math.floor(x / 10)},${Math.floor(z / 10)}`; cells.set(k, (cells.get(k) ?? 0) + 1); }
+  const empty = 25 - cells.size;
+  assert.ok(empty >= 5, `clearings: ${empty} of the 25 squares are empty`);
+  await page().$eval('#plClump', e => { e.value = 0; e.dispatchEvent(new Event('input')); });
+  await page().keyboard.press('Escape');
+  noErrors();
+});
+
 test('Worlds goes back to the start page', async () => {
   await page().goto(t.base + '/index.html', { waitUntil: 'networkidle0' });
   await page().click('#worldsBtn');
