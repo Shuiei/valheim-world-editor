@@ -40,6 +40,7 @@ export function createPlant(ed) {
       <div class="hint">Click points around the zone, or hold and drag to draw it freely; the shape closes by itself. Then drag a point to move it, drag the outline to add a point, Ctrl + click a point to remove it; Backspace removes the last point. <kbd>,</kbd> <kbd>.</kbd> or Alt+wheel turn it. Objects go at random spots inside (Density, Spacing); for a regular grid use Grid.</div>
     </div>
     <label class="field" id="plCellRow" hidden title="Space between objects, centre to centre">Spacing <input id="plCell" type="range" min="1" max="30" step="0.5" value="4"><span id="plCellV"></span></label>
+    <div class="hint" id="plFitHint" hidden style="color:var(--text)"><span></span> <button id="plFit" class="mini" title="Set the spacing to the widest ticked kind, so they stand side by side without overlapping">fit</button></div>
     <div id="plGridBox" hidden>
       <div class="hint">Drag a box on the ground; one object goes in the middle of each cell. <kbd>,</kbd> <kbd>.</kbd> or Alt+wheel turn it.</div>
     </div>
@@ -617,7 +618,44 @@ export function createPlant(ed) {
   }
   $('plPlace').onclick = placeShape; $('plClearShape').onclick = clearShape; $('plUndoPt').onclick = removeLastPoint;
 
+  // ---- How wide each kind is, seen from above (its model's box at the largest Size), to warn when the
+  // spacing makes them overlap: a 3 m blueberry bush every metre is one big hedge, not rows.
+  const widths = new Map();   // name -> metres (null: no model)
+  const bb = new THREE.Box3(), pb = new THREE.Box3(), bs = new THREE.Vector3();
+  function widthOf(name) {
+    if (widths.has(name)) return widths.get(name);
+    widths.set(name, null);
+    ed.pieceModel(name).then(parts => {
+      if (!parts?.length) return;
+      bb.makeEmpty();
+      for (const part of parts) { if (!part.geometry.boundingBox) part.geometry.computeBoundingBox(); bb.union(pb.copy(part.geometry.boundingBox).applyMatrix4(part.matrix)); }
+      bb.getSize(bs);
+      const rs = parts.rootScale ?? [1, 1, 1];
+      widths.set(name, Math.max(bs.x * rs[0], bs.z * rs[2]));
+      fitHint();
+    }).catch(() => {});
+    return null;
+  }
+  // The spacing slider of the current mode: centre to centre (Grid, Line) or the least distance (Brush, Zone).
+  const spacingInput = () => mode === 'grid' ? 'plCell' : mode === 'line' ? ($('plSnap').checked ? null : 'plEvery') : 'plSpacing';
+  function widest() {
+    let w = 0, who = null;
+    for (const n of chosen) { const x = widthOf(n); if (x != null && x > w) { w = x; who = n; } }
+    return { w: w * Math.max(v('plSmin'), v('plSmax')) / 100, who };
+  }
+  function fitHint() {
+    const id = spacingInput(), { w, who } = widest();
+    const over = ed.tool === 'plant' && id && who && w > v(id) + 0.25;
+    $('plFitHint').hidden = !over;
+    if (over) $('plFitHint').querySelector('span').textContent = `${who} is about ${w.toFixed(1)} m wide: ${v(id)} m apart they overlap.`;
+  }
+  $('plFit').onclick = () => {
+    const id = spacingInput(), { w } = widest();
+    if (!id || !w) return;
+    const el = $(id); el.value = Math.min(+el.max, Math.ceil(w * 2) / 2); el.dispatchEvent(new Event('input'));
+  };
   function updatePreview() {
+    fitHint();
     const shaped = mode !== 'brush';
     const show = ed.tool === 'plant' && !stroke && (shaped || !held.shift) && chosen.size > 0 && (shaped || at);
     ghostGroup.visible = show;
@@ -830,6 +868,7 @@ export function createPlant(ed) {
   // For automated tests: what the preview would place.
   window.__plantPreview = () => preview.map(o => ({ ...o }));
   window.__plantLine = () => linePts.map(p => ({ gx: p.gx, gz: p.gz }));
+  window.__plantWidth = (name, w) => { widths.set(name, w); updatePreview(); };
   ed.frame ??= [];
   ed.frame.push(step);
 }
