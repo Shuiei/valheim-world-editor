@@ -121,7 +121,9 @@ public class SaveTests
 		var c = again.Objects.Single(o => o.Prefab == copy.Prefab && Vector3.Distance(o.Position, copy.Position) < 0.01f);
 		Assert.Equal(90f, c.Rotation.Y, 0);
 		Assert.Equal(1.2f, c.Scale.X, 2);
-		Assert.Contains(again.Objects, o => o.Prefab == blank.Prefab && Vector3.Distance(o.Position, blank.Position) < 0.01f);
+		// A sapling is placed with the cultivator: with a builder chosen it is a player-built piece.
+		Assert.Contains(again.Objects.Select(o => (o.Prefab, o.Position)).Concat(again.Pieces.Select(p => (p.Prefab, p.Position))),
+			o => o.Prefab == blank.Prefab && Vector3.Distance(o.Position, blank.Position) < 0.01f);
 	}
 
 	[Fact]

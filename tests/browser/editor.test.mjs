@@ -989,6 +989,14 @@ test('Place tool: named Place, the sapling option only shows for saplings and cr
   await page().waitForFunction(() => !document.getElementById('plGrowRow').hidden);
   await page().click('#plList input[value="sapling_turnip"]');
   assert.ok(await page().$eval('#plGrowRow', e => e.hidden), 'hidden again once the sapling is unticked');
+  // Grown crops and trees from saplings too; bushes (nothing grows them) not.
+  for (const [kind, want] of [['Pickable_Carrot', true], ['Beech1', true], ['BlueberryBush', false]]) {
+    await page().evaluate(k => { localStorage.setItem('plantChosen', JSON.stringify([k])); }, kind);
+    await page().$eval('#plSearch', (e, k) => { e.value = k; e.dispatchEvent(new Event('input')); }, kind);
+    await page().click('#plNone');
+    await page().click(`#plList input[value="${kind}"]`);
+    assert.equal(!(await page().$eval('#plGrowRow', e => e.hidden)), want, kind);
+  }
   noErrors();
 });
 
@@ -1011,6 +1019,34 @@ test('placed objects follow the View switches', async () => {
   await page().$eval('[data-show="trees"]', e => { e.checked = true; e.dispatchEvent(new Event('change')); });
   assert.ok(await shown(), 'shown again');
   await page().click('#undo'); await sleep(800);
+  noErrors();
+});
+
+test('Place zone: Ctrl + click removes a point, drag moves one, Remove last point', async () => {
+  await openEditor();
+  await page().evaluate(() => localStorage.setItem('plantChosen', '["Beech1"]'));
+  await openEditor();
+  const c = (await records()).find(r => r.name === 'piece_chest_wood');
+  await lookAt(page(), c.x - 20, c.z + 20, 0, 45, 30);
+  await page().keyboard.press('t'); await sleep(300);
+  await page().click('#plModes [data-m="zone"]');
+  const pts = () => page().evaluate(() => window.__plantLine());
+  for (const [dx, dz] of [[-28, 14], [-12, 14], [-12, 28], [-28, 28]]) { const [x, y] = await screenOf(page(), c.x + dx, c.z + dz); await page().mouse.click(x, y); await sleep(150); }
+  assert.equal((await pts()).length, 4);
+  assert.ok(!(await page().$eval('#plUndoRow', e => e.hidden)), 'Remove last point shown');
+  // Ctrl + click on the second point removes it.
+  { const [x, y] = await screenOf(page(), c.x - 12, c.z + 14); await page().keyboard.down('Control'); await page().mouse.click(x, y); await page().keyboard.up('Control'); await sleep(150); }
+  const left = await pts();
+  assert.equal(left.length, 3, 'one point removed');
+  // Drag the first point 4 m east.
+  { const [x, y] = await screenOf(page(), c.x - 28, c.z + 14), [x2, y2] = await screenOf(page(), c.x - 24, c.z + 14);
+    await page().mouse.move(x, y); await page().mouse.down(); await page().mouse.move(x2, y2, { steps: 6 }); await page().mouse.up(); await sleep(150); }
+  const moved = await pts();
+  assert.equal(moved.length, 3, 'a drag adds no point');
+  assert.ok(Math.abs(moved[0].gx - left[0].gx - 4) < 1, `the point moved (${(moved[0].gx - left[0].gx).toFixed(2)} m)`);
+  await page().click('#plUndoPt');
+  assert.equal((await pts()).length, 2, 'the last point removed');
+  await page().keyboard.press('Escape');
   noErrors();
 });
 

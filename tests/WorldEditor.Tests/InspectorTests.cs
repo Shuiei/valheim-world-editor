@@ -258,6 +258,14 @@ public class BuilderTests
 	}
 
 	[Fact]
+	public void GrownCropsAndTreesKeepTheirSaplingsGrowRadius()
+	{
+		Assert.Equal(0.5f, TerrainEditor.Terrain.PrefabCatalog.GrownFrom["Pickable_Carrot"].Radius);
+		Assert.Equal("Oak_Sapling", TerrainEditor.Terrain.PrefabCatalog.GrownFrom["Oak1"].Sapling);
+		Assert.False(TerrainEditor.Terrain.PrefabCatalog.GrownFrom.ContainsKey("BlueberryBush"));
+	}
+
+	[Fact]
 	public void ACharacterFileGivesItsNameAndPlayerId()
 	{
 		// ... per-world data, then the name, the player id and an empty start seed.

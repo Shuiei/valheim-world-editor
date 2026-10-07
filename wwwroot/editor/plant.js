@@ -34,17 +34,17 @@ export function createPlant(ed) {
       <label class="field">Wiggle <input id="plWiggle" type="range" min="0" max="5" step="0.25" value="0"><span id="plWiggleV"></span></label>
       <label class="check"><input type="checkbox" id="plAlong" checked> Follow the line (plus the rotation; replaces random facing)</label>
       <label class="check"><input type="checkbox" id="plCurve" checked> Smooth curve through the points</label>
-      <div class="hint" id="plLineHint">Click points along the route, or hold and drag. Backspace removes the last point.</div>
+      <div class="hint" id="plLineHint">Click points along the route, or hold and drag to draw freely. Then drag a point to move it, drag the line to add a point, Ctrl + click a point to remove it; Backspace removes the last point.</div>
     </div>
     <div id="plZoneBox" hidden>
-      <div class="seg" id="plFill"><button data-f="scatter" class="on" title="Random spots, using Density and Spacing">Scatter</button><button data-f="grid" title="One object in the middle of each cell inside the shape">Grid</button></div>
-      <div class="hint">Click points around the zone, or hold and drag to draw it freely; the shape closes by itself. Backspace removes the last point; <kbd>,</kbd> <kbd>.</kbd> or Alt+wheel turn it.</div>
+      <div class="hint">Click points around the zone, or hold and drag to draw it freely; the shape closes by itself. Then drag a point to move it, drag the outline to add a point, Ctrl + click a point to remove it; Backspace removes the last point. <kbd>,</kbd> <kbd>.</kbd> or Alt+wheel turn it. Objects go at random spots inside (Density, Spacing); for a regular grid use Grid.</div>
     </div>
-    <label class="field" id="plCellRow" hidden>Cell <input id="plCell" type="range" min="1" max="30" step="0.5" value="4"><span id="plCellV"></span></label>
+    <label class="field" id="plCellRow" hidden title="Space between objects, centre to centre">Spacing <input id="plCell" type="range" min="1" max="30" step="0.5" value="4"><span id="plCellV"></span></label>
     <div id="plGridBox" hidden>
       <div class="hint">Drag a box on the ground; one object goes in the middle of each cell. <kbd>,</kbd> <kbd>.</kbd> or Alt+wheel turn it.</div>
     </div>
     <div class="row" id="plPlaceRow" hidden><button id="plPlace" class="primary">Place <kbd>Enter</kbd></button><button id="plClearShape">Clear <kbd>Esc</kbd></button></div>
+    <div class="row" id="plUndoRow" hidden><button id="plUndoPt" title="Remove the last point you clicked (Backspace)">Remove last point <kbd>Backspace</kbd></button></div>
     <div class="row"><button id="plNewLayout">New layout <kbd>R</kbd></button></div>
     <div class="hint" id="plPreview" style="color:var(--text)"></div>
     <div class="hint" id="plBrushHint">Density is objects per 100 m². Spacing keeps them apart (also from what is already there). Shift + drag removes the chosen kinds. The Mask applies.</div>`;
@@ -278,7 +278,7 @@ export function createPlant(ed) {
     return null;
   }
   // ---- Line and grid modes: placements follow a drawn line or fill the cells of a box.
-  let mode = 'brush', linePts = [], drawingLine = false, gridA = null, gridB = null, fill = 'scatter';
+  let mode = 'brush', linePts = [], drawingLine = false, gridA = null, gridB = null;
   // Zone mode uses linePts as the outline of a closed shape.
   const pointed = () => mode === 'line' || mode === 'zone';
   // Zone outlines and grid boxes are kept unturned ("local"); xf turns a local point by shapeTurn
@@ -362,21 +362,9 @@ export function createPlant(ed) {
   function shapePlacements(names, hash, cell) {
     const out = [];
     if (mode === 'zone') {
+      // Random spots inside (Density, Spacing); a regular grid is Grid mode's job.
       if (linePts.length < 3) return out;
-      if (fill === 'scatter') {
-        zoneSpots().forEach((q, i) => { const p = xf(q), o = placementAt(p.gx, p.gz, drawAt(i), names, hash, cell, v('plSpacing')); if (o) out.push(o); });
-        return out;
-      }
-      const size = v('plCell');
-      let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity;
-      for (const p of linePts) { x0 = Math.min(x0, p.gx); x1 = Math.max(x1, p.gx); z0 = Math.min(z0, p.gz); z1 = Math.max(z1, p.gz); }
-      let i = 0;
-      for (let gz = z0 + size / 2; gz < z1; gz += size) for (let gx = x0 + size / 2; gx < x1; gx += size) {
-        if (!inside(linePts, gx, gz)) continue;
-        if (i >= MAXSHAPE) return out;
-        const p = xf({ gx, gz }), o = placementAt(p.gx, p.gz, drawAt(i++), names, hash, cell, 0.3);
-        if (o) out.push(o);
-      }
+      zoneSpots().forEach((q, i) => { const p = xf(q), o = placementAt(p.gx, p.gz, drawAt(i), names, hash, cell, v('plSpacing')); if (o) out.push(o); });
       return out;
     }
     if (mode === 'line' && $('plSnap').checked) return snappedLine(names);
@@ -406,11 +394,14 @@ export function createPlant(ed) {
     } else if (mode === 'grid' && gridA && gridB) {
       const size = v('plCell');
       const x0 = Math.min(gridA.gx, gridB.gx), x1 = Math.max(gridA.gx, gridB.gx), z0 = Math.min(gridA.gz, gridB.gz), z1 = Math.max(gridA.gz, gridB.gz);
-      const nx = Math.floor((x1 - x0) / size), nz = Math.floor((z1 - z0) / size);
+      // As many whole cells as fit best (at least one each way), centred in the box: a box a little
+      // short of N cells still gets N.
+      const nx = Math.max(1, Math.round((x1 - x0) / size)), nz = Math.max(1, Math.round((z1 - z0) / size));
+      const ox = (x0 + x1) / 2 - nx * size / 2, oz = (z0 + z1) / 2 - nz * size / 2;
       let i = 0;
       for (let iz = 0; iz < nz; iz++) for (let ix = 0; ix < nx; ix++) {
         if (i >= MAXSHAPE) return out;
-        const p = xf({ gx: x0 + (ix + 0.5) * size, gz: z0 + (iz + 0.5) * size }), o = placementAt(p.gx, p.gz, drawAt(i++), names, hash, cell, 0.3);
+        const p = xf({ gx: ox + (ix + 0.5) * size, gz: oz + (iz + 0.5) * size }), o = placementAt(p.gx, p.gz, drawAt(i++), names, hash, cell, 0.3);
         if (o) out.push(o);
       }
     }
@@ -543,11 +534,18 @@ export function createPlant(ed) {
     return k;
   }
 
-  // A drawn line's points can be dragged (editor/handles.js), like the Path tool's.
+  // The points of a drawn line or zone can be dragged (editor/handles.js), like the Path tool's.
   const lineHandles = createHandles(ed, 0x9fe0ff);
   let dragPt = null;
+  const editable = () => (mode === 'line' && lineShape === 'points') || mode === 'zone';
+  // The points where they are drawn (a zone can be turned: its points are kept unturned).
+  const shownPts = () => mode === 'zone' ? linePts.map(xf) : linePts;
+  // The outline under the mouse, for adding a point: each stretch knows the point it starts from.
+  const outline = () => mode === 'zone' ? (pts => [...pts, pts[0]].map((p, i) => ({ ...p, seg: i })))(shownPts()) : lineCurve();
+  function removeLastPoint() { if (pointed() && linePts.length) { linePts.pop(); drawShape(); updatePreview(); } }
   function drawShape() {
-    lineHandles.draw(linePts, ed.tool === 'plant' && mode === 'line' && lineShape === 'points');
+    lineHandles.draw(shownPts(), ed.tool === 'plant' && editable());
+    $('plUndoRow').hidden = !(ed.tool === 'plant' && pointed() && linePts.length);
     const pts = [];
     if (mode === 'line' && (linePts.length || figA)) {
       const c = linePath();
@@ -577,7 +575,7 @@ export function createPlant(ed) {
     mode = m;
     $('plModes').querySelectorAll('[data-m]').forEach(b => b.classList.toggle('on', b.dataset.m === m));
     $('plLineBox').hidden = m !== 'line'; syncSnap(); $('plGridBox').hidden = m !== 'grid'; $('plZoneBox').hidden = m !== 'zone'; $('plPlaceRow').hidden = m === 'brush'; $('plBrushHint').hidden = m !== 'brush';
-    syncFill();
+    syncFill(); drawShape();
   }
   // End to end: the piece's own length sets the spacing, facing and size are fixed.
   function syncSnap() {
@@ -594,17 +592,14 @@ export function createPlant(ed) {
   $('plLineShape').querySelectorAll('[data-ls]').forEach(b => b.onclick = () => {
     lineShape = b.dataset.ls; clearShape(); syncSnap();
     $('plLineShape').querySelectorAll('[data-ls]').forEach(x => x.classList.toggle('on', x === b));
-    $('plLineHint').textContent = { points: 'Click points along the route, or hold and drag to draw freely. Backspace removes the last point.', circle: 'Press at the centre and drag out to the size; let go to see it, Enter places it. With End to end the size snaps so whole pieces close the ring.', rect: 'Press at one corner and drag to the opposite one; Enter places it. With End to end the sides snap to whole pieces.' }[lineShape];
+    $('plLineHint').textContent = { points: 'Click points along the route, or hold and drag to draw freely. Then drag a point to move it, drag the line to add a point, Ctrl + click a point to remove it; Backspace removes the last point.', circle: 'Press at the centre and drag out to the size; let go to see it, Enter places it. With End to end the size snaps so whole pieces close the ring.', rect: 'Press at one corner and drag to the opposite one; Enter places it. With End to end the sides snap to whole pieces.' }[lineShape];
   });
   function syncFill() {
-    const scatterFill = mode === 'zone' && fill === 'scatter';
-    $('plFill').querySelectorAll('[data-f]').forEach(b => b.classList.toggle('on', b.dataset.f === fill));
     $('plSingle').closest('label').hidden = mode !== 'brush';
-    for (const id of ['plDensity', 'plSpacing']) $(id).closest('label').hidden = mode !== 'brush' && !scatterFill;
-    $('plCellRow').hidden = !(mode === 'grid' || (mode === 'zone' && fill === 'grid'));
+    for (const id of ['plDensity', 'plSpacing']) $(id).closest('label').hidden = mode !== 'brush' && mode !== 'zone';
+    $('plCellRow').hidden = mode !== 'grid';
     drawShape(); updatePreview();
   }
-  $('plFill').querySelectorAll('[data-f]').forEach(b => b.onclick = () => { fill = b.dataset.f; syncFill(); });
   $('plModes').querySelectorAll('[data-m]').forEach(b => b.onclick = () => setMode(b.dataset.m));
   const syncShapeLabels = () => { $('plEveryV').textContent = `${v('plEvery')} m`; $('plWiggleV').textContent = `${v('plWiggle')} m`; $('plCellV').textContent = `${v('plCell')} m`; };
   ['plEvery', 'plWiggle', 'plCell', 'plAlong', 'plCurve'].forEach(id => $(id).addEventListener('input', () => { syncShapeLabels(); drawShape(); updatePreview(); }));
@@ -620,7 +615,7 @@ export function createPlant(ed) {
     ed.msg(`Placed ${added.length} object(s). Ctrl+Z removes them.`);
     updatePreview();
   }
-  $('plPlace').onclick = placeShape; $('plClearShape').onclick = clearShape;
+  $('plPlace').onclick = placeShape; $('plClearShape').onclick = clearShape; $('plUndoPt').onclick = removeLastPoint;
 
   function updatePreview() {
     const shaped = mode !== 'brush';
@@ -749,16 +744,17 @@ export function createPlant(ed) {
       ed.el.setPointerCapture(e.pointerId);
       press = { x: e.clientX, y: e.clientY, hit, drag: false };
       if (mode === 'line' && lineShape !== 'points') { figA = { gx: hit.gx, gz: hit.gz }; figB = null; drawShape(); updatePreview(); return; }
-      // A point of the line: drag it (Ctrl + click removes it); the line between two points: a new point there.
-      if (mode === 'line' && linePts.length) {
-        const at = lineHandles.point(e, linePts);
+      // A point of the line or zone: drag it (Ctrl + click removes it); the outline between two
+      // points: a new point there.
+      if (editable() && linePts.length) {
+        const at = lineHandles.point(e, shownPts());
         if (at >= 0) {
           press = null;
           if (e.ctrlKey) { linePts.splice(at, 1); drawShape(); updatePreview(); return; }
           dragPt = at; return;
         }
-        const seg = linePts.length >= 2 ? lineHandles.segment(e, lineCurve()) : -1;
-        if (seg >= 0) { press = null; linePts.splice(seg + 1, 0, { gx: hit.gx, gz: hit.gz }); dragPt = seg + 1; drawShape(); updatePreview(); return; }
+        const seg = linePts.length >= (mode === 'zone' ? 3 : 2) ? lineHandles.segment(e, outline()) : -1;
+        if (seg >= 0) { press = null; linePts.splice(seg + 1, 0, local(hit)); dragPt = seg + 1; drawShape(); updatePreview(); return; }
       }
       if (mode === 'grid') { gridA = { gx: hit.gx, gz: hit.gz }; gridB = null; shapeTurn = 0; pivot = null; }
     },
@@ -766,8 +762,8 @@ export function createPlant(ed) {
       at = hit; ed.showStatusFor?.(hit);
       if (!hit) return;
       if (press && mode === 'line' && lineShape !== 'points') { figB = { gx: hit.gx, gz: hit.gz }; drawShape(); updatePreview(); return; }
-      if (dragPt != null) { linePts[dragPt] = { gx: hit.gx, gz: hit.gz }; drawShape(); updatePreview(); return; }
-      if (mode === 'line' && !press) ed.el.style.cursor = lineHandles.point(e, linePts) >= 0 ? 'grab' : '';
+      if (dragPt != null) { linePts[dragPt] = local(hit); drawShape(); updatePreview(); return; }
+      if (editable() && !press) ed.el.style.cursor = lineHandles.point(e, shownPts()) >= 0 ? 'grab' : '';
       if (press && !press.drag && Math.hypot(e.clientX - press.x, e.clientY - press.y) > 6) {
         press.drag = true;
         if (pointed()) { const q = local(press.hit); if (!linePts.length || Math.hypot(linePts.at(-1).gx - q.gx, linePts.at(-1).gz - q.gz) > 0.3) linePts.push(q); drawingLine = true; }
@@ -804,7 +800,7 @@ export function createPlant(ed) {
       if (k === 'r' && !e.ctrlKey) { draws.length = 0; scatterSeed++; updatePreview(); return true; }
       if (e.key === 'Enter') { placeShape(); return true; }
       if (e.key === 'Escape' && (linePts.length || gridA || figA)) { clearShape(); return true; }
-      if (e.key === 'Backspace' && pointed() && linePts.length) { linePts.pop(); drawShape(); updatePreview(); return true; }
+      if (e.key === 'Backspace' && pointed() && linePts.length) { removeLastPoint(); return true; }
       if (turnable() && (e.key === ',' || e.key === '<' || e.key === '.' || e.key === '>')) { turnShape((e.key === ',' || e.key === '<' ? -1 : 1) * ed.turnStep(e)); return true; }
       return brush.key(e);
     }

@@ -30,15 +30,16 @@ dots in the preview.
 |---|---|
 | **Brush** | The preview follows the cursor. A **click** places exactly what the preview shows; a **drag** keeps adding objects under the brush. **Shift + drag** removes the ticked kinds under the brush. |
 | **Line** | Click points along a route (or hold and drag), or draw a **Circle** or a **Rectangle**. Objects go every *N* metres along it, or **end to end** like the game's hammer snaps them. |
-| **Grid** | Drag a box. One object goes in the middle of each cell. |
-| **Zone** | Click points around a zone (or hold and drag to draw it freely); it closes by itself. Fill it by **Scatter** (random spots) or **Grid** (one per cell). |
+| **Grid** | Drag a box. One object goes in the middle of each cell; the box gets as many whole cells as fit best (at least one), centred in it. |
+| **Zone** | Click points around a zone (or hold and drag to draw it freely); it closes by itself. Drag a point to move it, drag the outline to add a point, **Ctrl + click** a point to remove it. Objects go at random spots inside it (**Density**, **Spacing**). |
 
 In Line, Grid and Zone, press **Place** (`Enter`, or double-click the last point of a line or
-zone); **Clear** (`Esc`) removes the shape, **Backspace** removes the last point.
+zone); **Clear** (`Esc`) removes the shape, **Remove last point** (`Backspace`) takes back the last
+point you clicked.
 
 ![Line mode](images/plant-line.jpg)
 ![Grid mode, turned 15°](images/plant-grid.jpg)
-![Zone mode with a grid fill](images/plant-zone.jpg)
+![Zone mode](images/plant-zone.jpg)
 
 ## Fences and walls: end to end
 
@@ -68,20 +69,19 @@ tool, Flatten).
 | Control | Modes | What it does |
 |---|---|---|
 | **Size** (brush) | Brush | Brush radius (m). |
-| **Density** | Brush, Zone scatter | Objects per 100 m². |
-| **Spacing** | Brush, Zone scatter | Minimum distance between objects (m), also from objects already there. |
+| **Density** | Brush, Zone | Objects per 100 m². |
+| **Spacing** | Brush, Zone | Minimum distance between objects (m), also from objects already there. |
 | **Size** min / max (%) | All | Each object gets a random size between the two, in % of its normal size. |
 | **Tilt** | All | Random lean of each object, up to this many degrees. |
 | **Rotation** | All | Turns the preview layout and every object's facing (degrees). `,` `.` or Alt + wheel change it by 1° (Shift: 15°). |
 | **Random facing** | All | On: each object faces a random direction. Off: they all face the Rotation. |
 | **One at a time** | Brush | Places one object exactly under the cursor per click; only an object right on that spot blocks it. |
-| **Leave saplings and crops room to grow** | All, only shown when a sapling or crop is ticked | Keeps saplings and crops at least their in-game grow radius (0.5 m for crops, 2–3 m for tree saplings) away from everything, including each other, so they can grow. Off: place them as tightly as you like. |
+| **Leave saplings and crops room to grow** | All, only shown when a sapling, a crop or a tree that grows from one is ticked | Keeps saplings and crops at least their in-game grow radius (0.5 m for crops, 2–3 m for tree saplings) away from everything, including each other, so they can grow. Grown crops (Pickable_Carrot...) and trees that grow from saplings (Beech1, Oak1...) keep the room their sapling needs, like a planted field or orchard. Bushes do not grow from anything in the game: use **Spacing** for them. Off: place them as tightly as you like. |
 | **Every** | Line | Distance between two objects along the line (m). |
 | **Wiggle** | Line | Random sideways offset from the line, up to this many metres. |
 | **Follow the line** | Line | On (the default): each object follows the line (plus the Rotation): a piece lies along it, end to end, other kinds face along it. Off: random facing. Circles and rectangles always follow their outline. |
 | **Smooth curve through the points** | Line | A smooth curve instead of straight segments. |
-| **Scatter** / **Grid** | Zone | How the zone is filled. |
-| **Cell** | Grid, Zone grid | Size of each cell (m). |
+| **Spacing** | Grid | Space between objects, centre to centre (m): the size of each cell. |
 | **Place** (`Enter`) | Line, Grid, Zone | Places what the preview shows. |
 | **Clear** (`Esc`) | Line, Grid, Zone | Removes the drawn shape. |
 | **New layout** (`R`) | All | New random positions, kinds, sizes and facings for the preview. |
@@ -95,7 +95,7 @@ objects' facing) instead of only the facing.
 - **The Mask** applies (biome, height, slope, paint).
 - **Crops need cultivated ground** in the game. When a ticked crop needs it, the panel says so:
   paint the ground with **Cultivate** first.
-- In Line, Grid and Zone (grid) modes, existing objects do not block placement, only an object right
+- In Line and Grid modes, existing objects do not block placement, only an object right
   on the spot (0.3 m), so you cannot place the same pattern twice by accident.
 - New objects are fresh: for a kind the world already has, a copy of one with nothing unique kept
   (no contents, no health); for a kind it does not have, a new object exactly like the game makes

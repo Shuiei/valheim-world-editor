@@ -4,6 +4,22 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v0.26.2 — 2026-10-07 (editable zone points)
+
+### Added
+- **Place tool, Zone**: drag a point to move it, drag the outline to add a point, Ctrl + click a
+  point to remove it (as with lines). The hints above Place say how, for lines too.
+- **Remove last point** button (Zone and Line), the same as Backspace.
+
+### Changed
+- **Leave saplings and crops room to grow** also shows for grown crops (Pickable_Carrot...) and for
+  trees that grow from saplings (Beech1, Oak1...): they keep the room their sapling needs (read
+  from the game's saplings).
+- **Zone** fills at random only: its Scatter / Grid choice is gone, Grid mode makes grids.
+- **Grid** gets as many whole cells as fit best in the box you drag (at least one), centred: a box
+  a little short of N cells used to lose a row, a small box got nothing. Its **Cell** slider is now
+  called **Spacing** (space between objects).
+
 ## v0.26.1 — 2026-10-07 (placed objects follow View, chip toggles, Nobody builds)
 
 ### Changed
