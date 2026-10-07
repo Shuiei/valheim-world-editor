@@ -4,6 +4,18 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v0.26.1 — 2026-10-07 (placed objects follow View, chip toggles, Nobody builds)
+
+### Changed
+- Objects you placed follow the View switches like the others (before, they stayed shown until
+  saved): switching off Trees & logs hides the trees you just planted too.
+- A click on a **Favourite** or **Recent** kind ticks or unticks it (before, it placed only that
+  kind, which Shift + click now does), and each row has **all** / **none**.
+
+### Added
+- **Untick all** in the Place tool, next to Pick.
+- **Nobody (not player built)** in Built by: places pieces without a builder.
+
 ## v0.26.0 — 2026-10-07 (Place tool)
 
 ### Changed

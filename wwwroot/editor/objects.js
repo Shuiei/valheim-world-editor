@@ -47,16 +47,22 @@ export function createObjects(ed) {
     return place.compose(pos, q, sc);
   }
 
-  // Objects added in the editor are drawn in their own group, shown whatever the View switches say,
-  // so newly placed bushes or pickables never vanish and get placed twice.
-  function groupFor(kind, isNew) { return isNew ? ed.newGroup : kind === 'buildings' ? ed.buildings : ed.objectGroups[kind]; }
+  // Objects added in the editor are drawn in their own groups (one per kind, inside ed.newGroup, so
+  // they can carry their green markers and see-through look apart), and follow the View switches like
+  // the others: placing a kind that is switched off switches it on (ed.ensureShown).
+  const newGroups = {};
+  function newGroupFor(kind) {
+    if (!newGroups[kind]) { const g = new THREE.Group(); g.userData.kind = kind; g.visible = ed.isShown?.(kind) ?? true; ed.newGroup.add(g); newGroups[kind] = g; }
+    return newGroups[kind];
+  }
+  function groupFor(kind, isNew) { return isNew ? newGroupFor(kind) : kind === 'buildings' ? ed.buildings : ed.objectGroups[kind]; }
 
   // Green markers on new objects that are not saved / applied yet.
   const markers = new THREE.Points(new THREE.BufferGeometry(), new THREE.PointsMaterial({ color: 0x5dff8a, size: 9, sizeAttenuation: false, depthTest: false }));
   markers.renderOrder = 22; markers.frustumCulled = false; ed.newGroup.add(markers);
   function refreshMarkers() {
     const pts = [];
-    for (const r of records.values()) if (r.added && !r.deleted && !r.applied) pts.push(new THREE.Vector3(r.x - ed.originX - ed.cx, r.y + 0.4, -(r.z - ed.originZ - ed.cz)));
+    for (const r of records.values()) if (r.added && !r.deleted && !r.applied && newGroups[r.kind]?.visible !== false) pts.push(new THREE.Vector3(r.x - ed.originX - ed.cx, r.y + 0.4, -(r.z - ed.originZ - ed.cz)));
     markers.geometry.setFromPoints(pts);
   }
 
@@ -201,5 +207,5 @@ export function createObjects(ed) {
   // Placement matrix (three.js space) of a record-like { x, y, z, rx, ry, rz, scale }, for previews.
   const matrixFor = (r, rootScale, out) => out.copy(placement(r, rootScale));
 
-  return { records, load, add, flush, counts, addPieceRecord, markDeleted, alive, creatableTypes, state, stableHash, matrixFor, markApplied, reserveId, adopt };
+  return { records, load, add, flush, counts, addPieceRecord, markDeleted, alive, creatableTypes, state, stableHash, matrixFor, markApplied, reserveId, adopt, newGroups, refreshMarkers };
 }

@@ -1131,6 +1131,9 @@ function syncShow() {
   const on = k => document.querySelector(`[data-show="${k}"]`).checked;
   buildings.visible = on('buildings');
   for (const [k, g] of Object.entries(objectGroups)) g.visible = on(k);
+  // Objects placed in the editor follow the same switches.
+  for (const [k, g] of Object.entries(objects.newGroups)) g.visible = on(k);
+  objects.refreshMarkers();
   border.visible = on('borders');
   markers.visible = on('markers');
   syncLook();
@@ -1139,8 +1142,8 @@ function syncShow() {
 const defaults = Object.fromEntries([...document.querySelectorAll('[data-show]')].map(c => [c.dataset.show, c.checked]));
 const saved = readShow();
 document.querySelectorAll('[data-show]').forEach(c => { if (c.dataset.show in saved) c.checked = !!saved[c.dataset.show]; c.addEventListener('change', syncShow); });
-// Placing a kind that is switched off: switch it on, so what was placed is still shown after a reload
-// (new objects are drawn whatever the switches say, saved ones follow them).
+// Placing a kind that is switched off: switch it on, so what was just placed is shown.
+ed.isShown = k => document.querySelector(`[data-show="${k}"]`)?.checked ?? true;
 ed.ensureShown = kinds => {
   const turned = [];
   for (const k of new Set(kinds)) {
@@ -1483,7 +1486,7 @@ function pickEntity(e) {
   const r = el.getBoundingClientRect();
   pickMouse.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
   pickRay.setFromCamera(pickMouse, camera);
-  const groups = [buildings, newGroup, ...Object.values(objectGroups)].filter(g => g.visible);
+  const groups = [buildings, ...Object.values(objects.newGroups), ...Object.values(objectGroups)].filter(g => g.visible);
   const hits = pickRay.intersectObjects(groups, true);
   const terrainHit = pickRay.intersectObject(mesh, false)[0];
   for (const h of hits) {

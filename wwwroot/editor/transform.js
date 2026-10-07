@@ -172,7 +172,7 @@ export function createTransform(ed) {
   const drop = afterCommit(() => {
     const s = begin(); if (!s) return;
     const sel = ed.selection;
-    const groups = [ed.buildings, ed.newGroup, ...Object.values(ed.objectGroups)].filter(g => g.visible);
+    const groups = [ed.buildings, ...Object.values(ed.objects.newGroups), ...Object.values(ed.objectGroups)].filter(g => g.visible);
     let onObjects = 0;
     for (const it of s.items) {
       const p = target(s, it);
