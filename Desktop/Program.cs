@@ -55,6 +55,8 @@ public static class Options
 	public static string? Shot { get; private set; }
 	// Where those results also go (a Windows window app has no console to print to).
 	public static string? Report { get; private set; }
+	// Close after this many seconds, saying where the camera ended up (to check input from a script).
+	public static double QuitAfter { get; private set; }
 
 	public static void Say(string line)
 	{
@@ -67,6 +69,7 @@ public static class Options
 
 	public static void ClearShot() => Shot = null;
 	public static void ClearBench() => Bench = 0;
+	public static void QuitAfterDone() => QuitAfter = 0;
 
 	public static void Parse(string[] args)
 	{
@@ -90,6 +93,9 @@ public static class Options
 					break;
 				case "--shot":
 					Shot = Path.GetFullPath(args[++i]);
+					break;
+				case "--quit-after":
+					QuitAfter = double.Parse(args[++i], System.Globalization.CultureInfo.InvariantCulture);
 					break;
 				case "--report":
 					Report = Path.GetFullPath(args[++i]);

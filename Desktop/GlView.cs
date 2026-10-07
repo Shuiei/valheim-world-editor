@@ -42,9 +42,12 @@ public sealed class GlView : OpenGlControlBase
 	private long _statsAt;
 	public PerfLog? Perf { get; set; }
 
+	// For tests: the camera, and the keys held.
+	internal (float Yaw, float Pitch, float Distance, Vector3 Target) Camera { get { lock (_camLock) { return (_yaw, _pitch, _distance, _target); } } }
+	internal Key[] KeysHeld { get { lock (_keys) { return _keys.ToArray(); } } }
+
 	public GlView()
 	{
-		Focusable = true;
 		var idle = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
 		idle.Tick += (_, _) => RequestNextFrameRendering();
 		idle.Start();
@@ -539,6 +542,16 @@ public sealed class GlView : OpenGlControlBase
 	private readonly List<(long At, double Work)> _bench = new();
 	private unsafe void Automate(long now, int pw, int ph)
 	{
+		if (Options.QuitAfter > 0 && now > Options.QuitAfter * 1000)
+		{
+			lock (_camLock)
+			{
+				Options.Say($"camera: yaw {_yaw:0.000}, pitch {_pitch:0.000}, distance {_distance:0.0}, target {_target.X:0.0} {_target.Y:0.0} {_target.Z:0.0}");
+			}
+			Options.QuitAfterDone();
+			Dispatcher.UIThread.Post(() => (Avalonia.Application.Current?.ApplicationLifetime as Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime)?.Shutdown());
+			return;
+		}
 		if (Options.Shot == null && Options.Bench <= 0)
 		{
 			return;
@@ -649,46 +662,56 @@ public sealed class GlView : OpenGlControlBase
 		_target.Y = Math.Max(s.Heights[gz * s.W + gx], s.Water);
 	}
 
-	protected override void OnKeyDown(KeyEventArgs e)
+	// Mouse and keys. The OpenGL picture is not something Avalonia can hit-test (pointer events go
+	// through it), so a transparent surface laid over the view takes them and hands them here; keys
+	// come from the window, whatever has the focus.
+	public void Attach(Control surface, Window window)
 	{
-		lock (_keys)
+		surface.PointerPressed += (_, e) =>
 		{
-			_keys.Add(e.Key);
-		}
-		Wake();
-		base.OnKeyDown(e);
-	}
-
-	protected override void OnKeyUp(KeyEventArgs e)
-	{
-		lock (_keys)
+			var p = e.GetCurrentPoint(surface);
+			_dragFrom = p.Position;
+			_dragButton = p.Properties.PointerUpdateKind;
+			e.Pointer.Capture(surface);
+			Wake();
+		};
+		surface.PointerReleased += (_, e) =>
 		{
-			_keys.Remove(e.Key);
-		}
-		Wake();
-		base.OnKeyUp(e);
+			_dragFrom = null;
+			e.Pointer.Capture(null);
+			Wake();
+		};
+		surface.PointerMoved += (_, e) => Drag(e.GetPosition(surface));
+		surface.PointerWheelChanged += (_, e) =>
+		{
+			lock (_camLock)
+			{
+				_distance = Math.Clamp(_distance * MathF.Pow(0.88f, (float)e.Delta.Y), 3, 3000);
+			}
+			Wake();
+		};
+		window.KeyDown += (_, e) =>
+		{
+			lock (_keys)
+			{
+				_keys.Add(e.Key);
+			}
+			Wake();
+		};
+		window.KeyUp += (_, e) =>
+		{
+			lock (_keys)
+			{
+				_keys.Remove(e.Key);
+			}
+			Wake();
+		};
+		// Keys held when the window loses the focus would keep moving the camera.
+		window.Deactivated += (_, _) => { lock (_keys) { _keys.Clear(); } };
 	}
 
-	protected override void OnPointerPressed(PointerPressedEventArgs e)
+	private void Drag(Point p)
 	{
-		Focus();
-		var p = e.GetCurrentPoint(this);
-		_dragFrom = p.Position;
-		_dragButton = p.Properties.PointerUpdateKind;
-		e.Pointer.Capture(this);
-		Wake();
-	}
-
-	protected override void OnPointerReleased(PointerReleasedEventArgs e)
-	{
-		_dragFrom = null;
-		e.Pointer.Capture(null);
-		Wake();
-	}
-
-	protected override void OnPointerMoved(PointerEventArgs e)
-	{
-		var p = e.GetPosition(this);
 		if (_dragFrom is Point from)
 		{
 			float dx = (float)(p.X - from.X), dy = (float)(p.Y - from.Y);
@@ -707,15 +730,6 @@ public sealed class GlView : OpenGlControlBase
 				}
 			}
 			_dragFrom = p;
-		}
-		Wake();
-	}
-
-	protected override void OnPointerWheelChanged(PointerWheelEventArgs e)
-	{
-		lock (_camLock)
-		{
-			_distance = Math.Clamp(_distance * MathF.Pow(0.88f, (float)e.Delta.Y), 3, 3000);
 		}
 		Wake();
 	}
