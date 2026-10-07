@@ -17,7 +17,27 @@ public sealed class ModelStore
 {
 	public sealed record Part(string Mesh, int Sub, string Material, Matrix4x4 Matrix);
 	public sealed record Model(string Name, List<Part> Parts, Vector3 RootScale);
-	public sealed record MeshData(float[] Vertices, uint[][] Submeshes);
+	public sealed record MeshData(float[] Vertices, uint[][] Submeshes)
+	{
+		// The mesh's box (its vertices' smallest and largest coordinates).
+		public (Vector3 Min, Vector3 Max) Bounds { get; } = BoundsOf(Vertices);
+
+		private static (Vector3, Vector3) BoundsOf(float[] v)
+		{
+			if (v.Length < 8)
+			{
+				return (Vector3.Zero, Vector3.Zero);
+			}
+			Vector3 min = new(float.MaxValue), max = new(float.MinValue);
+			for (int i = 0; i + 2 < v.Length; i += 8)
+			{
+				var p = new Vector3(v[i], v[i + 1], v[i + 2]);
+				min = Vector3.Min(min, p);
+				max = Vector3.Max(max, p);
+			}
+			return (min, max);
+		}
+	}
 	public sealed record MaterialData(Vector4 Color, string? Map, float Cutoff, bool DoubleSided, Vector4 UvTransform);
 	public sealed record ImageData(int Width, int Height, byte[] Rgba);
 
