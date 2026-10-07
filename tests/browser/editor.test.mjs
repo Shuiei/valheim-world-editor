@@ -498,6 +498,22 @@ test('path: a river digs its bed below sea level (down to the game limit)', asyn
   noErrors();
 });
 
+test('magic select: a double click selects every connected piece, not the others', async () => {
+  await openEditor();
+  const c = (await records()).find(r => r.name === 'piece_chest_wood');
+  const y = await page().evaluate(([x, z]) => { const ed = window.__ed; return ed.sampleHeight(x - ed.originX, z - ed.originZ); }, [c.x - 8, c.z - 12]);
+  // A chain of three touching floors (stand-in boxes are 1.2 m wide), and one apart.
+  const ids = await page().evaluate(async (c, y) => window.__ed.objects.add([0, 1, 2, 5].map(i => ({ name: 'wood_floor', x: c.x - 8 + i, y, z: c.z - 12, rx: 0, ry: 0, rz: 0, scale: 0 }))), c, y);
+  await page().evaluate(() => window.__ed.setTool('select'));
+  await lookAt(page(), c.x - 6, c.z - 12, 0, 12, 10); await sleep(500);
+  const [x, yy] = await screenOf(page(), c.x - 8, c.z - 12, 0.6);
+  await page().mouse.click(x, yy, { clickCount: 1 }); await page().mouse.click(x, yy, { clickCount: 2 }); await sleep(600);
+  const sel = await page().evaluate(() => [...window.__ed.selection]);
+  assert.deepEqual(sel.sort(), ids.slice(0, 3).sort(), 'the three touching floors, not the one apart');
+  await page().evaluate(ids => window.__ed.setDeleted(ids, true), ids);
+  noErrors();
+});
+
 test('undo takes a change back and the counter clears', async () => {
   await openEditor();
   await page().keyboard.press('Escape');

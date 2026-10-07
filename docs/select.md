@@ -16,6 +16,8 @@ replace or delete them. Only objects that are shown can be picked; switch kinds 
 | **Alt + drag** | Draws a zone even when you start over an object (useful in forests, where trees cover the ground). |
 | **Shift + drag** | Adds what is inside the zone to the selection. |
 | **Click on empty ground** / `Esc` | Clears the selection. |
+| **Double-click a building piece** | Selects the whole building: every piece connected to it through pieces that touch (walls, floors, roofs, beams...). Pieces standing apart are not taken. |
+| **Whole building** | Adds every piece connected to the selected pieces. |
 
 ![Drawing a selection zone](images/select-zone-drawing.jpg)
 ![Everything inside selected](images/select-zone.jpg)

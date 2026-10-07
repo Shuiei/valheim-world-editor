@@ -306,6 +306,7 @@ import { createPlant } from './editor/plant.js';
 import { createMeasure } from './editor/measure.js';
 import { createTransform } from './editor/transform.js';
 import { createInspector } from './editor/inspector.js';
+import { createSelecting } from './editor/selecting.js';
 import { applyTips } from './editor/tips.js';
 import { gameLookBanner } from './app.js';
 gameLookBanner();
@@ -981,7 +982,7 @@ const ed = {
   get tool() { return tool; }, setTool: t => setTool(t), get radius() { return radius; }, get strength() { return strength; },
   changed: () => afterUpload?.(),
   handlers: {}, panels: toolPanels, onToolChange: toolChangeHooks, mask: g => 1,
-  pickEntity: e => pickEntity(e), clickSelect: e => clickSelect(e), hoverSelect: e => hoverSelect(e), drawSelection: () => drawSelection(), entityOf: id => entities.get(id),
+  pickEntity: e => pickEntity(e), boxOf: ent => boxOf(ent), clickSelect: e => clickSelect(e), hoverSelect: e => hoverSelect(e), drawSelection: () => drawSelection(), entityOf: id => entities.get(id),
   get selection() { return selection; }, selectIds: ids => { selection.clear(); for (const id of ids) if (entities.has(id)) selection.add(id); drawSelection(); }, clearSelection: () => clearSelection(),
   // Turning step for , . and Alt+wheel everywhere: 1°, or 15° with Shift.
   turnStep: e => e.shiftKey ? 15 : 1, isBrushTool: t => BRUSH_TOOLS.includes(t),
@@ -1001,6 +1002,7 @@ createPlant(ed);
 createMeasure(ed);
 createTransform(ed);
 createInspector(ed);
+createSelecting(ed);
 // Opened from the map's search: select the object (and open the inspector) once it is loaded. Objects
 // and building pieces load separately, so wait for whichever brings it, for a while.
 if (params.get('select')) {

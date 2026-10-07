@@ -40,6 +40,8 @@ version number. Newest first.
   moat, bowl or ridged hill into the ground, or any shape written as a formula.
 - **River / canal** (Path tool): digs a U-shaped bed below sea level with sloped banks, so the sea
   flows in.
+- **Select a whole building** (Select tool, like Axiom's magic select): double-click a piece, or
+  press Whole building, to select every piece connected to it.
 
 ### Fixed
 - A zone reset also removed players' tombstones, with what they carried: they are always kept now.
