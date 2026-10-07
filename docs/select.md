@@ -58,7 +58,7 @@ typed values are exact, so nothing snaps on top of them.
 |---|---|
 | **Delete** (`Del`) | Removes the selected objects. `Ctrl+Z` brings them back. |
 | **Deselect** | Clears the selection. |
-| **Replace** + **go** | Replaces every selected object by the chosen kind, at the same place and facing. |
+| **Replace with** + **Replace the selection** | Replaces every selected object by the chosen kind, at the same place and facing. **pick** fills the list from the world: click an object to use its kind. |
 | `Ctrl+C` | Copies the selection; `Ctrl+V` pastes it with the [paste tool](area.md#copy-and-paste). Copies are new, independent objects (a copied chest is empty). Pasted objects keep their height above the ground where they land. |
 
 ## Inspecting and changing an object's data

@@ -10,7 +10,9 @@ export function createPlant(ed) {
   panel.id = 'plantPanel';
   panel.innerHTML = `
     <div class="seg" id="plModes"><button data-m="brush" class="on" title="Paint under the brush">Brush</button><button data-m="line" title="Objects along a line you draw">Line</button><button data-m="grid" title="One object in the middle of each grid cell">Grid</button><button data-m="zone" title="Fill a shape you draw freely">Zone</button></div>
-    <input id="plSearch" type="search" placeholder="Search kinds (oak, rock, bush…)" style="width:100%;margin:2px 0 6px">
+    <div class="row" style="margin:2px 0 6px"><input id="plSearch" type="search" placeholder="Search kinds (oak, rock, bush…)" style="flex:3;min-width:0"><button id="plPick" title="Pick a kind from the world: click an object (Shift + click adds it to the ticked kinds)">Pick</button></div>
+    <div id="plFavBox" hidden><div class="chipHead">Favourites</div><div class="chips" id="plFav"></div></div>
+    <div id="plRecentBox" hidden><div class="chipHead">Recent</div><div class="chips" id="plRecent"></div></div>
     <div id="plList" class="plList"></div>
     <div class="hint" id="plChosen"></div>
     <label class="field">Density <input id="plDensity" type="range" min="0.2" max="20" step="0.2" value="3"><span id="plDensityV"></span></label>
@@ -58,7 +60,11 @@ export function createPlant(ed) {
     .plList summary .n.sel { color: var(--accent); }
     .plList details > div { padding: 0 0 4px 10px; }
     .plList label { display: flex; gap: 6px; align-items: center; padding: 2px 4px; border-radius: 5px; cursor: pointer; font-size: 12px; }
-    .plList label:hover { background: rgba(255,255,255,.04); }`;
+    .plList label:hover { background: rgba(255,255,255,.04); }
+    .plList .star { margin-left: auto; color: var(--muted); padding: 0 4px; cursor: pointer; font-size: 13px; line-height: 1; }
+    .plList .star.on { color: var(--accent); }
+    .chipHead { font-size: 10.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-top: 2px; }
+    #plFav, #plRecent { margin: 3px 0 6px; }`;
   document.head.appendChild(style);
 
   // Saplings' grow radius and cultivated-ground need, by name (filled from /api/grow below).
@@ -88,7 +94,8 @@ export function createPlant(ed) {
     // One collapsible section per category; searching opens every category with a match.
     $('plList').innerHTML = order.filter(k => groups[k]).map(k => `<details data-k="${k}" ${q || openKinds.has(k) ? 'open' : ''}>
       <summary>${KIND_LABEL[k]}<span class="n"></span></summary>
-      <div>${groups[k].map(t => `<label><input type="checkbox" value="${t.name}" ${chosen.has(t.name) ? 'checked' : ''}>${t.name}</label>`).join('')}</div></details>`).join('') || '<div class="hint">Nothing matches.</div>';
+      <div>${groups[k].map(t => `<label><input type="checkbox" value="${t.name}" ${chosen.has(t.name) ? 'checked' : ''}>${t.name}<span class="star${favs.includes(t.name) ? ' on' : ''}" data-star="${t.name}" title="${favs.includes(t.name) ? 'Remove from' : 'Add to'} favourites">${favs.includes(t.name) ? '★' : '☆'}</span></label>`).join('')}</div></details>`).join('') || '<div class="hint">Nothing matches.</div>';
+    $('plList').querySelectorAll('[data-star]').forEach(st => st.onclick = e => { e.preventDefault(); e.stopPropagation(); toggleFav(st.dataset.star); });
     $('plList').querySelectorAll('input').forEach(c => c.onchange = () => { c.checked ? chosen.add(c.value) : chosen.delete(c.value); saveChosen(); syncLabels(); countKinds(); });
     $('plList').querySelectorAll('details').forEach(d => d.addEventListener('toggle', () => {
       if (q) return;   // while searching, opening and closing is not remembered
@@ -97,6 +104,40 @@ export function createPlant(ed) {
     }));
     countKinds();
   }
+  // ---- Favourites (starred in the list) and recently placed kinds, as chips above the list: a click
+  // plants only that kind, Shift + click adds it to (or takes it out of) the ticked ones.
+  const readList = k => { try { const v = JSON.parse(localStorage.getItem(k) ?? '[]'); return Array.isArray(v) ? v : []; } catch { return []; } };
+  const writeList = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch { } };
+  let favs = readList('plantFavourites'), recent = readList('plantRecent');
+  function toggleFav(name) {
+    favs = favs.includes(name) ? favs.filter(n => n !== name) : [...favs, name];
+    writeList('plantFavourites', favs); fillList(); renderChips();
+  }
+  // Kinds placed: the newest first, eight at most.
+  function noteRecent(names) {
+    recent = [...new Set([...names, ...recent])].slice(0, 8);
+    writeList('plantRecent', recent); renderChips();
+  }
+  function choose(name, add) {
+    if (add) chosen.has(name) ? chosen.delete(name) : chosen.add(name);
+    else chosen = new Set([name]);
+    saveChosen(); fillList(); syncLabels(); renderChips(); autoSnap?.(); updatePreview();
+  }
+  function renderChips() {
+    const known = new Set(ed.objects.creatableTypes().map(t => t.name));
+    for (const [box, list, el] of [['plFavBox', favs, 'plFav'], ['plRecentBox', recent, 'plRecent']]) {
+      const names = list.filter(n => known.has(n));
+      $(box).hidden = !names.length;
+      $(el).innerHTML = names.map(n => `<button data-chip="${n}" class="${chosen.has(n) ? 'on' : ''}" title="Plant only this kind (Shift + click: add it to the ticked kinds)">${n}</button>`).join('');
+      $(el).querySelectorAll('[data-chip]').forEach(b => b.onclick = e => choose(b.dataset.chip, e.shiftKey));
+    }
+  }
+  (ed.onObjects ??= []).push(renderChips);
+  $('plPick').onclick = () => ed.pickKind('planting', (name, e) => {
+    if (!ed.objects.creatableTypes().some(t => t.name === name)) { ed.msg(`${name} cannot be placed: the game has no such kind to copy.`, true); return; }
+    choose(name, e.shiftKey);
+    ed.msg(`Planting ${[...chosen].join(', ')}.`);
+  });
   // "ticked / total" on each category header.
   function countKinds() {
     $('plList').querySelectorAll('details').forEach(d => {
@@ -561,6 +602,7 @@ export function createPlant(ed) {
     if (!preview.length) { ed.msg(mode === 'line' ? 'Draw a line first (click points on the ground).' : mode === 'zone' ? 'Draw a zone first (click points around it, or drag).' : 'Drag a box on the ground first.', true); return; }
     const list = preview.slice();
     const added = await ed.objects.add(list.map(o => ({ ...o, fresh: true })));
+    noteRecent([...new Set(list.map(o => o.name))]);
     hashStale = true;
     ed.pushHistory({ added, label: `Planted ${added.length} ${mode === 'line' ? 'along a line' : mode === 'zone' ? 'in a zone' : 'in a grid'}` });
     ed.msg(`Placed ${added.length} object(s). Ctrl+Z removes them.`);
@@ -675,6 +717,7 @@ export function createPlant(ed) {
       hashStale = true;
       // Planted and removed again in the same stroke: nothing to remember.
       const added = s.added.filter(id => !s.unplanted.includes(id)), deleted = [...s.deleted, ...s.unplanted.filter(id => !s.added.includes(id))];
+      if (added.length) noteRecent([...new Set(added.map(id => ed.objects.records.get(id)?.name).filter(Boolean))]);
       if (added.length || deleted.length) ed.pushHistory({ ...(added.length ? { added } : {}), ...(deleted.length ? { deleted } : {}), label: s.erase ? `Plant: removed ${deleted.length}` : `Planted ${added.length} (${[...new Set(added.map(id => ed.objects.records.get(id)?.name).filter(Boolean))].slice(0, 3).join(', ')})` });
       ed.msg(s.erase ? `Removed ${deleted.length} object(s).` : `Planted ${added.length} object(s). Ctrl+Z removes them; Save writes them to the world.`);
       makePattern();

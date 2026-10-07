@@ -42,7 +42,7 @@ Each button is one undo step.
 | **Kind chips** | Which kinds the buttons act on, with how many are inside. "hidden" means the kind is switched off in View. |
 | **Remove** | Removes the objects of the ticked kinds inside the selection. |
 | **Select** | Selects them, to move, turn or copy them with the [Select tool](select.md). |
-| **Replace** … **with** … | Replaces every object of the first kind inside by the second kind, at the same place and facing. The first list only offers kinds that are inside; the second offers every kind the game has. |
+| **Replace** … **with** … | Replaces every object of the first kind inside by the second kind, at the same place and facing. The first list only offers kinds that are inside; the second offers every kind the game has; its **pick** button fills it from the world (click an object to use its kind). |
 
 ## Copy and paste
 

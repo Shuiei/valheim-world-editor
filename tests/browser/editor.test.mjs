@@ -866,6 +866,61 @@ test('undo takes a change back and the counter clears', async () => {
   noErrors();
 });
 
+test('eyedropper, favourite and recent kinds', async () => {
+  await openEditor();
+  await page().evaluate(() => { localStorage.setItem('plantChosen', '["Bush01"]'); localStorage.removeItem('plantFavourites'); localStorage.removeItem('plantRecent'); });
+  await openEditor();
+  const chosen = () => page().evaluate(() => JSON.parse(localStorage.getItem('plantChosen')));
+  // An object that is drawn (shown) and of a kind that can be placed.
+  const c = await page().evaluate(() => {
+    const ed = window.__ed, ok = new Set(ed.objects.creatableTypes().map(t => t.name));
+    const r = [...ed.objects.records.values()].find(r => !r.deleted && r.name === 'Beech1' && ed.entityOf(r.id)?.inst.some(({ im }) => im.visible && im.parent?.visible) && ok.has(r.name));
+    return { id: r.id, name: r.name, x: r.x, z: r.z };
+  });
+  // Screen point of the middle of its drawn box.
+  const onChest = () => page().evaluate(id => {
+    const ed = window.__ed, v = ed.boxOf(ed.entityOf(id)).getCenter(new ed.THREE.Vector3()).project(ed.camera), r = ed.el.getBoundingClientRect();
+    return [r.left + (v.x + 1) / 2 * r.width, r.top + (1 - v.y) / 2 * r.height];
+  }, c.id);
+  await lookAt(page(), c.x, c.z, 0, 10, 4);
+  await page().keyboard.press('t'); await sleep(300);
+  const before = (await records()).length;
+  // Pick: the clicked object's kind becomes the only one ticked, and nothing is planted.
+  await page().click('#plPick');
+  { const [x, y] = await onChest(); await page().mouse.click(x, y); await sleep(300); }
+  assert.deepEqual(await chosen(), [c.name], await page().$eval('#sMsg', e => e.textContent));
+  assert.equal((await records()).length, before, 'the picking click places nothing');
+  // A star adds a favourite chip (without ticking the kind); the chip plants only that kind.
+  await page().$eval('#plSearch', e => { e.value = 'Bush01'; e.dispatchEvent(new Event('input')); });
+  await page().click('[data-star="Bush01"]'); await sleep(100);
+  assert.deepEqual(await chosen(), [c.name], 'the star does not tick the box');
+  assert.ok(await page().$('#plFav [data-chip="Bush01"]'), 'favourite chip shown');
+  await page().click('#plFav [data-chip="Bush01"]');
+  assert.deepEqual(await chosen(), ['Bush01']);
+  // Shift + click adds the kind to the ticked ones.
+  await page().keyboard.down('Shift'); await page().click('#plPick');
+  { const [x, y] = await onChest(); await page().mouse.click(x, y); await sleep(300); }
+  await page().keyboard.up('Shift');
+  assert.deepEqual((await chosen()).sort(), ['Bush01', c.name].sort());
+  // Placing remembers the kinds as recent.
+  await page().click('#plFav [data-chip="Bush01"]');
+  await page().click('#plModes [data-m="line"]');
+  await lookAt(page(), c.x, c.z + 20, 0, 45, 30);
+  for (const [dx, dz] of [[-6, 20], [6, 20]]) { const [x, y] = await screenOf(page(), c.x + dx, c.z + dz); await page().mouse.click(x, y); await sleep(150); }
+  await page().keyboard.press('Enter'); await sleep(1000);
+  assert.ok(await page().$('#plRecent [data-chip="Bush01"]'), 'recent chip shown');
+  // Select tool: pick fills the Replace list and leaves the selection alone.
+  await page().keyboard.press('Escape');
+  await page().evaluate(() => window.__ed.setTool('select'));
+  await lookAt(page(), c.x, c.z, 0, 10, 4);
+  await page().click('#selToPick');
+  { const [x, y] = await onChest(); await page().mouse.click(x, y); await sleep(300); }
+  assert.equal(await page().$eval('#selTo', e => e.value), c.name);
+  assert.equal(await page().evaluate(() => window.__ed.selection.size), 0, 'the picking click selects nothing');
+  await page().click('#undo'); await sleep(1000);
+  noErrors();
+});
+
 test('Worlds goes back to the start page', async () => {
   await page().goto(t.base + '/index.html', { waitUntil: 'networkidle0' });
   await page().click('#worldsBtn');

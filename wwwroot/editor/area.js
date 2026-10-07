@@ -46,7 +46,7 @@ export function createArea(ed) {
       <div class="chips" id="aKinds"></div>
       <div class="row"><button id="aRemove">Remove</button><button id="aSelectObj">Select</button></div>
       <label class="field">Replace <select id="aFrom"></select></label>
-      <label class="field">with <select id="aTo" class="typeList"></select></label>
+      <label class="field">with <select id="aTo" class="typeList"></select><span><button id="aToPick" class="mini" title="Pick the kind from the world: click an object">pick</button></span></label>
       <div class="row"><button id="aReplace">Replace</button></div>
     </div>
     <div class="sub"><h3>Copy &amp; paste</h3>
@@ -318,9 +318,18 @@ export function createArea(ed) {
   };
   // Select tool: "Replace with".
   const selRow = document.createElement('div');
-  selRow.innerHTML = `<label class="field">Replace <select id="selTo" class="typeList"></select><span><button id="selReplace" class="mini">go</button></span></label>`;
+  selRow.innerHTML = `<label class="field">Replace with <select id="selTo" class="typeList"></select><span><button id="selToPick" class="mini" title="Pick the kind from the world: click an object">pick</button></span></label>
+    <div class="row"><button id="selReplace">Replace the selection</button></div>`;
   $('selectPanel').querySelector('.row').after(selRow);
   $('selReplace').onclick = () => replace([...ed.selection], $('selTo').value).then(() => ed.clearSelection());
+  // Eyedropper: the clicked object's kind goes into the "with" list.
+  const pickInto = (id, label) => () => ed.pickKind(label, name => {
+    const sel = $(id);
+    if (![...sel.options].some(o => o.value === name)) { ed.msg(`${name} cannot be placed: the game has no such kind to copy.`, true); return; }
+    sel.value = name; ed.msg(`Replace with ${name}.`);
+  });
+  $('aToPick').onclick = pickInto('aTo', 'Replace');
+  $('selToPick').onclick = pickInto('selTo', 'Replace');
 
   // ---- Copy and paste.
   let clip = null, rot = 0, flip = false;   // rot: degrees (counter-clockwise seen from above)
