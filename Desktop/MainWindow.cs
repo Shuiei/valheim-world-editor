@@ -29,6 +29,9 @@ public sealed class MainWindow : Window
 	internal PathPanel PathPanel { get; }
 	internal AreaPanel AreaPanel { get; }
 	internal PastePanel PastePanel { get; }
+	internal PlaceTool PlaceTool { get; } = new();
+	internal PlaceInput PlaceInput { get; }
+	internal PlacePanel PlacePanel { get; }
 
 	// The save bar (top middle): what is waiting to be saved, undo, redo, Save, and the last message.
 	private readonly TextBlock _pending = new() { FontSize = 12, VerticalAlignment = VerticalAlignment.Center, Text = "All saved" };
@@ -134,6 +137,37 @@ public sealed class MainWindow : Window
 	}
 
 	private string? NameOfPrefab(int prefab) => _models?.NameOf(prefab) ?? TerrainEditor.Terrain.PrefabCatalog.DisplayName(prefab);
+
+	// A kind's model box in its own frame, in Unity's axes (the models are stored with z mirrored) and
+	// scaled like the model; null while unknown.
+	private readonly Dictionary<string, (System.Numerics.Vector3, System.Numerics.Vector3)?> _boxes = new();
+	private (System.Numerics.Vector3 Min, System.Numerics.Vector3 Max)? ModelBox(string name)
+	{
+		if (_boxes.TryGetValue(name, out var known))
+		{
+			return known;
+		}
+		if (_models?.LoadModel(name) is not { } model)
+		{
+			return _boxes[name] = null;
+		}
+		System.Numerics.Vector3 lo = new(float.MaxValue), hi = new(float.MinValue);
+		foreach (var part in model.Parts)
+		{
+			if (_models.LoadMesh(part.Mesh) is { } md)
+			{
+				var (a, b) = Picking.Transform(md.Bounds.Min, md.Bounds.Max, part.Matrix);
+				lo = System.Numerics.Vector3.Min(lo, a);
+				hi = System.Numerics.Vector3.Max(hi, b);
+			}
+		}
+		if (lo.X > hi.X)
+		{
+			return _boxes[name] = null;
+		}
+		var sc = model.RootScale;
+		return _boxes[name] = (new System.Numerics.Vector3(lo.X * sc.X, lo.Y * sc.Y, -hi.Z * sc.Z), new System.Numerics.Vector3(hi.X * sc.X, hi.Y * sc.Y, -lo.Z * sc.Z));
+	}
 
 	// Ctrl+C: the Area selection (ground and shown objects), or the Select tool's objects.
 	internal void Copy()
@@ -330,6 +364,10 @@ public sealed class MainWindow : Window
 			_ = Save();
 			e.Handled = true;
 		}
+		else if (Tools.Mode == ToolMode.Place && PlaceInput.Key(e.Key, mods.HasFlag(Avalonia.Input.KeyModifiers.Shift), ctrl))
+		{
+			e.Handled = true;
+		}
 		else if (Tools.SelectMode && _view.SelectTool.Key(e.Key, mods.HasFlag(Avalonia.Input.KeyModifiers.Shift), ctrl))
 		{
 			e.Handled = true;
@@ -376,7 +414,7 @@ public sealed class MainWindow : Window
 		{
 			Tools.Key("Escape");
 		}
-		else if (!ctrl && e.Key is Avalonia.Input.Key.E or Avalonia.Input.Key.M or Avalonia.Input.Key.G or Avalonia.Input.Key.P or Avalonia.Input.Key.B or Avalonia.Input.Key.O)
+		else if (!ctrl && e.Key is Avalonia.Input.Key.E or Avalonia.Input.Key.M or Avalonia.Input.Key.G or Avalonia.Input.Key.P or Avalonia.Input.Key.B or Avalonia.Input.Key.O or Avalonia.Input.Key.T)
 		{
 			Tools.Key(e.Key.ToString());
 		}
@@ -494,8 +532,29 @@ public sealed class MainWindow : Window
 			return picked.Count > 0 && picked[0].Path.IsFile ? picked[0].Path.LocalPath : null;
 		};
 		PastePanel = new PastePanel(_view.Paste);
+		PlaceTool.Brush = Tools.Brush;
+		PlaceTool.Scene = () => _view.Scene;
+		PlaceTool.Mask = () => _session?.MaskNow();
+		PlaceTool.NameOf = NameOfPrefab;
+		PlaceTool.ModelBox = ModelBox;
+		PlaceInput = new PlaceInput(_view, PlaceTool) { Session = () => _session };
+		PlaceInput.Message += t => { _message.Text = t; UpdateSaveBar(); };
+		_view.Place = PlaceInput;
+		PlacePanel = new PlacePanel(PlaceInput, () => _view.Scene, NameOfPrefab);
+		PlacePanel.Message += t => _message.Text = t;
 		PastePanel.Done += () => Tools.ChooseMode(ToolMode.Area);
 		_view.PasteClicked += PasteAt;
+		_view.ScriptedClick += (at, size) =>
+		{
+			if (Tools.Mode == ToolMode.Place)
+			{
+				PlaceInput.Moved(at, size);
+				int shown = PlaceInput.Shown.Length;
+				PlaceInput.Down(at, size, false, false, false, 1);
+				PlaceInput.Up(at, size);
+				Options.Say($"place: {shown} shown, {string.Join(", ", PlaceTool.Chosen)}: {_message.Text} {_session?.PendingText}");
+			}
+		};
 		_view.PathScripted += () =>
 		{
 			PathPanel.Refresh();
@@ -531,9 +590,9 @@ public sealed class MainWindow : Window
 			Margin = new Thickness(10),
 			HorizontalAlignment = HorizontalAlignment.Left,
 			VerticalAlignment = VerticalAlignment.Top,
-			Children = { Tools.Rail, Tools.Options, SelectPanel.Card, MeasurePanel.Card, ShapePanel.Card, PathPanel.Card, AreaPanel.Card, PastePanel.Card, MaskPanel.Card },
+			Children = { Tools.Rail, Tools.Options, SelectPanel.Card, MeasurePanel.Card, ShapePanel.Card, PathPanel.Card, AreaPanel.Card, PastePanel.Card, PlacePanel.Card, PlacePanel.Chooser, MaskPanel.Card },
 		};
-		SelectPanel.Card.IsVisible = MeasurePanel.Card.IsVisible = ShapePanel.Card.IsVisible = PathPanel.Card.IsVisible = AreaPanel.Card.IsVisible = PastePanel.Card.IsVisible = MaskPanel.Card.IsVisible = false;
+		SelectPanel.Card.IsVisible = MeasurePanel.Card.IsVisible = ShapePanel.Card.IsVisible = PathPanel.Card.IsVisible = AreaPanel.Card.IsVisible = PastePanel.Card.IsVisible = MaskPanel.Card.IsVisible = PlacePanel.Card.IsVisible = false;
 		ShapePanel.Changed += () => _view.ShapeRadius = ShapePanel.Radius;
 		_view.ShapeClicked += PutShape;
 		Tools.Options.VerticalAlignment = VerticalAlignment.Top;
@@ -548,7 +607,14 @@ public sealed class MainWindow : Window
 			PathPanel.Card.IsVisible = Tools.Mode == ToolMode.Path;
 			AreaPanel.Card.IsVisible = Tools.Mode == ToolMode.Area;
 			PastePanel.Card.IsVisible = Tools.Mode == ToolMode.Paste;
-			MaskPanel.Card.IsVisible = Tools.Mode is ToolMode.Brush or ToolMode.Path or ToolMode.Area or ToolMode.Shape;
+			PlacePanel.Card.IsVisible = Tools.Mode == ToolMode.Place;
+			if (Tools.Mode != ToolMode.Place)
+			{
+				PlacePanel.Chooser.IsVisible = false;
+				PlacePanel.KindsButton.Content = "+ Add kinds";
+			}
+			PlaceInput.Refresh();
+			MaskPanel.Card.IsVisible = Tools.Mode is ToolMode.Brush or ToolMode.Path or ToolMode.Area or ToolMode.Shape or ToolMode.Place;
 			if (Tools.Mode == ToolMode.Area)
 			{
 				AreaPanel.Refresh();
@@ -565,6 +631,9 @@ public sealed class MainWindow : Window
 			UpdateSaveBar();
 		};
 		KeyDown += OnKey;
+		// Shift held: the Place brush shows that a drag removes.
+		KeyDown += (_, e) => { if (e.Key is Avalonia.Input.Key.LeftShift or Avalonia.Input.Key.RightShift) PlaceInput.ShiftHeld(true); };
+		KeyUp += (_, e) => { if (e.Key is Avalonia.Input.Key.LeftShift or Avalonia.Input.Key.RightShift) PlaceInput.ShiftHeld(false); };
 		Closing += async (_, e) =>
 		{
 			if (_closeAnyway || _session == null || _session.Pending is (0, 0, 0, 0))
@@ -632,6 +701,10 @@ public sealed class MainWindow : Window
 				else if (Options.StartTool is "shape")
 				{
 					Tools.ChooseMode(ToolMode.Shape);
+				}
+				else if (Options.StartTool is "place")
+				{
+					Tools.ChooseMode(ToolMode.Place);
 				}
 				else if (Options.StartTool is "area")
 				{
