@@ -65,7 +65,7 @@ export const TIPS = {
   mPaint: 'Only ground with this paint.',
 
   // Select
-  selGround: 'On: every moved or turned object lands with its base on the ground where it ends up (PgUp / PgDn and the green arrow still lift it). Off: each keeps its height above the ground, which keeps buildings in shape.',
+  selGround: 'On: trees, rocks and other objects each land on the ground; building pieces move as one block that keeps its shape, with its bottom layer on the ground. Off: each object keeps its height above the ground.',
   selSnapTo: 'While moving, a piece\'s snap point locks onto the nearest snap point of a piece around it (within 0.75 m), so walls, floors and fences join like with the hammer.',
   nX: 'World position east-west (m) of the selection\'s middle (or of the one object).',
   nY: 'Height (m) of the lowest selected object.',
