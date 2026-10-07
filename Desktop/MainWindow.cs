@@ -39,6 +39,8 @@ public sealed class MainWindow : Window
 	internal Button UndoButton { get; } = new() { Content = "Undo", FontSize = 12, IsEnabled = false };
 	internal Button RedoButton { get; } = new() { Content = "Redo", FontSize = 12, IsEnabled = false };
 	internal Button SaveButton { get; } = new() { Content = "Save", FontSize = 12, IsEnabled = false };
+	internal Button HistoryButton { get; } = new() { Content = "History", FontSize = 12 };
+	internal HistoryPanel History { get; }
 	internal TextBlock PendingText => _pending;
 	internal TextBlock MessageText => _message;
 	// Asks before writing into the world (replaced by tests).
@@ -54,7 +56,11 @@ public sealed class MainWindow : Window
 		_session = session;
 		session.Brush = Tools.Brush;
 		session.Mask = Mask;
-		session.Changed += () => Dispatcher.UIThread.Post(UpdateSaveBar);
+		session.Changed += () => Dispatcher.UIThread.Post(() => { UpdateSaveBar(); History.Refresh(); });
+		// The kinds the Select tool can replace with.
+		var kinds = session.Scene.World?.Creatable.Where(p => NameOfPrefab(p) != null).OrderBy(p => NameOfPrefab(p), StringComparer.OrdinalIgnoreCase).ToList() ?? new();
+		SelectPanel.ReplaceKinds = kinds;
+		SelectPanel.ReplaceBox.ItemsSource = kinds.Select(p => NameOfPrefab(p)!).ToList();
 		UpdateSaveBar();
 	}
 
@@ -291,6 +297,8 @@ public sealed class MainWindow : Window
 	private Control SaveBar()
 	{
 		UndoButton.Click += (_, _) => Undo();
+		HistoryButton.Click += (_, _) => History.Toggle();
+		ToolTip.SetTip(HistoryButton, "Every change of this session: go back to one, or take out only one");
 		RedoButton.Click += (_, _) => Redo();
 		SaveButton.Click += async (_, _) => await Save();
 		ToolTip.SetTip(SaveButton, "Write the changes into the world's files (Ctrl+S)");
@@ -309,7 +317,7 @@ public sealed class MainWindow : Window
 				Spacing = 4,
 				Children =
 				{
-					new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = { _pending, UndoButton, RedoButton, SaveButton } },
+					new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = { _pending, UndoButton, RedoButton, HistoryButton, SaveButton } },
 					_message,
 				},
 			},
@@ -502,6 +510,21 @@ public sealed class MainWindow : Window
 	public MainWindow(bool load = true)
 	{
 		SelectPanel = new SelectPanel(_view.SelectTool);
+		History = new HistoryPanel(() => _session);
+		History.Message += t => { _message.Text = t; UpdateSaveBar(); };
+		SelectPanel.ReplaceAsked += prefab =>
+		{
+			_view.SelectTool.Commit();
+			var sel = _view.Selected.ToList();
+			if (_session is not { } s || sel.Count == 0)
+			{
+				_message.Text = "Select objects to replace first.";
+				return;
+			}
+			AreaPanel!.Replace(s, sel, prefab);
+			_view.Select(Array.Empty<int>());
+			UpdateSaveBar();
+		};
 		MaskPanel = new MaskPanel(Mask);
 		_view.BrushAltClick += (h, shift) =>
 		{
@@ -656,7 +679,7 @@ public sealed class MainWindow : Window
 		};
 		// Takes the mouse for the 3D view (see GlView.Attach).
 		var surface = new Border { Background = Brushes.Transparent };
-		Content = new Grid { Children = { _view, surface, panel, ViewPanel(), tools, SaveBar() } };
+		Content = new Grid { Children = { _view, surface, panel, ViewPanel(), tools, SaveBar(), History.Card } };
 		_view.Attach(surface, this);
 		_view.Perf = _perf;
 		_view.StatsChanged += s => _fps.Text = $"{s.Fps} frames/s · {s.WorkMs:0.0} ms of work each · {s.Objects:N0} objects ({s.Instances:N0} model parts in {s.Batches:N0} draws){(s.PendingModels > 0 ? $" · {s.PendingModels} kinds loading" : "")}";

@@ -29,6 +29,103 @@ public sealed class EditSession
 		public (int Index, bool Before, bool After)[] Things { get; init; } = Array.Empty<(int, bool, bool)>();
 		// Zones marked for reset (on) or not.
 		public (ZoneReset Reset, bool Before, bool After)[] Resets { get; init; } = Array.Empty<(ZoneReset, bool, bool)>();
+		public DateTime Time { get; init; } = DateTime.Now;
+		// Taken out (History panel: Remove), and the change a removal takes out.
+		public bool Removed { get; set; }
+		public Change? RevertOf { get; init; }
+
+		// "3 zones · 2 new · 1 removed · 1 zone reset", like the web editor's history.
+		public string Describe()
+		{
+			var parts = new List<string>();
+			if (Zones.Count > 0) parts.Add($"{Zones.Count} zone{(Zones.Count > 1 ? "s" : "")}");
+			int added = Things.Count(t => t.Before && !t.After), removed = Things.Count(t => !t.Before && t.After);
+			if (added > 0) parts.Add($"{added} new");
+			if (removed > 0) parts.Add($"{removed} removed");
+			if (Resets.Length > 0) parts.Add($"{Resets.Length} zone reset");
+			return string.Join(" · ", parts);
+		}
+	}
+
+	// The history, oldest first: what can be undone, and what was undone (the next redo last).
+	public IReadOnlyList<Change> UndoList { get { lock (_lock) { return _undo.ToList(); } } }
+	public IReadOnlyList<Change> RedoList { get { lock (_lock) { return _redo.ToList(); } } }
+
+	// Undoes every change made after this one.
+	public void BackTo(Change c)
+	{
+		while (UndoList.Count > 0 && UndoList[^1] != c && Undo())
+		{
+		}
+	}
+
+	// Redoes up to and including this one.
+	public void ForwardTo(Change c)
+	{
+		while (RedoList.Count > 0 && (UndoList.Count == 0 || UndoList[^1] != c) && Redo())
+		{
+		}
+	}
+
+	// Takes out one change and keeps everything done after it: its height change is taken off the points
+	// it touched (later edits there stay), paint goes back where nothing repainted it since, its objects
+	// and zone resets go back. The removal is itself a change that can be undone.
+	public string RemoveChange(Change c)
+	{
+		if (c.Removed || c.RevertOf != null)
+		{
+			return "That change cannot be removed.";
+		}
+		Change removal;
+		lock (_lock)
+		{
+			if (_stroke != null)
+			{
+				return "";
+			}
+			var g = Ground;
+			var start = g.Snapshot();
+			for (int k = 0; k < c.Points.Length; k++)
+			{
+				int p = c.Points[k];
+				g.Level[p] = Math.Clamp(g.Level[p] + c.Before.Level[k] - c.After.Level[k], -EditStore.MaxLevel, EditStore.MaxLevel);
+				g.Smooth[p] = Math.Clamp(g.Smooth[p] + c.Before.Smooth[k] - c.After.Smooth[k], -EditStore.MaxSmooth, EditStore.MaxSmooth);
+				g.Mod[p] = (byte)(MathF.Abs(g.Level[p]) + MathF.Abs(g.Smooth[p]) > 1e-4f || c.Before.Mod[k] != 0 && g.Mod[p] != 0 ? 1 : 0);
+				bool samePaint = g.PMod[p] == c.After.PMod[k];
+				for (int ch = 0; ch < 4 && samePaint; ch++)
+				{
+					samePaint = MathF.Abs(g.Paint[p * 4 + ch] - c.After.Paint[k * 4 + ch]) < 1e-4f;
+				}
+				if (samePaint)
+				{
+					g.PMod[p] = c.Before.PMod[k];
+					Array.Copy(c.Before.Paint, k * 4, g.Paint, p * 4, 4);
+				}
+			}
+			int[] pts = c.Points;
+			var things = c.Things.Select(t => (t.Index, Scene.Things[t.Index].Gone, t.Before)).Where(t => t.Gone != t.Before).ToArray();
+			var marked = Edits.Resets.Select(r => (r.X, r.Z)).ToHashSet();
+			var resets = c.Resets.Select(r => (r.Reset, marked.Contains((r.Reset.X, r.Reset.Z)), r.Before)).ToArray();
+			removal = new Change($"Removed: {c.Label}", pts, Pick(start, pts), Pick(g.Snapshot(), pts), c.Zones) { Things = things, Resets = resets, RevertOf = c };
+			if (pts.Length > 0)
+			{
+				Touch((0, 0, g.W - 1, g.H - 1));
+			}
+			Send(c.Zones);
+			SetGone(things.Select(t => (t.Index, t.Before)));
+			foreach (var (r, _, on) in resets)
+			{
+				Edits.SetReset(r, on);
+			}
+			c.Removed = true;
+		}
+		AddChange(removal);
+		if (removal.Things.Length > 0)
+		{
+			ThingsChanged?.Invoke(removal.Things.Select(t => t.Index).ToList());
+		}
+		Changed?.Invoke();
+		return $"Removed “{c.Label}”; everything else is kept. Ctrl+Z brings it back.";
 	}
 	private static readonly Ground.State NoPoints = new(Array.Empty<float>(), Array.Empty<float>(), Array.Empty<byte>(), Array.Empty<float>(), Array.Empty<byte>());
 	private readonly List<Change> _undo = new(), _redo = new();
@@ -275,6 +372,10 @@ public sealed class EditSession
 			foreach (var (r, b, a) in c.Resets)
 			{
 				Edits.SetReset(r, after ? a : b);
+			}
+			if (c.RevertOf != null)
+			{
+				c.RevertOf.Removed = after;
 			}
 		}
 		if (c.Things.Length > 0)

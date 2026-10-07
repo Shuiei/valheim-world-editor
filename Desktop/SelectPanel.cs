@@ -27,6 +27,11 @@ public sealed class SelectPanel
 	internal NumericUpDown ZBox { get; } = Num(0.1m);
 	internal NumericUpDown TurnBox { get; } = Num(1m);
 	internal Button ApplyButton { get; } = new() { Content = "Move there", FontSize = 12 };
+	// Replace with: the kinds this world can make (filled by the window), and the button.
+	internal ComboBox ReplaceBox { get; } = new() { FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch, MaxDropDownHeight = 400 };
+	internal Button ReplaceButton { get; } = new() { Content = "Replace the selection", FontSize = 12 };
+	public List<int> ReplaceKinds { get; set; } = new();
+	public event Action<int>? ReplaceAsked;
 	internal Button ByButton { get; } = new() { Content = "Move by", FontSize = 12 };
 
 	private static NumericUpDown Num(decimal step) => new() { Increment = step, FormatString = "0.##", FontSize = 12, MinWidth = 90 };
@@ -46,6 +51,13 @@ public sealed class SelectPanel
 		SameButton = Act("Same kind", "Select every shown object of the selected kinds");
 		InvertButton = Act("Invert", "Select the shown objects that are not selected, and only those");
 		DeleteButton.Click += (_, _) => tool.Delete();
+		ReplaceButton.Click += (_, _) =>
+		{
+			if (ReplaceBox.SelectedIndex >= 0 && ReplaceBox.SelectedIndex < ReplaceKinds.Count)
+			{
+				ReplaceAsked?.Invoke(ReplaceKinds[ReplaceBox.SelectedIndex]);
+			}
+		};
 		BuildingButton.Click += (_, _) => tool.WholeBuilding();
 		SameButton.Click += (_, _) => tool.SameKind();
 		InvertButton.Click += (_, _) => tool.Invert();
@@ -97,6 +109,8 @@ public sealed class SelectPanel
 					new TextBlock { Text = "Select", FontSize = 14, FontWeight = FontWeight.SemiBold },
 					new TextBlock { Text = "Click objects (Shift adds), or drag on the ground around them. Drag a selected object to move the selection.", FontSize = 12, Foreground = Brushes.LightGray, TextWrapping = TextWrapping.Wrap },
 					new WrapPanel { Children = { DeleteButton, BuildingButton, SameButton, InvertButton }, ItemSpacing = 4, LineSpacing = 4 },
+					new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*"), ColumnSpacing = 6, Children = { new TextBlock { Text = "Replace with", FontSize = 12, VerticalAlignment = VerticalAlignment.Center }, Col(ReplaceBox, 1) } },
+					ReplaceButton,
 					GroundBox,
 					SnapBox,
 					_exact,
@@ -109,6 +123,12 @@ public sealed class SelectPanel
 			},
 		};
 		Refresh();
+	}
+
+	private static Control Col(Control c, int col)
+	{
+		Grid.SetColumn(c, col);
+		return c;
 	}
 
 	private void SetBy(bool by)
