@@ -377,6 +377,14 @@ public sealed class MainWindow : Window
 					foreach (var b in _overlayBoxes.Values) b.IsChecked = true;
 					SlopeBox.IsChecked = ContourBox.IsChecked = true;
 				}
+				if (Options.StartTool is "select")
+				{
+					Tools.ChooseSelect();
+				}
+				else if (Enum.TryParse<BrushTool>(Options.StartTool, ignoreCase: true, out var startBrush))
+				{
+					Tools.Choose(startBrush);
+				}
 				for (int n = Options.EyeStart == "fly" ? 2 : Options.EyeStart == "walk" ? 1 : 0; n > 0; n--) _view.CycleEye();
 			}
 			catch (Exception ex)
