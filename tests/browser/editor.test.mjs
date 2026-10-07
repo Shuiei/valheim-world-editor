@@ -624,6 +624,43 @@ test('plant end to end: a rectangle of walls snaps to whole pieces and closes, a
   noErrors();
 });
 
+test('plant end to end on a slope: level pieces, each on its own ground, touching the last', async () => {
+  await openEditor();
+  await page().evaluate(() => localStorage.setItem('plantChosen', '["woodwall"]'));
+  await openEditor();
+  await page().keyboard.press('t'); await sleep(300);
+  await page().click('#plModes [data-m="line"]');
+  await page().click('#plSnap');
+  const c = (await records()).find(r => r.name === 'piece_chest_wood');
+  // Down the hill west of the chests (the test world's ground falls towards the east).
+  const A = [c.x - 40, c.z + 6], B = [c.x - 4, c.z + 6];
+  await lookAt(page(), c.x - 22, c.z + 6, 0, 45, 30);
+  for (const p of [A, B]) { const [x, y] = await screenOf(page(), ...p); await page().mouse.click(x, y); await sleep(150); }
+  await sleep(500);
+  const walls = await page().evaluate(() => {
+    const ed = window.__ed, ground = (x, z) => {
+      // Between the four nearest grid points, as placing does.
+      const fx = x - ed.originX, fz = z - ed.originZ, x0 = Math.floor(fx), z0 = Math.floor(fz), tx = fx - x0, tz = fz - z0, h = (a, b) => ed.height(b * ed.W + a);
+      return (h(x0, z0) * (1 - tx) + h(x0 + 1, z0) * tx) * (1 - tz) + (h(x0, z0 + 1) * (1 - tx) + h(x0 + 1, z0 + 1) * tx) * tz;
+    };
+    // A wall's ends (snap points at x = ±1, bottom at y = -1), on the ground at its start, middle and end.
+    return window.__plantPreview().map(o => {
+      const t = o.ry * Math.PI / 180, a = [o.x - Math.cos(t), o.z + Math.sin(t)], b = [o.x + Math.cos(t), o.z - Math.sin(t)];
+      return { a, b, bottom: o.y - 1, lowest: Math.min(ground(...a), ground(...b), ground(o.x, o.z)), level: o.rx === 0 && o.rz === 0 };
+    });
+  });
+  assert.ok(walls.length >= 10, `walls along the line (${walls.length})`);
+  assert.ok(walls.every(w => w.level), 'every wall stays level');
+  const worst = Math.max(...walls.map(w => Math.abs(w.bottom - w.lowest)));
+  assert.ok(worst < 0.02, `each stands on the ground where it is (off by ${worst.toFixed(3)} m at most)`);
+  for (let i = 1; i < walls.length; i++) assert.ok(Math.hypot(walls[i].a[0] - walls[i - 1].b[0], walls[i].a[1] - walls[i - 1].b[1]) < 0.02, `wall ${i} touches the last one`);
+  const heights = walls.map(w => w.bottom);
+  assert.ok(Math.max(...heights) - Math.min(...heights) > 0.5, 'they step down the slope');
+  await page().keyboard.press('Escape');
+  await page().click('#plSnap');
+  noErrors();
+});
+
 test('undo takes a change back and the counter clears', async () => {
   await openEditor();
   await page().keyboard.press('Escape');

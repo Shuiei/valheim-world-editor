@@ -2,6 +2,10 @@
 
 The editor's own changes: [CHANGELOG.md](https://github.com/Shuiei/valheim-world-editor/blob/main/CHANGELOG.md).
 
+## 0.20.1
+
+- Editor changes only (fences on slopes). The plugin is unchanged.
+
 ## 0.20.0
 
 - Editor changes only (fences end to end). The plugin is unchanged.

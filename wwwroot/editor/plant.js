@@ -432,11 +432,28 @@ export function createPlant(ed) {
   function snappedLine(names) {
     const out = [];
     snapGap = 0;
+    // Kinds whose length is not known (no snap points, no model yet) are left out.
+    names = names.filter(n => endsOf(n));
+    if (!names.length) return out;
     let k = 0;
     for (const pts of lineRuns()) k = snappedRun(pts, names, k, out);
     return out;
   }
+  // The point along the run at a straight distance dist from s, searching from segment seg at
+  // fraction t0 (the run is walked forwards only), or null past its end.
+  function along(pts, s, seg, t0, dist) {
+    for (; seg < pts.length - 1; seg++, t0 = 0) {
+      const a = pts[seg], b = pts[seg + 1], dx = b.gx - a.gx, dz = b.gz - a.gz, fx = a.gx - s.gx, fz = a.gz - s.gz;
+      const A = dx * dx + dz * dz, B = 2 * (fx * dx + fz * dz), C = fx * fx + fz * fz - dist * dist, disc = B * B - 4 * A * C;
+      if (A < 1e-9 || disc < 0) continue;
+      const t = (-B + Math.sqrt(disc)) / (2 * A);
+      if (t >= t0 - 1e-6 && t <= 1 + 1e-6) return { q: { gx: a.gx + dx * t, gz: a.gz + dz * t }, seg, t };
+    }
+    return null;
+  }
   // Places pieces end to end along one run of points, from its start. k: pieces placed so far.
+  // Pieces stay level, each on the ground where it stands (the lowest of its ends and middle, so it
+  // never floats): on a slope each one is a little higher or lower than the last, touching it.
   function snappedRun(pts, names, k, out) {
     if (pts.length < 2) return k;
     let s = { gx: pts[0].gx, gz: pts[0].gz }, seg = 0, t0 = 0, sSeg = 0;
@@ -444,24 +461,17 @@ export function createPlant(ed) {
       const name = names[k % names.length], e = endsOf(name);
       sSeg = seg;
       if (!e) break;
-      // The next point along the line exactly one piece length (straight) from this one.
-      let q = null;
-      for (; seg < pts.length - 1 && !q; seg++, t0 = 0) {
-        const a = pts[seg], b = pts[seg + 1], dx = b.gx - a.gx, dz = b.gz - a.gz, fx = a.gx - s.gx, fz = a.gz - s.gz;
-        const A = dx * dx + dz * dz, B = 2 * (fx * dx + fz * dz), C = fx * fx + fz * fz - e.len * e.len, disc = B * B - 4 * A * C;
-        if (A < 1e-9 || disc < 0) continue;
-        const t = (-B + Math.sqrt(disc)) / (2 * A);
-        if (t >= t0 - 1e-6 && t <= 1 + 1e-6) { q = { gx: a.gx + dx * t, gz: a.gz + dz * t }; t0 = t; break; }
-      }
-      if (!q) break;
+      const hit = along(pts, s, seg, t0, e.len);
+      if (!hit) break;
+      const q = hit.q;
       // Turn so that the piece's start-to-end runs along s -> q (Unity yaw, clockwise seen from above).
       const yaw = (Math.atan2(q.gx - s.gx, q.gz - s.gz) - e.heading) * 180 / Math.PI;
       const r = yaw * Math.PI / 180, c = Math.cos(r), sn = Math.sin(r);
       const ox = s.gx - (e.a[0] * c + e.a[2] * sn), oz = s.gz - (-e.a[0] * sn + e.a[2] * c);
-      const y = Math.min(heightAt(s.gx, s.gz), heightAt(q.gx, q.gz)) - e.a[1];
+      const bottom = Math.min(heightAt(s.gx, s.gz), heightAt(q.gx, q.gz), heightAt((s.gx + q.gx) / 2, (s.gz + q.gz) / 2));
       if (ox >= 1 && oz >= 1 && ox <= W - 2 && oz <= H - 2 && ed.mask(Math.round(oz) * W + Math.round(ox)))
-        out.push({ name, x: ed.originX + ox, y, z: ed.originZ + oz, rx: 0, ry: ((yaw % 360) + 360) % 360, rz: 0, scale: 0, gx: ox, gz: oz });
-      s = q;
+        out.push({ name, x: ed.originX + ox, y: bottom - e.a[1], z: ed.originZ + oz, rx: 0, ry: ((yaw % 360) + 360) % 360, rz: 0, scale: 0, gx: ox, gz: oz });
+      s = q; seg = hit.seg; t0 = hit.t;
     }
     // What is left of the line once no whole piece fits any more.
     for (let i = sSeg; i < pts.length - 1; i++) { const a = i === sSeg ? s : pts[i], b = pts[i + 1]; snapGap += Math.hypot(b.gx - a.gx, b.gz - a.gz); }
@@ -732,6 +742,8 @@ export function createPlant(ed) {
     e.preventDefault(); e.stopImmediatePropagation();
     (turnable() ? turnShape : turn)(Math.sign(e.deltaY) * ed.turnStep(e));
   }, { capture: true, passive: false });
+  // For automated tests: what the preview would place.
+  window.__plantPreview = () => preview.map(o => ({ ...o }));
   ed.frame ??= [];
   ed.frame.push(step);
 }
