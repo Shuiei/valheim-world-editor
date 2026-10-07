@@ -1,4 +1,4 @@
-# Build tools (WorldGen/pieces.json "tool"): which pieces each build tool's menu has, from the game's
+# Build tools (Core/WorldGen/pieces.json "tool"): which pieces each build tool's menu has, from the game's
 # PieceTables (_HammerPieceTable, _HoePieceTable, _CultivatorPieceTable, _FeasterPieceTable). The
 # editor writes a builder on new pieces of these kinds, as the game does when a player places one.
 # Entries that are not objects (repair, remove, the hoe's and cultivator's ground tools) are left out.

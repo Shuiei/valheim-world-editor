@@ -9,7 +9,7 @@ for path in sys.argv[1:]:
 T = H = 0
 rows = []
 for fn, lines in files.items():
-    if fn.startswith('WorldGen/') and fn not in ('WorldGen/PieceCatalog.cs', 'WorldGen/PrefabCatalog.cs'): continue
+    if '/WorldGen/' in '/' + fn and not fn.endswith(('PieceCatalog.cs', 'PrefabCatalog.cs')): continue
     t = len(lines); h = sum(lines.values()); T += t; H += h
     rows.append((h / t if t else 1, t - h, t, fn))
 for r, m, t, fn in sorted(rows):

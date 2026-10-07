@@ -158,27 +158,7 @@ public static class AppHost
 	}
 
 	// The first free port from `from` on, so a second copy (or another program) never blocks the start.
-	public static int FreePort(int from)
-	{
-		for (int p = from; p < from + 50; p++)
-		{
-			try
-			{
-				var l = new TcpListener(IPAddress.Loopback, p);
-				l.Start();
-				l.Stop();
-				return p;
-			}
-			catch (SocketException)
-			{
-			}
-		}
-		var any = new TcpListener(IPAddress.Loopback, 0);
-		any.Start();
-		int port = ((IPEndPoint)any.LocalEndpoint).Port;
-		any.Stop();
-		return port;
-	}
+	public static int FreePort(int from) => Places.FreePort(from);
 
 	public static void OpenBrowser(string url)
 	{

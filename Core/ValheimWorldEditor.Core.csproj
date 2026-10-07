@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Everything that is not web: saves, edits, the world generator, live mode, blueprints, settings.
+       Shared by the web app (TerrainEditor.csproj) and the native app. -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>ValheimWorldEditor.Core</AssemblyName>
+    <RootNamespace>TerrainEditor</RootNamespace>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="WorldEditor.Tests" />
+    <InternalsVisibleTo Include="ValheimWorldEditor" />
+    <InternalsVisibleTo Include="ValheimWorldEditor.Desktop" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="SSH.NET" Version="2026.0.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="WorldGen/terrain-modifiers.json" LogicalName="TerrainEditor.terrain-modifiers.json" />
+    <EmbeddedResource Include="WorldGen/pieces.json" LogicalName="TerrainEditor.pieces.json" />
+    <EmbeddedResource Include="WorldGen/prefabs.json" LogicalName="TerrainEditor.prefabs.json" />
+    <EmbeddedResource Include="WorldGen/vegetation.json" LogicalName="TerrainEditor.vegetation.json" />
+    <EmbeddedResource Include="WorldGen/zdo-keys.json" LogicalName="TerrainEditor.zdo-keys.json" />
+  </ItemGroup>
+</Project>

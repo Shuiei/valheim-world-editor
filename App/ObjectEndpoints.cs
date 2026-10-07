@@ -74,7 +74,7 @@ public static class ObjectEndpoints
 		return w.NewObjectBytes(n, m => w.LiveBytes ?? (files.TryGetValue(m.File, out byte[]? f) ? f : files[m.File] = File.ReadAllBytes(Path.Combine(w.Directory, m.File.FileName))));
 	}
 
-	public static string? PrefabName(int prefab) => PieceCatalog.Get(prefab)?.Name ?? PrefabCatalog.NameOf(prefab);
+	public static string? PrefabName(int prefab) => PrefabCatalog.DisplayName(prefab);
 
 	private static string S(float v) => v.ToString("R", CultureInfo.InvariantCulture);
 

@@ -4,10 +4,12 @@
 
 | Path | What it holds |
 |---|---|
-| `Program.cs`, `App/` | The app: window (`NativeWindow`, Photino), start page (`Launcher`), game-look setup (`GameLook`), settings, and the editor session with its HTTP API (`EditorSession`: `/api/world`, `/api/region`, `/api/objects`, `/api/save`, …). |
-| `Save/` | Save reader (`WorldSave`, `ValheimReader`), writer (`WorldWriter`), object building (`ZdoTools`: copies and blank objects), the `.db2` zone list, and live mode (`LiveBridge`, `LiveSync`). |
-| `Editing/` | Pending changes: terrain per zone, deleted and added objects, zone resets (`EditStore`). |
-| `WorldGen/` | Port of Valheim's world generator (bit-exact base terrain), map data, location flattening, the build-piece catalogue (`pieces.json`) and the prefab catalogue (`prefabs.json`). |
+| `Program.cs`, `App/` | The web app: window (`NativeWindow`, Photino), start page (`Launcher`), and the editor session with its HTTP API (`EditorSession`: `/api/world`, `/api/region`, `/api/objects`, `/api/save`, …) and the other `*Endpoints`. |
+| `Core/` | `ValheimWorldEditor.Core`, everything that is not web, shared with the native app to come (see the plan for it): |
+| `Core/App/` | Settings, game-look setup (`GameLook`), Regrow, search, blueprint formats, servers and SSH (`ServerConfig`, `Tunnel`), the local game (`LocalGame`), characters, zone statistics, folders (`Places`). |
+| `Core/Save/` | Save reader (`WorldSave`, `ValheimReader`), writer (`WorldWriter`), object building (`ZdoTools`: copies and blank objects), the `.db2` zone list, and live mode (`LiveBridge`, `LiveSync`). |
+| `Core/Editing/` | Pending changes: terrain per zone, deleted and added objects, zone resets (`EditStore`); heights of a block of zones (`HeightGrid`). |
+| `Core/WorldGen/` | Port of Valheim's world generator (bit-exact base terrain), map data, location flattening, the build-piece catalogue (`pieces.json`) and the prefab catalogue (`prefabs.json`). |
 | `wwwroot/` | The map (`index.html`, `mapview.js`) and the 3D editor (`editor.html`, `editor/*.js`, `terrain/*.js`, three.js in `lib/`). |
 | `wwwroot/editor/tips.js` | The hover text of every control. Keep it and the docs in step. |
 | `plugin/WorldEditorBridge/` | The BepInEx plugin for live mode (.NET Framework 4.7.2). |
@@ -124,22 +126,22 @@ What it does:
 A full run takes a few minutes and writes about 150 MB. The terrain and map output was checked to
 be byte-identical to the files made by hand during development.
 
-The catalogues that are in git are made by `scan_pieces.py` (`WorldGen/pieces.json`, with each
+The catalogues that are in git are made by `scan_pieces.py` (`Core/WorldGen/pieces.json`, with each
 piece's snap points),
-`scan_modifiers.py` (`WorldGen/terrain-modifiers.json`) and `scan_prefabs.py`
-(`WorldGen/prefabs.json`: also container sizes, ward radii and crafting station build ranges);
+`scan_modifiers.py` (`Core/WorldGen/terrain-modifiers.json`) and `scan_prefabs.py`
+(`Core/WorldGen/prefabs.json`: also container sizes, ward radii and crafting station build ranges);
 each takes the output file as argument and the bundle folder in `VWE_BUNDLES`.
-`scan_vegetation.py WorldGen/vegetation.json` makes the game's vegetation rules for Regrow nature
+`scan_vegetation.py Core/WorldGen/vegetation.json` makes the game's vegetation rules for Regrow nature
 (ZoneSystem's and the location lists', with the random draws each kind makes when it is created).
 `RegrowProbe` (with `REALWORLD=<world folder> OUT=<file>`) reports how many saved trees and rocks of a
 world the game generated sit where Regrow puts them (61 % on a played Meadows / Black Forest world;
 the rest is mostly the game's physics check against what it placed before, which the editor cannot do).
-`scan_grown.py WorldGen/prefabs.json` (run after `scan_prefabs.py`) adds what each sapling grows into
+`scan_grown.py Core/WorldGen/prefabs.json` (run after `scan_prefabs.py`) adds what each sapling grows into
 (grown crops and trees keep their sapling's grow radius).
-`scan_build_tools.py WorldGen/pieces.json WorldGen/prefabs.json` (run after the other two) adds
+`scan_build_tools.py Core/WorldGen/pieces.json Core/WorldGen/prefabs.json` (run after the other two) adds
 which build tool's menu has each piece (hammer, hoe, cultivator, feaster): the editor writes a
 builder on new pieces of those kinds.
-`scan_zdo_keys.py <Valheim folder> WorldGen/zdo-keys.json` makes the names of object data keys for
+`scan_zdo_keys.py <Valheim folder> Core/WorldGen/zdo-keys.json` makes the names of object data keys for
 the object inspector, from the string literals of `assembly_valheim.dll` (the save only keeps their
 hashes).
 

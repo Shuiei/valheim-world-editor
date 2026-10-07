@@ -9,7 +9,7 @@ public static class Characters
 	public sealed record Character(string Name, long Id);
 
 	// Character folders next to the world folders (characters_local and characters).
-	public static IEnumerable<string> Roots() => Launcher.WorldRoots()
+	public static IEnumerable<string> Roots() => Places.WorldRoots()
 		.Select(r => Path.Combine(Path.GetDirectoryName(r)!, Path.GetFileName(r) == "worlds_local" ? "characters_local" : "characters"))
 		.Distinct();
 

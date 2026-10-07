@@ -301,25 +301,7 @@ public static class Launcher
 	}
 
 	// Where Valheim keeps local worlds.
-	public static IEnumerable<string> WorldRoots()
-	{
-		string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-		if (OperatingSystem.IsWindows())
-		{
-			yield return Path.Combine(home, "AppData", "LocalLow", "IronGate", "Valheim", "worlds_local");
-			yield return Path.Combine(home, "AppData", "LocalLow", "IronGate", "Valheim", "worlds");
-		}
-		else
-		{
-			yield return Path.Combine(home, ".config", "unity3d", "IronGate", "Valheim", "worlds_local");
-			yield return Path.Combine(home, ".config", "unity3d", "IronGate", "Valheim", "worlds");
-			// Valheim through Proton (Steam Play) keeps its Windows-style folder inside the prefix.
-			foreach (string steam in new[] { Path.Combine(home, ".steam", "steam"), Path.Combine(home, ".local", "share", "Steam") })
-			{
-				yield return Path.Combine(steam, "steamapps", "compatdata", GameLook.ValheimAppId.ToString(), "pfx", "drive_c", "users", "steamuser", "AppData", "LocalLow", "IronGate", "Valheim", "worlds_local");
-			}
-		}
-	}
+	public static IEnumerable<string> WorldRoots() => Places.WorldRoots();
 
 	public static string? CheckWorld(string path)
 	{

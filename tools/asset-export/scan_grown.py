@@ -1,4 +1,4 @@
-# What each sapling grows into (WorldGen/prefabs.json "grows"), from the game's Plant components
+# What each sapling grows into (Core/WorldGen/prefabs.json "grows"), from the game's Plant components
 # (m_grownPrefabs): sapling_carrot -> Pickable_Carrot, Beech_Sapling -> Beech1... The editor gives the
 # grown kinds their sapling's grow radius, for "Leave saplings and crops room to grow".
 # Run after scan_prefabs.py, as it adds to its output.

@@ -1,4 +1,4 @@
-# Build-piece catalogue (WorldGen/pieces.json, in git): category and footprint of every piece, and its
+# Build-piece catalogue (Core/WorldGen/pieces.json, in git): category and footprint of every piece, and its
 # snap points (the children the game's hammer snaps pieces together by), in the piece's own frame.
 # Usage: VWE_BUNDLES=<game>/valheim_Data/StreamingAssets/SoftRef/Bundles python scan_pieces.py <out.json>
 import UnityPy, glob, json, sys
