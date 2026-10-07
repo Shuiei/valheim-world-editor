@@ -207,7 +207,8 @@ export function createArea(ed) {
   function fillTypeLists() {
     const types = ed.objects.creatableTypes(), groups = {};
     for (const t of types) (groups[t.kind] ??= []).push(t);
-    const html = KINDS.filter(k => groups[k]).map(k => `<optgroup label="${KIND_LABEL[k]}">${groups[k].map(t => `<option value="${t.name}">${t.name}</option>`).join('')}</optgroup>`).join('');
+    // The app window (WebKitGTK) shows group labels as GTK markup, where a bare "&" breaks them.
+    const html = KINDS.filter(k => groups[k]).map(k => `<optgroup label="${KIND_LABEL[k].replace(/ & /g, ' and ')}">${groups[k].map(t => `<option value="${t.name}">${t.name}</option>`).join('')}</optgroup>`).join('');
     document.querySelectorAll('select.typeList').forEach(s => { const v = s.value; s.innerHTML = html; if (v) s.value = v; });
   }
   (ed.onObjects ??= []).push(() => { fillTypeLists(); updateInfo(); });
