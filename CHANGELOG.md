@@ -4,6 +4,22 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v0.25.0 — 2026-10-07 (player-built pieces)
+
+### Added
+- **Built by** (View panel, Building): the player written as the builder of the pieces you place.
+  It lists the world's builders (the one with the most pieces is chosen at the start), the players
+  named on beds, wards and tombstones, and the characters on this computer; any other player id can
+  be typed. Remembered per world.
+- **Make player built** (Select tool): gives selected pieces that have no builder the chosen one.
+
+### Fixed
+- Pieces placed by the editor were not always **player built**: kinds the world had none of, and
+  copies of pieces from ruins, had no builder, so the game took them for ruins (a third of the
+  materials back, no base for fires, ignored by raids, wards and private chests owned by nobody).
+  Now every piece of a kind the hammer, hoe, cultivator or serving tray can place gets the chosen
+  builder when it is placed, pasted or built. Moved and edited objects keep their builder.
+
 ## v0.24.0 — 2026-10-07 (eyedropper and favourite kinds)
 
 ### Added

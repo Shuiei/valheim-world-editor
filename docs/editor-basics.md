@@ -69,10 +69,30 @@ folded.
 | Spoilers | **Ore & deposits**, **Ruins & structures**, **Location markers**, **Other objects** | Off by default, so the editor does not spoil what is still to be found. |
 | Overlays | **Your buildings**, **Water**, **Zone borders** | Player-built pieces, the sea surface, the 64 m zone lines. |
 | | **Defaults** / **All** / **Ground** | Default switches / show everything / show only the ground. |
+| Building | **Built by** | The player written as the builder of every piece you place: see below. |
 
 Only what is shown can be picked or selected. Objects you placed but did not save yet are always
 drawn (with a green dot), and placing a kind that is switched off switches it on, so you never
 lose sight of what you placed.
+
+## Player-built pieces
+
+Everything a player can place with the hammer, the hoe, the cultivator or the serving tray is
+**player built** in the game: it stores who built it. The editor writes the player chosen in
+**View → Building → Built by** on every such piece it places, pastes or builds, as the game would.
+Without a builder the game takes a piece for part of a ruin: taking it down gives only a third of
+its materials back, a fire next to it is no base (monsters still spawn), raids ignore it, and a ward
+or private chest answers to nobody.
+
+**Built by** lists the players who built in this world (the one with the most pieces comes first and
+is chosen at the start), the players named on beds, wards and tombstones, and the characters on this
+computer (your own player id, even in a world where you built nothing yet). **Other player id…**
+takes any id. The choice is remembered per world. With no player known at all, pieces get
+**Unknown player** (id 1): they are player built, but wards and private chests answer to nobody, so
+choose your own id when you can.
+
+Pieces placed by older versions of the editor may have no builder: select them and press **Make
+player built** (Select tool). Moving or editing an object keeps the builder it has.
 
 ## Shortcuts
 

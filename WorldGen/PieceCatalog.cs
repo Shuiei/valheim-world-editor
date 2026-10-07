@@ -13,6 +13,10 @@ public static class PieceCatalog
 	{
 		// Snap points in the piece's own frame (x, y, z each); empty when it has none.
 		public float[][] Snaps { get; init; } = Array.Empty<float[]>();
+
+		// The build tool whose menu has the piece (hammer, hoe, cultivator, feaster: the serving tray);
+		// null for pieces players cannot build (parts of ruins and dungeons).
+		public string? Tool { get; init; }
 	}
 
 	// Every piece with snap points, by name.
@@ -64,7 +68,8 @@ public static class PieceCatalog
 			// Pieces without box colliders get a 1 m marker.
 			float[] box = p.Value.TryGetProperty("box", out JsonElement b) ? b.EnumerateArray().Select(e => e.GetSingle()).ToArray() : new[] { -0.5f, 0.5f, -0.5f, 0.5f, 0f, 1f };
 			float[][] snaps = p.Value.TryGetProperty("snap", out JsonElement sp) ? sp.EnumerateArray().Select(v => v.EnumerateArray().Select(e => e.GetSingle()).ToArray()).ToArray() : Array.Empty<float[]>();
-			result[StableHash.Of(p.Name)] = new Info(p.Name, names.Count, cat, box[0], box[1], box[2], box[3], box[4], box[5]) { Snaps = snaps };
+			string? tool = p.Value.TryGetProperty("tool", out JsonElement t) ? t.GetString() : null;
+			result[StableHash.Of(p.Name)] = new Info(p.Name, names.Count, cat, box[0], box[1], box[2], box[3], box[4], box[5]) { Snaps = snaps, Tool = tool };
 			names.Add(p.Name);
 		}
 		Names = names.ToArray();

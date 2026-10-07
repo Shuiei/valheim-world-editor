@@ -268,6 +268,8 @@
   <label class="toggle"><input type="checkbox" data-show="water" checked><span class="t">Water</span></label>
   <label class="toggle"><input type="checkbox" data-show="borders" checked><span class="t">Zone borders</span></label>
   <div class="presets"><button id="showDefaults">Defaults</button><button id="showAll">All</button><button id="terrainOnly">Ground</button></div>
+  <h3>Building</h3>
+  <label class="field">Built by <select id="builder"></select></label>
 </aside>
 
 <aside id="historyPanel" class="card" hidden>
@@ -321,6 +323,7 @@ import { createHandles } from './editor/handles.js';
 import { createInspector } from './editor/inspector.js';
 import { createSelecting } from './editor/selecting.js';
 import { createEyedropper } from './editor/eyedropper.js';
+import { createBuilder } from './editor/builder.js';
 import { applyTips } from './editor/tips.js';
 import { gameLookBanner } from './app.js';
 gameLookBanner();
@@ -1020,6 +1023,7 @@ createErosion(ed);
 createShapes(ed);
 createMasks(ed, [...BRUSH_TOOLS, 'path', 'area', 'plant', 'shape']);
 createEyedropper(ed);
+createBuilder(ed);
 createArea(ed);
 createBlueprints(ed);
 createHeightmap(ed);

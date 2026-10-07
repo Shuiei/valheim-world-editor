@@ -21,6 +21,12 @@ public sealed class WorldSave
 
 	private static readonly int CreatorKey = StableHash.Of("creator");
 
+	// Player ids and the names stored with them: bed and tombstone owners, ward builders, players
+	// (live: the players that are online).
+	private static readonly int OwnerKey = StableHash.Of("owner"), OwnerNameKey = StableHash.Of("ownerName");
+	private static readonly int CreatorNameKey = StableHash.Of("creatorName");
+	private static readonly int PlayerIdKey = StableHash.Of("playerID"), PlayerNameKey = StableHash.Of("playerName");
+
 	private static readonly int ScaleKey = StableHash.Of("scale");
 
 	private static readonly int ScaleScalarKey = StableHash.Of("scaleScalar");
@@ -59,6 +65,19 @@ public sealed class WorldSave
 	// Player-built pieces (objects with a creator): prefab, position and Y rotation in degrees.
 	public List<(int Id, int Prefab, Vector3 Position, float RotationY)> Pieces { get; } = new();
 
+	// Pieces per builder (the "creator" player id).
+	public Dictionary<long, int> Creators { get; } = new();
+
+	// Player names by player id, from the objects that store both.
+	public Dictionary<long, string> PlayerNames { get; } = new();
+
+	// The player id written as "creator" on new pieces (things built with the hammer, hoe, cultivator
+	// or serving tray), so the game treats them as player built. Chosen in the editor; 0: not set.
+	public static long Builder { get; set; }
+
+	// The player who built the most pieces in this world (0 if nobody did).
+	public long TopBuilder => Creators.Count == 0 ? 0 : Creators.MaxBy(c => c.Value).Key;
+
 	// Every object in the save by id (its order in the save).
 	public List<ObjectRef> ObjectRefs { get; } = new();
 
@@ -86,6 +105,22 @@ public sealed class WorldSave
 	// with the prefab's own flags from the game (what the game writes for a freshly placed object).
 	// readSource gives the chunk file bytes the model lives in.
 	public byte[]? NewObjectBytes(TerrainEditor.Editing.NewObject n, Func<ObjectRef, byte[]> readSource)
+	{
+		byte[]? bytes = BuildBytes(n, readSource);
+		// A new piece of a kind players build (placed, pasted or built blank) is the chosen builder's,
+		// like one built in the game. Without a builder the game takes it for part of a ruin: a third of
+		// the materials back, no base for fires, ignored by raids. Moved and edited objects keep theirs.
+		if (bytes != null && Builder != 0 && (n.Fresh || n.Raw == null && ModelFor(n.Prefab, n.SourceId) == null)
+			&& TerrainEditor.Terrain.PieceCatalog.Get(n.Prefab)?.Tool != null)
+		{
+			ZdoData z = ZdoData.Parse(bytes);
+			z.Set("longs", CreatorKey, Builder.ToString(CultureInfo.InvariantCulture));
+			bytes = z.Serialize();
+		}
+		return bytes;
+	}
+
+	private byte[]? BuildBytes(TerrainEditor.Editing.NewObject n, Func<ObjectRef, byte[]> readSource)
 	{
 		if (n.Raw != null)
 		{
@@ -309,7 +344,7 @@ public sealed class WorldSave
 		bool tracked = prefab == LocationProxyPrefab || ModifierPrefabs.Contains(prefab);
 		int location = 0;
 		long timeCreated = 0;
-		long creator = 0;
+		long creator = 0, owner = 0, playerId = 0;
 		// Zero = not stored: the object keeps its prefab's own scale.
 		Vector3 scale = Vector3.Zero;
 		if ((flags & 0xFF) == 0)
@@ -388,9 +423,30 @@ public sealed class WorldSave
 				{
 					creator = value;
 				}
+				else if (key == OwnerKey)
+				{
+					owner = value;
+				}
+				else if (key == PlayerIdKey)
+				{
+					playerId = value;
+				}
 			}
 		}
-		Skip(pkg, worldVersion, flags, Strings, p => p.ReadString());
+		if ((flags & Strings) != 0)
+		{
+			int n = pkg.ReadNumItems(worldVersion);
+			for (int i = 0; i < n; i++)
+			{
+				int key = pkg.ReadInt();
+				string value = pkg.ReadString();
+				long who = key == OwnerNameKey ? owner : key == CreatorNameKey ? creator : key == PlayerNameKey ? playerId : 0;
+				if (who != 0 && value.Length > 0)
+				{
+					PlayerNames[who] = value;
+				}
+			}
+		}
 		if ((flags & ByteArrays) != 0)
 		{
 			int n = pkg.ReadNumItems(worldVersion);
@@ -423,6 +479,7 @@ public sealed class WorldSave
 		}
 		if (creator != 0)
 		{
+			Creators[creator] = Creators.GetValueOrDefault(creator) + 1;
 			Pieces.Add((id, prefab, position, rotation.Y));
 		}
 		else if (!tracked && !terrain && prefab != LocationProxyPrefab)

@@ -222,3 +222,51 @@ public class ZoneStatsTests
 		}
 	}
 }
+
+// New pieces are player built: they get the chosen builder as "creator", like pieces built in the game.
+public class BuilderTests
+{
+	private static readonly int CreatorKey = StableHash.Of("creator");
+
+	private static long CreatorOf(byte[] bytes) => ZdoData.Parse(bytes).LongList.FirstOrDefault(l => l.Key == CreatorKey).Value;
+
+	[Fact]
+	public void NewBuildPiecesGetTheBuilderOtherKindsAndMovesDoNot()
+	{
+		using var w = new TempWorld();
+		WorldSave world = w.Load();
+		long before = WorldSave.Builder;
+		try
+		{
+			WorldSave.Builder = 1234567890123L;
+			byte[] Source(ObjectRef m) => File.ReadAllBytes(Path.Combine(world.Directory, m.File.FileName));
+			// Copied from one in the world when it has one, else built blank.
+			byte[] Make(string name) => world.NewObjectBytes(new NewObject(-5, Fixtures.Hash(name), new Vector3(10, 30, 10), Vector3.Zero, 0f), Source)!;
+			Assert.Equal(1234567890123L, CreatorOf(Make("woodwall")));        // hammer
+			Assert.Equal(1234567890123L, CreatorOf(Make("sapling_turnip")));  // cultivator
+			Assert.Equal(0L, CreatorOf(Make("Beech1")));                      // not built by players
+			// A moved object keeps what it had.
+			int chest = world.Objects.First(o => o.Prefab == Fixtures.Hash("piece_chest_wood")).Id;
+			ZdoData z = ZdoData.Parse(world.ObjectBytes(chest));
+			var moved = new NewObject(-6, z.Prefab, z.Position + new Vector3(1, 0, 0), z.Rotation, 0f, chest, false);
+			Assert.Equal(0L, CreatorOf(world.NewObjectBytes(moved, Source)!));
+		}
+		finally
+		{
+			WorldSave.Builder = before;
+		}
+	}
+
+	[Fact]
+	public void ACharacterFileGivesItsNameAndPlayerId()
+	{
+		// ... per-world data, then the name, the player id and an empty start seed.
+		byte[] name = System.Text.Encoding.UTF8.GetBytes("Shuiei");
+		byte[] file = new byte[] { 1, 2, 3, 6 }.Concat(name).Concat(BitConverter.GetBytes(3349326647L)).Concat(new byte[] { 0, 1, 0, 0 }).ToArray();
+		var c = TerrainEditor.App.Characters.Read(file, "shuiei");
+		Assert.NotNull(c);
+		Assert.Equal("Shuiei", c!.Name);
+		Assert.Equal(3349326647L, c.Id);
+		Assert.Null(TerrainEditor.App.Characters.Read(file, "someone"));
+	}
+}
