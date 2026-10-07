@@ -49,6 +49,7 @@ export const TIPS = {
   pAmount: 'Raise / Lower by: how much to raise or lower along the path (m).',
   pStart: 'Ramp: height at the first point (m). Alt + click the ground to pick it.',
   pEnd: 'Ramp: height at the last point (m). Alt + Shift + click the ground to pick it.',
+  pDepth: 'River / canal: depth of the bed below sea level in the middle (m). The bed rises to the waterline at the path\'s width; the soft edge makes the banks. It only digs.',
   pCurve: 'On: a smooth curve through your points. Off: straight lines between them.',
   pNatural: 'Ragged edges, varying width and small bumps, so the path looks worn rather than tool-made.',
   pApply: 'Do the chosen action along the line (Enter). The line stays, so you can apply another action to it.',

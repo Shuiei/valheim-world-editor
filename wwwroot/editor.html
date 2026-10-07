@@ -200,6 +200,7 @@
       <option value="raise">Raise by</option>
       <option value="lower">Lower by</option>
       <option value="smooth">Smooth</option>
+      <option value="river">River / canal (water)</option>
       <option value="paint-dirt">Paint dirt</option>
       <option value="paint-paved">Paint paved</option>
       <option value="paint-cultivated">Paint cultivated</option>
@@ -211,6 +212,7 @@
     <label class="field pRow" data-for="raise lower">Amount <input id="pAmount" type="number" step="0.1" value="2"><span>m</span></label>
     <label class="field pRow" data-for="ramp">Start <input id="pStart" type="number" step="0.1" value="32"><span>m</span></label>
     <label class="field pRow" data-for="ramp">End <input id="pEnd" type="number" step="0.1" value="32"><span>m</span></label>
+    <label class="field pRow" data-for="river">Depth <input id="pDepth" type="number" step="0.25" min="0.25" value="2"><span>m</span></label>
     <label class="check"><input type="checkbox" id="pCurve" checked> Smooth curve through the points</label>
     <label class="check"><input type="checkbox" id="pNatural"> Natural look (ragged edges, bumps)</label>
     <div class="row"><button id="pApply" class="primary">Apply <kbd>Enter</kbd></button><button id="pClear">Clear <kbd>Esc</kbd></button></div>
@@ -1220,6 +1222,13 @@ function applyPath() {
       case 'lower': setHeight(g, h - (pv('pAmount') + bump) * w); break;
       case 'flatten': setHeight(g, h + (pv('pHeight') + bump - h) * w); break;
       case 'ramp': { const T = pv('pStart') + (pv('pEnd') - pv('pStart')) * (along / total) + bump; setHeight(g, h + (T - h) * w); break; }
+      case 'river': {
+        // A U-shaped bed: Depth below sea level in the middle, at the waterline at the path's width,
+        // then the soft edge blends it into the banks. It only digs: lower ground stays as it is.
+        const bed = WATER - pv('pDepth') * Math.max(0, 1 - (Math.min(dEff, halfEff) / halfEff) ** 2) + bump * 0.3;
+        if (bed < h) setHeight(g, h + (bed - h) * w);
+        break;
+      }
       case 'smooth': {
         let sum = 0, n = 0;
         for (let dz = -2; dz <= 2; dz++) for (let dx = -2; dx <= 2; dx++) { const k = (gz + dz) * W + gx + dx; if (k >= 0 && k < N) { sum += before[k]; n++; } }
