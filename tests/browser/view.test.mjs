@@ -113,6 +113,11 @@ test('the 3D view is drawn only while something happens, and Help says what draw
   for (let i = 0; i < 40; i++) { await page().mouse.move(600 + (i % 10) * 8, 400 + i); await sleep(30); }
   await page().keyboard.press('?'); await sleep(200);
   assert.match(await page().$eval('#gpuInfo', e => e.textContent), /\d+ frames\/s while moving \([\d.]+ ms of work each\)/);
+  // Selected (to copy it), the line stays as it is while the view keeps drawing.
+  await page().evaluate(() => { const r = document.createRange(); r.selectNodeContents(document.getElementById('gpuInfo')); getSelection().removeAllRanges(); getSelection().addRange(r); });
+  const text = await page().$eval('#gpuInfo', e => e.textContent);
+  for (let i = 0; i < 40; i++) { await page().evaluate(() => window.__ed.wake()); await sleep(30); }
+  assert.equal(await page().evaluate(() => getSelection().toString()), text, 'still selected, unchanged');
   noErrors();
 });
 
