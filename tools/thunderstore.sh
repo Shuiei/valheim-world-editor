@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Build the Thunderstore package of the plugin into <dist>: WorldEditorBridge-<version>.zip, from
-# tools/thunderstore/bridge/ (manifest.json and the mod page's README.md),
-# tools/thunderstore/CHANGELOG.md, wwwroot/icon.png and the DLL of the release packages
+# tools/thunderstore/bridge/ (manifest.json and the mod page's README.md), the editor's CHANGELOG.md
+# (through tools/thunderstore/changelog.py), wwwroot/icon.png and the DLL of the release packages
 # (tools/release.sh; those of the VERSION file's version already in <dist> are reused). Only the
 # plugin goes to Thunderstore: it does not host programs, so the editor is on GitHub releases only.
 # Usage: tools/thunderstore.sh <dist>   (needs what tools/release.sh needs)
@@ -37,7 +37,9 @@ PY
 package() {   # $1 package name, $2 its folder in tools/thunderstore; the files are already in $work/$1
   local name=$1 dir="$work/$1"
   sed "s/@VERSION@/$version/g" "$ts/$2/manifest.json" > "$dir/manifest.json"
-  cp "$ts/$2/README.md" "$ts/CHANGELOG.md" "$repo/wwwroot/icon.png" "$dir/"
+  cp "$ts/$2/README.md" "$repo/wwwroot/icon.png" "$dir/"
+  # The editor's changelog, with links to the matching editor on GitHub (versions with a release tag).
+  python3 "$ts/changelog.py" "$repo/CHANGELOG.md" "$dir/CHANGELOG.md" "$version" $(git -C "$repo" tag -l 'v*' 2>/dev/null)
   check "$dir"
   rm -f "$dist/$name-$version.zip"
   (cd "$dir" && zip -qrX "$dist/$name-$version.zip" .)
