@@ -247,13 +247,24 @@ public sealed class AreaPanel
 					continue;
 				}
 				var k = KindOf(t);
-				if ((includeHidden || t.Id < 0 || _view.IsShown(k)) && (!chosenKindsOnly || Area.Kinds.Contains(k)))
+				if ((includeHidden || t.Id < 0 || _view.IsShown(k)) && (!chosenKindsOnly || Area.Kinds.Contains(k) && MaskAt(t.Position.X - ox, t.Position.Z - oz)))
 				{
 					out_.Add(i);
 				}
 			}
 		}
 		return out_;
+	}
+
+	// Whether the Mask lets the ground at a grid point through (the object actions pick only there).
+	private bool MaskAt(float gx, float gz)
+	{
+		if (_session() is not { } s || s.MaskNow() is not { } m)
+		{
+			return true;
+		}
+		int x = Math.Clamp((int)MathF.Round(gx), 0, s.Ground.W - 1), z = Math.Clamp((int)MathF.Round(gz), 0, s.Ground.H - 1);
+		return m(z * s.Ground.W + x) > 0;
 	}
 
 	private ObjectKind KindOf(WorldScene.Thing t) => ObjectKinds.Of(_nameOf(t.Prefab), t.Piece);
@@ -264,7 +275,7 @@ public sealed class AreaPanel
 	{
 		var poly = Area.Polygon();
 		var g = _session()?.Ground;
-		VolumeText.Text = g != null ? Area.Volume(g, Ground(Current) ?? AreaTool.GroundAction.Flatten, Value(HeightBox), Value(AmountBox)) : "";
+		VolumeText.Text = g != null ? Area.Volume(g, Ground(Current) ?? AreaTool.GroundAction.Flatten, Value(HeightBox), Value(AmountBox), _session()?.MaskNow()) : "";
 		if (poly == null)
 		{
 			Info.Text = Area.Box ? "Drag on the ground to select a box." : "Click points around the area; double-click or Enter closes it. Backspace removes a point, Esc clears.";
@@ -327,7 +338,7 @@ public sealed class AreaPanel
 		{
 			var paint = Brush.PaintOf(Paints[Math.Max(0, PaintBox.SelectedIndex)].Tool)!;
 			string name = act == Act.Paint ? $"Paint {Paints[Math.Max(0, PaintBox.SelectedIndex)].Label.ToLowerInvariant()}" : AreaTool.Label(ga);
-			var touched = session.EditGround($"Area: {name}", g => Area.Apply(g, session.Brush, ga, Value(HeightBox), Value(AmountBox), paint));
+			var touched = session.EditGround($"Area: {name}", g => Area.Apply(g, session.Brush, ga, Value(HeightBox), Value(AmountBox), paint, session.MaskNow()));
 			Message?.Invoke($"{name} applied to {touched.Count} point(s).");
 			Refresh();
 			return;
@@ -416,7 +427,7 @@ public sealed class AreaPanel
 		}
 		bool Near(Regrow.Spot o, float d, Func<string?, ObjectKind, bool> test) =>
 			standing.Any(t => MathF.Abs(t.X - o.X) < d && MathF.Abs(t.Z - o.Z) < d && MathF.Sqrt((t.X - o.X) * (t.X - o.X) + (t.Z - o.Z) * (t.Z - o.Z)) < d && test(t.Name, t.Kind));
-		var keep = spots.Where(o => AreaTool.Inside(poly, o.X - ox, o.Z - oz) && Area.Kinds.Contains(ObjectKinds.Of(o.Name, false))
+		var keep = spots.Where(o => AreaTool.Inside(poly, o.X - ox, o.Z - oz) && Area.Kinds.Contains(ObjectKinds.Of(o.Name, false)) && MaskAt(o.X - ox, o.Z - oz)
 			&& !Near(o, 1, (_, _) => true) && !Near(o, 3, (n, _) => n == o.Name) && !Near(o, 4, (_, k) => k == ObjectKind.Buildings)).ToList();
 		if (keep.Count == 0)
 		{
@@ -498,7 +509,7 @@ public sealed class AreaPanel
 			Array.Copy(g.Base, bk.Base, g.Base.Length);
 			bk.TakeEdits(be);
 			var touched = new List<int>();
-			if (Area.WeightsIn(g.W, g.H) is not { } a)
+			if (Area.WeightsIn(g.W, g.H, session.MaskNow()) is not { } a)
 			{
 				return (touched, (0, 0, 0, 0));
 			}

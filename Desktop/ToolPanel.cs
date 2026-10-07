@@ -285,4 +285,13 @@ public sealed class ToolPanel
 
 	// The flatten height follows the ground where a stroke started.
 	public void ShowTarget(float h) => TargetBox.Value = (decimal)MathF.Round(h, 1);
+
+	// Alt + click with a brush: level to that height (Flatten, not from the stroke's start).
+	public void FlattenTo(float h)
+	{
+		TargetFromClickBox.IsChecked = false;
+		Brush.Target = MathF.Round(h, 1);
+		ShowTarget(h);
+		Choose(BrushTool.Flatten);
+	}
 }
