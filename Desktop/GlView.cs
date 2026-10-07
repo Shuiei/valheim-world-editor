@@ -127,7 +127,7 @@ public sealed class GlView : OpenGlControlBase
 	// How many wards, crafting stations, flattened places and locations the overlays show.
 	public event Action<Overlays.Built>? OverlaysBuilt;
 	private Overlays.Built? _overlays;
-	private readonly Dictionary<Overlays.Layer, (uint Vao, int Count)> _overlayGl = new();
+	private readonly Dictionary<Overlays.Layer, (uint Vao, int Count, uint Vbo)> _overlayGl = new();
 
 	// For tests: the camera, and the keys held.
 	internal (float Yaw, float Pitch, float Distance, Vector3 Target) Camera { get { lock (_camLock) { return (_yaw, _pitch, _distance, _target); } } }
@@ -138,6 +138,7 @@ public sealed class GlView : OpenGlControlBase
 
 	public GlView()
 	{
+		SelectTool = new SelectTool(this);
 		// Idle: a few frames a second, 20 with the game look (its water and clouds move).
 		var idle = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(50) };
 		idle.Tick += (_, _) => { if (_look != null || _clock.ElapsedMilliseconds - _idleAt >= 250) { _idleAt = _clock.ElapsedMilliseconds; RequestNextFrameRendering(); } };
@@ -158,6 +159,8 @@ public sealed class GlView : OpenGlControlBase
 		if (scene.Session != null)
 		{
 			scene.Session.Changed += Wake;
+			scene.Session.ThingsChanged += OnThingsChanged;
+			scene.Session.ThingsReset += () => { _thingsReset = true; Wake(); };
 		}
 		Task.Run(() =>
 		{
@@ -206,10 +209,30 @@ public sealed class GlView : OpenGlControlBase
 		public ModelStore.MaterialData Material = null!;
 	}
 	private readonly List<Batch> _batches = new();
+
+	// The things of one kind of object (a building piece a player placed apart from the same piece in a
+	// ruin): one model, drawn with one batch per model part. Its batches' instances are rebuilt when one
+	// of its things changes (deleted, moved, added, or shown elsewhere while being moved).
+	private sealed class Group
+	{
+		public required (int Prefab, bool Piece) Key { get; init; }
+		public required ObjectKind Kind { get; init; }
+		public readonly List<int> Things = new();
+		public Vector3 RootScale = Vector3.One;
+		// The model's box in its own frame (for picking), known once read.
+		public (Vector3 Min, Vector3 Max)? Box;
+		public readonly List<(Batch Batch, Matrix4x4 Pre)> Batches = new();
+		public bool Ready;
+	}
+	private readonly Dictionary<(int, bool), Group> _groups = new();
+	private readonly HashSet<Group> _dirtyGroups = new();
+	// Things shown somewhere else than where they are, while a move is being made (Select tool).
+	private Dictionary<int, WorldScene.Thing> _previews = new();
+	private volatile bool _thingsReset, _overlaysDirty;
 	private readonly Dictionary<string, (uint Vbo, uint[] Ebos, int[] Counts)> _meshGl = new();
 	private readonly Dictionary<string, uint> _textures = new();
 	// Models read on worker threads, waiting to go to the graphics card (on the drawing thread).
-	private sealed record ReadyModel(ObjectKind Kind, ModelStore.Model? Model, List<Matrix4x4> Placements, Dictionary<string, ModelStore.MeshData> Meshes,
+	private sealed record ReadyModel(Group Group, ModelStore.Model? Model, Dictionary<string, ModelStore.MeshData> Meshes,
 		Dictionary<string, ModelStore.MaterialData> Materials, Dictionary<string, ModelStore.ImageData?> Images);
 	private readonly ConcurrentQueue<ReadyModel> _ready = new();
 	private int _pending;
@@ -397,50 +420,186 @@ public sealed class GlView : OpenGlControlBase
 	}
 
 	// ---- Objects: read each kind's model on worker threads; the drawing thread uploads them.
+	private string? NameOf(int prefab) => _models?.NameOf(prefab) ?? TerrainEditor.Terrain.PrefabCatalog.DisplayName(prefab);
+
 	private void StartModels(WorldScene s)
 	{
-		// One group per kind of object (a building piece a player placed apart from the same piece in a ruin).
-		var byPrefab = Enumerable.Range(0, s.Things.Count).GroupBy(i => (s.Things[i].Prefab, s.Things[i].Piece)).ToList();
-		_bounds = new (Vector3, Vector3)[s.Things.Count];
-		_known = new bool[s.Things.Count];
-		_kinds = new ObjectKind[s.Things.Count];
-		_pending = byPrefab.Count;
-		var counts = new Dictionary<ObjectKind, int>();
-		foreach (var g in byPrefab)
+		lock (_groups)
 		{
-			var k = ObjectKinds.Of(_models?.NameOf(g.Key.Prefab) ?? TerrainEditor.Terrain.PrefabCatalog.DisplayName(g.Key.Prefab), g.Key.Piece);
-			counts[k] = counts.GetValueOrDefault(k) + g.Count();
-			foreach (int i in g)
+			_groups.Clear();
+			lock (_dirtyGroups)
 			{
-				_kinds[i] = k;
+				_dirtyGroups.Clear();
+			}
+			int n;
+			lock (s.Things)
+			{
+				n = s.Things.Count;
+				for (int i = 0; i < n; i++)
+				{
+					GroupOf(s, i, start: false);
+				}
+			}
+			_pending = _groups.Count;
+			foreach (var g in _groups.Values.ToList())
+			{
+				Load(g);
+			}
+		}
+		SendKindCounts(s);
+		_overlaysDirty = true;
+	}
+
+	// The group a thing belongs to (made, and its model read, if it is the first of its kind).
+	private Group GroupOf(WorldScene s, int i, bool start = true)
+	{
+		var t = s.Things[i];
+		var key = (t.Prefab, t.Piece);
+		EnsureSize(i + 1);
+		if (!_groups.TryGetValue(key, out var g))
+		{
+			g = _groups[key] = new Group { Key = key, Kind = ObjectKinds.Of(NameOf(t.Prefab), t.Piece) };
+			if (start)
+			{
+				Interlocked.Increment(ref _pending);
+				Load(g);
+			}
+		}
+		if (!g.Things.Contains(i))
+		{
+			g.Things.Add(i);
+		}
+		lock (_objLock)
+		{
+			_kinds[i] = g.Kind;
+		}
+		return g;
+	}
+
+	private void EnsureSize(int n)
+	{
+		lock (_objLock)
+		{
+			if (_bounds.Length >= n)
+			{
+				return;
+			}
+			int size = Math.Max(n, _bounds.Length * 3 / 2 + 16);
+			Array.Resize(ref _bounds, size);
+			Array.Resize(ref _known, size);
+			Array.Resize(ref _kinds, size);
+		}
+	}
+
+	private void SendKindCounts(WorldScene s)
+	{
+		var counts = new Dictionary<ObjectKind, int>();
+		lock (s.Things)
+		{
+			lock (_objLock)
+			{
+				for (int i = 0; i < s.Things.Count; i++)
+				{
+					if (!s.Things[i].Gone)
+					{
+						counts[_kinds[i]] = counts.GetValueOrDefault(_kinds[i]) + 1;
+					}
+				}
 			}
 		}
 		Dispatcher.UIThread.Post(() => KindCounts?.Invoke(counts));
-		_overlays = Overlays.Build(s, s.Modifiers, i => _models?.NameOf(s.Things[i].Prefab) ?? TerrainEditor.Terrain.PrefabCatalog.DisplayName(s.Things[i].Prefab));
-		UploadOverlays(_overlays);
-		var built = _overlays;
-		Dispatcher.UIThread.Post(() => OverlaysBuilt?.Invoke(built));
-		Task.Run(() => Parallel.ForEach(byPrefab, new ParallelOptions { MaxDegreeOfParallelism = Math.Max(2, Environment.ProcessorCount / 2) }, group =>
+	}
+
+	// Things appeared, went or came back (EditSession): their groups are drawn again.
+	private void OnThingsChanged(IReadOnlyList<int> indices)
+	{
+		var s = _scene;
+		if (s == null)
 		{
+			return;
+		}
+		lock (_groups)
+		{
+			lock (s.Things)
+			{
+				foreach (int i in indices)
+				{
+					MarkDirty(GroupOf(s, i));
+				}
+			}
+		}
+		lock (_selection)
+		{
+			_selection.RemoveWhere(i => s.Things[i].Gone);
+		}
+		_selectionDirty = true;
+		_overlaysDirty = true;
+		SendKindCounts(s);
+		Wake();
+	}
+
+	private void MarkDirty(Group g)
+	{
+		lock (_dirtyGroups)
+		{
+			_dirtyGroups.Add(g);
+		}
+	}
+
+	// Shows things somewhere else than where they are (a move in progress), or (null) where they are.
+	internal void SetPreviews(Dictionary<int, WorldScene.Thing>? previews)
+	{
+		var s = _scene;
+		if (s == null)
+		{
+			return;
+		}
+		var old = _previews;
+		_previews = previews ?? new();
+		lock (_groups)
+		{
+			foreach (int i in old.Keys.Concat(_previews.Keys))
+			{
+				var t = s.Things[i];
+				if (_groups.TryGetValue((t.Prefab, t.Piece), out var g))
+				{
+					MarkDirty(g);
+				}
+			}
+		}
+		_selectionDirty = true;
+		Wake();
+	}
+
+	// Reads a group's model on a worker thread; the drawing thread sends it to the graphics card.
+	private void Load(Group g)
+	{
+		Task.Run(() =>
+		{
+			_loadGate.Wait();
 			try
 			{
-				string? name = _models?.NameOf(group.Key.Prefab) ?? TerrainEditor.Terrain.PrefabCatalog.DisplayName(group.Key.Prefab);
-				var kind = ObjectKinds.Of(name, group.Key.Piece);
-				var model = name != null ? _models!.LoadModel(name) : null;
+				string? name = NameOf(g.Key.Prefab);
+				var model = name != null && _models != null ? _models.LoadModel(name) : null;
 				var meshes = new Dictionary<string, ModelStore.MeshData>();
 				var mats = new Dictionary<string, ModelStore.MaterialData>();
 				var images = new Dictionary<string, ModelStore.ImageData?>();
+				Vector3 lo = new(float.MaxValue), hi = new(float.MinValue);
 				if (model != null)
 				{
 					foreach (var part in model.Parts)
 					{
-						if (!meshes.ContainsKey(part.Mesh) && _models!.LoadMesh(part.Mesh) is { } md)
+						if (_models!.LoadMesh(part.Mesh) is { } md)
 						{
-							meshes[part.Mesh] = md;
+							meshes.TryAdd(part.Mesh, md);
+							// The object's box, for picking: the parts' meshes.
+							var (a, b) = Picking.Transform(md.Bounds.Min, md.Bounds.Max, part.Matrix);
+							lo = Vector3.Min(lo, a);
+							hi = Vector3.Max(hi, b);
 						}
 						if (!mats.ContainsKey(part.Material))
 						{
-							var mat = _models!.Material(part.Material);
+							var mat = _models.Material(part.Material);
 							mats[part.Material] = mat;
 							if (mat.Map != null && !images.ContainsKey(mat.Map))
 							{
@@ -457,41 +616,88 @@ public sealed class GlView : OpenGlControlBase
 						}
 					}
 				}
-				var root = model?.RootScale ?? Vector3.One;
-				var placements = group.Select(i => Placement(s, s.Things[i], root)).ToList();
-				// Each object's box, for picking: the parts' meshes, or the stand-in box.
-				Vector3 lo = new(float.MaxValue), hi = new(float.MinValue);
-				if (model != null)
-				{
-					foreach (var part in model.Parts)
-					{
-						if (_models!.LoadMesh(part.Mesh) is { } md)
-						{
-							var (a, b) = Picking.Transform(md.Bounds.Min, md.Bounds.Max, part.Matrix);
-							lo = Vector3.Min(lo, a);
-							hi = Vector3.Max(hi, b);
-						}
-					}
-				}
 				if (lo.X > hi.X)
 				{
+					// No model: the stand-in box.
 					(lo, hi) = (new Vector3(-0.5f, 0, -0.5f), new Vector3(0.5f, 2, 0.5f));
 				}
-				int n = 0;
-				foreach (int i in group)
-				{
-					_bounds[i] = Picking.Transform(lo, hi, placements[n++]);
-					_kinds[i] = kind;
-					_known[i] = true;
-				}
-				_ready.Enqueue(new ReadyModel(kind, model, placements, meshes, mats, images));
+				g.RootScale = model?.RootScale ?? Vector3.One;
+				g.Box = (lo, hi);
+				_ready.Enqueue(new ReadyModel(g, model, meshes, mats, images));
 			}
 			catch (Exception ex)
 			{
-				Status?.Invoke($"Model of {group.Key.Prefab}: {ex.Message}");
+				Status?.Invoke($"Model of {g.Key.Prefab}: {ex.Message}");
 				Interlocked.Decrement(ref _pending);
 			}
-		}));
+			finally
+			{
+				_loadGate.Release();
+			}
+			Wake();
+		});
+	}
+	private readonly SemaphoreSlim _loadGate = new(Math.Max(2, Environment.ProcessorCount / 2));
+	private readonly object _objLock = new();
+
+	// A group's instances (and its things' boxes) from where its things are now.
+	private unsafe void Rebuild(WorldScene s, Group g)
+	{
+		var list = new List<Matrix4x4>();
+		var previews = _previews;
+		lock (s.Things)
+		{
+			lock (_objLock)
+			{
+				foreach (int i in g.Things)
+				{
+					var t = previews.TryGetValue(i, out var p) ? p : s.Things[i];
+					var m = Placement(s, t, g.RootScale);
+					if (g.Box is { } box)
+					{
+						_bounds[i] = Picking.Transform(box.Min, box.Max, m);
+					}
+					_known[i] = !t.Gone && g.Box != null;
+					if (!t.Gone)
+					{
+						list.Add(m);
+					}
+				}
+			}
+		}
+		foreach (var (b, pre) in g.Batches)
+		{
+			var data = list.Select(m => pre * m).ToArray();
+			_gl.BindBuffer(BufferTargetARB.ArrayBuffer, b.InstanceVbo);
+			fixed (Matrix4x4* ptr = data)
+			{
+				_gl.BufferData(BufferTargetARB.ArrayBuffer, (nuint)(data.Length * 64), ptr, BufferUsageARB.DynamicDraw);
+			}
+			b.Instances = data.Length;
+		}
+	}
+
+	// Everything read again (after a save): the old batches go.
+	private void DropObjects()
+	{
+		foreach (var b in _batches)
+		{
+			_gl.DeleteVertexArray(b.Vao);
+			_gl.DeleteBuffer(b.InstanceVbo);
+		}
+		_batches.Clear();
+		while (_ready.TryDequeue(out _))
+		{
+		}
+		lock (_selection)
+		{
+			_selection.Clear();
+		}
+		_selectionDirty = true;
+		lock (_objLock)
+		{
+			Array.Clear(_known);
+		}
 	}
 	private readonly HashSet<string> _claimed = new();
 
@@ -531,11 +737,12 @@ public sealed class GlView : OpenGlControlBase
 				_textures[file] = tex;
 			}
 		}
+		var g = r.Group;
 		if (r.Model == null)
 		{
 			// No model copied for this kind: a box stands in, as in the web editor.
-			AddBatch(r.Kind, BoxMesh(), 0, new ModelStore.MaterialData(new Vector4(0.35f, 0.3f, 0.25f, 1), null, 0, false, new Vector4(1, 1, 0, 0)),
-				r.Placements.Select(p => Matrix4x4.CreateScale(1, 2, 1) * Matrix4x4.CreateTranslation(0, 1, 0) * p).ToList());
+			AddBatch(g, BoxMesh(), 0, new ModelStore.MaterialData(new Vector4(0.35f, 0.3f, 0.25f, 1), null, 0, false, new Vector4(1, 1, 0, 0)),
+				Matrix4x4.CreateScale(1, 2, 1) * Matrix4x4.CreateTranslation(0, 1, 0));
 		}
 		else
 		{
@@ -552,8 +759,13 @@ public sealed class GlView : OpenGlControlBase
 				{
 					continue;
 				}
-				AddBatch(r.Kind, mesh, part.Sub, r.Materials[part.Material], r.Placements.Select(p => part.Matrix * p).ToList());
+				AddBatch(g, mesh, part.Sub, r.Materials[part.Material], part.Matrix);
 			}
+		}
+		g.Ready = true;
+		if (_scene is { } s)
+		{
+			Rebuild(s, g);
 		}
 		Interlocked.Decrement(ref _pending);
 	}
@@ -611,9 +823,9 @@ public sealed class GlView : OpenGlControlBase
 		return MeshGl(id, new ModelStore.MeshData(verts.ToArray(), new[] { idx.ToArray() }));
 	}
 
-	private unsafe void AddBatch(ObjectKind kind, (uint Vbo, uint[] Ebos, int[] Counts) mesh, int sub, ModelStore.MaterialData mat, List<Matrix4x4> instances)
+	private unsafe void AddBatch(Group g, (uint Vbo, uint[] Ebos, int[] Counts) mesh, int sub, ModelStore.MaterialData mat, Matrix4x4 pre)
 	{
-		var b = new Batch { Kind = kind, Material = mat, IndexCount = mesh.Counts[sub], Instances = instances.Count };
+		var b = new Batch { Kind = g.Kind, Material = mat, IndexCount = mesh.Counts[sub], Instances = 0 };
 		lock (_textures)
 		{
 			b.Texture = mat.Map != null && _textures.TryGetValue(mat.Map, out uint t) ? t : 0;
@@ -630,11 +842,6 @@ public sealed class GlView : OpenGlControlBase
 		_gl.BindBuffer(BufferTargetARB.ElementArrayBuffer, mesh.Ebos[sub]);
 		b.InstanceVbo = _gl.GenBuffer();
 		_gl.BindBuffer(BufferTargetARB.ArrayBuffer, b.InstanceVbo);
-		var data = instances.ToArray();
-		fixed (Matrix4x4* p = data)
-		{
-			_gl.BufferData(BufferTargetARB.ArrayBuffer, (nuint)(data.Length * 64), p, BufferUsageARB.StaticDraw);
-		}
 		for (uint c = 0; c < 4; c++)
 		{
 			_gl.EnableVertexAttribArray(3 + c);
@@ -643,6 +850,7 @@ public sealed class GlView : OpenGlControlBase
 		}
 		_gl.BindVertexArray(0);
 		_batches.Add(b);
+		g.Batches.Add((b, pre));
 	}
 
 	// ---------------------------------------------------------------- drawing
@@ -669,6 +877,36 @@ public sealed class GlView : OpenGlControlBase
 			{
 				_lookFiles = null;
 				Status?.Invoke("Game look could not be set up: " + ex.Message);
+			}
+		}
+		if (s != null && _thingsReset)
+		{
+			_thingsReset = false;
+			DropObjects();
+			StartModels(s);
+		}
+		if (s != null)
+		{
+			Group[] dirty;
+			lock (_dirtyGroups)
+			{
+				dirty = _dirtyGroups.Where(g => g.Ready).ToArray();
+				_dirtyGroups.ExceptWith(dirty);
+			}
+			foreach (var g in dirty)
+			{
+				Rebuild(s, g);
+			}
+			if (_overlaysDirty && _terrainVao != 0)
+			{
+				_overlaysDirty = false;
+				Overlays.Built o;
+				lock (s.Things)
+				{
+					o = _overlays = Overlays.Build(s, s.Modifiers, i => NameOf(s.Things[i].Prefab));
+				}
+				UploadOverlays(o);
+				Dispatcher.UIThread.Post(() => OverlaysBuilt?.Invoke(o));
 			}
 		}
 		// A few models per frame, so the view keeps moving while they arrive.
@@ -790,6 +1028,7 @@ public sealed class GlView : OpenGlControlBase
 			DrawOverlays(vp);
 			DrawSelection(vp);
 			DrawBrush(s, vp);
+			DrawLasso(s, vp);
 			if (ShowWater)
 			{
 				if (_look != null)
@@ -870,6 +1109,16 @@ public sealed class GlView : OpenGlControlBase
 					Pick(new Point(px * size.Width, py * size.Height), size, add: false);
 					var sel = Selected;
 					Options.Say(sel.Count == 0 ? "picked: nothing" : $"picked: {string.Join(", ", sel.Select(i => $"{_models?.NameOf(_scene!.Things[i].Prefab)} ({_kinds[i]})"))}");
+					if (Options.MoveBy is var (mx, mz) && sel.Count > 0)
+					{
+						Dispatcher.UIThread.Post(() =>
+						{
+							var before = _scene!.Things[sel.First()].Position;
+							SelectTool.PlaceAt(mx, 0, mz, 0, by: true);
+							var now = Selected.Select(i => _scene.Things[i].Position).FirstOrDefault();
+							Options.Say($"moved: {before.X:0.0} {before.Y:0.0} {before.Z:0.0} → {now.X:0.0} {now.Y:0.0} {now.Z:0.0}, {_scene.Session?.PendingText}");
+						});
+					}
 				}
 				if (Options.StrokeTool is BrushTool tool && _scene.Session is { } session)
 				{
@@ -1025,6 +1274,14 @@ public sealed class GlView : OpenGlControlBase
 			_pointer = p.Position;
 			_surfaceSize = surface.Bounds.Size;
 			e.Pointer.Capture(surface);
+			if (_dragButton == PointerUpdateKind.LeftButtonPressed && _tool == null && _selectMode)
+			{
+				_dragFrom = null;
+				_selectDown = true;
+				SelectTool.Down(p.Position, _surfaceSize, e.KeyModifiers.HasFlag(KeyModifiers.Shift), e.KeyModifiers.HasFlag(KeyModifiers.Alt), e.ClickCount);
+				Wake();
+				return;
+			}
 			// With a brush, the left button paints (the middle one still slides the view).
 			if (_dragButton == PointerUpdateKind.LeftButtonPressed && _tool is BrushTool tool && _scene is { Session: { } session } s)
 			{
@@ -1041,13 +1298,18 @@ public sealed class GlView : OpenGlControlBase
 		{
 			// A left click (not a drag) picks the object under the pointer.
 			var at = e.GetPosition(surface);
-			if (_brushDown)
+			if (_selectDown)
+			{
+				_selectDown = false;
+				SelectTool.Up(at, surface.Bounds.Size, e.KeyModifiers.HasFlag(KeyModifiers.Shift));
+			}
+			else if (_brushDown)
 			{
 				_brushDown = false;
 				string message = _scene?.Session?.EndStroke() ?? "";
 				StrokeEnded?.Invoke(message);
 			}
-			else if (_tool == null && _dragButton == PointerUpdateKind.LeftButtonPressed && _pressAt is Point from && Point.Distance(from, at) < 5)
+			else if (_tool == null && !_selectMode && _dragButton == PointerUpdateKind.LeftButtonPressed && _pressAt is Point from && Point.Distance(from, at) < 5)
 			{
 				Pick(at, surface.Bounds.Size, e.KeyModifiers.HasFlag(KeyModifiers.Shift));
 			}
@@ -1060,6 +1322,10 @@ public sealed class GlView : OpenGlControlBase
 		{
 			_pointer = e.GetPosition(surface);
 			_surfaceSize = surface.Bounds.Size;
+			if (_selectDown)
+			{
+				SelectTool.Moved(_pointer.Value, _surfaceSize);
+			}
 			Drag(_pointer.Value);
 		};
 		surface.PointerExited += (_, _) =>
@@ -1105,6 +1371,32 @@ public sealed class GlView : OpenGlControlBase
 
 	private Point? _pressAt;
 
+	internal WorldScene? Scene => _scene;
+	// The Select tool takes the left button (see SelectTool); otherwise it slides the view and clicks pick.
+	public SelectTool SelectTool { get; }
+	private bool _selectMode;
+	public bool SelectMode { get => _selectMode; set { if (!value) SelectTool.Commit(); _selectMode = value; Wake(); } }
+	private bool _selectDown;
+
+	// The world point (x east, height, z north) of the ground under a point of the view, or null.
+	internal Vector3? WorldAt(Point at, Size size)
+	{
+		var s = _scene;
+		if (s == null || GroundAt(s, _lastViewProj, at, size) is not { } g)
+		{
+			return null;
+		}
+		float wx = s.X0 * 64f - 32f + g.X, wz = s.Z0 * 64f - 32f + g.Z;
+		return new Vector3(wx, Picking.HeightAt(s, g.X - (s.W - 1) / 2f, -(g.Z - (s.H - 1) / 2f)), wz);
+	}
+
+	private volatile bool _lassoDirty;
+	internal void LassoChanged()
+	{
+		_lassoDirty = true;
+		Wake();
+	}
+
 	// ---- Tools: a sculpt or paint brush (null: looking around and picking objects).
 	private BrushTool? _tool;
 	public BrushTool? Tool { get => _tool; set { _tool = value; Wake(); } }
@@ -1132,6 +1424,70 @@ public sealed class GlView : OpenGlControlBase
 		}
 		var p = o + d * t;
 		return (p.X + (s.W - 1) / 2f, -p.Z + (s.H - 1) / 2f);
+	}
+
+	private uint _lassoVao, _lassoVbo;
+	private int _lassoCount;
+	// The zone being drawn with the Select tool, on the ground.
+	private unsafe void DrawLasso(WorldScene s, Matrix4x4 vp)
+	{
+		if (_lassoDirty)
+		{
+			_lassoDirty = false;
+			var pts = SelectTool.Lasso?.ToList();
+			var data = new List<float>();
+			if (pts is { Count: > 1 })
+			{
+				pts.Add(pts[0]);
+				float ox = s.X0 * 64f - 32f, oz = s.Z0 * 64f - 32f;
+				for (int i = 1; i < pts.Count; i++)
+				{
+					var a = pts[i - 1];
+					var b = pts[i];
+					int n = Math.Max(1, (int)MathF.Ceiling(Vector2.Distance(a, b)));
+					for (int k = 0; k < n; k++)
+					{
+						foreach (var t in new[] { k / (float)n, (k + 1) / (float)n })
+						{
+							var p = Vector2.Lerp(a, b, t);
+							float x = p.X - ox - (s.W - 1) / 2f, z = -(p.Y - oz - (s.H - 1) / 2f);
+							data.AddRange(new[] { x, Picking.HeightAt(s, x, z) + 0.3f, z });
+						}
+					}
+				}
+			}
+			if (_lassoVao == 0)
+			{
+				_lassoVao = _gl.GenVertexArray();
+				_lassoVbo = _gl.GenBuffer();
+				_gl.BindVertexArray(_lassoVao);
+				_gl.BindBuffer(BufferTargetARB.ArrayBuffer, _lassoVbo);
+				_gl.EnableVertexAttribArray(0);
+				_gl.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 12, (void*)0);
+			}
+			var arr = data.ToArray();
+			_gl.BindBuffer(BufferTargetARB.ArrayBuffer, _lassoVbo);
+			fixed (float* p = arr)
+			{
+				_gl.BufferData(BufferTargetARB.ArrayBuffer, (nuint)(arr.Length * 4), p, BufferUsageARB.DynamicDraw);
+			}
+			_lassoCount = arr.Length / 3;
+		}
+		if (_lassoCount == 0)
+		{
+			return;
+		}
+		if (_lineProg == 0)
+		{
+			_lineProg = Program(Shaders.LineVs, Shaders.LineFs);
+		}
+		_gl.Disable(EnableCap.DepthTest);
+		_gl.UseProgram(_lineProg);
+		_gl.UniformMatrix4(_gl.GetUniformLocation(_lineProg, "uViewProj"), 1, false, (float*)&vp);
+		_gl.Uniform4(_gl.GetUniformLocation(_lineProg, "uColor"), 1f, 0.76f, 0.29f, 1f);
+		_gl.BindVertexArray(_lassoVao);
+		_gl.DrawArrays(PrimitiveType.Lines, 0, (uint)_lassoCount);
+		_gl.Enable(EnableCap.DepthTest);
 	}
 
 	private uint _ringVao, _ringVbo;
@@ -1243,6 +1599,32 @@ public sealed class GlView : OpenGlControlBase
 				_selection.Add(k);
 			}
 		}
+		SelectionDone();
+	}
+
+	// Selects these things (add: to what is selected).
+	internal void Select(IEnumerable<int> things, bool add = false)
+	{
+		var s = _scene;
+		lock (_selection)
+		{
+			if (!add)
+			{
+				_selection.Clear();
+			}
+			foreach (int i in things)
+			{
+				if (s != null && i < s.Things.Count && !s.Things[i].Gone)
+				{
+					_selection.Add(i);
+				}
+			}
+		}
+		SelectionDone();
+	}
+
+	private void SelectionDone()
+	{
 		_selectionDirty = true;
 		var s = _scene;
 		if (s != null)
@@ -1253,20 +1635,50 @@ public sealed class GlView : OpenGlControlBase
 		Wake();
 	}
 
+	// Whether a thing is drawn (not gone, its kind shown, its model known): only those can be picked.
+	internal bool IsPickable(int i)
+	{
+		lock (_objLock)
+		{
+			return i < _known.Length && _known[i] && _shown[(int)_kinds[i]];
+		}
+	}
+
+	internal (Vector3 Min, Vector3 Max) BoundsOf(int i)
+	{
+		lock (_objLock)
+		{
+			return _bounds[i];
+		}
+	}
+
+	internal ObjectKind KindOf(int i)
+	{
+		lock (_objLock)
+		{
+			return _kinds[i];
+		}
+	}
+
 	private unsafe void UploadOverlays(Overlays.Built o)
 	{
 		foreach (var (layer, data) in o.Lines)
 		{
-			uint vao = _gl.GenVertexArray(), vbo = _gl.GenBuffer();
-			_gl.BindVertexArray(vao);
-			_gl.BindBuffer(BufferTargetARB.ArrayBuffer, vbo);
+			// Built again when objects change: the same buffers are filled again.
+			if (!_overlayGl.TryGetValue(layer, out var old))
+			{
+				old = (_gl.GenVertexArray(), 0, _gl.GenBuffer());
+				_gl.BindVertexArray(old.Vao);
+				_gl.BindBuffer(BufferTargetARB.ArrayBuffer, old.Vbo);
+				_gl.EnableVertexAttribArray(0);
+				_gl.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 12, (void*)0);
+			}
+			_gl.BindBuffer(BufferTargetARB.ArrayBuffer, old.Vbo);
 			fixed (float* p = data)
 			{
-				_gl.BufferData(BufferTargetARB.ArrayBuffer, (nuint)(data.Length * 4), p, BufferUsageARB.StaticDraw);
+				_gl.BufferData(BufferTargetARB.ArrayBuffer, (nuint)(data.Length * 4), p, BufferUsageARB.DynamicDraw);
 			}
-			_gl.EnableVertexAttribArray(0);
-			_gl.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 12, (void*)0);
-			_overlayGl[layer] = (vao, data.Length / 3);
+			_overlayGl[layer] = (old.Vao, data.Length / 3, old.Vbo);
 		}
 		_gl.BindVertexArray(0);
 	}
@@ -1283,7 +1695,7 @@ public sealed class GlView : OpenGlControlBase
 		_gl.Enable(EnableCap.Blend);
 		_gl.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
 		_gl.DepthMask(false);
-		foreach (var (layer, (vao, count)) in _overlayGl)
+		foreach (var (layer, (vao, count, _)) in _overlayGl)
 		{
 			if (!_overlay[(int)layer] || count == 0)
 			{
