@@ -978,6 +978,20 @@ createPlant(ed);
 createMeasure(ed);
 createTransform(ed);
 createInspector(ed);
+// Opened from the map's search: select the object (and open the inspector) once it is loaded. Objects
+// and building pieces load separately, so wait for whichever brings it, for a while.
+if (params.get('select')) {
+  const id = +params.get('select'), started = performance.now();
+  const wait = setInterval(() => {
+    const r = objects.records.get(id);
+    if (!r || !entities.get(id)?.inst.length) { if (performance.now() - started > 30000) { clearInterval(wait); msg('The object from the search is not in this area any more.', true); } return; }
+    clearInterval(wait);
+    setTool('select'); ed.selectIds([id]);
+    const gx = r.x - originX, gz = r.z - originZ;
+    camera.position.set(gx - cx + 7, r.y + 9, -(gz - cz) + 11); controls.target.set(gx - cx, r.y, -(gz - cz)); controls.update();
+    if (params.get('inspect')) ed.inspect(id);
+  }, 300);
+}
 applyTips();
 syncToolPanel();
 Promise.all([fetch('/api/pieces').then(r => r.arrayBuffer()), fetch('/api/piece-types').then(r => r.json())]).then(async ([buf, types]) => {

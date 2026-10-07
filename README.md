@@ -18,6 +18,7 @@ opens a Valheim world in its own window, drawn with the game's own terrain, text
   brush, line, grid and zone patterns that respect the game's growing rules.
 - **Select, move, turn, copy and delete objects**, including whole buildings, and **inspect and
   change what they hold**: chest contents, sign texts, portal tags...
+- **Search the whole world** for a kind of object, an item in any chest, or a sign's text.
 - **Measure** distances and slopes, and see the ground coloured by steepness.
 - **Undo anything**, with a history panel that can roll back to any point or remove one change.
 

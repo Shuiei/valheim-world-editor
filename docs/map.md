@@ -26,6 +26,23 @@ shader, so it looks like the in-game map with everything revealed.
 | **Save to world…** / **Discard** | Same as in the editor: write or throw away the pending changes. |
 | **Reload from the game** | Live mode only: load the world again from the running game. |
 
+## Search the world
+
+Find things anywhere in the world, like Amulet's find or WorldEdit's `//count`. Type part of a name or
+text (not case sensitive), choose what to look for, and press **Find** (or `Enter`):
+
+| Look for | Finds |
+|---|---|
+| **Objects (by kind)** | Every object whose kind contains the text: `portal`, `beech`, `chest`, `guard_stone`... The game's own bookkeeping objects (names starting with `_`) only when the text starts with `_`. |
+| **Items in containers** | Every chest, cart or ship holding an item whose name contains the text: `Wood`, `Draugr`, `Silver`... with how many it holds. |
+| **Texts (signs, portals, wards…)** | Every object with a text that contains it: sign texts, portal tags, ward and tombstone names. |
+
+The results show how many there are of each kind (for items, how many in all), and every one is
+pinned on the map in orange. Click one in the list to go there: the map centres on it and **Edit in
+3D** opens the editor with that object selected (and, for items and texts, its
+[data](select.md#inspecting-and-changing-an-objects-data) open). Objects deleted but not saved yet are
+not found; objects placed but not saved yet are.
+
 ## Edited zones list
 
 The table lists every zone with ground edits: how many height points (`h`) and paint points (`p`)
