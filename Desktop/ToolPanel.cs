@@ -9,8 +9,9 @@ namespace TerrainEditor.Desktop;
 // (look around and pick objects), Select (move, turn and delete objects: see SelectPanel), the sculpt
 // brushes and the paint brushes. Keys as in the web editor: 1-9 and 0 pick the brushes, E selects,
 // Esc goes back to View.
-// Which tool is in use: View (look around, click picks), Select, Measure, Shape, Path, Area, or a brush (Tool says which).
-public enum ToolMode { View, Select, Measure, Shape, Path, Area, Brush }
+// Which tool is in use: View (look around, click picks), Select, Measure, Shape, Path, Area, Paste (from the
+// Area tool, Ctrl+V), or a brush (Tool says which).
+public enum ToolMode { View, Select, Measure, Shape, Path, Area, Paste, Brush }
 
 public sealed class ToolPanel
 {
@@ -201,7 +202,7 @@ public sealed class ToolPanel
 		_measureButton.Background = Mode == ToolMode.Measure ? On : Off;
 		_shapeButton.Background = Mode == ToolMode.Shape ? On : Off;
 		_pathButton.Background = Mode == ToolMode.Path ? On : Off;
-		_areaButton.Background = Mode == ToolMode.Area ? On : Off;
+		_areaButton.Background = Mode is ToolMode.Area or ToolMode.Paste ? On : Off;
 		foreach (var (k, b) in _buttons)
 		{
 			b.Background = k == t ? On : Off;
