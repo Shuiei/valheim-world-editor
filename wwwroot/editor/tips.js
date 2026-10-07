@@ -69,6 +69,7 @@ export const TIPS = {
   selClear: 'Clear the selection (Esc).',
   selTo: 'The kind to put in place of each selected object.',
   selReplace: 'Replace every selected object by the chosen kind, at the same place and facing.',
+  selBuilding: 'Add every building piece connected to the selected ones, through pieces that touch (double-clicking a piece does it too).',
   selInspect: 'Show everything the selected object holds in the save (sign text, portal tag, chest contents, timers...) and change it (I).',
   inApply: 'Replace the object by a copy with the changed data (one undo step). Save or Apply live writes it.',
   inRevert: 'Forget the changes made here.',
