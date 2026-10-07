@@ -31,7 +31,7 @@ The panel lists what is selected, by kind.
 
 | Action | What it does |
 |---|---|
-| **Put each object on the ground when moving** | On (the default): every moved or turned object lands with its base on the ground where it ends up. Off: each keeps its height above the ground, which keeps buildings with several levels in shape. Remembered in this browser. |
+| **Put each object on the ground when moving** | On (the default): trees, rocks and other objects each land on the ground where they end up. Building pieces move together and keep their shape: the whole building goes up or down until its bottom layer sits on the ground (on a slope part of it sinks into the hill rather than float, since pieces need the ground to carry what stands on them). Off: each object keeps its height above the ground. Remembered in this browser. |
 | **Snap to other pieces when moving** | On (the default): while you move, a piece's snap point locks onto the nearest snap point of a piece around it (within 0.75 m), so walls, floors, beams and fences join exactly, like with the hammer. The status bar says what it snapped to. Off: free moves. |
 | **Drag the orange ring** | Turns the selection around its middle; hold **Ctrl** for 15° steps. |
 | **Drag a selected object** | Moves the whole selection freely, onto the ground (or at the same height above it, with the switch off). |

@@ -4,6 +4,14 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v0.21.2 — 2026-10-07 (buildings keep their shape)
+
+### Changed
+- **Moving a building "on the ground"** keeps its shape: its pieces move as one block, and the block
+  goes up or down until its bottom layer sits on the ground (sinking into a slope rather than
+  floating). Trees, rocks and other objects in the selection still land on the ground one by one.
+  Before, every piece was put on the ground by itself, pulling buildings apart.
+
 ## v0.21.1 — 2026-10-07 (ring brush outline)
 
 ### Changed

@@ -740,6 +740,39 @@ test('transform: typed place and turn, snapping walls together, and the turning 
   noErrors();
 });
 
+test('select: a moved building keeps its shape, its base on the ground; a tree lands on its own', async () => {
+  await openEditor();
+  const c = (await records()).find(r => r.name === 'piece_chest_wood');
+  const P = [c.x - 30, c.z - 34];
+  const y0 = await page().evaluate(([x, z]) => { const ed = window.__ed; return ed.sampleHeight(x - ed.originX, z - ed.originZ) + 0.5; }, P);
+  // A floor, a wall on it and a second wall on top (walls: origin 1 m above their bottom), and a tree 4 m away.
+  const ids = await page().evaluate(async (P, y) => window.__ed.objects.add([
+    { name: 'wood_floor', x: P[0], y, z: P[1] }, { name: 'woodwall', x: P[0], y: y + 1, z: P[1] + 1 }, { name: 'woodwall', x: P[0], y: y + 3, z: P[1] + 1 },
+    { name: 'Beech1', x: P[0] + 4, y: y + 2, z: P[1] }].map(o => ({ ...o, rx: 0, ry: 0, rz: 0, scale: 0 }))), P, y0);
+  await page().evaluate(ids => { const ed = window.__ed; ed.setTool('select'); ed.selectIds(ids); document.activeElement?.blur();
+    const sn = document.getElementById('selSnapTo'); sn.checked = false; sn.dispatchEvent(new Event('change'));
+    const g = document.getElementById('selGround'); g.checked = true; g.dispatchEvent(new Event('change')); }, ids);
+  await lookAt(page(), P[0] + 2, P[1], 6, 12, 16); await sleep(600);
+  const tip = f => page().evaluate(f => {
+    const ed = window.__ed, g = ed.scene.children.find(o => o.isGroup && o.children.length >= 3 && o.renderOrder === 30);
+    const v = g.position.clone().add(new ed.THREE.Vector3(1, 0, 0).multiplyScalar(g.scale.x * f)).project(ed.camera);
+    const r = ed.el.getBoundingClientRect(); return [r.left + (v.x + 1) / 2 * r.width, r.top + (1 - v.y) / 2 * r.height];
+  }, f);
+  const [ax, ay] = await tip(0.8), [bx, by] = await tip(2.2);
+  await page().mouse.move(ax, ay); await page().mouse.down(); await page().mouse.move(bx, by, { steps: 8 }); await page().mouse.up();
+  await sleep(1500);
+  const moved = await page().evaluate(() => { const ed = window.__ed; return [...ed.selection].map(id => { const r = ed.objects.records.get(id); return { name: r.name, x: r.x, y: r.y, z: r.z, ground: ed.sampleHeight(r.x - ed.originX, r.z - ed.originZ) }; }); });
+  const floor = moved.find(m => m.name === 'wood_floor'), walls = moved.filter(m => m.name === 'woodwall').sort((a, b) => a.y - b.y), tree = moved.find(m => m.name === 'Beech1');
+  assert.ok(floor.x - P[0] > 0.3, 'it moved');
+  assert.ok(Math.abs(walls[1].y - walls[0].y - 2) < 0.01 && Math.abs(walls[0].y - floor.y - 1) < 0.01, 'the building keeps its shape');
+  // Bottom layer: the floor (bottom at its origin) and the lower wall (bottom 1 m below its origin).
+  const gaps = [floor.y - floor.ground, walls[0].y - 1 - walls[0].ground];
+  assert.ok(Math.max(...gaps) < 0.02 && Math.max(...gaps) > -2, `its base sits on the ground, nothing floats (${gaps.map(g => g.toFixed(2))})`);
+  assert.ok(Math.abs(tree.y - tree.ground) < 0.02, 'the tree lands on the ground by itself');
+  await page().evaluate(() => { const ed = window.__ed; ed.setDeleted([...ed.selection], true); const sn = document.getElementById('selSnapTo'); sn.checked = true; sn.dispatchEvent(new Event('change')); });
+  noErrors();
+});
+
 test('undo takes a change back and the counter clears', async () => {
   await openEditor();
   await page().keyboard.press('Escape');

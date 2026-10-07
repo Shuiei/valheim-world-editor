@@ -52,9 +52,11 @@ export function createTransform(ed) {
       // "on the ground" rests that bottom on the ground. Other kinds keep their origin on the ground, as
       // the game places them (tree roots reach below it on purpose).
       const sp = snapPoints[r.name], bottom = sp?.length ? Math.min(...sp.map(p => p[1])) : 0;
-      return { id, r, g, lift: r.y - groundAt(g.gx, g.gz), bottom, inst };
+      // Building pieces move as one block (see groundBlock); other kinds land one by one.
+      const piece = r.kind === 'buildings' || ed.objects.state.pieceNames.has(r.name);
+      return { id, r, g, lift: r.y - groundAt(g.gx, g.gz), bottom, piece, inst };
     });
-    session = { items, cx: cx / ids.length, cz: cz / ids.length, dgx: 0, dgz: 0, dy: 0, turn: 0, sx: 0, sy: 0, sz: 0, others: null };
+    session = { items, cx: cx / ids.length, cz: cz / ids.length, dgx: 0, dgz: 0, dy: 0, turn: 0, sx: 0, sy: 0, sz: 0, others: null, block: 0 };
     return session;
   }
   // Where an item ends up: turned around the selection centre (clockwise from above, like Unity's
@@ -63,7 +65,24 @@ export function createTransform(ed) {
   function target(s, it) {
     const t = s.turn * D, c = Math.cos(t), sn = Math.sin(t), ox = it.g.gx - s.cx, oz = it.g.gz - s.cz;
     const gx = s.cx + ox * c + oz * sn + s.dgx + s.sx, gz = s.cz - ox * sn + oz * c + s.dgz + s.sz;
+    if (it.piece && onGround() && !s.dropped) return { gx, gz, y: it.r.y + s.block + s.dy + s.sy };
     return { gx, gz, y: groundAt(gx, gz) + (s.dropped || !onGround() ? it.lift : -it.bottom) + s.dy + s.sy };
+  }
+  // On the ground, the selected building pieces keep their shape: the whole block goes up or down
+  // until its bottom layer (the pieces within 0.3 m of its lowest bottom) sits on the ground, sinking
+  // into a slope rather than floating (pieces need the ground to carry what stands on them).
+  function groundBlock(s) {
+    s.block = 0;
+    const pieces = s.items.filter(it => it.piece);
+    if (!pieces.length || !onGround() || s.dropped) return;
+    const low = Math.min(...pieces.map(it => it.r.y + it.bottom));
+    let need = Infinity;
+    for (const it of pieces) {
+      if (it.r.y + it.bottom > low + 0.3) continue;
+      const t = target({ ...s, block: 0, sx: 0, sy: 0, sz: 0 }, it);
+      need = Math.min(need, groundAt(t.gx, t.gz) - (it.r.y + it.bottom));
+    }
+    if (Number.isFinite(need)) s.block = need;
   }
   // Snapping: the pair of snap points (one of a moved piece, one of a piece around) that is closest,
   // within 0.75 m; the whole selection shifts so they meet. Recomputed at every step of a move.
@@ -102,6 +121,7 @@ export function createTransform(ed) {
   const A = new THREE.Matrix4(), T1 = new THREE.Matrix4(), R = new THREE.Matrix4(), T2 = new THREE.Matrix4(), M = new THREE.Matrix4();
   function preview() {
     const s = session; if (!s) return;
+    groundBlock(s);
     snap(s);
     for (const it of s.items) {
       const p = target(s, it);
@@ -231,6 +251,7 @@ export function createTransform(ed) {
     const s = begin(); if (!s) return;
     s.dgx += dx; s.dgz += dz; s.turn += dt;
     // Height: what the move does to the lowest object (ground, snapping), then what is asked for on top.
+    groundBlock(s);
     snap(s);
     const low = s.items.reduce((a, it) => it.r.y < a.r.y ? it : a), now = target(s, low).y;
     s.dy += low.r.y + dyWant - now;
