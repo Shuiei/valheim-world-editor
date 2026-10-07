@@ -4,6 +4,13 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v0.32.0 — 2026-10-07 (walk and fly)
+
+### Added
+- **Walk** and **Fly** views (`F`): see the world from a player's eyes, 1.8 m above the ground (or the
+  water), and walk it with WASD (Shift runs); `F` again flies (Space up, C down); `F` again goes back
+  to the usual view. Tools keep working, and Follow and the Area arrows keep the view.
+
 ## v0.31.0 — 2026-10-07 (area that follows the view)
 
 ### Added

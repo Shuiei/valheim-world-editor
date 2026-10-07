@@ -289,6 +289,7 @@
     <dt>Wheel</dt><dd>Zoom</dd>
     <dt>Middle drag</dt><dd>Slide the view (also Space + left drag, Shift + right drag, Move tool)</dd>
     <dt>W A S D</dt><dd>Move around</dd>
+    <dt>F</dt><dd>Walk at eye height (1.8 m) · Fly (Space up, C down) · back to the usual view</dd>
     <dt>1–9, 0, O</dt><dd>Sculpt and paint tools (O: Erode)</dd>
     <dt>B / P / T / G</dt><dd>Area, Path, Place, Shape</dd>
     <dt>E / M / H</dt><dd>Select, Measure, Move</dd>
@@ -1457,9 +1458,12 @@ addEventListener('blur', () => { held.clear(); spaceDown = false; });
 addEventListener('keydown', e => {
   // Typing in a text or number box; switches and sliders keep the shortcuts working.
   if (e.target.tagName === 'SELECT' || (e.target.tagName === 'INPUT' && !['checkbox', 'range', 'radio', 'button'].includes(e.target.type))) return;
+  if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') held.add(e.code);
   if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code) && !e.ctrlKey) { held.add(e.code); e.preventDefault(); return; }
+  if (eyeMode === 'fly' && (e.code === 'Space' || e.code === 'KeyC') && !e.ctrlKey) { held.add(e.code); e.preventDefault(); return; }
   if (e.code === 'Space') { spaceDown = true; e.preventDefault(); return; }
   if (ed.handlers[tool]?.key?.(e)) { e.preventDefault(); return; }
+  if (e.key.toLowerCase() === 'f' && !e.ctrlKey) { cycleEye(); e.preventDefault(); return; }
   for (const k of ed.keys ?? []) if (k(e)) { e.preventDefault(); return; }
   if (e.key.toLowerCase() === 'h') { setTool('move'); return; }
   if (e.key.toLowerCase() === 'p') { setTool('path'); return; }
@@ -1492,7 +1496,54 @@ el.addEventListener('pointerdown', e => {
 }, true);
 el.addEventListener('pointerup', () => { el.style.cursor = ''; });
 controls.screenSpacePanning = false;   // pan along the ground, not the screen plane
+// ---- Eye views (F): Walk keeps the eyes 1.8 m above the ground (or the water) like a player, Fly
+// moves freely (Space up, C down); F again goes back to the usual view. WASD move where you look,
+// Shift runs; right drag looks around (the orbit's centre sits just in front of the eyes).
+const EYE = 1.8;
+let eyeMode = null;
+function eyeGround(x, z) {
+  const gx = x + cx, gz = -z + cz;
+  const ground = gx >= 0 && gz >= 0 && gx < W - 1 && gz < H - 1 ? sampleHeight(gx, gz) : WATER;
+  return Math.max(ground, WATER - 1.2) + EYE;
+}
+function lookAhead() {
+  const dir = new THREE.Vector3(); camera.getWorldDirection(dir);
+  controls.target.copy(camera.position).addScaledVector(dir, 0.05);
+}
+function cycleEye() {
+  const next = eyeMode === null ? 'walk' : eyeMode === 'walk' ? 'fly' : null;
+  const dir = new THREE.Vector3(); camera.getWorldDirection(dir);
+  if (eyeMode === null) {
+    // Stand where the view was centred, facing the same way.
+    camera.position.set(controls.target.x, eyeGround(controls.target.x, controls.target.z), controls.target.z);
+    dir.y = 0; dir.normalize();
+    camera.lookAt(camera.position.clone().add(dir));
+  }
+  if (next === null) {
+    // Back to the usual view: look at the ground some way ahead, from a little back and up.
+    const ahead = camera.position.clone().addScaledVector(new THREE.Vector3(dir.x, 0, dir.z).normalize(), 20);
+    ahead.y = eyeGround(ahead.x, ahead.z) - EYE;
+    camera.position.set(ahead.x - dir.x * 30, ahead.y + 25, ahead.z - dir.z * 30);
+    controls.target.copy(ahead);
+  } else lookAhead();
+  eyeMode = next;
+  controls.enableZoom = controls.enablePan = !eyeMode;
+  controls.minPolarAngle = eyeMode ? 0.05 * Math.PI : 0;
+  controls.maxPolarAngle = eyeMode ? 0.95 * Math.PI : Math.PI * 0.49;
+  controls.update();
+  msg(eyeMode === 'walk' ? 'Walk: eyes at 1.8 m above the ground, like a player. WASD walk (Shift runs), right drag looks around. F: fly.'
+    : eyeMode === 'fly' ? 'Fly: WASD move where you look, Space up, C down, Shift faster. F: back to the usual view.' : 'Back to the usual view.');
+}
+ed.eyeMode = () => eyeMode;
+// Walking or flying on into the next area (Follow, arrows): the view came along in cam.
+if (['walk', 'fly'].includes(params.get('eye'))) setTimeout(() => {
+  eyeMode = params.get('eye');
+  controls.enableZoom = controls.enablePan = false;
+  controls.minPolarAngle = 0.05 * Math.PI; controls.maxPolarAngle = 0.95 * Math.PI;
+  lookAhead(); controls.update();
+}, 0);
 function moveWithKeys(dt) {
+  if (eyeMode) { moveEye(dt); return; }
   if (!held.size) return;
   const forward = new THREE.Vector3(); camera.getWorldDirection(forward); forward.y = 0; forward.normalize();
   const right = new THREE.Vector3().crossVectors(forward, new THREE.Vector3(0, 1, 0));
@@ -1506,6 +1557,30 @@ function moveWithKeys(dt) {
   step.normalize().multiplyScalar(speed * Math.min(dt, 0.1));
   camera.position.add(step); controls.target.add(step);
 }
+function moveEye(dt) {
+  const dir = new THREE.Vector3(); camera.getWorldDirection(dir);
+  const flat = new THREE.Vector3(dir.x, 0, dir.z).normalize(), right = new THREE.Vector3().crossVectors(flat, new THREE.Vector3(0, 1, 0));
+  const step = new THREE.Vector3();
+  const fwd = eyeMode === 'fly' ? dir : flat;
+  if (held.has('KeyW') || held.has('ArrowUp')) step.add(fwd);
+  if (held.has('KeyS') || held.has('ArrowDown')) step.sub(fwd);
+  if (held.has('KeyD') || held.has('ArrowRight')) step.add(right);
+  if (held.has('KeyA') || held.has('ArrowLeft')) step.sub(right);
+  if (eyeMode === 'fly' && held.has('Space')) step.y += 1;
+  if (eyeMode === 'fly' && held.has('KeyC')) step.y -= 1;
+  const fast = held.has('ShiftLeft') || held.has('ShiftRight');
+  if (step.lengthSq()) {
+    step.normalize().multiplyScalar((eyeMode === 'fly' ? 15 : 6) * (fast ? 3 : 1) * Math.min(dt, 0.1));
+    camera.position.add(step);
+  }
+  // Inside the area; walking follows the ground, flying stays above it.
+  camera.position.x = Math.max(-W / 2 + 1, Math.min(W / 2 - 1, camera.position.x));
+  camera.position.z = Math.max(-H / 2 + 1, Math.min(H / 2 - 1, camera.position.z));
+  const floor = eyeGround(camera.position.x, camera.position.z);
+  camera.position.y = eyeMode === 'walk' ? floor : Math.max(camera.position.y, floor - EYE + 0.5);
+  lookAhead();
+  if (step.lengthSq()) { clearTimeout(followTimer); followTimer = setTimeout(checkFollow, 700); }
+}
 // Keep the point the camera looks at over the edited area, whichever way the view was moved.
 function keepOverTerrain() {
   const lim = new THREE.Vector3(Math.max(-W / 2, Math.min(W / 2, controls.target.x)), controls.target.y, Math.max(-H / 2, Math.min(H / 2, controls.target.z)));
@@ -1518,7 +1593,7 @@ function keepOverTerrain() {
 // so nothing is lost; the view and the tool come along.
 function areaUrl(zx, zz) {
   const w = v => [v.x + cx + originX, v.y, -v.z + cz + originZ].map(n => n.toFixed(2)).join(',');
-  return `editor.html?zx=${zx}&zz=${zz}&size=${size}&tool=${tool}&cam=${w(camera.position)},${w(controls.target)}`;
+  return `editor.html?zx=${zx}&zz=${zz}&size=${size}&tool=${tool}&cam=${w(camera.position)},${w(controls.target)}${eyeMode ? `&eye=${eyeMode}` : ''}`;
 }
 document.querySelectorAll('[data-shift]').forEach(b => b.onclick = () => {
   const [dx, dz] = b.dataset.shift.split(',').map(Number);

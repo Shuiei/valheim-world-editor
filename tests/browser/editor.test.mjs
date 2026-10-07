@@ -1213,6 +1213,31 @@ test('moving the area keeps the view and the tool; Follow moves it near the edge
   noErrors();
 });
 
+test('eye views: walk at 1.8 m over the ground, fly up and down, back to the usual view', async () => {
+  await openEditor();
+  const c = (await records()).find(r => r.name === 'piece_chest_wood');
+  await lookAt(page(), c.x + 20, c.z + 20, 0, 40, 30);
+  const eye = () => page().evaluate(() => { const ed = window.__ed, p = ed.camera.position; return { y: p.y, ground: ed.sampleHeight(p.x + ed.cx, -p.z + ed.cz), mode: ed.eyeMode() }; });
+  await page().keyboard.press('f'); await sleep(200);
+  let e = await eye();
+  assert.equal(e.mode, 'walk');
+  assert.ok(Math.abs(e.y - Math.max(e.ground, 28.8) - 1.8) < 0.05, `eyes 1.8 m up (${(e.y - e.ground).toFixed(2)})`);
+  // Walk forward a second: still 1.8 m over the ground where it is now.
+  await page().keyboard.down('w'); await sleep(1000); await page().keyboard.up('w'); await sleep(100);
+  e = await eye();
+  assert.ok(Math.abs(e.y - Math.max(e.ground, 28.8) - 1.8) < 0.15, `still at eye height after walking (${(e.y - e.ground).toFixed(2)})`);
+  // Fly: Space goes up.
+  await page().keyboard.press('f'); await sleep(100);
+  const y0 = (await eye()).y;
+  await page().keyboard.down('Space'); await sleep(600); await page().keyboard.up('Space'); await sleep(100);
+  e = await eye();
+  assert.equal(e.mode, 'fly');
+  assert.ok(e.y > y0 + 3, `flew up (${(e.y - y0).toFixed(1)} m)`);
+  await page().keyboard.press('f'); await sleep(100);
+  assert.equal((await eye()).mode, null, 'back to the usual view');
+  noErrors();
+});
+
 test('Worlds goes back to the start page', async () => {
   await page().goto(t.base + '/index.html', { waitUntil: 'networkidle0' });
   await page().click('#worldsBtn');
