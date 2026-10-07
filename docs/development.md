@@ -58,8 +58,9 @@ editor and the plugin (`BuildInfo.Version`: the start page, the window title, th
 version and its `/status`), and both release scripts name their packages after it. For a release:
 
 1. Raise `VERSION` (Major.Minor.Patch).
-2. Add a `## v<version>` section to `CHANGELOG.md` (a test checks it). The Thunderstore package's
-   changelog is made from it.
+2. Add a `## v<version>` section to `CHANGELOG.md` (a test checks it). Put changes to the plugin
+   under a `### WorldEditorBridge` part of that section. The Thunderstore package's changelog is made
+   from it: each version shows the plugin's part (or "unchanged") and then the editor's.
 3. Keep the BepInExPack dependency in the three `tools/thunderstore/*/manifest.json` current.
 4. `tools/release.sh <folder>` and `tools/thunderstore.sh <folder>`; tag `v<version>`, publish the
    GitHub release, upload the Thunderstore zip (Thunderstore refuses a version it already has).
