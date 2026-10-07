@@ -156,4 +156,69 @@ test('tool panels: help behind ?, one Area action at a time, Place kinds in a dr
   noErrors();
 });
 
+test('Place pieces: snap beside and on top, elevation, Alt + click height, layers', async () => {
+  await openEditor(undefined, () => { localStorage.setItem('plantChosen', '["woodwall"]'); localStorage.setItem('plantDrawer', '0'); });
+  const w = (await records()).find(r => r.name === 'woodwall');
+  await lookAt(page(), w.x, w.z, 0, 14, 10);
+  await page().keyboard.press('t'); await sleep(300);
+  await page().waitForFunction(() => document.getElementById('plSingle').checked, { timeout: 20000 });
+  assert.equal(await page().$eval('#plPieceBox', e => e.hidden), false, 'piece options shown for a wall');
+  const preview = () => page().evaluate(() => window.__plantPreview());
+  const hover = async (x, z, lift = 0) => { const [sx, sy] = await screenOf(page(), x, z, lift); await page().mouse.move(sx, sy); await sleep(300); };
+  const rot = (await page().evaluate(id => window.__ed.objects.records.get(id).ry, w.id)) * Math.PI / 180;
+  // Beside: a wall hovered next to it ends up end to end with it, at its level.
+  const along = [Math.cos(rot), -Math.sin(rot)];   // the wall's local x axis on the ground (Unity yaw)
+  await hover(w.x + along[0] * 2.3, w.z + along[1] * 2.3);
+  let [o] = await preview();
+  assert.ok(o, 'one wall previewed');
+  assert.ok(Math.abs(o.y - w.y) < 0.01, `same level (${o.y} vs ${w.y})`);
+  assert.ok(Math.abs(Math.hypot(o.x - w.x, o.z - w.z) - 2) < 0.05, `end to end, 2 m apart (${Math.hypot(o.x - w.x, o.z - w.z).toFixed(3)})`);
+  assert.match(await page().$eval('#plPreview', e => e.textContent), /Snapped beside woodwall/);
+  // On top: hovering the wall puts the new one on it.
+  await page().click('#plAttach [data-at="top"]');
+  await hover(w.x, w.z, 1);
+  [o] = await preview();
+  assert.ok(Math.abs(o.y - (w.y + 2)) < 0.01 && Math.hypot(o.x - w.x, o.z - w.z) < 0.05, `on top (${o.x - w.x}, ${o.y - w.y}, ${o.z - w.z})`);
+  await page().click('#plAttach [data-at="side"]');
+  // Elevation, away from other pieces: 3 m above the ground (a wall's bottom is 1 m below its middle).
+  await page().$eval('#plSnapTo', e => { e.checked = false; e.dispatchEvent(new Event('input')); });
+  await page().select('#plElevMode', 'above');
+  await page().$eval('#plElev', e => { e.value = 3; e.dispatchEvent(new Event('input')); });
+  const spot = [w.x + 8, w.z + 8];
+  await hover(...spot);
+  const ground = await page().evaluate(([x, z]) => { const ed = window.__ed; return ed.sampleHeight(x - ed.originX, z - ed.originZ); }, spot);
+  [o] = await preview();
+  assert.ok(Math.abs(o.y - (ground + 1 + 3)) < 0.3, `3 m above the ground (${(o.y - ground).toFixed(2)})`);
+  // PgUp lifts it by 0.5 m.
+  await page().keyboard.press('PageUp'); await sleep(200);
+  assert.equal(await page().$eval('#plElev', e => +e.value), 3.5);
+  // Alt + click on the wall: one height for all, its top.
+  // The test world's walls have no builder (ruins, hidden at first): only shown things can be clicked.
+  await page().evaluate(() => { const c = document.querySelector('[data-show="ruins"]'); if (!c.checked) c.click(); }); await sleep(300);
+  // (the top of its drawn box: the test world's stand-in models are not centred on the piece)
+  { const [sx, sy] = await page().evaluate(id => { const ed = window.__ed, b = ed.boxOf(ed.entityOf(id)), v = b.getCenter(new ed.THREE.Vector3()).setY(b.max.y - 0.05).project(ed.camera), r = ed.el.getBoundingClientRect(); return [r.left + (v.x + 1) / 2 * r.width, r.top + (1 - v.y) / 2 * r.height]; }, w.id);
+    await page().keyboard.down('Alt'); await page().mouse.click(sx, sy); await page().keyboard.up('Alt'); await sleep(300); }
+  assert.equal(await page().$eval('#plElevMode', e => e.value), 'at');
+  { const h = await page().$eval('#plElev', e => +e.value); assert.ok(Math.abs(h - (w.y + 1)) < 0.02, `the top of the wall (${h} vs ${w.y + 1})`); }
+  await hover(...spot);
+  [o] = await preview();
+  assert.ok(Math.abs(o.y - (w.y + 2)) < 0.02, 'a wall standing at that height');
+  // Layers: a line of walls end to end, three high.
+  await page().select('#plElevMode', 'ground');
+  await page().click('#plModes [data-m="line"]');
+  assert.ok(await page().$eval('#plSnap', e => e.checked), 'end to end for walls');
+  await page().$eval('#plLayers', e => { e.value = 3; e.dispatchEvent(new Event('input')); });
+  for (const p of [[spot[0], spot[1]], [spot[0] + 6.5, spot[1]]]) { const [sx, sy] = await screenOf(page(), ...p); await page().mouse.click(sx, sy); await sleep(150); }
+  const line = await preview();
+  assert.equal(line.length, 9, `3 walls × 3 layers (${line.length})`);
+  // Each wall's column: three walls, 2 m apart (a wall's height), on the ground where it stands.
+  const cols = new Map();
+  for (const o of line) { const k = `${o.x.toFixed(2)},${o.z.toFixed(2)}`; (cols.get(k) ?? cols.set(k, []).get(k)).push(o.y); }
+  assert.equal(cols.size, 3, 'three columns');
+  for (const ys of cols.values()) { ys.sort((a, b) => a - b); assert.ok(ys.length === 3 && Math.abs(ys[1] - ys[0] - 2) < 0.01 && Math.abs(ys[2] - ys[1] - 2) < 0.01, `layers 2 m apart (${ys})`); }
+  await page().keyboard.press('Escape');
+  await page().$eval('#plLayers', e => { e.value = 1; e.dispatchEvent(new Event('input')); });
+  noErrors();
+});
+
 });

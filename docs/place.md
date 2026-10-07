@@ -62,6 +62,37 @@ kinds, until you change it yourself.
 | **Points** | Click points along the way, or hold and drag to draw freely. Then drag a point to move it, drag the line to add a point, **Ctrl + click** a point to remove it. **Close the loop** goes back to the first point at the end. |
 | **Circle** | Press at the centre and drag out to the size. With End to end the size snaps so that whole pieces close the ring. |
 | **Rectangle** | Press at one corner and drag to the opposite one. With End to end the sides snap to whole pieces, and each side is filled from its corner, so the corners meet exactly. |
+| **Layers** | With End to end: the line stacked this many pieces high, each layer on top of the one below (a wall 3 high, a double fence). |
+
+A line that starts within 1 m of a piece already there continues it: it starts at that piece's snap
+point and stays at its level.
+
+## Building pieces: snapping and elevation
+
+When a ticked kind is a building piece (it has snap points: walls, fences, floors, beams...), the
+Brush places one at a time under the cursor, and **Snap to pieces already there** (on by default)
+locks it onto the pieces around it, like the game's hammer:
+
+| Control | What it does |
+|---|---|
+| **Beside** | The piece goes end to end with the piece next to the cursor, at its level (bottom with bottom, top with top), in whichever quarter turn meets best. |
+| **On top** | The piece sits on top of the piece under the cursor, its bottom on that piece's top. |
+| Facing | A snapped piece faces like the piece it attaches to; **Rotation** turns it from there in quarter turns. |
+
+The preview says what it snapped to. Untick **Snap to pieces already there** to place freely.
+
+**Elevation** works for every kind and mode:
+
+| Control | What it does |
+|---|---|
+| **On the ground** | Each object stands on the ground where it goes (a piece by its bottom: walls have their middle at their origin). |
+| **Above the ground** | Each object stands **Above by** that many metres above the ground under it. |
+| **At one height** | Every object at the same **Height** (its bottom there), whatever the ground does: a level wall over uneven ground, a floor for a platform. |
+| `PgUp` / `PgDn` | Up or down by 0.5 m (`Shift`: 0.1 m); from On the ground it starts lifting above it. |
+| `Alt` + click | At one height: the top of the piece clicked (to build on it), or the ground there. |
+
+Objects placed above the ground may stand over water (the under-water check is only for objects on
+the ground).
 
 The preview shows the pieces and the size; when a line does not end on a whole piece, it says how
 much of it is left. **Enter** places them (one undo step).

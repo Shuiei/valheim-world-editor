@@ -17,6 +17,12 @@ export function createPlant(ed) {
     <div id="plMix"></div>
     <div class="hint" id="plChosen"></div>
     <div class="row"><button id="plPresetSave" title="Save the chosen kinds, their weights and the Density, Spacing, Size, Tilt and facing settings under a name">Save as preset…</button><button id="plPresetDel" disabled title="Delete the chosen preset (only your own)">Delete</button></div>
+    <label class="field" title="Where placed objects stand: on the ground, a height above it, or all at one height">Elevation <select id="plElevMode"><option value="ground">On the ground</option><option value="above">Above the ground</option><option value="at">At one height</option></select></label>
+    <label class="field" id="plElevRow" hidden>Height <input id="plElev" type="number" step="0.5" value="0"><span>m</span></label>
+    <div id="plPieceBox" hidden>
+      <label class="check" title="A piece locks onto the snap points of the pieces already there, like the hammer"><input type="checkbox" id="plSnapTo" checked> Snap to pieces already there</label>
+      <div class="seg" id="plAttach"><button data-at="side" class="on" title="End to end with the piece next to the cursor, at its level">Beside</button><button data-at="top" title="On top of the piece under the cursor">On top</button></div>
+    </div>
     <label class="check" id="plGrowRow" hidden title="Saplings and crops need free space around them to grow (their grow radius in the game)"><input type="checkbox" id="plGrow" checked> Leave saplings and crops room to grow</label>
     <label class="field">Density <input id="plDensity" type="range" min="0.2" max="20" step="0.2" value="3"><span id="plDensityV"></span></label>
     <label class="field">Spacing <input id="plSpacing" type="range" min="0.5" max="15" step="0.5" value="4"><span id="plSpacingV"></span></label>
@@ -30,6 +36,7 @@ export function createPlant(ed) {
     <div id="plLineBox" hidden>
       <div class="seg" id="plLineShape"><button data-ls="points" class="on" title="Click points along the way, or hold and drag to draw freely">Points</button><button data-ls="circle" title="Press at the centre and drag out to the size you want">Circle</button><button data-ls="rect" title="Press at one corner and drag to the opposite corner">Rectangle</button></div>
       <label class="check" title="Each piece starts where the last one ends, at the game's snap points, like the hammer snaps them"><input type="checkbox" id="plSnap"> End to end (snap together, like in game)</label>
+      <label class="field" id="plLayersRow" title="Stack the line this many pieces high, each layer on top of the one below">Layers <input id="plLayers" type="number" min="1" max="20" step="1" value="1"><span></span></label>
       <label class="check" id="plLoopRow"><input type="checkbox" id="plLoop"> Close the loop (back to the first point)</label>
       <label class="field">Every <input id="plEvery" type="range" min="0.5" max="30" step="0.5" value="4"><span id="plEveryV"></span></label>
       <label class="field">Wiggle <input id="plWiggle" type="range" min="0" max="5" step="0.25" value="0"><span id="plWiggleV"></span></label>
@@ -134,6 +141,7 @@ export function createPlant(ed) {
     $('plChosen').textContent = chosen.size ? '' : 'Nothing to place yet: + Add kinds, or a preset.';
     // The grow room option only matters for saplings and crops: shown (and used) only when one is ticked.
     $('plGrowRow').hidden = ![...chosen].some(n => grow[n]?.[0] > 0);
+    syncPieces();
     // Crops only grow on cultivated ground in the game.
     const cult = [...chosen].filter(n => grow[n]?.[1]);
     if (cult.length) $('plChosen').textContent = `${cult.join(', ')} only grow${cult.length > 1 ? '' : 's'} on cultivated ground (paint it with Cultivate first).`;
@@ -367,9 +375,9 @@ export function createPlant(ed) {
     const name = pickName(names, d.t);
     if (!free(hash, cell, gx, gz, Math.max(minDist ?? ($('plSingle').checked ? 0.3 : v('plSpacing')), growNeed(name)))) return null;
     const y = heightAt(gx, gz);
-    if (y < ed.WATER - 0.3 && !underwaterOk(names)) return null;  // not under water
+    if ($('plElevMode').value === 'ground' && y < ed.WATER - 0.3 && !underwaterOk(names)) return null;  // not under water
     const smin = v('plSmin') / 100, smax = Math.max(smin, v('plSmax') / 100), tilt = v('plTilt');
-    return { name, x: ed.originX + gx, y: y - 0.05, z: ed.originZ + gz,
+    return { name, x: ed.originX + gx, y: elevated(name, y), z: ed.originZ + gz,
       rx: d.rx * tilt, ry: (yaw != null ? yaw : $('plRandomYaw').checked ? d.ry * 360 : 0) + rotation(), rz: d.rz * tilt, scale: smin + d.s * (smax - smin), gx, gz };
   }
   const draw = () => ({ t: Math.random(), k: Math.random(), rx: Math.random() * 2 - 1, ry: Math.random(), rz: Math.random() * 2 - 1, s: Math.random() });
@@ -559,7 +567,7 @@ export function createPlant(ed) {
   // hammer snaps them. A piece's two ends are the middles of the faces along its longer side, from its
   // snap points (walls, fences, floors...) or, for kinds without any, from its model's box.
   let snapPoints = null;
-  fetch('/api/snappoints').then(r => r.json()).then(d => { snapPoints = d; autoSnap(); updatePreview(); }).catch(() => { snapPoints = {}; });
+  fetch('/api/snappoints').then(r => r.json()).then(d => { snapPoints = d; others = null; autoSnap(); syncPieces(); updatePreview(); }).catch(() => { snapPoints = {}; });
   // End to end switches itself on when every ticked kind is a piece the game snaps (fences, walls...)
   // and off otherwise, until the switch is changed by hand.
   let snapByHand = false;
@@ -567,14 +575,18 @@ export function createPlant(ed) {
     if (snapByHand || !snapPoints) return;
     const pieces = chosen.size > 0 && [...chosen].every(n => snapPoints[n]?.length >= 2);
     if ($('plSnap').checked !== pieces) { $('plSnap').checked = pieces; syncSnap(); drawShape(); }
+    // Pieces go one at a time under the cursor (where they can snap), until that is changed by hand.
+    if (!singleByHand && $('plSingle').checked !== pieces) { $('plSingle').checked = pieces; patternKey = ''; }
   }
+  let singleByHand = false;
+  $('plSingle').addEventListener('input', e => { if (e.isTrusted) singleByHand = true; });
   const endsCache = new Map();
   function endsFrom(xs, ys, zs) {
     const x0 = Math.min(...xs), x1 = Math.max(...xs), z0 = Math.min(...zs), z1 = Math.max(...zs), y = Math.min(...ys);
     const alongX = x1 - x0 >= z1 - z0 - 1e-3, cx = (x0 + x1) / 2, cz = (z0 + z1) / 2;
     const a = alongX ? [x0, y, cz] : [cx, y, z0], b = alongX ? [x1, y, cz] : [cx, y, z1];
     const len = Math.hypot(b[0] - a[0], b[2] - a[2]);
-    return len > 0.05 ? { a, b, len, heading: Math.atan2(b[0] - a[0], b[2] - a[2]) } : null;
+    return len > 0.05 ? { a, b, len, h: Math.max(...ys) - y, heading: Math.atan2(b[0] - a[0], b[2] - a[2]) } : null;
   }
   function endsOf(name) {
     if (endsCache.has(name)) return endsCache.get(name);
@@ -661,6 +673,11 @@ export function createPlant(ed) {
   function snappedRun(pts, names, k, out) {
     if (pts.length < 2) return k;
     let s = { gx: pts[0].gx, gz: pts[0].gz }, seg = 0, t0 = 0, sSeg = 0;
+    // Started next to a piece already there (within 1 m): the run continues it, from its snap point
+    // and at its level.
+    const start = snapOn() ? nearestSnap(s, 1) : null;
+    if (start) s = { gx: start[0], gz: start[2] };
+    const layers = Math.max(1, Math.min(20, Math.round(v('plLayers')) || 1)), elevMode = $('plElevMode').value, elev = +$('plElev').value || 0;
     for (; k < MAXSHAPE; k++) {
       const name = names[k % names.length], e = endsOf(name);
       sSeg = seg;
@@ -672,15 +689,144 @@ export function createPlant(ed) {
       const yaw = (Math.atan2(q.gx - s.gx, q.gz - s.gz) - e.heading) * 180 / Math.PI;
       const r = yaw * Math.PI / 180, c = Math.cos(r), sn = Math.sin(r);
       const ox = s.gx - (e.a[0] * c + e.a[2] * sn), oz = s.gz - (-e.a[0] * sn + e.a[2] * c);
-      const bottom = Math.min(heightAt(s.gx, s.gz), heightAt(q.gx, q.gz), heightAt((s.gx + q.gx) / 2, (s.gz + q.gz) / 2));
+      const bottom = elevMode === 'at' ? elev : start && elevMode === 'ground' ? start[1]
+        : Math.min(heightAt(s.gx, s.gz), heightAt(q.gx, q.gz), heightAt((s.gx + q.gx) / 2, (s.gz + q.gz) / 2)) + (elevMode === 'above' ? elev : 0);
       if (ox >= 1 && oz >= 1 && ox <= W - 2 && oz <= H - 2 && ed.mask(Math.round(oz) * W + Math.round(ox)))
-        out.push({ name, x: ed.originX + ox, y: bottom - e.a[1], z: ed.originZ + oz, rx: 0, ry: ((yaw % 360) + 360) % 360, rz: 0, scale: 0, gx: ox, gz: oz });
+        for (let L = 0; L < (e.h > 0.1 ? layers : 1); L++)
+          out.push({ name, x: ed.originX + ox, y: bottom - e.a[1] + L * e.h, z: ed.originZ + oz, rx: 0, ry: ((yaw % 360) + 360) % 360, rz: 0, scale: 0, gx: ox, gz: oz });
       s = q; seg = hit.seg; t0 = hit.t;
     }
     // What is left of the line once no whole piece fits any more.
     for (let i = sSeg; i < pts.length - 1; i++) { const a = i === sSeg ? s : pts[i], b = pts[i + 1]; snapGap += Math.hypot(b.gx - a.gx, b.gz - a.gz); }
     return k;
   }
+
+  // ---- Elevation: on the ground, a height above it, or one height for all. A piece's bottom (its
+  // lowest snap point: walls have their origin in the middle) is what stands there; other kinds stand
+  // on their origin, a little sunk like the game does.
+  const bottomOf = name => { const sp = snapPoints?.[name]; return sp?.length ? Math.min(...sp.map(p => p[1])) : null; };
+  function elevated(name, groundY) {
+    const b = bottomOf(name), m = $('plElevMode').value, h = +$('plElev').value || 0;
+    if (m === 'at') return h - (b ?? 0);
+    return groundY - (b ?? 0.05) + (m === 'above' ? h : 0);
+  }
+  function syncElev() {
+    const m = $('plElevMode').value;
+    $('plElevRow').hidden = m === 'ground';
+    $('plElevRow').firstChild.textContent = m === 'at' ? 'Height ' : 'Above by ';
+    updatePreview();
+  }
+  $('plElevMode').addEventListener('change', syncElev);
+  $('plElev').addEventListener('input', () => updatePreview());
+  // PgUp / PgDn: 0.5 m up or down (Shift: 0.1 m); from the ground they start lifting above it.
+  function nudgeElev(d) {
+    if ($('plElevMode').value === 'ground') { $('plElevMode').value = 'above'; $('plElev').value = 0; }
+    $('plElev').value = +(+$('plElev').value + d).toFixed(2);
+    syncElev();
+    ed.msg(`Elevation: ${$('plElevMode').value === 'at' ? 'at' : 'above the ground by'} ${$('plElev').value} m.`);
+  }
+  // Alt + click: one height for all, from the top of the piece clicked (to build on it) or the ground.
+  function pickElev(e, hit) {
+    const ent = ed.pickEntity(e), r = ent && ed.objects.records.get(ent.id), sp = r && snapPoints?.[r.name];
+    let y = hit?.y;
+    if (sp?.length) y = Math.max(...sp.map(p => rotU(p, r.rx, r.ry, r.rz)[1])) + r.y;
+    if (y == null) return;
+    $('plElevMode').value = 'at'; $('plElev').value = y.toFixed(2); syncElev();
+    ed.msg(`Elevation: everything at ${y.toFixed(2)} m${sp?.length ? ` (the top of ${r.name})` : ' (the ground there)'}. PgUp / PgDn change it.`);
+  }
+
+  // ---- Snapping to pieces already there (like the hammer, and the Select tool's moves): a single
+  // piece under the cursor locks onto the snap points around it, beside a piece (end to end, at its
+  // level) or on top of the piece under the cursor. Its turn follows that piece (in quarter turns).
+  const D2R = Math.PI / 180;
+  // Unity's rotation (Euler degrees: z, then x, then y) of a local point.
+  function rotU([x, y, z], rx, ry, rz) {
+    const cz = Math.cos(rz * D2R), sz = Math.sin(rz * D2R), cx = Math.cos(rx * D2R), sx = Math.sin(rx * D2R), cy = Math.cos(ry * D2R), sy = Math.sin(ry * D2R);
+    [x, y] = [x * cz - y * sz, x * sz + y * cz];
+    [y, z] = [y * cx - z * sx, y * sx + z * cx];
+    return [x * cy + z * sy, y, -x * sy + z * cy];
+  }
+  let attach = 'side', others = null, lastEvent = null, snappedTo = null;
+  $('plAttach').querySelectorAll('[data-at]').forEach(b => b.onclick = () => {
+    attach = b.dataset.at; $('plAttach').querySelectorAll('[data-at]').forEach(x => x.classList.toggle('on', x === b)); updatePreview();
+  });
+  (ed.onObjectsChanged ??= []).push(() => { others = null; });
+  const isPiece = n => snapPoints?.[n]?.length >= 2;
+  const snapOn = () => $('plSnapTo').checked && [...chosen].some(isPiece);
+  // The snap points of every piece in the area, in grid coordinates and height.
+  function otherSnaps() {
+    if (others) return others;
+    others = [];
+    for (const r of ed.objects.alive()) {
+      const sp = snapPoints?.[r.name];
+      if (!sp?.length) continue;
+      const gx = r.x - ed.originX, gz = r.z - ed.originZ;
+      const pts = sp.map(p => { const [a, b, c] = rotU(p, r.rx, r.ry, r.rz); return [gx + a, r.y + b, gz + c]; });
+      others.push({ r, gx, gz, pts, low: Math.min(...pts.map(p => p[1])) });
+    }
+    return others;
+  }
+  // The snap point of a piece already there nearest to p (along the ground), within d metres.
+  function nearestSnap(p, d) {
+    let best = null, bd = d;
+    for (const o of otherSnaps()) {
+      if (Math.abs(o.gx - p.gx) > d + 8 || Math.abs(o.gz - p.gz) > d + 8) continue;
+      for (const q of o.pts) { const dd = Math.hypot(q[0] - p.gx, q[2] - p.gz); if (dd < bd) { bd = dd; best = q; } }
+    }
+    return best;
+  }
+  // Snapped, a piece faces like the piece it attaches to, turned by the Rotation in quarter turns.
+  const alignYaw = ref => ref + 90 * Math.round(v('plRot') / 90);
+  function snapSingle(o) {
+    snappedTo = null;
+    const sp = snapPoints[o.name];
+    const near = otherSnaps().filter(x => Math.abs(x.gx - o.gx) < 12 && Math.abs(x.gz - o.gz) < 12);
+    if (!near.length) return o;
+    o = { ...o, rx: 0, rz: 0, scale: 0 };
+    const place = (gx, gz, y) => ({ ...o, gx, gz, x: ed.originX + gx, z: ed.originZ + gz, y });
+    if (attach === 'top') {
+      const ent = lastEvent && ed.pickEntity(lastEvent);
+      const under = (ent && near.find(x => x.r.id === ent.id)) ?? near.filter(x => Math.hypot(x.gx - o.gx, x.gz - o.gz) < 3).sort((a, b) => Math.hypot(a.gx - o.gx, a.gz - o.gz) - Math.hypot(b.gx - o.gx, b.gz - o.gz))[0];
+      if (under) {
+        const top = Math.max(...under.pts.map(p => p[1])), tops = under.pts.filter(p => p[1] > top - 0.05);
+        o.ry = alignYaw(under.r.ry);
+        const mine = sp.map(p => rotU(p, 0, o.ry, 0)), low = Math.min(...mine.map(p => p[1])), bottoms = mine.filter(p => p[1] < low + 0.05);
+        let best = null;
+        for (const t of tops) for (const m of bottoms) {
+          const gx = t[0] - m[0], gz = t[2] - m[2], d = Math.hypot(gx - o.gx, gz - o.gz);
+          if (!best || d < best.d) best = { d, gx, gz };
+        }
+        snappedTo = `on top of ${under.r.name}`;
+        return { ...place(best.gx, best.gz, top - low), ry: ((o.ry % 360) + 360) % 360 };
+      }
+    }
+    // Beside: turned like the nearest piece (the quarter turn that meets best, the facing asked for
+    // first), then the closest pair of snap points along the ground (within 1 m; bottom with bottom,
+    // top with top, each within its own piece) meets.
+    const close = near.slice().sort((a, b) => Math.hypot(a.gx - o.gx, a.gz - o.gz) - Math.hypot(b.gx - o.gx, b.gz - o.gz))[0];
+    const yaws = Math.hypot(close.gx - o.gx, close.gz - o.gz) < 5 ? [0, 180, 90, 270].map(k => alignYaw(close.r.ry) + k) : [o.ry];
+    let best = null;
+    yaws.forEach((ry, k) => {
+      const mine = sp.map(p => rotU(p, 0, ry, 0).map((v, i) => v + [o.gx, o.y, o.gz][i])), myLow = Math.min(...mine.map(p => p[1]));
+      for (const x of near) for (const q of x.pts) for (const m of mine) {
+        const d = Math.hypot(q[0] - m[0], q[2] - m[2]);
+        if (d > 1) continue;
+        const score = d + Math.abs((q[1] - x.low) - (m[1] - myLow)) + 0.01 * k;
+        if (!best || score < best.score) best = { score, q, m, ry, name: x.r.name };
+      }
+    });
+    if (!best) return o;
+    snappedTo = `beside ${best.name}`;
+    return { ...place(o.gx + best.q[0] - best.m[0], o.gz + best.q[2] - best.m[2], o.y + best.q[1] - best.m[1]), ry: ((best.ry % 360) + 360) % 360 };
+  }
+  // Called by the settings above before this part of the tool is set up: waits until it is.
+  var piecesReady = false;
+  function syncPieces() {
+    if (!piecesReady) return;
+    $('plPieceBox').hidden = ![...chosen].some(isPiece);
+    $('plAttach').hidden = mode !== 'brush';
+  }
+  $('plSnapTo').addEventListener('input', () => updatePreview());
 
   // The points of a drawn line or zone can be dragged (editor/handles.js), like the Path tool's.
   const lineHandles = createHandles(ed, 0x9fe0ff);
@@ -723,7 +869,7 @@ export function createPlant(ed) {
     mode = m;
     $('plModes').querySelectorAll('[data-m]').forEach(b => b.classList.toggle('on', b.dataset.m === m));
     $('plLineBox').hidden = m !== 'line'; syncSnap(); $('plGridBox').hidden = m !== 'grid'; $('plZoneBox').hidden = m !== 'zone'; $('plPlaceRow').hidden = m === 'brush'; $('plBrushHint').hidden = m !== 'brush'; $('plLineHint').hidden = m !== 'line';
-    syncFill(); drawShape();
+    syncPieces(); syncFill(); drawShape();
   }
   // End to end: the piece's own length sets the spacing, facing and size are fixed.
   function syncSnap() {
@@ -733,6 +879,7 @@ export function createPlant(ed) {
     for (const id of ['plEvery', 'plWiggle']) $(id).closest('label').hidden = on;
     for (const id of ['plSmin', 'plTilt', 'plRot', 'plRandomYaw']) $(id).closest('label').hidden = on;
     $('plLoopRow').hidden = mode !== 'line' || lineShape !== 'points';
+    $('plLayersRow').hidden = !on;
     $('plCurve').closest('label').hidden = lineShape !== 'points';
   }
   ['plSnap', 'plLoop'].forEach(id => $(id).addEventListener('input', () => { syncSnap(); drawShape(); updatePreview(); }));
@@ -751,7 +898,7 @@ export function createPlant(ed) {
   }
   $('plModes').querySelectorAll('[data-m]').forEach(b => b.onclick = () => setMode(b.dataset.m));
   const syncShapeLabels = () => { $('plEveryV').textContent = `${v('plEvery')} m`; $('plWiggleV').textContent = `${v('plWiggle')} m`; $('plCellV').textContent = `${v('plCell')} m`; };
-  ['plEvery', 'plWiggle', 'plCell', 'plAlong', 'plCurve'].forEach(id => $(id).addEventListener('input', () => { syncShapeLabels(); drawShape(); updatePreview(); }));
+  ['plEvery', 'plWiggle', 'plCell', 'plAlong', 'plCurve', 'plLayers'].forEach(id => $(id).addEventListener('input', () => { syncShapeLabels(); drawShape(); updatePreview(); }));
   syncShapeLabels();
   function clearShape() { linePts = []; figA = figB = null; gridA = gridB = null; shapeTurn = 0; pivot = null; drawingLine = false; drawShape(); updatePreview(); }
   async function placeShape() {
@@ -818,6 +965,8 @@ export function createPlant(ed) {
       const o = placementAt(at.gx + p.dx * c + p.dz * sn, at.gz - p.dx * sn + p.dz * c, p.d, names, hash, cell);
       if (o) placed.push(o);
     }
+    snappedTo = null;
+    if (!shaped && placed.length === 1 && snapOn() && isPiece(placed[0].name)) placed[0] = snapSingle(placed[0]);
     preview = roomToGrow(placed);
     const byName = new Map();
     for (const o of preview) (byName.get(o.name) ?? byName.set(o.name, []).get(o.name)).push(o);
@@ -840,7 +989,7 @@ export function createPlant(ed) {
     if (!chosen.size) { $('plPreview').textContent = 'Tick at least one kind to plant.'; return; }
     if (held.shift && mode === 'brush') { $('plPreview').textContent = 'Shift: drag to remove the chosen kinds under the brush.'; return; }
     if (mode !== 'brush') { $('plPreview').innerHTML = `<b>${preview.length}</b> object(s) ${mode === 'line' ? 'along the line' : mode === 'zone' ? 'in the zone' : 'in the grid'}${mode === 'line' && figA && figB ? (() => { const b = snapFigure(figA, figB); return lineShape === 'rect' ? ` (${Math.abs(b.gx - figA.gx).toFixed(1)} × ${Math.abs(b.gz - figA.gz).toFixed(1)} m)` : ` (radius ${Math.hypot(b.gx - figA.gx, b.gz - figA.gz).toFixed(1)} m)`; })() : ''}${mode === 'line' && $('plSnap').checked && snapGap > 0.05 && preview.length ? `, end to end (${snapGap.toFixed(1)} m of the line left at the end: move a point to close it)` : ''}. <kbd>Enter</kbd> places them${pointed() ? ' (or double-click)' : ''}${turnable() ? ` · <kbd>,</kbd> <kbd>.</kbd> or <kbd>Alt</kbd>+wheel turn the ${mode === 'zone' ? 'zone' : 'grid'}${shapeTurn ? ` (now ${shapeTurn}°)` : ''}` : ''} · <kbd>R</kbd> new random choices.`; return; }
-    $('plPreview').innerHTML = at ? `<b>${preview.length}</b> object(s) shown under the cursor. Click places exactly these; drag paints more. <kbd>R</kbd> new layout · <kbd>Alt</kbd>+wheel or <kbd>,</kbd> <kbd>.</kbd> rotate.` : 'Move over the ground to see what a click would place.';
+    $('plPreview').innerHTML = at ? `${snappedTo ? `Snapped ${snappedTo}. ` : ''}<b>${preview.length}</b> object(s) shown under the cursor. Click places exactly these; drag paints more. <kbd>R</kbd> new layout · <kbd>Alt</kbd>+wheel or <kbd>,</kbd> <kbd>.</kbd> rotate.` : 'Move over the ground to see what a click would place.';
   }
   const held = { shift: false };
   addEventListener('keydown', e => { if (e.key === 'Shift' && !held.shift) { held.shift = true; updatePreview(); } });
@@ -894,7 +1043,7 @@ export function createPlant(ed) {
       updatePreview();
     },
     move(e, hit) {
-      at = hit; ed.showStatusFor?.(hit); ed.updateRing?.();
+      at = hit; lastEvent = e; ed.showStatusFor?.(hit); ed.updateRing?.();
       if (stroke && !stroke.dragging && Math.hypot(e.clientX - stroke.x, e.clientY - stroke.y) > 6) {
         stroke.dragging = true;
         // Painting: the ground under the click gets the preview too, then the brush adds more.
@@ -992,10 +1141,13 @@ export function createPlant(ed) {
     }
   };
   ed.handlers.plant = {
-    down: (e, hit) => (mode === 'brush' ? brush : shaped).down(e, hit),
+    down: (e, hit) => { if (e.altKey && !e.shiftKey) { pickElev(e, hit); return; } (mode === 'brush' ? brush : shaped).down(e, hit); },
     move: (e, hit) => (mode === 'brush' ? brush : shaped).move(e, hit),
     up: (e, hit) => (mode === 'brush' ? brush : shaped).up(e, hit),
-    key: e => (mode === 'brush' ? brush : shaped).key(e)
+    key: e => {
+      if (e.key === 'PageUp' || e.key === 'PageDown') { nudgeElev((e.key === 'PageUp' ? 1 : -1) * (e.shiftKey ? 0.1 : 0.5)); return true; }
+      return (mode === 'brush' ? brush : shaped).key(e);
+    }
   };
   function turn(deg) {
     let r = v('plRot') + deg;
@@ -1021,4 +1173,5 @@ export function createPlant(ed) {
   window.__plantWidth = (name, w) => { widths.set(name, w); updatePreview(); };
   ed.frame ??= [];
   ed.frame.push(step);
+  piecesReady = true; syncPieces();
 }
