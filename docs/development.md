@@ -175,8 +175,7 @@ Running them locally:
 dotnet test tests/WorldEditor.Tests
 dotnet publish TerrainEditor.csproj -c Release -r linux-x64 --self-contained -p:PublishSingleFile=true -o out
 cd tests/browser && npm ci && npm test        # APP=<program> to test another build
-cd tests/browser && npm run coverage          # which lines of the page's scripts the tests run
-dotnet test tests/WorldEditor.Tests --collect:"XPlat Code Coverage"   # the same for the C# tests
+tools/coverage.sh                             # coverage of every test: server and page, line by line
 SKIP_PLUGIN=1 tools/release.sh /tmp/dist && tools/check-package.sh /tmp/dist/*.tar.gz --no-plugin
 ```
 

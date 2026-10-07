@@ -242,4 +242,138 @@ test('sharp edges: the pickaxe falloff, and a straight edge along a diagonal pat
   noErrors();
 });
 
+test('every sculpt and paint brush does its job: lower, raise, restore, smooth, natural, the four paints', async () => {
+  await openEditor();
+  const c = (await records()).find(r => r.name === 'piece_chest_wood');
+  const spot = [c.x + 25, c.z - 15];
+  await lookAt(page(), ...spot, 0, 40, 30);
+  const at = () => page().evaluate(([x, z]) => { const ed = window.__ed, g = Math.round(z - ed.originZ) * ed.W + Math.round(x - ed.originX); return { h: ed.height(g), base: ed.base[g], pmod: ed.pmod[g], paint: Array.from(ed.paint.slice(g * 4, g * 4 + 4)) }; }, spot);
+  const stroke = async key => {
+    await page().keyboard.press(key);
+    const [x, y] = await screenOf(page(), ...spot);
+    await page().mouse.move(x, y); await page().mouse.down(); await page().mouse.move(x + 3, y + 3, { steps: 20 }); await page().mouse.up(); await sleep(400);
+  };
+  const h0 = (await at()).h;
+  await stroke('2');
+  const low = (await at()).h;
+  assert.ok(low < h0 - 0.05, 'Lower digs');
+  const radius = v => page().$eval('#radius', (e, v) => { e.value = v; e.dispatchEvent(new Event('input')); }, v);
+  await radius(2);
+  await stroke('1'); await stroke('1'); await stroke('1');
+  await radius(8);
+  const raised = (await at()).h;
+  // Smooth: the ground around the spot gets less bumpy (each point nearer the average of its neighbours).
+  const bumps = () => page().evaluate(([x, z]) => {
+    const ed = window.__ed, cx = Math.round(x - ed.originX), cz = Math.round(z - ed.originZ), H = (gx, gz) => ed.height(gz * ed.W + gx);
+    let s = 0;
+    for (let gz = cz - 3; gz <= cz + 3; gz++) for (let gx = cx - 3; gx <= cx + 3; gx++) {
+      let a = 0; for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) a += H(gx + dx, gz + dz);
+      s += Math.abs(H(gx, gz) - a / 9);
+    }
+    return s;
+  }, spot);
+  const rough = await bumps();
+  await stroke('4');
+  { const r2 = await bumps(); assert.ok(r2 < rough, `Smooth evens it out (bumps ${rough.toFixed(3)} -> ${r2.toFixed(3)})`); }
+  const beforeNatural = (await at()).h;
+  await stroke('0');
+  assert.ok(Math.abs((await at()).h - beforeNatural) > 0.001, 'Natural changes the ground');
+  const off = Math.abs((await at()).h - (await at()).base);
+  await stroke('5'); await stroke('5'); await stroke('5');
+  assert.ok(Math.abs((await at()).h - (await at()).base) < off, 'Restore brings it back towards the generated ground');
+  for (const [key, ch, name] of [['6', 0, 'Dirt'], ['7', 1, 'Cultivate'], ['8', 2, 'Paved']]) {
+    await stroke(key); await stroke(key);
+    const p = await at();
+    assert.ok(p.pmod && p.paint[ch] > 0.5, `${name} paints its channel (${p.paint.map(v => v.toFixed(2))})`);
+  }
+  await stroke('9'); await stroke('9'); await stroke('9');
+  const cleared = await at();
+  assert.ok(cleared.paint.slice(0, 3).every(v => v < 0.5), `Clear takes the paint off (${cleared.paint.map(v => v.toFixed(2))})`);
+  noErrors();
+});
+
+test('path: raise, lower, flatten, smooth and paint along a line; Alt + click picks the height', async () => {
+  await openEditor();
+  const c = (await records()).find(r => r.name === 'piece_chest_wood');
+  const a = [c.x + 10, c.z - 30], b = [c.x + 30, c.z - 30], mid = [c.x + 20, c.z - 30];
+  await lookAt(page(), ...mid, 0, 50, 30);
+  await page().keyboard.press('p');
+  const at = () => page().evaluate(([x, z]) => { const ed = window.__ed, g = Math.round(z - ed.originZ) * ed.W + Math.round(x - ed.originX); return { h: ed.height(g), paint: Array.from(ed.paint.slice(g * 4, g * 4 + 4)), pmod: ed.pmod[g] }; }, mid);
+  const run = async action => {
+    await page().select('#pAction', action);
+    for (const p of [a, b]) { const [x, y] = await screenOf(page(), ...p); await page().mouse.click(x, y); await sleep(150); }
+    await page().keyboard.press('Enter'); await sleep(600);
+    await page().keyboard.press('Escape');
+  };
+  const h0 = (await at()).h;
+  await page().$eval('#pAmount', e => { e.value = 2; e.dispatchEvent(new Event('input')); });
+  await run('raise');
+  assert.ok(Math.abs((await at()).h - (h0 + 2)) < 0.2, 'Raise by 2 m');
+  await run('lower');
+  assert.ok(Math.abs((await at()).h - h0) < 0.2, 'Lower by 2 m');
+  await page().$eval('#pHeight', (e, v) => { e.value = v; e.dispatchEvent(new Event('input')); }, (h0 + 3).toFixed(1));
+  await run('flatten');
+  assert.ok(Math.abs((await at()).h - (h0 + 3)) < 0.2, 'Flatten to the Height');
+  const flat = (await at()).h;
+  await run('smooth');
+  assert.ok(Math.abs((await at()).h - flat) < 1.5, 'Smooth keeps it close');
+  await run('paint-paved');
+  const p = await at();
+  assert.ok(p.pmod && p.paint[2] > 0.5, `Paint paved along the line (${p.paint.map(v => v.toFixed(2))})`);
+  // Alt + click: the ground height there goes into Height.
+  await page().select('#pAction', 'flatten');
+  { const [x, y] = await screenOf(page(), ...mid); await page().keyboard.down('Alt'); await page().mouse.click(x, y); await page().keyboard.up('Alt'); await sleep(200); }
+  assert.ok(Math.abs(await page().$eval('#pHeight', e => +e.value) - (await at()).h) < 0.2, 'Alt + click picked the height');
+  noErrors();
+});
+
+test('mask: biome, height, slope and paint filters decide where brushes work', async () => {
+  await openEditor();
+  const c = (await records()).find(r => r.name === 'piece_chest_wood');
+  const spot = [c.x + 25, c.z - 15];
+  await lookAt(page(), ...spot, 0, 40, 30);
+  await page().keyboard.press('1');
+  const g = await page().evaluate(([x, z]) => { const ed = window.__ed; return Math.round(z - ed.originZ) * ed.W + Math.round(x - ed.originX); }, spot);
+  const info = await page().evaluate(g => ({ biome: window.__ed.vbiome[g], h: window.__ed.height(g) }), g);
+  const mask = () => page().evaluate(g => window.__ed.mask(g), g);
+  const set = (id, v) => page().$eval('#' + id, (e, v) => { e.value = v; e.dispatchEvent(new Event('input')); e.dispatchEvent(new Event('change')); }, v);
+  await page().click('#mOn');
+  assert.equal(await mask(), 1, 'on, with no filter: everywhere');
+  // Biomes: another biome only leaves this spot out; its own biome lets it in.
+  const other = info.biome === 1 ? 8 : 1;
+  await page().click(`#mBiomes [data-b="${other}"]`);
+  assert.equal(await mask(), 0, 'another biome: left out');
+  await page().click(`#mBiomes [data-b="${info.biome}"]`);
+  assert.equal(await mask(), 1, 'its own biome too: in');
+  await page().click(`#mBiomes [data-b="${other}"]`); await page().click(`#mBiomes [data-b="${info.biome}"]`);
+  // Height range.
+  await set('mHmax', (info.h - 1).toFixed(1));
+  assert.equal(await mask(), 0, 'above the highest: left out');
+  await set('mHmax', ''); await set('mHmin', (info.h - 1).toFixed(1));
+  assert.equal(await mask(), 1, 'above the lowest: in');
+  await set('mHmin', '');
+  // Slope: a maximum of 0° leaves out anything not dead flat; 90° lets everything in.
+  await set('mSmax', 0);
+  const flatOnly = await mask();
+  await set('mSmax', 90);
+  assert.equal(await mask(), 1, 'any slope up to 90°');
+  assert.ok(flatOnly < 1, 'only flat ground: this spot (a slope) is out');
+  await set('mSmax', '');
+  // Paint: only painted ground leaves out unpainted ground.
+  await page().select('#mPaint', 'painted');
+  assert.equal(await mask(), 0, 'unpainted ground is out');
+  await page().select('#mPaint', 'unpainted');
+  assert.equal(await mask(), 1, 'only unpainted: in');
+  await page().select('#mPaint', 'any');
+  // A stroke where the mask leaves everything out changes nothing, and says so.
+  await set('mHmax', (info.h - 5).toFixed(1));
+  const before = await page().evaluate(g => window.__ed.height(g), g);
+  const [x, y] = await screenOf(page(), ...spot);
+  await page().mouse.move(x, y); await page().mouse.down(); await page().mouse.move(x + 3, y + 3, { steps: 10 }); await page().mouse.up(); await sleep(400);
+  assert.equal(await page().evaluate(g => window.__ed.height(g), g), before, 'the masked stroke changed nothing');
+  await set('mHmax', '');
+  await page().click('#mOn');
+  noErrors();
+});
+
 });

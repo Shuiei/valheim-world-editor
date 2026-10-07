@@ -135,7 +135,7 @@ export async function startApp() {
       }
       await browser.close();
       proc.kill('SIGTERM');
-      await new Promise(r => { if (proc.exitCode != null) r(); else proc.on('exit', r); setTimeout(r, 10000); });
+      await new Promise(r => { if (proc.exitCode != null) r(); else proc.on('exit', r); setTimeout(r, 60000); });
       fs.rmSync(home, { recursive: true, force: true });
     },
   };
