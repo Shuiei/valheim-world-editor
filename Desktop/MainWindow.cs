@@ -58,6 +58,12 @@ public sealed class MainWindow : Window
 	{
 		_session = session;
 		session.Brush = Tools.Brush;
+		if (session.Scene.World is { } bw)
+		{
+			// The builder chosen for this world before, else the world's main builder.
+			TerrainEditor.Save.WorldSave.Builder = PlacePanel.Memory.Builders.TryGetValue(bw.Name, out long known) ? known : Builders.Default(bw);
+			FillBuilders();
+		}
 		session.Mask = Mask;
 		session.Changed += () => Dispatcher.UIThread.Post(() => { UpdateSaveBar(); History.Refresh(); });
 		// Saved: the objects were read again, with new indices.
@@ -249,6 +255,91 @@ public sealed class MainWindow : Window
 			return (t, rect);
 		}, Array.Empty<int>(), add);
 		_message.Text = $"Pasted{(paste.Count > 1 ? $" {paste.Count} copies" : "")}{(touched > 0 ? " with the ground" : "")}{(add.Count > 0 ? $", {add.Count} object(s)" : "")}. Click again to paste more, Esc when done.";
+		UpdateSaveBar();
+	}
+
+	// Built by: the world's builders, this computer's characters, named players, another id, or nobody.
+	private void FillBuilders()
+	{
+		if (_session?.Scene.World is not { } w)
+		{
+			return;
+		}
+		_fillingBuilders = true;
+		var players = Builders.Players(w);
+		BuilderIds.Clear();
+		BuilderIds.AddRange(players.Select(p => p.Id));
+		BuilderIds.Add(-1);
+		BuilderIds.Add(0);
+		BuilderBox.ItemsSource = players.Select(p => p.Label).Append("Other player id…").Append("Nobody (not player built)").ToList();
+		BuilderBox.SelectedIndex = BuilderIds.IndexOf(TerrainEditor.Save.WorldSave.Builder);
+		_fillingBuilders = false;
+	}
+
+	// Asks for a player id ("Other player id…"; replaced by tests).
+	internal Func<Task<string?>> AskPlayerId { get; set; }
+
+	private async Task BuilderChosen()
+	{
+		if (_fillingBuilders || BuilderBox.SelectedIndex < 0 || _session?.Scene.World is not { } w)
+		{
+			return;
+		}
+		long id = BuilderIds[BuilderBox.SelectedIndex];
+		if (id == -1)
+		{
+			string? text = (await AskPlayerId())?.Trim();
+			if (!long.TryParse(text, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out id) || id == 0)
+			{
+				if (!string.IsNullOrEmpty(text))
+				{
+					_message.Text = "A player id is a whole number other than 0.";
+				}
+				FillBuilders();
+				return;
+			}
+		}
+		TerrainEditor.Save.WorldSave.Builder = id;
+		PlacePanel.Memory.Builders[w.Name] = id;
+		PlacePanel.Memory.Save();
+		FillBuilders();
+		_message.Text = id == 0 ? "New pieces get no builder: the game takes them for parts of a ruin."
+			: $"New pieces are built by {Builders.Players(w).FirstOrDefault(p => p.Id == id)?.Label ?? $"player {id}"}.";
+	}
+
+	// Make player built: the selected pieces players build that have no builder get the chosen one.
+	internal void Claim()
+	{
+		_view.SelectTool.Commit();
+		if (_session is not { Scene.World: { } world } s)
+		{
+			return;
+		}
+		if (TerrainEditor.Save.WorldSave.Builder == 0)
+		{
+			_message.Text = "Built by is set to Nobody: choose a player first (View panel, Building).";
+			return;
+		}
+		var sel = _view.Selected.ToList();
+		var remove = new List<int>();
+		var adds = new List<(TerrainEditor.Editing.NewObject, bool)>();
+		foreach (int i in sel)
+		{
+			var t = s.Scene.Things[i];
+			if (ObjectData.Bytes(world, s.Edits, t.Id) is { } bytes && Builders.Claimed(bytes, TerrainEditor.Save.WorldSave.Builder) is { } z)
+			{
+				remove.Add(i);
+				adds.Add((new TerrainEditor.Editing.NewObject(0, z.Prefab, z.Position, z.Rotation, 0, null, false, z.Serialize()), true));
+			}
+		}
+		if (adds.Count == 0)
+		{
+			_message.Text = "Nothing to change: the selected pieces already have a builder, or are not things players build.";
+			return;
+		}
+		var copies = s.Commit($"Made {adds.Count} piece(s) player built", null, remove, adds);
+		_view.Select(sel.Where(i => !remove.Contains(i)).Concat(copies));
+		_message.Text = $"{adds.Count} piece(s) are now player built ({sel.Count - adds.Count} left as they were). Save writes it.";
 		UpdateSaveBar();
 	}
 
@@ -489,6 +580,10 @@ public sealed class MainWindow : Window
 	private readonly Dictionary<Overlays.Layer, CheckBox> _overlayBoxes = new();
 	internal IReadOnlyDictionary<Overlays.Layer, CheckBox> OverlayBoxes => _overlayBoxes;
 	internal CheckBox SlopeBox { get; } = new() { Content = "Slope colours", FontSize = 12 };
+	// Building: who new pieces are built by (the player ids: the list's entries).
+	internal ComboBox BuilderBox { get; } = new() { FontSize = 12, MinWidth = 200, MaxWidth = 260 };
+	internal List<long> BuilderIds { get; } = new();
+	private bool _fillingBuilders;
 	internal CheckBox ContourBox { get; } = new() { Content = "Height lines every", FontSize = 12 };
 	internal ComboBox ContourStepBox { get; } = new() { ItemsSource = new[] { "1", "2", "5", "10" }, SelectedIndex = 1, FontSize = 12, MinWidth = 60 };
 
@@ -524,6 +619,10 @@ public sealed class MainWindow : Window
 			Count(Overlays.Layer.Stations, o.Stations);
 			Count(Overlays.Layer.Flatten, o.Flattened);
 		};
+		list.Children.Add(Heading("BUILDING"));
+		ToolTip.SetTip(BuilderBox, "The player new pieces are built by: the game then treats them as player built (materials back, wards and private chests answer to that player)");
+		list.Children.Add(new StackPanel { Spacing = 2, Children = { new TextBlock { Text = "Built by", FontSize = 12 }, BuilderBox } });
+		BuilderBox.SelectionChanged += async (_, _) => await BuilderChosen();
 		list.Children.Add(Heading("LOOK (game look)"));
 		SlopeBox.IsCheckedChanged += (_, _) => _view.SlopeColours = SlopeBox.IsChecked == true;
 		void Contour() => _view.ContourStep = ContourBox.IsChecked == true ? float.Parse((string)ContourStepBox.SelectedItem!) : 0;
@@ -577,6 +676,9 @@ public sealed class MainWindow : Window
 		Inspector.Confirm = text => Dialogs.Ask(this, "Contents", text, "Apply anyway");
 		Inspector.Closed += () => _viewPanel.IsVisible = true;
 		SelectPanel.InspectButton.Click += (_, _) => Inspect();
+		SelectPanel.ClaimButton.Click += (_, _) => Claim();
+		ToolTip.SetTip(SelectPanel.ClaimButton, "Give the selected pieces placed without a builder the player chosen in View, Building");
+		AskPlayerId = () => Dialogs.AskText(this, "Built by", "Player id to write as the builder (the number Valheim keeps for a character):");
 		History.Message += t => { _message.Text = t; UpdateSaveBar(); };
 		SelectPanel.ReplaceAsked += prefab =>
 		{
