@@ -542,6 +542,8 @@ public sealed class MainWindow : Window
 		_view.Place = PlaceInput;
 		PlacePanel = new PlacePanel(PlaceInput, () => _view.Scene, NameOfPrefab);
 		PlacePanel.Message += t => _message.Text = t;
+		PlacePanel.AskName = () => Dialogs.AskText(this, "Save as preset", "Name of the preset:");
+		PlacePanel.Confirm = text => Dialogs.Ask(this, "Delete the preset", text, "Delete");
 		PastePanel.Done += () => Tools.ChooseMode(ToolMode.Area);
 		_view.PasteClicked += PasteAt;
 		_view.ScriptedClick += (at, size) =>

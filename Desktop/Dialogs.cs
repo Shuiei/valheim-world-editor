@@ -42,4 +42,34 @@ public static class Dialogs
 	}
 
 	public static Task Tell(Window owner, string title, string text) => Ask(owner, title, text, "OK", null);
+
+	// A line of text (null: cancelled).
+	public static async Task<string?> AskText(Window owner, string title, string text, string initial = "")
+	{
+		string? result = null;
+		var dialog = new Window
+		{
+			Title = title,
+			Width = 420,
+			SizeToContent = SizeToContent.Height,
+			CanResize = false,
+			WindowStartupLocation = WindowStartupLocation.CenterOwner,
+			Background = new SolidColorBrush(Color.FromRgb(24, 28, 34)),
+		};
+		var box = new TextBox { Text = initial };
+		var ok = new Button { Content = "OK", IsDefault = true };
+		ok.Click += (_, _) => { result = box.Text; dialog.Close(); };
+		var cancel = new Button { Content = "Cancel", IsCancel = true };
+		cancel.Click += (_, _) => dialog.Close();
+		dialog.Content = new StackPanel
+		{
+			Margin = new Thickness(18),
+			Spacing = 12,
+			Children = { new TextBlock { Text = text, TextWrapping = TextWrapping.Wrap, FontSize = 13 }, box,
+				new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, HorizontalAlignment = HorizontalAlignment.Right, Children = { ok, cancel } } },
+		};
+		dialog.Opened += (_, _) => box.Focus();
+		await dialog.ShowDialog(owner);
+		return result;
+	}
 }
