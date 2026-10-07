@@ -3,6 +3,13 @@
 All notable changes to the Valheim world editor and its WorldEditorBridge plugin, which share one
 version number. Newest first.
 
+## v0.20.3 — 2026-10-06 (readable dropdowns)
+
+### Fixed
+- Dropdown lists could be unreadable (pale text on a pale background), depending on the system
+  theme: the pages now declare themselves dark, so the lists are drawn dark, with the chosen entry
+  highlighted in the editor's amber.
+
 ## v0.20.2 — 2026-10-06 (dropdown labels)
 
 ### Fixed

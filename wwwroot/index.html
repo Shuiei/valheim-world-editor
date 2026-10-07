@@ -6,6 +6,11 @@
 <link rel="icon" href="icon.png">
 <title>Valheim World Editor</title>
 <style>
+  /* Dark pages: native parts of controls (the open list of a dropdown, its highlighted entry) are
+     drawn dark too, and list entries get explicit colours, whatever the system theme. */
+  :root { color-scheme: dark; }
+  select option, select optgroup { background: #1e232b; color: #e6e9ee; }
+  select option:checked { background: #e0a64b; color: #1b1508; }
   :root {
     --bg: #14171c; --panel: #1c2027; --line: #2c323c; --text: #e4e7ec; --muted: #8b93a1;
     --accent: #e0a64b; --raise: #e0604b; --lower: #4b8fe0;
