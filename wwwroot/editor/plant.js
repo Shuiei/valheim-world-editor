@@ -1,6 +1,8 @@
-// Plant brush (like WorldPainter's tree layers): paint trees, rocks or bushes onto the ground under the
-// brush with a density and a minimum spacing; Shift + drag removes the chosen kinds again. New objects
-// are copies of an object of the same kind already in the world, made when the world is saved.
+// Place tool (shown as "Place"; the code keeps its first name, plant): any kind of object, painted
+// with a brush (like WorldPainter's tree layers: a density and a minimum spacing; Shift + drag removes
+// the chosen kinds again), or along lines, circles and rectangles (pieces end to end at their snap
+// points, like the hammer), in grids and in zones. New objects are copies of an object of the same
+// kind already in the world, made when the world is saved.
 import { KINDS, KIND_LABEL } from './objects.js';
 import { createHandles } from './handles.js';
 
@@ -22,7 +24,7 @@ export function createPlant(ed) {
     <label class="field">Rotation <input id="plRot" type="range" min="-180" max="180" step="1" value="0"><span id="plRotV"></span></label>
     <label class="check"><input type="checkbox" id="plRandomYaw" checked> Random facing (off: all face the rotation)</label>
     <label class="check"><input type="checkbox" id="plSingle"> One at a time, exactly at the cursor</label>
-    <label class="check" title="Saplings and crops need free space around them to grow (their grow radius in the game)"><input type="checkbox" id="plGrow" checked> Leave saplings room to grow</label>
+    <label class="check" id="plGrowRow" hidden title="Saplings and crops need free space around them to grow (their grow radius in the game)"><input type="checkbox" id="plGrow" checked> Leave saplings and crops room to grow</label>
     <div id="plLineBox" hidden>
       <div class="seg" id="plLineShape"><button data-ls="points" class="on" title="Click points along the way, or hold and drag to draw freely">Points</button><button data-ls="circle" title="Press at the centre and drag out to the size you want">Circle</button><button data-ls="rect" title="Press at one corner and drag to the opposite corner">Rectangle</button></div>
       <label class="check" title="Each piece starts where the last one ends, at the game's snap points, like the hammer snaps them"><input type="checkbox" id="plSnap"> End to end (snap together, like in game)</label>
@@ -79,7 +81,9 @@ export function createPlant(ed) {
     $('plSpacingV').textContent = `${v('plSpacing')} m`;
     $('plTiltV').textContent = `${v('plTilt')}°`;
     $('plRotV').textContent = `${v('plRot')}°`;
-    $('plChosen').textContent = chosen.size ? `Planting: ${[...chosen].join(', ')}` : 'Tick one or more kinds to plant.';
+    $('plChosen').textContent = chosen.size ? `Placing: ${[...chosen].join(', ')}` : 'Tick one or more kinds to place.';
+    // The grow room option only matters for saplings and crops: shown (and used) only when one is ticked.
+    $('plGrowRow').hidden = ![...chosen].some(n => grow[n]?.[0] > 0);
     // Crops only grow on cultivated ground in the game.
     const cult = [...chosen].filter(n => grow[n]?.[1]);
     if (cult.length) $('plChosen').textContent += ` · ${cult.join(', ')} only grow${cult.length > 1 ? '' : 's'} on cultivated ground (paint it with Cultivate first).`;
@@ -128,15 +132,15 @@ export function createPlant(ed) {
     for (const [box, list, el] of [['plFavBox', favs, 'plFav'], ['plRecentBox', recent, 'plRecent']]) {
       const names = list.filter(n => known.has(n));
       $(box).hidden = !names.length;
-      $(el).innerHTML = names.map(n => `<button data-chip="${n}" class="${chosen.has(n) ? 'on' : ''}" title="Plant only this kind (Shift + click: add it to the ticked kinds)">${n}</button>`).join('');
+      $(el).innerHTML = names.map(n => `<button data-chip="${n}" class="${chosen.has(n) ? 'on' : ''}" title="Place only this kind (Shift + click: add it to the ticked kinds)">${n}</button>`).join('');
       $(el).querySelectorAll('[data-chip]').forEach(b => b.onclick = e => choose(b.dataset.chip, e.shiftKey));
     }
   }
   (ed.onObjects ??= []).push(renderChips);
-  $('plPick').onclick = () => ed.pickKind('planting', (name, e) => {
+  $('plPick').onclick = () => ed.pickKind('placing', (name, e) => {
     if (!ed.objects.creatableTypes().some(t => t.name === name)) { ed.msg(`${name} cannot be placed: the game has no such kind to copy.`, true); return; }
     choose(name, e.shiftKey);
-    ed.msg(`Planting ${[...chosen].join(', ')}.`);
+    ed.msg(`Placing ${[...chosen].join(', ')}.`);
   });
   // "ticked / total" on each category header.
   function countKinds() {
@@ -178,10 +182,10 @@ export function createPlant(ed) {
   // Saplings and crops: the game only lets them grow with nothing within their grow radius
   // (name -> [radius m, needs cultivated ground], from the game's prefabs).
   fetch('/api/grow').then(r => r.json()).then(g => { grow = g; syncLabels(); updatePreview(); }).catch(() => { });
-  const growNeed = name => $('plGrow').checked ? (grow[name]?.[0] ?? 0) : 0;
+  const growNeed = name => !$('plGrowRow').hidden && $('plGrow').checked ? (grow[name]?.[0] ?? 0) : 0;
   // Keeps the grow radius between the placements themselves too (rocks or other objects included).
   function roomToGrow(list) {
-    if (!$('plGrow').checked || !list.some(o => growNeed(o.name) > 0)) return list;
+    if ($('plGrowRow').hidden || !$('plGrow').checked || !list.some(o => growNeed(o.name) > 0)) return list;
     const h = new Map(), cell = 2, out = [];
     for (const o of list) {
       const need = growNeed(o.name), cx = Math.floor(o.gx / cell), cz = Math.floor(o.gz / cell);
@@ -604,7 +608,7 @@ export function createPlant(ed) {
     const added = await ed.objects.add(list.map(o => ({ ...o, fresh: true })));
     noteRecent([...new Set(list.map(o => o.name))]);
     hashStale = true;
-    ed.pushHistory({ added, label: `Planted ${added.length} ${mode === 'line' ? 'along a line' : mode === 'zone' ? 'in a zone' : 'in a grid'}` });
+    ed.pushHistory({ added, label: `Placed ${added.length} ${mode === 'line' ? 'along a line' : mode === 'zone' ? 'in a zone' : 'in a grid'}` });
     ed.msg(`Placed ${added.length} object(s). Ctrl+Z removes them.`);
     updatePreview();
   }
@@ -718,8 +722,8 @@ export function createPlant(ed) {
       // Planted and removed again in the same stroke: nothing to remember.
       const added = s.added.filter(id => !s.unplanted.includes(id)), deleted = [...s.deleted, ...s.unplanted.filter(id => !s.added.includes(id))];
       if (added.length) noteRecent([...new Set(added.map(id => ed.objects.records.get(id)?.name).filter(Boolean))]);
-      if (added.length || deleted.length) ed.pushHistory({ ...(added.length ? { added } : {}), ...(deleted.length ? { deleted } : {}), label: s.erase ? `Plant: removed ${deleted.length}` : `Planted ${added.length} (${[...new Set(added.map(id => ed.objects.records.get(id)?.name).filter(Boolean))].slice(0, 3).join(', ')})` });
-      ed.msg(s.erase ? `Removed ${deleted.length} object(s).` : `Planted ${added.length} object(s). Ctrl+Z removes them; Save writes them to the world.`);
+      if (added.length || deleted.length) ed.pushHistory({ ...(added.length ? { added } : {}), ...(deleted.length ? { deleted } : {}), label: s.erase ? `Place: removed ${deleted.length}` : `Placed ${added.length} (${[...new Set(added.map(id => ed.objects.records.get(id)?.name).filter(Boolean))].slice(0, 3).join(', ')})` });
+      ed.msg(s.erase ? `Removed ${deleted.length} object(s).` : `Placed ${added.length} object(s). Ctrl+Z removes them; Save writes them to the world.`);
       makePattern();
       updatePreview();
     },

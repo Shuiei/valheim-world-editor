@@ -56,7 +56,7 @@ export const TIPS = {
   pClear: 'Remove the line (Esc).',
 
   // Mask
-  mOn: 'Limit brushes, paths, area actions and planting to ground that matches all the settings below.',
+  mOn: 'Limit brushes, paths, area actions and placing to ground that matches all the settings below.',
   '#mBiomes': 'Only these biomes (none ticked = every biome).',
   mHmin: 'Only ground at or above this height (m). Empty = no limit. Alt + Shift + click fills the range around a spot.',
   mHmax: 'Only ground at or below this height (m). Empty = no limit.',
@@ -149,15 +149,15 @@ export const TIPS = {
   psDir: 'Which way the copies follow each other: along the copy\'s width or depth (turning with it), or stacked upwards.',
   psGap: 'Space left between two copies (m); negative values make them overlap.',
 
-  // Plant
+  // Place (the plant tool)
   '[data-m="brush"]': 'Paint objects under the brush: a click places what the preview shows, a drag keeps adding.',
   '[data-m="line"]': 'Place objects at a fixed spacing along a line you draw.',
   '[data-m="grid"]': 'Drag a box: one object in the middle of each cell.',
   '[data-m="zone"]': 'Draw a zone freely, then fill it by scatter or by a grid.',
   plSearch: 'Filter the list of kinds by name.',
-  plPick: 'Pick a kind from the world: click an object to plant only that kind. Shift + click adds it to the ticked kinds. Esc cancels.',
-  plFav: 'Starred kinds (☆ in the list). Click: plant only that kind. Shift + click: add it to, or take it out of, the ticked kinds.',
-  plRecent: 'The last kinds you placed, newest first. Click: plant only that kind. Shift + click: add it to, or take it out of, the ticked kinds.',
+  plPick: 'Pick a kind from the world: click an object to place only that kind. Shift + click adds it to the ticked kinds. Esc cancels.',
+  plFav: 'Starred kinds (☆ in the list). Click: place only that kind. Shift + click: add it to, or take it out of, the ticked kinds.',
+  plRecent: 'The last kinds you placed, newest first. Click: place only that kind. Shift + click: add it to, or take it out of, the ticked kinds.',
   plDensity: 'Brush and zone scatter: objects per 100 m².',
   plSpacing: 'Brush and zone scatter: minimum distance between objects (m), also from objects already there.',
   plSmin: 'Smallest size, in % of the normal size. Each object gets a random size between the two values.',
@@ -166,6 +166,7 @@ export const TIPS = {
   plRot: 'Turn of the preview layout and of each object\'s facing (degrees). , and . or Alt + wheel change it.',
   plRandomYaw: 'On: each object faces a random direction. Off: they all face the Rotation.',
   plSingle: 'Place one object exactly under the cursor per click (only an object right on the spot blocks it).',
+  plGrowRow: 'Keep saplings and crops at least their in-game grow radius away from everything, so they can grow. Only shown when a sapling or crop is ticked.',
   plGrow: 'Keep saplings and crops at least their in-game grow radius away from everything, so they can grow.',
   plSnap: 'Line: switches itself on when every ticked kind is a piece the game snaps. Each object starts exactly where the last one ends, turned along the line, like the game\'s hammer snaps pieces (fences, walls, stakes, floors...). Uses the pieces\' own snap points, or the model\'s length for other kinds.',
   plLoop: 'Line: go back to the first point at the end, to fence a zone in.',

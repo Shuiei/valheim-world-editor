@@ -1,6 +1,6 @@
-# Plant (`T`)
+# Place (`T`)
 
-![Plant brush with its preview](images/plant-brush.jpg)
+![Place brush with its preview](images/plant-brush.jpg)
 
 Place trees, rocks, bushes, crops, building pieces or anything else the game has, in four
 patterns. A see-through **preview** ("ghosts") always shows exactly what will be placed, so you
@@ -12,10 +12,10 @@ green dot.
 | Control | What it does |
 |---|---|
 | **Search** | Filters the list by name (oak, rock, turnip…). |
-| **Pick** | Eyedropper: click an object in the world to plant only its kind. **Shift + click** adds it to the ticked kinds instead. Esc cancels. |
+| **Pick** | Eyedropper: click an object in the world to place only its kind. **Shift + click** adds it to the ticked kinds instead. Esc cancels. |
 | **Favourites** | Click the ☆ after a kind in the list to star it; starred kinds show as buttons above the list. |
 | **Recent** | The last eight kinds you placed, newest first, as buttons above the list. |
-| Favourite and Recent buttons | A click plants only that kind; **Shift + click** adds it to (or takes it out of) the ticked kinds. Both lists are kept in this browser. |
+| Favourite and Recent buttons | A click places only that kind; **Shift + click** adds it to (or takes it out of) the ticked kinds. Both lists are kept in this browser. |
 | **Category lists** | Click a category to fold or unfold it; the number is ticked / total. |
 | **Tick boxes** | Every ticked kind is used; each placement picks one of them at random. |
 
@@ -74,7 +74,7 @@ tool, Flatten).
 | **Rotation** | All | Turns the preview layout and every object's facing (degrees). `,` `.` or Alt + wheel change it by 1° (Shift: 15°). |
 | **Random facing** | All | On: each object faces a random direction. Off: they all face the Rotation. |
 | **One at a time** | Brush | Places one object exactly under the cursor per click; only an object right on that spot blocks it. |
-| **Leave saplings room to grow** | All | Keeps saplings and crops at least their in-game grow radius (0.5 m for crops, 2–3 m for tree saplings) away from everything, including each other, so they can grow. Off: place them as tightly as you like. |
+| **Leave saplings and crops room to grow** | All, only shown when a sapling or crop is ticked | Keeps saplings and crops at least their in-game grow radius (0.5 m for crops, 2–3 m for tree saplings) away from everything, including each other, so they can grow. Off: place them as tightly as you like. |
 | **Every** | Line | Distance between two objects along the line (m). |
 | **Wiggle** | Line | Random sideways offset from the line, up to this many metres. |
 | **Follow the line** | Line | On (the default): each object follows the line (plus the Rotation): a piece lies along it, end to end, other kinds face along it. Off: random facing. Circles and rectangles always follow their outline. |

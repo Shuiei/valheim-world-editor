@@ -185,7 +185,7 @@
   <button data-tool="area" data-key="B">Area</button>
   <button data-tool="path" data-key="P">Path</button>
   <button data-tool="shape" data-key="G">Shape</button>
-  <button data-tool="plant" data-key="T">Plant</button>
+  <button data-tool="plant" data-key="T">Place</button>
   <button data-tool="select" data-key="E">Select</button>
   <button data-tool="measure" data-key="M">Measure</button>
   <button data-tool="move" data-key="H">Move</button>
@@ -287,11 +287,11 @@
     <dt>Middle drag</dt><dd>Slide the view (also Space + left drag, Shift + right drag, Move tool)</dd>
     <dt>W A S D</dt><dd>Move around</dd>
     <dt>1–9, 0, O</dt><dd>Sculpt and paint tools (O: Erode)</dd>
-    <dt>B / P / T / G</dt><dd>Area, Path, Plant, Shape</dd>
+    <dt>B / P / T / G</dt><dd>Area, Path, Place, Shape</dd>
     <dt>E / M / H</dt><dd>Select, Measure, Move</dd>
     <dt>Ctrl+C / Ctrl+V</dt><dd>Copy the area / paste it (R turns 90°, , . turn 1°, F mirrors)</dd>
     <dt>[ &nbsp; ]</dt><dd>Brush size</dd>
-    <dt>Plant: R · Alt+wheel</dt><dd>New layout · turn the preview (also , and .)</dd>
+    <dt>Place: R · Alt+wheel</dt><dd>New layout · turn the preview (also , and .)</dd>
     <dt>Alt + click</dt><dd>Pick the ground height</dd>
     <dt>Del</dt><dd>Delete the selected objects</dd>
     <dt>Ctrl+Z / Ctrl+Y</dt><dd>Undo / redo</dd>
@@ -542,7 +542,7 @@ const TOOLS = {
   path: ['Path', 'Draw a line, then flatten, ramp, raise, lower, smooth or paint along it.', 'M4 19c4 0 3-7 8-7s4-7 8-7M4 19h.01M20 5h.01'],
   area: ['Area', 'Select a box or polygon, then change the ground, remove or replace objects, copy it, or reset its zones.', 'M4 4h4M16 4h4v4M20 16v4h-4M8 20H4v-4M4 8v4M20 8v4M8 4h0M12 4h0M12 20h0'],
   paste: ['Paste', 'Place the copied area. R turns it 90°, , . or Alt+wheel by 1° (Shift 15°); F mirrors it.', 'M8 4h8v3H8zM6 6H5v14h14V6h-1'],
-  plant: ['Plant', 'Paint trees, rocks or bushes onto the ground. Shift + drag removes the chosen kinds.', 'M12 21v-7M12 14c-4 0-6-3-6-6 3 0 6 2 6 6zM12 12c0-4 2-7 6-7 0 4-2 7-6 7z'],
+  plant: ['Place', 'Place any kind of object: paint trees, rocks or bushes with a brush, or put walls, fences and other pieces along lines, circles, rectangles, grids and zones (end to end, like the hammer). Shift + drag removes the chosen kinds.', 'M12 21v-7M12 14c-4 0-6-3-6-6 3 0 6 2 6 6zM12 12c0-4 2-7 6-7 0 4-2 7-6 7z'],
   measure: ['Measure', 'Click two points to see the distance, height difference and slope.', 'M3 17L17 3l4 4L7 21zM7 13l2 2M10 10l2 2M13 7l2 2'],
   select: ['Select', 'Click trees, rocks or buildings to select them, then press Del to remove them from the world.', 'M5 3l14 8-6 2-2 6z'],
   move: ['Move view', 'Drag to slide the view. WASD and arrow keys also move it.', 'M12 3v18M3 12h18M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3']
@@ -1117,7 +1117,7 @@ Promise.all([
 ]).then(async ([objs, names, pieceTypes, templates, extraNames]) => {
   const all = { ...names };
   for (const n of [...pieceTypes, ...extraNames]) all[stableHash(n)] ??= n;
-  // Always load the objects (Plant, Select and Area need them), also without the game look; kinds
+  // Always load the objects (Place, Select and Area need them), also without the game look; kinds
   // whose model cannot be loaded are simply not drawn.
   const counts = await objects.load(objs, all, new Set(pieceTypes), templates);
   for (const el of document.querySelectorAll('[data-count]')) el.textContent = `(${counts[el.dataset.count] ?? 0})`;

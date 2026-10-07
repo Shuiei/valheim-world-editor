@@ -4,6 +4,15 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v0.26.0 — 2026-10-07 (Place tool)
+
+### Changed
+- The **Plant** tool is now called **Place** (still `T`): it places any kind of object, walls and
+  fences end to end along lines, circles and rectangles as well as trees and rocks with a brush.
+  Its guide is now docs/place.md.
+- **Leave saplings and crops room to grow** only shows (and only applies) when a sapling or crop is
+  ticked.
+
 ## v0.25.0 — 2026-10-07 (player-built pieces)
 
 ### Added

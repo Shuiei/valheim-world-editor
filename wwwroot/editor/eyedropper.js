@@ -1,4 +1,4 @@
-// Eyedropper: the next click on an object in the world gives its kind to whoever asked (the Plant
+// Eyedropper: the next click on an object in the world gives its kind to whoever asked (the Place
 // list, the Replace lists). Esc or a click on empty ground cancels. Only drawn objects can be picked.
 
 export function createEyedropper(ed) {
