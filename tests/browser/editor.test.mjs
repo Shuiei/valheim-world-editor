@@ -385,6 +385,41 @@ test('stamps: a mesa stamped once, and a picture loaded as a stamp', async () =>
   noErrors();
 });
 
+test('heightmap: an exported area imports back unchanged, a white picture lifts a selection', async () => {
+  await openEditor();
+  await page().evaluate(() => window.__ed.setTool('area'));
+  const png = Buffer.from(await (await fetch(`${t.base}/api/heightmap.png?x0=-1&z0=-1&x1=1&z1=1`)).arrayBuffer());
+  const file = path.join(t.home, 'area.png'); fs.writeFileSync(file, png);
+  const heightsNow = () => page().evaluate(() => { const ed = window.__ed, out = []; for (let g = 0; g < ed.N; g += 997) out.push(ed.height(g)); return out; });
+  const before = await heightsNow();
+  await (await page().$('#hmFile')).uploadFile(file);
+  await page().waitForFunction(() => !document.getElementById('hmBox').hidden);
+  await page().click('#hmApply'); await sleep(800);
+  const after = await heightsNow();
+  const worst = Math.max(...before.map((h, i) => Math.abs(h - after[i])));
+  assert.ok(worst < 0.02, `the ground came back within 2 cm (${worst.toFixed(4)} m)`);
+  await page().click('#undo'); await sleep(800);
+  // A white picture (8-bit RGBA, as browsers write PNGs) into a box selection: everything goes to Highest.
+  const c = (await records()).find(r => r.name === 'piece_chest_wood');
+  const spot = [c.x + 25, c.z - 25];
+  await lookAt(page(), ...spot, 0, 50, 35);
+  const [ax, ay] = await screenOf(page(), spot[0] - 6, spot[1] - 6), [bx, by] = await screenOf(page(), spot[0] + 6, spot[1] + 6);
+  await page().mouse.move(ax, ay); await page().mouse.down(); await page().mouse.move(bx, by, { steps: 6 }); await page().mouse.up();
+  await page().$eval('#aSoft', e => { e.value = 0; e.dispatchEvent(new Event('input')); });
+  const white = await page().evaluate(() => { const cv = document.createElement('canvas'); cv.width = cv.height = 16; const g = cv.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, 16, 16); return cv.toDataURL('image/png'); });
+  const wfile = path.join(t.home, 'white.png'); fs.writeFileSync(wfile, Buffer.from(white.split(',')[1], 'base64'));
+  const h0 = await page().evaluate(([x, z]) => { const ed = window.__ed; return ed.sampleHeight(x - ed.originX, z - ed.originZ); }, spot);
+  await (await page().$('#hmFile')).uploadFile(wfile);
+  await page().waitForFunction(() => !document.getElementById('hmBox').hidden);
+  await page().$eval('#hmMax', (e, v) => { e.value = v; }, (h0 + 2).toFixed(1));
+  await page().click('#hmApply'); await sleep(800);
+  const h1 = await page().evaluate(([x, z]) => { const ed = window.__ed; return ed.sampleHeight(x - ed.originX, z - ed.originZ); }, spot);
+  assert.ok(Math.abs(h1 - (+(h0 + 2).toFixed(1))) < 0.05, `lifted to Highest (${h0.toFixed(2)} -> ${h1.toFixed(2)})`);
+  await page().click('#undo'); await sleep(800);
+  await page().$eval('#aSoft', e => { e.value = 3; e.dispatchEvent(new Event('input')); });
+  noErrors();
+});
+
 test('undo takes a change back and the counter clears', async () => {
   await openEditor();
   await page().keyboard.press('Escape');

@@ -90,6 +90,20 @@ another world, the objects are made like the ones you plant: copies of an object
 in that world, or new objects for kinds it has none of. Kinds the game does not know (from mods)
 are left out, and the editor says which.
 
+## Heightmap
+
+Like WorldPainter's heightmap import and export: the ground as a grayscale picture, to change in an
+image editor (GIMP, Krita...) or a terrain tool (Gaea, World Machine...) and bring back.
+
+| Control | What it does |
+|---|---|
+| **Export the area** | Writes the ground of the whole loaded area as a 16-bit grayscale PNG: black is its lowest point, white its highest, north at the top, one pixel per metre (a 3 × 3 area is 193 × 193 pixels). The two heights are written into the picture. In a browser it is downloaded; it is always also written to the `heightmaps` folder of the editor's data folder. |
+| **Import…** | Reads a PNG (grayscale or colour, 8 or 16 bits) and fits it to the selection's box, or to the whole area when nothing is selected. |
+| **Lowest** / **Highest** | The heights for black and white. A picture exported by the editor brings its own (so an unchanged picture puts the ground back exactly); otherwise they start at the lowest and highest ground it covers now. |
+| **Put it into the ground** | Sets the ground to the picture's heights, one undo step. Inside a selection the **Soft edge** blends it into the ground around; the Mask and the game's ±8 m limit apply (points that cannot reach their height turn red). |
+
+Use 16 bits when you can: 8-bit pictures only have 256 steps between Lowest and Highest.
+
 ## Restore from a backup
 
 Like WorldEdit's `//restore`: put the selection back as it was in a backup of this world, to undo
