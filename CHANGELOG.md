@@ -4,6 +4,14 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v0.27.0 — 2026-10-07 (weighted mixes and presets)
+
+### Added
+- **Weights** in the Place tool: with several kinds ticked, a slider per kind sets how often it is
+  used (Beech 3, Birch 1: three beeches for one birch), with its share in %.
+- **Presets**: load a mix (kinds, weights, Density, Spacing, Size, Tilt, facing) from built-in looks
+  (Meadows woods, Black forest, Swamp, Berry patch, Forest floor, Meadows rocks) or save your own.
+
 ## v0.26.3 — 2026-10-07 (spacing that fits)
 
 ### Added

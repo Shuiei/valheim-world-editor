@@ -17,7 +17,10 @@ export function createPlant(ed) {
     <div id="plFavBox" hidden><div class="chipHead">Favourites<span><button class="link" data-all="plFav" title="Tick every favourite">all</button><button class="link" data-none="plFav" title="Untick every favourite">none</button></span></div><div class="chips" id="plFav"></div></div>
     <div id="plRecentBox" hidden><div class="chipHead">Recent<span><button class="link" data-all="plRecent" title="Tick every recent kind">all</button><button class="link" data-none="plRecent" title="Untick every recent kind">none</button></span></div><div class="chips" id="plRecent"></div></div>
     <div id="plList" class="plList"></div>
+    <div id="plMix"></div>
     <div class="hint" id="plChosen"></div>
+    <label class="field">Preset <select id="plPreset"></select></label>
+    <div class="row"><button id="plPresetSave" title="Save the ticked kinds, their weights and the Density, Spacing, Size, Tilt and facing settings under a name">Save as preset…</button><button id="plPresetDel" disabled title="Delete the chosen preset (only your own)">Delete</button></div>
     <label class="field">Density <input id="plDensity" type="range" min="0.2" max="20" step="0.2" value="3"><span id="plDensityV"></span></label>
     <label class="field">Spacing <input id="plSpacing" type="range" min="0.5" max="15" step="0.5" value="4"><span id="plSpacingV"></span></label>
     <label class="field">Size <span class="pair"><input id="plSmin" type="number" min="10" max="300" step="5" value="80"><input id="plSmax" type="number" min="10" max="300" step="5" value="120"></span><span>%</span></label>
@@ -70,7 +73,11 @@ export function createPlant(ed) {
     .chipHead { font-size: 10.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-top: 2px; display: flex; justify-content: space-between; align-items: center; }
     .chipHead .link { background: none; border: 0; padding: 0 0 0 8px; color: var(--muted); font-size: 10.5px; text-transform: uppercase; letter-spacing: .06em; cursor: pointer; }
     .chipHead .link:hover { color: var(--accent); }
-    #plFav, #plRecent { margin: 3px 0 6px; }`;
+    #plFav, #plRecent { margin: 3px 0 6px; }
+    #plMix { margin: 4px 0 2px; }
+    #plMix .mixRow { display: grid; grid-template-columns: minmax(0, 1fr) 90px 34px; gap: 6px; align-items: center; font-size: 12px; }
+    #plMix .mixRow span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    #plMix .mixRow .pct { text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; }`;
   document.head.appendChild(style);
 
   // Saplings' grow radius and cultivated-ground need, by name (filled from /api/grow below).
@@ -85,7 +92,8 @@ export function createPlant(ed) {
     $('plSpacingV').textContent = `${v('plSpacing')} m`;
     $('plTiltV').textContent = `${v('plTilt')}°`;
     $('plRotV').textContent = `${v('plRot')}°`;
-    $('plChosen').textContent = chosen.size ? `Placing: ${[...chosen].join(', ')}` : 'Tick one or more kinds to place.';
+    renderMix();
+    $('plChosen').textContent = chosen.size ? (chosen.size > 1 ? 'Weights: how often each kind is used.' : `Placing: ${[...chosen][0]}`) : 'Tick one or more kinds to place.';
     // The grow room option only matters for saplings and crops: shown (and used) only when one is ticked.
     $('plGrowRow').hidden = ![...chosen].some(n => grow[n]?.[0] > 0);
     // Crops only grow on cultivated ground in the game.
@@ -93,6 +101,32 @@ export function createPlant(ed) {
     if (cult.length) $('plChosen').textContent += ` · ${cult.join(', ')} only grow${cult.length > 1 ? '' : 's'} on cultivated ground (paint it with Cultivate first).`;
   }
   ['plDensity', 'plSpacing', 'plTilt', 'plRot'].forEach(id => $(id).addEventListener('input', syncLabels));
+
+  // ---- Mix: a weight per ticked kind (1-10), how often each one is used in random choices (Beech 3,
+  // Birch 1: three beeches for one birch). Remembered in this browser.
+  let weights = new Map();
+  try { weights = new Map(Object.entries(JSON.parse(localStorage.getItem('plantWeights') ?? '{}'))); } catch { }
+  const weightOf = n => weights.get(n) ?? 1;
+  const saveWeights = () => { try { localStorage.setItem('plantWeights', JSON.stringify(Object.fromEntries(weights))); } catch { } };
+  // The kind for a random draw t in [0, 1), by weight.
+  function pickName(names, t) {
+    let total = 0;
+    for (const n of names) total += weightOf(n);
+    let x = t * total;
+    for (const n of names) { x -= weightOf(n); if (x < 0) return n; }
+    return names[names.length - 1];
+  }
+  let mixKey = '';
+  function renderMix() {
+    const names = [...chosen], total = names.reduce((a, n) => a + weightOf(n), 0);
+    const pct = n => `${Math.round(weightOf(n) / total * 100)}%`;
+    if (names.join('|') === mixKey) { $('plMix').querySelectorAll('[data-w]').forEach(r => r.querySelector('.pct').textContent = pct(r.dataset.w)); return; }
+    mixKey = names.join('|');
+    $('plMix').innerHTML = names.length < 2 ? '' : names.map(n => `<div class="mixRow" data-w="${n}" title="Weight of ${n}: how often it is used compared to the other ticked kinds"><span>${n}</span><input type="range" min="1" max="10" step="1" value="${weightOf(n)}"><span class="pct">${pct(n)}</span></div>`).join('');
+    $('plMix').querySelectorAll('[data-w]').forEach(r => r.querySelector('input').oninput = e => {
+      weights.set(r.dataset.w, +e.target.value); saveWeights(); renderMix(); markPreset(); updatePreview();
+    });
+  }
   function fillList() {
     const q = $('plSearch').value.trim().toLowerCase();
     // Nature kinds first; pieces and spoilers can be planted too but are listed last.
@@ -104,7 +138,7 @@ export function createPlant(ed) {
       <summary>${KIND_LABEL[k]}<span class="n"></span></summary>
       <div>${groups[k].map(t => `<label><input type="checkbox" value="${t.name}" ${chosen.has(t.name) ? 'checked' : ''}>${t.name}<span class="star${favs.includes(t.name) ? ' on' : ''}" data-star="${t.name}" title="${favs.includes(t.name) ? 'Remove from' : 'Add to'} favourites">${favs.includes(t.name) ? '★' : '☆'}</span></label>`).join('')}</div></details>`).join('') || '<div class="hint">Nothing matches.</div>';
     $('plList').querySelectorAll('[data-star]').forEach(st => st.onclick = e => { e.preventDefault(); e.stopPropagation(); toggleFav(st.dataset.star); });
-    $('plList').querySelectorAll('input').forEach(c => c.onchange = () => { c.checked ? chosen.add(c.value) : chosen.delete(c.value); saveChosen(); syncLabels(); countKinds(); });
+    $('plList').querySelectorAll('input').forEach(c => c.onchange = () => { c.checked ? chosen.add(c.value) : chosen.delete(c.value); saveChosen(); syncLabels(); countKinds(); markPreset(); });
     $('plList').querySelectorAll('details').forEach(d => d.addEventListener('toggle', () => {
       if (q) return;   // while searching, opening and closing is not remembered
       d.open ? openKinds.add(d.dataset.k) : openKinds.delete(d.dataset.k);
@@ -132,6 +166,63 @@ export function createPlant(ed) {
     chosenChanged();
   }
   function chosenChanged() { saveChosen(); fillList(); syncLabels(); renderChips(); autoSnap?.(); updatePreview(); }
+
+  // ---- Presets: kinds with their weights and the scatter settings, by name. Built-in ones for common
+  // looks, and your own (kept in this browser). Kinds the game does not have are left out on loading.
+  const BUILT_IN = [
+    { name: 'Meadows woods', kinds: { Beech1: 4, Birch1: 1, Birch2: 1, Oak1: 1, Bush01: 2 }, density: 3, spacing: 4, smin: 80, smax: 120, tilt: 3 },
+    { name: 'Black forest', kinds: { FirTree: 3, Pinetree_01: 3, FirTree_big: 1, Bush01: 1 }, density: 4, spacing: 3.5, smin: 80, smax: 130, tilt: 2 },
+    { name: 'Swamp', kinds: { SwampTree1: 3, SwampTree2: 1 }, density: 2, spacing: 5, smin: 80, smax: 120, tilt: 4 },
+    { name: 'Berry patch', kinds: { RaspberryBush: 2, BlueberryBush: 1 }, density: 6, spacing: 3, smin: 90, smax: 110, tilt: 0 },
+    { name: 'Forest floor', kinds: { Pickable_Branch: 3, Pickable_Stone: 2, Pickable_Mushroom: 1, Pickable_Dandelion: 1 }, density: 2, spacing: 3, smin: 100, smax: 100, tilt: 0 },
+    { name: 'Meadows rocks', kinds: { Rock_3: 2, Rock_4: 1, Rock_7: 1 }, density: 1, spacing: 6, smin: 60, smax: 140, tilt: 10 },
+  ];
+  let own = readList('plantPresets');
+  function fillPresets() {
+    const opt = p => `<option value="${p.name}">${p.name}</option>`;
+    $('plPreset').innerHTML = '<option value="">Choose a preset…</option>'
+      + `<optgroup label="Built in">${BUILT_IN.map(opt).join('')}</optgroup>`
+      + (own.length ? `<optgroup label="Yours">${own.map(p => `<option value="own:${p.name}">${p.name}</option>`).join('')}</optgroup>` : '');
+    $('plPresetDel').disabled = true;
+  }
+  // Settings changed by hand: the list no longer shows a preset.
+  function markPreset() { $('plPreset').value = ''; $('plPresetDel').disabled = true; }
+  const setInput = (id, val) => { if (val == null) return; const el = $(id); if (el.type === 'checkbox') el.checked = !!val; else el.value = val; el.dispatchEvent(new Event('input')); };
+  function loadPreset(p) {
+    const known = new Set(ed.objects.creatableTypes().map(t => t.name));
+    const kinds = Object.entries(p.kinds).filter(([n]) => known.has(n));
+    if (!kinds.length) { ed.msg(`None of the kinds of ${p.name} can be placed in this world.`, true); return; }
+    chosen = new Set(kinds.map(([n]) => n));
+    for (const [n, w] of kinds) weights.set(n, w);
+    saveWeights();
+    setInput('plDensity', p.density); setInput('plSpacing', p.spacing); setInput('plSmin', p.smin); setInput('plSmax', p.smax); setInput('plTilt', p.tilt); setInput('plRandomYaw', p.randomYaw ?? true);
+    mixKey = ''; chosenChanged();
+    const left = Object.keys(p.kinds).length - kinds.length;
+    ed.msg(`Preset ${p.name}: ${kinds.map(([n, w]) => `${n} ${w}`).join(', ')}${left ? ` (${left} kind(s) this world cannot place left out)` : ''}.`);
+  }
+  $('plPreset').onchange = () => {
+    const v = $('plPreset').value;
+    const p = v.startsWith('own:') ? own.find(x => x.name === v.slice(4)) : BUILT_IN.find(x => x.name === v);
+    if (!p) return;
+    loadPreset(p);
+    $('plPreset').value = v; $('plPresetDel').disabled = !v.startsWith('own:');
+  };
+  $('plPresetSave').onclick = () => {
+    if (!chosen.size) { ed.msg('Tick one or more kinds first.', true); return; }
+    const name = (prompt('Name of the preset:', '') ?? '').trim();
+    if (!name) return;
+    const p = { name, kinds: Object.fromEntries([...chosen].map(n => [n, weightOf(n)])), density: v('plDensity'), spacing: v('plSpacing'), smin: v('plSmin'), smax: v('plSmax'), tilt: v('plTilt'), randomYaw: $('plRandomYaw').checked };
+    own = [...own.filter(x => x.name !== name), p].sort((a, b) => a.name.localeCompare(b.name));
+    writeList('plantPresets', own); fillPresets();
+    $('plPreset').value = `own:${name}`; $('plPresetDel').disabled = false;
+    ed.msg(`Saved the preset ${name}.`);
+  };
+  $('plPresetDel').onclick = () => {
+    const v = $('plPreset').value;
+    if (!v.startsWith('own:') || !confirm(`Delete the preset ${v.slice(4)}?`)) return;
+    own = own.filter(x => x.name !== v.slice(4)); writeList('plantPresets', own); fillPresets();
+  };
+  fillPresets();
   const chipNames = el => [...$(el).querySelectorAll('[data-chip]')].map(b => b.dataset.chip);
   $('plNone').onclick = () => { chosen.clear(); chosenChanged(); };
   panel.querySelectorAll('[data-all]').forEach(b => b.onclick = () => { chipNames(b.dataset.all).forEach(n => chosen.add(n)); chosenChanged(); });
@@ -217,7 +308,7 @@ export function createPlant(ed) {
     if (gx < 1 || gz < 1 || gx > W - 2 || gz > H - 2) return null;
     if (!ed.mask(Math.round(gz) * W + Math.round(gx))) return null;
     // One at a time: you pick the spot, so only an object right on top (0.3 m) blocks it.
-    const name = names[Math.floor(d.t * names.length) % names.length];
+    const name = pickName(names, d.t);
     if (!free(hash, cell, gx, gz, Math.max(minDist ?? ($('plSingle').checked ? 0.3 : v('plSpacing')), growNeed(name)))) return null;
     const y = heightAt(gx, gz);
     if (y < ed.WATER - 0.3 && !underwaterOk(names)) return null;  // not under water
@@ -383,7 +474,7 @@ export function createPlant(ed) {
           // Unity yaw: clockwise from north (+z), so the heading of (dx, dz) is atan2(dx, dz). Circles and
           // rectangles always follow their outline. A kind with a known length (snap points, model)
           // turns its length along the line; others face along it.
-          const name = names[Math.floor(d.t * names.length) % names.length], e = endsOf(name);
+          const name = pickName(names, d.t), e = endsOf(name);
           const yaw = $('plAlong').checked || lineShape !== 'points' ? (Math.atan2(dx, dz) - (e ? e.heading : 0)) * 180 / Math.PI : null;
           const o = placementAt(gx, gz, d, names, hash, cell, 0.3, yaw);
           if (o) out.push(o);
