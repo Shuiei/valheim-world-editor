@@ -22,6 +22,15 @@ public sealed class PlacePanel
 	internal Dictionary<PlaceTool.Modes, Button> ModeButtons { get; } = new();
 	internal Dictionary<PlaceTool.LineShapes, Button> ShapeButtons { get; } = new();
 	internal ComboBox PresetBox { get; }
+	internal Button SavePresetButton { get; } = new() { Content = "Save as preset…", FontSize = 12 };
+	internal Button DeletePresetButton { get; } = new() { Content = "Delete", FontSize = 12, IsEnabled = false };
+	internal WrapPanel Favourites { get; } = new() { ItemSpacing = 4, LineSpacing = 4 };
+	internal WrapPanel Recent { get; } = new() { ItemSpacing = 4, LineSpacing = 4 };
+	private readonly Control _favBox, _recentBox;
+	public PlaceMemory Memory { get; }
+	// Asks for a preset's name, and whether to delete one (the window's dialogs; replaced by tests).
+	internal Func<Task<string?>> AskName { get; set; } = () => Task.FromResult<string?>(null);
+	internal Func<string, Task<bool>> Confirm { get; set; } = _ => Task.FromResult(true);
 	internal StackPanel Mix { get; } = new() { Spacing = 3 };
 	internal Button KindsButton { get; } = new() { Content = "+ Add kinds", FontSize = 12 };
 	internal TextBox Search { get; } = new() { Watermark = "Search kinds (oak, rock, bush…)", FontSize = 12 };
@@ -99,12 +108,24 @@ public sealed class PlacePanel
 		Child = new ScrollViewer { MaxHeight = 820, Content = new StackPanel { Width = width, Spacing = 6, Children = { child } } },
 	};
 
-	public PlacePanel(PlaceInput input, Func<WorldScene?> scene, Func<int, string?> nameOf)
+	public PlacePanel(PlaceInput input, Func<WorldScene?> scene, Func<int, string?> nameOf, PlaceMemory? memory = null)
 	{
 		_input = input;
 		_scene = scene;
 		_nameOf = nameOf;
 		var t = input.Tool;
+		Memory = memory ?? PlaceMemory.Load();
+		if (Memory.Chosen.Count > 0)
+		{
+			t.Chosen.Clear();
+			t.Chosen.AddRange(Memory.Chosen);
+		}
+		foreach (var (k, w) in Memory.Weights)
+		{
+			t.Weights[k] = w;
+		}
+		t.AutoSnap();
+		input.Placed += names => { Memory.NoteRecent(names); RenderChips(); };
 		var modes = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 2 };
 		foreach (var m in Enum.GetValues<PlaceTool.Modes>())
 		{
@@ -117,17 +138,49 @@ public sealed class PlacePanel
 		ToolTip.SetTip(ModeButtons[PlaceTool.Modes.Line], "Objects along a line you draw");
 		ToolTip.SetTip(ModeButtons[PlaceTool.Modes.Grid], "One object in the middle of each grid cell");
 		ToolTip.SetTip(ModeButtons[PlaceTool.Modes.Zone], "Fill a shape you draw freely");
-		PresetBox = new ComboBox { ItemsSource = new[] { "Choose a preset…" }.Concat(PlaceTool.BuiltIn.Select(p => p.Name)).ToList(), SelectedIndex = 0, FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch };
+		PresetBox = new ComboBox { FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch };
+		FillPresets();
 		PresetBox.SelectionChanged += (_, _) =>
 		{
-			if (_filling || PresetBox.SelectedIndex <= 0)
+			DeletePresetButton.IsEnabled = PresetAt(PresetBox.SelectedIndex) is { Own: true };
+			if (_filling || PresetAt(PresetBox.SelectedIndex) is not { } chosen)
 			{
 				return;
 			}
-			var p = PlaceTool.BuiltIn[PresetBox.SelectedIndex - 1];
 			var known = Creatable().Select(c => c.Name).ToHashSet();
-			Say(t.Load(p, known.Contains));
+			Say(t.Load(chosen.Preset, known.Contains));
+			Remember();
 			Fill();
+			FillList();
+		};
+		ToolTip.SetTip(SavePresetButton, "Save the chosen kinds, their weights and the Density, Spacing, Size, Tilt and clumping settings under a name");
+		SavePresetButton.Click += async (_, _) =>
+		{
+			if (t.Chosen.Count == 0)
+			{
+				Say("Tick one or more kinds first.");
+				return;
+			}
+			string? name = (await AskName())?.Trim();
+			if (string.IsNullOrEmpty(name))
+			{
+				return;
+			}
+			var p = new PlaceTool.Preset(name, t.Chosen.ToDictionary(n => n, t.WeightOf), t.Density, t.Spacing, t.SizeMin, t.SizeMax, t.Tilt, t.Clump, t.Patch);
+			Memory.Presets = Memory.Presets.Where(x => x.Name != name).Append(p).OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase).ToList();
+			Memory.Save();
+			FillPresets(name);
+			Say($"Saved the preset {name}.");
+		};
+		DeletePresetButton.Click += async (_, _) =>
+		{
+			if (PresetAt(PresetBox.SelectedIndex) is not { Own: true } p || !await Confirm($"Delete the preset {p.Preset.Name}?"))
+			{
+				return;
+			}
+			Memory.Presets.RemoveAll(x => x.Name == p.Preset.Name);
+			Memory.Save();
+			FillPresets();
 		};
 		KindsButton.Click += (_, _) => { Chooser!.IsVisible = !Chooser.IsVisible; KindsButton.Content = Chooser.IsVisible ? "Done" : "+ Add kinds"; FillList(); };
 		Search.PropertyChanged += (_, e) => { if (e.Property == TextBox.TextProperty) FillList(); };
@@ -236,6 +289,7 @@ public sealed class PlacePanel
 				new TextBlock { Text = "Place", FontSize = 14, FontWeight = FontWeight.SemiBold },
 				modes,
 				Row("Preset", PresetBox),
+				new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Children = { SavePresetButton, DeletePresetButton } },
 				new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Children = { new TextBlock { Text = "KINDS", FontSize = 10, Foreground = Brushes.Gray, VerticalAlignment = VerticalAlignment.Center }, Col(KindsButton, 1) } },
 				Mix,
 				Note,
@@ -264,12 +318,59 @@ public sealed class PlacePanel
 				new TextBlock { Text = "Choose kinds", FontSize = 14, FontWeight = FontWeight.SemiBold },
 				Search,
 				PickButton,
+				(_favBox = new StackPanel { Spacing = 3, Children = { new TextBlock { Text = "FAVOURITES", FontSize = 10, Foreground = Brushes.Gray }, Favourites } }),
+				(_recentBox = new StackPanel { Spacing = 3, Children = { new TextBlock { Text = "RECENT", FontSize = 10, Foreground = Brushes.Gray }, Recent } }),
 				List,
 			},
 		}, 240);
 		Chooser.IsVisible = false;
 		input.Changed += ShowInfo;
 		Fill();
+		RenderChips();
+	}
+
+	private sealed record PresetEntry(PlaceTool.Preset Preset, bool Own);
+
+	private PresetEntry? PresetAt(int i) => i <= 0 ? null : i <= PlaceTool.BuiltIn.Length ? new(PlaceTool.BuiltIn[i - 1], false)
+		: i - 1 - PlaceTool.BuiltIn.Length < Memory.Presets.Count ? new(Memory.Presets[i - 1 - PlaceTool.BuiltIn.Length], true) : null;
+
+	private void FillPresets(string? select = null)
+	{
+		_filling = true;
+		PresetBox.ItemsSource = new[] { "Choose a preset…" }.Concat(PlaceTool.BuiltIn.Select(p => p.Name)).Concat(Memory.Presets.Select(p => $"Yours: {p.Name}")).ToList();
+		int own = Memory.Presets.FindIndex(p => p.Name == select);
+		PresetBox.SelectedIndex = own >= 0 ? 1 + PlaceTool.BuiltIn.Length + own : 0;
+		DeletePresetButton.IsEnabled = own >= 0;
+		_filling = false;
+	}
+
+	// The chosen kinds and weights are remembered for the next time.
+	private void Remember()
+	{
+		Memory.Chosen = T.Chosen.ToList();
+		Memory.Weights = new(T.Weights);
+		Memory.Save();
+	}
+
+	// Favourites and recent kinds as buttons: a click ticks or unticks that kind.
+	private void RenderChips()
+	{
+		var known = Creatable().Select(c => c.Name).ToHashSet();
+		foreach (var (panel, list, box) in new[] { (Favourites, Memory.Favourites, _favBox), (Recent, Memory.Recent, _recentBox) })
+		{
+			panel.Children.Clear();
+			foreach (var n in list.Where(n => known.Count == 0 || known.Contains(n)))
+			{
+				var b = new ToggleButton { Content = n, IsChecked = T.Chosen.Contains(n), FontSize = 11, Padding = new Thickness(6, 2) };
+				b.Click += (_, _) =>
+				{
+					if (T.Chosen.Contains(n)) T.Chosen.Remove(n); else T.Chosen.Add(n);
+					Chosen();
+				};
+				panel.Children.Add(b);
+			}
+			box.IsVisible = panel.Children.Count > 0;
+		}
 	}
 
 	private static Control Col(Control c, int col)
@@ -319,7 +420,11 @@ public sealed class PlacePanel
 					if (box.IsChecked == true) { if (!T.Chosen.Contains(n)) T.Chosen.Add(n); } else T.Chosen.Remove(n);
 					Chosen(fillList: false);
 				};
-				List.Children.Add(box);
+				bool fav = Memory.Favourites.Contains(n);
+				var star = new Button { Content = fav ? "★" : "☆", FontSize = 12, Padding = new Thickness(4, 0), Background = Brushes.Transparent };
+				ToolTip.SetTip(star, fav ? "Remove from favourites" : "Add to favourites");
+				star.Click += (_, _) => { Memory.ToggleFavourite(n); FillList(); RenderChips(); };
+				List.Children.Add(new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Children = { box, Col(star, 1) } });
 			}
 			if (q == "" && names.Count > 60)
 			{
@@ -340,6 +445,8 @@ public sealed class PlacePanel
 		{
 			FillList();
 		}
+		Remember();
+		RenderChips();
 		T.NewLayout();
 	}
 
@@ -357,7 +464,7 @@ public sealed class PlacePanel
 			{
 				var w = new Slider { Minimum = 1, Maximum = 10, TickFrequency = 1, IsSnapToTickEnabled = true, Value = T.WeightOf(n) };
 				ToolTip.SetTip(w, $"Weight of {n}: how often it is used compared to the other chosen kinds");
-				w.ValueChanged += (_, e) => { T.Weights[n] = (int)e.NewValue; RenderMix(); T.NewLayout(); };
+				w.ValueChanged += (_, e) => { T.Weights[n] = (int)e.NewValue; RenderMix(); Remember(); T.NewLayout(); };
 				g.Children.Add(Col(w, 1));
 			}
 			g.Children.Add(Col(pct, 2));

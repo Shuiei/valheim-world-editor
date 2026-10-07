@@ -11,7 +11,12 @@ namespace TerrainEditor.Desktop.Tests;
 
 public static class TestApp
 {
-	public static AppBuilder BuildAvaloniaApp() => AppBuilder.Configure<App>().UseHeadless(new AvaloniaHeadlessPlatformOptions());
+	public static AppBuilder BuildAvaloniaApp()
+	{
+		// The Place tool's memory goes to a file of the tests', not the user's.
+		PlaceMemory.PathOverride = Path.Combine(Path.GetTempPath(), $"vwe-place-{Environment.ProcessId}.json");
+		return AppBuilder.Configure<App>().UseHeadless(new AvaloniaHeadlessPlatformOptions());
+	}
 }
 
 // The mouse and keys reach the 3D view's camera through the window (the OpenGL picture itself cannot
