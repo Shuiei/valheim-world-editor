@@ -31,8 +31,9 @@ The panel lists what is selected, by kind.
 
 | Action | What it does |
 |---|---|
-| **Drag a selected object** | Moves the whole selection freely. Objects keep their height above the ground. |
-| **Drag an arrow** | Moves the selection along one axis only: **red X** (east–west), **green Y** (up–down), **blue Z** (north–south). Hold **Ctrl** to move in 0.5 m steps. X and Z keep the height above the ground; Y raises or sinks. |
+| **Put each object on the ground when moving** | On (the default): every moved or turned object lands with its base on the ground where it ends up. Off: each keeps its height above the ground, which keeps buildings with several levels in shape. Remembered in this browser. |
+| **Drag a selected object** | Moves the whole selection freely, onto the ground (or at the same height above it, with the switch off). |
+| **Drag an arrow** | Moves the selection along one axis only: **red X** (east–west), **green Y** (up–down), **blue Z** (north–south). Hold **Ctrl** to move in 0.5 m steps. X and Z follow the ground as above; Y raises or sinks. |
 | `,` `.` or **Alt + wheel** | Turns the selection around its centre by 1° (Shift: 15°). |
 | `PgUp` / `PgDn` | Lifts or lowers by 0.25 m (Shift: 1 m). |
 | `End` | **Drops** each object onto what is below it: the top of another object (a floor, a table, a rock), or the ground when there is nothing. Selected objects do not count as surfaces. |

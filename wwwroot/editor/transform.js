@@ -8,6 +8,15 @@ export function createTransform(ed) {
   const D = Math.PI / 180;
 
   const groundAt = (gx, gz) => ed.sampleHeight(gx, gz);
+  // "Put each object on the ground" (on by default): a moved object lands with its base on the ground
+  // where it ends up. Off: it keeps its height above the ground, as before.
+  const sw = document.createElement('label');
+  sw.className = 'check';
+  sw.innerHTML = '<input type="checkbox" id="selGround"> Put each object on the ground when moving';
+  $('selectPanel').querySelector('.hint').before(sw);
+  try { $('selGround').checked = localStorage.getItem('selectOnGround') !== '0'; } catch { $('selGround').checked = true; }
+  $('selGround').addEventListener('change', () => { try { localStorage.setItem('selectOnGround', $('selGround').checked ? '1' : '0'); } catch { } if (session) preview(); });
+  const onGround = () => $('selGround').checked;
   const toGrid = r => ({ gx: r.x - ed.originX, gz: r.z - ed.originZ });
 
   function begin() {
@@ -26,11 +35,12 @@ export function createTransform(ed) {
     return session;
   }
   // Where an item ends up: turned around the selection centre (clockwise from above, like Unity's
-  // yaw), moved, and kept at the same height above the ground.
+  // yaw), moved, and on the ground there (or at the same height above it, with the switch off). A lift
+  // (PgUp, the green arrow) comes on top; after End each keeps the spot it was dropped onto.
   function target(s, it) {
     const t = s.turn * D, c = Math.cos(t), sn = Math.sin(t), ox = it.g.gx - s.cx, oz = it.g.gz - s.cz;
     const gx = s.cx + ox * c + oz * sn + s.dgx, gz = s.cz - ox * sn + oz * c + s.dgz;
-    return { gx, gz, y: groundAt(gx, gz) + it.lift + s.dy };
+    return { gx, gz, y: groundAt(gx, gz) + (s.dropped || !onGround() ? it.lift : 0) + s.dy };
   }
   const A = new THREE.Matrix4(), T1 = new THREE.Matrix4(), R = new THREE.Matrix4(), T2 = new THREE.Matrix4(), M = new THREE.Matrix4();
   function preview() {

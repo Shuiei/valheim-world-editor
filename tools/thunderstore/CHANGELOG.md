@@ -2,6 +2,10 @@
 
 The editor's own changes: [CHANGELOG.md](https://github.com/Shuiei/valheim-world-editor/blob/main/CHANGELOG.md).
 
+## 0.19.2
+
+- Editor changes only (moved objects on the ground). The plugin is unchanged.
+
 ## 0.19.1
 
 - Editor changes only (area selection). The plugin is unchanged.
