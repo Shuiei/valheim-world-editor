@@ -80,6 +80,7 @@ export const TIPS = {
   aSaveBp: 'Save the clipboard as a blueprint: a file with a name, kept in the editor\'s data folder, that can be pasted into any world.',
   aLibrary: 'Open the list of saved blueprints, with a picture of each: paste one, or delete it.',
   bpSearch: 'Filter the blueprints by name.',
+  bpImport: 'Import a blueprint file of the PlanBuild mod (.blueprint) or a .vbuild file; it is kept as a blueprint here.',
   aKeepB: 'Player-built pieces in the zones are kept when they are reset.',
   aResetGround: 'Also undo the ground edits in the zones (height and paint).',
   aReset: 'On save, the zones under the selection lose their trees, rocks, ruins and dungeon entrances; the game generates them again when someone goes there.',

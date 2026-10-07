@@ -1,6 +1,8 @@
 // End-to-end: the start page, the map and the 3D editor on the test world, as a user drives them.
 import { describe, test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
 import { startApp, waitPhase, screenOf, lookAt, frames, sleep, stableHash } from './harness.mjs';
 
 let t;
@@ -172,6 +174,35 @@ test('blueprints: the clipboard is saved as a file and pasted from the library',
   const after = (await records()).filter(r => r.added && r.name === 'Beech1').length;
   assert.equal(after, before + 1, 'the blueprint pasted one tree');
   await page().keyboard.press('Escape');
+  noErrors();
+});
+
+test('blueprints: a PlanBuild file is imported, pasted and exported', async () => {
+  await openEditor();
+  await page().evaluate(() => window.__ed.setTool('area'));
+  await page().click('#aLibrary');
+  await page().waitForSelector('#bpImport');
+  const file = path.join(t.home, 'hut.blueprint');
+  fs.writeFileSync(file, '#Name:Imported hut\n#Creator:test\n#Description:""\n#Category:Misc\n#Pieces\n' +
+    'wood_floor;BuildingWorkbench;0;0;0;0;0;0;1;"";1;1;1\nwoodwall;BuildingWorkbench;1;0;2;0;0.7071068;0;0.7071068;"";1;1;1\nsome_mod_piece;Misc;0;0;0;0;0;0;1;"";1;1;1\n');
+  const input = await page().$('#bpFile');
+  await input.uploadFile(file);
+  await page().waitForFunction(() => [...document.querySelectorAll('#bpList .nm')].some(e => e.textContent === 'Imported hut'));
+  assert.match(await page().$eval('#sMsg', e => e.textContent), /some_mod_piece/, 'says which kinds were left out');
+  const { list } = await t.api('/api/blueprints');
+  const hut = list.find(b => b.name === 'Imported hut');
+  assert.equal(hut.objects, 2);
+  assert.equal(hut.source, 'PlanBuild');
+  const before = (await records()).filter(r => r.added).length;
+  await page().click(`#bpList .bp[data-id="${hut.id}"] [data-act="paste"]`);
+  const c = (await records()).find(r => r.name === 'piece_chest_wood');
+  await lookAt(page(), c.x + 10, c.z - 10, 0, 40, 30);
+  const [x, y] = await screenOf(page(), c.x + 10, c.z - 10);
+  await page().mouse.move(x, y); await sleep(300); await page().mouse.click(x, y); await sleep(1200);
+  assert.equal((await records()).filter(r => r.added).length, before + 2, 'pasted the two known pieces');
+  await page().keyboard.press('Escape');
+  const exported = await t.api(`/api/blueprints/${encodeURIComponent(hut.id)}/export`, { format: 'blueprint' });
+  assert.match(exported.text, /#Pieces\nwood_floor;/);
   noErrors();
 });
 

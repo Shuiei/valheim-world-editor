@@ -9,6 +9,8 @@ version number. Newest first.
 - **Blueprints** (Area tool → Copy & paste): save the clipboard as a named file, browse the saved
   ones with a picture of each, and paste them into any world. They are kept in the `blueprints`
   folder of the editor's data folder.
+- **PlanBuild and .vbuild files**: import a PlanBuild `.blueprint` (its terrain marks become ground)
+  or a `.vbuild` file into the blueprint list, and write any blueprint back out in either format.
 
 ## v0.4.1 — 2026-10-05 (editor on GitHub only)
 
