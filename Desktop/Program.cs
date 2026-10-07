@@ -78,6 +78,8 @@ public static class Options
 	public static float[]? PathAt { get; private set; }
 	// Click this point of the view (fractions) with the tool in use once loaded (--tool place…).
 	public static (double X, double Y)? ClickAt { get; private set; }
+	// With --click: only move the mouse there (to see what the tool would do).
+	public static bool HoverOnly { get; private set; }
 	// Move what --pick selected by this much (metres east, north), to check moving (nothing is saved).
 	public static (float X, float Z)? MoveBy { get; private set; }
 
@@ -141,6 +143,9 @@ public static class Options
 					break;
 				case "--path":
 					PathAt = args[++i].Split(',').Select(v => float.Parse(v, System.Globalization.CultureInfo.InvariantCulture)).ToArray();
+					break;
+				case "--hover-only":
+					HoverOnly = true;
 					break;
 				case "--click":
 					var cf = args[++i].Split(',').Select(v => double.Parse(v, System.Globalization.CultureInfo.InvariantCulture)).ToArray();
