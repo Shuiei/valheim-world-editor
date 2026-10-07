@@ -47,6 +47,8 @@ public sealed class WorldScene
 	public string LoadInfo { get; init; } = "";
 	// Editing the ground (null in tests that only draw).
 	public EditSession? Session { get; set; }
+	// The open world this area belongs to (shared by every area opened from the map).
+	public WorldSession? Owner { get; init; }
 
 	// An object or building piece. Things are only ever added to the list (indices stay valid): a
 	// deleted one is kept, Gone, so undo can bring it back; a moved one is a new thing (see EditSession).
@@ -83,12 +85,18 @@ public sealed class WorldScene
 	public static WorldScene Load(string dir, int zx, int zz, int size)
 	{
 		var watch = System.Diagnostics.Stopwatch.StartNew();
-		WorldSave.ModifierPrefabs = TerrainModifiers.NetworkPrefabHashes.ToHashSet();
-		var world = WorldSave.Load(dir);
-		long readMs = watch.ElapsedMilliseconds;
-		var edits = new EditStore(world);
-		var modifiers = new TerrainModifiers(world);
-		var terrain = new TerrainService(world, modifiers);
+		var owner = WorldSession.Open(dir);
+		return Load(owner, zx, zz, size, watch.ElapsedMilliseconds);
+	}
+
+	// An area (size × size zones around zone zx, zz) of an open world.
+	public static WorldScene Load(WorldSession owner, int zx, int zz, int size, long readMs = 0)
+	{
+		var watch = System.Diagnostics.Stopwatch.StartNew();
+		var world = owner.World;
+		var edits = owner.Edits;
+		var modifiers = owner.Modifiers;
+		var terrain = owner.Terrain;
 		int x0 = zx - size / 2, z0 = zz - size / 2, x1 = x0 + size - 1, z1 = z0 + size - 1;
 		// The zones' generated ground in parallel (the slow part), then the grid with the edits.
 		var keys = (from z in Enumerable.Range(z0, size) from x in Enumerable.Range(x0, size) select (x, z)).ToArray();
@@ -143,12 +151,12 @@ public sealed class WorldScene
 			}
 		}
 		float minX = x0 * 64f - 32f, maxX = x1 * 64f + 32f, minZ = z0 * 64f - 32f, maxZ = z1 * 64f + 32f;
-		var things = ReadThings(world, x0, z0, size, edits.Deleted);
+		var things = ReadThings(world, x0, z0, size, edits.Deleted, edits.Added);
 		var scene = new WorldScene
 		{
 			World = world, Name = world.Name, X0 = x0, Z0 = z0, Size = size, W = w, H = h, Heights = heights, Biomes = biomes,
 			Cx = minX + (w - 1) / 2f, Cz = minZ + (h - 1) / 2f, Things = things,
-			BiomeColor = biomeCol, Mask = mask, OceanDepth = ocean, Limit = limit, Modifiers = modifiers, Terrain = terrain,
+			BiomeColor = biomeCol, Mask = mask, OceanDepth = ocean, Limit = limit, Modifiers = modifiers, Terrain = terrain, Owner = owner,
 			LoadInfo = $"{world.Name}: read in {readMs} ms, {size}×{size} zones and {things.Count:N0} objects ready in {watch.ElapsedMilliseconds} ms",
 		};
 		scene.Session = new EditSession(scene, Ground.Read(terrain, edits, x0, z0, size), edits);
@@ -156,7 +164,8 @@ public sealed class WorldScene
 	}
 
 	// The objects and building pieces of the block's zones (those not deleted).
-	public static List<Thing> ReadThings(WorldSave world, int x0, int z0, int size, ICollection<int> deleted)
+	// added: objects added in this session (other areas of the world may have placed or moved some here).
+	public static List<Thing> ReadThings(WorldSave world, int x0, int z0, int size, ICollection<int> deleted, IEnumerable<NewObject>? added = null)
 	{
 		float minX = x0 * 64f - 32f, maxX = (x0 + size - 1) * 64f + 32f, minZ = z0 * 64f - 32f, maxZ = (z0 + size - 1) * 64f + 32f;
 		bool Inside(Vector3 p) => p.X >= minX && p.X < maxX && p.Z >= minZ && p.Z < maxZ;
@@ -173,6 +182,13 @@ public sealed class WorldScene
 			if (Inside(p) && !deleted.Contains(id))
 			{
 				things.Add(new Thing(id, prefab, p, new Vector3(0, ry, 0), 0, true));
+			}
+		}
+		foreach (var n in added ?? Enumerable.Empty<NewObject>())
+		{
+			if (Inside(n.Position))
+			{
+				things.Add(new Thing(n.Id, n.Prefab, n.Position, n.Rotation, n.Scale, PieceCatalog.Get(n.Prefab)?.Tool != null));
 			}
 		}
 		return things;

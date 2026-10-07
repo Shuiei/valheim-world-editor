@@ -156,7 +156,8 @@ public sealed class EditSession
 	public bool Stroking { get { lock (_lock) { return _stroke != null; } } }
 
 	// What is waiting to be saved, like the web editor's line under the Save button.
-	public (int Zones, int Deleted, int Added, int Resets) Pending => (Edits.ChangedZoneCount, Edits.DeletedCount, Edits.AddedCount, Edits.ResetCount);
+	public (int Zones, int Deleted, int Added, int Resets) Pending => Scene.Owner?.Pending ?? (Edits.ChangedZoneCount, Edits.DeletedCount, Edits.AddedCount, Edits.ResetCount);
+	public bool IsLive => Scene.Owner?.IsLive == true;
 
 	public string PendingText
 	{
@@ -164,7 +165,7 @@ public sealed class EditSession
 		{
 			var (z, d, a, r) = Pending;
 			var parts = new[] { z > 0 ? $"{z} zone{(z > 1 ? "s" : "")}" : "", d > 0 ? $"{d} deleted" : "", a > 0 ? $"{a} added" : "", r > 0 ? $"{r} reset" : "" }.Where(p => p != "").ToList();
-			return parts.Count > 0 ? "Unsaved: " + string.Join(", ", parts) : "All saved";
+			return parts.Count > 0 ? (IsLive ? "Not applied: " : "Unsaved: ") + string.Join(", ", parts) : IsLive ? "All applied" : "All saved";
 		}
 	}
 
@@ -483,7 +484,7 @@ public sealed class EditSession
 			}
 			foreach (var (o, piece) in add)
 			{
-				var n = o with { Id = _nextId-- };
+				var n = o with { Id = Scene.Owner?.NextId() ?? _nextId-- };
 				added.Add(n);
 				list.Add(new WorldScene.Thing(n.Id, n.Prefab, n.Position, n.Rotation, n.Scale, piece));
 				indices.Add(list.Count - 1);
@@ -554,24 +555,23 @@ public sealed class EditSession
 			{
 				throw new InvalidOperationException("A stroke is still going on.");
 			}
-			var changed = Edits.All().Where(e => e.Changed).ToList();
-			result = WorldWriter.Save(Scene.World, changed, Edits.Deleted, Edits.Added, Edits.Resets);
+			if (Scene.Owner is { } owner)
+			{
+				var o = owner.Save();
+				result = o.Saved!;
+			}
+			else
+			{
+				var changed = Edits.All().Where(e => e.Changed).ToList();
+				result = WorldWriter.Save(Scene.World, changed, Edits.Deleted, Edits.Added, Edits.Resets);
+				if (result.Saved)
+				{
+					Edits.ResetFrom(WorldSave.Load(Scene.World.Directory));
+				}
+			}
 			if (result.Saved)
 			{
-				var fresh = WorldSave.Load(Scene.World.Directory);
-				Scene.World = fresh;
-				Edits.ResetFrom(fresh);
-				Ground.TakeEdits(Edits);
-				_undo.Clear();
-				_redo.Clear();
-				// Saving gives objects new ids: read them again.
-				var things = WorldScene.ReadThings(fresh, Scene.X0, Scene.Z0, Scene.Size, Edits.Deleted);
-				lock (Scene.Things)
-				{
-					Scene.Things.Clear();
-					Scene.Things.AddRange(things);
-				}
-				_nextId = -1;
+				Reread(Scene.Owner?.World ?? WorldSave.Load(Scene.World.Directory));
 			}
 		}
 		if (result.Saved)
@@ -580,5 +580,47 @@ public sealed class EditSession
 		}
 		Changed?.Invoke();
 		return result;
+	}
+
+	// Live: applies everything to the running game. After zone resets the world is read again from the
+	// game (like a save); otherwise the history stays.
+	public async Task<WorldSession.Outcome> ApplyLive()
+	{
+		var owner = Scene.Owner!;
+		var o = await owner.ApplyLive();
+		lock (_lock)
+		{
+			if (o.Reloaded)
+			{
+				Reread(owner.World);
+			}
+			else
+			{
+				Ground.TakeEdits(Edits);
+			}
+		}
+		if (o.Reloaded)
+		{
+			ThingsReset?.Invoke();
+		}
+		Changed?.Invoke();
+		return o;
+	}
+
+	// The world was read again (saved, reloaded): the ground and the objects from it, no history.
+	private void Reread(WorldSave fresh)
+	{
+		Scene.World = fresh;
+		Ground.TakeEdits(Edits);
+		_undo.Clear();
+		_redo.Clear();
+		// Saving gives objects new ids: read them again.
+		var things = WorldScene.ReadThings(fresh, Scene.X0, Scene.Z0, Scene.Size, Edits.Deleted, Edits.Added);
+		lock (Scene.Things)
+		{
+			Scene.Things.Clear();
+			Scene.Things.AddRange(things);
+		}
+		_nextId = -1;
 	}
 }

@@ -41,6 +41,235 @@ public sealed class MainWindow : Window
 	internal Button SaveButton { get; } = new() { Content = "Save", FontSize = 12, IsEnabled = false };
 	internal Button HistoryButton { get; } = new() { Content = "History", FontSize = 12 };
 	internal HistoryPanel History { get; }
+	internal Button MapButton { get; } = new() { Content = "◂ Map", FontSize = 12, IsVisible = false };
+
+	// ---- Pages: the start page, the world map, and the 3D editor of an area.
+	private readonly ContentControl _pages = new();
+	private Control _editorPage = null!;
+	private readonly Border _busy = new() { Background = new SolidColorBrush(Color.FromArgb(200, 10, 12, 16)), IsVisible = false };
+	private readonly TextBlock _busyText = new() { FontSize = 16, Foreground = Brushes.White, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, TextWrapping = TextWrapping.Wrap };
+	private WorldSession? _world;
+	internal WorldSession? World => _world;
+	private StartPage? _start;
+	private MapPage? _map;
+	internal StartPage? StartPage => _start;
+	internal MapPage? MapPage => _map;
+	private readonly AppSettings _settings = AppSettings.Load();
+
+	private static string Describe((int Zones, int Deleted, int Added, int Resets) p)
+	{
+		var (z, d, a, r) = p;
+		return string.Join(", ", new[] { z > 0 ? $"{z} zone(s) of ground" : "", d > 0 ? $"{d} deleted" : "", a > 0 ? $"{a} added" : "", r > 0 ? $"{r} zone reset" : "" }.Where(x => x != ""));
+	}
+
+	private void Busy(string? text)
+	{
+		_busyText.Text = text ?? "";
+		_busy.IsVisible = text != null;
+	}
+
+	// The start page: how to edit, and which world.
+	internal void ShowStart(string? error = null)
+	{
+		_map?.Stop();
+		if (_start == null || error != null)
+		{
+			_start?.Stop();
+			_start = new StartPage(_settings, error);
+			_start.OpenRequested += async (open, what) => await OpenWorld(open, what);
+			_start.SettingsRequested += async () => { if (await SettingsDialog.Show(this, _settings)) _start!.SetMode(_start.Mode); };
+			_start.Confirm = text => Dialogs.Ask(this, "Valheim World Editor", text, "Yes");
+			_start.PickFolder = async title =>
+			{
+				var picked = await StorageProvider.OpenFolderPickerAsync(new Avalonia.Platform.Storage.FolderPickerOpenOptions { Title = title });
+				return picked.Count > 0 && picked[0].Path.IsFile ? picked[0].Path.LocalPath : null;
+			};
+			_start.PickFile = async title =>
+			{
+				var picked = await StorageProvider.OpenFilePickerAsync(new Avalonia.Platform.Storage.FilePickerOpenOptions { Title = title });
+				return picked.Count > 0 && picked[0].Path.IsFile ? picked[0].Path.LocalPath : null;
+			};
+		}
+		else
+		{
+			_start.SetMode(_start.Mode);
+		}
+		Title = "Valheim World Editor (native preview)";
+		_pages.Content = _start.View;
+	}
+
+	// Opens a world (offline or live), then shows its map.
+	internal async Task OpenWorld(Func<Task<WorldSession>> open, string what)
+	{
+		Busy(what);
+		try
+		{
+			_world = await open();
+		}
+		catch (Exception ex)
+		{
+			Busy(null);
+			Tunnel.Close();
+			ShowStart($"Could not open the world: {ex.Message}");
+			return;
+		}
+		finally
+		{
+			Busy(null);
+		}
+		_start?.Stop();
+		ShowMap();
+	}
+
+	// The world map (what is not saved stays pending).
+	internal void ShowMap()
+	{
+		if (_world == null)
+		{
+			ShowStart();
+			return;
+		}
+		_view.SelectTool.Commit();
+		if (_map == null)
+		{
+			_map = new MapPage();
+			_map.BackToWorlds += async () => await LeaveWorld();
+			_map.EditRequested += async (x, z, size) => await EditArea(x, z, size);
+			_map.SaveRequested += async () => await SaveWorld();
+			_map.DiscardRequested += async () => await DiscardWorld();
+			_map.ReloadRequested += async () => await ReloadWorld();
+		}
+		Title = $"{_world.World.Name} · Valheim World Editor (native preview)";
+		_map.Show(_world);
+		_pages.Content = _map.View;
+	}
+
+	// An area of the world in the 3D editor.
+	internal async Task EditArea(int x, int z, int size)
+	{
+		if (_world is not { } world)
+		{
+			return;
+		}
+		Busy($"Loading {size} × {size} zones around zone {x}, {z}…");
+		try
+		{
+			var scene = await Task.Run(() => WorldScene.Load(world, x, z, size));
+			await ShowEditor(scene);
+		}
+		catch (Exception ex)
+		{
+			_message.Text = "Could not open that area: " + ex.Message;
+		}
+		finally
+		{
+			Busy(null);
+		}
+	}
+
+	internal async Task ShowEditor(WorldScene scene)
+	{
+		_models ??= await Task.Run(ModelStore.Open);
+		// Lines and shapes drawn in the last area are left behind.
+		_view.Path.Clear();
+		_view.Area.Clear();
+		_view.Tape.Clear();
+		PlaceTool.ClearShape();
+		Inspector.Close();
+		_info.Text = scene.LoadInfo + (_models == null ? "\nNo game models copied yet: boxes stand in (open the web editor once to copy the game's look)." : "")
+			+ "\nView: click picks an object (Shift adds) · right drag turns · middle or left drag slides · wheel zooms · WASD moves · F walks and flies · E: select and move · 1-9, 0: brushes";
+		_view.Show(scene, _models);
+		if (scene.Session != null)
+		{
+			Edit(scene.Session);
+		}
+		MapButton.IsVisible = scene.Owner != null && !Options.Direct;
+		Title = $"{scene.Name} · Valheim World Editor (native preview)";
+		_pages.Content = _editorPage;
+	}
+
+	// Map: Save (or Apply live) for the whole world, after asking.
+	internal async Task SaveWorld()
+	{
+		if (_world is not { } w)
+		{
+			return;
+		}
+		if (w.IsLive)
+		{
+			Busy("Applying to the running game…");
+			var o = await w.ApplyLive();
+			Busy(null);
+			await Tell(o.Message);
+		}
+		else
+		{
+			string what = Describe(w.Pending);
+			if (!await ConfirmSave($"Write {what} into the world files?\n\nWorld folder: {w.World.Directory}\n\n"
+				+ "• A full backup of the folder is made first, next to it.\n"
+				+ "• Valheim (server or game) must NOT be running with this world, or it will overwrite these changes when it saves.\n"
+				+ "• Test on a copy first: open it as a local world, or upload it to a test server."))
+			{
+				return;
+			}
+			Busy("Saving…");
+			var o = await Task.Run(w.Save);
+			Busy(null);
+			string msg = o.Message;
+			if (o.Saved is { } r)
+			{
+				if (r.BackupDirectory != null) msg += $"\n\nBackup: {r.BackupDirectory}";
+				if (r.Skipped.Count > 0) msg += "\n\nNot saved:\n• " + string.Join("\n• ", r.Skipped);
+			}
+			await Tell(msg);
+		}
+		_map?.Show(w);
+	}
+
+	internal async Task DiscardWorld()
+	{
+		if (_world is not { } w || !await Dialogs.Ask(this, "Discard", $"Discard the unsaved changes ({Describe(w.Pending)})? The world is read again{(w.IsLive ? " from the game" : " from disk")}.", "Discard", "Keep them"))
+		{
+			return;
+		}
+		Busy("Reading the world again…");
+		await Task.Run(w.Discard);
+		Busy(null);
+		_map?.Show(w);
+	}
+
+	internal async Task ReloadWorld()
+	{
+		if (_world is not { IsLive: true } w)
+		{
+			return;
+		}
+		Busy("Loading the world from the game…");
+		try
+		{
+			await w.Reload();
+		}
+		catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or IOException)
+		{
+			_message.Text = "Could not reach the game: " + ex.Message;
+		}
+		Busy(null);
+		_map?.Show(w);
+	}
+
+	// Worlds: back to the start page (asks first when something is not saved).
+	internal async Task LeaveWorld()
+	{
+		if (_world is { } w && w.Pending is not (0, 0, 0, 0)
+			&& !await Dialogs.Ask(this, "Leave the world", $"{(w.IsLive ? "Not applied" : "Unsaved")}: {Describe(w.Pending)}. Leave the world without {(w.IsLive ? "applying" : "saving")} them?", "Leave anyway", "Stay"))
+		{
+			return;
+		}
+		_world = null;
+		_session = null;
+		Tunnel.Close();
+		ShowStart();
+	}
 	internal InspectorPanel Inspector { get; }
 	internal BlueprintsPanel Blueprints { get; }
 	private Control _viewPanel = null!;
@@ -85,6 +314,7 @@ public sealed class MainWindow : Window
 		_pending.Text = s.PendingText;
 		var (z, d, a, r) = s.Pending;
 		SaveButton.IsEnabled = z + d + a + r > 0;
+		SaveButton.Content = s.IsLive ? "Apply live" : "Save";
 		UndoButton.IsEnabled = s.CanUndo;
 		RedoButton.IsEnabled = s.CanRedo;
 		ToolTip.SetTip(UndoButton, s.UndoLabel is string u ? $"Undo {u} (Ctrl+Z)" : "Nothing to undo");
@@ -118,6 +348,15 @@ public sealed class MainWindow : Window
 		if (z + d + a + r == 0)
 		{
 			await Tell("There are no unsaved changes.");
+			return;
+		}
+		if (s.IsLive)
+		{
+			SaveButton.IsEnabled = false;
+			_message.Text = "Applying to the running game…";
+			var o = await s.ApplyLive();
+			_message.Text = o.Message;
+			UpdateSaveBar();
 			return;
 		}
 		string what = s.PendingText.Replace("Unsaved: ", "");
@@ -424,6 +663,8 @@ public sealed class MainWindow : Window
 	private Control SaveBar()
 	{
 		UndoButton.Click += (_, _) => Undo();
+		MapButton.Click += (_, _) => ShowMap();
+		ToolTip.SetTip(MapButton, "Back to the world map (what is not saved stays pending)");
 		HistoryButton.Click += (_, _) => History.Toggle();
 		ToolTip.SetTip(HistoryButton, "Every change of this session: go back to one, or take out only one");
 		RedoButton.Click += (_, _) => Redo();
@@ -444,7 +685,7 @@ public sealed class MainWindow : Window
 				Spacing = 4,
 				Children =
 				{
-					new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = { _pending, UndoButton, RedoButton, HistoryButton, SaveButton } },
+					new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = { MapButton, _pending, UndoButton, RedoButton, HistoryButton, SaveButton } },
 					_message,
 				},
 			},
@@ -882,12 +1123,14 @@ public sealed class MainWindow : Window
 		KeyUp += (_, e) => { if (e.Key is Avalonia.Input.Key.LeftShift or Avalonia.Input.Key.RightShift) PlaceInput.ShiftHeld(false); };
 		Closing += async (_, e) =>
 		{
-			if (_closeAnyway || _session == null || _session.Pending is (0, 0, 0, 0))
+			var pending = _world?.Pending ?? _session?.Pending ?? (0, 0, 0, 0);
+			if (_closeAnyway || pending is (0, 0, 0, 0))
 			{
+				Tunnel.Close();
 				return;
 			}
 			e.Cancel = true;
-			if (await Dialogs.Ask(this, "Unsaved changes", $"{_session.PendingText}. Quit without saving them?", "Quit without saving", "Keep editing"))
+			if (await Dialogs.Ask(this, "Unsaved changes", $"{(_world?.IsLive == true ? "Not applied" : "Unsaved")}: {Describe(pending)}. Quit without {(_world?.IsLive == true ? "applying" : "saving")} them?", "Quit anyway", "Keep editing"))
 			{
 				_closeAnyway = true;
 				Close();
@@ -896,7 +1139,10 @@ public sealed class MainWindow : Window
 		// Takes the mouse for the 3D view (see GlView.Attach).
 		var surface = new Border { Background = Brushes.Transparent };
 		_viewPanel = ViewPanel();
-		Content = new Grid { Children = { _view, surface, panel, _viewPanel, tools, SaveBar(), History.Card, Inspector.Card, Blueprints.Card } };
+		_editorPage = new Grid { Children = { _view, surface, panel, _viewPanel, tools, SaveBar(), History.Card, Inspector.Card, Blueprints.Card } };
+		_busy.Child = _busyText;
+		_pages.Content = _editorPage;
+		Content = new Grid { Children = { _pages, _busy } };
 		_view.Attach(surface, this);
 		_view.Perf = _perf;
 		_view.StatsChanged += s => _fps.Text = $"{s.Fps} frames/s · {s.WorkMs:0.0} ms of work each · {s.Objects:N0} objects ({s.Instances:N0} model parts in {s.Batches:N0} draws){(s.PendingModels > 0 ? $" · {s.PendingModels} kinds loading" : "")}";
@@ -929,18 +1175,38 @@ public sealed class MainWindow : Window
 				return;
 			}
 			Options.Say("window open");
+			if (Options.MapWorld is string mw)
+			{
+				await OpenWorld(() => Task.Run(() => WorldSession.Open(WorldScene.FindWorld(mw))), "Opening the world…");
+				if (Options.MapEdit is var (mx, mz))
+				{
+					_map!.Pick(mx, mz);
+					await EditArea(mx, mz, _map.Size);
+				}
+				return;
+			}
+			if (!Options.Direct)
+			{
+				ShowStart();
+				if (Options.Shot is string shot)
+				{
+					// The start page is not drawn with OpenGL: Avalonia renders it into a picture.
+					await Task.Delay(1500);
+					var size = new PixelSize((int)Bounds.Width, (int)Bounds.Height);
+					using var rtb = new Avalonia.Media.Imaging.RenderTargetBitmap(size);
+					rtb.Render(this);
+					rtb.Save(shot);
+					Options.Say($"picture: {shot}");
+					(Application.Current?.ApplicationLifetime as Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime)?.Shutdown();
+				}
+				return;
+			}
 			try
 			{
-				var scene = await Task.Run(() => WorldScene.Load(WorldScene.FindWorld(Options.World), Options.ZoneX, Options.ZoneZ, Options.Size));
-				var models = await Task.Run(ModelStore.Open);
-				_models = models;
-				_info.Text = scene.LoadInfo + (models == null ? "\nNo game models copied yet: boxes stand in (open the web editor once to copy the game's look)." : "")
-					+ "\nView: click picks an object (Shift adds) · right drag turns · middle or left drag slides · wheel zooms · WASD moves · F walks and flies · E: select and move · 1-9, 0: brushes";
-				_view.Show(scene, models);
-				if (scene.Session != null)
-				{
-					Edit(scene.Session);
-				}
+				var world = await Task.Run(() => WorldSession.Open(WorldScene.FindWorld(Options.World)));
+				_world = world;
+				var scene = await Task.Run(() => WorldScene.Load(world, Options.ZoneX, Options.ZoneZ, Options.Size));
+				await ShowEditor(scene);
 				if (Options.AllOverlays)
 				{
 					foreach (var b in _overlayBoxes.Values) b.IsChecked = true;
@@ -983,4 +1249,5 @@ public sealed class MainWindow : Window
 			}
 		};
 	}
+
 }

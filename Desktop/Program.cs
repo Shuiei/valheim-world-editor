@@ -51,6 +51,12 @@ public sealed class App : Application
 public static class Options
 {
 	public static string? World { get; private set; }
+	// --world or --zone given: straight into the 3D editor (scripts), not the start page.
+	public static bool Direct { get; private set; }
+	// Open this world's map (by name or folder), without the start page (to check the map).
+	public static string? MapWorld { get; private set; }
+	// With --map: pick this zone (x,z) and open it in the 3D editor.
+	public static (int X, int Z)? MapEdit { get; private set; }
 	public static int ZoneX { get; private set; }
 	public static int ZoneZ { get; private set; }
 	public static int Size { get; private set; } = 5;
@@ -104,8 +110,17 @@ public static class Options
 			{
 				case "--world":
 					World = args[++i];
+					Direct = true;
+					break;
+				case "--map":
+					MapWorld = args[++i];
+					break;
+				case "--map-edit":
+					var me = args[++i].Split(',');
+					MapEdit = (int.Parse(me[0]), int.Parse(me[1]));
 					break;
 				case "--zone":
+					Direct = true;
 					var p = args[++i].Split(',');
 					ZoneX = int.Parse(p[0]);
 					ZoneZ = int.Parse(p[1]);
