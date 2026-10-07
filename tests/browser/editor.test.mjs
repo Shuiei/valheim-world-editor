@@ -296,6 +296,31 @@ test('zone filter: zones across the world are marked for reset and unmarked', as
   noErrors();
 });
 
+test('restore: a deleted tree comes back from the backup made when saving', async () => {
+  await openEditor();
+  const tree = (await records()).find(r => r.name === 'Beech1' && !r.added);
+  await page().evaluate(id => { window.__ed.setTool('select'); window.__ed.selectIds([id]); document.activeElement?.blur(); }, tree.id);
+  await page().keyboard.press('Delete'); await sleep(800);
+  await page().click('#saveBtn');
+  await page().waitForNavigation({ waitUntil: 'networkidle0', timeout: 120000 }).catch(() => {});
+  await openEditor();
+  assert.ok(!(await records()).some(r => r.name === 'Beech1' && Math.abs(r.x - tree.x) < 0.01 && Math.abs(r.z - tree.z) < 0.01), 'the tree is gone after saving');
+  // Earlier tests can leave other changes that this save wrote; outside the selection nothing may change.
+  const outside = r => Math.abs(r.x - tree.x) > 8 || Math.abs(r.z - tree.z) > 8;
+  const others = (await records()).filter(outside).map(r => r.id).sort();
+  await page().evaluate(() => window.__ed.setTool('area'));
+  await lookAt(page(), tree.x, tree.z, 0, 50, 35);
+  const [ax, ay] = await screenOf(page(), tree.x - 6, tree.z - 6), [bx, by] = await screenOf(page(), tree.x + 6, tree.z + 6);
+  await page().mouse.move(ax, ay); await page().mouse.down(); await page().mouse.move(bx, by, { steps: 6 }); await page().mouse.up();
+  await page().waitForFunction(() => document.querySelectorAll('#aBackup option').length > 2);
+  await page().$eval('#aBackup', e => { e.selectedIndex = 1; e.dispatchEvent(new Event('change')); });
+  await page().click('#aBkRestore'); await sleep(2000);
+  const back = (await records()).find(r => r.name === 'Beech1' && Math.abs(r.x - tree.x) < 0.01 && Math.abs(r.z - tree.z) < 0.01);
+  assert.ok(back?.added, 'the tree is back, as a restored object');
+  assert.deepEqual((await records()).filter(outside).map(r => r.id).sort(), others, 'nothing outside the selection changed');
+  noErrors();
+});
+
 test('undo takes a change back and the counter clears', async () => {
   await openEditor();
   await page().keyboard.press('Escape');

@@ -184,3 +184,48 @@ public class SaveTests
 		Assert.DoesNotContain(after.Objects, o => o.Prefab == Fixtures.Hash("Beech1") && (int)MathF.Floor((o.Position.X + 32) / 64) == zone.X && (int)MathF.Floor((o.Position.Z + 32) / 64) == zone.Z);
 	}
 }
+
+// Restoring an area from a backup: objects come back with all their data.
+public class BackupTests
+{
+	[Fact]
+	public void TheBackupsNextToAWorldAreFound()
+	{
+		using var w = new TempWorld();
+		WorldSave world = w.Load();
+		var edits = new EditStore(world);
+		edits.SetDeleted(new[] { world.Objects.First(o => o.Prefab == Fixtures.Hash("Beech1")).Id }, true);
+		var r = WorldWriter.Save(world, Array.Empty<ZoneEdit>(), edits.Deleted);
+		var found = TerrainEditor.App.BackupEndpoints.Find(w.Dir);
+		var b = Assert.Single(found);
+		Assert.Equal(r.BackupDirectory, b.Path);
+		Assert.Equal("editor", b.Kind);
+	}
+
+	[Fact]
+	public void ADeletedObjectComesBackFromTheBackupWithItsData()
+	{
+		using var w = new TempWorld();
+		WorldSave world = w.Load();
+		var edits = new EditStore(world);
+		var tree = world.Objects.First(o => o.Prefab == Fixtures.Hash("Beech1"));
+		byte[] original = world.ObjectBytes(tree.Id);
+		edits.SetDeleted(new[] { tree.Id }, true);
+		var r = WorldWriter.Save(world, Array.Empty<ZoneEdit>(), edits.Deleted);
+		Assert.True(r.Saved);
+
+		WorldSave now = WorldSave.Load(w.Dir), backup = WorldSave.Load(r.BackupDirectory!);
+		Assert.Equal(world.ObjectCount - 1, now.ObjectCount);
+		var inBackup = backup.Objects.Single(o => o.Prefab == tree.Prefab && o.Position == tree.Position);
+		byte[] raw = backup.ObjectBytes(inBackup.Id);
+		Assert.Equal(original, raw);
+		var e2 = new EditStore(now);
+		ZdoData z = ZdoData.Parse(raw);
+		e2.AddObjects(new[] { new NewObject(-1, z.Prefab, z.Position, z.Rotation, 0f, null, false, raw) });
+		Assert.True(WorldWriter.Save(now, Array.Empty<ZoneEdit>(), null, e2.Added).Saved);
+		WorldSave after = WorldSave.Load(w.Dir);
+		Assert.Equal(world.ObjectCount, after.ObjectCount);
+		int back = after.Objects.Single(o => o.Prefab == tree.Prefab && o.Position == tree.Position).Id;
+		Assert.Equal(original, after.ObjectBytes(back));
+	}
+}

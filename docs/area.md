@@ -90,6 +90,18 @@ another world, the objects are made like the ones you plant: copies of an object
 in that world, or new objects for kinds it has none of. Kinds the game does not know (from mods)
 are left out, and the editor says which.
 
+## Restore from a backup
+
+Like WorldEdit's `//restore`: put the selection back as it was in a backup of this world, to undo
+griefing, a bad raid or an edit you regret, without rolling back the whole world.
+
+| Control | What it does |
+|---|---|
+| **Backup** | The backups next to the world folder, newest first: the editor's (made before every save, `<World>_backup_terraineditor-<date>`) and the game's own (`<World>_backup_auto-<date>`). **Another folder…** picks any other copy of the same world, for example a server backup copied to this computer (in live mode the list is empty, so that is the way). A copy of another world (another seed) is refused. |
+| **Ground** | The height and paint inside the selection come back exactly as in the backup; within the **Soft edge** they blend into the ground around. The Mask applies. |
+| **Objects** | The objects of the kinds ticked under **Objects inside** (tick **Buildings** for buildings) come back as they were, with all their data: a restored chest has its contents, a sign its text. Objects that are in the selection now but were not in the backup are removed. Objects unchanged since the backup are left as they are. |
+| **Restore the selection** | Does it: one step in History. Save or Apply live writes it. |
+
 ## Reset zones
 
 | Control | What it does |

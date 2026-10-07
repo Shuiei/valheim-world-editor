@@ -303,6 +303,7 @@ public static class EditorSession
 
 		BlueprintEndpoints.Map(app, () => world.Name, name => world.CanCreate(StableHash.Of(name)));
 		ObjectEndpoints.Map(app, () => world, edits, Pending);
+		BackupEndpoints.Map(app, () => world, edits, Pending);
 		app.MapGet("/api/zones/stats", () => new { stride = ZoneStats.Stride, data = ZoneStats.Compute(world, edits, (x, z) => (int)terrain.BiomeAt(x * 64f, z * 64f)), resets = edits.Resets.Select(r => new[] { r.X, r.Z }) });
 		app.MapGet("/api/search", (string q, string? what) => WorldSearch.Search(world, edits, q, what is "items" or "texts" ? what : "kinds"));
 

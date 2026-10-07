@@ -16,16 +16,17 @@ version number. Newest first.
 - **Object inspector** (Select tool, `I`): everything an object holds in the save, by name, and
   editing it: chest contents (items, stacks, quality, slots), sign texts, portal tags, ward
   permissions, timers... An edit is one undo step and is saved or applied live like any change.
-
 - **Search the world** (map page): every object of a kind, every container holding an item, or every
   sign, portal or ward whose text matches, counted and pinned on the map; a result opens the 3D
   editor with that object selected.
-
 - **Reset zones across the world** (map page, like MCA Selector): pick zones by biome, distance
   from buildings, ground edits and distance from the centre, and mark them all for the game to
   generate again.
-- **Zone resets in live mode** (needs the WorldEditorBridge of this version): Apply live resets the marked zones in the
-  running game, which generates them again at once where players are.
+- **Zone resets in live mode** (needs the WorldEditorBridge of this version): Apply live resets the
+  marked zones in the running game, which generates them again at once where players are.
+- **Restore from a backup** (Area tool, like WorldEdit's `//restore`): the ground and objects of a
+  selection as they were in one of the world's backups (the editor's or the game's), objects with
+  all their data.
 
 ### Fixed
 - A zone reset also removed players' tombstones, with what they carried: they are always kept now.
