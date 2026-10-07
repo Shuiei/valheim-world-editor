@@ -34,6 +34,8 @@ version number. Newest first.
   click, to a chosen height.
 - **Heightmaps** (Area tool, like WorldPainter): export the area's ground as a 16-bit grayscale PNG
   and import a picture back into the selection or the whole area, between chosen heights.
+- **Erode** (sculpt tool `O`, and an Area action): thermal erosion settles slopes to a rest angle,
+  water erosion cuts gullies and fills hollows.
 
 ### Fixed
 - A zone reset also removed players' tombstones, with what they carried: they are always kept now.

@@ -25,6 +25,7 @@ The panel shows the selected surface and how many shown objects are inside.
 | **Smooth** | Evens out bumps inside. |
 | **Naturalize** | Natural-looking bumps inside (Bumps and Size of the Naturalize tool). |
 | **Restore** | Puts the ground inside back to how the world generated it, and removes paint. |
+| **Erode** | Weathers the ground inside: slopes settle (thermal, with the Erode tool's rest angle), then rain cuts gullies (water). |
 | **Height** | Height (m) used by Flatten. **avg** sets it to the average ground height inside. |
 | **Amount** | Metres used by Raise and Lower. |
 | **Paint** + **apply** | Paints the ground inside with dirt, cultivated, paved, or clears the paint. |

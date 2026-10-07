@@ -18,6 +18,10 @@ export const TIPS = {
   // Brush settings
   radius: 'Brush radius in metres. [ and ] change it.',
   strength: 'How fast the brush works while you hold the mouse button.',
+  '[data-e="thermal"]': 'Thermal: where the ground is steeper than the rest angle, it slides down to its neighbours (screes, softened cliffs).',
+  '[data-e="water"]': 'Water: rain drops run downhill, dig where they speed up and leave what they carry where they slow down (gullies, fans, smooth valleys).',
+  erTalus: 'Thermal: the steepest slope that stays put (degrees). Lower values flatten more.',
+  '[data-act="erode"]': 'Weather the ground inside the selection: slopes settle and rain cuts gullies (rest angle from the Erode tool).',
   bShape: 'Shape of the brush: circle, square, ring (only a band around the middle, for rims and moats), ragged (a noisy edge for natural-looking strokes), or a picture (Stamps).',
   bFalloff: 'How the effect fades from the middle to the edge: smooth, linear, dome (round top), flat top (full strength almost to the edge), or peak (strong in the middle only).',
   bTurn: 'Turn of a square brush or a picture (degrees). , and . change it (Shift: 15°).',

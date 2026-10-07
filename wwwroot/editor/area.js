@@ -36,6 +36,7 @@ export function createArea(ed) {
         <button data-act="smooth" title="Even out bumps">Smooth</button>
         <button data-act="natural" title="Natural-looking bumps (settings in the Naturalize tool)">Naturalize</button>
         <button data-act="restore" title="Back to the generated ground, paint removed">Restore</button>
+        <button data-act="erode" title="Weather the ground inside: slopes settle and rain cuts gullies (rest angle from the Erode tool)">Erode</button>
       </div>
       <label class="field">Height <input id="aHeight" type="number" step="0.1" value="35"><span><button id="aAvg" class="mini" title="Average height inside the selection">avg</button></span></label>
       <label class="field">Amount <input id="aAmount" type="number" step="0.1" value="2"><span>m</span></label>
@@ -213,6 +214,13 @@ export function createArea(ed) {
   function groundAction(act) {
     const a = areaWeights();
     if (!a) { ed.msg('Select an area first.', true); return; }
+    if (act === 'erode') {
+      const state = ed.snapshotState(), touched = new Set();
+      ed.erosion.areaErode(a, touched);
+      commitTerrain(state, touched, { x0: a.x0 - 1, x1: a.x1 + 1, z0: a.z0 - 1, z1: a.z1 + 1 }, { label: 'Area: Erode' });
+      ed.msg(`Eroded ${touched.size} point(s). Ctrl+Z undoes it.`);
+      return;
+    }
     const state = ed.snapshotState(), touched = new Set();
     const before = new Float32Array(N); for (let g = 0; g < N; g++) before[g] = ed.height(g);
     const T = +$('aHeight').value, A = +$('aAmount').value, col = PAINTS[$('aPaint').value];

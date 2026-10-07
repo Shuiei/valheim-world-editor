@@ -420,6 +420,38 @@ test('heightmap: an exported area imports back unchanged, a white picture lifts 
   noErrors();
 });
 
+test('erosion: thermal settles a spike to its rest angle, the Area action erodes', async () => {
+  await openEditor();
+  const r = await page().evaluate(async () => {
+    const { thermal, hydraulic } = await import('/editor/erosion.js');
+    const w = 21, h = new Float32Array(w * w), wt = new Float32Array(w * w).fill(1);
+    h[10 * w + 10] = 20;
+    const volume = a => a.reduce((s, v) => s + v, 0), v0 = volume(h);
+    thermal(h, wt, w, w, 1, 1, 400);
+    let steepest = 0;
+    for (let z = 1; z < w - 1; z++) for (let x = 1; x < w - 1; x++) steepest = Math.max(steepest, h[z * w + x] - h[z * w + x + 1], h[z * w + x] - h[(z + 1) * w + x]);
+    const g = new Float32Array(w * w).map((_, i) => (i % w) * 0.5 + Math.sin(i) * 0.2);
+    hydraulic(g, wt, w, w, 300, 1, (() => { let s = 1; return () => (s = (s * 16807) % 2147483647) / 2147483647; })());
+    return { kept: Math.abs(volume(h) - v0), peak: h[10 * w + 10], steepest, finite: g.every(Number.isFinite) };
+  });
+  assert.ok(r.kept < 1e-3, `thermal moves ground, never loses it (${r.kept})`);
+  assert.ok(r.peak < 4, `the spike came down (${r.peak.toFixed(2)})`);
+  assert.ok(r.steepest < 1.3, `slopes near the rest angle (${r.steepest.toFixed(2)})`);
+  assert.ok(r.finite, 'water erosion stays finite');
+  // The Area tool's Erode changes the ground of a selection.
+  await page().evaluate(() => window.__ed.setTool('area'));
+  const c = (await records()).find(r => r.name === 'piece_chest_wood');
+  const spot = [c.x - 25, c.z + 25];
+  await lookAt(page(), ...spot, 0, 50, 35);
+  const [ax, ay] = await screenOf(page(), spot[0] - 10, spot[1] - 10), [bx, by] = await screenOf(page(), spot[0] + 10, spot[1] + 10);
+  await page().mouse.move(ax, ay); await page().mouse.down(); await page().mouse.move(bx, by, { steps: 6 }); await page().mouse.up();
+  const start = await pending();
+  await page().click('[data-act="erode"]'); await sleep(1500);
+  assert.notEqual(await pending(), start, 'the ground changed');
+  await page().click('#undo'); await sleep(1000);
+  noErrors();
+});
+
 test('undo takes a change back and the counter clears', async () => {
   await openEditor();
   await page().keyboard.press('Escape');
