@@ -290,6 +290,27 @@ public sealed class MainWindow : Window
 		UpdateSaveBar();
 	}
 
+	// Stamp once (Raise or Lower with a stamp): the whole picture into the ground, one undo step.
+	internal void StampAt(float gx, float gz)
+	{
+		if (_session is not { } s)
+		{
+			return;
+		}
+		var b = Tools.Brush;
+		float amount = b.StampHeight * (Tools.Tool == BrushTool.Lower ? -1 : 1);
+		bool clamped = false;
+		s.EditGround($"Stamp: {b.StampLabel}", g =>
+		{
+			var (t, rect, c) = Sculpt.StampOnce(g, b, gx, gz, amount, s.MaskNow());
+			clamped = c;
+			return (t, rect);
+		});
+		_message.Text = clamped ? "Stamped, but part of it reached the game limit of ±8 m from the original ground (red points)."
+			: $"Stamped {MathF.Abs(amount)} m {(amount >= 0 ? "up" : "down")}. Ctrl+Z undoes it.";
+		UpdateSaveBar();
+	}
+
 	// The Shape tool's click: the shape goes into the ground there (grid point).
 	internal void PutShape(float gx, float gz)
 	{
@@ -571,6 +592,29 @@ public sealed class MainWindow : Window
 			UpdateSaveBar();
 		};
 		MaskPanel = new MaskPanel(Mask);
+		_view.StampClicked += StampAt;
+		Tools.Message += t => _message.Text = t;
+		Tools.LoadStampAsked += async () =>
+		{
+			var picked = await StorageProvider.OpenFilePickerAsync(new Avalonia.Platform.Storage.FilePickerOpenOptions
+			{
+				Title = "Use a grayscale picture as the brush shape",
+				FileTypeFilter = new[] { new Avalonia.Platform.Storage.FilePickerFileType("Pictures") { Patterns = new[] { "*.png", "*.jpg", "*.jpeg", "*.bmp", "*.webp" } } },
+			});
+			if (picked.Count == 0 || !picked[0].Path.IsFile)
+			{
+				return;
+			}
+			string path = picked[0].Path.LocalPath;
+			if (Stamps.FromPicture(File.ReadAllBytes(path)) is { } data)
+			{
+				Tools.AddStamp(Path.GetFileNameWithoutExtension(path), data);
+			}
+			else
+			{
+				_message.Text = "That picture could not be read.";
+			}
+		};
 		_view.BrushAltClick += (h, shift) =>
 		{
 			if (shift)
