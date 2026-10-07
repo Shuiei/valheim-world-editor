@@ -335,6 +335,8 @@ export function createArea(ed) {
   // The Select tool's copy puts its objects here too.
   ed.setClipboard = c => { clip = c; try { localStorage.setItem('editorClipboard', JSON.stringify(encodeClip(clip))); } catch { } updateClipInfo(); };
   ed.getClipboard = () => clip;
+  // The selection, for other modules (heightmaps): its outline and the weights of its points.
+  ed.area = { polygon: () => polygon(), weights: (withMask = true) => areaWeights(withMask), commit: (state, touched, a, extra) => commitTerrain(state, touched, a, extra) };
   ed.startPaste = () => startPaste();
   function startPaste() {
     if (!clip) { ed.msg('Copy an area first (Area tool, Ctrl+C).', true); return; }

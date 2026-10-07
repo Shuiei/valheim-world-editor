@@ -32,6 +32,8 @@ version number. Newest first.
 - **Stamps**: pictures as brush shapes (built in: mountain, mesa, crater rim, dunes, rocky ground;
   or any picture loaded from a file), and "Stamp once" to put a whole stamp into the ground with one
   click, to a chosen height.
+- **Heightmaps** (Area tool, like WorldPainter): export the area's ground as a 16-bit grayscale PNG
+  and import a picture back into the selection or the whole area, between chosen heights.
 
 ### Fixed
 - A zone reset also removed players' tombstones, with what they carried: they are always kept now.
