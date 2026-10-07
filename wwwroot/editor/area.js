@@ -309,17 +309,18 @@ export function createArea(ed) {
     ed.msg('Working out what the game grows here…');
     const r = await fetch(`/api/regrow?${q}`);
     if (!r.ok) { ed.msg(await r.text(), true); return; }
-    const pieceNames = ed.objects.state.pieceNames;
+    const pieceNames = ed.objects.state.pieceNames, can = new Set(ed.objects.creatableTypes().map(t => t.name));
     const standing = ed.objects.alive().map(o => [o.x, o.z, o.name, o.kind]);
     const near = (o, d, test) => standing.some(([x, z, name, kind]) => Math.abs(x - o.x) < d && Math.abs(z - o.z) < d && Math.hypot(x - o.x, z - o.z) < d && test(name, kind));
     const spots = (await r.json()).filter(o => {
       const { gx, gz } = toGrid(o.x, o.z);
-      if (!inside(poly, gx, gz) || !kindOn.has(objectKind(o.name, pieceNames))) return false;
+      if (!can.has(o.name) || !inside(poly, gx, gz) || !kindOn.has(objectKind(o.name, pieceNames))) return false;
       if (!ed.mask(Math.round(gz) * W + Math.round(gx))) return false;
       return !near(o, 1, () => true) && !near(o, 3, (n, k) => n === o.name) && !near(o, 4, (n, k) => k === 'buildings');
     });
     if (!spots.length) { ed.msg('Nothing to regrow: the game grows none of the chosen kinds here, or it is all still standing.'); return; }
     const added = await ed.objects.add(spots.map(o => ({ ...o, fresh: true })));
+    if (!added.length) { ed.msg('Nothing to regrow: the game grows none of the chosen kinds here, or it is all still standing.'); return; }
     ed.pushHistory({ added, label: `Area: regrew ${added.length} object(s)` });
     const names = [...new Set(spots.map(o => o.name))];
     ed.msg(`Regrew ${added.length} object(s): ${names.slice(0, 6).join(', ')}${names.length > 6 ? '…' : ''}. Ctrl+Z takes them back; Save or Apply live writes them.`);

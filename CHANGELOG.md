@@ -4,6 +4,20 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v0.30.0 — 2026-10-07 (history survives reloads)
+
+### Changed
+- **History** survives a reload of the page and a move of the work area: the editor keeps it with the
+  pending changes. A change that touched ground outside the new area is left out, with the ones
+  before it. Saving, Discard and reloading from the game start a new history, as before.
+
+### Fixed
+- A long message in the status bar wrapped onto several lines and covered the last buttons of the
+  tool panel, which then could not be clicked. It now keeps to two lines (the whole text on hover).
+- "Switched on … in View" replaced what the tool had just said (how many objects were placed or
+  regrown); it is now added to it.
+- Regrow nature offered kinds the page cannot place, and then reported them as regrown.
+
 ## v0.29.0 — 2026-10-07 (regrow nature)
 
 ### Added
