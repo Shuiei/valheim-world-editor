@@ -15,6 +15,7 @@ public static class TestApp
 	{
 		// The Place tool's memory goes to a file of the tests', not the user's.
 		PlaceMemory.PathOverride = Path.Combine(Path.GetTempPath(), $"vwe-place-{Environment.ProcessId}.json");
+		Stamps.PathOverride = Path.Combine(Path.GetTempPath(), $"vwe-stamps-{Environment.ProcessId}.json");
 		return AppBuilder.Configure<App>().UseHeadless(new AvaloniaHeadlessPlatformOptions());
 	}
 }

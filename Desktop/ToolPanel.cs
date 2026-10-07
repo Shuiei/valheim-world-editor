@@ -30,7 +30,16 @@ public sealed class ToolPanel
 	internal Button SelectButton => _selectButton;
 	private readonly TextBlock _title = new() { FontSize = 14, FontWeight = FontWeight.SemiBold };
 	private readonly TextBlock _help = new() { FontSize = 12, Foreground = Brushes.LightGray, TextWrapping = TextWrapping.Wrap };
-	private readonly Control _flattenRows, _naturalRows, _turnRow, _erodeRows;
+	private readonly Control _flattenRows, _naturalRows, _turnRow, _erodeRows, _falloffRow, _stampOnceRows, _stampHeightRow;
+	// The stamps in the Shape list after the four shapes: the built-in ones, then loaded pictures.
+	internal List<Stamps.Stamp> StampList { get; } = Stamps.BuiltIn.Concat(Stamps.LoadKept()).ToList();
+	internal Button LoadStampButton { get; } = new() { Content = "Load stamp…", FontSize = 12 };
+	internal Button ForgetStampButton { get; } = new() { Content = "Forget stamp", FontSize = 12 };
+	internal CheckBox StampOnceBox { get; } = new() { Content = "Stamp once: a click puts the whole stamp in", FontSize = 12 };
+	internal NumericUpDown StampHeightBox { get; } = new() { Value = 4, Increment = 0.5m, FormatString = "0.0#", FontSize = 12 };
+	// Load stamp…: the window picks the picture.
+	public event Action? LoadStampAsked;
+	public event Action<string>? Message;
 	internal Button ThermalButton { get; } = new() { Content = "Thermal", FontSize = 12 };
 	internal Button WaterButton { get; } = new() { Content = "Water", FontSize = 12 };
 	internal Slider RestSlider { get; }
@@ -148,12 +157,33 @@ public sealed class ToolPanel
 		SizeSlider = Slide(1, 30, 0.5, Brush.Radius, sizeV, v => $"{v:0.#} m", v => Brush.Radius = (float)v);
 		var strengthV = new TextBlock();
 		StrengthSlider = Slide(0.05, 1, 0.05, Brush.Strength, strengthV, v => $"{v:0.00}", v => Brush.Strength = (float)v);
-		ShapeBox = new ComboBox { ItemsSource = new[] { "Circle", "Square", "Ring", "Ragged (noise)" }, SelectedIndex = 0, HorizontalAlignment = HorizontalAlignment.Stretch, FontSize = 12 };
+		ShapeBox = new ComboBox { SelectedIndex = 0, HorizontalAlignment = HorizontalAlignment.Stretch, FontSize = 12, MaxDropDownHeight = 400 };
+		FillShapes();
 		FalloffBox = new ComboBox { ItemsSource = new[] { "Smooth", "Linear", "Dome", "Flat top", "Peak", "Sharp edge (pickaxe)" }, SelectedIndex = 0, HorizontalAlignment = HorizontalAlignment.Stretch, FontSize = 12 };
 		var turnV = new TextBlock();
 		var turn = Slide(-180, 180, 1, 0, turnV, v => $"{v:0}°", v => Brush.Turn = (float)v);
 		_turnRow = Row("Turn", turn, turnV);
-		ShapeBox.SelectionChanged += (_, _) => { Brush.Shape = (BrushShape)Math.Max(0, ShapeBox.SelectedIndex); _turnRow.IsVisible = Brush.Shape == BrushShape.Square; };
+		ShapeBox.SelectionChanged += (_, _) => ShapeChosen();
+		ToolTip.SetTip(LoadStampButton, "Use a grayscale picture as the brush shape: white works fully, black not at all");
+		ToolTip.SetTip(ForgetStampButton, "Forget the loaded picture chosen as Shape");
+		LoadStampButton.Click += (_, _) => LoadStampAsked?.Invoke();
+		ForgetStampButton.Click += (_, _) =>
+		{
+			int i = ShapeBox.SelectedIndex - 4;
+			if (i < 0 || i >= StampList.Count || !StampList[i].Loaded)
+			{
+				Message?.Invoke("Choose a loaded picture as Shape first (built-in stamps stay).");
+				return;
+			}
+			StampList.RemoveAt(i);
+			Stamps.SaveKept(StampList.Where(s => s.Loaded));
+			FillShapes();
+			ShapeBox.SelectedIndex = 0;
+		};
+		StampOnceBox.IsCheckedChanged += (_, _) => { Brush.StampOnce = StampOnceBox.IsChecked == true; SyncStamp(); };
+		StampHeightBox.ValueChanged += (_, e) => Brush.StampHeight = (float)(e.NewValue ?? 0);
+		_stampHeightRow = Row("Height", StampHeightBox, new TextBlock { Text = " m", FontSize = 12, VerticalAlignment = VerticalAlignment.Center });
+		_stampOnceRows = new StackPanel { Spacing = 4, Children = { StampOnceBox, _stampHeightRow } };
 		FalloffBox.SelectionChanged += (_, _) => Brush.Falloff = (Falloff)Math.Max(0, FalloffBox.SelectedIndex);
 		_turnRow.IsVisible = false;
 
@@ -201,8 +231,10 @@ public sealed class ToolPanel
 				Row("Size", SizeSlider, sizeV),
 				Row("Strength", StrengthSlider, strengthV),
 				Row("Shape", ShapeBox),
-				Row("Falloff", FalloffBox),
+				(_falloffRow = Row("Falloff", FalloffBox)),
 				_turnRow,
+				new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Children = { LoadStampButton, ForgetStampButton } },
+				_stampOnceRows,
 				_flattenRows,
 				_naturalRows,
 				_erodeRows,
@@ -239,6 +271,7 @@ public sealed class ToolPanel
 			_flattenRows.IsVisible = tool == BrushTool.Flatten;
 			_naturalRows.IsVisible = tool == BrushTool.Natural;
 			_erodeRows.IsVisible = tool == BrushTool.Erode;
+			SyncStamp();
 		}
 		ToolChanged?.Invoke(t);
 	}
@@ -290,6 +323,47 @@ public sealed class ToolPanel
 			}
 		}
 		return false;
+	}
+
+	private void FillShapes() => ShapeBox.ItemsSource = new[] { "Circle", "Square", "Ring", "Ragged (noise)" }.Concat(StampList.Select(s => $"Stamp: {s.Label}")).ToList();
+
+	private void ShapeChosen()
+	{
+		int i = Math.Max(0, ShapeBox.SelectedIndex);
+		if (i >= 4 && i - 4 < StampList.Count)
+		{
+			Brush.Shape = BrushShape.Stamp;
+			Brush.StampData = StampList[i - 4].Data;
+			Brush.StampLabel = StampList[i - 4].Label;
+		}
+		else
+		{
+			Brush.Shape = (BrushShape)Math.Min(i, 3);
+		}
+		SyncStamp();
+	}
+
+	// A stamp: no falloff (the picture has its own), it turns, and Raise and Lower can stamp it once.
+	private void SyncStamp()
+	{
+		bool stamp = Brush.Shape == BrushShape.Stamp;
+		_turnRow.IsVisible = Brush.Shape is BrushShape.Square or BrushShape.Stamp;
+		_falloffRow.IsVisible = !stamp;
+		int i = ShapeBox.SelectedIndex - 4;
+		ForgetStampButton.IsVisible = i >= 0 && i < StampList.Count && StampList[i].Loaded;
+		_stampOnceRows.IsVisible = stamp && Tool is BrushTool.Raise or BrushTool.Lower;
+		_stampHeightRow.IsVisible = Brush.StampOnce;
+	}
+
+	// A picture loaded as a stamp: chosen as the Shape, and kept for next time.
+	public void AddStamp(string label, float[] data)
+	{
+		var st = new Stamps.Stamp($"pic:{DateTime.Now.Ticks}", label, data, Loaded: true);
+		StampList.Add(st);
+		Stamps.SaveKept(StampList.Where(s => s.Loaded));
+		FillShapes();
+		ShapeBox.SelectedIndex = 4 + StampList.Count - 1;
+		Message?.Invoke($"Loaded the stamp “{label}”: white parts work fully, black parts not at all.");
 	}
 
 	// The flatten height follows the ground where a stroke started.

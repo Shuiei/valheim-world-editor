@@ -17,7 +17,7 @@ public enum BrushTool
 	PaintClear,
 }
 
-public enum BrushShape { Circle, Square, Ring, Noise }
+public enum BrushShape { Circle, Square, Ring, Noise, Stamp }
 
 public enum Falloff { Smooth, Linear, Dome, Flat, Peak, Sharp }
 
@@ -25,7 +25,13 @@ public sealed class Brush
 {
 	public BrushShape Shape { get; set; } = BrushShape.Circle;
 	public Falloff Falloff { get; set; } = Falloff.Smooth;
-	// Square brushes turn (degrees).
+	// The picture of the Stamp shape (Stamps.Size squared weights), and Stamp once: a click of Raise or
+	// Lower puts the whole picture in, this many metres high.
+	public float[]? StampData { get; set; }
+	public string StampLabel { get; set; } = "";
+	public bool StampOnce { get; set; }
+	public float StampHeight { get; set; } = 4;
+	// Square brushes and stamps turn (degrees).
 	public float Turn { get; set; }
 	public float Radius { get; set; } = 6;
 	public float Strength { get; set; } = 0.4f;
@@ -93,7 +99,7 @@ public sealed class Brush
 		_ => t * t * (3 - 2 * t),
 	};
 
-	private bool Turnable => Shape == BrushShape.Square;
+	private bool Turnable => Shape is BrushShape.Square or BrushShape.Stamp;
 
 	// The weight of a point (dx, dz) from the brush middle (0..1). wx, wz: its world position, for the noise.
 	public float Weight(float dx, float dz, float wx = 0, float wz = 0)
@@ -103,6 +109,11 @@ public sealed class Brush
 		{
 			float a = -Turn * MathF.PI / 180, c = MathF.Cos(a), s = MathF.Sin(a);
 			(u, v) = ((dx * c - dz * s) / r, (dx * s + dz * c) / r);
+		}
+		// A picture has its own falloff.
+		if (Shape == BrushShape.Stamp)
+		{
+			return StampData != null ? Stamps.Sample(StampData, u, v) : 0;
 		}
 		float d = Shape switch
 		{
@@ -296,6 +307,35 @@ public static class Sculpt
 			}
 		}
 		return (x0 - 1, z0 - 1, x1 + 1, z1 + 1);
+	}
+
+	// Stamp once: the ground under the stamp moves by amount (metres) times the picture, all at once.
+	public static (List<int> Touched, (int X0, int Z0, int X1, int Z1) Rect, bool Clamped) StampOnce(Ground g, Brush b, float cx, float cz, float amount, Func<int, float>? mask)
+	{
+		var touched = new List<int>();
+		bool clamped = false;
+		float reach = b.Reach, ox = g.X0 * 64 - 32, oz = g.Z0 * 64 - 32;
+		int x0 = Math.Max(1, (int)MathF.Floor(cx - reach)), x1 = Math.Min(g.W - 2, (int)MathF.Ceiling(cx + reach));
+		int z0 = Math.Max(1, (int)MathF.Floor(cz - reach)), z1 = Math.Min(g.H - 2, (int)MathF.Ceiling(cz + reach));
+		for (int gz = z0; gz <= z1; gz++)
+		{
+			for (int gx = x0; gx <= x1; gx++)
+			{
+				if (g.Locked(gx, gz))
+				{
+					continue;
+				}
+				int p = gz * g.W + gx;
+				float w = b.Weight(gx - cx, gz - cz, ox + gx, oz + gz) * (mask?.Invoke(p) ?? 1);
+				if (w <= 0)
+				{
+					continue;
+				}
+				clamped |= g.SetHeight(p, g.HeightOf(p) + amount * w);
+				touched.Add(p);
+			}
+		}
+		return (touched, (x0 - 1, z0 - 1, x1 + 1, z1 + 1), clamped);
 	}
 
 	// Naturalize's aim: the ground's broad shape (blurred, from the start of the stroke) plus detail noise,

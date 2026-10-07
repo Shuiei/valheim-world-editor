@@ -1491,6 +1491,17 @@ public sealed class GlView : OpenGlControlBase
 				}
 				return;
 			}
+			// Stamp once: a click of Raise or Lower puts the whole stamp in.
+			if (_dragButton == PointerUpdateKind.LeftButtonPressed && _tool is BrushTool.Raise or BrushTool.Lower && _scene is { Session: { Brush: { StampOnce: true, Shape: BrushShape.Stamp } } } ss)
+			{
+				_dragFrom = null;
+				if (GroundAt(ss, _lastViewProj, p.Position, _surfaceSize) is { } at)
+				{
+					StampClicked?.Invoke(at.X, at.Z);
+				}
+				Wake();
+				return;
+			}
 			if (_dragButton == PointerUpdateKind.LeftButtonPressed && _tool is BrushTool tool && _scene is { Session: { } session } s)
 			{
 				_dragFrom = null;
@@ -1630,6 +1641,8 @@ public sealed class GlView : OpenGlControlBase
 	public event Action<float, float>? ShapeClicked;
 	public float ShapeRadius { get; set; } = 16;
 	public PathTool Path { get; } = new();
+	// Stamp once: a click on the ground (grid point).
+	public event Action<float, float>? StampClicked;
 	// Alt + click with a brush: the ground's height there (shift: Alt + Shift).
 	public event Action<float, bool>? BrushAltClick;
 	public AreaTool Area { get; } = new();
