@@ -1067,6 +1067,44 @@ test('Place grid: a warning and fit when the kinds are wider than the spacing', 
   noErrors();
 });
 
+test('Place mix: weights decide how often each kind is used; presets load and save', async () => {
+  await openEditor();
+  await page().evaluate(() => { localStorage.setItem('plantChosen', '["Beech1","Bush01"]'); localStorage.setItem('plantWeights', '{}'); localStorage.removeItem('plantPresets'); });
+  await openEditor();
+  const c = (await records()).find(r => r.name === 'piece_chest_wood');
+  await lookAt(page(), c.x + 20, c.z + 20, 0, 60, 0.01);
+  await page().keyboard.press('t'); await sleep(300);
+  await page().click('#plModes [data-m="grid"]');
+  await page().$eval('#plCell', e => { e.value = 2; e.dispatchEvent(new Event('input')); });
+  { const [a, b] = await screenOf(page(), c.x + 5, c.z + 5); const [x2, y2] = await screenOf(page(), c.x + 35, c.z + 35); await page().mouse.move(a, b); await page().mouse.down(); await page().mouse.move(x2, y2, { steps: 6 }); await page().mouse.up(); await sleep(400); }
+  const share = () => page().evaluate(() => { const p = window.__plantPreview(); return p.filter(o => o.name === 'Beech1').length / p.length; });
+  assert.equal(await page().$$eval('#plMix [data-w]', r => r.length), 2, 'a weight per ticked kind');
+  const even = await share();
+  assert.ok(even > 0.35 && even < 0.65, `even weights: about half beeches (${even.toFixed(2)})`);
+  // Beech 9, Bush 1: about nine in ten.
+  await page().$eval('#plMix [data-w="Beech1"] input', e => { e.value = 9; e.dispatchEvent(new Event('input')); });
+  assert.equal(await page().$eval('#plMix [data-w="Beech1"] .pct', e => e.textContent), '90%');
+  const heavy = await share();
+  assert.ok(heavy > 0.8, `weighted: mostly beeches (${heavy.toFixed(2)})`);
+  // A built-in preset ticks its kinds (those the world can place) with their weights.
+  await page().select('#plPreset', 'Meadows woods');
+  const chosen = await page().evaluate(() => JSON.parse(localStorage.getItem('plantChosen')));
+  assert.ok(chosen.includes('Beech1') && chosen.includes('Bush01'), `preset kinds ticked (${chosen})`);
+  assert.equal(await page().$eval('#plDensity', e => +e.value), 3);
+  // Save your own, load it back after changing things, delete it.
+  await page().evaluate(() => { window.prompt = () => 'My woods'; });
+  await page().click('#plPresetSave');
+  assert.equal(await page().$eval('#plPreset', e => e.value), 'own:My woods');
+  await page().click('#plNone');
+  await page().select('#plPreset', 'own:My woods');
+  assert.deepEqual((await page().evaluate(() => JSON.parse(localStorage.getItem('plantChosen')))).sort(), chosen.slice().sort());
+  await page().evaluate(() => { window.confirm = () => true; });
+  await page().click('#plPresetDel');
+  assert.equal(await page().$$eval('#plPreset option[value^="own:"]', o => o.length), 0);
+  await page().keyboard.press('Escape');
+  noErrors();
+});
+
 test('Worlds goes back to the start page', async () => {
   await page().goto(t.base + '/index.html', { waitUntil: 'networkidle0' });
   await page().click('#worldsBtn');
