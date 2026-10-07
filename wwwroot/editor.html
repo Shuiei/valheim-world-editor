@@ -333,6 +333,7 @@ import { createSelecting } from './editor/selecting.js';
 import { createEyedropper } from './editor/eyedropper.js';
 import { createBuilder } from './editor/builder.js';
 import { createOverlays } from './editor/overlays.js';
+import { createScript } from './editor/script.js';
 import { applyTips } from './editor/tips.js';
 import { gameLookBanner } from './app.js';
 gameLookBanner();
@@ -1108,6 +1109,7 @@ createMasks(ed, [...BRUSH_TOOLS, 'path', 'area', 'plant', 'shape']);
 createEyedropper(ed);
 createBuilder(ed);
 createOverlays(ed);
+createScript(ed);
 // The tool carried over from the previous area (Area arrows, Follow).
 // After the rest of the page has started (the Path panel's parts are made further down).
 if (params.get('tool') && document.querySelector(`[data-tool="${params.get('tool')}"]`)) setTimeout(() => setTool(params.get('tool')), 0);
