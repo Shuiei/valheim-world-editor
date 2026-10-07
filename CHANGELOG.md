@@ -3,6 +3,13 @@
 All notable changes to the Valheim world editor and its WorldEditorBridge plugin, which share one
 version number. Newest first.
 
+## Unreleased
+
+### Added
+- **Blueprints** (Area tool → Copy & paste): save the clipboard as a named file, browse the saved
+  ones with a picture of each, and paste them into any world. They are kept in the `blueprints`
+  folder of the editor's data folder.
+
 ## v0.4.1 — 2026-10-05 (editor on GitHub only)
 
 ### Changed

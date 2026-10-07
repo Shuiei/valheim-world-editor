@@ -152,6 +152,29 @@ test('copy and paste make new objects', async () => {
   noErrors();
 });
 
+test('blueprints: the clipboard is saved as a file and pasted from the library', async () => {
+  await openEditor();
+  const tree = (await records()).find(r => r.name === 'Beech1' && !r.added);
+  await page().evaluate(id => { window.__ed.setTool('select'); window.__ed.selectIds([id]); document.activeElement?.blur(); }, tree.id);
+  await lookAt(page(), tree.x, tree.z, 0, 40, 30); await sleep(500);
+  await page().keyboard.down('Control'); await page().keyboard.press('c'); await page().keyboard.up('Control');
+  await page().evaluate(() => window.__ed.setTool('area'));
+  await page().click('#aSaveBp'); await sleep(1000);
+  const { list } = await t.api('/api/blueprints');
+  assert.ok(list.length >= 1, 'a blueprint file was written');
+  assert.ok(list[0].thumb?.startsWith('data:image/png'), 'with a picture');
+  await page().click('#aLibrary');
+  await page().waitForSelector('#bpList .bp [data-act="paste"]');
+  const before = (await records()).filter(r => r.added && r.name === 'Beech1').length;
+  await page().click('#bpList .bp [data-act="paste"]');
+  const [x, y] = await screenOf(page(), tree.x - 7, tree.z + 5);
+  await page().mouse.move(x, y); await sleep(300); await page().mouse.click(x, y); await sleep(1200);
+  const after = (await records()).filter(r => r.added && r.name === 'Beech1').length;
+  assert.equal(after, before + 1, 'the blueprint pasted one tree');
+  await page().keyboard.press('Escape');
+  noErrors();
+});
+
 test('undo takes a change back and the counter clears', async () => {
   await openEditor();
   await page().keyboard.press('Escape');

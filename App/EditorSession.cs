@@ -301,6 +301,8 @@ public static class EditorSession
 			zones = edits.All().Where(e => e.HeightCount + e.PaintCount > 0 || e.Changed).Select(ZoneSummary)
 		});
 
+		BlueprintEndpoints.Map(app, () => world.Name);
+
 		app.MapGet("/api/zone/{x:int}/{z:int}", (int x, int z) =>
 		{
 			var e = edits.Get(x, z);

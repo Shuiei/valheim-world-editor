@@ -60,6 +60,23 @@ While pasting:
 | **Mirror** (`F`) | Mirrors the paste. |
 | **Done** (`Esc`) | Stops pasting. |
 
+## Blueprints
+
+A blueprint is a copy kept as a file, like a WorldEdit schematic: it stays when the editor closes
+and can be pasted into any world.
+
+| Control | What it does |
+|---|---|
+| **Save blueprint…** | Saves the clipboard (what the Area or Select tool copied last) under a name you type. A blueprint with the same name is replaced, after asking. |
+| **Blueprints…** | Opens the list of saved blueprints, each with a picture seen from above (ground shaded by height, objects as dots), its size, its number of objects and the world it came from. **Paste** puts it on the clipboard and starts pasting; **Delete** removes its file. |
+
+Blueprints are files in the `blueprints` folder of the editor's data folder
+(`~/.local/share/ValheimWorldEditor/blueprints` on Linux, `%LOCALAPPDATA%\ValheimWorldEditor\blueprints`
+on Windows), one `.json` file each, so they can be copied to another computer or shared. Pasted into
+another world, the objects are made like the ones you plant: copies of an object of the same kind
+in that world, or new objects for kinds it has none of. Kinds the game does not know (from mods)
+are left out, and the editor says which.
+
 ## Reset zones
 
 | Control | What it does |
