@@ -4,6 +4,12 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v0.38.3 — 2026-10-07
+
+### Fixed
+- The frame rate line in Help could not be selected to copy it: it was rewritten several times a
+  second, which dropped the selection. It now stays as it is while selected.
+
 ## v0.38.2 — 2026-10-07 (frame rate in Help)
 
 ### Added

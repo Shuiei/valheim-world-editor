@@ -1860,7 +1860,10 @@ renderer.setAnimationLoop(now => {
     if (frameLog.length >= 20) {
       fps.rate = Math.round((frameLog.length - 1) / ((frameLog[frameLog.length - 1][0] - frameLog[0][0]) / 1000));
       fps.ms = (frameLog.reduce((a, f) => a + f[1], 0) / frameLog.length).toFixed(1);
-      if (!$('help').hidden && frameLog.length % 10 === 0) $('gpuInfo').textContent = ed.gpuText();
+      // Not while some of it is selected (to copy it): rewriting the text would drop the selection.
+      if (!$('help').hidden && frameLog.length % 10 === 0 && !window.getSelection()?.containsNode($('gpuInfo'), true)) {
+        const t = ed.gpuText(); if ($('gpuInfo').textContent !== t) $('gpuInfo').textContent = t;
+      }
     }
   }
 });
