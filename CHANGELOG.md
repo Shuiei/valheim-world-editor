@@ -27,6 +27,8 @@ version number. Newest first.
 - **Restore from a backup** (Area tool, like WorldEdit's `//restore`): the ground and objects of a
   selection as they were in one of the world's backups (the editor's or the game's), objects with
   all their data.
+- **Brush shapes and falloff** (sculpt and paint tools, like WorldPainter): circle, square, ring or
+  ragged brushes, with a smooth, linear, dome, flat-top or peak falloff; square brushes turn.
 
 ### Fixed
 - A zone reset also removed players' tombstones, with what they carried: they are always kept now.
