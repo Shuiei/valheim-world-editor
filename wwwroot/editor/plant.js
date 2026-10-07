@@ -980,6 +980,8 @@ export function createPlant(ed) {
   }, { capture: true, passive: false });
   // For automated tests: what the preview would place.
   window.__plantPreview = () => preview.map(o => ({ ...o }));
+  // Follow (moving the area) would lose a shape being drawn.
+  (ed.moveBlockers ??= []).push(() => linePts.length || gridA || figA ? 'a Place shape is drawn (place or clear it)' : '');
   window.__plantLine = () => linePts.map(p => ({ gx: p.gx, gz: p.gz }));
   window.__plantWidth = (name, w) => { widths.set(name, w); updatePreview(); };
   ed.frame ??= [];

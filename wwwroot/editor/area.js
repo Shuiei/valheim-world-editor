@@ -394,6 +394,8 @@ export function createArea(ed) {
   ed.setClipboard = c => { clip = c; try { localStorage.setItem('editorClipboard', JSON.stringify(encodeClip(clip))); } catch { } updateClipInfo(); };
   ed.getClipboard = () => clip;
   // The selection, for other modules (heightmaps): its outline and the weights of its points.
+  // Follow (moving the area) would lose the selection.
+  (ed.moveBlockers ??= []).push(() => polygon() ? 'an Area selection is made (Clear to move on)' : '');
   ed.area = { polygon: () => polygon(), weights: (withMask = true) => areaWeights(withMask), commit: (state, touched, a, extra) => commitTerrain(state, touched, a, extra) };
   ed.startPaste = () => startPaste();
   function startPaste() {

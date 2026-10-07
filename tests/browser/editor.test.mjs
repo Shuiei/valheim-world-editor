@@ -1187,6 +1187,32 @@ test('history survives a reload of the page and a move of the work area', async 
   noErrors();
 });
 
+test('moving the area keeps the view and the tool; Follow moves it near the edge', async () => {
+  await openEditor();
+  await page().evaluate(() => localStorage.setItem('areaFollow', '0'));
+  await openEditor();
+  const target = () => page().evaluate(() => { const ed = window.__ed, t = window.__target(); return [t.x + ed.cx + ed.originX, -t.z + ed.cz + ed.originZ]; });
+  await page().evaluate(() => { window.__ed.setTool('plant'); window.__view(10, 60, 40, 10, 40, 0); });
+  const before = await target();
+  await Promise.all([page().waitForNavigation({ waitUntil: 'networkidle0' }), page().click('[data-shift="1,0"]')]);
+  await page().waitForFunction(() => window.__ed?.objects.records.size > 0 && !document.getElementById('loading'), { timeout: 120000 });
+  assert.match(page().url(), /zx=1&zz=0/);
+  const after = await target();
+  assert.ok(Math.hypot(after[0] - before[0], after[1] - before[1]) < 0.1, `the view stays on the same spot (${before} -> ${after})`);
+  assert.equal(await page().evaluate(() => window.__ed.tool), 'plant', 'the tool comes along');
+  // Follow: blocked while objects are selected, then moves the area when the view nears the edge.
+  await page().click('#follow');
+  const id = (await records())[0].id;
+  await page().evaluate(id => { const ed = window.__ed; ed.setTool('select'); ed.selectIds([id]); window.__view(ed.W / 2 - 4, 60, 30, ed.W / 2 - 4, 40, 0); }, id);
+  await page().waitForFunction(() => /Follow waits: objects are selected/.test(document.getElementById('sMsg').textContent), { timeout: 5000 });
+  await Promise.all([page().waitForNavigation({ waitUntil: 'networkidle0', timeout: 30000 }),
+    page().evaluate(() => { const ed = window.__ed; ed.clearSelection(); window.__view(ed.W / 2 - 3, 60, 30, ed.W / 2 - 3, 40, 0); })]);
+  assert.match(page().url(), /zx=2&zz=0/, 'moved one zone east');
+  await page().waitForFunction(() => window.__ed && !document.getElementById('loading'), { timeout: 120000 }); await sleep(1500);
+  await page().click('#follow');
+  noErrors();
+});
+
 test('Worlds goes back to the start page', async () => {
   await page().goto(t.base + '/index.html', { waitUntil: 'networkidle0' });
   await page().click('#worldsBtn');

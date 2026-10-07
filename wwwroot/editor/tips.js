@@ -11,6 +11,7 @@ export const TIPS = {
   saveBtn: 'Offline: write the changes into the world files (a backup of the world folder is made first). Live: send them to the running game.',
   liveReload: 'Load the world again from the running game (picks up what players changed since).',
   autoApply: 'Live mode: send every stroke, placement and undo to the game right away, without pressing Apply live.',
+  follow: 'Follow the view: when the point you look at comes near the edge of the area, the area moves there by itself (it waits while a path, shape, selection or stroke is unfinished).',
   historyToggle: 'Show every change made in this session; roll back to any point or remove one change (L).',
   viewToggle: 'Show or hide kinds of things in the world, and the look options (V).',
   helpToggle: 'Mouse controls and keyboard shortcuts (?).',

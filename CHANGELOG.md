@@ -4,6 +4,17 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v0.31.0 — 2026-10-07 (area that follows the view)
+
+### Added
+- **Follow** (next to the Area arrows): when the point you look at comes within 12 m of the edge of
+  the area, the area moves there by itself. It waits, and says why, while a stroke, a path or Place
+  shape, an Area selection or selected objects would be lost.
+
+### Changed
+- Moving the area (arrows or Follow) keeps the view on the same spot and the tool in hand, instead
+  of starting over above the middle with the Raise tool.
+
 ## v0.30.0 — 2026-10-07 (history survives reloads)
 
 ### Changed
