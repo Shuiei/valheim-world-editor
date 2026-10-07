@@ -93,6 +93,9 @@ export const TIPS = {
   psRot: 'Turn the paste a quarter turn (R). , and . turn it by 1° (Shift: 15°).',
   psFlip: 'Mirror the paste (F).',
   psDone: 'Stop pasting (Esc).',
+  psCount: 'How many copies one click places, side by side (like WorldEdit\'s //stack). 1 = a single paste.',
+  psDir: 'Which way the copies follow each other: along the copy\'s width or depth (turning with it), or stacked upwards.',
+  psGap: 'Space left between two copies (m); negative values make them overlap.',
 
   // Plant
   '[data-m="brush"]': 'Paint objects under the brush: a click places what the preview shows, a drag keeps adding.',

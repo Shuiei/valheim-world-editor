@@ -59,6 +59,9 @@ While pasting:
 | **Turn 90°** (`R`) | A quarter turn. `,` and `.` or Alt + wheel turn by 1° (Shift: 15°), to any angle. |
 | **Mirror** (`F`) | Mirrors the paste. |
 | **Done** (`Esc`) | Stops pasting. |
+| **Copies** | How many copies one click places (like WorldEdit's `//stack`). The extra copies are outlined too. All of them are one undo step. |
+| **Along** | Which way the copies follow each other: along the copy's **width** or **depth** (these turn and mirror with the paste), or **upwards** (stacked floors; only the first copy shapes the ground). |
+| **Gap** | Space between two copies (m). Each copy is moved by its own size plus the gap; a negative gap makes them overlap. Copies side by side each sit on the ground where they land. |
 
 ## Blueprints
 
