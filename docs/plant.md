@@ -46,7 +46,7 @@ kinds, until you change it yourself.
 
 | Control | What it does |
 |---|---|
-| **Points** | Click points along the way, or hold and drag to draw freely. **Close the loop** goes back to the first point at the end. |
+| **Points** | Click points along the way, or hold and drag to draw freely. Then drag a point to move it, drag the line to add a point, **Ctrl + click** a point to remove it. **Close the loop** goes back to the first point at the end. |
 | **Circle** | Press at the centre and drag out to the size. With End to end the size snaps so that whole pieces close the ring. |
 | **Rectangle** | Press at one corner and drag to the opposite one. With End to end the sides snap to whole pieces, and each side is filled from its corner, so the corners meet exactly. |
 
