@@ -2,6 +2,11 @@
 
 The editor's own changes: [CHANGELOG.md](https://github.com/Shuiei/valheim-world-editor/blob/main/CHANGELOG.md).
 
+## Unreleased
+
+- New: `POST /zones/reset`, so the editor can reset zones in the running game (they are generated
+  again at once where players are). Players' tombstones are always kept.
+
 ## 0.4.1
 
 - The editor is downloaded from the

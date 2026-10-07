@@ -99,7 +99,7 @@ HostKey = SHA256:…
 | Control | What it does |
 |---|---|
 | **LIVE** badge | Shows the editor is connected to the running game. |
-| **Apply live** | Sends every pending change to the game: ground (height and paint), deleted objects, and new objects (planted, pasted, replaced, moved). |
+| **Apply live** | Sends every pending change to the game: ground (height and paint), deleted objects, new objects (planted, pasted, replaced, moved), and zone resets. After a zone reset the world is read again from the game and the page reloads (the history starts over). |
 | **Auto** | Applies after every stroke, placement and undo, without pressing Apply live. |
 | **Reload** | Loads the world again from the game, to pick up what players changed since. Changes you have not applied are dropped (you are asked first). |
 | Player names | Connected players are drawn at their position, with their name, and follow them. |
@@ -114,7 +114,9 @@ the game again.
 
 ## Limits
 
-- **Zone reset** is not applied live yet; use offline mode for it.
+- **Zone resets** need a WorldEditorBridge newer than 0.4.1 on the server (the one that comes with this editor). The game generates a reset
+  zone again at once when a player is near it, otherwise the next time someone comes. A reset cannot
+  be undone after it is applied.
 - The plugin only works in a game that **hosts** the world (server, single player or host). In a
   game that joined someone else's server it refuses to change anything.
 - Objects placed live are created by the server; players see them like objects someone just

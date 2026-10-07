@@ -51,6 +51,14 @@
   .hits { max-height: 260px; overflow-y: auto; }
   .hit { display: grid; grid-template-columns: 1fr auto; padding: 4px 6px; border-radius: 5px; cursor: pointer; font-size: 12px; }
   .hit:hover, .hit.sel { background: #2a303a; }
+  .chips { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0; }
+  .chips button { background: #262b34; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 2px 8px; font: inherit; font-size: 11.5px; cursor: pointer; }
+  .chips button.on { background: var(--accent); color: #1a1a1a; border-color: var(--accent); }
+  .zf label { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 12px; margin: 4px 0; flex-wrap: wrap; }
+  .zf input[type=number] { width: 64px; background: #262b34; color: var(--text); border: 1px solid var(--line); border-radius: 4px; padding: 2px 4px; font: inherit; font-size: 12px; }
+  .zf .row { display: flex; gap: 6px; margin-top: 8px; }
+  .zf .row button { flex: 1; background: #262b34; color: var(--text); border: 1px solid var(--line); border-radius: 5px; padding: 6px 4px; cursor: pointer; font: inherit; font-size: 12px; }
+  .zf .row button.primary { background: var(--accent); color: #1a1a1a; border-color: var(--accent); font-weight: 600; }
   .hit .m { color: var(--muted); grid-column: 1 / -1; font-size: 11.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 </style>
 </head>
@@ -86,6 +94,18 @@
     <button id="sGo" title="Search every object of the world (Enter)">Find</button>
   </div>
   <div id="sResults"></div>
+  <h2>Reset zones across the world</h2>
+  <div class="zf">
+    <div class="hint" style="margin-top:0">Pick zones everywhere at once (like MCA Selector) and have the game generate them again: new trees, ore and dungeons, for example after a Valheim update. Buildings are never touched.</div>
+    <div class="chips" id="zBiomes" title="Only these biomes (none = every biome)"></div>
+    <label title="Leave out zones with player-built pieces, and zones close to them"><input type="checkbox" id="zNoBuild" checked> No buildings in the zone or within <input type="number" id="zDist" min="0" max="50" value="2"> zone(s)</label>
+    <label title="Leave out zones whose ground was edited (in game or in the editor)"><input type="checkbox" id="zNoEdit" checked> No ground edits</label>
+    <label title="Only zones the game has generated already (visited by a player)"><input type="checkbox" id="zOnlyGen" checked> Only zones the game generated</label>
+    <label title="Distance of the zone from the middle of the world (m); empty = no limit">From the centre <input type="number" id="zRmin" min="0" step="500" placeholder="0"> to <input type="number" id="zRmax" min="0" step="500" placeholder="10500"> m</label>
+    <label title="Also undo the ground edits of the zones (only matters when No ground edits is off)"><input type="checkbox" id="zGround"> Also undo their ground edits</label>
+    <div class="row"><button id="zShow" title="Show the matching zones on the map (blue)">Show matching</button><button id="zMark" class="primary" title="Mark the matching zones for reset (red); Save or Apply live does it">Mark for reset…</button><button id="zUnmark" title="Cancel every zone reset that is marked">Unmark all</button></div>
+    <div class="hint" id="zInfo"></div>
+  </div>
   <div id="pick" hidden>
     <h2 id="pickTitle"></h2>
     <div class="edit"><a id="editLink" href="#" title="Open this spot in the 3D editor">Edit in 3D</a>
@@ -124,6 +144,8 @@ const STRIDE = 13;
 let players = [];
 // Search results, pinned on the map; the one picked last is highlighted.
 let hits = [], hitSel = null;
+// Zone filter: matching zones (blue) and zones marked for reset (red), as "x,z" keys.
+let zoneMatches = [], resetMarks = new Set();
 const PIECE_STYLE = {
   0: ['rgba(150,72,34,0.92)', 'rgba(60,25,10,0.9)'],    // misc: portals, fires, signs...
   1: ['rgba(128,56,40,0.9)', 'rgba(55,22,14,0.9)'],     // crafting stations
@@ -172,7 +194,7 @@ function drawBuildings() {
 function drawOverlay() {
   // Redraw only when something visible changed (buildings can be many thousands).
   const key = [view.x, view.z, view.mpp, overlay.width, overlay.height, selected?.x, selected?.z, !!pieces, JSON.stringify(players), hits.length, hitSel?.id,
-    ...['showBuildings', 'showEdited', 'showGrid'].map(id => document.getElementById(id).checked)].join('|');
+    zoneMatches.length, resetMarks.size, ...['showBuildings', 'showEdited', 'showGrid'].map(id => document.getElementById(id).checked)].join('|');
   if (key === overlayKey) return;
   overlayKey = key;
   octx.clearRect(0, 0, overlay.width, overlay.height);
@@ -185,6 +207,11 @@ function drawOverlay() {
     octx.font = `${12 * devicePixelRatio}px system-ui`; octx.fillStyle = '#fff'; octx.strokeStyle = 'rgba(0,0,0,.7)'; octx.lineWidth = 3 * devicePixelRatio;
     octx.strokeText(p.name, sx + r + 3, sy + 4); octx.fillText(p.name, sx + r + 3, sy + 4);
   }
+  // Zone filter: matching zones in blue, zones marked for reset in red.
+  const zpx = ZONE / view.mpp * devicePixelRatio;
+  const fillZone = (zx, zz, color) => { const [sx, sy] = toScreen(zx * ZONE - ZONE / 2, zz * ZONE + ZONE / 2); octx.fillStyle = color; octx.fillRect(sx, sy, Math.max(2, zpx), Math.max(2, zpx)); };
+  for (const [zx, zz] of zoneMatches) if (!resetMarks.has(`${zx},${zz}`)) fillZone(zx, zz, 'rgba(70,160,255,0.35)');
+  for (const k of resetMarks) { const [zx, zz] = k.split(',').map(Number); fillZone(zx, zz, 'rgba(255,70,50,0.45)'); }
   // Search results: orange pins, the picked one larger with a ring.
   for (const h of hits) {
     const [sx, sy] = toScreen(h.x, h.z), sel = h === hitSel, r = (sel ? 6 : 3.5) * devicePixelRatio;
@@ -353,6 +380,62 @@ async function runSearch() {
 }
 document.getElementById('sGo').onclick = runSearch;
 document.getElementById('sQuery').addEventListener('keydown', e => { if (e.key === 'Enter') runSearch(); });
+// ---- Zone filter (whole world): pick zones by biome, buildings, edits and distance, then reset them.
+let showChanges = () => { };
+const BIOMES = [[1, 'Meadows'], [8, 'Black Forest'], [2, 'Swamp'], [4, 'Mountain'], [16, 'Plains'], [512, 'Mistlands'], [32, 'Ashlands'], [64, 'Deep North'], [256, 'Ocean']];
+const zBiomes = new Set();
+document.getElementById('zBiomes').innerHTML = BIOMES.map(([v, n]) => `<button data-b="${v}">${n}</button>`).join('');
+document.querySelectorAll('#zBiomes [data-b]').forEach(b => b.onclick = () => { const v = +b.dataset.b; zBiomes.has(v) ? zBiomes.delete(v) : zBiomes.add(v); b.classList.toggle('on', zBiomes.has(v)); if (zoneMatches.length) filterZones(); });
+let zoneStats = null;
+async function loadZoneStats() {
+  document.getElementById('zInfo').textContent = 'Reading every zone…';
+  const res = await (await fetch('/api/zones/stats')).json();
+  zoneStats = res;
+  return res;
+}
+function filterZones() {
+  const { stride, data } = zoneStats, num = id => { const v = document.getElementById(id).value.trim(); return v === '' ? null : +v; };
+  const noBuild = document.getElementById('zNoBuild').checked, dist = Math.max(0, num('zDist') ?? 0), noEdit = document.getElementById('zNoEdit').checked;
+  const onlyGen = document.getElementById('zOnlyGen').checked, rmin = num('zRmin'), rmax = num('zRmax');
+  zoneMatches = [];
+  let objects = 0;
+  for (let i = 0; i < data.length; i += stride) {
+    const [x, z, biome, pieces, edited, objs, d, gen] = data.slice(i, i + stride);
+    if (zBiomes.size && !zBiomes.has(biome)) continue;
+    // Buildings are never reset from here: a zone with pieces never matches.
+    if (pieces > 0 || (noBuild && d !== -1 && d <= dist)) continue;
+    if (noEdit && edited) continue;
+    if (onlyGen && !gen) continue;
+    const r = Math.hypot(x, z) * 64;
+    if ((rmin != null && r < rmin) || (rmax != null && r > rmax)) continue;
+    zoneMatches.push([x, z]); objects += objs;
+  }
+  document.getElementById('zInfo').textContent = `${zoneMatches.length.toLocaleString()} of ${(data.length / stride).toLocaleString()} zones match (${objects.toLocaleString()} objects in them)${resetMarks.size ? ` · ${resetMarks.size.toLocaleString()} marked for reset` : ''}.`;
+  overlayKey = '';
+}
+document.getElementById('zShow').onclick = async () => { await loadZoneStats(); filterZones(); };
+for (const id of ['zNoBuild', 'zDist', 'zNoEdit', 'zOnlyGen', 'zRmin', 'zRmax']) document.getElementById(id).addEventListener('input', () => { if (zoneStats) filterZones(); });
+async function postResets(zones, undo) {
+  // Sent in parts so a whole world does not make one huge request.
+  for (let i = 0; i < zones.length; i += 2000) {
+    await fetch('/api/reset-zones', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ zones: zones.slice(i, i + 2000), keepBuildings: true, ground: document.getElementById('zGround').checked, undo }) });
+  }
+  const info = await (await fetch('/api/world')).json();
+  world = info; showChanges(info); overlayKey = '';
+}
+document.getElementById('zMark').onclick = async () => {
+  await loadZoneStats(); filterZones();
+  if (!zoneMatches.length) { alert('No zone matches the filter.'); return; }
+  const live = world.live;
+  if (!confirm(`Mark ${zoneMatches.length.toLocaleString()} zone(s) for reset?\n\n• Their trees, rocks, ore, ruins and dungeon entrances are removed${document.getElementById('zGround').checked ? ', and their ground edits undone' : ''}; players' tombstones stay.\n• Valheim generates them again the next time a player comes near${live ? ' (at once where players are, once applied)' : ''}.\n• ${live ? 'Apply live' : 'Save to world'} does it; until then it can be cancelled with Unmark all.`)) return;
+  await postResets(zoneMatches, false);
+  filterZones();
+};
+document.getElementById('zUnmark').onclick = async () => {
+  if (!resetMarks.size) { alert('No zone is marked for reset.'); return; }
+  await postResets([...resetMarks].map(k => k.split(',').map(Number)), true);
+  if (zoneStats) filterZones();
+};
 document.getElementById('sWhat').onchange = () => { if (document.getElementById('sQuery').value.trim()) runSearch(); };
 for (const id of ['showPaint', 'showClouds']) document.getElementById(id).onchange = () => { if (mapView) { mapView.showPaint = document.getElementById('showPaint').checked; mapView.showClouds = document.getElementById('showClouds').checked; } };
 
@@ -360,12 +443,24 @@ for (const id of ['showPaint', 'showClouds']) document.getElementById(id).onchan
   resize(); requestAnimationFrame(frame);
   const w = await (await fetch('/api/world')).json();
   world = w; zones = w.zones;
-  const pendingChanges = { zones: w.changedZones, deleted: w.deletedObjects ?? 0, added: w.addedObjects ?? 0, resets: w.resetZones ?? 0 };
-  if (w.changedZones || pendingChanges.deleted || pendingChanges.added || pendingChanges.resets) {
-    document.getElementById('changes').hidden = false;
-    document.getElementById('changesText').textContent = [w.changedZones ? `${w.changedZones} zone(s) changed` : '', pendingChanges.deleted ? `${pendingChanges.deleted} object(s) deleted` : '', pendingChanges.added ? `${pendingChanges.added} object(s) added` : '', pendingChanges.resets ? `${pendingChanges.resets} zone(s) to reset` : ''].filter(Boolean).join(', ') + ' — not saved yet.';
-  }
-  document.getElementById('saveBtn').onclick = () => saveWorld(w, pendingChanges, res => { if (res.saved) location.reload(); });
+  let pendingChanges = {};
+  // The "not saved yet" box; called again when the zone filter marks zones.
+  showChanges = info => {
+    pendingChanges = { zones: info.changedZones, deleted: info.deletedObjects ?? 0, added: info.addedObjects ?? 0, resets: info.resetZones ?? 0 };
+    const any = pendingChanges.zones || pendingChanges.deleted || pendingChanges.added || pendingChanges.resets;
+    document.getElementById('changes').hidden = !any;
+    document.getElementById('changesText').textContent = [pendingChanges.zones ? `${pendingChanges.zones} zone(s) changed` : '', pendingChanges.deleted ? `${pendingChanges.deleted} object(s) deleted` : '', pendingChanges.added ? `${pendingChanges.added} object(s) added` : '', pendingChanges.resets ? `${pendingChanges.resets} zone(s) to reset` : ''].filter(Boolean).join(', ') + (w.live ? ' — not applied yet.' : ' — not saved yet.');
+    resetMarks = new Set((info.resetList ?? []).map(([x, z]) => `${x},${z}`));
+  };
+  showChanges(w);
+  if (w.live) {
+    // Live: the changes go to the running game.
+    document.getElementById('saveBtn').textContent = 'Apply live';
+    document.getElementById('saveBtn').onclick = async () => {
+      const res = await (await fetch('/api/save', { method: 'POST' })).json();
+      alert(res.message); location.reload();
+    };
+  } else document.getElementById('saveBtn').onclick = () => saveWorld(w, pendingChanges, res => { if (res.saved) location.reload(); });
   document.getElementById('discardBtn').onclick = () => discardChanges(pendingChanges, () => location.reload());
   if (w.live) {
     // Live view of the running world (WorldEditorBridge plugin): players, and Reload instead of Save.

@@ -165,4 +165,22 @@ public class SaveTests
 		}
 		return p;
 	}
+
+	[Fact]
+	public void AZoneResetKeepsPlayersTombstones()
+	{
+		using var w = new TempWorld();
+		WorldSave world = w.Load();
+		var edits = new EditStore(world);
+		var tree = world.Objects.First(o => o.Prefab == Fixtures.Hash("Beech1"));
+		edits.AddObjects(new[] { new NewObject(-1, Fixtures.Hash("Player_tombstone"), tree.Position + new Vector3(1, 0, 1), Vector3.Zero, 0f) });
+		Assert.True(WorldWriter.Save(world, Array.Empty<ZoneEdit>(), edits.Deleted, edits.Added).Saved);
+		WorldSave saved = WorldSave.Load(w.Dir);
+		var zone = saved.ObjectRefs.First(o => o.Prefab == Fixtures.Hash("Player_tombstone")).Zone;
+		var r = WorldWriter.Save(saved, Array.Empty<ZoneEdit>(), null, null, new[] { new ZoneReset(zone.X, zone.Z, true, false) });
+		Assert.True(r.Saved, r.Message);
+		WorldSave after = WorldSave.Load(w.Dir);
+		Assert.Contains(after.ObjectRefs, o => o.Prefab == Fixtures.Hash("Player_tombstone"));
+		Assert.DoesNotContain(after.Objects, o => o.Prefab == Fixtures.Hash("Beech1") && (int)MathF.Floor((o.Position.X + 32) / 64) == zone.X && (int)MathF.Floor((o.Position.Z + 32) / 64) == zone.Z);
+	}
 }

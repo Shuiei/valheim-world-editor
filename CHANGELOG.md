@@ -21,7 +21,15 @@ version number. Newest first.
   sign, portal or ward whose text matches, counted and pinned on the map; a result opens the 3D
   editor with that object selected.
 
+- **Reset zones across the world** (map page, like MCA Selector): pick zones by biome, distance
+  from buildings, ground edits and distance from the centre, and mark them all for the game to
+  generate again.
+- **Zone resets in live mode** (needs the WorldEditorBridge of this version): Apply live resets the marked zones in the
+  running game, which generates them again at once where players are.
+
 ### Fixed
+- A zone reset also removed players' tombstones, with what they carried: they are always kept now.
+- Saving twice within the same second failed, because both backups got the same folder name.
 - Objects placed or moved in this session lost what they were copied from after the page was
   reloaded, so moving one again made a fresh copy (a moved chest lost its contents).
 

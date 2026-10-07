@@ -737,7 +737,7 @@ function showPending(zones = pending.zones, deleted = pending.deleted, added = p
   $('pending').textContent = parts.length ? `${world.live ? 'Not applied' : 'Unsaved'}: ${parts.join(', ')}` : world.live ? 'All applied' : 'All saved';
   $('pending').classList.toggle('dirty', parts.length > 0);
   $('saveBtn').disabled = $('discardBtn').disabled = !parts.length;
-  if (world.live) $('saveBtn').disabled = !(zones + deleted + added);
+  if (world.live) $('saveBtn').disabled = !(zones + deleted + added + resets);
 }
 showPending();
 $('saveBtn').onclick = () => saveWorld(world, pending, res => { if (res.saved) location.reload(); });
@@ -760,6 +760,8 @@ if (world.live) {
       do {
         applying.again = false;
         const res = await (await fetch('/api/save', { method: 'POST' })).json();
+        // Zones were reset in the game: the world was read again, so the page starts over from it.
+        if (res.reloaded) { msg(res.message); setTimeout(() => location.reload(), 600); return; }
         showPendingFrom(res.pending);
         if (res.saved && !res.pending?.addedObjects) objects.markApplied();
         if (res.saved) { for (const e of undoStack) e.applied = true; renderHistory(); }
