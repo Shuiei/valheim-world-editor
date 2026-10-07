@@ -1033,6 +1033,7 @@ public sealed class GlView : OpenGlControlBase
 			DrawGizmo(s, vp);
 			DrawMeasure(s, vp);
 			DrawPath(s, vp);
+			DrawArea(s, vp);
 			if (ShowWater)
 			{
 				if (_look != null)
@@ -1303,6 +1304,14 @@ public sealed class GlView : OpenGlControlBase
 			_pointer = p.Position;
 			_surfaceSize = surface.Bounds.Size;
 			e.Pointer.Capture(surface);
+			if (_dragButton == PointerUpdateKind.LeftButtonPressed && _mode == ToolMode.Area)
+			{
+				_dragFrom = null;
+				_areaDown = true;
+				Area.Down(GridAt(p.Position, _surfaceSize), e.ClickCount);
+				Wake();
+				return;
+			}
 			if (_dragButton == PointerUpdateKind.LeftButtonPressed && _mode == ToolMode.Path)
 			{
 				_dragFrom = null;
@@ -1362,6 +1371,11 @@ public sealed class GlView : OpenGlControlBase
 				_pathDown = false;
 				Path.Up();
 			}
+			if (_areaDown)
+			{
+				_areaDown = false;
+				Area.Up();
+			}
 			if (_selectDown)
 			{
 				_selectDown = false;
@@ -1389,6 +1403,10 @@ public sealed class GlView : OpenGlControlBase
 			if (_pathDown)
 			{
 				Path.Moved(GridAt(_pointer.Value, _surfaceSize));
+			}
+			if (_areaDown)
+			{
+				Area.Moved(GridAt(_pointer.Value, _surfaceSize));
 			}
 			if (_selectDown)
 			{
@@ -1459,6 +1477,8 @@ public sealed class GlView : OpenGlControlBase
 	public event Action<float, float>? ShapeClicked;
 	public float ShapeRadius { get; set; } = 16;
 	public PathTool Path { get; } = new();
+	public AreaTool Area { get; } = new();
+	private bool _areaDown;
 	// --path: the line is drawn; the window applies it.
 	public event Action? PathScripted;
 	private bool _pathDown;
@@ -1724,6 +1744,63 @@ public sealed class GlView : OpenGlControlBase
 		DrawLines(ref _pathEdgeVao, ref _pathEdgeVbo, edges.ToArray(), vp, new Vector4(1, 0.69f, 0.63f, 0.6f));
 		DrawLines(ref _pathVao, ref _pathVbo, line.ToArray(), vp, new Vector4(1, 0.23f, 0.23f, 1));
 		DrawLines(ref _pathDotVao, ref _pathDotVbo, dots.ToArray(), vp, new Vector4(1, 0.69f, 0.63f, 1));
+	}
+
+	private uint _areaVao, _areaVbo, _resetVao, _resetVbo;
+	// The Area selection (in the Area tool), following the ground, and the zones marked for reset (red, always).
+	private void DrawArea(WorldScene s, Matrix4x4 vp)
+	{
+		Vector3 V(Vector2 g, float lift)
+		{
+			float x = g.X - (s.W - 1) / 2f, z = -(g.Y - (s.H - 1) / 2f);
+			return new Vector3(x, Picking.HeightAt(s, x, z) + lift, z);
+		}
+		void Ring(List<float> to, List<Vector2> pts, bool closed, float lift)
+		{
+			int n = closed ? pts.Count : pts.Count - 1;
+			for (int i = 0; i < n; i++)
+			{
+				Vector2 a = pts[i], b = pts[(i + 1) % pts.Count];
+				int steps = Math.Max(1, (int)MathF.Ceiling(Vector2.Distance(a, b)));
+				for (int k = 0; k < steps; k++)
+				{
+					var p = V(Vector2.Lerp(a, b, k / (float)steps), lift);
+					var q = V(Vector2.Lerp(a, b, (k + 1) / (float)steps), lift);
+					to.AddRange(new[] { p.X, p.Y, p.Z, q.X, q.Y, q.Z });
+				}
+			}
+		}
+		if (_mode == ToolMode.Area)
+		{
+			var data = new List<float>();
+			if (Area.Polygon() is { } poly)
+			{
+				Ring(data, poly, true, 0.3f);
+			}
+			else
+			{
+				List<Vector2> pts;
+				lock (Area.Points)
+				{
+					pts = Area.Points.ToList();
+				}
+				if (pts.Count > 1)
+				{
+					Ring(data, pts, false, 0.3f);
+				}
+			}
+			DrawLines(ref _areaVao, ref _areaVbo, data.ToArray(), vp, new Vector4(0.37f, 0.83f, 1, 1));
+		}
+		if (s.Session is { } session)
+		{
+			var data = new List<float>();
+			foreach (var r in session.Resets)
+			{
+				float gx0 = (r.X - s.X0) * 64, gz0 = (r.Z - s.Z0) * 64;
+				Ring(data, new() { new(gx0, gz0), new(gx0 + 64, gz0), new(gx0 + 64, gz0 + 64), new(gx0, gz0 + 64) }, true, 0.6f);
+			}
+			DrawLines(ref _resetVao, ref _resetVbo, data.ToArray(), vp, new Vector4(1, 0.31f, 0.25f, 1));
+		}
 	}
 
 	private uint _measureVao, _measureVbo;

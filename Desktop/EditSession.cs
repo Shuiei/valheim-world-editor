@@ -21,6 +21,8 @@ public sealed class EditSession
 	public sealed record Change(string Label, int[] Points, Ground.State Before, Ground.State After, List<(int X, int Z)> Zones)
 	{
 		public (int Index, bool Before, bool After)[] Things { get; init; } = Array.Empty<(int, bool, bool)>();
+		// Zones marked for reset (on) or not.
+		public (ZoneReset Reset, bool Before, bool After)[] Resets { get; init; } = Array.Empty<(ZoneReset, bool, bool)>();
 	}
 	private static readonly Ground.State NoPoints = new(Array.Empty<float>(), Array.Empty<float>(), Array.Empty<byte>(), Array.Empty<float>(), Array.Empty<byte>());
 	private readonly List<Change> _undo = new(), _redo = new();
@@ -206,14 +208,16 @@ public sealed class EditSession
 		return (touchedCount, clamped, bad);
 	}
 
+	// The values of these points only.
+	private static Ground.State Pick(Ground.State all, int[] pts) => new(
+		pts.Select(p => all.Level[p]).ToArray(), pts.Select(p => all.Smooth[p]).ToArray(), pts.Select(p => all.Mod[p]).ToArray(),
+		pts.SelectMany(p => new[] { all.Paint[p * 4], all.Paint[p * 4 + 1], all.Paint[p * 4 + 2], all.Paint[p * 4 + 3] }).ToArray(), pts.Select(p => all.PMod[p]).ToArray());
+
 	private void Record(string label, Ground.State start, IEnumerable<int> touched, List<(int X, int Z)> zones)
 	{
-		int[] pts = touched.Order().ToArray();
+		int[] pts = touched.Distinct().Order().ToArray();
 		var now = Ground.Snapshot();
-		Ground.State Pick(Ground.State all) => new(
-			pts.Select(p => all.Level[p]).ToArray(), pts.Select(p => all.Smooth[p]).ToArray(), pts.Select(p => all.Mod[p]).ToArray(),
-			pts.SelectMany(p => new[] { all.Paint[p * 4], all.Paint[p * 4 + 1], all.Paint[p * 4 + 2], all.Paint[p * 4 + 3] }).ToArray(), pts.Select(p => all.PMod[p]).ToArray());
-		_undo.Add(new Change(label, pts, Pick(start), Pick(now), zones));
+		_undo.Add(new Change(label, pts, Pick(start, pts), Pick(now, pts), zones));
 		if (_undo.Count > HistoryLength)
 		{
 			_undo.RemoveAt(0);
@@ -256,6 +260,10 @@ public sealed class EditSession
 			}
 			Send(c.Zones);
 			SetGone(c.Things.Select(t => (t.Index, after ? t.After : t.Before)));
+			foreach (var (r, b, a) in c.Resets)
+			{
+				Edits.SetReset(r, after ? a : b);
+			}
 		}
 		if (c.Things.Length > 0)
 		{
@@ -311,40 +319,88 @@ public sealed class EditSession
 	// (chest contents, builder...), like the web editor's moves. Returns the copies' indices.
 	public List<int> Move(IReadOnlyList<(int Index, System.Numerics.Vector3 Position, System.Numerics.Vector3 Rotation)> moves, string? label = null)
 	{
+		var live = moves.Where(m => !Scene.Things[m.Index].Gone).ToList();
+		var adds = live.Select(m =>
+		{
+			var t = Scene.Things[m.Index];
+			// A copy of an object of this session keeps what that one was copied from.
+			var from = t.Id < 0 ? Edits.FindAdded(t.Id) : null;
+			return (new NewObject(0, t.Prefab, m.Position, m.Rotation, t.Scale, t.Id < 0 ? from?.SourceId : t.Id, t.Id < 0 && (from?.Fresh ?? true), from?.Raw), t.Piece);
+		}).ToList();
+		return Commit(label ?? $"Moved {live.Count}", null, live.Select(m => m.Index).ToList(), adds);
+	}
+
+	// One undo step that may change the ground (ground: as EditGround), take things away (remove:
+	// indices) and add new objects (add: their ids are given here; Piece: a player-built piece). Returns
+	// the indices of the things added.
+	public List<int> Commit(string label, Func<Ground, (List<int> Touched, (int X0, int Z0, int X1, int Z1) Rect)>? ground,
+		IReadOnlyCollection<int> remove, IReadOnlyList<(NewObject Object, bool Piece)> add, (ZoneReset Reset, bool Before, bool After)[]? resets = null)
+	{
 		var list = Scene.Things;
 		var added = new List<NewObject>();
-		var copies = new List<int>();
+		var indices = new List<int>();
 		var changes = new List<(int, bool, bool)>();
+		int[] points = Array.Empty<int>();
+		Ground.State before = NoPoints, after = NoPoints;
+		var zones = new List<(int X, int Z)>();
+		lock (_lock)
+		{
+			if (ground != null)
+			{
+				var start = Ground.Snapshot();
+				var (touched, rect) = ground(Ground);
+				if (touched.Count > 0)
+				{
+					Touch(rect);
+					zones = Ground.ZonesOf(touched);
+					points = touched.Distinct().Order().ToArray();
+					(before, after) = (Pick(start, points), Pick(Ground.Snapshot(), points));
+					Send(zones);
+				}
+			}
+		}
 		lock (list)
 		{
-			foreach (var (i, pos, rot) in moves)
+			foreach (int i in remove.Distinct())
 			{
-				var t = list[i];
-				if (t.Gone)
+				if (!list[i].Gone)
 				{
-					continue;
+					changes.Add((i, false, true));
 				}
-				// A copy of an object of this session keeps what that one was copied from.
-				var from = t.Id < 0 ? Edits.FindAdded(t.Id) : null;
-				var n = new NewObject(_nextId--, t.Prefab, pos, rot, t.Scale, t.Id < 0 ? from?.SourceId : t.Id, t.Id < 0 && (from?.Fresh ?? true), from?.Raw);
+			}
+			foreach (var (o, piece) in add)
+			{
+				var n = o with { Id = _nextId-- };
 				added.Add(n);
-				list.Add(new WorldScene.Thing(n.Id, t.Prefab, pos, rot, t.Scale, t.Piece));
-				copies.Add(list.Count - 1);
-				changes.Add((i, false, true));
+				list.Add(new WorldScene.Thing(n.Id, n.Prefab, n.Position, n.Rotation, n.Scale, piece));
+				indices.Add(list.Count - 1);
 				changes.Add((list.Count - 1, true, false));
 			}
 		}
-		if (added.Count == 0)
+		if (added.Count > 0)
 		{
-			return copies;
+			Edits.AddObjects(added);
 		}
-		Edits.AddObjects(added);
 		SetGone(changes.Where(c => c.Item3).Select(c => (c.Item1, true)));
-		AddChange(new Change(label ?? $"Moved {added.Count}", Array.Empty<int>(), NoPoints, NoPoints, new()) { Things = changes.ToArray() });
-		ThingsChanged?.Invoke(changes.Select(c => c.Item1).ToList());
+		foreach (var (r, _, on) in resets ?? Array.Empty<(ZoneReset, bool, bool)>())
+		{
+			Edits.SetReset(r, on);
+		}
+		if (points.Length == 0 && changes.Count == 0 && (resets?.Length ?? 0) == 0)
+		{
+			return indices;
+		}
+		AddChange(new Change(label, points, before, after, zones) { Things = changes.ToArray(), Resets = resets ?? Array.Empty<(ZoneReset, bool, bool)>() });
+		if (changes.Count > 0)
+		{
+			ThingsChanged?.Invoke(changes.Select(c => c.Item1).ToList());
+		}
 		Changed?.Invoke();
-		return copies;
+		return indices;
 	}
+
+	// The zones marked to be given back to the world generator (to draw them).
+	public List<ZoneReset> Resets => Edits.Resets;
 
 	// The zones to the edit store, as the web page uploads them.
 	private void Send(List<(int X, int Z)> zones)

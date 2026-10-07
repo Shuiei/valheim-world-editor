@@ -25,6 +25,7 @@ public sealed class MainWindow : Window
 	internal MeasurePanel MeasurePanel { get; }
 	internal ShapePanel ShapePanel { get; } = new();
 	internal PathPanel PathPanel { get; }
+	internal AreaPanel AreaPanel { get; }
 
 	// The save bar (top middle): what is waiting to be saved, undo, redo, Save, and the last message.
 	private readonly TextBlock _pending = new() { FontSize = 12, VerticalAlignment = VerticalAlignment.Center, Text = "All saved" };
@@ -231,6 +232,24 @@ public sealed class MainWindow : Window
 		{
 			e.Handled = true;
 		}
+		else if (Tools.Mode == ToolMode.Area && !ctrl && e.Key is Avalonia.Input.Key.Enter or Avalonia.Input.Key.Return)
+		{
+			if (!_view.Area.CloseWithEnter())
+			{
+				_ = AreaPanel.Apply();
+			}
+			e.Handled = true;
+		}
+		else if (Tools.Mode == ToolMode.Area && !ctrl && e.Key == Avalonia.Input.Key.Back)
+		{
+			_view.Area.RemoveLast();
+			e.Handled = true;
+		}
+		else if (Tools.Mode == ToolMode.Area && !ctrl && e.Key == Avalonia.Input.Key.Escape && _view.Area.Points.Count > 0)
+		{
+			_view.Area.Clear();
+			e.Handled = true;
+		}
 		else if (Tools.Mode == ToolMode.Path && !ctrl && e.Key is Avalonia.Input.Key.Enter or Avalonia.Input.Key.Return)
 		{
 			ApplyPath();
@@ -255,7 +274,7 @@ public sealed class MainWindow : Window
 		{
 			Tools.Key("Escape");
 		}
-		else if (!ctrl && e.Key is Avalonia.Input.Key.E or Avalonia.Input.Key.M or Avalonia.Input.Key.G or Avalonia.Input.Key.P)
+		else if (!ctrl && e.Key is Avalonia.Input.Key.E or Avalonia.Input.Key.M or Avalonia.Input.Key.G or Avalonia.Input.Key.P or Avalonia.Input.Key.B)
 		{
 			Tools.Key(e.Key.ToString());
 		}
@@ -346,6 +365,10 @@ public sealed class MainWindow : Window
 		MeasurePanel = new MeasurePanel(_view);
 		PathPanel = new PathPanel(_view, Tools.Brush);
 		PathPanel.ApplyAsked += ApplyPath;
+		AreaPanel = new AreaPanel(_view, () => _session, prefab => _models?.NameOf(prefab) ?? TerrainEditor.Terrain.PrefabCatalog.DisplayName(prefab));
+		AreaPanel.Message += t => { _message.Text = t; UpdateSaveBar(); };
+		AreaPanel.SwitchToSelect += () => Tools.ChooseSelect();
+		AreaPanel.Confirm = text => Dialogs.Ask(this, "Reset zones", text, "Reset when saving");
 		_view.PathScripted += () =>
 		{
 			PathPanel.Refresh();
@@ -381,9 +404,9 @@ public sealed class MainWindow : Window
 			Margin = new Thickness(10),
 			HorizontalAlignment = HorizontalAlignment.Left,
 			VerticalAlignment = VerticalAlignment.Top,
-			Children = { Tools.Rail, Tools.Options, SelectPanel.Card, MeasurePanel.Card, ShapePanel.Card, PathPanel.Card },
+			Children = { Tools.Rail, Tools.Options, SelectPanel.Card, MeasurePanel.Card, ShapePanel.Card, PathPanel.Card, AreaPanel.Card },
 		};
-		SelectPanel.Card.IsVisible = MeasurePanel.Card.IsVisible = ShapePanel.Card.IsVisible = PathPanel.Card.IsVisible = false;
+		SelectPanel.Card.IsVisible = MeasurePanel.Card.IsVisible = ShapePanel.Card.IsVisible = PathPanel.Card.IsVisible = AreaPanel.Card.IsVisible = false;
 		ShapePanel.Changed += () => _view.ShapeRadius = ShapePanel.Radius;
 		_view.ShapeClicked += PutShape;
 		Tools.Options.VerticalAlignment = VerticalAlignment.Top;
@@ -396,6 +419,11 @@ public sealed class MainWindow : Window
 			MeasurePanel.Card.IsVisible = Tools.Mode == ToolMode.Measure;
 			ShapePanel.Card.IsVisible = Tools.Mode == ToolMode.Shape;
 			PathPanel.Card.IsVisible = Tools.Mode == ToolMode.Path;
+			AreaPanel.Card.IsVisible = Tools.Mode == ToolMode.Area;
+			if (Tools.Mode == ToolMode.Area)
+			{
+				AreaPanel.Refresh();
+			}
 		};
 		_view.SelectTool.Message += (text, _) => _message.Text = text;
 		_view.StrokeEnded += msg =>
@@ -475,6 +503,10 @@ public sealed class MainWindow : Window
 				else if (Options.StartTool is "shape")
 				{
 					Tools.ChooseMode(ToolMode.Shape);
+				}
+				else if (Options.StartTool is "area")
+				{
+					Tools.ChooseMode(ToolMode.Area);
 				}
 				else if (Options.StartTool is "path")
 				{
