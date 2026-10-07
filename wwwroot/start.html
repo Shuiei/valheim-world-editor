@@ -11,6 +11,11 @@
   :root { color-scheme: dark; }
   select option, select optgroup { background: #1e232b; color: #e6e9ee; }
   select option:checked { background: #e0a64b; color: #1b1508; }
+  /* The closed box: drawn by the page, not by the system theme (WebKitGTK draws a light button under
+     the page's light text otherwise), with its own arrow. */
+  select { -webkit-appearance: none; appearance: none; background-color: #1e232b; color: #e6e9ee;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%238e97a6' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") !important;
+    background-repeat: no-repeat !important; background-position: right 7px center !important; padding-right: 22px !important; }
   :root {
     --bg: #14171c; --panel: #1b1f26; --panel2: #1e232b; --line: #2e353f; --line2: #3c4552;
     --text: #e6e9ee; --muted: #8e97a6; --accent: #e0a64b; --accent-ink: #1b1508; --warn: #e0604b; --ok: #7bc47f;

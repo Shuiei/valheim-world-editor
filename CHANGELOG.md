@@ -3,6 +3,15 @@
 All notable changes to the Valheim world editor and its WorldEditorBridge plugin, which share one
 version number. Newest first.
 
+## v0.20.4 — 2026-10-06 (dropdown boxes)
+
+### Fixed
+- The closed dropdown boxes were drawn by the system theme (a light box in the app window on Linux)
+  under the editor's light text, so the chosen value could not be read: the editor draws them
+  itself now, dark, with its own arrow.
+- A dropdown followed by a button (Replace … go, Paint … apply, Saved … keep) pushed the button onto
+  the next line.
+
 ## v0.20.3 — 2026-10-06 (readable dropdowns)
 
 ### Fixed
