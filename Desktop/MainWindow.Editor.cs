@@ -42,7 +42,7 @@ public sealed partial class MainWindow
 	private static Button NavButton(string arrow, string where)
 	{
 		var b = new Button { Content = arrow, FontSize = 11, Padding = new Thickness(6, 3) }.Classed("ghost");
-		ToolTip.SetTip(b, $"Move the area one zone (64 m) {where.ToLowerInvariant()}");
+		b.Tip($"top.{where.ToLowerInvariant()}");
 		return b;
 	}
 
@@ -56,17 +56,17 @@ public sealed partial class MainWindow
 			AreaNav.Children.Add(b);
 		}
 		AreaNav.Children.Add(FollowButton);
-		ToolTip.SetTip(FollowButton, "Follow the view: when you look near the edge of the area, it moves there by itself");
+		FollowButton.Tip("top.follow");
 		FollowButton.Classes.Set("on", _settings.AreaFollow);
 		FollowButton.Click += (_, _) => SetFollow(!_settings.AreaFollow);
 		_followTimer.Tick += async (_, _) => await CheckFollow();
 		_followTimer.Start();
 
-		ToolTip.SetTip(DiscardButton, "Throw away the changes not saved (or not applied) yet: the last steps in History are undone");
+		DiscardButton.Tip("top.discard");
 		DiscardButton.Click += async (_, _) => await DiscardHere();
-		ToolTip.SetTip(ReloadButton, "Load the world again from the game");
+		ReloadButton.Tip("top.reload");
 		ReloadButton.Click += async (_, _) => await ReloadHere();
-		ToolTip.SetTip(AutoApplyBox, "Apply every stroke and undo to the game right away");
+		AutoApplyBox.Tip("top.auto");
 		AutoApplyBox.IsChecked = _settings.AutoApply;
 		AutoApplyBox.IsCheckedChanged += async (_, _) =>
 		{
@@ -78,7 +78,7 @@ public sealed partial class MainWindow
 			}
 		};
 
-		var close = new Button { Content = Icons.Make("close", 12), Padding = new Thickness(4) }.Classed("ghost");
+		var close = new Button { Content = Icons.Make("close", 12), Padding = new Thickness(4) }.Classed("ghost").Tip("note.close");
 		close.Click += (_, _) => LocationNote.IsVisible = false;
 		Grid.SetColumn(close, 1);
 		LocationNote = new Border
@@ -105,6 +105,8 @@ public sealed partial class MainWindow
 	private Control PlayersControl()
 	{
 		PlayersRow.Children.Add(new TextBlock { Text = "PLAYERS", FontSize = 11, FontWeight = FontWeight.SemiBold, Foreground = Ui.Muted, Margin = new Thickness(0, 8, 0, 2) });
+		PlayerBox.Tip("view.player");
+		GoPlayerButton.Tip("view.goPlayer");
 		PlayersRow.Children.Add(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { new TextBlock { Text = "Go to", FontSize = 12, VerticalAlignment = VerticalAlignment.Center }, PlayerBox, GoPlayerButton } });
 		return PlayersRow;
 	}
@@ -391,7 +393,7 @@ public sealed partial class MainWindow
 			PlayerBox.SelectedItem = chosen != null && names.Contains(chosen) ? chosen : names.FirstOrDefault();
 		}
 		GoPlayerButton.IsEnabled = names.Count > 0;
-		ToolTip.SetTip(PlayerBox, string.Join("\n", players.Select(p => $"{p.Name}: {p.World.X:0}, {p.World.Z:0}")));
+		ToolTip.SetTip(PlayerBox, Tips.Of("view.player") + "\n" + string.Join("\n", players.Select(p => $"{p.Name}: {p.World.X:0}, {p.World.Z:0}")));
 		PlaceLabels();
 	}
 

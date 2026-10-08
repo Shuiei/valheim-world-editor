@@ -68,10 +68,10 @@ public sealed class SelectPanel
 	public SelectPanel(SelectTool tool)
 	{
 		_tool = tool;
-		DeleteButton = Act("Delete", "Remove the selected objects from the world (Del). Ctrl+Z brings them back.");
-		BuildingButton = Act("Whole building", "Add every piece connected to the selected ones (double-click a piece does it too)");
-		SameButton = Act("Same kind", "Select every shown object of the selected kinds");
-		InvertButton = Act("Invert", "Select the shown objects that are not selected, and only those");
+		DeleteButton = Act("Delete", Tips.Of("select.delete"));
+		BuildingButton = Act("Whole building", Tips.Of("select.building"));
+		SameButton = Act("Same kind", Tips.Of("select.same"));
+		InvertButton = Act("Invert", Tips.Of("select.invert"));
 		DeleteButton.Click += (_, _) => tool.Delete();
 		ReplaceButton.Click += (_, _) =>
 		{
@@ -80,19 +80,30 @@ public sealed class SelectPanel
 				ReplaceAsked?.Invoke(ReplaceKinds[ReplaceBox.SelectedIndex]);
 			}
 		};
-		ToolTip.SetTip(ReplacePickButton, "Pick the kind from the world: click an object");
+		ReplacePickButton.Tip("select.pick");
+		ReplaceBox.Tip("select.to");
+		ReplaceButton.Tip("select.replace");
+		ApplyButton.Tip("select.apply");
+		InspectButton.Tip("select.inspect");
+		ClaimButton.Tip("select.claim");
+		SavedBox.Tip("select.saved");
+		ForgetButton.Tip("select.forget");
+		XBox.Tip("select.x");
+		YBox.Tip("select.y");
+		ZBox.Tip("select.z");
+		TurnBox.Tip("select.turn");
 		ReplacePickButton.Click += (_, _) => PickKindAsked?.Invoke("Replace", UsePicked);
 		BuildingButton.Click += (_, _) => tool.WholeBuilding();
 		SameButton.Click += (_, _) => tool.SameKind();
 		InvertButton.Click += (_, _) => tool.Invert();
-		GroundBox = new CheckBox { Content = "Put each object on the ground when moving", IsChecked = tool.OnGround, FontSize = 12 };
+		GroundBox = new CheckBox { Content = "Put each object on the ground when moving", IsChecked = tool.OnGround, FontSize = 12 }.Tip("select.ground");
 		GroundBox.IsCheckedChanged += (_, _) => tool.OnGround = GroundBox.IsChecked == true;
-		SnapBox = new CheckBox { Content = "Snap to other pieces when moving", IsChecked = tool.SnapToPieces, FontSize = 12 };
+		SnapBox = new CheckBox { Content = "Snap to other pieces when moving", IsChecked = tool.SnapToPieces, FontSize = 12 }.Tip("select.snap");
 		SnapBox.IsCheckedChanged += (_, _) => tool.SnapToPieces = SnapBox.IsChecked == true;
 
-		ToolTip.SetTip(KeepButton, "Keep the selection under a name, to select it again later (also after saving the world)");
-		ToolTip.SetTip(LoadButton, "Select the objects of the saved selection");
-		ToolTip.SetTip(AddSavedButton, "Add the objects of the saved selection to what is selected");
+		KeepButton.Tip("select.keep");
+		LoadButton.Tip("select.load");
+		AddSavedButton.Tip("select.add");
 		KeepButton.Click += async (_, _) => await Keep();
 		LoadButton.Click += (_, _) => UseSaved(false);
 		AddSavedButton.Click += (_, _) => UseSaved(true);
@@ -100,7 +111,12 @@ public sealed class SelectPanel
 		SavedBox.SelectionChanged += (_, _) => _savedRow!.IsVisible = SavedBox.SelectedIndex >= 0;
 		_savedRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, IsVisible = false, Children = { LoadButton, AddSavedButton, ForgetButton } };
 
-		Control Cell(string label, Control box) => new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Children = { new TextBlock { Text = label, Width = 34, FontSize = 12, VerticalAlignment = VerticalAlignment.Center }, box } };
+		Control Cell(string label, Control box)
+		{
+			var l = new TextBlock { Text = label, Width = 34, FontSize = 12, VerticalAlignment = VerticalAlignment.Center };
+			Tips.Label(l, box);
+			return new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Children = { l, box } };
+		}
 		var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("*,*"), RowDefinitions = new RowDefinitions("Auto,Auto"), ColumnSpacing = 6, RowSpacing = 4 };
 		void Put(Control c, int row, int col)
 		{
@@ -112,7 +128,7 @@ public sealed class SelectPanel
 		Put(Cell("Y", YBox), 0, 1);
 		Put(Cell("Z", ZBox), 1, 0);
 		Put(Cell("Turn", TurnBox), 1, 1);
-		ToolTip.SetTip(ByButton, "Move and turn by the typed amounts instead");
+		ByButton.Tip("select.by");
 		ByButton.Click += (_, _) => SetBy(!_by);
 		ApplyButton.Click += (_, _) => Apply();
 		_exact = new StackPanel
