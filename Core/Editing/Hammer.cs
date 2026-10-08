@@ -80,33 +80,37 @@ public static class Hammer
 
 	public static Data? Get(string prefab) => All.Value.GetValueOrDefault(prefab);
 
-	// How far below its origin a piece reaches (its colliders' lowest point), turned and scaled; 0 for a
-	// piece the game gives no collider.
-	public static float Bottom(string prefab, Quaternion rotation, float scale = 1)
+	// The points of a piece's colliders (box corners, mesh vertices, the bottoms and sides of spheres
+	// and capsules), turned and scaled, from its origin; none for a piece the game gives no collider.
+	public static IEnumerable<Vector3> Outline(string prefab, Quaternion rotation, float scale = 1)
 	{
-		if (Get(prefab) is not { Colliders.Length: > 0 } d)
+		if (Get(prefab) is not { } d)
 		{
-			return 0;
+			yield break;
 		}
-		float lo = float.MaxValue;
 		foreach (var c in d.Colliders)
 		{
 			IEnumerable<Vector3> pts = c switch
 			{
 				Box b => Enumerable.Range(0, 8).Select(i => b.C + Vector3.Transform(new Vector3((i & 1) == 0 ? -b.H.X : b.H.X, (i & 2) == 0 ? -b.H.Y : b.H.Y, (i & 4) == 0 ? -b.H.Z : b.H.Z), b.Q)),
-				Sphere sp => new[] { sp.C - new Vector3(0, sp.R, 0) },
-				Capsule cp => new[] { cp.A, cp.B },
+				Sphere sp => Round(sp.C, sp.R),
+				Capsule cp => Round(cp.A, cp.R).Concat(Round(cp.B, cp.R)),
 				Mesh m => m.V,
 				_ => Array.Empty<Vector3>(),
 			};
 			foreach (var v in pts)
 			{
-				float y = Vector3.Transform(v * scale, rotation).Y - (c is Capsule cap ? cap.R * scale : 0);
-				lo = MathF.Min(lo, y);
+				yield return Vector3.Transform(v * scale, rotation);
 			}
 		}
-		return lo == float.MaxValue ? 0 : lo;
+
+		static IEnumerable<Vector3> Round(Vector3 c, float r) => new[] { Vector3.UnitX, -Vector3.UnitX, Vector3.UnitY, -Vector3.UnitY, Vector3.UnitZ, -Vector3.UnitZ }.Select(u => c + u * r);
 	}
+
+	// How far below its origin a piece reaches (its colliders' lowest point), turned and scaled; 0 for a
+	// piece the game gives no collider.
+	public static float Bottom(string prefab, Quaternion rotation, float scale = 1) =>
+		Outline(prefab, rotation, scale).Select(v => v.Y).DefaultIfEmpty(0).Min();
 
 	// A piece standing in the world: its kind, where, turned how.
 	public sealed record Placed(int Index, string Prefab, Vector3 Position, Quaternion Rotation);

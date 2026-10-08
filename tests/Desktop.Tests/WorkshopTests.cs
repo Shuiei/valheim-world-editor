@@ -4,6 +4,7 @@ using Avalonia.Threading;
 using TerrainEditor.App;
 using TerrainEditor.Editing;
 using TerrainEditor.Save;
+using TerrainEditor.Terrain;
 using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
@@ -20,8 +21,9 @@ public class WorkshopTests
 		File.WriteAllText(path, "#Name:" + name + "\n#Creator:test\n#HomesteadVersion:1\n#Pieces\n"
 			+ "wood_floor;Building;0;0;0;0;0;0;1;\"\";1;1;1\n"
 			+ "woodwall;Building;1;1;0;0;0.707;0;0.707;\"\";1;1;1\n"
-			// Up in the air, touching nothing: it would fall.
-			+ "wood_floor;Building;0;12;6;0;0;0;1;\"\";1;1;1\n"
+			// Up in the air over the floor, touching nothing: it would fall (the ground it stood on in game
+			// is taken to be under the lowest piece of each spot).
+			+ "wood_floor;Building;0;12;0;0;0;0;1;\"\";1;1;1\n"
 			+ "no_such_piece_xyz;Building;0;0;0;0;0;0;1;\"\";1;1;1\n");
 		return path;
 	}
@@ -34,7 +36,7 @@ public class WorkshopTests
 		{
 			var scene = Workshop.Create("Workshop");
 			var s = scene.Session!;
-			var (placed, unknown, lift) = Workshop.Open(s, Hut(dir));
+			var (placed, unknown, lift, _) = Workshop.Open(s, Hut(dir));
 			Assert.Equal(3, placed);
 			// Its lowest point (the floor's collider, a little below its origin) on the ground.
 			Assert.Equal(-TerrainEditor.Editing.Hammer.Bottom("wood_floor", Quaternion.Identity), lift, 3);
@@ -334,5 +336,44 @@ public class WorkshopTests
 		await w.LeaveWorkshop();
 		Assert.False(w.CutBox.IsVisible);
 		Assert.Null(w.View.CutY);
+	}
+
+	// An imported building: its lowest buildable piece on the ground (a rock a builder left lower does
+	// not count), and the ground it stood on in game assumed under each of its lowest pieces (the
+	// terrain reached each post): a wall standing higher on its own spot is on the ground, one on top
+	// of another is not.
+	[Fact]
+	public void ImportsStandOnTheirLowestBuildablePieceAndTheTerrainUnderTheirPosts()
+	{
+		string dir = Path.Combine(Path.GetTempPath(), "vwe-ws-" + Guid.NewGuid().ToString("N")[..8]);
+		try
+		{
+			Directory.CreateDirectory(dir);
+			string f = Path.Combine(dir, "posts.blueprint");
+			File.WriteAllText(f, "#Name:Posts\n#Pieces\n"
+				+ "Placeable_Stone;Misc;3;-4;0;0;0;0;1;\"\";1;1;1\n"
+				+ "woodwall;Misc;0;1;0;0;0;0;1;\"\";1;1;1\n"
+				+ "woodwall;Misc;0;3;0;0;0;0;1;\"\";1;1;1\n"
+				+ "woodwall;Misc;6;3;0;0;0;0;1;\"\";1;1;1\n");
+			var scene = Workshop.Create("W");
+			var (_, _, lift, terrain) = Workshop.Open(scene.Session!, f);
+			// The lowest wall's bottom (0) on the ground; the rock (lower) left where it was in the building.
+			Assert.Equal(0, lift, 3);
+			var walls = scene.Things.Where(t => !t.Gone && PrefabCatalog.NameOf(t.Prefab) == "woodwall").OrderBy(t => t.Position.X).ThenBy(t => t.Position.Y).ToList();
+			Assert.Equal(Workshop.Ground + 1, walls[0].Position.Y, 3);
+			Assert.True(Workshop.Buildable("woodwall"));
+			Assert.False(Workshop.Buildable("Placeable_Stone"));
+			var pieces = walls.Select(t => new Stability.Piece("woodwall", t.Position, Quaternion.Identity)).ToList();
+			var r = Stability.Solve(pieces, (x, z) => Workshop.GroundAt(terrain, x, z));
+			// The low wall and the high wall standing alone: on the ground; the one on top: not.
+			Assert.Equal(100, r.Support[0], 1);
+			Assert.Equal(100, r.Support[2], 1);
+			Assert.True(r.Support[1] < 100);
+			Assert.Empty(r.Falls);
+		}
+		finally
+		{
+			Directory.Delete(dir, recursive: true);
+		}
 	}
 }

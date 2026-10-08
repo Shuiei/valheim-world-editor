@@ -17,7 +17,8 @@ the plugin is unchanged in versions without that part.
   meet. Ctrl + wheel lifts the piece; , and . turn it by 22.5° (or another step).
 - The Workshop's **Library** tab: your blueprints with pictures, cost and search; Open (alone on the
   plot), Add, drag one onto the plot, or drop .blueprint and .vbuild files from your files. A
-  blueprint keeps its form, its lowest point on the ground. The start page's Workshop card opens it.
+  blueprint keeps its form, its lowest buildable piece on the ground (rocks do not count); the
+  support check takes the ground it stood on in game to be under its lowest piece at each spot. The start page's Workshop card opens it.
 - The Workshop's **support check** tints the pieces in the game's build-mode colours (light blue on
   the ground, green to red); **Cut** shows the building only up to a height, to build inside it.
 - **Select**: Ctrl + click adds to the selection; Shift + click takes the row from the last object

@@ -28,6 +28,8 @@ public partial class MainWindow
 	// How far the blueprint opened was lifted to put its lowest point on the ground (taken off again
 	// when it is saved).
 	private float _workshopLift;
+	// The ground the blueprints opened or added stood on in game (per metre; Workshop.GroundAt).
+	private Dictionary<(int, int), float> _workshopTerrain = new();
 	private string? _workshopFile;
 	// The edits' version when the building was last saved (or opened).
 	private int _workshopSaved;
@@ -135,7 +137,12 @@ public partial class MainWindow
 		}
 		try
 		{
-			var (placed, unknown, _) = Workshop.Add(s, path, null, at);
+			var (placed, unknown, _, terrain) = Workshop.Add(s, path, null, at);
+			foreach (var (cell, y) in terrain)
+			{
+				_workshopTerrain[cell] = _workshopTerrain.TryGetValue(cell, out float was) ? MathF.Min(was, y) : y;
+			}
+			RefreshSupport();
 			_message.Text = $"Added “{Homestead.Read(path)?.Name ?? Path.GetFileNameWithoutExtension(path)}”: {placed} piece(s).{(unknown.Count > 0 ? $" {unknown.Count} kind(s) the game does not know were left out (mods?): {string.Join(", ", unknown.Take(5))}." : "")} Ctrl+Z takes it back.";
 		}
 		catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
@@ -186,14 +193,16 @@ public partial class MainWindow
 		_inWorkshop = true;
 		_workshopName = name;
 		_workshopLift = 0;
+		_workshopTerrain = new();
 		_workshopDetails = details;
 		// Only Homestead's own folder is saved back to without asking.
 		_workshopFile = path != null && string.Equals(Path.GetDirectoryName(Path.GetFullPath(path)), Path.GetFullPath(Blueprints.Status.Folder), StringComparison.Ordinal) ? path : null;
 		string msg = "The Workshop: pick a piece in Build and click to put it down (it snaps like the game's hammer); Select (E) moves, turns and deletes; then Save blueprint.";
 		if (path != null)
 		{
-			var (placed, unknown, lift) = Workshop.Open(scene.Session!, path, text);
+			var (placed, unknown, lift, terrain) = Workshop.Open(scene.Session!, path, text);
 			_workshopLift = lift;
+			_workshopTerrain = terrain;
 			msg = $"Opened “{name}”: {placed} piece(s).{(unknown.Count > 0 ? $" {unknown.Count} kind(s) the game does not know were left out (mods?): {string.Join(", ", unknown.Take(5))}." : "")} Change it, then Save blueprint.";
 		}
 		_workshopSaved = scene.Session!.Edits.Version;
@@ -284,7 +293,8 @@ public partial class MainWindow
 			for (int i = 0; i < s.Scene.Things.Count; i++)
 			{
 				var t = s.Scene.Things[i];
-				if (t.Gone || PieceCatalog.Get(t.Prefab) == null || PrefabCatalog.NameOf(t.Prefab) is not string name)
+				// Buildable pieces only (rocks and other things the hoe places are not the building).
+				if (t.Gone || PrefabCatalog.NameOf(t.Prefab) is not string name || !Workshop.Buildable(name))
 				{
 					continue;
 				}
@@ -292,7 +302,8 @@ public partial class MainWindow
 				pieces.Add(new Stability.Piece(name, t.Position, BlueprintFormats.FromEuler(t.Rotation), t.Scale > 0 ? t.Scale : 1));
 			}
 		}
-		var r = Stability.Solve(pieces, (_, _) => Workshop.Ground);
+		var terrain = _workshopTerrain;
+		var r = Stability.Solve(pieces, (x, z) => Workshop.GroundAt(terrain, x, z));
 		LastSupport = r;
 		var show = new Dictionary<int, float>();
 		for (int k = 0; k < index.Count; k++)

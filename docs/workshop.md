@@ -41,9 +41,14 @@ through names, descriptions and tags.
 | **Import file…** | Imports a file into the library. |
 
 A blueprint keeps its form exactly (every piece where it was, turned as it was); it is moved as one,
-so its lowest point (the pieces' real shape) is on the ground. A Homestead blueprint saved again
-keeps its height from its anchor. Files from PlanBuild and older tools hold no ground: parts that
-rested on uneven ground in game may hang above the flat plot, and the support check says so.
+so its lowest buildable piece (by its real shape) is on the ground. Rocks and other things the hoe
+places do not count: they are not the building, and the support check leaves them out. A Homestead
+blueprint saved again keeps its height from its anchor.
+
+In game the building stood on uneven ground. The support check takes that ground to be under the
+lowest piece of each spot (the terrain reached each post), or, for Homestead blueprints that record
+them, at their terrain contact points. A piece with nothing below it at its spot therefore counts as
+on the ground.
 
 The Workshop keeps to building: the tool rail has only **Build**, **Select** and **View** (the
 ground tools, Area, Path, Mountain and the rest are for worlds), and there is no Mask, View panel or
