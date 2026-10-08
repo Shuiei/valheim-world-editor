@@ -14,6 +14,9 @@ namespace TerrainEditor.Desktop;
 //   shot <file.png>                a picture of the whole window, panels and view (documentation)
 //   look <game|seethrough> <on|off>, look res <sharp|balanced|fast>
 //                                  the View panel's Look switches
+//   camera <x> <z> <yaw°> <pitch°> <distance>  the 3D view's camera on world x, z
+//   click <text>                   the visible button, switch or box labelled so (windows and dialogs)
+//   choose <text>                  the entry so named in whichever visible list has it
 //   bench <seconds>                the 3D camera turns on its own; the frame rates come back
 //   mouse <down|move|up> <x> <z> [left|right|middle] [shift|ctrl|alt ...]
 //                                  the mouse at world x, z over the 3D view (real pointer events)
@@ -152,6 +155,25 @@ public static class Driver
 					default: throw new InvalidOperationException("unknown look " + args[0]);
 				}
 				return State(w);
+			case "camera":
+				w.View.Orbit(F(0), F(1), F(2), F(3), F(4));
+				return State(w);
+			case "click":
+			{
+				var c = Find<Avalonia.Controls.Button>(w, b => string.Equals(TextOf(b), a[1], StringComparison.OrdinalIgnoreCase)) ?? throw new InvalidOperationException($"no button \"{a[1]}\"");
+				if (c is Avalonia.Controls.Primitives.ToggleButton t)
+				{
+					t.IsChecked = t.IsChecked != true;
+				}
+				c.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Avalonia.Controls.Button.ClickEvent));
+				return State(w);
+			}
+			case "choose":
+			{
+				var box = Find<Avalonia.Controls.ComboBox>(w, b => IndexOf(b, a[1]) >= 0) ?? throw new InvalidOperationException($"no list with \"{a[1]}\"");
+				box.SelectedIndex = IndexOf(box, a[1]);
+				return State(w);
+			}
 			case "bench":
 			{
 				string result = await w.View.Benchmark(F(0)).WaitAsync(TimeSpan.FromSeconds(F(0) + 60));
@@ -176,6 +198,42 @@ public static class Driver
 	}
 
 	// Where world x, z (on the ground) is over the 3D view.
+	// The first visible, enabled control of that type in the window or its open dialogs.
+	private static T? Find<T>(MainWindow w, Func<T, bool> match) where T : Avalonia.Controls.Control
+	{
+		IEnumerable<Avalonia.Controls.Window> windows = new Avalonia.Controls.Window[] { w }.Concat(w.OwnedWindows);
+		foreach (var win in windows.Reverse())
+		{
+			foreach (var c in Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(win).OfType<T>())
+			{
+				if (c.IsEffectivelyVisible && c.IsEffectivelyEnabled && match(c))
+				{
+					return c;
+				}
+			}
+		}
+		return null;
+	}
+
+	// A control's own words: its text content, or every text inside it.
+	private static string TextOf(Avalonia.Controls.ContentControl c) => c.Content is string s ? s.Trim()
+		: string.Join(" ", Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(c).OfType<Avalonia.Controls.TextBlock>().Select(t => t.Text?.Trim()).Where(t => !string.IsNullOrEmpty(t))).Trim();
+
+	private static int IndexOf(Avalonia.Controls.ComboBox box, string text)
+	{
+		int i = 0;
+		foreach (var item in box.Items)
+		{
+			string? name = item is Avalonia.Controls.ContentControl cc ? cc.Content?.ToString() : item?.ToString();
+			if (string.Equals(name?.Trim(), text, StringComparison.OrdinalIgnoreCase))
+			{
+				return i;
+			}
+			i++;
+		}
+		return -1;
+	}
+
 	private static Avalonia.Point ScreenAt(MainWindow w, float x, float z)
 	{
 		var s = w.View.Scene ?? throw new InvalidOperationException("no area open");

@@ -321,6 +321,23 @@ public sealed class VisualTests(EditorProcess editor) : IDisposable
 	}
 
 	[Fact]
+	public void TheDocumentationsCommandsPlaceTheCameraAndUseTheControls()
+	{
+		Open();
+		editor.Send("area 0 0 2");
+		var s = editor.Send("camera 10 -5 45 40 60");
+		Assert.Equal(45 * Math.PI / 180, s.GetProperty("yaw").GetDouble(), 3);
+		Assert.Equal(60, s.GetProperty("distance").GetDouble(), 3);
+		// A tool's panel: its list entries and buttons by their words.
+		editor.Send("key D1");
+		editor.Send("choose Square");
+		editor.Send("click History");
+		editor.Send("click History");
+		Assert.Equal("editor", editor.Send("state").GetProperty("page").GetString());
+		editor.Send("choose Circle");
+	}
+
+	[Fact]
 	public void TheMapDrawsTheWorld()
 	{
 		Assert.Equal("map", Open().GetProperty("page").GetString());
