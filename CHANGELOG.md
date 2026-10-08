@@ -11,6 +11,8 @@ the plugin is unchanged in versions without that part.
   Valheim on first start and again after a game update, as the web editor did. The start page
   shows the copy's progress, asks for the Valheim folder when it is not found, and offers Try
   again when it failed. Choosing another game folder in Settings checks it again.
+- Native app: every control explains itself when you hover it, as in the web editor; a row's label
+  tells the same.
 - Native app: a log (log.txt in the data folder, as the web app kept), the window's icon, the
   version in the title, and a Documentation link on the start page.
 - Native app: a world folder (`ValheimWorldEditor <folder>`) or a live game (`--live <url> --token
@@ -59,6 +61,9 @@ the plugin is unchanged in versions without that part.
 - Native app, Area: "pick" for Replace now works before an area is drawn.
 
 ### Removed
+- The web editor (the page in a WebView2/WebKitGTK window or the browser): the native app replaces
+  it, with every feature it had. Its JavaScript Script console is not carried over (C# scripts may
+  come later).
 - Native app: the development command-line options (pictures, scripted tools); `--world`,
   `--zone` and `--size` remain.
 

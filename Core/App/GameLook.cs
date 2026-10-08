@@ -7,7 +7,7 @@ namespace TerrainEditor.App;
 // The game's own look (terrain shader and textures, map textures, models) is copied from the user's
 // own Valheim install, never shipped: this finds the install, runs the bundled exporter
 // (export-game-files/export_all.py with its own Python runtime) in the background, and redoes it
-// after a game update. The files go to a per-user folder that the editor serves after wwwroot.
+// after a game update. The files go to a per-user folder (Dir) that the editor reads them from.
 public static class GameLook
 {
 	public const int ValheimAppId = 892970;
@@ -29,14 +29,6 @@ public static class GameLook
 
 	public static string? ValheimPath { get; private set; }
 
-	public static object Status()
-	{
-		lock (Lock)
-		{
-			return new { state = State, message = Message, valheim = ValheimPath, log = _log.TakeLast(6).ToArray(), progress = Progress() };
-		}
-	}
-
 	// What the start page shows: the state, its message, the Valheim folder, the exporter's last line
 	// and the progress (0..1, null when not known).
 	public sealed record Snapshot(string State, string? Message, string? Valheim, string? LastLine, double? Progress);
@@ -50,37 +42,29 @@ public static class GameLook
 		}
 	}
 
-	// At start (the native app): as Check, with no wwwroot of its own.
-	public static void Check(AppSettings settings, bool export = true) => Check(Path.Combine(AppContext.BaseDirectory, "wwwroot"), settings, export);
 
 	private sealed record Marker(string Valheim, string? BuildId, int Exporter, DateTime Made);
 
 	// Bump when the exporter's output changes, so existing installs export again.
 	private const int ExporterVersion = 1;
 
-	// Files that only a complete export leaves behind, in wwwroot (development) or the game-look folder.
-	public static bool Present(string wwwroot)
+	// Files that only a complete export leaves behind.
+	public static bool Present()
 	{
 		static bool Complete(string root) =>
 			File.Exists(Path.Combine(root, "terrain", "heightmap.frag.glsl")) && File.Exists(Path.Combine(root, "maptex", "background.png"))
 			&& File.Exists(Path.Combine(root, "models", "objects.json"));
-		return Complete(wwwroot) || Complete(Dir);
+		return Complete(Dir);
 	}
 
 	// At start: export when the files are missing, or when the game was updated since (export: false,
 	// for the tests' editor: only say whether the files are there, never copy).
-	public static void Check(string wwwroot, AppSettings settings, bool export = true)
+	public static void Check(AppSettings settings, bool export = true)
 	{
 		string? valheim = FindValheim(settings.ValheimPath);
 		lock (Lock)
 		{
 			ValheimPath = valheim;
-		}
-		bool inWwwroot = File.Exists(Path.Combine(wwwroot, "terrain", "heightmap.frag.glsl"));
-		if (inWwwroot)
-		{
-			Set("ready", "Using the game files next to the program.");
-			return;
 		}
 		Marker? marker = null;
 		try
@@ -90,7 +74,7 @@ public static class GameLook
 		catch
 		{
 		}
-		bool present = Present(wwwroot);
+		bool present = Present();
 		if (valheim == null)
 		{
 			Set(present ? "ready" : "missing", present ? null : "Valheim was not found on this computer. Choose its folder to get the game's look.");
@@ -155,7 +139,7 @@ public static class GameLook
 			{
 				lock (Lock)
 				{
-					if (p.ExitCode == 0 && Present(Dir))
+					if (p.ExitCode == 0 && Present())
 					{
 						File.WriteAllText(MarkerPath, JsonSerializer.Serialize(new Marker(valheim, build, ExporterVersion, DateTime.Now)));
 						Set("ready", "The game's look is ready.");

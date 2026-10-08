@@ -4,7 +4,7 @@ using TerrainEditor.Terrain;
 namespace TerrainEditor.App;
 
 // The kinds objects are sorted into for the View switches, the same rules as the web editor's
-// objectKind (wwwroot/editor/objects.js): by name, building pieces placed by players apart.
+// as the web editor's objectKind did: by name, building pieces placed by players apart.
 public enum ObjectKind
 {
 	Buildings,

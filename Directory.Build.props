@@ -5,7 +5,7 @@
     <Version>$([System.IO.File]::ReadAllText('$(MSBuildThisFileDirectory)VERSION').Trim())</Version>
   </PropertyGroup>
   <Target Name="WriteBuildInfo" BeforeTargets="CoreCompile"
-          Condition="'$(MSBuildProjectName)' == 'TerrainEditor' Or '$(MSBuildProjectName)' == 'WorldEditorBridge' Or '$(MSBuildProjectName)' == 'ValheimWorldEditor.Desktop'">
+          Condition="'$(MSBuildProjectName)' == 'WorldEditorBridge' Or '$(MSBuildProjectName)' == 'ValheimWorldEditor.Desktop'">
     <PropertyGroup>
       <BuildInfoFile>$(IntermediateOutputPath)BuildInfo.g.cs</BuildInfoFile>
     </PropertyGroup>

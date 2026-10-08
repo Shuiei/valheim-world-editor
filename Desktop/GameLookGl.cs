@@ -18,7 +18,7 @@ public sealed class GameLookGl
 
 	public static string? Folder()
 	{
-		foreach (string d in new[] { Path.Combine(GameLook.Dir, "terrain"), Path.Combine(AppContext.BaseDirectory, "wwwroot", "terrain") })
+		foreach (string d in new[] { Path.Combine(GameLook.Dir, "terrain") })
 		{
 			if (File.Exists(Path.Combine(d, "heightmap.frag.glsl")) && File.Exists(Path.Combine(d, "d_array.png")))
 			{
