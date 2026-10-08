@@ -99,19 +99,19 @@ public class ParityViewTests
 	public void TheStatusBarFollowsTheMouseOverTheGround()
 	{
 		var (w, s, screen) = Open();
-		Assert.True(string.IsNullOrEmpty(w.Cursor.Text));
+		Assert.True(string.IsNullOrEmpty(w.CursorText.Text));
 		w.MouseMove(screen(64, 64));
-		Assert.StartsWith("x 32, z 32   ground 30.00 m", w.Cursor.Text);
+		Assert.StartsWith("x 32, z 32   ground 30.00 m", w.CursorText.Text);
 		w.MouseMove(screen(10, 100));
-		Assert.StartsWith("x -22, z 68", w.Cursor.Text);
+		Assert.StartsWith("x -22, z 68", w.CursorText.Text);
 		// The ground changes under a still mouse: shown again (after a stroke, for one).
 		s.Ground.Mod[100 * s.Scene.W + 10] = 1;
 		s.Ground.Level[100 * s.Scene.W + 10] = 1;
 		w.ShowCursor(screen(10, 100));
-		Assert.Contains("+1.00", w.Cursor.Text);
+		Assert.Contains("+1.00", w.CursorText.Text);
 		// Off the view: nothing.
 		w.ShowCursor(null);
-		Assert.Equal("", w.Cursor.Text);
+		Assert.Equal("", w.CursorText.Text);
 	}
 
 	[AvaloniaFact]
@@ -120,7 +120,7 @@ public class ParityViewTests
 		var w = new MainWindow(load: false) { Width = 1000, Height = 1000 };
 		w.Show();
 		w.ShowCursor(new Avalonia.Point(500, 500));
-		Assert.Equal("", w.Cursor.Text);
+		Assert.Equal("", w.CursorText.Text);
 	}
 
 	// ---- View: Look.

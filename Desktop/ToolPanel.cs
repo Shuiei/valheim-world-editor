@@ -15,6 +15,9 @@ public enum ToolMode { View, Select, Measure, Shape, Path, Area, Paste, Place, B
 
 public sealed class ToolPanel
 {
+	// The brush shapes before the stamps, in BrushShape's order.
+	private static readonly string[] BuiltInShapes = { "Circle", "Square", "Ring", "Ragged (noise)" };
+
 	public Brush Brush { get; } = new();
 	public BrushTool? Tool { get; private set; }
 	public ToolMode Mode { get; private set; }
@@ -102,7 +105,7 @@ public sealed class ToolPanel
 		Child = child,
 	};
 
-	private static Control Row(string label, Control input, TextBlock? value = null)
+	private static Grid Row(string label, Control input, TextBlock? value = null)
 	{
 		var g = new Grid { ColumnDefinitions = new ColumnDefinitions("70,*,46") };
 		var l = new TextBlock { Text = label, FontSize = 12, VerticalAlignment = VerticalAlignment.Center };
@@ -386,7 +389,7 @@ public sealed class ToolPanel
 		return false;
 	}
 
-	private void FillShapes() => ShapeBox.ItemsSource = new[] { "Circle", "Square", "Ring", "Ragged (noise)" }.Concat(StampList.Select(s => $"Stamp: {s.Label}")).ToList();
+	private void FillShapes() => ShapeBox.ItemsSource = BuiltInShapes.Concat(StampList.Select(s => $"Stamp: {s.Label}")).ToList();
 
 	private void ShapeChosen()
 	{

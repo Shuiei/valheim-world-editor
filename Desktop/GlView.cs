@@ -300,9 +300,9 @@ public sealed class GlView : OpenGlControlBase
 	private int _pending;
 	private uint _boxVbo, _boxEbo;
 
-	protected override void OnOpenGlInit(GlInterface gli)
+	protected override void OnOpenGlInit(GlInterface gl)
 	{
-		_gl = GL.GetApi(name => gli.GetProcAddress(name));
+		_gl = GL.GetApi(name => gl.GetProcAddress(name));
 		_es = GlVersion.Type == GlProfileType.OpenGLES;
 		_terrainProg = Program(Shaders.TerrainVs, Shaders.TerrainFs);
 		_objectProg = Program(Shaders.ObjectVs, Shaders.ObjectFs);
@@ -314,7 +314,7 @@ public sealed class GlView : OpenGlControlBase
 	// new one when it comes back. Every OpenGL object went with the old context, so every name kept is
 	// forgotten (not deleted: they are gone) and the next frame builds them again in the new one.
 	// Keeping them drew with names that meant nothing, or something else, in the new context.
-	protected override void OnOpenGlDeinit(GlInterface gli)
+	protected override void OnOpenGlDeinit(GlInterface gl)
 	{
 		_terrainProg = _objectProg = _waterProg = _lineProg = 0;
 		_terrainVao = _terrainIndexCount = _waterVao = _terrainVbo = _terrainExtraVbo = 0;
@@ -763,7 +763,7 @@ public sealed class GlView : OpenGlControlBase
 	{
 		Task.Run(() =>
 		{
-			_loadGate.Wait();
+			LoadGate.Wait();
 			try
 			{
 				string? name = NameOf(g.Key.Prefab);
@@ -819,12 +819,13 @@ public sealed class GlView : OpenGlControlBase
 			}
 			finally
 			{
-				_loadGate.Release();
+				LoadGate.Release();
 			}
 			Wake();
 		});
 	}
-	private readonly SemaphoreSlim _loadGate = new(Math.Max(2, Environment.ProcessorCount / 2));
+	// Static: one 3D view lives as long as the app (and an instance field would make the view disposable).
+	private static readonly SemaphoreSlim LoadGate = new(Math.Max(2, Environment.ProcessorCount / 2));
 	private readonly object _objLock = new();
 
 	// A group's instances (and its things' boxes) from where its things are now.
@@ -1045,7 +1046,7 @@ public sealed class GlView : OpenGlControlBase
 	}
 
 	// ---------------------------------------------------------------- drawing
-	protected override unsafe void OnOpenGlRender(GlInterface gli, int fb)
+	protected override unsafe void OnOpenGlRender(GlInterface gl, int fb)
 	{
 		long now = _clock.ElapsedMilliseconds;
 		var start = Stopwatch.GetTimestamp();

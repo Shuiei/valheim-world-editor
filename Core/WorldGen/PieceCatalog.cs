@@ -22,13 +22,14 @@ public static class PieceCatalog
 	// Every piece with snap points, by name.
 	public static IEnumerable<Info> WithSnaps => ByHash.Values.Where(i => i.Snaps.Length > 0);
 
+	// Prefab names in catalogue order; Info.Index points into this list. Set by Load: declared before
+	// ByHash, whose initializer runs Load, so this initializer runs first and does not overwrite it.
+	public static string[] Names { get; private set; } = Array.Empty<string>();
+
 	private static readonly Dictionary<int, Info> ByHash = Load();
 
 	public static int Count => ByHash.Count;
 
-	// Prefab names in catalogue order; Info.Index points into this list.
-	// Set by Load (no initializer: it would run after ByHash and overwrite it).
-	public static string[] Names { get; private set; }
 
 	public static Info? Get(int prefab) => ByHash.TryGetValue(prefab, out var info) ? info : null;
 

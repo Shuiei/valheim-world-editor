@@ -1,7 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <!-- Everything that is not web: saves, edits, the world generator, live mode, blueprints, settings.
-       Shared by the web app (TerrainEditor.csproj) and the native app. -->
+  <!-- Everything that is not the window: saves, edits, the world generator, live mode, blueprints,
+       settings. Used by the app (Desktop), the tests and WorldCheck. -->
   <PropertyGroup>
+    <!-- The .NET analyzers' recommended rules; CI builds with warnings as errors (.circleci/config.yml). -->
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>

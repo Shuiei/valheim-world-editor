@@ -34,7 +34,7 @@ public sealed class PathPanel
 
 	private static NumericUpDown Num(decimal v, decimal step) => new() { Value = v, Increment = step, FormatString = "0.0#", FontSize = 12 };
 
-	private static Control Row(string label, Control input, Control? after = null)
+	private static Grid Row(string label, Control input, Control? after = null)
 	{
 		var g = new Grid { ColumnDefinitions = new ColumnDefinitions("70,*,46") };
 		var l = new TextBlock { Text = label, FontSize = 12, VerticalAlignment = VerticalAlignment.Center };

@@ -36,7 +36,7 @@ public sealed class PlaceTool
 	public float Tilt { get; set; } = 3;
 	public float Rotation { get; set; }
 	public bool RandomYaw { get; set; } = true;
-	public bool Single { get; set; }
+	public bool OneAtATime { get; set; }
 	public float Every { get; set; } = 4;
 	public float Wiggle { get; set; }
 	public bool Along { get; set; } = true;
@@ -146,7 +146,7 @@ public sealed class PlaceTool
 	// End to end switches itself on when every chosen kind is a piece the game snaps (fences, walls…),
 	// and pieces go one at a time under the cursor, until those are set by hand.
 	public bool EndToEndByHand { get; set; }
-	public bool SingleByHand { get; set; }
+	public bool OneAtATimeByHand { get; set; }
 	public void AutoSnap()
 	{
 		bool pieces = Chosen.Count > 0 && Chosen.All(IsPiece);
@@ -154,9 +154,9 @@ public sealed class PlaceTool
 		{
 			EndToEnd = pieces;
 		}
-		if (!SingleByHand)
+		if (!OneAtATimeByHand)
 		{
-			Single = pieces;
+			OneAtATime = pieces;
 		}
 	}
 
@@ -206,7 +206,7 @@ public sealed class PlaceTool
 	}
 
 	// Every object standing in the block (grid positions), for the spacing check.
-	private Hash Standing(WorldScene s, float cell)
+	private static Hash Standing(WorldScene s, float cell)
 	{
 		var h = new Hash(cell);
 		float ox = s.X0 * 64f - 32f, oz = s.Z0 * 64f - 32f;
@@ -229,7 +229,7 @@ public sealed class PlaceTool
 	// A placement: the kind, where (world position, and the grid point), turned and scaled.
 	public sealed record Placement(string Name, Vector3 Position, Vector3 Rotation, float Scale, Vector2 G);
 
-	private float HeightAt(WorldScene s, Vector2 g) => Picking.HeightAt(s, g.X - (s.W - 1) / 2f, -(g.Y - (s.H - 1) / 2f));
+	private static float HeightAt(WorldScene s, Vector2 g) => Picking.HeightAt(s, g.X - (s.W - 1) / 2f, -(g.Y - (s.H - 1) / 2f));
 
 	// Clumping (Brush and Zone): the density follows a noise pattern in world coordinates, so objects
 	// gather in groves and leave clearings. 0: even.
@@ -281,7 +281,7 @@ public sealed class PlaceTool
 		string name = PickName(names, d.T);
 		// One at a time: you pick the spot, so only an object right on top (0.3 m) blocks it; a piece that
 		// snaps to the pieces there goes where the snapping puts it (On top: right over the one below).
-		float near = Single ? SnapTo && IsPiece(name) && Mode == Modes.Brush ? 0 : 0.3f : Spacing;
+		float near = OneAtATime ? SnapTo && IsPiece(name) && Mode == Modes.Brush ? 0 : 0.3f : Spacing;
 		if (!hash.Free(g, MathF.Max(minDist ?? near, GrowNeed(name))))
 		{
 			return null;
@@ -300,7 +300,7 @@ public sealed class PlaceTool
 	// ---- Brush: the layout under the cursor (offsets), kept until the settings change or R.
 	private List<(Vector2 D, Draw Draw)> _pattern = new();
 	private string _patternKey = "";
-	private string SettingsKey => $"{Brush.Radius}|{Density}|{Spacing}|{Single}|{string.Join(",", Chosen)}";
+	private string SettingsKey => $"{Brush.Radius}|{Density}|{Spacing}|{OneAtATime}|{string.Join(",", Chosen)}";
 
 	public void NewLayout()
 	{
@@ -316,7 +316,7 @@ public sealed class PlaceTool
 		float r = Brush.Radius;
 		int n = Math.Min(400, (int)MathF.Round(Density / 100 * MathF.PI * r * r));
 		_pattern = new();
-		if (Single)
+		if (OneAtATime)
 		{
 			_pattern.Add((Vector2.Zero, NewDraw()));
 		}
@@ -568,7 +568,7 @@ public sealed class PlaceTool
 
 	// The snap points of every piece in the block (grid x, height, grid z).
 	private sealed record Other(int Index, string Name, Vector2 G, Vector3 Rotation, List<Vector3> Pts, float Low);
-	private List<Other> OtherSnaps(WorldScene s, Func<int, string?> nameOf)
+	private static List<Other> OtherSnaps(WorldScene s, Func<int, string?> nameOf)
 	{
 		var list = new List<Other>();
 		float ox = s.X0 * 64f - 32f, oz = s.Z0 * 64f - 32f;

@@ -314,7 +314,7 @@ public sealed class AreaPanel
 		Refresh();
 	}
 
-	private float Value(NumericUpDown b) => (float)(b.Value ?? 0);
+	private static float Value(NumericUpDown b) => (float)(b.Value ?? 0);
 
 	// The things inside the selection (indices), not deleted, of shown kinds (or added in this session).
 	// includeHidden: also kinds switched off in View (a backup restore compares with everything there).

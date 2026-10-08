@@ -36,8 +36,8 @@ public sealed class InspectorPanel
 	internal StackPanel ItemsBox { get; } = new() { Spacing = 3 };
 	internal StackPanel Fields { get; } = new() { Spacing = 2 };
 	internal ComboBox AddSection { get; } = new() { ItemsSource = Sections.Select(s => s.Name).ToList(), SelectedIndex = 0, FontSize = 11, Width = 100 };
-	internal TextBox AddKey { get; } = new() { Watermark = "name (text, tag…)", FontSize = 11 };
-	internal TextBox AddValue { get; } = new() { Watermark = "value", FontSize = 11 };
+	internal TextBox AddKey { get; } = new() { PlaceholderText = "name (text, tag…)", FontSize = 11 };
+	internal TextBox AddValue { get; } = new() { PlaceholderText = "value", FontSize = 11 };
 	internal Button AddButton { get; } = new() { Content = "Add", FontSize = 11 };
 	internal Button ApplyButton { get; } = new() { Content = "Apply changes", FontSize = 12, IsEnabled = false };
 	internal Button RevertButton { get; } = new() { Content = "Revert", FontSize = 12, IsEnabled = false };
@@ -234,7 +234,7 @@ public sealed class InspectorPanel
 
 	private string ItemsKey() => Items == null ? "" : string.Join(";", Items.Select(i => $"{i.Name},{i.Stack},{i.Quality},{i.Durability},{i.X},{i.Y}"));
 
-	private string Label(Field f) => f.Name is string n ? Labels.TryGetValue(n, out var l) ? l : n : $"#{f.Key}";
+	private static string Label(Field f) => f.Name is string n ? Labels.TryGetValue(n, out var l) ? l : n : $"#{f.Key}";
 
 	private void Render()
 	{
@@ -365,7 +365,7 @@ public sealed class InspectorPanel
 
 	private static Control Head(string t, int col) => Col(new TextBlock { Text = t, FontSize = 10, Foreground = Ui.Muted }, col);
 
-	private static Control WithBorder(NumericUpDown n, bool bad)
+	private static NumericUpDown WithBorder(NumericUpDown n, bool bad)
 	{
 		if (bad)
 		{

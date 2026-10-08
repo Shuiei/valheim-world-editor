@@ -95,7 +95,7 @@ public sealed class HistoryPanel
 		}
 	}
 
-	private Control Row(EditSession s, EditSession.Change c, bool undone, bool current)
+	private Border Row(EditSession s, EditSession.Change c, bool undone, bool current)
 	{
 		var acts = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, HorizontalAlignment = HorizontalAlignment.Right };
 		Button Act(string text, string tip, Action a)

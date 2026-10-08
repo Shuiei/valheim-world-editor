@@ -15,6 +15,9 @@ namespace TerrainEditor.Desktop;
 // web editor's terrain/pieces.js. Thread-safe: models are read on worker threads.
 public sealed class ModelStore
 {
+	// A model with no root scale: as it is.
+	private static readonly float[] UnitScale = { 1f, 1f, 1f };
+
 	public sealed record Part(string Mesh, int Sub, string Material, Matrix4x4 Matrix);
 	public sealed record Model(string Name, List<Part> Parts, Vector3 RootScale);
 	public sealed record MeshData(float[] Vertices, uint[][] Submeshes)
@@ -93,7 +96,7 @@ public sealed class ModelStore
 			var mat = new Matrix4x4(m[0], m[1], m[2], m[3], m[4], m[5], m[6], m[7], m[8], m[9], m[10], m[11], m[12], m[13], m[14], m[15]);
 			parts.Add(new Part(p["mesh"]!.GetValue<string>(), p["sub"]!.GetValue<int>(), p["mat"]!.GetValue<string>(), mat));
 		}
-		var rs = doc["rootScale"]?.AsArray().Select(v => v!.GetValue<float>()).ToArray() ?? new[] { 1f, 1f, 1f };
+		var rs = doc["rootScale"]?.AsArray().Select(v => v!.GetValue<float>()).ToArray() ?? UnitScale;
 		return parts.Count == 0 ? null : new Model(n, parts, new Vector3(rs[0], rs[1], rs[2]));
 	});
 

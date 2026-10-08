@@ -64,6 +64,16 @@ public static class Ui
 		return !OperatingSystem.IsWindows() && home.Length > 1 && (path == home || path.StartsWith(home + "/")) ? "~" + path[home.Length..] : path;
 	}
 
+	// "Valheim World Editor", "Valheim" in the accent colour (the start page's and the map's title).
+	public static TextBlock BrandTitle(double size, VerticalAlignment valign = VerticalAlignment.Stretch)
+	{
+		var t = new TextBlock { FontSize = size, FontWeight = FontWeight.SemiBold, VerticalAlignment = valign };
+		t.Inlines ??= new Avalonia.Controls.Documents.InlineCollection();
+		t.Inlines.Add(new Avalonia.Controls.Documents.Run("Valheim") { Foreground = Accent });
+		t.Inlines.Add(new Avalonia.Controls.Documents.Run(" World Editor"));
+		return t;
+	}
+
 	public static TextBlock Hint(string text) => new() { Text = text, FontSize = 11.5, Foreground = Muted, TextWrapping = TextWrapping.Wrap };
 
 	public static T Classed<T>(this T c, params string[] classes) where T : StyledElement
@@ -242,7 +252,7 @@ public static class Ui
 		s.Add(new Style(x => x.OfType<CheckBox>().Class("switch")) { Setters = { new Setter(TemplatedControl.TemplateProperty, SwitchTemplate()) } });
 	}
 
-	private static IControlTemplate SwitchTemplate() => new FuncControlTemplate<CheckBox>((cb, scope) =>
+	private static FuncControlTemplate<CheckBox> SwitchTemplate() => new FuncControlTemplate<CheckBox>((cb, scope) =>
 	{
 		var knob = new Border { Width = 13, Height = 13, CornerRadius = new CornerRadius(7), Margin = new Thickness(2), HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Center };
 		var track = new Border { Width = 30, Height = 17, CornerRadius = new CornerRadius(9), Child = knob, VerticalAlignment = VerticalAlignment.Center };

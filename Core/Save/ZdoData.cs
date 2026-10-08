@@ -7,6 +7,9 @@ namespace TerrainEditor.Save;
 // then written back in the save format (world version 41). The object inspector works on this.
 public sealed class ZdoData
 {
+	// Between the numbers of a vector or quaternion typed in the inspector.
+	private static readonly char[] NumberSeparators = { ' ', ',', ';' };
+
 	public const ushort Connections = 0x1, Floats = 0x2, Vec3s = 0x4, Quats = 0x8, Ints = 0x10, Longs = 0x20, Strings = 0x40, ByteArrays = 0x80;
 
 	private const ushort RotationFlag = 0x1000, SmallPositionFlag = 0x2000;
@@ -168,7 +171,7 @@ public sealed class ZdoData
 		static float F(string s) => float.Parse(s, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture);
 		static float[] Fs(string s, int n)
 		{
-			float[] v = s.Split(new[] { ' ', ',', ';' }, StringSplitOptions.RemoveEmptyEntries).Select(F).ToArray();
+			float[] v = s.Split(NumberSeparators, StringSplitOptions.RemoveEmptyEntries).Select(F).ToArray();
 			return v.Length == n ? v : throw new FormatException($"{n} numbers expected");
 		}
 		switch (section)

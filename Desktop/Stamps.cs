@@ -91,7 +91,7 @@ public static class Stamps
 		{
 			return null;
 		}
-		using var small = src.Resize(new SKImageInfo(Size, Size, SKColorType.Rgba8888, SKAlphaType.Unpremul), SKFilterQuality.Medium);
+		using var small = src.Resize(new SKImageInfo(Size, Size, SKColorType.Rgba8888, SKAlphaType.Unpremul), new SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.Linear));
 		if (small == null)
 		{
 			return null;
