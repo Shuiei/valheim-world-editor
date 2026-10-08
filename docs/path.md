@@ -8,8 +8,10 @@ ditch, or a painted track.
 ## How to use it
 
 1. Choose **Path** (`P`).
-2. **Click points** along the route, or **hold and drag** to draw it freely. The red line is the
-   centre; the thin lines show the full width and the soft edges.
+2. **Click points** along the route, or **hold and drag** to draw it freely. Before you click, a
+   circle under the cursor shows the path's width (and a thinner one its soft edge), and once there
+   are points, the stretch the next click adds. The red line is the centre; the light band and its
+   edges show the full width, the thin outer lines the soft edges.
 3. **Fine-tune it**: drag a point (the dots on the line) to move it, drag the line between two points
    to add a point there and move it, **Ctrl + click** a point to remove it.
 4. Pick an **Action** and its settings.

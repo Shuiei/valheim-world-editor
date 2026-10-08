@@ -34,7 +34,7 @@ boxes in the preview.
 
 | Mode | How it works |
 |---|---|
-| **Brush** | The preview follows the cursor. A **click** places exactly what the preview shows; a **drag** keeps adding objects under the brush. **Shift + drag** removes the ticked kinds under the brush. |
+| **Brush** | The preview follows the cursor, inside the brush's outline. A **click** places exactly what the preview shows; a **drag** keeps adding objects under the brush. **Shift + drag** removes the ticked kinds under the brush. |
 | **Line** | Click points along a route (or hold and drag), or draw a **Circle** or a **Rectangle**. Objects go every *N* metres along it, or **end to end** like the game's hammer snaps them. |
 | **Grid** | Drag a box. One object goes in the middle of each cell; the box gets as many whole cells as fit best (at least one), centred in it. |
 | **Zone** | Click points around a zone (or hold and drag to draw it freely); it closes by itself. Drag a point to move it, drag the outline to add a point, **Ctrl + click** a point to remove it. Objects go at random spots inside it (**Density**, **Spacing**). |

@@ -231,6 +231,8 @@ def scene_sculpt(e):
     e.send("set Size|7")
     move(e, P(7, -3))
     camera(e, 0, 0, 200, 38, 40)
+    # The brush's circle follows the pointer a frame later.
+    e.send("wait 300")
     e.shot(OUT / "sculpt.jpg")
 
 
