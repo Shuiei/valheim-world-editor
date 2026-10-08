@@ -9,6 +9,7 @@ using Avalonia.Threading;
 using Silk.NET.OpenGL;
 using SkiaSharp;
 using TerrainEditor.App;
+using TerrainEditor.Terrain;
 using MapData = ValheimGen.MapData;
 using Vector2 = System.Numerics.Vector2;
 using Vector4 = System.Numerics.Vector4;
@@ -23,7 +24,7 @@ public sealed class MapView : OpenGlControlBase
 {
 	private GL _gl = null!;
 	private bool _es;
-	private uint _prog, _vao, _lineProg, _lineVao, _lineVbo;
+	private uint _prog, _vao, _lineProg, _lineVao, _lineVbo, _fillProg, _fillVao, _fillVbo;
 	private readonly Dictionary<string, (uint Tex, int Unit)> _tex = new();
 	private MapData? _data;
 	private WorldSession? _session;
@@ -41,6 +42,19 @@ public sealed class MapView : OpenGlControlBase
 	public bool ShowClouds { get; set; }
 	// The area chosen to edit: its middle zone and size in zones (null: none).
 	public (int X, int Z, int Size)? Chosen { get; set; }
+	// Player-built pieces (PieceCatalog.Encode), read in the background; drawn as their footprints.
+	public bool ShowBuildings { get; set; } = true;
+	private volatile float[]? _pieces;
+	private int[] _pieceOrder = Array.Empty<int>();
+	public int PieceCount => (_pieces?.Length ?? 0) / PieceCatalog.Stride;
+	public event Action? PiecesRead;
+	// Live: the players online. Search results (the chosen one larger), and the zone filter's matches.
+	public IReadOnlyList<(string Name, float X, float Z)> Players { get; set; } = Array.Empty<(string, float, float)>();
+	public IReadOnlyList<Vector2> Pins { get; set; } = Array.Empty<Vector2>();
+	public int PinChosen { get; set; } = -1;
+	public IReadOnlyList<(int X, int Z)> Matches { get; set; } = Array.Empty<(int, int)>();
+	// The view moved or zoomed (labels over the map follow).
+	public event Action? ViewChanged;
 	public event Action<float, float>? Picked;
 	public event Action<float, float>? Hovered;
 	public event Action<string>? Status;
@@ -64,6 +78,7 @@ public sealed class MapView : OpenGlControlBase
 		_globalShown = false;
 		_detail = null;
 		_detailShown = null;
+		ReadPieces();
 		Status?.Invoke("Building the world map (same as the game does)…");
 		var data = _data;
 		Task.Run(() =>
@@ -83,8 +98,41 @@ public sealed class MapView : OpenGlControlBase
 	{
 		_detailShown = null;
 		_detail = null;
+		ReadPieces();
 		RequestNextFrameRendering();
 	}
+
+	private void ReadPieces()
+	{
+		var s = _session;
+		if (s == null)
+		{
+			return;
+		}
+		var world = s.World;
+		var deleted = s.Edits.Deleted;
+		Task.Run(() =>
+		{
+			float[] data = PieceCatalog.Encode(world, deleted);
+			// Lower pieces first so roofs end up on top, like looking down from above.
+			int[] order = Enumerable.Range(0, data.Length / PieceCatalog.Stride).OrderBy(i => data[i * PieceCatalog.Stride + 8]).ToArray();
+			Dispatcher.UIThread.Post(() =>
+			{
+				if (_session != s)
+				{
+					return;
+				}
+				_pieceOrder = order;
+				_pieces = data;
+				_buildingsKey = default;
+				PiecesRead?.Invoke();
+				RequestNextFrameRendering();
+			});
+		});
+	}
+
+	// Where a world point is on the control (its own units, not device pixels).
+	public Point ScreenOf(float x, float z) => new(Bounds.Width / 2 + (x - Center.X) / MetersPerPixel, Bounds.Height / 2 - (z - Center.Y) / MetersPerPixel);
 
 	protected override void OnOpenGlInit(GlInterface gli)
 	{
@@ -116,8 +164,35 @@ public sealed class MapView : OpenGlControlBase
 		{
 			_gl.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 12, (void*)0);
 		}
+		_fillProg = Program(FillVs, FillFs);
+		_fillVao = _gl.GenVertexArray();
+		_fillVbo = _gl.GenBuffer();
+		_gl.BindVertexArray(_fillVao);
+		_gl.BindBuffer(BufferTargetARB.ArrayBuffer, _fillVbo);
+		_gl.EnableVertexAttribArray(0);
+		_gl.EnableVertexAttribArray(1);
+		unsafe
+		{
+			_gl.VertexAttribPointer(0, 2, VertexAttribPointerType.Float, false, 24, (void*)0);
+			_gl.VertexAttribPointer(1, 4, VertexAttribPointerType.Float, false, 24, (void*)8);
+		}
 		_gl.BindVertexArray(0);
 	}
+
+	// Shapes in world metres with a colour per corner (buildings, zone fills, pins, players).
+	private const string FillVs = """
+		layout(location = 0) in vec2 aPos;
+		layout(location = 1) in vec4 aCol;
+		uniform vec4 uView;
+		out vec4 vCol;
+		void main() { gl_Position = vec4((aPos - uView.xy) * uView.zw, 0.0, 1.0); vCol = aCol; }
+		""";
+
+	private const string FillFs = """
+		in vec4 vCol;
+		out vec4 frag;
+		void main() { frag = vCol; }
+		""";
 
 	protected override void OnOpenGlDeinit(GlInterface gli)
 	{
@@ -306,11 +381,21 @@ public sealed class MapView : OpenGlControlBase
 		_gl.Uniform1(U("showClouds"), ShowClouds ? 1f : 0f);
 		_gl.BindVertexArray(_vao);
 		_gl.DrawArrays(PrimitiveType.Triangles, 0, 3);
+		_gl.Enable(EnableCap.Blend);
+		_gl.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
+		_gl.UseProgram(_fillProg);
+		_gl.Uniform4(_gl.GetUniformLocation(_fillProg, "uView"), Center.X, Center.Y, 2 / (w * mpp), 2 / (h * mpp));
+		DrawBuildings();
+		DrawZoneFills();
 		DrawLines(w, h, mpp);
+		_gl.Enable(EnableCap.Blend);
+		_gl.UseProgram(_fillProg);
+		DrawPins();
+		_gl.Disable(EnableCap.Blend);
 		_gl.BindVertexArray(0);
 		_gl.UseProgram(0);
 		// --map with --shot (and no --map-edit): a picture of the map once it is drawn.
-		if (Options.Shot is string shot && Options.MapEdit == null && ++_shotFrames == 30)
+		if (Options.Shot is string shot && Options.MapEdit == null && ++_shotFrames == 80)
 		{
 			byte[] px = new byte[w * h * 4];
 			fixed (byte* p = px)
@@ -365,6 +450,163 @@ public sealed class MapView : OpenGlControlBase
 				Dispatcher.UIThread.Post(RequestNextFrameRendering);
 			}
 		});
+	}
+
+	// ---- Shapes over the map in world metres (one colour per corner, drawn in order).
+	private unsafe void Fill(float[] data, PrimitiveType type)
+	{
+		if (data.Length == 0)
+		{
+			return;
+		}
+		_gl.BindVertexArray(_fillVao);
+		_gl.BindBuffer(BufferTargetARB.ArrayBuffer, _fillVbo);
+		fixed (float* p = data)
+		{
+			_gl.BufferData(BufferTargetARB.ArrayBuffer, (nuint)(data.Length * 4), p, BufferUsageARB.StreamDraw);
+		}
+		_gl.DrawArrays(type, 0, (uint)(data.Length / 6));
+	}
+
+	private static void Quad(List<float> to, Vector2 a, Vector2 b, Vector2 c, Vector2 d, Vector4 col)
+	{
+		foreach (var p in new[] { a, b, c, a, c, d })
+		{
+			to.AddRange(new[] { p.X, p.Y, col.X, col.Y, col.Z, col.W });
+		}
+	}
+
+	private static void Disc(List<float> to, float x, float z, float r, Vector4 col, int sides = 12)
+	{
+		for (int i = 0; i < sides; i++)
+		{
+			float a0 = i * MathF.Tau / sides, a1 = (i + 1) * MathF.Tau / sides;
+			to.AddRange(new[] { x, z, col.X, col.Y, col.Z, col.W });
+			to.AddRange(new[] { x + r * MathF.Cos(a0), z + r * MathF.Sin(a0), col.X, col.Y, col.Z, col.W });
+			to.AddRange(new[] { x + r * MathF.Cos(a1), z + r * MathF.Sin(a1), col.X, col.Y, col.Z, col.W });
+		}
+	}
+
+	// The web map's piece colours per category (fill, edge): misc, crafting, wood, stone, furniture.
+	private static readonly (Vector4 Fill, Vector4 Edge)[] PieceStyle =
+	{
+		(new(150 / 255f, 72 / 255f, 34 / 255f, 0.92f), new(60 / 255f, 25 / 255f, 10 / 255f, 0.9f)),
+		(new(128 / 255f, 56 / 255f, 40 / 255f, 0.9f), new(55 / 255f, 22 / 255f, 14 / 255f, 0.9f)),
+		(new(92 / 255f, 64 / 255f, 40 / 255f, 0.88f), new(38 / 255f, 24 / 255f, 14 / 255f, 0.9f)),
+		(new(110 / 255f, 104 / 255f, 96 / 255f, 0.92f), new(45 / 255f, 42 / 255f, 38 / 255f, 0.9f)),
+		(new(140 / 255f, 102 / 255f, 62 / 255f, 0.8f), new(60 / 255f, 40 / 255f, 22 / 255f, 0.85f)),
+	};
+
+	// Built once per zoom kind: footprints close up (edges very close), dots of two pixels further out.
+	private (float[]? Pieces, int Kind, float Mpp) _buildingsKey;
+	private float[] _buildingFill = Array.Empty<float>(), _buildingEdge = Array.Empty<float>();
+
+	private void DrawBuildings()
+	{
+		float[]? pc = _pieces;
+		float mpp = MetersPerPixel;
+		if (pc == null || !ShowBuildings || mpp > 10)
+		{
+			return;
+		}
+		int kind = mpp < 0.8f ? 2 : mpp < 2.5f ? 1 : 0;
+		if (_buildingsKey.Pieces != pc || _buildingsKey.Kind != kind || (kind == 0 && _buildingsKey.Mpp != mpp))
+		{
+			_buildingsKey = (pc, kind, mpp);
+			var fill = new List<float>();
+			var edge = new List<float>();
+			const int S = PieceCatalog.Stride;
+			foreach (int i in _pieceOrder)
+			{
+				int o = i * S;
+				float px = pc[o], pz = pc[o + 2];
+				var style = PieceStyle[Math.Clamp((int)pc[o + 9], 0, PieceStyle.Length - 1)];
+				if (kind == 0)
+				{
+					float r = mpp;
+					Quad(fill, new(px - r, pz - r), new(px + r, pz - r), new(px + r, pz + r), new(px - r, pz + r), style.Edge);
+					continue;
+				}
+				// Unity Y rotation (clockwise seen from above): local (x, z) to world.
+				float a = pc[o + 3] * MathF.PI / 180, c = MathF.Cos(a), sn = MathF.Sin(a);
+				Vector2 W(float lx, float lz) => new(px + lx * c + lz * sn, pz - lx * sn + lz * c);
+				Vector2 p0 = W(pc[o + 4], pc[o + 6]), p1 = W(pc[o + 5], pc[o + 6]), p2 = W(pc[o + 5], pc[o + 7]), p3 = W(pc[o + 4], pc[o + 7]);
+				Quad(fill, p0, p1, p2, p3, style.Fill);
+				if (kind == 2)
+				{
+					foreach (var (p, q) in new[] { (p0, p1), (p1, p2), (p2, p3), (p3, p0) })
+					{
+						edge.AddRange(new[] { p.X, p.Y, style.Edge.X, style.Edge.Y, style.Edge.Z, style.Edge.W, q.X, q.Y, style.Edge.X, style.Edge.Y, style.Edge.Z, style.Edge.W });
+					}
+				}
+			}
+			_buildingFill = fill.ToArray();
+			_buildingEdge = edge.ToArray();
+		}
+		Fill(_buildingFill, PrimitiveType.Triangles);
+		Fill(_buildingEdge, PrimitiveType.Lines);
+	}
+
+	// The zone filter's matches (blue) and the zones marked for reset (red).
+	private void DrawZoneFills()
+	{
+		var s = _session;
+		if (s == null)
+		{
+			return;
+		}
+		var marked = s.Edits.Resets.Select(r => (r.X, r.Z)).ToHashSet();
+		var data = new List<float>();
+		void Zone(int x, int z, Vector4 col) => Quad(data, new(x * 64 - 32, z * 64 - 32), new(x * 64 + 32, z * 64 - 32), new(x * 64 + 32, z * 64 + 32), new(x * 64 - 32, z * 64 + 32), col);
+		foreach (var (x, z) in Matches)
+		{
+			if (!marked.Contains((x, z)))
+			{
+				Zone(x, z, new Vector4(70 / 255f, 160 / 255f, 1, 0.35f));
+			}
+		}
+		foreach (var (x, z) in marked)
+		{
+			Zone(x, z, new Vector4(1, 70 / 255f, 50 / 255f, 0.45f));
+		}
+		Fill(data.ToArray(), PrimitiveType.Triangles);
+	}
+
+	// Search results (orange pins, the chosen one larger with a ring) and, live, the players (blue).
+	private void DrawPins()
+	{
+		float m = MetersPerPixel;
+		var data = new List<float>();
+		var dark = new Vector4(30 / 255f, 15 / 255f, 5 / 255f, 0.9f);
+		for (int i = 0; i < Pins.Count; i++)
+		{
+			if (i == PinChosen)
+			{
+				continue;
+			}
+			Disc(data, Pins[i].X, Pins[i].Y, 4.5f * m, dark, 8);
+			Disc(data, Pins[i].X, Pins[i].Y, 3.5f * m, new Vector4(1, 138 / 255f, 42 / 255f, 1), 8);
+		}
+		if (PinChosen >= 0 && PinChosen < Pins.Count)
+		{
+			var p = Pins[PinChosen];
+			var gold = new Vector4(1, 210 / 255f, 122 / 255f, 1);
+			for (int i = 0; i < 24; i++)
+			{
+				// The ring: a thin band of quads.
+				float a0 = i * MathF.Tau / 24, a1 = (i + 1) * MathF.Tau / 24, r0 = 12.5f * m, r1 = 14 * m;
+				Quad(data, new(p.X + r0 * MathF.Cos(a0), p.Y + r0 * MathF.Sin(a0)), new(p.X + r1 * MathF.Cos(a0), p.Y + r1 * MathF.Sin(a0)),
+					new(p.X + r1 * MathF.Cos(a1), p.Y + r1 * MathF.Sin(a1)), new(p.X + r0 * MathF.Cos(a1), p.Y + r0 * MathF.Sin(a1)), gold);
+			}
+			Disc(data, p.X, p.Y, 7.5f * m, dark);
+			Disc(data, p.X, p.Y, 6 * m, gold);
+		}
+		foreach (var (_, x, z) in Players)
+		{
+			Disc(data, x, z, 8 * m, new Vector4(11 / 255f, 32 / 255f, 48 / 255f, 1));
+			Disc(data, x, z, 6 * m, new Vector4(79 / 255f, 195 / 255f, 1, 1));
+		}
+		Fill(data.ToArray(), PrimitiveType.Triangles);
 	}
 
 	// ---- Lines over the map (in screen pixels): the chosen area, edited zones, resets, the grid.
@@ -470,6 +712,7 @@ public sealed class MapView : OpenGlControlBase
 				Center += new Vector2(-(float)(p.X - l.X) * MetersPerPixel, (float)(p.Y - l.Y) * MetersPerPixel);
 				_last = p;
 				RequestNextFrameRendering();
+				ViewChanged?.Invoke();
 			}
 		};
 		surface.PointerReleased += (_, e) =>
@@ -492,6 +735,7 @@ public sealed class MapView : OpenGlControlBase
 			MetersPerPixel = Math.Clamp(MetersPerPixel * MathF.Pow(0.8f, (float)e.Delta.Y), 0.25f, 40f);
 			Center += before - WorldAt(p);
 			RequestNextFrameRendering();
+			ViewChanged?.Invoke();
 			e.Handled = true;
 		};
 	}
@@ -502,5 +746,6 @@ public sealed class MapView : OpenGlControlBase
 		Center = new Vector2(x, z);
 		MetersPerPixel = metersPerPixel;
 		RequestNextFrameRendering();
+		ViewChanged?.Invoke();
 	}
 }

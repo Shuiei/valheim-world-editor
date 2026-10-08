@@ -1705,6 +1705,21 @@ public sealed class GlView : OpenGlControlBase
 
 	private Vector3 _lastEye;
 	// For tests (nothing is drawn headless): the camera the mouse is read with.
+	// The camera turned onto a world point, close (the map's search: the object found).
+	internal void Focus(Vector3 world, float distance = 35)
+	{
+		if (_scene is not { } s)
+		{
+			return;
+		}
+		lock (_camLock)
+		{
+			_target = new Vector3(world.X - s.Cx, world.Y, -(world.Z - s.Cz));
+			_distance = distance;
+		}
+		Wake();
+	}
+
 	internal void SetCamera(Vector3 eye, Vector3 target, float aspect)
 	{
 		_lastEye = eye;
