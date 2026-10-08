@@ -38,7 +38,7 @@ place and the clipboard.
 | Control | What it does |
 |---|---|
 | **Undo** / **Redo** | Undo the last change (`Ctrl+Z`), redo it (`Ctrl+Y` or `Ctrl+Shift+Z`). Works for every tool. |
-| **Pending** | "Unsaved: …" (offline) or "Not applied: …" (live): what is not written yet; "All saved" or "All applied" when nothing is. It counts zones whose ground really differs from the saved state, plus deleted and added objects, and zones marked for reset. In the view, every new object not saved (or applied) yet carries a green dot. |
+| **Pending** | "Unsaved: …" (offline) or "Not applied: …" (live): what is not written yet; "All saved" or "All applied" when nothing is. It counts zones whose ground really differs from the saved state, plus deleted and added objects, and zones marked for reset. In the view, every new object not saved (or applied) yet carries a green dot (**View → Unsaved marks** hides them). |
 | **Discard** | Throws away what is not saved (or applied) yet, after asking: the last steps in History are undone, and the rest of the history stays. The camera and the tool stay as they are. When changes are pending that no step here can undo (made in another area), it offers to read the world again instead. |
 | **Save to world** (offline, `Ctrl+S`) | Writes the changes into the world files. A copy of the whole world folder is made first (`<World>_backup_terraineditor-<date>`), the changes go into the next save, and the result is read back and checked. Close the game or server first. |
 | **Apply live** (live) | Sends the changes to the running game. See [live mode](live-mode.md). |
@@ -48,6 +48,8 @@ place and the clipboard.
 | **History** (`L`) | Opens the history panel, below. |
 | **View** (`V`) | Opens the View panel, below. |
 | **?** | Mouse controls and keyboard shortcuts. |
+
+![New trees not saved yet, each with a green dot](images/unsaved.jpg)
 
 ## History
 
@@ -81,6 +83,8 @@ new history (what it described is written or gone).
 | | **Location markers** | A post on every location (villages, the trader, dungeon entrances…). |
 | | **Ward areas**, **Build ranges** | Rings on the ground: where each ward protects (32 m) and where each workbench, forge and other crafting station lets you build (10–40 m, by kind). |
 | | **Location flattening** | Where locations flatten the ground: a ring for the flat part, a fainter one where it blends into the land. |
+| | **Unsaved marks** | The green dot over each new object not saved (or applied) yet. |
+| | **Limit marks** | The red on ground that reached the game's limit (8 m from its original height). |
 | | **Defaults** / **All** / **Ground** | The usual switches / show everything / only the ground. They set the objects, the water and the overlays, not the look. |
 | Building | **Built by** | The player written as the builder of every piece you place: see below. |
 | Ground (game look) | **Slope colours**, **Height lines every … m** | Ground overlays, see [Measure](measure.md). |
