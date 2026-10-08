@@ -1,7 +1,7 @@
 namespace TerrainEditor.Editing;
 
 // The ground of a block of zones as one grid of heights (65 points per zone side, shared edges once):
-// the generated ground plus the edits, within the game's ±8 m.
+// the generated ground plus the edits, within the game's ±8 m (plus the No limit lift not saved yet).
 public static class HeightGrid
 {
 	public static (int W, int H, float[] Heights) Read(ValheimGen.TerrainService terrain, EditStore edits, int x0, int z0, int x1, int z1)
@@ -25,6 +25,7 @@ public static class HeightGrid
 						{
 							v = Math.Clamp(b[i] + e.Level[i] + e.Smooth[i], b[i] - EditStore.MaxLevel, b[i] + EditStore.MaxLevel);
 						}
+						v += e?.Lift[i] ?? 0;
 						heights[(oz + k) * w + ox + l] = v;
 					}
 				}

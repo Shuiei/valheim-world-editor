@@ -15,6 +15,10 @@ public sealed class EditStore
 
 	public const float MaxSmooth = 1f;
 
+	// No limit: how far the editor moves ground beyond that (the world's ground stays well within
+	// what the game draws: about -400 to +1000 m).
+	public const float MaxLift = 400f;
+
 	private readonly object _lock = new();
 
 	private readonly Dictionary<(int, int), ZoneEdit> _zones = new();
@@ -328,11 +332,17 @@ public sealed class ZoneEdit(int zoneX, int zoneZ)
 	// RGBA per vertex: r dirt, g cultivated, b paved, a vegetation allowed.
 	public float[] Paint { get; init; } = new float[EditStore.Cells * 4];
 
+	// Height beyond the game's ±8 m (the editor's No limit): not saved as such, but turned into
+	// ground discs the game counts as generated ground (Uplift) when saving or applying.
+	public float[] Lift { get; init; } = new float[EditStore.Cells];
+
+	public bool HasLift => Lift.Any(l => l != 0f);
+
 	public int HeightCount => Modified.Count(m => m);
 
 	public int PaintCount => PaintModified.Count(m => m);
 
-	public bool IsEmpty => !Modified.Any(m => m) && !PaintModified.Any(m => m);
+	public bool IsEmpty => !Modified.Any(m => m) && !PaintModified.Any(m => m) && !HasLift;
 
 	// Same resulting ground and paint (how the height is split between level and smoothing aside).
 	public bool SameGround(ZoneEdit other)
@@ -340,7 +350,7 @@ public sealed class ZoneEdit(int zoneX, int zoneZ)
 		for (int i = 0; i < EditStore.Cells; i++)
 		{
 			float a = Modified[i] ? Level[i] + Smooth[i] : 0f, b = other.Modified[i] ? other.Level[i] + other.Smooth[i] : 0f;
-			if (Math.Abs(a - b) > 1e-4f || PaintModified[i] != other.PaintModified[i])
+			if (Math.Abs(a - b) > 1e-4f || Math.Abs(Lift[i] - other.Lift[i]) > 1e-4f || PaintModified[i] != other.PaintModified[i])
 			{
 				return false;
 			}
@@ -366,13 +376,15 @@ public sealed class ZoneEdit(int zoneX, int zoneZ)
 		Level = (float[])Level.Clone(),
 		Smooth = (float[])Smooth.Clone(),
 		PaintModified = (bool[])PaintModified.Clone(),
-		Paint = (float[])Paint.Clone()
+		Paint = (float[])Paint.Clone(),
+		Lift = (float[])Lift.Clone()
 	};
 
 	// Enforce the game's limits and drop no-op modifications, whatever the browser sent.
 	public void Sanitize()
 	{
-		if (Modified.Length != EditStore.Cells || Level.Length != EditStore.Cells || Smooth.Length != EditStore.Cells || PaintModified.Length != EditStore.Cells || Paint.Length != EditStore.Cells * 4)
+		if (Modified.Length != EditStore.Cells || Level.Length != EditStore.Cells || Smooth.Length != EditStore.Cells || PaintModified.Length != EditStore.Cells || Paint.Length != EditStore.Cells * 4
+			|| Lift.Length != EditStore.Cells)
 		{
 			throw new ArgumentException("Zone data must have 65x65 entries.");
 		}
@@ -380,6 +392,7 @@ public sealed class ZoneEdit(int zoneX, int zoneZ)
 		{
 			Level[i] = float.IsFinite(Level[i]) ? Math.Clamp(Level[i], -EditStore.MaxLevel, EditStore.MaxLevel) : 0f;
 			Smooth[i] = float.IsFinite(Smooth[i]) ? Math.Clamp(Smooth[i], -EditStore.MaxSmooth, EditStore.MaxSmooth) : 0f;
+			Lift[i] = float.IsFinite(Lift[i]) ? Math.Clamp(Lift[i], -EditStore.MaxLift, EditStore.MaxLift) : 0f;
 			if (!Modified[i])
 			{
 				Level[i] = 0f;

@@ -164,9 +164,9 @@ public sealed class Stroke
 	// The game's ±8 m limit stopped the ground somewhere.
 	public bool Clamped { get; set; }
 
-	public float StartHeight(Ground g, int p) => Start.Mod[p] != 0
-		? Math.Clamp(g.Base[p] + Start.Level[p] + Start.Smooth[p], g.Base[p] - TerrainEditor.Editing.EditStore.MaxLevel, g.Base[p] + TerrainEditor.Editing.EditStore.MaxLevel)
-		: g.Base[p];
+	public float StartHeight(Ground g, int p) => g.Base[p] + Start.Lift[p] + (Start.Mod[p] != 0
+		? Math.Clamp(Start.Level[p] + Start.Smooth[p], -TerrainEditor.Editing.EditStore.MaxLevel, TerrainEditor.Editing.EditStore.MaxLevel)
+		: 0);
 }
 
 public static class Sculpt
@@ -282,6 +282,8 @@ public static class Sculpt
 								g.Mod[p] = 0;
 							}
 						}
+						// Also back down from a No limit lift.
+						g.Lift[p] = MathF.Abs(g.Lift[p] * (1 - k)) < 0.01f ? 0 : g.Lift[p] * (1 - k);
 						if (g.PMod[p] != 0 && w > 0.5f)
 						{
 							g.PMod[p] = 0;

@@ -149,7 +149,8 @@ public static class Overlays
 			}
 		}
 
-		// Ground that locations flatten: the flat part, and fainter where it blends into the land.
+		// Ground that locations flatten: the flat part, and fainter where it blends into the land (not the
+		// editor's own ground discs for No limit ground: hundreds of them, they are just the ground).
 		int flattened = 0;
 		if (modifiers != null)
 		{
@@ -158,7 +159,7 @@ public static class Overlays
 			{
 				for (int zx = s.X0; zx < s.X0 + s.Size; zx++)
 				{
-					foreach (var m in modifiers.InZone(zx, zz).Where(m => !m.Player && (m.Level || m.Smooth)))
+					foreach (var m in modifiers.InZone(zx, zz).Where(m => !m.Player && !m.Disc && (m.Level || m.Smooth)))
 					{
 						if (!seen.Add(m))
 						{

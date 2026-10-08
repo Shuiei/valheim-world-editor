@@ -727,7 +727,7 @@ public sealed class AreaPanel
 				{
 					continue;
 				}
-				bool same = g.Mod[p] == bk.Mod[p] && g.PMod[p] == bk.PMod[p] && MathF.Abs(g.HeightOf(p) - bk.HeightOf(p)) < 1e-4f
+				bool same = g.Mod[p] == bk.Mod[p] && g.PMod[p] == bk.PMod[p] && MathF.Abs(g.HeightOf(p) - bk.HeightOf(p)) < 1e-4f && MathF.Abs(g.Original(p) - bk.Original(p)) < 1e-4f
 					&& (g.PMod[p] == 0 || Enumerable.Range(0, 4).All(c => MathF.Abs(g.Paint[p * 4 + c] - bk.Paint[p * 4 + c]) < 1e-4f));
 				if (same)
 				{
@@ -741,6 +741,8 @@ public sealed class AreaPanel
 					g.Smooth[p] = bk.Smooth[p];
 					g.PMod[p] = bk.PMod[p];
 					Array.Copy(bk.Paint, p * 4, g.Paint, p * 4, 4);
+					// The backup's original ground (its own ground discs) as a lift on this one's.
+					g.Lift[p] = bk.Original(p) - g.Base[p];
 				}
 				else
 				{
@@ -836,10 +838,10 @@ public sealed class AreaPanel
 					for (int l = 0; l <= 64; l++)
 					{
 						int gx = gx0 + l, gz = gz0 + k, p = gz * g.W + gx;
-						if (gx < g.W && gz < g.H && (g.Mod[p] != 0 || g.PMod[p] != 0))
+						if (gx < g.W && gz < g.H && (g.Mod[p] != 0 || g.PMod[p] != 0 || g.Lift[p] != 0))
 						{
 							g.Mod[p] = g.PMod[p] = 0;
-							g.Level[p] = g.Smooth[p] = 0;
+							g.Level[p] = g.Smooth[p] = g.Lift[p] = 0;
 							touched.Add(p);
 						}
 					}

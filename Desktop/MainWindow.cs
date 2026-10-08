@@ -370,6 +370,7 @@ public sealed partial class MainWindow : Window
 	{
 		_session = session;
 		session.Brush = Tools.Brush;
+		session.Ground.NoLimit = Tools.NoLimitBox.IsChecked == true;
 		if (session.Scene.World is { } bw)
 		{
 			// The builder chosen for this world before, else the world's main builder.
@@ -1418,6 +1419,14 @@ public sealed partial class MainWindow : Window
 		MaskPanel = new MaskPanel(Mask);
 		_view.StampClicked += StampAt;
 		Tools.Message += t => _message.Text = t;
+		Tools.NoLimitChanged += on =>
+		{
+			if (_session != null)
+			{
+				_session.Ground.NoLimit = on;
+			}
+			_message.Text = on ? "No limit: the ground tools go past the game's ±8 m. Saving turns that ground into ground discs every player's game counts as generated ground." : "The ground tools keep to the game's ±8 m.";
+		};
 		Tools.LoadStampAsked += async () =>
 		{
 			var picked = await StorageProvider.OpenFilePickerAsync(new Avalonia.Platform.Storage.FilePickerOpenOptions

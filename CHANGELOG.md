@@ -4,6 +4,21 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## Unreleased
+
+### Added
+- **No limit** (in the brush options; for every ground tool: brushes, Path, Area, pasting): move
+  the ground past the game's ±8 m, for mountains, cliffs and canyons. Saving (or Apply live) turns
+  that ground into invisible ground discs (the game's own DevGround1 location, placed as location
+  proxies) that every player's game counts as generated ground: no mod needed, console players
+  included. The hoe and pickaxe then get their ±8 m from the new ground. The disc heights are
+  fitted by working out the ground exactly as the game does; what they leave is ordinary ground
+  edits, and the discs' dirt is painted back to the biome's ground. Trees, rocks, ore, bushes and
+  pickables where the ground moved more than 2 m are taken away; building pieces stay. Lifting
+  again near earlier discs works them out again. Zones the game has not generated yet are left as
+  they were. Very steep walls come out softer, more so near the world's middle (the game applies
+  the discs in an order that depends on their height there).
+
 ## v1.0.1 — 2026-10-08
 
 ### Fixed

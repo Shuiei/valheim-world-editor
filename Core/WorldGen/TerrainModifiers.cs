@@ -13,7 +13,7 @@ public sealed class TerrainModifiers
 {
 	public sealed record Modifier(
 		Vector3 Position, bool Level, float LevelOffset, float LevelRadius, bool Square, bool Smooth, float SmoothRadius, float SmoothPower,
-		bool PaintCleared, float PaintRadius, int SortOrder, bool Player, long CreationTime)
+		bool PaintCleared, float PaintRadius, int SortOrder, bool Player, long CreationTime, bool Disc = false)
 	{
 		// TerrainModifier.GetRadius.
 		public float Radius => Math.Max(Level ? LevelRadius : 0f, Math.Max(Smooth ? SmoothRadius : 0f, PaintCleared ? PaintRadius : 0f));
@@ -31,10 +31,15 @@ public sealed class TerrainModifiers
 
 	public int LocationsWithModifiers { get; }
 
-	public TerrainModifiers(WorldSave world)
+	public TerrainModifiers(WorldSave world) : this(world.Placed)
+	{
+	}
+
+	// From any set of placed objects (Uplift: the world's with ground discs added or taken away).
+	public TerrainModifiers(IEnumerable<PlacedObject> placed)
 	{
 		List<Modifier> all = new();
-		foreach (PlacedObject p in world.Placed)
+		foreach (PlacedObject p in placed)
 		{
 			int key = p.Location != 0 ? p.Location : p.Prefab;
 			if (!Prefabs.TryGetValue(key, out var prefab) || prefab.Location != (p.Location != 0))
@@ -50,7 +55,8 @@ public sealed class TerrainModifiers
 			foreach (Template t in prefab.Mods)
 			{
 				Vector3 pos = p.Position + Vector3.Transform(t.Offset, rot);
-				all.Add(new Modifier(pos, t.Level, t.LevelOffset, t.LevelRadius, t.Square, t.Smooth, t.SmoothRadius, t.SmoothPower, t.PaintCleared, t.PaintRadius, t.SortOrder, t.Player, prefab.Location ? 0 : p.TimeCreated));
+				all.Add(new Modifier(pos, t.Level, t.LevelOffset, t.LevelRadius, t.Square, t.Smooth, t.SmoothRadius, t.SmoothPower, t.PaintCleared, t.PaintRadius, t.SortOrder, t.Player, prefab.Location ? 0 : p.TimeCreated,
+					prefab.Location && TerrainEditor.Editing.Uplift.IsDisc(p.Location)));
 			}
 		}
 		// TerrainModifier.SortByModifiers.

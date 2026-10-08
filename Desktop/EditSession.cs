@@ -93,6 +93,7 @@ public sealed class EditSession
 				g.Level[p] = Math.Clamp(g.Level[p] + c.Before.Level[k] - c.After.Level[k], -EditStore.MaxLevel, EditStore.MaxLevel);
 				g.Smooth[p] = Math.Clamp(g.Smooth[p] + c.Before.Smooth[k] - c.After.Smooth[k], -EditStore.MaxSmooth, EditStore.MaxSmooth);
 				g.Mod[p] = (byte)(MathF.Abs(g.Level[p]) + MathF.Abs(g.Smooth[p]) > 1e-4f || c.Before.Mod[k] != 0 && g.Mod[p] != 0 ? 1 : 0);
+				g.Lift[p] = Math.Clamp(g.Lift[p] + c.Before.Lift[k] - c.After.Lift[k], -EditStore.MaxLift, EditStore.MaxLift);
 				bool samePaint = g.PMod[p] == c.After.PMod[k];
 				for (int ch = 0; ch < 4 && samePaint; ch++)
 				{
@@ -129,7 +130,7 @@ public sealed class EditSession
 		Edited();
 		return $"Removed “{c.Label}”; everything else is kept. Ctrl+Z brings it back.";
 	}
-	private static readonly Ground.State NoPoints = new(Array.Empty<float>(), Array.Empty<float>(), Array.Empty<byte>(), Array.Empty<float>(), Array.Empty<byte>());
+	private static readonly Ground.State NoPoints = new(Array.Empty<float>(), Array.Empty<float>(), Array.Empty<byte>(), Array.Empty<float>(), Array.Empty<byte>(), Array.Empty<float>());
 	private readonly List<Change> _undo = new(), _redo = new();
 	public const int HistoryLength = 200;
 
@@ -334,7 +335,8 @@ public sealed class EditSession
 	// The values of these points only.
 	private static Ground.State Pick(Ground.State all, int[] pts) => new(
 		pts.Select(p => all.Level[p]).ToArray(), pts.Select(p => all.Smooth[p]).ToArray(), pts.Select(p => all.Mod[p]).ToArray(),
-		pts.SelectMany(p => new[] { all.Paint[p * 4], all.Paint[p * 4 + 1], all.Paint[p * 4 + 2], all.Paint[p * 4 + 3] }).ToArray(), pts.Select(p => all.PMod[p]).ToArray());
+		pts.SelectMany(p => new[] { all.Paint[p * 4], all.Paint[p * 4 + 1], all.Paint[p * 4 + 2], all.Paint[p * 4 + 3] }).ToArray(), pts.Select(p => all.PMod[p]).ToArray(),
+		pts.Select(p => all.Lift[p]).ToArray());
 
 	private void Record(string label, Ground.State start, IEnumerable<int> touched, List<(int X, int Z)> zones)
 	{
@@ -419,6 +421,7 @@ public sealed class EditSession
 				Ground.Level[p] = v.Level[k];
 				Ground.Smooth[p] = v.Smooth[k];
 				Ground.Mod[p] = v.Mod[k];
+				Ground.Lift[p] = v.Lift[k];
 				Array.Copy(v.Paint, k * 4, Ground.Paint, p * 4, 4);
 				Ground.PMod[p] = v.PMod[k];
 				int gx = p % Ground.W, gz = p / Ground.W;
@@ -614,6 +617,7 @@ public sealed class EditSession
 	public WorldWriter.Result Save()
 	{
 		WorldWriter.Result result;
+		bool reread;
 		lock (_lock)
 		{
 			if (_stroke != null)
@@ -622,13 +626,17 @@ public sealed class EditSession
 			}
 			// Every area opened in the app belongs to an open world (WorldScene.Load), which saves.
 			var owner = Scene.Owner ?? throw new InvalidOperationException("This area is not part of an open world, so it cannot be saved.");
-			result = owner.Save().Saved!;
-			if (result.Saved)
+			var o = owner.Save();
+			result = o.Saved!;
+			// No limit ground became ground discs (also when the save then failed): the ground under the
+			// area is not the same any more.
+			reread = result.Saved || o.Lifted;
+			if (reread)
 			{
 				Reread(owner.World);
 			}
 		}
-		if (result.Saved)
+		if (reread)
 		{
 			ThingsReset?.Invoke();
 		}
@@ -637,14 +645,15 @@ public sealed class EditSession
 	}
 
 	// Live: applies everything to the running game. After zone resets the world is read again from the
-	// game (like a save); otherwise the history stays.
+	// game (like a save), and after No limit ground became ground discs the area is (the ground under it
+	// changed); otherwise the history stays.
 	public async Task<WorldSession.Outcome> ApplyLive()
 	{
 		var owner = Scene.Owner!;
 		var o = await owner.ApplyLive();
 		lock (_lock)
 		{
-			if (o.Reloaded)
+			if (o.Reloaded || o.Lifted)
 			{
 				Reread(owner.World);
 			}
@@ -660,7 +669,7 @@ public sealed class EditSession
 				}
 			}
 		}
-		if (o.Reloaded)
+		if (o.Reloaded || o.Lifted)
 		{
 			ThingsReset?.Invoke();
 		}
@@ -782,7 +791,14 @@ public sealed class EditSession
 	private void Reread(WorldSave fresh)
 	{
 		Scene.World = fresh;
+		// The ground discs may have changed: the generated ground with them, everywhere in the area.
+		if (Scene.Owner is { } owner)
+		{
+			Scene.Modifiers = owner.Modifiers;
+			Ground.ReadBase(owner.Terrain);
+		}
 		Ground.TakeEdits(Edits);
+		Touch((0, 0, Ground.W - 1, Ground.H - 1));
 		_undo.Clear();
 		_redo.Clear();
 		// Saving gives objects new ids: read them again.

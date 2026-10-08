@@ -33,7 +33,7 @@ public sealed class WorldScene
 	public float Water { get; init; } = TerrainService.WaterLevel;
 	public required List<Thing> Things { get; init; }
 	// The ground the world's locations and pieces flatten (for the Location flattening overlay).
-	public TerrainModifiers? Modifiers { get; init; }
+	public TerrainModifiers? Modifiers { get; set; }
 	// The world generator's ground (regrow asks it what grows where); null in tests that only draw.
 	public TerrainService? Terrain { get; init; }
 	// For the game's terrain shader, per grid point: the biome colour the game puts in its mesh (corner
@@ -234,9 +234,10 @@ public sealed class WorldScene
 				things.Add(new Thing(id, prefab, p, new Vector3(0, ry, 0), 0, true));
 			}
 		}
+		// Not the ground discs for No limit ground (invisible: they are just the ground).
 		foreach (var n in added ?? Enumerable.Empty<NewObject>())
 		{
-			if (Inside(n.Position))
+			if (Inside(n.Position) && n.Prefab != WorldSave.LocationProxyPrefab)
 			{
 				things.Add(new Thing(n.Id, n.Prefab, n.Position, n.Rotation, n.Scale, PieceCatalog.Get(n.Prefab)?.Tool != null) { Tamed = TamedOf(world, n) });
 			}

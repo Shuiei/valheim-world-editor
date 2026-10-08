@@ -61,6 +61,9 @@ public sealed class WorldSave
 	// the game and is not part of the saved terrain data.
 	public List<(System.Numerics.Vector3 Position, int Location)> Locations { get; } = new();
 
+	// The ground discs the editor placed for No limit ground (Uplift): invisible location proxies.
+	public List<(int Id, Vector3 Position)> Discs { get; } = new();
+
 	// Every placed object that can modify terrain while the game runs: locations and the prefabs in
 	// ModifierPrefabs. Rotation is Euler degrees, as stored.
 	public List<PlacedObject> Placed { get; } = new();
@@ -495,6 +498,10 @@ public sealed class WorldSave
 		else if (!tracked && !terrain && prefab != LocationProxyPrefab)
 		{
 			Objects.Add((id, prefab, position, rotation, scale));
+		}
+		else if (prefab == LocationProxyPrefab && TerrainEditor.Editing.Uplift.IsDisc(location))
+		{
+			Discs.Add((id, position));
 		}
 		else if (prefab == LocationProxyPrefab && TerrainEditor.Terrain.PrefabCatalog.IsRunestone(location))
 		{
