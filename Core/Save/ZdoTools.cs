@@ -281,6 +281,11 @@ public sealed class ZoneDb
 		return db;
 	}
 
+	// A new world's: no zone generated, no location laid out yet (the game does it on first load), and
+	// the rest of the file (the random events' state...) as given.
+	public static ZoneDb Empty(int fileVersion, int locationVersion, byte[] tail) =>
+		new() { FileVersion = fileVersion, NetTime = 0, LocationVersion = locationVersion, LocationsGenerated = false, _tail = tail };
+
 	// The uncompressed ZoneSystem package, as the live bridge sends it.
 	public static ZoneDb FromPackage(byte[] package, double netTime)
 	{

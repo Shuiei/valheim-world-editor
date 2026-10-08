@@ -9,10 +9,57 @@ using TerrainEditor.Save;
 //   selftest-save <world copy>    edits, saves and reloads a COPY of a world (under /tmp only)
 //   inspect <world>               the chunk mapping and the layout of terrain objects
 //   summary <world>               the overview map and the most edited zones
+//   create <folder> <name> <seed> [radius]
+//                                 a new world from a seed, its middle generated radius zones out
+//                                 (refuses a folder that already holds a world)
+//   look <seed> [metres]          the biomes and water around the middle of a seed's world
 if (args.Length < 2)
 {
-	Console.Error.WriteLine("usage: WorldCheck verify <dump> [seed] | verify-ingame <world> <file> | selftest-save <world copy> | inspect <world> | summary <world>");
+	Console.Error.WriteLine("usage: WorldCheck verify <dump> [seed] | verify-ingame <world> <file> | selftest-save <world copy> | inspect <world> | summary <world> | create <folder> <name> <seed> [radius] | look <seed> [metres]");
 	return 2;
+}
+if (args[0] == "create")
+{
+	if (args.Length < 4)
+	{
+		Console.Error.WriteLine("create needs <folder> <name> <seed> [radius]");
+		return 2;
+	}
+	try
+	{
+		int radius = args.Length > 4 ? int.Parse(args[4], CultureInfo.InvariantCulture) : 0;
+		var made = WorldCreator.Create(args[1], args[2], args[3], radius);
+		Console.WriteLine($"Created '{args[2]}' (seed {args[3]} = {made.Seed}) in {made.Directory}: {made.Zones} zones generated, {made.Objects:N0} objects.");
+		return 0;
+	}
+	catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or FormatException)
+	{
+		Console.Error.WriteLine(ex.Message);
+		return 1;
+	}
+}
+if (args[0] == "look")
+{
+	float reach = args.Length > 2 ? float.Parse(args[2], CultureInfo.InvariantCulture) : 400f;
+	var gen = Look(args[1]);
+	var shares = new Dictionary<string, int>();
+	int water = 0, n = 0;
+	for (float z = -reach; z <= reach; z += 16f)
+	{
+		for (float x = -reach; x <= reach; x += 16f)
+		{
+			if (x * x + z * z > reach * reach)
+			{
+				continue;
+			}
+			string b = gen.GetBiome(x, z).ToString();
+			shares[b] = shares.GetValueOrDefault(b) + 1;
+			water += gen.GetHeight(new ValheimGen.Vector2(x, z)) < ValheimGen.TerrainService.WaterLevel ? 1 : 0;
+			n++;
+		}
+	}
+	Console.WriteLine($"seed {args[1]}: middle {gen.GetBiome(0, 0)}, within {reach} m: " + string.Join(", ", shares.OrderByDescending(kv => kv.Value).Select(kv => $"{kv.Key} {100.0 * kv.Value / n:0}%")) + $", under water {100.0 * water / n:0}%");
+	return 0;
 }
 if (args[0] == "verify")
 {
@@ -159,4 +206,10 @@ switch (args[0])
 	default:
 		Console.Error.WriteLine("unknown check " + args[0]);
 		return 2;
+}
+
+static ValheimGen.WorldGenerator Look(string seedName)
+{
+	ValheimGen.WorldGenerator.Initialize(new ValheimGen.World { m_seedName = seedName, m_seed = WorldCreator.SeedOf(seedName), m_worldGenVersion = WorldCreator.WorldGenVersion });
+	return ValheimGen.WorldGenerator.instance;
 }
