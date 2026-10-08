@@ -27,7 +27,8 @@ public static class Characters
 						list.Add(c);
 					}
 				}
-				catch (IOException)
+				// A file that cannot be read (another user's, locked) is passed over.
+				catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
 				{
 				}
 			}
