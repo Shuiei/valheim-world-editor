@@ -7,6 +7,8 @@ using Xunit;
 namespace WorldEditor.Tests;
 
 // 16-bit heightmaps: written and read back, with every PNG row filter, and the ground of a real area.
+// The world generator keeps static state: one world at a time.
+[Collection("World files")]
 public class HeightmapTests
 {
 	[Theory]
@@ -59,6 +61,8 @@ public class HeightmapTests
 // Regrow nature against a world the game generated: REALWORLD=<world folder> OUT=<report file> runs it
 // (how many saved trees, rocks... sit exactly where the port puts them, per kind). Without a world it
 // does nothing; the test world is too small to hold generated nature.
+// The world generator keeps static state: one world at a time.
+[Collection("World files")]
 public class RegrowProbe
 {
 	[Fact]
