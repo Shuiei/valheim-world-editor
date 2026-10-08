@@ -1,10 +1,8 @@
-using System.Runtime.InteropServices;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Layout;
 using Avalonia.Media;
-using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using TerrainEditor.App;
 using TerrainEditor.Editing;
@@ -14,8 +12,8 @@ namespace TerrainEditor.Desktop;
 
 // The world map page, like the web editor's (index.html): the world drawn like the game's map, what is
 // waiting to be saved (Save, or Apply live, and Discard), the map's options, search across the world,
-// zones picked by filter to reset, the edited zones, and the spot picked with a click (its edits shown
-// up close), opened in the 3D editor with the size chosen.
+// zones picked by filter to reset, the edited zones, and the spot picked with a click, opened in the
+// 3D editor with the size chosen.
 public sealed class MapPage
 {
 	public Control View { get; }
@@ -81,27 +79,11 @@ public sealed class MapPage
 	internal List<(int X, int Z)> Matches { get; private set; } = new();
 
 	// Zone detail and the edited zones.
-	private readonly StackPanel _detail = new() { Spacing = 4, IsVisible = false };
-	internal TextBlock DetailText { get; } = new() { FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
-	internal TextBlock DetailStats { get; } = new() { FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
-	private readonly TextBlock _terrainLow = Small(""), _terrainHigh = Small("");
-	internal Image TerrainImage { get; } = Picture();
-	internal Image HeightsImage { get; } = Picture();
-	internal Image PaintImage { get; } = Picture();
 	internal ListBox EditedList { get; } = new() { MaxHeight = 200, FontSize = 11 };
 	private readonly Expander _editedSection;
 	private List<ZoneEdit> _edited = new();
 
 	private static readonly IBrush PanelBg = Ui.Panel, Line = Ui.Line;
-
-	private static TextBlock Small(string t) => new() { Text = t, FontSize = 10, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
-
-	private static Image Picture()
-	{
-		var i = new Image { Width = 195, Height = 195, HorizontalAlignment = HorizontalAlignment.Left };
-		RenderOptions.SetBitmapInterpolationMode(i, BitmapInterpolationMode.None);
-		return i;
-	}
 
 	private static TextBlock H2(string t) => Ui.Heading(t, 4);
 
@@ -186,18 +168,7 @@ public sealed class MapPage
 			ZoneInfo);
 
 		// The spot picked, and its edits up close.
-		_detail.Children.Add(DetailText);
-		_detail.Children.Add(H2("Terrain (with your edits)"));
-		_detail.Children.Add(TerrainImage);
-		_detail.Children.Add(new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), Width = 195, HorizontalAlignment = HorizontalAlignment.Left, Children = { _terrainLow, Col(Small("relief · blue = water"), 1, HorizontalAlignment.Center), Col(_terrainHigh, 2) } });
-		_detail.Children.Add(H2("Your height edits"));
-		_detail.Children.Add(HeightsImage);
-		_detail.Children.Add(Small("blue −8 m (dug) · grey 0 · red +8 m (raised)"));
-		_detail.Children.Add(H2("Paint"));
-		_detail.Children.Add(PaintImage);
-		_detail.Children.Add(Small("red dirt · green cultivated · blue paved · darker = grass cleared · grey = untouched"));
-		_detail.Children.Add(DetailStats);
-		_pickBox = new StackPanel { Spacing = 6, IsVisible = false, Children = { PickTitle, new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { EditButton, SizeBox } }, _detail } };
+		_pickBox = new StackPanel { Spacing = 6, IsVisible = false, Children = { PickTitle, new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { EditButton, SizeBox } } } };
 		EditedList.SelectionChanged += (_, _) =>
 		{
 			if (EditedList.SelectedIndex is int i and >= 0 && i < _edited.Count)
@@ -316,10 +287,6 @@ public sealed class MapPage
 		ToolTip.SetTip(SaveButton, session.IsLive ? "Send every pending change to the running game (everyone sees it at once)" : "Write every pending change into the world files (a backup of the world folder is made first)");
 		UpdatePending();
 		FillEdited();
-		if (Spot is var (sx, sz))
-		{
-			ShowDetail(sx, sz);
-		}
 		_players.Stop();
 		Map.Players = Array.Empty<(string, float, float)>();
 		PlaceLabels();
@@ -397,7 +364,6 @@ public sealed class MapPage
 		PickTitle.Text = $"Zone {zx}, {zz} · {biome}";
 		_pickBox.IsVisible = true;
 		ShowChosen();
-		ShowDetail(zx, zz);
 	}
 
 	private void ShowChosen()
@@ -617,108 +583,5 @@ public sealed class MapPage
 			}
 		}
 		return (lo, hi);
-	}
-
-	private void ShowDetail(int zx, int zz)
-	{
-		if (_session is not { } s || s.Edits.Get(zx, zz) is not { } e || e.IsEmpty)
-		{
-			_detail.IsVisible = false;
-			return;
-		}
-		float[] bases = s.Terrain.BaseZone(zx, zz);
-		var pics = ZonePictures.Make(e, bases, ValheimGen.TerrainService.WaterLevel);
-		TerrainImage.Source = Bitmap(pics.Terrain);
-		HeightsImage.Source = Bitmap(pics.Heights);
-		PaintImage.Source = Bitmap(pics.Paint);
-		_terrainLow.Text = $"{pics.Low:0.0} m";
-		_terrainHigh.Text = $"{pics.High:0.0} m";
-		DetailText.Text = $"Ground {bases.Min():0.0}–{bases.Max():0.0} m originally, {pics.Low:0.0}–{pics.High:0.0} m now (sea level {ValheimGen.TerrainService.WaterLevel:0} m)";
-		var (lo, hi) = Range(e);
-		DetailStats.Text = $"{e.HeightCount} heights edited ({lo:0.00} to {hi:0.00} m), {e.PaintCount} points painted.";
-		_detail.IsVisible = true;
-	}
-
-	private static WriteableBitmap Bitmap(byte[] rgba)
-	{
-		int w = EditStore.Grid;
-		var bmp = new WriteableBitmap(new PixelSize(w, w), new Avalonia.Vector(96, 96), Avalonia.Platform.PixelFormat.Rgba8888, Avalonia.Platform.AlphaFormat.Opaque);
-		using var fb = bmp.Lock();
-		for (int y = 0; y < w; y++)
-		{
-			Marshal.Copy(rgba, y * w * 4, fb.Address + y * fb.RowBytes, w * 4);
-		}
-		return bmp;
-	}
-}
-
-// The zone detail's three pictures (index.html's selectZone), north up: the ground with the edits as
-// shaded relief, the height edits (blue dug, red raised), and the paint.
-public static class ZonePictures
-{
-	public sealed record Pictures(byte[] Terrain, byte[] Heights, byte[] Paint, float Low, float High);
-
-	private static void Put(byte[] to, int i, float r, float g, float b)
-	{
-		const int w = EditStore.Grid;
-		// Rows run along +Z; the picture's top row is the zone's north edge.
-		int x = i % w, y = w - 1 - i / w, o = (y * w + x) * 4;
-		to[o] = (byte)Math.Clamp(r, 0, 255);
-		to[o + 1] = (byte)Math.Clamp(g, 0, 255);
-		to[o + 2] = (byte)Math.Clamp(b, 0, 255);
-		to[o + 3] = 255;
-	}
-
-	private static float Mix(float a, float b, float t) => a + (b - a) * t;
-
-	public static Pictures Make(ZoneEdit e, float[] bases, float water)
-	{
-		const int w = EditStore.Grid;
-		var hs = new float[EditStore.Cells];
-		for (int i = 0; i < hs.Length; i++)
-		{
-			hs[i] = bases[i] + (e.Modified[i] ? e.Level[i] + e.Smooth[i] : 0);
-		}
-		float lo = hs.Min(), hi = hs.Max();
-		byte[] terrain = new byte[EditStore.Cells * 4], heights = new byte[EditStore.Cells * 4], paint = new byte[EditStore.Cells * 4];
-		for (int i = 0; i < hs.Length; i++)
-		{
-			float h = hs[i];
-			if (h < water)
-			{
-				float t = MathF.Min(1, (water - h) / 4);
-				Put(terrain, i, Mix(70, 30, t), Mix(120, 60, t), Mix(170, 110, t));
-			}
-			else
-			{
-				int x = i % w, y = i / w;
-				float dx = hs[y * w + Math.Min(x + 1, w - 1)] - hs[y * w + Math.Max(x - 1, 0)];
-				float dz = hs[Math.Min(y + 1, w - 1) * w + x] - hs[Math.Max(y - 1, 0) * w + x];
-				float shade = Math.Clamp(1 - (dx - dz) * 0.25f, 0.45f, 1.4f), t = hi > lo ? (h - lo) / (hi - lo) : 0.5f;
-				Put(terrain, i, Mix(96, 190, t) * shade, Mix(128, 180, t) * shade, Mix(70, 150, t) * shade);
-			}
-			if (!e.Modified[i])
-			{
-				Put(heights, i, 42, 47, 56);
-			}
-			else
-			{
-				float t = Math.Clamp((e.Level[i] + e.Smooth[i]) / 8, -1, 1);
-				if (t >= 0) Put(heights, i, Mix(42, 224, t), Mix(47, 96, t), Mix(56, 75, t));
-				else Put(heights, i, Mix(42, 75, -t), Mix(47, 143, -t), Mix(56, 224, -t));
-			}
-			// Paint channels: dirt, cultivated, paved, vegetation allowed (0 = grass cleared).
-			if (!e.PaintModified[i])
-			{
-				Put(paint, i, 42, 47, 56);
-			}
-			else
-			{
-				float r = e.Paint[i * 4], g = e.Paint[i * 4 + 1], b = e.Paint[i * 4 + 2], k = e.Paint[i * 4 + 3] < 0.5f ? 0.45f : 1;
-				if (r + g + b < 0.05f) Put(paint, i, 96 * k, 104 * k, 88 * k);
-				else Put(paint, i, r * 255 * k, g * 255 * k, b * 255 * k);
-			}
-		}
-		return new Pictures(terrain, heights, paint, lo, hi);
 	}
 }
