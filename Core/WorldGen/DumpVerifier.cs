@@ -7,6 +7,16 @@ namespace ValheimGen;
 // client plugin (BepInEx/TerrainDump.txt). Every value is compared bit-for-bit.
 public static class DumpVerifier
 {
+	// What was compared and how much matched; Errors: the first mismatches, described.
+	public sealed record Result(int RandomOk, int RandomWrong, int PerlinOk, int PerlinWrong, int HeightsOk, int HeightsWrong, int BiomesWrong, int ZonesOk, int ZonesWrong, int WaterWrong, List<string> Errors)
+	{
+		// The largest differences in metres (heights, and heights inside zones).
+		public double HeightMaxDiff { get; init; }
+		public double ZoneMaxDiff { get; init; }
+
+		public bool AllMatch => RandomWrong + PerlinWrong + HeightsWrong + BiomesWrong + ZonesWrong + WaterWrong == 0;
+	}
+
 	private static float F(string hex) => BitConverter.Int32BitsToSingle(int.Parse(hex, NumberStyles.HexNumber, CultureInfo.InvariantCulture));
 
 	private static string State()
@@ -15,10 +25,10 @@ public static class DumpVerifier
 		return $"{s.s0:x8} {s.s1:x8} {s.s2:x8} {s.s3:x8}";
 	}
 
-	public static void Run(string path, string seedName)
+	public static Result Run(string path, string seedName)
 	{
 		string[] lines = File.ReadAllLines(path);
-		int rOk = 0, rBad = 0, pOk = 0, pBad = 0, hOk = 0, hBad = 0, bBad = 0, zOk = 0, zBad = 0;
+		int rOk = 0, rBad = 0, pOk = 0, pBad = 0, hOk = 0, hBad = 0, bBad = 0, zOk = 0, zBad = 0, wBad = 0;
 		double pMax = 0, hMax = 0, zMax = 0;
 		List<string> firstErrors = new();
 		void Error(string msg)
@@ -93,8 +103,14 @@ public static class DumpVerifier
 			case "W":
 			{
 				gen ??= Init(seedName);
+				string offline = $"W lakes {gen.GetLakes().Count} rivers {gen.GetRivers().Count} streams {gen.GetStreams().Count}";
 				Console.WriteLine($"  game:    {line}");
-				Console.WriteLine($"  offline: W lakes {gen.GetLakes().Count} rivers {gen.GetRivers().Count} streams {gen.GetStreams().Count}");
+				Console.WriteLine($"  offline: {offline}");
+				if (offline != line.Trim())
+				{
+					wBad++;
+					Error($"Water: expected [{line.Trim()}] got [{offline}]");
+				}
 				break;
 			}
 			case "H":
@@ -156,6 +172,7 @@ public static class DumpVerifier
 		{
 			Console.WriteLine("  " + e);
 		}
+		return new Result(rOk, rBad, pOk, pBad, hOk, hBad, bBad, zOk, zBad, wBad, firstErrors) { HeightMaxDiff = hMax, ZoneMaxDiff = zMax };
 	}
 
 	private static WorldGenerator Init(string seedName)
