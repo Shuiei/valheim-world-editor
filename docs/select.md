@@ -3,7 +3,7 @@
 ![A selected rock with its move arrows](images/select-arrows.jpg)
 
 Pick objects (trees, rocks, building pieces, anything shown), then move, turn, lift, drop, copy,
-replace or delete them. Only objects that are shown can be picked; switch kinds on in the
+replace or delete them. The object under the cursor is outlined faintly: that is the one a click picks. Only objects that are shown can be picked; switch kinds on in the
 [View panel](editor-basics.md#view-panel) first.
 
 ## Selecting

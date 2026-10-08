@@ -1,6 +1,6 @@
 # Mask
 
-![The Mask limiting Lower to ground under 15°](images/mask.jpg)
+![The Mask limiting Raise to Meadows below 64 m and under 25°](images/mask.jpg)
 
 The Mask limits a tool to the ground that matches **all** of its settings, like WorldEdit masks or
 WorldPainter filters. It works with the ground brushes, Path, Shape, the Area tool's actions and Place.

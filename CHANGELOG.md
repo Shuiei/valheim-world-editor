@@ -50,6 +50,10 @@ the plugin is unchanged in versions without that part.
 - Native app: new objects not saved (or applied) yet carry a green dot in the view.
 - Native app, View: **Unsaved marks** hides the green dots on new objects (remembered).
 - Native app, View: **Limit marks** hides the red on ground at the game's ±8 m limit (remembered).
+- Native app, Path: before a click, a circle under the cursor shows the path's width and soft edge,
+  and the stretch the next point adds; the ground the path covers is tinted.
+- Native app, Select: the object under the cursor is outlined faintly before a click picks it.
+- Native app, Place: the brush's outline shows under the cursor (Brush mode).
 - Native app: placing or pasting a kind switched off in View switches it on, and says so.
 - The developer checks of the world generator and the save writer (`--verify`, `--verify-ingame`,
   `--selftest-save`, `--inspect`, `--summary`) moved to a separate tool, `tools/WorldCheck`. It can
@@ -79,6 +83,8 @@ the plugin is unchanged in versions without that part.
 - Native app: folders under the home are shown as `~/…` everywhere (saving, backups, blueprints,
   Settings), so no user name is on screen.
 - Native app, Settings: the dialog is as tall as what it holds (it had a large empty part).
+- Native app: the tools' lines (brush circles, path, area, measure, selection boxes) broke into faint
+  dashes when the 3D view ran below the screen's resolution; they are now drawn a few pixels wide.
 
 ### Removed
 - The web editor (the page in a WebView2/WebKitGTK window or the browser): the native app replaces
