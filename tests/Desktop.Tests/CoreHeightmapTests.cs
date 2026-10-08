@@ -42,12 +42,12 @@ public class HeightmapTests
 		WorldSave world = w.Load();
 		var edits = new EditStore(world);
 		var terrain = new ValheimGen.TerrainService(world, new TerrainModifiers(world));
-		var (W, H, heights) = HeightmapEndpoints.Heights(terrain, edits, -1, -1, 1, 1);
+		var (W, H, heights) = TerrainEditor.Editing.HeightGrid.Read(terrain, edits, -1, -1, 1, 1);
 		Assert.Equal((193, 193), (W, H));
-		byte[] png = HeightmapEndpoints.Encode(W, H, heights, "test", out float min, out float max);
+		byte[] png = Heightmaps.Encode(W, H, heights, "test", out float min, out float max);
 		Png.Image img = Png.Read(png);
-		Assert.Equal(min.ToString("R", System.Globalization.CultureInfo.InvariantCulture), img.Text[HeightmapEndpoints.MinKey]);
-		float[] back = HeightmapEndpoints.Resample(img, W, H);
+		Assert.Equal(min.ToString("R", System.Globalization.CultureInfo.InvariantCulture), img.Text[Heightmaps.MinKey]);
+		float[] back = Heightmaps.Resample(img, W, H);
 		// 16 bits over the height range: well under a centimetre.
 		float worst = Enumerable.Range(0, heights.Length).Max(i => MathF.Abs(min + back[i] * (max - min) - heights[i]));
 		Assert.True(worst < 0.01f, $"worst difference {worst} m");
