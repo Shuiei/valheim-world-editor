@@ -276,7 +276,7 @@ public sealed class GlView : OpenGlControlBase
 	// of its things changes (deleted, moved, added, or shown elsewhere while being moved).
 	private sealed class Group
 	{
-		public required (int Prefab, bool Piece) Key { get; init; }
+		public required (int Prefab, bool Piece, bool Tamed) Key { get; init; }
 		public required ObjectKind Kind { get; init; }
 		public readonly List<int> Things = new();
 		public Vector3 RootScale = Vector3.One;
@@ -285,7 +285,8 @@ public sealed class GlView : OpenGlControlBase
 		public readonly List<(Batch Batch, Matrix4x4 Pre)> Batches = new();
 		public bool Ready;
 	}
-	private readonly Dictionary<(int, bool), Group> _groups = new();
+	// By prefab, piece or not and tamed or not: tamed creatures are their own View kind.
+	private readonly Dictionary<(int, bool, bool), Group> _groups = new();
 	private readonly HashSet<Group> _dirtyGroups = new();
 	// Things shown somewhere else than where they are, while a move is being made (Select tool).
 	private Dictionary<int, WorldScene.Thing> _previews = new();
@@ -547,11 +548,11 @@ public sealed class GlView : OpenGlControlBase
 	private Group GroupOf(WorldScene s, int i, bool start = true)
 	{
 		var t = s.Things[i];
-		var key = (t.Prefab, t.Piece);
+		var key = (t.Prefab, t.Piece, t.Tamed);
 		EnsureSize(i + 1);
 		if (!_groups.TryGetValue(key, out var g))
 		{
-			g = _groups[key] = new Group { Key = key, Kind = ObjectKinds.Of(NameOf(t.Prefab), t.Piece) };
+			g = _groups[key] = new Group { Key = key, Kind = ObjectKinds.Of(NameOf(t.Prefab), t.Piece, t.Tamed) };
 			if (start)
 			{
 				Interlocked.Increment(ref _pending);
@@ -574,9 +575,9 @@ public sealed class GlView : OpenGlControlBase
 	{
 		lock (_groups)
 		{
-			if (!_groups.TryGetValue((prefab, piece), out var g))
+			if (!_groups.TryGetValue((prefab, piece, false), out var g))
 			{
-				g = _groups[(prefab, piece)] = new Group { Key = (prefab, piece), Kind = ObjectKinds.Of(NameOf(prefab), piece) };
+				g = _groups[(prefab, piece, false)] = new Group { Key = (prefab, piece, false), Kind = ObjectKinds.Of(NameOf(prefab), piece) };
 				Interlocked.Increment(ref _pending);
 				Load(g);
 			}
@@ -747,7 +748,7 @@ public sealed class GlView : OpenGlControlBase
 			foreach (int i in old.Keys.Concat(_previews.Keys))
 			{
 				var t = s.Things[i];
-				if (_groups.TryGetValue((t.Prefab, t.Piece), out var g))
+				if (_groups.TryGetValue((t.Prefab, t.Piece, t.Tamed), out var g))
 				{
 					MarkDirty(g);
 				}
@@ -2802,7 +2803,7 @@ public sealed class GlView : OpenGlControlBase
 			foreach (var (i, lo, hi) in boxes)
 			{
 				var t = s.Things[i];
-				_kinds[i] = ObjectKinds.Of(NameOf(t.Prefab), t.Piece);
+				_kinds[i] = ObjectKinds.Of(NameOf(t.Prefab), t.Piece, t.Tamed);
 				_bounds[i] = (lo, hi);
 				_boundsAt[i] = t.Position;
 				_known[i] = !t.Gone;
@@ -2978,7 +2979,9 @@ public sealed class GlView : OpenGlControlBase
 
 	private void DrawHoverObject(Matrix4x4 vp)
 	{
-		if (!_selectMode || _tool != null || _hoverObject is not int i || i >= _bounds.Length || _selection.Contains(i))
+		// Only what a click can pick: drawn and not deleted (a deleted object stays under the pointer).
+		if (!_selectMode || _tool != null || _hoverObject is not int i || i >= _bounds.Length || _selection.Contains(i)
+			|| !_known[i] || !_shown[(int)_kinds[i]] || _scene is not { } sc || i >= sc.Things.Count || sc.Things[i].Gone)
 		{
 			return;
 		}

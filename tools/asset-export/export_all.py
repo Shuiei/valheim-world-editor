@@ -255,6 +255,11 @@ def world_prefabs(world):
     return seen
 
 
+# Creatures players tame (and their young, born tamed), drawn in the Tamed animals kind. Deer and Neck
+# are tamed by server mods.
+TAMEABLE = {'Boar', 'Boar_piggy', 'Wolf', 'Wolf_cub', 'Lox', 'Lox_Calf', 'Hen', 'Chicken', 'Asksvin', 'Asksvin_hatchling', 'Deer', 'Neck'}
+
+
 def export_models(found, args, work, out):
     mdir = os.path.join(out, 'models'); os.makedirs(mdir, exist_ok=True)
     # The build-piece list: next to this script in a release, Core/WorldGen/pieces.json in the source tree.
@@ -268,9 +273,12 @@ def export_models(found, args, work, out):
     if args.objects != 'none':
         wanted = world_prefabs(args.world) if args.objects == 'world' else None
         for n, (b, pid, znv, creature, item) in roots.items():
-            if n in pieces or not znv or creature or item or n.endswith('_ragdoll'): continue
+            # Runestones (locations: the save keeps a proxy, the editor shows the location's model) and the
+            # creatures players tame, for the Tamed animals kind; both whatever the world holds.
+            extra = n.startswith('Runestone_') or creature and n in TAMEABLE
+            if not extra and (n in pieces or not znv or creature or item or n.endswith('_ragdoll')): continue
             h = stable_hash(n)
-            if wanted is not None and h not in wanted: continue
+            if wanted is not None and h not in wanted and not extra: continue
             objects[str(h)] = {'name': n, 'bundle': b, 'pid': pid}
     index.update(objects)
     ipath = os.path.join(work, 'model_index.json'); json.dump(index, open(ipath, 'w'))

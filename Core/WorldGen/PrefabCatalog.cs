@@ -32,8 +32,24 @@ public static class PrefabCatalog
 
 	public static Info? Get(int prefab) => ByHash.TryGetValue(prefab, out var info) ? info : null;
 
+	// Runestones are not objects but locations: the save keeps a location proxy for each, and the game
+	// builds the stone from it whenever the zone loads. The editor lists a runestone's proxy under the
+	// location's name (its hash stands for the prefab), so it can be shown, picked and deleted, never
+	// moved or copied (that would need the proxy's own prefab).
+	public static readonly string[] RunestoneLocations =
+	{
+		"Runestone_Ashlands", "Runestone_BlackForest", "Runestone_Boars", "Runestone_DeepNorth", "Runestone_Draugr", "Runestone_Greydwarfs",
+		"Runestone_Meadows", "Runestone_Mistlands", "Runestone_Mountains", "Runestone_Plains", "Runestone_Swamps",
+	};
+
+	private static readonly Dictionary<int, string> RunestoneNames = RunestoneLocations.ToDictionary(StableHash.Of);
+
+	public static bool IsRunestone(int prefab) => RunestoneNames.ContainsKey(prefab);
+
+	public static bool IsRunestoneName(string name) => name.StartsWith("Runestone_", StringComparison.Ordinal);
+
 	// The game's name of any prefab of the catalogue (also items and creatures), or null.
-	public static string? NameOf(int prefab) => AllNames.TryGetValue(prefab, out string? n) ? n : null;
+	public static string? NameOf(int prefab) => AllNames.TryGetValue(prefab, out string? n) ? n : RunestoneNames.GetValueOrDefault(prefab);
 
 	// Item prefabs (what containers and item stands can hold), by name.
 	public static IReadOnlyList<string> Items => ItemNames;

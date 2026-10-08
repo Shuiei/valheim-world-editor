@@ -365,6 +365,8 @@ public static class Tips
 		ObjectKind.Ore => "Copper, tin, silver and other deposits (spoiler).",
 		ObjectKind.Bushes => "Bushes, shrubs and ferns.",
 		ObjectKind.Pickables => "Mushrooms, berries, flowers, stones and other things to pick up.",
+		ObjectKind.Animals => "Boars, wolves, lox, hens, deer and other creatures players tamed (wild ones are under Other objects).",
+		ObjectKind.Runestones => "The world's runestones. They can be picked and deleted (the game builds them from their location, so they cannot be moved or copied).",
 		_ => "Everything else the save holds.",
 	};
 

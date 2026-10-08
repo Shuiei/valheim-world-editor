@@ -353,7 +353,7 @@ public sealed class AreaPanel
 		return m(z * s.Ground.W + x) > 0;
 	}
 
-	private ObjectKind KindOf(WorldScene.Thing t) => ObjectKinds.Of(_nameOf(t.Prefab), t.Piece);
+	private ObjectKind KindOf(WorldScene.Thing t) => ObjectKinds.Of(_nameOf(t.Prefab), t.Piece, t.Tamed);
 	private string NameOf(int prefab) => _nameOf(prefab) ?? prefab.ToString();
 
 	// The selection changed: its size, what is inside, the lists and the volumes.
@@ -768,9 +768,10 @@ public sealed class AreaPanel
 		if (BackupObjectsBox.IsChecked == true)
 		{
 			float ox = s.X0 * 64f - 32f, oz = s.Z0 * 64f - 32f;
+			// Runestones are left as they are on both sides (a location proxy cannot be copied back).
 			var wanted = WorldScene.ReadThings(bw, s.X0, s.Z0, s.Size, new HashSet<int>())
-				.Where(o => AreaTool.Inside(poly, o.Position.X - ox, o.Position.Z - oz) && Area.Kinds.Contains(KindOf(o))).ToList();
-			var current = ThingsInside(poly, chosenKindsOnly: true, includeHidden: true);
+				.Where(o => !o.Runestone && AreaTool.Inside(poly, o.Position.X - ox, o.Position.Z - oz) && Area.Kinds.Contains(KindOf(o))).ToList();
+			var current = ThingsInside(poly, chosenKindsOnly: true, includeHidden: true).Where(i => !s.Things[i].Runestone).ToList();
 			// Unchanged since the backup (same kind, place and facing): kept as they are.
 			bool Same(WorldScene.Thing r, WorldScene.Thing o) => r.Prefab == o.Prefab && MathF.Abs(r.Position.X - o.Position.X) < 0.01f
 				&& MathF.Abs(r.Position.Y - o.Position.Y) < 0.01f && MathF.Abs(r.Position.Z - o.Position.Z) < 0.01f

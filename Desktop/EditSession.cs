@@ -547,7 +547,7 @@ public sealed class EditSession
 			{
 				var n = o with { Id = Scene.Owner?.NextId() ?? _nextId-- };
 				added.Add(n);
-				list.Add(new WorldScene.Thing(n.Id, n.Prefab, n.Position, n.Rotation, n.Scale, piece));
+				list.Add(new WorldScene.Thing(n.Id, n.Prefab, n.Position, n.Rotation, n.Scale, piece) { Tamed = WorldScene.TamedOf(Scene.World, n) });
 				indices.Add(list.Count - 1);
 				changes.Add((list.Count - 1, true, false));
 			}
