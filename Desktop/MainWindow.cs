@@ -1568,11 +1568,8 @@ public sealed partial class MainWindow : Window
 			}
 			Options.Say("window open");
 			// The game's look: copied from the player's Valheim when missing or after a game update
-			// (not when driven by the tests: they never copy from the computer's game).
-			if (!Options.Driver)
-			{
-				GameLook.Check(_settings);
-			}
+			// (when driven by the tests, only whether it is there: they never copy from the game).
+			GameLook.Check(_settings, export: !Options.Driver);
 			if (Options.Direct)
 			{
 				// --world (and --zone): that area in the 3D editor at once.

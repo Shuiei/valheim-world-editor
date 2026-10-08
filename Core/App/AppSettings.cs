@@ -53,7 +53,7 @@ public sealed class AppSettings
 	{
 		get
 		{
-			string root = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+			string root = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData, Environment.SpecialFolderOption.DoNotVerify);
 			if (string.IsNullOrEmpty(root))
 			{
 				root = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".local", "share");

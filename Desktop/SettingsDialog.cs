@@ -51,7 +51,7 @@ public static class SettingsDialog
 	}
 
 	// Tests: what a changed game folder starts (the game-look copy otherwise).
-	internal static Action<AppSettings> CheckGameLook { get; set; } = GameLook.Check;
+	internal static Action<AppSettings> CheckGameLook { get; set; } = s => GameLook.Check(s);
 
 	// Tests: the folder picker (null: the system's).
 	internal static Func<string, Task<string?>>? PickFolder { get; set; }

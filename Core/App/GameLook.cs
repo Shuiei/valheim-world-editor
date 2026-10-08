@@ -51,7 +51,7 @@ public static class GameLook
 	}
 
 	// At start (the native app): as Check, with no wwwroot of its own.
-	public static void Check(AppSettings settings) => Check(Path.Combine(AppContext.BaseDirectory, "wwwroot"), settings);
+	public static void Check(AppSettings settings, bool export = true) => Check(Path.Combine(AppContext.BaseDirectory, "wwwroot"), settings, export);
 
 	private sealed record Marker(string Valheim, string? BuildId, int Exporter, DateTime Made);
 
@@ -67,8 +67,9 @@ public static class GameLook
 		return Complete(wwwroot) || Complete(Dir);
 	}
 
-	// At start: export when the files are missing, or when the game was updated since.
-	public static void Check(string wwwroot, AppSettings settings)
+	// At start: export when the files are missing, or when the game was updated since (export: false,
+	// for the tests' editor: only say whether the files are there, never copy).
+	public static void Check(string wwwroot, AppSettings settings, bool export = true)
 	{
 		string? valheim = FindValheim(settings.ValheimPath);
 		lock (Lock)
@@ -99,6 +100,11 @@ public static class GameLook
 		if (present && marker != null && marker.Exporter == ExporterVersion && (build == null || marker.BuildId == build))
 		{
 			Set("ready", null);
+			return;
+		}
+		if (!export)
+		{
+			Set(present ? "ready" : "missing", present ? null : "The game's look is not copied yet.");
 			return;
 		}
 		Start(valheim, settings, present ? "Valheim was updated: refreshing the game's look." : null);
