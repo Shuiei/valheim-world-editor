@@ -17,6 +17,9 @@ public static class TestApp
 		PlaceMemory.PathOverride = Path.Combine(Path.GetTempPath(), $"vwe-place-{Environment.ProcessId}.json");
 		Stamps.PathOverride = Path.Combine(Path.GetTempPath(), $"vwe-stamps-{Environment.ProcessId}.json");
 		TerrainEditor.App.AppSettings.PathOverride = Path.Combine(Path.GetTempPath(), $"vwe-settings-{Environment.ProcessId}.json");
+		TerrainEditor.App.ServerConfig.PathOverride = Path.Combine(Path.GetTempPath(), $"vwe-servers-{Environment.ProcessId}.cfg");
+		// "My game" looks only where a test says, never in the player's own Valheim or profiles.
+		TerrainEditor.App.LocalGame.SearchDefaultPlaces = false;
 		return AppBuilder.Configure<App>().UseHeadless(new AvaloniaHeadlessPlatformOptions());
 	}
 }

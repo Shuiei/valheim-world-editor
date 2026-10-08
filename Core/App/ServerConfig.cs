@@ -36,7 +36,10 @@ public static class ServerConfig
 		public string Id => $"{User}@{Host}:{SshPort}";
 	}
 
-	public static string FilePath => Path.Combine(AppSettings.DataDir, "servers.cfg");
+	// Tests: another file, so they never touch the user's servers.
+	public static string? PathOverride { get; set; }
+
+	public static string FilePath => PathOverride ?? Path.Combine(AppSettings.DataDir, "servers.cfg");
 
 	private static readonly object Lock = new();
 
