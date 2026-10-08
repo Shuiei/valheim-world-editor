@@ -25,6 +25,15 @@ public sealed class LiveSync
 		}
 	}
 
+	// Whether the game has this new object already (it was sent and accepted).
+	public bool IsLive(int id)
+	{
+		lock (_lock)
+		{
+			return _liveIds.ContainsKey(id);
+		}
+	}
+
 	public (int Deleted, int Added) Pending(EditStore edits)
 	{
 		lock (_lock)
