@@ -1214,6 +1214,11 @@ public sealed class MainWindow : Window
 				{
 					_map!.Pick(mx, mz);
 					await EditArea(mx, mz, _map.Size);
+					if (Options.MapBack)
+					{
+						await Task.Delay(3000);
+						ShowMap();
+					}
 				}
 				return;
 			}

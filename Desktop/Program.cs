@@ -60,6 +60,8 @@ public static class Options
 	// With --map: look at this point (x,z, metres per pixel); search the world and go to the first result.
 	public static (float X, float Z, float Mpp)? MapAt { get; private set; }
 	public static string? Search { get; private set; }
+	// With --map-edit: back to the map afterwards (its picture then, with --shot).
+	public static bool MapBack { get; private set; }
 	public static int ZoneX { get; private set; }
 	public static int ZoneZ { get; private set; }
 	public static int Size { get; private set; } = 5;
@@ -121,6 +123,9 @@ public static class Options
 				case "--map-at":
 					var ma = args[++i].Split(',').Select(v => float.Parse(v, System.Globalization.CultureInfo.InvariantCulture)).ToArray();
 					MapAt = (ma[0], ma[1], ma[2]);
+					break;
+				case "--map-back":
+					MapBack = true;
 					break;
 				case "--search":
 					Search = args[++i];
