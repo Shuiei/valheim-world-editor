@@ -58,7 +58,7 @@ public sealed class WorldScene
 	}
 
 	// The game's biome colour for a biome (Heightmap.GetBiomeColor): which terrain textures it blends.
-	private static byte[] BiomeRgba(int biome) => biome switch
+	internal static byte[] BiomeRgba(int biome) => biome switch
 	{
 		2 => new byte[] { 255, 0, 0, 0 },
 		4 => new byte[] { 0, 255, 0, 0 },
