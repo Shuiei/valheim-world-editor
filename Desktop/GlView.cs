@@ -1216,22 +1216,13 @@ public sealed class GlView : OpenGlControlBase
 
 	// --shot and --bench (Options): once every model is loaded, save a picture, then turn the camera
 	// for the given time and print the frame rates, then close the app.
-	private long _loadedAt = -1, _benchFrom = -1;
+	private long _loadedAt = -1;
 	private WorldScene? _loadedScene;
-	private readonly List<(long At, double Work)> _bench = new();
+	// The test driver: its pictures (once the area and its models are in) and its frame-rate measure
+	// (the camera turns on its own for a while, then the rates are given back).
 	private unsafe void Automate(long now, int pw, int ph)
 	{
-		if (Options.QuitAfter > 0 && now > Options.QuitAfter * 1000)
-		{
-			lock (_camLock)
-			{
-				Options.Say($"camera: yaw {_yaw:0.000}, pitch {_pitch:0.000}, distance {_distance:0.0}, target {_target.X:0.0} {_target.Y:0.0} {_target.Z:0.0}");
-			}
-			Options.QuitAfterDone();
-			Dispatcher.UIThread.Post(() => (Avalonia.Application.Current?.ApplicationLifetime as Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime)?.Shutdown());
-			return;
-		}
-		if (Options.Shot == null && Options.Bench <= 0 && _picture == null)
+		if (_picture == null && _bench == null)
 		{
 			return;
 		}
@@ -1240,75 +1231,6 @@ public sealed class GlView : OpenGlControlBase
 			if (_scene != null && _terrainVao != 0 && _pending == 0 && _ready.IsEmpty)
 			{
 				_loadedAt = now;
-				if (Options.PickAt is var (px, py))
-				{
-					var size = Bounds.Size;
-					Pick(new Point(px * size.Width, py * size.Height), size, add: false);
-					var sel = Selected;
-					Options.Say(sel.Count == 0 ? "picked: nothing" : $"picked: {string.Join(", ", sel.Select(i => $"{_models?.NameOf(_scene!.Things[i].Prefab)} ({_kinds[i]})"))}");
-					if (Options.MoveBy is var (mx, mz) && sel.Count > 0)
-					{
-						Dispatcher.UIThread.Post(() =>
-						{
-							var before = _scene!.Things[sel.First()].Position;
-							SelectTool.PlaceAt(mx, 0, mz, 0, by: true);
-							var now = Selected.Select(i => _scene.Things[i].Position).FirstOrDefault();
-							Options.Say($"moved: {before.X:0.0} {before.Y:0.0} {before.Z:0.0} → {now.X:0.0} {now.Y:0.0} {now.Z:0.0}, {_scene.Session?.PendingText}");
-						});
-					}
-				}
-				if (Options.ClickAt is var (cx, cy))
-				{
-					var size = Bounds.Size;
-					var at = new Point(cx * size.Width, cy * size.Height);
-					_surfaceSize = size;
-					Dispatcher.UIThread.Post(() => ScriptedClick?.Invoke(at, size));
-				}
-				if (Options.PathAt is { Length: >= 4 } pp)
-				{
-					var size = Bounds.Size;
-					for (int k = 0; k + 1 < pp.Length; k += 2)
-					{
-						if (GridAt(new Point(pp[k] * size.Width, pp[k + 1] * size.Height), size) is { } g)
-						{
-							Path.Points.Add(g);
-						}
-					}
-					Dispatcher.UIThread.Post(() => PathScripted?.Invoke());
-				}
-				if (Options.TapeAt is { Length: 4 } tp)
-				{
-					var size = Bounds.Size;
-					var ta = WorldAt(new Point(tp[0] * size.Width, tp[1] * size.Height), size);
-					var tb = WorldAt(new Point(tp[2] * size.Width, tp[3] * size.Height), size);
-					if (ta is { } pa && tb is { } pb)
-					{
-						Tape.Down(pa);
-						Tape.Down(pb);
-						var r = Tape.Measure(GroundHeight, _scene.Water)!;
-						Options.Say($"tape: {r.Distance:0.0} m, rise {r.Rise:0.0} m, slope {r.SlopeDegrees:0.0}°, lowest {r.Lowest:0.0}, highest {r.Highest:0.0}");
-					}
-				}
-				if (Options.StrokeTool is BrushTool tool && _scene.Session is { } session)
-				{
-					var size = Bounds.Size;
-					_tool = tool;
-					_pointer = new Point(size.Width / 2, size.Height / 2);
-					_surfaceSize = size;
-					if (GroundAt(_scene, _lastViewProj, _pointer.Value, size) is { } at)
-					{
-						int g = (int)MathF.Round(at.Z) * _scene.W + (int)MathF.Round(at.X);
-						float before = _scene.Heights[g];
-						session.BeginStroke(tool, at.X, at.Z);
-						for (int i = 0; i < 40; i++)
-						{
-							session.StrokeStep(at.X, at.Z, 1 / 30f);
-						}
-						string msg = session.EndStroke();
-						Options.Say($"stroke {tool} at {at.X:0.0}, {at.Z:0.0}: ground {before:0.00} → {_scene.Heights[g]:0.00} m, {session.PendingText} {msg}");
-					}
-				}
-				Options.Say($"loaded: {_scene.Things.Count} objects, {_batches.Sum(b => b.Instances)} model parts in {_batches.Count} draws, {_textures.Count} textures, view {pw}×{ph} px, {_gl.GetStringS(StringName.Renderer)}");
 			}
 			RequestNextFrameRendering();
 			return;
@@ -1326,37 +1248,44 @@ public sealed class GlView : OpenGlControlBase
 				req.Done.SetException(ex);
 			}
 		}
-		if (Options.Shot != null && !Options.MapBack && now - _loadedAt > 500)
+		if (_bench is { } bench)
 		{
-			GlPicture.Save(_gl, pw, ph, Options.Shot);
-			Options.Say($"picture: {Options.Shot}");
-			if (Options.Bench <= 0)
+			if (bench.From < 0)
 			{
-				Dispatcher.UIThread.Post(() => (Avalonia.Application.Current?.ApplicationLifetime as Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime)?.Shutdown());
-				return;
+				bench.From = now;
 			}
-			Options.ClearShot();
-		}
-		if (Options.Bench > 0)
-		{
-			if (_benchFrom < 0)
-			{
-				_benchFrom = now;
-			}
-			_bench.Add((now, 0));
+			bench.Frames.Add(now);
 			lock (_camLock)
 			{
 				_yaw += 0.01f;
 			}
-			if (now - _benchFrom > Options.Bench * 1000)
+			if (now - bench.From > bench.Seconds * 1000)
 			{
-				var gaps = _bench.Zip(_bench.Skip(1), (a, b) => b.At - a.At).OrderBy(g => g).ToList();
-				Options.Say($"bench: {_bench.Count / ((now - _benchFrom) / 1000.0):0} fps over {(now - _benchFrom) / 1000.0:0.0} s, work {_frames.Average(f => f.Work):0.0} ms, gaps median {gaps[gaps.Count / 2]} ms, 95% {gaps[gaps.Count * 95 / 100]} ms, max {gaps[^1]} ms, view {pw}×{ph} px");
-				Dispatcher.UIThread.Post(() => (Avalonia.Application.Current?.ApplicationLifetime as Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime)?.Shutdown());
-				Options.ClearBench();
+				_bench = null;
+				var gaps = bench.Frames.Zip(bench.Frames.Skip(1), (a, b) => b - a).OrderBy(g => g).ToList();
+				bench.Done.SetResult($"{bench.Frames.Count / ((now - bench.From) / 1000.0):0} fps over {(now - bench.From) / 1000.0:0.0} s, work {_frames.Average(f => f.Work):0.0} ms, gaps median {gaps[gaps.Count / 2]} ms, 95% {gaps[gaps.Count * 95 / 100]} ms, max {gaps[^1]} ms, view {pw}×{ph} px");
 			}
 			RequestNextFrameRendering();
 		}
+	}
+
+	private sealed class Bench
+	{
+		public required double Seconds { get; init; }
+		public long From { get; set; } = -1;
+		public List<long> Frames { get; } = new();
+		public TaskCompletionSource<string> Done { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+	}
+
+	private volatile Bench? _bench;
+
+	// The camera turns on its own for this many seconds; the frame rates come back.
+	internal Task<string> Benchmark(double seconds)
+	{
+		var b = new Bench { Seconds = seconds };
+		_bench = b;
+		Wake();
+		return b.Done.Task;
 	}
 
 	// OpenGL's perspective (depth from -1 to 1), as a System.Numerics (row vector) matrix.
@@ -1679,10 +1608,6 @@ public sealed class GlView : OpenGlControlBase
 	// Paste tool: a click on the ground (grid point).
 	public event Action<Vector2>? PasteClicked;
 	private bool _areaDown;
-	// --path: the line is drawn; the window applies it.
-	public event Action? PathScripted;
-	// --click: the window clicks there with its tool.
-	public event Action<Point, Size>? ScriptedClick;
 	private bool _pathDown;
 
 	// Where a grid point (on the ground, lifted a little) is on the view, or null behind the camera.

@@ -415,7 +415,6 @@ public sealed class MapView : OpenGlControlBase
 		_gl.Disable(EnableCap.Blend);
 		_gl.BindVertexArray(0);
 		_gl.UseProgram(0);
-		// --map with --shot (and no --map-edit): a picture of the map once it is drawn.
 		_drawn++;
 		if (Options.Driver)
 		{
@@ -440,17 +439,11 @@ public sealed class MapView : OpenGlControlBase
 				req.Done.SetException(ex);
 			}
 		}
-		if (Options.Shot is string shot && (Options.MapEdit == null || Options.MapBack) && ++_shotFrames == 80)
-		{
-			GlPicture.Save(_gl, w, h, shot);
-			Options.Say($"picture: {shot}");
-			Dispatcher.UIThread.Post(() => (Avalonia.Application.Current?.ApplicationLifetime as Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime)?.Shutdown());
-		}
 	}
 
 	// Close up (under 6 m a pixel): the ground in view at 1 m, with the edits, read in the background.
 	private bool _asking;
-	private int _shotFrames, _drawn;
+	private int _drawn;
 	private volatile GlPicture.Request? _picture;
 
 	internal Task Picture(string path)

@@ -736,18 +736,6 @@ public sealed class MainWindow : Window
 		UpdateSaveBar();
 	}
 
-	// --ui-shot: the window's panels drawn by Avalonia into a picture (the OpenGL views stay empty), then quit.
-	private async Task UiPicture(string path)
-	{
-		await Task.Delay(3000);
-		var size = new PixelSize((int)Bounds.Width, (int)Bounds.Height);
-		using var rtb = new Avalonia.Media.Imaging.RenderTargetBitmap(size);
-		rtb.Render(this);
-		rtb.Save(path);
-		Options.Say($"picture: {path}");
-		(Application.Current?.ApplicationLifetime as Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime)?.Shutdown();
-	}
-
 	// The right-hand panels share the place under the top bar: one at a time (null: none).
 	internal void ShowRight(Control? panel)
 	{
@@ -1236,28 +1224,6 @@ public sealed class MainWindow : Window
 		PlacePanel.Confirm = text => Dialogs.Ask(this, "Delete the preset", text, "Delete");
 		PastePanel.Done += () => Tools.ChooseMode(ToolMode.Area);
 		_view.PasteClicked += PasteAt;
-		_view.ScriptedClick += (at, size) =>
-		{
-			if (Tools.Mode == ToolMode.Place)
-			{
-				PlaceInput.Moved(at, size);
-				int shown = PlaceInput.Shown.Length;
-				if (Options.HoverOnly)
-				{
-					Options.Say($"place: {shown} shown, {string.Join(", ", PlaceTool.Chosen)} (hover only)");
-					return;
-				}
-				PlaceInput.Down(at, size, false, false, false, 1);
-				PlaceInput.Up(at, size);
-				Options.Say($"place: {shown} shown, {string.Join(", ", PlaceTool.Chosen)}: {_message.Text} {_session?.PendingText}");
-			}
-		};
-		_view.PathScripted += () =>
-		{
-			PathPanel.Refresh();
-			ApplyPath();
-			Options.Say($"path: {_view.Path.Points.Count} points, {PathPanel.Info.Text} {_message.Text} {_session?.PendingText}");
-		};
 		Title = "Valheim World Editor (native preview)";
 		Width = 1500;
 		Height = 950;
@@ -1384,117 +1350,29 @@ public sealed class MainWindow : Window
 				return;
 			}
 			Options.Say("window open");
+			if (Options.Direct)
+			{
+				// --world (and --zone): that area in the 3D editor at once.
+				try
+				{
+					var world = await Task.Run(() => WorldSession.Open(WorldScene.FindWorld(Options.World)));
+					_world = world;
+					var scene = await Task.Run(() => WorldScene.Load(world, Options.ZoneX, Options.ZoneZ, Options.Size));
+					await ShowEditor(scene);
+				}
+				catch (Exception ex)
+				{
+					_info.Text = "Could not open the world: " + ex.Message;
+					Options.Say(_info.Text);
+				}
+			}
+			else
+			{
+				ShowStart();
+			}
 			if (Options.Driver)
 			{
 				Driver.Start(this);
-				return;
-			}
-			if (Options.MapWorld is string mw)
-			{
-				await OpenWorld(() => Task.Run(() => WorldSession.Open(WorldScene.FindWorld(mw))), "Opening the world…");
-				if (Options.MapAt is var (ax, az, ampp))
-				{
-					_map!.Map.LookAt(ax, az, ampp);
-				}
-				if (Options.Search is string q)
-				{
-					_map!.SearchBox.Text = q;
-					await _map.Search();
-					Options.Say($"search: {_map.SearchInfo.Text.Replace('\n', ' ')}");
-					if (_map.Map.Pins.Count > 0)
-					{
-						var most = _map.Map.Pins.GroupBy(p => ((int)MathF.Floor((p.X + 32) / 64), (int)MathF.Floor((p.Y + 32) / 64))).MaxBy(g => g.Count())!;
-						Options.Say($"search: most in zone {most.Key.Item1},{most.Key.Item2} ({most.Count()})");
-					}
-					_map.Hits.SelectedIndex = 0;
-				}
-				if (Options.UiShot is string mui && Options.MapEdit == null)
-				{
-					await UiPicture(mui);
-				}
-				if (Options.MapEdit is var (mx, mz))
-				{
-					_map!.Pick(mx, mz);
-					await EditArea(mx, mz, _map.Size);
-					if (Options.MapBack)
-					{
-						await Task.Delay(3000);
-						ShowMap();
-					}
-				}
-				return;
-			}
-			if (!Options.Direct)
-			{
-				ShowStart();
-				if (Options.Shot is string shot)
-				{
-					// The start page is not drawn with OpenGL: Avalonia renders it into a picture.
-					await Task.Delay(1500);
-					var size = new PixelSize((int)Bounds.Width, (int)Bounds.Height);
-					using var rtb = new Avalonia.Media.Imaging.RenderTargetBitmap(size);
-					rtb.Render(this);
-					rtb.Save(shot);
-					Options.Say($"picture: {shot}");
-					(Application.Current?.ApplicationLifetime as Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime)?.Shutdown();
-				}
-				return;
-			}
-			try
-			{
-				var world = await Task.Run(() => WorldSession.Open(WorldScene.FindWorld(Options.World)));
-				_world = world;
-				var scene = await Task.Run(() => WorldScene.Load(world, Options.ZoneX, Options.ZoneZ, Options.Size));
-				await ShowEditor(scene);
-				if (Options.AllOverlays)
-				{
-					foreach (var b in _overlayBoxes.Values) b.IsChecked = true;
-					SlopeBox.IsChecked = ContourBox.IsChecked = true;
-				}
-				if (Options.StartTool is "select")
-				{
-					Tools.ChooseSelect();
-				}
-				else if (Options.StartTool is "measure")
-				{
-					Tools.ChooseMode(ToolMode.Measure);
-				}
-				else if (Options.StartTool is "shape")
-				{
-					Tools.ChooseMode(ToolMode.Shape);
-				}
-				else if (Options.StartTool is "place")
-				{
-					Tools.ChooseMode(ToolMode.Place);
-				}
-				else if (Options.StartTool is "area")
-				{
-					Tools.ChooseMode(ToolMode.Area);
-				}
-				else if (Options.StartTool is "path")
-				{
-					Tools.ChooseMode(ToolMode.Path);
-				}
-				else if (Options.StartTool is "help" or "history")
-				{
-					ShowRight(Options.StartTool == "help" ? HelpCard : History.Card);
-				}
-				else if (Enum.TryParse<BrushTool>(Options.StartTool, ignoreCase: true, out var startBrush))
-				{
-					Tools.Choose(startBrush);
-				}
-				for (int n = Options.EyeStart == "fly" ? 2 : Options.EyeStart == "walk" ? 1 : 0; n > 0; n--) _view.CycleEye();
-				if (Options.UiShot is string ui)
-				{
-					// The Mask open too, to see its rows.
-					MaskPanel.OnBox.IsChecked = true;
-					await UiPicture(ui);
-				}
-			}
-			catch (Exception ex)
-			{
-				_info.Text = "Could not open the world: " + ex.Message;
-				Options.Say(_info.Text);
 			}
 		};
 	}
