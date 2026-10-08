@@ -51,7 +51,8 @@ public static class GameLook
 	private sealed record Marker(string Valheim, string? BuildId, int Exporter, DateTime Made);
 
 	// Bump when the exporter's output changes, so existing installs export again.
-	private const int ExporterVersion = 1;
+	// 2: runestone locations and tameable creatures get models.
+	private const int ExporterVersion = 2;
 
 	// Files that only a complete export leaves behind.
 	public static bool Present()
@@ -96,7 +97,10 @@ public static class GameLook
 			Set(present ? "ready" : "missing", present ? null : "The game's look is not copied yet.");
 			return;
 		}
-		Start(valheim, settings, present ? "Valheim was updated: refreshing the game's look." : null);
+		string? why = !present ? null : marker != null && marker.Exporter != ExporterVersion
+			? "This version of the editor draws more of the game: copying the new models (a minute or two)."
+			: "Valheim was updated: refreshing the game's look.";
+		Start(valheim, settings, why);
 	}
 
 	// Start (or restart) the export from this Valheim folder.

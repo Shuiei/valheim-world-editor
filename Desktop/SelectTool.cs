@@ -88,11 +88,18 @@ public sealed class SelectTool
 			return null;
 		}
 		var items = new List<Item>();
+		int runestones = 0;
 		foreach (int i in _view.Selected)
 		{
 			var t = s.Things[i];
 			if (t.Gone)
 			{
+				continue;
+			}
+			// A runestone's stone is built by the game from its location: it can only be deleted.
+			if (t.Runestone)
+			{
+				runestones++;
 				continue;
 			}
 			var snaps = PieceCatalog.Get(t.Prefab)?.Snaps;
@@ -104,6 +111,10 @@ public sealed class SelectTool
 		}
 		if (items.Count == 0)
 		{
+			if (runestones > 0)
+			{
+				Message?.Invoke("Runestones cannot be moved or turned, only deleted (the game builds them from their location).", true);
+			}
 			return null;
 		}
 		return _move = new Move { Items = items, Cx = items.Average(it => it.Thing.Position.X), Cz = items.Average(it => it.Thing.Position.Z) };

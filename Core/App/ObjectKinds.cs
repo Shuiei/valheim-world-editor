@@ -14,6 +14,8 @@ public enum ObjectKind
 	Ore,
 	Bushes,
 	Pickables,
+	Animals,
+	Runestones,
 	Other,
 }
 
@@ -30,11 +32,13 @@ public static class ObjectKinds
 		ObjectKind.Ore => "Ore & deposits",
 		ObjectKind.Bushes => "Bushes & shrubs",
 		ObjectKind.Pickables => "Pickables",
+		ObjectKind.Animals => "Tamed animals",
+		ObjectKind.Runestones => "Runestones",
 		_ => "Other objects",
 	};
 
 	// Shown when the editor opens, as in the web editor's View panel (spoilers stay hidden).
-	public static bool ShownAtFirst(ObjectKind k) => k is ObjectKind.Buildings or ObjectKind.Trees or ObjectKind.Rocks;
+	public static bool ShownAtFirst(ObjectKind k) => k is ObjectKind.Buildings or ObjectKind.Trees or ObjectKind.Rocks or ObjectKind.Animals or ObjectKind.Runestones;
 
 	private static readonly Regex Ruin = new(@"^goblin_|^shipwreck_|^Statue|^BossStone_|^dungeon_|crypt_gate|^CastleKit_|^StartPlatform|^Beehive|^CargoCrate|^barrell|^RockDolmen|^TreasureChest", RegexOptions.IgnoreCase);
 	private static readonly Regex Pickable = new(@"^Pickable_|^Pickable|mushroom|Dandelion|Thistle", RegexOptions.IgnoreCase);
@@ -46,17 +50,22 @@ public static class ObjectKinds
 	private static readonly HashSet<string> PieceNames = new(PieceCatalog.Names, StringComparer.Ordinal);
 
 	// builtPiece: a building piece a player placed (it has a builder); the same piece without one is
-	// part of a ruin.
-	public static ObjectKind Of(string? name, bool builtPiece)
+	// part of a ruin. tamed: a creature a player tamed (wild ones stay in Other objects).
+	public static ObjectKind Of(string? name, bool builtPiece, bool tamed = false)
 	{
 		if (builtPiece)
 		{
 			return ObjectKind.Buildings;
 		}
+		if (tamed)
+		{
+			return ObjectKind.Animals;
+		}
 		if (name == null)
 		{
 			return ObjectKind.Other;
 		}
+		if (PrefabCatalog.IsRunestoneName(name)) return ObjectKind.Runestones;
 		if (PieceNames.Contains(name) || Ruin.IsMatch(name)) return ObjectKind.Ruins;
 		if (Pickable.IsMatch(name)) return ObjectKind.Pickables;
 		if (Tree.IsMatch(name)) return ObjectKind.Trees;

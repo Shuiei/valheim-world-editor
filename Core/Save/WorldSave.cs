@@ -31,6 +31,9 @@ public sealed class WorldSave
 
 	private static readonly int ScaleScalarKey = StableHash.Of("scaleScalar");
 
+	// Tameable.SetTamed writes it (an int, 1 when tamed).
+	private static readonly int TamedKey = StableHash.Of("tamed");
+
 	// Prefabs (besides LocationProxy) whose objects carry terrain modifiers; set before loading.
 	public static HashSet<int> ModifierPrefabs { get; set; } = new();
 
@@ -61,6 +64,9 @@ public sealed class WorldSave
 	// Every placed object that can modify terrain while the game runs: locations and the prefabs in
 	// ModifierPrefabs. Rotation is Euler degrees, as stored.
 	public List<PlacedObject> Placed { get; } = new();
+
+	// Objects that are tamed creatures (by id).
+	public HashSet<int> Tamed { get; } = new();
 
 	// Player-built pieces (objects with a creator): prefab, position and Y rotation in degrees.
 	public List<(int Id, int Prefab, Vector3 Position, float RotationY)> Pieces { get; } = new();
@@ -406,6 +412,10 @@ public sealed class WorldSave
 					Locations.Add((position, value));
 					location = value;
 				}
+				else if (key == TamedKey && value != 0)
+				{
+					Tamed.Add(id);
+				}
 			}
 		}
 		if ((flags & Longs) != 0)
@@ -485,6 +495,11 @@ public sealed class WorldSave
 		else if (!tracked && !terrain && prefab != LocationProxyPrefab)
 		{
 			Objects.Add((id, prefab, position, rotation, scale));
+		}
+		else if (prefab == LocationProxyPrefab && TerrainEditor.Terrain.PrefabCatalog.IsRunestone(location))
+		{
+			// A runestone: listed under its location's name (see PrefabCatalog.RunestoneLocations).
+			Objects.Add((id, location, position, rotation, scale));
 		}
 		foreach (TerrainZone z in TerrainZones)
 		{

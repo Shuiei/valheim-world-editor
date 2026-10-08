@@ -685,6 +685,11 @@ public sealed partial class MainWindow : Window
 	internal void Inspect()
 	{
 		_view.SelectTool.Commit();
+		if (_view.Selected.Count == 1 && _session?.Scene.Things[_view.Selected.First()].Runestone == true)
+		{
+			_message.Text = "A runestone holds no data of its own: the game builds it from its location. It can only be deleted.";
+			return;
+		}
 		if (_view.Selected.Count == 1 && Inspector.Open(_view.Selected.First()))
 		{
 			_viewPanel.IsVisible = false;
@@ -1000,7 +1005,7 @@ public sealed partial class MainWindow : Window
 	internal void ShowKindsOf(WorldScene scene, IReadOnlyList<int> indices)
 	{
 		var turned = new List<string>();
-		foreach (var k in indices.Where(i => i < scene.Things.Count).Select(i => ObjectKinds.Of(NameOfPrefab(scene.Things[i].Prefab), scene.Things[i].Piece)).Distinct())
+		foreach (var k in indices.Where(i => i < scene.Things.Count).Select(i => ObjectKinds.Of(NameOfPrefab(scene.Things[i].Prefab), scene.Things[i].Piece, scene.Things[i].Tamed)).Distinct())
 		{
 			if (_kindBoxes.TryGetValue(k, out var box) && box.IsChecked != true)
 			{

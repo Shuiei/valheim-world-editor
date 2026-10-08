@@ -55,7 +55,17 @@ public sealed class WorldScene
 	public readonly record struct Thing(int Id, int Prefab, Vector3 Position, Vector3 Rotation, float Scale, bool Piece)
 	{
 		public bool Gone { get; init; }
+
+		// A creature a player tamed (its own View kind).
+		public bool Tamed { get; init; }
+
+		// A runestone: in the save a location proxy, listed under the location's name. It can be
+		// picked and deleted, not moved or copied (see PrefabCatalog.RunestoneLocations).
+		public bool Runestone => PrefabCatalog.IsRunestone(Prefab);
 	}
+
+	// A new object is tamed when it is a moved tamed creature (a move keeps the object's own data).
+	public static bool TamedOf(WorldSave world, NewObject n) => !n.Fresh && n.SourceId is int s && world.Tamed.Contains(s);
 
 	// The game's biome colour for a biome (Heightmap.GetBiomeColor): which terrain textures it blends.
 	internal static byte[] BiomeRgba(int biome) => biome switch
@@ -180,7 +190,7 @@ public sealed class WorldScene
 		{
 			if (edits.FindAdded(id) is { } n)
 			{
-				found[id] = new Thing(n.Id, n.Prefab, n.Position, n.Rotation, n.Scale, PieceCatalog.Get(n.Prefab)?.Tool != null) { Gone = !added.Contains(id) };
+				found[id] = new Thing(n.Id, n.Prefab, n.Position, n.Rotation, n.Scale, PieceCatalog.Get(n.Prefab)?.Tool != null) { Gone = !added.Contains(id), Tamed = TamedOf(world, n) };
 			}
 		}
 		if (want.Any(i => i >= 0))
@@ -189,7 +199,7 @@ public sealed class WorldScene
 			{
 				if (want.Contains(id))
 				{
-					found[id] = new Thing(id, prefab, p, r, sc.X, false) { Gone = deleted.Contains(id) };
+					found[id] = new Thing(id, prefab, p, r, sc.X, false) { Gone = deleted.Contains(id), Tamed = world.Tamed.Contains(id) };
 				}
 			}
 			foreach (var (id, prefab, p, ry) in world.Pieces)
@@ -214,7 +224,7 @@ public sealed class WorldScene
 		{
 			if (Inside(p) && !deleted.Contains(id))
 			{
-				things.Add(new Thing(id, prefab, p, r, sc.X, false));
+				things.Add(new Thing(id, prefab, p, r, sc.X, false) { Tamed = world.Tamed.Contains(id) });
 			}
 		}
 		foreach (var (id, prefab, p, ry) in world.Pieces)
@@ -228,7 +238,7 @@ public sealed class WorldScene
 		{
 			if (Inside(n.Position))
 			{
-				things.Add(new Thing(n.Id, n.Prefab, n.Position, n.Rotation, n.Scale, PieceCatalog.Get(n.Prefab)?.Tool != null));
+				things.Add(new Thing(n.Id, n.Prefab, n.Position, n.Rotation, n.Scale, PieceCatalog.Get(n.Prefab)?.Tool != null) { Tamed = TamedOf(world, n) });
 			}
 		}
 		return things;
