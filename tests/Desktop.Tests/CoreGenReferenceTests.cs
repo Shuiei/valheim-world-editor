@@ -24,8 +24,8 @@ public class CoreGenReferenceTests
 		Assert.True(r.RandomOk == 57 && r.RandomWrong == 0, why);
 		Assert.True(r.PerlinOk == 1207 && r.PerlinWrong == 0, why);
 		Assert.True(r.BiomesWrong == 0 && r.WaterWrong == 0, why);
-		Assert.True(r.HeightsOk >= 2982 && r.HeightsOk + r.HeightsWrong == 3000, why);
-		Assert.True(r.ZonesOk >= 6 && r.ZonesOk + r.ZonesWrong == 8, why);
+		Assert.True(r.HeightsOk == 2982 && r.HeightsOk + r.HeightsWrong == 3000, why);
+		Assert.True(r.ZonesOk == 6 && r.ZonesOk + r.ZonesWrong == 8, why);
 		Assert.True(r.HeightMaxDiff < 0.001, why);
 		Assert.True(r.ZoneMaxDiff < 0.001, why);
 	}
