@@ -13,6 +13,7 @@
     <InternalsVisibleTo Include="WorldEditor.Tests" />
     <InternalsVisibleTo Include="ValheimWorldEditor" />
     <InternalsVisibleTo Include="ValheimWorldEditor.Desktop" />
+    <InternalsVisibleTo Include="Desktop.Tests" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="SSH.NET" Version="2026.0.0" />

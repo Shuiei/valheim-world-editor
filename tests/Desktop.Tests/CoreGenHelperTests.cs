@@ -119,4 +119,26 @@ public class CoreGenHelperTests
 		Assert.Equal(S, less.Length);
 		Assert.Equal(6f, less[S - 1]);
 	}
+
+	[Fact]
+	public void TheOverviewColoursWaterByDepthAndUnknownGroundGrey()
+	{
+		Assert.Equal((112f, 158f, 72f), TerrainService.BiomeColor(Heightmap.Biome.Meadows, 31));
+		// The water line itself is dry ground; under it the biome does not matter and deeper is darker.
+		Assert.Equal((112f, 158f, 72f), TerrainService.BiomeColor(Heightmap.Biome.Meadows, TerrainService.WaterLevel));
+		Assert.Equal((37.5f, 89.5f, 135f), TerrainService.BiomeColor(Heightmap.Biome.Meadows, TerrainService.WaterLevel - 6));
+		Assert.Equal((15f, 40f, 90f), TerrainService.BiomeColor(Heightmap.Biome.Plains, -100));
+		// Ocean ground above the water line (a shore) and no biome at all have no colour of their own.
+		Assert.Equal((150f, 150f, 150f), TerrainService.BiomeColor(Heightmap.Biome.Ocean, 31));
+		Assert.Equal((150f, 150f, 150f), TerrainService.BiomeColor(Heightmap.Biome.None, 31));
+	}
+
+	[Fact]
+	public void TheAlternateBiomeMapIsNeverReady()
+	{
+		// The port has no alternate biome map: the generator asking for a sector gets the empty answer.
+		var data = new AltBiomeWorldData();
+		Assert.False(data.IsReady);
+		Assert.Null(data.PointSectors);
+	}
 }

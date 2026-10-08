@@ -357,7 +357,7 @@ public static class WorldWriter
 		}
 	}
 
-	private static string? Verify(string dir, WorldSave before, IReadOnlyList<ZoneEdit> saved, int created, int removed, HashSet<(int, int)> groundReset, IReadOnlyList<ZoneReset> resets)
+	internal static string? Verify(string dir, WorldSave before, IReadOnlyList<ZoneEdit> saved, int created, int removed, HashSet<(int, int)> groundReset, IReadOnlyList<ZoneReset> resets)
 	{
 		WorldSave after = WorldSave.Load(dir);
 		foreach (ZoneReset r in resets)
