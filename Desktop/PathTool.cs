@@ -5,11 +5,45 @@ namespace TerrainEditor.Desktop;
 
 // The Path tool, like the web editor's (editor.html, Path tool): draw a line, then apply an action
 // along it with a width and a soft edge: flatten to a height, ramp from start to end, raise or lower,
-// smooth, dig a river, or paint. The line is kept after applying, so another action can follow.
+// smooth, dig a river, dig a cave, or paint. The line is kept after applying, so another action can follow.
+// Cave: a trench along the line (its floor follows the ground's lie below it, deepest in the middle,
+// with an entrance slope at each end), roofed over with the game's boulders where it is deep enough:
+// the ground cannot overhang (one height per point), so the roof is rocks, like the game's own caves.
 // Points are grid points of the block (x east, z north, one per metre).
 public sealed class PathTool
 {
-	public enum Action { Flatten, Ramp, Raise, Lower, Smooth, River, PaintDirt, PaintPaved, PaintCultivated, PaintClear }
+	public enum Action { Flatten, Ramp, Raise, Lower, Smooth, River, Cave, PaintDirt, PaintPaved, PaintCultivated, PaintClear }
+
+	// The boulders a cave's roof is made of: the game's big world rocks (they keep a saved size), how wide
+	// they are at least (m, unscaled) and how far their lowest point is below their middle.
+	public enum CaveRock { Auto, Forest, Coast, Heath, Mountain }
+
+	public static readonly Dictionary<CaveRock, (string Prefab, float Footprint, float Bottom)> RoofRocks = new()
+	{
+		[CaveRock.Forest] = ("rock4_forest", 24.2f, 12.9f),
+		[CaveRock.Coast] = ("rock4_coast", 24.2f, 12.9f),
+		[CaveRock.Heath] = ("rock4_heath", 24.2f, 12.9f),
+		[CaveRock.Mountain] = ("rock3_mountain", 12.7f, 8.2f),
+	};
+
+	public static string Label(CaveRock r) => r switch
+	{
+		CaveRock.Auto => "By biome",
+		CaveRock.Forest => "Forest boulders",
+		CaveRock.Coast => "Coast boulders",
+		CaveRock.Heath => "Heath boulders",
+		_ => "Mountain rocks",
+	};
+
+	// Cave presets: width, soft edge (the walls' slope), depth below the ground and headroom inside.
+	public sealed record CavePreset(string Name, float Width, float Soft, float Depth, float Headroom, string Help);
+
+	public static readonly CavePreset[] CavePresets =
+	{
+		new("Tunnel", 5, 1.5f, 6, 3.5f, "A narrow passage, just high enough to walk through."),
+		new("Cave", 8, 2.5f, 7.5f, 4.5f, "A cave to explore or hide a base in."),
+		new("Cavern", 14, 3.5f, 8, 5.5f, "A wide hall under the rocks."),
+	};
 
 	public static string Label(Action a) => a switch
 	{
@@ -19,6 +53,7 @@ public sealed class PathTool
 		Action.Lower => "Lower by",
 		Action.Smooth => "Smooth",
 		Action.River => "River / canal (water)",
+		Action.Cave => "Cave (dig and roof)",
 		Action.PaintDirt => "Paint dirt",
 		Action.PaintPaved => "Paint paved",
 		Action.PaintCultivated => "Paint cultivated",
@@ -34,6 +69,12 @@ public sealed class PathTool
 	public float End { get; set; } = 32;
 	public float Depth { get; set; } = 2;
 	public bool Curved { get; set; } = true;
+	// Cave: depth below the ground in the middle, headroom inside, the roof's boulders, and the seed
+	// that turns and sizes them.
+	public float CaveDepth { get; set; } = 7.5f;
+	public float Headroom { get; set; } = 4.5f;
+	public CaveRock Rock { get; set; }
+	public int Seed { get; set; } = Random.Shared.Next();
 	public bool Natural { get; set; }
 	// The ramp's ends follow the ground at the line's ends until typed in.
 	public bool RampEdited { get; set; }
@@ -86,11 +127,88 @@ public sealed class PathTool
 		return l;
 	}
 
-	// The action along the line. heightAt: the ground's height at a grid point (for the ramp's ends).
-	// Returns the points changed, the rectangle around them, and whether the game's limit stopped some.
-	public (List<int> Touched, (int X0, int Z0, int X1, int Z1) Rect, bool Clamped) Apply(Ground g, Brush b, float water, Func<int, float>? mask = null)
+	// A cave along the line: for each point of the dense line, how far along it is, the ground's lie
+	// there (the ground averaged over 6 m each way, so bumps do not show in the floor), how deep the cave
+	// is (Depth in the middle, an entrance slope at each end) and its floor.
+	public sealed record CavePlan(List<(Vector2 P, int Seg)> Curve, float[] Along, float[] Depth, float[] Floor);
+
+	public CavePlan PlanCave(Ground g)
 	{
 		var curve = Curve();
+		int n = curve.Count;
+		var along = new float[n];
+		for (int i = 1; i < n; i++)
+		{
+			along[i] = along[i - 1] + Vector2.Distance(curve[i].P, curve[i - 1].P);
+		}
+		var surface = curve.Select(c => g.HeightOf(Math.Clamp((int)MathF.Round(c.P.Y), 0, g.H - 1) * g.W + Math.Clamp((int)MathF.Round(c.P.X), 0, g.W - 1))).ToArray();
+		float total = n > 0 ? along[^1] : 0, entrance = MathF.Max(8, CaveDepth * 2.5f);
+		var depth = new float[n];
+		var floor = new float[n];
+		for (int i = 0; i < n; i++)
+		{
+			float sum = 0;
+			int k = 0;
+			for (int j = 0; j < n; j++)
+			{
+				if (MathF.Abs(along[j] - along[i]) <= 6)
+				{
+					sum += surface[j];
+					k++;
+				}
+			}
+			float t = Math.Clamp(MathF.Min(along[i], total - along[i]) / entrance, 0, 1);
+			depth[i] = CaveDepth * t * t * (3 - 2 * t);
+			floor[i] = sum / k - depth[i];
+		}
+		return new CavePlan(curve, along, depth, floor);
+	}
+
+	// The roof's boulders (world position, rotation in degrees, scale, prefab): along the stretches where
+	// the cave is deep enough to stand in under the ground, each boulder sized to span the cave and set
+	// so its lowest point is the ceiling. rockAt: the boulders for a world point (Auto: by biome).
+	public List<(Vector3 Position, Vector3 Rotation, float Scale, string Prefab)> Roof(CavePlan c, float ox, float oz, Func<float, float, CaveRock> rockAt)
+	{
+		var rocks = new List<(Vector3, Vector3, float, string)>();
+		var rnd = new Random(Seed);
+		int n = c.Curve.Count;
+		if (n < 2)
+		{
+			return rocks;
+		}
+		float total = c.Along[^1], s = 0;
+		while (s <= total)
+		{
+			int i = Math.Max(1, Array.FindIndex(c.Along, a => a >= s));
+			float t = (s - c.Along[i - 1]) / MathF.Max(1e-4f, c.Along[i] - c.Along[i - 1]);
+			Vector2 p = Vector2.Lerp(c.Curve[i - 1].P, c.Curve[i].P, t);
+			float depth = c.Depth[i - 1] + (c.Depth[i] - c.Depth[i - 1]) * t, floor = c.Floor[i - 1] + (c.Floor[i] - c.Floor[i - 1]) * t;
+			var kind = rockAt(ox + p.X, oz + p.Y);
+			var (prefab, footprint, bottom) = RoofRocks[kind == CaveRock.Auto ? CaveRock.Forest : kind];
+			float scale = Math.Clamp((Width + Soft + 4) / (footprint * 0.8f), 0.25f, 2.5f) * (0.92f + 0.16f * (float)rnd.NextDouble());
+			// Only where the ceiling is under the ground by a metre and a half: the entrances stay open.
+			if (depth >= Headroom + 1.5f)
+			{
+				float y = floor + Headroom + bottom * scale;
+				var rot = new Vector3(((float)rnd.NextDouble() - 0.5f) * 4, (float)rnd.NextDouble() * 360, ((float)rnd.NextDouble() - 0.5f) * 4);
+				rocks.Add((new Vector3(ox + p.X, y, oz + p.Y), rot, scale, prefab));
+			}
+			// Close together: their undersides are rounded, so wider apart the sky shows between them.
+			s += MathF.Max(2, footprint * scale * 0.3f);
+		}
+		return rocks;
+	}
+
+	// The action along the line. heightAt: the ground's height at a grid point (for the ramp's ends).
+	// Returns the points changed, the rectangle around them, and whether the game's limit stopped some.
+	// cave: the cave worked out before the ground changes (Cave; worked out here when not given).
+	public (List<int> Touched, (int X0, int Z0, int X1, int Z1) Rect, bool Clamped) Apply(Ground g, Brush b, float water, Func<int, float>? mask = null, CavePlan? cave = null)
+	{
+		var curve = Curve();
+		if (Act == Action.Cave)
+		{
+			cave ??= PlanCave(g);
+		}
 		var touched = new List<int>();
 		bool clamped = false;
 		if (curve.Count < 2)
@@ -136,7 +254,7 @@ public sealed class PathTool
 					continue;
 				}
 				// The nearest point of the line: distance, and how far along it.
-				float best = float.MaxValue, along = 0;
+				float best = float.MaxValue, along = 0, caveFloor = 0;
 				for (int i = 1; i < curve.Count; i++)
 				{
 					Vector2 a = curve[i - 1].P, d = curve[i].P - a;
@@ -151,6 +269,10 @@ public sealed class PathTool
 					{
 						best = dist;
 						along = cum[i - 1] + t * MathF.Sqrt(l2);
+						if (cave != null)
+						{
+							caveFloor = cave.Floor[i - 1] + (cave.Floor[i] - cave.Floor[i - 1]) * t;
+						}
 					}
 				}
 				float dEff = best, halfEff = half, bump = 0;
@@ -202,6 +324,21 @@ public sealed class PathTool
 						if (bed < h)
 						{
 							clamped |= g.SetHeight(p, h + (bed - h) * w);
+						}
+						break;
+					}
+					case Action.Cave:
+					{
+						// The floor across the cave's width; the soft edge makes its walls. It only digs, and keeps
+						// within the game's ±8 m unless No limit is on (bumps above the ground's lie would reach it).
+						float floor = caveFloor + bump * 0.3f;
+						if (!g.NoLimit)
+						{
+							floor = MathF.Max(floor, g.Original(p) - TerrainEditor.Editing.EditStore.MaxLevel + 0.1f);
+						}
+						if (floor < h)
+						{
+							clamped |= g.SetHeight(p, h + (floor - h) * w);
 						}
 						break;
 					}

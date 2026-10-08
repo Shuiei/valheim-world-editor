@@ -614,39 +614,20 @@ public sealed class AreaPanel
 	private async Task RegrowNature(EditSession session, List<Vector2> poly)
 	{
 		var s = session.Scene;
-		if (s.Terrain is not { } terrain || s.World == null)
-		{
-			Message?.Invoke("Regrow needs the world's generator (not available here).");
-			return;
-		}
 		float ox = s.X0 * 64f - 32f, oz = s.Z0 * 64f - 32f;
-		static int Zone(float v) => (int)MathF.Floor((v + 32) / 64);
-		int x0 = Zone(poly.Min(p => p.X) + ox), x1 = Zone(poly.Max(p => p.X) + ox), z0 = Zone(poly.Min(p => p.Y) + oz), z1 = Zone(poly.Max(p => p.Y) + oz);
-		if ((x1 - x0 + 1) * (z1 - z0 + 1) > 16)
+		var adds = await Growth.Spots(session, poly.Min(p => p.X) + ox, poly.Min(p => p.Y) + oz, poly.Max(p => p.X) + ox, poly.Max(p => p.Y) + oz,
+			o => AreaTool.Inside(poly, o.X - ox, o.Z - oz) && Area.Kinds.Contains(ObjectKinds.Of(o.Name, false)) && MaskAt(o.X - ox, o.Z - oz), _nameOf, m => Message?.Invoke(m));
+		if (adds == null)
 		{
-			Message?.Invoke("Choose a smaller area: regrow works on up to 16 zones (256 x 256 m) at once.");
 			return;
 		}
-		Message?.Invoke("Working out what the game grows here…");
-		var world = s.World;
-		var spots = await Task.Run(() => Regrow.Zones(terrain, session.Edits, world.Seed, x0, z0, x1, z1).Where(p => world.CanCreate(StableHash.Of(p.Name))).ToList());
-		List<(float X, float Z, string? Name, ObjectKind Kind)> standing;
-		lock (s.Things)
-		{
-			standing = s.Things.Where(t => !t.Gone).Select(t => (t.Position.X, t.Position.Z, _nameOf(t.Prefab), KindOf(t))).ToList();
-		}
-		bool Near(Regrow.Spot o, float d, Func<string?, ObjectKind, bool> test) =>
-			standing.Any(t => MathF.Abs(t.X - o.X) < d && MathF.Abs(t.Z - o.Z) < d && MathF.Sqrt((t.X - o.X) * (t.X - o.X) + (t.Z - o.Z) * (t.Z - o.Z)) < d && test(t.Name, t.Kind));
-		var keep = spots.Where(o => AreaTool.Inside(poly, o.X - ox, o.Z - oz) && Area.Kinds.Contains(ObjectKinds.Of(o.Name, false)) && MaskAt(o.X - ox, o.Z - oz)
-			&& !Near(o, 1, (_, _) => true) && !Near(o, 3, (n, _) => n == o.Name) && !Near(o, 4, (_, k) => k == ObjectKind.Buildings)).ToList();
-		if (keep.Count == 0)
+		if (adds.Count == 0)
 		{
 			Message?.Invoke("Nothing to regrow: the game grows none of the chosen kinds here, or it is all still standing.");
 			return;
 		}
-		var adds = keep.Select(o => (new NewObject(0, StableHash.Of(o.Name), new Vector3(o.X, o.Y, o.Z), new Vector3(o.Rx, o.Ry, o.Rz), MathF.Abs(o.Scale - 1) < 1e-4f ? 0 : o.Scale), false)).ToList();
-		session.Commit($"Area: regrew {adds.Count} object(s)", null, Array.Empty<int>(), adds);
-		var names = keep.Select(o => o.Name).Distinct().ToList();
+		Growth.Commit(session, $"Area: regrew {adds.Count} object(s)", adds);
+		var names = adds.Select(o => o.Name).Distinct().ToList();
 		Message?.Invoke($"Regrew {adds.Count} object(s): {string.Join(", ", names.Take(6))}{(names.Count > 6 ? "…" : "")}. Ctrl+Z takes them back; Save writes them.");
 	}
 

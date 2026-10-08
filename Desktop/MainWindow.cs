@@ -54,6 +54,7 @@ public sealed partial class MainWindow : Window
 	internal SelectPanel SelectPanel { get; }
 	internal MeasurePanel MeasurePanel { get; }
 	internal ShapePanel ShapePanel { get; } = new();
+	internal MountainPanel MountainPanel { get; } = new();
 	internal Mask Mask { get; } = new();
 	internal MaskPanel MaskPanel { get; }
 	internal PathPanel PathPanel { get; }
@@ -714,6 +715,11 @@ public sealed partial class MainWindow : Window
 			return;
 		}
 		bool clamped = false;
+		if (path.Act == PathTool.Action.Cave)
+		{
+			ApplyCave(s, path);
+			return;
+		}
 		var touched = s.EditGround($"Path: {PathTool.Label(path.Act)}", g =>
 		{
 			var (t, rect, c) = path.Apply(g, s.Brush, s.Scene.Water, s.MaskNow());
@@ -724,6 +730,70 @@ public sealed partial class MainWindow : Window
 		_message.Text = touched.Count == 0 ? "Nothing changed along the line."
 			: clamped ? "Applied, but part of the path reached the game limit of ±8 m from the original ground (red points)."
 			: $"Applied “{PathTool.Label(path.Act)}” along {total:0} m. The line is kept, so you can apply another action (Clear to start over).";
+		PathPanel.Refresh();
+		UpdateSaveBar();
+	}
+
+	// The Cave action: the trench, the trees and rocks in it taken away and the roof's boulders, in one
+	// undo step.
+	private void ApplyCave(EditSession s, PathTool path)
+	{
+		var scene = s.Scene;
+		var cave = path.PlanCave(s.Ground);
+		float ox = scene.X0 * 64f - 32f, oz = scene.Z0 * 64f - 32f, water = scene.Water;
+		PathTool.CaveRock RockAt(float x, float z)
+		{
+			if (path.Rock != PathTool.CaveRock.Auto)
+			{
+				return path.Rock;
+			}
+			var biome = scene.Terrain?.BiomeAt(x, z);
+			return biome switch
+			{
+				ValheimGen.Heightmap.Biome.Plains => PathTool.CaveRock.Heath,
+				ValheimGen.Heightmap.Biome.Mountain or ValheimGen.Heightmap.Biome.DeepNorth => PathTool.CaveRock.Mountain,
+				ValheimGen.Heightmap.Biome.Ocean => PathTool.CaveRock.Coast,
+				_ => PathTool.CaveRock.Forest,
+			};
+		}
+		var roof = path.Roof(cave, ox, oz, RockAt)
+			.Select(r => (r.Prefab, Hash: TerrainEditor.Save.StableHash.Of(r.Prefab), r.Position, r.Rotation, r.Scale))
+			.Where(r => scene.World?.CanCreate(r.Hash) != false)
+			.Select(r => (new TerrainEditor.Editing.NewObject(0, r.Hash, r.Position, r.Rotation, r.Scale), false)).ToList();
+		// Natural objects in the trench (deeper than half a metre there) would float or stand in the way.
+		float reach = path.Width / 2 + path.Soft;
+		var remove = new List<int>();
+		lock (scene.Things)
+		{
+			for (int i = 0; i < scene.Things.Count; i++)
+			{
+				var t = scene.Things[i];
+				if (t.Gone || !EditSession.Natural(t))
+				{
+					continue;
+				}
+				var at = new System.Numerics.Vector2(t.Position.X - ox, t.Position.Z - oz);
+				for (int k = 0; k < cave.Curve.Count; k++)
+				{
+					if (cave.Depth[k] > 0.5f && System.Numerics.Vector2.Distance(cave.Curve[k].P, at) <= reach)
+					{
+						remove.Add(i);
+						break;
+					}
+				}
+			}
+		}
+		bool clamped = false;
+		s.Commit($"Cave along {PathTool.Length(cave.Curve):0} m", g =>
+		{
+			var (t, rect, c) = path.Apply(g, s.Brush, water, s.MaskNow(), cave);
+			clamped = c;
+			return (t, rect);
+		}, remove, roof);
+		_message.Text = roof.Count == 0
+			? "Dug the cave's trench, but it is nowhere deep enough for a roof: make Depth larger than Headroom by 1.5 m, or the line longer (its ends slope up to the ground)."
+			: $"Dug a cave {PathTool.Length(cave.Curve):0} m long, roofed with {roof.Count} boulder(s){(remove.Count > 0 ? $"; {remove.Count} tree(s) and rock(s) in the way taken away" : "")}."
+				+ (clamped ? " Part of it reached the game's ±8 m limit (switch on No limit in the brush options to dig deeper)." : " Ctrl+Z takes it back.");
 		PathPanel.Refresh();
 		UpdateSaveBar();
 	}
@@ -746,6 +816,43 @@ public sealed partial class MainWindow : Window
 		});
 		_message.Text = clamped ? "Stamped, but part of it reached the game limit of ±8 m from the original ground (red points)."
 			: $"Stamped {MathF.Abs(amount)} m {(amount >= 0 ? "up" : "down")}. Ctrl+Z undoes it.";
+		UpdateSaveBar();
+	}
+
+	// The Mountain tool's click: the mountain goes into the ground there (grid point), then the biome's
+	// trees and rocks grow on it (a second undo step).
+	internal async Task PutMountain(float gx, float gz)
+	{
+		if (_session is not { } s)
+		{
+			return;
+		}
+		var m = MountainPanel.Spec;
+		string name = MountainPanel.Preset.Name;
+		if (s.Mountain(gx, gz, m, MountainPanel.Clear, $"Mountain: {name}") is not { } done)
+		{
+			_message.Text = $"The {name.ToLowerInvariant()} reaches {m.Reach:0} m around the click and does not fit in the open area: click nearer its middle, make it smaller, or open a bigger area.";
+			return;
+		}
+		UpdateSaveBar();
+		string placed = $"Placed a {name.ToLowerInvariant()}, {m.Height:0} m high{(done.Cleared > 0 ? $"; {done.Cleared} tree(s) and rock(s) it buried taken away" : "")}.";
+		_message.Text = placed;
+		if (!MountainPanel.Grow)
+		{
+			_message.Text = placed + " Ctrl+Z takes it back; saving turns it into ground discs.";
+			return;
+		}
+		var shape = Mountain.Shape(m);
+		float ox = s.Scene.X0 * 64f - 32f, oz = s.Scene.Z0 * 64f - 32f, wx = ox + gx, wz = oz + gz;
+		// On the slopes it raised by more than a metre (not around its foot, where the old ones stand).
+		var spots = await Growth.Spots(s, wx - m.Reach, wz - m.Reach, wx + m.Reach, wz + m.Reach, o => shape(o.X - wx, o.Z - wz) > 1,
+			NameOfPrefab, t => _message.Text = placed + " " + t, maxZones: 49);
+		if (spots is { Count: > 0 })
+		{
+			Growth.Commit(s, $"Mountain: grew {spots.Count} object(s)", spots);
+			placed += $" Grew {spots.Count} of the biome's trees and rocks on it.";
+		}
+		_message.Text = placed + " Ctrl+Z takes it back (twice with what grew); saving turns it into ground discs.";
 		UpdateSaveBar();
 	}
 
@@ -1537,7 +1644,7 @@ public sealed partial class MainWindow : Window
 			Margin = new Thickness(10, 70, 10, 58),
 			HorizontalAlignment = HorizontalAlignment.Left,
 			VerticalAlignment = VerticalAlignment.Top,
-			Children = { Tools.Rail, Tools.Options, SelectPanel.Card, MeasurePanel.Card, ShapePanel.Card, PathPanel.Card, AreaPanel.Card, PastePanel.Card, PlacePanel.Card, PlacePanel.Chooser, MaskPanel.Card },
+			Children = { Tools.Rail, Tools.Options, SelectPanel.Card, MeasurePanel.Card, ShapePanel.Card, MountainPanel.Card, PathPanel.Card, AreaPanel.Card, PastePanel.Card, PlacePanel.Card, PlacePanel.Chooser, MaskPanel.Card },
 		};
 		// Every panel of the column scrolls when the window is too short for it (a bar only then).
 		foreach (var card in tools.Children.OfType<Border>())
@@ -1548,9 +1655,26 @@ public sealed partial class MainWindow : Window
 				card.Child = new ScrollViewer { VerticalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Auto, Content = inner };
 			}
 		}
-		SelectPanel.Card.IsVisible = MeasurePanel.Card.IsVisible = ShapePanel.Card.IsVisible = PathPanel.Card.IsVisible = AreaPanel.Card.IsVisible = PastePanel.Card.IsVisible = MaskPanel.Card.IsVisible = PlacePanel.Card.IsVisible = false;
+		SelectPanel.Card.IsVisible = MeasurePanel.Card.IsVisible = ShapePanel.Card.IsVisible = MountainPanel.Card.IsVisible = PathPanel.Card.IsVisible = AreaPanel.Card.IsVisible = PastePanel.Card.IsVisible = MaskPanel.Card.IsVisible = PlacePanel.Card.IsVisible = false;
 		ShapePanel.Changed += () => _view.ShapeRadius = ShapePanel.Radius;
-		_view.ShapeClicked += PutShape;
+		MountainPanel.Changed += () => { if (Tools.Mode == ToolMode.Mountain) _view.ShapeRadius = MountainPanel.Spec.Reach; };
+		_view.ShapeClicked += (x, z) =>
+		{
+			if (Tools.Mode == ToolMode.Mountain)
+			{
+				_ = PutMountain(x, z);
+			}
+			else
+			{
+				PutShape(x, z);
+			}
+		};
+		Tools.CaveChosen += () =>
+		{
+			PathPanel.ChooseCave();
+			Tools.MarkCave(true);
+		};
+		PathPanel.ActionChanged += a => Tools.MarkCave(a == PathTool.Action.Cave);
 		Tools.Options.VerticalAlignment = VerticalAlignment.Top;
 		Tools.Rail.VerticalAlignment = VerticalAlignment.Top;
 		Tools.ToolChanged += t =>
@@ -1560,7 +1684,13 @@ public sealed partial class MainWindow : Window
 			SelectPanel.Card.IsVisible = Tools.SelectMode;
 			MeasurePanel.Card.IsVisible = Tools.Mode == ToolMode.Measure;
 			ShapePanel.Card.IsVisible = Tools.Mode == ToolMode.Shape;
+			MountainPanel.Card.IsVisible = Tools.Mode == ToolMode.Mountain;
+			_view.ShapeRadius = Tools.Mode == ToolMode.Mountain ? MountainPanel.Spec.Reach : ShapePanel.Radius;
 			PathPanel.Card.IsVisible = Tools.Mode == ToolMode.Path;
+			if (Tools.Mode == ToolMode.Path)
+			{
+				Tools.MarkCave(_view.Path.Act == PathTool.Action.Cave);
+			}
 			AreaPanel.Card.IsVisible = Tools.Mode == ToolMode.Area;
 			PastePanel.Card.IsVisible = Tools.Mode == ToolMode.Paste;
 			PlacePanel.Card.IsVisible = Tools.Mode == ToolMode.Place;
@@ -1570,7 +1700,7 @@ public sealed partial class MainWindow : Window
 				PlacePanel.KindsButton.Content = "+ Add kinds";
 			}
 			PlaceInput.Refresh();
-			MaskPanel.Card.IsVisible = Tools.Mode is ToolMode.Brush or ToolMode.Path or ToolMode.Area or ToolMode.Shape or ToolMode.Place;
+			MaskPanel.Card.IsVisible = Tools.Mode is ToolMode.Brush or ToolMode.Path or ToolMode.Area or ToolMode.Shape or ToolMode.Mountain or ToolMode.Place;
 			if (Tools.Mode == ToolMode.Area)
 			{
 				AreaPanel.Refresh();
