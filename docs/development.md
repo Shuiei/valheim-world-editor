@@ -74,9 +74,10 @@ dotnet publish Desktop/ValheimWorldEditor.Desktop.csproj -c Release -r linux-x64
 One file, `ValheimWorldEditor` (`-r win-x64`: `ValheimWorldEditor.exe`), with the libraries it needs
 (Skia, HarfBuzz, ANGLE on Windows) packed inside. Publish outside the source folder: a folder inside
 it is picked up by the next build. `tools/release.sh <folder>` builds the complete release packages:
-the program, the game-look exporter with its own Python runtime, the plugin and the readmes
-(`SKIP_PLUGIN=1` leaves the plugin out); `tools/check-package.sh <package>` checks one has what it
-needs and no source code, debug files or game files.
+the program, the game-look exporter with its own Python runtime and the readmes;
+`tools/check-package.sh <package>` checks one has what it needs and no source code, debug files,
+game files or plugin. The plugin is its own package: `tools/thunderstore.sh <folder>` builds
+`WorldEditorBridge-<version>.zip` (for the release page, Thunderstore and Hexium).
 
 The plugin: build `plugin/WorldEditorBridge/WorldEditorBridge.csproj` after pointing its
 `HintPath`s at your BepInEx `core` folder and the game's `*_Data/Managed` folder.
@@ -236,7 +237,7 @@ dotnet test tests/Desktop.Tests                                  # everything (v
 dotnet test tests/Desktop.Tests --filter "Category!=Visual"     # without the visual tests
 dotnet test tests/Desktop.Tests --filter "Category=Visual"      # only them
 dotnet-coverage collect -s tests/Desktop.Tests/coverage.config -f cobertura -o cov.xml "dotnet test tests/Desktop.Tests --filter Category!=Visual"
-SKIP_PLUGIN=1 tools/release.sh /tmp/dist && tools/check-package.sh /tmp/dist/*.tar.gz --no-plugin
+tools/release.sh /tmp/dist && tools/check-package.sh /tmp/dist/*.tar.gz
 ```
 
 The coverage counts only our own code: `coverage.config` leaves out FastNoise and the generator

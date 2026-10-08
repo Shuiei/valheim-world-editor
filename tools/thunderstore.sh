@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
-# Build the Thunderstore package of the plugin into <dist>: WorldEditorBridge-<version>.zip, from
+# Build the plugin's package into <dist>: WorldEditorBridge-<version>.zip, from
 # tools/thunderstore/bridge/ (manifest.json and the mod page's README.md), the editor's CHANGELOG.md
-# (through tools/thunderstore/changelog.py), Desktop/Assets/icon.png and the DLL of the release packages
-# (tools/release.sh; those of the VERSION file's version already in <dist> are reused). Only the
-# plugin goes to Thunderstore: it does not host programs, so the editor is on GitHub releases only.
-# Usage: tools/thunderstore.sh <dist>   (needs what tools/release.sh needs)
+# (through tools/thunderstore/changelog.py), Desktop/Assets/icon.png, the plugin built here
+# (plugins/WorldEditorBridge.dll) and tools/plugin-readme.txt (README.txt, for installing by hand).
+# The same zip goes to the GitHub release, Thunderstore and Hexium; the editor itself is on GitHub
+# releases only (Thunderstore does not host programs).
+# Usage: tools/thunderstore.sh <dist>   (needs dotnet 8, zip, python3; the plugin builds against the
+# game's and BepInEx's DLLs, see its project file)
 # Upload the zip at https://thunderstore.io/c/valheim/create/
 set -euo pipefail
 dist=$(realpath -m "${1:?output folder}")
@@ -15,8 +17,6 @@ mkdir -p "$dist"
 
 version=$(tr -d '[:space:]' < "$repo/VERSION")
 [[ $version =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "VERSION is not Major.Minor.Patch" >&2; exit 1; }
-linux="$dist/ValheimWorldEditor-v$version-linux-x64.tar.gz" windows="$dist/ValheimWorldEditor-v$version-win-x64.zip"
-[ -f "$linux" ] && [ -f "$windows" ] || "$repo/tools/release.sh" "$dist" >/dev/null
 
 # Thunderstore's rules: name a-z A-Z 0-9 _, description up to 250 characters, a 256x256 PNG icon.
 check() {
@@ -46,10 +46,10 @@ package() {   # $1 package name, $2 its folder in tools/thunderstore; the files 
   echo "$dist/$name-$version.zip"
 }
 
-# The same DLL as in the release packages' plugin/ folder.
 mkdir -p "$work/WorldEditorBridge/plugins"
-tar -xzf "$linux" -C "$work" ValheimWorldEditor/plugin/WorldEditorBridge.dll
-mv "$work/ValheimWorldEditor/plugin/WorldEditorBridge.dll" "$work/WorldEditorBridge/plugins/"
-rm -rf "$work/ValheimWorldEditor"
+"${DOTNET:-dotnet}" build "$repo/plugin/WorldEditorBridge/WorldEditorBridge.csproj" -c Release -p:DebugType=none -o "$work/build" >/dev/null
+cp "$work/build/WorldEditorBridge.dll" "$work/WorldEditorBridge/plugins/"
+sed "s/@VERSION@/$version/g" "$repo/tools/plugin-readme.txt" > "$work/WorldEditorBridge/README.txt"
+rm -rf "$repo/plugin/WorldEditorBridge/bin" "$repo/plugin/WorldEditorBridge/obj"
 package WorldEditorBridge bridge
 

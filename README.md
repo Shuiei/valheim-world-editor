@@ -49,7 +49,8 @@ your own computer; nothing is sent anywhere else.
   works, with plain colours and no object models.
 - For the **live** ways: **BepInEx** in the game that hosts the world (your Valheim, or the
   server), using [BepInExPack for Valheim](https://thunderstore.io/c/valheim/p/denikson/BepInExPack_Valheim/),
-  plus the WorldEditorBridge plugin that comes with the editor. Players who join need neither.
+  plus the WorldEditorBridge plugin (its own download, next to the editor's). Players who join need
+  neither.
 
 Nothing else: no Python, no .NET, no `ssh` command. Everything the editor needs comes in the
 download: one program file, drawn with OpenGL (any graphics driver of the last ten years; on
@@ -60,8 +61,9 @@ Windows it falls back to Direct3D when the driver has no OpenGL).
 1. Download `ValheimWorldEditor-<version>-win-x64.zip` (Windows) or
    `ValheimWorldEditor-<version>-linux-x64.tar.gz` (Linux) from the
    [Releases](https://github.com/Shuiei/valheim-world-editor/releases) page.
-2. Unpack it anywhere (Desktop, Documents…). It holds the editor, its `README.txt`, and a `plugin`
-   folder with `WorldEditorBridge.dll` and its own `README.txt`.
+2. Unpack it anywhere (Desktop, Documents…). It holds the editor and its `README.txt`. For live
+   editing, the WorldEditorBridge plugin is a separate download: `WorldEditorBridge-<version>.zip`
+   on the same page, or from a mod manager (below).
 3. Double-click **ValheimWorldEditor** (`ValheimWorldEditor.exe` on Windows). It opens in its own
    window, on the start page. (Windows may say "Windows protected your PC" the first time: the
    program is not signed. Click "More info", then "Run anyway".)
@@ -81,8 +83,9 @@ with `valheim_Data`).
    following its page.
 2. **Add the plugin:** with a mod manager, install
    [WorldEditorBridge](https://thunderstore.io/c/valheim/p/Tie/WorldEditorBridge/) from
-   Thunderstore (BepInEx comes with it). By hand: copy `plugin/WorldEditorBridge.dll` from the
-   editor's folder into `BepInEx/plugins` of your Valheim. The editor itself is only on the
+   Thunderstore or Hexium (BepInEx comes with it). By hand: copy `WorldEditorBridge.dll` from
+   `WorldEditorBridge-<version>.zip` (on the releases page) into `BepInEx/plugins` of your Valheim.
+   The editor itself is only on the
    [releases page](https://github.com/Shuiei/valheim-world-editor/releases): Thunderstore does not
    host programs.
 3. **Start Valheim** with BepInEx and load your world (single player, or start a server from the
@@ -98,9 +101,10 @@ game at once, and the game saves it as usual.
 ![Connecting to a server](docs/images/start-server.jpg)
 
 1. **On the server, once:** install BepInEx (BepInExPack for Valheim, following its instructions
-   for dedicated servers), copy `plugin/WorldEditorBridge.dll` into its `BepInEx/plugins` (or
-   install [WorldEditorBridge](https://thunderstore.io/c/valheim/p/Tie/WorldEditorBridge/) in a
-   mod manager's server profile), and restart it. See `plugin/README.txt` in the download.
+   for dedicated servers), copy `WorldEditorBridge.dll` (from `WorldEditorBridge-<version>.zip` on
+   the releases page) into its `BepInEx/plugins` (or install
+   [WorldEditorBridge](https://thunderstore.io/c/valheim/p/Tie/WorldEditorBridge/) in a mod
+   manager's server profile), and restart it. See the `README.txt` in that zip.
 2. On the start page, **A dedicated server**: enter the server's address, the user you log in to it
    with (SSH), the password or an SSH key file, and the **plugin token**: the `Token` line of
    `BepInEx/config/Tie.WorldEditorBridge.cfg` on the server. Tick **Save password** to not type the
@@ -177,7 +181,8 @@ dotnet publish Desktop/ValheimWorldEditor.Desktop.csproj -c Release -r linux-x64
 ```
 
 Use `-r win-x64` for Windows. `tools/release.sh <folder>` builds the complete release packages
-(the program, the game-look exporter and its Python runtime, the plugin). The tests, as CircleCI runs
+(the program, the game-look exporter and its Python runtime); `tools/thunderstore.sh <folder>` the
+plugin's (`WorldEditorBridge-<version>.zip`). The tests, as CircleCI runs
 them on every push (the visual tests need a display and are left out):
 
 ```sh

@@ -21,7 +21,7 @@ this plugin nor BepInEx. Editing a saved world with the game closed does not use
 
 2. Install the plugin
 ---------------------
-  1. Copy WorldEditorBridge.dll (in this folder) into BepInEx/plugins (of your Valheim, of your mod
+  1. Copy WorldEditorBridge.dll (in the plugins folder of this zip) into BepInEx/plugins (of your Valheim, of your mod
      manager profile, or of the server).
   2. Restart the game or server. BepInEx/LogOutput.log then shows
      "WorldEditorBridge @VERSION@ listening on http://127.0.0.1:5182/".

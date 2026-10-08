@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # Build the release packages (no source code, no game files) into <dist>, one per system:
 #   ValheimWorldEditor-<version>-linux-x64.tar.gz   the app (one program file, Desktop/), the
-#   ValheimWorldEditor-<version>-win-x64.zip        game-look exporter with its own Python, and
-#                                                   plugin/ with WorldEditorBridge.dll for live mode
+#   ValheimWorldEditor-<version>-win-x64.zip        game-look exporter with its own Python
 # Usage: tools/release.sh <dist>   (needs dotnet 8, tar, zip, curl, python3 with pip)
 # The version is the VERSION file's (the editor's and the plugin's); the packages are named v<version>.
-#   SKIP_PLUGIN=1: leave out the plugin (it builds against the game's DLLs, which CI does not have).
+# The WorldEditorBridge plugin is released on its own (tools/thunderstore.sh: WorldEditorBridge-<version>.zip,
+# on the release page, Thunderstore and Hexium), not inside the editor's packages.
 set -euo pipefail
 dist=$(realpath -m "${1:?output folder}")
 repo=$(cd "$(dirname "$0")/.." && pwd)
@@ -13,12 +13,6 @@ version=v$(tr -d '[:space:]' < "$repo/VERSION")
 dotnet=${DOTNET:-dotnet}
 work=$(mktemp -d); trap 'rm -rf "$work"' EXIT
 mkdir -p "$dist"
-
-# The plugin first (references the game's and BepInEx's DLLs; see its project file): both packages
-# carry it.
-if [ "${SKIP_PLUGIN:-}" != 1 ]; then
-  "$dotnet" build "$repo/plugin/WorldEditorBridge/WorldEditorBridge.csproj" -c Release -p:DebugType=none -o "$work/plugin" >/dev/null
-fi
 
 package() {   # $1 runtime id, $2 program file name (users start it by double-clicking), $3 readme
   local rid=$1 exe=$2 readme=$3
@@ -33,12 +27,6 @@ package() {   # $1 runtime id, $2 program file name (users start it by double-cl
   "$repo/tools/make-python-runtime.sh" "$rid" "$dir/export-game-files" >/dev/null
   cp "$repo/tools/$readme" "$dir/README.txt"
   sed -i "s/@VERSION@/$version/" "$dir/README.txt"
-  if [ "${SKIP_PLUGIN:-}" != 1 ]; then
-    mkdir -p "$dir/plugin"
-    cp "$work/plugin/WorldEditorBridge.dll" "$dir/plugin/"
-    cp "$repo/tools/plugin-readme.txt" "$dir/plugin/README.txt"
-    sed -i "s/@VERSION@/${version#v}/g" "$dir/plugin/README.txt"
-  fi
   # Windows readers get Windows line ends.
   if [ "$rid" = win-x64 ]; then find "$dir" -maxdepth 2 -name README.txt -exec sed -i 's/$/\r/' {} \;; fi
 }
@@ -48,5 +36,4 @@ tar -C "$work/linux-x64" -czf "$dist/ValheimWorldEditor-$version-linux-x64.tar.g
 package win-x64 ValheimWorldEditor.exe release-readme-windows.txt
 (cd "$work/win-x64" && zip -qr "$dist/ValheimWorldEditor-$version-win-x64.zip" ValheimWorldEditor)
 
-rm -rf "$repo/plugin/WorldEditorBridge/bin" "$repo/plugin/WorldEditorBridge/obj"
 ls -la "$dist"
