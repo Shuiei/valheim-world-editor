@@ -47,7 +47,26 @@ public sealed class StartPage
 
 	private static readonly IBrush Panel = Ui.Panel, Line = Ui.Line, Accent = Ui.Accent, Muted = Ui.Muted;
 
-	private static TextBlock Err() => new() { Foreground = new SolidColorBrush(Color.FromRgb(224, 96, 75)), TextWrapping = TextWrapping.Wrap, FontSize = 12 };
+	// A folder under the home folder as ~/… (Linux and macOS, as a terminal shows it).
+	internal static string Tilde(string path)
+	{
+		string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile).TrimEnd('/');
+		return !OperatingSystem.IsWindows() && home.Length > 1 && (path == home || path.StartsWith(home + "/")) ? "~" + path[home.Length..] : path;
+	}
+
+	// An error line: takes no room while it says nothing.
+	private static TextBlock Err()
+	{
+		var t = new TextBlock { Foreground = new SolidColorBrush(Color.FromRgb(224, 96, 75)), TextWrapping = TextWrapping.Wrap, FontSize = 12, IsVisible = false };
+		t.PropertyChanged += (_, e) =>
+		{
+			if (e.Property == TextBlock.TextProperty)
+			{
+				t.IsVisible = !string.IsNullOrEmpty(t.Text);
+			}
+		};
+		return t;
+	}
 	private static TextBlock Hint(string t) => new() { Text = t, Foreground = Muted, TextWrapping = TextWrapping.Wrap, FontSize = 12 };
 	private static Border Card(Control c) => Ui.Card(c);
 	private static TextBlock H2(string t) => new() { Text = t.ToUpperInvariant(), FontSize = 12, Foreground = Muted, FontWeight = FontWeight.SemiBold, Margin = new Thickness(0, 18, 0, 6) };
@@ -156,7 +175,7 @@ public sealed class StartPage
 						Orientation = Orientation.Horizontal,
 						Spacing = 10,
 						Margin = new Thickness(0, 24, 0, 0),
-						Children = { DocsLink, new TextBlock { Text = $"Settings, saved servers and log: {AppSettings.DataDir}", Foreground = Muted, FontSize = 11, VerticalAlignment = VerticalAlignment.Center } },
+						Children = { DocsLink, new TextBlock { Text = $"Settings, saved servers and log: {Tilde(AppSettings.DataDir)}", Foreground = Muted, FontSize = 11, VerticalAlignment = VerticalAlignment.Center } },
 					},
 				},
 			},
@@ -411,6 +430,7 @@ public sealed class StartPage
 		SavedServers.Children.Clear();
 		var servers = ServerConfig.Load();
 		bool any = servers.Count > 0;
+		SavedServers.IsVisible = any;
 		ServerForm.IsExpanded = !any;
 		((TextBlock)ServerForm.Header!).Text = any ? "Connect to another server" : "Connect to a server";
 		foreach (var s in servers)

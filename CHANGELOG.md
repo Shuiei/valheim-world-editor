@@ -53,6 +53,8 @@ the plugin is unchanged in versions without that part.
   their last rows could not be reached; they now stop above it and scroll.
 - The data folder follows `XDG_DATA_HOME` on Linux even before that folder exists (it fell back to
   `~/.local/share`).
+- Native app, start page: empty error lines and an empty server list left gaps; the data folder is
+  shown as `~/…`.
 - Native app: Space no longer presses the focused button in the editor.
 - Native app, Area: "pick" for Replace now works before an area is drawn.
 

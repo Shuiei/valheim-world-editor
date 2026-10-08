@@ -15,7 +15,8 @@ namespace TerrainEditor.Desktop;
 //   look <game|seethrough> <on|off>, look res <sharp|balanced|fast>
 //                                  the View panel's Look switches
 //   camera <x> <z> <yaw°> <pitch°> <distance>  the 3D view's camera on world x, z
-//   click <text>                   the visible button, switch or box labelled so (windows and dialogs)
+//   click <text>                   the visible button, switch or box labelled so, or whose words
+//                                  begin so (windows and dialogs)
 //   choose <text>                  the entry so named in whichever visible list has it
 //   bench <seconds>                the 3D camera turns on its own; the frame rates come back
 //   mouse <down|move|up> <x> <z> [left|right|middle] [shift|ctrl|alt ...]
@@ -160,7 +161,8 @@ public static class Driver
 				return State(w);
 			case "click":
 			{
-				var c = Find<Avalonia.Controls.Button>(w, b => string.Equals(TextOf(b), a[1], StringComparison.OrdinalIgnoreCase)) ?? throw new InvalidOperationException($"no button \"{a[1]}\"");
+				var c = Find<Avalonia.Controls.Button>(w, b => string.Equals(TextOf(b), a[1], StringComparison.OrdinalIgnoreCase))
+					?? Find<Avalonia.Controls.Button>(w, b => TextOf(b).StartsWith(a[1] + " ", StringComparison.OrdinalIgnoreCase)) ?? throw new InvalidOperationException($"no button \"{a[1]}\"");
 				if (c is Avalonia.Controls.Primitives.ToggleButton t)
 				{
 					t.IsChecked = t.IsChecked != true;

@@ -158,6 +158,35 @@ public class PanelGameLookTests
 	}
 
 	[Fact]
+	public void TheDataFolderShowsTheHomeAsATilde()
+	{
+		string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+		if (OperatingSystem.IsWindows())
+		{
+			Assert.Equal(Path.Combine(home, "x"), StartPage.Tilde(Path.Combine(home, "x")));
+			return;
+		}
+		Assert.Equal("~/.local/share/ValheimWorldEditor", StartPage.Tilde(home + "/.local/share/ValheimWorldEditor"));
+		Assert.Equal("~", StartPage.Tilde(home));
+		// Only the whole home folder: not a folder whose name merely starts the same.
+		Assert.Equal(home + "x/data", StartPage.Tilde(home + "x/data"));
+		Assert.Equal("/opt/editor", StartPage.Tilde("/opt/editor"));
+	}
+
+	[AvaloniaFact]
+	public void EmptyErrorsAndAnEmptyServerListTakeNoRoom()
+	{
+		var page = new StartPage(new AppSettings());
+		page.FillServers();
+		Assert.Equal(ServerConfig.Load().Count > 0, page.SavedServers.IsVisible);
+		Assert.False(page.PathError.IsVisible);
+		page.PathError.Text = "Not a world folder.";
+		Assert.True(page.PathError.IsVisible);
+		page.PathError.Text = "";
+		Assert.False(page.PathError.IsVisible);
+	}
+
+	[Fact]
 	public void TheExportersStateReadsAsASnapshot()
 	{
 		var s = GameLook.Now();
