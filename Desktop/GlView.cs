@@ -1372,6 +1372,16 @@ public sealed class GlView : OpenGlControlBase
 			_pointer = p.Position;
 			_surfaceSize = surface.Bounds.Size;
 			e.Pointer.Capture(surface);
+			// The eyedropper waits: this click is its, not the tool's (nor is the release).
+			if (_dragButton == PointerUpdateKind.LeftButtonPressed && PickObjectOnce is { } pickOnce)
+			{
+				PickObjectOnce = null;
+				_dragFrom = null;
+				_pickSwallow = true;
+				pickOnce(ObjectAt(p.Position, _surfaceSize));
+				Wake();
+				return;
+			}
 			if (_dragButton == PointerUpdateKind.LeftButtonPressed && _mode == ToolMode.Place && Place != null)
 			{
 				_dragFrom = null;
@@ -1472,6 +1482,14 @@ public sealed class GlView : OpenGlControlBase
 		};
 		surface.PointerReleased += (_, e) =>
 		{
+			if (_pickSwallow)
+			{
+				_pickSwallow = false;
+				_pressAt = null;
+				_dragFrom = null;
+				e.Pointer.Capture(null);
+				return;
+			}
 			// A left click (not a drag) picks the object under the pointer.
 			var at = e.GetPosition(surface);
 			if (_pathDown)
@@ -2325,6 +2343,11 @@ public sealed class GlView : OpenGlControlBase
 		}
 		SelectionDone();
 	}
+
+	// Eyedropper: the next left click gives the object under it (null: none) instead of going to
+	// the tool; its release is swallowed too.
+	internal Action<int?>? PickObjectOnce { get; set; }
+	private bool _pickSwallow;
 
 	// Selects these things (add: to what is selected).
 	internal void Select(IEnumerable<int> things, bool add = false)

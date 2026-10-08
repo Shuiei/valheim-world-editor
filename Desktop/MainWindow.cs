@@ -169,6 +169,8 @@ public sealed partial class MainWindow : Window
 		if (_map == null)
 		{
 			_map = new MapPage();
+			_map.StartView = () => Prefs.TryGet("map.view", out float[]? v) && v is { Length: 3 } && v.All(float.IsFinite) && v[2] > 0 ? (v[0], v[1], Math.Clamp(v[2], 0.25f, 40f)) : null;
+			_map.Map.ViewChanged += () => Prefs.Set("map.view", new[] { _map.Map.Center.X, _map.Map.Center.Y, _map.Map.MetersPerPixel });
 			_map.BackToWorlds += async () => await LeaveWorld();
 			_map.EditRequested += async (x, z, size) => await EditArea(x, z, size);
 			_map.SaveRequested += async () => await SaveWorld();
@@ -377,6 +379,7 @@ public sealed partial class MainWindow : Window
 		var kinds = session.Scene.World?.Creatable.Where(p => NameOfPrefab(p) != null).OrderBy(p => NameOfPrefab(p), StringComparer.OrdinalIgnoreCase).ToList() ?? new();
 		SelectPanel.ReplaceKinds = kinds;
 		SelectPanel.ReplaceBox.ItemsSource = kinds.Select(p => NameOfPrefab(p)!).ToList();
+		SelectPanel.FillSaved();
 		UpdateSaveBar();
 	}
 
@@ -471,7 +474,7 @@ public sealed partial class MainWindow : Window
 		UpdateSaveBar();
 	}
 
-	private string? NameOfPrefab(int prefab) => _models?.NameOf(prefab) ?? TerrainEditor.Terrain.PrefabCatalog.DisplayName(prefab);
+	internal string? NameOfPrefab(int prefab) => _models?.NameOf(prefab) ?? TerrainEditor.Terrain.PrefabCatalog.DisplayName(prefab);
 
 	// A kind's model box in its own frame, in Unity's axes (the models are stored with z mirrored) and
 	// scaled like the model; null while unknown.
@@ -742,6 +745,10 @@ public sealed partial class MainWindow : Window
 	// The right-hand panels share the place under the top bar: one at a time (null: none).
 	internal void ShowRight(Control? panel)
 	{
+		if (panel == _viewPanel || panel == HelpCard || panel == History.Card || panel == null)
+		{
+			Prefs.Set("panel.right", panel == _viewPanel ? "view" : panel == HelpCard ? "help" : panel == History.Card ? "history" : "none");
+		}
 		_viewPanel.IsVisible = panel == _viewPanel;
 		HelpCard.IsVisible = panel == HelpCard;
 		if (History.Card.IsVisible != (panel == History.Card))
@@ -866,6 +873,88 @@ public sealed partial class MainWindow : Window
 		return card;
 	}
 
+	// What is remembered between runs (Prefs, as the web editor kept it in the browser): each control set
+	// from it now and remembered as it changes.
+	private void RememberPrefs()
+	{
+		var p = Prefs;
+		// View: the kinds drawn, water, overlays, the look's slope colours and height lines.
+		foreach (var (k, box) in _kindBoxes)
+		{
+			p.Bind(box, $"view.show.{k}");
+		}
+		p.Bind(WaterBox, "view.water");
+		foreach (var (layer, box) in _overlayBoxes)
+		{
+			p.Bind(box, $"view.overlay.{layer}");
+		}
+		p.Bind(SlopeBox, "view.slope");
+		p.Bind(ContourBox, "view.contour");
+		p.Bind(ContourStepBox, "view.contourStep");
+		// The brush's shape and falloff, the Area action, Select's options.
+		p.Bind(Tools.ShapeBox, "brush.shape");
+		p.Bind(Tools.FalloffBox, "brush.falloff");
+		p.Bind(AreaPanel.ActionBox, "area.action");
+		p.Bind(SelectPanel.GroundBox, "select.onGround");
+		p.Bind(SelectPanel.SnapBox, "select.snap");
+		// Shape: the preset, and the formula when it is one's own.
+		p.Bind(ShapePanel.PresetBox, "shape.preset");
+		bool Own() => ShapePanel.PresetBox.SelectedIndex == ShapePanel.Presets.Length;
+		if (Own() && p.TryGet("shape.formula", out string? formula) && formula != null)
+		{
+			ShapePanel.FormulaBox.Text = formula;
+		}
+		ShapePanel.FormulaBox.PropertyChanged += (_, e) =>
+		{
+			if (e.Property == TextBox.TextProperty && Own())
+			{
+				p.Set("shape.formula", ShapePanel.FormulaBox.Text ?? "");
+			}
+		};
+		// The right-hand panel open.
+		ShowRight(p.Get("panel.right", "view") switch { "help" => HelpCard, "history" => History.Card, "none" => null, _ => _viewPanel });
+		// The clipboard (its objects' ids only meant something in the world it came from).
+		if (p.TryGet("clipboard", out System.Text.Json.Nodes.JsonObject? clip) && clip != null)
+		{
+			try
+			{
+				_view.Paste.Clip = CopyFormat.FromJson(clip, keepSources: false);
+				_keptClip = _view.Paste.Clip;
+			}
+			catch (Exception ex) when (ex is FormatException or InvalidOperationException or NullReferenceException or ArgumentException or System.Text.Json.JsonException)
+			{
+				p.Remove("clipboard");
+			}
+		}
+		_view.Paste.Changed += () =>
+		{
+			if (_view.Paste.Clip is { } c && !ReferenceEquals(c, _keptClip))
+			{
+				_keptClip = c;
+				p.Set("clipboard", CopyFormat.ToJson(c));
+			}
+		};
+	}
+
+	private CopyData? _keptClip;
+
+	// Eyedropper for the Replace lists: the next click on an object gives its kind (Esc cancels).
+	internal void PickKind(string label, Action<int> done)
+	{
+		_view.PickObjectOnce = i =>
+		{
+			if (i is int t && _view.Scene is { } sc && t < sc.Things.Count)
+			{
+				done(sc.Things[t].Prefab);
+			}
+			else
+			{
+				_message.Text = "Nothing picked: click right on an object (only things that are shown can be picked).";
+			}
+		};
+		_message.Text = $"Click an object to pick its kind for {label}. Esc cancels.";
+	}
+
 	private void OnKey(object? sender, Avalonia.Input.KeyEventArgs e)
 	{
 		// Typing in a box: its keys are its own.
@@ -875,6 +964,13 @@ public sealed partial class MainWindow : Window
 		}
 		var mods = e.KeyModifiers;
 		bool ctrl = mods.HasFlag(Avalonia.Input.KeyModifiers.Control) || mods.HasFlag(Avalonia.Input.KeyModifiers.Meta);
+		if (!ctrl && e.Key == Avalonia.Input.Key.Escape && _view.PickObjectOnce != null)
+		{
+			_view.PickObjectOnce = null;
+			_message.Text = "Picking cancelled.";
+			e.Handled = true;
+			return;
+		}
 		// The right-hand panels, as in the web editor: V the View panel, L the history, ? (or F3) the help.
 		if (!ctrl && e.Key is Avalonia.Input.Key.F3 or Avalonia.Input.Key.OemQuestion || (!ctrl && mods.HasFlag(Avalonia.Input.KeyModifiers.Shift) && e.Key == Avalonia.Input.Key.Oem2))
 		{
@@ -1095,8 +1191,12 @@ public sealed partial class MainWindow : Window
 	}
 
 	// load: false opens the window without a world (tests).
-	public MainWindow(bool load = true)
+	// What is remembered between runs (the tests' windows: in memory only, unless a test gives one).
+	internal Prefs Prefs { get; }
+
+	public MainWindow(bool load = true, Prefs? prefs = null)
 	{
+		Prefs = prefs ?? (load ? Prefs.Load() : Prefs.InMemory());
 		SelectPanel = new SelectPanel(_view.SelectTool);
 		History = new HistoryPanel(() => _session);
 		Inspector = new InspectorPanel(() => _session);
@@ -1118,6 +1218,15 @@ public sealed partial class MainWindow : Window
 		Inspector.Replaced += i => _view.Select(new[] { i });
 		Inspector.Confirm = text => Dialogs.Ask(this, "Contents", text, "Apply anyway");
 		Inspector.Closed += () => _viewPanel.IsVisible = true;
+		SelectPanel.Message += t => _message.Text = t;
+		SelectPanel.PickKindAsked += PickKind;
+		SelectPanel.NameOf = NameOfPrefab;
+		SelectPanel.WorldName = () => _world?.World.Name is { Length: > 0 } n ? n : _view.Scene?.World?.Name is { Length: > 0 } m ? m : null;
+		SelectPanel.Things = () => _view.Scene?.Things;
+		SelectPanel.SelectedIds = () => _view.Selected;
+		SelectPanel.SelectIds = ids => { Tools.ChooseSelect(); _view.Select(ids); };
+		SelectPanel.AskName = initial => Dialogs.AskText(this, "Keep the selection", "Name of the selection:", initial);
+		SelectPanel.Confirm = text => Dialogs.Ask(this, "Saved selections", text, "Forget");
 		SelectPanel.InspectButton.Click += (_, _) => Inspect();
 		SelectPanel.ClaimButton.Click += (_, _) => Claim();
 		ToolTip.SetTip(SelectPanel.ClaimButton, "Give the selected pieces placed without a builder the player chosen in View, Building");
@@ -1178,6 +1287,7 @@ public sealed partial class MainWindow : Window
 		PathPanel.ApplyAsked += ApplyPath;
 		AreaPanel = new AreaPanel(_view, () => _session, prefab => _models?.NameOf(prefab) ?? TerrainEditor.Terrain.PrefabCatalog.DisplayName(prefab));
 		AreaPanel.Message += t => { _message.Text = t; UpdateSaveBar(); };
+		AreaPanel.PickKindAsked += PickKind;
 		AreaPanel.SwitchToSelect += () => Tools.ChooseSelect();
 		AreaPanel.CopyAsked += Copy;
 		AreaPanel.PasteAsked += StartPaste;
@@ -1347,7 +1457,8 @@ public sealed partial class MainWindow : Window
 			_ => "",
 		};
 		_view.Status += t => { Options.Say(t); Dispatcher.UIThread.Post(() => _info.Text = t + "\n" + _info.Text); };
-		Closing += (_, _) => { _perf.Flush(); GameLook.StopExport(); };
+		Closing += (_, _) => { _perf.Flush(); GameLook.StopExport(); Prefs.Flush(); };
+		RememberPrefs();
 		_info.Text = "Loading the world…";
 		Opened += async (_, _) =>
 		{

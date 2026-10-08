@@ -56,6 +56,9 @@ public sealed class AreaPanel
 	internal Dictionary<ObjectKind, ToggleButton> KindButtons { get; } = new();
 	internal ComboBox FromBox { get; } = new() { FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch };
 	internal ComboBox ToBox { get; } = new() { FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch, MaxDropDownHeight = 400 };
+	// Eyedropper: the "with" kind picked from the world (the window takes the next click on an object).
+	internal Button ToPickButton { get; } = new() { Content = "pick", FontSize = 11, Padding = new Thickness(6, 2), Margin = new Thickness(4, 0, 0, 0) };
+	public event Action<string, Action<int>>? PickKindAsked;
 	internal CheckBox KeepBuildingsBox { get; } = new() { Content = "Keep my buildings", IsChecked = true, FontSize = 12 };
 	internal CheckBox ResetGroundBox { get; } = new() { Content = "Reset ground edits too", IsChecked = true, FontSize = 12 };
 	internal Button UnresetButton { get; } = new() { Content = "Cancel reset", FontSize = 12 };
@@ -159,6 +162,8 @@ public sealed class AreaPanel
 		CancelPictureButton.Click += (_, _) => { _picture = null; _pictureBox.IsVisible = false; };
 		PutButton.Click += (_, _) => PutPicture();
 		UnresetButton.Click += (_, _) => CancelReset();
+		ToolTip.SetTip(ToPickButton, "Pick the kind from the world: click an object");
+		ToPickButton.Click += (_, _) => PickKindAsked?.Invoke("Replace", UsePicked);
 		Area.Changed += Refresh;
 
 		Control Row(string label, Control input, Control? after = null)
@@ -210,7 +215,7 @@ public sealed class AreaPanel
 					For(Help("Weathers the ground inside: slopes settle and rain cuts gullies (rest angle from the Erode brush)."), Act.Erode),
 					For(kinds, Act.Remove, Act.Select, Act.Replace, Act.Regrow, Act.Backup),
 					For(Row("Replace", FromBox), Act.Replace),
-					For(Row("with", ToBox), Act.Replace),
+					For(Row("with", ToBox, ToPickButton), Act.Replace),
 					For(Help("Puts back what the game grows here: its own trees, rocks, bushes and pickables for the biome, by its vegetation rules, for the kinds chosen above."), Act.Regrow),
 					For(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Children = { CopyButton, PasteButton } }, Act.Copy),
 					For(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Children = { SaveBlueprintButton, LibraryButton } }, Act.Copy),
@@ -349,12 +354,18 @@ public sealed class AreaPanel
 		var names = inside.GroupBy(i => NameOf(s.Things[i].Prefab)).OrderByDescending(x => x.Count()).Select(x => $"{x.Key} ({x.Count()})").ToList();
 		FromBox.ItemsSource = names;
 		FromBox.SelectedIndex = keep != null && names.Contains(keep) ? names.IndexOf(keep) : names.Count > 0 ? 0 : -1;
-		if (_creatable.Count == 0 && s.World != null)
+		FillCreatable();
+		_view.LassoChanged();
+	}
+
+	// The kinds the world can make, for the "with" list (once: they are the game's).
+	private void FillCreatable()
+	{
+		if (_creatable.Count == 0 && _view.Scene?.World is { } w)
 		{
-			_creatable = s.World.Creatable.Where(p => _nameOf(p) != null).OrderBy(p => _nameOf(p), StringComparer.OrdinalIgnoreCase).ToList();
+			_creatable = w.Creatable.Where(p => _nameOf(p) != null).OrderBy(p => _nameOf(p), StringComparer.OrdinalIgnoreCase).ToList();
 			ToBox.ItemsSource = _creatable.Select(p => _nameOf(p)!).ToList();
 		}
-		_view.LassoChanged();
 	}
 
 	private static AreaTool.GroundAction? Ground(Act a) => a switch
@@ -436,6 +447,20 @@ public sealed class AreaPanel
 				break;
 		}
 		Refresh();
+	}
+
+	// The eyedropper's kind into the "with" list, when the game can make it.
+	internal void UsePicked(int prefab)
+	{
+		FillCreatable();
+		int i = _creatable.IndexOf(prefab);
+		if (i < 0)
+		{
+			Message?.Invoke($"{NameOf(prefab)} cannot be placed: the game has no such kind to copy.");
+			return;
+		}
+		ToBox.SelectedIndex = i;
+		Message?.Invoke($"Replace with {NameOf(prefab)}.");
 	}
 
 	// Replaces things with objects of another kind, where they are and turned as they are.

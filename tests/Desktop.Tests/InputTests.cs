@@ -20,6 +20,9 @@ public static class TestApp
 		Stamps.PathOverride = Path.Combine(Path.GetTempPath(), $"vwe-stamps-{Environment.ProcessId}.json");
 		TerrainEditor.App.AppSettings.PathOverride = Path.Combine(Path.GetTempPath(), $"vwe-settings-{Environment.ProcessId}.json");
 		TerrainEditor.App.ServerConfig.PathOverride = Path.Combine(Path.GetTempPath(), $"vwe-servers-{Environment.ProcessId}.cfg");
+		// What the editor remembers between runs, and saved selections: files of the tests' too.
+		Prefs.PathOverride = Path.Combine(Path.GetTempPath(), $"vwe-prefs-{Environment.ProcessId}.json");
+		SavedSelections.PathOverride ??= Path.Combine(Path.GetTempPath(), $"vwe-selections-{Environment.ProcessId}.json");
 		// "My game" looks only where a test says, never in the player's own Valheim or profiles.
 		TerrainEditor.App.LocalGame.SearchDefaultPlaces = false;
 		// Blueprints, heightmaps, logs: a data folder of the tests', never the user's.
