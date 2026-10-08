@@ -2,9 +2,12 @@
 # into one pull request; CircleCI runs the tests on each.
 version: 2
 updates:
-  # The app (TerrainEditor.csproj): ASP.NET, Photino (window), SSH.NET (tunnel).
+  # The app (Core, Desktop: Avalonia, SkiaSharp, SSH.NET) and the developer checks (WorldCheck).
   - package-ecosystem: nuget
-    directory: /
+    directories:
+      - /Core
+      - /Desktop
+      - /tools/WorldCheck
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
@@ -14,22 +17,12 @@ updates:
 
   # The C# tests (xUnit, test SDK, JUnit logger).
   - package-ecosystem: nuget
-    directory: /tests/WorldEditor.Tests
+    directory: /tests/Desktop.Tests
     schedule:
       interval: weekly
     open-pull-requests-limit: 3
     groups:
       tests:
-        patterns: ["*"]
-
-  # The browser tests (Puppeteer).
-  - package-ecosystem: npm
-    directory: /tests/browser
-    schedule:
-      interval: weekly
-    open-pull-requests-limit: 3
-    groups:
-      browser-tests:
         patterns: ["*"]
 
   # The game-look exporter's Python packages (also bundled in the release).
