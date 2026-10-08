@@ -12,6 +12,9 @@ public static class LocalGame
 
 	public sealed record Running(Bridge Bridge, string World, int Players);
 
+	// The plugin's settings file in BepInEx/config, and its name before 0.41.0 (an older plugin).
+	public const string ConfigName = "Tie.WorldEditorBridge.cfg", OldConfigName = "local.worldeditorbridge.cfg";
+
 	// Tests: only the folders of the settings given, never the player's own install or profiles.
 	public static bool SearchDefaultPlaces { get; set; } = true;
 
@@ -106,7 +109,11 @@ public static class LocalGame
 			bepInEx |= Directory.Exists(Path.Combine(dir, "core")) || Directory.Exists(Path.Combine(dir, "plugins"));
 			string plugins = Path.Combine(dir, "plugins");
 			plugin |= Directory.Exists(plugins) && Directory.EnumerateFiles(plugins, "WorldEditorBridge.dll", SearchOption.AllDirectories).Any();
-			string cfg = Path.Combine(dir, "config", "local.worldeditorbridge.cfg");
+			string cfg = Path.Combine(dir, "config", ConfigName);
+			if (!File.Exists(cfg))
+			{
+				cfg = Path.Combine(dir, "config", OldConfigName);
+			}
 			if (File.Exists(cfg) && Parse(cfg, where) is Bridge b)
 			{
 				list.Add(b);

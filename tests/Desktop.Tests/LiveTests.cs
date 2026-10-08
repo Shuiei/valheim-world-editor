@@ -166,7 +166,7 @@ public class LiveTests
 			Assert.Contains("Start Valheim once with BepInEx", Texts(start.GameState));
 			// The plugin's settings, but nothing answers: the game is not started.
 			Directory.CreateDirectory(Path.Combine(bep, "config"));
-			string cfg = Path.Combine(bep, "config", "local.worldeditorbridge.cfg");
+			string cfg = Path.Combine(bep, "config", "Tie.WorldEditorBridge.cfg");
 			File.WriteAllText(cfg, $"[Bridge]\nPort = {FakeGame.FreePort()}\nToken = {game.Token}\n");
 			await start.PollGame();
 			Assert.Contains("Start Valheim and load your world", Texts(start.GameState));
@@ -175,6 +175,9 @@ public class LiveTests
 			await start.PollGame();
 			Assert.Contains("Valheim is running with the world CITest", Texts(start.GameState));
 			Assert.Contains("2 player(s) connected", Texts(start.GameState));
+			// An older plugin's settings file (local.worldeditorbridge.cfg) is found too.
+			File.Move(cfg, Path.Combine(bep, "config", LocalGame.OldConfigName));
+			Assert.Equal(game.Port, Assert.Single(LocalGame.FindBridges(settings, out _, out _)).Port);
 			var edit = start.GameState.GetLogicalDescendants().OfType<Button>().Single();
 			edit.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
 			Assert.NotNull(opened);
