@@ -100,4 +100,19 @@ public class PagesTests
 			Done(dir);
 		}
 	}
+
+	[AvaloniaFact]
+	public void InfoIsHiddenUntilAskedFor()
+	{
+		var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
+		w.Show();
+		bool before = w.InfoButton.IsChecked == true;
+		w.InfoButton.IsChecked = false;
+		Assert.False(TerrainEditor.App.AppSettings.Load().ShowStats);
+		w.InfoButton.IsChecked = true;
+		// Remembered (in the tests' own settings file).
+		Assert.True(TerrainEditor.App.AppSettings.Load().ShowStats);
+		Assert.StartsWith(Path.GetTempPath(), TerrainEditor.App.AppSettings.PathOverride);
+		w.InfoButton.IsChecked = before;
+	}
 }

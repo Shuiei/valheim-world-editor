@@ -24,6 +24,9 @@ public sealed class AppSettings
 	// Which start-page choice was used last ("game", "server", "offline").
 	public string? LastMode { get; set; }
 
+	// Native app: the frame rate and load details shown in the 3D editor's corner (Info, F3).
+	public bool ShowStats { get; set; }
+
 	public sealed record RecentWorld(string Path, string Name, DateTime Opened);
 
 	public static string DataDir
@@ -41,7 +44,10 @@ public sealed class AppSettings
 		}
 	}
 
-	private static string FilePath => Path.Combine(DataDir, "settings.json");
+	// Tests: another file, so they never touch the user's settings.
+	public static string? PathOverride { get; set; }
+
+	private static string FilePath => PathOverride ?? Path.Combine(DataDir, "settings.json");
 
 	private static readonly object Lock = new();
 
