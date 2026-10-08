@@ -193,7 +193,8 @@ public class PanelStartTests
 	[AvaloniaFact]
 	public async Task MyGameWithUnreadablePluginSettingsKeepsWhatItShows()
 	{
-		if (!OperatingSystem.IsLinux())
+		// Root (CI's containers) reads a file whatever its permissions: nothing to check there.
+		if (!OperatingSystem.IsLinux() || Environment.UserName == "root")
 		{
 			return;
 		}
