@@ -12,15 +12,18 @@ public static class LocalGame
 
 	public sealed record Running(Bridge Bridge, string World, int Players);
 
+	// Tests: only the folders of the settings given, never the player's own install or profiles.
+	public static bool SearchDefaultPlaces { get; set; } = true;
+
 	// Folders that can hold the game's BepInEx: the Valheim install, and mod manager profiles.
 	public static IEnumerable<(string BepInEx, string Where)> BepInExFolders(AppSettings settings)
 	{
-		if (GameLook.FindValheim(settings.ValheimPath) is string valheim)
+		if (SearchDefaultPlaces && GameLook.FindValheim(settings.ValheimPath) is string valheim)
 		{
 			yield return (Path.Combine(valheim, "BepInEx"), "Valheim folder");
 		}
 		// Installed by a mod manager (Thunderstore package): the editor sits in <profile>/BepInEx/plugins/...
-		if (InstalledIn() is string own)
+		if (SearchDefaultPlaces && InstalledIn() is string own)
 		{
 			yield return (own, "this mod manager profile");
 		}
@@ -46,6 +49,10 @@ public static class LocalGame
 					yield return (Path.Combine(profile, "BepInEx"), $"profile \"{Path.GetFileName(profile)}\"");
 				}
 			}
+		}
+		if (!SearchDefaultPlaces)
+		{
+			yield break;
 		}
 		string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
 		string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);

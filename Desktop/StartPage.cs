@@ -323,6 +323,9 @@ public sealed class StartPage
 	// ---- Dedicated servers.
 	internal StackPanel SavedServers { get; } = new() { Spacing = 6 };
 	private readonly TextBlock _savedError = Err(), _serverError = Err(), _urlError = Err();
+	internal TextBlock ServerError => _serverError;
+	internal TextBlock UrlError => _urlError;
+	internal ContentControl GameState => _gameState;
 	internal TextBox SName { get; } = new() { Watermark = "how it shows in your list, e.g. Friends server (optional)" };
 	internal TextBox SHost { get; } = new() { Watermark = "my.server.com or 203.0.113.10" };
 	internal NumericUpDown SPort { get; } = new() { Value = 22, Minimum = 1, Maximum = 65535, FormatString = "0" };
@@ -436,7 +439,7 @@ public sealed class StartPage
 		}
 	}
 
-	private async Task ConnectNew()
+	internal async Task ConnectNew()
 	{
 		if (string.IsNullOrWhiteSpace(SHost.Text))
 		{
@@ -481,7 +484,7 @@ public sealed class StartPage
 		OpenLive(new LiveBridge(url, tr.Token), "server " + t.Host, "server", "Loading the world from the server…");
 	}
 
-	private async Task ConnectUrl()
+	internal async Task ConnectUrl()
 	{
 		string url = LiveUrl.Text?.Trim() ?? "";
 		if (!url.StartsWith("http", StringComparison.OrdinalIgnoreCase))
