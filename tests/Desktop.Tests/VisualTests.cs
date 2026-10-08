@@ -228,6 +228,117 @@ public sealed class VisualTests(EditorProcess editor) : IDisposable
 		Assert.True(Math.Abs(after.Dark - before.Dark) < 0.15, $"black {before.Dark:P0} before, {after.Dark:P0} after");
 	}
 
+	// Every picture drawn without an OpenGL error.
+	private void Clean() => Assert.Equal(0, editor.Send("state").GetProperty("glErrors").GetInt32());
+
+	private JsonElement Do(params string[] commands)
+	{
+		JsonElement last = default;
+		foreach (var c in commands)
+		{
+			last = editor.Send(c);
+		}
+		return last;
+	}
+
+	[Fact]
+	public void DrawingAZoneSelectsAndShowsTheHandles()
+	{
+		Open();
+		Do("area 0 0 3", "key E");
+		Do("mouse down -40 -40", "mouse move 40 -40", "mouse move 40 40", "mouse move -40 40");
+		// The zone being drawn.
+		ShowsSomething(Picture("lasso"));
+		var s = Do("mouse move -40 -39", "mouse up -40 -39");
+		Assert.True(s.GetProperty("selected").GetInt32() > 0, s.ToString());
+		Assert.Equal("Select", s.GetProperty("mode").GetString());
+		// The selection's boxes and the handles.
+		ShowsSomething(Picture("selected"));
+		Clean();
+	}
+
+	[Fact]
+	public void PlacePreviewsAndPlacesTrees()
+	{
+		Open();
+		Do("area 0 0 3", "key T", "mouse move 5 5");
+		ShowsSomething(Picture("place-preview"));
+		var s = Do("mouse down 5 5", "mouse up 5 5");
+		Assert.True(s.GetProperty("added").GetInt32() > 0, s.ToString());
+		ShowsSomething(Picture("placed"));
+		Clean();
+	}
+
+	[Fact]
+	public void TheBrushCircleFollowsTheMouseAndAStrokeChangesTheGround()
+	{
+		Open();
+		Do("area 0 0 3", "key D1", "mouse move 0 0");
+		ShowsSomething(Picture("brush"));
+		var s = Do("mouse down 0 0", "mouse move 2 0", "mouse move 4 0", "mouse up 4 0");
+		Assert.Equal(1, s.GetProperty("pending").GetInt32());
+		Clean();
+	}
+
+	[Fact]
+	public void AnAreaBoxAPathAndTheTapeAreDrawn()
+	{
+		Open();
+		Do("area 0 0 3", "key B", "mouse down -20 -20", "mouse move 0 0", "mouse move 20 20", "mouse up 20 20");
+		ShowsSomething(Picture("area-box"));
+		Do("key Escape", "key P", "mouse down -30 0", "mouse up -30 0", "mouse down 0 10", "mouse up 0 10", "mouse down 30 0", "mouse up 30 0");
+		ShowsSomething(Picture("path"));
+		Do("key Escape", "key M", "mouse down -20 5", "mouse up -20 5", "mouse down 25 -5", "mouse up 25 -5");
+		ShowsSomething(Picture("tape"));
+		Clean();
+	}
+
+	[Fact]
+	public void ACopiedAreaIsShownWhilePasting()
+	{
+		Open();
+		Do("area 0 0 3", "key B", "mouse down -30 -30", "mouse move 0 0", "mouse move 30 30", "mouse up 30 30", "key C ctrl", "key V ctrl", "mouse move 10 10");
+		Assert.Equal("Paste", editor.Send("state").GetProperty("mode").GetString());
+		ShowsSomething(Picture("paste"));
+		var s = Do("mouse down 10 10", "mouse up 10 10");
+		Assert.True(s.GetProperty("added").GetInt32() > 0, s.ToString());
+		Clean();
+	}
+
+	[Fact]
+	public void TheMouseTurnsZoomsAndSlidesTheView()
+	{
+		Open();
+		var s0 = Do("area 0 0 3", "key Escape");
+		var s1 = Do("mouse down 0 0 right", "mouse move 20 0 right", "mouse up 20 0 right");
+		Assert.NotEqual(s0.GetProperty("yaw").GetSingle(), s1.GetProperty("yaw").GetSingle());
+		var s2 = Do("wheel 0 0 3");
+		Assert.True(s2.GetProperty("distance").GetSingle() < s1.GetProperty("distance").GetSingle(), $"{s1} → {s2}");
+		var s3 = Do("mouse down 0 0 middle", "mouse move 15 15 middle", "mouse up 15 15 middle");
+		Assert.NotEqual(s2.GetProperty("targetX").GetSingle(), s3.GetProperty("targetX").GetSingle());
+		ShowsSomething(Picture("moved-view"));
+		Clean();
+	}
+
+	[Fact]
+	public void TheMapShowsBuildingsCloseUpSearchPinsAndZoneMatches()
+	{
+		Open();
+		var s = Do("mapview 0 0 0.5");
+		Assert.Equal(0.5, s.GetProperty("mapScale").GetSingle(), 3);
+		// Close up: the 1 m detail (with the edits) and the buildings' outlines. Mostly one biome: fewer
+		// colours than the whole map.
+		var close = Picture("map-close");
+		Assert.True(editor.Send("state").GetProperty("detail").GetBoolean(), "the close-up detail is not shown");
+		Assert.True(close.Spread > 12 && close.Colours > 150, $"{close}");
+		s = Do("search Beech", "mapview 0 0 3");
+		Assert.True(s.GetProperty("pins").GetInt32() > 0, s.ToString());
+		s = Do("zones");
+		Assert.True(s.GetProperty("matches").GetInt32() > 0, s.ToString());
+		ShowsSomething(Picture("map-marks"));
+		Clean();
+	}
+
 	[Fact]
 	public void AStrokeIsPendingAndTheAreaStillDraws()
 	{

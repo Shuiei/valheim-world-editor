@@ -260,8 +260,28 @@ public sealed class GlView : OpenGlControlBase
 		Status?.Invoke($"OpenGL {(_es ? "ES " : "")}{GlVersion.Major}.{GlVersion.Minor}: {_gl.GetStringS(StringName.Renderer)}");
 	}
 
+	// The view left the window (the map page is shown): Avalonia drops its OpenGL context and makes a
+	// new one when it comes back. Every OpenGL object went with the old context, so every name kept is
+	// forgotten (not deleted: they are gone) and the next frame builds them again in the new one.
+	// Keeping them drew with names that meant nothing, or something else, in the new context.
 	protected override void OnOpenGlDeinit(GlInterface gli)
 	{
+		_terrainProg = _objectProg = _waterProg = _lineProg = 0;
+		_terrainVao = _terrainIndexCount = _waterVao = _terrainVbo = _terrainExtraVbo = 0;
+		_boxVbo = _boxEbo = _ghostVbo = 0;
+		_pathVao = _pathVbo = _pathEdgeVao = _pathEdgeVbo = _pathDotVao = _pathDotVbo = 0;
+		_placeVao = _placeVbo = _placeShapeVao = _placeShapeVbo = 0;
+		_areaVao = _areaVbo = _resetVao = _resetVbo = 0;
+		_measureVao = _measureVbo = _lassoVao = _lassoVbo = _ringVao = _ringVbo = _lineVao = _lineVbo = 0;
+		_batches.Clear();
+		_meshGl.Clear();
+		_textures.Clear();
+		_gizmoGl.Clear();
+		_overlayGl.Clear();
+		_look = null;
+		_selectionDirty = true;
+		_overlaysDirty = true;
+		_sceneDirty = true;
 	}
 
 	private uint Program(string vs, string fs)
@@ -1170,6 +1190,7 @@ public sealed class GlView : OpenGlControlBase
 		double work = Stopwatch.GetElapsedTime(start).TotalMilliseconds;
 		Measure(now, work, camMoved, pw, ph);
 		Automate(now, pw, ph);
+		CountGlErrors();
 		// Full speed while something happens; the idle timer draws a few times a second otherwise.
 		if (camMoved || moving || _brushDown || now - _wokeAt < 1000 || !_ready.IsEmpty || _pending > 0)
 		{
@@ -2371,6 +2392,22 @@ public sealed class GlView : OpenGlControlBase
 	}
 
 	internal int FramesDrawn => _frames.Count;
+
+	// The test driver checks drawing raised no OpenGL error (counted only when driven).
+	internal int GlErrors { get; private set; }
+
+	private void CountGlErrors()
+	{
+		if (!Options.Driver)
+		{
+			return;
+		}
+		for (var e = _gl.GetError(); e != GLEnum.NoError; e = _gl.GetError())
+		{
+			GlErrors++;
+			Options.Say($"OpenGL error {e}");
+		}
+	}
 
 	internal bool IsPickable(int i)
 	{

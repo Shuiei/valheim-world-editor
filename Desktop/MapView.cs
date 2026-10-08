@@ -194,8 +194,14 @@ public sealed class MapView : OpenGlControlBase
 		void main() { frag = vCol; }
 		""";
 
+	// The map left the window (the 3D editor is shown): its OpenGL context goes, and every texture with
+	// it. They are forgotten (not deleted) and uploaded again into the next context.
 	protected override void OnOpenGlDeinit(GlInterface gli)
 	{
+		_tex.Clear();
+		_texturesLoaded = false;
+		_globalShown = false;
+		_detailShown = null;
 	}
 
 	private uint Program(string vs, string fs)
@@ -390,7 +396,8 @@ public sealed class MapView : OpenGlControlBase
 		_gl.Uniform2(U("canvasSize"), (float)w, h);
 		_gl.Uniform1(U("metersPerPixel"), mpp);
 		_gl.Uniform1(U("mapMeters"), mapMeters);
-		_gl.Uniform4(U("detailRect"), d?.X0 ?? 0, d?.Z0 ?? 0, d?.Size ?? 1, d != null ? 1 : 0);
+		// Floats (a vec4): whole numbers would pick glUniform4i, which a float uniform refuses.
+		_gl.Uniform4(U("detailRect"), (float)(d?.X0 ?? 0), (float)(d?.Z0 ?? 0), (float)(d?.Size ?? 1), d != null ? 1f : 0f);
 		_gl.Uniform1(U("showPaint"), ShowPaint ? 1f : 0f);
 		_gl.Uniform1(U("showClouds"), ShowClouds ? 1f : 0f);
 		_gl.BindVertexArray(_vao);
@@ -410,8 +417,17 @@ public sealed class MapView : OpenGlControlBase
 		_gl.UseProgram(0);
 		// --map with --shot (and no --map-edit): a picture of the map once it is drawn.
 		_drawn++;
+		if (Options.Driver)
+		{
+			for (var e = _gl.GetError(); e != GLEnum.NoError; e = _gl.GetError())
+			{
+				GlErrors++;
+				Options.Say($"OpenGL error (map) {e}");
+			}
+		}
 		// The test driver's pictures: once the world map is in and a few frames are drawn.
-		if (_picture is { } req && _drawn > 10)
+		// Zoomed in, the 1 m close-up is read in the background: the picture waits for it.
+		if (_picture is { } req && _drawn > 10 && (mpp >= 6 || (_detailShown != null && _detail == _detailShown && !_asking)))
 		{
 			_picture = null;
 			try
@@ -446,6 +462,12 @@ public sealed class MapView : OpenGlControlBase
 	}
 
 	internal int FramesDrawn => _drawn;
+
+	// The 1 m close-up is drawn (zoomed in, once read).
+	internal bool DetailShown => _detailShown != null;
+
+	// The test driver checks drawing raised no OpenGL error (counted only when driven).
+	internal int GlErrors { get; private set; }
 	private void AskDetail(float mpp, int w, int h)
 	{
 		if (_data == null || _session == null || mpp >= 6 || _asking)

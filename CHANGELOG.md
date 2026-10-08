@@ -16,6 +16,10 @@ the plugin is unchanged in versions without that part.
   low, by as much as it floated above the ground.
 - Native preview, Place: a double-click on the last point of a line or zone did not place it (the
   click was taken for dragging that point).
+- Native preview, map: the 1 m close-up never showed when zoomed in (its place was passed to the
+  shader as whole numbers, which OpenGL refused); the coarse whole-world map was drawn instead.
+- Native preview: after going between the map and the 3D editor, both kept OpenGL objects from the
+  view's previous context and drew with them (errors, or the wrong buffers); they are rebuilt now.
 - An object whose data is edited or moved keeps the game's short position form (the terrain
   compiler grew 8 bytes when written back).
 
