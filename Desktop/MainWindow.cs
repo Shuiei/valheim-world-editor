@@ -287,7 +287,7 @@ public sealed class MainWindow : Window
 
 	internal async Task DiscardWorld()
 	{
-		if (_world is not { } w || !await Dialogs.Ask(this, "Discard", $"Discard the unsaved changes ({Describe(w.Pending)})? The world is read again{(w.IsLive ? " from the game" : " from disk")}.", "Discard", "Keep them"))
+		if (_world is not { } w || !await Ask("Discard", $"Discard the unsaved changes ({Describe(w.Pending)})? The world is read again{(w.IsLive ? " from the game" : " from disk")}.", "Discard", "Keep them"))
 		{
 			return;
 		}
@@ -320,7 +320,7 @@ public sealed class MainWindow : Window
 	internal async Task LeaveWorld()
 	{
 		if (_world is { } w && w.Pending is not (0, 0, 0, 0)
-			&& !await Dialogs.Ask(this, "Leave the world", $"{(w.IsLive ? "Not applied" : "Unsaved")}: {Describe(w.Pending)}. Leave the world without {(w.IsLive ? "applying" : "saving")} them?", "Leave anyway", "Stay"))
+			&& !await Ask("Leave the world", $"{(w.IsLive ? "Not applied" : "Unsaved")}: {Describe(w.Pending)}. Leave the world without {(w.IsLive ? "applying" : "saving")} them?", "Leave anyway", "Stay"))
 		{
 			return;
 		}
@@ -336,6 +336,8 @@ public sealed class MainWindow : Window
 	internal TextBlock MessageText => _message;
 	// Asks before writing into the world (replaced by tests).
 	internal Func<string, Task<bool>> ConfirmSave { get; set; }
+	// A yes / no question (title, text, yes, no): Discard, Leave, Quit with unsaved changes. Tests answer it.
+	internal Func<string, string, string, string, Task<bool>> Ask { get; set; }
 	internal Func<string, Task> Tell { get; set; }
 	private EditSession? _session;
 	internal EditSession? Session => _session;
@@ -1263,6 +1265,7 @@ public sealed class MainWindow : Window
 		ToolTip.SetTip(record, $"A line every 0.2 s while the view is used, in {PerfLog.FilePath}");
 		HelpCard = Help(record);
 		ConfirmSave = text => Dialogs.Ask(this, "Save into the world", text, "Save");
+		Ask = (title, text, yes, no) => Dialogs.Ask(this, title, text, yes, no);
 		Tell = text => Dialogs.Tell(this, "Save", text);
 		var tools = new StackPanel
 		{
@@ -1325,7 +1328,7 @@ public sealed class MainWindow : Window
 				return;
 			}
 			e.Cancel = true;
-			if (await Dialogs.Ask(this, "Unsaved changes", $"{(_world?.IsLive == true ? "Not applied" : "Unsaved")}: {Describe(pending)}. Quit without {(_world?.IsLive == true ? "applying" : "saving")} them?", "Quit anyway", "Keep editing"))
+			if (await Ask("Unsaved changes", $"{(_world?.IsLive == true ? "Not applied" : "Unsaved")}: {Describe(pending)}. Quit without {(_world?.IsLive == true ? "applying" : "saving")} them?", "Quit anyway", "Keep editing"))
 			{
 				_closeAnyway = true;
 				Close();
