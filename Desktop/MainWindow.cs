@@ -165,6 +165,8 @@ public sealed class MainWindow : Window
 		if (_map == null)
 		{
 			_map = new MapPage();
+			_map.StartView = () => Prefs.TryGet("map.view", out float[]? v) && v is { Length: 3 } && v.All(float.IsFinite) && v[2] > 0 ? (v[0], v[1], Math.Clamp(v[2], 0.25f, 40f)) : null;
+			_map.Map.ViewChanged += () => Prefs.Set("map.view", new[] { _map.Map.Center.X, _map.Map.Center.Y, _map.Map.MetersPerPixel });
 			_map.BackToWorlds += async () => await LeaveWorld();
 			_map.EditRequested += async (x, z, size) => await EditArea(x, z, size);
 			_map.SaveRequested += async () => await SaveWorld();
@@ -740,6 +742,10 @@ public sealed class MainWindow : Window
 	// The right-hand panels share the place under the top bar: one at a time (null: none).
 	internal void ShowRight(Control? panel)
 	{
+		if (panel == _viewPanel || panel == HelpCard || panel == History.Card || panel == null)
+		{
+			Prefs.Set("panel.right", panel == _viewPanel ? "view" : panel == HelpCard ? "help" : panel == History.Card ? "history" : "none");
+		}
 		_viewPanel.IsVisible = panel == _viewPanel;
 		HelpCard.IsVisible = panel == HelpCard;
 		if (History.Card.IsVisible != (panel == History.Card))
@@ -863,6 +869,71 @@ public sealed class MainWindow : Window
 		card.IsVisible = false;
 		return card;
 	}
+
+	// What is remembered between runs (Prefs, as the web editor kept it in the browser): each control set
+	// from it now and remembered as it changes.
+	private void RememberPrefs()
+	{
+		var p = Prefs;
+		// View: the kinds drawn, water, overlays, the look's slope colours and height lines.
+		foreach (var (k, box) in _kindBoxes)
+		{
+			p.Bind(box, $"view.show.{k}");
+		}
+		p.Bind(WaterBox, "view.water");
+		foreach (var (layer, box) in _overlayBoxes)
+		{
+			p.Bind(box, $"view.overlay.{layer}");
+		}
+		p.Bind(SlopeBox, "view.slope");
+		p.Bind(ContourBox, "view.contour");
+		p.Bind(ContourStepBox, "view.contourStep");
+		// The brush's shape and falloff, the Area action, Select's options.
+		p.Bind(Tools.ShapeBox, "brush.shape");
+		p.Bind(Tools.FalloffBox, "brush.falloff");
+		p.Bind(AreaPanel.ActionBox, "area.action");
+		p.Bind(SelectPanel.GroundBox, "select.onGround");
+		p.Bind(SelectPanel.SnapBox, "select.snap");
+		// Shape: the preset, and the formula when it is one's own.
+		p.Bind(ShapePanel.PresetBox, "shape.preset");
+		bool Own() => ShapePanel.PresetBox.SelectedIndex == ShapePanel.Presets.Length;
+		if (Own() && p.TryGet("shape.formula", out string? formula) && formula != null)
+		{
+			ShapePanel.FormulaBox.Text = formula;
+		}
+		ShapePanel.FormulaBox.PropertyChanged += (_, e) =>
+		{
+			if (e.Property == TextBox.TextProperty && Own())
+			{
+				p.Set("shape.formula", ShapePanel.FormulaBox.Text ?? "");
+			}
+		};
+		// The right-hand panel open.
+		ShowRight(p.Get("panel.right", "view") switch { "help" => HelpCard, "history" => History.Card, "none" => null, _ => _viewPanel });
+		// The clipboard (its objects' ids only meant something in the world it came from).
+		if (p.TryGet("clipboard", out System.Text.Json.Nodes.JsonObject? clip) && clip != null)
+		{
+			try
+			{
+				_view.Paste.Clip = CopyFormat.FromJson(clip, keepSources: false);
+				_keptClip = _view.Paste.Clip;
+			}
+			catch (Exception ex) when (ex is FormatException or InvalidOperationException or NullReferenceException or ArgumentException or System.Text.Json.JsonException)
+			{
+				p.Remove("clipboard");
+			}
+		}
+		_view.Paste.Changed += () =>
+		{
+			if (_view.Paste.Clip is { } c && !ReferenceEquals(c, _keptClip))
+			{
+				_keptClip = c;
+				p.Set("clipboard", CopyFormat.ToJson(c));
+			}
+		};
+	}
+
+	private CopyData? _keptClip;
 
 	// Eyedropper for the Replace lists: the next click on an object gives its kind (Esc cancels).
 	internal void PickKind(string label, Action<int> done)
@@ -1116,8 +1187,12 @@ public sealed class MainWindow : Window
 	}
 
 	// load: false opens the window without a world (tests).
-	public MainWindow(bool load = true)
+	// What is remembered between runs (the tests' windows: in memory only, unless a test gives one).
+	internal Prefs Prefs { get; }
+
+	public MainWindow(bool load = true, Prefs? prefs = null)
 	{
+		Prefs = prefs ?? (load ? Prefs.Load() : Prefs.InMemory());
 		SelectPanel = new SelectPanel(_view.SelectTool);
 		History = new HistoryPanel(() => _session);
 		Inspector = new InspectorPanel(() => _session);
@@ -1376,7 +1451,8 @@ public sealed class MainWindow : Window
 			_ => "",
 		};
 		_view.Status += t => { Options.Say(t); Dispatcher.UIThread.Post(() => _info.Text = t + "\n" + _info.Text); };
-		Closing += (_, _) => { _perf.Flush(); GameLook.StopExport(); };
+		Closing += (_, _) => { _perf.Flush(); GameLook.StopExport(); Prefs.Flush(); };
+		RememberPrefs();
 		_info.Text = "Loading the world…";
 		Opened += async (_, _) =>
 		{
