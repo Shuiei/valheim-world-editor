@@ -19,15 +19,19 @@ the plugin is unchanged in versions without that part.
   they were. Very steep walls come out softer, more so near the world's middle (the game applies
   the discs in an order that depends on their height there).
 - **Mountain** tool: a click raises a lone peak, a ridge, a mountain range, a mesa, a volcano or
-  rolling hills, past the ±8 m (ground discs on saving). Each is made from a seed, with a ragged
-  outline, ridges and gullies; Randomize rolls a new one of the preset (size, roughness, direction,
-  seed). It takes away the trees and rocks it buries and grows the biome's own on its slopes, by the
-  game's rules.
+  rolling hills, past the ±8 m (ground discs on saving). Each is made from a seed, with a natural
+  profile (steeper up high, easing out at the foot), a ragged outline and broad ridges and gullies;
+  slopes mostly stay under 35°, so they keep grass and trees. Randomize rolls a new one of the preset
+  (size, roughness, direction, seed) that fits in the open area. It takes away the trees and rocks it
+  buries and grows the biome's own on its slopes, by the game's rules.
 - **Cave** tool (the Path tool's new Cave action): along a drawn line, a trench with an entrance
   slope at each end, roofed with the game's boulders (forest, coast, heath or mountain rocks, by
-  biome or chosen), each sized to span the cave and hung with its lowest point at the ceiling.
-  Presets (tunnel, cave, cavern) and Randomize. The ground cannot overhang in Valheim, so the roof is
-  rocks, as in the game's own caves; players can mine them like any boulder.
+  biome or chosen), upside down so their flat side is a nearly level ceiling, turned, tilted and
+  sized at random. Each is hung by its real underside (the game's model) to clear the headroom; more
+  are added until the floor is covered, and the walls rise into the rock so no daylight comes in at
+  the sides. A line drawn as a ring makes a ring-shaped cave with one entrance. Presets (tunnel,
+  cave, cavern) and Randomize. The ground cannot overhang in Valheim, so the roof is rocks; players
+  can mine them like any boulder.
 
 ## v1.0.1 — 2026-10-08
 
