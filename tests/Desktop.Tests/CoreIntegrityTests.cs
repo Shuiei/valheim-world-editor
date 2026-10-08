@@ -65,6 +65,20 @@ public class CoreIntegrityTests
 		Assert.Equal(2, after.Values.Sum());
 	}
 
+	// A .db2 file's parts: version and time, the zone list package (unpacked) and what follows it.
+	private static (int Version, double NetTime, byte[] Package, byte[] Tail) DbParts(string path)
+	{
+		using var r = new BinaryReader(File.OpenRead(path));
+		int version = r.ReadInt32();
+		double netTime = r.ReadDouble();
+		byte[] packed = r.ReadBytes(r.ReadInt32());
+		byte[] tail = r.ReadBytes((int)(r.BaseStream.Length - r.BaseStream.Position));
+		using var gz = new System.IO.Compression.GZipStream(new MemoryStream(packed), System.IO.Compression.CompressionMode.Decompress);
+		using var raw = new MemoryStream();
+		gz.CopyTo(raw);
+		return (version, netTime, raw.ToArray(), tail);
+	}
+
 	[Fact]
 	public void TheZoneListSurvivesARoundTrip()
 	{
@@ -75,7 +89,12 @@ public class CoreIntegrityTests
 		Assert.NotEmpty(db.Generated);
 		string copy = Path.Combine(w.Dir, "copy.db2");
 		db.Save(copy);
-		Assert.True(File.ReadAllBytes(db2).AsSpan().SequenceEqual(File.ReadAllBytes(copy)), "the zone list changes when written back unchanged");
+		// The same content: header, the zone list itself (compared unpacked: gzip's bytes depend on the
+		// zlib the runtime has, and CI's packs the same data differently) and the rest of the file.
+		var (a, b) = (DbParts(db2), DbParts(copy));
+		Assert.Equal((a.Version, a.NetTime), (b.Version, b.NetTime));
+		Assert.True(a.Package.AsSpan().SequenceEqual(b.Package), "the zone list changes when written back unchanged");
+		Assert.True(a.Tail.AsSpan().SequenceEqual(b.Tail), "the rest of the file changes when written back");
 		// A reset zone is no longer generated, and only that one.
 		var zone = db.Generated.First();
 		int count = db.Generated.Count;
