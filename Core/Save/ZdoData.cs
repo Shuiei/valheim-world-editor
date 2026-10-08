@@ -16,6 +16,10 @@ public sealed class ZdoData
 
 	public Vector3 Position { get; set; }
 
+	// Saved in the game's short form (whole metres as two shorts, height 0), as the game does for
+	// objects such as the terrain compiler: written back the same way while the position still fits.
+	public bool SmallPosition { get; set; }
+
 	public int Prefab { get; set; }
 
 	// Unity Euler angles in degrees.
@@ -52,6 +56,7 @@ public sealed class ZdoData
 		{
 			var (x, y) = r.ReadVector2s();
 			z.Position = new Vector3(x, 0f, y);
+			z.SmallPosition = true;
 		}
 		else
 		{
@@ -97,6 +102,8 @@ public sealed class ZdoData
 		Vector3 euler = new(ZdoBuilder.Wrap(Rotation.X), ZdoBuilder.Wrap(Rotation.Y), ZdoBuilder.Wrap(Rotation.Z));
 		bool rotated = euler.LengthSquared() > 1e-6f;
 		ushort flags = (ushort)(BaseFlags & 0x0F00);
+		bool small = SmallPosition && Position.Y == 0f && Fits(Position.X) && Fits(Position.Z);
+		if (small) flags |= SmallPositionFlag;
 		if (rotated) flags |= RotationFlag;
 		if (Connection != null) flags |= Connections;
 		if (FloatList.Count > 0) flags |= Floats;
@@ -109,7 +116,15 @@ public sealed class ZdoData
 		using MemoryStream ms = new();
 		using BinaryWriter w = new(ms, Encoding.UTF8);
 		w.Write(flags);
-		w.Write(Position.X); w.Write(Position.Y); w.Write(Position.Z);
+		if (small)
+		{
+			w.Write((short)Position.X);
+			w.Write((short)Position.Z);
+		}
+		else
+		{
+			w.Write(Position.X); w.Write(Position.Y); w.Write(Position.Z);
+		}
 		w.Write(Prefab);
 		if (rotated)
 		{
@@ -142,6 +157,8 @@ public sealed class ZdoData
 		w.Flush();
 		return ms.ToArray();
 	}
+
+	private static bool Fits(float v) => v == MathF.Round(v) && v >= short.MinValue && v <= short.MaxValue;
 
 	// Sets a value (replacing one with the same key in the same section), or removes it (value null).
 	// section: floats, vec3, quats, ints, longs, strings, bytes. Values come as text from the editor:
