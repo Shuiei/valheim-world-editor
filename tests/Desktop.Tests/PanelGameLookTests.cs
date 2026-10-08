@@ -9,6 +9,8 @@ namespace TerrainEditor.Desktop.Tests;
 // runs, the Valheim folder to choose when the game is not found, Try again when the copy failed, and
 // a word once it is done; and a changed game folder in Settings checking the look again. The copy
 // itself never runs here: the card is given the states.
+// Alone (DataDir): it swaps SettingsDialog.CheckGameLook, which other tests' Settings call too.
+[Collection("DataDir")]
 public class PanelGameLookTests
 {
 	private static (GameLookBanner B, List<(string Folder, AppSettings S)> Started, Func<GameLook.Snapshot, GameLook.Snapshot> Set) Banner(GameLook.Snapshot first)
