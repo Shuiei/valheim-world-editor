@@ -97,6 +97,31 @@ public sealed class CoreNewWorldTests : IDisposable
 	}
 
 	[Fact]
+	public void ABareZoneIsTheMostEvenDryMeadowsWithNothingOnItAndItsGroundUntouched()
+	{
+		var made = WorldCreator.Create(Folder("Bare"), "Bare", Seed, radius: 4, flat: true);
+		var (fx, fz) = Assert.NotNull(made.Flat);
+		var w = WorldSave.Load(Folder("Bare"));
+		var terrain = new ValheimGen.TerrainService(w);
+		// Inside the middle (not on its edge), all above the water, all Meadows.
+		Assert.InRange(fx, -3, 3);
+		Assert.InRange(fz, -3, 3);
+		float[] h = terrain.BaseZone(fx, fz);
+		Assert.True(h.Min() >= ValheimGen.TerrainService.WaterLevel + 1.5f, $"lowest {h.Min()}");
+		Assert.Equal(h.Max() - h.Min(), made.FlatSpan, 3);
+		Assert.Equal(ValheimGen.Heightmap.Biome.Meadows, terrain.BiomeAt(fx * 64, fz * 64));
+		// The most even such zone.
+		Assert.Equal((fx, fz, made.FlatSpan), WorldCreator.FlattestZone(terrain, 4));
+		// Nothing on it (the vegetation grew everywhere else), and its ground has no edit.
+		Assert.DoesNotContain(w.Objects, o => (int)MathF.Floor((o.Position.X + 32) / 64) == fx && (int)MathF.Floor((o.Position.Z + 32) / 64) == fz && o.Prefab != StableHash.Of("_TerrainCompiler"));
+		Assert.True(w.ObjectCount > 100);
+		Assert.All(w.TerrainZones, z => Assert.DoesNotContain(true, z.ModifiedHeight));
+		// Without generated zones around it, no bare zone (and nothing written).
+		Assert.Throws<ArgumentException>(() => WorldCreator.Create(Folder("TooSmall"), "Small", Seed, radius: 1, flat: true));
+		Assert.False(Directory.Exists(Folder("TooSmall")) && Directory.EnumerateFileSystemEntries(Folder("TooSmall")).Any());
+	}
+
+	[Fact]
 	public void TheMiddleIsGeneratedWithTheGamesVegetation()
 	{
 		var made = WorldCreator.Create(Folder("Grown"), "Grown", Seed, radius: 1);

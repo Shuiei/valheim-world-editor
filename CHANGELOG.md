@@ -48,10 +48,12 @@ the plugin is unchanged in versions without that part.
   recent places only it; Untick all; all / none per row; categories fold, and which are open is
   remembered.
 - Native app: new objects not saved (or applied) yet carry a green dot in the view.
+- Native app, View: **Unsaved marks** hides the green dots on new objects (remembered).
 - Native app: placing or pasting a kind switched off in View switches it on, and says so.
 - The developer checks of the world generator and the save writer (`--verify`, `--verify-ingame`,
   `--selftest-save`, `--inspect`, `--summary`) moved to a separate tool, `tools/WorldCheck`. It can
-  also write a new world from a seed (`create`), its middle generated with the game's vegetation.
+  also write a new world from a seed (`create`), its middle generated with the game's vegetation,
+  and with `--flat` keep its most even zone of dry Meadows bare (the documentation's pictures).
 
 ### Fixed
 - Native app: after a visit to the map, the 3D editor drew its models without textures (trees as

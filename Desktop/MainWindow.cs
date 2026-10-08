@@ -917,6 +917,7 @@ public sealed partial class MainWindow : Window
 			p.Bind(box, $"view.show.{k}");
 		}
 		p.Bind(WaterBox, "view.water");
+		p.Bind(UnsavedBox, "view.unsaved");
 		foreach (var (layer, box) in _overlayBoxes)
 		{
 			p.Bind(box, $"view.overlay.{layer}");
@@ -1199,6 +1200,7 @@ public sealed partial class MainWindow : Window
 	private readonly Dictionary<ObjectKind, CheckBox> _kindBoxes = new();
 	internal IReadOnlyDictionary<ObjectKind, CheckBox> KindBoxes => _kindBoxes;
 	internal CheckBox WaterBox { get; } = new() { Content = "Water", IsChecked = true, FontSize = 12 };
+	internal CheckBox UnsavedBox { get; } = new() { Content = "Unsaved marks", IsChecked = true, FontSize = 12 };
 	private readonly Dictionary<Overlays.Layer, CheckBox> _overlayBoxes = new();
 	internal IReadOnlyDictionary<Overlays.Layer, CheckBox> OverlayBoxes => _overlayBoxes;
 	internal CheckBox SlopeBox { get; } = new() { Content = "Slope colours", FontSize = 12 };
@@ -1267,6 +1269,7 @@ public sealed partial class MainWindow : Window
 			list.Children.Add(box);
 		}
 		WaterBox.IsCheckedChanged += (_, _) => _view.ShowWater = WaterBox.IsChecked == true;
+		UnsavedBox.IsCheckedChanged += (_, _) => _view.ShowNewMarkers = UnsavedBox.IsChecked == true;
 		list.Children.Add(WaterBox);
 		list.Children.Add(Heading("OVERLAYS"));
 		foreach (var (layer, label) in new[] { (Overlays.Layer.Borders, "Zone borders"), (Overlays.Layer.Markers, "Location markers"), (Overlays.Layer.Wards, "Ward areas"),
@@ -1278,6 +1281,8 @@ public sealed partial class MainWindow : Window
 			_overlayBoxes[layer] = box;
 			list.Children.Add(box);
 		}
+		UnsavedBox.Tip("view.unsaved");
+		list.Children.Add(UnsavedBox);
 		// The presets cover what is shown: kinds, water and overlays (as they are now: the defaults).
 		foreach (var box in _kindBoxes.Values.Append(WaterBox).Concat(_overlayBoxes.Values))
 		{

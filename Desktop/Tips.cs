@@ -240,6 +240,7 @@ public static class Tips
 		["view.seeThrough"] = "Make buildings half see-through, to see the ground and objects inside them.",
 		["view.res3d"] = "How many pixels the 3D view draws. Sharp: the screen's own. Balanced: one per screen point. Fast: fewer still. Fewer pixels give more frames per second.",
 		["view.water"] = "The sea surface.",
+		["view.unsaved"] = "A green dot over each new object not saved (or applied) yet. Off: no dots (the objects stay).",
 		["view.slope"] = "Colour the ground by steepness (needs Game look).",
 		["view.contour"] = "Draw height lines every chosen number of metres.",
 		["view.contourStep"] = "Distance between height lines (m).",
