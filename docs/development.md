@@ -14,7 +14,7 @@
 | `tests/Desktop.Tests/` | Every test (xUnit v3, Avalonia's headless mode), see [Tests](#tests). `tests/fixtures/` holds the test world. |
 | `tools/WorldCheck/` | Developer checks of the generator and the writer, and new worlds from a seed, see below. |
 | `tools/asset-export/` | Python (UnityPy) scripts that extract textures, shaders, models and catalogues from the game. |
-| `tools/docs-screenshots/` | `editor.py`: drives the app for the pictures in `docs/images/`. |
+| `tools/docs-screenshots/` | `scenes.py` builds and takes the pictures in `docs/images/`, through `editor.py`, which drives the app. |
 | `tools/release.sh`, `tools/check-package.sh` | The release packages, and their check. |
 | `tools/zdo_scan.py` | Minimal chunk reader, to check saved objects byte by byte. |
 
@@ -45,13 +45,25 @@ The app reads one command per line on its input and answers each with one line, 
 | `mouse <down\|move\|up> <x> <z> [button] [mods]`, `wheel`, `key <name> [mods]` | Real pointer and key events at world positions. |
 | `click <text>` / `choose <text>` | The visible button or switch with that label / the entry so named in a visible list (also in dialogs). |
 | `stroke`, `mapview`, `search`, `zones`, `look` | A brush stroke, the map's place, its search and zone filter, the View look switches. |
+| `set <label>\|<value>`, `type <hint>\|<text>`, `panel`, `message [text]` | A slider, box or list beside a label; a text box by its placeholder; the right-hand panel shown; the status bar's message (none: cleared). |
 | `picture <file.png>` / `shot <file.png>` | The view shown (3D or map) once it is drawn / the whole window, panels and view, as Avalonia's compositor draws it (never a capture of the screen). |
 | `bench <seconds>` / `state` / `quit` | Frame rates while the camera turns / the state / quit without asking. |
 
 `tools/docs-screenshots/editor.py` wraps it for the documentation's pictures: it starts the app with
 a stand-in home folder (none of this computer's characters, worlds or servers show; the game look
-is linked in), sends commands and saves `shot`s as JPEG. Scenes are built in a world made from a
-seed (`WorldCheck create`) and never saved.
+is linked in; driven, the app looks for Steam only in that home, so it never finds this computer's
+own Valheim), sends commands and saves `shot`s as JPEG, the status bar's message cleared first.
+`tools/docs-screenshots/scenes.py` holds one scene per picture: each opens a fresh editor and builds
+only what its picture shows, in worlds made from seeds and never saved:
+
+```sh
+WorldCheck create <dir>/Docs Docs yjRO99yNTI 16 --flat     # the bare zone the tools are shown on
+WorldCheck create <dir>/Fjordheim Fjordheim Fjord2026 3     # a second world for the start page
+python3 tools/docs-screenshots/scenes.py <dir> [scene ...]  # all scenes, or only those named
+```
+
+The pictures go to `docs/images` (or `$DOCS_OUT`). The red on ground at the ±8 m limit is switched
+off in every scene (it would hide the edits).
 
 ## Building
 
