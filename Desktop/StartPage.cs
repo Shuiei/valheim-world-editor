@@ -22,6 +22,9 @@ public sealed class StartPage
 	internal Func<string, Task<string?>> PickFolder { get; set; } = _ => Task.FromResult<string?>(null);
 	internal Func<string, Task<string?>> PickFile { get; set; } = _ => Task.FromResult<string?>(null);
 	internal Func<string, Task<bool>> Confirm { get; set; } = _ => Task.FromResult(true);
+	// Tests: the SSH tunnel and the worlds found on this computer (the real ones otherwise).
+	internal Func<Tunnel.Request, Task<Tunnel.Result>> StartTunnel { get; set; } = Tunnel.Start;
+	internal Func<AppSettings, List<Worlds.Info>> FindWorlds { get; set; } = Worlds.Find;
 	public event Action? SettingsRequested;
 
 	internal Dictionary<string, Button> ModeButtons { get; } = new();
@@ -288,7 +291,7 @@ public sealed class StartPage
 	internal void FillWorlds()
 	{
 		WorldCards.Children.Clear();
-		var worlds = Worlds.Find(_settings);
+		var worlds = FindWorlds(_settings);
 		if (worlds.Count == 0)
 		{
 			WorldCards.Children.Add(Hint("No worlds found on this computer. Choose a folder below, or add world folders in Settings."));
@@ -461,7 +464,7 @@ public sealed class StartPage
 	private async Task Connect(Tunnel.Request t, TextBlock error, string what)
 	{
 		error.Text = what;
-		var tr = await Tunnel.Start(t);
+		var tr = await StartTunnel(t);
 		if (tr.Error != null)
 		{
 			error.Text = tr.Error;
