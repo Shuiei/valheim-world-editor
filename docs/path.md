@@ -23,7 +23,7 @@ ditch, or a painted track.
 
 | Control | What it does |
 |---|---|
-| **Action** | What happens along the line: **Flatten to height**, **Ramp (start → end)**, **Raise by**, **Lower by**, **Smooth**, **River / canal (water)**, **Paint dirt** / **paved** / **cultivated**, **Clear paint**. |
+| **Action** | What happens along the line: **Flatten to height**, **Ramp (start → end)**, **Raise by**, **Lower by**, **Smooth**, **River / canal (water)**, **Cave (dig and roof)**, **Paint dirt** / **paved** / **cultivated**, **Clear paint**. |
 | **Width** | Width of the path (m). |
 | **Soft edge** | Width of the blend on each side (m), so the path joins the ground around it smoothly. At **0** the edge is as sharp as the ground allows, and the points the edge line crosses get a share of the change, so the edge follows the line straight (a trench with steep, straight sides). |
 | **Height** | Flatten to height: the height of the path (m). **Alt + click** the ground picks it. |
@@ -36,3 +36,25 @@ ditch, or a painted track.
 | **Clear (Esc)** | Removes the line. |
 
 The panel shows how many points the line has and how long it is. The [Mask](masks.md) applies.
+
+## Cave
+
+The **Cave** button on the tool rail opens the Path tool on its **Cave (dig and roof)** action. Draw
+the cave's line and press **Apply**: it digs a trench along it, with a slope down at each end as
+an entrance, and roofs it over with the game's big boulders. Valheim's ground cannot overhang (one
+height per point), so a cave is always rock over dug ground, like the game's own.
+
+| Control | What it does |
+|---|---|
+| **Preset** | **Tunnel** (narrow, just high enough to walk), **Cave**, or **Cavern** (a wide hall): width, wall slope, depth and headroom to start from. **Randomize** changes them a little and rolls new boulders. |
+| **Width**, **Soft edge** | The floor's width, and how far the walls slope out (m). |
+| **Depth** | How far below the ground the floor is in the middle (m). Past 8 m needs **No limit** (in the brush options). |
+| **Headroom** | The height inside, from the floor to the rock (m). The roof goes only where the cave is deeper than this by 1.5 m, so the entrances stay open. |
+| **Roof** | The boulders: **By biome** (heath rocks in the Plains, mountain rocks in the Mountains, coast rocks by the sea, forest rocks elsewhere), or one kind. |
+
+The boulders are turned upside down, so their flat side makes an even ceiling; each is turned,
+tilted and sized at random and set by its real shape to clear the headroom. More are added until
+the floor is covered, and the walls rise into the rock so no daylight comes in at the sides (within
+the ±8 m: the message says if some points could not reach). On top, the roof shows as a rocky
+outcrop. A line drawn as a closed loop makes a ring-shaped cave with one entrance. Trees and rocks
+in the trench are taken away. Players can mine the boulders with a pickaxe, like any boulder.
