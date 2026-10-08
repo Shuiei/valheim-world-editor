@@ -389,6 +389,45 @@ public sealed class VisualTests(EditorProcess editor) : IDisposable
 		Assert.Equal(1, s.GetProperty("pending").GetInt32());
 		ShowsSomething(Picture("after-stroke"));
 	}
+	[Fact]
+	public void TheLookSwitchesAndALowerResolutionStillDraw()
+	{
+		Open();
+		editor.Send("area 0 0 3");
+		try
+		{
+			var sharp = Picture("res-sharp");
+			// Fewer pixels, stretched to the view: the same scene, a little softer.
+			editor.Send("look res fast");
+			var fast = Picture("res-fast");
+			Assert.True(fast.Spread > sharp.Spread * 0.7, $"brightness spread {sharp.Spread:0.0} sharp, {fast.Spread:0.0} fast");
+			Assert.True(fast.Colours > 300, $"the picture has few colours ({fast.Colours})");
+			Assert.True(Math.Abs(fast.Mean - sharp.Mean) < 10, $"brightness {sharp.Mean:0} sharp, {fast.Mean:0} fast");
+			Assert.True(fast.Dark < 0.2, $"{fast.Dark:P0} of the picture is black");
+			editor.Send("look res balanced");
+			ShowsSomething(Picture("res-balanced"));
+			editor.Send("look res sharp");
+			// See-through buildings, and the plain look with boxes and back.
+			editor.Send("look seethrough on");
+			ShowsSomething(Picture("see-through"));
+			editor.Send("look seethrough off");
+			int objects = editor.Send("look game off").GetProperty("objects").GetInt32();
+			// Plain colours and boxes: far fewer colours than the game's textures, still not dark.
+			var plain = Picture("plain");
+			Assert.True(plain.Colours < sharp.Colours / 2, $"{plain.Colours} colours plain, {sharp.Colours} with the game look");
+			Assert.True(plain.Colours > 10 && plain.Dark < 0.2, $"{plain.Colours} colours, {plain.Dark:P0} black");
+			Assert.Equal(objects, editor.Send("look game on").GetProperty("objects").GetInt32());
+			ShowsSomething(Picture("game-look"));
+			Clean();
+		}
+		finally
+		{
+			// The editor is shared: back to the usual look for the other tests.
+			editor.Send("look res sharp");
+			editor.Send("look seethrough off");
+			editor.Send("look game on");
+		}
+	}
 }
 
 // Started straight in the 3D editor (--world, --zone): the area is open, and the benchmark runs.

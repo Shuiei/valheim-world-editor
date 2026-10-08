@@ -105,6 +105,52 @@ public sealed class GlView : OpenGlControlBase
 	}
 	private volatile bool _showWater = true;
 	public bool ShowWater { get => _showWater; set { _showWater = value; Wake(); } }
+
+	// View, Look: the game's look (its terrain shader, sky and sea, the models) or plain colours and
+	// boxes, as the web editor's switch; see-through buildings (players' pieces drawn faint, to see
+	// what is inside or behind them); and how many pixels the 3D view draws (Sharp: the screen's;
+	// Balanced: one per point; Fast: three quarters of that), fewer pixels for more frames.
+	public bool GameLookOn
+	{
+		get => _gameLookOn;
+		set
+		{
+			if (_gameLookOn != value)
+			{
+				_gameLookOn = value;
+				// The models or their boxes: the objects are made again.
+				_thingsReset = true;
+				Wake();
+			}
+		}
+	}
+	private volatile bool _gameLookOn = true;
+	// Whether the game's look is there to switch on (copied from the game, set up for this area).
+	public bool GameLookLoaded => _look != null;
+	public bool SeeThroughBuildings { get => _seeThrough; set { _seeThrough = value; Wake(); } }
+	private volatile bool _seeThrough;
+	public enum Resolution { Sharp, Balanced, Fast }
+	public Resolution Resolution3D { get => _resolution; set { _resolution = value; Wake(); } }
+	private volatile Resolution _resolution = Resolution.Sharp;
+
+	// Pixels drawn per screen point for a resolution, on a screen of this scaling.
+	internal static double PixelScale(Resolution r, double screen) => r switch
+	{
+		Resolution.Balanced => Math.Min(screen, 1),
+		Resolution.Fast => Math.Min(screen, 1) * 0.75,
+		_ => screen,
+	};
+
+	// The size in pixels the 3D view draws at now.
+	internal (int W, int H) RenderSize()
+	{
+		double scale = PixelScale(_resolution, TopLevel.GetTopLevel(this)?.RenderScaling ?? 1);
+		return (Math.Max(1, (int)(Bounds.Width * scale)), Math.Max(1, (int)(Bounds.Height * scale)));
+	}
+
+	// Alt + wheel: the tools that turn take it (the window decides: true when taken); otherwise it zooms.
+	// The direction is that of the , and . keys: towards you (down) as . and away (up) as ,.
+	internal Func<Key, bool, bool>? AltWheel { get; set; }
 	// How many objects of each kind the area has (once the models' names are known).
 	public event Action<Dictionary<ObjectKind, int>>? KindCounts;
 
@@ -273,6 +319,8 @@ public sealed class GlView : OpenGlControlBase
 		_placeVao = _placeVbo = _placeShapeVao = _placeShapeVbo = 0;
 		_areaVao = _areaVbo = _resetVao = _resetVbo = 0;
 		_measureVao = _measureVbo = _lassoVao = _lassoVbo = _ringVao = _ringVbo = _lineVao = _lineVbo = 0;
+		_lowFbo = _lowColor = _lowDepth = 0;
+		_lowW = _lowH = 0;
 		_batches.Clear();
 		_meshGl.Clear();
 		_textures.Clear();
@@ -705,7 +753,7 @@ public sealed class GlView : OpenGlControlBase
 			try
 			{
 				string? name = NameOf(g.Key.Prefab);
-				var model = name != null && _models != null ? _models.LoadModel(name) : null;
+				var model = name != null && _models != null && _gameLookOn ? _models.LoadModel(name) : null;
 				var meshes = new Dictionary<string, ModelStore.MeshData>();
 				var mats = new Dictionary<string, ModelStore.MaterialData>();
 				var images = new Dictionary<string, ModelStore.ImageData?>();
@@ -997,9 +1045,9 @@ public sealed class GlView : OpenGlControlBase
 		{
 			try
 			{
-				var look = new GameLookGl();
-				look.Init(_gl, Program, lf, s);
-				_look = look;
+				var made = new GameLookGl();
+				made.Init(_gl, Program, lf, s);
+				_look = made;
 			}
 			catch (Exception ex)
 			{
@@ -1047,8 +1095,20 @@ public sealed class GlView : OpenGlControlBase
 		_lastFrame = now;
 		double scaling = TopLevel.GetTopLevel(this)?.RenderScaling ?? 1;
 		int pw = Math.Max(1, (int)(Bounds.Width * scaling)), ph = Math.Max(1, (int)(Bounds.Height * scaling));
-		_gl.BindFramebuffer(FramebufferTarget.Framebuffer, (uint)fb);
-		_gl.Viewport(0, 0, (uint)pw, (uint)ph);
+		// Fewer pixels than the screen's (3D resolution): drawn into a smaller picture, then stretched.
+		var (rw, rh) = RenderSize();
+		bool low = rw < pw || rh < ph;
+		if (low)
+		{
+			LowResolution(rw, rh);
+		}
+		else
+		{
+			rw = pw;
+			rh = ph;
+		}
+		_gl.BindFramebuffer(FramebufferTarget.Framebuffer, low ? _lowFbo : (uint)fb);
+		_gl.Viewport(0, 0, (uint)rw, (uint)rh);
 		_gl.ClearColor(0.42f, 0.58f, 0.74f, 1);
 		_gl.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
 		_gl.Enable(EnableCap.DepthTest);
@@ -1090,12 +1150,14 @@ public sealed class GlView : OpenGlControlBase
 		}
 		var sun = GameLookGl.SunDirView;
 		float time = _clock.ElapsedMilliseconds / 1000f;
+		// The game's look, unless switched off in View.
+		var look = _gameLookOn ? _look : null;
 		if (s != null && _terrainVao != 0)
 		{
-			if (_look != null)
+			if (look != null)
 			{
-				_look.DrawSky(vp, eye, time);
-				_look.UseTerrain(vp, eye, time, slope: _slope, contour: _contour);
+				look.DrawSky(vp, eye, time);
+				look.UseTerrain(vp, eye, time, slope: _slope, contour: _contour);
 				// The game's mesh is seen from both sides (look.js: DoubleSide).
 				_gl.Disable(EnableCap.CullFace);
 			}
@@ -1123,35 +1185,55 @@ public sealed class GlView : OpenGlControlBase
 				uHasMap = _gl.GetUniformLocation(_objectProg, "uHasMap"), uUv = _gl.GetUniformLocation(_objectProg, "uUv");
 			_gl.Uniform1(_gl.GetUniformLocation(_objectProg, "uMap"), 0);
 			_gl.ActiveTexture(TextureUnit.Texture0);
-			foreach (var b in _batches)
+			bool seeThrough = _seeThrough;
+			int uSee = _gl.GetUniformLocation(_objectProg, "uSeeThrough");
+			// Opaque first; see-through buildings after, blended over everything and not hiding
+			// what is behind them.
+			foreach (var pass in seeThrough ? new[] { false, true } : new[] { false })
 			{
-				if (!_shown[(int)b.Kind])
+				if (pass)
 				{
-					continue;
+					_gl.Enable(EnableCap.Blend);
+					_gl.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
+					_gl.DepthMask(false);
+					_gl.Uniform1(uSee, 1f);
 				}
-				var m = b.Material;
-				if (b.Texture == 0 && m.Map != null)
+				foreach (var b in _batches)
 				{
-					lock (_textures)
+					if (!_shown[(int)b.Kind] || seeThrough && (b.Kind == ObjectKind.Buildings) != pass)
 					{
-						_textures.TryGetValue(m.Map, out b.Texture);
+						continue;
 					}
+					var m = b.Material;
+					if (b.Texture == 0 && m.Map != null)
+					{
+						lock (_textures)
+						{
+							_textures.TryGetValue(m.Map, out b.Texture);
+						}
+					}
+					if (m.DoubleSided)
+					{
+						_gl.Disable(EnableCap.CullFace);
+					}
+					else
+					{
+						_gl.Enable(EnableCap.CullFace);
+					}
+					_gl.Uniform4(uColor, m.Color.X, m.Color.Y, m.Color.Z, m.Color.W);
+					_gl.Uniform1(uCut, m.Cutoff);
+					_gl.Uniform1(uHasMap, b.Texture != 0 ? 1 : 0);
+					_gl.Uniform4(uUv, m.UvTransform.X, m.UvTransform.Y, m.UvTransform.Z, m.UvTransform.W);
+					_gl.BindTexture(TextureTarget.Texture2D, b.Texture);
+					_gl.BindVertexArray(b.Vao);
+					_gl.DrawElementsInstanced(PrimitiveType.Triangles, (uint)b.IndexCount, DrawElementsType.UnsignedInt, (void*)0, (uint)b.Instances);
 				}
-				if (m.DoubleSided)
+				if (pass)
 				{
-					_gl.Disable(EnableCap.CullFace);
+					_gl.Uniform1(uSee, 0f);
+					_gl.DepthMask(true);
+					_gl.Disable(EnableCap.Blend);
 				}
-				else
-				{
-					_gl.Enable(EnableCap.CullFace);
-				}
-				_gl.Uniform4(uColor, m.Color.X, m.Color.Y, m.Color.Z, m.Color.W);
-				_gl.Uniform1(uCut, m.Cutoff);
-				_gl.Uniform1(uHasMap, b.Texture != 0 ? 1 : 0);
-				_gl.Uniform4(uUv, m.UvTransform.X, m.UvTransform.Y, m.UvTransform.Z, m.UvTransform.W);
-				_gl.BindTexture(TextureTarget.Texture2D, b.Texture);
-				_gl.BindVertexArray(b.Vao);
-				_gl.DrawElementsInstanced(PrimitiveType.Triangles, (uint)b.IndexCount, DrawElementsType.UnsignedInt, (void*)0, (uint)b.Instances);
 			}
 
 			_ghostsDrawn = DrawGhosts(s, vp);
@@ -1166,9 +1248,9 @@ public sealed class GlView : OpenGlControlBase
 			DrawPlace(s, vp);
 			if (ShowWater)
 			{
-				if (_look != null)
+				if (look != null)
 				{
-					_look.DrawWater(vp, eye, time);
+					look.DrawWater(vp, eye, time);
 				}
 				else
 				{
@@ -1187,8 +1269,15 @@ public sealed class GlView : OpenGlControlBase
 		}
 		_gl.BindVertexArray(0);
 		_gl.UseProgram(0);
+		if (low)
+		{
+			_gl.BindFramebuffer(FramebufferTarget.ReadFramebuffer, _lowFbo);
+			_gl.BindFramebuffer(FramebufferTarget.DrawFramebuffer, (uint)fb);
+			_gl.BlitFramebuffer(0, 0, rw, rh, 0, 0, pw, ph, ClearBufferMask.ColorBufferBit, BlitFramebufferFilter.Linear);
+			_gl.BindFramebuffer(FramebufferTarget.Framebuffer, (uint)fb);
+		}
 		double work = Stopwatch.GetElapsedTime(start).TotalMilliseconds;
-		Measure(now, work, camMoved, pw, ph);
+		Measure(now, work, camMoved, rw, rh);
 		Automate(now, pw, ph);
 		CountGlErrors();
 		// Full speed while something happens; the idle timer draws a few times a second otherwise.
@@ -1196,6 +1285,36 @@ public sealed class GlView : OpenGlControlBase
 		{
 			RequestNextFrameRendering();
 		}
+	}
+
+	// The smaller picture for a lower 3D resolution (made again when the size changes).
+	private uint _lowFbo, _lowColor, _lowDepth;
+	private int _lowW, _lowH;
+
+	private void LowResolution(int w, int h)
+	{
+		if (_lowFbo != 0 && w == _lowW && h == _lowH)
+		{
+			return;
+		}
+		if (_lowFbo != 0)
+		{
+			_gl.DeleteFramebuffer(_lowFbo);
+			_gl.DeleteRenderbuffer(_lowColor);
+			_gl.DeleteRenderbuffer(_lowDepth);
+		}
+		(_lowW, _lowH) = (w, h);
+		_lowFbo = _gl.GenFramebuffer();
+		_lowColor = _gl.GenRenderbuffer();
+		_lowDepth = _gl.GenRenderbuffer();
+		_gl.BindRenderbuffer(RenderbufferTarget.Renderbuffer, _lowColor);
+		_gl.RenderbufferStorage(RenderbufferTarget.Renderbuffer, InternalFormat.Rgba8, (uint)w, (uint)h);
+		_gl.BindRenderbuffer(RenderbufferTarget.Renderbuffer, _lowDepth);
+		_gl.RenderbufferStorage(RenderbufferTarget.Renderbuffer, InternalFormat.DepthComponent24, (uint)w, (uint)h);
+		_gl.BindRenderbuffer(RenderbufferTarget.Renderbuffer, 0);
+		_gl.BindFramebuffer(FramebufferTarget.Framebuffer, _lowFbo);
+		_gl.FramebufferRenderbuffer(FramebufferTarget.Framebuffer, FramebufferAttachment.ColorAttachment0, RenderbufferTarget.Renderbuffer, _lowColor);
+		_gl.FramebufferRenderbuffer(FramebufferTarget.Framebuffer, FramebufferAttachment.DepthAttachment, RenderbufferTarget.Renderbuffer, _lowDepth);
 	}
 
 	private void Measure(long now, double work, bool camMoved, int pw, int ph)
@@ -1370,6 +1489,19 @@ public sealed class GlView : OpenGlControlBase
 			_pointer = p.Position;
 			_surfaceSize = surface.Bounds.Size;
 			e.Pointer.Capture(surface);
+			// Space + left drag and Shift + right drag slide the view, whatever the tool (the web
+			// editor's; handy without a middle button).
+			bool space;
+			lock (_keys)
+			{
+				space = _keys.Contains(Key.Space);
+			}
+			if (_eye == EyeMode.Orbit && (_dragButton == PointerUpdateKind.LeftButtonPressed && space || _dragButton == PointerUpdateKind.RightButtonPressed && e.KeyModifiers.HasFlag(KeyModifiers.Shift)))
+			{
+				_panDrag = true;
+				Wake();
+				return;
+			}
 			if (_dragButton == PointerUpdateKind.LeftButtonPressed && _mode == ToolMode.Place && Place != null)
 			{
 				_dragFrom = null;
@@ -1498,12 +1630,13 @@ public sealed class GlView : OpenGlControlBase
 				string message = _scene?.Session?.EndStroke() ?? "";
 				StrokeEnded?.Invoke(message);
 			}
-			else if (_mode == ToolMode.View && _dragButton == PointerUpdateKind.LeftButtonPressed && _pressAt is Point from && Point.Distance(from, at) < 5)
+			else if (_mode == ToolMode.View && !_panDrag && _dragButton == PointerUpdateKind.LeftButtonPressed && _pressAt is Point from && Point.Distance(from, at) < 5)
 			{
 				Pick(at, surface.Bounds.Size, e.KeyModifiers.HasFlag(KeyModifiers.Shift));
 			}
 			_pressAt = null;
 			_dragFrom = null;
+			_panDrag = false;
 			e.Pointer.Capture(null);
 			Wake();
 		};
@@ -1548,6 +1681,13 @@ public sealed class GlView : OpenGlControlBase
 		};
 		surface.PointerWheelChanged += (_, e) =>
 		{
+			if (e.KeyModifiers.HasFlag(KeyModifiers.Alt) && e.Delta.Y != 0 && AltWheel is { } turn
+				&& turn(e.Delta.Y > 0 ? Key.OemComma : Key.OemPeriod, e.KeyModifiers.HasFlag(KeyModifiers.Shift)))
+			{
+				e.Handled = true;
+				Wake();
+				return;
+			}
 			lock (_camLock)
 			{
 				if (_eye == EyeMode.Orbit)
@@ -1557,6 +1697,32 @@ public sealed class GlView : OpenGlControlBase
 			}
 			Wake();
 		};
+		// Space is the view's (held: Space + left drag slides, flying goes up), not the focused
+		// button's, which it would press; typing keeps it.
+		window.AddHandler(InputElement.KeyDownEvent, (_, e) =>
+		{
+			if (e.Key == Key.Space && e.Source is not TextBox)
+			{
+				lock (_keys)
+				{
+					_keys.Add(Key.Space);
+				}
+				e.Handled = true;
+				Wake();
+			}
+		}, Avalonia.Interactivity.RoutingStrategies.Tunnel);
+		window.AddHandler(InputElement.KeyUpEvent, (_, e) =>
+		{
+			if (e.Key == Key.Space && e.Source is not TextBox)
+			{
+				lock (_keys)
+				{
+					_keys.Remove(Key.Space);
+				}
+				e.Handled = true;
+				Wake();
+			}
+		}, Avalonia.Interactivity.RoutingStrategies.Tunnel);
 		window.KeyDown += (_, e) =>
 		{
 			if (e.Key == Key.F && e.KeyModifiers == KeyModifiers.None)
@@ -1583,6 +1749,9 @@ public sealed class GlView : OpenGlControlBase
 	}
 
 	private Point? _pressAt;
+	// The drag slides the view (Space + left, Shift + right).
+	private bool _panDrag;
+	internal bool Panning => _panDrag;
 
 	internal WorldScene? Scene => _scene;
 	// The Select tool takes the left button (see SelectTool); otherwise it slides the view and clicks pick.
@@ -2480,6 +2649,14 @@ public sealed class GlView : OpenGlControlBase
 		_gl.Enable(EnableCap.DepthTest);
 	}
 
+	// Slides the view along the ground by a drag of (dx, dy) points (under the camera lock).
+	private void Slide(float dx, float dy)
+	{
+		float k = _distance * 0.0015f, c = MathF.Cos(_yaw), sn = MathF.Sin(_yaw);
+		_target += new Vector3(-dx * c - dy * sn, 0, dx * sn - dy * c) * k;
+		FollowGround();
+	}
+
 	private void Drag(Point p)
 	{
 		if (_dragFrom is Point from)
@@ -2487,16 +2664,18 @@ public sealed class GlView : OpenGlControlBase
 			float dx = (float)(p.X - from.X), dy = (float)(p.Y - from.Y);
 			lock (_camLock)
 			{
-				if (_dragButton == PointerUpdateKind.RightButtonPressed)
+				if (_panDrag)
+				{
+					Slide(dx, dy);
+				}
+				else if (_dragButton == PointerUpdateKind.RightButtonPressed)
 				{
 					_yaw -= dx * 0.005f;
 					_pitch = _eye == EyeMode.Orbit ? Math.Clamp(_pitch + dy * 0.005f, 0.05f, 1.55f) : Math.Clamp(_pitch + dy * 0.005f, -1.45f, 1.45f);
 				}
 				else if (_eye == EyeMode.Orbit && _dragButton is PointerUpdateKind.MiddleButtonPressed or PointerUpdateKind.LeftButtonPressed)
 				{
-					float k = _distance * 0.0015f, c = MathF.Cos(_yaw), sn = MathF.Sin(_yaw);
-					_target += new Vector3(-dx * c - dy * sn, 0, dx * sn - dy * c) * k;
-					FollowGround();
+					Slide(dx, dy);
 				}
 			}
 			_dragFrom = p;
