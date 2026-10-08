@@ -18,7 +18,9 @@ public static class Characters
 		List<Character> list = new();
 		foreach (string root in Roots().Where(Directory.Exists))
 		{
-			foreach (string f in Directory.GetFiles(root, "*.fch"))
+			// In name order, not the file system's (it differs between file systems): of a character
+			// and its backup copy, the copy's longer name comes second, and the original is kept.
+			foreach (string f in Directory.GetFiles(root, "*.fch").OrderBy(f => f, StringComparer.Ordinal))
 			{
 				try
 				{
