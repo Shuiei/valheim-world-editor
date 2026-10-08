@@ -211,6 +211,8 @@ public class ZoneStatsTests
 }
 
 // New pieces are player built: they get the chosen builder as "creator", like pieces built in the game.
+// Opening worlds sets the builder for new pieces (WorldSave.Builder): one world at a time.
+[Collection("World files")]
 public class BuilderTests
 {
 	private static readonly int CreatorKey = StableHash.Of("creator");

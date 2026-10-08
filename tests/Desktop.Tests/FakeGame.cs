@@ -22,6 +22,10 @@ public sealed class FakeGame : IDisposable
 	public List<(int Destroy, int Create)> ObjectCalls { get; } = new();
 	public List<(int X, int Z, bool Keep, bool Ground)> Resets { get; } = new();
 	private uint _next = 1000;
+	// Answer this path with this status (an error from the game, or an older plugin without it).
+	public Dictionary<string, int> Fail { get; } = new();
+	// Objects the game no longer had when asked to destroy them.
+	public int Missing { get; set; }
 
 	public FakeGame()
 	{
@@ -69,6 +73,11 @@ public sealed class FakeGame : IDisposable
 				if (status != 200)
 				{
 					body = Encoding.UTF8.GetBytes("{\"error\":\"token\"}");
+				}
+				else if (Fail.TryGetValue(path, out int failed))
+				{
+					status = failed;
+					body = Encoding.UTF8.GetBytes("broken");
 				}
 				else if (path == "/status")
 				{
@@ -119,7 +128,7 @@ public sealed class FakeGame : IDisposable
 					{
 						ObjectCalls.Add((destroy, create));
 					}
-					body = Encoding.UTF8.GetBytes($"{{\"destroyed\":{destroy},\"missing\":0,\"created\":[{string.Join(",", ids)}]}}");
+					body = Encoding.UTF8.GetBytes($"{{\"destroyed\":{destroy - Missing},\"missing\":{Missing},\"created\":[{string.Join(",", ids)}]}}");
 				}
 				else if (path == "/zones/reset")
 				{

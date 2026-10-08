@@ -4,6 +4,17 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v0.41.1 — 2026-10-07
+
+### Fixed
+- Apply live: an error answered by the game (the plugin refusing a call) is reported as "Could not
+  apply live" instead of failing; the changes stay waiting.
+- Apply live: when the game refused the objects, deletions were already counted as sent and were
+  never sent again. Now nothing counts as applied until the game accepts it.
+- Apply live twice at once (a double click) could create the same new objects twice in the game.
+- An object whose data is edited or moved keeps the game's short position form (the terrain
+  compiler grew 8 bytes when written back).
+
 ## v0.41.0 — 2026-10-07 (plugin settings file renamed)
 
 ### Changed
