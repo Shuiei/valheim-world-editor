@@ -10,11 +10,10 @@ case "$pkg" in
 esac
 fail=0
 need() { grep -qx "$1" <<<"$list" || { echo "MISSING  $1"; fail=1; }; }
-for f in "$exe" "$py" ValheimWorldEditor/README.txt ValheimWorldEditor/wwwroot/start.html ValheimWorldEditor/wwwroot/index.html \
-  ValheimWorldEditor/wwwroot/editor.html ValheimWorldEditor/wwwroot/app.js ValheimWorldEditor/wwwroot/lib/three.module.min.js \
+for f in "$exe" "$py" ValheimWorldEditor/README.txt \
   ValheimWorldEditor/export-game-files/export_all.py ValheimWorldEditor/export-game-files/export_pieces.py ValheimWorldEditor/export-game-files/pieces.json; do need "$f"; done
 if [ "$plugin" != --no-plugin ]; then need ValheimWorldEditor/plugin/WorldEditorBridge.dll; need ValheimWorldEditor/plugin/README.txt; fi
-bad=$(grep -E '\.cs$|\.csproj$|\.pdb$|/obj/|/bin/Release|wwwroot/models/|wwwroot/maptex/|wwwroot/terrain/.*\.png$|heightmap\.frag\.glsl$|\.git/' <<<"$list" || true)
+bad=$(grep -E '\.cs$|\.csproj$|\.pdb$|/obj/|/bin/Release|wwwroot/|^ValheimWorldEditor/(models|maptex|terrain|game-look)/|heightmap\.frag\.glsl$|\.git/' <<<"$list" || true)
 if [ -n "$bad" ]; then echo "FORBIDDEN in the package:"; echo "$bad" | head -20; fail=1; fi
 size=$(du -m "$pkg" | cut -f1)
 if [ "$size" -gt 150 ]; then echo "TOO BIG  ${size} MB"; fail=1; fi

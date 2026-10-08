@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Build the release packages (no source code, no game files) into <dist>, one per system:
-#   ValheimWorldEditor-<version>-linux-x64.tar.gz   the app (window, web page, game-look exporter
-#   ValheimWorldEditor-<version>-win-x64.zip        with its own Python) and plugin/ with
-#                                                   WorldEditorBridge.dll for live mode
+#   ValheimWorldEditor-<version>-linux-x64.tar.gz   the app (one program file, Desktop/), the
+#   ValheimWorldEditor-<version>-win-x64.zip        game-look exporter with its own Python, and
+#                                                   plugin/ with WorldEditorBridge.dll for live mode
 # Usage: tools/release.sh <dist>   (needs dotnet 8, tar, zip, curl, python3 with pip)
 # The version is the VERSION file's (the editor's and the plugin's); the packages are named v<version>.
 #   SKIP_PLUGIN=1: leave out the plugin (it builds against the game's DLLs, which CI does not have).
@@ -23,17 +23,11 @@ fi
 package() {   # $1 runtime id, $2 program file name (users start it by double-clicking), $3 readme
   local rid=$1 exe=$2 readme=$3
   local dir="$work/$rid/ValheimWorldEditor"
-  "$dotnet" publish "$repo/TerrainEditor.csproj" -c Release -r "$rid" --self-contained -p:PublishSingleFile=true \
-    -p:DebugType=none -o "$work/$rid/publish" >/dev/null
+  "$dotnet" publish "$repo/Desktop/ValheimWorldEditor.Desktop.csproj" -c Release -r "$rid" --self-contained \
+    -p:PublishSingleFile=true -p:DebugType=none -p:DebugSymbols=false -o "$work/$rid/publish" >/dev/null
   mkdir -p "$dir/export-game-files"
+  # One file: the libraries it needs (Skia, HarfBuzz, ANGLE on Windows) are packed inside it.
   cp "$work/$rid/publish/$exe" "$dir/"
-  # Photino's native window library (single-file publish keeps native files next to the program).
-  find "$work/$rid/publish" -maxdepth 1 \( -name '*.so' -o -name '*.dll' \) -exec cp {} "$dir/" \;
-  cp -r "$work/$rid/publish/wwwroot" "$dir/"
-  # Never ship files extracted from the game, even if a local build folder had them.
-  rm -rf "$dir/wwwroot/models" "$dir/wwwroot/maptex" "$dir/wwwroot/terrain/"*.png "$dir/wwwroot/terrain/heightmap.frag.glsl"
-  # The window icon: icon.ico on Windows, icon.png elsewhere (and as the pages' icon everywhere).
-  [ "$rid" = win-x64 ] || rm -f "$dir/wwwroot/icon.ico"
   cp "$repo"/tools/asset-export/{export_all.py,assetlib.py,export_pieces.py,fix_normals.py,fix_alpha.py} \
      "$repo/tools/zdo_scan.py" "$repo/Core/WorldGen/pieces.json" "$dir/export-game-files/"
   "$repo/tools/make-python-runtime.sh" "$rid" "$dir/export-game-files" >/dev/null
