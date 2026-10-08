@@ -11,6 +11,8 @@ can see how many and how it looks before you click.
 Under **KINDS** the panel lists the kinds you chose, each with a ✕ to drop it. **+ Add kinds** opens
 **Choose kinds**, a list of every kind in a card beside the panel; **Done** closes it.
 
+![Choose kinds, beside the Place panel](images/place-chooser.jpg)
+
 | Control | What it does |
 |---|---|
 | **Search kinds** | Filters the list by name (oak, rock, bush…). Searching opens every category with a match. |

@@ -69,6 +69,8 @@ typed values are exact, so nothing snaps on top of them.
 Like MCEdit's NBT editor: with one object selected, **Inspect data (I)** opens a panel with
 everything the object holds in the save.
 
+![A chest selected, its data in the Inspector](images/inspector.jpg)
+
 | Part | What it shows |
 |---|---|
 | **Contents** | For chests (and anything with an `items` value): every item with its stack, quality, durability (%) and slot (X, Y). The container's size comes from the game (a wood chest has 5 × 2 slots); carts and ships keep their container on a part, so their size is unknown. **Add item** puts a new item in the first free slot (type its name: `Wood`, `SwordIron`... the list suggests every item of the game); **✕** takes one out; **Tidy slots** moves every item to the first free slots, row by row. Items outside the slots would be hidden in game, so the editor asks before applying that. |

@@ -85,6 +85,8 @@ While pasting:
 A blueprint is a copy kept as a file, like a WorldEdit schematic: it stays when the editor closes
 and can be pasted into any world.
 
+![A small hut kept as a blueprint, in the Blueprints panel](images/blueprints.jpg)
+
 | Control | What it does |
 |---|---|
 | **Save blueprint…** | Saves the clipboard (what the Area or Select tool copied last) under a name you type. A blueprint with the same name is replaced, after asking. |
