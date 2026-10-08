@@ -38,7 +38,7 @@ place and the clipboard.
 | Control | What it does |
 |---|---|
 | **Undo** / **Redo** | Undo the last change (`Ctrl+Z`), redo it (`Ctrl+Y` or `Ctrl+Shift+Z`). Works for every tool. |
-| **Pending** | "Unsaved: …" (offline) or "Not applied: …" (live): what is not written yet; "All saved" or "All applied" when nothing is. It counts zones whose ground really differs from the saved state, plus deleted and added objects, and zones marked for reset. |
+| **Pending** | "Unsaved: …" (offline) or "Not applied: …" (live): what is not written yet; "All saved" or "All applied" when nothing is. It counts zones whose ground really differs from the saved state, plus deleted and added objects, and zones marked for reset. In the view, every new object not saved (or applied) yet carries a green dot. |
 | **Discard** | Throws away what is not saved (or applied) yet, after asking: the last steps in History are undone, and the rest of the history stays. The camera and the tool stay as they are. When changes are pending that no step here can undo (made in another area), it offers to read the world again instead. |
 | **Save to world** (offline, `Ctrl+S`) | Writes the changes into the world files. A copy of the whole world folder is made first (`<World>_backup_terraineditor-<date>`), the changes go into the next save, and the result is read back and checked. Close the game or server first. |
 | **Apply live** (live) | Sends the changes to the running game. See [live mode](live-mode.md). |
@@ -75,7 +75,7 @@ new history (what it described is written or gone).
 | Look | **Game look** | Draws the world with the game's own textures, models, water and sky. Off: plain colours and boxes. Remembered. |
 | | **See-through buildings** | Draws players' buildings faint, to see the ground and objects inside or behind them. Trees and rocks stay solid. Remembered. |
 | | **3D resolution** | How many pixels the 3D view draws: **Sharp (the screen's)**, **Balanced** or **Fast**. Fewer pixels give more frames per second on slow computers; the status bar says the size. Remembered. |
-| Objects | **Your buildings**, **Ruins & structures**, **Trees & logs**, **Rocks**, **Ore & deposits**, **Bushes & shrubs**, **Pickables**, **Other objects** | Show or hide each kind. The number is how many there are in the area. Ruins, ore, bushes, pickables and other objects are off at first, so the editor does not spoil what is still to be found. |
+| Objects | **Your buildings**, **Ruins & structures**, **Trees & logs**, **Rocks**, **Ore & deposits**, **Bushes & shrubs**, **Pickables**, **Other objects** | Show or hide each kind. The number is how many there are in the area. Ruins, ore, bushes, pickables and other objects are off at first, so the editor does not spoil what is still to be found. Placing or pasting a kind that is off switches it on, so what you placed stays visible (the message says so). |
 | | **Water** | The sea and lake surface. |
 | Overlays | **Zone borders** | The 64 m zone lines. |
 | | **Location markers** | A post on every location (villages, the trader, dungeon entrances…). |

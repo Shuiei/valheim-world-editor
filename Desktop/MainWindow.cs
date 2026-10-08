@@ -372,7 +372,20 @@ public sealed partial class MainWindow : Window
 			FillBuilders();
 		}
 		session.Mask = Mask;
-		session.Changed += () => Dispatcher.UIThread.Post(() => { UpdateSaveBar(); History.Refresh(); });
+		// New objects keep a green marker until saved, or until the game has them (live).
+		_view.InGame = id => session.Scene.Owner?.IsLive == true && session.Scene.Owner.LiveSync.IsLive(id);
+		// What is placed stays visible: its kinds switched off in View are switched on.
+		session.ThingsAdded += indices => Dispatcher.UIThread.Post(() => ShowKindsOf(session.Scene, indices));
+		session.Changed += () => Dispatcher.UIThread.Post(() =>
+		{
+			UpdateSaveBar();
+			History.Refresh();
+			// The ground changed: the Area tool's cut and fill follows.
+			if (Tools.Mode == ToolMode.Area)
+			{
+				AreaPanel.RefreshVolume();
+			}
+		});
 		session.EditMade += () => Dispatcher.UIThread.Post(() => AutoApply(session));
 		// Saved: the objects were read again, with new indices.
 		session.ThingsReset += () => Dispatcher.UIThread.Post(() => { if (Inspector.IsOpen) Inspector.Close(); });
@@ -935,6 +948,19 @@ public sealed partial class MainWindow : Window
 				p.Set("shape.formula", ShapePanel.FormulaBox.Text ?? "");
 			}
 		};
+		// The Place tool's list: which categories are open.
+		if (p.TryGet("place.openKinds", out string[]? open) && open != null)
+		{
+			PlacePanel.OpenKinds.Clear();
+			foreach (var name in open)
+			{
+				if (Enum.TryParse<ObjectKind>(name, out var k))
+				{
+					PlacePanel.OpenKinds.Add(k);
+				}
+			}
+		}
+		PlacePanel.OpenKindsChanged += () => p.Set("place.openKinds", PlacePanel.OpenKinds.Select(k => k.ToString()).Order().ToArray());
 		// The right-hand panel open.
 		ShowRight(p.Get("panel.right", "view") switch { "help" => HelpCard, "history" => History.Card, "none" => null, _ => _viewPanel });
 		// The clipboard (its objects' ids only meant something in the world it came from).
@@ -961,6 +987,30 @@ public sealed partial class MainWindow : Window
 	}
 
 	private CopyData? _keptClip;
+
+	// Placing (or pasting) a kind switched off in View switches it on, so what was placed is seen; said
+	// after what the tool says about the placing, as the web editor did.
+	internal void ShowKindsOf(WorldScene scene, IReadOnlyList<int> indices)
+	{
+		var turned = new List<string>();
+		foreach (var k in indices.Where(i => i < scene.Things.Count).Select(i => ObjectKinds.Of(NameOfPrefab(scene.Things[i].Prefab), scene.Things[i].Piece)).Distinct())
+		{
+			if (_kindBoxes.TryGetValue(k, out var box) && box.IsChecked != true)
+			{
+				box.IsChecked = true;
+				turned.Add(ObjectKinds.Label(k));
+			}
+		}
+		if (turned.Count == 0)
+		{
+			return;
+		}
+		Dispatcher.UIThread.Post(() =>
+		{
+			string said = _message.Text ?? "";
+			_message.Text = $"{(said != "" ? said + " " : "")}Switched on {string.Join(", ", turned)} in View, so what you placed stays visible.";
+		}, DispatcherPriority.Background);
+	}
 
 	// Eyedropper for the Replace lists: the next click on an object gives its kind (Esc cancels).
 	internal void PickKind(string label, Action<int> done)

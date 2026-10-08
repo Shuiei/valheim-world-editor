@@ -150,6 +150,8 @@ public sealed class EditSession
 	// thing is read again (ThingsReset).
 	public event Action<IReadOnlyList<int>>? ThingsChanged;
 	public event Action? ThingsReset;
+	// New objects were added (placed, pasted, copied, restored...): their indices in Scene.Things.
+	public event Action<IReadOnlyList<int>>? ThingsAdded;
 	// Ids for objects added in this session: negative, like the web editor's.
 	private int _nextId = -1;
 
@@ -567,6 +569,10 @@ public sealed class EditSession
 		if (changes.Count > 0)
 		{
 			ThingsChanged?.Invoke(changes.Select(c => c.Item1).ToList());
+		}
+		if (indices.Count > 0)
+		{
+			ThingsAdded?.Invoke(indices);
 		}
 		Edited();
 		return indices;
