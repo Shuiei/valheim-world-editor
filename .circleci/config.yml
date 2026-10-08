@@ -1,14 +1,11 @@
 # Valheim World Editor: tests and build checks on every push and pull request.
-#   native-tests   the native app's tests (tests/Desktop.Tests): its windows headless, the core,
-#                  the SSH tunnel against a local sshd; the visual tests skip (no display)
-#   dotnet-tests   C# tests (save round trip, new objects, zone reset, live mode bookkeeping,
-#                  settings and saved servers, world discovery, timeouts) on tests/fixtures/CITest
-#   build-app      the Linux program, for the browser tests
-#   browser-tests  the real app on the test world, driven by headless Chrome
+#   native-tests   the app's tests (tests/Desktop.Tests): its windows headless, the core (saves,
+#                  the world generator against the game's values, live mode against a stand-in
+#                  bridge), the SSH tunnel against a local sshd; the visual tests skip (no display)
 #   packages       the Windows and Linux release packages: they build, and hold no source code or
 #                  game files (the plugin is left out: it builds against the game's own DLLs)
-# What CI cannot cover: the plugin build and the game-look export (both need Valheim's files) and
-# live mode against a real game (tested here against a stand-in bridge).
+# What CI cannot cover: the plugin build and the game-look export (both need Valheim's files), the
+# visual tests (they need a display and OpenGL) and live mode against a real game.
 version: 2.1
 
 executors:
@@ -42,70 +39,6 @@ jobs:
       - store_test_results:
           path: /tmp/test-results
 
-  dotnet-tests:
-    executor: dotnet
-    steps:
-      - checkout
-      - restore_cache:
-          keys:
-            - nuget-v1-{{ checksum "TerrainEditor.csproj" }}-{{ checksum "tests/WorldEditor.Tests/WorldEditor.Tests.csproj" }}
-      - run:
-          name: dotnet test
-          command: |
-            dotnet test tests/WorldEditor.Tests/WorldEditor.Tests.csproj -c Release \
-              --logger "junit;LogFilePath=/tmp/test-results/dotnet/results.xml" --logger "console;verbosity=normal"
-      - save_cache:
-          key: nuget-v1-{{ checksum "TerrainEditor.csproj" }}-{{ checksum "tests/WorldEditor.Tests/WorldEditor.Tests.csproj" }}
-          paths:
-            - ~/.nuget/packages
-      - store_test_results:
-          path: /tmp/test-results
-
-  build-app:
-    executor: dotnet
-    steps:
-      - checkout
-      - restore_cache:
-          keys:
-            - nuget-v1-{{ checksum "TerrainEditor.csproj" }}-{{ checksum "tests/WorldEditor.Tests/WorldEditor.Tests.csproj" }}
-      - run:
-          name: Publish the Linux program
-          command: dotnet publish TerrainEditor.csproj -c Release -r linux-x64 --self-contained -p:PublishSingleFile=true -p:DebugType=none -o out
-      - persist_to_workspace:
-          root: .
-          paths:
-            - out
-
-  browser-tests:
-    docker:
-      - image: cimg/node:lts-browsers
-    resource_class: medium
-    steps:
-      - checkout
-      - attach_workspace:
-          at: .
-      - restore_cache:
-          keys:
-            - npm-v1-{{ checksum "tests/browser/package-lock.json" }}
-      - run:
-          name: Install Puppeteer
-          working_directory: tests/browser
-          command: npm ci
-      - save_cache:
-          key: npm-v1-{{ checksum "tests/browser/package-lock.json" }}
-          paths:
-            - ~/.npm
-            - ~/.cache/puppeteer
-      - run:
-          name: Browser tests
-          working_directory: tests/browser
-          command: mkdir -p results && APP="$PWD/../../out/ValheimWorldEditor" VWE_TIMEOUT=120000 npm run test:ci
-          no_output_timeout: 20m
-      - store_test_results:
-          path: tests/browser/results
-      - store_artifacts:
-          path: tests/browser/results
-
   packages:
     executor: dotnet
     steps:
@@ -129,9 +62,4 @@ workflows:
   test:
     jobs:
       - native-tests
-      - dotnet-tests
-      - build-app
-      - browser-tests:
-          requires:
-            - build-app
       - packages

@@ -48,5 +48,5 @@ tar -C "$work/linux-x64" -czf "$dist/ValheimWorldEditor-$version-linux-x64.tar.g
 package win-x64 ValheimWorldEditor.exe release-readme-windows.txt
 (cd "$work/win-x64" && zip -qr "$dist/ValheimWorldEditor-$version-win-x64.zip" ValheimWorldEditor)
 
-rm -rf "$repo/bin" "$repo/obj" "$repo/plugin/WorldEditorBridge/bin" "$repo/plugin/WorldEditorBridge/obj"
+rm -rf "$repo/plugin/WorldEditorBridge/bin" "$repo/plugin/WorldEditorBridge/obj"
 ls -la "$dist"

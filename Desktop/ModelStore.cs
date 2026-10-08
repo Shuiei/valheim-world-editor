@@ -64,7 +64,7 @@ public sealed class ModelStore
 	// The copied models (null when the game's look has not been copied yet).
 	public static ModelStore? Open()
 	{
-		foreach (string dir in new[] { Path.Combine(GameLook.Dir, "models"), Path.Combine(AppContext.BaseDirectory, "wwwroot", "models") })
+		foreach (string dir in new[] { Path.Combine(GameLook.Dir, "models") })
 		{
 			if (File.Exists(Path.Combine(dir, "objects.json")) && File.Exists(Path.Combine(dir, "meshinfo.json")))
 			{

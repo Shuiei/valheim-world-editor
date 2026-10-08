@@ -1,17 +1,10 @@
 bin/
 obj/
 *.user
-# Extracted from the game's asset bundles (regenerate with tools/asset-export).
-wwwroot/models/
-wwwroot/maptex/
-wwwroot/terrain/*.png
-wwwroot/terrain/heightmap.frag.glsl
+# The game-look exporter's indexes.
 tools/asset-export/cab_index.json
 tools/asset-export/*_index*.json
 tools/asset-export/__pycache__/
 # Build output placed inside the source folder by mistake
 out/
-# Test outputs
-tests/browser/node_modules/
-tests/browser/results/
 __pycache__/

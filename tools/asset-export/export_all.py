@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Extract everything the editor's in-game look needs from a Valheim install, into a wwwroot folder.
+"""Extract everything the editor's in-game look needs from a Valheim install, into the editor's game-look folder.
 
-    python export_all.py --valheim "/path/to/Valheim" --out "/path/to/ValheimTerrainEditor/wwwroot"
+    python export_all.py --valheim "/path/to/Valheim" --out ~/.local/share/ValheimWorldEditor/game-look
 
 Writes, under --out:
   terrain/heightmap.frag.glsl      the game's terrain shader (Custom/Heightmap, deferred pass) for WebGL 2
@@ -297,7 +297,7 @@ def export_models(found, args, work, out):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('--valheim', required=True, help='the Valheim game folder (with valheim_Data)')
-    ap.add_argument('--out', required=True, help="the editor's wwwroot folder")
+    ap.add_argument('--out', required=True, help="the editor's game-look folder")
     ap.add_argument('--work', help='folder for the scan cache and indexes (default: <out>/../export-cache)')
     ap.add_argument('--objects', choices=('all', 'world', 'none'), default='all')
     ap.add_argument('--world', help='with --objects world: a world folder (with *.chunk files)')
