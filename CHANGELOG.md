@@ -10,8 +10,13 @@ the plugin is unchanged in versions without that part.
 - **The Workshop**: a blank, flat plot (from the start page or the Blueprints panel) to build a
   building with the Place and Select tools, then **Save blueprint**: only its building pieces are
   kept. Blueprints open in it to be changed. It keeps to building: **Build** (the hammer's pieces in
-  its tabs, with pictures, by crafting station and name, searchable; snap to pieces, stack on top,
-  a grid, a turn step), **Select** and **View**; no world tools, Mask or View panel.
+  its tabs, the cultivator's and the serving tray's too, with pictures, by crafting station and
+  name, searchable), **Select** and **View**; no world tools, Mask or View panel. Pieces go where the
+  game's hammer would put them, from the game's own data for every piece (colliders, snap points,
+  placement rules): pointed at a wall's top, the next stands on it; snap points within half a metre
+  meet. Ctrl + wheel lifts the piece; , and . turn it by 22.5° (or another step).
+- **Select**: Ctrl + click adds to the selection; Shift + click takes the row from the last object
+  clicked (wall 1, Shift + click wall 3: walls 1 to 3).
 - **Support check** (in the Workshop): each piece outlined in the colour the game gives its
   structural support (the game's own rules, per material), from blue on the ground to red, and pink
   for pieces that would fall. Saving asks first when some would.

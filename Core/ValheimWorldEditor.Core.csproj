@@ -27,5 +27,6 @@
     <EmbeddedResource Include="WorldGen/cave-rocks.json" LogicalName="TerrainEditor.cave-rocks.json" />
     <EmbeddedResource Include="WorldGen/piece-support.json" LogicalName="TerrainEditor.piece-support.json" />
     <EmbeddedResource Include="WorldGen/piece-cost.json" LogicalName="TerrainEditor.piece-cost.json" />
+    <EmbeddedResource Include="WorldGen/piece-place.json.gz" LogicalName="TerrainEditor.piece-place.json.gz" />
   </ItemGroup>
 </Project>

@@ -151,6 +151,9 @@ public sealed class GlView : OpenGlControlBase
 	// Alt + wheel: the tools that turn take it (the window decides: true when taken); otherwise it zooms.
 	// The direction is that of the , and . keys: towards you (down) as . and away (up) as ,.
 	internal Func<Key, bool, bool>? AltWheel { get; set; }
+	// Ctrl + wheel (up: 1, down: -1; with Shift): what the tool does with it (true), else the view zooms.
+	internal Func<int, bool, bool>? CtrlWheel { get; set; }
+	private double _wheelSum;
 	// How many objects of each kind the area has (once the models' names are known).
 	public event Action<Dictionary<ObjectKind, int>>? KindCounts;
 
@@ -1607,7 +1610,10 @@ public sealed class GlView : OpenGlControlBase
 			{
 				_dragFrom = null;
 				_selectDown = true;
-				SelectTool.Down(p.Position, _surfaceSize, e.KeyModifiers.HasFlag(KeyModifiers.Shift), e.KeyModifiers.HasFlag(KeyModifiers.Alt), e.ClickCount);
+				// Ctrl + click (or Shift, Ctrl + zone): added to what is selected; Shift + click: the row
+				// from the last object clicked.
+				SelectTool.Range = e.KeyModifiers.HasFlag(KeyModifiers.Shift) && !e.KeyModifiers.HasFlag(KeyModifiers.Control);
+				SelectTool.Down(p.Position, _surfaceSize, e.KeyModifiers.HasFlag(KeyModifiers.Shift) || e.KeyModifiers.HasFlag(KeyModifiers.Control), e.KeyModifiers.HasFlag(KeyModifiers.Alt), e.ClickCount);
 				Wake();
 				return;
 			}
@@ -1674,7 +1680,7 @@ public sealed class GlView : OpenGlControlBase
 			if (_selectDown)
 			{
 				_selectDown = false;
-				SelectTool.Up(at, surface.Bounds.Size, e.KeyModifiers.HasFlag(KeyModifiers.Shift));
+				SelectTool.Up(at, surface.Bounds.Size, e.KeyModifiers.HasFlag(KeyModifiers.Shift) || e.KeyModifiers.HasFlag(KeyModifiers.Control));
 			}
 			else if (_brushDown)
 			{
@@ -1684,7 +1690,8 @@ public sealed class GlView : OpenGlControlBase
 			}
 			else if (_mode == ToolMode.View && !_panDrag && _dragButton == PointerUpdateKind.LeftButtonPressed && _pressAt is Point from && Point.Distance(from, at) < 5)
 			{
-				Pick(at, surface.Bounds.Size, e.KeyModifiers.HasFlag(KeyModifiers.Shift));
+				Pick(at, surface.Bounds.Size, e.KeyModifiers.HasFlag(KeyModifiers.Shift) || e.KeyModifiers.HasFlag(KeyModifiers.Control),
+					e.KeyModifiers.HasFlag(KeyModifiers.Shift) && !e.KeyModifiers.HasFlag(KeyModifiers.Control));
 			}
 			_pressAt = null;
 			_dragFrom = null;
@@ -1736,12 +1743,30 @@ public sealed class GlView : OpenGlControlBase
 		};
 		surface.PointerWheelChanged += (_, e) =>
 		{
-			if (e.KeyModifiers.HasFlag(KeyModifiers.Alt) && e.Delta.Y != 0 && AltWheel is { } turn
-				&& turn(e.Delta.Y > 0 ? Key.OemComma : Key.OemPeriod, e.KeyModifiers.HasFlag(KeyModifiers.Shift)))
+			// Ctrl or Alt + wheel: one step per notch. Smooth-scrolling wheels and touchpads send parts of a
+			// notch (and some systems send Shift's as sideways): added up until a whole one.
+			bool ctrlW = e.KeyModifiers.HasFlag(KeyModifiers.Control), altW = e.KeyModifiers.HasFlag(KeyModifiers.Alt);
+			// Ctrl: building lifts the piece; Alt: the tools that turn things turn them. Else the view zooms.
+			bool wants = ctrlW ? Mode == ToolMode.Place && Place?.Tool.Building == true && CtrlWheel != null
+				: altW && AltWheel != null && Mode is ToolMode.Place or ToolMode.Paste or ToolMode.Select;
+			if (wants)
 			{
+				double delta = e.Delta.Y != 0 ? e.Delta.Y : e.Delta.X;
+				bool shiftW = e.KeyModifiers.HasFlag(KeyModifiers.Shift);
+				_wheelSum += delta;
+				while (Math.Abs(_wheelSum) >= 0.999)
+				{
+					int dir = _wheelSum > 0 ? 1 : -1;
+					_wheelSum -= dir;
+					_ = ctrlW ? CtrlWheel!(dir, shiftW) : AltWheel!(dir > 0 ? Key.OemComma : Key.OemPeriod, shiftW);
+				}
 				e.Handled = true;
 				Wake();
 				return;
+			}
+			else
+			{
+				_wheelSum = 0;
 			}
 			lock (_camLock)
 			{
@@ -2781,6 +2806,21 @@ public sealed class GlView : OpenGlControlBase
 
 	// The shown object under a point of the view (null: the ground or nothing is nearer), like the web
 	// editor: the nearest box the ray enters, unless the ground is hit first (half a metre of slack).
+	// The view's ray through a point, in world space (x east, up, z north), and how far along it the
+	// ground is (null: it does not meet it).
+	internal (Vector3 O, Vector3 D, float? GroundT)? WorldRay(Point at, Size size)
+	{
+		var s = _scene;
+		if (s == null || size.Width <= 0)
+		{
+			return null;
+		}
+		var (o, d) = Picking.Ray(_lastViewProj, (float)(at.X / size.Width * 2 - 1), (float)(1 - at.Y / size.Height * 2));
+		d = Vector3.Normalize(d);
+		float? g = Picking.HitGround(s, o, d);
+		return (new Vector3(o.X + s.Cx, o.Y, -o.Z + s.Cz), new Vector3(d.X, d.Y, -d.Z), g);
+	}
+
 	internal int? ObjectAt(Point at, Size size)
 	{
 		var s = _scene;
@@ -2810,21 +2850,61 @@ public sealed class GlView : OpenGlControlBase
 		return hit;
 	}
 
-	internal void Pick(Point at, Size size, bool add)
+	// A click on an object: it alone, or (add) added or taken out; range (Shift): every shown object in
+	// a row from the last one clicked to this one (w1, Shift + click w3: w1, w2 and w3).
+	internal void Pick(Point at, Size size, bool add, bool range = false)
 	{
 		int? i = ObjectAt(at, size);
+		var s = _scene;
 		lock (_selection)
 		{
-			if (!add)
+			if (range && i is int k && _anchor is int a && a != k && s != null && a < s.Things.Count && !s.Things[a].Gone)
 			{
-				_selection.Clear();
+				foreach (int j in Between(s, a, k))
+				{
+					_selection.Add(j);
+				}
 			}
-			if (i is int k && !_selection.Remove(k))
+			else
 			{
-				_selection.Add(k);
+				if (!add)
+				{
+					_selection.Clear();
+				}
+				if (i is int k2 && !_selection.Remove(k2))
+				{
+					_selection.Add(k2);
+				}
+				_anchor = i;
 			}
 		}
 		SelectionDone();
+	}
+
+	// The object a Shift + click's row starts from: the last one clicked.
+	private int? _anchor;
+
+	// The shown objects on the line from object a to object b (their middles within 0.75 m of it), both
+	// ends included.
+	internal IEnumerable<int> Between(WorldScene s, int a, int b)
+	{
+		var pa = s.Things[a].Position;
+		var pb = s.Things[b].Position;
+		var ab = pb - pa;
+		float len2 = MathF.Max(ab.LengthSquared(), 1e-6f);
+		for (int i = 0; i < s.Things.Count && i < _known.Length; i++)
+		{
+			var t = s.Things[i];
+			if (t.Gone || !_known[i] || !_shown[(int)_kinds[i]])
+			{
+				continue;
+			}
+			float u = Math.Clamp(Vector3.Dot(t.Position - pa, ab) / len2, 0, 1);
+			if (Vector3.Distance(t.Position, pa + ab * u) <= 0.75f)
+			{
+				yield return i;
+			}
+		}
 	}
 
 	// Eyedropper: the next left click gives the object under it (null: none) instead of going to

@@ -1901,6 +1901,17 @@ public sealed partial class MainWindow : Window
 		Content = new Grid { Children = { _pages, _busy } };
 		_view.Attach(surface, this);
 		_view.AltWheel = AltWheel;
+		// Building (the Workshop): Ctrl + wheel lifts the piece.
+		_view.CtrlWheel = (dir, shift) =>
+		{
+			if (Tools.Mode != ToolMode.Place || !PlaceTool.Building)
+			{
+				return false;
+			}
+			PlaceInput.Lift(dir * (shift ? 0.1f : 0.5f));
+			BuildPanel.ShowLift();
+			return true;
+		};
 		surface.PointerMoved += (_, e) => ShowCursor(e.GetPosition(surface));
 		surface.PointerExited += (_, _) => ShowCursor(null);
 		_view.StrokeEnded += _ => ShowCursor(_cursorAt);

@@ -30,20 +30,30 @@ The Workshop keeps to building: the tool rail has only **Build**, **Select** and
 ground tools, Area, Path, Mountain and the rest are for worlds), and there is no Mask, View panel or
 zone borders.
 
-**Build** (T) lists the game's hammer pieces in its tabs (**Building**, **Heavy building**,
-**Furniture**, **Crafting**, **Misc**, **More**), each with a small picture, grouped by the crafting
-station they need (none first, then the workbench, stonecutter, forge…) and by name within each.
-**Search pieces** finds them in every tab. Click a piece to pick it (its cost shows under the list),
-then click the plot to put it down, one at a time.
+**Build** (T) lists everything players build: the game's hammer pieces in its tabs (**Building**,
+**Heavy building**, **Furniture**, **Crafting**, **Misc**, **More**: walls, roofs, rugs, banners,
+torches and lights…), the cultivator's (**Plants**) and the serving tray's (**Feasts**), each with a
+small picture, grouped by the crafting station they need (none first, then the workbench,
+stonecutter, forge…) and by name within each. **Search pieces** finds them in every tab. Click a piece
+to pick it (its cost shows under the list), then click to put it down.
+
+Pieces go where the game's hammer would put them, worked out from the game's own data for every
+piece (its colliders, snap points and placement rules): the cursor's ray meets the ground or a piece
+(its real shape); the piece, turned as you set it, touches that point; then, if one of its snap
+points is within half a metre of a snap point of a piece already there, they meet. Point at a wall's
+top to put the next one on it, near its end to put one beside it. Rugs and other pieces the game
+places by their middle go right at the point.
 
 | Option | What it does |
 |---|---|
-| **Snap to pieces** | A piece put next to others meets them at their snap points and takes their turn, as with the game's hammer. Off: it goes where you click. |
-| **Stack on the piece under the cursor** | The piece goes on top of the one under the cursor: floors on walls, a second storey. |
-| **Grid** | Pieces not snapped go on this grid (0.5, 1 or 2 m, from the plot's middle), or exactly at the cursor (Off). |
-| **Turn by** | How far **,** and **.** (or Alt + wheel) turn the piece: 1°, 15°, 22.5°, 45° or 90°. Shift turns by 1°. |
+| **Snap to pieces** | Snapping, as in the game. Off: the piece stays where it touches (the game's Alt). |
+| **Grid** | Off (as in the game), or the ground's point rounded to 0.5, 1 or 2 m from the plot's middle. |
+| **Turn by** | How far **,** and **.** (or Alt + wheel) turn the piece: 22.5° as in the game, or 1°, 15°, 45°, 90°. Shift turns by 1°. |
+| **Lift** | **Ctrl + wheel** lifts the piece (or lowers it) half a metre a notch from where it touches (Shift: 0.1 m), before it snaps. **Reset** puts it back. |
 
-**Select** (E) moves, turns, lifts and deletes pieces; Ctrl+Z and Ctrl+Y undo and redo.
+**Select** (E) moves, turns, lifts and deletes pieces. **Ctrl + click** adds a piece to the
+selection; **Shift + click** takes the row from the last piece clicked (wall 1, then Shift + click
+wall 3: walls 1, 2 and 3); dragging any selected piece moves them all. Ctrl+Z and Ctrl+Y undo and redo.
 
 | Control | What it does |
 |---|---|

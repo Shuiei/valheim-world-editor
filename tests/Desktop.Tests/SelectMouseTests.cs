@@ -75,6 +75,27 @@ public class SelectMouseTests
 
 	private static WorldScene.Thing T(int id, int prefab, float x, float y, float z, bool piece = true) => new(id, prefab, new Vector3(x, y, z), Vector3.Zero, piece ? 0 : 1, piece);
 
+	// Shift + click: the row from the last object clicked (w1, Shift + click w3: w1, w2, w3), not what
+	// stands off it; Ctrl + click adds one.
+	[AvaloniaFact]
+	public void ShiftClickTakesTheRowAndCtrlClickAddsOne()
+	{
+		var v = Open(T(1, Wall, 36, 30, 40), T(2, Wall, 38, 30, 40), T(3, Wall, 40, 30, 40), T(4, Wall, 38, 30, 33), T(5, Wall, 46, 30, 46));
+		// From the east end (the move arrows point east and north of the first one, not over the others).
+		v.Click(40, 40);
+		Assert.Equal(new HashSet<int> { 2 }, v.Selected);
+		v.Tool.Range = true;
+		v.Click(36, 40, shift: true);
+		v.Tool.Range = false;
+		Assert.Equal(new HashSet<int> { 0, 1, 2 }, v.Selected);
+		// Ctrl (add, no row): one more.
+		v.Click(38, 33, shift: true);
+		Assert.Equal(new HashSet<int> { 0, 1, 2, 3 }, v.Selected);
+		// A plain click: that one alone.
+		v.Click(46, 46);
+		Assert.Equal(new HashSet<int> { 4 }, v.Selected);
+	}
+
 	[AvaloniaFact]
 	public void AClickPicksAndAClickOnEmptyGroundDeselects()
 	{

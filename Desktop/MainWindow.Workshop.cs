@@ -287,6 +287,8 @@ public partial class MainWindow
 			(k.Mode, k.OneAtATime, k.OneAtATimeByHand, k.RandomYaw, k.Tilt, k.SizeMin, k.SizeMax, k.Elevation, k.SnapTo, k.OnTop, k.Rotation);
 		t.GridStep = 0;
 		t.Building = false;
+		t.HeightNudge = 0;
+		t.AimRay = null;
 		PlaceInput.TurnStep = null;
 		Tools.SetWorkshop(false);
 		_view.SetOverlay(Overlays.Layer.Borders, k.Borders);

@@ -20,18 +20,22 @@ public sealed class BuildPanel
 	internal TextBox Search { get; } = new() { PlaceholderText = "Search pieces", FontSize = 12 };
 	internal WrapPanel Tiles { get; } = new() { ItemSpacing = 4, LineSpacing = 4 };
 	internal CheckBox SnapBox { get; } = new CheckBox { Content = "Snap to pieces", FontSize = 12, IsChecked = true }.Classed("switch");
-	internal CheckBox OnTopBox { get; } = new CheckBox { Content = "Stack on the piece under the cursor", FontSize = 12 }.Classed("switch");
-	internal ComboBox GridBox { get; } = new() { ItemsSource = new[] { "Off", "0.5 m", "1 m", "2 m" }, SelectedIndex = 2, FontSize = 12 };
-	internal ComboBox TurnBox { get; } = new() { ItemsSource = new[] { "1°", "15°", "22.5°", "45°", "90°" }, SelectedIndex = 4, FontSize = 12 };
+	internal ComboBox GridBox { get; } = new() { ItemsSource = new[] { "Off", "0.5 m", "1 m", "2 m" }, SelectedIndex = 0, FontSize = 12 };
+	// The game turns the hammer's piece by 22.5° a step.
+	internal ComboBox TurnBox { get; } = new() { ItemsSource = new[] { "1°", "15°", "22.5°", "45°", "90°" }, SelectedIndex = 2, FontSize = 12 };
 	internal TextBlock Chosen { get; } = new() { FontSize = 12, FontWeight = FontWeight.SemiBold, TextWrapping = TextWrapping.Wrap };
 	internal TextBlock Cost { get; } = new() { FontSize = 11, Foreground = new SolidColorBrush(Color.FromRgb(214, 190, 140)), TextWrapping = TextWrapping.Wrap };
+	internal TextBlock LiftText { get; } = new() { FontSize = 12, VerticalAlignment = VerticalAlignment.Center };
+	internal Button LiftReset { get; } = new() { Content = "Reset", FontSize = 11, Padding = new Thickness(6, 1) };
 	// The game's models, for the pictures (null: each piece's boxes).
 	internal Func<ModelStore?> Models { get; set; } = () => null;
 
-	// The hammer's tabs (Piece.PieceCategory), in its order.
+	// The hammer's tabs (Piece.PieceCategory), in its order, then the cultivator's and the serving
+	// tray's pieces (plants, feasts).
+	internal const int Plants = 100, Feasts = 101;
 	internal static readonly (int Category, string Name)[] Tabs =
 	{
-		(2, "Building"), (3, "Heavy building"), (4, "Furniture"), (1, "Crafting"), (0, "Misc"), (5, "More"),
+		(2, "Building"), (3, "Heavy building"), (4, "Furniture"), (1, "Crafting"), (0, "Misc"), (5, "More"), (Plants, "Plants"), (Feasts, "Feasts"),
 	};
 
 	private static readonly float[] Grids = { 0, 0.5f, 1, 2 };
@@ -43,11 +47,12 @@ public sealed class BuildPanel
 	private readonly Dictionary<string, Bitmap?> _pictures = new();
 	private readonly HashSet<string> _drawing = new();
 
-	// The hammer's pieces: (prefab, English name, tab).
+	// Everything players build: the hammer's pieces, the cultivator's and the serving tray's (prefab,
+	// English name, tab). The hoe's are ground edits, not pieces.
 	internal static readonly Lazy<List<(string Prefab, string Name, int Category)>> Pieces = new(() =>
 		PieceCatalog.Names.Select(n => (n, PieceCatalog.Get(StableHash.Of(n))))
-			.Where(p => p.Item2 is { Tool: "hammer" })
-			.Select(p => (p.n, PieceCost.PieceName(p.n), p.Item2!.Category))
+			.Where(p => p.Item2 is { Tool: "hammer" or "cultivator" or "feaster" })
+			.Select(p => (p.n, PieceCost.PieceName(p.n), p.Item2!.Tool switch { "cultivator" => Plants, "feaster" => Feasts, _ => p.Item2.Category }))
 			.OrderBy(p => StationRank(PieceCost.Get(p.n)?.Station)).ThenBy(p => PieceCost.Get(p.n)?.Station ?? "", StringComparer.OrdinalIgnoreCase)
 			.ThenBy(p => p.Item2, StringComparer.OrdinalIgnoreCase).ToList());
 
@@ -76,14 +81,15 @@ public sealed class BuildPanel
 		}
 		Search.PropertyChanged += (_, e) => { if (e.Property == TextBox.TextProperty) Render(); };
 		SnapBox.IsCheckedChanged += (_, _) => { Tool.SnapTo = SnapBox.IsChecked == true; Tool.Notify(); };
-		OnTopBox.IsCheckedChanged += (_, _) => { Tool.OnTop = OnTopBox.IsChecked == true; Tool.Notify(); };
 		GridBox.SelectionChanged += (_, _) => { Tool.GridStep = Grids[Math.Max(0, GridBox.SelectedIndex)]; Tool.Notify(); };
 		TurnBox.SelectionChanged += (_, _) => _input.TurnStep = Turns[Math.Max(0, TurnBox.SelectedIndex)];
 		SnapBox.Tip("build.snap");
-		OnTopBox.Tip("build.onTop");
 		GridBox.Tip("build.grid");
 		TurnBox.Tip("build.turn");
 		Search.Tip("build.search");
+		LiftReset.Tip("build.lift");
+		LiftReset.Click += (_, _) => { _input.Lift(-Tool.HeightNudge); ShowLift(); };
+		ShowLift();
 		static Control Row(string label, Control c) => new Grid
 		{
 			ColumnDefinitions = new ColumnDefinitions("90,*"),
@@ -107,12 +113,12 @@ public sealed class BuildPanel
 				Chosen,
 				Cost,
 				SnapBox,
-				OnTopBox,
 				Row("Grid", GridBox),
 				Row("Turn by", TurnBox),
+				Row("Lift", new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = { LiftText, LiftReset } }),
 				new TextBlock
 				{
-					Text = "Click to put the piece down. , and . turn it (Alt + wheel too; Shift: 1°). Pieces snap to the ones beside them, as with the game's hammer. Select (E) moves, turns and deletes them; Ctrl+Z undoes.",
+					Text = "As the game's hammer: point at the ground or a piece, the piece touches it and snaps to the snap points within half a metre. Click to put it down. , and . turn it (Alt + wheel too; Shift: 1°); Ctrl + wheel lifts it (Shift: 0.1 m). Select (E) moves, turns and deletes pieces; Ctrl+Z undoes.",
 					FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap,
 				},
 			},
@@ -135,7 +141,7 @@ public sealed class BuildPanel
 		t.SizeMin = t.SizeMax = 100;
 		t.Elevation = PlaceTool.Elevations.Ground;
 		t.SnapTo = SnapBox.IsChecked == true;
-		t.OnTop = OnTopBox.IsChecked == true;
+		t.OnTop = false;
 		t.GridStep = Grids[Math.Max(0, GridBox.SelectedIndex)];
 		_input.TurnStep = Turns[Math.Max(0, TurnBox.SelectedIndex)];
 		if (!(t.Chosen.Count == 1 && Pieces.Value.Any(p => p.Prefab == t.Chosen[0])))
@@ -144,6 +150,13 @@ public sealed class BuildPanel
 		}
 		t.Notify();
 		Render();
+	}
+
+	// The lift Ctrl + wheel gives.
+	public void ShowLift()
+	{
+		LiftText.Text = Tool.HeightNudge == 0 ? "none (Ctrl + wheel)" : $"{Tool.HeightNudge:+0.0#;-0.0#} m";
+		LiftReset.IsEnabled = Tool.HeightNudge != 0;
 	}
 
 	public void Choose(string prefab)

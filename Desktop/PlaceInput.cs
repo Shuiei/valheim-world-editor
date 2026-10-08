@@ -48,7 +48,7 @@ public sealed class PlaceInput
 		{
 			return;
 		}
-		int? under = Tool.OnTop && _pointer is Point p ? _view.ObjectAt(p, _size) : null;
+		int? under = (Tool.OnTop || Tool.Building) && _pointer is Point p ? _view.ObjectAt(p, _size) : null;
 		_preview = _view.Mode == ToolMode.Place && !(Tool.Mode == PlaceTool.Modes.Brush && _shift) ? Tool.Preview(_at, under) : new();
 		Shown = _preview.ToArray();
 		_view.LassoChanged();
@@ -189,7 +189,8 @@ public sealed class PlaceInput
 			}
 			return;
 		}
-		var hit = _view.GridAt(at, size);
+		// Building: where the cursor points (on a piece, or the ground), as the preview shows it.
+		var hit = Tool.Building && _at != null ? _at : _view.GridAt(at, size);
 		if (alt && !shift)
 		{
 			if (_view.WorldAt(at, size) is { } w)
@@ -259,11 +260,29 @@ public sealed class PlaceInput
 		}
 	}
 
+	// Building: Ctrl + wheel lifts the piece (or lowers it) from where the cursor points.
+	public void Lift(float metres)
+	{
+		Tool.HeightNudge = MathF.Round(Tool.HeightNudge + metres, 2);
+		if (_pointer is Point p)
+		{
+			Moved(p, _size);
+		}
+		Tool.Notify();
+		Message?.Invoke(Tool.HeightNudge == 0 ? "Lift: none (where the cursor points)." : $"Lift: {Tool.HeightNudge:+0.0#;-0.0#} m from where the cursor points (Ctrl + wheel; Shift: 0.1 m).");
+	}
+
 	public void Moved(Point at, Size size)
 	{
 		_pointer = at;
 		_size = size;
 		var hit = _view.GridAt(at, size);
+		// Building: the build ray itself (the piece goes where it hits, a piece or the ground).
+		if (Tool.Building)
+		{
+			Tool.AimRay = _view.WorldRay(at, size);
+			hit ??= Tool.AimRay != null ? Vector2.Zero : null;
+		}
 		_at = hit;
 		if (_stroke is { } s)
 		{
