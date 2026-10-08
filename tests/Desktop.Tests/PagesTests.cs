@@ -110,8 +110,8 @@ public class PagesTests
 		Assert.False(w.HelpCard.IsVisible);
 		w.ShowRight(w.HelpCard);
 		Assert.True(w.HelpCard.IsVisible);
-		Assert.True(w.HelpButton.Classes.Contains("on"));
-		Assert.False(w.ViewButton.Classes.Contains("on"));
+		Assert.Contains("on", w.HelpButton.Classes);
+		Assert.DoesNotContain("on", w.ViewButton.Classes);
 		w.ShowRight(w.History.Card);
 		Assert.False(w.HelpCard.IsVisible);
 		Assert.True(w.History.Card.IsVisible);

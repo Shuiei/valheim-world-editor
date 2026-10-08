@@ -1,6 +1,7 @@
 using System.Numerics;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
+using Avalonia.Threading;
 using Avalonia.VisualTree;
 using TerrainEditor.Save;
 using Xunit;
@@ -8,6 +9,7 @@ using Xunit;
 namespace TerrainEditor.Desktop.Tests;
 
 // The history panel: back to a change, redo to one, and taking out one change only.
+[Collection("World files")]
 public class HistoryTests
 {
 	private static float H(EditSession s, int x, int z) => s.Scene.Heights[z * s.Scene.W + x];
@@ -103,5 +105,60 @@ public class HistoryTests
 		Assert.Equal(StableHash.Of("Oak1"), oak.Prefab);
 		Assert.Equal(40, oak.Rotation.Y);
 		Assert.Empty(w.View.Selected);
+	}
+
+	// As used: a world, an area from the map, History open, then edits. The history follows the world
+	// to the map and back, and into another area as far as it fits there.
+	[AvaloniaFact]
+	public async Task TheHistoryFollowsTheWorldFromAreaToArea()
+	{
+		string dir = EditTests.CopyFixture();
+		try
+		{
+			var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
+			w.Show();
+			await w.OpenWorld(() => Task.Run(() => WorldSession.Open(dir)), "Opening…");
+			await w.EditArea(0, 0, 3);
+			w.ShowRight(w.History.Card);
+			var s = w.Session!;
+			// Ground in the middle zone, and an object deleted.
+			s.Shape(96, 96, Two, 3, 0, "raise");
+			int tree = s.Scene.Things.FindIndex(t => !t.Gone && !t.Piece);
+			Assert.True(tree >= 0);
+			int id = s.Scene.Things[tree].Id;
+			s.Delete(new[] { tree });
+			Dispatcher.UIThread.RunJobs();
+			Assert.Equal("2 change(s)", w.History.Count.Text);
+			// To the map and back to the same area: both are there, and undo brings the object back.
+			w.ShowMap();
+			await w.EditArea(0, 0, 3);
+			w.ShowRight(w.History.Card);
+			Dispatcher.UIThread.RunJobs();
+			s = w.Session!;
+			Assert.Equal(new[] { "raise", $"Deleted 1" }, s.UndoList.Select(c => c.Label));
+			Assert.Equal("2 change(s)", w.History.Count.Text);
+			s.Undo();
+			var back = s.Scene.Things.Single(t => t.Id == id);
+			Assert.False(back.Gone);
+			Assert.DoesNotContain(id, w.World!.Edits.Deleted);
+			Assert.Single(s.RedoList);
+			// A bigger area around it: the raise fits (same world points), the redo too.
+			w.ShowMap();
+			await w.EditArea(0, 0, 5);
+			s = w.Session!;
+			Assert.Equal(new[] { "raise" }, s.UndoList.Select(c => c.Label));
+			Assert.Single(s.RedoList);
+			s.Undo();
+			Assert.Equal(0, w.World.Pending.Zones);
+			// Far away: nothing fits there.
+			w.ShowMap();
+			await w.EditArea(20, 20, 1);
+			Assert.Empty(w.Session!.UndoList);
+			Assert.Empty(w.Session.RedoList);
+		}
+		finally
+		{
+			Directory.Delete(Path.GetDirectoryName(dir)!, recursive: true);
+		}
 	}
 }

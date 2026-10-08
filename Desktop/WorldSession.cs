@@ -21,6 +21,10 @@ public sealed class WorldSession
 	public bool IsLive => Live != null;
 	public string Label { get; init; } = "";
 
+	// The history while no area is open, or another one (see EditSession.Export); gone when the world
+	// is saved, discarded or read again.
+	public EditSession.Kept? History { get; set; }
+
 	// Ids for objects added in this session: negative, like the web editor's, unique across every area.
 	private int _nextId = -1;
 	public int NextId() => Interlocked.Decrement(ref _nextId) + 1;
@@ -78,6 +82,7 @@ public sealed class WorldSession
 			World = WorldSave.Load(World.Directory);
 			Edits.ResetFrom(World);
 			_nextId = -1;
+			History = null;
 		}
 		return new Outcome(result.Saved, result.Message, result.Saved, result);
 	}
@@ -112,6 +117,7 @@ public sealed class WorldSession
 				Edits.ResetFrom(World);
 				LiveSync.Reset();
 				_nextId = -1;
+				History = null;
 				reloaded = true;
 			}
 			return new Outcome(done.Count > 0, done.Count > 0 ? $"Applied to the running game: {string.Join("; ", done)}." : "Nothing to apply.", reloaded);
@@ -128,6 +134,7 @@ public sealed class WorldSession
 		World = await Live!.LoadWorld();
 		Edits.ResetFrom(World);
 		LiveSync.Reset();
+		History = null;
 	}
 
 	// Drops every pending change (offline: the world is read again from its files).
@@ -139,5 +146,6 @@ public sealed class WorldSession
 		}
 		Edits.ResetFrom(World);
 		LiveSync.Reset();
+		History = null;
 	}
 }
