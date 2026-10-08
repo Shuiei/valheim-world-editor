@@ -34,6 +34,15 @@ public static class Overlays
 
 	public sealed record Built(Dictionary<Layer, float[]> Lines, int Wards, int Stations, int Flattened, int Locations);
 
+	// The locations (villages, the trader, dungeon entrances...) in the area or within 40 m of it, as
+	// the Location markers show them.
+	public static int LocationsNear(WorldScene s)
+	{
+		float ox = s.X0 * 64f - 32f, oz = s.Z0 * 64f - 32f;
+		float minX = ox - 40, maxX = ox + s.W + 40, minZ = oz - 40, maxZ = oz + s.H + 40;
+		return (s.World?.Locations ?? new()).Count(l => l.Position.X >= minX && l.Position.X <= maxX && l.Position.Z >= minZ && l.Position.Z <= maxZ);
+	}
+
 	// names: each thing's prefab name (null when unknown).
 	public static Built Build(WorldScene s, TerrainModifiers? modifiers, Func<int, string?> names)
 	{

@@ -126,7 +126,7 @@ public sealed class EditSession
 		{
 			ThingsChanged?.Invoke(removal.Things.Select(t => t.Index).ToList());
 		}
-		Changed?.Invoke();
+		Edited();
 		return $"Removed “{c.Label}”; everything else is kept. Ctrl+Z brings it back.";
 	}
 	private static readonly Ground.State NoPoints = new(Array.Empty<float>(), Array.Empty<float>(), Array.Empty<byte>(), Array.Empty<float>(), Array.Empty<byte>());
@@ -137,6 +137,15 @@ public sealed class EditSession
 	// The grid rectangle changed since the view last took it (to send to the graphics card).
 	private (int X0, int Z0, int X1, int Z1)? _dirty;
 	public event Action? Changed;
+	// A change made by the user (a stroke, a tool, undo, redo, a change taken out): not a save or an
+	// apply. Live auto-apply sends these to the game.
+	public event Action? EditMade;
+
+	private void Edited()
+	{
+		Changed?.Invoke();
+		EditMade?.Invoke();
+	}
 	// Things that appeared, went or came back (indices into the scene's things); after a save, every
 	// thing is read again (ThingsReset).
 	public event Action<IReadOnlyList<int>>? ThingsChanged;
@@ -226,7 +235,7 @@ public sealed class EditSession
 				: s.Touched.Count == 0 && _strokeMask != null ? "Nothing changed: the Mask leaves out all the ground under the brush (check its height, slope, biome and paint settings)." : "";
 			_strokeMask = null;
 		}
-		Changed?.Invoke();
+		Edited();
 		return message;
 	}
 
@@ -247,7 +256,7 @@ public sealed class EditSession
 				Send(zones);
 			}
 		}
-		Changed?.Invoke();
+		Edited();
 		return touched;
 	}
 
@@ -316,7 +325,7 @@ public sealed class EditSession
 				Send(zones);
 			}
 		}
-		Changed?.Invoke();
+		Edited();
 		return (touchedCount, clamped, bad);
 	}
 
@@ -338,6 +347,54 @@ public sealed class EditSession
 	}
 
 	public bool Undo() => Step(_undo, _redo, after: false);
+
+	// The steps at the end of the history not saved (offline) or applied (live) yet.
+	public int UnappliedSteps
+	{
+		get
+		{
+			lock (_lock)
+			{
+				int n = 0;
+				for (int i = _undo.Count - 1; i >= 0 && !_undo[i].Applied; i--)
+				{
+					n++;
+				}
+				return n;
+			}
+		}
+	}
+
+	// The editor's Discard: undoes those steps, newest first, and drops what could be redone; the
+	// rest of the history stays. How many were undone (none during a stroke).
+	public int UndoUnapplied()
+	{
+		int n = 0;
+		while (true)
+		{
+			lock (_lock)
+			{
+				if (_stroke != null || _undo.Count == 0 || _undo[^1].Applied)
+				{
+					break;
+				}
+			}
+			if (!Undo())
+			{
+				break;
+			}
+			n++;
+		}
+		lock (_lock)
+		{
+			if (_stroke == null)
+			{
+				_redo.Clear();
+			}
+		}
+		Changed?.Invoke();
+		return n;
+	}
 
 	public bool Redo() => Step(_redo, _undo, after: true);
 
@@ -385,7 +442,7 @@ public sealed class EditSession
 		{
 			ThingsChanged?.Invoke(c.Things.Select(t => t.Index).ToList());
 		}
-		Changed?.Invoke();
+		Edited();
 		return true;
 	}
 
@@ -428,7 +485,7 @@ public sealed class EditSession
 		SetGone(live.Select(i => (i, true)));
 		AddChange(new Change($"Deleted {live.Length}", Array.Empty<int>(), NoPoints, NoPoints, new()) { Things = live.Select(i => (i, false, true)).ToArray() });
 		ThingsChanged?.Invoke(live);
-		Changed?.Invoke();
+		Edited();
 	}
 
 	// Moves (and turns) things: each is replaced by a copy at its new place that keeps its own data
@@ -511,7 +568,7 @@ public sealed class EditSession
 		{
 			ThingsChanged?.Invoke(changes.Select(c => c.Item1).ToList());
 		}
-		Changed?.Invoke();
+		Edited();
 		return indices;
 	}
 
