@@ -450,6 +450,9 @@ public sealed class AreaPanel
 
 	// ---- Heightmaps: the area's ground as a 16-bit picture (with its lowest and highest heights), and a
 	// picture back into the ground, fitted to the selection or the whole area.
+	// Where Export writes (null: the heightmaps folder in the app's data folder). Tests use their own.
+	internal string? HeightmapFolder { get; set; }
+
 	internal string? ExportHeightmap(string? folder = null)
 	{
 		if (_view.Scene is not { World: { } world } s)
@@ -458,7 +461,7 @@ public sealed class AreaPanel
 		}
 		int x1 = s.X0 + s.Size - 1, z1 = s.Z0 + s.Size - 1;
 		byte[] png = Heightmaps.Encode(s.W, s.H, s.Heights, $"{world.Name} zones {s.X0},{s.Z0} to {x1},{z1}", out float min, out float max);
-		string dir = folder ?? Path.Combine(AppSettings.DataDir, "heightmaps");
+		string dir = folder ?? HeightmapFolder ?? Path.Combine(AppSettings.DataDir, "heightmaps");
 		Directory.CreateDirectory(dir);
 		string safe = string.Concat(world.Name.Select(c => char.IsLetterOrDigit(c) || c is '-' or '_' ? c : '_'));
 		string path = Path.Combine(dir, $"{safe}_{s.X0}_{s.Z0}_{x1}_{z1}.png");
@@ -586,16 +589,14 @@ public sealed class AreaPanel
 	private void FillBackups(string? select = null)
 	{
 		var s = _view.Scene;
-		if (s?.World == null || string.IsNullOrEmpty(s.World.Directory) || !Directory.Exists(s.World.Directory))
-		{
-			_backupPaths = new();
-			BackupBox.ItemsSource = new[] { "Another folder…" };
-			return;
-		}
 		var keep = select ?? (BackupBox.SelectedIndex >= 0 && BackupBox.SelectedIndex < _backupPaths.Count ? _backupPaths[BackupBox.SelectedIndex] : null);
-		var found = Backups.Find(s.World.Directory);
+		// A world without a folder (live from a game) has no backups of its own; folders chosen by hand stay.
+		var found = s?.World != null && !string.IsNullOrEmpty(s.World.Directory) && Directory.Exists(s.World.Directory) ? Backups.Find(s.World.Directory) : new List<Backups.Info>();
 		var extra = _backupPaths.Where(p => !found.Any(f => f.Path == p)).ToList();
 		_backupPaths = found.Select(b => b.Path).Concat(extra).ToList();
+		// The list keeps the selected text across a new source: with "Another folder…" still selected it
+		// would ask for a folder again.
+		BackupBox.SelectedIndex = -1;
 		BackupBox.ItemsSource = found.Select(b => $"{(b.Kind == "game" ? "Game" : "Editor")} · {b.Date:g}").Concat(extra).Append("Another folder…").ToList();
 		BackupBox.SelectedIndex = keep != null ? _backupPaths.IndexOf(keep) : -1;
 	}
