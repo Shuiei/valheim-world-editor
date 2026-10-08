@@ -161,7 +161,7 @@ public sealed partial class MainWindow
 		if (_view.Scene is { } ns && ns.X0 + ns.Size / 2 == zx && ns.Z0 + ns.Size / 2 == zz && cam != null)
 		{
 			_view.WorldCamera = cam;
-			}
+		}
 	}
 
 	internal void SetFollow(bool on)

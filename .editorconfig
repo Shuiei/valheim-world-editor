@@ -1,0 +1,47 @@
+# The code's conventions, for editors, `dotnet format` and the analyzers (CI checks both:
+# .circleci/config.yml, job code-analysis).
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.{cs,csproj,props,targets,xml}]
+indent_style = tab
+indent_size = 4
+tab_width = 4
+
+[*.{json,yml,yaml,md}]
+indent_style = space
+indent_size = 2
+
+[*.cs]
+# Braces on their own line (Allman), as everywhere in the code.
+csharp_new_line_before_open_brace = all
+csharp_new_line_before_else = true
+csharp_new_line_before_catch = true
+csharp_new_line_before_finally = true
+csharp_new_line_before_members_in_object_initializers = false
+csharp_new_line_before_members_in_anonymous_types = false
+csharp_new_line_between_query_expression_clauses = true
+csharp_indent_case_contents = true
+# A case's block keeps its braces at the case label's indent.
+csharp_indent_case_contents_when_block = false
+csharp_indent_switch_labels = true
+csharp_space_after_cast = false
+csharp_space_after_keywords_in_control_flow_statements = true
+csharp_preserve_single_line_statements = true
+csharp_preserve_single_line_blocks = true
+dotnet_sort_system_directives_first = true
+
+# The world generator imitates Unity's own types (Vector2.x, sqrMagnitude, Random.state...) so the
+# game's decompiled code runs unchanged and stays bit-exact with the game (verified by WorldCheck);
+# their public fields, Unity's names and its operators stay as Unity has them.
+[Core/WorldGen/{UnityShim,UnityNative}.cs]
+dotnet_diagnostic.CA1051.severity = none
+dotnet_diagnostic.CA1708.severity = none
+dotnet_diagnostic.CA2231.severity = none
+dotnet_diagnostic.CA1822.severity = none
+dotnet_diagnostic.CS0675.severity = none
