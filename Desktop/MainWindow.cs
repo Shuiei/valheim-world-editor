@@ -82,6 +82,7 @@ public sealed class MainWindow : Window
 	private MapPage? _map;
 	internal StartPage? StartPage => _start;
 	internal MapPage? MapPage => _map;
+	internal bool MapShown => _map != null && _pages.Content == _map.View;
 	private readonly AppSettings _settings = AppSettings.Load();
 
 	private static string Describe((int Zones, int Deleted, int Added, int Resets) p)
@@ -339,6 +340,13 @@ public sealed class MainWindow : Window
 	private EditSession? _session;
 	internal EditSession? Session => _session;
 	private bool _closeAnyway;
+
+	// The test driver's quit: what is pending is dropped without asking.
+	internal void CloseWithoutAsking()
+	{
+		_closeAnyway = true;
+		Close();
+	}
 
 	// Starts editing a loaded scene (also used by tests with a scene of their own).
 	internal void Edit(EditSession session)
@@ -1370,6 +1378,11 @@ public sealed class MainWindow : Window
 				return;
 			}
 			Options.Say("window open");
+			if (Options.Driver)
+			{
+				Driver.Start(this);
+				return;
+			}
 			if (Options.MapWorld is string mw)
 			{
 				await OpenWorld(() => Task.Run(() => WorldSession.Open(WorldScene.FindWorld(mw))), "Opening the world…");

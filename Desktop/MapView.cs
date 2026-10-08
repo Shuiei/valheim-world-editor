@@ -409,22 +409,24 @@ public sealed class MapView : OpenGlControlBase
 		_gl.BindVertexArray(0);
 		_gl.UseProgram(0);
 		// --map with --shot (and no --map-edit): a picture of the map once it is drawn.
+		_drawn++;
+		// The test driver's pictures: once the world map is in and a few frames are drawn.
+		if (_picture is { } req && _drawn > 10)
+		{
+			_picture = null;
+			try
+			{
+				GlPicture.Save(_gl, w, h, req.Path);
+				req.Done.SetResult();
+			}
+			catch (Exception ex)
+			{
+				req.Done.SetException(ex);
+			}
+		}
 		if (Options.Shot is string shot && (Options.MapEdit == null || Options.MapBack) && ++_shotFrames == 80)
 		{
-			byte[] px = new byte[w * h * 4];
-			fixed (byte* p = px)
-			{
-				_gl.ReadPixels(0, 0, (uint)w, (uint)h, PixelFormat.Rgba, PixelType.UnsignedByte, p);
-			}
-			using var bmp = new SKBitmap(new SKImageInfo(w, h, SKColorType.Rgba8888, SKAlphaType.Unpremul));
-			for (int y = 0; y < h; y++)
-			{
-				System.Runtime.InteropServices.Marshal.Copy(px, (h - 1 - y) * w * 4, bmp.GetPixels() + y * w * 4, w * 4);
-			}
-			using (var f = File.Create(shot))
-			{
-				bmp.Encode(f, SKEncodedImageFormat.Png, 90);
-			}
+			GlPicture.Save(_gl, w, h, shot);
 			Options.Say($"picture: {shot}");
 			Dispatcher.UIThread.Post(() => (Avalonia.Application.Current?.ApplicationLifetime as Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime)?.Shutdown());
 		}
@@ -432,7 +434,18 @@ public sealed class MapView : OpenGlControlBase
 
 	// Close up (under 6 m a pixel): the ground in view at 1 m, with the edits, read in the background.
 	private bool _asking;
-	private int _shotFrames;
+	private int _shotFrames, _drawn;
+	private volatile GlPicture.Request? _picture;
+
+	internal Task Picture(string path)
+	{
+		var r = new GlPicture.Request { Path = path };
+		_picture = r;
+		RequestNextFrameRendering();
+		return r.Done.Task;
+	}
+
+	internal int FramesDrawn => _drawn;
 	private void AskDetail(float mpp, int w, int h)
 	{
 		if (_data == null || _session == null || mpp >= 6 || _asking)
