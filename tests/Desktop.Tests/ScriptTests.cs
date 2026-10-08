@@ -108,6 +108,28 @@ public class ScriptTests
 		Assert.Equal(60, At(s, cx, cz), 1);
 	}
 
+	// docs/scripting.md's recipes: each one compiles and runs, so the documentation stays true.
+	[Fact]
+	public void TheDocumentationsRecipesRun()
+	{
+		string doc = File.ReadAllText(Path.Combine(EditorProcess.Fixtures(), "..", "..", "docs", "scripting.md"));
+		var recipes = System.Text.RegularExpressions.Regex.Matches(doc, "```csharp\n(.*?)```", System.Text.RegularExpressions.RegexOptions.Singleline)
+			.Select(m => m.Groups[1].Value).ToList();
+		Assert.True(recipes.Count >= 6, $"{recipes.Count} recipes");
+		foreach (string code in recipes)
+		{
+			var tree = new WorldScene.Thing(5, StableHash.Of("Beech1"), new Vector3(10, 30, 10), Vector3.Zero, 0, false);
+			var bush = new WorldScene.Thing(6, StableHash.Of("RaspberryBush"), new Vector3(20, 30, 10), Vector3.Zero, 0, false);
+			var s = EditTests.Flat(3, tree, bush);
+			// Dry land, as most of a world is (the flat test ground is at sea level).
+			Array.Fill(s.Ground.Base, 45f);
+			Array.Fill(s.Scene.Heights, 45f);
+			var ch = Run(s, code);
+			Assert.False(ch.Empty, "a recipe changed nothing:\n" + code);
+			ScriptHost.Apply(s, ch, "recipe");
+		}
+	}
+
 	[Fact]
 	public void AStoppedScriptChangesNothing()
 	{

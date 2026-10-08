@@ -102,7 +102,8 @@ what grows there; it does not change its height.
   a small sawtooth, in game too.
 
 - **The 8 m limit.** The game stores ground changes as an offset from the generated ground and
-  allows at most ±8 m. Points that reach it turn red and the status bar says so.
+  allows at most ±8 m. Points that reach it turn red and the status bar says so. **No limit** (below)
+  goes past it.
 - **Locked edge.** The outer line of points of the loaded area cannot be changed, so it always
   joins the next area seamlessly. Move the area with the top-bar arrows to edit there.
 - **Locations.** Villages, the trader, dungeon entrances and similar places flatten the ground
@@ -136,3 +137,45 @@ In the formula:
 For example `h * smooth(1 - d / r) * (1 + 0.3 * n(x / 8, z / 8))` is a bumpy hill, and
 `abs(x) < 3 ? -h : 0` digs a 6 m wide trench through the circle. A mistake in the formula is shown
 under it. The Mask and the ±8 m limit apply; one click is one undo step.
+
+## No limit
+
+The **No limit: past the game's ±8 m** switch, at the bottom of the brush options, lets every ground
+tool (the brushes, Path, Area, pasting) move the ground as far as you like: mountains, cliffs,
+canyons. It is off each time the editor starts.
+
+The game itself never stores ground more than 8 m from the generated ground, but it does level the
+ground under its locations (villages, dungeons...) without that limit, and counts that ground as
+generated. So when you save (or Apply live), the editor turns ground past the limit into invisible
+**ground discs**: hundreds of the game's own invisible locations that level a disc of ground each,
+placed so that together they make your shape, plus ordinary edits for the rest. Every player's game
+builds the same ground from them, console players included, with no mod. The hoe and pickaxe then
+work ±8 m from the new ground.
+
+- **Trees, rocks and bushes** where the ground moved more than 2 m are taken away on saving (they
+  would be buried or float); building pieces stay.
+- **Very steep walls** come out a little softer than drawn, more so near the middle of the world;
+  the save says how far off the steepest points are.
+- **Zones the game has not generated yet** are left as they were (visit them in game first).
+- **The map** in game is drawn from the world's seed, so it does not show the new shape.
+- **From afar**, the shape appears when you come near, as a village's flattened ground does.
+
+## Mountain
+
+Click the ground to raise a whole mountain there, past the ±8 m (the circle shows how far it
+reaches). Each one is made from a seed, so no two are alike.
+
+| Control | What it does |
+|---|---|
+| **Preset** | **Lone peak**, **Ridge**, **Mountain range**, **Mesa** (a flat top with steep, rocky sides), **Volcano** (with a crater) or **Rolling hills**. Choosing one rolls a new mountain of it. |
+| **Height**, **Radius** | How high it rises and how far it reaches from the click (m); its outline is ragged, up to 15% further. |
+| **Rough** | 0: smooth slopes. 1: deep gullies and ridges. |
+| **Turn** | The direction a ridge or range runs. |
+| **Seed** | The number its detail comes from: the same seed and values make the same mountain again. |
+| **Randomize** | A new mountain of the preset: size, roughness, direction and seed, made to fit in the open area. |
+| **Take away the trees and rocks it buries** | On by default (building pieces stay). |
+| **Grow the biome's trees and rocks on it** | Then plants the biome's own vegetation on its slopes, by the game's rules (a second undo step). |
+
+Its slopes mostly stay under 35°, so they keep grass and trees; steeper ones show bare rock, as in
+game. It must fit in the open area: open a bigger area for big mountains. Saving turns it into
+ground discs, as with No limit. A [script](scripting.md) can place mountains too, by rule.

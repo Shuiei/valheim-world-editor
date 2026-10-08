@@ -11,7 +11,11 @@ opens a Valheim world in its own window, drawn with the game's own terrain, text
 
 - **Shape the ground**: raise, lower, flatten, smooth, naturalize or restore it, and paint dirt,
   cultivated soil or paved stone.
-- **Build roads and ramps** along a line you draw.
+- **Build roads and ramps** along a line you draw, and **dig caves** roofed with the game's boulders.
+- **Go past the game's ±8 m**: raise **mountains**, ridges and volcanoes, or dig canyons. The editor
+  turns that ground into invisible locations the game levels by itself, so it works for every
+  player, console players included, with no mod.
+- **Write scripts** in C# to generate anything over an area: terrain, paint, trees, rocks, buildings.
 - **Work on whole areas**: level, paint, clear or copy and paste a box or polygon, or have the game
   generate zones again from scratch. Keep copies as **blueprints** to paste into any world.
 - **Place anything the game has**: trees, rocks, bushes, crops, building pieces and so on, with
@@ -188,13 +192,14 @@ See [docs/development.md](docs/development.md).
 |---|---|
 | [Getting around](docs/editor-basics.md) | Camera, top bar, saving, discarding, history, View panel, shortcuts |
 | [World map](docs/map.md) | The overview map and opening an area in 3D |
-| [Ground tools](docs/terrain.md) | Raise, Lower, Flatten, Smooth, Naturalize, Restore, ground paint |
-| [Path](docs/path.md) | Roads, ramps and paint along a line |
+| [Ground tools](docs/terrain.md) | Raise, Lower, Flatten, Smooth, Naturalize, Restore, ground paint, No limit (past ±8 m), Mountain |
+| [Path](docs/path.md) | Roads, ramps, rivers, caves and paint along a line |
 | [Mask](docs/masks.md) | Limiting any tool by biome, height, slope or paint |
 | [Area, copy and paste](docs/area.md) | Box and polygon selections, bulk actions, paste, zone reset |
 | [Place](docs/place.md) | Any kind of object: trees and rocks with a brush, walls and fences end to end along lines, circles and rectangles, grids and zones |
 | [Select](docs/select.md) | Selecting, moving with arrows, turning, dropping, copying, deleting |
 | [Measure and overlays](docs/measure.md) | Distances, slopes, slope colours, height lines |
+| [Script](docs/scripting.md) | C# scripts that shape, paint and populate an area: how to write them, everything they can use, recipes |
 | [Live mode](docs/live-mode.md) | Editing a running server |
 | [Development](docs/development.md) | Project layout, extracting the game files, tests |
 

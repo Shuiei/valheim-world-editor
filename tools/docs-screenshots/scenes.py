@@ -260,6 +260,18 @@ def scene_path(e):
     e.shot(OUT / "path.jpg")
 
 
+def scene_script(e):
+    bare(e, size=3)
+    e.send("click Script")
+    e.send("choose Example: Terraced hill")
+    e.send("click Run")
+    # Compiling the first script takes a moment.
+    e.send("wait 8000")
+    camera(e, 0, 0, 200, 34, 210)
+    e.send("wait 1500")
+    e.shot(OUT / "script.jpg", keep_message=True)
+
+
 def scene_mask(e):
     """The Mask limiting Raise to Meadows below 64 m and under 25°: the stroke across a steep mound
     raises the flat ground on both sides and leaves the mound's steep sides as they were."""
