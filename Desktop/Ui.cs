@@ -179,6 +179,15 @@ public static class Ui
 		r["ExpanderHeaderBorderBrushPointerOver"] = Line;
 		r["ExpanderContentBackground"] = Brushes.Transparent;
 		r["ExpanderContentBorderBrush"] = Line;
+		// Folds inside cards: no padding or border of their own (the card's padding is the only one).
+		r["ExpanderHeaderPadding"] = new Thickness(0);
+		r["ExpanderContentPadding"] = new Thickness(0, 6, 0, 0);
+		r["ExpanderHeaderBorderThickness"] = new Thickness(0);
+		r["ExpanderContentDownBorderThickness"] = new Thickness(0);
+		r["ExpanderContentUpBorderThickness"] = new Thickness(0);
+		r["ExpanderContentLeftBorderThickness"] = new Thickness(0);
+		r["ExpanderContentRightBorderThickness"] = new Thickness(0);
+		r["ExpanderMinHeight"] = 32.0;
 
 		var s = app.Styles;
 		s.Add(new Style(x => x.OfType<Window>()) { Setters = { new Setter(TemplatedControl.BackgroundProperty, Bg), new Setter(TemplatedControl.FontSizeProperty, 13.0) } });

@@ -233,7 +233,7 @@ public sealed class MapPage
 		{
 			panel.Children.Add(c);
 		}
-		return new Expander { Header = new TextBlock { Text = title, FontSize = 13, FontWeight = FontWeight.SemiBold }, IsExpanded = open, Content = panel, HorizontalAlignment = HorizontalAlignment.Stretch, Padding = new Thickness(6) };
+		return new Expander { Header = new TextBlock { Text = title, FontSize = 13, FontWeight = FontWeight.SemiBold }, IsExpanded = open, Content = panel, HorizontalAlignment = HorizontalAlignment.Stretch };
 	}
 
 	private static Control Spaced(Control c)
