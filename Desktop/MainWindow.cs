@@ -55,6 +55,9 @@ public sealed partial class MainWindow : Window
 	internal MeasurePanel MeasurePanel { get; }
 	internal ShapePanel ShapePanel { get; } = new();
 	internal MountainPanel MountainPanel { get; } = new();
+	internal ScriptPanel ScriptPanel { get; } = new();
+	// Stops the running script (null: none runs).
+	private Action? _stopScript;
 	internal Mask Mask { get; } = new();
 	internal MaskPanel MaskPanel { get; }
 	internal PathPanel PathPanel { get; }
@@ -840,6 +843,81 @@ public sealed partial class MainWindow : Window
 		_message.Text = clamped ? "Stamped, but part of it reached the game limit of ±8 m from the original ground (red points)."
 			: $"Stamped {MathF.Abs(amount)} m {(amount >= 0 ? "up" : "down")}. Ctrl+Z undoes it.";
 		UpdateSaveBar();
+	}
+
+	// The Script tool's Run: compiled and run in the background on a snapshot of the area, then what it
+	// changed goes in as one undo step (nothing when it fails or is stopped).
+	internal async Task RunScript()
+	{
+		if (_session is not { } s)
+		{
+			_message.Text = "Open an area first: a script works on the open area.";
+			return;
+		}
+		if (_stopScript != null)
+		{
+			return;
+		}
+		var panel = ScriptPanel;
+		string name = panel.ScriptBox.SelectedItem as string ?? "script";
+		panel.Running(true);
+		panel.Output.Text = "Compiling…";
+		using var cancel = new CancellationTokenSource(TimeSpan.FromMinutes(2));
+		_stopScript = cancel.Cancel;
+		string code = panel.CodeBox.Text ?? "";
+		var snap = ScriptHost.Take(s, NameOfPrefab);
+		var watch = System.Diagnostics.Stopwatch.StartNew();
+		try
+		{
+			var (image, pdb, errors) = await Task.Run(() => ScriptHost.Compile(code));
+			if (image == null)
+			{
+				panel.Output.Text = "The script has mistakes:\n" + string.Join("\n", errors);
+				_message.Text = "The script has mistakes (see below it): nothing changed.";
+				return;
+			}
+			panel.Output.Text = "Running…";
+			var ch = await Task.Run(() => ScriptHost.Run(image, pdb, snap, cancel.Token), cancel.Token);
+			if (_session != s)
+			{
+				panel.Output.Text = ch.Output + "Another area was opened while the script ran: nothing changed.";
+				return;
+			}
+			string what;
+			if (ch.Empty)
+			{
+				what = "The script ran and changed nothing.";
+			}
+			else
+			{
+				int clamped = ScriptHost.Apply(s, ch, $"Script: {name.Replace("Example: ", "", StringComparison.Ordinal)}");
+				var parts = new List<string>();
+				if (ch.Heights.Count > 0) parts.Add($"{ch.Heights.Count:N0} ground point(s)");
+				if (ch.Paint.Count > 0) parts.Add($"{ch.Paint.Count:N0} painted");
+				if (ch.Add.Count > 0) parts.Add($"{ch.Add.Count:N0} object(s) placed");
+				if (ch.Remove.Count > 0) parts.Add($"{ch.Remove.Count:N0} taken away");
+				what = $"The script changed {string.Join(", ", parts)} in {watch.Elapsed.TotalSeconds:0.0} s; Ctrl+Z takes it all back."
+					+ (clamped > 0 ? $" {clamped:N0} point(s) stopped at the game's ±8 m (Ground.NoLimit = true lets them go further)." : "");
+			}
+			panel.Output.Text = ch.Output + what;
+			_message.Text = what;
+			UpdateSaveBar();
+		}
+		catch (OperationCanceledException)
+		{
+			panel.Output.Text = "Stopped: nothing changed.";
+			_message.Text = "The script was stopped (or ran 2 minutes): nothing changed.";
+		}
+		catch (Exception ex)
+		{
+			panel.Output.Text = $"The script stopped with an error, nothing changed:\n{ScriptHost.Where(ex)}{ex.GetType().Name}: {ex.Message}";
+			_message.Text = "The script stopped with an error (see below it): nothing changed.";
+		}
+		finally
+		{
+			_stopScript = null;
+			panel.Running(false);
+		}
 	}
 
 	// The Mountain tool's click: the mountain goes into the ground there (grid point), then the biome's
@@ -1667,7 +1745,7 @@ public sealed partial class MainWindow : Window
 			Margin = new Thickness(10, 70, 10, 58),
 			HorizontalAlignment = HorizontalAlignment.Left,
 			VerticalAlignment = VerticalAlignment.Top,
-			Children = { Tools.Rail, Tools.Options, SelectPanel.Card, MeasurePanel.Card, ShapePanel.Card, MountainPanel.Card, PathPanel.Card, AreaPanel.Card, PastePanel.Card, PlacePanel.Card, PlacePanel.Chooser, MaskPanel.Card },
+			Children = { Tools.Rail, Tools.Options, SelectPanel.Card, MeasurePanel.Card, ShapePanel.Card, MountainPanel.Card, ScriptPanel.Card, PathPanel.Card, AreaPanel.Card, PastePanel.Card, PlacePanel.Card, PlacePanel.Chooser, MaskPanel.Card },
 		};
 		// Every panel of the column scrolls when the window is too short for it (a bar only then).
 		foreach (var card in tools.Children.OfType<Border>())
@@ -1678,7 +1756,7 @@ public sealed partial class MainWindow : Window
 				card.Child = new ScrollViewer { VerticalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Auto, Content = inner };
 			}
 		}
-		SelectPanel.Card.IsVisible = MeasurePanel.Card.IsVisible = ShapePanel.Card.IsVisible = MountainPanel.Card.IsVisible = PathPanel.Card.IsVisible = AreaPanel.Card.IsVisible = PastePanel.Card.IsVisible = MaskPanel.Card.IsVisible = PlacePanel.Card.IsVisible = false;
+		SelectPanel.Card.IsVisible = MeasurePanel.Card.IsVisible = ShapePanel.Card.IsVisible = MountainPanel.Card.IsVisible = ScriptPanel.Card.IsVisible = PathPanel.Card.IsVisible = AreaPanel.Card.IsVisible = PastePanel.Card.IsVisible = MaskPanel.Card.IsVisible = PlacePanel.Card.IsVisible = false;
 		ShapePanel.Changed += () => _view.ShapeRadius = ShapePanel.Radius;
 		MountainPanel.Changed += () => { if (Tools.Mode == ToolMode.Mountain) _view.ShapeRadius = MountainPanel.Spec.Reach; };
 		_view.ShapeClicked += (x, z) =>
@@ -1698,6 +1776,9 @@ public sealed partial class MainWindow : Window
 			Tools.MarkCave(true);
 		};
 		PathPanel.ActionChanged += a => Tools.MarkCave(a == PathTool.Action.Cave);
+		ScriptPanel.RunAsked += () => _ = RunScript();
+		ScriptPanel.StopAsked += () => _stopScript?.Invoke();
+		ScriptPanel.Message += t => _message.Text = t;
 		Tools.Options.VerticalAlignment = VerticalAlignment.Top;
 		Tools.Rail.VerticalAlignment = VerticalAlignment.Top;
 		Tools.ToolChanged += t =>
@@ -1708,6 +1789,7 @@ public sealed partial class MainWindow : Window
 			MeasurePanel.Card.IsVisible = Tools.Mode == ToolMode.Measure;
 			ShapePanel.Card.IsVisible = Tools.Mode == ToolMode.Shape;
 			MountainPanel.Card.IsVisible = Tools.Mode == ToolMode.Mountain;
+			ScriptPanel.Card.IsVisible = Tools.Mode == ToolMode.Script;
 			_view.ShapeRadius = Tools.Mode == ToolMode.Mountain ? MountainPanel.Spec.Reach : ShapePanel.Radius;
 			PathPanel.Card.IsVisible = Tools.Mode == ToolMode.Path;
 			if (Tools.Mode == ToolMode.Path)

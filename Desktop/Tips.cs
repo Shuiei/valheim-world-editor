@@ -36,6 +36,13 @@ public static class Tips
 		["brush.turn"] = "Turn of a square brush or a picture (degrees). , and . change it (Shift: 15°).",
 		["brush.loadStamp"] = "Load a picture (PNG, JPEG...) as a brush shape: white parts work fully, black parts not at all. It is kept for next time.",
 		["brush.forgetStamp"] = "Forget the loaded picture chosen as Shape (built-in stamps stay).",
+		// ---- Script tool
+		["script.pick"] = "An example to start from, or a script you saved (Save keeps them in the data folder's scripts folder).",
+		["script.code"] = "The script: C# statements run on the open area, with Area, Ground, Objects, Noise, Rnd and Print. Ctrl+Enter runs it.",
+		["script.name"] = "The name to save the script under.",
+		["script.save"] = "Save the script (as <name>.csx in the data folder's scripts folder), to pick it again later.",
+		["script.run"] = "Compile and run the script on the open area (Ctrl+Enter): everything it changes is one undo step.",
+		["script.stop"] = "Stop the running script: nothing it did is kept. (A loop that never calls the editor cannot be stopped; it ends after 2 minutes.)",
 		// ---- Mountain tool
 		["mountain.preset"] = "What kind of mountain: a lone peak, a ridge, a mountain range, a mesa (flat top), a volcano or rolling hills. Choosing one rolls a new one (Randomize).",
 		["mountain.height"] = "How high it rises above the ground there (m). Past the game's ±8 m: saving turns it into ground discs.",

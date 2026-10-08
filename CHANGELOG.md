@@ -32,6 +32,15 @@ the plugin is unchanged in versions without that part.
   the sides. A line drawn as a ring makes a ring-shaped cave with one entrance. Presets (tunnel,
   cave, cavern) and Randomize. The ground cannot overhang in Valheim, so the roof is rocks; players
   can mine them like any boulder.
+- **Script** tool: C# scripts run on the open area, to generate anything the tools do and more.
+  The editor compiles them itself (no .NET install needed) and gives them Area (its corners, its
+  points, sea level, the world's seed), Ground (Height, Original, Set, Raise, Lower, Paint, Biome,
+  Shape, Mountain; past the ±8 m by default), Objects (All, OfKind, Near, Place, Remove, CanPlace),
+  Noise, a seeded Rnd and Print. A script runs in the background on a snapshot of the area; what it
+  changes goes in as one undo step, nothing when it fails (its mistakes and errors give the line) or
+  is stopped. Examples to start from (a mountain range, terraces, a canyon with a river, scattered
+  boulders, a ring of trees, a flat paved base, a noise landscape); scripts are saved in the data
+  folder's scripts folder. The program file is about 20 MB larger (the C# compiler).
 
 ## v1.0.1 — 2026-10-08
 
