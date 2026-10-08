@@ -160,7 +160,47 @@ public sealed class WorldScene
 			LoadInfo = $"{world.Name}: read in {readMs} ms, {size}×{size} zones and {things.Count:N0} objects ready in {watch.ElapsedMilliseconds} ms",
 		};
 		scene.Session = new EditSession(scene, Ground.Read(terrain, edits, x0, z0, size), edits);
+		// The world's history (made in other areas), fitted to this one.
+		if (owner?.History is { } kept)
+		{
+			scene.Session.Import(kept, ids => FindThings(world, edits, ids));
+		}
 		return scene;
+	}
+
+	// Objects by id wherever they are, as things gone or not (deleted, or added and undone, they are gone):
+	// what a history fitted to an area needs that the area does not show.
+	public static Dictionary<int, Thing> FindThings(WorldSave world, EditStore edits, IReadOnlyCollection<int> ids)
+	{
+		var want = ids.ToHashSet();
+		var deleted = edits.Deleted;
+		var added = edits.Added.Select(n => n.Id).ToHashSet();
+		var found = new Dictionary<int, Thing>();
+		foreach (int id in want.Where(i => i < 0))
+		{
+			if (edits.FindAdded(id) is { } n)
+			{
+				found[id] = new Thing(n.Id, n.Prefab, n.Position, n.Rotation, n.Scale, PieceCatalog.Get(n.Prefab)?.Tool != null) { Gone = !added.Contains(id) };
+			}
+		}
+		if (want.Any(i => i >= 0))
+		{
+			foreach (var (id, prefab, p, r, sc) in world.Objects)
+			{
+				if (want.Contains(id))
+				{
+					found[id] = new Thing(id, prefab, p, r, sc.X, false) { Gone = deleted.Contains(id) };
+				}
+			}
+			foreach (var (id, prefab, p, ry) in world.Pieces)
+			{
+				if (want.Contains(id))
+				{
+					found[id] = new Thing(id, prefab, p, new Vector3(0, ry, 0), 0, true) { Gone = deleted.Contains(id) };
+				}
+			}
+		}
+		return found;
 	}
 
 	// The objects and building pieces of the block's zones (those not deleted).

@@ -33,6 +33,8 @@ public sealed class EditSession
 		// Taken out (History panel: Remove), and the change a removal takes out.
 		public bool Removed { get; set; }
 		public Change? RevertOf { get; init; }
+		// Live: already sent to the running game (Apply live); still undoable, which makes a new change.
+		public bool Applied { get; set; }
 
 		// "3 zones · 2 new · 1 removed · 1 zone reset", like the web editor's history.
 		public string Describe()
@@ -597,6 +599,13 @@ public sealed class EditSession
 			else
 			{
 				Ground.TakeEdits(Edits);
+				if (o.Done)
+				{
+					foreach (var c in _undo)
+					{
+						c.Applied = true;
+					}
+				}
 			}
 		}
 		if (o.Reloaded)
@@ -605,6 +614,116 @@ public sealed class EditSession
 		}
 		Changed?.Invoke();
 		return o;
+	}
+
+	// ---- The history follows the open world from area to area (like the web editor's, kept by the
+	// server): while another area is open it is kept with the world, ground points by world position and
+	// objects by id, and fitted to the next area opened.
+	public sealed record Kept(List<Change> Undo, List<Change> Redo, int Ox, int Oz, int W, int X0, int Z0, Dictionary<Change, int[]> Ids);
+
+	public Kept Export()
+	{
+		lock (_lock)
+		{
+			var ids = new Dictionary<Change, int[]>();
+			foreach (var c in _undo.Concat(_redo))
+			{
+				ids[c] = c.Things.Select(t => Scene.Things[t.Index].Id).ToArray();
+			}
+			return new Kept(_undo.ToList(), _redo.ToList(), Scene.X0 * 64 - 32, Scene.Z0 * 64 - 32, Ground.W, Scene.X0, Scene.Z0, ids);
+		}
+	}
+
+	// The kept history fitted to this area: a change whose ground or objects are not all in it (and
+	// every change before it) is left out, as it could not be undone here. Objects it needs that the area
+	// does not show (deleted, or added and undone) come back as gone things. Returns how many were left out.
+	public int Import(Kept k, Func<IReadOnlyCollection<int>, Dictionary<int, WorldScene.Thing>> find)
+	{
+		lock (_lock)
+		{
+			int ox = Scene.X0 * 64 - 32, oz = Scene.Z0 * 64 - 32;
+			var index = new Dictionary<int, int>();
+			for (int i = 0; i < Scene.Things.Count; i++)
+			{
+				index.TryAdd(Scene.Things[i].Id, i);
+			}
+			var missing = k.Ids.Values.SelectMany(v => v).Where(id => !index.ContainsKey(id)).Distinct().ToList();
+			var found = missing.Count > 0 ? find(missing) : new();
+			float minX = Scene.X0 * 64f - 32f, maxX = (Scene.X0 + Scene.Size - 1) * 64f + 32f, minZ = Scene.Z0 * 64f - 32f, maxZ = (Scene.Z0 + Scene.Size - 1) * 64f + 32f;
+			int? Thing(int id)
+			{
+				if (index.TryGetValue(id, out int i))
+				{
+					return i;
+				}
+				if (found.TryGetValue(id, out var t) && t.Position.X >= minX && t.Position.X < maxX && t.Position.Z >= minZ && t.Position.Z < maxZ)
+				{
+					lock (Scene.Things)
+					{
+						Scene.Things.Add(t);
+						index[id] = Scene.Things.Count - 1;
+					}
+					return Scene.Things.Count - 1;
+				}
+				return null;
+			}
+			int[]? Points(int[] pts)
+			{
+				var r = new int[pts.Length];
+				for (int n = 0; n < pts.Length; n++)
+				{
+					int gx = pts[n] % k.W + k.Ox - ox, gz = pts[n] / k.W + k.Oz - oz;
+					if (gx < 0 || gz < 0 || gx >= Ground.W || gz >= Ground.H || Ground.Locked(gx, gz))
+					{
+						return null;
+					}
+					r[n] = gz * Ground.W + gx;
+				}
+				return r;
+			}
+			List<(int X, int Z)>? Zones(List<(int X, int Z)> zones)
+			{
+				var r = zones.Select(z => (X: z.X + k.X0 - Scene.X0, Z: z.Z + k.Z0 - Scene.Z0)).ToList();
+				return r.All(z => z.X >= 0 && z.Z >= 0 && z.X < Scene.Size && z.Z < Scene.Size) ? r : null;
+			}
+			var map = new Dictionary<Change, Change>();
+			Change? Fit(Change c)
+			{
+				if (Points(c.Points) is not { } pts || Zones(c.Zones) is not { } zones)
+				{
+					return null;
+				}
+				var ids = k.Ids[c];
+				var things = new (int, bool, bool)[ids.Length];
+				for (int n = 0; n < ids.Length; n++)
+				{
+					if (Thing(ids[n]) is not int i)
+					{
+						return null;
+					}
+					things[n] = (i, c.Things[n].Before, c.Things[n].After);
+				}
+				var f = new Change(c.Label, pts, c.Before, c.After, zones)
+				{
+					Things = things, Resets = c.Resets, Time = c.Time, Removed = c.Removed, Applied = c.Applied,
+					RevertOf = c.RevertOf != null && map.TryGetValue(c.RevertOf, out var r) ? r : null,
+				};
+				map[c] = f;
+				return f;
+			}
+			// Oldest first, so a removal finds the change it took out; then keep the newest that fit.
+			var undo = k.Undo.Select(Fit).ToList();
+			int start = undo.FindLastIndex(c => c == null) + 1;
+			_undo.Clear();
+			_undo.AddRange(undo.Skip(start)!);
+			// The redo list has the next redo last; fitted oldest first too. One that does not fit is
+			// dropped with every change after it (they could only be redone after it).
+			var redo = Enumerable.Reverse(k.Redo).Select(Fit).Reverse().ToList();
+			int end = redo.FindLastIndex(c => c == null);
+			_redo.Clear();
+			_redo.AddRange(redo.Skip(end + 1)!);
+			return start + end + 1;
+		}
 	}
 
 	// The world was read again (saved, reloaded): the ground and the objects from it, no history.

@@ -158,6 +158,7 @@ public sealed class MainWindow : Window
 			return;
 		}
 		_view.SelectTool.Commit();
+		KeepHistory();
 		if (_map == null)
 		{
 			_map = new MapPage();
@@ -174,6 +175,15 @@ public sealed class MainWindow : Window
 		_pages.Content = _map.View;
 	}
 
+	// Leaving an area: its history stays with the world, for the next area opened.
+	private void KeepHistory()
+	{
+		if (_session is { Scene.Owner: { } owner } s && _pages.Content == _editorPage)
+		{
+			owner.History = s.Export();
+		}
+	}
+
 	// An area of the world in the 3D editor.
 	internal async Task EditArea(int x, int z, int size)
 	{
@@ -181,6 +191,8 @@ public sealed class MainWindow : Window
 		{
 			return;
 		}
+		_view.SelectTool.Commit();
+		KeepHistory();
 		Busy($"Loading {size} × {size} zones around zone {x}, {z}…");
 		try
 		{
@@ -748,6 +760,7 @@ public sealed class MainWindow : Window
 		MapButton.Click += (_, _) => ShowMap();
 		ToolTip.SetTip(MapButton, "Back to the world map (what is not saved stays pending)");
 		HistoryButton.Click += (_, _) => ShowRight(History.Card.IsVisible ? null : History.Card);
+		History.Closed += () => HistoryButton.Classes.Set("on", false);
 		ToolTip.SetTip(HistoryButton, "Every change of this session: go back to one, or take out only one (L)");
 		ViewButton.Click += (_, _) => ShowRight(_viewPanel.IsVisible ? null : _viewPanel);
 		ToolTip.SetTip(ViewButton, "Show / hide things in the world (V)");

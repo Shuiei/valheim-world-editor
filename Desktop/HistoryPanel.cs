@@ -15,12 +15,13 @@ public sealed class HistoryPanel
 	internal TextBlock Count { get; } = new() { FontSize = 11, Foreground = Ui.Muted };
 	private readonly Func<EditSession?> _session;
 	public event Action<string>? Message;
+	public event Action? Closed;
 
 	public HistoryPanel(Func<EditSession?> session)
 	{
 		_session = session;
-		var close = new Button { Content = "✕", FontSize = 11, Padding = new Thickness(6, 0), HorizontalAlignment = HorizontalAlignment.Right };
-		close.Click += (_, _) => Card!.IsVisible = false;
+		var close = new Button { Content = Icons.Make("close", 14), Padding = new Thickness(5), HorizontalAlignment = HorizontalAlignment.Right }.Classed("ghost");
+		close.Click += (_, _) => { Card!.IsVisible = false; Closed?.Invoke(); };
 		Card = new Border
 		{
 			Background = Ui.Panel,
@@ -121,12 +122,28 @@ public sealed class HistoryPanel
 			}
 		}
 		string meta = c.Time.ToString("T") + (c.Describe() is { Length: > 0 } d ? " · " + d : "");
-		var label = new TextBlock { Text = c.Label, FontSize = 12, FontWeight = current ? FontWeight.SemiBold : FontWeight.Normal, TextDecorations = c.Removed ? TextDecorations.Strikethrough : null };
+		var label = new StackPanel
+		{
+			Orientation = Orientation.Horizontal,
+			Spacing = 6,
+			Children = { new TextBlock { Text = c.Label, FontSize = 12.5, FontWeight = current ? FontWeight.SemiBold : FontWeight.Normal, TextDecorations = c.Removed ? TextDecorations.Strikethrough : null, Foreground = c.Removed ? Ui.Muted : Ui.Text } },
+		};
+		if (c.Applied)
+		{
+			// Live: sent to the game already (the web editor's tag).
+			label.Children.Add(new Border
+			{
+				CornerRadius = new CornerRadius(999), BorderThickness = new Thickness(1), BorderBrush = new SolidColorBrush(Color.Parse("#2a6a4a")), Padding = new Thickness(5, 0), VerticalAlignment = VerticalAlignment.Center,
+				Child = new TextBlock { Text = "applied", FontSize = 10, Foreground = Ui.Live },
+			});
+		}
+		// The current change outlined in amber, like the web editor's.
 		return new Border
 		{
-			Background = current ? new SolidColorBrush(Color.FromArgb(60, 58, 92, 140)) : null,
-			CornerRadius = new CornerRadius(6),
-			Padding = new Thickness(6, 3),
+			BorderThickness = new Thickness(1),
+			BorderBrush = current ? Ui.Accent : Brushes.Transparent,
+			CornerRadius = new CornerRadius(7),
+			Padding = new Thickness(6),
 			Opacity = undone ? 0.5 : 1,
 			Child = new Grid
 			{
