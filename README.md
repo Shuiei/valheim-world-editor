@@ -48,9 +48,8 @@ your own computer; nothing is sent anywhere else.
   plus the WorldEditorBridge plugin that comes with the editor. Players who join need neither.
 
 Nothing else: no Python, no .NET, no `ssh` command. Everything the editor needs comes in the
-download. Its window uses the web engine of the system: Microsoft Edge WebView2 on Windows (part of
-Windows 11 and of an up-to-date Windows 10) and WebKitGTK on Linux (installed with most desktops).
-Without it, the editor opens in your web browser instead.
+download: one program file, drawn with OpenGL (any graphics driver of the last ten years; on
+Windows it falls back to Direct3D when the driver has no OpenGL).
 
 ### Install and start
 
@@ -65,10 +64,11 @@ Without it, the editor opens in your web browser instead.
 
 ![The start page](docs/images/start-game.jpg)
 
-The first time, a bar at the top shows the editor copying the game's look from your Valheim install
-(a few minutes, about 150 MB); you can already start editing meanwhile. After a Valheim update it is
-copied again by itself. If Valheim is not found, the bar asks for its folder (the one Steam installed
-it into, with `valheim_Data`).
+The first time, a card on the start page shows the editor copying the game's look from your Valheim
+install (a few minutes, about 150 MB); you can already start editing meanwhile, and the areas you
+open once it is done have the game's textures and models. After a Valheim update it is copied again
+by itself. If Valheim is not found, the card asks for its folder (the one Steam installed it into,
+with `valheim_Data`).
 
 ### My game (live)
 
@@ -134,7 +134,7 @@ In every way, the [world map](docs/map.md) opens first: click a spot and choose 
 The editor looks in the usual places by itself: Valheim in every Steam library (also Flatpak Steam
 and extra libraries), BepInEx in the Valheim folder and in the default r2modman / Thunderstore Mod
 Manager profiles, and worlds in Valheim's own world folders (Proton's too). When yours are
-elsewhere, set them in **⚙ Settings** on the start page:
+elsewhere, set them in **Settings** on the start page:
 
 - **Valheim game folder**: the folder with `valheim_Data` (a copy outside Steam, a second install…).
   **Automatic** goes back to searching the Steam libraries.
@@ -151,29 +151,30 @@ with the server; **edit** next to a saved server changes it. (The token is still
 
 ### Where things are kept
 
-Settings, saved servers (`servers.cfg`), the copied game files and a log are in `~/.local/share/ValheimWorldEditor` (Linux) or
-`%LOCALAPPDATA%\ValheimWorldEditor` (Windows). The bottom of the start page shows the folder.
+Settings, saved servers (`servers.cfg`), what the editor remembers between runs, blueprints, the
+copied game files and a log (`log.txt`, a new one each run) are in `~/.local/share/ValheimWorldEditor`
+(Linux) or `%LOCALAPPDATA%\ValheimWorldEditor` (Windows). The bottom of the start page shows the
+folder.
 
 ### Command line (optional)
 
 The program also takes a world or a live server directly, which is handy for scripts:
 
 ```sh
-ValheimWorldEditor "<world folder>"                                   # open that world
-ValheimWorldEditor --live http://127.0.0.1:5182 --token <token>       # connect to a server
-ValheimWorldEditor --browser                                          # use the web browser instead of a window
-ValheimWorldEditor --port 5190                                        # a fixed port (default: the first free one from 5180)
+ValheimWorldEditor "<world folder>"                                   # open that world's map
+ValheimWorldEditor --live http://127.0.0.1:5182 --token <token>       # connect to a game (or WORLD_BRIDGE_TOKEN)
+ValheimWorldEditor --world "<world folder or name>" --zone 3,-2       # straight into the 3D editor there
 ```
 
 ### Building from source
 
 ```sh
-dotnet publish TerrainEditor.csproj -c Release -r linux-x64 --self-contained -p:PublishSingleFile=true -o ../ValheimWorldEditor
+dotnet publish Desktop/ValheimWorldEditor.Desktop.csproj -c Release -r linux-x64 --self-contained -p:PublishSingleFile=true -o ../ValheimWorldEditor
 ```
 
-Use `-r win-x64` for Windows. Publish outside the source folder: a folder inside it would be packed
-into the next build. `tools/release.sh <folder>` builds the complete release packages
-(program, page, the exporter and its Python runtime). See [docs/development.md](docs/development.md).
+Use `-r win-x64` for Windows. `tools/release.sh <folder>` builds the complete release packages
+(the program, the game-look exporter and its Python runtime, the plugin). See
+[docs/development.md](docs/development.md).
 
 ## Documentation
 
@@ -186,7 +187,6 @@ into the next build. `tools/release.sh <folder>` builds the complete release pac
 | [Mask](docs/masks.md) | Limiting any tool by biome, height, slope or paint |
 | [Area, copy and paste](docs/area.md) | Box and polygon selections, bulk actions, paste, zone reset |
 | [Place](docs/place.md) | Any kind of object: trees and rocks with a brush, walls and fences end to end along lines, circles and rectangles, grids and zones |
-| [Script console](docs/script.md) | A few lines of JavaScript for bulk jobs (MCEdit filters), one undo step per run |
 | [Select](docs/select.md) | Selecting, moving with arrows, turning, dropping, copying, deleting |
 | [Measure and overlays](docs/measure.md) | Distances, slopes, slope colours, height lines |
 | [Live mode](docs/live-mode.md) | Editing a running server |
