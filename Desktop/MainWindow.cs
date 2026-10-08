@@ -108,6 +108,7 @@ public sealed class MainWindow : Window
 			_start?.Stop();
 			_start = new StartPage(_settings, error);
 			_start.OpenRequested += async (open, what) => await OpenWorld(open, what);
+			_start.OpenUrl = uri => Launcher.LaunchUriAsync(uri);
 			_start.SettingsRequested += async () => { if (await SettingsDialog.Show(this, _settings)) _start!.SetMode(_start.Mode); };
 			_start.Confirm = text => Dialogs.Ask(this, "Valheim World Editor", text, "Yes");
 			_start.PickFolder = async title =>
@@ -173,7 +174,7 @@ public sealed class MainWindow : Window
 			_map.Confirm = text => Dialogs.Ask(this, "Valheim World Editor", text, "Yes");
 			_map.Tell = text => Dialogs.Tell(this, "Valheim World Editor", text);
 		}
-		Title = $"{_world.World.Name} · Valheim World Editor (native preview)";
+		Title = $"{_world.World.Name} · Valheim World Editor {BuildInfo.Version}";
 		_map.Show(_world);
 		_pages.Content = _map.View;
 	}
@@ -235,7 +236,7 @@ public sealed class MainWindow : Window
 		_view.Tape.Clear();
 		PlaceTool.ClearShape();
 		Inspector.Close();
-		_info.Text = scene.LoadInfo + (_models == null ? "\nNo game models copied yet: boxes stand in (open the web editor once to copy the game's look)." : "");
+		_info.Text = scene.LoadInfo + (_models == null ? "\nNo game models copied yet: boxes stand in until the game's look is copied (see the start page)." : "");
 		_view.Show(scene, _models);
 		if (scene.Session != null)
 		{
@@ -245,7 +246,7 @@ public sealed class MainWindow : Window
 		_title.Text = scene.Name;
 		int mid = scene.Size / 2;
 		_subtitle.Text = $"{scene.Size} × {scene.Size} zones around zone {scene.X0 + mid}, {scene.Z0 + mid} · {scene.Things.Count(t => !t.Gone):N0} objects";
-		Title = $"{scene.Name} · Valheim World Editor (native preview)";
+		Title = $"{scene.Name} · Valheim World Editor {BuildInfo.Version}";
 		_pages.Content = _editorPage;
 	}
 
@@ -1225,6 +1226,7 @@ public sealed class MainWindow : Window
 		PastePanel.Done += () => Tools.ChooseMode(ToolMode.Area);
 		_view.PasteClicked += PasteAt;
 		Title = $"Valheim World Editor {BuildInfo.Version}";
+		Icon = new WindowIcon(Avalonia.Platform.AssetLoader.Open(new Uri($"avares://{typeof(MainWindow).Assembly.GetName().Name}/Assets/icon.png")));
 		Width = 1500;
 		Height = 950;
 		Background = Ui.Bg;
@@ -1375,6 +1377,19 @@ public sealed class MainWindow : Window
 			else
 			{
 				ShowStart();
+				// A world folder or a live game given on the command line: as if chosen on the start page.
+				if (Options.LiveUrl is string url)
+				{
+					_start!.SetMode("server");
+					_start.LiveUrl.Text = url;
+					_start.LiveToken.Text = Options.LiveToken ?? "";
+					await _start.ConnectUrl();
+				}
+				else if (Options.Folder is string folder)
+				{
+					_start!.SetMode("offline");
+					_start.OpenFolder(folder);
+				}
 			}
 			if (Options.Driver)
 			{

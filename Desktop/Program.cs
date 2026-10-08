@@ -14,8 +14,15 @@ public static class Program
 	public static void Main(string[] args)
 	{
 		Options.Parse(args);
+		// Everything said also goes to log.txt in the data folder (a window app has no console on Windows).
+		TerrainEditor.App.Log.Start(BuildInfo.Version);
 		AppDomain.CurrentDomain.UnhandledException += (_, e) => Options.Say($"crash: {e.ExceptionObject}");
-		// Windows: ANGLE (OpenGL ES on Direct3D 11) first, the driver's own OpenGL if that fails.
+		// Logging out, shutting down or `kill` (SIGTERM, SIGHUP): the tunnel and the game-look copy stop,
+		// then the app ends (changes not saved are lost, as when the computer turns off).
+		using var term = System.Runtime.InteropServices.PosixSignalRegistration.Create(System.Runtime.InteropServices.PosixSignal.SIGTERM, Quit);
+		using var hup = System.Runtime.InteropServices.PosixSignalRegistration.Create(System.Runtime.InteropServices.PosixSignal.SIGHUP, Quit);
+		// Windows: the graphics driver's own OpenGL (WGL) first, ANGLE (OpenGL ES on Direct3D 11) when
+		// that fails, drawing in software last.
 		// VWE_TRACE=1: Avalonia's warnings on the console.
 		if (Environment.GetEnvironmentVariable("VWE_TRACE") == "1")
 		{
@@ -24,6 +31,15 @@ public static class Program
 		AppBuilder.Configure<App>().UsePlatformDetect().LogToTrace(Avalonia.Logging.LogEventLevel.Warning)
 			.With(new Win32PlatformOptions { RenderingMode = new[] { Win32RenderingMode.Wgl, Win32RenderingMode.AngleEgl, Win32RenderingMode.Software } })
 			.StartWithClassicDesktopLifetime(args);
+	}
+
+	private static void Quit(System.Runtime.InteropServices.PosixSignalContext c)
+	{
+		c.Cancel = true;
+		Options.Say($"quit: {c.Signal}");
+		TerrainEditor.App.Tunnel.Close();
+		TerrainEditor.App.GameLook.StopExport();
+		Avalonia.Threading.Dispatcher.UIThread.Post(() => (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.Shutdown());
 	}
 }
 
@@ -47,6 +63,8 @@ public sealed class App : Application
 }
 
 // Command line options.
+//   <world folder>                                     that world's map
+//   --live <bridge url> --token <token>                a live game's map (the token also from WORLD_BRIDGE_TOKEN)
 //   --world <folder or name> [--zone x,z] [--size n]   straight into the 3D editor with that area
 //   --driver                                           driven by another program (see Driver)
 //   --data <folder>                                    settings and memory kept there (tests)
@@ -64,10 +82,22 @@ public static class Options
 	// user's (the visual tests). The game's look is still read from the usual place.
 	public static string? Data { get; private set; }
 
+	// <world folder>: its map, as if picked on the start page.
+	public static string? Folder { get; private set; }
+	// --live <url> --token <token>: the game's world, as if connected on the start page.
+	public static string? LiveUrl { get; private set; }
+	public static string? LiveToken { get; private set; }
+
 	public static void Say(string line) => Console.WriteLine(line);
 
 	public static void Parse(string[] args)
 	{
+		// Each start from nothing (the tests parse several lines in one process).
+		Folder = LiveUrl = World = Data = null;
+		Direct = Driver = false;
+		ZoneX = ZoneZ = 0;
+		Size = 5;
+		LiveToken = Environment.GetEnvironmentVariable("WORLD_BRIDGE_TOKEN");
 		// Every argument, the last too (a switch such as --driver or --map-back can come last).
 		for (int i = 0; i < args.Length; i++)
 		{
@@ -87,6 +117,7 @@ public static class Options
 					TerrainEditor.App.ServerConfig.PathOverride = Path.Combine(Data, "servers.cfg");
 					PlaceMemory.PathOverride = Path.Combine(Data, "place.json");
 					Stamps.PathOverride = Path.Combine(Data, "stamps.json");
+					TerrainEditor.App.AppSettings.DataDirOverride = Data;
 					break;
 				case "--zone":
 					Direct = true;
@@ -96,6 +127,18 @@ public static class Options
 					break;
 				case "--size":
 					Size = Math.Clamp(int.Parse(args[++i]), 1, 9);
+					break;
+				case "--live":
+					LiveUrl = args[++i];
+					break;
+				case "--token":
+					LiveToken = args[++i];
+					break;
+				default:
+					if (!args[i].StartsWith("--"))
+					{
+						Folder ??= args[i];
+					}
 					break;
 			}
 		}
