@@ -23,8 +23,27 @@ Blueprints live in Homestead's folder of Valheim's save folder:
 ## The Workshop
 
 The Workshop is a blank, flat meadow plot that is not part of any world. Open it from the start
-page (**The Workshop**: **New building**, or **Edit** next to a blueprint), or from the Blueprints
-panel (**New in Workshop**, **Edit**).
+page (**The Workshop**: **Open the Workshop**), or from a world's Blueprints panel (**New in
+Workshop**, **Edit**).
+
+### The Library
+
+The Build panel's **Library** tab lists your blueprints (Homestead's), with their picture (drawn
+from their pieces when a blueprint has none), piece count and cost; **Search blueprints** looks
+through names, descriptions and tags.
+
+| Action | What it does |
+|---|---|
+| **Open** | The blueprint alone on the plot, to change it (asks first when what is there is not saved). Saving writes it back. |
+| **Add** | Adds the blueprint to what is on the plot, in its middle (one undo step). |
+| **Drag a blueprint onto the plot** | Adds it where you drop it. |
+| **Drop files** | `.blueprint` (Homestead, PlanBuild) and `.vbuild` files dropped from your files onto the plot are imported into the library and added where they land. |
+| **Import file…** | Imports a file into the library. |
+
+A blueprint keeps its form exactly (every piece where it was, turned as it was); it is moved as one,
+so its lowest point (the pieces' real shape) is on the ground. A Homestead blueprint saved again
+keeps its height from its anchor. Files from PlanBuild and older tools hold no ground: parts that
+rested on uneven ground in game may hang above the flat plot, and the support check says so.
 
 The Workshop keeps to building: the tool rail has only **Build**, **Select** and **View** (the
 ground tools, Area, Path, Mountain and the rest are for worlds), and there is no Mask, View panel or

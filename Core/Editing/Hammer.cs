@@ -80,6 +80,34 @@ public static class Hammer
 
 	public static Data? Get(string prefab) => All.Value.GetValueOrDefault(prefab);
 
+	// How far below its origin a piece reaches (its colliders' lowest point), turned and scaled; 0 for a
+	// piece the game gives no collider.
+	public static float Bottom(string prefab, Quaternion rotation, float scale = 1)
+	{
+		if (Get(prefab) is not { Colliders.Length: > 0 } d)
+		{
+			return 0;
+		}
+		float lo = float.MaxValue;
+		foreach (var c in d.Colliders)
+		{
+			IEnumerable<Vector3> pts = c switch
+			{
+				Box b => Enumerable.Range(0, 8).Select(i => b.C + Vector3.Transform(new Vector3((i & 1) == 0 ? -b.H.X : b.H.X, (i & 2) == 0 ? -b.H.Y : b.H.Y, (i & 4) == 0 ? -b.H.Z : b.H.Z), b.Q)),
+				Sphere sp => new[] { sp.C - new Vector3(0, sp.R, 0) },
+				Capsule cp => new[] { cp.A, cp.B },
+				Mesh m => m.V,
+				_ => Array.Empty<Vector3>(),
+			};
+			foreach (var v in pts)
+			{
+				float y = Vector3.Transform(v * scale, rotation).Y - (c is Capsule cap ? cap.R * scale : 0);
+				lo = MathF.Min(lo, y);
+			}
+		}
+		return lo == float.MaxValue ? 0 : lo;
+	}
+
 	// A piece standing in the world: its kind, where, turned how.
 	public sealed record Placed(int Index, string Prefab, Vector3 Position, Quaternion Rotation);
 

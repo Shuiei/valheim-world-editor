@@ -1,6 +1,7 @@
 using System.Numerics;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
@@ -76,6 +77,12 @@ public sealed class BuildPanel
 		foreach (var (cat, name) in Tabs)
 		{
 			var b = new Button { Content = name, FontSize = 11, Padding = new Thickness(7, 2), Tag = cat };
+			ToolTip.SetTip(b, cat switch
+			{
+				Plants => "The cultivator's pieces: crops, saplings and flowers.",
+				Feasts => "The serving tray's pieces: feasts.",
+				_ => $"The pieces of the hammer's {name} tab.",
+			});
 			b.Click += (_, _) => { _tab = cat; Search.Text = ""; Render(); };
 			_tabs.Children.Add(b);
 		}
@@ -95,18 +102,34 @@ public sealed class BuildPanel
 			ColumnDefinitions = new ColumnDefinitions("90,*"),
 			Children = { new TextBlock { Text = label, FontSize = 12, VerticalAlignment = VerticalAlignment.Center }, Col(c) },
 		};
-		static Control Col(Control c)
+		PiecesTab.Click += (_, _) => ShowLibrary(false);
+		LibraryTab.Click += (_, _) => ShowLibrary(true);
+		PiecesTab.Tip("build.piecesTab");
+		LibraryTab.Tip("build.libraryTab");
+		LibrarySearch.Tip("build.librarySearch");
+		ImportButton.Tip("blueprints.import");
+		ImportButton.Click += (_, _) => ImportAsked?.Invoke();
+		LibrarySearch.PropertyChanged += (_, e) => { if (e.Property == TextBox.TextProperty) RenderLibrary(); };
+		_library = new StackPanel
 		{
-			Grid.SetColumn(c, 1);
-			return c;
-		}
-		Card = Ui.Card(new StackPanel
+			Spacing = 6,
+			IsVisible = false,
+			Children =
+			{
+				new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 4, Children = { LibrarySearch, Col(ImportButton) } },
+				new ScrollViewer { MaxHeight = 560, Content = LibraryList },
+				new TextBlock
+				{
+					Text = "Drag a blueprint onto the plot to add it there (or drop a .blueprint or .vbuild file from your files). Open puts it alone on the plot; Add puts it in the middle with what is there.",
+					FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap,
+				},
+			},
+		};
+		_pieces = new StackPanel
 		{
-			Width = 340,
 			Spacing = 6,
 			Children =
 			{
-				new TextBlock { Text = "Build", FontSize = 14, FontWeight = FontWeight.SemiBold },
 				Search,
 				_tabs,
 				new ScrollViewer { MaxHeight = 360, Content = Tiles },
@@ -122,8 +145,157 @@ public sealed class BuildPanel
 					FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap,
 				},
 			},
+		};
+		Card = Ui.Card(new StackPanel
+		{
+			Width = 340,
+			Spacing = 6,
+			Children =
+			{
+				new Grid
+				{
+					ColumnDefinitions = new ColumnDefinitions("*,Auto,Auto"),
+					ColumnSpacing = 4,
+					Children = { new TextBlock { Text = "Build", FontSize = 14, FontWeight = FontWeight.SemiBold, VerticalAlignment = VerticalAlignment.Center }, Col(PiecesTab), Col(LibraryTab, 2) },
+				},
+				_pieces,
+				_library,
+			},
 		});
 		Card.IsVisible = false;
+		ShowLibrary(false);
+	}
+
+	private static Control Col(Control c, int col = 1)
+	{
+		Grid.SetColumn(c, col);
+		return c;
+	}
+
+	// ---- The Library tab: Homestead's blueprints, opened on the plot, added to it, or dragged onto it.
+	internal Button PiecesTab { get; } = new() { Content = "Pieces", FontSize = 12, Padding = new Thickness(8, 2) };
+	internal Button LibraryTab { get; } = new() { Content = "Library", FontSize = 12, Padding = new Thickness(8, 2) };
+	internal TextBox LibrarySearch { get; } = new() { PlaceholderText = "Search blueprints", FontSize = 12 };
+	internal Button ImportButton { get; } = new() { Content = "Import file…", FontSize = 12 };
+	internal StackPanel LibraryList { get; } = new() { Spacing = 4 };
+	private readonly StackPanel _pieces, _library;
+	// The blueprints' folder (Homestead's).
+	internal Func<string> Folder { get; set; } = () => "";
+	// Open: the blueprint alone on the plot; Add: with what is there (in the middle).
+	public event Action<string>? OpenAsked, AddAsked;
+	public event Action? ImportAsked;
+	// What a blueprint dragged from the list carries: its file.
+	internal static readonly DataFormat<string> BlueprintFormat = DataFormat.CreateInProcessFormat<string>("vwe-blueprint");
+
+	internal bool LibraryShown => _library.IsVisible;
+
+	public void ShowLibrary(bool on)
+	{
+		_library.IsVisible = on;
+		_pieces.IsVisible = !on;
+		PiecesTab.Classes.Set("on", !on);
+		LibraryTab.Classes.Set("on", on);
+		if (on)
+		{
+			RenderLibrary();
+		}
+	}
+
+	internal void RenderLibrary()
+	{
+		LibraryList.Children.Clear();
+		var all = TerrainEditor.App.Homestead.List(Folder());
+		string q = LibrarySearch.Text?.Trim() ?? "";
+		var list = all.Where(e => q.Split(' ', StringSplitOptions.RemoveEmptyEntries).All(w => e.Name.Contains(w, StringComparison.OrdinalIgnoreCase)
+			|| e.Description.Contains(w, StringComparison.OrdinalIgnoreCase) || e.Tags.Any(t => t.Contains(w, StringComparison.OrdinalIgnoreCase)))).ToList();
+		if (list.Count == 0)
+		{
+			LibraryList.Children.Add(new TextBlock
+			{
+				Text = all.Count == 0 ? "No blueprints yet: build one and Save blueprint, import a file, or drop one here." : "Nothing matches.",
+				FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap,
+			});
+			return;
+		}
+		foreach (var e in list)
+		{
+			LibraryList.Children.Add(LibraryRow(e));
+		}
+	}
+
+	private Border LibraryRow(TerrainEditor.App.Homestead.Entry e)
+	{
+		Bitmap? pic = null;
+		if (e.Picture != null)
+		{
+			try
+			{
+				using var f = File.OpenRead(e.Picture);
+				pic = new Bitmap(f);
+			}
+			catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
+			{
+			}
+		}
+		var open = new Button { Content = "Open", FontSize = 11, Padding = new Thickness(6, 1) }.Tip("build.open");
+		var add = new Button { Content = "Add", FontSize = 11, Padding = new Thickness(6, 1) }.Tip("build.add");
+		open.Click += (_, _) => OpenAsked?.Invoke(e.Path);
+		add.Click += (_, _) => AddAsked?.Invoke(e.Path);
+		var image = new Image { Source = pic, Width = 60, Height = 60, VerticalAlignment = VerticalAlignment.Top };
+		if (pic == null)
+		{
+			DrawPicture(e.Path, image);
+		}
+		var row = new Border
+		{
+			Padding = new Thickness(4),
+			CornerRadius = new CornerRadius(6),
+			Background = Brushes.Transparent,
+			Cursor = new Avalonia.Input.Cursor(Avalonia.Input.StandardCursorType.Hand),
+			Tag = e.Path,
+			Child = new Grid
+			{
+				ColumnDefinitions = new ColumnDefinitions("60,*"),
+				ColumnSpacing = 8,
+				Children =
+				{
+					image,
+					Col(new StackPanel
+					{
+						Spacing = 2,
+						Children =
+						{
+							new TextBlock { Text = e.Name, FontSize = 12, FontWeight = FontWeight.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis },
+							new TextBlock { Text = $"{e.Pieces} piece(s) · {PieceCost.Of(e.Kinds).Describe(3)}", FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap },
+							new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Children = { open, add } },
+						},
+					}),
+				},
+			},
+		};
+		ToolTip.SetTip(row, "Drag onto the plot to add it there.");
+		// Dragged a few pixels: a drag and drop carrying the blueprint's file.
+		Avalonia.Input.PointerPressedEventArgs? pressed = null;
+		row.PointerPressed += (_, ev) =>
+		{
+			if (ev.GetCurrentPoint(row).Properties.IsLeftButtonPressed && ev.Source is not Button)
+			{
+				pressed = ev;
+			}
+		};
+		row.PointerReleased += (_, _) => pressed = null;
+		row.PointerMoved += async (_, ev) =>
+		{
+			if (pressed is not { } p || Point.Distance(p.GetPosition(row), ev.GetPosition(row)) < 6)
+			{
+				return;
+			}
+			pressed = null;
+			var data = new DataTransfer();
+			data.Add(DataTransferItem.Create(BlueprintFormat, e.Path));
+			await DragDrop.DoDragDropAsync(p, data, DragDropEffects.Copy);
+		};
+		return row;
 	}
 
 	private PlaceTool Tool => _input.Tool;
@@ -219,6 +391,43 @@ public sealed class BuildPanel
 			b.Click += (_, _) => Choose(prefab);
 			Tiles.Children.Add(b);
 		}
+	}
+
+	// A blueprint without its picture (made elsewhere): one drawn from its pieces, kept in memory only
+	// (its folder is left as it is), away from the window's thread.
+	private readonly Dictionary<(string, DateTime), Bitmap?> _blueprintPictures = new();
+
+	private void DrawPicture(string path, Image image)
+	{
+		var key = (path, File.GetLastWriteTimeUtc(path));
+		if (_blueprintPictures.TryGetValue(key, out var known))
+		{
+			image.Source = known;
+			return;
+		}
+		var models = Models();
+		Task.Run(() =>
+		{
+			try
+			{
+				var bp = TerrainEditor.App.BlueprintFormats.Parse(path, File.ReadAllText(path));
+				return BuildingPicture.Draw(bp.Pieces.Select(p => new BuildingPicture.Piece(p.Name, p.Position, p.Euler, p.Scale)).ToList(), models, 128);
+			}
+			catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+			{
+				return null;
+			}
+		}).ContinueWith(t => Dispatcher.UIThread.Post(() =>
+		{
+			Bitmap? b = null;
+			if (t.Result is byte[] png)
+			{
+				using var ms = new MemoryStream(png);
+				b = new Bitmap(ms);
+			}
+			_blueprintPictures[key] = b;
+			image.Source = b;
+		}), TaskScheduler.Default);
 	}
 
 	// A piece's picture: drawn once, away from the window's thread, then shown.

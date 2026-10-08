@@ -40,8 +40,7 @@ public sealed class StartPage
 	internal Expander ServerForm { get; } = new() { Header = new TextBlock { Text = "Connect to a server", FontWeight = FontWeight.SemiBold }, HorizontalAlignment = HorizontalAlignment.Stretch };
 	internal StackPanel OfflinePanel { get; } = new() { Spacing = 8 };
 	internal StackPanel WorkshopPanel { get; } = new() { Spacing = 8 };
-	internal Button NewBuildingButton { get; } = new Button { Content = "New building", FontSize = 13 }.Classed("primary");
-	internal StackPanel WorkshopList { get; } = new() { Spacing = 4 };
+	internal Button NewBuildingButton { get; } = new Button { Content = "Open the Workshop", FontSize = 13 }.Classed("primary");
 	internal TextBlock WorkshopHomestead { get; } = new() { TextWrapping = TextWrapping.Wrap, FontSize = 12 };
 	internal WrapPanel WorldCards { get; } = new() { ItemSpacing = 10, LineSpacing = 10 };
 	internal TextBox PathBox { get; } = new() { PlaceholderText = "Folder of the world (with _main.<n>.chunks files)", FontSize = 13 };
@@ -200,12 +199,11 @@ public sealed class StartPage
 			Children =
 			{
 				new TextBlock { Text = "Build on a blank plot", FontSize = 15, FontWeight = FontWeight.SemiBold },
-				Hint("Place building pieces (they snap like the game's hammer), move and turn them, see what would hold in game, then save it as a blueprint. Only the building is kept."),
+				Hint("Place building pieces as with the game's hammer, move and turn them, see what would hold in game, then save it as a blueprint. Only the building is kept. "
+					+ "Your blueprints are in the Workshop's Library: open them, add them, or drag them onto the plot."),
 				NewBuildingButton,
 			},
 		}));
-		WorkshopPanel.Children.Add(H2("Your blueprints"));
-		WorkshopPanel.Children.Add(WorkshopList);
 		WorkshopPanel.Children.Add(WorkshopHomestead);
 		SetMode(settings.LastMode is "game" or "server" or "offline" or "workshop" ? settings.LastMode : "game");
 	}
@@ -396,34 +394,8 @@ public sealed class StartPage
 	internal TextBlock UrlError => _urlError;
 	internal ContentControl GameState => _gameState;
 
-	// The Workshop's list: Homestead's blueprints, each opened in the Workshop to be changed.
-	internal void FillWorkshop()
-	{
-		var hs = Homestead.Find(_settings);
-		ShowHomestead(hs);
-		WorkshopList.Children.Clear();
-		var list = Homestead.List(hs.Folder);
-		if (list.Count == 0)
-		{
-			WorkshopList.Children.Add(Hint("No blueprints yet: build one, or save one from Homestead in game."));
-			return;
-		}
-		foreach (var e in list)
-		{
-			var edit = new Button { Content = "Edit", FontSize = 12 }.Tip("blueprints.edit");
-			string path = e.Path;
-			edit.Click += (_, _) => WorkshopRequested?.Invoke(path);
-			WorkshopList.Children.Add(Card(new Grid
-			{
-				ColumnDefinitions = new ColumnDefinitions("*,Auto"),
-				Children =
-				{
-					new StackPanel { Children = { new TextBlock { Text = e.Name, FontSize = 13, FontWeight = FontWeight.SemiBold }, Hint($"{e.Pieces} piece(s){(e.Creator is { Length: > 0 } c ? $" · by {c}" : "")} · {e.Saved:yyyy-MM-dd}") } },
-					Col(edit, 1),
-				},
-			}));
-		}
-	}
+	// The Workshop's card: whether Homestead is installed (its blueprints are the Workshop's Library).
+	internal void FillWorkshop() => ShowHomestead(Homestead.Find(_settings));
 
 	// Whether Homestead is in the game: the editor's blueprints are Homestead's, built in game with it.
 	internal void ShowHomestead(Homestead.Status hs)

@@ -1,4 +1,6 @@
+using System.Numerics;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Threading;
 using TerrainEditor.App;
@@ -18,6 +20,9 @@ public partial class MainWindow
 	// The blueprint's details (name, description, tags) and the file it was opened from (saving there again
 	// does not ask before replacing it).
 	private Homestead.Details? _workshopDetails;
+	// How far the blueprint opened was lifted to put its lowest point on the ground (taken off again
+	// when it is saved).
+	private float _workshopLift;
 	private string? _workshopFile;
 	// The edits' version when the building was last saved (or opened).
 	private int _workshopSaved;
@@ -33,6 +38,95 @@ public partial class MainWindow
 		SupportBox.Tip("workshop.support");
 		SupportBox.IsCheckedChanged += (_, _) => RefreshSupport();
 		Blueprints.EditAsked += async path => await OpenWorkshop(path);
+	}
+
+	// The Build panel's Library (once the panel is made).
+	private void SetUpLibrary()
+	{
+		BuildPanel.Folder = () => Blueprints.Status.Folder;
+		BuildPanel.OpenAsked += async path => await OpenWorkshop(path);
+		BuildPanel.AddAsked += path => AddToWorkshop(path, null);
+		BuildPanel.ImportAsked += async () =>
+		{
+			if (await Blueprints.PickFile() is string file && Blueprints.Import(file) != null)
+			{
+				BuildPanel.RenderLibrary();
+			}
+		};
+	}
+
+	// Drag and drop onto the 3D view: a blueprint from the Library, or .blueprint and .vbuild files from
+	// the computer's files (imported into the library first). In the Workshop each goes where it is
+	// dropped; in a world, files are only imported.
+	private void SetUpDrops(Control surface)
+	{
+		Avalonia.Input.DragDrop.SetAllowDrop(surface, true);
+		surface.AddHandler(Avalonia.Input.DragDrop.DragOverEvent, (_, e) =>
+		{
+			bool ours = e.DataTransfer.Contains(BuildPanel.BlueprintFormat) && _inWorkshop || e.DataTransfer.Contains(Avalonia.Input.DataFormat.File);
+			e.DragEffects = ours ? Avalonia.Input.DragDropEffects.Copy : Avalonia.Input.DragDropEffects.None;
+		});
+		surface.AddHandler(Avalonia.Input.DragDrop.DropEvent, (_, e) =>
+		{
+			var files = (e.DataTransfer.TryGetFiles() ?? Array.Empty<Avalonia.Platform.Storage.IStorageItem>())
+				.Select(f => Avalonia.Platform.Storage.StorageProviderExtensions.TryGetLocalPath(f)).OfType<string>().ToList();
+			Drop(e.DataTransfer.TryGetValue(BuildPanel.BlueprintFormat), files, e.GetPosition(surface), surface.Bounds.Size);
+		});
+	}
+
+	// What was dropped at a point of the view.
+	internal void Drop(string? blueprint, IReadOnlyList<string> files, Avalonia.Point at, Avalonia.Size size)
+	{
+		Vector2? world = null;
+		if (_session is { } s && _view.GridAt(at, size) is { } g)
+		{
+			world = new Vector2(s.Scene.X0 * 64f - 32f + g.X, s.Scene.Z0 * 64f - 32f + g.Y);
+		}
+		var paths = new List<string>();
+		if (blueprint != null)
+		{
+			paths.Add(blueprint);
+		}
+		foreach (string f in files.Where(f => f.EndsWith(".blueprint", StringComparison.OrdinalIgnoreCase) || f.EndsWith(".vbuild", StringComparison.OrdinalIgnoreCase)))
+		{
+			if (Blueprints.Import(f) is string name)
+			{
+				paths.Add(Path.Combine(Blueprints.Status.Folder, Homestead.FileName(name)));
+			}
+		}
+		if (files.Count > 0 && paths.Count == (blueprint != null ? 1 : 0))
+		{
+			_message.Text = "Drop .blueprint (Homestead, PlanBuild) or .vbuild files.";
+			return;
+		}
+		BuildPanel.RenderLibrary();
+		if (!_inWorkshop)
+		{
+			return;
+		}
+		foreach (string p in paths)
+		{
+			AddToWorkshop(p, world);
+		}
+	}
+
+	// A blueprint added to the building on the plot (at a world point x, z; null: the middle).
+	internal void AddToWorkshop(string path, Vector2? at)
+	{
+		if (!_inWorkshop || _session is not { } s)
+		{
+			return;
+		}
+		try
+		{
+			var (placed, unknown, _) = Workshop.Add(s, path, null, at);
+			_message.Text = $"Added “{Homestead.Read(path)?.Name ?? Path.GetFileNameWithoutExtension(path)}”: {placed} piece(s).{(unknown.Count > 0 ? $" {unknown.Count} kind(s) the game does not know were left out (mods?): {string.Join(", ", unknown.Take(5))}." : "")} Ctrl+Z takes it back.";
+		}
+		catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+		{
+			_message.Text = "Could not add that blueprint: " + ex.Message;
+		}
+		UpdateSaveBar();
 	}
 
 	// The Workshop, empty or with a blueprint's pieces on it. Leaves the open world first (asking when
@@ -75,13 +169,15 @@ public partial class MainWindow
 		await ShowEditor(scene);
 		_inWorkshop = true;
 		_workshopName = name;
+		_workshopLift = 0;
 		_workshopDetails = details;
 		// Only Homestead's own folder is saved back to without asking.
 		_workshopFile = path != null && string.Equals(Path.GetDirectoryName(Path.GetFullPath(path)), Path.GetFullPath(Blueprints.Status.Folder), StringComparison.Ordinal) ? path : null;
 		string msg = "The Workshop: pick a piece in Build and click to put it down (it snaps like the game's hammer); Select (E) moves, turns and deletes; then Save blueprint.";
 		if (path != null)
 		{
-			var (placed, unknown) = Workshop.Open(scene.Session!, path, text);
+			var (placed, unknown, lift) = Workshop.Open(scene.Session!, path, text);
+			_workshopLift = lift;
 			msg = $"Opened “{name}”: {placed} piece(s).{(unknown.Count > 0 ? $" {unknown.Count} kind(s) the game does not know were left out (mods?): {string.Join(", ", unknown.Take(5))}." : "")} Change it, then Save blueprint.";
 		}
 		_workshopSaved = scene.Session!.Edits.Version;
@@ -142,13 +238,14 @@ public partial class MainWindow
 		{
 			return;
 		}
-		var clip = Workshop.Building(s.Scene, _workshopName ?? "My building");
+		var clip = Workshop.Building(s.Scene, _workshopName ?? "My building", _workshopLift);
 		if (await Blueprints.SaveBuilding(clip, _workshopDetails ?? new Homestead.Details(_workshopName ?? "My building", "", new()), _workshopFile) is { } details)
 		{
 			string saved = details.Name;
 			_workshopName = saved;
 			_workshopDetails = details;
 			_workshopFile = Path.Combine(Blueprints.Status.Folder, Homestead.FileName(saved));
+			BuildPanel.RenderLibrary();
 			_workshopSaved = s.Edits.Version;
 			_title.Text = $"Workshop · {saved}";
 			UpdateSaveBar();
@@ -252,6 +349,7 @@ public partial class MainWindow
 	// them for building pieces) and the zone borders (the plot is no world).
 	private sealed record Kept(List<string> Chosen, PlaceTool.Modes Mode, bool OneAtATime, bool OneAtATimeByHand, bool RandomYaw, float Tilt, float SizeMin,
 		float SizeMax, PlaceTool.Elevations Elevation, bool SnapTo, bool OnTop, float Rotation, bool Borders);
+	// (The unsaved marks: everything on the plot is new, so they would only cover the building.)
 
 	private Kept? _kept;
 
@@ -267,6 +365,7 @@ public partial class MainWindow
 		}
 		Tools.SetWorkshop(true);
 		_view.SetOverlay(Overlays.Layer.Borders, false);
+		_view.ShowNewMarkers = false;
 		ShowRight(null);
 		ViewButton.IsVisible = false;
 		MaskPanel.Card.IsVisible = false;
@@ -292,6 +391,7 @@ public partial class MainWindow
 		PlaceInput.TurnStep = null;
 		Tools.SetWorkshop(false);
 		_view.SetOverlay(Overlays.Layer.Borders, k.Borders);
+		_view.ShowNewMarkers = UnsavedBox.IsChecked == true;
 		ViewButton.IsVisible = true;
 		BuildPanel.Card.IsVisible = false;
 		PlacePanel.Fill();

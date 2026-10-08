@@ -34,25 +34,28 @@ public class WorkshopTests
 		{
 			var scene = Workshop.Create("Workshop");
 			var s = scene.Session!;
-			var (placed, unknown) = Workshop.Open(s, Hut(dir));
+			var (placed, unknown, lift) = Workshop.Open(s, Hut(dir));
 			Assert.Equal(3, placed);
+			// Its lowest point (the floor's collider, a little below its origin) on the ground.
+			Assert.Equal(-TerrainEditor.Editing.Hammer.Bottom("wood_floor", Quaternion.Identity), lift, 3);
 			Assert.Equal(new[] { "no_such_piece_xyz" }, unknown);
 			Assert.True(s.CanUndo);
 			Assert.Equal(3, Workshop.Pieces(scene));
-			Assert.Contains(scene.Things, t => !t.Gone && t.Position == Workshop.Anchor(scene) + new Vector3(1, 1, 0));
-			var clip = Workshop.Building(scene, "Hut");
+			Assert.Contains(scene.Things, t => !t.Gone && Vector3.Distance(t.Position, Workshop.Anchor(scene) + new Vector3(1, 1 + lift, 0)) < 1e-3f);
+			// Saved back: as it was, from Homestead's anchor.
+			var clip = Workshop.Building(scene, "Hut", lift);
 			var text = Homestead.Write(clip, "Hut", "test", null, DateTime.Now);
 			var back = BlueprintFormats.Parse("Hut.blueprint", text);
 			Assert.Equal(3, back.Pieces.Count);
 			Assert.Contains(back.Pieces, p => p.Name == "woodwall" && Vector3.Distance(p.Position, new Vector3(1, 1, 0)) < 1e-3f && MathF.Abs(p.Euler.Y - 90) < 0.5f);
-			// Other files are centred, their lowest piece on the ground.
+			// Other files are centred, their lowest point on the ground (a wall reaches 1 m below its middle).
 			string other = Path.Combine(dir, "other.blueprint");
 			File.WriteAllText(other, "#Name:Other\n#Pieces\nwoodwall;Misc;10;5;10;0;0;0;1;\"\";1;1;1\nwoodwall;Misc;14;7;10;0;0;0;1;\"\";1;1;1\n");
 			var plot = Workshop.Create("Workshop");
 			Workshop.Open(plot.Session!, other);
 			var walls = plot.Things.Where(t => !t.Gone).Select(t => t.Position - Workshop.Anchor(plot)).OrderBy(p => p.X).ToList();
-			Assert.Equal(new Vector3(-2, 0, 0), walls[0]);
-			Assert.Equal(new Vector3(2, 2, 0), walls[1]);
+			Assert.Equal(new Vector3(-2, 1, 0), walls[0]);
+			Assert.Equal(new Vector3(2, 3, 0), walls[1]);
 		}
 		finally
 		{
@@ -254,5 +257,52 @@ public class WorkshopTests
 		// Reset: no lift.
 		w.BuildPanel.LiftReset.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Avalonia.Controls.Button.ClickEvent));
 		Assert.Equal(0, t.HeightNudge);
+	}
+
+	// The Workshop's Library: Homestead's blueprints, searched, opened alone on the plot, added to it
+	// (one undo step each), and dropped onto the view (from the Library, or files from the computer:
+	// imported first; other files said so). The unsaved marks are off in the Workshop.
+	[AvaloniaFact]
+	public async Task TheLibraryOpensAddsAndTakesDrops()
+	{
+		using var r = new PanelBlueprintsTests.Run();
+		var w = r.W;
+		r.Keep("Gate", "woodwall", "wood_floor");
+		r.Keep("Tower", "woodwall");
+		w.Ask = (_, _, _, _) => Task.FromResult(true);
+		await w.OpenWorkshop(null);
+		Assert.False(w.View.ShowNewMarkers);
+		var bp = w.BuildPanel;
+		bp.ShowLibrary(true);
+		Assert.True(bp.LibraryShown);
+		Assert.Equal(2, bp.LibraryList.Children.Count);
+		bp.LibrarySearch.Text = "tow";
+		Assert.Single(bp.LibraryList.Children);
+		bp.LibrarySearch.Text = "";
+		// Add: into the plot, with what is there.
+		w.AddToWorkshop(Path.Combine(r.Homestead, "Gate.blueprint"), null);
+		Assert.Equal(2, Workshop.Pieces(w.Session!.Scene));
+		w.AddToWorkshop(Path.Combine(r.Homestead, "Tower.blueprint"), new Vector2(5, 5));
+		Assert.Equal(3, Workshop.Pieces(w.Session!.Scene));
+		Assert.Contains(w.Session.Scene.Things, t => !t.Gone && MathF.Abs(t.Position.X - 5) < 0.01f && MathF.Abs(t.Position.Z - 5) < 0.01f);
+		Assert.StartsWith("Added “Tower”: 1 piece(s).", w.MessageText.Text);
+		w.Session.Undo();
+		Assert.Equal(2, Workshop.Pieces(w.Session.Scene));
+		// Dropped: from the Library, and a file from elsewhere (imported, then added).
+		w.Drop(Path.Combine(r.Homestead, "Tower.blueprint"), Array.Empty<string>(), new Avalonia.Point(0, 0), new Avalonia.Size(0, 0));
+		Assert.Equal(3, Workshop.Pieces(w.Session.Scene));
+		string other = Path.Combine(r.Dir, "Wall.vbuild");
+		File.WriteAllText(other, BlueprintFormats.Write(System.Text.Json.Nodes.JsonNode.Parse(CopyFormat.ToJson(PanelBlueprintsTests.Clip("Wall", "woodwall", "woodwall")).ToJsonString())!.AsObject(), "vbuild", "Wall", _ => 0));
+		w.Drop(null, new[] { other, Path.Combine(r.Dir, "notes.txt") }, new Avalonia.Point(0, 0), new Avalonia.Size(0, 0));
+		Assert.Equal(5, Workshop.Pieces(w.Session.Scene));
+		Assert.Contains(r.Listed, e => e.Name == "Wall");
+		Assert.Equal(3, bp.LibraryList.Children.Count);
+		w.Drop(null, new[] { Path.Combine(r.Dir, "notes.txt") }, new Avalonia.Point(0, 0), new Avalonia.Size(0, 0));
+		Assert.Equal("Drop .blueprint (Homestead, PlanBuild) or .vbuild files.", w.MessageText.Text);
+		// Open: that one alone (the plot was not saved: asked first).
+		await w.OpenWorkshop(Path.Combine(r.Homestead, "Gate.blueprint"));
+		Assert.Equal(2, Workshop.Pieces(w.Session.Scene));
+		await w.LeaveWorkshop();
+		Assert.Equal(w.UnsavedBox.IsChecked == true, w.View.ShowNewMarkers);
 	}
 }

@@ -39,33 +39,43 @@ public static class Workshop
 	// The middle of the plot at ground level: the blueprint's anchor.
 	public static Vector3 Anchor(WorldScene s) => new(s.Cx, Ground, s.Cz);
 
-	// A blueprint file's pieces onto the plot (one undo step). Homestead's are measured from their
-	// anchor; others (PlanBuild, .vbuild) from a corner, so they are centred, lowest piece on the ground.
-	// Returns how many were put and the kinds the editor cannot make.
-	public static (int Placed, List<string> Unknown) Open(EditSession s, string path, string? text = null)
+	// A blueprint file's pieces onto the plot (one undo step), its anchor at the plot's middle.
+	public static (int Placed, List<string> Unknown, float Lift) Open(EditSession s, string path, string? text = null) => Add(s, path, text, null);
+
+	// A blueprint file's pieces added to what is on the plot (one undo step), its anchor at world point
+	// at (x, z; on the ground there), or the plot's middle, its lowest point on the ground. Homestead's are
+	// measured from their anchor; others (PlanBuild, .vbuild) from a corner, so they are centred.
+	// Returns how many were put, the kinds the editor cannot make, and how far it was lifted (saving it
+	// back takes that off: Homestead's anchor keeps its height).
+	public static (int Placed, List<string> Unknown, float Lift) Add(EditSession s, string path, string? text, Vector2? at)
 	{
 		text ??= File.ReadAllText(path);
 		var parsed = BlueprintFormats.Parse(Path.GetFileName(path), text);
 		bool homestead = text.Contains("#HomesteadVersion:", StringComparison.OrdinalIgnoreCase);
 		var known = parsed.Pieces.Where(p => s.Scene.World.CanCreate(StableHash.Of(p.Name))).ToList();
 		var unknown = parsed.Pieces.Select(p => p.Name).Where(n => !s.Scene.World.CanCreate(StableHash.Of(n))).Distinct().OrderBy(n => n).ToList();
+		// The building as it is, moved as one: its lowest point (the pieces' colliders, as the game has
+		// them) on the ground; across, others than Homestead's (measured from a corner) centred.
 		Vector3 shift = Vector3.Zero;
-		if (!homestead && known.Count > 0)
+		if (known.Count > 0)
 		{
-			shift = new Vector3(-(known.Min(p => p.Position.X) + known.Max(p => p.Position.X)) / 2, -known.Min(p => p.Position.Y), -(known.Min(p => p.Position.Z) + known.Max(p => p.Position.Z)) / 2);
+			float low = known.Min(p => p.Position.Y + Hammer.Bottom(p.Name, BlueprintFormats.FromEuler(p.Euler), p.Scale > 0 ? p.Scale : 1));
+			shift = homestead ? new Vector3(0, -low, 0)
+				: new Vector3(-(known.Min(p => p.Position.X) + known.Max(p => p.Position.X)) / 2, -low, -(known.Min(p => p.Position.Z) + known.Max(p => p.Position.Z)) / 2);
 		}
-		var anchor = Anchor(s.Scene);
+		var anchor = at is { } w ? new Vector3(w.X, Ground, w.Y) : Anchor(s.Scene);
 		var adds = known.Select(p => (new NewObject(0, StableHash.Of(p.Name), anchor + p.Position + shift, p.Euler, MathF.Abs(p.Scale - 1) < 1e-3f ? 0 : p.Scale),
 			PieceCatalog.Get(StableHash.Of(p.Name))?.Tool != null)).ToList();
-		s.Commit($"Opened {parsed.Name}", null, Array.Empty<int>(), adds);
-		return (adds.Count, unknown);
+		s.Commit($"{(at == null ? "Opened" : "Added")} {parsed.Name}", null, Array.Empty<int>(), adds);
+		return (adds.Count, unknown, shift.Y);
 	}
 
 	// The building on the plot as a copy (the clipboard format, for BlueprintsPanel): every building
 	// piece standing, measured from the anchor. Anything else (trees, rocks, items) is left out.
-	public static JsonObject Building(WorldScene s, string name)
+	// lift: how far the blueprint opened was lifted (its anchor that much below the ground).
+	public static JsonObject Building(WorldScene s, string name, float lift = 0)
 	{
-		var anchor = Anchor(s);
+		var anchor = Anchor(s) + new Vector3(0, lift, 0);
 		var objects = new JsonArray();
 		lock (s.Things)
 		{

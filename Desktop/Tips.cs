@@ -359,11 +359,15 @@ public static class Tips
 
 		// ---- Blueprints and History
 		["blueprints.search"] = "Filter the blueprints by name.",
-		["blueprints.edit"] = "Open this blueprint in the Workshop, a blank plot, to change it and save it again.",
 		["blueprints.new"] = "Open the Workshop, a blank plot, to build a building and save it as a blueprint.",
 		["workshop.support"] = "On: every building piece is outlined in the colour the game gives its support in build mode (blue on the ground, then green to red), and pieces that would fall in game are pink. Off: build freely.",
 		["top.saveBlueprint"] = "Save the building pieces on the plot as a Homestead blueprint (nothing else is kept).",
-		["start.workshop"] = "Build on a blank plot, then keep it as a blueprint for Homestead.",
+		["start.workshop"] = "Build on a blank plot, then keep it as a blueprint for Homestead. Your blueprints are in its Library.",
+		["build.piecesTab"] = "The pieces to build with, in the game's tabs.",
+		["build.libraryTab"] = "Your blueprints (Homestead's): open one, add one to the plot, or drag it onto the plot.",
+		["build.librarySearch"] = "Find blueprints by name, description or tags.",
+		["build.open"] = "This blueprint alone on the plot (asks first when what is there is not saved).",
+		["build.add"] = "Add this blueprint to the plot, in its middle, with what is there (one undo step).",
 		["blueprints.getHomestead"] = "Opens Homestead's page on Thunderstore: install it in your Valheim (a mod manager does it in one click) to build these blueprints in game.",
 		["blueprints.import"] = "Import a .blueprint file (Homestead or PlanBuild) or a .vbuild file: it is kept as a Homestead blueprint, ready to build in game.",
 		["dialog.text"] = "Type the answer, then press OK (Enter).",

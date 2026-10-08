@@ -15,6 +15,9 @@ the plugin is unchanged in versions without that part.
   game's hammer would put them, from the game's own data for every piece (colliders, snap points,
   placement rules): pointed at a wall's top, the next stands on it; snap points within half a metre
   meet. Ctrl + wheel lifts the piece; , and . turn it by 22.5° (or another step).
+- The Workshop's **Library** tab: your blueprints with pictures, cost and search; Open (alone on the
+  plot), Add, drag one onto the plot, or drop .blueprint and .vbuild files from your files. A
+  blueprint keeps its form, its lowest point on the ground. The start page's Workshop card opens it.
 - **Select**: Ctrl + click adds to the selection; Shift + click takes the row from the last object
   clicked (wall 1, Shift + click wall 3: walls 1 to 3).
 - **Support check** (in the Workshop): each piece outlined in the colour the game gives its

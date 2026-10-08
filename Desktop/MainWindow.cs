@@ -1249,7 +1249,8 @@ public sealed partial class MainWindow : Window
 				turned.Add(ObjectKinds.Label(k));
 			}
 		}
-		if (turned.Count == 0)
+		// (The Workshop has no View panel to say it in.)
+		if (turned.Count == 0 || _inWorkshop)
 		{
 			return;
 		}
@@ -1748,6 +1749,7 @@ public sealed partial class MainWindow : Window
 		_view.Place = PlaceInput;
 		PlacePanel = new PlacePanel(PlaceInput, () => _view.Scene, NameOfPrefab);
 		BuildPanel = new BuildPanel(PlaceInput) { Models = () => _models };
+		SetUpLibrary();
 		PlacePanel.Message += t => _message.Text = t;
 		PlacePanel.AskName = () => Dialogs.AskText(this, "Save as preset", "Name of the preset:");
 		PlacePanel.Confirm = text => Dialogs.Ask(this, "Delete the preset", text, "Delete");
@@ -1885,6 +1887,7 @@ public sealed partial class MainWindow : Window
 		// Takes the mouse for the 3D view (see GlView.Attach).
 		var surface = new Border { Background = Brushes.Transparent };
 		Surface = surface;
+		SetUpDrops(surface);
 		SetUpEditorWorld();
 		_viewPanel = ViewPanel();
 		// The panels on the right: under the top bar, one at a time.
