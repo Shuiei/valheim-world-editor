@@ -4,6 +4,18 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## Unreleased
+
+### Added
+- **Mountain**: a preview before clicking: the mountain under the pointer as a mesh on the ground,
+  as high as it will rise. The circle turns red where it does not fit in the open area.
+
+### Fixed
+- A wide brush or Mountain circle no longer drops a line straight down where it passes the edge of
+  the open area, and follows hills instead of cutting through them.
+- Zone borders (and the other overlays lying on the ground) follow the ground when it changes: after
+  undoing or discarding a mountain they no longer outline it in the air.
+
 ## v1.1.0 — 2026-10-08
 
 ### Added

@@ -162,8 +162,10 @@ work ±8 m from the new ground.
 
 ## Mountain
 
-Click the ground to raise a whole mountain there, past the ±8 m (the circle shows how far it
-reaches). Each one is made from a seed, so no two are alike.
+Click the ground to raise a whole mountain there, past the ±8 m. Before you click, the mountain
+shows under the pointer as an orange mesh on the ground, as high as it will rise, and the circle
+shows how far it reaches; the circle turns red where the mountain does not fit in the open area (a
+click there does nothing). Each one is made from a seed, so no two are alike.
 
 | Control | What it does |
 |---|---|
