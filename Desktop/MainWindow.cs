@@ -9,7 +9,7 @@ namespace TerrainEditor.Desktop;
 
 // The prototype's window: the 3D view filling it, and a small panel with the frame rate, what is
 // loaded, and the Record frame rates switch.
-public sealed class MainWindow : Window
+public sealed partial class MainWindow : Window
 {
 	private readonly GlView _view = new();
 	private readonly TextBlock _fps = new() { FontSize = 12.5, TextWrapping = TextWrapping.Wrap }, _info = new() { FontSize = 12, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
@@ -162,6 +162,9 @@ public sealed class MainWindow : Window
 		}
 		_view.SelectTool.Commit();
 		KeepHistory();
+		_playersTimer.Stop();
+		_labelsTimer.Stop();
+		PlayerLabels.Children.Clear();
 		if (_map == null)
 		{
 			_map = new MapPage();
@@ -247,6 +250,7 @@ public sealed class MainWindow : Window
 		_subtitle.Text = $"{scene.Size} × {scene.Size} zones around zone {scene.X0 + mid}, {scene.Z0 + mid} · {scene.Things.Count(t => !t.Gone):N0} objects";
 		Title = $"{scene.Name} · Valheim World Editor (native preview)";
 		_pages.Content = _editorPage;
+		EditorOpened(scene);
 	}
 
 	// Map: Save (or Apply live) for the whole world, after asking.
@@ -365,6 +369,7 @@ public sealed class MainWindow : Window
 		}
 		session.Mask = Mask;
 		session.Changed += () => Dispatcher.UIThread.Post(() => { UpdateSaveBar(); History.Refresh(); });
+		session.EditMade += () => Dispatcher.UIThread.Post(() => AutoApply(session));
 		// Saved: the objects were read again, with new indices.
 		session.ThingsReset += () => Dispatcher.UIThread.Post(() => { if (Inspector.IsOpen) Inspector.Close(); });
 		// The kinds the Select tool can replace with.
@@ -395,6 +400,7 @@ public sealed class MainWindow : Window
 		RedoButton.IsEnabled = s.CanRedo;
 		ToolTip.SetTip(UndoButton, s.UndoLabel is string u ? $"Undo {u} (Ctrl+Z)" : "Nothing to undo");
 		ToolTip.SetTip(RedoButton, s.RedoLabel is string rl ? $"Redo {rl} (Ctrl+Shift+Z)" : "Nothing to redo");
+		UpdateEditorWorld(s, dirty);
 	}
 
 	internal void Undo()
@@ -428,11 +434,7 @@ public sealed class MainWindow : Window
 		}
 		if (s.IsLive)
 		{
-			SaveButton.IsEnabled = false;
-			_message.Text = "Applying to the running game…";
-			var o = await s.ApplyLive();
-			_message.Text = o.Message;
-			UpdateSaveBar();
+			await ApplyNow();
 			return;
 		}
 		string what = s.PendingText.Replace("Unsaved: ", "");
@@ -773,13 +775,13 @@ public sealed class MainWindow : Window
 		_pendingPill.Child = _pending;
 		var names = new StackPanel { VerticalAlignment = VerticalAlignment.Center, Children = { _title, _subtitle } };
 		var bar = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto") };
-		var left = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10, Children = { MapButton, names } };
+		var left = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10, Children = { MapButton, names, AreaNav } };
 		var right = new StackPanel
 		{
 			Orientation = Orientation.Horizontal,
 			Spacing = 4,
 			VerticalAlignment = VerticalAlignment.Center,
-			Children = { UndoButton, RedoButton, Sep(), _liveBadge, _pendingPill, SaveButton, Sep(), HistoryButton, ViewButton, HelpButton },
+			Children = { UndoButton, RedoButton, Sep(), _liveBadge, ReloadButton, AutoApplyBox, _pendingPill, DiscardButton, SaveButton, Sep(), HistoryButton, ViewButton, HelpButton },
 		};
 		Grid.SetColumn(right, 2);
 		bar.Children.Add(left);
@@ -1068,6 +1070,7 @@ public sealed class MainWindow : Window
 				box.Content = Ui.Counted(ObjectKinds.Label(k), counts.GetValueOrDefault(k));
 			}
 		};
+		list.Children.Add(PlayersControl());
 		// The web editor's switches.
 		foreach (var box in Avalonia.LogicalTree.LogicalExtensions.GetLogicalDescendants(list).OfType<CheckBox>())
 		{
@@ -1305,6 +1308,7 @@ public sealed class MainWindow : Window
 		// Takes the mouse for the 3D view (see GlView.Attach).
 		var surface = new Border { Background = Brushes.Transparent };
 		Surface = surface;
+		SetUpEditorWorld();
 		_viewPanel = ViewPanel();
 		// The panels on the right: under the top bar, one at a time.
 		foreach (var right in new[] { _viewPanel, History.Card, Inspector.Card, Blueprints.Card, HelpCard })
@@ -1314,7 +1318,7 @@ public sealed class MainWindow : Window
 			right.VerticalAlignment = VerticalAlignment.Top;
 		}
 		ViewButton.Classes.Add("on");
-		_editorPage = new Grid { Children = { _view, surface, tools, _viewPanel, History.Card, Inspector.Card, Blueprints.Card, HelpCard, TopBar(), StatusBar() } };
+		_editorPage = new Grid { Children = { _view, surface, PlayerLabels, tools, LocationNote, _viewPanel, History.Card, Inspector.Card, Blueprints.Card, HelpCard, TopBar(), StatusBar() } };
 		_busy.Child = _busyText;
 		_pages.Content = _editorPage;
 		Content = new Grid { Children = { _pages, _busy } };
