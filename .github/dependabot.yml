@@ -43,6 +43,8 @@ updates:
         patterns: ["*"]
     ignore:
       # The exporter relies on UnityPy 1.25's API: newer minor versions need checking against
-      # the game's files first (see docs/development.md).
+      # the game's files first (see docs/development.md). No patch updates either: from 1.25.3 it
+      # needs tpk_ar, which has no wheel, so the Windows runtime (wheels only) takes 1.25.2 while
+      # Linux takes the newest, and each one's trim list (tools/python-runtime) was traced with
+      # those; raising the minimum (as a Dependabot PR did) breaks the Windows package.
       - dependency-name: UnityPy
-        update-types: ["version-update:semver-minor", "version-update:semver-major"]
