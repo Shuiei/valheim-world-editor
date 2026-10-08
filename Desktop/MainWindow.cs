@@ -83,6 +83,8 @@ public sealed class MainWindow : Window
 	internal StartPage? StartPage => _start;
 	internal MapPage? MapPage => _map;
 	internal bool MapShown => _map != null && _pages.Content == _map.View;
+	// The transparent control over the 3D view that takes the mouse (the test driver sends it input).
+	internal Control Surface { get; private set; } = null!;
 	private readonly AppSettings _settings = AppSettings.Load();
 
 	private static string Describe((int Zones, int Deleted, int Added, int Resets) p)
@@ -1336,6 +1338,7 @@ public sealed class MainWindow : Window
 		};
 		// Takes the mouse for the 3D view (see GlView.Attach).
 		var surface = new Border { Background = Brushes.Transparent };
+		Surface = surface;
 		_viewPanel = ViewPanel();
 		// The panels on the right: under the top bar, one at a time.
 		foreach (var right in new[] { _viewPanel, History.Card, Inspector.Card, Blueprints.Card, HelpCard })
