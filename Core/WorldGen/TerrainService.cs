@@ -134,7 +134,7 @@ public sealed class TerrainService
 		return Png.Encode(size, size, rgba);
 	}
 
-	private static (float, float, float) BiomeColor(Heightmap.Biome biome, float h)
+	internal static (float, float, float) BiomeColor(Heightmap.Biome biome, float h)
 	{
 		if (h < WaterLevel)
 		{
