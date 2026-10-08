@@ -36,6 +36,10 @@ public static class Tips
 		["brush.turn"] = "Turn of a square brush or a picture (degrees). , and . change it (Shift: 15°).",
 		["brush.loadStamp"] = "Load a picture (PNG, JPEG...) as a brush shape: white parts work fully, black parts not at all. It is kept for next time.",
 		["brush.forgetStamp"] = "Forget the loaded picture chosen as Shape (built-in stamps stay).",
+		["brush.noLimit"] = "On: Raise, Lower, Flatten, the Path and Area tools and pasting move the ground as far as you like, not just the game's ±8 m. "
+			+ "Saving (or Apply live) turns that ground into invisible ground discs every player's game counts as generated ground, console players too: no mod needed. "
+			+ "The hoe and pickaxe then get their ±8 m from the new ground. Trees, rocks and bushes where the ground moved more than 2 m are taken away. "
+			+ "Very steep walls come out a little softer.",
 		["brush.stampOnce"] = "With a stamp as Shape, a click of Raise or Lower puts the whole stamp into the ground at once, to the Height below, instead of painting.",
 		["brush.stampHeight"] = "How high (Raise) or deep (Lower) the white parts of the stamp go (m).",
 		["brush.targetFromClick"] = "On: Flatten levels to the height of the ground where you start the stroke. Off: it levels to the Height below.",

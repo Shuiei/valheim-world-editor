@@ -7,6 +7,8 @@ namespace TerrainEditor.Desktop;
 // per grid point the generated height, the level and smoothing changes, whether the point was
 // changed, and the paint (dirt, cultivated, paved, vegetation) with whether it was painted. The same
 // arrays as the web editor's page (editor.html), turned back into zones for the EditStore (uploadNow).
+// Lift: height beyond the game's ±8 m (No limit), which saving turns into ground discs (Uplift): the
+// ground the ±8 m applies to is then the generated one plus the lift.
 public sealed class Ground
 {
 	public int W { get; }
@@ -22,6 +24,10 @@ public sealed class Ground
 	public float[] BaseMask { get; }
 	public byte[] Mod { get; }
 	public byte[] PMod { get; }
+	public float[] Lift { get; }
+
+	// No limit: edits go past the game's ±8 m (the rest goes into Lift).
+	public bool NoLimit { get; set; }
 
 	// The values as loaded (or last saved), and each zone's own saved values: zones share their edge
 	// points, and saved zones do not always agree on them. A point unchanged since loading is given
@@ -43,6 +49,7 @@ public sealed class Ground
 		Mod = new byte[n];
 		Paint = new float[n * 4];
 		PMod = new byte[n];
+		Lift = new float[n];
 		BaseMask = new float[n * 4];
 		_loaded = Snapshot();
 	}
@@ -51,28 +58,34 @@ public sealed class Ground
 	{
 		int w = size * 64 + 1;
 		var g = new Ground(w, w, x0, z0, size);
-		for (int zz = 0; zz < size; zz++)
+		g.ReadBase(terrain);
+		g.TakeEdits(edits);
+		return g;
+	}
+
+	// The generated ground and paint (again when the ground discs changed: Uplift).
+	public void ReadBase(TerrainService terrain)
+	{
+		for (int zz = 0; zz < Size; zz++)
 		{
-			for (int zx = 0; zx < size; zx++)
+			for (int zx = 0; zx < Size; zx++)
 			{
-				float[] b = terrain.BaseZone(x0 + zx, z0 + zz);
-				float[] m = terrain.BaseMask(x0 + zx, z0 + zz);
+				float[] b = terrain.BaseZone(X0 + zx, Z0 + zz);
+				float[] m = terrain.BaseMask(X0 + zx, Z0 + zz);
 				for (int k = 0; k < EditStore.Grid; k++)
 				{
 					for (int l = 0; l < EditStore.Grid; l++)
 					{
-						int i = k * EditStore.Grid + l, p = (zz * 64 + k) * w + zx * 64 + l;
-						g.Base[p] = b[i];
+						int i = k * EditStore.Grid + l, p = (zz * 64 + k) * W + zx * 64 + l;
+						Base[p] = b[i];
 						for (int c = 0; c < 4; c++)
 						{
-							g.BaseMask[p * 4 + c] = m[i * 4 + c];
+							BaseMask[p * 4 + c] = m[i * 4 + c];
 						}
 					}
 				}
 			}
 		}
-		g.TakeEdits(edits);
-		return g;
 	}
 
 	// Starts over from the edits (when loaded, and after saving).
@@ -94,6 +107,7 @@ public sealed class Ground
 						Level[p] = e?.Level[i] ?? 0;
 						Smooth[p] = e?.Smooth[i] ?? 0;
 						PMod[p] = (byte)(e != null && e.PaintModified[i] ? 1 : 0);
+						Lift[p] = e?.Lift[i] ?? 0;
 						for (int c = 0; c < 4; c++)
 						{
 							Paint[p * 4 + c] = e?.Paint[i * 4 + c] ?? 0;
@@ -105,34 +119,46 @@ public sealed class Ground
 		_loaded = Snapshot();
 	}
 
-	// Same as TerrainComp.ApplyToHeightmap: the edited height never leaves the original ground ± 8 m.
-	public float HeightOf(int g) => Mod[g] != 0 ? Math.Clamp(Base[g] + Level[g] + Smooth[g], Base[g] - EditStore.MaxLevel, Base[g] + EditStore.MaxLevel) : Base[g];
+	// Same as TerrainComp.ApplyToHeightmap: the edited height never leaves the original ground ± 8 m
+	// (the original ground including the lift).
+	public float HeightOf(int g) => Base[g] + Lift[g] + (Mod[g] != 0 ? Math.Clamp(Level[g] + Smooth[g], -EditStore.MaxLevel, EditStore.MaxLevel) : 0);
+
+	// The ground the game's ±8 m applies to: the generated one plus the lift.
+	public float Original(int g) => Base[g] + Lift[g];
 
 	public bool AtLimit(int g) => Mod[g] != 0 && MathF.Abs(Level[g] + Smooth[g]) >= EditStore.MaxLevel - 0.05f;
 
 	// The outer line of points stays as it is, so the block always joins its neighbours.
 	public bool Locked(int gx, int gz) => gx == 0 || gz == 0 || gx == W - 1 || gz == H - 1;
 
-	// Moves a point to a height (kept within the game's limit); true when the limit stopped it.
+	// Moves a point to a height (kept within the game's limit unless NoLimit); true when the limit stopped it.
 	public bool SetHeight(int g, float h)
 	{
-		float target = Math.Clamp(h, Base[g] - EditStore.MaxLevel, Base[g] + EditStore.MaxLevel);
 		if (Mod[g] == 0)
 		{
 			Smooth[g] = 0;
+			Level[g] = 0;
 			Mod[g] = 1;
 		}
+		if (NoLimit)
+		{
+			// The edit keeps its level and smoothing; the lift takes the rest.
+			float lift = Math.Clamp(h - Base[g] - Math.Clamp(Level[g] + Smooth[g], -EditStore.MaxLevel, EditStore.MaxLevel), -EditStore.MaxLift, EditStore.MaxLift);
+			Lift[g] = MathF.Abs(lift) < 1e-3f ? 0 : lift;
+			return false;
+		}
+		float o = Original(g), target = Math.Clamp(h, o - EditStore.MaxLevel, o + EditStore.MaxLevel);
 		// Keep the smoothing part and put the rest in the level part (itself limited to ± 8 m).
-		Level[g] = Math.Clamp(target - Base[g] - Smooth[g], -EditStore.MaxLevel, EditStore.MaxLevel);
+		Level[g] = Math.Clamp(target - o - Smooth[g], -EditStore.MaxLevel, EditStore.MaxLevel);
 		return MathF.Abs(target - h) > 1e-4f;
 	}
 
 	// The paint mask the game's terrain shader reads: the paint where painted, the generated one otherwise.
 	public float MaskOf(int g, int c) => PMod[g] != 0 ? Paint[g * 4 + c] : BaseMask[g * 4 + c];
 
-	public sealed record State(float[] Level, float[] Smooth, byte[] Mod, float[] Paint, byte[] PMod);
+	public sealed record State(float[] Level, float[] Smooth, byte[] Mod, float[] Paint, byte[] PMod, float[] Lift);
 
-	public State Snapshot() => new((float[])Level.Clone(), (float[])Smooth.Clone(), (byte[])Mod.Clone(), (float[])Paint.Clone(), (byte[])PMod.Clone());
+	public State Snapshot() => new((float[])Level.Clone(), (float[])Smooth.Clone(), (byte[])Mod.Clone(), (float[])Paint.Clone(), (byte[])PMod.Clone(), (float[])Lift.Clone());
 
 	// Every zone (block-relative) holding one of the points (edge points belong to two or four zones).
 	public List<(int X, int Z)> ZonesOf(IEnumerable<int> points)
@@ -157,7 +183,7 @@ public sealed class Ground
 
 	private bool UnchangedSinceLoad(int g)
 	{
-		if (Level[g] != _loaded.Level[g] || Smooth[g] != _loaded.Smooth[g] || Mod[g] != _loaded.Mod[g] || PMod[g] != _loaded.PMod[g])
+		if (Level[g] != _loaded.Level[g] || Smooth[g] != _loaded.Smooth[g] || Mod[g] != _loaded.Mod[g] || PMod[g] != _loaded.PMod[g] || Lift[g] != _loaded.Lift[g])
 		{
 			return false;
 		}
@@ -188,6 +214,7 @@ public sealed class Ground
 					e.Smooth[i] = own.Smooth[i];
 					e.PaintModified[i] = own.PaintModified[i];
 					Array.Copy(own.Paint, i * 4, e.Paint, i * 4, 4);
+					e.Lift[i] = own.Lift[i];
 					continue;
 				}
 				e.Modified[i] = Mod[g] != 0;
@@ -195,6 +222,7 @@ public sealed class Ground
 				e.Smooth[i] = Smooth[g];
 				e.PaintModified[i] = PMod[g] != 0;
 				Array.Copy(Paint, g * 4, e.Paint, i * 4, 4);
+				e.Lift[i] = Lift[g];
 			}
 		}
 		return e;

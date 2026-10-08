@@ -334,7 +334,7 @@ public sealed class AreaTool
 			{
 				continue;
 			}
-			float h = g.HeightOf(p), b = g.Base[p], d = (h - b) * w;
+			float h = g.HeightOf(p), b = g.Original(p), d = (h - b) * w;
 			if (d > 0) up += d; else down -= d;
 			float want = h + (height - h) * w, got = Math.Clamp(want, b - 8, b + 8);
 			if (got > h) fill += got - h; else cut += h - got;

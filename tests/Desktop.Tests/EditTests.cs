@@ -267,6 +267,45 @@ public class EditTests
 		}
 	}
 
+	[Fact]
+	public void NoLimitRaisesPastTheLimitAndSavingKeepsTheGroundWithGroundDiscs()
+	{
+		string dir = CopyFixture();
+		try
+		{
+			// Zones 1 to 3 (the test world keeps zones 0 to 15).
+			var scene = WorldScene.Load(dir, 2, 2, 3);
+			var s = scene.Session!;
+			s.Brush.Radius = 20;
+			s.Brush.Strength = 1;
+			int g = 96 * scene.W + 96;
+			float before = scene.Heights[g];
+			Stroke(s, BrushTool.Raise, 96, 96, 300);
+			Assert.InRange(scene.Heights[g] - before, 7.9f, 8.1f);
+			s.Ground.NoLimit = true;
+			Stroke(s, BrushTool.Raise, 96, 96, 300);
+			float after = scene.Heights[g];
+			Assert.True(after > before + 30, $"{after - before:0.0} m");
+			Assert.True(s.Ground.Lift[g] > 20);
+			var res = s.Save();
+			Assert.True(res.Saved, res.Message);
+			Assert.Contains("ground disc", res.Message);
+			Assert.Equal(0, s.Pending.Zones);
+			// The area shows the saved ground at once (the ground discs under it, no lift left).
+			Assert.Equal(after, scene.Heights[g], 0.5f);
+			Assert.Equal(0, s.Ground.Lift[g]);
+			var again = WorldScene.Load(dir, 2, 2, 3);
+			Assert.Equal(after, again.Heights[g], 0.5f);
+			Assert.NotEmpty(again.World.Discs);
+			// Not things of the area: they are just the ground.
+			Assert.DoesNotContain(again.Things, t => t.Prefab == WorldSave.LocationProxyPrefab);
+		}
+		finally
+		{
+			Directory.Delete(Path.GetDirectoryName(dir)!, recursive: true);
+		}
+	}
+
 	// The test world (tests/fixtures/CITest) copied where saving cannot harm it.
 	internal static string CopyFixture()
 	{

@@ -17,7 +17,14 @@ public sealed class TerrainService
 
 	private readonly Lazy<byte[]> _overviewPng;
 
-	private readonly TerrainEditor.Terrain.TerrainModifiers? _modifiers;
+	private TerrainEditor.Terrain.TerrainModifiers? _modifiers;
+
+	// New modifiers (ground discs added or taken away): the zones' ground is worked out again.
+	public void UseModifiers(TerrainEditor.Terrain.TerrainModifiers modifiers)
+	{
+		_modifiers = modifiers;
+		_zones.Clear();
+	}
 
 	public TerrainService(WorldSave save, TerrainEditor.Terrain.TerrainModifiers? modifiers = null, int overviewSize = 1024)
 	{

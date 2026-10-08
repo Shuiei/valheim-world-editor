@@ -13,7 +13,7 @@ public sealed class WorldSession : IDisposable
 {
 	public required WorldSave World { get; set; }
 	public required EditStore Edits { get; init; }
-	public required TerrainModifiers Modifiers { get; init; }
+	public required TerrainModifiers Modifiers { get; set; }
 	public required TerrainService Terrain { get; init; }
 	// Live: the running game (through WorldEditorBridge), and which object changes it already has.
 	public LiveBridge? Live { get; init; }
@@ -70,21 +70,47 @@ public sealed class WorldSession : IDisposable
 		}
 	}
 
-	public sealed record Outcome(bool Done, string Message, bool Reloaded, WorldWriter.Result? Saved = null);
+	public sealed record Outcome(bool Done, string Message, bool Reloaded, WorldWriter.Result? Saved = null)
+	{
+		// No limit ground was turned into ground discs: the ground under the area changed.
+		public bool Lifted { get; init; }
+	}
+
+	// No limit ground waiting (lifts): turned into ground discs and ordinary edits (Uplift), the ground
+	// worked out again with them. Null when there was none.
+	public Uplift.Plan? LiftToDiscs()
+	{
+		var plan = Editing.Uplift.Make(World, Terrain, Edits, NextId);
+		if (plan != null)
+		{
+			Editing.Uplift.Apply(plan, Edits);
+			UseModifiers(new TerrainModifiers(Editing.Uplift.PlacedNow(World, Edits)));
+		}
+		return plan;
+	}
+
+	private void UseModifiers(TerrainModifiers modifiers)
+	{
+		Modifiers = modifiers;
+		Terrain.UseModifiers(modifiers);
+	}
 
 	// Writes everything into the world's files (a backup first), then reads the world again.
 	public Outcome Save()
 	{
+		var plan = LiftToDiscs();
 		var changed = Edits.All().Where(e => e.Changed).ToList();
 		var result = WorldWriter.Save(World, changed, Edits.Deleted, Edits.Added, Edits.Resets);
 		if (result.Saved)
 		{
 			World = WorldSave.Load(World.Directory);
 			Edits.ResetFrom(World);
+			UseModifiers(new TerrainModifiers(World));
 			_nextId = -1;
 			History = null;
 		}
-		return new Outcome(result.Saved, result.Message, result.Saved, result);
+		string message = plan != null ? $"{result.Message} No limit ground: {plan.Describe()}." : result.Message;
+		return new Outcome(result.Saved, message, result.Saved, result with { Message = message }) { Lifted = plan != null };
 	}
 
 	// Live: the changed zones' ground and the object changes go into the running game; zone resets last
@@ -117,6 +143,11 @@ public sealed class WorldSession : IDisposable
 		var live = Live!;
 		var done = new List<string>();
 		bool reloaded = false;
+		var plan = LiftToDiscs();
+		if (plan != null)
+		{
+			done.Add($"No limit ground: {plan.Describe()}");
+		}
 		try
 		{
 			var zones = Edits.All().Where(e => e.Changed).ToList();
@@ -138,17 +169,18 @@ public sealed class WorldSession : IDisposable
 				done.Add($"{resets.Count} zone(s) reset");
 				World = await live.LoadWorld();
 				Edits.ResetFrom(World);
+				UseModifiers(new TerrainModifiers(World));
 				LiveSync.Reset();
 				_nextId = -1;
 				History = null;
 				reloaded = true;
 			}
-			return new Outcome(done.Count > 0, done.Count > 0 ? $"Applied to the running game: {string.Join("; ", done)}." : "Nothing to apply.", reloaded);
+			return new Outcome(done.Count > 0, done.Count > 0 ? $"Applied to the running game: {string.Join("; ", done)}." : "Nothing to apply.", reloaded) { Lifted = plan != null };
 		}
 		// The game answering with an error (InvalidOperationException from the bridge) is reported too.
 		catch (Exception ex) when (ex is HttpRequestException or IOException or TaskCanceledException or InvalidDataException or InvalidOperationException or System.Text.Json.JsonException)
 		{
-			return new Outcome(false, "Could not apply live: " + ex.Message, false);
+			return new Outcome(false, "Could not apply live: " + ex.Message, false) { Lifted = plan != null };
 		}
 	}
 
@@ -157,6 +189,7 @@ public sealed class WorldSession : IDisposable
 	{
 		World = await Live!.LoadWorld();
 		Edits.ResetFrom(World);
+		UseModifiers(new TerrainModifiers(World));
 		LiveSync.Reset();
 		History = null;
 	}
@@ -169,6 +202,7 @@ public sealed class WorldSession : IDisposable
 			World = WorldSave.Load(World.Directory);
 		}
 		Edits.ResetFrom(World);
+		UseModifiers(new TerrainModifiers(World));
 		LiveSync.Reset();
 		History = null;
 	}

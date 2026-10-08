@@ -43,6 +43,9 @@ public sealed class ToolPanel
 	// Load stamp…: the window picks the picture.
 	public event Action? LoadStampAsked;
 	public event Action<string>? Message;
+	// No limit: the ground tools go past the game's ±8 m (Ground.NoLimit); off at every start.
+	internal CheckBox NoLimitBox { get; } = new() { Content = "No limit: past the game's ±8 m", FontSize = 12 };
+	public event Action<bool>? NoLimitChanged;
 	internal Button ThermalButton { get; } = new() { Content = "Thermal", FontSize = 12 };
 	internal Button WaterButton { get; } = new() { Content = "Water", FontSize = 12 };
 	internal Slider RestSlider { get; }
@@ -275,6 +278,8 @@ public sealed class ToolPanel
 		WaterButton.Tip("erode.water");
 		_erodeRows = new StackPanel { Spacing = 4, Children = { new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Children = { ThermalButton, WaterButton } }, restRow } };
 		Mode(false);
+		NoLimitBox.Tip("brush.noLimit");
+		NoLimitBox.IsCheckedChanged += (_, _) => NoLimitChanged?.Invoke(NoLimitBox.IsChecked == true);
 		Options = Card(new StackPanel
 		{
 			Width = 280,
@@ -292,6 +297,7 @@ public sealed class ToolPanel
 				_flattenRows,
 				_naturalRows,
 				_erodeRows,
+				NoLimitBox,
 			},
 		});
 		Choose(null);

@@ -17,7 +17,7 @@ public static class CursorReadout
 		string height;
 		if (s.Session?.Ground is { } ground)
 		{
-			float h = ground.HeightOf(g), b = ground.Base[g], d = h - b;
+			float h = ground.HeightOf(g), b = ground.Original(g), d = h - b;
 			height = string.Format(c, "ground {0:0.00} m (original {1:0.00}, {2}{3:0.00}{4})", h, b, d >= 0 ? "+" : "", d, ground.AtLimit(g) ? ", at the ±8 m limit" : "");
 		}
 		else
