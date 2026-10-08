@@ -338,6 +338,24 @@ public sealed class VisualTests(EditorProcess editor) : IDisposable
 	}
 
 	[Fact]
+	public void TheEditorStillDrawsItsModelsAfterAVisitToTheMap()
+	{
+		Open();
+		editor.Send("area 0 0 2");
+		editor.Send("camera 40 20 30 50 70");
+		var before = Picture("models-before");
+		Assert.Equal("map", editor.Send("map").GetProperty("page").GetString());
+		editor.Send("area 0 0 2");
+		editor.Send("camera 40 20 30 50 70");
+		var after = Picture("models-after");
+		// The models came back untextured once (the textures being read were never read again in
+		// the view's new OpenGL context): trees as flat white leaf cards. Same look as before.
+		Assert.True(Math.Abs(after.Mean - before.Mean) < 8, $"brightness {before.Mean:0} before, {after.Mean:0} after");
+		Assert.True(Math.Abs(after.Spread - before.Spread) < 8, $"spread {before.Spread:0} before, {after.Spread:0} after");
+		Assert.Equal(0, editor.Send("state").GetProperty("glErrors").GetInt32());
+	}
+
+	[Fact]
 	public void TheMapDrawsTheWorld()
 	{
 		Assert.Equal("map", Open().GetProperty("page").GetString());
