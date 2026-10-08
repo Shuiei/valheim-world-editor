@@ -61,6 +61,11 @@ public static class Options
 	// With --map: look at this point (x,z, metres per pixel); search the world and go to the first result.
 	public static (float X, float Z, float Mpp)? MapAt { get; private set; }
 	public static string? Search { get; private set; }
+	// Driven by another program, one command per line (see Driver).
+	public static bool Driver { get; private set; }
+	// --data <folder>: settings, saved servers, Place tool memory and stamps go there instead of the
+	// user's (the visual tests). The game's look is still read from the usual place.
+	public static string? Data { get; private set; }
 	// With --map-edit: back to the map afterwards (its picture then, with --shot).
 	public static bool MapBack { get; private set; }
 	// A picture of the window's panels (Avalonia draws them; the 3D view stays empty), then quit.
@@ -112,7 +117,8 @@ public static class Options
 
 	public static void Parse(string[] args)
 	{
-		for (int i = 0; i < args.Length - 1; i++)
+		// Every argument, the last too (a switch such as --driver or --map-back can come last).
+		for (int i = 0; i < args.Length; i++)
 		{
 			switch (args[i])
 			{
@@ -126,6 +132,17 @@ public static class Options
 				case "--map-at":
 					var ma = args[++i].Split(',').Select(v => float.Parse(v, System.Globalization.CultureInfo.InvariantCulture)).ToArray();
 					MapAt = (ma[0], ma[1], ma[2]);
+					break;
+				case "--driver":
+					Driver = true;
+					break;
+				case "--data":
+					Data = Path.GetFullPath(args[++i]);
+					Directory.CreateDirectory(Data);
+					TerrainEditor.App.AppSettings.PathOverride = Path.Combine(Data, "settings.json");
+					TerrainEditor.App.ServerConfig.PathOverride = Path.Combine(Data, "servers.cfg");
+					PlaceMemory.PathOverride = Path.Combine(Data, "place.json");
+					Stamps.PathOverride = Path.Combine(Data, "stamps.json");
 					break;
 				case "--ui-shot":
 					UiShot = args[++i];

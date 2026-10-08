@@ -1196,6 +1196,7 @@ public sealed class GlView : OpenGlControlBase
 	// --shot and --bench (Options): once every model is loaded, save a picture, then turn the camera
 	// for the given time and print the frame rates, then close the app.
 	private long _loadedAt = -1, _benchFrom = -1;
+	private WorldScene? _loadedScene;
 	private readonly List<(long At, double Work)> _bench = new();
 	private unsafe void Automate(long now, int pw, int ph)
 	{
@@ -1209,7 +1210,7 @@ public sealed class GlView : OpenGlControlBase
 			Dispatcher.UIThread.Post(() => (Avalonia.Application.Current?.ApplicationLifetime as Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime)?.Shutdown());
 			return;
 		}
-		if (Options.Shot == null && Options.Bench <= 0)
+		if (Options.Shot == null && Options.Bench <= 0 && _picture == null)
 		{
 			return;
 		}
@@ -1291,24 +1292,22 @@ public sealed class GlView : OpenGlControlBase
 			RequestNextFrameRendering();
 			return;
 		}
+		if (_picture is { } req && now - _loadedAt > 500 && _pending == 0)
+		{
+			_picture = null;
+			try
+			{
+				GlPicture.Save(_gl, pw, ph, req.Path);
+				req.Done.SetResult();
+			}
+			catch (Exception ex)
+			{
+				req.Done.SetException(ex);
+			}
+		}
 		if (Options.Shot != null && !Options.MapBack && now - _loadedAt > 500)
 		{
-			byte[] px = new byte[pw * ph * 4];
-			fixed (byte* p = px)
-			{
-				_gl.ReadPixels(0, 0, (uint)pw, (uint)ph, PixelFormat.Rgba, PixelType.UnsignedByte, p);
-			}
-			// OpenGL rows go bottom up.
-			var info = new SkiaSharp.SKImageInfo(pw, ph, SkiaSharp.SKColorType.Rgba8888, SkiaSharp.SKAlphaType.Unpremul);
-			using var bmp = new SkiaSharp.SKBitmap(info);
-			for (int y = 0; y < ph; y++)
-			{
-				System.Runtime.InteropServices.Marshal.Copy(px, (ph - 1 - y) * pw * 4, bmp.GetPixels() + y * pw * 4, pw * 4);
-			}
-			using (var f = File.Create(Options.Shot))
-			{
-				bmp.Encode(f, SkiaSharp.SKEncodedImageFormat.Png, 90);
-			}
+			GlPicture.Save(_gl, pw, ph, Options.Shot);
 			Options.Say($"picture: {Options.Shot}");
 			if (Options.Bench <= 0)
 			{
@@ -2353,6 +2352,25 @@ public sealed class GlView : OpenGlControlBase
 			}
 		}
 	}
+
+	// The test driver's pictures: the next frame once the area and its models are in.
+	private volatile GlPicture.Request? _picture;
+
+	internal Task Picture(string path)
+	{
+		var r = new GlPicture.Request { Path = path };
+		// Measured again for this area: the picture waits until it and its models are in.
+		if (_scene != _loadedScene)
+		{
+			_loadedAt = -1;
+			_loadedScene = _scene;
+		}
+		_picture = r;
+		Wake();
+		return r.Done.Task;
+	}
+
+	internal int FramesDrawn => _frames.Count;
 
 	internal bool IsPickable(int i)
 	{
