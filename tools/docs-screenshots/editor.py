@@ -48,7 +48,7 @@ class FakeGame:
 
 
 class Editor:
-    def __init__(self, app=None, width=1440, height=900, game_world=None):
+    def __init__(self, app=None, width=1440, height=900, game_world=None, worlds=()):
         self.home = Path(tempfile.mkdtemp(prefix="vwe-docs-home-"))
         self.game = None
         # The stand-in home's own data folder (~/.local/share/ValheimWorldEditor): the start page
@@ -58,6 +58,15 @@ class Editor:
         look = Path.home() / ".local" / "share" / "ValheimWorldEditor" / "game-look"
         if look.is_dir():
             (data / "ValheimWorldEditor" / "game-look").symlink_to(look)
+        # A stand-in Valheim in the home's Steam library ("Found automatically" in Settings); the editor
+        # is driven, so it never looks for Steam outside this home.
+        valheim = self.home / ".local" / "share" / "Steam" / "steamapps" / "common" / "Valheim"
+        (valheim / "valheim_Data" / "StreamingAssets" / "SoftRef" / "Bundles").mkdir(parents=True)
+        # Worlds in Valheim's own folder, as a player has them (links to the read-only originals).
+        local = self.home / ".config" / "unity3d" / "IronGate" / "Valheim" / "worlds_local"
+        for w in worlds:
+            local.mkdir(parents=True, exist_ok=True)
+            (local / Path(w).name).symlink_to(Path(w).resolve())
         if game_world:
             # The plugin in an r2modman profile, as on many players' computers.
             self.game = FakeGame(game_world)
@@ -91,8 +100,11 @@ class Editor:
             raise RuntimeError(f"{command}: {answer}")
         return json.loads(answer[len("@@ ok "):])
 
-    def shot(self, path, quality=85):
-        """The whole window, saved as a JPEG for the docs."""
+    def shot(self, path, quality=85, keep_message=False):
+        """The whole window, saved as a JPEG for the docs (the status bar's message cleared unless
+        kept: it would tell how the scene was set up)."""
+        if not keep_message:
+            self.send("message")
         png = self.home / "shot.png"
         state = self.send(f"shot {png}")
         img = Image.open(png).convert("RGB")
