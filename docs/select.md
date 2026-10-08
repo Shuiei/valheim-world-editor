@@ -3,7 +3,10 @@
 ![A selected rock with its move arrows](images/select-arrows.jpg)
 
 Pick objects (trees, rocks, building pieces, anything shown), then move, turn, lift, drop, copy,
-replace or delete them. The object under the cursor is outlined faintly: that is the one a click picks. Only objects that are shown can be picked; switch kinds on in the
+replace or delete them. The object under the cursor is outlined faintly: that is the one a click picks.
+Runestones can be picked and deleted, but not moved, turned, copied or inspected: the game builds
+each one from its location whenever the zone loads, so deleting one removes that location for good
+(with the small flattening of the ground around it). Only objects that are shown can be picked; switch kinds on in the
 [View panel](editor-basics.md#view-panel) first.
 
 ## Selecting

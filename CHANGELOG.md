@@ -54,6 +54,10 @@ the plugin is unchanged in versions without that part.
   and the stretch the next point adds; the ground the path covers is tinted.
 - Native app, Select: the object under the cursor is outlined faintly before a click picks it.
 - Native app, Place: the brush's outline shows under the cursor (Brush mode).
+- Native app, View: **Tamed animals** (boars, wolves, lox, hens, deer, necks… that players tamed,
+  with their models) and **Runestones**, both shown at first. Runestones can be picked and deleted,
+  offline and live; they cannot be moved or copied. The game's look is copied again once for their
+  models.
 - Native app: placing or pasting a kind switched off in View switches it on, and says so.
 - The developer checks of the world generator and the save writer (`--verify`, `--verify-ingame`,
   `--selftest-save`, `--inspect`, `--summary`) moved to a separate tool, `tools/WorldCheck`. It can
