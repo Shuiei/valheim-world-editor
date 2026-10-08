@@ -37,10 +37,6 @@ public static class Regrow
 		public float maxAltitude { get; set; } = 1000f;
 		public float minVegetation { get; set; }
 		public float maxVegetation { get; set; }
-		public int surroundCheckVegetation { get; set; }
-		public float surroundCheckDistance { get; set; } = 20f;
-		public int surroundCheckLayers { get; set; } = 2;
-		public float surroundBetterThanAverage { get; set; }
 		public float minOceanDepth { get; set; }
 		public float maxOceanDepth { get; set; }
 		public float minTilt { get; set; }
@@ -209,7 +205,6 @@ public static class Regrow
 		Dictionary<(int, int), Zone> zones = new();
 		Zone hmap = ZoneAt(terrain, ground, zones, zx * 64f, zz * 64f);
 		float cx = zx * 64f, cz = zz * 64f;
-		List<float> tempVeg = new();
 		foreach (Rule veg in Rules.Value)
 		{
 			if (veg.enable == 0 || !hmap.HaveBiome(veg.biome))
@@ -231,7 +226,6 @@ public static class Regrow
 			}
 			float maxTiltCos = MathF.Cos(MathF.PI / 180f * veg.maxTilt), minTiltCos = MathF.Cos(MathF.PI / 180f * veg.minTilt);
 			float reach = 32f - veg.groupRadius;
-			tempVeg.Clear();
 			int tries = veg.forcePlacement != 0 ? count * 50 : count, placedGroups = 0;
 			for (int i = 0; i < tries; i++)
 			{
@@ -313,30 +307,6 @@ public static class Regrow
 					{
 						float forest = WorldGenerator.GetForestFactor(new ValheimGen.Vector3(px, py, pz));
 						if (forest < veg.forestTresholdMin || forest > veg.forestTresholdMax)
-						{
-							continue;
-						}
-					}
-					if (veg.surroundCheckVegetation != 0)
-					{
-						float sum = 0f;
-						for (int k = 0; k < veg.surroundCheckLayers; k++)
-						{
-							float dist = (float)(k + 1) / veg.surroundCheckLayers * veg.surroundCheckDistance;
-							for (int l = 0; l < 6; l++)
-							{
-								float f = l / 6f * MathF.PI * 2f;
-								float m = hm.VegetationMask(px + MathF.Sin(f) * dist, pz + MathF.Cos(f) * dist);
-								sum += m * ((1f - dist) / (veg.surroundCheckDistance * 2f));
-							}
-						}
-						tempVeg.Add(sum);
-						if (tempVeg.Count < 10)
-						{
-							continue;
-						}
-						float best = tempVeg.Max(), avg = tempVeg.Average();
-						if (sum < avg + (best - avg) * veg.surroundBetterThanAverage)
 						{
 							continue;
 						}
