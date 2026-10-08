@@ -4,32 +4,28 @@
 
 Place trees, rocks, bushes, crops, building pieces or anything else the game has, in four
 patterns. A see-through **preview** ("ghosts") always shows exactly what will be placed, so you
-can see how many and how it looks before you click. Objects you placed but did not save yet have a
-green dot.
+can see how many and how it looks before you click.
 
 ## Choosing what to place
 
-The panel lists the kinds you chose, each with a ✕ to drop it. **+ Add kinds** opens the list of
-every kind in a drawer beside the panel (it opens by itself while nothing is chosen); **Done** or ✕
-closes it, and it stays as you left it.
+Under **KINDS** the panel lists the kinds you chose, each with a ✕ to drop it. **+ Add kinds** opens
+**Choose kinds**, a list of every kind in a card beside the panel; **Done** closes it.
 
 | Control | What it does |
 |---|---|
-| **Search** | Filters the list by name (oak, rock, turnip…). |
-| **Untick all** (drawer) | Unticks every kind. |
-| **Weights** | In the panel, with two or more kinds chosen, a slider per kind (1–10) sets how often it is used, with its share: Beech 3, Birch 1 gives three beeches for one birch. Remembered in this browser. |
+| **Search kinds** | Filters the list by name (oak, rock, bush…). Long groups show their first 60 kinds until you search. |
+| **Tick boxes** | Every ticked kind is used; each placement picks one of them at random. The list is grouped by kind of object (trees, rocks, bushes, pickables…). |
+| **Weights** | In the panel, with two or more kinds chosen, a slider per kind (1–10) sets how often it is used, with its share: Beech 3, Birch 1 gives three beeches for one birch. Remembered. |
 | **Preset** | Loads a mix: its kinds with their weights, and its Density, Spacing, Clumping, Size, Tilt and facing. Built in: Meadows woods, Black forest, Swamp, Berry patch, Forest floor, Meadows rocks. Kinds a world cannot place are left out. |
-| **Save as preset…** / **Delete** (under the fold at the bottom) | Saves the ticked kinds, weights and those settings under a name (kept in this browser); Delete removes one of yours. |
-| **Pick from world** (drawer) | Eyedropper: click an object in the world to place only its kind. **Shift + click** adds it to the ticked kinds instead. Esc cancels. |
+| **Save as preset…** / **Delete** | Saves the chosen kinds, weights and those settings under a name (kept in the editor's data folder); Delete removes one of yours, after asking. |
+| **Pick from world** | Eyedropper: click an object in the world to place only its kind. `Esc` cancels. |
 | **Favourites** | Click the ☆ after a kind in the list to star it; starred kinds show as buttons above the list. |
 | **Recent** | The last eight kinds you placed, newest first, as buttons above the list. |
-| Favourite and Recent buttons | A click ticks or unticks that kind; **Shift + click** places only that kind. **all** / **none** tick or untick the whole row. Both lists are kept in this browser. |
-| **Category lists** | Click a category to fold or unfold it; the number is ticked / total. |
-| **Tick boxes** | Every ticked kind is used; each placement picks one of them at random. |
+| Favourite and Recent buttons | A click ticks or unticks that kind. Both lists are kept in the editor's data folder. |
 
 The list has every placeable kind in the game (about 1,500), including kinds your world has none
 of yet. Creatures, dropped items and effects are left out. Kinds without an extracted model show as
-dots in the preview.
+boxes in the preview.
 
 ## Modes
 
@@ -40,8 +36,8 @@ dots in the preview.
 | **Grid** | Drag a box. One object goes in the middle of each cell; the box gets as many whole cells as fit best (at least one), centred in it. |
 | **Zone** | Click points around a zone (or hold and drag to draw it freely); it closes by itself. Drag a point to move it, drag the outline to add a point, **Ctrl + click** a point to remove it. Objects go at random spots inside it (**Density**, **Spacing**). |
 
-In Line, Grid and Zone, press **Place** (`Enter`, or double-click the last point of a line or
-zone); **Clear** (`Esc`) removes the shape, **Remove last point** (`Backspace`) takes back the last
+In Line, Grid and Zone, press **Place (Enter)** (or double-click the last point of a line or
+zone); **Clear (Esc)** removes the shape, **Remove last point (Backspace)** takes back the last
 point you clicked.
 
 ![Line mode](images/plant-line.jpg)
@@ -50,7 +46,7 @@ point you clicked.
 
 ## Fences and walls: end to end
 
-In **Line** mode, **End to end** places pieces so that each one starts exactly where the last one ends,
+In **Line** mode, **End to end (snap together, like in game)** places pieces so that each one starts exactly where the last one ends,
 turned along the line, like the game's hammer snaps them: a fence, a stake wall, a row of walls or
 floors in a few clicks. The pieces' own snap points (from the game) give their length; other kinds
 use the length of their model. Ticking several kinds alternates them. End to end switches itself on
@@ -59,7 +55,7 @@ kinds, until you change it yourself.
 
 | Control | What it does |
 |---|---|
-| **Points** | Click points along the way, or hold and drag to draw freely. Then drag a point to move it, drag the line to add a point, **Ctrl + click** a point to remove it. **Close the loop** goes back to the first point at the end. |
+| **Points** | Click points along the way, or hold and drag to draw freely. Then drag a point to move it, drag the line to add a point, **Ctrl + click** a point to remove it. **Close the loop (back to the first point)** goes back to the first point at the end. |
 | **Circle** | Press at the centre and drag out to the size. With End to end the size snaps so that whole pieces close the ring. |
 | **Rectangle** | Press at one corner and drag to the opposite one. With End to end the sides snap to whole pieces, and each side is filled from its corner, so the corners meet exactly. |
 | **Layers** | With End to end: the line stacked this many pieces high, each layer on top of the one below (a wall 3 high, a double fence). |
@@ -86,7 +82,7 @@ The preview says what it snapped to. Untick **Snap to pieces already there** to 
 | Control | What it does |
 |---|---|
 | **On the ground** | Each object stands on the ground where it goes (a piece by its bottom: walls have their middle at their origin). |
-| **Above the ground** | Each object stands **Above by** that many metres above the ground under it. |
+| **Above the ground** | Each object stands **Height** metres above the ground under it. |
 | **At one height** | Every object at the same **Height** (its bottom there), whatever the ground does: a level wall over uneven ground, a floor for a platform. |
 | `PgUp` / `PgDn` | Up or down by 0.5 m (`Shift`: 0.1 m); from On the ground it starts lifting above it. |
 | `Alt` + click | At one height: the top of the piece clicked (to build on it), or the ground there. |
@@ -104,33 +100,30 @@ tool, Flatten).
 
 ## Settings
 
-Clumping, Patch size, Size (%), Tilt, Rotation, Random facing, One at a time, the preset buttons,
-New layout and the [Mask](masks.md) are folded under the line at the bottom of the panel ("Clumping,
-size, tilt, facing, presets, mask"); it stays open or closed as you left it. The **?** next to the tool
-name shows how-to text in the panel.
+The panel shows the settings of the chosen mode. The [Mask](masks.md) is on its own card next to it.
+The Place tool's settings are remembered between runs.
 
 | Control | Modes | What it does |
 |---|---|---|
-| **Size** (brush) | Brush | Brush radius (m). |
+| **Brush size** | Brush | Brush radius (m); `[` `]` change it. |
 | **Density** | Brush, Zone | Objects per 100 m². |
 | **Spacing** | Brush, Zone | Minimum distance between objects (m), also from objects already there. |
 | **Clumping** | Brush, Zone | Gathers the objects in groves with clearings between them, following a noise pattern fixed to the world (so strokes next to each other match). 0 %: an even spread; the higher, the fewer and smaller the groves. **New layout** (`R`) moves them. |
 | **Patch size** | Brush, Zone (with Clumping) | How big the groves and clearings are (m). |
-| **Size** min / max (%) | All | Each object gets a random size between the two, in % of its normal size. |
+| **Size %** min / max | All | Each object gets a random size between the two, in % of its normal size. |
 | **Tilt** | All | Random lean of each object, up to this many degrees. |
 | **Rotation** | All | Turns the preview layout and every object's facing (degrees). `,` `.` or Alt + wheel change it by 1° (Shift: 15°). |
-| **Random facing** | All | On: each object faces a random direction. Off: they all face the Rotation. |
-| **One at a time** | Brush | Places one object exactly under the cursor per click; only an object right on that spot blocks it. |
+| **Random facing (off: all face the rotation)** | All | On: each object faces a random direction. Off: they all face the Rotation. |
+| **One at a time, exactly at the cursor** | Brush | Places one object exactly under the cursor per click; only an object right on that spot blocks it. |
 | **Leave saplings and crops room to grow** | All, only shown when a sapling, a crop or a tree that grows from one is ticked | Keeps saplings and crops at least their in-game grow radius (0.5 m for crops, 2–3 m for tree saplings) away from everything, including each other, so they can grow. Grown crops (Pickable_Carrot...) and trees that grow from saplings (Beech1, Oak1...) keep the room their sapling needs, like a planted field or orchard. Bushes do not grow from anything in the game: use **Spacing** for them. Off: place them as tightly as you like. |
 | **Every** | Line | Distance between two objects along the line (m). |
 | **Wiggle** | Line | Random sideways offset from the line, up to this many metres. |
-| **Follow the line** | Line | On (the default): each object follows the line (plus the Rotation): a piece lies along it, end to end, other kinds face along it. Off: random facing. Circles and rectangles always follow their outline. |
+| **Follow the line (plus the rotation; replaces random facing)** | Line | On (the default): each object follows the line (plus the Rotation): a piece lies along it, end to end, other kinds face along it. Off: random facing. Circles and rectangles always follow their outline. |
 | **Smooth curve through the points** | Line | A smooth curve instead of straight segments. |
 | **Spacing** | Grid | Space between objects, centre to centre (m): the size of each cell. |
-| **fit** | Grid, Line, Brush, Zone | Shown when a ticked kind is wider than the spacing (its model at the largest Size), so they would overlap: a blueberry bush is about 3 m wide, so at 1 m apart the rows merge into one hedge. Sets the spacing to the widest ticked kind. |
-| **Place** (`Enter`) | Line, Grid, Zone | Places what the preview shows. |
-| **Clear** (`Esc`) | Line, Grid, Zone | Removes the drawn shape. |
-| **New layout** (`R`) | All | New random positions, kinds, sizes and facings for the preview. |
+| **Place (Enter)** | Line, Grid, Zone | Places what the preview shows. |
+| **Clear (Esc)** | Line, Grid, Zone | Removes the drawn shape. |
+| **New layout (R)** | All | New random positions, kinds, sizes and facings for the preview. |
 
 In Grid and Zone mode, `,` `.` and Alt + wheel **turn the whole box or zone** (with its cells and the
 objects' facing) instead of only the facing.

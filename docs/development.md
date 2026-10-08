@@ -4,42 +4,67 @@
 
 | Path | What it holds |
 |---|---|
-| `Program.cs`, `App/` | The web app: window (`NativeWindow`, Photino), start page (`Launcher`), and the editor session with its HTTP API (`EditorSession`: `/api/world`, `/api/region`, `/api/objects`, `/api/save`, …) and the other `*Endpoints`. |
-| `Core/` | `ValheimWorldEditor.Core`, everything that is not web, shared by the web app and the native app: |
-| `Core/App/` | Settings, game-look setup (`GameLook`), Regrow, search, blueprint formats, servers and SSH (`ServerConfig`, `Tunnel`), the local game (`LocalGame`), characters, zone statistics, folders (`Places`). |
-| `Core/Save/` | Save reader (`WorldSave`, `ValheimReader`), writer (`WorldWriter`), object building (`ZdoTools`: copies and blank objects), the `.db2` zone list, and live mode (`LiveBridge`, `LiveSync`). |
+| `Desktop/` | The app, `ValheimWorldEditor` (Avalonia window, 3D view and map drawn with OpenGL through Silk.NET). `Program.cs` (command line), `StartPage`, `MapPage` + `MapView` (the map), `MainWindow` (the 3D editor's page: top bar, tool rail, panels, keys) with `GlView` (the 3D view and its mouse), `WorldSession` / `WorldScene` / `EditSession` (the open world, the loaded area, its pending changes and history), one class per tool and panel (`AreaTool` + `AreaPanel`, `PlaceTool` + `PlacePanel`, `SelectTool` + `SelectPanel`, `PathTool`, `Sculpt`, `Erosion`, `Mask`…), `ModelStore` and `GameLookGl` (the game's models and terrain shader), `Prefs` (remembered choices), `Driver` (`--driver`, below). |
+| `Core/` | `ValheimWorldEditor.Core`, what is not about the window: |
+| `Core/App/` | Settings (`AppSettings`), the log (`Log`), game-look setup (`GameLook`), Regrow, search, blueprint formats, servers and SSH (`ServerConfig`, `Tunnel`), the local game (`LocalGame`), characters, zone statistics, folders (`Places`). |
+| `Core/Save/` | Save reader (`WorldSave`, `ValheimReader`), writer (`WorldWriter`), new worlds (`WorldCreator`), object building (`ZdoTools`: copies and blank objects), the `.db2` zone list, and live mode (`LiveBridge`, `LiveSync`). |
 | `Core/Editing/` | Pending changes: terrain per zone, deleted and added objects, zone resets (`EditStore`); heights of a block of zones (`HeightGrid`). |
-| `Core/WorldGen/` | Port of Valheim's world generator (bit-exact base terrain), map data, location flattening, the build-piece catalogue (`pieces.json`) and the prefab catalogue (`prefabs.json`). |
-| `Desktop/` | `ValheimWorldEditor.Desktop`, the native app being built to replace the web one (Avalonia window, 3D view drawn with OpenGL through Silk.NET): for now a preview that draws an area (`WorldScene`) with the game's models (`ModelStore`, `GlView`). `--world <name or folder> --zone x,z --size n` picks the area; `--bench <s>`, `--shot <file.png>` and `--report <file>` measure it. |
-| `wwwroot/` | The map (`index.html`, `mapview.js`) and the 3D editor (`editor.html`, `editor/*.js`, `terrain/*.js`, three.js in `lib/`). |
-| `wwwroot/editor/tips.js` | The hover text of every control. Keep it and the docs in step. |
+| `Core/WorldGen/` | Valheim's world generator (bit-exact base terrain), map data, location flattening, the build-piece catalogue (`pieces.json`), the prefab catalogue (`prefabs.json`), the vegetation rules (`vegetation.json`) and the object data names (`zdo-keys.json`). |
 | `plugin/WorldEditorBridge/` | The BepInEx plugin for live mode (.NET Framework 4.7.2). |
+| `tests/Desktop.Tests/` | Every test (xUnit v3, Avalonia's headless mode), see [Tests](#tests). `tests/fixtures/` holds the test world. |
+| `tools/WorldCheck/` | Developer checks of the generator and the writer, and new worlds from a seed, see below. |
 | `tools/asset-export/` | Python (UnityPy) scripts that extract textures, shaders, models and catalogues from the game. |
+| `tools/docs-screenshots/` | `editor.py`: drives the app for the pictures in `docs/images/`. |
+| `tools/release.sh`, `tools/check-package.sh` | The release packages, and their check. |
 | `tools/zdo_scan.py` | Minimal chunk reader, to check saved objects byte by byte. |
-| `tools/docs-screenshots/` | Scripts that take the screenshots in `docs/images/`. |
 
 ## Command line
 
 ```
-ValheimWorldEditor                                    start page (window, or the browser as fallback)
-ValheimWorldEditor [worldFolder] [--port 5180] [--browser]
-ValheimWorldEditor --live <bridge url> --token <token> [--port 5181] [--browser]
+ValheimWorldEditor                                         start page
+ValheimWorldEditor "<world folder>"                        that world's map
+ValheimWorldEditor --live <bridge url> --token <token>     a live game's map (token also from WORLD_BRIDGE_TOKEN)
+ValheimWorldEditor --world <folder or name> [--zone x,z] [--size n]   straight into the 3D editor
 ```
 
-Other options are for checking the world generator against the game and are not needed for
-editing: `--summary`, `--inspect`, `--verify <dump>`, `--verify-ingame <file>`, and
-`--selftest-save <copy under /tmp>` (it refuses any other folder).
+For tests and the documentation: `--driver` (driven over its input and output, below), `--data
+<folder>` (settings, servers, blueprints, the log… in that folder instead of the user's; the copied
+game look is still read from the user's) and `--window <width>x<height>` (the window's size).
+
+### The driver (`--driver`)
+
+The app reads one command per line on its input and answers each with one line, `@@ ok <json>`
+(the state: page, objects, pending, frames drawn, OpenGL errors, selection, camera…) or `@@ error
+<message>`. It prints `@@ ready` when it can take commands. The full list is at the top of
+`Desktop/Driver.cs`; the main ones:
+
+| Command | What it does |
+|---|---|
+| `world <folder>` / `area <zx> <zz> <size>` / `map` | Open a world (its map), an area in the 3D editor, back to the map. |
+| `camera <x> <z> <yaw°> <pitch°> <distance>` | The 3D camera on world x, z. |
+| `mouse <down\|move\|up> <x> <z> [button] [mods]`, `wheel`, `key <name> [mods]` | Real pointer and key events at world positions. |
+| `click <text>` / `choose <text>` | The visible button or switch with that label / the entry so named in a visible list (also in dialogs). |
+| `stroke`, `mapview`, `search`, `zones`, `look` | A brush stroke, the map's place, its search and zone filter, the View look switches. |
+| `picture <file.png>` / `shot <file.png>` | The view shown (3D or map) once it is drawn / the whole window, panels and view, as Avalonia's compositor draws it (never a capture of the screen). |
+| `bench <seconds>` / `state` / `quit` | Frame rates while the camera turns / the state / quit without asking. |
+
+`tools/docs-screenshots/editor.py` wraps it for the documentation's pictures: it starts the app with
+a stand-in home folder (none of this computer's characters, worlds or servers show; the game look
+is linked in), sends commands and saves `shot`s as JPEG. Scenes are built in a world made from a
+seed (`WorldCheck create`) and never saved.
 
 ## Building
 
 ```sh
-dotnet publish TerrainEditor.csproj -c Release -r linux-x64 --self-contained -p:PublishSingleFile=true -o ../ValheimWorldEditor
+dotnet publish Desktop/ValheimWorldEditor.Desktop.csproj -c Release -r linux-x64 --self-contained -p:PublishSingleFile=true -o ../ValheimWorldEditor
 ```
 
-The build copies `wwwroot` into the output. Publish outside the source folder: an output folder
-inside it is picked up as content by the next build. `-r win-x64` builds for Windows; it compiles,
-and under Wine editing and saving work, but the 58 MB world-map reply never arrived there (probably
-Wine's networking; not tried on real Windows).
+One file, `ValheimWorldEditor` (`-r win-x64`: `ValheimWorldEditor.exe`), with the libraries it needs
+(Skia, HarfBuzz, ANGLE on Windows) packed inside. Publish outside the source folder: a folder inside
+it is picked up by the next build. `tools/release.sh <folder>` builds the complete release packages:
+the program, the game-look exporter with its own Python runtime, the plugin and the readmes
+(`SKIP_PLUGIN=1` leaves the plugin out); `tools/check-package.sh <package>` checks one has what it
+needs and no source code, debug files or game files.
 
 The plugin: build `plugin/WorldEditorBridge/WorldEditorBridge.csproj` after pointing its
 `HintPath`s at your BepInEx `core` folder and the game's `*_Data/Managed` folder.
@@ -49,40 +74,44 @@ programs (it rejected the editor packages of 0.3.3), so the editor is only on th
 page, which the plugin's mod page points to. `tools/thunderstore.sh <folder>` builds
 `WorldEditorBridge-<version>.zip` from `tools/thunderstore/bridge/` (`manifest.json` and the mod
 page `README.md`), the editor's `CHANGELOG.md` (made into the plugin's changelog by
-`tools/thunderstore/changelog.py`, with links to the matching editor on GitHub) and `wwwroot/icon.png`, with the DLL of the
-release packages (reused when that version is already in the folder). It checks Thunderstore's
-rules (name, 250-character description, 256x256 icon). Upload the zip at
+`tools/thunderstore/changelog.py`, with links to the matching editor on GitHub) and the icon, with
+the DLL of the release packages (reused when that version is already in the folder). It checks
+Thunderstore's rules (name, 250-character description, 256x256 icon). Upload the zip at
 https://thunderstore.io/c/valheim/create/.
 
 ## Versions
 
 One version number for everything: the `VERSION` file. `Directory.Build.props` reads it into the
-editor and the plugin (`BuildInfo.Version`: the start page, the window title, the plugin's BepInEx
-version and its `/status`), and both release scripts name their packages after it. For a release:
+editor and the plugin (`BuildInfo.Version`: the start page, the window title, the log, the plugin's
+BepInEx version and its `/status`), and both release scripts name their packages after it. For a
+release:
 
 1. Raise `VERSION` (Major.Minor.Patch).
 2. Add a `## v<version>` section to `CHANGELOG.md` (a test checks it). Put changes to the plugin
    under a `### WorldEditorBridge` part of that section. The Thunderstore package's changelog is made
    from it: each version shows the plugin's part (or "unchanged") and then the editor's.
-3. Keep the BepInExPack dependency in the three `tools/thunderstore/*/manifest.json` current.
+3. Keep the BepInExPack dependency in the `tools/thunderstore/*/manifest.json` current.
 4. `tools/release.sh <folder>` and `tools/thunderstore.sh <folder>`; tag `v<version>`, publish the
    GitHub release, upload the Thunderstore zip (Thunderstore refuses a version it already has).
 
 ## Files extracted from the game
 
-The in-game look uses files that belong to the game, so they are not in git (see `.gitignore`) or
-in the release packages:
+The in-game look uses files that belong to the game, so they are never in git or in the release
+packages. The app copies them from the user's own Valheim (`Core/App/GameLook.cs`, started by the
+start page): it finds Valheim in the Steam libraries (or the folder the user chose), runs
+`export-game-files/export_all.py` with the bundled Python runtime into the per-user `game-look`
+folder of the data folder, and runs it again when Steam's build id of the game changes. That folder
+holds:
 
-- `wwwroot/terrain/*.png` and `heightmap.frag.glsl`: terrain textures and the converted terrain shader;
-- `wwwroot/maptex/`: map textures;
-- `wwwroot/models/`: building, tree, rock and bush models, their textures and `objects.json`.
+- `terrain/*.png` and `heightmap.frag.glsl`: terrain textures and the converted terrain shader
+  (drawn by `Desktop/GameLookGl.cs`);
+- `maptex/`: map textures (the map shader itself is hand-ported in `Desktop/MapShader.cs`);
+- `models/`: building, tree, rock and bush models, their textures and `objects.json`
+  (`Desktop/ModelStore.cs`).
 
-The app runs the exporter by itself (`App/GameLook.cs`): it finds Valheim in the Steam libraries
-(or the folder the user chose), runs `export-game-files/export_all.py` with the bundled Python
-runtime into the per-user `game-look` folder (served after `wwwroot`), and runs it again when
-Steam's build id of the game changes. `tools/make-python-runtime.sh` builds that runtime, then
-`tools/python-runtime/trim.py` removes every file a full export does not use: the list of what stays
-is `tools/python-runtime/keep-<linux-x64|win-x64>.txt` (plus the `encodings` package, the used
+`tools/make-python-runtime.sh` builds that runtime, then `tools/python-runtime/trim.py` removes every
+file a full export does not use: the list of what stays is
+`tools/python-runtime/keep-<linux-x64|win-x64>.txt` (plus the `encodings` package, the used
 packages' Python files and licence files; see the top of `trim.py`). After changing
 `requirements.txt`, the Python version or the exporter, make the lists again and commit them:
 
@@ -99,13 +128,13 @@ and Windows only has when a program installed the Visual C++ runtime.
 -r tools/asset-export/requirements.txt`):
 
 ```sh
-python3 tools/asset-export/export_all.py --valheim ~/.local/share/Steam/steamapps/common/Valheim --out wwwroot
+python3 tools/asset-export/export_all.py --valheim ~/.local/share/Steam/steamapps/common/Valheim --out ~/.local/share/ValheimWorldEditor/game-look
 ```
 
 | Option | Meaning |
 |---|---|
 | `--valheim` | The game client's folder (with `valheim_Data`). |
-| `--out` | The editor's `wwwroot`. |
+| `--out` | The `game-look` folder. |
 | `--objects all` / `world` / `none` | Models for every placeable kind (default), only the kinds in the save given with `--world <world folder>`, or build pieces only. |
 | `--only terrain` / `map` / `models` | Run only some steps (repeatable). |
 | `--work` | Cache folder (default `<out>/../export-cache`). |
@@ -116,81 +145,88 @@ What it does:
    arrays, the map material and each prefab's root object are (cached in `--work/scan.json`).
 2. **Terrain:** the textures of the `Heightmap` material, the diffuse and normal texture arrays
    stacked into vertical strips, and the OpenGL core build of the `Custom/Heightmap` shader, one
-   deferred-pass fragment variant converted for WebGL 2 (`look.js` adds its own `main()`). If a game
-   update changes the shader, the converter stops with a message instead of writing a broken file.
-3. **Map:** the textures of the `minimap` material. The map shader itself is hand-ported in
-   `wwwroot/mapview.js`.
+   deferred-pass fragment variant converted to GLSL ES 3.0 (`GameLookGl` adds its own `main()`). If
+   a game update changes the shader, the converter stops with a message instead of writing a broken
+   file.
+3. **Map:** the textures of the `minimap` material.
 4. **Models:** `export_pieces.py` (meshes, textures, materials; incremental, so an interrupted run
    continues), then `fix_normals.py` (Unity's DXT5nm normal maps to plain RGB) and `fix_alpha.py`
    (bleeds the colour of cut-out textures into their transparent pixels), then `objects.json`.
 
-A full run takes a few minutes and writes about 150 MB. The terrain and map output was checked to
-be byte-identical to the files made by hand during development.
+A full run takes a few minutes and writes about 150 MB.
 
 The catalogues that are in git are made by `scan_pieces.py` (`Core/WorldGen/pieces.json`, with each
-piece's snap points),
-`scan_modifiers.py` (`Core/WorldGen/terrain-modifiers.json`) and `scan_prefabs.py`
-(`Core/WorldGen/prefabs.json`: also container sizes, ward radii and crafting station build ranges);
-each takes the output file as argument and the bundle folder in `VWE_BUNDLES`.
-`scan_vegetation.py Core/WorldGen/vegetation.json` makes the game's vegetation rules for Regrow nature
-(ZoneSystem's and the location lists', with the random draws each kind makes when it is created).
-`RegrowProbe` (with `REALWORLD=<world folder> OUT=<file>`) reports how many saved trees and rocks of a
-world the game generated sit where Regrow puts them (61 % on a played Meadows / Black Forest world;
-the rest is mostly the game's physics check against what it placed before, which the editor cannot do).
-`scan_grown.py Core/WorldGen/prefabs.json` (run after `scan_prefabs.py`) adds what each sapling grows into
-(grown crops and trees keep their sapling's grow radius).
-`scan_build_tools.py Core/WorldGen/pieces.json Core/WorldGen/prefabs.json` (run after the other two) adds
-which build tool's menu has each piece (hammer, hoe, cultivator, feaster): the editor writes a
-builder on new pieces of those kinds.
-`scan_zdo_keys.py <Valheim folder> Core/WorldGen/zdo-keys.json` makes the names of object data keys for
-the object inspector, from the string literals of `assembly_valheim.dll` (the save only keeps their
-hashes).
+piece's snap points), `scan_modifiers.py` (`Core/WorldGen/terrain-modifiers.json`) and
+`scan_prefabs.py` (`Core/WorldGen/prefabs.json`: also container sizes, ward radii and crafting
+station build ranges); each takes the output file as argument and the bundle folder in
+`VWE_BUNDLES`. `scan_vegetation.py Core/WorldGen/vegetation.json` makes the game's vegetation rules
+for Regrow nature (ZoneSystem's and the location lists', with the random draws each kind makes when
+it is created). `scan_grown.py Core/WorldGen/prefabs.json` (run after `scan_prefabs.py`) adds what
+each sapling grows into (grown crops and trees keep their sapling's grow radius).
+`scan_build_tools.py Core/WorldGen/pieces.json Core/WorldGen/prefabs.json` (run after the other two)
+adds which build tool's menu has each piece (hammer, hoe, cultivator, feaster): the editor writes a
+builder on new pieces of those kinds. `scan_zdo_keys.py <Valheim folder>
+Core/WorldGen/zdo-keys.json` makes the names of object data keys for the object inspector, from the
+string literals of `assembly_valheim.dll` (the save only keeps their hashes).
+
+## WorldCheck
+
+`tools/WorldCheck` holds the developer checks, run with `dotnet run --project tools/WorldCheck --
+<check> …`:
+
+| Check | What it does |
+|---|---|
+| `verify <dump> [seed]` | The world generator against a dump recorded in the game (`DumpVerifier`). |
+| `verify-ingame <world> <file>` | The editor's ground against heightmaps recorded in the game by the TerrainCheck plugin. |
+| `selftest-save <world copy>` | Edits, saves and reads back a copy of a world (only under `/tmp`). |
+| `inspect <world>` / `summary <world>` | The chunk mapping and terrain objects / the overview map and the most edited zones. |
+| `create <folder> <name> <seed> [radius]` | A new world from a seed, in the game's save format; its middle (`radius` zones around spawn) generated with the game's vegetation rules (no locations). It refuses a folder that already holds a world. |
+| `look <seed> [metres]` | The biomes and water around a seed's spawn, to choose one. |
 
 ## Tests
 
-CircleCI (`.circleci/config.yml`) runs everything below on every push and pull request.
+Every test is in `tests/Desktop.Tests` (xUnit v3): the windows and panels run in Avalonia's
+headless mode, driven with real mouse and keyboard events, and the core (save round trips, the
+generator against values recorded in the game, live mode against a stand-in bridge, settings,
+servers, the SSH tunnel) is tested there too.
 
-| Job | What it checks |
-|---|---|
-| `dotnet-tests` | `tests/WorldEditor.Tests` (xUnit): the save round trip on the test world (ground edits, deleted and new objects, blank prefabs, copies and moves, zone reset, the 8 m limit, zones that are not generated), the prefab catalogue, live-mode bookkeeping against a stand-in bridge (apply only the difference, undo after applying), the 10-second connection check, `servers.cfg`, plugin settings, world and folder discovery. |
-| `build-app` + `browser-tests` | `tests/browser`: the real app (`--browser`) on the test world in headless Chrome, driven like a user: every tool, saving, backups, history, the start page and map, and no JavaScript errors. Box models stand in for the game's. |
-| `packages` | Both release packages build, and `tools/check-package.sh` finds everything they need and no source code, debug files or game files. |
-
-Not covered by CI: building the plugin and the game-look export (both need Valheim's own files) and
-live mode against a real game.
-
-The browser tests are split by area (`start`, `save`, `select`, `area`, `sculpt`, `place`,
-`place2`, `view`): each file starts its own app on its own copy of the test world, so files run side
-by side (`npm test` runs two at a time; more starve each other of processor time, as Chrome draws the
-3D view without a graphics card there). `common.mjs` holds what they share: `openEditor(query,
-prepare)` (prepare sets saved settings before the editor loads, to load it only once), `records()`,
-`noErrors()`. A step fails after `VWE_TIMEOUT` ms (30 s; CI sets 120 s), and `VWE_COVERAGE=<folder>`
-records which parts of the page's scripts ran (`node coverage.mjs <folder> --lines` lists the lines
-no test reaches).
+- **Visual tests** (`[Trait("Category", "Visual")]`, in `VisualTests.cs`) start the real app with
+  `--driver` and check what it draws with OpenGL: one app per group of tests (`EditorProcess`),
+  each test opening a fresh copy of the test world. They need a display and skip without one.
+- **The user's files are never touched.** A module initializer (`TestApp` in `InputTests.cs`) points
+  the settings, servers, Place memory, stamps, preferences, saved selections and the data folder at
+  temporary files before any test runs, and turns off the search of the computer's own Valheim and
+  mod manager profiles. Tests that change the environment or these paths (`HOME`, `XDG_*`, the data
+  folder) run in the non-parallel `DataDir` collection and put everything back. The visual tests'
+  app gets `--data` and never copies the game look.
+- **The SSH tunnel** is tested against a real `sshd` (`LocalSshd`): run as the test user on a free
+  local port, with its own keys and settings in a temporary folder (never `~/.ssh`, never port 22).
+  Without OpenSSH's `sshd` those tests skip, unless `VWE_NEED_SSHD=1` makes that a failure.
 
 The **test world** is `tests/fixtures/CITest`: a brand-new world made by a dedicated server and
 filled live through the editor (ground edits, trees, rocks, bushes, pickables, a crop, floors, walls,
 chests). `tests/fixtures/CITest.snapshot` is the same world as the plugin sends it.
 
+CircleCI (`.circleci/config.yml`) runs on every push and pull request:
+
+| Job | What it checks |
+|---|---|
+| `native-tests` | `tests/Desktop.Tests` without the visual tests, with OpenSSH's server installed (`VWE_NEED_SSHD=1`). |
+| `packages` | Both release packages build (without the plugin), and `tools/check-package.sh` finds everything they need and no source code, debug files or game files. |
+
+Not covered by CI: the visual tests (no display), building the plugin and the game-look export
+(both need Valheim's own files), and live mode against a real game.
+
 Running them locally:
 
 ```sh
-dotnet test tests/WorldEditor.Tests
-dotnet test tests/Desktop.Tests                # the native app, in Avalonia's headless mode
+dotnet test tests/Desktop.Tests                                  # everything (visual tests need a display)
+dotnet test tests/Desktop.Tests --filter "Category!=Visual"     # without the visual tests
+dotnet test tests/Desktop.Tests --filter "Category=Visual"      # only them
 dotnet-coverage collect -s tests/Desktop.Tests/coverage.config -f cobertura -o cov.xml "dotnet test tests/Desktop.Tests --filter Category!=Visual"
-                                              # the native app's coverage, our own code only
-dotnet publish TerrainEditor.csproj -c Release -r linux-x64 --self-contained -p:PublishSingleFile=true -o out
-cd tests/browser && npm ci && npm test        # APP=<program> to test another build
-tools/coverage.sh                             # coverage of every test: server and page, line by line
 SKIP_PLUGIN=1 tools/release.sh /tmp/dist && tools/check-package.sh /tmp/dist/*.tar.gz --no-plugin
 ```
 
-## Screenshots
-
-`tools/docs-screenshots/` holds the scripts that took the pictures in `docs/images/`. They were made
-for one particular world (places are given as world coordinates), so with another world change the
-coordinates at the top of each script. Run them in order against an editor on a world copy:
-
-```sh
-for f in tools/docs-screenshots/[0-9]*.mjs; do node "$f" http://127.0.0.1:5191 docs/images; done
-```
+The coverage counts only our own code: `coverage.config` leaves out FastNoise and the generator
+decompiled from Valheim (`WorldGenerator.cs`, `DUtils.cs`), which the test against the game's values
+checks as a whole.

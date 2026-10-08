@@ -24,7 +24,7 @@ For single player, or a world you host from the game.
    and token) itself, in the Valheim folder and in r2modman / Thunderstore Mod Manager profiles.
    (For a server the token is always typed; see below.)
 
-If your Valheim or your mod manager profile is not in the usual place, add it in **⚙ Settings** on
+If your Valheim or your mod manager profile is not in the usual place, add it in **Settings** on
 the start page (Valheim game folder, BepInEx folders).
 
 The plugin listens on port 5182 of your computer. If something else uses that port (for example an
@@ -102,10 +102,10 @@ moves it to the new name on its first start (port and token are kept), and the e
 | Control | What it does |
 |---|---|
 | **LIVE** badge | Shows the editor is connected to the running game. |
-| **Apply live** | Sends every pending change to the game: ground (height and paint), deleted objects, new objects (planted, pasted, replaced, moved), and zone resets. After a zone reset the world is read again from the game and the page reloads (the history starts over). |
-| **Auto** | Applies after every stroke, placement and undo, without pressing Apply live. |
-| **Reload** | Loads the world again from the game, to pick up what players changed since. Changes you have not applied are dropped (you are asked first). |
-| Player names | Connected players are drawn at their position, with their name, and follow them. |
+| **Apply live** | Sends every pending change to the game: ground (height and paint), deleted objects, new objects (planted, pasted, replaced, moved), and zone resets. After a zone reset the world is read again from the game (the history starts over). |
+| **Auto** | Applies after every stroke, placement and undo, without pressing Apply live. Turning it on sends what is already waiting. Remembered. |
+| **Reload** | Loads the world again from the game, to pick up what players changed since. Changes you have not applied are dropped (you are asked first). You stay in the same place. |
+| Players | Connected players are drawn at their position with their name, in the 3D view (blue posts) and on the map, and follow them. **View → Players → Go to** takes you to one. The map says how many are online. |
 
 The pending counter reads "Not applied: …" and the History panel marks applied changes.
 

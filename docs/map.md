@@ -2,15 +2,17 @@
 
 ![World map](images/map.jpg)
 
-The first page (http://127.0.0.1:5180) is a map of the whole world, drawn with the game's own map
-shader, so it looks like the in-game map with everything revealed.
+Opening a world shows a map of the whole world, drawn like the game's own map, so it looks like
+the in-game map with everything revealed. **Worlds** at the top of its panel goes back to the start
+page; the panel also says the world's name, seed, save number and how many objects it holds.
 
 ## Using it
 
-- **Drag** to pan, **scroll** to zoom.
-- **Click** any spot: a box shows the zone and its centre, with an **Edit in 3D** link and a size
-  choice. Clicking an edited zone also shows its details.
+- **Drag** to pan, **scroll** to zoom. The map remembers where it was.
+- **Click** any spot: the panel shows the zone and its biome, with **Edit in 3D** and a size choice.
 - The coordinates and zone under the cursor are shown at the bottom.
+- In live mode, the players online are drawn with their names, and the panel says how many there
+  are.
 
 ## Controls
 
@@ -18,18 +20,19 @@ shader, so it looks like the in-game map with everything revealed.
 |---|---|
 | **Show buildings** | Draws the footprint of every player-built piece. The number is how many pieces the world has. |
 | **Outline edited zones** | Outlines the zones whose ground was edited, in game or in the editor. |
-| **Show painted ground** | When zoomed in, draws dirt, paved and cultivated ground. |
+| **Show painted ground** | When zoomed in, draws dirt, paved and cultivated ground (fields). |
 | **Zone grid** | Draws the 64 m zone grid. |
-| **Clouds** | Draws the drifting cloud shadows of the in-game map. |
+| **Clouds (as in game)** | Draws the drifting cloud shadows of the in-game map. |
 | **Edit in 3D** | Opens the 3D editor around the clicked spot. |
 | **Size** (next to Edit in 3D) | How much ground the editor loads: 3 × 3 zones (192 m), 5 × 5 (320 m) or 7 × 7 (448 m). Bigger areas are slower to load and draw. |
-| **Save to world…** / **Discard** | Same as in the editor: write or throw away the pending changes. |
+| **Save to world…** / **Apply live** / **Discard** | Same as in the editor: write or throw away the pending changes. The line above them says what is pending. |
 | **Reload from the game** | Live mode only: load the world again from the running game. |
 
 ## Search the world
 
 Find things anywhere in the world, like Amulet's find or WorldEdit's `//count`. Type part of a name or
-text (not case sensitive), choose what to look for, and press **Find** (or `Enter`):
+text (not case sensitive), choose what to look for, and press **Find** (or `Enter`). The
+section folds with its title, like the two below:
 
 | Look for | Finds |
 |---|---|
@@ -66,10 +69,9 @@ but never players' tombstones, and the game builds the zone again the next time 
 it. Only zones inside the world are listed: a dedicated server with nobody online also generates zones
 far outside the world, which are left out.
 
-## Edited zones list
+## Edited zones
 
-The table lists every zone with ground edits: how many height points (`h`) and paint points (`p`)
-were changed, and the range of the height changes in metres. Click a row to see that zone:
-
-- its biome and its height range, original and now;
-- a picture of the terrain with your edits, of the height edits alone, and of the paint.
+The **Edited zones** list (folded at first) has every zone with ground edits: how many height
+points (`h`) and paint points (`p`) were changed, the range of the height changes in metres, and
+"(not saved)" for edits still pending. Click a row to go there: the map zooms in on the zone and
+picks it, ready for **Edit in 3D**.
