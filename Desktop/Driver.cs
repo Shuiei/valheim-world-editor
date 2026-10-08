@@ -12,6 +12,8 @@ namespace TerrainEditor.Desktop;
 //   stroke <tool> <x> <z> <steps>  a brush stroke at world x, z (tool: raise, lower, smooth...)
 //   picture <file.png>             a picture of the view shown (3D or map), once it is drawn
 //   shot <file.png>                a picture of the whole window, panels and view (documentation)
+//   look <game|seethrough> <on|off>, look res <sharp|balanced|fast>
+//                                  the View panel's Look switches
 //   bench <seconds>                the 3D camera turns on its own; the frame rates come back
 //   mouse <down|move|up> <x> <z> [left|right|middle] [shift|ctrl|alt ...]
 //                                  the mouse at world x, z over the 3D view (real pointer events)
@@ -141,6 +143,15 @@ public static class Driver
 				}
 				return State(w);
 			}
+			case "look":
+				switch (args[0])
+				{
+					case "game": w.GameLookBox.IsChecked = args[1] == "on"; break;
+					case "seethrough": w.SeeThroughBox.IsChecked = args[1] == "on"; break;
+					case "res": w.ResolutionBox.SelectedIndex = Array.IndexOf(new[] { "sharp", "balanced", "fast" }, args[1]); break;
+					default: throw new InvalidOperationException("unknown look " + args[0]);
+				}
+				return State(w);
 			case "bench":
 			{
 				string result = await w.View.Benchmark(F(0)).WaitAsync(TimeSpan.FromSeconds(F(0) + 60));

@@ -46,6 +46,8 @@ public static class Shaders
 		uniform vec4 uColor; uniform float uCutoff; uniform vec4 uUv;
 		// Ghosts (the Place tool's preview): see-through and tinted.
 		uniform float uGhost;
+		// See-through buildings (View): drawn faint.
+		uniform float uSeeThrough;
 		uniform vec3 uSun, uSunColor, uAmbient, uEye;
 		out vec4 frag;
 		void main() {
@@ -58,7 +60,7 @@ public static class Shaders
 			vec3 toCam = uEye - vPos;
 			vec3 v = normalize(toCam);
 			col += vec3(0.15, 0.25, 0.35) * uGhost;
-			frag = vec4(toSRGB(applyFogDir(col, length(toCam), -vec3(v.x, v.y, -v.z), vec3(uSun.x, uSun.y, -uSun.z))), 1.0 - 0.5 * uGhost);
+			frag = vec4(toSRGB(applyFogDir(col, length(toCam), -vec3(v.x, v.y, -v.z), vec3(uSun.x, uSun.y, -uSun.z))), (1.0 - 0.5 * uGhost) * (1.0 - 0.6 * uSeeThrough));
 		}
 		""";
 

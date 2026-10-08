@@ -31,6 +31,14 @@ the plugin is unchanged in versions without that part.
 - Native app: the editor remembers its choices between runs, as the web editor did: the View
   switches, the map's place, the brush's shape and falloff, the Area action, the Shape preset and
   your own formula, Select's options, the open right-hand panel and the clipboard.
+- Native app: the status bar shows where the mouse is (x/z), the ground's height against the
+  original (and the ±8 m limit) and the zone.
+- Native app, View: Game look on/off, See-through buildings, 3D resolution (Sharp, Balanced, Fast),
+  and Defaults / All / Ground presets.
+- Native app: `[` `]` change the brush size; H picks the View tool; Space + left drag and Shift +
+  right drag slide the view in any tool; Alt + wheel turns the selection, the paste or the Place
+  preview; the help lists every key.
+- Native app, Naturalize: New pattern (another noise pattern for the next stroke or natural path).
 - The developer checks of the world generator and the save writer (`--verify`, `--verify-ingame`,
   `--selftest-save`, `--inspect`, `--summary`) moved to a separate tool, `tools/WorldCheck`.
 
@@ -39,6 +47,9 @@ the plugin is unchanged in versions without that part.
   again and again; a folder chosen by hand was also dropped for live worlds.
 - My game: on Linux, mod manager profiles were listed and searched twice.
 - A character file that cannot be read no longer stops worlds from opening.
+
+- Native app: Space no longer presses the focused button in the editor.
+- Native app, Area: "pick" for Replace now works before an area is drawn.
 
 ### Removed
 - Native app: the development command-line options (pictures, scripted tools); `--world`,

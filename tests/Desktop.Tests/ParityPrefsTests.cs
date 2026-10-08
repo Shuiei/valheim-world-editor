@@ -386,6 +386,26 @@ public sealed class ParityPrefsMapTests : IDisposable
 	public void Dispose() => File.Delete(_file);
 
 	[AvaloniaFact]
+	public void TheLookSwitchesAreRemembered()
+	{
+		var w = new MainWindow(load: false, prefs: Prefs.Load(_file)) { Width = 1200, Height = 900 };
+		w.Show();
+		// Defaults: the game's look, solid buildings, sharp.
+		Assert.True(w.GameLookBox.IsChecked);
+		Assert.False(w.SeeThroughBox.IsChecked);
+		Assert.Equal(0, w.ResolutionBox.SelectedIndex);
+		w.GameLookBox.IsChecked = false;
+		w.SeeThroughBox.IsChecked = true;
+		w.ResolutionBox.SelectedIndex = 2;
+		w.Prefs.Flush();
+		var v = new MainWindow(load: false, prefs: Prefs.Load(_file)) { Width = 1200, Height = 900 };
+		v.Show();
+		Assert.False(v.GameLookBox.IsChecked);
+		Assert.True(v.SeeThroughBox.IsChecked);
+		Assert.Equal(2, v.ResolutionBox.SelectedIndex);
+	}
+
+	[AvaloniaFact]
 	public async Task TheMapLooksWhereItWasLeft()
 	{
 		using var world = new WorldEditor.Tests.TempWorld();
