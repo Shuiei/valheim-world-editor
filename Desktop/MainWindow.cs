@@ -12,12 +12,37 @@ namespace TerrainEditor.Desktop;
 public sealed class MainWindow : Window
 {
 	private readonly GlView _view = new();
-	private readonly TextBlock _fps = new() { FontSize = 13 }, _info = new() { FontSize = 12, Foreground = Brushes.LightGray, TextWrapping = TextWrapping.Wrap };
+	private readonly TextBlock _fps = new() { FontSize = 12.5, TextWrapping = TextWrapping.Wrap }, _info = new() { FontSize = 12, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
 	private readonly PerfLog _perf = new();
 	private readonly TextBlock _eye = new() { FontSize = 12, Foreground = new SolidColorBrush(Color.FromRgb(143, 240, 180)), TextWrapping = TextWrapping.Wrap };
-	private readonly StackPanel _stats = new() { Spacing = 6 };
-	private Control _infoCard = null!;
-	internal Avalonia.Controls.Primitives.ToggleButton InfoButton { get; } = new() { Content = "ⓘ Info", FontSize = 11, Padding = new Thickness(8, 2), Margin = new Thickness(10, 0, 0, 10) };
+	// Help (?, F3): the controls, the graphics card, what was loaded, the frame rate.
+	internal Border HelpCard { get; private set; } = null!;
+	internal Button HelpButton { get; } = new Button { Content = Icons.Make("help", 18), Padding = new Thickness(7, 5) }.Classed("ghost");
+	internal Button ViewButton { get; } = new Button { Content = Icons.With("view", "View"), FontSize = 12.5 }.Classed("ghost");
+	// The top bar's names: the world, and the area open.
+	private readonly TextBlock _title = new() { FontSize = 14, FontWeight = FontWeight.SemiBold, Text = "Valheim World Editor", TextTrimming = TextTrimming.CharacterEllipsis };
+	private readonly TextBlock _subtitle = new() { FontSize = 12, Foreground = Ui.Muted, TextTrimming = TextTrimming.CharacterEllipsis };
+	private readonly Border _liveBadge = new()
+	{
+		IsVisible = false,
+		CornerRadius = new CornerRadius(999),
+		BorderThickness = new Thickness(1),
+		BorderBrush = new SolidColorBrush(Color.Parse("#2a6a4a")),
+		Background = new SolidColorBrush(Color.Parse("#13261d")),
+		Padding = new Thickness(9, 4),
+		VerticalAlignment = VerticalAlignment.Center,
+		Child = new StackPanel
+		{
+			Orientation = Orientation.Horizontal,
+			Spacing = 6,
+			Children =
+			{
+				new Border { Width = 7, Height = 7, CornerRadius = new CornerRadius(4), Background = new SolidColorBrush(Color.Parse("#4be08a")), VerticalAlignment = VerticalAlignment.Center, BoxShadow = BoxShadows.Parse("0 0 6 0 #4be08a") },
+				new TextBlock { Text = "LIVE", FontSize = 11.5, FontWeight = FontWeight.Bold, LetterSpacing = 0.7, Foreground = new SolidColorBrush(Color.Parse("#8ff0b4")) },
+			},
+		},
+	};
+	private readonly Border _pendingPill = new() { CornerRadius = new CornerRadius(999), BorderThickness = new Thickness(1), Padding = new Thickness(9, 4), VerticalAlignment = VerticalAlignment.Center };
 	private readonly TextBlock _selection = new() { FontSize = 12, Foreground = new SolidColorBrush(Color.FromRgb(224, 166, 75)), TextWrapping = TextWrapping.Wrap };
 	private ModelStore? _models;
 	private string Name(WorldScene.Thing t) => _models?.NameOf(t.Prefab) ?? TerrainEditor.Terrain.PrefabCatalog.DisplayName(t.Prefab) ?? t.Prefab.ToString();
@@ -38,13 +63,13 @@ public sealed class MainWindow : Window
 
 	// The save bar (top middle): what is waiting to be saved, undo, redo, Save, and the last message.
 	private readonly TextBlock _pending = new() { FontSize = 12, VerticalAlignment = VerticalAlignment.Center, Text = "All saved" };
-	private readonly TextBlock _message = new() { FontSize = 12, Foreground = new SolidColorBrush(Color.FromRgb(240, 190, 90)), TextWrapping = TextWrapping.Wrap, MaxWidth = 520 };
-	internal Button UndoButton { get; } = new() { Content = "Undo", FontSize = 12, IsEnabled = false };
-	internal Button RedoButton { get; } = new() { Content = "Redo", FontSize = 12, IsEnabled = false };
-	internal Button SaveButton { get; } = new() { Content = "Save", FontSize = 12, IsEnabled = false };
-	internal Button HistoryButton { get; } = new() { Content = "History", FontSize = 12 };
+	private readonly TextBlock _message = new() { FontSize = 12.5, TextWrapping = TextWrapping.Wrap, MaxLines = 2, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center };
+	internal Button UndoButton { get; } = new Button { Content = Icons.Make("undo", 18), IsEnabled = false, Padding = new Thickness(7, 5) }.Classed("ghost");
+	internal Button RedoButton { get; } = new Button { Content = Icons.Make("redo", 18), IsEnabled = false, Padding = new Thickness(7, 5) }.Classed("ghost");
+	internal Button SaveButton { get; } = new Button { Content = "Save to world", FontSize = 12.5, IsEnabled = false }.Classed("primary");
+	internal Button HistoryButton { get; } = new Button { Content = Icons.With("history", "History"), FontSize = 12.5 }.Classed("ghost");
 	internal HistoryPanel History { get; }
-	internal Button MapButton { get; } = new() { Content = "◂ Map", FontSize = 12, IsVisible = false };
+	internal Button MapButton { get; } = new Button { Content = Icons.With("back", "Map"), FontSize = 12.5, IsVisible = false }.Classed("ghost");
 
 	// ---- Pages: the start page, the world map, and the 3D editor of an area.
 	private readonly ContentControl _pages = new();
@@ -195,14 +220,16 @@ public sealed class MainWindow : Window
 		_view.Tape.Clear();
 		PlaceTool.ClearShape();
 		Inspector.Close();
-		_info.Text = scene.LoadInfo + (_models == null ? "\nNo game models copied yet: boxes stand in (open the web editor once to copy the game's look)." : "")
-			+ "\nView: click picks an object (Shift adds) · right drag turns · middle or left drag slides · wheel zooms · WASD moves · F walks and flies · E: select and move · 1-9, 0: brushes";
+		_info.Text = scene.LoadInfo + (_models == null ? "\nNo game models copied yet: boxes stand in (open the web editor once to copy the game's look)." : "");
 		_view.Show(scene, _models);
 		if (scene.Session != null)
 		{
 			Edit(scene.Session);
 		}
 		MapButton.IsVisible = scene.Owner != null && !Options.Direct;
+		_title.Text = scene.Name;
+		int mid = scene.Size / 2;
+		_subtitle.Text = $"{scene.Size} × {scene.Size} zones around zone {scene.X0 + mid}, {scene.Z0 + mid} · {scene.Things.Count(t => !t.Gone):N0} objects";
 		Title = $"{scene.Name} · Valheim World Editor (native preview)";
 		_pages.Content = _editorPage;
 	}
@@ -332,8 +359,14 @@ public sealed class MainWindow : Window
 		}
 		_pending.Text = s.PendingText;
 		var (z, d, a, r) = s.Pending;
-		SaveButton.IsEnabled = z + d + a + r > 0;
-		SaveButton.Content = s.IsLive ? "Apply live" : "Save";
+		bool dirty = z + d + a + r > 0;
+		SaveButton.IsEnabled = dirty;
+		SaveButton.Content = s.IsLive ? "Apply live" : "Save to world";
+		// The pill: amber while something waits, grey when all is saved.
+		_pendingPill.Background = dirty ? new SolidColorBrush(Color.Parse("#2c2416")) : Brushes.Transparent;
+		_pendingPill.BorderBrush = dirty ? new SolidColorBrush(Color.Parse("#7a5a2a")) : Ui.Line;
+		_pending.Foreground = dirty ? new SolidColorBrush(Color.Parse("#f3d29b")) : Ui.Muted;
+		_liveBadge.IsVisible = s.IsLive;
 		UndoButton.IsEnabled = s.CanUndo;
 		RedoButton.IsEnabled = s.CanRedo;
 		ToolTip.SetTip(UndoButton, s.UndoLabel is string u ? $"Undo {u} (Ctrl+Z)" : "Nothing to undo");
@@ -679,40 +712,142 @@ public sealed class MainWindow : Window
 		UpdateSaveBar();
 	}
 
-	private Control SaveBar()
+	// --ui-shot: the window's panels drawn by Avalonia into a picture (the OpenGL views stay empty), then quit.
+	private async Task UiPicture(string path)
+	{
+		await Task.Delay(3000);
+		var size = new PixelSize((int)Bounds.Width, (int)Bounds.Height);
+		using var rtb = new Avalonia.Media.Imaging.RenderTargetBitmap(size);
+		rtb.Render(this);
+		rtb.Save(path);
+		Options.Say($"picture: {path}");
+		(Application.Current?.ApplicationLifetime as Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime)?.Shutdown();
+	}
+
+	// The right-hand panels share the place under the top bar: one at a time (null: none).
+	internal void ShowRight(Control? panel)
+	{
+		_viewPanel.IsVisible = panel == _viewPanel;
+		HelpCard.IsVisible = panel == HelpCard;
+		if (History.Card.IsVisible != (panel == History.Card))
+		{
+			History.Toggle();
+		}
+		ViewButton.Classes.Set("on", _viewPanel.IsVisible);
+		HistoryButton.Classes.Set("on", History.Card.IsVisible);
+		HelpButton.Classes.Set("on", HelpCard.IsVisible);
+	}
+
+	private static Control Sep() => new Border { Width = 1, Height = 26, Background = Ui.Line, Margin = new Thickness(4, 0), VerticalAlignment = VerticalAlignment.Center };
+
+	// The top bar (the web editor's): back to the map, the names, undo and redo, what is waiting to be
+	// saved and Save, and the right-hand panels.
+	private Control TopBar()
 	{
 		UndoButton.Click += (_, _) => Undo();
 		MapButton.Click += (_, _) => ShowMap();
 		ToolTip.SetTip(MapButton, "Back to the world map (what is not saved stays pending)");
-		HistoryButton.Click += (_, _) => History.Toggle();
-		ToolTip.SetTip(HistoryButton, "Every change of this session: go back to one, or take out only one");
+		HistoryButton.Click += (_, _) => ShowRight(History.Card.IsVisible ? null : History.Card);
+		ToolTip.SetTip(HistoryButton, "Every change of this session: go back to one, or take out only one (L)");
+		ViewButton.Click += (_, _) => ShowRight(_viewPanel.IsVisible ? null : _viewPanel);
+		ToolTip.SetTip(ViewButton, "Show / hide things in the world (V)");
+		HelpButton.Click += (_, _) => ShowRight(HelpCard.IsVisible ? null : HelpCard);
+		ToolTip.SetTip(HelpButton, "Controls and shortcuts (?)");
 		RedoButton.Click += (_, _) => Redo();
 		SaveButton.Click += async (_, _) => await Save();
-		// The message line takes room only when it says something.
-		_message.IsVisible = false;
-		_message.PropertyChanged += (_, e) => { if (e.Property == TextBlock.TextProperty) _message.IsVisible = !string.IsNullOrEmpty(_message.Text); };
 		ToolTip.SetTip(SaveButton, "Write the changes into the world's files (Ctrl+S)");
-		return new Border
+		ToolTip.SetTip(_liveBadge, "Connected to the running game through the WorldEditorBridge plugin");
+		_pendingPill.Child = _pending;
+		var names = new StackPanel { VerticalAlignment = VerticalAlignment.Center, Children = { _title, _subtitle } };
+		var bar = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto") };
+		var left = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10, Children = { MapButton, names } };
+		var right = new StackPanel
 		{
-			Background = new SolidColorBrush(Color.FromArgb(235, 24, 28, 34)),
-			BorderBrush = new SolidColorBrush(Color.FromRgb(46, 53, 63)),
-			BorderThickness = new Thickness(1),
-			CornerRadius = new CornerRadius(10),
-			Padding = new Thickness(10, 6),
-			Margin = new Thickness(10),
-			// At the bottom: the tool panels grow down from the top and would be covered.
-			HorizontalAlignment = HorizontalAlignment.Center,
-			VerticalAlignment = VerticalAlignment.Bottom,
-			Child = new StackPanel
+			Orientation = Orientation.Horizontal,
+			Spacing = 4,
+			VerticalAlignment = VerticalAlignment.Center,
+			Children = { UndoButton, RedoButton, Sep(), _liveBadge, _pendingPill, SaveButton, Sep(), HistoryButton, ViewButton, HelpButton },
+		};
+		Grid.SetColumn(right, 2);
+		bar.Children.Add(left);
+		bar.Children.Add(right);
+		var card = Ui.Card(bar);
+		card.Height = 50;
+		card.Padding = new Thickness(Ui.Pad.Left, 0);
+		card.Margin = new Thickness(10, 10, 10, 0);
+		card.VerticalAlignment = VerticalAlignment.Top;
+		return card;
+	}
+
+	// The status bar (bottom): the last message, the selection, walking or flying, and the controls.
+	private Control StatusBar()
+	{
+		var bar = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto,Auto,Auto"), ColumnSpacing = 18 };
+		var tips = new TextBlock { Text = "Right drag turns · Wheel zooms · Middle drag slides · ? help", FontSize = 12, Foreground = Ui.Muted, VerticalAlignment = VerticalAlignment.Center };
+		_selection.VerticalAlignment = _eye.VerticalAlignment = VerticalAlignment.Center;
+		_selection.TextWrapping = _eye.TextWrapping = TextWrapping.NoWrap;
+		_selection.MaxWidth = 380;
+		_selection.TextTrimming = TextTrimming.CharacterEllipsis;
+		Grid.SetColumn(_selection, 1);
+		Grid.SetColumn(_eye, 2);
+		Grid.SetColumn(tips, 3);
+		bar.Children.Add(_message);
+		bar.Children.Add(_selection);
+		bar.Children.Add(_eye);
+		bar.Children.Add(tips);
+		var card = Ui.Card(bar);
+		card.Margin = new Thickness(10, 0, 10, 10);
+		card.VerticalAlignment = VerticalAlignment.Bottom;
+		return card;
+	}
+
+	// Help: the controls (the web editor's list), then what the program knows about this computer.
+	private Border Help(CheckBox record)
+	{
+		var list = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*"), ColumnSpacing = 12, RowSpacing = 5 };
+		var rows = new (string Keys, string What)[]
+		{
+			("Left drag", "Use the tool"), ("Right drag", "Turn the view"), ("Wheel", "Zoom"), ("Middle drag", "Slide the view"), ("W A S D", "Move around"),
+			("F", "Walk at eye height · fly (Space up, C down) · back to the usual view"), ("1–9, 0, O", "Sculpt and paint tools (O: Erode)"),
+			("B / P / T / G", "Area, Path, Place, Shape"), ("E / M / Esc", "Select, Measure, View"), ("Ctrl+C / Ctrl+V", "Copy the area / paste it (R turns 90°, , . turn 1°, F mirrors)"),
+			("Alt + click", "Pick the ground height"), ("Del", "Delete the selected objects"), ("I", "Inspect the selected object"),
+			("Ctrl+Z / Ctrl+Y", "Undo / redo"), ("Ctrl+S", "Save"), ("V / L / ?", "View panel / history / this help"),
+		};
+		for (int i = 0; i < rows.Length; i++)
+		{
+			list.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+			var k = new TextBlock { Text = rows[i].Keys, FontSize = 12.5 };
+			var w = new TextBlock { Text = rows[i].What, FontSize = 12.5, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
+			Grid.SetRow(k, i);
+			Grid.SetRow(w, i);
+			Grid.SetColumn(w, 1);
+			list.Children.Add(k);
+			list.Children.Add(w);
+		}
+		var close = new Button { Content = Icons.Make("close", 14), Padding = new Thickness(5) }.Classed("ghost");
+		close.Click += (_, _) => ShowRight(null);
+		var head = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Children = { new TextBlock { Text = "Controls", FontSize = 14, FontWeight = FontWeight.SemiBold, VerticalAlignment = VerticalAlignment.Center } } };
+		Grid.SetColumn(close, 1);
+		head.Children.Add(close);
+		record.Classes.Add("switch");
+		var card = Ui.Card(new ScrollViewer
+		{
+			Content = new StackPanel
 			{
-				Spacing = 4,
+				Spacing = 8,
 				Children =
 				{
-					new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = { MapButton, _pending, UndoButton, RedoButton, HistoryButton, SaveButton } },
-					_message,
+					head, list,
+					Ui.Hint("Edits stay within the game's limit of ±8 m from the original ground; points at the limit turn red."),
+					Ui.Hint("The outer line of points is locked so the area always joins its neighbours seamlessly."),
+					Ui.Heading("This computer"),
+					_fps, _info, record,
 				},
 			},
-		};
+		});
+		card.Width = 330;
+		card.IsVisible = false;
+		return card;
 	}
 
 	private void OnKey(object? sender, Avalonia.Input.KeyEventArgs e)
@@ -724,9 +859,22 @@ public sealed class MainWindow : Window
 		}
 		var mods = e.KeyModifiers;
 		bool ctrl = mods.HasFlag(Avalonia.Input.KeyModifiers.Control) || mods.HasFlag(Avalonia.Input.KeyModifiers.Meta);
-		if (e.Key == Avalonia.Input.Key.F3)
+		// The right-hand panels, as in the web editor: V the View panel, L the history, ? (or F3) the help.
+		if (!ctrl && e.Key is Avalonia.Input.Key.F3 or Avalonia.Input.Key.OemQuestion || (!ctrl && mods.HasFlag(Avalonia.Input.KeyModifiers.Shift) && e.Key == Avalonia.Input.Key.Oem2))
 		{
-			InfoButton.IsChecked = InfoButton.IsChecked != true;
+			ShowRight(HelpCard.IsVisible ? null : HelpCard);
+			e.Handled = true;
+			return;
+		}
+		if (!ctrl && mods == Avalonia.Input.KeyModifiers.None && e.Key == Avalonia.Input.Key.V)
+		{
+			ShowRight(_viewPanel.IsVisible ? null : _viewPanel);
+			e.Handled = true;
+			return;
+		}
+		if (!ctrl && mods == Avalonia.Input.KeyModifiers.None && e.Key == Avalonia.Input.Key.L)
+		{
+			ShowRight(History.Card.IsVisible ? null : History.Card);
 			e.Handled = true;
 			return;
 		}
@@ -857,12 +1005,12 @@ public sealed class MainWindow : Window
 	internal CheckBox ContourBox { get; } = new() { Content = "Height lines every", FontSize = 12 };
 	internal ComboBox ContourStepBox { get; } = new() { ItemsSource = new[] { "1", "2", "5", "10" }, SelectedIndex = 1, FontSize = 12, MinWidth = 60 };
 
-	private static TextBlock Heading(string t) => new() { Text = t, FontSize = 11, FontWeight = FontWeight.SemiBold, Foreground = Brushes.Gray, Margin = new Thickness(0, 8, 0, 2) };
+	private static TextBlock Heading(string t) => Ui.Heading(t, 12);
 
 	private Control ViewPanel()
 	{
 		var list = new StackPanel { Spacing = 2 };
-		list.Children.Add(new TextBlock { Text = "VIEW", FontSize = 11, FontWeight = FontWeight.SemiBold, Foreground = Brushes.Gray, Margin = new Thickness(0, 0, 0, 4) });
+		list.Children.Add(Ui.Heading("View", 0));
 		foreach (var k in ObjectKinds.All)
 		{
 			var box = new CheckBox { Content = ObjectKinds.Label(k), IsChecked = _view.IsShown(k), FontSize = 12 };
@@ -883,7 +1031,7 @@ public sealed class MainWindow : Window
 		}
 		_view.OverlaysBuilt += o =>
 		{
-			void Count(Overlays.Layer l, int n) => _overlayBoxes[l].Content = $"{_overlayBoxes[l].Tag}  ({n})";
+			void Count(Overlays.Layer l, int n) => _overlayBoxes[l].Content = Ui.Counted((string)_overlayBoxes[l].Tag!, n);
 			Count(Overlays.Layer.Markers, o.Locations);
 			Count(Overlays.Layer.Wards, o.Wards);
 			Count(Overlays.Layer.Stations, o.Stations);
@@ -904,16 +1052,24 @@ public sealed class MainWindow : Window
 		{
 			foreach (var (k, box) in _kindBoxes)
 			{
-				box.Content = $"{ObjectKinds.Label(k)}  ({counts.GetValueOrDefault(k):N0})";
+				box.Content = Ui.Counted(ObjectKinds.Label(k), counts.GetValueOrDefault(k));
 			}
 		};
+		// The web editor's switches.
+		foreach (var box in Avalonia.LogicalTree.LogicalExtensions.GetLogicalDescendants(list).OfType<CheckBox>())
+		{
+			box.Classes.Add("switch");
+			box.FontSize = 12.5;
+		}
+		list.Width = 240;
 		return new Border
 		{
-			Background = new SolidColorBrush(Color.FromArgb(235, 24, 28, 34)),
-			BorderBrush = new SolidColorBrush(Color.FromRgb(46, 53, 63)),
+			Background = Ui.Panel,
+			BorderBrush = Ui.Line,
+			BoxShadow = BoxShadows.Parse("0 6 24 0 #59000000"),
 			BorderThickness = new Thickness(1),
 			CornerRadius = new CornerRadius(10),
-			Padding = new Thickness(12, 10),
+			Padding = Ui.Pad,
 			Margin = new Thickness(10),
 			HorizontalAlignment = HorizontalAlignment.Right,
 			VerticalAlignment = VerticalAlignment.Top,
@@ -1080,55 +1236,19 @@ public sealed class MainWindow : Window
 		Title = "Valheim World Editor (native preview)";
 		Width = 1500;
 		Height = 950;
-		Background = new SolidColorBrush(Color.FromRgb(20, 23, 28));
-		var record = new CheckBox { Content = "Record frame rates", FontSize = 12 };
+		Background = Ui.Bg;
+		var record = new CheckBox { Content = "Record frame rates", FontSize = 12.5 };
 		record.IsCheckedChanged += (_, _) => { _perf.On = record.IsChecked == true; _perf.Restart(); if (!_perf.On) _perf.Flush(); };
 		ToolTip.SetTip(record, $"A line every 0.2 s while the view is used, in {PerfLog.FilePath}");
-		var panel = new Border
-		{
-			Background = new SolidColorBrush(Color.FromArgb(235, 24, 28, 34)),
-			BorderBrush = new SolidColorBrush(Color.FromRgb(46, 53, 63)),
-			BorderThickness = new Thickness(1),
-			CornerRadius = new CornerRadius(10),
-			Padding = new Thickness(12, 10),
-			Margin = new Thickness(10, 10, 10, 6),
-			MaxWidth = 380,
-			HorizontalAlignment = HorizontalAlignment.Left,
-			VerticalAlignment = VerticalAlignment.Bottom,
-			Child = new StackPanel { Spacing = 6, Children = { _stats, _eye, _selection } },
-		};
-		// Frame rate and load details: hidden unless asked for (Info, F3); remembered.
-		_stats.Children.Add(_fps);
-		_stats.Children.Add(_info);
-		_stats.Children.Add(record);
-		_stats.IsVisible = _settings.ShowStats;
-		InfoButton.IsChecked = _settings.ShowStats;
-		ToolTip.SetTip(InfoButton, "Show the frame rate and what was loaded (F3)");
-		InfoButton.IsCheckedChanged += (_, _) =>
-		{
-			_stats.IsVisible = _settings.ShowStats = InfoButton.IsChecked == true;
-			_settings.Save();
-			Corner();
-		};
-		void Corner() => _infoCard.IsVisible = _stats.IsVisible || !string.IsNullOrEmpty(_eye.Text) || !string.IsNullOrEmpty(_selection.Text);
-		_eye.PropertyChanged += (_, e) => { if (e.Property == TextBlock.TextProperty) Corner(); };
-		_selection.PropertyChanged += (_, e) => { if (e.Property == TextBlock.TextProperty) Corner(); };
-		_infoCard = panel;
-		Corner();
-		var corner = new StackPanel
-		{
-			Spacing = 0,
-			HorizontalAlignment = HorizontalAlignment.Left,
-			VerticalAlignment = VerticalAlignment.Bottom,
-			Children = { panel, InfoButton },
-		};
+		HelpCard = Help(record);
 		ConfirmSave = text => Dialogs.Ask(this, "Save into the world", text, "Save");
 		Tell = text => Dialogs.Tell(this, "Save", text);
 		var tools = new StackPanel
 		{
 			Orientation = Orientation.Horizontal,
-			Spacing = 8,
-			Margin = new Thickness(10),
+			Spacing = Ui.Gap,
+			// Under the top bar, above the status bar.
+			Margin = new Thickness(10, 70, 10, 58),
 			HorizontalAlignment = HorizontalAlignment.Left,
 			VerticalAlignment = VerticalAlignment.Top,
 			Children = { Tools.Rail, Tools.Options, SelectPanel.Card, MeasurePanel.Card, ShapePanel.Card, PathPanel.Card, AreaPanel.Card, PastePanel.Card, PlacePanel.Card, PlacePanel.Chooser, MaskPanel.Card },
@@ -1193,7 +1313,15 @@ public sealed class MainWindow : Window
 		// Takes the mouse for the 3D view (see GlView.Attach).
 		var surface = new Border { Background = Brushes.Transparent };
 		_viewPanel = ViewPanel();
-		_editorPage = new Grid { Children = { _view, surface, corner, _viewPanel, tools, SaveBar(), History.Card, Inspector.Card, Blueprints.Card } };
+		// The panels on the right: under the top bar, one at a time.
+		foreach (var right in new[] { _viewPanel, History.Card, Inspector.Card, Blueprints.Card, HelpCard })
+		{
+			right.Margin = new Thickness(10, 70, 10, 58);
+			right.HorizontalAlignment = HorizontalAlignment.Right;
+			right.VerticalAlignment = VerticalAlignment.Top;
+		}
+		ViewButton.Classes.Add("on");
+		_editorPage = new Grid { Children = { _view, surface, tools, _viewPanel, History.Card, Inspector.Card, Blueprints.Card, HelpCard, TopBar(), StatusBar() } };
 		_busy.Child = _busyText;
 		_pages.Content = _editorPage;
 		Content = new Grid { Children = { _pages, _busy } };
@@ -1247,6 +1375,10 @@ public sealed class MainWindow : Window
 						Options.Say($"search: most in zone {most.Key.Item1},{most.Key.Item2} ({most.Count()})");
 					}
 					_map.Hits.SelectedIndex = 0;
+				}
+				if (Options.UiShot is string mui && Options.MapEdit == null)
+				{
+					await UiPicture(mui);
 				}
 				if (Options.MapEdit is var (mx, mz))
 				{
@@ -1311,6 +1443,10 @@ public sealed class MainWindow : Window
 				{
 					Tools.ChooseMode(ToolMode.Path);
 				}
+				else if (Options.StartTool is "help" or "history")
+				{
+					ShowRight(Options.StartTool == "help" ? HelpCard : History.Card);
+				}
 				else if (Enum.TryParse<BrushTool>(Options.StartTool, ignoreCase: true, out var startBrush))
 				{
 					Tools.Choose(startBrush);
@@ -1320,13 +1456,7 @@ public sealed class MainWindow : Window
 				{
 					// The Mask open too, to see its rows.
 					MaskPanel.OnBox.IsChecked = true;
-					await Task.Delay(3000);
-					var size = new PixelSize((int)Bounds.Width, (int)Bounds.Height);
-					using var rtb = new Avalonia.Media.Imaging.RenderTargetBitmap(size);
-					rtb.Render(this);
-					rtb.Save(ui);
-					Options.Say($"picture: {ui}");
-					(Application.Current?.ApplicationLifetime as Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime)?.Shutdown();
+					await UiPicture(ui);
 				}
 			}
 			catch (Exception ex)

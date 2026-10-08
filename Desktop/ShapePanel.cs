@@ -84,11 +84,12 @@ public sealed class ShapePanel
 		}
 		Card = new Border
 		{
-			Background = new SolidColorBrush(Color.FromArgb(235, 24, 28, 34)),
-			BorderBrush = new SolidColorBrush(Color.FromRgb(46, 53, 63)),
+			Background = Ui.Panel,
+			BorderBrush = Ui.Line,
+			BoxShadow = BoxShadows.Parse("0 6 24 0 #59000000"),
 			BorderThickness = new Thickness(1),
 			CornerRadius = new CornerRadius(10),
-			Padding = new Thickness(8),
+			Padding = Ui.Pad,
 			VerticalAlignment = VerticalAlignment.Top,
 			Child = new StackPanel
 			{
@@ -100,13 +101,13 @@ public sealed class ShapePanel
 					Row("Shape", PresetBox),
 					Row("Radius", RadiusSlider, radiusV),
 					Row("Height", HeightBox, new TextBlock { Text = " m", FontSize = 12, VerticalAlignment = VerticalAlignment.Center }),
-					new TextBlock { Text = "Formula", FontSize = 12, Foreground = Brushes.Gray },
+					new TextBlock { Text = "Formula", FontSize = 12, Foreground = Ui.Muted },
 					FormulaBox,
 					ErrorText,
 					new TextBlock
 					{
 						Text = "Click the ground to put the shape there: the formula gives how many metres to add to the ground at each point (negative digs). x and z are metres east and north of the click, d the distance from it, r the radius, h the height, n(x, z) smooth noise from -1 to 1. Functions: smooth, bell, sin, cos, abs, sqrt, min, max, pow, clamp, exp, floor; a ? b : c. Only points within the radius change; the ±8 m limit applies.",
-						FontSize = 11, Foreground = Brushes.Gray, TextWrapping = TextWrapping.Wrap,
+						FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap,
 					},
 				},
 			},

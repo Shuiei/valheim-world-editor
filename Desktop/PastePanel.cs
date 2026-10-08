@@ -10,7 +10,7 @@ public sealed class PastePanel
 {
 	public Control Card { get; }
 	private readonly PasteTool _paste;
-	internal TextBlock Info { get; } = new() { FontSize = 12, Foreground = Brushes.LightGray, TextWrapping = TextWrapping.Wrap };
+	internal TextBlock Info { get; } = new() { FontSize = 12, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
 	internal CheckBox GroundBox { get; } = new() { Content = "Ground shape and paint", IsChecked = true, FontSize = 12 };
 	internal CheckBox ObjectsBox { get; } = new() { Content = "Objects", IsChecked = true, FontSize = 12 };
 	internal NumericUpDown OffsetBox { get; } = new() { Value = 0, Increment = 0.5m, FormatString = "0.0#", FontSize = 12 };
@@ -52,11 +52,12 @@ public sealed class PastePanel
 		}
 		Card = new Border
 		{
-			Background = new SolidColorBrush(Color.FromArgb(235, 24, 28, 34)),
-			BorderBrush = new SolidColorBrush(Color.FromRgb(46, 53, 63)),
+			Background = Ui.Panel,
+			BorderBrush = Ui.Line,
+			BoxShadow = BoxShadows.Parse("0 6 24 0 #59000000"),
 			BorderThickness = new Thickness(1),
 			CornerRadius = new CornerRadius(10),
-			Padding = new Thickness(8),
+			Padding = Ui.Pad,
 			VerticalAlignment = VerticalAlignment.Top,
 			Child = new StackPanel
 			{
@@ -67,7 +68,7 @@ public sealed class PastePanel
 					new TextBlock { Text = "Paste", FontSize = 14, FontWeight = FontWeight.SemiBold },
 					Info, GroundBox, ObjectsBox,
 					Row("Height", OffsetBox, " m"),
-					new TextBlock { Text = "REPEAT (STACK)", FontSize = 10, Foreground = Brushes.Gray, Margin = new Thickness(0, 4, 0, 0) },
+					new TextBlock { Text = "REPEAT (STACK)", FontSize = 10, Foreground = Ui.Muted, Margin = new Thickness(0, 4, 0, 0) },
 					Row("Copies", CopiesBox),
 					Row("Along", AlongBox),
 					Row("Gap", GapBox, " m"),
@@ -75,7 +76,7 @@ public sealed class PastePanel
 					new TextBlock
 					{
 						Text = "Click to place; the copied ground keeps its shape relative to the point you click. Height moves the paste up or down.",
-						FontSize = 11, Foreground = Brushes.Gray, TextWrapping = TextWrapping.Wrap,
+						FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap,
 					},
 				},
 			},

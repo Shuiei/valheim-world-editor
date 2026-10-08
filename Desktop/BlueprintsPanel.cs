@@ -20,7 +20,7 @@ public sealed class BlueprintsPanel
 	internal TextBox Search { get; } = new() { Watermark = "Search blueprints", FontSize = 12 };
 	internal Button ImportButton { get; } = new() { Content = "Import file…", FontSize = 12 };
 	internal StackPanel List { get; } = new() { Spacing = 4 };
-	private readonly TextBlock _folder = new() { FontSize = 11, Foreground = Brushes.Gray, TextWrapping = TextWrapping.Wrap };
+	private readonly TextBlock _folder = new() { FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
 	private readonly Func<WorldScene?> _scene;
 	private readonly PasteTool _paste;
 	public event Action<string>? Message;
@@ -41,11 +41,12 @@ public sealed class BlueprintsPanel
 		ImportButton.Click += async (_, _) => { if (await PickFile() is string path) Import(path); };
 		Card = new Border
 		{
-			Background = new SolidColorBrush(Color.FromArgb(240, 24, 28, 34)),
-			BorderBrush = new SolidColorBrush(Color.FromRgb(46, 53, 63)),
+			Background = Ui.Panel,
+			BorderBrush = Ui.Line,
+			BoxShadow = BoxShadows.Parse("0 6 24 0 #59000000"),
 			BorderThickness = new Thickness(1),
 			CornerRadius = new CornerRadius(10),
-			Padding = new Thickness(10),
+			Padding = Ui.Pad,
 			Margin = new Thickness(10),
 			HorizontalAlignment = HorizontalAlignment.Right,
 			VerticalAlignment = VerticalAlignment.Top,
@@ -117,7 +118,7 @@ public sealed class BlueprintsPanel
 			List.Children.Add(new TextBlock
 			{
 				Text = _list.Count > 0 ? "Nothing matches." : "No blueprints yet. Copy something (Area or Select tool, Ctrl+C), then “Save blueprint…”.",
-				FontSize = 11, Foreground = Brushes.Gray, TextWrapping = TextWrapping.Wrap,
+				FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap,
 			});
 			return;
 		}
@@ -153,7 +154,7 @@ public sealed class BlueprintsPanel
 				{
 					new Image { Source = Picture(b.Thumb), Width = 64, Height = 64, [Grid.RowSpanProperty] = 3 },
 					Col(new TextBlock { Text = b.Name, FontSize = 12, FontWeight = FontWeight.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis }, 1),
-					Col(new TextBlock { Text = meta, FontSize = 11, Foreground = Brushes.Gray, TextWrapping = TextWrapping.Wrap, [Grid.RowProperty] = 1 }, 1),
+					Col(new TextBlock { Text = meta, FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap, [Grid.RowProperty] = 1 }, 1),
 					Col(new Border { Child = acts, [Grid.RowProperty] = 2 }, 1),
 				},
 			};

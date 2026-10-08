@@ -62,15 +62,14 @@ public sealed class PlacePanel
 	internal CheckBox AlongBox { get; } = new() { Content = "Follow the line (plus the rotation; replaces random facing)", IsChecked = true, FontSize = 12 };
 	internal CheckBox CurveBox { get; } = new() { Content = "Smooth curve through the points", IsChecked = true, FontSize = 12 };
 	internal Slider CellSlider { get; private set; } = null!;
-	internal Button PlaceButton { get; } = new() { Content = "Place (Enter)", FontSize = 12 };
+	internal Button PlaceButton { get; } = new Button { Content = "Place (Enter)", FontSize = 12 }.Classed("primary");
 	internal Button ClearButton { get; } = new() { Content = "Clear (Esc)", FontSize = 12 };
 	internal Button UndoPointButton { get; } = new() { Content = "Remove last point (Backspace)", FontSize = 12 };
 	internal Button NewLayoutButton { get; } = new() { Content = "New layout (R)", FontSize = 12 };
 	internal TextBlock Info { get; } = new() { FontSize = 12, TextWrapping = TextWrapping.Wrap };
 	private readonly Control _elevRow, _pieceBox, _attachRow, _brushRows, _scatterRows, _patchRow, _facingRows, _lineBox, _snapRows, _freeLineRows, _loopRow, _layersRow, _gridRow, _shapeRow, _undoRow, _brushHint, _lineHint;
-	private readonly TextBlock _lineHintText = new() { FontSize = 11, Foreground = Brushes.Gray, TextWrapping = TextWrapping.Wrap };
+	private readonly TextBlock _lineHintText = new() { FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
 
-	private static readonly IBrush On = new SolidColorBrush(Color.FromRgb(58, 92, 140));
 
 	private static Slider Slide(double min, double max, double step, double value, TextBlock shown, Func<double, string> fmt, Action<float> set)
 	{
@@ -99,15 +98,15 @@ public sealed class PlacePanel
 
 	private static Border CardOf(Control child, double width) => new()
 	{
-		Background = new SolidColorBrush(Color.FromArgb(235, 24, 28, 34)),
-		BorderBrush = new SolidColorBrush(Color.FromRgb(46, 53, 63)),
+		Background = Ui.Panel,
+		BorderBrush = Ui.Line,
+		BoxShadow = BoxShadows.Parse("0 6 24 0 #59000000"),
 		BorderThickness = new Thickness(1),
 		CornerRadius = new CornerRadius(10),
-		Padding = new Thickness(8),
+		Padding = Ui.Pad,
 		VerticalAlignment = VerticalAlignment.Top,
-		// As tall as the window allows: the scroll bar only when it does not fit, beside the content
-		// (it is drawn over it otherwise).
-		Child = new ScrollViewer { Content = new StackPanel { Width = width, Spacing = 6, Margin = new Thickness(0, 0, 12, 0), Children = { child } } },
+		// As tall as the window allows: the scroll bar only when it does not fit.
+		Child = new ScrollViewer { Content = new StackPanel { Width = width, Spacing = 6, Children = { child } } },
 	};
 
 	public PlacePanel(PlaceInput input, Func<WorldScene?> scene, Func<int, string?> nameOf, PlaceMemory? memory = null)
@@ -253,7 +252,7 @@ public sealed class PlacePanel
 		ClearButton.Click += (_, _) => t.ClearShape();
 		UndoPointButton.Click += (_, _) => input.RemoveLastPoint();
 		NewLayoutButton.Click += (_, _) => t.NewLayout();
-		TextBlock Hint(string s) => new() { Text = s, FontSize = 11, Foreground = Brushes.Gray, TextWrapping = TextWrapping.Wrap };
+		TextBlock Hint(string s) => new() { Text = s, FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
 
 		_elevRow = Row("Height", ElevBox, new TextBlock { Text = " m", FontSize = 12, VerticalAlignment = VerticalAlignment.Center });
 		_attachRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 2, Children = { BesideButton, OnTopButton } };
@@ -292,7 +291,7 @@ public sealed class PlacePanel
 				modes,
 				Row("Preset", PresetBox),
 				new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Children = { SavePresetButton, DeletePresetButton } },
-				new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Children = { new TextBlock { Text = "KINDS", FontSize = 10, Foreground = Brushes.Gray, VerticalAlignment = VerticalAlignment.Center }, Col(KindsButton, 1) } },
+				new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Children = { new TextBlock { Text = "KINDS", FontSize = 10, Foreground = Ui.Muted, VerticalAlignment = VerticalAlignment.Center }, Col(KindsButton, 1) } },
 				Mix,
 				Note,
 				Row("Elevation", ElevationBox),
@@ -320,8 +319,8 @@ public sealed class PlacePanel
 				new TextBlock { Text = "Choose kinds", FontSize = 14, FontWeight = FontWeight.SemiBold },
 				Search,
 				PickButton,
-				(_favBox = new StackPanel { Spacing = 3, Children = { new TextBlock { Text = "FAVOURITES", FontSize = 10, Foreground = Brushes.Gray }, Favourites } }),
-				(_recentBox = new StackPanel { Spacing = 3, Children = { new TextBlock { Text = "RECENT", FontSize = 10, Foreground = Brushes.Gray }, Recent } }),
+				(_favBox = new StackPanel { Spacing = 3, Children = { new TextBlock { Text = "FAVOURITES", FontSize = 10, Foreground = Ui.Muted }, Favourites } }),
+				(_recentBox = new StackPanel { Spacing = 3, Children = { new TextBlock { Text = "RECENT", FontSize = 10, Foreground = Ui.Muted }, Recent } }),
 				List,
 			},
 		}, 240);
@@ -412,7 +411,7 @@ public sealed class PlacePanel
 			{
 				continue;
 			}
-			List.Children.Add(new TextBlock { Text = ObjectKinds.Label(k).ToUpperInvariant(), FontSize = 10, Foreground = Brushes.Gray, Margin = new Thickness(0, 6, 0, 2) });
+			List.Children.Add(new TextBlock { Text = ObjectKinds.Label(k).ToUpperInvariant(), FontSize = 10, Foreground = Ui.Muted, Margin = new Thickness(0, 6, 0, 2) });
 			// Long groups are cut while not searching: the search finds the rest.
 			foreach (var n in q == "" ? names.Take(60) : names)
 			{
@@ -430,7 +429,7 @@ public sealed class PlacePanel
 			}
 			if (q == "" && names.Count > 60)
 			{
-				List.Children.Add(new TextBlock { Text = $"… {names.Count - 60} more: search for them.", FontSize = 11, Foreground = Brushes.Gray });
+				List.Children.Add(new TextBlock { Text = $"… {names.Count - 60} more: search for them.", FontSize = 11, Foreground = Ui.Muted });
 			}
 		}
 	}
@@ -461,7 +460,7 @@ public sealed class PlacePanel
 		{
 			var g = new Grid { ColumnDefinitions = new ColumnDefinitions("*,80,36,24") };
 			g.Children.Add(new TextBlock { Text = n, FontSize = 12, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis });
-			var pct = new TextBlock { FontSize = 11, Foreground = Brushes.Gray, VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Right, Text = names.Count > 1 ? $"{T.WeightOf(n) / total * 100:0}%" : "" };
+			var pct = new TextBlock { FontSize = 11, Foreground = Ui.Muted, VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Right, Text = names.Count > 1 ? $"{T.WeightOf(n) / total * 100:0}%" : "" };
 			if (names.Count > 1)
 			{
 				var w = new Slider { Minimum = 1, Maximum = 10, TickFrequency = 1, IsSnapToTickEnabled = true, Value = T.WeightOf(n) };
@@ -514,14 +513,14 @@ public sealed class PlacePanel
 		var m = t.Mode;
 		foreach (var (k, b) in ModeButtons)
 		{
-			b.Background = k == m ? On : null;
+			b.Classes.Set("on", k == m);
 		}
 		foreach (var (k, b) in ShapeButtons)
 		{
-			b.Background = k == t.LineShape ? On : null;
+			b.Classes.Set("on", k == t.LineShape);
 		}
-		BesideButton.Background = t.OnTop ? null : On;
-		OnTopButton.Background = t.OnTop ? On : null;
+		BesideButton.Classes.Set("on", !(t.OnTop));
+		OnTopButton.Classes.Set("on", t.OnTop);
 		bool line = m == PlaceTool.Modes.Line, endToEnd = line && t.EndToEnd;
 		_elevRow.IsVisible = t.Elevation != PlaceTool.Elevations.Ground;
 		_pieceBox.IsVisible = t.PiecesChosen;

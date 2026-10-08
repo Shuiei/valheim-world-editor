@@ -34,16 +34,7 @@ public sealed class App : Application
 	public override void Initialize()
 	{
 		Styles.Add(new FluentTheme());
-		// Number boxes without the theme's big up/down buttons (they squeezed the numbers out of
-		// narrow panels); the arrow keys and the mouse wheel still step them.
-		Styles.Add(new Avalonia.Styling.Style(x => x.OfType<Avalonia.Controls.NumericUpDown>())
-		{
-			Setters =
-			{
-				new Avalonia.Styling.Setter(Avalonia.Controls.NumericUpDown.ShowButtonSpinnerProperty, false),
-				new Avalonia.Styling.Setter(Avalonia.Layout.Layoutable.MinWidthProperty, 64.0),
-			},
-		});
+		Ui.Apply(this);
 		RequestedThemeVariant = ThemeVariant.Dark;
 	}
 

@@ -12,7 +12,7 @@ public sealed class HistoryPanel
 {
 	public Control Card { get; }
 	internal StackPanel Rows { get; } = new() { Spacing = 4 };
-	internal TextBlock Count { get; } = new() { FontSize = 11, Foreground = Brushes.Gray };
+	internal TextBlock Count { get; } = new() { FontSize = 11, Foreground = Ui.Muted };
 	private readonly Func<EditSession?> _session;
 	public event Action<string>? Message;
 
@@ -23,11 +23,12 @@ public sealed class HistoryPanel
 		close.Click += (_, _) => Card!.IsVisible = false;
 		Card = new Border
 		{
-			Background = new SolidColorBrush(Color.FromArgb(240, 24, 28, 34)),
-			BorderBrush = new SolidColorBrush(Color.FromRgb(46, 53, 63)),
+			Background = Ui.Panel,
+			BorderBrush = Ui.Line,
+			BoxShadow = BoxShadows.Parse("0 6 24 0 #59000000"),
 			BorderThickness = new Thickness(1),
 			CornerRadius = new CornerRadius(10),
-			Padding = new Thickness(8),
+			Padding = Ui.Pad,
 			// Just above the save bar.
 			Margin = new Thickness(10, 10, 10, 70),
 			HorizontalAlignment = HorizontalAlignment.Center,
@@ -79,7 +80,7 @@ public sealed class HistoryPanel
 		Count.Text = undo.Count > 0 ? $"{undo.Count} change(s)" : "";
 		if (s == null || undo.Count + redo.Count == 0)
 		{
-			Rows.Children.Add(new TextBlock { Text = "No changes yet in this session.", FontSize = 12, Foreground = Brushes.Gray });
+			Rows.Children.Add(new TextBlock { Text = "No changes yet in this session.", FontSize = 12, Foreground = Ui.Muted });
 			return;
 		}
 		// Undone changes on top (the next redo just above the current change).
@@ -135,7 +136,7 @@ public sealed class HistoryPanel
 				{
 					label,
 					Col(acts, 1),
-					RowOf(new TextBlock { Text = meta, FontSize = 11, Foreground = Brushes.Gray }, 1),
+					RowOf(new TextBlock { Text = meta, FontSize = 11, Foreground = Ui.Muted }, 1),
 				},
 			},
 		};
