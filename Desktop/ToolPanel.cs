@@ -46,6 +46,8 @@ public sealed class ToolPanel
 
 	// For tests.
 	internal Slider SizeSlider { get; }
+	// Naturalize: a new noise pattern for the next stroke (and natural paths).
+	internal Button NewPatternButton { get; } = new() { Content = "New pattern", FontSize = 12 };
 	internal Slider StrengthSlider { get; }
 	internal ComboBox ShapeBox { get; }
 	internal ComboBox FalloffBox { get; }
@@ -184,7 +186,7 @@ public sealed class ToolPanel
 		ToolTip.SetTip(_measureButton, "Measure (M): click two points to see the distance, height difference and slope.");
 		_measureButton.Click += (_, _) => ChooseMode(ToolMode.Measure);
 		_viewButton = Make("View", "Esc", "move");
-		ToolTip.SetTip(_viewButton, "View (Esc): look around, and click objects to pick them.");
+		ToolTip.SetTip(_viewButton, "View (Esc or H): look around, slide the view with the left button, and click objects to pick them.");
 		_viewButton.Click += (_, _) => Choose(null);
 		// On a short window the rail scrolls with the wheel; no bar (it would squeeze the buttons).
 		Rail = Ui.Card(new ScrollViewer { VerticalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Hidden, Content = new StackPanel { Width = 56, Children = { rail } } });
@@ -239,8 +241,10 @@ public sealed class ToolPanel
 			{
 				Row("Bumps", Slide(0.2, 4, 0.1, Brush.NoiseAmp, ampV, v => $"{v:0.0} m", v => Brush.NoiseAmp = (float)v), ampV),
 				Row("Bump size", Slide(4, 60, 1, Brush.NoiseSize, noiseV, v => $"{v:0} m", v => Brush.NoiseSize = (float)v), noiseV),
+				NewPatternButton,
 			},
 		};
+		NewPatternButton.Click += (_, _) => NewPattern();
 
 		var restV = new TextBlock();
 		RestSlider = Slide(10, 60, 1, Brush.RestAngle, restV, v => $"{v:0}°", v => Brush.RestAngle = (float)v);
@@ -314,9 +318,19 @@ public sealed class ToolPanel
 	}
 
 	// The rail's keys; true when the key was one.
+	// A new pattern of natural bumps (the web editor's New pattern): another seed for the noise.
+	internal void NewPattern(int? seed = null)
+	{
+		Brush.Noise = new Noise(seed ?? Random.Shared.Next());
+		Message?.Invoke("New natural pattern. The next Naturalize stroke or natural path uses it.");
+	}
+
+	// [ and ]: the brush one metre smaller or bigger (within the Size slider's range).
+	internal void ResizeBrush(int metres) => SizeSlider.Value = Math.Clamp(SizeSlider.Value + metres, SizeSlider.Minimum, SizeSlider.Maximum);
+
 	public bool Key(string key)
 	{
-		if (key == "Escape")
+		if (key is "Escape" or "H")
 		{
 			Choose(null);
 			return true;
