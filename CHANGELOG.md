@@ -24,6 +24,13 @@ the plugin is unchanged in versions without that part.
 - Native app, editor: move the area by one zone with ◀▲▼▶, or let it Follow the view near its edge
   (remembered); Follow waits while a selection, stroke, path or apply would be lost.
 - Native app, editor: a note says how many locations are in or near the area.
+- Native app, Select: saved selections. Keep the selection under a name, then select it again or
+  add it later, also after saving the world (per world, found again by kind and place).
+- Native app, Area and Select: "pick" next to Replace's list takes the kind from an object clicked
+  in the world.
+- Native app: the editor remembers its choices between runs, as the web editor did: the View
+  switches, the map's place, the brush's shape and falloff, the Area action, the Shape preset and
+  your own formula, Select's options, the open right-hand panel and the clipboard.
 - The developer checks of the world generator and the save writer (`--verify`, `--verify-ingame`,
   `--selftest-save`, `--inspect`, `--summary`) moved to a separate tool, `tools/WorldCheck`.
 
