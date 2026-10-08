@@ -4,11 +4,16 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
-## Unreleased
+## v1.0.1 — 2026-10-08
 
 ### Fixed
 - Linux: the 3D view and the map stayed blank without a GPU driver (Mesa's software OpenGL,
   llvmpipe) and in VMware virtual machines: Avalonia turned OpenGL off for those renderers.
+- Leaving a live world closes its connection to the game.
+
+### Changed
+- Every push is checked further: the code is analysed (no .NET analyzer warning allowed), and the
+  Linux and Windows packages are started and must draw the test world.
 
 ## v1.0.0 — 2026-10-08 (the native app replaces the web editor)
 
