@@ -15,6 +15,15 @@ the plugin is unchanged in versions without that part.
   version in the title, and a Documentation link on the start page.
 - Native app: a world folder (`ValheimWorldEditor <folder>`) or a live game (`--live <url> --token
   <token>`) given on the command line opens straight away, as with the web app.
+- Native app, editor: Discard in the top bar undoes the steps not saved (or applied) yet and keeps
+  the rest of the history; changes without a step here are discarded by reading the world again.
+- Native app, live: Reload in the editor's top bar, and the Auto switch that applies every change
+  to the game at once (remembered).
+- Native app, live: the players are shown in the 3D view with their names, and View has "Go to" a
+  player.
+- Native app, editor: move the area by one zone with ◀▲▼▶, or let it Follow the view near its edge
+  (remembered); Follow waits while a selection, stroke, path or apply would be lost.
+- Native app, editor: a note says how many locations are in or near the area.
 - The developer checks of the world generator and the save writer (`--verify`, `--verify-ingame`,
   `--selftest-save`, `--inspect`, `--summary`) moved to a separate tool, `tools/WorldCheck`.
 
