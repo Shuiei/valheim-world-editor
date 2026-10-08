@@ -18,6 +18,7 @@ namespace TerrainEditor.Desktop;
 //   click <text>                   the visible button, switch or box labelled so, or whose words
 //                                  begin so (windows and dialogs)
 //   choose <text>                  the entry so named in whichever visible list has it
+//   wait <ms>                      a pause (a brush stroke works frame by frame while held)
 //   bench <seconds>                the 3D camera turns on its own; the frame rates come back
 //   mouse <down|move|up> <x> <z> [left|right|middle] [shift|ctrl|alt ...]
 //                                  the mouse at world x, z over the 3D view (real pointer events)
@@ -155,6 +156,9 @@ public static class Driver
 					case "res": w.ResolutionBox.SelectedIndex = Array.IndexOf(new[] { "sharp", "balanced", "fast" }, args[1]); break;
 					default: throw new InvalidOperationException("unknown look " + args[0]);
 				}
+				return State(w);
+			case "wait":
+				await Task.Delay(TimeSpan.FromMilliseconds(Math.Clamp(F(0), 0, 60000)));
 				return State(w);
 			case "camera":
 				w.View.Orbit(F(0), F(1), F(2), F(3), F(4));
