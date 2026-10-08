@@ -63,6 +63,8 @@ public sealed partial class MainWindow : Window
 
 	// The save bar (top middle): what is waiting to be saved, undo, redo, Save, and the last message.
 	private readonly TextBlock _pending = new() { FontSize = 12, VerticalAlignment = VerticalAlignment.Center, Text = "All saved" };
+	// The status bar's message (the driver clears it before a documentation picture).
+	internal string StatusMessage { get => _message.Text ?? ""; set => _message.Text = value; }
 	private readonly TextBlock _message = new() { FontSize = 12.5, TextWrapping = TextWrapping.Wrap, MaxLines = 2, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center };
 	internal Button UndoButton { get; } = new Button { Content = Icons.Make("undo", 18), IsEnabled = false, Padding = new Thickness(7, 5) }.Classed("ghost");
 	internal Button RedoButton { get; } = new Button { Content = Icons.Make("redo", 18), IsEnabled = false, Padding = new Thickness(7, 5) }.Classed("ghost");
@@ -273,7 +275,7 @@ public sealed partial class MainWindow : Window
 		else
 		{
 			string what = Describe(w.Pending);
-			if (!await ConfirmSave($"Write {what} into the world files?\n\nWorld folder: {w.World.Directory}\n\n"
+			if (!await ConfirmSave($"Write {what} into the world files?\n\nWorld folder: {Ui.Tilde(w.World.Directory)}\n\n"
 				+ "• A full backup of the folder is made first, next to it.\n"
 				+ "• Valheim (server or game) must NOT be running with this world, or it will overwrite these changes when it saves.\n"
 				+ "• Test on a copy first: open it as a local world, or upload it to a test server."))
@@ -286,7 +288,7 @@ public sealed partial class MainWindow : Window
 			string msg = o.Message;
 			if (o.Saved is { } r)
 			{
-				if (r.BackupDirectory != null) msg += $"\n\nBackup: {r.BackupDirectory}";
+				if (r.BackupDirectory != null) msg += $"\n\nBackup: {Ui.Tilde(r.BackupDirectory)}";
 				if (r.Skipped.Count > 0) msg += "\n\nNot saved:\n• " + string.Join("\n• ", r.Skipped);
 			}
 			await Tell(msg);
@@ -457,7 +459,7 @@ public sealed partial class MainWindow : Window
 			return;
 		}
 		string what = s.PendingText.Replace("Unsaved: ", "");
-		if (!await ConfirmSave($"Write {what} into the world files?\n\nWorld folder: {s.Scene.World.Directory}\n\n"
+		if (!await ConfirmSave($"Write {what} into the world files?\n\nWorld folder: {Ui.Tilde(s.Scene.World.Directory)}\n\n"
 			+ "• A full backup of the folder is made first, next to it.\n"
 			+ "• Valheim (server or game) must NOT be running with this world, or it will overwrite these changes when it saves.\n"
 			+ "• Test on a copy first: open it as a local world, or upload it to a test server."))
@@ -472,7 +474,7 @@ public sealed partial class MainWindow : Window
 			string msg = res.Message;
 			if (res.BackupDirectory != null)
 			{
-				msg += $"\n\nBackup: {res.BackupDirectory}";
+				msg += $"\n\nBackup: {Ui.Tilde(res.BackupDirectory)}";
 			}
 			if (res.Skipped.Count > 0)
 			{
@@ -758,6 +760,9 @@ public sealed partial class MainWindow : Window
 	}
 
 	// The right-hand panels share the place under the top bar: one at a time (null: none).
+	// The driver: the right-hand panel by name (view, history, help or none).
+	internal void ShowRightPanel(string name) => ShowRight(name switch { "view" => _viewPanel, "history" => History.Card, "help" => HelpCard, _ => null });
+
 	internal void ShowRight(Control? panel)
 	{
 		if (panel == _viewPanel || panel == HelpCard || panel == History.Card || panel == null)
@@ -1502,7 +1507,7 @@ public sealed partial class MainWindow : Window
 		Background = Ui.Bg;
 		var record = new CheckBox { Content = "Record frame rates", FontSize = 12.5 };
 		record.IsCheckedChanged += (_, _) => { _perf.On = record.IsChecked == true; _perf.Restart(); if (!_perf.On) _perf.Flush(); };
-		ToolTip.SetTip(record, $"{Tips.Of("view.perf")} The file: {PerfLog.FilePath}");
+		ToolTip.SetTip(record, $"{Tips.Of("view.perf")} The file: {Ui.Tilde(PerfLog.FilePath)}");
 		HelpCard = Help(record);
 		ConfirmSave = text => Dialogs.Ask(this, "Save into the world", text, "Save");
 		Ask = (title, text, yes, no) => Dialogs.Ask(this, title, text, yes, no);

@@ -115,6 +115,8 @@ public static class Options
 					break;
 				case "--driver":
 					Driver = true;
+					// Driven by the tests or the documentation: never the computer's own game outside the home.
+					TerrainEditor.App.GameLook.SearchOutsideHome = false;
 					break;
 				case "--data":
 					Data = Path.GetFullPath(args[++i]);
@@ -124,6 +126,8 @@ public static class Options
 					PlaceMemory.PathOverride = Path.Combine(Data, "place.json");
 					Stamps.PathOverride = Path.Combine(Data, "stamps.json");
 					TerrainEditor.App.AppSettings.DataDirOverride = Data;
+					// The tests' editor: "My game" never finds the player's own profiles.
+					TerrainEditor.App.LocalGame.SearchDefaultPlaces = false;
 					break;
 				case "--zone":
 					Direct = true;

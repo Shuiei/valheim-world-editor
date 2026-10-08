@@ -20,6 +20,8 @@ namespace TerrainEditor.Desktop;
 //   choose <text>                  the entry so named in whichever visible list has it
 //   type <hint>|<text>             the visible text box whose placeholder contains hint gets text
 //   set <label>|<value>            the slider, text box(es: a,b) or list beside the label so worded
+//   panel <view|history|help|none> the right-hand panel shown
+//   message [text]                 the status bar's message (none: cleared)
 //   wait <ms>                      a pause (a brush stroke works frame by frame while held)
 //   bench <seconds>                the 3D camera turns on its own; the frame rates come back
 //   mouse <down|move|up> <x> <z> [left|right|middle] [shift|ctrl|alt ...]
@@ -27,6 +29,7 @@ namespace TerrainEditor.Desktop;
 //   wheel <x> <z> <steps>          the wheel there (positive: zoom in)
 //   key <name> [shift|ctrl|alt ...] a key pressed in the window (Avalonia key names: E, Escape, Enter, D1...)
 //   mapview <x> <z> <m per pixel>  the map looking there
+//   mappick <zone x> <zone z>      the map's zone picked (as a click on it)
 //   search <text>                  the map's search (objects by kind)
 //   zones                          the map's zone filter: show the matching zones
 //   state                          what is shown, the objects, what is pending, frames drawn
@@ -121,6 +124,9 @@ public static class Driver
 			case "mapview":
 				w.MapPage!.Map.LookAt(F(0), F(1), F(2));
 				return State(w);
+			case "mappick":
+				w.MapPage!.Pick((int)F(0), (int)F(1));
+				return State(w);
 			case "search":
 				w.MapPage!.SearchBox.Text = a[1];
 				await w.MapPage.Search();
@@ -183,9 +189,17 @@ public static class Driver
 						case Avalonia.Controls.Slider sl:
 							sl.Value = double.Parse(value, System.Globalization.CultureInfo.InvariantCulture);
 							return State(w);
-						case Avalonia.Controls.NumericUpDown nu:
-							nu.Value = decimal.Parse(value, System.Globalization.CultureInfo.InvariantCulture);
+						case Avalonia.Controls.NumericUpDown:
+						{
+							// Several boxes in the row (Height min, max): in order, comma separated; empty for none.
+							var boxes = Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(row).OfType<Avalonia.Controls.NumericUpDown>().Where(b => b.IsEffectivelyVisible).ToList();
+							var values = value.Split(',');
+							for (int k = 0; k < Math.Min(values.Length, boxes.Count); k++)
+							{
+								boxes[k].Value = values[k].Trim().Length == 0 ? null : decimal.Parse(values[k], System.Globalization.CultureInfo.InvariantCulture);
+							}
 							return State(w);
+						}
 						case Avalonia.Controls.TextBox:
 						{
 							// Several boxes in the row (Size % from, to): the values in order, comma separated.
@@ -204,6 +218,12 @@ public static class Driver
 				}
 				throw new InvalidOperationException($"nothing to set beside \"{label}\"");
 			}
+			case "panel":
+				w.ShowRightPanel(args[0]);
+				return State(w);
+			case "message":
+				w.StatusMessage = a.Length > 1 ? a[1] : "";
+				return State(w);
 			case "wait":
 				await Task.Delay(TimeSpan.FromMilliseconds(Math.Clamp(F(0), 0, 60000)));
 				return State(w);

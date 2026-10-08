@@ -20,6 +20,11 @@ public static class GameLook
 
 	public static string Dir => Path.Combine(AppSettings.UserDataDir, "game-look");
 
+	// False: Steam is only looked for under the home folder (not /opt/Steam, /usr/share/steam or
+	// Program Files): the editor driven by the tests and the documentation's pictures, whose stand-in
+	// home must not lead to the computer's own game.
+	public static bool SearchOutsideHome { get; set; } = true;
+
 	private static string MarkerPath => Path.Combine(Dir, "game-look.json");
 
 	// "ready", "missing" (not set up, Valheim not found), "running", "failed".
@@ -338,16 +343,23 @@ public static class GameLook
 			catch
 			{
 			}
-			roots.Add(@"C:\Program Files (x86)\Steam");
-			roots.Add(@"C:\Program Files\Steam");
+			if (SearchOutsideHome)
+			{
+				roots.Add(@"C:\Program Files (x86)\Steam");
+				roots.Add(@"C:\Program Files\Steam");
+			}
 		}
 		else
 		{
 			roots.AddRange(new[]
 			{
 				Path.Combine(home, ".steam", "steam"), Path.Combine(home, ".local", "share", "Steam"), Path.Combine(home, ".steam", "root"),
-				Path.Combine(home, ".var", "app", "com.valvesoftware.Steam", ".local", "share", "Steam"), "/opt/Steam", "/usr/share/steam",
+				Path.Combine(home, ".var", "app", "com.valvesoftware.Steam", ".local", "share", "Steam"),
 			});
+			if (SearchOutsideHome)
+			{
+				roots.AddRange(new[] { "/opt/Steam", "/usr/share/steam" });
+			}
 		}
 		var seen = new HashSet<string>();
 		foreach (string root in roots)

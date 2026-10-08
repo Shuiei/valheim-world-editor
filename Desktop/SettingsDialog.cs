@@ -63,7 +63,9 @@ public static class SettingsDialog
 		{
 			Title = "Settings: folders on this computer",
 			Width = 720,
-			Height = 640,
+			// As tall as what it holds (it scrolls past that).
+			SizeToContent = SizeToContent.Height,
+			MaxHeight = 760,
 			WindowStartupLocation = WindowStartupLocation.CenterOwner,
 			Background = new SolidColorBrush(Color.FromRgb(24, 28, 34)),
 		};
@@ -129,7 +131,7 @@ public static class SettingsDialog
 		};
 		var cancel = new Button { Content = "Cancel", IsCancel = true }.Tip("dialog.cancel");
 		cancel.Click += (_, _) => dialog.Close();
-		string detected = GameLook.FindValheim(null) is string d ? $"Found automatically: {d}" : "Not found automatically: choose the folder.";
+		string detected = GameLook.FindValheim(null) is string d ? $"Found automatically: {Ui.Tilde(d)}" : "Not found automatically: choose the folder.";
 		dialog.Content = new ScrollViewer
 		{
 			Content = new StackPanel
@@ -147,7 +149,7 @@ public static class SettingsDialog
 					Hint("Where else to look for the plugin for \"My game\": a BepInEx folder, a mod manager profile, or a folder of profiles. The Valheim folder and the default r2modman / Thunderstore Mod Manager profiles are always searched."),
 					H2("World folders"),
 					worlds,
-					Hint($"Always listed under \"A saved world\": a world folder, or a folder of worlds (a server's <savedir>/worlds_local, a backup folder…). Valheim's usual folders are always searched: {string.Join(", ", Places.WorldRoots().Where(Directory.Exists))}"),
+					Hint($"Always listed under \"A saved world\": a world folder, or a folder of worlds (a server's <savedir>/worlds_local, a backup folder…). Valheim's usual folders are always searched: {string.Join(", ", Places.WorldRoots().Where(Directory.Exists).Select(Ui.Tilde))}"),
 					error,
 					new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 12, 0, 0), Children = { cancel, save } },
 				},
