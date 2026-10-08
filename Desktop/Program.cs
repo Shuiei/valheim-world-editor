@@ -34,6 +34,16 @@ public sealed class App : Application
 	public override void Initialize()
 	{
 		Styles.Add(new FluentTheme());
+		// Number boxes without the theme's big up/down buttons (they squeezed the numbers out of
+		// narrow panels); the arrow keys and the mouse wheel still step them.
+		Styles.Add(new Avalonia.Styling.Style(x => x.OfType<Avalonia.Controls.NumericUpDown>())
+		{
+			Setters =
+			{
+				new Avalonia.Styling.Setter(Avalonia.Controls.NumericUpDown.ShowButtonSpinnerProperty, false),
+				new Avalonia.Styling.Setter(Avalonia.Layout.Layoutable.MinWidthProperty, 64.0),
+			},
+		});
 		RequestedThemeVariant = ThemeVariant.Dark;
 	}
 
@@ -62,6 +72,8 @@ public static class Options
 	public static string? Search { get; private set; }
 	// With --map-edit: back to the map afterwards (its picture then, with --shot).
 	public static bool MapBack { get; private set; }
+	// A picture of the window's panels (Avalonia draws them; the 3D view stays empty), then quit.
+	public static string? UiShot { get; private set; }
 	public static int ZoneX { get; private set; }
 	public static int ZoneZ { get; private set; }
 	public static int Size { get; private set; } = 5;
@@ -123,6 +135,9 @@ public static class Options
 				case "--map-at":
 					var ma = args[++i].Split(',').Select(v => float.Parse(v, System.Globalization.CultureInfo.InvariantCulture)).ToArray();
 					MapAt = (ma[0], ma[1], ma[2]);
+					break;
+				case "--ui-shot":
+					UiShot = args[++i];
 					break;
 				case "--map-back":
 					MapBack = true;
