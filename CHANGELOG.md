@@ -4,7 +4,7 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
-## v1.0.0 — unreleased (the native app replaces the web editor)
+## v1.0.0 — 2026-10-08 (the native app replaces the web editor)
 
 ### Added
 - Native app: the game's look (terrain textures, map textures and models) is copied from your own
