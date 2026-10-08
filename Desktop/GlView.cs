@@ -2530,7 +2530,7 @@ public sealed class GlView : OpenGlControlBase
 		DrawLines(ref _placeVao, ref _placeVbo, posts.ToArray(), vp, new Vector4(0.62f, 0.88f, 1, 1));
 		var t = pl.Tool;
 		// The brush's outline under the cursor: where a stroke places.
-		if (t.Mode == PlaceTool.Modes.Brush && _hover is { } h)
+		if (t.Mode == PlaceTool.Modes.Brush && !t.Building && _hover is { } h)
 		{
 			var ring = new List<float>();
 			var outline = t.Brush.Outline(96);

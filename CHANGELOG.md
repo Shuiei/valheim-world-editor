@@ -9,7 +9,9 @@ the plugin is unchanged in versions without that part.
 ### Added
 - **The Workshop**: a blank, flat plot (from the start page or the Blueprints panel) to build a
   building with the Place and Select tools, then **Save blueprint**: only its building pieces are
-  kept. Blueprints open in it to be changed.
+  kept. Blueprints open in it to be changed. It keeps to building: **Build** (the hammer's pieces in
+  its tabs, with pictures, by crafting station and name, searchable; snap to pieces, stack on top,
+  a grid, a turn step), **Select** and **View**; no world tools, Mask or View panel.
 - **Support check** (in the Workshop): each piece outlined in the colour the game gives its
   structural support (the game's own rules, per material), from blue on the ground to red, and pink
   for pieces that would fall. Saving asks first when some would.

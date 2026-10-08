@@ -26,8 +26,24 @@ The Workshop is a blank, flat meadow plot that is not part of any world. Open it
 page (**The Workshop**: **New building**, or **Edit** next to a blueprint), or from the Blueprints
 panel (**New in Workshop**, **Edit**).
 
-Build as in a world: the **Place** tool puts building pieces down and snaps them together like the
-game's hammer; the **Select** tool moves, turns and deletes them. Undo and redo work as usual.
+The Workshop keeps to building: the tool rail has only **Build**, **Select** and **View** (the
+ground tools, Area, Path, Mountain and the rest are for worlds), and there is no Mask, View panel or
+zone borders.
+
+**Build** (T) lists the game's hammer pieces in its tabs (**Building**, **Heavy building**,
+**Furniture**, **Crafting**, **Misc**, **More**), each with a small picture, grouped by the crafting
+station they need (none first, then the workbench, stonecutter, forge…) and by name within each.
+**Search pieces** finds them in every tab. Click a piece to pick it (its cost shows under the list),
+then click the plot to put it down, one at a time.
+
+| Option | What it does |
+|---|---|
+| **Snap to pieces** | A piece put next to others meets them at their snap points and takes their turn, as with the game's hammer. Off: it goes where you click. |
+| **Stack on the piece under the cursor** | The piece goes on top of the one under the cursor: floors on walls, a second storey. |
+| **Grid** | Pieces not snapped go on this grid (0.5, 1 or 2 m, from the plot's middle), or exactly at the cursor (Off). |
+| **Turn by** | How far **,** and **.** (or Alt + wheel) turn the piece: 1°, 15°, 22.5°, 45° or 90°. Shift turns by 1°. |
+
+**Select** (E) moves, turns, lifts and deletes pieces; Ctrl+Z and Ctrl+Y undo and redo.
 
 | Control | What it does |
 |---|---|
@@ -50,7 +66,8 @@ It does not count rocks or trees as support (the plot has none), and mesh collid
 
 ## The library (Blueprints panel)
 
-**Blueprints…** (in the Area tool and the top bar) lists Homestead's blueprints. Each shows:
+**Blueprints…** (in the Area tool's panel, in a world) lists Homestead's blueprints; the start
+page's **The Workshop** lists them too, with **Edit**. Each shows:
 
 - a **picture** of the building seen from above at an angle: the game's models with their textures
   when the [game's look](../README.md) has been copied, else each piece's shape in its material's colour.

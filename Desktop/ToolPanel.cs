@@ -146,7 +146,7 @@ public sealed class ToolPanel
 
 	public ToolPanel()
 	{
-		var rail = new StackPanel { Spacing = 0 };
+		var rail = _rail = new StackPanel { Spacing = 0 };
 		// A rail button: the web editor's icon (or the paint's colour), the name and the key.
 		Button Make(string label, string key, string? icon, IBrush? swatch = null)
 		{
@@ -329,9 +329,35 @@ public sealed class ToolPanel
 
 	public void ChooseMode(ToolMode mode) => Choose(null, mode);
 
+	// The Workshop: only Build (the Place tool, for building pieces), Select and View on the rail; the
+	// other tools (and their keys) are for worlds.
+	private readonly StackPanel _rail;
+	public bool Workshop { get; private set; }
+
+	public void SetWorkshop(bool on)
+	{
+		Workshop = on;
+		foreach (var c in _rail.Children)
+		{
+			c.IsVisible = !on || c == _placeButton || c == _selectButton || c == _viewButton;
+		}
+		var label = ((_placeButton.Content as Grid)!.Children[0] as StackPanel)!.Children[1] as TextBlock;
+		label!.Text = on ? "Build" : "Place";
+		ToolTip.SetTip(_placeButton, on ? "Build (T): pick a building piece, then click to put it down. It snaps to the pieces already there."
+			: "Place (T): paint trees, rocks or bushes with a brush, or put walls, fences and other pieces along lines, circles, rectangles, grids and zones.");
+		if (on && (Tool != null || Mode is not (ToolMode.View or ToolMode.Place or ToolMode.Select)))
+		{
+			Choose(null);
+		}
+	}
+
 	// A brush, or (null) the mode's tool.
 	public void Choose(BrushTool? t, ToolMode mode = ToolMode.View)
 	{
+		if (Workshop && (t != null || mode is not (ToolMode.View or ToolMode.Place or ToolMode.Select)))
+		{
+			return;
+		}
 		Tool = t;
 		Mode = t != null ? ToolMode.Brush : mode;
 		_viewButton.Classes.Set("on", Mode == ToolMode.View);

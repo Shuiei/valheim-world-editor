@@ -42,9 +42,9 @@ public static class Workshop
 	// A blueprint file's pieces onto the plot (one undo step). Homestead's are measured from their
 	// anchor; others (PlanBuild, .vbuild) from a corner, so they are centred, lowest piece on the ground.
 	// Returns how many were put and the kinds the editor cannot make.
-	public static (int Placed, List<string> Unknown) Open(EditSession s, string path)
+	public static (int Placed, List<string> Unknown) Open(EditSession s, string path, string? text = null)
 	{
-		string text = File.ReadAllText(path);
+		text ??= File.ReadAllText(path);
 		var parsed = BlueprintFormats.Parse(Path.GetFileName(path), text);
 		bool homestead = text.Contains("#HomesteadVersion:", StringComparison.OrdinalIgnoreCase);
 		var known = parsed.Pieces.Where(p => s.Scene.World.CanCreate(StableHash.Of(p.Name))).ToList();

@@ -55,6 +55,7 @@ public sealed partial class MainWindow : Window
 	internal MeasurePanel MeasurePanel { get; }
 	internal ShapePanel ShapePanel { get; } = new();
 	internal MountainPanel MountainPanel { get; } = new();
+	internal BuildPanel BuildPanel { get; private set; } = null!;
 	internal ScriptPanel ScriptPanel { get; } = new();
 	// Stops the running script (null: none runs).
 	private Action? _stopScript;
@@ -1746,6 +1747,7 @@ public sealed partial class MainWindow : Window
 		PlaceInput.Message += t => { _message.Text = t; UpdateSaveBar(); };
 		_view.Place = PlaceInput;
 		PlacePanel = new PlacePanel(PlaceInput, () => _view.Scene, NameOfPrefab);
+		BuildPanel = new BuildPanel(PlaceInput) { Models = () => _models };
 		PlacePanel.Message += t => _message.Text = t;
 		PlacePanel.AskName = () => Dialogs.AskText(this, "Save as preset", "Name of the preset:");
 		PlacePanel.Confirm = text => Dialogs.Ask(this, "Delete the preset", text, "Delete");
@@ -1771,7 +1773,7 @@ public sealed partial class MainWindow : Window
 			Margin = new Thickness(10, 70, 10, 58),
 			HorizontalAlignment = HorizontalAlignment.Left,
 			VerticalAlignment = VerticalAlignment.Top,
-			Children = { Tools.Rail, Tools.Options, SelectPanel.Card, MeasurePanel.Card, ShapePanel.Card, MountainPanel.Card, ScriptPanel.Card, PathPanel.Card, AreaPanel.Card, PastePanel.Card, PlacePanel.Card, PlacePanel.Chooser, MaskPanel.Card },
+			Children = { Tools.Rail, Tools.Options, SelectPanel.Card, MeasurePanel.Card, ShapePanel.Card, MountainPanel.Card, ScriptPanel.Card, PathPanel.Card, AreaPanel.Card, PastePanel.Card, PlacePanel.Card, PlacePanel.Chooser, BuildPanel.Card, MaskPanel.Card },
 		};
 		// Every panel of the column scrolls when the window is too short for it (a bar only then).
 		foreach (var card in tools.Children.OfType<Border>())
@@ -1824,14 +1826,15 @@ public sealed partial class MainWindow : Window
 			}
 			AreaPanel.Card.IsVisible = Tools.Mode == ToolMode.Area;
 			PastePanel.Card.IsVisible = Tools.Mode == ToolMode.Paste;
-			PlacePanel.Card.IsVisible = Tools.Mode == ToolMode.Place;
+			PlacePanel.Card.IsVisible = Tools.Mode == ToolMode.Place && !_inWorkshop;
+			BuildPanel.Card.IsVisible = Tools.Mode == ToolMode.Place && _inWorkshop;
 			if (Tools.Mode != ToolMode.Place)
 			{
 				PlacePanel.Chooser.IsVisible = false;
 				PlacePanel.KindsButton.Content = "+ Add kinds";
 			}
 			PlaceInput.Refresh();
-			MaskPanel.Card.IsVisible = Tools.Mode is ToolMode.Brush or ToolMode.Path or ToolMode.Area or ToolMode.Shape or ToolMode.Mountain or ToolMode.Place;
+			MaskPanel.Card.IsVisible = !_inWorkshop && Tools.Mode is ToolMode.Brush or ToolMode.Path or ToolMode.Area or ToolMode.Shape or ToolMode.Mountain or ToolMode.Place;
 			if (Tools.Mode == ToolMode.Area)
 			{
 				AreaPanel.Refresh();

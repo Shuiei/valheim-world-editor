@@ -54,13 +54,14 @@ public partial class MainWindow
 		{
 			return;
 		}
-		string? name = null;
+		string? name = null, text = null;
 		Homestead.Details? details = null;
 		if (path != null)
 		{
 			try
 			{
-				var parsed = BlueprintFormats.Parse(path, await File.ReadAllTextAsync(path));
+				text = await File.ReadAllTextAsync(path);
+				var parsed = BlueprintFormats.Parse(path, text);
 				name = parsed.Name;
 				details = Homestead.Read(path)?.Details is { } d ? d with { Name = name } : new Homestead.Details(name, parsed.Description ?? "", new());
 			}
@@ -77,19 +78,21 @@ public partial class MainWindow
 		_workshopDetails = details;
 		// Only Homestead's own folder is saved back to without asking.
 		_workshopFile = path != null && string.Equals(Path.GetDirectoryName(Path.GetFullPath(path)), Path.GetFullPath(Blueprints.Status.Folder), StringComparison.Ordinal) ? path : null;
-		string msg = "The Workshop: place building pieces (Place tool: they snap like the game's hammer), move and turn them (Select), then Save blueprint.";
+		string msg = "The Workshop: pick a piece in Build and click to put it down (it snaps like the game's hammer); Select (E) moves, turns and deletes; then Save blueprint.";
 		if (path != null)
 		{
-			var (placed, unknown) = Workshop.Open(scene.Session!, path);
+			var (placed, unknown) = Workshop.Open(scene.Session!, path, text);
 			msg = $"Opened “{name}”: {placed} piece(s).{(unknown.Count > 0 ? $" {unknown.Count} kind(s) the game does not know were left out (mods?): {string.Join(", ", unknown.Take(5))}." : "")} Change it, then Save blueprint.";
 		}
 		_workshopSaved = scene.Session!.Edits.Version;
+		EnterBuilding();
 		MapButton.Content = Icons.With("back", "Start");
 		MapButton.IsVisible = true;
 		SupportBox.IsVisible = true;
 		DiscardButton.IsVisible = false;
 		ShowWorkshopCost();
 		Tools.ChooseMode(ToolMode.Place);
+		BuildPanel.Card.IsVisible = true;
 		RefreshSupport();
 		UpdateSaveBar();
 		_message.Text = msg;
@@ -98,6 +101,7 @@ public partial class MainWindow
 	// Leaving an area: no Workshop any more (ShowEditor calls it for every area).
 	private void ResetWorkshop()
 	{
+		LeaveBuilding();
 		_inWorkshop = false;
 		ToolTip.SetTip(_subtitle, null);
 		MapButton.Content = Icons.With("back", "Map");
@@ -242,5 +246,53 @@ public partial class MainWindow
 				WorkshopSaveBar(s);
 			}
 		}, DispatcherPriority.Background);
+	}
+
+	// What the Workshop changes and gives back when it closes: the Place tool's settings (Build sets
+	// them for building pieces) and the zone borders (the plot is no world).
+	private sealed record Kept(List<string> Chosen, PlaceTool.Modes Mode, bool OneAtATime, bool OneAtATimeByHand, bool RandomYaw, float Tilt, float SizeMin,
+		float SizeMax, PlaceTool.Elevations Elevation, bool SnapTo, bool OnTop, float Rotation, bool Borders);
+
+	private Kept? _kept;
+
+	// The world tools away (the rail keeps Build, Select and View), the View panel and the Mask closed,
+	// no zone borders; the Place tool set for building.
+	private void EnterBuilding()
+	{
+		if (_kept == null)
+		{
+			var t = PlaceTool;
+			_kept = new Kept(t.Chosen.ToList(), t.Mode, t.OneAtATime, t.OneAtATimeByHand, t.RandomYaw, t.Tilt, t.SizeMin, t.SizeMax, t.Elevation, t.SnapTo, t.OnTop, t.Rotation,
+				_view.IsOverlayShown(Overlays.Layer.Borders));
+		}
+		Tools.SetWorkshop(true);
+		_view.SetOverlay(Overlays.Layer.Borders, false);
+		ShowRight(null);
+		ViewButton.IsVisible = false;
+		MaskPanel.Card.IsVisible = false;
+		BuildPanel.Start();
+	}
+
+	private void LeaveBuilding()
+	{
+		if (_kept is not { } k)
+		{
+			return;
+		}
+		_kept = null;
+		var t = PlaceTool;
+		t.Chosen.Clear();
+		t.Chosen.AddRange(k.Chosen);
+		(t.Mode, t.OneAtATime, t.OneAtATimeByHand, t.RandomYaw, t.Tilt, t.SizeMin, t.SizeMax, t.Elevation, t.SnapTo, t.OnTop, t.Rotation) =
+			(k.Mode, k.OneAtATime, k.OneAtATimeByHand, k.RandomYaw, k.Tilt, k.SizeMin, k.SizeMax, k.Elevation, k.SnapTo, k.OnTop, k.Rotation);
+		t.GridStep = 0;
+		t.Building = false;
+		PlaceInput.TurnStep = null;
+		Tools.SetWorkshop(false);
+		_view.SetOverlay(Overlays.Layer.Borders, k.Borders);
+		ViewButton.IsVisible = true;
+		BuildPanel.Card.IsVisible = false;
+		PlacePanel.Fill();
+		t.Notify();
 	}
 }

@@ -118,4 +118,74 @@ public class WorkshopTests
 		Assert.False(w.InWorkshop);
 		Assert.False(w.SupportBox.IsVisible);
 	}
+
+	// The Workshop keeps to building: Build, Select and View on the rail (other tools and keys do
+	// nothing there), the Build panel instead of Place's, no Mask, View panel or zone borders; leaving
+	// gives the Place tool and the rest back as they were.
+	[AvaloniaFact]
+	public async Task TheWorkshopOnlyBuildsAndGivesTheToolsBackWhenLeft()
+	{
+		using var r = new PanelBlueprintsTests.Run();
+		var w = r.W;
+		w.Ask = (_, _, _, _) => Task.FromResult(true);
+		w.PlaceTool.Chosen.Clear();
+		w.PlaceTool.Chosen.Add("Beech1");
+		w.PlaceTool.RandomYaw = true;
+		w.View.SetOverlay(Overlays.Layer.Borders, true);
+		await w.OpenWorkshop(null);
+		Assert.True(w.Tools.Workshop);
+		Assert.Equal(ToolMode.Place, w.Tools.Mode);
+		Assert.True(w.BuildPanel.Card.IsVisible);
+		Assert.False(w.PlacePanel.Card.IsVisible);
+		Assert.False(w.MaskPanel.Card.IsVisible);
+		Assert.False(w.ViewButton.IsVisible);
+		Assert.False(w.View.IsOverlayShown(Overlays.Layer.Borders));
+		// A building piece, one at a time, facing the turn.
+		Assert.Equal(new[] { "woodwall" }, w.PlaceTool.Chosen);
+		Assert.True(w.PlaceTool.Building && w.PlaceTool.OneAtATime && !w.PlaceTool.RandomYaw);
+		// World tools are not there.
+		w.Tools.ChooseMode(ToolMode.Mountain);
+		w.Tools.Choose(BrushTool.Raise);
+		Assert.Equal(ToolMode.Place, w.Tools.Mode);
+		w.Tools.ChooseSelect();
+		Assert.Equal(ToolMode.Select, w.Tools.Mode);
+		Assert.False(w.BuildPanel.Card.IsVisible);
+		w.Tools.ChooseMode(ToolMode.Place);
+		// Choosing a piece, the grid and the turn step.
+		w.BuildPanel.Choose("stone_wall_2x1");
+		Assert.Equal(new[] { "stone_wall_2x1" }, w.PlaceTool.Chosen);
+		Assert.Contains("Stone 4", w.BuildPanel.Cost.Text);
+		w.BuildPanel.GridBox.SelectedIndex = 3;
+		Assert.Equal(2, w.PlaceTool.GridStep);
+		w.BuildPanel.TurnBox.SelectedIndex = 3;
+		Assert.True(w.PlaceInput.Key(Avalonia.Input.Key.OemPeriod, false, false));
+		Assert.Equal(45, w.PlaceTool.Rotation);
+		w.BuildPanel.SnapBox.IsChecked = false;
+		Assert.False(w.PlaceTool.SnapTo);
+		await w.LeaveWorkshop();
+		Assert.False(w.Tools.Workshop);
+		Assert.Equal(new[] { "Beech1" }, w.PlaceTool.Chosen);
+		Assert.True(w.PlaceTool.RandomYaw && w.PlaceTool.SnapTo && !w.PlaceTool.Building);
+		Assert.Equal(0, w.PlaceTool.GridStep);
+		Assert.Null(w.PlaceInput.TurnStep);
+		Assert.True(w.ViewButton.IsVisible);
+		Assert.True(w.View.IsOverlayShown(Overlays.Layer.Borders));
+	}
+
+	[Fact]
+	public void BuildPiecesAreTheHammersByStationThenName()
+	{
+		var pieces = BuildPanel.Pieces.Value;
+		Assert.Contains(pieces, p => p.Prefab == "woodwall" && p.Name == "Wood Wall" && p.Category == 2);
+		Assert.DoesNotContain(pieces, p => p.Prefab == "Beech1");
+		for (int i = 1; i < pieces.Count; i++)
+		{
+			string? a = TerrainEditor.Terrain.PieceCost.Get(pieces[i - 1].Prefab)?.Station, b = TerrainEditor.Terrain.PieceCost.Get(pieces[i].Prefab)?.Station;
+			Assert.True(BuildPanel.StationRank(a) <= BuildPanel.StationRank(b));
+			if (a == b)
+			{
+				Assert.True(string.Compare(pieces[i - 1].Name, pieces[i].Name, StringComparison.OrdinalIgnoreCase) <= 0);
+			}
+		}
+	}
 }

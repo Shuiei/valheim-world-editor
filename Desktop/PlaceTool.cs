@@ -48,6 +48,10 @@ public sealed class PlaceTool
 	public Elevations Elevation { get; set; } = Elevations.Ground;
 	public float Elev { get; set; }
 	public bool SnapTo { get; set; } = true;
+	// One at a time in Brush: the cursor's point rounded to this grid (m; 0: off), from the area's middle.
+	public float GridStep { get; set; }
+	// Building pieces one by one (the Workshop's Build): no brush circle, no painting by dragging.
+	public bool Building { get; set; }
 	public bool OnTop { get; set; }
 	public bool GrowRoom { get; set; } = true;
 	// Settings or the line changed: the preview is worked out again.
@@ -927,6 +931,11 @@ public sealed class PlaceTool
 			// The layout turns with the rotation (clockwise from above, like the objects' facing).
 			float t = RotationNow * MathF.PI / 180, c = MathF.Cos(t), sn = MathF.Sin(t);
 			placed = new();
+			if (GridStep > 0 && OneAtATime)
+			{
+				float cx = (s.W - 1) / 2f, cz = (s.H - 1) / 2f;
+				at = new Vector2(cx + MathF.Round((at!.Value.X - cx) / GridStep) * GridStep, cz + MathF.Round((at.Value.Y - cz) / GridStep) * GridStep);
+			}
 			foreach (var (d, dr) in _pattern)
 			{
 				var g = new Vector2(at!.Value.X + d.X * c + d.Y * sn, at.Value.Y - d.X * sn + d.Y * c);

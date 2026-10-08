@@ -18,6 +18,8 @@ public sealed class PlaceInput
 	public PlaceTool Tool { get; }
 	public Func<EditSession?> Session { get; set; } = () => null;
 	public event Action<string>? Message;
+	// , . turn by this many degrees (null: 1°, Shift 15°).
+	public float? TurnStep { get; set; }
 	// Placed: the kinds, for the recent list.
 	public event Action<IReadOnlyList<string>>? Placed;
 
@@ -95,6 +97,11 @@ public sealed class PlaceInput
 				s.Removed.Add(i);
 			}
 			_view.Select(s.Removed);
+			return;
+		}
+		// Building (the Workshop): a click puts one piece; a drag does not paint more.
+		if (Tool.Building)
+		{
 			return;
 		}
 		s.Added.AddRange(Tool.PaintStep(at, dt, s.Added));
@@ -396,14 +403,16 @@ public sealed class PlaceInput
 		}
 		else
 		{
-			var list = s.Dragging ? s.Added : s.Stamp;
+			var list = s.Dragging && !Tool.Building ? s.Added : s.Stamp;
 			if (list.Count > 0)
 			{
 				var names = list.Select(o => o.Name).Distinct().ToList();
 				Commit(session, list, $"Placed {list.Count} ({string.Join(", ", names.Take(3))})");
 				Placed?.Invoke(names);
 			}
-			Message?.Invoke($"Placed {list.Count} object(s). Ctrl+Z removes them; Save writes them to the world.");
+			Message?.Invoke(Tool.Building
+				? list.Count == 0 ? "Nothing placed here." : $"Placed {string.Join(", ", list.Select(o => TerrainEditor.Terrain.PieceCost.PieceName(o.Name)).Distinct())}{(Tool.SnappedTo is string to ? $" {to}" : "")}. Ctrl+Z takes it back."
+				: $"Placed {list.Count} object(s). Ctrl+Z removes them; Save writes them to the world.");
 		}
 		Tool.NewLayout();
 		Refresh();
@@ -451,7 +460,8 @@ public sealed class PlaceInput
 		{
 			return false;
 		}
-		float step = shift ? 15 : 1;
+		// The Workshop turns pieces by its own step (Shift: by 1°).
+		float step = TurnStep is float ts ? shift ? 1 : ts : shift ? 15 : 1;
 		bool shape = Tool.Mode != PlaceTool.Modes.Brush;
 		switch (key)
 		{
