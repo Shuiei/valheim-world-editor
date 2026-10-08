@@ -19,6 +19,9 @@ public sealed class MapPage
 	public Control View { get; }
 	public MapView Map { get; } = new();
 	private WorldSession? _session;
+	// Where a newly shown world's map looks first (the place remembered from the last run; null: the whole world).
+	internal Func<(float X, float Z, float Mpp)?> StartView { get; set; } = () => null;
+
 	public event Action? BackToWorlds;
 	// Edit in 3D: the zone and the size in zones (Target: an object found to select there).
 	public event Action<int, int, int>? EditRequested;
@@ -269,8 +272,15 @@ public sealed class MapPage
 			Map.Matches = Matches;
 			_filtered = false;
 			ZoneInfo.Text = "";
-			// The whole world at first.
-			Map.LookAt(0, 0, 10500 * 2 / 900f);
+			// Where the map was last looked at (remembered), or the whole world.
+			if (StartView() is var (vx, vz, vm))
+			{
+				Map.LookAt(vx, vz, vm);
+			}
+			else
+			{
+				Map.LookAt(0, 0, 10500 * 2 / 900f);
+			}
 		}
 		else
 		{
