@@ -7,8 +7,10 @@
 #                  Fail fast: the first failing test stops its run, a test stuck for 5 minutes ends
 #                  it, and the core and the windows run as two processes, one after the other (the
 #                  windows' run does not start when the core fails; half the memory each)
-#   packages       the Windows and Linux release packages: they build, and hold no source code or
-#                  game files (the plugin is left out: it builds against the game's own DLLs)
+#   packages       the Windows and Linux release packages: they build, hold no source code or game
+#                  files (the plugin is left out: it builds against the game's own DLLs), and the
+#                  Linux one starts and draws the test world (tools/smoke-test.sh, under Xvfb)
+#   windows-smoke  the Windows package does the same on a Windows machine (tools/smoke-test.ps1)
 # Security and bug patterns (CodeQL) are checked by GitHub's code scanning, set up on GitHub itself.
 # What CI cannot cover: the plugin build and the game-look export (both need Valheim's files), the
 # visual tests (they need a display and OpenGL) and live mode against a real game.
@@ -101,8 +103,35 @@ jobs:
       - run:
           name: Check what is in them
           command: for p in /tmp/dist/*; do tools/check-package.sh "$p" --no-plugin; done
+      - run:
+          name: Smoke test of the Linux package (Xvfb, Mesa's software OpenGL)
+          no_output_timeout: 5m
+          command: |
+            apt-get install -y -qq xvfb xauth libgl1 libgl1-mesa-dri libegl1 libx11-6 libxrandr2 libxi6 libxcursor1 libice6 libsm6 libfontconfig1 > /dev/null
+            mkdir -p /tmp/smoke && tar -C /tmp/smoke -xzf /tmp/dist/ValheimWorldEditor-*-linux-x64.tar.gz
+            xvfb-run -a -s "-screen 0 1600x1000x24" tools/smoke-test.sh /tmp/smoke/ValheimWorldEditor/ValheimWorldEditor tests/fixtures/CITest
       - store_artifacts:
           path: /tmp/dist
+      - persist_to_workspace:
+          root: /tmp/dist
+          paths:
+            - "*.zip"
+
+  windows-smoke:
+    machine:
+      image: windows-server-2022-gui:current
+    resource_class: windows.medium
+    shell: powershell.exe -ExecutionPolicy Bypass
+    steps:
+      - checkout
+      - attach_workspace:
+          at: C:\dist
+      - run:
+          name: Smoke test of the Windows package
+          no_output_timeout: 5m
+          command: |
+            Expand-Archive (Get-Item C:\dist\ValheimWorldEditor-*-win-x64.zip).FullName -DestinationPath C:\smoke
+            tools\smoke-test.ps1 C:\smoke\ValheimWorldEditor\ValheimWorldEditor.exe tests\fixtures\CITest
 
 workflows:
   test:
@@ -110,3 +139,6 @@ workflows:
       - code-analysis
       - native-tests
       - packages
+      - windows-smoke:
+          requires:
+            - packages
