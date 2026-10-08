@@ -281,7 +281,7 @@ public sealed class StartPage
 					new TextBlock { Text = "Your game needs BepInEx and the WorldEditorBridge plugin (once, about 5 minutes)", FontSize = 15, FontWeight = FontWeight.SemiBold, TextWrapping = TextWrapping.Wrap },
 					Hint(state == "no-plugin" ? "BepInEx is installed: only steps 2 and 3 are left." : ""),
 					new TextBlock { Text = "1. Install BepInEx for Valheim: BepInExPack for Valheim (with a mod manager such as r2modman, or by hand into the Valheim folder: see its page).", TextWrapping = TextWrapping.Wrap },
-					new TextBlock { Text = "2. Add the plugin: with a mod manager, install WorldEditorBridge; by hand, copy WorldEditorBridge.dll from the plugin folder next to this program into BepInEx/plugins of your game.", TextWrapping = TextWrapping.Wrap },
+					new TextBlock { Text = "2. Add the plugin: with a mod manager, install WorldEditorBridge; by hand, copy WorldEditorBridge.dll (in WorldEditorBridge-<version>.zip, on the editor's releases page) into BepInEx/plugins of your game.", TextWrapping = TextWrapping.Wrap },
 					new TextBlock { Text = "3. Start Valheim (with BepInEx) and load your world. This page notices it by itself.", TextWrapping = TextWrapping.Wrap },
 				},
 			};

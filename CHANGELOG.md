@@ -4,7 +4,7 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
-## v1.1.0 — not released yet
+## v1.1.0 — 2026-10-08
 
 ### Added
 - **No limit** (in the brush options; for every ground tool: brushes, Path, Area, pasting): move
@@ -41,6 +41,10 @@ the plugin is unchanged in versions without that part.
   is stopped. Examples to start from (a mountain range, terraces, a canyon with a river, scattered
   boulders, a ring of trees, a flat paved base, a noise landscape); scripts are saved in the data
   folder's scripts folder. The program file is about 20 MB larger (the C# compiler).
+
+### Changed
+- The editor's download no longer holds the WorldEditorBridge plugin: it is its own download,
+  `WorldEditorBridge-<version>.zip`, on the same releases page, and on Thunderstore and Hexium.
 
 ## v1.0.1 — 2026-10-08
 

@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Checks a release package: what must be in it, and what must never be (source code, debug files,
-# files extracted from the game). Usage: tools/check-package.sh <package.tar.gz|.zip> [--no-plugin]
+# files extracted from the game, the plugin: it is released on its own).
+# Usage: tools/check-package.sh <package.tar.gz|.zip>
 set -euo pipefail
-pkg=${1:?package}; plugin=${2:-}
+pkg=${1:?package}
 case "$pkg" in
   *.tar.gz) list=$(tar -tzf "$pkg"); exe=ValheimWorldEditor/ValheimWorldEditor; py=ValheimWorldEditor/export-game-files/python/bin/python3.12 ;;
   *.zip) list=$(unzip -Z1 "$pkg"); exe=ValheimWorldEditor/ValheimWorldEditor.exe; py=ValheimWorldEditor/export-game-files/python/python.exe ;;
@@ -12,8 +13,7 @@ fail=0
 need() { grep -qx "$1" <<<"$list" || { echo "MISSING  $1"; fail=1; }; }
 for f in "$exe" "$py" ValheimWorldEditor/README.txt \
   ValheimWorldEditor/export-game-files/export_all.py ValheimWorldEditor/export-game-files/export_pieces.py ValheimWorldEditor/export-game-files/pieces.json; do need "$f"; done
-if [ "$plugin" != --no-plugin ]; then need ValheimWorldEditor/plugin/WorldEditorBridge.dll; need ValheimWorldEditor/plugin/README.txt; fi
-bad=$(grep -E '\.cs$|\.csproj$|\.pdb$|/obj/|/bin/Release|wwwroot/|^ValheimWorldEditor/(models|maptex|terrain|game-look)/|heightmap\.frag\.glsl$|\.git/' <<<"$list" || true)
+bad=$(grep -E '\.cs$|\.csproj$|\.pdb$|/obj/|/bin/Release|wwwroot/|^ValheimWorldEditor/(models|maptex|terrain|game-look|plugin)/|heightmap\.frag\.glsl$|\.git/' <<<"$list" || true)
 if [ -n "$bad" ]; then echo "FORBIDDEN in the package:"; echo "$bad" | head -20; fail=1; fi
 size=$(du -m "$pkg" | cut -f1)
 if [ "$size" -gt 150 ]; then echo "TOO BIG  ${size} MB"; fail=1; fi

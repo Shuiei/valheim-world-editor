@@ -16,8 +16,9 @@ For single player, or a world you host from the game.
    with a mod manager (r2modman, Thunderstore Mod Manager) or by hand into the Valheim folder, as
    its page explains. On Linux with the native game, BepInEx is started through the pack's start
    script (its page shows the Steam launch option); a mod manager does that for you.
-2. **The plugin:** copy `plugin/WorldEditorBridge.dll` (in the editor's download) into
-   `BepInEx/plugins` of your Valheim, or of your mod manager profile.
+2. **The plugin:** install WorldEditorBridge with a mod manager (Thunderstore or Hexium), or copy
+   `WorldEditorBridge.dll` from `WorldEditorBridge-<version>.zip` (on the editor's releases page)
+   into `BepInEx/plugins` of your Valheim, or of your mod manager profile.
 3. **Start Valheim** with BepInEx and load your world.
 4. Start page → **My game**. It shows what is missing, or "Valheim is running with the world …"
    with an **Edit live** button. On your own computer the editor reads the plugin's settings (port
@@ -34,7 +35,8 @@ the plugin's settings (below).
 ## A dedicated server
 
 1. **On the server, once:** BepInEx (BepInExPack for Valheim, following its dedicated-server
-   instructions), then `plugin/WorldEditorBridge.dll` in its `BepInEx/plugins/`, then restart the
+   instructions), then `WorldEditorBridge.dll` (from `WorldEditorBridge-<version>.zip`) in its
+   `BepInEx/plugins/`, then restart the
    server. Its log shows `WorldEditorBridge <version> listening on http://127.0.0.1:5182/`.
 2. Start page → **A dedicated server**: the server's address, the user you log in to it with over
    SSH, the password or an SSH key file (without either, the usual keys in `~/.ssh` are tried), and

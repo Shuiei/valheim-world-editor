@@ -95,14 +95,13 @@ jobs:
           name: Tools for packaging
           command: apt-get update -qq && apt-get install -y -qq zip python3 python3-pip curl > /dev/null
       - run:
-          name: Build the release packages (without the plugin)
+          name: Build the release packages
           environment:
-            SKIP_PLUGIN: "1"
             PIP_BREAK_SYSTEM_PACKAGES: "1"
           command: tools/release.sh /tmp/dist
       - run:
           name: Check what is in them
-          command: for p in /tmp/dist/*; do tools/check-package.sh "$p" --no-plugin; done
+          command: for p in /tmp/dist/*; do tools/check-package.sh "$p"; done
       - run:
           name: Smoke test of the Linux package (Xvfb, Mesa's software OpenGL)
           no_output_timeout: 5m

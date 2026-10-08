@@ -180,7 +180,6 @@ public static class LocalGame
 			players = running?.Players,
 			where = running?.Bridge.Where ?? bridges.FirstOrDefault()?.Where,
 			valheim = GameLook.FindValheim(settings.ValheimPath),
-			pluginFile = Path.Combine(AppContext.BaseDirectory, "plugin", "WorldEditorBridge.dll"),
 		};
 	}
 }
