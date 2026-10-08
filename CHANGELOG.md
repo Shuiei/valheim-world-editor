@@ -4,7 +4,7 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
-## Unreleased
+## v1.1.0 — not released yet
 
 ### Added
 - **No limit** (in the brush options; for every ground tool: brushes, Path, Area, pasting): move
