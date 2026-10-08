@@ -4,6 +4,24 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.0.0 — unreleased (the native app replaces the web editor)
+
+### Added
+- Native app: the game's look (terrain textures, map textures and models) is copied from your own
+  Valheim on first start and again after a game update, as the web editor did. The start page
+  shows the copy's progress, asks for the Valheim folder when it is not found, and offers Try
+  again when it failed. Choosing another game folder in Settings checks it again.
+
+### Fixed
+- Native app, Area: after choosing a backup folder with "Another folder…", the folder picker opened
+  again and again; a folder chosen by hand was also dropped for live worlds.
+- My game: on Linux, mod manager profiles were listed and searched twice.
+- A character file that cannot be read no longer stops worlds from opening.
+
+### Removed
+- Native app: the development command-line options (pictures, scripted tools); `--world`,
+  `--zone` and `--size` remain.
+
 ## v0.41.1 — 2026-10-07
 
 ### Fixed

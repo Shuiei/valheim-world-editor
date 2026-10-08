@@ -125,7 +125,7 @@ public sealed class MainWindow : Window
 		{
 			_start.SetMode(_start.Mode);
 		}
-		Title = "Valheim World Editor (native preview)";
+		Title = $"Valheim World Editor {BuildInfo.Version}";
 		_pages.Content = _start.View;
 	}
 
@@ -1224,7 +1224,7 @@ public sealed class MainWindow : Window
 		PlacePanel.Confirm = text => Dialogs.Ask(this, "Delete the preset", text, "Delete");
 		PastePanel.Done += () => Tools.ChooseMode(ToolMode.Area);
 		_view.PasteClicked += PasteAt;
-		Title = "Valheim World Editor (native preview)";
+		Title = $"Valheim World Editor {BuildInfo.Version}";
 		Width = 1500;
 		Height = 950;
 		Background = Ui.Bg;
@@ -1341,7 +1341,7 @@ public sealed class MainWindow : Window
 			_ => "",
 		};
 		_view.Status += t => { Options.Say(t); Dispatcher.UIThread.Post(() => _info.Text = t + "\n" + _info.Text); };
-		Closing += (_, _) => _perf.Flush();
+		Closing += (_, _) => { _perf.Flush(); GameLook.StopExport(); };
 		_info.Text = "Loading the world…";
 		Opened += async (_, _) =>
 		{
@@ -1350,6 +1350,12 @@ public sealed class MainWindow : Window
 				return;
 			}
 			Options.Say("window open");
+			// The game's look: copied from the player's Valheim when missing or after a game update
+			// (not when driven by the tests: they never copy from the computer's game).
+			if (!Options.Driver)
+			{
+				GameLook.Check(_settings);
+			}
 			if (Options.Direct)
 			{
 				// --world (and --zone): that area in the 3D editor at once.
