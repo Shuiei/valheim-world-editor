@@ -1585,11 +1585,12 @@ public sealed partial class MainWindow : Window
 		Blueprints.Pasting += () => { _viewPanel.IsVisible = true; StartPaste(); };
 		Blueprints.AskName = initial => Dialogs.AskText(this, "Save blueprint", "Name of the blueprint:", initial);
 		Blueprints.Confirm = text => Dialogs.Ask(this, "Blueprints", text, "Yes");
+		Blueprints.OpenUrl = uri => Launcher.LaunchUriAsync(uri);
 		Blueprints.PickFile = async () =>
 		{
 			var picked = await StorageProvider.OpenFilePickerAsync(new Avalonia.Platform.Storage.FilePickerOpenOptions
 			{
-				Title = "Import a PlanBuild .blueprint or .vbuild file",
+				Title = "Import a .blueprint (Homestead, PlanBuild) or .vbuild file",
 				FileTypeFilter = new[] { new Avalonia.Platform.Storage.FilePickerFileType("Blueprints") { Patterns = BlueprintPatterns } },
 			});
 			return picked.Count > 0 && picked[0].Path.IsFile ? picked[0].Path.LocalPath : null;

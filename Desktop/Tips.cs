@@ -359,7 +359,8 @@ public static class Tips
 
 		// ---- Blueprints and History
 		["blueprints.search"] = "Filter the blueprints by name.",
-		["blueprints.import"] = "Import a blueprint file of the PlanBuild mod (.blueprint) or a .vbuild file; it is kept as a blueprint here.",
+		["blueprints.getHomestead"] = "Opens Homestead's page on Thunderstore: install it in your Valheim (a mod manager does it in one click) to build these blueprints in game.",
+		["blueprints.import"] = "Import a .blueprint file (Homestead or PlanBuild) or a .vbuild file: it is kept as a Homestead blueprint, ready to build in game.",
 		["dialog.text"] = "Type the answer, then press OK (Enter).",
 		["dialog.cancel"] = "Close without doing anything (Esc).",
 	};
