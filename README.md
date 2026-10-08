@@ -173,8 +173,14 @@ dotnet publish Desktop/ValheimWorldEditor.Desktop.csproj -c Release -r linux-x64
 ```
 
 Use `-r win-x64` for Windows. `tools/release.sh <folder>` builds the complete release packages
-(the program, the game-look exporter and its Python runtime, the plugin). See
-[docs/development.md](docs/development.md).
+(the program, the game-look exporter and its Python runtime, the plugin). The tests, as CircleCI runs
+them on every push (the visual tests need a display and are left out):
+
+```sh
+dotnet test tests/Desktop.Tests/Desktop.Tests.csproj -c Release --filter "Category!=Visual"
+```
+
+See [docs/development.md](docs/development.md).
 
 ## Documentation
 
@@ -198,8 +204,9 @@ What changed and when: [CHANGELOG.md](CHANGELOG.md).
 
 - Offline saves always make a full backup of the world folder first, and the save is read back and
   checked before the editor reports success.
-- The editor follows the game's own limits: ground moves at most 8 m from its original height, and
-  the edge of the loaded area is locked so it joins its neighbours seamlessly.
+- The editor follows the game's own limits: ground moves at most 8 m from its original height (ground
+  at the limit turns red; **View → Limit marks** hides it), and the edge of the loaded area is locked
+  so it joins its neighbours seamlessly.
 - Nothing is written until you press **Save to world** or **Apply live**; **Discard** undoes
   everything that is not saved or applied yet.
 - Keep your own copies of worlds you care about anyway.

@@ -74,6 +74,11 @@ the plugin is unchanged in versions without that part.
 - Native app: Space no longer presses the focused button in the editor.
 - Native app, Place: Esc cancels Pick from world.
 - Native app, Area: "pick" for Replace now works before an area is drawn.
+- A character with a backup copy of its file (`ragnar_copy.fch`) could be listed under the copy's
+  name, depending on the disk: files are now read in name order, and the original is kept.
+- Native app: folders under the home are shown as `~/…` everywhere (saving, backups, blueprints,
+  Settings), so no user name is on screen.
+- Native app, Settings: the dialog is as tall as what it holds (it had a large empty part).
 
 ### Removed
 - The web editor (the page in a WebView2/WebKitGTK window or the browser): the native app replaces
