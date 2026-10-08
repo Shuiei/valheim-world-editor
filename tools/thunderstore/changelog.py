@@ -1,7 +1,7 @@
-# The plugin's changelog for its Thunderstore page, made from the editor's CHANGELOG.md (the editor and
+# The plugin's changelog for its mod pages (Thunderstore, Hexium: the same text for both), made from the editor's CHANGELOG.md (the editor and
 # the plugin share one version and one changelog). Each version is split in two: what changed in the
 # plugin (the "### WorldEditorBridge" part of the version, or "unchanged") and what changed in the
-# editor, with a link to that editor on GitHub (Thunderstore does not host programs). Only versioned
+# editor, with a link to that editor on GitHub (mod sites do not host programs). Only versioned
 # sections are kept; the older history is in the full changelog on GitHub.
 # Usage: python3 changelog.py <CHANGELOG.md> <out.md> <version> [released tags...]
 import re, sys
@@ -15,7 +15,7 @@ lines = [
     'WorldEditorBridge is the live-editing plugin of **Valheim World Editor**: the two share one version.',
     '**Download the editor that goes with this plugin from GitHub:**',
     f'[Valheim World Editor v{version}]({repo}/releases/tag/v{version}) (every version: the',
-    f'[releases page]({repo}/releases)). Thunderstore only hosts the plugin.', '',
+    f'[releases page]({repo}/releases)). This mod page only hosts the plugin.', '',
     'Each version below says what changed in this plugin, then what changed in the editor.', '',
 ]
 for sec in sections:
