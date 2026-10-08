@@ -280,6 +280,10 @@ public sealed class ParitySelectionTests : IDisposable
 		// The wall's box, as drawing would know it (no models here): 2 m wide, 2 m high.
 		w.View.SetBoxes(new[] { (0, c + new Vector3(-1, 0, -0.2f), c + new Vector3(1, 2, 0.2f)) });
 		w.View.SetCamera(c + new Vector3(0, 6, 8), c, 1);
+		// Laid out and drawn once: hit tests use the last frame (with one app for the whole run, the
+		// window is not always drawn yet here).
+		w.UpdateLayout();
+		Avalonia.Headless.AvaloniaHeadlessPlatform.ForceRenderTimerTick();
 		Avalonia.Threading.Dispatcher.UIThread.RunJobs();
 		return (w, s, ScreenOf(w, c + new Vector3(0, 1, 0.2f)), ScreenOf(w, c + new Vector3(0, 0, 3)));
 	}
@@ -307,6 +311,8 @@ public sealed class ParitySelectionTests : IDisposable
 	{
 		var (w, _, _, empty) = PickWindow();
 		w.Tools.ChooseMode(ToolMode.Area);
+		w.UpdateLayout();
+		Avalonia.Headless.AvaloniaHeadlessPlatform.ForceRenderTimerTick();
 		Avalonia.Threading.Dispatcher.UIThread.RunJobs();
 		var hit = Avalonia.Input.InputExtensions.InputHitTest(w, empty);
 		Assert.True(hit == w.Surface, $"{empty} hit {hit?.GetType().Name} {(hit as Control)?.Parent?.GetType().Name}");
