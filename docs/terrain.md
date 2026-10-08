@@ -24,8 +24,8 @@ hold and drag. The yellow ring on the ground is the brush. All of them work with
 |---|---|
 | **Size** | Brush radius in metres (`[` and `]` change it). The effect fades out smoothly towards the edge of the ring. |
 | **Strength** | How fast the brush works while you hold the button. |
-| **Shape** | **Circle**; **Square**; **Ring** (only the band between 40% of the size and the edge, shown by a second, fainter outline inside: crater rims, moats, walls of earth); **Ragged** (a noisy, natural-looking edge); or a picture, see [Stamps](#stamps). The ring on the ground shows the shape. |
-| **Falloff** | How the effect fades from the middle to the edge: **Smooth** (the default), **Linear**, **Dome** (round top, steep sides), **Flat top** (full strength almost to the edge: pads and terraces), **Peak** (strong in the middle only: spires and pits), **Sharp edge** (full strength right to the edge and nothing beyond: steep walls, like the game's pickaxe). |
+| **Shape** | **Circle**; **Square**; **Ring** (only the band between 40% of the size and the edge, shown by a second, fainter outline inside: crater rims, moats, walls of earth); **Ragged (noise)** (a noisy, natural-looking edge); or a picture (**Stamp: …**), see [Stamps](#stamps). The ring on the ground shows the shape. Remembered. |
+| **Falloff** | How the effect fades from the middle to the edge: **Smooth** (the default), **Linear**, **Dome** (round top, steep sides), **Flat top** (full strength almost to the edge: pads and terraces), **Peak** (strong in the middle only: spires and pits), **Sharp edge (pickaxe)** (full strength right to the edge and nothing beyond: steep walls, like the game's pickaxe). Remembered. |
 | **Turn** | Turns a square brush or a picture (degrees); `,` and `.` change it by 1° (Shift: 15°). |
 | **Mask** | Limits the brush to some ground, see [Mask](masks.md). |
 
@@ -34,14 +34,14 @@ hold and drag. The yellow ring on the ground is the brush. All of them work with
 | Control | What it does |
 |---|---|
 | **Level to the height where the stroke starts** | On (default): the ground under your first click sets the height; lower ground around it is raised and higher ground is cut, so you get a flat pad at that height. The Height box shows the height in use. |
-| **Height** | Used when the option above is off: everything is levelled to this height (m). **Alt + click** the ground picks its height and switches to this fixed mode, handy to make several pads match. |
+| **Height (m)** | Used when the option above is off: everything is levelled to this height. **Alt + click** the ground picks its height and switches to this fixed mode, handy to make several pads match. |
 
 ### Naturalize settings
 
 | Control | What it does |
 |---|---|
 | **Bumps** | How tall the natural bumps are (m). |
-| **Size** | How wide they are (m): small values give rough ground, large values gentle swells. |
+| **Bump size** | How wide they are (m): small values give rough ground, large values gentle swells. |
 | **New pattern** | A new random bump pattern for the next stroke (and for natural paths). |
 
 The pattern is continuous across the world, so neighbouring strokes and areas match.
@@ -55,12 +55,12 @@ The pattern is continuous across the world, so neighbouring strokes and areas ma
 | **Rest angle** | Thermal: the steepest slope that stays put (degrees). |
 
 Hold and drag like any brush; **Strength** sets how fast it works, and the shape, falloff and Mask
-apply. The Area tool has an **Erode** button that does both over a whole selection.
+apply. The Area tool's **Erode** action does it over a whole selection.
 
 ## Stamps
 
 A stamp is a picture used as the brush shape, like WorldPainter's custom brushes: white parts work
-fully, grey parts partly, black parts not at all. Choose one in **Shape**:
+fully, grey parts partly, black parts not at all. Choose one in **Shape** (they are listed as **Stamp: …**):
 
 | Stamp | Shape |
 |---|---|
@@ -72,7 +72,7 @@ fully, grey parts partly, black parts not at all. Choose one in **Shape**:
 
 | Control | What it does |
 |---|---|
-| **Load stamp…** | Uses any picture (PNG, JPEG...) as a stamp: a heightmap from another tool, a logo, a hand-drawn shape. It is shrunk to 128 × 128 points and kept in this browser, under its file name. |
+| **Load stamp…** | Uses any picture (PNG, JPEG...) as a stamp: a heightmap from another tool, a logo, a hand-drawn shape. It is shrunk to 128 × 128 points and kept in the editor's data folder, under its file name. |
 | **Forget stamp** | Removes the loaded picture chosen as Shape (the built-in stamps stay). |
 | **Stamp once** | With Raise or Lower: one click puts the whole stamp into the ground at once, the white parts **Height** metres up (or down), instead of painting while the button is held. One undo step; the ±8 m limit and the Mask apply. |
 
@@ -106,9 +106,10 @@ what grows there; it does not change its height.
 - **Locked edge.** The outer line of points of the loaded area cannot be changed, so it always
   joins the next area seamlessly. Move the area with the top-bar arrows to edit there.
 - **Locations.** Villages, the trader, dungeon entrances and similar places flatten the ground
-  around them while the game runs. The warning box in the tool panel counts them; the editor already
-  shows the ground with that flattening.
-- **Status bar.** It shows the ground height under the cursor, its original height, and the change.
+  around them while the game runs. A note at the bottom left of the editor counts them; the editor
+  already shows the ground with that flattening.
+- **Status bar.** It shows the ground height under the cursor, its original height, and the change
+  (and says when the point is at the ±8 m limit).
 
 ## Shape (`G`)
 

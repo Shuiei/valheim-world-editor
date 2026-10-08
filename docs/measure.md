@@ -7,7 +7,7 @@
 1. Choose **Measure** (`M`).
 2. Click a first point on the ground, then a second point. Before the second click, the line
    follows the cursor.
-3. Click again to start a new measurement; **Clear** (`Esc`) removes it.
+3. Click again to start a new measurement; **Clear (Esc)** removes it.
 
 The line follows the ground, so it shows the profile between the points. The panel shows:
 
@@ -22,7 +22,7 @@ The line follows the ground, so it shows the profile between the points. The pan
 
 ## Ground overlays
 
-In **View → Look**:
+In the View panel, under **Ground (game look)**:
 
 | Control | What it does |
 |---|---|
