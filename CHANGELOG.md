@@ -41,6 +41,14 @@ the plugin is unchanged in versions without that part.
   right drag slide the view in any tool; Alt + wheel turns the selection, the paste or the Place
   preview; the help lists every key.
 - Native app, Naturalize: New pattern (another noise pattern for the next stroke or natural path).
+- Native app, Area: cut and fill follows every change of the ground and of the action.
+- Native app, Place: **fit** sets the spacing when a chosen kind is wider than it (the panel says
+  so).
+- Native app, Place chooser: Shift + click on Pick from world adds the kind, and on a favourite or
+  recent places only it; Untick all; all / none per row; categories fold, and which are open is
+  remembered.
+- Native app: new objects not saved (or applied) yet carry a green dot in the view.
+- Native app: placing or pasting a kind switched off in View switches it on, and says so.
 - The developer checks of the world generator and the save writer (`--verify`, `--verify-ingame`,
   `--selftest-save`, `--inspect`, `--summary`) moved to a separate tool, `tools/WorldCheck`. It can
   also write a new world from a seed (`create`), its middle generated with the game's vegetation.
@@ -61,6 +69,7 @@ the plugin is unchanged in versions without that part.
 - Native app, start page: empty error lines and an empty server list left gaps; the data folder is
   shown as `~/…`.
 - Native app: Space no longer presses the focused button in the editor.
+- Native app, Place: Esc cancels Pick from world.
 - Native app, Area: "pick" for Replace now works before an area is drawn.
 
 ### Removed
