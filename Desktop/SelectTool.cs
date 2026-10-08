@@ -524,6 +524,9 @@ public sealed class SelectTool
 		return Gizmo.Hit(o, d, c, scale);
 	}
 
+	// The pointer is over a move handle (a click there drags, it does not pick).
+	public bool OverHandle => _hover != null;
+
 	public void Hover(Point at, Size size)
 	{
 		var h = HandleAt(at, size);
