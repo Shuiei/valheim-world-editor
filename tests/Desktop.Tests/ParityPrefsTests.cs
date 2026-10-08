@@ -386,6 +386,23 @@ public sealed class ParityPrefsMapTests : IDisposable
 	public void Dispose() => File.Delete(_file);
 
 	[AvaloniaFact]
+	public void TheUnsavedMarksCanBeHiddenAndThatIsRemembered()
+	{
+		var w = new MainWindow(load: false, prefs: Prefs.Load(_file)) { Width = 1200, Height = 900 };
+		w.Show();
+		Assert.True(w.UnsavedBox.IsChecked);
+		Assert.True(w.View.ShowNewMarkers);
+		w.UnsavedBox.IsChecked = false;
+		Assert.False(w.View.ShowNewMarkers);
+		Assert.False(string.IsNullOrEmpty(ToolTip.GetTip(w.UnsavedBox) as string));
+		w.Prefs.Flush();
+		var v = new MainWindow(load: false, prefs: Prefs.Load(_file)) { Width = 1200, Height = 900 };
+		v.Show();
+		Assert.False(v.UnsavedBox.IsChecked);
+		Assert.False(v.View.ShowNewMarkers);
+	}
+
+	[AvaloniaFact]
 	public void TheLookSwitchesAreRemembered()
 	{
 		var w = new MainWindow(load: false, prefs: Prefs.Load(_file)) { Width = 1200, Height = 900 };

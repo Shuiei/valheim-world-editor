@@ -1279,7 +1279,10 @@ public sealed class GlView : OpenGlControlBase
 				}
 			}
 			// Over everything, the water too.
-			DrawNewMarkers(s, vp);
+			if (ShowNewMarkers)
+			{
+				DrawNewMarkers(s, vp);
+			}
 		}
 		_gl.BindVertexArray(0);
 		_gl.UseProgram(0);
@@ -2138,6 +2141,9 @@ public sealed class GlView : OpenGlControlBase
 
 	// Whether a new object (id < 0) is in the game already (live: applied); such objects lose their marker.
 	public Func<int, bool> InGame { get; set; } = _ => false;
+
+	// The green marks on new objects can be hidden (View: Unsaved marks).
+	public bool ShowNewMarkers { get; set; } = true;
 
 	// The new objects not saved (or applied) yet, as the web editor marked them: a green dot of the same
 	// size on screen just above each, drawn over everything, for the kinds shown.

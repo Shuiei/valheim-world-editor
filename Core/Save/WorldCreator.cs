@@ -10,6 +10,8 @@ namespace TerrainEditor.Save;
 // The ground is the seed's own (the world generator); the zones within `radius` of the middle are
 // generated with the game's vegetation rules (Regrow), the rest is left for the game to generate;
 // zone 0, 0 also gets an unedited terrain compiler object, so the editor can save ground edits.
+// flat: the most even zone of dry Meadows left without vegetation, its ground untouched (no edit, so
+// the tools keep their whole ±8 m on it): a clean square to show them on (the documentation's pictures).
 // Location instances (the start altar, villages, dungeons...) are not placed: the world is marked as
 // not having them yet, so the game lays them out when it first loads it.
 public static class WorldCreator
@@ -23,7 +25,36 @@ public static class WorldCreator
 	// The largest square of generated zones around the middle (radius in zones).
 	public const int MaxRadius = 16;
 
-	public sealed record Created(string Directory, int Seed, int Zones, int Objects);
+	public sealed record Created(string Directory, int Seed, int Zones, int Objects, (int X, int Z)? Flat = null, float FlatSpan = 0);
+
+	// The most even zone of dry Meadows within `radius` zones of the middle (not on its edge): the
+	// one whose ground spans the fewest metres. Null when none is wholly above the water.
+	public static (int X, int Z, float Span)? FlattestZone(ValheimGen.TerrainService terrain, int radius)
+	{
+		(int, int, float)? best = null;
+		for (int z = -radius + 1; z < radius; z++)
+		{
+			for (int x = -radius + 1; x < radius; x++)
+			{
+				float[] h = terrain.BaseZone(x, z);
+				float lo = h.Min(), hi = h.Max();
+				if (lo < ValheimGen.TerrainService.WaterLevel + 1.5f || best is { } b && hi - lo >= b.Item3)
+				{
+					continue;
+				}
+				bool meadows = true;
+				for (int k = 0; k < 9 && meadows; k++)
+				{
+					meadows = terrain.BiomeAt(x * 64 + (k % 3 - 1) * 28, z * 64 + (k / 3 - 1) * 28) == ValheimGen.Heightmap.Biome.Meadows;
+				}
+				if (meadows)
+				{
+					best = (x, z, hi - lo);
+				}
+			}
+		}
+		return best;
+	}
 
 	// The game's seed number for a seed name (World: m_seed = m_seedName.GetStableHashCode()).
 	public static int SeedOf(string seedName) => StableHash.Of(seedName);
@@ -32,7 +63,7 @@ public static class WorldCreator
 	// JSON {"list":[]} behind its length (copied from a world the game made).
 	private static readonly byte[] EmptyListBlock = { 0x0f, 0, 0, 0, 0x0b, 0x05, 0x80, (byte)'{', (byte)'"', (byte)'l', (byte)'i', (byte)'s', (byte)'t', (byte)'"', (byte)':', (byte)'[', (byte)']', (byte)'}', 0x03 };
 
-	public static Created Create(string folder, string name, string seedName, int radius = 0, long? uid = null)
+	public static Created Create(string folder, string name, string seedName, int radius = 0, long? uid = null, bool flat = false)
 	{
 		name = name.Trim();
 		seedName = seedName.Trim();
@@ -48,6 +79,10 @@ public static class WorldCreator
 		{
 			throw new ArgumentOutOfRangeException(nameof(radius), $"The generated zones reach 0 to {MaxRadius} zones from the middle.");
 		}
+		if (flat && radius < 2)
+		{
+			throw new ArgumentException("A bare zone needs generated zones around it (a radius of 2 or more).", nameof(flat));
+		}
 		if (Directory.Exists(folder) && Directory.EnumerateFileSystemEntries(folder).Any(f => Path.GetFileName(f).StartsWith("_main.") || f.EndsWith(".chunk")))
 		{
 			throw new InvalidOperationException($"{folder} already holds a world: a new one is never written over it.");
@@ -61,12 +96,20 @@ public static class WorldCreator
 		db.Save(main + ".db2");
 
 		int objects = 0, zones = 0;
+		(int X, int Z, float Span)? flatZone = null;
 		if (radius > 0)
 		{
 			// The game's vegetation on the seed's own ground, zone by zone, in base chunk files.
 			WorldSave empty = WorldSave.Load(folder);
 			var terrain = new ValheimGen.TerrainService(empty);
 			var spots = Regrow.Zones(terrain, new EditStore(empty), seed, -radius, -radius, radius, radius);
+			if (flat)
+			{
+				flatZone = FlattestZone(terrain, radius) ?? throw new InvalidOperationException("No zone of dry, even Meadows near the middle: try another seed or a larger radius.");
+				var (fx, fz, _) = flatZone.Value;
+				// Nothing grows on it.
+				spots = spots.Where(s => (int)MathF.Floor((s.X + 32) / 64) != fx || (int)MathF.Floor((s.Z + 32) / 64) != fz).ToList();
+			}
 			var byChunk = new SortedDictionary<ushort, List<byte[]>>();
 			foreach (var s in spots)
 			{
@@ -108,7 +151,7 @@ public static class WorldCreator
 		}
 		// Written last, like the game: only then is the save complete.
 		File.WriteAllBytes(main + ".ok", BitConverter.GetBytes(SaveFileVersion));
-		return new Created(folder, seed, zones, objects);
+		return new Created(folder, seed, zones, objects, flatZone is var (cx, cz, _) ? (cx, cz) : null, flatZone?.Span ?? 0);
 	}
 
 	private static readonly int TerrainCompiler = StableHash.Of("_TerrainCompiler");

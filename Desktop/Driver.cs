@@ -18,6 +18,8 @@ namespace TerrainEditor.Desktop;
 //   click <text>                   the visible button, switch or box labelled so, or whose words
 //                                  begin so (windows and dialogs)
 //   choose <text>                  the entry so named in whichever visible list has it
+//   type <hint>|<text>             the visible text box whose placeholder contains hint gets text
+//   set <label>|<value>            the slider, text box(es: a,b) or list beside the label so worded
 //   wait <ms>                      a pause (a brush stroke works frame by frame while held)
 //   bench <seconds>                the 3D camera turns on its own; the frame rates come back
 //   mouse <down|move|up> <x> <z> [left|right|middle] [shift|ctrl|alt ...]
@@ -157,6 +159,51 @@ public static class Driver
 					default: throw new InvalidOperationException("unknown look " + args[0]);
 				}
 				return State(w);
+			case "type":
+			{
+				int bar = a[1].IndexOf('|');
+				string hint = a[1][..bar], text = a[1][(bar + 1)..];
+				var box = Find<Avalonia.Controls.TextBox>(w, b => (b.PlaceholderText ?? "").Contains(hint, StringComparison.OrdinalIgnoreCase)) ?? throw new InvalidOperationException($"no text box \"{hint}\"");
+				box.Text = text;
+				return State(w);
+			}
+			case "set":
+			{
+				int bar = a[1].IndexOf('|');
+				string label = a[1][..bar], value = a[1][(bar + 1)..];
+				var tb = Find<Avalonia.Controls.TextBlock>(w, t => string.Equals(t.Text?.Trim(), label, StringComparison.OrdinalIgnoreCase)) ?? throw new InvalidOperationException($"no label \"{label}\"");
+				// The row holding the label: the first control after it.
+				var row = (Avalonia.Visual?)Avalonia.VisualTree.VisualExtensions.GetVisualParent(tb);
+				for (int up = 0; up < 3 && row != null; up++, row = Avalonia.VisualTree.VisualExtensions.GetVisualParent(row))
+				{
+					var c = Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(row).OfType<Avalonia.Controls.Control>()
+						.FirstOrDefault(c => c is Avalonia.Controls.Slider or Avalonia.Controls.TextBox or Avalonia.Controls.ComboBox or Avalonia.Controls.NumericUpDown && c.IsEffectivelyVisible);
+					switch (c)
+					{
+						case Avalonia.Controls.Slider sl:
+							sl.Value = double.Parse(value, System.Globalization.CultureInfo.InvariantCulture);
+							return State(w);
+						case Avalonia.Controls.NumericUpDown nu:
+							nu.Value = decimal.Parse(value, System.Globalization.CultureInfo.InvariantCulture);
+							return State(w);
+						case Avalonia.Controls.TextBox:
+						{
+							// Several boxes in the row (Size % from, to): the values in order, comma separated.
+							var boxes = Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(row).OfType<Avalonia.Controls.TextBox>().Where(b => b.IsEffectivelyVisible).ToList();
+							var values = value.Split(',');
+							for (int k = 0; k < Math.Min(values.Length, boxes.Count); k++)
+							{
+								boxes[k].Text = values[k].Trim();
+							}
+							return State(w);
+						}
+						case Avalonia.Controls.ComboBox cb when IndexOf(cb, value) >= 0:
+							cb.SelectedIndex = IndexOf(cb, value);
+							return State(w);
+					}
+				}
+				throw new InvalidOperationException($"nothing to set beside \"{label}\"");
+			}
 			case "wait":
 				await Task.Delay(TimeSpan.FromMilliseconds(Math.Clamp(F(0), 0, 60000)));
 				return State(w);

@@ -9,27 +9,28 @@ using TerrainEditor.Save;
 //   selftest-save <world copy>    edits, saves and reloads a COPY of a world (under /tmp only)
 //   inspect <world>               the chunk mapping and the layout of terrain objects
 //   summary <world>               the overview map and the most edited zones
-//   create <folder> <name> <seed> [radius]
+//   create <folder> <name> <seed> [radius] [--flat]
 //                                 a new world from a seed, its middle generated radius zones out
 //                                 (refuses a folder that already holds a world)
 //   look <seed> [metres]          the biomes and water around the middle of a seed's world
 if (args.Length < 2)
 {
-	Console.Error.WriteLine("usage: WorldCheck verify <dump> [seed] | verify-ingame <world> <file> | selftest-save <world copy> | inspect <world> | summary <world> | create <folder> <name> <seed> [radius] | look <seed> [metres]");
+	Console.Error.WriteLine("usage: WorldCheck verify <dump> [seed] | verify-ingame <world> <file> | selftest-save <world copy> | inspect <world> | summary <world> | create <folder> <name> <seed> [radius] [--flat] | look <seed> [metres]");
 	return 2;
 }
 if (args[0] == "create")
 {
 	if (args.Length < 4)
 	{
-		Console.Error.WriteLine("create needs <folder> <name> <seed> [radius]");
+		Console.Error.WriteLine("create needs <folder> <name> <seed> [radius] [--flat]");
 		return 2;
 	}
 	try
 	{
-		int radius = args.Length > 4 ? int.Parse(args[4], CultureInfo.InvariantCulture) : 0;
-		var made = WorldCreator.Create(args[1], args[2], args[3], radius);
-		Console.WriteLine($"Created '{args[2]}' (seed {args[3]} = {made.Seed}) in {made.Directory}: {made.Zones} zones generated, {made.Objects:N0} objects.");
+		int radius = args.Length > 4 && args[4] != "--flat" ? int.Parse(args[4], CultureInfo.InvariantCulture) : 0;
+		var made = WorldCreator.Create(args[1], args[2], args[3], radius, flat: args.Contains("--flat"));
+		Console.WriteLine($"Created '{args[2]}' (seed {args[3]} = {made.Seed}) in {made.Directory}: {made.Zones} zones generated, {made.Objects:N0} objects."
+			+ (made.Flat is var (fx, fz) ? $" Zone {fx}, {fz}: the most even dry Meadows ({made.FlatSpan:0.0} m from lowest to highest), left bare." : ""));
 		return 0;
 	}
 	catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or FormatException)
