@@ -589,16 +589,14 @@ public sealed class AreaPanel
 	private void FillBackups(string? select = null)
 	{
 		var s = _view.Scene;
-		if (s?.World == null || string.IsNullOrEmpty(s.World.Directory) || !Directory.Exists(s.World.Directory))
-		{
-			_backupPaths = new();
-			BackupBox.ItemsSource = new[] { "Another folder…" };
-			return;
-		}
 		var keep = select ?? (BackupBox.SelectedIndex >= 0 && BackupBox.SelectedIndex < _backupPaths.Count ? _backupPaths[BackupBox.SelectedIndex] : null);
-		var found = Backups.Find(s.World.Directory);
+		// A world without a folder (live from a game) has no backups of its own; folders chosen by hand stay.
+		var found = s?.World != null && !string.IsNullOrEmpty(s.World.Directory) && Directory.Exists(s.World.Directory) ? Backups.Find(s.World.Directory) : new List<Backups.Info>();
 		var extra = _backupPaths.Where(p => !found.Any(f => f.Path == p)).ToList();
 		_backupPaths = found.Select(b => b.Path).Concat(extra).ToList();
+		// The list keeps the selected text across a new source: with "Another folder…" still selected it
+		// would ask for a folder again.
+		BackupBox.SelectedIndex = -1;
 		BackupBox.ItemsSource = found.Select(b => $"{(b.Kind == "game" ? "Game" : "Editor")} · {b.Date:g}").Concat(extra).Append("Another folder…").ToList();
 		BackupBox.SelectedIndex = keep != null ? _backupPaths.IndexOf(keep) : -1;
 	}

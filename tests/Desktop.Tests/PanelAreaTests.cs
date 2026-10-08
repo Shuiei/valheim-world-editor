@@ -191,9 +191,13 @@ public class PanelAreaTests
 		// A folder that is not a world: said in the panel and in the message.
 		string notAWorld = Path.Combine(Path.GetDirectoryName(r.Dir)!, "empty");
 		Directory.CreateDirectory(notAWorld);
-		r.P.PickFolder = () => Task.FromResult<string?>(notAWorld);
+		int asked = 0;
+		r.P.PickFolder = () => { asked++; return Task.FromResult<string?>(notAWorld); };
 		r.P.BackupBox.SelectedIndex = r.P.BackupBox.ItemCount - 1;
 		await LiveTests.Until(() => r.P.BackupBox.SelectedIndex >= 0 && ((IEnumerable<object>)r.P.BackupBox.ItemsSource!).Cast<string>().Contains(notAWorld));
+		// Asked once: the new list used to keep "Another folder…" selected and ask again, forever.
+		Assert.Equal(1, asked);
+		Assert.Equal(notAWorld, ((IEnumerable<object>)r.P.BackupBox.ItemsSource!).Cast<string>().ElementAt(r.P.BackupBox.SelectedIndex));
 		await r.P.Apply();
 		Assert.StartsWith("That folder is not a world save that can be read", r.P.BackupInfo.Text);
 		Assert.Equal(r.P.BackupInfo.Text, r.Said);
