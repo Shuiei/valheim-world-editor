@@ -319,6 +319,8 @@ public sealed class GlView : OpenGlControlBase
 		_terrainVao = _terrainIndexCount = _waterVao = _terrainVbo = _terrainExtraVbo = 0;
 		_boxVbo = _boxEbo = _ghostVbo = 0;
 		_pathVao = _pathVbo = _pathEdgeVao = _pathEdgeVbo = _pathDotVao = _pathDotVbo = 0;
+		_placeRingVao = _placeRingVbo = _hoverBoxVao = _hoverBoxVbo = 0;
+		_pathBandVao = _pathBandVbo = _pathSoftVao = _pathSoftVbo = _pathPreviewVao = _pathPreviewVbo = _pathPreviewSoftVao = _pathPreviewSoftVbo = 0;
 		_markVao = _markVbo = 0;
 		_placeVao = _placeVbo = _placeShapeVao = _placeShapeVbo = 0;
 		_areaVao = _areaVbo = _resetVao = _resetVbo = 0;
@@ -1143,6 +1145,9 @@ public sealed class GlView : OpenGlControlBase
 			}
 		}
 		proj = Perspective(60 * MathF.PI / 180, pw / (float)ph, 0.5f, 6000);
+		// Half a tool line's width per metre from the eye: about 1.25 screen pixels, and never under
+		// 0.9 pixel of the 3D view's own resolution (thinner lines break up when it is scaled up).
+		_linePx = 2 * MathF.Tan(30 * MathF.PI / 180) * MathF.Max(1.25f / Math.Max(1, ph), 0.9f / Math.Max(1, rh));
 		var vp = view * proj;
 		_lastViewProj = vp;
 		_lastEye = eye;
@@ -1152,7 +1157,7 @@ public sealed class GlView : OpenGlControlBase
 		// changed ground to the graphics card.
 		if (s != null)
 		{
-			_hover = (_tool != null || _mode == ToolMode.Shape) && _pointer is Point at ? GroundAt(s, vp, at, _surfaceSize) : null;
+			_hover = (_tool != null || _mode is ToolMode.Shape or ToolMode.Path || _mode == ToolMode.Place && Place?.Tool.Mode == PlaceTool.Modes.Brush) && _pointer is Point at ? GroundAt(s, vp, at, _surfaceSize) : null;
 			if (_brushDown && _hover is { } hv)
 			{
 				s.Session?.StrokeStep(hv.X, hv.Z, dt);
@@ -1253,6 +1258,7 @@ public sealed class GlView : OpenGlControlBase
 			_ghostsDrawn = DrawGhosts(s, vp);
 			DrawOverlays(vp);
 			DrawSelection(vp);
+			DrawHoverObject(vp);
 			DrawBrush(s, vp);
 			DrawLasso(s, vp);
 			DrawGizmo(s, vp);
@@ -1705,6 +1711,8 @@ public sealed class GlView : OpenGlControlBase
 			else if (_selectMode && _tool == null)
 			{
 				SelectTool.Hover(_pointer.Value, _surfaceSize);
+				// The object a click would pick (none over a move handle).
+				SetHoverObject(SelectTool.OverHandle ? null : ObjectAt(_pointer.Value, _surfaceSize));
 			}
 			else if (_mode == ToolMode.Measure && WorldAt(_pointer.Value, _surfaceSize) is { } w)
 			{
@@ -1715,6 +1723,7 @@ public sealed class GlView : OpenGlControlBase
 		surface.PointerExited += (_, _) =>
 		{
 			_pointer = null;
+			SetHoverObject(null);
 			Wake();
 		};
 		surface.PointerWheelChanged += (_, e) =>
@@ -2109,8 +2118,53 @@ public sealed class GlView : OpenGlControlBase
 	}
 
 	// Lines (pairs of view-space points) drawn over everything in one colour, refilled every call.
-	private unsafe void DrawLines(ref uint vao, ref uint vbo, float[] data, Matrix4x4 vp, Vector4 color, PrimitiveType kind = PrimitiveType.Lines)
+	// Half a tool line's width per metre from the eye (set each frame from the view's size).
+	private float _linePx = 0.0015f;
+
+	// Line segments (pairs of points) as thin strips facing the eye, `width` times a tool line's
+	// width: they stay whole at any resolution and angle, where 1-pixel lines broke into dashes.
+	private float[] Thicken(float[] seg, float width)
 	{
+		var o = new float[seg.Length / 6 * 18];
+		int n = 0;
+		for (int i = 0; i + 5 < seg.Length; i += 6)
+		{
+			var a = new Vector3(seg[i], seg[i + 1], seg[i + 2]);
+			var b = new Vector3(seg[i + 3], seg[i + 4], seg[i + 5]);
+			Vector3 d = b - a;
+			if (d.LengthSquared() < 1e-12f)
+			{
+				continue;
+			}
+			Vector3 side = Vector3.Cross(d, (a + b) / 2 - _lastEye);
+			if (side.LengthSquared() < 1e-12f)
+			{
+				side = Vector3.Cross(d, Vector3.UnitY);
+			}
+			if (side.LengthSquared() < 1e-12f)
+			{
+				side = Vector3.UnitX;
+			}
+			side = Vector3.Normalize(side);
+			Vector3 sa = side * (Vector3.Distance(_lastEye, a) * _linePx * width), sb = side * (Vector3.Distance(_lastEye, b) * _linePx * width);
+			foreach (var v in new[] { a - sa, a + sa, b + sb, a - sa, b + sb, b - sb })
+			{
+				o[n++] = v.X;
+				o[n++] = v.Y;
+				o[n++] = v.Z;
+			}
+		}
+		return n == o.Length ? o : o[..n];
+	}
+
+	// width: for line segments, times a tool line's width (0: 1-pixel lines).
+	private unsafe void DrawLines(ref uint vao, ref uint vbo, float[] data, Matrix4x4 vp, Vector4 color, PrimitiveType kind = PrimitiveType.Lines, bool blend = false, float width = 1)
+	{
+		if (kind == PrimitiveType.Lines && width > 0)
+		{
+			data = Thicken(data, width);
+			kind = PrimitiveType.Triangles;
+		}
 		if (data.Length == 0)
 		{
 			return;
@@ -2138,7 +2192,20 @@ public sealed class GlView : OpenGlControlBase
 		_gl.UniformMatrix4(_gl.GetUniformLocation(_lineProg, "uViewProj"), 1, false, (float*)&vp);
 		_gl.Uniform4(_gl.GetUniformLocation(_lineProg, "uColor"), color.X, color.Y, color.Z, color.W);
 		_gl.BindVertexArray(vao);
+		if (blend)
+		{
+			// See-through (alpha), on both sides (ribbons on slopes may face away).
+			_gl.Enable(EnableCap.Blend);
+			_gl.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
+		}
+		bool cull = _gl.IsEnabled(EnableCap.CullFace);
+		_gl.Disable(EnableCap.CullFace);
 		_gl.DrawArrays(kind, 0, (uint)(data.Length / 3));
+		if (cull)
+		{
+			_gl.Enable(EnableCap.CullFace);
+		}
+		_gl.Disable(EnableCap.Blend);
 		_gl.Enable(EnableCap.DepthTest);
 	}
 
@@ -2201,7 +2268,13 @@ public sealed class GlView : OpenGlControlBase
 	}
 
 	private uint _pathVao, _pathVbo, _pathEdgeVao, _pathEdgeVbo, _pathDotVao, _pathDotVbo;
-	// The Path tool's line (red, on the ground), its width (the line offset to both sides) and its points.
+	private uint _placeRingVao, _placeRingVbo;
+	private uint _pathBandVao, _pathBandVbo, _pathSoftVao, _pathSoftVbo, _pathPreviewVao, _pathPreviewVbo, _pathPreviewSoftVao, _pathPreviewSoftVbo;
+	// The Path tool: the ground it covers (a light band), its width's edges and the soft edge's outer
+	// line, the centre line (red) and its points; under the cursor, the width (and the soft edge) the
+	// next point brings, with the stretch from the last point to it. Lines are flat ribbons on the
+	// ground a few pixels wide, so they stay whole at any resolution and angle (1-pixel lines broke
+	// into dashes once the view was scaled up).
 	private void DrawPath(WorldScene s, Matrix4x4 vp)
 	{
 		if (_mode != ToolMode.Path)
@@ -2220,21 +2293,125 @@ public sealed class GlView : OpenGlControlBase
 			float x = g.X - (s.W - 1) / 2f, z = -(g.Y - (s.H - 1) / 2f);
 			return new Vector3(x, Picking.HeightAt(s, x, z) + lift, z);
 		}
-		var line = new List<float>();
-		var edges = new List<float>();
-		void Seg(List<float> to, Vector3 a, Vector3 b) => to.AddRange(new[] { a.X, a.Y, a.Z, b.X, b.Y, b.Z });
-		float half = Path.Width / 2;
-		for (int i = 1; i < curve.Count; i++)
+		// Grid points every metre or so along a line (the ground's own spacing), so a ribbon follows it.
+		static List<Vector2> Dense(IReadOnlyList<Vector2> line)
 		{
-			Vector2 a = curve[i - 1].P, b = curve[i].P;
-			Seg(line, V(a, 0.6f), V(b, 0.6f));
-			float len = MathF.Max(Vector2.Distance(a, b), 1e-6f);
-			var n = new Vector2(-(b.Y - a.Y), b.X - a.X) / len * half;
-			Seg(edges, V(a + n, 0.4f), V(b + n, 0.4f));
-			Seg(edges, V(a - n, 0.4f), V(b - n, 0.4f));
+			var o = new List<Vector2>();
+			for (int i = 0; i < line.Count; i++)
+			{
+				if (i > 0)
+				{
+					int n = Math.Max(1, (int)MathF.Ceiling(Vector2.Distance(line[i - 1], line[i])));
+					for (int k = 1; k < n; k++)
+					{
+						o.Add(Vector2.Lerp(line[i - 1], line[i], k / (float)n));
+					}
+				}
+				o.Add(line[i]);
+			}
+			return o;
+		}
+		// A line as a ribbon of triangles, its width a fixed share of the distance to the eye.
+		void Ribbon(List<float> to, IReadOnlyList<Vector2> line, float px, float lift)
+		{
+			var d = Dense(line);
+			for (int i = 1; i < d.Count; i++)
+			{
+				Vector2 a = d[i - 1], b = d[i];
+				float len = Vector2.Distance(a, b);
+				if (len < 1e-5f)
+				{
+					continue;
+				}
+				Vector3 va = V(a, lift), vb = V(b, lift);
+				Vector2 n = new Vector2(-(b.Y - a.Y), b.X - a.X) / len;
+				float wa = Vector3.Distance(_lastEye, va) * px, wb = Vector3.Distance(_lastEye, vb) * px;
+				Vector3 Off(Vector2 g, float w, Vector3 at) { var q = V(g + n * w, lift); return new Vector3(q.X, at.Y, q.Z); }
+				Vector3 a0 = Off(a, -wa, va), a1 = Off(a, wa, va), b0 = Off(b, -wb, vb), b1 = Off(b, wb, vb);
+				foreach (var v in new[] { a0, a1, b1, a0, b1, b0 })
+				{
+					to.AddRange(new[] { v.X, v.Y, v.Z });
+				}
+			}
+		}
+		// The line offset to one side (+1 left, -1 right) by a distance, point by point.
+		static List<Vector2> Offset(List<Vector2> line, float by)
+		{
+			var o = new List<Vector2>(line.Count);
+			for (int i = 0; i < line.Count; i++)
+			{
+				Vector2 dir = line[Math.Min(i + 1, line.Count - 1)] - line[Math.Max(i - 1, 0)];
+				float len = dir.Length();
+				o.Add(len < 1e-6f ? line[i] : line[i] + new Vector2(-dir.Y, dir.X) / len * by);
+			}
+			return o;
+		}
+		static List<Vector2> Circle(Vector2 c, float r)
+		{
+			int n = Math.Clamp((int)(r * 6), 32, 160);
+			return Enumerable.Range(0, n + 1).Select(i => c + new Vector2(MathF.Cos(i * MathF.Tau / n), MathF.Sin(i * MathF.Tau / n)) * r).ToList();
+		}
+		float half = Path.Width / 2, outer = half + MathF.Max(0, Path.Soft);
+		float Thick = _linePx * 1.6f, Thin = _linePx * 0.9f;
+		var band = new List<float>();
+		var edges = new List<float>();
+		var soft = new List<float>();
+		var line = new List<float>();
+		void Stretch(List<Vector2> c)
+		{
+			if (c.Count < 2)
+			{
+				return;
+			}
+			// The band: strips across the width, one per metre along and across, on the ground.
+			var d = Dense(c);
+			int across = Math.Max(2, (int)MathF.Ceiling(Path.Width));
+			var left = Offset(d, half);
+			for (int i = 1; i < d.Count; i++)
+			{
+				Vector2 na = (left[i - 1] - d[i - 1]) / MathF.Max(half, 1e-6f), nb = (left[i] - d[i]) / MathF.Max(half, 1e-6f);
+				for (int k = 0; k < across; k++)
+				{
+					float u0 = -half + Path.Width * k / across, u1 = -half + Path.Width * (k + 1) / across;
+					Vector3 p00 = V(d[i - 1] + na * u0, 0.25f), p01 = V(d[i - 1] + na * u1, 0.25f), p10 = V(d[i] + nb * u0, 0.25f), p11 = V(d[i] + nb * u1, 0.25f);
+					foreach (var v in new[] { p00, p01, p11, p00, p11, p10 })
+					{
+						band.AddRange(new[] { v.X, v.Y, v.Z });
+					}
+				}
+			}
+			Ribbon(edges, Offset(d, half), Thick, 0.35f);
+			Ribbon(edges, Offset(d, -half), Thick, 0.35f);
+			if (Path.Soft > 0.01f)
+			{
+				Ribbon(soft, Offset(d, outer), Thin, 0.3f);
+				Ribbon(soft, Offset(d, -outer), Thin, 0.3f);
+			}
+			Ribbon(line, c, Thick, 0.45f);
+		}
+		Stretch(curve.Select(c => c.P).ToList());
+		// The cursor: the width and soft edge a point there brings, and the stretch from the last point.
+		var preview = new List<float>();
+		var previewSoft = new List<float>();
+		if (_hover is { } h && !Path.Drawing)
+		{
+			var at = new Vector2(h.X, h.Z);
+			Ribbon(preview, Circle(at, half), Thick, 0.35f);
+			if (Path.Soft > 0.01f)
+			{
+				Ribbon(previewSoft, Circle(at, outer), Thin, 0.3f);
+			}
+			if (pts.Count > 0 && Vector2.Distance(pts[^1], at) > 0.5f)
+			{
+				var next = new List<Vector2> { pts[^1], at };
+				Ribbon(preview, Offset(Dense(next), half), Thin, 0.35f);
+				Ribbon(preview, Offset(Dense(next), -half), Thin, 0.35f);
+				Ribbon(preview, next, Thin, 0.45f);
+			}
 		}
 		// Each point: a small square that keeps its size on screen.
 		var dots = new List<float>();
+		void Seg(List<float> to, Vector3 a, Vector3 b) => to.AddRange(new[] { a.X, a.Y, a.Z, b.X, b.Y, b.Z });
 		foreach (var p in pts)
 		{
 			var c = V(p, 0.6f);
@@ -2246,8 +2423,12 @@ public sealed class GlView : OpenGlControlBase
 			}
 			Seg(dots, c - new Vector3(0, r, 0), c + new Vector3(0, r, 0));
 		}
-		DrawLines(ref _pathEdgeVao, ref _pathEdgeVbo, edges.ToArray(), vp, new Vector4(1, 0.69f, 0.63f, 0.6f));
-		DrawLines(ref _pathVao, ref _pathVbo, line.ToArray(), vp, new Vector4(1, 0.23f, 0.23f, 1));
+		DrawLines(ref _pathBandVao, ref _pathBandVbo, band.ToArray(), vp, new Vector4(1, 0.45f, 0.35f, 0.16f), PrimitiveType.Triangles, blend: true);
+		DrawLines(ref _pathSoftVao, ref _pathSoftVbo, soft.ToArray(), vp, new Vector4(1, 0.8f, 0.7f, 0.55f), PrimitiveType.Triangles, blend: true);
+		DrawLines(ref _pathEdgeVao, ref _pathEdgeVbo, edges.ToArray(), vp, new Vector4(1, 0.75f, 0.65f, 0.95f), PrimitiveType.Triangles, blend: true);
+		DrawLines(ref _pathVao, ref _pathVbo, line.ToArray(), vp, new Vector4(1, 0.23f, 0.23f, 1), PrimitiveType.Triangles);
+		DrawLines(ref _pathPreviewSoftVao, ref _pathPreviewSoftVbo, previewSoft.ToArray(), vp, new Vector4(1, 1, 1, 0.5f), PrimitiveType.Triangles, blend: true);
+		DrawLines(ref _pathPreviewVao, ref _pathPreviewVbo, preview.ToArray(), vp, new Vector4(1, 1, 1, 0.9f), PrimitiveType.Triangles, blend: true);
 		DrawLines(ref _pathDotVao, ref _pathDotVbo, dots.ToArray(), vp, new Vector4(1, 0.69f, 0.63f, 1));
 	}
 
@@ -2274,6 +2455,21 @@ public sealed class GlView : OpenGlControlBase
 		}
 		DrawLines(ref _placeVao, ref _placeVbo, posts.ToArray(), vp, new Vector4(0.62f, 0.88f, 1, 1));
 		var t = pl.Tool;
+		// The brush's outline under the cursor: where a stroke places.
+		if (t.Mode == PlaceTool.Modes.Brush && _hover is { } h)
+		{
+			var ring = new List<float>();
+			var outline = t.Brush.Outline(96);
+			for (int i = 0; i < outline.Count; i++)
+			{
+				foreach (var (ox2, oz2) in new[] { outline[i], outline[(i + 1) % outline.Count] })
+				{
+					float x = h.X + ox2 - (s.W - 1) / 2f, z = -(h.Z + oz2 - (s.H - 1) / 2f);
+					ring.AddRange(new[] { x, Picking.HeightAt(s, x, z) + 0.3f, z });
+				}
+			}
+			DrawLines(ref _placeRingVao, ref _placeRingVbo, ring.ToArray(), vp, new Vector4(0.62f, 0.88f, 1, 1), width: 1.2f);
+		}
 		Vector3 V(Vector2 g) { float x = g.X - (s.W - 1) / 2f, z = -(g.Y - (s.H - 1) / 2f); return new Vector3(x, Picking.HeightAt(s, x, z) + 0.3f, z); }
 		var data = new List<float>();
 		void Strip(IReadOnlyList<Vector2> pts)
@@ -2433,7 +2629,6 @@ public sealed class GlView : OpenGlControlBase
 	}
 
 	private uint _lassoVao, _lassoVbo;
-	private int _lassoCount;
 	// The zone being drawn with the Select tool, on the ground.
 	private unsafe void DrawLasso(WorldScene s, Matrix4x4 vp)
 	{
@@ -2462,39 +2657,12 @@ public sealed class GlView : OpenGlControlBase
 					}
 				}
 			}
-			if (_lassoVao == 0)
-			{
-				_lassoVao = _gl.GenVertexArray();
-				_lassoVbo = _gl.GenBuffer();
-				_gl.BindVertexArray(_lassoVao);
-				_gl.BindBuffer(BufferTargetARB.ArrayBuffer, _lassoVbo);
-				_gl.EnableVertexAttribArray(0);
-				_gl.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 12, (void*)0);
-			}
-			var arr = data.ToArray();
-			_gl.BindBuffer(BufferTargetARB.ArrayBuffer, _lassoVbo);
-			fixed (float* p = arr)
-			{
-				_gl.BufferData(BufferTargetARB.ArrayBuffer, (nuint)(arr.Length * 4), p, BufferUsageARB.DynamicDraw);
-			}
-			_lassoCount = arr.Length / 3;
+			_lassoSegs = data.ToArray();
 		}
-		if (_lassoCount == 0)
-		{
-			return;
-		}
-		if (_lineProg == 0)
-		{
-			_lineProg = Program(Shaders.LineVs, Shaders.LineFs);
-		}
-		_gl.Disable(EnableCap.DepthTest);
-		_gl.UseProgram(_lineProg);
-		_gl.UniformMatrix4(_gl.GetUniformLocation(_lineProg, "uViewProj"), 1, false, (float*)&vp);
-		_gl.Uniform4(_gl.GetUniformLocation(_lineProg, "uColor"), 1f, 0.76f, 0.29f, 1f);
-		_gl.BindVertexArray(_lassoVao);
-		_gl.DrawArrays(PrimitiveType.Lines, 0, (uint)_lassoCount);
-		_gl.Enable(EnableCap.DepthTest);
+		DrawLines(ref _lassoVao, ref _lassoVbo, _lassoSegs, vp, new Vector4(1, 0.76f, 0.29f, 1));
 	}
+
+	private float[] _lassoSegs = Array.Empty<float>();
 
 	private uint _ringVao, _ringVbo;
 	// The brush's outline on the ground (and the Ring shape's inner edge), seen through what stands on it.
@@ -2522,32 +2690,7 @@ public sealed class GlView : OpenGlControlBase
 		{
 			Loop(inner);
 		}
-		if (_lineProg == 0)
-		{
-			_lineProg = Program(Shaders.LineVs, Shaders.LineFs);
-		}
-		if (_ringVao == 0)
-		{
-			_ringVao = _gl.GenVertexArray();
-			_ringVbo = _gl.GenBuffer();
-			_gl.BindVertexArray(_ringVao);
-			_gl.BindBuffer(BufferTargetARB.ArrayBuffer, _ringVbo);
-			_gl.EnableVertexAttribArray(0);
-			_gl.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 12, (void*)0);
-		}
-		var arr = data.ToArray();
-		_gl.BindBuffer(BufferTargetARB.ArrayBuffer, _ringVbo);
-		fixed (float* p = arr)
-		{
-			_gl.BufferData(BufferTargetARB.ArrayBuffer, (nuint)(arr.Length * 4), p, BufferUsageARB.DynamicDraw);
-		}
-		_gl.Disable(EnableCap.DepthTest);
-		_gl.UseProgram(_lineProg);
-		_gl.UniformMatrix4(_gl.GetUniformLocation(_lineProg, "uViewProj"), 1, false, (float*)&vp);
-		_gl.Uniform4(_gl.GetUniformLocation(_lineProg, "uColor"), 1f, 1f, 1f, 1f);
-		_gl.BindVertexArray(_ringVao);
-		_gl.DrawArrays(PrimitiveType.Lines, 0, (uint)(arr.Length / 3));
-		_gl.Enable(EnableCap.DepthTest);
+		DrawLines(ref _ringVao, ref _ringVbo, data.ToArray(), vp, new Vector4(1, 1, 1, 1), width: 1.2f);
 	}
 
 	// ---- Selection: the objects picked (indices into the scene's things), drawn as orange boxes.
@@ -2796,7 +2939,6 @@ public sealed class GlView : OpenGlControlBase
 	}
 
 	private uint _lineProg, _lineVao, _lineVbo;
-	private int _lineCount;
 	private unsafe void DrawSelection(Matrix4x4 vp)
 	{
 		if (_selectionDirty)
@@ -2813,39 +2955,42 @@ public sealed class GlView : OpenGlControlBase
 					v.AddRange(new[] { p.X, p.Y, p.Z, q.X, q.Y, q.Z });
 				}
 			}
-			if (_lineProg == 0)
-			{
-				_lineProg = Program(Shaders.LineVs, Shaders.LineFs);
-			}
-			if (_lineVao == 0)
-			{
-				_lineVao = _gl.GenVertexArray();
-				_lineVbo = _gl.GenBuffer();
-				_gl.BindVertexArray(_lineVao);
-				_gl.BindBuffer(BufferTargetARB.ArrayBuffer, _lineVbo);
-				_gl.EnableVertexAttribArray(0);
-				_gl.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 12, (void*)0);
-			}
-			_gl.BindBuffer(BufferTargetARB.ArrayBuffer, _lineVbo);
-			var data = v.ToArray();
-			fixed (float* p = data)
-			{
-				_gl.BufferData(BufferTargetARB.ArrayBuffer, (nuint)(data.Length * 4), p, BufferUsageARB.DynamicDraw);
-			}
-			_lineCount = data.Length / 3;
+			_selectionSegs = v.ToArray();
 		}
-		if (_lineCount == 0)
+		// Seen through what is in front of it, like the web editor's selection.
+		DrawLines(ref _lineVao, ref _lineVbo, _selectionSegs, vp, new Vector4(1, 0.66f, 0.2f, 1));
+	}
+
+	private float[] _selectionSegs = Array.Empty<float>();
+
+	// The Select tool: the object under the pointer, outlined faintly before a click picks it.
+	private int? _hoverObject;
+	private uint _hoverBoxVao, _hoverBoxVbo;
+
+	private void SetHoverObject(int? i)
+	{
+		if (i != _hoverObject)
+		{
+			_hoverObject = i;
+			Wake();
+		}
+	}
+
+	private void DrawHoverObject(Matrix4x4 vp)
+	{
+		if (!_selectMode || _tool != null || _hoverObject is not int i || i >= _bounds.Length || _selection.Contains(i))
 		{
 			return;
 		}
-		// Seen through what is in front of it, like the web editor's selection.
-		_gl.Disable(EnableCap.DepthTest);
-		_gl.UseProgram(_lineProg);
-		_gl.UniformMatrix4(_gl.GetUniformLocation(_lineProg, "uViewProj"), 1, false, (float*)&vp);
-		_gl.Uniform4(_gl.GetUniformLocation(_lineProg, "uColor"), 1f, 0.66f, 0.2f, 1f);
-		_gl.BindVertexArray(_lineVao);
-		_gl.DrawArrays(PrimitiveType.Lines, 0, (uint)_lineCount);
-		_gl.Enable(EnableCap.DepthTest);
+		var (lo, hi) = _bounds[i];
+		Vector3 C(int k) => new((k & 1) == 0 ? lo.X : hi.X, (k & 2) == 0 ? lo.Y : hi.Y, (k & 4) == 0 ? lo.Z : hi.Z);
+		var v = new List<float>();
+		foreach (var (a, b) in new[] { (0, 1), (2, 3), (4, 5), (6, 7), (0, 2), (1, 3), (4, 6), (5, 7), (0, 4), (1, 5), (2, 6), (3, 7) })
+		{
+			var p = C(a); var q = C(b);
+			v.AddRange(new[] { p.X, p.Y, p.Z, q.X, q.Y, q.Z });
+		}
+		DrawLines(ref _hoverBoxVao, ref _hoverBoxVbo, v.ToArray(), vp, new Vector4(1, 0.85f, 0.55f, 0.6f), blend: true, width: 0.8f);
 	}
 
 	// Slides the view along the ground by a drag of (dx, dy) points (under the camera lock).

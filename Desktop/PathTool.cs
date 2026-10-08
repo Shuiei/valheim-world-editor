@@ -248,6 +248,9 @@ public sealed class PathTool
 	private int? _drag;
 	private bool _drawing;
 
+	// A drag is drawing the line now (the view then leaves out the cursor's preview).
+	public bool Drawing => _drawing;
+
 	public void Down(Vector2? hit, Point at, Func<Vector2, Point?> screen, bool ctrl, bool alt, bool shift, Func<Vector2, float> heightAt)
 	{
 		if (alt)
