@@ -6,6 +6,10 @@ using Avalonia.Input;
 using Xunit;
 
 [assembly: AvaloniaTestApplication(typeof(TerrainEditor.Desktop.Tests.TestApp))]
+// One Avalonia app for the whole run (each test closes its own windows: CloseWindowsAfterEachTest).
+// A new app per test was set up now and then on another thread than the dispatcher's, which failed
+// the test's cleanup ("The calling thread cannot access this object") at random, on CI too.
+[assembly: AvaloniaTestIsolation(AvaloniaTestIsolationLevel.PerAssembly)]
 
 namespace TerrainEditor.Desktop.Tests;
 
