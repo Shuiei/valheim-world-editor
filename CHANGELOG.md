@@ -20,6 +20,8 @@ the plugin is unchanged in versions without that part.
   shader as whole numbers, which OpenGL refused); the coarse whole-world map was drawn instead.
 - Native preview: after going between the map and the 3D editor, both kept OpenGL objects from the
   view's previous context and drew with them (errors, or the wrong buffers); they are rebuilt now.
+- Native preview, Place: a circle of walls end to end came out one wall short (a gap), the last
+  one falling a hair past the end of the ring through rounding.
 - An object whose data is edited or moved keeps the game's short position form (the terrain
   compiler grew 8 bytes when written back).
 

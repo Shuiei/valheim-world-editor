@@ -479,8 +479,12 @@ public sealed class PlaceTool
 				continue;
 			}
 			float t = (-B + MathF.Sqrt(disc)) / (2 * A);
-			if (t >= t0 - 1e-6f && t <= 1 + 1e-6f)
+			// A millimetre of slack at the end: float rounding over a whole ring of pieces otherwise
+			// leaves the last one just past the end, and the ring one piece short.
+			float slack = 1e-3f / MathF.Sqrt(A);
+			if (t >= t0 - 1e-6f && t <= 1 + slack)
 			{
+				t = MathF.Min(t, 1);
 				return (a + d * t, seg, t);
 			}
 		}
