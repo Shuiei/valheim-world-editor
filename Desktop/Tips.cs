@@ -375,6 +375,7 @@ public static class Tips
 		["build.search"] = "Find a piece by its name in every tab (wall, roof, stone floor…).",
 		["build.snap"] = "On: as the game's hammer, the piece moves so its nearest snap point meets one of a piece already there (within half a metre). Off: it stays where it touches what you point at (the game's Alt).",
 		["build.grid"] = "Where you point at the ground is rounded to this grid (from the middle of the plot) before the piece is put there; pieces pointed at are not. Off: as in the game.",
+		["workshop.cut"] = "See the building from a height: nothing above it is shown (metres above the plot), and you can point at what is inside, to build there. Left: off.",
 		["build.lift"] = "Back to no lift: the piece goes where the cursor points (on a piece, or the ground).",
 		["build.turn"] = "How far , and . (or Alt + wheel) turn the piece. Shift turns by 1°.",
 		["dialog.blueprintName"] = "The blueprint's name: Homestead lists it under this name in its hammer tab. Its file is named after it.",

@@ -59,6 +59,8 @@ public sealed class PlaceTool
 	public (Vector3 O, Vector3 D, float? GroundT)? AimRay { get; set; }
 	// Building: Ctrl + wheel lifts (or lowers) the piece from where the cursor points, in metres.
 	public float HeightNudge { get; set; }
+	// Building: the cut (world height); pieces above it are not pointed at.
+	public float? CutY { get; set; }
 	public bool OnTop { get; set; }
 	public bool GrowRoom { get; set; } = true;
 	// Settings or the line changed: the preview is worked out again.
@@ -980,7 +982,7 @@ public sealed class PlaceTool
 				}
 			}
 		}
-		if (Hammer.Ray(o, d, pieces, groundT) is not { } hit)
+		if (Hammer.Ray(o, d, pieces, groundT, CutY ?? float.MaxValue) is not { } hit)
 		{
 			return null;
 		}

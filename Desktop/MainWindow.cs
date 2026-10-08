@@ -1052,7 +1052,7 @@ public sealed partial class MainWindow : Window
 			Orientation = Orientation.Horizontal,
 			Spacing = 4,
 			VerticalAlignment = VerticalAlignment.Center,
-			Children = { UndoButton, RedoButton, Sep(), _liveBadge, ReloadButton, AutoApplyBox, SupportBox, _pendingPill, DiscardButton, SaveButton, Sep(), HistoryButton, ViewButton, HelpButton },
+			Children = { UndoButton, RedoButton, Sep(), _liveBadge, ReloadButton, AutoApplyBox, SupportBox, CutBox, _pendingPill, DiscardButton, SaveButton, Sep(), HistoryButton, ViewButton, HelpButton },
 		};
 		Grid.SetColumn(right, 2);
 		bar.Children.Add(left);

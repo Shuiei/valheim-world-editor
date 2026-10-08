@@ -116,7 +116,8 @@ public static class Hammer
 
 	// PieceRayTest: the nearest of the pieces' colliders and the ground (groundT: where the ray meets the
 	// ground, if it does).
-	public static Hit? Ray(Vector3 o, Vector3 d, IEnumerable<Placed> pieces, float? groundT)
+	// maxY: nothing above it counts (the Workshop's cut hides it).
+	public static Hit? Ray(Vector3 o, Vector3 d, IEnumerable<Placed> pieces, float? groundT, float maxY = float.MaxValue)
 	{
 		d = Vector3.Normalize(d);
 		float best = groundT ?? float.MaxValue;
@@ -133,7 +134,7 @@ public static class Hammer
 			var ld = Vector3.Transform(d, inv);
 			foreach (var shape in data.Colliders)
 			{
-				if (RayShape(lo, ld, shape) is (float t, Vector3 n) && t >= 0 && t < best)
+				if (RayShape(lo, ld, shape) is (float t, Vector3 n) && t >= 0 && t < best && o.Y + d.Y * t <= maxY + 1e-3f)
 				{
 					best = t;
 					hit = new Hit(p.Index, o + d * t, Vector3.Normalize(Vector3.Transform(n, p.Rotation)));

@@ -18,6 +18,8 @@ the plugin is unchanged in versions without that part.
 - The Workshop's **Library** tab: your blueprints with pictures, cost and search; Open (alone on the
   plot), Add, drag one onto the plot, or drop .blueprint and .vbuild files from your files. A
   blueprint keeps its form, its lowest point on the ground. The start page's Workshop card opens it.
+- The Workshop's **support check** tints the pieces in the game's build-mode colours (light blue on
+  the ground, green to red); **Cut** shows the building only up to a height, to build inside it.
 - **Select**: Ctrl + click adds to the selection; Shift + click takes the row from the last object
   clicked (wall 1, Shift + click wall 3: walls 1 to 3).
 - **Support check** (in the Workshop): each piece outlined in the colour the game gives its
@@ -33,6 +35,9 @@ the plugin is unchanged in versions without that part.
 ### Changed
 - **Save blueprint…** writes Homestead blueprints (pieces only, no ground). Blueprints kept in the
   editor's own format before are still listed, and **To Homestead** moves them.
+
+### Fixed
+- Objects shown untextured (white) after opening another area while models were still loading.
 
 ## v1.1.0 — 2026-10-08
 

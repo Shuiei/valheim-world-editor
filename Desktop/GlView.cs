@@ -329,8 +329,6 @@ public sealed class GlView : OpenGlControlBase
 		_placeRingVao = _placeRingVbo = _hoverBoxVao = _hoverBoxVbo = 0;
 		_pathBandVao = _pathBandVbo = _pathSoftVao = _pathSoftVbo = _pathPreviewVao = _pathPreviewVbo = _pathPreviewSoftVao = _pathPreviewSoftVbo = 0;
 		_markVao = _markVbo = 0;
-		Array.Clear(_supportVao);
-		Array.Clear(_supportVbo);
 		_placeVao = _placeVbo = _placeShapeVao = _placeShapeVbo = 0;
 		_areaVao = _areaVbo = _resetVao = _resetVbo = 0;
 		_measureVao = _measureVbo = _lassoVao = _lassoVbo = _ringVao = _ringVbo = _lineVao = _lineVbo = 0;
@@ -840,6 +838,8 @@ public sealed class GlView : OpenGlControlBase
 	private unsafe void Rebuild(WorldScene s, Group g)
 	{
 		var list = new List<Matrix4x4>();
+		var tints = new List<Vector3>();
+		var support = _support;
 		var previews = _previews;
 		lock (s.Things)
 		{
@@ -858,13 +858,19 @@ public sealed class GlView : OpenGlControlBase
 					if (!t.Gone)
 					{
 						list.Add(m);
+						tints.Add(support != null && support.TryGetValue(i, out float sv) ? SupportTint(sv) : Vector3.Zero);
 					}
 				}
 			}
 		}
 		foreach (var (b, pre) in g.Batches)
 		{
-			var data = list.Select(m => pre * m).ToArray();
+			var data = list.Select((m, k) =>
+			{
+				var w = pre * m;
+				(w.M14, w.M24, w.M34) = (tints[k].X, tints[k].Y, tints[k].Z);
+				return w;
+			}).ToArray();
 			_gl.BindBuffer(BufferTargetARB.ArrayBuffer, b.InstanceVbo);
 			fixed (Matrix4x4* ptr = data)
 			{
@@ -883,8 +889,9 @@ public sealed class GlView : OpenGlControlBase
 			_gl.DeleteBuffer(b.InstanceVbo);
 		}
 		_batches.Clear();
-		while (_ready.TryDequeue(out _))
+		while (_ready.TryDequeue(out var dropped))
 		{
+			UploadTextures(dropped);
 		}
 		lock (_selection)
 		{
@@ -910,7 +917,16 @@ public sealed class GlView : OpenGlControlBase
 		return Matrix4x4.CreateScale(scale) * Matrix4x4.CreateFromQuaternion(q) * Matrix4x4.CreateTranslation(pos);
 	}
 
+	// A loaded model's textures, then its batches.
 	private unsafe void Upload(ReadyModel r)
+	{
+		UploadTextures(r);
+		UploadModel(r);
+	}
+
+	// A loaded model's textures. Also for a model dropped before it was drawn (a new area): its loader
+	// claimed them, so no other loader reads them.
+	private unsafe void UploadTextures(ReadyModel r)
 	{
 		foreach (var (file, img) in r.Images)
 		{
@@ -934,6 +950,10 @@ public sealed class GlView : OpenGlControlBase
 				_textures[file] = tex;
 			}
 		}
+	}
+
+	private unsafe void UploadModel(ReadyModel r)
+	{
 		var g = r.Group;
 		if (r.Model == null)
 		{
@@ -1216,6 +1236,7 @@ public sealed class GlView : OpenGlControlBase
 			_gl.ActiveTexture(TextureUnit.Texture0);
 			bool seeThrough = _seeThrough;
 			int uSee = _gl.GetUniformLocation(_objectProg, "uSeeThrough");
+			_gl.Uniform2(_gl.GetUniformLocation(_objectProg, "uCut"), CutY != null ? 1f : 0f, CutY ?? 0f);
 			// Opaque first; see-through buildings after, blended over everything and not hiding
 			// what is behind them.
 			foreach (var pass in seeThrough ? new[] { false, true } : new[] { false })
@@ -1302,7 +1323,6 @@ public sealed class GlView : OpenGlControlBase
 			{
 				DrawNewMarkers(s, vp);
 			}
-			DrawSupport(vp);
 		}
 		_gl.BindVertexArray(0);
 		_gl.UseProgram(0);
@@ -2270,70 +2290,45 @@ public sealed class GlView : OpenGlControlBase
 		return list;
 	}
 
-	// The support check (the Workshop): each building piece outlined in the colour the game's build mode
-	// gives its support: blue on the ground, then green to red as it weakens, pink when it would break.
-	// Per thing index: -1 full, 0..1, or -2 breaks. Null: off.
+	// The support check (the Workshop): each building piece tinted as the game's build mode shows its
+	// support (SupportTint). Per thing index: -1 full, 0..1, or -2 breaks. Null: off.
 	private volatile Dictionary<int, float>? _support;
 
 	public void ShowSupport(Dictionary<int, float>? support)
 	{
 		_support = support;
+		// The tints are in the instances: built again.
+		lock (_groups)
+		{
+			foreach (var g in _groups.Values)
+			{
+				MarkDirty(g);
+			}
+		}
 		Wake();
 	}
 
 	internal Dictionary<int, float>? Support => _support;
 
-	private readonly uint[] _supportVao = new uint[6], _supportVbo = new uint[6];
-
-	private static readonly Vector4[] SupportColours =
+	// The game's colour for a support value (WearNTear.Highlight): light blue at full support (on the
+	// ground), else red to green as it gets stronger, more saturated and brighter the weaker; one that
+	// breaks as the weakest (red).
+	internal static Vector3 SupportTint(float v)
 	{
-		new(0.3f, 0.55f, 1f, 1),   // on the ground
-		new(0.35f, 0.9f, 0.35f, 1),
-		new(0.75f, 0.9f, 0.2f, 1),
-		new(1f, 0.6f, 0.1f, 1),
-		new(1f, 0.25f, 0.1f, 1),
-		new(1f, 0.15f, 0.7f, 1),   // breaks
-	};
+		if (v > -1.5f && v < 0)
+		{
+			return new Vector3(0.6f, 0.8f, 1f);
+		}
+		float t = Math.Clamp(v < 0 ? 0 : v, 0, 1);
+		// Lerp(red, green, t) has hue 0..1/3 with full saturation and value: its HSV, then the game's S and V.
+		float h = new Vector3(1 - t, t, 0) is var c && c.X >= c.Y ? c.Y / c.X / 6f : (2 - c.X / c.Y) / 6f;
+		return HsvToRgb(h, 1 - 0.5f * t, 1.2f - 0.3f * t);
+	}
 
-	internal static int SupportBucket(float v) => v <= -1.5f ? 5 : v < 0 ? 0 : v >= 0.75f ? 1 : v >= 0.5f ? 2 : v >= 0.25f ? 3 : 4;
-
-	private void DrawSupport(Matrix4x4 vp)
+	private static Vector3 HsvToRgb(float h, float s, float v)
 	{
-		if (_support is not { } support)
-		{
-			return;
-		}
-		var segs = Enumerable.Range(0, 6).Select(_ => new List<float>()).ToArray();
-		lock (_objLock)
-		{
-			foreach (var (i, v) in support)
-			{
-				if (i >= _bounds.Length || !_known[i])
-				{
-					continue;
-				}
-				var (lo, hi) = _bounds[i];
-				// A little inside the box, so neighbours' outlines do not lie on each other.
-				var pad = Vector3.Min((hi - lo) * 0.04f, new Vector3(0.05f));
-				lo += pad;
-				hi -= pad;
-				Vector3 C(int k) => new((k & 1) == 0 ? lo.X : hi.X, (k & 2) == 0 ? lo.Y : hi.Y, (k & 4) == 0 ? lo.Z : hi.Z);
-				var list = segs[SupportBucket(v)];
-				foreach (var (a, b) in new[] { (0, 1), (2, 3), (4, 5), (6, 7), (0, 2), (1, 3), (4, 6), (5, 7), (0, 4), (1, 5), (2, 6), (3, 7) })
-				{
-					var p = C(a);
-					var q = C(b);
-					list.AddRange(new[] { p.X, p.Y, p.Z, q.X, q.Y, q.Z });
-				}
-			}
-		}
-		for (int k = 0; k < 6; k++)
-		{
-			if (segs[k].Count > 0)
-			{
-				DrawLines(ref _supportVao[k], ref _supportVbo[k], segs[k].ToArray(), vp, SupportColours[k], width: 2);
-			}
-		}
+		float r = Math.Clamp(MathF.Abs(h * 6 - 3) - 1, 0, 1), g = Math.Clamp(2 - MathF.Abs(h * 6 - 2), 0, 1), b = Math.Clamp(2 - MathF.Abs(h * 6 - 4), 0, 1);
+		return new Vector3((1 - s + s * r) * v, (1 - s + s * g) * v, (1 - s + s * b) * v);
 	}
 
 	private uint _markVao, _markVbo;
@@ -2806,6 +2801,19 @@ public sealed class GlView : OpenGlControlBase
 
 	// The shown object under a point of the view (null: the ground or nothing is nearer), like the web
 	// editor: the nearest box the ray enters, unless the ground is hit first (half a metre of slack).
+	// The Workshop's cut: nothing drawn above this height (world y), and the cursor goes through what is
+	// hidden; null: none.
+	private float? _cutY;
+	internal float? CutY
+	{
+		get => _cutY;
+		set
+		{
+			_cutY = value;
+			Wake();
+		}
+	}
+
 	// The view's ray through a point, in world space (x east, up, z north), and how far along it the
 	// ground is (null: it does not meet it).
 	internal (Vector3 O, Vector3 D, float? GroundT)? WorldRay(Point at, Size size)
@@ -2833,7 +2841,8 @@ public sealed class GlView : OpenGlControlBase
 		int? hit = null;
 		for (int i = 0; i < _bounds.Length; i++)
 		{
-			if (!_known[i] || !_shown[(int)_kinds[i]])
+			// Not what the cut hides (whole above it).
+			if (!_known[i] || !_shown[(int)_kinds[i]] || _cutY is float cut && _bounds[i].Min.Y > cut)
 			{
 				continue;
 			}

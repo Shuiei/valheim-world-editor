@@ -14,6 +14,11 @@ namespace TerrainEditor.Desktop;
 // building piece outlined in the colour the game gives its support, pieces that would fall in pink.
 public partial class MainWindow
 {
+	// The cut: the building seen from a height (1 m steps, a half wall's height), to build inside it.
+	internal Slider CutSlider { get; } = new() { Minimum = 0, Maximum = 40, SmallChange = 1, LargeChange = 2, TickFrequency = 1, IsSnapToTickEnabled = true, Width = 120, VerticalAlignment = VerticalAlignment.Center };
+	internal TextBlock CutText { get; } = new() { FontSize = 12, VerticalAlignment = VerticalAlignment.Center, Width = 74 };
+	internal StackPanel CutBox { get; } = new() { Orientation = Orientation.Horizontal, Spacing = 6, IsVisible = false };
+
 	internal CheckBox SupportBox { get; } = new CheckBox { Content = "Support check", FontSize = 12, IsVisible = false, IsChecked = true, VerticalAlignment = VerticalAlignment.Center }.Classed("switch");
 	private bool _inWorkshop;
 	private string? _workshopName;
@@ -36,6 +41,17 @@ public partial class MainWindow
 	private void SetUpWorkshop()
 	{
 		SupportBox.Tip("workshop.support");
+		CutBox.Children.Add(CutSlider);
+		CutBox.Children.Add(CutText);
+		CutSlider.Tip("workshop.cut");
+		CutSlider.PropertyChanged += (_, e) =>
+		{
+			if (e.Property == Slider.ValueProperty)
+			{
+				SetCut((float)CutSlider.Value);
+			}
+		};
+		CutText.Text = "Cut: off";
 		SupportBox.IsCheckedChanged += (_, _) => RefreshSupport();
 		Blueprints.EditAsked += async path => await OpenWorkshop(path);
 	}
@@ -366,6 +382,10 @@ public partial class MainWindow
 		Tools.SetWorkshop(true);
 		_view.SetOverlay(Overlays.Layer.Borders, false);
 		_view.ShowNewMarkers = false;
+		CutBox.IsVisible = true;
+		CutSlider.Value = 0;
+		// Solid pieces (the View panel and its See-through switch are away).
+		_view.SeeThroughBuildings = false;
 		ShowRight(null);
 		ViewButton.IsVisible = false;
 		MaskPanel.Card.IsVisible = false;
@@ -391,10 +411,24 @@ public partial class MainWindow
 		PlaceInput.TurnStep = null;
 		Tools.SetWorkshop(false);
 		_view.SetOverlay(Overlays.Layer.Borders, k.Borders);
+		CutBox.IsVisible = false;
+		CutSlider.Value = 0;
 		_view.ShowNewMarkers = UnsavedBox.IsChecked == true;
+		_view.SeeThroughBuildings = SeeThroughBox.IsChecked == true;
 		ViewButton.IsVisible = true;
 		BuildPanel.Card.IsVisible = false;
 		PlacePanel.Fill();
 		t.Notify();
+	}
+
+	// The cut at so many metres above the plot (0: none): nothing drawn above it, and the cursor goes
+	// through what it hides.
+	private void SetCut(float metres)
+	{
+		float? y = metres > 0 ? Workshop.Ground + metres : null;
+		_view.CutY = y;
+		PlaceTool.CutY = y;
+		CutText.Text = metres > 0 ? $"Cut at {metres:0} m" : "Cut: off";
+		PlaceInput.Refresh();
 	}
 }

@@ -93,4 +93,15 @@ public class CoreHammerTests
 		Assert.NotEmpty(Hammer.Get("wood_roof")!.Snaps);
 		Assert.True(Hammer.Get("rug_wolf")!.ClipEverything);
 	}
+
+	[Fact]
+	public void TheCutHidesWhatIsAboveItFromTheBuildRay()
+	{
+		var pieces = new List<Hammer.Placed> { new(0, "woodwall", new Vector3(0, Ground + 1, 0), None) };
+		// Cut at 1.5 m above the ground: the wall's top (2 m) is not pointed at; the ray goes on.
+		var hit = Hammer.Ray(new Vector3(0.3f, Ground + 50, 0), -Vector3.UnitY, pieces, 50, Ground + 1.5f)!;
+		Assert.Null(hit.Piece);
+		Assert.Equal(Ground, hit.Point.Y, 3);
+		Assert.Equal(0, Hammer.Ray(new Vector3(0.3f, Ground + 50, 0), -Vector3.UnitY, pieces, 50)!.Piece);
+	}
 }
