@@ -18,6 +18,8 @@ public sealed class StartPage
 	private readonly AppSettings _settings;
 	private string _mode = "";
 	public event Action<Func<Task<WorldSession>>, string>? OpenRequested;
+	// The Workshop: a blueprint file to open in it, or null for a blank plot.
+	public event Action<string?>? WorkshopRequested;
 	// Asks the window for a folder or a file (Browse…).
 	internal Func<string, Task<string?>> PickFolder { get; set; } = _ => Task.FromResult<string?>(null);
 	internal Func<string, Task<string?>> PickFile { get; set; } = _ => Task.FromResult<string?>(null);
@@ -37,6 +39,10 @@ public sealed class StartPage
 	internal StackPanel ServerPanel { get; } = new() { Spacing = 8 };
 	internal Expander ServerForm { get; } = new() { Header = new TextBlock { Text = "Connect to a server", FontWeight = FontWeight.SemiBold }, HorizontalAlignment = HorizontalAlignment.Stretch };
 	internal StackPanel OfflinePanel { get; } = new() { Spacing = 8 };
+	internal StackPanel WorkshopPanel { get; } = new() { Spacing = 8 };
+	internal Button NewBuildingButton { get; } = new Button { Content = "New building", FontSize = 13 }.Classed("primary");
+	internal StackPanel WorkshopList { get; } = new() { Spacing = 4 };
+	internal TextBlock WorkshopHomestead { get; } = new() { TextWrapping = TextWrapping.Wrap, FontSize = 12 };
 	internal WrapPanel WorldCards { get; } = new() { ItemSpacing = 10, LineSpacing = 10 };
 	internal TextBox PathBox { get; } = new() { PlaceholderText = "Folder of the world (with _main.<n>.chunks files)", FontSize = 13 };
 	internal TextBlock PathError { get; } = Err();
@@ -78,12 +84,13 @@ public sealed class StartPage
 		DocsLink.Tip("start.docs");
 		settingsButton.Click += (_, _) => SettingsRequested?.Invoke();
 		DocsLink.Click += async (_, _) => await OpenUrl(new Uri(DocsUrl));
-		var modes = new UniformGrid { Columns = 3 };
+		var modes = new UniformGrid { Columns = 4 };
 		foreach (var (key, title, tag, text, icon) in new[]
 		{
 			("game", "My game", "live", "Edit the world you are playing in, single player or the one you host. You see the changes in game right away.", "game"),
 			("server", "A dedicated server", "live", "Edit your server's world while people play. The editor connects to the server itself.", "server"),
 			("offline", "A saved world", "offline", "Edit world files on this computer with the game closed, then start the game again.", "folder"),
+			("workshop", "The Workshop", "build", "Build a building on a blank plot and keep it as a blueprint, to build in game with Homestead.", "shape"),
 		})
 		{
 			var b = new Button
@@ -174,6 +181,7 @@ public sealed class StartPage
 					GamePanel,
 					ServerPanel,
 					OfflinePanel,
+					WorkshopPanel,
 					new StackPanel
 					{
 						Orientation = Orientation.Horizontal,
@@ -184,7 +192,22 @@ public sealed class StartPage
 				},
 			},
 		};
-		SetMode(settings.LastMode is "game" or "server" or "offline" ? settings.LastMode : "game");
+		NewBuildingButton.Tip("start.workshop");
+		NewBuildingButton.Click += (_, _) => WorkshopRequested?.Invoke(null);
+		WorkshopPanel.Children.Add(Card(new StackPanel
+		{
+			Spacing = 8,
+			Children =
+			{
+				new TextBlock { Text = "Build on a blank plot", FontSize = 15, FontWeight = FontWeight.SemiBold },
+				Hint("Place building pieces (they snap like the game's hammer), move and turn them, see what would hold in game, then save it as a blueprint. Only the building is kept."),
+				NewBuildingButton,
+			},
+		}));
+		WorkshopPanel.Children.Add(H2("Your blueprints"));
+		WorkshopPanel.Children.Add(WorkshopList);
+		WorkshopPanel.Children.Add(WorkshopHomestead);
+		SetMode(settings.LastMode is "game" or "server" or "offline" or "workshop" ? settings.LastMode : "game");
 	}
 
 	private static Control Col(Control c, int col)
@@ -206,6 +229,11 @@ public sealed class StartPage
 		GamePanel.IsVisible = mode == "game";
 		ServerPanel.IsVisible = mode == "server";
 		OfflinePanel.IsVisible = mode == "offline";
+		WorkshopPanel.IsVisible = mode == "workshop";
+		if (mode == "workshop")
+		{
+			FillWorkshop();
+		}
 		_gameTimer.Stop();
 		if (mode == "game")
 		{
@@ -368,6 +396,35 @@ public sealed class StartPage
 	internal TextBlock UrlError => _urlError;
 	internal ContentControl GameState => _gameState;
 
+	// The Workshop's list: Homestead's blueprints, each opened in the Workshop to be changed.
+	internal void FillWorkshop()
+	{
+		var hs = Homestead.Find(_settings);
+		ShowHomestead(hs);
+		WorkshopList.Children.Clear();
+		var list = Homestead.List(hs.Folder);
+		if (list.Count == 0)
+		{
+			WorkshopList.Children.Add(Hint("No blueprints yet: build one, or save one from Homestead in game."));
+			return;
+		}
+		foreach (var e in list)
+		{
+			var edit = new Button { Content = "Edit", FontSize = 12 }.Tip("blueprints.edit");
+			string path = e.Path;
+			edit.Click += (_, _) => WorkshopRequested?.Invoke(path);
+			WorkshopList.Children.Add(Card(new Grid
+			{
+				ColumnDefinitions = new ColumnDefinitions("*,Auto"),
+				Children =
+				{
+					new StackPanel { Children = { new TextBlock { Text = e.Name, FontSize = 13, FontWeight = FontWeight.SemiBold }, Hint($"{e.Pieces} piece(s){(e.Creator is { Length: > 0 } c ? $" · by {c}" : "")} · {e.Saved:yyyy-MM-dd}") } },
+					Col(edit, 1),
+				},
+			}));
+		}
+	}
+
 	// Whether Homestead is in the game: the editor's blueprints are Homestead's, built in game with it.
 	internal void ShowHomestead(Homestead.Status hs)
 	{
@@ -382,6 +439,8 @@ public sealed class StartPage
 			HomesteadText.Foreground = new SolidColorBrush(Color.FromRgb(240, 180, 90));
 		}
 		GetHomesteadButton.IsVisible = !hs.Installed;
+		WorkshopHomestead.Text = HomesteadText.Text;
+		WorkshopHomestead.Foreground = HomesteadText.Foreground;
 	}
 	internal TextBox SName { get; } = new() { PlaceholderText = "how it shows in your list, e.g. Friends server (optional)" };
 	internal TextBox SHost { get; } = new() { PlaceholderText = "my.server.com or 203.0.113.10" };

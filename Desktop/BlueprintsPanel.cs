@@ -25,6 +25,9 @@ public sealed class BlueprintsPanel
 	internal Func<Homestead.Status> FindHomestead { get; set; } = () => Homestead.Find(AppSettings.Load());
 	internal TextBox Search { get; } = new() { PlaceholderText = "Search blueprints", FontSize = 12 };
 	internal Button ImportButton { get; } = new() { Content = "Import file…", FontSize = 12 };
+	internal Button NewButton { get; } = new() { Content = "New in Workshop", FontSize = 12 };
+	// Edit (a blueprint file) or New in Workshop (null): the window opens the Workshop.
+	public event Action<string?>? EditAsked;
 	internal Button GetHomesteadButton { get; } = new() { Content = "Get Homestead", FontSize = 11, Padding = new Thickness(6, 1) };
 	internal StackPanel List { get; } = new() { Spacing = 4 };
 	internal TextBlock Banner { get; } = new() { FontSize = 11.5, TextWrapping = TextWrapping.Wrap };
@@ -53,6 +56,8 @@ public sealed class BlueprintsPanel
 		Search.PropertyChanged += (_, e) => { if (e.Property == TextBox.TextProperty) Render(); };
 		ImportButton.Tip("blueprints.import");
 		ImportButton.Click += async (_, _) => { if (await PickFile() is string path) Import(path); };
+		NewButton.Tip("blueprints.new");
+		NewButton.Click += (_, _) => EditAsked?.Invoke(null);
 		GetHomesteadButton.Tip("blueprints.getHomestead");
 		GetHomesteadButton.Click += async (_, _) => await OpenUrl(new Uri(Homestead.PageUrl));
 		_bannerBox = new Border
@@ -82,6 +87,7 @@ public sealed class BlueprintsPanel
 					new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Children = { new TextBlock { Text = "Blueprints", FontSize = 14, FontWeight = FontWeight.SemiBold }, Col(close, 1) } },
 					_bannerBox,
 					new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 4, Children = { Search, Col(ImportButton, 1) } },
+					NewButton,
 					new ScrollViewer { MaxHeight = 640, Content = List },
 					_folder,
 				},
@@ -222,6 +228,7 @@ public sealed class BlueprintsPanel
 			List.Children.Add(Row(PictureFile(e.Picture), e.Name, meta, act =>
 			{
 				act("Paste", "Put this blueprint on the clipboard and start pasting it", () => Paste(id));
+				act("Edit", "Open it in the Workshop, a blank plot, to change it", () => EditAsked?.Invoke(e.Path));
 				act(".vbuild", "Write it as a .vbuild file (BuildShare and older tools)", () => Export(id, "vbuild"));
 				act("Delete", "Delete this blueprint (its file and picture): Homestead loses it too", async () => await Delete(id, e.Name));
 			}));
@@ -317,6 +324,35 @@ public sealed class BlueprintsPanel
 		}
 		Message?.Invoke($"Saved the blueprint “{name}” ({clip.Objects.Count} object(s)) for Homestead."
 			+ (HasGround(json) ? " Its ground shape is not kept: Homestead blueprints hold pieces only." : "") + Reminder);
+		Refresh();
+		return name;
+	}
+
+	// The Workshop's building as a Homestead blueprint (asks for the name, suggested; one with that name
+	// is replaced after asking). The name saved under, or null.
+	public async Task<string?> SaveBuilding(JsonObject clip, string suggested)
+	{
+		_status = FindHomestead();
+		string? name = (await AskName(suggested))?.Trim();
+		if (string.IsNullOrEmpty(name))
+		{
+			return null;
+		}
+		if (HomesteadExists(name) && !await Confirm($"A blueprint called “{name}” already exists. Replace it?"))
+		{
+			return null;
+		}
+		try
+		{
+			WriteHomestead(clip, name, null);
+		}
+		catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+		{
+			Message?.Invoke($"Could not save the blueprint: {ex.Message}");
+			return null;
+		}
+		int count = (clip["objects"] as JsonArray)?.Count ?? 0;
+		Message?.Invoke($"Saved the blueprint “{name}” ({count} piece(s)) for Homestead.{Reminder}");
 		Refresh();
 		return name;
 	}

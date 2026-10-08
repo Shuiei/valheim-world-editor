@@ -116,6 +116,7 @@ public sealed partial class MainWindow : Window
 			_start?.Stop();
 			_start = new StartPage(_settings, error);
 			_start.OpenRequested += async (open, what) => await OpenWorld(open, what);
+			_start.WorkshopRequested += async path => await OpenWorkshop(path);
 			_start.OpenUrl = uri => Launcher.LaunchUriAsync(uri);
 			_start.SettingsRequested += async () => { if (await SettingsDialog.Show(this, _settings)) _start!.SetMode(_start.Mode); };
 			_start.Confirm = text => Dialogs.Ask(this, "Valheim World Editor", text, "Yes");
@@ -243,6 +244,7 @@ public sealed partial class MainWindow : Window
 	internal async Task ShowEditor(WorldScene scene)
 	{
 		_models ??= await Task.Run(ModelStore.Open);
+		ResetWorkshop();
 		// Lines and shapes drawn in the last area are left behind.
 		_view.Path.Clear();
 		_view.Area.Clear();
@@ -393,6 +395,7 @@ public sealed partial class MainWindow : Window
 		session.ThingsAdded += indices => Dispatcher.UIThread.Post(() => ShowKindsOf(session.Scene, indices));
 		session.Changed += () => Dispatcher.UIThread.Post(() =>
 		{
+			QueueSupport();
 			UpdateSaveBar();
 			History.Refresh();
 			// The ground changed: the Area tool's cut and fill follows.
@@ -417,6 +420,11 @@ public sealed partial class MainWindow : Window
 		var s = _session;
 		if (s == null)
 		{
+			return;
+		}
+		if (_inWorkshop)
+		{
+			WorkshopSaveBar(s);
 			return;
 		}
 		_pending.Text = s.PendingText;
@@ -457,6 +465,11 @@ public sealed partial class MainWindow : Window
 		var s = _session;
 		if (s == null)
 		{
+			return;
+		}
+		if (_inWorkshop)
+		{
+			await SaveWorkshop();
 			return;
 		}
 		_view.SelectTool.Commit();
@@ -1004,7 +1017,17 @@ public sealed partial class MainWindow : Window
 	private Border TopBar()
 	{
 		UndoButton.Click += (_, _) => Undo();
-		MapButton.Click += (_, _) => ShowMap();
+		MapButton.Click += async (_, _) =>
+		{
+			if (_inWorkshop)
+			{
+				await LeaveWorkshop();
+			}
+			else
+			{
+				ShowMap();
+			}
+		};
 		MapButton.Tip("top.map");
 		ToolTip.SetTip(UndoButton, "Undo the last change (Ctrl+Z).");
 		ToolTip.SetTip(RedoButton, "Redo the change you just undid (Ctrl+Y or Ctrl+Shift+Z).");
@@ -1028,7 +1051,7 @@ public sealed partial class MainWindow : Window
 			Orientation = Orientation.Horizontal,
 			Spacing = 4,
 			VerticalAlignment = VerticalAlignment.Center,
-			Children = { UndoButton, RedoButton, Sep(), _liveBadge, ReloadButton, AutoApplyBox, _pendingPill, DiscardButton, SaveButton, Sep(), HistoryButton, ViewButton, HelpButton },
+			Children = { UndoButton, RedoButton, Sep(), _liveBadge, ReloadButton, AutoApplyBox, SupportBox, _pendingPill, DiscardButton, SaveButton, Sep(), HistoryButton, ViewButton, HelpButton },
 		};
 		Grid.SetColumn(right, 2);
 		bar.Children.Add(left);
@@ -1586,6 +1609,7 @@ public sealed partial class MainWindow : Window
 		Blueprints.AskName = initial => Dialogs.AskText(this, "Save blueprint", "Name of the blueprint:", initial);
 		Blueprints.Confirm = text => Dialogs.Ask(this, "Blueprints", text, "Yes");
 		Blueprints.OpenUrl = uri => Launcher.LaunchUriAsync(uri);
+		SetUpWorkshop();
 		Blueprints.PickFile = async () =>
 		{
 			var picked = await StorageProvider.OpenFilePickerAsync(new Avalonia.Platform.Storage.FilePickerOpenOptions
@@ -1829,6 +1853,19 @@ public sealed partial class MainWindow : Window
 		Closing += async (_, e) =>
 		{
 			var pending = _world?.Pending ?? _session?.Pending ?? (0, 0, 0, 0);
+			if (_inWorkshop && !_closeAnyway)
+			{
+				if (WorkshopDirty)
+				{
+					e.Cancel = true;
+					if (await Ask("Unsaved building", "The building in the Workshop is not saved as a blueprint. Quit without saving it?", "Quit anyway", "Keep building"))
+					{
+						_closeAnyway = true;
+						Close();
+					}
+				}
+				return;
+			}
 			if (_closeAnyway || pending is (0, 0, 0, 0))
 			{
 				Tunnel.Close();

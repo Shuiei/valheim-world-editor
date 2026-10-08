@@ -68,10 +68,17 @@ public static class Homestead
 		}
 	}
 
+	// Another folder than the player's (the tests': they must never write into the game's folders).
+	public static string? FolderOverride { get; set; }
+
 	// Homestead/Blueprints in Valheim's save folder: the one that has it already, else the first save
 	// folder the game made (where its worlds are), else the usual one for this system.
 	public static string Folder()
 	{
+		if (FolderOverride != null)
+		{
+			return FolderOverride;
+		}
 		var saves = Places.WorldRoots().Select(r => Path.GetDirectoryName(r)!).Distinct().ToList();
 		string Of(string save) => Path.Combine(save, "Homestead", "Blueprints");
 		return saves.Select(Of).FirstOrDefault(Directory.Exists) ?? Of(saves.FirstOrDefault(Directory.Exists) ?? saves[0]);

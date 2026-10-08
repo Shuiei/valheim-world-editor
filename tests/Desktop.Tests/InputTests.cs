@@ -29,6 +29,8 @@ public static class TestApp
 		SavedSelections.PathOverride ??= Path.Combine(Path.GetTempPath(), $"vwe-selections-{Environment.ProcessId}.json");
 		// "My game" looks only where a test says, never in the player's own Valheim or profiles.
 		TerrainEditor.App.LocalGame.SearchDefaultPlaces = false;
+		// Never the game's own Homestead folder (a test run once left blueprints in it).
+		TerrainEditor.App.Homestead.FolderOverride ??= Path.Combine(Path.GetTempPath(), $"vwe-homestead-{Environment.ProcessId}");
 		// Nor Steam outside the home (the computer's own Valheim, its plugin's settings).
 		TerrainEditor.App.GameLook.SearchOutsideHome = false;
 		// Blueprints, heightmaps, logs: a data folder of the tests', never the user's.

@@ -10,18 +10,21 @@ using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
-// The Blueprints panel through its list: empty, searched, each row's Paste, .blueprint, .vbuild and
-// Delete buttons, thumbnails that are not pictures, Import file…, and what it says for files that are
-// missing, empty or not blueprints, a name already taken, and kinds a world cannot make. Its store is a
-// temporary folder, never the user's.
+// The Blueprints panel through its list: Homestead's blueprints (its folder: a temporary one here) and
+// the editor's older ones, empty, searched, each row's buttons (Paste, Edit, .vbuild, Delete; To Homestead
+// for older ones), thumbnails that are not pictures, Import file…, what it says for files that are
+// missing, empty or not blueprints, a name already taken, kinds a world cannot make, and whether
+// Homestead is installed (a warning when not). Never the user's own folders.
 public class PanelBlueprintsTests
 {
 	internal sealed class Run : IDisposable
 	{
 		public MainWindow W { get; } = new(load: false) { Width = 1600, Height = 1000 };
 		public string Dir { get; } = Path.Combine(Path.GetTempPath(), "vwe-bp-ui-" + Guid.NewGuid().ToString("N")[..8]);
+		public string Homestead => Path.Combine(Dir, "homestead");
 		public BlueprintsPanel B => W.Blueprints;
 		public string? Said;
+		public bool Installed { get; set; } = true;
 
 		public Run(EditSession? s = null)
 		{
@@ -29,9 +32,19 @@ public class PanelBlueprintsTests
 			s ??= EditTests.Flat(2);
 			W.View.Show(s.Scene, null);
 			W.Edit(s);
-			B.Store = new BlueprintStore(Dir);
+			B.Store = new BlueprintStore(Path.Combine(Dir, "older"));
+			B.FindHomestead = () => new TerrainEditor.App.Homestead.Status(Installed, Installed ? "1.3.2" : null, Installed ? new() { "test profile" } : new(), Homestead);
 			B.Message += t => Said = t;
 		}
+
+		// A Homestead blueprint in the folder.
+		public void Keep(string name, params string[] kinds)
+		{
+			Directory.CreateDirectory(Homestead);
+			File.WriteAllText(Path.Combine(Homestead, TerrainEditor.App.Homestead.FileName(name)), TerrainEditor.App.Homestead.Write(CopyFormat.ToJson(Clip(name, kinds)), name, "test", null, DateTime.Now));
+		}
+
+		public List<TerrainEditor.App.Homestead.Entry> Listed => TerrainEditor.App.Homestead.List(Homestead);
 
 		public void Dispose()
 		{
@@ -69,8 +82,8 @@ public class PanelBlueprintsTests
 		using var r = new Run();
 		r.B.Toggle(true);
 		Assert.Contains("No blueprints yet", Texts(r.B.List));
-		r.B.Store.Save("Gate", null, null, CopyFormat.ToJson(Clip("Gate", "woodwall")));
-		r.B.Store.Save("Tower", null, null, CopyFormat.ToJson(Clip("Tower", "woodwall")));
+		r.Keep("Gate", "woodwall");
+		r.Keep("Tower", "woodwall");
 		r.B.Refresh();
 		Assert.Equal(2, RowButtons(r, "Paste").Count);
 		r.B.Search.Text = "tow";
@@ -83,40 +96,68 @@ public class PanelBlueprintsTests
 	}
 
 	[AvaloniaFact]
-	public void EachRowPastesExportsAndDeletes()
+	public void TheBannerSaysWhetherHomesteadIsInstalled()
 	{
 		using var r = new Run();
-		r.B.Store.Save("Gate", "OtherWorld", "data:image/png;base64,not-base64!!", CopyFormat.ToJson(Clip("Gate", "woodwall", "Beech1")));
 		r.B.Toggle(true);
-		// The thumbnail that is not a picture is left empty.
-		Assert.Null(r.B.List.GetLogicalDescendants().OfType<Image>().Single().Source);
-		Assert.Contains("from OtherWorld", Texts(r.B.List));
+		Assert.Contains("Homestead 1.3.2 is installed (test profile)", r.B.Banner.Text);
+		Assert.False(r.B.GetHomesteadButton.IsVisible);
+		r.Installed = false;
+		r.B.Refresh();
+		Assert.StartsWith("Homestead is not installed", r.B.Banner.Text);
+		Assert.True(r.B.GetHomesteadButton.IsVisible);
+		Uri? opened = null;
+		r.B.OpenUrl = u => { opened = u; return Task.FromResult(true); };
+		Click(r.B.GetHomesteadButton);
+		Assert.Equal(TerrainEditor.App.Homestead.PageUrl, opened?.ToString());
+	}
+
+	[AvaloniaFact]
+	public void EachRowPastesEditsExportsAndDeletes()
+	{
+		using var r = new Run();
+		r.Keep("Gate", "woodwall", "wood_floor");
+		r.B.Toggle(true);
+		Assert.Contains("2 piece(s) · by test", Texts(r.B.List));
 		Click(RowButtons(r, ".vbuild").Single());
 		Assert.StartsWith("Written to ", r.Said);
 		Assert.EndsWith(".vbuild. Only the objects are written, not the ground.", r.Said);
-		Click(RowButtons(r, ".blueprint").Single());
-		Assert.Contains("PlanBuild/blueprints", r.Said);
+		string? edit = "none";
+		r.B.EditAsked += p => edit = p;
+		Click(RowButtons(r, "Edit").Single());
+		Assert.Equal(Path.Combine(r.Homestead, "Gate.blueprint"), edit);
 		Click(RowButtons(r, "Paste").Single());
 		Assert.Equal("Gate", r.W.View.Paste.Clip!.Name);
 		Assert.False(r.B.Card.IsVisible);
-		// Delete asks first.
+		// Delete asks first, and takes the picture too.
 		r.B.Toggle(true);
 		r.B.Confirm = _ => Task.FromResult(false);
 		Click(RowButtons(r, "Delete").Single());
-		Assert.Single(r.B.Store.List());
+		Assert.Single(r.Listed);
 		r.B.Confirm = _ => Task.FromResult(true);
 		Click(RowButtons(r, "Delete").Single());
-		Assert.Empty(r.B.Store.List());
+		Assert.Empty(r.Listed);
+		Assert.Empty(Directory.GetFiles(r.Homestead));
 		Assert.Contains("No blueprints yet", Texts(r.B.List));
 	}
 
 	[AvaloniaFact]
-	public void AThumbnailThatIsNotAPngIsLeftEmpty()
+	public void OlderEditorBlueprintsAreListedAndMovedToHomestead()
 	{
 		using var r = new Run();
-		r.B.Store.Save("Gate", null, "data:image/jpeg;base64,AAAA", CopyFormat.ToJson(Clip("Gate", "woodwall")));
+		r.B.Store.Save("Gate", "OtherWorld", "data:image/png;base64,not-base64!!", CopyFormat.ToJson(Clip("Gate", "woodwall", "Beech1")));
 		r.B.Toggle(true);
-		Assert.All(r.B.List.GetLogicalDescendants().OfType<Image>(), i => Assert.Null(i.Source));
+		Assert.Contains("Older editor blueprints", Texts(r.B.List));
+		Assert.Contains("from OtherWorld", Texts(r.B.List));
+		// The thumbnail that is not a picture is left empty.
+		Assert.Null(r.B.List.GetLogicalDescendants().OfType<Image>().Single().Source);
+		Click(RowButtons(r, "To Homestead").Single());
+		var moved = Assert.Single(r.Listed);
+		Assert.Equal("Gate", moved.Name);
+		Assert.NotNull(moved.Picture);
+		Assert.Contains("now a Homestead blueprint", r.Said);
+		// Its ground (the copy had some) is not kept.
+		Assert.Contains("ground shape is not kept", r.Said);
 	}
 
 	[AvaloniaFact]
@@ -124,6 +165,8 @@ public class PanelBlueprintsTests
 	{
 		using var r = new Run();
 		r.B.Paste("no-such-blueprint");
+		Assert.Equal("That blueprint could not be read.", r.Said);
+		r.B.Paste("hs:../outside.blueprint");
 		Assert.Equal("That blueprint could not be read.", r.Said);
 		Assert.Null(r.B.Export("no-such-blueprint", "vbuild"));
 		Assert.Equal("Could not export that blueprint.", r.Said);
@@ -145,25 +188,31 @@ public class PanelBlueprintsTests
 		Assert.Null(await r.B.Save());
 		r.B.AskName = _ => Task.FromResult<string?>("Gate");
 		Assert.Equal("Gate", await r.B.Save());
+		Assert.True(File.Exists(Path.Combine(r.Homestead, "Gate.png")));
 		r.B.Confirm = _ => Task.FromResult(false);
 		Assert.Null(await r.B.Save());
 		r.B.Confirm = _ => Task.FromResult(true);
 		Assert.Equal("Gate", await r.B.Save());
-		Assert.Single(r.B.Store.List());
+		Assert.Single(r.Listed);
+		// Without Homestead in the game, saving says it shows there once installed.
+		r.Installed = false;
+		Assert.Equal("Gate", await r.B.Save());
+		Assert.Contains("not installed in your game yet", r.Said);
 	}
 
 	[AvaloniaFact]
 	public void ImportFileUsesThePicker()
 	{
 		using var r = new Run();
-		r.B.Store.Save("Gate", null, null, CopyFormat.ToJson(Clip("Gate", "woodwall")));
-		string file = r.B.Export(r.B.Store.List()[0].Id, "vbuild")!;
+		r.Keep("Gate", "woodwall");
+		string file = r.B.Export("hs:Gate.blueprint", "vbuild")!;
 		r.B.PickFile = () => Task.FromResult<string?>(null);
 		Click(r.B.ImportButton);
-		Assert.Single(r.B.Store.List());
+		Assert.Single(r.Listed);
 		r.B.PickFile = () => Task.FromResult<string?>(file);
 		Click(r.B.ImportButton);
-		Assert.Equal(2, r.B.Store.List().Count);
+		Assert.Equal(2, r.Listed.Count);
+		Assert.Contains(r.Listed, e => e.Name.StartsWith("Gate", StringComparison.Ordinal) && e.Name != "Gate");
 	}
 }
 

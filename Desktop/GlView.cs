@@ -326,6 +326,8 @@ public sealed class GlView : OpenGlControlBase
 		_placeRingVao = _placeRingVbo = _hoverBoxVao = _hoverBoxVbo = 0;
 		_pathBandVao = _pathBandVbo = _pathSoftVao = _pathSoftVbo = _pathPreviewVao = _pathPreviewVbo = _pathPreviewSoftVao = _pathPreviewSoftVbo = 0;
 		_markVao = _markVbo = 0;
+		Array.Clear(_supportVao);
+		Array.Clear(_supportVbo);
 		_placeVao = _placeVbo = _placeShapeVao = _placeShapeVbo = 0;
 		_areaVao = _areaVbo = _resetVao = _resetVbo = 0;
 		_measureVao = _measureVbo = _lassoVao = _lassoVbo = _ringVao = _ringVbo = _lineVao = _lineVbo = 0;
@@ -1297,6 +1299,7 @@ public sealed class GlView : OpenGlControlBase
 			{
 				DrawNewMarkers(s, vp);
 			}
+			DrawSupport(vp);
 		}
 		_gl.BindVertexArray(0);
 		_gl.UseProgram(0);
@@ -2240,6 +2243,72 @@ public sealed class GlView : OpenGlControlBase
 			}
 		}
 		return list;
+	}
+
+	// The support check (the Workshop): each building piece outlined in the colour the game's build mode
+	// gives its support: blue on the ground, then green to red as it weakens, pink when it would break.
+	// Per thing index: -1 full, 0..1, or -2 breaks. Null: off.
+	private volatile Dictionary<int, float>? _support;
+
+	public void ShowSupport(Dictionary<int, float>? support)
+	{
+		_support = support;
+		Wake();
+	}
+
+	internal Dictionary<int, float>? Support => _support;
+
+	private readonly uint[] _supportVao = new uint[6], _supportVbo = new uint[6];
+
+	private static readonly Vector4[] SupportColours =
+	{
+		new(0.3f, 0.55f, 1f, 1),   // on the ground
+		new(0.35f, 0.9f, 0.35f, 1),
+		new(0.75f, 0.9f, 0.2f, 1),
+		new(1f, 0.6f, 0.1f, 1),
+		new(1f, 0.25f, 0.1f, 1),
+		new(1f, 0.15f, 0.7f, 1),   // breaks
+	};
+
+	internal static int SupportBucket(float v) => v <= -1.5f ? 5 : v < 0 ? 0 : v >= 0.75f ? 1 : v >= 0.5f ? 2 : v >= 0.25f ? 3 : 4;
+
+	private void DrawSupport(Matrix4x4 vp)
+	{
+		if (_support is not { } support)
+		{
+			return;
+		}
+		var segs = Enumerable.Range(0, 6).Select(_ => new List<float>()).ToArray();
+		lock (_objLock)
+		{
+			foreach (var (i, v) in support)
+			{
+				if (i >= _bounds.Length || !_known[i])
+				{
+					continue;
+				}
+				var (lo, hi) = _bounds[i];
+				// A little inside the box, so neighbours' outlines do not lie on each other.
+				var pad = Vector3.Min((hi - lo) * 0.04f, new Vector3(0.05f));
+				lo += pad;
+				hi -= pad;
+				Vector3 C(int k) => new((k & 1) == 0 ? lo.X : hi.X, (k & 2) == 0 ? lo.Y : hi.Y, (k & 4) == 0 ? lo.Z : hi.Z);
+				var list = segs[SupportBucket(v)];
+				foreach (var (a, b) in new[] { (0, 1), (2, 3), (4, 5), (6, 7), (0, 2), (1, 3), (4, 6), (5, 7), (0, 4), (1, 5), (2, 6), (3, 7) })
+				{
+					var p = C(a);
+					var q = C(b);
+					list.AddRange(new[] { p.X, p.Y, p.Z, q.X, q.Y, q.Z });
+				}
+			}
+		}
+		for (int k = 0; k < 6; k++)
+		{
+			if (segs[k].Count > 0)
+			{
+				DrawLines(ref _supportVao[k], ref _supportVbo[k], segs[k].ToArray(), vp, SupportColours[k], width: 2);
+			}
+		}
 	}
 
 	private uint _markVao, _markVbo;
