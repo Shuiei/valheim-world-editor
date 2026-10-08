@@ -37,6 +37,22 @@ public static class GameLook
 		}
 	}
 
+	// What the start page shows: the state, its message, the Valheim folder, the exporter's last line
+	// and the progress (0..1, null when not known).
+	public sealed record Snapshot(string State, string? Message, string? Valheim, string? LastLine, double? Progress);
+
+	public static Snapshot Now()
+	{
+		lock (Lock)
+		{
+			string? last = _log.Count > 0 ? Regex.Replace(_log[^1], @"^\d\d:\d\d:\d\d ", "") : null;
+			return new Snapshot(State, Message, ValheimPath, last, Progress());
+		}
+	}
+
+	// At start (the native app): as Check, with no wwwroot of its own.
+	public static void Check(AppSettings settings) => Check(Path.Combine(AppContext.BaseDirectory, "wwwroot"), settings);
+
 	private sealed record Marker(string Valheim, string? BuildId, int Exporter, DateTime Made);
 
 	// Bump when the exporter's output changes, so existing installs export again.

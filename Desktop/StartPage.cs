@@ -27,6 +27,7 @@ public sealed class StartPage
 	internal Func<AppSettings, List<Worlds.Info>> FindWorlds { get; set; } = Worlds.Find;
 	public event Action? SettingsRequested;
 
+	internal GameLookBanner LookBanner { get; }
 	internal Dictionary<string, Button> ModeButtons { get; } = new();
 	internal StackPanel GamePanel { get; } = new() { Spacing = 8 };
 	internal StackPanel ServerPanel { get; } = new() { Spacing = 8 };
@@ -50,6 +51,7 @@ public sealed class StartPage
 	public StartPage(AppSettings settings, string? lastError = null)
 	{
 		_settings = settings;
+		LookBanner = new GameLookBanner(settings) { PickFolder = t => PickFolder(t) };
 		var settingsButton = new Button { Content = Icons.With("settings", "Settings"), FontSize = 13 }.Classed("ghost");
 		ToolTip.SetTip(settingsButton, "Where the game, BepInEx and worlds are on this computer");
 		settingsButton.Click += (_, _) => SettingsRequested?.Invoke();
@@ -131,12 +133,13 @@ public sealed class StartPage
 						Children =
 						{
 							new TextBlock { Inlines = { new Avalonia.Controls.Documents.Run("Valheim") { Foreground = Accent }, new Avalonia.Controls.Documents.Run(" World Editor") }, FontSize = 26, FontWeight = FontWeight.SemiBold },
-							Col(new TextBlock { Text = $"  v{BuildInfo.Version} · native preview", Foreground = Muted, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(6, 0, 0, 6) }, 1),
+							Col(new TextBlock { Text = $"  v{BuildInfo.Version}", Foreground = Muted, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(6, 0, 0, 6) }, 1),
 							Col(settingsButton, 3),
 						},
 					},
 					new TextBlock { Text = "Shape the ground, paint it, build paths, place and move trees, rocks, crops and building pieces, copy and paste whole areas.", Foreground = Muted, TextWrapping = TextWrapping.Wrap },
 					_lastError,
+					LookBanner.View,
 					H2("How do you want to edit?"),
 					modes,
 					new Border { Height = 14 },

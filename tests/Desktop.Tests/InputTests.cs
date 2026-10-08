@@ -20,6 +20,8 @@ public static class TestApp
 		TerrainEditor.App.ServerConfig.PathOverride = Path.Combine(Path.GetTempPath(), $"vwe-servers-{Environment.ProcessId}.cfg");
 		// "My game" looks only where a test says, never in the player's own Valheim or profiles.
 		TerrainEditor.App.LocalGame.SearchDefaultPlaces = false;
+		// A changed game folder never starts a copy of the game's look.
+		SettingsDialog.CheckGameLook = _ => { };
 		return AppBuilder.Configure<App>().UseHeadless(new AvaloniaHeadlessPlatformOptions());
 	}
 }

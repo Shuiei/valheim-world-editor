@@ -37,12 +37,21 @@ public static class SettingsDialog
 		{
 			return string.Join(" ", problems);
 		}
+		bool gameChanged = game != settings.ValheimPath;
 		settings.ValheimPath = game;
 		settings.BepInExFolders = bep;
 		settings.WorldFolders = wl;
 		settings.Save();
+		if (gameChanged)
+		{
+			// Another game folder: its look (copied again when it is another version).
+			CheckGameLook(settings);
+		}
 		return null;
 	}
+
+	// Tests: what a changed game folder starts (the game-look copy otherwise).
+	internal static Action<AppSettings> CheckGameLook { get; set; } = GameLook.Check;
 
 	// Tests: the folder picker (null: the system's).
 	internal static Func<string, Task<string?>>? PickFolder { get; set; }

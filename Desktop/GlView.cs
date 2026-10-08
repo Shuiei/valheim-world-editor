@@ -179,7 +179,7 @@ public sealed class GlView : OpenGlControlBase
 			try
 			{
 				_lookFiles = GameLookGl.Read();
-				Status?.Invoke(_lookFiles == null ? "Game look not copied yet: plain colours (open the web editor once to copy it)." : "Game look loaded.");
+				Status?.Invoke(_lookFiles == null ? "Game look not copied yet: plain colours (see the start page)." : "Game look loaded.");
 			}
 			catch (Exception ex)
 			{
