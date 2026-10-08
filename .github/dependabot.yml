@@ -24,6 +24,13 @@ updates:
     groups:
       tests:
         patterns: ["*"]
+    ignore:
+      # The window tests run through Avalonia.Headless.XUnit, built against xUnit 3 (12.1.3 needs
+      # xunit.v3.extensibility.core 3.2.2): xUnit 4 waits until an Avalonia release supports it.
+      - dependency-name: xunit.v3
+        update-types: ["version-update:semver-major"]
+      - dependency-name: xunit.runner.visualstudio
+        update-types: ["version-update:semver-major"]
 
   # The game-look exporter's Python packages (also bundled in the release).
   - package-ecosystem: pip
