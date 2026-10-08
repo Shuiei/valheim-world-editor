@@ -63,9 +63,11 @@ public sealed class MapView : OpenGlControlBase
 
 	public MapView()
 	{
+		// Only while the map is shown (see GlView: a running timer keeps its view alive).
 		var idle = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
 		idle.Tick += (_, _) => RequestNextFrameRendering();
-		idle.Start();
+		AttachedToVisualTree += (_, _) => idle.Start();
+		DetachedFromVisualTree += (_, _) => idle.Stop();
 		ClipToBounds = true;
 	}
 
