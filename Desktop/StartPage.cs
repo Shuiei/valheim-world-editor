@@ -27,6 +27,7 @@ public sealed class StartPage
 	internal Dictionary<string, Button> ModeButtons { get; } = new();
 	internal StackPanel GamePanel { get; } = new() { Spacing = 8 };
 	internal StackPanel ServerPanel { get; } = new() { Spacing = 8 };
+	internal Expander ServerForm { get; } = new() { Header = new TextBlock { Text = "Connect to a server", FontWeight = FontWeight.SemiBold }, HorizontalAlignment = HorizontalAlignment.Stretch };
 	internal StackPanel OfflinePanel { get; } = new() { Spacing = 8 };
 	internal WrapPanel WorldCards { get; } = new() { ItemSpacing = 10, LineSpacing = 10 };
 	internal TextBox PathBox { get; } = new() { Watermark = "Folder of the world (with _main.<n>.chunks files)", FontSize = 13 };
@@ -348,12 +349,13 @@ public sealed class StartPage
 		connectUrl.Click += async (_, _) => await ConnectUrl();
 		ServerPanel.Children.Add(SavedServers);
 		ServerPanel.Children.Add(_savedError);
-		ServerPanel.Children.Add(Card(new StackPanel
+		// The form folds away once there are saved servers (they connect with one click).
+		ServerForm.Content = new StackPanel
 		{
 			Spacing = 8,
+			Margin = new Thickness(0, 6, 0, 0),
 			Children =
 			{
-				new TextBlock { Text = "Connect to a server", FontWeight = FontWeight.SemiBold },
 				Field("Name", SName),
 				Two(Field("Server address", SHost), Field("SSH port", SPort), "*,110"),
 				Two(Field("User", SUser), Field("Password", SPass)),
@@ -380,13 +382,18 @@ public sealed class StartPage
 					},
 				},
 			},
-		}));
+		};
+		ServerPanel.Children.Add(Card(ServerForm));
 	}
 
 	internal void FillServers()
 	{
 		SavedServers.Children.Clear();
-		foreach (var s in ServerConfig.Load())
+		var servers = ServerConfig.Load();
+		bool any = servers.Count > 0;
+		ServerForm.IsExpanded = !any;
+		((TextBlock)ServerForm.Header!).Text = any ? "Connect to another server" : "Connect to a server";
+		foreach (var s in servers)
 		{
 			var token = s.Token == null ? new TextBox { Watermark = "Plugin token", Width = 180 } : null;
 			var pass = s.Password == null && s.KeyFile == null ? new TextBox { Watermark = "Password", PasswordChar = '•', Width = 180 } : null;
@@ -394,13 +401,14 @@ public sealed class StartPage
 			var server = s;
 			go.Click += async (_, _) => await Connect(new Tunnel.Request(server.Host, server.SshPort, server.User, pass?.Text ?? server.Password, server.KeyFile, null, token?.Text ?? server.Token, null,
 				server.Password != null, server.Name, server.GameFolder), _savedError, $"Connecting to {server.Name}…");
-			var edit = new Button { Content = "edit", Background = Brushes.Transparent, Foreground = Muted };
+			var edit = new Button { Content = "edit", Foreground = Muted }.Classed("ghost");
 			edit.Click += (_, _) =>
 			{
+				ServerForm.IsExpanded = true;
 				(SHost.Text, SPort.Value, SUser.Text, SKey.Text, SFolder.Text, SName.Text) = (server.Host, server.SshPort, server.User, server.KeyFile, server.GameFolder, server.Name);
 				_serverError.Text = "Change what you need, enter the token and the password (unless saved or using a key), then Connect: the saved server is updated.";
 			};
-			var forget = new Button { Content = "forget", Background = Brushes.Transparent, Foreground = Muted };
+			var forget = new Button { Content = "forget", Foreground = Muted }.Classed("ghost");
 			forget.Click += async (_, _) =>
 			{
 				if (await Confirm($"Forget {server.Name}?"))
