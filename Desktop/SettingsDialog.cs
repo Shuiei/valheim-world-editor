@@ -44,6 +44,9 @@ public static class SettingsDialog
 		return null;
 	}
 
+	// Tests: the folder picker (null: the system's).
+	internal static Func<string, Task<string?>>? PickFolder { get; set; }
+
 	public static async Task<bool> Show(Window owner, AppSettings settings)
 	{
 		bool saved = false;
@@ -60,6 +63,10 @@ public static class SettingsDialog
 		TextBlock Hint(string t) => new() { Text = t, FontSize = 12, Foreground = muted, TextWrapping = TextWrapping.Wrap };
 		async Task<string?> Pick(string title)
 		{
+			if (PickFolder is { } pick)
+			{
+				return await pick(title);
+			}
 			var picked = await dialog.StorageProvider.OpenFolderPickerAsync(new Avalonia.Platform.Storage.FolderPickerOpenOptions { Title = title });
 			return picked.Count > 0 && picked[0].Path.IsFile ? picked[0].Path.LocalPath : null;
 		}
