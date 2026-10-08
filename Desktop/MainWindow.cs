@@ -341,6 +341,7 @@ public sealed partial class MainWindow : Window
 	internal InspectorPanel Inspector { get; }
 	internal BlueprintsPanel Blueprints { get; }
 	private Control _viewPanel = null!;
+	internal Control ViewPanelCard => _viewPanel;
 	internal TextBlock PendingText => _pending;
 	internal TextBlock MessageText => _message;
 	// Asks before writing into the world (replaced by tests).
@@ -802,18 +803,30 @@ public sealed partial class MainWindow : Window
 		return card;
 	}
 
-	// The status bar (bottom): the last message, the selection, walking or flying, and the controls.
+	// The status bar's cursor readout: where the pointer is on the ground (see CursorReadout).
+	internal TextBlock Cursor { get; } = new() { FontSize = 12, Foreground = Ui.Muted, VerticalAlignment = VerticalAlignment.Center, TextWrapping = TextWrapping.NoWrap };
+	private Point? _cursorAt;
+
+	internal void ShowCursor(Point? at)
+	{
+		_cursorAt = at;
+		Cursor.Text = at is Point p && _view.Scene is { } s && Surface is { } surface && _view.GridAt(p, surface.Bounds.Size) is { } g ? CursorReadout.Text(s, g.X, g.Y) : "";
+	}
+
+	// The status bar (bottom): the cursor, the last message, the selection, walking or flying, and the controls.
 	private Control StatusBar()
 	{
-		var bar = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto,Auto,Auto"), ColumnSpacing = 18 };
+		var bar = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto,Auto,Auto"), ColumnSpacing = 18 };
 		var tips = new TextBlock { Text = "Right drag turns · Wheel zooms · Middle drag slides · ? help", FontSize = 12, Foreground = Ui.Muted, VerticalAlignment = VerticalAlignment.Center };
 		_selection.VerticalAlignment = _eye.VerticalAlignment = VerticalAlignment.Center;
 		_selection.TextWrapping = _eye.TextWrapping = TextWrapping.NoWrap;
 		_selection.MaxWidth = 380;
 		_selection.TextTrimming = TextTrimming.CharacterEllipsis;
-		Grid.SetColumn(_selection, 1);
-		Grid.SetColumn(_eye, 2);
-		Grid.SetColumn(tips, 3);
+		Grid.SetColumn(_message, 1);
+		Grid.SetColumn(_selection, 2);
+		Grid.SetColumn(_eye, 3);
+		Grid.SetColumn(tips, 4);
+		bar.Children.Add(Cursor);
 		bar.Children.Add(_message);
 		bar.Children.Add(_selection);
 		bar.Children.Add(_eye);
@@ -830,10 +843,14 @@ public sealed partial class MainWindow : Window
 		var list = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*"), ColumnSpacing = 12, RowSpacing = 5 };
 		var rows = new (string Keys, string What)[]
 		{
-			("Left drag", "Use the tool"), ("Right drag", "Turn the view"), ("Wheel", "Zoom"), ("Middle drag", "Slide the view"), ("W A S D", "Move around"),
+			("Left drag", "Use the tool"), ("Right drag", "Turn the view"), ("Wheel", "Zoom"),
+			("Middle drag", "Slide the view (also Space + left drag, Shift + right drag, the View tool)"), ("W A S D", "Move around"),
 			("F", "Walk at eye height · fly (Space up, C down) · back to the usual view"), ("1–9, 0, O", "Sculpt and paint tools (O: Erode)"),
-			("B / P / T / G", "Area, Path, Place, Shape"), ("E / M / Esc", "Select, Measure, View"), ("Ctrl+C / Ctrl+V", "Copy the area / paste it (R turns 90°, , . turn 1°, F mirrors)"),
+			("B / P / T / G", "Area, Path, Place, Shape"), ("E / M / H", "Select, Measure, View (Esc too)"), ("[  ]", "Brush size"),
+			("Ctrl+C / Ctrl+V", "Copy the area / paste it (R turns 90°, , . turn 1°, F mirrors)"),
+			("Alt + wheel", "Turn the selection, the paste or the Place preview (, . too; Shift: 15°)"), ("Place: R", "New layout"),
 			("Alt + click", "Pick the ground height"), ("Del", "Delete the selected objects"), ("I", "Inspect the selected object"),
+			("PgUp / PgDn / End", "Lift, lower or drop the selection"),
 			("Ctrl+Z / Ctrl+Y", "Undo / redo"), ("Ctrl+S", "Save"), ("V / L / ?", "View panel / history / this help"),
 		};
 		for (int i = 0; i < rows.Length; i++)
@@ -891,6 +908,10 @@ public sealed partial class MainWindow : Window
 		p.Bind(SlopeBox, "view.slope");
 		p.Bind(ContourBox, "view.contour");
 		p.Bind(ContourStepBox, "view.contourStep");
+		// The look: the game's or plain, buildings see-through, the 3D view's resolution.
+		p.Bind(GameLookBox, "view.gameLook");
+		p.Bind(SeeThroughBox, "view.seeThrough");
+		p.Bind(ResolutionBox, "view.res3d");
 		// The brush's shape and falloff, the Area action, Select's options.
 		p.Bind(Tools.ShapeBox, "brush.shape");
 		p.Bind(Tools.FalloffBox, "brush.falloff");
@@ -954,6 +975,22 @@ public sealed partial class MainWindow : Window
 		};
 		_message.Text = $"Click an object to pick its kind for {label}. Esc cancels.";
 	}
+	// , . turn the paste by 1° (Shift: 15°); . is clockwise seen from above, like the other tools.
+	private bool TurnPaste(Avalonia.Input.Key key, bool shift)
+	{
+		float step = shift ? 15 : 1;
+		_view.Paste.TurnBy(key == Avalonia.Input.Key.OemComma ? step : -step);
+		return true;
+	}
+
+	// Alt + wheel: the tool that turns things turns them, as its , and . keys do; otherwise (false) it zooms.
+	internal bool AltWheel(Avalonia.Input.Key key, bool shift) => Tools.Mode switch
+	{
+		ToolMode.Paste => TurnPaste(key, shift),
+		ToolMode.Place => PlaceInput.Key(key, shift, false),
+		_ when Tools.SelectMode => _view.SelectTool.Key(key, shift, false),
+		_ => false,
+	};
 
 	private void OnKey(object? sender, Avalonia.Input.KeyEventArgs e)
 	{
@@ -1012,14 +1049,11 @@ public sealed partial class MainWindow : Window
 		}
 		else if (Tools.Mode == ToolMode.Paste && !ctrl && e.Key is Avalonia.Input.Key.R or Avalonia.Input.Key.F or Avalonia.Input.Key.OemComma or Avalonia.Input.Key.OemPeriod or Avalonia.Input.Key.Escape)
 		{
-			// , . turn by 1° (Shift: 15°); . is clockwise seen from above, like the other tools.
-			float step = mods.HasFlag(Avalonia.Input.KeyModifiers.Shift) ? 15 : 1;
 			switch (e.Key)
 			{
 				case Avalonia.Input.Key.R: _view.Paste.TurnBy(90); break;
 				case Avalonia.Input.Key.F: _view.Paste.Mirror = !_view.Paste.Mirror; _view.Paste.Notify(); break;
-				case Avalonia.Input.Key.OemComma: _view.Paste.TurnBy(step); break;
-				case Avalonia.Input.Key.OemPeriod: _view.Paste.TurnBy(-step); break;
+				case Avalonia.Input.Key.OemComma or Avalonia.Input.Key.OemPeriod: TurnPaste(e.Key, mods.HasFlag(Avalonia.Input.KeyModifiers.Shift)); break;
 				default: Tools.ChooseMode(ToolMode.Area); break;
 			}
 			e.Handled = true;
@@ -1027,6 +1061,11 @@ public sealed partial class MainWindow : Window
 		else if (ctrl && e.Key == Avalonia.Input.Key.S)
 		{
 			_ = Save();
+			e.Handled = true;
+		}
+		else if (!ctrl && e.Key is Avalonia.Input.Key.OemOpenBrackets or Avalonia.Input.Key.OemCloseBrackets)
+		{
+			Tools.ResizeBrush(e.Key == Avalonia.Input.Key.OemOpenBrackets ? -1 : 1);
 			e.Handled = true;
 		}
 		else if (!ctrl && e.Key == Avalonia.Input.Key.Escape && Inspector.IsOpen)
@@ -1089,7 +1128,7 @@ public sealed partial class MainWindow : Window
 		{
 			Tools.Key("Escape");
 		}
-		else if (!ctrl && e.Key is Avalonia.Input.Key.E or Avalonia.Input.Key.M or Avalonia.Input.Key.G or Avalonia.Input.Key.P or Avalonia.Input.Key.B or Avalonia.Input.Key.O or Avalonia.Input.Key.T)
+		else if (!ctrl && e.Key is Avalonia.Input.Key.E or Avalonia.Input.Key.M or Avalonia.Input.Key.G or Avalonia.Input.Key.P or Avalonia.Input.Key.B or Avalonia.Input.Key.O or Avalonia.Input.Key.T or Avalonia.Input.Key.H)
 		{
 			Tools.Key(e.Key.ToString());
 		}
@@ -1119,10 +1158,47 @@ public sealed partial class MainWindow : Window
 
 	private static TextBlock Heading(string t) => Ui.Heading(t, 12);
 
+	// View, Look: the game's look or plain colours and boxes, see-through buildings, and the 3D
+	// resolution (GlView). Presets switch every kind and overlay to the defaults, all on, or only the
+	// ground (the web editor's buttons).
+	internal CheckBox GameLookBox { get; } = new() { Content = "Game look", IsChecked = true, FontSize = 12 };
+	internal CheckBox SeeThroughBox { get; } = new() { Content = "See-through buildings", FontSize = 12 };
+	internal ComboBox ResolutionBox { get; } = new() { ItemsSource = new[] { "Sharp (the screen's)", "Balanced", "Fast" }, SelectedIndex = 0, FontSize = 12, MinWidth = 150 };
+	internal Button DefaultsButton { get; } = new() { Content = "Defaults", FontSize = 12 };
+	internal Button AllButton { get; } = new() { Content = "All", FontSize = 12 };
+	internal Button GroundButton { get; } = new() { Content = "Ground", FontSize = 12 };
+	private readonly Dictionary<CheckBox, bool> _viewDefaults = new();
+
+	internal enum ViewPreset { Defaults, All, Ground }
+
+	internal void ShowPreset(ViewPreset preset)
+	{
+		foreach (var (box, on) in _viewDefaults)
+		{
+			box.IsChecked = preset switch { ViewPreset.All => true, ViewPreset.Ground => false, _ => on };
+		}
+	}
+
 	private Control ViewPanel()
 	{
 		var list = new StackPanel { Spacing = 2 };
 		list.Children.Add(Ui.Heading("View", 0));
+		list.Children.Add(Heading("LOOK"));
+		ToolTip.SetTip(GameLookBox, "The game's terrain, sky, sea and models; off: plain colours and boxes");
+		GameLookBox.IsCheckedChanged += (_, _) => _view.GameLookOn = GameLookBox.IsChecked == true;
+		ToolTip.SetTip(SeeThroughBox, "Players' buildings drawn faint, to see what is inside or behind them");
+		SeeThroughBox.IsCheckedChanged += (_, _) => _view.SeeThroughBuildings = SeeThroughBox.IsChecked == true;
+		ToolTip.SetTip(ResolutionBox, "Pixels the 3D view draws: fewer pixels, more frames");
+		ResolutionBox.SelectionChanged += (_, _) =>
+		{
+			_view.Resolution3D = (GlView.Resolution)Math.Max(0, ResolutionBox.SelectedIndex);
+			var (w, h) = _view.RenderSize();
+			_message.Text = $"3D resolution: {ResolutionBox.SelectedItem}, {w}×{h} pixels.";
+		};
+		list.Children.Add(GameLookBox);
+		list.Children.Add(SeeThroughBox);
+		list.Children.Add(new StackPanel { Spacing = 2, Children = { new TextBlock { Text = "3D resolution", FontSize = 12 }, ResolutionBox } });
+		list.Children.Add(Heading("OBJECTS"));
 		foreach (var k in ObjectKinds.All)
 		{
 			var box = new CheckBox { Content = ObjectKinds.Label(k), IsChecked = _view.IsShown(k), FontSize = 12 };
@@ -1141,6 +1217,16 @@ public sealed partial class MainWindow : Window
 			_overlayBoxes[layer] = box;
 			list.Children.Add(box);
 		}
+		// The presets cover what is shown: kinds, water and overlays (as they are now: the defaults).
+		foreach (var box in _kindBoxes.Values.Append(WaterBox).Concat(_overlayBoxes.Values))
+		{
+			_viewDefaults[box] = box.IsChecked == true;
+		}
+		DefaultsButton.Click += (_, _) => ShowPreset(ViewPreset.Defaults);
+		AllButton.Click += (_, _) => ShowPreset(ViewPreset.All);
+		GroundButton.Click += (_, _) => ShowPreset(ViewPreset.Ground);
+		ToolTip.SetTip(GroundButton, "Only the ground: every kind of object, the water and the overlays off");
+		list.Children.Add(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Margin = new Thickness(0, 6, 0, 0), Children = { DefaultsButton, AllButton, GroundButton } });
 		_view.OverlaysBuilt += o =>
 		{
 			void Count(Overlays.Layer l, int n) => _overlayBoxes[l].Content = Ui.Counted((string)_overlayBoxes[l].Tag!, n);
@@ -1153,7 +1239,7 @@ public sealed partial class MainWindow : Window
 		ToolTip.SetTip(BuilderBox, "The player new pieces are built by: the game then treats them as player built (materials back, wards and private chests answer to that player)");
 		list.Children.Add(new StackPanel { Spacing = 2, Children = { new TextBlock { Text = "Built by", FontSize = 12 }, BuilderBox } });
 		BuilderBox.SelectionChanged += async (_, _) => await BuilderChosen();
-		list.Children.Add(Heading("LOOK (game look)"));
+		list.Children.Add(Heading("GROUND (game look)"));
 		SlopeBox.IsCheckedChanged += (_, _) => _view.SlopeColours = SlopeBox.IsChecked == true;
 		void Contour() => _view.ContourStep = ContourBox.IsChecked == true ? float.Parse((string)ContourStepBox.SelectedItem!) : 0;
 		ContourBox.IsCheckedChanged += (_, _) => Contour();
@@ -1435,6 +1521,10 @@ public sealed partial class MainWindow : Window
 		_pages.Content = _editorPage;
 		Content = new Grid { Children = { _pages, _busy } };
 		_view.Attach(surface, this);
+		_view.AltWheel = AltWheel;
+		surface.PointerMoved += (_, e) => ShowCursor(e.GetPosition(surface));
+		surface.PointerExited += (_, _) => ShowCursor(null);
+		_view.StrokeEnded += _ => ShowCursor(_cursorAt);
 		_view.Perf = _perf;
 		_view.StatsChanged += s => _fps.Text = $"{s.Fps} frames/s · {s.WorkMs:0.0} ms of work each · {s.Objects:N0} objects ({s.Instances:N0} model parts in {s.Batches:N0} draws){(s.PendingModels > 0 ? $" · {s.PendingModels} kinds loading" : "")}";
 		_view.SelectionChanged += _ =>
