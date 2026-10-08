@@ -47,7 +47,7 @@ public sealed class ModelStore
 	private readonly ConcurrentDictionary<string, Model?> _models = new();
 	private readonly ConcurrentDictionary<string, Lazy<MeshData?>> _meshes = new();
 
-	private ModelStore(string root)
+	internal ModelStore(string root)
 	{
 		_root = root;
 		_meshInfo = JsonNode.Parse(File.ReadAllText(Path.Combine(root, "meshinfo.json")))!.AsObject();
