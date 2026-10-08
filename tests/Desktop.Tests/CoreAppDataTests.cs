@@ -142,6 +142,9 @@ public class CoreAppDataTests
 		Assert.Contains(WorldSearch.Search(world, edits, "copied", "texts").Hits, h => h.Id == -5);
 		Assert.Contains(WorldSearch.Search(world, edits, "wood", "items").Hits, h => h.Id == -5);
 		Assert.Contains(WorldSearch.Search(world, edits, "beech1", "kinds").Hits, h => h.Id == -6);
+		// An added object of a kind the game does not have holds nothing to search.
+		edits.AddObjects(new[] { new NewObject(-7, StableHash.Of("NoSuchKind_x"), copy.Position, Vector3.Zero, 1f) });
+		Assert.DoesNotContain(WorldSearch.Search(world, edits, "a", "texts").Hits, h => h.Id == -7);
 	}
 
 	[Fact]

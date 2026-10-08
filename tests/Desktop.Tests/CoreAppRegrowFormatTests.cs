@@ -179,6 +179,35 @@ public class CoreAppRegrowTests
 		Assert.NotEqual(Regrow.Zones(terrain, edits, world.Seed, fx, fz, fx, fz), Regrow.Zones(terrain, edits, world.Seed + 1, fx, fz, fx, fz));
 	}
 
+	// Coasts: rocks that only grow in shallow water (when any do: the draws decide), groups spilling
+	// over into another biome.
+	[Fact]
+	public void RegrowOnCoastsKeepsToShallowWaterAndItsBiome()
+	{
+		using var w = new TempWorld();
+		WorldSave world = w.Load();
+		var terrain = new ValheimGen.TerrainService(world, null);
+		var edits = new EditStore(world);
+		var coasts = new List<(int X, int Z)>();
+		for (int zz = -90; zz <= 90 && coasts.Count < 40; zz += 2)
+		{
+			for (int zx = -90; zx <= 90 && coasts.Count < 40; zx += 2)
+			{
+				var c = terrain.CornerBiomes(zx, zz);
+				if (c.Contains((int)ValheimGen.Heightmap.Biome.Ocean) && c.Any(b => b != (int)ValheimGen.Heightmap.Biome.Ocean))
+				{
+					coasts.Add((zx, zz));
+				}
+			}
+		}
+		Assert.True(coasts.Count >= 20, $"{coasts.Count} coast zones");
+		var all = coasts.SelectMany(z => Regrow.Zones(terrain, edits, world.Seed, z.X, z.Z, z.X, z.Z)).ToList();
+		Assert.NotEmpty(all);
+		var rocks = all.Where(s => s.Name == "rock4_coast").ToList();
+		// Coast rocks stand between 2 m and 0.5 m below the sea.
+		Assert.All(rocks, r => Assert.InRange(r.Y - ValheimGen.TerrainService.WaterLevel, -2.01f, -0.49f));
+	}
+
 	[Fact]
 	public void SeveralZonesAtOnceAreTheZonesOneByOne()
 	{
