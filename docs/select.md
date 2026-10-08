@@ -20,23 +20,22 @@ replace or delete them. Only objects that are shown can be picked; switch kinds 
 | **Whole building** | Adds every piece connected to the selected pieces. |
 | **Same kind** | Selects every shown object in the area of the kinds selected now (select one beech, then all the beeches). |
 | **Invert** | Selects every shown object in the area that is not selected now. |
-| **Saved** + **keep** | Keeps the selection under a name, for this world, in this browser. Pick it in the list, then **Select it** (or **Add it** to the current selection) to get it back, also after the world was saved; **Forget** removes it. Objects are found again by kind and position, so moved or deleted ones are counted as missing. |
+| **Saved selections**: **Keep…** | Keeps the selection under a name, for this world (in the editor's data folder). Pick it in the list, then **Select** (or **Add** it to the current selection) to get it back, also after the world was saved; **Forget** removes it, after asking. Objects are found again by kind and place (within a few centimetres), so moved or deleted ones are counted as missing. |
 
 ![Drawing a selection zone](images/select-zone-drawing.jpg)
 ![Everything inside selected](images/select-zone.jpg)
 
-The panel lists what is selected, by kind. Under it come what you use most: **Delete**, **Deselect**,
-**Whole building**, **Same kind**, **Invert**, and **Exact place** once something is selected. Two
-folds at the bottom hold the rest, and stay open or closed as you left them: **More actions**
-(Replace with, Saved selections, Inspect data, Make player built) and **Moving** (the two switches
-below). The **?** next to the tool name shows how-to text in the panel.
+The status bar says what is selected, by kind. The panel holds **Delete**, **Whole building**,
+**Same kind**, **Invert**, **Inspect data (I)** and **Make player built**, then **Replace with**,
+the two moving switches, **Saved selections**, and **Exact place** once something is selected. A
+line at the bottom reminds the keys.
 
 ## Moving and turning
 
 | Action | What it does |
 |---|---|
-| **Put each object on the ground when moving** | On (the default): trees, rocks and other objects each land on the ground where they end up. Building pieces move together and keep their shape: the whole building goes up or down until its bottom layer sits on the ground (on a slope part of it sinks into the hill rather than float, since pieces need the ground to carry what stands on them). Off: each object keeps its height above the ground. Remembered in this browser. |
-| **Snap to other pieces when moving** | On (the default): while you move, a piece's snap point locks onto the nearest snap point of a piece around it (within 0.75 m), so walls, floors, beams and fences join exactly, like with the hammer. The status bar says what it snapped to. Off: free moves. |
+| **Put each object on the ground when moving** | On (the default): trees, rocks and other objects each land on the ground where they end up. Building pieces move together and keep their shape: the whole building goes up or down until its bottom layer sits on the ground (on a slope part of it sinks into the hill rather than float, since pieces need the ground to carry what stands on them). Off: each object keeps its height above the ground. Remembered. |
+| **Snap to other pieces when moving** | On (the default): while you move, a piece's snap point locks onto the nearest snap point of a piece around it (within 0.75 m), so walls, floors, beams and fences join exactly, like with the hammer. The status bar says what it snapped to. Off: free moves. Remembered. |
 | **Drag the orange ring** | Turns the selection around its middle; hold **Ctrl** for 15° steps. |
 | **Drag a selected object** | Moves the whole selection freely, onto the ground (or at the same height above it, with the switch off). |
 | **Drag an arrow** | Moves the selection along one axis only: **red X** (east–west), **green Y** (up–down), **blue Z** (north–south). Hold **Ctrl** to move in 0.5 m steps. X and Z follow the ground as above; Y raises or sinks. |
@@ -53,7 +52,7 @@ all of its data (a moved chest keeps its contents).
 The **Exact place** fields show where the selection is: **X** and **Z** are the world position of its
 middle (or of the one object), **Y** the height of its lowest object, **Turn** the first object's
 facing (degrees, clockwise seen from above). Type new values and press **Move there**; with **Move
-by**, type how far to move (east, up, north) and turn instead. It is one undo step, like a drag;
+by**, type how far to move (east, up, north) and turn instead, and press **Move by these**. It is one undo step, like a drag;
 typed values are exact, so nothing snaps on top of them.
 
 ## Other actions
@@ -61,14 +60,13 @@ typed values are exact, so nothing snaps on top of them.
 | Control | What it does |
 |---|---|
 | **Delete** (`Del`) | Removes the selected objects. `Ctrl+Z` brings them back. |
-| **Deselect** | Clears the selection. |
 | **Make player built** | Gives the selected pieces that have no builder the player chosen in View → Building → **Built by**, so the game treats them as player built (see [Player-built pieces](editor-basics.md#player-built-pieces)). Other objects are left as they are. One undo step. |
-| **Replace with** + **Replace the selection** | Replaces every selected object by the chosen kind, at the same place and facing. **pick** fills the list from the world: click an object to use its kind. |
+| **Replace with** + **Replace the selection** | Replaces every selected object by the chosen kind, at the same place and facing. **pick** fills the list from the world: click an object to use its kind (`Esc` cancels). |
 | `Ctrl+C` | Copies the selection; `Ctrl+V` pastes it with the [paste tool](area.md#copy-and-paste). Copies are new, independent objects (a copied chest is empty). Pasted objects keep their height above the ground where they land. |
 
 ## Inspecting and changing an object's data
 
-Like MCEdit's NBT editor: with one object selected, **Inspect data** (`I`) opens a panel with
+Like MCEdit's NBT editor: with one object selected, **Inspect data (I)** opens a panel with
 everything the object holds in the save.
 
 | Part | What it shows |
