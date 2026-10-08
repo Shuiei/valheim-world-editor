@@ -1842,6 +1842,27 @@ public sealed class GlView : OpenGlControlBase
 	private Vector3 _lastEye;
 	// For tests (nothing is drawn headless): the camera the mouse is read with.
 	// The camera turned onto a world point, close (the map's search: the object found).
+	// The orbit camera on world point (x, z) at the ground, turned yaw° around it, looking down pitch°
+	// (the documentation's pictures, through the driver).
+	internal void Orbit(float x, float z, float yawDegrees, float pitchDegrees, float distance)
+	{
+		if (_scene is not { } s)
+		{
+			return;
+		}
+		lock (_camLock)
+		{
+			var t = new Vector3(x - s.Cx, 0, -(z - s.Cz));
+			int gx = Math.Clamp((int)MathF.Round(t.X + (s.W - 1) / 2f), 0, s.W - 1), gz = Math.Clamp((int)MathF.Round(-t.Z + (s.H - 1) / 2f), 0, s.H - 1);
+			t.Y = Math.Max(s.Heights[gz * s.W + gx], s.Water);
+			_target = t;
+			_yaw = yawDegrees * MathF.PI / 180;
+			_pitch = Math.Clamp(pitchDegrees * MathF.PI / 180, 0.05f, 1.55f);
+			_distance = Math.Clamp(distance, 3, 3000);
+		}
+		Wake();
+	}
+
 	internal void Focus(Vector3 world, float distance = 35)
 	{
 		if (_scene is not { } s)
