@@ -294,6 +294,10 @@ public sealed class GlView : OpenGlControlBase
 	// Things shown somewhere else than where they are, while a move is being made (Select tool).
 	private Dictionary<int, WorldScene.Thing> _previews = new();
 	private volatile bool _thingsReset, _overlaysDirty;
+	// The overlays wait for the ground only (not for objects, which show at once): built again 200 ms
+	// after the last time at the most.
+	private bool _overlaysGroundOnly;
+	private long _overlaysBuiltAt;
 	private readonly Dictionary<string, (uint Vbo, uint[] Ebos, int[] Counts)> _meshGl = new();
 	private readonly Dictionary<string, uint> _textures = new();
 	// Models read on worker threads, waiting to go to the graphics card (on the drawing thread).
@@ -1094,9 +1098,12 @@ public sealed class GlView : OpenGlControlBase
 			{
 				Rebuild(s, g);
 			}
-			if (_overlaysDirty && _terrainVao != 0)
+			// Ground that changed moves the overlays lying on it (zone borders, rings): built again then
+			// too, a few times a second at most while a brush stroke goes on.
+			if (_overlaysDirty && _terrainVao != 0 && (!_overlaysGroundOnly || now - _overlaysBuiltAt >= 200))
 			{
-				_overlaysDirty = false;
+				_overlaysDirty = _overlaysGroundOnly = false;
+				_overlaysBuiltAt = now;
 				Overlays.Built o;
 				lock (s.Things)
 				{
@@ -1104,6 +1111,11 @@ public sealed class GlView : OpenGlControlBase
 				}
 				UploadOverlays(o);
 				Dispatcher.UIThread.Post(() => OverlaysBuilt?.Invoke(o));
+			}
+			else if (_overlaysDirty)
+			{
+				// Waiting for the 200 ms: another frame then.
+				RequestNextFrameRendering();
 			}
 		}
 		// A few models per frame, so the view keeps moving while they arrive.
@@ -1170,6 +1182,12 @@ public sealed class GlView : OpenGlControlBase
 			if (s.Session?.TakeDirty() is { } d && _terrainVao != 0)
 			{
 				UpdateTerrain(s, d.Z0, d.Z1);
+				// The mountain preview and the overlays stand on the ground as it is now.
+				_previewKey = null;
+				if (!_overlaysDirty)
+				{
+					_overlaysDirty = _overlaysGroundOnly = true;
+				}
 			}
 		}
 		var sun = GameLookGl.SunDirView;
@@ -1816,6 +1834,20 @@ public sealed class GlView : OpenGlControlBase
 	// Shape tool: a click on the ground (grid point), and the radius its outline shows.
 	public event Action<float, float>? ShapeClicked;
 	public float ShapeRadius { get; set; } = 16;
+
+	// The Mountain tool's shape (metres added east and north of the middle), drawn under the pointer as
+	// a mesh on the ground before clicking; null: none.
+	private Func<float, float, float>? _mountainPreview;
+	internal Func<float, float, float>? MountainPreview
+	{
+		get => _mountainPreview;
+		set
+		{
+			_mountainPreview = value;
+			_previewKey = null;
+			RequestNextFrameRendering();
+		}
+	}
 	public PathTool Path { get; } = new();
 	// Stamp once: a click on the ground (grid point).
 	public event Action<float, float>? StampClicked;
@@ -2669,33 +2701,106 @@ public sealed class GlView : OpenGlControlBase
 
 	private float[] _lassoSegs = Array.Empty<float>();
 
-	private uint _ringVao, _ringVbo;
+	private uint _ringVao, _ringVbo, _previewVao, _previewVbo;
+	// The mountain preview's lines, kept while the pointer stays on the same grid point.
+	private float[] _previewSegs = Array.Empty<float>();
+	private (int X, int Z, int W)? _previewKey;
+
+	// Whether a Mountain click at a grid point fits in the open area (what EditSession.Mountain needs).
+	internal static bool MountainFits(WorldScene s, float gx, float gz, float reach) => gx - reach >= 1 && gz - reach >= 1 && gx + reach <= s.W - 2 && gz + reach <= s.H - 2;
+
 	// The brush's outline on the ground (and the Ring shape's inner edge), seen through what stands on it.
+	// Short segments, so a wide ring follows hills instead of cutting through them; none outside the open
+	// area (no ground there). For the Mountain tool: the mountain itself as a mesh, and the ring in red
+	// where it does not fit.
 	private unsafe void DrawBrush(WorldScene s, Matrix4x4 vp)
 	{
 		if (_hover is not { } h || s.Session is not { } session || _tool == null && _mode is not (ToolMode.Shape or ToolMode.Mountain))
 		{
 			return;
 		}
-		const int n = 96;
+		float r = _tool == null ? ShapeRadius : session.Brush.Radius;
+		int n = Math.Clamp((int)MathF.Ceiling(MathF.Tau * r / 1.5f), 96, 2048);
 		var data = new List<float>();
 		void Loop(List<(float X, float Z)> pts)
 		{
 			for (int i = 0; i < pts.Count; i++)
 			{
-				foreach (var (ox, oz) in new[] { pts[i], pts[(i + 1) % pts.Count] })
+				var (ax, az) = At(pts[i]);
+				var (bx, bz) = At(pts[(i + 1) % pts.Count]);
+				float ya = Picking.HeightAt(s, ax, az), yb = Picking.HeightAt(s, bx, bz);
+				if (ya <= -1000 || yb <= -1000)
 				{
-					float x = h.X + ox - (s.W - 1) / 2f, z = -(h.Z + oz - (s.H - 1) / 2f);
-					data.AddRange(new[] { x, Picking.HeightAt(s, x, z) + 0.3f, z });
+					continue;
 				}
+				data.AddRange(new[] { ax, ya + 0.3f, az, bx, yb + 0.3f, bz });
 			}
 		}
+		(float, float) At((float X, float Z) o) => (h.X + o.X - (s.W - 1) / 2f, -(h.Z + o.Z - (s.H - 1) / 2f));
 		Loop(_tool == null ? Enumerable.Range(0, n).Select(i => (MathF.Cos(i * MathF.Tau / n) * ShapeRadius, MathF.Sin(i * MathF.Tau / n) * ShapeRadius)).ToList() : session.Brush.Outline(n));
 		if (_tool != null && session.Brush.InnerOutline(n) is { } inner)
 		{
 			Loop(inner);
 		}
-		DrawLines(ref _ringVao, ref _ringVbo, data.ToArray(), vp, new Vector4(1, 1, 1, 1), width: 1.2f);
+		bool fits = _mode != ToolMode.Mountain || MountainFits(s, h.X, h.Z, ShapeRadius);
+		DrawLines(ref _ringVao, ref _ringVbo, data.ToArray(), vp, fits ? new Vector4(1, 1, 1, 1) : new Vector4(1, 0.35f, 0.3f, 1), width: 1.2f);
+		if (_tool == null && _mode == ToolMode.Mountain && fits && _mountainPreview is { } shape)
+		{
+			var key = ((int)MathF.Round(h.X), (int)MathF.Round(h.Z), s.W);
+			if (_previewKey != key)
+			{
+				_previewKey = key;
+				_previewSegs = MountainMesh(s, key.Item1, key.Item2, ShapeRadius, shape);
+			}
+			DrawLines(ref _previewVao, ref _previewVbo, _previewSegs, vp, new Vector4(1, 0.78f, 0.35f, 0.9f), width: 1f);
+		}
+	}
+
+	// The mountain as it would rise at grid point (cx, cz): lines along x and z every few metres, each
+	// point at the ground plus the shape's height; flat ground (under half a metre added) left out.
+	internal static float[] MountainMesh(WorldScene s, int cx, int cz, float reach, Func<float, float, float> shape)
+	{
+		const int Cells = 40;
+		float step = 2 * reach / Cells;
+		var y = new float[(Cells + 1) * (Cells + 1)];
+		var up = new bool[y.Length];
+		for (int j = 0; j <= Cells; j++)
+		{
+			for (int i = 0; i <= Cells; i++)
+			{
+				float dx = -reach + i * step, dz = -reach + j * step;
+				float add = shape(dx, dz);
+				float x = cx + dx - (s.W - 1) / 2f, z = -(cz + dz - (s.H - 1) / 2f);
+				y[j * (Cells + 1) + i] = Picking.HeightAt(s, x, z) + add + 0.3f;
+				up[j * (Cells + 1) + i] = add > 0.5f;
+			}
+		}
+		var data = new List<float>();
+		void Seg(int i0, int j0, int i1, int j1)
+		{
+			int a = j0 * (Cells + 1) + i0, b = j1 * (Cells + 1) + i1;
+			if (!up[a] && !up[b])
+			{
+				return;
+			}
+			data.AddRange(new[] { cx - reach + i0 * step - (s.W - 1) / 2f, y[a], -(cz - reach + j0 * step - (s.H - 1) / 2f) });
+			data.AddRange(new[] { cx - reach + i1 * step - (s.W - 1) / 2f, y[b], -(cz - reach + j1 * step - (s.H - 1) / 2f) });
+		}
+		for (int j = 0; j <= Cells; j++)
+		{
+			for (int i = 0; i <= Cells; i++)
+			{
+				if (i < Cells)
+				{
+					Seg(i, j, i + 1, j);
+				}
+				if (j < Cells)
+				{
+					Seg(i, j, i, j + 1);
+				}
+			}
+		}
+		return data.ToArray();
 	}
 
 	// ---- Selection: the objects picked (indices into the scene's things), drawn as orange boxes.
