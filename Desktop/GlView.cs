@@ -589,6 +589,7 @@ public sealed class GlView : OpenGlControlBase
 			int size = Math.Max(n, _bounds.Length * 3 / 2 + 16);
 			Array.Resize(ref _bounds, size);
 			Array.Resize(ref _known, size);
+			Array.Resize(ref _boundsAt, size);
 			Array.Resize(ref _kinds, size);
 		}
 	}
@@ -760,6 +761,7 @@ public sealed class GlView : OpenGlControlBase
 					if (g.Box is { } box)
 					{
 						_bounds[i] = Picking.Transform(box.Min, box.Max, m);
+						_boundsAt[i] = t.Position;
 					}
 					_known[i] = !t.Gone && g.Box != null;
 					if (!t.Gone)
@@ -2243,6 +2245,8 @@ public sealed class GlView : OpenGlControlBase
 	// ---- Selection: the objects picked (indices into the scene's things), drawn as orange boxes.
 	private (Vector3 Min, Vector3 Max)[] _bounds = Array.Empty<(Vector3, Vector3)>();
 	private bool[] _known = Array.Empty<bool>();
+	// Where each thing was when its box was made (a move's preview may be ahead of the boxes).
+	private Vector3[] _boundsAt = Array.Empty<Vector3>();
 	private ObjectKind[] _kinds = Array.Empty<ObjectKind>();
 	private readonly HashSet<int> _selection = new();
 	private Matrix4x4 _lastViewProj;
@@ -2332,11 +2336,38 @@ public sealed class GlView : OpenGlControlBase
 	}
 
 	// Whether a thing is drawn (not gone, its kind shown, its model known): only those can be picked.
+	// Tests (headless, so nothing is drawn): the boxes drawing gives things, in view space.
+	internal void SetBoxes(IEnumerable<(int Index, Vector3 Min, Vector3 Max)> boxes)
+	{
+		var s = _scene!;
+		EnsureSize(s.Things.Count);
+		lock (_objLock)
+		{
+			foreach (var (i, lo, hi) in boxes)
+			{
+				var t = s.Things[i];
+				_kinds[i] = ObjectKinds.Of(NameOf(t.Prefab), t.Piece);
+				_bounds[i] = (lo, hi);
+				_boundsAt[i] = t.Position;
+				_known[i] = !t.Gone;
+			}
+		}
+	}
+
 	internal bool IsPickable(int i)
 	{
 		lock (_objLock)
 		{
 			return i < _known.Length && _known[i] && _shown[(int)_kinds[i]];
+		}
+	}
+
+	// A thing's box and the position it was made at (world coordinates).
+	internal (Vector3 Min, Vector3 Max, Vector3 At) BoxOf(int i)
+	{
+		lock (_objLock)
+		{
+			return (_bounds[i].Min, _bounds[i].Max, _boundsAt[i]);
 		}
 	}
 

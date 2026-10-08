@@ -312,8 +312,19 @@ public sealed class SelectTool
 		foreach (var it in m.Items)
 		{
 			var p = Target(m, it);
-			// The object's box where it is shown now (view space), or a small box at its place.
-			var (lo, hi) = _view.IsPickable(it.Index) ? _view.BoundsOf(it.Index) : (new Vector3(p.X - s.Cx - 0.1f, p.Y, -(p.Z - s.Cz) - 0.1f), new Vector3(p.X - s.Cx + 0.1f, p.Y + 0.2f, -(p.Z - s.Cz) + 0.1f));
+			// The object's box (view space) brought to where the move puts it: the box was made where the
+			// object was shown then, which the move may already have changed. Or a small box at its place.
+			Vector3 lo, hi;
+			if (_view.IsPickable(it.Index))
+			{
+				var (blo, bhi, at) = _view.BoxOf(it.Index);
+				var shift = new Vector3(p.X - at.X, p.Y - at.Y, -(p.Z - at.Z));
+				(lo, hi) = (blo + shift, bhi + shift);
+			}
+			else
+			{
+				(lo, hi) = (new Vector3(p.X - s.Cx - 0.1f, p.Y, -(p.Z - s.Cz) - 0.1f), new Vector3(p.X - s.Cx + 0.1f, p.Y + 0.2f, -(p.Z - s.Cz) + 0.1f));
+			}
 			float cx = (lo.X + hi.X) / 2, cz = (lo.Z + hi.Z) / 2, hx = (hi.X - lo.X) * 0.35f, hz = (hi.Z - lo.Z) * 0.35f;
 			float ground = GroundAt(p.X, p.Z), best = float.NegativeInfinity;
 			// The highest top of another drawn object under the middle or four points of the footprint.

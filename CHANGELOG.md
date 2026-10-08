@@ -12,6 +12,8 @@ the plugin is unchanged in versions without that part.
 - Apply live: when the game refused the objects, deletions were already counted as sent and were
   never sent again. Now nothing counts as applied until the game accepts it.
 - Apply live twice at once (a double click) could create the same new objects twice in the game.
+- Native preview, Select: Drop (End) right after selecting an object above another one put it too
+  low, by as much as it floated above the ground.
 - An object whose data is edited or moved keeps the game's short position form (the terrain
   compiler grew 8 bytes when written back).
 
