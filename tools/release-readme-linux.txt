@@ -18,8 +18,8 @@ Documentation: https://github.com/Shuiei/valheim-world-editor
      Valheim is found in any Steam library (also Flatpak Steam). If it is not found, the bar asks
      for its folder: the one with valheim_Data, usually ~/.local/share/Steam/steamapps/common/Valheim.
 
-  Nothing else to install. The window uses WebKitGTK (libwebkit2gtk-4.1, installed with most
-  desktops); without it the editor opens in your web browser instead.
+  Nothing else to install. The editor draws with OpenGL 3.3, which any graphics driver of the last
+  ten years has (Mesa, AMD, NVIDIA, Intel).
 
 
 2. Choose how to edit
@@ -62,6 +62,6 @@ Good to know
     "Server's Valheim folder" on its form gives precise errors when the plugin does not answer.
   - Every control explains itself when you hover it; "?" lists the keyboard shortcuts.
   - Settings, saved servers (servers.cfg), the copied game files and the log: ~/.local/share/ValheimWorldEditor
-  - Command line: ./ValheimWorldEditor "<world folder>" opens a world directly, --browser uses the
-    web browser instead of a window.
+  - Command line: ./ValheimWorldEditor "<world folder>" opens a world directly;
+    ./ValheimWorldEditor --live http://127.0.0.1:5182 --token <token> connects to a game.
   - Keep your own backups of worlds you care about.

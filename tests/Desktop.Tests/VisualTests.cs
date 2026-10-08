@@ -34,7 +34,7 @@ public class EditorProcess : IDisposable
 		}
 		string root = Path.GetFullPath(Path.Combine(Fixtures(), "..", ".."));
 		string config = AppContext.BaseDirectory.Contains($"{Path.DirectorySeparatorChar}Release{Path.DirectorySeparatorChar}") ? "Release" : "Debug";
-		string app = Path.Combine(root, "Desktop", "bin", config, "net8.0", "ValheimWorldEditor.Desktop.dll");
+		string app = Path.Combine(root, "Desktop", "bin", config, "net8.0", "ValheimWorldEditor.dll");
 		string dotnet = Path.GetFullPath(Path.Combine(System.Runtime.InteropServices.RuntimeEnvironment.GetRuntimeDirectory(), "..", "..", "..", OperatingSystem.IsWindows() ? "dotnet.exe" : "dotnet"));
 		var psi = new ProcessStartInfo(dotnet) { RedirectStandardInput = true, RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false };
 		foreach (string a in new[] { app, "--data", _data, "--driver" }.Concat(extra))

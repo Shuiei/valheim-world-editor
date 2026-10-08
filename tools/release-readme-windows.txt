@@ -19,8 +19,8 @@ Documentation: https://github.com/Shuiei/valheim-world-editor
      If Valheim is not found, the bar asks for its folder: the one Steam installed it into, with
      valheim_Data, usually C:\Program Files (x86)\Steam\steamapps\common\Valheim.
 
-  Nothing else to install. The window uses Microsoft Edge WebView2, which comes with Windows 11 and
-  an up-to-date Windows 10; without it the editor opens in your web browser instead.
+  Nothing else to install. The editor draws with your graphics card's OpenGL, or through Direct3D
+  when the driver has no OpenGL.
 
 
 2. Choose how to edit
