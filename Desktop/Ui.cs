@@ -58,18 +58,6 @@ public static class Ui
 
 	public static TextBlock Hint(string text) => new() { Text = text, FontSize = 11.5, Foreground = Muted, TextWrapping = TextWrapping.Wrap };
 
-	// The title and one-line description at the top of a tool's panel.
-	public static Control Title(string name, string? description = null)
-	{
-		var p = new StackPanel { Spacing = 2, Margin = new Thickness(0, 0, 0, 6) };
-		p.Children.Add(new TextBlock { Text = name, FontSize = 14, FontWeight = FontWeight.SemiBold });
-		if (description != null)
-		{
-			p.Children.Add(new TextBlock { Text = description, FontSize = 12, Foreground = Muted, TextWrapping = TextWrapping.Wrap });
-		}
-		return p;
-	}
-
 	public static T Classed<T>(this T c, params string[] classes) where T : StyledElement
 	{
 		foreach (var k in classes)
