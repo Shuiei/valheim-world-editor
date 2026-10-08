@@ -15,6 +15,9 @@ public sealed class MainWindow : Window
 	private readonly TextBlock _fps = new() { FontSize = 13 }, _info = new() { FontSize = 12, Foreground = Brushes.LightGray, TextWrapping = TextWrapping.Wrap };
 	private readonly PerfLog _perf = new();
 	private readonly TextBlock _eye = new() { FontSize = 12, Foreground = new SolidColorBrush(Color.FromRgb(143, 240, 180)), TextWrapping = TextWrapping.Wrap };
+	private readonly StackPanel _stats = new() { Spacing = 6 };
+	private Control _infoCard = null!;
+	internal Avalonia.Controls.Primitives.ToggleButton InfoButton { get; } = new() { Content = "ⓘ Info", FontSize = 11, Padding = new Thickness(8, 2), Margin = new Thickness(10, 0, 0, 10) };
 	private readonly TextBlock _selection = new() { FontSize = 12, Foreground = new SolidColorBrush(Color.FromRgb(224, 166, 75)), TextWrapping = TextWrapping.Wrap };
 	private ModelStore? _models;
 	private string Name(WorldScene.Thing t) => _models?.NameOf(t.Prefab) ?? TerrainEditor.Terrain.PrefabCatalog.DisplayName(t.Prefab) ?? t.Prefab.ToString();
@@ -717,6 +720,12 @@ public sealed class MainWindow : Window
 		}
 		var mods = e.KeyModifiers;
 		bool ctrl = mods.HasFlag(Avalonia.Input.KeyModifiers.Control) || mods.HasFlag(Avalonia.Input.KeyModifiers.Meta);
+		if (e.Key == Avalonia.Input.Key.F3)
+		{
+			InfoButton.IsChecked = InfoButton.IsChecked != true;
+			e.Handled = true;
+			return;
+		}
 		if (ctrl && e.Key == Avalonia.Input.Key.Z)
 		{
 			if (mods.HasFlag(Avalonia.Input.KeyModifiers.Shift)) Redo(); else Undo();
@@ -1078,11 +1087,36 @@ public sealed class MainWindow : Window
 			BorderThickness = new Thickness(1),
 			CornerRadius = new CornerRadius(10),
 			Padding = new Thickness(12, 10),
-			Margin = new Thickness(10),
+			Margin = new Thickness(10, 10, 10, 6),
 			MaxWidth = 380,
 			HorizontalAlignment = HorizontalAlignment.Left,
 			VerticalAlignment = VerticalAlignment.Bottom,
-			Child = new StackPanel { Spacing = 6, Children = { _fps, _info, _eye, _selection, record } },
+			Child = new StackPanel { Spacing = 6, Children = { _stats, _eye, _selection } },
+		};
+		// Frame rate and load details: hidden unless asked for (Info, F3); remembered.
+		_stats.Children.Add(_fps);
+		_stats.Children.Add(_info);
+		_stats.Children.Add(record);
+		_stats.IsVisible = _settings.ShowStats;
+		InfoButton.IsChecked = _settings.ShowStats;
+		ToolTip.SetTip(InfoButton, "Show the frame rate and what was loaded (F3)");
+		InfoButton.IsCheckedChanged += (_, _) =>
+		{
+			_stats.IsVisible = _settings.ShowStats = InfoButton.IsChecked == true;
+			_settings.Save();
+			Corner();
+		};
+		void Corner() => _infoCard.IsVisible = _stats.IsVisible || !string.IsNullOrEmpty(_eye.Text) || !string.IsNullOrEmpty(_selection.Text);
+		_eye.PropertyChanged += (_, e) => { if (e.Property == TextBlock.TextProperty) Corner(); };
+		_selection.PropertyChanged += (_, e) => { if (e.Property == TextBlock.TextProperty) Corner(); };
+		_infoCard = panel;
+		Corner();
+		var corner = new StackPanel
+		{
+			Spacing = 0,
+			HorizontalAlignment = HorizontalAlignment.Left,
+			VerticalAlignment = VerticalAlignment.Bottom,
+			Children = { panel, InfoButton },
 		};
 		ConfirmSave = text => Dialogs.Ask(this, "Save into the world", text, "Save");
 		Tell = text => Dialogs.Tell(this, "Save", text);
@@ -1155,7 +1189,7 @@ public sealed class MainWindow : Window
 		// Takes the mouse for the 3D view (see GlView.Attach).
 		var surface = new Border { Background = Brushes.Transparent };
 		_viewPanel = ViewPanel();
-		_editorPage = new Grid { Children = { _view, surface, panel, _viewPanel, tools, SaveBar(), History.Card, Inspector.Card, Blueprints.Card } };
+		_editorPage = new Grid { Children = { _view, surface, corner, _viewPanel, tools, SaveBar(), History.Card, Inspector.Card, Blueprints.Card } };
 		_busy.Child = _busyText;
 		_pages.Content = _editorPage;
 		Content = new Grid { Children = { _pages, _busy } };
