@@ -11,7 +11,7 @@ namespace TerrainEditor.Desktop;
 // Esc goes back to View.
 // Which tool is in use: View (look around, click picks), Select, Measure, Shape, Path, Area, Paste (from the
 // Area tool, Ctrl+V), Place, or a brush (Tool says which).
-public enum ToolMode { View, Select, Measure, Shape, Path, Area, Paste, Place, Brush }
+public enum ToolMode { View, Select, Measure, Shape, Path, Area, Paste, Place, Brush, Mountain }
 
 public sealed class ToolPanel
 {
@@ -29,7 +29,16 @@ public sealed class ToolPanel
 	public Control Options { get; }
 
 	private readonly Dictionary<BrushTool, Button> _buttons = new();
-	private readonly Button _viewButton, _selectButton, _measureButton, _shapeButton, _pathButton, _areaButton, _placeButton;
+	private readonly Button _viewButton, _selectButton, _measureButton, _shapeButton, _pathButton, _areaButton, _placeButton, _mountainButton, _caveButton;
+	// The Cave button: the Path tool with its Cave action (the window picks the action).
+	public event Action? CaveChosen;
+
+	// The Path tool lit as Cave while its action is Cave (the window says so when the action changes).
+	public void MarkCave(bool on)
+	{
+		_caveButton.Classes.Set("on", on && Mode == ToolMode.Path);
+		_pathButton.Classes.Set("on", !on && Mode == ToolMode.Path);
+	}
 	internal Button SelectButton => _selectButton;
 	private readonly TextBlock _title = new() { FontSize = 14, FontWeight = FontWeight.SemiBold };
 	private readonly TextBlock _help = new() { FontSize = 12, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
@@ -184,6 +193,16 @@ public sealed class ToolPanel
 		_shapeButton = Make("Shape", "G", "shape");
 		ToolTip.SetTip(_shapeButton, "Shape (G): click to put a mound, cone, mesa, crater, moat or bowl into the ground, or any shape you write as a formula.");
 		_shapeButton.Click += (_, _) => ChooseMode(ToolMode.Shape);
+		_mountainButton = Make("Mountain", "", "mountain");
+		ToolTip.SetTip(_mountainButton, "Mountain: click to raise a mountain, ridge, mesa, volcano or hills, past the game's ±8 m. Presets and Randomize make each one different.");
+		_mountainButton.Click += (_, _) => ChooseMode(ToolMode.Mountain);
+		_caveButton = Make("Cave", "", "cave");
+		ToolTip.SetTip(_caveButton, "Cave: draw its line, then Apply digs a trench along it and roofs it over with the game's boulders. Presets and Randomize make each one different.");
+		_caveButton.Click += (_, _) =>
+		{
+			ChooseMode(ToolMode.Path);
+			CaveChosen?.Invoke();
+		};
 		_placeButton = Make("Place", "T", "place");
 		ToolTip.SetTip(_placeButton, "Place (T): paint trees, rocks or bushes with a brush, or put walls, fences and other pieces along lines, circles, rectangles, grids and zones.");
 		_placeButton.Click += (_, _) => ChooseMode(ToolMode.Place);
@@ -319,6 +338,8 @@ public sealed class ToolPanel
 		_pathButton.Classes.Set("on", Mode == ToolMode.Path);
 		_areaButton.Classes.Set("on", Mode is ToolMode.Area or ToolMode.Paste);
 		_placeButton.Classes.Set("on", Mode == ToolMode.Place);
+		_mountainButton.Classes.Set("on", Mode == ToolMode.Mountain);
+		_caveButton.Classes.Set("on", false);
 		foreach (var (k, b) in _buttons)
 		{
 			b.Classes.Set("on", k == t);

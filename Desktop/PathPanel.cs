@@ -22,6 +22,14 @@ public sealed class PathPanel
 	internal NumericUpDown StartBox { get; } = Num(32, 0.1m);
 	internal NumericUpDown EndBox { get; } = Num(32, 0.1m);
 	internal NumericUpDown DepthBox { get; } = Num(2, 0.25m);
+	// Cave: a preset and Randomize, depth below the ground, headroom inside, the roof's boulders.
+	internal ComboBox CavePresetBox { get; }
+	internal Button CaveRandomButton { get; } = new() { Content = "Randomize", FontSize = 12 };
+	internal NumericUpDown CaveDepthBox { get; } = Num(7.5m, 0.5m);
+	internal NumericUpDown HeadroomBox { get; } = Num(4.5m, 0.5m);
+	internal ComboBox RockBox { get; }
+	internal TextBlock CaveHelp { get; } = new() { FontSize = 12, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
+	private readonly Random _random = new();
 	internal CheckBox CurveBox { get; } = new() { Content = "Smooth curve through the points", IsChecked = true, FontSize = 12 };
 	internal CheckBox NaturalBox { get; } = new() { Content = "Natural look (ragged edges, bumps)", FontSize = 12 };
 	internal Button ApplyButton { get; } = new Button { Content = "Apply (Enter)", FontSize = 12 }.Classed("primary");
@@ -31,6 +39,7 @@ public sealed class PathPanel
 	private readonly Control _naturalRows;
 	// Apply was asked for (the window does it: it has the edit session).
 	public event Action? ApplyAsked;
+	public event Action<PathTool.Action>? ActionChanged;
 
 	private static NumericUpDown Num(decimal v, decimal step) => new() { Value = v, Increment = step, FormatString = "0.0#", FontSize = 12 };
 
@@ -69,7 +78,7 @@ public sealed class PathPanel
 		_path = view.Path;
 		var actions = Enum.GetValues<PathTool.Action>();
 		ActionBox = new ComboBox { ItemsSource = actions.Select(PathTool.Label).ToArray(), SelectedIndex = 0, FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch };
-		ActionBox.SelectionChanged += (_, _) => { _path.Act = actions[Math.Max(0, ActionBox.SelectedIndex)]; ShowRows(); _path.Notify(); };
+		ActionBox.SelectionChanged += (_, _) => { _path.Act = actions[Math.Max(0, ActionBox.SelectedIndex)]; ShowRows(); _path.Notify(); ActionChanged?.Invoke(_path.Act); };
 		var widthV = new TextBlock();
 		WidthSlider = Slide(1, 40, 0.5, _path.Width, widthV, "m", v => { _path.Width = v; _path.Notify(); });
 		var softV = new TextBlock();
@@ -79,6 +88,23 @@ public sealed class PathPanel
 		StartBox.ValueChanged += (_, e) => { _path.Start = (float)(e.NewValue ?? 0); if (!_filling) _path.RampEdited = true; };
 		EndBox.ValueChanged += (_, e) => { _path.End = (float)(e.NewValue ?? 0); if (!_filling) _path.RampEdited = true; };
 		DepthBox.ValueChanged += (_, e) => _path.Depth = (float)(e.NewValue ?? 0);
+		CavePresetBox = new ComboBox { ItemsSource = PathTool.CavePresets.Select(p => p.Name).ToArray(), SelectedIndex = 1, FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch };
+		var rocks = Enum.GetValues<PathTool.CaveRock>();
+		RockBox = new ComboBox { ItemsSource = rocks.Select(PathTool.Label).ToArray(), SelectedIndex = 0, FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch };
+		RockBox.SelectionChanged += (_, _) => _path.Rock = rocks[Math.Max(0, RockBox.SelectedIndex)];
+		CaveDepthBox.Minimum = 2;
+		CaveDepthBox.Maximum = 20;
+		HeadroomBox.Minimum = 2;
+		HeadroomBox.Maximum = 15;
+		CaveDepthBox.ValueChanged += (_, e) => _path.CaveDepth = (float)(e.NewValue ?? 7.5m);
+		HeadroomBox.ValueChanged += (_, e) => _path.Headroom = (float)(e.NewValue ?? 4.5m);
+		CavePresetBox.SelectionChanged += (_, _) => CavePreset(false);
+		CaveRandomButton.Click += (_, _) => CavePreset(true);
+		CavePresetBox.Tip("cave.preset");
+		CaveRandomButton.Tip("cave.randomize");
+		CaveDepthBox.Tip("cave.depth");
+		HeadroomBox.Tip("cave.headroom");
+		RockBox.Tip("cave.rock");
 		DepthBox.Minimum = 0.25m;
 		CurveBox.IsCheckedChanged += (_, _) => { _path.Curved = CurveBox.IsChecked == true; _path.Notify(); };
 		NaturalBox.IsCheckedChanged += (_, _) => { _path.Natural = NaturalBox.IsChecked == true; ShowRows(); };
@@ -107,6 +133,11 @@ public sealed class PathPanel
 				Row("Bump size", Slide(4, 60, 1, brush.NoiseSize, sizeV, "m", v => brush.NoiseSize = v).Tip("natural.size"), sizeV),
 			},
 		};
+		Control Only(Control c, params PathTool.Action[] for_)
+		{
+			_rows[c] = for_;
+			return c;
+		}
 		Control R(string label, NumericUpDown box, params PathTool.Action[] for_)
 		{
 			var r = Row(label, box, M());
@@ -137,6 +168,11 @@ public sealed class PathPanel
 					R("Start", StartBox, PathTool.Action.Ramp),
 					R("End", EndBox, PathTool.Action.Ramp),
 					R("Depth", DepthBox, PathTool.Action.River),
+					Only(Row("Preset", CavePresetBox, CaveRandomButton), PathTool.Action.Cave),
+					Only(CaveHelp, PathTool.Action.Cave),
+					R("Depth", CaveDepthBox, PathTool.Action.Cave),
+					R("Headroom", HeadroomBox, PathTool.Action.Cave),
+					Only(Row("Roof", RockBox), PathTool.Action.Cave),
 					CurveBox,
 					NaturalBox,
 					_naturalRows,
@@ -153,6 +189,27 @@ public sealed class PathPanel
 		_path.Changed += Refresh;
 		ShowRows();
 		Refresh();
+	}
+
+	// The cave preset's values (random: each within about 15% of them, and new boulders).
+	private void CavePreset(bool random)
+	{
+		var p = PathTool.CavePresets[Math.Max(0, CavePresetBox.SelectedIndex)];
+		float F() => random ? 0.85f + 0.3f * (float)_random.NextDouble() : 1;
+		static decimal Half(float v) => Math.Round((decimal)v * 2) / 2;
+		WidthSlider.Value = (double)Half(p.Width * F());
+		SoftSlider.Value = (double)Half(p.Soft * F());
+		CaveDepthBox.Value = Math.Min(20, Half(p.Depth * F()));
+		HeadroomBox.Value = Half(p.Headroom * F());
+		_path.Seed = random ? _random.Next() : _path.Seed;
+		CaveHelp.Text = p.Help + (random ? " Randomized: new sizes and boulders for the next Apply (Ctrl+Z takes the last one back)." : "");
+	}
+
+	// The Cave button: the Cave action with its preset's values.
+	public void ChooseCave()
+	{
+		ActionBox.SelectedIndex = Array.IndexOf(Enum.GetValues<PathTool.Action>(), PathTool.Action.Cave);
+		CavePreset(false);
 	}
 
 	private void ShowRows()

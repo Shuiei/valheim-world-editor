@@ -1,3 +1,4 @@
+using TerrainEditor.App;
 using TerrainEditor.Editing;
 using TerrainEditor.Save;
 
@@ -261,6 +262,75 @@ public sealed class EditSession
 		}
 		Edited();
 		return touched;
+	}
+
+	// Natural objects (trees, rocks, ore, bushes, pickables): what new ground buries or leaves floating.
+	internal static bool Natural(WorldScene.Thing t) => !t.Piece && !t.Tamed
+		&& ObjectKinds.Of(TerrainEditor.Terrain.PrefabCatalog.NameOf(t.Prefab), false) is ObjectKind.Trees or ObjectKind.Rocks or ObjectKind.Ore or ObjectKind.Bushes or ObjectKind.Pickables;
+
+	// Puts a mountain into the ground around grid point (cx, cz) (Mountain tool), past the game's ±8 m
+	// (saving turns it into ground discs). clear: the natural objects where the ground rises more than
+	// Uplift.ClearHeight go (saving would take them away anyway). One undo step. Null when the mountain
+	// does not fit in the open area.
+	public (int Touched, int Cleared)? Mountain(float cx, float cz, MountainSpec m, bool clear, string label)
+	{
+		var g = Ground;
+		float reach = m.Reach;
+		if (cx - reach < 1 || cz - reach < 1 || cx + reach > g.W - 2 || cz + reach > g.H - 2)
+		{
+			return null;
+		}
+		var shape = TerrainEditor.Desktop.Mountain.Shape(m);
+		var mask = MaskNow();
+		float ox = Scene.X0 * 64 - 32, oz = Scene.Z0 * 64 - 32;
+		var remove = new List<int>();
+		if (clear)
+		{
+			lock (Scene.Things)
+			{
+				for (int i = 0; i < Scene.Things.Count; i++)
+				{
+					var t = Scene.Things[i];
+					float gx = t.Position.X - ox, gz = t.Position.Z - oz;
+					if (!t.Gone && Natural(t) && MathF.Abs(gx - cx) <= reach && MathF.Abs(gz - cz) <= reach
+						&& shape(gx - cx, gz - cz) * (mask?.Invoke((int)MathF.Round(gz) * g.W + (int)MathF.Round(gx)) ?? 1) > TerrainEditor.Editing.Uplift.ClearHeight)
+					{
+						remove.Add(i);
+					}
+				}
+			}
+		}
+		int touchedCount = 0;
+		Commit(label, gr =>
+		{
+			var touched = new List<int>();
+			bool was = gr.NoLimit;
+			gr.NoLimit = true;
+			int x0 = (int)MathF.Floor(cx - reach), x1 = (int)MathF.Ceiling(cx + reach), z0 = (int)MathF.Floor(cz - reach), z1 = (int)MathF.Ceiling(cz + reach);
+			for (int gz = z0; gz <= z1; gz++)
+			{
+				for (int gx = x0; gx <= x1; gx++)
+				{
+					int p = gz * gr.W + gx;
+					float w = mask?.Invoke(p) ?? 1;
+					if (gr.Locked(gx, gz) || w <= 0)
+					{
+						continue;
+					}
+					float v = shape(gx - cx, gz - cz) * w;
+					if (v == 0)
+					{
+						continue;
+					}
+					gr.SetHeight(p, gr.HeightOf(p) + v);
+					touched.Add(p);
+				}
+			}
+			gr.NoLimit = was;
+			touchedCount = touched.Count;
+			return (touched, (x0 - 1, z0 - 1, x1 + 1, z1 + 1));
+		}, remove, Array.Empty<(NewObject, bool)>());
+		return (touchedCount, remove.Count);
 	}
 
 	// Puts a shape into the ground around grid point (cx, cz) (Shape tool): the formula gives the metres

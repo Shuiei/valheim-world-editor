@@ -1162,7 +1162,7 @@ public sealed class GlView : OpenGlControlBase
 		// changed ground to the graphics card.
 		if (s != null)
 		{
-			_hover = (_tool != null || _mode is ToolMode.Shape or ToolMode.Path || _mode == ToolMode.Place && Place?.Tool.Mode == PlaceTool.Modes.Brush) && _pointer is Point at ? GroundAt(s, vp, at, _surfaceSize) : null;
+			_hover = (_tool != null || _mode is ToolMode.Shape or ToolMode.Mountain or ToolMode.Path || _mode == ToolMode.Place && Place?.Tool.Mode == PlaceTool.Modes.Brush) && _pointer is Point at ? GroundAt(s, vp, at, _surfaceSize) : null;
 			if (_brushDown && _hover is { } hv)
 			{
 				s.Session?.StrokeStep(hv.X, hv.Z, dt);
@@ -1580,7 +1580,7 @@ public sealed class GlView : OpenGlControlBase
 				Wake();
 				return;
 			}
-			if (_dragButton == PointerUpdateKind.LeftButtonPressed && _mode == ToolMode.Shape)
+			if (_dragButton == PointerUpdateKind.LeftButtonPressed && _mode is ToolMode.Shape or ToolMode.Mountain)
 			{
 				_dragFrom = null;
 				if (_scene is { } sc && GroundAt(sc, _lastViewProj, p.Position, _surfaceSize) is { } g)
@@ -2673,7 +2673,7 @@ public sealed class GlView : OpenGlControlBase
 	// The brush's outline on the ground (and the Ring shape's inner edge), seen through what stands on it.
 	private unsafe void DrawBrush(WorldScene s, Matrix4x4 vp)
 	{
-		if (_hover is not { } h || s.Session is not { } session || _tool == null && _mode != ToolMode.Shape)
+		if (_hover is not { } h || s.Session is not { } session || _tool == null && _mode is not (ToolMode.Shape or ToolMode.Mountain))
 		{
 			return;
 		}

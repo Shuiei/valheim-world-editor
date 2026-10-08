@@ -36,6 +36,22 @@ public static class Tips
 		["brush.turn"] = "Turn of a square brush or a picture (degrees). , and . change it (Shift: 15°).",
 		["brush.loadStamp"] = "Load a picture (PNG, JPEG...) as a brush shape: white parts work fully, black parts not at all. It is kept for next time.",
 		["brush.forgetStamp"] = "Forget the loaded picture chosen as Shape (built-in stamps stay).",
+		// ---- Mountain tool
+		["mountain.preset"] = "What kind of mountain: a lone peak, a ridge, a mountain range, a mesa (flat top), a volcano or rolling hills. Choosing one rolls a new one (Randomize).",
+		["mountain.height"] = "How high it rises above the ground there (m). Past the game's ±8 m: saving turns it into ground discs.",
+		["mountain.radius"] = "How far it reaches from where you click (m); its outline is ragged, up to 15% further. The circle shows it.",
+		["mountain.rough"] = "How rugged its slopes are: 0 smooth, 1 deep gullies and ridges.",
+		["mountain.turn"] = "The direction a ridge or range runs (degrees).",
+		["mountain.seed"] = "The number its detail is made from: the same seed and values make the same mountain again.",
+		["mountain.randomize"] = "A new mountain of the preset: new size, roughness, direction and seed.",
+		["mountain.clear"] = "Take away the trees, rocks, ore, bushes and pickables it would bury (saving does it anyway where the ground rises more than 2 m). Buildings stay.",
+		["mountain.grow"] = "Then grow the biome's own trees and rocks on its slopes, by the game's rules (another undo step).",
+		// ---- Cave (Path tool)
+		["cave.preset"] = "A tunnel, cave or cavern: width, wall slope, depth and headroom to start from.",
+		["cave.randomize"] = "New sizes around the preset's, and new boulders for the roof.",
+		["cave.depth"] = "How far below the ground the cave's floor is in the middle (m); the ends slope up to the ground as entrances. Past 8 m needs No limit (brush options).",
+		["cave.headroom"] = "The height inside, floor to the boulders' undersides (m). The roof goes only where the cave is deeper than this by 1.5 m.",
+		["cave.rock"] = "The boulders the roof is made of: the game's big world rocks (players can mine them, like any boulder). By biome: heath rocks in the Plains, mountain rocks in the Mountains, coast rocks by the sea, forest rocks elsewhere.",
 		["brush.noLimit"] = "On: Raise, Lower, Flatten, the Path and Area tools and pasting move the ground as far as you like, not just the game's ±8 m. "
 			+ "Saving (or Apply live) turns that ground into invisible ground discs every player's game counts as generated ground, console players too: no mod needed. "
 			+ "The hoe and pickaxe then get their ±8 m from the new ground. Trees, rocks and bushes where the ground moved more than 2 m are taken away. "
