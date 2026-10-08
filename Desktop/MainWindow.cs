@@ -1272,7 +1272,8 @@ public sealed partial class MainWindow : Window
 			Margin = new Thickness(10),
 			HorizontalAlignment = HorizontalAlignment.Right,
 			VerticalAlignment = VerticalAlignment.Top,
-			Child = list,
+			// Scrolls when the window is too short for it (a bar only then).
+			Child = new ScrollViewer { VerticalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Auto, Content = list },
 		};
 	}
 
@@ -1426,8 +1427,8 @@ public sealed partial class MainWindow : Window
 		_view.PasteClicked += PasteAt;
 		Title = $"Valheim World Editor {BuildInfo.Version}";
 		Icon = new WindowIcon(Avalonia.Platform.AssetLoader.Open(new Uri($"avares://{typeof(MainWindow).Assembly.GetName().Name}/Assets/icon.png")));
-		Width = 1500;
-		Height = 950;
+		Width = Options.WindowWidth > 0 ? Options.WindowWidth : 1500;
+		Height = Options.WindowHeight > 0 ? Options.WindowHeight : 950;
 		Background = Ui.Bg;
 		var record = new CheckBox { Content = "Record frame rates", FontSize = 12.5 };
 		record.IsCheckedChanged += (_, _) => { _perf.On = record.IsChecked == true; _perf.Restart(); if (!_perf.On) _perf.Flush(); };
@@ -1446,6 +1447,15 @@ public sealed partial class MainWindow : Window
 			VerticalAlignment = VerticalAlignment.Top,
 			Children = { Tools.Rail, Tools.Options, SelectPanel.Card, MeasurePanel.Card, ShapePanel.Card, PathPanel.Card, AreaPanel.Card, PastePanel.Card, PlacePanel.Card, PlacePanel.Chooser, MaskPanel.Card },
 		};
+		// Every panel of the column scrolls when the window is too short for it (a bar only then).
+		foreach (var card in tools.Children.OfType<Border>())
+		{
+			if (card.Child is Control inner and not ScrollViewer)
+			{
+				card.Child = null;
+				card.Child = new ScrollViewer { VerticalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Auto, Content = inner };
+			}
+		}
 		SelectPanel.Card.IsVisible = MeasurePanel.Card.IsVisible = ShapePanel.Card.IsVisible = PathPanel.Card.IsVisible = AreaPanel.Card.IsVisible = PastePanel.Card.IsVisible = MaskPanel.Card.IsVisible = PlacePanel.Card.IsVisible = false;
 		ShapePanel.Changed += () => _view.ShapeRadius = ShapePanel.Radius;
 		_view.ShapeClicked += PutShape;

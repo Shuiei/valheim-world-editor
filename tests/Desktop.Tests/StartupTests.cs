@@ -77,6 +77,16 @@ public sealed class StartupTests : IDisposable
 		Assert.Equal(9, Options.Size);
 		Options.Parse(new[] { "--size", "0" });
 		Assert.Equal(1, Options.Size);
+		Assert.Equal((0, 0), (Options.WindowWidth, Options.WindowHeight));
+	}
+
+	[Fact]
+	public void TheWindowsSizeCanBeGivenWithinLimits()
+	{
+		Options.Parse(new[] { "--window", "1440x900" });
+		Assert.Equal((1440, 900), (Options.WindowWidth, Options.WindowHeight));
+		Options.Parse(new[] { "--window", "10x99999" });
+		Assert.Equal((640, 4320), (Options.WindowWidth, Options.WindowHeight));
 	}
 
 	[Fact]

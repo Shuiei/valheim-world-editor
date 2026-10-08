@@ -67,6 +67,7 @@ public sealed class App : Application
 //   --live <bridge url> --token <token>                a live game's map (the token also from WORLD_BRIDGE_TOKEN)
 //   --world <folder or name> [--zone x,z] [--size n]   straight into the 3D editor with that area
 //   --driver                                           driven by another program (see Driver)
+//   --window <width>x<height>                          the window's size (the documentation's pictures)
 //   --data <folder>                                    settings and memory kept there (tests)
 public static class Options
 {
@@ -88,6 +89,10 @@ public static class Options
 	public static string? LiveUrl { get; private set; }
 	public static string? LiveToken { get; private set; }
 
+	// --window <w>x<h>: the window's size (0: the usual).
+	public static int WindowWidth { get; private set; }
+	public static int WindowHeight { get; private set; }
+
 	public static void Say(string line) => Console.WriteLine(line);
 
 	public static void Parse(string[] args)
@@ -97,6 +102,7 @@ public static class Options
 		Direct = Driver = false;
 		ZoneX = ZoneZ = 0;
 		Size = 5;
+		WindowWidth = WindowHeight = 0;
 		LiveToken = Environment.GetEnvironmentVariable("WORLD_BRIDGE_TOKEN");
 		// Every argument, the last too (a switch such as --driver or --map-back can come last).
 		for (int i = 0; i < args.Length; i++)
@@ -128,6 +134,13 @@ public static class Options
 				case "--size":
 					Size = Math.Clamp(int.Parse(args[++i]), 1, 9);
 					break;
+				case "--window":
+				{
+					var wh = args[++i].Split('x');
+					WindowWidth = Math.Clamp(int.Parse(wh[0]), 640, 7680);
+					WindowHeight = Math.Clamp(int.Parse(wh[1]), 480, 4320);
+					break;
+				}
 				case "--live":
 					LiveUrl = args[++i];
 					break;

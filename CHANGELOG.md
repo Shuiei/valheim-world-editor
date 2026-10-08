@@ -49,6 +49,8 @@ the plugin is unchanged in versions without that part.
 - My game: on Linux, mod manager profiles were listed and searched twice.
 - A character file that cannot be read no longer stops worlds from opening.
 
+- Native app: in a short window the View panel and the tool panels ran under the status bar and
+  their last rows could not be reached; they now stop above it and scroll.
 - Native app: Space no longer presses the focused button in the editor.
 - Native app, Area: "pick" for Replace now works before an area is drawn.
 
