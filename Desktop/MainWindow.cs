@@ -371,6 +371,11 @@ public sealed partial class MainWindow : Window
 	{
 		_session = session;
 		session.Brush = Tools.Brush;
+		MountainPanel.FitTo(session.Ground.W);
+		if (MountainPanel.Spec.Radius * 1.15f > (session.Ground.W - 1) / 2f - 2)
+		{
+			MountainPanel.Randomize();
+		}
 		session.Ground.NoLimit = Tools.NoLimitBox.IsChecked == true;
 		if (session.Scene.World is { } bw)
 		{
@@ -756,7 +761,8 @@ public sealed partial class MainWindow : Window
 				_ => PathTool.CaveRock.Forest,
 			};
 		}
-		var roof = path.Roof(cave, ox, oz, RockAt)
+		var built = CaveRoof.Build(path, cave, s.Ground.W, s.Ground.H, ox, oz, RockAt);
+		var roof = built.Rocks
 			.Select(r => (r.Prefab, Hash: TerrainEditor.Save.StableHash.Of(r.Prefab), r.Position, r.Rotation, r.Scale))
 			.Where(r => scene.World?.CanCreate(r.Hash) != false)
 			.Select(r => (new TerrainEditor.Editing.NewObject(0, r.Hash, r.Position, r.Rotation, r.Scale), false)).ToList();
@@ -784,15 +790,32 @@ public sealed partial class MainWindow : Window
 			}
 		}
 		bool clamped = false;
+		int open = 0;
 		s.Commit($"Cave along {PathTool.Length(cave.Curve):0} m", g =>
 		{
 			var (t, rect, c) = path.Apply(g, s.Brush, water, s.MaskNow(), cave);
 			clamped = c;
-			return (t, rect);
+			// The walls up into the rock where its underside is above them (no daylight at the sides).
+			foreach (var (p, top) in built.Seal)
+			{
+				if (!g.Locked(p % g.W, p / g.W) && g.HeightOf(p) < top)
+				{
+					g.SetHeight(p, top);
+					t.Add(p);
+					if (g.HeightOf(p) < top - 0.5f)
+					{
+						open++;
+					}
+				}
+			}
+			return (t, (rect.X0 - 4, rect.Z0 - 4, rect.X1 + 4, rect.Z1 + 4));
 		}, remove, roof);
-		_message.Text = roof.Count == 0
+		_message.Text = built.Uncovered > 0 && roof.Count > 0
+			? $"Dug a cave roofed with {roof.Count} boulder(s), but {built.Uncovered} point(s) of its floor stay open to the sky (at the area's edge?)."
+			: roof.Count == 0
 			? "Dug the cave's trench, but it is nowhere deep enough for a roof: make Depth larger than Headroom by 1.5 m, or the line longer (its ends slope up to the ground)."
 			: $"Dug a cave {PathTool.Length(cave.Curve):0} m long, roofed with {roof.Count} boulder(s){(remove.Count > 0 ? $"; {remove.Count} tree(s) and rock(s) in the way taken away" : "")}."
+				+ (open > 0 ? $" At {open} point(s) the walls could not rise to the rock (the game's ±8 m: No limit in the brush options lets them)." : "")
 				+ (clamped ? " Part of it reached the game's ±8 m limit (switch on No limit in the brush options to dig deeper)." : " Ctrl+Z takes it back.");
 		PathPanel.Refresh();
 		UpdateSaveBar();

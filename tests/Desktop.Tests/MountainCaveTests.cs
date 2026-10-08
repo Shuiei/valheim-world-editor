@@ -130,28 +130,41 @@ public class MountainCaveTests
 	}
 
 	[Fact]
-	public void TheRoofsBouldersHangTheirLowestPointAtTheCeilingWhereTheCaveIsDeepEnough()
+	public void TheRoofCoversTheCaveClearsTheHeadroomAndTheWallsRiseIntoIt()
 	{
 		var s = EditTests.Flat(2);
 		var path = CaveLine();
 		var plan = path.PlanCave(s.Ground);
-		var roof = path.Roof(plan, -32, -32, (_, _) => PathTool.CaveRock.Auto);
-		Assert.True(roof.Count >= 6, $"{roof.Count} boulders");
-		foreach (var (pos, _, scale, prefab) in roof)
+		var roof = CaveRoof.Build(path, plan, s.Ground.W, s.Ground.H, -32, -32, (_, _) => PathTool.CaveRock.Auto);
+		Assert.True(roof.Rocks.Count >= 4, $"{roof.Rocks.Count} boulders");
+		Assert.Equal(0, roof.Uncovered);
+		float ceiling = 30 - 7.5f + 4.5f;
+		var sizes = new HashSet<float>();
+		foreach (var r in roof.Rocks)
 		{
-			Assert.Equal("rock4_forest", prefab);
-			var (_, footprint, bottom) = PathTool.RoofRocks[PathTool.CaveRock.Forest];
-			// Its lowest point is the ceiling: the floor plus the headroom.
-			Assert.Equal(30 - 7.5f + 4.5f, pos.Y - bottom * scale, 0.3f);
-			// Wide enough to span the cave and its walls.
-			Assert.True(footprint * scale * 0.8f >= path.Width + path.Soft);
-			// Not over the entrances.
-			Assert.InRange(pos.X + 32, 10 + 8, 110 - 8);
+			Assert.Equal("rock4_forest", r.Prefab);
+			sizes.Add(r.Scale);
+			// Its real underside clears the ceiling over the floor, and touches it somewhere.
+			var low = CaveRoof.Underside(r.Prefab, r.Position.X + 32, r.Position.Z + 32, r.Rotation, r.Scale, s.Ground.W, s.Ground.H);
+			var overFloor = low.Where(kv => MathF.Abs(kv.Key / s.Ground.W - 60) <= path.Width / 2 && kv.Key % s.Ground.W is > 30 and < 90)
+				.Select(kv => kv.Value + r.Position.Y).ToList();
+			if (overFloor.Count > 0)
+			{
+				Assert.True(overFloor.Min() >= ceiling - 0.6f, $"{overFloor.Min()} under the ceiling {ceiling}");
+			}
 		}
-		// The same seed, the same boulders; a shallow cave has no roof.
-		Assert.Equal(roof, path.Roof(plan, -32, -32, (_, _) => PathTool.CaveRock.Auto));
+		// Turned and sized at random.
+		Assert.True(sizes.Count > 1);
+		Assert.True(roof.Rocks.Select(r => MathF.Round(r.Rotation.Y)).Distinct().Count() > 1);
+		// The walls rise to the rock where it is above them; never over the floor.
+		Assert.NotEmpty(roof.Seal);
+		Assert.All(roof.Seal.Keys, p => Assert.True(MathF.Abs(p / s.Ground.W - 60f) > path.Width / 2 - 0.01f));
+		// Upside down, their undersides are nearly level: the walls stay within the game's ±8 m.
+		Assert.All(roof.Seal.Values, v => Assert.True(v <= 30 + 8.5f, $"a wall to {v}"));
+		// The same seed, the same roof; a shallow cave has none.
+		Assert.Equal(roof.Rocks, CaveRoof.Build(path, plan, s.Ground.W, s.Ground.H, -32, -32, (_, _) => PathTool.CaveRock.Auto).Rocks);
 		var shallow = CaveLine(depth: 4, headroom: 4);
-		Assert.Empty(shallow.Roof(shallow.PlanCave(s.Ground), -32, -32, (_, _) => PathTool.CaveRock.Auto));
+		Assert.Empty(CaveRoof.Build(shallow, shallow.PlanCave(s.Ground), s.Ground.W, s.Ground.H, -32, -32, (_, _) => PathTool.CaveRock.Auto).Rocks);
 	}
 
 	private static void Click(Button b) => b.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
@@ -182,6 +195,12 @@ public class MountainCaveTests
 		Assert.Equal(ToolMode.Mountain, w.Tools.Mode);
 		Assert.True(w.MountainPanel.Card.IsVisible);
 		var before = w.MountainPanel.Spec;
+		// A 2-zone area: every roll fits in it.
+		for (int i = 0; i < 20; i++)
+		{
+			w.MountainPanel.Randomize();
+			Assert.True(w.MountainPanel.Spec.Reach <= (s.Ground.W - 1) / 2f - 2 + 1, $"{w.MountainPanel.Spec.Reach}");
+		}
 		Click(w.MountainPanel.RandomizeButton);
 		Assert.NotEqual(before.Seed, w.MountainPanel.Spec.Seed);
 	}

@@ -7,7 +7,8 @@ namespace TerrainEditor.Desktop;
 // along it with a width and a soft edge: flatten to a height, ramp from start to end, raise or lower,
 // smooth, dig a river, dig a cave, or paint. The line is kept after applying, so another action can follow.
 // Cave: a trench along the line (its floor follows the ground's lie below it, deepest in the middle,
-// with an entrance slope at each end), roofed over with the game's boulders where it is deep enough:
+// with an entrance slope at each end), roofed over with the game's boulders where it is deep enough
+// (CaveRoof):
 // the ground cannot overhang (one height per point), so the roof is rocks, like the game's own caves.
 // Points are grid points of the block (x east, z north, one per metre).
 public sealed class PathTool
@@ -15,7 +16,8 @@ public sealed class PathTool
 	public enum Action { Flatten, Ramp, Raise, Lower, Smooth, River, Cave, PaintDirt, PaintPaved, PaintCultivated, PaintClear }
 
 	// The boulders a cave's roof is made of: the game's big world rocks (they keep a saved size), how wide
-	// they are at least (m, unscaled) and how far their lowest point is below their middle.
+	// they are at least (m, unscaled) and how far their lowest point is below their middle (CaveRoof
+	// hangs them by their real underside).
 	public enum CaveRock { Auto, Forest, Coast, Heath, Mountain }
 
 	public static readonly Dictionary<CaveRock, (string Prefab, float Footprint, float Bottom)> RoofRocks = new()
@@ -162,41 +164,6 @@ public sealed class PathTool
 			floor[i] = sum / k - depth[i];
 		}
 		return new CavePlan(curve, along, depth, floor);
-	}
-
-	// The roof's boulders (world position, rotation in degrees, scale, prefab): along the stretches where
-	// the cave is deep enough to stand in under the ground, each boulder sized to span the cave and set
-	// so its lowest point is the ceiling. rockAt: the boulders for a world point (Auto: by biome).
-	public List<(Vector3 Position, Vector3 Rotation, float Scale, string Prefab)> Roof(CavePlan c, float ox, float oz, Func<float, float, CaveRock> rockAt)
-	{
-		var rocks = new List<(Vector3, Vector3, float, string)>();
-		var rnd = new Random(Seed);
-		int n = c.Curve.Count;
-		if (n < 2)
-		{
-			return rocks;
-		}
-		float total = c.Along[^1], s = 0;
-		while (s <= total)
-		{
-			int i = Math.Max(1, Array.FindIndex(c.Along, a => a >= s));
-			float t = (s - c.Along[i - 1]) / MathF.Max(1e-4f, c.Along[i] - c.Along[i - 1]);
-			Vector2 p = Vector2.Lerp(c.Curve[i - 1].P, c.Curve[i].P, t);
-			float depth = c.Depth[i - 1] + (c.Depth[i] - c.Depth[i - 1]) * t, floor = c.Floor[i - 1] + (c.Floor[i] - c.Floor[i - 1]) * t;
-			var kind = rockAt(ox + p.X, oz + p.Y);
-			var (prefab, footprint, bottom) = RoofRocks[kind == CaveRock.Auto ? CaveRock.Forest : kind];
-			float scale = Math.Clamp((Width + Soft + 4) / (footprint * 0.8f), 0.25f, 2.5f) * (0.92f + 0.16f * (float)rnd.NextDouble());
-			// Only where the ceiling is under the ground by a metre and a half: the entrances stay open.
-			if (depth >= Headroom + 1.5f)
-			{
-				float y = floor + Headroom + bottom * scale;
-				var rot = new Vector3(((float)rnd.NextDouble() - 0.5f) * 4, (float)rnd.NextDouble() * 360, ((float)rnd.NextDouble() - 0.5f) * 4);
-				rocks.Add((new Vector3(ox + p.X, y, oz + p.Y), rot, scale, prefab));
-			}
-			// Close together: their undersides are rounded, so wider apart the sky shows between them.
-			s += MathF.Max(2, footprint * scale * 0.3f);
-		}
-		return rocks;
 	}
 
 	// The action along the line. heightAt: the ground's height at a grid point (for the ramp's ends).

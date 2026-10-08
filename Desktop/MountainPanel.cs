@@ -26,6 +26,14 @@ public sealed class MountainPanel
 	private readonly Control _turnRow;
 	private bool _filling;
 	private readonly Random _random = new();
+	// The largest radius that fits in the open area (with its ragged outline), clicked in its middle.
+	private float _maxRadius = 280;
+
+	// The open area changed: Randomize keeps mountains that fit in it.
+	public void FitTo(int gridSize)
+	{
+		_maxRadius = MathF.Max(20, ((gridSize - 1) / 2f - 2) / 1.15f);
+	}
 
 	public Mountain.Preset Preset => Mountain.Presets[Math.Max(0, PresetBox.SelectedIndex)];
 
@@ -138,6 +146,12 @@ public sealed class MountainPanel
 	{
 		var p = Preset;
 		var m = Mountain.Roll(p, _random);
+		// Smaller as a whole (height too, so the slopes stay as gentle) when it would not fit.
+		if (m.Radius > _maxRadius)
+		{
+			float k = _maxRadius / m.Radius;
+			m = m with { Radius = MathF.Floor(_maxRadius), Height = MathF.Max(5, MathF.Round(m.Height * k)) };
+		}
 		_filling = true;
 		HeightSlider.Value = m.Height;
 		RadiusSlider.Value = m.Radius;
