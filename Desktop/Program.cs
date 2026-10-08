@@ -30,6 +30,10 @@ public static class Program
 		}
 		AppBuilder.Configure<App>().UsePlatformDetect().LogToTrace(Avalonia.Logging.LogEventLevel.Warning)
 			.With(new Win32PlatformOptions { RenderingMode = new[] { Win32RenderingMode.Wgl, Win32RenderingMode.AngleEgl, Win32RenderingMode.Software } })
+			// Linux: Avalonia turns OpenGL off for software renderers (Mesa's llvmpipe, VMware's
+			// SVGA3D), where its own drawing is faster without it; the 3D view and the map need
+			// OpenGL, so they were blank in virtual machines and without GPU drivers.
+			.With(new X11PlatformOptions { GlxRendererBlacklist = new List<string>() })
 			.StartWithClassicDesktopLifetime(args);
 	}
 
