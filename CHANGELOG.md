@@ -46,6 +46,9 @@ the plugin is unchanged in versions without that part.
   also write a new world from a seed (`create`), its middle generated with the game's vegetation.
 
 ### Fixed
+- Native app: after a visit to the map, the 3D editor drew its models without textures (trees as
+  big white and blue leaf cards): the textures being read for the view's old OpenGL context were
+  never read again for the new one.
 - Native app, Area: after choosing a backup folder with "Another folder…", the folder picker opened
   again and again; a folder chosen by hand was also dropped for live worlds.
 - My game: on Linux, mod manager profiles were listed and searched twice.

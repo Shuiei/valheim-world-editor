@@ -324,7 +324,13 @@ public sealed class GlView : OpenGlControlBase
 		_lowW = _lowH = 0;
 		_batches.Clear();
 		_meshGl.Clear();
-		_textures.Clear();
+		lock (_textures)
+		{
+			_textures.Clear();
+			// Textures being read for the old context: read again for the new one (else every model
+			// came back without its textures: trees as white leaf cards).
+			_claimed.Clear();
+		}
 		_gizmoGl.Clear();
 		_overlayGl.Clear();
 		_look = null;
@@ -951,6 +957,9 @@ public sealed class GlView : OpenGlControlBase
 		{
 			return m;
 		}
+		// No vertex array bound: binding the index buffers below would rewire whichever one is (another
+		// mesh's batch then draws with these triangles: shards everywhere).
+		_gl.BindVertexArray(0);
 		uint vbo = _gl.GenBuffer();
 		_gl.BindBuffer(BufferTargetARB.ArrayBuffer, vbo);
 		fixed (float* p = md!.Vertices)
