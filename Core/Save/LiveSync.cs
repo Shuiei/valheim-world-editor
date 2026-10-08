@@ -43,6 +43,9 @@ public sealed class LiveSync
 		List<byte[]> create = new();
 		List<int> createFor = new();
 		List<string> skipped = new();
+		// What the game has once it accepts the call (nothing is recorded before: a refused call is sent
+		// again next time).
+		List<int> destroyIds = new(), restoreIds = new(), dropNew = new();
 		lock (_lock)
 		{
 			HashSet<int> deleted = edits.Deleted;
@@ -51,8 +54,7 @@ public sealed class LiveSync
 			foreach (int id in deleted.Where(id => id >= 0 && id < world.ObjectRefs.Count && !_destroyed.Contains(id)))
 			{
 				destroy.Add(LiveId(id));
-				_destroyed.Add(id);
-				_liveIds.Remove(id);
+				destroyIds.Add(id);
 			}
 			// Undone deletions: the object comes back as a copy of its snapshot bytes.
 			foreach (int id in _destroyed.Where(id => !deleted.Contains(id)).ToList())
@@ -60,7 +62,7 @@ public sealed class LiveSync
 				ObjectRef o = world.ObjectRefs[id];
 				create.Add(world.LiveBytes![(int)o.Start..(int)o.End]);
 				createFor.Add(id);
-				_destroyed.Remove(id);
+				restoreIds.Add(id);
 			}
 			// New objects not in the game yet, and ones that were removed again (undo, delete).
 			foreach (NewObject n in added.Values.Where(n => !_liveIds.ContainsKey(n.Id)))
@@ -77,7 +79,7 @@ public sealed class LiveSync
 			foreach (int id in _liveIds.Keys.Where(id => id < 0 && !added.ContainsKey(id)).ToList())
 			{
 				destroy.Add(_liveIds[id]);
-				_liveIds.Remove(id);
+				dropNew.Add(id);
 			}
 		}
 		if (destroy.Count + create.Count == 0)
@@ -89,6 +91,19 @@ public sealed class LiveSync
 		var ids = doc.RootElement.GetProperty("created").EnumerateArray().Select(e => e.GetString()!.Split(':')).ToList();
 		lock (_lock)
 		{
+			foreach (int id in destroyIds)
+			{
+				_destroyed.Add(id);
+				_liveIds.Remove(id);
+			}
+			foreach (int id in restoreIds)
+			{
+				_destroyed.Remove(id);
+			}
+			foreach (int id in dropNew)
+			{
+				_liveIds.Remove(id);
+			}
 			for (int i = 0; i < ids.Count && i < createFor.Count; i++)
 			{
 				_liveIds[createFor[i]] = (long.Parse(ids[i][0]), uint.Parse(ids[i][1]));

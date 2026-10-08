@@ -5,6 +5,7 @@ using Avalonia.Threading;
 using TerrainEditor.App;
 using TerrainEditor.Editing;
 using TerrainEditor.Save;
+using TerrainEditor.Terrain;
 using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
@@ -101,6 +102,106 @@ public class LiveTests
 		Assert.Equal(2, game.Snapshots);
 		Assert.Equal((0, 0, 0, 0), world.Pending);
 		Assert.Empty(game.Terrain);
+	}
+
+	// The game refuses the objects (an error on its side): nothing counts as applied, and the next
+	// Apply live sends them again.
+	[Fact]
+	public async Task AFailedApplyIsSentAgainNextTime()
+	{
+		using var game = new FakeGame();
+		var world = await WorldSession.OpenLive(new LiveBridge(game.Url, game.Token), "test");
+		var scene = WorldScene.Load(world, 0, 0, 1);
+		var s = scene.Session!;
+		int tree = scene.Things.FindIndex(t => !t.Gone && !t.Piece);
+		s.Delete(new[] { tree });
+		game.Fail["/objects"] = 500;
+		var o = await s.ApplyLive();
+		Assert.False(o.Done);
+		Assert.StartsWith("Could not apply live", o.Message);
+		Assert.Equal(1, world.Pending.Deleted);
+		Assert.All(s.UndoList, c => Assert.False(c.Applied));
+		game.Fail.Clear();
+		o = await s.ApplyLive();
+		Assert.True(o.Done, o.Message);
+		Assert.Equal((1, 0), Assert.Single(game.ObjectCalls));
+		Assert.Equal(0, world.Pending.Deleted);
+	}
+
+	[Fact]
+	public async Task AFailedGroundApplyIsSentAgainNextTime()
+	{
+		using var game = new FakeGame();
+		var world = await WorldSession.OpenLive(new LiveBridge(game.Url, game.Token), "test");
+		var s = WorldScene.Load(world, 0, 0, 1).Session!;
+		s.Shape(32, 32, Two, 3, 0, "raise");
+		game.Fail["/terrain"] = 500;
+		var o = await s.ApplyLive();
+		Assert.False(o.Done);
+		Assert.Equal(1, world.Pending.Zones);
+		game.Fail.Clear();
+		o = await s.ApplyLive();
+		Assert.True(o.Done, o.Message);
+		Assert.Equal(new[] { (0, 0) }, game.Terrain);
+		Assert.Equal(0, world.Pending.Zones);
+	}
+
+	// Two applies at once (a double click): what is new is sent once.
+	[Fact]
+	public async Task TwoAppliesAtOnceSendEachChangeOnce()
+	{
+		using var game = new FakeGame();
+		var world = await WorldSession.OpenLive(new LiveBridge(game.Url, game.Token), "test");
+		var scene = WorldScene.Load(world, 0, 0, 1);
+		var s = scene.Session!;
+		var tree = (new NewObject(0, StableHash.Of("Beech1"), new System.Numerics.Vector3(10, 30, 10), System.Numerics.Vector3.Zero, 1), false);
+		s.Commit("plant", null, Array.Empty<int>(), new[] { tree });
+		s.Shape(32, 32, Two, 3, 0, "raise");
+		var results = await Task.WhenAll(world.ApplyLive(), world.ApplyLive());
+		// The first sends everything; the second finds nothing left.
+		Assert.Equal(new[] { "Applied", "Nothing to apply." }, results.Select(r => r.Message.StartsWith("Applied") ? "Applied" : r.Message).Order());
+		Assert.Equal((0, 1), Assert.Single(game.ObjectCalls));
+		Assert.Equal(new[] { (0, 0) }, game.Terrain);
+		Assert.Equal((0, 0, 0, 0), world.Pending);
+	}
+
+	// Objects someone already removed in the game are reported, not an error.
+	[Fact]
+	public async Task ObjectsAlreadyGoneInTheGameAreReported()
+	{
+		using var game = new FakeGame { Missing = 1 };
+		var world = await WorldSession.OpenLive(new LiveBridge(game.Url, game.Token), "test");
+		var scene = WorldScene.Load(world, 0, 0, 1);
+		scene.Session!.Delete(new[] { scene.Things.FindIndex(t => !t.Gone && !t.Piece) });
+		var o = await world.ApplyLive();
+		Assert.True(o.Done, o.Message);
+		Assert.Contains("1 were already gone", o.Message);
+	}
+
+	// A plugin from before live zone resets says so; the resets stay waiting.
+	[Fact]
+	public async Task AnOldPluginCannotResetZones()
+	{
+		using var game = new FakeGame();
+		game.Fail["/zones/reset"] = 404;
+		var world = await WorldSession.OpenLive(new LiveBridge(game.Url, game.Token), "test");
+		world.Edits.SetReset(new ZoneReset(2, 3, true, false), true);
+		var o = await world.ApplyLive();
+		Assert.False(o.Done);
+		Assert.Contains("too old to reset zones live", o.Message);
+		Assert.Equal(1, world.Pending.Resets);
+	}
+
+	// The game stops answering mid-session: opening the world again fails with a reason, Reload too.
+	[Fact]
+	public async Task AGameThatStopsAnsweringIsReported()
+	{
+		var game = new FakeGame();
+		var live = new LiveBridge(game.Url, game.Token);
+		var world = await WorldSession.OpenLive(live, "test");
+		game.Dispose();
+		await Assert.ThrowsAnyAsync<Exception>(() => world.Reload());
+		Assert.Contains("Nothing answers", await LiveBridge.Check(game.Url, game.Token, TimeSpan.FromSeconds(2)));
 	}
 
 	// "I made my own tunnel": a wrong token is explained; the right one opens the live map with the

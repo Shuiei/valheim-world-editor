@@ -89,7 +89,23 @@ public sealed class WorldSession
 
 	// Live: the changed zones' ground and the object changes go into the running game; zone resets last
 	// (the game regenerates them), after which the world is read again from the game.
+	// One apply at a time: a second one (a double click) waits and sends only what is still pending.
+	private readonly SemaphoreSlim _applying = new(1, 1);
+
 	public async Task<Outcome> ApplyLive()
+	{
+		await _applying.WaitAsync();
+		try
+		{
+			return await ApplyLiveOnce();
+		}
+		finally
+		{
+			_applying.Release();
+		}
+	}
+
+	private async Task<Outcome> ApplyLiveOnce()
 	{
 		var live = Live!;
 		var done = new List<string>();
@@ -122,7 +138,8 @@ public sealed class WorldSession
 			}
 			return new Outcome(done.Count > 0, done.Count > 0 ? $"Applied to the running game: {string.Join("; ", done)}." : "Nothing to apply.", reloaded);
 		}
-		catch (Exception ex) when (ex is HttpRequestException or IOException or TaskCanceledException or InvalidDataException)
+		// The game answering with an error (InvalidOperationException from the bridge) is reported too.
+		catch (Exception ex) when (ex is HttpRequestException or IOException or TaskCanceledException or InvalidDataException or InvalidOperationException or System.Text.Json.JsonException)
 		{
 			return new Outcome(false, "Could not apply live: " + ex.Message, false);
 		}
