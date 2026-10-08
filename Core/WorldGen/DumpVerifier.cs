@@ -44,124 +44,124 @@ public static class DumpVerifier
 			string[] p = line.Split(' ');
 			switch (p[0])
 			{
-			case "R":
-			{
-				int bar = Array.IndexOf(p, "|");
-				string expectedState = string.Join(" ", p.Skip(bar + 1));
-				string got;
-				string expected = string.Join(" ", p.Skip(1).Take(bar - 1));
-				if (p[1] == "init")
+				case "R":
 				{
-					Rnd.InitState(int.Parse(p[2], CultureInfo.InvariantCulture));
-					got = expected;
-				}
-				else if (p[1] == "rangei")
-				{
-					got = $"rangei {p[2]} {p[3]} {Rnd.Range(int.Parse(p[2], CultureInfo.InvariantCulture), int.Parse(p[3], CultureInfo.InvariantCulture)).ToString(CultureInfo.InvariantCulture)}";
-				}
-				else if (p[1] == "rangef")
-				{
-					got = $"rangef {p[2]} {p[3]} {BitConverter.SingleToInt32Bits(Rnd.Range(float.Parse(p[2], CultureInfo.InvariantCulture), float.Parse(p[3], CultureInfo.InvariantCulture))):x8}";
-				}
-				else if (p[1] == "value")
-				{
-					got = $"value {BitConverter.SingleToInt32Bits(Rnd.value):x8}";
-				}
-				else
-				{
-					Vector2 v = Rnd.insideUnitCircle;
-					got = $"circle {BitConverter.SingleToInt32Bits(v.x):x8} {BitConverter.SingleToInt32Bits(v.y):x8}";
-				}
-				string gotState = State();
-				if (got == expected && gotState == expectedState)
-				{
-					rOk++;
-				}
-				else
-				{
-					rBad++;
-					Error($"Random: expected [{expected} | {expectedState}] got [{got} | {gotState}]");
-				}
-				break;
-			}
-			case "P":
-			{
-				float x = F(p[1]), y = F(p[2]), want = F(p[3]);
-				float got = UnityPerlin.Noise(x, y);
-				if (BitConverter.SingleToInt32Bits(got) == BitConverter.SingleToInt32Bits(want))
-				{
-					pOk++;
-				}
-				else
-				{
-					pBad++;
-					pMax = Math.Max(pMax, Math.Abs(got - want));
-					Error($"Perlin({x}, {y}): expected {want:R} got {got:R}");
-				}
-				break;
-			}
-			case "W":
-			{
-				gen ??= Init(seedName);
-				string offline = $"W lakes {gen.GetLakes().Count} rivers {gen.GetRivers().Count} streams {gen.GetStreams().Count}";
-				Console.WriteLine($"  game:    {line}");
-				Console.WriteLine($"  offline: {offline}");
-				if (offline != line.Trim())
-				{
-					wBad++;
-					Error($"Water: expected [{line.Trim()}] got [{offline}]");
-				}
-				break;
-			}
-			case "H":
-			{
-				gen ??= Init(seedName);
-				float x = F(p[1]), z = F(p[2]), want = F(p[4]);
-				var biome = gen.GetBiome(x, z);
-				float got = gen.GetBiomeHeight(biome, x, z, out _);
-				if ((int)biome != int.Parse(p[3], CultureInfo.InvariantCulture))
-				{
-					bBad++;
-					Error($"Biome at ({x}, {z}): expected {(Heightmap.Biome)int.Parse(p[3], CultureInfo.InvariantCulture)} got {biome}");
-				}
-				if (BitConverter.SingleToInt32Bits(got) == BitConverter.SingleToInt32Bits(want))
-				{
-					hOk++;
-				}
-				else
-				{
-					hBad++;
-					hMax = Math.Max(hMax, Math.Abs(got - want));
-					Error($"Height at ({x}, {z}): expected {want:R} got {got:R}");
-				}
-				break;
-			}
-			case "Z":
-			{
-				gen ??= Init(seedName);
-				int zx = int.Parse(p[1], CultureInfo.InvariantCulture), zz = int.Parse(p[2], CultureInfo.InvariantCulture);
-				float[] got = BaseTerrain.BuildZone(gen, zx, zz);
-				int bad = 0;
-				for (int i = 0; i < got.Length; i++)
-				{
-					float want = F(p[3 + i]);
-					if (BitConverter.SingleToInt32Bits(got[i]) != BitConverter.SingleToInt32Bits(want))
+					int bar = Array.IndexOf(p, "|");
+					string expectedState = string.Join(" ", p.Skip(bar + 1));
+					string got;
+					string expected = string.Join(" ", p.Skip(1).Take(bar - 1));
+					if (p[1] == "init")
 					{
-						bad++;
-						zMax = Math.Max(zMax, Math.Abs(got[i] - want));
+						Rnd.InitState(int.Parse(p[2], CultureInfo.InvariantCulture));
+						got = expected;
 					}
+					else if (p[1] == "rangei")
+					{
+						got = $"rangei {p[2]} {p[3]} {Rnd.Range(int.Parse(p[2], CultureInfo.InvariantCulture), int.Parse(p[3], CultureInfo.InvariantCulture)).ToString(CultureInfo.InvariantCulture)}";
+					}
+					else if (p[1] == "rangef")
+					{
+						got = $"rangef {p[2]} {p[3]} {BitConverter.SingleToInt32Bits(Rnd.Range(float.Parse(p[2], CultureInfo.InvariantCulture), float.Parse(p[3], CultureInfo.InvariantCulture))):x8}";
+					}
+					else if (p[1] == "value")
+					{
+						got = $"value {BitConverter.SingleToInt32Bits(Rnd.value):x8}";
+					}
+					else
+					{
+						Vector2 v = Rnd.insideUnitCircle;
+						got = $"circle {BitConverter.SingleToInt32Bits(v.x):x8} {BitConverter.SingleToInt32Bits(v.y):x8}";
+					}
+					string gotState = State();
+					if (got == expected && gotState == expectedState)
+					{
+						rOk++;
+					}
+					else
+					{
+						rBad++;
+						Error($"Random: expected [{expected} | {expectedState}] got [{got} | {gotState}]");
+					}
+					break;
 				}
-				if (bad == 0)
+				case "P":
 				{
-					zOk++;
+					float x = F(p[1]), y = F(p[2]), want = F(p[3]);
+					float got = UnityPerlin.Noise(x, y);
+					if (BitConverter.SingleToInt32Bits(got) == BitConverter.SingleToInt32Bits(want))
+					{
+						pOk++;
+					}
+					else
+					{
+						pBad++;
+						pMax = Math.Max(pMax, Math.Abs(got - want));
+						Error($"Perlin({x}, {y}): expected {want:R} got {got:R}");
+					}
+					break;
 				}
-				else
+				case "W":
 				{
-					zBad++;
-					Error($"Zone ({zx}, {zz}): {bad} of {got.Length} heights differ");
+					gen ??= Init(seedName);
+					string offline = $"W lakes {gen.GetLakes().Count} rivers {gen.GetRivers().Count} streams {gen.GetStreams().Count}";
+					Console.WriteLine($"  game:    {line}");
+					Console.WriteLine($"  offline: {offline}");
+					if (offline != line.Trim())
+					{
+						wBad++;
+						Error($"Water: expected [{line.Trim()}] got [{offline}]");
+					}
+					break;
 				}
-				break;
-			}
+				case "H":
+				{
+					gen ??= Init(seedName);
+					float x = F(p[1]), z = F(p[2]), want = F(p[4]);
+					var biome = gen.GetBiome(x, z);
+					float got = gen.GetBiomeHeight(biome, x, z, out _);
+					if ((int)biome != int.Parse(p[3], CultureInfo.InvariantCulture))
+					{
+						bBad++;
+						Error($"Biome at ({x}, {z}): expected {(Heightmap.Biome)int.Parse(p[3], CultureInfo.InvariantCulture)} got {biome}");
+					}
+					if (BitConverter.SingleToInt32Bits(got) == BitConverter.SingleToInt32Bits(want))
+					{
+						hOk++;
+					}
+					else
+					{
+						hBad++;
+						hMax = Math.Max(hMax, Math.Abs(got - want));
+						Error($"Height at ({x}, {z}): expected {want:R} got {got:R}");
+					}
+					break;
+				}
+				case "Z":
+				{
+					gen ??= Init(seedName);
+					int zx = int.Parse(p[1], CultureInfo.InvariantCulture), zz = int.Parse(p[2], CultureInfo.InvariantCulture);
+					float[] got = BaseTerrain.BuildZone(gen, zx, zz);
+					int bad = 0;
+					for (int i = 0; i < got.Length; i++)
+					{
+						float want = F(p[3 + i]);
+						if (BitConverter.SingleToInt32Bits(got[i]) != BitConverter.SingleToInt32Bits(want))
+						{
+							bad++;
+							zMax = Math.Max(zMax, Math.Abs(got[i] - want));
+						}
+					}
+					if (bad == 0)
+					{
+						zOk++;
+					}
+					else
+					{
+						zBad++;
+						Error($"Zone ({zx}, {zz}): {bad} of {got.Length} heights differ");
+					}
+					break;
+				}
 			}
 		}
 		Console.WriteLine($"Random:  {rOk} ok, {rBad} wrong");

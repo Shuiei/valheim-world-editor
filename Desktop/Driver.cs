@@ -65,7 +65,9 @@ public static class Driver
 				}
 			}
 			Dispatcher.UIThread.Post(w.CloseWithoutAsking);
-		}) { IsBackground = true, Name = "Driver" };
+		});
+		thread.IsBackground = true;
+		thread.Name = "Driver";
 		thread.Start();
 		Console.WriteLine("@@ ready");
 		Console.Out.Flush();

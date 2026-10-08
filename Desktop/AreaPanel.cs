@@ -73,8 +73,11 @@ public sealed class AreaPanel
 	internal ComboBox BackupBox { get; } = new() { FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch };
 	internal CheckBox BackupGroundBox { get; } = new() { Content = "Ground (height and paint)", IsChecked = true, FontSize = 12 };
 	internal CheckBox BackupObjectsBox { get; } = new() { Content = "Objects of the kinds chosen above", IsChecked = true, FontSize = 12 };
-	internal TextBlock BackupInfo { get; } = new() { FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap,
-		Text = "Puts the selection back as it was in a backup: the editor's backups and the game's own are listed. Choose Your buildings above to bring buildings back too." };
+	internal TextBlock BackupInfo { get; } = new()
+	{
+		FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap,
+		Text = "Puts the selection back as it was in a backup: the editor's backups and the game's own are listed. Choose Your buildings above to bring buildings back too."
+	};
 	private List<string> _backupPaths = new();
 	// Asks for another backup folder (the window's folder picker).
 	internal Func<Task<string?>> PickFolder { get; set; } = () => Task.FromResult<string?>(null);

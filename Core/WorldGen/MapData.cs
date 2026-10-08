@@ -69,23 +69,23 @@ public sealed class MapData
 		Vector3 p = new(wx, 0f, wy);
 		switch (biome)
 		{
-		case Heightmap.Biome.Meadows:
-			return WorldGenerator.InForest(p) ? ((byte)255, (byte)0, (byte)0) : ((byte)0, (byte)0, (byte)0);
-		case Heightmap.Biome.Plains:
-			return WorldGenerator.GetForestFactor(p) < 0.8f ? ((byte)255, (byte)0, (byte)0) : ((byte)0, (byte)0, (byte)0);
-		case Heightmap.Biome.BlackForest:
-			return (255, 0, 0);
-		case Heightmap.Biome.Mistlands:
-		{
-			float f = WorldGenerator.GetForestFactor(p);
-			float t = Math.Clamp((f - 1.1f) / 0.2f, 0f, 1f);
-			return (0, Byte(1f - t * t * (3f - 2f * t)), 0);
-		}
-		case Heightmap.Biome.AshLands:
-			_gen.GetAshlandsHeight(wx, wy, out Color mask, cheap: true);
-			return (0, 0, Byte(mask.a));
-		default:
-			return (0, 0, 0);
+			case Heightmap.Biome.Meadows:
+				return WorldGenerator.InForest(p) ? ((byte)255, (byte)0, (byte)0) : ((byte)0, (byte)0, (byte)0);
+			case Heightmap.Biome.Plains:
+				return WorldGenerator.GetForestFactor(p) < 0.8f ? ((byte)255, (byte)0, (byte)0) : ((byte)0, (byte)0, (byte)0);
+			case Heightmap.Biome.BlackForest:
+				return (255, 0, 0);
+			case Heightmap.Biome.Mistlands:
+			{
+				float f = WorldGenerator.GetForestFactor(p);
+				float t = Math.Clamp((f - 1.1f) / 0.2f, 0f, 1f);
+				return (0, Byte(1f - t * t * (3f - 2f * t)), 0);
+			}
+			case Heightmap.Biome.AshLands:
+				_gen.GetAshlandsHeight(wx, wy, out Color mask, cheap: true);
+				return (0, 0, Byte(mask.a));
+			default:
+				return (0, 0, 0);
 		}
 	}
 

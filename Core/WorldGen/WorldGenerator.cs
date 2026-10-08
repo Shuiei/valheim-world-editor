@@ -1034,38 +1034,38 @@ public class WorldGenerator
 		}
 		switch (biome)
 		{
-		case Heightmap.Biome.Swamp:
-			return (float)((double)GetMarshHeight(wx, wy) * (double)num2 + (double)num);
-		case Heightmap.Biome.DeepNorth:
-			if (preGeneration)
-			{
-				return (float)((double)GetDeepNorthHeightPregenerate(wx, wy, riverPreDN) * (double)num2 + (double)num);
-			}
-			return (float)((double)GetDeepNorthHeight(wx, wy, out mask) * (double)num2 + (double)num);
-		case Heightmap.Biome.Mountain:
-			return (float)((double)GetSnowMountainHeight(wx, wy, menu: false) * (double)num2 + (double)num);
-		case Heightmap.Biome.BlackForest:
-			return (float)((double)GetForestHeight(wx, wy) * (double)num2 + (double)num);
-		case Heightmap.Biome.Ocean:
-			return (float)((double)GetOceanHeight(wx, wy) * (double)num2 + (double)num);
-		case Heightmap.Biome.AshLands:
-			if (preGeneration)
-			{
-				return (float)((double)GetAshlandsHeightPregenerate(wx, wy) * (double)num2 + (double)num);
-			}
-			return (float)((double)GetAshlandsHeight(wx, wy, out mask) * (double)num2 + (double)num);
-		case Heightmap.Biome.Plains:
-			return (float)((double)GetPlainsHeight(wx, wy) * (double)num2 + (double)num);
-		case Heightmap.Biome.Meadows:
-			return (float)((double)GetMeadowsHeight(wx, wy) * (double)num2 + (double)num);
-		case Heightmap.Biome.Mistlands:
-			if (preGeneration)
-			{
+			case Heightmap.Biome.Swamp:
+				return (float)((double)GetMarshHeight(wx, wy) * (double)num2 + (double)num);
+			case Heightmap.Biome.DeepNorth:
+				if (preGeneration)
+				{
+					return (float)((double)GetDeepNorthHeightPregenerate(wx, wy, riverPreDN) * (double)num2 + (double)num);
+				}
+				return (float)((double)GetDeepNorthHeight(wx, wy, out mask) * (double)num2 + (double)num);
+			case Heightmap.Biome.Mountain:
+				return (float)((double)GetSnowMountainHeight(wx, wy, menu: false) * (double)num2 + (double)num);
+			case Heightmap.Biome.BlackForest:
 				return (float)((double)GetForestHeight(wx, wy) * (double)num2 + (double)num);
-			}
-			return (float)((double)GetMistlandsHeight(wx, wy, out mask) * (double)num2 + (double)num);
-		default:
-			return 0f;
+			case Heightmap.Biome.Ocean:
+				return (float)((double)GetOceanHeight(wx, wy) * (double)num2 + (double)num);
+			case Heightmap.Biome.AshLands:
+				if (preGeneration)
+				{
+					return (float)((double)GetAshlandsHeightPregenerate(wx, wy) * (double)num2 + (double)num);
+				}
+				return (float)((double)GetAshlandsHeight(wx, wy, out mask) * (double)num2 + (double)num);
+			case Heightmap.Biome.Plains:
+				return (float)((double)GetPlainsHeight(wx, wy) * (double)num2 + (double)num);
+			case Heightmap.Biome.Meadows:
+				return (float)((double)GetMeadowsHeight(wx, wy) * (double)num2 + (double)num);
+			case Heightmap.Biome.Mistlands:
+				if (preGeneration)
+				{
+					return (float)((double)GetForestHeight(wx, wy) * (double)num2 + (double)num);
+				}
+				return (float)((double)GetMistlandsHeight(wx, wy, out mask) * (double)num2 + (double)num);
+			default:
+				return 0f;
 		}
 	}
 

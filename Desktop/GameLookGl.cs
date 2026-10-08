@@ -1,6 +1,6 @@
 using System.Numerics;
-using SkiaSharp;
 using Silk.NET.OpenGL;
+using SkiaSharp;
 using TerrainEditor.App;
 
 namespace TerrainEditor.Desktop;
