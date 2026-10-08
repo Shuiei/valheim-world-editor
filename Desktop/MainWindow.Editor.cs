@@ -60,7 +60,15 @@ public sealed partial class MainWindow
 		FollowButton.Classes.Set("on", _settings.AreaFollow);
 		FollowButton.Click += (_, _) => SetFollow(!_settings.AreaFollow);
 		_followTimer.Tick += async (_, _) => await CheckFollow();
-		_followTimer.Start();
+		// While the window is open (a running timer keeps the window alive).
+		Opened += (_, _) => _followTimer.Start();
+		Closed += (_, _) =>
+		{
+			_followTimer.Stop();
+			_playersTimer.Stop();
+			_labelsTimer.Stop();
+			_map?.Stop();
+		};
 
 		DiscardButton.Tip("top.discard");
 		DiscardButton.Click += async (_, _) => await DiscardHere();

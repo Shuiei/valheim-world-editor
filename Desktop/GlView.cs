@@ -189,9 +189,12 @@ public sealed class GlView : OpenGlControlBase
 	{
 		SelectTool = new SelectTool(this);
 		// Idle: a few frames a second, 20 with the game look (its water and clouds move).
+		// Only while the view is shown: a running timer is held by the dispatcher, and through its Tick
+		// this view, its scene and its models, so a view that kept it after its window closed was never freed.
 		var idle = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(50) };
 		idle.Tick += (_, _) => { if (_look != null || _clock.ElapsedMilliseconds - _idleAt >= 250) { _idleAt = _clock.ElapsedMilliseconds; RequestNextFrameRendering(); } };
-		idle.Start();
+		AttachedToVisualTree += (_, _) => idle.Start();
+		DetachedFromVisualTree += (_, _) => idle.Stop();
 	}
 
 	public void Show(WorldScene scene, ModelStore? models)

@@ -35,6 +35,7 @@ public static class TestApp
 
 	public static AppBuilder BuildAvaloniaApp()
 	{
+		CloseWindowsAfterEachTestAttribute.Hook();
 		return AppBuilder.Configure<App>().UseHeadless(new AvaloniaHeadlessPlatformOptions());
 	}
 }
