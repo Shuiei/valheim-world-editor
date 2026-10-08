@@ -241,6 +241,7 @@ public static class Tips
 		["view.res3d"] = "How many pixels the 3D view draws. Sharp: the screen's own. Balanced: one per screen point. Fast: fewer still. Fewer pixels give more frames per second.",
 		["view.water"] = "The sea surface.",
 		["view.unsaved"] = "A green dot over each new object not saved (or applied) yet. Off: no dots (the objects stay).",
+		["view.limit"] = "Red on the ground that reached the game's limit of ±8 m from its original height (in Game look). Off: no red (the ground stays as edited).",
 		["view.slope"] = "Colour the ground by steepness (needs Game look).",
 		["view.contour"] = "Draw height lines every chosen number of metres.",
 		["view.contourStep"] = "Distance between height lines (m).",

@@ -49,6 +49,7 @@ the plugin is unchanged in versions without that part.
   remembered.
 - Native app: new objects not saved (or applied) yet carry a green dot in the view.
 - Native app, View: **Unsaved marks** hides the green dots on new objects (remembered).
+- Native app, View: **Limit marks** hides the red on ground at the game's ±8 m limit (remembered).
 - Native app: placing or pasting a kind switched off in View switches it on, and says so.
 - The developer checks of the world generator and the save writer (`--verify`, `--verify-ingame`,
   `--selftest-save`, `--inspect`, `--summary`) moved to a separate tool, `tools/WorldCheck`. It can

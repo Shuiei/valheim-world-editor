@@ -170,6 +170,9 @@ public sealed class GlView : OpenGlControlBase
 	private float _contour;
 	public bool SlopeColours { get => _slope; set { _slope = value; Wake(); } }
 	public float ContourStep { get => _contour; set { _contour = value; Wake(); } }
+	// The red on ground at the game's ±8 m limit can be hidden (View: Limit marks).
+	private volatile bool _limit = true;
+	public bool LimitMarks { get => _limit; set { _limit = value; Wake(); } }
 	// How many wards, crafting stations, flattened places and locations the overlays show.
 	public event Action<Overlays.Built>? OverlaysBuilt;
 	private Overlays.Built? _overlays;
@@ -1168,7 +1171,7 @@ public sealed class GlView : OpenGlControlBase
 			if (look != null)
 			{
 				look.DrawSky(vp, eye, time);
-				look.UseTerrain(vp, eye, time, slope: _slope, contour: _contour);
+				look.UseTerrain(vp, eye, time, slope: _slope, contour: _contour, limit: _limit);
 				// The game's mesh is seen from both sides (look.js: DoubleSide).
 				_gl.Disable(EnableCap.CullFace);
 			}
