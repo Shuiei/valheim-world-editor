@@ -29,6 +29,9 @@ public sealed class ToolPanel
 	public Control Options { get; }
 
 	private readonly Dictionary<BrushTool, Button> _buttons = new();
+	// Blueprints: the library, to paste one (in a world).
+	private readonly Button _blueprintsButton;
+	public event Action? BlueprintsAsked;
 	private readonly Button _viewButton, _selectButton, _measureButton, _shapeButton, _pathButton, _areaButton, _placeButton, _mountainButton, _caveButton, _scriptButton;
 	// The Cave button: the Path tool with its Cave action (the window picks the action).
 	public event Action? CaveChosen;
@@ -206,6 +209,9 @@ public sealed class ToolPanel
 		_scriptButton = Make("Script", "", "script");
 		ToolTip.SetTip(_scriptButton, "Script: write C# that shapes the ground, paints it and places or removes objects over the open area: anything the tools do, and more. Examples to start from.");
 		_scriptButton.Click += (_, _) => ChooseMode(ToolMode.Script);
+		_blueprintsButton = Make("Blueprints", "", "paste");
+		_blueprintsButton.Tip("tools.blueprints");
+		_blueprintsButton.Click += (_, _) => BlueprintsAsked?.Invoke();
 		_placeButton = Make("Place", "T", "place");
 		ToolTip.SetTip(_placeButton, "Place (T): paint trees, rocks or bushes with a brush, or put walls, fences and other pieces along lines, circles, rectangles, grids and zones.");
 		_placeButton.Click += (_, _) => ChooseMode(ToolMode.Place);

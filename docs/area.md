@@ -72,6 +72,7 @@ While pasting:
 |---|---|
 | **Ground shape and paint** | Paste the copied ground. The shape is kept relative to the point you click. |
 | **Objects** | Paste the copied objects. They are new, independent objects: a pasted chest is an empty chest. |
+| **Clear the site** | Where the pasted building stands (its pieces, by their real shape, and a metre around), the ground in its way is dug down to its lowest piece, so a building pasted into a hill or a mound is not buried in it; lower ground is left as it is. Trees, rocks, bushes and pickables there are taken away. In the same undo step. |
 | **Height** | Moves the pasted ground and objects up or down (m). |
 | **Turn 90° (R)** | A quarter turn. `,` and `.` or Alt + wheel turn by 1° (Shift: 15°), to any angle. |
 | **Mirror (F)** | Mirrors the paste. |
@@ -89,7 +90,7 @@ A blueprint is a building kept as a file, to paste into any world or build in ga
 | Control | What it does |
 |---|---|
 | **Save blueprint…** | Saves the clipboard's objects (what the Area or Select tool copied last) as a Homestead blueprint, with a name, description and tags. Copied ground is not kept: Homestead blueprints hold pieces only. A blueprint with the same name is replaced, after asking. |
-| **Blueprints…** | Opens the library: each blueprint with its picture, cost, description and tags. **Paste** puts it on the clipboard and starts pasting. See [The library](workshop.md#the-library-blueprints-panel). |
+| **Blueprints…** | Opens the library (also the **Blueprints** button of the tool rail): each blueprint with its picture, cost, description and tags, the ones made in the Workshop too. **Paste** puts it on the clipboard and starts pasting. See [The library](workshop.md#the-library-blueprints-panel). |
 
 Sign texts and items on item stands are not carried over: pasted objects are always fresh ones.
 Pasted into a world, the objects are made like the ones you plant: copies of an object of the same

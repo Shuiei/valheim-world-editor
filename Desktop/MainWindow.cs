@@ -609,17 +609,35 @@ public sealed partial class MainWindow : Window
 		// The objects' heights come from the ground as the paste leaves it: the ground step fills the list,
 		// which Commit reads after it (one undo step for both).
 		var add = new List<(TerrainEditor.Editing.NewObject, bool)>();
+		// Clear the site: the trees, rocks and the like where the pasted building stands go too.
+		var cleared = new List<int>();
 		int touched = 0;
 		var paste = _view.Paste;
 		var label = paste.Count > 1 ? $"Paste ×{paste.Count}" : "Paste";
+		float ox = s.Scene.X0 * 64f - 32f, oz = s.Scene.Z0 * 64f - 32f;
 		s.Commit(label, g =>
 		{
 			var (t, rect, a) = paste.Apply(g, at, s.MaskNow());
 			add.AddRange(a);
 			touched = t.Count;
+			if (paste.Site.Count > 0)
+			{
+				lock (s.Scene.Things)
+				{
+					for (int i = 0; i < s.Scene.Things.Count; i++)
+					{
+						var th = s.Scene.Things[i];
+						if (!th.Gone && EditSession.Natural(th) && paste.Site.Contains(((int)MathF.Round(th.Position.X - ox), (int)MathF.Round(th.Position.Z - oz))))
+						{
+							cleared.Add(i);
+						}
+					}
+				}
+			}
 			return (t, rect);
-		}, Array.Empty<int>(), add);
-		_message.Text = $"Pasted{(paste.Count > 1 ? $" {paste.Count} copies" : "")}{(touched > 0 ? " with the ground" : "")}{(add.Count > 0 ? $", {add.Count} object(s)" : "")}. Click again to paste more, Esc when done.";
+		}, cleared, add);
+		_message.Text = $"Pasted{(paste.Count > 1 ? $" {paste.Count} copies" : "")}{(touched > 0 ? " with the ground" : "")}{(add.Count > 0 ? $", {add.Count} object(s)" : "")}"
+			+ $"{(cleared.Count > 0 ? $", {cleared.Count} tree(s), rock(s) and the like cleared from the site" : "")}. Click again to paste more, Esc when done.";
 		UpdateSaveBar();
 	}
 
@@ -1707,6 +1725,12 @@ public sealed partial class MainWindow : Window
 		AreaPanel.CopyAsked += Copy;
 		AreaPanel.PasteAsked += StartPaste;
 		AreaPanel.SaveBlueprintAsked += async () => await Blueprints.Save();
+		Tools.BlueprintsAsked += () =>
+		{
+			Inspector.Close();
+			Blueprints.Toggle();
+			_viewPanel.IsVisible = !Blueprints.Card.IsVisible;
+		};
 		AreaPanel.LibraryAsked += () =>
 		{
 			// The View panel makes room for the list.

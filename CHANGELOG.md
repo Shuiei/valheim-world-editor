@@ -21,6 +21,9 @@ the plugin is unchanged in versions without that part.
   support check takes the ground it stood on in game to be under its lowest piece at each spot. The start page's Workshop card opens it.
 - The Workshop's **support check** tints the pieces in the game's build-mode colours (light blue on
   the ground, green to red); **Cut** shows the building only up to a height, to build inside it.
+- In a world: a **Blueprints** button on the tool rail opens the library, to paste a blueprint made in
+  the Workshop. **Clear the site** (Paste, on by default): the ground in a pasted building's way is
+  dug down to its lowest piece, and the trees and rocks there are taken away.
 - **Select**: Ctrl + click adds to the selection; Shift + click takes the row from the last object
   clicked (wall 1, Shift + click wall 3: walls 1 to 3).
 - **Support check** (in the Workshop): each piece outlined in the colour the game gives its
