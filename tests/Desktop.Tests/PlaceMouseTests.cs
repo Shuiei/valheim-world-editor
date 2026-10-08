@@ -165,12 +165,12 @@ public class PlaceMouseTests
 		var s = v.S.Scene;
 		v.W.View.SetBoxes(new[] { (0, new Vector3(64 - 32 - 1 - s.Cx, 30, -(64 - 32 + 1 - s.Cz)), new Vector3(64 - 32 + 1 - s.Cx, 36, -(64 - 32 - 1 - s.Cz))) });
 		string? picked = null;
-		v.In.PickOnce = n => picked = n;
+		v.In.PickOnce = (n, _) => picked = n;
 		v.Click(10, 10);
 		Assert.Null(picked);
-		Assert.StartsWith("No object there", v.Said);
+		Assert.Equal("Nothing picked: click right on an object (only things that are shown can be picked).", v.Said);
 		Assert.Null(v.In.PickOnce);
-		v.In.PickOnce = n => picked = n;
+		v.In.PickOnce = (n, _) => picked = n;
 		v.Click(64, 64);
 		Assert.Equal("Oak1", picked);
 	}

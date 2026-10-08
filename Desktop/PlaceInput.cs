@@ -162,8 +162,8 @@ public sealed class PlaceInput
 		return best;
 	}
 
-	// Pick from world: the next click takes the kind of the object clicked.
-	public Action<string>? PickOnce { get; set; }
+	// Pick from world: the next click takes the kind of the object clicked (with whether Shift was held).
+	public Action<string, bool>? PickOnce { get; set; }
 
 	public void Down(Point at, Size size, bool shift, bool ctrl, bool alt, int clicks)
 	{
@@ -174,11 +174,11 @@ public sealed class PlaceInput
 			PickOnce = null;
 			if (_view.ObjectAt(at, size) is int i && _view.Scene is { } sc && Tool.NameOf(sc.Things[i].Prefab) is string name)
 			{
-				pick(name);
+				pick(name, shift);
 			}
 			else
 			{
-				Message?.Invoke("No object there: pick again from the panel.");
+				Message?.Invoke("Nothing picked: click right on an object (only things that are shown can be picked).");
 			}
 			return;
 		}
@@ -481,6 +481,10 @@ public sealed class PlaceInput
 			}
 			case Avalonia.Input.Key.Enter when shape:
 				PlaceShape();
+				return true;
+			case Avalonia.Input.Key.Escape when PickOnce != null:
+				PickOnce = null;
+				Message?.Invoke("Picking cancelled.");
 				return true;
 			case Avalonia.Input.Key.Escape when shape && (Tool.Points.Count > 0 || Tool.GridA != null || Tool.FigA != null):
 				Tool.ClearShape();

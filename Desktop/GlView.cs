@@ -316,6 +316,7 @@ public sealed class GlView : OpenGlControlBase
 		_terrainVao = _terrainIndexCount = _waterVao = _terrainVbo = _terrainExtraVbo = 0;
 		_boxVbo = _boxEbo = _ghostVbo = 0;
 		_pathVao = _pathVbo = _pathEdgeVao = _pathEdgeVbo = _pathDotVao = _pathDotVbo = 0;
+		_markVao = _markVbo = 0;
 		_placeVao = _placeVbo = _placeShapeVao = _placeShapeVbo = 0;
 		_areaVao = _areaVbo = _resetVao = _resetVbo = 0;
 		_measureVao = _measureVbo = _lassoVao = _lassoVbo = _ringVao = _ringVbo = _lineVao = _lineVbo = 0;
@@ -1277,6 +1278,8 @@ public sealed class GlView : OpenGlControlBase
 					_gl.Disable(EnableCap.Blend);
 				}
 			}
+			// Over everything, the water too.
+			DrawNewMarkers(s, vp);
 		}
 		_gl.BindVertexArray(0);
 		_gl.UseProgram(0);
@@ -2100,7 +2103,7 @@ public sealed class GlView : OpenGlControlBase
 	}
 
 	// Lines (pairs of view-space points) drawn over everything in one colour, refilled every call.
-	private unsafe void DrawLines(ref uint vao, ref uint vbo, float[] data, Matrix4x4 vp, Vector4 color)
+	private unsafe void DrawLines(ref uint vao, ref uint vbo, float[] data, Matrix4x4 vp, Vector4 color, PrimitiveType kind = PrimitiveType.Lines)
 	{
 		if (data.Length == 0)
 		{
@@ -2129,8 +2132,63 @@ public sealed class GlView : OpenGlControlBase
 		_gl.UniformMatrix4(_gl.GetUniformLocation(_lineProg, "uViewProj"), 1, false, (float*)&vp);
 		_gl.Uniform4(_gl.GetUniformLocation(_lineProg, "uColor"), color.X, color.Y, color.Z, color.W);
 		_gl.BindVertexArray(vao);
-		_gl.DrawArrays(PrimitiveType.Lines, 0, (uint)(data.Length / 3));
+		_gl.DrawArrays(kind, 0, (uint)(data.Length / 3));
 		_gl.Enable(EnableCap.DepthTest);
+	}
+
+	// Whether a new object (id < 0) is in the game already (live: applied); such objects lose their marker.
+	public Func<int, bool> InGame { get; set; } = _ => false;
+
+	// The new objects not saved (or applied) yet, as the web editor marked them: a green dot of the same
+	// size on screen just above each, drawn over everything, for the kinds shown.
+	internal List<Vector3> NewMarkers(WorldScene s)
+	{
+		var list = new List<Vector3>();
+		lock (s.Things)
+		{
+			lock (_objLock)
+			{
+				for (int i = 0; i < s.Things.Count; i++)
+				{
+					var t = s.Things[i];
+					if (t.Id < 0 && !t.Gone && i < _kinds.Length && _shown[(int)_kinds[i]] && !InGame(t.Id))
+					{
+						list.Add(new Vector3(t.Position.X - s.Cx, t.Position.Y + 0.4f, -(t.Position.Z - s.Cz)));
+					}
+				}
+			}
+		}
+		return list;
+	}
+
+	private uint _markVao, _markVbo;
+	private void DrawNewMarkers(WorldScene s, Matrix4x4 vp)
+	{
+		var marks = NewMarkers(s);
+		if (marks.Count == 0)
+		{
+			return;
+		}
+		var tri = new List<float>(marks.Count * 8 * 9);
+		foreach (var c in marks)
+		{
+			// About 9 pixels across at any distance: a little disc facing the camera.
+			var f = Vector3.Normalize(c - _lastEye);
+			var right = Vector3.Normalize(Vector3.Cross(f, Vector3.UnitY) is var x && x.LengthSquared() > 1e-6f ? x : Vector3.UnitX);
+			var up = Vector3.Cross(right, f);
+			float r = Vector3.Distance(_lastEye, c) * 0.0058f;
+			for (int k = 0; k < 8; k++)
+			{
+				float a0 = k * MathF.Tau / 8, a1 = (k + 1) * MathF.Tau / 8;
+				foreach (var v in new[] { c, c + r * (MathF.Cos(a0) * right + MathF.Sin(a0) * up), c + r * (MathF.Cos(a1) * right + MathF.Sin(a1) * up) })
+				{
+					tri.Add(v.X);
+					tri.Add(v.Y);
+					tri.Add(v.Z);
+				}
+			}
+		}
+		DrawLines(ref _markVao, ref _markVbo, tri.ToArray(), vp, new Vector4(0x5d / 255f, 1, 0x8a / 255f, 1), PrimitiveType.Triangles);
 	}
 
 	private uint _pathVao, _pathVbo, _pathEdgeVao, _pathEdgeVbo, _pathDotVao, _pathDotVbo;

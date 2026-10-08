@@ -114,7 +114,7 @@ public sealed class AreaPanel
 		BoxButton.Click += (_, _) => { Area.Box = true; Area.Clear(); ShowShape(); };
 		PolyButton.Click += (_, _) => { Area.Box = false; Area.Clear(); ShowShape(); };
 		ClearButton.Click += (_, _) => { Area.Clear(); Message?.Invoke("Selection cleared."); };
-		ActionBox.SelectionChanged += (_, _) => { ShowRows(); if (Current == Act.Backup) FillBackups(); };
+		ActionBox.SelectionChanged += (_, _) => { ShowRows(); RefreshVolume(); if (Current == Act.Backup) FillBackups(); };
 		BackupBox.SelectionChanged += async (_, _) =>
 		{
 			// The last entry: another folder.
@@ -357,11 +357,18 @@ public sealed class AreaPanel
 	private string NameOf(int prefab) => _nameOf(prefab) ?? prefab.ToString();
 
 	// The selection changed: its size, what is inside, the lists and the volumes.
+	// Cut and fill: what Flatten, Raise or Lower would move, and how much the ground inside was raised
+	// and dug since generated (again after every change of the ground, as the web editor did).
+	public void RefreshVolume()
+	{
+		var g = _session()?.Ground;
+		VolumeText.Text = g != null ? Area.Volume(g, Ground(Current) ?? AreaTool.GroundAction.Flatten, Value(HeightBox), Value(AmountBox), _session()?.MaskNow()) : "";
+	}
+
 	public void Refresh()
 	{
 		var poly = Area.Polygon();
-		var g = _session()?.Ground;
-		VolumeText.Text = g != null ? Area.Volume(g, Ground(Current) ?? AreaTool.GroundAction.Flatten, Value(HeightBox), Value(AmountBox), _session()?.MaskNow()) : "";
+		RefreshVolume();
 		if (poly == null)
 		{
 			Info.Text = Area.Box ? "Drag on the ground to select a box." : "Click points around the area; double-click or Enter closes it. Backspace removes a point, Esc clears.";

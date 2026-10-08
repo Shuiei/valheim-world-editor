@@ -34,6 +34,7 @@ is on its own card next to the panel.
 | **Soft edge** (above the Action list) | Ground actions fade out over this many metres inside the edge of the selection, so the result blends in. At **0** the edge is as sharp as the ground allows and follows the outline straight. |
 | **Flatten** | Levels the ground inside to **Height**. |
 | **Raise** / **Lower** | Lifts / digs the ground inside by **Amount**. |
+| Cut and fill | Under Flatten, Raise and Lower: how much ground the action would move ("Flatten to 35 m: dig 120 m³, fill 340 m³", with what the game's ±8 m limit leaves out of reach), and how much the ground inside has been raised and dug since the world generated it. It follows every change of the ground. |
 | **Smooth** | Evens out bumps inside. |
 | **Naturalize** | Natural-looking bumps inside (Bumps and Bump size of the Naturalize brush). |
 | **Restore the ground** | Puts the ground inside back to how the world generated it, and removes paint. |

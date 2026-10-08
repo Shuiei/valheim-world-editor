@@ -36,6 +36,18 @@ public sealed class PlacePanel
 	internal TextBox Search { get; } = new() { Watermark = "Search kinds (oak, rock, bush…)", FontSize = 12 };
 	internal StackPanel List { get; } = new() { Spacing = 1 };
 	internal Button PickButton { get; } = new() { Content = "Pick from world", FontSize = 12 };
+	internal Button UntickAllButton { get; } = new() { Content = "Untick all", FontSize = 12 };
+	// all / none for the favourites and the recent kinds.
+	internal Button FavAllButton { get; } = Link("all");
+	internal Button FavNoneButton { get; } = Link("none");
+	internal Button RecentAllButton { get; } = Link("all");
+	internal Button RecentNoneButton { get; } = Link("none");
+	// The list's categories that are open (folded ones show only their header); remembered by the window.
+	internal HashSet<ObjectKind> OpenKinds { get; } = new() { ObjectKind.Trees };
+	public event Action? OpenKindsChanged;
+	internal Dictionary<ObjectKind, Expander> Groups { get; } = new();
+	// Shift held on the last press of a chip (a click takes Shift from its press).
+	private bool _shiftPress;
 	internal ComboBox ElevationBox { get; } = new() { ItemsSource = new[] { "On the ground", "Above the ground", "At one height" }, SelectedIndex = 0, FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch };
 	internal NumericUpDown ElevBox { get; } = new() { Value = 0, Increment = 0.5m, FormatString = "0.0#", FontSize = 12 };
 	internal CheckBox SnapToBox { get; } = new() { Content = "Snap to pieces already there", IsChecked = true, FontSize = 12 };
@@ -67,6 +79,10 @@ public sealed class PlacePanel
 	internal Button UndoPointButton { get; } = new() { Content = "Remove last point (Backspace)", FontSize = 12 };
 	internal Button NewLayoutButton { get; } = new() { Content = "New layout (R)", FontSize = 12 };
 	internal TextBlock Info { get; } = new() { FontSize = 12, TextWrapping = TextWrapping.Wrap };
+	// Kinds wider than the spacing: says so, and fit sets the spacing to them.
+	internal TextBlock FitText { get; } = new() { FontSize = 12, TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center };
+	internal Button FitButton { get; } = new() { Content = "fit", FontSize = 11, Padding = new Thickness(6, 2), VerticalAlignment = VerticalAlignment.Center };
+	private readonly Control _fitRow;
 	private readonly Control _elevRow, _pieceBox, _attachRow, _brushRows, _scatterRows, _patchRow, _facingRows, _lineBox, _snapRows, _freeLineRows, _loopRow, _layersRow, _gridRow, _shapeRow, _undoRow, _brushHint, _lineHint;
 	private readonly TextBlock _lineHintText = new() { FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
 
@@ -81,6 +97,8 @@ public sealed class PlacePanel
 		s.ValueChanged += (_, e) => { shown.Text = fmt(e.NewValue); set((float)e.NewValue); };
 		return s;
 	}
+
+	private static Button Link(string text) => new() { Content = text, FontSize = 10, Padding = new Thickness(4, 0), Background = Brushes.Transparent, Foreground = Ui.Muted };
 
 	private static Control Row(string label, Control input, Control? after = null)
 	{
@@ -210,20 +228,29 @@ public sealed class PlacePanel
 		Search.PropertyChanged += (_, e) => { if (e.Property == TextBox.TextProperty) FillList(); };
 		PickButton.Click += (_, _) =>
 		{
-			input.PickOnce = name =>
+			input.PickOnce = (name, shift) =>
 			{
 				if (!Creatable().Any(c => c.Name == name))
 				{
 					Say($"{name} cannot be placed: the game has no such kind to copy.");
 					return;
 				}
-				t.Chosen.Clear();
-				t.Chosen.Add(name);
-				Chosen();
-				Say($"Placing {name}.");
+				// A click places only that kind; Shift + click adds it to the ticked kinds.
+				Choose(name, add: shift);
+				Say($"Placing {string.Join(", ", T.Chosen)}.");
 			};
-			Say("Click an object in the view to place its kind.");
+			Say("Click an object to pick its kind for placing. Esc cancels.");
 		};
+		UntickAllButton.Tip("place.untickAll");
+		UntickAllButton.Click += (_, _) => { T.Chosen.Clear(); Chosen(); };
+		FavAllButton.Tip("place.favAll");
+		FavNoneButton.Tip("place.favNone");
+		RecentAllButton.Tip("place.recentAll");
+		RecentNoneButton.Tip("place.recentNone");
+		FavAllButton.Click += (_, _) => TickRow(Memory.Favourites, true);
+		FavNoneButton.Click += (_, _) => TickRow(Memory.Favourites, false);
+		RecentAllButton.Click += (_, _) => TickRow(Memory.Recent, true);
+		RecentNoneButton.Click += (_, _) => TickRow(Memory.Recent, false);
 		ElevationBox.SelectionChanged += (_, _) => { if (!_filling) { t.Elevation = (PlaceTool.Elevations)Math.Max(0, ElevationBox.SelectedIndex); t.Notify(); } Sync(); };
 		ElevBox.ValueChanged += (_, e) => { if (!_filling) { t.Elev = (float)(e.NewValue ?? 0); t.Notify(); } };
 		SnapToBox.IsCheckedChanged += (_, _) => { t.SnapTo = SnapToBox.IsChecked == true; t.Notify(); };
@@ -237,7 +264,7 @@ public sealed class PlacePanel
 		var densV = new TextBlock();
 		DensitySlider = Slide(0.2, 20, 0.2, t.Density, densV, v => $"{v:0.0}", v => { t.Density = v; t.Notify(); });
 		var spV = new TextBlock();
-		SpacingSlider = Slide(0.5, 15, 0.5, t.Spacing, spV, v => $"{v:0.#} m", v => { t.Spacing = v; t.Notify(); });
+		SpacingSlider = Slide(0.5, PlaceTool.MaxSpacing, 0.5, t.Spacing, spV, v => $"{v:0.#} m", v => { t.Spacing = v; t.Notify(); });
 		var clV = new TextBlock();
 		ClumpSlider = Slide(0, 100, 5, t.Clump, clV, v => $"{v:0}%", v => { t.Clump = v; Sync(); t.Notify(); });
 		var paV = new TextBlock();
@@ -261,7 +288,7 @@ public sealed class PlacePanel
 		TiltSlider.Tip("place.tilt");
 		RotationSlider.Tip("place.rotation");
 		var evV = new TextBlock();
-		EverySlider = Slide(0.5, 30, 0.5, t.Every, evV, v => $"{v:0.#} m", v => { t.Every = v; t.Notify(); });
+		EverySlider = Slide(0.5, PlaceTool.MaxEvery, 0.5, t.Every, evV, v => $"{v:0.#} m", v => { t.Every = v; t.Notify(); });
 		var wiV = new TextBlock();
 		WiggleSlider = Slide(0, 5, 0.25, t.Wiggle, wiV, v => $"{v:0.##} m", v => { t.Wiggle = v; t.Notify(); });
 		AlongBox.IsCheckedChanged += (_, _) => { t.Along = AlongBox.IsChecked == true; t.Notify(); };
@@ -269,7 +296,7 @@ public sealed class PlacePanel
 		EverySlider.Tip("place.every");
 		WiggleSlider.Tip("place.wiggle");
 		var ceV = new TextBlock();
-		CellSlider = Slide(1, 30, 0.5, t.Cell, ceV, v => $"{v:0.#} m", v => { t.Cell = v; t.Notify(); });
+		CellSlider = Slide(1, PlaceTool.MaxCell, 0.5, t.Cell, ceV, v => $"{v:0.#} m", v => { t.Cell = v; t.Notify(); });
 		CellSlider.Tip("place.cell");
 		var shapes = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 2 };
 		foreach (var (ls, label, tip) in new[] { (PlaceTool.LineShapes.Points, "Points", "Click points along the way, or hold and drag to draw freely"),
@@ -285,6 +312,15 @@ public sealed class PlacePanel
 		ClearButton.Click += (_, _) => t.ClearShape();
 		UndoPointButton.Click += (_, _) => input.RemoveLastPoint();
 		NewLayoutButton.Click += (_, _) => t.NewLayout();
+		FitButton.Tip("place.fit");
+		FitButton.Click += (_, _) =>
+		{
+			if (t.Fit())
+			{
+				Fill();
+				t.Notify();
+			}
+		};
 		TextBlock Hint(string s) => new() { Text = s, FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
 
 		_elevRow = Row("Height", ElevBox, new TextBlock { Text = " m", FontSize = 12, VerticalAlignment = VerticalAlignment.Center });
@@ -311,6 +347,7 @@ public sealed class PlacePanel
 		_lineBox = new StackPanel { Spacing = 4, Children = { shapes, _snapRows, _loopRow, _freeLineRows, CurveBox, _lineHintText } };
 		_gridRow = Row("Spacing", CellSlider, ceV);
 		_shapeRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Children = { PlaceButton, ClearButton } };
+		_fitRow = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 6, Children = { FitText, Col(FitButton, 1) } };
 		_undoRow = UndoPointButton;
 		_brushHint = Hint("Density is objects per 100 m². Spacing keeps them apart (also from what is already there). Shift + drag removes the chosen kinds. The Mask applies.");
 		_lineHint = Hint("");
@@ -337,6 +374,7 @@ public sealed class PlacePanel
 				SingleBox,
 				_lineBox,
 				_gridRow,
+				_fitRow,
 				_shapeRow,
 				_undoRow,
 				NewLayoutButton,
@@ -351,9 +389,9 @@ public sealed class PlacePanel
 			{
 				new TextBlock { Text = "Choose kinds", FontSize = 14, FontWeight = FontWeight.SemiBold },
 				Search,
-				PickButton,
-				(_favBox = new StackPanel { Spacing = 3, Children = { new TextBlock { Text = "FAVOURITES", FontSize = 10, Foreground = Ui.Muted }, Favourites } }),
-				(_recentBox = new StackPanel { Spacing = 3, Children = { new TextBlock { Text = "RECENT", FontSize = 10, Foreground = Ui.Muted }, Recent } }),
+				new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Children = { PickButton, UntickAllButton } },
+				(_favBox = new StackPanel { Spacing = 3, Children = { ChipHead("FAVOURITES", FavAllButton, FavNoneButton), Favourites } }),
+				(_recentBox = new StackPanel { Spacing = 3, Children = { ChipHead("RECENT", RecentAllButton, RecentNoneButton), Recent } }),
 				List,
 			},
 		}, 240);
@@ -386,7 +424,51 @@ public sealed class PlacePanel
 		Memory.Save();
 	}
 
-	// Favourites and recent kinds as buttons: a click ticks or unticks that kind.
+	private static Control ChipHead(string title, Button all, Button none) => new StackPanel
+	{
+		Orientation = Orientation.Horizontal,
+		Spacing = 2,
+		Children = { new TextBlock { Text = title, FontSize = 10, Foreground = Ui.Muted, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 4, 0) }, all, none },
+	};
+
+	// all / none: tick or untick every kind of the row (those this world can place).
+	private void TickRow(IEnumerable<string> names, bool on)
+	{
+		var known = Creatable().Select(c => c.Name).ToHashSet();
+		foreach (var n in names.Where(n => known.Count == 0 || known.Contains(n)).ToList())
+		{
+			if (on && !T.Chosen.Contains(n))
+			{
+				T.Chosen.Add(n);
+			}
+			else if (!on)
+			{
+				T.Chosen.Remove(n);
+			}
+		}
+		Chosen();
+	}
+
+	// A kind chosen from a chip or the world: add (or take away if ticked), or place only it.
+	internal void Choose(string name, bool add)
+	{
+		if (!add)
+		{
+			T.Chosen.Clear();
+			T.Chosen.Add(name);
+		}
+		else if (!T.Chosen.Remove(name))
+		{
+			T.Chosen.Add(name);
+		}
+		Chosen();
+	}
+
+	// A chip clicked: ticks or unticks that kind; with Shift, places only it.
+	internal void ChipClicked(string name, bool shift) => Choose(name, add: !shift);
+
+	// Favourites and recent kinds as buttons: a click ticks or unticks that kind, Shift + click places
+	// only it.
 	private void RenderChips()
 	{
 		var known = Creatable().Select(c => c.Name).ToHashSet();
@@ -396,10 +478,15 @@ public sealed class PlacePanel
 			foreach (var n in list.Where(n => known.Count == 0 || known.Contains(n)))
 			{
 				var b = new ToggleButton { Content = n, IsChecked = T.Chosen.Contains(n), FontSize = 11, Padding = new Thickness(6, 2) }.Tip(ReferenceEquals(panel, Favourites) ? "place.favourite" : "place.recent");
+				b.AddHandler(Avalonia.Input.InputElement.PointerPressedEvent, (_, e) => _shiftPress = e.KeyModifiers.HasFlag(Avalonia.Input.KeyModifiers.Shift), Avalonia.Interactivity.RoutingStrategies.Tunnel, handledEventsToo: true);
+				b.AddHandler(Avalonia.Input.InputElement.KeyDownEvent, (_, _) => _shiftPress = false, Avalonia.Interactivity.RoutingStrategies.Tunnel, handledEventsToo: true);
 				b.Click += (_, _) =>
 				{
-					if (T.Chosen.Contains(n)) T.Chosen.Remove(n); else T.Chosen.Add(n);
-					Chosen();
+					bool shift = _shiftPress;
+					_shiftPress = false;
+					// The button turned itself on or off: what is ticked decides.
+					b.IsChecked = T.Chosen.Contains(n);
+					ChipClicked(n, shift);
 				};
 				panel.Children.Add(b);
 			}
@@ -437,6 +524,7 @@ public sealed class PlacePanel
 		}
 		string q = Search.Text?.Trim() ?? "";
 		List.Children.Clear();
+		Groups.Clear();
 		foreach (var k in Order)
 		{
 			var names = Creatable().Where(c => c.Kind == k && (q == "" || c.Name.Contains(q, StringComparison.OrdinalIgnoreCase))).Select(c => c.Name).OrderBy(n => n, StringComparer.OrdinalIgnoreCase).ToList();
@@ -444,26 +532,65 @@ public sealed class PlacePanel
 			{
 				continue;
 			}
-			List.Children.Add(new TextBlock { Text = ObjectKinds.Label(k).ToUpperInvariant(), FontSize = 10, Foreground = Ui.Muted, Margin = new Thickness(0, 6, 0, 2) });
-			// Long groups are cut while not searching: the search finds the rest.
-			foreach (var n in q == "" ? names.Take(60) : names)
+			// One category that folds; searching opens every category with a match (not remembered).
+			var body = new StackPanel { Spacing = 1 };
+			var g = new Expander { HorizontalAlignment = HorizontalAlignment.Stretch, Padding = new Thickness(2), IsExpanded = q != "" || OpenKinds.Contains(k), Content = body }.Tip("place.group");
+			void Header() => g.Header = new Grid
 			{
-				var box = new CheckBox { Content = n, IsChecked = T.Chosen.Contains(n), FontSize = 12 }.Tip("place.kind");
-				box.IsCheckedChanged += (_, _) =>
+				ColumnDefinitions = new ColumnDefinitions("*,Auto"),
+				Children =
 				{
-					if (box.IsChecked == true) { if (!T.Chosen.Contains(n)) T.Chosen.Add(n); } else T.Chosen.Remove(n);
-					Chosen(fillList: false);
-				};
-				bool fav = Memory.Favourites.Contains(n);
-				var star = new Button { Content = fav ? "★" : "☆", FontSize = 12, Padding = new Thickness(4, 0), Background = Brushes.Transparent };
-				ToolTip.SetTip(star, fav ? "Remove from favourites" : "Add to favourites");
-				star.Click += (_, _) => { Memory.ToggleFavourite(n); FillList(); RenderChips(); };
-				List.Children.Add(new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Children = { box, Col(star, 1) } });
-			}
-			if (q == "" && names.Count > 60)
+					new TextBlock { Text = ObjectKinds.Label(k).ToUpperInvariant(), FontSize = 10.5, FontWeight = FontWeight.SemiBold, Foreground = Ui.Muted },
+					Col(new TextBlock { Text = names.Count(T.Chosen.Contains) is int on && on > 0 ? $"{on} / {names.Count}" : $"{names.Count}", FontSize = 10.5, Foreground = names.Any(T.Chosen.Contains) ? Ui.Accent : Ui.Muted, Margin = new Thickness(8, 0, 0, 0) }, 1),
+				},
+			};
+			Header();
+			// The checkboxes are made when the category opens (some hold hundreds of kinds).
+			void Fill()
 			{
-				List.Children.Add(new TextBlock { Text = $"… {names.Count - 60} more: search for them.", FontSize = 11, Foreground = Ui.Muted });
+				if (body.Children.Count > 0 || !g.IsExpanded)
+				{
+					return;
+				}
+				foreach (var n in names)
+				{
+					var box = new CheckBox { Content = n, IsChecked = T.Chosen.Contains(n), FontSize = 12 }.Tip("place.kind");
+					box.IsCheckedChanged += (_, _) =>
+					{
+						if (box.IsChecked == true) { if (!T.Chosen.Contains(n)) T.Chosen.Add(n); } else T.Chosen.Remove(n);
+						Header();
+						Chosen(fillList: false);
+					};
+					bool fav = Memory.Favourites.Contains(n);
+					var star = new Button { Content = fav ? "★" : "☆", FontSize = 12, Padding = new Thickness(4, 0), Background = Brushes.Transparent };
+					ToolTip.SetTip(star, fav ? "Remove from favourites" : "Add to favourites");
+					star.Click += (_, _) => { Memory.ToggleFavourite(n); FillList(); RenderChips(); };
+					body.Children.Add(new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Children = { box, Col(star, 1) } });
+				}
 			}
+			Fill();
+			g.PropertyChanged += (_, e) =>
+			{
+				if (e.Property != Expander.IsExpandedProperty)
+				{
+					return;
+				}
+				Fill();
+				if (q != "")
+				{
+					return;
+				}
+				if (g.IsExpanded ? OpenKinds.Add(k) : OpenKinds.Remove(k))
+				{
+					OpenKindsChanged?.Invoke();
+				}
+			};
+			Groups[k] = g;
+			List.Children.Add(g);
+		}
+		if (List.Children.Count == 0)
+		{
+			List.Children.Add(new TextBlock { Text = "Nothing matches.", FontSize = 11, Foreground = Ui.Muted });
 		}
 	}
 
@@ -535,6 +662,8 @@ public sealed class PlacePanel
 		SizeMaxBox.Value = (decimal)t.SizeMax;
 		TiltSlider.Value = t.Tilt;
 		RandomYawBox.IsChecked = t.RandomYaw;
+		EverySlider.Value = t.Every;
+		CellSlider.Value = t.Cell;
 		_filling = false;
 		RenderMix();
 		Sync();
@@ -584,12 +713,22 @@ public sealed class PlacePanel
 		Note.Text = t.Chosen.Count == 0 ? "Nothing to place yet: + Add kinds, or a preset."
 			: cult.Count > 0 ? $"{string.Join(", ", cult)} only grow{(cult.Count > 1 ? "" : "s")} on cultivated ground (paint it with Cultivate first)." : "";
 		Note.IsVisible = Note.Text != "";
+		ShowFit();
+	}
+
+	// The fit hint: only when a chosen kind is wider than the spacing.
+	private void ShowFit()
+	{
+		string? hint = T.FitHint();
+		FitText.Text = hint ?? "";
+		_fitRow.IsVisible = hint != null;
 	}
 
 	// What the preview shows.
 	private void ShowInfo()
 	{
 		var t = T;
+		ShowFit();
 		_undoRow.IsVisible = t.Mode is PlaceTool.Modes.Line or PlaceTool.Modes.Zone && t.Points.Count > 0;
 		int n = _input.PreviewNow.Count;
 		if (t.Chosen.Count == 0)
