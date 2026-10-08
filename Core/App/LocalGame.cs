@@ -18,8 +18,12 @@ public static class LocalGame
 	// Tests: only the folders of the settings given, never the player's own install or profiles.
 	public static bool SearchDefaultPlaces { get; set; } = true;
 
-	// Folders that can hold the game's BepInEx: the Valheim install, and mod manager profiles.
-	public static IEnumerable<(string BepInEx, string Where)> BepInExFolders(AppSettings settings)
+	// Folders that can hold the game's BepInEx: the Valheim install, and mod manager profiles. Each
+	// once: on Linux the application data folder is ~/.config, so r2modman's would come twice.
+	public static IEnumerable<(string BepInEx, string Where)> BepInExFolders(AppSettings settings) =>
+		AllBepInExFolders(settings).DistinctBy(f => Path.GetFullPath(f.BepInEx).TrimEnd(Path.DirectorySeparatorChar));
+
+	private static IEnumerable<(string BepInEx, string Where)> AllBepInExFolders(AppSettings settings)
 	{
 		if (SearchDefaultPlaces && GameLook.FindValheim(settings.ValheimPath) is string valheim)
 		{
