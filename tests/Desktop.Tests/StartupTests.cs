@@ -185,6 +185,32 @@ public sealed class StartupTests : IDisposable
 		}
 	}
 
+	[Fact]
+	public void DrivenTheEditorLooksForTheGameOnlyUnderTheHome()
+	{
+		string home = Path.Combine(_dir, "home");
+		Directory.CreateDirectory(home);
+		string? oldHome = Environment.GetEnvironmentVariable("HOME");
+		bool outside = GameLook.SearchOutsideHome;
+		Environment.SetEnvironmentVariable("HOME", home);
+		try
+		{
+			// An empty home: no Valheim, wherever else the computer has one.
+			Options.Parse(new[] { "--driver" });
+			Assert.False(GameLook.SearchOutsideHome);
+			Assert.Null(GameLook.FindValheim(null));
+			// One in the home's Steam library is found.
+			string valheim = Path.Combine(home, ".local", "share", "Steam", "steamapps", "common", "Valheim");
+			Directory.CreateDirectory(Path.Combine(valheim, "valheim_Data", "StreamingAssets", "SoftRef", "Bundles"));
+			Assert.Equal(Path.GetFullPath(valheim), Path.GetFullPath(GameLook.FindValheim(null)!));
+		}
+		finally
+		{
+			Environment.SetEnvironmentVariable("HOME", oldHome);
+			GameLook.SearchOutsideHome = outside;
+		}
+	}
+
 	[AvaloniaFact]
 	public void TheWindowHasItsIconAndTheStartPageLinksTheDocumentation()
 	{

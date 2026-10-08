@@ -47,12 +47,7 @@ public sealed class StartPage
 
 	private static readonly IBrush Panel = Ui.Panel, Line = Ui.Line, Accent = Ui.Accent, Muted = Ui.Muted;
 
-	// A folder under the home folder as ~/… (Linux and macOS, as a terminal shows it).
-	internal static string Tilde(string path)
-	{
-		string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile).TrimEnd('/');
-		return !OperatingSystem.IsWindows() && home.Length > 1 && (path == home || path.StartsWith(home + "/")) ? "~" + path[home.Length..] : path;
-	}
+	internal static string Tilde(string path) => Ui.Tilde(path);
 
 	// An error line: takes no room while it says nothing.
 	private static TextBlock Err()
@@ -352,7 +347,7 @@ public sealed class StartPage
 					},
 				},
 			};
-			ToolTip.SetTip(card, $"{Tips.Of("start.world")}\n{w.Path}");
+			ToolTip.SetTip(card, $"{Tips.Of("start.world")}\n{Ui.Tilde(w.Path)}");
 			var path = w.Path;
 			card.Click += (_, _) => OpenFolder(path);
 			WorldCards.Children.Add(card);

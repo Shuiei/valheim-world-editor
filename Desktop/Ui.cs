@@ -56,6 +56,14 @@ public static class Ui
 		return g;
 	}
 
+	// A path under the home folder as ~/… (Linux and macOS, as a terminal shows it): shorter, and no
+	// one's user name on screen.
+	public static string Tilde(string path)
+	{
+		string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile).TrimEnd('/');
+		return !OperatingSystem.IsWindows() && home.Length > 1 && (path == home || path.StartsWith(home + "/")) ? "~" + path[home.Length..] : path;
+	}
+
 	public static TextBlock Hint(string text) => new() { Text = text, FontSize = 11.5, Foreground = Muted, TextWrapping = TextWrapping.Wrap };
 
 	public static T Classed<T>(this T c, params string[] classes) where T : StyledElement

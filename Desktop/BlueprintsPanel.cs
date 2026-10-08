@@ -88,7 +88,7 @@ public sealed class BlueprintsPanel
 			return;
 		}
 		_list = Store.List();
-		_folder.Text = $"Kept as files in {Store.Directory}. Each one can be pasted into any world.";
+		_folder.Text = $"Kept as files in {Ui.Tilde(Store.Directory)}. Each one can be pasted into any world.";
 		Render();
 	}
 

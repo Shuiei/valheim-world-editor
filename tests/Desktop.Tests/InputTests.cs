@@ -25,6 +25,8 @@ public static class TestApp
 		SavedSelections.PathOverride ??= Path.Combine(Path.GetTempPath(), $"vwe-selections-{Environment.ProcessId}.json");
 		// "My game" looks only where a test says, never in the player's own Valheim or profiles.
 		TerrainEditor.App.LocalGame.SearchDefaultPlaces = false;
+		// Nor Steam outside the home (the computer's own Valheim, its plugin's settings).
+		TerrainEditor.App.GameLook.SearchOutsideHome = false;
 		// Blueprints, heightmaps, logs: a data folder of the tests', never the user's.
 		TerrainEditor.App.AppSettings.DataDirOverride = Path.Combine(Path.GetTempPath(), $"vwe-data-{Environment.ProcessId}");
 		// A changed game folder never starts a copy of the game's look.
