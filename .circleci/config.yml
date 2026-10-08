@@ -107,8 +107,11 @@ jobs:
           name: Smoke test of the Linux package (Xvfb, Mesa's software OpenGL)
           no_output_timeout: 5m
           command: |
-            apt-get install -y -qq xvfb xauth libgl1 libgl1-mesa-dri libegl1 libx11-6 libxrandr2 libxi6 libxcursor1 libice6 libsm6 libfontconfig1 > /dev/null
+            apt-get install -y -qq xvfb xauth mesa-utils libgl1 libglx-mesa0 libgl1-mesa-dri libegl1 libegl-mesa0 libgles2 \
+              libx11-6 libxrandr2 libxi6 libxcursor1 libice6 libsm6 libfontconfig1 > /dev/null
             mkdir -p /tmp/smoke && tar -C /tmp/smoke -xzf /tmp/dist/ValheimWorldEditor-*-linux-x64.tar.gz
+            # The OpenGL the virtual screen offers (Mesa's software renderer, llvmpipe).
+            xvfb-run -a -s "-screen 0 1600x1000x24" glxinfo -B | grep -E 'renderer|version' || true
             xvfb-run -a -s "-screen 0 1600x1000x24" tools/smoke-test.sh /tmp/smoke/ValheimWorldEditor/ValheimWorldEditor tests/fixtures/CITest
       - store_artifacts:
           path: /tmp/dist

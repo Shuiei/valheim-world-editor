@@ -13,6 +13,11 @@ home=$(mktemp -d); trap 'rm -rf "$home"' EXIT
 out=$( { printf 'world %s\narea 0 0 1\nwait 2000\nstate\nquit\n' "$world"; } \
   | HOME="$home" XDG_DATA_HOME="$home/.local/share" XDG_CONFIG_HOME="$home/.config" timeout 180 "$prog" --driver 2>&1 ) || true
 printf '%s\n' "$out" | grep '^@@' | cut -c1-200
+# When it fails: what the app said besides the driver, and its log (which says how it draws).
+show_why() {
+  echo "--- the app's other output:"; printf '%s\n' "$out" | grep -v '^@@' | tail -40
+  echo "--- its log:"; tail -40 "$home/.local/share/ValheimWorldEditor/log.txt" 2>/dev/null || echo "(none)"
+}
 
 printf '%s\n' "$out" | python3 -c '
 import json, sys
@@ -34,4 +39,4 @@ if gl: problems.append(f"{gl} OpenGL error(s)")
 if problems:
     sys.exit("smoke test: " + "; ".join(problems))
 print(f"smoke test: ok ({frames} frames, {objects} objects, no OpenGL error)")
-'
+''' || { show_why; exit 1; }
