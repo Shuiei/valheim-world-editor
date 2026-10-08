@@ -5,7 +5,7 @@ using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
-// The map page's tools: search, zones picked by filter to reset, the edited zones and their pictures.
+// The map page's tools: search, zones picked by filter to reset, and the edited zones.
 [Collection("World files")]
 public class MapToolsTests
 {
@@ -34,25 +34,6 @@ public class MapToolsTests
 		var loose = new ZoneFilter(new HashSet<int>(), false, 0, false, false, null, null);
 		Assert.DoesNotContain((0, 0), loose.Match(stats).Zones);
 		Assert.Contains((1, 0), loose.Match(stats).Zones);
-	}
-
-	[Fact]
-	public void ZonePicturesShowRaisedAndDugGround()
-	{
-		var e = new ZoneEdit(0, 0);
-		// Raised in the south-west corner (row 0 = south: the bottom row of the picture).
-		e.Modified[0] = true;
-		e.Level[0] = 8;
-		e.Modified[EditStore.Grid - 1] = true;
-		e.Level[EditStore.Grid - 1] = -8;
-		var bases = Enumerable.Repeat(40f, EditStore.Cells).ToArray();
-		var p = ZonePictures.Make(e, bases, 30);
-		int bottomLeft = (EditStore.Grid - 1) * EditStore.Grid * 4, bottomRight = bottomLeft + (EditStore.Grid - 1) * 4;
-		Assert.Equal(new byte[] { 224, 96, 75 }, p.Heights[bottomLeft..(bottomLeft + 3)]);
-		Assert.Equal(new byte[] { 75, 143, 224 }, p.Heights[bottomRight..(bottomRight + 3)]);
-		Assert.Equal(new byte[] { 42, 47, 56 }, p.Heights[0..3]);
-		Assert.Equal(32, p.Low);
-		Assert.Equal(48, p.High);
 	}
 
 	[AvaloniaFact]
@@ -125,7 +106,7 @@ public class MapToolsTests
 			Assert.Contains("zone reset", map.Pending.Text);
 			await map.UnmarkAll();
 			Assert.Equal(0, w.World.Pending.Resets);
-			// Edited ground: listed, and shown up close when picked.
+			// Edited ground: listed; picking one goes there.
 			await w.EditArea(0, 0, 1);
 			w.Session!.Shape(32, 32, Formula.Compile("2", new string[0]), 4, 0, "x");
 			w.ShowMap();
@@ -134,8 +115,6 @@ public class MapToolsTests
 			var e0 = edited.OrderByDescending(e => e.HeightCount + e.PaintCount).First();
 			map.EditedList.SelectedIndex = 0;
 			Assert.Equal((e0.ZoneX, e0.ZoneZ), map.Spot);
-			Assert.NotNull(map.TerrainImage.Source);
-			Assert.Contains("heights edited", map.DetailStats.Text);
 		}
 		finally
 		{
