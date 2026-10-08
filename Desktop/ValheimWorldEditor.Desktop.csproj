@@ -12,10 +12,14 @@
     <InvariantGlobalization>true</InvariantGlobalization>
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
     <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
-    <ApplicationIcon>../wwwroot/icon.ico</ApplicationIcon>
+    <ApplicationIcon>Assets/icon.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="Desktop.Tests" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- The window's icon (Windows also takes the program's, ApplicationIcon). -->
+    <AvaloniaResource Include="Assets/icon.png" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../Core/ValheimWorldEditor.Core.csproj" />

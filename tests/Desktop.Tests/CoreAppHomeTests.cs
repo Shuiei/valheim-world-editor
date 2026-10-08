@@ -17,7 +17,7 @@ public sealed class CoreAppHomeTests : IDisposable
 {
 	private static readonly string[] Vars = { "HOME", "XDG_CONFIG_HOME", "XDG_DATA_HOME", "LOCALAPPDATA" };
 	private readonly Dictionary<string, string?> _old = Vars.ToDictionary(v => v, Environment.GetEnvironmentVariable);
-	private readonly string? _settings = AppSettings.PathOverride, _servers = ServerConfig.PathOverride;
+	private readonly string? _settings = AppSettings.PathOverride, _servers = ServerConfig.PathOverride, _dataDir = AppSettings.DataDirOverride;
 	private readonly bool _defaults = LocalGame.SearchDefaultPlaces;
 	private readonly string _home = Path.Combine(Path.GetTempPath(), "vwe-home-" + Guid.NewGuid().ToString("N")[..8]);
 
@@ -29,6 +29,7 @@ public sealed class CoreAppHomeTests : IDisposable
 		Environment.SetEnvironmentVariable("XDG_DATA_HOME", Path.Combine(_home, ".local", "share"));
 		Environment.SetEnvironmentVariable("LOCALAPPDATA", null);
 		AppSettings.PathOverride = null;
+		AppSettings.DataDirOverride = null;
 		ServerConfig.PathOverride = Path.Combine(_home, "servers.cfg");
 		// Only the folders a test sets up (Steam's own folders outside the home are never looked at).
 		LocalGame.SearchDefaultPlaces = false;
@@ -49,6 +50,7 @@ public sealed class CoreAppHomeTests : IDisposable
 			Environment.SetEnvironmentVariable(k, v);
 		}
 		AppSettings.PathOverride = _settings;
+		AppSettings.DataDirOverride = _dataDir;
 		ServerConfig.PathOverride = _servers;
 		LocalGame.SearchDefaultPlaces = _defaults;
 		try

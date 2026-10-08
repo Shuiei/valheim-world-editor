@@ -11,7 +11,9 @@ namespace TerrainEditor.Desktop.Tests;
 
 public static class TestApp
 {
-	public static AppBuilder BuildAvaloniaApp()
+	// Before any test runs (headless or not): the user's files are never the tests'.
+	[System.Runtime.CompilerServices.ModuleInitializer]
+	internal static void KeepTheUsersFiles()
 	{
 		// The Place tool's memory goes to a file of the tests', not the user's.
 		PlaceMemory.PathOverride = Path.Combine(Path.GetTempPath(), $"vwe-place-{Environment.ProcessId}.json");
@@ -20,8 +22,14 @@ public static class TestApp
 		TerrainEditor.App.ServerConfig.PathOverride = Path.Combine(Path.GetTempPath(), $"vwe-servers-{Environment.ProcessId}.cfg");
 		// "My game" looks only where a test says, never in the player's own Valheim or profiles.
 		TerrainEditor.App.LocalGame.SearchDefaultPlaces = false;
+		// Blueprints, heightmaps, logs: a data folder of the tests', never the user's.
+		TerrainEditor.App.AppSettings.DataDirOverride = Path.Combine(Path.GetTempPath(), $"vwe-data-{Environment.ProcessId}");
 		// A changed game folder never starts a copy of the game's look.
 		SettingsDialog.CheckGameLook = _ => { };
+	}
+
+	public static AppBuilder BuildAvaloniaApp()
+	{
 		return AppBuilder.Configure<App>().UseHeadless(new AvaloniaHeadlessPlatformOptions());
 	}
 }

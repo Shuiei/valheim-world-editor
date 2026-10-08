@@ -20,14 +20,18 @@ public class AppTests : IDisposable
 		// The native tests send saved servers to a test file: this test gets its own, in its folder.
 		_oldServers = ServerConfig.PathOverride;
 		ServerConfig.PathOverride = Path.Combine(_data, "servers.cfg");
+		// The data folder from the environment here, not the tests' own.
+		_oldDataDir = AppSettings.DataDirOverride;
+		AppSettings.DataDirOverride = null;
 	}
 
-	private readonly string? _oldServers;
+	private readonly string? _oldServers, _oldDataDir;
 
 	public void Dispose()
 	{
 		Environment.SetEnvironmentVariable("XDG_DATA_HOME", _old);
 		ServerConfig.PathOverride = _oldServers;
+		AppSettings.DataDirOverride = _oldDataDir;
 		try
 		{
 			Directory.Delete(_data, true);

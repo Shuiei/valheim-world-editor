@@ -24,7 +24,7 @@ public static class AppHost
 			await EditorSession.RunAsync(args, new SessionControl());
 			return 0;
 		}
-		Log.Start();
+		Log.Start(Version);
 		bool browser = args.Contains("--browser");
 		int port = Option(args, "--port") is string ps ? int.Parse(ps) : FreePort(5180);
 		var settings = AppSettings.Load();
@@ -181,48 +181,6 @@ public static class AppHost
 		catch (Exception ex)
 		{
 			Console.Error.WriteLine("Could not open the browser: " + ex.Message);
-		}
-	}
-}
-
-// Console output also goes to a log file in the data folder (a window app has no console on Windows).
-public static class Log
-{
-	public static string FilePath => Path.Combine(AppSettings.DataDir, "log.txt");
-
-	public static void Start()
-	{
-		try
-		{
-			var file = new StreamWriter(FilePath, append: false) { AutoFlush = true };
-			Console.SetOut(new Tee(Console.Out, file));
-			Console.SetError(new Tee(Console.Error, file));
-		}
-		catch
-		{
-		}
-	}
-
-	private sealed class Tee(TextWriter a, TextWriter b) : TextWriter
-	{
-		public override System.Text.Encoding Encoding => a.Encoding;
-
-		public override void Write(char value)
-		{
-			try { a.Write(value); } catch { }
-			try { b.Write(value); } catch { }
-		}
-
-		public override void Write(string? value)
-		{
-			try { a.Write(value); } catch { }
-			try { b.Write(value); } catch { }
-		}
-
-		public override void WriteLine(string? value)
-		{
-			try { a.WriteLine(value); } catch { }
-			try { b.WriteLine(value); } catch { }
 		}
 	}
 }

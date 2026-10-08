@@ -11,6 +11,12 @@ the plugin is unchanged in versions without that part.
   Valheim on first start and again after a game update, as the web editor did. The start page
   shows the copy's progress, asks for the Valheim folder when it is not found, and offers Try
   again when it failed. Choosing another game folder in Settings checks it again.
+- Native app: a log (log.txt in the data folder, as the web app kept), the window's icon, the
+  version in the title, and a Documentation link on the start page.
+- Native app: a world folder (`ValheimWorldEditor <folder>`) or a live game (`--live <url> --token
+  <token>`) given on the command line opens straight away, as with the web app.
+- The developer checks of the world generator and the save writer (`--verify`, `--verify-ingame`,
+  `--selftest-save`, `--inspect`, `--summary`) moved to a separate tool, `tools/WorldCheck`.
 
 ### Fixed
 - Native app, Area: after choosing a backup folder with "Another folder…", the folder picker opened

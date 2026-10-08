@@ -26,6 +26,10 @@ public sealed class StartPage
 	internal Func<Tunnel.Request, Task<Tunnel.Result>> StartTunnel { get; set; } = Tunnel.Start;
 	internal Func<AppSettings, List<Worlds.Info>> FindWorlds { get; set; } = Worlds.Find;
 	public event Action? SettingsRequested;
+	public const string DocsUrl = "https://github.com/Shuiei/valheim-world-editor#readme";
+	// Documentation: the project's page, in the web browser.
+	internal Button DocsLink { get; } = new Button { Content = Icons.With("help", "Documentation"), FontSize = 11, Padding = new Thickness(6, 2) }.Classed("ghost");
+	internal Func<Uri, Task<bool>> OpenUrl { get; set; } = _ => Task.FromResult(false);
 
 	internal GameLookBanner LookBanner { get; }
 	internal Dictionary<string, Button> ModeButtons { get; } = new();
@@ -55,6 +59,7 @@ public sealed class StartPage
 		var settingsButton = new Button { Content = Icons.With("settings", "Settings"), FontSize = 13 }.Classed("ghost");
 		ToolTip.SetTip(settingsButton, "Where the game, BepInEx and worlds are on this computer");
 		settingsButton.Click += (_, _) => SettingsRequested?.Invoke();
+		DocsLink.Click += async (_, _) => await OpenUrl(new Uri(DocsUrl));
 		var modes = new UniformGrid { Columns = 3 };
 		foreach (var (key, title, tag, text, icon) in new[]
 		{
@@ -146,7 +151,13 @@ public sealed class StartPage
 					GamePanel,
 					ServerPanel,
 					OfflinePanel,
-					new TextBlock { Text = $"Settings, saved servers and log: {AppSettings.DataDir}", Foreground = Muted, FontSize = 11, Margin = new Thickness(0, 24, 0, 0) },
+					new StackPanel
+					{
+						Orientation = Orientation.Horizontal,
+						Spacing = 10,
+						Margin = new Thickness(0, 24, 0, 0),
+						Children = { DocsLink, new TextBlock { Text = $"Settings, saved servers and log: {AppSettings.DataDir}", Foreground = Muted, FontSize = 11, VerticalAlignment = VerticalAlignment.Center } },
+					},
 				},
 			},
 		};

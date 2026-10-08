@@ -18,7 +18,7 @@ public static class GameLook
 
 	private static readonly List<string> _log = new();
 
-	public static string Dir => Path.Combine(AppSettings.DataDir, "game-look");
+	public static string Dir => Path.Combine(AppSettings.UserDataDir, "game-look");
 
 	private static string MarkerPath => Path.Combine(Dir, "game-look.json");
 
@@ -136,7 +136,7 @@ public static class GameLook
 				UseShellExecute = false,
 				CreateNoWindow = true,
 			};
-			foreach (string a in new[] { "-u", script, "--valheim", valheim, "--out", Dir, "--work", Path.Combine(AppSettings.DataDir, "export-cache") })
+			foreach (string a in new[] { "-u", script, "--valheim", valheim, "--out", Dir, "--work", Path.Combine(AppSettings.UserDataDir, "export-cache") })
 			{
 				psi.ArgumentList.Add(a);
 			}

@@ -16,6 +16,8 @@ public class EditorProcess : IDisposable
 	private readonly string _data = Path.Combine(Path.GetTempPath(), "vwe-visual-" + Guid.NewGuid().ToString("N")[..8]);
 	public string? Why { get; }
 	public bool Available => _p != null;
+	// The editor's data folder (--data): its settings, log...
+	public string Data => _data;
 
 	public EditorProcess()
 		: this(Array.Empty<string>())
@@ -155,6 +157,65 @@ public sealed class DirectEditorProcess() : EditorProcess(Start())
 		{
 		}
 	}
+}
+
+// The editor started with a world folder: that world's map.
+public sealed class FolderEditorProcess() : EditorProcess(Start())
+{
+	private static string? _copy;
+
+	private static string[] Start()
+	{
+		_copy = Path.Combine(Path.GetTempPath(), "vwe-visual-folder-" + Guid.NewGuid().ToString("N")[..8]);
+		string world = Path.Combine(_copy, "CITest");
+		Directory.CreateDirectory(world);
+		foreach (string f in Directory.GetFiles(Path.Combine(Fixtures(), "CITest")))
+		{
+			File.Copy(f, Path.Combine(world, Path.GetFileName(f)));
+		}
+		return new[] { world };
+	}
+
+	public override void Dispose()
+	{
+		base.Dispose();
+		try
+		{
+			Directory.Delete(_copy!, true);
+		}
+		catch (Exception)
+		{
+		}
+	}
+}
+
+// The editor started with --live and --token: the stand-in game's map.
+public sealed class LiveEditorProcess() : EditorProcess(Start())
+{
+	private static FakeGame? _game;
+	public FakeGame Game => _game!;
+
+	private static string[] Start()
+	{
+		_game = new FakeGame();
+		return new[] { "--live", _game.Url, "--token", _game.Token };
+	}
+
+	public override void Dispose()
+	{
+		base.Dispose();
+		_game?.Dispose();
+	}
+}
+
+[CollectionDefinition("Visual folder")]
+public sealed class FolderVisualGroup : ICollectionFixture<FolderEditorProcess>
+{
+}
+
+[CollectionDefinition("Visual live")]
+public sealed class LiveVisualGroup : ICollectionFixture<LiveEditorProcess>
+{
 }
 
 [CollectionDefinition("Visual")]
@@ -412,5 +473,47 @@ public sealed class DirectVisualTests(DirectEditorProcess editor)
 		string bench = editor.Send("bench 1").GetProperty("bench").GetString()!;
 		Assert.Matches(@"^\d+ fps over \d+\.\d s, work .* ms, gaps median \d+ ms, 95% \d+ ms, max \d+ ms, view \d+×\d+ px$", bench);
 		Assert.Equal(0, editor.Send("state").GetProperty("glErrors").GetInt32());
+		// What it said is in its log, in the tests' data folder.
+		string log = File.ReadAllText(Path.Combine(editor.Data, "log.txt"));
+		Assert.StartsWith($"Valheim World Editor {BuildInfo.Version}, ", log);
+		Assert.Contains("window open", log);
+	}
+
+	internal static JsonElement WaitForPage(EditorProcess editor, string page)
+	{
+		JsonElement s = editor.Send("state");
+		for (int i = 0; i < 300 && s.GetProperty("page").GetString() != page; i++)
+		{
+			Thread.Sleep(100);
+			s = editor.Send("state");
+		}
+		Assert.Equal(page, s.GetProperty("page").GetString());
+		return s;
+	}
+}
+
+// Started with a world folder: its map opens.
+[Collection("Visual folder")]
+[Trait("Category", "Visual")]
+public sealed class FolderVisualTests(FolderEditorProcess editor)
+{
+	[Fact]
+	public void AWorldFolderOnTheCommandLineOpensItsMap()
+	{
+		Assert.SkipUnless(editor.Available, editor.Why ?? "");
+		DirectVisualTests.WaitForPage(editor, "map");
+	}
+}
+
+// Started with --live and --token: the game's world opens on the map.
+[Collection("Visual live")]
+[Trait("Category", "Visual")]
+public sealed class LiveVisualTests(LiveEditorProcess editor)
+{
+	[Fact]
+	public void ALiveGameOnTheCommandLineOpensItsMap()
+	{
+		Assert.SkipUnless(editor.Available, editor.Why ?? "");
+		DirectVisualTests.WaitForPage(editor, "map");
 	}
 }

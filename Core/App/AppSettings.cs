@@ -26,7 +26,24 @@ public sealed class AppSettings
 
 	public sealed record RecentWorld(string Path, string Name, DateTime Opened);
 
+	// The data folder: settings, servers, blueprints, the log (DataDirOverride: another folder, for
+	// the tests' editor). The copied game files stay in the user's (UserDataDir), read only by tests.
 	public static string DataDir
+	{
+		get
+		{
+			if (DataDirOverride is string o)
+			{
+				Directory.CreateDirectory(o);
+				return o;
+			}
+			return UserDataDir;
+		}
+	}
+
+	public static string? DataDirOverride { get; set; }
+
+	public static string UserDataDir
 	{
 		get
 		{
