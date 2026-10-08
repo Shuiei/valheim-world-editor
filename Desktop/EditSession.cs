@@ -557,23 +557,12 @@ public sealed class EditSession
 			{
 				throw new InvalidOperationException("A stroke is still going on.");
 			}
-			if (Scene.Owner is { } owner)
-			{
-				var o = owner.Save();
-				result = o.Saved!;
-			}
-			else
-			{
-				var changed = Edits.All().Where(e => e.Changed).ToList();
-				result = WorldWriter.Save(Scene.World, changed, Edits.Deleted, Edits.Added, Edits.Resets);
-				if (result.Saved)
-				{
-					Edits.ResetFrom(WorldSave.Load(Scene.World.Directory));
-				}
-			}
+			// Every area opened in the app belongs to an open world (WorldScene.Load), which saves.
+			var owner = Scene.Owner ?? throw new InvalidOperationException("This area is not part of an open world, so it cannot be saved.");
+			result = owner.Save().Saved!;
 			if (result.Saved)
 			{
-				Reread(Scene.Owner?.World ?? WorldSave.Load(Scene.World.Directory));
+				Reread(owner.World);
 			}
 		}
 		if (result.Saved)
