@@ -51,6 +51,8 @@ the plugin is unchanged in versions without that part.
 
 - Native app: in a short window the View panel and the tool panels ran under the status bar and
   their last rows could not be reached; they now stop above it and scroll.
+- The data folder follows `XDG_DATA_HOME` on Linux even before that folder exists (it fell back to
+  `~/.local/share`).
 - Native app: Space no longer presses the focused button in the editor.
 - Native app, Area: "pick" for Replace now works before an area is drawn.
 

@@ -152,6 +152,39 @@ public sealed class StartupTests : IDisposable
 		Assert.Same(stdout, Console.Out);
 	}
 
+	[Fact]
+	public void TheTestsEditorOnlyLooksForTheGamesLookAndNeverCopiesIt()
+	{
+		string xdg = Path.Combine(_dir, "xdg"), game = Path.Combine(_dir, "Valheim");
+		Directory.CreateDirectory(Path.Combine(game, "valheim_Data", "StreamingAssets", "SoftRef", "Bundles"));
+		string? oldXdg = Environment.GetEnvironmentVariable("XDG_DATA_HOME"), oldLocal = Environment.GetEnvironmentVariable("LOCALAPPDATA");
+		Environment.SetEnvironmentVariable("XDG_DATA_HOME", xdg);
+		Environment.SetEnvironmentVariable("LOCALAPPDATA", null);
+		try
+		{
+			AppSettings.PathOverride = Path.Combine(_dir, "settings.json");
+			// Only ever this test's folder (never the user's copied game files).
+			Assert.True(GameLook.Dir.StartsWith(_dir), $"game look in {GameLook.Dir}");
+			var settings = new AppSettings { ValheimPath = game };
+			GameLook.Check(settings, export: false);
+			Assert.Equal("missing", GameLook.Now().State);
+			Assert.False(Directory.Exists(GameLook.Dir), "nothing copied");
+			// Once the files are there: ready.
+			foreach (string f in new[] { "terrain/heightmap.frag.glsl", "maptex/background.png", "models/objects.json" })
+			{
+				Directory.CreateDirectory(Path.GetDirectoryName(Path.Combine(GameLook.Dir, f))!);
+				File.WriteAllText(Path.Combine(GameLook.Dir, f), "");
+			}
+			GameLook.Check(settings, export: false);
+			Assert.Equal("ready", GameLook.Now().State);
+		}
+		finally
+		{
+			Environment.SetEnvironmentVariable("XDG_DATA_HOME", oldXdg);
+			Environment.SetEnvironmentVariable("LOCALAPPDATA", oldLocal);
+		}
+	}
+
 	[AvaloniaFact]
 	public void TheWindowHasItsIconAndTheStartPageLinksTheDocumentation()
 	{
