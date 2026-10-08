@@ -45,7 +45,9 @@ public sealed partial class MainWindow : Window
 	private readonly Border _pendingPill = new() { CornerRadius = new CornerRadius(999), BorderThickness = new Thickness(1), Padding = new Thickness(9, 4), VerticalAlignment = VerticalAlignment.Center };
 	private readonly TextBlock _selection = new() { FontSize = 12, Foreground = new SolidColorBrush(Color.FromRgb(224, 166, 75)), TextWrapping = TextWrapping.Wrap };
 	private ModelStore? _models;
-	private string Name(WorldScene.Thing t) => _models?.NameOf(t.Prefab) ?? TerrainEditor.Terrain.PrefabCatalog.DisplayName(t.Prefab) ?? t.Prefab.ToString();
+	// The file pickers' patterns.
+	private static readonly string[] BlueprintPatterns = { "*.blueprint", "*.vbuild" }, PicturePatterns = { "*.png", "*.jpg", "*.jpeg", "*.bmp", "*.webp" }, PngPatterns = { "*.png" };
+	private string ThingName(WorldScene.Thing t) => _models?.NameOf(t.Prefab) ?? TerrainEditor.Terrain.PrefabCatalog.DisplayName(t.Prefab) ?? t.Prefab.ToString();
 
 	public GlView View => _view;
 	internal ToolPanel Tools { get; } = new();
@@ -335,6 +337,7 @@ public sealed partial class MainWindow : Window
 		{
 			return;
 		}
+		_world?.Dispose();
 		_world = null;
 		_session = null;
 		Tunnel.Close();
@@ -785,11 +788,11 @@ public sealed partial class MainWindow : Window
 		HelpButton.Classes.Set("on", HelpCard.IsVisible);
 	}
 
-	private static Control Sep() => new Border { Width = 1, Height = 26, Background = Ui.Line, Margin = new Thickness(4, 0), VerticalAlignment = VerticalAlignment.Center };
+	private static Border Sep() => new Border { Width = 1, Height = 26, Background = Ui.Line, Margin = new Thickness(4, 0), VerticalAlignment = VerticalAlignment.Center };
 
 	// The top bar (the web editor's): back to the map, the names, undo and redo, what is waiting to be
 	// saved and Save, and the right-hand panels.
-	private Control TopBar()
+	private Border TopBar()
 	{
 		UndoButton.Click += (_, _) => Undo();
 		MapButton.Click += (_, _) => ShowMap();
@@ -830,17 +833,17 @@ public sealed partial class MainWindow : Window
 	}
 
 	// The status bar's cursor readout: where the pointer is on the ground (see CursorReadout).
-	internal TextBlock Cursor { get; } = new() { FontSize = 12, Foreground = Ui.Muted, VerticalAlignment = VerticalAlignment.Center, TextWrapping = TextWrapping.NoWrap };
+	internal TextBlock CursorText { get; } = new() { FontSize = 12, Foreground = Ui.Muted, VerticalAlignment = VerticalAlignment.Center, TextWrapping = TextWrapping.NoWrap };
 	private Point? _cursorAt;
 
 	internal void ShowCursor(Point? at)
 	{
 		_cursorAt = at;
-		Cursor.Text = at is Point p && _view.Scene is { } s && Surface is { } surface && _view.GridAt(p, surface.Bounds.Size) is { } g ? CursorReadout.Text(s, g.X, g.Y) : "";
+		CursorText.Text = at is Point p && _view.Scene is { } s && Surface is { } surface && _view.GridAt(p, surface.Bounds.Size) is { } g ? CursorReadout.Text(s, g.X, g.Y) : "";
 	}
 
 	// The status bar (bottom): the cursor, the last message, the selection, walking or flying, and the controls.
-	private Control StatusBar()
+	private Border StatusBar()
 	{
 		var bar = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto,Auto,Auto"), ColumnSpacing = 18 };
 		var tips = new TextBlock { Text = "Right drag turns · Wheel zooms · Middle drag slides · ? help", FontSize = 12, Foreground = Ui.Muted, VerticalAlignment = VerticalAlignment.Center };
@@ -852,7 +855,7 @@ public sealed partial class MainWindow : Window
 		Grid.SetColumn(_selection, 2);
 		Grid.SetColumn(_eye, 3);
 		Grid.SetColumn(tips, 4);
-		bar.Children.Add(Cursor);
+		bar.Children.Add(CursorText);
 		bar.Children.Add(_message);
 		bar.Children.Add(_selection);
 		bar.Children.Add(_eye);
@@ -1246,7 +1249,7 @@ public sealed partial class MainWindow : Window
 		}
 	}
 
-	private Control ViewPanel()
+	private Border ViewPanel()
 	{
 		var list = new StackPanel { Spacing = 2 };
 		list.Children.Add(Ui.Heading("View", 0));
@@ -1378,7 +1381,7 @@ public sealed partial class MainWindow : Window
 			var picked = await StorageProvider.OpenFilePickerAsync(new Avalonia.Platform.Storage.FilePickerOpenOptions
 			{
 				Title = "Import a PlanBuild .blueprint or .vbuild file",
-				FileTypeFilter = new[] { new Avalonia.Platform.Storage.FilePickerFileType("Blueprints") { Patterns = new[] { "*.blueprint", "*.vbuild" } } },
+				FileTypeFilter = new[] { new Avalonia.Platform.Storage.FilePickerFileType("Blueprints") { Patterns = BlueprintPatterns } },
 			});
 			return picked.Count > 0 && picked[0].Path.IsFile ? picked[0].Path.LocalPath : null;
 		};
@@ -1420,7 +1423,7 @@ public sealed partial class MainWindow : Window
 			var picked = await StorageProvider.OpenFilePickerAsync(new Avalonia.Platform.Storage.FilePickerOpenOptions
 			{
 				Title = "Use a grayscale picture as the brush shape",
-				FileTypeFilter = new[] { new Avalonia.Platform.Storage.FilePickerFileType("Pictures") { Patterns = new[] { "*.png", "*.jpg", "*.jpeg", "*.bmp", "*.webp" } } },
+				FileTypeFilter = new[] { new Avalonia.Platform.Storage.FilePickerFileType("Pictures") { Patterns = PicturePatterns } },
 			});
 			if (picked.Count == 0 || !picked[0].Path.IsFile)
 			{
@@ -1478,7 +1481,7 @@ public sealed partial class MainWindow : Window
 			var picked = await StorageProvider.OpenFilePickerAsync(new Avalonia.Platform.Storage.FilePickerOpenOptions
 			{
 				Title = "Import a heightmap (grayscale PNG)",
-				FileTypeFilter = new[] { new Avalonia.Platform.Storage.FilePickerFileType("PNG pictures") { Patterns = new[] { "*.png" } } },
+				FileTypeFilter = new[] { new Avalonia.Platform.Storage.FilePickerFileType("PNG pictures") { Patterns = PngPatterns } },
 			});
 			return picked.Count > 0 && picked[0].Path.IsFile ? picked[0].Path.LocalPath : null;
 		};
@@ -1628,8 +1631,8 @@ public sealed partial class MainWindow : Window
 			}
 		};
 		_view.SelectionChanged += things => _selection.Text = things.Count == 0 ? "" : things.Count == 1
-			? $"Selected: {Name(things[0])} at {things[0].Position.X:0.0}, {things[0].Position.Z:0.0} (height {things[0].Position.Y:0.0})"
-			: $"Selected: {things.Count} objects ({string.Join(", ", things.GroupBy(Name).OrderByDescending(g => g.Count()).Take(4).Select(g => $"{g.Key} ×{g.Count()}"))})";
+			? $"Selected: {ThingName(things[0])} at {things[0].Position.X:0.0}, {things[0].Position.Z:0.0} (height {things[0].Position.Y:0.0})"
+			: $"Selected: {things.Count} objects ({string.Join(", ", things.GroupBy(ThingName).OrderByDescending(g => g.Count()).Take(4).Select(g => $"{g.Key} ×{g.Count()}"))})";
 		_view.EyeChanged += e => _eye.Text = e switch
 		{
 			GlView.EyeMode.Walk => "Walking at eye height: WASD moves (Shift runs), right drag looks around · F flies",

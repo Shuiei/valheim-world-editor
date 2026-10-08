@@ -134,9 +134,9 @@ public sealed class MapView : OpenGlControlBase
 	// Where a world point is on the control (its own units, not device pixels).
 	public Point ScreenOf(float x, float z) => new(Bounds.Width / 2 + (x - Center.X) / MetersPerPixel, Bounds.Height / 2 - (z - Center.Y) / MetersPerPixel);
 
-	protected override void OnOpenGlInit(GlInterface gli)
+	protected override void OnOpenGlInit(GlInterface gl)
 	{
-		_gl = GL.GetApi(name => gli.GetProcAddress(name));
+		_gl = GL.GetApi(name => gl.GetProcAddress(name));
 		_es = GlVersion.Type == GlProfileType.OpenGLES;
 		_prog = Program(MapShader.Vertex, MapShader.Fragment);
 		_vao = _gl.GenVertexArray();
@@ -196,7 +196,7 @@ public sealed class MapView : OpenGlControlBase
 
 	// The map left the window (the 3D editor is shown): its OpenGL context goes, and every texture with
 	// it. They are forgotten (not deleted) and uploaded again into the next context.
-	protected override void OnOpenGlDeinit(GlInterface gli)
+	protected override void OnOpenGlDeinit(GlInterface gl)
 	{
 		_tex.Clear();
 		_texturesLoaded = false;
@@ -328,7 +328,7 @@ public sealed class MapView : OpenGlControlBase
 
 	private double Scaling => TopLevel.GetTopLevel(this)?.RenderScaling ?? 1;
 
-	protected override unsafe void OnOpenGlRender(GlInterface gli, int fb)
+	protected override unsafe void OnOpenGlRender(GlInterface gl, int fb)
 	{
 		var g = _global;
 		double scaling = Scaling;

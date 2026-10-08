@@ -82,7 +82,7 @@ public static class SettingsDialog
 			var picked = await dialog.StorageProvider.OpenFolderPickerAsync(new Avalonia.Platform.Storage.FolderPickerOpenOptions { Title = title });
 			return picked.Count > 0 && picked[0].Path.IsFile ? picked[0].Path.LocalPath : null;
 		}
-		var valheim = new TextBox { Text = settings.ValheimPath, Watermark = "automatic (Steam libraries)" }.Tip("settings.valheim");
+		var valheim = new TextBox { Text = settings.ValheimPath, PlaceholderText = "automatic (Steam libraries)" }.Tip("settings.valheim");
 		var browse = new Button { Content = "Browse…" }.Tip("settings.browse");
 		browse.Click += async (_, _) => { if (await Pick("The Valheim game folder (with valheim_Data)") is string p) valheim.Text = p; };
 		var auto = new Button { Content = "Automatic" }.Tip("settings.auto");

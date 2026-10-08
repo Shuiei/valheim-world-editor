@@ -61,7 +61,7 @@ public class PlaceTests
 	public void SingleIsExactlyAtTheCursorAndStaysAwayFromOthers()
 	{
 		var (t, _) = Tool(new WorldScene.Thing(1, StableHash.Of("Beech1"), new Vector3(32, 30, 32), Vector3.Zero, 1, false));
-		t.Single = true;
+		t.OneAtATime = true;
 		var p = Assert.Single(t.Preview(new Vector2(50, 50)));
 		Assert.Equal(new Vector2(50, 50), p.G);
 		// Right on top of a standing tree (world 32, 32 is grid 64, 64): nothing.
@@ -92,7 +92,7 @@ public class PlaceTests
 		t.Chosen.Add(Wall);
 		t.AutoSnap();
 		Assert.True(t.EndToEnd);
-		Assert.True(t.Single);
+		Assert.True(t.OneAtATime);
 		t.Mode = PlaceTool.Modes.Line;
 		t.Points.Add(new Vector2(20, 64));
 		t.Points.Add(new Vector2(41, 64));
@@ -170,7 +170,7 @@ public class PlaceTests
 	public void ElevationsAndUnderwater()
 	{
 		var (t, s) = Tool();
-		t.Single = true;
+		t.OneAtATime = true;
 		t.Elevation = PlaceTool.Elevations.At;
 		t.Elev = 50;
 		Assert.Equal(50, t.Preview(new Vector2(50, 50))[0].Position.Y, 3);
@@ -257,7 +257,7 @@ public class PlaceTests
 	public void ShiftDragRemovesTheChosenKinds()
 	{
 		var (w, s, screen) = Open();
-		w.PlaceInput.Tool.Single = true;
+		w.PlaceInput.Tool.OneAtATime = true;
 		w.MouseMove(screen(64, 64));
 		w.MouseDown(screen(64, 64), MouseButton.Left);
 		w.MouseUp(screen(64, 64), MouseButton.Left);

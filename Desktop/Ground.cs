@@ -15,8 +15,13 @@ public sealed class Ground
 	public int X0 { get; }
 	public int Z0 { get; }
 	public int Size { get; }
-	public readonly float[] Base, Level, Smooth, Paint, BaseMask;
-	public readonly byte[] Mod, PMod;
+	public float[] Base { get; }
+	public float[] Level { get; }
+	public float[] Smooth { get; }
+	public float[] Paint { get; }
+	public float[] BaseMask { get; }
+	public byte[] Mod { get; }
+	public byte[] PMod { get; }
 
 	// The values as loaded (or last saved), and each zone's own saved values: zones share their edge
 	// points, and saved zones do not always agree on them. A point unchanged since loading is given

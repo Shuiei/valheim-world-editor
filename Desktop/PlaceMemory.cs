@@ -7,6 +7,8 @@ namespace TerrainEditor.Desktop;
 // presets, favourite and recently placed kinds, the chosen kinds and their weights.
 public sealed class PlaceMemory
 {
+	private static readonly JsonSerializerOptions Indented = new() { WriteIndented = true };
+
 	public List<PlaceTool.Preset> Presets { get; set; } = new();
 	public List<string> Favourites { get; set; } = new();
 	public List<string> Recent { get; set; } = new();
@@ -37,7 +39,7 @@ public sealed class PlaceMemory
 		try
 		{
 			Directory.CreateDirectory(Path.GetDirectoryName(Where)!);
-			File.WriteAllText(Where, JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true }));
+			File.WriteAllText(Where, JsonSerializer.Serialize(this, Indented));
 		}
 		catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
 		{

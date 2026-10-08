@@ -36,6 +36,9 @@ namespace TerrainEditor.Desktop;
 //   quit
 public static class Driver
 {
+	// The View panel's 3D resolution choices, in their list's order.
+	private static readonly string[] Resolutions = { "sharp", "balanced", "fast" };
+
 	public static void Start(MainWindow w)
 	{
 		var thread = new Thread(() =>
@@ -163,7 +166,7 @@ public static class Driver
 				{
 					case "game": w.GameLookBox.IsChecked = args[1] == "on"; break;
 					case "seethrough": w.SeeThroughBox.IsChecked = args[1] == "on"; break;
-					case "res": w.ResolutionBox.SelectedIndex = Array.IndexOf(new[] { "sharp", "balanced", "fast" }, args[1]); break;
+					case "res": w.ResolutionBox.SelectedIndex = Array.IndexOf(Resolutions, args[1]); break;
 					default: throw new InvalidOperationException("unknown look " + args[0]);
 				}
 				return State(w);

@@ -17,7 +17,7 @@ public sealed class BlueprintsPanel
 {
 	public Control Card { get; }
 	public BlueprintStore Store { get; set; } = BlueprintStore.Default;
-	internal TextBox Search { get; } = new() { Watermark = "Search blueprints", FontSize = 12 };
+	internal TextBox Search { get; } = new() { PlaceholderText = "Search blueprints", FontSize = 12 };
 	internal Button ImportButton { get; } = new() { Content = "Import file…", FontSize = 12 };
 	internal StackPanel List { get; } = new() { Spacing = 4 };
 	private readonly TextBlock _folder = new() { FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };

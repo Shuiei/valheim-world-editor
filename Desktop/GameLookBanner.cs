@@ -24,7 +24,7 @@ public sealed class GameLookBanner
 	internal TextBlock Message { get; } = new() { TextWrapping = TextWrapping.Wrap };
 	internal ProgressBar Bar { get; } = new() { Minimum = 0, Maximum = 1, Height = 6, MinHeight = 6 };
 	internal TextBlock LastLine { get; } = Ui.Hint("");
-	internal TextBox PathBox { get; } = new() { Watermark = "…/steamapps/common/Valheim", FontSize = 13 };
+	internal TextBox PathBox { get; } = new() { PlaceholderText = "…/steamapps/common/Valheim", FontSize = 13 };
 	internal Button Browse { get; } = new() { Content = "Browse…" };
 	internal Button Use { get; } = new Button { Content = "Use" }.Classed("primary");
 	internal Button Retry { get; } = new Button { Content = "Try again" }.Classed("primary");

@@ -11,6 +11,8 @@ namespace TerrainEditor.Desktop;
 // settings of the mode; the kinds to choose from open in a list beside it.
 public sealed class PlacePanel
 {
+	private static readonly string[] ChoosePreset = { "Choose a preset…" };
+
 	public Control Card { get; }
 	public Control Chooser { get; }
 	private readonly PlaceInput _input;
@@ -33,7 +35,7 @@ public sealed class PlacePanel
 	internal Func<string, Task<bool>> Confirm { get; set; } = _ => Task.FromResult(true);
 	internal StackPanel Mix { get; } = new() { Spacing = 3 };
 	internal Button KindsButton { get; } = new() { Content = "+ Add kinds", FontSize = 12 };
-	internal TextBox Search { get; } = new() { Watermark = "Search kinds (oak, rock, bush…)", FontSize = 12 };
+	internal TextBox Search { get; } = new() { PlaceholderText = "Search kinds (oak, rock, bush…)", FontSize = 12 };
 	internal StackPanel List { get; } = new() { Spacing = 1 };
 	internal Button PickButton { get; } = new() { Content = "Pick from world", FontSize = 12 };
 	internal Button UntickAllButton { get; } = new() { Content = "Untick all", FontSize = 12 };
@@ -100,7 +102,7 @@ public sealed class PlacePanel
 
 	private static Button Link(string text) => new() { Content = text, FontSize = 10, Padding = new Thickness(4, 0), Background = Brushes.Transparent, Foreground = Ui.Muted };
 
-	private static Control Row(string label, Control input, Control? after = null)
+	private static Grid Row(string label, Control input, Control? after = null)
 	{
 		var g = new Grid { ColumnDefinitions = new ColumnDefinitions("72,*,Auto") };
 		var l = new TextBlock { Text = label, FontSize = 12, VerticalAlignment = VerticalAlignment.Center };
@@ -281,7 +283,7 @@ public sealed class PlacePanel
 		var roV = new TextBlock();
 		RotationSlider = Slide(-180, 180, 1, t.Rotation, roV, v => $"{v:0}°", v => { if (!_filling) { t.Rotation = v; t.Notify(); } });
 		RandomYawBox.IsCheckedChanged += (_, _) => { t.RandomYaw = RandomYawBox.IsChecked == true; t.Notify(); };
-		SingleBox.IsCheckedChanged += (_, _) => { if (!_filling) { t.Single = SingleBox.IsChecked == true; t.SingleByHand = true; t.Notify(); } };
+		SingleBox.IsCheckedChanged += (_, _) => { if (!_filling) { t.OneAtATime = SingleBox.IsChecked == true; t.OneAtATimeByHand = true; t.Notify(); } };
 		EndToEndBox.IsCheckedChanged += (_, _) => { if (!_filling) { t.EndToEnd = EndToEndBox.IsChecked == true; t.EndToEndByHand = true; Sync(); t.Notify(); } };
 		LayersBox.ValueChanged += (_, e) => { t.Layers = (int)(e.NewValue ?? 1); t.Notify(); };
 		LoopBox.IsCheckedChanged += (_, _) => { t.Loop = LoopBox.IsChecked == true; t.Notify(); };
@@ -409,7 +411,7 @@ public sealed class PlacePanel
 	private void FillPresets(string? select = null)
 	{
 		_filling = true;
-		PresetBox.ItemsSource = new[] { "Choose a preset…" }.Concat(PlaceTool.BuiltIn.Select(p => p.Name)).Concat(Memory.Presets.Select(p => $"Yours: {p.Name}")).ToList();
+		PresetBox.ItemsSource = ChoosePreset.Concat(PlaceTool.BuiltIn.Select(p => p.Name)).Concat(Memory.Presets.Select(p => $"Yours: {p.Name}")).ToList();
 		int own = Memory.Presets.FindIndex(p => p.Name == select);
 		PresetBox.SelectedIndex = own >= 0 ? 1 + PlaceTool.BuiltIn.Length + own : 0;
 		DeletePresetButton.IsEnabled = own >= 0;
@@ -424,7 +426,7 @@ public sealed class PlacePanel
 		Memory.Save();
 	}
 
-	private static Control ChipHead(string title, Button all, Button none) => new StackPanel
+	private static StackPanel ChipHead(string title, Button all, Button none) => new StackPanel
 	{
 		Orientation = Orientation.Horizontal,
 		Spacing = 2,
@@ -652,7 +654,7 @@ public sealed class PlacePanel
 		ElevationBox.SelectedIndex = (int)t.Elevation;
 		ElevBox.Value = (decimal)t.Elev;
 		RotationSlider.Value = t.Rotation;
-		SingleBox.IsChecked = t.Single;
+		SingleBox.IsChecked = t.OneAtATime;
 		EndToEndBox.IsChecked = t.EndToEnd;
 		DensitySlider.Value = t.Density;
 		SpacingSlider.Value = t.Spacing;

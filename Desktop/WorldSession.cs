@@ -9,7 +9,7 @@ namespace TerrainEditor.Desktop;
 // One open world, for as long as it is open: the save (or the running game's world, live), the edits
 // waiting to be saved, and the world generator's ground. Every area opened from the map shares it, so
 // edits stay pending while you move around the world (like the web editor's session).
-public sealed class WorldSession
+public sealed class WorldSession : IDisposable
 {
 	public required WorldSave World { get; set; }
 	public required EditStore Edits { get; init; }
@@ -91,6 +91,13 @@ public sealed class WorldSession
 	// (the game regenerates them), after which the world is read again from the game.
 	// One apply at a time: a second one (a double click) waits and sends only what is still pending.
 	private readonly SemaphoreSlim _applying = new(1, 1);
+
+	// When the world is left: the live connection closes.
+	public void Dispose()
+	{
+		Live?.Dispose();
+		_applying.Dispose();
+	}
 
 	public async Task<Outcome> ApplyLive()
 	{

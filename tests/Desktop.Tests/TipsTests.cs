@@ -54,7 +54,7 @@ public class TipsTests
 		string what = c switch
 		{
 			ContentControl cc => Text(cc.Content),
-			TextBox t => t.Watermark ?? t.Text ?? "",
+			TextBox t => t.PlaceholderText ?? t.Text ?? "",
 			ComboBox b => b.SelectedItem?.ToString() ?? "",
 			_ => "",
 		};

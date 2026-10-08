@@ -1,7 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <!-- The native app (Avalonia window, 3D view drawn with OpenGL), next to the web app until it does
-       everything the web one does. Uses the shared Core library. -->
+  <!-- The app: an Avalonia window, the 3D view and the map drawn with OpenGL. Uses the Core library. -->
   <PropertyGroup>
+    <!-- The .NET analyzers' recommended rules; CI builds with warnings as errors (.circleci/config.yml).
+         CS9057: Avalonia's analyzers are built for a newer compiler than some SDKs run (it is about
+         the machine's SDK, not the code). -->
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <NoWarn>$(NoWarn);CS9057</NoWarn>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>

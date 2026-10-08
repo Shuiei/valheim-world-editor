@@ -331,6 +331,8 @@ public static class GameLook
 		return null;
 	}
 
+	private static readonly string[] SystemSteamRoots = { "/opt/Steam", "/usr/share/steam" };
+
 	private static IEnumerable<string> SteamLibraries()
 	{
 		var roots = new List<string>();
@@ -362,7 +364,7 @@ public static class GameLook
 			});
 			if (SearchOutsideHome)
 			{
-				roots.AddRange(new[] { "/opt/Steam", "/usr/share/steam" });
+				roots.AddRange(SystemSteamRoots);
 			}
 		}
 		var seen = new HashSet<string>();

@@ -16,7 +16,7 @@ public sealed class StartPage
 {
 	public Control View { get; }
 	private readonly AppSettings _settings;
-	private string _mode;
+	private string _mode = "";
 	public event Action<Func<Task<WorldSession>>, string>? OpenRequested;
 	// Asks the window for a folder or a file (Browse…).
 	internal Func<string, Task<string?>> PickFolder { get; set; } = _ => Task.FromResult<string?>(null);
@@ -38,7 +38,7 @@ public sealed class StartPage
 	internal Expander ServerForm { get; } = new() { Header = new TextBlock { Text = "Connect to a server", FontWeight = FontWeight.SemiBold }, HorizontalAlignment = HorizontalAlignment.Stretch };
 	internal StackPanel OfflinePanel { get; } = new() { Spacing = 8 };
 	internal WrapPanel WorldCards { get; } = new() { ItemSpacing = 10, LineSpacing = 10 };
-	internal TextBox PathBox { get; } = new() { Watermark = "Folder of the world (with _main.<n>.chunks files)", FontSize = 13 };
+	internal TextBox PathBox { get; } = new() { PlaceholderText = "Folder of the world (with _main.<n>.chunks files)", FontSize = 13 };
 	internal TextBlock PathError { get; } = Err();
 	private readonly TextBlock _lastError = new() { Foreground = new SolidColorBrush(Color.FromRgb(224, 96, 75)), TextWrapping = TextWrapping.Wrap, IsVisible = false };
 	private readonly DispatcherTimer _gameTimer = new() { Interval = TimeSpan.FromSeconds(2.5) };
@@ -154,7 +154,7 @@ public sealed class StartPage
 						ColumnDefinitions = new ColumnDefinitions("Auto,Auto,*,Auto"),
 						Children =
 						{
-							new TextBlock { Inlines = { new Avalonia.Controls.Documents.Run("Valheim") { Foreground = Accent }, new Avalonia.Controls.Documents.Run(" World Editor") }, FontSize = 26, FontWeight = FontWeight.SemiBold },
+							Ui.BrandTitle(26),
 							Col(new TextBlock { Text = $"  v{BuildInfo.Version}", Foreground = Muted, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(6, 0, 0, 6) }, 1),
 							Col(settingsButton, 3),
 						},
@@ -360,19 +360,19 @@ public sealed class StartPage
 	internal TextBlock ServerError => _serverError;
 	internal TextBlock UrlError => _urlError;
 	internal ContentControl GameState => _gameState;
-	internal TextBox SName { get; } = new() { Watermark = "how it shows in your list, e.g. Friends server (optional)" };
-	internal TextBox SHost { get; } = new() { Watermark = "my.server.com or 203.0.113.10" };
+	internal TextBox SName { get; } = new() { PlaceholderText = "how it shows in your list, e.g. Friends server (optional)" };
+	internal TextBox SHost { get; } = new() { PlaceholderText = "my.server.com or 203.0.113.10" };
 	internal NumericUpDown SPort { get; } = new() { Value = 22, Minimum = 1, Maximum = 65535, FormatString = "0" };
-	internal TextBox SUser { get; } = new() { Watermark = "the account you log in with" };
-	internal TextBox SPass { get; } = new() { PasswordChar = '•', Watermark = "or use a key file below" };
-	internal TextBox SKey { get; } = new() { Watermark = "~/.ssh/id_ed25519" };
-	internal TextBox SToken { get; } = new() { Watermark = "the Token line in BepInEx/config/Tie.WorldEditorBridge.cfg on the server" };
-	internal TextBox SFolder { get; } = new() { Watermark = "/home/valheim/server, the folder with BepInEx (for the plugin's port and precise errors)" };
+	internal TextBox SUser { get; } = new() { PlaceholderText = "the account you log in with" };
+	internal TextBox SPass { get; } = new() { PasswordChar = '•', PlaceholderText = "or use a key file below" };
+	internal TextBox SKey { get; } = new() { PlaceholderText = "~/.ssh/id_ed25519" };
+	internal TextBox SToken { get; } = new() { PlaceholderText = "the Token line in BepInEx/config/Tie.WorldEditorBridge.cfg on the server" };
+	internal TextBox SFolder { get; } = new() { PlaceholderText = "/home/valheim/server, the folder with BepInEx (for the plugin's port and precise errors)" };
 	internal CheckBox SSave { get; } = new() { Content = "Save password" };
 	internal TextBox SPhrase { get; } = new() { PasswordChar = '•' };
-	internal NumericUpDown SBridge { get; } = new() { Minimum = 1, Maximum = 65535, FormatString = "0", Watermark = "5182" };
+	internal NumericUpDown SBridge { get; } = new() { Minimum = 1, Maximum = 65535, FormatString = "0", PlaceholderText = "5182" };
 	internal TextBox LiveUrl { get; } = new() { Text = "127.0.0.1:5182" };
-	internal TextBox LiveToken { get; } = new() { Watermark = "from BepInEx/config/Tie.WorldEditorBridge.cfg" };
+	internal TextBox LiveToken { get; } = new() { PlaceholderText = "from BepInEx/config/Tie.WorldEditorBridge.cfg" };
 
 	private void BuildServerPanel()
 	{
@@ -451,8 +451,8 @@ public sealed class StartPage
 		((TextBlock)ServerForm.Header!).Text = any ? "Connect to another server" : "Connect to a server";
 		foreach (var s in servers)
 		{
-			var token = s.Token == null ? new TextBox { Watermark = "Plugin token", Width = 180 }.Tip("start.savedToken") : null;
-			var pass = s.Password == null && s.KeyFile == null ? new TextBox { Watermark = "Password", PasswordChar = '•', Width = 180 }.Tip("start.savedPassword") : null;
+			var token = s.Token == null ? new TextBox { PlaceholderText = "Plugin token", Width = 180 }.Tip("start.savedToken") : null;
+			var pass = s.Password == null && s.KeyFile == null ? new TextBox { PlaceholderText = "Password", PasswordChar = '•', Width = 180 }.Tip("start.savedPassword") : null;
 			var go = new Button { Content = "Connect" }.Classed("primary").Tip("start.savedConnect");
 			var server = s;
 			go.Click += async (_, _) => await Connect(new Tunnel.Request(server.Host, server.SshPort, server.User, pass?.Text ?? server.Password, server.KeyFile, null, token?.Text ?? server.Token, null,

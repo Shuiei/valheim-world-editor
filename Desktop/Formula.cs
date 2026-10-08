@@ -11,8 +11,8 @@ public static class Formula
 {
 	public sealed class Env
 	{
-		public readonly Dictionary<string, double> Vars = new();
-		public Func<double, double, double> Noise = (_, _) => 0;
+		public Dictionary<string, double> Vars { get; } = new();
+		public Func<double, double, double> Noise { get; set; } = (_, _) => 0;
 	}
 
 	// JavaScript's truth: 0 and NaN are false.

@@ -56,7 +56,7 @@ public sealed class MapPage
 	private readonly Canvas _labels = new() { IsHitTestVisible = false };
 
 	// Search.
-	internal TextBox SearchBox { get; } = new() { Watermark = "Beech, Wood, a sign's text…", FontSize = 12 };
+	internal TextBox SearchBox { get; } = new() { PlaceholderText = "Beech, Wood, a sign's text…", FontSize = 12 };
 	internal ComboBox SearchWhat { get; } = new() { ItemsSource = new[] { "Objects (by kind)", "Items in containers", "Texts (signs, portals, wards…)" }, SelectedIndex = 0, FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch };
 	internal Button FindButton { get; } = new Button { Content = Icons.With("search", "Find"), FontSize = 12.5, VerticalAlignment = VerticalAlignment.Stretch }.Classed("primary");
 	internal TextBlock SearchInfo { get; } = new() { FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
@@ -70,8 +70,8 @@ public sealed class MapPage
 	internal NumericUpDown DistBox { get; } = new() { Value = 2, Minimum = 0, Maximum = 50, Increment = 1, FormatString = "0", FontSize = 12, MinWidth = 70 };
 	internal CheckBox NoEditBox { get; } = new() { Content = "No ground edits", IsChecked = true, FontSize = 12 };
 	internal CheckBox OnlyGenBox { get; } = new() { Content = "Only zones the game generated", IsChecked = true, FontSize = 12 };
-	internal TextBox RMinBox { get; } = new() { Watermark = "0", FontSize = 12, Width = 70 };
-	internal TextBox RMaxBox { get; } = new() { Watermark = "10500", FontSize = 12, Width = 70 };
+	internal TextBox RMinBox { get; } = new() { PlaceholderText = "0", FontSize = 12, Width = 70 };
+	internal TextBox RMaxBox { get; } = new() { PlaceholderText = "10500", FontSize = 12, Width = 70 };
 	internal CheckBox GroundBox { get; } = new() { Content = "Also undo their ground edits", FontSize = 12 };
 	internal Button ShowMatchButton { get; } = new() { Content = "Show matching", FontSize = 12 };
 	internal Button MarkButton { get; } = new Button { Content = "Mark for reset…", FontSize = 12 }.Classed("primary");
@@ -213,7 +213,7 @@ public sealed class MapPage
 					Spacing = 8,
 					Children =
 					{
-						new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Children = { new TextBlock { Inlines = { new Avalonia.Controls.Documents.Run("Valheim") { Foreground = Ui.Accent }, new Avalonia.Controls.Documents.Run(" World Editor") }, FontSize = 16, FontWeight = FontWeight.SemiBold, VerticalAlignment = VerticalAlignment.Center }, Col(worlds, 1) } },
+						new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Children = { Ui.BrandTitle(16, VerticalAlignment.Center), Col(worlds, 1) } },
 						Meta,
 						_liveBox,
 						_changesBox,

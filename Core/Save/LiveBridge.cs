@@ -2,11 +2,13 @@ namespace TerrainEditor.Save;
 
 // Client for the WorldEditorBridge BepInEx plugin running in the game (usually on the dedicated
 // server, reached through an SSH tunnel such as ssh -L 5182:127.0.0.1:5182 user@server).
-public sealed class LiveBridge(string url, string token)
+public sealed class LiveBridge(string url, string token) : IDisposable
 {
 	private readonly HttpClient _http = new() { BaseAddress = new Uri(url.TrimEnd('/') + "/"), Timeout = TimeSpan.FromMinutes(3) };
 
 	public string Url { get; } = url;
+
+	public void Dispose() => _http.Dispose();
 
 	private async Task<HttpResponseMessage> Get(string path)
 	{

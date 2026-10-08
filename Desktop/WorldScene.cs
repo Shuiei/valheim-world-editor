@@ -30,7 +30,7 @@ public sealed class WorldScene
 	// World coordinates of the block's middle.
 	public float Cx { get; init; }
 	public float Cz { get; init; }
-	public float Water => TerrainService.WaterLevel;
+	public float Water { get; init; } = TerrainService.WaterLevel;
 	public required List<Thing> Things { get; init; }
 	// The ground the world's locations and pieces flatten (for the Location flattening overlay).
 	public TerrainModifiers? Modifiers { get; init; }

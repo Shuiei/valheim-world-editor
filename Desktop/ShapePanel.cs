@@ -10,6 +10,9 @@ namespace TerrainEditor.Desktop;
 // shown in the box, so it can be changed.
 public sealed class ShapePanel
 {
+	// What a formula can use: metres east and north of the click, distance, radius, ground height.
+	private static readonly string[] FormulaVars = { "x", "z", "d", "r", "h" };
+
 	public static readonly (string Key, string Name, string Formula)[] Presets =
 	{
 		("mound", "Mound", "h * smooth(1 - d / r)"),
@@ -125,7 +128,7 @@ public sealed class ShapePanel
 	{
 		try
 		{
-			Function = Formula.Compile(FormulaBox.Text ?? "", new[] { "x", "z", "d", "r", "h" });
+			Function = Formula.Compile(FormulaBox.Text ?? "", FormulaVars);
 			ErrorText.Text = "";
 		}
 		catch (FormatException ex)

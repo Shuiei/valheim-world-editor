@@ -14,7 +14,7 @@ public static class WindowShot
 		var dialogs = window.OwnedWindows.Where(d => d.IsVisible).ToList();
 		if (dialogs.Count == 0)
 		{
-			main.Save(path);
+			main.Save(path, Avalonia.Media.Imaging.PngBitmapEncoderOptions.Default);
 			return;
 		}
 		using var canvasBitmap = Decode(main);
@@ -43,7 +43,7 @@ public static class WindowShot
 	private static SKBitmap Decode(Avalonia.Media.Imaging.Bitmap bitmap)
 	{
 		using var ms = new MemoryStream();
-		bitmap.Save(ms);
+		bitmap.Save(ms, Avalonia.Media.Imaging.PngBitmapEncoderOptions.Default);
 		ms.Position = 0;
 		return SKBitmap.Decode(ms);
 	}

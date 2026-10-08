@@ -28,7 +28,7 @@ public sealed class MaskPanel
 	internal TextBlock WarningText { get; } = new() { FontSize = 11, Foreground = new SolidColorBrush(Color.FromRgb(240, 150, 90)), TextWrapping = TextWrapping.Wrap };
 
 	private static NumericUpDown Num(decimal step, decimal min = -1000, decimal max = 2000) =>
-		new() { Value = null, Increment = step, Minimum = min, Maximum = max, FormatString = "0.#", FontSize = 12, MinWidth = 80, Watermark = "none" };
+		new() { Value = null, Increment = step, Minimum = min, Maximum = max, FormatString = "0.#", FontSize = 12, MinWidth = 80, PlaceholderText = "none" };
 
 	public MaskPanel(Mask mask)
 	{

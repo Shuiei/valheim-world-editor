@@ -102,7 +102,7 @@ public sealed partial class MainWindow
 	}
 
 	// The View panel's Go to a player (live worlds).
-	private Control PlayersControl()
+	private StackPanel PlayersControl()
 	{
 		PlayersRow.Children.Add(new TextBlock { Text = "PLAYERS", FontSize = 11, FontWeight = FontWeight.SemiBold, Foreground = Ui.Muted, Margin = new Thickness(0, 8, 0, 2) });
 		PlayerBox.Tip("view.player");

@@ -25,6 +25,10 @@ public static class PrefabCatalog
 
 	private static readonly Dictionary<int, Info> Extra = new();
 
+	// GrownFrom's table, made before ByHash's initializer runs Load (which fills it): static initializers
+	// run in the file's order, so one written after ByHash would replace the filled table with an empty one.
+	private static readonly Dictionary<string, (float Radius, string Sapling)> GrownFromStart = new();
+
 	private static readonly Dictionary<int, Info> ByHash = Load();
 
 	// Kinds the editor offers to place: saved objects (persistent), not creatures, item drops or ragdolls.
@@ -59,8 +63,8 @@ public static class PrefabCatalog
 
 	// What saplings grow into, with the sapling's grow radius: Pickable_Carrot -> 0.5 m (sapling_carrot),
 	// Beech1 -> 2 m (Beech_Sapling). Placed grown, they keep the room they would have grown in.
-	// Filled by Load (no initializer: it would run after the catalogue is loaded and empty it).
-	public static Dictionary<string, (float Radius, string Sapling)> GrownFrom { get; private set; }
+	// Filled by Load (see GrownFromStart).
+	public static Dictionary<string, (float Radius, string Sapling)> GrownFrom { get; private set; } = GrownFromStart;
 
 	private sealed record Entry(int p, int d, int t, int c = 0, int i = 0, double gr = 0, int cult = 0, int cw = 0, int ch = 0, double ward = 0, double build = 0, string[]? grows = null);
 
@@ -69,7 +73,7 @@ public static class PrefabCatalog
 		using Stream s = Assembly.GetExecutingAssembly().GetManifestResourceStream("TerrainEditor.prefabs.json")
 			?? throw new InvalidOperationException("prefabs.json is not embedded");
 		var all = JsonSerializer.Deserialize<Dictionary<string, Entry>>(s)!;
-		GrownFrom = new();
+		GrownFrom = GrownFromStart;
 		Dictionary<int, Info> map = new();
 		foreach (var (name, e) in all)
 		{

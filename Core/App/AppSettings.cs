@@ -86,11 +86,13 @@ public sealed class AppSettings
 		}
 	}
 
+	private static readonly JsonSerializerOptions Indented = new() { WriteIndented = true };
+
 	public void Save()
 	{
 		lock (Lock)
 		{
-			File.WriteAllText(FilePath, JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true }));
+			File.WriteAllText(FilePath, JsonSerializer.Serialize(this, Indented));
 		}
 	}
 
