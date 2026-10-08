@@ -265,6 +265,11 @@ public sealed class VisualTests(EditorProcess editor) : IDisposable
 	{
 		string path = Path.Combine(_dir, name + ".png");
 		editor.Send($"picture {path}");
+		return Picture(name, path);
+	}
+
+	private static Look Picture(string name, string path)
+	{
 		using var bmp = SKBitmap.Decode(path);
 		Assert.NotNull(bmp);
 		var colours = new HashSet<uint>();
@@ -291,6 +296,28 @@ public sealed class VisualTests(EditorProcess editor) : IDisposable
 	{
 		Assert.True(l.Spread > 12, $"the picture is flat (brightness spread {l.Spread:0.0})");
 		Assert.True(l.Colours > 300, $"the picture has few colours ({l.Colours})");
+	}
+
+	// The window as the user sees it, panels and view: what the documentation's pictures are.
+	private Look Shot(string name)
+	{
+		string path = Path.Combine(_dir, name + ".png");
+		editor.Send($"shot {path}");
+		Assert.True(File.Exists(path));
+		return Picture(name, path);
+	}
+
+	[Fact]
+	public void AWindowShotHasThePanelsAndTheView()
+	{
+		Open();
+		var map = Shot("shot-map");
+		ShowsSomething(map);
+		editor.Send("area 0 0 2");
+		var area = Shot("shot-area");
+		ShowsSomething(area);
+		// The view is in it (daylight, not the empty dark the window alone gives).
+		Assert.True(area.Dark < 0.3, $"{area.Dark:P0} of the window shot is black");
 	}
 
 	[Fact]

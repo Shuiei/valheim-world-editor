@@ -313,7 +313,7 @@ def main():
     if 'terrain' in steps: export_terrain(found, al, out)
     if 'map' in steps: export_map(found, al, out)
     if 'models' in steps: export_models(found, args, work, out)
-    log('done. Start the editor and reload the page.')
+    log('done.')
 
 
 if __name__ == '__main__':
