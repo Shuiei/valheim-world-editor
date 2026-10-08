@@ -10,9 +10,7 @@
     <InvariantGlobalization>true</InvariantGlobalization>
   </PropertyGroup>
   <ItemGroup>
-    <InternalsVisibleTo Include="WorldEditor.Tests" />
     <InternalsVisibleTo Include="ValheimWorldEditor" />
-    <InternalsVisibleTo Include="ValheimWorldEditor.Desktop" />
     <InternalsVisibleTo Include="Desktop.Tests" />
   </ItemGroup>
   <ItemGroup>
