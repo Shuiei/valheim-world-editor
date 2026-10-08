@@ -14,6 +14,8 @@ the plugin is unchanged in versions without that part.
 - Apply live twice at once (a double click) could create the same new objects twice in the game.
 - Native preview, Select: Drop (End) right after selecting an object above another one put it too
   low, by as much as it floated above the ground.
+- Native preview, Place: a double-click on the last point of a line or zone did not place it (the
+  click was taken for dragging that point).
 - An object whose data is edited or moved keeps the game's short position form (the terrain
   compiler grew 8 bytes when written back).
 

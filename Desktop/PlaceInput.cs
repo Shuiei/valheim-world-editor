@@ -211,6 +211,14 @@ public sealed class PlaceInput
 			Tool.Notify();
 			return;
 		}
+		// A double-click on the last point places the shape (before the point is taken for a drag: the
+		// second click of a double-click is always on it).
+		if (Pointed && clicks >= 2 && Tool.Points.Count > 0 && Vector2.Distance(Tool.Points[^1], Tool.Local(h)) < 1.5f)
+		{
+			_press = null;
+			PlaceShape();
+			return;
+		}
 		if (Editable && Tool.Points.Count > 0)
 		{
 			int pt = PointAt(at);
@@ -235,13 +243,6 @@ public sealed class PlaceInput
 				Tool.Notify();
 				return;
 			}
-		}
-		if (Pointed && clicks >= 2 && Tool.Points.Count > 0 && Vector2.Distance(Tool.Points[^1], Tool.Local(h)) < 1.5f)
-		{
-			// A double-click on the last point places the shape.
-			_press = null;
-			PlaceShape();
-			return;
 		}
 		if (Tool.Mode == PlaceTool.Modes.Grid)
 		{
