@@ -439,7 +439,8 @@ public sealed class VisualTests(EditorProcess editor) : IDisposable
 		Open();
 		Do("area 0 0 3", "key D1", "mouse move 0 0");
 		ShowsSomething(Picture("brush"));
-		var s = Do("mouse down 0 0", "mouse move 2 0", "mouse move 4 0", "mouse up 4 0");
+		// Held for a moment: the brush works frame by frame while the button is down.
+		var s = Do("mouse down 0 0", "wait 150", "mouse move 2 0", "wait 150", "mouse move 4 0", "wait 150", "mouse up 4 0");
 		Assert.Equal(1, s.GetProperty("pending").GetInt32());
 		Clean();
 	}
