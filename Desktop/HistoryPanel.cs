@@ -20,7 +20,7 @@ public sealed class HistoryPanel
 	public HistoryPanel(Func<EditSession?> session)
 	{
 		_session = session;
-		var close = new Button { Content = Icons.Make("close", 14), Padding = new Thickness(5), HorizontalAlignment = HorizontalAlignment.Right }.Classed("ghost");
+		var close = new Button { Content = Icons.Make("close", 14), Padding = new Thickness(5), HorizontalAlignment = HorizontalAlignment.Right }.Classed("ghost").Tip("card.close");
 		close.Click += (_, _) => { Card!.IsVisible = false; Closed?.Invoke(); };
 		Card = new Border
 		{

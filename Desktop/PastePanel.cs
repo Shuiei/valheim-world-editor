@@ -34,12 +34,22 @@ public sealed class PastePanel
 		TurnButton.Click += (_, _) => paste.TurnBy(90);
 		MirrorButton.Click += (_, _) => { paste.Mirror = !paste.Mirror; paste.Notify(); };
 		DoneButton.Click += (_, _) => Done?.Invoke();
-		ToolTip.SetTip(TurnButton, "Quarter turn; , . turn by 1° (Shift: 15°)");
+		TurnButton.Tip("paste.turn");
+		MirrorButton.Tip("paste.mirror");
+		DoneButton.Tip("paste.done");
+		GroundBox.Tip("paste.ground");
+		ObjectsBox.Tip("paste.objects");
+		OffsetBox.Tip("paste.offset");
+		CopiesBox.Tip("paste.copies");
+		AlongBox.Tip("paste.along");
+		GapBox.Tip("paste.gap");
 		paste.Changed += Refresh;
 		Control Row(string label, Control input, string? unit = null)
 		{
 			var g = new Grid { ColumnDefinitions = new ColumnDefinitions("70,*,Auto") };
-			g.Children.Add(new TextBlock { Text = label, FontSize = 12, VerticalAlignment = VerticalAlignment.Center });
+			var l = new TextBlock { Text = label, FontSize = 12, VerticalAlignment = VerticalAlignment.Center };
+			Tips.Label(l, input);
+			g.Children.Add(l);
 			Grid.SetColumn(input, 1);
 			g.Children.Add(input);
 			if (unit != null)

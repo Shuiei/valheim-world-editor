@@ -14,7 +14,7 @@ public sealed class MaskPanel
 	private readonly Mask _mask;
 	private readonly Control _body;
 	private bool _filling;
-	internal CheckBox OnBox { get; } = new() { Content = "Mask", FontSize = 13, FontWeight = FontWeight.SemiBold };
+	internal CheckBox OnBox { get; } = new CheckBox { Content = "Mask", FontSize = 13, FontWeight = FontWeight.SemiBold }.Tip("mask.on");
 	internal Dictionary<int, ToggleButton> BiomeButtons { get; } = new();
 	internal NumericUpDown HeightMin { get; } = Num(0.5m);
 	internal NumericUpDown HeightMax { get; } = Num(0.5m);
@@ -36,7 +36,7 @@ public sealed class MaskPanel
 		var biomes = new WrapPanel { ItemSpacing = 4, LineSpacing = 4 };
 		foreach (var (b, name) in Mask.BiomeNames)
 		{
-			var t = new ToggleButton { Content = name, FontSize = 11, Padding = new Thickness(6, 2) };
+			var t = new ToggleButton { Content = name, FontSize = 11, Padding = new Thickness(6, 2) }.Tip("mask.biome");
 			t.IsCheckedChanged += (_, _) =>
 			{
 				if (t.IsChecked == true) mask.Biomes.Add(b); else mask.Biomes.Remove(b);
@@ -46,6 +46,11 @@ public sealed class MaskPanel
 			biomes.Children.Add(t);
 		}
 		OnBox.IsCheckedChanged += (_, _) => Changed();
+		HeightMin.Tip("mask.hmin");
+		HeightMax.Tip("mask.hmax");
+		SlopeMin.Tip("mask.smin");
+		SlopeMax.Tip("mask.smax");
+		PaintBox.Tip("mask.paint");
 		foreach (var n in new[] { HeightMin, HeightMax, SlopeMin, SlopeMax })
 		{
 			n.ValueChanged += (_, _) => Changed();

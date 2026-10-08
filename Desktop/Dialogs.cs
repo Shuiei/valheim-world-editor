@@ -23,11 +23,12 @@ public static class Dialogs
 		};
 		var buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, HorizontalAlignment = HorizontalAlignment.Right };
 		var ok = new Button { Content = yes, IsDefault = true };
+		ToolTip.SetTip(ok, $"{yes} (Enter).");
 		ok.Click += (_, _) => { result = true; dialog.Close(); };
 		buttons.Children.Add(ok);
 		if (no != null)
 		{
-			var cancel = new Button { Content = no, IsCancel = true };
+			var cancel = new Button { Content = no, IsCancel = true }.Tip("dialog.cancel");
 			cancel.Click += (_, _) => dialog.Close();
 			buttons.Children.Add(cancel);
 		}
@@ -56,10 +57,11 @@ public static class Dialogs
 			WindowStartupLocation = WindowStartupLocation.CenterOwner,
 			Background = new SolidColorBrush(Color.FromRgb(24, 28, 34)),
 		};
-		var box = new TextBox { Text = initial };
+		var box = new TextBox { Text = initial }.Tip("dialog.text");
 		var ok = new Button { Content = "OK", IsDefault = true };
+		ToolTip.SetTip(ok, "Use this answer (Enter).");
 		ok.Click += (_, _) => { result = box.Text; dialog.Close(); };
-		var cancel = new Button { Content = "Cancel", IsCancel = true };
+		var cancel = new Button { Content = "Cancel", IsCancel = true }.Tip("dialog.cancel");
 		cancel.Click += (_, _) => dialog.Close();
 		dialog.Content = new StackPanel
 		{

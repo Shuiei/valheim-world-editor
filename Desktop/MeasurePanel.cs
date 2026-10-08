@@ -20,6 +20,7 @@ public sealed class MeasurePanel
 	{
 		_view = view;
 		ClearButton.Click += (_, _) => view.Tape.Clear();
+		ClearButton.Tip("measure.clear");
 		view.Tape.Changed += Refresh;
 		Card = new Border
 		{

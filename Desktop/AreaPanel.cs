@@ -140,11 +140,36 @@ public sealed class AreaPanel
 				HeightBox.Value = (decimal)MathF.Round(avg, 1);
 			}
 		};
-		ToolTip.SetTip(AverageButton, "Average height inside the selection");
+		AverageButton.Tip("area.avg");
+		ActionBox.Tip("area.action");
+		BoxButton.Tip("area.box");
+		PolyButton.Tip("area.poly");
+		ClearButton.Tip("area.clear");
+		SoftSlider.Tip("area.soft");
+		HeightBox.Tip("area.height");
+		AmountBox.Tip("area.amount");
+		PaintBox.Tip("area.paint");
+		FromBox.Tip("area.from");
+		ToBox.Tip("area.to");
+		KeepBuildingsBox.Tip("area.keepBuildings");
+		ResetGroundBox.Tip("area.resetGround");
+		UnresetButton.Tip("area.unreset");
+		BackupBox.Tip("area.backup");
+		BackupGroundBox.Tip("area.backupGround");
+		BackupObjectsBox.Tip("area.backupObjects");
+		CopyButton.Tip("area.copy");
+		PasteButton.Tip("area.paste");
+		SaveBlueprintButton.Tip("area.saveBlueprint");
+		LibraryButton.Tip("area.library");
+		LowestBox.Tip("area.lowest");
+		HighestBox.Tip("area.highest");
+		PutButton.Tip("area.put");
+		CancelPictureButton.Tip("area.cancelPicture");
 		var kinds = new WrapPanel { ItemSpacing = 4, LineSpacing = 4 };
 		foreach (var k in ObjectKinds.All)
 		{
 			var b = new ToggleButton { Content = ObjectKinds.Label(k), IsChecked = Area.Kinds.Contains(k), FontSize = 11, Padding = new Thickness(6, 2) };
+			ToolTip.SetTip(b, $"{Tips.Kind(k)} {Tips.Of("area.kind")}");
 			b.IsCheckedChanged += (_, _) => { if (b.IsChecked == true) Area.Kinds.Add(k); else Area.Kinds.Remove(k); };
 			KindButtons[k] = b;
 			kinds.Children.Add(b);
@@ -156,20 +181,22 @@ public sealed class AreaPanel
 		LibraryButton.Click += (_, _) => LibraryAsked?.Invoke();
 		ClipInfo.Text = "Copies the ground (shape and paint) and the shown objects inside the selection.";
 		ExportButton.Click += (_, _) => Message?.Invoke(ExportHeightmap() ?? "");
-		ToolTip.SetTip(ExportButton, "The ground of the whole area as a 16-bit grayscale picture");
+		ExportButton.Tip("area.export");
 		ImportButton.Click += async (_, _) => { if (await PickPicture() is string path) LoadPicture(path); };
-		ToolTip.SetTip(ImportButton, "A grayscale picture into the ground");
+		ImportButton.Tip("area.import");
 		CancelPictureButton.Click += (_, _) => { _picture = null; _pictureBox.IsVisible = false; };
 		PutButton.Click += (_, _) => PutPicture();
 		UnresetButton.Click += (_, _) => CancelReset();
-		ToolTip.SetTip(ToPickButton, "Pick the kind from the world: click an object");
+		ToPickButton.Tip("area.pick");
 		ToPickButton.Click += (_, _) => PickKindAsked?.Invoke("Replace", UsePicked);
 		Area.Changed += Refresh;
 
 		Control Row(string label, Control input, Control? after = null)
 		{
 			var g = new Grid { ColumnDefinitions = new ColumnDefinitions("70,*,Auto") };
-			g.Children.Add(new TextBlock { Text = label, FontSize = 12, VerticalAlignment = VerticalAlignment.Center });
+			var l = new TextBlock { Text = label, FontSize = 12, VerticalAlignment = VerticalAlignment.Center };
+			Tips.Label(l, input);
+			g.Children.Add(l);
 			Grid.SetColumn(input, 1);
 			g.Children.Add(input);
 			if (after != null)
@@ -266,6 +293,10 @@ public sealed class AreaPanel
 			row.IsVisible = acts.Contains(act);
 		}
 		ApplyButton.IsVisible = act is not (Act.Heightmap or Act.Copy);
+		// The action's own explanation, on the list and on its button.
+		string what = Tips.Of($"areaAct.{act}");
+		ToolTip.SetTip(ActionBox, $"{Tips.Of("area.action")} {what}");
+		ToolTip.SetTip(ApplyButton, $"{what} (Enter). Ctrl+Z undoes it.");
 		ApplyButton.Content = act switch
 		{
 			Act.Remove => "Remove the objects (Enter)",

@@ -46,6 +46,10 @@ public sealed class GameLookBanner
 		_card = Ui.Card(new StackPanel { Spacing = 6, Children = { Title, Message, Bar, LastLine, PathRow, Retry, Error, Hint } });
 		_card.Margin = new Thickness(0, 10, 0, 0);
 		_card.IsVisible = false;
+		PathBox.Tip("look.path");
+		Browse.Tip("look.browse");
+		Use.Tip("look.use");
+		Retry.Tip("look.retry");
 		Browse.Click += async (_, _) => { if (await PickFolder("Choose the Valheim game folder (with valheim_Data)") is string p) PathBox.Text = p; };
 		Use.Click += (_, _) => Start(PathBox.Text);
 		Retry.Click += (_, _) => Start(Read().Valheim ?? _settings.ValheimPath);
