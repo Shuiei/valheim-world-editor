@@ -138,6 +138,8 @@ public sealed class MainWindow : Window
 			_map.SaveRequested += async () => await SaveWorld();
 			_map.DiscardRequested += async () => await DiscardWorld();
 			_map.ReloadRequested += async () => await ReloadWorld();
+			_map.Confirm = text => Dialogs.Ask(this, "Valheim World Editor", text, "Yes");
+			_map.Tell = text => Dialogs.Tell(this, "Valheim World Editor", text);
 		}
 		Title = $"{_world.World.Name} · Valheim World Editor (native preview)";
 		_map.Show(_world);
@@ -156,6 +158,20 @@ public sealed class MainWindow : Window
 		{
 			var scene = await Task.Run(() => WorldScene.Load(world, x, z, size));
 			await ShowEditor(scene);
+			// Found by the map's search: selected, the camera on it (items and texts: in the inspector).
+			if (_map?.Target is var (id, inspect) && _map.Spot == (x, z))
+			{
+				int i = scene.Things.FindIndex(t => t.Id == id && !t.Gone);
+				if (i >= 0)
+				{
+					_view.Focus(scene.Things[i].Position);
+					_view.Select(new[] { i });
+					if (inspect)
+					{
+						Inspect();
+					}
+				}
+			}
 		}
 		catch (Exception ex)
 		{
@@ -1178,6 +1194,22 @@ public sealed class MainWindow : Window
 			if (Options.MapWorld is string mw)
 			{
 				await OpenWorld(() => Task.Run(() => WorldSession.Open(WorldScene.FindWorld(mw))), "Opening the world…");
+				if (Options.MapAt is var (ax, az, ampp))
+				{
+					_map!.Map.LookAt(ax, az, ampp);
+				}
+				if (Options.Search is string q)
+				{
+					_map!.SearchBox.Text = q;
+					await _map.Search();
+					Options.Say($"search: {_map.SearchInfo.Text.Replace('\n', ' ')}");
+					if (_map.Map.Pins.Count > 0)
+					{
+						var most = _map.Map.Pins.GroupBy(p => ((int)MathF.Floor((p.X + 32) / 64), (int)MathF.Floor((p.Y + 32) / 64))).MaxBy(g => g.Count())!;
+						Options.Say($"search: most in zone {most.Key.Item1},{most.Key.Item2} ({most.Count()})");
+					}
+					_map.Hits.SelectedIndex = 0;
+				}
 				if (Options.MapEdit is var (mx, mz))
 				{
 					_map!.Pick(mx, mz);

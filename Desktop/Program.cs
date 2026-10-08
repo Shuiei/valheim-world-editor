@@ -57,6 +57,9 @@ public static class Options
 	public static string? MapWorld { get; private set; }
 	// With --map: pick this zone (x,z) and open it in the 3D editor.
 	public static (int X, int Z)? MapEdit { get; private set; }
+	// With --map: look at this point (x,z, metres per pixel); search the world and go to the first result.
+	public static (float X, float Z, float Mpp)? MapAt { get; private set; }
+	public static string? Search { get; private set; }
 	public static int ZoneX { get; private set; }
 	public static int ZoneZ { get; private set; }
 	public static int Size { get; private set; } = 5;
@@ -114,6 +117,13 @@ public static class Options
 					break;
 				case "--map":
 					MapWorld = args[++i];
+					break;
+				case "--map-at":
+					var ma = args[++i].Split(',').Select(v => float.Parse(v, System.Globalization.CultureInfo.InvariantCulture)).ToArray();
+					MapAt = (ma[0], ma[1], ma[2]);
+					break;
+				case "--search":
+					Search = args[++i];
 					break;
 				case "--map-edit":
 					var me = args[++i].Split(',');
