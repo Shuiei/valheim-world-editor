@@ -32,7 +32,7 @@ public sealed class InspectorPanel
 	public Control Card { get; }
 	private readonly Func<EditSession?> _session;
 	private readonly TextBlock _title = new() { FontSize = 14, FontWeight = FontWeight.SemiBold };
-	private readonly TextBlock _where = new() { FontSize = 11, Foreground = Brushes.Gray, TextWrapping = TextWrapping.Wrap };
+	private readonly TextBlock _where = new() { FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
 	internal StackPanel ItemsBox { get; } = new() { Spacing = 3 };
 	internal StackPanel Fields { get; } = new() { Spacing = 2 };
 	internal ComboBox AddSection { get; } = new() { ItemsSource = Sections.Select(s => s.Name).ToList(), SelectedIndex = 0, FontSize = 11, Width = 100 };
@@ -98,11 +98,12 @@ public sealed class InspectorPanel
 		ApplyButton.Click += async (_, _) => await Apply();
 		Card = new Border
 		{
-			Background = new SolidColorBrush(Color.FromArgb(240, 24, 28, 34)),
-			BorderBrush = new SolidColorBrush(Color.FromRgb(46, 53, 63)),
+			Background = Ui.Panel,
+			BorderBrush = Ui.Line,
+			BoxShadow = BoxShadows.Parse("0 6 24 0 #59000000"),
 			BorderThickness = new Thickness(1),
 			CornerRadius = new CornerRadius(10),
-			Padding = new Thickness(10),
+			Padding = Ui.Pad,
 			Margin = new Thickness(10),
 			HorizontalAlignment = HorizontalAlignment.Right,
 			VerticalAlignment = VerticalAlignment.Top,
@@ -119,14 +120,14 @@ public sealed class InspectorPanel
 						new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Children = { _title, Col(close, 1) } },
 						_where,
 						ItemsBox,
-						new TextBlock { Text = "DATA", FontSize = 10, Foreground = Brushes.Gray, Margin = new Thickness(0, 6, 0, 0) },
+						new TextBlock { Text = "DATA", FontSize = 10, Foreground = Ui.Muted, Margin = new Thickness(0, 6, 0, 0) },
 						Fields,
 						new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,*,Auto"), ColumnSpacing = 4, Children = { AddSection, Col(AddKey, 1), Col(AddValue, 2), Col(AddButton, 3) } },
 						new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { ApplyButton, RevertButton } },
 						new TextBlock
 						{
 							Text = "Applying replaces the object by a copy with the new data (Ctrl+Z puts the old one back), like a move does; Save writes it. Change values only if you know what they do: the game may reset or ignore wrong ones.",
-							FontSize = 11, Foreground = Brushes.Gray, TextWrapping = TextWrapping.Wrap,
+							FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap,
 						},
 					},
 				},
@@ -241,7 +242,7 @@ public sealed class InspectorPanel
 		Fields.Children.Clear();
 		if (FieldList.Count == 0 && Added.Count == 0)
 		{
-			Fields.Children.Add(new TextBlock { Text = "This object holds no data: the game uses its defaults.", FontSize = 11, Foreground = Brushes.Gray });
+			Fields.Children.Add(new TextBlock { Text = "This object holds no data: the game uses its defaults.", FontSize = 11, Foreground = Ui.Muted });
 		}
 		foreach (var f in FieldList)
 		{
@@ -262,7 +263,7 @@ public sealed class InspectorPanel
 			var label = new TextBlock { Text = Label(f), FontSize = 11, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis, TextDecorations = f.Removed ? TextDecorations.Strikethrough : null };
 			ToolTip.SetTip(label, $"{f.Name} · {Sections.FirstOrDefault(x => x.Section == f.Section).Name ?? "data"} · key {f.Key}");
 			var row = new Grid { ColumnDefinitions = new ColumnDefinitions("*,170,Auto"), ColumnSpacing = 4, Children = { label, Col(box, 1), Col(rm, 2) } };
-			Fields.Children.Add(f.Note != null && !ro ? new StackPanel { Children = { row, new TextBlock { Text = f.Note, FontSize = 10, Foreground = Brushes.Gray } } } : row);
+			Fields.Children.Add(f.Note != null && !ro ? new StackPanel { Children = { row, new TextBlock { Text = f.Note, FontSize = 10, Foreground = Ui.Muted } } } : row);
 		}
 		foreach (var a in Added.ToList())
 		{
@@ -286,7 +287,7 @@ public sealed class InspectorPanel
 			return;
 		}
 		var (w, h) = _grid;
-		ItemsBox.Children.Add(new TextBlock { Text = $"CONTENTS · {(w > 0 ? $"{w} × {h} slots" : "size unknown")} · {Items.Count} item(s)", FontSize = 10, Foreground = Brushes.Gray });
+		ItemsBox.Children.Add(new TextBlock { Text = $"CONTENTS · {(w > 0 ? $"{w} × {h} slots" : "size unknown")} · {Items.Count} item(s)", FontSize = 10, Foreground = Ui.Muted });
 		if (_inventoryError != null)
 		{
 			ItemsBox.Children.Add(new TextBlock { Text = $"The contents cannot be read: {_inventoryError}", FontSize = 11, Foreground = Brushes.Orange, TextWrapping = TextWrapping.Wrap });
@@ -356,7 +357,7 @@ public sealed class InspectorPanel
 		ItemsBox.Children.Add(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Children = { add, tidy } });
 	}
 
-	private static Control Head(string t, int col) => Col(new TextBlock { Text = t, FontSize = 10, Foreground = Brushes.Gray }, col);
+	private static Control Head(string t, int col) => Col(new TextBlock { Text = t, FontSize = 10, Foreground = Ui.Muted }, col);
 
 	private static Control WithBorder(NumericUpDown n, bool bad)
 	{

@@ -24,9 +24,9 @@ public sealed class PathPanel
 	internal NumericUpDown DepthBox { get; } = Num(2, 0.25m);
 	internal CheckBox CurveBox { get; } = new() { Content = "Smooth curve through the points", IsChecked = true, FontSize = 12 };
 	internal CheckBox NaturalBox { get; } = new() { Content = "Natural look (ragged edges, bumps)", FontSize = 12 };
-	internal Button ApplyButton { get; } = new() { Content = "Apply (Enter)", FontSize = 12 };
+	internal Button ApplyButton { get; } = new Button { Content = "Apply (Enter)", FontSize = 12 }.Classed("primary");
 	internal Button ClearButton { get; } = new() { Content = "Clear (Esc)", FontSize = 12 };
-	internal TextBlock Info { get; } = new() { FontSize = 12, Foreground = Brushes.LightGray };
+	internal TextBlock Info { get; } = new() { FontSize = 12, Foreground = Ui.Muted };
 	private readonly Dictionary<Control, PathTool.Action[]> _rows = new();
 	private readonly Control _naturalRows;
 	// Apply was asked for (the window does it: it has the edit session).
@@ -101,11 +101,12 @@ public sealed class PathPanel
 		}
 		Card = new Border
 		{
-			Background = new SolidColorBrush(Color.FromArgb(235, 24, 28, 34)),
-			BorderBrush = new SolidColorBrush(Color.FromRgb(46, 53, 63)),
+			Background = Ui.Panel,
+			BorderBrush = Ui.Line,
+			BoxShadow = BoxShadows.Parse("0 6 24 0 #59000000"),
 			BorderThickness = new Thickness(1),
 			CornerRadius = new CornerRadius(10),
-			Padding = new Thickness(8),
+			Padding = Ui.Pad,
 			VerticalAlignment = VerticalAlignment.Top,
 			Child = new StackPanel
 			{
@@ -130,7 +131,7 @@ public sealed class PathPanel
 					new TextBlock
 					{
 						Text = "Click points along the route, or hold and drag. Then drag a point to move it, drag the line to add a point, Ctrl + click a point to remove it; Backspace removes the last one. Alt + click picks the height (Alt + Shift: ramp end).",
-						FontSize = 11, Foreground = Brushes.Gray, TextWrapping = TextWrapping.Wrap,
+						FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap,
 					},
 				},
 			},

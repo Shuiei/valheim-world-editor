@@ -70,22 +70,23 @@ public sealed class MaskPanel
 			Spacing = 6,
 			Children =
 			{
-				new TextBlock { Text = "Only change ground that matches everything below.", FontSize = 11, Foreground = Brushes.Gray, TextWrapping = TextWrapping.Wrap },
+				new TextBlock { Text = "Only change ground that matches everything below.", FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap },
 				biomes,
 				Pair("Height", HeightMin, HeightMax, "m"),
 				Pair("Slope", SlopeMin, SlopeMax, "°"),
 				new Grid { ColumnDefinitions = new ColumnDefinitions("50,*,14"), ColumnSpacing = 4, Children = { new TextBlock { Text = "Paint", FontSize = 12, VerticalAlignment = VerticalAlignment.Center }, Column(PaintBox, 1) } },
 				WarningText,
-				new TextBlock { Text = "No biome selected = all biomes. Leave a box empty for no limit. Alt + Shift + click the ground fills the height range around it (±2 m).", FontSize = 11, Foreground = Brushes.Gray, TextWrapping = TextWrapping.Wrap },
+				new TextBlock { Text = "No biome selected = all biomes. Leave a box empty for no limit. Alt + Shift + click the ground fills the height range around it (±2 m).", FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap },
 			},
 		};
 		Card = new Border
 		{
-			Background = new SolidColorBrush(Color.FromArgb(235, 24, 28, 34)),
-			BorderBrush = new SolidColorBrush(Color.FromRgb(46, 53, 63)),
+			Background = Ui.Panel,
+			BorderBrush = Ui.Line,
+			BoxShadow = BoxShadows.Parse("0 6 24 0 #59000000"),
 			BorderThickness = new Thickness(1),
 			CornerRadius = new CornerRadius(10),
-			Padding = new Thickness(8),
+			Padding = Ui.Pad,
 			VerticalAlignment = VerticalAlignment.Top,
 			Child = new StackPanel { Width = 280, Spacing = 6, Children = { OnBox, _body } },
 		};

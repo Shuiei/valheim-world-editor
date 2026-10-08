@@ -9,7 +9,7 @@ namespace TerrainEditor.Desktop;
 public sealed class MeasurePanel
 {
 	public Control Card { get; }
-	private readonly TextBlock _hint = new() { FontSize = 12, Foreground = Brushes.LightGray, TextWrapping = TextWrapping.Wrap };
+	private readonly TextBlock _hint = new() { FontSize = 12, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
 	private readonly Grid _rows = new() { ColumnDefinitions = new ColumnDefinitions("Auto,*"), ColumnSpacing = 12, RowSpacing = 3 };
 	private readonly GlView _view;
 	internal Button ClearButton { get; } = new() { Content = "Clear (Esc)", FontSize = 12 };
@@ -23,11 +23,12 @@ public sealed class MeasurePanel
 		view.Tape.Changed += Refresh;
 		Card = new Border
 		{
-			Background = new SolidColorBrush(Color.FromArgb(235, 24, 28, 34)),
-			BorderBrush = new SolidColorBrush(Color.FromRgb(46, 53, 63)),
+			Background = Ui.Panel,
+			BorderBrush = Ui.Line,
+			BoxShadow = BoxShadows.Parse("0 6 24 0 #59000000"),
 			BorderThickness = new Thickness(1),
 			CornerRadius = new CornerRadius(10),
-			Padding = new Thickness(8),
+			Padding = Ui.Pad,
 			VerticalAlignment = VerticalAlignment.Top,
 			Child = new StackPanel
 			{
@@ -37,7 +38,7 @@ public sealed class MeasurePanel
 				{
 					new TextBlock { Text = "Measure", FontSize = 14, FontWeight = FontWeight.SemiBold },
 					_hint, _rows, ClearButton,
-					new TextBlock { Text = "Slope colours and height lines are in the View panel (Look).", FontSize = 11, Foreground = Brushes.Gray, TextWrapping = TextWrapping.Wrap },
+					new TextBlock { Text = "Slope colours and height lines are in the View panel (Look).", FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap },
 				},
 			},
 		};
@@ -56,7 +57,7 @@ public sealed class MeasurePanel
 		{
 			_rows.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
 			int r = _rows.RowDefinitions.Count - 1;
-			var l = new TextBlock { Text = label, FontSize = 12, Foreground = Brushes.Gray };
+			var l = new TextBlock { Text = label, FontSize = 12, Foreground = Ui.Muted };
 			var v = new SelectableTextBlock { Text = value, FontSize = 12, HorizontalAlignment = HorizontalAlignment.Right };
 			Grid.SetRow(l, r);
 			Grid.SetRow(v, r);

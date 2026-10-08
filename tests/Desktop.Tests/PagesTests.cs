@@ -102,17 +102,29 @@ public class PagesTests
 	}
 
 	[AvaloniaFact]
-	public void InfoIsHiddenUntilAskedFor()
+	public void RightPanelsOneAtATime()
 	{
 		var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
 		w.Show();
-		bool before = w.InfoButton.IsChecked == true;
-		w.InfoButton.IsChecked = false;
-		Assert.False(TerrainEditor.App.AppSettings.Load().ShowStats);
-		w.InfoButton.IsChecked = true;
-		// Remembered (in the tests' own settings file).
-		Assert.True(TerrainEditor.App.AppSettings.Load().ShowStats);
-		Assert.StartsWith(Path.GetTempPath(), TerrainEditor.App.AppSettings.PathOverride);
-		w.InfoButton.IsChecked = before;
+		// The View panel at first; Help and History take its place, one at a time.
+		Assert.False(w.HelpCard.IsVisible);
+		w.ShowRight(w.HelpCard);
+		Assert.True(w.HelpCard.IsVisible);
+		Assert.True(w.HelpButton.Classes.Contains("on"));
+		Assert.False(w.ViewButton.Classes.Contains("on"));
+		w.ShowRight(w.History.Card);
+		Assert.False(w.HelpCard.IsVisible);
+		Assert.True(w.History.Card.IsVisible);
+		w.ShowRight(null);
+		Assert.False(w.History.Card.IsVisible);
+	}
+
+	[AvaloniaFact]
+	public void EveryIconParses()
+	{
+		foreach (var name in Icons.Paths.Keys)
+		{
+			Assert.NotNull(Icons.Make(name));
+		}
 	}
 }

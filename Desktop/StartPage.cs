@@ -36,26 +36,25 @@ public sealed class StartPage
 	private readonly ContentControl _gameState = new();
 	private readonly TextBlock _gameError = Err();
 
-	private static readonly IBrush Panel = new SolidColorBrush(Color.FromRgb(27, 31, 38)), Line = new SolidColorBrush(Color.FromRgb(46, 53, 63)),
-		Accent = new SolidColorBrush(Color.FromRgb(224, 166, 75)), Muted = new SolidColorBrush(Color.FromRgb(142, 151, 166));
+	private static readonly IBrush Panel = Ui.Panel, Line = Ui.Line, Accent = Ui.Accent, Muted = Ui.Muted;
 
 	private static TextBlock Err() => new() { Foreground = new SolidColorBrush(Color.FromRgb(224, 96, 75)), TextWrapping = TextWrapping.Wrap, FontSize = 12 };
 	private static TextBlock Hint(string t) => new() { Text = t, Foreground = Muted, TextWrapping = TextWrapping.Wrap, FontSize = 12 };
-	private static Border Card(Control c) => new() { Background = Panel, BorderBrush = Line, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(12), Padding = new Thickness(14, 12), Child = c };
+	private static Border Card(Control c) => Ui.Card(c);
 	private static TextBlock H2(string t) => new() { Text = t.ToUpperInvariant(), FontSize = 12, Foreground = Muted, FontWeight = FontWeight.SemiBold, Margin = new Thickness(0, 18, 0, 6) };
 
 	public StartPage(AppSettings settings, string? lastError = null)
 	{
 		_settings = settings;
-		var settingsButton = new Button { Content = "⚙ Settings", FontSize = 13 };
+		var settingsButton = new Button { Content = Icons.With("settings", "Settings"), FontSize = 13 }.Classed("ghost");
 		ToolTip.SetTip(settingsButton, "Where the game, BepInEx and worlds are on this computer");
 		settingsButton.Click += (_, _) => SettingsRequested?.Invoke();
 		var modes = new UniformGrid { Columns = 3 };
-		foreach (var (key, title, tag, text) in new[]
+		foreach (var (key, title, tag, text, icon) in new[]
 		{
-			("game", "My game", "live", "Edit the world you are playing in, single player or the one you host. You see the changes in game right away."),
-			("server", "A dedicated server", "live", "Edit your server's world while people play. The editor connects to the server itself."),
-			("offline", "A saved world", "offline", "Edit world files on this computer with the game closed, then start the game again."),
+			("game", "My game", "live", "Edit the world you are playing in, single player or the one you host. You see the changes in game right away.", "game"),
+			("server", "A dedicated server", "live", "Edit your server's world while people play. The editor connects to the server itself.", "server"),
+			("offline", "A saved world", "offline", "Edit world files on this computer with the game closed, then start the game again.", "folder"),
 		})
 		{
 			var b = new Button
@@ -64,13 +63,13 @@ public sealed class StartPage
 				HorizontalContentAlignment = HorizontalAlignment.Left,
 				VerticalAlignment = VerticalAlignment.Stretch,
 				Margin = new Thickness(0, 0, 10, 0),
-				Padding = new Thickness(14, 12),
+				Padding = Ui.Pad,
 				Content = new StackPanel
 				{
 					Spacing = 4,
 					Children =
 					{
-						new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = { new TextBlock { Text = title, FontSize = 15, FontWeight = FontWeight.SemiBold }, new TextBlock { Text = tag, FontSize = 11, Foreground = tag == "live" ? new SolidColorBrush(Color.FromRgb(123, 196, 127)) : Muted, VerticalAlignment = VerticalAlignment.Center } } },
+						new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = { Icons.Make(icon, 20), new TextBlock { Text = title, FontSize = 15, FontWeight = FontWeight.SemiBold }, new TextBlock { Text = tag, FontSize = 11, Foreground = tag == "live" ? new SolidColorBrush(Color.FromRgb(123, 196, 127)) : Muted, VerticalAlignment = VerticalAlignment.Center } } },
 						new TextBlock { Text = text, FontSize = 12, Foreground = Muted, TextWrapping = TextWrapping.Wrap },
 					},
 				},
@@ -96,7 +95,7 @@ public sealed class StartPage
 		// A saved world.
 		var browse = new Button { Content = "Browse…" };
 		browse.Click += async (_, _) => { if (await PickFolder("Choose a world folder (with _main.<n>.chunks)") is string p) PathBox.Text = p; };
-		var openPath = new Button { Content = "Open", Background = Accent, Foreground = Brushes.Black };
+		var openPath = new Button { Content = "Open" }.Classed("primary");
 		openPath.Click += (_, _) => OpenFolder(PathBox.Text ?? "");
 		OfflinePanel.Children.Add(WorldCards);
 		OfflinePanel.Children.Add(Hint("Close Valheim (or stop the server) before you save changes into a world: a running game writes over the files. Saving always makes a full backup of the world first."));
@@ -114,7 +113,7 @@ public sealed class StartPage
 
 		View = new ScrollViewer
 		{
-			Background = new SolidColorBrush(Color.FromRgb(20, 23, 28)),
+			Background = Ui.Bg,
 			Content = new StackPanel
 			{
 				MaxWidth = 980,
@@ -160,7 +159,7 @@ public sealed class StartPage
 		_mode = mode;
 		foreach (var (k, b) in ModeButtons)
 		{
-			b.BorderBrush = k == mode ? Accent : Line;
+			b.Classes.Set("on", k == mode);
 			b.BorderThickness = new Thickness(k == mode ? 2 : 1);
 		}
 		GamePanel.IsVisible = mode == "game";
@@ -216,7 +215,7 @@ public sealed class StartPage
 		Control content;
 		if (running != null)
 		{
-			var edit = new Button { Content = "Edit live", Background = Accent, Foreground = Brushes.Black, VerticalAlignment = VerticalAlignment.Center };
+			var edit = new Button { Content = "Edit live", VerticalAlignment = VerticalAlignment.Center }.Classed("primary");
 			var bridge = running.Bridge;
 			edit.Click += (_, _) => OpenLive(new LiveBridge($"http://127.0.0.1:{bridge.Port}", bridge.Token), "my game", "game", "Connecting to your game…");
 			content = new Grid
@@ -300,7 +299,7 @@ public sealed class StartPage
 			{
 				Width = 300,
 				HorizontalContentAlignment = HorizontalAlignment.Left,
-				Padding = new Thickness(14, 10),
+				Padding = Ui.Pad,
 				IsEnabled = w.Usable,
 				Content = new StackPanel
 				{
@@ -343,7 +342,7 @@ public sealed class StartPage
 		Control Two(Control a, Control b, string cols = "*,*") => new Grid { ColumnDefinitions = new ColumnDefinitions(cols), ColumnSpacing = 10, Children = { a, Col(b, 1) } };
 		var keyBrowse = new Button { Content = "Browse…", VerticalAlignment = VerticalAlignment.Bottom };
 		keyBrowse.Click += async (_, _) => { if (await PickFile("Choose the SSH key file") is string p) SKey.Text = p; };
-		var connect = new Button { Content = "Connect", Background = Accent, Foreground = Brushes.Black, HorizontalAlignment = HorizontalAlignment.Right };
+		var connect = new Button { Content = "Connect", HorizontalAlignment = HorizontalAlignment.Right }.Classed("primary");
 		connect.Click += async (_, _) => await ConnectNew();
 		var connectUrl = new Button { Content = "Connect", VerticalAlignment = VerticalAlignment.Bottom };
 		connectUrl.Click += async (_, _) => await ConnectUrl();
@@ -391,7 +390,7 @@ public sealed class StartPage
 		{
 			var token = s.Token == null ? new TextBox { Watermark = "Plugin token", Width = 180 } : null;
 			var pass = s.Password == null && s.KeyFile == null ? new TextBox { Watermark = "Password", PasswordChar = '•', Width = 180 } : null;
-			var go = new Button { Content = "Connect", Background = Accent, Foreground = Brushes.Black };
+			var go = new Button { Content = "Connect" }.Classed("primary");
 			var server = s;
 			go.Click += async (_, _) => await Connect(new Tunnel.Request(server.Host, server.SshPort, server.User, pass?.Text ?? server.Password, server.KeyFile, null, token?.Text ?? server.Token, null,
 				server.Password != null, server.Name, server.GameFolder), _savedError, $"Connecting to {server.Name}…");

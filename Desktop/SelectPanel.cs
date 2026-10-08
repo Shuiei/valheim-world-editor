@@ -11,7 +11,7 @@ public sealed class SelectPanel
 {
 	public Control Card { get; }
 	private readonly SelectTool _tool;
-	private readonly TextBlock _info = new() { FontSize = 12, Foreground = Brushes.LightGray, TextWrapping = TextWrapping.Wrap };
+	private readonly TextBlock _info = new() { FontSize = 12, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
 	private readonly Control _exact;
 	private bool _by;
 
@@ -88,7 +88,7 @@ public sealed class SelectPanel
 			Spacing = 4,
 			Children =
 			{
-				new TextBlock { Text = "EXACT PLACE", FontSize = 10, Foreground = Brushes.Gray, Margin = new Thickness(0, 6, 0, 0) },
+				new TextBlock { Text = "EXACT PLACE", FontSize = 10, Foreground = Ui.Muted, Margin = new Thickness(0, 6, 0, 0) },
 				grid,
 				new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { ApplyButton, ByButton } },
 				_info,
@@ -96,11 +96,12 @@ public sealed class SelectPanel
 		};
 		Card = new Border
 		{
-			Background = new SolidColorBrush(Color.FromArgb(235, 24, 28, 34)),
-			BorderBrush = new SolidColorBrush(Color.FromRgb(46, 53, 63)),
+			Background = Ui.Panel,
+			BorderBrush = Ui.Line,
+			BoxShadow = BoxShadows.Parse("0 6 24 0 #59000000"),
 			BorderThickness = new Thickness(1),
 			CornerRadius = new CornerRadius(10),
-			Padding = new Thickness(8),
+			Padding = Ui.Pad,
 			VerticalAlignment = VerticalAlignment.Top,
 			Child = new StackPanel
 			{
@@ -109,7 +110,7 @@ public sealed class SelectPanel
 				Children =
 				{
 					new TextBlock { Text = "Select", FontSize = 14, FontWeight = FontWeight.SemiBold },
-					new TextBlock { Text = "Click objects (Shift adds), or drag on the ground around them. Drag a selected object to move the selection.", FontSize = 12, Foreground = Brushes.LightGray, TextWrapping = TextWrapping.Wrap },
+					new TextBlock { Text = "Click objects (Shift adds), or drag on the ground around them. Drag a selected object to move the selection.", FontSize = 12, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap },
 					new WrapPanel { Children = { DeleteButton, BuildingButton, SameButton, InvertButton, InspectButton, ClaimButton }, ItemSpacing = 4, LineSpacing = 4 },
 					new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*"), ColumnSpacing = 6, Children = { new TextBlock { Text = "Replace with", FontSize = 12, VerticalAlignment = VerticalAlignment.Center }, Col(ReplaceBox, 1) } },
 					ReplaceButton,
@@ -119,7 +120,7 @@ public sealed class SelectPanel
 					new TextBlock
 					{
 						Text = ", . turn (Shift: 15°) · PgUp PgDn lift (Shift: 1 m) · End drops onto what is under · Del deletes · Esc cancels a move · Alt + drag draws a zone over objects",
-						FontSize = 11, Foreground = Brushes.Gray, TextWrapping = TextWrapping.Wrap,
+						FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap,
 					},
 				},
 			},
@@ -137,7 +138,7 @@ public sealed class SelectPanel
 	{
 		_by = by;
 		ApplyButton.Content = by ? "Move by these" : "Move there";
-		ByButton.Background = by ? new SolidColorBrush(Color.FromRgb(58, 92, 140)) : null;
+		ByButton.Classes.Set("on", by);
 		if (by)
 		{
 			XBox.Value = YBox.Value = ZBox.Value = TurnBox.Value = 0;

@@ -29,12 +29,12 @@ public sealed class MapPage
 	internal Func<string, Task<bool>> Confirm { get; set; } = _ => Task.FromResult(true);
 	internal Func<string, Task> Tell { get; set; } = _ => Task.CompletedTask;
 
-	internal TextBlock Meta { get; } = new() { FontSize = 12, Foreground = Brushes.LightGray, TextWrapping = TextWrapping.Wrap };
+	internal TextBlock Meta { get; } = new() { FontSize = 12, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
 	internal TextBlock Pending { get; } = new() { FontSize = 12, TextWrapping = TextWrapping.Wrap };
-	internal Button SaveButton { get; } = new() { Content = "Save to world…", FontSize = 12 };
+	internal Button SaveButton { get; } = new Button { Content = "Save to world…", FontSize = 12.5 }.Classed("primary");
 	internal Button DiscardButton { get; } = new() { Content = "Discard", FontSize = 12 };
 	internal TextBlock LiveText { get; } = new() { FontSize = 12, Foreground = new SolidColorBrush(Color.FromRgb(143, 240, 180)), TextWrapping = TextWrapping.Wrap };
-	internal Button ReloadButton { get; } = new() { Content = "Reload from the game", FontSize = 12 };
+	internal Button ReloadButton { get; } = new() { Content = Icons.With("reload", "Reload from the game"), FontSize = 12 };
 	private readonly Control _liveBox, _changesBox;
 	internal CheckBox BuildingsBox { get; } = new() { Content = "Show buildings (player-built pieces)", IsChecked = true, FontSize = 12 };
 	internal CheckBox GridBox { get; } = new() { Content = "Zone grid", FontSize = 12 };
@@ -42,10 +42,10 @@ public sealed class MapPage
 	internal CheckBox PaintBox { get; } = new() { Content = "Show painted ground (dirt, paved, fields) when zoomed in", IsChecked = true, FontSize = 12 };
 	internal CheckBox CloudsBox { get; } = new() { Content = "Clouds (as in game)", FontSize = 12 };
 	internal TextBlock PickTitle { get; } = new() { FontSize = 14, FontWeight = FontWeight.SemiBold, TextWrapping = TextWrapping.Wrap };
-	internal Button EditButton { get; } = new() { Content = "Edit in 3D", FontSize = 13 };
+	internal Button EditButton { get; } = new Button { Content = "Edit in 3D", FontSize = 12.5 }.Classed("primary");
 	internal ComboBox SizeBox { get; } = new() { ItemsSource = new[] { "3 × 3 zones (192 m)", "5 × 5 zones (320 m)", "7 × 7 zones (448 m)" }, SelectedIndex = 1, FontSize = 12 };
 	private readonly Control _pickBox;
-	internal TextBlock Cursor { get; } = new() { FontSize = 12, Foreground = Brushes.LightGray };
+	internal TextBlock Cursor { get; } = new() { FontSize = 12, Foreground = Ui.Muted };
 	private readonly TextBlock _status = new() { FontSize = 13, Foreground = Brushes.White };
 	public (int X, int Z)? Spot { get; private set; }
 	// An object found by the search: selected (and, for items and texts, inspected) once the area opens.
@@ -57,8 +57,8 @@ public sealed class MapPage
 	// Search.
 	internal TextBox SearchBox { get; } = new() { Watermark = "Beech, Wood, a sign's text…", FontSize = 12 };
 	internal ComboBox SearchWhat { get; } = new() { ItemsSource = new[] { "Objects (by kind)", "Items in containers", "Texts (signs, portals, wards…)" }, SelectedIndex = 0, FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch };
-	internal Button FindButton { get; } = new() { Content = "Find", FontSize = 12, VerticalAlignment = VerticalAlignment.Stretch };
-	internal TextBlock SearchInfo { get; } = new() { FontSize = 11, Foreground = Brushes.LightGray, TextWrapping = TextWrapping.Wrap };
+	internal Button FindButton { get; } = new Button { Content = Icons.With("search", "Find"), FontSize = 12.5, VerticalAlignment = VerticalAlignment.Stretch }.Classed("primary");
+	internal TextBlock SearchInfo { get; } = new() { FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
 	internal ListBox Hits { get; } = new() { MaxHeight = 220, FontSize = 11 };
 	private List<WorldSearch.Hit> _hits = new();
 	private string _searchWhat = "kinds";
@@ -73,17 +73,17 @@ public sealed class MapPage
 	internal TextBox RMaxBox { get; } = new() { Watermark = "10500", FontSize = 12, Width = 70 };
 	internal CheckBox GroundBox { get; } = new() { Content = "Also undo their ground edits", FontSize = 12 };
 	internal Button ShowMatchButton { get; } = new() { Content = "Show matching", FontSize = 12 };
-	internal Button MarkButton { get; } = new() { Content = "Mark for reset…", FontSize = 12 };
+	internal Button MarkButton { get; } = new Button { Content = "Mark for reset…", FontSize = 12 }.Classed("primary");
 	internal Button UnmarkButton { get; } = new() { Content = "Unmark all", FontSize = 12 };
-	internal TextBlock ZoneInfo { get; } = new() { FontSize = 11, Foreground = Brushes.LightGray, TextWrapping = TextWrapping.Wrap };
+	internal TextBlock ZoneInfo { get; } = new() { FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
 	private int[]? _stats;
 	private bool _filtered;
 	internal List<(int X, int Z)> Matches { get; private set; } = new();
 
 	// Zone detail and the edited zones.
 	private readonly StackPanel _detail = new() { Spacing = 4, IsVisible = false };
-	internal TextBlock DetailText { get; } = new() { FontSize = 11, Foreground = Brushes.LightGray, TextWrapping = TextWrapping.Wrap };
-	internal TextBlock DetailStats { get; } = new() { FontSize = 11, Foreground = Brushes.LightGray, TextWrapping = TextWrapping.Wrap };
+	internal TextBlock DetailText { get; } = new() { FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
+	internal TextBlock DetailStats { get; } = new() { FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
 	private readonly TextBlock _terrainLow = Small(""), _terrainHigh = Small("");
 	internal Image TerrainImage { get; } = Picture();
 	internal Image HeightsImage { get; } = Picture();
@@ -92,9 +92,9 @@ public sealed class MapPage
 	private readonly Expander _editedSection;
 	private List<ZoneEdit> _edited = new();
 
-	private static readonly IBrush PanelBg = new SolidColorBrush(Color.FromArgb(235, 24, 28, 34)), Line = new SolidColorBrush(Color.FromRgb(46, 53, 63));
+	private static readonly IBrush PanelBg = Ui.Panel, Line = Ui.Line;
 
-	private static TextBlock Small(string t) => new() { Text = t, FontSize = 10, Foreground = Brushes.Gray, TextWrapping = TextWrapping.Wrap };
+	private static TextBlock Small(string t) => new() { Text = t, FontSize = 10, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
 
 	private static Image Picture()
 	{
@@ -103,11 +103,11 @@ public sealed class MapPage
 		return i;
 	}
 
-	private static TextBlock H2(string t) => new() { Text = t.ToUpperInvariant(), FontSize = 10, Foreground = Brushes.Gray, Margin = new Thickness(0, 4, 0, 0) };
+	private static TextBlock H2(string t) => Ui.Heading(t, 4);
 
 	public MapPage()
 	{
-		var worlds = new Button { Content = "Worlds", FontSize = 12 };
+		var worlds = new Button { Content = Icons.With("back", "Worlds"), FontSize = 12.5 }.Classed("ghost");
 		ToolTip.SetTip(worlds, "Back to the start page to open another world");
 		worlds.Click += (_, _) => BackToWorlds?.Invoke();
 		SaveButton.Click += (_, _) => SaveRequested?.Invoke();
@@ -176,7 +176,7 @@ public sealed class MapPage
 		MarkButton.Click += async (_, _) => await MarkMatching();
 		UnmarkButton.Click += async (_, _) => await UnmarkAll();
 		var zones = Section("Reset zones across the world", false,
-			new TextBlock { Text = "Pick zones everywhere at once (like MCA Selector) and have the game generate them again: new trees, ore and dungeons, for example after a Valheim update. Buildings are never touched.", FontSize = 11, Foreground = Brushes.LightGray, TextWrapping = TextWrapping.Wrap },
+			new TextBlock { Text = "Pick zones everywhere at once (like MCA Selector) and have the game generate them again: new trees, ore and dungeons, for example after a Valheim update. Buildings are never touched.", FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap },
 			biomes,
 			new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { NoBuildBox, DistBox, new TextBlock { Text = "zone(s)", FontSize = 12, VerticalAlignment = VerticalAlignment.Center } } },
 			NoEditBox, OnlyGenBox,
@@ -215,6 +215,7 @@ public sealed class MapPage
 			BorderBrush = Line,
 			BorderThickness = new Thickness(1),
 			CornerRadius = new CornerRadius(10),
+			Padding = Ui.Pad,
 			Margin = new Thickness(10),
 			Width = 340,
 			HorizontalAlignment = HorizontalAlignment.Left,
@@ -225,17 +226,16 @@ public sealed class MapPage
 				Content = new StackPanel
 				{
 					Spacing = 8,
-					Margin = new Thickness(12, 10),
 					Children =
 					{
-						new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Children = { new TextBlock { Text = "Valheim World Editor", FontSize = 16, FontWeight = FontWeight.SemiBold }, Col(worlds, 1) } },
+						new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Children = { new TextBlock { Inlines = { new Avalonia.Controls.Documents.Run("Valheim") { Foreground = Ui.Accent }, new Avalonia.Controls.Documents.Run(" World Editor") }, FontSize = 16, FontWeight = FontWeight.SemiBold, VerticalAlignment = VerticalAlignment.Center }, Col(worlds, 1) } },
 						Meta,
 						_liveBox,
 						_changesBox,
 						H2("Map"),
-						BuildingsBox, EditedBox, PaintBox, GridBox, CloudsBox,
+						new StackPanel { Children = { BuildingsBox, EditedBox, PaintBox, GridBox, CloudsBox } },
 						_pickBox,
-						new TextBlock { Text = "Click the map to pick a spot, drag to move, wheel to zoom.", FontSize = 11, Foreground = Brushes.Gray, TextWrapping = TextWrapping.Wrap },
+						new TextBlock { Text = "Click the map to pick a spot, drag to move, wheel to zoom.", FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap },
 						search,
 						zones,
 						_editedSection,
@@ -245,10 +245,12 @@ public sealed class MapPage
 		};
 		var surface = new Border { Background = Brushes.Transparent };
 		Map.Attach(surface);
-		var cursor = new Border { Background = PanelBg, CornerRadius = new CornerRadius(6), Padding = new Thickness(8, 4), Margin = new Thickness(10), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Bottom, Child = Cursor };
-		var status = new Border { Background = PanelBg, CornerRadius = new CornerRadius(6), Padding = new Thickness(10, 6), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Child = _status };
+		var cursor = new Border { Background = PanelBg, BorderBrush = Line, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(10), Padding = Ui.Pad, Margin = new Thickness(10), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Bottom, Child = Cursor };
+		var status = new Border { Background = PanelBg, BorderBrush = Line, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(10), Padding = Ui.Pad, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Child = _status };
 		status.IsVisible = false;
 		Map.Status += t => status.IsVisible = !string.IsNullOrEmpty(t);
+		cursor.IsVisible = false;
+		Cursor.PropertyChanged += (_, e) => { if (e.Property == TextBlock.TextProperty) cursor.IsVisible = !string.IsNullOrEmpty(Cursor.Text); };
 		View = new Grid { Background = new SolidColorBrush(Color.FromRgb(20, 23, 28)), Children = { Map, surface, _labels, side, cursor, status } };
 		_players.Tick += async (_, _) => await PollPlayers();
 	}

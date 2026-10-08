@@ -45,21 +45,21 @@ public sealed class AreaPanel
 	internal Button BoxButton { get; } = new() { Content = "Box", FontSize = 12 };
 	internal Button PolyButton { get; } = new() { Content = "Polygon", FontSize = 12 };
 	internal Button ClearButton { get; } = new() { Content = "Clear (Esc)", FontSize = 12 };
-	internal TextBlock Info { get; } = new() { FontSize = 12, Foreground = Brushes.LightGray, TextWrapping = TextWrapping.Wrap };
+	internal TextBlock Info { get; } = new() { FontSize = 12, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
 	internal Slider SoftSlider { get; }
 	internal ComboBox ActionBox { get; }
 	internal NumericUpDown HeightBox { get; } = new() { Value = 35, Increment = 0.1m, FormatString = "0.0#", FontSize = 12 };
 	internal Button AverageButton { get; } = new() { Content = "avg", FontSize = 11, Padding = new Thickness(6, 2) };
 	internal NumericUpDown AmountBox { get; } = new() { Value = 2, Increment = 0.1m, FormatString = "0.0#", FontSize = 12 };
 	internal ComboBox PaintBox { get; } = new() { ItemsSource = Paints.Select(p => p.Label).ToArray(), SelectedIndex = 0, FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch };
-	internal TextBlock VolumeText { get; } = new() { FontSize = 11, Foreground = Brushes.Gray, TextWrapping = TextWrapping.Wrap };
+	internal TextBlock VolumeText { get; } = new() { FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
 	internal Dictionary<ObjectKind, ToggleButton> KindButtons { get; } = new();
 	internal ComboBox FromBox { get; } = new() { FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch };
 	internal ComboBox ToBox { get; } = new() { FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch, MaxDropDownHeight = 400 };
 	internal CheckBox KeepBuildingsBox { get; } = new() { Content = "Keep my buildings", IsChecked = true, FontSize = 12 };
 	internal CheckBox ResetGroundBox { get; } = new() { Content = "Reset ground edits too", IsChecked = true, FontSize = 12 };
 	internal Button UnresetButton { get; } = new() { Content = "Cancel reset", FontSize = 12 };
-	internal Button ApplyButton { get; } = new() { FontSize = 12 };
+	internal Button ApplyButton { get; } = new Button { FontSize = 12 }.Classed("primary");
 	private readonly Dictionary<Control, Act[]> _rows = new();
 	private List<int> _creatable = new();
 
@@ -70,7 +70,7 @@ public sealed class AreaPanel
 	internal ComboBox BackupBox { get; } = new() { FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch };
 	internal CheckBox BackupGroundBox { get; } = new() { Content = "Ground (height and paint)", IsChecked = true, FontSize = 12 };
 	internal CheckBox BackupObjectsBox { get; } = new() { Content = "Objects of the kinds chosen above", IsChecked = true, FontSize = 12 };
-	internal TextBlock BackupInfo { get; } = new() { FontSize = 11, Foreground = Brushes.Gray, TextWrapping = TextWrapping.Wrap,
+	internal TextBlock BackupInfo { get; } = new() { FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap,
 		Text = "Puts the selection back as it was in a backup: the editor's backups and the game's own are listed. Choose Your buildings above to bring buildings back too." };
 	private List<string> _backupPaths = new();
 	// Asks for another backup folder (the window's folder picker).
@@ -82,7 +82,7 @@ public sealed class AreaPanel
 	internal Button PasteButton { get; } = new() { Content = "Paste (Ctrl+V)", FontSize = 12 };
 	internal Button SaveBlueprintButton { get; } = new() { Content = "Save blueprint…", FontSize = 12 };
 	internal Button LibraryButton { get; } = new() { Content = "Blueprints…", FontSize = 12 };
-	internal TextBlock ClipInfo { get; } = new() { FontSize = 11, Foreground = Brushes.Gray, TextWrapping = TextWrapping.Wrap };
+	internal TextBlock ClipInfo { get; } = new() { FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
 	public event Action? CopyAsked, PasteAsked, SaveBlueprintAsked, LibraryAsked;
 
 	// Heightmap: export the area, or import a picture into the selection (or the whole area).
@@ -90,9 +90,9 @@ public sealed class AreaPanel
 	internal Button ImportButton { get; } = new() { Content = "Import…", FontSize = 12 };
 	internal NumericUpDown LowestBox { get; } = new() { Increment = 0.5m, FormatString = "0.###", FontSize = 12 };
 	internal NumericUpDown HighestBox { get; } = new() { Increment = 0.5m, FormatString = "0.###", FontSize = 12 };
-	internal Button PutButton { get; } = new() { Content = "Put it into the ground", FontSize = 12 };
+	internal Button PutButton { get; } = new Button { Content = "Put it into the ground", FontSize = 12 }.Classed("primary");
 	internal Button CancelPictureButton { get; } = new() { Content = "Cancel", FontSize = 12 };
-	internal TextBlock PictureInfo { get; } = new() { FontSize = 11, Foreground = Brushes.LightGray, TextWrapping = TextWrapping.Wrap };
+	internal TextBlock PictureInfo { get; } = new() { FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
 	private Control _pictureBox = null!;
 	internal Func<Task<string?>> PickPicture { get; set; } = () => Task.FromResult<string?>(null);
 	private (float[] Values, int X0, int Z0, int W, int H, List<(int G, float W)> Cells)? _picture;
@@ -179,14 +179,15 @@ public sealed class AreaPanel
 			_rows[c] = acts;
 			return c;
 		}
-		TextBlock Help(string t) => new() { Text = t, FontSize = 11, Foreground = Brushes.Gray, TextWrapping = TextWrapping.Wrap };
+		TextBlock Help(string t) => new() { Text = t, FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
 		Card = new Border
 		{
-			Background = new SolidColorBrush(Color.FromArgb(235, 24, 28, 34)),
-			BorderBrush = new SolidColorBrush(Color.FromRgb(46, 53, 63)),
+			Background = Ui.Panel,
+			BorderBrush = Ui.Line,
+			BoxShadow = BoxShadows.Parse("0 6 24 0 #59000000"),
 			BorderThickness = new Thickness(1),
 			CornerRadius = new CornerRadius(10),
-			Padding = new Thickness(8),
+			Padding = Ui.Pad,
 			VerticalAlignment = VerticalAlignment.Top,
 			Child = new StackPanel
 			{
@@ -244,12 +245,11 @@ public sealed class AreaPanel
 		ShowRows();
 	}
 
-	private static readonly IBrush On = new SolidColorBrush(Color.FromRgb(58, 92, 140));
 
 	private void ShowShape()
 	{
-		BoxButton.Background = Area.Box ? On : null;
-		PolyButton.Background = Area.Box ? null : On;
+		BoxButton.Classes.Set("on", Area.Box);
+		PolyButton.Classes.Set("on", !(Area.Box));
 		Refresh();
 	}
 

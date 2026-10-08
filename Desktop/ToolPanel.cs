@@ -29,7 +29,7 @@ public sealed class ToolPanel
 	private readonly Button _viewButton, _selectButton, _measureButton, _shapeButton, _pathButton, _areaButton, _placeButton;
 	internal Button SelectButton => _selectButton;
 	private readonly TextBlock _title = new() { FontSize = 14, FontWeight = FontWeight.SemiBold };
-	private readonly TextBlock _help = new() { FontSize = 12, Foreground = Brushes.LightGray, TextWrapping = TextWrapping.Wrap };
+	private readonly TextBlock _help = new() { FontSize = 12, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
 	private readonly Control _flattenRows, _naturalRows, _turnRow, _erodeRows, _falloffRow, _stampOnceRows, _stampHeightRow;
 	// The stamps in the Shape list after the four shapes: the built-in ones, then loaded pictures.
 	internal List<Stamps.Stamp> StampList { get; } = Stamps.BuiltIn.Concat(Stamps.LoadKept()).ToList();
@@ -60,15 +60,43 @@ public sealed class ToolPanel
 		(BrushTool.PaintDirt, "6"), (BrushTool.PaintCultivated, "7"), (BrushTool.PaintPaved, "8"), (BrushTool.PaintClear, "9"),
 	};
 
-	private static readonly IBrush On = new SolidColorBrush(Color.FromRgb(58, 92, 140)), Off = new SolidColorBrush(Color.FromArgb(0, 0, 0, 0));
+	// The rail's short names, icons and paint colours (the web editor's).
+	private static string RailLabel(BrushTool t) => t switch
+	{
+		BrushTool.Natural => "Natural",
+		BrushTool.PaintCultivated => "Cultivate",
+		BrushTool.PaintClear => "Clear",
+		_ => Brush.Label(t),
+	};
+
+	private static (string? Icon, IBrush? Swatch) Look(BrushTool t) => t switch
+	{
+		BrushTool.Raise => ("raise", null),
+		BrushTool.Lower => ("lower", null),
+		BrushTool.Flatten => ("flatten", null),
+		BrushTool.Smooth => ("smooth", null),
+		BrushTool.Natural => ("natural", null),
+		BrushTool.Erode => ("erode", null),
+		BrushTool.Restore => ("restore", null),
+		BrushTool.PaintDirt => (null, new SolidColorBrush(Color.Parse("#8a6a46"))),
+		BrushTool.PaintCultivated => (null, new SolidColorBrush(Color.Parse("#4e3622"))),
+		BrushTool.PaintPaved => (null, new SolidColorBrush(Color.Parse("#8d8d88"))),
+		_ => (null, new LinearGradientBrush
+		{
+			StartPoint = new RelativePoint(0, 0, RelativeUnit.Relative),
+			EndPoint = new RelativePoint(1, 1, RelativeUnit.Relative),
+			GradientStops = { new GradientStop(Color.Parse("#5e8a3a"), 0.5), new GradientStop(Color.Parse("#7a6a4a"), 0.5) },
+		}),
+	};
 
 	private static Border Card(Control child) => new()
 	{
-		Background = new SolidColorBrush(Color.FromArgb(235, 24, 28, 34)),
-		BorderBrush = new SolidColorBrush(Color.FromRgb(46, 53, 63)),
+		Background = Ui.Panel,
+		BorderBrush = Ui.Line,
+		BoxShadow = BoxShadows.Parse("0 6 24 0 #59000000"),
 		BorderThickness = new Thickness(1),
 		CornerRadius = new CornerRadius(10),
-		Padding = new Thickness(8),
+		Padding = Ui.Pad,
 		Child = child,
 	};
 
@@ -99,58 +127,67 @@ public sealed class ToolPanel
 
 	public ToolPanel()
 	{
-		var rail = new StackPanel { Spacing = 2 };
-		Button Make(string label, string key)
+		var rail = new StackPanel { Spacing = 0 };
+		// A rail button: the web editor's icon (or the paint's colour), the name and the key.
+		Button Make(string label, string key, string? icon, IBrush? swatch = null)
 		{
+			Control picture = icon != null ? Icons.Make(icon, 16) : new Border { Width = 16, Height = 16, CornerRadius = new CornerRadius(5), Background = swatch, BorderBrush = new SolidColorBrush(Color.FromArgb(64, 255, 255, 255)), BorderThickness = new Thickness(1) };
+			picture.HorizontalAlignment = HorizontalAlignment.Center;
 			var b = new Button
 			{
 				Content = new Grid
 				{
-					ColumnDefinitions = new ColumnDefinitions("*,Auto"),
-					Children = { new TextBlock { Text = label, FontSize = 12 }, new TextBlock { Text = key, FontSize = 10, Foreground = Brushes.Gray, [Grid.ColumnProperty] = 1, Margin = new Thickness(8, 0, 0, 0) } },
+					Children =
+					{
+						new StackPanel { Spacing = 1, Children = { picture, new TextBlock { Text = label, FontSize = 10.5, HorizontalAlignment = HorizontalAlignment.Center } } },
+						new TextBlock { Text = key, FontSize = 9, Opacity = 0.6, HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, -2, -1, 0), FontFamily = new FontFamily("monospace") },
+					},
 				},
 				HorizontalAlignment = HorizontalAlignment.Stretch,
 				HorizontalContentAlignment = HorizontalAlignment.Stretch,
-				Padding = new Thickness(8, 4),
-				Background = Off,
-			};
+				Padding = new Thickness(2, 3, 3, 2),
+			}.Classed("rail");
 			rail.Children.Add(b);
 			return b;
 		}
-		_viewButton = Make("View", "Esc");
-		ToolTip.SetTip(_viewButton, "Look around and click objects to select them.");
-		_viewButton.Click += (_, _) => Choose(null);
-		_selectButton = Make("Select", "E");
-		ToolTip.SetTip(_selectButton, "Select (E): click objects, or drag on the ground around them; then move, turn, lift or delete them.");
-		_selectButton.Click += (_, _) => ChooseSelect();
-		_measureButton = Make("Measure", "M");
-		ToolTip.SetTip(_measureButton, "Measure (M): click two points to see the distance, height difference and slope.");
-		_measureButton.Click += (_, _) => ChooseMode(ToolMode.Measure);
-		_shapeButton = Make("Shape", "G");
-		ToolTip.SetTip(_shapeButton, "Shape (G): click to put a mound, cone, mesa, crater, moat or bowl into the ground, or any shape you write as a formula.");
-		_shapeButton.Click += (_, _) => ChooseMode(ToolMode.Shape);
-		_pathButton = Make("Path", "P");
-		ToolTip.SetTip(_pathButton, "Path (P): draw a line, then flatten, ramp, raise, lower, smooth, dig a river or paint along it.");
-		_pathButton.Click += (_, _) => ChooseMode(ToolMode.Path);
-		_areaButton = Make("Area", "B");
-		ToolTip.SetTip(_areaButton, "Area (B): select a box or polygon, then change the ground, remove, select or replace objects, or reset its zones.");
-		_areaButton.Click += (_, _) => ChooseMode(ToolMode.Area);
-		_placeButton = Make("Place", "T");
-		ToolTip.SetTip(_placeButton, "Place (T): paint trees, rocks or bushes with a brush, or put walls, fences and other pieces along lines, circles, rectangles, grids and zones.");
-		_placeButton.Click += (_, _) => ChooseMode(ToolMode.Place);
-		rail.Children.Add(new TextBlock { Text = "SCULPT", FontSize = 10, Foreground = Brushes.Gray, Margin = new Thickness(4, 6, 0, 0) });
+		void Cap(string text) => rail.Children.Add(new TextBlock { Text = text.ToUpperInvariant(), FontSize = 9, Foreground = Ui.Muted, LetterSpacing = 0.7, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, rail.Children.Count == 0 ? 0 : 5, 0, 1) });
+		Cap("Sculpt");
 		foreach (var (t, key) in Keys)
 		{
 			if (t == BrushTool.PaintDirt)
 			{
-				rail.Children.Add(new TextBlock { Text = "PAINT", FontSize = 10, Foreground = Brushes.Gray, Margin = new Thickness(4, 6, 0, 0) });
+				Cap("Paint");
 			}
-			var b = Make(Brush.Label(t), key);
+			var (icon, swatch) = Look(t);
+			var b = Make(RailLabel(t), key, icon, swatch);
 			ToolTip.SetTip(b, $"{Brush.Label(t)} ({key}): {Brush.Help(t)}");
 			b.Click += (_, _) => Choose(t);
 			_buttons[t] = b;
 		}
-		Rail = Card(new StackPanel { Width = 118, Children = { rail } });
+		Cap("Other");
+		_areaButton = Make("Area", "B", "area");
+		ToolTip.SetTip(_areaButton, "Area (B): select a box or polygon, then change the ground, remove, select or replace objects, or reset its zones.");
+		_areaButton.Click += (_, _) => ChooseMode(ToolMode.Area);
+		_pathButton = Make("Path", "P", "path");
+		ToolTip.SetTip(_pathButton, "Path (P): draw a line, then flatten, ramp, raise, lower, smooth, dig a river or paint along it.");
+		_pathButton.Click += (_, _) => ChooseMode(ToolMode.Path);
+		_shapeButton = Make("Shape", "G", "shape");
+		ToolTip.SetTip(_shapeButton, "Shape (G): click to put a mound, cone, mesa, crater, moat or bowl into the ground, or any shape you write as a formula.");
+		_shapeButton.Click += (_, _) => ChooseMode(ToolMode.Shape);
+		_placeButton = Make("Place", "T", "place");
+		ToolTip.SetTip(_placeButton, "Place (T): paint trees, rocks or bushes with a brush, or put walls, fences and other pieces along lines, circles, rectangles, grids and zones.");
+		_placeButton.Click += (_, _) => ChooseMode(ToolMode.Place);
+		_selectButton = Make("Select", "E", "select");
+		ToolTip.SetTip(_selectButton, "Select (E): click objects, or drag on the ground around them; then move, turn, lift or delete them.");
+		_selectButton.Click += (_, _) => ChooseSelect();
+		_measureButton = Make("Measure", "M", "measure");
+		ToolTip.SetTip(_measureButton, "Measure (M): click two points to see the distance, height difference and slope.");
+		_measureButton.Click += (_, _) => ChooseMode(ToolMode.Measure);
+		_viewButton = Make("View", "Esc", "move");
+		ToolTip.SetTip(_viewButton, "View (Esc): look around, and click objects to pick them.");
+		_viewButton.Click += (_, _) => Choose(null);
+		// On a short window the rail scrolls with the wheel; no bar (it would squeeze the buttons).
+		Rail = Ui.Card(new ScrollViewer { VerticalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Hidden, Content = new StackPanel { Width = 56, Children = { rail } } });
 
 		// The options: size and strength, the brush shape, and each tool's own.
 		var sizeV = new TextBlock();
@@ -211,8 +248,8 @@ public sealed class ToolPanel
 		void Mode(bool water)
 		{
 			Brush.ErodeWater = water;
-			ThermalButton.Background = water ? Off : On;
-			WaterButton.Background = water ? On : Off;
+			ThermalButton.Classes.Set("on", !water);
+			WaterButton.Classes.Set("on", water);
 			restRow.IsVisible = !water;
 		}
 		ThermalButton.Click += (_, _) => Mode(false);
@@ -252,16 +289,16 @@ public sealed class ToolPanel
 	{
 		Tool = t;
 		Mode = t != null ? ToolMode.Brush : mode;
-		_viewButton.Background = Mode == ToolMode.View ? On : Off;
-		_selectButton.Background = Mode == ToolMode.Select ? On : Off;
-		_measureButton.Background = Mode == ToolMode.Measure ? On : Off;
-		_shapeButton.Background = Mode == ToolMode.Shape ? On : Off;
-		_pathButton.Background = Mode == ToolMode.Path ? On : Off;
-		_areaButton.Background = Mode is ToolMode.Area or ToolMode.Paste ? On : Off;
-		_placeButton.Background = Mode == ToolMode.Place ? On : Off;
+		_viewButton.Classes.Set("on", Mode == ToolMode.View);
+		_selectButton.Classes.Set("on", Mode == ToolMode.Select);
+		_measureButton.Classes.Set("on", Mode == ToolMode.Measure);
+		_shapeButton.Classes.Set("on", Mode == ToolMode.Shape);
+		_pathButton.Classes.Set("on", Mode == ToolMode.Path);
+		_areaButton.Classes.Set("on", Mode is ToolMode.Area or ToolMode.Paste);
+		_placeButton.Classes.Set("on", Mode == ToolMode.Place);
 		foreach (var (k, b) in _buttons)
 		{
-			b.Background = k == t ? On : Off;
+			b.Classes.Set("on", k == t);
 		}
 		Options.IsVisible = t != null;
 		if (t is BrushTool tool)
