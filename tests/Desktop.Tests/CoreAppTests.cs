@@ -4,7 +4,7 @@ using Xunit;
 namespace WorldEditor.Tests;
 
 // Settings, saved servers, plugin settings and world discovery. These use the app's data folder,
-// so they point it at a temporary one (XDG_DATA_HOME) and do not run in parallel.
+// so they point it at a temporary one (XDG_DATA_HOME, and their own servers file) and run alone.
 [Collection("DataDir")]
 public class AppTests : IDisposable
 {
@@ -17,11 +17,17 @@ public class AppTests : IDisposable
 		Directory.CreateDirectory(_data);
 		Environment.SetEnvironmentVariable("XDG_DATA_HOME", _data);
 		Environment.SetEnvironmentVariable("LOCALAPPDATA", _data);
+		// The native tests send saved servers to a test file: this test gets its own, in its folder.
+		_oldServers = ServerConfig.PathOverride;
+		ServerConfig.PathOverride = Path.Combine(_data, "servers.cfg");
 	}
+
+	private readonly string? _oldServers;
 
 	public void Dispose()
 	{
 		Environment.SetEnvironmentVariable("XDG_DATA_HOME", _old);
+		ServerConfig.PathOverride = _oldServers;
 		try
 		{
 			Directory.Delete(_data, true);
@@ -85,10 +91,10 @@ public class AppTests : IDisposable
 	public void WorldFoldersAreChecked()
 	{
 		using var w = new TempWorld();
-		Assert.Null(Launcher.CheckWorld(w.Dir));
-		Assert.Contains("does not exist", Launcher.CheckWorld("/no/such/folder")!);
-		Assert.Contains("holds worlds", Launcher.CheckWorld(Path.GetDirectoryName(w.Dir)!)!);
-		Assert.Contains("No Valheim world", Launcher.CheckWorld(_data)!);
+		Assert.Null(Worlds.Check(w.Dir));
+		Assert.Contains("does not exist", Worlds.Check("/no/such/folder")!);
+		Assert.Contains("holds worlds", Worlds.Check(Path.GetDirectoryName(w.Dir)!)!);
+		Assert.Contains("No Valheim world", Worlds.Check(_data)!);
 	}
 
 	[Fact]
@@ -96,7 +102,7 @@ public class AppTests : IDisposable
 	{
 		using var w = new TempWorld();
 		var settings = new AppSettings { WorldFolders = { Path.GetDirectoryName(w.Dir)! } };
-		var found = Launcher.FindWorlds(settings);
+		var found = Worlds.Find(settings);
 		var world = Assert.Single(found, x => x.Path == w.Dir);
 		Assert.Equal("yours", world.Where);
 		Assert.True(world.Usable);

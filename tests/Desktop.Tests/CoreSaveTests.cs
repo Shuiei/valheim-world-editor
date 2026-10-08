@@ -198,7 +198,7 @@ public class BackupTests
 		var edits = new EditStore(world);
 		edits.SetDeleted(new[] { world.Objects.First(o => o.Prefab == Fixtures.Hash("Beech1")).Id }, true);
 		var r = WorldWriter.Save(world, Array.Empty<ZoneEdit>(), edits.Deleted);
-		var found = TerrainEditor.App.BackupEndpoints.Find(w.Dir);
+		var found = TerrainEditor.App.Backups.Find(w.Dir);
 		var b = Assert.Single(found);
 		Assert.Equal(r.BackupDirectory, b.Path);
 		Assert.Equal("editor", b.Kind);

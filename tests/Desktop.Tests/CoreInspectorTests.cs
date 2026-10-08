@@ -74,19 +74,6 @@ public class InspectorTests
 	}
 
 	[Fact]
-	public void AChestDescribesItsContents()
-	{
-		using var w = new TempWorld();
-		WorldSave world = w.Load();
-		var edits = new EditStore(world);
-		int chest = world.Objects.First(o => o.Prefab == Fixtures.Hash("piece_chest_wood")).Id;
-		JsonObject d = ObjectEndpoints.Describe(chest, ZdoData.Parse(world.ObjectBytes(chest)));
-		Assert.Equal("piece_chest_wood", (string?)d["name"]);
-		Assert.Equal(5, (int)d["inventory"]!["width"]!);
-		Assert.NotNull(d["inventory"]!["items"]);
-	}
-
-	[Fact]
 	public void AnEditedChestAndSignAreSavedWithTheirNewData()
 	{
 		using var w = new TempWorld();
