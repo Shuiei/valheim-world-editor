@@ -177,6 +177,8 @@ Running them locally:
 ```sh
 dotnet test tests/WorldEditor.Tests
 dotnet test tests/Desktop.Tests                # the native app, in Avalonia's headless mode
+dotnet-coverage collect -s tests/Desktop.Tests/coverage.config -f cobertura -o cov.xml "dotnet test tests/Desktop.Tests --filter Category!=Visual"
+                                              # the native app's coverage, our own code only
 dotnet publish TerrainEditor.csproj -c Release -r linux-x64 --self-contained -p:PublishSingleFile=true -o out
 cd tests/browser && npm ci && npm test        # APP=<program> to test another build
 tools/coverage.sh                             # coverage of every test: server and page, line by line
