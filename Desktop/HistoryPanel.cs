@@ -28,9 +28,10 @@ public sealed class HistoryPanel
 			BorderThickness = new Thickness(1),
 			CornerRadius = new CornerRadius(10),
 			Padding = new Thickness(8),
-			Margin = new Thickness(10, 70, 10, 10),
+			// Just above the save bar.
+			Margin = new Thickness(10, 10, 10, 70),
 			HorizontalAlignment = HorizontalAlignment.Center,
-			VerticalAlignment = VerticalAlignment.Top,
+			VerticalAlignment = VerticalAlignment.Bottom,
 			IsVisible = false,
 			Child = new StackPanel
 			{

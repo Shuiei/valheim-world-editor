@@ -105,7 +105,9 @@ public sealed class PlacePanel
 		CornerRadius = new CornerRadius(10),
 		Padding = new Thickness(8),
 		VerticalAlignment = VerticalAlignment.Top,
-		Child = new ScrollViewer { MaxHeight = 820, Content = new StackPanel { Width = width, Spacing = 6, Children = { child } } },
+		// As tall as the window allows: the scroll bar only when it does not fit, beside the content
+		// (it is drawn over it otherwise).
+		Child = new ScrollViewer { Content = new StackPanel { Width = width, Spacing = 6, Margin = new Thickness(0, 0, 12, 0), Children = { child } } },
 	};
 
 	public PlacePanel(PlaceInput input, Func<WorldScene?> scene, Func<int, string?> nameOf, PlaceMemory? memory = null)

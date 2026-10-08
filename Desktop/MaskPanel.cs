@@ -53,7 +53,8 @@ public sealed class MaskPanel
 		PaintBox.SelectionChanged += (_, _) => Changed();
 		Control Pair(string label, Control a, Control b, string unit)
 		{
-			var g = new Grid { ColumnDefinitions = new ColumnDefinitions("50,*,*,Auto"), ColumnSpacing = 4 };
+			// The same columns on every row (the unit too), so the boxes line up.
+			var g = new Grid { ColumnDefinitions = new ColumnDefinitions("50,*,*,14"), ColumnSpacing = 4 };
 			g.Children.Add(new TextBlock { Text = label, FontSize = 12, VerticalAlignment = VerticalAlignment.Center });
 			Grid.SetColumn(a, 1);
 			Grid.SetColumn(b, 2);
@@ -73,7 +74,7 @@ public sealed class MaskPanel
 				biomes,
 				Pair("Height", HeightMin, HeightMax, "m"),
 				Pair("Slope", SlopeMin, SlopeMax, "°"),
-				new Grid { ColumnDefinitions = new ColumnDefinitions("50,*"), Children = { new TextBlock { Text = "Paint", FontSize = 12, VerticalAlignment = VerticalAlignment.Center }, Column(PaintBox, 1) } },
+				new Grid { ColumnDefinitions = new ColumnDefinitions("50,*,14"), ColumnSpacing = 4, Children = { new TextBlock { Text = "Paint", FontSize = 12, VerticalAlignment = VerticalAlignment.Center }, Column(PaintBox, 1) } },
 				WarningText,
 				new TextBlock { Text = "No biome selected = all biomes. Leave a box empty for no limit. Alt + Shift + click the ground fills the height range around it (±2 m).", FontSize = 11, Foreground = Brushes.Gray, TextWrapping = TextWrapping.Wrap },
 			},

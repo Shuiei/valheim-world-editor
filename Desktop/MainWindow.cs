@@ -688,6 +688,9 @@ public sealed class MainWindow : Window
 		ToolTip.SetTip(HistoryButton, "Every change of this session: go back to one, or take out only one");
 		RedoButton.Click += (_, _) => Redo();
 		SaveButton.Click += async (_, _) => await Save();
+		// The message line takes room only when it says something.
+		_message.IsVisible = false;
+		_message.PropertyChanged += (_, e) => { if (e.Property == TextBlock.TextProperty) _message.IsVisible = !string.IsNullOrEmpty(_message.Text); };
 		ToolTip.SetTip(SaveButton, "Write the changes into the world's files (Ctrl+S)");
 		return new Border
 		{
@@ -697,8 +700,9 @@ public sealed class MainWindow : Window
 			CornerRadius = new CornerRadius(10),
 			Padding = new Thickness(10, 6),
 			Margin = new Thickness(10),
+			// At the bottom: the tool panels grow down from the top and would be covered.
 			HorizontalAlignment = HorizontalAlignment.Center,
-			VerticalAlignment = VerticalAlignment.Top,
+			VerticalAlignment = VerticalAlignment.Bottom,
 			Child = new StackPanel
 			{
 				Spacing = 4,
@@ -1312,6 +1316,18 @@ public sealed class MainWindow : Window
 					Tools.Choose(startBrush);
 				}
 				for (int n = Options.EyeStart == "fly" ? 2 : Options.EyeStart == "walk" ? 1 : 0; n > 0; n--) _view.CycleEye();
+				if (Options.UiShot is string ui)
+				{
+					// The Mask open too, to see its rows.
+					MaskPanel.OnBox.IsChecked = true;
+					await Task.Delay(3000);
+					var size = new PixelSize((int)Bounds.Width, (int)Bounds.Height);
+					using var rtb = new Avalonia.Media.Imaging.RenderTargetBitmap(size);
+					rtb.Render(this);
+					rtb.Save(ui);
+					Options.Say($"picture: {ui}");
+					(Application.Current?.ApplicationLifetime as Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime)?.Shutdown();
+				}
 			}
 			catch (Exception ex)
 			{
