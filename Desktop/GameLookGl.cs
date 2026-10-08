@@ -143,6 +143,7 @@ public sealed class GameLookGl
 		uniform vec3 uSunColor;
 		uniform float uSlope;
 		uniform float uContour;
+		uniform float uLimit;
 		in float vLimit;
 		out vec4 fragColor;
 		void main() {
@@ -177,8 +178,8 @@ public sealed class GameLookGl
 		    float line = max((1.0 - smoothstep(0.0, fw * 1.2, minor)) * 0.45, (1.0 - smoothstep(0.0, fw * 2.0, major)) * 0.8);
 		    col = mix(col, vec3(0.02), line);
 		  }
-		  // Points at the game's +-8 m edit limit.
-		  col = mix(col, vec3(0.75, 0.06, 0.04), vLimit * 0.55);
+		  // Points at the game's +-8 m edit limit (View: Limit marks).
+		  col = mix(col, vec3(0.75, 0.06, 0.04), vLimit * 0.55 * uLimit);
 		  fragColor = vec4(toSRGB(applyFogDir(col, length(_WorldSpaceCameraPos - wp), -v, uSunDir)), 1.0);
 		}
 		""";
@@ -497,7 +498,7 @@ public sealed class GameLookGl
 	}
 
 	// Binds the terrain shader with its textures and settings; the caller draws the ground mesh.
-	public void UseTerrain(Matrix4x4 vp, Vector3 eye, float time, bool slope, float contour)
+	public void UseTerrain(Matrix4x4 vp, Vector3 eye, float time, bool slope, float contour, bool limit)
 	{
 		Shared(_terrain, vp, eye, time);
 		void F(string n, float v) => _gl.Uniform1(_gl.GetUniformLocation(_terrain, n), v);
@@ -514,7 +515,7 @@ public sealed class GameLookGl
 		F("_Glossiness", 0.1f); F("_SnowGloss", 1); F("_RockGloss", 0.7f); F("_Metallic", 0);
 		F("_WaterLevel", _scene.Water); F("_LodHideDistance", 1e6f); F("_LodHideModifier", 0);
 		F("_UVScale", 0.5f); F("_BumpScale", 1); F("_Wet", 0);
-		F("uSlope", slope ? 1 : 0); F("uContour", contour);
+		F("uSlope", slope ? 1 : 0); F("uContour", contour); F("uLimit", limit ? 1 : 0);
 		int unit = 0;
 		foreach (var (name, (tex, target)) in _tex)
 		{
