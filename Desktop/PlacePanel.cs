@@ -85,7 +85,9 @@ public sealed class PlacePanel
 	private static Control Row(string label, Control input, Control? after = null)
 	{
 		var g = new Grid { ColumnDefinitions = new ColumnDefinitions("72,*,Auto") };
-		g.Children.Add(new TextBlock { Text = label, FontSize = 12, VerticalAlignment = VerticalAlignment.Center });
+		var l = new TextBlock { Text = label, FontSize = 12, VerticalAlignment = VerticalAlignment.Center };
+		Tips.Label(l, input);
+		g.Children.Add(l);
 		Grid.SetColumn(input, 1);
 		g.Children.Add(input);
 		if (after != null)
@@ -135,11 +137,32 @@ public sealed class PlacePanel
 			ModeButtons[m] = b;
 			modes.Children.Add(b);
 		}
-		ToolTip.SetTip(ModeButtons[PlaceTool.Modes.Brush], "Paint under the brush");
-		ToolTip.SetTip(ModeButtons[PlaceTool.Modes.Line], "Objects along a line you draw");
-		ToolTip.SetTip(ModeButtons[PlaceTool.Modes.Grid], "One object in the middle of each grid cell");
-		ToolTip.SetTip(ModeButtons[PlaceTool.Modes.Zone], "Fill a shape you draw freely");
-		PresetBox = new ComboBox { FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch };
+		ModeButtons[PlaceTool.Modes.Brush].Tip("place.brush");
+		ModeButtons[PlaceTool.Modes.Line].Tip("place.line");
+		ModeButtons[PlaceTool.Modes.Grid].Tip("place.grid");
+		ModeButtons[PlaceTool.Modes.Zone].Tip("place.zone");
+		PresetBox = new ComboBox { FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch }.Tip("place.preset");
+		DeletePresetButton.Tip("place.deletePreset");
+		KindsButton.Tip("place.kinds");
+		Search.Tip("place.search");
+		PickButton.Tip("place.pick");
+		ElevationBox.Tip("place.elevation");
+		ElevBox.Tip("place.elev");
+		SnapToBox.Tip("place.snapTo");
+		GrowBox.Tip("place.grow");
+		SizeMinBox.Tip("place.sizeMin");
+		SizeMaxBox.Tip("place.sizeMax");
+		RandomYawBox.Tip("place.randomYaw");
+		SingleBox.Tip("place.single");
+		EndToEndBox.Tip("place.endToEnd");
+		LayersBox.Tip("place.layers");
+		LoopBox.Tip("place.loop");
+		AlongBox.Tip("place.along");
+		CurveBox.Tip("place.curve");
+		PlaceButton.Tip("place.place");
+		ClearButton.Tip("place.clearShape");
+		UndoPointButton.Tip("place.undoPoint");
+		NewLayoutButton.Tip("place.newLayout");
 		FillPresets();
 		PresetBox.SelectionChanged += (_, _) =>
 		{
@@ -154,7 +177,7 @@ public sealed class PlacePanel
 			Fill();
 			FillList();
 		};
-		ToolTip.SetTip(SavePresetButton, "Save the chosen kinds, their weights and the Density, Spacing, Size, Tilt and clumping settings under a name");
+		SavePresetButton.Tip("place.savePreset");
 		SavePresetButton.Click += async (_, _) =>
 		{
 			if (t.Chosen.Count == 0)
@@ -206,8 +229,8 @@ public sealed class PlacePanel
 		SnapToBox.IsCheckedChanged += (_, _) => { t.SnapTo = SnapToBox.IsChecked == true; t.Notify(); };
 		BesideButton.Click += (_, _) => { t.OnTop = false; Sync(); t.Notify(); };
 		OnTopButton.Click += (_, _) => { t.OnTop = true; Sync(); t.Notify(); };
-		ToolTip.SetTip(BesideButton, "End to end with the piece next to the cursor, at its level");
-		ToolTip.SetTip(OnTopButton, "On top of the piece under the cursor");
+		BesideButton.Tip("place.beside");
+		OnTopButton.Tip("place.onTop");
 		GrowBox.IsCheckedChanged += (_, _) => { t.GrowRoom = GrowBox.IsChecked == true; t.Notify(); };
 		var sizeV = new TextBlock();
 		SizeSlider = Slide(1, 30, 0.5, t.Brush.Radius, sizeV, v => $"{v:0.#} m", v => { t.Brush.Radius = v; t.Notify(); });
@@ -221,6 +244,11 @@ public sealed class PlacePanel
 		PatchSlider = Slide(5, 120, 5, t.Patch, paV, v => $"{v:0} m", v => { t.Patch = v; t.Notify(); });
 		SizeMinBox.ValueChanged += (_, e) => { t.SizeMin = (float)(e.NewValue ?? 80); t.Notify(); };
 		SizeMaxBox.ValueChanged += (_, e) => { t.SizeMax = (float)(e.NewValue ?? 120); t.Notify(); };
+		SizeSlider.Tip("place.size");
+		DensitySlider.Tip("place.density");
+		SpacingSlider.Tip("place.spacing");
+		ClumpSlider.Tip("place.clump");
+		PatchSlider.Tip("place.patch");
 		var tiV = new TextBlock();
 		TiltSlider = Slide(0, 20, 1, t.Tilt, tiV, v => $"{v:0}°", v => { t.Tilt = v; t.Notify(); });
 		var roV = new TextBlock();
@@ -230,14 +258,19 @@ public sealed class PlacePanel
 		EndToEndBox.IsCheckedChanged += (_, _) => { if (!_filling) { t.EndToEnd = EndToEndBox.IsChecked == true; t.EndToEndByHand = true; Sync(); t.Notify(); } };
 		LayersBox.ValueChanged += (_, e) => { t.Layers = (int)(e.NewValue ?? 1); t.Notify(); };
 		LoopBox.IsCheckedChanged += (_, _) => { t.Loop = LoopBox.IsChecked == true; t.Notify(); };
+		TiltSlider.Tip("place.tilt");
+		RotationSlider.Tip("place.rotation");
 		var evV = new TextBlock();
 		EverySlider = Slide(0.5, 30, 0.5, t.Every, evV, v => $"{v:0.#} m", v => { t.Every = v; t.Notify(); });
 		var wiV = new TextBlock();
 		WiggleSlider = Slide(0, 5, 0.25, t.Wiggle, wiV, v => $"{v:0.##} m", v => { t.Wiggle = v; t.Notify(); });
 		AlongBox.IsCheckedChanged += (_, _) => { t.Along = AlongBox.IsChecked == true; t.Notify(); };
 		CurveBox.IsCheckedChanged += (_, _) => { t.Curve = CurveBox.IsChecked == true; t.Notify(); };
+		EverySlider.Tip("place.every");
+		WiggleSlider.Tip("place.wiggle");
 		var ceV = new TextBlock();
 		CellSlider = Slide(1, 30, 0.5, t.Cell, ceV, v => $"{v:0.#} m", v => { t.Cell = v; t.Notify(); });
+		CellSlider.Tip("place.cell");
 		var shapes = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 2 };
 		foreach (var (ls, label, tip) in new[] { (PlaceTool.LineShapes.Points, "Points", "Click points along the way, or hold and drag to draw freely"),
 			(PlaceTool.LineShapes.Circle, "Circle", "Press at the centre and drag out to the size you want"), (PlaceTool.LineShapes.Rect, "Rectangle", "Press at one corner and drag to the opposite corner") })
@@ -362,7 +395,7 @@ public sealed class PlacePanel
 			panel.Children.Clear();
 			foreach (var n in list.Where(n => known.Count == 0 || known.Contains(n)))
 			{
-				var b = new ToggleButton { Content = n, IsChecked = T.Chosen.Contains(n), FontSize = 11, Padding = new Thickness(6, 2) };
+				var b = new ToggleButton { Content = n, IsChecked = T.Chosen.Contains(n), FontSize = 11, Padding = new Thickness(6, 2) }.Tip(ReferenceEquals(panel, Favourites) ? "place.favourite" : "place.recent");
 				b.Click += (_, _) =>
 				{
 					if (T.Chosen.Contains(n)) T.Chosen.Remove(n); else T.Chosen.Add(n);
@@ -415,7 +448,7 @@ public sealed class PlacePanel
 			// Long groups are cut while not searching: the search finds the rest.
 			foreach (var n in q == "" ? names.Take(60) : names)
 			{
-				var box = new CheckBox { Content = n, IsChecked = T.Chosen.Contains(n), FontSize = 12 };
+				var box = new CheckBox { Content = n, IsChecked = T.Chosen.Contains(n), FontSize = 12 }.Tip("place.kind");
 				box.IsCheckedChanged += (_, _) =>
 				{
 					if (box.IsChecked == true) { if (!T.Chosen.Contains(n)) T.Chosen.Add(n); } else T.Chosen.Remove(n);
@@ -464,13 +497,13 @@ public sealed class PlacePanel
 			if (names.Count > 1)
 			{
 				var w = new Slider { Minimum = 1, Maximum = 10, TickFrequency = 1, IsSnapToTickEnabled = true, Value = T.WeightOf(n) };
-				ToolTip.SetTip(w, $"Weight of {n}: how often it is used compared to the other chosen kinds");
+				ToolTip.SetTip(w, $"Weight of {n}: {Tips.Of("place.weight")}");
 				w.ValueChanged += (_, e) => { T.Weights[n] = (int)e.NewValue; RenderMix(); Remember(); T.NewLayout(); };
 				g.Children.Add(Col(w, 1));
 			}
 			g.Children.Add(Col(pct, 2));
 			var x = new Button { Content = "✕", FontSize = 11, Padding = new Thickness(4, 0) };
-			ToolTip.SetTip(x, $"Stop placing {n}");
+			ToolTip.SetTip(x, $"{Tips.Of("place.unchoose")} ({n})");
 			x.Click += (_, _) => { T.Chosen.Remove(n); Chosen(); };
 			g.Children.Add(Col(x, 3));
 			Mix.Children.Add(g);

@@ -69,10 +69,16 @@ public sealed class ShapePanel
 			Sync();
 		};
 		FormulaBox.Text = Presets[0].Formula;
+		PresetBox.Tip("shape.preset");
+		RadiusSlider.Tip("shape.radius");
+		HeightBox.Tip("shape.height");
+		FormulaBox.Tip("shape.formula");
 		Control Row(string label, Control input, Control? after = null)
 		{
 			var g = new Grid { ColumnDefinitions = new ColumnDefinitions("60,*,Auto") };
-			g.Children.Add(new TextBlock { Text = label, FontSize = 12, VerticalAlignment = VerticalAlignment.Center });
+			var l = new TextBlock { Text = label, FontSize = 12, VerticalAlignment = VerticalAlignment.Center };
+			Tips.Label(l, input);
+			g.Children.Add(l);
 			Grid.SetColumn(input, 1);
 			g.Children.Add(input);
 			if (after != null)

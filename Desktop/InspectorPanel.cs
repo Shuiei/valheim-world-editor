@@ -80,8 +80,14 @@ public sealed class InspectorPanel
 	public InspectorPanel(Func<EditSession?> session)
 	{
 		_session = session;
-		var close = new Button { Content = "✕", FontSize = 11, Padding = new Thickness(6, 0) };
+		var close = new Button { Content = "✕", FontSize = 11, Padding = new Thickness(6, 0) }.Tip("card.close");
 		close.Click += (_, _) => Close();
+		AddSection.Tip("inspect.addSection");
+		AddKey.Tip("inspect.addKey");
+		AddValue.Tip("inspect.addValue");
+		AddButton.Tip("inspect.add");
+		ApplyButton.Tip("inspect.apply");
+		RevertButton.Tip("inspect.revert");
 		AddButton.Click += (_, _) =>
 		{
 			string key = AddKey.Text?.Trim() ?? "";
@@ -248,7 +254,7 @@ public sealed class InspectorPanel
 		{
 			bool isItems = f.Section == "bytes" && f.Key == ObjectData.ItemsKey && Items != null && _inventoryError == null;
 			bool ro = f.Section == "bytes";
-			var box = new TextBox { Text = isItems ? "see Contents above" : ro ? f.Note : f.Now, IsReadOnly = ro, FontSize = 11, Opacity = f.Removed ? 0.5 : 1 };
+			var box = new TextBox { Text = isItems ? "see Contents above" : ro ? f.Note : f.Now, IsReadOnly = ro, FontSize = 11, Opacity = f.Removed ? 0.5 : 1 }.Tip("inspect.value");
 			box.PropertyChanged += (_, e) =>
 			{
 				if (e.Property == TextBox.TextProperty && !ro)
@@ -258,7 +264,7 @@ public sealed class InspectorPanel
 				}
 			};
 			var rm = new Button { Content = f.Removed ? "↺" : "✕", FontSize = 11, Padding = new Thickness(4, 0) };
-			ToolTip.SetTip(rm, f.Removed ? "Keep this value" : "Remove this value");
+			rm.Tip(f.Removed ? "inspect.keepValue" : "inspect.removeValue");
 			rm.Click += (_, _) => { f.Removed = !f.Removed; Render(); };
 			var label = new TextBlock { Text = Label(f), FontSize = 11, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis, TextDecorations = f.Removed ? TextDecorations.Strikethrough : null };
 			ToolTip.SetTip(label, $"{f.Name} · {Sections.FirstOrDefault(x => x.Section == f.Section).Name ?? "data"} · key {f.Key}");
@@ -267,7 +273,7 @@ public sealed class InspectorPanel
 		}
 		foreach (var a in Added.ToList())
 		{
-			var x = new Button { Content = "✕", FontSize = 11, Padding = new Thickness(4, 0) };
+			var x = new Button { Content = "✕", FontSize = 11, Padding = new Thickness(4, 0) }.Tip("inspect.unadd");
 			x.Click += (_, _) => { Added.Remove(a); Render(); };
 			Fields.Children.Add(new Grid
 			{
@@ -301,16 +307,16 @@ public sealed class InspectorPanel
 		});
 		foreach (var it in Items.ToList())
 		{
-			var name = new AutoCompleteBox { Text = it.Name, ItemsSource = PrefabCatalog.Items, FilterMode = AutoCompleteFilterMode.ContainsOrdinal, FontSize = 11, MinimumPrefixLength = 2 };
+			var name = new AutoCompleteBox { Text = it.Name, ItemsSource = PrefabCatalog.Items, FilterMode = AutoCompleteFilterMode.ContainsOrdinal, FontSize = 11, MinimumPrefixLength = 2 }.Tip("inspect.item");
 			name.PropertyChanged += (_, e) => { if (e.Property == AutoCompleteBox.TextProperty) { it.Name = name.Text?.Trim() ?? ""; Dirty(); } };
-			NumericUpDown Num(int v, int min, int max, Action<int> set)
+			NumericUpDown Num(int v, int min, int max, Action<int> set, string tip)
 			{
-				var n = new NumericUpDown { Value = v, Minimum = min, Maximum = max, Increment = 1, FormatString = "0", FontSize = 11, ShowButtonSpinner = false };
+				var n = new NumericUpDown { Value = v, Minimum = min, Maximum = max, Increment = 1, FormatString = "0", FontSize = 11, ShowButtonSpinner = false }.Tip(tip);
 				n.ValueChanged += (_, e) => { set((int)(e.NewValue ?? min)); Dirty(); };
 				return n;
 			}
 			var x = new Button { Content = "✕", FontSize = 11, Padding = new Thickness(4, 0) };
-			ToolTip.SetTip(x, "Take this item out");
+			x.Tip("inspect.removeItem");
 			x.Click += (_, _) => { Items.Remove(it); RenderItems(); Dirty(); };
 			bool bad = w > 0 && (it.X >= w || it.Y >= h);
 			ItemsBox.Children.Add(new Grid
@@ -320,16 +326,16 @@ public sealed class InspectorPanel
 				Children =
 				{
 					name,
-					Col(Num(it.Stack, 1, 65535, v => it.Stack = v), 1),
-					Col(Num(it.Quality, 1, 10, v => it.Quality = v), 2),
-					Col(Num((int)MathF.Round(it.Durability), 0, 100000, v => it.Durability = v), 3),
-					Col(WithBorder(Num(it.X, 0, 255, v => it.X = v), bad), 4),
-					Col(WithBorder(Num(it.Y, 0, 255, v => it.Y = v), bad), 5),
+					Col(Num(it.Stack, 1, 65535, v => it.Stack = v, "inspect.count"), 1),
+					Col(Num(it.Quality, 1, 10, v => it.Quality = v, "inspect.quality"), 2),
+					Col(Num((int)MathF.Round(it.Durability), 0, 100000, v => it.Durability = v, "inspect.durability"), 3),
+					Col(WithBorder(Num(it.X, 0, 255, v => it.X = v, "inspect.slotX"), bad), 4),
+					Col(WithBorder(Num(it.Y, 0, 255, v => it.Y = v, "inspect.slotY"), bad), 5),
 					Col(x, 6),
 				},
 			});
 		}
-		var add = new Button { Content = "Add item", FontSize = 11 };
+		var add = new Button { Content = "Add item", FontSize = 11 }.Tip("inspect.addItem");
 		add.Click += (_, _) =>
 		{
 			if (FreeSlot() is not var (fx, fy))
@@ -342,7 +348,7 @@ public sealed class InspectorPanel
 			Dirty();
 		};
 		var tidy = new Button { Content = "Tidy slots", FontSize = 11 };
-		ToolTip.SetTip(tidy, "Put every item in the first free slots, row by row");
+		tidy.Tip("inspect.tidy");
 		tidy.Click += (_, _) =>
 		{
 			int width = w > 0 ? w : 4;

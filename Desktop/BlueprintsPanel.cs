@@ -34,10 +34,11 @@ public sealed class BlueprintsPanel
 	{
 		_paste = paste;
 		_scene = scene;
-		var close = new Button { Content = "✕", FontSize = 11, Padding = new Thickness(6, 0) };
+		var close = new Button { Content = "✕", FontSize = 11, Padding = new Thickness(6, 0) }.Tip("card.close");
+		Search.Tip("blueprints.search");
 		close.Click += (_, _) => Card!.IsVisible = false;
 		Search.PropertyChanged += (_, e) => { if (e.Property == TextBox.TextProperty) Render(); };
-		ToolTip.SetTip(ImportButton, "Import a PlanBuild .blueprint or a .vbuild file");
+		ImportButton.Tip("blueprints.import");
 		ImportButton.Click += async (_, _) => { if (await PickFile() is string path) Import(path); };
 		Card = new Border
 		{

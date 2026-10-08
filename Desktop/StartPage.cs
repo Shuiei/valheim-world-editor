@@ -76,7 +76,8 @@ public sealed class StartPage
 		_settings = settings;
 		LookBanner = new GameLookBanner(settings) { PickFolder = t => PickFolder(t) };
 		var settingsButton = new Button { Content = Icons.With("settings", "Settings"), FontSize = 13 }.Classed("ghost");
-		ToolTip.SetTip(settingsButton, "Where the game, BepInEx and worlds are on this computer");
+		settingsButton.Tip("start.settings");
+		DocsLink.Tip("start.docs");
 		settingsButton.Click += (_, _) => SettingsRequested?.Invoke();
 		DocsLink.Click += async (_, _) => await OpenUrl(new Uri(DocsUrl));
 		var modes = new UniformGrid { Columns = 3 };
@@ -104,6 +105,7 @@ public sealed class StartPage
 					},
 				},
 			};
+			b.Tip($"start.{key}");
 			b.Click += (_, _) => SetMode(key);
 			ModeButtons[key] = b;
 			modes.Children.Add(b);
@@ -123,9 +125,10 @@ public sealed class StartPage
 		BuildServerPanel();
 
 		// A saved world.
-		var browse = new Button { Content = "Browse…" };
+		var browse = new Button { Content = "Browse…" }.Tip("start.browse");
 		browse.Click += async (_, _) => { if (await PickFolder("Choose a world folder (with _main.<n>.chunks)") is string p) PathBox.Text = p; };
-		var openPath = new Button { Content = "Open" }.Classed("primary");
+		var openPath = new Button { Content = "Open" }.Classed("primary").Tip("start.open");
+		PathBox.Tip("start.folder");
 		openPath.Click += (_, _) => OpenFolder(PathBox.Text ?? "");
 		OfflinePanel.Children.Add(WorldCards);
 		OfflinePanel.Children.Add(Hint("Close Valheim (or stop the server) before you save changes into a world: a running game writes over the files. Saving always makes a full backup of the world first."));
@@ -252,7 +255,7 @@ public sealed class StartPage
 		Control content;
 		if (running != null)
 		{
-			var edit = new Button { Content = "Edit live", VerticalAlignment = VerticalAlignment.Center }.Classed("primary");
+			var edit = new Button { Content = "Edit live", VerticalAlignment = VerticalAlignment.Center }.Classed("primary").Tip("start.editLive");
 			var bridge = running.Bridge;
 			edit.Click += (_, _) => OpenLive(new LiveBridge($"http://127.0.0.1:{bridge.Port}", bridge.Token), "my game", "game", "Connecting to your game…");
 			content = new Grid
@@ -349,7 +352,7 @@ public sealed class StartPage
 					},
 				},
 			};
-			ToolTip.SetTip(card, w.Path);
+			ToolTip.SetTip(card, $"{Tips.Of("start.world")}\n{w.Path}");
 			var path = w.Path;
 			card.Click += (_, _) => OpenFolder(path);
 			WorldCards.Children.Add(card);
@@ -378,13 +381,31 @@ public sealed class StartPage
 
 	private void BuildServerPanel()
 	{
-		Control Field(string label, Control box) => new StackPanel { Spacing = 3, Children = { new TextBlock { Text = label, FontSize = 12, Foreground = Muted }, box } };
+		Control Field(string label, Control box)
+		{
+			var l = new TextBlock { Text = label, FontSize = 12, Foreground = Muted };
+			Tips.Label(l, box);
+			return new StackPanel { Spacing = 3, Children = { l, box } };
+		}
+		SName.Tip("start.name");
+		SHost.Tip("start.host");
+		SPort.Tip("start.sshPort");
+		SUser.Tip("start.user");
+		SPass.Tip("start.password");
+		SKey.Tip("start.keyFile");
+		SToken.Tip("start.token");
+		SFolder.Tip("start.gameFolder");
+		SSave.Tip("start.savePassword");
+		SPhrase.Tip("start.passphrase");
+		SBridge.Tip("start.bridgePort");
+		LiveUrl.Tip("start.bridgeUrl");
+		LiveToken.Tip("start.token");
 		Control Two(Control a, Control b, string cols = "*,*") => new Grid { ColumnDefinitions = new ColumnDefinitions(cols), ColumnSpacing = 10, Children = { a, Col(b, 1) } };
-		var keyBrowse = new Button { Content = "Browse…", VerticalAlignment = VerticalAlignment.Bottom };
+		var keyBrowse = new Button { Content = "Browse…", VerticalAlignment = VerticalAlignment.Bottom }.Tip("start.browse");
 		keyBrowse.Click += async (_, _) => { if (await PickFile("Choose the SSH key file") is string p) SKey.Text = p; };
-		var connect = new Button { Content = "Connect", HorizontalAlignment = HorizontalAlignment.Right }.Classed("primary");
+		var connect = new Button { Content = "Connect", HorizontalAlignment = HorizontalAlignment.Right }.Classed("primary").Tip("start.connect");
 		connect.Click += async (_, _) => await ConnectNew();
-		var connectUrl = new Button { Content = "Connect", VerticalAlignment = VerticalAlignment.Bottom };
+		var connectUrl = new Button { Content = "Connect", VerticalAlignment = VerticalAlignment.Bottom }.Tip("start.connectUrl");
 		connectUrl.Click += async (_, _) => await ConnectUrl();
 		ServerPanel.Children.Add(SavedServers);
 		ServerPanel.Children.Add(_savedError);
@@ -435,20 +456,20 @@ public sealed class StartPage
 		((TextBlock)ServerForm.Header!).Text = any ? "Connect to another server" : "Connect to a server";
 		foreach (var s in servers)
 		{
-			var token = s.Token == null ? new TextBox { Watermark = "Plugin token", Width = 180 } : null;
-			var pass = s.Password == null && s.KeyFile == null ? new TextBox { Watermark = "Password", PasswordChar = '•', Width = 180 } : null;
-			var go = new Button { Content = "Connect" }.Classed("primary");
+			var token = s.Token == null ? new TextBox { Watermark = "Plugin token", Width = 180 }.Tip("start.savedToken") : null;
+			var pass = s.Password == null && s.KeyFile == null ? new TextBox { Watermark = "Password", PasswordChar = '•', Width = 180 }.Tip("start.savedPassword") : null;
+			var go = new Button { Content = "Connect" }.Classed("primary").Tip("start.savedConnect");
 			var server = s;
 			go.Click += async (_, _) => await Connect(new Tunnel.Request(server.Host, server.SshPort, server.User, pass?.Text ?? server.Password, server.KeyFile, null, token?.Text ?? server.Token, null,
 				server.Password != null, server.Name, server.GameFolder), _savedError, $"Connecting to {server.Name}…");
-			var edit = new Button { Content = "edit", Foreground = Muted }.Classed("ghost");
+			var edit = new Button { Content = "edit", Foreground = Muted }.Classed("ghost").Tip("start.savedEdit");
 			edit.Click += (_, _) =>
 			{
 				ServerForm.IsExpanded = true;
 				(SHost.Text, SPort.Value, SUser.Text, SKey.Text, SFolder.Text, SName.Text) = (server.Host, server.SshPort, server.User, server.KeyFile, server.GameFolder, server.Name);
 				_serverError.Text = "Change what you need, enter the token and the password (unless saved or using a key), then Connect: the saved server is updated.";
 			};
-			var forget = new Button { Content = "forget", Foreground = Muted }.Classed("ghost");
+			var forget = new Button { Content = "forget", Foreground = Muted }.Classed("ghost").Tip("start.savedForget");
 			forget.Click += async (_, _) =>
 			{
 				if (await Confirm($"Forget {server.Name}?"))
