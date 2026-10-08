@@ -273,6 +273,7 @@ public sealed class GlView : OpenGlControlBase
 		_placeVao = _placeVbo = _placeShapeVao = _placeShapeVbo = 0;
 		_areaVao = _areaVbo = _resetVao = _resetVbo = 0;
 		_measureVao = _measureVbo = _lassoVao = _lassoVbo = _ringVao = _ringVbo = _lineVao = _lineVbo = 0;
+		_playersVao = _playersVbo = 0;
 		_batches.Clear();
 		_meshGl.Clear();
 		_textures.Clear();
@@ -1161,6 +1162,7 @@ public sealed class GlView : OpenGlControlBase
 			DrawLasso(s, vp);
 			DrawGizmo(s, vp);
 			DrawMeasure(s, vp);
+			DrawPlayers(s, vp);
 			DrawPath(s, vp);
 			DrawArea(s, vp);
 			DrawPlace(s, vp);
@@ -1665,6 +1667,83 @@ public sealed class GlView : OpenGlControlBase
 			_distance = distance;
 		}
 		Wake();
+	}
+
+	// The camera with its target in world metres: kept when another area opens (null: no area).
+	internal (float Yaw, float Pitch, float Distance, Vector3 World)? WorldCamera
+	{
+		get
+		{
+			if (_scene is not { } s)
+			{
+				return null;
+			}
+			lock (_camLock)
+			{
+				return (_yaw, _pitch, _distance, new Vector3(_target.X + s.Cx, _target.Y, -_target.Z + s.Cz));
+			}
+		}
+		set
+		{
+			if (_scene is not { } s || value is not var (yaw, pitch, distance, world))
+			{
+				return;
+			}
+			lock (_camLock)
+			{
+				(_yaw, _pitch, _distance) = (yaw, pitch, distance);
+				_target = new Vector3(world.X - s.Cx, world.Y, -(world.Z - s.Cz));
+			}
+			Wake();
+		}
+	}
+
+	// Live: the players online, in world metres (blue posts with a beam up; their names are labels
+	// the window places over the view).
+	internal IReadOnlyList<(string Name, Vector3 World)> Players
+	{
+		get => _players;
+		set
+		{
+			_players = value;
+			Wake();
+		}
+	}
+	private IReadOnlyList<(string Name, Vector3 World)> _players = Array.Empty<(string, Vector3)>();
+	private uint _playersVao, _playersVbo;
+
+	// A player's post: a body 1.9 m tall (rings and sides) and a 40 m beam, in view space.
+	internal static float[] PlayerPosts(WorldScene s, IEnumerable<(string Name, Vector3 World)> players)
+	{
+		var data = new List<float>();
+		void Seg(Vector3 p, Vector3 q) => data.AddRange(new[] { p.X, p.Y, p.Z, q.X, q.Y, q.Z });
+		foreach (var (_, w) in players)
+		{
+			var c = new Vector3(w.X - s.Cx, w.Y, -(w.Z - s.Cz));
+			for (int i = 0; i < 12; i++)
+			{
+				float a0 = i * MathF.Tau / 12, a1 = (i + 1) * MathF.Tau / 12;
+				var p0 = new Vector3(MathF.Cos(a0), 0, MathF.Sin(a0)) * 0.45f;
+				var p1 = new Vector3(MathF.Cos(a1), 0, MathF.Sin(a1)) * 0.45f;
+				Seg(c + p0, c + p1);
+				Seg(c + p0 + new Vector3(0, 1.9f, 0), c + p1 + new Vector3(0, 1.9f, 0));
+				if (i % 3 == 0)
+				{
+					Seg(c + p0, c + p0 + new Vector3(0, 1.9f, 0));
+				}
+			}
+			Seg(c, c + new Vector3(0, 40, 0));
+		}
+		return data.ToArray();
+	}
+
+	private void DrawPlayers(WorldScene s, Matrix4x4 vp)
+	{
+		if (_players.Count == 0)
+		{
+			return;
+		}
+		DrawLines(ref _playersVao, ref _playersVbo, PlayerPosts(s, _players), vp, new Vector4(0.31f, 0.76f, 1, 1));
 	}
 
 	internal void SetCamera(Vector3 eye, Vector3 target, float aspect)

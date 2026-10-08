@@ -24,6 +24,12 @@ public sealed class AppSettings
 	// Which start-page choice was used last ("game", "server", "offline").
 	public string? LastMode { get; set; }
 
+	// The 3D editor's live "Auto" switch (every change sent to the game at once) and Follow (the area
+	// moves by itself when the view nears its edge), kept between runs like the web editor's.
+	public bool AutoApply { get; set; }
+
+	public bool AreaFollow { get; set; }
+
 	public sealed record RecentWorld(string Path, string Name, DateTime Opened);
 
 	// The data folder: settings, servers, blueprints, the log (DataDirOverride: another folder, for
