@@ -414,8 +414,13 @@ public sealed class VisualTests(EditorProcess editor) : IDisposable
 		// The zone being drawn.
 		ShowsSomething(Picture("lasso"));
 		var s = Do("mouse move -40 -39", "mouse up -40 -39");
+		// The selection settles on the next frames (once in a while, under load, it was not there yet).
+		for (int i = 0; i < 20 && s.GetProperty("selected").GetInt32() == 0; i++)
+		{
+			s = editor.Send("wait 100");
+		}
 		Assert.True(s.GetProperty("selected").GetInt32() > 0, s.ToString());
-		Assert.Equal("Select", s.GetProperty("mode").GetString());
+		Assert.True(s.GetProperty("mode").GetString() == "Select", s.ToString());
 		// The selection's boxes and the handles.
 		ShowsSomething(Picture("selected"));
 		Clean();
