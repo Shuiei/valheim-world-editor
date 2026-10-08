@@ -105,7 +105,9 @@ public sealed class ToolPanel
 	private static Control Row(string label, Control input, TextBlock? value = null)
 	{
 		var g = new Grid { ColumnDefinitions = new ColumnDefinitions("70,*,46") };
-		g.Children.Add(new TextBlock { Text = label, FontSize = 12, VerticalAlignment = VerticalAlignment.Center });
+		var l = new TextBlock { Text = label, FontSize = 12, VerticalAlignment = VerticalAlignment.Center };
+		Tips.Label(l, input);
+		g.Children.Add(l);
 		Grid.SetColumn(input, 1);
 		g.Children.Add(input);
 		if (value != null)
@@ -201,10 +203,16 @@ public sealed class ToolPanel
 		FalloffBox = new ComboBox { ItemsSource = new[] { "Smooth", "Linear", "Dome", "Flat top", "Peak", "Sharp edge (pickaxe)" }, SelectedIndex = 0, HorizontalAlignment = HorizontalAlignment.Stretch, FontSize = 12 };
 		var turnV = new TextBlock();
 		var turn = Slide(-180, 180, 1, 0, turnV, v => $"{v:0}°", v => Brush.Turn = (float)v);
-		_turnRow = Row("Turn", turn, turnV);
+		_turnRow = Row("Turn", turn.Tip("brush.turn"), turnV);
 		ShapeBox.SelectionChanged += (_, _) => ShapeChosen();
-		ToolTip.SetTip(LoadStampButton, "Use a grayscale picture as the brush shape: white works fully, black not at all");
-		ToolTip.SetTip(ForgetStampButton, "Forget the loaded picture chosen as Shape");
+		LoadStampButton.Tip("brush.loadStamp");
+		ForgetStampButton.Tip("brush.forgetStamp");
+		StampOnceBox.Tip("brush.stampOnce");
+		StampHeightBox.Tip("brush.stampHeight");
+		SizeSlider.Tip("brush.size");
+		StrengthSlider.Tip("brush.strength");
+		ShapeBox.Tip("brush.shape");
+		FalloffBox.Tip("brush.falloff");
 		LoadStampButton.Click += (_, _) => LoadStampAsked?.Invoke();
 		ForgetStampButton.Click += (_, _) =>
 		{
@@ -227,7 +235,8 @@ public sealed class ToolPanel
 		_turnRow.IsVisible = false;
 
 		TargetFromClickBox = new CheckBox { Content = "Level to the height where the stroke starts", IsChecked = Brush.TargetFromClick, FontSize = 12 };
-		TargetBox = new NumericUpDown { Value = (decimal)Brush.Target, Increment = 0.1m, FormatString = "0.0", FontSize = 12, IsEnabled = !Brush.TargetFromClick };
+		TargetBox = new NumericUpDown { Value = (decimal)Brush.Target, Increment = 0.1m, FormatString = "0.0", FontSize = 12, IsEnabled = !Brush.TargetFromClick }.Tip("brush.target");
+		TargetFromClickBox.Tip("brush.targetFromClick");
 		TargetFromClickBox.IsCheckedChanged += (_, _) => { Brush.TargetFromClick = TargetFromClickBox.IsChecked == true; TargetBox.IsEnabled = !Brush.TargetFromClick; };
 		TargetBox.ValueChanged += (_, e) => Brush.Target = (float)(e.NewValue ?? 0);
 		_flattenRows = new StackPanel { Spacing = 4, Children = { TargetFromClickBox, Row("Height (m)", TargetBox) } };
@@ -239,15 +248,16 @@ public sealed class ToolPanel
 			Spacing = 4,
 			Children =
 			{
-				Row("Bumps", Slide(0.2, 4, 0.1, Brush.NoiseAmp, ampV, v => $"{v:0.0} m", v => Brush.NoiseAmp = (float)v), ampV),
-				Row("Bump size", Slide(4, 60, 1, Brush.NoiseSize, noiseV, v => $"{v:0} m", v => Brush.NoiseSize = (float)v), noiseV),
+				Row("Bumps", Slide(0.2, 4, 0.1, Brush.NoiseAmp, ampV, v => $"{v:0.0} m", v => Brush.NoiseAmp = (float)v).Tip("natural.amp"), ampV),
+				Row("Bump size", Slide(4, 60, 1, Brush.NoiseSize, noiseV, v => $"{v:0} m", v => Brush.NoiseSize = (float)v).Tip("natural.size"), noiseV),
 				NewPatternButton,
 			},
 		};
 		NewPatternButton.Click += (_, _) => NewPattern();
+		NewPatternButton.Tip("natural.seed");
 
 		var restV = new TextBlock();
-		RestSlider = Slide(10, 60, 1, Brush.RestAngle, restV, v => $"{v:0}°", v => Brush.RestAngle = (float)v);
+		RestSlider = Slide(10, 60, 1, Brush.RestAngle, restV, v => $"{v:0}°", v => Brush.RestAngle = (float)v).Tip("erode.rest");
 		var restRow = Row("Rest angle", RestSlider, restV);
 		void Mode(bool water)
 		{
@@ -258,8 +268,8 @@ public sealed class ToolPanel
 		}
 		ThermalButton.Click += (_, _) => Mode(false);
 		WaterButton.Click += (_, _) => Mode(true);
-		ToolTip.SetTip(ThermalButton, "Steep ground slides down to its resting angle");
-		ToolTip.SetTip(WaterButton, "Rain runs downhill, cutting gullies and filling hollows");
+		ThermalButton.Tip("erode.thermal");
+		WaterButton.Tip("erode.water");
 		_erodeRows = new StackPanel { Spacing = 4, Children = { new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Children = { ThermalButton, WaterButton } }, restRow } };
 		Mode(false);
 		Options = Card(new StackPanel

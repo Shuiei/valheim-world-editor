@@ -37,7 +37,9 @@ public sealed class PathPanel
 	private static Control Row(string label, Control input, Control? after = null)
 	{
 		var g = new Grid { ColumnDefinitions = new ColumnDefinitions("70,*,46") };
-		g.Children.Add(new TextBlock { Text = label, FontSize = 12, VerticalAlignment = VerticalAlignment.Center });
+		var l = new TextBlock { Text = label, FontSize = 12, VerticalAlignment = VerticalAlignment.Center };
+		Tips.Label(l, input);
+		g.Children.Add(l);
 		Grid.SetColumn(input, 1);
 		g.Children.Add(input);
 		if (after != null)
@@ -81,6 +83,18 @@ public sealed class PathPanel
 		CurveBox.IsCheckedChanged += (_, _) => { _path.Curved = CurveBox.IsChecked == true; _path.Notify(); };
 		NaturalBox.IsCheckedChanged += (_, _) => { _path.Natural = NaturalBox.IsChecked == true; ShowRows(); };
 		ApplyButton.Click += (_, _) => ApplyAsked?.Invoke();
+		ActionBox.Tip("path.action");
+		WidthSlider.Tip("path.width");
+		SoftSlider.Tip("path.soft");
+		HeightBox.Tip("path.height");
+		AmountBox.Tip("path.amount");
+		StartBox.Tip("path.start");
+		EndBox.Tip("path.end");
+		DepthBox.Tip("path.depth");
+		CurveBox.Tip("path.curve");
+		NaturalBox.Tip("path.natural");
+		ApplyButton.Tip("path.apply");
+		ClearButton.Tip("path.clear");
 		ClearButton.Click += (_, _) => _path.Clear();
 		var ampV = new TextBlock();
 		var sizeV = new TextBlock();
@@ -89,8 +103,8 @@ public sealed class PathPanel
 			Spacing = 4,
 			Children =
 			{
-				Row("Bumps", Slide(0.2, 4, 0.1, brush.NoiseAmp, ampV, "m", v => brush.NoiseAmp = v), ampV),
-				Row("Bump size", Slide(4, 60, 1, brush.NoiseSize, sizeV, "m", v => brush.NoiseSize = v), sizeV),
+				Row("Bumps", Slide(0.2, 4, 0.1, brush.NoiseAmp, ampV, "m", v => brush.NoiseAmp = v).Tip("natural.amp"), ampV),
+				Row("Bump size", Slide(4, 60, 1, brush.NoiseSize, sizeV, "m", v => brush.NoiseSize = v).Tip("natural.size"), sizeV),
 			},
 		};
 		Control R(string label, NumericUpDown box, params PathTool.Action[] for_)

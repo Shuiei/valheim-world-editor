@@ -396,6 +396,7 @@ public sealed partial class MainWindow : Window
 		bool dirty = z + d + a + r > 0;
 		SaveButton.IsEnabled = dirty;
 		SaveButton.Content = s.IsLive ? "Apply live" : "Save to world";
+		SaveButton.Tip(s.IsLive ? "top.apply" : "top.save");
 		// The pill: amber while something waits, grey when all is saved.
 		_pendingPill.Background = dirty ? new SolidColorBrush(Color.Parse("#2c2416")) : Brushes.Transparent;
 		_pendingPill.BorderBrush = dirty ? new SolidColorBrush(Color.Parse("#7a5a2a")) : Ui.Line;
@@ -769,17 +770,19 @@ public sealed partial class MainWindow : Window
 	{
 		UndoButton.Click += (_, _) => Undo();
 		MapButton.Click += (_, _) => ShowMap();
-		ToolTip.SetTip(MapButton, "Back to the world map (what is not saved stays pending)");
+		MapButton.Tip("top.map");
+		ToolTip.SetTip(UndoButton, "Undo the last change (Ctrl+Z).");
+		ToolTip.SetTip(RedoButton, "Redo the change you just undid (Ctrl+Y or Ctrl+Shift+Z).");
 		HistoryButton.Click += (_, _) => ShowRight(History.Card.IsVisible ? null : History.Card);
 		History.Closed += () => HistoryButton.Classes.Set("on", false);
-		ToolTip.SetTip(HistoryButton, "Every change of this session: go back to one, or take out only one (L)");
+		HistoryButton.Tip("top.history");
 		ViewButton.Click += (_, _) => ShowRight(_viewPanel.IsVisible ? null : _viewPanel);
-		ToolTip.SetTip(ViewButton, "Show / hide things in the world (V)");
+		ViewButton.Tip("top.view");
 		HelpButton.Click += (_, _) => ShowRight(HelpCard.IsVisible ? null : HelpCard);
-		ToolTip.SetTip(HelpButton, "Controls and shortcuts (?)");
+		HelpButton.Tip("top.help");
 		RedoButton.Click += (_, _) => Redo();
 		SaveButton.Click += async (_, _) => await Save();
-		ToolTip.SetTip(SaveButton, "Write the changes into the world's files (Ctrl+S)");
+		SaveButton.Tip("top.save");
 		ToolTip.SetTip(_liveBadge, "Connected to the running game through the WorldEditorBridge plugin");
 		_pendingPill.Child = _pending;
 		var names = new StackPanel { VerticalAlignment = VerticalAlignment.Center, Children = { _title, _subtitle } };
@@ -864,7 +867,7 @@ public sealed partial class MainWindow : Window
 			list.Children.Add(k);
 			list.Children.Add(w);
 		}
-		var close = new Button { Content = Icons.Make("close", 14), Padding = new Thickness(5) }.Classed("ghost");
+		var close = new Button { Content = Icons.Make("close", 14), Padding = new Thickness(5) }.Classed("ghost").Tip("card.close");
 		close.Click += (_, _) => ShowRight(null);
 		var head = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Children = { new TextBlock { Text = "Controls", FontSize = 14, FontWeight = FontWeight.SemiBold, VerticalAlignment = VerticalAlignment.Center } } };
 		Grid.SetColumn(close, 1);
@@ -1184,11 +1187,17 @@ public sealed partial class MainWindow : Window
 		var list = new StackPanel { Spacing = 2 };
 		list.Children.Add(Ui.Heading("View", 0));
 		list.Children.Add(Heading("LOOK"));
-		ToolTip.SetTip(GameLookBox, "The game's terrain, sky, sea and models; off: plain colours and boxes");
+		GameLookBox.Tip("view.gameLook");
+		WaterBox.Tip("view.water");
+		SlopeBox.Tip("view.slope");
+		ContourBox.Tip("view.contour");
+		ContourStepBox.Tip("view.contourStep");
+		DefaultsButton.Tip("view.defaults");
+		AllButton.Tip("view.all");
 		GameLookBox.IsCheckedChanged += (_, _) => _view.GameLookOn = GameLookBox.IsChecked == true;
-		ToolTip.SetTip(SeeThroughBox, "Players' buildings drawn faint, to see what is inside or behind them");
+		SeeThroughBox.Tip("view.seeThrough");
 		SeeThroughBox.IsCheckedChanged += (_, _) => _view.SeeThroughBuildings = SeeThroughBox.IsChecked == true;
-		ToolTip.SetTip(ResolutionBox, "Pixels the 3D view draws: fewer pixels, more frames");
+		ResolutionBox.Tip("view.res3d");
 		ResolutionBox.SelectionChanged += (_, _) =>
 		{
 			_view.Resolution3D = (GlView.Resolution)Math.Max(0, ResolutionBox.SelectedIndex);
@@ -1202,6 +1211,7 @@ public sealed partial class MainWindow : Window
 		foreach (var k in ObjectKinds.All)
 		{
 			var box = new CheckBox { Content = ObjectKinds.Label(k), IsChecked = _view.IsShown(k), FontSize = 12 };
+			ToolTip.SetTip(box, Tips.Kind(k));
 			box.IsCheckedChanged += (_, _) => _view.SetShown(k, box.IsChecked == true);
 			_kindBoxes[k] = box;
 			list.Children.Add(box);
@@ -1213,6 +1223,7 @@ public sealed partial class MainWindow : Window
 			(Overlays.Layer.Stations, "Build ranges"), (Overlays.Layer.Flatten, "Location flattening") })
 		{
 			var box = new CheckBox { Content = label, IsChecked = _view.IsOverlayShown(layer), FontSize = 12, Tag = label };
+			ToolTip.SetTip(box, Tips.Overlay(layer));
 			box.IsCheckedChanged += (_, _) => _view.SetOverlay(layer, box.IsChecked == true);
 			_overlayBoxes[layer] = box;
 			list.Children.Add(box);
@@ -1225,7 +1236,7 @@ public sealed partial class MainWindow : Window
 		DefaultsButton.Click += (_, _) => ShowPreset(ViewPreset.Defaults);
 		AllButton.Click += (_, _) => ShowPreset(ViewPreset.All);
 		GroundButton.Click += (_, _) => ShowPreset(ViewPreset.Ground);
-		ToolTip.SetTip(GroundButton, "Only the ground: every kind of object, the water and the overlays off");
+		GroundButton.Tip("view.ground");
 		list.Children.Add(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Margin = new Thickness(0, 6, 0, 0), Children = { DefaultsButton, AllButton, GroundButton } });
 		_view.OverlaysBuilt += o =>
 		{
@@ -1236,7 +1247,7 @@ public sealed partial class MainWindow : Window
 			Count(Overlays.Layer.Flatten, o.Flattened);
 		};
 		list.Children.Add(Heading("BUILDING"));
-		ToolTip.SetTip(BuilderBox, "The player new pieces are built by: the game then treats them as player built (materials back, wards and private chests answer to that player)");
+		BuilderBox.Tip("view.builder");
 		list.Children.Add(new StackPanel { Spacing = 2, Children = { new TextBlock { Text = "Built by", FontSize = 12 }, BuilderBox } });
 		BuilderBox.SelectionChanged += async (_, _) => await BuilderChosen();
 		list.Children.Add(Heading("GROUND (game look)"));
@@ -1316,7 +1327,6 @@ public sealed partial class MainWindow : Window
 		SelectPanel.Confirm = text => Dialogs.Ask(this, "Saved selections", text, "Forget");
 		SelectPanel.InspectButton.Click += (_, _) => Inspect();
 		SelectPanel.ClaimButton.Click += (_, _) => Claim();
-		ToolTip.SetTip(SelectPanel.ClaimButton, "Give the selected pieces placed without a builder the player chosen in View, Building");
 		AskPlayerId = () => Dialogs.AskText(this, "Built by", "Player id to write as the builder (the number Valheim keeps for a character):");
 		History.Message += t => { _message.Text = t; UpdateSaveBar(); };
 		SelectPanel.ReplaceAsked += prefab =>
@@ -1432,7 +1442,7 @@ public sealed partial class MainWindow : Window
 		Background = Ui.Bg;
 		var record = new CheckBox { Content = "Record frame rates", FontSize = 12.5 };
 		record.IsCheckedChanged += (_, _) => { _perf.On = record.IsChecked == true; _perf.Restart(); if (!_perf.On) _perf.Flush(); };
-		ToolTip.SetTip(record, $"A line every 0.2 s while the view is used, in {PerfLog.FilePath}");
+		ToolTip.SetTip(record, $"{Tips.Of("view.perf")} The file: {PerfLog.FilePath}");
 		HelpCard = Help(record);
 		ConfirmSave = text => Dialogs.Ask(this, "Save into the world", text, "Save");
 		Ask = (title, text, yes, no) => Dialogs.Ask(this, title, text, yes, no);

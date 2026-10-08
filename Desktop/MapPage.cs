@@ -93,13 +93,24 @@ public sealed class MapPage
 	public MapPage()
 	{
 		var worlds = new Button { Content = Icons.With("back", "Worlds"), FontSize = 12.5 }.Classed("ghost");
-		ToolTip.SetTip(worlds, "Back to the start page to open another world");
+		worlds.Tip("map.worlds");
+		SaveButton.Tip("map.save");
+		DiscardButton.Tip("map.discard");
+		GridBox.Tip("map.grid");
+		EditedBox.Tip("map.edited");
+		PaintBox.Tip("map.paint");
+		CloudsBox.Tip("map.clouds");
+		EditButton.Tip("map.edit");
+		SearchWhat.Tip("map.searchWhat");
+		DistBox.Tip("map.dist");
+		RMinBox.Tip("map.rmin");
+		RMaxBox.Tip("map.rmax");
 		worlds.Click += (_, _) => BackToWorlds?.Invoke();
 		SaveButton.Click += (_, _) => SaveRequested?.Invoke();
 		DiscardButton.Click += (_, _) => DiscardRequested?.Invoke();
 		ReloadButton.Click += (_, _) => ReloadRequested?.Invoke();
-		ToolTip.SetTip(ReloadButton, "Load the world again from the running game");
-		ToolTip.SetTip(BuildingsBox, "Draw the footprint of every player-built piece on the map");
+		ReloadButton.Tip("map.reload");
+		BuildingsBox.Tip("map.buildings");
 		BuildingsBox.IsCheckedChanged += (_, _) => { Map.ShowBuildings = BuildingsBox.IsChecked == true; Map.RequestNextFrameRendering(); };
 		GridBox.IsCheckedChanged += (_, _) => { Map.ShowGrid = GridBox.IsChecked == true; Map.RequestNextFrameRendering(); };
 		EditedBox.IsCheckedChanged += (_, _) => { Map.ShowEdited = EditedBox.IsChecked == true; Map.RequestNextFrameRendering(); };
@@ -107,7 +118,7 @@ public sealed class MapPage
 		CloudsBox.IsCheckedChanged += (_, _) => { Map.ShowClouds = CloudsBox.IsChecked == true; Map.RequestNextFrameRendering(); };
 		EditButton.Click += (_, _) => { if (Spot is var (x, z)) EditRequested?.Invoke(x, z, Size); };
 		SizeBox.SelectionChanged += (_, _) => ShowChosen();
-		ToolTip.SetTip(SizeBox, "How much ground the 3D editor loads around the spot (bigger is slower)");
+		SizeBox.Tip("map.size");
 		Map.Picked += (x, z) => Pick((int)MathF.Floor((x + 32) / 64), (int)MathF.Floor((z + 32) / 64));
 		Map.Hovered += Hover;
 		Map.Status += t => _status.Text = t;
@@ -118,8 +129,8 @@ public sealed class MapPage
 		_changesBox = new StackPanel { Spacing = 6, Children = { Pending, new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { SaveButton, DiscardButton } } } };
 
 		// Search the world.
-		ToolTip.SetTip(SearchBox, "Part of a name or text; not case sensitive");
-		ToolTip.SetTip(FindButton, "Search every object of the world (Enter)");
+		SearchBox.Tip("map.search");
+		FindButton.Tip("map.find");
 		FindButton.Click += async (_, _) => await Search();
 		SearchBox.KeyDown += async (_, e) => { if (e.Key == Avalonia.Input.Key.Enter) await Search(); };
 		SearchWhat.SelectionChanged += async (_, _) => { if (!string.IsNullOrWhiteSpace(SearchBox.Text)) await Search(); };
@@ -137,19 +148,19 @@ public sealed class MapPage
 		var biomes = new WrapPanel();
 		foreach (var (value, name) in ZoneFilter.BiomeChoices)
 		{
-			var b = new ToggleButton { Content = name, FontSize = 11, Padding = new Thickness(6, 2), Margin = new Thickness(0, 0, 4, 4) };
+			var b = new ToggleButton { Content = name, FontSize = 11, Padding = new Thickness(6, 2), Margin = new Thickness(0, 0, 4, 4) }.Tip("map.biome");
 			b.IsCheckedChanged += (_, _) => Refilter();
 			BiomeButtons[value] = b;
 			biomes.Children.Add(b);
 		}
-		ToolTip.SetTip(biomes, "Only these biomes (none = every biome)");
-		ToolTip.SetTip(NoBuildBox, "Leave out zones with player-built pieces, and zones close to them");
-		ToolTip.SetTip(NoEditBox, "Leave out zones whose ground was edited (in game or in the editor)");
-		ToolTip.SetTip(OnlyGenBox, "Only zones the game has generated already (visited by a player)");
-		ToolTip.SetTip(GroundBox, "Also undo the ground edits of the zones (only matters when No ground edits is off)");
-		ToolTip.SetTip(ShowMatchButton, "Show the matching zones on the map (blue)");
-		ToolTip.SetTip(MarkButton, "Mark the matching zones for reset (red); Save or Apply live does it");
-		ToolTip.SetTip(UnmarkButton, "Cancel every zone reset that is marked");
+		biomes.Tip("map.biome");
+		NoBuildBox.Tip("map.noBuild");
+		NoEditBox.Tip("map.noEdit");
+		OnlyGenBox.Tip("map.onlyGen");
+		GroundBox.Tip("map.ground");
+		ShowMatchButton.Tip("map.show");
+		MarkButton.Tip("map.mark");
+		UnmarkButton.Tip("map.unmark");
 		foreach (var c in new[] { NoBuildBox, NoEditBox, OnlyGenBox })
 		{
 			c.IsCheckedChanged += (_, _) => Refilter();
@@ -294,7 +305,7 @@ public sealed class MapPage
 			: $"{w.Name} · seed {w.SeedName} · save #{w.SaveNumber} · {w.ObjectCount:N0} objects in {w.ChunkCount} chunks";
 		_liveBox.IsVisible = session.IsLive;
 		SaveButton.Content = session.IsLive ? "Apply live" : "Save to world…";
-		ToolTip.SetTip(SaveButton, session.IsLive ? "Send every pending change to the running game (everyone sees it at once)" : "Write every pending change into the world files (a backup of the world folder is made first)");
+		SaveButton.Tip(session.IsLive ? "map.apply" : "map.save");
 		UpdatePending();
 		FillEdited();
 		_players.Stop();
