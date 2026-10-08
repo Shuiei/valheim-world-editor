@@ -1289,7 +1289,7 @@ public sealed class GlView : OpenGlControlBase
 			RequestNextFrameRendering();
 			return;
 		}
-		if (Options.Shot != null && now - _loadedAt > 500)
+		if (Options.Shot != null && !Options.MapBack && now - _loadedAt > 500)
 		{
 			byte[] px = new byte[pw * ph * 4];
 			fixed (byte* p = px)

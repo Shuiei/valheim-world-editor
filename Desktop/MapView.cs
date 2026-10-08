@@ -351,7 +351,21 @@ public sealed class MapView : OpenGlControlBase
 			Upload("d", dt.Layers);
 			_detailShown = _detail;
 		}
+		// The 3D editor draws in the same OpenGL context: its textures, depth test and culling are
+		// still set when the map comes back, so the map sets its own every frame.
+		_gl.Disable(EnableCap.DepthTest);
+		_gl.Disable(EnableCap.CullFace);
+		_gl.Disable(EnableCap.ScissorTest);
+		_gl.DepthMask(true);
+		_gl.ColorMask(true, true, true, true);
 		_gl.UseProgram(_prog);
+		foreach (var (name, (tex, unit)) in _tex)
+		{
+			_gl.ActiveTexture(TextureUnit.Texture0 + unit);
+			_gl.BindTexture(TextureTarget.Texture2D, tex);
+			_gl.Uniform1(_gl.GetUniformLocation(_prog, name), unit);
+		}
+		_gl.ActiveTexture(TextureUnit.Texture0);
 		int U(string n) => _gl.GetUniformLocation(_prog, n);
 		float time = _clock.ElapsedMilliseconds / 1000f;
 		_gl.Uniform4(U("_Time"), time / 20, time, time * 2, time * 3);
@@ -395,7 +409,7 @@ public sealed class MapView : OpenGlControlBase
 		_gl.BindVertexArray(0);
 		_gl.UseProgram(0);
 		// --map with --shot (and no --map-edit): a picture of the map once it is drawn.
-		if (Options.Shot is string shot && Options.MapEdit == null && ++_shotFrames == 80)
+		if (Options.Shot is string shot && (Options.MapEdit == null || Options.MapBack) && ++_shotFrames == 80)
 		{
 			byte[] px = new byte[w * h * 4];
 			fixed (byte* p = px)
