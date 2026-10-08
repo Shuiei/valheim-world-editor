@@ -332,13 +332,13 @@ public sealed class StartPage
 	internal TextBox SUser { get; } = new() { Watermark = "the account you log in with" };
 	internal TextBox SPass { get; } = new() { PasswordChar = '•', Watermark = "or use a key file below" };
 	internal TextBox SKey { get; } = new() { Watermark = "~/.ssh/id_ed25519" };
-	internal TextBox SToken { get; } = new() { Watermark = "the Token line in BepInEx/config/local.worldeditorbridge.cfg on the server" };
+	internal TextBox SToken { get; } = new() { Watermark = "the Token line in BepInEx/config/Tie.WorldEditorBridge.cfg on the server" };
 	internal TextBox SFolder { get; } = new() { Watermark = "/home/valheim/server, the folder with BepInEx (for the plugin's port and precise errors)" };
 	internal CheckBox SSave { get; } = new() { Content = "Save password" };
 	internal TextBox SPhrase { get; } = new() { PasswordChar = '•' };
 	internal NumericUpDown SBridge { get; } = new() { Minimum = 1, Maximum = 65535, FormatString = "0", Watermark = "5182" };
 	internal TextBox LiveUrl { get; } = new() { Text = "127.0.0.1:5182" };
-	internal TextBox LiveToken { get; } = new() { Watermark = "from BepInEx/config/local.worldeditorbridge.cfg" };
+	internal TextBox LiveToken { get; } = new() { Watermark = "from BepInEx/config/Tie.WorldEditorBridge.cfg" };
 
 	private void BuildServerPanel()
 	{
@@ -448,7 +448,7 @@ public sealed class StartPage
 		}
 		if (string.IsNullOrWhiteSpace(SToken.Text))
 		{
-			_serverError.Text = "Enter the plugin's token: the Token line in BepInEx/config/local.worldeditorbridge.cfg on the server.";
+			_serverError.Text = "Enter the plugin's token: the Token line in BepInEx/config/Tie.WorldEditorBridge.cfg on the server.";
 			return;
 		}
 		await Connect(new Tunnel.Request(SHost.Text.Trim(), (int)(SPort.Value ?? 22), SUser.Text?.Trim() ?? "", NullIfEmpty(SPass.Text), NullIfEmpty(SKey.Text), NullIfEmpty(SPhrase.Text), SToken.Text.Trim(),

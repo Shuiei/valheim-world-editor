@@ -38,7 +38,7 @@ the plugin's settings (below).
    server. Its log shows `WorldEditorBridge <version> listening on http://127.0.0.1:5182/`.
 2. Start page → **A dedicated server**: the server's address, the user you log in to it with over
    SSH, the password or an SSH key file (without either, the usual keys in `~/.ssh` are tried), and
-   the **plugin token** (the `Token` line of `BepInEx/config/local.worldeditorbridge.cfg` on the
+   the **plugin token** (the `Token` line of `BepInEx/config/Tie.WorldEditorBridge.cfg` on the
    server). The token is always typed by you: the editor never reads it from the server, so an SSH
    login alone is not enough to change the world. Tick **Save password** to keep the password (see
    [Saved servers](#saved-servers)).
@@ -49,7 +49,7 @@ the plugin's settings (below).
 4. The server is saved in the list, with its token, for one-click access next time.
 
 **Server's Valheim folder** (optional, on the form): the server folder that holds `BepInEx`. With
-it, the editor reads the plugin's port from `BepInEx/config/local.worldeditorbridge.cfg` there (never
+it, the editor reads the plugin's port from `BepInEx/config/Tie.WorldEditorBridge.cfg` there (never
 the token), and when the plugin does not answer it checks that folder and says what is missing: the
 folder, BepInEx, the plugin in `BepInEx/plugins`, or a server not started with BepInEx.
 
@@ -86,7 +86,10 @@ HostKey = SHA256:…
   server. If you reinstalled the server, empty that line to accept the new identity.
 - **forget** next to a saved server removes it.
 
-### Plugin settings (`local.worldeditorbridge.cfg`)
+### Plugin settings (`Tie.WorldEditorBridge.cfg`)
+
+In `BepInEx/config`. Plugins older than 0.41.0 named it `local.worldeditorbridge.cfg`; the plugin
+moves it to the new name on its first start (port and token are kept), and the editor reads either.
 
 | Setting | Default | Meaning |
 |---|---|---|

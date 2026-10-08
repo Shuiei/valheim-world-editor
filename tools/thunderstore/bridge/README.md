@@ -40,7 +40,7 @@ game closed does not need it either.
 ## Connecting the editor
 
 Start the game or server once with the plugin: it writes
-`BepInEx/config/local.worldeditorbridge.cfg` with a random **Token**. Keep the token secret: anyone
+`BepInEx/config/Tie.WorldEditorBridge.cfg` with a random **Token**. Keep the token secret: anyone
 with it and access to the port can change the world.
 
 - **Your own game**: in the editor, choose **My game** on the start page. Load your world in
@@ -50,7 +50,7 @@ with it and access to the port can change the world.
   and the Token from the server's config file, then **Connect**. The editor makes its own
   encrypted tunnel to the server and saves it for one-click access next time.
 
-Settings in `local.worldeditorbridge.cfg`:
+Settings in `Tie.WorldEditorBridge.cfg`:
 
 | Setting | Default | Meaning |
 |---|---|---|

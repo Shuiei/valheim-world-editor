@@ -4,6 +4,18 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v0.41.0 — 2026-10-07 (plugin settings file renamed)
+
+### Changed
+- The editor finds the plugin's settings under either name (your game, and the server's Valheim
+  folder over SSH), so it works with older plugins too. Every hint and guide names the new file.
+
+### WorldEditorBridge
+- The plugin's id is now `Tie.WorldEditorBridge`, so its settings are in
+  `BepInEx/config/Tie.WorldEditorBridge.cfg` (was `local.worldeditorbridge.cfg`). On its first start
+  the plugin moves the old file to the new name: the port and token are kept, and saved servers in
+  the editor keep connecting.
+
 ## v0.40.1 — 2026-10-07
 
 ### Changed

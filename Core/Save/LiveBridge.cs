@@ -51,7 +51,7 @@ public sealed class LiveBridge(string url, string token)
 			return (int)res.StatusCode switch
 			{
 				200 => null,
-				401 or 403 => "The server answered but refused the token. Copy the Token from BepInEx/config/local.worldeditorbridge.cfg on the server.",
+				401 or 403 => "The server answered but refused the token. Copy the Token from BepInEx/config/Tie.WorldEditorBridge.cfg on the server.",
 				409 => "The plugin answered, but the game it runs in does not host the world (it joined another server). Connect to the server that hosts it.",
 				_ => $"The server answered with an error ({(int)res.StatusCode}). Is it the WorldEditorBridge plugin?",
 			};

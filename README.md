@@ -99,7 +99,7 @@ game at once, and the game saves it as usual.
    mod manager's server profile), and restart it. See `plugin/README.txt` in the download.
 2. On the start page, **A dedicated server**: enter the server's address, the user you log in to it
    with (SSH), the password or an SSH key file, and the **plugin token**: the `Token` line of
-   `BepInEx/config/local.worldeditorbridge.cfg` on the server. Tick **Save password** to not type the
+   `BepInEx/config/Tie.WorldEditorBridge.cfg` on the server. Tick **Save password** to not type the
    password again.
 3. **Connect.** The editor logs in, opens its own encrypted tunnel to the plugin and loads the
    world. The plugin only listens on the server itself, so it is never exposed to the internet.

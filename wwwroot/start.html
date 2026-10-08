@@ -133,7 +133,7 @@
         <button class="b" id="sKeyBrowse" hidden style="align-self:flex-end">Browse…</button>
       </div>
       <div class="row">
-        <label class="f">Plugin token<input id="sToken" placeholder="the Token line in BepInEx/config/local.worldeditorbridge.cfg on the server"></label>
+        <label class="f">Plugin token<input id="sToken" placeholder="the Token line in BepInEx/config/Tie.WorldEditorBridge.cfg on the server"></label>
       </div>
       <div class="row">
         <label class="f">Server's Valheim folder (optional)<input id="sFolder" placeholder="/home/valheim/server, the folder with BepInEx (for the plugin's port and precise errors)"></label>
@@ -154,7 +154,7 @@
         <div style="font-weight:600;margin:14px 0 6px">I made my own tunnel</div>
         <div class="row">
           <label class="f">Bridge address<input id="liveUrl" value="127.0.0.1:5182"></label>
-          <label class="f">Token<input id="token" placeholder="from BepInEx/config/local.worldeditorbridge.cfg"></label>
+          <label class="f">Token<input id="token" placeholder="from BepInEx/config/Tie.WorldEditorBridge.cfg"></label>
           <button class="b" id="connectUrl" style="align-self:flex-end">Connect</button>
         </div>
         <div class="err" id="urlErr"></div>
@@ -292,7 +292,7 @@ async function loadServers() {
 }
 $('sConnect').onclick = () => {
   if (!$('sHost').value.trim()) { $('serverErr').textContent = 'Enter the server address.'; return; }
-  if (!$('sToken').value.trim()) { $('serverErr').textContent = "Enter the plugin's token (the Token line in BepInEx/config/local.worldeditorbridge.cfg on the server)."; return; }
+  if (!$('sToken').value.trim()) { $('serverErr').textContent = "Enter the plugin's token (the Token line in BepInEx/config/Tie.WorldEditorBridge.cfg on the server)."; return; }
   open({ mode: 'server', host: $('sHost').value, sshPort: +$('sPort').value || 22, user: $('sUser').value, password: $('sPass').value || null, keyPath: $('sKey').value || null,
     passphrase: $('sPhrase').value || null, savePassword: $('sSave').checked, name: $('sName').value || null, token: $('sToken').value, bridgePort: +$('sBridge').value || null, gameFolder: $('sFolder').value || null }, $('serverErr'), 'Connecting to the server…');
 };

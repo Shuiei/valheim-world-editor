@@ -115,7 +115,7 @@ public static class Launcher
 			}
 			if (req.Mode == "server" && string.IsNullOrWhiteSpace(req.Token))
 			{
-				return Results.Ok(new { ok = false, error = "Enter the plugin's token: the Token line in BepInEx/config/local.worldeditorbridge.cfg on the server." });
+				return Results.Ok(new { ok = false, error = "Enter the plugin's token: the Token line in BepInEx/config/Tie.WorldEditorBridge.cfg on the server." });
 			}
 			if (req.Mode is "server" or "saved")
 			{

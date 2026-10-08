@@ -144,7 +144,8 @@ public static class Tunnel
 		int? folderPort = null;
 		if (gameFolder != null && r.BridgePort == null)
 		{
-			string text = Run(client, $"cat {Quote(gameFolder + "/BepInEx/config/local.worldeditorbridge.cfg")} 2>/dev/null");
+			string cfg = gameFolder + "/BepInEx/config/";
+			string text = Run(client, $"cat {Quote(cfg + LocalGame.ConfigName)} 2>/dev/null || cat {Quote(cfg + LocalGame.OldConfigName)} 2>/dev/null");
 			if (System.Text.RegularExpressions.Regex.Match(text, @"^\s*Port\s*=\s*(\d+)", System.Text.RegularExpressions.RegexOptions.Multiline) is { Success: true } pm)
 			{
 				folderPort = int.Parse(pm.Groups[1].Value);
@@ -156,7 +157,7 @@ public static class Tunnel
 		{
 			client.Disconnect();
 			client.Dispose();
-			return Fail("Enter the plugin's token: the Token line in BepInEx/config/local.worldeditorbridge.cfg on the server.");
+			return Fail("Enter the plugin's token: the Token line in BepInEx/config/Tie.WorldEditorBridge.cfg on the server.");
 		}
 		int local = Places.FreePort(15182);
 		var forward = new ForwardedPortLocal("127.0.0.1", (uint)local, "127.0.0.1", (uint)bridgePort);
@@ -195,7 +196,7 @@ public static class Tunnel
 		string q = Quote(f);
 		string answer = Run(client, $"if [ ! -d {q} ]; then echo nofolder; elif [ ! -d {q}/BepInEx ]; then echo nobepinex; " +
 			$"elif ! find {q}/BepInEx/plugins -name WorldEditorBridge.dll 2>/dev/null | grep -q .; then echo noplugin; " +
-			$"elif [ ! -f {q}/BepInEx/config/local.worldeditorbridge.cfg ]; then echo nocfg; else echo installed; fi").Trim();
+			$"elif [ ! -f {q}/BepInEx/config/{LocalGame.ConfigName} ] && [ ! -f {q}/BepInEx/config/{LocalGame.OldConfigName} ]; then echo nocfg; else echo installed; fi").Trim();
 		return answer switch
 		{
 			"nofolder" => $"The folder {f} does not exist on the server: check the server's Valheim folder.",

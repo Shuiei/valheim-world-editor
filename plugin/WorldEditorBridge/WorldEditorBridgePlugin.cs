@@ -30,7 +30,10 @@ namespace WorldEditorBridge;
 [BepInPlugin(Guid, "WorldEditorBridge", Version)]
 public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
 {
-	public const string Guid = "local.worldeditorbridge";
+	public const string Guid = "Tie.WorldEditorBridge";
+
+	// The id before 0.41.0, which named the settings file.
+	private const string OldGuid = "local.worldeditorbridge";
 
 	public const string Version = BuildInfo.Version;
 
@@ -72,6 +75,22 @@ public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
 
 	private void Awake()
 	{
+		// Settings made under the old id (port, token) move to the new file, so editors that saved the
+		// token keep connecting.
+		string old = Path.Combine(Paths.ConfigPath, OldGuid + ".cfg");
+		if (File.Exists(old) && !File.Exists(Config.ConfigFilePath))
+		{
+			try
+			{
+				File.Move(old, Config.ConfigFilePath);
+				Config.Reload();
+				Logger.LogInfo($"Settings moved from {OldGuid}.cfg to {Guid}.cfg");
+			}
+			catch (IOException ex)
+			{
+				Logger.LogWarning($"Could not move {old}: {ex.Message}");
+			}
+		}
 		_bind = Config.Bind("Http", "BindAddress", "127.0.0.1", "Address to listen on. Keep 127.0.0.1 and reach it through an SSH tunnel (ssh -L 5182:127.0.0.1:5182 user@server).");
 		_port = Config.Bind("Http", "Port", 5182, "TCP port of the bridge.");
 		_token = Config.Bind("Http", "Token", "", "Secret the editor must send (X-Bridge-Token header or ?token=). Generated on first start when empty.");

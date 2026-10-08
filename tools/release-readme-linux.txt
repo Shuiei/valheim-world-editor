@@ -39,7 +39,7 @@ Documentation: https://github.com/Shuiei/valheim-world-editor
   A DEDICATED SERVER (live): edit your server's world while people play.
     1. Once, on the server: BepInEx and WorldEditorBridge.dll, see plugin/README.txt.
     2. Enter the server's address, your SSH user and password (or SSH key file), and the plugin's
-       token (the Token line of BepInEx/config/local.worldeditorbridge.cfg on the server).
+       token (the Token line of BepInEx/config/Tie.WorldEditorBridge.cfg on the server).
        Tick "Save password" to not type it again.
     3. Connect. The editor logs in and makes its own encrypted tunnel: no ssh command needed.
        The server is then saved in the list: next time it is one click.
