@@ -26,5 +26,6 @@
     <EmbeddedResource Include="WorldGen/zdo-keys.json" LogicalName="TerrainEditor.zdo-keys.json" />
     <EmbeddedResource Include="WorldGen/cave-rocks.json" LogicalName="TerrainEditor.cave-rocks.json" />
     <EmbeddedResource Include="WorldGen/piece-support.json" LogicalName="TerrainEditor.piece-support.json" />
+    <EmbeddedResource Include="WorldGen/piece-cost.json" LogicalName="TerrainEditor.piece-cost.json" />
   </ItemGroup>
 </Project>

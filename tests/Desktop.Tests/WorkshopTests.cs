@@ -97,12 +97,18 @@ public class WorkshopTests
 		Assert.Equal("Leave the Workshop", Assert.Single(asked));
 		Assert.True(w.InWorkshop);
 		// Saving asks first, since a piece would fall; then writes the building only.
-		r.B.AskName = _ => Task.FromResult<string?>("Hut 2");
+		// The details asked start from the blueprint's own, with its cost.
+		string? costAsked = null;
+		r.B.AskDetails = (d, cost) => { costAsked = cost; return Task.FromResult<Homestead.Details?>(d with { Name = "Hut 2", Tags = new() { "hut" } }); };
+		Assert.StartsWith("Wood ", w.WorkshopCost);
 		answer = true;
 		await w.SaveWorkshop();
 		Assert.Equal("Save blueprint", asked[^1]);
 		var saved = Homestead.List(r.Homestead).Single(e => e.Name == "Hut 2");
 		Assert.Equal(2, saved.Pieces);
+		Assert.Equal(new[] { "hut" }, saved.Tags);
+		Assert.StartsWith("Wood ", costAsked);
+		Assert.NotNull(saved.Picture);
 		Assert.Contains("· saved", w.PendingText.Text);
 		// Saved: leaving does not ask.
 		answer = false;

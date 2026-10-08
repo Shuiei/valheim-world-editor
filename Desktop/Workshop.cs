@@ -89,6 +89,15 @@ public static class Workshop
 		static JsonObject P(float x, float z) => new() { ["gx"] = x, ["gz"] = z };
 	}
 
+	// How many of each kind of building piece stand on the plot (prefab name → count).
+	public static Dictionary<string, int> Kinds(WorldScene s)
+	{
+		lock (s.Things)
+		{
+			return s.Things.Where(t => !t.Gone && PieceCatalog.Get(t.Prefab) != null).GroupBy(t => PrefabCatalog.NameOf(t.Prefab) ?? "?").ToDictionary(g => g.Key, g => g.Count());
+		}
+	}
+
 	// How many building pieces stand on the plot.
 	public static int Pieces(WorldScene s)
 	{

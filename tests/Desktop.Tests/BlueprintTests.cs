@@ -68,7 +68,7 @@ public class BlueprintTests
 			bp.Store = new BlueprintStore(dir);
 			string hs = Path.Combine(dir, "homestead");
 			bp.FindHomestead = () => new Homestead.Status(true, "1.3.2", new() { "test" }, hs);
-			bp.AskName = _ => Task.FromResult<string?>("Gate");
+			bp.AskDetails = (d, _) => Task.FromResult<Homestead.Details?>(d with { Name = "Gate" });
 			bp.Confirm = _ => Task.FromResult(true);
 			Assert.Null(await bp.Save());
 			Assert.StartsWith("Copy something first", w.MessageText.Text);

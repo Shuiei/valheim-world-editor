@@ -4,6 +4,26 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## Unreleased
+
+### Added
+- **The Workshop**: a blank, flat plot (from the start page or the Blueprints panel) to build a
+  building with the Place and Select tools, then **Save blueprint**: only its building pieces are
+  kept. Blueprints open in it to be changed.
+- **Support check** (in the Workshop): each piece outlined in the colour the game gives its
+  structural support (the game's own rules, per material), from blue on the ground to red, and pink
+  for pieces that would fall. Saving asks first when some would.
+- Blueprints are **Homestead**'s (the in-game building mod): saved into its folder, so they show in
+  its hammer tab ready to build in game, and its own blueprints are listed here. The editor finds
+  Homestead in the game's BepInEx and mod manager profiles, and warns when it is not installed.
+- The blueprint library shows each blueprint's **3D picture** (the game's models when its look has
+  been copied), its **cost** in game (materials and crafting stations), a **description** and
+  **tags**; the search looks through all of them; **Details** changes them.
+
+### Changed
+- **Save blueprint…** writes Homestead blueprints (pieces only, no ground). Blueprints kept in the
+  editor's own format before are still listed, and **To Homestead** moves them.
+
 ## v1.1.0 — 2026-10-08
 
 ### Added

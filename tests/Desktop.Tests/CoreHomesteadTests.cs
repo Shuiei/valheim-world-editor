@@ -84,4 +84,24 @@ public class CoreHomesteadTests : IDisposable
 		Assert.Empty(Homestead.List(Path.Combine(_dir, "missing")));
 		Assert.Equal("a_b.blueprint", Homestead.FileName("a/b"));
 	}
+
+	[Fact]
+	public void DescriptionAndTagsAreWrittenReadAndChangedBeforeThePieces()
+	{
+		Directory.CreateDirectory(_dir);
+		string file = Path.Combine(_dir, "Hut.blueprint");
+		string text = Homestead.Write(Clip(("wood_floor", 0, 0, 0, 0), ("wood_floor", 2, 0, 0, 0)), "Hut", "Tester", null, DateTime.Now, "A small\nhut", new[] { "house", "wood" });
+		// Homestead skips header lines it does not know, as long as they come before "#Pieces".
+		Assert.True(text.IndexOf("#Tags:house, wood\n", StringComparison.Ordinal) < text.IndexOf("#Pieces", StringComparison.Ordinal));
+		Assert.Contains("#Description:A small hut\n", text);
+		File.WriteAllText(file, text);
+		var e = Homestead.Read(file)!;
+		Assert.Equal(("A small hut", 2), (e.Description, e.Kinds["wood_floor"]));
+		Assert.Equal(new[] { "house", "wood" }, e.Tags);
+		string changed = Homestead.WithDetails(text, new Homestead.Details("Big hut", "Bigger", new() { "house" }));
+		Assert.StartsWith("#Name:Big hut\n#Creator:Tester\n#Description:Bigger\n#Tags:house\n#Category:Blueprints\n", changed);
+		Assert.EndsWith(text[text.IndexOf("#Pieces", StringComparison.Ordinal)..], changed);
+		Assert.DoesNotContain("#Tags:", Homestead.WithDetails(text, new Homestead.Details("Hut", "", new())));
+		Assert.Equal(new[] { "house", "Viking", "stone" }, Homestead.Details.ParseTags("house, Viking,stone ,HOUSE;; "));
+	}
 }

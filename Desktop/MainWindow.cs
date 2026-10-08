@@ -1606,7 +1606,8 @@ public sealed partial class MainWindow : Window
 		Blueprints = new BlueprintsPanel(_view.Paste, () => _view.Scene);
 		Blueprints.Message += t => _message.Text = t;
 		Blueprints.Pasting += () => { _viewPanel.IsVisible = true; StartPaste(); };
-		Blueprints.AskName = initial => Dialogs.AskText(this, "Save blueprint", "Name of the blueprint:", initial);
+		Blueprints.AskDetails = (start, cost) => Dialogs.AskBlueprint(this, start, cost);
+		Blueprints.Models = () => _models;
 		Blueprints.Confirm = text => Dialogs.Ask(this, "Blueprints", text, "Yes");
 		Blueprints.OpenUrl = uri => Launcher.LaunchUriAsync(uri);
 		SetUpWorkshop();

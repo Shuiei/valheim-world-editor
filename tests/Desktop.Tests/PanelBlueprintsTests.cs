@@ -184,9 +184,9 @@ public class PanelBlueprintsTests
 	{
 		using var r = new Run();
 		r.W.View.Paste.Clip = Clip("Gate", "woodwall");
-		r.B.AskName = _ => Task.FromResult<string?>(null);
+		r.B.AskDetails = (_, _) => Task.FromResult<TerrainEditor.App.Homestead.Details?>(null);
 		Assert.Null(await r.B.Save());
-		r.B.AskName = _ => Task.FromResult<string?>("Gate");
+		r.B.AskDetails = (d, _) => Task.FromResult<TerrainEditor.App.Homestead.Details?>(d with { Name = "Gate" });
 		Assert.Equal("Gate", await r.B.Save());
 		Assert.True(File.Exists(Path.Combine(r.Homestead, "Gate.png")));
 		r.B.Confirm = _ => Task.FromResult(false);
@@ -198,6 +198,39 @@ public class PanelBlueprintsTests
 		r.Installed = false;
 		Assert.Equal("Gate", await r.B.Save());
 		Assert.Contains("not installed in your game yet", r.Said);
+	}
+
+	[AvaloniaFact]
+	public async Task DetailsCostAndTagsAreShownSearchedAndChanged()
+	{
+		using var r = new Run();
+		r.W.View.Paste.Clip = Clip("Gate", "woodwall", "woodwall", "stone_wall_2x1");
+		r.B.AskDetails = (d, cost) => Task.FromResult<TerrainEditor.App.Homestead.Details?>(new("Gate", "A gate for the north wall", new() { "gate", "stone" }));
+		Assert.Equal("Gate", await r.B.Save());
+		r.Keep("Tower", "woodwall");
+		r.B.Toggle(true);
+		string texts = Texts(r.B.List);
+		Assert.Contains("Cost: Stone 4 · Wood 4 (needs Stonecutter, Workbench)", texts);
+		Assert.Contains("A gate for the north wall", texts);
+		Assert.Contains("stone", texts);
+		// Found by a tag, by its description, and by both.
+		r.B.Search.Text = "stone";
+		Assert.Single(RowButtons(r, "Paste"));
+		r.B.Search.Text = "north gate";
+		Assert.Single(RowButtons(r, "Paste"));
+		r.B.Search.Text = "";
+		// Details…: a new name (the file follows, with its picture) and tags.
+		r.B.AskDetails = (d, _) => Task.FromResult<TerrainEditor.App.Homestead.Details?>(d with { Name = "North gate", Tags = new() { "gate" } });
+		Assert.True(await r.B.EditDetails(r.Listed.Single(e => e.Name == "Gate")));
+		var gate = r.Listed.Single(e => e.Name == "North gate");
+		Assert.Equal("North gate.blueprint", Path.GetFileName(gate.Path));
+		Assert.NotNull(gate.Picture);
+		Assert.Equal(new[] { "gate" }, gate.Tags);
+		Assert.Equal("A gate for the north wall", gate.Description);
+		Assert.Equal(3, gate.Pieces);
+		// Cancelled: nothing changes.
+		r.B.AskDetails = (_, _) => Task.FromResult<TerrainEditor.App.Homestead.Details?>(null);
+		Assert.False(await r.B.EditDetails(gate));
 	}
 
 	[AvaloniaFact]

@@ -368,6 +368,9 @@ public static class Tips
 		["blueprints.import"] = "Import a .blueprint file (Homestead or PlanBuild) or a .vbuild file: it is kept as a Homestead blueprint, ready to build in game.",
 		["dialog.text"] = "Type the answer, then press OK (Enter).",
 		["dialog.cancel"] = "Close without doing anything (Esc).",
+		["dialog.blueprintName"] = "The blueprint's name: Homestead lists it under this name in its hammer tab. Its file is named after it.",
+		["dialog.blueprintDescription"] = "A few words about it, shown in the library (and to people you share the file with).",
+		["dialog.blueprintTags"] = "Words to find it by, separated by commas: house, viking, stone, gate… The library's search looks through them.",
 	};
 
 	public static string Of(string key) => Texts.TryGetValue(key, out string? t) ? t : throw new KeyNotFoundException("No tip " + key);

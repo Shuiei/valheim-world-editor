@@ -49,6 +49,11 @@ public static class Stability
 	// workbench, a chest: no, they rest on what is under them without counting).
 	public static bool Known(string prefab) => Pieces.Value.ContainsKey(prefab);
 
+	// A piece's material (WearNTear: 0 wood, 1 stone, 2 iron… -1 unknown) and its colliders as boxes in
+	// its own frame (middle, half size, rotation): its rough shape, for pictures without its model.
+	public static (int Material, List<(Vector3 C, Vector3 H, Quaternion Q)> Boxes) Shape(string prefab) =>
+		Pieces.Value.TryGetValue(prefab, out var d) ? (d.Material, d.Boxes.Select(b => (b.C, b.H, b.Q)).ToList()) : (-1, new());
+
 	// WearNTear.GetMaterialProperties: maximum and minimum support, losses per metre.
 	public static (float Max, float Min, float Horizontal, float Vertical) Material(int m) => m switch
 	{
