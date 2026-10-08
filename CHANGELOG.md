@@ -40,7 +40,8 @@ the plugin is unchanged in versions without that part.
   preview; the help lists every key.
 - Native app, Naturalize: New pattern (another noise pattern for the next stroke or natural path).
 - The developer checks of the world generator and the save writer (`--verify`, `--verify-ingame`,
-  `--selftest-save`, `--inspect`, `--summary`) moved to a separate tool, `tools/WorldCheck`.
+  `--selftest-save`, `--inspect`, `--summary`) moved to a separate tool, `tools/WorldCheck`. It can
+  also write a new world from a seed (`create`), its middle generated with the game's vegetation.
 
 ### Fixed
 - Native app, Area: after choosing a backup folder with "Another folder…", the folder picker opened
