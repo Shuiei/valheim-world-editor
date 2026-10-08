@@ -134,11 +134,16 @@ jobs:
             tools\smoke-test.ps1 C:\smoke\ValheimWorldEditor\ValheimWorldEditor.exe tests\fixtures\CITest
 
 workflows:
+  # The packages first: when the app does not build or start, nothing else runs.
   test:
     jobs:
-      - code-analysis
-      - native-tests
       - packages
+      - code-analysis:
+          requires:
+            - packages
+      - native-tests:
+          requires:
+            - packages
       - windows-smoke:
           requires:
             - packages
