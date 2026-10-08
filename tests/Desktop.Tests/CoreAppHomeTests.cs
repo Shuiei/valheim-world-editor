@@ -191,6 +191,10 @@ public sealed class CoreAppHomeTests : IDisposable
 			Assert.StartsWith("That folder cannot be read", Worlds.Check(locked));
 			// A readable folder holding an unreadable one: that one simply holds no world.
 			Assert.StartsWith("No Valheim world", Worlds.Check(_home));
+			// A recent world now in a folder that cannot be read: left out, the rest still listed.
+			var s = new AppSettings();
+			s.Recent.Add(new AppSettings.RecentWorld(locked, "Locked", DateTime.Now));
+			Assert.DoesNotContain(Worlds.Find(s), w => w.Path == locked);
 		}
 		finally
 		{
