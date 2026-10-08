@@ -371,6 +371,7 @@ public sealed class MainWindow : Window
 		var kinds = session.Scene.World?.Creatable.Where(p => NameOfPrefab(p) != null).OrderBy(p => NameOfPrefab(p), StringComparer.OrdinalIgnoreCase).ToList() ?? new();
 		SelectPanel.ReplaceKinds = kinds;
 		SelectPanel.ReplaceBox.ItemsSource = kinds.Select(p => NameOfPrefab(p)!).ToList();
+		SelectPanel.FillSaved();
 		UpdateSaveBar();
 	}
 
@@ -468,7 +469,7 @@ public sealed class MainWindow : Window
 		UpdateSaveBar();
 	}
 
-	private string? NameOfPrefab(int prefab) => _models?.NameOf(prefab) ?? TerrainEditor.Terrain.PrefabCatalog.DisplayName(prefab);
+	internal string? NameOfPrefab(int prefab) => _models?.NameOf(prefab) ?? TerrainEditor.Terrain.PrefabCatalog.DisplayName(prefab);
 
 	// A kind's model box in its own frame, in Unity's axes (the models are stored with z mirrored) and
 	// scaled like the model; null while unknown.
@@ -863,6 +864,23 @@ public sealed class MainWindow : Window
 		return card;
 	}
 
+	// Eyedropper for the Replace lists: the next click on an object gives its kind (Esc cancels).
+	internal void PickKind(string label, Action<int> done)
+	{
+		_view.PickObjectOnce = i =>
+		{
+			if (i is int t && _view.Scene is { } sc && t < sc.Things.Count)
+			{
+				done(sc.Things[t].Prefab);
+			}
+			else
+			{
+				_message.Text = "Nothing picked: click right on an object (only things that are shown can be picked).";
+			}
+		};
+		_message.Text = $"Click an object to pick its kind for {label}. Esc cancels.";
+	}
+
 	private void OnKey(object? sender, Avalonia.Input.KeyEventArgs e)
 	{
 		// Typing in a box: its keys are its own.
@@ -872,6 +890,13 @@ public sealed class MainWindow : Window
 		}
 		var mods = e.KeyModifiers;
 		bool ctrl = mods.HasFlag(Avalonia.Input.KeyModifiers.Control) || mods.HasFlag(Avalonia.Input.KeyModifiers.Meta);
+		if (!ctrl && e.Key == Avalonia.Input.Key.Escape && _view.PickObjectOnce != null)
+		{
+			_view.PickObjectOnce = null;
+			_message.Text = "Picking cancelled.";
+			e.Handled = true;
+			return;
+		}
 		// The right-hand panels, as in the web editor: V the View panel, L the history, ? (or F3) the help.
 		if (!ctrl && e.Key is Avalonia.Input.Key.F3 or Avalonia.Input.Key.OemQuestion || (!ctrl && mods.HasFlag(Avalonia.Input.KeyModifiers.Shift) && e.Key == Avalonia.Input.Key.Oem2))
 		{
@@ -1114,6 +1139,15 @@ public sealed class MainWindow : Window
 		Inspector.Replaced += i => _view.Select(new[] { i });
 		Inspector.Confirm = text => Dialogs.Ask(this, "Contents", text, "Apply anyway");
 		Inspector.Closed += () => _viewPanel.IsVisible = true;
+		SelectPanel.Message += t => _message.Text = t;
+		SelectPanel.PickKindAsked += PickKind;
+		SelectPanel.NameOf = NameOfPrefab;
+		SelectPanel.WorldName = () => _world?.World.Name is { Length: > 0 } n ? n : _view.Scene?.World?.Name is { Length: > 0 } m ? m : null;
+		SelectPanel.Things = () => _view.Scene?.Things;
+		SelectPanel.SelectedIds = () => _view.Selected;
+		SelectPanel.SelectIds = ids => { Tools.ChooseSelect(); _view.Select(ids); };
+		SelectPanel.AskName = initial => Dialogs.AskText(this, "Keep the selection", "Name of the selection:", initial);
+		SelectPanel.Confirm = text => Dialogs.Ask(this, "Saved selections", text, "Forget");
 		SelectPanel.InspectButton.Click += (_, _) => Inspect();
 		SelectPanel.ClaimButton.Click += (_, _) => Claim();
 		ToolTip.SetTip(SelectPanel.ClaimButton, "Give the selected pieces placed without a builder the player chosen in View, Building");
@@ -1174,6 +1208,7 @@ public sealed class MainWindow : Window
 		PathPanel.ApplyAsked += ApplyPath;
 		AreaPanel = new AreaPanel(_view, () => _session, prefab => _models?.NameOf(prefab) ?? TerrainEditor.Terrain.PrefabCatalog.DisplayName(prefab));
 		AreaPanel.Message += t => { _message.Text = t; UpdateSaveBar(); };
+		AreaPanel.PickKindAsked += PickKind;
 		AreaPanel.SwitchToSelect += () => Tools.ChooseSelect();
 		AreaPanel.CopyAsked += Copy;
 		AreaPanel.PasteAsked += StartPaste;
