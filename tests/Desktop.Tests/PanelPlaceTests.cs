@@ -79,7 +79,7 @@ public class PanelPlaceTests
 		Click(r.P.KindsButton);
 		Assert.True(r.P.Chooser.IsVisible);
 		Assert.Equal("Done", r.P.KindsButton.Content);
-		// Grouped by kind, long groups cut while not searching.
+		// Grouped by kind, in categories that fold.
 		Assert.Contains("TREES", Texts(r.P.List));
 		int all = Ticks(r).Count;
 		r.P.Search.Text = "beech";
@@ -109,19 +109,6 @@ public class PanelPlaceTests
 		Click(r.P.KindsButton);
 		Assert.False(r.P.Chooser.IsVisible);
 		Assert.Equal("+ Add kinds", r.P.KindsButton.Content);
-	}
-
-	[AvaloniaFact]
-	public void AGroupOfMoreThanSixtyKindsIsCutUntilSearched()
-	{
-		using var r = new Run();
-		Click(r.P.KindsButton);
-		r.P.Search.Text = "";
-		string texts = Texts(r.P.List);
-		if (r.P.Creatable().GroupBy(c => c.Kind).Any(g => g.Count() > 60))
-		{
-			Assert.Contains("more: search for them.", texts);
-		}
 	}
 
 	[AvaloniaFact]
@@ -194,13 +181,13 @@ public class PanelPlaceTests
 	{
 		using var r = new Run();
 		Click(r.P.PickButton);
-		Assert.Equal("Click an object in the view to place its kind.", r.Said);
+		Assert.Equal("Click an object to pick its kind for placing. Esc cancels.", r.Said);
 		Assert.NotNull(r.W.PlaceInput.PickOnce);
-		r.W.PlaceInput.PickOnce!("NotAThing_xyz");
+		r.W.PlaceInput.PickOnce!("NotAThing_xyz", false);
 		Assert.Equal("NotAThing_xyz cannot be placed: the game has no such kind to copy.", r.Said);
 		Click(r.P.PickButton);
 		string kind = r.P.Creatable().First().Name;
-		r.W.PlaceInput.PickOnce!(kind);
+		r.W.PlaceInput.PickOnce!(kind, false);
 		Assert.Equal($"Placing {kind}.", r.Said);
 		Assert.Equal(new[] { kind }, r.T.Chosen);
 	}

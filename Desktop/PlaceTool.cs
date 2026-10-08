@@ -54,6 +54,70 @@ public sealed class PlaceTool
 	public event Action? Changed;
 	public void Notify() => Changed?.Invoke();
 
+	// The largest value of each spacing setting (the panel's sliders end there).
+	public const float MaxSpacing = 15, MaxEvery = 30, MaxCell = 30;
+
+	// The chosen kind that is widest at its largest size (m, across its model's box), for the fit
+	// hint; (0, null) while no chosen kind's model is known.
+	public (float Width, string? Who) Widest()
+	{
+		float w = 0;
+		string? who = null;
+		foreach (var n in Chosen)
+		{
+			if (ModelBox(n) is var (lo, hi) && MathF.Max(hi.X - lo.X, hi.Z - lo.Z) is float x && x > w)
+			{
+				(w, who) = (x, n);
+			}
+		}
+		return (w * MathF.Max(SizeMin, SizeMax) / 100, who);
+	}
+
+	// The spacing the mode goes by: centre to centre in Grid and Line, the least distance in Brush and
+	// Zone; none for End to end lines (the pieces' own length sets it).
+	public float? SpacingNow => Mode switch
+	{
+		Modes.Grid => Cell,
+		Modes.Line => EndToEnd ? null : Every,
+		_ => Spacing,
+	};
+
+	// Says when the widest chosen kind is wider than the spacing (so they overlap), as the web editor did.
+	public string? FitHint()
+	{
+		if (SpacingNow is not float v || Widest() is not (var w, string who) || w <= v + 0.25f)
+		{
+			return null;
+		}
+		return $"{who} is about {w:0.0} m wide: {v:0.##} m apart they overlap.";
+	}
+
+	// Fit: the spacing set to the widest chosen kind (to the next half metre, within the setting's
+	// range), so they stand side by side without overlapping. False when there is nothing to fit.
+	public bool Fit()
+	{
+		var (w, who) = Widest();
+		if (SpacingNow == null || who == null || w <= 0)
+		{
+			return false;
+		}
+		float Up(float max) => MathF.Min(max, MathF.Ceiling(w * 2) / 2);
+		switch (Mode)
+		{
+			case Modes.Grid:
+				Cell = Up(MaxCell);
+				break;
+			case Modes.Line:
+				Every = Up(MaxEvery);
+				break;
+			default:
+				Spacing = Up(MaxSpacing);
+				break;
+		}
+		NewLayout();
+		return true;
+	}
+
 	private Random _rand = new();
 	private float _clumpSeed = Random.Shared.NextSingle() * 1000;
 	public const int MaxShape = 2000;
