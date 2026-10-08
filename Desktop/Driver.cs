@@ -11,6 +11,7 @@ namespace TerrainEditor.Desktop;
 //   map                            back to the map
 //   stroke <tool> <x> <z> <steps>  a brush stroke at world x, z (tool: raise, lower, smooth...)
 //   picture <file.png>             a picture of the view shown (3D or map), once it is drawn
+//   bench <seconds>                the 3D camera turns on its own; the frame rates come back
 //   mouse <down|move|up> <x> <z> [left|right|middle] [shift|ctrl|alt ...]
 //                                  the mouse at world x, z over the 3D view (real pointer events)
 //   wheel <x> <z> <steps>          the wheel there (positive: zoom in)
@@ -121,6 +122,11 @@ public static class Driver
 			case "picture":
 				await (w.MapShown ? w.MapPage!.Map.Picture(a[1]) : w.View.Picture(a[1])).WaitAsync(TimeSpan.FromSeconds(60));
 				return State(w);
+			case "bench":
+			{
+				string result = await w.View.Benchmark(F(0)).WaitAsync(TimeSpan.FromSeconds(F(0) + 60));
+				return JsonSerializer.Serialize(new { bench = result });
+			}
 			case "state":
 			case "quit":
 				return State(w);

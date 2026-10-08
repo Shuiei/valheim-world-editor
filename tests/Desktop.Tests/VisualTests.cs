@@ -10,7 +10,7 @@ namespace TerrainEditor.Desktop.Tests;
 // graphics card or Mesa's software renderer); without one the tests skip. Its settings and memory go
 // to a test folder (--data), never the user's. Run only these: --filter Category=Visual; skip them:
 // --filter Category!=Visual.
-public sealed class EditorProcess : IDisposable
+public class EditorProcess : IDisposable
 {
 	private readonly Process? _p;
 	private readonly string _data = Path.Combine(Path.GetTempPath(), "vwe-visual-" + Guid.NewGuid().ToString("N")[..8]);
@@ -18,6 +18,12 @@ public sealed class EditorProcess : IDisposable
 	public bool Available => _p != null;
 
 	public EditorProcess()
+		: this(Array.Empty<string>())
+	{
+	}
+
+	// Started with more options (the world to open at once, for example).
+	protected EditorProcess(string[] extra)
 	{
 		if (OperatingSystem.IsLinux() && string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DISPLAY")) && string.IsNullOrEmpty(Environment.GetEnvironmentVariable("WAYLAND_DISPLAY")))
 		{
@@ -29,7 +35,7 @@ public sealed class EditorProcess : IDisposable
 		string app = Path.Combine(root, "Desktop", "bin", config, "net8.0", "ValheimWorldEditor.Desktop.dll");
 		string dotnet = Path.GetFullPath(Path.Combine(System.Runtime.InteropServices.RuntimeEnvironment.GetRuntimeDirectory(), "..", "..", "..", OperatingSystem.IsWindows() ? "dotnet.exe" : "dotnet"));
 		var psi = new ProcessStartInfo(dotnet) { RedirectStandardInput = true, RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false };
-		foreach (string a in new[] { app, "--data", _data, "--driver" })
+		foreach (string a in new[] { app, "--data", _data, "--driver" }.Concat(extra))
 		{
 			psi.ArgumentList.Add(a);
 		}
@@ -94,7 +100,7 @@ public sealed class EditorProcess : IDisposable
 		}
 	}
 
-	public void Dispose()
+	public virtual void Dispose()
 	{
 		if (_p != null)
 		{
@@ -121,8 +127,43 @@ public sealed class EditorProcess : IDisposable
 	}
 }
 
+// The editor started with --world and --zone: straight into the 3D view of a copy of the test world.
+public sealed class DirectEditorProcess() : EditorProcess(Start())
+{
+	private static string? _copy;
+
+	private static string[] Start()
+	{
+		_copy = Path.Combine(Path.GetTempPath(), "vwe-visual-direct-" + Guid.NewGuid().ToString("N")[..8]);
+		string world = Path.Combine(_copy, "CITest");
+		Directory.CreateDirectory(world);
+		foreach (string f in Directory.GetFiles(Path.Combine(Fixtures(), "CITest")))
+		{
+			File.Copy(f, Path.Combine(world, Path.GetFileName(f)));
+		}
+		return new[] { "--world", world, "--zone", "0,0", "--size", "2" };
+	}
+
+	public override void Dispose()
+	{
+		base.Dispose();
+		try
+		{
+			Directory.Delete(_copy!, true);
+		}
+		catch (Exception)
+		{
+		}
+	}
+}
+
 [CollectionDefinition("Visual")]
 public sealed class VisualGroup : ICollectionFixture<EditorProcess>
+{
+}
+
+[CollectionDefinition("Visual direct")]
+public sealed class DirectVisualGroup : ICollectionFixture<DirectEditorProcess>
 {
 }
 
@@ -347,5 +388,29 @@ public sealed class VisualTests(EditorProcess editor) : IDisposable
 		var s = editor.Send("stroke raise 0 0 30");
 		Assert.Equal(1, s.GetProperty("pending").GetInt32());
 		ShowsSomething(Picture("after-stroke"));
+	}
+}
+
+// Started straight in the 3D editor (--world, --zone): the area is open, and the benchmark runs.
+[Collection("Visual direct")]
+[Trait("Category", "Visual")]
+public sealed class DirectVisualTests(DirectEditorProcess editor)
+{
+	[Fact]
+	public void TheWorldOpensStraightInTheEditorAndTheBenchmarkRuns()
+	{
+		Assert.SkipUnless(editor.Available, editor.Why ?? "");
+		// The area loads after the window opens: wait for it.
+		JsonElement s = editor.Send("state");
+		for (int i = 0; i < 200 && s.GetProperty("page").GetString() != "editor"; i++)
+		{
+			Thread.Sleep(100);
+			s = editor.Send("state");
+		}
+		Assert.Equal("editor", s.GetProperty("page").GetString());
+		Assert.True(s.GetProperty("objects").GetInt32() > 0);
+		string bench = editor.Send("bench 1").GetProperty("bench").GetString()!;
+		Assert.Matches(@"^\d+ fps over \d+\.\d s, work .* ms, gaps median \d+ ms, 95% \d+ ms, max \d+ ms, view \d+×\d+ px$", bench);
+		Assert.Equal(0, editor.Send("state").GetProperty("glErrors").GetInt32());
 	}
 }
