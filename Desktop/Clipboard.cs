@@ -61,8 +61,16 @@ public sealed class CopyData
 		}
 		float cx = list.Average(t => t.Position.X), cz = list.Average(t => t.Position.Z);
 		float x0 = list.Min(t => t.Position.X) - cx - 1, x1 = list.Max(t => t.Position.X) - cx + 1, z0 = list.Min(t => t.Position.Z) - cz - 1, z1 = list.Max(t => t.Position.Z) - cz + 1;
-		var objs = list.Select(t => new Obj(t.Prefab, nameOf(t.Prefab) ?? t.Prefab.ToString(), t.Position.X - cx, t.Position.Z - cz,
-			t.Position.Y - groundAt(t.Position.X, t.Position.Z), t.Rotation, t.Scale, SourceOf(s, t), Follow: true)).ToList();
+		// Trees, rocks and the like keep their height above the ground where each lands; building pieces
+		// keep the building's shape: their height from the ground at the selection's middle (pieces
+		// following the ground one by one would come apart on a slope).
+		float mid = groundAt(cx, cz);
+		var objs = list.Select(t =>
+		{
+			bool piece = t.Piece || PieceCatalog.Get(t.Prefab) != null;
+			return new Obj(t.Prefab, nameOf(t.Prefab) ?? t.Prefab.ToString(), t.Position.X - cx, t.Position.Z - cz,
+				t.Position.Y - (piece ? mid : groundAt(t.Position.X, t.Position.Z)), t.Rotation, t.Scale, SourceOf(s, t), Follow: !piece);
+		}).ToList();
 		return new CopyData
 		{
 			W = 1, H = 1, Rel = new[] { float.NaN }, Wt = new float[1], Pnt = new[] { -1f, -1, -1, -1 }, Objects = objs,

@@ -15,6 +15,8 @@ the plugin is unchanged in versions without that part.
   the open area, and follows hills instead of cutting through them.
 - Zone borders (and the other overlays lying on the ground) follow the ground when it changes: after
   undoing or discarding a mountain they no longer outline it in the air.
+- Buildings copied with the Select tool keep their shape when pasted on a slope: each piece no longer
+  follows the ground on its own (trees, rocks and the like still do).
 
 ## v1.1.0 — 2026-10-08
 
