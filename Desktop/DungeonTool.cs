@@ -284,8 +284,9 @@ public sealed partial class DungeonTool
 					}
 				}
 			}
-			Commit(d, rooms, $"Dungeon: added {p.Name}", problem == null ? $"Added {p.Name}{with}." : $"Added {p.Name}{with}. {problem}", add: made);
+			// Selected before the change is told (Changed): the panel shows Delete for it at once.
 			Selected = rooms.Count - 1;
+			Commit(d, rooms, $"Dungeon: added {p.Name}", problem == null ? $"Added {p.Name}{with}." : $"Added {p.Name}{with}. {problem}", add: made);
 			return true;
 		}
 		if (HoverJoint is int ji && Dungeon is { } dj && ji < DoorJoints.Count)

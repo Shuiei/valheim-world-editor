@@ -226,6 +226,8 @@ public class DungeonToolTests
 		// The dungeon object again, and the room's objects, in one step.
 		Assert.Equal(things + 1 + expected.Count, r.Scene.Things.Count);
 		Assert.Equal(steps + 1, r.Scene.Session.UndoList.Count);
+		// The new room is selected, and the panel lets it be deleted at once.
+		Assert.True(r.P.DeleteButton.IsEnabled);
 		Assert.Contains($"with {expected.Count} object(s)", r.Said);
 		Assert.All(expected, m => Assert.Contains(r.Scene.Things, t => !t.Gone && t.Prefab == StableHash.Of(m.Prefab) && Vector3.Distance(t.Position, m.Position) < 1e-3f));
 		// Switched off: the room alone.
