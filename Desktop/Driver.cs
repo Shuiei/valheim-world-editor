@@ -33,6 +33,7 @@ namespace TerrainEditor.Desktop;
 //   mappick <zone x> <zone z>      the map's zone picked (as a click on it)
 //   search <text>                  the map's search (objects by kind)
 //   zones                          the map's zone filter: show the matching zones
+//   workshop [file.blueprint]      the Workshop opened (on that blueprint); how long it took
 //   state                          what is shown, the objects, what is pending, frames drawn
 //   quit
 public static class Driver
@@ -270,6 +271,12 @@ public static class Driver
 			{
 				string result = await w.View.Benchmark(F(0)).WaitAsync(TimeSpan.FromSeconds(F(0) + 60));
 				return JsonSerializer.Serialize(new { bench = result });
+			}
+			case "workshop":
+			{
+				var sw = System.Diagnostics.Stopwatch.StartNew();
+				await w.OpenWorkshop(a.Length > 1 ? a[1] : null);
+				return JsonSerializer.Serialize(new { opened = sw.ElapsedMilliseconds, objects = w.View.Scene?.Things.Count(t => !t.Gone) ?? 0 });
 			}
 			case "state":
 			case "quit":

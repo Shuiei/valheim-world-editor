@@ -26,6 +26,11 @@ the plugin is unchanged in versions without that part.
 - The game's look now includes the dungeons' rooms (copied once more after this update).
 - **Dungeon rooms** in the View panel shows or hides them.
 
+### Fixed
+- The support check knows the pieces the game never checks: Mistlands' large black marble floor
+  (also carts, ships and wards) stays up wherever it is and holds what stands on it, as in game. A
+  building on such floors in the air no longer shows walls that would fall.
+
 ## v1.15.5 — 2026-10-09
 
 ### Fixed
