@@ -425,6 +425,11 @@ public sealed partial class MainWindow : Window
 	// Starts editing a loaded scene (also used by tests with a scene of their own).
 	internal void Edit(EditSession session)
 	{
+		// Another area: building in the last one's dungeon (and its cut) ends.
+		if (BuildingInDungeon)
+		{
+			BuildInDungeon(false);
+		}
 		_session = session;
 		session.Brush = Tools.Brush;
 		MountainPanel.FitTo(session.Ground.W);

@@ -19,7 +19,7 @@ public partial class MainWindow
 		var t = PlaceTool;
 		if (on && _dungeonKept == null)
 		{
-			_dungeonKept = new Kept(t.Chosen.ToList(), t.Mode, t.OneAtATime, t.OneAtATimeByHand, t.RandomYaw, t.Tilt, t.SizeMin, t.SizeMax, t.Elevation, t.SnapTo, t.OnTop, t.Rotation, false);
+			_dungeonKept = KeepPlaceTool();
 			BuildPanel.Start();
 			t.CutY = _view.CutY;
 			Tools.ChooseMode(ToolMode.Place);
@@ -28,16 +28,7 @@ public partial class MainWindow
 		else if (!on && _dungeonKept is { } k)
 		{
 			_dungeonKept = null;
-			t.Chosen.Clear();
-			t.Chosen.AddRange(k.Chosen);
-			(t.Mode, t.OneAtATime, t.OneAtATimeByHand, t.RandomYaw, t.Tilt, t.SizeMin, t.SizeMax, t.Elevation, t.SnapTo, t.OnTop, t.Rotation) =
-				(k.Mode, k.OneAtATime, k.OneAtATimeByHand, k.RandomYaw, k.Tilt, k.SizeMin, k.SizeMax, k.Elevation, k.SnapTo, k.OnTop, k.Rotation);
-			t.GridStep = 0;
-			t.Building = false;
-			t.HeightNudge = 0;
-			t.AimRay = null;
-			t.CutY = null;
-			PlaceInput.TurnStep = null;
+			RestorePlaceTool(k);
 			t.Notify();
 		}
 	}

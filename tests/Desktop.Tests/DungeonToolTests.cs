@@ -185,6 +185,23 @@ public class DungeonToolTests
 	}
 
 	[AvaloniaFact]
+	public void BuildHereKeepsTheCutAndAnotherAreaEndsIt()
+	{
+		using var r = new Run();
+		Click(r.P.GoInside);
+		var cut = r.W.View.CutY;
+		Assert.NotNull(cut);
+		Click(r.P.BuildHere);
+		// Building under the dungeon's cut: the roofs stay away, the pieces go on the floors.
+		Assert.Equal(cut, r.W.View.CutY);
+		Assert.Equal(cut, r.W.PlaceTool.CutY);
+		// Another area opened: building in this dungeon ends, its cut with it.
+		r.W.Edit(r.Scene.Session!);
+		Assert.False(r.W.BuildingInDungeon);
+		Assert.Null(r.W.PlaceTool.CutY);
+	}
+
+	[AvaloniaFact]
 	public void DeletingARoomTakesTheObjectsInItWithIt()
 	{
 		using var r = new Run();
