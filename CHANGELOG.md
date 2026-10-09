@@ -67,6 +67,10 @@ the plugin is unchanged in versions without that part.
 - A damaged history file (kept between runs) no longer stops its world from opening: the world opens
   without the earlier history. A `stamps.json` with an entry missing its picture no longer stops the
   editor from starting.
+- Valheim for Windows: when the terrain shader of a copied game look cannot be made into GLSL on
+  this computer, the start page says so, instead of copying the whole game look again at every start
+  (minutes each time, ending the same way). A later editor whose shader converter changed makes the
+  shader again from the copied file, without a new copy.
 
 ### WorldEditorBridge
 - An apply the game takes more than 30 seconds to start (a world save on the server) is no longer
