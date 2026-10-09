@@ -177,12 +177,23 @@ public partial class MainWindow
 				["data"] = BlueprintFormats.DataJson(data),
 			});
 		}
-		string folder = Homestead.Folder();
-		Directory.CreateDirectory(folder);
-		string file = string.Concat(r.Name.ToLowerInvariant().Select(c => char.IsLetterOrDigit(c) ? c : '-')).Trim('-');
-		string path = Path.Combine(folder, file + ".blueprint");
-		await File.WriteAllTextAsync(path, Homestead.Write(new System.Text.Json.Nodes.JsonObject { ["objects"] = objects }, r.Name, "Valheim World Editor", null, DateTime.Now,
-			$"A generated dungeon (seed {settings.Seed}): " + string.Join(" ", r.Notes), new[] { "dungeon", "generated" }));
-		await OpenWorkshop(path);
+		try
+		{
+			string folder = Homestead.Folder();
+			Directory.CreateDirectory(folder);
+			// A blueprint of that name already (one changed in the Workshop, perhaps): kept, this one numbered.
+			string path = Path.Combine(folder, Homestead.FileName(r.Name));
+			for (int n = 2; File.Exists(path); n++)
+			{
+				path = Path.Combine(folder, Homestead.FileName($"{r.Name} ({n})"));
+			}
+			await File.WriteAllTextAsync(path, Homestead.Write(new System.Text.Json.Nodes.JsonObject { ["objects"] = objects }, r.Name, "Valheim World Editor", null, DateTime.Now,
+				$"A generated dungeon (seed {settings.Seed}): " + string.Join(" ", r.Notes), new[] { "dungeon", "generated" }));
+			await OpenWorkshop(path);
+		}
+		catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+		{
+			_message.Text = $"Could not write the dungeon's blueprint: {ex.Message}";
+		}
 	}
 }

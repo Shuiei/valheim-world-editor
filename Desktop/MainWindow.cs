@@ -1756,7 +1756,17 @@ public sealed partial class MainWindow : Window
 		DungeonPanel = new DungeonPanel(_view);
 		DungeonPanel.BuildAsked += () => BuildInDungeon(true);
 		DungeonPanel.Gen.PlaceAsked += PlaceGenerated;
-		DungeonPanel.Gen.WorkshopAsked += s => _ = OpenGeneratedInWorkshop(s);
+		DungeonPanel.Gen.WorkshopAsked += async s =>
+		{
+			try
+			{
+				await OpenGeneratedInWorkshop(s);
+			}
+			catch (Exception ex)
+			{
+				_message.Text = $"Could not open the dungeon in the Workshop: {ex.Message}";
+			}
+		};
 		_view.Dungeon.Message += t => _message.Text = t;
 		PathPanel = new PathPanel(_view, Tools.Brush);
 		PathPanel.ApplyAsked += ApplyPath;
