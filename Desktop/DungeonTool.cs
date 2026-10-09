@@ -44,29 +44,50 @@ public sealed partial class DungeonTool
 	internal Func<float> Random { get; set; } = () => System.Random.Shared.NextSingle();
 
 	// Where two rooms of the open dungeon meet and a door can stand.
-	public List<Dungeons.Joint> DoorJoints => Dungeon is { } d ? Dungeons.Joints(d.Rooms).Where(j => j.DoorAllowed && Dungeons.DoorsFor(d.Kind, j.Type).Any()).ToList() : new();
+	public List<Dungeons.Joint> DoorJoints => Derive()?.Joints ?? new();
 
 	// The scene's doors (of the dungeon's door kinds) standing at a joint.
-	public List<int> DoorsAt(Dungeons.Joint j)
+	public List<int> DoorsAt(Dungeons.Joint j) => Derive() is { } c && c.Doors.TryGetValue(Spot(j.Position), out var at) ? at.ToList() : new();
+
+	// How many pairs of the open dungeon's rooms overlap.
+	public int OverlappingPairs => Derive()?.Overlapping ?? 0;
+
+	// What the drawing, the pointer and the panel ask of the open dungeon (its open ends, door joints,
+	// doors, overlaps), worked out once for each change of it, not for each frame or pointer move.
+	private sealed record Derived(DungeonRooms.Dungeon D, int Version, int Count, List<Dungeons.OpenEnd> Free, List<Dungeons.Joint> Joints,
+		Dictionary<(long, long, long), List<int>> Doors, int Overlapping);
+
+	private Derived? _derived;
+
+	private static (long, long, long) Spot(Vector3 p) => ((long)MathF.Round(p.X * 20), (long)MathF.Round(p.Y * 20), (long)MathF.Round(p.Z * 20));
+
+	private Derived? Derive()
 	{
-		var found = new List<int>();
-		if (Scene == null || Dungeon is not { } d)
+		if (Scene is not { } s || Dungeon is not { } d)
 		{
-			return found;
+			return null;
+		}
+		int version = s.Session?.Edits.Version ?? 0, count = s.Things.Count;
+		if (_derived is { } c && ReferenceEquals(c.D, d) && c.Version == version && c.Count == count)
+		{
+			return c;
 		}
 		var kinds = d.Kind.Doors.Select(x => StableHash.Of(x.Prefab)).ToHashSet();
-		lock (Scene.Things)
+		var doors = new Dictionary<(long, long, long), List<int>>();
+		lock (s.Things)
 		{
-			for (int i = 0; i < Scene.Things.Count; i++)
+			for (int i = 0; i < s.Things.Count; i++)
 			{
-				var t = Scene.Things[i];
-				if (!t.Gone && kinds.Contains(t.Prefab) && Vector3.DistanceSquared(t.Position, j.Position) < 0.01f)
+				var t = s.Things[i];
+				if (!t.Gone && kinds.Contains(t.Prefab))
 				{
-					found.Add(i);
+					(doors.TryGetValue(Spot(t.Position), out var l) ? l : doors[Spot(t.Position)] = new()).Add(i);
 				}
 			}
 		}
-		return found;
+		int overlapping = d.Rooms.Select((r, i) => Dungeons.Overlaps(d.Rooms, r, i).Count > 0 ? 1 : 0).Sum() / 2;
+		var joints = Dungeons.Joints(d.Rooms).Where(j => j.DoorAllowed && Dungeons.DoorsFor(d.Kind, j.Type).Any()).ToList();
+		return _derived = new Derived(d, version, count, Dungeons.Openings(d.Rooms, freeOnly: true), joints, doors, overlapping);
 	}
 
 	public event Action? Changed;
@@ -80,7 +101,7 @@ public sealed partial class DungeonTool
 
 	public DungeonRooms.Dungeon? Dungeon => Current is { } at ? All.FirstOrDefault(d => Vector3.DistanceSquared(d.Thing.Position, at) < 0.01f) : null;
 
-	public List<Dungeons.OpenEnd> FreeEnds => Dungeon is { } d ? Dungeons.Openings(d.Rooms, freeOnly: true) : new();
+	public List<Dungeons.OpenEnd> FreeEnds => Derive()?.Free ?? new();
 
 	// ---- Names shown for the kinds of dungeon.
 	public static string KindName(Dungeons.Kind k) => k.Name switch

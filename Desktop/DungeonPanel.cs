@@ -170,7 +170,7 @@ public sealed class DungeonPanel
 			return;
 		}
 		int open = Tool.FreeEnds.Count;
-		int overlaps = d.Rooms.Select((r, i) => Dungeons.Overlaps(d.Rooms, r, i).Count > 0 ? 1 : 0).Sum() / 2;
+		int overlaps = Tool.OverlappingPairs;
 		string text = $"{d.Rooms.Count} rooms, {open} open end(s).";
 		if (overlaps > 0)
 		{
