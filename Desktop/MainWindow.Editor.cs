@@ -22,6 +22,10 @@ public sealed partial class MainWindow
 	internal Button ReloadButton { get; } = new Button { Content = Icons.With("reload", "Reload"), FontSize = 12.5, IsVisible = false }.Classed("ghost");
 	internal CheckBox AutoApplyBox { get; } = new CheckBox { Content = "Auto", FontSize = 12, IsVisible = false, VerticalAlignment = VerticalAlignment.Center }.Classed("switch");
 	internal StackPanel AreaNav { get; } = new() { Orientation = Orientation.Horizontal, Spacing = 2, VerticalAlignment = VerticalAlignment.Center };
+	// The area's size, changed on the fly (around the same middle zone).
+	internal ComboBox AreaSizeBox { get; } = new() { ItemsSource = AreaSizes.Select(n => $"{n} × {n}").ToArray(), FontSize = 11.5, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(4, 0) };
+	internal static readonly int[] AreaSizes = { 3, 5, 7 };
+	private bool _fillingSize;
 	internal TextBlock LocationText { get; } = new() { FontSize = 12, TextWrapping = TextWrapping.Wrap, Foreground = new SolidColorBrush(Color.Parse("#f3d29b")) };
 	internal Border LocationNote { get; private set; } = null!;
 	internal ComboBox PlayerBox { get; } = new() { FontSize = 12, MinWidth = 130 };
@@ -55,6 +59,15 @@ public sealed partial class MainWindow
 			b.Click += async (_, _) => await MoveArea(dx, dz);
 			AreaNav.Children.Add(b);
 		}
+		AreaNav.Children.Add(AreaSizeBox);
+		AreaSizeBox.Tip("top.areaSize");
+		AreaSizeBox.SelectionChanged += async (_, _) =>
+		{
+			if (!_fillingSize && AreaSizeBox.SelectedIndex >= 0)
+			{
+				await ResizeArea(AreaSizes[AreaSizeBox.SelectedIndex]);
+			}
+		};
 		AreaNav.Children.Add(FollowButton);
 		FollowButton.Tip("top.follow");
 		FollowButton.Classes.Set("on", _settings.AreaFollow);
@@ -130,6 +143,7 @@ public sealed partial class MainWindow
 	private void EditorOpened(WorldScene scene)
 	{
 		AreaNav.IsVisible = scene.Owner != null;
+		ShowAreaSize(scene.Size);
 		int n = Overlays.LocationsNear(scene);
 		LocationText.Text = n == 0 ? "" : $"{n} location(s) here. The ground already includes the flattening the game does around them (turn on Location markers in View to see where).";
 		LocationNote.IsVisible = n > 0;
@@ -170,6 +184,31 @@ public sealed partial class MainWindow
 		{
 			_view.WorldCamera = cam;
 		}
+	}
+
+	// The area made bigger or smaller around its middle zone: the edits, the history and the view stay.
+	internal async Task ResizeArea(int size)
+	{
+		if (_view.Scene is not { Owner: not null } s || s.Size == size)
+		{
+			return;
+		}
+		if (MoveBlocker() is string why)
+		{
+			_message.Text = $"The area cannot change size now: {why}.";
+			ShowAreaSize(s.Size);
+			return;
+		}
+		int mid = s.Size / 2;
+		_message.Text = $"Opening {size} × {size} zones…";
+		await OpenAreaKeepingView(s.X0 + mid, s.Z0 + mid, size);
+	}
+
+	private void ShowAreaSize(int size)
+	{
+		_fillingSize = true;
+		AreaSizeBox.SelectedIndex = Array.IndexOf(AreaSizes, size);
+		_fillingSize = false;
 	}
 
 	internal void SetFollow(bool on)

@@ -447,6 +447,35 @@ public class ParityEditorTests
 		Assert.Equal(3, r.W.View.Scene.Size);
 	}
 
+	// The area made bigger (or smaller) on the fly, around the same middle zone, keeping the view and
+	// what waits to be saved; not while something unfinished would be lost.
+	[AvaloniaFact]
+	public async Task TheAreaGrowsAndShrinksOnTheFly()
+	{
+		using var r = new Run();
+		await r.Open(0, 0, 3);
+		Assert.Equal(0, r.W.AreaSizeBox.SelectedIndex);
+		r.Raise();
+		var cam = r.W.View.WorldCamera!.Value;
+		r.W.AreaSizeBox.SelectedIndex = 2;
+		await LiveTests.Until(() => r.W.View.Scene!.Size == 7);
+		Assert.Equal((-3, -3), (r.W.View.Scene!.X0, r.W.View.Scene.Z0));
+		Assert.Equal(cam.World.X, r.W.View.WorldCamera!.Value.World.X, 3);
+		Assert.Equal(1, r.W.World!.Pending.Zones);
+		await r.W.ResizeArea(5);
+		Assert.Equal((5, -2), (r.W.View.Scene!.Size, r.W.View.Scene.X0));
+		Assert.Equal(1, r.W.AreaSizeBox.SelectedIndex);
+		// Something selected: it waits, and says why.
+		r.W.View.Select(new[] { 0 });
+		if (r.W.View.Selected.Count > 0)
+		{
+			await r.W.ResizeArea(7);
+			Assert.Equal(5, r.W.View.Scene!.Size);
+			Assert.StartsWith("The area cannot change size now", r.W.MessageText.Text);
+			Assert.Equal(1, r.W.AreaSizeBox.SelectedIndex);
+		}
+	}
+
 	[AvaloniaFact]
 	public async Task NoAreaNoMove()
 	{
