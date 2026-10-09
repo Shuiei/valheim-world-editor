@@ -4,6 +4,23 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## Unreleased
+
+### Added
+- Live: the open area **follows the game**. Every 2 seconds the editor asks the game what changed in
+  that area's zones (only those): objects players built, removed or changed appear, go or change in
+  the editor, and ground dug or paved there comes in, without steps in History and without
+  dropping your changes (Reload is no longer needed for the area you work in). Objects you deleted
+  stay deleted; objects the game removed are not brought back by undo.
+- Live: where you have ground changes not applied yet and the game changed that zone's ground too,
+  yours are kept, the status bar says so, and **Apply live** asks first: applying could erase what
+  players did there.
+
+### WorldEditorBridge
+- `/watch`: one number per asked zone, which changes when an object there is made, removed or
+  changed (not when a creature walks); `/zone`: the saved objects of the asked zones, in the
+  snapshot's format. Only those zones are read, from the game's own per-zone lists.
+
 ## v1.15.6 — 2026-10-09
 
 ### Fixed
