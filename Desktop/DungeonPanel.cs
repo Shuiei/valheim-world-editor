@@ -26,6 +26,7 @@ public sealed class DungeonPanel
 	internal Button DeleteButton { get; } = new() { Content = "Delete room (Del)", FontSize = 12 };
 	internal TextBlock Info { get; } = new() { FontSize = 12, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
 	internal CheckBox Contents { get; } = new() { Content = "With what the game puts in them", IsChecked = true, FontSize = 12 };
+	internal CheckBox Doors { get; } = new() { Content = "Doors where the game might put them", IsChecked = true, FontSize = 12 };
 	private readonly TextBlock _empty = new()
 	{
 		FontSize = 12, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap,
@@ -50,6 +51,8 @@ public sealed class DungeonPanel
 		DeleteButton.Tip("dungeon.delete");
 		Contents.Tip("dungeon.contents");
 		Contents.IsCheckedChanged += (_, _) => Tool.WithContents = Contents.IsChecked == true;
+		Doors.Tip("dungeon.doors");
+		Doors.IsCheckedChanged += (_, _) => Tool.WithDoors = Doors.IsChecked == true;
 		DungeonBox.SelectionChanged += (_, _) =>
 		{
 			if (!_filling && DungeonBox.SelectedIndex >= 0 && DungeonBox.SelectedIndex < _shown.Count)
@@ -81,7 +84,7 @@ public sealed class DungeonPanel
 				new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { GoInside, BuildHere } },
 				new StackPanel { Spacing = 2, Children = { _cutText, CutSlider } },
 				new TextBlock { Text = "ROOMS", FontSize = 11, Foreground = Ui.Muted, FontWeight = FontWeight.SemiBold },
-				Filter, Rooms, Contents,
+				Filter, Rooms, Contents, Doors,
 				new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { TurnButton, DeleteButton } },
 				CloseEnds, Info,
 			},
@@ -103,7 +106,7 @@ public sealed class DungeonPanel
 				{
 					new TextBlock { Text = "Dungeon", FontSize = 14, FontWeight = FontWeight.SemiBold },
 					new TextBlock { FontSize = 12, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap,
-						Text = "Pick a room below, then click a green opening to add it there. Click a room to select it." },
+						Text = "Pick a room below, then click a green opening to add it there. Click a room to select it, an orange or blue square (where rooms meet) to put a door there or take it away." },
 					_empty, _body,
 				},
 			},

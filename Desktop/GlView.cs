@@ -2026,7 +2026,7 @@ public sealed class GlView : OpenGlControlBase
 	// pointed at, and the room a click would add, see-through).
 	public DungeonTool Dungeon { get; } = new();
 
-	private uint _dungeonVao, _dungeonVbo, _dungeonPickVao, _dungeonPickVbo, _dungeonAddVao, _dungeonAddVbo;
+	private uint _dungeonVao, _dungeonVbo, _dungeonPickVao, _dungeonPickVbo, _dungeonAddVao, _dungeonAddVbo, _dungeonDoorVao, _dungeonDoorVbo, _dungeonJointVao, _dungeonJointVbo;
 
 	private void DrawDungeon(WorldScene s, Matrix4x4 vp)
 	{
@@ -2059,6 +2059,33 @@ public sealed class GlView : OpenGlControlBase
 		if (ends.Count > 0)
 		{
 			DrawLines(ref _dungeonVao, ref _dungeonVbo, ends.ToArray(), vp, new Vector4(0.35f, 0.95f, 0.45f, 0.95f), blend: true, width: 2f);
+		}
+		// Joints that can take a door: a small square, blue with a door, orange without; a click puts one
+		// or takes it away.
+		var withDoor = new List<float>();
+		var noDoor = new List<float>();
+		var joints = Dungeon.DoorJoints;
+		for (int i = 0; i < joints.Count; i++)
+		{
+			var j = joints[i];
+			var side = Vector3.Transform(Vector3.UnitX, j.Rotation) * 0.6f;
+			var up = Vector3.UnitY;
+			Vector3[] c = { j.Position + up * 0.9f - side, j.Position + up * 0.9f + side, j.Position + up * 2.1f + side, j.Position + up * 2.1f - side };
+			var list = Dungeon.HoverJoint == i ? hovered : Dungeon.DoorsAt(j).Count > 0 ? withDoor : noDoor;
+			for (int k = 0; k < 4; k++)
+			{
+				var a = V(c[k]);
+				var b = V(c[(k + 1) % 4]);
+				list.AddRange(new[] { a.X, a.Y, a.Z, b.X, b.Y, b.Z });
+			}
+		}
+		if (withDoor.Count > 0)
+		{
+			DrawLines(ref _dungeonDoorVao, ref _dungeonDoorVbo, withDoor.ToArray(), vp, new Vector4(0.4f, 0.7f, 1f, 0.95f), blend: true, width: 2f);
+		}
+		if (noDoor.Count > 0)
+		{
+			DrawLines(ref _dungeonJointVao, ref _dungeonJointVbo, noDoor.ToArray(), vp, new Vector4(1f, 0.6f, 0.2f, 0.9f), blend: true, width: 1.5f);
 		}
 		// The room selected (white) or pointed at (faint), as its box.
 		var boxes = new List<float>();

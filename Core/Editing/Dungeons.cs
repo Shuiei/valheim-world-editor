@@ -18,7 +18,8 @@ public static class Dungeons
 
 	// One opening of a room, in the room's own frame. Two rooms join where openings of the same type
 	// meet at one point, facing each other.
-	public sealed record Opening(string Type, bool Entrance, bool AllowDoor, Vector3 Position, Quaternion Rotation);
+	// AllowDoor: a door can stand there (OnlyIfOther: only when the other room's opening allows one too).
+	public sealed record Opening(string Type, bool Entrance, bool AllowDoor, Vector3 Position, Quaternion Rotation, bool OnlyIfOther = false);
 
 	// A networked object the game makes with a room when it first generates it; Node is where it sits in
 	// the room's tree of random parts (-1: on the room itself).
@@ -39,7 +40,13 @@ public static class Dungeons
 	// box its rooms stay in, around the zone's centre at the dungeon's height.
 	// CustomInterior: rooms are rolled by their place relative to the dungeon (m_useCustomInteriorTransform);
 	// BaseSeed: the dungeon's seed is added to each room's roll (m_addBaseSeedToRandomSpawn).
-	public sealed record Kind(string Name, int Hash, int Themes, bool Interior, Vector3 ZoneSize, bool CustomInterior = false, bool BaseSeed = false);
+	// Doors: its door types (prefab, opening type, chance; 0 takes DoorChance).
+	public sealed record Kind(string Name, int Hash, int Themes, bool Interior, Vector3 ZoneSize, bool CustomInterior = false, bool BaseSeed = false)
+	{
+		public (string Prefab, string Type, float Chance)[] Doors { get; init; } = Array.Empty<(string, string, float)>();
+
+		public float DoorChance { get; init; } = 0.5f;
+	}
 
 	private sealed record Catalog(Dictionary<int, Room> Rooms, Dictionary<int, Kind> Kinds);
 
@@ -74,7 +81,7 @@ public static class Dungeons
 			bool B(string k) => r.GetProperty(k).GetInt32() != 0;
 			rooms[StableHash.Of(p.Name)] = new Room(p.Name, StableHash.Of(p.Name), r.GetProperty("theme").GetInt32(), V(r.GetProperty("size"), 0),
 				B("endCap"), B("entrance"), B("divider"), r.GetProperty("endCapPrio").GetInt32(), r.GetProperty("weight").GetSingle(), B("perimeter"), B("enabled"),
-				r.GetProperty("openings").EnumerateArray().Select(o => new Opening(o[0].GetString() ?? "", o[1].GetInt32() != 0, o[2].GetInt32() != 0, V(o, 4), Q(o, 7))).ToArray(),
+				r.GetProperty("openings").EnumerateArray().Select(o => new Opening(o[0].GetString() ?? "", o[1].GetInt32() != 0, o[2].GetInt32() != 0, V(o, 4), Q(o, 7), o[3].GetInt32() != 0)).ToArray(),
 				r.GetProperty("contents").EnumerateArray().Select(c => new Content(c[0].GetString() ?? "", V(c, 1), Q(c, 4), c[8].GetInt32())).ToArray(),
 				r.GetProperty("spawns").EnumerateArray().Select(x => new Spawn(x[0].GetInt32(), x[1].GetSingle(), x[2].GetInt32(), x[3].GetInt32(), x[4].GetInt32(), x[5].GetInt32())).ToArray(),
 				r.GetProperty("picks").EnumerateArray().Select(x => new Pick(x[0].GetInt32(), x[1].GetInt32(),
@@ -86,7 +93,11 @@ public static class Dungeons
 		{
 			JsonElement d = p.Value;
 			kinds[StableHash.Of(p.Name)] = new Kind(p.Name, StableHash.Of(p.Name), d.GetProperty("themes").GetInt32(), d.GetProperty("algorithm").GetInt32() == 0, V(d.GetProperty("zoneSize"), 0),
-				d.GetProperty("customInterior").GetInt32() != 0, d.GetProperty("baseSeed").GetInt32() != 0);
+				d.GetProperty("customInterior").GetInt32() != 0, d.GetProperty("baseSeed").GetInt32() != 0)
+			{
+				Doors = d.GetProperty("doors").EnumerateArray().Select(x => (x[0].GetString() ?? "", x[1].GetString() ?? "", x[2].GetSingle())).ToArray(),
+				DoorChance = d.GetProperty("doorChance").GetSingle(),
+			};
 		}
 		return new Catalog(rooms, kinds);
 	}
@@ -216,6 +227,49 @@ public static class Dungeons
 		}
 		// The entrance room's way in leads out of the dungeon: it never takes a room.
 		return all.Where(a => !a.Entrance && !all.Any(b => b.Room != a.Room && Vector3.DistanceSquared(a.Position, b.Position) < 0.01f)).ToList();
+	}
+
+	// ---- Doors. Where two rooms meet, the game may put a door (DungeonGenerator.PlaceDoors): at the
+	// opening of the room that was there first, facing as it does, when that opening allows a door
+	// (and, OnlyIfOther, the new room's does too), and not where an end cap closes it.
+	public sealed record Joint(int First, int Second, Vector3 Position, Quaternion Rotation, string Type, bool DoorAllowed);
+
+	public static List<Joint> Joints(IReadOnlyList<Placed> rooms)
+	{
+		var joints = new List<Joint>();
+		var ends = Openings(rooms, freeOnly: false);
+		foreach (var a in ends)
+		{
+			foreach (var b in ends)
+			{
+				if (b.Room <= a.Room || Vector3.DistanceSquared(a.Position, b.Position) >= 0.01f)
+				{
+					continue;
+				}
+				var oa = rooms[a.Room].Room!.Openings[a.Index];
+				var ob = rooms[b.Room].Room!.Openings[b.Index];
+				bool allowed = !rooms[b.Room].Room!.EndCap && oa.AllowDoor && (!oa.OnlyIfOther || ob.AllowDoor);
+				joints.Add(new Joint(a.Room, b.Room, a.Position, a.Rotation, a.Type, allowed));
+			}
+		}
+		return joints;
+	}
+
+	// The door types a joint of this type can take in this kind of dungeon.
+	public static IEnumerable<(string Prefab, string Type, float Chance)> DoorsFor(Kind kind, string type) => kind.Doors.Where(d => d.Type == type);
+
+	// The game's roll for a door at a joint (FindDoorType, then its chance): the door, or null. random:
+	// numbers from 0 to 1.
+	public static string? RollDoor(Kind kind, Joint joint, Func<float> random)
+	{
+		var types = DoorsFor(kind, joint.Type).ToList();
+		if (!joint.DoorAllowed || types.Count == 0)
+		{
+			return null;
+		}
+		var door = types[Math.Min(types.Count - 1, (int)(random() * types.Count))];
+		float chance = door.Chance > 0 ? door.Chance : kind.DoorChance;
+		return random() <= chance ? door.Prefab : null;
 	}
 
 	// ---- Room boxes (Room.m_size, centred on the room's position, turned with it), for picking and for

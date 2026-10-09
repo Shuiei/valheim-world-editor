@@ -17,8 +17,10 @@ the plugin is unchanged in versions without that part.
     it would overlap another room or leave the dungeon's space.
   - Added rooms come with what the game would put in them at that place: chests, creatures'
     spawners, torches, ice, decorations, rolled the way the game rolls them.
-  - Delete a room (its contents go with it), and **Close open ends** caps them with the game's end
-    caps. Each change is one undo step; **Save to world** and **Apply live** write it.
+  - **Doors** where rooms meet: an added room gets the dungeon's door (curtain, gate, ice wall) by
+    the game's chance, and a click on a square where two rooms meet puts one there or takes it away.
+  - Delete a room (its contents and doors go with it), and **Close open ends** caps them with the
+    game's end caps. Each change is one undo step; **Save to world** and **Apply live** write it.
   - **Build here**: build with the hammer's pieces inside the dungeon, on its rooms' floors (where they
     hold in game).
 - The game's look now includes the dungeons' rooms (copied once more after this update).

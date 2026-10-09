@@ -39,8 +39,8 @@ for Windows or Linux. Unpack it and start it. You don't need to install anything
 
 **Dungeons**
 - **Edit Frost Caves, crypts and other dungeons room by room.** Add the game's rooms at their
-  openings, joined the way the game joins them, with the chests, creatures and decorations the game
-  would put in them; delete rooms, and cap the open ends. The game builds the dungeon from the list
+  openings, joined the way the game joins them, with the chests, creatures, decorations and doors the
+  game would put in them; delete rooms, and cap the open ends. The game builds the dungeon from the list
   you make, no mod needed.
 - **Build inside a dungeon** with the hammer's pieces, on the rooms' floors.
 

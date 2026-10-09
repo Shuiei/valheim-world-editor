@@ -392,6 +392,7 @@ public static class Tips
 		["dungeon.turn"] = "Joins the picked room by another of its openings (R): it turns around the opening you point at.",
 		["dungeon.close"] = "Puts the game's end cap on every open end, so nothing leads out of the dungeon.",
 		["dungeon.contents"] = "Rooms come with what the game would put in them there: chests, creatures' spawners, torches, ice, decorations (rolled the way the game rolls them for that place). Off: bare rooms.",
+		["dungeon.doors"] = "Where an added room joins, a door (the dungeon's own: curtains, gates, ice walls) by the game's chance. Off: none. Squares mark where doors can go: click one to put a door or take it away.",
 		["dungeon.delete"] = "Removes the selected room (Del). Ctrl+Z puts it back.",
 		["build.lift"] = "Back to no lift: the piece goes where the cursor points (on a piece, or the ground).",
 		["build.turn"] = "How far , and . (or Alt + wheel) turn the piece. Shift turns by 1°.",

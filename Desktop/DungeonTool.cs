@@ -34,6 +34,41 @@ public sealed partial class DungeonTool
 
 	public int? HoverRoom { get; private set; }
 
+	// A joint that can take a door (its index in DoorJoints), pointed at.
+	public int? HoverJoint { get; private set; }
+
+	// A door where an added room joins, by the game's chance (Dungeons.RollDoor).
+	public bool WithDoors { get; set; } = true;
+
+	// Numbers from 0 to 1 for the door rolls (tests set their own).
+	internal Func<float> Random { get; set; } = () => System.Random.Shared.NextSingle();
+
+	// Where two rooms of the open dungeon meet and a door can stand.
+	public List<Dungeons.Joint> DoorJoints => Dungeon is { } d ? Dungeons.Joints(d.Rooms).Where(j => j.DoorAllowed && Dungeons.DoorsFor(d.Kind, j.Type).Any()).ToList() : new();
+
+	// The scene's doors (of the dungeon's door kinds) standing at a joint.
+	public List<int> DoorsAt(Dungeons.Joint j)
+	{
+		var found = new List<int>();
+		if (Scene == null || Dungeon is not { } d)
+		{
+			return found;
+		}
+		var kinds = d.Kind.Doors.Select(x => StableHash.Of(x.Prefab)).ToHashSet();
+		lock (Scene.Things)
+		{
+			for (int i = 0; i < Scene.Things.Count; i++)
+			{
+				var t = Scene.Things[i];
+				if (!t.Gone && kinds.Contains(t.Prefab) && Vector3.DistanceSquared(t.Position, j.Position) < 0.01f)
+				{
+					found.Add(i);
+				}
+			}
+		}
+		return found;
+	}
+
 	public event Action? Changed;
 
 	public event Action<string>? Message;
@@ -93,36 +128,43 @@ public sealed partial class DungeonTool
 	// ---- The pointer (a ray in world space).
 	public void Hover(Vector3 origin, Vector3 dir)
 	{
-		int? end = null, room = null;
+		int? end = null, room = null, joint = null;
 		if (Dungeon is { } d)
 		{
-			// A free opening near the ray (within 1.5 m of it), the nearest along it.
-			float best = float.MaxValue;
-			var ends = FreeEnds;
-			for (int i = 0; i < ends.Count; i++)
-			{
-				float t = Vector3.Dot(ends[i].Position - origin, dir);
-				if (t <= 0)
-				{
-					continue;
-				}
-				float miss = Vector3.Distance(origin + dir * t, ends[i].Position);
-				if (miss < 1.5f && t < best)
-				{
-					best = t;
-					end = i;
-				}
-			}
+			// A free opening near the ray (within 1.5 m of it), the nearest along it; else a joint that
+			// can take a door; else a room.
+			end = Nearest(FreeEnds.Select(e => e.Position).ToList(), origin, dir);
 			if (end == null)
+			{
+				joint = Nearest(DoorJoints.Select(j => j.Position).ToList(), origin, dir);
+			}
+			if (end == null && joint == null)
 			{
 				room = RoomAt(d.Rooms, origin, dir);
 			}
 		}
-		if (end != HoverEnd || room != HoverRoom)
+		if (end != HoverEnd || room != HoverRoom || joint != HoverJoint)
 		{
-			(HoverEnd, HoverRoom) = (end, room);
+			(HoverEnd, HoverRoom, HoverJoint) = (end, room, joint);
 			Changed?.Invoke();
 		}
+	}
+
+	// The point nearest along the ray that it passes within 1.5 m of.
+	private static int? Nearest(List<Vector3> points, Vector3 origin, Vector3 dir)
+	{
+		int? found = null;
+		float best = float.MaxValue;
+		for (int i = 0; i < points.Count; i++)
+		{
+			float t = Vector3.Dot(points[i] - origin, dir);
+			if (t > 0 && t < best && Vector3.Distance(origin + dir * t, points[i]) < 1.5f)
+			{
+				best = t;
+				found = i;
+			}
+		}
+		return found;
 	}
 
 	// The room whose box the ray meets first from outside, or the smallest box it starts in (the camera
@@ -209,8 +251,25 @@ public sealed partial class DungeonTool
 			rooms.Add(p);
 			var made = ContentsOf(d, new[] { p });
 			string with = made.Count > 0 ? $" with {made.Count} object(s)" : "";
+			// Its door, as the game rolls one where a room joins (on the opening it took).
+			if (WithDoors)
+			{
+				foreach (var j in Dungeons.Joints(rooms).Where(j => j.Second == rooms.Count - 1))
+				{
+					if (Dungeons.RollDoor(d.Kind, j, Random) is string door)
+					{
+						with += with.Length == 0 ? " with a door" : " and a door";
+						made.Add((new NewObject(0, StableHash.Of(door), j.Position, Dungeons.ToEuler(j.Rotation), 0), false));
+					}
+				}
+			}
 			Commit(d, rooms, $"Dungeon: added {p.Name}", problem == null ? $"Added {p.Name}{with}." : $"Added {p.Name}{with}. {problem}", add: made);
 			Selected = rooms.Count - 1;
+			return true;
+		}
+		if (HoverJoint is int ji && Dungeon is { } dj && ji < DoorJoints.Count)
+		{
+			ToggleDoor(dj, DoorJoints[ji]);
 			return true;
 		}
 		Selected = HoverRoom;
@@ -236,6 +295,10 @@ public sealed partial class DungeonTool
 		// What the game made in the room (chests, spawners, ice, torches: objects of their own) goes with
 		// it, unless another room holds it too.
 		var inside = Inside(gone, rooms);
+		foreach (var j in Dungeons.Joints(d.Rooms).Where(j => j.First == i || j.Second == i))
+		{
+			inside.AddRange(DoorsAt(j).Where(k => !inside.Contains(k)));
+		}
 		Commit(d, rooms, $"Dungeon: removed {name}", $"Removed {name}" + (inside.Count > 0 ? $" and the {inside.Count} object(s) in it" : "") +
 			". Its neighbours' openings are open now: Close open ends caps them.", inside);
 		return true;
@@ -308,6 +371,28 @@ public sealed partial class DungeonTool
 			Message?.Invoke(left > 0 ? $"{left} open end(s) have no end cap of their type." : "No open end to close.");
 		}
 		return added;
+	}
+
+	// A door at a joint: the one there taken away, or the dungeon's door for that kind of opening put
+	// there (facing as the first room's opening, where the game puts it).
+	public void ToggleDoor(DungeonRooms.Dungeon d, Dungeons.Joint j)
+	{
+		if (Scene?.Session is not { } s)
+		{
+			return;
+		}
+		var there = DoorsAt(j);
+		if (there.Count > 0)
+		{
+			s.Commit("Dungeon: removed a door", null, there, Array.Empty<(NewObject, bool)>());
+			Message?.Invoke("Removed the door. Ctrl+Z puts it back.");
+		}
+		else if (Dungeons.DoorsFor(d.Kind, j.Type).FirstOrDefault() is { Prefab: { Length: > 0 } door })
+		{
+			s.Commit("Dungeon: added a door", null, Array.Empty<int>(), new[] { (new NewObject(0, StableHash.Of(door), j.Position, Dungeons.ToEuler(j.Rotation), 0), false) });
+			Message?.Invoke($"Added a door ({door}). Click it again to take it away.");
+		}
+		Changed?.Invoke();
 	}
 
 	// The objects the game makes with these rooms of the dungeon (none when WithContents is off).

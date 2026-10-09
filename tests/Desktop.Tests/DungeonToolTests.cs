@@ -234,4 +234,43 @@ public class DungeonToolTests
 		r.T.Click();
 		Assert.Equal(things + 1, r.Scene.Things.Count);
 	}
+
+	[AvaloniaFact]
+	public void DoorsComeWithAddedRoomsByChanceAndAClickOnAJointTogglesOne()
+	{
+		using var r = new Run();
+		int ice = StableHash.Of("caverock_ice_pillar_wall");
+		int Doors() => r.Scene.Things.Count(t => !t.Gone && t.Prefab == ice);
+		r.P.Contents.IsChecked = false;
+		// A roll that always puts the door: the new room's joint gets the cave's door for plain openings.
+		r.T.Random = () => 0f;
+		r.T.Choose("cave_new_corridor03");
+		r.PointAt(r.T.FreeEnds[0]);
+		r.T.Click();
+		Assert.Equal(1, Doors());
+		Assert.Contains("with a door", r.Said);
+		var joint = Assert.Single(r.T.DoorJoints);
+		Assert.Single(r.T.DoorsAt(joint));
+		// A roll that never does: the next room comes alone.
+		r.T.Random = () => 0.99f;
+		r.PointAt(r.T.FreeEnds.First(e => e.Room == 1));
+		r.T.Click();
+		Assert.Equal(1, Doors());
+		Assert.Equal(2, r.T.DoorJoints.Count);
+		// A click on the empty joint puts a door; again takes it away.
+		r.T.Choose(null);
+		var empty = r.T.DoorJoints.First(j => r.T.DoorsAt(j).Count == 0);
+		r.T.Hover(empty.Position + new Vector3(0, 1.5f, 0) + new Vector3(0, 20, 0), -Vector3.UnitY);
+		Assert.NotNull(r.T.HoverJoint);
+		r.T.Click();
+		Assert.Equal(2, Doors());
+		r.T.Click();
+		Assert.Equal(1, Doors());
+		// Deleting the corridor takes its doors with it.
+		r.T.Hover(r.Rooms[1].Position + new Vector3(0, 0.5f, 0), -Vector3.UnitY);
+		r.T.Click();
+		Assert.Equal(1, r.T.Selected);
+		r.T.Delete();
+		Assert.Equal(0, Doors());
+	}
 }

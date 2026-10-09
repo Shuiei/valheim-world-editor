@@ -40,11 +40,21 @@ chosen.
 
 **Close open ends** puts the game's end cap on every open end, so nothing leads out of the dungeon.
 
+## Doors
+
+Where two rooms meet, the game sometimes puts a door: a Frost Cave's cloth curtains and ice walls, a
+crypt's gates, the mines' doors. Each kind of dungeon has its own, for each kind of opening.
+
+- With **Doors where the game might put them** on, an added room gets one where it joins, by the
+  game's own chance.
+- A square marks every place two rooms meet and a door can stand: **blue** with a door, **orange**
+  without. Click it to put the dungeon's door there, or to take the door away.
+
 ## Selecting and deleting
 
 Click a room to select it (its box shows), then **Delete room** (Del). What stands in the room
-(chests, spawners, ice…) goes with it. The rooms next to it have open ends again: **Close open ends**
-caps them.
+(chests, spawners, ice…) and the doors where it met other rooms go with it. The rooms next to it have
+open ends again: **Close open ends** caps them.
 
 Each change is one step of the history: Ctrl+Z puts things back. **Save to world** writes it, or
 **Apply live** in live mode.
@@ -60,8 +70,6 @@ as a player comes near.
 
 ## Good to know
 
-- **Doors** between rooms (the cloth curtains of Frost Caves, crypt gates) are objects the game adds
-  where two rooms meet. Rooms added here have none; place one with the Place tool where you want it.
 - Some of what the game puts in rooms (icicles, crystals, fish) settles on the nearest surface in game,
   so it may sit a little differently from where the editor shows it.
 - The game draws dungeons dark, lit by their torches. The editor lights them like the outside, to see

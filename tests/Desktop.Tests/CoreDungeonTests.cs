@@ -177,6 +177,25 @@ public class CoreDungeonTests
 		Assert.NotEqual(Dungeons.Contents(Cave()[5], kind, CaveAt, 1).Select(m => m.Prefab), Dungeons.Contents(moved, kind, CaveAt, 1).Select(m => m.Prefab));
 	}
 
+	[Fact]
+	public void DoorsGoWhereRoomsMeetTheGamesWay()
+	{
+		// That Frost Cave: 29 joints, 13 where a door can stand (all its 7 saved doors are on those).
+		var rooms = Cave();
+		var joints = Dungeons.Joints(rooms);
+		Assert.Equal(29, joints.Count);
+		Assert.Equal(13, joints.Count(j => j.DoorAllowed));
+		// Never where an end cap closes the opening.
+		Assert.DoesNotContain(joints, j => j.DoorAllowed && rooms[j.Second].Room!.EndCap);
+		var cave = Dungeons.KindOf(StableHash.Of("DG_Cave"))!;
+		Assert.Contains(cave.Doors, d => d.Prefab == "cloth_hanging_door_double" && d.Type == "shrine");
+		var shrine = joints.First(j => j.DoorAllowed && j.Type == "shrine");
+		// The roll: the door type, then its chance (0.8 for a shrine curtain).
+		Assert.Equal("cloth_hanging_door_double", Dungeons.RollDoor(cave, shrine, () => 0.5f));
+		Assert.Null(Dungeons.RollDoor(cave, shrine, () => 0.9f));
+		Assert.Null(Dungeons.RollDoor(cave, shrine with { DoorAllowed = false }, () => 0f));
+	}
+
 	private sealed class Vector3Comparer(float tolerance) : IEqualityComparer<Vector3>
 	{
 		public bool Equals(Vector3 a, Vector3 b) => Vector3.Distance(a, b) <= tolerance;

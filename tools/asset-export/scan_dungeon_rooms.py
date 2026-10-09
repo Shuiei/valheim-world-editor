@@ -84,6 +84,17 @@ for fi, f in enumerate(files):
                 if t is not None: behaviours.append((pid, t))
         return tr, behaviours
 
+    # A dungeon's door types (DungeonGenerator.m_doorTypes): [prefab, opening type, chance (0: the
+    # dungeon's doorChance)].
+    def doors(g):
+        out = []
+        for d in g.get('m_doorTypes', []):
+            ref = d['m_prefab']
+            go = tt(ref['m_PathID']) if ref.get('m_FileID') == 0 and ref.get('m_PathID') else None
+            if go is not None and 'm_Name' in go:
+                out.append([go['m_Name'], d['m_connectionType'], r(d.get('m_chance', 0))])
+        return out
+
     for o in env.objects:
         if o.type.name != 'GameObject': continue
         go = tt(o.path_id)
@@ -98,7 +109,8 @@ for fi, f in enumerate(files):
                               'minRooms': g['m_minRooms'], 'tileWidth': r(g.get('m_tileWidth', 8)),
                               'zoneSize': [r(g['m_zoneSize']['x']), r(g['m_zoneSize']['y']), r(g['m_zoneSize']['z'])],
                               'customInterior': int(g.get('m_useCustomInteriorTransform', 0)),
-                              'baseSeed': int(g.get('m_addBaseSeedToRandomSpawn', 0))}
+                              'baseSeed': int(g.get('m_addBaseSeedToRandomSpawn', 0)),
+                              'doorChance': r(g.get('m_doorChance', 0.5)), 'doors': doors(g)}
         if 'room' not in kinds or name in rooms: continue
         room = kinds['room']
         info = {'theme': room['m_theme'], 'size': [room['m_size']['x'], room['m_size']['y'], room['m_size']['z']],
