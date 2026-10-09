@@ -76,6 +76,8 @@ the plugin is unchanged in versions without that part.
 - The Mask's slope, height and paint rules judge edits made at once (Mountain, Shape, Paste, Stamp
   once, Path) on the ground as it was before them. They saw the points already changed by the same
   edit: with a slope limit, most of a mountain was left out in a ragged pattern.
+- Copies and blueprints keep objects of kinds the editor has no name for (from mods): they are
+  written as their number and came back as another, unknown kind, left out when pasted.
 
 ### WorldEditorBridge
 - An apply the game takes more than 30 seconds to start (a world save on the server) is no longer

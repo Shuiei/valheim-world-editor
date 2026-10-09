@@ -297,7 +297,7 @@ public sealed class BlueprintsPanel
 			}
 			var parsed = BlueprintFormats.Parse(path, File.ReadAllText(path));
 			var world = _scene()?.World;
-			var clip = BlueprintFormats.ToClip(parsed, n => world?.CanCreate(StableHash.Of(n)) ?? TerrainEditor.Terrain.PrefabCatalog.Get(StableHash.Of(n)) != null, out _);
+			var clip = BlueprintFormats.ToClip(parsed, n => world?.CanCreate(StableHash.OfName(n)) ?? TerrainEditor.Terrain.PrefabCatalog.Get(StableHash.OfName(n)) != null, out _);
 			return (clip, parsed.Name, null);
 		}
 		if (Store.Read(id) is not string json || JsonNode.Parse(json) is not JsonObject doc || doc["clip"] is not JsonObject c)
@@ -552,7 +552,7 @@ public sealed class BlueprintsPanel
 		}
 		_status = FindHomestead();
 		var world = _scene()?.World;
-		var clip = BlueprintFormats.ToClip(parsed, n => world?.CanCreate(StableHash.Of(n)) ?? TerrainEditor.Terrain.PrefabCatalog.Get(StableHash.Of(n)) != null, out var unknown);
+		var clip = BlueprintFormats.ToClip(parsed, n => world?.CanCreate(StableHash.OfName(n)) ?? TerrainEditor.Terrain.PrefabCatalog.Get(StableHash.OfName(n)) != null, out var unknown);
 		string baseName = string.IsNullOrWhiteSpace(parsed.Name) ? "Imported" : parsed.Name, name = baseName;
 		for (int n = 2; HomesteadExists(name); n++)
 		{
