@@ -228,6 +228,48 @@ public class AreaWorldTests
 
 	private static void Done(string dir) => Directory.Delete(Path.GetDirectoryName(dir)!, recursive: true);
 
+	// Saving offline is like Apply live: the area and its history stay, the steps saved; an undo is
+	// then pending, and saved by the next save. The save the world was opened from stays until the world
+	// is left, then only the latest. No backup folder.
+	[AvaloniaFact]
+	public void SavingKeepsTheHistoryAndAnUndoIsSavedToo()
+	{
+		var (w, s, dir) = Open();
+		try
+		{
+			float H(int x, int z) => s.Scene.Heights[z * s.Scene.W + x];
+			float was = H(32, 32);
+			int tree = s.Scene.Things.FindIndex(t => !t.Piece);
+			s.Shape(32, 32, Formula.Compile("3", new string[0]), 4, 0, "x");
+			s.Delete(new[] { tree });
+			Assert.True(s.Save().Saved);
+			Assert.Equal((0, 0, 0, 0), s.Pending);
+			Assert.True(s.CanUndo);
+			Assert.Equal(0, s.UnappliedSteps);
+			Assert.Empty(Directory.GetDirectories(Path.GetDirectoryName(dir)!, "*_backup_*"));
+			// The tree back (undo): pending, then saved.
+			s.Undo();
+			Assert.Equal((0, 1, 0, 0), s.Pending);
+			Assert.True(s.Save().Saved);
+			Assert.Equal((0, 0, 0, 0), s.Pending);
+			var saved = WorldSave.Load(dir);
+			Assert.Contains(saved.Objects, o => o.Prefab == s.Scene.Things[tree].Prefab && Vector3.Distance(o.Position, s.Scene.Things[tree].Position) < 0.01f);
+			// The raise back too.
+			s.Undo();
+			Assert.Equal(1, s.Pending.Zones);
+			Assert.True(s.Save().Saved);
+			Assert.Equal(was, H(32, 32), 2);
+			// Two saves in the folder (the one it was opened from, the latest); one once left.
+			Assert.Equal(2, Directory.GetFiles(dir, "_main.*.ok").Length);
+			s.Scene.Owner!.Dispose();
+			Assert.Single(Directory.GetFiles(dir, "_main.*.ok"));
+		}
+		finally
+		{
+			Done(dir);
+		}
+	}
+
 	[AvaloniaFact]
 	public async Task RegrowPutsBackWhatTheGameGrows()
 	{
@@ -263,7 +305,7 @@ public class AreaWorldTests
 	}
 
 	[AvaloniaFact]
-	public async Task RestoreFromTheBackupThatSavingMade()
+	public async Task RestoreFromABackup()
 	{
 		var (w, s, dir) = Open();
 		try
@@ -273,12 +315,13 @@ public class AreaWorldTests
 			float was = H(32, 32);
 			int tree = s.Scene.Things.FindIndex(t => !t.Piece);
 			var gone = s.Scene.Things[tree];
-			// Change the world and save: the save keeps a backup of how it was.
+			// A backup of how it was (the game's), then the world changed and saved.
+			WorldEditor.Tests.TempWorld.CopyDir(dir, dir.TrimEnd(Path.DirectorySeparatorChar) + "_backup_auto-20261001100000");
 			s.Shape(32, 32, Formula.Compile("3", new string[0]), 4, 0, "x");
 			s.Delete(new[] { tree });
 			Assert.True(s.Save().Saved);
 			var backup = Assert.Single(TerrainEditor.App.Backups.Find(dir));
-			Assert.Equal("editor", backup.Kind);
+			Assert.Equal("game", backup.Kind);
 			Assert.Equal(was + 3, H(32, 32), 2);
 
 			foreach (var k in p.KindButtons.Keys)

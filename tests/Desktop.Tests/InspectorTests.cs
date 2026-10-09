@@ -57,10 +57,8 @@ public class InspectorTests
 				.Where(b => b != null).Select(b => InventoryData.Read(b!)).Single(i => i.Items.Any(it => it.Prefab == StableHash.Of("Resin") && it.Stack == 7));
 			Assert.Contains(inv.Items, i => i.Prefab == StableHash.Of("Resin") && i.Stack == 7 && i.X == x && i.Y == y);
 			Assert.Equal(before + 1, inv.Items.Count);
-			// Saving read the objects again: the inspector closed, and nothing stays selected.
-			Avalonia.Threading.Dispatcher.UIThread.RunJobs();
-			Assert.False(ins.IsOpen);
-			Assert.Empty(w.View.Selected);
+			// Saved: nothing pending (the area and its history stay, as after Apply live).
+			Assert.Equal((0, 0, 0, 0), s.Pending);
 		}
 		finally
 		{

@@ -257,7 +257,9 @@ public class EditTests
 			var res = s.Save();
 			Assert.True(res.Saved, res.Message);
 			Assert.Equal(0, s.Pending.Zones);
-			Assert.False(s.CanUndo);
+			// Like Apply live, the history stays, its steps saved.
+			Assert.True(s.CanUndo);
+			Assert.Equal(0, s.UnappliedSteps);
 			var again = WorldScene.Load(dir, 0, 0, 1);
 			Assert.Equal(after, again.Heights[g], 3);
 		}

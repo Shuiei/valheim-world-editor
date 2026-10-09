@@ -110,7 +110,7 @@ public class CoreSaveWriterTests
 		Assert.False(r.Saved);
 		Assert.StartsWith("The saved world did not read back correctly (zone", r.Message);
 		Assert.Contains("differs at point 500", r.Message);
-		Assert.Contains("The backup was restored", r.Message);
+		Assert.Contains("Nothing changed", r.Message);
 		AssertSame(before, w.Dir);
 	}
 

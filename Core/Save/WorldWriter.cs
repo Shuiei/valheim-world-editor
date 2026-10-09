@@ -5,27 +5,38 @@ using TerrainEditor.Editing;
 namespace TerrainEditor.Save;
 
 // Writes terrain edits back into a chunked world save, following ZNet.SaveWorldThread:
-//   1. full backup of the world folder (editor-specific, next to the world folder)
-//   2. changed chunk files are written under a new version number; untouched objects are copied
+//   1. changed chunk files are written under a new version number; untouched objects are copied
 //      byte for byte, terrain objects get new TCData, new terrain objects are appended
-//   3. a new save number: _main.<n+1>.chunks (updated index), .db2 and .fwl2 (copied)
-//   4. _main.<n+1>.ok is written last: the game only trusts a save that has it
-//   5. the previous save number's files and the replaced chunk files are removed
-// Afterwards the save is read back and compared with the edits; on any mismatch the backup is
-// restored.
+//   2. a new save number (the highest there + 1): _main.<n>.chunks (updated index), .db2 and .fwl2
+//   3. _main.<n>.ok is written last: the game only trusts a save that has it
+//   4. the save is read back and compared with the edits; on any mismatch (or failure) the new files
+//      are removed and the world is as it was: nothing of the old save is touched before this
+//   5. the save it was made from and the chunk files it replaced are removed (KeepBase: kept, for the
+//      open world's next saves, which are made from it too), and the files of Drop (an earlier save
+//      of the same session) with them
+// No backup folder: nothing is removed before the new save has read back right.
 public static class WorldWriter
 {
 	private const int SaveFileVersion = 41;
 
 	public static readonly int TombstonePrefab = StableHash.Of("Player_tombstone");
 
-	public sealed record Result(bool Saved, string Message, string? BackupDirectory, int ZonesWritten, int ZonesCreated, List<string> Skipped, int ObjectsDeleted = 0, int ObjectsAdded = 0, int ZonesReset = 0);
+	public sealed record Result(bool Saved, string Message, string? BackupDirectory, int ZonesWritten, int ZonesCreated, List<string> Skipped, int ObjectsDeleted = 0, int ObjectsAdded = 0, int ZonesReset = 0)
+	{
+		// The files the save wrote (its _main files and new chunk files).
+		public IReadOnlyList<string> Files { get; init; } = Array.Empty<string>();
+	}
+
+	// KeepBase: the save it is made from stays (an open world saves again from it). Drop: files of an
+	// earlier save of the same session, removed once this one has read back right.
+	public sealed record Options(bool KeepBase = false, IReadOnlyCollection<string>? Drop = null);
 
 	// deleted: ids (WorldSave.ObjectRefs) of objects to leave out of the new save.
 	// added: new objects copied from a template object of the same prefab. resets: zones handed back
 	// to the world generator (their objects are removed and the zone is marked as not generated).
-	public static Result Save(WorldSave world, IReadOnlyList<ZoneEdit> changed, IReadOnlyCollection<int>? deleted = null, IReadOnlyList<NewObject>? added = null, IReadOnlyList<ZoneReset>? resets = null)
+	public static Result Save(WorldSave world, IReadOnlyList<ZoneEdit> changed, IReadOnlyCollection<int>? deleted = null, IReadOnlyList<NewObject>? added = null, IReadOnlyList<ZoneReset>? resets = null, Options? options = null)
 	{
+		options ??= new Options();
 		List<string> skipped = new();
 		deleted ??= Array.Empty<int>();
 		added ??= Array.Empty<NewObject>();
@@ -128,14 +139,13 @@ public static class WorldWriter
 			return new Result(false, "Nothing could be saved.", null, 0, 0, skipped);
 		}
 
-		string backup = Backup(world.Directory);
 		string dir = world.Directory;
-		int newNumber = world.SaveNumber + 1;
+		int newNumber = Math.Max(world.SaveNumber, LatestNumber(dir)) + 1;
 		List<string> newFiles = new();
+		Dictionary<ChunkFile, (uint Version, int Count)> updated = new();
 		try
 		{
 			// 2. Changed chunk files under a new version.
-			Dictionary<ChunkFile, (uint Version, int Count)> updated = new();
 			foreach (ChunkFile file in patches.Keys.Union(additions.Keys).Union(removals.Keys))
 			{
 				patches.TryGetValue(file, out var p);
@@ -147,14 +157,15 @@ public static class WorldWriter
 					version++;
 				}
 				string path = Path.Combine(dir, ChunkFile.NameFor(file.Chunk, file.Size, version));
-				int count = WriteChunk(Path.Combine(dir, file.FileName), path, file, p, a, r);
 				newFiles.Add(path);
+				int count = WriteChunk(Path.Combine(dir, file.FileName), path, file, p, a, r);
 				updated[file] = (version, count);
 			}
 			// 3. New save number: index, world data, metadata.
 			string main = Path.Combine(dir, $"_main.{newNumber}");
+			// Each file is listed before it is written: a failure halfway removes it too.
+			newFiles.AddRange(new[] { main + ".chunks", main + ".db2", main + ".fwl2", main + ".ok" });
 			WriteIndex(main + ".chunks", world.Chunks, updated);
-			newFiles.Add(main + ".chunks");
 			if (resets.Count > 0)
 			{
 				ZoneDb db = ZoneDb.Load(Path.Combine(dir, $"_main.{world.SaveNumber}.db2"));
@@ -169,35 +180,35 @@ public static class WorldWriter
 				File.Copy(Path.Combine(dir, $"_main.{world.SaveNumber}.db2"), main + ".db2", overwrite: true);
 			}
 			File.Copy(Path.Combine(dir, $"_main.{world.SaveNumber}.fwl2"), main + ".fwl2", overwrite: true);
-			newFiles.Add(main + ".db2");
-			newFiles.Add(main + ".fwl2");
 			// 4. Commit marker, written last like the game does.
 			WriteAllBytesDurable(main + ".ok", BitConverter.GetBytes(SaveFileVersion));
-			newFiles.Add(main + ".ok");
-			// 5. Remove the previous save number and the replaced chunk files.
-			foreach (string ext in new[] { ".ok", ".chunks", ".db2", ".fwl2" })
-			{
-				File.Delete(Path.Combine(dir, $"_main.{world.SaveNumber}{ext}"));
-			}
-			foreach (ChunkFile file in updated.Keys)
-			{
-				File.Delete(Path.Combine(dir, file.FileName));
-			}
-			// 6. Read back and compare with what was meant to be written.
+			// 5. Read back and compare with what was meant to be written (nothing old removed yet).
 			string? problem = Verify(dir, world, changed.Where(e => !notSaved.Contains((e.ZoneX, e.ZoneZ))).ToList(), created + addedCount, removed, groundReset, resets);
 			if (problem != null)
 			{
-				Restore(backup, dir);
-				return new Result(false, "The saved world did not read back correctly (" + problem + "). The backup was restored; nothing changed.", backup, 0, 0, skipped);
+				RemoveAll(newFiles);
+				return new Result(false, "The saved world did not read back correctly (" + problem + "). Nothing changed.", null, 0, 0, skipped);
 			}
 		}
 		catch (Exception ex)
 		{
-			Restore(backup, dir);
-			return new Result(false, "Saving failed (" + ex.Message + "). The backup was restored; nothing changed.", backup, 0, 0, skipped);
+			RemoveAll(newFiles);
+			return new Result(false, "Saving failed (" + ex.Message + "). Nothing changed.", null, 0, 0, skipped);
 		}
+		// 6. The save it was made from (unless kept) and an earlier save of the session go.
+		var old = new List<string>();
+		if (!options.KeepBase)
+		{
+			old.AddRange(MainExtensions.Select(ext => Path.Combine(dir, $"_main.{world.SaveNumber}{ext}")));
+			old.AddRange(updated.Keys.Select(c => Path.Combine(dir, c.FileName)));
+		}
+		if (options.Drop != null)
+		{
+			old.AddRange(options.Drop.Where(f => !newFiles.Contains(f)));
+		}
+		RemoveAll(old);
 		string what = string.Join(", ", new[] { written + created > 0 ? $"{written + created} zone(s)" : null, deleted.Count > 0 ? $"{deleted.Count} deleted object(s)" : null, addedCount > 0 ? $"{addedCount} new object(s)" : null, resets.Count > 0 ? $"{resets.Count} reset zone(s) ({removed - deleted.Count} objects cleared)" : null }.Where(x => x != null));
-		return new Result(true, $"Saved {what} to save #{newNumber}.", backup, written, created, skipped, removed, addedCount, resets.Count);
+		return new Result(true, $"Saved {what} to save #{newNumber}.", null, written, created, skipped, removed, addedCount, resets.Count) { Files = newFiles };
 	}
 
 	// Mirrors TerrainComp.Save: a GZip-compressed ZPackage.
@@ -328,33 +339,40 @@ public static class WorldWriter
 		fs.Flush(flushToDisk: true);
 	}
 
-	private static string Backup(string dir)
+	private static readonly string[] MainExtensions = { ".ok", ".chunks", ".db2", ".fwl2" };
+
+	private static void RemoveAll(IEnumerable<string> files)
 	{
-		string trimmed = dir.TrimEnd(Path.DirectorySeparatorChar);
-		string backup = $"{trimmed}_backup_terraineditor-{DateTime.Now:yyyyMMdd-HHmmss}";
-		// Two saves in the same second each get their own backup.
-		for (int n = 2; Directory.Exists(backup); n++)
+		foreach (string f in files)
 		{
-			backup = $"{trimmed}_backup_terraineditor-{DateTime.Now:yyyyMMdd-HHmmss}-{n}";
+			try
+			{
+				File.Delete(f);
+			}
+			catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+			{
+			}
 		}
-		Directory.CreateDirectory(backup);
-		foreach (string file in Directory.GetFiles(trimmed))
-		{
-			File.Copy(file, Path.Combine(backup, Path.GetFileName(file)));
-		}
-		return backup;
 	}
 
-	private static void Restore(string backup, string dir)
+	// The highest save number in a world folder (-1: none).
+	private static int LatestNumber(string dir) => Directory.GetFiles(dir, "_main.*.chunks")
+		.Select(f => Path.GetFileName(f).Split('.')).Where(p => p.Length == 3 && int.TryParse(p[1], out _)).Select(p => int.Parse(p[1], System.Globalization.CultureInfo.InvariantCulture)).DefaultIfEmpty(-1).Max();
+
+	// The world folder down to its latest save: every other save number's files and the chunk files its
+	// index does not list go (an open world's base, once it is left).
+	public static void Prune(string dir)
 	{
-		foreach (string file in Directory.GetFiles(dir))
+		int latest = LatestNumber(dir);
+		if (latest < 0)
 		{
-			File.Delete(file);
+			return;
 		}
-		foreach (string file in Directory.GetFiles(backup))
-		{
-			File.Copy(file, Path.Combine(dir, Path.GetFileName(file)));
-		}
+		WorldSave now = WorldSave.Load(dir);
+		var keep = now.Chunks.Select(c => c.FileName).ToHashSet();
+		var old = Directory.GetFiles(dir, "_main.*").Where(f => Path.GetFileName(f).Split('.') is [_, var n, _] && n != latest.ToString(System.Globalization.CultureInfo.InvariantCulture))
+			.Concat(Directory.GetFiles(dir, "*.chunk").Where(f => !keep.Contains(Path.GetFileName(f))));
+		RemoveAll(old.ToList());
 	}
 
 	internal static string? Verify(string dir, WorldSave before, IReadOnlyList<ZoneEdit> saved, int created, int removed, HashSet<(int, int)> groundReset, IReadOnlyList<ZoneReset> resets)
