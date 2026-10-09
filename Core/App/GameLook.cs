@@ -80,6 +80,7 @@ public static class GameLook
 		catch
 		{
 		}
+		ConvertShader();
 		bool present = Present();
 		if (valheim == null)
 		{
@@ -148,7 +149,17 @@ public static class GameLook
 			{
 				lock (Lock)
 				{
-					if (p.ExitCode == 0 && Present())
+					Console.WriteLine($"game look: the exporter ended (exit code {p.ExitCode})");
+					string? shaderProblem = null;
+					if (p.ExitCode == 0)
+					{
+						shaderProblem = ConvertShader();
+					}
+					if (shaderProblem != null)
+					{
+						Set("failed", "Copying the game's look failed: " + shaderProblem);
+					}
+					else if (p.ExitCode == 0 && Present())
 					{
 						File.WriteAllText(MarkerPath, JsonSerializer.Serialize(new Marker(valheim, build, ExporterVersion, DateTime.Now)));
 						Set("ready", "The game's look is ready.");
@@ -159,6 +170,7 @@ public static class GameLook
 					}
 				}
 			};
+			Console.WriteLine($"game look: copying from {valheim} (Steam build {(build.Length > 0 ? build : "unknown")})");
 			p.Start();
 			p.BeginOutputReadLine();
 			p.BeginErrorReadLine();
@@ -174,6 +186,7 @@ public static class GameLook
 		{
 			return;
 		}
+		Console.WriteLine("game look: " + Regex.Replace(line, @"^\d\d:\d\d:\d\d ", ""));
 		lock (Lock)
 		{
 			_log.Add(line);
@@ -186,8 +199,34 @@ public static class GameLook
 
 	private static void Set(string state, string? message)
 	{
+		if (state != State || message != Message)
+		{
+			Console.WriteLine($"game look: {state}{(message == null ? "" : ": " + message)}");
+		}
 		State = state;
 		Message = message;
+	}
+
+	// A copy from Valheim for Windows brings the terrain shader as SPIR-V (its Vulkan program): made
+	// into GLSL here (TerrainShader). Null when done or not needed, else what went wrong.
+	private static string? ConvertShader()
+	{
+		string terrain = Path.Combine(Dir, "terrain");
+		if (File.Exists(Path.Combine(terrain, TerrainShader.GlslFile)) || !File.Exists(Path.Combine(terrain, TerrainShader.SpirvFile)))
+		{
+			return null;
+		}
+		try
+		{
+			TerrainShader.ConvertIn(terrain);
+			Console.WriteLine("game look: terrain shader made from its Vulkan program");
+			return null;
+		}
+		catch (Exception e)
+		{
+			Console.WriteLine($"game look: the terrain shader could not be made: {e}");
+			return e.Message;
+		}
 	}
 
 	// Rough progress 0..1 from the exporter's output: the bundle scan, then the models.

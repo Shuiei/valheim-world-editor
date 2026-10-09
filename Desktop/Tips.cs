@@ -317,6 +317,7 @@ public static class Tips
 		// ---- Start page
 		["start.settings"] = "Where the game, BepInEx and worlds are on this computer.",
 		["start.docs"] = "The editor's documentation, in your web browser.",
+		["start.log"] = "Opens the editor's log (ValheimWorldEditor.log, started over at each run). Attach it to a bug report on GitHub: it says what the editor did and what went wrong.",
 		["start.game"] = "Edit the world you are playing in, single player or the one you host. You see the changes in game right away.",
 		["start.server"] = "Edit your server's world while people play. The editor connects to the server itself.",
 		["start.offline"] = "Edit world files on this computer with the game closed, then start the game again.",
@@ -348,6 +349,7 @@ public static class Tips
 		["look.browse"] = "Choose the Valheim folder.",
 		["look.use"] = "Copy the game's look from this folder.",
 		["look.retry"] = "Try to copy the game's look again.",
+		["look.log"] = "Opens the editor's log (ValheimWorldEditor.log), with what the copy said before it stopped. Attach it to a bug report on GitHub.",
 
 		// ---- Settings
 		["settings.valheim"] = "The Valheim game folder (with valheim_Data). Empty: found in the Steam libraries.",

@@ -32,6 +32,8 @@ public sealed class StartPage
 	// Documentation: the project's page, in the web browser.
 	internal Button DocsLink { get; } = new Button { Content = Icons.With("help", "Documentation"), FontSize = 11, Padding = new Thickness(6, 2) }.Classed("ghost");
 	internal Func<Uri, Task<bool>> OpenUrl { get; set; } = _ => Task.FromResult(false);
+	// Open log: ValheimWorldEditor.log in the system's text viewer, to attach to a bug report.
+	internal Button LogLink { get; } = new Button { Content = "Open log", FontSize = 11, Padding = new Thickness(6, 2) }.Classed("ghost");
 
 	internal GameLookBanner LookBanner { get; }
 	internal Dictionary<string, Button> ModeButtons { get; } = new();
@@ -77,12 +79,14 @@ public sealed class StartPage
 	public StartPage(AppSettings settings, string? lastError = null)
 	{
 		_settings = settings;
-		LookBanner = new GameLookBanner(settings) { PickFolder = t => PickFolder(t) };
+		LookBanner = new GameLookBanner(settings) { PickFolder = t => PickFolder(t), OpenLog = () => OpenLog() };
 		var settingsButton = new Button { Content = Icons.With("settings", "Settings"), FontSize = 13 }.Classed("ghost");
 		settingsButton.Tip("start.settings");
 		DocsLink.Tip("start.docs");
 		settingsButton.Click += (_, _) => SettingsRequested?.Invoke();
 		DocsLink.Click += async (_, _) => await OpenUrl(new Uri(DocsUrl));
+		LogLink.Tip("start.log");
+		LogLink.Click += async (_, _) => await OpenLog();
 		var modes = new UniformGrid { Columns = 4 };
 		foreach (var (key, title, tag, text, icon) in new[]
 		{
@@ -186,7 +190,7 @@ public sealed class StartPage
 						Orientation = Orientation.Horizontal,
 						Spacing = 10,
 						Margin = new Thickness(0, 24, 0, 0),
-						Children = { DocsLink, new TextBlock { Text = $"Settings, saved servers and log: {Tilde(AppSettings.DataDir)}", Foreground = Muted, FontSize = 11, VerticalAlignment = VerticalAlignment.Center } },
+						Children = { DocsLink, LogLink, new TextBlock { Text = $"Settings, saved servers and log: {Tilde(AppSettings.DataDir)}", Foreground = Muted, FontSize = 11, VerticalAlignment = VerticalAlignment.Center } },
 					},
 				},
 			},
@@ -330,6 +334,8 @@ public sealed class StartPage
 		_settings.Save();
 		OpenRequested?.Invoke(() => WorldSession.OpenLive(live, label), what);
 	}
+
+	internal Task<bool> OpenLog() => OpenUrl(new Uri(Path.GetFullPath(Log.FilePath)));
 
 	internal void OpenFolder(string path)
 	{

@@ -4,6 +4,22 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.15.5 — 2026-10-09
+
+### Fixed
+- Copying the game's look works with Valheim for Windows. It stopped with "ValueError: 15 is not in
+  list": the Windows game has its terrain shader for Direct3D and Vulkan only, and the copy looked
+  for the OpenGL one (which only the Linux and Mac games have). It now takes the Vulkan one there,
+  and the editor turns it into the same shader: the ground looks as it does from a Linux game.
+
+### Added
+- **Open log**, at the bottom of the start page and when copying the game's look fails: opens the
+  editor's log, to attach to a bug report on GitHub.
+- The log is now `ValheimWorldEditor.log` (was `log.txt`), started over at each run like the game's
+  `LogOutput.log`, and says more: each line has its time, and it holds the game-look copy's own
+  output (the error that stopped it, too), which Valheim folder and game build it copied from, and
+  errors in background tasks.
+
 ## v1.15.4 — 2026-10-09
 
 ### Fixed

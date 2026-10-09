@@ -14,9 +14,10 @@ public static class Program
 	public static void Main(string[] args)
 	{
 		Options.Parse(args);
-		// Everything said also goes to log.txt in the data folder (a window app has no console on Windows).
+		// Everything said also goes to ValheimWorldEditor.log in the data folder (a window app has no console on Windows).
 		TerrainEditor.App.Log.Start(BuildInfo.Version);
 		AppDomain.CurrentDomain.UnhandledException += (_, e) => Options.Say($"crash: {e.ExceptionObject}");
+		TaskScheduler.UnobservedTaskException += (_, e) => Options.Say($"error in a background task: {e.Exception}");
 		// Logging out, shutting down or `kill` (SIGTERM, SIGHUP): the tunnel and the game-look copy stop,
 		// then the app ends (changes not saved are lost, as when the computer turns off).
 		using var term = System.Runtime.InteropServices.PosixSignalRegistration.Create(System.Runtime.InteropServices.PosixSignal.SIGTERM, Quit);
