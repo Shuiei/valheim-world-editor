@@ -109,6 +109,9 @@ the plugin is unchanged in versions without that part.
   other).
 - Areas with very many objects of one kind (tens of thousands of one piece) open, save and switch
   the look without a pause of a second or more.
+- Worlds open and save faster: reading a world looked through every edited zone for each object.
+  A world of 355,000 objects and 78 edited zones reads in 0.24 s instead of 0.57 s; worlds with
+  thousands of edited zones gain much more.
 
 ### WorldEditorBridge
 - An apply the game takes more than 30 seconds to start (a world save on the server) is no longer

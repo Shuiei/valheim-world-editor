@@ -520,12 +520,11 @@ public sealed class WorldSave
 			// A runestone: listed under its location's name (see PrefabCatalog.RunestoneLocations).
 			Objects.Add((id, location, position, rotation, scale));
 		}
-		foreach (TerrainZone z in TerrainZones)
+		// Only this object's own terrain data can still lack its end (the last zone added, if it is this
+		// object's): looking through every zone for each object made loading a large world slow.
+		if (terrain && TerrainZones[^1].Source is { End: < 0 } src)
 		{
-			if (z.Source is { } src && src.File == file && src.Start == start && src.End < 0)
-			{
-				z.Source = src with { End = end };
-			}
+			TerrainZones[^1].Source = src with { End = end };
 		}
 	}
 
