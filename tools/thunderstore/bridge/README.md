@@ -110,3 +110,9 @@ In `BepInEx/config/Tie.WorldEditorBridge.cfg`:
 - [Live editing in detail](https://github.com/Shuiei/valheim-world-editor/blob/main/docs/live-mode.md)
 - [Report a problem or suggest an idea](https://github.com/Shuiei/valheim-world-editor/issues)
 - [What changed in each version](https://github.com/Shuiei/valheim-world-editor/blob/main/CHANGELOG.md)
+
+## License
+
+[MIT](https://github.com/Shuiei/valheim-world-editor/blob/main/LICENSE), © 2026 Shuiei. The source
+is on [GitHub](https://github.com/Shuiei/valheim-world-editor). Not affiliated with or endorsed by
+Iron Gate or Coffee Stain.
