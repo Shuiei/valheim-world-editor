@@ -276,11 +276,12 @@ public sealed class WorldSession : IDisposable
 		}
 		try
 		{
-			var zones = Edits.All().Where(e => e.Changed).ToList();
+			// Copies as sent: edits made while the game answers are not marked as applied.
+			var zones = Edits.All().Where(e => e.Changed).Select(e => e.Clone()).ToList();
 			if (zones.Count > 0)
 			{
 				await live.ApplyTerrain(zones.Select(e => (e.ZoneX, e.ZoneZ, WorldWriter.EncodeTerrain(e))).ToList());
-				Edits.MarkApplied(zones.Select(e => (e.ZoneX, e.ZoneZ)));
+				Edits.MarkApplied(zones);
 				done.Add($"{zones.Count} zone(s) of ground");
 			}
 			string objects = await LiveSync.Apply(World, Edits, live);

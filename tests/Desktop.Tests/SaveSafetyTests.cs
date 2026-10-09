@@ -86,4 +86,31 @@ public class SaveSafetyTests
 		Assert.Equal(1, again.UndoUnapplied());
 		Assert.Equal(3, again.UndoList.Count);
 	}
+
+	// Live: a stroke made while the game answers an Apply is not marked as applied; it stays pending
+	// and goes with the next Apply.
+	[Fact]
+	public async Task AStrokeDuringALiveApplyStaysPending()
+	{
+		using var game = new FakeGame();
+		var world = await WorldSession.OpenLive(new LiveBridge(game.Url, game.Token), FakeGame.Label());
+		var s = WorldScene.Load(world, 0, 0, 1).Session!;
+		s.Shape(32, 32, Two, 3, 0, "raise");
+		game.HoldTerrain = new(TaskCreationOptions.RunContinuationsAsynchronously);
+		var applying = s.ApplyLive();
+		await game.TerrainArrived.Task;
+		s.Shape(34, 34, Two, 3, 0, "raise");
+		game.HoldTerrain.SetResult();
+		var o = await applying;
+		Assert.True(o.Done, o.Message);
+		Assert.Equal(1, world.Pending.Zones);
+		Assert.Equal(1, s.UnappliedSteps);
+		game.HoldTerrain = null;
+		int sent = game.Terrain.Count;
+		o = await s.ApplyLive();
+		Assert.True(o.Done, o.Message);
+		Assert.Equal(sent + 1, game.Terrain.Count);
+		Assert.Equal(0, world.Pending.Zones);
+		Assert.Equal(0, s.UnappliedSteps);
+	}
 }

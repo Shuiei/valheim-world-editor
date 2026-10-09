@@ -292,6 +292,29 @@ public sealed class EditStore
 		}
 	}
 
+	// Live: the zones as they were sent to the game (copies taken when sending). The game has those;
+	// a zone changed again while they were on the way stays changed, to be sent next.
+	public void MarkApplied(IReadOnlyList<ZoneEdit> sent)
+	{
+		lock (_lock)
+		{
+			foreach (ZoneEdit s in sent)
+			{
+				var key = (s.ZoneX, s.ZoneZ);
+				var applied = s.Clone();
+				applied.Changed = false;
+				applied.ExistsInWorld = true;
+				_baseline[key] = applied;
+				if (_zones.TryGetValue(key, out ZoneEdit? e))
+				{
+					e.ExistsInWorld = true;
+					e.Changed = !e.SameGround(s);
+				}
+			}
+			Version++;
+		}
+	}
+
 	// Zones the editor has put back to their saved / applied state (discarding pending changes).
 	public void MarkUnchanged(IEnumerable<(int X, int Z)> zones)
 	{

@@ -731,6 +731,12 @@ public sealed class EditSession
 	public async Task<WorldSession.Outcome> ApplyLive()
 	{
 		var owner = Scene.Owner!;
+		// The steps there are now: a step made while the game answers may not be in what was sent.
+		List<Change> before;
+		lock (_lock)
+		{
+			before = _undo.ToList();
+		}
 		var o = await owner.ApplyLive();
 		lock (_lock)
 		{
@@ -743,7 +749,7 @@ public sealed class EditSession
 				Ground.TakeEdits(Edits);
 				if (o.Done)
 				{
-					foreach (var c in _undo)
+					foreach (var c in before)
 					{
 						c.Applied = true;
 					}

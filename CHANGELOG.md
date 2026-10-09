@@ -17,6 +17,9 @@ the plugin is unchanged in versions without that part.
 - **Area → Backup** no longer restores another world's backup: a folder chosen with "Another
   folder…" stays in the list when another world is opened, and choosing it there used the backup
   read for the first world without checking its seed.
+- Live: ground changed while **Apply live** waits for the game (a second stroke with Auto apply on)
+  is no longer lost. It was marked as applied with the first stroke but never sent: players did
+  not see it, and Discard did not take it back. It now stays pending and goes with the next apply.
 
 ## v1.15.5 — 2026-10-09
 
