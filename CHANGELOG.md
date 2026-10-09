@@ -78,6 +78,8 @@ the plugin is unchanged in versions without that part.
   edit: with a slope limit, most of a mountain was left out in a ragged pattern.
 - Copies and blueprints keep objects of kinds the editor has no name for (from mods): they are
   written as their number and came back as another, unknown kind, left out when pasted.
+- The Area tool's **Restore** also takes back No limit ground (a mountain, a deep paste), as the
+  Restore brush does: over a mountain it changed nothing to be seen.
 
 ### WorldEditorBridge
 - An apply the game takes more than 30 seconds to start (a world save on the server) is no longer
