@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Download the latest version
+    url: https://github.com/Shuiei/valheim-world-editor/releases/latest
+    about: The editor and the WorldEditorBridge plugin. Use the same version of both.
+  - name: Read the guide
+    url: https://github.com/Shuiei/valheim-world-editor#readme
+    about: Setting up, the three ways to edit, and common questions.

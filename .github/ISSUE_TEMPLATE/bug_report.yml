@@ -1,0 +1,82 @@
+name: Bug report
+description: Something is wrong, crashes or does not work as described.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time. Please attach the editor's log: **Open log** at the bottom of the
+        start page opens it. A new `ValheimWorldEditor.log` is started at each run, so save it
+        before starting the editor again.
+
+  - type: input
+    id: version
+    attributes:
+      label: Editor version
+      description: Shown at the bottom of the start page.
+      placeholder: "1.15.5"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - Windows 10/11
+        - Linux
+        - Other (say below)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: mode
+    attributes:
+      label: How were you editing?
+      options:
+        - My game (live, single player or hosted)
+        - A dedicated server (live, over SSH)
+        - A saved world (offline)
+        - The Workshop
+        - Not in a world yet (start page)
+    validations:
+      required: true
+
+  - type: input
+    id: plugin
+    attributes:
+      label: WorldEditorBridge plugin version
+      description: Live modes only. It should be the same version as the editor.
+      placeholder: "1.15.5"
+
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what happened instead.
+      placeholder: |
+        1. Opened the world "MyWorld" on the map
+        2. Selected the Terrain tool, raised the ground at zone 3,-2
+        3. Expected … but …
+    validations:
+      required: true
+
+  - type: textarea
+    id: log
+    attributes:
+      label: Log
+      description: Drag `ValheimWorldEditor.log` here, or paste the relevant part.
+      render: text
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Screenshots, GPU, anything else
+      description: Screenshots help a lot for drawing problems. For those, also say your graphics card and driver.
+
+  - type: checkboxes
+    id: world
+    attributes:
+      label: World safety
+      options:
+        - label: My world was damaged or lost changes (we will look at this first)
