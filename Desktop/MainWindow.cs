@@ -1334,8 +1334,9 @@ public sealed partial class MainWindow : Window
 
 	private void OnKey(object? sender, Avalonia.Input.KeyEventArgs e)
 	{
-		// Typing in a box: its keys are its own.
-		if (e.Source is TextBox)
+		// Typing in a box: its keys are its own. The keys below are the 3D editor's: on the start page or
+		// the map they would act on the area left open behind it (an undo pushed live, unseen).
+		if (e.Source is TextBox || _pages.Content != _editorPage)
 		{
 			return;
 		}

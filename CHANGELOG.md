@@ -20,6 +20,9 @@ the plugin is unchanged in versions without that part.
 - Live: ground changed while **Apply live** waits for the game (a second stroke with Auto apply on)
   is no longer lost. It was marked as applied with the first stroke but never sent: players did
   not see it, and Discard did not take it back. It now stays pending and goes with the next apply.
+- The editor's keys (Ctrl+Z, Ctrl+Y, Ctrl+S, Ctrl+V, the tool keys) do nothing on the start page
+  and the map. On the map they acted on the area left open behind it: Ctrl+Z undid its last step
+  unseen (live with Auto apply on, in the game too).
 
 ## v1.15.5 — 2026-10-09
 
