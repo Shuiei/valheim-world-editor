@@ -180,4 +180,20 @@ public class PasteTests
 		Assert.Equal(before, H(s, 60, 60), 3);
 		Assert.False(s.Scene.Things[0].Gone);
 	}
+
+	// The paste's ghost (drawn before clicking) is where the paste puts each object, lowered or raised
+	// by Height (Ctrl + wheel in the window).
+	[Fact]
+	public void TheGhostIsWhereThePastePutsThem()
+	{
+		var s = Area();
+		var paste = new PasteTool { Clip = CopyData.FromArea(Box(32, 32, 48, 48), s.Ground, s.Scene, new[] { 0 }, _ => "Beech1"), Turn = 90, Offset = -2 };
+		float ox = s.Scene.X0 * 64f - 32f, oz = s.Scene.Z0 * 64f - 32f;
+		var ghost = Assert.Single(paste.Ghosts(new Vector2(90, 90), g => H(s, (int)MathF.Round(g.X), (int)MathF.Round(g.Y)), ox, oz));
+		var (_, _, add) = paste.Apply(s.Ground, new Vector2(90, 90));
+		var placed = Assert.Single(add).Item1;
+		Assert.Equal(placed.Position, ghost.Position);
+		Assert.Equal(placed.Rotation, ghost.Rotation);
+		Assert.Equal(Beech, ghost.Prefab);
+	}
 }

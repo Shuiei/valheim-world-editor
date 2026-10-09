@@ -24,6 +24,8 @@ the plugin is unchanged in versions without that part.
 - In a world: a **Blueprints** button on the tool rail opens the library, to paste a blueprint made in
   the Workshop. **Clear the site** (Paste, on by default): the ground in a pasted building's way is
   dug down to its lowest piece, and the trees and rocks there are taken away.
+- Paste shows what it will place as see-through models (not only posts), at its height; Ctrl + wheel
+  lowers or raises it (into a hill: Clear the site digs it out).
 - **Select**: Ctrl + click adds to the selection; Shift + click takes the row from the last object
   clicked (wall 1, Shift + click wall 3: walls 1 to 3).
 - **Support check** (in the Workshop): each piece outlined in the colour the game gives its

@@ -171,6 +171,31 @@ public sealed class PasteTool
 		return (objs, outlines);
 	}
 
+	// The objects a paste at grid point at would place (as Apply places them, the ground as it is now):
+	// name, world position, rotation, scale; for drawing them as ghosts.
+	public List<(int Prefab, Vector3 Position, Vector3 Rotation, float Scale)> Ghosts(Vector2 at, Func<Vector2, float> heightAt, float ox, float oz)
+	{
+		var list = new List<(int, Vector3, Vector3, float)>();
+		if (Clip is not { } c || !Objects)
+		{
+			return list;
+		}
+		float baseH = heightAt(at) + Offset;
+		for (int k = 0; k < Count; k++)
+		{
+			var (ca, up) = CopyAt(at, k);
+			float anchor = (Direction == Along.Up ? baseH : heightAt(ca) + Offset) + up;
+			foreach (var o in c.Objects)
+			{
+				var p = ca + Xf(new Vector2(o.Dx, o.Dz));
+				float y = o.Follow ? heightAt(p) + o.Dy + up : anchor + o.Dy;
+				var r = o.Rotation;
+				list.Add((o.Prefab, new Vector3(ox + p.X, y, oz + p.Y), new Vector3(Mirror ? -r.X : r.X, (Mirror ? -r.Y : r.Y) - Turn, Mirror ? -r.Z : r.Z), o.Scale));
+			}
+		}
+		return list;
+	}
+
 	// Pastes at a grid point: the ground (shape and paint, with the copy's soft edge) and the objects,
 	// as new objects copied from the originals. Returns the ground points changed and their rectangle,
 	// and the objects to add (Piece: a player-built piece).

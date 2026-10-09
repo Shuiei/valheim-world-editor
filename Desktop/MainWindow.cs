@@ -1931,6 +1931,13 @@ public sealed partial class MainWindow : Window
 		// Building (the Workshop): Ctrl + wheel lifts the piece.
 		_view.CtrlWheel = (dir, shift) =>
 		{
+			// Pasting: the paste lowered (into a mountain: Clear the site digs it out) or raised.
+			if (Tools.Mode == ToolMode.Paste)
+			{
+				PastePanel.OffsetBox.Value = Math.Round((PastePanel.OffsetBox.Value ?? 0) + dir * (shift ? 0.1m : 0.5m), 2);
+				_message.Text = $"Paste height: {PastePanel.OffsetBox.Value:+0.0#;-0.0#;0} m from the ground clicked (Ctrl + wheel; Shift: 0.1 m).";
+				return true;
+			}
 			if (Tools.Mode != ToolMode.Place || !PlaceTool.Building)
 			{
 				return false;

@@ -88,7 +88,7 @@ public sealed class PastePanel
 					new WrapPanel { ItemSpacing = 4, LineSpacing = 4, Children = { TurnButton, MirrorButton, DoneButton } },
 					new TextBlock
 					{
-						Text = "Click to place; the copied ground keeps its shape relative to the point you click. Height moves the paste up or down.",
+						Text = "Click to place; the copied ground keeps its shape relative to the point you click. Height (or Ctrl + wheel; Shift: 0.1 m) moves the paste up or down: lower a building into a hill, and Clear the site digs it out.",
 						FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap,
 					},
 				},

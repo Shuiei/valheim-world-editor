@@ -592,15 +592,28 @@ public sealed class GlView : OpenGlControlBase
 	}
 
 	private uint _ghostVbo;
-	// The Place tool's preview drawn with the models, see-through. Kinds whose model is not there yet
-	// keep their posts (DrawPlace). Returns the prefabs drawn.
+	// The kinds the paste's ghost drew this frame (their posts are left out).
+	private HashSet<int>? _pasteGhosts;
+	// The Place tool's preview, or the Paste tool's (the building where it would land), drawn with the
+	// models, see-through. Kinds whose model is not there yet keep their posts (DrawPlace, the paste's
+	// outline). Returns the prefabs drawn.
 	private unsafe HashSet<int> DrawGhosts(WorldScene s, Matrix4x4 vp)
 	{
 		var drawn = new HashSet<int>();
-		if (_mode != ToolMode.Place || Place is not { } pl || pl.Shown.Length == 0)
+		List<(int Prefab, Vector3 Position, Vector3 Rotation, float Scale)> shown;
+		if (_mode == ToolMode.Place && Place is { } pl && pl.Shown.Length > 0)
+		{
+			shown = pl.Shown.Select(o => (TerrainEditor.Save.StableHash.Of(o.Name), o.Position, o.Rotation, o.Scale)).ToList();
+		}
+		else if (_mode == ToolMode.Paste && Paste.At is { } pat && Paste.Clip != null)
+		{
+			shown = Paste.Ghosts(pat, GridHeight, s.X0 * 64f - 32f, s.Z0 * 64f - 32f);
+		}
+		else
 		{
 			return drawn;
 		}
+		_pasteGhosts = _mode == ToolMode.Paste ? drawn : null;
 		if (_ghostVbo == 0)
 		{
 			_ghostVbo = _gl.GenBuffer();
@@ -612,9 +625,9 @@ public sealed class GlView : OpenGlControlBase
 		_gl.DepthMask(false);
 		int uColor = _gl.GetUniformLocation(_objectProg, "uColor"), uCut = _gl.GetUniformLocation(_objectProg, "uCutoff"),
 			uHasMap = _gl.GetUniformLocation(_objectProg, "uHasMap"), uUv = _gl.GetUniformLocation(_objectProg, "uUv");
-		foreach (var byKind in pl.Shown.GroupBy(o => o.Name))
+		foreach (var byKind in shown.GroupBy(o => o.Prefab))
 		{
-			int prefab = TerrainEditor.Save.StableHash.Of(byKind.Key);
+			int prefab = byKind.Key;
 			bool piece = TerrainEditor.Terrain.PieceCatalog.Get(prefab)?.Tool != null;
 			var g = KindGroup(prefab, piece);
 			if (!g.Ready || g.Batches.Count == 0)
@@ -1767,7 +1780,7 @@ public sealed class GlView : OpenGlControlBase
 			// notch (and some systems send Shift's as sideways): added up until a whole one.
 			bool ctrlW = e.KeyModifiers.HasFlag(KeyModifiers.Control), altW = e.KeyModifiers.HasFlag(KeyModifiers.Alt);
 			// Ctrl: building lifts the piece; Alt: the tools that turn things turn them. Else the view zooms.
-			bool wants = ctrlW ? Mode == ToolMode.Place && Place?.Tool.Building == true && CtrlWheel != null
+			bool wants = ctrlW ? (Mode == ToolMode.Place && Place?.Tool.Building == true || Mode == ToolMode.Paste) && CtrlWheel != null
 				: altW && AltWheel != null && Mode is ToolMode.Place or ToolMode.Paste or ToolMode.Select;
 			if (wants)
 			{
@@ -2640,15 +2653,22 @@ public sealed class GlView : OpenGlControlBase
 		}
 		if (_mode == ToolMode.Paste && Paste.At is { } pat && Paste.Clip != null)
 		{
-			// Where the paste would go: its outlines and a small post at each object.
+			// Where the paste would go: its outlines and a small post at each object whose model is not
+			// drawn as a ghost (DrawGhosts).
 			var (objs, outlines) = Paste.Preview(pat, GridHeight);
 			var data = new List<float>();
 			foreach (var o in outlines)
 			{
 				Ring(data, o, true, 0.3f);
 			}
-			foreach (var o in objs)
+			var ghosted = _pasteGhosts;
+			for (int k = 0; k < objs.Count; k++)
 			{
+				if (ghosted != null && ghosted.Contains(Paste.Clip.Objects[k % Paste.Clip.Objects.Count].Prefab))
+				{
+					continue;
+				}
+				var o = objs[k];
 				float x = o.X - (s.W - 1) / 2f, z = -(o.Z - (s.H - 1) / 2f);
 				data.AddRange(new[] { x, o.Y, z, x, o.Y + 1.2f, z, x - 0.3f, o.Y + 0.5f, z, x + 0.3f, o.Y + 0.5f, z });
 			}

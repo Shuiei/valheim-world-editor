@@ -201,7 +201,7 @@ public static class Tips
 		// ---- Paste
 		["paste.ground"] = "Paste the copied ground shape and paint.",
 		["paste.objects"] = "Paste the copied objects.",
-		["paste.offset"] = "Move the pasted ground and objects up or down (m).",
+		["paste.offset"] = "Move the pasted ground and objects up or down (m); Ctrl + wheel too (Shift: 0.1 m). Lower a building into a hill: Clear the site digs the ground in its way.",
 		["paste.turn"] = "Turn the paste a quarter turn (R). , and . or Alt + wheel turn it by 1° (Shift: 15°).",
 		["paste.mirror"] = "Mirror the paste (F).",
 		["paste.done"] = "Stop pasting (Esc).",
