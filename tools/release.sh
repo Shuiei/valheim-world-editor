@@ -26,7 +26,8 @@ package() {   # $1 runtime id, $2 program file name (users start it by double-cl
      "$repo/tools/zdo_scan.py" "$repo/Core/WorldGen/pieces.json" "$dir/export-game-files/"
   "$repo/tools/make-python-runtime.sh" "$rid" "$dir/export-game-files" >/dev/null
   cp "$repo/tools/$readme" "$dir/README.txt"
-  sed -i "s/@VERSION@/$version/" "$dir/README.txt"
+  # @VERSION@: v1.2.3 (the editor's packages); @NUMBER@: 1.2.3 (the plugin's zip, WorldEditorBridge-1.2.3.zip).
+  sed -i -e "s/@VERSION@/$version/g" -e "s/@NUMBER@/${version#v}/g" "$dir/README.txt"
   # Windows readers get Windows line ends.
   if [ "$rid" = win-x64 ]; then find "$dir" -maxdepth 2 -name README.txt -exec sed -i 's/$/\r/' {} \;; fi
 }
