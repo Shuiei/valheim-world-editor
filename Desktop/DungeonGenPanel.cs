@@ -46,6 +46,13 @@ public sealed class DungeonGenPanel
 	private readonly StackPanel _levelButtons = new() { Orientation = Orientation.Horizontal, Spacing = 4 };
 	private readonly List<Control> _piecesOnly = new();
 	private DungeonGen.Result? _result;
+	// Made again once the settings stop changing for a moment, away from the window's thread; only the
+	// newest is shown.
+	private readonly Avalonia.Threading.DispatcherTimer _wait = new() { Interval = TimeSpan.FromMilliseconds(300) };
+	private int _generation;
+
+	// The dungeon being made for the settings shown (tests wait for it).
+	internal Task Pending { get; private set; } = Task.CompletedTask;
 	private int _level;
 	private bool _quiet;
 
@@ -150,6 +157,7 @@ public sealed class DungeonGenPanel
 			},
 		};
 		DockPanel.SetDock(Randomize, Dock.Right);
+		_wait.Tick += (_, _) => Make();
 		Changed();
 	}
 
@@ -186,16 +194,40 @@ public sealed class DungeonGenPanel
 		_decayText.Text = $"Ruin: {s.Decay * 100:0} %";
 		_loopsText.Text = $"Ways round: {(s.Loops == 0 ? "none (a tree)" : $"× {s.Loops:0.##}")}";
 		Name.PlaceholderText = DungeonGen.NameFor(s.Seed, s.Style, s.Biome);
-		try
+		Place.IsEnabled = false;
+		_wait.Stop();
+		_wait.Start();
+	}
+
+	private void Make()
+	{
+		_wait.Stop();
+		var s = Settings();
+		int generation = ++_generation;
+		Summary.Text = "Making it…";
+		Pending = Task.Run(() =>
 		{
-			_result = DungeonGen.Make(s);
-			Summary.Text = string.Join(" ", _result.Notes);
-		}
-		catch (Exception e)
+			try
+			{
+				return (Result: DungeonGen.Make(s), Error: (string?)null);
+			}
+			catch (Exception e)
+			{
+				return (Result: (DungeonGen.Result?)null, Error: e.Message);
+			}
+		}).ContinueWith(t =>
 		{
-			_result = null;
-			Summary.Text = "Could not make it: " + e.Message;
-		}
+			if (generation == _generation)
+			{
+				Show(t.Result.Result, t.Result.Error);
+			}
+		}, TaskScheduler.FromCurrentSynchronizationContext());
+	}
+
+	private void Show(DungeonGen.Result? result, string? error)
+	{
+		_result = result;
+		Summary.Text = result != null ? string.Join(" ", result.Notes) : "Could not make it: " + error;
 		Place.IsEnabled = _result != null;
 		var levels = _result?.Map?.Select(r => r.Level).Distinct().Order().ToList() ?? new List<int>();
 		_level = Math.Clamp(_level, 0, Math.Max(0, levels.Count - 1));
