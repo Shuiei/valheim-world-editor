@@ -24,6 +24,13 @@ the plugin is unchanged in versions without that part.
   - **Place in the world** puts it 5000 m above the view with a linked portal pair, as one undo
     step. It is written as a ruin, like the game's own dungeons. **Open in the Workshop** opens it as
     a blueprint.
+- **Blueprints keep what objects hold**: chests' contents, signs' texts, creatures (a dungeon's boss,
+  with its stars) and whether the building is a ruin. They go in the editor's own lines of the file,
+  which Homestead and PlanBuild skip, so the file still builds in game. They come back when the
+  blueprint is opened in the Workshop, saved from it, or placed in a world.
+- **Chest contents as in game** (inspector): the container's slots in a grid. Click one to choose its
+  item, how many and how good; empty it, or move it to another slot. A double click on an object
+  opens its inspector.
 - **Dungeon** tool: edit the rooms of Frost Caves, burial chambers, sunken crypts, infested mines and
   the game's other dungeons. The game builds a dungeon from a list of its rooms kept in the save
   (5000 m above its entrance); the tool edits that list, and the game builds what you make, no mod
@@ -44,6 +51,8 @@ the plugin is unchanged in versions without that part.
 - **Dungeon rooms** in the View panel shows or hides them.
 
 ### Fixed
+- Contents set in the inspector on a chest never opened were replaced by the game's own loot when it
+  first loaded. Such a chest is now marked as already filled.
 - The support check knows the pieces the game never checks: Mistlands' large black marble floor
   (also carts, ships and wards) stays up wherever it is and holds what stands on it, as in game. A
   building on such floors in the air no longer shows walls that would fall.

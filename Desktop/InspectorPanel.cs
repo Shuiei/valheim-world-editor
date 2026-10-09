@@ -75,6 +75,8 @@ public sealed class InspectorPanel
 	internal List<ItemRow>? Items { get; private set; }
 	private string _itemsAtOpen = "";
 	private (int W, int H) _grid;
+	private (int X, int Y)? _slot; // the slot picked in the grid
+	private bool _moving; // the next slot clicked takes the picked slot's item
 	private string? _inventoryError;
 
 	public InspectorPanel(Func<EditSession?> session)
@@ -229,6 +231,8 @@ public sealed class InspectorPanel
 			}
 		}
 		_itemsAtOpen = ItemsKey();
+		_slot = null;
+		_moving = false;
 		Render();
 	}
 
@@ -299,7 +303,18 @@ public sealed class InspectorPanel
 			ItemsBox.Children.Add(new TextBlock { Text = $"The contents cannot be read: {_inventoryError}", FontSize = 11, Foreground = Brushes.Orange, TextWrapping = TextWrapping.Wrap });
 			return;
 		}
-		ItemsBox.Children.Add(new Grid
+		if (w > 0 && h > 0)
+		{
+			SlotGrid(w, h);
+		}
+		var rows = new StackPanel { Spacing = 3 };
+		var details = new Expander
+		{
+			Header = new TextBlock { Text = "Every item's details", FontSize = 11 }, Content = rows, IsExpanded = w <= 0 || h <= 0 || Items.Any(i => i.X >= w || i.Y >= h),
+			HorizontalAlignment = HorizontalAlignment.Stretch, Padding = new Thickness(0),
+		}.Tip("inspect.details");
+		ItemsBox.Children.Add(details);
+		rows.Children.Add(new Grid
 		{
 			ColumnDefinitions = new ColumnDefinitions("*,54,44,50,40,40,26"),
 			ColumnSpacing = 3,
@@ -319,7 +334,7 @@ public sealed class InspectorPanel
 			x.Tip("inspect.removeItem");
 			x.Click += (_, _) => { Items.Remove(it); RenderItems(); Dirty(); };
 			bool bad = w > 0 && (it.X >= w || it.Y >= h);
-			ItemsBox.Children.Add(new Grid
+			rows.Children.Add(new Grid
 			{
 				ColumnDefinitions = new ColumnDefinitions("*,54,44,50,40,40,26"),
 				ColumnSpacing = 3,
@@ -360,7 +375,149 @@ public sealed class InspectorPanel
 			RenderItems();
 			Dirty();
 		};
-		ItemsBox.Children.Add(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Children = { add, tidy } });
+		rows.Children.Add(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Children = { add, tidy } });
+	}
+
+	// The container's slots as in game, w × h: each shows its item and how many. Click one to choose
+	// what it holds (or empty it); Move, then another slot, moves the item there (or swaps the two).
+	private void SlotGrid(int w, int h)
+	{
+		var grid = new Grid { HorizontalAlignment = HorizontalAlignment.Left };
+		for (int x = 0; x < w; x++)
+		{
+			grid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(Math.Min(46, 376.0 / w))));
+		}
+		for (int y = 0; y < h; y++)
+		{
+			grid.RowDefinitions.Add(new RowDefinition(new GridLength(46)));
+		}
+		for (int y = 0; y < h; y++)
+		{
+			for (int x = 0; x < w; x++)
+			{
+				var at = (x, y);
+				var it = Items!.FirstOrDefault(i => i.X == x && i.Y == y);
+				var cell = new Button
+				{
+					Margin = new Thickness(1), Padding = new Thickness(2), HorizontalAlignment = HorizontalAlignment.Stretch, VerticalAlignment = VerticalAlignment.Stretch,
+					HorizontalContentAlignment = HorizontalAlignment.Stretch, VerticalContentAlignment = VerticalAlignment.Stretch,
+					Background = it != null ? Ui.Panel2 : Ui.Bg, BorderThickness = new Thickness(_slot == at ? 2 : 1),
+					BorderBrush = _slot == at ? new SolidColorBrush(Ui.AccentColor) : Ui.Line,
+					Content = it == null ? null : new Grid
+					{
+						Children =
+						{
+							new TextBlock { Text = it.Name, FontSize = 9, TextWrapping = TextWrapping.Wrap, TextTrimming = TextTrimming.CharacterEllipsis, MaxLines = 2 },
+							new TextBlock { Text = it.Stack > 1 ? it.Stack.ToString(CultureInfo.InvariantCulture) : "", FontSize = 11, FontWeight = FontWeight.SemiBold,
+								HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Bottom },
+						},
+					},
+				}.Tip("inspect.slot");
+				if (it != null)
+				{
+					ToolTip.SetTip(cell, $"{it.Name} × {it.Stack} (slot {x + 1}, {y + 1})");
+				}
+				cell.Click += (_, _) =>
+				{
+					if (_moving && _slot is var (fx, fy) && _slot != at)
+					{
+						var from = Items!.FirstOrDefault(i => i.X == fx && i.Y == fy);
+						var to = Items!.FirstOrDefault(i => i.X == at.x && i.Y == at.y);
+						if (from != null)
+						{
+							(from.X, from.Y) = at;
+						}
+						if (to != null)
+						{
+							(to.X, to.Y) = (fx, fy);
+						}
+						Dirty();
+					}
+					_moving = false;
+					_slot = at;
+					RenderItems();
+				};
+				Grid.SetColumn(cell, x);
+				Grid.SetRow(cell, y);
+				grid.Children.Add(cell);
+			}
+		}
+		ItemsBox.Children.Add(grid);
+		if (_slot is not var (sx, sy) || sx >= w || sy >= h)
+		{
+			ItemsBox.Children.Add(new TextBlock { Text = "Click a slot to choose what it holds.", FontSize = 11, Foreground = Ui.Muted });
+			return;
+		}
+		// The picked slot: its item (any of the game's), how many, how good.
+		var item = Items!.FirstOrDefault(i => i.X == sx && i.Y == sy);
+		var pick = new AutoCompleteBox
+		{
+			Text = item?.Name ?? "", ItemsSource = PrefabCatalog.Items, FilterMode = AutoCompleteFilterMode.ContainsOrdinal, FontSize = 11, MinimumPrefixLength = 1,
+			Watermark = "Find an item…",
+		}.Tip("inspect.slotItem");
+		void Chosen()
+		{
+			string name = pick.Text?.Trim() ?? "";
+			var known = PrefabCatalog.Items.FirstOrDefault(n => string.Equals(n, name, StringComparison.OrdinalIgnoreCase));
+			if (known == null || known == item?.Name)
+			{
+				return;
+			}
+			if (item == null)
+			{
+				Items.Add(new ItemRow { Name = known, X = sx, Y = sy });
+			}
+			else
+			{
+				item.Name = known;
+			}
+			Dirty();
+			RenderItems();
+		}
+		pick.SelectionChanged += (_, _) => Chosen();
+		pick.LostFocus += (_, _) => Chosen();
+		var count = new NumericUpDown { Value = item?.Stack ?? 1, Minimum = 1, Maximum = 9999, Increment = 1, FormatString = "0", FontSize = 11, Width = 90, IsEnabled = item != null }.Tip("inspect.count");
+		count.ValueChanged += (_, e) =>
+		{
+			if (item != null)
+			{
+				item.Stack = (int)(e.NewValue ?? 1);
+				Dirty();
+			}
+		};
+		var quality = new NumericUpDown { Value = item?.Quality ?? 1, Minimum = 1, Maximum = 10, Increment = 1, FormatString = "0", FontSize = 11, Width = 70, IsEnabled = item != null }.Tip("inspect.quality");
+		quality.ValueChanged += (_, e) =>
+		{
+			if (item != null)
+			{
+				item.Quality = (int)(e.NewValue ?? 1);
+				Dirty();
+			}
+		};
+		var empty = new Button { Content = "Empty", FontSize = 11, IsEnabled = item != null }.Tip("inspect.emptySlot");
+		empty.Click += (_, _) =>
+		{
+			Items.Remove(item!);
+			Dirty();
+			RenderItems();
+		};
+		var move = new Button { Content = _moving ? "Click a slot…" : "Move", FontSize = 11, IsEnabled = item != null }.Tip("inspect.moveSlot");
+		move.Click += (_, _) =>
+		{
+			_moving = !_moving;
+			RenderItems();
+		};
+		ItemsBox.Children.Add(new TextBlock { Text = $"SLOT {sx + 1}, {sy + 1}", FontSize = 10, Foreground = Ui.Muted });
+		ItemsBox.Children.Add(pick);
+		ItemsBox.Children.Add(new StackPanel
+		{
+			Orientation = Orientation.Horizontal, Spacing = 6,
+			Children =
+			{
+				new TextBlock { Text = "How many", FontSize = 11, VerticalAlignment = VerticalAlignment.Center }, count,
+				new TextBlock { Text = "Quality", FontSize = 11, VerticalAlignment = VerticalAlignment.Center }, quality, empty, move,
+			},
+		});
 	}
 
 	private static Control Head(string t, int col) => Col(new TextBlock { Text = t, FontSize = 10, Foreground = Ui.Muted }, col);

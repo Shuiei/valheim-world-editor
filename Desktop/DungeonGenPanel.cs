@@ -119,7 +119,7 @@ public sealed class DungeonGenPanel
 				PlaceAsked?.Invoke(Settings(), _result);
 			}
 		};
-		ToWorkshop.Click += (_, _) => WorkshopAsked?.Invoke(Settings() with { BossKey = false, Made = DungeonGen.Made.Pieces });
+		ToWorkshop.Click += (_, _) => WorkshopAsked?.Invoke(Settings() with { Made = DungeonGen.Made.Pieces });
 		var pieces = new StackPanel
 		{
 			Spacing = 6,

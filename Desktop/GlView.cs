@@ -1785,6 +1785,11 @@ public sealed class GlView : OpenGlControlBase
 				// from the last object clicked.
 				SelectTool.Range = e.KeyModifiers.HasFlag(KeyModifiers.Shift) && !e.KeyModifiers.HasFlag(KeyModifiers.Control);
 				SelectTool.Down(p.Position, _surfaceSize, e.KeyModifiers.HasFlag(KeyModifiers.Shift) || e.KeyModifiers.HasFlag(KeyModifiers.Control), e.KeyModifiers.HasFlag(KeyModifiers.Alt), e.ClickCount);
+				if (e.ClickCount == 2)
+				{
+					// A double click on an object: its inspector (a chest's contents, a sign's text...).
+					Dispatcher.UIThread.Post(() => InspectAsked?.Invoke());
+				}
 				Wake();
 				return;
 			}
@@ -3154,6 +3159,9 @@ public sealed class GlView : OpenGlControlBase
 	private Matrix4x4 _lastViewProj;
 	private bool _selectionDirty;
 	public event Action<IReadOnlyList<WorldScene.Thing>>? SelectionChanged;
+
+	// A double click in Select mode.
+	public event Action? InspectAsked;
 	internal IReadOnlyCollection<int> Selected { get { lock (_selection) { return _selection.ToArray(); } } }
 
 	// The shown object under a point of the view (null: the ground or nothing is nearer), like the web

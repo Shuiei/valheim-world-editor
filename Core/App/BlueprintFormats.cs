@@ -13,11 +13,18 @@ namespace TerrainEditor.App;
 // quaternions. Terrain entries (shape;x;y;z;radius;rotation;smooth;paint) level and paint the ground.
 public static class BlueprintFormats
 {
-	public sealed record Piece(string Name, Vector3 Position, Vector3 Euler, float Scale);
+	// Data: values of the object's data the editor keeps for it (its own #EditorData lines).
+	public sealed record Piece(string Name, Vector3 Position, Vector3 Euler, float Scale, IReadOnlyList<TerrainEditor.Editing.ObjectField>? Data = null);
 
 	public sealed record TerrainMod(string Shape, Vector3 Position, float Radius, int Rotation, string Paint);
 
-	public sealed record Parsed(string Name, string? Creator, string? Description, List<Piece> Pieces, List<TerrainMod> Terrain, int SkippedLines);
+	// Ruin: written by the editor as a ruin (no builder; #EditorRuin), as generated dungeons are.
+	public sealed record Parsed(string Name, string? Creator, string? Description, List<Piece> Pieces, List<TerrainMod> Terrain, int SkippedLines, bool Ruin = false);
+
+	// The editor's own header lines (other mods skip header lines they do not know): an object's data,
+	// "#EditorData:n;section;key;value" (n: the object's line among the pieces, from 0), and a building
+	// written as a ruin. Homestead and PlanBuild build without them.
+	public const string DataHeader = "#EditorData:", RuinHeader = "#EditorRuin:1";
 
 	public static Parsed Parse(string fileName, string text)
 	{
@@ -27,7 +34,10 @@ public static class BlueprintFormats
 		string? creator = null, description = null;
 		List<Piece> pieces = new();
 		List<TerrainMod> terrain = new();
-		int skipped = 0;
+		int skipped = 0, line0 = 0;
+		bool ruin = false;
+		var data = new Dictionary<int, List<TerrainEditor.Editing.ObjectField>>();
+		var lines = new List<int>();
 		string section = "pieces";
 		foreach (string raw in text.Split('\n'))
 		{
@@ -40,6 +50,17 @@ public static class BlueprintFormats
 			if (line.StartsWith("#Creator:", StringComparison.Ordinal)) { creator = line[9..].Trim(); continue; }
 			if (line.StartsWith("#Description:", StringComparison.Ordinal)) { description = Unquote(line[13..].Trim()); continue; }
 			if (line.StartsWith("#Category:", StringComparison.Ordinal)) { continue; }
+			if (line == RuinHeader) { ruin = true; continue; }
+			if (line.StartsWith(DataHeader, StringComparison.Ordinal))
+			{
+				string rest = line[DataHeader.Length..];
+				int bar = rest.IndexOf(';');
+				if (bar > 0 && int.TryParse(rest[..bar], NumberStyles.Integer, CultureInfo.InvariantCulture, out int at) && TerrainEditor.Editing.ObjectField.Parse(rest[(bar + 1)..]) is { } f)
+				{
+					(data.TryGetValue(at, out var l) ? l : data[at] = new()).Add(f);
+				}
+				continue;
+			}
 			if (line == "#SnapPoints") { section = "snap"; continue; }
 			if (line == "#Terrain") { section = "terrain"; continue; }
 			if (line == "#Pieces") { section = "pieces"; continue; }
@@ -57,7 +78,9 @@ public static class BlueprintFormats
 						terrain.Add(ParseTerrain(line));
 						break;
 					case "pieces":
+						int n = line0++;
 						pieces.Add(vbuild ? ParseVBuild(line) : ParseBlueprintPiece(line));
+						lines.Add(n);
 						break;
 				}
 			}
@@ -66,7 +89,19 @@ public static class BlueprintFormats
 				skipped++;
 			}
 		}
-		return new Parsed(name, creator, description, pieces, terrain, skipped);
+		if (data.Count > 0 || ruin)
+		{
+			for (int k = 0; k < pieces.Count; k++)
+			{
+				var d = data.TryGetValue(lines[k], out var held) ? held : new List<TerrainEditor.Editing.ObjectField>();
+				if (ruin)
+				{
+					d.Add(TerrainEditor.Editing.ObjectField.NoBuilder);
+				}
+				pieces[k] = pieces[k] with { Data = d };
+			}
+		}
+		return new Parsed(name, creator, description, pieces, terrain, skipped, ruin);
 	}
 
 	private static Piece ParseBlueprintPiece(string line)
@@ -173,6 +208,10 @@ public static class BlueprintFormats
 				["name"] = p.Name, ["dx"] = R(p.Position.X - cx), ["dz"] = R(p.Position.Z - cz), ["dy"] = R(p.Position.Y - minY),
 				["rx"] = R(p.Euler.X), ["ry"] = R(p.Euler.Y), ["rz"] = R(p.Euler.Z), ["scale"] = MathF.Abs(p.Scale - 1f) < 1e-3f ? 0 : R(p.Scale), ["sourceId"] = null,
 			});
+			if (p.Data is { Count: > 0 } fields)
+			{
+				((JsonObject)objects[^1]!)["data"] = DataJson(fields);
+			}
 		}
 		int w = 1, h = 1;
 		int[] rel = { -32768 }, wt = { 0 }, pnt = { -255, -255, -255, -255 };
@@ -226,6 +265,12 @@ public static class BlueprintFormats
 	}
 
 	private static float R(float v) => MathF.Round(v * 1000f) / 1000f;
+
+	// An object's data in the clipboard format: its fields as text (ObjectField).
+	public static JsonArray DataJson(IEnumerable<TerrainEditor.Editing.ObjectField> fields) => new(fields.Select(f => (JsonNode)f.ToString()).ToArray());
+
+	public static List<TerrainEditor.Editing.ObjectField>? DataOf(JsonNode? data) =>
+		data is JsonArray a && a.Count > 0 ? a.Select(n => TerrainEditor.Editing.ObjectField.Parse((string?)n ?? "")).OfType<TerrainEditor.Editing.ObjectField>().ToList() : null;
 
 	private static bool Covers(TerrainMod t, float x, float z)
 	{

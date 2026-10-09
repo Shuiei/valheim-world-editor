@@ -213,6 +213,8 @@ public class DungeonToolTests
 	public void AnAddedRoomBringsWhatTheGamePutsInItUnlessSwitchedOff()
 	{
 		using var r = new Run();
+		// Never a door (doors come by chance): only the room and its contents are counted.
+		r.T.Random = () => 1f;
 		int things = r.Scene.Things.Count;
 		r.T.Choose("cave_new_crossroads01_ice");
 		r.PointAt(r.T.FreeEnds[0]);

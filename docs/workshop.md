@@ -52,6 +52,15 @@ lowest piece of each spot (the terrain reached each post), or, for Homestead blu
 them, at their terrain contact points. A piece with nothing below it at its spot therefore counts as
 on the ground.
 
+**What objects hold** goes with the blueprint: a chest's contents, a sign's text, a creature's stars
+(a dungeon's boss), and whether the building is a ruin (no builder, as generated dungeons are).
+Double-click an object (or select it and press **I**) to see or change what it holds; a chest shows
+its slots as in game. The editor writes all this in its own lines of the blueprint file, which
+Homestead and PlanBuild skip, so the same file still builds in game. When you place the blueprint in a
+world from the editor (Paste, or the Blueprints panel), its objects come back holding what they held.
+Built in game with Homestead, it is only the objects: the game makes chests empty and places no
+creatures.
+
 The Workshop keeps to building: the tool rail has only **Build**, **Select** and **View** (the
 ground tools, Area, Path, Mountain and the rest are for worlds), and there is no Mask, View panel or
 zone borders.

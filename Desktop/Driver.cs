@@ -247,6 +247,24 @@ public static class Driver
 			case "wait":
 				await Task.Delay(TimeSpan.FromMilliseconds(Math.Clamp(F(0), 0, 60000)));
 				return State(w);
+			case "inspect":
+			{
+				// inspect <prefab>: the first such object selected, its inspector open.
+				var scene = w.View.Scene ?? throw new InvalidOperationException("no area open");
+				// One holding something first (a chest with contents).
+				var all = Enumerable.Range(0, scene.Things.Count).Where(k => !scene.Things[k].Gone && scene.Things[k].Prefab == TerrainEditor.Save.StableHash.Of(a[1])).ToList();
+				int i = all.Cast<int?>().FirstOrDefault(k => scene.Session is { } ss && TerrainEditor.App.ObjectData.Bytes(scene.World, ss.Edits, scene.Things[k!.Value].Id) is { } b
+					&& TerrainEditor.Save.ZdoData.Parse(b).GetBytes(TerrainEditor.App.ObjectData.ItemsKey) != null) ?? (all.Count > 0 ? all[0] : -1);
+				if (i < 0)
+				{
+					throw new InvalidOperationException($"no {a[1]} here");
+				}
+				w.Tools.ChooseMode(ToolMode.Select);
+				w.View.Select(new[] { i });
+				w.View.Focus(scene.Things[i].Position);
+				w.Inspect();
+				return State(w);
+			}
 			case "camera":
 				w.View.Orbit(F(0), F(1), F(2), F(3), F(4), args.Length > 5 ? F(5) : null);
 				return State(w);

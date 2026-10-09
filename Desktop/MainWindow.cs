@@ -1689,6 +1689,7 @@ public sealed partial class MainWindow : Window
 		SelectPanel.AskName = initial => Dialogs.AskText(this, "Keep the selection", "Name of the selection:", initial);
 		SelectPanel.Confirm = text => Dialogs.Ask(this, "Saved selections", text, "Forget");
 		SelectPanel.InspectButton.Click += (_, _) => Inspect();
+		_view.InspectAsked += () => { if (_view.Selected.Count == 1) Inspect(); };
 		SelectPanel.ClaimButton.Click += (_, _) => Claim();
 		AskPlayerId = () => Dialogs.AskText(this, "Built by", "Player id to write as the builder (the number Valheim keeps for a character):");
 		History.Message += t => { _message.Text = t; UpdateSaveBar(); };

@@ -156,8 +156,10 @@ public partial class MainWindow
 		_view.CutY = arrival.Y + 3.5f;
 	}
 
-	// A generated dungeon as a blueprint (in the game's Homestead folder), opened in the Workshop. A
-	// blueprint keeps only objects, not their data: no key in a chest, so no locked gate.
+	// A generated dungeon as a blueprint (in the game's Homestead folder), opened in the Workshop. What
+	// its objects hold (the key in its chest, signs, the boss's stars) goes in the editor's own lines of
+	// the file, and the building is written as a ruin (no builder): the editor puts them back when the
+	// blueprint is placed in a world. Built in game with Homestead, it is only the objects.
 	internal async Task OpenGeneratedInWorkshop(DungeonGen.Settings settings)
 	{
 		var r = DungeonGen.Make(settings);
@@ -167,9 +169,12 @@ public partial class MainWindow
 		foreach (var it in r.Items)
 		{
 			var e = Dungeons.ToEuler(it.Rotation);
+			var data = (it.Data ?? Array.Empty<(string Section, string Key, string Value)>())
+				.Select(d => new ObjectField(d.Section, StableHash.Of(d.Key), d.Value)).Append(ObjectField.NoBuilder);
 			objects.Add(new System.Text.Json.Nodes.JsonObject
 			{
 				["name"] = it.Prefab, ["dx"] = it.Position.X - mx, ["dy"] = it.Position.Y - my, ["dz"] = it.Position.Z - mz, ["rx"] = e.X, ["ry"] = e.Y, ["rz"] = e.Z, ["scale"] = 0,
+				["data"] = BlueprintFormats.DataJson(data),
 			});
 		}
 		string folder = Homestead.Folder();

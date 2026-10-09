@@ -68,9 +68,11 @@ Like everything else in the editor, it is one step of the history (Ctrl+Z takes 
 you **Save to world** or **Apply live**. The dungeon is written as a ruin, with no builder, like the
 game's own: monsters leave its walls alone, and taking it apart gives back a third of the materials.
 
-**Open in the Workshop** opens it as a blueprint (in the game's Homestead folder), to look at it or
-build it by hand. A blueprint keeps only objects, not what they hold: there is no key in a chest, so
-it has no locked gate.
+**Open in the Workshop** opens it as a blueprint (in the game's Homestead folder), to change it there:
+open a chest to change what it holds, move rooms' furniture, add your own touches. The blueprint
+keeps what its objects hold (the key in its chest, the signs, the boss and its stars) and that it is
+a ruin. Placed in a world from the editor, it comes back whole. Built in game with Homestead, it is
+only the objects: no key, no boss.
 
 All of a dungeon of building pieces holds in the game, high in the sky. Its floors and roofs are
 black marble slabs, the one piece the game never asks for support, and everything else stands on
