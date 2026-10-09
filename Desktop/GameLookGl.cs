@@ -75,6 +75,9 @@ public sealed class GameLookGl
 	public static readonly Vector3 FogColor = Srgb(0.302f, 0.581f, 0.747f);
 	public static readonly Vector3 SunFogColor = Srgb(0.801f, 0.687f, 0.43f);
 	public const float FogDensity = 0.003f;
+	// Where the fog starts, in metres from the camera (the view sets it each frame: the orbit's
+	// distance, so zooming out does not fog the area over; 0 walking or flying, as in game).
+	public static float FogStart { get; set; }
 	public static readonly Vector3 SkyTop = Srgb(0.2f, 0.42f, 0.68f);
 	public static readonly Vector3 SkyHorizon = Srgb(0.55f, 0.72f, 0.84f);
 	// The sun in view space (z mirrored), for the objects' simpler lighting.
@@ -84,12 +87,15 @@ public sealed class GameLookGl
 		uniform vec3 uFogColor;
 		uniform vec3 uSunFogColor;
 		uniform float uFogDensity;
+		// Where the fog starts (m from the camera): the point the camera turns around, so the area
+		// worked on stays clear however far the view is zoomed out; only what lies beyond it fades.
+		uniform float uFogStart;
 		// Unity exponential-squared fog; looking towards the sun the fog takes the sun fog colour.
 		vec3 fogColorFor(vec3 viewDir, vec3 sunDir) {
 		  return mix(uFogColor, uSunFogColor, pow(max(dot(viewDir, sunDir), 0.0), 6.0));
 		}
 		vec3 applyFogDir(vec3 c, float dist, vec3 viewDir, vec3 sunDir) {
-		  float f = 1.0 - exp(-pow(dist * uFogDensity, 2.0));
+		  float f = 1.0 - exp(-pow(max(dist - uFogStart, 0.0) * uFogDensity, 2.0));
 		  return mix(c, fogColorFor(viewDir, sunDir), clamp(f, 0.0, 1.0));
 		}
 		vec3 toSRGB(vec3 c) {
@@ -477,6 +483,7 @@ public sealed class GameLookGl
 		V3("uFogColor", FogColor);
 		V3("uSunFogColor", SunFogColor);
 		_gl.Uniform1(_gl.GetUniformLocation(prog, "uFogDensity"), FogDensity);
+		_gl.Uniform1(_gl.GetUniformLocation(prog, "uFogStart"), FogStart);
 		V3("uSunDir", SunDir);
 		V3("uSunColor", SunColor);
 		V3("uOffset", new Vector3(_scene.Cx, 0, _scene.Cz));
