@@ -47,6 +47,13 @@ the plugin is unchanged in versions without that part.
 - Opening another area (or saving, or switching the look) while the models are still being read no
   longer closes the editor or draws objects of the area left: a model read for it went into the new
   area, with that area's object numbers.
+- An error the editor did not expect no longer closes it, losing every change not saved: it is
+  written to the log and said in the status bar (or a message away from the 3D editor). Saving,
+  applying and Discard from the map, and leaving a world, say what went wrong (a world folder gone
+  or locked) instead of closing the editor or leaving it showing "Saving…".
+- Blueprints: importing (also by dropping a file on the 3D view), exporting, deleting and turning an
+  older blueprint into a Homestead one say so when the folder cannot be written, instead of closing
+  the editor; so does exporting a heightmap.
 
 ### WorldEditorBridge
 - An apply the game takes more than 30 seconds to start (a world save on the server) is no longer

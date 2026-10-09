@@ -113,6 +113,26 @@ public class WindowFlowTests
 		Assert.Equal((0, 0, 0, 0), r.W.World.Pending);
 	}
 
+	// The world folder gone while the map is open: Discard and Save say so, the window stays (it
+	// closed, losing every change) and is not left busy.
+	[AvaloniaFact]
+	public async Task AWorldFolderThatIsGoneIsSaidSo()
+	{
+		using var r = new Run();
+		await r.Edited();
+		r.W.ShowMap();
+		r.Answer = true;
+		Directory.Delete(r.Dir, recursive: true);
+		await r.W.DiscardWorld();
+		Assert.StartsWith("Could not read the world again: ", r.W.MessageText.Text);
+		await r.W.SaveWorld();
+		Assert.StartsWith("Could not save", r.Told.Last());
+		Assert.Equal(1, r.W.World!.Pending.Zones);
+		Assert.False(r.W.IsBusy);
+		await r.W.LeaveWorld();
+		Assert.Null(r.W.World);
+	}
+
 	[AvaloniaFact]
 	public async Task LeavingWithUnsavedChangesAsksFirst()
 	{

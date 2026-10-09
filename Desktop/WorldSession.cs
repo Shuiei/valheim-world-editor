@@ -233,7 +233,15 @@ public sealed class WorldSession : IDisposable
 	{
 		if (!IsLive && _lastSave != null && System.IO.Directory.Exists(World.Directory))
 		{
-			WorldWriter.Prune(World.Directory);
+			// The world is left whatever happens: a folder that cannot be read now keeps its files.
+			try
+			{
+				WorldWriter.Prune(World.Directory);
+			}
+			catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
+			{
+				Console.WriteLine($"Leaving the world: its earlier saves could not be removed: {ex.Message}");
+			}
 		}
 		ForgetSaves();
 	}
