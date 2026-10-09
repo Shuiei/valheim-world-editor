@@ -27,7 +27,8 @@ and everyone online sees it appear, as if a very fast Viking had done it by hand
 - **Tidy up.** Plant a forest, clear the rocks off a field, remove every tree in an area, find the
   chest that holds the last of your black metal.
 
-Every change can be undone, even after it is applied.
+Every change can be undone, even after it is applied, and the history is still there the next time
+you open the world.
 
 ## How it works
 

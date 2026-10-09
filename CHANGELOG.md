@@ -13,6 +13,10 @@ the plugin is unchanged in versions without that part.
   object back with its contents, a placed one removed. When the world may have changed since (live,
   or saved by the game), the editor asks once before undoing or redoing those steps.
 
+### WorldEditorBridge
+- A new mod page: what people use live editing for, how it works, what to expect, and what each
+  connection message means. The plugin itself is unchanged.
+
 ## v1.15.1 — 2026-10-09
 
 ### Changed
@@ -26,10 +30,6 @@ the plugin is unchanged in versions without that part.
 - The server form says the plugin's token is written the first time the server starts with the
   plugin. The README, the plugin's README.txt and its mod page say so too, and the start page
   pictures show the Workshop.
-
-### WorldEditorBridge
-- A new mod page: what people use live editing for, how it works, what to expect, and what each
-  connection message means. The plugin itself is unchanged.
 
 ## v1.15.0 — 2026-10-08
 
