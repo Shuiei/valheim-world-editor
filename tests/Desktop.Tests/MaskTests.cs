@@ -106,6 +106,25 @@ public class MaskTests
 		Assert.Equal(30, H(s, 70, 60), 3);
 	}
 
+	// A one-shot edit is judged against the ground before it, not its own changes: flat ground under
+	// "slope max 20°" all passes, so a raised block is whole (the points after the first ones saw the
+	// raised neighbours as a steep slope and were left out, in scan order).
+	[Fact]
+	public void AShapeIsJudgedOnTheGroundBeforeIt()
+	{
+		var s = Area();
+		s.Mask.On = true;
+		s.Mask.SlopeMax = 20;
+		s.Shape(40, 40, Formula.Compile("6", new string[0]), 6, 0, "x");
+		for (int dx = -4; dx <= 4; dx++)
+		{
+			for (int dz = -4; dz <= 4; dz++)
+			{
+				Assert.Equal(36, H(s, 40 + dx, 40 + dz), 3);
+			}
+		}
+	}
+
 	[AvaloniaFact]
 	public void ThePanelAndAltClicks()
 	{

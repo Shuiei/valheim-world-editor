@@ -44,8 +44,9 @@ public sealed class Mask
 	}
 
 	// The mask over a ground (1 where it passes, 0 elsewhere), or null when off. biomes: each point's
-	// biome. frozen: judge each point once, as the ground was the first time it was asked (a brush
-	// stroke is not stopped half-way by its own changes).
+	// biome. The ground is judged as it is now, when the mask is made: an edit that changes it while
+	// asking (a mountain, a shape, a paste, a brush stroke) is not judged against its own changes (a
+	// slope then mixed changed and unchanged neighbours). frozen: each point is also judged only once.
 	public Func<int, float>? For(Ground g, int[] biomes, bool frozen = false)
 	{
 		if (!On)
@@ -55,11 +56,23 @@ public sealed class Mask
 		var set = Biomes.Count > 0 ? new HashSet<int>(Biomes) : null;
 		float? hmin = HeightMin, hmax = HeightMax, smin = SlopeMin, smax = SlopeMax;
 		var paint = Paint;
+		int w = g.W, h = g.H;
+		float[]? heights = null;
+		if (hmin != null || hmax != null || smin != null || smax != null)
+		{
+			heights = new float[w * h];
+			for (int p = 0; p < heights.Length; p++)
+			{
+				heights[p] = g.HeightOf(p);
+			}
+		}
+		byte[]? pmod = paint != PaintRule.Any ? (byte[])g.PMod.Clone() : null;
+		float[]? colours = paint != PaintRule.Any ? (float[])g.Paint.Clone() : null;
 		float Slope(int p)
 		{
-			int gx = p % g.W, gz = p / g.W;
-			float hx = g.HeightOf(gz * g.W + Math.Min(g.W - 1, gx + 1)) - g.HeightOf(gz * g.W + Math.Max(0, gx - 1));
-			float hz = g.HeightOf(Math.Min(g.H - 1, gz + 1) * g.W + gx) - g.HeightOf(Math.Max(0, gz - 1) * g.W + gx);
+			int gx = p % w, gz = p / w;
+			float hx = heights![gz * w + Math.Min(w - 1, gx + 1)] - heights[gz * w + Math.Max(0, gx - 1)];
+			float hz = heights[Math.Min(h - 1, gz + 1) * w + gx] - heights[Math.Max(0, gz - 1) * w + gx];
 			return MathF.Atan(MathF.Sqrt(hx * hx + hz * hz) / 2) * 180 / MathF.PI;
 		}
 		bool PaintOk(int p)
@@ -68,8 +81,8 @@ public sealed class Mask
 			{
 				return true;
 			}
-			bool painted = g.PMod[p] != 0;
-			float r = g.Paint[p * 4], gr = g.Paint[p * 4 + 1], b = g.Paint[p * 4 + 2];
+			bool painted = pmod![p] != 0;
+			float r = colours![p * 4], gr = colours[p * 4 + 1], b = colours[p * 4 + 2];
 			return paint switch
 			{
 				PaintRule.Unpainted => !painted || r + gr + b < 0.3f,
@@ -88,8 +101,8 @@ public sealed class Mask
 			}
 			if (hmin != null || hmax != null)
 			{
-				float h = g.HeightOf(p);
-				if (h < hmin || h > hmax)
+				float at = heights![p];
+				if (at < hmin || at > hmax)
 				{
 					return 0;
 				}

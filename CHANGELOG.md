@@ -73,6 +73,9 @@ the plugin is unchanged in versions without that part.
   shader again from the copied file, without a new copy.
 - An object put (or pasted) outside the world, beyond about ±16 km, is left out of the save and
   listed under "Not saved"; the whole save failed.
+- The Mask's slope, height and paint rules judge edits made at once (Mountain, Shape, Paste, Stamp
+  once, Path) on the ground as it was before them. They saw the points already changed by the same
+  edit: with a slope limit, most of a mountain was left out in a ragged pattern.
 
 ### WorldEditorBridge
 - An apply the game takes more than 30 seconds to start (a world save on the server) is no longer
