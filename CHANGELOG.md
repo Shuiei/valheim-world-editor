@@ -107,6 +107,8 @@ the plugin is unchanged in versions without that part.
 - The map and areas are made faster on computers with many cores: the ground of 256 zones in parallel
   takes about 0.1 s instead of 0.6 to 1.3 s (a cache of the rivers made the threads wait on each
   other).
+- Areas with very many objects of one kind (tens of thousands of one piece) open, save and switch
+  the look without a pause of a second or more.
 
 ### WorldEditorBridge
 - An apply the game takes more than 30 seconds to start (a world save on the server) is no longer

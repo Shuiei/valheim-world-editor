@@ -316,6 +316,9 @@ public sealed class GlView : OpenGlControlBase
 		public required (int Prefab, bool Piece, bool Tamed) Key { get; init; }
 		public required ObjectKind Kind { get; init; }
 		public readonly List<int> Things = new();
+		// The same, to ask whether one is in (a list's Contains made opening an area with tens of
+		// thousands of one piece take seconds: every object asked it).
+		public readonly HashSet<int> Members = new();
 		public Vector3 RootScale = Vector3.One;
 		// The model's box in its own frame (for picking), known once read.
 		public (Vector3 Min, Vector3 Max)? Box;
@@ -622,7 +625,7 @@ public sealed class GlView : OpenGlControlBase
 				Load(g);
 			}
 		}
-		if (!g.Things.Contains(i))
+		if (g.Members.Add(i))
 		{
 			g.Things.Add(i);
 		}
