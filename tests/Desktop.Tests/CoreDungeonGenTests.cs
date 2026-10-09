@@ -130,6 +130,21 @@ public class CoreDungeonGenTests
 		Assert.Contains(r.Items, i => i.Prefab == "sunken_crypt_gate");
 	}
 
+	[Theory]
+	[InlineData("Meadows")]
+	[InlineData("Black Forest")]
+	[InlineData("Swamp")]
+	[InlineData("Mountain")]
+	[InlineData("Plains")]
+	[InlineData("Mistlands")]
+	[InlineData("Ashlands")]
+	[InlineData("Deep North")]
+	public void EveryBiomesOwnRoomsCanBeGenerated(string biome)
+	{
+		var r = DungeonGen.Make(new DungeonGen.Settings(Made: DungeonGen.Made.Rooms, Biome: biome, Size: 2, Seed: 5));
+		Assert.True(r.Rooms!.Count > 3);
+	}
+
 	[Fact]
 	public void TheGamesRoomsCanBeGeneratedToo()
 	{

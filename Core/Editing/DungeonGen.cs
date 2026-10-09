@@ -54,7 +54,7 @@ public static class DungeonGen
 	{
 		"Meadows" or "Black Forest" => "DG_ForestCrypt",
 		"Swamp" => "DG_SunkenCrypt",
-		"Plains" => "DG_GoblinCamp",
+		"Plains" => "DG_Hildir_PlainsFortress",
 		"Mistlands" => "DG_DvergrTown",
 		"Ashlands" => "DG_MorkHalla",
 		_ => "DG_Cave",
@@ -72,7 +72,14 @@ public static class DungeonGen
 	private static Result MakeRooms(Settings s, int worldSeed)
 	{
 		var notes = new List<string>();
-		var kind = Dungeons.Kinds.FirstOrDefault(k => k.Name == (s.Kind ?? RoomsOf(s.Biome))) ?? Dungeons.KindOf(Save.StableHash.Of("DG_Cave"))!;
+		var cave = Dungeons.KindOf(Save.StableHash.Of("DG_Cave"))!;
+		var kind = Dungeons.Kinds.FirstOrDefault(k => k.Name == (s.Kind ?? RoomsOf(s.Biome))) ?? cave;
+		// Camps and villages are laid out on the ground, not joined room to room: a cave instead.
+		if (!Dungeons.RoomsFor(kind).Any(r => !r.Entrance && !r.EndCap && !r.Divider && r.Openings.Length > 0))
+		{
+			notes.Add($"{Describe(kind)} has no rooms to join: a cave instead");
+			kind = cave;
+		}
 		var rnd = new Random(s.Seed);
 		var all = Dungeons.RoomsFor(kind).ToList();
 		var entrances = all.Where(r => r.Entrance && !r.EndCap).ToList();
