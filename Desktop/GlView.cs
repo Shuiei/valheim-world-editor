@@ -9,6 +9,7 @@ using Avalonia.OpenGL.Controls;
 using Avalonia.Threading;
 using Silk.NET.OpenGL;
 using TerrainEditor.App;
+using TerrainEditor.Editing;
 
 namespace TerrainEditor.Desktop;
 
@@ -71,11 +72,16 @@ public sealed class GlView : OpenGlControlBase
 		Wake();
 	}
 
-	// Walking: the eyes 1.8 m over the ground (or the water); flying: never below that.
+	// Above this the game takes a place for indoors (Character.InInterior): dungeons are built there,
+	// 5000 m over their entrances. The camera does not keep to the ground up there.
+	internal const float InteriorHeight = 3000f;
+
+	// Walking: the eyes 1.8 m over the ground (or the water); flying: never below that. Not in a
+	// dungeon (the ground is far below).
 	private void KeepOverGround(bool walk)
 	{
 		var s = _scene;
-		if (s == null)
+		if (s == null || _eyePos.Y > InteriorHeight)
 		{
 			return;
 		}
@@ -205,6 +211,9 @@ public sealed class GlView : OpenGlControlBase
 	public void Show(WorldScene scene, ModelStore? models)
 	{
 		_scene = scene;
+		Dungeon.Scene = scene;
+		Dungeon.Changed -= Wake;
+		Dungeon.Changed += Wake;
 		_models = models;
 		int g = (scene.H / 2) * scene.W + scene.W / 2;
 		lock (_camLock)
@@ -314,6 +323,8 @@ public sealed class GlView : OpenGlControlBase
 		public (Vector3 Min, Vector3 Max)? Box;
 		public readonly List<(Batch Batch, Matrix4x4 Pre)> Batches = new();
 		public bool Ready;
+		// A model was read (else the batches are the stand-in box).
+		public bool HasModel;
 	}
 	// By prefab, piece or not and tamed or not: tamed creatures are their own View kind.
 	private readonly Dictionary<(int, bool, bool), Group> _groups = new();
@@ -664,15 +675,27 @@ public sealed class GlView : OpenGlControlBase
 			return drawn;
 		}
 		_pasteGhosts = _mode == ToolMode.Paste ? drawn : null;
+		DrawInstances(s, shown, ghost: true, drawn);
+		return drawn;
+	}
+
+	// Models at places that are not things of the scene, one draw per model part: see-through (ghost:
+	// the Place and Paste previews) or solid (dungeon rooms). Kinds whose model is not read yet, or that
+	// have none, are skipped (and left out of `drawn`).
+	private unsafe void DrawInstances(WorldScene s, IEnumerable<(int Prefab, Vector3 Position, Vector3 Rotation, float Scale)> shown, bool ghost, HashSet<int>? drawn = null)
+	{
 		if (_ghostVbo == 0)
 		{
 			_ghostVbo = _own.Buffer();
 		}
 		_gl.UseProgram(_objectProg);
-		_gl.Uniform1(_gl.GetUniformLocation(_objectProg, "uGhost"), 1f);
-		_gl.Enable(EnableCap.Blend);
-		_gl.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
-		_gl.DepthMask(false);
+		_gl.Uniform1(_gl.GetUniformLocation(_objectProg, "uGhost"), ghost ? 1f : 0f);
+		if (ghost)
+		{
+			_gl.Enable(EnableCap.Blend);
+			_gl.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
+			_gl.DepthMask(false);
+		}
 		int uColor = _gl.GetUniformLocation(_objectProg, "uColor"), uCut = _gl.GetUniformLocation(_objectProg, "uCutoff"),
 			uHasMap = _gl.GetUniformLocation(_objectProg, "uHasMap"), uUv = _gl.GetUniformLocation(_objectProg, "uUv");
 		foreach (var byKind in shown.GroupBy(o => o.Prefab))
@@ -680,11 +703,11 @@ public sealed class GlView : OpenGlControlBase
 			int prefab = byKind.Key;
 			bool piece = TerrainEditor.Terrain.PieceCatalog.Get(prefab)?.Tool != null;
 			var g = KindGroup(prefab, piece);
-			if (!g.Ready || g.Batches.Count == 0)
+			if (!g.Ready || g.Batches.Count == 0 || !ghost && !g.HasModel)
 			{
 				continue;
 			}
-			drawn.Add(prefab);
+			drawn?.Add(prefab);
 			var mats = byKind.Select(o => Placement(s, new WorldScene.Thing(0, prefab, o.Position, o.Rotation, o.Scale, piece), g.RootScale)).ToList();
 			foreach (var (b, pre) in g.Batches)
 			{
@@ -700,6 +723,13 @@ public sealed class GlView : OpenGlControlBase
 					_gl.VertexAttribPointer(3 + c, 4, VertexAttribPointerType.Float, false, 64, (void*)(c * 16));
 				}
 				var m = b.Material;
+				if (b.Texture == 0 && m.Map != null)
+				{
+					lock (_textures)
+					{
+						_textures.TryGetValue(m.Map, out b.Texture);
+					}
+				}
 				if (m.DoubleSided)
 				{
 					_gl.Disable(EnableCap.CullFace);
@@ -723,10 +753,30 @@ public sealed class GlView : OpenGlControlBase
 			}
 		}
 		_gl.Uniform1(_gl.GetUniformLocation(_objectProg, "uGhost"), 0f);
-		_gl.DepthMask(true);
-		_gl.Disable(EnableCap.Blend);
+		if (ghost)
+		{
+			_gl.DepthMask(true);
+			_gl.Disable(EnableCap.Blend);
+		}
 		_gl.BindVertexArray(0);
-		return drawn;
+	}
+
+	// The rooms of the area's dungeons (not objects of the save: entries in their dungeon's data, see
+	// DungeonRooms), drawn like objects; a room shown elsewhere by the Dungeon tool (moving, adding) too.
+	private void DrawRooms(WorldScene s)
+	{
+		var shown = new List<(int, Vector3, Vector3, float)>();
+		foreach (var d in DungeonRooms.Of(s))
+		{
+			foreach (var r in d.Rooms)
+			{
+				shown.Add((r.Hash, r.Position, TerrainEditor.Editing.Dungeons.ToEuler(r.Rotation), 0f));
+			}
+		}
+		if (shown.Count > 0)
+		{
+			DrawInstances(s, shown, ghost: false);
+		}
 	}
 
 	private void EnsureSize(int n)
@@ -878,6 +928,7 @@ public sealed class GlView : OpenGlControlBase
 					(lo, hi) = (new Vector3(-0.5f, 0, -0.5f), new Vector3(0.5f, 2, 0.5f));
 				}
 				g.RootScale = model?.RootScale ?? Vector3.One;
+				g.HasModel = model != null;
 				g.Box = (lo, hi);
 				_ready.Enqueue(new ReadyModel(g, model, meshes, mats, images));
 			}
@@ -1368,6 +1419,10 @@ public sealed class GlView : OpenGlControlBase
 				}
 			}
 
+			if (_shown[(int)ObjectKind.Dungeons])
+			{
+				DrawRooms(s);
+			}
 			_ghostsDrawn = DrawGhosts(s, vp);
 			DrawOverlays(vp);
 			DrawSelection(vp);
@@ -1380,6 +1435,7 @@ public sealed class GlView : OpenGlControlBase
 			DrawPath(s, vp);
 			DrawArea(s, vp);
 			DrawPlace(s, vp);
+			DrawDungeon(s, vp);
 			if (ShowWater)
 			{
 				if (look != null)
@@ -1602,11 +1658,11 @@ public sealed class GlView : OpenGlControlBase
 		return true;
 	}
 
-	// The target point stays on the ground (or the water) under it.
+	// The target point stays on the ground (or the water) under it; in a dungeon, at its height.
 	private void FollowGround()
 	{
 		var s = _scene;
-		if (s == null)
+		if (s == null || _target.Y > InteriorHeight)
 		{
 			return;
 		}
@@ -1695,6 +1751,17 @@ public sealed class GlView : OpenGlControlBase
 				{
 					ShapeClicked?.Invoke(g.X, g.Z);
 				}
+				Wake();
+				return;
+			}
+			if (_dragButton == PointerUpdateKind.LeftButtonPressed && _mode == ToolMode.Dungeon)
+			{
+				_dragFrom = null;
+				if (WorldRay(p.Position, _surfaceSize) is { } ray)
+				{
+					Dungeon.Hover(ray.O, ray.D);
+				}
+				Dungeon.Click();
 				Wake();
 				return;
 			}
@@ -1831,6 +1898,10 @@ public sealed class GlView : OpenGlControlBase
 				// The object a click would pick (none over a move handle).
 				SetHoverObject(SelectTool.OverHandle ? null : ObjectAt(_pointer.Value, _surfaceSize));
 			}
+			else if (_mode == ToolMode.Dungeon && WorldRay(_pointer.Value, _surfaceSize) is { } ray)
+			{
+				Dungeon.Hover(ray.O, ray.D);
+			}
 			else if (_mode == ToolMode.Measure && WorldAt(_pointer.Value, _surfaceSize) is { } w)
 			{
 				Tape.Move(w);
@@ -1950,6 +2021,79 @@ public sealed class GlView : OpenGlControlBase
 	public bool SelectMode => _mode == ToolMode.Select;
 	private bool _selectMode => _mode == ToolMode.Select;
 	public MeasureTool Tape { get; } = new();
+
+	// ---- The Dungeon tool: its state, and what it shows (the free openings, the room selected or
+	// pointed at, and the room a click would add, see-through).
+	public DungeonTool Dungeon { get; } = new();
+
+	private uint _dungeonVao, _dungeonVbo, _dungeonPickVao, _dungeonPickVbo, _dungeonAddVao, _dungeonAddVbo;
+
+	private void DrawDungeon(WorldScene s, Matrix4x4 vp)
+	{
+		if (_mode != ToolMode.Dungeon || Dungeon.Dungeon is not { } d)
+		{
+			return;
+		}
+		Vector3 V(Vector3 w) => new(w.X - s.Cx, w.Y, -(w.Z - s.Cz));
+		// Free openings: a square across each, 2 m wide, 3 m high, standing on its floor point.
+		var ends = new List<float>();
+		var hovered = new List<float>();
+		var free = Dungeon.FreeEnds;
+		for (int i = 0; i < free.Count; i++)
+		{
+			var e = free[i];
+			var side = Vector3.Transform(Vector3.UnitX, e.Rotation);
+			var up = Vector3.UnitY;
+			Vector3[] c = { e.Position - side, e.Position + side, e.Position + side + up * 3, e.Position - side + up * 3 };
+			var list = Dungeon.HoverEnd == i ? hovered : ends;
+			for (int k = 0; k < 4; k++)
+			{
+				var a = V(c[k]);
+				var b = V(c[(k + 1) % 4]);
+				list.AddRange(new[] { a.X, a.Y, a.Z, b.X, b.Y, b.Z });
+			}
+			var m = V(e.Position + up * 1.5f);
+			var n = V(e.Position + up * 1.5f + Vector3.Transform(Vector3.UnitZ, e.Rotation) * -1.5f);
+			list.AddRange(new[] { m.X, m.Y, m.Z, n.X, n.Y, n.Z });
+		}
+		if (ends.Count > 0)
+		{
+			DrawLines(ref _dungeonVao, ref _dungeonVbo, ends.ToArray(), vp, new Vector4(0.35f, 0.95f, 0.45f, 0.95f), blend: true, width: 2f);
+		}
+		// The room selected (white) or pointed at (faint), as its box.
+		var boxes = new List<float>();
+		foreach (int i in new[] { Dungeon.Selected, Dungeon.HoverRoom }.OfType<int>().Distinct().Where(i => i < d.Rooms.Count))
+		{
+			BoxLines(boxes, Dungeons.Box(d.Rooms[i]), V);
+		}
+		if (boxes.Count > 0)
+		{
+			DrawLines(ref _dungeonPickVao, ref _dungeonPickVbo, boxes.ToArray(), vp, new Vector4(1, 0.9f, 0.6f, 0.9f), blend: true, width: 1.5f);
+		}
+		// The room a click adds: its model see-through, its box green, or red when it would not fit.
+		if (Dungeon.Preview is { } p)
+		{
+			DrawInstances(s, new[] { (p.Hash, p.Position, Dungeons.ToEuler(p.Rotation), 0f) }, ghost: true);
+			BoxLines(hovered, Dungeons.Box(p), V);
+		}
+		if (hovered.Count > 0)
+		{
+			bool ok = Dungeon.Preview is not { } pp || Dungeon.Problem(pp) == null;
+			DrawLines(ref _dungeonAddVao, ref _dungeonAddVbo, hovered.ToArray(), vp, ok ? new Vector4(1, 0.95f, 0.3f, 1) : new Vector4(1, 0.3f, 0.25f, 1), blend: true, width: 2.5f);
+		}
+	}
+
+	private static void BoxLines(List<float> into, (Vector3 C, Vector3 H, Quaternion R) box, Func<Vector3, Vector3> view)
+	{
+		Vector3 h = new(Math.Max(box.H.X, 0.25f), Math.Max(box.H.Y, 0.25f), Math.Max(box.H.Z, 0.25f));
+		Vector3 Corner(int k) => view(box.C + Vector3.Transform(new Vector3((k & 1) == 0 ? -h.X : h.X, (k & 2) == 0 ? -h.Y : h.Y, (k & 4) == 0 ? -h.Z : h.Z), box.R));
+		foreach (var (a, b) in new[] { (0, 1), (2, 3), (4, 5), (6, 7), (0, 2), (1, 3), (4, 6), (5, 7), (0, 4), (1, 5), (2, 6), (3, 7) })
+		{
+			var p = Corner(a);
+			var q = Corner(b);
+			into.AddRange(new[] { p.X, p.Y, p.Z, q.X, q.Y, q.Z });
+		}
+	}
 	// Shape tool: a click on the ground (grid point), and the radius its outline shows.
 	public event Action<float, float>? ShapeClicked;
 	public float ShapeRadius { get; set; } = 16;
@@ -2027,7 +2171,8 @@ public sealed class GlView : OpenGlControlBase
 	// The camera turned onto a world point, close (the map's search: the object found).
 	// The orbit camera on world point (x, z) at the ground, turned yaw° around it, looking down pitch°
 	// (the documentation's pictures, through the driver).
-	internal void Orbit(float x, float z, float yawDegrees, float pitchDegrees, float distance)
+	// height: around that height instead (inside a dungeon).
+	internal void Orbit(float x, float z, float yawDegrees, float pitchDegrees, float distance, float? height = null)
 	{
 		if (_scene is not { } s)
 		{
@@ -2037,7 +2182,7 @@ public sealed class GlView : OpenGlControlBase
 		{
 			var t = new Vector3(x - s.Cx, 0, -(z - s.Cz));
 			int gx = Math.Clamp((int)MathF.Round(t.X + (s.W - 1) / 2f), 0, s.W - 1), gz = Math.Clamp((int)MathF.Round(-t.Z + (s.H - 1) / 2f), 0, s.H - 1);
-			t.Y = Math.Max(s.Heights[gz * s.W + gx], s.Water);
+			t.Y = height ?? Math.Max(s.Heights[gz * s.W + gx], s.Water);
 			_target = t;
 			_yaw = yawDegrees * MathF.PI / 180;
 			_pitch = Math.Clamp(pitchDegrees * MathF.PI / 180, 0.05f, 1.55f);

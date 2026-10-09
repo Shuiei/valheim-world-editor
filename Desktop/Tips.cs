@@ -382,6 +382,15 @@ public static class Tips
 		["paste.clearSite"] = "Where a pasted building (its pieces) stands: the ground in its way, a mountain, a mound, is dug down to its lowest piece, a metre around it too; never raised. Trees, rocks, bushes and pickables there are taken away. One undo step with the paste.",
 		["history.earlier"] = "Made in an earlier session of the editor: the history is kept with the world after each save or Apply live, and comes back when you open it again. When the world may have changed since (live, or saved by the game), you are asked once before undoing or redoing these steps.",
 		["tools.blueprints"] = "Your blueprints (Homestead's, the Workshop's): paste one into this area.",
+		["tools.dungeon"] = "Dungeon: edit the rooms of a Frost Cave, crypt or other dungeon of this area. Add rooms at their openings, delete them, close the open ends: the game builds the rooms from the list you make.",
+		["dungeon.which"] = "The dungeons of this area: the game keeps each one's rooms 5000 m above its entrance.",
+		["dungeon.inside"] = "Takes the view up to the dungeon and cuts its roofs away, to look down into its rooms.",
+		["dungeon.cut"] = "Hides what is higher than this above the dungeon's floor, to see into the rooms. 0 shows the roofs.",
+		["dungeon.find"] = "Shows only the rooms whose name has these letters.",
+		["dungeon.rooms"] = "The rooms this dungeon can take (the game's rooms of its kind). Pick one, then click a green opening: it joins there the way the game joins rooms.",
+		["dungeon.turn"] = "Joins the picked room by another of its openings (R): it turns around the opening you point at.",
+		["dungeon.close"] = "Puts the game's end cap on every open end, so nothing leads out of the dungeon.",
+		["dungeon.delete"] = "Removes the selected room (Del). Ctrl+Z puts it back.",
 		["build.lift"] = "Back to no lift: the piece goes where the cursor points (on a piece, or the ground).",
 		["build.turn"] = "How far , and . (or Alt + wheel) turn the piece. Shift turns by 1°.",
 		["dialog.blueprintName"] = "The blueprint's name: Homestead lists it under this name in its hammer tab. Its file is named after it.",
@@ -419,6 +428,7 @@ public static class Tips
 		ObjectKind.Pickables => "Mushrooms, berries, flowers, stones and other things to pick up.",
 		ObjectKind.Animals => "Boars, wolves, lox, hens, deer and other creatures players tamed (wild ones are under Other objects).",
 		ObjectKind.Runestones => "The world's runestones. They can be picked and deleted (the game builds them from their location, so they cannot be moved or copied).",
+		ObjectKind.Dungeons => "The rooms of Frost Caves, crypts and other dungeons, high above their entrances (5000 m up, where the game keeps them). Edit them with the Dungeon tool.",
 		_ => "Everything else the save holds.",
 	};
 

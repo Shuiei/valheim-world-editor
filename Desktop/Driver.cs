@@ -14,7 +14,8 @@ namespace TerrainEditor.Desktop;
 //   shot <file.png>                a picture of the whole window, panels and view (documentation)
 //   look <game|seethrough> <on|off>, look res <sharp|balanced|fast>
 //                                  the View panel's Look switches
-//   camera <x> <z> <yaw°> <pitch°> <distance>  the 3D view's camera on world x, z
+//   camera <x> <z> <yaw°> <pitch°> <distance> [y]  the 3D view's camera on world x, z (at height y:
+//                                              inside a dungeon)
 //   click <text>                   the visible button, switch or box labelled so, or whose words
 //                                  begin so (windows and dialogs)
 //   choose <text>                  the entry so named in whichever visible list has it
@@ -246,7 +247,7 @@ public static class Driver
 				await Task.Delay(TimeSpan.FromMilliseconds(Math.Clamp(F(0), 0, 60000)));
 				return State(w);
 			case "camera":
-				w.View.Orbit(F(0), F(1), F(2), F(3), F(4));
+				w.View.Orbit(F(0), F(1), F(2), F(3), F(4), args.Length > 5 ? F(5) : null);
 				return State(w);
 			case "click":
 			{

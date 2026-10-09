@@ -1,4 +1,5 @@
-# Export Valheim build-piece models for the terrain editor (three.js space: z mirrored).
+# Export Valheim build-piece models for the terrain editor (three.js space: z mirrored); also
+# world objects and dungeon rooms (room_skips).
 # out/pieces/<name>.json: {parts:[{mesh, sub, mat, m:[16 col-major]}]}
 # out/meshes/<id>.bin: float32 pos*3, float32 normal*3, float32 uv*2 per vertex, then uint32 indices per submesh
 # out/meshes/<id>.json-ish info is folded into the piece json (vertex count, submesh index ranges)
@@ -14,8 +15,11 @@ ONLY = set(sys.argv[2].split(',')) if len(sys.argv) > 2 and sys.argv[2] else Non
 TEXMAX = 1024
 for d in ('pieces', 'meshes', 'tex'): os.makedirs(os.path.join(OUT, d), exist_ok=True)
 index = json.load(open(os.environ.get('INDEX') or os.path.join(os.path.dirname(__file__), 'piece_index.json')))
-# object_index.json format: {hash: {name, bundle, pid}} -> {name: [bundle, pid]}
-if index and isinstance(next(iter(index.values())), dict): index = {v['name']: [v['bundle'], v['pid']] for v in index.values()}
+# object_index.json format: {hash: {name, bundle, pid[, room]}} -> {name: [bundle, pid]}; room: a dungeon room
+ROOMS = set()
+if index and isinstance(next(iter(index.values())), dict):
+    ROOMS = {v['name'] for v in index.values() if v.get('room')}
+    index = {v['name']: [v['bundle'], v['pid']] for v in index.values()}
 matfile = os.path.join(OUT, 'materials.json')
 materials = json.load(open(matfile)) if os.path.exists(matfile) else {}
 done_meshes = set(os.path.splitext(f)[0] for f in os.listdir(os.path.join(OUT, 'meshes')))
@@ -132,6 +136,33 @@ def comps(byid, go):
         except Exception: pass
     return out
 
+# A dungeon room's model: what the game always shows of it. Its networked objects (chests, spawners,
+# torches...) are left out: they are saved objects of their own, drawn where they are. Of its random
+# parts, a RandomSpawn's subtree is kept when it is there at least half the time (else its "off" object
+# is), and a RandomObject keeps its first choice only.
+def room_skips(byid, pid, skip_go):
+    def visit(gopid, root):
+        go = byid[gopid].read_typetree()
+        for t, o, tt in comps(byid, go):
+            if t != 'MonoBehaviour': continue
+            if not root and 'm_persistent' in tt and 'm_distant' in tt:
+                skip_go.add(gopid)
+            elif 'm_chanceToSpawn' in tt and 'm_OffObject' in tt:
+                off = tt['m_OffObject'].get('m_PathID')
+                if tt['m_chanceToSpawn'] >= 50:
+                    if off: skip_go.add(off)
+                else:
+                    skip_go.add(gopid)
+            elif 'm_objects' in tt and 'm_dungeonRequireTheme' in tt:
+                for e in tt['m_objects'][1:]:
+                    c = e['m_object'].get('m_PathID')
+                    if c: skip_go.add(c)
+        tr = next((tt for t, o, tt in comps(byid, go) if t == 'Transform'), None)
+        for ch in tr['m_Children'] if tr else []:
+            co = byid.get(ch['m_PathID'])
+            if co: visit(co.read_typetree()['m_GameObject']['m_PathID'], False)
+    visit(pid, True)
+
 def export_piece(name, bundle, pid):
     env, byid = assetlib.env_for_bundle(bundle)
     root = byid[pid]
@@ -161,6 +192,7 @@ def export_piece(name, bundle, pid):
                     co = byid.get(ch['m_PathID'])
                     if co: scan(co.read_typetree()['m_GameObject']['m_PathID'])
     scan(pid)
+    if name in ROOMS: room_skips(byid, pid, skip_go)
     parts = []
     def walk(gopid, M, isroot):
         if gopid in skip_go and not isroot: return
