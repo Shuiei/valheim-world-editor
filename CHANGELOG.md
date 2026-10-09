@@ -14,6 +14,9 @@ the plugin is unchanged in versions without that part.
 - Changes saved (or applied live) from the map are kept as saved: **Discard** in the area opened
   next undid them too, and saving again then took them out of the world. The History panel also
   showed them as not saved.
+- **Area → Backup** no longer restores another world's backup: a folder chosen with "Another
+  folder…" stays in the list when another world is opened, and choosing it there used the backup
+  read for the first world without checking its seed.
 
 ## v1.15.5 — 2026-10-09
 

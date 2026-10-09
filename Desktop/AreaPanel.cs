@@ -648,10 +648,11 @@ public sealed class AreaPanel
 		BackupBox.SelectedIndex = keep != null ? _backupPaths.IndexOf(keep) : -1;
 	}
 
-	// A backup's world (read once; the last one is kept).
+	// A backup's world (read once; the last one is kept, and only ever used for a world of its seed: a
+	// folder chosen by hand stays in the list when another world is opened).
 	internal async Task<(WorldSave World, EditStore Edits)?> OpenBackup(string path, WorldSave current)
 	{
-		if (_backup is { } b && b.Path == path)
+		if (_backup is { } b && b.Path == path && b.World.Seed == current.Seed && b.World.SeedName == current.SeedName)
 		{
 			return (b.World, b.Edits);
 		}
