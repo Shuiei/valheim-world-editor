@@ -82,6 +82,9 @@ the plugin is unchanged in versions without that part.
   Restore brush does: over a mountain it changed nothing to be seen.
 - A **Path** with Smooth along the west or east edge of the area no longer mixes in the ground of the
   opposite edge.
+- Pointing past the edge of the area no longer finds "ground" 1000 m down: the Measure tool, pastes,
+  brushes and the Path and Area tools took such points. Ward and workbench rings crossing the edge
+  no longer plunge down outside it.
 
 ### WorldEditorBridge
 - An apply the game takes more than 30 seconds to start (a world save on the server) is no longer

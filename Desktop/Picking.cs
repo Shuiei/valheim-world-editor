@@ -64,12 +64,14 @@ public static class Picking
 	}
 
 	// Where the ray meets the ground (distance), stepping half a metre then narrowing down, or null.
+	// Only the area's ground: outside it, where HeightAt is very low, the ray never hits (it hit 1000 m
+	// down past the edge, a point the tools then took).
 	public static float? HitGround(WorldScene s, Vector3 o, Vector3 d, float maxDist = 4000)
 	{
 		float Below(float t)
 		{
 			var p = o + d * t;
-			return p.Y - HeightAt(s, p.X, p.Z);
+			return Inside(s, p.X, p.Z) ? p.Y - HeightAt(s, p.X, p.Z) : float.PositiveInfinity;
 		}
 		float prev = 0;
 		float above = Below(0);
@@ -90,6 +92,13 @@ public static class Picking
 			above = b;
 		}
 		return null;
+	}
+
+	// A view-space point over the area's ground.
+	public static bool Inside(WorldScene s, float x, float z)
+	{
+		float gx = x + (s.W - 1) / 2f, gz = -z + (s.H - 1) / 2f;
+		return gx >= 0 && gz >= 0 && gx <= s.W - 1 && gz <= s.H - 1;
 	}
 
 	// The ground's height under a view-space point (between the grid points), or very low outside.
