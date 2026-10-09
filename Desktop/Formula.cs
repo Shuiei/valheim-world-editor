@@ -47,7 +47,7 @@ public static class Formula
 		["bell"] = a => Math.Exp(-a[0] * a[0] * 2.5),
 	};
 
-	// How many numbers each function takes (min and max: any number of them, at least one).
+	// How many numbers each function takes (min and max: any number, none included, as in JavaScript).
 	private static readonly Dictionary<string, int> Arity = new()
 	{
 		["pow"] = 2, ["atan2"] = 2, ["clamp"] = 3, ["min"] = -1, ["max"] = -1,
@@ -176,9 +176,9 @@ public static class Formula
 						throw new FormatException($"there is no function “{id}”");
 					}
 					int arity = Arity.GetValueOrDefault(id, 1);
-					if (arity < 0 ? args.Count == 0 : args.Count != arity)
+					if (arity >= 0 && args.Count != arity)
 					{
-						throw new FormatException(arity < 0 ? $"{id}(…) takes at least one number" : $"{id}(…) takes {(arity == 1 ? "one number" : $"{arity} numbers")}");
+						throw new FormatException($"{id}(…) takes {(arity == 1 ? "one number" : $"{arity} numbers")}");
 					}
 					var arr = args.ToArray();
 					return env => f(arr.Select(a => a(env)).ToArray());

@@ -50,7 +50,6 @@ public class ShapeTests
 	[InlineData("sin()", "sin(…) takes one number")]
 	[InlineData("pow(x)", "pow(…) takes 2 numbers")]
 	[InlineData("clamp(x, 0)", "clamp(…) takes 3 numbers")]
-	[InlineData("max()", "max(…) takes at least one number")]
 	public void MistakesAreExplained(string src, string message)
 	{
 		var ex = Assert.Throws<FormatException>(() => Formula.Compile(src, new[] { "x", "z" }));
