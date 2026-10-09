@@ -7,6 +7,8 @@ the plugin is unchanged in versions without that part.
 ## Unreleased
 
 ### Added
+- The area's size (3 × 3, 5 × 5, 7 × 7 zones) changes on the fly next to the Area arrows, around the
+  same middle zone, keeping the view, the changes and the history.
 - **Mountain**: a preview before clicking: the mountain under the pointer as a mesh on the ground,
   as high as it will rise. The circle turns red where it does not fit in the open area.
 

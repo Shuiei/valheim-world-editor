@@ -20,6 +20,7 @@ public static class Tips
 		["top.history"] = "Every change of this session: roll back to any point, or remove one change (L).",
 		["top.view"] = "Show or hide kinds of things in the world, and the look options (V).",
 		["top.help"] = "Mouse controls and keyboard shortcuts (?).",
+		["top.areaSize"] = "The area's size: 3 × 3, 5 × 5 or 7 × 7 zones around the same middle zone, changed on the fly. What you changed and the history stay.",
 		["top.follow"] = "Follow the view: when the point you look at comes near the edge of the area, the area moves there by itself (it waits while a path, shape, selection or stroke is unfinished).",
 		["top.west"] = "Move the area one zone (64 m) west. Pending changes stay.",
 		["top.north"] = "Move the area one zone (64 m) north. Pending changes stay.",
