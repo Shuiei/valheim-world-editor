@@ -2,7 +2,8 @@
 # Build the plugin's package into <dist>: WorldEditorBridge-<version>.zip, from
 # tools/thunderstore/bridge/ (manifest.json and the mod page's README.md), the editor's CHANGELOG.md
 # (through tools/thunderstore/changelog.py), Desktop/Assets/icon.png, the plugin built here
-# (plugins/WorldEditorBridge.dll) and tools/plugin-readme.txt (README.txt, for installing by hand).
+# (plugins/WorldEditorBridge.dll), tools/plugin-readme.txt (README.txt, for installing by hand) and the
+# repository's LICENSE (MIT).
 # The same zip goes to the GitHub release, Thunderstore and Hexium; the editor itself is on GitHub
 # releases only (Thunderstore does not host programs).
 # Usage: tools/thunderstore.sh <dist>   (needs dotnet 8, zip, python3; the plugin builds against the
@@ -37,7 +38,7 @@ PY
 package() {   # $1 package name, $2 its folder in tools/thunderstore; the files are already in $work/$1
   local name=$1 dir="$work/$1"
   sed "s/@VERSION@/$version/g" "$ts/$2/manifest.json" > "$dir/manifest.json"
-  cp "$ts/$2/README.md" "$repo/Desktop/Assets/icon.png" "$dir/"
+  cp "$ts/$2/README.md" "$repo/Desktop/Assets/icon.png" "$repo/LICENSE" "$dir/"
   # The editor's changelog, with links to the matching editor on GitHub (versions with a release tag).
   python3 "$ts/changelog.py" "$repo/CHANGELOG.md" "$dir/CHANGELOG.md" "$version" $(git -C "$repo" tag -l 'v*' 2>/dev/null)
   check "$dir"
