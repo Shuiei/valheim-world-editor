@@ -104,6 +104,9 @@ the plugin is unchanged in versions without that part.
   streams, lakes) are worked out with the game's precision. Of the heights recorded in the game, 2992
   of 3000 now match bit for bit (2982 before) and all 8 zones (6 before); the rest still differ by
   less than a millimetre.
+- The map and areas are made faster on computers with many cores: the ground of 256 zones in parallel
+  takes about 0.1 s instead of 0.6 to 1.3 s (a cache of the rivers made the threads wait on each
+  other).
 
 ### WorldEditorBridge
 - An apply the game takes more than 30 seconds to start (a world save on the server) is no longer
