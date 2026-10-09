@@ -75,6 +75,22 @@ public sealed class WorldSession : IDisposable
 		}
 	}
 
+	// Saved or applied from the map (no area open): the kept steps are in the world now, as an open
+	// area's are once it saves (EditSession), so a later Discard does not undo them.
+	private void MarkHistoryApplied()
+	{
+		if (Area == null && History != null)
+		{
+			// Applied is part of a step's hash: the ids are keyed again once it is set.
+			var ids = History.Ids.ToList();
+			foreach (var c in History.Undo)
+			{
+				c.Applied = true;
+			}
+			History = History with { Ids = ids.ToDictionary(p => p.Key, p => p.Value) };
+		}
+	}
+
 	// The world was read again: the steps do not match it any more.
 	private void ForgetHistory()
 	{
@@ -205,6 +221,7 @@ public sealed class WorldSession : IDisposable
 			Edits.MarkApplied(changed.Select(e => (e.ZoneX, e.ZoneZ)));
 			_savedDeleted = Edits.Deleted.ToHashSet();
 			_savedAdded = Edits.Added.ToHashSet();
+			MarkHistoryApplied();
 			KeepHistory();
 		}
 		string message = plan != null ? $"{result.Message} No limit ground: {plan.Describe()}." : result.Message;
@@ -286,6 +303,7 @@ public sealed class WorldSession : IDisposable
 			}
 			else if (done.Count > 0)
 			{
+				MarkHistoryApplied();
 				KeepHistory();
 			}
 			return new Outcome(done.Count > 0, done.Count > 0 ? $"Applied to the running game: {string.Join("; ", done)}." : "Nothing to apply.", reloaded) { Lifted = plan != null };

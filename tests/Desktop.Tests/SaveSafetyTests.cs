@@ -62,4 +62,28 @@ public class SaveSafetyTests
 		Assert.Contains($"save #{game}", r.Message);
 		Assert.Equal(game, WorldWriter.LatestNumber(w.Dir));
 	}
+
+	// Saved from the map (no area open): the steps are saved, so Discard in the area opened next
+	// undoes only what came after, never the saved ones.
+	[Fact]
+	public void StepsSavedFromTheMapAreNotDiscardedLater()
+	{
+		using var w = new TempWorld();
+		using var world = WorldSession.Open(w.Dir);
+		var s = WorldScene.Load(world, 0, 0, 1).Session!;
+		s.Shape(20, 20, Two, 3, 0, "raise");
+		s.Shape(30, 30, Two, 3, 0, "raise");
+		s.Shape(40, 40, Two, 3, 0, "raise");
+		// To the map (as MainWindow.ShowMap does), saved there.
+		world.History = s.Export();
+		world.Area = null;
+		var o = world.Save();
+		Assert.True(o.Done, o.Message);
+		var again = WorldScene.Load(world, 0, 0, 1).Session!;
+		Assert.Equal(0, again.UnappliedSteps);
+		again.Shape(50, 50, Two, 3, 0, "raise");
+		Assert.Equal(1, again.UnappliedSteps);
+		Assert.Equal(1, again.UndoUnapplied());
+		Assert.Equal(3, again.UndoList.Count);
+	}
 }
