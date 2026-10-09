@@ -79,6 +79,19 @@ public sealed class AppSettings
 			{
 				return File.Exists(FilePath) ? JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(FilePath)) ?? new AppSettings() : new AppSettings();
 			}
+			catch (JsonException ex)
+			{
+				// Not readable: kept aside as settings.json.bad (the next save would write over it).
+				Console.WriteLine($"Settings: {FilePath} could not be read ({ex.Message}); kept as {FilePath}.bad, starting from the defaults.");
+				try
+				{
+					File.Copy(FilePath, FilePath + ".bad", overwrite: true);
+				}
+				catch (Exception copy) when (copy is IOException or UnauthorizedAccessException)
+				{
+				}
+				return new AppSettings();
+			}
 			catch
 			{
 				return new AppSettings();
@@ -88,11 +101,19 @@ public sealed class AppSettings
 
 	private static readonly JsonSerializerOptions Indented = new() { WriteIndented = true };
 
+	// A file that cannot be written (locked, read-only) is left as it was: the settings stay in memory.
 	public void Save()
 	{
 		lock (Lock)
 		{
-			File.WriteAllText(FilePath, JsonSerializer.Serialize(this, Indented));
+			try
+			{
+				SafeFile.WriteAllText(FilePath, JsonSerializer.Serialize(this, Indented));
+			}
+			catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+			{
+				Console.WriteLine($"Settings: could not write {FilePath}: {ex.Message}");
+			}
 		}
 	}
 

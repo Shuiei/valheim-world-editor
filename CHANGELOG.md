@@ -30,6 +30,12 @@ the plugin is unchanged in versions without that part.
   taken for the world's save, as the game does. The world opens from the last complete save, and
   leaving it no longer deletes that save. Leaving a world also no longer deletes your own files named
   `_main.<something>` in its folder (a `_main.backup.zip`).
+- Settings and saved servers are written whole or not at all: a crash or power cut while writing
+  them no longer resets the settings (Valheim folder, world folders, recent worlds) or loses every
+  saved server. Settings that cannot be read are kept as `settings.json.bad`, and a settings file
+  that cannot be written (locked) no longer stops the app.
+- `servers.cfg` is only readable by you from the moment it is made (it was readable by others for an
+  instant), and a saved password with spaces at its ends no longer loses them (the login failed).
 
 ### WorldEditorBridge
 - An apply the game takes more than 30 seconds to start (a world save on the server) is no longer
