@@ -27,6 +27,10 @@ the plugin is unchanged in versions without that part.
   plugin. The README, the plugin's README.txt and its mod page say so too, and the start page
   pictures show the Workshop.
 
+### WorldEditorBridge
+- A new mod page: what people use live editing for, how it works, what to expect, and what each
+  connection message means. The plugin itself is unchanged.
+
 ## v1.15.0 — 2026-10-08
 
 ### Added

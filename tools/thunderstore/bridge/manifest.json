@@ -2,7 +2,7 @@
   "name": "WorldEditorBridge",
   "version_number": "@VERSION@",
   "website_url": "https://github.com/Shuiei/valheim-world-editor",
-  "description": "Live link for Valheim World Editor: sculpt terrain past ±8 m, build and paste blueprints, place and move objects in a running world or dedicated server. Install where the world is hosted; players who join need nothing.",
+  "description": "Edit your world while it runs, with Valheim World Editor: sculpt and pave terrain (past ±8 m too), paste buildings, place or remove anything, undo it all. Install where the world is hosted; players who join need nothing.",
   "dependencies": [
     "denikson-BepInExPack_Valheim-5.4.2351"
   ]
