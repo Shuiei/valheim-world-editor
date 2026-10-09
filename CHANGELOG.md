@@ -85,6 +85,8 @@ the plugin is unchanged in versions without that part.
 - Pointing past the edge of the area no longer finds "ground" 1000 m down: the Measure tool, pastes,
   brushes and the Path and Area tools took such points. Ward and workbench rings crossing the edge
   no longer plunge down outside it.
+- An object found with the map's search and opened with **Edit in 3D** stays selected in the editor:
+  the selection went at the first frame drawn, while the inspector still showed the object.
 
 ### WorldEditorBridge
 - An apply the game takes more than 30 seconds to start (a world save on the server) is no longer

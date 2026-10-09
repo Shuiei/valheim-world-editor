@@ -211,6 +211,13 @@ public sealed class GlView : OpenGlControlBase
 		{
 			_target = new Vector3(0, scene.Heights[g], 0);
 		}
+		// Another area: the selection goes now (its indices were the last one's), before anything is
+		// selected in this one.
+		lock (_selection)
+		{
+			_selection.Clear();
+		}
+		SelectionDone();
 		_sceneDirty = true;
 		_lookFiles = null;
 		// The game look is set up for the area's own textures (mask, heights): again for a new one. The
@@ -964,10 +971,8 @@ public sealed class GlView : OpenGlControlBase
 		{
 			UploadTextures(dropped);
 		}
-		lock (_selection)
-		{
-			_selection.Clear();
-		}
+		// (The selection went when the area was shown or read again, not here: one made since, as the
+		// map's "Edit in 3D" makes at once, is the new area's.)
 		_selectionDirty = true;
 		lock (_objLock)
 		{

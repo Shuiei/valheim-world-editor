@@ -528,6 +528,23 @@ public sealed class VisualTests(EditorProcess editor) : IDisposable
 		Clean();
 	}
 
+	// An object found by the map's search, opened with Edit in 3D: still selected once the area is
+	// drawn (the first frame dropped the selection made as the area opened).
+	[Fact]
+	public void AFoundObjectStaysSelectedInTheEditor()
+	{
+		Open();
+		var s = Do("search Beech", "hit 0", "click Edit in 3D");
+		for (int n = 0; n < 120 && s.GetProperty("page").GetString() != "editor"; n++)
+		{
+			s = editor.Send("wait 250");
+		}
+		Assert.Equal("editor", s.GetProperty("page").GetString());
+		Picture("found");
+		Assert.Equal(1, editor.Send("state").GetProperty("selected").GetInt32());
+		Clean();
+	}
+
 	[Fact]
 	public void AStrokeIsPendingAndTheAreaStillDraws()
 	{
