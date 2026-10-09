@@ -61,7 +61,8 @@ public sealed class EditStore
 	{
 		foreach (TerrainZone z in world.TerrainZones)
 		{
-			if (z.ModifiedHeight.Length != Cells || z.ModifiedPaint.Length != Cells)
+			// Two terrain objects in one zone: the first is shown (the writer saves the zone into both).
+			if (z.ModifiedHeight.Length != Cells || z.ModifiedPaint.Length != Cells || _zones.ContainsKey((z.ZoneX, z.ZoneZ)))
 			{
 				continue;
 			}

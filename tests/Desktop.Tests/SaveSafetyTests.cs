@@ -113,4 +113,31 @@ public class SaveSafetyTests
 		Assert.Equal(0, world.Pending.Zones);
 		Assert.Equal(0, s.UnappliedSteps);
 	}
+
+	// A zone with two terrain objects (the game makes them now and then): saving its ground no longer
+	// fails, and both get it.
+	[Fact]
+	public void AZoneWithTwoTerrainObjectsSaves()
+	{
+		using var w = new TempWorld();
+		WorldSave save = w.Load();
+		var t = save.TerrainZones[0];
+		int id = save.ObjectRefs.FindIndex(o => o.IsTerrain && o.File == t.Source!.File && o.Start == t.Source.Start);
+		Assert.True(id >= 0);
+		var copy = new TerrainEditor.Editing.NewObject(-1, t.Prefab, t.Center, System.Numerics.Vector3.Zero, 0f, Raw: save.ObjectBytes(id));
+		var r = WorldWriter.Save(save, Array.Empty<TerrainEditor.Editing.ZoneEdit>(), added: new[] { copy });
+		Assert.True(r.Saved, r.Message);
+		save = w.Load();
+		Assert.Equal(2, save.TerrainZones.Count(z => z.ZoneX == t.ZoneX && z.ZoneZ == t.ZoneZ));
+
+		var edit = new TerrainEditor.Editing.EditStore(save).Get(t.ZoneX, t.ZoneZ)!;
+		edit.Modified[200] = true;
+		edit.Level[200] = 3f;
+		edit.Smooth[200] = 0f;
+		r = WorldWriter.Save(save, new[] { edit });
+		Assert.True(r.Saved, r.Message);
+		var both = w.Load().TerrainZones.Where(z => z.ZoneX == t.ZoneX && z.ZoneZ == t.ZoneZ).ToList();
+		Assert.Equal(2, both.Count);
+		Assert.All(both, z => Assert.Equal(3f, z.LevelDelta[200], 4));
+	}
 }

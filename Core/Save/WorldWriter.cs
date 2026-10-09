@@ -64,7 +64,9 @@ public static class WorldWriter
 		{
 			return new Result(false, $"This world uses save format {world.Chunks.First().WorldVersion}; the writer only supports {SaveFileVersion}.", null, 0, 0, skipped);
 		}
-		Dictionary<(int, int), TerrainZone> existing = world.TerrainZones.Where(z => z.Source != null).ToDictionary(z => (z.ZoneX, z.ZoneZ));
+		// A zone can hold two terrain objects with data (the game makes them now and then): each gets
+		// the zone's ground, so whichever one the game uses has it.
+		Dictionary<(int, int), List<TerrainZone>> existing = world.TerrainZones.Where(z => z.Source != null).GroupBy(z => (z.ZoneX, z.ZoneZ)).ToDictionary(g => g.Key, g => g.ToList());
 		TerrainZone? template = world.TerrainZones.FirstOrDefault(z => z.Source != null);
 		Dictionary<ChunkFile, HashSet<long>> removals = new();
 		void Remove(ObjectRef o) => (removals.TryGetValue(o.File, out var set) ? set : removals[o.File] = new()).Add(o.Start);
@@ -94,9 +96,12 @@ public static class WorldWriter
 		foreach (ZoneEdit edit in changed)
 		{
 			byte[] data = EncodeTerrain(edit);
-			if (existing.TryGetValue((edit.ZoneX, edit.ZoneZ), out TerrainZone? zone))
+			if (existing.TryGetValue((edit.ZoneX, edit.ZoneZ), out List<TerrainZone>? zones))
 			{
-				(patches.TryGetValue(zone.Source!.File, out var p) ? p : patches[zone.Source.File] = new())[zone.Source.Start] = (zone.Source, data);
+				foreach (TerrainZone zone in zones)
+				{
+					(patches.TryGetValue(zone.Source!.File, out var p) ? p : patches[zone.Source.File] = new())[zone.Source.Start] = (zone.Source, data);
+				}
 				written++;
 				continue;
 			}
@@ -403,33 +408,43 @@ public static class WorldWriter
 		{
 			return $"{after.ObjectCount} objects, expected {before.ObjectCount + created - removed}";
 		}
+		var afterZones = after.TerrainZones.ToLookup(t => (t.ZoneX, t.ZoneZ));
 		foreach (ZoneEdit e in saved)
 		{
-			TerrainZone? z = after.TerrainZones.FirstOrDefault(t => t.ZoneX == e.ZoneX && t.ZoneZ == e.ZoneZ);
-			if (z == null)
+			if (!afterZones.Contains((e.ZoneX, e.ZoneZ)))
 			{
 				return $"zone {e.ZoneX}, {e.ZoneZ} is missing";
 			}
-			for (int i = 0; i < EditStore.Cells; i++)
+			foreach (TerrainZone z in afterZones[(e.ZoneX, e.ZoneZ)])
 			{
-				if (z.ModifiedHeight[i] != e.Modified[i] || (e.Modified[i] && (z.LevelDelta[i] != e.Level[i] || z.SmoothDelta[i] != e.Smooth[i])) || z.ModifiedPaint[i] != e.PaintModified[i])
+				for (int i = 0; i < EditStore.Cells; i++)
 				{
-					return $"zone {e.ZoneX}, {e.ZoneZ} differs at point {i}";
-				}
-				if (e.PaintModified[i] && (z.Paint[i] != new Vector4(e.Paint[i * 4], e.Paint[i * 4 + 1], e.Paint[i * 4 + 2], e.Paint[i * 4 + 3])))
-				{
-					return $"zone {e.ZoneX}, {e.ZoneZ} paint differs at point {i}";
+					if (z.ModifiedHeight[i] != e.Modified[i] || (e.Modified[i] && (z.LevelDelta[i] != e.Level[i] || z.SmoothDelta[i] != e.Smooth[i])) || z.ModifiedPaint[i] != e.PaintModified[i])
+					{
+						return $"zone {e.ZoneX}, {e.ZoneZ} differs at point {i}";
+					}
+					if (e.PaintModified[i] && (z.Paint[i] != new Vector4(e.Paint[i * 4], e.Paint[i * 4 + 1], e.Paint[i * 4 + 2], e.Paint[i * 4 + 3])))
+					{
+						return $"zone {e.ZoneX}, {e.ZoneZ} paint differs at point {i}";
+					}
 				}
 			}
 		}
 		var changed = saved;
 		// Every other terrain zone must be untouched.
-		foreach (TerrainZone z in before.TerrainZones.Where(t => changed.All(e => e.ZoneX != t.ZoneX || e.ZoneZ != t.ZoneZ) && !groundReset.Contains((t.ZoneX, t.ZoneZ))))
+		// (Two terrain objects in one zone: compared in order, the writer keeps the objects' order.)
+		foreach (var group in before.TerrainZones.Where(t => changed.All(e => e.ZoneX != t.ZoneX || e.ZoneZ != t.ZoneZ) && !groundReset.Contains((t.ZoneX, t.ZoneZ))).GroupBy(t => (t.ZoneX, t.ZoneZ)))
 		{
-			TerrainZone? a = after.TerrainZones.FirstOrDefault(t => t.ZoneX == z.ZoneX && t.ZoneZ == z.ZoneZ);
-			if (a == null || !a.LevelDelta.SequenceEqual(z.LevelDelta) || !a.ModifiedHeight.SequenceEqual(z.ModifiedHeight) || !a.ModifiedPaint.SequenceEqual(z.ModifiedPaint))
+			var now = afterZones[group.Key].ToList();
+			int n = 0;
+			foreach (TerrainZone z in group)
 			{
-				return $"unchanged zone {z.ZoneX}, {z.ZoneZ} was altered";
+				TerrainZone? a = n < now.Count ? now[n] : null;
+				n++;
+				if (a == null || !a.LevelDelta.SequenceEqual(z.LevelDelta) || !a.ModifiedHeight.SequenceEqual(z.ModifiedHeight) || !a.ModifiedPaint.SequenceEqual(z.ModifiedPaint))
+				{
+					return $"unchanged zone {z.ZoneX}, {z.ZoneZ} was altered";
+				}
 			}
 		}
 		return after.TerrainZones.Count >= before.TerrainZones.Count - groundReset.Count ? null : "terrain zones were lost";

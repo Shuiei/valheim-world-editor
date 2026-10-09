@@ -23,6 +23,9 @@ the plugin is unchanged in versions without that part.
 - The editor's keys (Ctrl+Z, Ctrl+Y, Ctrl+S, Ctrl+V, the tool keys) do nothing on the start page
   and the map. On the map they acted on the area left open behind it: Ctrl+Z undid its last step
   unseen (live with Auto apply on, in the game too).
+- A world with two terrain objects in one zone (the game makes them now and then) can be saved:
+  every save failed with "An item with the same key has already been added". The zone's ground now
+  goes into both, so the game shows it whichever one it uses.
 
 ## v1.15.5 — 2026-10-09
 
