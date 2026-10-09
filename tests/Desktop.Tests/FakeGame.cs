@@ -18,6 +18,9 @@ public sealed class FakeGame : IDisposable
 	public string Token { get; } = "test-token";
 	public string Players { get; set; } = "[{\"name\":\"Ada\",\"x\":10,\"y\":30,\"z\":-20,\"yaw\":0},{\"name\":\"Bjorn\",\"x\":-40,\"y\":31,\"z\":5,\"yaw\":90}]";
 	public int Snapshots;
+	// A label of its own for each game opened (what the window shows; the history kept on disk goes by
+	// it), so tests running together never share one.
+	public static string Label() => "test " + Guid.NewGuid().ToString("N")[..8];
 	public List<(int X, int Z)> Terrain { get; } = new();
 	public List<(int Destroy, int Create)> ObjectCalls { get; } = new();
 	public List<(int X, int Z, bool Keep, bool Ground)> Resets { get; } = new();

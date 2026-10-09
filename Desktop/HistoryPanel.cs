@@ -16,6 +16,8 @@ public sealed class HistoryPanel
 	private readonly Func<EditSession?> _session;
 	public event Action<string>? Message;
 	public event Action? Closed;
+	// Whether these steps may be changed (the window asks about steps from an earlier session).
+	internal Func<IReadOnlyList<EditSession.Change>, Task<bool>> Allow { get; set; } = _ => Task.FromResult(true);
 
 	public HistoryPanel(Func<EditSession?> session)
 	{
@@ -98,30 +100,39 @@ public sealed class HistoryPanel
 	private Border Row(EditSession s, EditSession.Change c, bool undone, bool current)
 	{
 		var acts = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, HorizontalAlignment = HorizontalAlignment.Right };
-		Button Act(string text, string tip, Action a)
+		// The steps an action changes, asked about first.
+		Button Act(string text, string tip, Func<IReadOnlyList<EditSession.Change>> steps, Action a)
 		{
 			var b = new Button { Content = text, FontSize = 11, Padding = new Thickness(6, 1) };
 			ToolTip.SetTip(b, tip);
-			b.Click += (_, _) => { a(); Refresh(); };
+			b.Click += async (_, _) =>
+			{
+				if (await Allow(steps()))
+				{
+					a();
+				}
+				Refresh();
+			};
 			acts.Children.Add(b);
 			return b;
 		}
 		if (undone)
 		{
-			Act("Redo to here", "Redo up to this change", () => s.ForwardTo(c));
+			Act("Redo to here", "Redo up to this change", () => s.RedoList.SkipWhile(r => r != c).ToList(), () => s.ForwardTo(c));
 		}
 		else
 		{
 			if (!current)
 			{
-				Act("Back to here", "Undo every change after this one", () => s.BackTo(c));
+				Act("Back to here", "Undo every change after this one", () => s.UndoList.SkipWhile(u => u != c).Skip(1).ToList(), () => s.BackTo(c));
 			}
 			if (!c.Removed && c.RevertOf == null)
 			{
-				Act("Remove", "Take out only this change", () => Message?.Invoke(s.RemoveChange(c)));
+				Act("Remove", "Take out only this change", () => new[] { c }, () => Message?.Invoke(s.RemoveChange(c)));
 			}
 		}
-		string meta = c.Time.ToString("T") + (c.Describe() is { Length: > 0 } d ? " · " + d : "");
+		// Steps from an earlier session of the editor show their day too.
+		string meta = c.Time.ToString(c.Time.Date == DateTime.Today ? "T" : "g") + (c.Describe() is { Length: > 0 } d ? " · " + d : "");
 		var label = new StackPanel
 		{
 			Orientation = Orientation.Horizontal,
@@ -136,6 +147,15 @@ public sealed class HistoryPanel
 				CornerRadius = new CornerRadius(999), BorderThickness = new Thickness(1), BorderBrush = new SolidColorBrush(Color.Parse("#2a6a4a")), Padding = new Thickness(5, 0), VerticalAlignment = VerticalAlignment.Center,
 				Child = new TextBlock { Text = "applied", FontSize = 10, Foreground = Ui.Live },
 			});
+		}
+		if (c.Earlier)
+		{
+			// Kept from an earlier session of the editor (HistoryFile).
+			label.Children.Add(new Border
+			{
+				CornerRadius = new CornerRadius(999), BorderThickness = new Thickness(1), BorderBrush = Ui.Line, Padding = new Thickness(5, 0), VerticalAlignment = VerticalAlignment.Center,
+				Child = new TextBlock { Text = "earlier session", FontSize = 10, Foreground = Ui.Muted },
+			}.Tip("history.earlier"));
 		}
 		// The current change outlined in amber, like the web editor's.
 		return new Border

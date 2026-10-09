@@ -35,7 +35,7 @@ public class LiveTests
 	public async Task ApplyLiveSendsTheGroundAndObjectsAndKeepsTheHistory()
 	{
 		using var game = new FakeGame();
-		var world = await WorldSession.OpenLive(new LiveBridge(game.Url, game.Token), "test");
+		var world = await WorldSession.OpenLive(new LiveBridge(game.Url, game.Token), FakeGame.Label());
 		Assert.True(world.IsLive);
 		Assert.Equal(1, game.Snapshots);
 		var scene = WorldScene.Load(world, 0, 0, 1);
@@ -76,7 +76,7 @@ public class LiveTests
 	public async Task ZoneResetsAreAppliedThenTheWorldIsReadAgain()
 	{
 		using var game = new FakeGame();
-		var world = await WorldSession.OpenLive(new LiveBridge(game.Url, game.Token), "test");
+		var world = await WorldSession.OpenLive(new LiveBridge(game.Url, game.Token), FakeGame.Label());
 		var scene = WorldScene.Load(world, 0, 0, 1);
 		scene.Session!.Shape(32, 32, Two, 3, 0, "raise");
 		world.Edits.SetReset(new ZoneReset(2, 3, true, false), true);
@@ -94,7 +94,7 @@ public class LiveTests
 	public async Task ReloadDropsWhatIsNotApplied()
 	{
 		using var game = new FakeGame();
-		var world = await WorldSession.OpenLive(new LiveBridge(game.Url, game.Token), "test");
+		var world = await WorldSession.OpenLive(new LiveBridge(game.Url, game.Token), FakeGame.Label());
 		var scene = WorldScene.Load(world, 0, 0, 1);
 		scene.Session!.Shape(32, 32, Two, 3, 0, "raise");
 		Assert.Equal(1, world.Pending.Zones);
@@ -110,7 +110,7 @@ public class LiveTests
 	public async Task AFailedApplyIsSentAgainNextTime()
 	{
 		using var game = new FakeGame();
-		var world = await WorldSession.OpenLive(new LiveBridge(game.Url, game.Token), "test");
+		var world = await WorldSession.OpenLive(new LiveBridge(game.Url, game.Token), FakeGame.Label());
 		var scene = WorldScene.Load(world, 0, 0, 1);
 		var s = scene.Session!;
 		int tree = scene.Things.FindIndex(t => !t.Gone && !t.Piece);
@@ -132,7 +132,7 @@ public class LiveTests
 	public async Task AFailedGroundApplyIsSentAgainNextTime()
 	{
 		using var game = new FakeGame();
-		var world = await WorldSession.OpenLive(new LiveBridge(game.Url, game.Token), "test");
+		var world = await WorldSession.OpenLive(new LiveBridge(game.Url, game.Token), FakeGame.Label());
 		var s = WorldScene.Load(world, 0, 0, 1).Session!;
 		s.Shape(32, 32, Two, 3, 0, "raise");
 		game.Fail["/terrain"] = 500;
@@ -151,7 +151,7 @@ public class LiveTests
 	public async Task TwoAppliesAtOnceSendEachChangeOnce()
 	{
 		using var game = new FakeGame();
-		var world = await WorldSession.OpenLive(new LiveBridge(game.Url, game.Token), "test");
+		var world = await WorldSession.OpenLive(new LiveBridge(game.Url, game.Token), FakeGame.Label());
 		var scene = WorldScene.Load(world, 0, 0, 1);
 		var s = scene.Session!;
 		var tree = (new NewObject(0, StableHash.Of("Beech1"), new System.Numerics.Vector3(10, 30, 10), System.Numerics.Vector3.Zero, 1), false);
@@ -170,7 +170,7 @@ public class LiveTests
 	public async Task ObjectsAlreadyGoneInTheGameAreReported()
 	{
 		using var game = new FakeGame { Missing = 1 };
-		var world = await WorldSession.OpenLive(new LiveBridge(game.Url, game.Token), "test");
+		var world = await WorldSession.OpenLive(new LiveBridge(game.Url, game.Token), FakeGame.Label());
 		var scene = WorldScene.Load(world, 0, 0, 1);
 		scene.Session!.Delete(new[] { scene.Things.FindIndex(t => !t.Gone && !t.Piece) });
 		var o = await world.ApplyLive();
@@ -184,7 +184,7 @@ public class LiveTests
 	{
 		using var game = new FakeGame();
 		game.Fail["/zones/reset"] = 404;
-		var world = await WorldSession.OpenLive(new LiveBridge(game.Url, game.Token), "test");
+		var world = await WorldSession.OpenLive(new LiveBridge(game.Url, game.Token), FakeGame.Label());
 		world.Edits.SetReset(new ZoneReset(2, 3, true, false), true);
 		var o = await world.ApplyLive();
 		Assert.False(o.Done);
@@ -198,7 +198,7 @@ public class LiveTests
 	{
 		var game = new FakeGame();
 		var live = new LiveBridge(game.Url, game.Token);
-		var world = await WorldSession.OpenLive(live, "test");
+		var world = await WorldSession.OpenLive(live, FakeGame.Label());
 		game.Dispose();
 		await Assert.ThrowsAnyAsync<Exception>(() => world.Reload());
 		Assert.Contains("Nothing answers", await LiveBridge.Check(game.Url, game.Token, TimeSpan.FromSeconds(2)));

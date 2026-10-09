@@ -170,6 +170,10 @@ public sealed class WorldScene
 			LoadInfo = $"{world.Name}: read in {readMs} ms, {size}×{size} zones and {things.Count:N0} objects ready in {watch.ElapsedMilliseconds} ms",
 		};
 		scene.Session = new EditSession(scene, Ground.Read(terrain, edits, x0, z0, size), edits);
+		if (owner != null)
+		{
+			owner.Area = scene.Session;
+		}
 		// The world's history (made in other areas), fitted to this one.
 		if (owner?.History is { } kept)
 		{

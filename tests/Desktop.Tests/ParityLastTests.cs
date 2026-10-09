@@ -416,7 +416,7 @@ public class ParityLastTests
 		using var game = new FakeGame();
 		var w = new MainWindow(load: false) { Width = 1200, Height = 900 };
 		w.Show();
-		var world = await WorldSession.OpenLive(new LiveBridge(game.Url, game.Token), "test");
+		var world = await WorldSession.OpenLive(new LiveBridge(game.Url, game.Token), FakeGame.Label());
 		var scene = WorldScene.Load(world, 0, 0, 1);
 		var s = scene.Session!;
 		w.View.Show(scene, null);
@@ -435,7 +435,7 @@ public class ParityLastTests
 	public async Task TheLiveSyncKnowsWhichNewObjectsTheGameHas()
 	{
 		using var game = new FakeGame();
-		var world = await WorldSession.OpenLive(new LiveBridge(game.Url, game.Token), "test");
+		var world = await WorldSession.OpenLive(new LiveBridge(game.Url, game.Token), FakeGame.Label());
 		var s = WorldScene.Load(world, 0, 0, 1).Session!;
 		var i = s.Commit("Placed", null, Array.Empty<int>(), new[] { (Tree(s, "Beech1", 20, 20), false) })[0];
 		int id = s.Scene.Things[i].Id;
