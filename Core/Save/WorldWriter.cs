@@ -369,8 +369,9 @@ public static class WorldWriter
 	}
 
 	// Why a save made from save number `known` would throw away a newer one in the folder (the game
-	// saved the world since it was read), or null when there is none.
-	public static string? Newer(string dir, int known) => LatestNumber(dir) is int newest && newest > known
+	// saved the world since it was read), or null when there is none. Only a complete save counts: one
+	// cut short long ago would block every save.
+	public static string? Newer(string dir, int known) => WorldSave.CommittedSave(dir) is int newest && newest > known
 		? $"Valheim saved this world (save #{newest}) after the editor read it: saving now would throw away what was done in the game since. Nothing was saved. Leave the world and open it again to edit the game's save."
 		: null;
 
@@ -378,19 +379,25 @@ public static class WorldWriter
 	public static int LatestNumber(string dir) => Directory.GetFiles(dir, "_main.*.chunks")
 		.Select(f => Path.GetFileName(f).Split('.')).Where(p => p.Length == 3 && int.TryParse(p[1], out _)).Select(p => int.Parse(p[1], System.Globalization.CultureInfo.InvariantCulture)).DefaultIfEmpty(-1).Max();
 
-	// The world folder down to its latest save: every other save number's files and the chunk files its
-	// index does not list go (an open world's base, once it is left).
+	// The world folder down to its latest save: earlier save numbers' files and the chunk files its
+	// index does not list go (an open world's base, once it is left). A newer save without its commit
+	// marker (cut short, or the game writing it right now) is left alone, and so are the chunk files
+	// then; so are files named _main.<something else>.
 	public static void Prune(string dir)
 	{
-		int latest = LatestNumber(dir);
-		if (latest < 0)
+		if (LatestNumber(dir) < 0)
 		{
 			return;
 		}
 		WorldSave now = WorldSave.Load(dir);
+		int latest = now.SaveNumber;
 		var keep = now.Chunks.Select(c => c.FileName).ToHashSet();
-		var old = Directory.GetFiles(dir, "_main.*").Where(f => Path.GetFileName(f).Split('.') is [_, var n, _] && n != latest.ToString(System.Globalization.CultureInfo.InvariantCulture))
-			.Concat(Directory.GetFiles(dir, "*.chunk").Where(f => !keep.Contains(Path.GetFileName(f))));
+		var old = Directory.GetFiles(dir, "_main.*").Where(f => Path.GetFileName(f).Split('.') is [_, var n, _]
+			&& int.TryParse(n, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out int number) && number < latest);
+		if (LatestNumber(dir) == latest)
+		{
+			old = old.Concat(Directory.GetFiles(dir, "*.chunk").Where(f => !keep.Contains(Path.GetFileName(f))));
+		}
 		RemoveAll(old.ToList());
 	}
 

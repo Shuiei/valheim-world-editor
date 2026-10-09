@@ -26,6 +26,10 @@ the plugin is unchanged in versions without that part.
 - A world with two terrain objects in one zone (the game makes them now and then) can be saved:
   every save failed with "An item with the same key has already been added". The zone's ground now
   goes into both, so the game shows it whichever one it uses.
+- A save cut short (the game or the editor stopped while writing it: no `_main.<n>.ok`) is no longer
+  taken for the world's save, as the game does. The world opens from the last complete save, and
+  leaving it no longer deletes that save. Leaving a world also no longer deletes your own files named
+  `_main.<something>` in its folder (a `_main.backup.zip`).
 
 ## v1.15.5 — 2026-10-09
 

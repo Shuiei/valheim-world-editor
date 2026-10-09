@@ -140,4 +140,29 @@ public class SaveSafetyTests
 		Assert.Equal(2, both.Count);
 		Assert.All(both, z => Assert.Equal(3f, z.LevelDelta[200], 4));
 	}
+
+	// A save cut short (no commit marker, .ok) is not the world's save: it opens from the last complete
+	// one, which leaving the world keeps, and a later save goes past it.
+	[Fact]
+	public void ASaveWithoutItsCommitMarkerIsNotUsed()
+	{
+		using var w = new TempWorld();
+		int good = w.Load().SaveNumber;
+		int cut = GameSaves(w.Dir);
+		File.Delete(Path.Combine(w.Dir, $"_main.{cut}.ok"));
+		File.WriteAllText(Path.Combine(w.Dir, "_main.backup.zip"), "mine");
+		Assert.Equal(good, WorldSave.Load(w.Dir).SaveNumber);
+		WorldWriter.Prune(w.Dir);
+		Assert.True(File.Exists(Path.Combine(w.Dir, $"_main.{good}.ok")));
+		Assert.True(File.Exists(Path.Combine(w.Dir, $"_main.{cut}.chunks")));
+		Assert.True(File.Exists(Path.Combine(w.Dir, "_main.backup.zip")));
+		Assert.Equal(good, WorldSave.Load(w.Dir).SaveNumber);
+		// Saving works (the cut save does not count as newer) and takes the next free number.
+		using var world = WorldSession.Open(w.Dir);
+		var s = WorldScene.Load(world, 0, 0, 1).Session!;
+		s.Shape(32, 32, Two, 3, 0, "raise");
+		var o = s.Save();
+		Assert.True(o.Saved, o.Message);
+		Assert.Equal(cut + 1, WorldSave.Load(w.Dir).SaveNumber);
+	}
 }
