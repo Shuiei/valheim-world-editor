@@ -835,6 +835,11 @@ public sealed class GlView : OpenGlControlBase
 			LoadGate.Wait();
 			try
 			{
+				// Left already (another area opened while it waited): not read at all.
+				if (!Current(g))
+				{
+					return;
+				}
 				string? name = NameOf(g.Key.Prefab);
 				var model = name != null && _models != null && _gameLookOn ? _models.LoadModel(name) : null;
 				var meshes = new Dictionary<string, ModelStore.MeshData>();
@@ -884,7 +889,10 @@ public sealed class GlView : OpenGlControlBase
 			catch (Exception ex)
 			{
 				Status?.Invoke($"Model of {g.Key.Prefab}: {ex.Message}");
-				Interlocked.Decrement(ref _pending);
+				if (Current(g))
+				{
+					Interlocked.Decrement(ref _pending);
+				}
 			}
 			finally
 			{
@@ -980,11 +988,24 @@ public sealed class GlView : OpenGlControlBase
 		return Matrix4x4.CreateScale(scale) * Matrix4x4.CreateFromQuaternion(q) * Matrix4x4.CreateTranslation(pos);
 	}
 
-	// A loaded model's textures, then its batches.
+	// A loaded model's textures, then its batches. A model read for an area (or a look) left since
+	// keeps only its textures: its group is gone, and its things' indices are another scene's.
 	private unsafe void Upload(ReadyModel r)
 	{
 		UploadTextures(r);
-		UploadModel(r);
+		if (Current(r.Group))
+		{
+			UploadModel(r);
+		}
+	}
+
+	// The group is still the view's (not one of an area left since).
+	private bool Current(Group g)
+	{
+		lock (_groups)
+		{
+			return _groups.TryGetValue(g.Key, out var now) && now == g;
+		}
 	}
 
 	// A loaded model's textures. Also for a model dropped before it was drawn (a new area): its loader

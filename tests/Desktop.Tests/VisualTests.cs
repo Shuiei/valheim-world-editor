@@ -355,6 +355,25 @@ public sealed class VisualTests(EditorProcess editor) : IDisposable
 		Assert.Equal(0, editor.Send("state").GetProperty("glErrors").GetInt32());
 	}
 
+	// Areas switched while their models are still being read: a model read for the area left was put
+	// into the new one, with that area's object numbers (out of range: the app closed).
+	[Fact]
+	public void SwitchingAreasWhileModelsLoadKeepsDrawing()
+	{
+		Open();
+		for (int n = 0; n < 4; n++)
+		{
+			editor.Send("area 0 0 3");
+			editor.Send("area 0 0 1");
+		}
+		editor.Send("camera 0 0 30 50 70");
+		var picture = Picture("switched");
+		Assert.True(picture.Spread > 1, "the view is drawn");
+		var state = editor.Send("state");
+		Assert.Equal("editor", state.GetProperty("page").GetString());
+		Assert.Equal(0, state.GetProperty("glErrors").GetInt32());
+	}
+
 	[Fact]
 	public void TheMapDrawsTheWorld()
 	{

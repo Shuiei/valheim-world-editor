@@ -44,6 +44,9 @@ the plugin is unchanged in versions without that part.
   that cannot be written (locked) no longer stops the app.
 - `servers.cfg` is only readable by you from the moment it is made (it was readable by others for an
   instant), and a saved password with spaces at its ends no longer loses them (the login failed).
+- Opening another area (or saving, or switching the look) while the models are still being read no
+  longer closes the editor or draws objects of the area left: a model read for it went into the new
+  area, with that area's object numbers.
 
 ### WorldEditorBridge
 - An apply the game takes more than 30 seconds to start (a world save on the server) is no longer
