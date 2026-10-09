@@ -217,21 +217,33 @@ public sealed class WorldSave
 
 	private static int FindLatestSave(string directory)
 	{
-		// The game keeps rolling saves (_main.<n>.*); the highest number with an index file is current.
-		int best = -1;
-		foreach (string path in System.IO.Directory.GetFiles(directory, "_main.*.chunks"))
-		{
-			string[] parts = Path.GetFileName(path).Split('.');
-			if (parts.Length == 3 && int.TryParse(parts[1], NumberStyles.None, CultureInfo.InvariantCulture, out int n) && n > best)
-			{
-				best = n;
-			}
-		}
+		int best = CommittedSave(directory);
 		if (best < 0)
 		{
 			throw new InvalidDataException("No _main.<n>.chunks file found in " + directory + ". Is this a chunked (Deep North) world save?");
 		}
 		return best;
+	}
+
+	// The game keeps rolling saves (_main.<n>.*); the current one is the highest number with an index
+	// file and the commit marker (.ok, written last: a save without it was cut short, or is being
+	// written right now). A folder where no save has the marker: the highest index. -1: none.
+	public static int CommittedSave(string directory)
+	{
+		int best = -1, committed = -1;
+		foreach (string path in System.IO.Directory.GetFiles(directory, "_main.*.chunks"))
+		{
+			string[] parts = Path.GetFileName(path).Split('.');
+			if (parts.Length == 3 && int.TryParse(parts[1], NumberStyles.None, CultureInfo.InvariantCulture, out int n))
+			{
+				best = Math.Max(best, n);
+				if (n > committed && File.Exists(Path.Combine(directory, $"_main.{n}.ok")))
+				{
+					committed = n;
+				}
+			}
+		}
+		return committed >= 0 ? committed : best;
 	}
 
 	private void LoadChunks()
@@ -518,12 +530,11 @@ public sealed class WorldSave
 			// A runestone: listed under its location's name (see PrefabCatalog.RunestoneLocations).
 			Objects.Add((id, location, position, rotation, scale));
 		}
-		foreach (TerrainZone z in TerrainZones)
+		// Only this object's own terrain data can still lack its end (the last zone added, if it is this
+		// object's): looking through every zone for each object made loading a large world slow.
+		if (terrain && TerrainZones[^1].Source is { End: < 0 } src)
 		{
-			if (z.Source is { } src && src.File == file && src.Start == start && src.End < 0)
-			{
-				z.Source = src with { End = end };
-			}
+			TerrainZones[^1].Source = src with { End = end };
 		}
 	}
 

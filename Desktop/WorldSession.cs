@@ -75,6 +75,22 @@ public sealed class WorldSession : IDisposable
 		}
 	}
 
+	// Saved or applied from the map (no area open): the kept steps are in the world now, as an open
+	// area's are once it saves (EditSession), so a later Discard does not undo them.
+	private void MarkHistoryApplied()
+	{
+		if (Area == null && History != null)
+		{
+			// Applied is part of a step's hash: the ids are keyed again once it is set.
+			var ids = History.Ids.ToList();
+			foreach (var c in History.Undo)
+			{
+				c.Applied = true;
+			}
+			History = History with { Ids = ids.ToDictionary(p => p.Key, p => p.Value) };
+		}
+	}
+
 	// The world was read again: the steps do not match it any more.
 	private void ForgetHistory()
 	{
@@ -128,6 +144,7 @@ public sealed class WorldSession : IDisposable
 	// world is left), with every change since; the zones and objects of the last save, the files it
 	// wrote (removed by the next one).
 	private IReadOnlyList<string>? _lastSave;
+	private int? _lastNumber;
 	private HashSet<(int, int)> _savedZones = new();
 	private HashSet<int> _savedDeleted = new();
 	private HashSet<NewObject> _savedAdded = new();
@@ -135,6 +152,7 @@ public sealed class WorldSession : IDisposable
 	private void ForgetSaves()
 	{
 		_lastSave = null;
+		_lastNumber = null;
 		_savedZones = new();
 		_savedDeleted = new();
 		_savedAdded = new();
@@ -170,14 +188,21 @@ public sealed class WorldSession : IDisposable
 	// from, with every change since (so a zone saved before and not changed since is written again),
 	// and the previous save of the session goes. After zone resets or when No limit ground became ground
 	// discs, the world is read again from what was written (the ground or zones are not the same).
+	// A save the game made after the world was read (a play test between two saves) is never thrown
+	// away: the save is refused before anything changes, No limit ground included.
 	public Outcome Save()
 	{
+		int known = _lastNumber ?? World.SaveNumber;
+		if (WorldWriter.Newer(World.Directory, known) is string newer)
+		{
+			return new Outcome(false, newer, false, new WorldWriter.Result(false, newer, null, 0, 0, new()));
+		}
 		var plan = LiftToDiscs();
 		var zones = Edits.All().Where(e => e.Changed).Select(e => (e.ZoneX, e.ZoneZ)).ToHashSet();
 		zones.UnionWith(_savedZones);
 		var changed = Edits.All().Where(e => zones.Contains((e.ZoneX, e.ZoneZ))).ToList();
 		bool reread = plan != null || Edits.ResetCount > 0;
-		var result = WorldWriter.Save(World, changed, Edits.Deleted, Edits.Added, Edits.Resets, new WorldWriter.Options(KeepBase: !reread, Drop: _lastSave));
+		var result = WorldWriter.Save(World, changed, Edits.Deleted, Edits.Added, Edits.Resets, new WorldWriter.Options(KeepBase: !reread, Drop: _lastSave, Latest: known));
 		if (result.Saved && reread)
 		{
 			World = WorldSave.Load(World.Directory);
@@ -191,10 +216,12 @@ public sealed class WorldSession : IDisposable
 		else if (result.Saved)
 		{
 			_lastSave = result.Files;
+			_lastNumber = result.Number;
 			_savedZones = zones;
 			Edits.MarkApplied(changed.Select(e => (e.ZoneX, e.ZoneZ)));
 			_savedDeleted = Edits.Deleted.ToHashSet();
 			_savedAdded = Edits.Added.ToHashSet();
+			MarkHistoryApplied();
 			KeepHistory();
 		}
 		string message = plan != null ? $"{result.Message} No limit ground: {plan.Describe()}." : result.Message;
@@ -206,7 +233,15 @@ public sealed class WorldSession : IDisposable
 	{
 		if (!IsLive && _lastSave != null && System.IO.Directory.Exists(World.Directory))
 		{
-			WorldWriter.Prune(World.Directory);
+			// The world is left whatever happens: a folder that cannot be read now keeps its files.
+			try
+			{
+				WorldWriter.Prune(World.Directory);
+			}
+			catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
+			{
+				Console.WriteLine($"Leaving the world: its earlier saves could not be removed: {ex.Message}");
+			}
 		}
 		ForgetSaves();
 	}
@@ -249,11 +284,12 @@ public sealed class WorldSession : IDisposable
 		}
 		try
 		{
-			var zones = Edits.All().Where(e => e.Changed).ToList();
+			// Copies as sent: edits made while the game answers are not marked as applied.
+			var zones = Edits.All().Where(e => e.Changed).Select(e => e.Clone()).ToList();
 			if (zones.Count > 0)
 			{
 				await live.ApplyTerrain(zones.Select(e => (e.ZoneX, e.ZoneZ, WorldWriter.EncodeTerrain(e))).ToList());
-				Edits.MarkApplied(zones.Select(e => (e.ZoneX, e.ZoneZ)));
+				Edits.MarkApplied(zones);
 				done.Add($"{zones.Count} zone(s) of ground");
 			}
 			string objects = await LiveSync.Apply(World, Edits, live);
@@ -276,6 +312,7 @@ public sealed class WorldSession : IDisposable
 			}
 			else if (done.Count > 0)
 			{
+				MarkHistoryApplied();
 				KeepHistory();
 			}
 			return new Outcome(done.Count > 0, done.Count > 0 ? $"Applied to the running game: {string.Join("; ", done)}." : "Nothing to apply.", reloaded) { Lifted = plan != null };

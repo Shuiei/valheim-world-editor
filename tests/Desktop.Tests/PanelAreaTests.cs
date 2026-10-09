@@ -218,6 +218,9 @@ public class PanelAreaTests
 		r.P.BackupInfo.Text = "";
 		Assert.NotNull(await r.P.OpenBackup(r.Dir, r.S.Scene.World));
 		Assert.Equal("", r.P.BackupInfo.Text);
+		// Kept, it is still refused for another world (the same folder chosen after opening that one).
+		Assert.Null(await r.P.OpenBackup(r.Dir, other));
+		Assert.StartsWith("That is another world (seed ", r.P.BackupInfo.Text);
 	}
 
 	[AvaloniaFact]

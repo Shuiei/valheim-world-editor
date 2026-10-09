@@ -156,16 +156,10 @@ public partial class MainWindow
 	// something is not saved), and a building not saved as a blueprint (asking too).
 	internal async Task OpenWorkshop(string? path)
 	{
-		if (_world is { } w)
+		if (_world is { } w && w.Pending is not (0, 0, 0, 0)
+			&& !await Ask("Leave the world", $"{(w.IsLive ? "Not applied" : "Unsaved")}: {Describe(w.Pending)}. Leave the world for the Workshop without {(w.IsLive ? "applying" : "saving")} them?", "Leave anyway", "Stay"))
 		{
-			if (w.Pending is not (0, 0, 0, 0)
-				&& !await Ask("Leave the world", $"{(w.IsLive ? "Not applied" : "Unsaved")}: {Describe(w.Pending)}. Leave the world for the Workshop without {(w.IsLive ? "applying" : "saving")} them?", "Leave anyway", "Stay"))
-			{
-				return;
-			}
-			w.Dispose();
-			_world = null;
-			Tunnel.Close();
+			return;
 		}
 		if (WorkshopDirty && !await Ask("Workshop", "The building on the plot is not saved as a blueprint. Open another anyway?", "Open anyway", "Stay"))
 		{
@@ -184,9 +178,18 @@ public partial class MainWindow
 			}
 			catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
 			{
+				// The world stays open as it was.
 				_message.Text = "Could not open that blueprint: " + ex.Message;
 				return;
 			}
+		}
+		// Left only once the blueprint could be read.
+		if (_world is { } open)
+		{
+			open.Dispose();
+			_world = null;
+			_session = null;
+			Tunnel.Close();
 		}
 		var scene = Workshop.Create(name != null ? $"Workshop · {name}" : "Workshop");
 		await ShowEditor(scene);

@@ -27,6 +27,23 @@ public static partial class TerrainShader
 
 		""";
 
+	// The first line of a GLSL file made here: which version of this converter made it. A later editor
+	// with a changed converter makes it again from the kept SPIR-V (no new copy of the game's look).
+	public const int ConverterVersion = 1;
+	public static string Stamp => $"// Made from {SpirvFile} by the editor's converter {ConverterVersion}.";
+
+	// Whether the GLSL there was made by this converter (false: none, or from an older one).
+	public static bool IsCurrent(string terrainDir)
+	{
+		string glsl = Path.Combine(terrainDir, GlslFile);
+		if (!File.Exists(glsl))
+		{
+			return false;
+		}
+		using var reader = new StreamReader(glsl);
+		return reader.ReadLine() == Stamp;
+	}
+
 	// Turns terrain/heightmap.frag.spv into heightmap.frag.glsl; true when there was one to turn.
 	public static bool ConvertIn(string terrainDir)
 	{
@@ -35,7 +52,7 @@ public static partial class TerrainShader
 		{
 			return false;
 		}
-		string glsl = FromSpirv(File.ReadAllBytes(spv));
+		string glsl = Stamp + "\n" + FromSpirv(File.ReadAllBytes(spv));
 		string tmp = Path.Combine(terrainDir, GlslFile + ".tmp");
 		File.WriteAllText(tmp, glsl);
 		File.Move(tmp, Path.Combine(terrainDir, GlslFile), overwrite: true);

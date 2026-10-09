@@ -265,6 +265,8 @@ public sealed class CoreTunnelSshTests : IClassFixture<LocalSshd>, IDisposable
 		string home = Path.Combine(_dir, "home");
 		Directory.CreateDirectory(Path.Combine(home, ".ssh"));
 		File.Copy(_ssh.Key, Path.Combine(home, ".ssh", "id_ed25519"));
+		// One the editor cannot read is skipped (it stopped the login with "The key file could not be read").
+		File.WriteAllText(Path.Combine(home, ".ssh", "id_ecdsa"), "not a key");
 		File.Copy(_ssh.Key, Path.Combine(home, "mykey"));
 		Environment.SetEnvironmentVariable("HOME", home);
 		var r = await Tunnel.Start(Req(key: ""));
@@ -295,6 +297,11 @@ public sealed class CoreTunnelSshTests : IClassFixture<LocalSshd>, IDisposable
 		r = await Tunnel.Start(Req());
 		Assert.StartsWith($"The server's identity changed (it was SHA256:somethingelse, now {_ssh.Fingerprint}).", r.Error);
 		Assert.False(Tunnel.Open);
+		// Known under another account only: the same server, so still refused (it was trusted afresh).
+		ServerConfig.Forget(id);
+		ServerConfig.Remember(new ServerConfig.Server { Name = "Other account", Host = "127.0.0.1", SshPort = _ssh.Port, User = "someone-else", HostKey = "SHA256:somethingelse" });
+		r = await Tunnel.Start(Req());
+		Assert.StartsWith("The server's identity changed (it was SHA256:somethingelse", r.Error);
 	}
 
 	[Fact]

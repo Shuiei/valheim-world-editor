@@ -42,7 +42,7 @@ public static class CopyFormat
 		Rel = o["rel"]!.AsArray().Select(v => I(v) == -32768 ? float.NaN : I(v) / 100f).ToArray(),
 		Wt = o["wt"]!.AsArray().Select(v => I(v) / 255f).ToArray(),
 		Pnt = o["pnt"]!.AsArray().Select(v => I(v) < 0 ? -1f : I(v) / 255f).ToArray(),
-		Objects = o["objects"]!.AsArray().Select(x => new CopyData.Obj(StableHash.Of((string)x!["name"]!), (string)x["name"]!, F(x["dx"]), F(x["dz"]), F(x["dy"]),
+		Objects = o["objects"]!.AsArray().Select(x => new CopyData.Obj(StableHash.OfName((string)x!["name"]!), (string)x["name"]!, F(x["dx"]), F(x["dz"]), F(x["dy"]),
 			new Vector3(F(x["rx"]), F(x["ry"]), F(x["rz"])), F(x["scale"]), keepSources && x["sourceId"] != null ? I(x["sourceId"]) : null, (bool?)x["follow"] ?? false,
 			BlueprintFormats.DataOf(x["data"]))).ToList(),
 		Poly = (o["poly"] as JsonArray)?.Select(p => new Vector2(F(p!["gx"]), F(p["gz"]))).ToList() ?? new(),

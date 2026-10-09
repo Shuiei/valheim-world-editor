@@ -49,6 +49,8 @@ public sealed class ModelStore
 	private readonly JsonObject _meshInfo, _materials;
 	private readonly ConcurrentDictionary<string, Model?> _models = new();
 	private readonly ConcurrentDictionary<string, Lazy<MeshData?>> _meshes = new();
+	// Each mesh's box, kept when its vertices are let go (Forget).
+	private readonly ConcurrentDictionary<string, (Vector3 Min, Vector3 Max)> _bounds = new();
 
 	internal ModelStore(string root)
 	{
@@ -127,8 +129,17 @@ public sealed class ModelStore
 			}
 			indices[s] = idx;
 		}
-		return new MeshData(verts, indices);
+		var md = new MeshData(verts, indices);
+		_bounds[i] = md.Bounds;
+		return md;
 	})).Value;
+
+	// A mesh's box, if it was read before (null: read it with LoadMesh).
+	public (Vector3 Min, Vector3 Max)? BoundsOf(string id) => _bounds.TryGetValue(id, out var b) ? b : null;
+
+	// The mesh's vertices are not needed any more (they are on the graphics card): let go, its box kept.
+	// Read again if asked again.
+	public void Forget(string id) => _meshes.TryRemove(id, out _);
 
 	public MaterialData Material(string id)
 	{

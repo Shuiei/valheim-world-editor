@@ -25,7 +25,7 @@ public static class GameLook
 	// home must not lead to the computer's own game.
 	public static bool SearchOutsideHome { get; set; } = true;
 
-	private static string MarkerPath => Path.Combine(Dir, "game-look.json");
+	internal static string MarkerPath => Path.Combine(Dir, "game-look.json");
 
 	// "ready", "missing" (not set up, Valheim not found), "running", "failed".
 	public static string State { get; private set; } = "missing";
@@ -48,12 +48,12 @@ public static class GameLook
 	}
 
 
-	private sealed record Marker(string Valheim, string? BuildId, int Exporter, DateTime Made);
+	internal sealed record Marker(string Valheim, string? BuildId, int Exporter, DateTime Made);
 
 	// Bump when the exporter's output changes, so existing installs export again.
 	// 2: runestone locations and tameable creatures get models.
 	// 3: dungeon rooms get models (the Dungeon tool).
-	private const int ExporterVersion = 3;
+	internal const int ExporterVersion = 3;
 
 	// Files that only a complete export leaves behind.
 	public static bool Present()
@@ -81,15 +81,23 @@ public static class GameLook
 		catch
 		{
 		}
-		ConvertShader();
+		string? problem = ConvertShader();
 		bool present = Present();
+		string? build = valheim != null ? BuildId(valheim) : null;
+		bool upToDate = marker != null && marker.Exporter == ExporterVersion && (valheim == null || build == null || marker.BuildId == build);
+		// The copy is done but its shader could not be made here: copying again would end the same
+		// way (minutes, at every start). Said instead; a game update or a new editor copies again.
+		if (problem != null && !present && upToDate)
+		{
+			Set("failed", "The game's look is copied, but its terrain shader could not be made: " + problem);
+			return;
+		}
 		if (valheim == null)
 		{
 			Set(present ? "ready" : "missing", present ? null : "Valheim was not found on this computer. Choose its folder to get the game's look.");
 			return;
 		}
-		string? build = BuildId(valheim);
-		if (present && marker != null && marker.Exporter == ExporterVersion && (build == null || marker.BuildId == build))
+		if (present && upToDate)
 		{
 			Set("ready", null);
 			return;
@@ -209,11 +217,13 @@ public static class GameLook
 	}
 
 	// A copy from Valheim for Windows brings the terrain shader as SPIR-V (its Vulkan program): made
-	// into GLSL here (TerrainShader). Null when done or not needed, else what went wrong.
+	// into GLSL here (TerrainShader), again when this editor's converter is newer than the one that
+	// made it (a GLSL that cannot be made again stays). Null when done or not needed, else what went
+	// wrong.
 	private static string? ConvertShader()
 	{
 		string terrain = Path.Combine(Dir, "terrain");
-		if (File.Exists(Path.Combine(terrain, TerrainShader.GlslFile)) || !File.Exists(Path.Combine(terrain, TerrainShader.SpirvFile)))
+		if (!File.Exists(Path.Combine(terrain, TerrainShader.SpirvFile)) || TerrainShader.IsCurrent(terrain))
 		{
 			return null;
 		}
@@ -433,7 +443,7 @@ public static class GameLook
 	}
 
 	// Steam's build id of the installed game (changes with every update), or null.
-	private static string? BuildId(string valheim)
+	internal static string? BuildId(string valheim)
 	{
 		try
 		{

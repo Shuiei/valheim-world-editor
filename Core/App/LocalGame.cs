@@ -51,7 +51,7 @@ public static class LocalGame
 			}
 			else
 			{
-				foreach (string profile in Directory.GetDirectories(extra).Where(d => Directory.Exists(Path.Combine(d, "BepInEx"))))
+				foreach (string profile in Places.Subfolders(extra).Where(d => Directory.Exists(Path.Combine(d, "BepInEx"))))
 				{
 					yield return (Path.Combine(profile, "BepInEx"), $"profile \"{Path.GetFileName(profile)}\"");
 				}
@@ -79,7 +79,7 @@ public static class LocalGame
 			{
 				continue;
 			}
-			foreach (string profile in Directory.GetDirectories(root))
+			foreach (string profile in Places.Subfolders(root))
 			{
 				yield return (Path.Combine(profile, "BepInEx"), $"{name} profile \"{Path.GetFileName(profile)}\"");
 			}

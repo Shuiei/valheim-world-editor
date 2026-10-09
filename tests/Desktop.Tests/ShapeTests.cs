@@ -47,10 +47,24 @@ public class ShapeTests
 	[InlineData("1 2", "“2” is out of place")]
 	[InlineData("1 # 2", "I do not understand “# 2”")]
 	[InlineData("n(1)", "n(x, z) takes two numbers")]
+	[InlineData("sin()", "sin(…) takes one number")]
+	[InlineData("pow(x)", "pow(…) takes 2 numbers")]
+	[InlineData("clamp(x, 0)", "clamp(…) takes 3 numbers")]
 	public void MistakesAreExplained(string src, string message)
 	{
 		var ex = Assert.Throws<FormatException>(() => Formula.Compile(src, new[] { "x", "z" }));
 		Assert.Equal(message, ex.Message);
+	}
+
+	// A pasted formula nested thousands deep is refused (it ran out of stack: the app closed).
+	[Fact]
+	public void DeepOrHugeFormulasAreRefused()
+	{
+		var names = new[] { "x", "z" };
+		Assert.Equal("the formula is nested too deeply", Assert.Throws<FormatException>(() => Formula.Compile(new string('(', 1000) + "1" + new string(')', 1000), names)).Message);
+		Assert.Equal("the formula is nested too deeply", Assert.Throws<FormatException>(() => Formula.Compile(new string('-', 3000) + "1", names)).Message);
+		Assert.Equal("the formula is too long", Assert.Throws<FormatException>(() => Formula.Compile(string.Join("+", Enumerable.Repeat("1", 3000)), names)).Message);
+		Assert.Equal(40, Eval(new string('(', 50) + "40" + new string(')', 50)), 9);
 	}
 
 	[Fact]

@@ -22,7 +22,7 @@ A full run takes a few minutes and writes about 150 MB.
   world    only kinds found in the save given with --world (a world folder with *.chunk files)
   none     build pieces only
 """
-import argparse, collections, glob, json, os, re, struct, subprocess, sys, time
+import argparse, collections, glob, json, os, re, shutil, struct, subprocess, sys, time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(os.path.dirname(HERE))
@@ -51,15 +51,36 @@ def find_bundles(valheim):
              'Point --valheim at the game folder (the client: a dedicated server has no models).')
 
 
-# ---- 1. One pass over every bundle: where things are.
-def scan(bundles, work):
+# Files are written whole or not at all (a temporary file, then renamed): an export stopped halfway
+# (the editor closed) leaves no cut file that the next run would read.
+def save_json(obj, path):
+    tmp = path + '.tmp'
+    with open(tmp, 'w') as f: json.dump(obj, f)
+    os.replace(tmp, path)
+
+
+# The game's bundles as they are: name, size and time of each. A game update changes them.
+def bundles_now(files):
+    return [[os.path.basename(f), os.path.getsize(f), int(os.path.getmtime(f))] for f in files]
+
+
+# ---- 1. One pass over every bundle: where things are. Kept in the work folder, and done again when
+# the game's bundles changed (a game update: names and places in them are not the same any more);
+# the models made from the old ones (models_dir) go then, before the new scan is kept, so they are
+# all made again even if this run stops.
+def scan(bundles, work, models_dir):
     path = os.path.join(work, 'scan.json')
-    if os.path.exists(path):
-        log('scan: using', path)
-        return json.load(open(path))
-    import UnityPy
-    res = {'cab': {}, 'roots': {}, 'heightmap': None, 'arrays': {}, 'minimap': None}
     files = sorted(f for f in glob.glob(os.path.join(bundles, '*')) if os.path.isfile(f))
+    now = bundles_now(files)
+    if os.path.exists(path):
+        try: res = json.load(open(path))
+        except ValueError: res = None
+        if res is not None and res.get('bundles') == now:
+            log('scan: using', path)
+            return res
+        log('scan: the game changed since', path)
+    import UnityPy
+    res = {'cab': {}, 'roots': {}, 'heightmap': None, 'arrays': {}, 'minimap': None, 'bundles': now}
     log(f'scan: reading {len(files)} bundles (once)')
     for fi, f in enumerate(files):
         name = os.path.basename(f)
@@ -103,9 +124,13 @@ def scan(bundles, work):
                 if prev is None or (prev[2] is None and znv is not None):
                     res['roots'][n] = [name, o.path_id, znv, int(creature), int(item)]
         if fi % 50 == 0: log(f'scan: {fi}/{len(files)} bundles, {len(res["roots"])} root objects')
+    for sub in ('pieces', 'meshes'):
+        shutil.rmtree(os.path.join(models_dir, sub), ignore_errors=True)
+    for f in ('materials.json', 'meshinfo.json'):
+        if os.path.exists(os.path.join(models_dir, f)): os.remove(os.path.join(models_dir, f))
     os.makedirs(work, exist_ok=True)
-    json.dump(res, open(path, 'w'))
-    json.dump(res['cab'], open(os.path.join(work, 'cab_index.json'), 'w'))
+    save_json(res['cab'], os.path.join(work, 'cab_index.json'))
+    save_json(res, path)
     log('scan: done')
     return res
 
@@ -310,10 +335,11 @@ def export_models(found, args, work, out):
             if n in roots and str(stable_hash(n)) not in index:
                 index[str(stable_hash(n))] = {'name': n, 'bundle': roots[n][0], 'pid': roots[n][1], 'room': 1}
                 rooms += 1
-    ipath = os.path.join(work, 'model_index.json'); json.dump(index, open(ipath, 'w'))
+    ipath = os.path.join(work, 'model_index.json'); save_json(index, ipath)
     log(f'models: {len(index)} kinds ({len(index) - len(objects) - rooms} build pieces, {len(objects)} world objects, {rooms} dungeon rooms)')
     env = dict(os.environ, INDEX=ipath)
-    # export_pieces.py reuses what is already in the output folder, so an interrupted run continues.
+    # export_pieces.py reuses what is already in the output folder, so an interrupted run continues
+    # (scan() empties it when the game changed).
     done = {os.path.splitext(f)[0] for f in os.listdir(os.path.join(mdir, 'pieces'))} if os.path.isdir(os.path.join(mdir, 'pieces')) else set()
     todo = sorted(v['name'] for v in index.values() if v['name'] not in done)
     if todo:
@@ -327,7 +353,7 @@ def export_models(found, args, work, out):
     for h, v in objects.items():
         p = os.path.join(mdir, 'pieces', v['name'] + '.json')
         if os.path.exists(p) and json.load(open(p))['parts']: names[h] = v['name']
-    json.dump(names, open(os.path.join(mdir, 'objects.json'), 'w'))
+    save_json(names, os.path.join(mdir, 'objects.json'))
     log(f'models: {len(names)} world objects with a model')
 
 
@@ -347,7 +373,7 @@ def main():
     out = os.path.abspath(args.out)
     work = os.path.abspath(args.work or os.path.join(out, '..', 'export-cache')); os.makedirs(work, exist_ok=True)
     bundles = find_bundles(args.valheim)
-    found = scan(bundles, work)
+    found = scan(bundles, work, os.path.join(out, 'models'))
     al = use_assetlib(bundles, work)
     steps = args.only or ['terrain', 'map', 'models']
     if 'terrain' in steps: export_terrain(found, al, out, args.shader == 'vulkan')
