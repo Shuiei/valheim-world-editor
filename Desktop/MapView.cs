@@ -23,6 +23,8 @@ namespace TerrainEditor.Desktop;
 public sealed class MapView : OpenGlControlBase
 {
 	private GL _gl = null!;
+	// Every OpenGL object the map made, deleted with its context (see GlObjects).
+	private GlObjects _own = null!;
 	private bool _es;
 	private uint _prog, _vao, _lineProg, _lineVao, _lineVbo, _fillProg, _fillVao, _fillVbo;
 	private readonly Dictionary<string, (uint Tex, int Unit)> _tex = new();
@@ -139,11 +141,12 @@ public sealed class MapView : OpenGlControlBase
 	protected override void OnOpenGlInit(GlInterface gl)
 	{
 		_gl = GL.GetApi(name => gl.GetProcAddress(name));
+		_own = new GlObjects(_gl);
 		_es = GlVersion.Type == GlProfileType.OpenGLES;
 		_prog = Program(MapShader.Vertex, MapShader.Fragment);
-		_vao = _gl.GenVertexArray();
+		_vao = _own.VertexArray();
 		_gl.BindVertexArray(_vao);
-		uint vbo = _gl.GenBuffer();
+		uint vbo = _own.Buffer();
 		_gl.BindBuffer(BufferTargetARB.ArrayBuffer, vbo);
 		float[] tri = { -1, -1, 3, -1, -1, 3 };
 		unsafe
@@ -157,8 +160,8 @@ public sealed class MapView : OpenGlControlBase
 			_gl.VertexAttribPointer(loc, 2, VertexAttribPointerType.Float, false, 0, (void*)0);
 		}
 		_lineProg = Program(Shaders.LineVs, Shaders.LineFs);
-		_lineVao = _gl.GenVertexArray();
-		_lineVbo = _gl.GenBuffer();
+		_lineVao = _own.VertexArray();
+		_lineVbo = _own.Buffer();
 		_gl.BindVertexArray(_lineVao);
 		_gl.BindBuffer(BufferTargetARB.ArrayBuffer, _lineVbo);
 		_gl.EnableVertexAttribArray(0);
@@ -167,8 +170,8 @@ public sealed class MapView : OpenGlControlBase
 			_gl.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 12, (void*)0);
 		}
 		_fillProg = Program(FillVs, FillFs);
-		_fillVao = _gl.GenVertexArray();
-		_fillVbo = _gl.GenBuffer();
+		_fillVao = _own.VertexArray();
+		_fillVbo = _own.Buffer();
 		_gl.BindVertexArray(_fillVao);
 		_gl.BindBuffer(BufferTargetARB.ArrayBuffer, _fillVbo);
 		_gl.EnableVertexAttribArray(0);
@@ -196,10 +199,12 @@ public sealed class MapView : OpenGlControlBase
 		void main() { frag = vCol; }
 		""";
 
-	// The map left the window (the 3D editor is shown): its OpenGL context goes, and every texture with
-	// it. They are forgotten (not deleted) and uploaded again into the next context.
+	// The map left the window (the 3D editor is shown): its OpenGL context goes. Its textures, buffers
+	// and programs are shared with Avalonia's own context and would outlive it: they are deleted, then
+	// uploaded again into the next context.
 	protected override void OnOpenGlDeinit(GlInterface gl)
 	{
+		_own.DeleteAll();
 		_tex.Clear();
 		_texturesLoaded = false;
 		_globalShown = false;
@@ -222,15 +227,18 @@ public sealed class MapView : OpenGlControlBase
 			return s;
 		}
 		uint p = _gl.CreateProgram();
-		_gl.AttachShader(p, Compile(ShaderType.VertexShader, vs));
-		_gl.AttachShader(p, Compile(ShaderType.FragmentShader, fs));
+		uint v = Compile(ShaderType.VertexShader, vs), f = Compile(ShaderType.FragmentShader, fs);
+		_gl.AttachShader(p, v);
+		_gl.AttachShader(p, f);
 		_gl.LinkProgram(p);
 		_gl.GetProgram(p, ProgramPropertyARB.LinkStatus, out int linked);
 		if (linked == 0)
 		{
 			throw new InvalidOperationException(_gl.GetProgramInfoLog(p));
 		}
-		return p;
+		_gl.DeleteShader(v);
+		_gl.DeleteShader(f);
+		return _own.Program(p);
 	}
 
 	// A texture on its own unit, bound to the sampler of that name.
@@ -238,7 +246,7 @@ public sealed class MapView : OpenGlControlBase
 	{
 		if (!_tex.TryGetValue(name, out var t))
 		{
-			t = (_gl.GenTexture(), _tex.Count);
+			t = (_own.Texture(), _tex.Count);
 			_tex[name] = t;
 		}
 		_gl.ActiveTexture(TextureUnit.Texture0 + t.Unit);
