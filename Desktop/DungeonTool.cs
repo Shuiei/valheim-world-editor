@@ -223,11 +223,51 @@ public sealed partial class DungeonTool
 			return false;
 		}
 		var rooms = d.Rooms.ToList();
-		string name = rooms[i].Name;
+		var gone = rooms[i];
+		string name = gone.Name;
 		rooms.RemoveAt(i);
 		Selected = null;
-		Commit(d, rooms, $"Dungeon: removed {name}", $"Removed {name}. Its openings' neighbours are open now: Close open ends caps them.");
+		// What the game made in the room (chests, spawners, ice, torches: objects of their own) goes with
+		// it, unless another room holds it too.
+		var inside = Inside(gone, rooms);
+		Commit(d, rooms, $"Dungeon: removed {name}", $"Removed {name}" + (inside.Count > 0 ? $" and the {inside.Count} object(s) in it" : "") +
+			". Its neighbours' openings are open now: Close open ends caps them.", inside);
 		return true;
+	}
+
+	// The scene's objects (not the dungeon itself) the room holds: within its box, and nearer its middle
+	// than any other room's whose box holds them too (rooms meet at their walls; an end cap, flat, gets
+	// 1.5 m of depth each side).
+	public List<int> Inside(Dungeons.Placed room, IReadOnlyList<Dungeons.Placed> others)
+	{
+		var found = new List<int>();
+		if (Scene == null)
+		{
+			return found;
+		}
+		static float? In(Dungeons.Placed r, Vector3 p)
+		{
+			var (c, h, q) = Dungeons.Box(r);
+			h = Vector3.Max(h, new Vector3(1.5f));
+			var l = Vector3.Transform(p - c, Quaternion.Inverse(q));
+			return MathF.Abs(l.X) <= h.X + 0.05f && MathF.Abs(l.Y) <= h.Y + 0.05f && MathF.Abs(l.Z) <= h.Z + 0.05f ? Vector3.Distance(p, c) : null;
+		}
+		lock (Scene.Things)
+		{
+			for (int i = 0; i < Scene.Things.Count; i++)
+			{
+				var t = Scene.Things[i];
+				if (t.Gone || Dungeons.KindOf(t.Prefab) != null || In(room, t.Position) is not float mine)
+				{
+					continue;
+				}
+				if (!others.Any(o => In(o, t.Position) is float theirs && theirs < mine))
+				{
+					found.Add(i);
+				}
+			}
+		}
+		return found;
 	}
 
 	// An end cap on every free opening: of the open dungeon's rooms, one whose only opening has that
@@ -263,7 +303,7 @@ public sealed partial class DungeonTool
 		return added;
 	}
 
-	private void Commit(DungeonRooms.Dungeon d, List<Dungeons.Placed> rooms, string label, string message)
+	private void Commit(DungeonRooms.Dungeon d, List<Dungeons.Placed> rooms, string label, string message, IReadOnlyCollection<int>? alsoRemove = null)
 	{
 		if (Scene?.Session is not { } s)
 		{
@@ -276,7 +316,7 @@ public sealed partial class DungeonTool
 			return;
 		}
 		var z = ZdoData.Parse(Dungeons.WithRooms(bytes, rooms));
-		s.Commit(label, null, new[] { d.Index }, new[] { (new NewObject(0, z.Prefab, z.Position, z.Rotation, 0, null, false, z.Serialize()), false) });
+		s.Commit(label, null, new[] { d.Index }.Concat(alsoRemove ?? Array.Empty<int>()).ToArray(), new[] { (new NewObject(0, z.Prefab, z.Position, z.Rotation, 0, null, false, z.Serialize()), false) });
 		HoverEnd = null;
 		Message?.Invoke(message + " Ctrl+Z undoes; Save writes it.");
 		Changed?.Invoke();

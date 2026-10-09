@@ -183,4 +183,29 @@ public class DungeonToolTests
 		Assert.Equal(before, (t.Mode, t.Building, t.OneAtATime));
 		Assert.False(r.W.BuildPanel.Card.IsVisible);
 	}
+
+	[AvaloniaFact]
+	public void DeletingARoomTakesTheObjectsInItWithIt()
+	{
+		using var r = new Run();
+		Click(r.P.CloseEnds);
+		// A chest in a cap, and one in the entrance room.
+		var cap = r.Rooms[1];
+		int chest = StableHash.Of("piece_chest_wood");
+		r.Scene.Session!.Commit("Chests", null, Array.Empty<int>(), new[]
+		{
+			(new NewObject(0, chest, cap.Position + new Vector3(0, -2, 0), Vector3.Zero, 0), true),
+			(new NewObject(0, chest, At + new Vector3(4, -2, 0), Vector3.Zero, 0), true),
+		});
+		int before = r.Scene.Things.Count(t => !t.Gone && t.Prefab == chest);
+		r.T.Hover(cap.Position + new Vector3(0, 1, 0), -Vector3.UnitY);
+		r.T.Click();
+		Assert.True(r.T.Delete());
+		Assert.Equal(before - 1, r.Scene.Things.Count(t => !t.Gone && t.Prefab == chest));
+		Assert.Contains("and the 1 object(s) in it", r.Said);
+		// One step back: the room and its chest.
+		r.Scene.Session.Undo();
+		Assert.Equal(before, r.Scene.Things.Count(t => !t.Gone && t.Prefab == chest));
+		Assert.Equal(4, r.Rooms.Count);
+	}
 }
