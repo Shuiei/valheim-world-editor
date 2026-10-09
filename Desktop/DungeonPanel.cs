@@ -25,6 +25,7 @@ public sealed class DungeonPanel
 	internal Button CloseEnds { get; } = new() { Content = "Close open ends", FontSize = 12 };
 	internal Button DeleteButton { get; } = new() { Content = "Delete room (Del)", FontSize = 12 };
 	internal TextBlock Info { get; } = new() { FontSize = 12, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
+	internal CheckBox Contents { get; } = new() { Content = "With what the game puts in them", IsChecked = true, FontSize = 12 };
 	private readonly TextBlock _empty = new() { FontSize = 12, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap,
 		Text = "No dungeon in this area. Open the area over a Frost Cave, crypt or other dungeon entrance: the game keeps its rooms 5000 m above it." };
 	private readonly StackPanel _body;
@@ -44,6 +45,8 @@ public sealed class DungeonPanel
 		TurnButton.Tip("dungeon.turn");
 		CloseEnds.Tip("dungeon.close");
 		DeleteButton.Tip("dungeon.delete");
+		Contents.Tip("dungeon.contents");
+		Contents.IsCheckedChanged += (_, _) => Tool.WithContents = Contents.IsChecked == true;
 		DungeonBox.SelectionChanged += (_, _) =>
 		{
 			if (!_filling && DungeonBox.SelectedIndex >= 0 && DungeonBox.SelectedIndex < _shown.Count)
@@ -75,7 +78,7 @@ public sealed class DungeonPanel
 				new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { GoInside, BuildHere } },
 				new StackPanel { Spacing = 2, Children = { _cutText, CutSlider } },
 				new TextBlock { Text = "ROOMS", FontSize = 11, Foreground = Ui.Muted, FontWeight = FontWeight.SemiBold },
-				Filter, Rooms,
+				Filter, Rooms, Contents,
 				new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { TurnButton, DeleteButton } },
 				CloseEnds, Info,
 			},

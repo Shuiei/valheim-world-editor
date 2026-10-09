@@ -208,4 +208,30 @@ public class DungeonToolTests
 		Assert.Equal(before, r.Scene.Things.Count(t => !t.Gone && t.Prefab == chest));
 		Assert.Equal(4, r.Rooms.Count);
 	}
+
+	[AvaloniaFact]
+	public void AnAddedRoomBringsWhatTheGamePutsInItUnlessSwitchedOff()
+	{
+		using var r = new Run();
+		int things = r.Scene.Things.Count;
+		r.T.Choose("cave_new_crossroads01_ice");
+		r.PointAt(r.T.FreeEnds[0]);
+		var p = r.T.Preview!;
+		var expected = Dungeons.Contents(p, r.T.Dungeon!.Kind, At, r.Scene.World.Seed);
+		Assert.NotEmpty(expected);
+		int steps = r.Scene.Session!.UndoList.Count;
+		r.T.Click();
+		// The dungeon object again, and the room's objects, in one step.
+		Assert.Equal(things + 1 + expected.Count, r.Scene.Things.Count);
+		Assert.Equal(steps + 1, r.Scene.Session.UndoList.Count);
+		Assert.Contains($"with {expected.Count} object(s)", r.Said);
+		Assert.All(expected, m => Assert.Contains(r.Scene.Things, t => !t.Gone && t.Prefab == StableHash.Of(m.Prefab) && Vector3.Distance(t.Position, m.Position) < 1e-3f));
+		// Switched off: the room alone.
+		r.P.Contents.IsChecked = false;
+		r.T.Choose("cave_new_endcap02");
+		r.PointAt(r.T.FreeEnds[0]);
+		things = r.Scene.Things.Count;
+		r.T.Click();
+		Assert.Equal(things + 1, r.Scene.Things.Count);
+	}
 }

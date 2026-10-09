@@ -22,6 +22,10 @@ public sealed partial class DungeonTool
 
 	public int Join { get; private set; }
 
+	// Rooms added with what the game makes in them (chests, creatures' spawners, torches, ice): rolled
+	// from the room's place the way the game rolls them (Dungeons.Contents).
+	public bool WithContents { get; set; } = true;
+
 	// The room clicked last (an index into the current dungeon's list).
 	public int? Selected { get; private set; }
 
@@ -203,7 +207,9 @@ public sealed partial class DungeonTool
 			string? problem = Problem(p);
 			var rooms = d.Rooms.ToList();
 			rooms.Add(p);
-			Commit(d, rooms, $"Dungeon: added {p.Name}", problem == null ? $"Added {p.Name}." : $"Added {p.Name}. {problem}");
+			var made = ContentsOf(d, new[] { p });
+			string with = made.Count > 0 ? $" with {made.Count} object(s)" : "";
+			Commit(d, rooms, $"Dungeon: added {p.Name}", problem == null ? $"Added {p.Name}{with}." : $"Added {p.Name}{with}. {problem}", add: made);
 			Selected = rooms.Count - 1;
 			return true;
 		}
@@ -280,7 +286,7 @@ public sealed partial class DungeonTool
 		}
 		var caps = Dungeons.RoomsFor(d.Kind).Where(r => r.EndCap && r.Openings.Length == 1).OrderByDescending(r => r.EndCapPrio).ThenBy(r => r.Name, StringComparer.Ordinal).ToList();
 		var rooms = d.Rooms.ToList();
-		int added = 0, left = 0;
+		int added = 0, left = 0, before = rooms.Count;
 		foreach (var end in Dungeons.Openings(d.Rooms, freeOnly: true))
 		{
 			var cap = caps.FirstOrDefault(c => c.Openings[0].Type == end.Type && !c.Openings[0].Entrance);
@@ -294,7 +300,8 @@ public sealed partial class DungeonTool
 		}
 		if (added > 0)
 		{
-			Commit(d, rooms, $"Dungeon: closed {added} open end(s)", $"Closed {added} open end(s) with end caps." + (left > 0 ? $" {left} have no end cap of their type." : ""));
+			Commit(d, rooms, $"Dungeon: closed {added} open end(s)", $"Closed {added} open end(s) with end caps." + (left > 0 ? $" {left} have no end cap of their type." : ""),
+				add: ContentsOf(d, rooms.Skip(before)));
 		}
 		else
 		{
@@ -303,7 +310,27 @@ public sealed partial class DungeonTool
 		return added;
 	}
 
-	private void Commit(DungeonRooms.Dungeon d, List<Dungeons.Placed> rooms, string label, string message, IReadOnlyCollection<int>? alsoRemove = null)
+	// The objects the game makes with these rooms of the dungeon (none when WithContents is off).
+	private List<(NewObject, bool)> ContentsOf(DungeonRooms.Dungeon d, IEnumerable<Dungeons.Placed> rooms)
+	{
+		var list = new List<(NewObject, bool)>();
+		if (!WithContents || Scene == null)
+		{
+			return list;
+		}
+		foreach (var r in rooms)
+		{
+			foreach (var m in Dungeons.Contents(r, d.Kind, d.Thing.Position, Scene.World.Seed))
+			{
+				int prefab = StableHash.Of(m.Prefab);
+				list.Add((new NewObject(0, prefab, m.Position, Dungeons.ToEuler(m.Rotation), 0), TerrainEditor.Terrain.PieceCatalog.Get(prefab)?.Tool != null));
+			}
+		}
+		return list;
+	}
+
+	private void Commit(DungeonRooms.Dungeon d, List<Dungeons.Placed> rooms, string label, string message, IReadOnlyCollection<int>? alsoRemove = null,
+		IReadOnlyList<(NewObject, bool)>? add = null)
 	{
 		if (Scene?.Session is not { } s)
 		{
@@ -316,7 +343,9 @@ public sealed partial class DungeonTool
 			return;
 		}
 		var z = ZdoData.Parse(Dungeons.WithRooms(bytes, rooms));
-		s.Commit(label, null, new[] { d.Index }.Concat(alsoRemove ?? Array.Empty<int>()).ToArray(), new[] { (new NewObject(0, z.Prefab, z.Position, z.Rotation, 0, null, false, z.Serialize()), false) });
+		var adds = new List<(NewObject, bool)> { (new NewObject(0, z.Prefab, z.Position, z.Rotation, 0, null, false, z.Serialize()), false) };
+		adds.AddRange(add ?? Array.Empty<(NewObject, bool)>());
+		s.Commit(label, null, new[] { d.Index }.Concat(alsoRemove ?? Array.Empty<int>()).ToArray(), adds);
 		HoverEnd = null;
 		Message?.Invoke(message + " Ctrl+Z undoes; Save writes it.");
 		Changed?.Invoke();

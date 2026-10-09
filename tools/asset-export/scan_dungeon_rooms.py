@@ -11,8 +11,10 @@
 #   contents: the networked objects (ZNetView children) the game makes when it first generates the
 #     room (DungeonGenerator.PlaceRoom, SpawnMode.Full): [prefab, x, y, z, qx, qy, qz, qw, node], and
 #     what decides whether each is there, in the order the game rolls them: spawns (RandomSpawn:
-#     [node, chance %, required theme, off node]) and picks (RandomObject: [node, required theme,
-#     [[choice node, weight]...]]), with nodes: the parent of every node that matters (-1 the room).
+#     [node, chance %, required theme, off node, min elevation, max elevation]) and picks (RandomObject:
+#     [node, required theme, [[choice node, weight]...], min elevation, max elevation]), with nodes: the
+#     parent of every node that matters (-1 the room). A dungeon kind's baseSeed: its seed is added to
+#     each room's roll (m_addBaseSeedToRandomSpawn).
 # Only what is active and enabled in the prefab counts (Utils.GetEnabledComponentsInChildren).
 # Usage: VWE_BUNDLES=<game>/valheim_Data/StreamingAssets/SoftRef/Bundles python scan_dungeon_rooms.py <out.json>
 import UnityPy, glob, json, sys
@@ -95,7 +97,8 @@ for fi, f in enumerate(files):
             dungeons[name] = {'algorithm': g['m_algorithm'], 'themes': g['m_themes'], 'maxRooms': g['m_maxRooms'],
                               'minRooms': g['m_minRooms'], 'tileWidth': r(g.get('m_tileWidth', 8)),
                               'zoneSize': [r(g['m_zoneSize']['x']), r(g['m_zoneSize']['y']), r(g['m_zoneSize']['z'])],
-                              'customInterior': int(g.get('m_useCustomInteriorTransform', 0))}
+                              'customInterior': int(g.get('m_useCustomInteriorTransform', 0)),
+                              'baseSeed': int(g.get('m_addBaseSeedToRandomSpawn', 0))}
         if 'room' not in kinds or name in rooms: continue
         room = kinds['room']
         info = {'theme': room['m_theme'], 'size': [room['m_size']['x'], room['m_size']['y'], room['m_size']['z']],
@@ -137,14 +140,15 @@ for fi, f in enumerate(files):
                     info['contents'].append([prefab_name(g['m_Name']), r(pos[0]), r(pos[1]), r(pos[2]), r(rot[0]), r(rot[1]), r(rot[2]), r(rot[3]), node(gid)])
                 elif k == 'spawn':
                     off = b['m_OffObject']['m_PathID']
-                    info['spawns'].append([node(gid), r(b['m_chanceToSpawn']), b.get('m_dungeonRequireTheme', 0), node(off) if off and off in parent_of else -1])
+                    info['spawns'].append([node(gid), r(b['m_chanceToSpawn']), b.get('m_dungeonRequireTheme', 0), node(off) if off and off in parent_of else -1,
+                                           b.get('m_minElevation', -10000), b.get('m_maxElevation', 10000)])
                 elif k == 'pick':
                     choices = []
                     for e in b['m_objects']:
                         cid = e['m_object']['m_PathID']
                         if cid and cid in parent_of:
                             choices.append([node(cid), r(e['m_weight'])])
-                    info['picks'].append([node(gid), b.get('m_dungeonRequireTheme', 0), choices])
+                    info['picks'].append([node(gid), b.get('m_dungeonRequireTheme', 0), choices, b.get('m_minElevation', -10000), b.get('m_maxElevation', 10000)])
             for c in t['m_Children']:
                 ct = tt(c['m_PathID'])
                 if ct is None: continue

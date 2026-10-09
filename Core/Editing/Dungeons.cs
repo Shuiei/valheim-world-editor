@@ -2,6 +2,7 @@ using System.IO.Compression;
 using System.Numerics;
 using System.Text.Json;
 using TerrainEditor.Save;
+using Rnd = ValheimGen.UnityEngine.Random;
 
 namespace TerrainEditor.Editing;
 
@@ -23,12 +24,12 @@ public static class Dungeons
 	// the room's tree of random parts (-1: on the room itself).
 	public sealed record Content(string Prefab, Vector3 Position, Quaternion Rotation, int Node);
 
-	// RandomSpawn: the node is there with this chance (%) when the dungeon has the theme (0: any); when
-	// not, Off (a node, -1 none) is shown instead.
-	public sealed record Spawn(int Node, float Chance, int Theme, int Off);
+	// RandomSpawn: the node is there with this chance (%) when the dungeon has the theme (0: any) and it
+	// is within the heights; when not, Off (a node, -1 none) is shown instead.
+	public sealed record Spawn(int Node, float Chance, int Theme, int Off, int MinY, int MaxY);
 
 	// RandomObject: one of the choices (node, weight) is kept, the others are not.
-	public sealed record Pick(int Node, int Theme, (int Node, float Weight)[] Choices);
+	public sealed record Pick(int Node, int Theme, (int Node, float Weight)[] Choices, int MinY, int MaxY);
 
 	public sealed record Room(string Name, int Hash, int Theme, Vector3 Size, bool EndCap, bool Entrance, bool Divider, int EndCapPrio,
 		float Weight, bool Perimeter, bool Enabled, Opening[] Openings, Content[] Contents, Spawn[] Spawns, Pick[] Picks, int[] Nodes);
@@ -36,7 +37,9 @@ public static class Dungeons
 	// A kind of dungeon (the DG_ prefab): its room themes; Interior: built in the sky above its entrance
 	// (DungeonGenerator.Algorithm.Dungeon), not laid out on the ground (camps, villages); ZoneSize: the
 	// box its rooms stay in, around the zone's centre at the dungeon's height.
-	public sealed record Kind(string Name, int Hash, int Themes, bool Interior, Vector3 ZoneSize);
+	// CustomInterior: rooms are rolled by their place relative to the dungeon (m_useCustomInteriorTransform);
+	// BaseSeed: the dungeon's seed is added to each room's roll (m_addBaseSeedToRandomSpawn).
+	public sealed record Kind(string Name, int Hash, int Themes, bool Interior, Vector3 ZoneSize, bool CustomInterior = false, bool BaseSeed = false);
 
 	private sealed record Catalog(Dictionary<int, Room> Rooms, Dictionary<int, Kind> Kinds);
 
@@ -73,16 +76,17 @@ public static class Dungeons
 				B("endCap"), B("entrance"), B("divider"), r.GetProperty("endCapPrio").GetInt32(), r.GetProperty("weight").GetSingle(), B("perimeter"), B("enabled"),
 				r.GetProperty("openings").EnumerateArray().Select(o => new Opening(o[0].GetString() ?? "", o[1].GetInt32() != 0, o[2].GetInt32() != 0, V(o, 4), Q(o, 7))).ToArray(),
 				r.GetProperty("contents").EnumerateArray().Select(c => new Content(c[0].GetString() ?? "", V(c, 1), Q(c, 4), c[8].GetInt32())).ToArray(),
-				r.GetProperty("spawns").EnumerateArray().Select(x => new Spawn(x[0].GetInt32(), x[1].GetSingle(), x[2].GetInt32(), x[3].GetInt32())).ToArray(),
+				r.GetProperty("spawns").EnumerateArray().Select(x => new Spawn(x[0].GetInt32(), x[1].GetSingle(), x[2].GetInt32(), x[3].GetInt32(), x[4].GetInt32(), x[5].GetInt32())).ToArray(),
 				r.GetProperty("picks").EnumerateArray().Select(x => new Pick(x[0].GetInt32(), x[1].GetInt32(),
-					x[2].EnumerateArray().Select(c => (c[0].GetInt32(), c[1].GetSingle())).ToArray())).ToArray(),
+					x[2].EnumerateArray().Select(c => (c[0].GetInt32(), c[1].GetSingle())).ToArray(), x[3].GetInt32(), x[4].GetInt32())).ToArray(),
 				r.GetProperty("nodes").EnumerateArray().Select(n => n.GetInt32()).ToArray());
 		}
 		var kinds = new Dictionary<int, Kind>();
 		foreach (JsonProperty p in doc.RootElement.GetProperty("dungeons").EnumerateObject())
 		{
 			JsonElement d = p.Value;
-			kinds[StableHash.Of(p.Name)] = new Kind(p.Name, StableHash.Of(p.Name), d.GetProperty("themes").GetInt32(), d.GetProperty("algorithm").GetInt32() == 0, V(d.GetProperty("zoneSize"), 0));
+			kinds[StableHash.Of(p.Name)] = new Kind(p.Name, StableHash.Of(p.Name), d.GetProperty("themes").GetInt32(), d.GetProperty("algorithm").GetInt32() == 0, V(d.GetProperty("zoneSize"), 0),
+				d.GetProperty("customInterior").GetInt32() != 0, d.GetProperty("baseSeed").GetInt32() != 0);
 		}
 		return new Catalog(rooms, kinds);
 	}
@@ -315,6 +319,101 @@ public static class Dungeons
 			}
 		}
 		return true;
+	}
+
+	// ---- What the game makes with a room when it generates it (DungeonGenerator.PlaceRoom, SpawnMode
+	// Full): its networked objects, those its random parts keep, rolled from the room's place the game's
+	// way (Random.InitState, then each RandomSpawn's chance, then each RandomObject's pick, in order). The
+	// random parts' own heights are taken as the room's.
+	public sealed record Made(string Prefab, Vector3 Position, Quaternion Rotation);
+
+	// DungeonGenerator.GetSeed: the world's seed and the dungeon's zone and place.
+	public static int Seed(int worldSeed, Vector3 dungeonPosition)
+	{
+		int zx = (int)MathF.Floor((dungeonPosition.X + 32f) / 64f), zz = (int)MathF.Floor((dungeonPosition.Z + 32f) / 64f);
+		return unchecked(worldSeed + zx * 4271 + zz * -7187 + (int)dungeonPosition.X * -4271 + (int)dungeonPosition.Y * 9187 + (int)dungeonPosition.Z * -2134);
+	}
+
+	public static List<Made> Contents(Placed p, Kind kind, Vector3 dungeonPosition, int worldSeed)
+	{
+		var made = new List<Made>();
+		if (p.Room is not { } room || room.Contents.Length == 0)
+		{
+			return made;
+		}
+		Vector3 v = kind.CustomInterior ? p.Position - dungeonPosition : p.Position;
+		int seed = unchecked((int)v.X * 4271 + (int)v.Y * 9187 + (int)v.Z * 2134 + (kind.BaseSeed ? Seed(worldSeed, dungeonPosition) : 0));
+		var off = new bool[room.Nodes.Length];
+		var was = Rnd.state;
+		try
+		{
+			Rnd.InitState(seed);
+			float y = p.Position.Y;
+			foreach (var s in room.Spawns)
+			{
+				bool spawned = Rnd.Range(0f, 100f) <= s.Chance;
+				if (s.Theme != 0 && (kind.Themes & s.Theme) == 0 || y < s.MinY || y > s.MaxY)
+				{
+					spawned = false;
+				}
+				Set(s.Node, !spawned);
+				if (s.Off >= 0)
+				{
+					Set(s.Off, spawned);
+				}
+			}
+			foreach (var pick in room.Picks)
+			{
+				float total = pick.Choices.Sum(c => c.Weight), roll = Rnd.Range(0f, total), sum = 0;
+				int? chosen = null;
+				foreach (var (node, weight) in pick.Choices)
+				{
+					sum += weight;
+					if (roll <= sum)
+					{
+						chosen = node;
+						break;
+					}
+				}
+				if (pick.Theme != 0 && (kind.Themes & pick.Theme) == 0 || y < pick.MinY || y > pick.MaxY)
+				{
+					chosen = null;
+				}
+				foreach (var (node, _) in pick.Choices)
+				{
+					Set(node, node != chosen);
+				}
+				if (chosen == null)
+				{
+					Set(pick.Node, true);
+				}
+			}
+		}
+		finally
+		{
+			Rnd.state = was;
+		}
+		foreach (var c in room.Contents)
+		{
+			bool shown = true;
+			for (int n = c.Node; n >= 0 && shown; n = room.Nodes[n])
+			{
+				shown = !off[n];
+			}
+			if (shown)
+			{
+				made.Add(new Made(c.Prefab, p.ToWorld(c.Position), Quaternion.Normalize(p.Rotation * c.Rotation)));
+			}
+		}
+		return made;
+
+		void Set(int node, bool hidden)
+		{
+			if (node >= 0 && node < off.Length)
+			{
+				off[node] = hidden;
+			}
+		}
 	}
 
 	// ---- Dungeons of a save.
