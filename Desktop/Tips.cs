@@ -202,7 +202,7 @@ public static class Tips
 		// ---- Paste
 		["paste.ground"] = "Paste the copied ground shape and paint.",
 		["paste.objects"] = "Paste the copied objects.",
-		["paste.offset"] = "Move the pasted ground and objects up or down (m).",
+		["paste.offset"] = "Move the pasted ground and objects up or down (m); Ctrl + wheel too (Shift: 0.1 m). Lower a building into a hill: Clear the site digs the ground in its way.",
 		["paste.turn"] = "Turn the paste a quarter turn (R). , and . or Alt + wheel turn it by 1° (Shift: 15°).",
 		["paste.mirror"] = "Mirror the paste (F).",
 		["paste.done"] = "Stop pasting (Esc).",
@@ -360,9 +360,30 @@ public static class Tips
 
 		// ---- Blueprints and History
 		["blueprints.search"] = "Filter the blueprints by name.",
-		["blueprints.import"] = "Import a blueprint file of the PlanBuild mod (.blueprint) or a .vbuild file; it is kept as a blueprint here.",
+		["blueprints.new"] = "Open the Workshop, a blank plot, to build a building and save it as a blueprint.",
+		["workshop.support"] = "On: every building piece is outlined in the colour the game gives its support in build mode (blue on the ground, then green to red), and pieces that would fall in game are pink. Off: build freely.",
+		["top.saveBlueprint"] = "Save the building pieces on the plot as a Homestead blueprint (nothing else is kept).",
+		["start.workshop"] = "Build on a blank plot, then keep it as a blueprint for Homestead. Your blueprints are in its Library.",
+		["build.piecesTab"] = "The pieces to build with, in the game's tabs.",
+		["build.libraryTab"] = "Your blueprints (Homestead's): open one, add one to the plot, or drag it onto the plot.",
+		["build.librarySearch"] = "Find blueprints by name, description or tags.",
+		["build.open"] = "This blueprint alone on the plot (asks first when what is there is not saved).",
+		["build.add"] = "Add this blueprint to the plot, in its middle, with what is there (one undo step).",
+		["blueprints.getHomestead"] = "Opens Homestead's page on Thunderstore: install it in your Valheim (a mod manager does it in one click) to build these blueprints in game.",
+		["blueprints.import"] = "Import a .blueprint file (Homestead or PlanBuild) or a .vbuild file: it is kept as a Homestead blueprint, ready to build in game.",
 		["dialog.text"] = "Type the answer, then press OK (Enter).",
 		["dialog.cancel"] = "Close without doing anything (Esc).",
+		["build.search"] = "Find a piece by its name in every tab (wall, roof, stone floor…).",
+		["build.snap"] = "On: as the game's hammer, the piece moves so its nearest snap point meets one of a piece already there (within half a metre). Off: it stays where it touches what you point at (the game's Alt).",
+		["build.grid"] = "Where you point at the ground is rounded to this grid (from the middle of the plot) before the piece is put there; pieces pointed at are not. Off: as in the game.",
+		["workshop.cut"] = "See the building from a height: nothing above it is shown (metres above the plot), and you can point at what is inside, to build there. Left: off.",
+		["paste.clearSite"] = "Where a pasted building (its pieces) stands: the ground in its way, a mountain, a mound, is dug down to its lowest piece, a metre around it too; never raised. Trees, rocks, bushes and pickables there are taken away. One undo step with the paste.",
+		["tools.blueprints"] = "Your blueprints (Homestead's, the Workshop's): paste one into this area.",
+		["build.lift"] = "Back to no lift: the piece goes where the cursor points (on a piece, or the ground).",
+		["build.turn"] = "How far , and . (or Alt + wheel) turn the piece. Shift turns by 1°.",
+		["dialog.blueprintName"] = "The blueprint's name: Homestead lists it under this name in its hammer tab. Its file is named after it.",
+		["dialog.blueprintDescription"] = "A few words about it, shown in the library (and to people you share the file with).",
+		["dialog.blueprintTags"] = "Words to find it by, separated by commas: house, viking, stone, gate… The library's search looks through them.",
 	};
 
 	public static string Of(string key) => Texts.TryGetValue(key, out string? t) ? t : throw new KeyNotFoundException("No tip " + key);

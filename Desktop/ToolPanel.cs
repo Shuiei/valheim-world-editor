@@ -29,6 +29,9 @@ public sealed class ToolPanel
 	public Control Options { get; }
 
 	private readonly Dictionary<BrushTool, Button> _buttons = new();
+	// Blueprints: the library, to paste one (in a world).
+	private readonly Button _blueprintsButton;
+	public event Action? BlueprintsAsked;
 	private readonly Button _viewButton, _selectButton, _measureButton, _shapeButton, _pathButton, _areaButton, _placeButton, _mountainButton, _caveButton, _scriptButton;
 	// The Cave button: the Path tool with its Cave action (the window picks the action).
 	public event Action? CaveChosen;
@@ -146,7 +149,7 @@ public sealed class ToolPanel
 
 	public ToolPanel()
 	{
-		var rail = new StackPanel { Spacing = 0 };
+		var rail = _rail = new StackPanel { Spacing = 0 };
 		// A rail button: the web editor's icon (or the paint's colour), the name and the key.
 		Button Make(string label, string key, string? icon, IBrush? swatch = null)
 		{
@@ -206,6 +209,9 @@ public sealed class ToolPanel
 		_scriptButton = Make("Script", "", "script");
 		ToolTip.SetTip(_scriptButton, "Script: write C# that shapes the ground, paints it and places or removes objects over the open area: anything the tools do, and more. Examples to start from.");
 		_scriptButton.Click += (_, _) => ChooseMode(ToolMode.Script);
+		_blueprintsButton = Make("Blueprints", "", "paste");
+		_blueprintsButton.Tip("tools.blueprints");
+		_blueprintsButton.Click += (_, _) => BlueprintsAsked?.Invoke();
 		_placeButton = Make("Place", "T", "place");
 		ToolTip.SetTip(_placeButton, "Place (T): paint trees, rocks or bushes with a brush, or put walls, fences and other pieces along lines, circles, rectangles, grids and zones.");
 		_placeButton.Click += (_, _) => ChooseMode(ToolMode.Place);
@@ -329,9 +335,35 @@ public sealed class ToolPanel
 
 	public void ChooseMode(ToolMode mode) => Choose(null, mode);
 
+	// The Workshop: only Build (the Place tool, for building pieces), Select and View on the rail; the
+	// other tools (and their keys) are for worlds.
+	private readonly StackPanel _rail;
+	public bool Workshop { get; private set; }
+
+	public void SetWorkshop(bool on)
+	{
+		Workshop = on;
+		foreach (var c in _rail.Children)
+		{
+			c.IsVisible = !on || c == _placeButton || c == _selectButton || c == _viewButton;
+		}
+		var label = ((_placeButton.Content as Grid)!.Children[0] as StackPanel)!.Children[1] as TextBlock;
+		label!.Text = on ? "Build" : "Place";
+		ToolTip.SetTip(_placeButton, on ? "Build (T): pick a building piece, then click to put it down. It snaps to the pieces already there."
+			: "Place (T): paint trees, rocks or bushes with a brush, or put walls, fences and other pieces along lines, circles, rectangles, grids and zones.");
+		if (on && (Tool != null || Mode is not (ToolMode.View or ToolMode.Place or ToolMode.Select)))
+		{
+			Choose(null);
+		}
+	}
+
 	// A brush, or (null) the mode's tool.
 	public void Choose(BrushTool? t, ToolMode mode = ToolMode.View)
 	{
+		if (Workshop && (t != null || mode is not (ToolMode.View or ToolMode.Place or ToolMode.Select)))
+		{
+			return;
+		}
 		Tool = t;
 		Mode = t != null ? ToolMode.Brush : mode;
 		_viewButton.Classes.Set("on", Mode == ToolMode.View);

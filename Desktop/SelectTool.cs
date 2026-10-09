@@ -555,6 +555,9 @@ public sealed class SelectTool
 	// A copy of the zone's points for the drawing thread.
 	public Vector2[]? Lasso { get; private set; }
 
+	// Shift (not Ctrl) held: a click takes the row from the last object clicked (GlView.Pick).
+	public bool Range { get; set; }
+
 	public void Down(Point at, Size size, bool shift, bool alt, int clicks)
 	{
 		var s = Scene;
@@ -562,8 +565,9 @@ public sealed class SelectTool
 		{
 			return;
 		}
-		// A handle: drag along its axis, or around the ring.
-		if (HandleAt(at, size) is { } handle && _view.GizmoAt() is var (c, _))
+		// A handle: drag along its axis, or around the ring (not for a Shift + click's row: the pieces
+		// in the row may lie under the handles).
+		if (!Range && HandleAt(at, size) is { } handle && _view.GizmoAt() is var (c, _))
 		{
 			_commitTimer.Stop();
 			if (Begin() is not { } mv)
@@ -598,7 +602,7 @@ public sealed class SelectTool
 			_lasso = (at, new List<Vector2> { new(g2.X, g2.Z) }, shift, false);
 			return;
 		}
-		_view.Pick(at, size, shift);
+		_view.Pick(at, size, shift, Range);
 	}
 
 	public void Moved(Point at, Size size, bool ctrl = false)
@@ -717,7 +721,7 @@ public sealed class SelectTool
 		else
 		{
 			// A plain click on a selected object: that one only.
-			_view.Pick(at, size, shift);
+			_view.Pick(at, size, shift, Range);
 		}
 	}
 

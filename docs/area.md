@@ -72,6 +72,7 @@ While pasting:
 |---|---|
 | **Ground shape and paint** | Paste the copied ground. The shape is kept relative to the point you click. |
 | **Objects** | Paste the copied objects. They are new, independent objects: a pasted chest is an empty chest. |
+| **Clear the site** | Where the pasted building stands (its pieces, by their real shape, and a metre around), the ground in its way is dug down to its lowest piece, so a building pasted into a hill or a mound is not buried in it; lower ground is left as it is. Trees, rocks, bushes and pickables there are taken away. In the same undo step. |
 | **Height** | Moves the pasted ground and objects up or down (m). |
 | **Turn 90° (R)** | A quarter turn. `,` and `.` or Alt + wheel turn by 1° (Shift: 15°), to any angle. |
 | **Mirror (F)** | Mirrors the paste. |
@@ -82,32 +83,19 @@ While pasting:
 
 ## Blueprints
 
-A blueprint is a copy kept as a file, like a WorldEdit schematic: it stays when the editor closes
-and can be pasted into any world.
-
-![A small hut kept as a blueprint, in the Blueprints panel](images/blueprints.jpg)
-
-| Control | What it does |
-|---|---|
-| **Save blueprint…** | Saves the clipboard (what the Area or Select tool copied last) under a name you type. A blueprint with the same name is replaced, after asking. |
-| **Blueprints…** | Opens the list of saved blueprints, each with a picture seen from above (ground shaded by height, objects as dots), its size, its number of objects and the world it came from. **Search blueprints** narrows the list by name. **Paste** puts it on the clipboard and starts pasting; **Delete** removes its file, after asking. |
-
-### Other mods' blueprints
+A blueprint is a building kept as a file, to paste into any world or build in game. Blueprints are
+[Homestead](https://thunderstore.io/c/valheim/p/sighsorry/Homestead/)'s: the library, the Workshop
+(a blank plot to build them on) and the support check are in [The Workshop](workshop.md).
 
 | Control | What it does |
 |---|---|
-| **Import file…** | Reads a blueprint of the [PlanBuild](https://github.com/sirskunkalot/PlanBuild) mod (`.blueprint`) or a `.vbuild` file (BuildShare and older tools) and keeps it as a blueprint here. PlanBuild's terrain marks become copied ground: levelled to their height and painted. Pieces the game does not know (from other mods) are left out, and the editor says which. |
-| **.blueprint** / **.vbuild** | Writes the blueprint as a PlanBuild `.blueprint` or a `.vbuild` file into `blueprints/export`. For PlanBuild, copy it into `BepInEx/config/PlanBuild/blueprints`. Only the objects are written: those formats cannot hold free-form ground. |
+| **Save blueprint…** | Saves the clipboard's objects (what the Area or Select tool copied last) as a Homestead blueprint, with a name, description and tags. Copied ground is not kept: Homestead blueprints hold pieces only. A blueprint with the same name is replaced, after asking. |
+| **Blueprints…** | Opens the library (also the **Blueprints** button of the tool rail): each blueprint with its picture, cost, description and tags, the ones made in the Workshop too. **Paste** puts it on the clipboard and starts pasting. See [The library](workshop.md#the-library-blueprints-panel). |
 
-Sign texts and items on item stands in PlanBuild files are not carried over: pasted objects are always
-fresh ones.
-
-Blueprints are files in the `blueprints` folder of the editor's data folder
-(`~/.local/share/ValheimWorldEditor/blueprints` on Linux, `%LOCALAPPDATA%\ValheimWorldEditor\blueprints`
-on Windows), one `.json` file each, so they can be copied to another computer or shared. Pasted into
-another world, the objects are made like the ones you plant: copies of an object of the same kind
-in that world, or new objects for kinds it has none of. Kinds the game does not know (from mods)
-are left out, and the editor says which.
+Sign texts and items on item stands are not carried over: pasted objects are always fresh ones.
+Pasted into a world, the objects are made like the ones you plant: copies of an object of the same
+kind in that world, or new objects for kinds it has none of. Kinds the game does not know (from
+mods) are left out, and the editor says which.
 
 ## Heightmap
 

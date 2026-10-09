@@ -151,6 +151,9 @@ public sealed class GlView : OpenGlControlBase
 	// Alt + wheel: the tools that turn take it (the window decides: true when taken); otherwise it zooms.
 	// The direction is that of the , and . keys: towards you (down) as . and away (up) as ,.
 	internal Func<Key, bool, bool>? AltWheel { get; set; }
+	// Ctrl + wheel (up: 1, down: -1; with Shift): what the tool does with it (true), else the view zooms.
+	internal Func<int, bool, bool>? CtrlWheel { get; set; }
+	private double _wheelSum;
 	// How many objects of each kind the area has (once the models' names are known).
 	public event Action<Dictionary<ObjectKind, int>>? KindCounts;
 
@@ -593,15 +596,28 @@ public sealed class GlView : OpenGlControlBase
 	}
 
 	private uint _ghostVbo;
-	// The Place tool's preview drawn with the models, see-through. Kinds whose model is not there yet
-	// keep their posts (DrawPlace). Returns the prefabs drawn.
+	// The kinds the paste's ghost drew this frame (their posts are left out).
+	private HashSet<int>? _pasteGhosts;
+	// The Place tool's preview, or the Paste tool's (the building where it would land), drawn with the
+	// models, see-through. Kinds whose model is not there yet keep their posts (DrawPlace, the paste's
+	// outline). Returns the prefabs drawn.
 	private unsafe HashSet<int> DrawGhosts(WorldScene s, Matrix4x4 vp)
 	{
 		var drawn = new HashSet<int>();
-		if (_mode != ToolMode.Place || Place is not { } pl || pl.Shown.Length == 0)
+		List<(int Prefab, Vector3 Position, Vector3 Rotation, float Scale)> shown;
+		if (_mode == ToolMode.Place && Place is { } pl && pl.Shown.Length > 0)
+		{
+			shown = pl.Shown.Select(o => (TerrainEditor.Save.StableHash.Of(o.Name), o.Position, o.Rotation, o.Scale)).ToList();
+		}
+		else if (_mode == ToolMode.Paste && Paste.At is { } pat && Paste.Clip != null)
+		{
+			shown = Paste.Ghosts(pat, GridHeight, s.X0 * 64f - 32f, s.Z0 * 64f - 32f);
+		}
+		else
 		{
 			return drawn;
 		}
+		_pasteGhosts = _mode == ToolMode.Paste ? drawn : null;
 		if (_ghostVbo == 0)
 		{
 			_ghostVbo = _gl.GenBuffer();
@@ -613,9 +629,9 @@ public sealed class GlView : OpenGlControlBase
 		_gl.DepthMask(false);
 		int uColor = _gl.GetUniformLocation(_objectProg, "uColor"), uCut = _gl.GetUniformLocation(_objectProg, "uCutoff"),
 			uHasMap = _gl.GetUniformLocation(_objectProg, "uHasMap"), uUv = _gl.GetUniformLocation(_objectProg, "uUv");
-		foreach (var byKind in pl.Shown.GroupBy(o => o.Name))
+		foreach (var byKind in shown.GroupBy(o => o.Prefab))
 		{
-			int prefab = TerrainEditor.Save.StableHash.Of(byKind.Key);
+			int prefab = byKind.Key;
 			bool piece = TerrainEditor.Terrain.PieceCatalog.Get(prefab)?.Tool != null;
 			var g = KindGroup(prefab, piece);
 			if (!g.Ready || g.Batches.Count == 0)
@@ -839,6 +855,8 @@ public sealed class GlView : OpenGlControlBase
 	private unsafe void Rebuild(WorldScene s, Group g)
 	{
 		var list = new List<Matrix4x4>();
+		var tints = new List<Vector3>();
+		var support = _support;
 		var previews = _previews;
 		lock (s.Things)
 		{
@@ -857,13 +875,19 @@ public sealed class GlView : OpenGlControlBase
 					if (!t.Gone)
 					{
 						list.Add(m);
+						tints.Add(support != null && support.TryGetValue(i, out float sv) ? SupportTint(sv) : Vector3.Zero);
 					}
 				}
 			}
 		}
 		foreach (var (b, pre) in g.Batches)
 		{
-			var data = list.Select(m => pre * m).ToArray();
+			var data = list.Select((m, k) =>
+			{
+				var w = pre * m;
+				(w.M14, w.M24, w.M34) = (tints[k].X, tints[k].Y, tints[k].Z);
+				return w;
+			}).ToArray();
 			_gl.BindBuffer(BufferTargetARB.ArrayBuffer, b.InstanceVbo);
 			fixed (Matrix4x4* ptr = data)
 			{
@@ -882,8 +906,9 @@ public sealed class GlView : OpenGlControlBase
 			_gl.DeleteBuffer(b.InstanceVbo);
 		}
 		_batches.Clear();
-		while (_ready.TryDequeue(out _))
+		while (_ready.TryDequeue(out var dropped))
 		{
+			UploadTextures(dropped);
 		}
 		lock (_selection)
 		{
@@ -909,7 +934,16 @@ public sealed class GlView : OpenGlControlBase
 		return Matrix4x4.CreateScale(scale) * Matrix4x4.CreateFromQuaternion(q) * Matrix4x4.CreateTranslation(pos);
 	}
 
+	// A loaded model's textures, then its batches.
 	private unsafe void Upload(ReadyModel r)
+	{
+		UploadTextures(r);
+		UploadModel(r);
+	}
+
+	// A loaded model's textures. Also for a model dropped before it was drawn (a new area): its loader
+	// claimed them, so no other loader reads them.
+	private unsafe void UploadTextures(ReadyModel r)
 	{
 		foreach (var (file, img) in r.Images)
 		{
@@ -933,6 +967,10 @@ public sealed class GlView : OpenGlControlBase
 				_textures[file] = tex;
 			}
 		}
+	}
+
+	private unsafe void UploadModel(ReadyModel r)
+	{
 		var g = r.Group;
 		if (r.Model == null)
 		{
@@ -1232,6 +1270,7 @@ public sealed class GlView : OpenGlControlBase
 			_gl.ActiveTexture(TextureUnit.Texture0);
 			bool seeThrough = _seeThrough;
 			int uSee = _gl.GetUniformLocation(_objectProg, "uSeeThrough");
+			_gl.Uniform2(_gl.GetUniformLocation(_objectProg, "uCut"), CutY != null ? 1f : 0f, CutY ?? 0f);
 			// Opaque first; see-through buildings after, blended over everything and not hiding
 			// what is behind them.
 			foreach (var pass in seeThrough ? new[] { false, true } : new[] { false })
@@ -1625,7 +1664,10 @@ public sealed class GlView : OpenGlControlBase
 			{
 				_dragFrom = null;
 				_selectDown = true;
-				SelectTool.Down(p.Position, _surfaceSize, e.KeyModifiers.HasFlag(KeyModifiers.Shift), e.KeyModifiers.HasFlag(KeyModifiers.Alt), e.ClickCount);
+				// Ctrl + click (or Shift, Ctrl + zone): added to what is selected; Shift + click: the row
+				// from the last object clicked.
+				SelectTool.Range = e.KeyModifiers.HasFlag(KeyModifiers.Shift) && !e.KeyModifiers.HasFlag(KeyModifiers.Control);
+				SelectTool.Down(p.Position, _surfaceSize, e.KeyModifiers.HasFlag(KeyModifiers.Shift) || e.KeyModifiers.HasFlag(KeyModifiers.Control), e.KeyModifiers.HasFlag(KeyModifiers.Alt), e.ClickCount);
 				Wake();
 				return;
 			}
@@ -1692,7 +1734,7 @@ public sealed class GlView : OpenGlControlBase
 			if (_selectDown)
 			{
 				_selectDown = false;
-				SelectTool.Up(at, surface.Bounds.Size, e.KeyModifiers.HasFlag(KeyModifiers.Shift));
+				SelectTool.Up(at, surface.Bounds.Size, e.KeyModifiers.HasFlag(KeyModifiers.Shift) || e.KeyModifiers.HasFlag(KeyModifiers.Control));
 			}
 			else if (_brushDown)
 			{
@@ -1702,7 +1744,8 @@ public sealed class GlView : OpenGlControlBase
 			}
 			else if (_mode == ToolMode.View && !_panDrag && _dragButton == PointerUpdateKind.LeftButtonPressed && _pressAt is Point from && Point.Distance(from, at) < 5)
 			{
-				Pick(at, surface.Bounds.Size, e.KeyModifiers.HasFlag(KeyModifiers.Shift));
+				Pick(at, surface.Bounds.Size, e.KeyModifiers.HasFlag(KeyModifiers.Shift) || e.KeyModifiers.HasFlag(KeyModifiers.Control),
+					e.KeyModifiers.HasFlag(KeyModifiers.Shift) && !e.KeyModifiers.HasFlag(KeyModifiers.Control));
 			}
 			_pressAt = null;
 			_dragFrom = null;
@@ -1754,12 +1797,37 @@ public sealed class GlView : OpenGlControlBase
 		};
 		surface.PointerWheelChanged += (_, e) =>
 		{
-			if (e.KeyModifiers.HasFlag(KeyModifiers.Alt) && e.Delta.Y != 0 && AltWheel is { } turn
-				&& turn(e.Delta.Y > 0 ? Key.OemComma : Key.OemPeriod, e.KeyModifiers.HasFlag(KeyModifiers.Shift)))
+			// Ctrl or Alt + wheel: one step per notch. Smooth-scrolling wheels and touchpads send parts of a
+			// notch (and some systems send Shift's as sideways): added up until a whole one.
+			bool ctrlW = e.KeyModifiers.HasFlag(KeyModifiers.Control), altW = e.KeyModifiers.HasFlag(KeyModifiers.Alt);
+			// Ctrl: building lifts the piece; Alt: the tools that turn things turn them. Else the view zooms.
+			bool wants = ctrlW ? (Mode == ToolMode.Place && Place?.Tool.Building == true || Mode == ToolMode.Paste) && CtrlWheel != null
+				: altW && AltWheel != null && Mode is ToolMode.Place or ToolMode.Paste or ToolMode.Select;
+			if (wants)
 			{
-				e.Handled = true;
-				Wake();
-				return;
+				double delta = e.Delta.Y != 0 ? e.Delta.Y : e.Delta.X;
+				bool shiftW = e.KeyModifiers.HasFlag(KeyModifiers.Shift);
+				_wheelSum += delta;
+				bool tried = false, used = false;
+				while (Math.Abs(_wheelSum) >= 0.999)
+				{
+					int dir = _wheelSum > 0 ? 1 : -1;
+					_wheelSum -= dir;
+					tried = true;
+					used |= ctrlW ? CtrlWheel!(dir, shiftW) : AltWheel!(dir > 0 ? Key.OemComma : Key.OemPeriod, shiftW);
+				}
+				// Nothing to turn (or lift): the wheel zooms as usual.
+				if (!tried || used)
+				{
+					e.Handled = true;
+					Wake();
+					return;
+				}
+				_wheelSum = 0;
+			}
+			else
+			{
+				_wheelSum = 0;
 			}
 			lock (_camLock)
 			{
@@ -2277,6 +2345,47 @@ public sealed class GlView : OpenGlControlBase
 		return list;
 	}
 
+	// The support check (the Workshop): each building piece tinted as the game's build mode shows its
+	// support (SupportTint). Per thing index: -1 full, 0..1, or -2 breaks. Null: off.
+	private volatile Dictionary<int, float>? _support;
+
+	public void ShowSupport(Dictionary<int, float>? support)
+	{
+		_support = support;
+		// The tints are in the instances: built again.
+		lock (_groups)
+		{
+			foreach (var g in _groups.Values)
+			{
+				MarkDirty(g);
+			}
+		}
+		Wake();
+	}
+
+	internal Dictionary<int, float>? Support => _support;
+
+	// The game's colour for a support value (WearNTear.Highlight): light blue at full support (on the
+	// ground), else red to green as it gets stronger, more saturated and brighter the weaker; one that
+	// breaks as the weakest (red).
+	internal static Vector3 SupportTint(float v)
+	{
+		if (v > -1.5f && v < 0)
+		{
+			return new Vector3(0.6f, 0.8f, 1f);
+		}
+		float t = Math.Clamp(v < 0 ? 0 : v, 0, 1);
+		// Lerp(red, green, t) has hue 0..1/3 with full saturation and value: its HSV, then the game's S and V.
+		float h = new Vector3(1 - t, t, 0) is var c && c.X >= c.Y ? c.Y / c.X / 6f : (2 - c.X / c.Y) / 6f;
+		return HsvToRgb(h, 1 - 0.5f * t, 1.2f - 0.3f * t);
+	}
+
+	private static Vector3 HsvToRgb(float h, float s, float v)
+	{
+		float r = Math.Clamp(MathF.Abs(h * 6 - 3) - 1, 0, 1), g = Math.Clamp(2 - MathF.Abs(h * 6 - 2), 0, 1), b = Math.Clamp(2 - MathF.Abs(h * 6 - 4), 0, 1);
+		return new Vector3((1 - s + s * r) * v, (1 - s + s * g) * v, (1 - s + s * b) * v);
+	}
+
 	private uint _markVao, _markVbo;
 	private void DrawNewMarkers(WorldScene s, Matrix4x4 vp)
 	{
@@ -2496,7 +2605,7 @@ public sealed class GlView : OpenGlControlBase
 		DrawLines(ref _placeVao, ref _placeVbo, posts.ToArray(), vp, new Vector4(0.62f, 0.88f, 1, 1));
 		var t = pl.Tool;
 		// The brush's outline under the cursor: where a stroke places.
-		if (t.Mode == PlaceTool.Modes.Brush && _hover is { } h)
+		if (t.Mode == PlaceTool.Modes.Brush && !t.Building && _hover is { } h)
 		{
 			var ring = new List<float>();
 			var outline = t.Brush.Outline(96);
@@ -2586,15 +2695,22 @@ public sealed class GlView : OpenGlControlBase
 		}
 		if (_mode == ToolMode.Paste && Paste.At is { } pat && Paste.Clip != null)
 		{
-			// Where the paste would go: its outlines and a small post at each object.
+			// Where the paste would go: its outlines and a small post at each object whose model is not
+			// drawn as a ghost (DrawGhosts).
 			var (objs, outlines) = Paste.Preview(pat, GridHeight);
 			var data = new List<float>();
 			foreach (var o in outlines)
 			{
 				Ring(data, o, true, 0.3f);
 			}
-			foreach (var o in objs)
+			var ghosted = _pasteGhosts;
+			for (int k = 0; k < objs.Count; k++)
 			{
+				if (ghosted != null && ghosted.Contains(Paste.Clip.Objects[k % Paste.Clip.Objects.Count].Prefab))
+				{
+					continue;
+				}
+				var o = objs[k];
 				float x = o.X - (s.W - 1) / 2f, z = -(o.Z - (s.H - 1) / 2f);
 				data.AddRange(new[] { x, o.Y, z, x, o.Y + 1.2f, z, x - 0.3f, o.Y + 0.5f, z, x + 0.3f, o.Y + 0.5f, z });
 			}
@@ -2820,6 +2936,34 @@ public sealed class GlView : OpenGlControlBase
 
 	// The shown object under a point of the view (null: the ground or nothing is nearer), like the web
 	// editor: the nearest box the ray enters, unless the ground is hit first (half a metre of slack).
+	// The Workshop's cut: nothing drawn above this height (world y), and the cursor goes through what is
+	// hidden; null: none.
+	private float? _cutY;
+	internal float? CutY
+	{
+		get => _cutY;
+		set
+		{
+			_cutY = value;
+			Wake();
+		}
+	}
+
+	// The view's ray through a point, in world space (x east, up, z north), and how far along it the
+	// ground is (null: it does not meet it).
+	internal (Vector3 O, Vector3 D, float? GroundT)? WorldRay(Point at, Size size)
+	{
+		var s = _scene;
+		if (s == null || size.Width <= 0)
+		{
+			return null;
+		}
+		var (o, d) = Picking.Ray(_lastViewProj, (float)(at.X / size.Width * 2 - 1), (float)(1 - at.Y / size.Height * 2));
+		d = Vector3.Normalize(d);
+		float? g = Picking.HitGround(s, o, d);
+		return (new Vector3(o.X + s.Cx, o.Y, -o.Z + s.Cz), new Vector3(d.X, d.Y, -d.Z), g);
+	}
+
 	internal int? ObjectAt(Point at, Size size)
 	{
 		var s = _scene;
@@ -2832,7 +2976,8 @@ public sealed class GlView : OpenGlControlBase
 		int? hit = null;
 		for (int i = 0; i < _bounds.Length; i++)
 		{
-			if (!_known[i] || !_shown[(int)_kinds[i]])
+			// Not what the cut hides (whole above it).
+			if (!_known[i] || !_shown[(int)_kinds[i]] || _cutY is float cut && _bounds[i].Min.Y > cut)
 			{
 				continue;
 			}
@@ -2849,21 +2994,61 @@ public sealed class GlView : OpenGlControlBase
 		return hit;
 	}
 
-	internal void Pick(Point at, Size size, bool add)
+	// A click on an object: it alone, or (add) added or taken out; range (Shift): every shown object in
+	// a row from the last one clicked to this one (w1, Shift + click w3: w1, w2 and w3).
+	internal void Pick(Point at, Size size, bool add, bool range = false)
 	{
 		int? i = ObjectAt(at, size);
+		var s = _scene;
 		lock (_selection)
 		{
-			if (!add)
+			if (range && i is int k && _anchor is int a && a != k && s != null && a < s.Things.Count && !s.Things[a].Gone)
 			{
-				_selection.Clear();
+				foreach (int j in Between(s, a, k))
+				{
+					_selection.Add(j);
+				}
 			}
-			if (i is int k && !_selection.Remove(k))
+			else
 			{
-				_selection.Add(k);
+				if (!add)
+				{
+					_selection.Clear();
+				}
+				if (i is int k2 && !_selection.Remove(k2))
+				{
+					_selection.Add(k2);
+				}
+				_anchor = i;
 			}
 		}
 		SelectionDone();
+	}
+
+	// The object a Shift + click's row starts from: the last one clicked.
+	private int? _anchor;
+
+	// The shown objects on the line from object a to object b (their middles within 0.75 m of it), both
+	// ends included.
+	internal IEnumerable<int> Between(WorldScene s, int a, int b)
+	{
+		var pa = s.Things[a].Position;
+		var pb = s.Things[b].Position;
+		var ab = pb - pa;
+		float len2 = MathF.Max(ab.LengthSquared(), 1e-6f);
+		for (int i = 0; i < s.Things.Count && i < _known.Length; i++)
+		{
+			var t = s.Things[i];
+			if (t.Gone || !_known[i] || !_shown[(int)_kinds[i]])
+			{
+				continue;
+			}
+			float u = Math.Clamp(Vector3.Dot(t.Position - pa, ab) / len2, 0, 1);
+			if (Vector3.Distance(t.Position, pa + ab * u) <= 0.75f)
+			{
+				yield return i;
+			}
+		}
 	}
 
 	// Eyedropper: the next left click gives the object under it (null: none) instead of going to

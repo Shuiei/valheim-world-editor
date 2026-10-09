@@ -55,6 +55,7 @@ public sealed partial class MainWindow : Window
 	internal MeasurePanel MeasurePanel { get; }
 	internal ShapePanel ShapePanel { get; } = new();
 	internal MountainPanel MountainPanel { get; } = new();
+	internal BuildPanel BuildPanel { get; private set; } = null!;
 	internal ScriptPanel ScriptPanel { get; } = new();
 	// Stops the running script (null: none runs).
 	private Action? _stopScript;
@@ -116,6 +117,7 @@ public sealed partial class MainWindow : Window
 			_start?.Stop();
 			_start = new StartPage(_settings, error);
 			_start.OpenRequested += async (open, what) => await OpenWorld(open, what);
+			_start.WorkshopRequested += async path => await OpenWorkshop(path);
 			_start.OpenUrl = uri => Launcher.LaunchUriAsync(uri);
 			_start.SettingsRequested += async () => { if (await SettingsDialog.Show(this, _settings)) _start!.SetMode(_start.Mode); };
 			_start.Confirm = text => Dialogs.Ask(this, "Valheim World Editor", text, "Yes");
@@ -243,6 +245,7 @@ public sealed partial class MainWindow : Window
 	internal async Task ShowEditor(WorldScene scene)
 	{
 		_models ??= await Task.Run(ModelStore.Open);
+		ResetWorkshop();
 		// Lines and shapes drawn in the last area are left behind.
 		_view.Path.Clear();
 		_view.Area.Clear();
@@ -392,6 +395,7 @@ public sealed partial class MainWindow : Window
 		session.ThingsAdded += indices => Dispatcher.UIThread.Post(() => ShowKindsOf(session.Scene, indices));
 		session.Changed += () => Dispatcher.UIThread.Post(() =>
 		{
+			QueueSupport();
 			UpdateSaveBar();
 			History.Refresh();
 			// The ground changed: the Area tool's cut and fill follows.
@@ -416,6 +420,11 @@ public sealed partial class MainWindow : Window
 		var s = _session;
 		if (s == null)
 		{
+			return;
+		}
+		if (_inWorkshop)
+		{
+			WorkshopSaveBar(s);
 			return;
 		}
 		_pending.Text = s.PendingText;
@@ -456,6 +465,11 @@ public sealed partial class MainWindow : Window
 		var s = _session;
 		if (s == null)
 		{
+			return;
+		}
+		if (_inWorkshop)
+		{
+			await SaveWorkshop();
 			return;
 		}
 		_view.SelectTool.Commit();
@@ -590,17 +604,35 @@ public sealed partial class MainWindow : Window
 		// The objects' heights come from the ground as the paste leaves it: the ground step fills the list,
 		// which Commit reads after it (one undo step for both).
 		var add = new List<(TerrainEditor.Editing.NewObject, bool)>();
+		// Clear the site: the trees, rocks and the like where the pasted building stands go too.
+		var cleared = new List<int>();
 		int touched = 0;
 		var paste = _view.Paste;
 		var label = paste.Count > 1 ? $"Paste ×{paste.Count}" : "Paste";
+		float ox = s.Scene.X0 * 64f - 32f, oz = s.Scene.Z0 * 64f - 32f;
 		s.Commit(label, g =>
 		{
 			var (t, rect, a) = paste.Apply(g, at, s.MaskNow());
 			add.AddRange(a);
 			touched = t.Count;
+			if (paste.Site.Count > 0)
+			{
+				lock (s.Scene.Things)
+				{
+					for (int i = 0; i < s.Scene.Things.Count; i++)
+					{
+						var th = s.Scene.Things[i];
+						if (!th.Gone && EditSession.Natural(th) && paste.Site.Contains(((int)MathF.Round(th.Position.X - ox), (int)MathF.Round(th.Position.Z - oz))))
+						{
+							cleared.Add(i);
+						}
+					}
+				}
+			}
 			return (t, rect);
-		}, Array.Empty<int>(), add);
-		_message.Text = $"Pasted{(paste.Count > 1 ? $" {paste.Count} copies" : "")}{(touched > 0 ? " with the ground" : "")}{(add.Count > 0 ? $", {add.Count} object(s)" : "")}. Click again to paste more, Esc when done.";
+		}, cleared, add);
+		_message.Text = $"Pasted{(paste.Count > 1 ? $" {paste.Count} copies" : "")}{(touched > 0 ? " with the ground" : "")}{(add.Count > 0 ? $", {add.Count} object(s)" : "")}"
+			+ $"{(cleared.Count > 0 ? $", {cleared.Count} tree(s), rock(s) and the like cleared from the site" : "")}. Click again to paste more, Esc when done.";
 		UpdateSaveBar();
 	}
 
@@ -999,7 +1031,17 @@ public sealed partial class MainWindow : Window
 	private Border TopBar()
 	{
 		UndoButton.Click += (_, _) => Undo();
-		MapButton.Click += (_, _) => ShowMap();
+		MapButton.Click += async (_, _) =>
+		{
+			if (_inWorkshop)
+			{
+				await LeaveWorkshop();
+			}
+			else
+			{
+				ShowMap();
+			}
+		};
 		MapButton.Tip("top.map");
 		ToolTip.SetTip(UndoButton, "Undo the last change (Ctrl+Z).");
 		ToolTip.SetTip(RedoButton, "Redo the change you just undid (Ctrl+Y or Ctrl+Shift+Z).");
@@ -1023,7 +1065,7 @@ public sealed partial class MainWindow : Window
 			Orientation = Orientation.Horizontal,
 			Spacing = 4,
 			VerticalAlignment = VerticalAlignment.Center,
-			Children = { UndoButton, RedoButton, Sep(), _liveBadge, ReloadButton, AutoApplyBox, _pendingPill, DiscardButton, SaveButton, Sep(), HistoryButton, ViewButton, HelpButton },
+			Children = { UndoButton, RedoButton, Sep(), _liveBadge, ReloadButton, AutoApplyBox, SupportBox, CutBox, _pendingPill, DiscardButton, SaveButton, Sep(), HistoryButton, ViewButton, HelpButton },
 		};
 		Grid.SetColumn(right, 2);
 		bar.Children.Add(left);
@@ -1220,7 +1262,8 @@ public sealed partial class MainWindow : Window
 				turned.Add(ObjectKinds.Label(k));
 			}
 		}
-		if (turned.Count == 0)
+		// (The Workshop has no View panel to say it in.)
+		if (turned.Count == 0 || _inWorkshop)
 		{
 			return;
 		}
@@ -1578,13 +1621,16 @@ public sealed partial class MainWindow : Window
 		Blueprints = new BlueprintsPanel(_view.Paste, () => _view.Scene);
 		Blueprints.Message += t => _message.Text = t;
 		Blueprints.Pasting += () => { _viewPanel.IsVisible = true; StartPaste(); };
-		Blueprints.AskName = initial => Dialogs.AskText(this, "Save blueprint", "Name of the blueprint:", initial);
+		Blueprints.AskDetails = (start, cost) => Dialogs.AskBlueprint(this, start, cost);
+		Blueprints.Models = () => _models;
 		Blueprints.Confirm = text => Dialogs.Ask(this, "Blueprints", text, "Yes");
+		Blueprints.OpenUrl = uri => Launcher.LaunchUriAsync(uri);
+		SetUpWorkshop();
 		Blueprints.PickFile = async () =>
 		{
 			var picked = await StorageProvider.OpenFilePickerAsync(new Avalonia.Platform.Storage.FilePickerOpenOptions
 			{
-				Title = "Import a PlanBuild .blueprint or .vbuild file",
+				Title = "Import a .blueprint (Homestead, PlanBuild) or .vbuild file",
 				FileTypeFilter = new[] { new Avalonia.Platform.Storage.FilePickerFileType("Blueprints") { Patterns = BlueprintPatterns } },
 			});
 			return picked.Count > 0 && picked[0].Path.IsFile ? picked[0].Path.LocalPath : null;
@@ -1674,6 +1720,12 @@ public sealed partial class MainWindow : Window
 		AreaPanel.CopyAsked += Copy;
 		AreaPanel.PasteAsked += StartPaste;
 		AreaPanel.SaveBlueprintAsked += async () => await Blueprints.Save();
+		Tools.BlueprintsAsked += () =>
+		{
+			Inspector.Close();
+			Blueprints.Toggle();
+			_viewPanel.IsVisible = !Blueprints.Card.IsVisible;
+		};
 		AreaPanel.LibraryAsked += () =>
 		{
 			// The View panel makes room for the list.
@@ -1715,6 +1767,8 @@ public sealed partial class MainWindow : Window
 		PlaceInput.Message += t => { _message.Text = t; UpdateSaveBar(); };
 		_view.Place = PlaceInput;
 		PlacePanel = new PlacePanel(PlaceInput, () => _view.Scene, NameOfPrefab);
+		BuildPanel = new BuildPanel(PlaceInput) { Models = () => _models };
+		SetUpLibrary();
 		PlacePanel.Message += t => _message.Text = t;
 		PlacePanel.AskName = () => Dialogs.AskText(this, "Save as preset", "Name of the preset:");
 		PlacePanel.Confirm = text => Dialogs.Ask(this, "Delete the preset", text, "Delete");
@@ -1740,7 +1794,7 @@ public sealed partial class MainWindow : Window
 			Margin = new Thickness(10, 70, 10, 58),
 			HorizontalAlignment = HorizontalAlignment.Left,
 			VerticalAlignment = VerticalAlignment.Top,
-			Children = { Tools.Rail, Tools.Options, SelectPanel.Card, MeasurePanel.Card, ShapePanel.Card, MountainPanel.Card, ScriptPanel.Card, PathPanel.Card, AreaPanel.Card, PastePanel.Card, PlacePanel.Card, PlacePanel.Chooser, MaskPanel.Card },
+			Children = { Tools.Rail, Tools.Options, SelectPanel.Card, MeasurePanel.Card, ShapePanel.Card, MountainPanel.Card, ScriptPanel.Card, PathPanel.Card, AreaPanel.Card, PastePanel.Card, PlacePanel.Card, PlacePanel.Chooser, BuildPanel.Card, MaskPanel.Card },
 		};
 		// Every panel of the column scrolls when the window is too short for it (a bar only then).
 		foreach (var card in tools.Children.OfType<Border>())
@@ -1801,14 +1855,15 @@ public sealed partial class MainWindow : Window
 			}
 			AreaPanel.Card.IsVisible = Tools.Mode == ToolMode.Area;
 			PastePanel.Card.IsVisible = Tools.Mode == ToolMode.Paste;
-			PlacePanel.Card.IsVisible = Tools.Mode == ToolMode.Place;
+			PlacePanel.Card.IsVisible = Tools.Mode == ToolMode.Place && !_inWorkshop;
+			BuildPanel.Card.IsVisible = Tools.Mode == ToolMode.Place && _inWorkshop;
 			if (Tools.Mode != ToolMode.Place)
 			{
 				PlacePanel.Chooser.IsVisible = false;
 				PlacePanel.KindsButton.Content = "+ Add kinds";
 			}
 			PlaceInput.Refresh();
-			MaskPanel.Card.IsVisible = Tools.Mode is ToolMode.Brush or ToolMode.Path or ToolMode.Area or ToolMode.Shape or ToolMode.Mountain or ToolMode.Place;
+			MaskPanel.Card.IsVisible = !_inWorkshop && Tools.Mode is ToolMode.Brush or ToolMode.Path or ToolMode.Area or ToolMode.Shape or ToolMode.Mountain or ToolMode.Place;
 			if (Tools.Mode == ToolMode.Area)
 			{
 				AreaPanel.Refresh();
@@ -1831,6 +1886,19 @@ public sealed partial class MainWindow : Window
 		Closing += async (_, e) =>
 		{
 			var pending = _world?.Pending ?? _session?.Pending ?? (0, 0, 0, 0);
+			if (_inWorkshop && !_closeAnyway)
+			{
+				if (WorkshopDirty)
+				{
+					e.Cancel = true;
+					if (await Ask("Unsaved building", "The building in the Workshop is not saved as a blueprint. Quit without saving it?", "Quit anyway", "Keep building"))
+					{
+						_closeAnyway = true;
+						Close();
+					}
+				}
+				return;
+			}
 			if (_closeAnyway || pending is (0, 0, 0, 0))
 			{
 				Tunnel.Close();
@@ -1846,6 +1914,7 @@ public sealed partial class MainWindow : Window
 		// Takes the mouse for the 3D view (see GlView.Attach).
 		var surface = new Border { Background = Brushes.Transparent };
 		Surface = surface;
+		SetUpDrops(surface);
 		SetUpEditorWorld();
 		_viewPanel = ViewPanel();
 		// The panels on the right: under the top bar, one at a time.
@@ -1862,6 +1931,24 @@ public sealed partial class MainWindow : Window
 		Content = new Grid { Children = { _pages, _busy } };
 		_view.Attach(surface, this);
 		_view.AltWheel = AltWheel;
+		// Building (the Workshop): Ctrl + wheel lifts the piece.
+		_view.CtrlWheel = (dir, shift) =>
+		{
+			// Pasting: the paste lowered (into a mountain: Clear the site digs it out) or raised.
+			if (Tools.Mode == ToolMode.Paste)
+			{
+				PastePanel.OffsetBox.Value = Math.Round((PastePanel.OffsetBox.Value ?? 0) + dir * (shift ? 0.1m : 0.5m), 2);
+				_message.Text = $"Paste height: {PastePanel.OffsetBox.Value:+0.0#;-0.0#;0} m from the ground clicked (Ctrl + wheel; Shift: 0.1 m).";
+				return true;
+			}
+			if (Tools.Mode != ToolMode.Place || !PlaceTool.Building)
+			{
+				return false;
+			}
+			PlaceInput.Lift(dir * (shift ? 0.1f : 0.5f));
+			BuildPanel.ShowLift();
+			return true;
+		};
 		surface.PointerMoved += (_, e) => ShowCursor(e.GetPosition(surface));
 		surface.PointerExited += (_, _) => ShowCursor(null);
 		_view.StrokeEnded += _ => ShowCursor(_cursorAt);

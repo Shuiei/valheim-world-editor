@@ -13,6 +13,7 @@ public sealed class PastePanel
 	internal TextBlock Info { get; } = new() { FontSize = 12, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
 	internal CheckBox GroundBox { get; } = new() { Content = "Ground shape and paint", IsChecked = true, FontSize = 12 };
 	internal CheckBox ObjectsBox { get; } = new() { Content = "Objects", IsChecked = true, FontSize = 12 };
+	internal CheckBox ClearSiteBox { get; } = new() { Content = "Clear the site (dig the ground in its way, take away trees and rocks)", IsChecked = true, FontSize = 12 };
 	internal NumericUpDown OffsetBox { get; } = new() { Value = 0, Increment = 0.5m, FormatString = "0.0#", FontSize = 12 };
 	internal NumericUpDown CopiesBox { get; } = new() { Value = 1, Minimum = 1, Maximum = 50, Increment = 1, FormatString = "0", FontSize = 12 };
 	internal ComboBox AlongBox { get; } = new() { ItemsSource = new[] { "its width", "its depth", "upwards" }, SelectedIndex = 0, FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch };
@@ -27,6 +28,8 @@ public sealed class PastePanel
 		_paste = paste;
 		GroundBox.IsCheckedChanged += (_, _) => paste.Ground = GroundBox.IsChecked == true;
 		ObjectsBox.IsCheckedChanged += (_, _) => paste.Objects = ObjectsBox.IsChecked == true;
+		ClearSiteBox.IsCheckedChanged += (_, _) => paste.ClearSite = ClearSiteBox.IsChecked == true;
+		ClearSiteBox.Tip("paste.clearSite");
 		OffsetBox.ValueChanged += (_, e) => { paste.Offset = (float)(e.NewValue ?? 0); paste.Notify(); };
 		CopiesBox.ValueChanged += (_, e) => { paste.Copies = (int)(e.NewValue ?? 1); paste.Notify(); };
 		AlongBox.SelectionChanged += (_, _) => { paste.Direction = (PasteTool.Along)Math.Max(0, AlongBox.SelectedIndex); paste.Notify(); };
@@ -76,7 +79,7 @@ public sealed class PastePanel
 				Children =
 				{
 					new TextBlock { Text = "Paste", FontSize = 14, FontWeight = FontWeight.SemiBold },
-					Info, GroundBox, ObjectsBox,
+					Info, GroundBox, ObjectsBox, ClearSiteBox,
 					Row("Height", OffsetBox, " m"),
 					new TextBlock { Text = "REPEAT (STACK)", FontSize = 10, Foreground = Ui.Muted, Margin = new Thickness(0, 4, 0, 0) },
 					Row("Copies", CopiesBox),
@@ -85,7 +88,7 @@ public sealed class PastePanel
 					new WrapPanel { ItemSpacing = 4, LineSpacing = 4, Children = { TurnButton, MirrorButton, DoneButton } },
 					new TextBlock
 					{
-						Text = "Click to place; the copied ground keeps its shape relative to the point you click. Height moves the paste up or down.",
+						Text = "Click to place; the copied ground keeps its shape relative to the point you click. Height (or Ctrl + wheel; Shift: 0.1 m) moves the paste up or down: lower a building into a hill, and Clear the site digs it out.",
 						FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap,
 					},
 				},

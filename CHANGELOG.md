@@ -4,13 +4,19 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
-## Unreleased
+## v1.15.0 — 2026-10-08
 
 ### Added
 - The area's size (3 × 3, 5 × 5, 7 × 7 zones) changes on the fly next to the Area arrows, around the
   same middle zone, keeping the view, the changes and the history.
-- **Mountain**: a preview before clicking: the mountain under the pointer as a mesh on the ground,
-  as high as it will rise. The circle turns red where it does not fit in the open area.
+
+## v1.14.1 — 2026-10-08
+
+### Fixed
+- Zooming out no longer fogs the area over: the fog starts at the point the view turns around, so
+  only what lies beyond it fades.
+
+## v1.14.0 — 2026-10-08
 
 ### Changed
 - **Save to world** (offline) works like Apply live: the area and its history stay after saving; undo
@@ -18,15 +24,127 @@ the plugin is unchanged in versions without that part.
   the old save is removed before the new one reads back right (on a failure the new files go and
   nothing changed), and the save the world was opened from stays until the world is left.
 
+## v1.13.0 — 2026-10-08
+
+### Added
+- **Mountain**: a preview before clicking: the mountain under the pointer as a mesh on the ground,
+  as high as it will rise. The circle turns red where it does not fit in the open area.
+
 ### Fixed
 - A wide brush or Mountain circle no longer drops a line straight down where it passes the edge of
   the open area, and follows hills instead of cutting through them.
 - Zone borders (and the other overlays lying on the ground) follow the ground when it changes: after
   undoing or discarding a mountain they no longer outline it in the air.
-- Zooming out no longer fogs the area over: the fog starts at the point the view turns around, so
-  only what lies beyond it fades.
+
+## v1.12.1 — 2026-10-08
+
+### Fixed
 - Buildings copied with the Select tool keep their shape when pasted on a slope: each piece no longer
   follows the ground on its own (trees, rocks and the like still do).
+
+## v1.12.0 — 2026-10-08
+
+### Added
+- **Paste** shows what it will place as see-through models (not only posts), at its height; Ctrl +
+  wheel lowers or raises it (into a hill: Clear the site digs it out).
+
+## v1.11.0 — 2026-10-08
+
+### Added
+- In a world: a **Blueprints** button on the tool rail opens the library, to paste a blueprint made in
+  the Workshop.
+- **Clear the site** (Paste, on by default): the ground in a pasted building's way is dug down to its
+  lowest piece (a metre around too, never raised, past the ±8 m if need be), and the trees, rocks,
+  bushes and pickables there are taken away, in the paste's undo step.
+
+## v1.10.0 — 2026-10-08
+
+### Changed
+- A blueprint opened or added in the Workshop stands on its lowest buildable piece (rocks and other
+  things the hoe places do not count), and the support check takes the ground it stood on in game to
+  be under its lowest piece at each spot (the terrain reached each post), or at Homestead's terrain
+  contact points. Rocks are left out of the support check.
+
+## v1.9.1 — 2026-10-08
+
+### Fixed
+- Objects shown untextured (white) after opening another area while models were still loading.
+
+## v1.9.0 — 2026-10-08
+
+### Added
+- **Cut** (the Workshop): the building shown only up to a height, a metre at a time, and the cursor
+  goes through what is hidden, to build inside it.
+
+### Changed
+- The **support check** tints the pieces in the game's build-mode colours (light blue on the ground,
+  green to red) instead of outlining them; the pieces' own look still shows.
+- The Workshop draws pieces solid (See-through buildings is for worlds).
+
+## v1.8.0 — 2026-10-08
+
+### Added
+- The Workshop's **Library** tab: your blueprints with pictures, cost and search; **Open** (alone on
+  the plot), **Add**, drag one onto the plot, or drop .blueprint and .vbuild files from your files
+  (imported into the library). A blueprint keeps its form exactly; Homestead's keep their anchor's
+  height when saved again.
+
+### Changed
+- The start page's Workshop card opens the Workshop; the blueprints are in its Library.
+- No unsaved marks in the Workshop (everything on the plot is new).
+
+## v1.7.0 — 2026-10-08
+
+### Added
+- **Select**: Ctrl + click adds to the selection; Shift + click takes the row from the last object
+  clicked (wall 1, Shift + click wall 3: walls 1 to 3).
+
+## v1.6.0 — 2026-10-08
+
+### Added
+- The Workshop places pieces where the **game's hammer** would, from the game's own data for every
+  piece (colliders, snap points, placement rules): the piece touches what you point at, then snap
+  points within half a metre meet; pointed at a wall's top, the next stands on it.
+- **Ctrl + wheel** lifts the piece (Shift: 0.1 m); , and . turn it by the game's 22.5° (or another step).
+- The Build panel's **Plants** (cultivator) and **Feasts** (serving tray) tabs: everything players build.
+
+### Fixed
+- Turning with the wheel: one step a notch (smooth wheels and touchpads too), and a snapped piece keeps
+  the turn asked for.
+
+## v1.5.0 — 2026-10-08
+
+### Changed
+- The Workshop keeps to building: **Build** (the hammer's pieces in its tabs, with pictures, by
+  crafting station and name, searchable; snap, grid and turn step), **Select** and **View**; no
+  world tools, Mask, View panel or zone borders there.
+
+## v1.4.0 — 2026-10-08
+
+### Added
+- The blueprint library shows each blueprint's **3D picture** (the game's models when its look has
+  been copied), its **cost** in game (materials and crafting stations), a **description** and
+  **tags**; the search looks through all of them; **Details** changes them.
+
+## v1.3.0 — 2026-10-08
+
+### Added
+- **The Workshop**: a blank, flat plot (from the start page or the Blueprints panel) to build a
+  building, then **Save blueprint**: only its building pieces are kept. Blueprints open in it to be
+  changed.
+- **Support check** (in the Workshop): each piece's structural support worked out by the game's own
+  rules (per material), from full on the ground to what would fall. Saving asks first when some would.
+
+## v1.2.0 — 2026-10-08
+
+### Added
+- Blueprints are **Homestead**'s (the in-game building mod): saved into its folder, so they show in
+  its hammer tab ready to build in game, and its own blueprints are listed here. The editor finds
+  Homestead in the game's BepInEx and mod manager profiles, and warns when it is not installed.
+
+### Changed
+- **Save blueprint…** writes Homestead blueprints (pieces only, no ground). Blueprints kept in the
+  editor's own format before are still listed, and **To Homestead** moves them.
 
 ## v1.1.0 — 2026-10-08
 

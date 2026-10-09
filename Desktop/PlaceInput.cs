@@ -18,6 +18,8 @@ public sealed class PlaceInput
 	public PlaceTool Tool { get; }
 	public Func<EditSession?> Session { get; set; } = () => null;
 	public event Action<string>? Message;
+	// , . turn by this many degrees (null: 1°, Shift 15°).
+	public float? TurnStep { get; set; }
 	// Placed: the kinds, for the recent list.
 	public event Action<IReadOnlyList<string>>? Placed;
 
@@ -46,7 +48,7 @@ public sealed class PlaceInput
 		{
 			return;
 		}
-		int? under = Tool.OnTop && _pointer is Point p ? _view.ObjectAt(p, _size) : null;
+		int? under = (Tool.OnTop || Tool.Building) && _pointer is Point p ? _view.ObjectAt(p, _size) : null;
 		_preview = _view.Mode == ToolMode.Place && !(Tool.Mode == PlaceTool.Modes.Brush && _shift) ? Tool.Preview(_at, under) : new();
 		Shown = _preview.ToArray();
 		_view.LassoChanged();
@@ -95,6 +97,11 @@ public sealed class PlaceInput
 				s.Removed.Add(i);
 			}
 			_view.Select(s.Removed);
+			return;
+		}
+		// Building (the Workshop): a click puts one piece; a drag does not paint more.
+		if (Tool.Building)
+		{
 			return;
 		}
 		s.Added.AddRange(Tool.PaintStep(at, dt, s.Added));
@@ -182,7 +189,8 @@ public sealed class PlaceInput
 			}
 			return;
 		}
-		var hit = _view.GridAt(at, size);
+		// Building: where the cursor points (on a piece, or the ground), as the preview shows it.
+		var hit = Tool.Building && _at != null ? _at : _view.GridAt(at, size);
 		if (alt && !shift)
 		{
 			if (_view.WorldAt(at, size) is { } w)
@@ -252,11 +260,29 @@ public sealed class PlaceInput
 		}
 	}
 
+	// Building: Ctrl + wheel lifts the piece (or lowers it) from where the cursor points.
+	public void Lift(float metres)
+	{
+		Tool.HeightNudge = MathF.Round(Tool.HeightNudge + metres, 2);
+		if (_pointer is Point p)
+		{
+			Moved(p, _size);
+		}
+		Tool.Notify();
+		Message?.Invoke(Tool.HeightNudge == 0 ? "Lift: none (where the cursor points)." : $"Lift: {Tool.HeightNudge:+0.0#;-0.0#} m from where the cursor points (Ctrl + wheel; Shift: 0.1 m).");
+	}
+
 	public void Moved(Point at, Size size)
 	{
 		_pointer = at;
 		_size = size;
 		var hit = _view.GridAt(at, size);
+		// Building: the build ray itself (the piece goes where it hits, a piece or the ground).
+		if (Tool.Building)
+		{
+			Tool.AimRay = _view.WorldRay(at, size);
+			hit ??= Tool.AimRay != null ? Vector2.Zero : null;
+		}
 		_at = hit;
 		if (_stroke is { } s)
 		{
@@ -396,14 +422,16 @@ public sealed class PlaceInput
 		}
 		else
 		{
-			var list = s.Dragging ? s.Added : s.Stamp;
+			var list = s.Dragging && !Tool.Building ? s.Added : s.Stamp;
 			if (list.Count > 0)
 			{
 				var names = list.Select(o => o.Name).Distinct().ToList();
 				Commit(session, list, $"Placed {list.Count} ({string.Join(", ", names.Take(3))})");
 				Placed?.Invoke(names);
 			}
-			Message?.Invoke($"Placed {list.Count} object(s). Ctrl+Z removes them; Save writes them to the world.");
+			Message?.Invoke(Tool.Building
+				? list.Count == 0 ? "Nothing placed here." : $"Placed {string.Join(", ", list.Select(o => TerrainEditor.Terrain.PieceCost.PieceName(o.Name)).Distinct())}{(Tool.SnappedTo is string to ? $" {to}" : "")}. Ctrl+Z takes it back."
+				: $"Placed {list.Count} object(s). Ctrl+Z removes them; Save writes them to the world.");
 		}
 		Tool.NewLayout();
 		Refresh();
@@ -451,7 +479,8 @@ public sealed class PlaceInput
 		{
 			return false;
 		}
-		float step = shift ? 15 : 1;
+		// The Workshop turns pieces by its own step (Shift: by 1°).
+		float step = TurnStep is float ts ? shift ? 1 : ts : shift ? 15 : 1;
 		bool shape = Tool.Mode != PlaceTool.Modes.Brush;
 		switch (key)
 		{
