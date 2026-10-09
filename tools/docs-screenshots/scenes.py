@@ -11,7 +11,9 @@ saving: what a picture shows is only that scene's own changes. Run:
 
     python3 tools/docs-screenshots/scenes.py <dir> [scene ...]
 
-Pictures go to docs/images (or $DOCS_OUT). With scene names, only those scenes run.
+Pictures go to docs/images (or $DOCS_OUT). With scene names, only those scenes run. For the start
+$HOMESTEAD_DLL (Homestead.dll from its Thunderstore package) puts Homestead in the stand-in game's
+BepInEx, so the start page and the Blueprints panel show it installed.
 """
 import os
 import sys
@@ -490,7 +492,7 @@ def scene_blueprints(e):
     e.send("click Save blueprint…")
     e.send("wait 500")
     e.send("type |Small hut")
-    e.send("click OK")
+    e.send("click Save")
     e.send("wait 500")
     e.send("click Blueprints…")
     camera(e, 0, 0, 200, 40, 55)
@@ -515,6 +517,9 @@ def scene_start(e):
     e.send("click A saved world")
     e.send("wait 1500")
     e.shot(OUT / "start-offline.jpg")
+    e.send("click The Workshop")
+    e.send("wait 800")
+    e.shot(OUT / "start-workshop.jpg")
     e.send("click Settings")
     e.send("wait 800")
     e.shot(OUT / "settings.jpg")
@@ -532,7 +537,8 @@ def main():
         started = time.time()
         # Each scene in a fresh editor: nothing carries over, nothing is saved.
         start = name == "start"
-        with Editor(game_world="Docs" if start else None, worlds=(f"{DIR}/Docs", f"{DIR}/Fjordheim") if start else ()) as e:
+        with Editor(game_world="Docs" if start else None, worlds=(f"{DIR}/Docs", f"{DIR}/Fjordheim") if start else (),
+                    homestead=os.environ.get("HOMESTEAD_DLL")) as e:
             try:
                 SCENES[name](e)
             except Exception as ex:

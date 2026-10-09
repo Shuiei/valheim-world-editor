@@ -19,7 +19,8 @@ For single player, or a world you host from the game.
 2. **The plugin:** install WorldEditorBridge with a mod manager (Thunderstore or Hexium), or copy
    `WorldEditorBridge.dll` from `WorldEditorBridge-<version>.zip` (on the editor's releases page)
    into `BepInEx/plugins` of your Valheim, or of your mod manager profile.
-3. **Start Valheim** with BepInEx and load your world.
+3. **Start Valheim** with BepInEx and load your world. The plugin's first start writes its
+   settings (`BepInEx/config/Tie.WorldEditorBridge.cfg`, with the token) that the editor reads.
 4. Start page → **My game**. It shows what is missing, or "Valheim is running with the world …"
    with an **Edit live** button. On your own computer the editor reads the plugin's settings (port
    and token) itself, in the Valheim folder and in r2modman / Thunderstore Mod Manager profiles.
@@ -37,7 +38,9 @@ the plugin's settings (below).
 1. **On the server, once:** BepInEx (BepInExPack for Valheim, following its dedicated-server
    instructions), then `WorldEditorBridge.dll` (from `WorldEditorBridge-<version>.zip`) in its
    `BepInEx/plugins/`, then restart the
-   server. Its log shows `WorldEditorBridge <version> listening on http://127.0.0.1:5182/`.
+   server. Its log shows `WorldEditorBridge <version> listening on http://127.0.0.1:5182/`. This
+   first start with the plugin writes `BepInEx/config/Tie.WorldEditorBridge.cfg` and its token: until
+   the server has started once with the plugin, there is no token to enter.
 2. Start page → **A dedicated server**: the server's address, the user you log in to it with over
    SSH, the password or an SSH key file (without either, the usual keys in `~/.ssh` are tried), and
    the **plugin token** (the `Token` line of `BepInEx/config/Tie.WorldEditorBridge.cfg` on the

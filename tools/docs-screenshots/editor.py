@@ -48,7 +48,7 @@ class FakeGame:
 
 
 class Editor:
-    def __init__(self, app=None, width=1440, height=900, game_world=None, worlds=()):
+    def __init__(self, app=None, width=1440, height=900, game_world=None, worlds=(), homestead=None):
         self.home = Path(tempfile.mkdtemp(prefix="vwe-docs-home-"))
         self.game = None
         # The stand-in home's own data folder (~/.local/share/ValheimWorldEditor): the start page
@@ -75,6 +75,12 @@ class Editor:
             (bep / "plugins" / "WorldEditorBridge.dll").write_bytes(b"")
             (bep / "config").mkdir()
             (bep / "config" / "Tie.WorldEditorBridge.cfg").write_text(f"[Bridge]\nPort = {self.game.port}\nToken = {self.game.token}\n")
+        if homestead:
+            # Homestead (a copy of its Homestead.dll: the editor shows its version), in the stand-in
+            # game's BepInEx, or with the plugin in its mod manager profile.
+            plugins = (bep if game_world else valheim / "BepInEx") / "plugins"
+            plugins.mkdir(parents=True, exist_ok=True)
+            shutil.copy(homestead, plugins / "Homestead.dll")
         env = dict(os.environ, HOME=str(self.home), XDG_DATA_HOME=str(data), XDG_CONFIG_HOME=str(self.home / ".config"))
         app = app or REPO / "Desktop" / "bin" / "Debug" / "net8.0" / "ValheimWorldEditor.dll"
         cmd = ["dotnet", str(app)] if str(app).endswith(".dll") else [str(app)]

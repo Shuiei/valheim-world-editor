@@ -1,43 +1,84 @@
 # Valheim World Editor
 
 [![CircleCI](https://dl.circleci.com/status-badge/img/gh/Shuiei/valheim-world-editor/tree/main.svg?style=svg)](https://dl.circleci.com/status-badge/redirect/gh/Shuiei/valheim-world-editor/tree/main)
+[![Latest release](https://img.shields.io/github/v/release/Shuiei/valheim-world-editor)](https://github.com/Shuiei/valheim-world-editor/releases/latest)
+
+**A world editor for Valheim, in the spirit of Minecraft's MCEdit, WorldEdit and WorldPainter.**
+Open a world, saved or running, in a 3D window that draws it with the game's own terrain, textures
+and models. Shape the land, build, place and move anything, then save it back or watch it change in
+game as you work.
 
 ![The 3D editor showing a base, with the tool rail, tool panel and View panel](docs/images/overview.jpg)
 
-## What is this?
+**[Download the latest release](https://github.com/Shuiei/valheim-world-editor/releases/latest)**
+for Windows or Linux. Unpack it and start it. You don't need to install anything else.
 
-A world editor for Valheim, in the spirit of Minecraft's MCEdit, WorldEdit and WorldPainter. It
-opens a Valheim world in its own window, drawn with the game's own terrain, textures and models. There you can:
+## What you can do
 
-- **Shape the ground**: raise, lower, flatten, smooth, naturalize or restore it, and paint dirt,
-  cultivated soil or paved stone.
-- **Build roads and ramps** along a line you draw, and **dig caves** roofed with the game's boulders.
-- **Go past the game's ±8 m**: raise **mountains**, ridges and volcanoes, or dig canyons. The editor
-  turns that ground into invisible locations the game levels by itself, so it works for every
-  player, console players included, with no mod.
-- **Write scripts** in C# to generate anything over an area: terrain, paint, trees, rocks, buildings.
-- **Work on whole areas**: level, paint, clear or copy and paste a box or polygon, or have the game
-  generate zones again from scratch. Keep copies as **blueprints** to paste into any world.
-- **Place anything the game has**: trees, rocks, bushes, crops, building pieces and so on, with
-  brush, line, grid and zone patterns that respect the game's growing rules.
-- **Select, move, turn, copy and delete objects**, including whole buildings, and **inspect and
-  change what they hold**: chest contents, sign texts, portal tags...
-- **Search the whole world** for a kind of object, an item in any chest, or a sign's text.
-- **Measure** distances and slopes, and see the ground coloured by steepness.
-- **Restore an area from a backup**, ground and objects, to undo griefing without rolling back
-  the whole world.
-- **Undo anything**, with a history panel that can roll back to any point or remove one change.
+**Terrain**
+- **Sculpt the ground** with brushes that raise, lower, flatten, smooth, erode, naturalize or restore
+  it, and **paint** it with dirt, cultivated soil or paved stone.
+- **Go past the game's ±8 m limit.** Raise mountains, ridges and volcanoes, or dig canyons, with a
+  preview before you click. The editor stores that ground as invisible locations the game levels by
+  itself. It works for every player, console players included, and nobody needs a mod.
+- **Draw roads, ramps, rivers and caves** along a line. Caves are roofed with the game's own
+  boulders.
 
-There are three ways to edit, all on the start page:
+**Building**
+- **The Workshop** is a blank plot where you build with every piece the game has: hammer,
+  cultivator and serving tray. Pieces snap exactly as they do with the in-game hammer. A **support
+  check** tints each piece green to red, like the game's build mode. **Cut** shows the building only
+  up to a height, so you can work inside it.
+- **Blueprints** are saved in the format of [Homestead](https://thunderstore.io/c/valheim/p/sighsorry/Homestead/).
+  A building you save in the editor shows up in Homestead's hammer tab, ready to build in game. One
+  you save in game opens in the editor. The library shows each blueprint's 3D picture, cost,
+  description and tags. You can drag a blueprint onto the plot or drop `.blueprint` (Homestead,
+  PlanBuild) and `.vbuild` files on it.
+- **Paste a blueprint into any world.** Before you click, it shows as see-through models. It clears
+  its site: the ground in the way is dug out, and the trees and rocks there are removed.
 
-| Way | What it edits | Needs |
+**Objects**
+- **Place anything the game has**: trees, rocks, bushes, crops and building pieces. Use a brush,
+  lines, circles, grids or whole zones; the brush follows the game's growing rules.
+- **Select, move, turn, copy and delete** objects, whole buildings included.
+- **Look inside objects and change what they hold**: chest contents, sign texts, portal tags…
+- **Search the whole world** for a kind of object, an item in any chest, or the text of a sign.
+
+**Areas and worlds**
+- **Work on an area**, a box or polygon: level, paint, clear, copy and paste it. You can also have the
+  game generate its zones again from scratch.
+- **Restore an area from a backup**, ground and objects, to undo griefing without rolling back the
+  whole world.
+- **Write C# scripts** that shape, paint and fill an area with terrain, trees, rocks and buildings.
+- **Measure** distances and slopes, and colour the ground by steepness.
+- **Undo anything.** The history panel goes back to any point, or takes out one change only.
+
+## Three ways to edit
+
+All three start from the editor's start page.
+
+| | What it edits | What you need |
 |---|---|---|
-| **My game** (live) | The world you are playing in: single player, or the one you host. You see the changes in game right away. | BepInEx and the WorldEditorBridge plugin in your Valheim. |
-| **A dedicated server** (live) | Your server's world while people play. The editor logs in to the server and makes its own tunnel. | BepInEx and the plugin on the server, and an SSH login to it. |
-| **A saved world** (offline) | World files on this computer, with the game closed. Saved as a new save; like live mode, the history stays across saves. | Nothing. |
+| **My game** (live) | The world you are playing: single player, or the one you host. Changes show in game right away. | BepInEx and the WorldEditorBridge plugin in your Valheim. |
+| **A dedicated server** (live) | Your server's world, while people play. The editor logs in over SSH and opens its own encrypted tunnel. | BepInEx and the plugin on the server, and an SSH login to it. |
+| **A saved world** (offline) | World files on this computer, with the game closed. | Nothing. |
 
-It is a single program for Windows and Linux: download, unpack, double-click. Everything runs on
-your own computer; nothing is sent anywhere else.
+**The Workshop**, the fourth card on the start page, needs no world at all.
+
+![The start page, with the Workshop card open](docs/images/start-workshop.jpg)
+
+One program runs on Windows and Linux, and everything happens on your computer. Nothing is sent
+anywhere else.
+
+## Quick start
+
+1. Download `ValheimWorldEditor-<version>-win-x64.zip` (Windows) or `-linux-x64.tar.gz` (Linux) from
+   the [releases page](https://github.com/Shuiei/valheim-world-editor/releases/latest).
+2. Unpack it anywhere and double-click **ValheimWorldEditor**.
+3. Pick a way to edit on the start page. To try it safely, open **A saved world** with the game
+   closed, or **The Workshop**.
+
+The sections below cover each step in more detail.
 
 ## Installation
 
@@ -89,7 +130,9 @@ with `valheim_Data`).
    [releases page](https://github.com/Shuiei/valheim-world-editor/releases): Thunderstore does not
    host programs.
 3. **Start Valheim** with BepInEx and load your world (single player, or start a server from the
-   game to host it).
+   game to host it). On this first start the plugin writes its settings,
+   `BepInEx/config/Tie.WorldEditorBridge.cfg`, with a random token. The editor reads that file, so
+   the game has to have started once with the plugin.
 4. On the start page, **My game** shows "Valheim is running with the world …": click **Edit live**.
    On your own computer it finds the plugin and its token by itself, also in mod manager profiles.
 
@@ -104,14 +147,18 @@ game at once, and the game saves it as usual.
    for dedicated servers), copy `WorldEditorBridge.dll` (from `WorldEditorBridge-<version>.zip` on
    the releases page) into its `BepInEx/plugins` (or install
    [WorldEditorBridge](https://thunderstore.io/c/valheim/p/Tie/WorldEditorBridge/) in a mod
-   manager's server profile), and restart it. See the `README.txt` in that zip.
-2. On the start page, **A dedicated server**: enter the server's address, the user you log in to it
+   manager's server profile).
+2. **Start the server once with the plugin**, so it writes `BepInEx/config/Tie.WorldEditorBridge.cfg`.
+   That file holds the plugin's **token**, a random secret made on that first start. Until the
+   server has started once with the plugin, there is no token to enter. See the `README.txt` in the
+   plugin's zip.
+3. On the start page, **A dedicated server**: enter the server's address, the user you log in to it
    with (SSH), the password or an SSH key file, and the **plugin token**: the `Token` line of
    `BepInEx/config/Tie.WorldEditorBridge.cfg` on the server. Tick **Save password** to not type the
    password again.
-3. **Connect.** The editor logs in, opens its own encrypted tunnel to the plugin and loads the
+4. **Connect.** The editor logs in, opens its own encrypted tunnel to the plugin and loads the
    world. The plugin only listens on the server itself, so it is never exposed to the internet.
-4. The server is then **saved** in the list, with its token: next time it is one click.
+5. The server is then **saved** in the list, with its token: next time it is one click.
 
 If something is wrong, the editor says what: login refused, no answer, wrong token, plugin not
 running on the server, or a server whose identity changed since last time (it refuses to connect
@@ -166,7 +213,75 @@ copied game files and a log (`log.txt`, a new one each run) are in `~/.local/sha
 (Linux) or `%LOCALAPPDATA%\ValheimWorldEditor` (Windows). The bottom of the start page shows the
 folder.
 
-### Command line (optional)
+## Documentation
+
+| Page | Covers |
+|---|---|
+| [Getting around](docs/editor-basics.md) | Camera, top bar, saving, discarding, history, View panel, shortcuts |
+| [World map](docs/map.md) | The overview map and opening an area in 3D |
+| [Ground tools](docs/terrain.md) | Raise, Lower, Flatten, Smooth, Naturalize, Restore, ground paint, No limit (past ±8 m), Mountain |
+| [Path](docs/path.md) | Roads, ramps, rivers, caves and paint along a line |
+| [Mask](docs/masks.md) | Limiting any tool by biome, height, slope or paint |
+| [Area, copy and paste](docs/area.md) | Box and polygon selections, bulk actions, paste, zone reset |
+| [The Workshop](docs/workshop.md) | Building on a blank plot, the support check, Homestead blueprints: library, cost, pictures, tags, sharing |
+| [Place](docs/place.md) | Any kind of object: trees and rocks with a brush, walls and fences end to end along lines, circles and rectangles, grids and zones |
+| [Select](docs/select.md) | Selecting, moving with arrows, turning, dropping, copying, deleting |
+| [Measure and overlays](docs/measure.md) | Distances, slopes, slope colours, height lines |
+| [Script](docs/scripting.md) | C# scripts that shape, paint and populate an area: how to write them, everything they can use, recipes |
+| [Live mode](docs/live-mode.md) | Editing a running server |
+| [Development](docs/development.md) | Project layout, extracting the game files, tests |
+
+What changed and when: [CHANGELOG.md](CHANGELOG.md).
+
+## Safety
+
+- **Nothing is written until you choose to.** Edits stay in the editor until you press **Save to
+  world** or **Apply live**. **Discard** drops everything that is not saved or applied yet.
+- **Offline saves are checked.** The editor writes your changes as the world's next save and reads
+  them back. If they don't read back right, the new files are removed and the world is as it was.
+  The save you opened the world from is kept until you leave the world.
+- **The editor follows the game's rules.** Ground moves at most 8 m from its original height, the
+  way the game allows. Ground at that limit turns red (**View → Limit marks** hides it). The only
+  way past the limit is **No limit** and **Mountain**, which use locations the game itself
+  understands. The edge of the loaded area stays locked, so it joins its neighbours seamlessly.
+- **The plugin is private.** WorldEditorBridge only listens on the computer it runs on, and it needs
+  a secret token. A server is reached through the editor's own SSH tunnel and is never exposed to
+  the internet.
+- Keep your own copies of worlds you care about anyway.
+
+## Questions
+
+**Do the players on my server need anything?**
+No. Only the game or server that hosts the world needs BepInEx and the plugin. Players who join,
+console players included, need nothing. That also goes for mountains past ±8 m.
+
+**Do I need Homestead?**
+Only to build blueprints in game. The Workshop, the library and pasting blueprints into a world all
+work without it. When Homestead is missing, the editor says so and links to it. Note that a server
+running Homestead turns away players who don't have it, and console players can't install mods.
+
+**The editor asks for a token. Where is it?**
+In `BepInEx/config/Tie.WorldEditorBridge.cfg`, on the `Token` line. The plugin writes that file the
+first time the game or server starts with it, so start it once after installing the plugin. For your
+own game the editor reads the token by itself; for a dedicated server you copy it from the server.
+
+**Can I edit while the game is running?**
+Yes, in live mode with the plugin. For a saved world, close the game or stop the server first: a
+running game saves over the files the editor writes.
+
+**Is the editor on Thunderstore or Hexium?**
+Only the plugin, [WorldEditorBridge](https://thunderstore.io/c/valheim/p/Tie/WorldEditorBridge/),
+is there. The editor is a program, not a mod, so it is only on the
+[releases page](https://github.com/Shuiei/valheim-world-editor/releases/latest). Use the same version
+of both.
+
+**Something is wrong or missing.**
+[Open an issue](https://github.com/Shuiei/valheim-world-editor/issues). The editor's log
+(`log.txt`, in the folder shown at the bottom of the start page) helps.
+
+## For developers
+
+### Command line
 
 The program also takes a world or a live server directly, which is handy for scripts:
 
@@ -192,34 +307,3 @@ dotnet test tests/Desktop.Tests/Desktop.Tests.csproj -c Release --filter "Catego
 ```
 
 See [docs/development.md](docs/development.md).
-
-## Documentation
-
-| Page | Covers |
-|---|---|
-| [Getting around](docs/editor-basics.md) | Camera, top bar, saving, discarding, history, View panel, shortcuts |
-| [World map](docs/map.md) | The overview map and opening an area in 3D |
-| [Ground tools](docs/terrain.md) | Raise, Lower, Flatten, Smooth, Naturalize, Restore, ground paint, No limit (past ±8 m), Mountain |
-| [Path](docs/path.md) | Roads, ramps, rivers, caves and paint along a line |
-| [Mask](docs/masks.md) | Limiting any tool by biome, height, slope or paint |
-| [Area, copy and paste](docs/area.md) | Box and polygon selections, bulk actions, paste, zone reset |
-| [The Workshop](docs/workshop.md) | Building on a blank plot, the support check, Homestead blueprints: library, cost, pictures, tags, sharing |
-| [Place](docs/place.md) | Any kind of object: trees and rocks with a brush, walls and fences end to end along lines, circles and rectangles, grids and zones |
-| [Select](docs/select.md) | Selecting, moving with arrows, turning, dropping, copying, deleting |
-| [Measure and overlays](docs/measure.md) | Distances, slopes, slope colours, height lines |
-| [Script](docs/scripting.md) | C# scripts that shape, paint and populate an area: how to write them, everything they can use, recipes |
-| [Live mode](docs/live-mode.md) | Editing a running server |
-| [Development](docs/development.md) | Project layout, extracting the game files, tests |
-
-What changed and when: [CHANGELOG.md](CHANGELOG.md).
-
-## Safety
-
-- Offline saves always make a full backup of the world folder first, and the save is read back and
-  checked before the editor reports success.
-- The editor follows the game's own limits: ground moves at most 8 m from its original height (ground
-  at the limit turns red; **View → Limit marks** hides it), and the edge of the loaded area is locked
-  so it joins its neighbours seamlessly.
-- Nothing is written until you press **Save to world** or **Apply live**; **Discard** undoes
-  everything that is not saved or applied yet.
-- Keep your own copies of worlds you care about anyway.

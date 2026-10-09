@@ -25,7 +25,8 @@ this plugin nor BepInEx. Editing a saved world with the game closed does not use
      manager profile, or of the server).
   2. Restart the game or server. BepInEx/LogOutput.log then shows
      "WorldEditorBridge @VERSION@ listening on http://127.0.0.1:5182/".
-  3. The plugin wrote BepInEx/config/Tie.WorldEditorBridge.cfg with a random Token. Keep it
+  3. On that first start the plugin wrote BepInEx/config/Tie.WorldEditorBridge.cfg with a random
+     Token (the editor needs it, so start the game or server once before connecting). Keep it
      secret: anyone with it and access to the port can change the world.
 
   Settings in that file:
