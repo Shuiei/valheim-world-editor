@@ -133,6 +133,23 @@ public class WindowFlowTests
 		Assert.Null(r.W.World);
 	}
 
+	// A blueprint that cannot be read for the Workshop: the world stays open, with its changes (it was
+	// left first, and the editor kept showing the area of a world closed under it).
+	[AvaloniaFact]
+	public async Task AWorkshopBlueprintThatCannotBeReadKeepsTheWorld()
+	{
+		using var r = new Run();
+		await r.Edited();
+		r.Answer = true;
+		var world = r.W.World;
+		await r.W.OpenWorkshop(Path.Combine(r.Dir, "no-such.blueprint"));
+		Assert.StartsWith("Could not open that blueprint: ", r.W.MessageText.Text);
+		Assert.Same(world, r.W.World);
+		Assert.Equal(1, r.W.World!.Pending.Zones);
+		await r.W.Save();
+		Assert.StartsWith("Saved", r.Told.Last());
+	}
+
 	[AvaloniaFact]
 	public async Task LeavingWithUnsavedChangesAsksFirst()
 	{

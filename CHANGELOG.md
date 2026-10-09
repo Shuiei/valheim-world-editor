@@ -54,6 +54,9 @@ the plugin is unchanged in versions without that part.
 - Blueprints: importing (also by dropping a file on the 3D view), exporting, deleting and turning an
   older blueprint into a Homestead one say so when the folder cannot be written, instead of closing
   the editor; so does exporting a heightmap.
+- Opening a blueprint in the Workshop that cannot be read (removed meanwhile) keeps the open world
+  as it was: the world was closed first, and the editor kept showing an area of it that could no
+  longer be saved or applied.
 
 ### WorldEditorBridge
 - An apply the game takes more than 30 seconds to start (a world save on the server) is no longer
