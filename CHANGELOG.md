@@ -4,6 +4,14 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.15.6 — unreleased
+
+### Fixed
+- Saving a world the game saved since the editor read it (a play test between two saves) no longer
+  throws away what was done in the game: the save was made from the save the world was opened from,
+  and leaving the world then deleted the game's save. The editor now says Valheim saved the world
+  and saves nothing; leave the world and open it again to edit the game's save.
+
 ## v1.15.5 — 2026-10-09
 
 ### Fixed

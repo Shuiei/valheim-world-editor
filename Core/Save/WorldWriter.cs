@@ -25,11 +25,15 @@ public static class WorldWriter
 	{
 		// The files the save wrote (its _main files and new chunk files).
 		public IReadOnlyList<string> Files { get; init; } = Array.Empty<string>();
+		// The save number written (-1: none).
+		public int Number { get; init; } = -1;
 	}
 
 	// KeepBase: the save it is made from stays (an open world saves again from it). Drop: files of an
-	// earlier save of the same session, removed once this one has read back right.
-	public sealed record Options(bool KeepBase = false, IReadOnlyCollection<string>? Drop = null);
+	// earlier save of the same session, removed once this one has read back right. Latest: the newest
+	// save number the caller knows of (its own last save, or the one it opened); a newer one in the
+	// folder was made by the game since, and saving would throw it away, so nothing is saved.
+	public sealed record Options(bool KeepBase = false, IReadOnlyCollection<string>? Drop = null, int? Latest = null);
 
 	// deleted: ids (WorldSave.ObjectRefs) of objects to leave out of the new save.
 	// added: new objects copied from a template object of the same prefab. resets: zones handed back
@@ -51,6 +55,10 @@ public static class WorldWriter
 		if (changed.Count == 0 && deleted.Count == 0 && added.Count == 0 && resets.Count == 0)
 		{
 			return new Result(false, "Nothing to save.", null, 0, 0, skipped);
+		}
+		if (options.Latest is int known && Newer(world.Directory, known) is string newer)
+		{
+			return new Result(false, newer, null, 0, 0, skipped);
 		}
 		if (world.Chunks.Any(c => c.WorldVersion != SaveFileVersion))
 		{
@@ -208,7 +216,7 @@ public static class WorldWriter
 		}
 		RemoveAll(old);
 		string what = string.Join(", ", new[] { written + created > 0 ? $"{written + created} zone(s)" : null, deleted.Count > 0 ? $"{deleted.Count} deleted object(s)" : null, addedCount > 0 ? $"{addedCount} new object(s)" : null, resets.Count > 0 ? $"{resets.Count} reset zone(s) ({removed - deleted.Count} objects cleared)" : null }.Where(x => x != null));
-		return new Result(true, $"Saved {what} to save #{newNumber}.", null, written, created, skipped, removed, addedCount, resets.Count) { Files = newFiles };
+		return new Result(true, $"Saved {what} to save #{newNumber}.", null, written, created, skipped, removed, addedCount, resets.Count) { Files = newFiles, Number = newNumber };
 	}
 
 	// Mirrors TerrainComp.Save: a GZip-compressed ZPackage.
@@ -355,8 +363,14 @@ public static class WorldWriter
 		}
 	}
 
+	// Why a save made from save number `known` would throw away a newer one in the folder (the game
+	// saved the world since it was read), or null when there is none.
+	public static string? Newer(string dir, int known) => LatestNumber(dir) is int newest && newest > known
+		? $"Valheim saved this world (save #{newest}) after the editor read it: saving now would throw away what was done in the game since. Nothing was saved. Leave the world and open it again to edit the game's save."
+		: null;
+
 	// The highest save number in a world folder (-1: none).
-	private static int LatestNumber(string dir) => Directory.GetFiles(dir, "_main.*.chunks")
+	public static int LatestNumber(string dir) => Directory.GetFiles(dir, "_main.*.chunks")
 		.Select(f => Path.GetFileName(f).Split('.')).Where(p => p.Length == 3 && int.TryParse(p[1], out _)).Select(p => int.Parse(p[1], System.Globalization.CultureInfo.InvariantCulture)).DefaultIfEmpty(-1).Max();
 
 	// The world folder down to its latest save: every other save number's files and the chunk files its
