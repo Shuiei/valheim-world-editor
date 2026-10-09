@@ -1720,19 +1720,9 @@ public sealed partial class MainWindow : Window
 		AreaPanel.CopyAsked += Copy;
 		AreaPanel.PasteAsked += StartPaste;
 		AreaPanel.SaveBlueprintAsked += async () => await Blueprints.Save();
-		Tools.BlueprintsAsked += () =>
-		{
-			Inspector.Close();
-			Blueprints.Toggle();
-			_viewPanel.IsVisible = !Blueprints.Card.IsVisible;
-		};
-		AreaPanel.LibraryAsked += () =>
-		{
-			// The View panel makes room for the list.
-			Inspector.Close();
-			Blueprints.Toggle();
-			_viewPanel.IsVisible = !Blueprints.Card.IsVisible;
-		};
+		// The library is a tool of the rail: its panel takes the place of the tool's options.
+		AreaPanel.LibraryAsked += () => Tools.ChooseMode(ToolMode.Blueprints);
+		Blueprints.Closed += () => Tools.Choose(null);
 		_view.Paste.Changed += () =>
 		{
 			var c = _view.Paste.Clip;
@@ -1794,7 +1784,7 @@ public sealed partial class MainWindow : Window
 			Margin = new Thickness(10, 70, 10, 58),
 			HorizontalAlignment = HorizontalAlignment.Left,
 			VerticalAlignment = VerticalAlignment.Top,
-			Children = { Tools.Rail, Tools.Options, SelectPanel.Card, MeasurePanel.Card, ShapePanel.Card, MountainPanel.Card, ScriptPanel.Card, PathPanel.Card, AreaPanel.Card, PastePanel.Card, PlacePanel.Card, PlacePanel.Chooser, BuildPanel.Card, MaskPanel.Card },
+			Children = { Tools.Rail, Tools.Options, SelectPanel.Card, MeasurePanel.Card, ShapePanel.Card, MountainPanel.Card, ScriptPanel.Card, Blueprints.Card, PathPanel.Card, AreaPanel.Card, PastePanel.Card, PlacePanel.Card, PlacePanel.Chooser, BuildPanel.Card, MaskPanel.Card },
 		};
 		// Every panel of the column scrolls when the window is too short for it (a bar only then).
 		foreach (var card in tools.Children.OfType<Border>())
@@ -1846,6 +1836,10 @@ public sealed partial class MainWindow : Window
 			ShapePanel.Card.IsVisible = Tools.Mode == ToolMode.Shape;
 			MountainPanel.Card.IsVisible = Tools.Mode == ToolMode.Mountain;
 			ScriptPanel.Card.IsVisible = Tools.Mode == ToolMode.Script;
+			if (Blueprints.Card.IsVisible != (Tools.Mode == ToolMode.Blueprints))
+			{
+				Blueprints.Toggle(Tools.Mode == ToolMode.Blueprints);
+			}
 			_view.ShapeRadius = Tools.Mode == ToolMode.Mountain ? MountainPanel.Spec.Reach : ShapePanel.Radius;
 			_view.MountainPreview = Tools.Mode == ToolMode.Mountain ? Mountain.Shape(MountainPanel.Spec) : null;
 			PathPanel.Card.IsVisible = Tools.Mode == ToolMode.Path;
@@ -1918,14 +1912,14 @@ public sealed partial class MainWindow : Window
 		SetUpEditorWorld();
 		_viewPanel = ViewPanel();
 		// The panels on the right: under the top bar, one at a time.
-		foreach (var right in new[] { _viewPanel, History.Card, Inspector.Card, Blueprints.Card, HelpCard })
+		foreach (var right in new[] { _viewPanel, History.Card, Inspector.Card, HelpCard })
 		{
 			right.Margin = new Thickness(10, 70, 10, 58);
 			right.HorizontalAlignment = HorizontalAlignment.Right;
 			right.VerticalAlignment = VerticalAlignment.Top;
 		}
 		ViewButton.Classes.Add("on");
-		_editorPage = new Grid { Children = { _view, surface, PlayerLabels, tools, LocationNote, _viewPanel, History.Card, Inspector.Card, Blueprints.Card, HelpCard, TopBar(), StatusBar() } };
+		_editorPage = new Grid { Children = { _view, surface, PlayerLabels, tools, LocationNote, _viewPanel, History.Card, Inspector.Card, HelpCard, TopBar(), StatusBar() } };
 		_busy.Child = _busyText;
 		_pages.Content = _editorPage;
 		Content = new Grid { Children = { _pages, _busy } };

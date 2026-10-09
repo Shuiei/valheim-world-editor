@@ -38,6 +38,8 @@ public sealed class BlueprintsPanel
 	private readonly Func<WorldScene?> _scene;
 	private readonly PasteTool _paste;
 	public event Action<string>? Message;
+	// ✕: the window goes back to View.
+	public event Action? Closed;
 	// A blueprint went onto the clipboard: the window starts pasting.
 	public event Action? Pasting;
 	// Asks for a blueprint's name, description and tags (given the ones to start from, and what it costs).
@@ -57,7 +59,7 @@ public sealed class BlueprintsPanel
 		_scene = scene;
 		var close = new Button { Content = "✕", FontSize = 11, Padding = new Thickness(6, 0) }.Tip("card.close");
 		Search.Tip("blueprints.search");
-		close.Click += (_, _) => Card!.IsVisible = false;
+		close.Click += (_, _) => { Card!.IsVisible = false; Closed?.Invoke(); };
 		Search.PropertyChanged += (_, e) => { if (e.Property == TextBox.TextProperty) Render(); };
 		ImportButton.Tip("blueprints.import");
 		ImportButton.Click += async (_, _) => { if (await PickFile() is string path) Import(path); };
@@ -79,8 +81,6 @@ public sealed class BlueprintsPanel
 			BorderThickness = new Thickness(1),
 			CornerRadius = new CornerRadius(10),
 			Padding = Ui.Pad,
-			Margin = new Thickness(10),
-			HorizontalAlignment = HorizontalAlignment.Right,
 			VerticalAlignment = VerticalAlignment.Top,
 			IsVisible = false,
 			Child = new StackPanel

@@ -10,8 +10,8 @@ namespace TerrainEditor.Desktop;
 // brushes and the paint brushes. Keys as in the web editor: 1-9 and 0 pick the brushes, E selects,
 // Esc goes back to View.
 // Which tool is in use: View (look around, click picks), Select, Measure, Shape, Path, Area, Paste (from the
-// Area tool, Ctrl+V), Place, or a brush (Tool says which).
-public enum ToolMode { View, Select, Measure, Shape, Path, Area, Paste, Place, Brush, Mountain, Script }
+// Area tool, Ctrl+V), Place, Blueprints (the library, to paste one), or a brush (Tool says which).
+public enum ToolMode { View, Select, Measure, Shape, Path, Area, Paste, Place, Brush, Mountain, Script, Blueprints }
 
 public sealed class ToolPanel
 {
@@ -29,9 +29,8 @@ public sealed class ToolPanel
 	public Control Options { get; }
 
 	private readonly Dictionary<BrushTool, Button> _buttons = new();
-	// Blueprints: the library, to paste one (in a world).
+	// Blueprints: the library, to paste one (in a world), in place of a tool's options.
 	private readonly Button _blueprintsButton;
-	public event Action? BlueprintsAsked;
 	private readonly Button _viewButton, _selectButton, _measureButton, _shapeButton, _pathButton, _areaButton, _placeButton, _mountainButton, _caveButton, _scriptButton;
 	// The Cave button: the Path tool with its Cave action (the window picks the action).
 	public event Action? CaveChosen;
@@ -43,6 +42,7 @@ public sealed class ToolPanel
 		_pathButton.Classes.Set("on", !on && Mode == ToolMode.Path);
 	}
 	internal Button SelectButton => _selectButton;
+	internal Button BlueprintsButton => _blueprintsButton;
 	private readonly TextBlock _title = new() { FontSize = 14, FontWeight = FontWeight.SemiBold };
 	private readonly TextBlock _help = new() { FontSize = 12, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
 	private readonly Control _flattenRows, _naturalRows, _turnRow, _erodeRows, _falloffRow, _stampOnceRows, _stampHeightRow;
@@ -211,7 +211,7 @@ public sealed class ToolPanel
 		_scriptButton.Click += (_, _) => ChooseMode(ToolMode.Script);
 		_blueprintsButton = Make("Blueprints", "", "paste");
 		_blueprintsButton.Tip("tools.blueprints");
-		_blueprintsButton.Click += (_, _) => BlueprintsAsked?.Invoke();
+		_blueprintsButton.Click += (_, _) => ChooseMode(ToolMode.Blueprints);
 		_placeButton = Make("Place", "T", "place");
 		ToolTip.SetTip(_placeButton, "Place (T): paint trees, rocks or bushes with a brush, or put walls, fences and other pieces along lines, circles, rectangles, grids and zones.");
 		_placeButton.Click += (_, _) => ChooseMode(ToolMode.Place);
@@ -375,6 +375,7 @@ public sealed class ToolPanel
 		_placeButton.Classes.Set("on", Mode == ToolMode.Place);
 		_mountainButton.Classes.Set("on", Mode == ToolMode.Mountain);
 		_scriptButton.Classes.Set("on", Mode == ToolMode.Script);
+		_blueprintsButton.Classes.Set("on", Mode == ToolMode.Blueprints);
 		_caveButton.Classes.Set("on", false);
 		foreach (var (k, b) in _buttons)
 		{

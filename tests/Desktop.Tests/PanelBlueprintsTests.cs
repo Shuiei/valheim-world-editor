@@ -77,6 +77,31 @@ public class PanelBlueprintsTests
 	private static List<Button> RowButtons(Run r, string label) => r.B.List.GetLogicalDescendants().OfType<Button>().Where(b => b.Content as string == label).ToList();
 
 	[AvaloniaFact]
+	public void TheRailsBlueprintsIsAToolWithItsPanelOnTheLeft()
+	{
+		using var r = new Run();
+		r.Keep("Hut", "woodwall");
+		Click(r.W.Tools.BlueprintsButton);
+		Assert.Equal(ToolMode.Blueprints, r.W.Tools.Mode);
+		Assert.True(r.W.Tools.BlueprintsButton.Classes.Contains("on"));
+		Assert.True(r.B.Card.IsVisible);
+		// In the left column, next to the rail, where the tools' options are.
+		Assert.Same(r.W.Tools.Rail.Parent, r.B.Card.Parent);
+		Assert.Contains("Hut", Texts(r.B.List));
+		// Another tool replaces it.
+		r.W.Tools.ChooseMode(ToolMode.Path);
+		Assert.False(r.B.Card.IsVisible);
+		Assert.False(r.W.Tools.BlueprintsButton.Classes.Contains("on"));
+		// The Area tool's Blueprints… opens it too; ✕ goes back to View.
+		r.W.AreaPanel.LibraryButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+		Dispatcher.UIThread.RunJobs();
+		Assert.Equal(ToolMode.Blueprints, r.W.Tools.Mode);
+		Click(r.B.Card.GetLogicalDescendants().OfType<Button>().First(b => b.Content as string == "✕"));
+		Assert.Equal(ToolMode.View, r.W.Tools.Mode);
+		Assert.False(r.B.Card.IsVisible);
+	}
+
+	[AvaloniaFact]
 	public void AnEmptyListAndASearchThatFindsNothingSaySo()
 	{
 		using var r = new Run();
