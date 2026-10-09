@@ -459,17 +459,20 @@ public sealed class InspectorPanel
 		{
 			string name = pick.Text?.Trim() ?? "";
 			var known = PrefabCatalog.Items.FirstOrDefault(n => string.Equals(n, name, StringComparison.OrdinalIgnoreCase));
-			if (known == null || known == item?.Name)
+			// What the slot holds now: a pick and the box then losing focus (once the grid is drawn
+			// again) both come here, and must not put the item in twice.
+			var now = Items.FirstOrDefault(i => i.X == sx && i.Y == sy);
+			if (known == null || known == now?.Name)
 			{
 				return;
 			}
-			if (item == null)
+			if (now == null)
 			{
 				Items.Add(new ItemRow { Name = known, X = sx, Y = sy });
 			}
 			else
 			{
-				item.Name = known;
+				now.Name = known;
 			}
 			Dirty();
 			RenderItems();
