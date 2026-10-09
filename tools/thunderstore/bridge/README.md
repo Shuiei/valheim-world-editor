@@ -1,61 +1,97 @@
 # WorldEditorBridge
 
-**Live editing for [Valheim World Editor](https://github.com/Shuiei/valheim-world-editor)**, a 3D
-world editor for Valheim in the spirit of Minecraft's MCEdit and WorldPainter. Install this plugin
-where your world is hosted. The editor can then change that world while it runs, and you and your
-players see each change in game as soon as it is applied.
+**Edit your Valheim world while it runs.** WorldEditorBridge connects
+[Valheim World Editor](https://github.com/Shuiei/valheim-world-editor), a 3D world editor for
+Windows and Linux, to your game or dedicated server. Shape the land, build, place or remove anything,
+and everyone online sees it appear, as if a very fast Viking had done it by hand.
 
-![The 3D editor showing a base](https://raw.githubusercontent.com/Shuiei/valheim-world-editor/main/docs/images/overview.jpg)
+![The editor, showing a base on a server](https://raw.githubusercontent.com/Shuiei/valheim-world-editor/main/docs/images/overview.jpg)
 
-> **This plugin is only the bridge.** The editor is a separate program for Windows and Linux.
-> Download it from the **[releases page](https://github.com/Shuiei/valheim-world-editor/releases/latest)**,
-> unpack it anywhere and start it. Use the same version of the editor and of this plugin.
+> **This mod is the bridge, not the editor.** Get the editor from its
+> **[releases page](https://github.com/Shuiei/valheim-world-editor/releases/latest)**: unpack it and
+> start it, nothing to install. Use the same version of the editor and of this mod.
 
-## What the editor does
+## What people use it for
 
-- **Sculpt and paint the ground**: raise, lower, flatten, smooth, erode or restore it, and paint
-  dirt, cultivated soil or paved stone.
-- **Go past the game's ±8 m limit.** Raise mountains and ridges or dig canyons. Players need no mod
-  to see them, console players included.
-- **Draw roads, ramps, rivers and caves** along a line.
-- **Build in the Workshop** with every piece the game has. Pieces snap exactly like the hammer, and
-  a support check shows the game's colours. Buildings are saved as
-  [Homestead](https://thunderstore.io/c/valheim/p/sighsorry/Homestead/) blueprints, ready to build
+- **Repair griefing.** Someone dug a crater next to the portal hub or burned down a forest? Put
+  the ground and the trees back for that spot only, from a backup, without rolling back the world.
+- **Prepare a building site.** Level a hilltop, terrace a slope, pave a courtyard, then build on it
   in game.
-- **Paste blueprints into your world.** The ground in the way is dug out, and the trees and rocks
-  there are removed.
-- **Place anything the game has**: trees, rocks, crops and building pieces, with a brush, lines,
-  grids or whole zones.
-- **Select, move, copy and delete** objects and whole buildings. Change chest contents, sign texts
-  and portal tags.
-- **Restore an area from a backup** to undo griefing without rolling back the whole world.
-- **Undo anything**, with a full history.
+- **Build roads between bases.** Draw the route on the map: the editor levels and paves it, with
+  ramps where it climbs.
+- **Make landmarks.** Raise a mountain, a volcano or a cliff past the game's ±8 m limit, carve a
+  canyon or dig a cave roofed with boulders. Players see them with no mod at all.
+- **Bring in a building.** Design it in the editor's Workshop (or use a
+  [Homestead](https://thunderstore.io/c/valheim/p/sighsorry/Homestead/) blueprint) and paste it into
+  the world: the hill in its way is dug out, trees and rocks there are cleared.
+- **Tidy up.** Plant a forest, clear the rocks off a field, remove every tree in an area, find the
+  chest that holds the last of your black metal.
 
-The editor also opens saved worlds with the game closed. That needs no plugin.
+Every change can be undone, even after it is applied.
 
-## Where to install it
+## How it works
 
-Install it **where the world is hosted**, nowhere else:
+1. The mod runs inside the game that **hosts** the world (your game, or the dedicated server) and
+   waits for the editor. It only listens on that computer, and only answers with its secret token.
+2. The editor loads the world from it and shows it in 3D, with the game's own terrain, textures and
+   models. Players stay connected.
+3. You edit. Nothing reaches the game until you press **Apply live** (or turn on **Auto**). Then
+   the game gets the changed ground and objects, players see them, and the game saves them as usual.
 
-| You play… | Install the plugin in… |
+A dedicated server is reached through an encrypted SSH connection the editor opens by itself: the
+mod is never exposed to the internet, and you have nothing else to set up.
+
+## Install
+
+Install it **where the world is hosted**, nowhere else.
+
+| You play… | Install the mod in… |
 |---|---|
-| Single player, or a world you host from the game | Your own game, with your mod manager like any other mod |
-| On a dedicated server | The server, with a mod manager's server profile or by copying `WorldEditorBridge.dll` into its `BepInEx/plugins` |
+| Single player, or a world you host from the game | Your game, with your mod manager like any other mod |
+| On a dedicated server | The server: a mod manager's server profile, or `WorldEditorBridge.dll` copied into its `BepInEx/plugins` |
 
-**Players who join need nothing**: no plugin and no BepInEx. Console players can join as usual.
+**Players who join need nothing**: no mod, no BepInEx. Console and crossplay players join as usual
+and see every change.
 
-## Connecting the editor
+Then **start the game or server once** with the mod. That first start writes
+`BepInEx/config/Tie.WorldEditorBridge.cfg` with a random **Token**, which the editor needs.
 
-**Start the game or server once with the plugin before connecting.** On that first start it writes
-`BepInEx/config/Tie.WorldEditorBridge.cfg` with a random **Token**, and the editor needs that token.
-Keep it secret: with it and access to the port, anyone can change the world.
+## Connect
 
-- **Your own game**: in the editor, choose **My game** on the start page and load your world in
-  Valheim. The editor finds the plugin and its token by itself, mod manager profiles included, and
-  shows **Edit live**.
-- **A dedicated server**: choose **A dedicated server** and enter the server's address, your SSH
-  login and the token from the server's config file, then **Connect**. The editor opens its own
-  encrypted tunnel and remembers the server, so next time it is one click.
+- **Your own game:** in the editor, choose **My game** and load your world in Valheim. The editor
+  finds the mod and its token by itself (mod manager profiles included) and shows **Edit live**.
+- **A dedicated server:** choose **A dedicated server**, enter the server's address, your SSH login
+  and the token from the server's `Tie.WorldEditorBridge.cfg`, then **Connect**. The server is
+  remembered: next time it is one click.
+
+The BepInEx log shows `WorldEditorBridge <version> listening on http://127.0.0.1:5182/` when the mod
+is running.
+
+## Good to know
+
+- **Loading the world pauses the game for a moment.** The editor reads every object of the world
+  at once; on a large, old world that can take a few seconds. Load once, then edit as long as you
+  like. Very large changes (thousands of objects at once) can make the server hitch when applied.
+- **Only the host can be edited.** In a game that joined someone else's server the mod refuses to
+  change anything.
+- **Zone resets** (generate a zone again from scratch) cannot be undone once applied.
+- **Keep the token secret.** With it, and access to the port, anyone can change the world. Leave it
+  empty in the file to get a new one at the next start.
+- The editor's changes are ordinary game objects and ground: other mods and the game treat them like
+  anything a player built, planted or dug.
+
+## If it does not connect
+
+The editor says what went wrong:
+
+| The editor says | What to do |
+|---|---|
+| refused the login | Check the SSH user and the password or key file. |
+| No answer | Check the server's address, and that SSH is enabled on it. |
+| refused the token | Copy the `Token` line from the server's `.cfg` file again. |
+| does not answer | The game or server is not running with BepInEx and this mod (check the log line above). |
+| does not host the world | The mod runs in a game that joined someone else's server. Install it on the server instead. |
+| identity changed | The server's SSH identity is not the one seen before. If you did not reinstall it, do not connect. |
 
 ## Settings
 
@@ -63,15 +99,13 @@ In `BepInEx/config/Tie.WorldEditorBridge.cfg`:
 
 | Setting | Default | Meaning |
 |---|---|---|
-| `BindAddress` | `127.0.0.1` | Only this computer can connect. A server is reached through the editor's SSH tunnel and is never exposed to the internet. |
-| `Port` | `5182` | Change it if something else uses 5182. |
-| `Token` | random | Leave it empty to get a new one at the next start. |
-
-Once the plugin runs, the BepInEx log shows `WorldEditorBridge <version> listening on http://127.0.0.1:5182/`.
+| `BindAddress` | `127.0.0.1` | Only this computer can connect. Keep it: a server is reached through the editor's SSH tunnel. |
+| `Port` | `5182` | Change it if something else uses 5182 (the editor reads it from the file, or asks). |
+| `Token` | random | The secret the editor sends. Leave it empty to get a new one at the next start. |
 
 ## More
 
-- [Full guide](https://github.com/Shuiei/valheim-world-editor), with screenshots of every tool
-- [Live mode in detail](https://github.com/Shuiei/valheim-world-editor/blob/main/docs/live-mode.md), and what each connection error means
-- [The Workshop and blueprints](https://github.com/Shuiei/valheim-world-editor/blob/main/docs/workshop.md)
+- [The editor, with screenshots of every tool](https://github.com/Shuiei/valheim-world-editor)
+- [Live editing in detail](https://github.com/Shuiei/valheim-world-editor/blob/main/docs/live-mode.md)
 - [Report a problem or suggest an idea](https://github.com/Shuiei/valheim-world-editor/issues)
+- [What changed in each version](https://github.com/Shuiei/valheim-world-editor/blob/main/CHANGELOG.md)
