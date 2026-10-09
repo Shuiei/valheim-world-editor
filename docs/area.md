@@ -118,7 +118,7 @@ griefing, a bad raid or an edit you regret, without rolling back the whole world
 
 | Control | What it does |
 |---|---|
-| **Backup** | The backups next to the world folder, newest first: the editor's (made before every save, `<World>_backup_terraineditor-<date>`) and the game's own (`<World>_backup_auto-<date>`). **Another folder…** picks any other copy of the same world, for example a server backup copied to this computer (in live mode the list is empty, so that is the way). A copy of another world (another seed) is refused. |
+| **Backup** | The backups next to the world folder, newest first: the game's own (`<World>_backup_auto-<date>`) and the editor's from older versions (`<World>_backup_terraineditor-<date>`). **Another folder…** picks any other copy of the same world, for example a server backup copied to this computer (in live mode the list is empty, so that is the way). A copy of another world (another seed) is refused. |
 | **Ground** | The height and paint inside the selection come back exactly as in the backup; within the **Soft edge** they blend into the ground around. The Mask applies. |
 | **Objects** | The objects of the kinds chosen with the chips above (choose **Your buildings** for buildings) come back as they were, with all their data: a restored chest has its contents, a sign its text. Objects that are in the selection now but were not in the backup are removed. Objects unchanged since the backup are left as they are. |
 | **Restore the selection (Enter)** (the button at the bottom) | Does it: one step in History. Save or Apply live writes it. |

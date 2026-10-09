@@ -4,6 +4,26 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.15.0 — 2026-10-08
+
+### Added
+- The area's size (3 × 3, 5 × 5, 7 × 7 zones) changes on the fly next to the Area arrows, around the
+  same middle zone, keeping the view, the changes and the history.
+
+## v1.14.1 — 2026-10-08
+
+### Fixed
+- Zooming out no longer fogs the area over: the fog starts at the point the view turns around, so
+  only what lies beyond it fades.
+
+## v1.14.0 — 2026-10-08
+
+### Changed
+- **Save to world** (offline) works like Apply live: the area and its history stay after saving; undo
+  a step and save again to take it back. No backup folder is made at each save any more: nothing of
+  the old save is removed before the new one reads back right (on a failure the new files go and
+  nothing changed), and the save the world was opened from stays until the world is left.
+
 ## v1.13.0 — 2026-10-08
 
 ### Added

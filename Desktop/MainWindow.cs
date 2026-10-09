@@ -285,7 +285,7 @@ public sealed partial class MainWindow : Window
 		{
 			string what = Describe(w.Pending);
 			if (!await ConfirmSave($"Write {what} into the world files?\n\nWorld folder: {Ui.Tilde(w.World.Directory)}\n\n"
-				+ "• A full backup of the folder is made first, next to it.\n"
+				+ "• Like Apply live: the world stays open with its history; undo a step and save again to take it back. The save it was opened from is kept until you leave the world.\n"
 				+ "• Valheim (server or game) must NOT be running with this world, or it will overwrite these changes when it saves.\n"
 				+ "• Test on a copy first: open it as a local world, or upload it to a test server."))
 			{
@@ -297,7 +297,6 @@ public sealed partial class MainWindow : Window
 			string msg = o.Message;
 			if (o.Saved is { } r)
 			{
-				if (r.BackupDirectory != null) msg += $"\n\nBackup: {Ui.Tilde(r.BackupDirectory)}";
 				if (r.Skipped.Count > 0) msg += "\n\nNot saved:\n• " + string.Join("\n• ", r.Skipped);
 			}
 			await Tell(msg);
@@ -487,7 +486,7 @@ public sealed partial class MainWindow : Window
 		}
 		string what = s.PendingText.Replace("Unsaved: ", "");
 		if (!await ConfirmSave($"Write {what} into the world files?\n\nWorld folder: {Ui.Tilde(s.Scene.World.Directory)}\n\n"
-			+ "• A full backup of the folder is made first, next to it.\n"
+			+ "• Like Apply live: the world stays open with its history; undo a step and save again to take it back. The save it was opened from is kept until you leave the world.\n"
 			+ "• Valheim (server or game) must NOT be running with this world, or it will overwrite these changes when it saves.\n"
 			+ "• Test on a copy first: open it as a local world, or upload it to a test server."))
 		{
@@ -499,10 +498,6 @@ public sealed partial class MainWindow : Window
 		{
 			var res = await Task.Run(s.Save);
 			string msg = res.Message;
-			if (res.BackupDirectory != null)
-			{
-				msg += $"\n\nBackup: {Ui.Tilde(res.BackupDirectory)}";
-			}
 			if (res.Skipped.Count > 0)
 			{
 				msg += "\n\nNot saved:\n• " + string.Join("\n• ", res.Skipped);

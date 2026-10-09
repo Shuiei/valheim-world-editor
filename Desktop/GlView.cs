@@ -1192,9 +1192,11 @@ public sealed class GlView : OpenGlControlBase
 			{
 				eye = _target + _distance * new Vector3(MathF.Cos(_pitch) * MathF.Sin(_yaw), MathF.Sin(_pitch), MathF.Cos(_pitch) * MathF.Cos(_yaw));
 				view = Matrix4x4.CreateLookAt(eye, _target, Vector3.UnitY);
+				GameLookGl.FogStart = _distance;
 			}
 			else
 			{
+				GameLookGl.FogStart = 0;
 				eye = _eyePos;
 				view = Matrix4x4.CreateLookAt(eye, eye + Forward, Vector3.UnitY);
 			}
@@ -1260,6 +1262,7 @@ public sealed class GlView : OpenGlControlBase
 			V3("uFogColor", GameLookGl.FogColor);
 			V3("uSunFogColor", GameLookGl.SunFogColor);
 			_gl.Uniform1(_gl.GetUniformLocation(_objectProg, "uFogDensity"), GameLookGl.FogDensity);
+			_gl.Uniform1(_gl.GetUniformLocation(_objectProg, "uFogStart"), GameLookGl.FogStart);
 			V3("uEye", eye);
 			int uColor = _gl.GetUniformLocation(_objectProg, "uColor"), uCut = _gl.GetUniformLocation(_objectProg, "uCutoff"),
 				uHasMap = _gl.GetUniformLocation(_objectProg, "uHasMap"), uUv = _gl.GetUniformLocation(_objectProg, "uUv");

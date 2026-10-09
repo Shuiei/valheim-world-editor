@@ -76,7 +76,6 @@ public class WindowFlowTests
 		Assert.Equal(before + 1, r.SaveNumber);
 		Assert.Equal((0, 0, 0, 0), r.W.World.Pending);
 		Assert.StartsWith("Saved 1 zone(s)", r.Told.Single());
-		Assert.Contains("Backup: ", r.Told.Single());
 		Assert.Equal("Everything is saved.", r.W.MapPage!.Pending.Text);
 	}
 

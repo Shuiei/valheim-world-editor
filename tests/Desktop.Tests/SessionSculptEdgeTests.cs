@@ -68,9 +68,10 @@ public class SessionSculptEdgeTests
 			s.ThingsReset += () => reset = true;
 			var r = s.Save();
 			Assert.True(r.Saved, r.Message);
-			Assert.True(reset);
+			// Not read again (no zone reset, no ground discs): the objects and the history stay.
+			Assert.False(reset);
 			Assert.Equal(0, s.Pending.Zones);
-			Assert.Empty(s.UndoList);
+			Assert.Single(s.UndoList);
 			Assert.Equal(3, WorldSave.Load(dir).SaveNumber);
 		}
 		finally

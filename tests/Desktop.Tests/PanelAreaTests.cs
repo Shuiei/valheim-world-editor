@@ -244,6 +244,8 @@ public class PanelAreaTests
 			}
 			return (touched, (4, 4, 61, 61));
 		});
+		// The game's backup from before, then saved.
+		WorldEditor.Tests.TempWorld.CopyDir(r.Dir, r.Dir.TrimEnd(Path.DirectorySeparatorChar) + "_backup_auto-20261001100000");
 		Assert.True(r.S.Save().Saved);
 		var backup = Assert.Single(Backups.Find(r.Dir));
 		foreach (var b in r.P.KindButtons.Values)

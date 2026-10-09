@@ -12,7 +12,7 @@ public static class Tips
 	{
 		// ---- Top bar of the editor
 		["top.map"] = "Back to the world map. What is not saved or applied stays pending.",
-		["top.save"] = "Write the changes into the world files (Ctrl+S); a backup of the world folder is made first.",
+		["top.save"] = "Write the changes into the world files (Ctrl+S). Like Apply live, the history stays: undo a step and save again to take it back.",
 		["top.apply"] = "Send the pending changes to the running game (Ctrl+S): everyone there sees them at once.",
 		["top.discard"] = "Undo every change that is not saved or applied yet. Saved and applied changes stay.",
 		["top.reload"] = "Load the world again from the running game (picks up what players changed since).",
@@ -20,6 +20,7 @@ public static class Tips
 		["top.history"] = "Every change of this session: roll back to any point, or remove one change (L).",
 		["top.view"] = "Show or hide kinds of things in the world, and the look options (V).",
 		["top.help"] = "Mouse controls and keyboard shortcuts (?).",
+		["top.areaSize"] = "The area's size: 3 × 3, 5 × 5 or 7 × 7 zones around the same middle zone, changed on the fly. What you changed and the history stay.",
 		["top.follow"] = "Follow the view: when the point you look at comes near the edge of the area, the area moves there by itself (it waits while a path, shape, selection or stroke is unfinished).",
 		["top.west"] = "Move the area one zone (64 m) west. Pending changes stay.",
 		["top.north"] = "Move the area one zone (64 m) north. Pending changes stay.",
@@ -175,7 +176,7 @@ public static class Tips
 		["area.highest"] = "Height (m) for white in the picture.",
 		["area.put"] = "Set the ground to the picture's heights (one undo step). The soft edge, the Mask and the ±8 m limit apply.",
 		["area.cancelPicture"] = "Forget the picture without changing the ground.",
-		["area.backup"] = "The backup to restore from: the editor's backups (made before every save) and the game's own, newest first, or another copy of this world.",
+		["area.backup"] = "The backup to restore from: the game's own backups (and older editor ones), newest first, or another copy of this world.",
 		["area.backupGround"] = "Put the ground (height and paint) inside the selection back as it was in the backup.",
 		["area.backupObjects"] = "Put the objects of the kinds chosen above back as they were in the backup, with all their data. Unchanged objects stay as they are.",
 		["area.keepBuildings"] = "Player-built pieces in the zones are kept when they are reset.",
@@ -287,7 +288,7 @@ public static class Tips
 
 		// ---- Map page
 		["map.worlds"] = "Back to the start page to open another world.",
-		["map.save"] = "Write every pending change into the world files (a backup of the world folder is made first).",
+		["map.save"] = "Write every pending change into the world files.",
 		["map.apply"] = "Send every pending change to the running game (everyone sees it at once).",
 		["map.discard"] = "Forget every change that is not saved or applied yet: the world is read again.",
 		["map.reload"] = "Load the world again from the running game.",

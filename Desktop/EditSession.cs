@@ -682,8 +682,8 @@ public sealed class EditSession
 		}
 	}
 
-	// Writes the changes into the world's files (with a backup first, see WorldWriter), then starts over
-	// from what was written: nothing pending, an empty history (like the web editor reloading its page).
+	// Writes the changes into the world's files (WorldSession.Save); the history stays, its steps saved
+	// (an undo is then pending, saved by the next save), as with Apply live.
 	public WorldWriter.Result Save()
 	{
 		WorldWriter.Result result;
@@ -698,12 +698,21 @@ public sealed class EditSession
 			var owner = Scene.Owner ?? throw new InvalidOperationException("This area is not part of an open world, so it cannot be saved.");
 			var o = owner.Save();
 			result = o.Saved!;
-			// No limit ground became ground discs (also when the save then failed): the ground under the
-			// area is not the same any more.
-			reread = result.Saved || o.Lifted;
+			// Read again only when the world was (zone resets) or No limit ground became ground discs
+			// (also when the save then failed): the ground under the area is not the same any more.
+			// Otherwise, as after Apply live, the area and its history stay; the steps are saved.
+			reread = o.Reloaded || o.Lifted;
 			if (reread)
 			{
 				Reread(owner.World);
+			}
+			else if (result.Saved)
+			{
+				Ground.TakeEdits(Edits);
+				foreach (var c in _undo)
+				{
+					c.Applied = true;
+				}
 			}
 		}
 		if (reread)

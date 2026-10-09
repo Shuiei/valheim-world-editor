@@ -34,7 +34,7 @@ There are three ways to edit, all on the start page:
 |---|---|---|
 | **My game** (live) | The world you are playing in: single player, or the one you host. You see the changes in game right away. | BepInEx and the WorldEditorBridge plugin in your Valheim. |
 | **A dedicated server** (live) | Your server's world while people play. The editor logs in to the server and makes its own tunnel. | BepInEx and the plugin on the server, and an SSH login to it. |
-| **A saved world** (offline) | World files on this computer, with the game closed. Saved as a new save, with a full backup first. | Nothing. |
+| **A saved world** (offline) | World files on this computer, with the game closed. Saved as a new save; like live mode, the history stays across saves. | Nothing. |
 
 It is a single program for Windows and Linux: download, unpack, double-click. Everything runs on
 your own computer; nothing is sent anywhere else.
@@ -128,9 +128,11 @@ have your own tunnel (`ssh -L`, PuTTY)? Use **More options → I made my own tun
 2. On the start page, **A saved world**: click the world. Worlds in Valheim's usual folders are listed
    by themselves; for another one (a copy of a server's world, for example) use **Another world
    folder** with **Browse…** or by typing it (`<savedir>/worlds_local/<World>` for a server).
-3. Edit, then **Save to world**. The editor first copies the whole world folder to
-   `<World>_backup_terraineditor-<date>`, then writes your changes as the next save and reads them
-   back to check them. Start the game or server again to see the result.
+3. Edit, then **Save to world**. The editor writes your changes as the next save and reads them back
+   to check them (if they do not read back right, the new files are removed and nothing changed).
+   As with Apply live, the world stays open with its history: undo a step and save again to take it
+   back. The save the world was opened from is kept until you leave the world, then only the latest
+   save stays. Start the game or server again to see the result.
 
 In every way, the [world map](docs/map.md) opens first: click a spot and choose **Edit in 3D**.
 **Worlds** (on the map page) goes back to the start page.

@@ -44,7 +44,9 @@ public class SaveTests
 		WorldWriter.Result r = WorldWriter.Save(world, edits.All().Where(e => e.Changed).ToList());
 		Assert.True(r.Saved, r.Message);
 		Assert.Equal(1, r.ZonesWritten);
-		Assert.True(Directory.Exists(r.BackupDirectory), "a backup of the world is made first");
+		// No backup folder: the old save goes only once the new one has read back right.
+		Assert.Null(r.BackupDirectory);
+		Assert.Empty(Directory.GetDirectories(Path.GetDirectoryName(w.Dir)!, "*_backup_*"));
 
 		WorldSave again = WorldSave.Load(w.Dir);
 		Assert.Equal(3, again.SaveNumber);
@@ -195,12 +197,12 @@ public class BackupTests
 	{
 		using var w = new TempWorld();
 		WorldSave world = w.Load();
-		var edits = new EditStore(world);
-		edits.SetDeleted(new[] { world.Objects.First(o => o.Prefab == Fixtures.Hash("Beech1")).Id }, true);
-		var r = WorldWriter.Save(world, Array.Empty<ZoneEdit>(), edits.Deleted);
+		// A backup the editor made before (older versions made one at each save).
+		string copy = w.Dir.TrimEnd(Path.DirectorySeparatorChar) + "_backup_terraineditor-20261001-100000";
+		TempWorld.CopyDir(w.Dir, copy);
 		var found = TerrainEditor.App.Backups.Find(w.Dir);
 		var b = Assert.Single(found);
-		Assert.Equal(r.BackupDirectory, b.Path);
+		Assert.Equal(copy, b.Path);
 		Assert.Equal("editor", b.Kind);
 	}
 
@@ -213,10 +215,12 @@ public class BackupTests
 		var tree = world.Objects.First(o => o.Prefab == Fixtures.Hash("Beech1"));
 		byte[] original = world.ObjectBytes(tree.Id);
 		edits.SetDeleted(new[] { tree.Id }, true);
+		string copy = w.Dir.TrimEnd(Path.DirectorySeparatorChar) + "_backup_auto-20261001100000";
+		TempWorld.CopyDir(w.Dir, copy);
 		var r = WorldWriter.Save(world, Array.Empty<ZoneEdit>(), edits.Deleted);
 		Assert.True(r.Saved);
 
-		WorldSave now = WorldSave.Load(w.Dir), backup = WorldSave.Load(r.BackupDirectory!);
+		WorldSave now = WorldSave.Load(w.Dir), backup = WorldSave.Load(copy);
 		Assert.Equal(world.ObjectCount - 1, now.ObjectCount);
 		var inBackup = backup.Objects.Single(o => o.Prefab == tree.Prefab && o.Position == tree.Position);
 		byte[] raw = backup.ObjectBytes(inBackup.Id);
