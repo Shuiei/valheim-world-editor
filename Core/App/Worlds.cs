@@ -33,14 +33,15 @@ public static class Worlds
 			Add(r.Path, "recent");
 		}
 		// Folders added in Settings: a world, or a folder of worlds.
+		// (A drive's root has folders that cannot be read: those are skipped.)
 		foreach (string folder in settings.WorldFolders.Where(Directory.Exists))
 		{
-			if (Directory.GetFiles(folder, "_main.*.chunks").Length > 0)
+			if (Places.HasWorld(folder))
 			{
 				Add(folder, "yours");
 				continue;
 			}
-			foreach (string d in Directory.GetDirectories(folder).Where(d => Directory.GetFiles(d, "_main.*.chunks").Length > 0))
+			foreach (string d in Places.Subfolders(folder).Where(Places.HasWorld))
 			{
 				Add(d, "yours");
 			}
@@ -51,15 +52,21 @@ public static class Worlds
 			{
 				continue;
 			}
-			foreach (string d in Directory.GetDirectories(root))
+			foreach (string d in Places.Subfolders(root).Where(Places.HasWorld))
 			{
-				if (Directory.GetFiles(d, "_main.*.chunks").Length > 0)
-				{
-					Add(d, "local");
-				}
+				Add(d, "local");
 			}
 			// Old single-file worlds (<World>.db): the game converts them when it next loads them.
-			foreach (string db in Directory.GetFiles(root, "*.db"))
+			string[] dbs;
+			try
+			{
+				dbs = Directory.GetFiles(root, "*.db");
+			}
+			catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
+			{
+				continue;
+			}
+			foreach (string db in dbs)
 			{
 				string name = Path.GetFileNameWithoutExtension(db);
 				if (!Directory.Exists(Path.Combine(root, name)) && seen.Add(db))
@@ -86,26 +93,14 @@ public static class Worlds
 		{
 			return "That folder does not exist.";
 		}
-		// Folders that cannot be read (another user's, the system's) hold no world.
-		static bool HasWorld(string dir)
-		{
-			try
-			{
-				return Directory.GetFiles(dir, "_main.*.chunks").Length > 0;
-			}
-			catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
-			{
-				return false;
-			}
-		}
-		if (HasWorld(path))
+		if (Places.HasWorld(path))
 		{
 			return null;
 		}
 		try
 		{
 			// A worlds_local folder with one world in it: point at the world instead.
-			string[] inside = Directory.GetDirectories(path).Where(HasWorld).ToArray();
+			string[] inside = Directory.GetDirectories(path).Where(Places.HasWorld).ToArray();
 			return inside.Length > 0
 				? $"That folder holds worlds; pick one of them ({string.Join(", ", inside.Select(System.IO.Path.GetFileName).Take(4))})."
 				: "No Valheim world in that folder (a world folder holds _main.<n>.chunks and *.chunk files).";

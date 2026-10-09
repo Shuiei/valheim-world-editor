@@ -27,6 +27,9 @@ public sealed class FakeGame : IDisposable
 	private uint _next = 1000;
 	// Answer this path with this status (an error from the game, or an older plugin without it).
 	public Dictionary<string, int> Fail { get; } = new();
+	// Set: ground sent to the game waits for it before the game answers (TerrainArrived says it came).
+	public TaskCompletionSource? HoldTerrain { get; set; }
+	public TaskCompletionSource TerrainArrived { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 	// Objects the game no longer had when asked to destroy them.
 	public int Missing { get; set; }
 
@@ -108,6 +111,11 @@ public sealed class FakeGame : IDisposable
 							r.ReadBytes(r.ReadInt32());
 							Terrain.Add((x, z));
 						}
+					}
+					if (HoldTerrain is { } hold)
+					{
+						TerrainArrived.TrySetResult();
+						await hold.Task;
 					}
 					body = Encoding.UTF8.GetBytes($"{{\"zones\":{n}}}");
 				}

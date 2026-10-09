@@ -233,7 +233,10 @@ public static class HistoryFile
 		{
 			return ReadFile(w, path);
 		}
-		catch (Exception ex) when (ex is IOException or InvalidDataException or EndOfStreamException or UnauthorizedAccessException)
+		// A damaged file (cut, or changed by hand: counts, ticks or indices out of range) is left out:
+		// the world still opens, without the earlier history.
+		catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException or OverflowException or ArgumentException
+			or IndexOutOfRangeException or OutOfMemoryException or KeyNotFoundException or FormatException)
 		{
 			Console.WriteLine($"History: could not read {path}: {ex.Message}");
 			return null;

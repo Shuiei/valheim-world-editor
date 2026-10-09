@@ -121,7 +121,9 @@ public static class Stamps
 			{
 				return new();
 			}
-			return (JsonSerializer.Deserialize<List<Kept>>(File.ReadAllText(FilePath)) ?? new())
+			// (Entries without their weights, as a file changed by hand can have, are left out.)
+			return (JsonSerializer.Deserialize<List<Kept?>>(File.ReadAllText(FilePath)) ?? new())
+				.Where(k => k is { Name: not null, Weights: not null }).Select(k => k!)
 				.Select(k => new Stamp(k.Name, k.Label, Convert.FromBase64String(k.Weights).Select(b => b / 255f).ToArray(), Loaded: true))
 				.Where(s => s.Data.Length == Size * Size).ToList();
 		}

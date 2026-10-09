@@ -39,6 +39,18 @@ public class BlueprintTests
 		Assert.StartsWith("data:image/png;base64,", CopyFormat.Thumb(c));
 	}
 
+	// A kind without a known name (a mod's) is written as its hash and read back as that kind (it came
+	// back as the hash of the number's text: an unknown kind, left out when pasted).
+	[Fact]
+	public void AKindWithoutANameKeepsItsHash()
+	{
+		var c = Sample();
+		c.Objects.Clear();
+		c.Objects.Add(new(-123456789, "-123456789", 0, 0, 0, Vector3.Zero, 0, null));
+		Assert.Equal(-123456789, CopyFormat.FromJson(CopyFormat.ToJson(c)).Objects.Single().Prefab);
+		Assert.Equal(StableHash.Of("woodwall"), StableHash.OfName("woodwall"));
+	}
+
 	[Fact]
 	public void TheWebEditorsBlueprintsAreRead()
 	{

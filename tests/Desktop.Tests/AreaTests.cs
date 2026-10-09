@@ -78,6 +78,20 @@ public class AreaTests
 		Assert.Equal(new[] { (0, 0), (1, 0), (0, 1), (1, 1) }.OrderBy(z => z), a.ZonesUnder(s.Ground).OrderBy(z => z));
 	}
 
+	// Restore over No limit ground (a mountain, held as lift past the ±8 m limit) brings it back down
+	// too (it changed nothing to be seen).
+	[Fact]
+	public void RestoreTakesAMountainAway()
+	{
+		var s = EditTests.Flat(5);
+		Assert.NotNull(s.Mountain(160, 160, new TerrainEditor.Desktop.MountainSpec(TerrainEditor.Desktop.MountainKind.Peak, 80, 60, 0.6f, 0, 42), clear: false, "Mountain: test"));
+		Assert.True(H(s, 160, 160) > 80);
+		var a = Box(100, 100, 220, 220);
+		s.EditGround("Area: Restore", g => a.Apply(g, s.Brush, AreaTool.GroundAction.Restore, 0, 0, new float[4]));
+		Assert.Equal(30, H(s, 160, 160), 3);
+		Assert.Equal(0, s.Ground.Lift[160 * s.Ground.W + 160]);
+	}
+
 	private static readonly int Beech = StableHash.Of("Beech1"), Rock = StableHash.Of("rock4_coast"), Wall = StableHash.Of("wood_wall_half");
 
 	private static (MainWindow W, EditSession S) Open()

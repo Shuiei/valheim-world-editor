@@ -25,11 +25,15 @@ public static class WorldWriter
 	{
 		// The files the save wrote (its _main files and new chunk files).
 		public IReadOnlyList<string> Files { get; init; } = Array.Empty<string>();
+		// The save number written (-1: none).
+		public int Number { get; init; } = -1;
 	}
 
 	// KeepBase: the save it is made from stays (an open world saves again from it). Drop: files of an
-	// earlier save of the same session, removed once this one has read back right.
-	public sealed record Options(bool KeepBase = false, IReadOnlyCollection<string>? Drop = null);
+	// earlier save of the same session, removed once this one has read back right. Latest: the newest
+	// save number the caller knows of (its own last save, or the one it opened); a newer one in the
+	// folder was made by the game since, and saving would throw it away, so nothing is saved.
+	public sealed record Options(bool KeepBase = false, IReadOnlyCollection<string>? Drop = null, int? Latest = null);
 
 	// deleted: ids (WorldSave.ObjectRefs) of objects to leave out of the new save.
 	// added: new objects copied from a template object of the same prefab. resets: zones handed back
@@ -52,11 +56,17 @@ public static class WorldWriter
 		{
 			return new Result(false, "Nothing to save.", null, 0, 0, skipped);
 		}
+		if (options.Latest is int known && Newer(world.Directory, known) is string newer)
+		{
+			return new Result(false, newer, null, 0, 0, skipped);
+		}
 		if (world.Chunks.Any(c => c.WorldVersion != SaveFileVersion))
 		{
 			return new Result(false, $"This world uses save format {world.Chunks.First().WorldVersion}; the writer only supports {SaveFileVersion}.", null, 0, 0, skipped);
 		}
-		Dictionary<(int, int), TerrainZone> existing = world.TerrainZones.Where(z => z.Source != null).ToDictionary(z => (z.ZoneX, z.ZoneZ));
+		// A zone can hold two terrain objects with data (the game makes them now and then): each gets
+		// the zone's ground, so whichever one the game uses has it.
+		Dictionary<(int, int), List<TerrainZone>> existing = world.TerrainZones.Where(z => z.Source != null).GroupBy(z => (z.ZoneX, z.ZoneZ)).ToDictionary(g => g.Key, g => g.ToList());
 		TerrainZone? template = world.TerrainZones.FirstOrDefault(z => z.Source != null);
 		Dictionary<ChunkFile, HashSet<long>> removals = new();
 		void Remove(ObjectRef o) => (removals.TryGetValue(o.File, out var set) ? set : removals[o.File] = new()).Add(o.Start);
@@ -86,9 +96,12 @@ public static class WorldWriter
 		foreach (ZoneEdit edit in changed)
 		{
 			byte[] data = EncodeTerrain(edit);
-			if (existing.TryGetValue((edit.ZoneX, edit.ZoneZ), out TerrainZone? zone))
+			if (existing.TryGetValue((edit.ZoneX, edit.ZoneZ), out List<TerrainZone>? zones))
 			{
-				(patches.TryGetValue(zone.Source!.File, out var p) ? p : patches[zone.Source.File] = new())[zone.Source.Start] = (zone.Source, data);
+				foreach (TerrainZone zone in zones)
+				{
+					(patches.TryGetValue(zone.Source!.File, out var p) ? p : patches[zone.Source.File] = new())[zone.Source.Start] = (zone.Source, data);
+				}
 				written++;
 				continue;
 			}
@@ -100,7 +113,7 @@ public static class WorldWriter
 			ChunkFile? target = ChunkMath.Find(world.Chunks, edit.ZoneX, edit.ZoneZ);
 			if (target == null)
 			{
-				skipped.Add($"zone {edit.ZoneX}, {edit.ZoneZ}: not generated yet (no world data there; visit it in game first)");
+				skipped.Add(ChunkMath.InWorld(edit.ZoneX, edit.ZoneZ) ? $"zone {edit.ZoneX}, {edit.ZoneZ}: not generated yet (no world data there; visit it in game first)" : $"zone {edit.ZoneX}, {edit.ZoneZ}: outside the world");
 				notSaved.Add((edit.ZoneX, edit.ZoneZ));
 				continue;
 			}
@@ -122,7 +135,7 @@ public static class WorldWriter
 			ChunkFile? target = ChunkMath.Find(world.Chunks, zx, zz);
 			if (target == null)
 			{
-				skipped.Add($"a new object at {n.Position.X:F0}, {n.Position.Z:F0}: zone {zx}, {zz} is not generated yet");
+				skipped.Add($"a new object at {n.Position.X:F0}, {n.Position.Z:F0}: zone {zx}, {zz} {(ChunkMath.InWorld(zx, zz) ? "is not generated yet" : "is outside the world")}");
 				continue;
 			}
 			byte[]? bytes = world.NewObjectBytes(n, m => sources.TryGetValue(m.File, out byte[]? src) ? src : sources[m.File] = File.ReadAllBytes(Path.Combine(world.Directory, m.File.FileName)));
@@ -208,7 +221,7 @@ public static class WorldWriter
 		}
 		RemoveAll(old);
 		string what = string.Join(", ", new[] { written + created > 0 ? $"{written + created} zone(s)" : null, deleted.Count > 0 ? $"{deleted.Count} deleted object(s)" : null, addedCount > 0 ? $"{addedCount} new object(s)" : null, resets.Count > 0 ? $"{resets.Count} reset zone(s) ({removed - deleted.Count} objects cleared)" : null }.Where(x => x != null));
-		return new Result(true, $"Saved {what} to save #{newNumber}.", null, written, created, skipped, removed, addedCount, resets.Count) { Files = newFiles };
+		return new Result(true, $"Saved {what} to save #{newNumber}.", null, written, created, skipped, removed, addedCount, resets.Count) { Files = newFiles, Number = newNumber };
 	}
 
 	// Mirrors TerrainComp.Save: a GZip-compressed ZPackage.
@@ -355,23 +368,36 @@ public static class WorldWriter
 		}
 	}
 
+	// Why a save made from save number `known` would throw away a newer one in the folder (the game
+	// saved the world since it was read), or null when there is none. Only a complete save counts: one
+	// cut short long ago would block every save.
+	public static string? Newer(string dir, int known) => WorldSave.CommittedSave(dir) is int newest && newest > known
+		? $"Valheim saved this world (save #{newest}) after the editor read it: saving now would throw away what was done in the game since. Nothing was saved. Leave the world and open it again to edit the game's save."
+		: null;
+
 	// The highest save number in a world folder (-1: none).
-	private static int LatestNumber(string dir) => Directory.GetFiles(dir, "_main.*.chunks")
+	public static int LatestNumber(string dir) => Directory.GetFiles(dir, "_main.*.chunks")
 		.Select(f => Path.GetFileName(f).Split('.')).Where(p => p.Length == 3 && int.TryParse(p[1], out _)).Select(p => int.Parse(p[1], System.Globalization.CultureInfo.InvariantCulture)).DefaultIfEmpty(-1).Max();
 
-	// The world folder down to its latest save: every other save number's files and the chunk files its
-	// index does not list go (an open world's base, once it is left).
+	// The world folder down to its latest save: earlier save numbers' files and the chunk files its
+	// index does not list go (an open world's base, once it is left). A newer save without its commit
+	// marker (cut short, or the game writing it right now) is left alone, and so are the chunk files
+	// then; so are files named _main.<something else>.
 	public static void Prune(string dir)
 	{
-		int latest = LatestNumber(dir);
-		if (latest < 0)
+		if (LatestNumber(dir) < 0)
 		{
 			return;
 		}
 		WorldSave now = WorldSave.Load(dir);
+		int latest = now.SaveNumber;
 		var keep = now.Chunks.Select(c => c.FileName).ToHashSet();
-		var old = Directory.GetFiles(dir, "_main.*").Where(f => Path.GetFileName(f).Split('.') is [_, var n, _] && n != latest.ToString(System.Globalization.CultureInfo.InvariantCulture))
-			.Concat(Directory.GetFiles(dir, "*.chunk").Where(f => !keep.Contains(Path.GetFileName(f))));
+		var old = Directory.GetFiles(dir, "_main.*").Where(f => Path.GetFileName(f).Split('.') is [_, var n, _]
+			&& int.TryParse(n, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out int number) && number < latest);
+		if (LatestNumber(dir) == latest)
+		{
+			old = old.Concat(Directory.GetFiles(dir, "*.chunk").Where(f => !keep.Contains(Path.GetFileName(f))));
+		}
 		RemoveAll(old.ToList());
 	}
 
@@ -389,33 +415,43 @@ public static class WorldWriter
 		{
 			return $"{after.ObjectCount} objects, expected {before.ObjectCount + created - removed}";
 		}
+		var afterZones = after.TerrainZones.ToLookup(t => (t.ZoneX, t.ZoneZ));
 		foreach (ZoneEdit e in saved)
 		{
-			TerrainZone? z = after.TerrainZones.FirstOrDefault(t => t.ZoneX == e.ZoneX && t.ZoneZ == e.ZoneZ);
-			if (z == null)
+			if (!afterZones.Contains((e.ZoneX, e.ZoneZ)))
 			{
 				return $"zone {e.ZoneX}, {e.ZoneZ} is missing";
 			}
-			for (int i = 0; i < EditStore.Cells; i++)
+			foreach (TerrainZone z in afterZones[(e.ZoneX, e.ZoneZ)])
 			{
-				if (z.ModifiedHeight[i] != e.Modified[i] || (e.Modified[i] && (z.LevelDelta[i] != e.Level[i] || z.SmoothDelta[i] != e.Smooth[i])) || z.ModifiedPaint[i] != e.PaintModified[i])
+				for (int i = 0; i < EditStore.Cells; i++)
 				{
-					return $"zone {e.ZoneX}, {e.ZoneZ} differs at point {i}";
-				}
-				if (e.PaintModified[i] && (z.Paint[i] != new Vector4(e.Paint[i * 4], e.Paint[i * 4 + 1], e.Paint[i * 4 + 2], e.Paint[i * 4 + 3])))
-				{
-					return $"zone {e.ZoneX}, {e.ZoneZ} paint differs at point {i}";
+					if (z.ModifiedHeight[i] != e.Modified[i] || (e.Modified[i] && (z.LevelDelta[i] != e.Level[i] || z.SmoothDelta[i] != e.Smooth[i])) || z.ModifiedPaint[i] != e.PaintModified[i])
+					{
+						return $"zone {e.ZoneX}, {e.ZoneZ} differs at point {i}";
+					}
+					if (e.PaintModified[i] && (z.Paint[i] != new Vector4(e.Paint[i * 4], e.Paint[i * 4 + 1], e.Paint[i * 4 + 2], e.Paint[i * 4 + 3])))
+					{
+						return $"zone {e.ZoneX}, {e.ZoneZ} paint differs at point {i}";
+					}
 				}
 			}
 		}
 		var changed = saved;
 		// Every other terrain zone must be untouched.
-		foreach (TerrainZone z in before.TerrainZones.Where(t => changed.All(e => e.ZoneX != t.ZoneX || e.ZoneZ != t.ZoneZ) && !groundReset.Contains((t.ZoneX, t.ZoneZ))))
+		// (Two terrain objects in one zone: compared in order, the writer keeps the objects' order.)
+		foreach (var group in before.TerrainZones.Where(t => changed.All(e => e.ZoneX != t.ZoneX || e.ZoneZ != t.ZoneZ) && !groundReset.Contains((t.ZoneX, t.ZoneZ))).GroupBy(t => (t.ZoneX, t.ZoneZ)))
 		{
-			TerrainZone? a = after.TerrainZones.FirstOrDefault(t => t.ZoneX == z.ZoneX && t.ZoneZ == z.ZoneZ);
-			if (a == null || !a.LevelDelta.SequenceEqual(z.LevelDelta) || !a.ModifiedHeight.SequenceEqual(z.ModifiedHeight) || !a.ModifiedPaint.SequenceEqual(z.ModifiedPaint))
+			var now = afterZones[group.Key].ToList();
+			int n = 0;
+			foreach (TerrainZone z in group)
 			{
-				return $"unchanged zone {z.ZoneX}, {z.ZoneZ} was altered";
+				TerrainZone? a = n < now.Count ? now[n] : null;
+				n++;
+				if (a == null || !a.LevelDelta.SequenceEqual(z.LevelDelta) || !a.ModifiedHeight.SequenceEqual(z.ModifiedHeight) || !a.ModifiedPaint.SequenceEqual(z.ModifiedPaint))
+				{
+					return $"unchanged zone {z.ZoneX}, {z.ZoneZ} was altered";
+				}
 			}
 		}
 		return after.TerrainZones.Count >= before.TerrainZones.Count - groundReset.Count ? null : "terrain zones were lost";

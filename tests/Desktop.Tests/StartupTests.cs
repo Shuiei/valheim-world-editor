@@ -211,6 +211,48 @@ public sealed class StartupTests : IDisposable
 		}
 	}
 
+	// A copy from Valheim for Windows whose terrain shader cannot be made here: said, not copied again
+	// at every start (minutes each time, ending the same way). An older converter's shader is made
+	// again from the kept SPIR-V, without a new copy.
+	[Fact]
+	public void AShaderThatCannotBeMadeIsSaidNotCopiedAgain()
+	{
+		string xdg = Path.Combine(_dir, "xdg"), game = Path.Combine(_dir, "Valheim");
+		Directory.CreateDirectory(Path.Combine(game, "valheim_Data", "StreamingAssets", "SoftRef", "Bundles"));
+		string? oldXdg = Environment.GetEnvironmentVariable("XDG_DATA_HOME"), oldLocal = Environment.GetEnvironmentVariable("LOCALAPPDATA");
+		Environment.SetEnvironmentVariable("XDG_DATA_HOME", xdg);
+		Environment.SetEnvironmentVariable("LOCALAPPDATA", null);
+		try
+		{
+			AppSettings.PathOverride = Path.Combine(_dir, "settings.json");
+			Assert.True(GameLook.Dir.StartsWith(_dir), $"game look in {GameLook.Dir}");
+			foreach (string f in new[] { "maptex/background.png", "models/objects.json" })
+			{
+				Directory.CreateDirectory(Path.GetDirectoryName(Path.Combine(GameLook.Dir, f))!);
+				File.WriteAllText(Path.Combine(GameLook.Dir, f), "");
+			}
+			string terrain = Path.Combine(GameLook.Dir, "terrain");
+			Directory.CreateDirectory(terrain);
+			File.WriteAllBytes(Path.Combine(terrain, TerrainShader.SpirvFile), new byte[] { 1, 2, 3, 4, 5, 6, 7, 8 });
+			File.WriteAllText(GameLook.MarkerPath, System.Text.Json.JsonSerializer.Serialize(new GameLook.Marker(game, GameLook.BuildId(game), GameLook.ExporterVersion, DateTime.Now)));
+			var settings = new AppSettings { ValheimPath = game };
+			GameLook.Check(settings, export: false);
+			Assert.Equal("failed", GameLook.Now().State);
+			Assert.StartsWith("The game's look is copied, but its terrain shader could not be made: ", GameLook.Now().Message);
+			// A shader made by an older converter: it is the one used while it cannot be made again.
+			File.WriteAllText(Path.Combine(terrain, TerrainShader.GlslFile), "// an older converter's shader");
+			Assert.False(TerrainShader.IsCurrent(terrain));
+			GameLook.Check(settings, export: false);
+			Assert.Equal("ready", GameLook.Now().State);
+			Assert.Equal("// an older converter's shader", File.ReadAllText(Path.Combine(terrain, TerrainShader.GlslFile)));
+		}
+		finally
+		{
+			Environment.SetEnvironmentVariable("XDG_DATA_HOME", oldXdg);
+			Environment.SetEnvironmentVariable("LOCALAPPDATA", oldLocal);
+		}
+	}
+
 	[Fact]
 	public void DrivenTheEditorLooksForTheGameOnlyUnderTheHome()
 	{

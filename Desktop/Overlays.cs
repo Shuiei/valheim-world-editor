@@ -47,10 +47,12 @@ public static class Overlays
 	public static Built Build(WorldScene s, TerrainModifiers? modifiers, Func<int, string?> names)
 	{
 		var lines = All.ToDictionary(l => l, _ => new List<float>());
+		// (Outside the area: the height at its nearest edge. Rings crossing the edge plunged 1000 m.)
 		Vector3 OnGround(float gx, float gz, float lift)
 		{
 			float x = gx - (s.W - 1) / 2f, z = -(gz - (s.H - 1) / 2f);
-			return new Vector3(x, Picking.HeightAt(s, x, z) + lift, z);
+			float cx = Math.Clamp(gx, 0, s.W - 1) - (s.W - 1) / 2f, cz = -(Math.Clamp(gz, 0, s.H - 1) - (s.H - 1) / 2f);
+			return new Vector3(x, Picking.HeightAt(s, cx, cz) + lift, z);
 		}
 		void Strip(Layer l, IReadOnlyList<Vector3> pts)
 		{

@@ -126,15 +126,17 @@ public class PanelStartTests
 		r.P.FillServers();
 		Assert.Contains("key file", Texts(r.P.SavedServers));
 		Assert.Contains("password asked", Texts(r.P.SavedServers));
-		// The server without a token or password: its boxes are typed into.
+		// The server without a token or password: its boxes are typed into; the one with a key file asks
+		// for its passphrase (never saved: such a key could not connect again).
 		var boxes = r.P.SavedServers.GetLogicalDescendants().OfType<TextBox>().ToList();
-		Assert.Equal(2, boxes.Count);
+		Assert.Equal(3, boxes.Count);
+		boxes[2].Text = "my phrase";
 		// Newest first: the bare server, then Valhalla.
 		var connects = r.P.SavedServers.GetLogicalDescendants().OfType<Button>().Where(b => b.Content as string == "Connect").ToList();
 		Click(connects[1]);
 		await LiveTests.Until(() => r.Opened.Count == 1);
 		var first = r.Tunnels.Single();
-		Assert.Equal(("Valhalla", "/keys/id", game.Token, "/srv/valheim"), (first.Name, first.KeyPath, first.Token, first.GameFolder));
+		Assert.Equal(("Valhalla", "/keys/id", game.Token, "/srv/valheim", "my phrase"), (first.Name, first.KeyPath, first.Token, first.GameFolder, first.Passphrase));
 		boxes[0].Text = game.Token;
 		boxes[1].Text = "secret";
 		Click(connects[0]);

@@ -52,6 +52,21 @@ public class OverlayTests
 		Assert.Equal(20, max, 1);
 	}
 
+	// A ring crossing the area's edge stays at ground level outside it (it plunged 1000 m down there,
+	// drawn over everything).
+	[Fact]
+	public void ARingCrossingTheEdgeStaysOnTheGround()
+	{
+		var bench = new WorldScene.Thing(1, StableHash.Of("piece_workbench"), new Vector3(28, 35, 0), Vector3.Zero, 0, true);
+		var o = Overlays.Build(Flat(bench), null, _ => "piece_workbench");
+		float[] l = o.Lines[Overlays.Layer.Stations];
+		Assert.Contains(Enumerable.Range(0, l.Length / 3), i => l[i * 3] > 32.5f);
+		for (int i = 1; i < l.Length; i += 3)
+		{
+			Assert.Equal(35.4f, l[i], 2);
+		}
+	}
+
 	[AvaloniaFact]
 	public void FWalksAtEyeHeightThenFliesThenComesBack()
 	{
