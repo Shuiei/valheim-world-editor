@@ -15,6 +15,51 @@ public class MountainCaveTests
 {
 	private static readonly MountainSpec Peak = new(MountainKind.Peak, 80, 60, 0.6f, 0, 42);
 
+	// The preview before clicking: the mountain's mesh on the ground under the pointer, only where it
+	// rises, as high as it will be; and where it fits in the open area (else the ring is red).
+	[Fact]
+	public void ThePreviewIsTheMountainOnTheGroundAndSaysWhereItFits()
+	{
+		var scene = EditTests.Flat(5).Scene;
+		int c = (scene.W - 1) / 2;
+		float ground = scene.Heights[c * scene.W + c];
+		var m = Peak with { Radius = 50 };
+		float[] mesh = GlView.MountainMesh(scene, c, c, m.Reach, Mountain.Shape(m));
+		Assert.NotEmpty(mesh);
+		Assert.Equal(0, mesh.Length % 6);
+		var ys = Enumerable.Range(0, mesh.Length / 3).Select(i => mesh[i * 3 + 1]).ToList();
+		Assert.InRange(ys.Max(), ground + m.Height * 0.7f, ground + m.Height * 1.3f);
+		Assert.True(ys.Min() >= ground);
+		// Every point within the mountain's reach of the middle (view space: x east, z mirrored).
+		for (int i = 0; i < mesh.Length / 3; i++)
+		{
+			float x = mesh[i * 3] + (scene.W - 1) / 2f - c, z = -mesh[i * 3 + 2] + (scene.H - 1) / 2f - c;
+			Assert.True(MathF.Abs(x) <= m.Reach + 0.01f && MathF.Abs(z) <= m.Reach + 0.01f);
+		}
+		Assert.True(GlView.MountainFits(scene, c, c, m.Reach));
+		Assert.False(GlView.MountainFits(scene, 20, c, m.Reach));
+		Assert.False(GlView.MountainFits(scene, c, scene.H - 10, m.Reach));
+	}
+
+	[AvaloniaFact]
+	public void TheMountainToolShowsItsPreviewAndOtherToolsDoNot()
+	{
+		var w = new MainWindow(load: false) { Width = 1400, Height = 900 };
+		w.Show();
+		var s = EditTests.Flat(5);
+		w.View.Show(s.Scene, null);
+		w.Edit(s);
+		w.Tools.ChooseMode(ToolMode.Mountain);
+		var first = w.View.MountainPreview;
+		Assert.NotNull(first);
+		// A new mountain (Randomize): a new preview.
+		w.MountainPanel.Randomize();
+		Assert.NotSame(first, w.View.MountainPreview);
+		w.Tools.ChooseMode(ToolMode.Shape);
+		Assert.Null(w.View.MountainPreview);
+		w.Close();
+	}
+
 	[Fact]
 	public void TheSameSeedMakesTheSameMountainAndAnotherSeedAnother()
 	{

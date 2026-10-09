@@ -1812,7 +1812,14 @@ public sealed partial class MainWindow : Window
 		}
 		SelectPanel.Card.IsVisible = MeasurePanel.Card.IsVisible = ShapePanel.Card.IsVisible = MountainPanel.Card.IsVisible = ScriptPanel.Card.IsVisible = PathPanel.Card.IsVisible = AreaPanel.Card.IsVisible = PastePanel.Card.IsVisible = MaskPanel.Card.IsVisible = PlacePanel.Card.IsVisible = false;
 		ShapePanel.Changed += () => _view.ShapeRadius = ShapePanel.Radius;
-		MountainPanel.Changed += () => { if (Tools.Mode == ToolMode.Mountain) _view.ShapeRadius = MountainPanel.Spec.Reach; };
+		MountainPanel.Changed += () =>
+		{
+			if (Tools.Mode == ToolMode.Mountain)
+			{
+				_view.ShapeRadius = MountainPanel.Spec.Reach;
+				_view.MountainPreview = Mountain.Shape(MountainPanel.Spec);
+			}
+		};
 		_view.ShapeClicked += (x, z) =>
 		{
 			if (Tools.Mode == ToolMode.Mountain)
@@ -1845,6 +1852,7 @@ public sealed partial class MainWindow : Window
 			MountainPanel.Card.IsVisible = Tools.Mode == ToolMode.Mountain;
 			ScriptPanel.Card.IsVisible = Tools.Mode == ToolMode.Script;
 			_view.ShapeRadius = Tools.Mode == ToolMode.Mountain ? MountainPanel.Spec.Reach : ShapePanel.Radius;
+			_view.MountainPreview = Tools.Mode == ToolMode.Mountain ? Mountain.Shape(MountainPanel.Spec) : null;
 			PathPanel.Card.IsVisible = Tools.Mode == ToolMode.Path;
 			if (Tools.Mode == ToolMode.Path)
 			{
