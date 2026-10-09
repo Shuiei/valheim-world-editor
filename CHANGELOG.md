@@ -92,6 +92,10 @@ the plugin is unchanged in versions without that part.
 - An apply the game takes more than 30 seconds to start (a world save on the server) is no longer
   done later anyway: the editor was told it failed and sent it again, so new objects were made twice
   for every player. Given up on, it never runs; once started, the editor waits for it.
+- Objects linked to others (a creature spawner and what it spawned, two connected portals) keep the
+  link when a live delete or move is undone: the object came back without it (a spawner then spawned
+  a second creature), and the other side still pointed at the removed object. A paste of a linked
+  object still there takes no link (it would take the original's).
 - A malformed object to make fails the whole call before anything changes. Objects removed and made
   before it stayed done, and sending the call again made them twice.
 

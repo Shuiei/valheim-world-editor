@@ -513,12 +513,14 @@ public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
 		int prefab = p.ReadInt();
 		Vector3 euler = (flags & 0x1000) != 0 ? p.ReadSmallRotation() : Vector3.zero;
 		List<Action<ZDO>> values = new();
+		var linkType = ZDOExtraData.ConnectionType.None;
+		int linkHash = 0;
 		if ((flags & 0xFF) != 0)
 		{
 			if ((flags & 0x1) != 0)
 			{
-				p.ReadByte();
-				p.ReadInt();
+				linkType = (ZDOExtraData.ConnectionType)p.ReadByte();
+				linkHash = p.ReadInt();
 			}
 			void Each(int flag, Func<int, Action<ZDO>> read)
 			{
@@ -551,6 +553,10 @@ public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
 			foreach (Action<ZDO> set in values)
 			{
 				set(zdo);
+			}
+			if (linkType != ZDOExtraData.ConnectionType.None)
+			{
+				Relink(zdo, linkType, linkHash);
 			}
 			return zdo;
 		};
@@ -639,11 +645,12 @@ public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
 				zdos.Add(zdo);
 			}
 		}
+		var links = SnapshotLinks();
 		pkg.Write((short)41);
 		pkg.Write(zdos.Count);
 		foreach (ZDO zdo in zdos)
 		{
-			WriteZdo(pkg, zdo);
+			WriteZdo(pkg, zdo, links);
 		}
 		foreach (ZDO zdo in zdos)
 		{
@@ -684,12 +691,87 @@ public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
 		return p.GetArray();
 	}
 
-	// Mirrors ZDO.Save (world version 41), reading the live data instead of the save-time copy.
-	private static void WriteZdo(ZPackage pkg, ZDO zdo)
+	// Links between objects (a spawner and what it spawned, two portals...), as the save writes them: a
+	// hash on the object holding the link and the same hash, marked Target, on its target. The hash is
+	// kept with both objects' ids (main thread only), so an object made again from the snapshot (an
+	// undone delete) gets its link back, and links to it follow it to its new id.
+	private static readonly Dictionary<int, (ZDOExtraData.ConnectionType Type, ZDOID Source, ZDOID Target)> Links = new();
+
+	private static int LinkHash(ZDOID source) => unchecked((int)(source.UserID * 486187739L) ^ (int)source.ID * 16777619) | 1;
+
+	private static Dictionary<ZDOID, (ZDOExtraData.ConnectionType Type, int Hash)> SnapshotLinks()
 	{
-		ZDOExtraData.GetData(zdo.m_uid, out var floats, out var vec3s, out var quats, out var ints, out var longs, out var strings, out var bytes, out ZDOConnection conn);
+		var of = new Dictionary<ZDOID, (ZDOExtraData.ConnectionType, int)>();
+		var targets = new List<(ZDOID, ZDOExtraData.ConnectionType, int)>();
+		foreach (ZDOID source in ZDOExtraData.GetAllConnectionZDOIDs())
+		{
+			ZDOConnection c = ZDOExtraData.GetConnection(source);
+			if (c == null || c.m_type == ZDOExtraData.ConnectionType.None)
+			{
+				continue;
+			}
+			int hash = LinkHash(source);
+			Links[hash] = (c.m_type, source, c.m_target);
+			of[source] = (c.m_type, hash);
+			if (c.m_target != ZDOID.None)
+			{
+				targets.Add((c.m_target, c.m_type | ZDOExtraData.ConnectionType.Target, hash));
+			}
+		}
+		// One link per object in the save: the one it holds before the one it is the target of.
+		foreach (var (target, type, hash) in targets)
+		{
+			if (!of.ContainsKey(target))
+			{
+				of[target] = (type, hash);
+			}
+		}
+		return of;
+	}
+
+	// An object made again from the snapshot (its old link: type and hash) in place of one that is gone
+	// (an undone delete, a move): its link back, and the links to its old id now to it. A copy of an
+	// object still there (a paste) takes no link: it would take the original's.
+	private static void Relink(ZDO made, ZDOExtraData.ConnectionType type, int hash)
+	{
+		if (!Links.TryGetValue(hash, out var link))
+		{
+			return;
+		}
+		bool holder = (type & ZDOExtraData.ConnectionType.Target) == 0;
+		ZDOID old = holder ? link.Source : link.Target;
+		if (ZDOMan.instance.GetZDO(old) != null)
+		{
+			return;
+		}
+		if (holder)
+		{
+			if (link.Target == ZDOID.None || ZDOMan.instance.GetZDO(link.Target) != null)
+			{
+				made.SetConnection(link.Type, link.Target);
+			}
+			Links[hash] = (link.Type, made.m_uid, link.Target);
+		}
+		else
+		{
+			Links[hash] = (link.Type, link.Source, made.m_uid);
+		}
+		foreach (ZDOID source in ZDOExtraData.GetAllConnectionZDOIDs())
+		{
+			ZDOConnection c = ZDOExtraData.GetConnection(source);
+			if (c != null && c.m_target == old && ZDOMan.instance.GetZDO(source) is { } other)
+			{
+				other.UpdateConnection(c.m_type, made.m_uid);
+			}
+		}
+	}
+
+	// Mirrors ZDO.Save (world version 41), reading the live data instead of the save-time copy.
+	private static void WriteZdo(ZPackage pkg, ZDO zdo, Dictionary<ZDOID, (ZDOExtraData.ConnectionType Type, int Hash)> links)
+	{
+		ZDOExtraData.GetData(zdo.m_uid, out var floats, out var vec3s, out var quats, out var ints, out var longs, out var strings, out var bytes, out ZDOConnection _);
 		int flags = 0;
-		bool hasConn = conn != null && conn.m_type != ZDOExtraData.ConnectionType.None;
+		bool hasConn = links.TryGetValue(zdo.m_uid, out var conn);
 		if (hasConn) flags |= 0x1;
 		if (floats.Count > 0) flags |= 0x2;
 		if (vec3s.Count > 0) flags |= 0x4;
@@ -718,8 +800,8 @@ public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
 		}
 		if (hasConn)
 		{
-			pkg.Write((byte)conn.m_type);
-			pkg.Write(0);
+			pkg.Write((byte)conn.Type);
+			pkg.Write(conn.Hash);
 		}
 		Section(pkg, floats, v => pkg.Write(v));
 		Section(pkg, vec3s, v => pkg.Write(v));
