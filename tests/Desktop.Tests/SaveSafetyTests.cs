@@ -165,4 +165,23 @@ public class SaveSafetyTests
 		Assert.True(o.Saved, o.Message);
 		Assert.Equal(cut + 1, WorldSave.Load(w.Dir).SaveNumber);
 	}
+
+	// An object put far outside the world (beyond ±16 km) is skipped and said; the rest is saved (the
+	// whole save failed).
+	[Fact]
+	public void AnObjectOutsideTheWorldIsSkipped()
+	{
+		using var w = new TempWorld();
+		WorldSave save = w.Load();
+		var (_, prefab, near, _, _) = save.Objects.First(o => MathF.Abs(o.Position.X) < 200 && MathF.Abs(o.Position.Z) < 200);
+		var added = new[]
+		{
+			new TerrainEditor.Editing.NewObject(-1, prefab, near + new System.Numerics.Vector3(1, 0, 1), System.Numerics.Vector3.Zero, 0f),
+			new TerrainEditor.Editing.NewObject(-2, prefab, new System.Numerics.Vector3(20000, 30, 0), System.Numerics.Vector3.Zero, 0f),
+		};
+		var r = WorldWriter.Save(save, Array.Empty<TerrainEditor.Editing.ZoneEdit>(), added: added);
+		Assert.True(r.Saved, r.Message + " | " + string.Join(" | ", r.Skipped));
+		Assert.Equal(1, r.ObjectsAdded);
+		Assert.Contains(r.Skipped, s => s.Contains("outside the world"));
+	}
 }

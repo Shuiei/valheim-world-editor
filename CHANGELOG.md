@@ -71,6 +71,8 @@ the plugin is unchanged in versions without that part.
   this computer, the start page says so, instead of copying the whole game look again at every start
   (minutes each time, ending the same way). A later editor whose shader converter changed makes the
   shader again from the copied file, without a new copy.
+- An object put (or pasted) outside the world, beyond about ±16 km, is left out of the save and
+  listed under "Not saved"; the whole save failed.
 
 ### WorldEditorBridge
 - An apply the game takes more than 30 seconds to start (a world save on the server) is no longer

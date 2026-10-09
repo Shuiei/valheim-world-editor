@@ -113,7 +113,7 @@ public static class WorldWriter
 			ChunkFile? target = ChunkMath.Find(world.Chunks, edit.ZoneX, edit.ZoneZ);
 			if (target == null)
 			{
-				skipped.Add($"zone {edit.ZoneX}, {edit.ZoneZ}: not generated yet (no world data there; visit it in game first)");
+				skipped.Add(ChunkMath.InWorld(edit.ZoneX, edit.ZoneZ) ? $"zone {edit.ZoneX}, {edit.ZoneZ}: not generated yet (no world data there; visit it in game first)" : $"zone {edit.ZoneX}, {edit.ZoneZ}: outside the world");
 				notSaved.Add((edit.ZoneX, edit.ZoneZ));
 				continue;
 			}
@@ -135,7 +135,7 @@ public static class WorldWriter
 			ChunkFile? target = ChunkMath.Find(world.Chunks, zx, zz);
 			if (target == null)
 			{
-				skipped.Add($"a new object at {n.Position.X:F0}, {n.Position.Z:F0}: zone {zx}, {zz} is not generated yet");
+				skipped.Add($"a new object at {n.Position.X:F0}, {n.Position.Z:F0}: zone {zx}, {zz} {(ChunkMath.InWorld(zx, zz) ? "is not generated yet" : "is outside the world")}");
 				continue;
 			}
 			byte[]? bytes = world.NewObjectBytes(n, m => sources.TryGetValue(m.File, out byte[]? src) ? src : sources[m.File] = File.ReadAllBytes(Path.Combine(world.Directory, m.File.FileName)));
