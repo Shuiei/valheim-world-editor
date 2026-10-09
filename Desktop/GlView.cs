@@ -1805,15 +1805,22 @@ public sealed class GlView : OpenGlControlBase
 				double delta = e.Delta.Y != 0 ? e.Delta.Y : e.Delta.X;
 				bool shiftW = e.KeyModifiers.HasFlag(KeyModifiers.Shift);
 				_wheelSum += delta;
+				bool tried = false, used = false;
 				while (Math.Abs(_wheelSum) >= 0.999)
 				{
 					int dir = _wheelSum > 0 ? 1 : -1;
 					_wheelSum -= dir;
-					_ = ctrlW ? CtrlWheel!(dir, shiftW) : AltWheel!(dir > 0 ? Key.OemComma : Key.OemPeriod, shiftW);
+					tried = true;
+					used |= ctrlW ? CtrlWheel!(dir, shiftW) : AltWheel!(dir > 0 ? Key.OemComma : Key.OemPeriod, shiftW);
 				}
-				e.Handled = true;
-				Wake();
-				return;
+				// Nothing to turn (or lift): the wheel zooms as usual.
+				if (!tried || used)
+				{
+					e.Handled = true;
+					Wake();
+					return;
+				}
+				_wheelSum = 0;
 			}
 			else
 			{
