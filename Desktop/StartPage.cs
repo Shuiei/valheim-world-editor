@@ -513,9 +513,12 @@ public sealed class StartPage
 		{
 			var token = s.Token == null ? new TextBox { PlaceholderText = "Plugin token", Width = 180 }.Tip("start.savedToken") : null;
 			var pass = s.Password == null && s.KeyFile == null ? new TextBox { PlaceholderText = "Password", PasswordChar = '•', Width = 180 }.Tip("start.savedPassword") : null;
+			// A key file with a passphrase: never saved, so asked here (it could not connect again).
+			var phrase = s.KeyFile != null ? new TextBox { PlaceholderText = "Key passphrase (if any)", PasswordChar = '•', Width = 180 }.Tip("start.savedPassphrase") : null;
 			var go = new Button { Content = "Connect" }.Classed("primary").Tip("start.savedConnect");
 			var server = s;
-			go.Click += async (_, _) => await Connect(new Tunnel.Request(server.Host, server.SshPort, server.User, pass?.Text ?? server.Password, server.KeyFile, null, token?.Text ?? server.Token, null,
+			go.Click += async (_, _) => await Connect(new Tunnel.Request(server.Host, server.SshPort, server.User, pass?.Text ?? server.Password, server.KeyFile,
+				string.IsNullOrEmpty(phrase?.Text) ? null : phrase.Text, token?.Text ?? server.Token, null,
 				server.Password != null, server.Name, server.GameFolder), _savedError, $"Connecting to {server.Name}…");
 			var edit = new Button { Content = "edit", Foreground = Muted }.Classed("ghost").Tip("start.savedEdit");
 			edit.Click += (_, _) =>
@@ -545,6 +548,7 @@ public sealed class StartPage
 			});
 			if (token != null) row.Children.Add(token);
 			if (pass != null) row.Children.Add(pass);
+			if (phrase != null) row.Children.Add(phrase);
 			row.Children.Add(go);
 			row.Children.Add(edit);
 			row.Children.Add(forget);

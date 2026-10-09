@@ -77,11 +77,13 @@ public static class Tunnel
 					string k = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".ssh", name);
 					if (File.Exists(k))
 					{
+						// One that cannot be used (a passphrase, a format SSH.NET does not read, no
+						// access) is skipped: the password is still tried.
 						try
 						{
 							methods.Add(new PrivateKeyAuthenticationMethod(user, new PrivateKeyFile(k)));
 						}
-						catch (SshPassPhraseNullOrEmptyException)
+						catch (Exception ex) when (ex is SshException or IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException)
 						{
 						}
 					}
@@ -106,13 +108,18 @@ public static class Tunnel
 		var info = new Renci.SshNet.ConnectionInfo(host, port, user, methods.ToArray()) { Timeout = TimeSpan.FromSeconds(12) };
 		var client = new SshClient(info) { KeepAliveInterval = TimeSpan.FromSeconds(30) };
 		string id = $"{user}@{host}:{port}";
-		ServerConfig.Server? saved = ServerConfig.Load().FirstOrDefault(s => s.Id == id);
+		// The server's key as known for this address and port, whatever the account (logging in as
+		// another user is still the same server: a different key there is refused too).
+		var savedServers = ServerConfig.Load();
+		ServerConfig.Server? saved = savedServers.FirstOrDefault(s => s.Id == id);
+		string? pinned = saved?.HostKey
+			?? savedServers.FirstOrDefault(s => s.HostKey != null && s.SshPort == port && string.Equals(s.Host, host, StringComparison.OrdinalIgnoreCase))?.HostKey;
 		string? seen = null, changed = null;
 		// Trust on first use: remember the server's key; refuse if it changes later.
 		client.HostKeyReceived += (_, e) =>
 		{
 			seen = "SHA256:" + Convert.ToBase64String(SHA256.HashData(e.HostKey)).TrimEnd('=');
-			if (saved?.HostKey is string known && known != seen)
+			if (pinned is string known && known != seen)
 			{
 				changed = known;
 				e.CanTrust = false;

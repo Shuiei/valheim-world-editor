@@ -93,6 +93,11 @@ the plugin is unchanged in versions without that part.
   script's ground change without an undo step, while saying nothing changed.
 - Closing the window with unsaved changes and answering **Keep editing** no longer stops the copy of
   the game's look running in the background.
+- Live, SSH: a saved server that uses a key file with a passphrase can connect again: its row has a
+  **Key passphrase** box (the passphrase is never saved, and the connection always failed with "The
+  key file could not be read"). One of the usual keys in `~/.ssh` that cannot be used no longer stops
+  the login before the password is tried. And the server's remembered identity is checked for every
+  account on that address: logging in as another user accepted any identity, and saved it.
 
 ### WorldEditorBridge
 - An apply the game takes more than 30 seconds to start (a world save on the server) is no longer
