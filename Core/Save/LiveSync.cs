@@ -1,7 +1,12 @@
+using System.Numerics;
 using System.Text.Json;
 using TerrainEditor.Editing;
 
 namespace TerrainEditor.Save;
+
+// An object in the running game: its ZDOID, and what it is and where, to find it again when another
+// mod has made it again under a new ZDOID.
+public readonly record struct LiveTarget(long User, uint Id, int Prefab, Vector3 Position);
 
 // Keeps the running game's objects in step with the editor's deletions and new objects. It remembers
 // what has already been applied, so each apply sends only the difference, and undo works after
@@ -14,7 +19,7 @@ public sealed class LiveSync
 	private readonly HashSet<int> _destroyed = new();
 
 	// Objects whose live ZDOID is not the snapshot's: new objects (ids < 0) and restored ones.
-	private readonly Dictionary<int, (long User, uint Id)> _liveIds = new();
+	private readonly Dictionary<int, LiveTarget> _liveIds = new();
 
 	public void Reset()
 	{
@@ -48,9 +53,11 @@ public sealed class LiveSync
 
 	public async Task<string> Apply(WorldSave world, EditStore edits, LiveBridge live)
 	{
-		List<(long, uint)> destroy = new();
+		List<LiveTarget> destroy = new();
 		List<byte[]> create = new();
 		List<int> createFor = new();
+		// What each creation is and where (for its LiveTarget once the game gives its ZDOID).
+		List<(int Prefab, Vector3 Position)> createWhat = new();
 		List<string> skipped = new();
 		// What the game has once it accepts the call (nothing is recorded before: a refused call is sent
 		// again next time).
@@ -59,7 +66,15 @@ public sealed class LiveSync
 		{
 			HashSet<int> deleted = edits.Deleted;
 			Dictionary<int, NewObject> added = edits.Added.ToDictionary(a => a.Id);
-			(long, uint) LiveId(int id) => _liveIds.TryGetValue(id, out var l) ? l : world.ObjectRefs[id].LiveId;
+			LiveTarget LiveId(int id)
+			{
+				if (_liveIds.TryGetValue(id, out var l))
+				{
+					return l;
+				}
+				ObjectRef o = world.ObjectRefs[id];
+				return new LiveTarget(o.LiveId.User, o.LiveId.Id, o.Prefab, o.Position);
+			}
 			foreach (int id in deleted.Where(id => id >= 0 && id < world.ObjectRefs.Count && !_destroyed.Contains(id)))
 			{
 				destroy.Add(LiveId(id));
@@ -71,6 +86,7 @@ public sealed class LiveSync
 				ObjectRef o = world.ObjectRefs[id];
 				create.Add(world.LiveBytes![(int)o.Start..(int)o.End]);
 				createFor.Add(id);
+				createWhat.Add((o.Prefab, o.Position));
 				restoreIds.Add(id);
 			}
 			// New objects not in the game yet, and ones that were removed again (undo, delete).
@@ -84,6 +100,7 @@ public sealed class LiveSync
 				}
 				create.Add(bytes);
 				createFor.Add(n.Id);
+				createWhat.Add((n.Prefab, n.Position));
 			}
 			foreach (int id in _liveIds.Keys.Where(id => id < 0 && !added.ContainsKey(id)).ToList())
 			{
@@ -115,11 +132,15 @@ public sealed class LiveSync
 			}
 			for (int i = 0; i < ids.Count && i < createFor.Count; i++)
 			{
-				_liveIds[createFor[i]] = (long.Parse(ids[i][0]), uint.Parse(ids[i][1]));
+				_liveIds[createFor[i]] = new LiveTarget(long.Parse(ids[i][0]), uint.Parse(ids[i][1]), createWhat[i].Prefab, createWhat[i].Position);
 			}
 		}
 		int destroyed = doc.RootElement.GetProperty("destroyed").GetInt32(), missing = doc.RootElement.GetProperty("missing").GetInt32();
 		string msg = $"{destroyed} object(s) removed, {ids.Count} created";
+		if (doc.RootElement.TryGetProperty("refound", out var rf) && rf.GetInt32() is > 0 and int refound)
+		{
+			msg += $" ({refound} made again by another mod, found at their place)";
+		}
 		if (missing > 0)
 		{
 			msg += $", {missing} were already gone";

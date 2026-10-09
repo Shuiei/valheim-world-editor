@@ -4,6 +4,21 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.15.4 — 2026-10-09
+
+### Fixed
+- Undoing a placed object after **Apply live** removes it for the players too, on servers with mods
+  that make objects again under a new id when they appear (ServersideQoL does, for build pieces,
+  plants, fires, turrets and more). The undo found the object "already gone", and players kept
+  seeing the new copy. Each removal now also says what the object is and where it stands, and the
+  plugin removes that object at that place when its id is gone. Needs the plugin from this version
+  on the server.
+
+### WorldEditorBridge
+- An object to remove whose id is gone is looked for by its kind and place (within 10 cm), once
+  each, and removed if found. Another kind of object at that place, or an empty place, is left
+  alone. Editors from before still work as they did.
+
 ## v1.15.3 — 2026-10-09
 
 ### Fixed
