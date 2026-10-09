@@ -20,7 +20,7 @@ each one from its location whenever the zone loads, so deleting one removes that
 | **Alt + drag** | Draws a zone even when you start over an object (useful in forests, where trees cover the ground). |
 | **Shift + drag** or **Ctrl + drag** | Adds what is inside the zone to the selection. |
 | **Click on empty ground** / `Esc` | Clears the selection. |
-| **Double-click a building piece** | Selects the whole building: every piece connected to it through pieces that touch (walls, floors, roofs, beams...). Pieces standing apart are not taken. |
+| **Double-click a building piece** | Selects the whole building: every piece connected to it through pieces that touch (walls, floors, roofs, beams...). Pieces standing apart are not taken. A chest (any container) is the exception: a double click selects it alone and opens its data, its contents. |
 | **Whole building** | Adds every piece connected to the selected pieces. |
 | **Same kind** | Selects every shown object in the area of the kinds selected now (select one beech, then all the beeches). |
 | **Invert** | Selects every shown object in the area that is not selected now. |
@@ -70,7 +70,7 @@ typed values are exact, so nothing snaps on top of them.
 
 ## Inspecting and changing an object's data
 
-Like MCEdit's NBT editor: with one object selected, **Inspect data (I)** (or a double click on it) opens a panel with
+Like MCEdit's NBT editor: with one object selected, **Inspect data (I)** (or a double click on it, unless it is a building piece: that selects the building) opens a panel with
 everything the object holds in the save.
 
 ![A chest selected, its data in the Inspector](images/inspector.jpg)
