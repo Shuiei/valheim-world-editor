@@ -31,6 +31,7 @@ namespace TerrainEditor.Desktop;
 //   mapview <x> <z> <m per pixel>  the map looking there
 //   mappick <zone x> <zone z>      the map's zone picked (as a click on it)
 //   search <text>                  the map's search (objects by kind)
+//   hit <n>                        the search's result n (from 0) picked, as a click in its list
 //   zones                          the map's zone filter: show the matching zones
 //   state                          what is shown, the objects, what is pending, frames drawn
 //   quit
@@ -148,6 +149,9 @@ public static class Driver
 			case "search":
 				w.MapPage!.SearchBox.Text = a[1];
 				await w.MapPage.Search();
+				return State(w);
+			case "hit":
+				w.MapPage!.Hits.SelectedIndex = int.Parse(a[1], System.Globalization.CultureInfo.InvariantCulture);
 				return State(w);
 			case "zones":
 				w.MapPage!.NoBuildBox.IsChecked = w.MapPage.NoEditBox.IsChecked = w.MapPage.OnlyGenBox.IsChecked = false;

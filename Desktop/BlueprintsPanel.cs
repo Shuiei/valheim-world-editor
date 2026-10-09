@@ -297,7 +297,7 @@ public sealed class BlueprintsPanel
 			}
 			var parsed = BlueprintFormats.Parse(path, File.ReadAllText(path));
 			var world = _scene()?.World;
-			var clip = BlueprintFormats.ToClip(parsed, n => world?.CanCreate(StableHash.Of(n)) ?? TerrainEditor.Terrain.PrefabCatalog.Get(StableHash.Of(n)) != null, out _);
+			var clip = BlueprintFormats.ToClip(parsed, n => world?.CanCreate(StableHash.OfName(n)) ?? TerrainEditor.Terrain.PrefabCatalog.Get(StableHash.OfName(n)) != null, out _);
 			return (clip, parsed.Name, null);
 		}
 		if (Store.Read(id) is not string json || JsonNode.Parse(json) is not JsonObject doc || doc["clip"] is not JsonObject c)
@@ -471,7 +471,10 @@ public sealed class BlueprintsPanel
 		{
 			target = $"{name} ({n})";
 		}
-		WriteHomestead(clip, Named(target), world);
+		if (!TryWrite(() => WriteHomestead(clip, Named(target), world)))
+		{
+			return null;
+		}
 		Message?.Invoke($"“{target}” is now a Homestead blueprint.{(HasGround(clip) ? " Its ground shape is not kept: Homestead blueprints hold pieces only." : "")}{Reminder}");
 		Refresh();
 		return target;
@@ -486,10 +489,13 @@ public sealed class BlueprintsPanel
 		if (id.StartsWith(HomesteadId, StringComparison.Ordinal))
 		{
 			string path = Path.Combine(Status.Folder, id[HomesteadId.Length..]);
-			if (Path.GetFileName(path) == id[HomesteadId.Length..])
+			if (Path.GetFileName(path) == id[HomesteadId.Length..] && !TryWrite(() =>
 			{
 				File.Delete(path);
 				File.Delete(Path.ChangeExtension(path, ".png"));
+			}))
+			{
+				return;
 			}
 		}
 		else
@@ -509,9 +515,17 @@ public sealed class BlueprintsPanel
 		}
 		string text = BlueprintFormats.Write(clip, format, name, n => TerrainEditor.Terrain.PieceCatalog.Get(StableHash.Of(n))?.Category ?? 0);
 		string dir = Path.Combine(Store.Directory, "export");
-		Directory.CreateDirectory(dir);
 		string path = Path.Combine(dir, Path.GetFileNameWithoutExtension(Homestead.FileName(name)) + "." + format);
-		File.WriteAllText(path, text);
+		try
+		{
+			Directory.CreateDirectory(dir);
+			File.WriteAllText(path, text);
+		}
+		catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+		{
+			Message?.Invoke($"Could not write {path}: {ex.Message}");
+			return null;
+		}
 		Message?.Invoke($"Written to {path}.{(format == "blueprint" ? " For PlanBuild, copy it into BepInEx/config/PlanBuild/blueprints." : "")} Only the objects are written, not the ground.");
 		return path;
 	}
@@ -538,13 +552,16 @@ public sealed class BlueprintsPanel
 		}
 		_status = FindHomestead();
 		var world = _scene()?.World;
-		var clip = BlueprintFormats.ToClip(parsed, n => world?.CanCreate(StableHash.Of(n)) ?? TerrainEditor.Terrain.PrefabCatalog.Get(StableHash.Of(n)) != null, out var unknown);
+		var clip = BlueprintFormats.ToClip(parsed, n => world?.CanCreate(StableHash.OfName(n)) ?? TerrainEditor.Terrain.PrefabCatalog.Get(StableHash.OfName(n)) != null, out var unknown);
 		string baseName = string.IsNullOrWhiteSpace(parsed.Name) ? "Imported" : parsed.Name, name = baseName;
 		for (int n = 2; HomesteadExists(name); n++)
 		{
 			name = $"{baseName} ({n})";
 		}
-		WriteHomestead(clip, new Homestead.Details(name, parsed.Description ?? "", Homestead.Details.ParseTags(TagsOf(text))), null);
+		if (!TryWrite(() => WriteHomestead(clip, new Homestead.Details(name, parsed.Description ?? "", Homestead.Details.ParseTags(TagsOf(text))), null)))
+		{
+			return null;
+		}
 		Refresh();
 		int count = (clip["objects"] as JsonArray)?.Count ?? 0;
 		Message?.Invoke($"Imported “{name}” as a Homestead blueprint: {count} piece(s)."
@@ -552,6 +569,21 @@ public sealed class BlueprintsPanel
 			+ (unknown.Count > 0 ? $" {unknown.Count} kind(s) the game does not know were left out (mods?): {string.Join(", ", unknown.Take(5))}{(unknown.Count > 5 ? "…" : "")}." : "")
 			+ (parsed.SkippedLines > 0 ? $" {parsed.SkippedLines} unreadable line(s) skipped." : "") + Reminder);
 		return name;
+	}
+
+	// A blueprint file written or removed; when the folder refuses (read-only, locked), says so (false).
+	private bool TryWrite(Action write)
+	{
+		try
+		{
+			write();
+			return true;
+		}
+		catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+		{
+			Message?.Invoke($"Could not write in the blueprints folder: {ex.Message}");
+			return false;
+		}
 	}
 
 	// The "#Tags:" line of a blueprint file (null when it has none).

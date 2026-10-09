@@ -4,6 +4,131 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.15.6 — unreleased
+
+### Fixed
+- Saving a world the game saved since the editor read it (a play test between two saves) no longer
+  throws away what was done in the game: the save was made from the save the world was opened from,
+  and leaving the world then deleted the game's save. The editor now says Valheim saved the world
+  and saves nothing; leave the world and open it again to edit the game's save.
+- Changes saved (or applied live) from the map are kept as saved: **Discard** in the area opened
+  next undid them too, and saving again then took them out of the world. The History panel also
+  showed them as not saved.
+- **Area → Backup** no longer restores another world's backup: a folder chosen with "Another
+  folder…" stays in the list when another world is opened, and choosing it there used the backup
+  read for the first world without checking its seed.
+- Live: ground changed while **Apply live** waits for the game (a second stroke with Auto apply on)
+  is no longer lost. It was marked as applied with the first stroke but never sent: players did
+  not see it, and Discard did not take it back. It now stays pending and goes with the next apply.
+- The editor's keys (Ctrl+Z, Ctrl+Y, Ctrl+S, Ctrl+V, the tool keys) do nothing on the start page
+  and the map. On the map they acted on the area left open behind it: Ctrl+Z undid its last step
+  unseen (live with Auto apply on, in the game too).
+- A world with two terrain objects in one zone (the game makes them now and then) can be saved:
+  every save failed with "An item with the same key has already been added". The zone's ground now
+  goes into both, so the game shows it whichever one it uses.
+- A save cut short (the game or the editor stopped while writing it: no `_main.<n>.ok`) is no longer
+  taken for the world's save, as the game does. The world opens from the last complete save, and
+  leaving it no longer deletes that save. Leaving a world also no longer deletes your own files named
+  `_main.<something>` in its folder (a `_main.backup.zip`).
+- Copying the game's look no longer breaks for good when it is stopped halfway (closing the editor
+  during the first copy): it could leave a cut file that made every later copy fail, or models
+  without their textures that were never copied again. Each file is now written whole or not at
+  all, and a model counts as copied only with its materials.
+- After a Valheim update, the game's look is copied from the new game files: the copy kept using
+  where things were in the old ones (new kinds got no model, changed ones kept the old model, and a
+  removed file made the copy fail every time). It now reads the game files again and copies every
+  model again when they changed.
+- Settings and saved servers are written whole or not at all: a crash or power cut while writing
+  them no longer resets the settings (Valheim folder, world folders, recent worlds) or loses every
+  saved server. Settings that cannot be read are kept as `settings.json.bad`, and a settings file
+  that cannot be written (locked) no longer stops the app.
+- `servers.cfg` is only readable by you from the moment it is made (it was readable by others for an
+  instant), and a saved password with spaces at its ends no longer loses them (the login failed).
+- Opening another area (or saving, or switching the look) while the models are still being read no
+  longer closes the editor or draws objects of the area left: a model read for it went into the new
+  area, with that area's object numbers.
+- An error the editor did not expect no longer closes it, losing every change not saved: it is
+  written to the log and said in the status bar (or a message away from the 3D editor). Saving,
+  applying and Discard from the map, and leaving a world, say what went wrong (a world folder gone
+  or locked) instead of closing the editor or leaving it showing "Saving…".
+- Blueprints: importing (also by dropping a file on the 3D view), exporting, deleting and turning an
+  older blueprint into a Homestead one say so when the folder cannot be written, instead of closing
+  the editor; so does exporting a heightmap.
+- Opening a blueprint in the Workshop that cannot be read (removed meanwhile) keeps the open world
+  as it was: the world was closed first, and the editor kept showing an area of it that could no
+  longer be saved or applied.
+- A folder of worlds added in Settings that holds a folder that cannot be read (a drive's root, with
+  its "System Volume Information" or "lost+found") no longer leaves the start page with no world
+  listed: that folder is skipped. The same for mod manager profile folders.
+- Shape formulas: a function given the wrong number of values (`sin()`, `pow(x)`, `clamp(x, 0)`)
+  is a mistake explained when the formula is read, instead of every point failing as "bad"; and a
+  formula nested very deeply (a pasted one with thousands of brackets) is refused instead of closing
+  the editor.
+- A damaged history file (kept between runs) no longer stops its world from opening: the world opens
+  without the earlier history. A `stamps.json` with an entry missing its picture no longer stops the
+  editor from starting.
+- Valheim for Windows: when the terrain shader of a copied game look cannot be made into GLSL on
+  this computer, the start page says so, instead of copying the whole game look again at every start
+  (minutes each time, ending the same way). A later editor whose shader converter changed makes the
+  shader again from the copied file, without a new copy.
+- An object put (or pasted) outside the world, beyond about ±16 km, is left out of the save and
+  listed under "Not saved"; the whole save failed.
+- The Mask's slope, height and paint rules judge edits made at once (Mountain, Shape, Paste, Stamp
+  once, Path) on the ground as it was before them. They saw the points already changed by the same
+  edit: with a slope limit, most of a mountain was left out in a ragged pattern.
+- Copies and blueprints keep objects of kinds the editor has no name for (from mods): they are
+  written as their number and came back as another, unknown kind, left out when pasted.
+- The Area tool's **Restore** also takes back No limit ground (a mountain, a deep paste), as the
+  Restore brush does: over a mountain it changed nothing to be seen.
+- A **Path** with Smooth along the west or east edge of the area no longer mixes in the ground of the
+  opposite edge.
+- Pointing past the edge of the area no longer finds "ground" 1000 m down: the Measure tool, pastes,
+  brushes and the Path and Area tools took such points. Ward and workbench rings crossing the edge
+  no longer plunge down outside it.
+- An object found with the map's search and opened with **Edit in 3D** stays selected in the editor:
+  the selection went at the first frame drawn, while the inspector still showed the object.
+- **Script**: a script's changes are not applied when the area changed while it ran (a stroke, an
+  undo, a save that read the world again): they overwrote the stroke, or removed other objects than
+  the ones the script chose. And an object number that is not the area's no longer leaves the
+  script's ground change without an undo step, while saying nothing changed.
+- Closing the window with unsaved changes and answering **Keep editing** no longer stops the copy of
+  the game's look running in the background.
+- Live, SSH: a saved server that uses a key file with a passphrase can connect again: its row has a
+  **Key passphrase** box (the passphrase is never saved, and the connection always failed with "The
+  key file could not be read"). One of the usual keys in `~/.ssh` that cannot be used no longer stops
+  the login before the password is tried. And the server's remembered identity is checked for every
+  account on that address: logging in as another user accepted any identity, and saved it.
+- The README in the editor's packages names the plugin's file as it is on the release page
+  (`WorldEditorBridge-1.15.6.zip`, it said `WorldEditorBridge-v1.15.6.zip`).
+- The world generator is closer to the game's: lengths and distances between points (rivers,
+  streams, lakes) are worked out with the game's precision. Of the heights recorded in the game, 2992
+  of 3000 now match bit for bit (2982 before) and all 8 zones (6 before); the rest still differ by
+  less than a millimetre.
+- The map and areas are made faster on computers with many cores: the ground of 256 zones in parallel
+  takes about 0.1 s instead of 0.6 to 1.3 s (a cache of the rivers made the threads wait on each
+  other).
+- Areas with very many objects of one kind (tens of thousands of one piece) open, save and switch
+  the look without a pause of a second or more.
+- Worlds open and save faster: reading a world looked through every edited zone for each object.
+  A world of 355,000 objects and 78 edited zones reads in 0.24 s instead of 0.57 s; worlds with
+  thousands of edited zones gain much more.
+- Less memory over a long session: a model's vertices are let go once they are on the graphics card,
+  and past 1 GB of models and textures there, opening another area lets them go (that area's are
+  read again). They piled up with every new kind seen, gigabytes with Valheim open beside it.
+- Areas with hundreds of kinds of objects no longer hold up other background work while their models
+  are read (the next area, the map's search and close-up waited seconds behind them).
+
+### WorldEditorBridge
+- An apply the game takes more than 30 seconds to start (a world save on the server) is no longer
+  done later anyway: the editor was told it failed and sent it again, so new objects were made twice
+  for every player. Given up on, it never runs; once started, the editor waits for it.
+- Objects linked to others (a creature spawner and what it spawned, two connected portals) keep the
+  link when a live delete or move is undone: the object came back without it (a spawner then spawned
+  a second creature), and the other side still pointed at the removed object. A paste of a linked
+  object still there takes no link (it would take the original's).
+- A malformed object to make fails the whole call before anything changes. Objects removed and made
+  before it stayed done, and sending the call again made them twice.
+
 ## v1.15.5 — 2026-10-09
 
 ### Fixed

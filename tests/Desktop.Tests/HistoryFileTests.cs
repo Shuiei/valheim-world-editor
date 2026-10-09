@@ -34,6 +34,51 @@ public class HistoryFileTests
 		return (was, treeThing, rock);
 	}
 
+	// A history file damaged after its header (a count out of range, as a file changed by hand can
+	// have): the world still opens, without it (it threw, and the world could not be opened).
+	[AvaloniaFact]
+	public void ADamagedHistoryFileDoesNotStopTheWorldOpening()
+	{
+		string dir = EditTests.CopyFixture();
+		try
+		{
+			EditAndSave(dir);
+			var probe = WorldSession.Open(dir);
+			string path = HistoryFile.PathOf(HistoryFile.KeyOf(probe));
+			probe.Dispose();
+			byte[] raw;
+			using (var gz = new System.IO.Compression.GZipStream(File.OpenRead(path), System.IO.Compression.CompressionMode.Decompress))
+			using (var ms = new MemoryStream())
+			{
+				gz.CopyTo(ms);
+				raw = ms.ToArray();
+			}
+			// Header: magic, version, key, has stamp, stamp, saved at; then the object count.
+			long at;
+			using (var r = new BinaryReader(new MemoryStream(raw), System.Text.Encoding.UTF8))
+			{
+				r.ReadInt32();
+				r.ReadInt32();
+				r.ReadString();
+				r.ReadBoolean();
+				r.ReadString();
+				r.ReadInt64();
+				at = r.BaseStream.Position;
+			}
+			BitConverter.GetBytes(-5).CopyTo(raw, at);
+			using (var gz = new System.IO.Compression.GZipStream(File.Create(path), System.IO.Compression.CompressionLevel.Fastest))
+			{
+				gz.Write(raw);
+			}
+			using var world = WorldSession.Open(dir);
+			Assert.Null(world.Restored);
+		}
+		finally
+		{
+			Done(dir);
+		}
+	}
+
 	[AvaloniaFact]
 	public void TheHistoryComesBackWhenTheWorldIsOpenedAgain()
 	{

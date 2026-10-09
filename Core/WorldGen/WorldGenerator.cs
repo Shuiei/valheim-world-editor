@@ -78,11 +78,6 @@ public class WorldGenerator
 
 	private Dictionary<Vector2i, RiverPoint[]> m_riverPoints = new Dictionary<Vector2i, RiverPoint[]>();
 
-	private RiverPoint[] m_cachedRiverPoints;
-
-	private Vector2i m_cachedRiverGrid = new Vector2i(-999999, -999999);
-
-	private ReaderWriterLockSlim m_riverCacheLock = new ReaderWriterLockSlim();
 
 	private List<Heightmap.Biome> m_biomes = new List<Heightmap.Biome>();
 
@@ -238,7 +233,6 @@ public class WorldGenerator
 		m_riverPoints.Clear();
 		m_rivers.Clear();
 		m_streams.Clear();
-		m_cachedRiverPoints = null;
 	}
 
 	private void VersionSetup(int version)
@@ -623,40 +617,17 @@ public class WorldGenerator
 		return new Vector2i(x, y);
 	}
 
+	// The game keeps the last grid cell's points in a cache behind a lock; here many threads ask at once
+	// (maps, areas), and that cache made them evict each other and wait on the lock (several times
+	// slower). The points are only read once the world is made: read straight from the dictionary.
 	private void GetRiverWeight(float wx, float wy, out float weight, out float width)
 	{
-		Vector2i riverGrid = GetRiverGrid(wx, wy);
-		m_riverCacheLock.EnterReadLock();
-		if (riverGrid == m_cachedRiverGrid)
-		{
-			if (m_cachedRiverPoints != null)
-			{
-				GetWeight(m_cachedRiverPoints, wx, wy, out weight, out width);
-				m_riverCacheLock.ExitReadLock();
-			}
-			else
-			{
-				weight = 0f;
-				width = 0f;
-				m_riverCacheLock.ExitReadLock();
-			}
-			return;
-		}
-		m_riverCacheLock.ExitReadLock();
-		if (m_riverPoints.TryGetValue(riverGrid, out var value))
+		if (m_riverPoints.TryGetValue(GetRiverGrid(wx, wy), out var value))
 		{
 			GetWeight(value, wx, wy, out weight, out width);
-			m_riverCacheLock.EnterWriteLock();
-			m_cachedRiverGrid = riverGrid;
-			m_cachedRiverPoints = value;
-			m_riverCacheLock.ExitWriteLock();
 		}
 		else
 		{
-			m_riverCacheLock.EnterWriteLock();
-			m_cachedRiverGrid = riverGrid;
-			m_cachedRiverPoints = null;
-			m_riverCacheLock.ExitWriteLock();
 			weight = 0f;
 			width = 0f;
 		}

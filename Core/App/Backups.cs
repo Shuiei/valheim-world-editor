@@ -17,7 +17,7 @@ public static class Backups
 		}
 		string prefix = System.IO.Path.GetFileName(trimmed) + "_backup_";
 		return Directory.GetDirectories(parent, prefix + "*")
-			.Where(d => Directory.GetFiles(d, "_main.*.chunks").Length > 0)
+			.Where(Places.HasWorld)
 			.Select(d => new Info(d, System.IO.Path.GetFileName(d), Directory.GetLastWriteTime(d), System.IO.Path.GetFileName(d)[prefix.Length..].StartsWith("auto", StringComparison.Ordinal) ? "game" : "editor"))
 			.OrderByDescending(b => b.Date).ToList();
 	}

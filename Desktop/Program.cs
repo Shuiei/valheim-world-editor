@@ -61,7 +61,16 @@ public sealed class App : Application
 	{
 		if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
 		{
-			desktop.MainWindow = new MainWindow();
+			var window = new MainWindow();
+			desktop.MainWindow = window;
+			// An error in a button's or a key's handler would close the app and lose what is not saved:
+			// it is logged and shown instead.
+			Avalonia.Threading.Dispatcher.UIThread.UnhandledException += (_, e) =>
+			{
+				Options.Say($"error: {e.Exception}");
+				e.Handled = true;
+				window.ShowError(e.Exception);
+			};
 		}
 		base.OnFrameworkInitializationCompleted();
 	}

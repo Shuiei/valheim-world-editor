@@ -73,6 +73,12 @@ public static class ServerConfig
 					continue;
 				}
 				string key = line[..eq].Trim(), value = line[(eq + 1)..].Trim();
+				// A password is taken as written (spaces at its ends are part of it): after "= ".
+				if (key.Equals("password", StringComparison.OrdinalIgnoreCase))
+				{
+					string after = raw[(raw.IndexOf('=') + 1)..];
+					value = after.StartsWith(' ') ? after[1..] : after;
+				}
 				string? opt = value.Length == 0 ? null : value;
 				switch (key.ToLowerInvariant())
 				{
@@ -142,7 +148,8 @@ public static class ServerConfig
 			sb.AppendLine($"GameFolder = {s.GameFolder}");
 			sb.AppendLine($"HostKey = {s.HostKey}");
 		}
-		File.WriteAllText(FilePath, sb.ToString());
+		// Only the user can read it, from the start (it can hold a password).
+		SafeFile.WriteAllText(FilePath, sb.ToString(), UnixFileMode.UserRead | UnixFileMode.UserWrite);
 		if (!OperatingSystem.IsWindows())
 		{
 			File.SetUnixFileMode(FilePath, UnixFileMode.UserRead | UnixFileMode.UserWrite);

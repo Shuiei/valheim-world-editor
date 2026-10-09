@@ -18,10 +18,32 @@ index = json.load(open(os.environ.get('INDEX') or os.path.join(os.path.dirname(_
 if index and isinstance(next(iter(index.values())), dict): index = {v['name']: [v['bundle'], v['pid']] for v in index.values()}
 matfile = os.path.join(OUT, 'materials.json')
 materials = json.load(open(matfile)) if os.path.exists(matfile) else {}
-done_meshes = set(os.path.splitext(f)[0] for f in os.listdir(os.path.join(OUT, 'meshes')))
 mesh_info_file = os.path.join(OUT, 'meshinfo.json')
 mesh_info = json.load(open(mesh_info_file)) if os.path.exists(mesh_info_file) else {}
+# A mesh counts as done only once meshinfo.json lists it (a run stopped in between made it again).
+done_meshes = set(os.path.splitext(f)[0] for f in os.listdir(os.path.join(OUT, 'meshes')) if f.endswith('.bin')) & set(mesh_info)
 done_tex = {}
+
+# Every file is written whole or not at all (a temporary file, then renamed): a run stopped halfway
+# (the editor closed) leaves no cut file that the next run would take as done.
+def write_file(path, data, mode='wb'):
+    tmp = path + '.tmp'
+    with open(tmp, mode) as f: f.write(data)
+    os.replace(tmp, path)
+
+def save_image(img, path, **kw):
+    tmp = path + '.tmp'
+    img.save(tmp, format='PNG' if path.endswith('.png') else 'JPEG', **kw)
+    os.replace(tmp, path)
+
+# The pieces exported since materials.json and meshinfo.json were last written: their files are
+# renamed into place only after (a piece whose materials are not saved yet is not done).
+pending = []
+
+def save_progress():
+    write_file(matfile, json.dumps(materials), 'w'); write_file(mesh_info_file, json.dumps(mesh_info), 'w')
+    for tmp in pending: os.replace(tmp, tmp[:-len('.part')])
+    pending.clear()
 
 def mat4_trs(p, q, s):
     x, y, z, w = q
@@ -62,7 +84,7 @@ def export_mesh(obj):
         flat = [i for t in tri for i in t]
         buf += struct.pack(f'<{len(flat)}I', *flat)
         ranges.append(len(flat))
-    open(os.path.join(OUT, 'meshes', mid + '.bin'), 'wb').write(buf)
+    write_file(os.path.join(OUT, 'meshes', mid + '.bin'), buf)
     mesh_info[mid] = {'v': n, 'sub': ranges, 'name': m.m_Name}
     done_meshes.add(mid)
     return mid
@@ -85,9 +107,9 @@ def export_tex(owner, ref):
         img = img.resize((max(1, int(img.width * f)), max(1, int(img.height * f))), Image.LANCZOS)
     img = img.transpose(Image.FLIP_TOP_BOTTOM)  # Unity origin is bottom-left; three uses flipY=false
     if img.mode == 'RGBA' and img.getchannel('A').getextrema()[0] < 250:
-        name = f'{tid}.png'; img.save(os.path.join(OUT, 'tex', name), optimize=True)
+        name = f'{tid}.png'; save_image(img, os.path.join(OUT, 'tex', name), optimize=True)
     else:
-        name = f'{tid}.jpg'; img.convert('RGB').save(os.path.join(OUT, 'tex', name), quality=88)
+        name = f'{tid}.jpg'; save_image(img.convert('RGB'), os.path.join(OUT, 'tex', name), quality=88)
     done_tex[k] = name
     return name
 
@@ -198,7 +220,9 @@ def export_piece(name, bundle, pid):
     walk(pid, None, True)
     rt = next((tt for t, o, tt in comps(byid, byid[pid].read_typetree()) if t == 'Transform'), None)
     rs = rt['m_LocalScale'] if rt else {'x': 1, 'y': 1, 'z': 1}
-    json.dump({'parts': parts, 'rootScale': [rs['x'], rs['y'], rs['z']]}, open(os.path.join(OUT, 'pieces', name + '.json'), 'w'))
+    part = os.path.join(OUT, 'pieces', name + '.json.part')
+    write_file(part, json.dumps({'parts': parts, 'rootScale': [rs['x'], rs['y'], rs['z']]}), 'w')
+    pending.append(part)
     return len(parts)
 
 names = sorted(index)
@@ -217,6 +241,5 @@ for i, n in enumerate(names):
         print(f'{i+1}/{len(names)} {n}: {k} parts', flush=True)
     except Exception:
         print('FAILED', n, file=sys.stderr); traceback.print_exc()
-    if i % 25 == 0:
-        json.dump(materials, open(matfile, 'w')); json.dump(mesh_info, open(mesh_info_file, 'w'))
-json.dump(materials, open(matfile, 'w')); json.dump(mesh_info, open(mesh_info_file, 'w'))
+    if i % 25 == 0: save_progress()
+save_progress()

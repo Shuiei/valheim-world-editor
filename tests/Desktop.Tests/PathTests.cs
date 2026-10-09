@@ -56,6 +56,35 @@ public class PathTests
 		Assert.Equal("Path", s.UndoLabel);
 	}
 
+	// Smoothing along the area's west edge only looks at ground there, not at the east edge (the 5 × 5
+	// kernel wrapped into the row before, at the far side of the area).
+	[Fact]
+	public void SmoothingAtTheEdgeDoesNotWrapAround()
+	{
+		var s = EditTests.Flat(2);
+		int w = s.Ground.W, hgt = s.Ground.H;
+		s.EditGround("east up", g =>
+		{
+			var touched = new List<int>();
+			for (int z = 0; z < hgt; z++)
+			{
+				for (int x = w - 2; x < w; x++)
+				{
+					g.SetHeight(z * w + x, 38);
+					touched.Add(z * w + x);
+				}
+			}
+			return (touched, (w - 2, 0, w - 1, hgt - 1));
+		});
+		var p = Line((1, 10), (1, 100));
+		p.Act = PathTool.Action.Smooth;
+		p.Width = 2;
+		p.Soft = 0;
+		Apply(s, p);
+		Assert.Equal(30, H(s, 1, 60), 3);
+		Assert.Equal(30, H(s, 0, 60), 3);
+	}
+
 	[Fact]
 	public void ARampGoesFromStartToEnd()
 	{

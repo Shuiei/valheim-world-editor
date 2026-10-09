@@ -345,6 +345,7 @@ public static class Tips
 		["start.savedForget"] = "Remove this server from the list (its password and token are forgotten too).",
 		["start.savedToken"] = "The plugin's token for this server.",
 		["start.savedPassword"] = "The password for this server.",
+		["start.savedPassphrase"] = "The passphrase of this server's key file, if it has one (never saved).",
 		["look.path"] = "The folder Steam installed Valheim into (the one with valheim_Data).",
 		["look.browse"] = "Choose the Valheim folder.",
 		["look.use"] = "Copy the game's look from this folder.",

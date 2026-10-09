@@ -50,6 +50,35 @@ public class ScriptTests
 		Assert.Equal(30, At(s, 45, 45), 3);
 	}
 
+	// Object numbers that are not the area's (a script's own, out of range): left out, and the ground
+	// change is still one undo step (it threw after changing the ground, with no step to undo it).
+	[Fact]
+	public void BadObjectNumbersAreLeftOut()
+	{
+		var s = EditTests.Flat(2);
+		var ch = new ScriptHost.Changes();
+		ch.Heights[45 * s.Ground.W + 45] = 33;
+		ch.Remove.Add(-1);
+		ch.Remove.Add(1_000_000);
+		ScriptHost.Apply(s, ch, "Script: test");
+		Assert.Equal("Script: test", s.UndoLabel);
+		Assert.True(s.Undo());
+		Assert.Equal(30, s.Ground.HeightOf(45 * s.Ground.W + 45), 3);
+	}
+
+	// What tells a script's run that the area changed while it ran (then nothing is applied).
+	[Fact]
+	public void EveryStepMovesTheGeneration()
+	{
+		var s = EditTests.Flat(2);
+		int g0 = s.Generation;
+		s.Shape(40, 40, Formula.Compile("2", new string[0]), 4, 0, "x");
+		int g1 = s.Generation;
+		Assert.NotEqual(g0, g1);
+		s.Undo();
+		Assert.NotEqual(g1, s.Generation);
+	}
+
 	[Fact]
 	public void WithoutNoLimitTheGameLimitHolds()
 	{

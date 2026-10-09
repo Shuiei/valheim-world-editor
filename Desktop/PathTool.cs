@@ -317,10 +317,11 @@ public sealed class PathTool
 						{
 							for (int dx = -2; dx <= 2; dx++)
 							{
-								int k = (gz + dz) * g.W + gx + dx;
-								if (k >= 0 && k < before!.Length)
+								// Inside the area on both axes (a flat index would wrap into the next row).
+								int x = gx + dx, z = gz + dz;
+								if (x >= 0 && x < g.W && z >= 0 && z < g.H)
 								{
-									sum += before[k];
+									sum += before![z * g.W + x];
 									n++;
 								}
 							}

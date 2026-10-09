@@ -19,9 +19,17 @@ public static class ChunkMath
 		return (ushort)(ix / 8 + ((iz / 8) << 8));
 	}
 
-	// The chunk file (from the current index) whose area contains the sector, if any.
+	// A sector inside the world's chunk grid (±256 zones, about ±16 km).
+	public static bool InWorld(int sectorX, int sectorZ) => (uint)(sectorX + 256) < 512 && (uint)(sectorZ + 256) < 512;
+
+	// The chunk file (from the current index) whose area contains the sector, if any (none outside the
+	// world).
 	public static ChunkFile? Find(IEnumerable<ChunkFile> chunks, int sectorX, int sectorZ)
 	{
+		if (!InWorld(sectorX, sectorZ))
+		{
+			return null;
+		}
 		ushort c = BaseChunk(sectorX, sectorZ);
 		return chunks.FirstOrDefault(f => f.Size < SizeFilters.Length && (ushort)(c & SizeFilters[f.Size]) == f.Chunk && f.Chunk != PortalChunk);
 	}

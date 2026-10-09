@@ -23,6 +23,8 @@ slope of 0° or a minimum above the maximum.
 
 During a brush stroke the mask looks at the ground **as it was when the stroke started**. So a
 Raise stroke on ground below the height limit keeps rising past it until you let go, and a
-stroke that changes the slope does not switch itself off halfway.
+stroke that changes the slope does not switch itself off halfway. The same holds for edits made at
+once (Mountain, Shape, Paste, Stamp once, Path, the Area tool's actions): each is judged on the ground
+as it was just before it.
 
 If a stroke changes nothing because the mask leaves everything out, the status bar says so.

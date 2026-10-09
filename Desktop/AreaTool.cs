@@ -295,6 +295,8 @@ public sealed class AreaTool
 							g.Mod[p] = 0;
 						}
 					}
+					// Also back down from a No limit lift (a mountain, a deep paste), as the Restore brush.
+					g.Lift[p] = w > 0.98f || MathF.Abs(g.Lift[p] * (1 - w)) < 0.01f ? 0 : g.Lift[p] * (1 - w);
 					if (g.PMod[p] != 0 && w > 0.5f)
 					{
 						g.PMod[p] = 0;

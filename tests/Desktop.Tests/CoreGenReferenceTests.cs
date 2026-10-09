@@ -12,10 +12,10 @@ public class CoreGenReferenceTests
 {
 	private static string Reference => Path.Combine(Fixtures.Root, "worldgen-reference.txt");
 
-	// Where the port stands: the random numbers, the noise, every biome and the water are exact; all
-	// but 18 of the 3000 heights and 6 of the 8 zones are bit for bit, and the rest differ by less than
-	// a millimetre (floating point done in a different order than the game's runtime). Any change that
-	// moves further from the game fails here.
+	// Where the port stands: the random numbers, the noise, every biome, the water and the 8 zones are
+	// exact; all but 8 of the 3000 heights are bit for bit (all in the Deep North), and those differ by
+	// less than a millimetre (floating point done in a different order than the game's runtime). Any
+	// change that moves further from the game fails here.
 	[Fact]
 	public void TheGeneratorMatchesTheGame()
 	{
@@ -24,8 +24,8 @@ public class CoreGenReferenceTests
 		Assert.True(r.RandomOk == 57 && r.RandomWrong == 0, why);
 		Assert.True(r.PerlinOk == 1207 && r.PerlinWrong == 0, why);
 		Assert.True(r.BiomesWrong == 0 && r.WaterWrong == 0, why);
-		Assert.True(r.HeightsOk == 2982 && r.HeightsOk + r.HeightsWrong == 3000, why);
-		Assert.True(r.ZonesOk == 6 && r.ZonesOk + r.ZonesWrong == 8, why);
+		Assert.True(r.HeightsOk == 2992 && r.HeightsOk + r.HeightsWrong == 3000, why);
+		Assert.True(r.ZonesOk == 8 && r.ZonesOk + r.ZonesWrong == 8, why);
 		Assert.True(r.HeightMaxDiff < 0.001, why);
 		Assert.True(r.ZoneMaxDiff < 0.001, why);
 	}

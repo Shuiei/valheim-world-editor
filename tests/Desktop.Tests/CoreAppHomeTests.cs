@@ -197,6 +197,10 @@ public sealed class CoreAppHomeTests : IDisposable
 			var s = new AppSettings();
 			s.Recent.Add(new AppSettings.RecentWorld(locked, "Locked", DateTime.Now));
 			Assert.DoesNotContain(Worlds.Find(s), w => w.Path == locked);
+			// A folder of worlds added in Settings that holds one that cannot be read (a drive's root):
+			// the list is still made (it threw, and the start page listed no world at all).
+			s.WorldFolders.Add(_home);
+			Assert.DoesNotContain(Worlds.Find(s), w => w.Path == locked);
 		}
 		finally
 		{

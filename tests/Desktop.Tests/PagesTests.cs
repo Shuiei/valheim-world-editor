@@ -1,5 +1,7 @@
 using System.Numerics;
+using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
+using Avalonia.Input;
 using TerrainEditor.Save;
 using Xunit;
 
@@ -125,6 +127,33 @@ public class PagesTests
 		foreach (var name in Icons.Paths.Keys)
 		{
 			Assert.NotNull(Icons.Make(name));
+		}
+	}
+
+	// The editor's keys do nothing on the map: Ctrl+Z there would undo in the area left open behind it.
+	[AvaloniaFact]
+	public async Task EditorKeysDoNothingOnTheMap()
+	{
+		string dir = EditTests.CopyFixture();
+		try
+		{
+			var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
+			w.Show();
+			await w.OpenWorld(() => Task.Run(() => WorldSession.Open(dir)), "Opening…");
+			await w.EditArea(0, 0, 3);
+			var s = w.Session!;
+			s.Shape(96, 96, Formula.Compile("2", new string[0]), 4, 0, "x");
+			Assert.Single(s.UndoList);
+			w.ShowMap();
+			w.KeyPress(Key.Z, RawInputModifiers.Control, PhysicalKey.Z, "z");
+			w.KeyPress(Key.S, RawInputModifiers.Control, PhysicalKey.S, "s");
+			Assert.Single(s.UndoList);
+			Assert.Equal(1, w.World!.Pending.Zones);
+			w.Close();
+		}
+		finally
+		{
+			Done(dir);
 		}
 	}
 }

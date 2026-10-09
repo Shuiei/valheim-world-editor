@@ -29,10 +29,11 @@ def main(rid, valheim):
         os.makedirs(export)
         subprocess.run([os.path.join(repo, 'tools', 'make-python-runtime.sh'), rid, export], check=True,
                        env=dict(os.environ, VWE_NO_TRIM='1'), stdout=subprocess.DEVNULL)
-        for f in ('export_all.py', 'assetlib.py', 'export_pieces.py', 'fix_normals.py', 'fix_alpha.py'):
+        # The same files as tools/release.sh puts in the package.
+        for f in ('export_all.py', 'assetlib.py', 'export_pieces.py', 'fix_normals.py', 'fix_alpha.py', 'smolv.py', 'vulkan_shader.py'):
             shutil.copy(os.path.join(repo, 'tools', 'asset-export', f), export)
         shutil.copy(os.path.join(repo, 'tools', 'zdo_scan.py'), export)
-        shutil.copy(os.path.join(repo, 'WorldGen', 'pieces.json'), export)
+        shutil.copy(os.path.join(repo, 'Core', 'WorldGen', 'pieces.json'), export)
         root = os.path.join(export, 'python')
         log = os.path.join(work, 'trace.log')
         args = [os.path.join(export, 'export_all.py'), '--valheim', valheim, '--out', os.path.join(work, 'out'), '--work', os.path.join(work, 'cache')]

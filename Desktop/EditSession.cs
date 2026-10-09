@@ -189,6 +189,7 @@ public sealed class EditSession
 	// The brush goes down at grid point (cx, cz).
 	public void BeginStroke(BrushTool tool, float cx, float cz)
 	{
+		Interlocked.Increment(ref _generation);
 		lock (_lock)
 		{
 			_stroke = new Stroke { Tool = tool, Start = Ground.Snapshot() };
@@ -412,6 +413,7 @@ public sealed class EditSession
 
 	private void Record(string label, Ground.State start, IEnumerable<int> touched, List<(int X, int Z)> zones)
 	{
+		Interlocked.Increment(ref _generation);
 		int[] pts = touched.Distinct().Order().ToArray();
 		var now = Ground.Snapshot();
 		_undo.Add(new Change(label, pts, Pick(start, pts), Pick(now, pts), zones));
@@ -474,8 +476,14 @@ public sealed class EditSession
 
 	public bool Redo() => Step(_redo, _undo, after: true);
 
+	// Counts every change to the area (a step made, undone or redone, the area read again): what was
+	// worked out from it earlier (a script's run) is out of date once it moved.
+	public int Generation => Volatile.Read(ref _generation);
+	private int _generation;
+
 	private bool Step(List<Change> from, List<Change> to, bool after)
 	{
+		Interlocked.Increment(ref _generation);
 		Change c;
 		lock (_lock)
 		{
@@ -540,6 +548,7 @@ public sealed class EditSession
 
 	private void AddChange(Change c)
 	{
+		Interlocked.Increment(ref _generation);
 		lock (_lock)
 		{
 			_undo.Add(c);
@@ -611,9 +620,10 @@ public sealed class EditSession
 		}
 		lock (list)
 		{
+			// (Indices from elsewhere, a script's, are checked: a bad one changed the ground with no undo step.)
 			foreach (int i in remove.Distinct())
 			{
-				if (!list[i].Gone)
+				if (i >= 0 && i < list.Count && !list[i].Gone)
 				{
 					changes.Add((i, false, true));
 				}
@@ -731,6 +741,12 @@ public sealed class EditSession
 	public async Task<WorldSession.Outcome> ApplyLive()
 	{
 		var owner = Scene.Owner!;
+		// The steps there are now: a step made while the game answers may not be in what was sent.
+		List<Change> before;
+		lock (_lock)
+		{
+			before = _undo.ToList();
+		}
 		var o = await owner.ApplyLive();
 		lock (_lock)
 		{
@@ -743,7 +759,7 @@ public sealed class EditSession
 				Ground.TakeEdits(Edits);
 				if (o.Done)
 				{
-					foreach (var c in _undo)
+					foreach (var c in before)
 					{
 						c.Applied = true;
 					}
@@ -871,6 +887,7 @@ public sealed class EditSession
 	// The world was read again (saved, reloaded): the ground and the objects from it, no history.
 	private void Reread(WorldSave fresh)
 	{
+		Interlocked.Increment(ref _generation);
 		Scene.World = fresh;
 		// The ground discs may have changed: the generated ground with them, everywhere in the area.
 		if (Scene.Owner is { } owner)

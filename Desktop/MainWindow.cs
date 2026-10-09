@@ -102,6 +102,8 @@ public sealed partial class MainWindow : Window
 		return string.Join(", ", new[] { z > 0 ? $"{z} zone(s) of ground" : "", d > 0 ? $"{d} deleted" : "", a > 0 ? $"{a} added" : "", r > 0 ? $"{r} zone reset" : "" }.Where(x => x != ""));
 	}
 
+	internal bool IsBusy => _busy.IsVisible;
+
 	private void Busy(string? text)
 	{
 		_busyText.Text = text ?? "";
@@ -278,9 +280,20 @@ public sealed partial class MainWindow : Window
 		if (w.IsLive)
 		{
 			Busy("Applying to the running game…");
-			var o = await w.ApplyLive();
-			Busy(null);
-			await Tell(o.Message);
+			string message;
+			try
+			{
+				message = (await w.ApplyLive()).Message;
+			}
+			catch (Exception ex)
+			{
+				message = "Could not apply live: " + ex.Message;
+			}
+			finally
+			{
+				Busy(null);
+			}
+			await Tell(message);
 		}
 		else
 		{
@@ -293,12 +306,23 @@ public sealed partial class MainWindow : Window
 				return;
 			}
 			Busy("Saving…");
-			var o = await Task.Run(w.Save);
-			Busy(null);
-			string msg = o.Message;
-			if (o.Saved is { } r)
+			string msg;
+			try
 			{
-				if (r.Skipped.Count > 0) msg += "\n\nNot saved:\n• " + string.Join("\n• ", r.Skipped);
+				var o = await Task.Run(w.Save);
+				msg = o.Message;
+				if (o.Saved is { } r)
+				{
+					if (r.Skipped.Count > 0) msg += "\n\nNot saved:\n• " + string.Join("\n• ", r.Skipped);
+				}
+			}
+			catch (Exception ex)
+			{
+				msg = "Could not save: " + ex.Message;
+			}
+			finally
+			{
+				Busy(null);
 			}
 			await Tell(msg);
 		}
@@ -312,8 +336,18 @@ public sealed partial class MainWindow : Window
 			return;
 		}
 		Busy("Reading the world again…");
-		await Task.Run(w.Discard);
-		Busy(null);
+		try
+		{
+			await Task.Run(w.Discard);
+		}
+		catch (Exception ex)
+		{
+			_message.Text = "Could not read the world again: " + ex.Message;
+		}
+		finally
+		{
+			Busy(null);
+		}
 		_map?.Show(w);
 	}
 
@@ -350,6 +384,21 @@ public sealed partial class MainWindow : Window
 		Tunnel.Close();
 		ShowStart();
 	}
+	// An error no part of the window caught (App): said in the status bar, so the editor stays open
+	// with the changes not saved yet.
+	internal void ShowError(Exception ex)
+	{
+		Busy(null);
+		string text = $"Something went wrong: {ex.Message} Your changes are still here. Details in the log (Open log, on the start page).";
+		_message.Text = text;
+		// Away from the 3D editor (its status bar not shown): once in a dialog, not one per error.
+		if (_pages.Content != _editorPage && !_errorShown)
+		{
+			_errorShown = true;
+			_ = Tell(text).ContinueWith(_ => _errorShown = false, TaskScheduler.FromCurrentSynchronizationContext());
+		}
+	}
+	private bool _errorShown;
 	internal InspectorPanel Inspector { get; }
 	internal BlueprintsPanel Blueprints { get; }
 	private Control _viewPanel = null!;
@@ -918,6 +967,7 @@ public sealed partial class MainWindow : Window
 		_stopScript = cancel.Cancel;
 		string code = panel.CodeBox.Text ?? "";
 		var snap = ScriptHost.Take(s, NameOfPrefab);
+		int generation = s.Generation;
 		var watch = System.Diagnostics.Stopwatch.StartNew();
 		try
 		{
@@ -933,6 +983,14 @@ public sealed partial class MainWindow : Window
 			if (_session != s)
 			{
 				panel.Output.Text = ch.Output + "Another area was opened while the script ran: nothing changed.";
+				return;
+			}
+			// Its heights and object numbers are those of the area when it started: changed since (a
+			// stroke, an undo, a save that read the world again), they would undo that or hit other objects.
+			if (s.Generation != generation)
+			{
+				panel.Output.Text = ch.Output + "The area changed while the script ran: nothing changed. Run it again.";
+				_message.Text = "The area changed while the script ran: nothing changed. Run it again.";
 				return;
 			}
 			string what;
@@ -1334,8 +1392,9 @@ public sealed partial class MainWindow : Window
 
 	private void OnKey(object? sender, Avalonia.Input.KeyEventArgs e)
 	{
-		// Typing in a box: its keys are its own.
-		if (e.Source is TextBox)
+		// Typing in a box: its keys are its own. The keys below are the 3D editor's: on the start page or
+		// the map they would act on the area left open behind it (an undo pushed live, unseen).
+		if (e.Source is TextBox || _pages.Content != _editorPage)
 		{
 			return;
 		}
@@ -1994,7 +2053,8 @@ public sealed partial class MainWindow : Window
 			_ => "",
 		};
 		_view.Status += t => { Options.Say(t); Dispatcher.UIThread.Post(() => _info.Text = t + "\n" + _info.Text); };
-		Closing += (_, _) => { _perf.Flush(); GameLook.StopExport(); Prefs.Flush(); };
+		// Once really closed (Closing also comes when "Keep editing" keeps the window open).
+		Closed += (_, _) => { _perf.Flush(); GameLook.StopExport(); Prefs.Flush(); };
 		RememberPrefs();
 		_info.Text = "Loading the world…";
 		Opened += async (_, _) =>

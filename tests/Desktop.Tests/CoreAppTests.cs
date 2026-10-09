@@ -70,6 +70,49 @@ public class AppTests : IDisposable
 		Assert.Single(ServerConfig.Load());
 	}
 
+	// A saved password keeps spaces at its ends (it was trimmed, and the login then failed).
+	[Fact]
+	public void ASavedPasswordKeepsItsSpaces()
+	{
+		ServerConfig.Remember(new ServerConfig.Server { Name = "S", Host = "my.server.com", User = "valheim", Password = " pass word  " });
+		Assert.Equal(" pass word  ", Assert.Single(ServerConfig.Load()).Password);
+		Assert.False(File.Exists(ServerConfig.FilePath + ".tmp"));
+	}
+
+	// Settings that cannot be read are kept aside before the defaults are written over them, and a
+	// settings file that cannot be written is left alone without an error.
+	[Fact]
+	public void BrokenSettingsAreKeptAsideAndAFailedWriteIsQuiet()
+	{
+		string path = Path.Combine(_data, "settings.json");
+		string? old = AppSettings.PathOverride;
+		AppSettings.PathOverride = path;
+		try
+		{
+			Check(path);
+		}
+		finally
+		{
+			AppSettings.PathOverride = old;
+		}
+	}
+
+	private static void Check(string path)
+	{
+		File.WriteAllText(path, "{\"ValheimPath\": \"/games/Valh");
+		var s = AppSettings.Load();
+		Assert.Null(s.ValheimPath);
+		Assert.Equal("{\"ValheimPath\": \"/games/Valh", File.ReadAllText(path + ".bad"));
+		s.ValheimPath = "/games/Valheim";
+		s.Save();
+		Assert.Equal("/games/Valheim", AppSettings.Load().ValheimPath);
+		Assert.False(File.Exists(path + ".tmp"));
+		File.Delete(path);
+		Directory.CreateDirectory(path);
+		s.Save();
+		Assert.True(Directory.Exists(path));
+	}
+
 	[Fact]
 	public void RememberingTheSameServerUpdatesIt()
 	{

@@ -53,5 +53,7 @@ public class PickingTests
 		float t = Picking.HitGround(s, new Vector3(0, 25, 0), new Vector3(0, -1, 0))!.Value;
 		Assert.Equal(20f, t, 2);
 		Assert.Null(Picking.HitGround(s, new Vector3(0, 25, 0), new Vector3(0, 1, 0)));
+		// A ray that leaves the area above the ground hits nothing (it hit 1000 m down past the edge).
+		Assert.Null(Picking.HitGround(s, new Vector3(0, 25, 0), Vector3.Normalize(new Vector3(1, -0.3f, 0))));
 	}
 }

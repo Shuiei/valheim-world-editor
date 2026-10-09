@@ -204,6 +204,27 @@ public class PanelBlueprintsTests
 		Assert.Contains("no pieces found in it", r.Said);
 	}
 
+	// A blueprints folder that cannot be written (here a file where the folder should be) is said so;
+	// it closed the editor, losing what was not saved (an import is also a drop on the 3D view).
+	[AvaloniaFact]
+	public void AFolderThatCannotBeWrittenIsSaidSo()
+	{
+		using var r = new Run();
+		r.Keep("Gate", "woodwall");
+		string file = r.B.Export("hs:Gate.blueprint", "vbuild")!;
+		Directory.Delete(r.Homestead, recursive: true);
+		File.WriteAllText(r.Homestead, "not a folder");
+		Assert.Null(r.B.Import(file));
+		Assert.StartsWith("Could not write in the blueprints folder: ", r.Said);
+		string export = Path.GetDirectoryName(file)!;
+		Directory.Delete(export, recursive: true);
+		File.WriteAllText(export, "not a folder");
+		File.Delete(r.Homestead);
+		r.Keep("Gate", "woodwall");
+		Assert.Null(r.B.Export("hs:Gate.blueprint", "vbuild"));
+		Assert.StartsWith("Could not write ", r.Said);
+	}
+
 	[AvaloniaFact]
 	public async Task SavingAsksForANameAndBeforeReplacingOne()
 	{

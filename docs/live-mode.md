@@ -63,7 +63,10 @@ is not 5182 and no folder is given), and **I made my own tunnel** (address + tok
 with `ssh -L` or PuTTY.
 
 A server is saved only after a successful connection. **edit** next to a saved server fills the
-form with it, to change its folder, port or name.
+form with it, to change its folder, port or name. A saved server with a key file has a **Key
+passphrase** box next to it: the passphrase is never saved, so type it there when the key has one.
+Of the usual keys in `~/.ssh`, one the editor cannot use (a passphrase, a format it does not read) is
+skipped and the others and the password are still tried.
 
 ### Saved servers
 
@@ -88,7 +91,9 @@ HostKey = SHA256:…
   the file can only be read by you; prefer an SSH key where you can.
 - `HostKey` is the server's identity, remembered on the first connection (trust on first use). If
   it ever changes the editor refuses to connect, because someone could be pretending to be your
-  server. If you reinstalled the server, empty that line to accept the new identity.
+  server; this holds for every account on that address and port, not only the one saved. If you
+  reinstalled the server, empty that line (in each saved server with that address) to accept the new
+  identity.
 - **forget** next to a saved server removes it.
 
 ### Plugin settings (`Tie.WorldEditorBridge.cfg`)

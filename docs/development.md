@@ -44,7 +44,7 @@ The app reads one command per line on its input and answers each with one line, 
 | `camera <x> <z> <yaw°> <pitch°> <distance>` | The 3D camera on world x, z. |
 | `mouse <down\|move\|up> <x> <z> [button] [mods]`, `wheel`, `key <name> [mods]` | Real pointer and key events at world positions. |
 | `click <text>` / `choose <text>` | The visible button or switch with that label / the entry so named in a visible list (also in dialogs). |
-| `stroke`, `mapview`, `search`, `zones`, `look` | A brush stroke, the map's place, its search and zone filter, the View look switches. |
+| `stroke`, `mapview`, `search`, `hit`, `zones`, `look` | A brush stroke, the map's place, its search (and a result picked) and zone filter, the View look switches. |
 | `set <label>\|<value>`, `type <hint>\|<text>`, `panel`, `message [text]` | A slider, box or list beside a label; a text box by its placeholder; the right-hand panel shown; the status bar's message (none: cleared). |
 | `picture <file.png>` / `shot <file.png>` | The view shown (3D or map) once it is drawn / the whole window, panels and view, as Avalonia's compositor draws it (never a capture of the screen). |
 | `bench <seconds>` / `state` / `quit` | Frame rates while the camera turns / the state / quit without asking. |
@@ -155,7 +155,9 @@ python3 tools/asset-export/export_all.py --valheim ~/.local/share/Steam/steamapp
 What it does:
 
 1. Reads every asset bundle once and records where the terrain material, the terrain texture
-   arrays, the map material and each prefab's root object are (cached in `--work/scan.json`).
+   arrays, the map material and each prefab's root object are (cached in `--work/scan.json`, with
+   each bundle's name, size and time: when they change, a game update, it reads them again and the
+   models are all made again).
 2. **Terrain:** the textures of the `Heightmap` material, the diffuse and normal texture arrays
    stacked into vertical strips, and the OpenGL core build of the `Custom/Heightmap` shader, one
    deferred-pass fragment variant converted to GLSL ES 3.0 (`GameLookGl` adds its own `main()`). If
@@ -163,7 +165,8 @@ What it does:
    file.
 3. **Map:** the textures of the `minimap` material.
 4. **Models:** `export_pieces.py` (meshes, textures, materials; incremental, so an interrupted run
-   continues), then `fix_normals.py` (Unity's DXT5nm normal maps to plain RGB) and `fix_alpha.py`
+   continues: each file is written to a temporary file then renamed, and a piece counts as done once
+   `materials.json` and `meshinfo.json` hold what it uses, saved every 25 pieces), then `fix_normals.py` (Unity's DXT5nm normal maps to plain RGB) and `fix_alpha.py`
    (bleeds the colour of cut-out textures into their transparent pixels), then `objects.json`.
 
 A full run takes a few minutes and writes about 150 MB.
@@ -205,7 +208,10 @@ servers, the SSH tunnel) is tested there too.
 
 - **Visual tests** (`[Trait("Category", "Visual")]`, in `VisualTests.cs`) start the real app with
   `--driver` and check what it draws with OpenGL: one app per group of tests (`EditorProcess`),
-  each test opening a fresh copy of the test world. They need a display and skip without one.
+  each test opening a fresh copy of the test world. They need a display and skip without one. One
+  group starts the app with `VWE_GPU_BUDGET=1`: the models and textures on the graphics card past
+  that many bytes (1 GiB by default) are let go when another area opens, so every area reads its
+  models again.
 - **The user's files are never touched.** A module initializer (`TestApp` in `InputTests.cs`) points
   the settings, servers, Place memory, stamps, preferences, saved selections and the data folder at
   temporary files before any test runs, and turns off the search of the computer's own Valheim and

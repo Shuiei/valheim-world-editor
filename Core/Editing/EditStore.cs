@@ -61,7 +61,8 @@ public sealed class EditStore
 	{
 		foreach (TerrainZone z in world.TerrainZones)
 		{
-			if (z.ModifiedHeight.Length != Cells || z.ModifiedPaint.Length != Cells)
+			// Two terrain objects in one zone: the first is shown (the writer saves the zone into both).
+			if (z.ModifiedHeight.Length != Cells || z.ModifiedPaint.Length != Cells || _zones.ContainsKey((z.ZoneX, z.ZoneZ)))
 			{
 				continue;
 			}
@@ -286,6 +287,29 @@ public sealed class EditStore
 					e.Changed = false;
 					e.ExistsInWorld = true;
 					_baseline[key] = e.Clone();
+				}
+			}
+			Version++;
+		}
+	}
+
+	// Live: the zones as they were sent to the game (copies taken when sending). The game has those;
+	// a zone changed again while they were on the way stays changed, to be sent next.
+	public void MarkApplied(IReadOnlyList<ZoneEdit> sent)
+	{
+		lock (_lock)
+		{
+			foreach (ZoneEdit s in sent)
+			{
+				var key = (s.ZoneX, s.ZoneZ);
+				var applied = s.Clone();
+				applied.Changed = false;
+				applied.ExistsInWorld = true;
+				_baseline[key] = applied;
+				if (_zones.TryGetValue(key, out ZoneEdit? e))
+				{
+					e.ExistsInWorld = true;
+					e.Changed = !e.SameGround(s);
 				}
 			}
 			Version++;

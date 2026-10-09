@@ -7,6 +7,33 @@ namespace TerrainEditor.App;
 // folders, and a free local port.
 public static class Places
 {
+	// The folders in a folder; none when it cannot be read (a drive's "System Volume Information", a
+	// root-owned lost+found, another user's folder).
+	public static string[] Subfolders(string dir)
+	{
+		try
+		{
+			return Directory.GetDirectories(dir);
+		}
+		catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
+		{
+			return Array.Empty<string>();
+		}
+	}
+
+	// A folder holding a world (_main.<n>.chunks); false when it cannot be read.
+	public static bool HasWorld(string dir)
+	{
+		try
+		{
+			return Directory.GetFiles(dir, "_main.*.chunks").Length > 0;
+		}
+		catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
+		{
+			return false;
+		}
+	}
+
 	public static IEnumerable<string> WorldRoots()
 	{
 		string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);

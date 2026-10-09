@@ -95,4 +95,9 @@ public static class StableHash
 			return num + num2 * 1566083941;
 		}
 	}
+
+	// The prefab an object's name in a copy or blueprint stands for: a kind with no known name (from a
+	// mod, or not in the catalogue) is written as its hash, a number, which stands for itself.
+	public static int OfName(string name) =>
+		int.TryParse(name, System.Globalization.NumberStyles.AllowLeadingSign, System.Globalization.CultureInfo.InvariantCulture, out int hash) ? hash : Of(name);
 }

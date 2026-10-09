@@ -528,10 +528,17 @@ public sealed class AreaPanel
 		int x1 = s.X0 + s.Size - 1, z1 = s.Z0 + s.Size - 1;
 		byte[] png = Heightmaps.Encode(s.W, s.H, s.Heights, $"{world.Name} zones {s.X0},{s.Z0} to {x1},{z1}", out float min, out float max);
 		string dir = folder ?? HeightmapFolder ?? Path.Combine(AppSettings.DataDir, "heightmaps");
-		Directory.CreateDirectory(dir);
 		string safe = string.Concat(world.Name.Select(c => char.IsLetterOrDigit(c) || c is '-' or '_' ? c : '_'));
 		string path = Path.Combine(dir, $"{safe}_{s.X0}_{s.Z0}_{x1}_{z1}.png");
-		File.WriteAllBytes(path, png);
+		try
+		{
+			Directory.CreateDirectory(dir);
+			File.WriteAllBytes(path, png);
+		}
+		catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+		{
+			return $"Could not write the heightmap to {path}: {ex.Message}";
+		}
 		return $"Heightmap written to {path} ({s.W} × {s.H}, {min:0.0} to {max:0.0} m).";
 	}
 
@@ -648,10 +655,11 @@ public sealed class AreaPanel
 		BackupBox.SelectedIndex = keep != null ? _backupPaths.IndexOf(keep) : -1;
 	}
 
-	// A backup's world (read once; the last one is kept).
+	// A backup's world (read once; the last one is kept, and only ever used for a world of its seed: a
+	// folder chosen by hand stays in the list when another world is opened).
 	internal async Task<(WorldSave World, EditStore Edits)?> OpenBackup(string path, WorldSave current)
 	{
-		if (_backup is { } b && b.Path == path)
+		if (_backup is { } b && b.Path == path && b.World.Seed == current.Seed && b.World.SeedName == current.SeedName)
 		{
 			return (b.World, b.Edits);
 		}
