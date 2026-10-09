@@ -1754,6 +1754,8 @@ public sealed partial class MainWindow : Window
 		MeasurePanel = new MeasurePanel(_view);
 		DungeonPanel = new DungeonPanel(_view);
 		DungeonPanel.BuildAsked += () => BuildInDungeon(true);
+		DungeonPanel.Gen.PlaceAsked += PlaceGenerated;
+		DungeonPanel.Gen.WorkshopAsked += s => _ = OpenGeneratedInWorkshop(s);
 		_view.Dungeon.Message += t => _message.Text = t;
 		PathPanel = new PathPanel(_view, Tools.Brush);
 		PathPanel.ApplyAsked += ApplyPath;

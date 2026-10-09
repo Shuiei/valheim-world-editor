@@ -11,6 +11,8 @@ namespace TerrainEditor.Desktop;
 public sealed class DungeonPanel
 {
 	public Control Card { get; }
+	internal DungeonGenPanel Gen { get; } = new();
+	private readonly Expander _generate;
 	private readonly GlView _view;
 	private DungeonTool Tool => _view.Dungeon;
 	internal ComboBox DungeonBox { get; } = new() { HorizontalAlignment = HorizontalAlignment.Stretch, FontSize = 12 };
@@ -89,6 +91,12 @@ public sealed class DungeonPanel
 				CloseEnds, Info,
 			},
 		};
+		_generate = new Expander
+		{
+			Header = new TextBlock { Text = "Generate a dungeon", FontSize = 12, FontWeight = FontWeight.SemiBold },
+			Content = Gen.View, HorizontalAlignment = HorizontalAlignment.Stretch, IsExpanded = true,
+		};
+		_generate.Tip("dungeon.gen");
 		Card = new Border
 		{
 			Background = Ui.Panel,
@@ -98,16 +106,22 @@ public sealed class DungeonPanel
 			CornerRadius = new CornerRadius(10),
 			Padding = Ui.Pad,
 			VerticalAlignment = VerticalAlignment.Top,
-			Child = new StackPanel
+			Child = new ScrollViewer
 			{
-				Width = 280,
-				Spacing = 6,
-				Children =
+				MaxHeight = 820,
+				HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled,
+				Content = new StackPanel
 				{
-					new TextBlock { Text = "Dungeon", FontSize = 14, FontWeight = FontWeight.SemiBold },
-					new TextBlock { FontSize = 12, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap,
-						Text = "Pick a room below, then click a green opening to add it there. Click a room to select it, an orange or blue square (where rooms meet) to put a door there or take it away." },
-					_empty, _body,
+					Width = 280,
+					Spacing = 6,
+					Children =
+					{
+						new TextBlock { Text = "Dungeon", FontSize = 14, FontWeight = FontWeight.SemiBold },
+						_generate,
+						new TextBlock { FontSize = 12, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap,
+							Text = "Editing this area's dungeons: pick a room below, then click a green opening to add it there. Click a room to select it, an orange or blue square (where rooms meet) to put a door there or take it away." },
+						_empty, _body,
+					},
 				},
 			},
 		};
@@ -130,6 +144,7 @@ public sealed class DungeonPanel
 		_filling = false;
 		_empty.IsVisible = _shown.Count == 0;
 		_body.IsVisible = _shown.Count > 0;
+		_generate.IsExpanded = _shown.Count == 0;
 		FillRooms();
 		Refresh();
 	}

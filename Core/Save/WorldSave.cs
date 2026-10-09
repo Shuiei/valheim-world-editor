@@ -148,7 +148,8 @@ public sealed class WorldSave
 		{
 			return ZdoBuilder.Build(readSource(model), model, model.File.WorldVersion, n.Position, n.Rotation, n.Scale, n.Fresh);
 		}
-		return TerrainEditor.Terrain.PrefabCatalog.Get(n.Prefab) is { } info ? ZdoBuilder.Blank(n.Prefab, info.Flags, n.Position, n.Rotation, n.Scale) : null;
+		// Also what is not offered for placing (creatures: generated dungeons put some down).
+		return TerrainEditor.Terrain.PrefabCatalog.Details(n.Prefab) is { } info ? ZdoBuilder.Blank(n.Prefab, info.Flags, n.Position, n.Rotation, n.Scale) : null;
 	}
 
 	// The saved bytes of an object of the save (id >= 0): from its chunk file, or from the live snapshot.

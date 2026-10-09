@@ -27,6 +27,8 @@ public sealed class GlView : OpenGlControlBase
 	private WorldScene? _scene;
 	private ModelStore? _models;
 
+	internal ModelStore? Models => _models;
+
 	// ---- Camera: orbit around a target point (view space), like the web editor's.
 	private readonly object _camLock = new();
 	private Vector3 _target;
