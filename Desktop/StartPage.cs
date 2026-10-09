@@ -18,6 +18,8 @@ public sealed class StartPage
 	private readonly AppSettings _settings;
 	private string _mode = "";
 	public event Action<Func<Task<WorldSession>>, string>? OpenRequested;
+	// The Workshop: a blueprint file to open in it, or null for a blank plot.
+	public event Action<string?>? WorkshopRequested;
 	// Asks the window for a folder or a file (Browse…).
 	internal Func<string, Task<string?>> PickFolder { get; set; } = _ => Task.FromResult<string?>(null);
 	internal Func<string, Task<string?>> PickFile { get; set; } = _ => Task.FromResult<string?>(null);
@@ -37,12 +39,18 @@ public sealed class StartPage
 	internal StackPanel ServerPanel { get; } = new() { Spacing = 8 };
 	internal Expander ServerForm { get; } = new() { Header = new TextBlock { Text = "Connect to a server", FontWeight = FontWeight.SemiBold }, HorizontalAlignment = HorizontalAlignment.Stretch };
 	internal StackPanel OfflinePanel { get; } = new() { Spacing = 8 };
+	internal StackPanel WorkshopPanel { get; } = new() { Spacing = 8 };
+	internal Button NewBuildingButton { get; } = new Button { Content = "Open the Workshop", FontSize = 13 }.Classed("primary");
+	internal TextBlock WorkshopHomestead { get; } = new() { TextWrapping = TextWrapping.Wrap, FontSize = 12 };
 	internal WrapPanel WorldCards { get; } = new() { ItemSpacing = 10, LineSpacing = 10 };
 	internal TextBox PathBox { get; } = new() { PlaceholderText = "Folder of the world (with _main.<n>.chunks files)", FontSize = 13 };
 	internal TextBlock PathError { get; } = Err();
 	private readonly TextBlock _lastError = new() { Foreground = new SolidColorBrush(Color.FromRgb(224, 96, 75)), TextWrapping = TextWrapping.Wrap, IsVisible = false };
 	private readonly DispatcherTimer _gameTimer = new() { Interval = TimeSpan.FromSeconds(2.5) };
 	private readonly ContentControl _gameState = new();
+	// Homestead (the building library's in-game side): found in the game's BepInEx or not.
+	internal TextBlock HomesteadText { get; } = new() { TextWrapping = TextWrapping.Wrap, FontSize = 12 };
+	internal Button GetHomesteadButton { get; } = new() { Content = "Get Homestead", FontSize = 11, Padding = new Thickness(6, 1), IsVisible = false };
 	private readonly TextBlock _gameError = Err();
 
 	private static readonly IBrush Panel = Ui.Panel, Line = Ui.Line, Accent = Ui.Accent, Muted = Ui.Muted;
@@ -75,12 +83,13 @@ public sealed class StartPage
 		DocsLink.Tip("start.docs");
 		settingsButton.Click += (_, _) => SettingsRequested?.Invoke();
 		DocsLink.Click += async (_, _) => await OpenUrl(new Uri(DocsUrl));
-		var modes = new UniformGrid { Columns = 3 };
+		var modes = new UniformGrid { Columns = 4 };
 		foreach (var (key, title, tag, text, icon) in new[]
 		{
 			("game", "My game", "live", "Edit the world you are playing in, single player or the one you host. You see the changes in game right away.", "game"),
 			("server", "A dedicated server", "live", "Edit your server's world while people play. The editor connects to the server itself.", "server"),
 			("offline", "A saved world", "offline", "Edit world files on this computer with the game closed, then start the game again.", "folder"),
+			("workshop", "The Workshop", "build", "Build a building on a blank plot and keep it as a blueprint, to build in game with Homestead.", "shape"),
 		})
 		{
 			var b = new Button
@@ -114,6 +123,9 @@ public sealed class StartPage
 		// My game.
 		GamePanel.Children.Add(Card(_gameState));
 		GamePanel.Children.Add(_gameError);
+		GetHomesteadButton.Tip("blueprints.getHomestead");
+		GetHomesteadButton.Click += async (_, _) => await OpenUrl(new Uri(Homestead.PageUrl));
+		GamePanel.Children.Add(new StackPanel { Spacing = 4, Margin = new Thickness(2, 6, 0, 0), Children = { HomesteadText, GetHomesteadButton } });
 		_gameTimer.Tick += async (_, _) => await PollGame();
 
 		// A dedicated server.
@@ -168,6 +180,7 @@ public sealed class StartPage
 					GamePanel,
 					ServerPanel,
 					OfflinePanel,
+					WorkshopPanel,
 					new StackPanel
 					{
 						Orientation = Orientation.Horizontal,
@@ -178,7 +191,21 @@ public sealed class StartPage
 				},
 			},
 		};
-		SetMode(settings.LastMode is "game" or "server" or "offline" ? settings.LastMode : "game");
+		NewBuildingButton.Tip("start.workshop");
+		NewBuildingButton.Click += (_, _) => WorkshopRequested?.Invoke(null);
+		WorkshopPanel.Children.Add(Card(new StackPanel
+		{
+			Spacing = 8,
+			Children =
+			{
+				new TextBlock { Text = "Build on a blank plot", FontSize = 15, FontWeight = FontWeight.SemiBold },
+				Hint("Place building pieces as with the game's hammer, move and turn them, see what would hold in game, then save it as a blueprint. Only the building is kept. "
+					+ "Your blueprints are in the Workshop's Library: open them, add them, or drag them onto the plot."),
+				NewBuildingButton,
+			},
+		}));
+		WorkshopPanel.Children.Add(WorkshopHomestead);
+		SetMode(settings.LastMode is "game" or "server" or "offline" or "workshop" ? settings.LastMode : "game");
 	}
 
 	private static Control Col(Control c, int col)
@@ -200,6 +227,11 @@ public sealed class StartPage
 		GamePanel.IsVisible = mode == "game";
 		ServerPanel.IsVisible = mode == "server";
 		OfflinePanel.IsVisible = mode == "offline";
+		WorkshopPanel.IsVisible = mode == "workshop";
+		if (mode == "workshop")
+		{
+			FillWorkshop();
+		}
 		_gameTimer.Stop();
 		if (mode == "game")
 		{
@@ -234,6 +266,7 @@ public sealed class StartPage
 				return (found, b, p);
 			});
 			running = await LocalGame.FindRunning(bridges);
+			ShowHomestead(await Task.Run(() => Homestead.Find(_settings)));
 		}
 		catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or HttpRequestException)
 		{
@@ -360,6 +393,27 @@ public sealed class StartPage
 	internal TextBlock ServerError => _serverError;
 	internal TextBlock UrlError => _urlError;
 	internal ContentControl GameState => _gameState;
+
+	// The Workshop's card: whether Homestead is installed (its blueprints are the Workshop's Library).
+	internal void FillWorkshop() => ShowHomestead(Homestead.Find(_settings));
+
+	// Whether Homestead is in the game: the editor's blueprints are Homestead's, built in game with it.
+	internal void ShowHomestead(Homestead.Status hs)
+	{
+		if (hs.Installed)
+		{
+			HomesteadText.Text = $"Homestead {hs.Version} is installed ({string.Join(", ", hs.Where.Distinct())}): the editor's blueprints show in its hammer tab, to build in game.";
+			HomesteadText.Foreground = Muted;
+		}
+		else
+		{
+			HomesteadText.Text = "Homestead is not installed in your Valheim's BepInEx (nor in a mod manager profile). The editor's blueprints are Homestead's: install it to build them in game.";
+			HomesteadText.Foreground = new SolidColorBrush(Color.FromRgb(240, 180, 90));
+		}
+		GetHomesteadButton.IsVisible = !hs.Installed;
+		WorkshopHomestead.Text = HomesteadText.Text;
+		WorkshopHomestead.Foreground = HomesteadText.Foreground;
+	}
 	internal TextBox SName { get; } = new() { PlaceholderText = "how it shows in your list, e.g. Friends server (optional)" };
 	internal TextBox SHost { get; } = new() { PlaceholderText = "my.server.com or 203.0.113.10" };
 	internal NumericUpDown SPort { get; } = new() { Value = 22, Minimum = 1, Maximum = 65535, FormatString = "0" };

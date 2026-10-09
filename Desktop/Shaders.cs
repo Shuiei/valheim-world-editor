@@ -31,32 +31,45 @@ public static class Shaders
 		layout(location = 2) in vec2 aUv;
 		layout(location = 3) in mat4 aModel;
 		uniform mat4 uViewProj;
-		out vec3 vNor; out vec2 vUv; out vec3 vPos;
+		out vec3 vNor; out vec2 vUv; out vec3 vPos; out vec3 vTint;
 		void main() {
-			vec4 w = aModel * vec4(aPos, 1.0);
-			vNor = mat3(aModel) * aNor; vUv = aUv; vPos = w.xyz;
+			// The support check's tint rides in the placement's unused corner (zero: none).
+			mat4 m = aModel;
+			vTint = vec3(m[0][3], m[1][3], m[2][3]);
+			m[0][3] = 0.0; m[1][3] = 0.0; m[2][3] = 0.0;
+			vec4 w = m * vec4(aPos, 1.0);
+			vNor = mat3(m) * aNor; vUv = aUv; vPos = w.xyz;
 			gl_Position = uViewProj * w;
 		}
 		""";
 
 	// Lit like the game look's day (sun, flat ambient, fog), in view space (the sun's z mirrored).
 	public const string ObjectFs = GameLookGl.Common + """
-		in vec3 vNor; in vec2 vUv; in vec3 vPos;
+		in vec3 vNor; in vec2 vUv; in vec3 vPos; in vec3 vTint;
 		uniform sampler2D uMap; uniform int uHasMap;
 		uniform vec4 uColor; uniform float uCutoff; uniform vec4 uUv;
 		// Ghosts (the Place tool's preview): see-through and tinted.
 		uniform float uGhost;
 		// See-through buildings (View): drawn faint.
 		uniform float uSeeThrough;
+		// The Workshop's cut: x on (1), y the height above which nothing is drawn (not the ghosts).
+		uniform vec2 uCut;
 		uniform vec3 uSun, uSunColor, uAmbient, uEye;
 		out vec4 frag;
 		void main() {
+			if (uCut.x > 0.5 && uGhost < 0.5 && vPos.y > uCut.y) discard;
 			vec4 c = uColor;
 			if (uHasMap == 1) c *= texture(uMap, vUv * uUv.xy + uUv.zw);
 			if (c.a < uCutoff) discard;
 			vec3 n = normalize(vNor);
 			if (!gl_FrontFacing) n = -n;
+			// The support check, in the game's build-mode colours (WearNTear.Highlight): the colour tinted,
+			// glowing a little (the game glows with 0.4 of it, which hides the texture), so the piece
+			// still shows what it is.
+			bool tinted = vTint != vec3(0.0);
+			if (tinted) c.rgb *= mix(vec3(1.0), vTint, 0.75);
 			vec3 col = c.rgb * (uAmbient + uSunColor * max(dot(n, uSun), 0.0));
+			if (tinted) col += vTint * 0.12;
 			vec3 toCam = uEye - vPos;
 			vec3 v = normalize(toCam);
 			col += vec3(0.15, 0.25, 0.35) * uGhost;

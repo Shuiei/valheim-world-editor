@@ -158,7 +158,7 @@ public sealed class SelectPanel
 				Children =
 				{
 					new TextBlock { Text = "Select", FontSize = 14, FontWeight = FontWeight.SemiBold },
-					new TextBlock { Text = "Click objects (Shift adds), or drag on the ground around them. Drag a selected object to move the selection.", FontSize = 12, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap },
+					new TextBlock { Text = "Click objects (Ctrl adds; Shift + click takes the row from the last one), or drag on the ground around them. Drag a selected object to move the selection.", FontSize = 12, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap },
 					new WrapPanel { Children = { DeleteButton, BuildingButton, SameButton, InvertButton, InspectButton, ClaimButton }, ItemSpacing = 4, LineSpacing = 4 },
 					new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), ColumnSpacing = 6, Children = { new TextBlock { Text = "Replace with", FontSize = 12, VerticalAlignment = VerticalAlignment.Center }, Col(ReplaceBox, 1), Col(ReplacePickButton, 2) } },
 					ReplaceButton,

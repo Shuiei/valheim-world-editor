@@ -112,6 +112,15 @@ public static class Driver
 				Mouse(w, args[0], p, button, Mods(args.Skip(4)));
 				return State(w);
 			}
+			case "mouse3":
+			{
+				// A point in the air: world x, height above the ground, z (pieces, for the Workshop).
+				var sc = w.View.Scene ?? throw new InvalidOperationException("no area open");
+				var g = new System.Numerics.Vector2(F(1) - (sc.X0 * 64 - 32), F(3) - (sc.Z0 * 64 - 32));
+				var p = w.View.ScreenOfGrid(g, F(2)) ?? throw new InvalidOperationException("not in view");
+				Mouse(w, args[0], p, args.Length > 4 ? args[4] : "left", Mods(args.Skip(5)));
+				return State(w);
+			}
 			case "wheel":
 			{
 				var p = ScreenAt(w, F(0), F(1));

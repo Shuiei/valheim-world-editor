@@ -66,29 +66,31 @@ public class BlueprintTests
 			w.Edit(s);
 			var bp = w.Blueprints;
 			bp.Store = new BlueprintStore(dir);
-			bp.AskName = _ => Task.FromResult<string?>("Gate");
+			string hs = Path.Combine(dir, "homestead");
+			bp.FindHomestead = () => new Homestead.Status(true, "1.3.2", new() { "test" }, hs);
+			bp.AskDetails = (d, _) => Task.FromResult<Homestead.Details?>(d with { Name = "Gate" });
 			bp.Confirm = _ => Task.FromResult(true);
 			Assert.Null(await bp.Save());
 			Assert.StartsWith("Copy something first", w.MessageText.Text);
 			w.View.Paste.Clip = Sample();
 			Assert.Equal("Gate", await bp.Save());
-			var listed = Assert.Single(bp.Store.List());
-			Assert.Equal((3, 2, 2, true), (listed.W, listed.H, listed.Objects, listed.Ground));
-			Assert.StartsWith("data:image/png", listed.Thumb);
+			// A Homestead blueprint with its picture; the copy's ground is not kept.
+			var listed = Assert.Single(Homestead.List(hs));
+			Assert.Equal(("Gate", 2), (listed.Name, listed.Pieces));
+			Assert.NotNull(listed.Picture);
+			Assert.Contains("ground shape is not kept", w.MessageText.Text);
 			bp.Toggle(true);
 			Assert.Single(bp.List.Children);
 			// Pasting it: on the clipboard, in the Paste tool.
 			w.View.Paste.Clip = null;
-			bp.Paste(listed.Id);
+			bp.Paste("hs:Gate.blueprint");
 			Assert.Equal("Gate", w.View.Paste.Clip!.Name);
 			Assert.Equal(ToolMode.Paste, w.View.Mode);
-			// For PlanBuild, and back in.
-			string file = bp.Export(listed.Id, "blueprint")!;
+			// As a .vbuild, and back in.
+			string file = bp.Export("hs:Gate.blueprint", "vbuild")!;
 			Assert.Contains("woodwall", File.ReadAllText(file));
 			Assert.Equal("Gate (2)", bp.Import(file));
-			var imported = bp.Store.List().Single(b => b.Name == "Gate (2)");
-			Assert.Equal("PlanBuild", imported.Source);
-			Assert.Equal(2, imported.Objects);
+			Assert.Equal(2, Homestead.List(hs).Single(b => b.Name == "Gate (2)").Pieces);
 		}
 		finally
 		{

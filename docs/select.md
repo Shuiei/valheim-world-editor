@@ -14,10 +14,11 @@ each one from its location whenever the zone loads, so deleting one removes that
 | Action | What it does |
 |---|---|
 | **Click** an object | Selects it (and only it). The yellow box marks selected objects; a blue box shows what is under the cursor. |
-| **Shift + click** | Adds an object to the selection, or takes it out. |
+| **Ctrl + click** | Adds an object to the selection, or takes it out. Dragging any selected object then moves them all together. |
+| **Shift + click** | Selects the row from the last object clicked to this one: click wall 1, then Shift + click wall 3, and walls 1, 2 and 3 are selected (the objects on the line between them). |
 | **Drag on empty ground** | Draws a zone; everything shown inside it is selected when you let go. |
 | **Alt + drag** | Draws a zone even when you start over an object (useful in forests, where trees cover the ground). |
-| **Shift + drag** | Adds what is inside the zone to the selection. |
+| **Shift + drag** or **Ctrl + drag** | Adds what is inside the zone to the selection. |
 | **Click on empty ground** / `Esc` | Clears the selection. |
 | **Double-click a building piece** | Selects the whole building: every piece connected to it through pieces that touch (walls, floors, roofs, beams...). Pieces standing apart are not taken. |
 | **Whole building** | Adds every piece connected to the selected pieces. |

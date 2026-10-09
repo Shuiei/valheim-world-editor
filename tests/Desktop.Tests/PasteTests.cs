@@ -143,6 +143,60 @@ public class PasteTests
 		Assert.Equal(30, H(s, 100, 100), 3);
 	}
 
+	// Clear the site: a building pasted into a mound digs the ground in its way down to its lowest
+	// piece (a metre around too, never raising it) and takes away the tree there, not the one
+	// further off; off, the ground and the tree stay. One undo step.
+	[AvaloniaFact]
+	public void PastingABuildingClearsItsSite()
+	{
+		var w = new MainWindow(load: false) { Width = 1200, Height = 900 };
+		w.Show();
+		var s = EditTests.Flat(2, new WorldScene.Thing(1, Beech, new Vector3(60 - 32, 33, 60 - 32), Vector3.Zero, 1, false),
+			new WorldScene.Thing(2, Beech, new Vector3(80 - 32, 30, 80 - 32), Vector3.Zero, 1, false));
+		s.Shape(60, 60, Formula.Compile("h * smooth(1 - d / r)", new[] { "d", "r", "h" }), 6, 3, "mound");
+		w.View.Show(s.Scene, null);
+		w.Edit(s);
+		float before = H(s, 60, 60), foot = H(s, 66, 60);
+		// A wall 6 m west of the point clicked (its middle 1 m up: its bottom on the ground clicked).
+		var wall = new CopyData
+		{
+			W = 1, H = 1, Rel = new[] { float.NaN }, Wt = new[] { 0f }, Pnt = new[] { -1f, -1, -1, -1 },
+			Objects = new() { new CopyData.Obj(StableHash.Of("woodwall"), "woodwall", -6, 0, 1, new Vector3(0, 90, 0), 0, null) },
+			Poly = new() { new(-8, -2), new(2, -2), new(2, 2), new(-8, 2) }, Name = "Wall",
+		};
+		w.View.Paste.Clip = wall;
+		w.PasteAt(new Vector2(66, 60));
+		Assert.Equal(foot, H(s, 60, 60), 2);
+		Assert.True(before > foot + 2);
+		Assert.True(s.Scene.Things[0].Gone);
+		Assert.False(s.Scene.Things[1].Gone);
+		Assert.Contains("cleared from the site", w.MessageText.Text);
+		s.Undo();
+		Assert.Equal(before, H(s, 60, 60), 3);
+		Assert.False(s.Scene.Things[0].Gone);
+		// Off: the wall goes in, the mound and the tree stay.
+		w.PastePanel.ClearSiteBox.IsChecked = false;
+		w.PasteAt(new Vector2(66, 60));
+		Assert.Equal(before, H(s, 60, 60), 3);
+		Assert.False(s.Scene.Things[0].Gone);
+	}
+
+	// The paste's ghost (drawn before clicking) is where the paste puts each object, lowered or raised
+	// by Height (Ctrl + wheel in the window).
+	[Fact]
+	public void TheGhostIsWhereThePastePutsThem()
+	{
+		var s = Area();
+		var paste = new PasteTool { Clip = CopyData.FromArea(Box(32, 32, 48, 48), s.Ground, s.Scene, new[] { 0 }, _ => "Beech1"), Turn = 90, Offset = -2 };
+		float ox = s.Scene.X0 * 64f - 32f, oz = s.Scene.Z0 * 64f - 32f;
+		var ghost = Assert.Single(paste.Ghosts(new Vector2(90, 90), g => H(s, (int)MathF.Round(g.X), (int)MathF.Round(g.Y)), ox, oz));
+		var (_, _, add) = paste.Apply(s.Ground, new Vector2(90, 90));
+		var placed = Assert.Single(add).Item1;
+		Assert.Equal(placed.Position, ghost.Position);
+		Assert.Equal(placed.Rotation, ghost.Rotation);
+		Assert.Equal(Beech, ghost.Prefab);
+	}
+
 	// Copied with the Select tool on a slope: building pieces keep the building's shape (each piece's
 	// height from the others), trees and the like keep their height above the ground where they land.
 	[Fact]

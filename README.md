@@ -203,6 +203,7 @@ See [docs/development.md](docs/development.md).
 | [Path](docs/path.md) | Roads, ramps, rivers, caves and paint along a line |
 | [Mask](docs/masks.md) | Limiting any tool by biome, height, slope or paint |
 | [Area, copy and paste](docs/area.md) | Box and polygon selections, bulk actions, paste, zone reset |
+| [The Workshop](docs/workshop.md) | Building on a blank plot, the support check, Homestead blueprints: library, cost, pictures, tags, sharing |
 | [Place](docs/place.md) | Any kind of object: trees and rocks with a brush, walls and fences end to end along lines, circles and rectangles, grids and zones |
 | [Select](docs/select.md) | Selecting, moving with arrows, turning, dropping, copying, deleting |
 | [Measure and overlays](docs/measure.md) | Distances, slopes, slope colours, height lines |

@@ -74,4 +74,49 @@ public static class Dialogs
 		await dialog.ShowDialog(owner);
 		return result;
 	}
+
+	// A blueprint's name, description and tags (comma separated), with what it costs to build; null
+	// when cancelled.
+	public static async Task<TerrainEditor.App.Homestead.Details?> AskBlueprint(Window owner, TerrainEditor.App.Homestead.Details start, string cost)
+	{
+		TerrainEditor.App.Homestead.Details? result = null;
+		var dialog = new Window
+		{
+			Title = "Blueprint",
+			Width = 460,
+			SizeToContent = SizeToContent.Height,
+			CanResize = false,
+			WindowStartupLocation = WindowStartupLocation.CenterOwner,
+			Background = new SolidColorBrush(Color.FromRgb(24, 28, 34)),
+		};
+		var name = new TextBox { Text = start.Name }.Tip("dialog.blueprintName");
+		var description = new TextBox { Text = start.Description, AcceptsReturn = false, TextWrapping = TextWrapping.Wrap, MinHeight = 54, PlaceholderText = "What it is, how to build it…" }.Tip("dialog.blueprintDescription");
+		var tags = new TextBox { Text = string.Join(", ", start.Tags), PlaceholderText = "house, viking, stone" }.Tip("dialog.blueprintTags");
+		var ok = new Button { Content = "Save", IsDefault = true };
+		ToolTip.SetTip(ok, "Keep these details (Enter).");
+		ok.Click += (_, _) =>
+		{
+			result = new TerrainEditor.App.Homestead.Details(name.Text ?? "", (description.Text ?? "").Replace('\n', ' ').Replace('\r', ' '), TerrainEditor.App.Homestead.Details.ParseTags(tags.Text));
+			dialog.Close();
+		};
+		var cancel = new Button { Content = "Cancel", IsCancel = true }.Tip("dialog.cancel");
+		cancel.Click += (_, _) => dialog.Close();
+		TextBlock Label(string t) => new() { Text = t, FontSize = 12, Foreground = Brushes.Gray };
+		dialog.Content = new StackPanel
+		{
+			Margin = new Thickness(18),
+			Spacing = 6,
+			Children =
+			{
+				Label("Name"), name,
+				Label("Description"), description,
+				Label("Tags (separated by commas)"), tags,
+				new TextBlock { Text = "Cost in game: " + cost, FontSize = 12, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 6, 0, 0) },
+				new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 8, 0, 0), Children = { ok, cancel } },
+			},
+		};
+		dialog.Opened += (_, _) => name.Focus();
+		await dialog.ShowDialog(owner);
+		return result;
+	}
 }

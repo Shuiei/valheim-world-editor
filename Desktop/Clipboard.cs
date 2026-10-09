@@ -90,6 +90,11 @@ public sealed class PasteTool
 	public bool Mirror { get; set; }
 	public bool Ground { get; set; } = true;
 	public bool Objects { get; set; } = true;
+	// Clear the site: where the pasted building stands, the ground in its way is dug down to its lowest
+	// piece (a metre around it too), and the trees, rocks and the like there go (Site, for the caller).
+	public bool ClearSite { get; set; } = true;
+	// The grid points the last Apply cleared (its buildings' outlines and the metre around them).
+	public HashSet<(int X, int Z)> Site { get; } = new();
 	public float Offset { get; set; }
 	public int Copies { get; set; } = 1;
 	public enum Along { Width, Depth, Up }
@@ -174,6 +179,31 @@ public sealed class PasteTool
 		return (objs, outlines);
 	}
 
+	// The objects a paste at grid point at would place (as Apply places them, the ground as it is now):
+	// name, world position, rotation, scale; for drawing them as ghosts.
+	public List<(int Prefab, Vector3 Position, Vector3 Rotation, float Scale)> Ghosts(Vector2 at, Func<Vector2, float> heightAt, float ox, float oz)
+	{
+		var list = new List<(int, Vector3, Vector3, float)>();
+		if (Clip is not { } c || !Objects)
+		{
+			return list;
+		}
+		float baseH = heightAt(at) + Offset;
+		for (int k = 0; k < Count; k++)
+		{
+			var (ca, up) = CopyAt(at, k);
+			float anchor = (Direction == Along.Up ? baseH : heightAt(ca) + Offset) + up;
+			foreach (var o in c.Objects)
+			{
+				var p = ca + Xf(new Vector2(o.Dx, o.Dz));
+				float y = o.Follow ? heightAt(p) + o.Dy + up : anchor + o.Dy;
+				var r = o.Rotation;
+				list.Add((o.Prefab, new Vector3(ox + p.X, y, oz + p.Y), new Vector3(Mirror ? -r.X : r.X, (Mirror ? -r.Y : r.Y) - Turn, Mirror ? -r.Z : r.Z), o.Scale));
+			}
+		}
+		return list;
+	}
+
 	// Pastes at a grid point: the ground (shape and paint, with the copy's soft edge) and the objects,
 	// as new objects copied from the originals. Returns the ground points changed and their rectangle,
 	// and the objects to add (Piece: a player-built piece).
@@ -182,6 +212,7 @@ public sealed class PasteTool
 		var c = Clip!;
 		var touched = new List<int>();
 		var add = new List<(NewObject, bool)>();
+		Site.Clear();
 		int half = (int)MathF.Ceiling(MathF.Sqrt(c.W * c.W + c.H * c.H) / 2) + 1;
 		int bx0 = g.W, bx1 = 0, bz0 = g.H, bz1 = 0;
 		float baseH = g.HeightOf(Index(g, at)) + Offset;
@@ -250,7 +281,66 @@ public sealed class PasteTool
 				}
 			}
 		}
+		if (ClearSite && Objects)
+		{
+			var (dug, rect) = Clear(g, add, mask);
+			touched.AddRange(dug);
+			if (dug.Count > 0)
+			{
+				(bx0, bx1, bz0, bz1) = (Math.Min(bx0, rect.X0), Math.Max(bx1, rect.X1), Math.Min(bz0, rect.Z0), Math.Max(bz1, rect.Z1));
+			}
+		}
 		return (touched, (Math.Min(bx0, bx1) - 1, Math.Min(bz0, bz1) - 1, bx1 + 1, bz1 + 1), add);
+	}
+
+	// Each grid point under (or within a metre of) a pasted buildable piece: the ground there dug down
+	// to the lowest such piece's bottom (its colliders, as the game has them), never raised; past the
+	// game's ±8 m if need be (a building dug into a mountain).
+	private (List<int> Dug, (int X0, int Z0, int X1, int Z1) Rect) Clear(Ground g, List<(NewObject O, bool Piece)> placed, Func<int, float>? mask)
+	{
+		float ox = g.X0 * 64 - 32, oz = g.Z0 * 64 - 32;
+		var to = new Dictionary<(int, int), float>();
+		foreach (var (o, _) in placed)
+		{
+			string? name = TerrainEditor.Terrain.PrefabCatalog.NameOf(o.Prefab);
+			if (name == null || !Workshop.Buildable(name))
+			{
+				continue;
+			}
+			var pts = TerrainEditor.Editing.Hammer.Outline(name, TerrainEditor.App.BlueprintFormats.FromEuler(o.Rotation), o.Scale > 0 ? o.Scale : 1).ToList();
+			if (pts.Count == 0)
+			{
+				continue;
+			}
+			float bottom = o.Position.Y + pts.Min(v => v.Y);
+			int x0 = (int)MathF.Floor(o.Position.X - ox + pts.Min(v => v.X)) - 1, x1 = (int)MathF.Ceiling(o.Position.X - ox + pts.Max(v => v.X)) + 1;
+			int z0 = (int)MathF.Floor(o.Position.Z - oz + pts.Min(v => v.Z)) - 1, z1 = (int)MathF.Ceiling(o.Position.Z - oz + pts.Max(v => v.Z)) + 1;
+			for (int gz = Math.Max(1, z0); gz <= Math.Min(g.H - 2, z1); gz++)
+			{
+				for (int gx = Math.Max(1, x0); gx <= Math.Min(g.W - 2, x1); gx++)
+				{
+					to[(gx, gz)] = to.TryGetValue((gx, gz), out float was) ? MathF.Min(was, bottom) : bottom;
+				}
+			}
+		}
+		var dug = new List<int>();
+		int rx0 = g.W, rx1 = 0, rz0 = g.H, rz1 = 0;
+		bool limit = g.NoLimit;
+		g.NoLimit = true;
+		foreach (var ((gx, gz), y) in to)
+		{
+			Site.Add((gx, gz));
+			int p = gz * g.W + gx;
+			if (g.Locked(gx, gz) || (mask?.Invoke(p) ?? 1) <= 0 || g.HeightOf(p) <= y)
+			{
+				continue;
+			}
+			g.SetHeight(p, y);
+			dug.Add(p);
+			(rx0, rx1, rz0, rz1) = (Math.Min(rx0, gx), Math.Max(rx1, gx), Math.Min(rz0, gz), Math.Max(rz1, gz));
+		}
+		g.NoLimit = limit;
+		return (dug, (rx0, rz0, rx1, rz1));
 	}
 
 	private static int Index(Ground g, Vector2 p) => Math.Clamp((int)MathF.Round(p.Y), 0, g.H - 1) * g.W + Math.Clamp((int)MathF.Round(p.X), 0, g.W - 1);
