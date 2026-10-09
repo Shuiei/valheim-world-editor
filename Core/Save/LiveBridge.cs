@@ -97,22 +97,32 @@ public sealed class LiveBridge(string url, string token) : IDisposable
 	}
 
 	// Objects to destroy (live ZDOIDs) and to create (save-format bytes); returns the plugin's JSON.
-	public async Task<string> ApplyObjects(IReadOnlyList<(long User, uint Id)> destroy, IReadOnlyList<byte[]> create)
+	// After them, each destroyed object's prefab and position: another mod may have made the object
+	// again under a new ZDOID (ServersideQoL does, for build pieces, plants, fires and more), and the
+	// plugin finds it by those. Plugins from before 1.15.4 stop reading before them.
+	public async Task<string> ApplyObjects(IReadOnlyList<LiveTarget> destroy, IReadOnlyList<byte[]> create)
 	{
 		using MemoryStream ms = new();
 		using (BinaryWriter w = new(ms, System.Text.Encoding.UTF8, leaveOpen: true))
 		{
 			w.Write(destroy.Count);
-			foreach (var (user, id) in destroy)
+			foreach (LiveTarget t in destroy)
 			{
-				w.Write(user);
-				w.Write(id);
+				w.Write(t.User);
+				w.Write(t.Id);
 			}
 			w.Write(create.Count);
 			foreach (byte[] o in create)
 			{
 				w.Write(o.Length);
 				w.Write(o);
+			}
+			foreach (LiveTarget t in destroy)
+			{
+				w.Write(t.Prefab);
+				w.Write(t.Position.X);
+				w.Write(t.Position.Y);
+				w.Write(t.Position.Z);
 			}
 		}
 		using HttpRequestMessage req = new(HttpMethod.Post, "objects") { Content = new ByteArrayContent(ms.ToArray()) };

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
 using System.Net;
 using System.Reflection;
 using System.Text;
@@ -331,37 +332,101 @@ public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
 
 	// Destroys objects (as their owner, so every peer drops them) and creates new ones from objects in
 	// the save file format (flags, position, prefab, rotation, data), like ZDO.Load but for a new object.
+	// Editors from 1.15.4 add each destroyed object's prefab and position: another mod may have made it
+	// again under a new ZDOID (ServersideQoL does, for build pieces, plants, fires and more), and then
+	// the object of that prefab at that place goes instead. Without this, undoing a placed piece found
+	// it "already gone" while every player kept seeing the new one.
 	private byte[] ApplyObjects(byte[] body)
 	{
 		ZPackage pkg = new(body);
 		long session = ZDOMan.GetSessionID();
-		int destroyCount = pkg.ReadInt(), destroyed = 0, missing = 0;
+		int destroyCount = pkg.ReadInt();
+		ZDOID[] destroyIds = new ZDOID[destroyCount];
 		for (int i = 0; i < destroyCount; i++)
 		{
-			ZDOID id = new(pkg.ReadLong(), pkg.ReadUInt());
-			ZDO zdo = ZDOMan.instance.GetZDO(id);
+			destroyIds[i] = new ZDOID(pkg.ReadLong(), pkg.ReadUInt());
+		}
+		int createCount = pkg.ReadInt();
+		byte[][] creates = new byte[createCount][];
+		for (int i = 0; i < createCount; i++)
+		{
+			creates[i] = pkg.ReadByteArray();
+		}
+		(int Prefab, Vector3 Position)[] where = null;
+		if (pkg.GetPos() < pkg.Size())
+		{
+			where = new (int, Vector3)[destroyCount];
+			for (int i = 0; i < destroyCount; i++)
+			{
+				where[i] = (pkg.ReadInt(), pkg.ReadVector3());
+			}
+		}
+		int destroyed = 0, refound = 0;
+		List<int> lost = new();
+		for (int i = 0; i < destroyCount; i++)
+		{
+			ZDO zdo = ZDOMan.instance.GetZDO(destroyIds[i]);
 			if (zdo == null)
 			{
-				missing++;
+				lost.Add(i);
 				continue;
 			}
 			zdo.SetOwner(session);
 			ZDOMan.instance.DestroyZDO(zdo);
 			destroyed++;
 		}
-		int createCount = pkg.ReadInt();
+		if (lost.Count > 0 && where != null)
+		{
+			refound = DestroyAtPlace(lost.Select(i => where[i]).ToList(), session);
+		}
+		int missing = lost.Count - refound;
 		StringBuilder ids = new();
 		for (int i = 0; i < createCount; i++)
 		{
-			ZDO zdo = CreateFromSaveFormat(new ZPackage(pkg.ReadByteArray()));
+			ZDO zdo = CreateFromSaveFormat(new ZPackage(creates[i]));
 			if (i > 0)
 			{
 				ids.Append(',');
 			}
 			ids.Append('"').Append(zdo.m_uid.UserID.ToString(CultureInfo.InvariantCulture)).Append(':').Append(zdo.m_uid.ID.ToString(CultureInfo.InvariantCulture)).Append('"');
 		}
-		Logger.LogInfo($"WorldEditorBridge: destroyed {destroyed} object(s) ({missing} already gone), created {createCount}");
-		return Encoding.UTF8.GetBytes($"{{\"destroyed\":{destroyed},\"missing\":{missing},\"created\":[{ids}]}}");
+		Logger.LogInfo($"WorldEditorBridge: destroyed {destroyed + refound} object(s) ({refound} found again at their place under a new id, {missing} already gone), created {createCount}");
+		return Encoding.UTF8.GetBytes($"{{\"destroyed\":{destroyed + refound},\"refound\":{refound},\"missing\":{missing},\"created\":[{ids}]}}");
+	}
+
+	// The objects of these prefabs at these places (within 10 cm: a re-made object keeps its position),
+	// each at most once; returns how many were found and destroyed.
+	private static int DestroyAtPlace(List<(int Prefab, Vector3 Position)> wanted, long session)
+	{
+		Dictionary<int, List<Vector3>> byPrefab = new();
+		foreach (var (prefab, pos) in wanted)
+		{
+			if (!byPrefab.TryGetValue(prefab, out var list))
+			{
+				byPrefab[prefab] = list = new List<Vector3>();
+			}
+			list.Add(pos);
+		}
+		var dict = (Dictionary<ZDOID, ZDO>)ObjectsById.GetValue(ZDOMan.instance);
+		int found = 0;
+		foreach (ZDO zdo in new List<ZDO>(dict.Values))
+		{
+			if (!byPrefab.TryGetValue(zdo.GetPrefab(), out var places) || places.Count == 0)
+			{
+				continue;
+			}
+			Vector3 p = zdo.GetPosition();
+			int at = places.FindIndex(w => (w - p).sqrMagnitude < 0.01f);
+			if (at < 0)
+			{
+				continue;
+			}
+			places.RemoveAt(at);
+			zdo.SetOwner(session);
+			ZDOMan.instance.DestroyZDO(zdo);
+			found++;
+		}
+		return found;
 	}
 
 	private static readonly int TombstonePrefab = "Player_tombstone".GetStableHashCode();

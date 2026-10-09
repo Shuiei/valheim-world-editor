@@ -22,6 +22,7 @@ public sealed class FakeBridge : IDisposable
 	public List<(int Destroy, int Create)> ObjectCalls { get; } = new();
 
 	public List<(long, uint)> Destroyed { get; } = new();
+	public List<(int Prefab, Vector3 Position)> Places { get; } = new();
 
 	public List<(int X, int Z, bool Keep, bool Ground)> Resets { get; } = new();
 
@@ -68,6 +69,11 @@ public sealed class FakeBridge : IDisposable
 				{
 					r.ReadBytes(r.ReadInt32());
 					ids.Add($"77:{_next++}");
+				}
+				// What each destroyed object is and where (the editor adds it after the creations).
+				for (int i = 0; i < destroy; i++)
+				{
+					Places.Add((r.ReadInt32(), new Vector3(r.ReadSingle(), r.ReadSingle(), r.ReadSingle())));
 				}
 				lock (ObjectCalls)
 				{
@@ -194,6 +200,9 @@ public class LiveTests
 		await sync.Apply(world, edits, live);
 		Assert.Equal((1, 1), bridge.ObjectCalls[1]);
 		Assert.Contains((77L, 1000u), bridge.Destroyed);
+		// With what it is and where: a mod that made it again under a new id has it there.
+		Assert.Contains((Fixtures.Hash("Beech1"), tree.Position + new Vector3(3, 0, 3)), bridge.Places);
+		Assert.Contains((tree.Prefab, tree.Position), bridge.Places);
 		Assert.Equal((0, 0), sync.Pending(edits));
 	}
 
