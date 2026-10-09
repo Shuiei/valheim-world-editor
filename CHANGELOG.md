@@ -10,6 +10,12 @@ the plugin is unchanged in versions without that part.
 - **Mountain**: a preview before clicking: the mountain under the pointer as a mesh on the ground,
   as high as it will rise. The circle turns red where it does not fit in the open area.
 
+### Changed
+- **Save to world** (offline) works like Apply live: the area and its history stay after saving; undo
+  a step and save again to take it back. No backup folder is made at each save any more: nothing of
+  the old save is removed before the new one reads back right (on a failure the new files go and
+  nothing changed), and the save the world was opened from stays until the world is left.
+
 ### Fixed
 - A wide brush or Mountain circle no longer drops a line straight down where it passes the edge of
   the open area, and follows hills instead of cutting through them.

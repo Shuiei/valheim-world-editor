@@ -205,8 +205,8 @@ public class SelectTests
 			var again = WorldScene.Load(dir, 0, 0, 1);
 			Assert.Contains(again.Things, o => o.Prefab == t.Prefab && Vector3.Distance(o.Position, to) < 0.01f);
 			Assert.DoesNotContain(again.Things, o => o.Prefab == t.Prefab && Vector3.Distance(o.Position, t.Position) < 0.01f);
-			// The scene was read again after saving: same objects, new ids.
-			Assert.Equal(again.Things.Count, scene.Things.Count);
+			// The scene stays as it is after saving (like Apply live): the same objects shown.
+			Assert.Equal(again.Things.Count, scene.Things.Count(o => !o.Gone));
 		}
 		finally
 		{

@@ -66,8 +66,33 @@ public sealed class WorldSession : IDisposable
 				var (d, a) = LiveSync.Pending(Edits);
 				return (Edits.ChangedZoneCount, d, a, Edits.ResetCount);
 			}
-			return (Edits.ChangedZoneCount, Edits.DeletedCount, Edits.AddedCount, Edits.ResetCount);
+			if (_lastSave == null)
+			{
+				return (Edits.ChangedZoneCount, Edits.DeletedCount, Edits.AddedCount, Edits.ResetCount);
+			}
+			// Saved already: what differs from that save (an undo after it is pending too).
+			var deleted = Edits.Deleted;
+			var added = Edits.Added.ToHashSet();
+			int del = deleted.Count(i => !_savedDeleted.Contains(i)) + _savedDeleted.Count(i => !deleted.Contains(i));
+			int add = added.Count(o => !_savedAdded.Contains(o)) + _savedAdded.Count(o => !added.Contains(o));
+			return (Edits.ChangedZoneCount, del, add, Edits.ResetCount);
 		}
+	}
+
+	// Offline, once saved: the open world saves again from the save it was opened from (kept until the
+	// world is left), with every change since; the zones and objects of the last save, the files it
+	// wrote (removed by the next one).
+	private IReadOnlyList<string>? _lastSave;
+	private HashSet<(int, int)> _savedZones = new();
+	private HashSet<int> _savedDeleted = new();
+	private HashSet<NewObject> _savedAdded = new();
+
+	private void ForgetSaves()
+	{
+		_lastSave = null;
+		_savedZones = new();
+		_savedDeleted = new();
+		_savedAdded = new();
 	}
 
 	public sealed record Outcome(bool Done, string Message, bool Reloaded, WorldWriter.Result? Saved = null)
@@ -95,22 +120,49 @@ public sealed class WorldSession : IDisposable
 		Terrain.UseModifiers(modifiers);
 	}
 
-	// Writes everything into the world's files (a backup first), then reads the world again.
+	// Writes everything into the world's files, like Apply live: the world stays open as it is, with
+	// its history (an undo, saved again, is saved). Each save is made from the save the world was opened
+	// from, with every change since (so a zone saved before and not changed since is written again),
+	// and the previous save of the session goes. After zone resets or when No limit ground became ground
+	// discs, the world is read again from what was written (the ground or zones are not the same).
 	public Outcome Save()
 	{
 		var plan = LiftToDiscs();
-		var changed = Edits.All().Where(e => e.Changed).ToList();
-		var result = WorldWriter.Save(World, changed, Edits.Deleted, Edits.Added, Edits.Resets);
-		if (result.Saved)
+		var zones = Edits.All().Where(e => e.Changed).Select(e => (e.ZoneX, e.ZoneZ)).ToHashSet();
+		zones.UnionWith(_savedZones);
+		var changed = Edits.All().Where(e => zones.Contains((e.ZoneX, e.ZoneZ))).ToList();
+		bool reread = plan != null || Edits.ResetCount > 0;
+		var result = WorldWriter.Save(World, changed, Edits.Deleted, Edits.Added, Edits.Resets, new WorldWriter.Options(KeepBase: !reread, Drop: _lastSave));
+		if (result.Saved && reread)
 		{
 			World = WorldSave.Load(World.Directory);
+			WorldWriter.Prune(World.Directory);
 			Edits.ResetFrom(World);
 			UseModifiers(new TerrainModifiers(World));
 			_nextId = -1;
 			History = null;
+			ForgetSaves();
+		}
+		else if (result.Saved)
+		{
+			_lastSave = result.Files;
+			_savedZones = zones;
+			Edits.MarkApplied(changed.Select(e => (e.ZoneX, e.ZoneZ)));
+			_savedDeleted = Edits.Deleted.ToHashSet();
+			_savedAdded = Edits.Added.ToHashSet();
 		}
 		string message = plan != null ? $"{result.Message} No limit ground: {plan.Describe()}." : result.Message;
-		return new Outcome(result.Saved, message, result.Saved, result with { Message = message }) { Lifted = plan != null };
+		return new Outcome(result.Saved, message, result.Saved && reread, result with { Message = message }) { Lifted = plan != null };
+	}
+
+	// Leaving an offline world it saved: the save it was opened from goes (only the latest stays).
+	private void PruneSaves()
+	{
+		if (!IsLive && _lastSave != null && System.IO.Directory.Exists(World.Directory))
+		{
+			WorldWriter.Prune(World.Directory);
+		}
+		ForgetSaves();
 	}
 
 	// Live: the changed zones' ground and the object changes go into the running game; zone resets last
@@ -121,6 +173,7 @@ public sealed class WorldSession : IDisposable
 	// When the world is left: the live connection closes.
 	public void Dispose()
 	{
+		PruneSaves();
 		Live?.Dispose();
 		_applying.Dispose();
 	}
@@ -199,6 +252,7 @@ public sealed class WorldSession : IDisposable
 	{
 		if (!IsLive)
 		{
+			PruneSaves();
 			World = WorldSave.Load(World.Directory);
 		}
 		Edits.ResetFrom(World);
