@@ -26,8 +26,11 @@ public sealed class DungeonPanel
 	internal Button DeleteButton { get; } = new() { Content = "Delete room (Del)", FontSize = 12 };
 	internal TextBlock Info { get; } = new() { FontSize = 12, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
 	internal CheckBox Contents { get; } = new() { Content = "With what the game puts in them", IsChecked = true, FontSize = 12 };
-	private readonly TextBlock _empty = new() { FontSize = 12, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap,
-		Text = "No dungeon in this area. Open the area over a Frost Cave, crypt or other dungeon entrance: the game keeps its rooms 5000 m above it." };
+	private readonly TextBlock _empty = new()
+	{
+		FontSize = 12, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap,
+		Text = "No dungeon in this area. Open the area over a Frost Cave, crypt or other dungeon entrance: the game keeps its rooms 5000 m above it."
+	};
 	private readonly StackPanel _body;
 	private List<DungeonRooms.Dungeon> _shown = new();
 	private bool _filling;
