@@ -68,6 +68,20 @@ public sealed class ModelStoreTests : IDisposable
 		Assert.Equal((Vector3.Zero, Vector3.Zero), store.LoadMesh("empty")!.Bounds);
 	}
 
+	// A mesh on the graphics card is let go from memory: its box is kept, and it is read again if asked.
+	[Fact]
+	public void AForgottenMeshKeepsItsBoxAndIsReadAgain()
+	{
+		var store = new ModelStore(_dir);
+		Assert.Null(store.BoundsOf("m1"));
+		var first = store.LoadMesh("m1")!;
+		store.Forget("m1");
+		Assert.Equal(first.Bounds, store.BoundsOf("m1"));
+		var again = store.LoadMesh("m1")!;
+		Assert.NotSame(first, again);
+		Assert.Equal(first.Vertices, again.Vertices);
+	}
+
 	[Fact]
 	public void MaterialsHaveTheirOptionsOrDefaults()
 	{

@@ -24,8 +24,8 @@ public class EditorProcess : IDisposable
 	{
 	}
 
-	// Started with more options (the world to open at once, for example).
-	protected EditorProcess(string[] extra)
+	// Started with more options (the world to open at once, for example), and environment variables.
+	protected EditorProcess(string[] extra, IReadOnlyDictionary<string, string>? env = null)
 	{
 		if (OperatingSystem.IsLinux() && string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DISPLAY")) && string.IsNullOrEmpty(Environment.GetEnvironmentVariable("WAYLAND_DISPLAY")))
 		{
@@ -40,6 +40,10 @@ public class EditorProcess : IDisposable
 		foreach (string a in new[] { app, "--data", _data, "--driver" }.Concat(extra))
 		{
 			psi.ArgumentList.Add(a);
+		}
+		foreach (var (k, v) in env ?? new Dictionary<string, string>())
+		{
+			psi.Environment[k] = v;
 		}
 		_p = Process.Start(psi)!;
 		_p.ErrorDataReceived += (_, _) => { };
@@ -137,6 +141,37 @@ public sealed class DirectEditorProcess() : EditorProcess(Start())
 	private static string[] Start()
 	{
 		_copy = Path.Combine(Path.GetTempPath(), "vwe-visual-direct-" + Guid.NewGuid().ToString("N")[..8]);
+		string world = Path.Combine(_copy, "CITest");
+		Directory.CreateDirectory(world);
+		foreach (string f in Directory.GetFiles(Path.Combine(Fixtures(), "CITest")))
+		{
+			File.Copy(f, Path.Combine(world, Path.GetFileName(f)));
+		}
+		return new[] { "--world", world, "--zone", "0,0", "--size", "2" };
+	}
+
+	public override void Dispose()
+	{
+		base.Dispose();
+		try
+		{
+			Directory.Delete(_copy!, true);
+		}
+		catch (Exception)
+		{
+		}
+	}
+}
+
+// Started straight in the 3D editor with a graphics-card budget of 1 byte: every area opened lets the
+// models go and reads them again.
+public sealed class TinyBudgetEditorProcess() : EditorProcess(Start(), new Dictionary<string, string> { ["VWE_GPU_BUDGET"] = "1" })
+{
+	private static string? _copy;
+
+	private static string[] Start()
+	{
+		_copy = Path.Combine(Path.GetTempPath(), "vwe-visual-budget-" + Guid.NewGuid().ToString("N")[..8]);
 		string world = Path.Combine(_copy, "CITest");
 		Directory.CreateDirectory(world);
 		foreach (string f in Directory.GetFiles(Path.Combine(Fixtures(), "CITest")))
@@ -658,5 +693,63 @@ public sealed class LiveVisualTests(LiveEditorProcess editor)
 	{
 		Assert.SkipUnless(editor.Available, editor.Why ?? "");
 		DirectVisualTests.WaitForPage(editor, "map");
+	}
+}
+
+[CollectionDefinition("Visual budget")]
+public sealed class VisualBudgetCollection : ICollectionFixture<TinyBudgetEditorProcess>
+{
+}
+
+// Past the graphics-card budget, opening another area lets the models go: they are read again, and
+// the area still draws them (with their textures).
+[Collection("Visual budget")]
+[Trait("Category", "Visual")]
+public sealed class BudgetVisualTests(TinyBudgetEditorProcess editor)
+{
+	[Fact]
+	public void ModelsLetGoAreReadAgain()
+	{
+		Assert.SkipUnless(editor.Available, editor.Why ?? "");
+		DirectVisualTests.WaitForPage(editor, "editor");
+		string dir = Path.Combine(Path.GetTempPath(), "vwe-visual-budget-pics-" + Guid.NewGuid().ToString("N")[..8]);
+		Directory.CreateDirectory(dir);
+		try
+		{
+			editor.Send("camera 40 20 30 50 70");
+			editor.Send($"picture {Path.Combine(dir, "a.png")}");
+			for (int n = 0; n < 2; n++)
+			{
+				editor.Send("area 0 0 2");
+			}
+			editor.Send("camera 40 20 30 50 70");
+			editor.Send($"picture {Path.Combine(dir, "b.png")}");
+			Assert.Equal(0, editor.Send("state").GetProperty("glErrors").GetInt32());
+			string log = File.ReadAllText(Path.Combine(editor.Data, "ValheimWorldEditor.log"));
+			Assert.Contains("Models let go from the graphics card", log);
+			using var a = SkiaSharp.SKBitmap.Decode(Path.Combine(dir, "a.png"));
+			using var b = SkiaSharp.SKBitmap.Decode(Path.Combine(dir, "b.png"));
+			Assert.Equal(Mean(a), Mean(b), 0);
+		}
+		finally
+		{
+			Directory.Delete(dir, true);
+		}
+	}
+
+	private static double Mean(SkiaSharp.SKBitmap bmp)
+	{
+		double sum = 0;
+		int n = 0;
+		for (int y = 0; y < bmp.Height; y += 4)
+		{
+			for (int x = 0; x < bmp.Width; x += 4)
+			{
+				var c = bmp.GetPixel(x, y);
+				sum += 0.2126 * c.Red + 0.7152 * c.Green + 0.0722 * c.Blue;
+				n++;
+			}
+		}
+		return sum / n / 8;
 	}
 }

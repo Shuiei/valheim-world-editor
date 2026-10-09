@@ -208,7 +208,10 @@ servers, the SSH tunnel) is tested there too.
 
 - **Visual tests** (`[Trait("Category", "Visual")]`, in `VisualTests.cs`) start the real app with
   `--driver` and check what it draws with OpenGL: one app per group of tests (`EditorProcess`),
-  each test opening a fresh copy of the test world. They need a display and skip without one.
+  each test opening a fresh copy of the test world. They need a display and skip without one. One
+  group starts the app with `VWE_GPU_BUDGET=1`: the models and textures on the graphics card past
+  that many bytes (1 GiB by default) are let go when another area opens, so every area reads its
+  models again.
 - **The user's files are never touched.** A module initializer (`TestApp` in `InputTests.cs`) points
   the settings, servers, Place memory, stamps, preferences, saved selections and the data folder at
   temporary files before any test runs, and turns off the search of the computer's own Valheim and

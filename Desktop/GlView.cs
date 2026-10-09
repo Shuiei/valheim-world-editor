@@ -336,6 +336,13 @@ public sealed class GlView : OpenGlControlBase
 	private bool _overlaysGroundOnly;
 	private long _overlaysBuiltAt;
 	private readonly Dictionary<string, (uint Vbo, uint[] Ebos, int[] Counts)> _meshGl = new();
+	// Meshes on the graphics card (read by the loaders on worker threads), and about how much the
+	// models and their textures take there. Past the budget, opening another area lets them all go
+	// (that area's are read again): they piled up over a long session, gigabytes with Valheim open.
+	private readonly ConcurrentDictionary<string, bool> _onGpu = new();
+	private long _gpuBytes;
+	// VWE_GPU_BUDGET (bytes): another budget, for the tests.
+	private static readonly long GpuBudget = long.TryParse(Environment.GetEnvironmentVariable("VWE_GPU_BUDGET"), out long b) ? b : 1L << 30;
 	private readonly Dictionary<string, uint> _textures = new();
 	// Models read on worker threads, waiting to go to the graphics card (on the drawing thread).
 	private sealed record ReadyModel(Group Group, ModelStore.Model? Model, Dictionary<string, ModelStore.MeshData> Meshes,
@@ -381,6 +388,8 @@ public sealed class GlView : OpenGlControlBase
 		_lowW = _lowH = 0;
 		_batches.Clear();
 		_meshGl.Clear();
+		_onGpu.Clear();
+		_gpuBytes = 0;
 		lock (_textures)
 		{
 			_textures.Clear();
@@ -860,11 +869,17 @@ public sealed class GlView : OpenGlControlBase
 				{
 					foreach (var part in model.Parts)
 					{
-						if (_models!.LoadMesh(part.Mesh) is { } md)
+						// A mesh already on the graphics card is not read again: only its box is needed.
+						var bounds = _onGpu.ContainsKey(part.Mesh) ? _models!.BoundsOf(part.Mesh) : null;
+						if (bounds == null && _models!.LoadMesh(part.Mesh) is { } md)
 						{
 							meshes.TryAdd(part.Mesh, md);
+							bounds = md.Bounds;
+						}
+						if (bounds is var (min, max))
+						{
 							// The object's box, for picking: the parts' meshes.
-							var (a, b) = Picking.Transform(md.Bounds.Min, md.Bounds.Max, part.Matrix);
+							var (a, b) = Picking.Transform(min, max, part.Matrix);
 							lo = Vector3.Min(lo, a);
 							hi = Vector3.Max(hi, b);
 						}
@@ -961,6 +976,32 @@ public sealed class GlView : OpenGlControlBase
 		}
 	}
 
+	// Every model and texture off the graphics card (after DropObjects: no batch uses them).
+	private void DropModels()
+	{
+		foreach (var (vbo, ebos, _) in _meshGl.Values)
+		{
+			_own.DeleteBuffer(vbo);
+			foreach (uint e in ebos)
+			{
+				_own.DeleteBuffer(e);
+			}
+		}
+		_meshGl.Clear();
+		_onGpu.Clear();
+		lock (_textures)
+		{
+			foreach (uint t in _textures.Values)
+			{
+				_own.DeleteTexture(t);
+			}
+			_textures.Clear();
+			_claimed.Clear();
+		}
+		Status?.Invoke($"Models let go from the graphics card ({_gpuBytes >> 20} MB): this area's are read again.");
+		_gpuBytes = 0;
+	}
+
 	// Everything read again (after a save): the old batches go.
 	private void DropObjects()
 	{
@@ -1037,6 +1078,8 @@ public sealed class GlView : OpenGlControlBase
 			_gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
 			_gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.Repeat);
 			_gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.Repeat);
+			// With its mipmaps, a third more.
+			_gpuBytes += (long)img.Width * img.Height * 4 * 4 / 3;
 			lock (_textures)
 			{
 				_textures[file] = tex;
@@ -1106,6 +1149,9 @@ public sealed class GlView : OpenGlControlBase
 			}
 			counts[s] = md.Submeshes[s].Length;
 		}
+		_gpuBytes += md.Vertices.Length * 4L + md.Submeshes.Sum(x => x.Length * 4L);
+		_onGpu[id] = true;
+		_models?.Forget(id);
 		return _meshGl[id] = (vbo, ebos, counts);
 	}
 
@@ -1175,8 +1221,13 @@ public sealed class GlView : OpenGlControlBase
 		if (s != null && _sceneDirty)
 		{
 			_sceneDirty = false;
-			// Another area: the last one's objects go (the models stay on the graphics card).
+			// Another area: the last one's objects go (the models stay on the graphics card, unless
+			// they are past the budget).
 			DropObjects();
+			if (_gpuBytes > GpuBudget)
+			{
+				DropModels();
+			}
 			BuildTerrain(s);
 			StartModels(s);
 		}

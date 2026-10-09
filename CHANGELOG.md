@@ -112,6 +112,9 @@ the plugin is unchanged in versions without that part.
 - Worlds open and save faster: reading a world looked through every edited zone for each object.
   A world of 355,000 objects and 78 edited zones reads in 0.24 s instead of 0.57 s; worlds with
   thousands of edited zones gain much more.
+- Less memory over a long session: a model's vertices are let go once they are on the graphics card,
+  and past 1 GB of models and textures there, opening another area lets them go (that area's are
+  read again). They piled up with every new kind seen, gigabytes with Valheim open beside it.
 
 ### WorldEditorBridge
 - An apply the game takes more than 30 seconds to start (a world save on the server) is no longer
