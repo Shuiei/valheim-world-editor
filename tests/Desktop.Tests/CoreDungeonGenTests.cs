@@ -120,6 +120,23 @@ public class CoreDungeonGenTests
 	}
 
 	[Fact]
+	public void ItGoesHigherThanWhatIsAlreadyUpThere()
+	{
+		var r = Make("Crypt", "Swamp", 2, 1, 4);
+		var origin = new Vector3(100, 5050, 100);
+		Assert.Equal(origin, DungeonGen.Clear(origin, r, DungeonGen.Taken(Array.Empty<(int, Vector3)>(), Array.Empty<(Vector3, int)>())));
+		// A crypt's entrance nearby that nobody entered yet: its dungeon will come 5000 m above it.
+		var crypt = (new Vector3(130, 40, 120), StableHash.Of("Crypt3"));
+		var raised = DungeonGen.Clear(origin, r, DungeonGen.Taken(Array.Empty<(int, Vector3)>(), new[] { crypt }));
+		Assert.True(raised.Y + r.Items.Min(i => i.Position.Y) - 6 >= 40 + 5250 - 0.01f, $"raised to {raised.Y}");
+		// A cave already laid out: its dungeon object keeps the space of its rooms, not just its point.
+		var cave = (StableHash.Of("DG_Cave"), new Vector3(150, 5050, 140));
+		Assert.True(DungeonGen.Clear(origin, r, DungeonGen.Taken(new[] { cave }, Array.Empty<(Vector3, int)>())).Y > origin.Y);
+		// Other locations take nothing.
+		Assert.Equal(origin, DungeonGen.Clear(origin, r, DungeonGen.Taken(Array.Empty<(int, Vector3)>(), new[] { (new Vector3(130, 40, 120), StableHash.Of("StoneTower1")) })));
+	}
+
+	[Fact]
 	public void TheKeyChestHoldsTheKey()
 	{
 		var r = Make("Crypt", "Swamp", 2, 2, 7);

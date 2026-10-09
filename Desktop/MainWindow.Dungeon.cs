@@ -63,21 +63,15 @@ public partial class MainWindow
 			return scene.Heights[j * scene.W + i];
 		}
 		var origin = new Vector3(MathF.Round(gx), MathF.Round(ground) + 5000, MathF.Round(gz));
-		// Clear of what is already up there (a cave's interior, another dungeon): higher by 50 m steps.
-		if (r.Items.Count > 0)
+		// Clear of what is already up there: dungeons laid out, objects, and over the dungeons' locations
+		// near here, the space the game will lay theirs out in (higher by 50 m steps).
+		List<(int, Vector3)> high;
+		lock (scene.Things)
 		{
-			float x0 = r.Items.Min(i => i.Position.X) - 10, x1 = r.Items.Max(i => i.Position.X) + 10, z0 = r.Items.Min(i => i.Position.Z) - 10, z1 = r.Items.Max(i => i.Position.Z) + 10;
-			float y0 = r.Items.Min(i => i.Position.Y) - 6, y1 = r.Items.Max(i => i.Position.Y) + 6;
-			List<Vector3> high;
-			lock (scene.Things)
-			{
-				high = scene.Things.Where(t => !t.Gone && t.Position.Y > 3000).Select(t => t.Position).ToList();
-			}
-			for (int k = 0; k < 40 && high.Any(p => p.X - origin.X > x0 && p.X - origin.X < x1 && p.Z - origin.Z > z0 && p.Z - origin.Z < z1 && p.Y - origin.Y > y0 && p.Y - origin.Y < y1); k++)
-			{
-				origin.Y += 50;
-			}
+			high = scene.Things.Where(t => !t.Gone && t.Position.Y > 3000).Select(t => (t.Prefab, t.Position)).ToList();
 		}
+		var near = world.Locations.Where(l => MathF.Abs(l.Position.X - origin.X) < 600 && MathF.Abs(l.Position.Z - origin.Z) < 600);
+		origin = DungeonGen.Clear(origin, r, DungeonGen.Taken(high, near));
 		var files = new Dictionary<ChunkFile, byte[]>();
 		byte[]? Blank(NewObject n) => world.NewObjectBytes(n, m => world.LiveBytes ?? (files.TryGetValue(m.File, out var f) ? f : files[m.File] = File.ReadAllBytes(Path.Combine(world.Directory, m.File.FileName))));
 		var adds = new List<(NewObject, bool)>();

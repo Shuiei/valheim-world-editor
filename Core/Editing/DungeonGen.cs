@@ -49,6 +49,66 @@ public static class DungeonGen
 
 	public static Result Make(Settings s, int worldSeed = 0) => s.Made == Made.Rooms ? MakeRooms(s, worldSeed) : MakePieces(s);
 
+	// Locations with a dungeon, which the game lays out 5000 m above them when a player first comes
+	// near: nothing of it is in the save until then.
+	public static readonly HashSet<int> DungeonLocations = new[]
+	{
+		"Crypt2", "Crypt3", "Crypt4", "HalfBurried_ForestCrypt", "SunkenCrypt4", "MountainCave02", "Hildir_crypt", "Hildir_cave", "Hildir_plainsfortress",
+		"Mistlands_DvergrTownEntrance1", "Mistlands_DvergrTownEntrance2", "Mistlands_DvergrBossEntrance1", "MorgenHole1", "MorgenHole2", "MorgenHole3",
+		"TheHole01", "TheDarkestHole", "CharredFortress",
+	}.Select(Save.StableHash.Of).ToHashSet();
+
+	public readonly record struct Box(Vector3 Min, Vector3 Max)
+	{
+		public bool Overlaps(Box o) => Min.X < o.Max.X && o.Min.X < Max.X && Min.Y < o.Max.Y && o.Min.Y < Max.Y && Min.Z < o.Max.Z && o.Min.Z < Max.Z;
+	}
+
+	// What is taken high up: objects above 3000 m (a dungeon object: the whole space its rooms keep),
+	// and the space over every location whose dungeon the game has not laid out yet.
+	public static List<Box> Taken(IEnumerable<(int Prefab, Vector3 Position)> high, IEnumerable<(Vector3 Position, int Location)> locations)
+	{
+		var boxes = new List<Box>();
+		foreach (var (prefab, p) in high)
+		{
+			if (Dungeons.KindOf(prefab) is { } k)
+			{
+				var h = new Vector3(k.ZoneSize.X / 2 + 32, 60, k.ZoneSize.Z / 2 + 32);
+				boxes.Add(new Box(p - h, p + h));
+			}
+			else
+			{
+				boxes.Add(new Box(p - Vector3.One, p + Vector3.One));
+			}
+		}
+		foreach (var (p, location) in locations)
+		{
+			if (DungeonLocations.Contains(location))
+			{
+				boxes.Add(new Box(new Vector3(p.X - 96, p.Y + 4900, p.Z - 96), new Vector3(p.X + 96, p.Y + 5250, p.Z + 96)));
+			}
+		}
+		return boxes;
+	}
+
+	// Where a dungeon made at origin can go: there, or higher by 50 m steps until it is clear of what is
+	// taken.
+	public static Vector3 Clear(Vector3 origin, Result r, IReadOnlyList<Box> taken)
+	{
+		var points = r.Items.Select(i => i.Position).Concat(r.Rooms?.Select(p => p.Position) ?? Enumerable.Empty<Vector3>()).ToList();
+		if (points.Count == 0)
+		{
+			return origin;
+		}
+		float pad = r.Rooms != null ? 30 : 10;
+		var min = points.Aggregate(Vector3.Min) - new Vector3(pad, 6, pad);
+		var max = points.Aggregate(Vector3.Max) + new Vector3(pad, 6, pad);
+		for (int k = 0; k < 80 && taken.Any(t => t.Overlaps(new Box(origin + min, origin + max))); k++)
+		{
+			origin.Y += 50;
+		}
+		return origin;
+	}
+
 	// The game's dungeon of a biome, for Made.Rooms.
 	private static string RoomsOf(string biome) => biome switch
 	{
