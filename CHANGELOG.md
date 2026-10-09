@@ -4,6 +4,26 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.16.0 — 2026-10-09
+
+### Added
+- **Dungeon** tool: edit the rooms of Frost Caves, burial chambers, sunken crypts, infested mines and
+  the game's other dungeons. The game builds a dungeon from a list of its rooms kept in the save
+  (5000 m above its entrance); the tool edits that list, and the game builds what you make, no mod
+  needed.
+  - **Go inside** takes the view up to the dungeon and cuts its roofs away to look into its rooms.
+  - Pick one of the dungeon's rooms and click an open end (a green frame): the room joins there the
+    way the game joins rooms. **Turn** (R) joins it by another of its openings. A red box warns when
+    it would overlap another room or leave the dungeon's space.
+  - Added rooms come with what the game would put in them at that place: chests, creatures'
+    spawners, torches, ice, decorations, rolled the way the game rolls them.
+  - Delete a room (its contents go with it), and **Close open ends** caps them with the game's end
+    caps. Each change is one undo step; **Save to world** and **Apply live** write it.
+  - **Build here**: build with the hammer's pieces inside the dungeon, on its rooms' floors (where they
+    hold in game).
+- The game's look now includes the dungeons' rooms (copied once more after this update).
+- **Dungeon rooms** in the View panel shows or hides them.
+
 ## v1.15.5 — 2026-10-09
 
 ### Fixed

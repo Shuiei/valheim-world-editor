@@ -37,6 +37,13 @@ for Windows or Linux. Unpack it and start it. You don't need to install anything
 - **Paste a blueprint into any world.** Before you click, it shows as see-through models. It clears
   its site: the ground in the way is dug out, and the trees and rocks there are removed.
 
+**Dungeons**
+- **Edit Frost Caves, crypts and other dungeons room by room.** Add the game's rooms at their
+  openings, joined the way the game joins them, with the chests, creatures and decorations the game
+  would put in them; delete rooms, and cap the open ends. The game builds the dungeon from the list
+  you make, no mod needed.
+- **Build inside a dungeon** with the hammer's pieces, on the rooms' floors.
+
 **Objects**
 - **Place anything the game has**: trees, rocks, bushes, crops and building pieces. Use a brush,
   lines, circles, grids or whole zones; the brush follows the game's growing rules.
@@ -224,6 +231,7 @@ folder.
 | [Path](docs/path.md) | Roads, ramps, rivers, caves and paint along a line |
 | [Mask](docs/masks.md) | Limiting any tool by biome, height, slope or paint |
 | [Area, copy and paste](docs/area.md) | Box and polygon selections, bulk actions, paste, zone reset |
+| [Dungeons](docs/dungeons.md) | Editing a dungeon's rooms: adding them at openings, their contents, deleting, closing open ends, building inside |
 | [The Workshop](docs/workshop.md) | Building on a blank plot, the support check, Homestead blueprints: library, cost, pictures, tags, sharing |
 | [Place](docs/place.md) | Any kind of object: trees and rocks with a brush, walls and fences end to end along lines, circles and rectangles, grids and zones |
 | [Select](docs/select.md) | Selecting, moving with arrows, turning, dropping, copying, deleting |
