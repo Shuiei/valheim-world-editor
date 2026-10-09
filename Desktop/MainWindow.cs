@@ -967,6 +967,7 @@ public sealed partial class MainWindow : Window
 		_stopScript = cancel.Cancel;
 		string code = panel.CodeBox.Text ?? "";
 		var snap = ScriptHost.Take(s, NameOfPrefab);
+		int generation = s.Generation;
 		var watch = System.Diagnostics.Stopwatch.StartNew();
 		try
 		{
@@ -982,6 +983,14 @@ public sealed partial class MainWindow : Window
 			if (_session != s)
 			{
 				panel.Output.Text = ch.Output + "Another area was opened while the script ran: nothing changed.";
+				return;
+			}
+			// Its heights and object numbers are those of the area when it started: changed since (a
+			// stroke, an undo, a save that read the world again), they would undo that or hit other objects.
+			if (s.Generation != generation)
+			{
+				panel.Output.Text = ch.Output + "The area changed while the script ran: nothing changed. Run it again.";
+				_message.Text = "The area changed while the script ran: nothing changed. Run it again.";
 				return;
 			}
 			string what;

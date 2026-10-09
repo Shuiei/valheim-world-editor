@@ -87,6 +87,10 @@ the plugin is unchanged in versions without that part.
   no longer plunge down outside it.
 - An object found with the map's search and opened with **Edit in 3D** stays selected in the editor:
   the selection went at the first frame drawn, while the inspector still showed the object.
+- **Script**: a script's changes are not applied when the area changed while it ran (a stroke, an
+  undo, a save that read the world again): they overwrote the stroke, or removed other objects than
+  the ones the script chose. And an object number that is not the area's no longer leaves the
+  script's ground change without an undo step, while saying nothing changed.
 
 ### WorldEditorBridge
 - An apply the game takes more than 30 seconds to start (a world save on the server) is no longer
