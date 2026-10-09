@@ -47,7 +47,7 @@ public class ParityEditorTests
 		{
 			Game = new FakeGame();
 			var game = Game;
-			await W.OpenWorld(() => WorldSession.OpenLive(new LiveBridge(game.Url, game.Token), "test"), "Opening…");
+			await W.OpenWorld(() => WorldSession.OpenLive(new LiveBridge(game.Url, game.Token), FakeGame.Label()), "Opening…");
 			W.MapPage?.Stop();
 			await W.EditArea(x, z, size);
 			Assert.True(W.Session!.IsLive);

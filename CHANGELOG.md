@@ -4,6 +4,15 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.16.0 — 2026-10-09
+
+### Added
+- The history is kept after the editor closes. After each **Save to world** or **Apply live** it
+  is kept on disk with the world, and when the world is opened again (in a later run too) its steps
+  are back in **History**, tagged **earlier session**, ready to undo: the ground as it was, a deleted
+  object back with its contents, a placed one removed. When the world may have changed since (live,
+  or saved by the game), the editor asks once before undoing or redoing those steps.
+
 ## v1.15.1 — 2026-10-09
 
 ### Changed

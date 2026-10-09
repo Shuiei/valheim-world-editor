@@ -36,6 +36,8 @@ public sealed class EditSession
 		public Change? RevertOf { get; init; }
 		// Live: already sent to the running game (Apply live); still undoable, which makes a new change.
 		public bool Applied { get; set; }
+		// From an earlier session of the editor (HistoryFile): the world may have changed since.
+		public bool Earlier { get; init; }
 
 		// "3 zones · 2 new · 1 removed · 1 zone reset", like the web editor's history.
 		public string Describe()
@@ -845,7 +847,7 @@ public sealed class EditSession
 				}
 				var f = new Change(c.Label, pts, c.Before, c.After, zones)
 				{
-					Things = things, Resets = c.Resets, Time = c.Time, Removed = c.Removed, Applied = c.Applied,
+					Things = things, Resets = c.Resets, Time = c.Time, Removed = c.Removed, Applied = c.Applied, Earlier = c.Earlier,
 					RevertOf = c.RevertOf != null && map.TryGetValue(c.RevertOf, out var r) ? r : null,
 				};
 				map[c] = f;

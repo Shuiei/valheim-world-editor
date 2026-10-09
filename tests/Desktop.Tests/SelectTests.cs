@@ -204,9 +204,10 @@ public class SelectTests
 			Assert.Equal(1, res.ObjectsDeleted);
 			var again = WorldScene.Load(dir, 0, 0, 1);
 			Assert.Contains(again.Things, o => o.Prefab == t.Prefab && Vector3.Distance(o.Position, to) < 0.01f);
-			Assert.DoesNotContain(again.Things, o => o.Prefab == t.Prefab && Vector3.Distance(o.Position, t.Position) < 0.01f);
+			// Not at its old place (the kept history has it ready to come back, gone).
+			Assert.DoesNotContain(again.Things, o => !o.Gone && o.Prefab == t.Prefab && Vector3.Distance(o.Position, t.Position) < 0.01f);
 			// The scene stays as it is after saving (like Apply live): the same objects shown.
-			Assert.Equal(again.Things.Count, scene.Things.Count(o => !o.Gone));
+			Assert.Equal(again.Things.Count(o => !o.Gone), scene.Things.Count(o => !o.Gone));
 		}
 		finally
 		{

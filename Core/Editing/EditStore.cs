@@ -180,6 +180,19 @@ public sealed class EditStore
 		}
 	}
 
+	// Objects a kept history can bring back (gone now): with the ones added and deleted again, so an
+	// undo or redo adds them. Nothing is pending until then.
+	public void KeepGone(IEnumerable<NewObject> objects)
+	{
+		lock (_lock)
+		{
+			foreach (NewObject o in objects.Where(o => o.Id < 0))
+			{
+				_addedTrash[o.Id] = o;
+			}
+		}
+	}
+
 	public List<ZoneReset> Resets
 	{
 		get

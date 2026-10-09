@@ -148,6 +148,13 @@ public sealed partial class MainWindow
 		LocationText.Text = n == 0 ? "" : $"{n} location(s) here. The ground already includes the flattening the game does around them (turn on Location markers in View to see where).";
 		LocationNote.IsVisible = n > 0;
 		_followSaid = "";
+		// The history kept from an earlier session, said once when it first shows.
+		if (scene.Owner is { Restored: { } kept, RestoredSaid: false } owner && scene.Session?.UndoList.Concat(scene.Session.RedoList).Any(c => c.Earlier) == true)
+		{
+			owner.RestoredSaid = true;
+			int steps = scene.Session.UndoList.Count(c => c.Earlier) + scene.Session.RedoList.Count(c => c.Earlier);
+			_message.Text = $"History from an earlier session ({kept.SavedAt:g}): {steps} step(s) you can undo, in History.{(kept.Changed ? $" The world {(owner.IsLive ? "may have changed" : "was saved again")} since: you are asked before undoing them." : "")}";
+		}
 		bool live = scene.Owner?.IsLive == true;
 		PlayersRow.IsVisible = live;
 		if (live)

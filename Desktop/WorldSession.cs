@@ -22,8 +22,19 @@ public sealed class WorldSession : IDisposable
 	public string Label { get; init; } = "";
 
 	// The history while no area is open, or another one (see EditSession.Export); gone when the world
-	// is saved, discarded or read again.
+	// is read again (zone resets, No limit ground). It is kept on disk after each save or Apply live
+	// (HistoryFile) and comes back when the world is opened again.
 	public EditSession.Kept? History { get; set; }
+	// The open area's session, whose history is the world's while it is open.
+	public EditSession? Area { get; set; }
+	// The history kept from an earlier session of the editor, when the world was opened (null: none).
+	public HistoryFile.Restored? Restored { get; private set; }
+	// Its steps may not match the world any more (live, or saved by the game since): asked once before
+	// undoing or redoing them (Earlier).
+	public bool EarlierMayDiffer => Restored?.Changed == true && !EarlierAllowed;
+	public bool EarlierAllowed { get; set; }
+	// The window said so already.
+	public bool RestoredSaid { get; set; }
 
 	// Ids for objects added in this session: negative, like the web editor's, unique across every area.
 	private int _nextId = -1;
@@ -32,10 +43,44 @@ public sealed class WorldSession : IDisposable
 	private static WorldSession From(WorldSave world, LiveBridge? live, string label)
 	{
 		var modifiers = new TerrainModifiers(world);
-		return new WorldSession
+		var s = new WorldSession
 		{
 			World = world, Edits = new EditStore(world), Modifiers = modifiers, Terrain = new TerrainService(world, modifiers), Live = live, Label = label,
 		};
+		s.RestoreHistory();
+		return s;
+	}
+
+	// The history kept on disk for this world, if any (the first area opened takes it).
+	private void RestoreHistory()
+	{
+		Restored = HistoryFile.Read(this);
+		History = Restored?.Kept;
+	}
+
+	// After a save or Apply live: the history as it is now (it matches what the world holds) goes to
+	// disk. A failure to write it is only logged: the save itself is done.
+	private void KeepHistory()
+	{
+		try
+		{
+			if ((Area?.Export() ?? History) is { } kept)
+			{
+				HistoryFile.Write(this, kept);
+			}
+		}
+		catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+		{
+			Console.WriteLine($"History: could not keep it on disk: {ex.Message}");
+		}
+	}
+
+	// The world was read again: the steps do not match it any more.
+	private void ForgetHistory()
+	{
+		History = null;
+		Restored = null;
+		HistoryFile.Delete(this);
 	}
 
 	// A world on this computer (its folder).
@@ -140,7 +185,7 @@ public sealed class WorldSession : IDisposable
 			Edits.ResetFrom(World);
 			UseModifiers(new TerrainModifiers(World));
 			_nextId = -1;
-			History = null;
+			ForgetHistory();
 			ForgetSaves();
 		}
 		else if (result.Saved)
@@ -150,6 +195,7 @@ public sealed class WorldSession : IDisposable
 			Edits.MarkApplied(changed.Select(e => (e.ZoneX, e.ZoneZ)));
 			_savedDeleted = Edits.Deleted.ToHashSet();
 			_savedAdded = Edits.Added.ToHashSet();
+			KeepHistory();
 		}
 		string message = plan != null ? $"{result.Message} No limit ground: {plan.Describe()}." : result.Message;
 		return new Outcome(result.Saved, message, result.Saved && reread, result with { Message = message }) { Lifted = plan != null };
@@ -225,8 +271,12 @@ public sealed class WorldSession : IDisposable
 				UseModifiers(new TerrainModifiers(World));
 				LiveSync.Reset();
 				_nextId = -1;
-				History = null;
+				ForgetHistory();
 				reloaded = true;
+			}
+			else if (done.Count > 0)
+			{
+				KeepHistory();
 			}
 			return new Outcome(done.Count > 0, done.Count > 0 ? $"Applied to the running game: {string.Join("; ", done)}." : "Nothing to apply.", reloaded) { Lifted = plan != null };
 		}
@@ -259,5 +309,12 @@ public sealed class WorldSession : IDisposable
 		UseModifiers(new TerrainModifiers(World));
 		LiveSync.Reset();
 		History = null;
+		Area = null;
+		// Offline the world is as it was last saved: so is the history kept then.
+		if (!IsLive)
+		{
+			_nextId = -1;
+			RestoreHistory();
+		}
 	}
 }

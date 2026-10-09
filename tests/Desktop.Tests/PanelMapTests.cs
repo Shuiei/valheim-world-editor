@@ -54,7 +54,7 @@ public class PanelMapTests
 			broken(game);
 			var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
 			w.Show();
-			await w.OpenWorld(() => WorldSession.OpenLive(new LiveBridge(game.Url, game.Token), "test"), "Connecting…");
+			await w.OpenWorld(() => WorldSession.OpenLive(new LiveBridge(game.Url, game.Token), FakeGame.Label()), "Connecting…");
 			await LiveTests.Until(() => w.MapPage!.LiveText.Text == "Live world · the game does not answer right now.");
 			w.MapPage!.Stop();
 		}

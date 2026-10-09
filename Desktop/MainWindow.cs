@@ -200,6 +200,7 @@ public sealed partial class MainWindow : Window
 		if (_session is { Scene.Owner: { } owner } s && _pages.Content == _editorPage)
 		{
 			owner.History = s.Export();
+			owner.Area = null;
 		}
 	}
 
@@ -445,18 +446,42 @@ public sealed partial class MainWindow : Window
 		UpdateEditorWorld(s, dirty);
 	}
 
-	internal void Undo()
+	internal async Task Undo()
 	{
 		_view.SelectTool.Commit();
-		_session?.Undo();
+		if (_session is { } s && s.UndoList.Count > 0 && await AllowEarlier(new[] { s.UndoList[^1] }))
+		{
+			s.Undo();
+		}
 		UpdateSaveBar();
 	}
 
-	internal void Redo()
+	internal async Task Redo()
 	{
 		_view.SelectTool.Commit();
-		_session?.Redo();
+		if (_session is { } s && s.RedoList.Count > 0 && await AllowEarlier(new[] { s.RedoList[^1] }))
+		{
+			s.Redo();
+		}
 		UpdateSaveBar();
+	}
+
+	// Steps from an earlier session of the editor (kept on disk), when the world may have changed since
+	// (live, or saved again by the game): asked once per open world before undoing or redoing them.
+	internal async Task<bool> AllowEarlier(IEnumerable<EditSession.Change> steps)
+	{
+		if (_session?.Scene.Owner is not { EarlierMayDiffer: true } w || !steps.Any(c => c.Earlier))
+		{
+			return true;
+		}
+		string since = w.IsLive ? "Players may have changed the world since." : "The world was saved again since (by the game, or another program).";
+		if (!await Ask("A step from an earlier session", $"This step was made in an earlier session of the editor (kept {w.Restored!.SavedAt:g}). {since} Undoing or redoing it puts the ground and the objects back as they were then, over what changed since.", "Go ahead", "Cancel"))
+		{
+			_message.Text = "Nothing changed.";
+			return false;
+		}
+		w.EarlierAllowed = true;
+		return true;
 	}
 
 	// Like the web editor's Save: asks first, writes (with a backup), then says what was done.
@@ -1030,7 +1055,7 @@ public sealed partial class MainWindow : Window
 	// saved and Save, and the right-hand panels.
 	private Border TopBar()
 	{
-		UndoButton.Click += (_, _) => Undo();
+		UndoButton.Click += async (_, _) => await Undo();
 		MapButton.Click += async (_, _) =>
 		{
 			if (_inWorkshop)
@@ -1052,7 +1077,7 @@ public sealed partial class MainWindow : Window
 		ViewButton.Tip("top.view");
 		HelpButton.Click += (_, _) => ShowRight(HelpCard.IsVisible ? null : HelpCard);
 		HelpButton.Tip("top.help");
-		RedoButton.Click += (_, _) => Redo();
+		RedoButton.Click += async (_, _) => await Redo();
 		SaveButton.Click += async (_, _) => await Save();
 		SaveButton.Tip("top.save");
 		ToolTip.SetTip(_liveBadge, "Connected to the running game through the WorldEditorBridge plugin");
@@ -1344,12 +1369,12 @@ public sealed partial class MainWindow : Window
 		}
 		if (ctrl && e.Key == Avalonia.Input.Key.Z)
 		{
-			if (mods.HasFlag(Avalonia.Input.KeyModifiers.Shift)) Redo(); else Undo();
+			_ = mods.HasFlag(Avalonia.Input.KeyModifiers.Shift) ? Redo() : Undo();
 			e.Handled = true;
 		}
 		else if (ctrl && e.Key == Avalonia.Input.Key.Y)
 		{
-			Redo();
+			_ = Redo();
 			e.Handled = true;
 		}
 		else if (ctrl && e.Key == Avalonia.Input.Key.C && Tools.Mode is ToolMode.Area or ToolMode.Select)
@@ -1652,6 +1677,7 @@ public sealed partial class MainWindow : Window
 		SelectPanel.ClaimButton.Click += (_, _) => Claim();
 		AskPlayerId = () => Dialogs.AskText(this, "Built by", "Player id to write as the builder (the number Valheim keeps for a character):");
 		History.Message += t => { _message.Text = t; UpdateSaveBar(); };
+		History.Allow = AllowEarlier;
 		SelectPanel.ReplaceAsked += prefab =>
 		{
 			_view.SelectTool.Commit();

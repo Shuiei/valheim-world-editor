@@ -378,6 +378,7 @@ public static class Tips
 		["build.grid"] = "Where you point at the ground is rounded to this grid (from the middle of the plot) before the piece is put there; pieces pointed at are not. Off: as in the game.",
 		["workshop.cut"] = "See the building from a height: nothing above it is shown (metres above the plot), and you can point at what is inside, to build there. Left: off.",
 		["paste.clearSite"] = "Where a pasted building (its pieces) stands: the ground in its way, a mountain, a mound, is dug down to its lowest piece, a metre around it too; never raised. Trees, rocks, bushes and pickables there are taken away. One undo step with the paste.",
+		["history.earlier"] = "Made in an earlier session of the editor: the history is kept with the world after each save or Apply live, and comes back when you open it again. When the world may have changed since (live, or saved by the game), you are asked once before undoing or redoing these steps.",
 		["tools.blueprints"] = "Your blueprints (Homestead's, the Workshop's): paste one into this area.",
 		["build.lift"] = "Back to no lift: the piece goes where the cursor points (on a piece, or the ground).",
 		["build.turn"] = "How far , and . (or Alt + wheel) turn the piece. Shift turns by 1°.",

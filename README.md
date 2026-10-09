@@ -51,7 +51,8 @@ for Windows or Linux. Unpack it and start it. You don't need to install anything
   whole world.
 - **Write C# scripts** that shape, paint and fill an area with terrain, trees, rocks and buildings.
 - **Measure** distances and slopes, and colour the ground by steepness.
-- **Undo anything.** The history panel goes back to any point, or takes out one change only.
+- **Undo anything.** The history panel goes back to any point, or takes out one change only. It is
+  kept with the world after each save, so you can still undo after closing the editor.
 
 ## Three ways to edit
 

@@ -67,8 +67,22 @@ Applied changes (live) can still be undone; the next apply then sends the undo.
 
 The history follows you from area to area (the arrows, Follow, the map): it stays with the pending
 changes. A change that touched ground outside the new area is left out, with every change before
-it, since it could not be undone from there. Saving, Discard and reloading from the game start a
-new history (what it described is written or gone).
+it, since it could not be undone from there. Saving and Apply live keep it: undo a step and save
+(or apply) again to take it back. Zone resets and No limit ground read the world again, which starts
+a new history; so does reloading from the game.
+
+### Kept after the editor closes
+
+After each **Save to world** or **Apply live**, the history is kept on disk with the world (in
+`history/` of the editor's data folder). When you open the world again, even after closing the
+editor, it is back in **History**, tagged **earlier session**, and **Undo** takes those steps back
+as before: the ground as it was, a deleted object back with its contents, a placed one removed.
+Changes you neither saved nor applied are not kept.
+
+The world may have changed since: players built and dug (live), or the game saved it again
+(offline). Then the editor asks once, before the first step from an earlier session is undone or
+redone, as it puts the ground and the objects back as they were, over what changed since. Saved
+worlds that only the editor saved since are not asked about.
 
 ## View panel
 

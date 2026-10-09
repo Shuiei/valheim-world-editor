@@ -161,7 +161,7 @@ public class WindowFlowTests
 	{
 		var game = new FakeGame();
 		using var r = new Run();
-		await r.W.OpenWorld(() => WorldSession.OpenLive(new LiveBridge(game.Url, game.Token), "test"), "Connecting…");
+		await r.W.OpenWorld(() => WorldSession.OpenLive(new LiveBridge(game.Url, game.Token), FakeGame.Label()), "Connecting…");
 		r.W.MapPage!.Stop();
 		game.Dispose();
 		await r.W.ReloadWorld();
