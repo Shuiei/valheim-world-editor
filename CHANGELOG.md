@@ -31,6 +31,13 @@ the plugin is unchanged in versions without that part.
   leaving it no longer deletes that save. Leaving a world also no longer deletes your own files named
   `_main.<something>` in its folder (a `_main.backup.zip`).
 
+### WorldEditorBridge
+- An apply the game takes more than 30 seconds to start (a world save on the server) is no longer
+  done later anyway: the editor was told it failed and sent it again, so new objects were made twice
+  for every player. Given up on, it never runs; once started, the editor waits for it.
+- A malformed object to make fails the whole call before anything changes. Objects removed and made
+  before it stayed done, and sending the call again made them twice.
+
 ## v1.15.5 — 2026-10-09
 
 ### Fixed

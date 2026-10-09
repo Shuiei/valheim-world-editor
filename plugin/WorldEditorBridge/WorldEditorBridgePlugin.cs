@@ -72,6 +72,9 @@ public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
 		public Exception Error;
 
 		public readonly ManualResetEventSlim Done = new(false);
+
+		// 0 waiting, 1 taken by the main thread, 2 given up by the caller (never runs).
+		public int State;
 	}
 
 	private void Awake()
@@ -142,6 +145,10 @@ public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
 		// At most a few jobs per frame; each is quick except the snapshot.
 		for (int i = 0; i < 4 && _jobs.TryDequeue(out Job job); i++)
 		{
+			if (Interlocked.CompareExchange(ref job.State, 1, 0) != 0)
+			{
+				continue;
+			}
 			try
 			{
 				job.Result = job.Work();
@@ -158,9 +165,15 @@ public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
 	{
 		Job job = new() { Work = work };
 		_jobs.Enqueue(job);
+		// Given up on, a job never runs later (the editor, told it failed, sends it again: objects would be
+		// made twice). One the main thread already took is waited for: it is quick once started.
 		if (!job.Done.Wait(timeoutMs))
 		{
-			throw new TimeoutException("the game did not answer in time");
+			if (Interlocked.CompareExchange(ref job.State, 2, 0) == 0)
+			{
+				throw new TimeoutException("the game did not answer in time");
+			}
+			job.Done.Wait();
 		}
 		if (job.Error != null)
 		{
@@ -347,10 +360,12 @@ public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
 			destroyIds[i] = new ZDOID(pkg.ReadLong(), pkg.ReadUInt());
 		}
 		int createCount = pkg.ReadInt();
-		byte[][] creates = new byte[createCount][];
+		// Every object to make is read first: a malformed one fails the call before anything changed,
+		// so the editor, which records nothing then, can send it again without doubles.
+		Func<ZDO>[] creates = new Func<ZDO>[createCount];
 		for (int i = 0; i < createCount; i++)
 		{
-			creates[i] = pkg.ReadByteArray();
+			creates[i] = ReadSaveFormat(new ZPackage(pkg.ReadByteArray()));
 		}
 		(int Prefab, Vector3 Position)[] where = null;
 		if (pkg.GetPos() < pkg.Size())
@@ -383,7 +398,7 @@ public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
 		StringBuilder ids = new();
 		for (int i = 0; i < createCount; i++)
 		{
-			ZDO zdo = CreateFromSaveFormat(new ZPackage(creates[i]));
+			ZDO zdo = creates[i]();
 			if (i > 0)
 			{
 				ids.Append(',');
@@ -480,7 +495,9 @@ public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
 		return Encoding.UTF8.GetBytes($"{{\"zones\":{zones.Count},\"destroyed\":{destroyed},\"locations\":{locations}}}");
 	}
 
-	private static ZDO CreateFromSaveFormat(ZPackage p)
+	// An object as the save writes it (ZDO.Save), read whole into what makes it: nothing is made in the
+	// game until that is called.
+	private static Func<ZDO> ReadSaveFormat(ZPackage p)
 	{
 		int flags = p.ReadUShort();
 		Vector3 pos;
@@ -495,41 +512,48 @@ public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
 		}
 		int prefab = p.ReadInt();
 		Vector3 euler = (flags & 0x1000) != 0 ? p.ReadSmallRotation() : Vector3.zero;
-		ZDO zdo = ZDOMan.instance.CreateNewZDO(pos, prefab);
-		zdo.Persistent = (flags & 0x100) != 0;
-		zdo.Distant = (flags & 0x200) != 0;
-		zdo.Type = (ZDO.ObjectType)((flags >> 10) & 3);
-		zdo.SetPrefab(prefab);
-		zdo.SetRotation(Quaternion.Euler(euler));
-		if ((flags & 0xFF) == 0)
+		List<Action<ZDO>> values = new();
+		if ((flags & 0xFF) != 0)
 		{
+			if ((flags & 0x1) != 0)
+			{
+				p.ReadByte();
+				p.ReadInt();
+			}
+			void Each(int flag, Func<int, Action<ZDO>> read)
+			{
+				if ((flags & flag) == 0)
+				{
+					return;
+				}
+				int n = p.ReadNumItems();
+				for (int k = 0; k < n; k++)
+				{
+					values.Add(read(p.ReadInt()));
+				}
+			}
+			Each(0x2, key => { float v = p.ReadSingle(); return z => z.Set(key, v); });
+			Each(0x4, key => { Vector3 v = p.ReadVector3(); return z => z.Set(key, v); });
+			Each(0x8, key => { Quaternion v = p.ReadQuaternion(); return z => z.Set(key, v); });
+			Each(0x10, key => { int v = p.ReadInt(); return z => z.Set(key, v); });
+			Each(0x20, key => { long v = p.ReadLong(); return z => z.Set(key, v); });
+			Each(0x40, key => { string v = p.ReadString(); return z => z.Set(key, v); });
+			Each(0x80, key => { byte[] v = p.ReadByteArray(); return z => z.Set(key, v); });
+		}
+		return () =>
+		{
+			ZDO zdo = ZDOMan.instance.CreateNewZDO(pos, prefab);
+			zdo.Persistent = (flags & 0x100) != 0;
+			zdo.Distant = (flags & 0x200) != 0;
+			zdo.Type = (ZDO.ObjectType)((flags >> 10) & 3);
+			zdo.SetPrefab(prefab);
+			zdo.SetRotation(Quaternion.Euler(euler));
+			foreach (Action<ZDO> set in values)
+			{
+				set(zdo);
+			}
 			return zdo;
-		}
-		if ((flags & 0x1) != 0)
-		{
-			p.ReadByte();
-			p.ReadInt();
-		}
-		void Each(int flag, Action<int> read)
-		{
-			if ((flags & flag) == 0)
-			{
-				return;
-			}
-			int n = p.ReadNumItems();
-			for (int k = 0; k < n; k++)
-			{
-				read(p.ReadInt());
-			}
-		}
-		Each(0x2, key => zdo.Set(key, p.ReadSingle()));
-		Each(0x4, key => zdo.Set(key, p.ReadVector3()));
-		Each(0x8, key => zdo.Set(key, p.ReadQuaternion()));
-		Each(0x10, key => zdo.Set(key, p.ReadInt()));
-		Each(0x20, key => zdo.Set(key, p.ReadLong()));
-		Each(0x40, key => zdo.Set(key, p.ReadString()));
-		Each(0x80, key => zdo.Set(key, p.ReadByteArray()));
-		return zdo;
+		};
 	}
 
 	// Like ZNetView.Awake for the _TerrainCompiler prefab, at the zone centre.
