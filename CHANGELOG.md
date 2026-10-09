@@ -4,6 +4,20 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.15.1 — 2026-10-09
+
+### Changed
+- **Blueprints** on the tool rail is a tool like the others: it lights up, and the blueprint list
+  opens next to the rail in place of the last tool's options (it opened on the right, over the View
+  panel). **Blueprints…** in the Area tool opens it the same way.
+
+### Fixed
+- The saved-world page no longer says each save makes a full backup (it has not since 1.14.0): each
+  save is read back and checked before the old one is removed.
+- The server form says the plugin's token is written the first time the server starts with the
+  plugin. The README, the plugin's README.txt and its mod page say so too, and the start page
+  pictures show the Workshop.
+
 ## v1.15.0 — 2026-10-08
 
 ### Added

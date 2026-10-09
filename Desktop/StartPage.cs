@@ -138,7 +138,7 @@ public sealed class StartPage
 		PathBox.Tip("start.folder");
 		openPath.Click += (_, _) => OpenFolder(PathBox.Text ?? "");
 		OfflinePanel.Children.Add(WorldCards);
-		OfflinePanel.Children.Add(Hint("Close Valheim (or stop the server) before you save changes into a world: a running game writes over the files. Saving always makes a full backup of the world first."));
+		OfflinePanel.Children.Add(Hint("Close Valheim (or stop the server) before you save changes into a world: a running game writes over the files. Each save is read back and checked before the old one is removed."));
 		OfflinePanel.Children.Add(Card(new StackPanel
 		{
 			Spacing = 6,
@@ -555,7 +555,7 @@ public sealed class StartPage
 		}
 		if (string.IsNullOrWhiteSpace(SToken.Text))
 		{
-			_serverError.Text = "Enter the plugin's token: the Token line in BepInEx/config/Tie.WorldEditorBridge.cfg on the server.";
+			_serverError.Text = "Enter the plugin's token: the Token line in BepInEx/config/Tie.WorldEditorBridge.cfg on the server (written the first time the server starts with the plugin).";
 			return;
 		}
 		await Connect(new Tunnel.Request(SHost.Text.Trim(), (int)(SPort.Value ?? 22), SUser.Text?.Trim() ?? "", NullIfEmpty(SPass.Text), NullIfEmpty(SKey.Text), NullIfEmpty(SPhrase.Text), SToken.Text.Trim(),
