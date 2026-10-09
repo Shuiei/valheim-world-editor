@@ -39,6 +39,24 @@ public sealed class LiveSync
 		}
 	}
 
+	// Whether the game no longer has this object because the editor removed it (applied).
+	public bool IsDestroyed(int id)
+	{
+		lock (_lock)
+		{
+			return _destroyed.Contains(id);
+		}
+	}
+
+	// Whether this ZDOID is one the editor made (a new object, or a removed one brought back).
+	public bool IsOurs((long User, uint Id) zdo)
+	{
+		lock (_lock)
+		{
+			return _liveIds.Values.Any(t => t.User == zdo.User && t.Id == zdo.Id);
+		}
+	}
+
 	public (int Deleted, int Added) Pending(EditStore edits)
 	{
 		lock (_lock)
@@ -84,7 +102,7 @@ public sealed class LiveSync
 			foreach (int id in _destroyed.Where(id => !deleted.Contains(id)).ToList())
 			{
 				ObjectRef o = world.ObjectRefs[id];
-				create.Add(world.LiveBytes![(int)o.Start..(int)o.End]);
+				create.Add(world.ObjectBytes(id));
 				createFor.Add(id);
 				createWhat.Add((o.Prefab, o.Position));
 				restoreIds.Add(id);
@@ -92,7 +110,7 @@ public sealed class LiveSync
 			// New objects not in the game yet, and ones that were removed again (undo, delete).
 			foreach (NewObject n in added.Values.Where(n => !_liveIds.ContainsKey(n.Id)))
 			{
-				byte[]? bytes = world.NewObjectBytes(n, _ => world.LiveBytes!);
+				byte[]? bytes = world.NewObjectBytes(n, m => world.LiveSource(m.File));
 				if (bytes == null)
 				{
 					skipped.Add($"unknown kind of object at {n.Position.X:F0}, {n.Position.Z:F0}");

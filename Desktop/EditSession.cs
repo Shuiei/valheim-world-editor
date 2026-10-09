@@ -540,6 +540,11 @@ public sealed class EditSession
 		{
 			foreach (var (i, gone) in things)
 			{
+				// Removed (or changed) in the game since: undo does not bring it back (it is not there).
+				if (!gone && list[i].Id >= 0 && Scene.World.Vanished.Contains(list[i].Id))
+				{
+					continue;
+				}
 				list[i] = list[i] with { Gone = gone };
 				Edits.SetDeleted(new[] { list[i].Id }, gone);
 			}
@@ -882,6 +887,73 @@ public sealed class EditSession
 			_redo.AddRange(redo.Skip(end + 1)!);
 			return start + end + 1;
 		}
+	}
+
+	// Live: what the game changed in the zones shown (WorldSession.FollowGame), taken in without an undo
+	// step: objects removed or changed there go, new and changed ones come, and the ground of the zones
+	// given is read again. Not during a stroke (asked again next time: false).
+	public bool TakeGameChanges(WorldSave.Merged merged, IReadOnlyCollection<(int X, int Z)> ground)
+	{
+		var list = Scene.Things;
+		var changed = new List<int>();
+		var added = new List<int>();
+		lock (_lock)
+		{
+			if (_stroke != null)
+			{
+				return false;
+			}
+			var gone = merged.Vanished.ToHashSet();
+			var fresh = merged.Added.ToHashSet();
+			var world = Scene.World;
+			float minX = Scene.X0 * 64f - 32f, maxX = (Scene.X0 + Scene.Size - 1) * 64f + 32f, minZ = Scene.Z0 * 64f - 32f, maxZ = (Scene.Z0 + Scene.Size - 1) * 64f + 32f;
+			bool Inside(System.Numerics.Vector3 p) => p.X >= minX && p.X < maxX && p.Z >= minZ && p.Z < maxZ;
+			lock (list)
+			{
+				for (int i = 0; i < list.Count; i++)
+				{
+					if (list[i].Id >= 0 && gone.Contains(list[i].Id) && !list[i].Gone)
+					{
+						list[i] = list[i] with { Gone = true };
+						changed.Add(i);
+					}
+				}
+				if (fresh.Count > 0)
+				{
+					foreach (var (id, prefab, p, r, sc) in world.Objects)
+					{
+						if (fresh.Contains(id) && Inside(p))
+						{
+							added.Add(list.Count);
+							list.Add(new WorldScene.Thing(id, prefab, p, r, sc.X, false) { Tamed = world.Tamed.Contains(id) });
+						}
+					}
+					foreach (var (id, prefab, p, ry) in world.Pieces)
+					{
+						if (fresh.Contains(id) && Inside(p))
+						{
+							added.Add(list.Count);
+							list.Add(new WorldScene.Thing(id, prefab, p, new System.Numerics.Vector3(0, ry, 0), 0, true));
+						}
+					}
+				}
+			}
+			if (ground.Count > 0)
+			{
+				Ground.TakeEdits(Edits);
+				Touch((0, 0, Ground.W - 1, Ground.H - 1));
+			}
+		}
+		if (changed.Count > 0)
+		{
+			ThingsChanged?.Invoke(changed);
+		}
+		if (added.Count > 0)
+		{
+			ThingsAdded?.Invoke(added);
+		}
+		Changed?.Invoke();
+		return true;
 	}
 
 	// The world was read again (saved, reloaded): the ground and the objects from it, no history.

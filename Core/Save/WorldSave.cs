@@ -157,7 +157,7 @@ public sealed class WorldSave
 		ObjectRef o = ObjectRefs[id];
 		if (LiveBytes != null)
 		{
-			return LiveBytes[(int)o.Start..(int)o.End];
+			return LiveSource(o.File)[(int)o.Start..(int)o.End];
 		}
 		using FileStream fs = File.OpenRead(Path.Combine(Directory, o.File.FileName));
 		byte[] b = new byte[o.End - o.Start];
@@ -269,6 +269,110 @@ public sealed class WorldSave
 
 	// The decompressed live snapshot; object byte ranges (ObjectRef.Start .. End) point into it.
 	public byte[]? LiveBytes { get; private set; }
+
+	// Live: the bytes an object's offsets are in, the snapshot's or those of objects read since from the
+	// game (MergeLive: each read is its own little file).
+	private readonly Dictionary<ChunkFile, byte[]> _liveFiles = new();
+
+	public byte[] LiveSource(ChunkFile file) => _liveFiles.TryGetValue(file, out byte[]? b) ? b : LiveBytes!;
+
+	// Live: objects the game no longer has as they were (removed, or changed: read again under a new
+	// id). Left out of every list; their ids stay taken.
+	public HashSet<int> Vanished { get; } = new();
+
+	public sealed record Merged(List<int> Added, List<int> Vanished, HashSet<(int X, int Z)> TerrainZones);
+
+	// Live: the zones' objects as the game has them now (ZDOID and bytes, as the plugin's /zone sends them),
+	// merged in: new ones and changed ones (read again) are added under new ids, those gone or changed
+	// vanish. keep: objects the editor deleted (pending or applied): left as they are whatever the game
+	// did (undo brings them back); ours: ZDOIDs of objects the editor made itself (they are its new
+	// objects).
+	public Merged MergeLive(IReadOnlyCollection<(int X, int Z)> zones, IReadOnlyList<(long User, uint Id, byte[] Bytes)> objects,
+		Func<int, bool> keep, Func<(long User, uint Id), bool> ours)
+	{
+		var zoneSet = zones.ToHashSet();
+		var known = new Dictionary<(long, uint), int>();
+		for (int id = 0; id < ObjectRefs.Count; id++)
+		{
+			ObjectRef o = ObjectRefs[id];
+			if (!Vanished.Contains(id) && zoneSet.Contains(o.Zone))
+			{
+				known[o.LiveId] = id;
+			}
+		}
+		var result = new Merged(new(), new(), new());
+		var fresh = new List<(long User, uint Id, byte[] Bytes)>();
+		var seen = new HashSet<int>();
+		foreach (var (user, zid, bytes) in objects)
+		{
+			if (known.TryGetValue((user, zid), out int id))
+			{
+				seen.Add(id);
+				// (Changed in the game but deleted in the editor: the deletion stands.)
+				if (!keep(id) && !ObjectBytes(id).AsSpan().SequenceEqual(bytes))
+				{
+					Vanish(id, result);
+					fresh.Add((user, zid, bytes));
+				}
+			}
+			else if (!ours((user, zid)))
+			{
+				fresh.Add((user, zid, bytes));
+			}
+		}
+		foreach (int id in known.Values)
+		{
+			if (!seen.Contains(id) && !keep(id))
+			{
+				Vanish(id, result);
+			}
+		}
+		if (fresh.Count > 0)
+		{
+			byte[] all = fresh.SelectMany(f => f.Bytes).ToArray();
+			ChunkFile file = new() { Chunk = 0, Size = 0, Version = 0, IndexCount = 0, WorldVersion = Chunks.Count > 0 ? Chunks[0].WorldVersion : 41, Count = fresh.Count, Length = all.Length };
+			_liveFiles[file] = all;
+			using ValheimReader pkg = new(new MemoryStream(all));
+			foreach (var (user, zid, _) in fresh)
+			{
+				int id = ObjectRefs.Count;
+				int zonesBefore = TerrainZones.Count;
+				ReadZdo(pkg, file.WorldVersion, file);
+				ObjectCount++;
+				ObjectRefs[id].LiveId = (user, zid);
+				result.Added.Add(id);
+				if (TerrainZones.Count > zonesBefore)
+				{
+					var z = TerrainZones[^1];
+					result.TerrainZones.Add((z.ZoneX, z.ZoneZ));
+				}
+			}
+		}
+		return result;
+	}
+
+	// An object out of every list (its id stays taken, its bytes kept for undo's sake).
+	private void Vanish(int id, Merged result)
+	{
+		Vanished.Add(id);
+		result.Vanished.Add(id);
+		ObjectRef o = ObjectRefs[id];
+		Objects.RemoveAll(x => x.Id == id);
+		Pieces.RemoveAll(x => x.Id == id);
+		Discs.RemoveAll(x => x.Id == id);
+		Tamed.Remove(id);
+		int t = TerrainZones.FindIndex(z => z.Source is { } src && src.File == o.File && src.Start == o.Start);
+		if (t >= 0)
+		{
+			result.TerrainZones.Add((TerrainZones[t].ZoneX, TerrainZones[t].ZoneZ));
+			TerrainZones.RemoveAt(t);
+		}
+		int placed = Placed.FindIndex(x => x.Prefab == o.Prefab && Vector3.DistanceSquared(x.Position, o.Position) < 1e-4f);
+		if (placed >= 0)
+		{
+			Placed.RemoveAt(placed);
+		}
+	}
 
 	// A snapshot from the WorldEditorBridge plugin (gzip): world info, ZoneSystem data and every
 	// persistent object in the chunk file format, followed by each object's live ZDOID.

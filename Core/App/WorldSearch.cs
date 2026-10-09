@@ -69,7 +69,7 @@ public static class WorldSearch
 		// Items and texts: only objects with byte arrays (containers) or strings are read.
 		ushort needed = what == "items" ? ZdoData.ByteArrays : ZdoData.Strings;
 		Dictionary<ChunkFile, byte[]> files = new();
-		byte[] Source(ObjectRef o) => world.LiveBytes ?? (files.TryGetValue(o.File, out byte[]? f) ? f : files[o.File] = File.ReadAllBytes(Path.Combine(world.Directory, o.File.FileName)));
+		byte[] Source(ObjectRef o) => world.IsLive ? world.LiveSource(o.File) : (files.TryGetValue(o.File, out byte[]? f) ? f : files[o.File] = File.ReadAllBytes(Path.Combine(world.Directory, o.File.FileName)));
 		IEnumerable<(int Id, Func<byte[]> Bytes)> Candidates()
 		{
 			for (int id = 0; id < world.ObjectRefs.Count; id++)

@@ -306,6 +306,7 @@ public sealed class WorldSession : IDisposable
 				Edits.ResetFrom(World);
 				UseModifiers(new TerrainModifiers(World));
 				LiveSync.Reset();
+				_digests.Clear();
 				_nextId = -1;
 				ForgetHistory();
 				reloaded = true;
@@ -324,6 +325,59 @@ public sealed class WorldSession : IDisposable
 		}
 	}
 
+	// ---- Live: following the game. The zones shown are asked about every few seconds (one number each,
+	// cheap); those that changed are read again and merged in: objects made, removed or changed in the
+	// game appear as they are, and ground changed there replaces the editor's where it has no changes of
+	// its own (where it has, it is kept, and applying it asks first: Edits.GameChanged).
+	private readonly Dictionary<(int, int), ulong> _digests = new();
+
+	public sealed record Followed(WorldSave.Merged Merged, List<(int X, int Z)> Ground, List<(int X, int Z)> Kept)
+	{
+		public bool Any => Merged.Added.Count + Merged.Vanished.Count + Ground.Count + Kept.Count > 0;
+	}
+
+	// What changed in these zones since they were last asked about (null: nothing, or an apply is under
+	// way: asked again next time). The plugin's errors and an unreachable game are the caller's to show.
+	public async Task<Followed?> FollowGame(IReadOnlyCollection<(int X, int Z)> zones)
+	{
+		if (Live is not { } live || zones.Count == 0 || !await _applying.WaitAsync(0))
+		{
+			return null;
+		}
+		try
+		{
+			var now = await live.Watch(zones);
+			var changed = now.Where(kv => !_digests.TryGetValue(kv.Key, out ulong d) || d != kv.Value).Select(kv => kv.Key).ToList();
+			if (changed.Count == 0)
+			{
+				return null;
+			}
+			var objects = await live.ZoneObjects(changed);
+			var merged = World.MergeLive(changed, objects, id => Edits.Deleted.Contains(id) || LiveSync.IsDestroyed(id), LiveSync.IsOurs);
+			foreach (var key in changed)
+			{
+				_digests[key] = now[key];
+			}
+			var ground = new List<(int, int)>();
+			var kept = new List<(int, int)>();
+			foreach (var (x, z) in merged.TerrainZones)
+			{
+				var zone = World.TerrainZones.FirstOrDefault(t => t.ZoneX == x && t.ZoneZ == z);
+				(Edits.TakeGameGround(x, z, zone) ? kept : ground).Add((x, z));
+			}
+			// Objects that shape the ground as the game runs (locations, some pieces) came or went.
+			if (merged.Added.Concat(merged.Vanished).Any(id => World.ObjectRefs[id].Prefab is int p && (p == WorldSave.LocationProxyPrefab || WorldSave.ModifierPrefabs.Contains(p))))
+			{
+				UseModifiers(new TerrainModifiers(World));
+			}
+			return new Followed(merged, ground, kept);
+		}
+		finally
+		{
+			_applying.Release();
+		}
+	}
+
 	// Live: the world read again from the game (what players changed since); pending edits are dropped.
 	public async Task Reload()
 	{
@@ -331,6 +385,7 @@ public sealed class WorldSession : IDisposable
 		Edits.ResetFrom(World);
 		UseModifiers(new TerrainModifiers(World));
 		LiveSync.Reset();
+		_digests.Clear();
 		History = null;
 	}
 
