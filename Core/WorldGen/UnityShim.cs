@@ -26,9 +26,11 @@ public struct Vector2
 
 	public static Vector2 right => new(1f, 0f);
 
-	public float magnitude => (float)Math.Sqrt(x * x + y * y);
+	// Squares and sums in double, as the game's Mono runtime does with these floats (the float result
+	// differed now and then: rivers and streams a hair off).
+	public float magnitude => (float)Math.Sqrt((double)x * x + (double)y * y);
 
-	public float sqrMagnitude => x * x + y * y;
+	public float sqrMagnitude => (float)((double)x * x + (double)y * y);
 
 	public Vector2 normalized
 	{
@@ -43,10 +45,10 @@ public struct Vector2
 	{
 		float dx = a.x - b.x;
 		float dy = a.y - b.y;
-		return (float)Math.Sqrt(dx * dx + dy * dy);
+		return (float)Math.Sqrt((double)dx * dx + (double)dy * dy);
 	}
 
-	public static float SqrMagnitude(Vector2 a) => a.x * a.x + a.y * a.y;
+	public static float SqrMagnitude(Vector2 a) => (float)((double)a.x * a.x + (double)a.y * a.y);
 
 	public static Vector2 operator +(Vector2 a, Vector2 b) => new(a.x + b.x, a.y + b.y);
 

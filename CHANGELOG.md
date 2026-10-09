@@ -100,6 +100,10 @@ the plugin is unchanged in versions without that part.
   account on that address: logging in as another user accepted any identity, and saved it.
 - The README in the editor's packages names the plugin's file as it is on the release page
   (`WorldEditorBridge-1.15.6.zip`, it said `WorldEditorBridge-v1.15.6.zip`).
+- The world generator is closer to the game's: lengths and distances between points (rivers,
+  streams, lakes) are worked out with the game's precision. Of the heights recorded in the game, 2992
+  of 3000 now match bit for bit (2982 before) and all 8 zones (6 before); the rest still differ by
+  less than a millimetre.
 
 ### WorldEditorBridge
 - An apply the game takes more than 30 seconds to start (a world save on the server) is no longer
