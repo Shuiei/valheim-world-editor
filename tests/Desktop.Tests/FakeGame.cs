@@ -31,7 +31,7 @@ public sealed class FakeGame : IDisposable
 	public TaskCompletionSource? HoldTerrain { get; set; }
 	public TaskCompletionSource TerrainArrived { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 	// What the game has in its zones, for /watch and /zone: each zone's number (it changes with the zone)
-	// and its objects (ZDOID and bytes). A zone not set: number 0, no objects.
+	// and its objects (ZDOID and bytes). Zones not set are not watched.
 	public Dictionary<(int X, int Z), (ulong Digest, List<(long User, uint Id, byte[] Bytes)> Objects)> Zones { get; } = new();
 	public int ZoneReads;
 	// Objects the game no longer had when asked to destroy them.
@@ -158,7 +158,9 @@ public sealed class FakeGame : IDisposable
 					{
 						if (path == "/watch")
 						{
-							body = Encoding.UTF8.GetBytes("{\"zones\":[" + string.Join(",", asked.Select(z => $"[{z.Item1},{z.Item2},\"{(Zones.TryGetValue(z, out var e) ? e.Digest : 0)}\"]")) + "]}");
+							// Zones not set are left out (as the plugin leaves out zones outside the world):
+							// the editor then has nothing to read again there.
+							body = Encoding.UTF8.GetBytes("{\"zones\":[" + string.Join(",", asked.Where(Zones.ContainsKey).Select(z => $"[{z.Item1},{z.Item2},\"{Zones[z].Digest}\"]")) + "]}");
 						}
 						else
 						{

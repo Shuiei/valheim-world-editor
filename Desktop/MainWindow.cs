@@ -279,6 +279,10 @@ public sealed partial class MainWindow : Window
 		}
 		if (w.IsLive)
 		{
+			if (!await ConfirmOverGame(w))
+			{
+				return;
+			}
 			Busy("Applying to the running game…");
 			string message;
 			try

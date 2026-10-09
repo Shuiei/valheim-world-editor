@@ -291,13 +291,20 @@ public sealed class WorldSave
 		Func<int, bool> keep, Func<(long User, uint Id), bool> ours)
 	{
 		var zoneSet = zones.ToHashSet();
+		// Every object by ZDOID, wherever it was: one that came into these zones from another (a creature
+		// walking in) is the same object moved, not a new one.
 		var known = new Dictionary<(long, uint), int>();
+		var inZones = new List<int>();
 		for (int id = 0; id < ObjectRefs.Count; id++)
 		{
 			ObjectRef o = ObjectRefs[id];
-			if (!Vanished.Contains(id) && zoneSet.Contains(o.Zone))
+			if (!Vanished.Contains(id))
 			{
 				known[o.LiveId] = id;
+				if (zoneSet.Contains(o.Zone))
+				{
+					inZones.Add(id);
+				}
 			}
 		}
 		var result = new Merged(new(), new(), new());
@@ -320,7 +327,7 @@ public sealed class WorldSave
 				fresh.Add((user, zid, bytes));
 			}
 		}
-		foreach (int id in known.Values)
+		foreach (int id in inZones)
 		{
 			if (!seen.Contains(id) && !keep(id))
 			{

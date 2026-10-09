@@ -37,6 +37,8 @@ public sealed partial class MainWindow
 	private readonly DispatcherTimer _playersTimer = new() { Interval = TimeSpan.FromSeconds(2) };
 	private readonly DispatcherTimer _labelsTimer = new() { Interval = TimeSpan.FromMilliseconds(100) };
 	private readonly DispatcherTimer _followTimer = new() { Interval = TimeSpan.FromMilliseconds(700) };
+	// Live: the game asked every 2 s what changed in the zones shown (WorldSession.FollowGame).
+	private readonly DispatcherTimer _gameTimer = new() { Interval = TimeSpan.FromSeconds(2) };
 	private string _followSaid = "";
 	internal AppSettings Settings => _settings;
 	// Writes the settings (Auto, Follow); tests keep them in memory, so no other window reads them.
@@ -78,6 +80,7 @@ public sealed partial class MainWindow
 		Closed += (_, _) =>
 		{
 			_followTimer.Stop();
+			_gameTimer.Stop();
 			_playersTimer.Stop();
 			_labelsTimer.Stop();
 			_map?.Stop();
@@ -119,6 +122,7 @@ public sealed partial class MainWindow
 
 		GoPlayerButton.Click += async (_, _) => await GoToPlayer(PlayerBox.SelectedItem as string);
 		_playersTimer.Tick += async (_, _) => await PollPlayers();
+		_gameTimer.Tick += async (_, _) => await FollowGame();
 		_labelsTimer.Tick += (_, _) => PlaceLabels();
 	}
 
@@ -162,9 +166,11 @@ public sealed partial class MainWindow
 			_ = PollPlayers();
 			_playersTimer.Start();
 			_labelsTimer.Start();
+			_gameTimer.Start();
 		}
 		else
 		{
+			_gameTimer.Stop();
 			_playersTimer.Stop();
 			_labelsTimer.Stop();
 			SetPlayers(Array.Empty<(string, Vector3)>());
@@ -393,6 +399,11 @@ public sealed partial class MainWindow
 				{
 					break;
 				}
+				if (s.Scene.Owner is { } owner && !await ConfirmOverGame(owner))
+				{
+					_message.Text = "Not applied: the game changed the ground where you have changes (Apply live asks again).";
+					break;
+				}
 				SaveButton.IsEnabled = false;
 				_message.Text = "Applying to the running game…";
 				var o = await s.ApplyLive();
@@ -415,6 +426,95 @@ public sealed partial class MainWindow
 		{
 			_ = ApplyNow();
 		}
+	}
+
+	// ---- Live: following the game in the zones shown.
+	private bool _followingGame, _gameTooOld;
+	// Changes the area could not take yet (a stroke was being drawn): given at the next tick.
+	private readonly List<WorldSession.Followed> _gameWaiting = new();
+
+	internal async Task FollowGame()
+	{
+		if (_followingGame || _gameTooOld || _session is not { IsLive: true, Scene.Owner: { } owner } s)
+		{
+			return;
+		}
+		_followingGame = true;
+		try
+		{
+			var zones = new List<(int, int)>();
+			for (int z = 0; z < s.Scene.Size; z++)
+			{
+				for (int x = 0; x < s.Scene.Size; x++)
+				{
+					zones.Add((s.Scene.X0 + x, s.Scene.Z0 + z));
+				}
+			}
+			var f = await owner.FollowGame(zones);
+			if (_session != s)
+			{
+				// Another area opened meanwhile: it was read from the world, which has these changes.
+				_gameWaiting.Clear();
+				return;
+			}
+			if (f != null && f.Any)
+			{
+				_gameWaiting.Add(f);
+			}
+			while (_gameWaiting.Count > 0 && s.TakeGameChanges(_gameWaiting[0].Merged, _gameWaiting[0].Ground))
+			{
+				SayFromGame(_gameWaiting[0]);
+				_gameWaiting.RemoveAt(0);
+			}
+			UpdateSaveBar();
+		}
+		catch (InvalidOperationException ex) when (ex.Message.Contains("too old", StringComparison.Ordinal))
+		{
+			// An older plugin on the server: no following (Reload still reads the whole world again).
+			_gameTooOld = true;
+			_message.Text = "The WorldEditorBridge plugin on the server is older than this editor: update it to see what players change while you edit (Reload reads the world again meanwhile).";
+		}
+		catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or IOException or InvalidDataException or InvalidOperationException or System.Text.Json.JsonException or FormatException)
+		{
+			// The game does not answer right now: asked again at the next tick.
+		}
+		finally
+		{
+			_followingGame = false;
+		}
+	}
+
+	private void SayFromGame(WorldSession.Followed f)
+	{
+		var parts = new List<string>();
+		int added = f.Merged.Added.Count, gone = f.Merged.Vanished.Count;
+		if (added > 0) parts.Add($"{added} object(s) made or changed");
+		if (gone > 0) parts.Add($"{gone} removed or changed");
+		if (f.Ground.Count > 0) parts.Add($"the ground of {f.Ground.Count} zone(s)");
+		string text = parts.Count > 0 ? $"From the game: {string.Join(", ", parts)}." : "";
+		if (f.Kept.Count > 0)
+		{
+			text += $" The game changed the ground of zone(s) {string.Join("; ", f.Kept.Select(z => $"{z.X}, {z.Z}"))}, where you have changes not applied: yours are kept, and applying asks first.";
+		}
+		if (text != "")
+		{
+			_message.Text = text.Trim();
+		}
+	}
+
+	// Before applying: ground the game changed where the editor has changes not applied yet would be
+	// written over (whatever was dug or built there since). Asks; true to go on.
+	internal async Task<bool> ConfirmOverGame(WorldSession w)
+	{
+		var pending = w.Edits.All().Where(e => e.Changed).Select(e => (e.ZoneX, e.ZoneZ)).ToHashSet();
+		var over = w.Edits.GameChanged.Where(pending.Contains).ToList();
+		if (over.Count == 0)
+		{
+			return true;
+		}
+		return await Ask("Apply over the game's changes",
+			$"The ground of {over.Count} zone(s) ({string.Join("; ", over.Take(6).Select(z => $"{z.X}, {z.Z}"))}{(over.Count > 6 ? "…" : "")}) was changed in the game since you started editing it. "
+			+ "Applying writes your ground there: what players dug, flattened or paved in those zones since may be erased.\n\nApply anyway?", "Apply", "Not now");
 	}
 
 	// ---- Live players.

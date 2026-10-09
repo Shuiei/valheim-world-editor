@@ -1,4 +1,5 @@
 using System.Numerics;
+using Avalonia.Headless.XUnit;
 using TerrainEditor.Editing;
 using TerrainEditor.Save;
 using Xunit;
@@ -133,6 +134,27 @@ public class LiveFollowTests
 		Assert.Empty(world.Edits.GameChanged);
 	}
 
+	// An object that came into a zone from another (a creature walking in) is moved, not doubled.
+	[Fact]
+	public async Task AnObjectFromAnotherZoneIsMovedNotDoubled()
+	{
+		var (game, world, _) = await Open();
+		using var _g = game;
+		var w = world.World;
+		int other = Enumerable.Range(0, w.ObjectRefs.Count).First(id => w.ObjectRefs[id].Zone != (0, 0) && !w.ObjectRefs[id].IsTerrain && w.Objects.Any(o => o.Id == id));
+		var z = ZdoData.Parse(w.ObjectBytes(other));
+		z.Position = new Vector3(5, z.Position.Y, 5);
+		var objects = AsRead(w, (0, 0));
+		var zid = w.ObjectRefs[other].LiveId;
+		objects.Add((zid.User, zid.Id, z.Serialize()));
+		game.Zones[(0, 0)] = (1, objects);
+		var f = (await world.FollowGame(new[] { (0, 0) }))!;
+		Assert.Equal(new[] { other }, f.Merged.Vanished);
+		int moved = Assert.Single(f.Merged.Added);
+		Assert.Equal((0, 0), w.ObjectRefs[moved].Zone);
+		Assert.Single(Enumerable.Range(0, w.ObjectRefs.Count), id => !w.Vanished.Contains(id) && w.ObjectRefs[id].LiveId == zid);
+	}
+
 	// What the editor made itself and the game now has is not taken for something new.
 	[Fact]
 	public async Task TheEditorsOwnObjectsAreNotTakenTwice()
@@ -150,5 +172,55 @@ public class LiveFollowTests
 		var f = (await world.FollowGame(new[] { (0, 0) }))!;
 		Assert.Empty(f.Merged.Added);
 		Assert.Empty(f.Merged.Vanished);
+	}
+
+	// In the window: what the game changed is said in the status bar, and applying over ground the game
+	// changed asks first (not applied when the answer is no).
+	[AvaloniaFact]
+	public async Task TheWindowSaysWhatCameAndAsksBeforeApplyingOverIt()
+	{
+		using var game = new FakeGame();
+		var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
+		w.Show();
+		var asked = new List<string>();
+		bool answer = false;
+		w.Ask = (title, _, _, _) => { asked.Add(title); return Task.FromResult(answer); };
+		await w.OpenWorld(() => WorldSession.OpenLive(new LiveBridge(game.Url, game.Token), FakeGame.Label()), "Opening…");
+		await w.EditArea(0, 0, 1);
+		var world = w.World!;
+		var s = w.Session!;
+		var wsave = world.World;
+		// The game: a tree cut down in zone 0, 0.
+		int tree = s.Scene.Things.FindIndex(t => !t.Piece && t.Id >= 0 && wsave.ObjectRefs[t.Id].Zone == (0, 0));
+		var cut = wsave.ObjectRefs[s.Scene.Things[tree].Id].LiveId;
+		game.Zones[(0, 0)] = (1, AsRead(wsave, (0, 0)).Where(o => (o.Item1, o.Item2) != cut).ToList());
+		await w.FollowGame();
+		Assert.True(s.Scene.Things[tree].Gone);
+		Assert.StartsWith("From the game: 1 removed or changed.", w.MessageText.Text);
+		// Then ground: the editor raises zone 0, 0 while the game digs there.
+		s.Shape(10, 10, Two, 3, 0, "raise");
+		var tz = wsave.TerrainZones.First(z => z.ZoneX == 0 && z.ZoneZ == 0).Source!;
+		int compiler = Enumerable.Range(0, wsave.ObjectRefs.Count).First(id => wsave.ObjectRefs[id].IsTerrain && wsave.ObjectRefs[id].File == tz.File && wsave.ObjectRefs[id].Start == tz.Start);
+		var dug = new EditStore(wsave).Get(0, 0)!;
+		dug.Modified[2000] = true;
+		dug.Level[2000] = -3;
+		var z = ZdoData.Parse(wsave.ObjectBytes(compiler));
+		z.Set("bytes", TCData, Convert.ToBase64String(WorldWriter.EncodeTerrain(dug)));
+		var objects = AsRead(wsave, (0, 0));
+		var cid = wsave.ObjectRefs[compiler].LiveId;
+		int at = objects.FindIndex(o => (o.Item1, o.Item2) == cid);
+		objects[at] = (cid.User, cid.Id, z.Serialize());
+		game.Zones[(0, 0)] = (2, objects);
+		await w.FollowGame();
+		Assert.Contains("where you have changes not applied", w.MessageText.Text);
+		int sent = game.Terrain.Count;
+		await w.ApplyNow();
+		Assert.Equal(new[] { "Apply over the game's changes" }, asked);
+		Assert.Equal(sent, game.Terrain.Count);
+		answer = true;
+		await w.ApplyNow();
+		Assert.Equal(sent + 1, game.Terrain.Count);
+		Assert.Empty(world.Edits.GameChanged);
+		w.Close();
 	}
 }
