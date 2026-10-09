@@ -1753,6 +1753,7 @@ public sealed partial class MainWindow : Window
 		};
 		MeasurePanel = new MeasurePanel(_view);
 		DungeonPanel = new DungeonPanel(_view);
+		DungeonPanel.BuildAsked += () => BuildInDungeon(true);
 		_view.Dungeon.Message += t => _message.Text = t;
 		PathPanel = new PathPanel(_view, Tools.Brush);
 		PathPanel.ApplyAsked += ApplyPath;
@@ -1901,8 +1902,12 @@ public sealed partial class MainWindow : Window
 			}
 			AreaPanel.Card.IsVisible = Tools.Mode == ToolMode.Area;
 			PastePanel.Card.IsVisible = Tools.Mode == ToolMode.Paste;
-			PlacePanel.Card.IsVisible = Tools.Mode == ToolMode.Place && !_inWorkshop;
-			BuildPanel.Card.IsVisible = Tools.Mode == ToolMode.Place && _inWorkshop;
+			if (BuildingInDungeon && Tools.Mode != ToolMode.Place)
+			{
+				BuildInDungeon(false);
+			}
+			PlacePanel.Card.IsVisible = Tools.Mode == ToolMode.Place && !_inWorkshop && !BuildingInDungeon;
+			BuildPanel.Card.IsVisible = Tools.Mode == ToolMode.Place && (_inWorkshop || BuildingInDungeon);
 			if (Tools.Mode != ToolMode.Place)
 			{
 				PlacePanel.Chooser.IsVisible = false;

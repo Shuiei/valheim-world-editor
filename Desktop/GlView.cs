@@ -3154,7 +3154,14 @@ public sealed class GlView : OpenGlControlBase
 		var (o, d) = Picking.Ray(_lastViewProj, (float)(at.X / size.Width * 2 - 1), (float)(1 - at.Y / size.Height * 2));
 		d = Vector3.Normalize(d);
 		float? g = Picking.HitGround(s, o, d);
-		return (new Vector3(o.X + s.Cx, o.Y, -o.Z + s.Cz), new Vector3(d.X, d.Y, -d.Z), g);
+		var wo = new Vector3(o.X + s.Cx, o.Y, -o.Z + s.Cz);
+		var wd = new Vector3(d.X, d.Y, -d.Z);
+		// A dungeon's rooms are the ground there (their floors and walls).
+		if (_shown[(int)ObjectKind.Dungeons] && DungeonRooms.Of(s) is { Count: > 0 } dungeons && RoomSurfaces.Hit(dungeons, _models, wo, wd, CutY ?? float.MaxValue) is float rt && (g == null || rt < g))
+		{
+			g = rt;
+		}
+		return (wo, wd, g);
 	}
 
 	internal int? ObjectAt(Point at, Size size)

@@ -15,6 +15,8 @@ public sealed class DungeonPanel
 	private DungeonTool Tool => _view.Dungeon;
 	internal ComboBox DungeonBox { get; } = new() { HorizontalAlignment = HorizontalAlignment.Stretch, FontSize = 12 };
 	internal Button GoInside { get; } = new() { Content = "Go inside", FontSize = 12 };
+	internal Button BuildHere { get; } = new() { Content = "Build here", FontSize = 12 };
+	public event Action? BuildAsked;
 	internal Slider CutSlider { get; } = new() { Minimum = 0, Maximum = 30, Value = 0, SmallChange = 1, TickFrequency = 1, IsSnapToTickEnabled = true };
 	private readonly TextBlock _cutText = new() { FontSize = 12 };
 	internal TextBox Filter { get; } = new() { PlaceholderText = "Find a room…", FontSize = 12 };
@@ -34,6 +36,8 @@ public sealed class DungeonPanel
 		_view = view;
 		DungeonBox.Tip("dungeon.which");
 		GoInside.Tip("dungeon.inside");
+		BuildHere.Tip("dungeon.build");
+		BuildHere.Click += (_, _) => BuildAsked?.Invoke();
 		CutSlider.Tip("dungeon.cut");
 		Filter.Tip("dungeon.find");
 		Rooms.Tip("dungeon.rooms");
@@ -68,7 +72,7 @@ public sealed class DungeonPanel
 			Children =
 			{
 				DungeonBox,
-				new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { GoInside } },
+				new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { GoInside, BuildHere } },
 				new StackPanel { Spacing = 2, Children = { _cutText, CutSlider } },
 				new TextBlock { Text = "ROOMS", FontSize = 11, Foreground = Ui.Muted, FontWeight = FontWeight.SemiBold },
 				Filter, Rooms,

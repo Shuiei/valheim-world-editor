@@ -385,6 +385,7 @@ public static class Tips
 		["tools.dungeon"] = "Dungeon: edit the rooms of a Frost Cave, crypt or other dungeon of this area. Add rooms at their openings, delete them, close the open ends: the game builds the rooms from the list you make.",
 		["dungeon.which"] = "The dungeons of this area: the game keeps each one's rooms 5000 m above its entrance.",
 		["dungeon.inside"] = "Takes the view up to the dungeon and cuts its roofs away, to look down into its rooms.",
+		["dungeon.build"] = "Build with the hammer's pieces in this dungeon: they go on the rooms' floors and snap to each other. Pieces on a room's floor hold in game; pieces hanging in the air in a dungeon fall.",
 		["dungeon.cut"] = "Hides what is higher than this above the dungeon's floor, to see into the rooms. 0 shows the roofs.",
 		["dungeon.find"] = "Shows only the rooms whose name has these letters.",
 		["dungeon.rooms"] = "The rooms this dungeon can take (the game's rooms of its kind). Pick one, then click a green opening: it joins there the way the game joins rooms.",

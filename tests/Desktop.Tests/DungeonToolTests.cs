@@ -164,4 +164,23 @@ public class DungeonToolTests
 		Assert.Single(r.T.FreeEnds);
 		Assert.Null(r.T.Selected);
 	}
+
+	[AvaloniaFact]
+	public void BuildHereSetsThePlaceToolForBuildingAndLeavingGivesItsSettingsBack()
+	{
+		using var r = new Run();
+		var t = r.W.PlaceTool;
+		var before = (t.Mode, t.Building, t.OneAtATime);
+		Click(r.P.BuildHere);
+		Assert.Equal(ToolMode.Place, r.W.Tools.Mode);
+		Assert.True(r.W.BuildingInDungeon);
+		Assert.True(t.Building);
+		Assert.True(r.W.BuildPanel.Card.IsVisible);
+		Assert.False(r.W.PlacePanel.Card.IsVisible);
+		// Back to the Dungeon tool: the Place tool as it was.
+		r.W.Tools.ChooseMode(ToolMode.Dungeon);
+		Assert.False(r.W.BuildingInDungeon);
+		Assert.Equal(before, (t.Mode, t.Building, t.OneAtATime));
+		Assert.False(r.W.BuildPanel.Card.IsVisible);
+	}
 }
