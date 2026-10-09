@@ -4,6 +4,15 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.15.3 — 2026-10-09
+
+### Fixed
+- The editor no longer fills the graphics card's memory over a session. Each trip between the map and
+  the 3D editor left the whole area's models, textures and ground on the card (about 165 MB a trip),
+  and each move to another area left its ground and game look (about 40 MB). Both are now deleted, so
+  the editor stays near the same size however long it runs, and leaves room for a game played beside
+  it.
+
 ## v1.15.2 — 2026-10-09
 
 ### Added

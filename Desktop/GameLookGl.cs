@@ -277,6 +277,7 @@ public sealed class GameLookGl
 
 	// ---- On the graphics card.
 	private GL _gl = null!;
+	private GlObjects _own = null!;
 	private uint _terrain, _sky, _water;
 	private uint _skyVao, _skyCount, _waterVao;
 	private readonly Dictionary<string, (uint Tex, TextureTarget Target)> _tex = new();
@@ -286,13 +287,14 @@ public sealed class GameLookGl
 	public void Init(GL gl, Func<string, string, uint> program, Files f, WorldScene s)
 	{
 		_gl = gl;
+		_own = new GlObjects(gl);
 		_scene = s;
 		// Rows of odd widths (the grid's 64n + 1 points, as half floats) are not padded to 4 bytes.
 		_gl.PixelStore(PixelStoreParameter.UnpackAlignment, 1);
 		// The extracted shader brings its own precision lines (GLSL ES); desktop OpenGL ignores them.
-		_terrain = program(TerrainVs, f.Fragment.Replace("#version 300 es", "") + Common + TerrainMain);
-		_sky = program(SkyVs, Common + SkyFs);
-		_water = program(WaterVs, Common + WaterFs);
+		_terrain = _own.Program(program(TerrainVs, f.Fragment.Replace("#version 300 es", "") + Common + TerrainMain));
+		_sky = _own.Program(program(SkyVs, Common + SkyFs));
+		_water = _own.Program(program(WaterVs, Common + WaterFs));
 		_tex["_DiffuseArrayTex"] = (Array2D(f.DiffuseArray, srgb: true), TextureTarget.Texture2DArray);
 		_tex["_NormalArrayTex"] = (Array2D(f.NormalArray, srgb: false), TextureTarget.Texture2DArray);
 		_tex["_NoiseTex"] = (Tex2D(f.Noise), TextureTarget.Texture2D);
@@ -310,6 +312,15 @@ public sealed class GameLookGl
 		_heightTex = HeightTexture(s);
 		BuildSky();
 		BuildWater(s);
+	}
+
+	// Its programs, textures and meshes off the graphics card (another area, or the view's context
+	// going). The drawing's context must be current.
+	public void Delete()
+	{
+		_own?.DeleteAll();
+		_tex.Clear();
+		_terrain = _sky = _water = _skyVao = _waterVao = _maskTex = _heightTex = 0;
 	}
 
 	// After an edit: the paint mask and the heights (the water's depth) of rows z0..z1 again.
@@ -336,7 +347,7 @@ public sealed class GameLookGl
 
 	private unsafe uint Tex2D(Image img, bool mipmaps = true, bool repeat = true, bool srgb = false)
 	{
-		uint t = _gl.GenTexture();
+		uint t = _own.Texture();
 		_gl.BindTexture(TextureTarget.Texture2D, t);
 		fixed (byte* p = img.Rgba)
 		{
@@ -357,7 +368,7 @@ public sealed class GameLookGl
 	private unsafe uint Array2D(Image img, bool srgb)
 	{
 		int s = img.Width, n = img.Height / s;
-		uint t = _gl.GenTexture();
+		uint t = _own.Texture();
 		_gl.BindTexture(TextureTarget.Texture2DArray, t);
 		fixed (byte* p = img.Rgba)
 		{
@@ -385,7 +396,7 @@ public sealed class GameLookGl
 			t ^= t + (t ^ (t >> 7)) * (t | 61);
 			data[i] = (byte)(((t ^ (t >> 14)) / 4294967296.0) * 256);
 		}
-		uint tex = _gl.GenTexture();
+		uint tex = _own.Texture();
 		_gl.BindTexture(TextureTarget.Texture3D, tex);
 		fixed (byte* p = data)
 		{
@@ -404,7 +415,7 @@ public sealed class GameLookGl
 	private unsafe uint HeightTexture(WorldScene s)
 	{
 		Half[] h = s.Heights.Select(v => (Half)v).ToArray();
-		uint t = _gl.GenTexture();
+		uint t = _own.Texture();
 		_gl.BindTexture(TextureTarget.Texture2D, t);
 		fixed (Half* p = h)
 		{
@@ -454,15 +465,15 @@ public sealed class GameLookGl
 
 	private unsafe uint Mesh(float[] v, uint[] idx)
 	{
-		uint vao = _gl.GenVertexArray();
+		uint vao = _own.VertexArray();
 		_gl.BindVertexArray(vao);
-		uint vbo = _gl.GenBuffer();
+		uint vbo = _own.Buffer();
 		_gl.BindBuffer(BufferTargetARB.ArrayBuffer, vbo);
 		fixed (float* p = v)
 		{
 			_gl.BufferData(BufferTargetARB.ArrayBuffer, (nuint)(v.Length * 4), p, BufferUsageARB.StaticDraw);
 		}
-		uint ebo = _gl.GenBuffer();
+		uint ebo = _own.Buffer();
 		_gl.BindBuffer(BufferTargetARB.ElementArrayBuffer, ebo);
 		fixed (uint* p = idx)
 		{

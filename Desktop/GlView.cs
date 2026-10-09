@@ -20,6 +20,8 @@ namespace TerrainEditor.Desktop;
 public sealed class GlView : OpenGlControlBase
 {
 	private GL _gl = null!;
+	// Every OpenGL object this view made, deleted with its context (see GlObjects).
+	private GlObjects _own = null!;
 	private bool _es;
 	private WorldScene? _scene;
 	private ModelStore? _models;
@@ -211,7 +213,15 @@ public sealed class GlView : OpenGlControlBase
 		}
 		_sceneDirty = true;
 		_lookFiles = null;
-		// The game look is set up for the area's own textures (mask, heights): again for a new one.
+		// The game look is set up for the area's own textures (mask, heights): again for a new one. The
+		// old one's textures go at the next frame (only the drawing may touch the graphics card).
+		if (_look != null)
+		{
+			lock (_looksDropped)
+			{
+				_looksDropped.Add(_look);
+			}
+		}
 		_look = null;
 		if (scene.Session != null)
 		{
@@ -246,6 +256,19 @@ public sealed class GlView : OpenGlControlBase
 	}
 	private volatile GameLookGl.Files? _lookFiles;
 	private GameLookGl? _look;
+	private readonly List<GameLookGl> _looksDropped = new();
+
+	private void DropLooks()
+	{
+		lock (_looksDropped)
+		{
+			foreach (var look in _looksDropped)
+			{
+				look.Delete();
+			}
+			_looksDropped.Clear();
+		}
+	}
 
 	// Asks for frames at full speed for a second. Avalonia takes frame requests on its own (UI) thread
 	// only: from a worker thread (a model or the game look finished loading) the request goes there.
@@ -265,6 +288,7 @@ public sealed class GlView : OpenGlControlBase
 	// ---------------------------------------------------------------- GL objects
 	private uint _terrainProg, _objectProg, _waterProg;
 	private uint _terrainVao, _terrainIndexCount, _waterVao, _terrainVbo, _terrainExtraVbo;
+	private uint _terrainEbo, _terrainBiomeVbo, _waterVbo, _waterEbo;
 	private bool _sceneDirty;
 
 	private sealed class Batch
@@ -313,6 +337,7 @@ public sealed class GlView : OpenGlControlBase
 	protected override void OnOpenGlInit(GlInterface gl)
 	{
 		_gl = GL.GetApi(name => gl.GetProcAddress(name));
+		_own = new GlObjects(_gl);
 		_es = GlVersion.Type == GlProfileType.OpenGLES;
 		_terrainProg = Program(Shaders.TerrainVs, Shaders.TerrainFs);
 		_objectProg = Program(Shaders.ObjectVs, Shaders.ObjectFs);
@@ -321,11 +346,16 @@ public sealed class GlView : OpenGlControlBase
 	}
 
 	// The view left the window (the map page is shown): Avalonia drops its OpenGL context and makes a
-	// new one when it comes back. Every OpenGL object went with the old context, so every name kept is
-	// forgotten (not deleted: they are gone) and the next frame builds them again in the new one.
-	// Keeping them drew with names that meant nothing, or something else, in the new context.
+	// new one when it comes back. Its buffers, textures and programs are shared with Avalonia's own
+	// context, so they outlive it: all are deleted here (the context is still current), then every name
+	// is forgotten and the next frame builds them again in the new one. Keeping the names drew with
+	// names that meant nothing, or something else, in the new context.
 	protected override void OnOpenGlDeinit(GlInterface gl)
 	{
+		DropLooks();
+		_look?.Delete();
+		_own.DeleteAll();
+		_terrainEbo = _terrainBiomeVbo = _waterVbo = _waterEbo = 0;
 		_terrainProg = _objectProg = _waterProg = _lineProg = 0;
 		_terrainVao = _terrainIndexCount = _waterVao = _terrainVbo = _terrainExtraVbo = 0;
 		_boxVbo = _boxEbo = _ghostVbo = 0;
@@ -356,7 +386,10 @@ public sealed class GlView : OpenGlControlBase
 		_sceneDirty = true;
 	}
 
-	private uint Program(string vs, string fs)
+	private uint Program(string vs, string fs) => _own.Program(Link(vs, fs));
+
+	// A program not yet anyone's (the game look keeps its own).
+	private uint Link(string vs, string fs)
 	{
 		string head = _es ? "#version 300 es\nprecision highp float;\nprecision highp int;\n" : "#version 330 core\n";
 		uint Compile(ShaderType t, string src)
@@ -442,8 +475,21 @@ public sealed class GlView : OpenGlControlBase
 		_look?.UpdateRows(s, z0, z1);
 	}
 
+	// The last area's ground and sea.
+	private void DeleteTerrain()
+	{
+		_own.DeleteVertexArray(_terrainVao);
+		_own.DeleteVertexArray(_waterVao);
+		foreach (uint b in new[] { _terrainVbo, _terrainEbo, _terrainBiomeVbo, _terrainExtraVbo, _waterVbo, _waterEbo })
+		{
+			_own.DeleteBuffer(b);
+		}
+		_terrainVao = _waterVao = _terrainVbo = _terrainEbo = _terrainBiomeVbo = _terrainExtraVbo = _waterVbo = _waterEbo = 0;
+	}
+
 	private unsafe void BuildTerrain(WorldScene s)
 	{
+		DeleteTerrain();
 		int w = s.W, h = s.H;
 		float[] v = TerrainRows(s, 0, h - 1);
 		uint[] idx = new uint[(w - 1) * (h - 1) * 6];
@@ -458,15 +504,15 @@ public sealed class GlView : OpenGlControlBase
 				idx[k++] = b; idx[k++] = d; idx[k++] = c;
 			}
 		}
-		_terrainVao = _gl.GenVertexArray();
+		_terrainVao = _own.VertexArray();
 		_gl.BindVertexArray(_terrainVao);
-		uint vbo = _terrainVbo = _gl.GenBuffer();
+		uint vbo = _terrainVbo = _own.Buffer();
 		_gl.BindBuffer(BufferTargetARB.ArrayBuffer, vbo);
 		fixed (float* p = v)
 		{
 			_gl.BufferData(BufferTargetARB.ArrayBuffer, (nuint)(v.Length * 4), p, BufferUsageARB.StaticDraw);
 		}
-		uint ebo = _gl.GenBuffer();
+		uint ebo = _terrainEbo = _own.Buffer();
 		_gl.BindBuffer(BufferTargetARB.ElementArrayBuffer, ebo);
 		fixed (uint* p = idx)
 		{
@@ -478,7 +524,7 @@ public sealed class GlView : OpenGlControlBase
 			_gl.VertexAttribPointer(a, 3, VertexAttribPointerType.Float, false, 36, (void*)(a * 12));
 		}
 		// For the game's terrain shader: biome colour (bytes), then mask uv, ocean depth, limit tint.
-		uint bc = _gl.GenBuffer();
+		uint bc = _terrainBiomeVbo = _own.Buffer();
 		_gl.BindBuffer(BufferTargetARB.ArrayBuffer, bc);
 		fixed (byte* p = s.BiomeColor)
 		{
@@ -487,7 +533,7 @@ public sealed class GlView : OpenGlControlBase
 		_gl.EnableVertexAttribArray(3);
 		_gl.VertexAttribPointer(3, 4, VertexAttribPointerType.UnsignedByte, true, 4, (void*)0);
 		float[] extra = ExtraRows(s, 0, h - 1);
-		uint ex = _terrainExtraVbo = _gl.GenBuffer();
+		uint ex = _terrainExtraVbo = _own.Buffer();
 		_gl.BindBuffer(BufferTargetARB.ArrayBuffer, ex);
 		fixed (float* p = extra)
 		{
@@ -504,15 +550,15 @@ public sealed class GlView : OpenGlControlBase
 		float hw = w / 2f + 400, hh = h / 2f + 400, y = s.Water;
 		float[] q = { -hw, y, -hh, hw, y, -hh, hw, y, hh, -hw, y, hh };
 		uint[] qi = { 0, 2, 1, 0, 3, 2 };
-		_waterVao = _gl.GenVertexArray();
+		_waterVao = _own.VertexArray();
 		_gl.BindVertexArray(_waterVao);
-		uint wv = _gl.GenBuffer();
+		uint wv = _waterVbo = _own.Buffer();
 		_gl.BindBuffer(BufferTargetARB.ArrayBuffer, wv);
 		fixed (float* p = q)
 		{
 			_gl.BufferData(BufferTargetARB.ArrayBuffer, (nuint)(q.Length * 4), p, BufferUsageARB.StaticDraw);
 		}
-		uint we = _gl.GenBuffer();
+		uint we = _waterEbo = _own.Buffer();
 		_gl.BindBuffer(BufferTargetARB.ElementArrayBuffer, we);
 		fixed (uint* p = qi)
 		{
@@ -620,7 +666,7 @@ public sealed class GlView : OpenGlControlBase
 		_pasteGhosts = _mode == ToolMode.Paste ? drawn : null;
 		if (_ghostVbo == 0)
 		{
-			_ghostVbo = _gl.GenBuffer();
+			_ghostVbo = _own.Buffer();
 		}
 		_gl.UseProgram(_objectProg);
 		_gl.Uniform1(_gl.GetUniformLocation(_objectProg, "uGhost"), 1f);
@@ -902,8 +948,8 @@ public sealed class GlView : OpenGlControlBase
 	{
 		foreach (var b in _batches)
 		{
-			_gl.DeleteVertexArray(b.Vao);
-			_gl.DeleteBuffer(b.InstanceVbo);
+			_own.DeleteVertexArray(b.Vao);
+			_own.DeleteBuffer(b.InstanceVbo);
 		}
 		_batches.Clear();
 		while (_ready.TryDequeue(out var dropped))
@@ -951,7 +997,7 @@ public sealed class GlView : OpenGlControlBase
 			{
 				continue;
 			}
-			uint tex = _gl.GenTexture();
+			uint tex = _own.Texture();
 			_gl.BindTexture(TextureTarget.Texture2D, tex);
 			fixed (byte* p = img.Rgba)
 			{
@@ -1013,7 +1059,7 @@ public sealed class GlView : OpenGlControlBase
 		// No vertex array bound: binding the index buffers below would rewire whichever one is (another
 		// mesh's batch then draws with these triangles: shards everywhere).
 		_gl.BindVertexArray(0);
-		uint vbo = _gl.GenBuffer();
+		uint vbo = _own.Buffer();
 		_gl.BindBuffer(BufferTargetARB.ArrayBuffer, vbo);
 		fixed (float* p = md!.Vertices)
 		{
@@ -1023,7 +1069,7 @@ public sealed class GlView : OpenGlControlBase
 		var counts = new int[md.Submeshes.Length];
 		for (int s = 0; s < ebos.Length; s++)
 		{
-			ebos[s] = _gl.GenBuffer();
+			ebos[s] = _own.Buffer();
 			_gl.BindBuffer(BufferTargetARB.ElementArrayBuffer, ebos[s]);
 			fixed (uint* p = md.Submeshes[s])
 			{
@@ -1067,7 +1113,7 @@ public sealed class GlView : OpenGlControlBase
 		{
 			b.Texture = mat.Map != null && _textures.TryGetValue(mat.Map, out uint t) ? t : 0;
 		}
-		b.Vao = _gl.GenVertexArray();
+		b.Vao = _own.VertexArray();
 		_gl.BindVertexArray(b.Vao);
 		_gl.BindBuffer(BufferTargetARB.ArrayBuffer, mesh.Vbo);
 		_gl.EnableVertexAttribArray(0);
@@ -1077,7 +1123,7 @@ public sealed class GlView : OpenGlControlBase
 		_gl.EnableVertexAttribArray(2);
 		_gl.VertexAttribPointer(2, 2, VertexAttribPointerType.Float, false, 32, (void*)24);
 		_gl.BindBuffer(BufferTargetARB.ElementArrayBuffer, mesh.Ebos[sub]);
-		b.InstanceVbo = _gl.GenBuffer();
+		b.InstanceVbo = _own.Buffer();
 		_gl.BindBuffer(BufferTargetARB.ArrayBuffer, b.InstanceVbo);
 		for (uint c = 0; c < 4; c++)
 		{
@@ -1096,6 +1142,7 @@ public sealed class GlView : OpenGlControlBase
 		long now = _clock.ElapsedMilliseconds;
 		var start = Stopwatch.GetTimestamp();
 		var s = _scene;
+		DropLooks();
 		if (s != null && _sceneDirty)
 		{
 			_sceneDirty = false;
@@ -1106,14 +1153,15 @@ public sealed class GlView : OpenGlControlBase
 		}
 		if (s != null && _look == null && _lookFiles is { } lf && _terrainVao != 0)
 		{
+			var made = new GameLookGl();
 			try
 			{
-				var made = new GameLookGl();
-				made.Init(_gl, Program, lf, s);
+				made.Init(_gl, Link, lf, s);
 				_look = made;
 			}
 			catch (Exception ex)
 			{
+				made.Delete();
 				_lookFiles = null;
 				Status?.Invoke("Game look could not be set up: " + ex.Message);
 			}
@@ -1390,14 +1438,14 @@ public sealed class GlView : OpenGlControlBase
 		}
 		if (_lowFbo != 0)
 		{
-			_gl.DeleteFramebuffer(_lowFbo);
-			_gl.DeleteRenderbuffer(_lowColor);
-			_gl.DeleteRenderbuffer(_lowDepth);
+			_own.DeleteFramebuffer(_lowFbo);
+			_own.DeleteRenderbuffer(_lowColor);
+			_own.DeleteRenderbuffer(_lowDepth);
 		}
 		(_lowW, _lowH) = (w, h);
-		_lowFbo = _gl.GenFramebuffer();
-		_lowColor = _gl.GenRenderbuffer();
-		_lowDepth = _gl.GenRenderbuffer();
+		_lowFbo = _own.Framebuffer();
+		_lowColor = _own.Renderbuffer();
+		_lowDepth = _own.Renderbuffer();
 		_gl.BindRenderbuffer(RenderbufferTarget.Renderbuffer, _lowColor);
 		_gl.RenderbufferStorage(RenderbufferTarget.Renderbuffer, InternalFormat.Rgba8, (uint)w, (uint)h);
 		_gl.BindRenderbuffer(RenderbufferTarget.Renderbuffer, _lowDepth);
@@ -2149,7 +2197,7 @@ public sealed class GlView : OpenGlControlBase
 			foreach (var h in Enum.GetValues<Gizmo.Handle>())
 			{
 				var mesh = Gizmo.Mesh(h);
-				uint vao = _gl.GenVertexArray(), vbo = _gl.GenBuffer();
+				uint vao = _own.VertexArray(), vbo = _own.Buffer();
 				_gl.BindVertexArray(vao);
 				_gl.BindBuffer(BufferTargetARB.ArrayBuffer, vbo);
 				fixed (float* p = mesh)
@@ -2283,8 +2331,8 @@ public sealed class GlView : OpenGlControlBase
 		}
 		if (vao == 0)
 		{
-			vao = _gl.GenVertexArray();
-			vbo = _gl.GenBuffer();
+			vao = _own.VertexArray();
+			vbo = _own.Buffer();
 			_gl.BindVertexArray(vao);
 			_gl.BindBuffer(BufferTargetARB.ArrayBuffer, vbo);
 			_gl.EnableVertexAttribArray(0);
@@ -3183,7 +3231,7 @@ public sealed class GlView : OpenGlControlBase
 			// Built again when objects change: the same buffers are filled again.
 			if (!_overlayGl.TryGetValue(layer, out var old))
 			{
-				old = (_gl.GenVertexArray(), 0, _gl.GenBuffer());
+				old = (_own.VertexArray(), 0, _own.Buffer());
 				_gl.BindVertexArray(old.Vao);
 				_gl.BindBuffer(BufferTargetARB.ArrayBuffer, old.Vbo);
 				_gl.EnableVertexAttribArray(0);
