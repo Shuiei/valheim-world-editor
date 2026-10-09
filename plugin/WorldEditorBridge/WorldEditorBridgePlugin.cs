@@ -266,6 +266,34 @@ public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
 				Reply(res, 200, "application/json", OnMainThread(() => ResetZones(body)));
 				break;
 			}
+			case "/watch":
+			{
+				if (ctx.Request.HttpMethod != "POST")
+				{
+					Reply(res, 405, "text/plain", Encoding.UTF8.GetBytes("POST only"));
+					break;
+				}
+				byte[] body = ReadAll(ctx.Request.InputStream);
+				Reply(res, 200, "application/json", OnMainThread(() => Watch(body)));
+				break;
+			}
+			case "/zone":
+			{
+				if (ctx.Request.HttpMethod != "POST")
+				{
+					Reply(res, 405, "text/plain", Encoding.UTF8.GetBytes("POST only"));
+					break;
+				}
+				byte[] body = ReadAll(ctx.Request.InputStream);
+				byte[] raw = OnMainThread(() => ZoneObjects(body));
+				using MemoryStream packed = new();
+				using (GZipStream gz = new(packed, System.IO.Compression.CompressionLevel.Fastest, leaveOpen: true))
+				{
+					gz.Write(raw, 0, raw.Length);
+				}
+				Reply(res, 200, "application/octet-stream", packed.ToArray());
+				break;
+			}
 			case "/snapshot":
 			{
 				byte[] raw = OnMainThread(Snapshot, 120000);
@@ -689,6 +717,109 @@ public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
 			p.Write(li.m_placed);
 		}
 		return p.GetArray();
+	}
+
+	// ---- What changes in the zones the editor shows (it asks every few seconds: only those zones are
+	// read, from the game's own per-zone lists, never the whole world).
+
+	private static readonly FieldInfo ObjectsBySector = typeof(ZDOMan).GetField("m_objectsBySector", BindingFlags.Instance | BindingFlags.NonPublic);
+
+	// Zones asked for: int count, then int x, int z each (outside the world: left out).
+	private static List<Vector2s> ReadZones(byte[] body)
+	{
+		ZPackage pkg = new(body);
+		int count = pkg.ReadInt();
+		List<Vector2s> zones = new(count);
+		for (int i = 0; i < count; i++)
+		{
+			int x = pkg.ReadInt(), z = pkg.ReadInt();
+			if (x >= -256 && x < 256 && z >= -256 && z < 256)
+			{
+				zones.Add(new Vector2s(x, z));
+			}
+		}
+		return zones;
+	}
+
+	// The saved objects of a zone (persistent ZDOs), as the game keeps them by zone.
+	private static IEnumerable<ZDO> ZoneZdos(Vector2s zone)
+	{
+		var bySector = (List<ZDO>[])ObjectsBySector.GetValue(ZDOMan.instance);
+		uint index = ZoneSystem.SectorToIndex(zone).Sector;
+		if (index >= bySector.Length || bySector[index] is not { } list)
+		{
+			yield break;
+		}
+		foreach (ZDO zdo in list)
+		{
+			if (zdo.Persistent)
+			{
+				yield return zdo;
+			}
+		}
+	}
+
+	// Kinds that move by themselves (creatures, ships, carts, items: they sync their transform): their
+	// moves are not changes to the world worth reading again.
+	private static readonly Dictionary<int, bool> Movers = new();
+
+	private static bool Moves(int prefab)
+	{
+		if (!Movers.TryGetValue(prefab, out bool moves))
+		{
+			GameObject go = ZNetScene.instance != null ? ZNetScene.instance.GetPrefab(prefab) : null;
+			Movers[prefab] = moves = go != null && go.GetComponent<ZSyncTransform>() != null;
+		}
+		return moves;
+	}
+
+	// One number per zone that changes when an object there is made, removed or changed (its data or
+	// place; a mover only when made or removed): the editor reads a zone again when it changes.
+	private byte[] Watch(byte[] body)
+	{
+		StringBuilder sb = new("{\"zones\":[");
+		bool first = true;
+		foreach (Vector2s zone in ReadZones(body))
+		{
+			ulong digest = 0;
+			foreach (ZDO zdo in ZoneZdos(zone))
+			{
+				int prefab = zdo.GetPrefab();
+				ulong h = unchecked((ulong)zdo.m_uid.UserID * 0x9E3779B97F4A7C15UL ^ zdo.m_uid.ID * 0xC2B2AE3D27D4EB4FUL ^ (uint)prefab * 0x165667B19E3779F9UL);
+				h ^= Moves(prefab) ? 0 : unchecked(zdo.DataRevision * 0x27D4EB2F165667C5UL + 1);
+				// A sum: the same whatever order the game keeps the zone's list in.
+				digest = unchecked(digest + (h ^ (h >> 29)) * 0xBF58476D1CE4E5B9UL);
+			}
+			sb.Append(first ? "" : ",").Append('[').Append(zone.x).Append(',').Append(zone.y).Append(",\"").Append(digest.ToString(CultureInfo.InvariantCulture)).Append("\"]");
+			first = false;
+		}
+		return Encoding.UTF8.GetBytes(sb.Append("]}").ToString());
+	}
+
+	// The saved objects of the zones asked for, in the snapshot's format: int count, then for each its
+	// ZDOID (long, uint) and its bytes (int length, bytes).
+	private byte[] ZoneObjects(byte[] body)
+	{
+		var links = SnapshotLinks();
+		List<(ZDOID Id, byte[] Bytes)> found = new();
+		foreach (Vector2s zone in ReadZones(body))
+		{
+			foreach (ZDO zdo in ZoneZdos(zone))
+			{
+				ZPackage one = new();
+				WriteZdo(one, zdo, links);
+				found.Add((zdo.m_uid, one.GetArray()));
+			}
+		}
+		ZPackage pkg = new();
+		pkg.Write(found.Count);
+		foreach (var (id, bytes) in found)
+		{
+			pkg.Write(id.UserID);
+			pkg.Write(id.ID);
+			pkg.Write(bytes);
+		}
+		return pkg.GetArray();
 	}
 
 	// Links between objects (a spawner and what it spawned, two portals...), as the save writes them: a
