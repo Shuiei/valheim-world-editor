@@ -83,6 +83,10 @@ public static class Driver
 		float F(int i) => float.Parse(args[i], System.Globalization.CultureInfo.InvariantCulture);
 		switch (a[0])
 		{
+			case "spirv":
+				// SPIRV-Cross (the terrain shader from Valheim for Windows) loads in this build.
+				TerrainEditor.App.TerrainShader.SelfTest();
+				return "{\"spirvCross\":\"ok\"}";
 			case "world":
 				await w.OpenWorld(() => Task.Run(() => WorldSession.Open(a[1])), "Opening the world…");
 				return State(w);

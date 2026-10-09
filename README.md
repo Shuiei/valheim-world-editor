@@ -210,7 +210,7 @@ with the server; **edit** next to a saved server changes it. (The token is still
 ### Where things are kept
 
 Settings, saved servers (`servers.cfg`), what the editor remembers between runs, blueprints, the
-copied game files and a log (`log.txt`, a new one each run) are in `~/.local/share/ValheimWorldEditor`
+copied game files and a log (`ValheimWorldEditor.log`, a new one each run) are in `~/.local/share/ValheimWorldEditor`
 (Linux) or `%LOCALAPPDATA%\ValheimWorldEditor` (Windows). The bottom of the start page shows the
 folder.
 
@@ -277,8 +277,9 @@ is there. The editor is a program, not a mod, so it is only on the
 of both.
 
 **Something is wrong or missing.**
-[Open an issue](https://github.com/Shuiei/valheim-world-editor/issues). The editor's log
-(`log.txt`, in the folder shown at the bottom of the start page) helps.
+[Open an issue](https://github.com/Shuiei/valheim-world-editor/issues) and attach the editor's log:
+**Open log** at the bottom of the start page opens it (`ValheimWorldEditor.log`, started over at
+each run, so attach it before starting the editor again).
 
 ## For developers
 

@@ -22,6 +22,10 @@ them from the player's own Valheim install, on their computer.
 
 - `Core/WorldGen/FastNoise.cs`: FastNoise, MIT License, Copyright (c) 2017 Jordan Peck (its notice
   is kept in the file).
+- `tools/asset-export/smolv.py`: a Python port of the decoder in [SMOL-V](https://github.com/aras-p/smol-v),
+  MIT License, Copyright (c) 2016-2024 Aras Pranckevicius.
+- [SPIRV-Cross](https://github.com/KhronosGroup/SPIRV-Cross) (Apache License 2.0), through Silk.NET's
+  native build of it, turns the terrain shader from Valheim for Windows into GLSL.
 - Libraries the editor is built with, each under its own license: [Avalonia](https://github.com/AvaloniaUI/Avalonia)
   (MIT), [Silk.NET](https://github.com/dotnet/Silk.NET) (MIT), [SSH.NET](https://github.com/sshnet/SSH.NET)
   (MIT) and [Roslyn](https://github.com/dotnet/roslyn) (MIT), for scripts.

@@ -28,6 +28,8 @@ public sealed class GameLookBanner
 	internal Button Browse { get; } = new() { Content = "Browse…" };
 	internal Button Use { get; } = new Button { Content = "Use" }.Classed("primary");
 	internal Button Retry { get; } = new Button { Content = "Try again" }.Classed("primary");
+	internal Button ShowLog { get; } = new() { Content = "Open log" };
+	internal Func<Task<bool>> OpenLog { get; set; } = () => Task.FromResult(false);
 	internal TextBlock Error { get; } = new() { Foreground = new SolidColorBrush(Color.FromRgb(224, 96, 75)), TextWrapping = TextWrapping.Wrap, FontSize = 12 };
 	internal TextBlock Hint { get; } = Ui.Hint("");
 	internal Grid PathRow { get; }
@@ -43,13 +45,15 @@ public sealed class GameLookBanner
 		Grid.SetColumn(Browse, 1);
 		Grid.SetColumn(Use, 2);
 		PathRow = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto,Auto"), ColumnSpacing = 6, Children = { PathBox, Browse, Use } };
-		_card = Ui.Card(new StackPanel { Spacing = 6, Children = { Title, Message, Bar, LastLine, PathRow, Retry, Error, Hint } });
+		_card = Ui.Card(new StackPanel { Spacing = 6, Children = { Title, Message, Bar, LastLine, PathRow, new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = { Retry, ShowLog } }, Error, Hint } });
 		_card.Margin = new Thickness(0, 10, 0, 0);
 		_card.IsVisible = false;
 		PathBox.Tip("look.path");
 		Browse.Tip("look.browse");
 		Use.Tip("look.use");
 		Retry.Tip("look.retry");
+		ShowLog.Tip("look.log");
+		ShowLog.Click += async (_, _) => await OpenLog();
 		Browse.Click += async (_, _) => { if (await PickFolder("Choose the Valheim game folder (with valheim_Data)") is string p) PathBox.Text = p; };
 		Use.Click += (_, _) => Start(PathBox.Text);
 		Retry.Click += (_, _) => Start(Read().Valheim ?? _settings.ValheimPath);
@@ -76,7 +80,7 @@ public sealed class GameLookBanner
 		var s = Read();
 		bool changed = s.State != _state;
 		_state = s.State;
-		Bar.IsVisible = LastLine.IsVisible = PathRow.IsVisible = Retry.IsVisible = false;
+		Bar.IsVisible = LastLine.IsVisible = PathRow.IsVisible = Retry.IsVisible = ShowLog.IsVisible = false;
 		switch (s.State)
 		{
 			case "running":
@@ -101,8 +105,8 @@ public sealed class GameLookBanner
 			case "failed":
 				Title.Text = "The game's look could not be copied";
 				Message.Text = s.Message ?? "";
-				Retry.IsVisible = true;
-				Hint.Text = "";
+				Retry.IsVisible = ShowLog.IsVisible = true;
+				Hint.Text = "The editor works without it, with plain colours and no models. To report the problem, attach the editor's log (Open log) to an issue on GitHub.";
 				break;
 			default:
 				Title.Text = "The game's look is ready.";

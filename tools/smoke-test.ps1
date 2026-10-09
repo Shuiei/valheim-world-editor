@@ -1,6 +1,6 @@
 # Starts the packaged Windows editor (ValheimWorldEditor.exe from the release zip) and checks it really
-# works, through its test driver, like tools/smoke-test.sh does on Linux: it starts, opens the test
-# world, opens an area in the 3D editor, and draws frames with no OpenGL error.
+# works, through its test driver, like tools/smoke-test.sh does on Linux: it starts, loads SPIRV-Cross
+# (spirv), opens the test world, opens an area in the 3D editor, and draws frames with no OpenGL error.
 # Usage: tools/smoke-test.ps1 <program file> <world folder>
 param([Parameter(Mandatory)][string]$Program, [Parameter(Mandatory)][string]$World)
 $ErrorActionPreference = 'Stop'
@@ -15,7 +15,7 @@ $psi.RedirectStandardOutput = $true
 $psi.RedirectStandardError = $true
 $p = [Diagnostics.Process]::Start($psi)
 $err = $p.StandardError.ReadToEndAsync()
-foreach ($c in @("world $World", 'area 0 0 1', 'wait 2000', 'state', 'quit')) { $p.StandardInput.WriteLine($c) }
+foreach ($c in @('spirv', "world $World", 'area 0 0 1', 'wait 2000', 'state', 'quit')) { $p.StandardInput.WriteLine($c) }
 $p.StandardInput.Close()
 $out = $p.StandardOutput.ReadToEndAsync()
 if (-not $p.WaitForExit(180000)) { $p.Kill(); throw 'smoke test: the editor did not finish within 3 minutes' }

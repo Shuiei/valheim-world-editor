@@ -5,6 +5,7 @@
 
 Writes, under --out:
   terrain/heightmap.frag.glsl      the game's terrain shader (Custom/Heightmap, deferred pass) for WebGL 2
+                                   (heightmap.frag.spv instead, from a copy without OpenGL shaders: Windows)
   terrain/*.png                    terrain textures (texture arrays stacked into vertical strips)
   maptex/*.png                     world map textures
   models/                          models of build pieces and world objects (meshes, textures, materials)
@@ -129,7 +130,7 @@ TERRAIN_TEX = {'_CliffNormal': 'cliff_n', '_ColorVarietyNoise': 'variety', '_Mis
 GF = {96: 10, 97: 10, 98: 11, 99: 11, 100: 12, 101: 12, 102: 26, 103: 26, 104: 27, 105: 27, 106: 24, 107: 24, 108: 25, 109: 25, 8: 4, 4: 4}
 
 
-def export_terrain(found, al, out):
+def export_terrain(found, al, out, vulkan=False):
     import lz4.block, UnityPy
     from PIL import Image
     from UnityPy.export import Texture2DConverter
@@ -169,11 +170,30 @@ def export_terrain(found, al, out):
         sheet.save(os.path.join(tdir, dst + '.png'), optimize=True)
         log(f'terrain: {arr} ({depth} slices)')
     # Shader: the OpenGL core (platform 15) program blob, then one fragment variant of the deferred pass.
+    # Valheim for Windows has no OpenGL programs: there the Vulkan one (platform 18) is taken, named,
+    # and written as SPIR-V for the editor to turn into GLSL (heightmap.frag.spv).
     sh = al.resolve(mat, mt['m_Shader']); st = sh.read_typetree()
-    blob = bytes(st['compressedBlob']); data = b''
-    pi = st['platforms'].index(15)
-    for o_, c, d in zip(flat(st['offsets'][pi]), flat(st['compressedLengths'][pi]), flat(st['decompressedLengths'][pi])):
-        data += lz4.block.decompress(blob[o_:o_ + c], uncompressed_size=d)
+    blob = bytes(st['compressedBlob'])
+    def platform_blob(pi):
+        data = b''
+        for o_, c, d in zip(flat(st['offsets'][pi]), flat(st['compressedLengths'][pi]), flat(st['decompressedLengths'][pi])):
+            data += lz4.block.decompress(blob[o_:o_ + c], uncompressed_size=d)
+        return data
+    glsl, spv = os.path.join(tdir, 'heightmap.frag.glsl'), os.path.join(tdir, 'heightmap.frag.spv')
+    platforms = list(st['platforms'])
+    log('terrain: shader programs for platforms', platforms)
+    if 15 not in platforms or vulkan:
+        if 18 not in platforms:
+            sys.exit(f'terrain: the terrain shader has no OpenGL or Vulkan program (platforms {platforms}); '
+                     'this copy of the game cannot give the editor its terrain shader')
+        if HERE not in sys.path: sys.path.insert(0, HERE)
+        import vulkan_shader
+        open(spv, 'wb').write(vulkan_shader.terrain_fragment(st, platform_blob(platforms.index(18))))
+        if os.path.exists(glsl): os.remove(glsl)
+        log('terrain: shader taken from the Vulkan program (the editor turns it into GLSL)')
+        return
+    if os.path.exists(spv): os.remove(spv)
+    data = platform_blob(platforms.index(15))
     d = data.decode('latin1')
     frags = []; i = 0
     while True:
@@ -310,6 +330,9 @@ def main():
     ap.add_argument('--objects', choices=('all', 'world', 'none'), default='all')
     ap.add_argument('--world', help='with --objects world: a world folder (with *.chunk files)')
     ap.add_argument('--only', choices=('terrain', 'map', 'models'), action='append', help='run only these steps (repeatable)')
+    ap.add_argument('--shader', choices=('auto', 'vulkan'), default='auto',
+                    help="vulkan: take the terrain shader from its Vulkan program even when there is an OpenGL one "
+                         "(what a Windows copy of the game gives; for testing)")
     args = ap.parse_args()
     if args.objects == 'world' and not args.world: ap.error('--objects world needs --world')
     out = os.path.abspath(args.out)
@@ -318,7 +341,7 @@ def main():
     found = scan(bundles, work)
     al = use_assetlib(bundles, work)
     steps = args.only or ['terrain', 'map', 'models']
-    if 'terrain' in steps: export_terrain(found, al, out)
+    if 'terrain' in steps: export_terrain(found, al, out, args.shader == 'vulkan')
     if 'map' in steps: export_map(found, al, out)
     if 'models' in steps: export_models(found, args, work, out)
     log('done.')

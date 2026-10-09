@@ -144,8 +144,9 @@ With **Record frame rates** (off each time the editor opens) the editor writes i
 editor's work per frame and the longest gap between two frames. Idle moments are not written. The
 view is only drawn at full speed while something happens; otherwise a few times a second.
 
-Everything the editor says also goes to `log.txt` in the same folder, a new one each run: send it
-along when you report a problem.
+Everything the editor says also goes to `ValheimWorldEditor.log` in the same folder, each line with
+its time, started over at each run (like the game's `LogOutput.log`). **Open log** at the bottom of
+the start page opens it: attach it when you report a problem.
 
 | Key | Action |
 |---|---|

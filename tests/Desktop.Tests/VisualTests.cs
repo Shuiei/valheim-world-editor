@@ -581,7 +581,7 @@ public sealed class DirectVisualTests(DirectEditorProcess editor)
 		Assert.Matches(@"^\d+ fps over \d+\.\d s, work .* ms, gaps median \d+ ms, 95% \d+ ms, max \d+ ms, view \d+×\d+ px$", bench);
 		Assert.Equal(0, editor.Send("state").GetProperty("glErrors").GetInt32());
 		// What it said is in its log, in the tests' data folder.
-		string log = File.ReadAllText(Path.Combine(editor.Data, "log.txt"));
+		string log = File.ReadAllText(Path.Combine(editor.Data, "ValheimWorldEditor.log"));
 		Assert.StartsWith($"Valheim World Editor {BuildInfo.Version}, ", log);
 		Assert.Contains("window open", log);
 	}

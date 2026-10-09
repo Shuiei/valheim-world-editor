@@ -113,6 +113,36 @@ public class PanelGameLookTests
 	}
 
 	[AvaloniaFact]
+	public async Task AFailedCopyOffersTheLog()
+	{
+		var (b, _, _) = Banner(new("failed", "Copying the game's look failed: ValueError: 15 is not in list", "/games/valheim", null, null));
+		int opened = 0;
+		b.OpenLog = () => { opened++; return Task.FromResult(true); };
+		Assert.True(b.ShowLog.IsVisible);
+		Assert.Contains("Open log", b.Hint.Text);
+		b.ShowLog.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
+		await Task.Delay(10);
+		Assert.Equal(1, opened);
+		// Not while it runs.
+		var (r, _, _) = Banner(new("running", null, "/games/valheim", null, 0.1));
+		Assert.False(r.ShowLog.IsVisible);
+	}
+
+	[AvaloniaFact]
+	public async Task TheStartPageOpensTheLogFile()
+	{
+		var opened = new List<Uri>();
+		var page = new StartPage(new AppSettings()) { OpenUrl = u => { opened.Add(u); return Task.FromResult(true); } };
+		page.LogLink.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
+		await Task.Delay(10);
+		Assert.Equal(Path.GetFullPath(Log.FilePath), Assert.Single(opened).LocalPath);
+		// The game-look card opens the same file.
+		await page.LookBanner.OpenLog();
+		Assert.Equal(2, opened.Count);
+		Assert.True(opened[1].IsFile);
+	}
+
+	[AvaloniaFact]
 	public void AFailedCopyWithNoFolderKnownUsesTheSettingsOne()
 	{
 		var settings = new AppSettings { ValheimPath = "/from/settings" };
