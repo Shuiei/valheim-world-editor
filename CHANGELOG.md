@@ -91,6 +91,8 @@ the plugin is unchanged in versions without that part.
   undo, a save that read the world again): they overwrote the stroke, or removed other objects than
   the ones the script chose. And an object number that is not the area's no longer leaves the
   script's ground change without an undo step, while saying nothing changed.
+- Closing the window with unsaved changes and answering **Keep editing** no longer stops the copy of
+  the game's look running in the background.
 
 ### WorldEditorBridge
 - An apply the game takes more than 30 seconds to start (a world save on the server) is no longer

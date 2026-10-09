@@ -2053,7 +2053,8 @@ public sealed partial class MainWindow : Window
 			_ => "",
 		};
 		_view.Status += t => { Options.Say(t); Dispatcher.UIThread.Post(() => _info.Text = t + "\n" + _info.Text); };
-		Closing += (_, _) => { _perf.Flush(); GameLook.StopExport(); Prefs.Flush(); };
+		// Once really closed (Closing also comes when "Keep editing" keeps the window open).
+		Closed += (_, _) => { _perf.Flush(); GameLook.StopExport(); Prefs.Flush(); };
 		RememberPrefs();
 		_info.Text = "Loading the world…";
 		Opened += async (_, _) =>
