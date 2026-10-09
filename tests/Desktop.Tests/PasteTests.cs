@@ -196,4 +196,28 @@ public class PasteTests
 		Assert.Equal(placed.Rotation, ghost.Rotation);
 		Assert.Equal(Beech, ghost.Prefab);
 	}
+
+	// Copied with the Select tool on a slope: building pieces keep the building's shape (each piece's
+	// height from the others), trees and the like keep their height above the ground where they land.
+	[Fact]
+	public void SelectCopiesKeepABuildingsShapeOnASlope()
+	{
+		int wall = StableHash.Of("woodwall");
+		var s = Area();
+		// On the mound's side: two walls one above the other, a tree beside them.
+		float ox = s.Scene.X0 * 64f - 32f, oz = s.Scene.Z0 * 64f - 32f;
+		float gy = H(s, 37, 40);
+		s.Scene.Things.Add(new WorldScene.Thing(2, wall, new Vector3(37 + ox, gy + 1, 40 + oz), Vector3.Zero, 0, true));
+		s.Scene.Things.Add(new WorldScene.Thing(3, wall, new Vector3(37 + ox, gy + 3, 40 + oz), Vector3.Zero, 0, true));
+		float GroundAt(float x, float z) => H(s, (int)MathF.Round(x - ox), (int)MathF.Round(z - oz));
+		var clip = CopyData.FromThings(s.Scene, new[] { 0, 1, 2 }, i => i == StableHash.Of("Beech1") ? "Beech1" : "woodwall", GroundAt)!;
+		Assert.True(clip.Objects.Single(o => o.Name == "Beech1").Follow);
+		Assert.All(clip.Objects.Where(o => o.Name == "woodwall"), o => Assert.False(o.Follow));
+		var paste = new PasteTool { Clip = clip, Ground = false };
+		var (_, _, add) = paste.Apply(s.Ground, new Vector2(90, 90));
+		var walls = add.Select(a => a.Item1).Where(o => o.Prefab == wall).OrderBy(o => o.Position.Y).ToList();
+		Assert.Equal(2, walls[1].Position.Y - walls[0].Position.Y, 3);
+		var tree = add.Select(a => a.Item1).Single(o => o.Prefab == Beech);
+		Assert.Equal(GroundAt(tree.Position.X, tree.Position.Z), tree.Position.Y, 2);
+	}
 }

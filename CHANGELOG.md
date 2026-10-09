@@ -44,6 +44,8 @@ the plugin is unchanged in versions without that part.
 
 ### Fixed
 - Objects shown untextured (white) after opening another area while models were still loading.
+- Buildings copied with the Select tool keep their shape when pasted on a slope: each piece no longer
+  follows the ground on its own (trees, rocks and the like still do).
 
 ## v1.1.0 — 2026-10-08
 
