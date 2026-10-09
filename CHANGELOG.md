@@ -64,6 +64,9 @@ the plugin is unchanged in versions without that part.
   is a mistake explained when the formula is read, instead of every point failing as "bad"; and a
   formula nested very deeply (a pasted one with thousands of brackets) is refused instead of closing
   the editor.
+- A damaged history file (kept between runs) no longer stops its world from opening: the world opens
+  without the earlier history. A `stamps.json` with an entry missing its picture no longer stops the
+  editor from starting.
 
 ### WorldEditorBridge
 - An apply the game takes more than 30 seconds to start (a world save on the server) is no longer

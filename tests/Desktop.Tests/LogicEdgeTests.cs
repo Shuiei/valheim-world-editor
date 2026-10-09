@@ -120,6 +120,9 @@ public class LogicEdgeTests
 			File.WriteAllText(Stamps.PathOverride, "{ not json");
 			File.WriteAllText(PlaceMemory.PathOverride, "[[[");
 			Assert.Empty(Stamps.LoadKept());
+			// Entries without their weights (it threw: the editor did not start).
+			File.WriteAllText(Stamps.PathOverride, "[null, {\"Name\": \"pic:1\", \"Label\": \"x\", \"Weights\": null}]");
+			Assert.Empty(Stamps.LoadKept());
 			var memory = PlaceMemory.Load();
 			Assert.Empty(memory.Recent);
 			// Written into a folder that cannot hold the file: nothing thrown.
