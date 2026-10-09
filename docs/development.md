@@ -155,7 +155,9 @@ python3 tools/asset-export/export_all.py --valheim ~/.local/share/Steam/steamapp
 What it does:
 
 1. Reads every asset bundle once and records where the terrain material, the terrain texture
-   arrays, the map material and each prefab's root object are (cached in `--work/scan.json`).
+   arrays, the map material and each prefab's root object are (cached in `--work/scan.json`, with
+   each bundle's name, size and time: when they change, a game update, it reads them again and the
+   models are all made again).
 2. **Terrain:** the textures of the `Heightmap` material, the diffuse and normal texture arrays
    stacked into vertical strips, and the OpenGL core build of the `Custom/Heightmap` shader, one
    deferred-pass fragment variant converted to GLSL ES 3.0 (`GameLookGl` adds its own `main()`). If
@@ -163,7 +165,8 @@ What it does:
    file.
 3. **Map:** the textures of the `minimap` material.
 4. **Models:** `export_pieces.py` (meshes, textures, materials; incremental, so an interrupted run
-   continues), then `fix_normals.py` (Unity's DXT5nm normal maps to plain RGB) and `fix_alpha.py`
+   continues: each file is written to a temporary file then renamed, and a piece counts as done once
+   `materials.json` and `meshinfo.json` hold what it uses, saved every 25 pieces), then `fix_normals.py` (Unity's DXT5nm normal maps to plain RGB) and `fix_alpha.py`
    (bleeds the colour of cut-out textures into their transparent pixels), then `objects.json`.
 
 A full run takes a few minutes and writes about 150 MB.

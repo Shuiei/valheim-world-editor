@@ -30,6 +30,14 @@ the plugin is unchanged in versions without that part.
   taken for the world's save, as the game does. The world opens from the last complete save, and
   leaving it no longer deletes that save. Leaving a world also no longer deletes your own files named
   `_main.<something>` in its folder (a `_main.backup.zip`).
+- Copying the game's look no longer breaks for good when it is stopped halfway (closing the editor
+  during the first copy): it could leave a cut file that made every later copy fail, or models
+  without their textures that were never copied again. Each file is now written whole or not at
+  all, and a model counts as copied only with its materials.
+- After a Valheim update, the game's look is copied from the new game files: the copy kept using
+  where things were in the old ones (new kinds got no model, changed ones kept the old model, and a
+  removed file made the copy fail every time). It now reads the game files again and copies every
+  model again when they changed.
 - Settings and saved servers are written whole or not at all: a crash or power cut while writing
   them no longer resets the settings (Valheim folder, world folders, recent worlds) or loses every
   saved server. Settings that cannot be read are kept as `settings.json.bad`, and a settings file

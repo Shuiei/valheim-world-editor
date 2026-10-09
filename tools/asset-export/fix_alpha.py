@@ -45,5 +45,6 @@ for n in sorted(names):
         far = filled.point(lambda v: 255 if v == 0 else 0)
         bands = [Image.composite(Image.new('L', im.size, int(mean[i] + 0.5)), c, far) for i, c in enumerate(bands)]
     w, h = orig.size
-    Image.merge('RGBA', bands + [alpha]).crop((k, k, k + w, k + h)).save(p, optimize=True); done += 1
+    # Written whole, then renamed: a run stopped here leaves the texture as it was.
+    Image.merge('RGBA', bands + [alpha]).crop((k, k, k + w, k + h)).save(p + '.tmp', format='PNG', optimize=True); os.replace(p + '.tmp', p); done += 1
 print('bled', done)

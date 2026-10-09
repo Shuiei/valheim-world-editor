@@ -19,5 +19,6 @@ for n in sorted(set(v['normal'] for v in m.values() if 'normal' in v)):
     # x, y back to bytes: (v * 0.5 + 0.5) * 255.
     xb = ImageMath.lambda_eval(lambda e: e['x'] * 127.5 + 128, x=x).convert('L')
     yb = ImageMath.lambda_eval(lambda e: e['y'] * 127.5 + 128, y=y).convert('L')
-    Image.merge('RGB', (xb, yb, z)).save(p, optimize=True); done += 1
+    # Written whole, then renamed: a run stopped here leaves the texture as it was.
+    Image.merge('RGB', (xb, yb, z)).save(p + '.tmp', format='PNG' if p.endswith('.png') else 'JPEG', optimize=True); os.replace(p + '.tmp', p); done += 1
 print('converted', done)
