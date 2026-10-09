@@ -208,6 +208,8 @@ public sealed partial class MainWindow
 	{
 		_fillingSize = true;
 		AreaSizeBox.SelectedIndex = Array.IndexOf(AreaSizes, size);
+		// A size not in the list (1 × 1, from the command line) shows as it is.
+		AreaSizeBox.PlaceholderText = $"{size} × {size}";
 		_fillingSize = false;
 	}
 

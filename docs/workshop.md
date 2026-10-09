@@ -26,6 +26,8 @@ The Workshop is a blank, flat meadow plot that is not part of any world. Open it
 page (**The Workshop**: **Open the Workshop**), or from a world's Blueprints panel (**New in
 Workshop**, **Edit**).
 
+![The Workshop card on the start page](images/start-workshop.jpg)
+
 ### The Library
 
 The Build panel's **Library** tab lists your blueprints (Homestead's), with their picture (drawn
@@ -101,8 +103,9 @@ It does not count rocks or trees as support (the plot has none), and mesh collid
 
 ## The library (Blueprints panel)
 
-**Blueprints…** (in the Area tool's panel, in a world) lists Homestead's blueprints; the start
-page's **The Workshop** lists them too, with **Edit**. Each shows:
+In a world, **Blueprints** on the tool rail (or **Blueprints…** in the Area tool's panel) is a tool
+like the others: its list of Homestead's blueprints takes the place of the tool's options, next to
+the rail, and **✕** goes back to View. The Workshop's **Library** tab lists them too. Each shows:
 
 - a **picture** of the building seen from above at an angle: the game's models with their textures
   when the [game's look](../README.md) has been copied, else each piece's shape in its material's colour.
