@@ -846,12 +846,14 @@ public sealed class GlView : OpenGlControlBase
 		Wake();
 	}
 
-	// Reads a group's model on a worker thread; the drawing thread sends it to the graphics card.
+	// Reads a group's model on a worker thread; the drawing thread sends it to the graphics card. Waiting
+	// for its turn holds no thread (hundreds of kinds each blocking one starved the thread pool: the
+	// next area's loading and the map's search waited seconds behind them).
 	private void Load(Group g)
 	{
-		Task.Run(() =>
+		Task.Run(async () =>
 		{
-			LoadGate.Wait();
+			await LoadGate.WaitAsync();
 			try
 			{
 				// Left already (another area opened while it waited): not read at all.
@@ -876,16 +878,16 @@ public sealed class GlView : OpenGlControlBase
 							meshes.TryAdd(part.Mesh, md);
 							bounds = md.Bounds;
 						}
-						if (bounds is var (min, max))
+						if (bounds is { } box)
 						{
 							// The object's box, for picking: the parts' meshes.
-							var (a, b) = Picking.Transform(min, max, part.Matrix);
+							var (a, b) = Picking.Transform(box.Min, box.Max, part.Matrix);
 							lo = Vector3.Min(lo, a);
 							hi = Vector3.Max(hi, b);
 						}
 						if (!mats.ContainsKey(part.Material))
 						{
-							var mat = _models.Material(part.Material);
+							var mat = _models!.Material(part.Material);
 							mats[part.Material] = mat;
 							if (mat.Map != null && !images.ContainsKey(mat.Map))
 							{

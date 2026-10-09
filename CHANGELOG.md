@@ -115,6 +115,8 @@ the plugin is unchanged in versions without that part.
 - Less memory over a long session: a model's vertices are let go once they are on the graphics card,
   and past 1 GB of models and textures there, opening another area lets them go (that area's are
   read again). They piled up with every new kind seen, gigabytes with Valheim open beside it.
+- Areas with hundreds of kinds of objects no longer hold up other background work while their models
+  are read (the next area, the map's search and close-up waited seconds behind them).
 
 ### WorldEditorBridge
 - An apply the game takes more than 30 seconds to start (a world save on the server) is no longer
