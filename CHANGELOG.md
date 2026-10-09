@@ -60,6 +60,10 @@ the plugin is unchanged in versions without that part.
 - A folder of worlds added in Settings that holds a folder that cannot be read (a drive's root, with
   its "System Volume Information" or "lost+found") no longer leaves the start page with no world
   listed: that folder is skipped. The same for mod manager profile folders.
+- Shape formulas: a function given the wrong number of values (`sin()`, `pow(x)`, `clamp(x, 0)`)
+  is a mistake explained when the formula is read, instead of every point failing as "bad"; and a
+  formula nested very deeply (a pasted one with thousands of brackets) is refused instead of closing
+  the editor.
 
 ### WorldEditorBridge
 - An apply the game takes more than 30 seconds to start (a world save on the server) is no longer

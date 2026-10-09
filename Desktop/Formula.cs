@@ -47,6 +47,16 @@ public static class Formula
 		["bell"] = a => Math.Exp(-a[0] * a[0] * 2.5),
 	};
 
+	// How many numbers each function takes (min and max: any number of them, at least one).
+	private static readonly Dictionary<string, int> Arity = new()
+	{
+		["pow"] = 2, ["atan2"] = 2, ["clamp"] = 3, ["min"] = -1, ["max"] = -1,
+	};
+
+	// Deeper nesting, or a longer formula, would run out of stack (which closes the app: it cannot be
+	// caught) when it is read or worked out.
+	private const int MaxDepth = 100, MaxTokens = 4000;
+
 	private sealed record Tok(double? N = null, string? Id = null, string? Op = null)
 	{
 		public override string ToString() => Op ?? Id ?? N?.ToString(CultureInfo.InvariantCulture) ?? "";
@@ -75,7 +85,11 @@ public static class Formula
 		{
 			throw new FormatException("the formula is empty");
 		}
-		int i = 0;
+		if (toks.Count > MaxTokens)
+		{
+			throw new FormatException("the formula is too long");
+		}
+		int i = 0, depth = 0;
 		Tok? Peek() => i < toks.Count ? toks[i] : null;
 		bool Eat(string op)
 		{
@@ -94,6 +108,21 @@ public static class Formula
 			}
 		}
 		Func<Env, double> Primary()
+		{
+			if (++depth > MaxDepth)
+			{
+				throw new FormatException("the formula is nested too deeply");
+			}
+			try
+			{
+				return PrimaryAt();
+			}
+			finally
+			{
+				depth--;
+			}
+		}
+		Func<Env, double> PrimaryAt()
 		{
 			if (i >= toks.Count)
 			{
@@ -145,6 +174,11 @@ public static class Formula
 					if (!Funcs.TryGetValue(id, out var f))
 					{
 						throw new FormatException($"there is no function “{id}”");
+					}
+					int arity = Arity.GetValueOrDefault(id, 1);
+					if (arity < 0 ? args.Count == 0 : args.Count != arity)
+					{
+						throw new FormatException(arity < 0 ? $"{id}(…) takes at least one number" : $"{id}(…) takes {(arity == 1 ? "one number" : $"{arity} numbers")}");
 					}
 					var arr = args.ToArray();
 					return env => f(arr.Select(a => a(env)).ToArray());
