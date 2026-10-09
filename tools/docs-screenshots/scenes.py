@@ -499,6 +499,61 @@ def scene_blueprints(e):
     e.shot(OUT / "blueprints.jpg", keep_message=True)
 
 
+def scene_mountain(e):
+    # A lone peak past the game's +-8 m, in a 3 x 3 area so it has room.
+    bare(e, size=3, unsaved=False)
+    e.send("click Mountain")
+    e.send("choose Lone peak")
+    e.send("set Height|80")
+    e.send("set Rough|0.3")
+    e.send("click Grow the biome's trees and rocks on it")
+    camera(e, 0, 0, 200, 35, 260)
+    click(e, P(0, 0))
+    e.send("wait 1500")
+    # Back to View: the preview under the pointer would hide the mountain.
+    e.send("key Escape")
+    camera(e, 0, 0, 210, 32, 220)
+    e.shot(OUT / "mountain.jpg", keep_message=True)
+
+
+def scene_workshop(e):
+    # A small house built with the Place tool in a world, kept as a blueprint, opened in the Workshop:
+    # its pieces tinted by the support check, as the game's build mode shows them.
+    bare(e, unsaved=False)
+    level(e, P(-12, -10), P(12, 10))
+    e.send("key T")
+    pieces(e)
+    kinds(e, "wood_floor")
+    e.send("click Grid")
+    e.send("set Spacing|2")
+    drag(e, P(-4, -3), P(4, 3))
+    e.send("key Return")
+    kinds(e, "woodwall")
+    e.send("click Line")
+    e.send("click Rectangle")
+    e.send("set Layers|3")
+    drag(e, P(-4, -3), P(4, 3))
+    e.send("key Return")
+    e.send("key B")
+    drag(e, P(-7, -6), P(7, 6))
+    e.send("choose Copy and paste")
+    e.send("key C ctrl")
+    e.send("click Save blueprint…")
+    e.send("wait 500")
+    e.send("type |Small house")
+    e.send("click Save")
+    e.send("wait 500")
+    e.send("click Blueprints")
+    e.send("click Edit")
+    e.send("wait 500")
+    e.send("click Leave anyway")
+    e.send("wait 2500")
+    e.send("key T")
+    # The Workshop's plot is centred on 0, 0 (not the world's zone).
+    e.send("camera 0 0 30 28 24")
+    e.shot(OUT / "workshop.jpg")
+
+
 def scene_map(e):
     e.send(f"world {world()}")
     e.send(f"mapview {C[0] + 200} {C[1]} 1.6")
