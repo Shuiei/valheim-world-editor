@@ -57,7 +57,7 @@ the plugin is unchanged in versions without that part.
   (also carts, ships and wards) stays up wherever it is and holds what stands on it, as in game. A
   building on such floors in the air no longer shows walls that would fall.
 
-## v1.15.6 — unreleased
+## v1.15.6 — 2026-10-09
 
 ### Fixed
 - Saving a world the game saved since the editor read it (a play test between two saves) no longer
