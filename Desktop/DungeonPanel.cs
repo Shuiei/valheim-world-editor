@@ -147,6 +147,8 @@ public sealed class DungeonPanel
 		_generate.IsExpanded = _shown.Count == 0;
 		FillRooms();
 		Refresh();
+		// Back from Build here or another tool: the cut the slider shows.
+		SetCut(CutSlider.Value);
 	}
 
 	private void FillRooms()

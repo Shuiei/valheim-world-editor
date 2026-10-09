@@ -1884,8 +1884,9 @@ public sealed partial class MainWindow : Window
 			{
 				DungeonPanel.Reload();
 			}
-			else if (DungeonPanel.Card.IsVisible)
+			else if (DungeonPanel.Card.IsVisible && !BuildingInDungeon)
 			{
+				// Not into Build here (it builds under the dungeon's cut): the cut off.
 				DungeonPanel.Leave();
 			}
 			DungeonPanel.Card.IsVisible = Tools.Mode == ToolMode.Dungeon;
@@ -1907,6 +1908,10 @@ public sealed partial class MainWindow : Window
 			PastePanel.Card.IsVisible = Tools.Mode == ToolMode.Paste;
 			if (BuildingInDungeon && Tools.Mode != ToolMode.Place)
 			{
+				if (Tools.Mode != ToolMode.Dungeon)
+				{
+					DungeonPanel.Leave();
+				}
 				BuildInDungeon(false);
 			}
 			PlacePanel.Card.IsVisible = Tools.Mode == ToolMode.Place && !_inWorkshop && !BuildingInDungeon;
