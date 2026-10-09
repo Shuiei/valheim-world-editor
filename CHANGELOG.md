@@ -7,6 +7,23 @@ the plugin is unchanged in versions without that part.
 ## v1.16.0 — 2026-10-09
 
 ### Added
+- **Generate a dungeon** (Dungeon panel): a whole dungeon from a few choices and a seed. It is made
+  of building pieces, or of the biome's own dungeon rooms. A plan of each level updates as you
+  change the choices.
+  - Eight styles: crypt, catacombs, temple, fortress, prison, Dvergr hold, goblin warren and ruins.
+    Each has its own rooms (burial chambers, ossuaries, chapels, barracks, feast halls, cell blocks,
+    forges, studies...), each furnished for its purpose.
+  - Seven wall materials, and eight biomes for monsters, chests, loot and lights.
+  - Settings for size, levels, monsters (spawners that come back, or monsters placed once), the
+    boss, loot, light, furniture, ruin and ways round.
+  - The layout reads like a building: rooms along axes, wings in pairs, and loops between rooms
+    that lie close together. Stairs go down between levels, and some halls rise through two levels.
+  - A door closes every room, so its monsters wait behind it. An antechamber leads to the boss's
+    arena behind a gate that opens with the crypt key, which lies in a chest far away; the treasury
+    is beyond the arena. Hidden caches sit behind cracked walls.
+  - **Place in the world** puts it 5000 m above the view with a linked portal pair, as one undo
+    step. It is written as a ruin, like the game's own dungeons. **Open in the Workshop** opens it as
+    a blueprint.
 - **Dungeon** tool: edit the rooms of Frost Caves, burial chambers, sunken crypts, infested mines and
   the game's other dungeons. The game builds a dungeon from a list of its rooms kept in the save
   (5000 m above its entrance); the tool edits that list, and the game builds what you make, no mod

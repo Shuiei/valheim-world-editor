@@ -203,6 +203,7 @@ public sealed class DungeonGenPanel
 		foreach (int l in levels)
 		{
 			var b = new ToggleButton { Content = $"Level {l + 1}", FontSize = 11, IsChecked = l == _level, Padding = new Thickness(6, 2) };
+			b.Tip("dungeon.gen.level");
 			int at = l;
 			b.Click += (_, _) =>
 			{

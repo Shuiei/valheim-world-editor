@@ -57,7 +57,27 @@ public partial class MainWindow
 		float gx = target.X + scene.Cx, gz = scene.Cz - target.Z;
 		int ix = Math.Clamp((int)MathF.Round(gx - scene.Cx + (scene.W - 1) / 2f), 0, scene.W - 1), iz = Math.Clamp((int)MathF.Round(gz - scene.Cz + (scene.H - 1) / 2f), 0, scene.H - 1);
 		float ground = Math.Max(scene.Heights[iz * scene.W + ix], scene.Water);
+		float HeightAt(float x, float z)
+		{
+			int i = Math.Clamp((int)MathF.Round(x - scene.Cx + (scene.W - 1) / 2f), 0, scene.W - 1), j = Math.Clamp((int)MathF.Round(z - scene.Cz + (scene.H - 1) / 2f), 0, scene.H - 1);
+			return scene.Heights[j * scene.W + i];
+		}
 		var origin = new Vector3(MathF.Round(gx), MathF.Round(ground) + 5000, MathF.Round(gz));
+		// Clear of what is already up there (a cave's interior, another dungeon): higher by 50 m steps.
+		if (r.Items.Count > 0)
+		{
+			float x0 = r.Items.Min(i => i.Position.X) - 10, x1 = r.Items.Max(i => i.Position.X) + 10, z0 = r.Items.Min(i => i.Position.Z) - 10, z1 = r.Items.Max(i => i.Position.Z) + 10;
+			float y0 = r.Items.Min(i => i.Position.Y) - 6, y1 = r.Items.Max(i => i.Position.Y) + 6;
+			List<Vector3> high;
+			lock (scene.Things)
+			{
+				high = scene.Things.Where(t => !t.Gone && t.Position.Y > 3000).Select(t => t.Position).ToList();
+			}
+			for (int k = 0; k < 40 && high.Any(p => p.X - origin.X > x0 && p.X - origin.X < x1 && p.Z - origin.Z > z0 && p.Z - origin.Z < z1 && p.Y - origin.Y > y0 && p.Y - origin.Y < y1); k++)
+			{
+				origin.Y += 50;
+			}
+		}
 		var files = new Dictionary<ChunkFile, byte[]>();
 		byte[]? Blank(NewObject n) => world.NewObjectBytes(n, m => world.LiveBytes ?? (files.TryGetValue(m.File, out var f) ? f : files[m.File] = File.ReadAllBytes(Path.Combine(world.Directory, m.File.FileName))));
 		var adds = new List<(NewObject, bool)>();
@@ -80,12 +100,14 @@ public partial class MainWindow
 			var above = placed[0].Position + new Vector3(0, 3, 0);
 			arrival = RoomSurfaces.Hit(new[] { dungeon }, _view.Models, above, -Vector3.UnitY) is float down ? above - new Vector3(0, down - 0.05f, 0) : placed[0].Position;
 		}
-		int skipped = 0;
+		// Every object with its own data, and no builder: the game takes the dungeon for a ruin, as its
+		// own dungeons (monsters do not go for its walls; taking it apart gives back a third).
+		int skipped = 0, creator = StableHash.Of("creator");
 		foreach (var it in r.Items)
 		{
 			int prefab = StableHash.Of(it.Prefab);
+			// Made fresh (nothing kept of the object it is copied from), then its builder taken off.
 			var n = new NewObject(0, prefab, it.Position + origin, Dungeons.ToEuler(it.Rotation), 0);
-			if (it.Data is { Count: > 0 } data)
 			{
 				if (Blank(n) is not { } bytes)
 				{
@@ -93,7 +115,8 @@ public partial class MainWindow
 					continue;
 				}
 				var z = ZdoData.Parse(bytes);
-				foreach (var (section, key, value) in data)
+				z.Set("longs", creator, null);
+				foreach (var (section, key, value) in it.Data ?? Array.Empty<(string, string, string)>())
 				{
 					if (section == "bytes")
 					{
@@ -113,7 +136,7 @@ public partial class MainWindow
 		string tag = $"dg{settings.Seed % 100000}";
 		int link = Random.Shared.Next(1, int.MaxValue);
 		int portal = StableHash.Of("portal_wood");
-		foreach (var (at, yaw, kindByte) in new[] { (arrival, 0f, (byte)0x01), (new Vector3(gx, ground, gz + 3), 180f, (byte)0x11) })
+		foreach (var (at, yaw, kindByte) in new[] { (arrival, 0f, (byte)0x01), (new Vector3(gx, Math.Max(HeightAt(gx, gz + 3), scene.Water), gz + 3), 180f, (byte)0x11) })
 		{
 			var n = new NewObject(0, portal, at, new Vector3(0, yaw, 0), 0);
 			if (Blank(n) is not { } bytes)
@@ -121,6 +144,7 @@ public partial class MainWindow
 				continue;
 			}
 			var z = ZdoData.Parse(bytes);
+			z.Set("longs", creator, null);
 			z.Set("strings", StableHash.Of("tag"), tag);
 			z.Connection = new[] { kindByte }.Concat(BitConverter.GetBytes(link)).ToArray();
 			adds.Add((n with { Raw = z.Serialize(), Fresh = false }, true));

@@ -336,11 +336,11 @@ internal sealed class DungeonDresser
 	}
 
 	// ---- Who guards it.
-	private void Spawn(Frame f, Foe foe, float u, float v, float yaw, int level = 1, bool once = false)
+	private void Spawn(Frame f, Foe foe, float u, float v, float yaw, int level = 1, bool once = false, bool force = false)
 	{
 		bool creature = once || !_s.Respawn;
 		var data = creature && level > 1 ? new[] { ("ints", "level", level.ToString(System.Globalization.CultureInfo.InvariantCulture)) } : null;
-		Put(f, creature ? foe.Creature : foe.Spawner, u, v, yaw, 0.6f, data: data);
+		Put(f, creature ? foe.Creature : foe.Spawner, u, v, yaw, 0.6f, force: force, data: data);
 	}
 
 	private void Foes(Frame f, float perArea, Foe[]? pool = null, int level = 1)
@@ -1184,7 +1184,7 @@ internal sealed class DungeonDresser
 		f.Take(0, 0, 1.5f);
 		if (_boss != null)
 		{
-			Spawn(f, _boss, 0, 0.5f, 180, Math.Clamp(1 + (int)MathF.Round(_s.Monsters), 1, 3), once: true);
+			Spawn(f, _boss, 0, 0.5f, 180, Math.Clamp(1 + (int)MathF.Round(_s.Monsters), 1, 3), once: true, force: true);
 		}
 		if (_s.Monsters > 0)
 		{

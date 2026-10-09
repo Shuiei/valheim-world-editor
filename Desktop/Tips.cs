@@ -402,6 +402,7 @@ public static class Tips
 		["dungeon.gen.secrets"] = "Small rooms of treasure behind a cracked wall to break (stone) or a tapestry.",
 		["dungeon.gen.name"] = "Written on a sign in its entrance hall. Empty: one is made up from the seed.",
 		["dungeon.gen.seed"] = "Any number: each makes another dungeon with the same choices.",
+		["dungeon.gen.level"] = "Shows this level in the plan.",
 		["dungeon.gen.randomize"] = "Another seed.",
 		["dungeon.gen.place"] = "Puts it 5000 m above the middle of the view, where the game keeps its dungeons, with a portal on the ground here leading in (and one back out). Ctrl+Z takes it all back.",
 		["dungeon.gen.workshop"] = "Opens it as a blueprint in the Workshop, to look at it or build it by hand. A blueprint keeps only the objects: no key in a chest, so no locked gate.",
