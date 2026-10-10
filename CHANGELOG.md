@@ -4,7 +4,7 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
-## Unreleased
+## v1.17.0 — 2026-10-10
 
 ### Changed
 - The game's look (models, textures, the terrain shader and the map) is **read straight from your

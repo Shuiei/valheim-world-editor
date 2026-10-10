@@ -21,6 +21,10 @@ and everyone online sees it appear, as if a very fast Viking had done it by hand
   ramps where it climbs.
 - **Make landmarks.** Raise a mountain, a volcano or a cliff past the game's ±8 m limit, carve a
   canyon or dig a cave roofed with boulders. Players see them with no mod at all.
+- **Make dungeons.** Generate a whole dungeon from a style and a seed (crypt, fortress, Dvergr
+  hold, goblin warren…), stocked with its creatures and loot, or add rooms to the game's own
+  dungeons (Frost Caves, crypts, infested mines…) and remove them. The game builds them, no mod
+  needed for players.
 - **Bring in a building.** Design it in the editor's Workshop (or use a
   [Homestead](https://thunderstore.io/c/valheim/p/sighsorry/Homestead/) blueprint) and paste it into
   the world: the hill in its way is dug out, trees and rocks there are cleared.
@@ -35,7 +39,8 @@ you open the world.
 1. The mod runs inside the game that **hosts** the world (your game, or the dedicated server) and
    waits for the editor. It only listens on that computer, and only answers with its secret token.
 2. The editor loads the world from it and shows it in 3D, with the game's own terrain, textures and
-   models. Players stay connected.
+   models. Players stay connected, and what they build, remove or dig in the area you edit shows up
+   in the editor as they do it.
 3. You edit. Nothing reaches the game until you press **Apply live** (or turn on **Auto**). Then
    the game gets the changed ground and objects, players see them, and the game saves them as usual.
 
