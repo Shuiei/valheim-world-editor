@@ -12,6 +12,8 @@ the plugin is unchanged in versions without that part.
   first start and after every game update (the first time, and after an update, the editor reads the
   game's files for a few seconds), no 150 MB `game-look` folder (the old copy is deleted), and the
   release packages are about 90 MB smaller (no Python inside).
+- The editor runs on **.NET 10** (it was .NET 8, whose support ends in November 2026). Nothing to
+  install: the packages still carry it.
 
 ### Added
 - When Valheim is not found, the start page explains step by step how to find its folder (Steam's
@@ -29,6 +31,7 @@ the plugin is unchanged in versions without that part.
   players did there. Undo your changes there and the game's ground comes in.
 
 ### Fixed
+- Place, Line: a line exactly a whole number of spacings long sometimes left out its last object.
 - Opening another world while the map or an area of the first was still being drawn no longer takes
   that world's rivers and streams away (its ground came out without them), and the map reads its own
   world's biomes. Making a world's ground while Regrow (or another world) runs no longer shifts its
