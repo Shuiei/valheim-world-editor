@@ -74,6 +74,9 @@ keeps what its objects hold (the key in its chest, the signs, the boss and its s
 a ruin. Placed in a world from the editor, it comes back whole. Built in game with Homestead, it is
 only the objects: no key, no boss.
 
+From the Workshop itself, the Build panel's **Library** has **Generate dungeon…**: the same choices
+(building pieces only), then **Open on the plot** or **Add to the plot** (with what is already there).
+
 All of a dungeon of building pieces holds in the game, high in the sky. Its floors and roofs are
 black marble slabs, the one piece the game never asks for support, and everything else stands on
 them.

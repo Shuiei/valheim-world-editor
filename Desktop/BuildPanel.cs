@@ -14,7 +14,8 @@ namespace TerrainEditor.Desktop;
 // The Workshop's Build panel: the hammer's pieces in its tabs (Building, Heavy building, Furniture…),
 // each with a small picture, searchable; the one clicked is what the Place tool puts down, one at a
 // time under the cursor. Snapping to the pieces already there, stacking on the one under the cursor,
-// a grid for the rest, and the step , and . turn by. What the piece costs in game.
+// a grid for the rest, and the step , and . turn by. What the piece costs in game. Its Library: the
+// blueprints, and Generate dungeon (a dungeon of building pieces made onto the plot).
 public sealed class BuildPanel
 {
 	public Control Card { get; }
@@ -109,6 +110,10 @@ public sealed class BuildPanel
 		LibrarySearch.Tip("build.librarySearch");
 		ImportButton.Tip("blueprints.import");
 		ImportButton.Click += (_, _) => ImportAsked?.Invoke();
+		GenerateButton.Tip("build.generate");
+		GenerateButton.Click += (_, _) => ShowDungeon();
+		BackToLibrary.Tip("build.backToLibrary");
+		BackToLibrary.Click += (_, _) => ShowLibrary(true);
 		LibrarySearch.PropertyChanged += (_, e) => { if (e.Property == TextBox.TextProperty) RenderLibrary(); };
 		_library = new StackPanel
 		{
@@ -116,8 +121,9 @@ public sealed class BuildPanel
 			IsVisible = false,
 			Children =
 			{
-				new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 4, Children = { LibrarySearch, Col(ImportButton) } },
-				new ScrollViewer { MaxHeight = 560, Content = LibraryList },
+				LibrarySearch,
+				new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Children = { ImportButton, GenerateButton } },
+				new ScrollViewer { MaxHeight = 530, Content = LibraryList },
 				new TextBlock
 				{
 					Text = "Drag a blueprint onto the plot to add it there (or drop a .blueprint or .vbuild file from your files). Open puts it alone on the plot; Add puts it in the middle with what is there.",
@@ -125,6 +131,18 @@ public sealed class BuildPanel
 				},
 			},
 		};
+		_dungeon = new StackPanel
+		{
+			Spacing = 6,
+			IsVisible = false,
+			Children =
+			{
+				new DockPanel { Children = { BackToLibrary, new TextBlock { Text = "Generate a dungeon", FontSize = 13, FontWeight = FontWeight.SemiBold, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(8, 0, 0, 0) } } },
+				new ScrollViewer { MaxHeight = 560, Content = Dungeon.View },
+				Dungeon.Actions,
+			},
+		};
+		DockPanel.SetDock(BackToLibrary, Dock.Left);
 		_pieces = new StackPanel
 		{
 			Spacing = 6,
@@ -160,6 +178,7 @@ public sealed class BuildPanel
 				},
 				_pieces,
 				_library,
+				_dungeon,
 			},
 		});
 		Card.IsVisible = false;
@@ -178,7 +197,11 @@ public sealed class BuildPanel
 	internal TextBox LibrarySearch { get; } = new() { PlaceholderText = "Search blueprints", FontSize = 12 };
 	internal Button ImportButton { get; } = new() { Content = "Import file…", FontSize = 12 };
 	internal StackPanel LibraryList { get; } = new() { Spacing = 4 };
-	private readonly StackPanel _pieces, _library;
+	// Generate dungeon: the Dungeon panel's generator, made of building pieces, onto the plot.
+	internal Button GenerateButton { get; } = new() { Content = "Generate dungeon…", FontSize = 12 };
+	internal Button BackToLibrary { get; } = new() { Content = "← Library", FontSize = 12 };
+	internal DungeonGenPanel Dungeon { get; } = new(inWorkshop: true);
+	private readonly StackPanel _pieces, _library, _dungeon;
 	// The blueprints' folder (Homestead's).
 	internal Func<string> Folder { get; set; } = () => "";
 	// Open: the blueprint alone on the plot; Add: with what is there (in the middle).
@@ -188,17 +211,28 @@ public sealed class BuildPanel
 	internal static readonly DataFormat<string> BlueprintFormat = DataFormat.CreateInProcessFormat<string>("vwe-blueprint");
 
 	internal bool LibraryShown => _library.IsVisible;
+	internal bool DungeonShown => _dungeon.IsVisible;
 
 	public void ShowLibrary(bool on)
 	{
 		_library.IsVisible = on;
 		_pieces.IsVisible = !on;
+		_dungeon.IsVisible = false;
 		PiecesTab.Classes.Set("on", !on);
 		LibraryTab.Classes.Set("on", on);
 		if (on)
 		{
 			RenderLibrary();
 		}
+	}
+
+	// The generator, in the Library's place (its tab stays lit).
+	internal void ShowDungeon()
+	{
+		_library.IsVisible = _pieces.IsVisible = false;
+		_dungeon.IsVisible = true;
+		PiecesTab.Classes.Set("on", false);
+		LibraryTab.Classes.Set("on", true);
 	}
 
 	internal void RenderLibrary()

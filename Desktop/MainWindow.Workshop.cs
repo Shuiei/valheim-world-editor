@@ -64,6 +64,17 @@ public partial class MainWindow
 		BuildPanel.Folder = () => Blueprints.Status.Folder;
 		BuildPanel.OpenAsked += async path => await OpenWorkshop(path);
 		BuildPanel.AddAsked += path => AddToWorkshop(path, null);
+		BuildPanel.Dungeon.PlotAsked += async (settings, result, add) =>
+		{
+			try
+			{
+				await GeneratedOntoPlot(settings, result, add);
+			}
+			catch (Exception ex)
+			{
+				_message.Text = $"Could not put the dungeon on the plot: {ex.Message}";
+			}
+		};
 		BuildPanel.ImportAsked += async () =>
 		{
 			if (await Blueprints.PickFile() is string file && Blueprints.Import(file) != null)
