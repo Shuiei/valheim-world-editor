@@ -7,7 +7,7 @@ using TerrainEditor.App;
 namespace TerrainEditor.Desktop;
 
 // Settings: folders on this computer (the web start page's settings): the Valheim game folder, more
-// BepInEx folders to look for the plugin in, and more world folders to list.
+// BepInEx folders to look for the plugin in, more world folders to list; and Claude's connection.
 public static class SettingsDialog
 {
 	private static string Expand(string path)
@@ -122,10 +122,39 @@ public static class SettingsDialog
 		}
 		var bep = List(settings.BepInExFolders, "A BepInEx folder or a mod manager profile", out var readBep);
 		var worlds = List(settings.WorldFolders, "A world folder or a folder of worlds", out var readWorlds);
+		// Claude's connection.
+		var claude = new CheckBox { Content = "Allow Claude to connect", IsChecked = settings.ClaudeConnect }.Classed("switch").Tip("settings.claude");
+		var port = new TextBox { Text = settings.ClaudePort.ToString(System.Globalization.CultureInfo.InvariantCulture), Width = 90 }.Tip("settings.claudePort");
+		string token = string.IsNullOrEmpty(settings.ClaudeToken) ? ClaudeServer.NewToken() : settings.ClaudeToken;
+		var command = new TextBox { IsReadOnly = true, TextWrapping = TextWrapping.Wrap, FontSize = 12, FontFamily = new FontFamily("monospace") }.Tip("settings.claudeCommand");
+		void ShowCommand() => command.Text = ClaudeServer.ClaudeCodeCommand(int.TryParse(port.Text, out int p) ? p : settings.ClaudePort, token);
+		ShowCommand();
+		port.TextChanged += (_, _) => ShowCommand();
+		var copy = new Button { Content = "Copy" }.Tip("settings.claudeCopy");
+		copy.Click += async (_, _) => { if (TopLevel.GetTopLevel(dialog)?.Clipboard is { } cb) await Avalonia.Input.Platform.ClipboardExtensions.SetTextAsync(cb, command.Text ?? ""); };
+		var renew = new Button { Content = "New token" }.Tip("settings.claudeToken");
+		renew.Click += (_, _) => { token = ClaudeServer.NewToken(); ShowCommand(); };
+		var claudeDetails = new StackPanel { Spacing = 6, IsVisible = claude.IsChecked == true };
+		claude.IsCheckedChanged += (_, _) => claudeDetails.IsVisible = claude.IsChecked == true;
+		claudeDetails.Children.Add(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = { new TextBlock { Text = "Port", VerticalAlignment = VerticalAlignment.Center }, port, renew } });
+		claudeDetails.Children.Add(Hint("To connect Claude Code, run this once in a terminal (other MCP clients: the address, with the header):"));
+		claudeDetails.Children.Add(new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 4, Children = { command, Col(copy, 1) } });
+		if (ClaudeServer.Status is string status)
+		{
+			claudeDetails.Children.Add(Hint(status));
+		}
 		var error = new TextBlock { Foreground = new SolidColorBrush(Color.FromRgb(224, 96, 75)), TextWrapping = TextWrapping.Wrap };
 		var save = new Button { Content = "Save", IsDefault = true }.Tip("settings.save");
 		save.Click += (_, _) =>
 		{
+			if (!int.TryParse(port.Text, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out int claudePort) || claudePort is < 1024 or > 65535)
+			{
+				error.Text = "The port for Claude must be a number from 1024 to 65535.";
+				return;
+			}
+			settings.ClaudeConnect = claude.IsChecked == true;
+			settings.ClaudePort = claudePort;
+			settings.ClaudeToken = token;
 			if (Apply(settings, valheim.Text, readBep(), readWorlds()) is string problem)
 			{
 				error.Text = problem;
@@ -155,6 +184,10 @@ public static class SettingsDialog
 					H2("World folders"),
 					worlds,
 					Hint($"Always listed under \"A saved world\": a world folder, or a folder of worlds (a server's <savedir>/worlds_local, a backup folder…). Valheim's usual folders are always searched: {string.Join(", ", Places.WorldRoots().Where(Directory.Exists).Select(Ui.Tilde))}"),
+					H2("Claude"),
+					claude,
+					Hint("Lets Claude (Claude Code, Claude Desktop) look at the world or the Workshop open in the editor and change it from a prompt: shape the ground, place objects, build. Only from this computer, with the token below. What it changes stays pending, like your own changes: you save, apply live or save the blueprint."),
+					claudeDetails,
 					error,
 					new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 12, 0, 0), Children = { cancel, save } },
 				},

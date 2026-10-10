@@ -124,7 +124,15 @@ public sealed partial class MainWindow : Window
 			_start.OpenRequested += async (open, what) => await OpenWorld(open, what);
 			_start.WorkshopRequested += async path => await OpenWorkshop(path);
 			_start.OpenUrl = uri => Launcher.LaunchUriAsync(uri);
-			_start.SettingsRequested += async () => { if (await SettingsDialog.Show(this, _settings)) _start!.SetMode(_start.Mode); };
+			_start.SettingsRequested += async () =>
+			{
+				if (await SettingsDialog.Show(this, _settings))
+				{
+					_start!.SetMode(_start.Mode);
+					// Claude's connection, as the settings now say.
+					await ClaudeServer.Apply(_settings, this);
+				}
+			};
 			_start.Confirm = text => Dialogs.Ask(this, "Valheim World Editor", text, "Yes");
 			_start.PickFolder = async title =>
 			{
@@ -2131,6 +2139,8 @@ public sealed partial class MainWindow : Window
 			// The game's look: copied from the player's Valheim when missing or after a game update
 			// (when driven by the tests, only whether it is there: they never copy from the game).
 			GameLook.Check(_settings);
+			// Claude's connection, when chosen in Settings.
+			await ClaudeServer.Apply(_settings, this);
 			if (!Options.Driver)
 			{
 				// The copy older editors made of the game's look: nothing reads it any more.
