@@ -150,6 +150,8 @@ internal sealed class DungeonDresser
 
 	private T One<T>(IReadOnlyList<T> list) => list[_rnd.Next(list.Count)];
 
+	private string One(params string[] list) => list[_rnd.Next(list.Length)];
+
 	private bool Chance(double p) => _rnd.NextDouble() < p;
 
 	private int Count(float n) => n <= 0 ? 0 : (int)MathF.Floor(n) + (_rnd.NextDouble() < n - MathF.Floor(n) ? 1 : 0);
@@ -244,9 +246,9 @@ internal sealed class DungeonDresser
 	}
 
 	// ---- What hangs on walls.
-	private void Hangings(Frame f, int count, string[]? choice = null)
+	private void Hangings(Frame f, int count, params string[] choice)
 	{
-		var options = choice ?? _b.Hanging;
+		var options = choice.Length > 0 ? choice : _b.Hanging;
 		var spots = f.WallSpots(3.2f, 3f).OrderBy(_ => _rnd.Next()).Take(count).ToList();
 		foreach (var s in spots)
 		{
@@ -273,7 +275,7 @@ internal sealed class DungeonDresser
 		int n = (int)MathF.Floor((v1 - v0) / len);
 		if (n < 2)
 		{
-			Put(f, One(new[] { "rug_wolf", "rug_fur", "rug_deer" }), u, (v0 + v1) / 2, 0, 0, force: true);
+			Put(f, One("rug_wolf", "rug_fur", "rug_deer"), u, (v0 + v1) / 2, 0, 0, force: true);
 			return;
 		}
 		float start = (v0 + v1) / 2 - n * len / 2 + len / 2;
@@ -285,9 +287,9 @@ internal sealed class DungeonDresser
 	}
 
 	// ---- What lies about.
-	private void Clutter(Frame f, float perArea, string[]? choice = null)
+	private void Clutter(Frame f, float perArea, params string[] choice)
 	{
-		var options = choice ?? _b.Clutter;
+		var options = choice.Length > 0 ? choice : _b.Clutter;
 		int n = Count(f.Area * perArea * (0.5f + 0.5f * _s.Decor));
 		var walls = f.WallSpots(1.3f, 2.5f).OrderBy(_ => _rnd.Next()).ToList();
 		for (int i = 0; i < n; i++)
@@ -315,14 +317,14 @@ internal sealed class DungeonDresser
 		for (int i = 0; i < rubble; i++)
 		{
 			var (cu, cv) = corners[i % 4];
-			PutNear(f, One(new[] { "Morkhalla_Rubble2", "Morkhalla_Rubble1" }), cu * (f.HalfA - 2.2f), cv * (f.HalfD - 2.2f), R(0, 360), 1.8f, 0.6f);
+			PutNear(f, One("Morkhalla_Rubble2", "Morkhalla_Rubble1"), cu * (f.HalfA - 2.2f), cv * (f.HalfD - 2.2f), R(0, 360), 1.8f, 0.6f);
 		}
 		int debris = Count(f.Area / 40 * _decay * 2);
 		for (int i = 0; i < debris; i++)
 		{
 			if (Spot(f, 0.6f) is var (u, v))
 			{
-				Put(f, One(new[] { "stone_wall_2x1_ruin", "stone_wall_1x1_ruin", "piece_pot1_cracked", "piece_pot3_cracked" }), u, v, R(0, 360), 0.6f);
+				Put(f, One("stone_wall_2x1_ruin", "stone_wall_1x1_ruin", "piece_pot1_cracked", "piece_pot3_cracked"), u, v, R(0, 360), 0.6f);
 			}
 		}
 		// A fallen pillar now and then.
@@ -472,7 +474,7 @@ internal sealed class DungeonDresser
 		}
 	}
 
-	private string Banner => One(new[] { "piece_banner01", "piece_banner02", "piece_banner03", "piece_banner04", "piece_banner05", "piece_banner06", "piece_banner07" });
+	private string Banner => One("piece_banner01", "piece_banner02", "piece_banner03", "piece_banner04", "piece_banner05", "piece_banner06", "piece_banner07");
 
 	// The wall hangings that suit the style: banners in keeps and temples, the biome's own elsewhere.
 	private string[] Drapes => _style.Name switch
@@ -588,7 +590,7 @@ internal sealed class DungeonDresser
 				Put(f, "dvergrprops_lantern_standing", 0.5f, v - 0.6f, 0, 0, y: 0.78f, force: true);
 				break;
 			default:
-				Put(f, f.S.Tall ? "StatueEvil" : One(new[] { "Ashlands_Altar", "offeraltar_FrozenKing_bossroom" }), 0, v, 180, 1.6f);
+				Put(f, f.S.Tall ? "StatueEvil" : One("Ashlands_Altar", "offeraltar_FrozenKing_bossroom"), 0, v, 180, 1.6f);
 				Brazier(f, -2.2f, v - 0.6f);
 				Brazier(f, 2.2f, v - 0.6f);
 				break;
@@ -600,7 +602,7 @@ internal sealed class DungeonDresser
 		"Marble" or "Grausten" => "piece_blackmarble_throne",
 		"Goblin" => "piece_bone_throne",
 		"Stave" => "piece_moose_throne",
-		_ => _style.Name == "Crypt" ? "piece_bone_throne" : One(new[] { "piece_throne01", "piece_throne02" }),
+		_ => _style.Name == "Crypt" ? "piece_bone_throne" : One("piece_throne01", "piece_throne02"),
 	};
 
 	// A dais of stone 1 m high across the far end, steps in front, the throne on it. It stands on the
@@ -630,7 +632,7 @@ internal sealed class DungeonDresser
 		switch (_rnd.Next(4))
 		{
 			case 0:
-				Put(f, One(_decay > 0.4f ? new[] { "StatueThor_broken_top", "StatueFreya_broken_left" } : new[] { "StatueThor", "StatueFreya", "StatueDeer", "StatueSeed" }), 0, 0, 180, 1.4f);
+				Put(f, _decay > 0.4f ? One("StatueThor_broken_top", "StatueFreya_broken_left") : One("StatueThor", "StatueFreya", "StatueDeer", "StatueSeed"), 0, 0, 180, 1.4f);
 				break;
 			case 1:
 				for (int i = 0; i < 4; i++)
@@ -733,7 +735,7 @@ internal sealed class DungeonDresser
 			// A heap of bones that keeps raising the dead until broken.
 			Put(f, _b.Name == "Swamp" ? "Spawner_DraugrPile" : _b.Name == "Black Forest" || _b.Name == "Meadows" ? "BonePileSpawner" : "BonePileSpawner_swamp", 0, R(-1, 1), R(0, 360), 1.3f);
 		}
-		Clutter(f, 0.04f, new[] { "Skull1", "LargeBone", "LargeBone_half01", "Skull1" });
+		Clutter(f, 0.04f, "Skull1", "LargeBone", "LargeBone_half01", "Skull1");
 		Lights(f);
 		Foes(f, 0.4f);
 		Decay(f);
@@ -742,7 +744,7 @@ internal sealed class DungeonDresser
 	private void Chapel(Frame f)
 	{
 		float far = f.HalfD - 1.6f;
-		Put(f, One(new[] { "Ashlands_Altar", "offeraltar_FrozenKing_bossroom", "blackmarble_altar_crystal" }) is var altar && altar == "blackmarble_altar_crystal" ? "Ashlands_Altar" : altar, 0, far, 180, 1.4f);
+		Put(f, One("Ashlands_Altar", "offeraltar_FrozenKing_bossroom", "blackmarble_altar_crystal") is var altar && altar == "blackmarble_altar_crystal" ? "Ashlands_Altar" : altar, 0, far, 180, 1.4f);
 		var statues = _decay > 0.4f ? new[] { "StatueFreya_broken_left", "StatueThor_broken_top" } : new[] { "StatueFreya", "StatueThor" };
 		Put(f, statues[0], -2.6f, far + 0.3f, 180, 0.6f);
 		Put(f, statues[1], 2.6f, far + 0.3f, 180, 0.6f);
@@ -778,7 +780,7 @@ internal sealed class DungeonDresser
 
 	private void Shrine(Frame f)
 	{
-		Put(f, f.S.Tall ? "StatueEvil" : One(new[] { "StatueSeed", "blackmarble_altar_crystal", "StatueDeer" }), 0, 0, 180, 1.3f, y: 0);
+		Put(f, f.S.Tall ? "StatueEvil" : One("StatueSeed", "blackmarble_altar_crystal", "StatueDeer"), 0, 0, 180, 1.3f, y: 0);
 		float r = Math.Min(f.HalfA, f.HalfD) - 1.6f;
 		for (int i = 0; i < 6; i++)
 		{
@@ -836,7 +838,7 @@ internal sealed class DungeonDresser
 			Put(f, "ArmorStand_Male", -(f.HalfA - 0.8f), v, 90, 0.6f);
 			Put(f, "ArmorStand_Male", f.HalfA - 0.8f, v, -90, 0.6f);
 		}
-		Hangings(f, 4, new[] { "piece_banner01", "piece_banner02", "piece_banner05", "piece_banner06" });
+		Hangings(f, 4, "piece_banner01", "piece_banner02", "piece_banner05", "piece_banner06");
 		Trophies(f, 2);
 		Lights(f, important: true);
 		Elite(f, -1.8f, f.HalfD - 6.5f, 180);
@@ -951,7 +953,7 @@ internal sealed class DungeonDresser
 		foreach (var s in f.WallSpots(1.4f, 2.6f).OrderBy(_ => _rnd.Next()).Take(5))
 		{
 			var (u, v) = In(s, 0.6f);
-			Put(f, One(new[] { "barrell", "CargoCrate", "prop_wood_stack" }), u, v, R(0, 360), 0.6f);
+			Put(f, One("barrell", "CargoCrate", "prop_wood_stack"), u, v, R(0, 360), 0.6f);
 		}
 		Lights(f);
 		Foes(f, 0.5f);
@@ -1011,7 +1013,7 @@ internal sealed class DungeonDresser
 			var (u, v) = In(s, 0.12f);
 			Put(f, "dvergrprops_shelf", u, v, s.Yaw, 0.6f);
 		}
-		Put(f, One(new[] { "rug_wolf", "rug_fur", "rug_deer" }), 0, 0, 0, 0, force: true);
+		Put(f, One("rug_wolf", "rug_fur", "rug_deer"), 0, 0, 0, 0, force: true);
 		Put(f, "dvergrprops_table", 0, 0, 0, 1.2f);
 		Put(f, "dvergrprops_chair", 0, -1.1f, 0, 0.4f);
 		Put(f, "dvergrprops_chair", 0, 1.1f, 180, 0.4f);
@@ -1047,7 +1049,7 @@ internal sealed class DungeonDresser
 				Hang(f, "Morkhalla_WallChain1", (back, (a + b) / 2, side < 0 ? 90 : -90));
 				if (Chance(0.6))
 				{
-					_o.Add(One(new[] { "Pickable_ForestCryptRemains01", "Pickable_ForestCryptRemains02", "Skull1" }), f.W(mid + side * 0.8f, a + R(1, 3), f.Top + Lift), f.Yaw(R(0, 360)));
+					_o.Add(One("Pickable_ForestCryptRemains01", "Pickable_ForestCryptRemains02", "Skull1"), f.W(mid + side * 0.8f, a + R(1, 3), f.Top + Lift), f.Yaw(R(0, 360)));
 				}
 				else if (Chance(0.3) && _s.Loot > 0)
 				{
@@ -1083,7 +1085,7 @@ internal sealed class DungeonDresser
 		{
 			_o.Add("dvergrprops_hooknchain", f.W(-1.5f, -1.5f, f.Top + f.H - 2.5f), f.Yaw(0));
 		}
-		Clutter(f, 0.04f, new[] { "Skull1", "LargeBone", "Pickable_ForestCryptRemains01", "skull_pile" });
+		Clutter(f, 0.04f, "Skull1", "LargeBone", "Pickable_ForestCryptRemains01", "skull_pile");
 		Lights(f);
 		Foes(f, 0.7f);
 		Decay(f);
@@ -1162,7 +1164,7 @@ internal sealed class DungeonDresser
 		}
 		else
 		{
-			Put(f, One(new[] { "Ashlands_Altar", "offeraltar_FrozenKing_bossroom" }), 0, f.HalfD - 1.6f, 180, 1.5f);
+			Put(f, One("Ashlands_Altar", "offeraltar_FrozenKing_bossroom"), 0, f.HalfD - 1.6f, 180, 1.5f);
 		}
 		// A great rug in the middle, the boss upon it; a giant's sword before the altar; banners.
 		foreach (var (cu, cv, yaw) in new[] { (-2.18f, -2.18f, 0f), (2.18f, -2.18f, 90f), (2.18f, 2.18f, 180f), (-2.18f, 2.18f, 270f) })
@@ -1196,7 +1198,7 @@ internal sealed class DungeonDresser
 				}
 			}
 		}
-		Clutter(f, 0.012f, new[] { "Skull1", "LargeBone", "lox_ribs", "skull_pile" });
+		Clutter(f, 0.012f, "Skull1", "LargeBone", "lox_ribs", "skull_pile");
 		Lights(f, important: true);
 	}
 
@@ -1218,7 +1220,7 @@ internal sealed class DungeonDresser
 			}
 		}
 		Hangings(f, 2, Drapes);
-		Clutter(f, 0.02f, new[] { "Skull1", "skull_pile", "LargeBone" });
+		Clutter(f, 0.02f, "Skull1", "skull_pile", "LargeBone");
 		Elite(f, -1.6f, 0, 180);
 		Elite(f, 1.6f, 0, 180);
 		Lights(f, important: true);
@@ -1273,7 +1275,7 @@ internal sealed class DungeonDresser
 		foreach (var s in f.WallSpots(2.2f, 2.8f).OrderBy(_ => _rnd.Next()).Take(6))
 		{
 			var (u, v) = In(s, 0.7f);
-			Put(f, One(new[] { "dvergrprops_crate", "dvergrprops_barrel", "dvergrprops_pickaxe", "dvergrprops_crate_long" }), u, v, s.Yaw + R(-20, 20), 0.6f);
+			Put(f, One("dvergrprops_crate", "dvergrprops_barrel", "dvergrprops_pickaxe", "dvergrprops_crate_long"), u, v, s.Yaw + R(-20, 20), 0.6f);
 		}
 		Pickables(f, 1.5f);
 		Lights(f);
@@ -1296,7 +1298,7 @@ internal sealed class DungeonDresser
 			var (u, v) = In(s, 0.12f);
 			Put(f, "dvergrprops_shelf", u, v, s.Yaw, 0.6f);
 		}
-		Clutter(f, 0.02f, new[] { "dvergrprops_crate", "dvergrprops_barrel", "dvergrprops_pickaxe" });
+		Clutter(f, 0.02f, "dvergrprops_crate", "dvergrprops_barrel", "dvergrprops_pickaxe");
 		Lights(f);
 		Foes(f, 0.6f);
 		Decay(f);
@@ -1307,7 +1309,7 @@ internal sealed class DungeonDresser
 		Put(f, Bed, -(f.HalfA - 1.2f), f.HalfD - 1.6f, 90, 1f);
 		Put(f, Bed, f.HalfA - 1.2f, f.HalfD - 1.6f, -90, 1f);
 		Put(f, "prop_chest_warderobe", 0, f.HalfD - 0.6f, 180, 0.9f);
-		Put(f, One(new[] { "rug_wolf", "rug_fur", "rug_deer" }), 0, -0.5f, 0, 0, force: true);
+		Put(f, One("rug_wolf", "rug_fur", "rug_deer"), 0, -0.5f, 0, 0, force: true);
 		Put(f, "dvergrprops_table", 0, -0.5f, 0, 1.1f);
 		Put(f, "dvergrprops_chair", -1.1f, -0.5f, 90, 0.4f);
 		Put(f, "dvergrprops_chair", 1.1f, -0.5f, -90, 0.4f);

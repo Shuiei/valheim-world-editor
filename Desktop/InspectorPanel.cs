@@ -449,11 +449,12 @@ public sealed class InspectorPanel
 			return;
 		}
 		// The picked slot: its item (any of the game's), how many, how good.
-		var item = Items!.FirstOrDefault(i => i.X == sx && i.Y == sy);
+		var items = Items!;
+		var item = items.FirstOrDefault(i => i.X == sx && i.Y == sy);
 		var pick = new AutoCompleteBox
 		{
 			Text = item?.Name ?? "", ItemsSource = PrefabCatalog.Items, FilterMode = AutoCompleteFilterMode.ContainsOrdinal, FontSize = 11, MinimumPrefixLength = 1,
-			Watermark = "Find an item…",
+			PlaceholderText = "Find an item…",
 		}.Tip("inspect.slotItem");
 		void Chosen()
 		{
@@ -461,14 +462,14 @@ public sealed class InspectorPanel
 			var known = PrefabCatalog.Items.FirstOrDefault(n => string.Equals(n, name, StringComparison.OrdinalIgnoreCase));
 			// What the slot holds now: a pick and the box then losing focus (once the grid is drawn
 			// again) both come here, and must not put the item in twice.
-			var now = Items.FirstOrDefault(i => i.X == sx && i.Y == sy);
+			var now = items.FirstOrDefault(i => i.X == sx && i.Y == sy);
 			if (known == null || known == now?.Name)
 			{
 				return;
 			}
 			if (now == null)
 			{
-				Items.Add(new ItemRow { Name = known, X = sx, Y = sy });
+				items.Add(new ItemRow { Name = known, X = sx, Y = sy });
 			}
 			else
 			{
@@ -500,7 +501,7 @@ public sealed class InspectorPanel
 		var empty = new Button { Content = "Empty", FontSize = 11, IsEnabled = item != null }.Tip("inspect.emptySlot");
 		empty.Click += (_, _) =>
 		{
-			Items.Remove(item!);
+			items.Remove(item!);
 			Dirty();
 			RenderItems();
 		};

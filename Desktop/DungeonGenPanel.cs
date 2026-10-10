@@ -54,7 +54,6 @@ public sealed class DungeonGenPanel
 	// The dungeon being made for the settings shown (tests wait for it).
 	internal Task Pending { get; private set; } = Task.CompletedTask;
 	private int _level;
-	private bool _quiet;
 
 	// Bosses and elites of every biome, by creature.
 	private static string[] Bosses => DungeonKit.Biomes.SelectMany(b => b.Elites.Append(b.Boss)).Select(f => f.Creature).Distinct().ToArray();
@@ -64,7 +63,7 @@ public sealed class DungeonGenPanel
 	private static Slider Slide(double min, double max, double value, double step) =>
 		new() { Minimum = min, Maximum = max, Value = value, SmallChange = step, TickFrequency = step, IsSnapToTickEnabled = true };
 
-	private static Control Row(string label, Control c) => new DockPanel
+	private static DockPanel Row(string label, Control c) => new()
 	{
 		Children = { new TextBlock { Text = label, FontSize = 12, Width = 80, VerticalAlignment = VerticalAlignment.Center }, c },
 	};
@@ -179,10 +178,6 @@ public sealed class DungeonGenPanel
 
 	private void Changed()
 	{
-		if (_quiet)
-		{
-			return;
-		}
 		var s = Settings();
 		bool pieces = s.Made == DungeonGen.Made.Pieces;
 		foreach (var c in _piecesOnly)

@@ -687,7 +687,7 @@ internal sealed class DungeonPlanner
 								if (d >= 3 && path.All(t => Free(L, t)) && SlotAllowed(b, n1, n2, (-dir.X, -dir.Z)))
 								{
 									var (aa, bb, tt1, tt2, dd, ll, pp) = (a, b, t1, t2, dir, len, path);
-									options.Add((d - len * 0.3f + (float)_rnd.NextDouble(), () =>
+									void Join()
 									{
 										if (ll == 0)
 										{
@@ -699,7 +699,8 @@ internal sealed class DungeonPlanner
 											Connect(aa, c, tt1, tt2, dd, loop: true);
 											Connect(c, bb, Add(tt1, dd, ll), Add(tt2, dd, ll), dd, loop: true);
 										}
-									}));
+									}
+									options.Add((d - len * 0.3f + (float)_rnd.NextDouble(), Join));
 								}
 								break;
 							}

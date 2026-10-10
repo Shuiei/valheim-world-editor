@@ -145,6 +145,8 @@ public partial class MainWindow
 	// its objects hold (the key in its chest, signs, the boss's stars) goes in the editor's own lines of
 	// the file, and the building is written as a ruin (no builder): the editor puts them back when the
 	// blueprint is placed in a world. Built in game with Homestead, it is only the objects.
+	private static readonly string[] DungeonTags = { "dungeon", "generated" };
+
 	internal async Task OpenGeneratedInWorkshop(DungeonGen.Settings settings)
 	{
 		var r = DungeonGen.Make(settings);
@@ -173,7 +175,7 @@ public partial class MainWindow
 				path = Path.Combine(folder, Homestead.FileName($"{r.Name} ({n})"));
 			}
 			await File.WriteAllTextAsync(path, Homestead.Write(new System.Text.Json.Nodes.JsonObject { ["objects"] = objects }, r.Name, "Valheim World Editor", null, DateTime.Now,
-				$"A generated dungeon (seed {settings.Seed}): " + string.Join(" ", r.Notes), new[] { "dungeon", "generated" }));
+				$"A generated dungeon (seed {settings.Seed}): " + string.Join(" ", r.Notes), DungeonTags));
 			await OpenWorkshop(path);
 		}
 		catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
