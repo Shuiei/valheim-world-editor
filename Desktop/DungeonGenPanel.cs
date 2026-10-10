@@ -11,13 +11,19 @@ namespace TerrainEditor.Desktop;
 // Generating a dungeon (the Dungeon panel's Generate): its settings, a plan of what they make (made
 // again at each change; the same settings and seed always make the same dungeon), and where it goes:
 // into the world above the view's centre, a portal pair joining it to the ground, or into the
-// Workshop as a blueprint.
+// Workshop as a blueprint. In the Workshop (the Build panel's Generate dungeon) it is made of building
+// pieces only, and goes onto the plot: alone (Open on the plot) or with what is there (Add to the plot).
 public sealed class DungeonGenPanel
 {
 	public Control View { get; }
+	// What the dungeon made goes to: under the settings, or (in the Workshop) where the host puts it, so
+	// that it stays in sight when the settings scroll.
+	public Control Actions { get; }
 
 	public event Action<DungeonGen.Settings, DungeonGen.Result>? PlaceAsked;
 	public event Action<DungeonGen.Settings>? WorkshopAsked;
+	// In the Workshop: the dungeon made onto the plot (true: added to what is there).
+	public event Action<DungeonGen.Settings, DungeonGen.Result, bool>? PlotAsked;
 
 	internal ComboBox Made { get; } = Combo("Building pieces", "The game's own rooms");
 	internal ComboBox Biome { get; } = Combo(DungeonKit.Biomes.Select(b => b.Name).ToArray());
@@ -40,6 +46,8 @@ public sealed class DungeonGenPanel
 	internal Button Randomize { get; } = new() { Content = "Randomize", FontSize = 12 };
 	internal Button Place { get; } = new() { Content = "Place in the world", FontSize = 12 };
 	internal Button ToWorkshop { get; } = new() { Content = "Open in the Workshop", FontSize = 12 };
+	internal Button OpenOnPlot { get; } = new() { Content = "Open on the plot", FontSize = 12 };
+	internal Button AddToPlot { get; } = new() { Content = "Add to the plot", FontSize = 12 };
 	internal TextBlock Summary { get; } = new() { FontSize = 12, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
 	private readonly TextBlock _monstersText = new() { FontSize = 12 }, _lootText = new() { FontSize = 12 }, _decayText = new() { FontSize = 12 }, _loopsText = new() { FontSize = 12 };
 	private readonly Canvas _plan = new() { Width = 258, Height = 190, Background = Ui.Bg, ClipToBounds = true };
@@ -68,7 +76,7 @@ public sealed class DungeonGenPanel
 		Children = { new TextBlock { Text = label, FontSize = 12, Width = 80, VerticalAlignment = VerticalAlignment.Center }, c },
 	};
 
-	public DungeonGenPanel()
+	public DungeonGenPanel(bool inWorkshop = false)
 	{
 		Biome.SelectedIndex = 1;
 		Size.SelectedIndex = 1;
@@ -97,6 +105,8 @@ public sealed class DungeonGenPanel
 		Randomize.Tip("dungeon.gen.randomize");
 		Place.Tip("dungeon.gen.place");
 		ToWorkshop.Tip("dungeon.gen.workshop");
+		OpenOnPlot.Tip("dungeon.gen.openOnPlot");
+		AddToPlot.Tip("dungeon.gen.addToPlot");
 		foreach (var c in new Control[] { Made, Biome, Style, Walls, Size, Levels, Boss, Light, Decor })
 		{
 			((ComboBox)c).SelectionChanged += (_, _) => Changed();
@@ -126,6 +136,8 @@ public sealed class DungeonGenPanel
 			}
 		};
 		ToWorkshop.Click += (_, _) => WorkshopAsked?.Invoke(Settings() with { Made = DungeonGen.Made.Pieces });
+		OpenOnPlot.Click += (_, _) => { if (_result != null) PlotAsked?.Invoke(Settings(), _result, false); };
+		AddToPlot.Click += (_, _) => { if (_result != null) PlotAsked?.Invoke(Settings(), _result, true); };
 		var pieces = new StackPanel
 		{
 			Spacing = 6,
@@ -141,20 +153,29 @@ public sealed class DungeonGenPanel
 		};
 		_piecesOnly.Add(pieces);
 		_piecesOnly.Add(ToWorkshop);
+		// The plot only takes building pieces (the game's rooms are kept in a world's dungeon).
+		var made = Row("Made of", Made);
+		made.IsVisible = !inWorkshop;
+		var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
+		actions.Children.AddRange(inWorkshop ? new Control[] { OpenOnPlot, AddToPlot } : new Control[] { Place, ToWorkshop });
+		Actions = actions;
 		View = new StackPanel
 		{
 			Spacing = 6,
 			Children =
 			{
-				Row("Made of", Made), Row("Biome", Biome), Row("Size", Size),
+				made, Row("Biome", Biome), Row("Size", Size),
 				new StackPanel { Spacing = 0, Children = { _monstersText, Monsters } }, Respawn,
 				pieces,
 				new DockPanel { Children = { new TextBlock { Text = "Seed", FontSize = 12, Width = 80, VerticalAlignment = VerticalAlignment.Center }, Randomize, Seed } },
 				new Border { BorderBrush = Ui.Line, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(4), Child = _plan },
 				_levelButtons, Summary,
-				new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { Place, ToWorkshop } },
 			},
 		};
+		if (!inWorkshop)
+		{
+			((StackPanel)View).Children.Add(actions);
+		}
 		DockPanel.SetDock(Randomize, Dock.Right);
 		_wait.Tick += (_, _) => Make();
 		Changed();
@@ -189,7 +210,7 @@ public sealed class DungeonGenPanel
 		_decayText.Text = $"Ruin: {s.Decay * 100:0} %";
 		_loopsText.Text = $"Ways round: {(s.Loops == 0 ? "none (a tree)" : $"× {s.Loops:0.##}")}";
 		Name.PlaceholderText = DungeonGen.NameFor(s.Seed, s.Style, s.Biome);
-		Place.IsEnabled = false;
+		Place.IsEnabled = OpenOnPlot.IsEnabled = AddToPlot.IsEnabled = false;
 		_wait.Stop();
 		_wait.Start();
 	}
@@ -223,7 +244,7 @@ public sealed class DungeonGenPanel
 	{
 		_result = result;
 		Summary.Text = result != null ? string.Join(" ", result.Notes) : "Could not make it: " + error;
-		Place.IsEnabled = _result != null;
+		Place.IsEnabled = OpenOnPlot.IsEnabled = AddToPlot.IsEnabled = _result != null;
 		var levels = _result?.Map?.Select(r => r.Level).Distinct().Order().ToList() ?? new List<int>();
 		_level = Math.Clamp(_level, 0, Math.Max(0, levels.Count - 1));
 		_levelButtons.Children.Clear();

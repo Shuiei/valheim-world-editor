@@ -41,6 +41,7 @@ through names, descriptions and tags.
 | **Drag a blueprint onto the plot** | Adds it where you drop it. |
 | **Drop files** | `.blueprint` (Homestead, PlanBuild) and `.vbuild` files dropped from your files onto the plot are imported into the library and added where they land. |
 | **Import file…** | Imports a file into the library. |
+| **Generate dungeon…** | Makes a dungeon of building pieces from a few choices and a seed (the Dungeon panel's generator: see [Dungeons](dungeons.md#generating-a-dungeon)), then **Open on the plot** puts it there alone and **Add to the plot** with what is there. Its blueprint is kept in the library. **← Library** goes back to your blueprints. |
 
 A blueprint keeps its form exactly (every piece where it was, turned as it was); it is moved as one,
 so its lowest buildable piece (by its real shape) is on the ground. Rocks and other things the hoe

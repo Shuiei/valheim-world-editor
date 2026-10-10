@@ -4,6 +4,14 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## Unreleased
+
+### Added
+- **Generate dungeon** in the Workshop: the Build panel's Library has **Generate dungeon…**, the Dungeon
+  panel's generator (building pieces only), with **Open on the plot** (the dungeon alone) and **Add to
+  the plot** (with what is there, one undo step). Its blueprint is kept in the library, with what its
+  objects hold.
+
 ## v1.17.0 — 2026-10-10
 
 ### Changed
