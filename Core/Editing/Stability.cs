@@ -18,7 +18,9 @@ public static class Stability
 	// axis-aligned bounds count); Counts: on a layer the game's support check looks at.
 	private sealed record Box(Vector3 C, Vector3 H, Quaternion Q, bool Aabb, bool Counts);
 
-	private sealed record Data(int Material, bool Supports, Vector3 Com, Box[] Boxes);
+	// Free: the game never checks its support (WearNTear.m_noSupportWear off): it stays up, at its
+	// material's full support, wherever it is.
+	private sealed record Data(int Material, bool Supports, Vector3 Com, Box[] Boxes, bool Free = false);
 
 	private static readonly Lazy<Dictionary<string, Data>> Pieces = new(Load);
 
@@ -40,7 +42,7 @@ public static class Stability
 				return new Box(new Vector3(F(0), F(1), F(2)), new Vector3(F(3), F(4), F(5)), new Quaternion(F(6), F(7), F(8), F(9)), b[10].GetInt32() != 0, SupportLayers.Contains(b[11].GetInt32()));
 			}).ToArray();
 			result[p.Name] = new Data(p.Value.GetProperty("m").GetInt32(), p.Value.GetProperty("s").GetInt32() != 0,
-				new Vector3(c[0].GetSingle(), c[1].GetSingle(), c[2].GetSingle()), boxes);
+				new Vector3(c[0].GetSingle(), c[1].GetSingle(), c[2].GetSingle()), boxes, p.Value.TryGetProperty("f", out var f) && f.GetInt32() != 0);
 		}
 		return result;
 	}
@@ -177,7 +179,7 @@ public static class Stability
 			seen[i] = d.Boxes.Where(b => b.Counts).Select(b => World(b, pieces[i], 0f)).ToArray();
 			com[i] = pieces[i].Position + Vector3.Transform(d.Com, pieces[i].Rotation);
 			// Touching the terrain: a grown box reaching the ground anywhere under it.
-			grounded[i] = grown[i].Any(g => g.Corners().Append(g.C).Any(c => c.Y <= groundAt(c.X, c.Z)));
+			grounded[i] = d.Free || grown[i].Any(g => g.Corners().Append(g.C).Any(c => c.Y <= groundAt(c.X, c.Z)));
 		}
 		// Who touches whom (the boxes do not move): for each piece, the other pieces' colliders its own
 		// grown boxes reach.

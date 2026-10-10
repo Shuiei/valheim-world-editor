@@ -540,6 +540,12 @@ public sealed class EditSession
 		{
 			foreach (var (i, gone) in things)
 			{
+				// Removed in the game since: neither undo nor redo touches it (it is not there to bring back
+				// or to delete; a deletion of it would remove another object under its ZDOID).
+				if (list[i].Id >= 0 && Scene.World.Vanished.Contains(list[i].Id))
+				{
+					continue;
+				}
 				list[i] = list[i] with { Gone = gone };
 				Edits.SetDeleted(new[] { list[i].Id }, gone);
 			}
@@ -738,7 +744,8 @@ public sealed class EditSession
 	// Live: applies everything to the running game. After zone resets the world is read again from the
 	// game (like a save), and after No limit ground became ground discs the area is (the ground under it
 	// changed); otherwise the history stays.
-	public async Task<WorldSession.Outcome> ApplyLive()
+	// confirm: see WorldSession.ApplyLive (asked before writing over ground the game changed).
+	public async Task<WorldSession.Outcome> ApplyLive(Func<IReadOnlyList<(int X, int Z)>, Task<bool>>? confirm = null)
 	{
 		var owner = Scene.Owner!;
 		// The steps there are now: a step made while the game answers may not be in what was sent.
@@ -747,7 +754,7 @@ public sealed class EditSession
 		{
 			before = _undo.ToList();
 		}
-		var o = await owner.ApplyLive();
+		var o = await owner.ApplyLive(confirm);
 		lock (_lock)
 		{
 			if (o.Reloaded || o.Lifted)
@@ -882,6 +889,87 @@ public sealed class EditSession
 			_redo.AddRange(redo.Skip(end + 1)!);
 			return start + end + 1;
 		}
+	}
+
+	// Live: what the game changed (WorldSession.MergeGame), taken into the area without an undo step:
+	// objects removed in the game go, changed ones are shown as they are now (same thing, same place in
+	// the history), new ones come, and the ground of the zones given is read again. Taking the same
+	// changes twice changes nothing (an area opened meanwhile may already have them). Not during a stroke
+	// (false: given again next time).
+	public bool TakeGameChanges(WorldSession.Followed f)
+	{
+		var list = Scene.Things;
+		var changed = new List<int>();
+		bool ground = f.Ground.Count > 0 || f.Merged.Modifiers;
+		lock (_lock)
+		{
+			if (_stroke != null)
+			{
+				return false;
+			}
+			var world = Scene.World;
+			var gone = f.Merged.Vanished.Concat(f.Ours).ToHashSet();
+			var update = f.Merged.Updated.Concat(f.Merged.Added).ToHashSet();
+			float minX = Scene.X0 * 64f - 32f, maxX = (Scene.X0 + Scene.Size - 1) * 64f + 32f, minZ = Scene.Z0 * 64f - 32f, maxZ = (Scene.Z0 + Scene.Size - 1) * 64f + 32f;
+			bool Inside(System.Numerics.Vector3 p) => p.X >= minX && p.X < maxX && p.Z >= minZ && p.Z < maxZ;
+			// The objects as the world has them now, by id (those changed or new).
+			var now = WorldScene.FindThings(world, Edits, update);
+			lock (list)
+			{
+				var at = new Dictionary<int, int>();
+				for (int i = 0; i < list.Count; i++)
+				{
+					at[list[i].Id] = i;
+				}
+				foreach (int id in gone)
+				{
+					if (at.TryGetValue(id, out int i) && !list[i].Gone)
+					{
+						list[i] = list[i] with { Gone = true };
+						changed.Add(i);
+					}
+				}
+				foreach (var (id, t) in now)
+				{
+					if (at.TryGetValue(id, out int i))
+					{
+						// Changed in the game: shown as it is now (deleted in the editor, it stays so).
+						var next = t with { Gone = list[i].Gone };
+						if (next != list[i])
+						{
+							list[i] = next;
+							changed.Add(i);
+						}
+					}
+					else if (Inside(t.Position) && !t.Gone && t.Prefab != WorldSave.LocationProxyPrefab)
+					{
+						changed.Add(list.Count);
+						list.Add(t);
+					}
+				}
+			}
+			if (ground)
+			{
+				if (f.Merged.Modifiers && Scene.Owner is { } owner)
+				{
+					Scene.Modifiers = owner.Modifiers;
+					Ground.ReadBase(owner.Terrain);
+				}
+				Ground.TakeEdits(Edits);
+				Touch((0, 0, Ground.W - 1, Ground.H - 1));
+			}
+		}
+		if (changed.Count > 0 || ground)
+		{
+			// What was worked out from the area before (an open inspector, a running script) is out of date.
+			Interlocked.Increment(ref _generation);
+		}
+		if (changed.Count > 0)
+		{
+			ThingsChanged?.Invoke(changed);
+		}
+		Changed?.Invoke();
+		return true;
 	}
 
 	// The world was read again (saved, reloaded): the ground and the objects from it, no history.

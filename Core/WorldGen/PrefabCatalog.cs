@@ -25,6 +25,11 @@ public static class PrefabCatalog
 
 	private static readonly Dictionary<int, Info> Extra = new();
 
+	// Creatures (not offered for placing, but generated dungeons and blueprints carry their bosses).
+	private static readonly HashSet<int> CreatureHashes = new();
+
+	public static bool IsCreature(int prefab) => CreatureHashes.Contains(prefab);
+
 	// GrownFrom's table, made before ByHash's initializer runs Load (which fills it): static initializers
 	// run in the file's order, so one written after ByHash would replace the filled table with an empty one.
 	private static readonly Dictionary<string, (float Radius, string Sapling)> GrownFromStart = new();
@@ -79,6 +84,10 @@ public static class PrefabCatalog
 		{
 			int hash = StableHash.Of(name);
 			AllNames[hash] = name;
+			if (e.c != 0)
+			{
+				CreatureHashes.Add(hash);
+			}
 			if (e.i != 0)
 			{
 				ItemNames.Add(name);

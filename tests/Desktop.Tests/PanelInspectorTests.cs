@@ -64,6 +64,28 @@ public class PanelInspectorTests
 		return r.I.Index!.Value;
 	}
 
+	// The slot grid: an empty slot clicked, an item picked; the box losing focus after the grid is
+	// drawn again does not put it in a second time.
+	[AvaloniaFact]
+	public void APickedItemGoesInItsSlotOnce()
+	{
+		using var r = new Run();
+		Assert.True(r.I.Open(r.ChestIndex));
+		var grid = r.I.ItemsBox.Children.OfType<Grid>().First(g => g.RowDefinitions.Count > 0);
+		var free = r.I.FreeSlot()!.Value;
+		var slot = grid.Children.OfType<Button>().First(b => Grid.GetColumn(b) == free.X && Grid.GetRow(b) == free.Y);
+		Click(slot);
+		var pick = r.I.ItemsBox.GetLogicalDescendants().OfType<AutoCompleteBox>().First(b => b.Watermark == "Find an item…");
+		pick.Text = "Coins";
+		pick.SelectedItem = "Coins";
+		Dispatcher.UIThread.RunJobs();
+		pick.RaiseEvent(new Avalonia.Input.FocusChangedEventArgs(Avalonia.Input.InputElement.LostFocusEvent));
+		Dispatcher.UIThread.RunJobs();
+		Assert.Single(r.I.Items!, i => i.X == free.X && i.Y == free.Y);
+		Assert.Equal("Coins", r.I.Items!.Single(i => i.X == free.X && i.Y == free.Y).Name);
+		Assert.True(r.I.ApplyButton.IsEnabled);
+	}
+
 	[AvaloniaFact]
 	public async Task TypingAValueEnablesApplyAndRevertPutsItBack()
 	{

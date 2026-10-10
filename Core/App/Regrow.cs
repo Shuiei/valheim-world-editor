@@ -73,7 +73,6 @@ public static class Regrow
 	// One object the game would place: prefab, Unity world position, Euler rotation (degrees), scale.
 	public sealed record Spot(string Name, float X, float Y, float Z, float Rx, float Ry, float Rz, float Scale);
 
-
 	// What the game would place in zones x0..x1, z0..z1 on the current ground. Kinds the editor cannot
 	// create (no networked object) are left out by the caller.
 	public static List<Spot> Zones(TerrainService terrain, EditStore edits, int seed, int x0, int z0, int x1, int z1)
@@ -82,24 +81,21 @@ public static class Regrow
 		var (w, h, heights) = HeightGrid.Read(terrain, edits, x0 - 1, z0 - 1, x1 + 1, z1 + 1);
 		Ground ground = new(heights, w, h, (x0 - 1) * 64f - 32f, (z0 - 1) * 64f - 32f);
 		List<Spot> spots = new();
-		// Unity's Random is one shared state (the world generator uses it too): one at a time.
-		lock (Rnd.Lock)
+		// Unity's Random has one state per thread: put back what this thread had.
+		Rnd.State saved = Rnd.state;
+		try
 		{
-			Rnd.State saved = Rnd.state;
-			try
+			for (int zz = z0; zz <= z1; zz++)
 			{
-				for (int zz = z0; zz <= z1; zz++)
+				for (int zx = x0; zx <= x1; zx++)
 				{
-					for (int zx = x0; zx <= x1; zx++)
-					{
-						PlaceZone(terrain, ground, seed, zx, zz, spots);
-					}
+					PlaceZone(terrain, ground, seed, zx, zz, spots);
 				}
 			}
-			finally
-			{
-				Rnd.state = saved;
-			}
+		}
+		finally
+		{
+			Rnd.state = saved;
 		}
 		return spots;
 	}

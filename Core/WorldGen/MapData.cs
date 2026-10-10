@@ -43,9 +43,9 @@ public sealed class MapData
 		_global = new Lazy<Layers>(BuildGlobal, LazyThreadSafetyMode.ExecutionAndPublication);
 	}
 
-	public Layers Global => _global.Value;
-
 	internal WorldGenerator GeneratorForTests => _gen;
+
+	public Layers Global => _global.Value;
 
 	private static byte Byte(float v) => (byte)Math.Clamp((int)Math.Round(v * 255f), 0, 255);
 

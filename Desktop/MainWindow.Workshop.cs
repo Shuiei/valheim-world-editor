@@ -385,14 +385,38 @@ public partial class MainWindow
 
 	// The world tools away (the rail keeps Build, Select and View), the View panel and the Mask closed,
 	// no zone borders; the Place tool set for building.
+	// The Place tool's settings, kept while the Workshop's Build (or building in a dungeon) uses it.
+	private Kept KeepPlaceTool()
+	{
+		var t = PlaceTool;
+		return new Kept(t.Chosen.ToList(), t.Mode, t.OneAtATime, t.OneAtATimeByHand, t.RandomYaw, t.Tilt, t.SizeMin, t.SizeMax, t.Elevation, t.SnapTo, t.OnTop, t.Rotation,
+			_view.IsOverlayShown(Overlays.Layer.Borders));
+	}
+
+	// The Place tool as it was kept, out of Build.
+	private void RestorePlaceTool(Kept k)
+	{
+		var t = PlaceTool;
+		t.Chosen.Clear();
+		t.Chosen.AddRange(k.Chosen);
+		(t.Mode, t.OneAtATime, t.OneAtATimeByHand, t.RandomYaw, t.Tilt, t.SizeMin, t.SizeMax, t.Elevation, t.SnapTo, t.OnTop, t.Rotation) =
+			(k.Mode, k.OneAtATime, k.OneAtATimeByHand, k.RandomYaw, k.Tilt, k.SizeMin, k.SizeMax, k.Elevation, k.SnapTo, k.OnTop, k.Rotation);
+		t.GridStep = 0;
+		t.Building = false;
+		t.HeightNudge = 0;
+		t.AimRay = null;
+		t.CutY = null;
+		PlaceInput.TurnStep = null;
+	}
+
 	private void EnterBuilding()
 	{
-		if (_kept == null)
+		// Building in a dungeon ends first: its kept settings are the ones the Workshop keeps.
+		if (BuildingInDungeon)
 		{
-			var t = PlaceTool;
-			_kept = new Kept(t.Chosen.ToList(), t.Mode, t.OneAtATime, t.OneAtATimeByHand, t.RandomYaw, t.Tilt, t.SizeMin, t.SizeMax, t.Elevation, t.SnapTo, t.OnTop, t.Rotation,
-				_view.IsOverlayShown(Overlays.Layer.Borders));
+			BuildInDungeon(false);
 		}
+		_kept ??= KeepPlaceTool();
 		Tools.SetWorkshop(true);
 		_view.SetOverlay(Overlays.Layer.Borders, false);
 		_view.ShowNewMarkers = false;
@@ -413,16 +437,7 @@ public partial class MainWindow
 			return;
 		}
 		_kept = null;
-		var t = PlaceTool;
-		t.Chosen.Clear();
-		t.Chosen.AddRange(k.Chosen);
-		(t.Mode, t.OneAtATime, t.OneAtATimeByHand, t.RandomYaw, t.Tilt, t.SizeMin, t.SizeMax, t.Elevation, t.SnapTo, t.OnTop, t.Rotation) =
-			(k.Mode, k.OneAtATime, k.OneAtATimeByHand, k.RandomYaw, k.Tilt, k.SizeMin, k.SizeMax, k.Elevation, k.SnapTo, k.OnTop, k.Rotation);
-		t.GridStep = 0;
-		t.Building = false;
-		t.HeightNudge = 0;
-		t.AimRay = null;
-		PlaceInput.TurnStep = null;
+		RestorePlaceTool(k);
 		Tools.SetWorkshop(false);
 		_view.SetOverlay(Overlays.Layer.Borders, k.Borders);
 		CutBox.IsVisible = false;
@@ -432,7 +447,7 @@ public partial class MainWindow
 		ViewButton.IsVisible = true;
 		BuildPanel.Card.IsVisible = false;
 		PlacePanel.Fill();
-		t.Notify();
+		PlaceTool.Notify();
 	}
 
 	// The cut at so many metres above the plot (0: none): nothing drawn above it, and the cursor goes

@@ -14,7 +14,8 @@ namespace TerrainEditor.Desktop;
 //   shot <file.png>                a picture of the whole window, panels and view (documentation)
 //   look <game|seethrough> <on|off>, look res <sharp|balanced|fast>
 //                                  the View panel's Look switches
-//   camera <x> <z> <yaw°> <pitch°> <distance>  the 3D view's camera on world x, z
+//   camera <x> <z> <yaw°> <pitch°> <distance> [y]  the 3D view's camera on world x, z (at height y:
+//                                              inside a dungeon)
 //   click <text>                   the visible button, switch or box labelled so, or whose words
 //                                  begin so (windows and dialogs)
 //   choose <text>                  the entry so named in whichever visible list has it
@@ -33,6 +34,7 @@ namespace TerrainEditor.Desktop;
 //   search <text>                  the map's search (objects by kind)
 //   hit <n>                        the search's result n (from 0) picked, as a click in its list
 //   zones                          the map's zone filter: show the matching zones
+//   workshop [file.blueprint]      the Workshop opened (on that blueprint); how long it took
 //   state                          what is shown, the objects, what is pending, frames drawn
 //   quit
 public static class Driver
@@ -249,8 +251,26 @@ public static class Driver
 			case "wait":
 				await Task.Delay(TimeSpan.FromMilliseconds(Math.Clamp(F(0), 0, 60000)));
 				return State(w);
+			case "inspect":
+			{
+				// inspect <prefab>: the first such object selected, its inspector open.
+				var scene = w.View.Scene ?? throw new InvalidOperationException("no area open");
+				// One holding something first (a chest with contents).
+				var all = Enumerable.Range(0, scene.Things.Count).Where(k => !scene.Things[k].Gone && scene.Things[k].Prefab == TerrainEditor.Save.StableHash.Of(a[1])).ToList();
+				int i = all.Cast<int?>().FirstOrDefault(k => scene.Session is { } ss && TerrainEditor.App.ObjectData.Bytes(scene.World, ss.Edits, scene.Things[k!.Value].Id) is { } b
+					&& TerrainEditor.Save.ZdoData.Parse(b).GetBytes(TerrainEditor.App.ObjectData.ItemsKey) != null) ?? (all.Count > 0 ? all[0] : -1);
+				if (i < 0)
+				{
+					throw new InvalidOperationException($"no {a[1]} here");
+				}
+				w.Tools.ChooseMode(ToolMode.Select);
+				w.View.Select(new[] { i });
+				w.View.Focus(scene.Things[i].Position);
+				w.Inspect();
+				return State(w);
+			}
 			case "camera":
-				w.View.Orbit(F(0), F(1), F(2), F(3), F(4));
+				w.View.Orbit(F(0), F(1), F(2), F(3), F(4), args.Length > 5 ? F(5) : null);
 				return State(w);
 			case "click":
 			{
@@ -273,6 +293,12 @@ public static class Driver
 			{
 				string result = await w.View.Benchmark(F(0)).WaitAsync(TimeSpan.FromSeconds(F(0) + 60));
 				return JsonSerializer.Serialize(new { bench = result });
+			}
+			case "workshop":
+			{
+				var sw = System.Diagnostics.Stopwatch.StartNew();
+				await w.OpenWorkshop(a.Length > 1 ? a[1] : null);
+				return JsonSerializer.Serialize(new { opened = sw.ElapsedMilliseconds, objects = w.View.Scene?.Things.Count(t => !t.Gone) ?? 0 });
 			}
 			case "state":
 			case "quit":

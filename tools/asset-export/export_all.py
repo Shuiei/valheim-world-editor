@@ -8,7 +8,7 @@ Writes, under --out:
                                    (heightmap.frag.spv instead, from a copy without OpenGL shaders: Windows)
   terrain/*.png                    terrain textures (texture arrays stacked into vertical strips)
   maptex/*.png                     world map textures
-  models/                          models of build pieces and world objects (meshes, textures, materials)
+  models/                          models of build pieces, world objects and dungeon rooms (meshes, textures, materials)
 
 These files belong to the game: they are made from your own copy and must not be redistributed.
 
@@ -326,8 +326,17 @@ def export_models(found, args, work, out):
             if wanted is not None and h not in wanted and not extra: continue
             objects[str(h)] = {'name': n, 'bundle': b, 'pid': pid}
     index.update(objects)
+    # Dungeon rooms (the Dungeon tool): every room of the game's dungeons, by name.
+    rpath = next((p for p in (os.path.join(HERE, 'dungeon-rooms.json.gz'), os.path.join(REPO, 'Core', 'WorldGen', 'dungeon-rooms.json.gz')) if os.path.exists(p)), None)
+    rooms = 0
+    if rpath:
+        import gzip
+        for n in json.load(gzip.open(rpath))['rooms']:
+            if n in roots and str(stable_hash(n)) not in index:
+                index[str(stable_hash(n))] = {'name': n, 'bundle': roots[n][0], 'pid': roots[n][1], 'room': 1}
+                rooms += 1
     ipath = os.path.join(work, 'model_index.json'); save_json(index, ipath)
-    log(f'models: {len(index)} kinds ({len(index) - len(objects)} build pieces, {len(objects)} world objects)')
+    log(f'models: {len(index)} kinds ({len(index) - len(objects) - rooms} build pieces, {len(objects)} world objects, {rooms} dungeon rooms)')
     env = dict(os.environ, INDEX=ipath)
     # export_pieces.py reuses what is already in the output folder, so an interrupted run continues
     # (scan() empties it when the game changed).

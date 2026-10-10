@@ -23,6 +23,7 @@ public static class Icons
 		["mountain"] = "M2 20l7-14 4 6 3-4 6 12zM7 10l2 2 2-2",
 		["script"] = "M8 7l-5 5 5 5M16 7l5 5-5 5M14 4l-4 16",
 		["cave"] = "M3 20v-8a9 8 0 0 1 18 0v8M8 20v-5a4 4 0 0 1 8 0v5",
+		["dungeon"] = "M4 21V9l8-5 8 5v12M8 21v-3h3v-3h3v-3h3",
 		["path"] = "M4 19c4 0 3-7 8-7s4-7 8-7M4 19h.01M20 5h.01",
 		["area"] = "M4 4h4M16 4h4v4M20 16v4h-4M8 20H4v-4M4 8v4M20 8v4",
 		["paste"] = "M8 4h8v3H8zM6 6H5v14h14V6h-1",

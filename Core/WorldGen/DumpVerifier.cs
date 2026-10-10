@@ -25,16 +25,7 @@ public static class DumpVerifier
 		return $"{s.s0:x8} {s.s1:x8} {s.s2:x8} {s.s3:x8}";
 	}
 
-	// (Unity's Random is the whole program's: held for the whole check, which draws from it line by line.)
 	public static Result Run(string path, string seedName)
-	{
-		lock (Rnd.Lock)
-		{
-			return RunLocked(path, seedName);
-		}
-	}
-
-	private static Result RunLocked(string path, string seedName)
 	{
 		string[] lines = File.ReadAllLines(path);
 		int rOk = 0, rBad = 0, pOk = 0, pBad = 0, hOk = 0, hBad = 0, bBad = 0, zOk = 0, zBad = 0, wBad = 0;
@@ -188,9 +179,9 @@ public static class DumpVerifier
 	{
 		var watch = System.Diagnostics.Stopwatch.StartNew();
 		World world = new() { m_seedName = seedName, m_seed = TerrainEditor.Save.StableHash.Of(seedName), m_worldGenVersion = 2 };
-		WorldGenerator.Initialize(world);
+		var gen = WorldGenerator.Create(world);
 		Console.WriteLine($"  offline worldgen init {watch.ElapsedMilliseconds} ms, seed {world.m_seed}");
-		return WorldGenerator.instance;
+		return gen;
 	}
 }
 

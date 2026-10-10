@@ -15,6 +15,14 @@ public static class ZoneStats
 
 	public static int[] Compute(WorldSave world, EditStore edits, Func<int, int, int> biomeOf)
 	{
+		lock (world.Sync)
+		{
+			return ComputeIn(world, edits, biomeOf);
+		}
+	}
+
+	private static int[] ComputeIn(WorldSave world, EditStore edits, Func<int, int, int> biomeOf)
+	{
 		if (world.Zones == null)
 		{
 			return Array.Empty<int>();
@@ -25,7 +33,7 @@ public static class ZoneStats
 		for (int id = 0; id < world.ObjectRefs.Count; id++)
 		{
 			ObjectRef o = world.ObjectRefs[id];
-			if (deleted.Contains(id) || o.IsTerrain)
+			if (deleted.Contains(id) || world.Vanished.Contains(id) || o.IsTerrain)
 			{
 				continue;
 			}

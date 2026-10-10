@@ -11,6 +11,8 @@ public static class ObjectData
 {
 	public static readonly int ItemsKey = StableHash.Of("items");
 
+	public static readonly int AddedDefaultItemsKey = StableHash.Of("addedDefaultItems");
+
 	// The saved bytes of an object of the world (id >= 0) or of one added in this session (id < 0).
 	public static byte[]? Bytes(WorldSave w, EditStore edits, int id)
 	{
@@ -24,7 +26,7 @@ public static class ObjectData
 			return null;
 		}
 		Dictionary<ChunkFile, byte[]> files = new();
-		return w.NewObjectBytes(n, m => w.LiveBytes ?? (files.TryGetValue(m.File, out byte[]? f) ? f : files[m.File] = File.ReadAllBytes(Path.Combine(w.Directory, m.File.FileName))));
+		return w.NewObjectBytes(n, m => w.IsLive ? w.LiveSource(m.File) : (files.TryGetValue(m.File, out byte[]? f) ? f : files[m.File] = File.ReadAllBytes(Path.Combine(w.Directory, m.File.FileName))));
 	}
 
 	public static InventoryData BuildInventory(List<ItemUpload> list)
@@ -59,6 +61,9 @@ public static class ObjectData
 		if (inventory != null)
 		{
 			z.SetBytes(ItemsKey, BuildInventory(inventory).Write());
+			// Told it has its default items already: a chest never opened fills itself with the game's
+			// loot when it first loads (Container.Awake), over what was set here.
+			z.Set("ints", AddedDefaultItemsKey, "1");
 		}
 		return z;
 	}

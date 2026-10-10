@@ -46,11 +46,11 @@ public class WorldGenerator
 
 	private const float m_waterTreshold = 0.05f;
 
-	private static readonly Dictionary<Vector2s, Heightmap.BiomeArea> s_cachedBiomeAreas = new Dictionary<Vector2s, Heightmap.BiomeArea>();
+	// The game keeps these caches static (one world at a time); here each generator has its own, read by
+	// many threads at once, so that worlds open together do not share or clear each other's biomes.
+	private readonly System.Collections.Concurrent.ConcurrentDictionary<Vector2s, Heightmap.BiomeArea> s_cachedBiomeAreas = new();
 
-	private static readonly Dictionary<Vector2s, Heightmap.Biome> s_cachedBiomes = new Dictionary<Vector2s, Heightmap.Biome>();
-
-	private static WorldGenerator m_instance = null;
+	private readonly System.Collections.Concurrent.ConcurrentDictionary<Vector2s, Heightmap.Biome> s_cachedBiomes = new();
 
 	public World m_world;
 
@@ -77,6 +77,7 @@ public class WorldGenerator
 	private List<River> m_streams = new List<River>();
 
 	private Dictionary<Vector2i, RiverPoint[]> m_riverPoints = new Dictionary<Vector2i, RiverPoint[]>();
+
 
 	private List<Heightmap.Biome> m_biomes = new List<Heightmap.Biome>();
 
@@ -182,41 +183,15 @@ public class WorldGenerator
 		new Vector2s(0, 64)
 	};
 
-	public static WorldGenerator instance => m_instance;
-
-	// A generator for the world, also the current one (instance). The previous one is left as it is:
-	// another world's map or area may still be reading it (clearing its rivers took them away there).
-	public static WorldGenerator Create(World world)
-	{
-		var made = new WorldGenerator(world);
-		m_instance = made;
-		return made;
-	}
-
-	public static void Initialize(World world) => Create(world);
-
-	public static void Deitialize()
-	{
-		m_instance = null;
-	}
+	// The game keeps one generator in a static instance; the editor can have several worlds open at once
+	// (a world being made while another is shown), so each caller keeps its own.
+	public static WorldGenerator Create(World world) => new WorldGenerator(world);
 
 	private WorldGenerator(World world)
 	{
 		m_world = world;
-		s_cachedBiomeAreas.Clear();
-		s_cachedBiomes.Clear();
 		m_version = m_world.m_worldGenVersion;
 		VersionSetup(m_version);
-		// Unity's Random is one state for the whole program: held while it is seeded and drawn from here
-		// (rivers and streams too), so a regrow or another world being made meanwhile cannot shift it.
-		lock (UnityEngine.Random.Lock)
-		{
-			Seed();
-		}
-	}
-
-	private void Seed()
-	{
 		UnityEngine.Random.State state = UnityEngine.Random.state;
 		UnityEngine.Random.InitState(m_world.m_seed);
 		if (m_noiseGen == null)
@@ -633,8 +608,7 @@ public class WorldGenerator
 
 	// The game keeps the last grid cell's points in a cache behind a lock; here many threads ask at once
 	// (maps, areas), and that cache made them evict each other and wait on the lock (several times
-	// slower). The points are only written while this generator is made (each world has its own): read
-	// straight from the dictionary (Vector2i's hash spreads the cells: a lookup is cheap).
+	// slower). The points are only read once the world is made: read straight from the dictionary.
 	private void GetRiverWeight(float wx, float wy, out float weight, out float width)
 	{
 		if (m_riverPoints.TryGetValue(GetRiverGrid(wx, wy), out var value))
@@ -703,7 +677,7 @@ public class WorldGenerator
 		Heightmap.Biome biome8 = GetBiome(point - s_biomeAreaOffsetsInt[6]);
 		Heightmap.Biome biome9 = GetBiome(point - s_biomeAreaOffsetsInt[7]);
 		value = ((biome != biome2 || biome != biome3 || biome != biome4 || biome != biome5 || biome != biome6 || biome != biome7 || biome != biome8 || biome != biome9) ? Heightmap.BiomeArea.Edge : Heightmap.BiomeArea.Median);
-		s_cachedBiomeAreas.Add(point, value);
+		s_cachedBiomeAreas.TryAdd(point, value);
 		return value;
 	}
 
@@ -714,7 +688,7 @@ public class WorldGenerator
 			return value;
 		}
 		value = GetBiome(point.x, point.y);
-		s_cachedBiomes.Add(point, value);
+		s_cachedBiomes.TryAdd(point, value);
 		return value;
 	}
 

@@ -53,6 +53,7 @@ public sealed partial class MainWindow : Window
 	internal ToolPanel Tools { get; } = new();
 	internal SelectPanel SelectPanel { get; }
 	internal MeasurePanel MeasurePanel { get; }
+	internal DungeonPanel DungeonPanel { get; }
 	internal ShapePanel ShapePanel { get; } = new();
 	internal MountainPanel MountainPanel { get; } = new();
 	internal BuildPanel BuildPanel { get; private set; } = null!;
@@ -177,6 +178,9 @@ public sealed partial class MainWindow : Window
 		KeepHistory();
 		_playersTimer.Stop();
 		_labelsTimer.Stop();
+		// Following the game is the open area's: the map reads the world as it is (Reload for the rest).
+		_gameTimer.Stop();
+		_gameFetched = null;
 		PlayerLabels.Children.Clear();
 		if (_map == null)
 		{
@@ -283,7 +287,7 @@ public sealed partial class MainWindow : Window
 			string message;
 			try
 			{
-				message = (await w.ApplyLive()).Message;
+				message = (await w.ApplyLive(over => { Busy(null); return ConfirmOverGame(over); })).Message;
 			}
 			catch (Exception ex)
 			{
@@ -424,6 +428,11 @@ public sealed partial class MainWindow : Window
 	// Starts editing a loaded scene (also used by tests with a scene of their own).
 	internal void Edit(EditSession session)
 	{
+		// Another area: building in the last one's dungeon (and its cut) ends.
+		if (BuildingInDungeon)
+		{
+			BuildInDungeon(false);
+		}
 		_session = session;
 		session.Brush = Tools.Brush;
 		MountainPanel.FitTo(session.Ground.W);
@@ -448,6 +457,11 @@ public sealed partial class MainWindow : Window
 			QueueSupport();
 			UpdateSaveBar();
 			History.Refresh();
+			// The dungeon's rooms changed (an edit, undo): the Dungeon tool's list follows.
+			if (Tools.Mode == ToolMode.Dungeon)
+			{
+				DungeonPanel.Reload();
+			}
 			// The ground changed: the Area tool's cut and fill follows.
 			if (Tools.Mode == ToolMode.Area)
 			{
@@ -1518,6 +1532,15 @@ public sealed partial class MainWindow : Window
 			_view.Path.Clear();
 			e.Handled = true;
 		}
+		else if (Tools.Mode == ToolMode.Dungeon && !ctrl && e.Key == Avalonia.Input.Key.Delete && _view.Dungeon.Delete())
+		{
+			e.Handled = true;
+		}
+		else if (Tools.Mode == ToolMode.Dungeon && !ctrl && e.Key == Avalonia.Input.Key.R)
+		{
+			_view.Dungeon.Turn();
+			e.Handled = true;
+		}
 		else if (Tools.Mode == ToolMode.Measure && !ctrl && e.Key == Avalonia.Input.Key.Escape && _view.Tape.A != null)
 		{
 			_view.Tape.Clear();
@@ -1733,6 +1756,7 @@ public sealed partial class MainWindow : Window
 		SelectPanel.AskName = initial => Dialogs.AskText(this, "Keep the selection", "Name of the selection:", initial);
 		SelectPanel.Confirm = text => Dialogs.Ask(this, "Saved selections", text, "Forget");
 		SelectPanel.InspectButton.Click += (_, _) => Inspect();
+		_view.InspectAsked += () => { if (_view.Selected.Count == 1) Inspect(); };
 		SelectPanel.ClaimButton.Click += (_, _) => Claim();
 		AskPlayerId = () => Dialogs.AskText(this, "Built by", "Player id to write as the builder (the number Valheim keeps for a character):");
 		History.Message += t => { _message.Text = t; UpdateSaveBar(); };
@@ -1796,6 +1820,21 @@ public sealed partial class MainWindow : Window
 			}
 		};
 		MeasurePanel = new MeasurePanel(_view);
+		DungeonPanel = new DungeonPanel(_view);
+		DungeonPanel.BuildAsked += () => BuildInDungeon(true);
+		DungeonPanel.Gen.PlaceAsked += PlaceGenerated;
+		DungeonPanel.Gen.WorkshopAsked += async s =>
+		{
+			try
+			{
+				await OpenGeneratedInWorkshop(s);
+			}
+			catch (Exception ex)
+			{
+				_message.Text = $"Could not open the dungeon in the Workshop: {ex.Message}";
+			}
+		};
+		_view.Dungeon.Message += t => _message.Text = t;
 		PathPanel = new PathPanel(_view, Tools.Brush);
 		PathPanel.ApplyAsked += ApplyPath;
 		AreaPanel = new AreaPanel(_view, () => _session, prefab => _models?.NameOf(prefab) ?? TerrainEditor.Terrain.PrefabCatalog.DisplayName(prefab));
@@ -1869,7 +1908,7 @@ public sealed partial class MainWindow : Window
 			Margin = new Thickness(10, 70, 10, 58),
 			HorizontalAlignment = HorizontalAlignment.Left,
 			VerticalAlignment = VerticalAlignment.Top,
-			Children = { Tools.Rail, Tools.Options, SelectPanel.Card, MeasurePanel.Card, ShapePanel.Card, MountainPanel.Card, ScriptPanel.Card, Blueprints.Card, PathPanel.Card, AreaPanel.Card, PastePanel.Card, PlacePanel.Card, PlacePanel.Chooser, BuildPanel.Card, MaskPanel.Card },
+			Children = { Tools.Rail, Tools.Options, SelectPanel.Card, MeasurePanel.Card, DungeonPanel.Card, ShapePanel.Card, MountainPanel.Card, ScriptPanel.Card, Blueprints.Card, PathPanel.Card, AreaPanel.Card, PastePanel.Card, PlacePanel.Card, PlacePanel.Chooser, BuildPanel.Card, MaskPanel.Card },
 		};
 		// Every panel of the column scrolls when the window is too short for it (a bar only then).
 		foreach (var card in tools.Children.OfType<Border>())
@@ -1880,7 +1919,7 @@ public sealed partial class MainWindow : Window
 				card.Child = new ScrollViewer { VerticalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Auto, Content = inner };
 			}
 		}
-		SelectPanel.Card.IsVisible = MeasurePanel.Card.IsVisible = ShapePanel.Card.IsVisible = MountainPanel.Card.IsVisible = ScriptPanel.Card.IsVisible = PathPanel.Card.IsVisible = AreaPanel.Card.IsVisible = PastePanel.Card.IsVisible = MaskPanel.Card.IsVisible = PlacePanel.Card.IsVisible = false;
+		SelectPanel.Card.IsVisible = MeasurePanel.Card.IsVisible = DungeonPanel.Card.IsVisible = ShapePanel.Card.IsVisible = MountainPanel.Card.IsVisible = ScriptPanel.Card.IsVisible = PathPanel.Card.IsVisible = AreaPanel.Card.IsVisible = PastePanel.Card.IsVisible = MaskPanel.Card.IsVisible = PlacePanel.Card.IsVisible = false;
 		ShapePanel.Changed += () => _view.ShapeRadius = ShapePanel.Radius;
 		MountainPanel.Changed += () =>
 		{
@@ -1918,6 +1957,16 @@ public sealed partial class MainWindow : Window
 			_view.Mode = Tools.Mode;
 			SelectPanel.Card.IsVisible = Tools.SelectMode;
 			MeasurePanel.Card.IsVisible = Tools.Mode == ToolMode.Measure;
+			if (Tools.Mode == ToolMode.Dungeon)
+			{
+				DungeonPanel.Reload();
+			}
+			else if (DungeonPanel.Card.IsVisible && !BuildingInDungeon)
+			{
+				// Not into Build here (it builds under the dungeon's cut): the cut off.
+				DungeonPanel.Leave();
+			}
+			DungeonPanel.Card.IsVisible = Tools.Mode == ToolMode.Dungeon;
 			ShapePanel.Card.IsVisible = Tools.Mode == ToolMode.Shape;
 			MountainPanel.Card.IsVisible = Tools.Mode == ToolMode.Mountain;
 			ScriptPanel.Card.IsVisible = Tools.Mode == ToolMode.Script;
@@ -1934,8 +1983,16 @@ public sealed partial class MainWindow : Window
 			}
 			AreaPanel.Card.IsVisible = Tools.Mode == ToolMode.Area;
 			PastePanel.Card.IsVisible = Tools.Mode == ToolMode.Paste;
-			PlacePanel.Card.IsVisible = Tools.Mode == ToolMode.Place && !_inWorkshop;
-			BuildPanel.Card.IsVisible = Tools.Mode == ToolMode.Place && _inWorkshop;
+			if (BuildingInDungeon && Tools.Mode != ToolMode.Place)
+			{
+				if (Tools.Mode != ToolMode.Dungeon)
+				{
+					DungeonPanel.Leave();
+				}
+				BuildInDungeon(false);
+			}
+			PlacePanel.Card.IsVisible = Tools.Mode == ToolMode.Place && !_inWorkshop && !BuildingInDungeon;
+			BuildPanel.Card.IsVisible = Tools.Mode == ToolMode.Place && (_inWorkshop || BuildingInDungeon);
 			if (Tools.Mode != ToolMode.Place)
 			{
 				PlacePanel.Chooser.IsVisible = false;

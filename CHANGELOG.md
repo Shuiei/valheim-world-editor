@@ -6,12 +6,82 @@ the plugin is unchanged in versions without that part.
 
 ## Unreleased
 
+### Added
+- Live: the open area **follows the game**. Every 2 seconds the editor asks the game what changed in
+  that area's zones (only those): objects players built, removed or changed appear, go or change in
+  the editor, and ground dug or paved there comes in, without steps in History and without
+  dropping your changes (Reload is no longer needed for the area you work in). A changed object stays
+  the same object (history, selection and inspector follow it). Objects you deleted and applied stay
+  deleted; objects the game removed are not brought back by undo or redo.
+- Live: where you have ground changes not applied yet and the game changed that zone's ground too,
+  yours are kept, the status bar says so, and **Apply live** asks first: applying could erase what
+  players did there. Undo your changes there and the game's ground comes in.
+
 ### Fixed
 - Opening another world while the map or an area of the first was still being drawn no longer takes
   that world's rivers and streams away (its ground came out without them), and the map reads its own
   world's biomes. Making a world's ground while Regrow (or another world) runs no longer shifts its
   rivers and streams away from the game's.
-- Ground is worked out a little faster on one thread (zones about 12% faster).
+- Ground is worked out a little faster (river lookups no longer walk long chains).
+
+### WorldEditorBridge
+- `/watch`: one number per asked zone, which changes when an object there is made, removed or
+  changed (not when a creature walks or a fire burns); `/zone`: the saved objects of the asked zones,
+  portals included, in the snapshot's format. Only those zones are read, from the game's own
+  per-zone lists.
+
+## v1.16.0 — 2026-10-09
+
+### Added
+- **Generate a dungeon** (Dungeon panel): a whole dungeon from a few choices and a seed. It is made
+  of building pieces, or of the biome's own dungeon rooms. A plan of each level updates as you
+  change the choices.
+  - Eight styles: crypt, catacombs, temple, fortress, prison, Dvergr hold, goblin warren and ruins.
+    Each has its own rooms (burial chambers, ossuaries, chapels, barracks, feast halls, cell blocks,
+    forges, studies...), each furnished for its purpose.
+  - Seven wall materials, and eight biomes for monsters, chests, loot and lights.
+  - Settings for size, levels, monsters (spawners that come back, or monsters placed once), the
+    boss, loot, light, furniture, ruin and ways round.
+  - The layout reads like a building: rooms along axes, wings in pairs, and loops between rooms
+    that lie close together. Stairs go down between levels, and some halls rise through two levels.
+  - A door closes every room, so its monsters wait behind it. An antechamber leads to the boss's
+    arena behind a gate that opens with the crypt key, which lies in a chest far away; the treasury
+    is beyond the arena. Hidden caches sit behind cracked walls.
+  - **Place in the world** puts it 5000 m above the view with a linked portal pair, as one undo
+    step. It is written as a ruin, like the game's own dungeons. **Open in the Workshop** opens it as
+    a blueprint.
+- **Blueprints keep what objects hold**: chests' contents, signs' texts, creatures (a dungeon's boss,
+  with its stars) and whether the building is a ruin. They go in the editor's own lines of the file,
+  which Homestead and PlanBuild skip, so the file still builds in game. They come back when the
+  blueprint is opened in the Workshop, saved from it, or placed in a world.
+- **Chest contents as in game** (inspector): the container's slots in a grid. Click one to choose its
+  item, how many and how good; empty it, or move it to another slot. A double click on an object
+  opens its inspector.
+- **Dungeon** tool: edit the rooms of Frost Caves, burial chambers, sunken crypts, infested mines and
+  the game's other dungeons. The game builds a dungeon from a list of its rooms kept in the save
+  (5000 m above its entrance); the tool edits that list, and the game builds what you make, no mod
+  needed.
+  - **Go inside** takes the view up to the dungeon and cuts its roofs away to look into its rooms.
+  - Pick one of the dungeon's rooms and click an open end (a green frame): the room joins there the
+    way the game joins rooms. **Turn** (R) joins it by another of its openings. A red box warns when
+    it would overlap another room or leave the dungeon's space.
+  - Added rooms come with what the game would put in them at that place: chests, creatures'
+    spawners, torches, ice, decorations, rolled the way the game rolls them.
+  - **Doors** where rooms meet: an added room gets the dungeon's door (curtain, gate, ice wall) by
+    the game's chance, and a click on a square where two rooms meet puts one there or takes it away.
+  - Delete a room (its contents and doors go with it), and **Close open ends** caps them with the
+    game's end caps. Each change is one undo step; **Save to world** and **Apply live** write it.
+  - **Build here**: build with the hammer's pieces inside the dungeon, on its rooms' floors (where they
+    hold in game).
+- The game's look now includes the dungeons' rooms (copied once more after this update).
+- **Dungeon rooms** in the View panel shows or hides them.
+
+### Fixed
+- Contents set in the inspector on a chest never opened were replaced by the game's own loot when it
+  first loaded. Such a chest is now marked as already filled.
+- The support check knows the pieces the game never checks: Mistlands' large black marble floor
+  (also carts, ships and wards) stays up wherever it is and holds what stands on it, as in game. A
+  building on such floors in the air no longer shows walls that would fall.
 
 ## v1.15.6 — 2026-10-09
 
