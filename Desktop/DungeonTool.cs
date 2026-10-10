@@ -280,7 +280,7 @@ public sealed partial class DungeonTool
 					if (Dungeons.RollDoor(d.Kind, j, Random) is string door)
 					{
 						with += with.Length == 0 ? " with a door" : " and a door";
-						made.Add((new NewObject(0, StableHash.Of(door), j.Position, Dungeons.ToEuler(j.Rotation), 0), false));
+						made.Add((new NewObject(0, StableHash.Of(door), j.Position, BlueprintFormats.ToEuler(j.Rotation), 0), false));
 					}
 				}
 			}
@@ -411,7 +411,7 @@ public sealed partial class DungeonTool
 		}
 		else if (Dungeons.DoorsFor(d.Kind, j.Type).FirstOrDefault() is { Prefab: { Length: > 0 } door })
 		{
-			s.Commit("Dungeon: added a door", null, Array.Empty<int>(), new[] { (new NewObject(0, StableHash.Of(door), j.Position, Dungeons.ToEuler(j.Rotation), 0), false) });
+			s.Commit("Dungeon: added a door", null, Array.Empty<int>(), new[] { (new NewObject(0, StableHash.Of(door), j.Position, BlueprintFormats.ToEuler(j.Rotation), 0), false) });
 			Message?.Invoke($"Added a door ({door}). Click it again to take it away.");
 		}
 		Changed?.Invoke();
@@ -430,7 +430,7 @@ public sealed partial class DungeonTool
 			foreach (var m in Dungeons.Contents(r, d.Kind, d.Thing.Position, Scene.World.Seed))
 			{
 				int prefab = StableHash.Of(m.Prefab);
-				list.Add((new NewObject(0, prefab, m.Position, Dungeons.ToEuler(m.Rotation), 0), TerrainEditor.Terrain.PieceCatalog.Get(prefab)?.Tool != null));
+				list.Add((new NewObject(0, prefab, m.Position, BlueprintFormats.ToEuler(m.Rotation), 0), TerrainEditor.Terrain.PieceCatalog.Get(prefab)?.Tool != null));
 			}
 		}
 		return list;

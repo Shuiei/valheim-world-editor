@@ -98,6 +98,11 @@ public class WorkshopTests
 			Assert.Equal(f, ObjectField.Parse(f.ToString()));
 		}
 		Assert.Null(ObjectField.Parse("nothing;1;x"));
+		// Base64 the save cannot take as that section (a damaged line): left out, not kept for the save to fail on.
+		static string B(string v) => Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(v));
+		Assert.Null(ObjectField.Parse("floats;1;" + B("abc")));
+		Assert.Null(ObjectField.Parse("vec3;1;" + B("1 2")));
+		Assert.Null(ObjectField.Parse("bytes;1;" + B("not base64!")));
 	}
 
 	[Fact]

@@ -167,13 +167,16 @@ public static class Workshop
 	}
 
 	// What an object of the plot holds: every value of its data but its builder and scale (a blueprint
-	// has its own), and no builder at all on a ruin's.
+	// has its own), and no builder at all on a ruin's: the plot opened from one, or a building piece
+	// without a builder (added from one: the others got the chosen builder when they were put).
 	private static List<ObjectField> DataOf(WorldScene s, WorldScene.Thing t)
 	{
 		var list = new List<ObjectField>();
+		bool ruin = s.Ruin;
 		if (s.Session is { } session && ObjectData.Bytes(s.World, session.Edits, t.Id) is { } bytes)
 		{
 			var z = ZdoData.Parse(bytes);
+			ruin |= WorldSave.Builder != 0 && PieceCatalog.Get(t.Prefab)?.Tool != null && !z.LongList.Any(f => f.Key == ObjectField.CreatorKey);
 			var ci = System.Globalization.CultureInfo.InvariantCulture;
 			static string S(float v) => v.ToString("R", System.Globalization.CultureInfo.InvariantCulture);
 			list.AddRange(z.FloatList.Where(f => f.Key != StableHash.Of("scaleScalar")).Select(f => new ObjectField("floats", f.Key, S(f.Value))));
@@ -184,7 +187,7 @@ public static class Workshop
 			list.AddRange(z.StringList.Select(f => new ObjectField("strings", f.Key, f.Value)));
 			list.AddRange(z.ByteList.Select(f => new ObjectField("bytes", f.Key, Convert.ToBase64String(f.Value))));
 		}
-		if (s.Ruin)
+		if (ruin)
 		{
 			list.Add(ObjectField.NoBuilder);
 		}

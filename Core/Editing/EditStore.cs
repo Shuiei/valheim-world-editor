@@ -574,7 +574,9 @@ public sealed record ObjectField(string Section, int Key, string? Value)
 		}
 		try
 		{
-			return new ObjectField(p[0], key, p[2] == "-" ? null : System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(p[2])));
+			string? value = p[2] == "-" ? null : System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(p[2]));
+			// A value the save cannot take (a damaged or hand-edited line) is left out here, not when the world is written.
+			return TerrainEditor.Save.ZdoData.Valid(p[0], value) ? new ObjectField(p[0], key, value) : null;
 		}
 		catch (FormatException)
 		{
