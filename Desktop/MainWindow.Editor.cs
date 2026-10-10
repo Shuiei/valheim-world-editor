@@ -37,6 +37,8 @@ public sealed partial class MainWindow
 	private readonly DispatcherTimer _playersTimer = new() { Interval = TimeSpan.FromSeconds(2) };
 	private readonly DispatcherTimer _labelsTimer = new() { Interval = TimeSpan.FromMilliseconds(100) };
 	private readonly DispatcherTimer _followTimer = new() { Interval = TimeSpan.FromMilliseconds(700) };
+	// Live: the game asked every 2 s what changed in the zones shown (WorldSession.FollowGame).
+	private readonly DispatcherTimer _gameTimer = new() { Interval = TimeSpan.FromSeconds(2) };
 	private string _followSaid = "";
 	internal AppSettings Settings => _settings;
 	// Writes the settings (Auto, Follow); tests keep them in memory, so no other window reads them.
@@ -78,6 +80,7 @@ public sealed partial class MainWindow
 		Closed += (_, _) =>
 		{
 			_followTimer.Stop();
+			_gameTimer.Stop();
 			_playersTimer.Stop();
 			_labelsTimer.Stop();
 			_map?.Stop();
@@ -119,6 +122,7 @@ public sealed partial class MainWindow
 
 		GoPlayerButton.Click += async (_, _) => await GoToPlayer(PlayerBox.SelectedItem as string);
 		_playersTimer.Tick += async (_, _) => await PollPlayers();
+		_gameTimer.Tick += async (_, _) => await FollowGame();
 		_labelsTimer.Tick += (_, _) => PlaceLabels();
 	}
 
@@ -162,9 +166,11 @@ public sealed partial class MainWindow
 			_ = PollPlayers();
 			_playersTimer.Start();
 			_labelsTimer.Start();
+			_gameTimer.Start();
 		}
 		else
 		{
+			_gameTimer.Stop();
 			_playersTimer.Stop();
 			_labelsTimer.Stop();
 			SetPlayers(Array.Empty<(string, Vector3)>());
@@ -395,8 +401,13 @@ public sealed partial class MainWindow
 				}
 				SaveButton.IsEnabled = false;
 				_message.Text = "Applying to the running game…";
-				var o = await s.ApplyLive();
+				var o = await s.ApplyLive(ConfirmOverGame);
 				_message.Text = o.Message;
+				if (o.Declined)
+				{
+					UpdateSaveBar();
+					break;
+				}
 				UpdateSaveBar();
 				History.Refresh();
 			}
@@ -416,6 +427,101 @@ public sealed partial class MainWindow
 			_ = ApplyNow();
 		}
 	}
+
+	// ---- Live: following the game in the zones shown.
+	private bool _followingGame;
+	// The world whose plugin is too old to follow (asked again for another world).
+	private WorldSession? _gameTooOld;
+	// Read from the game, not merged yet (a stroke was being drawn, an apply was under way): merged at
+	// the next tick, before anything new is read.
+	private WorldSession.Fetched? _gameFetched;
+
+	internal async Task FollowGame()
+	{
+		if (_followingGame || _session is not { IsLive: true, Scene.Owner: { } owner } s || _gameTooOld == owner)
+		{
+			return;
+		}
+		_followingGame = true;
+		try
+		{
+			if (_gameFetched == null && !s.Stroking)
+			{
+				var zones = new List<(int, int)>();
+				for (int z = 0; z < s.Scene.Size; z++)
+				{
+					for (int x = 0; x < s.Scene.Size; x++)
+					{
+						zones.Add((s.Scene.X0 + x, s.Scene.Z0 + z));
+					}
+				}
+				_gameFetched = await owner.FetchGame(zones);
+			}
+			// Merged and shown at once, on this thread: nothing changes the world or the area in between.
+			// The area open now gets it, whichever it is (taking it twice changes nothing).
+			if (_session is not { Scene.Owner: { } now } open || now != owner)
+			{
+				_gameFetched = null;
+				return;
+			}
+			if (_gameFetched is { } fetched && !open.Stroking && owner.MergeGame(fetched) is { } followed)
+			{
+				_gameFetched = null;
+				if (followed.Any && open.TakeGameChanges(followed))
+				{
+					SayFromGame(followed);
+				}
+			}
+			// Changes of the editor's undone where the game changed the ground meanwhile: the game's now.
+			else if (_gameFetched == null && !open.Stroking && owner.TakeWaitingGround() is { Count: > 0 } waiting)
+			{
+				open.TakeGameChanges(new WorldSession.Followed(new TerrainEditor.Save.WorldSave.Merged(new(), new(), new(), new()), new(), waiting, new()));
+				_message.Text = $"From the game: the ground of {waiting.Count} zone(s), where your changes were undone.";
+			}
+			UpdateSaveBar();
+		}
+		catch (InvalidOperationException ex) when (ex.Message.Contains("too old", StringComparison.Ordinal))
+		{
+			// An older plugin on the server: no following (Reload still reads the whole world again).
+			_gameTooOld = owner;
+			_message.Text = "The WorldEditorBridge plugin on the server is older than this editor: update it to see what players change while you edit (Reload reads the world again meanwhile).";
+		}
+		catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or IOException or InvalidDataException or InvalidOperationException or System.Text.Json.JsonException or FormatException)
+		{
+			// The game does not answer right now: asked again at the next tick.
+		}
+		finally
+		{
+			_followingGame = false;
+		}
+	}
+
+	// Said in the status bar: what came from the game that shows (objects come, go or move; ground). A
+	// change of data alone (a fire burning down, a chest used) is taken in without a word.
+	private void SayFromGame(WorldSession.Followed f)
+	{
+		var parts = new List<string>();
+		int added = f.Merged.Added.Count, gone = f.Merged.Vanished.Count + f.Ours.Count;
+		if (added > 0) parts.Add($"{added} new object(s)");
+		if (gone > 0) parts.Add($"{gone} removed");
+		if (f.Ground.Count > 0) parts.Add($"the ground of {f.Ground.Count} zone(s)");
+		string text = parts.Count > 0 ? $"From the game: {string.Join(", ", parts)}." : "";
+		if (f.Kept.Count > 0)
+		{
+			text += $" The game changed the ground of zone(s) {string.Join("; ", f.Kept.Select(z => $"{z.X}, {z.Z}"))}, where you have changes not applied: yours are kept, and applying asks first.";
+		}
+		if (text != "")
+		{
+			_message.Text = text.Trim();
+		}
+	}
+
+	// Asked by Apply live before writing over ground the game changed where the editor has changes not
+	// applied yet (whatever was dug or built there since). True to go on.
+	internal async Task<bool> ConfirmOverGame(IReadOnlyList<(int X, int Z)> over) =>
+		await Ask("Apply over the game's changes",
+			$"The ground of {over.Count} zone(s) ({string.Join("; ", over.Take(6).Select(z => $"{z.X}, {z.Z}"))}{(over.Count > 6 ? "…" : "")}) was changed in the game since you started editing it. "
+			+ "Applying writes your ground there: what players dug, flattened or paved in those zones since may be erased.\n\nApply anyway?", "Apply", "Not now");
 
 	// ---- Live players.
 

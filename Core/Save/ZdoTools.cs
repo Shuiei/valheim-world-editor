@@ -26,6 +26,9 @@ public sealed class ObjectRef
 
 	public bool IsTerrain { get; set; }
 
+	// The player who built it (its "creator"; 0: none).
+	public long Creator { get; set; }
+
 	// The object's ZDOID in the running game (live snapshots only).
 	public (long User, uint Id) LiveId { get; set; }
 

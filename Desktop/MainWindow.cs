@@ -177,6 +177,9 @@ public sealed partial class MainWindow : Window
 		KeepHistory();
 		_playersTimer.Stop();
 		_labelsTimer.Stop();
+		// Following the game is the open area's: the map reads the world as it is (Reload for the rest).
+		_gameTimer.Stop();
+		_gameFetched = null;
 		PlayerLabels.Children.Clear();
 		if (_map == null)
 		{
@@ -283,7 +286,7 @@ public sealed partial class MainWindow : Window
 			string message;
 			try
 			{
-				message = (await w.ApplyLive()).Message;
+				message = (await w.ApplyLive(over => { Busy(null); return ConfirmOverGame(over); })).Message;
 			}
 			catch (Exception ex)
 			{

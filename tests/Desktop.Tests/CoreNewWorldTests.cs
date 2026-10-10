@@ -97,6 +97,28 @@ public sealed class CoreNewWorldTests : IDisposable
 	}
 
 	[Fact]
+	public void WorldsMadeOnSeveralThreadsAtOnceHaveTheirOwnGround()
+	{
+		WorldCreator.Create(Folder("One"), "One", Seed);
+		WorldCreator.Create(Folder("Two"), "Two", "AnotherOne");
+		var saves = new[] { WorldSave.Load(Folder("One")), WorldSave.Load(Folder("Two")) };
+		var zones = new[] { (0, 0), (5, -4), (-3, 2), (2, 3) };
+		float[][] Ground(WorldSave w)
+		{
+			var t = new ValheimGen.TerrainService(w);
+			return zones.Select(z => t.RawZone(z.Item1, z.Item2).Concat(Enumerable.Range(0, 9).Select(k => (float)t.BiomeAt(z.Item1 * 64 + k * 7, z.Item2 * 64 - k * 7))).ToArray()).ToArray();
+		}
+		var alone = saves.Select(Ground).ToArray();
+		// Each thread makes its world's generator again and again while the others make theirs.
+		var together = Enumerable.Range(0, 8).AsParallel().WithDegreeOfParallelism(8)
+			.Select(i => (i % 2, Enumerable.Range(0, 3).Select(_ => Ground(saves[i % 2])).ToList())).ToList();
+		foreach (var (seed, runs) in together)
+		{
+			Assert.All(runs, r => Assert.Equal(alone[seed], r));
+		}
+	}
+
+	[Fact]
 	public void ABareZoneIsTheMostEvenDryMeadowsWithNothingOnItAndItsGroundUntouched()
 	{
 		var made = WorldCreator.Create(Folder("Bare"), "Bare", Seed, radius: 4, flat: true);

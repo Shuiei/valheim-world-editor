@@ -39,6 +39,43 @@ public sealed class LiveSync
 		}
 	}
 
+	// Whether the game no longer has this object because the editor removed it (applied).
+	public bool IsDestroyed(int id)
+	{
+		lock (_lock)
+		{
+			return _destroyed.Contains(id);
+		}
+	}
+
+	// The game removed an object the editor made (a player picked or destroyed it): no longer the
+	// editor's to remove or to count.
+	public void Forget(int id)
+	{
+		lock (_lock)
+		{
+			_liveIds.Remove(id);
+		}
+	}
+
+	// The editor's new objects the game has, by id (ids < 0).
+	public List<(int Id, LiveTarget Target)> NewObjects()
+	{
+		lock (_lock)
+		{
+			return _liveIds.Where(kv => kv.Key < 0).Select(kv => (kv.Key, kv.Value)).ToList();
+		}
+	}
+
+	// Whether this ZDOID is one the editor made (a new object, or a removed one brought back).
+	public bool IsOurs((long User, uint Id) zdo)
+	{
+		lock (_lock)
+		{
+			return _liveIds.Values.Any(t => t.User == zdo.User && t.Id == zdo.Id);
+		}
+	}
+
 	public (int Deleted, int Added) Pending(EditStore edits)
 	{
 		lock (_lock)
@@ -84,7 +121,7 @@ public sealed class LiveSync
 			foreach (int id in _destroyed.Where(id => !deleted.Contains(id)).ToList())
 			{
 				ObjectRef o = world.ObjectRefs[id];
-				create.Add(world.LiveBytes![(int)o.Start..(int)o.End]);
+				create.Add(world.ObjectBytes(id));
 				createFor.Add(id);
 				createWhat.Add((o.Prefab, o.Position));
 				restoreIds.Add(id);
@@ -92,7 +129,7 @@ public sealed class LiveSync
 			// New objects not in the game yet, and ones that were removed again (undo, delete).
 			foreach (NewObject n in added.Values.Where(n => !_liveIds.ContainsKey(n.Id)))
 			{
-				byte[]? bytes = world.NewObjectBytes(n, _ => world.LiveBytes!);
+				byte[]? bytes = world.NewObjectBytes(n, m => world.LiveSource(m.File));
 				if (bytes == null)
 				{
 					skipped.Add($"unknown kind of object at {n.Position.X:F0}, {n.Position.Z:F0}");
@@ -133,6 +170,15 @@ public sealed class LiveSync
 			for (int i = 0; i < ids.Count && i < createFor.Count; i++)
 			{
 				_liveIds[createFor[i]] = new LiveTarget(long.Parse(ids[i][0]), uint.Parse(ids[i][1]), createWhat[i].Prefab, createWhat[i].Position);
+			}
+		}
+		// Objects of the world made again in the game (an applied delete undone): followed under their new
+		// ZDOID from now on (WorldSave.MergeLive), as the world's own.
+		for (int i = 0; i < ids.Count && i < createFor.Count; i++)
+		{
+			if (createFor[i] >= 0)
+			{
+				world.SetLiveId(createFor[i], (long.Parse(ids[i][0]), uint.Parse(ids[i][1])));
 			}
 		}
 		int destroyed = doc.RootElement.GetProperty("destroyed").GetInt32(), missing = doc.RootElement.GetProperty("missing").GetInt32();

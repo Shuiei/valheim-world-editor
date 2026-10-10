@@ -445,6 +445,21 @@ public sealed class InspectorPanel
 			return;
 		}
 		var t = s.Scene.Things[index];
+		// Live: changed or removed in the game since it was opened (a player used the chest): the copy
+		// would bring back its old data. Shown as it is now, to change again.
+		if (t.Gone || !(ObjectData.Bytes(s.Scene.World, s.Edits, t.Id)?.AsSpan().SequenceEqual(_bytes) ?? false))
+		{
+			Message?.Invoke(t.Gone ? "This object is gone (removed in the game): nothing changed." : "This object changed in the game since you opened it: here it is as it is now, make your change again.");
+			if (t.Gone)
+			{
+				Close();
+			}
+			else
+			{
+				Open(index);
+			}
+			return;
+		}
 		string name = PrefabCatalog.DisplayName(z.Prefab) ?? "object";
 		var copies = s.Commit($"Edited {name}", null, new[] { index }, new[] { (new NewObject(0, z.Prefab, z.Position, z.Rotation, 0, null, false, z.Serialize()), t.Piece) });
 		Message?.Invoke($"Changed {name}. Ctrl+Z puts the old one back; Save writes it.");

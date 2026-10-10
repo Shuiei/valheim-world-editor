@@ -52,6 +52,7 @@ public sealed class EditStore
 			_added.Clear();
 			_addedTrash.Clear();
 			_resets.Clear();
+			_gameChanged.Clear();
 			Load(world);
 			Version++;
 		}
@@ -66,20 +67,114 @@ public sealed class EditStore
 			{
 				continue;
 			}
-			ZoneEdit edit = new(z.ZoneX, z.ZoneZ) { ExistsInWorld = true };
-			for (int i = 0; i < Cells; i++)
-			{
-				edit.Modified[i] = z.ModifiedHeight[i];
-				edit.Level[i] = z.LevelDelta[i];
-				edit.Smooth[i] = z.SmoothDelta[i];
-				edit.PaintModified[i] = z.ModifiedPaint[i];
-				edit.Paint[i * 4] = z.Paint[i].X;
-				edit.Paint[i * 4 + 1] = z.Paint[i].Y;
-				edit.Paint[i * 4 + 2] = z.Paint[i].Z;
-				edit.Paint[i * 4 + 3] = z.Paint[i].W;
-			}
+			ZoneEdit edit = FromTerrain(z);
 			_zones[(z.ZoneX, z.ZoneZ)] = edit;
 			_baseline[(z.ZoneX, z.ZoneZ)] = edit.Clone();
+		}
+	}
+
+	private static ZoneEdit FromTerrain(TerrainZone z)
+	{
+		ZoneEdit edit = new(z.ZoneX, z.ZoneZ) { ExistsInWorld = true };
+		for (int i = 0; i < Cells; i++)
+		{
+			edit.Modified[i] = z.ModifiedHeight[i];
+			edit.Level[i] = z.LevelDelta[i];
+			edit.Smooth[i] = z.SmoothDelta[i];
+			edit.PaintModified[i] = z.ModifiedPaint[i];
+			edit.Paint[i * 4] = z.Paint[i].X;
+			edit.Paint[i * 4 + 1] = z.Paint[i].Y;
+			edit.Paint[i * 4 + 2] = z.Paint[i].Z;
+			edit.Paint[i * 4 + 3] = z.Paint[i].W;
+		}
+		return edit;
+	}
+
+	// Live: zones whose ground the game changed (a player digging, a hoe) while the editor had changes of
+	// its own there, not applied yet, with the game's ground. Applying them would write over what was done
+	// in the game, so the editor asks first; once the editor's changes there are undone the game's ground
+	// comes in (TakeWaitingGround); applying clears it (or discarding).
+	private readonly Dictionary<(int, int), ZoneEdit> _gameChanged = new();
+
+	public IReadOnlyList<(int X, int Z)> GameChanged
+	{
+		get
+		{
+			lock (_lock)
+			{
+				return _gameChanged.Keys.ToList();
+			}
+		}
+	}
+
+	// The zones the game changed under changes of the editor's not applied yet: what an apply would write
+	// over (asked first).
+	public List<(int X, int Z)> PendingOverGame()
+	{
+		lock (_lock)
+		{
+			return _gameChanged.Keys.Where(k => _zones.TryGetValue(k, out ZoneEdit? e) && e.Changed).ToList();
+		}
+	}
+
+	public enum GameGround { Same, Taken, Kept }
+
+	// Live: a zone's ground as the game has it now (null: no ground changes there any more). Same: what
+	// the editor has as applied (its own apply coming back); Taken: a zone without changes of the
+	// editor's takes it; Kept: one with changes keeps them, the game's ground waiting (GameChanged).
+	public GameGround TakeGameGround(int zx, int zz, TerrainZone? z)
+	{
+		var key = (zx, zz);
+		ZoneEdit fresh = z != null && z.ModifiedHeight.Length == Cells && z.ModifiedPaint.Length == Cells ? FromTerrain(z) : new ZoneEdit(zx, zz);
+		lock (_lock)
+		{
+			bool same = _baseline.TryGetValue(key, out ZoneEdit? was) ? was.SameGround(fresh) : fresh.IsEmpty;
+			if (same)
+			{
+				_gameChanged.Remove(key);
+				return GameGround.Same;
+			}
+			Version++;
+			if (_zones.TryGetValue(key, out ZoneEdit? e) && e.Changed)
+			{
+				_gameChanged[key] = fresh;
+				return GameGround.Kept;
+			}
+			Take(key, fresh, z != null);
+			return GameGround.Taken;
+		}
+	}
+
+	private void Take((int, int) key, ZoneEdit fresh, bool exists)
+	{
+		_baseline[key] = fresh.Clone();
+		_gameChanged.Remove(key);
+		if (exists)
+		{
+			_zones[key] = fresh;
+		}
+		else
+		{
+			_zones.Remove(key);
+		}
+	}
+
+	// Live: zones whose changes of the editor's were undone since the game changed their ground: they
+	// take the game's ground now. Returns them (their ground is to be shown again).
+	public List<(int X, int Z)> TakeWaitingGround()
+	{
+		lock (_lock)
+		{
+			var ready = _gameChanged.Where(kv => !(_zones.TryGetValue(kv.Key, out ZoneEdit? e) && e.Changed)).ToList();
+			foreach (var (key, fresh) in ready)
+			{
+				Take(key, fresh, fresh.ExistsInWorld);
+			}
+			if (ready.Count > 0)
+			{
+				Version++;
+			}
+			return ready.Select(kv => kv.Key).ToList();
 		}
 	}
 
@@ -288,6 +383,7 @@ public sealed class EditStore
 					e.ExistsInWorld = true;
 					_baseline[key] = e.Clone();
 				}
+				_gameChanged.Remove(key);
 			}
 			Version++;
 		}
@@ -306,6 +402,7 @@ public sealed class EditStore
 				applied.Changed = false;
 				applied.ExistsInWorld = true;
 				_baseline[key] = applied;
+				_gameChanged.Remove(key);
 				if (_zones.TryGetValue(key, out ZoneEdit? e))
 				{
 					e.ExistsInWorld = true;

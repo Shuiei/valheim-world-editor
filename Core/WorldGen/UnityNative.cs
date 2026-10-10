@@ -75,7 +75,9 @@ namespace ValheimGen
 
 	namespace UnityEngine
 	{
-		// Unity's UnityEngine.Random: Xorshift128 with Unity's seeding and float conversion.
+		// Unity's UnityEngine.Random: Xorshift128 with Unity's seeding and float conversion. The game only
+		// draws from it on the main thread; here worlds are made and regrown on several threads at once, so
+		// each thread has its own state (shared, they would mix their draws and make other rivers).
 		public static class Random
 		{
 			public struct State
@@ -89,12 +91,16 @@ namespace ValheimGen
 				internal uint s3;
 			}
 
+			[ThreadStatic]
 			private static uint _s0;
 
+			[ThreadStatic]
 			private static uint _s1;
 
+			[ThreadStatic]
 			private static uint _s2;
 
+			[ThreadStatic]
 			private static uint _s3;
 
 			public static State state

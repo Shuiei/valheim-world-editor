@@ -30,6 +30,10 @@ public sealed class FakeGame : IDisposable
 	// Set: ground sent to the game waits for it before the game answers (TerrainArrived says it came).
 	public TaskCompletionSource? HoldTerrain { get; set; }
 	public TaskCompletionSource TerrainArrived { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+	// What the game has in its zones, for /watch and /zone: each zone's number (it changes with the zone)
+	// and its objects (ZDOID and bytes). Zones not set are not watched.
+	public Dictionary<(int X, int Z), (ulong Digest, List<(long User, uint Id, byte[] Bytes)> Objects)> Zones { get; } = new();
+	public int ZoneReads;
 	// Objects the game no longer had when asked to destroy them.
 	public int Missing { get; set; }
 
@@ -140,6 +144,49 @@ public sealed class FakeGame : IDisposable
 						ObjectCalls.Add((destroy, create));
 					}
 					body = Encoding.UTF8.GetBytes($"{{\"destroyed\":{destroy - Missing},\"missing\":{Missing},\"created\":[{string.Join(",", ids)}]}}");
+				}
+				else if (path == "/watch" || path == "/zone")
+				{
+					using var r = new BinaryReader(ctx.Request.InputStream);
+					int n = r.ReadInt32();
+					var asked = new List<(int, int)>();
+					for (int i = 0; i < n; i++)
+					{
+						asked.Add((r.ReadInt32(), r.ReadInt32()));
+					}
+					lock (Zones)
+					{
+						if (path == "/watch")
+						{
+							// Zones not set are left out (as the plugin leaves out zones outside the world):
+							// the editor then has nothing to read again there.
+							body = Encoding.UTF8.GetBytes("{\"zones\":[" + string.Join(",", asked.Where(Zones.ContainsKey).Select(z => $"[{z.Item1},{z.Item2},\"{Zones[z].Digest}\"]")) + "]}");
+						}
+						else
+						{
+							Interlocked.Increment(ref ZoneReads);
+							var all = asked.SelectMany(z => Zones.TryGetValue(z, out var e) ? e.Objects : new()).ToList();
+							using var raw = new MemoryStream();
+							using (var w = new BinaryWriter(raw, Encoding.UTF8, leaveOpen: true))
+							{
+								w.Write(all.Count);
+								foreach (var (user, id, bytes) in all)
+								{
+									w.Write(user);
+									w.Write(id);
+									w.Write(bytes.Length);
+									w.Write(bytes);
+								}
+							}
+							using var packed = new MemoryStream();
+							using (var gz = new System.IO.Compression.GZipStream(packed, System.IO.Compression.CompressionLevel.Fastest, leaveOpen: true))
+							{
+								gz.Write(raw.ToArray());
+							}
+							body = packed.ToArray();
+							type = "application/octet-stream";
+						}
+					}
 				}
 				else if (path == "/zones/reset")
 				{

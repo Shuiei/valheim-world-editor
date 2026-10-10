@@ -39,7 +39,7 @@ public sealed class MapData
 	{
 		_terrain = terrain;
 		_edits = edits;
-		_gen = WorldGenerator.instance;
+		_gen = terrain.Generator;
 		_global = new Lazy<Layers>(BuildGlobal, LazyThreadSafetyMode.ExecutionAndPublication);
 	}
 
