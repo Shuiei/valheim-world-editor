@@ -148,7 +148,7 @@ internal sealed class DungeonDresser
 
 	private float R(float a, float b) => a + (float)_rnd.NextDouble() * (b - a);
 
-	private T One<T>(IReadOnlyList<T> list) => list[_rnd.Next(list.Count)];
+	private T One<T>(T[] list) => list[_rnd.Next(list.Length)];
 
 	private string One(params string[] list) => list[_rnd.Next(list.Length)];
 

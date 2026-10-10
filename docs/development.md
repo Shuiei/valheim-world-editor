@@ -66,6 +66,9 @@ off in every scene (it would hide the edits).
 
 ## Building
 
+With the .NET 10 SDK (`global.json` asks for it; the plugin builds with it too). The app targets
+`net10.0`; the release packages carry the runtime.
+
 ```sh
 dotnet publish Desktop/ValheimWorldEditor.Desktop.csproj -c Release -r linux-x64 --self-contained -p:PublishSingleFile=true -o ../ValheimWorldEditor
 ```

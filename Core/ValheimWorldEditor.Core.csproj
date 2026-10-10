@@ -4,7 +4,7 @@
   <PropertyGroup>
     <!-- The .NET analyzers' recommended rules; CI builds with warnings as errors (.circleci/config.yml). -->
     <AnalysisLevel>latest-recommended</AnalysisLevel>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>ValheimWorldEditor.Core</AssemblyName>

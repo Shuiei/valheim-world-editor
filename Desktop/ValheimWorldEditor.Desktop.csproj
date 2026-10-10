@@ -1,13 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <!-- The app: an Avalonia window, the 3D view and the map drawn with OpenGL. Uses the Core library. -->
   <PropertyGroup>
-    <!-- The .NET analyzers' recommended rules; CI builds with warnings as errors (.circleci/config.yml).
-         CS9057: Avalonia's analyzers are built for a newer compiler than some SDKs run (it is about
-         the machine's SDK, not the code). -->
+    <!-- The .NET analyzers' recommended rules; CI builds with warnings as errors (.circleci/config.yml). -->
     <AnalysisLevel>latest-recommended</AnalysisLevel>
-    <NoWarn>$(NoWarn);CS9057</NoWarn>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>ValheimWorldEditor</AssemblyName>
@@ -38,6 +35,6 @@
     <!-- The Script tool: C# scripts compiled in the app (Roslyn), against .NET's reference assemblies
          carried inside (a single-file app has no assembly files to point the compiler at). -->
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0" />
-    <PackageReference Include="Basic.Reference.Assemblies.Net80" Version="1.8.12" />
+    <PackageReference Include="Basic.Reference.Assemblies.Net100" Version="1.8.12" />
   </ItemGroup>
 </Project>
