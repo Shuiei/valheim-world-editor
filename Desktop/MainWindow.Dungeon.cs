@@ -133,7 +133,34 @@ public partial class MainWindow
 
 	internal async Task OpenGeneratedInWorkshop(DungeonGen.Settings settings)
 	{
-		var r = DungeonGen.Make(settings);
+		if (await WriteGeneratedBlueprint(settings, DungeonGen.Make(settings)) is string path)
+		{
+			await OpenWorkshop(path);
+		}
+	}
+
+	// The Workshop's Generate dungeon: the dungeon made onto the plot, alone (asking first when what is
+	// there is not saved) or added to it in its middle. Its blueprint stays in the Library.
+	internal async Task GeneratedOntoPlot(DungeonGen.Settings settings, DungeonGen.Result r, bool add)
+	{
+		if (await WriteGeneratedBlueprint(settings, r) is not string path)
+		{
+			return;
+		}
+		BuildPanel.RenderLibrary();
+		if (add)
+		{
+			AddToWorkshop(path, null);
+		}
+		else
+		{
+			await OpenWorkshop(path);
+		}
+	}
+
+	// A generated dungeon written as a blueprint; its file, or null when it could not be written (said).
+	private async Task<string?> WriteGeneratedBlueprint(DungeonGen.Settings settings, DungeonGen.Result r)
+	{
 		float mx = (r.Items.Min(i => i.Position.X) + r.Items.Max(i => i.Position.X)) / 2, mz = (r.Items.Min(i => i.Position.Z) + r.Items.Max(i => i.Position.Z)) / 2;
 		float my = r.Items.Min(i => i.Position.Y);
 		var objects = new System.Text.Json.Nodes.JsonArray();
@@ -150,7 +177,8 @@ public partial class MainWindow
 		}
 		try
 		{
-			string folder = Homestead.Folder();
+			// The Library's folder (Homestead's).
+			string folder = Blueprints.Status.Folder;
 			Directory.CreateDirectory(folder);
 			// A blueprint of that name already (one changed in the Workshop, perhaps): kept, this one numbered.
 			string path = Path.Combine(folder, Homestead.FileName(r.Name));
@@ -160,11 +188,12 @@ public partial class MainWindow
 			}
 			await File.WriteAllTextAsync(path, Homestead.Write(new System.Text.Json.Nodes.JsonObject { ["objects"] = objects }, r.Name, "Valheim World Editor", null, DateTime.Now,
 				$"A generated dungeon (seed {settings.Seed}): " + string.Join(" ", r.Notes), DungeonTags));
-			await OpenWorkshop(path);
+			return path;
 		}
 		catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
 		{
 			_message.Text = $"Could not write the dungeon's blueprint: {ex.Message}";
+			return null;
 		}
 	}
 }

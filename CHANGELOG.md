@@ -6,11 +6,18 @@ the plugin is unchanged in versions without that part.
 
 ## Unreleased
 
+### Added
+- **Generate dungeon** in the Workshop: the Build panel's Library has **Generate dungeon…**, the Dungeon
+  panel's generator (building pieces only), with **Open on the plot** (the dungeon alone) and **Add to
+  the plot** (with what is there, one undo step). Its blueprint is kept in the library, with what its
+  objects hold.
+
 ### Changed
 - The Windows package holds `ValheimWorldEditor.exe` with its four native libraries beside it (keep
   them together), and the program carries its details (name, description, author). Some antivirus
   programs flagged it: it unpacked those libraries to a temporary folder at each start, which looks
   like what a dropper does, and had no details.
+
 
 ## v1.17.0 — 2026-10-10
 

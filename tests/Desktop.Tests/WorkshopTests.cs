@@ -385,6 +385,70 @@ public class WorkshopTests
 		Assert.Equal(w.UnsavedBox.IsChecked == true, w.View.ShowNewMarkers);
 	}
 
+	// The Library's Generate dungeon: the Dungeon panel's generator in the Build panel, made of building
+	// pieces only (no "Made of", no Place in the world); Add to the plot puts it there with what is there
+	// (one undo step), Open on the plot alone (asked first: the plot is not saved); its blueprint is kept
+	// in the Library; back to the Library after.
+	[AvaloniaFact]
+	public async Task TheLibraryGeneratesADungeonOntoThePlot()
+	{
+		using var r = new PanelBlueprintsTests.Run();
+		var w = r.W;
+		r.Keep("Tower", "woodwall");
+		int asked = 0;
+		w.Ask = (_, _, _, _) => { asked++; return Task.FromResult(true); };
+		await w.OpenWorkshop(null);
+		var bp = w.BuildPanel;
+		bp.ShowLibrary(true);
+		bp.GenerateButton.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Avalonia.Controls.Button.ClickEvent));
+		Assert.True(bp.DungeonShown);
+		Assert.False(bp.LibraryShown);
+		Assert.Contains("on", bp.LibraryTab.Classes);
+		var g = bp.Dungeon;
+		Assert.False(((Avalonia.Controls.Control)g.Made.Parent!).IsVisible);
+		Assert.Null(g.Place.Parent);
+		Assert.True(g.OpenOnPlot.IsVisible && g.AddToPlot.IsVisible);
+		// Small and quick to make.
+		g.Size.SelectedIndex = 0;
+		g.Levels.SelectedIndex = 0;
+		await Until(g, () => g.AddToPlot.IsEnabled);
+		g.AddToPlot.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Avalonia.Controls.Button.ClickEvent));
+		await Until(g, () => Workshop.Pieces(w.Session!.Scene) > 1);
+		int pieces = Workshop.Pieces(w.Session!.Scene);
+		Assert.StartsWith("Added “", w.MessageText.Text);
+		// Its blueprint: every object (chests, creatures, torches too), the plot counts building pieces.
+		Assert.Contains(r.Listed, e => e.Tags.Contains("dungeon") && e.Pieces >= pieces);
+		Assert.Equal(0, asked);
+		w.Session.Undo();
+		Assert.Equal(0, Workshop.Pieces(w.Session.Scene));
+		w.Session.Redo();
+		// Open on the plot: the plot changed and is not saved, so asked; the dungeon alone on a new plot
+		// (its blueprint numbered: the first one is kept).
+		var before = w.Session;
+		g.OpenOnPlot.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Avalonia.Controls.Button.ClickEvent));
+		await Until(g, () => asked == 1 && w.InWorkshop && w.Session != before);
+		Assert.Equal(pieces, Workshop.Pieces(w.Session.Scene));
+		Assert.Equal(2, r.Listed.Count(e => e.Tags.Contains("dungeon")));
+		Assert.True(bp.DungeonShown);
+		bp.BackToLibrary.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Avalonia.Controls.Button.ClickEvent));
+		Assert.True(bp.LibraryShown);
+		Assert.False(bp.DungeonShown);
+		Assert.Equal(3, bp.LibraryList.Children.Count);
+	}
+
+	// Waits (a few seconds at most) for what the window does after a click, the generator's dungeon too.
+	private static async Task Until(DungeonGenPanel g, Func<bool> done)
+	{
+		for (int i = 0; i < 300 && !done(); i++)
+		{
+			Dispatcher.UIThread.RunJobs();
+			await g.Pending;
+			await Task.Delay(20);
+		}
+		Dispatcher.UIThread.RunJobs();
+		Assert.True(done());
+	}
+
 	// The support check's colours are the game's (WearNTear.Highlight): light blue on the ground, red to
 	// green as support grows, red when it breaks; and the cut hides the building above a height.
 	[AvaloniaFact]
