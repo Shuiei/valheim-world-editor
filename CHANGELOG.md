@@ -17,6 +17,13 @@ the plugin is unchanged in versions without that part.
   yours are kept, the status bar says so, and **Apply live** asks first: applying could erase what
   players did there. Undo your changes there and the game's ground comes in.
 
+### Fixed
+- Opening another world while the map or an area of the first was still being drawn no longer takes
+  that world's rivers and streams away (its ground came out without them), and the map reads its own
+  world's biomes. Making a world's ground while Regrow (or another world) runs no longer shifts its
+  rivers and streams away from the game's.
+- Ground is worked out a little faster (river lookups no longer walk long chains).
+
 ### WorldEditorBridge
 - `/watch`: one number per asked zone, which changes when an object there is made, removed or
   changed (not when a creature walks or a fire burns); `/zone`: the saved objects of the asked zones,
