@@ -1,9 +1,10 @@
 # Valheim World Editor: tests and build checks on every push and pull request.
 #   code-analysis  the editor (Core, Desktop) builds with no .NET analyzer warning (warnings are
 #                  errors) and is formatted as .editorconfig says (dotnet format)
-#   native-tests   the app's tests (tests/Desktop.Tests): its windows headless, the core (saves,
-#                  the world generator against the game's values, live mode against a stand-in
-#                  bridge), the SSH tunnel against a local sshd; the visual tests skip (no display).
+#   native-tests   the app's tests (tests/Desktop.Tests, built with warnings as errors): its windows
+#                  headless, the core (saves, the world generator against the game's values, live
+#                  mode against a stand-in bridge), the SSH tunnel against a local sshd; the visual
+#                  tests skip (no display).
 #                  Fail fast: the first failing test stops its run, a test stuck for 5 minutes ends
 #                  it, and the core and the windows run as two processes, one after the other (the
 #                  windows' run does not start when the core fails; half the memory each)
@@ -56,8 +57,8 @@ jobs:
           keys:
             - nuget-native-v1-{{ checksum "Desktop/ValheimWorldEditor.Desktop.csproj" }}-{{ checksum "tests/Desktop.Tests/Desktop.Tests.csproj" }}
       - run:
-          name: Build the tests
-          command: dotnet build tests/Desktop.Tests/Desktop.Tests.csproj -c Release
+          name: Build the tests (every warning is an error)
+          command: dotnet build tests/Desktop.Tests/Desktop.Tests.csproj -c Release -warnaserror
       # Fail fast: xUnit stops at the first failure (StopOnFail), a test stuck 5 minutes ends the run
       # (with a dump), and silence ends the step sooner than CircleCI's 10 minutes.
       - run:

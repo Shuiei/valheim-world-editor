@@ -30,14 +30,14 @@ public class GameFilesTests
 		var stores = Stores();
 		Assert.SkipUnless(stores != null, "needs Valheim and a game-look copy made by the old exporter");
 		var (bundles, copy) = stores!.Value;
-		var names = Directory.GetFiles(Path.Combine(LookModels, "pieces"), "*.json").Select(Path.GetFileNameWithoutExtension).Order(StringComparer.Ordinal).ToList();
+		var names = Directory.GetFiles(Path.Combine(LookModels, "pieces"), "*.json").Select(f => Path.GetFileNameWithoutExtension(f)).Order(StringComparer.Ordinal).ToList();
 		// A spread of every kind (pieces, objects, rooms), and the biggest room.
 		var sample = names.Where((_, i) => i % 25 == 0).Append("morkhalla_entrance02").Append("piece_workbench").Distinct().ToList();
 		var problems = new List<string>();
 		int parts = 0, textures = 0;
 		foreach (string name in sample)
 		{
-			var want = copy.LoadModel(name!);
+			var want = copy.LoadModel(name);
 			var got = bundles.LoadModel(name!);
 			if (want == null)
 			{

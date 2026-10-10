@@ -239,7 +239,7 @@ public class ParityEditorTests
 		// A new change, then its undo: each goes to the game by itself.
 		r.Raise(40, 40, "second");
 		await LiveTests.Until(() => r.Game.Terrain.Count == 2 && r.W.World.Pending == (0, 0, 0, 0));
-		r.W.Undo();
+		await r.W.Undo();
 		await LiveTests.Until(() => r.Game.Terrain.Count == 3 && r.W.World.Pending == (0, 0, 0, 0));
 		// Off: changes wait again.
 		r.W.AutoApplyBox.IsChecked = false;
@@ -502,7 +502,7 @@ public class ParityEditorTests
 		r.W.SetFollow(true);
 		Assert.True(r.W.Settings.AreaFollow);
 		Assert.Equal(1, r.Saves);
-		Assert.True(r.W.FollowButton.Classes.Contains("on"));
+		Assert.Contains("on", r.W.FollowButton.Classes);
 		Assert.Contains("Follow: the area moves", r.W.MessageText.Text);
 		// In the middle: stays.
 		LookAt(r.W, 0, 0);
