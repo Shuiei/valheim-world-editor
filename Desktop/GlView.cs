@@ -29,6 +29,9 @@ public sealed class GlView : OpenGlControlBase
 
 	internal ModelStore? Models => _models;
 
+	// The last frame-rate report (the test driver reads it).
+	internal Stats? LastStats { get; private set; }
+
 	// ---- Camera: orbit around a target point (view space), like the web editor's.
 	private readonly object _camLock = new();
 	private Vector3 _target;
@@ -262,7 +265,7 @@ public sealed class GlView : OpenGlControlBase
 			try
 			{
 				_lookFiles = GameLookGl.Read();
-				Status?.Invoke(_lookFiles == null ? "Game look not copied yet: plain colours (see the start page)." : "Game look loaded.");
+				Status?.Invoke(_lookFiles == null ? "Valheim was not found: plain colours (choose its folder on the start page)." : "Game look loaded.");
 			}
 			catch (Exception ex)
 			{
@@ -1608,6 +1611,7 @@ public sealed class GlView : OpenGlControlBase
 		{
 			_statsAt = now;
 			var st = new Stats(_frames.Count, _frames.Average(f => f.Work), _scene?.Things.Count ?? 0, _batches.Count, _batches.Sum(b => b.Instances), _pending);
+			LastStats = st;
 			Dispatcher.UIThread.Post(() => StatsChanged?.Invoke(st));
 		}
 	}

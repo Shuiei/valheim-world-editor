@@ -5,15 +5,12 @@ using Silk.NET.SPIRV.Cross;
 namespace TerrainEditor.App;
 
 // The terrain shader from a game copy without OpenGL programs (Valheim for Windows has Direct3D 11
-// and Vulkan only): the game-look copy writes the deferred pass's Vulkan program as SPIR-V, with its
-// names put back (heightmap.frag.spv, see tools/asset-export/vulkan_shader.py); this turns it into
-// the GLSL the OpenGL path makes (export_all.py convert_shader): plain uniforms, the four G-buffer
-// targets as globals, the ocean depth and the paint mask as varyings, main() renamed.
+// and Vulkan only): the deferred pass's Vulkan program as SPIR-V, with its names put back
+// (GameShader.FromVulkan), turned into the GLSL the OpenGL path makes (GameShader.FromOpenGl): plain
+// uniforms, the four G-buffer targets as globals, the ocean depth and the paint mask as varyings,
+// main() renamed.
 public static partial class TerrainShader
 {
-	public const string SpirvFile = "heightmap.frag.spv";
-	public const string GlslFile = "heightmap.frag.glsl";
-
 	private const string Header = """
 		// Valheim's terrain shader (Custom/Heightmap, deferred G-buffer pass), compiled by Unity for
 		// Vulkan, turned into GLSL by SPIRV-Cross and adapted like the OpenGL one: the four G-buffer
@@ -26,38 +23,6 @@ public static partial class TerrainShader
 		precision highp sampler2DArray;
 
 		""";
-
-	// The first line of a GLSL file made here: which version of this converter made it. A later editor
-	// with a changed converter makes it again from the kept SPIR-V (no new copy of the game's look).
-	public const int ConverterVersion = 1;
-	public static string Stamp => $"// Made from {SpirvFile} by the editor's converter {ConverterVersion}.";
-
-	// Whether the GLSL there was made by this converter (false: none, or from an older one).
-	public static bool IsCurrent(string terrainDir)
-	{
-		string glsl = Path.Combine(terrainDir, GlslFile);
-		if (!File.Exists(glsl))
-		{
-			return false;
-		}
-		using var reader = new StreamReader(glsl);
-		return reader.ReadLine() == Stamp;
-	}
-
-	// Turns terrain/heightmap.frag.spv into heightmap.frag.glsl; true when there was one to turn.
-	public static bool ConvertIn(string terrainDir)
-	{
-		string spv = Path.Combine(terrainDir, SpirvFile);
-		if (!File.Exists(spv))
-		{
-			return false;
-		}
-		string glsl = Stamp + "\n" + FromSpirv(File.ReadAllBytes(spv));
-		string tmp = Path.Combine(terrainDir, GlslFile + ".tmp");
-		File.WriteAllText(tmp, glsl);
-		File.Move(tmp, Path.Combine(terrainDir, GlslFile), overwrite: true);
-		return true;
-	}
 
 	public static string FromSpirv(byte[] spirv) => Adapt(CrossCompile(spirv));
 

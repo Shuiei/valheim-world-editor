@@ -18,7 +18,7 @@ public static class Program
 		TerrainEditor.App.Log.Start(BuildInfo.Version);
 		AppDomain.CurrentDomain.UnhandledException += (_, e) => Options.Say($"crash: {e.ExceptionObject}");
 		TaskScheduler.UnobservedTaskException += (_, e) => Options.Say($"error in a background task: {e.Exception}");
-		// Logging out, shutting down or `kill` (SIGTERM, SIGHUP): the tunnel and the game-look copy stop,
+		// Logging out, shutting down or `kill` (SIGTERM, SIGHUP): the tunnel closes,
 		// then the app ends (changes not saved are lost, as when the computer turns off).
 		using var term = System.Runtime.InteropServices.PosixSignalRegistration.Create(System.Runtime.InteropServices.PosixSignal.SIGTERM, Quit);
 		using var hup = System.Runtime.InteropServices.PosixSignalRegistration.Create(System.Runtime.InteropServices.PosixSignal.SIGHUP, Quit);
@@ -43,7 +43,6 @@ public static class Program
 		c.Cancel = true;
 		Options.Say($"quit: {c.Signal}");
 		TerrainEditor.App.Tunnel.Close();
-		TerrainEditor.App.GameLook.StopExport();
 		Avalonia.Threading.Dispatcher.UIThread.Post(() => (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.Shutdown());
 	}
 }

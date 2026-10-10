@@ -414,6 +414,9 @@ public static class Driver
 			pins = w.MapPage?.Map.Pins.Count ?? 0,
 			matches = w.MapPage?.Matches.Count ?? 0,
 			detail = w.MapPage?.Map.DetailShown ?? false,
+			models = w.View.Models != null,
+			modelParts = w.View.LastStats?.Instances ?? 0,
+			modelsLoading = w.View.LastStats?.PendingModels ?? 0,
 		});
 	}
 }

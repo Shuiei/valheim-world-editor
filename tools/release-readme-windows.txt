@@ -13,10 +13,9 @@ Documentation: https://github.com/Shuiei/valheim-world-editor
      Windows may show "Windows protected your PC" the first time (the program is not signed):
      click "More info", then "Run anyway".
   3. The editor opens in its own window, on the start page. It lists the worlds of this computer.
-     The first time, a bar shows it copying the game's look (textures and models) from your
-     Valheim install: a few minutes, only once (and again after a Valheim update). You can already
-     open a world meanwhile.
-     If Valheim is not found, the bar asks for its folder: the one Steam installed it into, with
+     It reads the game's look (textures and models) from your Valheim install, nothing is copied:
+     the first time (and after a Valheim update) it reads the game's files for a few seconds.
+     If Valheim is not found, the start page asks for its folder: the one Steam installed it into, with
      valheim_Data, usually C:\Program Files (x86)\Steam\steamapps\common\Valheim.
 
   Nothing else to install. The editor draws with your graphics card's OpenGL, or through Direct3D
