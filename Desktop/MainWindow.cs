@@ -45,6 +45,8 @@ public sealed partial class MainWindow : Window
 	private readonly Border _pendingPill = new() { CornerRadius = new CornerRadius(999), BorderThickness = new Thickness(1), Padding = new Thickness(9, 4), VerticalAlignment = VerticalAlignment.Center };
 	private readonly TextBlock _selection = new() { FontSize = 12, Foreground = new SolidColorBrush(Color.FromRgb(224, 166, 75)), TextWrapping = TextWrapping.Wrap };
 	private ModelStore? _models;
+	// The game's models being opened at start (the bundles indexed the first time: a few seconds).
+	private Task<ModelStore?>? _modelsLoading;
 	// The file pickers' patterns.
 	private static readonly string[] BlueprintPatterns = { "*.blueprint", "*.vbuild" }, PicturePatterns = { "*.png", "*.jpg", "*.jpeg", "*.bmp", "*.webp" }, PngPatterns = { "*.png" };
 	private string ThingName(WorldScene.Thing t) => _models?.NameOf(t.Prefab) ?? TerrainEditor.Terrain.PrefabCatalog.DisplayName(t.Prefab) ?? t.Prefab.ToString();
@@ -251,6 +253,11 @@ public sealed partial class MainWindow : Window
 
 	internal async Task ShowEditor(WorldScene scene)
 	{
+		if (_models == null && _modelsLoading != null)
+		{
+			_models = await _modelsLoading;
+			_modelsLoading = null;
+		}
 		_models ??= await Task.Run(ModelStore.Open);
 		ResetWorkshop();
 		// Lines and shapes drawn in the last area are left behind.
@@ -259,7 +266,7 @@ public sealed partial class MainWindow : Window
 		_view.Tape.Clear();
 		PlaceTool.ClearShape();
 		Inspector.Close();
-		_info.Text = scene.LoadInfo + (_models == null ? "\nNo game models copied yet: boxes stand in until the game's look is copied (see the start page)." : "");
+		_info.Text = scene.LoadInfo + (_models == null ? "\nNo game models: Valheim was not found, boxes stand in (choose its folder on the start page)." : "");
 		_view.Show(scene, _models);
 		if (scene.Session != null)
 		{
@@ -2124,6 +2131,10 @@ public sealed partial class MainWindow : Window
 			// The game's look: copied from the player's Valheim when missing or after a game update
 			// (when driven by the tests, only whether it is there: they never copy from the game).
 			GameLook.Check(_settings, export: !Options.Driver);
+			if (!Options.Driver)
+			{
+				_modelsLoading = Task.Run(ModelStore.Open);
+			}
 			if (Options.Direct)
 			{
 				// --world (and --zone): that area in the 3D editor at once.

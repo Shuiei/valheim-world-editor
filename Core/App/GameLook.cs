@@ -4,10 +4,10 @@ using System.Text.RegularExpressions;
 
 namespace TerrainEditor.App;
 
-// The game's own look (terrain shader and textures, map textures, models) is copied from the user's
-// own Valheim install, never shipped: this finds the install, runs the bundled exporter
-// (export-game-files/export_all.py with its own Python runtime) in the background, and redoes it
-// after a game update. The files go to a per-user folder (Dir) that the editor reads them from.
+// The game's own look (terrain shader and textures, map textures; models are read from the game's
+// bundles, see GameBundles) is copied from the user's own Valheim install, never shipped: this finds
+// the install, runs the bundled exporter (export-game-files/export_all.py with its own Python runtime)
+// in the background, and redoes it after a game update. The files go to a per-user folder (Dir) that the editor reads them from.
 public static class GameLook
 {
 	public const int ValheimAppId = 892970;
@@ -59,8 +59,7 @@ public static class GameLook
 	public static bool Present()
 	{
 		static bool Complete(string root) =>
-			File.Exists(Path.Combine(root, "terrain", "heightmap.frag.glsl")) && File.Exists(Path.Combine(root, "maptex", "background.png"))
-			&& File.Exists(Path.Combine(root, "models", "objects.json"));
+			File.Exists(Path.Combine(root, "terrain", "heightmap.frag.glsl")) && File.Exists(Path.Combine(root, "maptex", "background.png"));
 		return Complete(Dir);
 	}
 
@@ -145,7 +144,8 @@ public static class GameLook
 				UseShellExecute = false,
 				CreateNoWindow = true,
 			};
-			foreach (string a in new[] { "-u", script, "--valheim", valheim, "--out", Dir, "--work", Path.Combine(AppSettings.UserDataDir, "export-cache") })
+			// The terrain and the map only: models are read from the game's bundles (GameBundles).
+			foreach (string a in new[] { "-u", script, "--valheim", valheim, "--out", Dir, "--work", Path.Combine(AppSettings.UserDataDir, "export-cache"), "--only", "terrain", "--only", "map" })
 			{
 				psi.ArgumentList.Add(a);
 			}

@@ -28,7 +28,9 @@ them from the player's own Valheim install, on their computer.
   native build of it, turns the terrain shader from Valheim for Windows into GLSL.
 - Libraries the editor is built with, each under its own license: [Avalonia](https://github.com/AvaloniaUI/Avalonia)
   (MIT), [Silk.NET](https://github.com/dotnet/Silk.NET) (MIT), [SSH.NET](https://github.com/sshnet/SSH.NET)
-  (MIT) and [Roslyn](https://github.com/dotnet/roslyn) (MIT), for scripts.
+  (MIT), [Roslyn](https://github.com/dotnet/roslyn) (MIT), for scripts, and, to read the game's models
+  and textures from its own files, [AssetsTools.NET](https://github.com/nesrak1/AssetsTools.NET) (MIT)
+  and [BCnEncoder.NET](https://github.com/Nominom/BCnEncoder.NET) (MIT or Unlicense).
 - The game-look exporter in the release packages runs on a bundled [Python](https://www.python.org/)
   (Python Software Foundation License) with [UnityPy](https://github.com/K0lb3/UnityPy) (MIT) and the packages it needs, each under its own
   license.
