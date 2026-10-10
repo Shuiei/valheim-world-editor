@@ -2,7 +2,7 @@
 # Build the release packages (no source code, no game files) into <dist>, one per system:
 #   ValheimWorldEditor-<version>-linux-x64.tar.gz   the app (one program file, Desktop/) and its
 #   ValheimWorldEditor-<version>-win-x64.zip        README; it reads the game's look from Valheim itself
-# Usage: tools/release.sh <dist>   (needs dotnet 8, tar, zip)
+# Usage: tools/release.sh <dist>   (needs the .NET 10 SDK, tar, zip)
 # The version is the VERSION file's (the editor's and the plugin's); the packages are named v<version>.
 # The WorldEditorBridge plugin is released on its own (tools/thunderstore.sh: WorldEditorBridge-<version>.zip,
 # on the release page, Thunderstore and Hexium), not inside the editor's packages.

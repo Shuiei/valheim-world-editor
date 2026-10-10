@@ -8,11 +8,12 @@ namespace TerrainEditor.Desktop.Tests;
 // changes going in as one undo step.
 public class ScriptTests
 {
-	private static ScriptHost.Changes Run(EditSession s, string code, CancellationToken cancel = default)
+	// Stopped by the token given, else with the test (when the run is cancelled).
+	private static ScriptHost.Changes Run(EditSession s, string code, CancellationToken? cancel = null)
 	{
 		var (image, pdb, errors) = ScriptHost.Compile(code);
 		Assert.True(image != null, string.Join("\n", errors));
-		return ScriptHost.Run(image!, pdb, ScriptHost.Take(s, p => TerrainEditor.Terrain.PrefabCatalog.NameOf(p)), cancel);
+		return ScriptHost.Run(image!, pdb, ScriptHost.Take(s, p => TerrainEditor.Terrain.PrefabCatalog.NameOf(p)), cancel ?? TestContext.Current.CancellationToken);
 	}
 
 	private static float At(EditSession s, float x, float z) => s.Ground.HeightOf((int)(z + 32) * s.Ground.W + (int)(x + 32));

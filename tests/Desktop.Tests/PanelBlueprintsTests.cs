@@ -83,7 +83,7 @@ public class PanelBlueprintsTests
 		r.Keep("Hut", "woodwall");
 		Click(r.W.Tools.BlueprintsButton);
 		Assert.Equal(ToolMode.Blueprints, r.W.Tools.Mode);
-		Assert.True(r.W.Tools.BlueprintsButton.Classes.Contains("on"));
+		Assert.Contains("on", r.W.Tools.BlueprintsButton.Classes);
 		Assert.True(r.B.Card.IsVisible);
 		// In the left column, next to the rail, where the tools' options are.
 		Assert.Same(r.W.Tools.Rail.Parent, r.B.Card.Parent);
@@ -91,7 +91,7 @@ public class PanelBlueprintsTests
 		// Another tool replaces it.
 		r.W.Tools.ChooseMode(ToolMode.Path);
 		Assert.False(r.B.Card.IsVisible);
-		Assert.False(r.W.Tools.BlueprintsButton.Classes.Contains("on"));
+		Assert.DoesNotContain("on", r.W.Tools.BlueprintsButton.Classes);
 		// The Area tool's Blueprints… opens it too; ✕ goes back to View.
 		r.W.AreaPanel.LibraryButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
 		Dispatcher.UIThread.RunJobs();

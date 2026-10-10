@@ -75,7 +75,7 @@ public class PanelInspectorTests
 		var free = r.I.FreeSlot()!.Value;
 		var slot = grid.Children.OfType<Button>().First(b => Grid.GetColumn(b) == free.X && Grid.GetRow(b) == free.Y);
 		Click(slot);
-		var pick = r.I.ItemsBox.GetLogicalDescendants().OfType<AutoCompleteBox>().First(b => b.Watermark == "Find an item…");
+		var pick = r.I.ItemsBox.GetLogicalDescendants().OfType<AutoCompleteBox>().First(b => b.PlaceholderText == "Find an item…");
 		pick.Text = "Coins";
 		pick.SelectedItem = "Coins";
 		Dispatcher.UIThread.RunJobs();

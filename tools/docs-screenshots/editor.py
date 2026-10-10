@@ -106,7 +106,7 @@ class Editor:
             plugins.mkdir(parents=True, exist_ok=True)
             shutil.copy(homestead, plugins / "Homestead.dll")
         env = dict(os.environ, HOME=str(self.home), XDG_DATA_HOME=str(data), XDG_CONFIG_HOME=str(self.home / ".config"))
-        app = app or REPO / "Desktop" / "bin" / "Debug" / "net8.0" / "ValheimWorldEditor.dll"
+        app = app or REPO / "Desktop" / "bin" / "Debug" / "net10.0" / "ValheimWorldEditor.dll"
         cmd = ["dotnet", str(app)] if str(app).endswith(".dll") else [str(app)]
         cmd += ["--driver", "--window", f"{width}x{height}"]
         self.width = width

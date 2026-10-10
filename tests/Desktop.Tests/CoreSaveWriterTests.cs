@@ -9,7 +9,7 @@ namespace WorldEditor.Tests;
 // back the same (the read-back check restores the backup).
 public class CoreSaveWriterTests
 {
-	private static Dictionary<string, byte[]> Files(string dir) => Directory.GetFiles(dir).ToDictionary(Path.GetFileName, File.ReadAllBytes)!;
+	private static Dictionary<string, byte[]> Files(string dir) => Directory.GetFiles(dir).ToDictionary(f => Path.GetFileName(f), File.ReadAllBytes);
 
 	private static void AssertSame(Dictionary<string, byte[]> before, string dir)
 	{

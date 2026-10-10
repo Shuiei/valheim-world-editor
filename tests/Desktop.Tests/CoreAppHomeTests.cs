@@ -547,7 +547,7 @@ public sealed class CoreAppHomeTests : IDisposable
 			var s = c.GetStream();
 			await s.WriteAsync(Encoding.ASCII.GetBytes("HTTP/1.1 400 Bad Request\r\n\r\n"));
 			await Task.Delay(200);
-		});
+		}, TestContext.Current.CancellationToken);
 		try
 		{
 			File.WriteAllText(Local("key"), TestKey);

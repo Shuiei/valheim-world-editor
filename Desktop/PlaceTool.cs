@@ -630,7 +630,7 @@ public sealed class PlaceTool
 
 	// Places pieces end to end along one run, from its start; on a slope each one is a little higher or
 	// lower than the last, touching it. k: pieces placed so far.
-	private int SnappedRun(WorldScene s, List<Vector2> pts, IReadOnlyList<string> names, int k, List<Placement> outp, Func<int, float>? mask, List<Other>? others)
+	private int SnappedRun(WorldScene s, List<Vector2> pts, List<string> names, int k, List<Placement> outp, Func<int, float>? mask, List<Other>? others)
 	{
 		if (pts.Count < 2)
 		{
@@ -758,7 +758,9 @@ public sealed class PlaceTool
 			{
 				Vector2 a = c[sgi - 1], b = c[sgi];
 				float len = Vector2.Distance(a, b);
-				while (next <= walked + len + 1e-6f)
+				// 1 mm of slack: a line a whole number of spacings long gets its end piece whatever the
+				// rounding of the points picked on the ground.
+				while (next <= walked + len + 1e-3f)
 				{
 					float t = len > 0 ? (next - walked) / len : 0, dx = (b.X - a.X) / (len == 0 ? 1 : len), dz = (b.Y - a.Y) / (len == 0 ? 1 : len);
 					var d = DrawAt(i);

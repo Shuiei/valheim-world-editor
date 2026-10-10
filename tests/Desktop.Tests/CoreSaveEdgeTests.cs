@@ -11,7 +11,7 @@ namespace WorldEditor.Tests;
 public class SaveEdgeTests
 {
 	// Every file of the folder, by name.
-	private static Dictionary<string, byte[]> Files(string dir) => Directory.GetFiles(dir).ToDictionary(Path.GetFileName, File.ReadAllBytes)!;
+	private static Dictionary<string, byte[]> Files(string dir) => Directory.GetFiles(dir).ToDictionary(f => Path.GetFileName(f), File.ReadAllBytes);
 
 	private static void AssertSame(Dictionary<string, byte[]> before, string dir)
 	{

@@ -37,7 +37,7 @@ public static class ScriptHost
 		var user = Tree(code, "script");
 		var compilation = CSharpCompilation.Create("Script" + Guid.NewGuid().ToString("N")[..8],
 			new[] { Tree(Api.Value, "api"), Tree(Usings, "usings"), user },
-			Basic.Reference.Assemblies.Net80.References.All,
+			Basic.Reference.Assemblies.Net100.References.All,
 			new CSharpCompilationOptions(OutputKind.ConsoleApplication, optimizationLevel: OptimizationLevel.Release, nullableContextOptions: NullableContextOptions.Disable));
 		using var ms = new MemoryStream();
 		using var pdb = new MemoryStream();

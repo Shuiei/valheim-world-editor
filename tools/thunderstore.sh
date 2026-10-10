@@ -6,7 +6,7 @@
 # repository's LICENSE (MIT).
 # The same zip goes to the GitHub release, Thunderstore and Hexium; the editor itself is on GitHub
 # releases only (Thunderstore does not host programs).
-# Usage: tools/thunderstore.sh <dist>   (needs dotnet 8, zip, python3; the plugin builds against the
+# Usage: tools/thunderstore.sh <dist>   (needs the .NET 10 SDK, zip, python3; the plugin builds against the
 # game's and BepInEx's DLLs, see its project file)
 # Upload the zip at https://thunderstore.io/c/valheim/create/
 set -euo pipefail

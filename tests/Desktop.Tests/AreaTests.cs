@@ -145,7 +145,7 @@ public class AreaTests
 	}
 
 	[AvaloniaFact]
-	public async Task ReplacePutsAnotherKindInTheSamePlaces()
+	public void ReplacePutsAnotherKindInTheSamePlaces()
 	{
 		var (w, s) = Open();
 		var p = w.AreaPanel;

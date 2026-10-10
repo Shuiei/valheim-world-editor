@@ -121,14 +121,14 @@ public sealed class ParityPrefsTests : IDisposable
 		Assert.False(File.Exists(File1));
 		for (int i = 0; i < 50 && !File.Exists(File1); i++)
 		{
-			await Task.Delay(100);
+			await Task.Delay(100, TestContext.Current.CancellationToken);
 		}
 		Assert.Equal(19, Prefs.Load(File1).Get("n", -1));
 		// Removing writes too.
 		p.Remove("n");
 		for (int i = 0; i < 50 && Prefs.Load(File1).Has("n"); i++)
 		{
-			await Task.Delay(100);
+			await Task.Delay(100, TestContext.Current.CancellationToken);
 		}
 		Assert.False(Prefs.Load(File1).Has("n"));
 	}

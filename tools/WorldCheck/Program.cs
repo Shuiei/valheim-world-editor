@@ -153,7 +153,7 @@ switch (args[0])
 			var e3 = new TerrainEditor.Editing.ZoneEdit(150, 150);
 			e3.Modified[5] = true; e3.Level[5] = 3f;
 			store.Put(e3);
-			var hashesBefore = Directory.GetFiles(world.Directory, "*.chunk").ToDictionary(Path.GetFileName, f => Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(f))));
+			var hashesBefore = Directory.GetFiles(world.Directory, "*.chunk").ToDictionary(f => Path.GetFileName(f), f => Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(f))));
 			var result = WorldWriter.Save(world, store.All().Where(z => z.Changed).ToList());
 			Console.WriteLine($"Result: saved={result.Saved} '{result.Message}' written={result.ZonesWritten} created={result.ZonesCreated} skipped=[{string.Join("; ", result.Skipped)}]");
 			Console.WriteLine($"Backup: {result.BackupDirectory}");
@@ -164,7 +164,7 @@ switch (args[0])
 			Console.WriteLine($"Existing zone ({exist.ZoneX},{exist.ZoneZ}): point 0 level {z1.LevelDelta[0]}, point 299 {z1.LevelDelta[299]}, paint 2000 {z1.Paint[2000]}; untouched point 4000 same as before: {z1.LevelDelta[4000] == exist.LevelDelta[4000] && z1.ModifiedHeight[4000] == exist.ModifiedHeight[4000]}");
 			Console.WriteLine($"New zone ({fresh.zx},{fresh.zz}): {(z2 == null ? "MISSING" : $"found in {z2.Source!.File.FileName}, point 2050 level {z2.LevelDelta[2050]} smooth {z2.SmoothDelta[2050]}, {z2.ModifiedHeight.Count(m => m)} edited points")}");
 			Console.WriteLine($"Ungenerated zone (150,150) written: {after.TerrainZones.Any(t => t.ZoneX == 150 && t.ZoneZ == 150)}");
-			var hashesAfter = Directory.GetFiles(world.Directory, "*.chunk").ToDictionary(Path.GetFileName, f => Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(f))));
+			var hashesAfter = Directory.GetFiles(world.Directory, "*.chunk").ToDictionary(f => Path.GetFileName(f), f => Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(f))));
 			int same = hashesBefore.Count(kv => hashesAfter.TryGetValue(kv.Key, out var h) && h == kv.Value);
 			Console.WriteLine($"Chunk files byte-identical to before: {same} of {hashesBefore.Count}; new files: {string.Join(", ", hashesAfter.Keys.Except(hashesBefore.Keys))}; removed: {string.Join(", ", hashesBefore.Keys.Except(hashesAfter.Keys))}");
 			Console.WriteLine($"Main files now: {string.Join(", ", Directory.GetFiles(world.Directory, "_main.*").Select(Path.GetFileName).OrderBy(n => n))}");
@@ -211,6 +211,5 @@ switch (args[0])
 
 static ValheimGen.WorldGenerator Look(string seedName)
 {
-	ValheimGen.WorldGenerator.Initialize(new ValheimGen.World { m_seedName = seedName, m_seed = WorldCreator.SeedOf(seedName), m_worldGenVersion = WorldCreator.WorldGenVersion });
-	return ValheimGen.WorldGenerator.instance;
+	return ValheimGen.WorldGenerator.Create(new ValheimGen.World { m_seedName = seedName, m_seed = WorldCreator.SeedOf(seedName), m_worldGenVersion = WorldCreator.WorldGenVersion });
 }
