@@ -78,7 +78,6 @@ public class WorldGenerator
 
 	private Dictionary<Vector2i, RiverPoint[]> m_riverPoints = new Dictionary<Vector2i, RiverPoint[]>();
 
-
 	private List<Heightmap.Biome> m_biomes = new List<Heightmap.Biome>();
 
 	private static FastNoise m_noiseGen;
@@ -185,11 +184,16 @@ public class WorldGenerator
 
 	public static WorldGenerator instance => m_instance;
 
-	public static void Initialize(World world)
+	// A generator for the world, also the current one (instance). The previous one is left as it is:
+	// another world's map or area may still be reading it (clearing its rivers took them away there).
+	public static WorldGenerator Create(World world)
 	{
-		m_instance?.CleanCachedRiverData();
-		m_instance = new WorldGenerator(world);
+		var made = new WorldGenerator(world);
+		m_instance = made;
+		return made;
 	}
+
+	public static void Initialize(World world) => Create(world);
 
 	public static void Deitialize()
 	{
@@ -203,6 +207,16 @@ public class WorldGenerator
 		s_cachedBiomes.Clear();
 		m_version = m_world.m_worldGenVersion;
 		VersionSetup(m_version);
+		// Unity's Random is one state for the whole program: held while it is seeded and drawn from here
+		// (rivers and streams too), so a regrow or another world being made meanwhile cannot shift it.
+		lock (UnityEngine.Random.Lock)
+		{
+			Seed();
+		}
+	}
+
+	private void Seed()
+	{
 		UnityEngine.Random.State state = UnityEngine.Random.state;
 		UnityEngine.Random.InitState(m_world.m_seed);
 		if (m_noiseGen == null)
@@ -619,7 +633,8 @@ public class WorldGenerator
 
 	// The game keeps the last grid cell's points in a cache behind a lock; here many threads ask at once
 	// (maps, areas), and that cache made them evict each other and wait on the lock (several times
-	// slower). The points are only read once the world is made: read straight from the dictionary.
+	// slower). The points are only written while this generator is made (each world has its own): read
+	// straight from the dictionary (Vector2i's hash spreads the cells: a lookup is cheap).
 	private void GetRiverWeight(float wx, float wy, out float weight, out float width)
 	{
 		if (m_riverPoints.TryGetValue(GetRiverGrid(wx, wy), out var value))

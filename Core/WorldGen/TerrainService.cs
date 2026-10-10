@@ -30,12 +30,15 @@ public sealed class TerrainService
 	{
 		_modifiers = modifiers;
 		World world = new() { m_seed = save.Seed, m_seedName = save.SeedName, m_worldGenVersion = save.WorldGenVersion };
-		WorldGenerator.Initialize(world);
-		_gen = WorldGenerator.instance;
+		// Its own generator (another world's, made meanwhile, is not this one's).
+		_gen = WorldGenerator.Create(world);
 		_overviewPng = new Lazy<byte[]>(() => RenderOverview(overviewSize), LazyThreadSafetyMode.ExecutionAndPublication);
 	}
 
 	public int OverviewSize { get; } = 1024;
+
+	// The world's generator (biomes, rivers): this world's, whatever was made after it.
+	public WorldGenerator Generator => _gen;
 
 	public byte[] OverviewPng => _overviewPng.Value;
 

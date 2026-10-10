@@ -4,6 +4,15 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## Unreleased
+
+### Fixed
+- Opening another world while the map or an area of the first was still being drawn no longer takes
+  that world's rivers and streams away (its ground came out without them), and the map reads its own
+  world's biomes. Making a world's ground while Regrow (or another world) runs no longer shifts its
+  rivers and streams away from the game's.
+- Ground is worked out a little faster on one thread (zones about 12% faster).
+
 ## v1.15.6 — 2026-10-09
 
 ### Fixed

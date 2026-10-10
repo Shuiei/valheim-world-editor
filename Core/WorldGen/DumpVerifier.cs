@@ -25,7 +25,16 @@ public static class DumpVerifier
 		return $"{s.s0:x8} {s.s1:x8} {s.s2:x8} {s.s3:x8}";
 	}
 
+	// (Unity's Random is the whole program's: held for the whole check, which draws from it line by line.)
 	public static Result Run(string path, string seedName)
+	{
+		lock (Rnd.Lock)
+		{
+			return RunLocked(path, seedName);
+		}
+	}
+
+	private static Result RunLocked(string path, string seedName)
 	{
 		string[] lines = File.ReadAllLines(path);
 		int rOk = 0, rBad = 0, pOk = 0, pBad = 0, hOk = 0, hBad = 0, bBad = 0, zOk = 0, zBad = 0, wBad = 0;

@@ -39,11 +39,13 @@ public sealed class MapData
 	{
 		_terrain = terrain;
 		_edits = edits;
-		_gen = WorldGenerator.instance;
+		_gen = terrain.Generator;
 		_global = new Lazy<Layers>(BuildGlobal, LazyThreadSafetyMode.ExecutionAndPublication);
 	}
 
 	public Layers Global => _global.Value;
+
+	internal WorldGenerator GeneratorForTests => _gen;
 
 	private static byte Byte(float v) => (byte)Math.Clamp((int)Math.Round(v * 255f), 0, 255);
 

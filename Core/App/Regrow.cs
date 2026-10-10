@@ -73,8 +73,6 @@ public static class Regrow
 	// One object the game would place: prefab, Unity world position, Euler rotation (degrees), scale.
 	public sealed record Spot(string Name, float X, float Y, float Z, float Rx, float Ry, float Rz, float Scale);
 
-	// Unity's Random is one shared state: one regrow at a time (the terrain generator uses it too, once).
-	private static readonly object RandomLock = new();
 
 	// What the game would place in zones x0..x1, z0..z1 on the current ground. Kinds the editor cannot
 	// create (no networked object) are left out by the caller.
@@ -84,7 +82,8 @@ public static class Regrow
 		var (w, h, heights) = HeightGrid.Read(terrain, edits, x0 - 1, z0 - 1, x1 + 1, z1 + 1);
 		Ground ground = new(heights, w, h, (x0 - 1) * 64f - 32f, (z0 - 1) * 64f - 32f);
 		List<Spot> spots = new();
-		lock (RandomLock)
+		// Unity's Random is one shared state (the world generator uses it too): one at a time.
+		lock (Rnd.Lock)
 		{
 			Rnd.State saved = Rnd.state;
 			try
