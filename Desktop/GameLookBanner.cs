@@ -9,8 +9,8 @@ namespace TerrainEditor.Desktop;
 
 // The game's look (terrain textures, map textures, models) is read from the player's own Valheim
 // (GameLook): the start page's card that follows it. While its files are first read (indexed), a
-// word; when Valheim is not found, a field to choose its folder; when it failed, Try again; once it
-// is done, a word that the next area opened has it. Hidden when there is nothing to say.
+// word; when Valheim is not found, how to find its folder and a field to choose it; when it failed,
+// Try again; once it is done, a word that the next area opened has it. Hidden when there is nothing to say.
 public sealed class GameLookBanner
 {
 	public Control View => _card;
@@ -32,6 +32,7 @@ public sealed class GameLookBanner
 	internal Func<Task<bool>> OpenLog { get; set; } = () => Task.FromResult(false);
 	internal TextBlock Error { get; } = new() { Foreground = new SolidColorBrush(Color.FromRgb(224, 96, 75)), TextWrapping = TextWrapping.Wrap, FontSize = 12 };
 	internal TextBlock Hint { get; } = Ui.Hint("");
+	internal TextBlock Steps { get; } = new() { Text = SetupSteps(OperatingSystem.IsWindows()), TextWrapping = TextWrapping.Wrap, FontSize = 12.5, LineHeight = 19 };
 	internal Grid PathRow { get; }
 
 	// Tests: the game look's state, choosing the game folder, and the folder picker.
@@ -45,7 +46,7 @@ public sealed class GameLookBanner
 		Grid.SetColumn(Browse, 1);
 		Grid.SetColumn(Use, 2);
 		PathRow = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto,Auto"), ColumnSpacing = 6, Children = { PathBox, Browse, Use } };
-		_card = Ui.Card(new StackPanel { Spacing = 6, Children = { Title, Message, Bar, LastLine, PathRow, new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = { Retry, ShowLog } }, Error, Hint } });
+		_card = Ui.Card(new StackPanel { Spacing = 6, Children = { Title, Message, Steps, Bar, LastLine, PathRow, new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = { Retry, ShowLog } }, Error, Hint } });
 		_card.Margin = new Thickness(0, 10, 0, 0);
 		_card.IsVisible = false;
 		PathBox.Tip("look.path");
@@ -61,6 +62,17 @@ public sealed class GameLookBanner
 		_card.AttachedToVisualTree += (_, _) => { Refresh(); _timer.Start(); };
 		_card.DetachedFromVisualTree += (_, _) => _timer.Stop();
 	}
+
+	// How to find the game folder, for this system.
+	internal static string SetupSteps(bool windows) => string.Join("\n", new[]
+	{
+		"1. Install Valheim with Steam on this computer (owning it is enough: the editor needs its files, not the game running).",
+		"2. In Steam, right-click Valheim in your Library, then Manage › Browse local files. The folder that opens is the one to choose: it holds valheim_Data.",
+		windows
+			? "3. Usually: C:\\Program Files (x86)\\Steam\\steamapps\\common\\Valheim, or <your Steam library>\\steamapps\\common\\Valheim on another drive."
+			: "3. Usually: ~/.local/share/Steam/steamapps/common/Valheim (Flatpak Steam: ~/.var/app/com.valvesoftware.Steam/.local/share/Steam/steamapps/common/Valheim), or <your Steam library>/steamapps/common/Valheim.",
+		"4. Paste it below or use Browse…, then Use. A folder near it works too (steamapps, common, valheim_Data).",
+	});
 
 	internal void Start(string? folder)
 	{
@@ -80,7 +92,7 @@ public sealed class GameLookBanner
 		var s = Read();
 		bool changed = s.State != _state;
 		_state = s.State;
-		Bar.IsVisible = LastLine.IsVisible = PathRow.IsVisible = Retry.IsVisible = ShowLog.IsVisible = false;
+		Bar.IsVisible = LastLine.IsVisible = PathRow.IsVisible = Retry.IsVisible = ShowLog.IsVisible = Steps.IsVisible = false;
 		switch (s.State)
 		{
 			case "running":
@@ -95,12 +107,12 @@ public sealed class GameLookBanner
 			case "missing":
 				Title.Text = "Get the game's look";
 				Message.Text = s.Message ?? "Valheim was not found on this computer.";
-				PathRow.IsVisible = true;
+				PathRow.IsVisible = Steps.IsVisible = true;
 				if (changed && string.IsNullOrEmpty(PathBox.Text))
 				{
 					PathBox.Text = s.Valheim ?? "";
 				}
-				Hint.Text = "Choose the folder Steam installed Valheim into (the one with valheim_Data): the editor reads the game's textures and models from it (nothing is copied). Without it the editor works with plain colours and no models.";
+				Hint.Text = "The editor only reads the game's files (nothing is copied or changed). Without them it works too, with plain colours and boxes instead of the game's textures and models. The folder can be changed later in Settings.";
 				break;
 			case "failed":
 				Title.Text = "The game's look could not be read";

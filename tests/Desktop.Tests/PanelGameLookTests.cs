@@ -6,8 +6,9 @@ using Xunit;
 namespace TerrainEditor.Desktop.Tests;
 
 // The start page's game-look card: hidden while the look is there, the copy's progress while it
-// runs, the Valheim folder to choose when the game is not found, Try again when the copy failed, and
-// a word once it is done; and a changed game folder in Settings checking the look again. The copy
+// runs, how to find the Valheim folder and a field to choose it when the game is not found, Try again
+// when the copy failed, and a word once it is done; a folder near the game taken as the game folder;
+// and a changed game folder in Settings checking the look again. The copy
 // itself never runs here: the card is given the states.
 // Alone (DataDir): it swaps SettingsDialog.CheckGameLook, which other tests' Settings call too.
 [Collection("DataDir")]
@@ -42,6 +43,7 @@ public class PanelGameLookTests
 		Assert.Equal(0.04, b.Bar.Value, 3);
 		Assert.Equal("scan: 10/100 bundles", b.LastLine.Text);
 		Assert.Contains("You can already pick a world", b.Hint.Text);
+		Assert.False(b.Steps.IsVisible);
 		// Its progress follows.
 		set(new("running", null, "/games/valheim", "120/400 models", 0.6));
 		b.Refresh();
@@ -64,6 +66,9 @@ public class PanelGameLookTests
 		Assert.True(b.View.IsVisible);
 		Assert.Equal("Get the game's look", b.Title.Text);
 		Assert.True(b.PathRow.IsVisible);
+		// How to find the folder, step by step.
+		Assert.True(b.Steps.IsVisible);
+		Assert.Contains("Manage › Browse local files", b.Steps.Text);
 		Assert.False(b.Bar.IsVisible);
 		Assert.False(b.Retry.IsVisible);
 		// Nothing typed: says what to choose, starts nothing.
@@ -216,6 +221,40 @@ public class PanelGameLookTests
 		Assert.True(page.PathError.IsVisible);
 		page.PathError.Text = "";
 		Assert.False(page.PathError.IsVisible);
+	}
+
+	[Fact]
+	public void AFolderNearTheGameLeadsToIt()
+	{
+		string root = Path.Combine(Path.GetTempPath(), "vwe-steam-" + Guid.NewGuid().ToString("N")[..8]);
+		string game = Path.Combine(root, "steamapps", "common", "Valheim");
+		Directory.CreateDirectory(Path.Combine(game, "valheim_Data", "StreamingAssets", "SoftRef", "Bundles"));
+		try
+		{
+			foreach (string chosen in new[] { game, game + Path.DirectorySeparatorChar, Path.Combine(game, "valheim_Data"), Path.Combine(root, "steamapps", "common"), Path.Combine(root, "steamapps"), root, $"  \"{game}\" " })
+			{
+				Assert.Equal(Path.GetFullPath(game), GameLook.GameFolder(chosen));
+			}
+			Assert.Null(GameLook.GameFolder(Path.Combine(game, "valheim_Data", "StreamingAssets")));
+			Assert.Null(GameLook.GameFolder(Path.Combine(root, "nowhere")));
+			// Settings keeps the game folder itself.
+			var old = SettingsDialog.CheckGameLook;
+			SettingsDialog.CheckGameLook = _ => { };
+			try
+			{
+				var settings = new AppSettings();
+				Assert.Null(SettingsDialog.Apply(settings, Path.Combine(root, "steamapps"), Array.Empty<string>(), Array.Empty<string>()));
+				Assert.Equal(Path.GetFullPath(game), settings.ValheimPath);
+			}
+			finally
+			{
+				SettingsDialog.CheckGameLook = old;
+			}
+		}
+		finally
+		{
+			Directory.Delete(root, true);
+		}
 	}
 
 	[Fact]

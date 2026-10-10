@@ -14,6 +14,10 @@ the plugin is unchanged in versions without that part.
   release packages are about 90 MB smaller (no Python inside).
 
 ### Added
+- When Valheim is not found, the start page explains step by step how to find its folder (Steam's
+  **Manage › Browse local files**, the usual places on your system). A folder next to the game folder
+  (`steamapps`, `common`, `valheim_Data`) is taken as the game folder it leads to, on the start page
+  and in Settings.
 - Live: the open area **follows the game**. Every 2 seconds the editor asks the game what changed in
   that area's zones (only those): objects players built, removed or changed appear, go or change in
   the editor, and ground dug or paved there comes in, without steps in History and without

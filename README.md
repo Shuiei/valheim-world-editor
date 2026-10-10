@@ -121,8 +121,17 @@ Windows it falls back to Direct3D when the driver has no OpenGL).
 
 The editor reads the game's look (textures, models, the terrain and map) straight from your Valheim
 install: nothing is copied. The first time, and after a Valheim update, it reads the game's files for
-a few seconds (a card on the start page says so). If Valheim is not found, the card asks for its
-folder (the one Steam installed it into, with `valheim_Data`).
+a few seconds (a card on the start page says so). If Valheim is not found, the card explains how to
+find its folder and asks for it: in Steam, right-click Valheim, then **Manage › Browse local files**;
+the folder that opens (the one with `valheim_Data`) is the one to choose. Usual places:
+
+- Linux: `~/.local/share/Steam/steamapps/common/Valheim` (Flatpak Steam:
+  `~/.var/app/com.valvesoftware.Steam/.local/share/Steam/steamapps/common/Valheim`)
+- Windows: `C:\Program Files (x86)\Steam\steamapps\common\Valheim`
+- Another Steam library: `<library>/steamapps/common/Valheim`
+
+A folder near it works too (`steamapps`, `common`, `valheim_Data`): the editor finds the game folder
+from it. The folder can be changed later in **Settings**.
 
 ### My game (live)
 

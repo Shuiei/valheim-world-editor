@@ -25,9 +25,14 @@ public static class SettingsDialog
 	{
 		var problems = new List<string>();
 		string? game = string.IsNullOrWhiteSpace(valheim) ? null : Expand(valheim);
-		if (game != null && GameLook.BundlesDir(game) == null)
+		if (game != null)
 		{
-			problems.Add("The Valheim folder must be the game's folder, the one with valheim_Data.");
+			// A folder next to it (steamapps, valheim_Data…) is taken as the game folder it leads to.
+			game = GameLook.GameFolder(game) ?? game;
+			if (GameLook.BundlesDir(game) == null)
+			{
+				problems.Add("The Valheim folder must be the game's folder, the one with valheim_Data (in Steam: right-click Valheim, Manage › Browse local files).");
+			}
 		}
 		List<string> Clean(IEnumerable<string> list, string what) => list.Select(p => p.Trim()).Where(p => p.Length > 0).Select(Expand).Distinct()
 			.Where(p => { if (Directory.Exists(p)) return true; problems.Add($"{what} not found: {p}"); return false; }).ToList();
