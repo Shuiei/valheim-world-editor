@@ -11,9 +11,20 @@
     <RootNamespace>TerrainEditor.Desktop</RootNamespace>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <InvariantGlobalization>true</InvariantGlobalization>
-    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <!-- Published as one file. On Linux its native libraries (Skia, HarfBuzz, SPIRV-Cross) are packed
+         inside it too; on Windows they stay beside the .exe: a program that writes DLLs to a temporary
+         folder and loads them is what antivirus heuristics take for a dropper. -->
+    <IncludeNativeLibrariesForSelfExtract Condition="!$(RuntimeIdentifier.StartsWith('win'))">true</IncludeNativeLibrariesForSelfExtract>
     <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
     <ApplicationIcon>Assets/icon.ico</ApplicationIcon>
+    <!-- The program's details (Windows shows them in its Properties and in the Task Manager); a program
+         without them looks more suspect to antivirus heuristics. -->
+    <Product>Valheim World Editor</Product>
+    <AssemblyTitle>Valheim World Editor</AssemblyTitle>
+    <Description>A world editor for Valheim: shape the ground, build, place and move objects, edit dungeons, offline or live.</Description>
+    <Company>Shuiei</Company>
+    <Authors>Shuiei</Authors>
+    <Copyright>Copyright (c) 2026 Shuiei</Copyright>
   </PropertyGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="Desktop.Tests" />

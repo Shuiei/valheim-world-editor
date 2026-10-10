@@ -8,7 +8,8 @@ Documentation: https://github.com/Shuiei/valheim-world-editor
 
 1. Start the editor
 -------------------
-  1. Unzip this folder anywhere (for example on the Desktop). Do not run it from inside the zip.
+  1. Unzip this folder anywhere (for example on the Desktop). Do not run it from inside the zip, and
+     keep its files together: ValheimWorldEditor.exe needs the four .dll files beside it.
   2. Double-click ValheimWorldEditor.exe.
      Windows may show "Windows protected your PC" the first time (the program is not signed):
      click "More info", then "Run anyway".
