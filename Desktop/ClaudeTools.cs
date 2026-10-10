@@ -231,8 +231,77 @@ public sealed class ClaudeTools
 	})));
 
 	[McpServerTool(Name = "script_reference", ReadOnly = true, Title = "The script API")]
-	[Description("The C# API run_script scripts use, as its source with comments: Area (bounds, points), Ground (Height, Set, Raise, Lower, Paint, Shape, Mountain, Biome), Objects (All, OfKind, Near, Place, Remove, CanPlace), Noise, Rand, Print. Read it before writing a script.")]
+	[Description("The C# API run_script scripts use, as its source with comments: Area (bounds, points), Ground (Height, Set, Raise, Lower, Paint, Shape, Mountain, Biome), Objects (All, OfKind, Near, Place, Remove, CanPlace), Noise, Rnd, Print. Read it before writing a script.")]
 	public static string ScriptReference() => ScriptHost.ApiSource;
+
+	// ---- Changing (pending changes only, one step of the history each).
+
+	// Why Claude cannot change the open area now, or null: nothing open, or live with Auto on (each change
+	// would go to the game at once, and Claude's must wait for the user).
+	private string? CannotEdit()
+	{
+		if (_w.Session == null)
+		{
+			return "No area is open: open_area (a world) or open_workshop first.";
+		}
+		if (_w.World is { IsLive: true } && _w.Settings.AutoApply)
+		{
+			return "The open world is live with Auto on: every change would go to the game at once. Ask the user to turn Auto off; Claude's changes then wait for Apply live.";
+		}
+		return null;
+	}
+
+	[McpServerTool(Name = "run_script", Title = "Run a script on the area")]
+	[Description("Runs a C# script on the open area (or the Workshop's plot), as the editor's Script tool does: the script's statements are the body of a program using the API script_reference gives (Area, Ground, Objects, Noise, Rnd, Print). What it changes (ground heights, paint, objects placed or taken away) goes in as one step of the history, pending until the user saves; nothing changes when it has mistakes or fails (the errors say which line). Returns what it printed and what it changed. Ground stays within the game's ±8 m of the original unless Ground.NoLimit = true.")]
+	public Task<string> RunScript(
+		[Description("The script: C# statements, e.g. \"Ground.Mountain(Area.CenterX, Area.CenterZ, height: 30, radius: 50);\"")] string code,
+		[Description("A few words for the history (\"Claude: river valley\").")] string label = "Claude: script") => OnUi(async () =>
+	{
+		if (CannotEdit() is string why)
+		{
+			return why;
+		}
+		var r = await _w.RunScriptCode(code, label.StartsWith("Claude", StringComparison.Ordinal) ? label : "Claude: " + label);
+		_w.MessageText.Text = r.Message;
+		return r.Output;
+	});
+
+	[McpServerTool(Name = "undo", Title = "Undo")]
+	[Description("Takes back the last change of the area (anyone's: Claude's or the user's), as Ctrl+Z.")]
+	public Task<string> Undo() => OnUi(async () =>
+	{
+		if (CannotEdit() is string why)
+		{
+			return why;
+		}
+		if (_w.Session is not { CanUndo: true })
+		{
+			return "Nothing to undo.";
+		}
+		await _w.Undo();
+		return "Undone. Now pending: " + Pending();
+	});
+
+	[McpServerTool(Name = "redo", Title = "Redo")]
+	[Description("Puts back the last change undone, as Ctrl+Y.")]
+	public Task<string> Redo() => OnUi(async () =>
+	{
+		if (CannotEdit() is string why)
+		{
+			return why;
+		}
+		if (_w.Session is not { CanRedo: true })
+		{
+			return "Nothing to redo.";
+		}
+		await _w.Redo();
+		return "Redone. Now pending: " + Pending();
+	});
+
+	// The changes not saved yet, in words.
+	private string Pending() => _w.World is { } w
+		? w.Pending is (0, 0, 0, 0) ? "nothing." : $"{w.Pending.Zones} zone(s) of ground, {w.Pending.Added} object(s) added, {w.Pending.Deleted} taken away."
+		: _w.Session is { } s ? $"{Workshop.Pieces(s.Scene)} building piece(s) on the plot, not saved as a blueprint." : "nothing.";
 
 	// Why a world cannot be left now (changes the user has not saved), or null.
 	private string? Unsaved()
