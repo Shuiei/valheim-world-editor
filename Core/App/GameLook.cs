@@ -118,10 +118,11 @@ public static class GameLook
 	public static string? Start(string valheim, AppSettings settings)
 	{
 		valheim = valheim.Trim().Trim('"');
-		if (BundlesDir(valheim) == null)
+		if (GameFolder(valheim) is not string game)
 		{
-			return "That folder is not a Valheim game folder (it has no valheim_Data). Pick the folder Steam installed Valheim into.";
+			return "That folder is not Valheim's game folder: it has no valheim_Data, and Valheim is not inside it. In Steam, right-click Valheim, then Manage › Browse local files: choose the folder that opens.";
 		}
+		valheim = game;
 		settings.ValheimPath = valheim;
 		settings.Save();
 		Check(settings);
@@ -172,6 +173,32 @@ public static class GameLook
 			}
 		}
 		return null;
+	}
+
+	// The game folder from a folder chosen near it: the game folder itself, its valheim_Data, or a
+	// folder above it in a Steam library (Steam, steamapps, common). Null when none of these.
+	public static string? GameFolder(string chosen)
+	{
+		try
+		{
+			string full = Path.GetFullPath(chosen.Trim().Trim('"'));
+			// Without a trailing separator (kept on a drive's or the file system's root).
+			full = Path.TrimEndingDirectorySeparator(full);
+			string? parent = Path.GetDirectoryName(full);
+			var tries = new List<string> { full };
+			if (parent != null && Path.GetFileName(full).Equals("valheim_Data", StringComparison.OrdinalIgnoreCase))
+			{
+				tries.Add(parent);
+			}
+			tries.Add(Path.Combine(full, "Valheim"));
+			tries.Add(Path.Combine(full, "common", "Valheim"));
+			tries.Add(Path.Combine(full, "steamapps", "common", "Valheim"));
+			return tries.FirstOrDefault(t => BundlesDir(t) != null);
+		}
+		catch
+		{
+			return null;
+		}
 	}
 
 	// The configured folder if it is valid, else Valheim in any Steam library on this computer.
