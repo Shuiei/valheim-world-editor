@@ -540,8 +540,9 @@ public sealed class EditSession
 		{
 			foreach (var (i, gone) in things)
 			{
-				// Removed (or changed) in the game since: undo does not bring it back (it is not there).
-				if (!gone && list[i].Id >= 0 && Scene.World.Vanished.Contains(list[i].Id))
+				// Removed in the game since: neither undo nor redo touches it (it is not there to bring back
+				// or to delete; a deletion of it would remove another object under its ZDOID).
+				if (list[i].Id >= 0 && Scene.World.Vanished.Contains(list[i].Id))
 				{
 					continue;
 				}
@@ -743,7 +744,8 @@ public sealed class EditSession
 	// Live: applies everything to the running game. After zone resets the world is read again from the
 	// game (like a save), and after No limit ground became ground discs the area is (the ground under it
 	// changed); otherwise the history stays.
-	public async Task<WorldSession.Outcome> ApplyLive()
+	// confirm: see WorldSession.ApplyLive (asked before writing over ground the game changed).
+	public async Task<WorldSession.Outcome> ApplyLive(Func<IReadOnlyList<(int X, int Z)>, Task<bool>>? confirm = null)
 	{
 		var owner = Scene.Owner!;
 		// The steps there are now: a step made while the game answers may not be in what was sent.
@@ -752,7 +754,7 @@ public sealed class EditSession
 		{
 			before = _undo.ToList();
 		}
-		var o = await owner.ApplyLive();
+		var o = await owner.ApplyLive(confirm);
 		lock (_lock)
 		{
 			if (o.Reloaded || o.Lifted)
@@ -889,68 +891,82 @@ public sealed class EditSession
 		}
 	}
 
-	// Live: what the game changed in the zones shown (WorldSession.FollowGame), taken in without an undo
-	// step: objects removed or changed there go, new and changed ones come, and the ground of the zones
-	// given is read again. Not during a stroke (asked again next time: false).
-	public bool TakeGameChanges(WorldSave.Merged merged, IReadOnlyCollection<(int X, int Z)> ground)
+	// Live: what the game changed (WorldSession.MergeGame), taken into the area without an undo step:
+	// objects removed in the game go, changed ones are shown as they are now (same thing, same place in
+	// the history), new ones come, and the ground of the zones given is read again. Taking the same
+	// changes twice changes nothing (an area opened meanwhile may already have them). Not during a stroke
+	// (false: given again next time).
+	public bool TakeGameChanges(WorldSession.Followed f)
 	{
 		var list = Scene.Things;
 		var changed = new List<int>();
-		var added = new List<int>();
+		bool ground = f.Ground.Count > 0 || f.Merged.Modifiers;
 		lock (_lock)
 		{
 			if (_stroke != null)
 			{
 				return false;
 			}
-			var gone = merged.Vanished.ToHashSet();
-			var fresh = merged.Added.ToHashSet();
 			var world = Scene.World;
+			var gone = f.Merged.Vanished.Concat(f.Ours).ToHashSet();
+			var update = f.Merged.Updated.Concat(f.Merged.Added).ToHashSet();
 			float minX = Scene.X0 * 64f - 32f, maxX = (Scene.X0 + Scene.Size - 1) * 64f + 32f, minZ = Scene.Z0 * 64f - 32f, maxZ = (Scene.Z0 + Scene.Size - 1) * 64f + 32f;
 			bool Inside(System.Numerics.Vector3 p) => p.X >= minX && p.X < maxX && p.Z >= minZ && p.Z < maxZ;
+			// The objects as the world has them now, by id (those changed or new).
+			var now = WorldScene.FindThings(world, Edits, update);
 			lock (list)
 			{
+				var at = new Dictionary<int, int>();
 				for (int i = 0; i < list.Count; i++)
 				{
-					if (list[i].Id >= 0 && gone.Contains(list[i].Id) && !list[i].Gone)
+					at[list[i].Id] = i;
+				}
+				foreach (int id in gone)
+				{
+					if (at.TryGetValue(id, out int i) && !list[i].Gone)
 					{
 						list[i] = list[i] with { Gone = true };
 						changed.Add(i);
 					}
 				}
-				if (fresh.Count > 0)
+				foreach (var (id, t) in now)
 				{
-					foreach (var (id, prefab, p, r, sc) in world.Objects)
+					if (at.TryGetValue(id, out int i))
 					{
-						if (fresh.Contains(id) && Inside(p))
+						// Changed in the game: shown as it is now (deleted in the editor, it stays so).
+						var next = t with { Gone = list[i].Gone };
+						if (next != list[i])
 						{
-							added.Add(list.Count);
-							list.Add(new WorldScene.Thing(id, prefab, p, r, sc.X, false) { Tamed = world.Tamed.Contains(id) });
+							list[i] = next;
+							changed.Add(i);
 						}
 					}
-					foreach (var (id, prefab, p, ry) in world.Pieces)
+					else if (Inside(t.Position) && !t.Gone && t.Prefab != WorldSave.LocationProxyPrefab)
 					{
-						if (fresh.Contains(id) && Inside(p))
-						{
-							added.Add(list.Count);
-							list.Add(new WorldScene.Thing(id, prefab, p, new System.Numerics.Vector3(0, ry, 0), 0, true));
-						}
+						changed.Add(list.Count);
+						list.Add(t);
 					}
 				}
 			}
-			if (ground.Count > 0)
+			if (ground)
 			{
+				if (f.Merged.Modifiers && Scene.Owner is { } owner)
+				{
+					Scene.Modifiers = owner.Modifiers;
+					Ground.ReadBase(owner.Terrain);
+				}
 				Ground.TakeEdits(Edits);
 				Touch((0, 0, Ground.W - 1, Ground.H - 1));
 			}
 		}
+		if (changed.Count > 0 || ground)
+		{
+			// What was worked out from the area before (an open inspector, a running script) is out of date.
+			Interlocked.Increment(ref _generation);
+		}
 		if (changed.Count > 0)
 		{
 			ThingsChanged?.Invoke(changed);
-		}
-		if (added.Count > 0)
-		{
-			ThingsAdded?.Invoke(added);
 		}
 		Changed?.Invoke();
 		return true;

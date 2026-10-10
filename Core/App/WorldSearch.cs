@@ -15,7 +15,16 @@ public static class WorldSearch
 
 	private static readonly int ItemsKey = StableHash.Of("items");
 
+	// (Live: under the world's lock, so what the game changes comes in before or after, not during.)
 	public static Result Search(WorldSave world, EditStore edits, string query, string what, int limit = 2000)
+	{
+		lock (world.Sync)
+		{
+			return SearchIn(world, edits, query, what, limit);
+		}
+	}
+
+	private static Result SearchIn(WorldSave world, EditStore edits, string query, string what, int limit)
 	{
 		query = query.Trim();
 		List<Hit> hits = new();
@@ -45,7 +54,7 @@ public static class WorldSearch
 			for (int id = 0; id < world.ObjectRefs.Count; id++)
 			{
 				ObjectRef o = world.ObjectRefs[id];
-				if (deleted.Contains(id) || o.IsTerrain || o.Prefab == WorldSave.LocationProxyPrefab)
+				if (deleted.Contains(id) || world.Vanished.Contains(id) || o.IsTerrain || o.Prefab == WorldSave.LocationProxyPrefab)
 				{
 					continue;
 				}
@@ -75,7 +84,7 @@ public static class WorldSearch
 			for (int id = 0; id < world.ObjectRefs.Count; id++)
 			{
 				ObjectRef o = world.ObjectRefs[id];
-				if (!deleted.Contains(id) && !o.IsTerrain && (o.Flags & needed) != 0)
+				if (!deleted.Contains(id) && !world.Vanished.Contains(id) && !o.IsTerrain && (o.Flags & needed) != 0)
 				{
 					yield return (id, () => Source(o)[(int)o.Start..(int)o.End]);
 				}

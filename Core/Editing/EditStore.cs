@@ -91,9 +91,10 @@ public sealed class EditStore
 	}
 
 	// Live: zones whose ground the game changed (a player digging, a hoe) while the editor had changes of
-	// its own there, not applied yet. Applying them would write over what was done in the game, so the
-	// editor asks first; cleared once applied (or discarded).
-	private readonly HashSet<(int, int)> _gameChanged = new();
+	// its own there, not applied yet, with the game's ground. Applying them would write over what was done
+	// in the game, so the editor asks first; once the editor's changes there are undone the game's ground
+	// comes in (TakeWaitingGround); applying clears it (or discarding).
+	private readonly Dictionary<(int, int), ZoneEdit> _gameChanged = new();
 
 	public IReadOnlyList<(int X, int Z)> GameChanged
 	{
@@ -101,41 +102,79 @@ public sealed class EditStore
 		{
 			lock (_lock)
 			{
-				return _gameChanged.ToList();
+				return _gameChanged.Keys.ToList();
 			}
 		}
 	}
 
-	// Live: a zone's ground as the game has it now (null: no ground changes there any more). A zone
-	// without changes of the editor's takes it; one with changes keeps them (true), marked GameChanged
-	// when the game's ground is not simply what the editor applied there.
-	public bool TakeGameGround(int zx, int zz, TerrainZone? z)
+	// The zones the game changed under changes of the editor's not applied yet: what an apply would write
+	// over (asked first).
+	public List<(int X, int Z)> PendingOverGame()
+	{
+		lock (_lock)
+		{
+			return _gameChanged.Keys.Where(k => _zones.TryGetValue(k, out ZoneEdit? e) && e.Changed).ToList();
+		}
+	}
+
+	public enum GameGround { Same, Taken, Kept }
+
+	// Live: a zone's ground as the game has it now (null: no ground changes there any more). Same: what
+	// the editor has as applied (its own apply coming back); Taken: a zone without changes of the
+	// editor's takes it; Kept: one with changes keeps them, the game's ground waiting (GameChanged).
+	public GameGround TakeGameGround(int zx, int zz, TerrainZone? z)
 	{
 		var key = (zx, zz);
 		ZoneEdit fresh = z != null && z.ModifiedHeight.Length == Cells && z.ModifiedPaint.Length == Cells ? FromTerrain(z) : new ZoneEdit(zx, zz);
 		lock (_lock)
 		{
 			bool same = _baseline.TryGetValue(key, out ZoneEdit? was) ? was.SameGround(fresh) : fresh.IsEmpty;
-			_baseline[key] = fresh.Clone();
+			if (same)
+			{
+				_gameChanged.Remove(key);
+				return GameGround.Same;
+			}
 			Version++;
 			if (_zones.TryGetValue(key, out ZoneEdit? e) && e.Changed)
 			{
-				if (!same)
-				{
-					_gameChanged.Add(key);
-				}
-				e.ExistsInWorld = fresh.ExistsInWorld;
-				return true;
+				_gameChanged[key] = fresh;
+				return GameGround.Kept;
 			}
-			if (z == null)
+			Take(key, fresh, z != null);
+			return GameGround.Taken;
+		}
+	}
+
+	private void Take((int, int) key, ZoneEdit fresh, bool exists)
+	{
+		_baseline[key] = fresh.Clone();
+		_gameChanged.Remove(key);
+		if (exists)
+		{
+			_zones[key] = fresh;
+		}
+		else
+		{
+			_zones.Remove(key);
+		}
+	}
+
+	// Live: zones whose changes of the editor's were undone since the game changed their ground: they
+	// take the game's ground now. Returns them (their ground is to be shown again).
+	public List<(int X, int Z)> TakeWaitingGround()
+	{
+		lock (_lock)
+		{
+			var ready = _gameChanged.Where(kv => !(_zones.TryGetValue(kv.Key, out ZoneEdit? e) && e.Changed)).ToList();
+			foreach (var (key, fresh) in ready)
 			{
-				_zones.Remove(key);
+				Take(key, fresh, fresh.ExistsInWorld);
 			}
-			else
+			if (ready.Count > 0)
 			{
-				_zones[key] = fresh;
+				Version++;
 			}
-			return false;
+			return ready.Select(kv => kv.Key).ToList();
 		}
 	}
 

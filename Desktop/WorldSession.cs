@@ -162,6 +162,8 @@ public sealed class WorldSession : IDisposable
 	{
 		// No limit ground was turned into ground discs: the ground under the area changed.
 		public bool Lifted { get; init; }
+		// Live: not applied, the answer to "apply over the game's changes?" was no.
+		public bool Declined { get; init; }
 	}
 
 	// No limit ground waiting (lifts): turned into ground discs and ordinary edits (Uplift), the ground
@@ -259,11 +261,17 @@ public sealed class WorldSession : IDisposable
 		_applying.Dispose();
 	}
 
-	public async Task<Outcome> ApplyLive()
+	// confirm: asked, with the zones, when applying would write over ground the game changed under the
+	// editor's changes (asked here, while no follow can come in between).
+	public async Task<Outcome> ApplyLive(Func<IReadOnlyList<(int X, int Z)>, Task<bool>>? confirm = null)
 	{
 		await _applying.WaitAsync();
 		try
 		{
+			if (confirm != null && Edits.PendingOverGame() is { Count: > 0 } over && !await confirm(over))
+			{
+				return new Outcome(false, "Not applied: the game changed the ground where you have changes (Apply live asks again).", false) { Declined = true };
+			}
 			return await ApplyLiveOnce();
 		}
 		finally
@@ -326,59 +334,98 @@ public sealed class WorldSession : IDisposable
 	}
 
 	// ---- Live: following the game. The zones shown are asked about every few seconds (one number each,
-	// cheap); those that changed are read again and merged in: objects made, removed or changed in the
-	// game appear as they are, and ground changed there replaces the editor's where it has no changes of
-	// its own (where it has, it is kept, and applying it asks first: Edits.GameChanged).
+	// cheap); those that changed are read again (FetchGame, on the network) and merged in (MergeGame, at
+	// once on the window's thread): objects made, removed or changed in the game appear as they are, and
+	// ground changed there replaces the editor's where it has no changes of its own (where it has, they
+	// are kept, and applying them asks first: Edits.PendingOverGame).
 	private readonly Dictionary<(int, int), ulong> _digests = new();
 
-	public sealed record Followed(WorldSave.Merged Merged, List<(int X, int Z)> Ground, List<(int X, int Z)> Kept)
+	public sealed record Fetched(WorldSave World, Dictionary<(int X, int Z), ulong> Digests, List<(int X, int Z)> Changed, List<(long User, uint Id, byte[] Bytes)> Objects);
+
+	// Ours: the editor's own new objects the game removed (players picked or destroyed them). Ground:
+	// zones whose ground came in; Kept: zones whose ground the game changed under the editor's changes.
+	public sealed record Followed(WorldSave.Merged Merged, List<int> Ours, List<(int X, int Z)> Ground, List<(int X, int Z)> Kept)
 	{
-		public bool Any => Merged.Added.Count + Merged.Vanished.Count + Ground.Count + Kept.Count > 0;
+		public bool Any => Merged.Added.Count + Merged.Updated.Count + Merged.Vanished.Count + Ours.Count + Ground.Count + Kept.Count > 0;
 	}
 
-	// What changed in these zones since they were last asked about (null: nothing, or an apply is under
-	// way: asked again next time). The plugin's errors and an unreachable game are the caller's to show.
-	public async Task<Followed?> FollowGame(IReadOnlyCollection<(int X, int Z)> zones)
+	// The zones that changed since they were last merged, read from the game (null: none). The plugin's
+	// errors and an unreachable game are the caller's to show.
+	public async Task<Fetched?> FetchGame(IReadOnlyCollection<(int X, int Z)> zones)
 	{
-		if (Live is not { } live || zones.Count == 0 || !await _applying.WaitAsync(0))
+		if (Live is not { } live || zones.Count == 0)
 		{
 			return null;
 		}
-		try
+		var world = World;
+		var now = await live.Watch(zones);
+		var changed = now.Where(kv => !_digests.TryGetValue(kv.Key, out ulong d) || d != kv.Value).Select(kv => kv.Key).ToList();
+		if (changed.Count == 0)
 		{
-			var now = await live.Watch(zones);
-			var changed = now.Where(kv => !_digests.TryGetValue(kv.Key, out ulong d) || d != kv.Value).Select(kv => kv.Key).ToList();
-			if (changed.Count == 0)
-			{
-				return null;
-			}
-			var objects = await live.ZoneObjects(changed);
-			// Kept as the editor has them: its deletions, and objects it made again in the game (an
-			// applied delete undone: the game has it under a new ZDOID, which is the editor's own).
-			var merged = World.MergeLive(changed, objects, id => Edits.Deleted.Contains(id) || LiveSync.IsDestroyed(id) || LiveSync.IsLive(id), LiveSync.IsOurs);
-			foreach (var key in changed)
-			{
-				_digests[key] = now[key];
-			}
-			var ground = new List<(int, int)>();
-			var kept = new List<(int, int)>();
-			foreach (var (x, z) in merged.TerrainZones)
-			{
-				var zone = World.TerrainZones.FirstOrDefault(t => t.ZoneX == x && t.ZoneZ == z);
-				(Edits.TakeGameGround(x, z, zone) ? kept : ground).Add((x, z));
-			}
-			// Objects that shape the ground as the game runs (locations, some pieces) came or went.
-			if (merged.Added.Concat(merged.Vanished).Any(id => World.ObjectRefs[id].Prefab is int p && (p == WorldSave.LocationProxyPrefab || WorldSave.ModifierPrefabs.Contains(p))))
-			{
-				UseModifiers(new TerrainModifiers(World));
-			}
-			return new Followed(merged, ground, kept);
+			return null;
 		}
-		finally
-		{
-			_applying.Release();
-		}
+		return new Fetched(world, now, changed, await live.ZoneObjects(changed));
 	}
+
+	// What was read, merged into the world (on the window's thread, at once: nothing else changes the
+	// world meanwhile). Null: not now (an apply is under way, or the world's lists are being read): merge
+	// it again later. Read for a world read again since: dropped (empty).
+	public Followed? MergeGame(Fetched f)
+	{
+		if (f.World != World)
+		{
+			return new Followed(new WorldSave.Merged(new(), new(), new(), new()), new(), new(), new());
+		}
+		if (_applying.CurrentCount == 0)
+		{
+			return null;
+		}
+		var deleted = Edits.Deleted;
+		// Kept as the editor has them: its applied deletions (undo brings them back).
+		var merged = World.MergeLive(f.Changed, f.Objects, LiveSync.IsDestroyed, LiveSync.IsOurs);
+		if (merged == null)
+		{
+			return null;
+		}
+		foreach (var key in f.Changed)
+		{
+			_digests[key] = f.Digests[key];
+		}
+		// Gone from the game while deleted in the editor, not applied yet: nothing left to delete.
+		Edits.SetDeleted(merged.Vanished.Where(deleted.Contains).ToList(), false);
+		// The editor's new objects the game no longer has in the zones read.
+		var changed = f.Changed.ToHashSet();
+		var there = f.Objects.Select(o => (o.User, o.Id)).ToHashSet();
+		var ours = LiveSync.NewObjects().Where(n => changed.Contains(Zone(n.Target.Position)) && !there.Contains((n.Target.User, n.Target.Id))).Select(n => n.Id).ToList();
+		foreach (int id in ours)
+		{
+			LiveSync.Forget(id);
+		}
+		Edits.SetDeleted(ours, true);
+		var ground = new List<(int, int)>();
+		var kept = new List<(int, int)>();
+		foreach (var (x, z) in merged.TerrainZones)
+		{
+			var zone = World.TerrainZones.FirstOrDefault(t => t.ZoneX == x && t.ZoneZ == z);
+			switch (Edits.TakeGameGround(x, z, zone))
+			{
+				case EditStore.GameGround.Taken: ground.Add((x, z)); break;
+				case EditStore.GameGround.Kept: kept.Add((x, z)); break;
+			}
+		}
+		ground.AddRange(Edits.TakeWaitingGround());
+		if (merged.Modifiers)
+		{
+			// (With the editor's ground discs: those it applied are its own, not merged.)
+			UseModifiers(new TerrainModifiers(Editing.Uplift.PlacedNow(World, Edits)));
+		}
+		return new Followed(merged, ours, ground, kept);
+	}
+
+	// Zones whose changes of the editor's were undone since the game changed their ground: theirs now.
+	public List<(int X, int Z)> TakeWaitingGround() => Edits.TakeWaitingGround();
+
+	private static (int, int) Zone(System.Numerics.Vector3 p) => ((int)MathF.Floor((p.X + 32f) / 64f), (int)MathF.Floor((p.Z + 32f) / 64f));
 
 	// Live: the world read again from the game (what players changed since); pending edits are dropped.
 	public async Task Reload()
@@ -402,6 +449,7 @@ public sealed class WorldSession : IDisposable
 		Edits.ResetFrom(World);
 		UseModifiers(new TerrainModifiers(World));
 		LiveSync.Reset();
+		_digests.Clear();
 		History = null;
 		Area = null;
 		// Offline the world is as it was last saved: so is the history kept then.

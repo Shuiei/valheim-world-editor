@@ -276,113 +276,203 @@ public sealed class WorldSave
 
 	public byte[] LiveSource(ChunkFile file) => _liveFiles.TryGetValue(file, out byte[]? b) ? b : LiveBytes!;
 
-	// Live: objects the game no longer has as they were (removed, or changed: read again under a new
-	// id). Left out of every list; their ids stay taken.
+	// Live: objects the game no longer has (removed in the game). Left out of every list; their ids
+	// stay taken, and their bytes stay readable (history).
 	public HashSet<int> Vanished { get; } = new();
 
-	public sealed record Merged(List<int> Added, List<int> Vanished, HashSet<(int X, int Z)> TerrainZones);
+	// Live: held while the world's lists change (MergeLive) and while other threads read them (an area
+	// loading, the map's search and statistics): what the game changed comes in between.
+	public object Sync { get; } = new();
 
-	// Live: the zones' objects as the game has them now (ZDOID and bytes, as the plugin's /zone sends them),
-	// merged in: new ones and changed ones (read again) are added under new ids, those gone or changed
-	// vanish. keep: objects the editor deleted (pending or applied), or made again in the game under a
-	// new ZDOID (an applied delete undone): left as they are whatever the game did; ours: ZDOIDs of
-	// objects the editor made itself (they are its own objects).
-	public Merged MergeLive(IReadOnlyCollection<(int X, int Z)> zones, IReadOnlyList<(long User, uint Id, byte[] Bytes)> objects,
-		Func<int, bool> keep, Func<(long User, uint Id), bool> ours)
+	// Live: the objects by ZDOID and by zone (not the vanished ones), made at the first merge.
+	private Dictionary<(long, uint), int>? _byLiveId;
+	private Dictionary<(int, int), HashSet<int>>? _byZone;
+
+	private void Index()
 	{
-		var zoneSet = zones.ToHashSet();
-		// Every object by ZDOID, wherever it was: one that came into these zones from another (a creature
-		// walking in) is the same object moved, not a new one.
-		var known = new Dictionary<(long, uint), int>();
-		var inZones = new List<int>();
+		if (_byLiveId != null)
+		{
+			return;
+		}
+		_byLiveId = new();
+		_byZone = new();
 		for (int id = 0; id < ObjectRefs.Count; id++)
 		{
-			ObjectRef o = ObjectRefs[id];
 			if (!Vanished.Contains(id))
 			{
-				known[o.LiveId] = id;
-				if (zoneSet.Contains(o.Zone))
-				{
-					inZones.Add(id);
-				}
+				Track(id);
 			}
 		}
-		var result = new Merged(new(), new(), new());
-		var fresh = new List<(long User, uint Id, byte[] Bytes)>();
-		var seen = new HashSet<int>();
-		foreach (var (user, zid, bytes) in objects)
-		{
-			if (known.TryGetValue((user, zid), out int id))
-			{
-				seen.Add(id);
-				// (Changed in the game but deleted in the editor: the deletion stands.)
-				if (!keep(id) && !ObjectBytes(id).AsSpan().SequenceEqual(bytes))
-				{
-					Vanish(id, result);
-					fresh.Add((user, zid, bytes));
-				}
-			}
-			else if (!ours((user, zid)))
-			{
-				fresh.Add((user, zid, bytes));
-			}
-		}
-		foreach (int id in inZones)
-		{
-			if (!seen.Contains(id) && !keep(id))
-			{
-				Vanish(id, result);
-			}
-		}
-		if (fresh.Count > 0)
-		{
-			byte[] all = fresh.SelectMany(f => f.Bytes).ToArray();
-			ChunkFile file = new() { Chunk = 0, Size = 0, Version = 0, IndexCount = 0, WorldVersion = Chunks.Count > 0 ? Chunks[0].WorldVersion : 41, Count = fresh.Count, Length = all.Length };
-			_liveFiles[file] = all;
-			using ValheimReader pkg = new(new MemoryStream(all));
-			foreach (var (user, zid, _) in fresh)
-			{
-				int id = ObjectRefs.Count;
-				int zonesBefore = TerrainZones.Count;
-				ReadZdo(pkg, file.WorldVersion, file);
-				ObjectCount++;
-				ObjectRefs[id].LiveId = (user, zid);
-				result.Added.Add(id);
-				if (TerrainZones.Count > zonesBefore)
-				{
-					var z = TerrainZones[^1];
-					result.TerrainZones.Add((z.ZoneX, z.ZoneZ));
-				}
-			}
-		}
-		return result;
 	}
 
-	// An object out of every list (its id stays taken, its bytes kept for undo's sake).
-	private void Vanish(int id, Merged result)
+	private void Track(int id)
 	{
-		Vanished.Add(id);
-		result.Vanished.Add(id);
 		ObjectRef o = ObjectRefs[id];
-		Objects.RemoveAll(x => x.Id == id);
-		Pieces.RemoveAll(x => x.Id == id);
-		Discs.RemoveAll(x => x.Id == id);
-		Tamed.Remove(id);
-		int t = TerrainZones.FindIndex(z => z.Source is { } src && src.File == o.File && src.Start == o.Start);
-		if (t >= 0)
+		_byLiveId![o.LiveId] = id;
+		(_byZone!.TryGetValue(o.Zone, out var set) ? set : _byZone[o.Zone] = new()).Add(id);
+	}
+
+	private void Untrack(int id)
+	{
+		ObjectRef o = ObjectRefs[id];
+		_byLiveId!.Remove(o.LiveId);
+		if (_byZone!.TryGetValue(o.Zone, out var set))
 		{
-			result.TerrainZones.Add((TerrainZones[t].ZoneX, TerrainZones[t].ZoneZ));
-			TerrainZones.RemoveAt(t);
-		}
-		int placed = Placed.FindIndex(x => x.Prefab == o.Prefab && Vector3.DistanceSquared(x.Position, o.Position) < 1e-4f);
-		if (placed >= 0)
-		{
-			Placed.RemoveAt(placed);
+			set.Remove(id);
 		}
 	}
 
-	// A snapshot from the WorldEditorBridge plugin (gzip): world info, ZoneSystem data and every
-	// persistent object in the chunk file format, followed by each object's live ZDOID.
+	// Live: the object is in the game under another ZDOID now (the editor made it again there: an applied
+	// delete undone); followed by that one from then on.
+	public void SetLiveId(int id, (long User, uint Id) zdo)
+	{
+		lock (Sync)
+		{
+			if (_byLiveId != null && !Vanished.Contains(id))
+			{
+				Untrack(id);
+				ObjectRefs[id].LiveId = zdo;
+				Track(id);
+			}
+			else
+			{
+				ObjectRefs[id].LiveId = zdo;
+			}
+		}
+	}
+
+	// Added: objects new to the editor (new ids); Updated: objects the game changed (data, place), read
+	// again under their own id; Vanished: objects gone from the game; TerrainZones: zones whose ground
+	// data came or went; Modifiers: objects that shape the ground as the game runs came, went or changed.
+	public sealed record Merged(List<int> Added, List<int> Updated, List<int> Vanished, HashSet<(int X, int Z)> TerrainZones)
+	{
+		public bool Modifiers { get; set; }
+	}
+
+	// Live: the zones' objects as the game has them now (ZDOID and bytes, as the plugin's /zone sends
+	// them), merged in. keep: objects not to vanish though the game lacks them (the editor's own applied
+	// deletions: undo brings them back); ours: ZDOIDs of objects the editor made itself (its new
+	// objects). Null when the world's lists are being read elsewhere right now: try again later.
+	public Merged? MergeLive(IReadOnlyCollection<(int X, int Z)> zones, IReadOnlyList<(long User, uint Id, byte[] Bytes)> objects,
+		Func<int, bool> keep, Func<(long User, uint Id), bool> ours)
+	{
+		if (!Monitor.TryEnter(Sync))
+		{
+			return null;
+		}
+		try
+		{
+			Index();
+			var result = new Merged(new(), new(), new(), new());
+			var seen = new HashSet<int>();
+			var fresh = new List<(long User, uint Id, byte[] Bytes, int Replace)>();
+			foreach (var (user, zid, bytes) in objects)
+			{
+				if (_byLiveId!.TryGetValue((user, zid), out int id))
+				{
+					seen.Add(id);
+					if (!ObjectBytes(id).AsSpan().SequenceEqual(bytes))
+					{
+						fresh.Add((user, zid, bytes, id));
+					}
+				}
+				else if (!ours((user, zid)))
+				{
+					fresh.Add((user, zid, bytes, -1));
+				}
+			}
+			var gone = zones.SelectMany(z => _byZone!.TryGetValue(z, out var set) ? set : Enumerable.Empty<int>()).Where(id => !seen.Contains(id) && !keep(id)).ToList();
+			// Out of the lists at once (one pass each): the vanished, and the changed ones read again below.
+			var drop = gone.Concat(fresh.Where(f => f.Replace >= 0).Select(f => f.Replace)).ToHashSet();
+			if (drop.Count > 0)
+			{
+				Drop(drop, result);
+			}
+			foreach (int id in gone)
+			{
+				Untrack(id);
+				Vanished.Add(id);
+				result.Vanished.Add(id);
+			}
+			if (fresh.Count > 0)
+			{
+				byte[] all = fresh.SelectMany(f => f.Bytes).ToArray();
+				ChunkFile file = new() { Chunk = 0, Size = 0, Version = 0, IndexCount = 0, WorldVersion = Chunks.Count > 0 ? Chunks[0].WorldVersion : 41, Count = fresh.Count, Length = all.Length };
+				_liveFiles[file] = all;
+				using ValheimReader pkg = new(new MemoryStream(all));
+				foreach (var (user, zid, _, replace) in fresh)
+				{
+					if (replace >= 0)
+					{
+						Untrack(replace);
+					}
+					int zonesBefore = TerrainZones.Count;
+					int id = ReadZdo(pkg, file.WorldVersion, file, replace);
+					ObjectRefs[id].LiveId = (user, zid);
+					Track(id);
+					(replace >= 0 ? result.Updated : result.Added).Add(id);
+					if (replace < 0)
+					{
+						ObjectCount++;
+					}
+					if (TerrainZones.Count > zonesBefore)
+					{
+						var z = TerrainZones[^1];
+						result.TerrainZones.Add((z.ZoneX, z.ZoneZ));
+					}
+					result.Modifiers |= Shapes(ObjectRefs[id].Prefab);
+				}
+			}
+			return result;
+		}
+		finally
+		{
+			Monitor.Exit(Sync);
+		}
+	}
+
+	private static bool Shapes(int prefab) => prefab == LocationProxyPrefab || ModifierPrefabs.Contains(prefab);
+
+	// These objects out of every list (their ids stay; the changed ones are read again after).
+	private void Drop(HashSet<int> ids, Merged result)
+	{
+		Objects.RemoveAll(x => ids.Contains(x.Id));
+		Pieces.RemoveAll(x => ids.Contains(x.Id));
+		Discs.RemoveAll(x => ids.Contains(x.Id));
+		foreach (int id in ids)
+		{
+			ObjectRef o = ObjectRefs[id];
+			Tamed.Remove(id);
+			if (o.Creator != 0 && Creators.TryGetValue(o.Creator, out int n))
+			{
+				Creators[o.Creator] = n - 1;
+			}
+			if (o.Prefab == LocationProxyPrefab)
+			{
+				int at = Locations.FindIndex(l => Vector3.DistanceSquared(l.Position, o.Position) < 1e-4f);
+				if (at >= 0)
+				{
+					Locations.RemoveAt(at);
+				}
+			}
+			if (Shapes(o.Prefab))
+			{
+				result.Modifiers = true;
+				int placed = Placed.FindIndex(x => x.Prefab == o.Prefab && Vector3.DistanceSquared(x.Position, o.Position) < 1e-4f);
+				if (placed >= 0)
+				{
+					Placed.RemoveAt(placed);
+				}
+			}
+		}
+		var sources = ids.Select(id => (ObjectRefs[id].File, ObjectRefs[id].Start)).ToHashSet();
+		foreach (var z in TerrainZones.Where(z => z.Source is { } src && sources.Contains((src.File, src.Start))))
+		{
+			result.TerrainZones.Add((z.ZoneX, z.ZoneZ));
+		}
+		TerrainZones.RemoveAll(z => z.Source is { } src && sources.Contains((src.File, src.Start)));
+	}
+
 	public static WorldSave LoadLive(byte[] gzipped, string source)
 	{
 		using MemoryStream raw = new();
@@ -439,12 +529,21 @@ public sealed class WorldSave
 
 	// Mirrors ZDO.Load(ZPackage, Version.World), recording where things are in the file so a
 	// writer can later copy objects unchanged or patch just the terrain data.
-	private void ReadZdo(ValheimReader pkg, int worldVersion, ChunkFile file)
+	// replace: read in place of that object (live: changed in the game), else a new one. Returns its id.
+	private int ReadZdo(ValheimReader pkg, int worldVersion, ChunkFile file, int replace = -1)
 	{
 		long start = pkg.Position;
-		int id = ObjectRefs.Count;
+		int id = replace >= 0 ? replace : ObjectRefs.Count;
 		ObjectRef objRef = new() { File = file, Start = start };
-		ObjectRefs.Add(objRef);
+		if (replace >= 0)
+		{
+			objRef.LiveId = ObjectRefs[id].LiveId;
+			ObjectRefs[id] = objRef;
+		}
+		else
+		{
+			ObjectRefs.Add(objRef);
+		}
 		const ushort Connections = 0x1, Floats = 0x2, Vec3 = 0x4, Quats = 0x8, Ints = 0x10, Longs = 0x20, Strings = 0x40, ByteArrays = 0x80;
 		const ushort Rotation = 0x1000, SmallPosition = 0x2000;
 		bool chunked = worldVersion >= WorldVersion.ChunkedSave;
@@ -492,7 +591,7 @@ public sealed class WorldSave
 			{
 				Placed.Add(new PlacedObject(prefab, 0, position, rotation, 0));
 			}
-			return;
+			return id;
 		}
 		if ((flags & Connections) != 0)
 		{
@@ -608,6 +707,7 @@ public sealed class WorldSave
 		}
 		bool terrain = TerrainZones.Count > 0 && TerrainZones[^1].Source is { } last && last.File == file && last.Start == start;
 		objRef.IsPiece = creator != 0;
+		objRef.Creator = creator;
 		objRef.IsTerrain = terrain;
 		if (!terrain)
 		{
@@ -637,6 +737,7 @@ public sealed class WorldSave
 		{
 			TerrainZones[^1].Source = src with { End = end };
 		}
+		return id;
 	}
 
 	private static void Skip(ValheimReader pkg, int worldVersion, ushort flags, ushort flag, Action<ValheimReader> readValue)

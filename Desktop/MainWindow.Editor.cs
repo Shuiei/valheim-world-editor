@@ -399,15 +399,15 @@ public sealed partial class MainWindow
 				{
 					break;
 				}
-				if (s.Scene.Owner is { } owner && !await ConfirmOverGame(owner))
-				{
-					_message.Text = "Not applied: the game changed the ground where you have changes (Apply live asks again).";
-					break;
-				}
 				SaveButton.IsEnabled = false;
 				_message.Text = "Applying to the running game…";
-				var o = await s.ApplyLive();
+				var o = await s.ApplyLive(ConfirmOverGame);
 				_message.Text = o.Message;
+				if (o.Declined)
+				{
+					UpdateSaveBar();
+					break;
+				}
 				UpdateSaveBar();
 				History.Refresh();
 			}
@@ -429,49 +429,61 @@ public sealed partial class MainWindow
 	}
 
 	// ---- Live: following the game in the zones shown.
-	private bool _followingGame, _gameTooOld;
-	// Changes the area could not take yet (a stroke was being drawn): given at the next tick.
-	private readonly List<WorldSession.Followed> _gameWaiting = new();
+	private bool _followingGame;
+	// The world whose plugin is too old to follow (asked again for another world).
+	private WorldSession? _gameTooOld;
+	// Read from the game, not merged yet (a stroke was being drawn, an apply was under way): merged at
+	// the next tick, before anything new is read.
+	private WorldSession.Fetched? _gameFetched;
 
 	internal async Task FollowGame()
 	{
-		if (_followingGame || _gameTooOld || _session is not { IsLive: true, Scene.Owner: { } owner } s)
+		if (_followingGame || _session is not { IsLive: true, Scene.Owner: { } owner } s || _gameTooOld == owner)
 		{
 			return;
 		}
 		_followingGame = true;
 		try
 		{
-			var zones = new List<(int, int)>();
-			for (int z = 0; z < s.Scene.Size; z++)
+			if (_gameFetched == null && !s.Stroking)
 			{
-				for (int x = 0; x < s.Scene.Size; x++)
+				var zones = new List<(int, int)>();
+				for (int z = 0; z < s.Scene.Size; z++)
 				{
-					zones.Add((s.Scene.X0 + x, s.Scene.Z0 + z));
+					for (int x = 0; x < s.Scene.Size; x++)
+					{
+						zones.Add((s.Scene.X0 + x, s.Scene.Z0 + z));
+					}
 				}
+				_gameFetched = await owner.FetchGame(zones);
 			}
-			var f = await owner.FollowGame(zones);
-			if (_session != s)
+			// Merged and shown at once, on this thread: nothing changes the world or the area in between.
+			// The area open now gets it, whichever it is (taking it twice changes nothing).
+			if (_session is not { Scene.Owner: { } now } open || now != owner)
 			{
-				// Another area opened meanwhile: it was read from the world, which has these changes.
-				_gameWaiting.Clear();
+				_gameFetched = null;
 				return;
 			}
-			if (f != null && f.Any)
+			if (_gameFetched is { } fetched && !open.Stroking && owner.MergeGame(fetched) is { } followed)
 			{
-				_gameWaiting.Add(f);
+				_gameFetched = null;
+				if (followed.Any && open.TakeGameChanges(followed))
+				{
+					SayFromGame(followed);
+				}
 			}
-			while (_gameWaiting.Count > 0 && s.TakeGameChanges(_gameWaiting[0].Merged, _gameWaiting[0].Ground))
+			// Changes of the editor's undone where the game changed the ground meanwhile: the game's now.
+			else if (_gameFetched == null && !open.Stroking && owner.TakeWaitingGround() is { Count: > 0 } waiting)
 			{
-				SayFromGame(_gameWaiting[0]);
-				_gameWaiting.RemoveAt(0);
+				open.TakeGameChanges(new WorldSession.Followed(new TerrainEditor.Save.WorldSave.Merged(new(), new(), new(), new()), new(), waiting, new()));
+				_message.Text = $"From the game: the ground of {waiting.Count} zone(s), where your changes were undone.";
 			}
 			UpdateSaveBar();
 		}
 		catch (InvalidOperationException ex) when (ex.Message.Contains("too old", StringComparison.Ordinal))
 		{
 			// An older plugin on the server: no following (Reload still reads the whole world again).
-			_gameTooOld = true;
+			_gameTooOld = owner;
 			_message.Text = "The WorldEditorBridge plugin on the server is older than this editor: update it to see what players change while you edit (Reload reads the world again meanwhile).";
 		}
 		catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or IOException or InvalidDataException or InvalidOperationException or System.Text.Json.JsonException or FormatException)
@@ -484,12 +496,14 @@ public sealed partial class MainWindow
 		}
 	}
 
+	// Said in the status bar: what came from the game that shows (objects come, go or move; ground). A
+	// change of data alone (a fire burning down, a chest used) is taken in without a word.
 	private void SayFromGame(WorldSession.Followed f)
 	{
 		var parts = new List<string>();
-		int added = f.Merged.Added.Count, gone = f.Merged.Vanished.Count;
-		if (added > 0) parts.Add($"{added} object(s) made or changed");
-		if (gone > 0) parts.Add($"{gone} removed or changed");
+		int added = f.Merged.Added.Count, gone = f.Merged.Vanished.Count + f.Ours.Count;
+		if (added > 0) parts.Add($"{added} new object(s)");
+		if (gone > 0) parts.Add($"{gone} removed");
 		if (f.Ground.Count > 0) parts.Add($"the ground of {f.Ground.Count} zone(s)");
 		string text = parts.Count > 0 ? $"From the game: {string.Join(", ", parts)}." : "";
 		if (f.Kept.Count > 0)
@@ -502,20 +516,12 @@ public sealed partial class MainWindow
 		}
 	}
 
-	// Before applying: ground the game changed where the editor has changes not applied yet would be
-	// written over (whatever was dug or built there since). Asks; true to go on.
-	internal async Task<bool> ConfirmOverGame(WorldSession w)
-	{
-		var pending = w.Edits.All().Where(e => e.Changed).Select(e => (e.ZoneX, e.ZoneZ)).ToHashSet();
-		var over = w.Edits.GameChanged.Where(pending.Contains).ToList();
-		if (over.Count == 0)
-		{
-			return true;
-		}
-		return await Ask("Apply over the game's changes",
+	// Asked by Apply live before writing over ground the game changed where the editor has changes not
+	// applied yet (whatever was dug or built there since). True to go on.
+	internal async Task<bool> ConfirmOverGame(IReadOnlyList<(int X, int Z)> over) =>
+		await Ask("Apply over the game's changes",
 			$"The ground of {over.Count} zone(s) ({string.Join("; ", over.Take(6).Select(z => $"{z.X}, {z.Z}"))}{(over.Count > 6 ? "…" : "")}) was changed in the game since you started editing it. "
 			+ "Applying writes your ground there: what players dug, flattened or paved in those zones since may be erased.\n\nApply anyway?", "Apply", "Not now");
-	}
 
 	// ---- Live players.
 
