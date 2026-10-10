@@ -179,9 +179,9 @@ public static class DumpVerifier
 	{
 		var watch = System.Diagnostics.Stopwatch.StartNew();
 		World world = new() { m_seedName = seedName, m_seed = TerrainEditor.Save.StableHash.Of(seedName), m_worldGenVersion = 2 };
-		WorldGenerator.Initialize(world);
+		var gen = WorldGenerator.Create(world);
 		Console.WriteLine($"  offline worldgen init {watch.ElapsedMilliseconds} ms, seed {world.m_seed}");
-		return WorldGenerator.instance;
+		return gen;
 	}
 }
 

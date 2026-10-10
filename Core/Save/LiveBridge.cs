@@ -165,5 +165,71 @@ public sealed class LiveBridge(string url, string token) : IDisposable
 		return body;
 	}
 
+	// The zones asked for as an int count, then int x, int z each.
+	private static byte[] ZoneList(IReadOnlyCollection<(int X, int Z)> zones)
+	{
+		using MemoryStream ms = new();
+		using (BinaryWriter w = new(ms, System.Text.Encoding.UTF8, leaveOpen: true))
+		{
+			w.Write(zones.Count);
+			foreach (var (x, z) in zones)
+			{
+				w.Write(x);
+				w.Write(z);
+			}
+		}
+		return ms.ToArray();
+	}
+
+	private async Task<HttpResponseMessage> Post(string path, byte[] body)
+	{
+		using HttpRequestMessage req = new(HttpMethod.Post, path) { Content = new ByteArrayContent(body) };
+		req.Headers.Add("X-Bridge-Token", token);
+		HttpResponseMessage res = await _http.SendAsync(req);
+		if (!res.IsSuccessStatusCode)
+		{
+			string text = await res.Content.ReadAsStringAsync();
+			throw new InvalidOperationException(res.StatusCode == System.Net.HttpStatusCode.NotFound
+				? $"the WorldEditorBridge plugin on the server is too old for {path}: update it"
+				: $"bridge {path}: {(int)res.StatusCode} {text}");
+		}
+		return res;
+	}
+
+	// One number per zone that changes when an object there changes (a plugin from this version on).
+	public async Task<Dictionary<(int X, int Z), ulong>> Watch(IReadOnlyCollection<(int X, int Z)> zones)
+	{
+		using var res = await Post("watch", ZoneList(zones));
+		using var doc = System.Text.Json.JsonDocument.Parse(await res.Content.ReadAsStringAsync());
+		var digests = new Dictionary<(int, int), ulong>();
+		foreach (var z in doc.RootElement.GetProperty("zones").EnumerateArray())
+		{
+			digests[(z[0].GetInt32(), z[1].GetInt32())] = ulong.Parse(z[2].GetString()!, System.Globalization.CultureInfo.InvariantCulture);
+		}
+		return digests;
+	}
+
+	// The saved objects of the zones as the game has them now: ZDOID and save-format bytes.
+	public async Task<List<(long User, uint Id, byte[] Bytes)>> ZoneObjects(IReadOnlyCollection<(int X, int Z)> zones)
+	{
+		using var res = await Post("zone", ZoneList(zones));
+		using var raw = new MemoryStream();
+		using (var gz = new System.IO.Compression.GZipStream(await res.Content.ReadAsStreamAsync(), System.IO.Compression.CompressionMode.Decompress))
+		{
+			await gz.CopyToAsync(raw);
+		}
+		raw.Position = 0;
+		using var r = new BinaryReader(raw);
+		int count = r.ReadInt32();
+		var list = new List<(long, uint, byte[])>(count);
+		for (int i = 0; i < count; i++)
+		{
+			long user = r.ReadInt64();
+			uint id = r.ReadUInt32();
+			list.Add((user, id, r.ReadBytes(r.ReadInt32())));
+		}
+		return list;
+	}
+
 	public async Task<WorldSave> LoadWorld() => WorldSave.LoadLive(await Snapshot(), "live: " + Url);
 }
