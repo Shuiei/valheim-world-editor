@@ -28,13 +28,13 @@
     <ProjectReference Include="../Core/ValheimWorldEditor.Core.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Avalonia" Version="12.1.3" />
-    <PackageReference Include="Avalonia.Desktop" Version="12.1.3" />
-    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.3" />
+    <PackageReference Include="Avalonia" Version="12.1.4" />
+    <PackageReference Include="Avalonia.Desktop" Version="12.1.4" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.4" />
     <PackageReference Include="Silk.NET.OpenGL" Version="2.23.0" />
     <!-- The Script tool: C# scripts compiled in the app (Roslyn), against .NET's reference assemblies
          carried inside (a single-file app has no assembly files to point the compiler at). -->
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.9.0" />
     <PackageReference Include="Basic.Reference.Assemblies.Net100" Version="1.8.12" />
   </ItemGroup>
 </Project>
