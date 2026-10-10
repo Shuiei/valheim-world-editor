@@ -724,6 +724,9 @@ public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
 
 	private static readonly FieldInfo ObjectsBySector = typeof(ZDOMan).GetField("m_objectsBySector", BindingFlags.Instance | BindingFlags.NonPublic);
 
+	// Portals are kept apart from the zone lists, in their own (by zone too).
+	private static readonly FieldInfo PortalObjects = typeof(ZDOMan).GetField("m_portalObjects", BindingFlags.Instance | BindingFlags.NonPublic);
+
 	// Zones asked for: int count, then int x, int z each (outside the world: left out).
 	private static List<Vector2s> ReadZones(byte[] body)
 	{
@@ -741,14 +744,17 @@ public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
 		return zones;
 	}
 
-	// The saved objects of a zone (persistent ZDOs), as the game keeps them by zone.
+	// The saved objects of a zone (persistent ZDOs), as the game keeps them by zone: its list, and its
+	// portals (kept apart).
 	private static IEnumerable<ZDO> ZoneZdos(Vector2s zone)
 	{
 		var bySector = (List<ZDO>[])ObjectsBySector.GetValue(ZDOMan.instance);
-		uint index = ZoneSystem.SectorToIndex(zone).Sector;
-		if (index >= bySector.Length || bySector[index] is not { } list)
+		var portals = (Dictionary<ZoneSystem.SectorIndex, List<ZDO>>)PortalObjects.GetValue(ZDOMan.instance);
+		ZoneSystem.SectorIndex index = ZoneSystem.SectorToIndex(zone);
+		IEnumerable<ZDO> list = index.Sector < bySector.Length && bySector[index.Sector] is { } inZone ? inZone : Enumerable.Empty<ZDO>();
+		if (portals != null && portals.TryGetValue(index, out List<ZDO> zonePortals))
 		{
-			yield break;
+			list = list.Concat(zonePortals);
 		}
 		foreach (ZDO zdo in list)
 		{
@@ -763,18 +769,24 @@ public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
 	// moves are not changes to the world worth reading again.
 	private static readonly Dictionary<int, bool> Movers = new();
 
+	// And kinds that rewrite their data on their own every few seconds while a player is near (fires and
+	// torches their fuel time, smelters, cooking stations, beehives, fermenters, sap collectors): that is
+	// not a change worth reading their zone again for (they would be read at every look).
 	private static bool Moves(int prefab)
 	{
 		if (!Movers.TryGetValue(prefab, out bool moves))
 		{
 			GameObject go = ZNetScene.instance != null ? ZNetScene.instance.GetPrefab(prefab) : null;
-			Movers[prefab] = moves = go != null && go.GetComponent<ZSyncTransform>() != null;
+			Movers[prefab] = moves = go != null && (go.GetComponent<ZSyncTransform>() != null || go.GetComponent<Fireplace>() != null
+				|| go.GetComponent<Smelter>() != null || go.GetComponent<CookingStation>() != null || go.GetComponent<Beehive>() != null
+				|| go.GetComponent<Fermenter>() != null || go.GetComponent<SapCollector>() != null);
 		}
 		return moves;
 	}
 
 	// One number per zone that changes when an object there is made, removed or changed (its data or
-	// place; a mover only when made or removed): the editor reads a zone again when it changes.
+	// place; a mover or a ticking kind only when made or removed): the editor reads a zone again when it
+	// changes, and then sees every object as it is.
 	private byte[] Watch(byte[] body)
 	{
 		StringBuilder sb = new("{\"zones\":[");
