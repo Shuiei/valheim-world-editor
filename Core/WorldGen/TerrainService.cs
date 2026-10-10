@@ -13,6 +13,9 @@ public sealed class TerrainService
 
 	private readonly WorldGenerator _gen;
 
+	// This world's generator (the map reads biomes and rivers from it).
+	internal WorldGenerator Generator => _gen;
+
 	private readonly ConcurrentDictionary<(int, int), float[]> _zones = new();
 
 	private readonly Lazy<byte[]> _overviewPng;
@@ -30,8 +33,7 @@ public sealed class TerrainService
 	{
 		_modifiers = modifiers;
 		World world = new() { m_seed = save.Seed, m_seedName = save.SeedName, m_worldGenVersion = save.WorldGenVersion };
-		WorldGenerator.Initialize(world);
-		_gen = WorldGenerator.instance;
+		_gen = WorldGenerator.Create(world);
 		_overviewPng = new Lazy<byte[]>(() => RenderOverview(overviewSize), LazyThreadSafetyMode.ExecutionAndPublication);
 	}
 
