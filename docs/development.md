@@ -6,14 +6,14 @@
 |---|---|
 | `Desktop/` | The app, `ValheimWorldEditor` (Avalonia window, 3D view and map drawn with OpenGL through Silk.NET). `Program.cs` (command line), `StartPage`, `MapPage` + `MapView` (the map), `MainWindow` (the 3D editor's page: top bar, tool rail, panels, keys) with `GlView` (the 3D view and its mouse), `WorldSession` / `WorldScene` / `EditSession` (the open world, the loaded area, its pending changes and history), one class per tool and panel (`AreaTool` + `AreaPanel`, `PlaceTool` + `PlacePanel`, `SelectTool` + `SelectPanel`, `PathTool`, `Sculpt`, `Erosion`, `Mask`…), `ModelStore` and `GameLookGl` (the game's models and terrain shader), `Prefs` (remembered choices), `Driver` (`--driver`, below). |
 | `Core/` | `ValheimWorldEditor.Core`, what is not about the window: |
-| `Core/App/` | Settings (`AppSettings`), the log (`Log`), game-look setup (`GameLook`), Regrow, search, blueprint formats, servers and SSH (`ServerConfig`, `Tunnel`), the local game (`LocalGame`), characters, zone statistics, folders (`Places`). |
+| `Core/App/` | Settings (`AppSettings`), the log (`Log`), the game's files (`GameLook`, `GameBundles`, `GameLookData`, `GameShader`, `GameTextures`), Regrow, search, blueprint formats, servers and SSH (`ServerConfig`, `Tunnel`), the local game (`LocalGame`), characters, zone statistics, folders (`Places`). |
 | `Core/Save/` | Save reader (`WorldSave`, `ValheimReader`), writer (`WorldWriter`), new worlds (`WorldCreator`), object building (`ZdoTools`: copies and blank objects), the `.db2` zone list, and live mode (`LiveBridge`, `LiveSync`). |
 | `Core/Editing/` | Pending changes: terrain per zone, deleted and added objects, zone resets (`EditStore`); heights of a block of zones (`HeightGrid`). |
 | `Core/WorldGen/` | Valheim's world generator (bit-exact base terrain), map data, location flattening, the build-piece catalogue (`pieces.json`), the prefab catalogue (`prefabs.json`), the vegetation rules (`vegetation.json`) and the object data names (`zdo-keys.json`). |
 | `plugin/WorldEditorBridge/` | The BepInEx plugin for live mode (.NET Framework 4.7.2). |
 | `tests/Desktop.Tests/` | Every test (xUnit v3, Avalonia's headless mode), see [Tests](#tests). `tests/fixtures/` holds the test world. |
 | `tools/WorldCheck/` | Developer checks of the generator and the writer, and new worlds from a seed, see below. |
-| `tools/asset-export/` | Python (UnityPy) scripts that extract textures, shaders, models and catalogues from the game. |
+| `tools/asset-export/` | Python (UnityPy) scripts that make the catalogues in `Core/WorldGen/` from the game's files (developers only; not in the release). |
 | `tools/docs-screenshots/` | `scenes.py` builds and takes the pictures in `docs/images/`, through `editor.py`, which drives the app. |
 | `tools/release.sh`, `tools/check-package.sh` | The release packages, and their check. |
 | `tools/zdo_scan.py` | Minimal chunk reader, to check saved objects byte by byte. |
@@ -28,8 +28,8 @@ ValheimWorldEditor --world <folder or name> [--zone x,z] [--size n]   straight i
 ```
 
 For tests and the documentation: `--driver` (driven over its input and output, below), `--data
-<folder>` (settings, servers, blueprints, the log… in that folder instead of the user's; the copied
-game look is still read from the user's) and `--window <width>x<height>` (the window's size).
+<folder>` (settings, servers, blueprints, the log… in that folder instead of the user's; the game's
+files are still read from the user's Valheim, and its index kept in the user's data folder) and `--window <width>x<height>` (the window's size).
 
 ### The driver (`--driver`)
 
@@ -50,9 +50,8 @@ The app reads one command per line on its input and answers each with one line, 
 | `bench <seconds>` / `state` / `quit` | Frame rates while the camera turns / the state / quit without asking. |
 
 `tools/docs-screenshots/editor.py` wraps it for the documentation's pictures: it starts the app with
-a stand-in home folder (none of this computer's characters, worlds or servers show; the game look
-is linked in; driven, the app looks for Steam only in that home, so it never finds this computer's
-own Valheim), sends commands and saves `shot`s as JPEG, the status bar's message cleared first.
+a stand-in home folder (none of this computer's characters, worlds or servers show; driven, the app
+looks for Steam only in that home, so for the game's look its settings name this computer's Valheim), sends commands and saves `shot`s as JPEG, the status bar's message cleared first.
 `tools/docs-screenshots/scenes.py` holds one scene per picture: each opens a fresh editor and builds
 only what its picture shows, in worlds made from seeds and never saved:
 
@@ -107,75 +106,50 @@ release:
 4. `tools/release.sh <folder>` and `tools/thunderstore.sh <folder>`; tag `v<version>`, publish the
    GitHub release, upload the Thunderstore zip (Thunderstore refuses a version it already has).
 
-## Files extracted from the game
+## The game's files
 
 The in-game look uses files that belong to the game, so they are never in git or in the release
-packages. The app copies them from the user's own Valheim (`Core/App/GameLook.cs`, started by the
-start page): it finds Valheim in the Steam libraries (or the folder the user chose), runs
-`export-game-files/export_all.py` with the bundled Python runtime into the per-user `game-look`
-folder of the data folder, and runs it again when Steam's build id of the game changes. That folder
-holds:
+packages, and nothing is copied: the app reads them from the user's own Valheim, straight from its
+asset bundles (`valheim_Data/StreamingAssets/SoftRef/Bundles`), in C# with
+[AssetsTools.NET](https://github.com/nesrak1/AssetsTools.NET) (the bundles carry their type trees, so
+every field reads by name). `Core/App/GameLook.cs` finds Valheim in the Steam libraries (or the folder
+the user chose) and keeps the one reader, `Core/App/GameBundles.cs`:
 
-- `terrain/*.png` and `heightmap.frag.glsl`: terrain textures and the converted terrain shader
-  (drawn by `Desktop/GameLookGl.cs`);
-- `maptex/`: map textures (the map shader itself is hand-ported in `Desktop/MapShader.cs`);
-- `models/`: building, tree, rock and bush models, their textures and `objects.json`
-  (`Desktop/ModelStore.cs`).
+- **Index:** which bundle holds each prefab, from each bundle's table of contents (its AssetBundle's
+  `m_Container`); a prefab name in two bundles is the one with a ZNetView. A few other assets are
+  found there by file name (`GameBundles.NamedAssets`: the terrain material and texture arrays, the
+  map material). Building it reads every bundle's table (about 5 s); it is kept in `game-index.json`
+  in the data folder with each bundle's name, size and time, and made again when they change (a game
+  update).
+- **Models** (`Desktop/BundleModels.cs` for `Desktop/ModelStore.cs`): a prefab's parts (MeshFilter or
+  SkinnedMeshRenderer with their materials, placed by the transforms), leaving out the worn and broken
+  looks of pieces, lower levels of detail, inactive objects and, in dungeon rooms, their networked
+  objects and random parts not there half the time. Meshes are decoded from their vertex streams; z
+  is mirrored (Unity is left-handed). A small piece takes tens of milliseconds, the biggest dungeon
+  room about 10 s, on a worker thread.
+- **Textures** (`Core/App/GameTextures.cs`): the mip level no larger than 1024 pixels, decoded to RGBA
+  ([BCnEncoder.NET](https://github.com/Nominom/BCnEncoder.NET) for DXT1, DXT5, BC4, BC5, BC7); cut-out
+  textures get the colour of nearby opaque pixels in their transparent ones, so filtering does not
+  bleed the hidden colour into leaf edges.
+- **Terrain and map** (`Core/App/GameLookData.cs`, drawn by `Desktop/GameLookGl.cs` and
+  `Desktop/MapView.cs`): the `Heightmap_basematerial` textures, the diffuse and normal texture arrays,
+  the `minimap` material's textures, and the terrain shader (`Core/App/GameShader.cs`): from the
+  OpenGL core program one deferred-pass fragment variant converted to GLSL ES 3.0 (`GameLookGl` adds
+  its own `main()`); Valheim for Windows has no OpenGL programs, so there the Vulkan one is taken
+  (SMOL-V decoded by `Core/App/Smolv.cs`, its uniforms' names put back from its parameter blob) and
+  SPIRV-Cross turns it into the same GLSL (`Core/App/TerrainShader.cs`). If a game update changes the
+  shader, the converter says so instead of drawing a broken one.
 
-`tools/make-python-runtime.sh` builds that runtime, then `tools/python-runtime/trim.py` removes every
-file a full export does not use: the list of what stays is
-`tools/python-runtime/keep-<linux-x64|win-x64>.txt` (plus the `encodings` package, the used
-packages' Python files and licence files; see the top of `trim.py`). After changing
-`requirements.txt`, the Python version or the exporter, make the lists again and commit them:
-
-```sh
-python3 tools/python-runtime/trace.py linux-x64 ~/.local/share/Steam/steamapps/common/Valheim
-python3 tools/python-runtime/trace.py win-x64 ~/.local/share/Steam/steamapps/common/Valheim   # under Wine
-```
-
-Each runs a full export with the untrimmed runtime and logs what it opens and loads. The Windows
-runtime also carries `msvcp140.dll` (from Microsoft's `msvc-runtime` wheel), which UnityPy needs
-and Windows only has when a program installed the Visual C++ runtime.
-
-`tools/asset-export/export_all.py` can also be run by hand (Python 3; `pip install
--r tools/asset-export/requirements.txt`):
-
-```sh
-python3 tools/asset-export/export_all.py --valheim ~/.local/share/Steam/steamapps/common/Valheim --out ~/.local/share/ValheimWorldEditor/game-look
-```
-
-| Option | Meaning |
-|---|---|
-| `--valheim` | The game client's folder (with `valheim_Data`). |
-| `--out` | The `game-look` folder. |
-| `--objects all` / `world` / `none` | Models for every placeable kind (default), only the kinds in the save given with `--world <world folder>`, or build pieces only. |
-| `--only terrain` / `map` / `models` | Run only some steps (repeatable). |
-| `--work` | Cache folder (default `<out>/../export-cache`). |
-
-What it does:
-
-1. Reads every asset bundle once and records where the terrain material, the terrain texture
-   arrays, the map material and each prefab's root object are (cached in `--work/scan.json`, with
-   each bundle's name, size and time: when they change, a game update, it reads them again and the
-   models are all made again).
-2. **Terrain:** the textures of the `Heightmap` material, the diffuse and normal texture arrays
-   stacked into vertical strips, and the OpenGL core build of the `Custom/Heightmap` shader, one
-   deferred-pass fragment variant converted to GLSL ES 3.0 (`GameLookGl` adds its own `main()`). If
-   a game update changes the shader, the converter stops with a message instead of writing a broken
-   file.
-3. **Map:** the textures of the `minimap` material.
-4. **Models:** `export_pieces.py` (meshes, textures, materials; incremental, so an interrupted run
-   continues: each file is written to a temporary file then renamed, and a piece counts as done once
-   `materials.json` and `meshinfo.json` hold what it uses, saved every 25 pieces), then `fix_normals.py` (Unity's DXT5nm normal maps to plain RGB) and `fix_alpha.py`
-   (bleeds the colour of cut-out textures into their transparent pixels), then `objects.json`.
-
-A full run takes a few minutes and writes about 150 MB.
+`tests/Desktop.Tests/GameFilesTests.cs` (`--filter Category=Game`) checks the models against a copy the
+older Python exporter made, where both are on the computer.
 
 The catalogues that are in git are made by `scan_pieces.py` (`Core/WorldGen/pieces.json`, with each
 piece's snap points), `scan_modifiers.py` (`Core/WorldGen/terrain-modifiers.json`) and
 `scan_prefabs.py` (`Core/WorldGen/prefabs.json`: also container sizes, ward radii and crafting
 station build ranges); each takes the output file as argument and the bundle folder in
-`VWE_BUNDLES`. `scan_vegetation.py Core/WorldGen/vegetation.json` makes the game's vegetation rules
+`VWE_BUNDLES`, and follows references between bundles with `tools/asset-export/cab_index.json`, made
+by `make_cab_index.py` (once, and again after a game update; `pip install -r
+tools/asset-export/requirements.txt` first). `scan_vegetation.py Core/WorldGen/vegetation.json` makes the game's vegetation rules
 for Regrow nature (ZoneSystem's and the location lists', with the random draws each kind makes when
 it is created). `scan_grown.py Core/WorldGen/prefabs.json` (run after `scan_prefabs.py`) adds what
 each sapling grows into (grown crops and trees keep their sapling's grow radius).

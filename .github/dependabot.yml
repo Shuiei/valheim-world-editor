@@ -32,7 +32,7 @@ updates:
       - dependency-name: xunit.runner.visualstudio
         update-types: ["version-update:semver-major"]
 
-  # The game-look exporter's Python packages (also bundled in the release).
+  # The Python packages of the developer scripts that make the editor's data files (tools/asset-export).
   - package-ecosystem: pip
     directory: /tools/asset-export
     schedule:
@@ -42,9 +42,6 @@ updates:
       exporter:
         patterns: ["*"]
     ignore:
-      # The exporter relies on UnityPy 1.25's API: newer minor versions need checking against
-      # the game's files first (see docs/development.md). No patch updates either: from 1.25.3 it
-      # needs tpk_ar, which has no wheel, so the Windows runtime (wheels only) takes 1.25.2 while
-      # Linux takes the newest, and each one's trim list (tools/python-runtime) was traced with
-      # those; raising the minimum (as a Dependabot PR did) breaks the Windows package.
+      # The scripts rely on UnityPy 1.25's API: newer versions need checking against the game's
+      # files first (see docs/development.md).
       - dependency-name: UnityPy

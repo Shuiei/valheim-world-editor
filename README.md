@@ -94,8 +94,8 @@ The sections below cover each step in more detail.
 
 - **Windows 10/11 or Linux**, 64-bit.
 - **Valheim** installed through Steam on the same computer, for the game's look. The editor finds it
-  by itself and copies the textures and models it needs from it, once. Without it the editor still
-  works, with plain colours and no object models.
+  by itself and reads the textures and models it needs straight from the game's files (nothing is
+  copied). Without it the editor still works, with plain colours and no object models.
 - For the **live** ways: **BepInEx** in the game that hosts the world (your Valheim, or the
   server), using [BepInExPack for Valheim](https://thunderstore.io/c/valheim/p/denikson/BepInExPack_Valheim/),
   plus the WorldEditorBridge plugin (its own download, next to the editor's). Players who join need
@@ -119,11 +119,10 @@ Windows it falls back to Direct3D when the driver has no OpenGL).
 
 ![The start page](docs/images/start-game.jpg)
 
-The first time, a card on the start page shows the editor copying the game's look from your Valheim
-install (a few minutes, about 150 MB); you can already start editing meanwhile, and the areas you
-open once it is done have the game's textures and models. After a Valheim update it is copied again
-by itself. If Valheim is not found, the card asks for its folder (the one Steam installed it into,
-with `valheim_Data`).
+The editor reads the game's look (textures, models, the terrain and map) straight from your Valheim
+install: nothing is copied. The first time, and after a Valheim update, it reads the game's files for
+a few seconds (a card on the start page says so). If Valheim is not found, the card asks for its
+folder (the one Steam installed it into, with `valheim_Data`).
 
 ### My game (live)
 
@@ -217,7 +216,7 @@ with the server; **edit** next to a saved server changes it. (The token is still
 ### Where things are kept
 
 Settings, saved servers (`servers.cfg`), what the editor remembers between runs, blueprints, the
-copied game files and a log (`ValheimWorldEditor.log`, a new one each run) are in `~/.local/share/ValheimWorldEditor`
+index of the game's files (`game-index.json`) and a log (`ValheimWorldEditor.log`, a new one each run) are in `~/.local/share/ValheimWorldEditor`
 (Linux) or `%LOCALAPPDATA%\ValheimWorldEditor` (Windows). The bottom of the start page shows the
 folder.
 
@@ -308,7 +307,7 @@ dotnet publish Desktop/ValheimWorldEditor.Desktop.csproj -c Release -r linux-x64
 ```
 
 Use `-r win-x64` for Windows. `tools/release.sh <folder>` builds the complete release packages
-(the program, the game-look exporter and its Python runtime); `tools/thunderstore.sh <folder>` the
+(the program and its README); `tools/thunderstore.sh <folder>` the
 plugin's (`WorldEditorBridge-<version>.zip`). The tests, as CircleCI runs
 them on every push (the visual tests need a display and are left out):
 

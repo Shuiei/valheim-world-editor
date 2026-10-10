@@ -2118,7 +2118,7 @@ public sealed partial class MainWindow : Window
 		};
 		_view.Status += t => { Options.Say(t); Dispatcher.UIThread.Post(() => _info.Text = t + "\n" + _info.Text); };
 		// Once really closed (Closing also comes when "Keep editing" keeps the window open).
-		Closed += (_, _) => { _perf.Flush(); GameLook.StopExport(); Prefs.Flush(); };
+		Closed += (_, _) => { _perf.Flush(); Prefs.Flush(); };
 		RememberPrefs();
 		_info.Text = "Loading the world…";
 		Opened += async (_, _) =>
@@ -2130,9 +2130,11 @@ public sealed partial class MainWindow : Window
 			Options.Say("window open");
 			// The game's look: copied from the player's Valheim when missing or after a game update
 			// (when driven by the tests, only whether it is there: they never copy from the game).
-			GameLook.Check(_settings, export: !Options.Driver);
+			GameLook.Check(_settings);
 			if (!Options.Driver)
 			{
+				// The copy older editors made of the game's look: nothing reads it any more.
+				_ = Task.Run(GameLook.DeleteOldCopy);
 				_modelsLoading = Task.Run(ModelStore.Open);
 			}
 			if (Options.Direct)

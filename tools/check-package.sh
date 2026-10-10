@@ -5,15 +5,14 @@
 set -euo pipefail
 pkg=${1:?package}
 case "$pkg" in
-  *.tar.gz) list=$(tar -tzf "$pkg"); exe=ValheimWorldEditor/ValheimWorldEditor; py=ValheimWorldEditor/export-game-files/python/bin/python3.12 ;;
-  *.zip) list=$(unzip -Z1 "$pkg"); exe=ValheimWorldEditor/ValheimWorldEditor.exe; py=ValheimWorldEditor/export-game-files/python/python.exe ;;
+  *.tar.gz) list=$(tar -tzf "$pkg"); exe=ValheimWorldEditor/ValheimWorldEditor ;;
+  *.zip) list=$(unzip -Z1 "$pkg"); exe=ValheimWorldEditor/ValheimWorldEditor.exe ;;
   *) echo "unknown package type: $pkg" >&2; exit 2 ;;
 esac
 fail=0
 need() { grep -qx "$1" <<<"$list" || { echo "MISSING  $1"; fail=1; }; }
-for f in "$exe" "$py" ValheimWorldEditor/README.txt \
-  ValheimWorldEditor/export-game-files/export_all.py ValheimWorldEditor/export-game-files/export_pieces.py ValheimWorldEditor/export-game-files/vulkan_shader.py ValheimWorldEditor/export-game-files/smolv.py ValheimWorldEditor/export-game-files/pieces.json ValheimWorldEditor/export-game-files/dungeon-rooms.json.gz; do need "$f"; done
-bad=$(grep -E '\.cs$|\.csproj$|\.pdb$|/obj/|/bin/Release|wwwroot/|^ValheimWorldEditor/(models|maptex|terrain|game-look|plugin)/|heightmap\.frag\.glsl$|\.git/' <<<"$list" || true)
+for f in "$exe" ValheimWorldEditor/README.txt; do need "$f"; done
+bad=$(grep -E '\.cs$|\.csproj$|\.pdb$|/obj/|/bin/Release|wwwroot/|^ValheimWorldEditor/(models|maptex|terrain|game-look|plugin|export-game-files)/|heightmap\.frag\.glsl$|\.git/' <<<"$list" || true)
 if [ -n "$bad" ]; then echo "FORBIDDEN in the package:"; echo "$bad" | head -20; fail=1; fi
 size=$(du -m "$pkg" | cut -f1)
 if [ "$size" -gt 150 ]; then echo "TOO BIG  ${size} MB"; fail=1; fi

@@ -30,13 +30,10 @@ internal sealed class BundleModels : ModelStore.ISource
 		_game = game;
 	}
 
-	public static string IndexFile => Path.Combine(AppSettings.UserDataDir, "game-index.json");
-
-	// The models of this Valheim game folder (its bundles indexed now, or read from the kept index),
-	// or null when it is not one.
-	public static BundleModels? ForGame(string? valheim)
+	// The models of the game's files (their index read or built now), or null when there are none.
+	public static BundleModels? For(GameBundles? game)
 	{
-		if (GameBundles.ForGame(valheim, IndexFile) is not { } game)
+		if (game == null)
 		{
 			return null;
 		}
@@ -44,9 +41,9 @@ internal sealed class BundleModels : ModelStore.ISource
 		{
 			return game.Index.Count > 0 ? new BundleModels(game) : null;
 		}
-		catch (Exception e) when (e is IOException or InvalidDataException or UnauthorizedAccessException)
+		catch (Exception e) when (e is IOException or InvalidDataException or UnauthorizedAccessException or NotSupportedException or NotImplementedException)
 		{
-			Console.WriteLine($"game files: could not read the bundles in {valheim}: {e.Message}");
+			Console.WriteLine($"game files: could not read the bundles in {game.Folder}: {e.Message}");
 			return null;
 		}
 	}

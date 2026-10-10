@@ -1,209 +1,131 @@
-using System.Diagnostics;
-using System.Text.Json;
 using System.Text.RegularExpressions;
 
 namespace TerrainEditor.App;
 
-// The game's own look (terrain shader and textures, map textures; models are read from the game's
-// bundles, see GameBundles) is copied from the user's own Valheim install, never shipped: this finds
-// the install, runs the bundled exporter (export-game-files/export_all.py with its own Python runtime)
-// in the background, and redoes it after a game update. The files go to a per-user folder (Dir) that the editor reads them from.
+// The game's own look (models, textures, the terrain shader, the map's textures) is read from the
+// user's own Valheim install, never shipped nor copied: this finds the install and keeps the one
+// reader of its asset bundles (GameBundles). The first time, and after a game update, the bundles are
+// indexed (a few seconds, in the background; the index is kept in a file).
 public static class GameLook
 {
 	public const int ValheimAppId = 892970;
 
 	private static readonly object Lock = new();
 
-	private static Process? _process;
+	private static GameBundles? _bundles;
 
-	private static readonly List<string> _log = new();
-
+	// Where older editors copied the game's look (game-look) and kept the copy's cache (export-cache):
+	// deleted, nothing reads them any more.
 	public static string Dir => Path.Combine(AppSettings.UserDataDir, "game-look");
+
+	private static string OldCache => Path.Combine(AppSettings.UserDataDir, "export-cache");
+
+	// The bundles' index (prefab -> bundle), kept between runs.
+	public static string IndexFile => Path.Combine(AppSettings.UserDataDir, "game-index.json");
 
 	// False: Steam is only looked for under the home folder (not /opt/Steam, /usr/share/steam or
 	// Program Files): the editor driven by the tests and the documentation's pictures, whose stand-in
 	// home must not lead to the computer's own game.
 	public static bool SearchOutsideHome { get; set; } = true;
 
-	internal static string MarkerPath => Path.Combine(Dir, "game-look.json");
-
-	// "ready", "missing" (not set up, Valheim not found), "running", "failed".
+	// "ready", "missing" (Valheim not found), "running" (indexing its bundles), "failed".
 	public static string State { get; private set; } = "missing";
 
 	public static string? Message { get; private set; }
 
 	public static string? ValheimPath { get; private set; }
 
-	// What the start page shows: the state, its message, the Valheim folder, the exporter's last line
-	// and the progress (0..1, null when not known).
+	// The reader of the game's bundles (null when Valheim is not found).
+	public static GameBundles? Bundles
+	{
+		get
+		{
+			lock (Lock)
+			{
+				return _bundles;
+			}
+		}
+	}
+
+	// What the start page shows: the state, its message, the Valheim folder, a detail line and the
+	// progress (0..1, null when not known).
 	public sealed record Snapshot(string State, string? Message, string? Valheim, string? LastLine, double? Progress);
 
 	public static Snapshot Now()
 	{
 		lock (Lock)
 		{
-			string? last = _log.Count > 0 ? Regex.Replace(_log[^1], @"^\d\d:\d\d:\d\d ", "") : null;
-			return new Snapshot(State, Message, ValheimPath, last, Progress());
+			return new Snapshot(State, Message, ValheimPath, null, State == "ready" ? 1 : null);
 		}
 	}
 
-
-	internal sealed record Marker(string Valheim, string? BuildId, int Exporter, DateTime Made);
-
-	// Bump when the exporter's output changes, so existing installs export again.
-	// 2: runestone locations and tameable creatures get models.
-	// 3: dungeon rooms get models (the Dungeon tool).
-	internal const int ExporterVersion = 3;
-
-	// Files that only a complete export leaves behind.
-	public static bool Present()
-	{
-		static bool Complete(string root) =>
-			File.Exists(Path.Combine(root, "terrain", "heightmap.frag.glsl")) && File.Exists(Path.Combine(root, "maptex", "background.png"));
-		return Complete(Dir);
-	}
-
-	// At start: export when the files are missing, or when the game was updated since (export: false,
-	// for the tests' editor: only say whether the files are there, never copy).
-	public static void Check(AppSettings settings, bool export = true)
+	// At start and when the game folder changes: finds Valheim and indexes its bundles (in the
+	// background when the kept index is out of date).
+	public static void Check(AppSettings settings)
 	{
 		string? valheim = FindValheim(settings.ValheimPath);
+		GameBundles? game;
 		lock (Lock)
 		{
 			ValheimPath = valheim;
+			if (valheim == null)
+			{
+				_bundles = null;
+				Set("missing", "Valheim was not found on this computer. Choose its folder to get the game's look.");
+				return;
+			}
+			if (_bundles == null || !string.Equals(_bundles.Folder, BundlesDir(valheim), StringComparison.Ordinal))
+			{
+				_bundles = GameBundles.ForGame(valheim, IndexFile);
+			}
+			game = _bundles;
+			if (game == null)
+			{
+				Set("failed", "The game's files could not be read.");
+				return;
+			}
+			if (game.Indexed)
+			{
+				Set("ready", null);
+				return;
+			}
+			Set("running", "Reading the game's files (a few seconds, only after a game update).");
 		}
-		Marker? marker = null;
-		try
+		Task.Run(() =>
 		{
-			marker = File.Exists(MarkerPath) ? JsonSerializer.Deserialize<Marker>(File.ReadAllText(MarkerPath)) : null;
-		}
-		catch
-		{
-		}
-		string? problem = ConvertShader();
-		bool present = Present();
-		string? build = valheim != null ? BuildId(valheim) : null;
-		bool upToDate = marker != null && marker.Exporter == ExporterVersion && (valheim == null || build == null || marker.BuildId == build);
-		// The copy is done but its shader could not be made here: copying again would end the same
-		// way (minutes, at every start). Said instead; a game update or a new editor copies again.
-		if (problem != null && !present && upToDate)
-		{
-			Set("failed", "The game's look is copied, but its terrain shader could not be made: " + problem);
-			return;
-		}
-		if (valheim == null)
-		{
-			Set(present ? "ready" : "missing", present ? null : "Valheim was not found on this computer. Choose its folder to get the game's look.");
-			return;
-		}
-		if (present && upToDate)
-		{
-			Set("ready", null);
-			return;
-		}
-		if (!export)
-		{
-			Set(present ? "ready" : "missing", present ? null : "The game's look is not copied yet.");
-			return;
-		}
-		string? why = !present ? null : marker != null && marker.Exporter != ExporterVersion
-			? "This version of the editor draws more of the game: copying the new models (a minute or two)."
-			: "Valheim was updated: refreshing the game's look.";
-		Start(valheim, settings, why);
+			string state, message;
+			try
+			{
+				int n = game.Index.Count;
+				(state, message) = n > 0 ? ("ready", "The game's look is ready.") : ("failed", "No models were found in the game's files.");
+			}
+			catch (Exception e) when (e is IOException or InvalidDataException or UnauthorizedAccessException or NotSupportedException or NotImplementedException)
+			{
+				Console.WriteLine($"game look: {e}");
+				(state, message) = ("failed", "The game's files could not be read: " + e.Message);
+			}
+			lock (Lock)
+			{
+				if (ReferenceEquals(_bundles, game))
+				{
+					Set(state, message);
+				}
+			}
+		});
 	}
 
-	// Start (or restart) the export from this Valheim folder.
-	public static string? Start(string valheim, AppSettings settings, string? why = null)
+	// Use this Valheim folder: kept in the settings, then read. The problem, or null.
+	public static string? Start(string valheim, AppSettings settings)
 	{
 		valheim = valheim.Trim().Trim('"');
 		if (BundlesDir(valheim) == null)
 		{
 			return "That folder is not a Valheim game folder (it has no valheim_Data). Pick the folder Steam installed Valheim into.";
 		}
-		lock (Lock)
-		{
-			if (_process is { HasExited: false })
-			{
-				return null;
-			}
-			string? python = PythonPath(), script = ScriptPath();
-			if (python == null || script == null)
-			{
-				Set("failed", "The game-look exporter is missing from this installation (export-game-files).");
-				return null;
-			}
-			settings.ValheimPath = valheim;
-			settings.Save();
-			ValheimPath = valheim;
-			_log.Clear();
-			Directory.CreateDirectory(Dir);
-			var psi = new ProcessStartInfo(python)
-			{
-				RedirectStandardOutput = true,
-				RedirectStandardError = true,
-				UseShellExecute = false,
-				CreateNoWindow = true,
-			};
-			// The terrain and the map only: models are read from the game's bundles (GameBundles).
-			foreach (string a in new[] { "-u", script, "--valheim", valheim, "--out", Dir, "--work", Path.Combine(AppSettings.UserDataDir, "export-cache"), "--only", "terrain", "--only", "map" })
-			{
-				psi.ArgumentList.Add(a);
-			}
-			psi.Environment["PYTHONIOENCODING"] = "utf-8";
-			var p = new Process { StartInfo = psi, EnableRaisingEvents = true };
-			p.OutputDataReceived += (_, e) => Add(e.Data);
-			p.ErrorDataReceived += (_, e) => Add(e.Data);
-			string build = BuildId(valheim) ?? "";
-			p.Exited += (_, _) =>
-			{
-				lock (Lock)
-				{
-					Console.WriteLine($"game look: the exporter ended (exit code {p.ExitCode})");
-					string? shaderProblem = null;
-					if (p.ExitCode == 0)
-					{
-						shaderProblem = ConvertShader();
-					}
-					if (shaderProblem != null)
-					{
-						Set("failed", "Copying the game's look failed: " + shaderProblem);
-					}
-					else if (p.ExitCode == 0 && Present())
-					{
-						File.WriteAllText(MarkerPath, JsonSerializer.Serialize(new Marker(valheim, build, ExporterVersion, DateTime.Now)));
-						Set("ready", "The game's look is ready.");
-					}
-					else
-					{
-						Set("failed", "Copying the game's look failed: " + (_log.LastOrDefault(l => l.Contains("Error") || l.StartsWith("No ") || l.Contains("exit")) ?? _log.LastOrDefault() ?? $"exit code {p.ExitCode}"));
-					}
-				}
-			};
-			Console.WriteLine($"game look: copying from {valheim} (Steam build {(build.Length > 0 ? build : "unknown")})");
-			p.Start();
-			p.BeginOutputReadLine();
-			p.BeginErrorReadLine();
-			_process = p;
-			Set("running", why ?? "Copying the game's look from your Valheim install (a few minutes, only this once).");
-			return null;
-		}
-	}
-
-	private static void Add(string? line)
-	{
-		if (string.IsNullOrWhiteSpace(line))
-		{
-			return;
-		}
-		Console.WriteLine("game look: " + Regex.Replace(line, @"^\d\d:\d\d:\d\d ", ""));
-		lock (Lock)
-		{
-			_log.Add(line);
-			if (_log.Count > 400)
-			{
-				_log.RemoveRange(0, 200);
-			}
-		}
+		settings.ValheimPath = valheim;
+		settings.Save();
+		Check(settings);
+		return null;
 	}
 
 	private static void Set(string state, string? message)
@@ -216,139 +138,28 @@ public static class GameLook
 		Message = message;
 	}
 
-	// A copy from Valheim for Windows brings the terrain shader as SPIR-V (its Vulkan program): made
-	// into GLSL here (TerrainShader), again when this editor's converter is newer than the one that
-	// made it (a GLSL that cannot be made again stays). Null when done or not needed, else what went
-	// wrong.
-	private static string? ConvertShader()
+	// The copy older editors made (up to 1.16): about 150 MB nothing reads any more. Called by the app
+	// at start (not by the tests' editors: their data folder is the user's).
+	public static void DeleteOldCopy()
 	{
-		string terrain = Path.Combine(Dir, "terrain");
-		if (!File.Exists(Path.Combine(terrain, TerrainShader.SpirvFile)) || TerrainShader.IsCurrent(terrain))
-		{
-			return null;
-		}
-		try
-		{
-			TerrainShader.ConvertIn(terrain);
-			Console.WriteLine("game look: terrain shader made from its Vulkan program");
-			return null;
-		}
-		catch (Exception e)
-		{
-			Console.WriteLine($"game look: the terrain shader could not be made: {e}");
-			return e.Message;
-		}
-	}
-
-	// Rough progress 0..1 from the exporter's output: the bundle scan, then the models.
-	private static double? Progress()
-	{
-		if (State != "running")
-		{
-			return State == "ready" ? 1 : null;
-		}
-		for (int i = _log.Count - 1; i >= 0; i--)
-		{
-			Match m = Regex.Match(_log[i], @"scan: (\d+)/(\d+) bundles");
-			if (m.Success)
-			{
-				return 0.4 * int.Parse(m.Groups[1].Value) / Math.Max(1, int.Parse(m.Groups[2].Value));
-			}
-			m = Regex.Match(_log[i], @"^(\d+)/(\d+) ");
-			if (m.Success)
-			{
-				return 0.45 + 0.5 * int.Parse(m.Groups[1].Value) / Math.Max(1, int.Parse(m.Groups[2].Value));
-			}
-			if (_log[i].Contains("terrain:") || _log[i].Contains("map:"))
-			{
-				return 0.42;
-			}
-		}
-		return 0.02;
-	}
-
-	public static void StopExport()
-	{
-		lock (Lock)
+		foreach (string d in new[] { Dir, OldCache })
 		{
 			try
 			{
-				if (_process is { HasExited: false })
+				if (Directory.Exists(d))
 				{
-					_process.Kill(true);
+					Directory.Delete(d, true);
+					Console.WriteLine($"game look: deleted the old copy in {d}");
 				}
 			}
-			catch
+			catch (Exception e) when (e is IOException or UnauthorizedAccessException)
 			{
+				Console.WriteLine($"game look: could not delete the old copy in {d}: {e.Message}");
 			}
 		}
 	}
 
 	// ---- Finding things.
-
-	private static string? ExportDir()
-	{
-		foreach (string d in new[] { Path.Combine(AppContext.BaseDirectory, "export-game-files"), Path.Combine(AppContext.BaseDirectory, "..", "tools", "asset-export") })
-		{
-			if (File.Exists(Path.Combine(d, "export_all.py")))
-			{
-				return Path.GetFullPath(d);
-			}
-		}
-		return null;
-	}
-
-	private static string? ScriptPath() => ExportDir() is string d ? Path.Combine(d, "export_all.py") : null;
-
-	// Mod managers unpack zips without Unix permissions: give the bundled Python back its run bit.
-	private static void MakeRunnable(string path)
-	{
-		if (OperatingSystem.IsWindows())
-		{
-			return;
-		}
-		try
-		{
-			UnixFileMode mode = File.GetUnixFileMode(path);
-			const UnixFileMode run = UnixFileMode.UserExecute | UnixFileMode.GroupExecute | UnixFileMode.OtherExecute;
-			if ((mode & UnixFileMode.UserExecute) == 0)
-			{
-				File.SetUnixFileMode(path, mode | run);
-			}
-		}
-		catch (Exception e)
-		{
-			Console.WriteLine($"could not make {path} runnable: {e.Message}");
-		}
-	}
-
-	// The bundled Python runtime, else one installed on the computer (development).
-	private static string? PythonPath()
-	{
-		if (ExportDir() is string d)
-		{
-			foreach (string p in new[] { Path.Combine(d, "python", "python.exe"), Path.Combine(d, "python", "bin", "python3.12"), Path.Combine(d, "python", "bin", "python3") })
-			{
-				if (File.Exists(p))
-				{
-					MakeRunnable(p);
-					return p;
-				}
-			}
-		}
-		foreach (string name in OperatingSystem.IsWindows() ? new[] { "python.exe", "py.exe" } : new[] { "python3" })
-		{
-			foreach (string dir in (Environment.GetEnvironmentVariable("PATH") ?? "").Split(Path.PathSeparator))
-			{
-				string p = Path.Combine(dir, name);
-				if (File.Exists(p))
-				{
-					return p;
-				}
-			}
-		}
-		return null;
-	}
 
 	public static string? BundlesDir(string valheim)
 	{
@@ -439,30 +250,6 @@ public static class GameLook
 					yield return lib;
 				}
 			}
-		}
-	}
-
-	// Steam's build id of the installed game (changes with every update), or null.
-	internal static string? BuildId(string valheim)
-	{
-		try
-		{
-			string manifest = Path.Combine(valheim, "..", "..", $"appmanifest_{ValheimAppId}.acf");
-			if (File.Exists(manifest))
-			{
-				Match m = Regex.Match(File.ReadAllText(manifest), "\"buildid\"\\s+\"(\\d+)\"");
-				if (m.Success)
-				{
-					return m.Groups[1].Value;
-				}
-			}
-			// No Steam manifest (copied install): the newest bundle file time stands in.
-			string? b = BundlesDir(valheim);
-			return b == null ? null : Directory.GetFiles(b).Select(File.GetLastWriteTimeUtc).DefaultIfEmpty().Max().Ticks.ToString();
-		}
-		catch
-		{
-			return null;
 		}
 	}
 }

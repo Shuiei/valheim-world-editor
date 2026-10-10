@@ -114,23 +114,4 @@ public class CoreTerrainShaderTests
 		var e = Assert.Throws<InvalidDataException>(() => TerrainShader.Adapt(changed));
 		Assert.Contains($"The terrain shader changed ({what})", e.Message);
 	}
-
-	[Fact]
-	public void TheShaderFileIsTurnedIntoGlslOnce()
-	{
-		string dir = Path.Combine(Path.GetTempPath(), "vwe-shader-" + Guid.NewGuid().ToString("N")[..8]);
-		Directory.CreateDirectory(dir);
-		try
-		{
-			Assert.False(TerrainShader.ConvertIn(dir));
-			File.WriteAllBytes(Path.Combine(dir, TerrainShader.SpirvFile), WhiteFragment());
-			Assert.Throws<InvalidDataException>(() => TerrainShader.ConvertIn(dir));
-			// Nothing half-written is left as the shader.
-			Assert.False(File.Exists(Path.Combine(dir, TerrainShader.GlslFile)));
-		}
-		finally
-		{
-			Directory.Delete(dir, true);
-		}
-	}
 }

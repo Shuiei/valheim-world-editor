@@ -76,18 +76,9 @@ public sealed class ModelStore
 		_source = source;
 	}
 
-	// The game's models: read from the Valheim game folder's bundles when the game is found, else from
-	// a copy made by the old exporter (game-look/models); null when there is neither. Run off the UI
-	// thread: the first time the bundles are indexed (a few seconds; kept in a file after).
-	public static ModelStore? Open()
-	{
-		if (BundleModels.ForGame(GameLook.ValheimPath) is { } game)
-		{
-			return new ModelStore(game);
-		}
-		string dir = Path.Combine(GameLook.Dir, "models");
-		return File.Exists(Path.Combine(dir, "objects.json")) && File.Exists(Path.Combine(dir, "meshinfo.json")) ? new ModelStore(dir) : null;
-	}
+	// The game's models, read from the Valheim game folder's bundles; null when the game is not found.
+	// Run off the UI thread: the first time the bundles are indexed (a few seconds; kept in a file after).
+	public static ModelStore? Open() => BundleModels.For(GameLook.Bundles) is { } game ? new ModelStore(game) : null;
 
 	// A world object's model name, else a dungeon room's (their models are under the room's prefab name,
 	// like pieces), else the prefab's.

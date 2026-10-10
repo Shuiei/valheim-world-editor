@@ -22,7 +22,7 @@ them from the player's own Valheim install, on their computer.
 
 - `Core/WorldGen/FastNoise.cs`: FastNoise, MIT License, Copyright (c) 2017 Jordan Peck (its notice
   is kept in the file).
-- `tools/asset-export/smolv.py`: a Python port of the decoder in [SMOL-V](https://github.com/aras-p/smol-v),
+- `Core/App/Smolv.cs`: a C# port of the decoder in [SMOL-V](https://github.com/aras-p/smol-v),
   MIT License, Copyright (c) 2016-2024 Aras Pranckevicius.
 - [SPIRV-Cross](https://github.com/KhronosGroup/SPIRV-Cross) (Apache License 2.0), through Silk.NET's
   native build of it, turns the terrain shader from Valheim for Windows into GLSL.
@@ -31,6 +31,3 @@ them from the player's own Valheim install, on their computer.
   (MIT), [Roslyn](https://github.com/dotnet/roslyn) (MIT), for scripts, and, to read the game's models
   and textures from its own files, [AssetsTools.NET](https://github.com/nesrak1/AssetsTools.NET) (MIT)
   and [BCnEncoder.NET](https://github.com/Nominom/BCnEncoder.NET) (MIT or Unlicense).
-- The game-look exporter in the release packages runs on a bundled [Python](https://www.python.org/)
-  (Python Software Foundation License) with [UnityPy](https://github.com/K0lb3/UnityPy) (MIT) and the packages it needs, each under its own
-  license.

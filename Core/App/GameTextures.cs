@@ -26,10 +26,11 @@ public static class GameTextures
 				var px = new BcDecoder().DecodeRaw(t.Data, t.Width, t.Height, format);
 				for (int i = 0; i < n; i++)
 				{
+					// BC4 (one channel) reads as grey, as the copy had it.
 					rgba[i * 4] = px[i].r;
-					rgba[i * 4 + 1] = px[i].g;
-					rgba[i * 4 + 2] = px[i].b;
-					rgba[i * 4 + 3] = t.Format == 10 ? (byte)255 : px[i].a;
+					rgba[i * 4 + 1] = t.Format == 26 ? px[i].r : px[i].g;
+					rgba[i * 4 + 2] = t.Format == 26 ? px[i].r : px[i].b;
+					rgba[i * 4 + 3] = t.Format is 10 or 26 ? (byte)255 : px[i].a;
 				}
 				return rgba;
 			case 4:
@@ -63,10 +64,11 @@ public static class GameTextures
 				}
 				return rgba;
 			case 1 or 63:
+				// Alpha8: black with that alpha; R8: grey.
 				for (int i = 0; i < n; i++)
 				{
 					byte v = t.Data[i];
-					rgba[i * 4] = rgba[i * 4 + 1] = rgba[i * 4 + 2] = t.Format == 1 ? (byte)255 : v;
+					rgba[i * 4] = rgba[i * 4 + 1] = rgba[i * 4 + 2] = t.Format == 1 ? (byte)0 : v;
 					rgba[i * 4 + 3] = t.Format == 1 ? v : (byte)255;
 				}
 				return rgba;

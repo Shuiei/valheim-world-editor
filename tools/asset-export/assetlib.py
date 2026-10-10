@@ -1,6 +1,7 @@
 # Shared helpers for reading Valheim's asset bundles by (internal file, path id).
 import UnityPy, json, os
-# export_all.py sets VWE_BUNDLES (the game's bundle folder) and VWE_CAB_INDEX (internal file -> bundle).
+# VWE_BUNDLES: the game's bundle folder; VWE_CAB_INDEX: internal file -> bundle (default cab_index.json
+# here, made by make_cab_index.py).
 B=os.path.join(os.environ.get('VWE_BUNDLES', '/opt/Steam/steamapps/common/Valheim/valheim_Data/StreamingAssets/SoftRef/Bundles'), '')
 _idx=os.environ.get('VWE_CAB_INDEX') or os.path.join(os.path.dirname(__file__),'cab_index.json')
 IDX=json.load(open(_idx)) if os.path.exists(_idx) else {}

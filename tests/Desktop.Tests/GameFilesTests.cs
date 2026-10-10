@@ -4,9 +4,9 @@ using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
-// The models read from the game's own bundles (BundleModels) against a copy the old Python exporter
-// made of the same game (game-look/models): same parts, vertices, triangles, placement, materials and
-// textures. Needs Valheim and that copy on this computer (skipped elsewhere, as in CI). Run alone:
+// The game's own files read on a computer with Valheim (skipped elsewhere, as in CI): the models
+// (BundleModels) against a copy the older Python exporter made of the same game (game-look/models, the
+// editor deletes it at start, so only where it was kept), and the terrain and map. Run alone:
 // dotnet test tests/Desktop.Tests --filter Category=Game
 [Trait("Category", "Game")]
 public class GameFilesTests
@@ -20,7 +20,7 @@ public class GameFilesTests
 		{
 			return null;
 		}
-		var game = BundleModels.ForGame(valheim);
+		var game = BundleModels.For(GameBundles.ForGame(valheim, GameLook.IndexFile));
 		return game == null ? null : (new ModelStore(game), new ModelStore(LookModels));
 	}
 
@@ -118,6 +118,29 @@ public class GameFilesTests
 		}
 		Assert.True(problems.Count == 0, $"{sample.Count} models, {parts} parts, {textures} textures compared:\n" + string.Join("\n", problems.Take(40)));
 		Assert.True(parts > 2000 && textures > 20, $"too little compared: {parts} parts, {textures} textures");
+	}
+
+	// The terrain (its shader from both programs, the Linux copy's OpenGL one and the Vulkan one
+	// Valheim for Windows has) and the map, from the game's own files.
+	[Fact]
+	public void TheTerrainAndMapAreReadFromTheGame()
+	{
+		string? valheim = GameLook.FindValheim(null);
+		Assert.SkipUnless(valheim != null, "needs Valheim");
+		var game = GameBundles.ForGame(valheim, GameLook.IndexFile)!;
+		var vulkan = GameLookData.ReadTerrain(game, vulkan: true);
+		Assert.Contains("void valheimGBuffer()", vulkan.Fragment);
+		Assert.Equal(256, vulkan.DiffuseArray.Width);
+		Assert.Equal(0, vulkan.DiffuseArray.Height % 256);
+		Assert.Equal(GameLookData.TerrainTextures.Count, vulkan.Textures.Count);
+		var programs = game.LoadShader(game.LoadMaterial(game.Asset("Heightmap_basematerial.mat")!)!.ShaderAt!)!;
+		if (programs.Platforms.Contains(GameShader.OpenGlCore))
+		{
+			Assert.Contains("void valheimGBuffer()", GameLookData.ReadTerrain(game).Fragment);
+		}
+		var map = GameLookData.ReadMap(game);
+		Assert.Equal(GameLookData.MapTextures.Count, map.Count);
+		Assert.All(map.Values, p => Assert.Equal(p.Width * p.Height * 4, p.Rgba.Length));
 	}
 
 	private static bool Near(Matrix4x4 a, Matrix4x4 b, float e)

@@ -1,12 +1,11 @@
 using System.Numerics;
 using Silk.NET.OpenGL;
-using SkiaSharp;
 using TerrainEditor.App;
 
 namespace TerrainEditor.Desktop;
 
 // The game's look, as the web editor's terrain/look.js draws it: Valheim's own terrain shader
-// (heightmap.frag.glsl, taken from the game by the game-look copy) lit like the game's deferred
+// (read from the game's files, see GameLookData) lit like the game's deferred
 // renderer, the ocean and a sky with clouds, at midday in the default "Clear" weather. Inside the
 // shaders everything is in Unity's left-handed world space: view (x, y, z) is Unity (x + Cx, y, Cz - z).
 public sealed class GameLookGl
@@ -16,53 +15,18 @@ public sealed class GameLookGl
 		Image Paved, Image Rock, Image Snow, Image Variety);
 	public sealed record Image(int Width, int Height, byte[] Rgba);
 
-	public static string? Folder()
-	{
-		foreach (string d in new[] { Path.Combine(GameLook.Dir, "terrain") })
-		{
-			if (File.Exists(Path.Combine(d, "heightmap.frag.glsl")) && File.Exists(Path.Combine(d, "d_array.png")))
-			{
-				return d;
-			}
-		}
-		return null;
-	}
-
-	// The terrain textures with row 0 at the bottom (Unity's origin); a texture array is a vertical
-	// strip of square slices, each flipped on its own.
+	// The terrain's shader and textures, read from the game's files (rows bottom first, Unity's
+	// origin; a texture array is its square slices one above the other). Null when Valheim is not found.
 	public static Files? Read()
 	{
-		string? dir = Folder();
-		if (dir == null)
+		if (GameLook.Bundles is not { } game)
 		{
 			return null;
 		}
-		Image Load(string name, bool flip = true, bool slices = false)
-		{
-			using var codec = SKCodec.Create(Path.Combine(dir, name)) ?? throw new InvalidOperationException($"{name} cannot be read");
-			var info = new SKImageInfo(codec.Info.Width, codec.Info.Height, SKColorType.Rgba8888, SKAlphaType.Unpremul);
-			byte[] px = new byte[info.BytesSize];
-			unsafe
-			{
-				fixed (byte* p = px)
-				{
-					codec.GetPixels(info, (IntPtr)p);
-				}
-			}
-			int w = info.Width, h = info.Height, row = w * 4;
-			int slice = slices ? w : h, n = h / slice;
-			byte[] outPx = new byte[px.Length];
-			for (int k = 0; k < n; k++)
-			{
-				for (int y = 0; y < slice; y++)
-				{
-					System.Buffer.BlockCopy(px, (k * slice + y) * row, outPx, (k * slice + (flip ? slice - 1 - y : y)) * row, row);
-				}
-			}
-			return new Image(w, h, outPx);
-		}
-		return new Files(File.ReadAllText(Path.Combine(dir, "heightmap.frag.glsl")), Load("d_array.png", slices: true), Load("n_array.png", slices: true),
-			Load("noise.png"), Load("cliff_n.png"), Load("mistcliff_n.png"), Load("paved_n.png"), Load("rock_n.png"), Load("snow_n.png"), Load("variety.png"));
+		var t = GameLookData.ReadTerrain(game);
+		Image Of(GameLookData.Picture p) => new(p.Width, p.Height, p.Rgba);
+		Image Tex(string name) => Of(t.Textures[name]);
+		return new Files(t.Fragment, Of(t.DiffuseArray), Of(t.NormalArray), Tex("noise"), Tex("cliff_n"), Tex("mistcliff_n"), Tex("paved_n"), Tex("rock_n"), Tex("snow_n"), Tex("variety"));
 	}
 
 	// ---- Midday in the game's default "Clear" environment (EnvMan.m_environments), like look.js DAY:

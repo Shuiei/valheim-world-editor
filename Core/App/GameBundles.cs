@@ -35,7 +35,7 @@ public sealed class GameBundles
 
 	public sealed record TexEnv(Where? Texture, float ScaleX, float ScaleY, float OffsetX, float OffsetY);
 
-	public sealed record Material(string Name, string Shader, Dictionary<string, TexEnv> Textures, Dictionary<string, float> Floats, Dictionary<string, float[]> Colors);
+	public sealed record Material(string Name, string Shader, Where? ShaderAt, Dictionary<string, TexEnv> Textures, Dictionary<string, float> Floats, Dictionary<string, float[]> Colors);
 
 	// One mip level of a texture, as stored (bottom row first): Unity's TextureFormat, its size, bytes.
 	public sealed record TextureLevel(string Name, int Format, int Width, int Height, byte[] Data);
@@ -55,6 +55,11 @@ public sealed class GameBundles
 	private readonly Dictionary<(string, long), AssetTypeValueField?> _fields = new();
 	private readonly Dictionary<string, Kind> _kinds = new();
 	private Dictionary<string, Where>? _index;
+	private Dictionary<string, Where> _assets = new();
+
+	// Assets found by their file name in the bundles' tables of contents (besides prefabs): the
+	// terrain's material and texture arrays, the world map's material.
+	public static readonly string[] NamedAssets = { "Heightmap_basematerial.mat", "terrain_d_array.texture2darray", "terrain_n_array.texture2darray", "minimap.mat" };
 	private Dictionary<int, string>? _byHash;
 
 	// dir: the bundles folder; cacheFile: where the index is kept (null: not kept).
@@ -77,6 +82,22 @@ public sealed class GameBundles
 
 	public int BundleCount => _files.Count;
 
+	// The bundles folder read.
+	public string Folder => _dir;
+
+	// Whether the index is there already (built or read from the kept file); false: asking for it reads
+	// it (a few seconds when it must be built).
+	public bool Indexed
+	{
+		get
+		{
+			lock (_sync)
+			{
+				return _index != null;
+			}
+		}
+	}
+
 	// Prefab name -> its root object (built or read from the cache on first use).
 	public IReadOnlyDictionary<string, Where> Index
 	{
@@ -86,6 +107,16 @@ public sealed class GameBundles
 			{
 				return EnsureIndex();
 			}
+		}
+	}
+
+	// One of NamedAssets, if the game has it.
+	public Where? Asset(string fileName)
+	{
+		lock (_sync)
+		{
+			EnsureIndex();
+			return _assets.GetValueOrDefault(fileName);
 		}
 	}
 
@@ -165,6 +196,15 @@ public sealed class GameBundles
 							res[p.Name] = w;
 						}
 					}
+					var assets = new Dictionary<string, Where>();
+					foreach (var p in doc.RootElement.GetProperty("Assets").EnumerateObject())
+					{
+						if (Where.FromKey(p.Value.GetString() ?? "") is Where w)
+						{
+							assets[p.Name] = w;
+						}
+					}
+					_assets = assets;
 					return SetIndex(res);
 				}
 			}
@@ -181,7 +221,7 @@ public sealed class GameBundles
 			try
 			{
 				Directory.CreateDirectory(Path.GetDirectoryName(_cacheFile)!);
-				SafeFile.WriteAllText(_cacheFile, JsonSerializer.Serialize(new { Bundles = BundlesNow(), Prefabs = index.ToDictionary(kv => kv.Key, kv => kv.Value.Key) }));
+				SafeFile.WriteAllText(_cacheFile, JsonSerializer.Serialize(new { Bundles = BundlesNow(), Prefabs = index.ToDictionary(kv => kv.Key, kv => kv.Value.Key), Assets = _assets.ToDictionary(kv => kv.Key, kv => kv.Value.Key) }));
 			}
 			catch (Exception e) when (e is IOException or UnauthorizedAccessException)
 			{
@@ -208,6 +248,7 @@ public sealed class GameBundles
 	{
 		var res = new Dictionary<string, Where>();
 		var twice = new Dictionary<string, List<Where>>();
+		var assets = new Dictionary<string, Where>();
 		foreach (string bundle in _files.Keys.Order(StringComparer.Ordinal))
 		{
 			BundleFileInstance b;
@@ -232,6 +273,11 @@ public sealed class GameBundles
 					string path = c["first"].AsString;
 					if (!path.EndsWith(".prefab", StringComparison.OrdinalIgnoreCase))
 					{
+						string file = Path.GetFileName(path);
+						if (Array.IndexOf(NamedAssets, file) >= 0)
+						{
+							assets.TryAdd(file, new Where(bundle, c["second.asset.m_PathID"].AsLong));
+						}
 						continue;
 					}
 					string n = Path.GetFileNameWithoutExtension(path);
@@ -257,6 +303,7 @@ public sealed class GameBundles
 			res[n] = list.FirstOrDefault(IsNetworked) ?? list[0];
 		}
 		_fields.Clear();
+		_assets = assets;
 		return res;
 	}
 
@@ -699,7 +746,8 @@ public sealed class GameBundles
 					return null;
 				}
 				string shader = "";
-				if (Resolve(at.Bundle, m["m_Shader"]) is Where sh && Read(sh.Bundle, sh.PathId) is { } shf && Has(shf, "m_ParsedForm"))
+				var shaderAt = Resolve(at.Bundle, m["m_Shader"]);
+				if (shaderAt is Where sh && Read(sh.Bundle, sh.PathId) is { } shf && Has(shf, "m_ParsedForm"))
 				{
 					shader = shf["m_ParsedForm.m_Name"].AsString;
 				}
@@ -721,7 +769,7 @@ public sealed class GameBundles
 					var v = c["second"];
 					colors[c["first"].AsString] = new[] { v["r"].AsFloat, v["g"].AsFloat, v["b"].AsFloat, v["a"].AsFloat };
 				}
-				return new Material(m["m_Name"].AsString, shader, texs, floats, colors);
+				return new Material(m["m_Name"].AsString, shader, shaderAt, texs, floats, colors);
 			}
 			finally
 			{
@@ -793,6 +841,150 @@ public sealed class GameBundles
 			{
 				_fields.Clear();
 			}
+		}
+	}
+
+	// A Texture2DArray's GraphicsFormat as a TextureFormat (the compressed ones read here).
+	private static int FromGraphicsFormat(int gf) => gf switch
+	{
+		96 or 97 => 10,
+		98 or 99 => 11,
+		100 or 101 => 12,
+		102 or 103 => 26,
+		104 or 105 => 27,
+		106 or 107 => 24,
+		108 or 109 => 25,
+		8 or 4 => 4,
+		_ => gf,
+	};
+
+	// The top level of each slice of a texture array (bottom row first).
+	public List<TextureLevel>? LoadTextureArray(Where at)
+	{
+		lock (_sync)
+		{
+			try
+			{
+				if (Read(at.Bundle, at.PathId) is not { } t || TypeOf(at.Bundle, at.PathId) != (int)AssetClassID.Texture2DArray)
+				{
+					return null;
+				}
+				int format = FromGraphicsFormat(t["m_Format"].AsInt), w = t["m_Width"].AsInt, h = t["m_Height"].AsInt, depth = t["m_Depth"].AsInt;
+				byte[] data = t["image data"].AsByteArray;
+				if (data.Length == 0 && t["m_StreamData.size"].AsUInt > 0)
+				{
+					data = StreamBytes(at.Bundle, t["m_StreamData"]);
+				}
+				int size = LevelSize(format, w, h);
+				if (depth <= 0 || FormatLayout(format).Bytes == 0 || data.Length / depth < size)
+				{
+					return null;
+				}
+				// Slice after slice, each with its mip levels.
+				int per = data.Length / depth;
+				return Enumerable.Range(0, depth).Select(i => new TextureLevel($"{t["m_Name"].AsString}[{i}]", format, w, h, data.AsSpan(i * per, size).ToArray())).ToList();
+			}
+			finally
+			{
+				_fields.Clear();
+			}
+		}
+	}
+
+	// A shader's programs: the platforms it has, each platform's program blob (LZ4-unpacked), and the
+	// sub-programs of its deferred pass (for the Vulkan one).
+	public sealed record ShaderPrograms(int[] Platforms, Dictionary<int, byte[]> Blobs, List<GameShader.SubProgram> Deferred);
+
+	public ShaderPrograms? LoadShader(Where at)
+	{
+		lock (_sync)
+		{
+			try
+			{
+				if (Read(at.Bundle, at.PathId) is not { } sh || TypeOf(at.Bundle, at.PathId) != (int)AssetClassID.Shader)
+				{
+					return null;
+				}
+				int[] platforms = sh["platforms.Array"].Children.Select(c => (int)c.AsUInt).ToArray();
+				byte[] blob = sh["compressedBlob.Array"].AsByteArray;
+				var blobs = new Dictionary<int, byte[]>();
+				for (int pi = 0; pi < platforms.Length; pi++)
+				{
+					var offs = Numbers(sh["offsets.Array"].Children[pi]).ToList();
+					var comp = Numbers(sh["compressedLengths.Array"].Children[pi]).ToList();
+					var full = Numbers(sh["decompressedLengths.Array"].Children[pi]).ToList();
+					using var ms = new MemoryStream();
+					for (int k = 0; k < offs.Count; k++)
+					{
+						var outBuf = new byte[full[k]];
+						int got = LZ4ps.LZ4Codec.Decode32(blob, (int)offs[k], (int)comp[k], outBuf, 0, (int)full[k], true);
+						if (got != full[k])
+						{
+							throw new InvalidDataException("the terrain shader's program could not be unpacked");
+						}
+						ms.Write(outBuf);
+					}
+					blobs[platforms[pi]] = ms.ToArray();
+				}
+				var deferred = new List<GameShader.SubProgram>();
+				foreach (var sub in sh["m_ParsedForm.m_SubShaders.Array"].Children)
+				{
+					foreach (var ps in sub["m_Passes.Array"].Children)
+					{
+						if (ps["m_State.m_Name"].AsString != "DEFERRED")
+						{
+							continue;
+						}
+						var prog = ps["progVertex"];
+						var lists = prog["m_PlayerSubPrograms.Array"].Children;
+						var paramLists = prog["m_ParameterBlobIndices.Array"].Children;
+						for (int li = 0; li < lists.Count; li++)
+						{
+							var items = lists[li]["Array"].Children;
+							var prms = li < paramLists.Count ? Numbers(paramLists[li]).ToList() : new List<uint>();
+							for (int j = 0; j < items.Count; j++)
+							{
+								var sp = items[j];
+								deferred.Add(new GameShader.SubProgram(sp["m_GpuProgramType"].AsInt, sp["m_KeywordIndices.Array"].Children.Count, (int)sp["m_BlobIndex"].AsUInt, j < prms.Count ? (int)prms[j] : int.MaxValue));
+							}
+						}
+					}
+				}
+				return new ShaderPrograms(platforms, blobs, deferred);
+			}
+			finally
+			{
+				_fields.Clear();
+			}
+		}
+	}
+
+	// The numbers of a field: itself, or those of its array (nested arrays flattened).
+	private static IEnumerable<uint> Numbers(AssetTypeValueField f)
+	{
+		if (!f["Array"].IsDummy)
+		{
+			foreach (var c in f["Array"].Children)
+			{
+				foreach (uint n in Numbers(c))
+				{
+					yield return n;
+				}
+			}
+		}
+		else if (f.TemplateField.IsArray)
+		{
+			foreach (var c in f.Children)
+			{
+				foreach (uint n in Numbers(c))
+				{
+					yield return n;
+				}
+			}
+		}
+		else
+		{
+			yield return f.AsUInt;
 		}
 	}
 

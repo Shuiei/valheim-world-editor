@@ -6,6 +6,13 @@ the plugin is unchanged in versions without that part.
 
 ## Unreleased
 
+### Changed
+- The game's look (models, textures, the terrain shader and the map) is **read straight from your
+  Valheim**, in the editor itself: nothing is copied any more. No more copy of a few minutes at the
+  first start and after every game update (the first time, and after an update, the editor reads the
+  game's files for a few seconds), no 150 MB `game-look` folder (the old copy is deleted), and the
+  release packages are about 90 MB smaller (no Python inside).
+
 ### Added
 - Live: the open area **follows the game**. Every 2 seconds the editor asks the game what changed in
   that area's zones (only those): objects players built, removed or changed appear, go or change in
