@@ -73,10 +73,12 @@ With the .NET 10 SDK (`global.json` asks for it; the plugin builds with it too).
 dotnet publish Desktop/ValheimWorldEditor.Desktop.csproj -c Release -r linux-x64 --self-contained -p:PublishSingleFile=true -o ../ValheimWorldEditor
 ```
 
-One file, `ValheimWorldEditor` (`-r win-x64`: `ValheimWorldEditor.exe`), with the libraries it needs
-(Skia, HarfBuzz, ANGLE on Windows) packed inside. Publish outside the source folder: a folder inside
-it is picked up by the next build. `tools/release.sh <folder>` builds the complete release packages:
-the program, the game-look exporter with its own Python runtime and the readmes;
+One file, `ValheimWorldEditor`, with the native libraries it needs (Skia, HarfBuzz, SPIRV-Cross)
+packed inside. With `-r win-x64`, `ValheimWorldEditor.exe` and its four native DLLs beside it (ANGLE,
+Skia, HarfBuzz, SPIRV-Cross): a program that unpacks DLLs to a temporary folder at start is what
+antivirus heuristics take for a dropper. Publish outside the source folder: a folder inside it is
+picked up by the next build. `tools/release.sh <folder>` builds the complete release packages: the
+program (with its DLLs on Windows) and the readmes;
 `tools/check-package.sh <package>` checks one has what it needs and no source code, debug files,
 game files or plugin. The plugin is its own package: `tools/thunderstore.sh <folder>` builds
 `WorldEditorBridge-<version>.zip` (for the release page, Thunderstore and Hexium).
