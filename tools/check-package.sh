@@ -12,6 +12,10 @@ esac
 fail=0
 need() { grep -qx "$1" <<<"$list" || { echo "MISSING  $1"; fail=1; }; }
 for f in "$exe" ValheimWorldEditor/README.txt; do need "$f"; done
+# Windows: the program's native libraries beside it (they are not unpacked at start).
+if [[ "$pkg" == *.zip ]]; then
+  for f in av_libglesv2.dll libHarfBuzzSharp.dll libSkiaSharp.dll spirv-cross.dll; do need "ValheimWorldEditor/$f"; done
+fi
 bad=$(grep -E '\.cs$|\.csproj$|\.pdb$|/obj/|/bin/Release|wwwroot/|^ValheimWorldEditor/(models|maptex|terrain|game-look|plugin|export-game-files)/|heightmap\.frag\.glsl$|\.git/' <<<"$list" || true)
 if [ -n "$bad" ]; then echo "FORBIDDEN in the package:"; echo "$bad" | head -20; fail=1; fi
 size=$(du -m "$pkg" | cut -f1)
