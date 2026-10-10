@@ -189,6 +189,14 @@ public sealed class WorldScene
 	// what a history fitted to an area needs that the area does not show.
 	public static Dictionary<int, Thing> FindThings(WorldSave world, EditStore edits, IReadOnlyCollection<int> ids)
 	{
+		lock (world.Sync)
+		{
+			return FindThingsIn(world, edits, ids);
+		}
+	}
+
+	private static Dictionary<int, Thing> FindThingsIn(WorldSave world, EditStore edits, IReadOnlyCollection<int> ids)
+	{
 		var want = ids.ToHashSet();
 		var deleted = edits.Deleted;
 		var added = edits.Added.Select(n => n.Id).ToHashSet();
@@ -216,6 +224,12 @@ public sealed class WorldScene
 					found[id] = new Thing(id, prefab, p, new Vector3(0, ry, 0), 0, true) { Gone = deleted.Contains(id) };
 				}
 			}
+			// Live: removed in the game since (gone for good, but still in the history).
+			foreach (int id in want.Where(i => i >= 0 && i < world.ObjectRefs.Count && world.Vanished.Contains(i) && !found.ContainsKey(i)))
+			{
+				var o = world.ObjectRefs[id];
+				found[id] = new Thing(id, o.Prefab, o.Position, Vector3.Zero, 0, o.IsPiece) { Gone = true };
+			}
 		}
 		return found;
 	}
@@ -223,6 +237,14 @@ public sealed class WorldScene
 	// The objects and building pieces of the block's zones (those not deleted).
 	// added: objects added in this session (other areas of the world may have placed or moved some here).
 	public static List<Thing> ReadThings(WorldSave world, int x0, int z0, int size, ICollection<int> deleted, IEnumerable<NewObject>? added = null)
+	{
+		lock (world.Sync)
+		{
+			return ReadThingsIn(world, x0, z0, size, deleted, added);
+		}
+	}
+
+	private static List<Thing> ReadThingsIn(WorldSave world, int x0, int z0, int size, ICollection<int> deleted, IEnumerable<NewObject>? added)
 	{
 		float minX = x0 * 64f - 32f, maxX = (x0 + size - 1) * 64f + 32f, minZ = z0 * 64f - 32f, maxZ = (z0 + size - 1) * 64f + 32f;
 		bool Inside(Vector3 p) => p.X >= minX && p.X < maxX && p.Z >= minZ && p.Z < maxZ;

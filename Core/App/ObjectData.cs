@@ -26,7 +26,7 @@ public static class ObjectData
 			return null;
 		}
 		Dictionary<ChunkFile, byte[]> files = new();
-		return w.NewObjectBytes(n, m => w.LiveBytes ?? (files.TryGetValue(m.File, out byte[]? f) ? f : files[m.File] = File.ReadAllBytes(Path.Combine(w.Directory, m.File.FileName))));
+		return w.NewObjectBytes(n, m => w.IsLive ? w.LiveSource(m.File) : (files.TryGetValue(m.File, out byte[]? f) ? f : files[m.File] = File.ReadAllBytes(Path.Combine(w.Directory, m.File.FileName))));
 	}
 
 	public static InventoryData BuildInventory(List<ItemUpload> list)

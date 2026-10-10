@@ -114,10 +114,37 @@ moves it to the new name on its first start (port and token are kept), and the e
 | **LIVE** badge | Shows the editor is connected to the running game. |
 | **Apply live** | Sends every pending change to the game: ground (height and paint), deleted objects, new objects (planted, pasted, replaced, moved), and zone resets. After a zone reset the world is read again from the game (the history starts over). |
 | **Auto** | Applies after every stroke, placement and undo, without pressing Apply live. Turning it on sends what is already waiting. Remembered. |
-| **Reload** | Loads the world again from the game, to pick up what players changed since. Changes you have not applied are dropped (you are asked first). You stay in the same place. |
+| **Reload** | Loads the whole world again from the game. Changes you have not applied are dropped (you are asked first). You stay in the same place. The open area follows the game by itself (below): Reload is for the rest of the world, or an older plugin. |
 | Players | Connected players are drawn at their position with their name, in the 3D view (blue posts) and on the map, and follow them. **View → Players → Go to** takes you to one. The map says how many are online. |
 
 The pending counter reads "Not applied: …" and the History panel marks applied changes.
+
+## Following the game
+
+While an area is open, the editor asks the game every 2 seconds what changed in that area's zones
+(only those zones, not the whole world: the game answers with one number per zone, and only the
+zones whose number changed are read again).
+
+- **Objects** players built, removed or changed there appear, go or change in the editor, without
+  a step in History. A changed object (a chest used, a piece moved) stays the same object in the
+  editor, so its place in History, the selection and the inspector stay with it; the inspector does
+  not apply over a version the game changed meanwhile (it shows the new one to change again). An
+  object you deleted and applied stays deleted (undo brings it back); one the game removed is gone
+  for good: undo and redo leave it alone, and a deletion of it not applied yet is dropped. Objects
+  you placed that players then picked or destroyed go too. Creatures and other things that move by
+  themselves, and fires, smelters, beehives and the like (which change their own data all the time),
+  are followed when they appear or go, not for every move or tick; portals are followed too.
+- **Ground** dug, flattened, paved or cultivated in the game comes in where you have no changes of
+  your own in that zone. Where you have changes not applied yet, yours are kept and the status bar
+  says so. **Apply live** (and **Auto**) then asks first: applying writes your ground over that zone,
+  and what players did to its ground since may be erased. Answer **Not now** to keep your changes
+  pending (nothing is applied then); undo them and the game's ground comes in at the next look.
+- Following happens only in the 3D editor, never during a brush stroke or while applying; the map
+  shows the world as it was last followed (**Reload** reads all of it again).
+
+The status bar says what came from the game ("From the game: 2 object(s) made or changed…").
+Following needs this version of the WorldEditorBridge plugin on the server; with an older one the
+editor says so, and **Reload** reads the world again.
 
 ## Undo after applying
 

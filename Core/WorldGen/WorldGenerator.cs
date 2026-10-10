@@ -46,11 +46,11 @@ public class WorldGenerator
 
 	private const float m_waterTreshold = 0.05f;
 
-	private static readonly Dictionary<Vector2s, Heightmap.BiomeArea> s_cachedBiomeAreas = new Dictionary<Vector2s, Heightmap.BiomeArea>();
+	// The game keeps these caches static (one world at a time); here each generator has its own, read by
+	// many threads at once, so that worlds open together do not share or clear each other's biomes.
+	private readonly System.Collections.Concurrent.ConcurrentDictionary<Vector2s, Heightmap.BiomeArea> s_cachedBiomeAreas = new();
 
-	private static readonly Dictionary<Vector2s, Heightmap.Biome> s_cachedBiomes = new Dictionary<Vector2s, Heightmap.Biome>();
-
-	private static WorldGenerator m_instance = null;
+	private readonly System.Collections.Concurrent.ConcurrentDictionary<Vector2s, Heightmap.Biome> s_cachedBiomes = new();
 
 	public World m_world;
 
@@ -183,24 +183,13 @@ public class WorldGenerator
 		new Vector2s(0, 64)
 	};
 
-	public static WorldGenerator instance => m_instance;
-
-	public static void Initialize(World world)
-	{
-		m_instance?.CleanCachedRiverData();
-		m_instance = new WorldGenerator(world);
-	}
-
-	public static void Deitialize()
-	{
-		m_instance = null;
-	}
+	// The game keeps one generator in a static instance; the editor can have several worlds open at once
+	// (a world being made while another is shown), so each caller keeps its own.
+	public static WorldGenerator Create(World world) => new WorldGenerator(world);
 
 	private WorldGenerator(World world)
 	{
 		m_world = world;
-		s_cachedBiomeAreas.Clear();
-		s_cachedBiomes.Clear();
 		m_version = m_world.m_worldGenVersion;
 		VersionSetup(m_version);
 		UnityEngine.Random.State state = UnityEngine.Random.state;
@@ -688,7 +677,7 @@ public class WorldGenerator
 		Heightmap.Biome biome8 = GetBiome(point - s_biomeAreaOffsetsInt[6]);
 		Heightmap.Biome biome9 = GetBiome(point - s_biomeAreaOffsetsInt[7]);
 		value = ((biome != biome2 || biome != biome3 || biome != biome4 || biome != biome5 || biome != biome6 || biome != biome7 || biome != biome8 || biome != biome9) ? Heightmap.BiomeArea.Edge : Heightmap.BiomeArea.Median);
-		s_cachedBiomeAreas.Add(point, value);
+		s_cachedBiomeAreas.TryAdd(point, value);
 		return value;
 	}
 
@@ -699,7 +688,7 @@ public class WorldGenerator
 			return value;
 		}
 		value = GetBiome(point.x, point.y);
-		s_cachedBiomes.Add(point, value);
+		s_cachedBiomes.TryAdd(point, value);
 		return value;
 	}
 

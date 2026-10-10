@@ -43,7 +43,7 @@ place and the clipboard.
 | **Save to world** (offline, `Ctrl+S`) | Writes the changes into the world files: they go into the next save, and the result is read back and checked (if it does not read back right, the new files are removed and nothing changed). Like **Apply live**, the area and its history stay: undo a step and save again to take it back. The save the world was opened from is kept until you leave the world. No backup folder is made. Close the game or server first. If the game saved the world after the editor read it (a play test between two saves), nothing is saved: leave the world and open it again, so the game's save is not thrown away. |
 | **Apply live** (live) | Sends the changes to the running game. See [live mode](live-mode.md). |
 | **LIVE** (live) | Connected to the running game. |
-| **Reload** (live) | Loads the world again from the game, after asking when changes are not applied yet. You stay where you are. |
+| **Reload** (live) | Loads the world again from the game, after asking when changes are not applied yet. You stay where you are. The open area also follows the game by itself, see [live mode](live-mode.md#following-the-game). |
 | **Auto** (live) | Applies every change to the game as soon as it is done: each stroke when you let go, each tool, undo and redo. Remembered. |
 | **History** (`L`) | Opens the history panel, below. |
 | **View** (`V`) | Opens the View panel, below. |

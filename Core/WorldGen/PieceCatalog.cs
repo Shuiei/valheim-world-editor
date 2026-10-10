@@ -40,7 +40,12 @@ public static class PieceCatalog
 	public static float[] Encode(WorldSave world, ICollection<int> deleted)
 	{
 		List<float> data = new(world.Pieces.Count * Stride);
-		foreach (var (id, prefab, pos, rotY) in world.Pieces)
+		List<(int Id, int Prefab, System.Numerics.Vector3 Position, float RotationY)> pieces;
+		lock (world.Sync)
+		{
+			pieces = world.Pieces.ToList();
+		}
+		foreach (var (id, prefab, pos, rotY) in pieces)
 		{
 			if (deleted.Contains(id))
 			{
