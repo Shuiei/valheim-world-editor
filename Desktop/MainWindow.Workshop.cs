@@ -35,7 +35,7 @@ public partial class MainWindow
 	private int _workshopSaved;
 
 	internal bool InWorkshop => _inWorkshop;
-	private bool WorkshopDirty => _inWorkshop && _session != null && _session.Edits.Version != _workshopSaved;
+	internal bool WorkshopDirty => _inWorkshop && _session != null && _session.Edits.Version != _workshopSaved;
 
 	// The last support check (null: off, or not in the Workshop).
 	internal Stability.Result? LastSupport { get; private set; }
