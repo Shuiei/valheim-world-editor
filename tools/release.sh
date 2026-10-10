@@ -23,7 +23,7 @@ package() {   # $1 runtime id, $2 program file name (users start it by double-cl
   # One file: the libraries it needs (Skia, HarfBuzz, ANGLE on Windows) are packed inside it.
   cp "$work/$rid/publish/$exe" "$dir/"
   cp "$repo"/tools/asset-export/{export_all.py,assetlib.py,export_pieces.py,fix_normals.py,fix_alpha.py,smolv.py,vulkan_shader.py} \
-     "$repo/tools/zdo_scan.py" "$repo/Core/WorldGen/pieces.json" "$dir/export-game-files/"
+     "$repo/tools/zdo_scan.py" "$repo/Core/WorldGen/pieces.json" "$repo/Core/WorldGen/dungeon-rooms.json.gz" "$dir/export-game-files/"
   "$repo/tools/make-python-runtime.sh" "$rid" "$dir/export-game-files" >/dev/null
   cp "$repo/tools/$readme" "$dir/README.txt"
   # @VERSION@: v1.2.3 (the editor's packages); @NUMBER@: 1.2.3 (the plugin's zip, WorldEditorBridge-1.2.3.zip).

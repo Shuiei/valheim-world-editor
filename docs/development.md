@@ -184,6 +184,9 @@ adds which build tool's menu has each piece (hammer, hoe, cultivator, feaster): 
 builder on new pieces of those kinds. `scan_zdo_keys.py <Valheim folder>
 Core/WorldGen/zdo-keys.json` makes the names of object data keys for the object inspector, from the
 string literals of `assembly_valheim.dll` (the save only keeps their hashes).
+`scan_dungeon_rooms.py Core/WorldGen/dungeon-rooms.json` (then gzip it to `dungeon-rooms.json.gz`)
+makes the Dungeon tool's catalogue: each dungeon kind's themes and space, and each room's size,
+openings and the objects the game makes in it with the random parts that decide them.
 
 ## WorldCheck
 

@@ -12,7 +12,7 @@ esac
 fail=0
 need() { grep -qx "$1" <<<"$list" || { echo "MISSING  $1"; fail=1; }; }
 for f in "$exe" "$py" ValheimWorldEditor/README.txt \
-  ValheimWorldEditor/export-game-files/export_all.py ValheimWorldEditor/export-game-files/export_pieces.py ValheimWorldEditor/export-game-files/vulkan_shader.py ValheimWorldEditor/export-game-files/smolv.py ValheimWorldEditor/export-game-files/pieces.json; do need "$f"; done
+  ValheimWorldEditor/export-game-files/export_all.py ValheimWorldEditor/export-game-files/export_pieces.py ValheimWorldEditor/export-game-files/vulkan_shader.py ValheimWorldEditor/export-game-files/smolv.py ValheimWorldEditor/export-game-files/pieces.json ValheimWorldEditor/export-game-files/dungeon-rooms.json.gz; do need "$f"; done
 bad=$(grep -E '\.cs$|\.csproj$|\.pdb$|/obj/|/bin/Release|wwwroot/|^ValheimWorldEditor/(models|maptex|terrain|game-look|plugin)/|heightmap\.frag\.glsl$|\.git/' <<<"$list" || true)
 if [ -n "$bad" ]; then echo "FORBIDDEN in the package:"; echo "$bad" | head -20; fail=1; fi
 size=$(du -m "$pkg" | cut -f1)

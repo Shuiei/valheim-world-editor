@@ -69,4 +69,25 @@ public class CoreStabilityTests
 		Assert.True(Stability.Known("piece_workbench"));
 		Assert.False(Stability.Known("no_such_piece"));
 	}
+
+	[Fact]
+	public void ABlackMarbleSlabNeverFallsAndHoldsWhatStandsOnIt()
+	{
+		// Far above any ground: an 8 × 8 m slab (the game never checks its support), a stone wall on it,
+		// and the same wall alone beside it.
+		float sky = Ground + 5000;
+		var pieces = new List<Stability.Piece>
+		{
+			new("blackmarble_floor_large", new Vector3(0, sky - 1, 0), Quaternion.Identity),
+			new("stone_wall_4x2", new Vector3(0, sky + 1, 0), Quaternion.Identity),
+			new("stone_wall_4x2", new Vector3(30, sky + 1, 0), Quaternion.Identity),
+		};
+		var r = Stability.Solve(pieces, Flat);
+		Assert.Equal(-1, r.Colour[0]);
+		Assert.Equal(1500, r.Support[0], 1);
+		Assert.DoesNotContain(0, r.Falls);
+		Assert.DoesNotContain(1, r.Falls);
+		Assert.Equal(1000, r.Support[1], 1);
+		Assert.Contains(2, r.Falls);
+	}
 }

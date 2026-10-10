@@ -547,7 +547,41 @@ public sealed class ZoneEdit(int zoneX, int zoneZ)
 // moved object, all of the source's data (chest contents, health, builder...) is kept.
 // Raw: the object's complete data in the save format (an object edited in the inspector, or restored
 // from a backup); it is written with this position, rotation and scale instead of copying a source.
-public sealed record NewObject(int Id, int Prefab, System.Numerics.Vector3 Position, System.Numerics.Vector3 Rotation, float Scale, int? SourceId = null, bool Fresh = true, byte[]? Raw = null);
+// Data: values set on it however it is made (a copy of a model, blank, or Raw), last; see ObjectField.
+public sealed record NewObject(int Id, int Prefab, System.Numerics.Vector3 Position, System.Numerics.Vector3 Rotation, float Scale, int? SourceId = null, bool Fresh = true, byte[]? Raw = null,
+	IReadOnlyList<ObjectField>? Data = null);
+
+// A value of an object's data: section (floats, vec3, quats, ints, longs, strings, bytes), key (the
+// stable hash of its name), value as ZdoData.Set takes it (text; base64 for bytes), null to remove it.
+// As text (blueprints, the clipboard): "section;key;value in base64" ("-" for none).
+public sealed record ObjectField(string Section, int Key, string? Value)
+{
+	public static readonly int CreatorKey = TerrainEditor.Save.StableHash.Of("creator");
+
+	// No builder: the game takes the object for part of a ruin (generated dungeons).
+	public static readonly ObjectField NoBuilder = new("longs", CreatorKey, null);
+
+	public override string ToString() => $"{Section};{Key.ToString(System.Globalization.CultureInfo.InvariantCulture)};"
+		+ (Value == null ? "-" : Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(Value)));
+
+	public static ObjectField? Parse(string text)
+	{
+		string[] p = text.Split(';');
+		if (p.Length != 3 || p[0] is not ("floats" or "vec3" or "quats" or "ints" or "longs" or "strings" or "bytes")
+			|| !int.TryParse(p[1], System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out int key))
+		{
+			return null;
+		}
+		try
+		{
+			return new ObjectField(p[0], key, p[2] == "-" ? null : System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(p[2])));
+		}
+		catch (FormatException)
+		{
+			return null;
+		}
+	}
+}
 
 // Give a zone back to the world generator. KeepBuildings keeps player-built pieces; Ground also
 // removes the terrain edits.

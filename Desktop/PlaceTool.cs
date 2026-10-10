@@ -986,7 +986,8 @@ public sealed class PlaceTool
 		{
 			return null;
 		}
-		if (hit.Piece == null && GridStep > 0)
+		// The grid rounds on the ground outside only (in a dungeon the ray meets a room's floor).
+		if (hit.Piece == null && GridStep > 0 && hit.Point.Y < GlView.InteriorHeight)
 		{
 			float mx = ox + (s.W - 1) / 2f, mz = oz + (s.H - 1) / 2f;
 			var gp = new Vector3(mx + MathF.Round((hit.Point.X - mx) / GridStep) * GridStep, 0, mz + MathF.Round((hit.Point.Z - mz) / GridStep) * GridStep);

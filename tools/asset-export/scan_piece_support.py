@@ -1,9 +1,10 @@
 # What the game's support check (WearNTear.UpdateSupport) needs of every build piece, for the
 # editor's stability check (Core/WorldGen/piece-support.json, in git): its material (WearNTear.
-# m_materialType: wood, stone, iron...), centre of mass offset, whether it supports other pieces, and
-# its colliders as boxes in the piece's own frame. The game tests support with each collider's box,
-# grown by 0.3 m: a BoxCollider's own turned box, any other collider's axis-aligned bounds (a mesh
-# collider's are kept here as its mesh's box, turned with the piece at run time). Colliders of every
+# m_materialType: wood, stone, iron...), centre of mass offset, whether it supports other pieces,
+# whether the game checks its support at all (f: never), and its colliders as boxes in the piece's own
+# frame. The game tests support with each collider's box, grown by 0.3 m: a BoxCollider's own turned
+# box, any other collider's axis-aligned bounds (a mesh collider's are kept here as its mesh's box,
+# turned with the piece at run time). Colliders of every
 # child count, inactive ones too (GetComponentsInChildren(includeInactive: true)); triggers do not.
 # Each box: [cx, cy, cz, hx, hy, hz, qx, qy, qz, qw, aabb, layer] (centre, half size, rotation; aabb 1:
 # bounds of a non-box collider; the collider's layer).
@@ -117,6 +118,10 @@ for fi, f in enumerate(files):
         w = wnt[0]
         com = w.get('m_comOffset', {'x': 0, 'y': 0, 'z': 0})
         out[go['m_Name']] = {'m': w['m_materialType'], 's': int(w.get('m_supports', 1)), 'c': [r(com['x']), r(com['y']), r(com['z'])], 'b': boxes}
+        # f: the game never checks its support (m_noSupportWear off): it never falls, and keeps its full
+        # support for what rests on it (black marble's large floor, some dungeon pieces).
+        if not w.get('m_noSupportWear', 1):
+            out[go['m_Name']]['f'] = 1
     if fi % 60 == 0:
         print('scanned', fi, '/', len(files), 'pieces', len(out), file=sys.stderr)
 json.dump(out, open(sys.argv[1], 'w'), separators=(',', ':'))

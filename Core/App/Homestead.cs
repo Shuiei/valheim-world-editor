@@ -187,7 +187,11 @@ public static class Homestead
 	{
 		var objs = (clip["objects"] as JsonArray ?? new()).OfType<JsonObject>().Select(o => (
 			Name: (string?)o["name"] ?? "", X: F(o["dx"]), Y: F(o["dy"]), Z: F(o["dz"]),
-			Rot: BlueprintFormats.FromEuler(new Vector3(F(o["rx"]), F(o["ry"]), F(o["rz"]))), Scale: F(o["scale"]))).Where(o => o.Name.Length > 0).ToList();
+			Rot: BlueprintFormats.FromEuler(new Vector3(F(o["rx"]), F(o["ry"]), F(o["rz"]))), Scale: F(o["scale"]),
+			Data: BlueprintFormats.DataOf(o["data"]) ?? new List<TerrainEditor.Editing.ObjectField>())).Where(o => o.Name.Length > 0).ToList();
+		// Written as a ruin when every object is (no builder): one line for all, not one each.
+		bool ruin = objs.Count > 0 && objs.All(o => o.Data.Contains(TerrainEditor.Editing.ObjectField.NoBuilder));
+		var ordered = objs.OrderBy(o => o.Y).ThenBy(o => o.X).ThenBy(o => o.Z).ToList();
 		float radius = objs.Count == 0 ? 0 : MathF.Sqrt(objs.Max(o => o.X * o.X + o.Z * o.Z)) + 1f;
 		StringBuilder sb = new();
 		sb.Append("#Name:").Append(Header(name)).Append('\n');
@@ -202,8 +206,20 @@ public static class Homestead
 		sb.Append("#HomesteadWorld:").Append(Header(world ?? "")).Append('\n');
 		sb.Append("#HomesteadSavedAt:").Append(new DateTimeOffset(saved).ToString("yyyy-MM-dd HH:mm:ss zzz", CultureInfo.InvariantCulture)).Append('\n');
 		sb.Append("#HomesteadRadius:").Append(S(radius)).Append('\n');
+		// The editor's own: what objects hold (a chest's contents, a sign's text...), by their line below.
+		if (ruin)
+		{
+			sb.Append(BlueprintFormats.RuinHeader).Append('\n');
+		}
+		for (int k = 0; k < ordered.Count; k++)
+		{
+			foreach (var f in ordered[k].Data.Where(f => !(ruin && f == TerrainEditor.Editing.ObjectField.NoBuilder)))
+			{
+				sb.Append(BlueprintFormats.DataHeader).Append(k.ToString(CultureInfo.InvariantCulture)).Append(';').Append(f.ToString()).Append('\n');
+			}
+		}
 		sb.Append("#Pieces\n");
-		foreach (var o in objs.OrderBy(o => o.Y).ThenBy(o => o.X).ThenBy(o => o.Z))
+		foreach (var o in ordered)
 		{
 			float s = o.Scale > 0 ? o.Scale : 1f;
 			sb.Append(string.Join(";", Header(o.Name).Replace(";", "", StringComparison.Ordinal), "Building", S(o.X), S(o.Y), S(o.Z),

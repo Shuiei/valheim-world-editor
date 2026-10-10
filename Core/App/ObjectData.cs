@@ -11,6 +11,8 @@ public static class ObjectData
 {
 	public static readonly int ItemsKey = StableHash.Of("items");
 
+	public static readonly int AddedDefaultItemsKey = StableHash.Of("addedDefaultItems");
+
 	// The saved bytes of an object of the world (id >= 0) or of one added in this session (id < 0).
 	public static byte[]? Bytes(WorldSave w, EditStore edits, int id)
 	{
@@ -59,6 +61,9 @@ public static class ObjectData
 		if (inventory != null)
 		{
 			z.SetBytes(ItemsKey, BuildInventory(inventory).Write());
+			// Told it has its default items already: a chest never opened fills itself with the game's
+			// loot when it first loads (Container.Awake), over what was set here.
+			z.Set("ints", AddedDefaultItemsKey, "1");
 		}
 		return z;
 	}

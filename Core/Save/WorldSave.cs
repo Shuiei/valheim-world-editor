@@ -105,7 +105,7 @@ public sealed class WorldSave
 		return Templates.TryGetValue(prefab, out int t) ? ObjectRefs[t] : null;
 	}
 
-	public bool CanCreate(int prefab) => Templates.ContainsKey(prefab) || TerrainEditor.Terrain.PrefabCatalog.Get(prefab) != null;
+	public bool CanCreate(int prefab) => Templates.ContainsKey(prefab) || TerrainEditor.Terrain.PrefabCatalog.Get(prefab) != null || TerrainEditor.Terrain.PrefabCatalog.IsCreature(prefab);
 
 	// Prefabs that can be created: any object in the world, and every placeable game prefab.
 	public IEnumerable<int> Creatable => Templates.Keys.Concat(TerrainEditor.Terrain.PrefabCatalog.Placeable.Select(p => StableHash.Of(p.Name))).Distinct();
@@ -124,6 +124,15 @@ public sealed class WorldSave
 		{
 			ZdoData z = ZdoData.Parse(bytes);
 			z.Set("longs", CreatorKey, Builder.ToString(CultureInfo.InvariantCulture));
+			bytes = z.Serialize();
+		}
+		if (bytes != null && n.Data is { Count: > 0 } data)
+		{
+			ZdoData z = ZdoData.Parse(bytes);
+			foreach (var f in data)
+			{
+				z.Set(f.Section, f.Key, f.Value);
+			}
 			bytes = z.Serialize();
 		}
 		return bytes;
@@ -148,7 +157,8 @@ public sealed class WorldSave
 		{
 			return ZdoBuilder.Build(readSource(model), model, model.File.WorldVersion, n.Position, n.Rotation, n.Scale, n.Fresh);
 		}
-		return TerrainEditor.Terrain.PrefabCatalog.Get(n.Prefab) is { } info ? ZdoBuilder.Blank(n.Prefab, info.Flags, n.Position, n.Rotation, n.Scale) : null;
+		// Also what is not offered for placing (creatures: generated dungeons put some down).
+		return TerrainEditor.Terrain.PrefabCatalog.Details(n.Prefab) is { } info ? ZdoBuilder.Blank(n.Prefab, info.Flags, n.Position, n.Rotation, n.Scale) : null;
 	}
 
 	// The saved bytes of an object of the save (id >= 0): from its chunk file, or from the live snapshot.

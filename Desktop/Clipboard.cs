@@ -21,7 +21,9 @@ public sealed class CopyData
 	// An object: offsets from the middle (east, north) and from the reference height (or, Follow, from
 	// the ground under it: objects copied with the Select tool), its turn and scale, and what it was
 	// copied from (its data goes with it).
-	public sealed record Obj(int Prefab, string Name, float Dx, float Dz, float Dy, Vector3 Rotation, float Scale, int? SourceId, bool Follow = false);
+	// Data: what it holds, set on it as it is made (blueprints keep it; see ObjectField).
+	public sealed record Obj(int Prefab, string Name, float Dx, float Dz, float Dy, Vector3 Rotation, float Scale, int? SourceId, bool Follow = false,
+		IReadOnlyList<ObjectField>? Data = null);
 
 	// The ground and the shown objects inside an Area selection.
 	public static CopyData? FromArea(AreaTool area, Ground g, WorldScene s, IReadOnlyList<int> objects, Func<int, string?> nameOf)
@@ -277,7 +279,7 @@ public sealed class PasteTool
 					float y = o.Follow ? g.HeightOf(Index(g, p)) + o.Dy + lift : anchor + o.Dy;
 					var r = o.Rotation;
 					var rot = new Vector3(Mirror ? -r.X : r.X, (Mirror ? -r.Y : r.Y) - Turn, Mirror ? -r.Z : r.Z);
-					add.Add((new NewObject(0, o.Prefab, new Vector3(ox + p.X, y, oz + p.Y), rot, o.Scale, o.SourceId, true), PieceCatalog.Get(o.Prefab)?.Tool != null));
+					add.Add((new NewObject(0, o.Prefab, new Vector3(ox + p.X, y, oz + p.Y), rot, o.Scale, o.SourceId, true, Data: o.Data), PieceCatalog.Get(o.Prefab)?.Tool != null));
 				}
 			}
 		}

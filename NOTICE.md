@@ -13,7 +13,7 @@ cover them:
   the editor generates terrain exactly like it.
 - The data read from the game's files in `Core/WorldGen/`: `prefabs.json`, `pieces.json`,
   `piece-cost.json`, `piece-place.json.gz`, `piece-support.json`, `vegetation.json`,
-  `cave-rocks.json`, `terrain-modifiers.json` and `zdo-keys.json`.
+  `cave-rocks.json`, `terrain-modifiers.json`, `zdo-keys.json` and `dungeon-rooms.json.gz`.
 
 The game's textures and models are not in this repository or in the releases: the editor copies
 them from the player's own Valheim install, on their computer.

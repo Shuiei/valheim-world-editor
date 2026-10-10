@@ -52,7 +52,8 @@ public static class GameLook
 
 	// Bump when the exporter's output changes, so existing installs export again.
 	// 2: runestone locations and tameable creatures get models.
-	internal const int ExporterVersion = 2;
+	// 3: dungeon rooms get models (the Dungeon tool).
+	internal const int ExporterVersion = 3;
 
 	// Files that only a complete export leaves behind.
 	public static bool Present()
