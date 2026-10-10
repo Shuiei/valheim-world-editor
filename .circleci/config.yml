@@ -4,10 +4,11 @@
 #   native-tests   the app's tests (tests/Desktop.Tests, built with warnings as errors): its windows
 #                  headless, the core (saves, the world generator against the game's values, live
 #                  mode against a stand-in bridge), the SSH tunnel against a local sshd; the visual
-#                  tests skip (no display).
+#                  tests skip (no display). Three containers each run a third of the test classes,
+#                  shared out by their last times (tools/ci-tests.sh).
 #                  Fail fast: the first failing test stops its run, a test stuck for 5 minutes ends
-#                  it, and the core and the windows run as two processes, one after the other (the
-#                  windows' run does not start when the core fails; half the memory each)
+#                  it, and in each container the core and the windows run as two processes, one after
+#                  the other (the windows' run does not start when the core fails; half the memory each)
 #   packages       the Windows and Linux release packages: they build, hold no source code or game
 #                  files (the plugin is left out: it builds against the game's own DLLs), and the
 #                  Linux one starts and draws the test world (tools/smoke-test.sh, under Xvfb)
@@ -48,6 +49,9 @@ jobs:
 
   native-tests:
     executor: dotnet
+    # Three containers, each with a third of the test classes (tools/ci-tests.sh): the window tests run
+    # one at a time (one UI thread), so more containers is what makes them faster.
+    parallelism: 3
     steps:
       - checkout
       - run:
@@ -59,26 +63,21 @@ jobs:
       - run:
           name: Build the tests (every warning is an error)
           command: dotnet build tests/Desktop.Tests/Desktop.Tests.csproj -c Release -warnaserror
-      # Fail fast: xUnit stops at the first failure (StopOnFail), a test stuck 5 minutes ends the run
-      # (with a dump), and silence ends the step sooner than CircleCI's 10 minutes.
+      - run:
+          name: This container's share of the test classes (by their last times)
+          command: tools/ci-tests.sh share
+      # Fail fast: xUnit stops at the first failure, a test stuck 5 minutes ends the run (with a dump),
+      # and silence ends the step sooner than CircleCI's 10 minutes.
       - run:
           name: Core tests (saves, world generator, live mode, SSH tunnel)
           no_output_timeout: 6m
           environment:
             VWE_NEED_SSHD: "1"
-          command: |
-            dotnet test tests/Desktop.Tests/Desktop.Tests.csproj -c Release --no-build \
-              --filter "Category!=Visual&FullyQualifiedName~WorldEditor.Tests." --blame-hang-timeout 5m \
-              --logger "junit;LogFilePath=/tmp/test-results/core/results.xml" --logger "console;verbosity=normal" \
-              -- xUnit.StopOnFail=true
+          command: tools/ci-tests.sh run WorldEditor.Tests core
       - run:
           name: App tests (the windows, headless)
           no_output_timeout: 6m
-          command: |
-            dotnet test tests/Desktop.Tests/Desktop.Tests.csproj -c Release --no-build \
-              --filter "Category!=Visual&FullyQualifiedName~TerrainEditor.Desktop.Tests." --blame-hang-timeout 5m \
-              --logger "junit;LogFilePath=/tmp/test-results/app/results.xml" --logger "console;verbosity=normal" \
-              -- xUnit.StopOnFail=true
+          command: tools/ci-tests.sh run TerrainEditor.Desktop.Tests app
       - save_cache:
           key: nuget-native-v1-{{ checksum "Desktop/ValheimWorldEditor.Desktop.csproj" }}-{{ checksum "tests/Desktop.Tests/Desktop.Tests.csproj" }}
           paths:
