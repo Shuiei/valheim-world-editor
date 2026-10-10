@@ -10,8 +10,9 @@ the plugin is unchanged in versions without that part.
 - The game's look (models, textures, the terrain shader and the map) is **read straight from your
   Valheim**, in the editor itself: nothing is copied any more. No more copy of a few minutes at the
   first start and after every game update (the first time, and after an update, the editor reads the
-  game's files for a few seconds), no 150 MB `game-look` folder (the old copy is deleted), and the
-  release packages are about 90 MB smaller (no Python inside).
+  game's files for a few seconds), no 150 MB `game-look` folder (the old copy is deleted), and
+  smaller release packages, with no Python inside: about 23 MB less to download on Linux (77 MB
+  less unpacked) and 10 MB less on Windows (37 MB less unpacked).
 - The editor runs on **.NET 10** (it was .NET 8, whose support ends in November 2026). Nothing to
   install: the packages still carry it.
 
