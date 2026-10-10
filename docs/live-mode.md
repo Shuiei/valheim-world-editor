@@ -125,15 +125,22 @@ While an area is open, the editor asks the game every 2 seconds what changed in 
 (only those zones, not the whole world: the game answers with one number per zone, and only the
 zones whose number changed are read again).
 
-- **Objects** players built, removed, picked or changed there appear, go or change in the editor,
-  without a step in History. A tree you deleted in the editor stays deleted whatever the game did
-  to it; an object the game removed is not brought back by undo. Creatures and other things that
-  move by themselves are not followed as they walk around, only when they appear or go.
+- **Objects** players built, removed or changed there appear, go or change in the editor, without
+  a step in History. A changed object (a chest used, a piece moved) stays the same object in the
+  editor, so its place in History, the selection and the inspector stay with it; the inspector does
+  not apply over a version the game changed meanwhile (it shows the new one to change again). An
+  object you deleted and applied stays deleted (undo brings it back); one the game removed is gone
+  for good: undo and redo leave it alone, and a deletion of it not applied yet is dropped. Objects
+  you placed that players then picked or destroyed go too. Creatures and other things that move by
+  themselves, and fires, smelters, beehives and the like (which change their own data all the time),
+  are followed when they appear or go, not for every move or tick; portals are followed too.
 - **Ground** dug, flattened, paved or cultivated in the game comes in where you have no changes of
   your own in that zone. Where you have changes not applied yet, yours are kept and the status bar
   says so. **Apply live** (and **Auto**) then asks first: applying writes your ground over that zone,
   and what players did to its ground since may be erased. Answer **Not now** to keep your changes
-  pending; undo them, or **Reload**, to take the game's ground instead.
+  pending (nothing is applied then); undo them and the game's ground comes in at the next look.
+- Following happens only in the 3D editor, never during a brush stroke or while applying; the map
+  shows the world as it was last followed (**Reload** reads all of it again).
 
 The status bar says what came from the game ("From the game: 2 object(s) made or changed…").
 Following needs this version of the WorldEditorBridge plugin on the server; with an older one the
