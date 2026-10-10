@@ -123,7 +123,8 @@ public struct Vector2i : IEquatable<Vector2i>
 
 	public override bool Equals(object obj) => obj is Vector2i v && Equals(v);
 
-	public override int GetHashCode() => x.GetHashCode() ^ y.GetHashCode();
+	// Spread out (x ^ y gave the world's grid cells only about 512 hashes: long chains in a dictionary).
+	public override int GetHashCode() => unchecked(x * 73856093 ^ y * 19349663);
 
 	public static bool operator ==(Vector2i a, Vector2i b) => a.Equals(b);
 
