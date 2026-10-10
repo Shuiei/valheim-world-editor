@@ -210,7 +210,7 @@ CircleCI (`.circleci/config.yml`) runs on every push and pull request:
 
 | Job | What it checks |
 |---|---|
-| `native-tests` | `tests/Desktop.Tests` without the visual tests, with OpenSSH's server installed (`VWE_NEED_SSHD=1`). |
+| `native-tests` | `tests/Desktop.Tests` without the visual tests, with OpenSSH's server installed (`VWE_NEED_SSHD=1`), on three containers that each run a third of the test classes, shared out by their last times (`tools/ci-tests.sh`). |
 | `packages` | Both release packages build (without the plugin), and `tools/check-package.sh` finds everything they need and no source code, debug files or game files. |
 
 Not covered by CI: the visual tests (no display), building the plugin and the game-look export

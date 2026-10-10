@@ -23,6 +23,9 @@ public class CoreDungeonGenTests
 		}
 	}
 
+	// The samples of two styles only (the same seeds as in Samples).
+	public static IEnumerable<object[]> SamplesOf(string style1, string style2) => Samples().Where(s => (string)s[0] == style1 || (string)s[0] == style2);
+
 	private static DungeonGen.Result Make(string style, string biome, int size, int levels, int seed) =>
 		DungeonGen.Make(new DungeonGen.Settings(Biome: biome, Style: style, Size: size, Levels: levels, Seed: seed));
 
@@ -36,9 +39,9 @@ public class CoreDungeonGenTests
 		Assert.NotEqual(a.Items.Count, Make("Crypt", "Swamp", 3, 2, 43).Items.Count);
 	}
 
-	[Theory]
-	[MemberData(nameof(Samples))]
-	public void ItIsMadeOfTheGamesObjectsAndHolds(string style, string biome, int size, int levels, int seed)
+	// Checked in CoreDungeonHolds*Tests: the slowest check (the stability of every piece), split in
+	// classes of two styles that run side by side.
+	internal static void MadeOfTheGamesObjectsAndHolds(string style, string biome, int size, int levels, int seed)
 	{
 		var r = Make(style, biome, size, levels, seed);
 		var unknown = r.Items.Select(i => i.Prefab).Distinct().Where(n => PrefabCatalog.Details(StableHash.Of(n)) == null).ToList();
@@ -51,6 +54,18 @@ public class CoreDungeonGenTests
 		var real = falls.Where(i => !(goblinWalls && pieces[i].Prefab is "sign" or "piece_banner01" or "piece_banner02" or "piece_banner05" or "piece_banner06" or "piece_banner07"))
 			.Select(i => $"{pieces[i].Prefab} at {pieces[i].Position}").ToList();
 		Assert.Empty(real);
+	}
+
+	// A style added later is checked too: the CoreDungeonHolds*Tests classes cover every style.
+	[Fact]
+	public void TheHoldingChecksCoverEveryStyle()
+	{
+		var styles = typeof(CoreDungeonGenTests).Assembly.GetTypes()
+			.Where(t => t.Name.StartsWith("CoreDungeonHolds", StringComparison.Ordinal))
+			.SelectMany(t => t.GetMethods().SelectMany(m => m.GetCustomAttributes(typeof(MemberDataAttribute), false)))
+			.SelectMany(a => ((MemberDataAttribute)a).Arguments.OfType<string>())
+			.ToList();
+		Assert.Equal(DungeonKit.Styles.Select(s => s.Name).Order(), styles.Order());
 	}
 
 	[Theory]
@@ -170,4 +185,36 @@ public class CoreDungeonGenTests
 		Assert.True(r.Rooms!.Count > 5);
 		Assert.Empty(Dungeons.Openings(r.Rooms, freeOnly: true));
 	}
+}
+
+public class CoreDungeonHoldsTempleAndGoblinWarrenTests
+{
+	[Theory]
+	[MemberData(nameof(CoreDungeonGenTests.SamplesOf), "Temple", "Goblin warren", MemberType = typeof(CoreDungeonGenTests))]
+	public void ItIsMadeOfTheGamesObjectsAndHolds(string style, string biome, int size, int levels, int seed) =>
+		CoreDungeonGenTests.MadeOfTheGamesObjectsAndHolds(style, biome, size, levels, seed);
+}
+
+public class CoreDungeonHoldsCryptAndRuinsTests
+{
+	[Theory]
+	[MemberData(nameof(CoreDungeonGenTests.SamplesOf), "Crypt", "Ruins", MemberType = typeof(CoreDungeonGenTests))]
+	public void ItIsMadeOfTheGamesObjectsAndHolds(string style, string biome, int size, int levels, int seed) =>
+		CoreDungeonGenTests.MadeOfTheGamesObjectsAndHolds(style, biome, size, levels, seed);
+}
+
+public class CoreDungeonHoldsCatacombsAndPrisonTests
+{
+	[Theory]
+	[MemberData(nameof(CoreDungeonGenTests.SamplesOf), "Catacombs", "Prison", MemberType = typeof(CoreDungeonGenTests))]
+	public void ItIsMadeOfTheGamesObjectsAndHolds(string style, string biome, int size, int levels, int seed) =>
+		CoreDungeonGenTests.MadeOfTheGamesObjectsAndHolds(style, biome, size, levels, seed);
+}
+
+public class CoreDungeonHoldsFortressAndDvergrHoldTests
+{
+	[Theory]
+	[MemberData(nameof(CoreDungeonGenTests.SamplesOf), "Fortress", "Dvergr hold", MemberType = typeof(CoreDungeonGenTests))]
+	public void ItIsMadeOfTheGamesObjectsAndHolds(string style, string biome, int size, int levels, int seed) =>
+		CoreDungeonGenTests.MadeOfTheGamesObjectsAndHolds(style, biome, size, levels, seed);
 }
