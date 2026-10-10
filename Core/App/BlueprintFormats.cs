@@ -147,6 +147,7 @@ public static class BlueprintFormats
 	// Unity's Euler angles (degrees, applied z, then x, then y: R = Ry * Rx * Rz) of a quaternion.
 	public static Vector3 ToEuler(Quaternion q)
 	{
+		q = Quaternion.Normalize(q);
 		float m02 = 2f * (q.X * q.Z + q.W * q.Y), m22 = 1f - 2f * (q.X * q.X + q.Y * q.Y);
 		float m12 = 2f * (q.Y * q.Z - q.W * q.X), m10 = 2f * (q.X * q.Y + q.W * q.Z), m11 = 1f - 2f * (q.X * q.X + q.Z * q.Z);
 		float m00 = 1f - 2f * (q.Y * q.Y + q.Z * q.Z), m20 = 2f * (q.X * q.Z - q.W * q.Y);

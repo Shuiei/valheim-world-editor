@@ -1,6 +1,7 @@
 using System.IO.Compression;
 using System.Numerics;
 using System.Text.Json;
+using TerrainEditor.App;
 using TerrainEditor.Save;
 using Rnd = ValheimGen.UnityEngine.Random;
 
@@ -102,35 +103,6 @@ public static class Dungeons
 		return new Catalog(rooms, kinds);
 	}
 
-	// ---- Rotations: the save keeps Euler angles (Unity's eulerAngles, degrees; Quaternion.Euler turns
-	// about z, then x, then y).
-	private const float Deg = MathF.PI / 180f;
-
-	public static Quaternion FromEuler(Vector3 e) => Quaternion.CreateFromYawPitchRoll(e.Y * Deg, e.X * Deg, e.Z * Deg);
-
-	public static Vector3 ToEuler(Quaternion q)
-	{
-		q = Quaternion.Normalize(q);
-		// Unity's Quaternion.eulerAngles for its ZXY order: pitch from the rotated forward's height.
-		float sinX = 2f * (q.W * q.X - q.Y * q.Z);
-		float x, y, z;
-		if (MathF.Abs(sinX) > 0.9999f)
-		{
-			// Looking straight up or down: z folded into y.
-			x = MathF.CopySign(90f, sinX);
-			y = MathF.Atan2(2f * (q.W * q.Y - q.X * q.Z), 1f - 2f * (q.Y * q.Y + q.Z * q.Z)) / Deg;
-			z = 0;
-		}
-		else
-		{
-			x = MathF.Asin(sinX) / Deg;
-			y = MathF.Atan2(2f * (q.W * q.Y + q.X * q.Z), 1f - 2f * (q.X * q.X + q.Y * q.Y)) / Deg;
-			z = MathF.Atan2(2f * (q.W * q.Z + q.X * q.Y), 1f - 2f * (q.X * q.X + q.Z * q.Z)) / Deg;
-		}
-		static float Wrap(float a) => a < 0 ? a + 360f : a >= 360f ? a - 360f : a;
-		return new Vector3(Wrap(x), Wrap(y), Wrap(z));
-	}
-
 	// ---- The room list.
 	public sealed record Placed(int Hash, Vector3 Position, Quaternion Rotation)
 	{
@@ -160,7 +132,7 @@ public static class Dungeons
 			int hash = r.ReadInt32();
 			var pos = new Vector3(r.ReadSingle(), r.ReadSingle(), r.ReadSingle());
 			var euler = new Vector3(r.ReadSingle(), r.ReadSingle(), r.ReadSingle());
-			list.Add(new Placed(hash, pos, FromEuler(euler)));
+			list.Add(new Placed(hash, pos, BlueprintFormats.FromEuler(euler)));
 		}
 		return list;
 	}
@@ -173,7 +145,7 @@ public static class Dungeons
 			w.Write(rooms.Count);
 			foreach (Placed p in rooms)
 			{
-				Vector3 e = ToEuler(p.Rotation);
+				Vector3 e = BlueprintFormats.ToEuler(p.Rotation);
 				w.Write(p.Hash);
 				w.Write(p.Position.X);
 				w.Write(p.Position.Y);
