@@ -353,7 +353,9 @@ public sealed class WorldSession : IDisposable
 				return null;
 			}
 			var objects = await live.ZoneObjects(changed);
-			var merged = World.MergeLive(changed, objects, id => Edits.Deleted.Contains(id) || LiveSync.IsDestroyed(id), LiveSync.IsOurs);
+			// Kept as the editor has them: its deletions, and objects it made again in the game (an
+			// applied delete undone: the game has it under a new ZDOID, which is the editor's own).
+			var merged = World.MergeLive(changed, objects, id => Edits.Deleted.Contains(id) || LiveSync.IsDestroyed(id) || LiveSync.IsLive(id), LiveSync.IsOurs);
 			foreach (var key in changed)
 			{
 				_digests[key] = now[key];

@@ -134,6 +134,32 @@ public class LiveFollowTests
 		Assert.Empty(world.Edits.GameChanged);
 	}
 
+	// An applied delete undone and applied again: the game has the object back under a new ZDOID, and the
+	// next follow keeps it (it vanished: the old ZDOID was not seen, the new one was the editor's own).
+	[Fact]
+	public async Task AnAppliedDeleteUndoneStaysAfterFollowing()
+	{
+		var (game, world, s) = await Open();
+		using var _ = game;
+		var w = world.World;
+		int tree = s.Scene.Things.FindIndex(t => !t.Piece && t.Id >= 0 && w.ObjectRefs[t.Id].Zone == (0, 0));
+		int id = s.Scene.Things[tree].Id;
+		s.Delete(new[] { tree });
+		Assert.True((await world.ApplyLive()).Done);
+		s.Undo();
+		Assert.True((await world.ApplyLive()).Done);
+		// The game: the tree back under the stand-in's next ZDOID (77:1000), the old one gone.
+		var old = w.ObjectRefs[id].LiveId;
+		var objects = AsRead(w, (0, 0)).Where(o => (o.Item1, o.Item2) != old).ToList();
+		objects.Add((77, 1000, w.ObjectBytes(id)));
+		game.Zones[(0, 0)] = (1, objects);
+		var f = await world.FollowGame(new[] { (0, 0) });
+		Assert.True(f == null || (f.Merged.Vanished.Count == 0 && f.Merged.Added.Count == 0));
+		Assert.DoesNotContain(id, w.Vanished);
+		Assert.False(s.Scene.Things[tree].Gone);
+		Assert.Equal((0, 0, 0, 0), world.Pending);
+	}
+
 	// An object that came into a zone from another (a creature walking in) is moved, not doubled.
 	[Fact]
 	public async Task AnObjectFromAnotherZoneIsMovedNotDoubled()

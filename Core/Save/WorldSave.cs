@@ -284,9 +284,9 @@ public sealed class WorldSave
 
 	// Live: the zones' objects as the game has them now (ZDOID and bytes, as the plugin's /zone sends them),
 	// merged in: new ones and changed ones (read again) are added under new ids, those gone or changed
-	// vanish. keep: objects the editor deleted (pending or applied): left as they are whatever the game
-	// did (undo brings them back); ours: ZDOIDs of objects the editor made itself (they are its new
-	// objects).
+	// vanish. keep: objects the editor deleted (pending or applied), or made again in the game under a
+	// new ZDOID (an applied delete undone): left as they are whatever the game did; ours: ZDOIDs of
+	// objects the editor made itself (they are its own objects).
 	public Merged MergeLive(IReadOnlyCollection<(int X, int Z)> zones, IReadOnlyList<(long User, uint Id, byte[] Bytes)> objects,
 		Func<int, bool> keep, Func<(long User, uint Id), bool> ours)
 	{
