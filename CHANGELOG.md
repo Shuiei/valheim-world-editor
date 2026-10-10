@@ -23,6 +23,12 @@ the plugin is unchanged in versions without that part.
   world's biomes. Making a world's ground while Regrow (or another world) runs no longer shifts its
   rivers and streams away from the game's.
 - Ground is worked out a little faster (river lookups no longer walk long chains).
+- A blueprint or copy with a damaged object value (a number that is not one) no longer makes saving
+  the world fail: that value is left out when the blueprint is read.
+- In the Workshop, the pieces of a ruin blueprint (a generated dungeon) added to a building stay a
+  ruin's in the blueprint saved, instead of becoming the builder's.
+- The 3D view no longer stalls for a frame after each Dungeon tool change while it reads the
+  dungeons' rooms again: they are read beside it.
 
 ### WorldEditorBridge
 - `/watch`: one number per asked zone, which changes when an object there is made, removed or

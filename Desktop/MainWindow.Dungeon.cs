@@ -86,41 +86,26 @@ public partial class MainWindow
 			arrival = RoomSurfaces.Hit(new[] { dungeon }, _view.Models, above, -Vector3.UnitY) is float down ? above - new Vector3(0, down - 0.05f, 0) : placed[0].Position;
 		}
 		// Every object with its own data, and no builder: the game takes the dungeon for a ruin, as its
-		// own dungeons (monsters do not go for its walls; taking it apart gives back a third).
-		int skipped = 0, creator = StableHash.Of("creator");
+		// own dungeons (monsters do not go for its walls; taking it apart gives back a third). Made fresh
+		// (nothing kept of the object it is copied from); the data goes on when it is written.
+		int skipped = 0;
 		foreach (var it in r.Items)
 		{
 			int prefab = StableHash.Of(it.Prefab);
-			// Made fresh (nothing kept of the object it is copied from), then its builder taken off.
-			var n = new NewObject(0, prefab, it.Position + origin, Dungeons.ToEuler(it.Rotation), 0);
+			if (world.ModelFor(prefab, null) == null && TerrainEditor.Terrain.PrefabCatalog.Details(prefab) == null)
 			{
-				if (Blank(n) is not { } bytes)
-				{
-					skipped++;
-					continue;
-				}
-				var z = ZdoData.Parse(bytes);
-				z.Set("longs", creator, null);
-				foreach (var (section, key, value) in it.Data ?? Array.Empty<(string, string, string)>())
-				{
-					if (section == "bytes")
-					{
-						z.SetBytes(StableHash.Of(key), Convert.FromBase64String(value));
-					}
-					else
-					{
-						z.Set(section, StableHash.Of(key), value);
-					}
-				}
-				n = n with { Raw = z.Serialize(), Fresh = false };
+				skipped++;
+				continue;
 			}
-			adds.Add((n, TerrainEditor.Terrain.PieceCatalog.Get(prefab)?.Tool != null));
+			var data = (it.Data ?? Array.Empty<(string Section, string Key, string Value)>()).Select(d => new ObjectField(d.Section, StableHash.Of(d.Key), d.Value)).Append(ObjectField.NoBuilder).ToList();
+			adds.Add((new NewObject(0, prefab, it.Position + origin, BlueprintFormats.ToEuler(it.Rotation), 0, Data: data), TerrainEditor.Terrain.PieceCatalog.Get(prefab)?.Tool != null));
 		}
 		// Two portals of the same tag, written linked (the game pairs only portals it sees made, or that
 		// a save gives linked).
 		string tag = $"dg{settings.Seed % 100000}";
 		int link = Random.Shared.Next(1, int.MaxValue);
 		int portal = StableHash.Of("portal_wood");
+		var portalData = new[] { ObjectField.NoBuilder, new ObjectField("strings", StableHash.Of("tag"), tag) };
 		foreach (var (at, yaw, kindByte) in new[] { (arrival, 0f, (byte)0x01), (new Vector3(gx, Math.Max(HeightAt(gx, gz + 3), scene.Water), gz + 3), 180f, (byte)0x11) })
 		{
 			var n = new NewObject(0, portal, at, new Vector3(0, yaw, 0), 0);
@@ -128,11 +113,10 @@ public partial class MainWindow
 			{
 				continue;
 			}
+			// The link is no field of the data: set on the object itself.
 			var z = ZdoData.Parse(bytes);
-			z.Set("longs", creator, null);
-			z.Set("strings", StableHash.Of("tag"), tag);
 			z.Connection = new[] { kindByte }.Concat(BitConverter.GetBytes(link)).ToArray();
-			adds.Add((n with { Raw = z.Serialize(), Fresh = false }, true));
+			adds.Add((n with { Raw = z.Serialize(), Fresh = false, Data = portalData }, true));
 		}
 		session.Commit($"Dungeon: generated {r.Name}", null, Array.Empty<int>(), adds);
 		_message.Text = $"Generated {r.Name}: {adds.Count} objects, 5000 m above here. A portal \u201c{tag}\u201d on the ground here leads in. "
@@ -155,7 +139,7 @@ public partial class MainWindow
 		var objects = new System.Text.Json.Nodes.JsonArray();
 		foreach (var it in r.Items)
 		{
-			var e = Dungeons.ToEuler(it.Rotation);
+			var e = BlueprintFormats.ToEuler(it.Rotation);
 			var data = (it.Data ?? Array.Empty<(string Section, string Key, string Value)>())
 				.Select(d => new ObjectField(d.Section, StableHash.Of(d.Key), d.Value)).Append(ObjectField.NoBuilder);
 			objects.Add(new System.Text.Json.Nodes.JsonObject

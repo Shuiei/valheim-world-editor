@@ -1,4 +1,5 @@
 using System.Numerics;
+using TerrainEditor.App;
 using TerrainEditor.Editing;
 using TerrainEditor.Save;
 using Xunit;
@@ -64,8 +65,8 @@ public class CoreDungeonTests
 	[InlineData(89.5, 10, 0)]
 	public void EulerAnglesTurnLikeUnitys(float x, float y, float z)
 	{
-		Quaternion q = Dungeons.FromEuler(new Vector3(x, y, z));
-		Assert.True(Same(q, Dungeons.FromEuler(Dungeons.ToEuler(q))));
+		Quaternion q = BlueprintFormats.FromEuler(new Vector3(x, y, z));
+		Assert.True(Same(q, BlueprintFormats.FromEuler(BlueprintFormats.ToEuler(q))));
 		// Quaternion.Euler turns about z, then x, then y.
 		Quaternion zxy = Quaternion.CreateFromAxisAngle(Vector3.UnitY, y * MathF.PI / 180) * Quaternion.CreateFromAxisAngle(Vector3.UnitX, x * MathF.PI / 180)
 			* Quaternion.CreateFromAxisAngle(Vector3.UnitZ, z * MathF.PI / 180);

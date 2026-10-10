@@ -787,11 +787,11 @@ public sealed class GlView : OpenGlControlBase
 	private void DrawRooms(WorldScene s)
 	{
 		var shown = new List<(int, Vector3, Vector3, float)>();
-		foreach (var d in DungeonRooms.Of(s))
+		foreach (var d in DungeonRooms.Shown(s, Wake))
 		{
 			foreach (var r in d.Rooms)
 			{
-				shown.Add((r.Hash, r.Position, TerrainEditor.Editing.Dungeons.ToEuler(r.Rotation), 0f));
+				shown.Add((r.Hash, r.Position, TerrainEditor.App.BlueprintFormats.ToEuler(r.Rotation), 0f));
 			}
 		}
 		if (shown.Count > 0)
@@ -2189,7 +2189,7 @@ public sealed class GlView : OpenGlControlBase
 		// The room a click adds: its model see-through, its box green, or red when it would not fit.
 		if (Dungeon.Preview is { } p)
 		{
-			DrawInstances(s, new[] { (p.Hash, p.Position, Dungeons.ToEuler(p.Rotation), 0f) }, ghost: true);
+			DrawInstances(s, new[] { (p.Hash, p.Position, BlueprintFormats.ToEuler(p.Rotation), 0f) }, ghost: true);
 			BoxLines(hovered, Dungeons.Box(p), V);
 		}
 		if (hovered.Count > 0)
@@ -3276,7 +3276,7 @@ public sealed class GlView : OpenGlControlBase
 		var wo = new Vector3(o.X + s.Cx, o.Y, -o.Z + s.Cz);
 		var wd = new Vector3(d.X, d.Y, -d.Z);
 		// A dungeon's rooms are the ground there (their floors and walls).
-		if (_shown[(int)ObjectKind.Dungeons] && DungeonRooms.Of(s) is { Count: > 0 } dungeons && RoomSurfaces.Hit(dungeons, _models, wo, wd, CutY ?? float.MaxValue) is float rt && (g == null || rt < g))
+		if (_shown[(int)ObjectKind.Dungeons] && DungeonRooms.Shown(s, Wake) is { Count: > 0 } dungeons && RoomSurfaces.Hit(dungeons, _models, wo, wd, CutY ?? float.MaxValue) is float rt && (g == null || rt < g))
 		{
 			g = rt;
 		}

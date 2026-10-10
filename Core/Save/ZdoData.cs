@@ -187,6 +187,20 @@ public sealed class ZdoData
 		}
 	}
 
+	// Whether Set takes this value for that section (the numbers it needs, base64 for bytes).
+	public static bool Valid(string section, string? value)
+	{
+		try
+		{
+			new ZdoData().Set(section, 0, value);
+			return true;
+		}
+		catch (Exception ex) when (ex is FormatException or OverflowException or ArgumentException)
+		{
+			return false;
+		}
+	}
+
 	public void SetBytes(int key, byte[] value) => Put(ByteList, key, value, v => v);
 
 	public byte[]? GetBytes(int key) => ByteList.FirstOrDefault(i => i.Key == key).Value;

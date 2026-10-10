@@ -15,14 +15,48 @@ public static class DungeonRooms
 
 	private static readonly ConditionalWeakTable<WorldScene, Cache> Caches = new();
 
-	public static IReadOnlyList<Dungeon> Of(WorldScene s)
+	// Scenes whose dungeons are being read again for the view.
+	private static readonly ConditionalWeakTable<WorldScene, object> Reading = new();
+
+	private static (int Version, int Count) Now(WorldScene s)
 	{
-		int version = s.Session?.Edits.Version ?? 0;
-		int count;
 		lock (s.Things)
 		{
-			count = s.Things.Count;
+			return (s.Session?.Edits.Version ?? 0, s.Things.Count);
 		}
+	}
+
+	// For drawing (each frame): what was read last, without waiting; after an edit they are read again on
+	// a worker (chunk files, each dungeon's data), and ready is called when they are.
+	public static IReadOnlyList<Dungeon> Shown(WorldScene s, Action ready)
+	{
+		var (version, count) = Now(s);
+		Caches.TryGetValue(s, out var c);
+		if (c is { } k && k.Version == version && k.Count == count)
+		{
+			return k.Dungeons;
+		}
+		if (Reading.TryAdd(s, new object()))
+		{
+			Task.Run(() =>
+			{
+				try
+				{
+					Of(s);
+				}
+				finally
+				{
+					Reading.Remove(s);
+				}
+				ready();
+			});
+		}
+		return c?.Dungeons ?? Array.Empty<Dungeon>();
+	}
+
+	public static IReadOnlyList<Dungeon> Of(WorldScene s)
+	{
+		var (version, count) = Now(s);
 		if (Caches.TryGetValue(s, out var c) && c.Version == version && c.Count == count)
 		{
 			return c.Dungeons;
@@ -55,7 +89,7 @@ public static class DungeonRooms
 					problem = "The game has not laid this dungeon out yet (nobody has been near it).";
 				}
 			}
-			catch (Exception e) when (e is InvalidDataException or IOException or EndOfStreamException or ArgumentException)
+			catch (Exception e) when (e is InvalidDataException or IOException or EndOfStreamException or ArgumentException or FormatException or OverflowException)
 			{
 				problem = e.Message;
 			}
