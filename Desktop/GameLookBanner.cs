@@ -7,10 +7,10 @@ using TerrainEditor.App;
 
 namespace TerrainEditor.Desktop;
 
-// The game's look (terrain textures, map textures, models) is copied once from the player's own
-// Valheim, in the background (GameLook): the start page's card that follows it. While it runs, its
-// progress; when Valheim is not found, a field to choose its folder; when it failed, Try again; once
-// it is done, a word that the next area opened has it. Hidden when there is nothing to say.
+// The game's look (terrain textures, map textures, models) is read from the player's own Valheim
+// (GameLook): the start page's card that follows it. While its files are first read (indexed), a
+// word; when Valheim is not found, a field to choose its folder; when it failed, Try again; once it
+// is done, a word that the next area opened has it. Hidden when there is nothing to say.
 public sealed class GameLookBanner
 {
 	public Control View => _card;
@@ -34,7 +34,7 @@ public sealed class GameLookBanner
 	internal TextBlock Hint { get; } = Ui.Hint("");
 	internal Grid PathRow { get; }
 
-	// Tests: the exporter's state, starting it, and the folder picker.
+	// Tests: the game look's state, choosing the game folder, and the folder picker.
 	internal Func<GameLook.Snapshot> Read { get; set; } = GameLook.Now;
 	internal Func<string, AppSettings, string?> StartExport { get; set; } = (folder, settings) => GameLook.Start(folder, settings);
 	internal Func<string, Task<string?>> PickFolder { get; set; } = _ => Task.FromResult<string?>(null);
@@ -74,7 +74,7 @@ public sealed class GameLookBanner
 		Refresh();
 	}
 
-	// Shows the exporter's state (rebuilt when it changes; the progress every time).
+	// Shows the game look's state (rebuilt when it changes; the progress every time).
 	internal void Refresh()
 	{
 		var s = Read();
@@ -86,7 +86,7 @@ public sealed class GameLookBanner
 			case "running":
 				_sawRunning = true;
 				Title.Text = "Preparing the game's look";
-				Message.Text = s.Message ?? "Copying the textures and models from your Valheim, once.";
+				Message.Text = s.Message ?? "Reading the game's files (a few seconds, only after a game update).";
 				Bar.IsVisible = LastLine.IsVisible = true;
 				Bar.Value = s.Progress ?? 0;
 				LastLine.Text = s.LastLine ?? "";
@@ -100,10 +100,10 @@ public sealed class GameLookBanner
 				{
 					PathBox.Text = s.Valheim ?? "";
 				}
-				Hint.Text = "Choose the folder Steam installed Valheim into (the one with valheim_Data): the editor copies the game's textures and models from it, once. Without it the editor works with plain colours and no models.";
+				Hint.Text = "Choose the folder Steam installed Valheim into (the one with valheim_Data): the editor reads the game's textures and models from it (nothing is copied). Without it the editor works with plain colours and no models.";
 				break;
 			case "failed":
-				Title.Text = "The game's look could not be copied";
+				Title.Text = "The game's look could not be read";
 				Message.Text = s.Message ?? "";
 				Retry.IsVisible = ShowLog.IsVisible = true;
 				Hint.Text = "The editor works without it, with plain colours and no models. To report the problem, attach the editor's log (Open log) to an issue on GitHub.";

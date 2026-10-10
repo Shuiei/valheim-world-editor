@@ -7,7 +7,6 @@ using Avalonia.OpenGL;
 using Avalonia.OpenGL.Controls;
 using Avalonia.Threading;
 using Silk.NET.OpenGL;
-using SkiaSharp;
 using TerrainEditor.App;
 using TerrainEditor.Terrain;
 using MapData = ValheimGen.MapData;
@@ -256,7 +255,7 @@ public sealed class MapView : OpenGlControlBase
 		_gl.Uniform1(_gl.GetUniformLocation(_prog, name), t.Unit);
 	}
 
-	// Plain stand-ins (RGBA) when the game's map textures were not copied yet.
+	// Plain stand-ins (RGBA) when the game's map textures cannot be read (Valheim not found).
 	private static readonly Dictionary<string, byte[]> Fallback = new()
 	{
 		["_BackgroundTex"] = new byte[] { 200, 186, 150, 255 }, ["_FogLayerTex"] = new byte[] { 255, 255, 255, 0 }, ["_WaterTex"] = new byte[] { 128, 128, 128, 255 },
@@ -267,12 +266,24 @@ public sealed class MapView : OpenGlControlBase
 	private unsafe void LoadTextures()
 	{
 		_texturesLoaded = true;
+		var pictures = new Dictionary<string, GameLookData.Picture>();
+		try
+		{
+			if (GameLook.Bundles is { } game)
+			{
+				pictures = GameLookData.ReadMap(game);
+			}
+		}
+		catch (Exception e) when (e is IOException or InvalidDataException or NotSupportedException)
+		{
+			Console.WriteLine($"map: the game's map textures could not be read: {e.Message}");
+		}
 		foreach (var (u, f) in new[] { ("Background", "background"), ("FogLayer", "foglayer"), ("Water", "water"), ("lava", "lava"), ("Mountain", "mountain"), ("Cloud", "cloud"), ("Forest", "forest"), ("Space", "space") })
 		{
-			string name = $"_{u}Tex", path = Path.Combine(GameLook.Dir, "maptex", f + ".png");
+			string name = $"_{u}Tex";
 			// The lava mask is data, every other map texture a colour.
 			bool srgb = u != "lava";
-			using var bmp = File.Exists(path) ? SKBitmap.Decode(path)?.Copy(SKColorType.Rgba8888) : null;
+			var bmp = pictures.GetValueOrDefault(f);
 			Texture(name, _ =>
 			{
 				_gl.PixelStore(PixelStoreParameter.UnpackAlignment, 1);
@@ -286,8 +297,11 @@ public sealed class MapView : OpenGlControlBase
 					_gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
 					return;
 				}
-				// Pictures are stored top row first; the web uploads them as they are (no flip), so do the same.
-				_gl.TexImage2D(TextureTarget.Texture2D, 0, srgb ? InternalFormat.Srgb8Alpha8 : InternalFormat.Rgba8, (uint)bmp.Width, (uint)bmp.Height, 0, PixelFormat.Rgba, PixelType.UnsignedByte, (void*)bmp.GetPixels());
+				// Top row first; the web uploaded the pictures as they are (no flip), so the same.
+				fixed (byte* px = bmp.Rgba)
+				{
+					_gl.TexImage2D(TextureTarget.Texture2D, 0, srgb ? InternalFormat.Srgb8Alpha8 : InternalFormat.Rgba8, (uint)bmp.Width, (uint)bmp.Height, 0, PixelFormat.Rgba, PixelType.UnsignedByte, px);
+				}
 				_gl.GenerateMipmap(TextureTarget.Texture2D);
 				_gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.LinearMipmapLinear);
 				_gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);

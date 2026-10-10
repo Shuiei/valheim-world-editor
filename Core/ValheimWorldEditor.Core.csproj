@@ -17,6 +17,9 @@
     <InternalsVisibleTo Include="Desktop.Tests" />
   </ItemGroup>
   <ItemGroup>
+    <!-- The game's models and textures, read from its asset bundles (App/GameBundles.cs, GameTextures.cs). -->
+    <PackageReference Include="AssetsTools.NET" Version="3.0.5" />
+    <PackageReference Include="BCnEncoder.Net" Version="2.3.0" />
     <PackageReference Include="SSH.NET" Version="2026.0.0" />
     <!-- The terrain shader from Valheim for Windows (SPIR-V to GLSL, App/TerrainShader.cs). -->
     <PackageReference Include="Silk.NET.SPIRV.Cross" Version="2.23.0" />

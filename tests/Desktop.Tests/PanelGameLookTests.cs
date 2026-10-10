@@ -47,7 +47,7 @@ public class PanelGameLookTests
 		b.Refresh();
 		Assert.Equal(0.6, b.Bar.Value, 3);
 		Assert.Equal("120/400 models", b.LastLine.Text);
-		Assert.Equal("Copying the textures and models from your Valheim, once.", b.Message.Text);
+		Assert.Equal("Reading the game's files (a few seconds, only after a game update).", b.Message.Text);
 		// Done: still shown, saying where it will be seen.
 		set(new("ready", null, "/games/valheim", null, 1));
 		b.Refresh();
@@ -102,7 +102,7 @@ public class PanelGameLookTests
 	public void AFailedCopyIsTriedAgainFromTheSameFolder()
 	{
 		var (b, started, set) = Banner(new("failed", "The exporter stopped (exit 1).", "/games/valheim", null, null));
-		Assert.Equal("The game's look could not be copied", b.Title.Text);
+		Assert.Equal("The game's look could not be read", b.Title.Text);
 		Assert.Equal("The exporter stopped (exit 1).", b.Message.Text);
 		Assert.True(b.Retry.IsVisible);
 		Assert.False(b.PathRow.IsVisible);

@@ -50,9 +50,8 @@ public static class SettingsDialog
 		return null;
 	}
 
-	// Tests: what a changed game folder starts (the game-look copy otherwise).
-	// Driven (tests, docs pictures): never a copy, whose folder may be the player's own linked in.
-	internal static Action<AppSettings> CheckGameLook { get; set; } = s => GameLook.Check(s, export: !Options.Driver);
+	// Tests: what a changed game folder starts (reading the game's files otherwise).
+	internal static Action<AppSettings> CheckGameLook { get; set; } = GameLook.Check;
 
 	// Tests: the folder picker (null: the system's).
 	internal static Func<string, Task<string?>>? PickFolder { get; set; }

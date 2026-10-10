@@ -12,10 +12,9 @@ Documentation: https://github.com/Shuiei/valheim-world-editor
   2. Double-click ValheimWorldEditor. If your file manager opens it as text or asks what to do,
      choose "Run" (or right-click, "Run as program"). From a terminal: ./ValheimWorldEditor
   3. The editor opens in its own window, on the start page. It lists the worlds of this computer.
-     The first time, a bar shows it copying the game's look (textures and models) from your
-     Valheim install: a few minutes, only once (and again after a Valheim update). You can already
-     open a world meanwhile.
-     Valheim is found in any Steam library (also Flatpak Steam). If it is not found, the bar asks
+     It reads the game's look (textures and models) from your Valheim install, nothing is copied:
+     the first time (and after a Valheim update) it reads the game's files for a few seconds.
+     Valheim is found in any Steam library (also Flatpak Steam). If it is not found, the start page asks
      for its folder: the one with valheim_Data, usually ~/.local/share/Steam/steamapps/common/Valheim.
 
   Nothing else to install. The editor draws with OpenGL 3.3, which any graphics driver of the last

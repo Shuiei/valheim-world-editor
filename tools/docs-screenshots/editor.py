@@ -47,21 +47,45 @@ class FakeGame:
         self.server.shutdown()
 
 
+def real_bundles():
+    """This computer's Valheim bundles folder (the editor's settings first, then the usual Steam places)."""
+    places = []
+    try:
+        v = json.loads((Path.home() / ".local" / "share" / "ValheimWorldEditor" / "settings.json").read_text()).get("ValheimPath")
+        if v: places.append(Path(v))
+    except (OSError, ValueError):
+        pass
+    for steam in (Path.home() / ".local" / "share" / "Steam", Path.home() / ".steam" / "steam", Path("/opt/Steam")):
+        places.append(steam / "steamapps" / "common" / "Valheim")
+    for v in places:
+        b = v / "valheim_Data" / "StreamingAssets" / "SoftRef" / "Bundles"
+        if b.is_dir():
+            return b.resolve()
+    return None
+
+
 class Editor:
     def __init__(self, app=None, width=1440, height=900, game_world=None, worlds=(), homestead=None):
         self.home = Path(tempfile.mkdtemp(prefix="vwe-docs-home-"))
         self.game = None
         # The stand-in home's own data folder (~/.local/share/ValheimWorldEditor): the start page
-        # shows it as such. The copied game look is the real one, read only.
+        # shows it as such. The index of the game's files is the real one (made again if stale).
         data = self.home / ".local" / "share"
         (data / "ValheimWorldEditor").mkdir(parents=True)
-        look = Path.home() / ".local" / "share" / "ValheimWorldEditor" / "game-look"
-        if look.is_dir():
-            (data / "ValheimWorldEditor" / "game-look").symlink_to(look)
+        index = Path.home() / ".local" / "share" / "ValheimWorldEditor" / "game-index.json"
+        if index.is_file():
+            (data / "ValheimWorldEditor" / "game-index.json").symlink_to(index)
         # A stand-in Valheim in the home's Steam library ("Found automatically" in Settings); the editor
-        # is driven, so it never looks for Steam outside this home.
+        # is driven, so it never looks for Steam outside this home. Its bundles are this computer's
+        # Valheim's (read only), for the game's look.
         valheim = self.home / ".local" / "share" / "Steam" / "steamapps" / "common" / "Valheim"
-        (valheim / "valheim_Data" / "StreamingAssets" / "SoftRef" / "Bundles").mkdir(parents=True)
+        bundles = valheim / "valheim_Data" / "StreamingAssets" / "SoftRef" / "Bundles"
+        bundles.parent.mkdir(parents=True)
+        real = real_bundles()
+        if real:
+            bundles.symlink_to(real)
+        else:
+            bundles.mkdir()
         # Worlds in Valheim's own folder, as a player has them (links to the read-only originals).
         local = self.home / ".config" / "unity3d" / "IronGate" / "Valheim" / "worlds_local"
         for w in worlds:
