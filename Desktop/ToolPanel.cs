@@ -11,7 +11,7 @@ namespace TerrainEditor.Desktop;
 // Esc goes back to View.
 // Which tool is in use: View (look around, click picks), Select, Measure, Shape, Path, Area, Paste (from the
 // Area tool, Ctrl+V), Place, Blueprints (the library, to paste one), or a brush (Tool says which).
-public enum ToolMode { View, Select, Measure, Shape, Path, Area, Paste, Place, Brush, Mountain, Script, Blueprints }
+public enum ToolMode { View, Select, Measure, Shape, Path, Area, Paste, Place, Brush, Mountain, Script, Blueprints, Dungeon }
 
 public sealed class ToolPanel
 {
@@ -31,7 +31,7 @@ public sealed class ToolPanel
 	private readonly Dictionary<BrushTool, Button> _buttons = new();
 	// Blueprints: the library, to paste one (in a world), in place of a tool's options.
 	private readonly Button _blueprintsButton;
-	private readonly Button _viewButton, _selectButton, _measureButton, _shapeButton, _pathButton, _areaButton, _placeButton, _mountainButton, _caveButton, _scriptButton;
+	private readonly Button _viewButton, _selectButton, _measureButton, _shapeButton, _pathButton, _areaButton, _placeButton, _mountainButton, _caveButton, _scriptButton, _dungeonButton;
 	// The Cave button: the Path tool with its Cave action (the window picks the action).
 	public event Action? CaveChosen;
 
@@ -206,6 +206,9 @@ public sealed class ToolPanel
 			ChooseMode(ToolMode.Path);
 			CaveChosen?.Invoke();
 		};
+		_dungeonButton = Make("Dungeon", "", "dungeon");
+		_dungeonButton.Tip("tools.dungeon");
+		_dungeonButton.Click += (_, _) => ChooseMode(ToolMode.Dungeon);
 		_scriptButton = Make("Script", "", "script");
 		ToolTip.SetTip(_scriptButton, "Script: write C# that shapes the ground, paints it and places or removes objects over the open area: anything the tools do, and more. Examples to start from.");
 		_scriptButton.Click += (_, _) => ChooseMode(ToolMode.Script);
@@ -375,6 +378,7 @@ public sealed class ToolPanel
 		_placeButton.Classes.Set("on", Mode == ToolMode.Place);
 		_mountainButton.Classes.Set("on", Mode == ToolMode.Mountain);
 		_scriptButton.Classes.Set("on", Mode == ToolMode.Script);
+		_dungeonButton.Classes.Set("on", Mode == ToolMode.Dungeon);
 		_blueprintsButton.Classes.Set("on", Mode == ToolMode.Blueprints);
 		_caveButton.Classes.Set("on", false);
 		foreach (var (k, b) in _buttons)

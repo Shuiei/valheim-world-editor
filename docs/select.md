@@ -20,7 +20,7 @@ each one from its location whenever the zone loads, so deleting one removes that
 | **Alt + drag** | Draws a zone even when you start over an object (useful in forests, where trees cover the ground). |
 | **Shift + drag** or **Ctrl + drag** | Adds what is inside the zone to the selection. |
 | **Click on empty ground** / `Esc` | Clears the selection. |
-| **Double-click a building piece** | Selects the whole building: every piece connected to it through pieces that touch (walls, floors, roofs, beams...). Pieces standing apart are not taken. |
+| **Double-click a building piece** | Selects the whole building: every piece connected to it through pieces that touch (walls, floors, roofs, beams...). Pieces standing apart are not taken. A chest (any container) is the exception: a double click selects it alone and opens its data, its contents. |
 | **Whole building** | Adds every piece connected to the selected pieces. |
 | **Same kind** | Selects every shown object in the area of the kinds selected now (select one beech, then all the beeches). |
 | **Invert** | Selects every shown object in the area that is not selected now. |
@@ -70,14 +70,14 @@ typed values are exact, so nothing snaps on top of them.
 
 ## Inspecting and changing an object's data
 
-Like MCEdit's NBT editor: with one object selected, **Inspect data (I)** opens a panel with
+Like MCEdit's NBT editor: with one object selected, **Inspect data (I)** (or a double click on it, unless it is a building piece: that selects the building) opens a panel with
 everything the object holds in the save.
 
 ![A chest selected, its data in the Inspector](images/inspector.jpg)
 
 | Part | What it shows |
 |---|---|
-| **Contents** | For chests (and anything with an `items` value): every item with its stack, quality, durability (%) and slot (X, Y). The container's size comes from the game (a wood chest has 5 × 2 slots); carts and ships keep their container on a part, so their size is unknown. **Add item** puts a new item in the first free slot (type its name: `Wood`, `SwordIron`... the list suggests every item of the game); **✕** takes one out; **Tidy slots** moves every item to the first free slots, row by row. Items outside the slots would be hidden in game, so the editor asks before applying that. |
+| **Contents** | For chests (and anything with an `items` value): the container's slots as in game, each with its item and how many. Click a slot to choose what it holds (type a few letters of any item of the game), how many and how good; **Empty** takes it out; **Move**, then another slot, moves it there (two items swap). How many can be more than a stack holds in game: the game keeps a stack's worth. **Every item's details** lists every item with its stack, quality, durability (%) and slot (X, Y). The container's size comes from the game (a wood chest has 5 × 2 slots); carts and ships keep their container on a part, so their size is unknown. **Add item** puts a new item in the first free slot (type its name: `Wood`, `SwordIron`... the list suggests every item of the game); **✕** takes one out; **Tidy slots** moves every item to the first free slots, row by row. Items outside the slots would be hidden in game, so the editor asks before applying that. Changed contents are marked as the chest's own: a chest never opened would otherwise fill itself with the game's loot when it first loads, over them. |
 | **Data** | Every value, by the name the game uses (with a readable label for the common ones: Text (sign), Tag (portal), Builder, Health, Planted at...). Numbers and texts can be changed in place; **✕** removes a value (the game then uses its default). Whole numbers that are the name of a prefab (an item on an item stand, for example) show that name. Other binary data is listed but not changed here. |
 | **Add** | Adds a value the object does not have yet: choose its kind, type its name as the game calls it (`text` for a sign, `tag` for a portal...) and the value. |
 | **Apply changes** | Replaces the object by a copy with the new data, at the same place: one step in History, so `Ctrl+Z` puts the old one back. Save or Apply live writes it. A changed object can still be moved, turned and changed again, and keeps its data. |

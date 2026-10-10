@@ -584,7 +584,9 @@ public sealed class SelectTool
 		}
 		int? hit = alt ? null : _view.ObjectAt(at, size);
 		var ground = _view.WorldAt(at, size);
-		if (clicks >= 2 && hit is int dbl && IsPiece(s.Things[dbl]))
+		// A double click on a building piece: the whole building; on a chest, the chest alone (its
+		// inspector opens: GlView.InspectAsked).
+		if (clicks >= 2 && hit is int dbl && IsPiece(s.Things[dbl]) && !(TerrainEditor.Terrain.PrefabCatalog.Details(s.Things[dbl].Prefab)?.ContainerW > 0))
 		{
 			WholeBuilding(new[] { dbl });
 			return;

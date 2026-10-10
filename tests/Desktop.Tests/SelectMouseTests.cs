@@ -194,6 +194,17 @@ public class SelectMouseTests
 	}
 
 	[AvaloniaFact]
+	public void ADoubleClickOnAChestInABuildingSelectsTheChestAlone()
+	{
+		// The chest stands on the building's floor; its contents are what a double click is for.
+		var v = Open(T(1, Wall, 40, 30, 40), T(2, Floor, 41, 29.5f, 41.2f), T(3, StableHash.Of("piece_chest_wood"), 41, 29.6f, 41.6f));
+		v.Click(41, 41.6f, clicks: 2);
+		Assert.Equal(new HashSet<int> { 2 }, v.Selected);
+		v.Click(40, 40, clicks: 2);
+		Assert.Equal(new HashSet<int> { 0, 1, 2 }, v.Selected);
+	}
+
+	[AvaloniaFact]
 	public void SameKindSelectsEveryShownObjectOfTheSelectedKinds()
 	{
 		var v = Open(T(1, Beech, 40, 30, 40, false), T(2, Beech, 50, 30, 50, false), T(3, Wall, 45, 30, 45));

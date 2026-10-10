@@ -19,6 +19,9 @@ public sealed class WorldScene
 {
 	// Replaced by a fresh read after saving.
 	public required WorldSave World { get; set; }
+
+	// The Workshop's: the blueprint open was written as a ruin (no builder), and is saved as one.
+	public bool Ruin { get; set; }
 	public required string Name { get; init; }
 	public int X0 { get; init; }
 	public int Z0 { get; init; }

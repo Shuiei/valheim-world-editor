@@ -79,7 +79,9 @@ public sealed class ModelStore
 		return null;
 	}
 
-	public string? NameOf(int prefab) => _names.TryGetValue(prefab, out string? n) ? n : PrefabCatalog.DisplayName(prefab);
+	// A world object's model name (objects.json), else a dungeon room's (their models are under the room's
+	// prefab name, like pieces), else the prefab's.
+	public string? NameOf(int prefab) => _names.TryGetValue(prefab, out string? n) ? n : TerrainEditor.Editing.Dungeons.RoomOf(prefab)?.Name ?? PrefabCatalog.DisplayName(prefab);
 
 	public Model? LoadModel(string name) => _models.GetOrAdd(name, n =>
 	{

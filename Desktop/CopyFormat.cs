@@ -24,6 +24,7 @@ public static class CopyFormat
 		{
 			["name"] = o.Name, ["dx"] = R(o.Dx), ["dz"] = R(o.Dz), ["dy"] = R(o.Dy), ["rx"] = R(o.Rotation.X), ["ry"] = R(o.Rotation.Y), ["rz"] = R(o.Rotation.Z),
 			["scale"] = R(o.Scale), ["sourceId"] = o.SourceId, ["follow"] = o.Follow,
+			["data"] = o.Data is { Count: > 0 } d ? BlueprintFormats.DataJson(d) : null,
 		}).ToArray()),
 		["poly"] = new JsonArray(c.Poly.Select(p => (JsonNode)new JsonObject { ["gx"] = R(p.X), ["gz"] = R(p.Y) }).ToArray()),
 		["name"] = c.Name,
@@ -42,7 +43,8 @@ public static class CopyFormat
 		Wt = o["wt"]!.AsArray().Select(v => I(v) / 255f).ToArray(),
 		Pnt = o["pnt"]!.AsArray().Select(v => I(v) < 0 ? -1f : I(v) / 255f).ToArray(),
 		Objects = o["objects"]!.AsArray().Select(x => new CopyData.Obj(StableHash.OfName((string)x!["name"]!), (string)x["name"]!, F(x["dx"]), F(x["dz"]), F(x["dy"]),
-			new Vector3(F(x["rx"]), F(x["ry"]), F(x["rz"])), F(x["scale"]), keepSources && x["sourceId"] != null ? I(x["sourceId"]) : null, (bool?)x["follow"] ?? false)).ToList(),
+			new Vector3(F(x["rx"]), F(x["ry"]), F(x["rz"])), F(x["scale"]), keepSources && x["sourceId"] != null ? I(x["sourceId"]) : null, (bool?)x["follow"] ?? false,
+			BlueprintFormats.DataOf(x["data"]))).ToList(),
 		Poly = (o["poly"] as JsonArray)?.Select(p => new Vector2(F(p!["gx"]), F(p["gz"]))).ToList() ?? new(),
 		Name = name ?? (string?)o["name"],
 	};

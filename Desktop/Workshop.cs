@@ -66,7 +66,11 @@ public static class Workshop
 				: new Vector3(-(known.Min(p => p.Position.X) + known.Max(p => p.Position.X)) / 2, -low, -(known.Min(p => p.Position.Z) + known.Max(p => p.Position.Z)) / 2);
 		}
 		var anchor = at is { } w ? new Vector3(w.X, Ground, w.Y) : Anchor(s.Scene);
-		var adds = known.Select(p => (new NewObject(0, StableHash.Of(p.Name), anchor + p.Position + shift, p.Euler, MathF.Abs(p.Scale - 1) < 1e-3f ? 0 : p.Scale),
+		if (at == null)
+		{
+			s.Scene.Ruin = parsed.Ruin;
+		}
+		var adds = known.Select(p => (new NewObject(0, StableHash.Of(p.Name), anchor + p.Position + shift, p.Euler, MathF.Abs(p.Scale - 1) < 1e-3f ? 0 : p.Scale, Data: p.Data),
 			PieceCatalog.Get(StableHash.Of(p.Name))?.Tool != null)).ToList();
 		s.Commit($"{(at == null ? "Opened" : "Added")} {parsed.Name}", null, Array.Empty<int>(), adds);
 		// The ground it stood on in game, for the support check: Homestead's terrain contacts when the file
@@ -126,8 +130,9 @@ public static class Workshop
 	public static float GroundAt(IReadOnlyDictionary<(int, int), float> terrain, float x, float z) =>
 		terrain.TryGetValue(((int)MathF.Floor(x), (int)MathF.Floor(z)), out float y) ? MathF.Max(Ground, y) : Ground;
 
-	// The building on the plot as a copy (the clipboard format, for BlueprintsPanel): every building
-	// piece standing, measured from the anchor. Anything else (trees, rocks, items) is left out.
+	// What is on the plot as a copy (the clipboard format, for BlueprintsPanel): every object standing
+	// (the plot starts bare: all on it was put there), measured from the anchor, with what it holds (a
+	// chest's contents, a sign's text, a creature's stars...).
 	// lift: how far the blueprint opened was lifted (its anchor that much below the ground).
 	public static JsonObject Building(WorldScene s, string name, float lift = 0)
 	{
@@ -135,13 +140,19 @@ public static class Workshop
 		var objects = new JsonArray();
 		lock (s.Things)
 		{
-			foreach (var t in s.Things.Where(t => !t.Gone && PieceCatalog.Get(t.Prefab) != null))
+			foreach (var t in s.Things.Where(t => !t.Gone && PrefabCatalog.Details(t.Prefab) != null))
 			{
-				objects.Add(new JsonObject
+				var o = new JsonObject
 				{
 					["name"] = PrefabCatalog.NameOf(t.Prefab), ["dx"] = R(t.Position.X - anchor.X), ["dz"] = R(t.Position.Z - anchor.Z), ["dy"] = R(t.Position.Y - anchor.Y),
 					["rx"] = R(t.Rotation.X), ["ry"] = R(t.Rotation.Y), ["rz"] = R(t.Rotation.Z), ["scale"] = R(t.Scale), ["sourceId"] = null,
-				});
+				};
+				var data = DataOf(s, t);
+				if (data.Count > 0)
+				{
+					o["data"] = BlueprintFormats.DataJson(data);
+				}
+				objects.Add(o);
 			}
 		}
 		float half = objects.Count == 0 ? 1 : objects.OfType<JsonObject>().Max(o => MathF.Max(MathF.Abs((float)o["dx"]!), MathF.Abs((float)o["dz"]!))) + 2;
@@ -153,6 +164,31 @@ public static class Workshop
 			["name"] = name,
 		};
 		static JsonObject P(float x, float z) => new() { ["gx"] = x, ["gz"] = z };
+	}
+
+	// What an object of the plot holds: every value of its data but its builder and scale (a blueprint
+	// has its own), and no builder at all on a ruin's.
+	private static List<ObjectField> DataOf(WorldScene s, WorldScene.Thing t)
+	{
+		var list = new List<ObjectField>();
+		if (s.Session is { } session && ObjectData.Bytes(s.World, session.Edits, t.Id) is { } bytes)
+		{
+			var z = ZdoData.Parse(bytes);
+			var ci = System.Globalization.CultureInfo.InvariantCulture;
+			static string S(float v) => v.ToString("R", System.Globalization.CultureInfo.InvariantCulture);
+			list.AddRange(z.FloatList.Where(f => f.Key != StableHash.Of("scaleScalar")).Select(f => new ObjectField("floats", f.Key, S(f.Value))));
+			list.AddRange(z.Vec3List.Where(f => f.Key != StableHash.Of("scale")).Select(f => new ObjectField("vec3", f.Key, $"{S(f.Value.X)} {S(f.Value.Y)} {S(f.Value.Z)}")));
+			list.AddRange(z.QuatList.Select(f => new ObjectField("quats", f.Key, $"{S(f.Value.X)} {S(f.Value.Y)} {S(f.Value.Z)} {S(f.Value.W)}")));
+			list.AddRange(z.IntList.Select(f => new ObjectField("ints", f.Key, f.Value.ToString(ci))));
+			list.AddRange(z.LongList.Where(f => f.Key != ObjectField.CreatorKey).Select(f => new ObjectField("longs", f.Key, f.Value.ToString(ci))));
+			list.AddRange(z.StringList.Select(f => new ObjectField("strings", f.Key, f.Value)));
+			list.AddRange(z.ByteList.Select(f => new ObjectField("bytes", f.Key, Convert.ToBase64String(f.Value))));
+		}
+		if (s.Ruin)
+		{
+			list.Add(ObjectField.NoBuilder);
+		}
+		return list;
 	}
 
 	// How many of each kind of building piece stand on the plot (prefab name → count).
