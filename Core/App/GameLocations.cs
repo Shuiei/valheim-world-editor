@@ -4,7 +4,8 @@ using ValheimGen;
 
 namespace TerrainEditor.App;
 
-// The game's location rules (SeedLocations.RuleSet) read from its files: the main scene's ZoneSystem
+// The game's location rules (SeedLocations.RuleSet) read from its files (the editor has no copy of its
+// own: Valheim is needed anyway, and a copy would go out of date): the main scene's ZoneSystem
 // and LocationLists, and the alt biomes (in the main scene's bundle and the bundles it needs, which the
 // SoftRef manifest lists), kept in the data folder until the game changes.
 //
@@ -16,7 +17,7 @@ namespace TerrainEditor.App;
 public static class GameLocations
 {
 	// The lists' wake order, by (locations, vegetations), from the game's log (Valheim 0.221). After a
-	// game update that changes them, reading fails and the editor's copy is used.
+	// game update that changes them, reading fails (no bosses or traders shown) until this is updated.
 	private static readonly (int Locations, int Vegetation)[] Order = { (3, 0), (2, 0), (27, 25), (4, 0), (25, 33), (25, 35) };
 
 	public static string CacheFile => Path.Combine(AppSettings.UserDataDir, "game-locations.json");
@@ -40,7 +41,7 @@ public static class GameLocations
 	}
 
 	// The rules from the game (from the cache when the game is unchanged), or null when they cannot be
-	// read (then the editor's copy stays in use).
+	// read.
 	public static SeedLocations.RuleSet? Load(GameBundles bundles, string? cacheFile)
 	{
 		try
@@ -70,7 +71,7 @@ public static class GameLocations
 		}
 		catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException or InvalidDataException or KeyNotFoundException)
 		{
-			Console.WriteLine($"The game's location rules could not be read ({e.Message}): the editor's copy is used.");
+			Console.WriteLine($"The game's location rules could not be read ({e.Message}): no bosses or traders on the New world page.");
 			return null;
 		}
 	}
@@ -108,7 +109,7 @@ public static class GameLocations
 		}
 		if (zone == null || alts == null || Order.Any(k => !lists.ContainsKey(k)))
 		{
-			Console.WriteLine($"The game's location rules were not all found (ZoneSystem: {zone != null}, alt biomes: {alts != null}, lists: {lists.Count}/{Order.Length}); a game update? The editor's copy is used.");
+			Console.WriteLine($"The game's location rules were not all found (ZoneSystem: {zone != null}, alt biomes: {alts != null}, lists: {lists.Count}/{Order.Length}); a game update changed them? No bosses or traders on the New world page.");
 			return null;
 		}
 		var rules = new SeedLocations.RuleSet();
@@ -160,7 +161,8 @@ public static class GameLocations
 		return rule;
 	}
 
-	// The editor's copy (WorldGen/locations.json) made again from the game: --export-locations <file>.
+	// The tests' copy (tests/fixtures/locations.json: the kinds laid out first) made again from the game:
+	// --export-locations <file>.
 	public static int Export(string? path)
 	{
 		if (path == null)
@@ -175,8 +177,9 @@ public static class GameLocations
 			Console.Error.WriteLine(bundles == null ? "Valheim was not found." : "The location rules could not be read (see the log).");
 			return 1;
 		}
-		File.WriteAllText(path, rules.ToJson());
-		Console.WriteLine($"{rules.locations.Count} locations, {rules.altBiomes.Count} alt biomes written to {path}");
+		var kept = SeedLocations.Prioritized(rules);
+		File.WriteAllText(path, kept.ToJson());
+		Console.WriteLine($"{kept.locations.Count} of {rules.locations.Count} locations written to {path}");
 		return 0;
 	}
 

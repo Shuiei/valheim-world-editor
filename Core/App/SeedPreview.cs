@@ -52,7 +52,8 @@ public static class SeedPreview
 		float StartContinent, // share of the land in the start's own landmass
 		IReadOnlyDictionary<Heightmap.Biome, float> Distance, // metres from the start to the nearest of each biome (PositiveInfinity: none)
 		IReadOnlyDictionary<Heightmap.Biome, bool> SameLand, // whether that nearest one is on the start's landmass
-		IReadOnlyDictionary<string, float>? Nearest = null); // metres from the start to the nearest of each landmark (null: not looked for)
+		IReadOnlyDictionary<string, float>? Nearest = null, // metres from the start to the nearest of each landmark (null: not looked for)
+		bool TempleStart = false); // Start is the game's start temple (else the Meadows nearest the middle: no rules from the game)
 
 	// Size x Size cells of Cell metres over the world, row 0 the south: biome (index in Biomes, 255
 	// ocean or outside), ground height.
@@ -113,7 +114,8 @@ public static class SeedPreview
 			}
 		}
 		var start = marks.FirstOrDefault(m => m.Kind == "start");
-		var stats = Measure(biome, size, cell, start is null ? null : (start.X, start.Z));
+		var stats = Measure(biome, size, cell, start is null ? null : (start.X, start.Z)) with { TempleStart = start != null };
+		landmarks &= SeedLocations.Available;
 		if (landmarks)
 		{
 			stats = stats with

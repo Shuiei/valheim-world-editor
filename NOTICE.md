@@ -12,10 +12,11 @@ cover them:
 - `Core/WorldGen/WorldGenerator.cs` and `Core/WorldGen/DUtils.cs`: decompiled from the game, so
   the editor generates terrain exactly like it. `Core/WorldGen/SeedLocations.cs` follows the game's
   location placement (ZoneSystem, AltBiomeWorldData) the same way, so a new world's locations are
-  known before the game makes them.
+  known before the game makes them; its rules are read from the player's game, and
+  `tests/fixtures/locations.json` holds some of them for the tests.
 - The data read from the game's files in `Core/WorldGen/`: `prefabs.json`, `pieces.json`,
   `piece-cost.json`, `piece-place.json.gz`, `piece-support.json`, `vegetation.json`,
-  `locations.json`, `cave-rocks.json`, `terrain-modifiers.json`, `zdo-keys.json` and `dungeon-rooms.json.gz`.
+  `cave-rocks.json`, `terrain-modifiers.json`, `zdo-keys.json` and `dungeon-rooms.json.gz`.
 
 The game's textures and models are not in this repository or in the releases: the editor copies
 them from the player's own Valheim install, on their computer.

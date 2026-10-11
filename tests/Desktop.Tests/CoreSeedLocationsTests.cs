@@ -3,7 +3,8 @@ using Xunit;
 
 namespace WorldEditor.Tests;
 
-// Where the game lays out a seed's locations (SeedLocations), against a world the game made: seed
+// Where the game lays out a seed's locations (SeedLocations, with the game's rules from
+// tests/fixtures/locations.json), against a world the game made: seed
 // 5DCcdIcuYJ's start temple, Eikthyr's altars, the Bog Witch's ten spots, Fader's arenas and the spot
 // that became Haldor's camp, as Valheim 0.221 saved them.
 public class CoreSeedLocationsTests
@@ -16,17 +17,22 @@ public class CoreSeedLocationsTests
 	[Fact]
 	public void TheRulesRoundTripAndCanBeSwapped()
 	{
-		var copy = SeedLocations.Embedded;
+		Fixtures.UseLocations();
+		var copy = SeedLocations.Current;
+		Assert.True(SeedLocations.Available);
 		var again = SeedLocations.RuleSet.FromJson(copy.ToJson());
 		Assert.Equal(copy.locations.Select(l => (l.prefab, l.quantity, l.biome, l.altBiome)), again.locations.Select(l => (l.prefab, l.quantity, l.biome, l.altBiome)));
 		Assert.Equal(copy.ToJson(), again.ToJson());
-		Assert.Contains(copy.altBiomes, a => a.blockLocationNames.Contains("WoodFarm1"));
 		Assert.Equal("StartTemple", SeedLocations.Ordered[0].prefab);
+		// The tests' copy keeps only what the editor shows, and trimming it again changes nothing.
+		Assert.All(copy.locations, l => Assert.True(l.prioritized != 0 && l.enable != 0 && l.quantity != 0, l.prefab));
+		Assert.Equal(copy.ToJson(), SeedLocations.Prioritized(copy).ToJson());
 	}
 
 	[Fact]
 	public void TheStartIsWhereTheGamePutsItsTemple()
 	{
+		Fixtures.UseLocations();
 		var start = Assert.Single(SeedLocations.Place(Seed(), SeedLocations.Which.Start, cancel: TestContext.Current.CancellationToken));
 		Assert.Equal("StartTemple", start.Rule.prefab);
 		Assert.Equal(0.444078f, start.X, 0.01f);
@@ -36,6 +42,7 @@ public class CoreSeedLocationsTests
 	[Fact]
 	public void BossesAndTradersAreWhereTheGameLaysThemOut()
 	{
+		Fixtures.UseLocations();
 		var placed = SeedLocations.Place(Seed(), SeedLocations.Which.Prioritized, parallel: true, cancel: TestContext.Current.CancellationToken);
 		Has(placed, "StartTemple", 0.444078f, -6.853543f);
 		Has(placed, "Eikthyrnir", 332.4125f, 64.03294f);

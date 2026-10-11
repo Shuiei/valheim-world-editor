@@ -12,6 +12,7 @@ public class CoreSeedPreviewTests
 	[Fact]
 	public void ASeedsPreviewMeasuresItsWorld()
 	{
+		Fixtures.UseLocations();
 		var watch = System.Diagnostics.Stopwatch.StartNew();
 		var p = SeedPreview.Make("abc", 128, cancel: TestContext.Current.CancellationToken);
 		var took = watch.Elapsed;
@@ -26,6 +27,7 @@ public class CoreSeedPreviewTests
 		Assert.Equal(Heightmap.Biome.Meadows, SeedPreview.Generator("abc").GetBiome(s.Start.X, s.Start.Z));
 		Assert.True(s.Distance[Heightmap.Biome.Meadows] < p.Cell, $"Meadows at {s.Distance[Heightmap.Biome.Meadows]} m");
 		Assert.Null(s.Nearest);
+		Assert.True(s.TempleStart);
 		Assert.Null(p.Landmarks);
 		Assert.True(s.Distance[Heightmap.Biome.BlackForest] < s.Distance[Heightmap.Biome.DeepNorth]);
 		Assert.InRange(s.StartContinent, 0.0001f, 1);
@@ -38,6 +40,7 @@ public class CoreSeedPreviewTests
 	[Fact]
 	public void APreviewCanShowTheBossesAndTraders()
 	{
+		Fixtures.UseLocations();
 		var p = SeedPreview.Make("5DCcdIcuYJ", 64, parallel: true, landmarks: true, cancel: TestContext.Current.CancellationToken);
 		var start = Assert.Single(p.Landmarks!, m => m.Kind == "start");
 		Assert.Equal((start.X, start.Z), p.Stats.Start);

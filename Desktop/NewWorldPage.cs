@@ -239,7 +239,9 @@ public sealed class NewWorldPage : IDisposable
 	{
 		Shown = p;
 		Picture.Source = Draw(p, 460, startDot: false);
-		Stats.Text = Describe(p.Stats);
+		Stats.Text = Describe(p.Stats) + (p.Landmarks == null
+			? "\nThe bosses and traders could not be read from the game's files (the log says why): they are not shown, and the search cannot look for them."
+			: "");
 		PlaceMarks();
 	}
 
@@ -322,7 +324,9 @@ public sealed class NewWorldPage : IDisposable
 			"Biomes: " + string.Join(", ", SeedPreview.Biomes.Where(b => s.Shares[b] > 0.005f).Select(b => $"{Name(b)} {s.Shares[b] * 100:0} %")),
 			"Nearest to the start: " + string.Join(", ", SeedPreview.Biomes.Skip(1).Where(b => b is not (Heightmap.Biome.AshLands or Heightmap.Biome.DeepNorth))
 				.Select(b => $"{Name(b)} {Km(s.Distance[b])}{(s.SameLand[b] || float.IsPositiveInfinity(s.Distance[b]) ? "" : " (by sea)")}")),
-			$"The start (red dot): {s.Start.X:0}, {s.Start.Z:0}, where the game will put its start temple.",
+			s.TempleStart
+				? $"The start (red dot): {s.Start.X:0}, {s.Start.Z:0}, where the game will put its start temple."
+				: $"The start (red dot) is likely near {s.Start.X:0}, {s.Start.Z:0}: the game puts it in Meadows close to the middle.",
 		};
 		if (s.Nearest is { } n)
 		{

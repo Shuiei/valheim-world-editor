@@ -9,7 +9,7 @@
 | `Core/App/` | Settings (`AppSettings`), the log (`Log`), the game's files (`GameLook`, `GameBundles`, `GameLookData`, `GameShader`, `GameTextures`), Regrow, search, blueprint formats, servers and SSH (`ServerConfig`, `Tunnel`), the local game (`LocalGame`), characters, zone statistics, folders (`Places`). |
 | `Core/Save/` | Save reader (`WorldSave`, `ValheimReader`), writer (`WorldWriter`), new worlds (`WorldCreator`), object building (`ZdoTools`: copies and blank objects), the `.db2` zone list, and live mode (`LiveBridge`, `LiveSync`). |
 | `Core/Editing/` | Pending changes: terrain per zone, deleted and added objects, zone resets (`EditStore`); heights of a block of zones (`HeightGrid`). |
-| `Core/WorldGen/` | Valheim's world generator (bit-exact base terrain), map data, location flattening, the build-piece catalogue (`pieces.json`), the prefab catalogue (`prefabs.json`), the vegetation rules (`vegetation.json`), a copy of the location rules (`locations.json`, for the New world page's start, bosses and traders, read from the game when it is found) and the object data names (`zdo-keys.json`). |
+| `Core/WorldGen/` | Valheim's world generator (bit-exact base terrain), map data, location flattening, the build-piece catalogue (`pieces.json`), the prefab catalogue (`prefabs.json`), the vegetation rules (`vegetation.json`), and the object data names (`zdo-keys.json`). |
 | `plugin/WorldEditorBridge/` | The BepInEx plugin for live mode (.NET Framework 4.7.2). |
 | `tests/Desktop.Tests/` | Every test (xUnit v3, Avalonia's headless mode), see [Tests](#tests). `tests/fixtures/` holds the test world. |
 | `tools/WorldCheck/` | Developer checks of the generator and the writer, and new worlds from a seed, see below. |
@@ -173,10 +173,11 @@ openings and the objects the game makes in it with the random parts that decide 
 
 The game's location rules (for the New world page's start, bosses and traders) are read by the editor
 itself, in C# (`Core/App/GameLocations.cs`), from the player's Valheim, and kept in the data folder
-until the game changes. `Core/WorldGen/locations.json` is a copy for when Valheim is not found (and for
-the tests): after a game update, make it again with `ValheimWorldEditor --export-locations
-Core/WorldGen/locations.json`, and check the game log's "Added N locations" lines against
-`GameLocations.Order` (when they change, reading fails and the copy is used).
+until the game changes; the editor keeps no copy of them. The tests, which run without the game, use
+`tests/fixtures/locations.json` (only the kinds the page shows): after a game update, make it again
+with `ValheimWorldEditor --export-locations tests/fixtures/locations.json`, and check the game log's
+"Added N locations" lines against `GameLocations.Order` (when they change, reading fails and the page
+shows no bosses or traders).
 
 ## WorldCheck
 

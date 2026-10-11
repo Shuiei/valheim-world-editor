@@ -1,4 +1,3 @@
-using System.Reflection;
 using System.Text.Json;
 using TerrainEditor.Save;
 using Rnd = ValheimGen.UnityEngine.Random;
@@ -7,8 +6,8 @@ namespace ValheimGen;
 
 // Where the game will lay out a seed's locations (start temple, traders, bosses, dungeons...) when its
 // world first loads, before the world exists: ZoneSystem.GenerateLocations replayed with the game's
-// rules on the editor's copy of its generator. The rules are read from the game's files when Valheim
-// is found (GameLocations, then Use); WorldGen/locations.json is a copy for when it is not.
+// rules on the editor's copy of its generator. The rules are read from the game's files (GameLocations,
+// then Use); until then, or when they cannot be read, there are none (Available) and nothing is placed.
 //
 // The game picks each try's zone from a biome map of the world (AltBiomeWorldData: 2048 x 2048 points
 // 12 m apart, each biome's points listed in the order its flood fill met them), then checks the spot
@@ -34,8 +33,6 @@ public static class SeedLocations
 		public float minDistanceFromSimilar { get; set; }
 		public string groupMax { get; set; } = "";
 		public float maxDistanceFromSimilar { get; set; }
-		public int iconAlways { get; set; }
-		public int iconPlaced { get; set; }
 		public float interiorRadius { get; set; }
 		public float exteriorRadius { get; set; }
 		public float minTerrainDelta { get; set; }
@@ -89,20 +86,20 @@ public static class SeedLocations
 		public HashSet<string> Blocked { get; } = rules.altBiomes.SelectMany(a => a.blockLocationNames).ToHashSet();
 	}
 
-	public static RuleSet Embedded { get; } = LoadEmbedded();
+	private static volatile State _state = new(new RuleSet());
 
-	private static RuleSet LoadEmbedded()
-	{
-		using Stream s = Assembly.GetExecutingAssembly().GetManifestResourceStream("TerrainEditor.locations.json")
-			?? throw new InvalidOperationException("locations.json is not embedded");
-		using var reader = new StreamReader(s);
-		return RuleSet.FromJson(reader.ReadToEnd());
-	}
-
-	private static volatile State _state = new(Embedded);
-
-	// The rules read from the game in place of the copy (or the copy again: Use(Embedded)).
+	// The rules read from the game (or the tests' copy, tests/fixtures/locations.json).
 	public static void Use(RuleSet rules) => _state = new State(rules);
+
+	// Whether there are rules to place with.
+	public static bool Available => _state.Rules.locations.Count > 0;
+
+	// The kinds laid out first (start, bosses, traders...), as the tests' copy keeps them: what the
+	// editor shows, and all they need.
+	public static RuleSet Prioritized(RuleSet rules) => new()
+	{
+		locations = rules.locations.Where(l => l.prioritized != 0 && l.enable != 0 && l.quantity != 0).ToList(),
+	};
 
 	public static RuleSet Current => _state.Rules;
 

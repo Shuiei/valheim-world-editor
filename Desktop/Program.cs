@@ -20,8 +20,8 @@ public static class Program
 			ClaudeRelay.Run();
 			return;
 		}
-		// --export-locations <file>: the editor's copy of the game's location rules made again (for
-		// developers, after a game update: Core/WorldGen/locations.json).
+		// --export-locations <file>: the tests' copy of the game's location rules made again (for
+		// developers, after a game update: tests/fixtures/locations.json).
 		int export = Array.IndexOf(args, "--export-locations");
 		if (export >= 0)
 		{
