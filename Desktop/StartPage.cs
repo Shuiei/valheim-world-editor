@@ -138,7 +138,15 @@ public sealed class StartPage
         GetHomesteadButton.Tip("blueprints.getHomestead");
         GetHomesteadButton.Click += async (_, _) => await OpenUrl(new Uri(Homestead.PageUrl));
 
-        _gameTimer.Tick += async (_, _) => await PollGame();
+        // A tick during a check skips: asking for one more after it would chain slow checks without a pause.
+        _gameTimer.Tick += async (_, _) =>
+        {
+            if (_poll is { IsCompleted: false })
+            {
+                return;
+            }
+            await PollGame();
+        };
 
         // A dedicated server.
         BuildServerPanel();
