@@ -351,6 +351,7 @@ See [docs/development.md](docs/development.md).
 
 ## License
 
-[MIT](LICENSE), © 2026 Shuiei. The few files that come from Valheim itself (its world generator and
-data read from the game) remain Iron Gate's and are not covered: see [NOTICE.md](NOTICE.md). Not
-affiliated with or endorsed by Iron Gate or Coffee Stain.
+[MIT](LICENSE), © 2026 Shuiei. The repository holds none of Valheim's code: the world generator is
+written for the editor, following the game's formulas. The data files read from the game remain
+Iron Gate's and are not covered: see [NOTICE.md](NOTICE.md). Not affiliated with or endorsed by
+Iron Gate or Coffee Stain.
