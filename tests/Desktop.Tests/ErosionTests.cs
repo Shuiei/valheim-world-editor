@@ -70,7 +70,7 @@ public class ErosionTests
     [Fact]
     public void TheErodeBrushIsOneStroke()
     {
-        var s = EditTests.Flat(2);
+        var s = TestScenes.Flat(2);
         s.Shape(64, 64, Formula.Compile("d < 4 ? 6 : 0", ["d"]), 4, 0, "tower");
         float top = s.Scene.Heights[64 * s.Scene.W + 64];
         s.Brush.Radius = 10;
@@ -91,7 +91,7 @@ public class ErosionTests
     {
         var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
         w.Show();
-        var s = EditTests.Flat(2);
+        var s = TestScenes.Flat(2);
         s.Shape(64, 64, Formula.Compile("d < 4 ? 6 : 0", ["d"]), 4, 0, "tower");
         w.View.Show(s.Scene, null);
         w.Edit(s);

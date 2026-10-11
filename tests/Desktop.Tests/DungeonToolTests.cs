@@ -5,6 +5,7 @@ using Avalonia.Interactivity;
 using TerrainEditor.App;
 using TerrainEditor.Editing;
 using TerrainEditor.Save;
+using WorldEditor.Tests;
 using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
@@ -28,7 +29,7 @@ public class DungeonToolTests
     private sealed class Run : IDisposable
     {
         public MainWindow W { get; } = new(load: false) { Width = 1600, Height = 1000 };
-        public string Dir { get; } = EditTests.CopyFixture();
+        public string Dir { get; } = Fixtures.CopyFixture();
         public WorldScene Scene { get; }
         public DungeonTool T => W.View.Dungeon;
         public DungeonPanel P => W.DungeonPanel;

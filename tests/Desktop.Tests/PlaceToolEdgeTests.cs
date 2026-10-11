@@ -19,7 +19,7 @@ public class PlaceToolEdgeTests
     /// </summary>
     private static (PlaceTool T, EditSession S) Tool(params WorldScene.Thing[] things)
     {
-        var s = EditTests.Flat(2, things);
+        var s = TestScenes.Flat(2, things);
         var t = new PlaceTool { Scene = () => s.Scene, Brush = s.Brush, NameOf = h => h == StableHash.Of(Wall) ? Wall : h == StableHash.Of("Beech1") ? "Beech1" : null };
         t.Chosen.Clear();
         t.Chosen.Add("Beech1");

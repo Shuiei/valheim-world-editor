@@ -6,7 +6,8 @@ hold across files, and where a new feature goes. Building, CI, the game's files 
 
 Files are named from the repository's root (`Core/Save/WorldWriter.cs`). Many comments in the code
 still say "like the web editor's": the editor began as a page in the browser, which the native app
-replaced. The `Parity*` tests check that what it did still works.
+replaced. Tests from that time check that what it did still works (`KeysAndMouseTests`,
+`ViewFeaturesTests`, `WebEditorFeaturesTests`, `WorldControlsTests`, `PrefsTests`, `SavedSelectionsTests`).
 
 ## The projects
 
@@ -15,7 +16,9 @@ replaced. The `Parity*` tests check that what it did still works.
 | `Core/ValheimWorldEditor.Core.csproj` | `TerrainEditor.App`, `.Save`, `.Editing`, `.Terrain`, `ValheimGen` | Everything that is not the window: reading and writing saves, pending changes, the world generator, live mode's client, the game data read from Valheim, settings, blueprints, SSH. No Avalonia. |
 | `Desktop/ValheimWorldEditor.Desktop.csproj` | `TerrainEditor.Desktop` | The program, `ValheimWorldEditor`: the Avalonia window, the pages, the 3D view and the map (OpenGL through Silk.NET), the tools and panels, the Script tool (Roslyn), the Claude MCP server (ASP.NET Core). |
 | `plugin/WorldEditorBridge/` | `WorldEditorBridge` | The BepInEx plugin for live mode: one file, `WorldEditorBridgePlugin.cs`, .NET Framework 4.7.2, inside the game. It shares no code with the editor, only a byte format and `VERSION`. |
-| `tests/Desktop.Tests/` | `WorldEditor.Tests` (core), `TerrainEditor.Desktop.Tests` (app) | Every test, xUnit v3 with Avalonia's headless mode. |
+| `tests/Core.Tests/` | `WorldEditor.Tests` | Core's tests (xUnit v3), laid out like `Core/`. |
+| `tests/Desktop.Tests/` | `TerrainEditor.Desktop.Tests` | The app's tests, xUnit v3 with Avalonia's headless mode, laid out like `Desktop/`. |
+| `tests/Support/` | `WorldEditor.Tests` | Helpers compiled into both test projects: the test world, the fixtures, a stand-in game. |
 | `tools/WorldCheck/` | `TerrainEditor.WorldCheck` | Developer checks of the generator and the writer against the game (see [development.md](development.md#worldcheck)). |
 | `tools/DocsScreenshots/` | `TerrainEditor.DocsScreenshots` | The pictures in `docs/images`, taken through the app's `--driver`. |
 
@@ -156,7 +159,7 @@ the next person knows what to compare with after a game update.
 
 `Core/WorldGen/WorldGenerator*.cs` makes a world from its seed as the game does: to the bit, but for 8 of
 the 3000 heights the reference test samples, all in the Deep North and less than a millimetre off
-(floating point done in another order than the game's runtime; `CoreGenReferenceTests`). The ground under
+(floating point done in another order than the game's runtime; `WorldGeneratorReferenceTests`). The ground under
 every saved edit is "generated height + location flattening + edit", so a generator that is off by
 a float's last bit puts the edits at the wrong height, and seams show where the editor's ground meets
 the game's. So:
@@ -170,10 +173,10 @@ the game's. So:
 - **The analyzers' fixes count.** A code-style fix in `Core/WorldGen/` is a change to the maths:
   `.editorconfig` already turns off the rules (CA1051, CA1708, CA2231) that would change the Unity
   stand-ins' public fields, names and operators in `UnityShim.cs` and `UnityNative.cs`.
-- **Check.** `CoreGenReferenceTests` compares Unity's random numbers, Perlin noise, 3000 heights and
+- **Check.** `WorldGeneratorReferenceTests` compares Unity's random numbers, Perlin noise, 3000 heights and
   biomes, eight whole zones and the water's count with values recorded in the game
   (`tests/fixtures/worldgen-reference.txt`, seed `5DCcdIcuYJ`); any change that moves away from the
-  game fails there. `CoreGenMapTests`, `CoreGenModifierTests` and `CoreGenHelperTests` cover the map,
+  game fails there. `MapDataTests`, `TerrainModifiersTests` and `UnityShimTests` cover the map,
   the flattening and the helpers. For a refactor, also compare `WorldCheck look <seed> <metres>` (and
   `verify` against a dump, where you have one) before and after: the output must be identical.
 - **Thread-safety.** The game has one static generator; the editor has one per world
@@ -181,7 +184,7 @@ the game's. So:
   `Random` state is `[ThreadStatic]`, and the generator's per-call caches are `[ThreadStatic]` fields
   keyed by the generator's own `_number` (`WorldGenerator.Ground.cs`, `WorldGenerator.Biomes.cs`);
   longer-lived caches are instance `ConcurrentDictionary`s (`TerrainService`, `MapData`). A new
-  static field in the generator must follow one of those patterns. `CoreGenConcurrencyTests` checks
+  static field in the generator must follow one of those patterns. `WorldGeneratorConcurrencyTests` checks
   that a second world leaves the first one's rivers alone and that generators made at once agree.
 
 CodeRabbit is told the same for `Core/WorldGen/**` (`.coderabbit.yaml`).
@@ -216,7 +219,7 @@ Changing the protocol means changing both sides in one pull request, under one `
 editor meets older plugins in the wild: a missing endpoint answers 404, and the editor says the
 plugin is too old instead of failing (`LiveBridge`). Keep old endpoints and fields working, and add
 a `### WorldEditorBridge` part to the version's `CHANGELOG.md` section. Tests use a stand-in game
-(`tests/Desktop.Tests/FakeGame.cs`, `CoreLiveTests`, `LiveTests`, `LiveFollowTests`); CI never runs
+(`tests/Support/FakeGame.cs`, `LiveBridgeTests`, `LiveTests`, `LiveFollowTests`); CI never runs
 the real plugin, so test it in a local game or a local server.
 
 **The plugin is Unity code.** Unity calls `Awake`, `Update` and `OnDestroy` by name: they look unused
@@ -306,35 +309,38 @@ generator above). A commit that only reformats goes in `.git-blame-ignore-revs`.
 
 **One version.** `VERSION` is the only version number: `Directory.Build.props` makes it the
 assemblies' version and `BuildInfo.Version` for the app and the plugin, and the packages are named
-after it. `CoreVersionTests` checks `CHANGELOG.md` has its section. Steps in
+after it. `VersionTests` checks `CHANGELOG.md` has its section. Steps in
 [development.md](development.md#versions).
 
 ## Where a change goes
 
 | To add | Where | Then |
 |---|---|---|
-| A tool | A value in `ToolMode` (`Desktop/ToolPanel.cs`) and its rail button there; `<Name>Tool.cs` for the mouse (wired in `GlView`, like `Tape` for Measure) and `<Name>Panel.cs` with its `Card`, built and added to the tool column in `MainWindow.cs`, shown when its mode is on. Changes go through `EditSession` (`Commit`, `EditGround`…) so they are pending and undoable. | A tip for each control in `Desktop/Tips.cs` (`TipsTests` fails otherwise); a `Panel*Tests` or `<Name>Tests` file; a `docs/<tool>.md` page and the README's table. |
+| A tool | A value in `ToolMode` (`Desktop/ToolPanel.cs`) and its rail button there; `<Name>Tool.cs` for the mouse (wired in `GlView`, like `Tape` for Measure) and `<Name>Panel.cs` with its `Card`, built and added to the tool column in `MainWindow.cs`, shown when its mode is on. Changes go through `EditSession` (`Commit`, `EditGround`…) so they are pending and undoable. | A tip for each control in `Desktop/Tips.cs` (`TipsTests` fails otherwise); `<Name>ToolTests` and `<Name>PanelTests` files; a `docs/<tool>.md` page and the README's table. |
 | A Claude tool | A `[McpServerTool]` method in `Desktop/ClaudeTools.cs`, run through `OnUi`, `CannotEdit` first. | `ClaudeToolsTests`; the table in `docs/claude.md`. |
-| A script API member | `Desktop/ScriptApi.csx` (and what it calls in `ScriptHost`). Add, do not rename. | `ScriptTests`; `docs/scripting.md`. |
-| A kind of game data | A reader in `Core/App/GameCatalogues*.cs` (an `IStartScan` in the one pass when it is in the bundles, listed in `AtStart`), a `Kind` line in `GameData.Kinds` with its `Use` and trim, and the type that takes it (often in `Core/WorldGen/`, namespace `TerrainEditor.Terrain`). | `--export-test-data tests/fixtures` for its copy; `NOTICE.md`; the list in `docs/development.md`; a `Core*Tests` reading the copy. |
-| A value of an object (a chest, a sign) | `ObjectField` on `NewObject`, read and written through `ZdoData` (`Core/Save/ZdoData.cs`) and `ObjectData` (`Core/App/ObjectData.cs`); item formats in `InventoryData`, `StandData`. | `CoreInspectorTests`, `CoreSaveDataTests`; check the bytes against the game's with `WorldCheck objects`. |
-| Something saved with the world | `WorldWriter.Save` writes it, and `WorldWriter.Verify` must check it read back; `WorldSave` reads it. Live, the same change needs its endpoint in the plugin. | `CoreSaveWriterTests`, `CoreSaveCheckTests`, `CoreIntegrityTests`, `SaveSafetyTests`; `WorldCheck selftest-save` on a copy. |
-| A remembered choice | A `Prefs` bind where the control is made; a setting in `AppSettings` (with the Settings dialog). | `ParityPrefsTests`, `PanelSettingsTests`. |
+| A script API member | `Desktop/ScriptApi.csx` (and what it calls in `ScriptHost`). Add, do not rename. | `ScriptHostTests`; `docs/scripting.md`. |
+| A kind of game data | A reader in `Core/App/GameCatalogues*.cs` (an `IStartScan` in the one pass when it is in the bundles, listed in `AtStart`), a `Kind` line in `GameData.Kinds` with its `Use` and trim, and the type that takes it (often in `Core/WorldGen/`, namespace `TerrainEditor.Terrain`). | `--export-test-data tests/fixtures` for its copy; `NOTICE.md`; the list in `docs/development.md`; a test in `tests/Core.Tests` reading the copy. |
+| A value of an object (a chest, a sign) | `ObjectField` on `NewObject`, read and written through `ZdoData` (`Core/Save/ZdoData.cs`) and `ObjectData` (`Core/App/ObjectData.cs`); item formats in `InventoryData`, `StandData`. | `ObjectDataTests`, `ZdoDataTests`; check the bytes against the game's with `WorldCheck objects`. |
+| Something saved with the world | `WorldWriter.Save` writes it, and `WorldWriter.Verify` must check it read back; `WorldSave` reads it. Live, the same change needs its endpoint in the plugin. | `WorldWriterTests`, `WorldWriterCheckTests`, `WorldSaveIntegrityTests`, `SaveSafetyTests`; `WorldCheck selftest-save` on a copy. |
+| A remembered choice | A `Prefs` bind where the control is made; a setting in `AppSettings` (with the Settings dialog). | `PrefsTests`, `SettingsDialogTests`. |
 
 ### Which tests cover what
 
-All tests are in `tests/Desktop.Tests`. The file's prefix says where to look:
+The tests are laid out like the code: a test class per file, named after the file it tests
+(`Core/Save/WorldWriter.cs` → `tests/Core.Tests/Save/WorldWriterTests.cs`, `Desktop/PlaceTool.cs` →
+`tests/Desktop.Tests/PlaceToolTests.cs`). Several classes for one file say what they look at
+(`PlaceToolMouseTests`, `PlaceToolEdgeTests`, `WorldWriterCheckTests`).
 
 | Files | Cover | CI job |
 |---|---|---|
-| `Core*Tests.cs` (namespace `WorldEditor.Tests`) | Core without a window: saves (`CoreSave*`, `CoreIntegrity`), the generator (`CoreGen*`), live mode against a stand-in (`CoreLive`), the game's files read without the game (`CoreGameFiles`, `CoreTerrainShader`), dungeons, the hammer, support, blueprints, the SSH tunnel (`CoreTunnelSsh`, a real local `sshd`), `VERSION` | `core-tests` |
-| `Panel*Tests.cs` | One panel or page through its controls | `app-tests` |
-| `Parity*Tests.cs` | What the old web editor did, in the app: keys, view, selection, prefs | `app-tests` |
-| Feature names (`PlaceTests`, `SelectMouseTests`, `EditTests`, `LiveTests`, `WorkshopTests`, `ClaudeToolsTests`, `ScriptTests`, `SaveSafetyTests`…) | A tool or workflow end to end, with real mouse and key events | `app-tests` |
-| `VisualTests.cs` (`Category=Visual`) | The real app over `--driver`, drawing with OpenGL | none (needs a display) |
-| `GameFilesTests.cs` (`Category=Game`) | Reading the real game's terrain and map | none (needs Valheim) |
+| `tests/Core.Tests/{App,Editing,Save,WorldGen}/` | Core without a window, file by file: saves (`WorldSave*`, `WorldWriter*`, `ValheimReader`, `ZdoData`), the generator (`WorldGenerator*`, `MapData`, `TerrainModifiers`), live mode against a stand-in (`LiveBridge`), the game's files read without the game (`GameBundles`, `TerrainShader`), dungeons, the hammer, support, blueprints, the SSH tunnel (`Tunnel`, a real local `sshd`) | `core-tests` |
+| `tests/Core.Tests/Integration/` | Core across files: the home folder (`HomeFolderTests`), the shared data on the test world (`AppDataTests`), the save's small parts; the real game's terrain and map (`GameFilesTests`, `Category=Game`, not in CI: needs Valheim) | `core-tests` |
+| `tests/Desktop.Tests/*Tests.cs` | One tool, panel, page or part of the app, with real mouse and key events (`PlaceToolTests`, `AreaPanelTests`, `StartPageTests`, `ClaudeToolsTests`, `ScriptHostTests`, `WorkshopTests`…) | `app-tests` |
+| `tests/Desktop.Tests/Integration/` | The window's workflows end to end (`WindowFlowTests`, `PagesTests`, `SaveSafetyTests`, `StartupTests`, `LiveTests`, `LiveFollowTests`), what the old web editor did (`KeysAndMouseTests`, `ViewFeaturesTests`, `WebEditorFeaturesTests`, `WorldControlsTests`), `VERSION` | `app-tests` |
+| `tests/Desktop.Tests/Integration/*VisualTests.cs` (`Category=Visual`) | The real app over `--driver`, drawing with OpenGL | none (needs a display) |
 
-Tests never touch the user's files: `TestApp` (`InputTests.cs`) points every path at temporary
-ones; tests that change the environment go in the `DataDir` collection. Each test works on its own
-copy of `tests/fixtures/CITest` (`CoreFixture`). How to run them, and what CI leaves out:
-[development.md](development.md#tests).
+Helpers are in `Support/` folders: each project's own, and `tests/Support/` for both. Tests never
+touch the user's files: `TestFiles` (`tests/Support`) and `TestApp` (the app's) point every path at
+temporary ones; tests that change the environment go in the `DataDir` collection. Each test works on
+its own copy of `tests/fixtures/CITest` (`TempWorld`, `Fixtures.CopyFixture`). How to run them, and
+what CI leaves out: [development.md](development.md#tests).

@@ -13,6 +13,7 @@
   <ItemGroup>
     <InternalsVisibleTo Include="ValheimWorldEditor" />
     <InternalsVisibleTo Include="Desktop.Tests" />
+    <InternalsVisibleTo Include="Core.Tests" />
   </ItemGroup>
   <ItemGroup>
     <!-- The game's models and textures, read from its asset bundles (App/GameBundles.cs, GameTextures.cs). -->

@@ -6,6 +6,7 @@ using Avalonia.LogicalTree;
 using Avalonia.Threading;
 using TerrainEditor.App;
 using TerrainEditor.Save;
+using WorldEditor.Tests;
 using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
@@ -110,7 +111,7 @@ public class TipsTests
     {
         var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
         w.Show();
-        var s = EditTests.Flat(2, new WorldScene.Thing(1, StableHash.Of("Beech1"), new Vector3(0, 30, 0), Vector3.Zero, 1, false));
+        var s = TestScenes.Flat(2, new WorldScene.Thing(1, StableHash.Of("Beech1"), new Vector3(0, 30, 0), Vector3.Zero, 1, false));
         w.View.Show(s.Scene, null);
         w.Edit(s);
         var missing = new HashSet<string>();
@@ -171,7 +172,7 @@ public class TipsTests
     [AvaloniaFact]
     public async Task EveryControlOfTheMapHasATip()
     {
-        string dir = EditTests.CopyFixture();
+        string dir = Fixtures.CopyFixture();
         try
         {
             var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
@@ -298,7 +299,7 @@ public class TipsTests
     [Fact]
     public void EveryTextIsUsedAndNoneIsEmpty()
     {
-        string desktop = Path.Combine(EditorProcess.Fixtures(), "..", "..", "Desktop");
+        string desktop = Path.Combine(Fixtures.Root, "..", "..", "Desktop");
         string code = string.Join("\n", Directory.GetFiles(desktop, "*.cs").Where(f => !f.EndsWith("Tips.cs", StringComparison.Ordinal)).Select(File.ReadAllText));
         // Keys made in code: the area actions, the area's moves, the start page's choices.
         static bool Made(string k) => k.StartsWith("areaAct.", StringComparison.Ordinal) || k is "top.west" or "top.north" or "top.south" or "top.east" or "start.home" or "start.game" or "start.server" or "start.offline" || k.StartsWith("overlay.", StringComparison.Ordinal);

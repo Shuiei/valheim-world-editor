@@ -4,12 +4,13 @@
 #   core-tests     the core's tests on three containers (saves, the world generator against the game's
 #                  values, live mode against a stand-in bridge, the SSH tunnel against a local sshd), and
 #   app-tests      the app's windows, headless, on three containers (the visual tests skip: no
-#                  display). Both build tests/Desktop.Tests with warnings as errors; CircleCI shares
-#                  the test classes out by their last times and can rerun only the failed ones
-#                  (circleci tests run, tools/ci-tests.sh). Every test runs, failing or not; a test
-#                  stuck for 5 minutes ends its run.
-#                  Each test container sends its code coverage to Codecov, which merges the six
-#                  (codecov.yml) and fails its own check (codecov/project) under 95% line coverage.
+#                  display). Each builds its test project (tests/Core.Tests, tests/Desktop.Tests)
+#                  with warnings as errors; CircleCI shares the test classes out by their last times
+#                  and can rerun only the failed ones (circleci tests run, tools/ci-tests.sh). Every
+#                  test runs, failing or not; a test stuck for 5 minutes ends its run.
+#                  On main only, each test container sends its code coverage to Codecov, which merges
+#                  the six (codecov.yml) and fails its own check (codecov/project) under 95% line
+#                  coverage; branches run the tests without it (several times faster).
 #   packages       the Windows and Linux release packages: they build, hold no source code or game
 #                  files (the plugin is left out: it builds against the game's own DLLs), and the
 #                  Linux one starts and draws the test world (tools/smoke-test.sh, under Xvfb)
@@ -32,14 +33,14 @@ executors:
     resource_class: medium
 
 commands:
-  # One namespace's test classes (no visual tests), shared out between the job's containers by
+  # One test project's classes (no visual tests), shared out between the job's containers by
   # CircleCI by the time each class took in the last runs (circleci tests run). It also gives the job
   # "Rerun failed tests": a rerun runs only the classes that failed. Every test runs (a failure does
   # not stop the others); a test stuck 5 minutes ends the run (with a dump), and silence ends the step
   # sooner than CircleCI's 10 minutes.
   test-classes:
     parameters:
-      namespace:
+      project:
         type: string
       what:
         type: string
@@ -52,37 +53,43 @@ commands:
           command: apt-get update -qq && apt-get install -y -qq openssh-server libfontconfig1 gnupg > /dev/null && mkdir -p /run/sshd
       - restore_cache:
           keys:
-            - nuget-v2-{{ checksum "Directory.Build.props" }}-{{ checksum "Core/ValheimWorldEditor.Core.csproj" }}-{{ checksum "Desktop/ValheimWorldEditor.Desktop.csproj" }}-{{ checksum "tests/Desktop.Tests/Desktop.Tests.csproj" }}
+            - nuget-v2-{{ checksum "Directory.Build.props" }}-{{ checksum "Core/ValheimWorldEditor.Core.csproj" }}-{{ checksum "Desktop/ValheimWorldEditor.Desktop.csproj" }}-{{ checksum "tests/Core.Tests/Core.Tests.csproj" }}-{{ checksum "tests/Desktop.Tests/Desktop.Tests.csproj" }}
             # Else main's latest (a branch whose packages changed restores only what it adds).
             - nuget-v2-
       - run:
           name: Build the tests (every warning is an error)
-          command: dotnet build tests/Desktop.Tests/Desktop.Tests.csproj -c Release -warnaserror
+          command: dotnet build << parameters.project >> -c Release -warnaserror
       - run:
           name: << parameters.what >>
           no_output_timeout: 6m
           environment:
             VWE_NEED_SSHD: "1"
           command: |
-            tools/ci-tests.sh list << parameters.namespace >> \
-              | circleci tests run --command="xargs tools/ci-tests.sh run << parameters.results >>" --split-by=timings --timings-type=classname --verbose
+            # Coverage on main only (Codecov reports main's).
+            if [ "$CIRCLE_BRANCH" = main ]; then export VWE_COVERAGE=1; fi
+            tools/ci-tests.sh list << parameters.project >> \
+              | circleci tests run --command="xargs tools/ci-tests.sh run << parameters.project >> << parameters.results >>" --split-by=timings --timings-type=classname --verbose
       # Saved from main only: branches reuse main's (each cache is kept 15 days and billed).
       - when:
           condition:
             equal: [main, << pipeline.git.branch >>]
           steps:
             - save_cache:
-                key: nuget-v2-{{ checksum "Directory.Build.props" }}-{{ checksum "Core/ValheimWorldEditor.Core.csproj" }}-{{ checksum "Desktop/ValheimWorldEditor.Desktop.csproj" }}-{{ checksum "tests/Desktop.Tests/Desktop.Tests.csproj" }}
+                key: nuget-v2-{{ checksum "Directory.Build.props" }}-{{ checksum "Core/ValheimWorldEditor.Core.csproj" }}-{{ checksum "Desktop/ValheimWorldEditor.Desktop.csproj" }}-{{ checksum "tests/Core.Tests/Core.Tests.csproj" }}-{{ checksum "tests/Desktop.Tests/Desktop.Tests.csproj" }}
                 paths:
                   - ~/.nuget/packages
-      # The coverage of this container's tests, merged with the other containers' by Codecov. A failed
-      # upload fails the job: Codecov's check waits for every container's.
-      - codecov/upload:
-          dir: /tmp/coverage
-          flags: << parameters.results >>
-          plugins: noop
-          fail_on_error: true
-          when: on_success
+      # On main, the coverage of this container's tests, merged with the other containers' by Codecov.
+      # A failed upload fails the job: Codecov's check waits for every container's.
+      - when:
+          condition:
+            equal: [main, << pipeline.git.branch >>]
+          steps:
+            - codecov/upload:
+                dir: /tmp/coverage
+                flags: << parameters.results >>
+                plugins: noop
+                fail_on_error: true
+                when: on_success
       - store_test_results:
           path: /tmp/test-results
       - store_artifacts:
@@ -97,7 +104,7 @@ jobs:
       # project's packages change.
       - restore_cache:
           keys:
-            - nuget-v2-{{ checksum "Directory.Build.props" }}-{{ checksum "Core/ValheimWorldEditor.Core.csproj" }}-{{ checksum "Desktop/ValheimWorldEditor.Desktop.csproj" }}-{{ checksum "tests/Desktop.Tests/Desktop.Tests.csproj" }}
+            - nuget-v2-{{ checksum "Directory.Build.props" }}-{{ checksum "Core/ValheimWorldEditor.Core.csproj" }}-{{ checksum "Desktop/ValheimWorldEditor.Desktop.csproj" }}-{{ checksum "tests/Core.Tests/Core.Tests.csproj" }}-{{ checksum "tests/Desktop.Tests/Desktop.Tests.csproj" }}
             # Else main's latest (a branch whose packages changed restores only what it adds).
             - nuget-v2-
       - run:
@@ -116,18 +123,18 @@ jobs:
             equal: [main, << pipeline.git.branch >>]
           steps:
             - save_cache:
-                key: nuget-v2-{{ checksum "Directory.Build.props" }}-{{ checksum "Core/ValheimWorldEditor.Core.csproj" }}-{{ checksum "Desktop/ValheimWorldEditor.Desktop.csproj" }}-{{ checksum "tests/Desktop.Tests/Desktop.Tests.csproj" }}
+                key: nuget-v2-{{ checksum "Directory.Build.props" }}-{{ checksum "Core/ValheimWorldEditor.Core.csproj" }}-{{ checksum "Desktop/ValheimWorldEditor.Desktop.csproj" }}-{{ checksum "tests/Core.Tests/Core.Tests.csproj" }}-{{ checksum "tests/Desktop.Tests/Desktop.Tests.csproj" }}
                 paths:
                   - ~/.nuget/packages
 
   core-tests:
     executor: dotnet
-    # The world generator's and dungeons' tests run several times slower under coverage: three
-    # containers keep the job about as long as app-tests.
+    # The world generator's and dungeons' tests run several times slower under coverage (on main):
+    # three containers keep the job about as long as app-tests.
     parallelism: 3
     steps:
       - test-classes:
-          namespace: WorldEditor.Tests
+          project: tests/Core.Tests/Core.Tests.csproj
           what: Core tests (saves, world generator, live mode, SSH tunnel)
           results: core
 
@@ -137,7 +144,7 @@ jobs:
     parallelism: 3
     steps:
       - test-classes:
-          namespace: TerrainEditor.Desktop.Tests
+          project: tests/Desktop.Tests/Desktop.Tests.csproj
           what: App tests (the windows, headless)
           results: app
 
