@@ -8,46 +8,122 @@ namespace ValheimGen;
 // 64 m cells as round points along a wavy line; the ground reads how deep in a river a point is.
 public sealed partial class WorldGenerator
 {
-    // A river or stream: from one end to the other, its widths, and its waves.
+    /// <summary>
+    /// A river or stream: from one end to the other, its widths, and its waves. Map points: y is world z.
+    /// </summary>
     public sealed class River
     {
+        /// <summary>
+        /// Where it starts.
+        /// </summary>
         public Vector2 P0 { get; set; }
+        /// <summary>
+        /// Where it ends.
+        /// </summary>
         public Vector2 P1 { get; set; }
+        /// <summary>
+        /// Halfway between the ends.
+        /// </summary>
         public Vector2 Center { get; set; }
+        /// <summary>
+        /// The narrowest a point of it is, metres (a point's radius in the ground).
+        /// </summary>
         public float WidthMin { get; set; }
+        /// <summary>
+        /// The widest a point of it is, metres.
+        /// </summary>
         public float WidthMax { get; set; }
+        /// <summary>
+        /// How far its waves swing sideways, metres.
+        /// </summary>
         public float CurveWidth { get; set; }
+        /// <summary>
+        /// Its waves' length scale, metres.
+        /// </summary>
         public float CurveWavelength { get; set; }
     }
 
-    // One point of a river's line: where, how wide (and that squared).
+    /// <summary>
+    /// One point of a river's line: where, how wide (and that squared).
+    /// </summary>
+    /// <param name="at">Where.</param>
+    /// <param name="width">How wide, metres: the ground reads it as the point's radius.</param>
     private readonly struct RiverPoint(Vector2 at, float width)
     {
+        /// <summary>
+        /// Where.
+        /// </summary>
         public readonly Vector2 At = at;
+        /// <summary>
+        /// How wide, metres.
+        /// </summary>
         public readonly float Width = width;
+        /// <summary>
+        /// The width squared (rounded to float as the game's).
+        /// </summary>
         public readonly float WidthSquared = (float)((double)width * width);
     }
 
+    /// <summary>
+    /// Which lines Draw draws into the cells.
+    /// </summary>
     private enum Streams
     {
+        /// <summary>
+        /// Every one (rivers).
+        /// </summary>
         All,
+        /// <summary>
+        /// Streams starting outside the Deep North.
+        /// </summary>
         NotDeepNorth,
+        /// <summary>
+        /// Streams starting in the Deep North.
+        /// </summary>
         DeepNorthOnly,
     }
 
+    /// <summary>
+    /// The rivers' and the streams' own seeds, drawn from the world's.
+    /// </summary>
     private readonly int _riverSeed, _streamSeed;
+    /// <summary>
+    /// The lakes' middles.
+    /// </summary>
     private List<Vector2> _lakes = [];
+    /// <summary>
+    /// The rivers, in the order they were laid out.
+    /// </summary>
     private List<River> _rivers = [];
+    /// <summary>
+    /// The streams as the game lists them (laid out with the Deep North not raised); those starting in the
+    /// Deep North are not drawn from this list (the game keeps no list of the ones it draws there).
+    /// </summary>
     private List<River> _streams = [];
-    // The river points touching each cell (read by many threads once the world is made).
+    /// <summary>
+    /// The river points touching each cell (read by many threads once the world is made).
+    /// </summary>
     private readonly Dictionary<Vector2i, RiverPoint[]> _riverCells = [];
 
+    /// <summary>
+    /// The lakes' middles; empty for the menu world. The generator's own list: callers must not change it.
+    /// </summary>
     public List<Vector2> GetLakes() => _lakes;
 
+    /// <summary>
+    /// The rivers; the generator's own list.
+    /// </summary>
     public List<River> GetRivers() => _rivers;
 
+    /// <summary>
+    /// The streams as the game lists them (those starting in the Deep North included, though not drawn from this
+    /// list); the generator's own list.
+    /// </summary>
     public List<River> GetStreams() => _streams;
 
+    /// <summary>
+    /// Finds the lakes, then lays out and draws the rivers and both sets of streams, in the game's order.
+    /// </summary>
     private void LayOutWater()
     {
         _lakes = FindLakes();
@@ -59,6 +135,9 @@ public sealed partial class WorldGenerator
 
     // ---- Lakes: every 128 m where the continents are under 0.05, nearby ones merged.
 
+    /// <summary>
+    /// Every 128 m where the continents are under 0.05, within 800 m of each other merged.
+    /// </summary>
     private List<Vector2> FindLakes()
     {
         var low = new List<Vector2>();
@@ -75,7 +154,10 @@ public sealed partial class WorldGenerator
         return Merge(low, 800f);
     }
 
-    // Points within range of each other merged into one (halfway each time), in the game's order.
+    /// <summary>
+    /// Points within range of each other merged into one (halfway each time), in the game's order.
+    /// Empties <paramref name="points"/>.
+    /// </summary>
     private static List<Vector2> Merge(List<Vector2> points, float range)
     {
         var merged = new List<Vector2>();
@@ -94,7 +176,9 @@ public sealed partial class WorldGenerator
         return merged;
     }
 
-    // The nearest other point within range (the first of equals), or -1.
+    /// <summary>
+    /// The nearest other point within range (the first of equals), or -1.
+    /// </summary>
     private static int Nearest(List<Vector2> points, Vector2 p, float range)
     {
         int best = -1;
@@ -118,6 +202,9 @@ public sealed partial class WorldGenerator
     // ---- Rivers: from each lake to a random lake within 2 km (5 km for one with no river yet) whose
     // way stays low and leaves the water somewhere.
 
+    /// <summary>
+    /// Lays out the rivers from the rivers' seed and draws them, leaving this thread's Random state as it was.
+    /// </summary>
     private List<River> PlaceRivers()
     {
         var saved = Rnd.state;
@@ -149,7 +236,9 @@ public sealed partial class WorldGenerator
         return rivers;
     }
 
-    // A river's waves: a fifteenth of its length wide, a twentieth long.
+    /// <summary>
+    /// A river's waves: a fifteenth of its length wide, a twentieth long.
+    /// </summary>
     private static void Curves(River river)
     {
         float length = Vector2.Distance(river.P0, river.P1);
@@ -157,6 +246,9 @@ public sealed partial class WorldGenerator
         river.CurveWavelength = (float)((double)length / 20.0);
     }
 
+    /// <summary>
+    /// A random lake (index) within range of p that no river joins to p yet and whose way a river can run, or -1.
+    /// </summary>
     private int RandomRiverEnd(List<River> rivers, Vector2 p, float range)
     {
         var ends = new List<int>();
@@ -171,8 +263,10 @@ public sealed partial class WorldGenerator
         return ends.Count == 0 ? -1 : ends[Rnd.Range(0, ends.Count)];
     }
 
-    // Along the way (every 128 m, ends left out): never over 0.4, and out of the water (over 0.05) at
-    // least once.
+    /// <summary>
+    /// Along the way (every 128 m, ends left out): never over 0.4, and out of the water (over 0.05) at
+    /// least once.
+    /// </summary>
     private bool RiverCanRun(Vector2 a, Vector2 b)
     {
         const float Step = 128f;
@@ -195,6 +289,13 @@ public sealed partial class WorldGenerator
     // ---- Streams: 3000 tries for a start on low slopes (26 to 31 m) and an end higher up (36 to 44 m,
     // 80 to 200 m away), their middle between those heights.
 
+    /// <summary>
+    /// Lays out the streams from the streams' seed and draws those in (or outside) the Deep North, leaving this
+    /// thread's Random state as it was.
+    /// </summary>
+    /// <param name="deepNorth">Lay out with the Deep North raised and draw only the streams starting in it, instead
+    /// of the others.</param>
+    /// <returns>Every stream laid out, also those not drawn.</returns>
     private List<River> PlaceStreams(bool deepNorth)
     {
         var saved = Rnd.state;
@@ -221,6 +322,9 @@ public sealed partial class WorldGenerator
         return streams;
     }
 
+    /// <summary>
+    /// Up to 100 random points for one on low slopes (26 to 31 m); false when none was.
+    /// </summary>
     private bool StreamStart(bool forRivers, out Vector2 start)
     {
         for (int i = 0; i < 100; i++)
@@ -237,7 +341,9 @@ public sealed partial class WorldGenerator
         return false;
     }
 
-    // Tried at random directions, from 200 m down towards 80 m.
+    /// <summary>
+    /// An end higher up (36 to 44 m), tried at random directions, from 200 m down towards 80 m; false when none was.
+    /// </summary>
     private bool StreamEnd(Vector2 start, bool forRivers, out Vector2 end)
     {
         const float Longest = 200f, Shortest = 80f;
@@ -262,8 +368,10 @@ public sealed partial class WorldGenerator
 
     // ---- Drawing them into the cells.
 
-    // Points every eighth of the narrowest width along each line, waved sideways, each a random width;
-    // added to the cells after those drawn before (the order the ground sums them in).
+    /// <summary>
+    /// Points every eighth of the narrowest width along each line, waved sideways, each a random width;
+    /// added to the cells after those drawn before (the order the ground sums them in).
+    /// </summary>
     private void Draw(List<River> rivers, Streams which)
     {
         var cells = new Dictionary<Vector2i, List<RiverPoint>>();
@@ -291,7 +399,9 @@ public sealed partial class WorldGenerator
         }
     }
 
-    // A point into every cell its circle reaches (rows south to north, cells west to east).
+    /// <summary>
+    /// A point into every cell its circle reaches (rows south to north, cells west to east).
+    /// </summary>
     private static void AddToCells(Dictionary<Vector2i, List<RiverPoint>> cells, Vector2 p, float width)
     {
         var home = GetRiverGrid(p.x, p.y);
@@ -314,7 +424,9 @@ public sealed partial class WorldGenerator
         }
     }
 
-    // Whether a circle reaches into a cell (the cell and the circle's box overlap).
+    /// <summary>
+    /// Whether a circle reaches into a cell (the cell and the circle's box overlap).
+    /// </summary>
     public static bool InsideRiverGrid(Vector2i cell, Vector2 p, float r)
     {
         var away = p - new Vector2((float)(cell.x * 64.0), (float)(cell.y * 64.0));
@@ -322,11 +434,16 @@ public sealed partial class WorldGenerator
         return Math.Abs(away.x) < reach && Math.Abs(away.y) < reach;
     }
 
+    /// <summary>
+    /// The 64 m river cell a point is in (cells centred on multiples of 64 m, as zones).
+    /// </summary>
     public static Vector2i GetRiverGrid(float x, float z) =>
         new(Mathf.FloorToInt((float)(((double)x + 32.0) / 64.0)), Mathf.FloorToInt((float)(((double)z + 32.0) / 64.0)));
 
-    // How deep in a river a point is (0 outside, 1 on a point's line) and the rivers' width there (the
-    // widths averaged by depth).
+    /// <summary>
+    /// How deep in a river a point is (0 outside, 1 on a point's line) and the rivers' width there (the
+    /// widths averaged by depth).
+    /// </summary>
     private void RiverAt(float x, float z, out float weight, out float width)
     {
         weight = 0f;

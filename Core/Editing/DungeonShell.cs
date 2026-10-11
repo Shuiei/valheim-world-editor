@@ -3,20 +3,31 @@ using static TerrainEditor.Editing.DungeonKit;
 
 namespace TerrainEditor.Editing;
 
-// What a generated dungeon is made of, as it is laid out: objects with their place and turn, and the
-// object data some need (a chest's contents, a sign's text, a creature's stars). The same object twice
-// at the same place (a slab shared by two levels, a wall seen from both sides) is kept once.
+/// <summary>
+/// What a generated dungeon is made of, as it is laid out: objects with their place and turn, and the
+/// object data some need (a chest's contents, a sign's text, a creature's stars). The same object twice
+/// at the same place (a slab shared by two levels, a wall seen from both sides) is kept once.
+/// </summary>
 internal sealed class DungeonOut
 {
+    /// <summary>The objects so far, in the order added.</summary>
     public readonly List<DungeonGen.Item> Items = [];
+    /// <summary>Prefab and position (5 cm steps) of every object added, to keep each once.</summary>
     private readonly HashSet<(string, int, int, int)> _seen = [];
 
+    /// <summary>A turn about the vertical axis, in degrees.</summary>
     public static Quaternion Yaw(float degrees) => Quaternion.CreateFromAxisAngle(Vector3.UnitY, degrees * MathF.PI / 180f);
 
+    /// <summary>The turn (degrees) that faces a grid way: 0 for +z, 90 for +x.</summary>
     public static float YawOf((int X, int Z) d) => MathF.Atan2(d.X, d.Z) * 180f / MathF.PI;
 
+    /// <summary>Adds an object turned <paramref name="yaw"/> degrees, unless the same prefab is already at that place.</summary>
     public void Add(string prefab, Vector3 p, float yaw, IReadOnlyList<(string Section, string Key, string Value)>? data = null) => Add(prefab, p, Yaw(yaw), data);
 
+    /// <summary>
+    /// Adds an object, unless the same prefab is already at that place (to 5 cm); data: values of its object
+    /// data (section, key, value as text).
+    /// </summary>
     public void Add(string prefab, Vector3 p, Quaternion q, IReadOnlyList<(string Section, string Key, string Value)>? data = null)
     {
         if (_seen.Add((prefab, (int)MathF.Round(p.X * 20), (int)MathF.Round(p.Y * 20), (int)MathF.Round(p.Z * 20))))
@@ -26,11 +37,16 @@ internal sealed class DungeonOut
     }
 }
 
-// The building: floor and roof slabs, walls, doorways, posts, beams, floor finish, stairs.
+/// <summary>The building: floor and roof slabs, walls, doorways, posts, beams, floor finish, stairs.</summary>
 internal static class DungeonShell
 {
+    /// <summary>The four ways along the grid: +z, +x, -z, -x.</summary>
     private static readonly (int X, int Z)[] Dirs = [(0, 1), (1, 0), (0, -1), (-1, 0)];
 
+    /// <summary>
+    /// Builds every level of the plan in the material: slabs, walls, doorways, the floor finish (when the
+    /// settings' Decor is 1 or more), beams and stairs.
+    /// </summary>
     public static void Build(DungeonPlan plan, Material mat, DungeonOut o, DungeonGen.Settings s)
     {
         foreach (var l in plan.Levels)
@@ -67,8 +83,10 @@ internal static class DungeonShell
         }
     }
 
-    // Black marble slabs (8 × 8 × 2 m), the floor and roof of every cell in use: the one piece the game
-    // never asks for support, so all else can stand on them, high in the sky.
+    /// <summary>
+    /// Black marble slabs (8 × 8 × 2 m), the floor and roof of every cell in use: the one piece the game
+    /// never asks for support, so all else can stand on them, high in the sky.
+    /// </summary>
     private static void Slabs(DungeonPlan.Level l, float f, DungeonOut o)
     {
         var floors = new HashSet<(int, int)>();
@@ -101,9 +119,18 @@ internal static class DungeonShell
         }
     }
 
-    // A wall's piece of plane: along the X axis (a plane x = Line) or the Z axis (z = Line), metres.
+    /// <summary>A wall's piece of plane: along the X axis (a plane x = Line) or the Z axis (z = Line), metres.</summary>
+    /// <param name="AlongZ">The wall runs along z, in the plane x = Line; else along x, in z = Line.</param>
+    /// <param name="Line">Where the plane is (metres).</param>
+    /// <param name="Index">The tile it borders, counted along the wall.</param>
+    /// <param name="Y0">Its foot (metres).</param>
+    /// <param name="Y1">Its top (metres).</param>
     private sealed record Edge(bool AlongZ, float Line, int Index, float Y0, float Y1);
 
+    /// <summary>
+    /// Walls between tiles of different spaces and round the outside, except in doorways and between
+    /// corridors; each run filled with the material's pieces, posts at its ends if the material has them.
+    /// </summary>
     private static void Walls(DungeonPlan plan, DungeonPlan.Level l, float f, Material mat, DungeonOut o)
     {
         var doorEdges = new HashSet<((int, int), (int, int))>();
@@ -168,10 +195,11 @@ internal static class DungeonShell
         }
     }
 
-    // Whether tile t of space s is over its stairwell (no floor under it).
+    /// <summary>Whether tile t of space s is over its stairwell (no floor under it).</summary>
     private static bool InWell(DungeonPlan.Space s, (int, int) t) =>
         s.Room == Room.StairTop && DungeonPlanner.Depth((s.X0, s.Z0, s.W, s.H), s.Dir, t) >= 4;
 
+    /// <summary>A pillar or post of segments at (x, z) from y0 up to about y1 (metres).</summary>
     public static void Stack(Column c, DungeonOut o, float x, float z, float y0, float y1)
     {
         for (float y = y0; y < y1 - 0.3f; y += c.H)
@@ -180,8 +208,10 @@ internal static class DungeonShell
         }
     }
 
-    // Fills a piece of wall (t0..t1 along the line, y0..y1) with the material's pieces, largest first.
-    // Where no piece is low enough for what is left at the top, one rises past it, into the roof.
+    /// <summary>
+    /// Fills a piece of wall (t0..t1 along the line, y0..y1) with the material's pieces, largest first.
+    /// Where no piece is low enough for what is left at the top, one rises past it, into the roof.
+    /// </summary>
     public static void Fill(Material mat, DungeonOut o, bool alongZ, float line, float t0, float t1, float y0, float y1)
     {
         const float Eps = 0.01f;
@@ -202,7 +232,7 @@ internal static class DungeonShell
         Fill(mat, o, alongZ, line, t0, t1, y0 + part.H, y1);
     }
 
-    // A doorway: 4 m of wall with its opening and what closes it.
+    /// <summary>A doorway: 4 m of wall with its opening and what closes it.</summary>
     private static void Doorway(DungeonPlan.Doorway d, float f, Material mat, DungeonOut o)
     {
         var (cx, cz) = d.Center;
@@ -270,7 +300,7 @@ internal static class DungeonShell
         }
     }
 
-    // Beams under the roof across a room, every 4 m.
+    /// <summary>Beams under the roof across a room, every 4 m.</summary>
     private static void Beams(DungeonPlan.Space sp, float f, Material mat, DungeonOut o)
     {
         float top = f + DungeonPlan.HeightOf(sp) - mat.BeamTop;
@@ -298,8 +328,10 @@ internal static class DungeonShell
         }
     }
 
-    // The stairs from a stairwell's first cell down to the middle of its last, against one side, on
-    // stone stacks; a railing where the floor ends.
+    /// <summary>
+    /// The stairs from a stairwell's first cell down to the middle of its last, against one side, on
+    /// stone stacks; a railing where the floor ends.
+    /// </summary>
     private static void Stairs(DungeonPlan.Space top, float f, DungeonOut o)
     {
         var d = top.Dir;

@@ -4,22 +4,47 @@ using Renci.SshNet.Common;
 
 namespace TerrainEditor.App;
 
-// The SSH tunnel to a dedicated server, made by the app itself (SSH.NET), so players do not need
-// an ssh command or PuTTY: connects with a password or a key and forwards a free local port to the
-// WorldEditorBridge plugin on the server. The plugin's token is entered by the user.
+/// <summary>
+/// The SSH tunnel to a dedicated server, made by the app itself (SSH.NET), so players do not need
+/// an ssh command or PuTTY: connects with a password or a key and forwards a free local port to the
+/// WorldEditorBridge plugin on the server. The plugin's token is entered by the user. One tunnel at a time.
+/// </summary>
 public static class Tunnel
 {
+    /// <summary>What the player entered to connect.</summary>
+    /// <param name="Host">The server's address, or user@address.</param>
+    /// <param name="Port">The SSH port; 0 or less: 22.</param>
+    /// <param name="User">The account to log in with (unless given in <paramref name="Host"/>).</param>
+    /// <param name="Password">The password, also answering keyboard-interactive prompts.</param>
+    /// <param name="KeyPath">A private key file (~ for the home folder); none: the usual ~/.ssh keys are tried.</param>
+    /// <param name="Passphrase">The key's passphrase, if it has one.</param>
+    /// <param name="Token">The plugin's token; empty: the saved server's.</param>
+    /// <param name="BridgePort">
+    /// The plugin's port; null: from the server's plugin settings, the saved server or 5182.
+    /// </param>
+    /// <param name="SavePassword">Whether to keep the password in servers.cfg.</param>
+    /// <param name="Name">The name to save the server under.</param>
+    /// <param name="GameFolder">The server's Valheim folder, for the plugin's port and precise errors.</param>
     public sealed record Request(string Host, int Port, string User, string? Password, string? KeyPath, string? Passphrase, string? Token, int? BridgePort, bool SavePassword, string? Name, string? GameFolder = null);
 
-    // Server: what to save in servers.cfg once the plugin has answered (the caller saves it).
+    /// <summary>How connecting went.</summary>
+    /// <param name="LocalPort">The local port forwarded to the plugin; 0 on failure.</param>
+    /// <param name="Token">The plugin's token to send; empty on failure.</param>
+    /// <param name="Error">Why it failed, for the player; null on success.</param>
+    /// <param name="Fingerprint">The server's host key (SHA256:base64), null on failure.</param>
+    /// <param name="Server">What to save in servers.cfg once the plugin has answered (the caller saves it).</param>
     public sealed record Result(int LocalPort, string Token, string? Error, string? Fingerprint, ServerConfig.Server? Server = null);
 
+    /// <summary>The open SSH connection, if any.</summary>
     private static SshClient? _client;
 
+    /// <summary>Its local port forward to the plugin.</summary>
     private static ForwardedPortLocal? _forward;
 
+    /// <summary>Whether a tunnel is connected.</summary>
     public static bool Open => _client?.IsConnected == true;
 
+    /// <summary>Stops the forward and disconnects, ignoring errors.</summary>
     public static void Close()
     {
         try
@@ -41,6 +66,11 @@ public static class Tunnel
         _forward = null;
     }
 
+    /// <summary>
+    /// Closes any tunnel, connects (refusing a host key different from the one saved for that address
+    /// and port) and forwards a free local port from 15182 up to the plugin. Failures to log in or connect
+    /// come back in <see cref="Result.Error"/>.
+    /// </summary>
     public static async Task<Result> Start(Request r)
     {
         Close();
@@ -191,7 +221,10 @@ public static class Tunnel
         static Result Fail(string message) => new(0, "", message, null);
     }
 
-    // Why the plugin does not answer, from what the server's Valheim folder holds (while connected).
+    /// <summary>
+    /// Why the plugin does not answer, from what the server's Valheim folder holds (while connected). Null
+    /// when not connected, no folder is given or the check did not answer.
+    /// </summary>
     public static string? Diagnose(string? gameFolder)
     {
         SshClient? client = _client;
@@ -215,8 +248,10 @@ public static class Tunnel
         };
     }
 
+    /// <summary>A path quoted for the server's shell (single quotes).</summary>
     private static string Quote(string path) => "'" + path.Replace("'", "'\\''") + "'";
 
+    /// <summary>A shell command's output on the server (15 s at most); empty when it fails.</summary>
     private static string Run(SshClient client, string command)
     {
         try

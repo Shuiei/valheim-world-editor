@@ -13,52 +13,99 @@ namespace TerrainEditor.App;
 // vegetation rules, the terrain modifiers, the names of object data and the cave rocks.
 public static partial class GameCatalogues
 {
+    /// <summary>
+    /// Unity's class id of a LODGroup.
+    /// </summary>
     private const int LodGroupType = (int)AssetClassID.LODGroup;
 
-    // The prefabs, read at the editor's start (GameData): every prefab with a ZNetView on its root (a
-    // network object the save can hold), with what a new object of it needs in the save: persistent /
-    // distant flags and object type ("p", "d", "t"). Creatures ("c") and item drops ("i") are marked, so
-    // the editor can leave them out of what it offers to place. Saplings (Plant) also get their grow
-    // radius ("gr", the free space they need to grow), whether they need cultivated ground ("cult") and
-    // what they grow into ("grows": Plant's m_grownPrefabs). Containers get their grid size ("cw" x
-    // "ch"), wards their protected radius ("ward"), crafting stations the radius they allow building in
-    // ("build").
-    // What stands hold: items get their type ("it"), their attach override ("ao", when set), their
-    // number of variants ("var", when they have some), whether they have an "attach" child ("at": without
-    // one no item stand takes them) or an "attach_skin" one ("ats": armour stands take either, or a chest
-    // or legs piece without), and for items that wear, their durability when new ("dur") and what each
-    // quality level adds ("durl"). Item stands get the types they take ("is") and the items they take or
-    // refuse whatever their type ("isi", "isu"); armour stands the types each slot takes ("as", in slot
-    // order: the save keeps slot i's item under "<i>_item").
-    // Scripts are told by their fields in the type tree (nothing of them read); the prefabs are found
-    // from the ZNetViews up to their GameObjects through the bundle's tree read raw (Layout.Tree), kept to
-    // the roots; only the scripts needed are read whole. What saplings grow into and what item stands
-    // take are named in other bundles: found among what the reading met (no bundle opened again).
+    /// <summary>
+    /// The prefabs, read at the editor's start (GameData): every prefab with a ZNetView on its root (a
+    /// network object the save can hold), with what a new object of it needs in the save: persistent /
+    /// distant flags and object type ("p", "d", "t"). Creatures ("c") and item drops ("i") are marked, so
+    /// the editor can leave them out of what it offers to place. Saplings (Plant) also get their grow
+    /// radius ("gr", the free space they need to grow), whether they need cultivated ground ("cult") and
+    /// what they grow into ("grows": Plant's m_grownPrefabs). Containers get their grid size ("cw" x
+    /// "ch"), wards their protected radius ("ward"), crafting stations the radius they allow building in
+    /// ("build").
+    /// What stands hold: items get their type ("it"), their attach override ("ao", when set), their
+    /// number of variants ("var", when they have some), whether they have an "attach" child ("at": without
+    /// one no item stand takes them) or an "attach_skin" one ("ats": armour stands take either, or a chest
+    /// or legs piece without), and for items that wear, their durability when new ("dur") and what each
+    /// quality level adds ("durl"). Item stands get the types they take ("is") and the items they take or
+    /// refuse whatever their type ("isi", "isu"); armour stands the types each slot takes ("as", in slot
+    /// order: the save keeps slot i's item under "&lt;i&gt;_item").
+    /// Scripts are told by their fields in the type tree (nothing of them read); the prefabs are found
+    /// from the ZNetViews up to their GameObjects through the bundle's tree read raw (Layout.Tree), kept to
+    /// the roots; only the scripts needed are read whole. What saplings grow into and what item stands
+    /// take are named in other bundles: found among what the reading met (no bundle opened again).
+    /// </summary>
     private sealed class PrefabScan : IStartScan
     {
-        // What a script is, by its fields.
+        /// <summary>
+        /// What a script is, by its fields.
+        /// </summary>
         [Flags]
         private enum Role
         {
+            /// <summary>
+            /// None that matters.
+            /// </summary>
             None = 0,
+            /// <summary>
+            /// A ZNetView (m_persistent, m_distant, m_type).
+            /// </summary>
             Net = 1,
+            /// <summary>
+            /// A Character (m_runSpeed).
+            /// </summary>
             Creature = 2,
+            /// <summary>
+            /// Has item data (m_itemData): marks the prefab as an item.
+            /// </summary>
             Item = 4,
+            /// <summary>
+            /// A Plant (m_grownPrefabs, m_growRadius).
+            /// </summary>
             Plant = 8,
+            /// <summary>
+            /// A Container (m_width, m_height, m_privacy).
+            /// </summary>
             Container = 16,
+            /// <summary>
+            /// A PrivateArea ward (m_radius, m_areaMarker, m_enabledEffect).
+            /// </summary>
             Ward = 32,
+            /// <summary>
+            /// A CraftingStation (m_rangeBuild).
+            /// </summary>
             Station = 64,
+            /// <summary>
+            /// An ItemDrop (m_itemData with m_autoPickup): read for what stands hold.
+            /// </summary>
             Drop = 128,
+            /// <summary>
+            /// An ItemStand (m_supportedTypes, m_attachOther).
+            /// </summary>
             Stand = 256,
+            /// <summary>
+            /// An ArmorStand (m_slots, m_poseCount).
+            /// </summary>
             Armour = 512,
         }
 
-        // Read whole on a prefab's root.
+        /// <summary>
+        /// Read whole on a prefab's root.
+        /// </summary>
         private const Role OnRoot = Role.Net | Role.Plant | Role.Container | Role.Ward | Role.Station;
 
-        // Read whole wherever they are.
+        /// <summary>
+        /// Read whole wherever they are.
+        /// </summary>
         private const Role Anywhere = Role.Plant | Role.Drop | Role.Stand | Role.Armour;
 
+        /// <summary>
+        /// A script's roles, from its class's field names.
+        /// </summary>
         private static Role RoleOf(IReadOnlySet<string> fields)
         {
             bool All(params string[] names) => names.All(fields.Contains);
@@ -76,19 +123,43 @@ public static partial class GameCatalogues
             return r;
         }
 
+        /// <summary>
+        /// The prefab entries, by name.
+        /// </summary>
         private readonly Dictionary<string, Dict> _prefabs = [];
-        // Each script's role, by where it is.
+        /// <summary>
+        /// Each script's role, by where it is.
+        /// </summary>
         private readonly Dictionary<Ref, Role> _roles = [];
-        // Every networked root's name by where it is: what saplings name (without opening their bundles).
+        /// <summary>
+        /// Every networked root's name by where it is: what saplings name (without opening their bundles).
+        /// </summary>
         private readonly Dictionary<Ref, string> _names = [];
-        // Saplings: the grown prefabs they name.
+        /// <summary>
+        /// Saplings: the grown prefabs they name.
+        /// </summary>
         private readonly Dictionary<string, List<Ref>> _plants = [];
-        // Items by their ItemDrop component (what item stands name), and what stands take.
+        /// <summary>
+        /// Items by their ItemDrop component (what item stands name).
+        /// </summary>
         private readonly Dictionary<Ref, string> _owners = [];
+        /// <summary>
+        /// The items' entries, by prefab name, added to their prefabs in <c>Json</c>.
+        /// </summary>
         private readonly Dictionary<string, Dict> _items = [];
+        /// <summary>
+        /// What item stands take, by prefab name: types, items taken, items refused.
+        /// </summary>
         private readonly Dictionary<string, (List<long> Types, List<Ref> Take, List<Ref> Refuse)> _stands = [];
+        /// <summary>
+        /// What each armour stand slot takes, by prefab name.
+        /// </summary>
         private readonly Dictionary<string, List<object?>> _armour = [];
 
+        /// <summary>
+        /// Reads the bundle's prefabs (networked roots) and what its saplings, items and stands say; see the class
+        /// summary.
+        /// </summary>
         public void Read(Bundle b, Game game)
         {
             // Each script's role (once per script, from its class's fields).
@@ -230,7 +301,10 @@ public static partial class GameCatalogues
             }
         }
 
-        // A networked root (its name and components), when its ZNetView can be read.
+        /// <summary>
+        /// Adds the entry of a networked root (its name and components), when its ZNetView can be read; the first
+        /// root of a name is kept.
+        /// </summary>
         private void ReadPrefab(Bundle b, Ref at, (string Name, (int File, long Pid)[] Components) go, Dictionary<long, Role> roles)
         {
             bool creature = false, item = false;
@@ -298,11 +372,21 @@ public static partial class GameCatalogues
             _prefabs[name] = entry;
         }
 
-        // What a script read anywhere says, taken as it is read (the script itself is not kept: items'
-        // are large): its GameObject, what a sapling grows into, an item's entry (without "at", "ats"),
-        // what an item stand takes (types, items taken and refused), an armour stand's slots.
+        /// <summary>
+        /// What a script read anywhere says, taken as it is read (the script itself is not kept: items'
+        /// are large): its GameObject, what a sapling grows into, an item's entry (without "at", "ats"),
+        /// what an item stand takes (types, items taken and refused), an armour stand's slots.
+        /// </summary>
+        /// <param name="Go">The script's GameObject.</param>
+        /// <param name="Grows">A sapling's grown prefabs.</param>
+        /// <param name="Item">An item's entry.</param>
+        /// <param name="Stand">An item stand's types, items taken and items refused.</param>
+        /// <param name="Slots">An armour stand's slots, each the types it takes.</param>
         private sealed record Said(long Go, List<Ref>? Grows, Dict? Item, (List<long> Types, List<Ref> Take, List<Ref> Refuse)? Stand, List<object?>? Slots);
 
+        /// <summary>
+        /// What a script says, by its roles (see <c>Said</c>).
+        /// </summary>
         private static Said Say(Bundle.Inner f, Role r, AssetTypeValueField d)
         {
             static List<long> Types(AssetTypeValueField list) => [.. list["Array"].Children.Select(t => Int(Py(t))).Distinct().Order()];
@@ -337,9 +421,11 @@ public static partial class GameCatalogues
                 item == null && (r & Role.Stand) == 0 && (r & Role.Armour) != 0 ? [.. d["m_slots.Array"].Children.Select(s => (object?)Types(s["m_supportedTypes"]))] : null);
         }
 
-        // A script's say kept under its GameObject's name (the first of each name for stands), with the
-        // names of an item's children: "attach" (item stands take no item without), "attach_skin" (armour
-        // stands take either, or a chest or legs piece without; ItemStand.GetAttachPrefab).
+        /// <summary>
+        /// A script's say kept under its GameObject's name (the first of each name for stands), with the
+        /// names of an item's children: "attach" (item stands take no item without), "attach_skin" (armour
+        /// stands take either, or a chest or legs piece without; ItemStand.GetAttachPrefab).
+        /// </summary>
         private void Keep(Bundle.Inner f, long pid, string owner, Said said, HashSet<string> kids)
         {
             if (said.Grows != null)
@@ -373,8 +459,10 @@ public static partial class GameCatalogues
             }
         }
 
-        // What needs names from other bundles (the grown prefabs, the items stands name), from what was
-        // read of them.
+        /// <summary>
+        /// The "prefabs" JSON (keys sorted), with what needs names from other bundles (the grown prefabs, the
+        /// items stands name) filled in from what was read of them.
+        /// </summary>
         public string Json()
         {
             foreach (var (owner, refs) in _plants)
@@ -428,17 +516,19 @@ public static partial class GameCatalogues
         }
     }
 
-    // The game's vegetation rules, ZoneSystem's m_vegetation then the LocationLists' (by m_sortOrder), as
-    // the game merges them; "Regrow nature" places by these rules. Read at the editor's start (GameData):
-    // only the main scene's bundles, where ZoneSystem and the lists are (as for GameLocations), then the
-    // prefabs' and scripts' bundles. Alt biomes'
-    // extra vegetation (Deep North parts the editor's generator does not model) is left out. "draws":
-    // the random draws the prefab's components make in Awake when the game creates it (they shift the
-    // generator's sequence for the rest of the rule): LodFadeInOut (with a LODGroup: the camera is more
-    // than 20 m away while zones generate around a player), MineRock5, Floating, LightFlicker, Fish one
-    // each, RandomFlyingBird two, Pickable one when it respawns (m_respawnTimeMinutes > 0). Checked
-    // against a played world: with these, the generated spots match the saved ones. Components of
-    // inactive children do not wake.
+    /// <summary>
+    /// The game's vegetation rules, ZoneSystem's m_vegetation then the LocationLists' (by m_sortOrder), as
+    /// the game merges them; "Regrow nature" places by these rules. Read at the editor's start (GameData):
+    /// only the main scene's bundles, where ZoneSystem and the lists are (as for GameLocations), then the
+    /// prefabs' and scripts' bundles. Alt biomes' extra vegetation (Deep North parts the editor's generator
+    /// does not model) is left out. "draws":
+    /// the random draws the prefab's components make in Awake when the game creates it (they shift the
+    /// generator's sequence for the rest of the rule): LodFadeInOut (with a LODGroup: the camera is more
+    /// than 20 m away while zones generate around a player), MineRock5, Floating, LightFlicker, Fish one
+    /// each, RandomFlyingBird two, Pickable one when it respawns (m_respawnTimeMinutes &gt; 0). Checked
+    /// against a played world: with these, the generated spots match the saved ones. Components of
+    /// inactive children do not wake.
+    /// </summary>
     public static string VegetationJson(GameBundles bundles)
     {
         using var game = new Game(bundles.Folder);
@@ -457,18 +547,39 @@ public static partial class GameCatalogues
         return CatalogueJson.Write(scan.Finish(game), new CatalogueJson.Style(",", Indent: 0));
     }
 
+    /// <summary>
+    /// Gathers the vegetation rules of the main scene's bundles, then names their prefabs and counts their draws.
+    /// </summary>
     private sealed class VegetationScan
     {
+        /// <summary>
+        /// The VegetationSpawner fields kept, written without their "m_".
+        /// </summary>
         private static readonly string[] Keep = ["m_name", "m_enable", "m_min", "m_max", "m_forcePlacement", "m_scaleMin", "m_scaleMax", "m_randTilt", "m_chanceToUseGroundTilt", "m_biome", "m_biomeArea", "m_blockCheck", "m_snapToStaticSolid", "m_minAltitude", "m_maxAltitude", "m_minVegetation", "m_maxVegetation", "m_surroundCheckVegetation", "m_surroundCheckDistance", "m_surroundCheckLayers", "m_surroundBetterThanAverage", "m_minOceanDepth", "m_maxOceanDepth", "m_minTilt", "m_maxTilt", "m_terrainDeltaRadius", "m_maxTerrainDelta", "m_minTerrainDelta", "m_snapToWater", "m_groundOffset", "m_groupSizeMin", "m_groupSizeMax", "m_groupRadius", "m_minDistanceFromCenter", "m_maxDistanceFromCenter", "m_inForest", "m_forestTresholdMin", "m_forestTresholdMax"];
 
+        /// <summary>
+        /// Random draws made in Awake by these scripts (LodFadeInOut only with a LODGroup, Pickable only when it
+        /// respawns: in <c>Finish</c>).
+        /// </summary>
         private static readonly Dictionary<string, int> Draws = new() { ["LodFadeInOut"] = 1, ["MineRock5"] = 1, ["Floating"] = 1, ["LightFlicker"] = 1, ["Fish"] = 1, ["RandomFlyingBird"] = 2 };
 
+        /// <summary>
+        /// ZoneSystem's own rules with their prefabs, null until found.
+        /// </summary>
         private List<(Dict Rule, Ref Prefab)>? _zone;
-        // The LocationLists, each once (some bundles repeat them): by (sort order, first rule's name, rules).
+        /// <summary>
+        /// The LocationLists, each once (some bundles repeat them): by (sort order, first rule's name, rule count).
+        /// </summary>
         private readonly Dictionary<(long Order, string First, int Count), List<(Dict Rule, Ref Prefab)>> _lists = [];
 
+        /// <summary>
+        /// Whether ZoneSystem was found.
+        /// </summary>
         public bool Found => _zone != null;
 
+        /// <summary>
+        /// Takes ZoneSystem's rules and each LocationList's from one bundle.
+        /// </summary>
         public void Read(Bundle b)
         {
             // The scripts with vegetation, told by their fields in the type tree (once per script): only
@@ -504,6 +615,9 @@ public static partial class GameCatalogues
             }
         }
 
+        /// <summary>
+        /// The rules of a vegetation list (fields of <c>Keep</c>) with their prefabs.
+        /// </summary>
         private static List<(Dict, Ref)> Rules(Bundle.Inner f, List<AssetTypeValueField> vegs) => [.. vegs.Select(v =>
         {
             var rule = new Dict();
@@ -515,6 +629,9 @@ public static partial class GameCatalogues
             return (rule, new Ref(f.FileOf(p["m_FileID"].AsInt) ?? "", p["m_PathID"].AsLong));
         })];
 
+        /// <summary>
+        /// All rules in the game's order, with "prefab" and "draws" set; rules whose prefab has no name are left out.
+        /// </summary>
         public List<object?> Finish(Game game)
         {
             var all = (_zone ?? []).Concat(_lists.OrderBy(kv => kv.Key.Order).ThenBy(kv => kv.Key.First, StringComparer.Ordinal).ThenBy(kv => kv.Key.Count).SelectMany(kv => kv.Value)).ToList();
@@ -559,6 +676,10 @@ public static partial class GameCatalogues
             return rules;
         }
 
+        /// <summary>
+        /// The scripts on a prefab's active objects (the root counts even inactive): script, LODGroup on the same
+        /// object, respawns.
+        /// </summary>
         private static List<(Ref, bool, bool)> ScriptsOf(Bundle b, Bundle.Inner f, long root)
         {
             var res = new List<(Ref, bool, bool)>();
@@ -596,19 +717,29 @@ public static partial class GameCatalogues
         }
     }
 
-    // The TerrainModifiers of locations and networked prefabs (active and enabled ones, in the prefab's
-    // frame), as TerrainModifiers.Use takes them: read at the editor's start (GameData).
+    /// <summary>
+    /// The TerrainModifiers of locations and networked prefabs (active and enabled ones, in the prefab's
+    /// frame), as TerrainModifiers.Use takes them: read at the editor's start (GameData).
+    /// </summary>
     private sealed class ModifierScan : IStartScan
     {
+        /// <summary>
+        /// The entries by prefab name: {"location": bool, "modifiers": [...]}.
+        /// </summary>
         public Dict Entries { get; } = new();
 
+        /// <summary>
+        /// The "terrain-modifiers" JSON.
+        /// </summary>
         public string Json() => CatalogueJson.Write(Entries, new CatalogueJson.Style(",", Indent: 0));
 
-        // From each TerrainModifier (told by its script, its fields the only ones read whole) up its parents
-        // to the prefab, rather than down every prefab's objects (some locations have tens of thousands).
-        // A prefab is kept when it is a location or networked; its modifiers in the order of a walk down
-        // it: by their place under the prefab (the child indices), then on their object. Inactive or
-        // disabled ones are left out.
+        /// <summary>
+        /// From each TerrainModifier (told by its script, its fields the only ones read whole) up its parents
+        /// to the prefab, rather than down every prefab's objects (some locations have tens of thousands).
+        /// A prefab is kept when it is a location or networked; its modifiers in the order of a walk down
+        /// it: by their place under the prefab (the child indices), then on their object. Inactive or
+        /// disabled ones are left out.
+        /// </summary>
         public void Read(Bundle b, Game game)
         {
             var found = new Dictionary<long, List<(List<int> Path, int Index, Dict Entry)>>();
@@ -665,9 +796,11 @@ public static partial class GameCatalogues
             }
         }
 
-        // From an object up to its prefab root: the root, the Transforms from below the root down to the
-        // object, whether all of them are active (the root too), and the child index at each step. Null
-        // when something on the way cannot be read.
+        /// <summary>
+        /// From an object up to its prefab root: the root, the Transforms from below the root down to the
+        /// object, whether all of them are active (the root too), and the child index at each step. Null
+        /// when something on the way cannot be read.
+        /// </summary>
         private static (long Root, List<AssetTypeValueField> Chain, bool Active, List<int> Index)? Up(Bundle b, long goPid)
         {
             var chain = new List<AssetTypeValueField>();
@@ -711,7 +844,9 @@ public static partial class GameCatalogues
             return null;
         }
 
-        // One modifier as the catalogue has it (pos: where it is in the prefab's frame).
+        /// <summary>
+        /// One modifier as the catalogue has it (pos: where it is in the prefab's frame).
+        /// </summary>
         private static Dict Entry(AssetTypeValueField m, bool atRoot, V3 p) => new()
         {
             ["pos"] = atRoot ? Origin() : [R(p.X, 4), R(p.Y, 4), R(p.Z, 4)],
@@ -734,11 +869,16 @@ public static partial class GameCatalogues
 
     }
 
-    // The cave roof rocks' shapes, each prefab's mesh in its own frame (the model's scale applied: its
-    // rock is a child scaled 4 times), as vertices and triangles, for the Path tool's Cave (CaveRoof),
-    // read at the editor's start (GameData): only the bundle that has them is opened (the index tells it).
+    /// <summary>
+    /// The cave roof rocks' shapes, each prefab's mesh in its own frame (the model's scale applied: its
+    /// rock is a child scaled 4 times), as vertices and triangles, for the Path tool's Cave (CaveRoof),
+    /// read at the editor's start (GameData): only the bundle that has them is opened (the index tells it).
+    /// </summary>
     public static string CaveRocksJson(GameBundles bundles) => CatalogueJson.Write(CaveRocks(bundles), new CatalogueJson.Style(",", ":"));
 
+    /// <summary>
+    /// The two cave roof rocks' shapes, by prefab name.
+    /// </summary>
     private static Dict CaveRocks(GameBundles bundles)
     {
         var res = new Dict();
@@ -770,7 +910,9 @@ public static partial class GameCatalogues
         return res;
     }
 
-    // One rock's mesh (named mesh in its prefab's bundle), scaled, as cave-rocks has it.
+    /// <summary>
+    /// One rock's mesh (named mesh in its prefab's bundle), scaled, as cave-rocks has it.
+    /// </summary>
     private static Dict RockShape(Bundle b, string prefab, string mesh, double scale)
     {
         // Told by its name, read alone first (the bundle has many meshes).
@@ -796,7 +938,9 @@ public static partial class GameCatalogues
         return new Dict { ["v"] = vs, ["t"] = tris };
     }
 
-    // A named object's name (m_Name, its first field), nothing else read.
+    /// <summary>
+    /// A named object's name (m_Name, its first field), nothing else read.
+    /// </summary>
     private static string? NameOf(Bundle.Inner f, AssetFileInfo info)
     {
         var file = f.Assets.file;
@@ -805,16 +949,28 @@ public static partial class GameCatalogues
         return n is >= 0 and <= 256 ? System.Text.Encoding.UTF8.GetString(file.Reader.ReadBytes(n)) : null;
     }
 
+    /// <summary>
+    /// The game's data folder, as spelled on Windows and Linux.
+    /// </summary>
     private static readonly string[] DataFolders = ["valheim_Data", "Valheim_Data"];
 
+    /// <summary>
+    /// What a data name looks like: a letter or "_" first, then letters, digits, "_" or spaces, 40 characters at most.
+    /// </summary>
     private static readonly System.Text.RegularExpressions.Regex KeyName = new(@"\A[A-Za-z_][A-Za-z0-9_ ]{0,39}\z");
 
-    // The names of the data an object (ZDO) can hold, by hash (the save keeps only the hash of each
-    // name), for the object inspector (ZdoKeys), read at the editor's start (GameData). Every string literal of the game's code (the user strings
-    // of assembly_valheim.dll) is a candidate, plus the names the game builds at run time ("pu_id" + i
-    // for ward permissions, "{index}_item" for armour stands...).
+    /// <summary>
+    /// The names of the data an object (ZDO) can hold, by hash (the save keeps only the hash of each
+    /// name), for the object inspector (ZdoKeys), read at the editor's start (GameData). Every string literal
+    /// of the game's code (the user strings of assembly_valheim.dll) is a candidate, plus the names the game
+    /// builds at run time ("pu_id" + i for ward permissions, "{index}_item" for armour stands...).
+    /// </summary>
     public static string ZdoKeysJson(string valheim) => CatalogueJson.Write(ZdoKeyNames(valheim), new CatalogueJson.Style(",", ":", SortKeys: true));
 
+    /// <summary>
+    /// The candidate names (see <c>ZdoKeysJson</c>) by the text of their stable hash; the shortest name wins a shared
+    /// hash.
+    /// </summary>
     private static Dict ZdoKeyNames(string valheim)
     {
         string dll = DataFolders.Select(d => Path.Combine(valheim, d, "Managed", "assembly_valheim.dll")).FirstOrDefault(File.Exists)

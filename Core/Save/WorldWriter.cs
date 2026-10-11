@@ -4,40 +4,77 @@ using TerrainEditor.Editing;
 
 namespace TerrainEditor.Save;
 
-// Writes terrain edits back into a chunked world save, following ZNet.SaveWorldThread:
-//   1. changed chunk files are written under a new version number; untouched objects are copied
-//      byte for byte, terrain objects get new TCData, new terrain objects are appended
-//   2. a new save number (the highest there + 1): _main.<n>.chunks (updated index), .db2 and .fwl2
-//   3. _main.<n>.ok is written last: the game only trusts a save that has it
-//   4. the save is read back and compared with the edits; on any mismatch (or failure) the new files
-//      are removed and the world is as it was: nothing of the old save is touched before this
-//   5. the save it was made from and the chunk files it replaced are removed (KeepBase: kept, for the
-//      open world's next saves, which are made from it too), and the files of Drop (an earlier save
-//      of the same session) with them
-// No backup folder: nothing is removed before the new save has read back right.
+/// <summary>
+/// Writes terrain edits back into a chunked world save, following ZNet.SaveWorldThread:
+/// <list type="number">
+/// <item><description>
+/// changed chunk files are written under a new version number; untouched objects are copied byte for byte, terrain
+/// objects get new TCData, new terrain objects are appended
+/// </description></item>
+/// <item><description>
+/// a new save number (the highest there + 1): _main.&lt;n&gt;.chunks (updated index), .db2 and .fwl2
+/// </description></item>
+/// <item><description>_main.&lt;n&gt;.ok is written last: the game only trusts a save that has it</description></item>
+/// <item><description>
+/// the save is read back and compared with the edits; on any mismatch (or failure) the new files are removed and the
+/// world is as it was: nothing of the old save is touched before this
+/// </description></item>
+/// <item><description>
+/// the save it was made from and the chunk files it replaced are removed (KeepBase: kept, for the open world's next
+/// saves, which are made from it too), and the files of Drop (an earlier save of the same session) with them
+/// </description></item>
+/// </list>
+/// No backup folder: nothing is removed before the new save has read back right.
+/// </summary>
 public static class WorldWriter
 {
+    /// <summary>The only save format version the writer writes (and accepts to change).</summary>
     private const int SaveFileVersion = 41;
 
+    /// <summary>Prefab hash of a player's tombstone, which zone resets never clear.</summary>
     public static readonly int TombstonePrefab = StableHash.Of("Player_tombstone");
 
+    /// <summary>The outcome of a <c>Save</c>.</summary>
+    /// <param name="Saved">Whether a new save was written.</param>
+    /// <param name="Message">What was saved, or why nothing was, for the user.</param>
+    /// <param name="BackupDirectory">Always null: the writer makes no backup folder.</param>
+    /// <param name="ZonesWritten">Zones whose existing terrain objects got new ground data.</param>
+    /// <param name="ZonesCreated">Zones that got a new terrain object.</param>
+    /// <param name="Skipped">Edits that could not be saved, each with the reason.</param>
+    /// <param name="ObjectsDeleted">Objects left out, those cleared by zone resets included.</param>
+    /// <param name="ObjectsAdded">New objects written.</param>
+    /// <param name="ZonesReset">Zones handed back to the world generator.</param>
     public sealed record Result(bool Saved, string Message, string? BackupDirectory, int ZonesWritten, int ZonesCreated, List<string> Skipped, int ObjectsDeleted = 0, int ObjectsAdded = 0, int ZonesReset = 0)
     {
-        // The files the save wrote (its _main files and new chunk files).
+        /// <summary>The files the save wrote (its _main files and new chunk files).</summary>
         public IReadOnlyList<string> Files { get; init; } = [];
-        // The save number written (-1: none).
+        /// <summary>The save number written (-1: none).</summary>
         public int Number { get; init; } = -1;
     }
 
-    // KeepBase: the save it is made from stays (an open world saves again from it). Drop: files of an
-    // earlier save of the same session, removed once this one has read back right. Latest: the newest
-    // save number the caller knows of (its own last save, or the one it opened); a newer one in the
-    // folder was made by the game since, and saving would throw it away, so nothing is saved.
+    /// <summary>How a save treats the files around it.</summary>
+    /// <param name="KeepBase">The save it is made from stays (an open world saves again from it).</param>
+    /// <param name="Drop">
+    /// Files of an earlier save of the same session, removed once this one has read back right.
+    /// </param>
+    /// <param name="Latest">
+    /// The newest save number the caller knows of (its own last save, or the one it opened); a newer one in the folder
+    /// was made by the game since, and saving would throw it away, so nothing is saved.
+    /// </param>
     public sealed record Options(bool KeepBase = false, IReadOnlyCollection<string>? Drop = null, int? Latest = null);
 
-    // deleted: ids (WorldSave.ObjectRefs) of objects to leave out of the new save.
-    // added: new objects copied from a template object of the same prefab. resets: zones handed back
-    // to the world generator (their objects are removed and the zone is marked as not generated).
+    /// <summary>Writes a new save of the world with these changes, or nothing at all (see the type's steps).</summary>
+    /// <param name="world">The world as loaded; its save is the base of the new one.</param>
+    /// <param name="changed">Zones whose ground was edited.</param>
+    /// <param name="deleted">Ids (WorldSave.ObjectRefs) of objects to leave out of the new save.</param>
+    /// <param name="added">
+    /// New objects (WorldSave.NewObjectBytes): their own data when they carry it (Raw), else a copy of an
+    /// object of the same prefab in the world, else a blank object from the game's data.
+    /// </param>
+    /// <param name="resets">
+    /// Zones handed back to the world generator (their objects are removed and the zone is marked as not generated).
+    /// </param>
+    /// <param name="options">File handling; null for the defaults.</param>
     public static Result Save(WorldSave world, IReadOnlyList<ZoneEdit> changed, IReadOnlyCollection<int>? deleted = null, IReadOnlyList<NewObject>? added = null, IReadOnlyList<ZoneReset>? resets = null, Options? options = null)
     {
         options ??= new Options();
@@ -224,7 +261,7 @@ public static class WorldWriter
         return new Result(true, $"Saved {what} to save #{newNumber}.", null, written, created, skipped, removed, addedCount, resets.Count) { Files = newFiles, Number = newNumber };
     }
 
-    // Mirrors TerrainComp.Save: a GZip-compressed ZPackage.
+    /// <summary>Mirrors TerrainComp.Save: a GZip-compressed ZPackage.</summary>
     public static byte[] EncodeTerrain(ZoneEdit e)
     {
         using MemoryStream raw = new();
@@ -267,7 +304,8 @@ public static class WorldWriter
         return compressed.ToArray();
     }
 
-    // A new terrain object: the template object's bytes with this zone's position and data.
+    /// <summary>A new terrain object: the template object's bytes with this zone's position and data.</summary>
+    /// <exception cref="InvalidOperationException">The template's position is not in the short format.</exception>
     private static byte[] NewTerrainObject(WorldSave world, TerrainZone template, ZoneEdit edit, byte[] data)
     {
         ZdoLocation src = template.Source!;
@@ -288,6 +326,17 @@ public static class WorldWriter
         return ms.ToArray();
     }
 
+    /// <summary>
+    /// Writes a chunk file anew: its objects copied byte for byte, less the removed ones, with patched TCData where
+    /// given, then the additions.
+    /// </summary>
+    /// <param name="patches">New TCData by object start offset, or null.</param>
+    /// <param name="additions">Objects to append, or null.</param>
+    /// <param name="removals">Start offsets of objects to leave out, or null.</param>
+    /// <param name="sourcePath">The chunk file as it is.</param>
+    /// <param name="targetPath">The new chunk file; must not exist yet.</param>
+    /// <param name="file">The chunk file as read.</param>
+    /// <returns>How many objects the new file holds.</returns>
     private static int WriteChunk(string sourcePath, string targetPath, ChunkFile file, Dictionary<long, (ZdoLocation Loc, byte[] Data)>? patches, List<byte[]>? additions, HashSet<long>? removals)
     {
         byte[] source = File.ReadAllBytes(sourcePath);
@@ -326,6 +375,7 @@ public static class WorldWriter
         return count;
     }
 
+    /// <summary>The new .chunks index: every chunk file, with the new version and count of those rewritten.</summary>
     private static void WriteIndex(string path, List<ChunkFile> chunks, Dictionary<ChunkFile, (uint Version, int Count)> updated)
     {
         using FileStream fs = new(path, FileMode.Create, FileAccess.Write);
@@ -345,6 +395,7 @@ public static class WorldWriter
         fs.Flush(flushToDisk: true);
     }
 
+    /// <summary>Writes a file and flushes it to disk before returning.</summary>
     private static void WriteAllBytesDurable(string path, byte[] bytes)
     {
         using FileStream fs = new(path, FileMode.Create, FileAccess.Write);
@@ -352,8 +403,10 @@ public static class WorldWriter
         fs.Flush(flushToDisk: true);
     }
 
+    /// <summary>The file extensions of one save number's _main files.</summary>
     private static readonly string[] MainExtensions = [".ok", ".chunks", ".db2", ".fwl2"];
 
+    /// <summary>Deletes the files, ignoring any that cannot be deleted.</summary>
     private static void RemoveAll(IEnumerable<string> files)
     {
         foreach (string f in files)
@@ -368,21 +421,25 @@ public static class WorldWriter
         }
     }
 
-    // Why a save made from save number `known` would throw away a newer one in the folder (the game
-    // saved the world since it was read), or null when there is none. Only a complete save counts: one
-    // cut short long ago would block every save.
+    /// <summary>
+    /// Why a save made from save number <c>known</c> would throw away a newer one in the folder (the game saved the
+    /// world since it was read), or null when there is none. Only a complete save counts: one cut short long ago would
+    /// block every save.
+    /// </summary>
     public static string? Newer(string dir, int known) => WorldSave.CommittedSave(dir) is int newest && newest > known
         ? $"Valheim saved this world (save #{newest}) after the editor read it: saving now would throw away what was done in the game since. Nothing was saved. Leave the world and open it again to edit the game's save."
         : null;
 
-    // The highest save number in a world folder (-1: none).
+    /// <summary>The highest save number in a world folder (-1: none).</summary>
     public static int LatestNumber(string dir) => Directory.GetFiles(dir, "_main.*.chunks")
         .Select(f => Path.GetFileName(f).Split('.')).Where(p => p.Length == 3 && int.TryParse(p[1], out _)).Select(p => int.Parse(p[1], System.Globalization.CultureInfo.InvariantCulture)).DefaultIfEmpty(-1).Max();
 
-    // The world folder down to its latest save: earlier save numbers' files and the chunk files its
-    // index does not list go (an open world's base, once it is left). A newer save without its commit
-    // marker (cut short, or the game writing it right now) is left alone, and so are the chunk files
-    // then; so are files named _main.<something else>.
+    /// <summary>
+    /// The world folder down to its latest save: earlier save numbers' files and the chunk files its index does not
+    /// list go (an open world's base, once it is left). A newer save without its commit marker (cut short, or the game
+    /// writing it right now) is left alone, and so are the chunk files then; so are files named _main.&lt;something
+    /// else&gt;.
+    /// </summary>
     public static void Prune(string dir)
     {
         if (LatestNumber(dir) < 0)
@@ -401,6 +458,11 @@ public static class WorldWriter
         RemoveAll([.. old]);
     }
 
+    /// <summary>
+    /// Reads the new save back and checks it against what was meant: reset zones no longer generated, the object count,
+    /// the saved zones' ground, and every other zone's ground untouched.
+    /// </summary>
+    /// <returns>What is wrong, or null when the save is right.</returns>
     internal static string? Verify(string dir, WorldSave before, IReadOnlyList<ZoneEdit> saved, int created, int removed, HashSet<(int, int)> groundReset, IReadOnlyList<ZoneReset> resets)
     {
         var after = WorldSave.Load(dir);

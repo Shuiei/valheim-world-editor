@@ -2,19 +2,36 @@ using System.Text.Json;
 
 namespace TerrainEditor.Terrain;
 
-// What build pieces cost in game, for the blueprint library: each piece's English name, its resources
-// (item and amount, as the hammer takes them) and the crafting station that must be near to build it,
-// read from the player's own Valheim (GameData; the tests use tests/fixtures/piece-cost.json).
+/// <summary>
+/// What build pieces cost in game, for the blueprint library: each piece's English name, its resources
+/// (item and amount, as the hammer takes them) and the crafting station that must be near to build it,
+/// read from the player's own Valheim (GameData; the tests use tests/fixtures/piece-cost.json).
+/// </summary>
 public static class PieceCost
 {
+    /// <summary>
+    /// One piece's recipe.
+    /// </summary>
+    /// <param name="Name">The piece's English name.</param>
+    /// <param name="Station">The crafting station that must be near to build it; null when none.</param>
+    /// <param name="Resources">Item prefab names and amounts, as the hammer takes them.</param>
     public sealed record Info(string Name, string? Station, (string Item, int Amount)[] Resources);
 
-    // None until Use: no world or Workshop opens before then (GameData).
+    /// <summary>
+    /// None until Use: no world or Workshop opens before then (GameData).
+    /// </summary>
     private static volatile Data _catalogue = new([], []);
 
+    /// <summary>
+    /// What Use read, swapped in whole so readers never see half of it.
+    /// </summary>
+    /// <param name="Pieces">Recipes by piece prefab name.</param>
+    /// <param name="Items">English item names by item prefab name.</param>
     private sealed record Data(Dictionary<string, Info> Pieces, Dictionary<string, string> Items);
 
-    // The pieces and items, as GameCatalogues' CostScan writes them.
+    /// <summary>
+    /// Takes the pieces and items, as GameCatalogues' CostScan writes them.
+    /// </summary>
     public static void Use(string json)
     {
         using var doc = JsonDocument.Parse(json);
@@ -28,19 +45,35 @@ public static class PieceCost
         _catalogue = new Data(pieces, items);
     }
 
+    /// <summary>
+    /// A piece's recipe by prefab name; null for pieces the game has no recipe for.
+    /// </summary>
     public static Info? Get(string prefab) => _catalogue.Pieces.GetValueOrDefault(prefab);
 
-    // An item's English name (Wood, Fine wood, Bronze nails), else its prefab name.
+    /// <summary>
+    /// An item's English name (Wood, Fine wood, Bronze nails), else its prefab name.
+    /// </summary>
     public static string ItemName(string item) => _catalogue.Items.GetValueOrDefault(item, item);
 
-    // A piece's English name, else its prefab name.
+    /// <summary>
+    /// A piece's English name, else its prefab name.
+    /// </summary>
     public static string PieceName(string prefab) => Get(prefab)?.Name ?? prefab;
 
-    // What a building costs: materials (most first), the stations it needs, and the kinds of piece the
-    // game has no recipe for (from mods, or not buildable) with how many there are.
+    /// <summary>
+    /// What a building costs.
+    /// </summary>
+    /// <param name="Materials">Item prefab name, English name and amount, most first.</param>
+    /// <param name="Stations">The crafting stations it needs, sorted.</param>
+    /// <param name="Unknown">The kinds of piece the game has no recipe for (from mods, or not buildable) with how
+    /// many there are.</param>
     public sealed record Total(List<(string Item, string Name, int Amount)> Materials, List<string> Stations, Dictionary<string, int> Unknown)
     {
-        // "Wood 24 · Stone 8 · Resin 2", the first few (… when there are more), and its stations.
+        /// <summary>
+        /// "Wood 24 · Stone 8 · Resin 2", the first few (… when there are more), and its stations; "Free" when
+        /// there are no materials, or "Cost unknown" when only pieces without a recipe.
+        /// </summary>
+        /// <param name="most">How many materials to list.</param>
         public string Describe(int most = 4)
         {
             if (Materials.Count == 0)
@@ -52,7 +85,9 @@ public static class PieceCost
         }
     }
 
-    // The cost of so many of each piece kind (prefab name → count).
+    /// <summary>
+    /// The cost of so many of each piece kind (prefab name → count).
+    /// </summary>
     public static Total Of(IEnumerable<KeyValuePair<string, int>> kinds)
     {
         var amounts = new Dictionary<string, int>();
@@ -78,5 +113,8 @@ public static class PieceCost
         return new Total(materials, [.. stations], unknown);
     }
 
+    /// <summary>
+    /// The cost of a list of pieces by prefab name, one entry per piece.
+    /// </summary>
     public static Total Of(IEnumerable<string> prefabs) => Of(prefabs.GroupBy(p => p).Select(g => KeyValuePair.Create(g.Key, g.Count())));
 }

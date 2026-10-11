@@ -6,70 +6,129 @@ using Rnd = ValheimGen.UnityEngine.Random;
 
 namespace TerrainEditor.Editing;
 
-// The game's dungeons (Frost Caves, crypts, Dvergr mines...) as the editor's Dungeon tool edits them.
-// A dungeon is one object (DG_Cave, DG_SunkenCrypt...) whose byte array "roomData" lists its rooms: the
-// stable hash of each room prefab's name, its position and rotation. The game builds the rooms from
-// that list when the dungeon loads (DungeonGenerator.Load/Spawn) and never checks it against its own
-// generator, so a list made here is built as it is. Rooms and their openings come from the player's
-// Valheim (GameData; the tests use tests/fixtures/dungeon-rooms.json). All in Unity's world space.
+/// <summary>
+/// The game's dungeons (Frost Caves, crypts, Dvergr mines...) as the editor's Dungeon tool edits them.
+/// A dungeon is one object (DG_Cave, DG_SunkenCrypt...) whose byte array "roomData" lists its rooms: the
+/// stable hash of each room prefab's name, its position and rotation. The game builds the rooms from
+/// that list when the dungeon loads (DungeonGenerator.Load/Spawn) and never checks it against its own
+/// generator, so a list made here is built as it is. Rooms and their openings come from the player's
+/// Valheim (GameData; the tests use tests/fixtures/dungeon-rooms.json). All in Unity's world space.
+/// </summary>
 public static class Dungeons
 {
+    /// <summary>The object data key of a dungeon's room list ("roomData").</summary>
     public static readonly int RoomDataKey = StableHash.Of("roomData");
 
-    // One opening of a room, in the room's own frame. Two rooms join where openings of the same type
-    // meet at one point, facing each other.
-    // AllowDoor: a door can stand there (OnlyIfOther: only when the other room's opening allows one too).
+    /// <summary>
+    /// One opening of a room, in the room's own frame. Two rooms join where openings of the same type
+    /// meet at one point, facing each other.
+    /// </summary>
+    /// <param name="Type">Its connection type; only openings of the same type join.</param>
+    /// <param name="Entrance">The entrance room's way in, from outside the dungeon.</param>
+    /// <param name="AllowDoor">A door can stand there.</param>
+    /// <param name="Position">Where it is in the room's frame.</param>
+    /// <param name="Rotation">Which way it faces in the room's frame.</param>
+    /// <param name="OnlyIfOther">A door only when the other room's opening allows one too.</param>
     public sealed record Opening(string Type, bool Entrance, bool AllowDoor, Vector3 Position, Quaternion Rotation, bool OnlyIfOther = false);
 
-    // A networked object the game makes with a room when it first generates it; Node is where it sits in
-    // the room's tree of random parts (-1: on the room itself).
+    /// <summary>A networked object the game makes with a room when it first generates it.</summary>
+    /// <param name="Prefab">The object's prefab name.</param>
+    /// <param name="Position">In the room's frame.</param>
+    /// <param name="Rotation">In the room's frame.</param>
+    /// <param name="Node">Where it sits in the room's tree of random parts (-1: on the room itself).</param>
     public sealed record Content(string Prefab, Vector3 Position, Quaternion Rotation, int Node);
 
-    // RandomSpawn: the node is there with this chance (%) when the dungeon has the theme (0: any) and it
-    // is within the heights; when not, Off (a node, -1 none) is shown instead.
+    /// <summary>
+    /// RandomSpawn: the node is there with this chance (%) when the dungeon has the theme (0: any) and it
+    /// is within the heights; when not, Off (a node, -1 none) is shown instead.
+    /// </summary>
+    /// <param name="Node">The part it shows or hides.</param>
+    /// <param name="Chance">Its chance (%).</param>
+    /// <param name="Theme">The dungeon theme flags it needs (0: any).</param>
+    /// <param name="Off">The node shown when it is not (-1 none).</param>
+    /// <param name="MinY">Lowest room height it is there at (metres).</param>
+    /// <param name="MaxY">Highest room height it is there at (metres).</param>
     public sealed record Spawn(int Node, float Chance, int Theme, int Off, int MinY, int MaxY);
 
-    // RandomObject: one of the choices (node, weight) is kept, the others are not.
+    /// <summary>RandomObject: one of the choices (node, weight) is kept, the others are not.</summary>
+    /// <param name="Node">Its own node, hidden when no choice is kept (wrong theme or height).</param>
+    /// <param name="Theme">The dungeon theme flags it needs (0: any).</param>
+    /// <param name="Choices">The nodes to choose from and their weights.</param>
+    /// <param name="MinY">Lowest room height a choice is kept at (metres).</param>
+    /// <param name="MaxY">Highest room height a choice is kept at (metres).</param>
     public sealed record Pick(int Node, int Theme, (int Node, float Weight)[] Choices, int MinY, int MaxY);
 
+    /// <summary>A room prefab of the game's dungeons, as GameData's dungeon scan describes it.</summary>
+    /// <param name="Name">Its prefab name.</param>
+    /// <param name="Hash">The stable hash of its name, as in a room list.</param>
+    /// <param name="Theme">Its theme flags; it can go in dungeons sharing one.</param>
+    /// <param name="Size">Its box (metres, Room.m_size), centred on its position.</param>
+    /// <param name="EndCap">Closes an open end.</param>
+    /// <param name="Entrance">An entrance room, the first of a dungeon.</param>
+    /// <param name="Divider">The game's m_divider; not joined by the generator here.</param>
+    /// <param name="EndCapPrio">The game's m_endCapPrio; the Dungeon tool's Close open ends picks the highest that fits.</param>
+    /// <param name="Weight">How often it is picked against the others (Room.m_weight).</param>
+    /// <param name="Perimeter">The game's m_perimeter (kept, not used here).</param>
+    /// <param name="Enabled">The game uses it; disabled rooms are left out of RoomsFor.</param>
+    /// <param name="Openings">Where other rooms join it.</param>
+    /// <param name="Contents">The networked objects it makes.</param>
+    /// <param name="Spawns">Its RandomSpawn parts, rolled in order.</param>
+    /// <param name="Picks">Its RandomObject parts, rolled after the spawns.</param>
+    /// <param name="Nodes">Each random part's parent node (-1: the room itself).</param>
     public sealed record Room(string Name, int Hash, int Theme, Vector3 Size, bool EndCap, bool Entrance, bool Divider, int EndCapPrio,
         float Weight, bool Perimeter, bool Enabled, Opening[] Openings, Content[] Contents, Spawn[] Spawns, Pick[] Picks, int[] Nodes);
 
-    // A kind of dungeon (the DG_ prefab): its room themes; Interior: built in the sky above its entrance
-    // (DungeonGenerator.Algorithm.Dungeon), not laid out on the ground (camps, villages); ZoneSize: the
-    // box its rooms stay in, around the zone's centre at the dungeon's height.
-    // CustomInterior: rooms are rolled by their place relative to the dungeon (m_useCustomInteriorTransform);
-    // BaseSeed: the dungeon's seed is added to each room's roll (m_addBaseSeedToRandomSpawn).
-    // Doors: its door types (prefab, opening type, chance; 0 takes DoorChance).
+    /// <summary>A kind of dungeon (the DG_ prefab).</summary>
+    /// <param name="Name">The DG_ prefab's name.</param>
+    /// <param name="Hash">The stable hash of its name (the object's prefab).</param>
+    /// <param name="Themes">Its room themes (flags).</param>
+    /// <param name="Interior">
+    /// Built in the sky above its entrance (DungeonGenerator.Algorithm.Dungeon), not laid out on the ground
+    /// (camps, villages).
+    /// </param>
+    /// <param name="ZoneSize">The box its rooms stay in, around the zone's centre at the dungeon's height (metres).</param>
+    /// <param name="CustomInterior">Rooms are rolled by their place relative to the dungeon (m_useCustomInteriorTransform).</param>
+    /// <param name="BaseSeed">The dungeon's seed is added to each room's roll (m_addBaseSeedToRandomSpawn).</param>
     public sealed record Kind(string Name, int Hash, int Themes, bool Interior, Vector3 ZoneSize, bool CustomInterior = false, bool BaseSeed = false)
     {
+        /// <summary>Its door types (prefab, opening type, chance; 0 takes DoorChance).</summary>
         public (string Prefab, string Type, float Chance)[] Doors { get; init; } = [];
 
+        /// <summary>The chance (0 to 1) of a door whose type gives none.</summary>
         public float DoorChance { get; init; } = 0.5f;
     }
 
+    /// <summary>The rooms and dungeon kinds read, by name hash.</summary>
     private sealed record Catalog(Dictionary<int, Room> Rooms, Dictionary<int, Kind> Kinds);
 
-    // None until Use: no world opens before then (GameData).
+    /// <summary>None until Use: no world opens before then (GameData).</summary>
     private static volatile Catalog _all = new([], []);
 
-    // The dungeons and rooms as GameCatalogues' DungeonScan writes them.
+    /// <summary>Takes the dungeons and rooms as GameCatalogues' DungeonScan writes them, in place of any before.</summary>
     public static void Use(string json) => _all = Load(json);
 
+    /// <summary>The room of this name hash, or null when it is not known.</summary>
     public static Room? RoomOf(int hash) => _all.Rooms.GetValueOrDefault(hash);
 
+    /// <summary>The room of this prefab name, or null when it is not known.</summary>
     public static Room? RoomOf(string name) => RoomOf(StableHash.Of(name));
 
+    /// <summary>The dungeon kind of an object's prefab hash, or null when it is not a dungeon.</summary>
     public static Kind? KindOf(int prefab) => _all.Kinds.GetValueOrDefault(prefab);
 
+    /// <summary>Every dungeon kind, by name.</summary>
     public static IEnumerable<Kind> Kinds => _all.Kinds.Values.OrderBy(k => k.Name, StringComparer.Ordinal);
 
+    /// <summary>Every room, by name.</summary>
     public static IEnumerable<Room> AllRooms => _all.Rooms.Values.OrderBy(r => r.Name, StringComparer.Ordinal);
 
-    // The rooms a dungeon of this kind can hold: those of its themes, the game's way
-    // (DungeonGenerator.SetupAvailableRooms: enabled rooms whose theme shares a flag with the dungeon's).
+    /// <summary>
+    /// The rooms a dungeon of this kind can hold: those of its themes, the game's way
+    /// (DungeonGenerator.SetupAvailableRooms: enabled rooms whose theme shares a flag with the dungeon's).
+    /// </summary>
     public static IEnumerable<Room> RoomsFor(Kind kind) => AllRooms.Where(r => r.Enabled && (r.Theme & kind.Themes) != 0);
 
+    /// <summary>Reads the scan's JSON ("rooms" and "dungeons", each by prefab name).</summary>
     private static Catalog Load(string json)
     {
         using var doc = JsonDocument.Parse(json);
@@ -104,20 +163,30 @@ public static class Dungeons
     }
 
     // ---- The room list.
+    /// <summary>One entry of a dungeon's room list: a room where it stands.</summary>
+    /// <param name="Hash">The stable hash of the room prefab's name.</param>
+    /// <param name="Position">World space.</param>
+    /// <param name="Rotation">World space.</param>
     public sealed record Placed(int Hash, Vector3 Position, Quaternion Rotation)
     {
+        /// <summary>The room, or null when the hash is not a known room.</summary>
         public Room? Room => RoomOf(Hash);
 
+        /// <summary>The room's name, or its hash when it is not known.</summary>
         public string Name => Room?.Name ?? Hash.ToString(System.Globalization.CultureInfo.InvariantCulture);
 
-        // An opening in world space: where it is and which way it faces.
+        /// <summary>An opening in world space: where it is and which way it faces.</summary>
         public (Vector3 Position, Quaternion Rotation) At(Opening o) => (Position + Vector3.Transform(o.Position, Rotation), Rotation * o.Rotation);
 
+        /// <summary>A point of the room's own frame in world space.</summary>
         public Vector3 ToWorld(Vector3 local) => Position + Vector3.Transform(local, Rotation);
     }
 
-    // DungeonGenerator.Save: an int count, then per room its hash (int), position (3 floats) and
-    // rotation (Euler angles, 3 floats).
+    /// <summary>
+    /// Reads a room list as DungeonGenerator.Save writes it: an int count, then per room its hash (int),
+    /// position (3 floats) and rotation (Euler angles, 3 floats).
+    /// </summary>
+    /// <exception cref="InvalidDataException">The count does not fit the bytes.</exception>
     public static List<Placed> Read(byte[] data)
     {
         using var r = new BinaryReader(new MemoryStream(data));
@@ -137,6 +206,7 @@ public static class Dungeons
         return list;
     }
 
+    /// <summary>Writes a room list the way the game saves it (see <see cref="Read"/>).</summary>
     public static byte[] Write(IReadOnlyList<Placed> rooms)
     {
         var ms = new MemoryStream(4 + rooms.Count * 28);
@@ -158,9 +228,12 @@ public static class Dungeons
         return ms.ToArray();
     }
 
-    // ---- Joining rooms, the game's way (DungeonGenerator.PlaceRoom + CalculateRoomPosRot): the new
-    // room is turned so that its opening `mine` faces the other way from the open one, and moved so the
-    // two meet.
+    // ---- Joining rooms.
+    /// <summary>
+    /// Joins a room the game's way (DungeonGenerator.PlaceRoom + CalculateRoomPosRot): the new room is
+    /// turned so that its opening <paramref name="mine"/> faces the other way from the open one, and moved
+    /// so the two meet.
+    /// </summary>
     public static Placed Attach(Room room, Opening mine, Vector3 openPosition, Quaternion openRotation)
     {
         Quaternion exit = openRotation * Quaternion.CreateFromAxisAngle(Vector3.UnitY, MathF.PI);
@@ -169,14 +242,25 @@ public static class Dungeons
         return new Placed(room.Hash, pos, Quaternion.Normalize(rot));
     }
 
-    // The openings a room can join an open one of this type with: those of the same type (an end cap's
-    // only opening too), never the entrance's way in.
+    /// <summary>
+    /// The openings a room can join an open one of this type with: those of the same type (an end cap's
+    /// only opening too), never the entrance's way in.
+    /// </summary>
     public static IEnumerable<Opening> Matching(Room room, string type) => room.Openings.Where(o => !o.Entrance && o.Type == type);
 
-    // An opening of a placed room and whether another room meets it there (RoomConnection.TestContact:
-    // within 0.1 m).
+    /// <summary>An opening of a placed room, in world space.</summary>
+    /// <param name="Room">The index of its room in the list.</param>
+    /// <param name="Index">The index of the opening in its room's openings.</param>
+    /// <param name="Position">Where it is.</param>
+    /// <param name="Rotation">Which way it faces.</param>
+    /// <param name="Type">Its connection type.</param>
+    /// <param name="Entrance">The entrance room's way in.</param>
     public sealed record OpenEnd(int Room, int Index, Vector3 Position, Quaternion Rotation, string Type, bool Entrance);
 
+    /// <summary>
+    /// The openings of the placed rooms (unknown rooms have none); with <paramref name="freeOnly"/>, only
+    /// those no other room meets (RoomConnection.TestContact: within 0.1 m), never the entrance's way in.
+    /// </summary>
     public static List<OpenEnd> Openings(IReadOnlyList<Placed> rooms, bool freeOnly)
     {
         var all = new List<OpenEnd>();
@@ -201,11 +285,21 @@ public static class Dungeons
         return [.. all.Where(a => !a.Entrance && !all.Any(b => b.Room != a.Room && Vector3.DistanceSquared(a.Position, b.Position) < 0.01f))];
     }
 
-    // ---- Doors. Where two rooms meet, the game may put a door (DungeonGenerator.PlaceDoors): at the
-    // opening of the room that was there first, facing as it does, when that opening allows a door
-    // (and, OnlyIfOther, the new room's does too), and not where an end cap closes it.
+    // ---- Doors.
+    /// <summary>
+    /// Where two rooms meet, the game may put a door (DungeonGenerator.PlaceDoors): at the opening of the
+    /// room that was there first, facing as it does, when that opening allows a door (and, OnlyIfOther, the
+    /// new room's does too), and not where an end cap closes it.
+    /// </summary>
+    /// <param name="First">The index of the room that was there first.</param>
+    /// <param name="Second">The index of the room that joined it.</param>
+    /// <param name="Position">The first room's opening, in world space.</param>
+    /// <param name="Rotation">Which way the first room's opening faces.</param>
+    /// <param name="Type">The openings' connection type.</param>
+    /// <param name="DoorAllowed">Whether a door may stand there.</param>
     public sealed record Joint(int First, int Second, Vector3 Position, Quaternion Rotation, string Type, bool DoorAllowed);
 
+    /// <summary>Every place where two placed rooms' openings meet (within 0.1 m).</summary>
     public static List<Joint> Joints(IReadOnlyList<Placed> rooms)
     {
         var joints = new List<Joint>();
@@ -227,11 +321,14 @@ public static class Dungeons
         return joints;
     }
 
-    // The door types a joint of this type can take in this kind of dungeon.
+    /// <summary>The door types a joint of this type can take in this kind of dungeon.</summary>
     public static IEnumerable<(string Prefab, string Type, float Chance)> DoorsFor(Kind kind, string type) => kind.Doors.Where(d => d.Type == type);
 
-    // The game's roll for a door at a joint (FindDoorType, then its chance): the door, or null. random:
-    // numbers from 0 to 1.
+    /// <summary>The game's roll for a door at a joint (FindDoorType, then its chance).</summary>
+    /// <param name="kind">The dungeon kind, for its door types.</param>
+    /// <param name="joint">Where the rooms meet.</param>
+    /// <param name="random">Numbers from 0 to 1; called twice when a door can stand there.</param>
+    /// <returns>The door's prefab, or null.</returns>
     public static string? RollDoor(Kind kind, Joint joint, Func<float> random)
     {
         var types = DoorsFor(kind, joint.Type).ToList();
@@ -244,15 +341,22 @@ public static class Dungeons
         return random() <= chance ? door.Prefab : null;
     }
 
-    // ---- Room boxes (Room.m_size, centred on the room's position, turned with it), for picking and for
-    // the game's overlap test (DungeonGenerator.TestCollision: the new room's box 0.1 m smaller).
+    // ---- Room boxes.
+    /// <summary>
+    /// A room's box (Room.m_size, centred on the room's position, turned with it), for picking and for
+    /// the game's overlap test (DungeonGenerator.TestCollision: the new room's box 0.1 m smaller). An
+    /// unknown room gets a 4 m cube.
+    /// </summary>
     public static (Vector3 Center, Vector3 Half, Quaternion Rotation) Box(Placed p)
     {
         Vector3 size = p.Room?.Size ?? new Vector3(4);
         return (p.Position, size / 2f, p.Rotation);
     }
 
-    // Indexes of the placed rooms the box of `p` (at index `skip`, -1 for a new one) overlaps.
+    /// <summary>
+    /// Indexes of the placed rooms the box of <paramref name="p"/> (at index <paramref name="skip"/>, -1 for
+    /// a new one) overlaps; unknown rooms and rooms without a floor size never count.
+    /// </summary>
     public static List<int> Overlaps(IReadOnlyList<Placed> rooms, Placed p, int skip = -1)
     {
         var hits = new List<int>();
@@ -276,7 +380,7 @@ public static class Dungeons
         return hits;
     }
 
-    // Separating axis test of two turned boxes (centre, half size, rotation).
+    /// <summary>Separating axis test of two turned boxes (centre, half size, rotation); touching faces do not count.</summary>
     public static bool BoxesOverlap((Vector3 C, Vector3 H, Quaternion R) a, (Vector3 C, Vector3 H, Quaternion R) b)
     {
         Vector3[] ax = [Vector3.Transform(Vector3.UnitX, a.R), Vector3.Transform(Vector3.UnitY, a.R), Vector3.Transform(Vector3.UnitZ, a.R)];
@@ -318,8 +422,10 @@ public static class Dungeons
         return true;
     }
 
-    // Whether a room stays inside the dungeon's box (DungeonGenerator.IsInsideDungeon: all eight corners
-    // of its box within m_zoneSize around the zone's centre, at the dungeon's height).
+    /// <summary>
+    /// Whether a room stays inside the dungeon's box (DungeonGenerator.IsInsideDungeon: all eight corners
+    /// of its box within m_zoneSize around the zone's centre, at the dungeon's height). An unknown room does.
+    /// </summary>
     public static bool Inside(Kind kind, Vector3 dungeonPosition, Placed p)
     {
         if (p.Room is not { } room)
@@ -347,19 +453,26 @@ public static class Dungeons
         return true;
     }
 
-    // ---- What the game makes with a room when it generates it (DungeonGenerator.PlaceRoom, SpawnMode
-    // Full): its networked objects, those its random parts keep, rolled from the room's place the game's
-    // way (Random.InitState, then each RandomSpawn's chance, then each RandomObject's pick, in order). The
-    // random parts' own heights are taken as the room's.
+    // ---- What the game makes with a room when it generates it.
+    /// <summary>An object the game makes with a room, in world space.</summary>
+    /// <param name="Prefab">The object's prefab name.</param>
+    /// <param name="Position">World space.</param>
+    /// <param name="Rotation">World space.</param>
     public sealed record Made(string Prefab, Vector3 Position, Quaternion Rotation);
 
-    // DungeonGenerator.GetSeed: the world's seed and the dungeon's zone and place.
+    /// <summary>The dungeon's seed (DungeonGenerator.GetSeed): the world's seed and the dungeon's zone and place.</summary>
     public static int Seed(int worldSeed, Vector3 dungeonPosition)
     {
         int zx = (int)MathF.Floor((dungeonPosition.X + 32f) / 64f), zz = (int)MathF.Floor((dungeonPosition.Z + 32f) / 64f);
         return unchecked(worldSeed + zx * 4271 + zz * -7187 + (int)dungeonPosition.X * -4271 + (int)dungeonPosition.Y * 9187 + (int)dungeonPosition.Z * -2134);
     }
 
+    /// <summary>
+    /// What the game makes with a room when it generates it (DungeonGenerator.PlaceRoom, SpawnMode Full): its
+    /// networked objects, those its random parts keep, rolled from the room's place the game's way
+    /// (Random.InitState, then each RandomSpawn's chance, then each RandomObject's pick, in order). The
+    /// random parts' own heights are taken as the room's. The shared Unity random state is put back after.
+    /// </summary>
     public static List<Made> Contents(Placed p, Kind kind, Vector3 dungeonPosition, int worldSeed)
     {
         var made = new List<Made>();
@@ -443,8 +556,14 @@ public static class Dungeons
     }
 
     // ---- Dungeons of a save.
+    /// <summary>A dungeon object found in a save.</summary>
+    /// <param name="Id">The object's id in the save.</param>
+    /// <param name="Kind">Its kind.</param>
+    /// <param name="Position">Where it stands.</param>
+    /// <param name="Rooms">How many rooms its list has (0: none, or not readable).</param>
     public sealed record Found(int Id, Kind Kind, Vector3 Position, int Rooms);
 
+    /// <summary>Every dungeon object of the save, with its room count.</summary>
     public static List<Found> In(WorldSave world)
     {
         var found = new List<Found>();
@@ -468,7 +587,7 @@ public static class Dungeons
         return found;
     }
 
-    // The dungeon object's bytes with another room list.
+    /// <summary>The dungeon object's bytes with another room list.</summary>
     public static byte[] WithRooms(byte[] dungeonObject, IReadOnlyList<Placed> rooms)
     {
         var z = ZdoData.Parse(dungeonObject);
