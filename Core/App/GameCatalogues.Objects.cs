@@ -9,8 +9,8 @@ using V3 = (double X, double Y, double Z);
 
 namespace TerrainEditor.App;
 
-// The catalogue of the game's vegetation; and what the editor reads of the game's other objects at its
-// start (GameData): the prefabs, the terrain modifiers, the names of object data and the cave rocks.
+// What the editor reads of the game's other objects at its start (GameData): the prefabs, the
+// vegetation rules, the terrain modifiers, the names of object data and the cave rocks.
 public static partial class GameCatalogues
 {
 	private const int LodGroupType = (int)AssetClassID.LODGroup;
@@ -428,8 +428,10 @@ public static partial class GameCatalogues
 		}
 	}
 
-	// vegetation.json: the game's vegetation rules, ZoneSystem's m_vegetation then the LocationLists'
-	// (by m_sortOrder), as the game merges them; "Regrow nature" places by these rules. Alt biomes'
+	// The game's vegetation rules, ZoneSystem's m_vegetation then the LocationLists' (by m_sortOrder), as
+	// the game merges them; "Regrow nature" places by these rules. Read at the editor's start (GameData):
+	// only the main scene's bundles, where ZoneSystem and the lists are (as for GameLocations), then the
+	// prefabs' and scripts' bundles. Alt biomes'
 	// extra vegetation (Deep North parts the editor's generator does not model) is left out. "draws":
 	// the random draws the prefab's components make in Awake when the game creates it (they shift the
 	// generator's sequence for the rest of the rule): LodFadeInOut (with a LODGroup: the camera is more
@@ -437,7 +439,25 @@ public static partial class GameCatalogues
 	// each, RandomFlyingBird two, Pickable one when it respawns (m_respawnTimeMinutes > 0). Checked
 	// against a played world: with these, the generated spots match the saved ones. Components of
 	// inactive children do not wake.
-	private sealed class VegetationScan : IScan
+	public static string VegetationJson(GameBundles bundles)
+	{
+		using var game = new Game(bundles.Folder);
+		// For the prefabs, in bundles not opened yet.
+		game.IndexCabs();
+		var scan = new VegetationScan();
+		foreach (string name in GameLocations.MainSceneBundles(bundles).Order(StringComparer.Ordinal))
+		{
+			using var b = game.Open(name) ?? throw new InvalidDataException($"{name} cannot be read");
+			scan.Read(b);
+		}
+		if (!scan.Found)
+		{
+			throw new InvalidDataException("the main scene's ZoneSystem was not found");
+		}
+		return CatalogueJson.Write(scan.Finish(game), new CatalogueJson.Style(",", Indent: 0));
+	}
+
+	private sealed class VegetationScan
 	{
 		private static readonly string[] Keep = { "m_name", "m_enable", "m_min", "m_max", "m_forcePlacement", "m_scaleMin", "m_scaleMax", "m_randTilt", "m_chanceToUseGroundTilt", "m_biome", "m_biomeArea", "m_blockCheck", "m_snapToStaticSolid", "m_minAltitude", "m_maxAltitude", "m_minVegetation", "m_maxVegetation", "m_surroundCheckVegetation", "m_surroundCheckDistance", "m_surroundCheckLayers", "m_surroundBetterThanAverage", "m_minOceanDepth", "m_maxOceanDepth", "m_minTilt", "m_maxTilt", "m_terrainDeltaRadius", "m_maxTerrainDelta", "m_minTerrainDelta", "m_snapToWater", "m_groundOffset", "m_groupSizeMin", "m_groupSizeMax", "m_groupRadius", "m_minDistanceFromCenter", "m_maxDistanceFromCenter", "m_inForest", "m_forestTresholdMin", "m_forestTresholdMax" };
 
@@ -447,13 +467,27 @@ public static partial class GameCatalogues
 		// The LocationLists, each once (some bundles repeat them): by (sort order, first rule's name, rules).
 		private readonly Dictionary<(long Order, string First, int Count), List<(Dict Rule, Ref Prefab)>> _lists = new();
 
+		public bool Found => _zone != null;
+
 		public void Read(Bundle b)
 		{
+			// The scripts with vegetation, told by their fields in the type tree (once per script): only
+			// their objects are read.
+			var byScript = new Dictionary<(Bundle.Inner, ushort), bool>();
+			bool HasVegetation(Bundle.Inner f, AssetFileInfo info)
+			{
+				ushort index = info.GetScriptIndex(f.Assets.file);
+				if (!byScript.TryGetValue((f, index), out bool has))
+				{
+					byScript[(f, index)] = has = b.FieldNames(f, info).Contains("m_vegetation");
+				}
+				return has;
+			}
 			foreach (var f in b.Files)
 			{
 				foreach (var info in f.Assets.file.AssetInfos)
 				{
-					if (info.TypeId != MonoBehaviourType || b.Field(f, info.PathId) is not { } d || !Has(d, "m_vegetation"))
+					if (info.TypeId != MonoBehaviourType || !HasVegetation(f, info) || b.Field(f, info.PathId) is not { } d)
 					{
 						continue;
 					}

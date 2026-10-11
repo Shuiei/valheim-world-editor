@@ -16,7 +16,7 @@ public static class GameData
 	// bundles -> JSON; null: in the one pass over the bundles, GameCatalogues.ReadAtStart), who takes it,
 	// and how the tests' copy is trimmed (the game's and the copy's JSON -> what the copy keeps; by
 	// default the entries it has).
-	private sealed record Kind(string Name, Func<string, GameBundles, string>? Read, Action<string> Use, Func<JsonElement, JsonElement, Dictionary<string, object>>? Trim = null);
+	private sealed record Kind(string Name, Func<string, GameBundles, string>? Read, Action<string> Use, Func<JsonElement, JsonElement, object>? Trim = null);
 
 	private static readonly Kind[] Kinds =
 	{
@@ -28,6 +28,7 @@ public static class GameData
 		new("zdo-keys", (valheim, _) => GameCatalogues.ZdoKeysJson(valheim), ZdoKeys.Use),
 		new("cave-rocks", (_, bundles) => GameCatalogues.CaveRocksJson(bundles), CaveRocks.Use),
 		new("piece-cost", null, PieceCost.Use, TrimPieceCost),
+		new("vegetation", (_, bundles) => GameCatalogues.VegetationJson(bundles), Regrow.Use, TrimVegetation),
 	};
 
 	public static string CacheFile(string kind) => Path.Combine(AppSettings.UserDataDir, $"game-{kind}.json");
@@ -251,7 +252,18 @@ public static class GameData
 		};
 	}
 
-	// What a copy holds, to tell what went: its entries, else (trimmed its own way) those of each part.
+	// vegetation (a list of rules): the game's rules the copy has, by name and prefab.
+	private static List<JsonElement> TrimVegetation(JsonElement game, JsonElement copy)
+	{
+		var kept = copy.EnumerateArray().Select(RuleKey).ToHashSet();
+		return game.EnumerateArray().Where(r => kept.Contains(RuleKey(r))).ToList();
+	}
+
+	private static string RuleKey(JsonElement rule) => $"{rule.GetProperty("name").GetString()}/{rule.GetProperty("prefab").GetString()}";
+
+	// What a copy holds, to tell what went: its entries (a list's: its rules), else (trimmed its own
+	// way) those of each part.
 	private static List<string> Kept(JsonElement copy, bool entries) =>
-		copy.EnumerateObject().SelectMany(p => entries ? new[] { p.Name } : p.Value.EnumerateObject().Select(e => $"{p.Name}/{e.Name}")).ToList();
+		copy.ValueKind == JsonValueKind.Array ? copy.EnumerateArray().Select(RuleKey).ToList()
+		: copy.EnumerateObject().SelectMany(p => entries ? new[] { p.Name } : p.Value.EnumerateObject().Select(e => $"{p.Name}/{e.Name}")).ToList();
 }
