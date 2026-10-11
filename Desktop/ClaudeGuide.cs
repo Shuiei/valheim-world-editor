@@ -59,6 +59,13 @@ public static class ClaudeGuide
 		- Gable ends are filled with sloped walls (wood_wall_roof: a 2 m base rising 1 m; wood_wall_roof_45:
 		  rising 2 m) over full or half walls. build_roof does all of this.
 
+		Dressing (what makes a room lived in)
+		- Food and drink are pieces of the serving tray (Feaster): place them on tables with place_pieces
+		  by their item name (CookedMeat, HoneyGlazedChicken, MeadTasty, Bread...), or a whole feast
+		  (FeastMeadows ... FeastAshlands). find_prefabs shows their tool as feaster.
+		- Item stands (itemstand on a wall, itemstandh lying flat) and armour stands hold items:
+		  set_contents puts a weapon, shield, trophy or food on one, and dresses an armour stand.
+
 		Support (what holds, as the game computes it; support_check shows it)
 		- A piece touching the ground holds fully. Support passes to the pieces it touches and drops with
 		  distance: wood loses 20 % per metre sideways and 12.5 % per metre up, and falls below 10 % of 100.

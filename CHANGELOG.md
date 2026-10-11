@@ -25,6 +25,9 @@ the plugin is unchanged in versions without that part.
   (armour, cape, belt, shield, weapon) and sets its pose. Each list offers only what the game lets
   that stand or slot take, and the item is saved whole, as the game saves it, so it comes off the
   stand as set. Claude does the same with `set_contents`.
+- **Serving tray food stays on the table**: food and drink of the serving tray (Feaster: dishes, meads,
+  berries, the feasts) placed, pasted or added with a blueprint in the editor are marked as pieces, as
+  the game marks them; before, they were loose items in game, falling and despawning away from a base.
 - **Generate dungeon** in the Workshop: the Build panel's Library has **Generate dungeon…**, the Dungeon
   panel's generator (building pieces only), with **Open on the plot** (the dungeon alone) and **Add to
   the plot** (with what is there, one undo step). Its blueprint is kept in the library, with what its
