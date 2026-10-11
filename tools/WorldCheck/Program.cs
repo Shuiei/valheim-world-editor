@@ -77,10 +77,10 @@ if (!Directory.Exists(worldDir))
 	return 1;
 }
 var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-// The game's terrain modifiers, from this computer's Valheim (as the editor reads them).
-if (!GameModifiers.Ensure(GameBundles.ForGame(GameLook.FindValheim(AppSettings.Load().ValheimPath), GameLook.IndexFile)))
+// The game's data, from this computer's Valheim (as the editor reads it).
+if (!GameData.Ensure(GameBundles.ForGame(GameLook.FindValheim(AppSettings.Load().ValheimPath), GameLook.IndexFile)))
 {
-	Console.Error.WriteLine(GameModifiers.Missing);
+	Console.Error.WriteLine(GameData.Missing);
 	return 1;
 }
 WorldSave.ModifierPrefabs = TerrainEditor.Terrain.TerrainModifiers.NetworkPrefabHashes.ToHashSet();

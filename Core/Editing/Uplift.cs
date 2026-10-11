@@ -23,7 +23,7 @@ public static class Uplift
 
 	public static bool IsDisc(int location) => location == Disc;
 
-	// DevGround1's TerrainModifier (as the game has it, GameModifiers): level radius, smoothing radius, paint radius.
+	// DevGround1's TerrainModifier (as the game has it, GameData): level radius, smoothing radius, paint radius.
 	public const float DiscRadius = 8f, DiscReach = 12.96f, PaintRadius = 9.19f;
 
 	// The modifier's place in the location (it decides the order the game applies discs in).

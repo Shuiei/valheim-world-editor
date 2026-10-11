@@ -87,8 +87,8 @@ public static class GameLook
 			if (game.Indexed)
 			{
 				Set("ready", null);
-				// The terrain modifiers too, ready before a world is opened (from the cache: at once).
-				Task.Run(() => GameModifiers.Ensure(game));
+				// The rest of the game data too, ready before a world is opened (from the caches: at once).
+				Task.Run(() => GameData.Ensure(game));
 				return;
 			}
 			Set("running", "Reading the game's files (a few seconds, only after a game update).");
@@ -100,7 +100,7 @@ public static class GameLook
 			{
 				int n = game.Index.Count;
 				(state, message) = n == 0 ? ("failed", "No models were found in the game's files.")
-					: !GameModifiers.Ensure(game) ? ("failed", "The game's terrain modifiers could not be read (see the log).")
+					: !GameData.Ensure(game) ? ("failed", "Some of the game's data could not be read (see the log).")
 					: ("ready", "The game's look is ready.");
 			}
 			catch (Exception e) when (e is IOException or InvalidDataException or UnauthorizedAccessException or NotSupportedException or NotImplementedException)

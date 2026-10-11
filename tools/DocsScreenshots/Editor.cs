@@ -29,18 +29,15 @@ public sealed class Editor : IDisposable
 		_home = Directory.CreateTempSubdirectory("vwe-docs-home-").FullName;
 		_width = width;
 		// The stand-in home's own data folder (~/.local/share/ValheimWorldEditor): the start page shows
-		// it as such. The index of the game's files and its terrain modifiers are the real ones (made again
-		// if stale).
+		// it as such. The index of the game's files and the game data read from them are the real ones
+		// (made again if stale).
 		string data = Path.Combine(_home, ".local", "share");
 		string ours = Path.Combine(data, "ValheimWorldEditor");
 		Directory.CreateDirectory(ours);
-		foreach (string kept in new[] { "game-index.json", "game-terrain-modifiers.json" })
+		string mineDir = Path.Combine(UserHome, ".local", "share", "ValheimWorldEditor");
+		foreach (string mine in Directory.Exists(mineDir) ? Directory.GetFiles(mineDir, "game-*.json") : [])
 		{
-			string mine = Path.Combine(UserHome, ".local", "share", "ValheimWorldEditor", kept);
-			if (File.Exists(mine))
-			{
-				File.CreateSymbolicLink(Path.Combine(ours, kept), mine);
-			}
+			File.CreateSymbolicLink(Path.Combine(ours, Path.GetFileName(mine)), mine);
 		}
 		// A stand-in Valheim in the home's Steam library ("Found automatically" in Settings); the app is
 		// driven, so it never looks for Steam outside this home. Its bundles are this computer's
