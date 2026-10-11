@@ -1,0 +1,16 @@
+0#Name:Small hut
+#Creator:Valheim World Editor
+#Description:"A hut"
+#Category:Misc
+#EditorRuin:1
+#EditorData:0;strings;-1234;Hello
+#EditorData:1;ints;tamed;1
+#SnapPoints
+0;0;0
+#Terrain
+square;0;0;0;3;45;false;paved
+circle;2;0.5;1;2.5;0;true;dirt
+#Pieces
+wood_floor;Building;0;0;0;0;0;0;1;"";1;1;1
+wood_wall_half(Clone);Building;1,5;0,25;-2,5;0;0.7071068;0;0.7071068;"";1;1;1
+piece_chest_wood;Furniture;1;0.5;1;0;0;0;1;"";1.25;1.25;1.25

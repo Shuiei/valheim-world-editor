@@ -319,20 +319,32 @@ public sealed class ZoneDb
     /// </summary>
     private byte[] _tail = [];
 
+    // The largest zone package read: the biggest world has about 110,000 zones (4 bytes each) and some
+    // ten thousand locations (17 bytes each), well under a megabyte.
+    private const int MaxPackage = 64 << 20;
+
     /// <summary>Reads a .db2 file.</summary>
     public static ZoneDb Load(string path)
     {
+        using FileStream file = File.OpenRead(path);
+        return Load(file);
+    }
+
+    /// <summary>A .db2 file's content, from a stream (the fuzz tests read it from bytes).</summary>
+    public static ZoneDb Load(Stream stream)
+    {
         ZoneDb db = new();
-        using BinaryReader r = new(File.OpenRead(path));
+        using BinaryReader r = new(stream);
         db.FileVersion = r.ReadInt32();
         db.NetTime = r.ReadDouble();
-        int len = r.ReadInt32();
-        byte[] packed = r.ReadBytes(len);
-        db._tail = r.ReadBytes((int)(r.BaseStream.Length - r.BaseStream.Position));
-        using GZipStream gz = new(new MemoryStream(packed), CompressionMode.Decompress);
-        using MemoryStream raw = new();
-        gz.CopyTo(raw);
-        db.ReadPackage(raw.ToArray());
+        byte[] packed = r.ReadExactBytes(r.ReadInt32());
+        // The rest as it comes: a stream that cannot seek does not tell how much is left.
+        using (MemoryStream rest = new())
+        {
+            r.BaseStream.CopyTo(rest);
+            db._tail = rest.ToArray();
+        }
+        db.ReadPackage(CheckedReads.Gunzip(packed, MaxPackage));
         return db;
     }
 
@@ -358,19 +370,19 @@ public sealed class ZoneDb
     {
         ZoneDb db = this;
         using BinaryReader p = new(new MemoryStream(package));
-        int n = p.ReadInt32();
+        int n = p.CheckCount(p.ReadInt32(), 4);
         for (int i = 0; i < n; i++)
         {
             db.Generated.Add((p.ReadInt16(), p.ReadInt16()));
         }
         db.LocationVersion = p.ReadInt32();
-        int keys = p.ReadInt32();
+        int keys = p.CheckCount(p.ReadInt32(), 1);
         for (int i = 0; i < keys; i++)
         {
-            db.GlobalKeys.Add(p.ReadString());
+            db.GlobalKeys.Add(p.ReadCheckedString());
         }
         db.LocationsGenerated = p.ReadBoolean();
-        int locs = p.ReadInt32();
+        int locs = p.CheckCount(p.ReadInt32(), 17);
         for (int i = 0; i < locs; i++)
         {
             db.Locations.Add((p.ReadInt32(), new Vector3(p.ReadSingle(), p.ReadSingle(), p.ReadSingle()), p.ReadBoolean()));
