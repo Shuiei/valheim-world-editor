@@ -46,6 +46,8 @@ the plugin is unchanged in versions without that part.
   the key for itself first.
 - **The world map** zoomed out a little from the closest views (3 to 6 m a pixel, on a wide window)
   read its close-up again on every frame, keeping a core busy for nothing.
+- **Preparing the game's look** (start page) shows how far it is and what it reads, the game's bundles
+  one by one: the bar stood still at the start until the look was ready.
 - **The world map** no longer holds up the rest of the editor while it is built: it took every
   background thread, so on a computer with few cores a live game's players, its answers and the other
   work in the background waited seconds for it.
