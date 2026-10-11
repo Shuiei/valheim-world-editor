@@ -298,6 +298,260 @@ public sealed class ClaudeTools
 		return "Redone. Now pending: " + Pending();
 	});
 
+	// ---- Building.
+
+	// A piece (or any object) to put down.
+	public sealed class PieceSpec
+	{
+		[Description("Prefab name, e.g. woodwall, wood_floor, stone_wall_2x1, wood_roof_45, Beech1.")]
+		public string Prefab { get; set; } = "";
+
+		[Description("World x (east), metres.")]
+		public float X { get; set; }
+
+		[Description("World z (north), metres.")]
+		public float Z { get; set; }
+
+		[Description("Height of the piece's origin (optional: it stands on the ground there, its lowest point touching it). The Workshop's plot is at y = 34.")]
+		public float? Y { get; set; }
+
+		[Description("Turn round the vertical, degrees (0: the piece's front faces north; 90: east).")]
+		public float Yaw { get; set; }
+
+		[Description("Tilt forward, degrees (usually 0).")]
+		public float Pitch { get; set; }
+
+		[Description("Tilt sideways, degrees (usually 0).")]
+		public float Roll { get; set; }
+
+		[Description("Snap to the snap points of pieces already there (and of those before it in the list) within 0.5 m, as the game's hammer does (default: true).")]
+		public bool Snap { get; set; } = true;
+	}
+
+	[McpServerTool(Name = "place_pieces", Title = "Put down pieces and objects")]
+	[Description("Puts down building pieces (and any other objects: trees, rocks…) in the open area or on the Workshop's plot, all as one step of the history (pending). Pieces snap to the snap points of pieces already there within 0.5 m, as the game's hammer does, so place them where they should join and let the snap make them meet; piece_info gives sizes and snap points. Returns where each went (after snapping) and its id. Check the result with support_check (Workshop) and screenshot.")]
+	public Task<string> PlacePieces(
+		[Description("The pieces, in the order they are put down.")] PieceSpec[] pieces,
+		[Description("A few words for the history.")] string label = "Claude: building") => OnUi(() =>
+	{
+		if (CannotEdit() is string why)
+		{
+			return why;
+		}
+		var session = _w.Session!;
+		var scene = session.Scene;
+		float minX = scene.X0 * 64f - 32f, minZ = scene.Z0 * 64f - 32f, maxX = minX + scene.Size * 64f, maxZ = minZ + scene.Size * 64f;
+		var placed = new List<TerrainEditor.Editing.Hammer.Placed>();
+		lock (scene.Things)
+		{
+			for (int i = 0; i < scene.Things.Count; i++)
+			{
+				var t = scene.Things[i];
+				if (!t.Gone && _w.NameOfPrefab(t.Prefab) is string n && TerrainEditor.Editing.Hammer.Get(n) != null)
+				{
+					placed.Add(new(i, n, t.Position, TerrainEditor.App.BlueprintFormats.FromEuler(t.Rotation)));
+				}
+			}
+		}
+		var adds = new List<(TerrainEditor.Editing.NewObject, bool)>();
+		var report = new List<object>();
+		var problems = new List<string>();
+		foreach (var (p, k) in pieces.Select((p, k) => (p, k)))
+		{
+			int hash = TerrainEditor.Save.StableHash.Of(p.Prefab);
+			var piece = TerrainEditor.Terrain.PieceCatalog.Get(hash);
+			if (piece == null && TerrainEditor.Terrain.PrefabCatalog.Get(hash) == null)
+			{
+				problems.Add($"#{k} {p.Prefab}: not an object the game has (find_prefabs)");
+				continue;
+			}
+			if (p.X < minX || p.X > maxX || p.Z < minZ || p.Z > maxZ)
+			{
+				problems.Add($"#{k} {p.Prefab}: ({p.X}, {p.Z}) is outside the area (x {minX} to {maxX}, z {minZ} to {maxZ})");
+				continue;
+			}
+			var euler = new System.Numerics.Vector3(p.Pitch, p.Yaw, p.Roll);
+			var q = TerrainEditor.App.BlueprintFormats.FromEuler(euler);
+			float y = p.Y ?? GroundAt(scene, p.X, p.Z) - TerrainEditor.Editing.Hammer.Bottom(p.Prefab, q);
+			var pos = new System.Numerics.Vector3(p.X, y, p.Z);
+			int? to = null;
+			if (p.Snap)
+			{
+				(pos, to) = TerrainEditor.Editing.Hammer.Snap(p.Prefab, q, pos, placed);
+			}
+			placed.Add(new(-1 - k, p.Prefab, pos, q));
+			adds.Add((new TerrainEditor.Editing.NewObject(0, hash, pos, euler, 0), piece?.Tool != null));
+			report.Add(new { prefab = p.Prefab, x = MathF.Round(pos.X, 3), y = MathF.Round(pos.Y, 3), z = MathF.Round(pos.Z, 3), snapped = to != null });
+		}
+		if (adds.Count == 0)
+		{
+			return "Nothing put down: " + string.Join("; ", problems);
+		}
+		var ids = session.Commit(label.StartsWith("Claude", StringComparison.Ordinal) ? label : "Claude: " + label, null, Array.Empty<int>(), adds);
+		_w.AfterClaudeEdit($"Claude put down {adds.Count} piece(s); Ctrl+Z takes them back.");
+		return ToJson(new { placed = report.Select((r, i) => new { id = i < ids.Count ? ids[i] : -1, piece = r }), problems, pending = Pending() });
+	});
+
+	// The ground's height at a world point of the area (its nearest grid point).
+	private static float GroundAt(WorldScene scene, float x, float z)
+	{
+		int i = Math.Clamp((int)MathF.Round(x - scene.Cx + (scene.W - 1) / 2f), 0, scene.W - 1);
+		int j = Math.Clamp((int)MathF.Round(z - scene.Cz + (scene.H - 1) / 2f), 0, scene.H - 1);
+		return scene.Heights[j * scene.W + i];
+	}
+
+	[McpServerTool(Name = "remove_objects", Title = "Take objects away")]
+	[Description("Takes objects of the open area (or the plot) away, by their ids (list_objects, place_pieces), as one step of the history (pending).")]
+	public Task<string> RemoveObjects([Description("Their ids.")] int[] ids) => OnUi(() =>
+	{
+		if (CannotEdit() is string why)
+		{
+			return why;
+		}
+		var session = _w.Session!;
+		var things = session.Scene.Things;
+		var ok = ids.Distinct().Where(i => i >= 0 && i < things.Count && !things[i].Gone).ToList();
+		if (ok.Count == 0)
+		{
+			return "None of those ids is an object of the area.";
+		}
+		session.Commit($"Claude: took {ok.Count} away", null, ok, Array.Empty<(TerrainEditor.Editing.NewObject, bool)>());
+		_w.AfterClaudeEdit($"Claude took {ok.Count} object(s) away; Ctrl+Z puts them back.");
+		return $"Took {ok.Count} away{(ok.Count < ids.Length ? $" ({ids.Length - ok.Count} id(s) were not objects of the area)" : "")}. Now pending: {Pending()}";
+	});
+
+	[McpServerTool(Name = "support_check", ReadOnly = true, Title = "Would it stand?")]
+	[Description("The Workshop's support check, as the game computes it: for the building pieces on the plot, which would fall (nothing holds them up enough) and the weakest ones still standing (support 0 about to fall, 1 strong). Pieces on the ground hold best; support drops with each piece away from it (wood less far than stone, iron further).")]
+	public Task<string> SupportCheck() => OnUi(() =>
+	{
+		if (!_w.InWorkshop)
+		{
+			return "The support check is the Workshop's: open_workshop first.";
+		}
+		_w.SupportBox.IsChecked = true;
+		_w.RefreshSupport();
+		if (_w.LastSupport is not { } r || _w.Session?.Scene is not { } scene)
+		{
+			return "No building piece on the plot.";
+		}
+		var things = _w.LastSupportThings;
+		object Piece(int k) => new
+		{
+			id = things[k], name = _w.NameOfPrefab(scene.Things[things[k]].Prefab),
+			x = MathF.Round(scene.Things[things[k]].Position.X, 2), y = MathF.Round(scene.Things[things[k]].Position.Y, 2), z = MathF.Round(scene.Things[things[k]].Position.Z, 2),
+			support = MathF.Round(r.Colour[k], 2),
+		};
+		return ToJson(new
+		{
+			pieces = things.Count,
+			wouldFall = r.Breaking,
+			falling = r.Falls.Take(60).Select(Piece),
+			// Support: 0 (red, about to fall) to 1 (green); pieces on the ground (light blue in the editor) hold best and are left out.
+			weakest = Enumerable.Range(0, things.Count).Where(k => !r.Free[k] && !r.Breaks[k] && r.Colour[k] >= 0).OrderBy(k => r.Colour[k]).Take(10).Select(Piece),
+			onTheGround = Enumerable.Range(0, things.Count).Count(k => r.Colour[k] < 0),
+		});
+	});
+
+	[McpServerTool(Name = "open_workshop", Title = "Open the Workshop")]
+	[Description("Opens the Workshop: a blank 192 m plot (ground at y = 34, its middle at x = 0, z = 0) to build a blueprint on, optionally with a blueprint of the library on it (list_blueprints). Refused while a world or the Workshop has changes not saved. The user saves the building as a blueprint.")]
+	public Task<string> OpenWorkshop([Description("A blueprint's name from list_blueprints (optional: an empty plot).")] string? blueprint = null) => OnUi(async () =>
+	{
+		if (Unsaved() is string why)
+		{
+			return why;
+		}
+		string? path = null;
+		if (!string.IsNullOrWhiteSpace(blueprint))
+		{
+			path = Path.Combine(_w.Blueprints.Status.Folder, TerrainEditor.App.Homestead.FileName(blueprint));
+			if (!File.Exists(path))
+			{
+				return $"No blueprint \"{blueprint}\" in the library (list_blueprints).";
+			}
+		}
+		await _w.OpenWorkshop(path);
+		return ToJson(StateOf(_w));
+	});
+
+	[McpServerTool(Name = "list_blueprints", ReadOnly = true, Title = "The blueprint library")]
+	[Description("The user's blueprints (Homestead's library): name, pieces, cost, description, tags. Open one in the Workshop (open_workshop) or add it to the plot (add_blueprint).")]
+	public Task<string> ListBlueprints([Description("Words to find in the name, description or tags (optional).")] string? query = null) => OnUi(() =>
+	{
+		var words = (query ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries);
+		return ToJson(TerrainEditor.App.Homestead.List(_w.Blueprints.Status.Folder)
+			.Where(e => words.All(w => e.Name.Contains(w, StringComparison.OrdinalIgnoreCase) || e.Description.Contains(w, StringComparison.OrdinalIgnoreCase) || e.Tags.Any(t => t.Contains(w, StringComparison.OrdinalIgnoreCase))))
+			.Select(e => new { name = e.Name, pieces = e.Pieces, cost = TerrainEditor.Terrain.PieceCost.Of(e.Kinds).Describe(4), description = e.Description, tags = e.Tags }));
+	});
+
+	[McpServerTool(Name = "add_blueprint", Title = "Add a blueprint to the plot")]
+	[Description("Adds a blueprint of the library to the Workshop's plot, with what is there, centred on x, z (default: the plot's middle), standing on the ground; one step of the history.")]
+	public Task<string> AddBlueprint(
+		[Description("The blueprint's name (list_blueprints).")] string blueprint,
+		[Description("World x of its middle (optional).")] float? x = null,
+		[Description("World z of its middle (optional).")] float? z = null) => OnUi(() =>
+	{
+		if (!_w.InWorkshop)
+		{
+			return "Blueprints are added in the Workshop: open_workshop first.";
+		}
+		string path = Path.Combine(_w.Blueprints.Status.Folder, TerrainEditor.App.Homestead.FileName(blueprint));
+		if (!File.Exists(path))
+		{
+			return $"No blueprint \"{blueprint}\" in the library (list_blueprints).";
+		}
+		_w.AddToWorkshop(path, x is float ax && z is float az ? new System.Numerics.Vector2(ax, az) : null);
+		return _w.MessageText.Text + " Now pending: " + Pending();
+	});
+
+	[McpServerTool(Name = "generate_dungeon", Title = "Generate a dungeon")]
+	[Description("Generates a dungeon, as the Dungeon panel does, and puts it on the Workshop's plot (with what is there) or, in a world, 5000 m above the point x, z (where the game keeps its dungeons) with a linked portal pair on the ground there. One step of the history (pending).")]
+	public async Task<string> GenerateDungeon(
+		[Description("Its biome: Meadows, Black Forest, Swamp, Mountain, Plains, Mistlands, Ashlands, Deep North.")] string biome = "Black Forest",
+		[Description("Its style (optional: the biome's): Crypt, Catacombs, Temple, Fortress, Prison, Dvergr hold, Goblin warren, Ruins.")] string? style = null,
+		[Description("Its wall material (optional: the biome's).")] string? walls = null,
+		[Description("Rooms per level: 1 small to 4 huge.")] int size = 2,
+		[Description("Levels, 1 to 4.")] int levels = 2,
+		[Description("Monsters: 0 none to 3 (1 usual).")] float monsters = 1,
+		[Description("Chests and treasure: 0 none to 2 (1 usual).")] float loot = 1,
+		[Description("Light: 0 dark, 1 dim, 2 bright.")] int light = 1,
+		[Description("Furniture: 0 bare, 1 furnished, 2 rich.")] int decor = 1,
+		[Description("Any number: each makes another dungeon with the same choices.")] int seed = 1,
+		[Description("Its name, on a sign at the entrance (optional: made up).")] string? name = null,
+		[Description("In a world: x of the point of the open area it goes above (optional: the view's middle).")] float? x = null,
+		[Description("In a world: z of that point.")] float? z = null)
+	{
+		var settings = new TerrainEditor.Editing.DungeonGen.Settings(Biome: biome, Style: style, Walls: walls, Size: Math.Clamp(size, 1, 4), Levels: Math.Clamp(levels, 1, 4),
+			Monsters: Math.Clamp(monsters, 0, 3), Loot: Math.Clamp(loot, 0, 2), Light: Math.Clamp(light, 0, 2), Decor: Math.Clamp(decor, 0, 2), Seed: seed, Name: name);
+		if (await OnUi(() => CannotEdit()) is string why)
+		{
+			return why;
+		}
+		var result = await Task.Run(() => TerrainEditor.Editing.DungeonGen.Make(settings));
+		return await OnUi(async () =>
+		{
+			if (_w.InWorkshop)
+			{
+				await _w.GeneratedOntoPlot(settings, result, add: true);
+			}
+			else
+			{
+				if (x is float px && z is float pz)
+				{
+					// Above a point of the open area (its ground is the area's).
+					var sc = _w.Session!.Scene;
+					float minX = sc.X0 * 64f - 32f, minZ = sc.Z0 * 64f - 32f;
+					if (px < minX || pz < minZ || px > minX + sc.Size * 64f || pz > minZ + sc.Size * 64f)
+					{
+						return $"({px}, {pz}) is outside the open area (x {minX} to {minX + sc.Size * 64f}, z {minZ} to {minZ + sc.Size * 64f}): open_area there first.";
+					}
+					_w.View.Orbit(px, pz, 45, 55, 120);
+				}
+				_w.PlaceGenerated(settings, result);
+			}
+			return $"{string.Join(" ", result.Notes)} {_w.MessageText.Text} Now pending: {Pending()}";
+		});
+	}
+
 	// The changes not saved yet, in words.
 	private string Pending() => _w.World is { } w
 		? w.Pending is (0, 0, 0, 0) ? "nothing." : $"{w.Pending.Zones} zone(s) of ground, {w.Pending.Added} object(s) added, {w.Pending.Deleted} taken away."

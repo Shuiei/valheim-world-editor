@@ -52,7 +52,10 @@ public class PanelSettingsTests
 		return w;
 	}
 
-	private static List<TextBox> Boxes(Window d) => d.GetLogicalDescendants().OfType<TextBox>().ToList();
+	// The folders' boxes (not Claude's port and command).
+	private static List<TextBox> Boxes(Window d) => d.GetLogicalDescendants().OfType<TextBox>().Where(b => b.Name?.StartsWith("Claude", StringComparison.Ordinal) != true).ToList();
+
+	private static TextBox Named(Window d, string name) => d.GetLogicalDescendants().OfType<TextBox>().Single(b => b.Name == name);
 
 	private static List<Button> Buttons(Window d, string label) => d.GetLogicalDescendants().OfType<Button>().Where(b => b.Content as string == label).ToList();
 
@@ -86,6 +89,40 @@ public class PanelSettingsTests
 		Assert.Equal(game, kept.ValheimPath);
 		Assert.Equal(new[] { bep }, kept.BepInExFolders);
 		Assert.Equal(new[] { worlds }, kept.WorldFolders);
+	}
+
+	// Claude's connection: off at first (its details hidden); on, the port and the command to add the editor
+	// to Claude Code (with the token); a port that is not one is refused; saved with the token.
+	[AvaloniaFact]
+	public async Task ClaudesConnectionIsChosenWithItsPortAndToken()
+	{
+		using var t = new Temp();
+		var settings = new AppSettings();
+		var owner = Owner();
+		var shown = SettingsDialog.Show(owner, settings);
+		var d = PanelDialogsTests.Shown(owner);
+		var allow = d.GetLogicalDescendants().OfType<CheckBox>().Single(c => c.Content as string == "Allow Claude to connect");
+		var port = Named(d, "ClaudePort");
+		var command = Named(d, "ClaudeCommand");
+		Assert.False(allow.IsChecked);
+		Assert.False(port.IsEffectivelyVisible);
+		allow.IsChecked = true;
+		Dispatcher.UIThread.RunJobs();
+		Assert.True(port.IsEffectivelyVisible);
+		Assert.StartsWith("claude mcp add --transport http valheim-editor http://127.0.0.1:5731/mcp --header \"Authorization: Bearer ", command.Text);
+		port.Text = "80";
+		Click(Buttons(d, "Save").Single());
+		Assert.Contains(Texts(d).Split(" | "), x => x.Contains("1024 to 65535"));
+		port.Text = "6000";
+		Dispatcher.UIThread.RunJobs();
+		Assert.Contains("127.0.0.1:6000/mcp", command.Text);
+		string token = command.Text!.Split("Bearer ")[1].TrimEnd('"');
+		Click(Buttons(d, "Save").Single());
+		Assert.True(await shown);
+		var kept = AppSettings.Load();
+		Assert.True(kept.ClaudeConnect);
+		Assert.Equal(6000, kept.ClaudePort);
+		Assert.Equal(token, kept.ClaudeToken);
 	}
 
 	[AvaloniaFact]

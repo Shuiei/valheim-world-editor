@@ -124,9 +124,9 @@ public static class SettingsDialog
 		var worlds = List(settings.WorldFolders, "A world folder or a folder of worlds", out var readWorlds);
 		// Claude's connection.
 		var claude = new CheckBox { Content = "Allow Claude to connect", IsChecked = settings.ClaudeConnect }.Classed("switch").Tip("settings.claude");
-		var port = new TextBox { Text = settings.ClaudePort.ToString(System.Globalization.CultureInfo.InvariantCulture), Width = 90 }.Tip("settings.claudePort");
+		var port = new TextBox { Name = "ClaudePort", Text = settings.ClaudePort.ToString(System.Globalization.CultureInfo.InvariantCulture), Width = 90 }.Tip("settings.claudePort");
 		string token = string.IsNullOrEmpty(settings.ClaudeToken) ? ClaudeServer.NewToken() : settings.ClaudeToken;
-		var command = new TextBox { IsReadOnly = true, TextWrapping = TextWrapping.Wrap, FontSize = 12, FontFamily = new FontFamily("monospace") }.Tip("settings.claudeCommand");
+		var command = new TextBox { Name = "ClaudeCommand", IsReadOnly = true, TextWrapping = TextWrapping.Wrap, FontSize = 12, FontFamily = new FontFamily("monospace") }.Tip("settings.claudeCommand");
 		void ShowCommand() => command.Text = ClaudeServer.ClaudeCodeCommand(int.TryParse(port.Text, out int p) ? p : settings.ClaudePort, token);
 		ShowCommand();
 		port.TextChanged += (_, _) => ShowCommand();

@@ -40,6 +40,9 @@ public partial class MainWindow
 	// The last support check (null: off, or not in the Workshop).
 	internal Stability.Result? LastSupport { get; private set; }
 
+	// The things (indices in the scene) the last support check's pieces are, in its order.
+	internal IReadOnlyList<int> LastSupportThings { get; private set; } = Array.Empty<int>();
+
 	private void SetUpWorkshop()
 	{
 		SupportBox.Tip("workshop.support");
@@ -319,6 +322,7 @@ public partial class MainWindow
 		var terrain = _workshopTerrain;
 		var r = Stability.Solve(pieces, (x, z) => Workshop.GroundAt(terrain, x, z));
 		LastSupport = r;
+		LastSupportThings = index;
 		var show = new Dictionary<int, float>();
 		for (int k = 0; k < index.Count; k++)
 		{
@@ -363,6 +367,14 @@ public partial class MainWindow
 		_liveBadge.IsVisible = false;
 		UndoButton.IsEnabled = s.CanUndo;
 		RedoButton.IsEnabled = s.CanRedo;
+	}
+
+	// After a change Claude made (ClaudeTools): the save bar, the support check, the message.
+	internal void AfterClaudeEdit(string message)
+	{
+		_message.Text = message;
+		UpdateSaveBar();
+		QueueSupport();
 	}
 
 	// After an edit in the Workshop: the support check again (a moment later, once per batch of edits).
