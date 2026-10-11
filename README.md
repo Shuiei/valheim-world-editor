@@ -241,7 +241,7 @@ folder.
 | [Mask](docs/masks.md) | Limiting any tool by biome, height, slope or paint |
 | [Area, copy and paste](docs/area.md) | Box and polygon selections, bulk actions, paste, zone reset |
 | [Dungeons](docs/dungeons.md) | Editing a dungeon's rooms: adding them at openings, their contents, deleting, closing open ends, building inside |
-| [A new world](docs/new-world.md) | Seeing a seed's world before making it, finding seeds with the start, biomes and land you want, creating the world |
+| [A new world](docs/new-world.md) | Seeing a seed's world before making it (biomes, start, bosses, traders), finding seeds with what you want near the start, creating the world |
 | [The Workshop](docs/workshop.md) | Building on a blank plot, the support check, Homestead blueprints: library, cost, pictures, tags, sharing |
 | [Place](docs/place.md) | Any kind of object: trees and rocks with a brush, walls and fences end to end along lines, circles and rectangles, grids and zones |
 | [Select](docs/select.md) | Selecting, moving with arrows, turning, dropping, copying, deleting |

@@ -6,10 +6,9 @@ namespace TerrainEditor.App;
 
 // A seed seen from above before its world exists (the New world page): the game's own generator
 // (WorldGenerator) sampled on a coarse grid over the whole world, and what a player would care about:
-// how much land, which biomes, the main continent, where the start is likely to be (the Meadows nearest
-// the middle: the game puts its start temple in Meadows near the middle) and how far each biome is
-// from there. The locations themselves (start temple, traders, bosses) are laid out by the game when
-// the world first loads: they are not part of this.
+// how much land, which biomes, the main continent, where the start is (SeedLocations: where the game
+// will put its start temple), how far each biome is from there and, when asked, where the bosses and
+// traders will be.
 public static class SeedPreview
 {
 	public const float Radius = WorldGenerator.worldSize;
@@ -21,6 +20,29 @@ public static class SeedPreview
 		Heightmap.Biome.Plains, Heightmap.Biome.Mistlands, Heightmap.Biome.AshLands, Heightmap.Biome.DeepNorth,
 	};
 
+	// The places worth knowing about before playing: the start, the traders, the bosses' altars.
+	public static readonly (string Prefab, string Name, string Kind)[] Landmarks =
+	{
+		("StartTemple", "The start", "start"),
+		("Vendor_BlackForest", "Haldor", "trader"),
+		("BogWitch_Camp", "The Bog Witch", "trader"),
+		("Hildir_camp", "Hildir", "trader"),
+		("Eikthyrnir", "Eikthyr", "boss"),
+		("GDKing", "The Elder", "boss"),
+		("Bonemass", "Bonemass", "boss"),
+		("Dragonqueen", "Moder", "boss"),
+		("GoblinKing", "Yagluth", "boss"),
+		("Mistlands_DvergrBossEntrance1", "The Queen", "boss"),
+		("FaderLocation", "Fader", "boss"),
+	};
+
+	// The bosses of the first five biomes, for the "bosses within" wish.
+	public static readonly string[] EarlyBosses = { "Eikthyr", "The Elder", "Bonemass", "Moder", "Yagluth" };
+
+	// One landmark: OneOf when the game lays out several spots and keeps only the first a player comes
+	// near (the traders), the rest vanishing.
+	public sealed record Landmark(string Name, string Kind, float X, float Z, bool OneOf);
+
 	public sealed record Stats(
 		float Land, // share of the world (inside its 10 km) that is land
 		IReadOnlyDictionary<Heightmap.Biome, float> Shares, // share of the land in each biome
@@ -29,11 +51,12 @@ public static class SeedPreview
 		float LandNearStart, // share of land within 400 m of it
 		float StartContinent, // share of the land in the start's own landmass
 		IReadOnlyDictionary<Heightmap.Biome, float> Distance, // metres from the start to the nearest of each biome (PositiveInfinity: none)
-		IReadOnlyDictionary<Heightmap.Biome, bool> SameLand); // whether that nearest one is on the start's landmass
+		IReadOnlyDictionary<Heightmap.Biome, bool> SameLand, // whether that nearest one is on the start's landmass
+		IReadOnlyDictionary<string, float>? Nearest = null); // metres from the start to the nearest of each landmark (null: not looked for)
 
 	// Size x Size cells of Cell metres over the world, row 0 the south: biome (index in Biomes, 255
 	// ocean or outside), ground height.
-	public sealed record Preview(string Seed, int Size, float Cell, byte[] Biome, float[] Height, Stats Stats)
+	public sealed record Preview(string Seed, int Size, float Cell, byte[] Biome, float[] Height, Stats Stats, IReadOnlyList<Landmark>? Landmarks = null)
 	{
 		public (float X, float Z) CellCenter(int i, int j) => (-Radius + (i + 0.5f) * Cell, -Radius + (j + 0.5f) * Cell);
 	}
@@ -45,8 +68,9 @@ public static class SeedPreview
 		m_seedName = seedName, m_seed = WorldCreator.SeedOf(seedName), m_worldGenVersion = WorldCreator.WorldGenVersion,
 	});
 
-	// The seed's preview on size x size cells (128: a quick look, 256: a clearer one).
-	public static Preview Make(string seedName, int size = 160, bool parallel = false, CancellationToken cancel = default)
+	// The seed's preview on size x size cells (128: a quick look, 256: a clearer one); landmarks: where the
+	// bosses and traders will be too (a fraction of a second more, a few seconds on one core).
+	public static Preview Make(string seedName, int size = 160, bool parallel = false, bool landmarks = false, CancellationToken cancel = default)
 	{
 		var gen = Generator(seedName);
 		float cell = 2 * Radius / size;
@@ -78,10 +102,32 @@ public static class SeedPreview
 				biome[k] = index < 0 || h < TerrainService.WaterLevel - (swamp ? 3 : 1) ? Ocean : (byte)index;
 			}
 		});
-		return new Preview(seedName, size, cell, biome, height, Measure(biome, size, cell));
+		var placed = SeedLocations.Place(gen, landmarks ? SeedLocations.Which.Prioritized : SeedLocations.Which.Start, parallel, cancel);
+		var marks = new List<Landmark>();
+		foreach (var p in placed)
+		{
+			int at = Array.FindIndex(Landmarks, l => l.Prefab == p.Rule.prefab);
+			if (at >= 0)
+			{
+				marks.Add(new Landmark(Landmarks[at].Name, Landmarks[at].Kind, p.X, p.Z, p.Rule.unique != 0 && p.Rule.quantity > 1));
+			}
+		}
+		var start = marks.FirstOrDefault(m => m.Kind == "start");
+		var stats = Measure(biome, size, cell, start is null ? null : (start.X, start.Z));
+		if (landmarks)
+		{
+			stats = stats with
+			{
+				Nearest = Landmarks.Select(l => l.Name).Distinct().ToDictionary(n => n, n => marks.Where(m => m.Name == n)
+					.Select(m => MathF.Sqrt((m.X - stats.Start.X) * (m.X - stats.Start.X) + (m.Z - stats.Start.Z) * (m.Z - stats.Start.Z)))
+					.DefaultIfEmpty(float.PositiveInfinity).Min()),
+			};
+		}
+		return new Preview(seedName, size, cell, biome, height, stats, landmarks ? marks : null);
 	}
 
-	internal static Stats Measure(byte[] biome, int size, float cell)
+	// start: where the game puts its start temple (null: the Meadows cell nearest the middle).
+	internal static Stats Measure(byte[] biome, int size, float cell, (float X, float Z)? startAt = null)
 	{
 		int inside = 0, land = 0;
 		var counts = new int[Biomes.Length];
@@ -156,6 +202,27 @@ public static class SeedPreview
 			}
 		}
 		var start = startCell < 0 ? (0f, 0f) : (-Radius + (startCell % size + 0.5f) * cell, -Radius + (startCell / size + 0.5f) * cell);
+		if (startAt is { } at)
+		{
+			// The temple's own cell, or the nearest land cell (a cell is coarse: the temple can sit on its
+			// shore) for its landmass.
+			start = (at.X, at.Z);
+			startCell = -1;
+			best = float.MaxValue;
+			for (int k = 0; k < biome.Length; k++)
+			{
+				if (biome[k] == Ocean)
+				{
+					continue;
+				}
+				float dx = -Radius + (k % size + 0.5f) * cell - at.X, dz = -Radius + (k / size + 0.5f) * cell - at.Z, d = dx * dx + dz * dz;
+				if (d < best)
+				{
+					best = d;
+					startCell = k;
+				}
+			}
+		}
 		int startMass = startCell < 0 ? -1 : mass[startCell];
 		// Around the start, and the nearest of each biome.
 		int near = 0, nearLand = 0;
@@ -214,7 +281,15 @@ public static class SeedPreview
 		float MaxPlainsDistance = 0,
 		bool BiomesOnStartLand = false, // the nearest of each biome on the start's landmass (no sailing needed)
 		float MinLand = 0, // at least this share of land
-		float MaxLand = 1); // at most this share
+		float MaxLand = 1, // at most this share
+		float MaxHaldorDistance = 0, // the nearest of each trader's spots within this many metres (0: no wish)
+		float MaxBogWitchDistance = 0,
+		float MaxHildirDistance = 0,
+		float MaxBossDistance = 0) // the nearest altar of each of the first five bosses within this many metres
+	{
+		// Whether the bosses and traders must be looked for.
+		public bool NeedsLandmarks => MaxHaldorDistance > 0 || MaxBogWitchDistance > 0 || MaxHildirDistance > 0 || MaxBossDistance > 0;
+	}
 
 	// How well a preview meets the wishes, from 0 up (higher is better).
 	public static float Score(Stats s, Wishes w)
@@ -228,8 +303,18 @@ public static class SeedPreview
 		{
 			score += 2 * s.LandNearStart;
 		}
-		float Near(Heightmap.Biome b, float max) => max <= 0 ? 0 : float.IsPositiveInfinity(s.Distance[b]) ? -2 : s.Distance[b] <= max ? 1 + (max - s.Distance[b]) / max : -(s.Distance[b] - max) / max;
+		static float Within(float d, float max) => max <= 0 ? 0 : float.IsPositiveInfinity(d) ? -2 : d <= max ? 1 + (max - d) / max : -(d - max) / max;
+		float Near(Heightmap.Biome b, float max) => Within(s.Distance[b], max);
 		score += Near(Heightmap.Biome.Swamp, w.MaxSwampDistance) + Near(Heightmap.Biome.Mountain, w.MaxMountainDistance) + Near(Heightmap.Biome.Plains, w.MaxPlainsDistance);
+		if (s.Nearest is { } n)
+		{
+			float To(string name) => n.TryGetValue(name, out float d) ? d : float.PositiveInfinity;
+			score += Within(To("Haldor"), w.MaxHaldorDistance) + Within(To("The Bog Witch"), w.MaxBogWitchDistance) + Within(To("Hildir"), w.MaxHildirDistance);
+			if (w.MaxBossDistance > 0)
+			{
+				score += EarlyBosses.Average(b => Within(To(b), w.MaxBossDistance));
+			}
+		}
 		if (w.BiomesOnStartLand)
 		{
 			score += 0.25f * s.SameLand.Count(kv => kv.Key is not (Heightmap.Biome.AshLands or Heightmap.Biome.DeepNorth) && kv.Value);
@@ -256,7 +341,7 @@ public static class SeedPreview
 		{
 			Parallel.For(0, count, options, _ =>
 			{
-				var p = Make(RandomSeed(), size, cancel: cancel);
+				var p = Make(RandomSeed(), size, landmarks: wishes.NeedsLandmarks, cancel: cancel);
 				float score = Score(p.Stats, wishes);
 				lock (found)
 				{

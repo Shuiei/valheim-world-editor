@@ -21,16 +21,36 @@ public class CoreSeedPreviewTests
 		Assert.InRange(s.Land, 0.15f, 0.7f);
 		Assert.Equal(1, s.Shares.Values.Sum(), 2);
 		Assert.All(new[] { Heightmap.Biome.Meadows, Heightmap.Biome.BlackForest, Heightmap.Biome.Swamp, Heightmap.Biome.Mountain, Heightmap.Biome.Plains }, b => Assert.True(s.Shares[b] > 0, b.ToString()));
-		// The start: in Meadows near the middle, where the game puts it.
+		// The start: the game's start temple, in Meadows near the middle.
 		Assert.True(MathF.Sqrt(s.Start.X * s.Start.X + s.Start.Z * s.Start.Z) < 1500, $"start at {s.Start}");
 		Assert.Equal(Heightmap.Biome.Meadows, SeedPreview.Generator("abc").GetBiome(s.Start.X, s.Start.Z));
-		Assert.Equal(0, s.Distance[Heightmap.Biome.Meadows]);
+		Assert.True(s.Distance[Heightmap.Biome.Meadows] < p.Cell, $"Meadows at {s.Distance[Heightmap.Biome.Meadows]} m");
+		Assert.Null(s.Nearest);
+		Assert.Null(p.Landmarks);
 		Assert.True(s.Distance[Heightmap.Biome.BlackForest] < s.Distance[Heightmap.Biome.DeepNorth]);
 		Assert.InRange(s.StartContinent, 0.0001f, 1);
 		Assert.True(took < TimeSpan.FromSeconds(20), $"took {took}");
 		// The same seed, the same world.
 		Assert.Equal(p.Biome, SeedPreview.Make("abc", 128, cancel: TestContext.Current.CancellationToken).Biome);
 		Assert.NotEqual(p.Biome, SeedPreview.Make("abd", 128, cancel: TestContext.Current.CancellationToken).Biome);
+	}
+
+	[Fact]
+	public void APreviewCanShowTheBossesAndTraders()
+	{
+		var p = SeedPreview.Make("5DCcdIcuYJ", 64, parallel: true, landmarks: true, cancel: TestContext.Current.CancellationToken);
+		var start = Assert.Single(p.Landmarks!, m => m.Kind == "start");
+		Assert.Equal((start.X, start.Z), p.Stats.Start);
+		Assert.Equal(3, p.Landmarks!.Count(m => m.Name == "Eikthyr"));
+		Assert.All(p.Landmarks!.Where(m => m.Kind == "trader"), m => Assert.True(m.OneOf));
+		Assert.All(p.Landmarks!.Where(m => m.Kind == "boss"), m => Assert.False(m.OneOf));
+		// The nearest Eikthyr altar (110, 206 from the temple at 0.4, -6.9): about 239 m.
+		Assert.InRange(p.Stats.Nearest!["Eikthyr"], 235, 245);
+		Assert.True(p.Stats.Nearest["Haldor"] >= 1000, "Haldor keeps away from the middle");
+		var wishes = new SeedPreview.Wishes(MaxHaldorDistance: 3000);
+		Assert.True(wishes.NeedsLandmarks);
+		Assert.False(new SeedPreview.Wishes().NeedsLandmarks);
+		Assert.True(SeedPreview.Score(p.Stats, wishes) != SeedPreview.Score(p.Stats, wishes with { MaxHaldorDistance = 0 }));
 	}
 
 	[Fact]

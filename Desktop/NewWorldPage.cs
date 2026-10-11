@@ -12,10 +12,11 @@ using ValheimGen;
 namespace TerrainEditor.Desktop;
 
 // A new world (the start page's "A new world"): a name and a seed, the seed's world seen from above
-// before it exists (SeedPreview: the game's own generator), a search through random seeds for one that
-// suits (the start on a large landmass, the first Swamp or Mountain close...), and Create: a normal
-// Valheim world in the game's world folder. The game lays out its start, traders and dungeons when it
-// first loads it, and generates its zones as players explore them; the editor edits what is generated.
+// before it exists (SeedPreview: the game's own generator, with where it will put the start, the
+// bosses' altars and the traders), a search through random seeds for one that suits (the start on a
+// large landmass, the first Swamp or Mountain close, Haldor near...), and Create: a normal Valheim world
+// in the game's world folder. The game lays out its locations when it first loads it, and generates its
+// zones as players explore them; the editor edits what is generated.
 public sealed class NewWorldPage : IDisposable
 {
 	public Control View { get; }
@@ -26,12 +27,16 @@ public sealed class NewWorldPage : IDisposable
 	public event Action<string, string, string>? CreateRequested;
 
 	internal TextBox NameBox { get; } = new() { Text = "", PlaceholderText = "My world", FontSize = 13 };
-	internal TextBox SeedBox { get; } = new() { FontSize = 13, MaxLength = 10 };
+	internal TextBox SeedBox { get; } = new() { FontSize = 13, MaxLength = 10, PlaceholderText = "Up to 10 letters or digits" };
 	internal Button Roll { get; } = new() { Content = "Roll", FontSize = 12 };
 	internal ComboBox Where { get; } = new() { HorizontalAlignment = HorizontalAlignment.Stretch, FontSize = 12 };
 	internal Button Create { get; } = new Button { Content = "Create world", FontSize = 13 }.Classed("primary");
 	internal TextBlock Problem { get; } = new() { Foreground = new SolidColorBrush(Avalonia.Media.Color.FromRgb(224, 96, 75)), TextWrapping = TextWrapping.Wrap, FontSize = 12 };
 	internal Image Picture { get; } = new() { Width = 460, Height = 460, Stretch = Stretch.Uniform };
+	// The landmarks over the picture, and which kinds show.
+	internal Canvas Marks { get; } = new() { Width = 460, Height = 460 };
+	internal CheckBox ShowBosses { get; } = new() { IsChecked = true, FontSize = 12 };
+	internal CheckBox ShowTraders { get; } = new() { IsChecked = true, FontSize = 12 };
 	internal TextBlock Stats { get; } = new() { FontSize = 12, TextWrapping = TextWrapping.Wrap, Width = 460 };
 	// Finding a seed.
 	internal CheckBox BigLand { get; } = new() { Content = "The start on a large landmass", IsChecked = true, FontSize = 12 };
@@ -40,6 +45,10 @@ public sealed class NewWorldPage : IDisposable
 	internal NumericUpDown Swamp { get; } = Near(1500);
 	internal NumericUpDown Mountain { get; } = Near(2000);
 	internal NumericUpDown Plains { get; } = Near(0);
+	internal NumericUpDown Haldor { get; } = Near(0);
+	internal NumericUpDown BogWitch { get; } = Near(0);
+	internal NumericUpDown Hildir { get; } = Near(0);
+	internal NumericUpDown Bosses { get; } = Near(0);
 	internal ComboBox Count { get; } = new() { ItemsSource = new[] { "60 seeds", "150 seeds", "400 seeds" }, SelectedIndex = 1, FontSize = 12 };
 	internal Button Find { get; } = new() { Content = "Find seeds", FontSize = 12 };
 	internal Button Stop { get; } = new() { Content = "Stop", FontSize = 12, IsVisible = false };
@@ -86,6 +95,14 @@ public sealed class NewWorldPage : IDisposable
 		Swamp.Tip("newWorld.near");
 		Mountain.Tip("newWorld.near");
 		Plains.Tip("newWorld.near");
+		Haldor.Tip("newWorld.trader");
+		BogWitch.Tip("newWorld.trader");
+		Hildir.Tip("newWorld.trader");
+		Bosses.Tip("newWorld.bosses");
+		ShowBosses.Tip("newWorld.showBosses");
+		ShowTraders.Tip("newWorld.showTraders");
+		ShowBosses.IsCheckedChanged += (_, _) => PlaceMarks();
+		ShowTraders.IsCheckedChanged += (_, _) => PlaceMarks();
 		Find.Tip("newWorld.find");
 		Roll.Click += (_, _) => SeedBox.Text = SeedPreview.RandomSeed();
 		SeedBox.TextChanged += (_, _) => { _wait.Stop(); _wait.Start(); };
@@ -94,6 +111,7 @@ public sealed class NewWorldPage : IDisposable
 		Find.Click += (_, _) => StartSearch();
 		Stop.Click += (_, _) => _search?.Cancel();
 		static Control Row(string label, Control c) => new DockPanel { Children = { new TextBlock { Text = label, Width = 90, FontSize = 12, VerticalAlignment = VerticalAlignment.Center }, c } };
+		static Control Metres(string label, NumericUpDown n) => new DockPanel { Children = { new TextBlock { Text = label, Width = 120, FontSize = 12, VerticalAlignment = VerticalAlignment.Center }, new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { n, new TextBlock { Text = "m", VerticalAlignment = VerticalAlignment.Center } } } } };
 		var seedRow = new DockPanel { Children = { new TextBlock { Text = "Seed", Width = 90, FontSize = 12, VerticalAlignment = VerticalAlignment.Center }, Roll, SeedBox } };
 		DockPanel.SetDock(Roll, Dock.Right);
 		Roll.Margin = new Thickness(6, 0, 0, 0);
@@ -106,7 +124,7 @@ public sealed class NewWorldPage : IDisposable
 				Row("Name", NameBox),
 				seedRow,
 				Row("Saved in", Where),
-				Ui.Hint("A normal Valheim world, as the game makes them: players need no mod. The game lays out its start, traders and dungeons the first time it loads it, and makes each place as players reach it. Play it (or walk around) before reshaping an area in the editor: only the places the game has made can be edited."),
+				Ui.Hint("A normal Valheim world, as the game makes them: players need no mod, console players included. The game lays out its start, traders and dungeons the first time it loads it, and makes each place as players reach it. Play it (or walk around) before reshaping an area in the editor: only the places the game has made can be edited."),
 				Create,
 				Problem,
 			},
@@ -120,9 +138,13 @@ public sealed class NewWorldPage : IDisposable
 				new TextBlock { Text = "Find a seed", FontSize = 15, FontWeight = FontWeight.SemiBold },
 				Ui.Hint("Random seeds are looked at with the game's own generator, and the best kept. 0: no wish."),
 				BigLand, LandAround, OnFoot,
-				Row("Swamp within", new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { Swamp, new TextBlock { Text = "m", VerticalAlignment = VerticalAlignment.Center } } }),
-				Row("Mountain within", new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { Mountain, new TextBlock { Text = "m", VerticalAlignment = VerticalAlignment.Center } } }),
-				Row("Plains within", new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { Plains, new TextBlock { Text = "m", VerticalAlignment = VerticalAlignment.Center } } }),
+				Metres("Swamp within", Swamp),
+				Metres("Mountain within", Mountain),
+				Metres("Plains within", Plains),
+				Metres("Haldor within", Haldor),
+				Metres("Bog Witch within", BogWitch),
+				Metres("Hildir within", Hildir),
+				Metres("Bosses 1–5 within", Bosses),
 				findRow,
 				Progress,
 				new ScrollViewer { MaxHeight = 330, Content = Found },
@@ -134,7 +156,21 @@ public sealed class NewWorldPage : IDisposable
 			Spacing = 8,
 			Children =
 			{
-				new Border { BorderBrush = Ui.Line, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(4), Child = Picture, HorizontalAlignment = HorizontalAlignment.Left },
+				new Border { BorderBrush = Ui.Line, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(4), Child = new Panel { Children = { Picture, Marks } }, HorizontalAlignment = HorizontalAlignment.Left },
+				new StackPanel
+				{
+					Orientation = Orientation.Horizontal, Spacing = 14,
+					Children =
+					{
+						Legend(Mark("start"), "The start"),
+						Legend(Mark("boss"), "Bosses' altars", ShowBosses),
+						Legend(new StackPanel
+						{
+							Orientation = Orientation.Horizontal, Spacing = 10,
+							Children = { Legend(Mark("trader", "Haldor"), "Haldor"), Legend(Mark("trader", "The Bog Witch"), "Bog Witch"), Legend(Mark("trader", "Hildir"), "Hildir") },
+						}, "", ShowTraders),
+					},
+				},
 				Stats,
 			},
 		});
@@ -183,7 +219,7 @@ public sealed class NewWorldPage : IDisposable
 		}
 		var cancel = _preview = new CancellationTokenSource();
 		Stats.Text = "Looking at the world…";
-		Pending = Task.Run(() => SeedPreview.Make(seed, 200, parallel: true, cancel.Token), cancel.Token).ContinueWith(t =>
+		Pending = Task.Run(() => SeedPreview.Make(seed, 200, parallel: true, landmarks: true, cancel.Token), cancel.Token).ContinueWith(t =>
 		{
 			if (cancel.IsCancellationRequested || t.Status != TaskStatus.RanToCompletion)
 			{
@@ -196,21 +232,98 @@ public sealed class NewWorldPage : IDisposable
 	private void Show(SeedPreview.Preview p)
 	{
 		Shown = p;
-		Picture.Source = Draw(p, 460);
+		Picture.Source = Draw(p, 460, startDot: false);
 		Stats.Text = Describe(p.Stats);
+		PlaceMarks();
 	}
+
+	// The landmark kinds' looks: the start red, bosses purple diamonds, each trader a colour of its own.
+	private static SolidColorBrush Fill(string kind, string name = "") => new SolidColorBrush(kind switch
+	{
+		"start" => Avalonia.Media.Color.FromRgb(230, 40, 40),
+		"boss" => Avalonia.Media.Color.FromRgb(176, 96, 232),
+		_ => name switch
+		{
+			"The Bog Witch" => Avalonia.Media.Color.FromRgb(120, 206, 92),
+			"Hildir" => Avalonia.Media.Color.FromRgb(244, 120, 176),
+			_ => Avalonia.Media.Color.FromRgb(244, 196, 64),
+		},
+	});
+
+	private static Control Mark(string kind, string name = "")
+	{
+		var outline = new SolidColorBrush(Avalonia.Media.Color.FromRgb(20, 20, 24));
+		return kind == "boss"
+			? new Border { Width = 9, Height = 9, Background = Fill(kind), BorderBrush = outline, BorderThickness = new Thickness(1), RenderTransform = new RotateTransform(45) }
+			: new Avalonia.Controls.Shapes.Ellipse { Width = kind == "start" ? 11 : 9, Height = kind == "start" ? 11 : 9, Fill = Fill(kind, name), Stroke = kind == "start" ? Brushes.White : outline, StrokeThickness = kind == "start" ? 2 : 1 };
+	}
+
+	private static Control Legend(Control mark, string text, CheckBox? toggle = null)
+	{
+		mark.VerticalAlignment = VerticalAlignment.Center;
+		var label = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 5, Children = { mark } };
+		if (text.Length > 0)
+		{
+			label.Children.Add(new TextBlock { Text = text, FontSize = 11, VerticalAlignment = VerticalAlignment.Center });
+		}
+		if (toggle is null)
+		{
+			return label;
+		}
+		toggle.Content = label;
+		return toggle;
+	}
+
+	// The shown seed's landmarks over the picture (north up), each with what it is and how far.
+	internal void PlaceMarks()
+	{
+		Marks.Children.Clear();
+		if (Shown?.Landmarks is not { } marks)
+		{
+			return;
+		}
+		var start = Shown.Stats.Start;
+		// The start last: on top.
+		foreach (var m in marks.OrderBy(m => m.Kind == "start"))
+		{
+			if ((m.Kind == "boss" && ShowBosses.IsChecked != true) || (m.Kind == "trader" && ShowTraders.IsChecked != true))
+			{
+				continue;
+			}
+			var c = Mark(m.Kind, m.Name);
+			float d = MathF.Sqrt((m.X - start.X) * (m.X - start.X) + (m.Z - start.Z) * (m.Z - start.Z));
+			string what = m.Kind == "boss" ? $"{m.Name}'s altar" : m.Name;
+			string tip = m.Kind == "start" ? $"The start: {m.X:0}, {m.Z:0}" : $"{what}: {m.X:0}, {m.Z:0}, {Km(d)} from the start";
+			if (m.OneOf)
+			{
+				tip += $"\nOne of {marks.Count(o => o.Name == m.Name)} spots: the first one players come near becomes the camp, the others vanish.";
+			}
+			ToolTip.SetTip(c, tip);
+			double size = c.Width;
+			Canvas.SetLeft(c, (m.X + SeedPreview.Radius) / (2 * SeedPreview.Radius) * Marks.Width - size / 2);
+			Canvas.SetTop(c, (SeedPreview.Radius - m.Z) / (2 * SeedPreview.Radius) * Marks.Height - size / 2);
+			Marks.Children.Add(c);
+		}
+	}
+
+	internal static string Km(float m) => float.IsPositiveInfinity(m) ? "none" : m < 1000 ? $"{m / 100:0}00 m" : $"{m / 1000:0.0} km";
 
 	internal static string Describe(SeedPreview.Stats s)
 	{
-		string Km(float m) => float.IsPositiveInfinity(m) ? "none" : m < 1000 ? $"{m / 100:0}00 m" : $"{m / 1000:0.0} km";
 		var lines = new List<string>
 		{
 			$"Land: {s.Land * 100:0} % of the world · the start's landmass: {s.StartContinent * 100:0} % of the land (largest: {s.MainContinent * 100:0} %) · land around the start: {s.LandNearStart * 100:0} %",
 			"Biomes: " + string.Join(", ", SeedPreview.Biomes.Where(b => s.Shares[b] > 0.005f).Select(b => $"{Name(b)} {s.Shares[b] * 100:0} %")),
 			"Nearest to the start: " + string.Join(", ", SeedPreview.Biomes.Skip(1).Where(b => b is not (Heightmap.Biome.AshLands or Heightmap.Biome.DeepNorth))
 				.Select(b => $"{Name(b)} {Km(s.Distance[b])}{(s.SameLand[b] || float.IsPositiveInfinity(s.Distance[b]) ? "" : " (by sea)")}")),
-			$"The start (red dot) is likely near {s.Start.X:0}, {s.Start.Z:0}: the game puts it in Meadows close to the middle.",
+			$"The start (red dot): {s.Start.X:0}, {s.Start.Z:0}, where the game will put its start temple.",
 		};
+		if (s.Nearest is { } n)
+		{
+			string Of(string name) => Km(n.TryGetValue(name, out float d) ? d : float.PositiveInfinity);
+			lines.Add($"Traders (the nearest of their spots): Haldor {Of("Haldor")}, the Bog Witch {Of("The Bog Witch")}, Hildir {Of("Hildir")}. Each has several spots: the first one players come near becomes the trader's camp, the others vanish.");
+			lines.Add("Bosses (the nearest altar): " + string.Join(", ", SeedPreview.Landmarks.Where(l => l.Kind == "boss").Select(l => $"{l.Name} {Of(l.Name)}")));
+		}
 		return string.Join("\n", lines);
 	}
 
@@ -224,7 +337,7 @@ public sealed class NewWorldPage : IDisposable
 
 	// The preview as a picture of px pixels: the game map's biome colours, shaded by height, the sea by
 	// depth, the start in red, north up.
-	internal static WriteableBitmap Draw(SeedPreview.Preview p, int px)
+	internal static WriteableBitmap Draw(SeedPreview.Preview p, int px, bool startDot = true)
 	{
 		var bmp = new WriteableBitmap(new PixelSize(px, px), new Vector(96, 96), PixelFormat.Bgra8888, AlphaFormat.Premul);
 		using var fb = bmp.Lock();
@@ -261,7 +374,7 @@ public sealed class NewWorldPage : IDisposable
 						(r, g, b) = ((byte)(br + (255 - br) * lift), (byte)(bg + (255 - bg) * lift), (byte)(bb + (255 - bb) * lift));
 					}
 				}
-				if (Math.Abs(i - startI) <= Math.Max(1, p.Size / 100) && Math.Abs(j - startJ) <= Math.Max(1, p.Size / 100))
+				if (startDot && Math.Abs(i - startI) <= Math.Max(1, p.Size / 100) && Math.Abs(j - startJ) <= Math.Max(1, p.Size / 100))
 				{
 					(r, g, b) = (230, 40, 40);
 				}
@@ -278,7 +391,9 @@ public sealed class NewWorldPage : IDisposable
 	internal SeedPreview.Wishes Wishes() => new(
 		BigStartLand: BigLand.IsChecked == true, LandAroundStart: LandAround.IsChecked == true,
 		MaxSwampDistance: (float)(Swamp.Value ?? 0), MaxMountainDistance: (float)(Mountain.Value ?? 0), MaxPlainsDistance: (float)(Plains.Value ?? 0),
-		BiomesOnStartLand: OnFoot.IsChecked == true);
+		BiomesOnStartLand: OnFoot.IsChecked == true,
+		MaxHaldorDistance: (float)(Haldor.Value ?? 0), MaxBogWitchDistance: (float)(BogWitch.Value ?? 0), MaxHildirDistance: (float)(Hildir.Value ?? 0),
+		MaxBossDistance: (float)(Bosses.Value ?? 0));
 
 	// Random seeds looked at in the background; the best shown as they come.
 	internal void StartSearch()

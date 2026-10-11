@@ -8,8 +8,21 @@ without any mod, console players on crossplay included.
 
 Type a seed (up to 10 letters and digits) or press **Roll** for a random one. The map on the right
 shows that seed's world as the game will make it, from the editor's copy of the game's world
-generator: land coloured by biome, sea shaded by depth, north up. The red dot is where the start
-probably is: the game puts its start temple in Meadows close to the middle.
+generator: land coloured by biome, sea shaded by depth, north up.
+
+Over it, the places the game will lay out when the world first loads, found by following its own
+placement rules:
+
+- the **start** (red dot): the start temple;
+- the **bosses' altars** (purple): Eikthyr, the Elder, Bonemass, Moder, Yagluth, the Queen, Fader;
+- the **traders' spots**: Haldor (yellow), the Bog Witch (green) and Hildir (pink). The game lays out
+  several spots for each trader; the first one players come near becomes the trader's camp and the
+  others vanish.
+
+Hover a mark for its coordinates and its distance from the start; the boxes under the map hide the
+bosses or the traders. These are exactly where the game puts them. (The smaller places, villages,
+ruins and the like, are not shown: some of them depend on an alt biome, such as Dark Meadows, that the
+game picks at random each time it loads a world.)
 
 Below the map:
 
@@ -18,6 +31,8 @@ Below the map:
 - **Biomes**: each biome's share of the land.
 - **Nearest to the start**: how far the first Black Forest, Swamp, Mountain, Plains and so on are,
   and whether you need to sail there (**by sea**).
+- **Traders** and **Bosses**: how far the nearest spot of each trader, and the nearest altar of each
+  boss, are from the start.
 
 Land here is ground you can stand on or wade through. The game names much of the shallow sea after
 the land near it; the map counts it as sea.
@@ -29,6 +44,13 @@ the land near it; the map counts it as sea.
 - **The start on a large landmass** and **Land all around the start**.
 - **Each biome reachable on foot from the start**: no sailing for the early biomes.
 - **Swamp / Mountain / Plains within** so many metres of the start (0: no wish).
+- **Haldor / Bog Witch / Hildir within**: one of the trader's spots within so many metres of the
+  start.
+- **Bosses 1–5 within**: an altar of each of Eikthyr, the Elder, Bonemass, Moder and Yagluth within
+  so many metres.
+
+Looking for traders or bosses makes a search a few times slower: the game's placement maps the whole
+world for each seed.
 
 Choose how many seeds to try (60, 150 or 400) and press **Find seeds**. The best appear as small
 maps with their score; click one to see it large. **Stop** keeps what was found so far. A search

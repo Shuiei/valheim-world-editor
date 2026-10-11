@@ -9,10 +9,12 @@ the plugin is unchanged in versions without that part.
 ### Added
 - **A new world** (the start page's fifth card): makes a new world, a normal one that players join
   without any mod (crossplay included). The seed's world shows before it is made, from the editor's
-  copy of the game's generator: its land and biomes, the likely start, how far each biome is from it
-  and whether you need to sail there. **Find a seed** tries many random seeds and keeps the best for
-  what you ask: the start on a large landmass, land around it, Swamp, Mountain or Plains within a
-  distance, every early biome on foot. See [docs/new-world.md](docs/new-world.md).
+  copy of the game's generator: its land and biomes, and exactly where the game will put the start
+  temple, the bosses' altars and the traders' spots (Haldor, the Bog Witch, Hildir), with how far
+  each is from the start and whether you need to sail to each biome. **Find a seed** tries many
+  random seeds and keeps the best for what you ask: the start on a large landmass, land around it,
+  Swamp, Mountain or Plains within a distance, every early biome on foot, a trader or the first five
+  bosses within a distance. See [docs/new-world.md](docs/new-world.md).
 
 ## v1.18.0 — 2026-10-10
 
