@@ -175,9 +175,11 @@ The game's location rules (for the New world page's start, bosses and traders) a
 itself, in C# (`Core/App/GameLocations.cs`), from the player's Valheim, and kept in the data folder
 until the game changes; the editor keeps no copy of them. The tests, which run without the game, use
 `tests/fixtures/locations.json` (only the kinds the page shows): after a game update, make it again
-with `ValheimWorldEditor --export-locations tests/fixtures/locations.json`, and check the game log's
-"Added N locations" lines against `GameLocations.Order` (when they change, reading fails and the page
-shows no bosses or traders).
+with `ValheimWorldEditor --export-locations tests/fixtures/locations.json`. The order of the game's
+location lists comes from the game's own log (`Player.log`, its "Added N locations, M vegetations ...
+from main" lines), so it follows game updates once the game has been started; without a log, the
+editor uses `GameLocations.BuiltInOrder` (Valheim 0.221), which is worth refreshing from a new log
+after an update.
 
 ## WorldCheck
 

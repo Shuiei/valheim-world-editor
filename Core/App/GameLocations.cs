@@ -11,14 +11,88 @@ namespace TerrainEditor.App;
 //
 // The order is the game's (ZoneSystem.SetupLocations): ZoneSystem's own m_locations, then the
 // LocationLists by m_sortOrder (they share one: the game keeps the order they wake in, which its log
-// shows as "Added N locations, M vegetations ... from main"), then the alt biomes' m_addLocations.
+// shows as "Added N locations, M vegetations ... from main": read from the player's log, so it
+// follows game updates), then the alt biomes' m_addLocations.
 // A prefab's name is the file name the manifest lists for its asset ID (what SoftReference.Name gives;
 // m_prefabName is not always saved, and sometimes out of date).
 public static class GameLocations
 {
-	// The lists' wake order, by (locations, vegetations), from the game's log (Valheim 0.221). After a
-	// game update that changes them, reading fails (no bosses or traders shown) until this is updated.
-	private static readonly (int Locations, int Vegetation)[] Order = { (3, 0), (2, 0), (27, 25), (4, 0), (25, 33), (25, 35) };
+	// The lists' wake order, by (locations, vegetations), as the game's log showed it for Valheim 0.221:
+	// used when no log of the game is found (ListOrder reads it from the player's own log first).
+	private static readonly (int Locations, int Vegetation)[] BuiltInOrder = { (3, 0), (2, 0), (27, 25), (4, 0), (25, 33), (25, 35) };
+
+	// The lists' order from the game's own log (Player.log, or Player-prev.log, beside its saves: the
+	// newest that has it), else the built-in one; and where it came from (for the log).
+	internal static ((int Locations, int Vegetation)[] Order, string From) ListOrder()
+	{
+		var logs = Places.WorldRoots().Select(Path.GetDirectoryName).Where(d => d != null).Distinct()
+			.SelectMany(d => new[] { Path.Combine(d!, "Player.log"), Path.Combine(d!, "Player-prev.log") })
+			.Where(File.Exists)
+			.OrderByDescending(File.GetLastWriteTimeUtc);
+		foreach (string log in logs)
+		{
+			try
+			{
+				// Shared: the game may be running and writing it.
+				using var reader = new StreamReader(new FileStream(log, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete));
+				if (OrderFromLog(ReadLines(reader)) is { } order)
+				{
+					return (order, $"{log} ({File.GetLastWriteTime(log):yyyy-MM-dd})");
+				}
+			}
+			catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+			{
+				// Next one.
+			}
+		}
+		return (BuiltInOrder, "the editor's table (Valheim 0.221; no log of the game found)");
+
+		static IEnumerable<string> ReadLines(StreamReader r)
+		{
+			while (r.ReadLine() is { } line)
+			{
+				yield return line;
+			}
+		}
+	}
+
+	private static readonly System.Text.RegularExpressions.Regex Added = new(@"Added (\d+) locations, (\d+) vegetations.* from main\s*$");
+
+	// The game writes a line for each list as it adds them ("Added 27 locations, 25 vegetations, ...
+	// from main"), at each start: the last run's lines in their order (lists with no location left out:
+	// they add none), or null when the log has none.
+	internal static (int Locations, int Vegetation)[]? OrderFromLog(IEnumerable<string> lines)
+	{
+		List<(int, int)>? last = null, run = null;
+		foreach (string line in lines)
+		{
+			var m = Added.Match(line);
+			if (!m.Success)
+			{
+				// A run's lines come one after another: anything else between them ends it.
+				if (run != null)
+				{
+					last = run;
+					run = null;
+				}
+				continue;
+			}
+			run ??= new();
+			var list = (int.Parse(m.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture), int.Parse(m.Groups[2].Value, System.Globalization.CultureInfo.InvariantCulture));
+			// A list met again: the lines of another run, right after.
+			if (run.Contains(list))
+			{
+				last = run;
+				run = new();
+			}
+			if (list.Item1 > 0)
+			{
+				run.Add(list);
+			}
+		}
+		last = run ?? last;
+		return last is { Count: > 0 } ? last.ToArray() : null;
+	}
 
 	public static string CacheFile => Path.Combine(AppSettings.UserDataDir, "game-locations.json");
 
@@ -60,17 +134,18 @@ public static class GameLocations
 			{
 				return null;
 			}
-			string stamp = CacheVersion + " " + JsonSerializer.Serialize(scanned.Select(b => new FileInfo(bundles.PathOf(b)!)).Select(f => $"{f.Name}:{f.Length}:{f.LastWriteTimeUtc.Ticks}"));
+			var (order, from) = ListOrder();
+			string stamp = CacheVersion + " " + string.Join(",", order.Select(o => $"{o.Locations}/{o.Vegetation}")) + " " + JsonSerializer.Serialize(scanned.Select(b => new FileInfo(bundles.PathOf(b)!)).Select(f => $"{f.Name}:{f.Length}:{f.LastWriteTimeUtc.Ticks}"));
 			if (cacheFile != null && Cached(cacheFile, stamp) is { } cached)
 			{
 				Console.WriteLine($"Location rules: {cached.locations.Count} kinds, from the cache.");
 				return cached;
 			}
 			var watch = System.Diagnostics.Stopwatch.StartNew();
-			var rules = Read(bundles, scanned, manifest);
+			var rules = Read(bundles, scanned, manifest, order);
 			if (rules != null)
 			{
-				Console.WriteLine($"Location rules: {rules.locations.Count} kinds and {rules.altBiomes.Count} alt biomes read from the game ({scanned.Count} bundles) in {watch.ElapsedMilliseconds} ms.");
+				Console.WriteLine($"Location rules: {rules.locations.Count} kinds and {rules.altBiomes.Count} alt biomes read from the game ({scanned.Count} bundles) in {watch.ElapsedMilliseconds} ms; the lists' order from {from}.");
 			}
 			if (rules != null && cacheFile != null)
 			{
@@ -108,7 +183,7 @@ public static class GameLocations
 		}
 	}
 
-	private static SeedLocations.RuleSet? Read(GameBundles bundles, List<string> scanned, Manifest manifest)
+	private static SeedLocations.RuleSet? Read(GameBundles bundles, List<string> scanned, Manifest manifest, (int Locations, int Vegetation)[] order)
 	{
 		AssetTypeValueField? zone = null, alts = null;
 		var lists = new Dictionary<(int, int), AssetTypeValueField>();
@@ -128,7 +203,7 @@ public static class GameLocations
 				else if (!locations.IsDummy && !f["m_sortOrder"].IsDummy)
 				{
 					var key = (Count(locations), Count(f["m_vegetation"]));
-					if (Order.Contains(key))
+					if (order.Contains(key))
 					{
 						lists.TryAdd(key, locations);
 					}
@@ -139,14 +214,14 @@ public static class GameLocations
 				}
 			}
 		}
-		if (zone == null || alts == null || Order.Any(k => !lists.ContainsKey(k)))
+		if (zone == null || alts == null || order.Any(k => !lists.ContainsKey(k)))
 		{
-			Console.WriteLine($"The game's location rules were not all found (ZoneSystem: {zone != null}, alt biomes: {alts != null}, lists: {lists.Count}/{Order.Length}); a game update changed them? No bosses or traders on the New world page.");
+			Console.WriteLine($"The game's location rules were not all found (ZoneSystem: {zone != null}, alt biomes: {alts != null}, lists: {lists.Count}/{order.Length}); a game update changed them (start the game once to refresh its log)? No bosses or traders on the New world page.");
 			return null;
 		}
 		var rules = new SeedLocations.RuleSet();
 		rules.locations.AddRange(Items(zone).Select(l => Location(l, manifest, null)));
-		foreach (var key in Order)
+		foreach (var key in order)
 		{
 			rules.locations.AddRange(Items(lists[key]).Select(l => Location(l, manifest, null)));
 		}
