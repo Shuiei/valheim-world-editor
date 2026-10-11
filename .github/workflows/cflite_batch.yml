@@ -1,0 +1,47 @@
+# ClusterFuzzLite every night, on main (a schedule always runs on the default branch): an hour of fuzzing
+# over every target (tests/Fuzz), from the corpus the earlier runs grew. Not on pull requests: it takes
+# too long for them. A crash fails the run and shows in code scanning; its input is kept as the run's
+# artifact. Run it by hand from the Actions tab (workflow_dispatch) to fuzz a change before the night.
+# Without a storage repository, corpora and reports are kept as artifacts.
+name: ClusterFuzzLite batch fuzzing
+
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+permissions: read-all
+
+jobs:
+  batch:
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Build fuzzers
+        id: build
+        uses: google/clusterfuzzlite/actions/build_fuzzers@884713a6c30a92e5e8544c39945cd7cb630abcd1 # v1
+        with:
+          # .NET is not a ClusterFuzzLite language: each target is a native libFuzzer binary (see
+          # .clusterfuzzlite/build.sh).
+          language: c++
+          sanitizer: address
+      - name: Run fuzzers
+        id: run
+        uses: google/clusterfuzzlite/actions/run_fuzzers@884713a6c30a92e5e8544c39945cd7cb630abcd1 # v1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          fuzz-seconds: 3600
+          mode: batch
+          sanitizer: address
+          output-sarif: true
+      - name: Upload the findings to code scanning
+        if: always() && hashFiles('cifuzz-sarif/results.sarif') != ''
+        uses: github/codeql-action/upload-sarif@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
+        with:
+          sarif_file: cifuzz-sarif/results.sarif
+          checkout_path: cifuzz-sarif
+          category: clusterfuzzlite
