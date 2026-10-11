@@ -20,7 +20,7 @@ public class LayoutTests
         var s = EditTests.Flat(2);
         w.View.Show(s.Scene, null);
         w.Edit(s);
-        var view = (Border)typeof(MainWindow).GetField("_viewPanel", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(w)!;
+        var view = (Border)w.ViewPanelCard;
         w.ShowRight(view);
         w.Tools.ChooseMode(ToolMode.Area);
         w.UpdateLayout();
