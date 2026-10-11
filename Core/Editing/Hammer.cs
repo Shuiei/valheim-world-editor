@@ -3,30 +3,57 @@ using System.Text.Json;
 
 namespace TerrainEditor.Editing;
 
-// The game's hammer, as it places a piece (Player.UpdatePlacementGhost, PieceRayTest,
-// FindClosestSnapPoints; Piece.GetSnapPoints), for the Workshop's Build: the build ray hits the nearest
-// piece collider or the ground; the ghost, turned as asked, is put 50 m out along the hit's normal, then
-// moved so its collider point nearest the hit touches it (ground pieces and "clip everything" pieces:
-// their origin at the hit); then, of every snap point of the ghost and every snap point of the pieces
-// within 10 m, the closest pair within 0.5 m meets, unless that puts it right where the same piece
-// already stands. The pieces' colliders, snap points and flags are read from the player's own Valheim
-// (GameData; the tests use tests/fixtures/piece-place.json). All in world space (Unity's axes).
+/// <summary>
+/// The game's hammer, as it places a piece (Player.UpdatePlacementGhost, PieceRayTest,
+/// FindClosestSnapPoints; Piece.GetSnapPoints), for the Workshop's Build: the build ray hits the nearest
+/// piece collider or the ground; the ghost, turned as asked, is put 50 m out along the hit's normal, then
+/// moved so its collider point nearest the hit touches it (ground pieces and "clip everything" pieces:
+/// their origin at the hit); then, of every snap point of the ghost and every snap point of the pieces
+/// within 10 m, the closest pair within 0.5 m meets, unless that puts it right where the same piece
+/// already stands. The pieces' colliders, snap points and flags are read from the player's own Valheim
+/// (GameData; the tests use tests/fixtures/piece-place.json). All in world space (Unity's axes).
+/// </summary>
 public static class Hammer
 {
+    /// <summary>Snap points this close (metres) meet; pieces whose reach comes this close (metres) are searched.</summary>
     public const float SnapDistance = 0.5f, SnapRadius = 10f;
 
+    /// <summary>A piece's collider, in the piece's own frame.</summary>
     public abstract record Shape;
+    /// <summary>A box collider: centre, half size, rotation.</summary>
+    /// <param name="C">Its centre.</param>
+    /// <param name="H">Its half size.</param>
+    /// <param name="Q">Its rotation in the piece's frame.</param>
     public sealed record Box(Vector3 C, Vector3 H, Quaternion Q) : Shape;
+    /// <summary>A sphere collider.</summary>
+    /// <param name="C">Its centre.</param>
+    /// <param name="R">Its radius.</param>
     public sealed record Sphere(Vector3 C, float R) : Shape;
+    /// <summary>A capsule collider: the two ends of its axis and its radius.</summary>
+    /// <param name="A">One end of its axis.</param>
+    /// <param name="B">The other end.</param>
+    /// <param name="R">Its radius.</param>
     public sealed record Capsule(Vector3 A, Vector3 B, float R) : Shape;
+    /// <summary>A mesh collider.</summary>
+    /// <param name="Convex">Unity takes it as convex (only then does ClosestPoint work on it).</param>
+    /// <param name="V">Its vertices.</param>
+    /// <param name="I">Its triangles, three vertex indices each.</param>
     public sealed record Mesh(bool Convex, Vector3[] V, int[] I) : Shape;
 
+    /// <summary>What the hammer needs of a piece.</summary>
+    /// <param name="Ground">A ground piece (Piece.m_groundPiece): put with its origin at a ground hit.</param>
+    /// <param name="ClipGround">May clip into the ground (Piece.m_clipGround): put with its origin at a ground hit.</param>
+    /// <param name="ClipEverything">May clip into anything (Piece.m_clipEverything): put with its origin at any hit.</param>
+    /// <param name="RotatedOverlap">May stand where the same piece does if turned differently (Piece.m_allowRotatedOverlap).</param>
+    /// <param name="Snaps">Its snap points, in its own frame.</param>
+    /// <param name="Colliders">Its colliders, in its own frame.</param>
     public sealed record Data(bool Ground, bool ClipGround, bool ClipEverything, bool RotatedOverlap, Vector3[] Snaps, Shape[] Colliders)
     {
-        // The piece's reach from its origin (for the 10 m search).
+        /// <summary>The piece's reach from its origin (for the 10 m search).</summary>
         public float Radius { get; } = Colliders.Select(Reach).DefaultIfEmpty(0).Max();
     }
 
+    /// <summary>How far a collider reaches from the piece's origin, at most (metres).</summary>
     private static float Reach(Shape s) => s switch
     {
         Box b => b.C.Length() + b.H.Length(),
@@ -36,10 +63,10 @@ public static class Hammer
         _ => 0,
     };
 
-    // None until Use: no world or Workshop opens before then (GameData).
+    /// <summary>None until Use: no world or Workshop opens before then (GameData).</summary>
     private static volatile Dictionary<string, Data> _all = [];
 
-    // The pieces by name, as GameCatalogues' PlaceScan writes them.
+    /// <summary>Takes the pieces by name, as GameCatalogues' PlaceScan writes them, in place of any before.</summary>
     public static void Use(string json)
     {
         using var doc = JsonDocument.Parse(json);
@@ -76,10 +103,13 @@ public static class Hammer
         _all = result;
     }
 
+    /// <summary>A piece's data, or null when the scan has no such piece.</summary>
     public static Data? Get(string prefab) => _all.GetValueOrDefault(prefab);
 
-    // The points of a piece's colliders (box corners, mesh vertices, the bottoms and sides of spheres
-    // and capsules), turned and scaled, from its origin; none for a piece the game gives no collider.
+    /// <summary>
+    /// The points of a piece's colliders (box corners, mesh vertices, the bottoms and sides of spheres
+    /// and capsules), turned and scaled, from its origin; none for a piece the game gives no collider.
+    /// </summary>
     public static IEnumerable<Vector3> Outline(string prefab, Quaternion rotation, float scale = 1)
     {
         if (Get(prefab) is not { } d)
@@ -105,20 +135,33 @@ public static class Hammer
         static IEnumerable<Vector3> Round(Vector3 c, float r) => new[] { Vector3.UnitX, -Vector3.UnitX, Vector3.UnitY, -Vector3.UnitY, Vector3.UnitZ, -Vector3.UnitZ }.Select(u => c + u * r);
     }
 
-    // How far below its origin a piece reaches (its colliders' lowest point), turned and scaled; 0 for a
-    // piece the game gives no collider.
+    /// <summary>
+    /// How far below its origin a piece reaches (its colliders' lowest point), turned and scaled; 0 for a
+    /// piece the game gives no collider.
+    /// </summary>
     public static float Bottom(string prefab, Quaternion rotation, float scale = 1) =>
         Outline(prefab, rotation, scale).Select(v => v.Y).DefaultIfEmpty(0).Min();
 
-    // A piece standing in the world: its kind, where, turned how.
+    /// <summary>A piece standing in the world: its kind, where, turned how.</summary>
+    /// <param name="Index">The caller's own index of it, given back in hits and snaps.</param>
+    /// <param name="Prefab">Its prefab name.</param>
+    /// <param name="Position">Where it stands.</param>
+    /// <param name="Rotation">How it is turned.</param>
     public sealed record Placed(int Index, string Prefab, Vector3 Position, Quaternion Rotation);
 
-    // What the build ray hits first: a piece (its index) or the ground (null), the point and its normal.
+    /// <summary>What the build ray hits first.</summary>
+    /// <param name="Piece">The piece's index (Placed.Index), or null for the ground.</param>
+    /// <param name="Point">Where it hits.</param>
+    /// <param name="Normal">The surface's normal there (unit length; straight up on the ground).</param>
     public sealed record Hit(int? Piece, Vector3 Point, Vector3 Normal);
 
-    // PieceRayTest: the nearest of the pieces' colliders and the ground (groundT: where the ray meets the
-    // ground, if it does).
-    // maxY: nothing above it counts (the Workshop's cut hides it).
+    /// <summary>PieceRayTest: the nearest of the pieces' colliders and the ground.</summary>
+    /// <param name="o">The ray's origin.</param>
+    /// <param name="d">Its direction (any length).</param>
+    /// <param name="pieces">The pieces it may hit; those the scan does not know are passed through.</param>
+    /// <param name="groundT">Where the ray meets the ground (distance along it), if it does.</param>
+    /// <param name="maxY">Nothing above it counts (the Workshop's cut hides it).</param>
+    /// <returns>The nearest hit, or null when it hits nothing.</returns>
     public static Hit? Ray(Vector3 o, Vector3 d, IEnumerable<Placed> pieces, float? groundT, float maxY = float.MaxValue)
     {
         d = Vector3.Normalize(d);
@@ -146,9 +189,11 @@ public static class Hammer
         return hit;
     }
 
-    // UpdatePlacementGhost: where the piece goes, pointed at hit, turned by rotation (and lifted, the
-    // editor's own Ctrl + wheel), then snapped (snap: the snap points' search is done). Returns the
-    // position and what it snapped to (null: nothing).
+    /// <summary>
+    /// UpdatePlacementGhost: where the piece goes, pointed at hit, turned by rotation (and lifted, the
+    /// editor's own Ctrl + wheel), then snapped (snap: the snap points' search is done). Returns the
+    /// position and what it snapped to (null: nothing).
+    /// </summary>
     public static (Vector3 Position, int? SnappedTo) Place(string prefab, Quaternion rotation, Hit hit, IReadOnlyList<Placed> pieces, float lift = 0, bool snap = true)
     {
         var data = Get(prefab);
@@ -186,10 +231,12 @@ public static class Hammer
         return snap ? Snap(prefab, rotation, pos, pieces) : (pos, null);
     }
 
-    // FindClosestSnapPoints: the piece at pos, turned by rotation, moved so that the closest pair of its
-    // snap points and those of the pieces within 10 m meets, when they are within half a metre (and
-    // unless that puts it right where the same piece already stands). Returns where it goes and what it
-    // snapped to (null: nothing, it stays at pos).
+    /// <summary>
+    /// FindClosestSnapPoints: the piece at pos, turned by rotation, moved so that the closest pair of its
+    /// snap points and those of the pieces within 10 m meets, when they are within half a metre (and
+    /// unless that puts it right where the same piece already stands). Returns where it goes and what it
+    /// snapped to (null: nothing, it stays at pos).
+    /// </summary>
     public static (Vector3 Position, int? SnappedTo) Snap(string prefab, Quaternion rotation, Vector3 pos, IReadOnlyList<Placed> pieces)
     {
         if (Get(prefab) is not { Snaps.Length: > 0 } data)
@@ -232,9 +279,11 @@ public static class Hammer
         return overlaps ? (pos, null) : (snapped, to);
     }
 
+    /// <summary>The angle between two rotations (degrees, 0 to 180).</summary>
     private static float AngleDegrees(Quaternion a, Quaternion b) => MathF.Acos(MathF.Min(1, MathF.Abs(Quaternion.Dot(a, b)))) * 2 * 180 / MathF.PI;
 
-    // ---- Collider.ClosestPoint, in the piece's frame (p inside: p itself).
+    // ---- Collider.ClosestPoint.
+    /// <summary>Collider.ClosestPoint, in the piece's frame (p inside: p itself).</summary>
     internal static Vector3 Closest(Shape s, Vector3 p) => s switch
     {
         Box b => ClosestBox(b, p),
@@ -244,6 +293,7 @@ public static class Hammer
         _ => p,
     };
 
+    /// <summary>The point of a box nearest p (p itself when inside).</summary>
     private static Vector3 ClosestBox(Box b, Vector3 p)
     {
         var l = Vector3.Transform(p - b.C, Quaternion.Inverse(b.Q));
@@ -251,6 +301,7 @@ public static class Hammer
         return b.C + Vector3.Transform(c, b.Q);
     }
 
+    /// <summary>The point of a capsule nearest p (p itself when inside).</summary>
     private static Vector3 ClosestCapsule(Capsule c, Vector3 p)
     {
         var seg = c.B - c.A;
@@ -259,7 +310,7 @@ public static class Hammer
         return Vector3.Distance(p, axis) <= c.R ? p : axis + Vector3.Normalize(p - axis) * c.R;
     }
 
-    // A convex mesh: the point itself when inside, else the nearest point of its triangles.
+    /// <summary>A convex mesh: the point itself when inside, else the nearest point of its triangles.</summary>
     private static Vector3 ClosestHull(Mesh m, Vector3 p)
     {
         Vector3 best = p;
@@ -290,7 +341,7 @@ public static class Hammer
         return inside ? p : best;
     }
 
-    // Ericson, Real-Time Collision Detection 5.1.5.
+    /// <summary>The point of triangle a, b, c nearest p (Ericson, Real-Time Collision Detection 5.1.5).</summary>
     internal static Vector3 ClosestTriangle(Vector3 p, Vector3 a, Vector3 b, Vector3 c)
     {
         Vector3 ab = b - a, ac = c - a, ap = p - a;
@@ -330,7 +381,11 @@ public static class Hammer
         return a + ab * (vb * denom) + ac * (vc * denom);
     }
 
-    // ---- Raycasts, in the piece's frame: the distance along d (unit length) and the surface's normal.
+    // ---- Raycasts.
+    /// <summary>
+    /// A ray against a collider, in the piece's frame: the distance along d (unit length) and the surface's
+    /// normal; null when it misses.
+    /// </summary>
     private static (float, Vector3)? RayShape(Vector3 o, Vector3 d, Shape s) => s switch
     {
         Box b => RayBox(o, d, b),
@@ -340,6 +395,7 @@ public static class Hammer
         _ => null,
     };
 
+    /// <summary>A ray against a turned box (slab test); null when it misses or starts inside.</summary>
     private static (float, Vector3)? RayBox(Vector3 o, Vector3 d, Box b)
     {
         var inv = Quaternion.Inverse(b.Q);
@@ -379,6 +435,7 @@ public static class Hammer
         return tmin < 0 ? null : (tmin, Vector3.Transform(n, b.Q));
     }
 
+    /// <summary>A ray against a sphere; null when it misses or starts inside.</summary>
     private static (float, Vector3)? RaySphere(Vector3 o, Vector3 d, Vector3 c, float r)
     {
         var m = o - c;
@@ -400,6 +457,7 @@ public static class Hammer
         return (t, Vector3.Normalize(o + d * t - c));
     }
 
+    /// <summary>A ray against a capsule, marched up to 64 steps or 1000 m; null when it misses.</summary>
     private static (float, Vector3)? RayCapsule(Vector3 o, Vector3 d, Capsule c)
     {
         // Marched: close enough for a cursor, and capsules are rare among pieces.
@@ -418,7 +476,7 @@ public static class Hammer
         return null;
     }
 
-    // Möller–Trumbore over the triangles, both sides (Unity's mesh colliders are hit from outside).
+    /// <summary>Möller–Trumbore over the triangles, both sides (Unity's mesh colliders are hit from outside).</summary>
     private static (float, Vector3)? RayMesh(Vector3 o, Vector3 d, Mesh m)
     {
         (float, Vector3)? best = null;

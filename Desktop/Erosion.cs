@@ -1,17 +1,30 @@
 namespace TerrainEditor.Desktop;
 
-// Erosion, like the web editor's (editor/erosion.js; VoxelSniper's erode brush, Axiom's erosion):
-// ground that weathers like real ground. Thermal: where the ground is steeper than its resting angle,
-// material slides down to its lower neighbours (screes, softened cliffs). Water: drops of rain run
-// downhill, dig where they speed up and leave what they carry where they slow down (gullies, fans,
-// smooth valleys). Both work on a local copy of the heights, written back through SetHeight (so the
-// ±8 m limit applies).
+/// <summary>
+/// Erosion, like the web editor's (editor/erosion.js; VoxelSniper's erode brush, Axiom's erosion): ground that weathers
+/// like real ground. Thermal: where the ground is steeper than its resting angle, material slides down to its lower
+/// neighbours (screes, softened cliffs). Water: drops of rain run downhill, dig where they speed up and leave what they
+/// carry where they slow down (gullies, fans, smooth valleys). Both work on a local copy of the heights, written back
+/// through SetHeight (so the ±8 m limit applies).
+/// </summary>
 public static class Erosion
 {
+    /// <summary>
+    /// The eight neighbours of a grid point.
+    /// </summary>
     private static readonly (int Dx, int Dz)[] N8 = [(1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (1, -1), (-1, 1), (-1, -1)];
 
-    // h: heights of a w × d window (row by row), wt: how much each point may change (0..1). talus:
-    // steepest slope (rise per metre) that stays put. amount: share of the excess moved per pass.
+    /// <summary>
+    /// Thermal erosion: where the ground is steeper than its resting angle, material slides down to its lower
+    /// neighbours. The window's edge points only take material, they never give it.
+    /// </summary>
+    /// <param name="h">Heights of a w × d window (row by row), changed in place.</param>
+    /// <param name="wt">How much each point may change (0..1; 0 leaves it alone).</param>
+    /// <param name="w">The window's width in points.</param>
+    /// <param name="d">Its depth in points.</param>
+    /// <param name="talus">Steepest slope (rise per metre) that stays put; see Talus.</param>
+    /// <param name="amount">Share of the excess moved per pass.</param>
+    /// <param name="passes">How many times it runs over the window.</param>
     public static void Thermal(float[] h, float[] wt, int w, int d, float talus, float amount, int passes)
     {
         float[] delta = new float[h.Length];
@@ -62,7 +75,19 @@ public static class Erosion
         }
     }
 
-    // Rain drops (after Hans Theobald Beyer's "Implementation of a method for hydraulic erosion").
+    /// <summary>
+    /// Water erosion with rain drops (after Hans Theobald Beyer's "Implementation of a method for hydraulic erosion"):
+    /// each drop runs downhill for up to 40 steps, digging where it speeds up and leaving what it carries where it
+    /// slows down or goes uphill.
+    /// </summary>
+    /// <param name="h">Heights of a w × d window (row by row), changed in place.</param>
+    /// <param name="wt">How much each point may change (0..1; 0 leaves it alone).</param>
+    /// <param name="w">The window's width in points.</param>
+    /// <param name="d">Its depth in points.</param>
+    /// <param name="drops">How many drops fall, at random points of the window (those on points that may not change are
+    /// skipped).</param>
+    /// <param name="strength">Scales how much a drop digs (1: the Area tool's).</param>
+    /// <param name="rand">Where the drops fall.</param>
     public static void Hydraulic(float[] h, float[] wt, int w, int d, int drops, float strength, Random rand)
     {
         const float Inertia = 0.05f, CapacityK = 4, Deposit = 0.3f, Evaporate = 0.02f, Gravity = 4, MinSlope = 0.01f;
@@ -134,7 +159,21 @@ public static class Erosion
         }
     }
 
-    // Copies the heights of a window of the ground, runs fn on them, and writes back what changed.
+    /// <summary>
+    /// Copies the heights of a window of the ground, runs fn on them, and writes back what changed through SetHeight
+    /// (so the ±8 m limit applies).
+    /// </summary>
+    /// <param name="g">The ground.</param>
+    /// <param name="x0">The window's first grid x (clamped to the grid).</param>
+    /// <param name="z0">Its first grid z.</param>
+    /// <param name="x1">Its last grid x (included).</param>
+    /// <param name="z1">Its last grid z (included).</param>
+    /// <param name="weightOf">How much the point at (grid x, grid z, index) may change, 0..1; locked points get
+    /// 0.</param>
+    /// <param name="fn">The erosion: heights, weights, width, depth (as Thermal and Hydraulic take them).</param>
+    /// <param name="touched">Gets the indices of the points changed.</param>
+    /// <param name="clamped">Set when a point reached the ±8 m limit; left as it was otherwise.</param>
+    /// <returns>The window, clamped to the grid; nothing runs when it is less than 3 points wide or deep.</returns>
     public static (int X0, int Z0, int X1, int Z1) Run(Ground g, int x0, int z0, int x1, int z1, Func<int, int, int, float> weightOf,
         Action<float[], float[], int, int> fn, ICollection<int> touched, ref bool clamped)
     {
@@ -173,9 +212,21 @@ public static class Erosion
         return (x0, z0, x1, z1);
     }
 
+    /// <summary>
+    /// A resting angle in degrees as the slope Thermal takes (rise per metre).
+    /// </summary>
     public static float Talus(float degrees) => MathF.Tan(degrees * MathF.PI / 180);
 
-    // The Area tool's Erode: both kinds over the whole selection, in one go.
+    /// <summary>
+    /// The Area tool's Erode: both kinds over the whole selection, in one go (thermal, rain, then thermal again to
+    /// settle).
+    /// </summary>
+    /// <param name="g">The ground.</param>
+    /// <param name="a">The selection and how much each of its points may change.</param>
+    /// <param name="restAngle">The resting angle in degrees.</param>
+    /// <param name="rand">Where the drops fall.</param>
+    /// <param name="touched">Gets the indices of the points changed.</param>
+    /// <returns>The grid rectangle worked on (the selection and one point around it).</returns>
     public static (int X0, int Z0, int X1, int Z1) Area(Ground g, AreaTool.Weights a, float restAngle, Random rand, ICollection<int> touched)
     {
         var weights = a.Cells.ToDictionary(c => c.G, c => c.W);

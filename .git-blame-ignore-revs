@@ -1,5 +1,5 @@
 # Commits that only changed formatting: git blame skips them (git config blame.ignoreRevsFile .git-blame-ignore-revs;
 # GitHub does by itself).
 
-# Indent C# with four spaces, as the .NET community does
-63dcde57bb795e35d5004a9654c70aa61d69cb3b
+# Four-space indent and the .NET code style, applied by dotnet format (#64)
+bec8648ab00a14f28203712229120b5913704d92

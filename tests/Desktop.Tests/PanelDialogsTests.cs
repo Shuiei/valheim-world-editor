@@ -7,18 +7,25 @@ using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
-// The small modal windows (Dialogs): a question answered with either button, a message with only
-// OK, and a line of text typed, kept or cancelled. They are real windows owned by the main one: the
-// tests find them there and press their buttons.
+/// <summary>
+/// The small modal windows (Dialogs): a question answered with either button, a message with only OK, and a line of
+/// text typed, kept or cancelled. They are real windows owned by the main one: the tests find them there and press
+/// their buttons.
+/// </summary>
 public class PanelDialogsTests
 {
-    // The dialog the owner shows (after the posted work that opens it).
+    /// <summary>
+    /// The dialog the owner shows (after the posted work that opens it).
+    /// </summary>
     internal static Window Shown(Window owner)
     {
         Dispatcher.UIThread.RunJobs();
         return Assert.Single(owner.OwnedWindows);
     }
 
+    /// <summary>
+    /// Presses the dialog's button with this label.
+    /// </summary>
     internal static void Press(Window dialog, string label)
     {
         var b = dialog.GetLogicalDescendants().OfType<Button>().Single(b => b.Content as string == label);
@@ -26,6 +33,9 @@ public class PanelDialogsTests
         Dispatcher.UIThread.RunJobs();
     }
 
+    /// <summary>
+    /// A shown 800 × 600 window to own the dialogs.
+    /// </summary>
     private static Window Owner()
     {
         var w = new Window { Width = 800, Height = 600 };

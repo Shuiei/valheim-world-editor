@@ -7,17 +7,20 @@ using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
-// Deleting and moving objects: the edit session's changes (with undo), the Select tool's keys and
-// exact place, and a moved object saved into a world.
-// Loads the test world: the world generator is the game's, with static state, so tests that read a
-// world never run at the same time (one collection).
+/// <summary>
+/// Deleting and moving objects: the edit session's changes (with undo), the Select tool's keys and exact place, and a
+/// moved object saved into a world. Loads the test world: the world generator is the game's, with static state, so
+/// tests that read a world never run at the same time (one collection).
+/// </summary>
 [Collection("World files")]
 public class SelectTests
 {
     private static readonly int Beech = StableHash.Of("Beech1");
     private static readonly int Wall = StableHash.Of("wood_wall_half");
 
-    // A flat 2 × 2 zone area (world x and z from -32 to 96) with a tree and a wall.
+    /// <summary>
+    /// A flat 2 × 2 zone area (world x and z from -32 to 96) with a tree and a wall.
+    /// </summary>
     private static EditSession Area() => EditTests.Flat(2,
         new WorldScene.Thing(10, Beech, new Vector3(20, 30, 20), Vector3.Zero, 1, false),
         new WorldScene.Thing(11, Wall, new Vector3(40, 30, 40), new Vector3(0, 90, 0), 0, true));
@@ -70,6 +73,9 @@ public class SelectTests
         Assert.Equal((0, 0, 0, 0), s.Pending);
     }
 
+    /// <summary>
+    /// A shown main window editing the mound area, in the Select tool.
+    /// </summary>
     private static (MainWindow W, EditSession S) Window()
     {
         var w = new MainWindow(load: false) { Width = 1200, Height = 800 };
@@ -81,6 +87,9 @@ public class SelectTests
         return (w, s);
     }
 
+    /// <summary>
+    /// The last thing in the scene (the one just added).
+    /// </summary>
     private static WorldScene.Thing Last(EditSession s) => s.Scene.Things[^1];
 
     [AvaloniaFact]
@@ -216,7 +225,9 @@ public class SelectTests
     }
 }
 
-// The move arrows and the turning ring.
+/// <summary>
+/// The move arrows and the turning ring.
+/// </summary>
 public class GizmoTests
 {
     [Fact]
@@ -253,6 +264,10 @@ public class GizmoTests
         Assert.Equal(90, Gizmo.Heading(new Vector3(1, 10, 0), -Vector3.UnitY, Vector3.Zero)!.Value, 3);
     }
 
+    /// <summary>
+    /// A shown main window with one half wall selected, looking down on it; with the screen point of a point in view
+    /// space.
+    /// </summary>
     private static (MainWindow W, EditSession S, Func<Vector3, Avalonia.Point> Screen) Open()
     {
         var w = new MainWindow(load: false) { Width = 1000, Height = 1000 };

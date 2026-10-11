@@ -2,9 +2,11 @@ using TerrainEditor.Save;
 
 namespace WorldEditor.Tests;
 
-// The test world: tests/fixtures/CITest, a fresh world made by a dedicated server and filled live
-// through the editor (ground edits, trees, rocks, bushes, pickables, a crop, floors, walls,
-// chests). Every test works on its own copy, so saves never touch the fixture.
+/// <summary>
+/// The test world: tests/fixtures/CITest, a fresh world made by a dedicated server and filled live through the editor
+/// (ground edits, trees, rocks, bushes, pickables, a crop, floors, walls, chests). Every test works on its own copy, so
+/// saves never touch the fixture.
+/// </summary>
 public sealed class TempWorld : IDisposable
 {
     public string Dir { get; }
@@ -38,6 +40,10 @@ public sealed class TempWorld : IDisposable
     }
 }
 
+/// <summary>
+/// Where the test fixtures are (tests/fixtures, found up from the test binaries), and the game data and location rules
+/// given from them.
+/// </summary>
 public static class Fixtures
 {
     public static string Root
@@ -58,15 +64,18 @@ public static class Fixtures
 
     public static string World => Path.Combine(Root, "CITest");
 
-    // The game's location rules for the kinds laid out first (start, bosses, traders), as
-    // `ValheimWorldEditor --export-locations` reads them from Valheim 0.221: CI has no game.
+    /// <summary>
+    /// The game's location rules for the kinds laid out first (start, bosses, traders), as `ValheimWorldEditor
+    /// --export-locations` reads them from Valheim 0.221: CI has no game.
+    /// </summary>
     public static void UseLocations() =>
         ValheimGen.SeedLocations.Use(ValheimGen.SeedLocations.RuleSet.FromJson(File.ReadAllText(Path.Combine(Root, "locations.json"))));
 
-    // The game's data (terrain modifiers, object data names...) trimmed to what the tests meet, as
-    // `ValheimWorldEditor --export-test-data tests/fixtures` reads it from the game: the editor reads it
-    // from the player's Valheim, which CI does not have. Given before any test runs, as the editor has
-    // it before any world opens.
+    /// <summary>
+    /// The game's data (terrain modifiers, object data names...) trimmed to what the tests meet, as `ValheimWorldEditor
+    /// --export-test-data tests/fixtures` reads it from the game: the editor reads it from the player's Valheim, which
+    /// CI does not have. Given before any test runs, as the editor has it before any world opens.
+    /// </summary>
     [System.Runtime.CompilerServices.ModuleInitializer]
     internal static void UseGameData() => TerrainEditor.App.GameData.UseCopies(Root);
 

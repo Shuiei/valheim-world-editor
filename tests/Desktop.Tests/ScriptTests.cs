@@ -4,11 +4,15 @@ using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
-// The Script tool: C# scripts compiled in the app and run on a snapshot of the open area, their
-// changes going in as one undo step.
+/// <summary>
+/// The Script tool: C# scripts compiled in the app and run on a snapshot of the open area, their changes going in as
+/// one undo step.
+/// </summary>
 public class ScriptTests
 {
-    // Stopped by the token given, else with the test (when the run is cancelled).
+    /// <summary>
+    /// Stopped by the token given, else with the test (when the run is cancelled).
+    /// </summary>
     private static ScriptHost.Changes Run(EditSession s, string code, CancellationToken? cancel = null)
     {
         var (image, pdb, errors) = ScriptHost.Compile(code);
@@ -16,6 +20,9 @@ public class ScriptTests
         return ScriptHost.Run(image!, pdb, ScriptHost.Take(s, Terrain.PrefabCatalog.NameOf), cancel ?? TestContext.Current.CancellationToken);
     }
 
+    /// <summary>
+    /// The ground height at world point (x, z) of a 1 × 1 zone area.
+    /// </summary>
     private static float At(EditSession s, float x, float z) => s.Ground.HeightOf((int)(z + 32) * s.Ground.W + (int)(x + 32));
 
     [Fact]

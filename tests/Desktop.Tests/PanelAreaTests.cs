@@ -10,13 +10,19 @@ using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
-// The Area panel through its own controls on a copy of the test world (zone 0, 0): every ground
-// action chosen in its list and applied, what it says with nothing to work on, Replace chosen from its
-// lists, the height average, the backups list ("Another folder…", a folder that is not a world,
-// another world), a restore with a soft edge, Cancel reset, Regrow's limits, and heightmaps.
+/// <summary>
+/// The Area panel through its own controls on a copy of the test world (zone 0, 0): every ground action chosen in its
+/// list and applied, what it says with nothing to work on, Replace chosen from its lists, the height average, the
+/// backups list ("Another folder…", a folder that is not a world, another world), a restore with a soft edge, Cancel
+/// reset, Regrow's limits, and heightmaps.
+/// </summary>
 [Collection("World files")]
 public class PanelAreaTests
 {
+    /// <summary>
+    /// A main window on its own copy of the test world, opened in the Area tool with a zone selected unless told not
+    /// to; deleted when disposed.
+    /// </summary>
     private sealed class Run : IDisposable
     {
         public MainWindow W { get; } = new(load: false) { Width = 1600, Height = 1000 };
@@ -39,6 +45,9 @@ public class PanelAreaTests
             }
         }
 
+        /// <summary>
+        /// Selects the box between two grid points.
+        /// </summary>
         public void Select(float x0, float z0, float x1, float z1)
         {
             W.View.Area.Clear();
@@ -47,11 +56,18 @@ public class PanelAreaTests
             W.View.Area.Notify();
         }
 
+        /// <summary>
+        /// The ground height at grid point (x, z).
+        /// </summary>
         public float H(int x, int z) => S.Scene.Heights[z * S.Scene.W + x];
 
+        /// <inheritdoc/>
         public void Dispose() => Directory.Delete(Path.GetDirectoryName(Dir)!, recursive: true);
     }
 
+    /// <summary>
+    /// Clicks the button and runs the posted work it starts.
+    /// </summary>
     private static void Click(Button b)
     {
         b.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));

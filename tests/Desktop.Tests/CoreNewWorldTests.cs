@@ -4,9 +4,11 @@ using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
-// A new world from a seed (WorldCreator, the docs world): the files the game writes, byte for byte
-// where they can be; the seed's own ground; the zones around the middle generated with the game's
-// vegetation; a world the editor opens, edits and saves; and never written over an existing world.
+/// <summary>
+/// A new world from a seed (WorldCreator, the docs world): the files the game writes, byte for byte where they can be;
+/// the seed's own ground; the zones around the middle generated with the game's vegetation; a world the editor opens,
+/// edits and saves; and never written over an existing world.
+/// </summary>
 [Collection("World files")]
 public sealed class CoreNewWorldTests : IDisposable
 {
@@ -16,6 +18,9 @@ public sealed class CoreNewWorldTests : IDisposable
     private const string Seed = "GbXfypqU3G";
     private const long FixtureUid = 0x8d9ed32b;
 
+    /// <summary>
+    /// Deletes the temporary folder.
+    /// </summary>
     public void Dispose()
     {
         try
@@ -27,8 +32,14 @@ public sealed class CoreNewWorldTests : IDisposable
         }
     }
 
+    /// <summary>
+    /// A file of the test world in tests/fixtures/CITest.
+    /// </summary>
     private static string Fixture(string file) => Path.Combine(EditorProcess.Fixtures(), "CITest", file);
 
+    /// <summary>
+    /// A folder inside the temporary folder.
+    /// </summary>
     private string Folder(string name) => Path.Combine(_dir, name);
 
     [Fact]

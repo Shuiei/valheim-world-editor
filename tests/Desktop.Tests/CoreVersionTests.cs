@@ -5,11 +5,16 @@ using Xunit;
 
 namespace WorldEditor.Tests;
 
-// One version for the editor, the plugin and the packages: the VERSION file.
+/// <summary>
+/// One version for the editor, the plugin and the packages: the VERSION file.
+/// </summary>
 public class VersionTests
 {
     private static readonly string Repo = Path.GetFullPath(Path.Combine(Fixtures.Root, "..", ".."));
 
+    /// <summary>
+    /// The VERSION file's text.
+    /// </summary>
     private static string Version => File.ReadAllText(Path.Combine(Repo, "VERSION")).Trim();
 
     [Fact]

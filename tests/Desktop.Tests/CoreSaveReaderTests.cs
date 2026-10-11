@@ -6,14 +6,18 @@ using Xunit;
 
 namespace WorldEditor.Tests;
 
-// What the save reader takes from objects' values, with objects carrying them saved into a copy of
-// the test world through the editor's own writer: a scale kept as one number, a location marker and
-// its location, when a terrain modifier was made, the names of owners and players, a moved object
-// given a new scale, and a zone list that cannot be read.
+/// <summary>
+/// What the save reader takes from objects' values, with objects carrying them saved into a copy of the test world
+/// through the editor's own writer: a scale kept as one number, a location marker and its location, when a terrain
+/// modifier was made, the names of owners and players, a moved object given a new scale, and a zone list that cannot be
+/// read.
+/// </summary>
 [Collection("World files")]
 public class CoreSaveReaderTests
 {
-    // Saves objects made from scratch (their own bytes), then reads the world again.
+    /// <summary>
+    /// Saves objects made from scratch (their own bytes), then reads the world again.
+    /// </summary>
     private static WorldSave SaveAndRead(TempWorld w, params ZdoData[] objects)
     {
         var world = w.Load();
@@ -24,7 +28,9 @@ public class CoreSaveReaderTests
         return w.Load();
     }
 
-    // An object at a spot of the test world (its first tree's place, moved by dx, dz).
+    /// <summary>
+    /// An object at a spot of the test world (its first tree's place, moved by dx, dz).
+    /// </summary>
     private static ZdoData At(TempWorld w, string prefab, float dx, float dz)
     {
         var (_, _, position, _, _) = w.Load().Objects.First(o => o.Prefab == StableHash.Of("Beech1"));

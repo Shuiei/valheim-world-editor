@@ -5,7 +5,9 @@ using Xunit;
 
 namespace WorldEditor.Tests;
 
-// PlanBuild .blueprint and .vbuild files, read into the clipboard format and written back.
+/// <summary>
+/// PlanBuild .blueprint and .vbuild files, read into the clipboard format and written back.
+/// </summary>
 public class BlueprintFormatTests
 {
     private const string PlanBuild = """

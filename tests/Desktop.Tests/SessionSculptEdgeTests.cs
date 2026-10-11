@@ -5,9 +5,11 @@ using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
-// Edge cases of the edit session and the brushes: the history's length limit, calls outside a stroke,
-// saving during a stroke or from an area opened on its own, taking out a change that marked zones for
-// reset; every falloff's profile, the ragged and turned brushes and their outlines, and erosion by rain.
+/// <summary>
+/// Edge cases of the edit session and the brushes: the history's length limit, calls outside a stroke, saving during a
+/// stroke or from an area opened on its own, taking out a change that marked zones for reset; every falloff's profile,
+/// the ragged and turned brushes and their outlines, and erosion by rain.
+/// </summary>
 [Collection("World files")]
 public class SessionSculptEdgeTests
 {

@@ -4,22 +4,31 @@ using TerrainEditor.App;
 
 namespace TerrainEditor.Desktop;
 
-// Stamps, like the web editor's (editor/stamps.js; WorldPainter's custom brushes, Axiom's stamp tool):
-// a picture as the brush shape. White works fully, black not at all. A few are built in (mountain,
-// mesa, crater rim…); any picture can be loaded (kept in stamps.json for next time).
+/// <summary>
+/// Stamps, like the web editor's (editor/stamps.js; WorldPainter's custom brushes, Axiom's stamp tool):
+/// a picture as the brush shape. White works fully, black not at all. A few are built in (mountain,
+/// mesa, crater rim…); any picture can be loaded (kept in stamps.json for next time).
+/// </summary>
 public static class Stamps
 {
+    /// <summary>A stamp's width and height in pixels: every stamp is Size × Size weights.</summary>
     public const int Size = 128;
 
+    /// <summary>One stamp offered in the brush's shape list.</summary>
+    /// <param name="Name">Its key (the built-in ones start with "stamp:").</param>
+    /// <param name="Label">The name shown in the shape list.</param>
+    /// <param name="Data">Size × Size weights, 0..1, row by row from the north.</param>
+    /// <param name="Loaded">Loaded from a picture (kept in stamps.json and can be forgotten), not built in.</param>
     public sealed record Stamp(string Name, string Label, float[] Data, bool Loaded = false);
 
-    // The web editor's value noise (the same numbers, so the built-in stamps look the same).
+    /// <summary>The web editor's value noise (the same numbers, so the built-in stamps look the same).</summary>
     private static double Hash(double x, double y)
     {
         double s = Math.Sin(x * 127.1 + y * 311.7) * 43758.5453;
         return s - Math.Floor(s);
     }
 
+    /// <summary>Smooth value noise, 0..1, between the hashes of the four nearest whole points.</summary>
     private static double VNoise(double x, double y)
     {
         double ix = Math.Floor(x), iy = Math.Floor(y), fx = x - ix, fy = y - iy, sx = fx * fx * (3 - 2 * fx), sy = fy * fy * (3 - 2 * fy);
@@ -27,6 +36,7 @@ public static class Stamps
         return (a + (b - a) * sx) * (1 - sy) + (c + (d - c) * sx) * sy;
     }
 
+    /// <summary>Four octaves of <c>VNoise</c>, scaled back to about 0..1.</summary>
     private static double Fractal(double x, double y)
     {
         double s = 0, a = 0.5;
@@ -40,6 +50,9 @@ public static class Stamps
         return s / 0.9375;
     }
 
+    /// <summary>
+    /// Fills a stamp from a function of (u, v) in -1..1, north up; values are clamped to 0..1.
+    /// </summary>
     private static float[] Render(Func<double, double, double> f)
     {
         float[] data = new float[Size * Size];
@@ -53,6 +66,7 @@ public static class Stamps
         return data;
     }
 
+    /// <summary>The built-in stamps, always offered first.</summary>
     public static readonly Stamp[] BuiltIn =
     [
         new("stamp:mountain", "Mountain", Render((u, v) => { double d = Math.Sqrt(u * u + v * v); return d >= 1 ? 0 : Math.Pow(1 - d, 1.6) * (0.75 + 0.5 * Fractal(u * 4 + 7, v * 4 + 3)); })),
@@ -62,7 +76,7 @@ public static class Stamps
         new("stamp:rocky", "Rocky ground", Render((u, v) => { double d = Math.Sqrt(u * u + v * v); if (d >= 1) { return 0; } return Math.Min(1, (1 - d) * 2.5) * Math.Max(0, Fractal(u * 6 + 11, v * 6 - 5) * 1.6 - 0.45); })),
     ];
 
-    // The weight at (u, v) in -1..1 (north up), between the four nearest pixels.
+    /// <summary>The weight at (u, v) in -1..1 (north up), between the four nearest pixels; 0 outside.</summary>
     public static float Sample(float[] data, float u, float v)
     {
         if (u <= -1 || u >= 1 || v <= -1 || v >= 1)
@@ -76,7 +90,8 @@ public static class Stamps
         return (At(x0, y0) * (1 - tx) + At(x0 + 1, y0) * tx) * (1 - ty) + (At(x0, y0 + 1) * (1 - tx) + At(x0 + 1, y0 + 1) * tx) * ty;
     }
 
-    // A picture (any size) to Size × Size weights: brightness times opacity. Null when it cannot be read.
+    /// <summary>A picture (any size) to Size × Size weights: brightness times opacity. Null when it cannot be read.</summary>
+    /// <param name="bytes">The picture file's contents, in any format Skia decodes.</param>
     public static float[]? FromPicture(byte[] bytes)
     {
         // Not a picture: no codec (Decode would throw).
@@ -109,10 +124,17 @@ public static class Stamps
     }
 
     // ---- Loaded pictures, kept between runs (the weights themselves, 0..255 per pixel).
+    /// <summary>A loaded stamp as stamps.json keeps it: the weights as base64, one byte (0..255) per pixel.</summary>
     private sealed record Kept(string Name, string Label, string Weights);
+    /// <summary>Where stamps.json is instead of the data folder (the tests' and documentation's --data).</summary>
     internal static string? PathOverride { get; set; }
+    /// <summary>The stamps.json file in use.</summary>
     private static string FilePath => PathOverride ?? Path.Combine(AppSettings.DataDir, "stamps.json");
 
+    /// <summary>
+    /// The loaded stamps kept from earlier runs; empty when there are none or the file cannot be read. Entries
+    /// without weights or of the wrong size are left out.
+    /// </summary>
     public static List<Stamp> LoadKept()
     {
         try
@@ -133,6 +155,7 @@ public static class Stamps
         }
     }
 
+    /// <summary>Writes the loaded stamps to stamps.json, replacing it; a failure to write is ignored.</summary>
     public static void SaveKept(IEnumerable<Stamp> loaded)
     {
         try

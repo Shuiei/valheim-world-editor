@@ -2,40 +2,70 @@ using System.Text.RegularExpressions;
 
 namespace TerrainEditor.App;
 
-// The game's own look (models, textures, the terrain shader, the map's textures) is read from the
-// user's own Valheim install, never shipped nor copied: this finds the install and keeps the one
-// reader of its asset bundles (GameBundles). The first time, and after a game update, the bundles are
-// indexed (a few seconds, in the background; the index is kept in a file).
+/// <summary>
+/// The game's own look (models, textures, the terrain shader, the map's textures) is read from the
+/// user's own Valheim install, never shipped nor copied: this finds the install and keeps the one
+/// reader of its asset bundles (GameBundles). The first time, and after a game update, the bundles are
+/// indexed (a few seconds, in the background; the index is kept in a file).
+/// </summary>
 public static class GameLook
 {
+    /// <summary>
+    /// Valheim's Steam app id (its Proton prefix under compatdata is named by it).
+    /// </summary>
     public const int ValheimAppId = 892970;
 
+    /// <summary>
+    /// Guards the bundles reader and the state.
+    /// </summary>
     private static readonly Lock Lock = new();
 
+    /// <summary>
+    /// The reader of the game's bundles in use.
+    /// </summary>
     private static GameBundles? _bundles;
 
-    // Where older editors copied the game's look (game-look) and kept the copy's cache (export-cache):
-    // deleted, nothing reads them any more.
+    /// <summary>
+    /// Where older editors copied the game's look (game-look): deleted (<c>DeleteOldCopy</c>), nothing reads it
+    /// any more.
+    /// </summary>
     public static string Dir => Path.Combine(AppSettings.UserDataDir, "game-look");
 
+    /// <summary>
+    /// Where older editors kept the copy's cache: deleted too (<c>DeleteOldCopy</c>).
+    /// </summary>
     private static string OldCache => Path.Combine(AppSettings.UserDataDir, "export-cache");
 
-    // The bundles' index (prefab -> bundle), kept between runs.
+    /// <summary>
+    /// The bundles' index (prefab -&gt; bundle), kept between runs.
+    /// </summary>
     public static string IndexFile => Path.Combine(AppSettings.UserDataDir, "game-index.json");
 
-    // False: Steam is only looked for under the home folder (not /opt/Steam, /usr/share/steam or
-    // Program Files): the editor driven by the tests and the documentation's pictures, whose stand-in
-    // home must not lead to the computer's own game.
+    /// <summary>
+    /// False: Steam is only looked for under the home folder (not /opt/Steam, /usr/share/steam or
+    /// Program Files): the editor driven by the tests and the documentation's pictures, whose stand-in
+    /// home must not lead to the computer's own game.
+    /// </summary>
     public static bool SearchOutsideHome { get; set; } = true;
 
-    // "ready", "missing" (Valheim not found), "running" (indexing its bundles), "failed".
+    /// <summary>
+    /// "ready", "missing" (Valheim not found), "running" (indexing its bundles), "failed".
+    /// </summary>
     public static string State { get; private set; } = "missing";
 
+    /// <summary>
+    /// The state's message for the start page, null when none.
+    /// </summary>
     public static string? Message { get; private set; }
 
+    /// <summary>
+    /// The Valheim folder found by the last <c>Check</c>, null when none.
+    /// </summary>
     public static string? ValheimPath { get; private set; }
 
-    // The reader of the game's bundles (null when Valheim is not found).
+    /// <summary>
+    /// The reader of the game's bundles (null when Valheim is not found).
+    /// </summary>
     public static GameBundles? Bundles
     {
         get
@@ -47,10 +77,19 @@ public static class GameLook
         }
     }
 
-    // What the start page shows: the state, its message, the Valheim folder, a detail line and the
-    // progress (0..1, null when not known).
+    /// <summary>
+    /// What the start page shows.
+    /// </summary>
+    /// <param name="State">The state (see <c>State</c>).</param>
+    /// <param name="Message">Its message.</param>
+    /// <param name="Valheim">The Valheim folder.</param>
+    /// <param name="LastLine">A detail line (null from <c>Now</c>).</param>
+    /// <param name="Progress">The progress (0..1, null when not known).</param>
     public sealed record Snapshot(string State, string? Message, string? Valheim, string? LastLine, double? Progress);
 
+    /// <summary>
+    /// The state as it is now.
+    /// </summary>
     public static Snapshot Now()
     {
         lock (Lock)
@@ -59,8 +98,10 @@ public static class GameLook
         }
     }
 
-    // At start and when the game folder changes: finds Valheim and indexes its bundles (in the
-    // background when the kept index is out of date).
+    /// <summary>
+    /// At start and when the game folder changes: finds Valheim and indexes its bundles (in the
+    /// background when the kept index is out of date).
+    /// </summary>
     public static void Check(AppSettings settings)
     {
         string? valheim = FindValheim(settings.ValheimPath);
@@ -118,7 +159,9 @@ public static class GameLook
         });
     }
 
-    // Use this Valheim folder: kept in the settings, then read. The problem, or null.
+    /// <summary>
+    /// Use this Valheim folder: kept in the settings, then read. The problem, or null.
+    /// </summary>
     public static string? Start(string valheim, AppSettings settings)
     {
         valheim = valheim.Trim().Trim('"');
@@ -133,6 +176,9 @@ public static class GameLook
         return null;
     }
 
+    /// <summary>
+    /// Sets the state and its message, logging a change.
+    /// </summary>
     private static void Set(string state, string? message)
     {
         if (state != State || message != Message)
@@ -143,8 +189,10 @@ public static class GameLook
         Message = message;
     }
 
-    // The copy older editors made (up to 1.16): about 150 MB nothing reads any more. Called by the app
-    // at start (not by the tests' editors: their data folder is the user's).
+    /// <summary>
+    /// The copy older editors made (up to 1.16): about 150 MB nothing reads any more. Called by the app
+    /// at start (not by the tests' editors: their data folder is the user's).
+    /// </summary>
     public static void DeleteOldCopy()
     {
         foreach (string d in new[] { Dir, OldCache })
@@ -166,6 +214,10 @@ public static class GameLook
 
     // ---- Finding things.
 
+    /// <summary>
+    /// The bundles folder of a Valheim game folder (valheim_Data/StreamingAssets/SoftRef/Bundles, either spelling), or
+    /// null.
+    /// </summary>
     public static string? BundlesDir(string valheim)
     {
         foreach (string sub in new[] { "valheim_Data", "Valheim_Data" })
@@ -179,8 +231,10 @@ public static class GameLook
         return null;
     }
 
-    // The game folder from a folder chosen near it: the game folder itself, its valheim_Data, or a
-    // folder above it in a Steam library (Steam, steamapps, common). Null when none of these.
+    /// <summary>
+    /// The game folder from a folder chosen near it: the game folder itself, its valheim_Data, or a
+    /// folder above it in a Steam library (Steam, steamapps, common). Null when none of these.
+    /// </summary>
     public static string? GameFolder(string chosen)
     {
         try
@@ -205,7 +259,9 @@ public static class GameLook
         }
     }
 
-    // The configured folder if it is valid, else Valheim in any Steam library on this computer.
+    /// <summary>
+    /// The configured folder if it is valid, else Valheim in any Steam library on this computer.
+    /// </summary>
     public static string? FindValheim(string? configured)
     {
         if (configured != null && BundlesDir(configured) != null)
@@ -223,8 +279,15 @@ public static class GameLook
         return null;
     }
 
+    /// <summary>
+    /// Steam's system-wide folders on Linux (looked at only with <c>SearchOutsideHome</c>).
+    /// </summary>
     private static readonly string[] SystemSteamRoots = ["/opt/Steam", "/usr/share/steam"];
 
+    /// <summary>
+    /// Steam's folders on this computer (registry and default places on Windows, the home's and Flatpak's on Linux),
+    /// each followed by the other libraries its libraryfolders.vdf lists; each folder once.
+    /// </summary>
     private static IEnumerable<string> SteamLibraries()
     {
         var roots = new List<string>();

@@ -1,15 +1,26 @@
 namespace TerrainEditor.Save;
 
-// Client for the WorldEditorBridge BepInEx plugin running in the game (usually on the dedicated
-// server, reached through an SSH tunnel such as ssh -L 5182:127.0.0.1:5182 user@server).
+/// <summary>
+/// Client for the WorldEditorBridge BepInEx plugin running in the game (usually on the dedicated server, reached
+/// through an SSH tunnel such as ssh -L 5182:127.0.0.1:5182 user@server).
+/// </summary>
+/// <param name="url">The bridge's base address, for example http://127.0.0.1:5182.</param>
+/// <param name="token">The plugin's token, sent with every request as the X-Bridge-Token header.</param>
 public sealed class LiveBridge(string url, string token) : IDisposable
 {
+    /// <summary>
+    /// HTTP client rooted at the bridge address; three minutes timeout, since a whole-world snapshot is slow.
+    /// </summary>
     private readonly HttpClient _http = new() { BaseAddress = new Uri(url.TrimEnd('/') + "/"), Timeout = TimeSpan.FromMinutes(3) };
 
+    /// <summary>The bridge address as given.</summary>
     public string Url { get; } = url;
 
+    /// <inheritdoc/>
     public void Dispose() => _http.Dispose();
 
+    /// <summary>A GET request with the token.</summary>
+    /// <exception cref="InvalidOperationException">The bridge answered with an error status.</exception>
     private async Task<HttpResponseMessage> Get(string path)
     {
         using HttpRequestMessage req = new(HttpMethod.Get, path);
@@ -23,14 +34,25 @@ public sealed class LiveBridge(string url, string token) : IDisposable
         return res;
     }
 
+    /// <summary>
+    /// The whole persistent world as the running game has it (world info, zone data and every persistent object),
+    /// gzip-compressed; <c>WorldSave.LoadLive</c> reads it.
+    /// </summary>
     public async Task<byte[]> Snapshot() => await (await Get("snapshot")).Content.ReadAsByteArrayAsync();
 
+    /// <summary>The connected players and their positions, as the plugin's JSON array.</summary>
     public async Task<string> Players() => await (await Get("players")).Content.ReadAsStringAsync();
 
+    /// <summary>Plugin and world info, as the plugin's JSON.</summary>
     public async Task<string> Status() => await (await Get("status")).Content.ReadAsStringAsync();
 
-    // A quick reachability check before opening a live world: null when the bridge answers, else a
-    // plain explanation of what is wrong.
+    /// <summary>
+    /// A quick reachability check before opening a live world: null when the bridge answers, else a plain explanation
+    /// of what is wrong.
+    /// </summary>
+    /// <param name="url">The address to try, with its scheme, for example http://127.0.0.1:5182.</param>
+    /// <param name="token">The token to send.</param>
+    /// <param name="timeout">How long to wait for an answer.</param>
     public static async Task<string?> Check(string url, string token, TimeSpan timeout)
     {
         Uri uri;
@@ -70,7 +92,10 @@ public sealed class LiveBridge(string url, string token) : IDisposable
         }
     }
 
-    // New terrain data for zones (TerrainComp.Save format), as a ZPackage: count, then x, z, byte array.
+    /// <summary>
+    /// New terrain data for zones (TerrainComp.Save format), as a ZPackage: count, then x, z, byte array.
+    /// </summary>
+    /// <returns>The plugin's answer text.</returns>
     public async Task<string> ApplyTerrain(IReadOnlyList<(int X, int Z, byte[] Data)> zones)
     {
         using MemoryStream ms = new();
@@ -96,10 +121,12 @@ public sealed class LiveBridge(string url, string token) : IDisposable
         return body;
     }
 
-    // Objects to destroy (live ZDOIDs) and to create (save-format bytes); returns the plugin's JSON.
-    // After them, each destroyed object's prefab and position: another mod may have made the object
-    // again under a new ZDOID (ServersideQoL does, for build pieces, plants, fires and more), and the
-    // plugin finds it by those. Plugins from before 1.15.4 stop reading before them.
+    /// <summary>
+    /// Objects to destroy (live ZDOIDs) and to create (save-format bytes); returns the plugin's JSON. After them, each
+    /// destroyed object's prefab and position: another mod may have made the object again under a new ZDOID
+    /// (ServersideQoL does, for build pieces, plants, fires and more), and the plugin finds it by those. Plugins from
+    /// before 1.15.4 stop reading before them.
+    /// </summary>
     public async Task<string> ApplyObjects(IReadOnlyList<LiveTarget> destroy, IReadOnlyList<byte[]> create)
     {
         using MemoryStream ms = new();
@@ -136,8 +163,10 @@ public sealed class LiveBridge(string url, string token) : IDisposable
         return body;
     }
 
-    // Zones to hand back to the world generator in the running game: int count, then per zone int x,
-    // int z, bool keep buildings, bool reset ground. Returns the plugin's JSON.
+    /// <summary>
+    /// Zones to hand back to the world generator in the running game: int count, then per zone int x, int z, bool keep
+    /// buildings, bool reset ground. Returns the plugin's JSON.
+    /// </summary>
     public async Task<string> ResetZones(IReadOnlyList<Editing.ZoneReset> zones)
     {
         using MemoryStream ms = new();
@@ -165,7 +194,7 @@ public sealed class LiveBridge(string url, string token) : IDisposable
         return body;
     }
 
-    // The zones asked for as an int count, then int x, int z each.
+    /// <summary>The zones asked for as an int count, then int x, int z each.</summary>
     private static byte[] ZoneList(IReadOnlyCollection<(int X, int Z)> zones)
     {
         using MemoryStream ms = new();
@@ -181,6 +210,10 @@ public sealed class LiveBridge(string url, string token) : IDisposable
         return ms.ToArray();
     }
 
+    /// <summary>A POST request with the token and a binary body.</summary>
+    /// <exception cref="InvalidOperationException">
+    /// The bridge answered with an error status (404 means the plugin is too old for that endpoint).
+    /// </exception>
     private async Task<HttpResponseMessage> Post(string path, byte[] body)
     {
         using HttpRequestMessage req = new(HttpMethod.Post, path) { Content = new ByteArrayContent(body) };
@@ -196,7 +229,9 @@ public sealed class LiveBridge(string url, string token) : IDisposable
         return res;
     }
 
-    // One number per zone that changes when an object there changes (a plugin from this version on).
+    /// <summary>
+    /// One number per zone that changes when an object there changes (a plugin from this version on).
+    /// </summary>
     public async Task<Dictionary<(int X, int Z), ulong>> Watch(IReadOnlyCollection<(int X, int Z)> zones)
     {
         using var res = await Post("watch", ZoneList(zones));
@@ -209,7 +244,7 @@ public sealed class LiveBridge(string url, string token) : IDisposable
         return digests;
     }
 
-    // The saved objects of the zones as the game has them now: ZDOID and save-format bytes.
+    /// <summary>The saved objects of the zones as the game has them now: ZDOID and save-format bytes.</summary>
     public async Task<List<(long User, uint Id, byte[] Bytes)>> ZoneObjects(IReadOnlyCollection<(int X, int Z)> zones)
     {
         using var res = await Post("zone", ZoneList(zones));
@@ -231,5 +266,6 @@ public sealed class LiveBridge(string url, string token) : IDisposable
         return list;
     }
 
+    /// <summary>Takes a snapshot and loads it as a world, its source named after the bridge address.</summary>
     public async Task<WorldSave> LoadWorld() => WorldSave.LoadLive(await Snapshot(), "live: " + Url);
 }

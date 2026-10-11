@@ -9,9 +9,11 @@ using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
-// Saved selections (per world, found again by kind and place after the ids changed) and the
-// eyedropper for the Replace lists (Area and Select): the store's edge cases, the Select panel's
-// Keep / Select / Add / Forget, and picking a kind with a click in the 3D view.
+/// <summary>
+/// Saved selections (per world, found again by kind and place after the ids changed) and the eyedropper for the Replace
+/// lists (Area and Select): the store's edge cases, the Select panel's Keep / Select / Add / Forget, and picking a kind
+/// with a click in the 3D view.
+/// </summary>
 [Collection("Saved selections")]
 public sealed class ParitySelectionTests : IDisposable
 {
@@ -24,6 +26,7 @@ public sealed class ParitySelectionTests : IDisposable
         SavedSelections.PathOverride = Path.Combine(_dir, "selections.json");
     }
 
+    /// <inheritdoc/>
     public void Dispose()
     {
         SavedSelections.PathOverride = _old;
@@ -32,10 +35,19 @@ public sealed class ParitySelectionTests : IDisposable
 
     private static readonly int Beech = StableHash.Of("Beech1"), Wall = StableHash.Of("wood_wall_half");
 
+    /// <summary>
+    /// A thing of this kind at world point (x, y, z), gone or not.
+    /// </summary>
     private static WorldScene.Thing T(int id, int prefab, float x, float y, float z, bool gone = false) => new(id, prefab, new Vector3(x, y, z), Vector3.Zero, 1, false) { Gone = gone };
 
+    /// <summary>
+    /// A saved selection named "s" holding these items.
+    /// </summary>
     private static SavedSelections.Saved S(params SavedSelections.Item[] items) => new("s", [.. items]);
 
+    /// <summary>
+    /// A saved item of this kind at (x, y, z).
+    /// </summary>
     private static SavedSelections.Item I(int prefab, float x, float y, float z) => new(prefab, x, y, z);
 
     // ---- The store.
@@ -106,6 +118,10 @@ public sealed class ParitySelectionTests : IDisposable
 
     // ---- The Select panel.
 
+    /// <summary>
+    /// A shown main window editing a flat 2 × 2 zone area with these objects, in the Select tool, its panel's messages
+    /// collected and its questions answered (world "World one", the name given, yes).
+    /// </summary>
     private static (MainWindow W, EditSession S, List<string> Messages) Window(params WorldScene.Thing[] things)
     {
         var w = new MainWindow(load: false) { Width = 1200, Height = 900 };
@@ -122,6 +138,9 @@ public sealed class ParitySelectionTests : IDisposable
         return (w, s, messages);
     }
 
+    /// <summary>
+    /// Raises the button's click (no posted work run).
+    /// </summary>
     private static void Click(Button b) => b.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
 
     [AvaloniaFact]
@@ -253,6 +272,9 @@ public sealed class ParitySelectionTests : IDisposable
 
     // ---- The eyedropper.
 
+    /// <summary>
+    /// Where a point in view space is on screen.
+    /// </summary>
     private static Avalonia.Point ScreenOf(MainWindow w, Vector3 viewPos)
     {
         var q = Vector4.Transform(new Vector4(viewPos, 1), w.View.ViewProj);
@@ -260,7 +282,9 @@ public sealed class ParitySelectionTests : IDisposable
         return new Avalonia.Point((q.X / q.W + 1) / 2 * size.Width, (1 - q.Y / q.W) / 2 * size.Height);
     }
 
-    // A click in the window, once its layout is done (a tool chosen changes it).
+    /// <summary>
+    /// A click in the window, once its layout is done (a tool chosen changes it).
+    /// </summary>
     private static void Press(MainWindow w, Avalonia.Point at, MouseButton button)
     {
         Avalonia.Threading.Dispatcher.UIThread.RunJobs();
@@ -269,6 +293,10 @@ public sealed class ParitySelectionTests : IDisposable
         w.MouseUp(at, button);
     }
 
+    /// <summary>
+    /// A shown main window with one half wall (given its box, as there are no models here) and the view looking at it:
+    /// with a screen point on the wall and one on empty ground.
+    /// </summary>
     private static (MainWindow W, EditSession S, Avalonia.Point Wall, Avalonia.Point Empty) PickWindow()
     {
         var w = new MainWindow(load: false) { Width = 1000, Height = 1000 };
@@ -397,6 +425,9 @@ public sealed class ParitySelectionTests : IDisposable
     }
 }
 
+/// <summary>
+/// Runs the saved selections' tests one at a time: they share the store's path.
+/// </summary>
 [CollectionDefinition("Saved selections", DisableParallelization = true)]
 public sealed class SavedSelectionsGroup
 {

@@ -38,6 +38,8 @@ catch (InvalidDataException ex)
     return 1;
 }
 
+// The changelog command: the mod pages' changelog from CHANGELOG.md's text. version gets a download link, and so
+// does each older version whose tag (v1.2.3) is in tags.
 static string Changelog(string text, string version, HashSet<string> tags)
 {
     var lines = new List<string>
@@ -72,6 +74,8 @@ static string Changelog(string text, string version, HashSet<string> tags)
     return string.Join("\n", lines).TrimEnd('\n') + "\n";
 }
 
+// The check command: throws InvalidDataException naming the first rule the package folder breaks (a missing
+// file or manifest key throws the runtime's own exception instead).
 static void Check(string dir)
 {
     using var m = JsonDocument.Parse(File.ReadAllText(Path.Combine(dir, "manifest.json")));
@@ -94,6 +98,7 @@ static void Check(string dir)
     }
 }
 
+// Throws InvalidDataException with what when ok is false.
 static void Require(bool ok, string what)
 {
     if (!ok)

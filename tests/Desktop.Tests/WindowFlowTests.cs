@@ -6,14 +6,20 @@ using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
-// The window's workflows on a copy of the test world: saving from the map and from the editor (with
-// the confirmation answered no, then yes), Discard, leaving and quitting with unsaved changes, a world
-// that cannot be opened, a game that stops answering, and the shortcuts and their messages.
+/// <summary>
+/// The window's workflows on a copy of the test world: saving from the map and from the editor (with the confirmation
+/// answered no, then yes), Discard, leaving and quitting with unsaved changes, a world that cannot be opened, a game
+/// that stops answering, and the shortcuts and their messages.
+/// </summary>
 [Collection("World files")]
 public class WindowFlowTests
 {
     private static readonly Func<Formula.Env, double> Two = Formula.Compile("2", []);
 
+    /// <summary>
+    /// A main window on its own copy of the test world, with what it tells and asks collected and every question
+    /// answered with <c>Answer</c>; deleted when disposed.
+    /// </summary>
     private sealed class Run : IDisposable
     {
         public MainWindow W { get; } = new(load: false) { Width = 1600, Height = 1000 };
@@ -30,13 +36,18 @@ public class WindowFlowTests
             W.Ask = (title, _, _, _) => { Asked.Add(title); return Task.FromResult(Answer); };
         }
 
+        /// <summary>
+        /// Opens the world (its map).
+        /// </summary>
         public async Task Open()
         {
             await W.OpenWorld(() => Task.Run(() => WorldSession.Open(Dir)), "Opening…");
             Assert.NotNull(W.World);
         }
 
-        // An area with a raised spot: one zone of ground pending.
+        /// <summary>
+        /// An area with a raised spot: one zone of ground pending.
+        /// </summary>
         public async Task Edited()
         {
             await Open();
@@ -47,6 +58,7 @@ public class WindowFlowTests
 
         public int SaveNumber => WorldSave.Load(Dir).SaveNumber;
 
+        /// <inheritdoc/>
         public void Dispose()
         {
             try

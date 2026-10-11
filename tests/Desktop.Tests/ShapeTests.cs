@@ -6,9 +6,14 @@ using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
-// The Shape tool and its formula language (the web editor's editor/shapes.js).
+/// <summary>
+/// The Shape tool and its formula language (the web editor's editor/shapes.js).
+/// </summary>
 public class ShapeTests
 {
+    /// <summary>
+    /// Compiles the formula and evaluates it at (x, z).
+    /// </summary>
     private static double Eval(string src, double x = 0, double z = 0)
     {
         var f = Formula.Compile(src, ["x", "z"]);

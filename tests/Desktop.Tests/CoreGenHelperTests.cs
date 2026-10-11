@@ -4,9 +4,11 @@ using Rnd = ValheimGen.UnityEngine.Random;
 
 namespace WorldEditor.Tests;
 
-// The small stand-ins the generator uses for Unity: vectors and their operators, Mathf, the random
-// number generator at its edges (backwards ranges, the unit circle), GenMath's remapping, and
-// the piece catalogue's footprints for the map.
+/// <summary>
+/// The small stand-ins the generator uses for Unity: vectors and their operators, Mathf, the random number generator at
+/// its edges (backwards ranges, the unit circle), GenMath's remapping, and the piece catalogue's footprints for the
+/// map.
+/// </summary>
 [Collection("World files")]
 public class CoreGenHelperTests
 {

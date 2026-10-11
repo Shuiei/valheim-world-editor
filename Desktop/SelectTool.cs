@@ -5,16 +5,21 @@ using TerrainEditor.Terrain;
 
 namespace TerrainEditor.Desktop;
 
-// The Select tool, like the web editor's (editor/transform.js, editor/selecting.js): click objects to
-// select them (Shift adds), drag on empty ground to draw a zone and select what is in it, drag a
-// selected object to move the selection, turn it (, .), lift it (PgUp PgDn), drop it onto what is
-// under it (End), type an exact place, and delete it (Del). A move is shown live; when it ends the
-// originals are replaced by copies at the new place (EditSession.Move), in one undo step.
+/// <summary>
+/// The Select tool, like the web editor's (editor/transform.js, editor/selecting.js): click objects to
+/// select them (Shift adds), drag on empty ground to draw a zone and select what is in it, drag a
+/// selected object to move the selection, turn it (, .), lift it (PgUp PgDn), drop it onto what is
+/// under it (End), type an exact place, and delete it (Del). A move is shown live; when it ends the
+/// originals are replaced by copies at the new place (EditSession.Move), in one undo step.
+/// </summary>
 public sealed class SelectTool
 {
+    /// <summary>The 3D view whose scene and selection the tool works on.</summary>
     private readonly GlView _view;
+    /// <summary>Degrees to radians.</summary>
     private const float D = MathF.PI / 180;
 
+    /// <summary>The tool for one 3D view.</summary>
     public SelectTool(GlView view)
     {
         _view = view;
@@ -22,25 +27,30 @@ public sealed class SelectTool
         _commitTimer.Tick += (_, _) => Commit();
     }
 
-    // What to tell the user ("" clears the line; warn: shown as a problem).
+    /// <summary>What to tell the user ("" clears the line; the flag (warn): shown as a problem).</summary>
     public event Action<string, bool>? Message;
-    // Put each moved object on the ground where it ends up; snap building pieces to the pieces around.
+    /// <summary>Put each moved object on the ground where it ends up (pieces as one block: see GroundBlock).</summary>
     public bool OnGround { get; set; } = true;
+    /// <summary>Snap moved building pieces to the pieces around.</summary>
     public bool SnapToPieces { get; set; } = true;
 
+    /// <summary>The view's open scene.</summary>
     private WorldScene? Scene => _view.Scene;
+    /// <summary>The open scene's edit session.</summary>
     private EditSession? Session => _view.Scene?.Session;
 
     // ---- Where things are: world coordinates (x east, z north), heights in metres.
+    /// <summary>The ground's height at a world point, as drawn.</summary>
     private float GroundAt(float wx, float wz)
     {
         var s = Scene!;
         return Picking.HeightAt(s, wx - s.Cx, -(wz - s.Cz));
     }
 
+    /// <summary>A building piece: read as one, or a prefab the piece catalogue knows (added pieces).</summary>
     private static bool IsPiece(WorldScene.Thing t) => t.Piece || PieceCatalog.Get(t.Prefab) != null;
 
-    // Unity's rotation (Euler degrees: z, then x, then y) of a local point.
+    /// <summary>Unity's rotation (Euler degrees: z, then x, then y) of a local point.</summary>
     private static Vector3 Rotate(Vector3 p, Vector3 r)
     {
         float cz = MathF.Cos(r.Z * D), sz = MathF.Sin(r.Z * D), cx = MathF.Cos(r.X * D), sx = MathF.Sin(r.X * D), cy = MathF.Cos(r.Y * D), sy = MathF.Sin(r.Y * D);
@@ -50,32 +60,54 @@ public sealed class SelectTool
         return new Vector3(x * cy + z * sy, y, -x * sy + z * cy);
     }
 
+    /// <summary>A piece's snap points in the world, placed at <paramref name="at"/> turned by <paramref name="rot"/> (Euler degrees).</summary>
     private static IEnumerable<Vector3> SnapsAt(int prefab, Vector3 at, Vector3 rot) =>
         (PieceCatalog.Get(prefab)?.Snaps ?? []).Select(p => at + Rotate(new Vector3(p[0], p[1], p[2]), rot));
 
     // ---- A move in progress.
+    /// <summary>One object being moved.</summary>
     private sealed class Item
     {
+        /// <summary>Its index in the scene's Things.</summary>
         public int Index;
+        /// <summary>The object as it was when the move began.</summary>
         public WorldScene.Thing Thing;
-        // Height above the ground; a piece's bottom below its origin (from its snap points).
+        /// <summary>Height above the ground; a piece's bottom below its origin (from its snap points).</summary>
         public float Lift, Bottom;
+        /// <summary>A building piece (moves with the block on the ground, can snap).</summary>
         public bool Piece;
     }
 
+    /// <summary>A move of the selection, shown live until it is committed.</summary>
     private sealed class Move
     {
+        /// <summary>What is moved (runestones and gone objects left out).</summary>
         public required List<Item> Items;
+        /// <summary>
+        /// The selection's middle when the move began (Cx, Cz: turns go around it); how far it moved (Dx, Dz) and was
+        /// lifted (Dy), in metres; the turn in degrees (-180..180); the snap's shift (Sx, Sy, Sz); how far the
+        /// pieces' block goes up or down to sit on the ground (Block).
+        /// </summary>
         public float Cx, Cz, Dx, Dz, Dy, Turn, Sx, Sy, Sz, Block;
+        /// <summary>Dropped with End (each item keeps the height it dropped to); typed exactly (no snapping).</summary>
         public bool Dropped, NoSnap;
+        /// <summary>The name of the piece the selection snapped to, for the message; null when not snapped.</summary>
         public string? Snapped;
+        /// <summary>The snap points of the pieces around (within 60 m), gathered once per move.</summary>
         public List<(Vector3 P, string Name)>? Others;
     }
 
+    /// <summary>The move in progress, if any.</summary>
     private Move? _move;
+    /// <summary>Commits a key-driven move (turn, lift, drop) once the keys stop for 700 ms.</summary>
     private readonly DispatcherTimer _commitTimer;
+    /// <summary>A move is in progress (not committed yet).</summary>
     public bool Moving => _move != null;
 
+    /// <summary>
+    /// The move in progress, or a new one of the selection; null when there is nothing to move (a runestone alone
+    /// says why).
+    /// </summary>
     private Move? Begin()
     {
         if (_move != null)
@@ -123,9 +155,15 @@ public sealed class SelectTool
         return _move = new Move { Items = items, Cx = items.Average(it => it.Thing.Position.X), Cz = items.Average(it => it.Thing.Position.Z) };
     }
 
-    // Where an item ends up: turned around the selection's middle (clockwise from above, like Unity's
-    // yaw), moved, and on the ground there (or as high above it as before). Pieces on the ground move
-    // as one block (see GroundBlock).
+    /// <summary>
+    /// Where an item ends up: turned around the selection's middle (clockwise from above, like Unity's
+    /// yaw), moved, and on the ground there (or as high above it as before). Pieces on the ground move
+    /// as one block (see GroundBlock).
+    /// </summary>
+    /// <param name="m">The move.</param>
+    /// <param name="it">The item.</param>
+    /// <param name="block">Add the block's ground shift.</param>
+    /// <param name="shift">Add the snap's shift.</param>
     private Vector3 Target(Move m, Item it, bool block = true, bool shift = true)
     {
         float t = m.Turn * D, c = MathF.Cos(t), sn = MathF.Sin(t), ox = it.Thing.Position.X - m.Cx, oz = it.Thing.Position.Z - m.Cz;
@@ -138,8 +176,10 @@ public sealed class SelectTool
         return new Vector3(x, GroundAt(x, z) + (m.Dropped || !OnGround ? it.Lift : -it.Bottom) + m.Dy + sy, z);
     }
 
-    // On the ground, the selected building pieces keep their shape: the whole block goes up or down
-    // until its bottom layer sits on the ground (sinking into a slope rather than floating).
+    /// <summary>
+    /// On the ground, the selected building pieces keep their shape: the whole block goes up or down
+    /// until its bottom layer sits on the ground (sinking into a slope rather than floating).
+    /// </summary>
     private void GroundBlock(Move m)
     {
         m.Block = 0;
@@ -160,8 +200,10 @@ public sealed class SelectTool
         }
     }
 
-    // Snapping: the closest pair of snap points (one of a moved piece, one of a piece around) within
-    // 0.75 m; the whole selection shifts so they meet.
+    /// <summary>
+    /// Snapping: the closest pair of snap points (one of a moved piece, one of a piece around) within
+    /// 0.75 m; the whole selection shifts so they meet.
+    /// </summary>
     private void Snap(Move m)
     {
         m.Sx = m.Sy = m.Sz = 0;
@@ -223,6 +265,7 @@ public sealed class SelectTool
         m.Snapped = b.Name;
     }
 
+    /// <summary>Shows the move in progress in the view (as previews) and says how far it went.</summary>
     private void Preview()
     {
         var m = _move;
@@ -242,7 +285,10 @@ public sealed class SelectTool
         Message?.Invoke($"Moving {m.Items.Count} object(s): {moved:0.0} m{(m.Turn != 0 ? $", turned {m.Turn:0.#}°" : "")}{(m.Dy != 0 ? $", {(m.Dy > 0 ? "+" : "")}{m.Dy:0.00} m" : "")}{(m.Snapped != null ? $" · snapped to {m.Snapped}" : "")}", false);
     }
 
-    // Ends a move: the originals are replaced by copies at their new places, and those get selected.
+    /// <summary>
+    /// Ends a move: the originals are replaced by copies at their new places, and those get selected. A move that
+    /// changed nothing is just dropped.
+    /// </summary>
     public void Commit()
     {
         _commitTimer.Stop();
@@ -265,7 +311,7 @@ public sealed class SelectTool
         Message?.Invoke($"Moved {copies.Count} object(s). Ctrl+Z puts them back.", false);
     }
 
-    // Puts a move back (Esc).
+    /// <summary>Puts a move back (Esc); false when there was none.</summary>
     public bool Cancel()
     {
         if (_move == null)
@@ -280,12 +326,14 @@ public sealed class SelectTool
         return true;
     }
 
+    /// <summary>Restarts the commit timer: the move is committed once the keys stop.</summary>
     private void Later()
     {
         _commitTimer.Stop();
         _commitTimer.Start();
     }
 
+    /// <summary>Turns the selection about its middle (positive: clockwise from above), committed shortly after.</summary>
     public void Turn(float degrees)
     {
         if (Begin() is not { } m)
@@ -301,6 +349,7 @@ public sealed class SelectTool
         Later();
     }
 
+    /// <summary>Lifts (or, negative, lowers) the selection, committed shortly after.</summary>
     public void Lift(float metres)
     {
         if (Begin() is not { } m)
@@ -312,8 +361,10 @@ public sealed class SelectTool
         Later();
     }
 
-    // End: each selected object drops onto whatever is under it: the top of another object, or else
-    // the ground.
+    /// <summary>
+    /// End: each selected object drops onto whatever is under it: the top of another object, or else
+    /// the ground.
+    /// </summary>
     public void Drop()
     {
         if (Begin() is not { } m)
@@ -372,6 +423,10 @@ public sealed class SelectTool
     }
 
     // ---- Exact place: the selection's middle (height: its lowest object) and the first one's turn.
+    /// <summary>
+    /// The selection's middle (height: its lowest object), the first one's turn (-180..180) and how many there
+    /// are; null when nothing is selected.
+    /// </summary>
     public (float X, float Y, float Z, float Turn, int Count)? Where()
     {
         var s = Scene;
@@ -388,7 +443,12 @@ public sealed class SelectTool
         return (things.Average(t => t.Position.X), things.Min(t => t.Position.Y), things.Average(t => t.Position.Z), turn, things.Count);
     }
 
-    // Moves the selection there (by: by these amounts), as one undo step; typed values are not snapped.
+    /// <summary>Moves the selection there (by: by these amounts), as one undo step; typed values are not snapped.</summary>
+    /// <param name="x">World x of the middle, in metres (or how far to move).</param>
+    /// <param name="y">Height of the lowest object, in metres (or how far to lift).</param>
+    /// <param name="z">World z of the middle, in metres (or how far to move).</param>
+    /// <param name="turn">The first object's turn, in degrees (or how far to turn).</param>
+    /// <param name="by">The values are amounts to move by, not a place.</param>
     public void PlaceAt(float x, float y, float z, float turn, bool by)
     {
         Commit();
@@ -407,6 +467,7 @@ public sealed class SelectTool
         Commit();
     }
 
+    /// <summary>Deletes the selection (Del), as one undo step.</summary>
     public void Delete()
     {
         Commit();
@@ -422,6 +483,7 @@ public sealed class SelectTool
     }
 
     // ---- More ways to select.
+    /// <summary>The indices of the objects drawn and pickable now (not gone, not hidden by View).</summary>
     private IEnumerable<int> Shown()
     {
         var s = Scene!;
@@ -434,6 +496,7 @@ public sealed class SelectTool
         }
     }
 
+    /// <summary>Selects every shown object of the selected objects' kinds (prefabs).</summary>
     public void SameKind()
     {
         var s = Scene;
@@ -452,6 +515,7 @@ public sealed class SelectTool
         Message?.Invoke($"Selected every shown object of the same kind: {ids.Count}.", false);
     }
 
+    /// <summary>Selects the shown objects that are not selected, and only those.</summary>
     public void Invert()
     {
         if (Scene == null)
@@ -464,7 +528,11 @@ public sealed class SelectTool
         Message?.Invoke($"Selected the {ids.Count} shown object(s) that were not selected.", false);
     }
 
-    // Every building piece connected to the selected ones through pieces that touch (boxes grown a little).
+    /// <summary>
+    /// Every building piece connected to the selected ones through pieces that touch (boxes grown a little), added
+    /// to the selection.
+    /// </summary>
+    /// <param name="from">The pieces to start from; null for the selection.</param>
     public void WholeBuilding(IEnumerable<int>? from = null)
     {
         var s = Scene;
@@ -530,10 +598,17 @@ public sealed class SelectTool
     }
 
     // ---- The handles (Gizmo): the one under the mouse or being dragged is drawn highlighted.
+    /// <summary>The handle under the mouse, if any.</summary>
     private Gizmo.Handle? _hover;
+    /// <summary>
+    /// A handle being dragged: which, the gizmo's centre, where along its axis (or heading round the ring) the drag
+    /// began, and the move's offsets and turn then.
+    /// </summary>
     private (Gizmo.Handle Handle, Vector3 Centre, float Start, float Dx, float Dz, float Dy, float Turn)? _handleDrag;
+    /// <summary>The handle to draw highlighted: the one dragged, else the one under the mouse.</summary>
     public Gizmo.Handle? HotHandle => _handleDrag?.Handle ?? _hover;
 
+    /// <summary>The handle under a point of the view, if the gizmo shows.</summary>
     private Gizmo.Handle? HandleAt(Point at, Size size)
     {
         if (_view.GizmoAt() is not var (c, scale))
@@ -544,9 +619,10 @@ public sealed class SelectTool
         return Gizmo.Hit(o, d, c, scale);
     }
 
-    // The pointer is over a move handle (a click there drags, it does not pick).
+    /// <summary>The pointer is over a move handle (a click there drags, it does not pick).</summary>
     public bool OverHandle => _hover != null;
 
+    /// <summary>The pointer moved with no button down: highlights the handle under it.</summary>
     public void Hover(Point at, Size size)
     {
         var h = HandleAt(at, size);
@@ -558,15 +634,30 @@ public sealed class SelectTool
     }
 
     // ---- The mouse (left button; the view passes it on in the Select tool).
+    /// <summary>A press on a selected object: where on screen, and the ground point under it.</summary>
     private (Point At, Vector3 From)? _drag;
+    /// <summary>That press moved far enough (5 px) to be a move, not a click.</summary>
     private bool _dragMoving;
+    /// <summary>
+    /// A press on empty ground: where on screen, the zone's ground points (x, z), whether it adds to the selection
+    /// (Shift), and whether it is being drawn (moved past 6 px) rather than a click.
+    /// </summary>
     private (Point At, List<Vector2> Points, bool Add, bool Drawing)? _lasso;
-    // A copy of the zone's points for the drawing thread.
+    /// <summary>A copy of the zone's points for the drawing thread.</summary>
     public Vector2[]? Lasso { get; private set; }
 
-    // Shift (not Ctrl) held: a click takes the row from the last object clicked (GlView.Pick).
+    /// <summary>Shift (not Ctrl) held: a click takes the row from the last object clicked (GlView.Pick).</summary>
     public bool Range { get; set; }
 
+    /// <summary>
+    /// The left button went down: drags a handle, starts a move of the selection, starts a zone on empty ground,
+    /// or picks.
+    /// </summary>
+    /// <param name="at">The point in the view.</param>
+    /// <param name="size">The view's size.</param>
+    /// <param name="shift">Shift held: add to the selection.</param>
+    /// <param name="alt">Alt held: objects are not hit (the ground only).</param>
+    /// <param name="clicks">The click count (2 or more on a building piece other than a chest: the whole building).</param>
     public void Down(Point at, Size size, bool shift, bool alt, int clicks)
     {
         var s = Scene;
@@ -616,6 +707,10 @@ public sealed class SelectTool
         _view.Pick(at, size, shift, Range);
     }
 
+    /// <summary>The pointer moved with the left button down: drags the handle, draws the zone, or moves the selection.</summary>
+    /// <param name="at">The point in the view.</param>
+    /// <param name="size">The view's size.</param>
+    /// <param name="ctrl">Ctrl held: handle drags go in 15° or half-metre steps.</param>
     public void Moved(Point at, Size size, bool ctrl = false)
     {
         if (_handleDrag is { } hd)
@@ -692,6 +787,10 @@ public sealed class SelectTool
         }
     }
 
+    /// <summary>
+    /// The left button came up: ends a handle drag or a move, selects what is inside the zone drawn, or (a plain
+    /// click on a selected object) picks that one.
+    /// </summary>
     public void Up(Point at, Size size, bool shift)
     {
         if (_handleDrag != null)
@@ -736,6 +835,7 @@ public sealed class SelectTool
         }
     }
 
+    /// <summary>Whether a point (x, z) is inside a polygon of (x, z) points (even-odd rule).</summary>
     public static bool Inside(IReadOnlyList<Vector2> poly, float x, float z)
     {
         bool c = false;
@@ -751,7 +851,10 @@ public sealed class SelectTool
         return c;
     }
 
-    // The tool's keys; true when the key was one.
+    /// <summary>
+    /// The tool's keys (Esc, Del; with a selection: , . turn, PgUp PgDn lift, End drops; Shift for bigger steps);
+    /// true when the key was one.
+    /// </summary>
     public bool Key(Avalonia.Input.Key key, bool shift)
     {
         switch (key)

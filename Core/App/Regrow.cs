@@ -8,71 +8,135 @@ using Rnd = ValheimGen.UnityEngine.Random;
 
 namespace TerrainEditor.App;
 
-// "Regrow nature": the trees, rocks, bushes and pickables the game would put in a zone, by its own
-// vegetation rules (ZoneSystem.m_vegetation and the LocationLists, read from the player's Valheim:
-// GameData; the tests use tests/fixtures/vegetation.json) and the same random draws
-// (ZoneSystem.PlaceVegetation, Unity's Random seeded per zone and rule), on the ground as it is now. What the editor cannot know is skipped: the physics checks against objects
-// already standing (IsBlocked, snapping onto rocks), clear areas around locations, and the Deep North's
-// alt biomes. The page drops spots taken by objects that are there and keeps those in the selection.
+/// <summary>
+/// "Regrow nature": the trees, rocks, bushes and pickables the game would put in a zone, by its own
+/// vegetation rules (ZoneSystem.m_vegetation and the LocationLists, read from the player's Valheim:
+/// GameData; the tests use tests/fixtures/vegetation.json) and the same random draws
+/// (ZoneSystem.PlaceVegetation, Unity's Random seeded per zone and rule), on the ground as it is now. What
+/// the editor cannot know is skipped: the physics checks against objects already standing (IsBlocked,
+/// snapping onto rocks), clear areas around locations, and the Deep North's alt biomes. The page drops spots
+/// taken by objects that are there and keeps those in the selection.
+/// </summary>
 public static class Regrow
 {
 #pragma warning disable IDE1006 // named as the JSON keys they are read from
+    /// <summary>
+    /// One vegetation rule (a ZoneVegetation of the game), with its fields' names. Booleans are 0 or 1;
+    /// distances in metres, tilts in degrees.
+    /// </summary>
     private sealed class Rule
     {
+        /// <summary>The prefab placed; its hash also seeds the rule's random draws.</summary>
         public string prefab { get; set; } = "";
+        /// <summary>The rule's own name in the game.</summary>
         public string name { get; set; } = "";
+        /// <summary>0: the rule is off.</summary>
         public int enable { get; set; }
+        /// <summary>Lowest group count per zone, when <see cref="max"/> is 1 or more.</summary>
         public float min { get; set; }
+        /// <summary>Below 1: the chance of one group in the zone; else the highest group count.</summary>
         public float max { get; set; }
+        /// <summary>1: try up to 50 times the count to place the groups.</summary>
         public int forcePlacement { get; set; }
+        /// <summary>Smallest uniform scale.</summary>
         public float scaleMin { get; set; } = 1f;
+        /// <summary>Largest uniform scale.</summary>
         public float scaleMax { get; set; } = 1f;
+        /// <summary>Largest random tilt on x and z (degrees).</summary>
         public float randTilt { get; set; }
+        /// <summary>Chance (0..1) the object is turned to the ground's slope instead.</summary>
         public float chanceToUseGroundTilt { get; set; }
+        /// <summary>The biomes it grows in (biome bit flags).</summary>
         public int biome { get; set; }
+        /// <summary>Where in a biome (flags): 1 edge, 2 middle (median); 7 by default, anywhere.</summary>
         public int biomeArea { get; set; } = 7;
+        /// <summary>The game's physics check against objects standing there; not done here.</summary>
         public int blockCheck { get; set; }
+        /// <summary>The game's snapping onto rocks; not done here.</summary>
         public int snapToStaticSolid { get; set; }
+        /// <summary>Lowest ground height, metres above the water level.</summary>
         public float minAltitude { get; set; } = -1000f;
+        /// <summary>Highest ground height, metres above the water level.</summary>
         public float maxAltitude { get; set; } = 1000f;
+        /// <summary>
+        /// Lowest vegetation mask (paint mask alpha); no check when it equals <see cref="maxVegetation"/>.
+        /// </summary>
         public float minVegetation { get; set; }
+        /// <summary>Highest vegetation mask.</summary>
         public float maxVegetation { get; set; }
+        /// <summary>Least ocean depth (metres); no check when it equals <see cref="maxOceanDepth"/>.</summary>
         public float minOceanDepth { get; set; }
+        /// <summary>Greatest ocean depth (metres).</summary>
         public float maxOceanDepth { get; set; }
+        /// <summary>Lowest ground slope (degrees).</summary>
         public float minTilt { get; set; }
+        /// <summary>Highest ground slope (degrees).</summary>
         public float maxTilt { get; set; } = 90f;
+        /// <summary>Radius of the ten random height samples for the terrain delta check; 0: no check.</summary>
         public float terrainDeltaRadius { get; set; }
+        /// <summary>Largest height difference (metres) within <see cref="terrainDeltaRadius"/>.</summary>
         public float maxTerrainDelta { get; set; } = 2f;
+        /// <summary>Smallest height difference (metres) within <see cref="terrainDeltaRadius"/>.</summary>
         public float minTerrainDelta { get; set; }
+        /// <summary>1: put at the water level instead of the ground.</summary>
         public int snapToWater { get; set; }
+        /// <summary>Raised this far above the ground (or water).</summary>
         public float groundOffset { get; set; }
+        /// <summary>Fewest objects in a group.</summary>
         public int groupSizeMin { get; set; } = 1;
+        /// <summary>Most objects in a group.</summary>
         public int groupSizeMax { get; set; } = 1;
+        /// <summary>How far a group's other objects go from its first.</summary>
         public float groupRadius { get; set; }
+        /// <summary>Distance from the world's middle; 0: no limit.</summary>
         public float minDistanceFromCenter { get; set; }
+        /// <summary>Distance from the world's middle; 0: no limit.</summary>
         public float maxDistanceFromCenter { get; set; }
+        /// <summary>1: only where the forest factor is between the thresholds below.</summary>
         public int inForest { get; set; }
+        /// <summary>Lowest forest factor, with <see cref="inForest"/>.</summary>
         public float forestTresholdMin { get; set; }
+        /// <summary>Highest forest factor, with <see cref="inForest"/>.</summary>
         public float forestTresholdMax { get; set; } = 1f;
-        // Random draws the object's components make when the game creates it (Awake): they move the
-        // sequence on for the rest of the rule.
+        /// <summary>
+        /// Random draws the object's components make when the game creates it (Awake): they move the
+        /// sequence on for the rest of the rule.
+        /// </summary>
         public int draws { get; set; }
     }
 #pragma warning restore IDE1006
 
-    // None until Use: no world opens before then (GameData).
+    /// <summary>The vegetation rules, in the game's order. None until Use: no world opens before then (GameData).</summary>
     private static volatile List<Rule> _rules = [];
 
-    // The rules as GameCatalogues.VegetationJson writes them.
+    /// <summary>The rules as GameCatalogues.VegetationJson writes them.</summary>
     public static void Use(string json) => _rules = JsonSerializer.Deserialize<List<Rule>>(json)!;
 
+    /// <summary>How many vegetation rules are loaded (0 before <see cref="Use"/>).</summary>
     public static int RuleCount => _rules.Count;
 
-    // One object the game would place: prefab, Unity world position, Euler rotation (degrees), scale.
+    /// <summary>One object the game would place: prefab, Unity world position, Euler rotation (degrees), scale.</summary>
+    /// <param name="Name">The prefab.</param>
+    /// <param name="X">World x (metres).</param>
+    /// <param name="Y">Height (metres).</param>
+    /// <param name="Z">World z (metres).</param>
+    /// <param name="Rx">Rotation about x (degrees).</param>
+    /// <param name="Ry">Rotation about y (degrees).</param>
+    /// <param name="Rz">Rotation about z (degrees).</param>
+    /// <param name="Scale">Uniform scale.</param>
     public sealed record Spot(string Name, float X, float Y, float Z, float Rx, float Ry, float Rz, float Scale);
 
-    // What the game would place in zones x0..x1, z0..z1 on the current ground. Kinds the editor cannot
-    // create (no networked object) are left out by the caller.
+    /// <summary>
+    /// What the game would place in zones x0..x1, z0..z1 on the current ground. Kinds the editor cannot
+    /// create (no networked object) are left out by the caller.
+    /// </summary>
+    /// <param name="terrain">The world's terrain (biomes, paint mask).</param>
+    /// <param name="edits">The session's edits, for the ground as it is now.</param>
+    /// <param name="seed">The world's seed.</param>
+    /// <param name="x0">First zone column.</param>
+    /// <param name="z0">First zone row.</param>
+    /// <param name="x1">Last zone column (inclusive).</param>
+    /// <param name="z1">Last zone row (inclusive).</param>
     public static List<Spot> Zones(TerrainService terrain, EditStore edits, int seed, int x0, int z0, int x1, int z1)
     {
         // The ground one zone around too: groups reach up to 20 m past their zone.
@@ -98,12 +162,18 @@ public static class Regrow
         return spots;
     }
 
-    // The ground the editor has now: heights every metre, triangles split like the game's terrain
-    // mesh (from (x + 1, z) to (x, z + 1)).
+    /// <summary>
+    /// The ground the editor has now: heights every metre, triangles split like the game's terrain
+    /// mesh (from (x + 1, z) to (x, z + 1)). wx0, wz0 are the world position of the first height.
+    /// </summary>
     private sealed class Ground(float[] heights, int w, int h, float wx0, float wz0)
     {
+        /// <summary>Whether the world point is on the grid.</summary>
         public bool Inside(float x, float z) => x >= wx0 && z >= wz0 && x < wx0 + w - 1 && z < wz0 + h - 1;
 
+        /// <summary>
+        /// The ground height at a world point, and the normal of its triangle; points off the grid are clamped onto it.
+        /// </summary>
         public float Height(float x, float z, out NVector3 normal)
         {
             float gx = Math.Clamp(x - wx0, 0f, w - 1.001f), gz = Math.Clamp(z - wz0, 0f, h - 1.001f);
@@ -119,22 +189,32 @@ public static class Regrow
             return h11 + (h01 - h11) * (1f - fx) + (h10 - h11) * (1f - fz);
         }
 
+        /// <summary>The ground height at a world point.</summary>
         public float Height(float x, float z) => Height(x, z, out _);
     }
 
-    // One zone's heightmap as the game sees it while placing: corner biomes, edge or middle of a biome,
-    // the vegetation mask and the ocean depth at its corners.
+    /// <summary>
+    /// One zone's heightmap as the game sees it while placing: corner biomes, edge or middle of a biome,
+    /// the vegetation mask and the ocean depth at its corners.
+    /// </summary>
     private sealed class Zone
     {
+        /// <summary>The biome at each corner, as <c>TerrainService.CornerBiomes</c> gives them.</summary>
         public required int[] Corners;
+        /// <summary>The base paint mask: 65 × 65 vertices, four floats (RGBA) each.</summary>
         public required float[] Mask;
+        /// <summary>Ocean depth (metres below water) at the heightmap's four corners, in the game's corner order.</summary>
         public required float[] OceanDepth;
+        /// <summary>The zone's middle in world metres.</summary>
         public float Cx, Cz;
 
+        /// <summary>Whether any corner has one of these biomes (bit flags).</summary>
         public bool HaveBiome(int biome) => Corners.Any(c => (c & biome) != 0);
 
+        /// <summary>The game's biome area: 2 (median) when all four corners are one biome, else 1 (edge).</summary>
         public int Area => Corners[0] == Corners[1] && Corners[0] == Corners[2] && Corners[0] == Corners[3] ? 2 : 1;   // Median : Edge
 
+        /// <summary>The biome at a world point, weighting the corners by distance as the game does.</summary>
         public int Biome(float x, float z)
         {
             if (Corners[0] == Corners[1] && Corners[0] == Corners[2] && Corners[0] == Corners[3])
@@ -153,13 +233,14 @@ public static class Regrow
             return weights.OrderByDescending(kv => kv.Value).ThenBy(kv => BitOperations.Log2((uint)kv.Key)).First().Key;
         }
 
-        // Heightmap.GetVegetationMask: the alpha of the base paint mask at the vertex under the point.
+        /// <summary>Heightmap.GetVegetationMask: the alpha of the base paint mask at the vertex under the point.</summary>
         public float VegetationMask(float x, float z)
         {
             int mx = Math.Clamp((int)MathF.Floor(x - 0.5f - Cx + 0.5f + 32f), 0, 64), my = Math.Clamp((int)MathF.Floor(z - 0.5f - Cz + 0.5f + 32f), 0, 64);
             return Mask[(my * 65 + mx) * 4 + 3];
         }
 
+        /// <summary>The ocean depth at a world point, between the four corners' depths.</summary>
         public float Ocean(float x, float z)
         {
             int vx = (int)MathF.Floor(x - Cx + 0.5f) + 32, vy = (int)MathF.Floor(z - Cz + 0.5f) + 32;
@@ -169,8 +250,10 @@ public static class Regrow
         }
     }
 
+    /// <summary>Unity's Mathf.Lerp: t clamped to 0..1.</summary>
     private static float Lerp(float a, float b, float t) => a + (b - a) * Math.Clamp(t, 0f, 1f);
 
+    /// <summary>The zone holding a world point, made once per <paramref name="cache"/>.</summary>
     private static Zone ZoneAt(TerrainService terrain, Ground ground, Dictionary<(int, int), Zone> cache, float x, float z)
     {
         int zx = (int)MathF.Floor((x + 32f) / 64f), zz = (int)MathF.Floor((z + 32f) / 64f);
@@ -193,6 +276,10 @@ public static class Regrow
         return zone;
     }
 
+    /// <summary>
+    /// ZoneSystem.PlaceVegetation for one zone: every enabled rule of its biomes, the same draws in the same
+    /// order, adding what passes the checks to <paramref name="spots"/>.
+    /// </summary>
     private static void PlaceZone(TerrainService terrain, Ground ground, int seed, int zx, int zz, List<Spot> spots)
     {
         Dictionary<(int, int), Zone> zones = [];
@@ -340,7 +427,7 @@ public static class Regrow
         }
     }
 
-    // Unity's Quaternion.LookRotation(forward, up).
+    /// <summary>Unity's Quaternion.LookRotation(forward, up).</summary>
     private static NQuaternion LookRotation(NVector3 forward, NVector3 up)
     {
         var z = NVector3.Normalize(forward);

@@ -6,13 +6,17 @@ using TerrainEditor.Save;
 
 namespace TerrainEditor.Desktop;
 
-// A copy as JSON, the web editor's clipboard format (editor/area.js encodeClip): heights in cm
-// (-32768 = no ground), edge weights and paint in 1/255, objects and outline as they are. Blueprint
-// files hold it, so the two editors read each other's blueprints. And a small picture of a copy.
+/// <summary>
+/// A copy as JSON, the web editor's clipboard format (editor/area.js encodeClip): heights in cm
+/// (-32768 = no ground), edge weights and paint in 1/255, objects and outline as they are. Blueprint
+/// files hold it, so the two editors read each other's blueprints. And a small picture of a copy.
+/// </summary>
 public static class CopyFormat
 {
+    /// <summary>A number rounded to four decimals, for the JSON.</summary>
     private static double R(float v) => Math.Round(v, 4);
 
+    /// <summary>A copy in the clipboard format.</summary>
     public static JsonObject ToJson(CopyData c) => new()
     {
         ["w"] = c.W,
@@ -38,11 +42,15 @@ public static class CopyFormat
         ["name"] = c.Name,
     };
 
-    // Numbers as written by either editor (whole or not, float or double inside the node).
+    /// <summary>Numbers as written by either editor (whole or not, float or double inside the node); d when missing.</summary>
     private static float F(JsonNode? n, float d = 0) => n == null ? d : float.Parse(n.ToJsonString(), System.Globalization.CultureInfo.InvariantCulture);
+    /// <summary>A number as written by either editor, rounded to a whole one (0 when missing).</summary>
     private static int I(JsonNode? n) => (int)MathF.Round(F(n));
 
-    // keepSources: the object ids only mean something in the world the copy came from.
+    /// <summary>A copy from the clipboard format.</summary>
+    /// <param name="o">The JSON.</param>
+    /// <param name="name">Its name; null: the one in the JSON.</param>
+    /// <param name="keepSources">Keep the objects' source ids: they only mean something in the world the copy came from.</param>
     public static CopyData FromJson(JsonObject o, string? name = null, bool keepSources = true) => new()
     {
         W = I(o["w"]),
@@ -57,8 +65,12 @@ public static class CopyFormat
         Name = name ?? (string?)o["name"],
     };
 
-    // A small picture of a copy seen from above (north up): the ground shaded by height, objects as dots
-    // coloured by kind (the web editor's drawThumb), as a PNG data URL.
+    /// <summary>
+    /// A small picture of a copy seen from above (north up): the ground shaded by height, objects as dots
+    /// coloured by kind (the web editor's drawThumb), as a PNG data URL.
+    /// </summary>
+    /// <param name="c">The copy.</param>
+    /// <param name="size">The picture's width and height in pixels.</param>
     public static string Thumb(CopyData c, int size = 160)
     {
         using var bmp = new SKBitmap(size, size);

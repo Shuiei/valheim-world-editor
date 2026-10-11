@@ -7,39 +7,82 @@ using TerrainEditor.Terrain;
 
 namespace TerrainEditor.Desktop;
 
-// The game's models: read from the game's own files (BundleModels, from Valheim's asset bundles), or
-// from files in the exporter's layout (Files: a folder with pieces/<name>.json listing a kind's parts
-// (mesh, submesh, material, matrix in the view's right-handed space), meshes/<id>.bin holding
-// interleaved position, normal, uv (float32, 8 per vertex) then the uint32 indices of each submesh,
-// materials.json the colours and textures (tex/); what the tests give it). Thread-safe: models are read
-// on worker threads.
+/// <summary>
+/// The game's models: read from the game's own files (BundleModels, from Valheim's asset bundles), or from files in the
+/// exporter's layout (Files: a folder with pieces/&lt;name&gt;.json listing a kind's parts (mesh, submesh, material,
+/// matrix in the view's right-handed space), meshes/&lt;id&gt;.bin holding interleaved position, normal, uv (float32, 8
+/// per vertex) then the uint32 indices of each submesh, materials.json the colours and textures (tex/); what the tests
+/// give it). Thread-safe: models are read on worker threads.
+/// </summary>
 public sealed class ModelStore
 {
-    // Where the models come from. Meshes come with Unity's winding (the store turns it around).
+    /// <summary>
+    /// Where the models come from. Meshes come with Unity's winding (the store turns it around).
+    /// </summary>
     internal interface ISource
     {
-        // A world object's model name (objects with a model of their own: not pieces, creatures, items).
+        /// <summary>
+        /// A world object's model name (objects with a model of their own: not pieces, creatures, items).
+        /// </summary>
+        /// <returns>The model name, or null when the prefab has none of its own.</returns>
         string? ObjectName(int prefab);
 
+        /// <summary>
+        /// A model by name, or null when there is none.
+        /// </summary>
         Model? Model(string name);
 
+        /// <summary>
+        /// A mesh by id, or null when there is none; Unity's winding.
+        /// </summary>
         MeshData? Mesh(string id);
 
+        /// <summary>
+        /// A material by id.
+        /// </summary>
         MaterialData Material(string id);
 
+        /// <summary>
+        /// A texture by id, or null when it cannot be read.
+        /// </summary>
         ImageData? Texture(string id);
     }
 
-    // A model with no root scale: as it is.
+    /// <summary>
+    /// A model with no root scale: as it is.
+    /// </summary>
     private static readonly float[] UnitScale = [1f, 1f, 1f];
 
+    /// <summary>
+    /// One part of a model: a submesh drawn with a material.
+    /// </summary>
+    /// <param name="Mesh">The mesh's id.</param>
+    /// <param name="Sub">Which of the mesh's submeshes.</param>
+    /// <param name="Material">The material's id.</param>
+    /// <param name="Matrix">The part's placement in the model, in the view's right-handed space.</param>
     public sealed record Part(string Mesh, int Sub, string Material, Matrix4x4 Matrix);
+    /// <summary>
+    /// A kind's model: its parts and its root's scale.
+    /// </summary>
+    /// <param name="Name">The model name it was asked by.</param>
+    /// <param name="Parts">Its parts, never empty when loaded through the store.</param>
+    /// <param name="RootScale">The prefab root's scale; used when a placed object has no scale of its own.</param>
     public sealed record Model(string Name, List<Part> Parts, Vector3 RootScale);
+    /// <summary>
+    /// A mesh's vertices and triangles.
+    /// </summary>
+    /// <param name="Vertices">Interleaved position, normal, uv: 8 floats per vertex.</param>
+    /// <param name="Submeshes">Each submesh's triangle indices, three per triangle.</param>
     public sealed record MeshData(float[] Vertices, uint[][] Submeshes)
     {
-        // The mesh's box (its vertices' smallest and largest coordinates).
+        /// <summary>
+        /// The mesh's box (its vertices' smallest and largest coordinates).
+        /// </summary>
         public (Vector3 Min, Vector3 Max) Bounds { get; } = BoundsOf(Vertices);
 
+        /// <summary>
+        /// The smallest and largest vertex positions; zero for a mesh without a whole vertex.
+        /// </summary>
         private static (Vector3, Vector3) BoundsOf(float[] v)
         {
             if (v.Length < 8)
@@ -56,33 +99,72 @@ public sealed class ModelStore
             return (min, max);
         }
     }
+    /// <summary>
+    /// How a part is coloured.
+    /// </summary>
+    /// <param name="Color">RGBA, the colour in linear space (alpha as is).</param>
+    /// <param name="Map">The texture's id, or null for none.</param>
+    /// <param name="Cutoff">Alpha below which pixels are dropped; 0 draws them all.</param>
+    /// <param name="DoubleSided">Draw both faces.</param>
+    /// <param name="UvTransform">Texture scale (x, y) then offset (z, w), applied as uv * scale + offset.</param>
     public sealed record MaterialData(Vector4 Color, string? Map, float Cutoff, bool DoubleSided, Vector4 UvTransform);
+    /// <summary>
+    /// A texture's pixels.
+    /// </summary>
+    /// <param name="Width">In pixels.</param>
+    /// <param name="Height">In pixels.</param>
+    /// <param name="Rgba">Four bytes per pixel, row by row.</param>
     public sealed record ImageData(int Width, int Height, byte[] Rgba);
 
+    /// <summary>
+    /// Where models, meshes, materials and textures are read from.
+    /// </summary>
     private readonly ISource _source;
+    /// <summary>
+    /// Models read so far by name, null for those that have none (asked once).
+    /// </summary>
     private readonly ConcurrentDictionary<string, Model?> _models = new();
+    /// <summary>
+    /// Meshes read so far by id; lazy so two threads asking at once read a mesh once.
+    /// </summary>
     private readonly ConcurrentDictionary<string, Lazy<MeshData?>> _meshes = new();
-    // Each mesh's box, kept when its vertices are let go (Forget).
+    /// <summary>
+    /// Each mesh's box, kept when its vertices are let go (Forget).
+    /// </summary>
     private readonly ConcurrentDictionary<string, (Vector3 Min, Vector3 Max)> _bounds = new();
 
-    // Models from files in the exporter's layout (the tests' small sets).
+    /// <summary>
+    /// Models from files in the exporter's layout (the tests' small sets).
+    /// </summary>
+    /// <param name="root">The folder holding pieces/, meshes/, tex/, meshinfo.json, materials.json and
+    /// objects.json.</param>
     internal ModelStore(string root) : this(new Files(root))
     {
     }
 
+    /// <summary>
+    /// Models from any source (the game's bundles, or files).
+    /// </summary>
     internal ModelStore(ISource source)
     {
         _source = source;
     }
 
-    // The game's models, read from the Valheim game folder's bundles; null when the game is not found.
-    // Run off the UI thread: the first time the bundles are indexed (a few seconds; kept in a file after).
+    /// <summary>
+    /// The game's models, read from the Valheim game folder's bundles; null when the game is not found. Run off the UI
+    /// thread: the first time the bundles are indexed (a few seconds; kept in a file after).
+    /// </summary>
     public static ModelStore? Open() => BundleModels.For(GameLook.Bundles) is { } game ? new ModelStore(game) : null;
 
-    // A world object's model name, else a dungeon room's (their models are under the room's prefab name,
-    // like pieces), else the prefab's.
+    /// <summary>
+    /// A world object's model name, else a dungeon room's (their models are under the room's prefab name, like pieces),
+    /// else the prefab's.
+    /// </summary>
     public string? NameOf(int prefab) => _source.ObjectName(prefab) ?? Editing.Dungeons.RoomOf(prefab)?.Name ?? PrefabCatalog.DisplayName(prefab);
 
+    /// <summary>
+    /// A model by name, read once and kept; null when there is none, it has no parts or it could not be read.
+    /// </summary>
     public Model? LoadModel(string name) => _models.GetOrAdd(name, n =>
     {
         try
@@ -96,6 +178,10 @@ public sealed class ModelStore
         }
     });
 
+    /// <summary>
+    /// A mesh by id, read once (with its winding turned around for the right-handed view) and kept until <c>Forget</c>;
+    /// null when there is none or it could not be read.
+    /// </summary>
     public MeshData? LoadMesh(string id) => _meshes.GetOrAdd(id, i => new Lazy<MeshData?>(() =>
     {
         MeshData? md;
@@ -124,16 +210,25 @@ public sealed class ModelStore
         return md;
     })).Value;
 
-    // A mesh's box, if it was read before (null: read it with LoadMesh).
+    /// <summary>
+    /// A mesh's box, if it was read before (null: read it with LoadMesh).
+    /// </summary>
     public (Vector3 Min, Vector3 Max)? BoundsOf(string id) => _bounds.TryGetValue(id, out var b) ? b : null;
 
-    // The mesh's vertices are not needed any more (they are on the graphics card): let go, its box kept.
-    // Read again if asked again.
+    /// <summary>
+    /// The mesh's vertices are not needed any more (they are on the graphics card): let go, its box kept. Read again if
+    /// asked again.
+    /// </summary>
     public void Forget(string id) => _meshes.TryRemove(id, out _);
 
-    // Colours are sRGB; the shader lights in linear colours.
+    /// <summary>
+    /// Colours are sRGB; the shader lights in linear colours. One sRGB channel (0..1) to linear, by a 2.2 gamma.
+    /// </summary>
     internal static float Linear(float v) => MathF.Pow(v, 2.2f);
 
+    /// <summary>
+    /// A material by id; plain white and opaque when it could not be read.
+    /// </summary>
     public MaterialData Material(string id)
     {
         try
@@ -147,7 +242,9 @@ public sealed class ModelStore
         }
     }
 
-    // A texture's pixels, RGBA, the bottom row first (as Unity keeps them).
+    /// <summary>
+    /// A texture's pixels, RGBA, the bottom row first (as Unity keeps them); null when it could not be read.
+    /// </summary>
     public ImageData? LoadTexture(string id)
     {
         try
@@ -161,13 +258,27 @@ public sealed class ModelStore
         }
     }
 
-    // Files in the exporter's layout (see the top).
+    /// <summary>
+    /// Files in the exporter's layout (see the top).
+    /// </summary>
     private sealed class Files : ISource
     {
+        /// <summary>
+        /// The folder the files are in.
+        /// </summary>
         private readonly string _root;
+        /// <summary>
+        /// Object model names by prefab hash, from objects.json.
+        /// </summary>
         private readonly Dictionary<int, string> _names = [];
+        /// <summary>
+        /// meshinfo.json (each mesh's vertex count and submesh index counts) and materials.json.
+        /// </summary>
         private readonly JsonObject _meshInfo, _materials;
 
+        /// <summary>
+        /// Reads the index files; meshes, pieces and textures are read when asked.
+        /// </summary>
         public Files(string root)
         {
             _root = root;
@@ -182,8 +293,10 @@ public sealed class ModelStore
             }
         }
 
+        /// <inheritdoc/>
         public string? ObjectName(int prefab) => _names.TryGetValue(prefab, out string? n) ? n : null;
 
+        /// <inheritdoc/>
         public Model? Model(string name)
         {
             string file = Path.Combine(_root, "pieces", name + ".json");
@@ -205,6 +318,7 @@ public sealed class ModelStore
             return new Model(name, parts, new Vector3(rs[0], rs[1], rs[2]));
         }
 
+        /// <inheritdoc/>
         public MeshData? Mesh(string id)
         {
             if (_meshInfo[id] is not JsonObject info)
@@ -227,6 +341,7 @@ public sealed class ModelStore
             return new MeshData(verts, indices);
         }
 
+        /// <inheritdoc/>
         public MaterialData Material(string id)
         {
             var m = _materials[id] as JsonObject;
@@ -237,6 +352,9 @@ public sealed class ModelStore
                 cutoff, m?["doubleSided"]?.GetValue<bool>() == true, new Vector4(uv[0], uv[1], uv[2], uv[3]));
         }
 
+        /// <summary>
+        /// A texture file under tex/, decoded as stored; null when it cannot be read.
+        /// </summary>
         public ImageData? Texture(string file)
         {
             string path = Path.Combine(_root, "tex", file);

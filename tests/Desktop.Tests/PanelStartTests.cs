@@ -8,13 +8,19 @@ using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
-// The start page: connecting to a dedicated server through the form and from a saved server (the SSH
-// tunnel replaced by one that leads to a stand-in game), each way it can fail, forgetting a server,
-// the saved worlds as cards, a world folder typed with ~, and "My game" when the plugin's settings
-// cannot be read. Saved servers and settings go to the tests' own files; it runs alone.
+/// <summary>
+/// The start page: connecting to a dedicated server through the form and from a saved server (the SSH tunnel replaced
+/// by one that leads to a stand-in game), each way it can fail, forgetting a server, the saved worlds as cards, a world
+/// folder typed with ~, and "My game" when the plugin's settings cannot be read. Saved servers and settings go to the
+/// tests' own files; it runs alone.
+/// </summary>
 [Collection("DataDir")]
 public class PanelStartTests
 {
+    /// <summary>
+    /// A start page with its own settings, saved servers in a temporary file, and the worlds it was asked to open; the
+    /// saved-servers path is put back when disposed.
+    /// </summary>
     private sealed class Run : IDisposable
     {
         public StartPage P { get; }
@@ -33,7 +39,9 @@ public class PanelStartTests
             P.OpenRequested += (open, what) => { Open = open; Opened.Add(what); };
         }
 
-        // The tunnel opens on this port with this token (a stand-in game's), or fails.
+        /// <summary>
+        /// The tunnel opens on this port with this token (a stand-in game's), or fails.
+        /// </summary>
         public void Tunnel(int port, string token, string? error = null) => P.StartTunnel = r =>
         {
             Tunnels.Add(r);
@@ -41,6 +49,7 @@ public class PanelStartTests
                 error == null ? new ServerConfig.Server { Name = r.Name ?? r.Host, Host = r.Host, SshPort = r.Port, User = r.User, Token = r.Token } : null));
         };
 
+        /// <inheritdoc/>
         public void Dispose()
         {
             ServerConfig.PathOverride = _servers;
@@ -54,12 +63,18 @@ public class PanelStartTests
         }
     }
 
+    /// <summary>
+    /// Clicks the button and runs the posted work it starts.
+    /// </summary>
     private static void Click(Button b)
     {
         b.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         Dispatcher.UIThread.RunJobs();
     }
 
+    /// <summary>
+    /// Every text block's text under the control, joined with " | ", for asserting on what it shows.
+    /// </summary>
     private static string Texts(Control c) => string.Join(" | ", c.GetLogicalDescendants().OfType<TextBlock>().Select(t => t.Text));
 
     [AvaloniaFact]

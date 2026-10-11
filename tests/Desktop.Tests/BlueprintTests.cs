@@ -7,9 +7,14 @@ using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
-// Blueprints: copies kept as files (in the web editor's format), pasted, exported and imported.
+/// <summary>
+/// Blueprints: copies kept as files (in the web editor's format), pasted, exported and imported.
+/// </summary>
 public class BlueprintTests
 {
+    /// <summary>
+    /// A small 3 × 2 copy with ground, an empty cell, paint and objects.
+    /// </summary>
     private static CopyData Sample() => new()
     {
         W = 3,

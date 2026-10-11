@@ -6,10 +6,14 @@ using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
-// Overlays (zone borders, wards, build ranges), and walking and flying over the ground.
+/// <summary>
+/// Overlays (zone borders, wards, build ranges), and walking and flying over the ground.
+/// </summary>
 public class OverlayTests
 {
-    // A flat 1 × 1 zone area at 35 m, with the given objects.
+    /// <summary>
+    /// A flat 1 × 1 zone area at 35 m, with the given objects.
+    /// </summary>
     internal static WorldScene Flat(params WorldScene.Thing[] things) => new()
     {
         World = null!,

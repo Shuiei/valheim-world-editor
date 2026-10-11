@@ -7,13 +7,20 @@ using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
-// The rest of the Select and Place tools' mouse and keys: the up and north arrows (Ctrl: half-metre
-// steps), a click on one of several selected objects, the tools' calls with nothing to work on; the
-// Place brush painting while it is dragged, Shift turning the preview into the eraser, a click on a
-// zone's edge adding a point, and turning the brush's pieces with the keys.
+/// <summary>
+/// The rest of the Select and Place tools' mouse and keys: the up and north arrows (Ctrl: half-metre steps), a click on
+/// one of several selected objects, the tools' calls with nothing to work on; the Place brush painting while it is
+/// dragged, Shift turning the preview into the eraser, a click on a zone's edge adding a point, and turning the brush's
+/// pieces with the keys.
+/// </summary>
 [Collection("World files")]
 public class SelectPlaceGapTests
 {
+    /// <summary>
+    /// A shown main window editing a flat 2 × 2 zone area with these objects (a half wall when none), in the Select
+    /// tool with the first selected, the eye this far from the wall's foot; with the screen point of a point in view
+    /// space.
+    /// </summary>
     private static (MainWindow W, EditSession S, Func<Vector3, Avalonia.Point> Screen) Open(Vector3 eyeFromWall, params WorldScene.Thing[] things)
     {
         var w = new MainWindow(load: false) { Width = 1000, Height = 1000 };

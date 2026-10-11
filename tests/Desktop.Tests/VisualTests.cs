@@ -5,11 +5,12 @@ using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
-// The real editor, drawing with OpenGL: one editor process for the whole group (started once, driven
-// with --driver commands), each test opening a fresh copy of the test world. Needs a display (and a
-// graphics card or Mesa's software renderer); without one the tests skip. Its settings and memory go
-// to a test folder (--data), never the user's. Run only these: --filter Category=Visual; skip them:
-// --filter Category!=Visual.
+/// <summary>
+/// The real editor, drawing with OpenGL: one editor process for the whole group (started once, driven with --driver
+/// commands), each test opening a fresh copy of the test world. Needs a display (and a graphics card or Mesa's software
+/// renderer); without one the tests skip. Its settings and memory go to a test folder (--data), never the user's. Run
+/// only these: --filter Category=Visual; skip them: --filter Category!=Visual.
+/// </summary>
 public class EditorProcess : IDisposable
 {
     private readonly Process? _p;
@@ -25,7 +26,9 @@ public class EditorProcess : IDisposable
     {
     }
 
-    // Started with more options (the world to open at once, for example), and environment variables.
+    /// <summary>
+    /// Started with more options (the world to open at once, for example), and environment variables.
+    /// </summary>
     protected EditorProcess(string[] extra, IReadOnlyDictionary<string, string>? env = null)
     {
         if (OperatingSystem.IsLinux() && string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DISPLAY")) && string.IsNullOrEmpty(Environment.GetEnvironmentVariable("WAYLAND_DISPLAY")))
@@ -58,6 +61,9 @@ public class EditorProcess : IDisposable
         }
     }
 
+    /// <summary>
+    /// The repo's tests/fixtures folder, found up from the test binaries.
+    /// </summary>
     internal static string Fixtures()
     {
         for (string? d = AppContext.BaseDirectory; d != null; d = Path.GetDirectoryName(d))
@@ -70,7 +76,9 @@ public class EditorProcess : IDisposable
         throw new DirectoryNotFoundException("tests/fixtures");
     }
 
-    // The next answer line ("@@ ..."), skipping the editor's other output.
+    /// <summary>
+    /// The next answer line ("@@ ..."), skipping the editor's other output.
+    /// </summary>
     private string? Next(TimeSpan timeout)
     {
         var watch = Stopwatch.StartNew();
@@ -93,7 +101,9 @@ public class EditorProcess : IDisposable
         return null;
     }
 
-    // Sends a command; its answer's JSON (an error fails the test).
+    /// <summary>
+    /// Sends a command; its answer's JSON (an error fails the test).
+    /// </summary>
     public JsonElement Send(string command)
     {
         lock (_sendLock)
@@ -107,6 +117,7 @@ public class EditorProcess : IDisposable
         }
     }
 
+    /// <inheritdoc/>
     public virtual void Dispose()
     {
         if (_p != null)
@@ -135,11 +146,16 @@ public class EditorProcess : IDisposable
     }
 }
 
-// The editor started with --world and --zone: straight into the 3D view of a copy of the test world.
+/// <summary>
+/// The editor started with --world and --zone: straight into the 3D view of a copy of the test world.
+/// </summary>
 public sealed class DirectEditorProcess() : EditorProcess(Start())
 {
     private static string? _copy;
 
+    /// <summary>
+    /// The command line: a fresh copy of the test world, its zone 0, 0, 2 zones across.
+    /// </summary>
     private static string[] Start()
     {
         _copy = Path.Combine(Path.GetTempPath(), "vwe-visual-direct-" + Guid.NewGuid().ToString("N")[..8]);
@@ -152,6 +168,7 @@ public sealed class DirectEditorProcess() : EditorProcess(Start())
         return ["--world", world, "--zone", "0,0", "--size", "2"];
     }
 
+    /// <inheritdoc/>
     public override void Dispose()
     {
         base.Dispose();
@@ -165,12 +182,17 @@ public sealed class DirectEditorProcess() : EditorProcess(Start())
     }
 }
 
-// Started straight in the 3D editor with a graphics-card budget of 1 byte: every area opened lets the
-// models go and reads them again.
+/// <summary>
+/// Started straight in the 3D editor with a graphics-card budget of 1 byte: every area opened lets the models go and
+/// reads them again.
+/// </summary>
 public sealed class TinyBudgetEditorProcess() : EditorProcess(Start(), new Dictionary<string, string> { ["VWE_GPU_BUDGET"] = "1" })
 {
     private static string? _copy;
 
+    /// <summary>
+    /// The command line: a fresh copy of the test world, its zone 0, 0, 2 zones across.
+    /// </summary>
     private static string[] Start()
     {
         _copy = Path.Combine(Path.GetTempPath(), "vwe-visual-budget-" + Guid.NewGuid().ToString("N")[..8]);
@@ -183,6 +205,7 @@ public sealed class TinyBudgetEditorProcess() : EditorProcess(Start(), new Dicti
         return ["--world", world, "--zone", "0,0", "--size", "2"];
     }
 
+    /// <inheritdoc/>
     public override void Dispose()
     {
         base.Dispose();
@@ -196,11 +219,16 @@ public sealed class TinyBudgetEditorProcess() : EditorProcess(Start(), new Dicti
     }
 }
 
-// The editor started with a world folder: that world's map.
+/// <summary>
+/// The editor started with a world folder: that world's map.
+/// </summary>
 public sealed class FolderEditorProcess() : EditorProcess(Start())
 {
     private static string? _copy;
 
+    /// <summary>
+    /// The command line: a fresh copy of the test world's folder.
+    /// </summary>
     private static string[] Start()
     {
         _copy = Path.Combine(Path.GetTempPath(), "vwe-visual-folder-" + Guid.NewGuid().ToString("N")[..8]);
@@ -213,6 +241,7 @@ public sealed class FolderEditorProcess() : EditorProcess(Start())
         return [world];
     }
 
+    /// <inheritdoc/>
     public override void Dispose()
     {
         base.Dispose();
@@ -226,19 +255,25 @@ public sealed class FolderEditorProcess() : EditorProcess(Start())
     }
 }
 
-// The editor started with --live and --token: the stand-in game's map.
+/// <summary>
+/// The editor started with --live and --token: the stand-in game's map.
+/// </summary>
 public sealed class LiveEditorProcess() : EditorProcess(Start())
 {
     private static FakeGame? _game;
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Tests reach the game through their fixture.")]
     public FakeGame Game => _game!;
 
+    /// <summary>
+    /// The command line: a new stand-in game's address and token.
+    /// </summary>
     private static string[] Start()
     {
         _game = new FakeGame();
         return ["--live", _game.Url, "--token", _game.Token];
     }
 
+    /// <inheritdoc/>
     public override void Dispose()
     {
         base.Dispose();
@@ -246,32 +281,49 @@ public sealed class LiveEditorProcess() : EditorProcess(Start())
     }
 }
 
+/// <summary>
+/// Shares one <c>FolderEditorProcess</c> between the tests of the "Visual folder" collection.
+/// </summary>
 [CollectionDefinition("Visual folder")]
 public sealed class FolderVisualGroup : ICollectionFixture<FolderEditorProcess>
 {
 }
 
+/// <summary>
+/// Shares one <c>LiveEditorProcess</c> between the tests of the "Visual live" collection.
+/// </summary>
 [CollectionDefinition("Visual live")]
 public sealed class LiveVisualGroup : ICollectionFixture<LiveEditorProcess>
 {
 }
 
+/// <summary>
+/// Shares one <c>EditorProcess</c> between the tests of the "Visual" collection.
+/// </summary>
 [CollectionDefinition("Visual")]
 public sealed class VisualGroup : ICollectionFixture<EditorProcess>
 {
 }
 
+/// <summary>
+/// Shares one <c>DirectEditorProcess</c> between the tests of the "Visual direct" collection.
+/// </summary>
 [CollectionDefinition("Visual direct")]
 public sealed class DirectVisualGroup : ICollectionFixture<DirectEditorProcess>
 {
 }
 
+/// <summary>
+/// Pictures drawn by the real editor (OpenGL), each test on a fresh copy of the test world: the map, the 3D view, the
+/// tools' drawing, the documentation's shots.
+/// </summary>
 [Collection("Visual")]
 [Trait("Category", "Visual")]
 public sealed class VisualTests(EditorProcess editor) : IDisposable
 {
     private readonly string _dir = Path.Combine(Path.GetTempPath(), "vwe-visual-world-" + Guid.NewGuid().ToString("N")[..8]);
 
+    /// <inheritdoc/>
     public void Dispose()
     {
         try
@@ -283,7 +335,9 @@ public sealed class VisualTests(EditorProcess editor) : IDisposable
         }
     }
 
-    // A fresh copy of the test world, opened (its map shown).
+    /// <summary>
+    /// A fresh copy of the test world, opened (its map shown).
+    /// </summary>
     private JsonElement Open()
     {
         Assert.SkipUnless(editor.Available, editor.Why ?? "");
@@ -296,9 +350,15 @@ public sealed class VisualTests(EditorProcess editor) : IDisposable
         return editor.Send($"world {world}");
     }
 
+    /// <summary>
+    /// How much a picture shows: average brightness, its spread, distinct colours (5 bits a channel) and share of
+    /// near-black.
+    /// </summary>
     private sealed record Look(double Mean, double Spread, int Colours, double Dark);
 
-    // How much a picture shows: average brightness, its spread, distinct colours, share of near-black.
+    /// <summary>
+    /// How much a picture shows: average brightness, its spread, distinct colours, share of near-black.
+    /// </summary>
     private Look Picture(string name)
     {
         string path = Path.Combine(_dir, name + ".png");
@@ -306,6 +366,9 @@ public sealed class VisualTests(EditorProcess editor) : IDisposable
         return PictureAt(path);
     }
 
+    /// <summary>
+    /// Measures a saved picture, every third pixel each way.
+    /// </summary>
     private static Look PictureAt(string path)
     {
         using var bmp = SKBitmap.Decode(path);
@@ -330,13 +393,18 @@ public sealed class VisualTests(EditorProcess editor) : IDisposable
         return new Look(mean, Math.Sqrt(sq / n - mean * mean), colours.Count, dark / (double)n);
     }
 
+    /// <summary>
+    /// Fails when the picture is flat or has few colours.
+    /// </summary>
     private static void ShowsSomething(Look l)
     {
         Assert.True(l.Spread > 12, $"the picture is flat (brightness spread {l.Spread:0.0})");
         Assert.True(l.Colours > 300, $"the picture has few colours ({l.Colours})");
     }
 
-    // The window as the user sees it, panels and view: what the documentation's pictures are.
+    /// <summary>
+    /// The window as the user sees it, panels and view: what the documentation's pictures are.
+    /// </summary>
     private Look Shot(string name)
     {
         string path = Path.Combine(_dir, name + ".png");
@@ -449,9 +517,14 @@ public sealed class VisualTests(EditorProcess editor) : IDisposable
         Assert.True(Math.Abs(after.Dark - before.Dark) < 0.15, $"black {before.Dark:P0} before, {after.Dark:P0} after");
     }
 
-    // Every picture drawn without an OpenGL error.
+    /// <summary>
+    /// Every picture drawn without an OpenGL error.
+    /// </summary>
     private void Clean() => Assert.Equal(0, editor.Send("state").GetProperty("glErrors").GetInt32());
 
+    /// <summary>
+    /// Sends the commands in turn; returns the last answer.
+    /// </summary>
     private JsonElement Do(params string[] commands)
     {
         JsonElement last = default;
@@ -633,7 +706,9 @@ public sealed class VisualTests(EditorProcess editor) : IDisposable
     }
 }
 
-// Started straight in the 3D editor (--world, --zone): the area is open, and the benchmark runs.
+/// <summary>
+/// Started straight in the 3D editor (--world, --zone): the area is open, and the benchmark runs.
+/// </summary>
 [Collection("Visual direct")]
 [Trait("Category", "Visual")]
 public sealed class DirectVisualTests(DirectEditorProcess editor)
@@ -660,6 +735,9 @@ public sealed class DirectVisualTests(DirectEditorProcess editor)
         Assert.Contains("window open", log);
     }
 
+    /// <summary>
+    /// Waits (up to 30 s) for the editor to show this page; returns its state.
+    /// </summary>
     internal static JsonElement WaitForPage(EditorProcess editor, string page)
     {
         JsonElement s = editor.Send("state");
@@ -673,7 +751,9 @@ public sealed class DirectVisualTests(DirectEditorProcess editor)
     }
 }
 
-// Started with a world folder: its map opens.
+/// <summary>
+/// Started with a world folder: its map opens.
+/// </summary>
 [Collection("Visual folder")]
 [Trait("Category", "Visual")]
 public sealed class FolderVisualTests(FolderEditorProcess editor)
@@ -686,7 +766,9 @@ public sealed class FolderVisualTests(FolderEditorProcess editor)
     }
 }
 
-// Started with --live and --token: the game's world opens on the map.
+/// <summary>
+/// Started with --live and --token: the game's world opens on the map.
+/// </summary>
 [Collection("Visual live")]
 [Trait("Category", "Visual")]
 public sealed class LiveVisualTests(LiveEditorProcess editor)
@@ -699,13 +781,18 @@ public sealed class LiveVisualTests(LiveEditorProcess editor)
     }
 }
 
+/// <summary>
+/// Shares one <c>TinyBudgetEditorProcess</c> between the tests of the "Visual budget" collection.
+/// </summary>
 [CollectionDefinition("Visual budget")]
 public sealed class VisualBudgetDefinition : ICollectionFixture<TinyBudgetEditorProcess>
 {
 }
 
-// Past the graphics-card budget, opening another area lets the models go: they are read again, and
-// the area still draws them (with their textures).
+/// <summary>
+/// Past the graphics-card budget, opening another area lets the models go: they are read again, and the area still
+/// draws them (with their textures).
+/// </summary>
 [Collection("Visual budget")]
 [Trait("Category", "Visual")]
 public sealed class BudgetVisualTests(TinyBudgetEditorProcess editor)
@@ -740,6 +827,9 @@ public sealed class BudgetVisualTests(TinyBudgetEditorProcess editor)
         }
     }
 
+    /// <summary>
+    /// A picture's average brightness (luminance), every fourth pixel each way.
+    /// </summary>
     private static double Mean(SKBitmap bmp)
     {
         double sum = 0;

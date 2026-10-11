@@ -7,22 +7,30 @@ using TerrainEditor.Terrain;
 
 namespace TerrainEditor.Desktop;
 
-// The Place tool's mouse and keys (the web editor's plant.js handlers). Brush: a click places what
-// the preview shows, a drag paints more (Shift + drag removes the chosen kinds); each stroke is one
-// undo step. Line, Zone: click points (or hold and drag to draw freely), drag a point to move it, the
-// line to add one, Ctrl + click to remove one; Circle and Rectangle: press and drag; Grid: drag a box;
-// Enter (or a double-click on the last point) places.
+/// <summary>
+/// The Place tool's mouse and keys (the web editor's plant.js handlers). Brush: a click places what the preview shows,
+/// a drag paints more (Shift + drag removes the chosen kinds); each stroke is one undo step. Line, Zone: click points
+/// (or hold and drag to draw freely), drag a point to move it, the line to add one, Ctrl + click to remove one; Circle
+/// and Rectangle: press and drag; Grid: drag a box; Enter (or a double-click on the last point) places.
+/// </summary>
 public sealed class PlaceInput
 {
+    /// <summary>The view: hit tests, selection highlight and redraws.</summary>
     private readonly GlView _view;
+    /// <summary>The Place tool whose settings and shapes the input drives.</summary>
     public PlaceTool Tool { get; }
+    /// <summary>The edit session placements are committed to (null while no world is open).</summary>
     public Func<EditSession?> Session { get; set; } = () => null;
+    /// <summary>A line for the status bar.</summary>
     public event Action<string>? Message;
-    // , . turn by this many degrees (null: 1°, Shift 15°).
+    /// <summary>The step <c>,</c> and <c>.</c> turn by, in degrees (Shift: 1°); null: 1°, Shift 15°.</summary>
     public float? TurnStep { get; set; }
-    // Placed: the kinds, for the recent list.
+    /// <summary>Something was placed: the kinds placed, for the recent list.</summary>
     public event Action<IReadOnlyList<string>>? Placed;
 
+    /// <summary>
+    /// Wires the input to the view and the tool; the preview is worked out again whenever the tool changes.
+    /// </summary>
     public PlaceInput(GlView view, PlaceTool tool)
     {
         _view = view;
@@ -32,16 +40,26 @@ public sealed class PlaceInput
         tool.Changed += Refresh;
     }
 
-    // What is drawn: the preview (or what a stroke has placed so far), as copies for the drawing thread.
+    /// <summary>
+    /// What is drawn: the preview (or what a stroke has placed so far), as copies for the drawing thread.
+    /// </summary>
     public PlaceTool.Placement[] Shown { get; private set; } = [];
+    /// <summary>What a click or Enter would place now.</summary>
     private List<PlaceTool.Placement> _preview = [];
+    /// <summary>What a click or Enter would place now (for the panel's count).</summary>
     public IReadOnlyList<PlaceTool.Placement> PreviewNow => _preview;
+    /// <summary>The cursor's grid point, or null off the ground.</summary>
     private Vector2? _at;
+    /// <summary>The mouse on the view, in pixels, once it has moved.</summary>
     private Point? _pointer;
+    /// <summary>The view's size with the last mouse event.</summary>
     private Size _size;
+    /// <summary>Shift is held: in Brush the preview is hidden (a drag removes instead).</summary>
     private bool _shift;
 
-    // The cursor's grid point changed, or a setting: the preview is worked out again.
+    /// <summary>
+    /// The cursor's grid point changed, or a setting: the preview is worked out again (not during a stroke).
+    /// </summary>
     public void Refresh()
     {
         if (_stroke != null)
@@ -54,8 +72,10 @@ public sealed class PlaceInput
         _view.LassoChanged();
         Changed?.Invoke();
     }
+    /// <summary>The preview was worked out again.</summary>
     public event Action? Changed;
 
+    /// <summary>Shift was pressed or let go.</summary>
     public void ShiftHeld(bool on)
     {
         if (_shift != on)
@@ -66,21 +86,36 @@ public sealed class PlaceInput
     }
 
     // ---- Brush strokes.
+    /// <summary>A brush stroke, from press to release: one undo step.</summary>
     private sealed class Stroke
     {
+        /// <summary>Shift + drag: removes the chosen kinds instead of placing.</summary>
         public bool Erase;
+        /// <summary>Where the press was, in pixels; past 6 px it is a drag.</summary>
         public Point From;
+        /// <summary>The mouse moved far enough to paint (or erase).</summary>
         public bool Dragging;
+        /// <summary>What the preview showed at the press: what a click places.</summary>
         public List<PlaceTool.Placement> Stamp = [];
+        /// <summary>What the drag has painted so far (the stamp included).</summary>
         public List<PlaceTool.Placement> Added = [];
+        /// <summary>Erasing: the things to remove (indices into the scene's things).</summary>
         public HashSet<int> Removed = [];
+        /// <summary>When the stroke last painted (ms on the input's clock).</summary>
         public long Last;
     }
 
+    /// <summary>The stroke under way, or null.</summary>
     private Stroke? _stroke;
+    /// <summary>Paints about 30 times a second during a stroke.</summary>
     private readonly DispatcherTimer _timer;
+    /// <summary>Times the paint steps.</summary>
     private readonly System.Diagnostics.Stopwatch _clock = System.Diagnostics.Stopwatch.StartNew();
 
+    /// <summary>
+    /// A paint step of the stroke under way: erases under the brush, or adds placements around the cursor (not while
+    /// building).
+    /// </summary>
     private void Paint()
     {
         if (_stroke is not { Dragging: true } s || _at is not { } at)
@@ -110,13 +145,17 @@ public sealed class PlaceInput
     }
 
     // ---- Shapes.
+    /// <summary>A press on a shape: where (pixels and grid point) and whether it has become a drag.</summary>
     private (Point At, Vector2 Hit, bool Drag)? _press;
+    /// <summary>The shape's point being dragged, or null.</summary>
     private int? _dragPt;
 
+    /// <summary>The shape's points can be dragged, inserted and removed (Line with Points, and Zone).</summary>
     private bool Editable => Tool.Mode == PlaceTool.Modes.Line && Tool.LineShape == PlaceTool.LineShapes.Points || Tool.Mode == PlaceTool.Modes.Zone;
+    /// <summary>The shape is made of clicked points (Line and Zone).</summary>
     private bool Pointed => Tool.Mode is PlaceTool.Modes.Line or PlaceTool.Modes.Zone;
 
-    // The points where they are drawn (a zone can be turned: its points are kept unturned).
+    /// <summary>The points where they are drawn (a zone can be turned: its points are kept unturned).</summary>
     public List<Vector2> ShownPoints()
     {
         lock (Tool.Points)
@@ -125,8 +164,10 @@ public sealed class PlaceInput
         }
     }
 
+    /// <summary>Where a grid point is on the view (30 cm above the ground), or null behind the camera.</summary>
     private Point? Screen(Vector2 g) => _view.ScreenOfGrid(g, 0.3f);
 
+    /// <summary>The shape's point within 10 px of the mouse, or -1.</summary>
     private int PointAt(Point at)
     {
         int best = -1;
@@ -143,7 +184,7 @@ public sealed class PlaceInput
         return best;
     }
 
-    // The stretch of the outline under the mouse: the index of the point it starts from, or -1.
+    /// <summary>The stretch of the outline under the mouse: the index of the point it starts from, or -1.</summary>
     private int SegmentAt(Point at)
     {
         var dense = Tool.Mode == PlaceTool.Modes.Zone
@@ -169,9 +210,21 @@ public sealed class PlaceInput
         return best;
     }
 
-    // Pick from world: the next click takes the kind of the object clicked (with whether Shift was held).
+    /// <summary>
+    /// Pick from world: the next click takes the kind of the object clicked (with whether Shift was held).
+    /// </summary>
     public Action<string, bool>? PickOnce { get; set; }
 
+    /// <summary>
+    /// A mouse press: picks a kind (Pick from world), picks the elevation (Alt), starts a brush stroke, or starts or
+    /// edits a shape.
+    /// </summary>
+    /// <param name="at">The mouse on the view, in pixels.</param>
+    /// <param name="size">The view's size.</param>
+    /// <param name="shift">Shift held (Brush: erase; picking: add the kind).</param>
+    /// <param name="ctrl">Ctrl held: remove the point clicked.</param>
+    /// <param name="alt">Alt held (without Shift): pick the elevation.</param>
+    /// <param name="clicks">The click count; a double-click on the last point places the shape.</param>
     public void Down(Point at, Size size, bool shift, bool ctrl, bool alt, int clicks)
     {
         _pointer = at;
@@ -260,7 +313,7 @@ public sealed class PlaceInput
         }
     }
 
-    // Building: Ctrl + wheel lifts the piece (or lowers it) from where the cursor points.
+    /// <summary>Building: Ctrl + wheel lifts the piece (or lowers it) from where the cursor points.</summary>
     public void Lift(float metres)
     {
         Tool.HeightNudge = MathF.Round(Tool.HeightNudge + metres, 2);
@@ -272,6 +325,10 @@ public sealed class PlaceInput
         Message?.Invoke(Tool.HeightNudge == 0 ? "Lift: none (where the cursor points)." : $"Lift: {Tool.HeightNudge:+0.0#;-0.0#} m from where the cursor points (Ctrl + wheel; Shift: 0.1 m).");
     }
 
+    /// <summary>
+    /// The mouse moved: follows the cursor, starts a drag past 6 px, drags points, figures and grid boxes, or draws
+    /// freehand (a point every 2 m).
+    /// </summary>
     public void Moved(Point at, Size size)
     {
         _pointer = at;
@@ -357,6 +414,10 @@ public sealed class PlaceInput
         Refresh();
     }
 
+    /// <summary>
+    /// The mouse was let go: ends a stroke (committing it), a point drag, or a press on a shape (adding the point, or
+    /// finishing the figure or box).
+    /// </summary>
     public void Up(Point at, Size size)
     {
         if (_stroke is { } s)
@@ -405,6 +466,10 @@ public sealed class PlaceInput
         Tool.Notify();
     }
 
+    /// <summary>
+    /// Commits a finished stroke as one undo step (the removed things, or the click's or drag's placements) and says
+    /// what it did.
+    /// </summary>
     private void EndStroke(Stroke s)
     {
         _view.Select([]);
@@ -437,6 +502,9 @@ public sealed class PlaceInput
         Refresh();
     }
 
+    /// <summary>
+    /// Commits placements as new objects in one undo step; kinds built with a tool go in as player-built pieces.
+    /// </summary>
     private static void Commit(EditSession session, List<PlaceTool.Placement> list, string label)
     {
         var adds = list.Select(o =>
@@ -447,7 +515,7 @@ public sealed class PlaceInput
         session.Commit(label, null, [], adds);
     }
 
-    // Enter: places what the line, grid or zone shows.
+    /// <summary>Enter: places what the line, grid or zone shows.</summary>
     public void PlaceShape()
     {
         if (_preview.Count == 0 || Session() is not { } session)
@@ -463,6 +531,7 @@ public sealed class PlaceInput
         Refresh();
     }
 
+    /// <summary>Removes the line's or zone's last point (Backspace).</summary>
     public void RemoveLastPoint()
     {
         if (Pointed && Tool.Points.Count > 0)
@@ -472,7 +541,7 @@ public sealed class PlaceInput
         }
     }
 
-    // The tool's keys; true when the key was one.
+    /// <summary>The tool's keys; true when the key was one.</summary>
     public bool Key(Avalonia.Input.Key key, bool shift, bool ctrl)
     {
         if (ctrl)

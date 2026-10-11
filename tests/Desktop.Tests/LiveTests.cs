@@ -9,14 +9,18 @@ using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
-// Live mode against a stand-in for the game (FakeGame): opening the running world, Apply live (ground,
-// objects, zone resets), Reload, the players on the map, and the start page's ways in.
+/// <summary>
+/// Live mode against a stand-in for the game (FakeGame): opening the running world, Apply live (ground, objects, zone
+/// resets), Reload, the players on the map, and the start page's ways in.
+/// </summary>
 [Collection("World files")]
 public class LiveTests
 {
     private static readonly Func<Formula.Env, double> Two = Formula.Compile("2", []);
 
-    // Waits for the window's posted work and background tasks.
+    /// <summary>
+    /// Waits for the window's posted work and background tasks.
+    /// </summary>
     internal static async Task Until(Func<bool> done, int ms = 15000)
     {
         var watch = System.Diagnostics.Stopwatch.StartNew();
@@ -28,6 +32,9 @@ public class LiveTests
         }
     }
 
+    /// <summary>
+    /// Every text shown in a control and its children, joined with " | ".
+    /// </summary>
     private static string Texts(Control? c) => c == null ? "" : string.Join(" | ", c.GetLogicalDescendants().OfType<TextBlock>().Select(t => t.Text).Prepend((c as TextBlock)?.Text).Where(t => !string.IsNullOrEmpty(t)));
 
     [Fact]
