@@ -84,6 +84,6 @@ everything the object holds in the save.
 | **Apply changes** | Replaces the object by a copy with the new data, at the same place: one step in History, so `Ctrl+Z` puts the old one back. Save or Apply live writes it. A changed object can still be moved, turned and changed again, and keeps its data. |
 | **Revert** | Forgets the changes made in the panel. |
 
-The names of the values come from the game's code (`WorldGen/zdo-keys.json`); a value whose name is
+The names of the values come from the game's code (read from your Valheim); a value whose name is
 not known is shown by its number. Change values only when you know what they do: the game may reset
 or ignore values it does not expect.

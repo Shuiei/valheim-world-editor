@@ -9,7 +9,7 @@
 | `Core/App/` | Settings (`AppSettings`), the log (`Log`), the game's files (`GameLook`, `GameBundles`, `GameLookData`, `GameShader`, `GameTextures`), Regrow, search, blueprint formats, servers and SSH (`ServerConfig`, `Tunnel`), the local game (`LocalGame`), characters, zone statistics, folders (`Places`). |
 | `Core/Save/` | Save reader (`WorldSave`, `ValheimReader`), writer (`WorldWriter`), new worlds (`WorldCreator`), object building (`ZdoTools`: copies and blank objects), the `.db2` zone list, and live mode (`LiveBridge`, `LiveSync`). |
 | `Core/Editing/` | Pending changes: terrain per zone, deleted and added objects, zone resets (`EditStore`); heights of a block of zones (`HeightGrid`). |
-| `Core/WorldGen/` | Valheim's world generator (bit-exact base terrain), map data, location flattening, the dungeon catalogue (`dungeon-rooms.json.gz`) (the game data the editor reads from the player's Valheim, the terrain modifiers, prefabs, build pieces, pieces' support and placement, object data names, cave rocks, piece costs and vegetation rules, is not kept: `Core/App/GameData.cs`). |
+| `Core/WorldGen/` | Valheim's world generator (bit-exact base terrain), map data, location flattening; no game data (what the editor needs of the game, the terrain modifiers, prefabs, build pieces, pieces' support and placement, object data names, cave rocks, piece costs, vegetation rules and dungeon rooms, is read from the player's Valheim: `Core/App/GameData.cs`). |
 | `plugin/WorldEditorBridge/` | The BepInEx plugin for live mode (.NET Framework 4.7.2). |
 | `tests/Desktop.Tests/` | Every test (xUnit v3, Avalonia's headless mode), see [Tests](#tests). `tests/fixtures/` holds the test world. |
 | `tools/WorldCheck/` | Developer checks of the generator and the writer, saved objects byte by byte, and new worlds from a seed, see below. |
@@ -152,21 +152,13 @@ the user chose) and keeps the one reader, `Core/App/GameBundles.cs`:
 `tests/Desktop.Tests/GameFilesTests.cs` (`--filter Category=Game`) checks the models against a copy the
 older Python exporter made, where both are on the computer.
 
-The catalogue that is still in git (`Core/WorldGen/`, embedded in the app) is made from the game's
-files by the editor itself, in C# on the same reader (`Core/App/GameCatalogues*.cs`): after a game
-update, `ValheimWorldEditor --export-catalogues Core/WorldGen` makes it again (about 6 minutes: every
-bundle is read once), and `--export-catalogues <folder> <name> ...` only those named
-(`dungeon-rooms`). It is `dungeon-rooms.json.gz` (the Dungeon tool's catalogue: each dungeon kind's
-themes and space, and each room's size, openings and the objects the game makes in it with the random
-parts that decide them). The files are written exactly as before (`Core/App/CatalogueJson.cs`: the same
-number format, key order and separators), so a new export shows in git only what the game changed.
-
-Some of the game's data is not kept in the repository at all: the editor reads it from the player's
-Valheim at its start (`Core/App/GameData.cs`, one entry per kind), in seconds, and keeps each kind in
+None of the game's data is kept in the repository or the app: the editor reads what it needs from
+the player's Valheim at its start (`Core/App/GameData.cs`, one entry per kind; the readers are in
+`Core/App/GameCatalogues*.cs`, on the same reader as the models), in seconds, and keeps each kind in
 the data folder (`game-<kind>.json`) until the game's files change. No world or Workshop opens without
 it. The kinds found in the bundles are read together, in one pass over them (each bundle opened once
-and given to each kind's reader, `GameCatalogues.ReadAtStart`; about 11 s for them all, the first
-time and after a game update). The kinds so far:
+and given to each kind's reader, `GameCatalogues.ReadAtStart`; about 12 s for them all, the first
+time and after a game update). The kinds:
 
 - `terrain-modifiers`: how locations and a few objects shape the ground before the saved edits, found
   from each `TerrainModifier` script (told by the script its file lists for it) up to its prefab,
@@ -203,6 +195,12 @@ time and after a game update). The kinds so far:
   the scripts with vegetation read), then the prefabs' and their scripts' bundles (about 1 s). Its
   test copy is a list: it keeps the rules it has, by name and prefab (all of them: Regrow's tests go
   over every biome).
+- `dungeon-rooms`: the Dungeon tool's dungeons and rooms: each dungeon kind's themes, space and doors,
+  and each room's size, openings and the objects the game makes in it with the random parts that
+  decide them, found from the `Room` and `DungeonGenerator` scripts up to their prefabs. A room's
+  tree is read raw, a level at a time; of its scripts only those that matter, where it is active, and
+  the many `ZNetView`s and `RandomSpawn`s raw too (about 2 s). Its test copy keeps every dungeon kind
+  and the rooms it has (those of the kinds the tests generate: the biomes' own and the Frost Caves).
 
 The tests use trimmed copies, `tests/fixtures/<kind>.json` (what they meet; the driver's
 `gamedata <folder>` gives them to the smoke tests). After a game update, make them again with
