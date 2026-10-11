@@ -41,9 +41,12 @@ case "${1:?list or run}" in
       # CLI does not take for coverage: renamed coverage.<n>.cobertura.xml (its *coverage*.* pattern),
       # numbered in case xargs runs this more than once in a container.
       out="/tmp/coverage/$name-${CIRCLE_NODE_INDEX:-0}"
-      n=$(find "$out" -name 'coverage.*.cobertura.xml' | wc -l)
+      n=1
       find "$out" -name '*.cobertura.xml' ! -name 'coverage.*' | while read -r report; do
-        n=$((n + 1))
+        # The first number free: a report already named is never replaced.
+        while [ -e "$out/coverage.$n.cobertura.xml" ]; do
+          n=$((n + 1))
+        done
         mv "$report" "$out/coverage.$n.cobertura.xml"
       done
     fi
