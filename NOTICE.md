@@ -30,4 +30,6 @@ them from the player's own Valheim install, on their computer.
   (MIT), [Silk.NET](https://github.com/dotnet/Silk.NET) (MIT), [SSH.NET](https://github.com/sshnet/SSH.NET)
   (MIT), [Roslyn](https://github.com/dotnet/roslyn) (MIT), for scripts, and, to read the game's models
   and textures from its own files, [AssetsTools.NET](https://github.com/nesrak1/AssetsTools.NET) (MIT)
-  and [BCnEncoder.NET](https://github.com/Nominom/BCnEncoder.NET) (MIT or Unlicense).
+  and [BCnEncoder.NET](https://github.com/Nominom/BCnEncoder.NET) (MIT or Unlicense); for Claude's
+  connection, the [MCP C# SDK](https://github.com/modelcontextprotocol/csharp-sdk) (Apache License 2.0)
+  with ASP.NET Core (MIT).

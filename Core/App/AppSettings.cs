@@ -30,6 +30,14 @@ public sealed class AppSettings
 
 	public bool AreaFollow { get; set; }
 
+	// Claude's connection (Settings): the editor's MCP server, on 127.0.0.1 at this port, for callers
+	// that send this token. Off unless chosen.
+	public bool ClaudeConnect { get; set; }
+
+	public int ClaudePort { get; set; } = 5731;
+
+	public string? ClaudeToken { get; set; }
+
 	public sealed record RecentWorld(string Path, string Name, DateTime Opened);
 
 	// The data folder: settings, servers, blueprints, the log (DataDirOverride: another folder, for

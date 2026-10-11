@@ -7,12 +7,14 @@ namespace TerrainEditor.Desktop;
 
 // The history of this session, like the web editor's: every change, the newest first (undone ones
 // greyed), with Back to here (undo every change after it), Redo to here, and Remove (take out only that
-// change and keep everything done after it).
+// change and keep everything done after it). Claude's changes (labelled "Claude: …") carry a tag, and
+// Take back Claude's changes removes them all, keeping the user's.
 public sealed class HistoryPanel
 {
 	public Control Card { get; }
 	internal StackPanel Rows { get; } = new() { Spacing = 4 };
 	internal TextBlock Count { get; } = new() { FontSize = 11, Foreground = Ui.Muted };
+	internal Button TakeBackClaude { get; } = new Button { Content = "Take back Claude's changes", FontSize = 11, Padding = new Thickness(6, 1), IsVisible = false }.Tip("history.claude");
 	private readonly Func<EditSession?> _session;
 	public event Action<string>? Message;
 	public event Action? Closed;
@@ -24,6 +26,7 @@ public sealed class HistoryPanel
 		_session = session;
 		var close = new Button { Content = Icons.Make("close", 14), Padding = new Thickness(5), HorizontalAlignment = HorizontalAlignment.Right }.Classed("ghost").Tip("card.close");
 		close.Click += (_, _) => { Card!.IsVisible = false; Closed?.Invoke(); };
+		TakeBackClaude.Click += async (_, _) => await TakeBackClaudes();
 		Card = new Border
 		{
 			Background = Ui.Panel,
@@ -48,6 +51,7 @@ public sealed class HistoryPanel
 						ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"),
 						Children = { new TextBlock { Text = "History", FontSize = 14, FontWeight = FontWeight.SemiBold }, Col(Count, 1, new Thickness(8, 3, 0, 0)), Col(close, 2) },
 					},
+					TakeBackClaude,
 					new ScrollViewer { MaxHeight = 520, Content = Rows },
 				},
 			},
@@ -62,6 +66,28 @@ public sealed class HistoryPanel
 			c.Margin = m;
 		}
 		return c;
+	}
+
+	// A change Claude made (ClaudeTools labels them so).
+	internal static bool ByClaude(EditSession.Change c) => c.Label.StartsWith("Claude:", StringComparison.Ordinal);
+
+	// Claude's changes still in, newest first.
+	private static List<EditSession.Change> ClaudesChanges(EditSession s) =>
+		s.UndoList.Where(c => ByClaude(c) && !c.Removed && c.RevertOf == null).Reverse().ToList();
+
+	// Every change of Claude's taken out (newest first), the user's kept.
+	internal async Task TakeBackClaudes()
+	{
+		if (_session() is not { } s || ClaudesChanges(s) is not { Count: > 0 } steps || !await Allow(steps))
+		{
+			return;
+		}
+		foreach (var c in steps)
+		{
+			s.RemoveChange(c);
+		}
+		Message?.Invoke($"Took back {steps.Count} change(s) Claude made; yours are kept.");
+		Refresh();
 	}
 
 	public void Toggle()
@@ -81,6 +107,7 @@ public sealed class HistoryPanel
 		var undo = s?.UndoList ?? Array.Empty<EditSession.Change>();
 		var redo = s?.RedoList ?? Array.Empty<EditSession.Change>();
 		Count.Text = undo.Count > 0 ? $"{undo.Count} change(s)" : "";
+		TakeBackClaude.IsVisible = s != null && ClaudesChanges(s).Count > 0;
 		if (s == null || undo.Count + redo.Count == 0)
 		{
 			Rows.Children.Add(new TextBlock { Text = "No changes yet in this session.", FontSize = 12, Foreground = Ui.Muted });
@@ -147,6 +174,14 @@ public sealed class HistoryPanel
 				CornerRadius = new CornerRadius(999), BorderThickness = new Thickness(1), BorderBrush = new SolidColorBrush(Color.Parse("#2a6a4a")), Padding = new Thickness(5, 0), VerticalAlignment = VerticalAlignment.Center,
 				Child = new TextBlock { Text = "applied", FontSize = 10, Foreground = Ui.Live },
 			});
+		}
+		if (ByClaude(c))
+		{
+			label.Children.Add(new Border
+			{
+				CornerRadius = new CornerRadius(999), BorderThickness = new Thickness(1), BorderBrush = new SolidColorBrush(Color.Parse("#7a5a2a")), Padding = new Thickness(5, 0), VerticalAlignment = VerticalAlignment.Center,
+				Child = new TextBlock { Text = "Claude", FontSize = 10, Foreground = Ui.Accent },
+			}.Tip("history.byClaude"));
 		}
 		if (c.Earlier)
 		{

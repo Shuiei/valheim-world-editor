@@ -7,6 +7,18 @@ the plugin is unchanged in versions without that part.
 ## Unreleased
 
 ### Added
+- **Claude** can work in the editor (Settings → **Allow Claude to connect**): an MCP server inside
+  the editor, on this computer only and with a secret token, for Claude Code or any MCP client. Claude
+  looks at the open world or Workshop (its state, heights, biomes, objects, screenshots, the game's
+  pieces), shapes it with scripts, puts down building pieces (snapped as the game's hammer does),
+  checks that they stand, adds blueprints and generates dungeons. What it changes stays pending, one
+  undo step each: it never saves, applies live or saves a blueprint, and changes nothing while live
+  with Auto on. It is told how the editor and Valheim's building work when it connects; it builds
+  floors, walls with doors and gable roofs over rectangles, levels ground, lays roads, paints and
+  plants forests in one step each, fills chests and writes signs, sees four views of a place at
+  once or a map of the area with coordinates, and works on what you selected. Claude Desktop connects
+  through `ValheimWorldEditor --mcp-stdio`. **History → Take back Claude's changes** removes all of
+  Claude's changes and keeps yours. See [docs/claude.md](docs/claude.md).
 - **Generate dungeon** in the Workshop: the Build panel's Library has **Generate dungeon…**, the Dungeon
   panel's generator (building pieces only), with **Open on the plot** (the dungeon alone) and **Add to
   the plot** (with what is there, one undo step). Its blueprint is kept in the library, with what its

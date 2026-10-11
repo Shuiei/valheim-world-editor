@@ -25,6 +25,9 @@ public static class ScriptHost
 		return r.ReadToEnd();
 	});
 
+	// The API scripts are compiled with, as its source (Claude's script_reference).
+	internal static string ApiSource => Api.Value;
+
 	private const string Usings = "global using System;\nglobal using System.Linq;\nglobal using System.Collections.Generic;\nglobal using static Globals;\n";
 
 	// The script compiled (its assembly's bytes and debug information, for the line an error happens
