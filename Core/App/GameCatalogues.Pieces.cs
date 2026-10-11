@@ -248,6 +248,7 @@ public static partial class GameCatalogues
 				return;
 			}
 			var roots = Layout.Roots(owners);
+			Layout.Check(b, owners[0].Item2, roots);
 			foreach (var (f, info) in b.Objects)
 			{
 				if (info.TypeId != GameObjectType || !roots.Contains(info.PathId) || b.Field(f, info.PathId) is not { } go)
@@ -342,6 +343,21 @@ public static partial class GameCatalogues
 				}
 			}
 			return roots;
+		}
+
+		// The layout read as the type tree says, for one GameObject: whether it is a root agrees with
+		// Roots. A game made with another Unity could lay objects out otherwise: said, rather than read
+		// wrong.
+		public static void Check(Bundle b, long go, HashSet<long> roots)
+		{
+			if (b.Field(go) is not { } g || b.ComponentIds(g).FirstOrDefault(c => c.Type == TransformType) is not (_, long tr and not 0) || b.Field(tr) is not { } t)
+			{
+				return;
+			}
+			if ((t["m_Father.m_PathID"].AsLong == 0) != roots.Contains(go))
+			{
+				throw new InvalidDataException("The game's objects are not laid out as the editor expects (another Unity version?).");
+			}
 		}
 
 		// By file, then by place in it (those that are not there left out); with what they stand for.
