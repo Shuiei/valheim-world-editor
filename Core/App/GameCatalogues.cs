@@ -1,74 +1,17 @@
-using System.IO.Compression;
-using System.Text;
 using AssetsTools.NET;
 using AssetsTools.NET.Extra;
-using Style = TerrainEditor.App.CatalogueJson.Style;
 
 namespace TerrainEditor.App;
 
-// The catalogues in Core/WorldGen made again from the game's files: --export-catalogues <folder>
-// [name ...]. None is left: everything is read at the editor's start (GameData).
+// What the editor reads of the game's files at its start (GameData), in C# on the same reader as the
+// models: the kinds found in the bundles, all in one pass over them (ReadAtStart), and those with their
+// own readers. Each is written as CatalogueJson writes it.
 public static partial class GameCatalogues
 {
-	public static readonly string[] All = Array.Empty<string>();
-
-	// Written gzipped (the largest).
-	private static readonly string[] Gzipped = Array.Empty<string>();
-
-	// --export-catalogues <folder> [name ...]: all catalogues, or those named (with or without .json).
-	public static int Export(string[] args)
-	{
-		if (args.Length == 0 || args[0].StartsWith("--", StringComparison.Ordinal))
-		{
-			Console.Error.WriteLine($"--export-catalogues needs the folder to write to, then optionally the catalogues to make ({string.Join(", ", All)}).");
-			return 2;
-		}
-		var names = args.Skip(1).Select(n => n.Replace(".gz", "", StringComparison.Ordinal).Replace(".json", "", StringComparison.Ordinal)).ToHashSet();
-		if (names.FirstOrDefault(n => Array.IndexOf(All, n) < 0) is string unknown)
-		{
-			Console.Error.WriteLine($"No catalogue \"{unknown}\" (there are {string.Join(", ", All)}).");
-			return 2;
-		}
-		if (names.Count == 0)
-		{
-			names = All.ToHashSet();
-		}
-		string? valheim = GameLook.FindValheim(AppSettings.Load().ValheimPath);
-		var bundles = valheim == null ? null : GameBundles.ForGame(valheim, null);
-		if (valheim == null || bundles == null)
-		{
-			Console.Error.WriteLine("Valheim was not found.");
-			return 1;
-		}
-		var watch = System.Diagnostics.Stopwatch.StartNew();
-		var made = Make(valheim, bundles, names);
-		Directory.CreateDirectory(args[0]);
-		foreach (string name in All.Where(made.ContainsKey))
-		{
-			byte[] json = new UTF8Encoding(false).GetBytes(made[name]);
-			string path = Path.Combine(args[0], name + (Gzipped.Contains(name) ? ".json.gz" : ".json"));
-			if (Gzipped.Contains(name))
-			{
-				using var gz = new GZipStream(File.Create(path), CompressionLevel.SmallestSize);
-				gz.Write(json);
-			}
-			else
-			{
-				File.WriteAllBytes(path, json);
-			}
-			Console.WriteLine($"{path}: {json.Length} bytes");
-		}
-		Console.WriteLine($"{made.Count} catalogues made in {watch.Elapsed.TotalSeconds:0} s");
-		return 0;
-	}
-
-	// Each catalogue asked for, as its JSON: none is left (all are read at the editor's start).
-	private static Dictionary<string, string> Make(string valheim, GameBundles bundles, HashSet<string> names) => new();
-
-	// What the editor reads of the bundles at its start (GameData), each kind found from the scripts it
-	// needs up to their prefabs, not by reading every object of every bundle as the catalogues do
-	// (seconds, not minutes). Every kind asked for is read in one pass: each bundle opened once and
-	// given to each kind's reader.
+	// The kinds read in the one pass over the bundles, each found from the scripts it needs up to their
+	// prefabs, not by reading every object of every bundle (seconds, not minutes). Each bundle is opened
+	// once and given to each kind's reader, in the order of their file names: the order entries come in,
+	// and which one wins when a name is found twice.
 	public static readonly string[] AtStart = { "terrain-modifiers", "prefabs", "pieces", "piece-support", "piece-place", "piece-cost", "dungeon-rooms" };
 
 	// The kinds named (of AtStart), as their JSON.
@@ -108,12 +51,6 @@ public static partial class GameCatalogues
 		void Read(Bundle b, Game game);
 
 		string Json();
-	}
-
-	// One catalogue's reading of every bundle.
-	private interface IScan
-	{
-		void Read(Bundle b);
 	}
 
 	// ---- The bundles.
@@ -518,7 +455,7 @@ public static partial class GameCatalogues
 		public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
 	}
 
-	// ---- Values, as the catalogues have them.
+	// ---- Values, as the game data's JSON has them.
 
 	private const int GameObjectType = (int)AssetClassID.GameObject;
 	private const int TransformType = (int)AssetClassID.Transform;
