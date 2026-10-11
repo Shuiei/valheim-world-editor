@@ -35,8 +35,6 @@ public sealed partial class WorldGenerator
 		DeepNorthOnly,
 	}
 
-	private const float RiverCell = 64f;
-
 	private readonly int _riverSeed, _streamSeed;
 	private List<Vector2> _lakes = new();
 	private List<River> _rivers = new();

@@ -13,7 +13,6 @@ internal sealed class DungeonDresser
 	// gets no support from it in game.
 	private const float Lift = 0.05f;
 
-	private readonly DungeonPlan _plan;
 	private readonly Material _mat;
 	private readonly Biome _b;
 	private readonly Style _style;
@@ -25,9 +24,8 @@ internal sealed class DungeonDresser
 	private readonly Foe? _boss;
 	private readonly string _name;
 
-	private DungeonDresser(DungeonPlan plan, Material mat, Biome b, Style style, DungeonGen.Settings s, Random rnd, DungeonOut o, string name)
+	private DungeonDresser(Material mat, Biome b, Style style, DungeonGen.Settings s, Random rnd, DungeonOut o, string name)
 	{
-		_plan = plan;
 		_mat = mat;
 		_b = b;
 		_style = style;
@@ -42,7 +40,7 @@ internal sealed class DungeonDresser
 
 	public static void Dress(DungeonPlan plan, Material mat, Biome b, Style style, DungeonGen.Settings s, Random rnd, DungeonOut o, string name)
 	{
-		var d = new DungeonDresser(plan, mat, b, style, s, rnd, o, name);
+		var d = new DungeonDresser(mat, b, style, s, rnd, o, name);
 		foreach (var sp in plan.Spaces)
 		{
 			d.Furnish(new Frame(sp, mat, plan));
@@ -473,8 +471,6 @@ internal sealed class DungeonDresser
 			Elite(f, 0, f.HalfD * 0.3f, 180);
 		}
 	}
-
-	private string Banner => One("piece_banner01", "piece_banner02", "piece_banner03", "piece_banner04", "piece_banner05", "piece_banner06", "piece_banner07");
 
 	// The wall hangings that suit the style: banners in keeps and temples, the biome's own elsewhere.
 	private string[] Drapes => _style.Name switch
