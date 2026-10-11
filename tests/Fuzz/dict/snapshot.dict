@@ -1,0 +1,7 @@
+# The live snapshot's magic and version (WorldSave.LoadLive), and gzip's header.
+"VWEB"
+"\x01\x00\x00\x00"
+"\x1f\x8b\x08\x00"
+"\x29\x00"
+"\xff\xff\xff\x7f"
+"\x00\x00\x00\x80"

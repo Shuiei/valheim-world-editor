@@ -1,0 +1,5 @@
+# Counts, lengths and gzip's header in a .db2 file (ZoneDb.Load).
+"\x1f\x8b\x08\x00"
+"\xff\xff\xff\x7f"
+"\x00\x00\x00\x80"
+"defeated_eikthyr"
