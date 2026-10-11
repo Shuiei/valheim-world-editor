@@ -1,13 +1,15 @@
 # Valheim World Editor: tests and build checks on every push and pull request.
 #   code-analysis  the editor (Core, Desktop) builds with no .NET analyzer warning (warnings are
 #                  errors) and is formatted as .editorconfig says (dotnet format)
-#   core-tests     the core's tests (saves, the world generator against the game's values, live mode
-#                  against a stand-in bridge, the SSH tunnel against a local sshd), and
+#   core-tests     the core's tests on three containers (saves, the world generator against the game's
+#                  values, live mode against a stand-in bridge, the SSH tunnel against a local sshd), and
 #   app-tests      the app's windows, headless, on three containers (the visual tests skip: no
 #                  display). Both build tests/Desktop.Tests with warnings as errors; CircleCI shares
 #                  the test classes out by their last times and can rerun only the failed ones
 #                  (circleci tests run, tools/ci-tests.sh). Every test runs, failing or not; a test
 #                  stuck for 5 minutes ends its run.
+#                  Each test container sends its code coverage to Codecov, which merges the six
+#                  (codecov.yml) and fails its own check (codecov/project) under 95% line coverage.
 #   packages       the Windows and Linux release packages: they build, hold no source code or game
 #                  files (the plugin is left out: it builds against the game's own DLLs), and the
 #                  Linux one starts and draws the test world (tools/smoke-test.sh, under Xvfb)
@@ -16,6 +18,12 @@
 # What CI cannot cover: the plugin build and reading the game's data (both need Valheim's files), the
 # visual tests (they need a display and OpenGL) and live mode against a real game.
 version: 2.1
+
+orbs:
+  # Codecov's official orb: uploads the coverage with Codecov's CLI, checked against its signature
+  # (needs gpg). The token is the project's CODECOV_TOKEN. Any 6.x (the latest); a new major version is
+  # taken by hand.
+  codecov: codecov/codecov@6
 
 executors:
   dotnet:
@@ -40,8 +48,8 @@ commands:
     steps:
       - checkout
       - run:
-          name: OpenSSH server (the tunnel's tests) and fonts (Avalonia headless)
-          command: apt-get update -qq && apt-get install -y -qq openssh-server libfontconfig1 > /dev/null && mkdir -p /run/sshd
+          name: OpenSSH server (the tunnel's tests), fonts (Avalonia headless) and gpg (Codecov's CLI)
+          command: apt-get update -qq && apt-get install -y -qq openssh-server libfontconfig1 gnupg > /dev/null && mkdir -p /run/sshd
       - restore_cache:
           keys:
             - nuget-v2-{{ checksum "Directory.Build.props" }}-{{ checksum "Core/ValheimWorldEditor.Core.csproj" }}-{{ checksum "Desktop/ValheimWorldEditor.Desktop.csproj" }}-{{ checksum "tests/Desktop.Tests/Desktop.Tests.csproj" }}
@@ -67,6 +75,14 @@ commands:
                 key: nuget-v2-{{ checksum "Directory.Build.props" }}-{{ checksum "Core/ValheimWorldEditor.Core.csproj" }}-{{ checksum "Desktop/ValheimWorldEditor.Desktop.csproj" }}-{{ checksum "tests/Desktop.Tests/Desktop.Tests.csproj" }}
                 paths:
                   - ~/.nuget/packages
+      # The coverage of this container's tests, merged with the other containers' by Codecov. A failed
+      # upload fails the job: Codecov's check waits for every container's.
+      - codecov/upload:
+          dir: /tmp/coverage
+          flags: << parameters.results >>
+          plugins: noop
+          fail_on_error: true
+          when: on_success
       - store_test_results:
           path: /tmp/test-results
       - store_artifacts:
@@ -106,6 +122,9 @@ jobs:
 
   core-tests:
     executor: dotnet
+    # The world generator's and dungeons' tests run several times slower under coverage: three
+    # containers keep the job about as long as app-tests.
+    parallelism: 3
     steps:
       - test-classes:
           namespace: WorldEditor.Tests
