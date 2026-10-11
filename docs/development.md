@@ -14,7 +14,7 @@
 | `tests/Desktop.Tests/` | Every test (xUnit v3, Avalonia's headless mode), see [Tests](#tests). `tests/fixtures/` holds the test world. |
 | `tools/WorldCheck/` | Developer checks of the generator and the writer, saved objects byte by byte, and new worlds from a seed, see below. |
 | `tools/asset-export/` | Python (UnityPy) scripts that make the catalogues in `Core/WorldGen/` from the game's files (developers only; not in the release). |
-| `tools/docs-screenshots/` | `scenes.py` builds and takes the pictures in `docs/images/`, through `editor.py`, which drives the app. |
+| `tools/DocsScreenshots/` | `Scenes.cs` builds and takes the pictures in `docs/images/`, through `Editor.cs`, which drives the app. |
 | `tools/release.sh`, `tools/check-package.sh` | The release packages, and their check. |
 
 ## Command line
@@ -48,16 +48,16 @@ The app reads one command per line on its input and answers each with one line, 
 | `picture <file.png>` / `shot <file.png>` | The view shown (3D or map) once it is drawn / the whole window, panels and view, as Avalonia's compositor draws it (never a capture of the screen). |
 | `bench <seconds>` / `state` / `quit` | Frame rates while the camera turns / the state / quit without asking. |
 
-`tools/docs-screenshots/editor.py` wraps it for the documentation's pictures: it starts the app with
+`tools/DocsScreenshots/Editor.cs` wraps it for the documentation's pictures: it starts the app with
 a stand-in home folder (none of this computer's characters, worlds or servers show; driven, the app
 looks for Steam only in that home, so for the game's look its settings name this computer's Valheim), sends commands and saves `shot`s as JPEG, the status bar's message cleared first.
-`tools/docs-screenshots/scenes.py` holds one scene per picture: each opens a fresh editor and builds
+`tools/DocsScreenshots/Scenes.cs` holds one scene per picture: each opens a fresh editor and builds
 only what its picture shows, in worlds made from seeds and never saved:
 
 ```sh
 WorldCheck create <dir>/Docs Docs yjRO99yNTI 16 --flat     # the bare zone the tools are shown on
 WorldCheck create <dir>/Fjordheim Fjordheim Fjord2026 3     # a second world for the start page
-python3 tools/docs-screenshots/scenes.py <dir> [scene ...]  # all scenes, or only those named
+dotnet run --project tools/DocsScreenshots -- <dir> [scene ...]  # all scenes, or only those named
 ```
 
 The pictures go to `docs/images` (or `$DOCS_OUT`). The red on ground at the ±8 m limit is switched
