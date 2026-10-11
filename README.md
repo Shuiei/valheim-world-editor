@@ -246,6 +246,7 @@ folder.
 | [Measure and overlays](docs/measure.md) | Distances, slopes, slope colours, height lines |
 | [Script](docs/scripting.md) | C# scripts that shape, paint and populate an area: how to write them, everything they can use, recipes |
 | [Live mode](docs/live-mode.md) | Editing a running server |
+| [Claude](docs/claude.md) | Letting Claude shape the world or build in the Workshop from a prompt (MCP) |
 | [Development](docs/development.md) | Project layout, extracting the game files, tests |
 
 What changed and when: [CHANGELOG.md](CHANGELOG.md).
@@ -264,6 +265,8 @@ What changed and when: [CHANGELOG.md](CHANGELOG.md).
 - **The plugin is private.** WorldEditorBridge only listens on the computer it runs on, and it needs
   a secret token. A server is reached through the editor's own SSH tunnel and is never exposed to
   the internet.
+- **Claude only connects if you allow it** (Settings), only from this computer, with a secret token,
+  and what it changes stays pending like your own changes.
 - Keep your own copies of worlds you care about anyway.
 
 ## Questions

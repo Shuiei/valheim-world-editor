@@ -124,7 +124,15 @@ public sealed partial class MainWindow : Window
 			_start.OpenRequested += async (open, what) => await OpenWorld(open, what);
 			_start.WorkshopRequested += async path => await OpenWorkshop(path);
 			_start.OpenUrl = uri => Launcher.LaunchUriAsync(uri);
-			_start.SettingsRequested += async () => { if (await SettingsDialog.Show(this, _settings)) _start!.SetMode(_start.Mode); };
+			_start.SettingsRequested += async () =>
+			{
+				if (await SettingsDialog.Show(this, _settings))
+				{
+					_start!.SetMode(_start.Mode);
+					// Claude's connection, as the settings now say.
+					await ClaudeServer.Apply(_settings, this);
+				}
+			};
 			_start.Confirm = text => Dialogs.Ask(this, "Valheim World Editor", text, "Yes");
 			_start.PickFolder = async title =>
 			{
@@ -967,11 +975,10 @@ public sealed partial class MainWindow : Window
 		UpdateSaveBar();
 	}
 
-	// The Script tool's Run: compiled and run in the background on a snapshot of the area, then what it
-	// changed goes in as one undo step (nothing when it fails or is stopped).
+	// The Script tool's Run: the panel's script on the open area (RunScriptCode), its output below it.
 	internal async Task RunScript()
 	{
-		if (_session is not { } s)
+		if (_session == null)
 		{
 			_message.Text = "Open an area first: a script works on the open area.";
 			return;
@@ -983,10 +990,39 @@ public sealed partial class MainWindow : Window
 		var panel = ScriptPanel;
 		string name = panel.ScriptBox.SelectedItem as string ?? "script";
 		panel.Running(true);
-		panel.Output.Text = "Compiling…";
+		try
+		{
+			var r = await RunScriptCode(panel.CodeBox.Text ?? "", $"Script: {name.Replace("Example: ", "", StringComparison.Ordinal)}", t => panel.Output.Text = t);
+			panel.Output.Text = r.Output;
+			_message.Text = r.Message;
+		}
+		finally
+		{
+			panel.Running(false);
+		}
+	}
+
+	// What a script gave: what it printed and what became of it (Output), the status bar's line (Message),
+	// and whether its changes went in (Changed).
+	internal sealed record ScriptOutcome(bool Changed, string Output, string Message);
+
+	// A script on the open area (the Script tool's Run, Claude's run_script): compiled and run in the
+	// background on a snapshot of the area, then what it changed goes in as one undo step (label), nothing
+	// when it fails, is stopped, runs 2 minutes, or the area changed meanwhile. progress: "Compiling…",
+	// "Running…". apply false: a dry run, only what it would change is said.
+	internal async Task<ScriptOutcome> RunScriptCode(string code, string label, Action<string>? progress = null, bool apply = true)
+	{
+		if (_session is not { } s)
+		{
+			return new(false, "", "Open an area first: a script works on the open area.");
+		}
+		if (_stopScript != null)
+		{
+			return new(false, "", "A script is already running: nothing changed.");
+		}
+		progress?.Invoke("Compiling…");
 		using var cancel = new CancellationTokenSource(TimeSpan.FromMinutes(2));
 		_stopScript = cancel.Cancel;
-		string code = panel.CodeBox.Text ?? "";
 		var snap = ScriptHost.Take(s, NameOfPrefab);
 		int generation = s.Generation;
 		var watch = System.Diagnostics.Stopwatch.StartNew();
@@ -995,59 +1031,51 @@ public sealed partial class MainWindow : Window
 			var (image, pdb, errors) = await Task.Run(() => ScriptHost.Compile(code));
 			if (image == null)
 			{
-				panel.Output.Text = "The script has mistakes:\n" + string.Join("\n", errors);
-				_message.Text = "The script has mistakes (see below it): nothing changed.";
-				return;
+				return new(false, "The script has mistakes:\n" + string.Join("\n", errors), "The script has mistakes (see below it): nothing changed.");
 			}
-			panel.Output.Text = "Running…";
+			progress?.Invoke("Running…");
 			var ch = await Task.Run(() => ScriptHost.Run(image, pdb, snap, cancel.Token), cancel.Token);
 			if (_session != s)
 			{
-				panel.Output.Text = ch.Output + "Another area was opened while the script ran: nothing changed.";
-				return;
+				return new(false, ch.Output + "Another area was opened while the script ran: nothing changed.", "Another area was opened while the script ran: nothing changed.");
 			}
 			// Its heights and object numbers are those of the area when it started: changed since (a
 			// stroke, an undo, a save that read the world again), they would undo that or hit other objects.
 			if (s.Generation != generation)
 			{
-				panel.Output.Text = ch.Output + "The area changed while the script ran: nothing changed. Run it again.";
-				_message.Text = "The area changed while the script ran: nothing changed. Run it again.";
-				return;
+				return new(false, ch.Output + "The area changed while the script ran: nothing changed. Run it again.", "The area changed while the script ran: nothing changed. Run it again.");
 			}
-			string what;
 			if (ch.Empty)
 			{
-				what = "The script ran and changed nothing.";
+				return new(false, ch.Output + "The script ran and changed nothing.", "The script ran and changed nothing.");
 			}
-			else
+			var parts = new List<string>();
+			if (ch.Heights.Count > 0) parts.Add($"{ch.Heights.Count:N0} ground point(s)");
+			if (ch.Paint.Count > 0) parts.Add($"{ch.Paint.Count:N0} painted");
+			if (ch.Add.Count > 0) parts.Add($"{ch.Add.Count:N0} object(s) placed");
+			if (ch.Remove.Count > 0) parts.Add($"{ch.Remove.Count:N0} taken away");
+			if (!apply)
 			{
-				int clamped = ScriptHost.Apply(s, ch, $"Script: {name.Replace("Example: ", "", StringComparison.Ordinal)}");
-				var parts = new List<string>();
-				if (ch.Heights.Count > 0) parts.Add($"{ch.Heights.Count:N0} ground point(s)");
-				if (ch.Paint.Count > 0) parts.Add($"{ch.Paint.Count:N0} painted");
-				if (ch.Add.Count > 0) parts.Add($"{ch.Add.Count:N0} object(s) placed");
-				if (ch.Remove.Count > 0) parts.Add($"{ch.Remove.Count:N0} taken away");
-				what = $"The script changed {string.Join(", ", parts)} in {watch.Elapsed.TotalSeconds:0.0} s; Ctrl+Z takes it all back."
-					+ (clamped > 0 ? $" {clamped:N0} point(s) stopped at the game's ±8 m (Ground.NoLimit = true lets them go further)." : "");
+				string would = $"Dry run: the script would change {string.Join(", ", parts)}; nothing changed.";
+				return new(false, ch.Output + would, would);
 			}
-			panel.Output.Text = ch.Output + what;
-			_message.Text = what;
+			int clamped = ScriptHost.Apply(s, ch, label);
+			string what = $"The script changed {string.Join(", ", parts)} in {watch.Elapsed.TotalSeconds:0.0} s; Ctrl+Z takes it all back."
+				+ (clamped > 0 ? $" {clamped:N0} point(s) stopped at the game's ±8 m (Ground.NoLimit = true lets them go further)." : "");
 			UpdateSaveBar();
+			return new(true, ch.Output + what, what);
 		}
 		catch (OperationCanceledException)
 		{
-			panel.Output.Text = "Stopped: nothing changed.";
-			_message.Text = "The script was stopped (or ran 2 minutes): nothing changed.";
+			return new(false, "Stopped: nothing changed.", "The script was stopped (or ran 2 minutes): nothing changed.");
 		}
 		catch (Exception ex)
 		{
-			panel.Output.Text = $"The script stopped with an error, nothing changed:\n{ScriptHost.Where(ex)}{ex.GetType().Name}: {ex.Message}";
-			_message.Text = "The script stopped with an error (see below it): nothing changed.";
+			return new(false, $"The script stopped with an error, nothing changed:\n{ScriptHost.Where(ex)}{ex.GetType().Name}: {ex.Message}", "The script stopped with an error (see below it): nothing changed.");
 		}
 		finally
 		{
 			_stopScript = null;
-			panel.Running(false);
 		}
 	}
 
@@ -2131,6 +2159,8 @@ public sealed partial class MainWindow : Window
 			// The game's look: copied from the player's Valheim when missing or after a game update
 			// (when driven by the tests, only whether it is there: they never copy from the game).
 			GameLook.Check(_settings);
+			// Claude's connection, when chosen in Settings.
+			await ClaudeServer.Apply(_settings, this);
 			if (!Options.Driver)
 			{
 				// The copy older editors made of the game's look: nothing reads it any more.

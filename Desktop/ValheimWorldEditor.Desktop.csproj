@@ -47,5 +47,11 @@
          carried inside (a single-file app has no assembly files to point the compiler at). -->
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.9.0" />
     <PackageReference Include="Basic.Reference.Assemblies.Net100" Version="1.8.12" />
+    <!-- Claude's connection (Settings: Allow Claude to connect): an MCP server inside the app, on
+         127.0.0.1 only (ClaudeServer.cs), with ASP.NET Core's web server. -->
+    <PackageReference Include="ModelContextProtocol.AspNetCore" Version="2.2.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 </Project>

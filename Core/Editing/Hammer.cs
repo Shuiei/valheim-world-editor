@@ -185,11 +185,19 @@ public static class Hammer
 			pos = nearest is { } np ? point + (ghost - np) : point;
 		}
 		pos.Y += lift;
-		if (!snap || data == null || data.Snaps.Length == 0)
+		return snap ? Snap(prefab, rotation, pos, pieces) : (pos, null);
+	}
+
+	// FindClosestSnapPoints: the piece at pos, turned by rotation, moved so that the closest pair of its
+	// snap points and those of the pieces within 10 m meets, when they are within half a metre (and
+	// unless that puts it right where the same piece already stands). Returns where it goes and what it
+	// snapped to (null: nothing, it stays at pos).
+	public static (Vector3 Position, int? SnappedTo) Snap(string prefab, Quaternion rotation, Vector3 pos, IReadOnlyList<Placed> pieces)
+	{
+		if (Get(prefab) is not { Snaps.Length: > 0 } data)
 		{
 			return (pos, null);
 		}
-		// FindClosestSnapPoints: the pieces within 10 m (their colliders), every pair of snap points.
 		float bestD = SnapDistance;
 		Vector3? move = null;
 		int? to = null;
