@@ -5,9 +5,11 @@ using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
-// A ruin blueprint (a generated dungeon) added onto a plot opened from a building players built: its
-// pieces stay a ruin's (no builder) in the blueprint saved, the others keep being the builder's.
-// Sets the builder for new pieces (WorldSave.Builder): one world at a time.
+/// <summary>
+/// A ruin blueprint (a generated dungeon) added onto a plot opened from a building players built: its pieces stay a
+/// ruin's (no builder) in the blueprint saved, the others keep being the builder's. Sets the builder for new pieces
+/// (WorldSave.Builder): one world at a time.
+/// </summary>
 [Collection("World files")]
 public class WorkshopRuinTests
 {

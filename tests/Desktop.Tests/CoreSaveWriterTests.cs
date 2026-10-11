@@ -4,13 +4,21 @@ using Xunit;
 
 namespace WorldEditor.Tests;
 
-// The world writer's remaining edges: a world with no terrain object to copy for new ground, a chunk
-// file name already taken, a terrain template in an unexpected layout, and a value that cannot read
-// back the same (the read-back check restores the backup).
+/// <summary>
+/// The world writer's remaining edges: a world with no terrain object to copy for new ground, a chunk file name already
+/// taken, a terrain template in an unexpected layout, and a value that cannot read back the same (the read-back check
+/// restores the backup).
+/// </summary>
 public class CoreSaveWriterTests
 {
+    /// <summary>
+    /// Every file of the folder, by name.
+    /// </summary>
     private static Dictionary<string, byte[]> Files(string dir) => Directory.GetFiles(dir).ToDictionary(f => Path.GetFileName(f), File.ReadAllBytes);
 
+    /// <summary>
+    /// Asserts the folder holds the same files with the same bytes as before.
+    /// </summary>
     private static void AssertSame(Dictionary<string, byte[]> before, string dir)
     {
         var after = Files(dir);
@@ -21,6 +29,9 @@ public class CoreSaveWriterTests
         }
     }
 
+    /// <summary>
+    /// A zone that has world data (a chunk file) but no ground edits yet.
+    /// </summary>
     private static (int X, int Z) FreshZone(WorldSave world)
     {
         var t = world.TerrainZones[0];
@@ -41,6 +52,9 @@ public class CoreSaveWriterTests
         throw new InvalidOperationException("no fresh zone");
     }
 
+    /// <summary>
+    /// A ground edit of this zone raising one point by this many metres.
+    /// </summary>
     private static ZoneEdit Raised(int zx, int zz, float by, int point)
     {
         var e = new ZoneEdit(zx, zz);

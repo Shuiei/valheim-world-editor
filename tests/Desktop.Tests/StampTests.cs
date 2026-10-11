@@ -6,7 +6,9 @@ using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
-// Stamps: pictures as brush shapes, built in or loaded, and stamping one in at once.
+/// <summary>
+/// Stamps: pictures as brush shapes, built in or loaded, and stamping one in at once.
+/// </summary>
 public class StampTests
 {
     private static float H(EditSession s, int x, int z) => s.Scene.Heights[z * s.Scene.W + x];

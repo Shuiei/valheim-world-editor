@@ -5,18 +5,28 @@ using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
-// The history kept on disk (HistoryFile): written at each save, back when the world is opened again
-// (a later run of the editor), its steps undone as before: the ground back, a deleted tree back with its
-// data, a placed one taken away. Steps from then are marked, and asked about when the world was saved
-// again since. On a copy of the test world; the data folder is the tests'.
+/// <summary>
+/// The history kept on disk (HistoryFile): written at each save, back when the world is opened again (a later run of
+/// the editor), its steps undone as before: the ground back, a deleted tree back with its data, a placed one taken
+/// away. Steps from then are marked, and asked about when the world was saved again since. On a copy of the test world;
+/// the data folder is the tests'.
+/// </summary>
 [Collection("World files")]
 public class HistoryFileTests
 {
+    /// <summary>
+    /// Deletes the copy of the test world (its temporary parent folder).
+    /// </summary>
     private static void Done(string dir) => Directory.Delete(Path.GetDirectoryName(dir)!, recursive: true);
 
+    /// <summary>
+    /// The height at grid point (x, z) of the area.
+    /// </summary>
     private static float H(EditSession s, int x, int z) => s.Scene.Heights[z * s.Scene.W + x];
 
-    // Raises the ground, deletes a tree, places a rock; saves; the world is left (the editor closed).
+    /// <summary>
+    /// Raises the ground, deletes a tree, places a rock; saves; the world is left (the editor closed).
+    /// </summary>
     private static (float Was, WorldScene.Thing Tree, Vector3 Rock) EditAndSave(string dir)
     {
         var scene = WorldScene.Load(dir, 0, 0, 1);

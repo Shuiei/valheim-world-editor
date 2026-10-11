@@ -5,7 +5,9 @@ using Xunit;
 
 namespace WorldEditor.Tests;
 
-// New objects built without a model in the world, and the prefab catalogue they rely on.
+/// <summary>
+/// New objects built without a model in the world, and the prefab catalogue they rely on.
+/// </summary>
 public class ObjectTests
 {
     [Fact]

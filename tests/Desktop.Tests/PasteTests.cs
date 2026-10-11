@@ -7,15 +7,22 @@ using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
-// Copy and paste: an Area selection's ground and objects, or the Select tool's objects, pasted
-// elsewhere, turned, mirrored and repeated.
+/// <summary>
+/// Copy and paste: an Area selection's ground and objects, or the Select tool's objects, pasted elsewhere, turned,
+/// mirrored and repeated.
+/// </summary>
 public class PasteTests
 {
     private static readonly int Beech = StableHash.Of("Beech1");
 
+    /// <summary>
+    /// The ground height at grid point (x, z).
+    /// </summary>
     private static float H(EditSession s, int x, int z) => s.Scene.Heights[z * s.Scene.W + x];
 
-    // A 2 × 2 zone area with a 3 m mound at grid (40, 40) and a tree on it (world = grid - 32).
+    /// <summary>
+    /// A 2 × 2 zone area with a 3 m mound at grid (40, 40) and a tree on it (world = grid - 32).
+    /// </summary>
     private static EditSession Area()
     {
         var s = EditTests.Flat(2, new WorldScene.Thing(1, Beech, new Vector3(8, 33, 8), new Vector3(0, 30, 0), 1, false));
@@ -23,6 +30,9 @@ public class PasteTests
         return s;
     }
 
+    /// <summary>
+    /// An Area box between two grid points, with no soft edge.
+    /// </summary>
     private static AreaTool Box(float x0, float z0, float x1, float z1)
     {
         var a = new AreaTool { Soft = 0 };
@@ -79,6 +89,9 @@ public class PasteTests
         Assert.Equal(350, p.Turn, 3);
     }
 
+    /// <summary>
+    /// Rounds to 3 decimals (with -0 made 0), to compare points.
+    /// </summary>
     private static Vector2 Round(Vector2 v) => new(MathF.Round(v.X, 3) + 0f, MathF.Round(v.Y, 3) + 0f);
 
     [Fact]

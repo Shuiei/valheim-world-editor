@@ -4,10 +4,15 @@ using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
-// The map page's tools: search, zones picked by filter to reset, and the edited zones.
+/// <summary>
+/// The map page's tools: search, zones picked by filter to reset, and the edited zones.
+/// </summary>
 [Collection("World files")]
 public class MapToolsTests
 {
+    /// <summary>
+    /// Deletes the copy of the test world (its temporary parent folder).
+    /// </summary>
     private static void Done(string dir) => Directory.Delete(Path.GetDirectoryName(dir)!, recursive: true);
 
     [Fact]

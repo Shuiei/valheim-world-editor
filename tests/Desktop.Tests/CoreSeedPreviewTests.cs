@@ -4,9 +4,11 @@ using Xunit;
 
 namespace WorldEditor.Tests;
 
-// A seed seen before its world exists (SeedPreview): the game's generator sampled over the whole
-// world, the land, the biomes, the likely start and how far each biome is from it; scores that follow
-// the wishes; a search that keeps the best seeds.
+/// <summary>
+/// A seed seen before its world exists (SeedPreview): the game's generator sampled over the whole world, the land, the
+/// biomes, the likely start and how far each biome is from it; scores that follow the wishes; a search that keeps the
+/// best seeds.
+/// </summary>
 public class CoreSeedPreviewTests
 {
     [Fact]

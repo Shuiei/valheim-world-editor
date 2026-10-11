@@ -5,10 +5,15 @@ using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
-// The Generate panel: changes come quickly (a seed typed, a slider dragged); the dungeon is made once
-// they stop, away from the window's thread, and only the newest is shown.
+/// <summary>
+/// The Generate panel: changes come quickly (a seed typed, a slider dragged); the dungeon is made once they stop, away
+/// from the window's thread, and only the newest is shown.
+/// </summary>
 public class DungeonGenPanelTests
 {
+    /// <summary>
+    /// Waits (4 s at most) until the panel's dungeon is made and Place is on.
+    /// </summary>
     private static async Task Settled(DungeonGenPanel p)
     {
         for (int i = 0; i < 200 && !p.Place.IsEnabled; i++)

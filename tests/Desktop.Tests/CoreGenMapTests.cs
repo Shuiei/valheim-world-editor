@@ -5,18 +5,26 @@ using Xunit;
 
 namespace WorldEditor.Tests;
 
-// The world map's data (MapData) and the terrain service it reads: the 1 m close-up with the saved
-// and pending edits (the game's 8 m limit, paint), windows across zone borders, the close-up cache,
-// the layers' byte layout, and the overview picture.
+/// <summary>
+/// The world map's data (MapData) and the terrain service it reads: the 1 m close-up with the saved and pending edits
+/// (the game's 8 m limit, paint), windows across zone borders, the close-up cache, the layers' byte layout, and the
+/// overview picture.
+/// </summary>
 [Collection("World files")]
 public class CoreGenMapTests
 {
+    /// <summary>
+    /// The world, its terrain service (a 64 px overview) and its edit store.
+    /// </summary>
     private static (WorldSave World, TerrainService Terrain, EditStore Edits) Open(TempWorld w)
     {
         var world = w.Load();
         return (world, new TerrainService(world, null, overviewSize: 64), new EditStore(world));
     }
 
+    /// <summary>
+    /// The height in the layers at this column and row.
+    /// </summary>
     private static float H(MapData.Layers l, int col, int row) => (float)l.Heights[row * l.Width + col];
 
     [Fact]

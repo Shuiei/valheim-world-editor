@@ -8,7 +8,9 @@ using Xunit;
 
 namespace WorldEditor.Tests;
 
-// Live mode without a game: a stand-in for the WorldEditorBridge plugin answers like it does.
+/// <summary>
+/// Live mode without a game: a stand-in for the WorldEditorBridge plugin answers like it does.
+/// </summary>
 public sealed class FakeBridge : IDisposable
 {
     private readonly HttpListener _listener = new();
@@ -99,6 +101,9 @@ public sealed class FakeBridge : IDisposable
         }
     }
 
+    /// <summary>
+    /// A local TCP port free right now.
+    /// </summary>
     public static int FreePort()
     {
         var l = new TcpListener(IPAddress.Loopback, 0);
@@ -108,9 +113,13 @@ public sealed class FakeBridge : IDisposable
         return p;
     }
 
+    /// <inheritdoc/>
     public void Dispose() => _listener.Close();
 }
 
+/// <summary>
+/// The live bridge client (LiveBridge) against FakeBridge.
+/// </summary>
 public class LiveTests
 {
     [Fact]

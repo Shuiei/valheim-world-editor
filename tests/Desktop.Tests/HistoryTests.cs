@@ -7,10 +7,15 @@ using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
-// The history panel: back to a change, redo to one, and taking out one change only.
+/// <summary>
+/// The history panel: back to a change, redo to one, and taking out one change only.
+/// </summary>
 [Collection("World files")]
 public class HistoryTests
 {
+    /// <summary>
+    /// The height at grid point (x, z) of the area.
+    /// </summary>
     private static float H(EditSession s, int x, int z) => s.Scene.Heights[z * s.Scene.W + x];
     private static readonly Func<Formula.Env, double> Two = Formula.Compile("2", []);
 
@@ -55,6 +60,9 @@ public class HistoryTests
         Assert.Equal("That change cannot be removed.", s.RemoveChange(s.UndoList[0]));
     }
 
+    /// <summary>
+    /// Takes out one change; returns the undo label then.
+    /// </summary>
     private static string Remove(EditSession s, EditSession.Change c)
     {
         s.RemoveChange(c);

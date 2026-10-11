@@ -7,14 +7,17 @@ using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
-// Sculpting and painting the ground: the brushes' math (the web editor's applyBrush), undo and redo,
-// what goes to the edit store, and saving into a world.
-// Loads the test world: the world generator is the game's, with static state, so tests that read a
-// world never run at the same time (one collection).
+/// <summary>
+/// Sculpting and painting the ground: the brushes' math (the web editor's applyBrush), undo and redo, what goes to the
+/// edit store, and saving into a world. Loads the test world: the world generator is the game's, with static state, so
+/// tests that read a world never run at the same time (one collection).
+/// </summary>
 [Collection("World files")]
 public class EditTests
 {
-    // A flat block of size × size zones at 30 m, with nothing edited, and its edit session.
+    /// <summary>
+    /// A flat block of size × size zones at 30 m, with nothing edited, and its edit session.
+    /// </summary>
     internal static EditSession Flat(int size = 2, params WorldScene.Thing[] things)
     {
         int w = size * 64 + 1;
@@ -44,7 +47,9 @@ public class EditTests
         return session;
     }
 
-    // A stroke held for a number of frames of 1/60 s at grid point (x, z).
+    /// <summary>
+    /// A stroke held for a number of frames of 1/60 s at grid point (x, z).
+    /// </summary>
     private static void Stroke(EditSession s, BrushTool tool, float x, float z, int frames = 30)
     {
         s.BeginStroke(tool, x, z);
@@ -55,6 +60,9 @@ public class EditTests
         s.EndStroke();
     }
 
+    /// <summary>
+    /// The height at grid point (x, z) of the area.
+    /// </summary>
     private static float At(EditSession s, int x, int z) => s.Scene.Heights[z * s.Scene.W + x];
 
     [Fact]
@@ -319,7 +327,9 @@ public class EditTests
         }
     }
 
-    // The test world (tests/fixtures/CITest) copied where saving cannot harm it.
+    /// <summary>
+    /// The test world (tests/fixtures/CITest) copied where saving cannot harm it.
+    /// </summary>
     internal static string CopyFixture()
     {
         string? root = AppContext.BaseDirectory;

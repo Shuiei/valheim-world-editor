@@ -12,9 +12,14 @@ using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
+/// <summary>
+/// The tests' Avalonia app (headless), and the files the editor keeps pointed at the tests' own.
+/// </summary>
 public static class TestApp
 {
-    // Before any test runs (headless or not): the user's files are never the tests'.
+    /// <summary>
+    /// Before any test runs (headless or not): the user's files are never the tests'.
+    /// </summary>
     [System.Runtime.CompilerServices.ModuleInitializer]
     internal static void KeepTheUsersFiles()
     {
@@ -38,6 +43,9 @@ public static class TestApp
         SettingsDialog.CheckGameLook = _ => { };
     }
 
+    /// <summary>
+    /// The headless app the Avalonia tests run in, with windows closed after each test.
+    /// </summary>
     public static AppBuilder BuildAvaloniaApp()
     {
         CloseWindowsAfterEachTestAttribute.Hook();
@@ -45,10 +53,15 @@ public static class TestApp
     }
 }
 
-// The mouse and keys reach the 3D view's camera through the window (the OpenGL picture itself cannot
-// be hit by the pointer: a transparent surface over it takes the input).
+/// <summary>
+/// The mouse and keys reach the 3D view's camera through the window (the OpenGL picture itself cannot be hit by the
+/// pointer: a transparent surface over it takes the input).
+/// </summary>
 public class InputTests
 {
+    /// <summary>
+    /// An 800 × 600 window shown, and its 3D view.
+    /// </summary>
     private static (MainWindow Window, GlView View) Open()
     {
         var w = new MainWindow(load: false) { Width = 800, Height = 600 };

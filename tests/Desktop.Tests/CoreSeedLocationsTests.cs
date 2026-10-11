@@ -3,14 +3,21 @@ using Xunit;
 
 namespace WorldEditor.Tests;
 
-// Where the game lays out a seed's locations (SeedLocations, with the game's rules from
-// tests/fixtures/locations.json), against a world the game made: seed
-// 5DCcdIcuYJ's start temple, Eikthyr's altars, the Bog Witch's ten spots, Fader's arenas and the spot
-// that became Haldor's camp, as Valheim 0.221 saved them.
+/// <summary>
+/// Where the game lays out a seed's locations (SeedLocations, with the game's rules from
+/// tests/fixtures/locations.json), against a world the game made: seed 5DCcdIcuYJ's start temple, Eikthyr's altars, the
+/// Bog Witch's ten spots, Fader's arenas and the spot that became Haldor's camp, as Valheim 0.221 saved them.
+/// </summary>
 public class CoreSeedLocationsTests
 {
+    /// <summary>
+    /// The generator of seed 5DCcdIcuYJ.
+    /// </summary>
     private static WorldGenerator Seed() => TerrainEditor.App.SeedPreview.Generator("5DCcdIcuYJ");
 
+    /// <summary>
+    /// Asserts a location of this prefab was placed at x, z (within 1 cm).
+    /// </summary>
     private static void Has(List<SeedLocations.Placed> placed, string prefab, float x, float z) =>
         Assert.Contains(placed, p => p.Rule.prefab == prefab && MathF.Abs(p.X - x) < 0.01f && MathF.Abs(p.Z - z) < 0.01f);
 

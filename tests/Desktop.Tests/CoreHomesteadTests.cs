@@ -5,13 +5,18 @@ using Xunit;
 
 namespace WorldEditor.Tests;
 
-// Homestead's blueprints, the editor's building library: finding Homestead in a BepInEx folder (with
-// its version), writing a blueprint the way Homestead writes them (its headers, pieces measured from the
-// anchor, rotations as quaternions) that reads back the same, and listing a folder of them.
+/// <summary>
+/// Homestead's blueprints, the editor's building library: finding Homestead in a BepInEx folder (with its version),
+/// writing a blueprint the way Homestead writes them (its headers, pieces measured from the anchor, rotations as
+/// quaternions) that reads back the same, and listing a folder of them.
+/// </summary>
 public class CoreHomesteadTests : IDisposable
 {
     private readonly string _dir = Path.Combine(Path.GetTempPath(), "vwe-hs-" + Guid.NewGuid().ToString("N")[..8]);
 
+    /// <summary>
+    /// Deletes the temporary folder.
+    /// </summary>
     public void Dispose()
     {
         if (Directory.Exists(_dir))
@@ -42,6 +47,9 @@ public class CoreHomesteadTests : IDisposable
         Assert.Equal(Homestead.FolderOverride, found.Folder);
     }
 
+    /// <summary>
+    /// A one-cell clipboard copy with no ground holding these pieces (name, position and yaw).
+    /// </summary>
     private static JsonObject Clip(params (string Name, float X, float Y, float Z, float Yaw)[] pieces) => new()
     {
         ["w"] = 1,

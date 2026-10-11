@@ -8,13 +8,19 @@ using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
-// Claude's connection (ClaudeServer, ClaudeTools): looking at a world and shaping it with scripts (one
-// pending step each, nothing on mistakes, undo), never over unsaved changes, never while live with Auto
-// on; building in the Workshop (pieces snapped as the hammer does, the support check naming what would
-// fall); and the server only answering 127.0.0.1 callers with the token.
+/// <summary>
+/// Claude's connection (ClaudeServer, ClaudeTools): looking at a world and shaping it with scripts (one pending step
+/// each, nothing on mistakes, undo), never over unsaved changes, never while live with Auto on; building in the
+/// Workshop (pieces snapped as the hammer does, the support check naming what would fall); and the server only
+/// answering 127.0.0.1 callers with the token.
+/// </summary>
 [Collection("World files")]
 public class ClaudeToolsTests
 {
+    /// <summary>
+    /// A window on a copy of the test world with its Claude tools, questions answered No, settings never saved, Auto
+    /// apply and area follow off, and a Homestead folder of its own; OpenLive opens a stand-in game instead.
+    /// </summary>
     private sealed class Run : IDisposable
     {
         public MainWindow W { get; } = new(load: false) { Width = 1600, Height = 1000 };
@@ -59,6 +65,9 @@ public class ClaudeToolsTests
         }
     }
 
+    /// <summary>
+    /// A tool's JSON answer, parsed.
+    /// </summary>
     private static JsonElement J(string json) => JsonDocument.Parse(json).RootElement;
 
     [AvaloniaFact]
@@ -265,6 +274,9 @@ public class ClaudeToolsTests
         Assert.Contains("not running", down.ToString());
     }
 
+    /// <summary>
+    /// An HTTP handler answering every request with the given function, without a network.
+    /// </summary>
     private sealed class Answer(Func<HttpRequestMessage, HttpResponseMessage> answer) : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) => Task.FromResult(answer(request));

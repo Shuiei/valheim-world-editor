@@ -7,22 +7,40 @@ using SkiaSharp;
 
 namespace TerrainEditor.DocsScreenshots;
 
-// Drives the app for the documentation's pictures (its --driver mode, see Desktop/Driver.cs).
-//
-// The app runs with a stand-in home: none of this computer's characters, worlds, servers or settings
-// show in the pictures. Only the copied game look is shared (read only), so the pictures have the
-// game's textures and models. Nothing is ever saved: each scene's changes stay pending and are
-// discarded with its editor.
+/// <summary>
+/// Drives the app for the documentation's pictures (its --driver mode, see Desktop/Driver.cs).
+/// </summary>
+/// <remarks>
+/// The app runs with a stand-in home: none of this computer's characters, worlds, servers or settings show in
+/// the pictures. Only the copied game look is shared (read only), so the pictures have the game's textures and
+/// models. Nothing is ever saved: each scene's changes stay pending and are discarded with its editor.
+/// </remarks>
 public sealed class Editor : IDisposable
 {
-    // The repository: the folder above this program that holds VERSION and Desktop.
+    /// <summary>The repository: the folder above this program that holds VERSION and Desktop.</summary>
     public static readonly string Repo = FindRepo();
 
+    /// <summary>The stand-in home, a temporary folder deleted on Dispose.</summary>
     private readonly string _home;
+    /// <summary>The window's width in pixels; pictures are scaled down to it.</summary>
     private readonly int _width;
+    /// <summary>The stand-in running game, when the scene shows one.</summary>
     private readonly FakeGame? _game;
+    /// <summary>The driven app.</summary>
     private readonly Process _p;
 
+    /// <summary>
+    /// Makes the stand-in home and starts the app in it, driven, and waits until it is ready.
+    /// </summary>
+    /// <param name="app">The app's dll (run with dotnet) or executable; null for the Debug build in Desktop/bin.</param>
+    /// <param name="width">Window width in pixels.</param>
+    /// <param name="height">Window height in pixels.</param>
+    /// <param name="gameWorld">When set, a stand-in running game with this world (the plugin in an r2modman
+    /// profile, answering /status).</param>
+    /// <param name="worlds">World folders or files linked into the stand-in Valheim's worlds_local.</param>
+    /// <param name="homestead">A Homestead.dll to copy into the stand-in game's BepInEx plugins.</param>
+    /// <param name="recent">Worlds listed as opened before on the start page, the first a few hours ago, then a day
+    /// apart.</param>
     public Editor(string? app = null, int width = 1440, int height = 900, string? gameWorld = null,
         IReadOnlyList<string>? worlds = null, string? homestead = null, IReadOnlyList<string>? recent = null)
     {
@@ -129,9 +147,10 @@ public sealed class Editor : IDisposable
         }
     }
 
-    // The real user's home (the stand-in one is only the app's).
+    /// <summary>The real user's home (the stand-in one is only the app's).</summary>
     private static string UserHome => Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
 
+    /// <summary>The app's next answer line (starting "@@ "); other output is skipped.</summary>
     private string Answer()
     {
         while (true)
@@ -144,7 +163,8 @@ public sealed class Editor : IDisposable
         }
     }
 
-    // One command; its answer's state (an error answer throws).
+    /// <summary>One command; its answer's state (an error answer throws).</summary>
+    /// <returns>The JSON state after "@@ ok ", cloned so it outlives the answer.</returns>
     public JsonElement Send(string command)
     {
         _p.StandardInput.WriteLine(command);
@@ -158,8 +178,14 @@ public sealed class Editor : IDisposable
         return doc.RootElement.Clone();
     }
 
-    // The whole window, saved as a JPEG for the docs (the status bar's message cleared unless kept: it
-    // would tell how the scene was set up).
+    /// <summary>
+    /// The whole window, saved as a JPEG for the docs (the status bar's message cleared unless kept: it would tell
+    /// how the scene was set up).
+    /// </summary>
+    /// <param name="path">The JPEG file to write.</param>
+    /// <param name="quality">JPEG quality, 0 to 100.</param>
+    /// <param name="keepMessage">Keep the status bar's message in the picture.</param>
+    /// <returns>The app's state when the picture was taken.</returns>
     public JsonElement Shot(string path, int quality = 85, bool keepMessage = false)
     {
         if (!keepMessage)
@@ -193,6 +219,10 @@ public sealed class Editor : IDisposable
         return state;
     }
 
+    /// <summary>
+    /// Asks the app to quit (killing it when it cannot be asked or does not exit within 15 s), stops the
+    /// stand-in game and deletes the stand-in home.
+    /// </summary>
     public void Dispose()
     {
         try
@@ -219,7 +249,10 @@ public sealed class Editor : IDisposable
         }
     }
 
-    // This computer's Valheim bundles folder (the app's settings first, then the usual Steam places).
+    /// <summary>
+    /// This computer's Valheim bundles folder (the app's settings first, then the usual Steam places), links
+    /// resolved; null when none is found.
+    /// </summary>
     private static string? RealBundles()
     {
         var places = new List<string>();
@@ -250,6 +283,7 @@ public sealed class Editor : IDisposable
         return null;
     }
 
+    /// <summary>Finds <c>Repo</c> from this program's folder upwards; throws when there is none.</summary>
     private static string FindRepo()
     {
         for (var d = new DirectoryInfo(AppContext.BaseDirectory); d != null; d = d.Parent)
@@ -263,16 +297,25 @@ public sealed class Editor : IDisposable
     }
 }
 
-// Answers the start page's "is Valheim running?" like the WorldEditorBridge plugin, for the "My game"
-// picture (only /status: nothing is ever edited live).
+/// <summary>
+/// Answers the start page's "is Valheim running?" like the WorldEditorBridge plugin, for the "My game" picture
+/// (only /status: nothing is ever edited live).
+/// </summary>
 public sealed class FakeGame : IDisposable
 {
+    /// <summary>The token the app must send (X-Bridge-Token), written into the stand-in plugin's settings.</summary>
     public string Token { get; }
+    /// <summary>The free local port it listens on.</summary>
     public int Port { get; }
 
+    /// <summary>Listens on 127.0.0.1 at <c>Port</c>.</summary>
     private readonly HttpListener _listener = new();
+    /// <summary>The /status answer: the world's name and no players, as JSON.</summary>
     private readonly byte[] _status;
 
+    /// <summary>Starts listening on a free local port.</summary>
+    /// <param name="world">The world name /status reports.</param>
+    /// <param name="token">The token requests must carry.</param>
     public FakeGame(string world, string token = "docs")
     {
         Token = token;
@@ -289,6 +332,7 @@ public sealed class FakeGame : IDisposable
         _ = Task.Run(Serve);
     }
 
+    /// <summary>Answers GET /status with the right token; anything else gets 403 and an empty JSON object.</summary>
     private async Task Serve()
     {
         while (_listener.IsListening)
@@ -319,6 +363,7 @@ public sealed class FakeGame : IDisposable
         }
     }
 
+    /// <summary>Stops listening, which ends <c>Serve</c>.</summary>
     public void Dispose()
     {
         _listener.Close();
