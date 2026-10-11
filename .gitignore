@@ -1,10 +1,6 @@
 bin/
 obj/
 *.user
-# The game-look exporter's indexes.
-tools/asset-export/cab_index.json
-tools/asset-export/*_index*.json
-tools/asset-export/__pycache__/
 # Build output placed inside the source folder by mistake
 out/
 __pycache__/

@@ -12,7 +12,7 @@ namespace TerrainEditor.Editing;
 // stable hash of each room prefab's name, its position and rotation. The game builds the rooms from
 // that list when the dungeon loads (DungeonGenerator.Load/Spawn) and never checks it against its own
 // generator, so a list made here is built as it is. Rooms and their openings come from
-// dungeon-rooms.json.gz (tools/asset-export/scan_dungeon_rooms.py). All in Unity's world space.
+// dungeon-rooms.json.gz (--export-catalogues). All in Unity's world space.
 public static class Dungeons
 {
 	public static readonly int RoomDataKey = StableHash.Of("roomData");

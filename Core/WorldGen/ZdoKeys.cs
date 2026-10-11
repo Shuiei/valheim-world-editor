@@ -5,7 +5,7 @@ using TerrainEditor.Save;
 namespace TerrainEditor.Terrain;
 
 // Names of object data keys (the save keeps only their hashes), from the game code
-// (tools/asset-export/scan_zdo_keys.py): for the object inspector.
+// (--export-catalogues, GameCatalogues.cs): for the object inspector.
 public static class ZdoKeys
 {
 	private static readonly Dictionary<int, string> ByHash = Load();
