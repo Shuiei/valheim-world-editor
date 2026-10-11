@@ -59,4 +59,21 @@ public class FuzzFindingsTests
     [Fact]
     public void TerrainDataTooLarge() =>
         Refused(() => TerrainZone.Decode(default, 0, Gzip(new byte[17 << 20])));
+
+    // Picture data whose compression is damaged (the decompressor threw ZLibException).
+    [Fact]
+    public void PngDamagedData() =>
+        Refused(() => Png.Read(Convert.FromHexString("89504e470d0a1a0a0000000d494844520000000d000000030804000000d94a22e80000002649444154783f63604944415460e1e5e317106411121611151397ffffff746d6170067b15070000000000d958744982")));
+
+    // Gzip data whose compressed part is damaged.
+    [Fact]
+    public void GzipDamagedData()
+    {
+        byte[] damaged = Gzip(Enumerable.Range(0, 4096).Select(i => (byte)(i * 7)).ToArray());
+        for (int i = 12; i < damaged.Length - 8; i += 5)
+        {
+            damaged[i] ^= 0xA5;
+        }
+        Refused(() => CheckedReads.Gunzip(damaged, 1 << 20));
+    }
 }

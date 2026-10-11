@@ -148,9 +148,17 @@ public static class Png
         {
             byte[] buffer = new byte[81920];
             int n;
-            while (o.Length < need && (n = zs.Read(buffer, 0, (int)Math.Min(buffer.Length, need - o.Length))) > 0)
+            try
             {
-                o.Write(buffer, 0, n);
+                while (o.Length < need && (n = zs.Read(buffer, 0, (int)Math.Min(buffer.Length, need - o.Length))) > 0)
+                {
+                    o.Write(buffer, 0, n);
+                }
+            }
+            catch (IOException e)
+            {
+                // Damaged compressed data (ZLibException): read from memory, nothing else can fail.
+                throw new InvalidDataException("the PNG picture data is damaged", e);
             }
             raw = o.ToArray();
         }

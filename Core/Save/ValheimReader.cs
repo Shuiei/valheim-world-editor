@@ -158,13 +158,21 @@ public static class CheckedReads
         using MemoryStream raw = new();
         byte[] buffer = new byte[81920];
         int n;
-        while ((n = gz.Read(buffer)) > 0)
+        try
         {
-            if (raw.Length + n > limit)
+            while ((n = gz.Read(buffer)) > 0)
             {
-                throw new InvalidDataException($"the data unpacks to more than {limit} bytes");
+                if (raw.Length + n > limit)
+                {
+                    throw new InvalidDataException($"the data unpacks to more than {limit} bytes");
+                }
+                raw.Write(buffer, 0, n);
             }
-            raw.Write(buffer, 0, n);
+        }
+        catch (IOException e)
+        {
+            // Damaged compressed data (ZLibException): read from memory, nothing else can fail.
+            throw new InvalidDataException("the compressed data is damaged", e);
         }
         return raw.ToArray();
     }
