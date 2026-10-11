@@ -174,17 +174,7 @@ public sealed class PlaceTool
 	}
 
 	// ---- Saplings and crops: the game lets them grow only with nothing within their grow radius.
-	private static readonly Dictionary<string, (float Radius, bool Cultivated)> GrowInfo = LoadGrow();
-
-	private static Dictionary<string, (float, bool)> LoadGrow()
-	{
-		var d = PrefabCatalog.Placeable.Where(p => p.GrowRadius > 0).ToDictionary(p => p.Name, p => (p.GrowRadius, p.NeedsCultivated));
-		foreach (var (name, g) in PrefabCatalog.GrownFrom)
-		{
-			d.TryAdd(name, (g.Radius, false));
-		}
-		return d;
-	}
+	private static IReadOnlyDictionary<string, (float Radius, bool Cultivated)> GrowInfo => PrefabCatalog.GrowRoom;
 
 	public bool GrowMatters => Chosen.Any(n => GrowInfo.TryGetValue(n, out var g) && g.Radius > 0);
 	public List<string> NeedCultivated => Chosen.Where(n => GrowInfo.TryGetValue(n, out var g) && g.Cultivated).ToList();

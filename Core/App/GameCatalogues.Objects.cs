@@ -9,19 +9,20 @@ using V3 = (double X, double Y, double Z);
 
 namespace TerrainEditor.App;
 
-// The catalogues of the game's other objects: prefabs and vegetation; and what the editor reads at its
-// start (GameData): the terrain modifiers, the names of object data and the cave rocks.
+// The catalogue of the game's vegetation; and what the editor reads of the game's other objects at its
+// start (GameData): the prefabs, the terrain modifiers, the names of object data and the cave rocks.
 public static partial class GameCatalogues
 {
 	private const int LodGroupType = (int)AssetClassID.LODGroup;
 
-	// prefabs.json: every prefab with a ZNetView on its root (a network object the save can hold), with
-	// what a new object of it needs in the save: persistent / distant flags and object type ("p", "d",
-	// "t"). Creatures ("c") and item drops ("i") are marked, so the editor can leave them out of what it
-	// offers to place. Saplings (Plant) also get their grow radius ("gr", the free space they need to
-	// grow), whether they need cultivated ground ("cult") and what they grow into ("grows": Plant's
-	// m_grownPrefabs). Containers get their grid size ("cw" x "ch"), wards their protected radius
-	// ("ward"), crafting stations the radius they allow building in ("build").
+	// The prefabs, read at the editor's start (GameData): every prefab with a ZNetView on its root (a
+	// network object the save can hold), with what a new object of it needs in the save: persistent /
+	// distant flags and object type ("p", "d", "t"). Creatures ("c") and item drops ("i") are marked, so
+	// the editor can leave them out of what it offers to place. Saplings (Plant) also get their grow
+	// radius ("gr", the free space they need to grow), whether they need cultivated ground ("cult") and
+	// what they grow into ("grows": Plant's m_grownPrefabs). Containers get their grid size ("cw" x
+	// "ch"), wards their protected radius ("ward"), crafting stations the radius they allow building in
+	// ("build").
 	// What stands hold: items get their type ("it"), their attach override ("ao", when set), their
 	// number of variants ("var", when they have some), whether they have an "attach" child ("at": without
 	// one no item stand takes them) or an "attach_skin" one ("ats": armour stands take either, or a chest
@@ -29,9 +30,57 @@ public static partial class GameCatalogues
 	// quality level adds ("durl"). Item stands get the types they take ("is") and the items they take or
 	// refuse whatever their type ("isi", "isu"); armour stands the types each slot takes ("as", in slot
 	// order: the save keeps slot i's item under "<i>_item").
-	private sealed class PrefabScan : IScan
+	// Scripts are told by their fields in the type tree (nothing of them read); the prefabs are found
+	// from the ZNetViews up to their GameObjects through the bundle's tree read raw (Layout.Tree), kept to
+	// the roots; only the scripts needed are read whole. What saplings grow into and what item stands
+	// take are named in other bundles: found among what the reading met (no bundle opened again).
+	private sealed class PrefabScan : IStartScan
 	{
+		// What a script is, by its fields.
+		[Flags]
+		private enum Role
+		{
+			None = 0,
+			Net = 1,
+			Creature = 2,
+			Item = 4,
+			Plant = 8,
+			Container = 16,
+			Ward = 32,
+			Station = 64,
+			Drop = 128,
+			Stand = 256,
+			Armour = 512,
+		}
+
+		// Read whole on a prefab's root.
+		private const Role OnRoot = Role.Net | Role.Plant | Role.Container | Role.Ward | Role.Station;
+
+		// Read whole wherever they are.
+		private const Role Anywhere = Role.Plant | Role.Drop | Role.Stand | Role.Armour;
+
+		private static Role RoleOf(IReadOnlySet<string> fields)
+		{
+			bool All(params string[] names) => names.All(fields.Contains);
+			var r = Role.None;
+			r |= All("m_persistent", "m_distant", "m_type") ? Role.Net : 0;
+			r |= All("m_runSpeed") ? Role.Creature : 0;
+			r |= All("m_itemData") ? Role.Item : 0;
+			r |= All("m_grownPrefabs", "m_growRadius") ? Role.Plant : 0;
+			r |= All("m_width", "m_height", "m_privacy") ? Role.Container : 0;
+			r |= All("m_radius", "m_areaMarker", "m_enabledEffect") ? Role.Ward : 0;
+			r |= All("m_rangeBuild") ? Role.Station : 0;
+			r |= All("m_itemData", "m_autoPickup") ? Role.Drop : 0;
+			r |= All("m_supportedTypes", "m_attachOther") ? Role.Stand : 0;
+			r |= All("m_slots", "m_poseCount") ? Role.Armour : 0;
+			return r;
+		}
+
 		private readonly Dictionary<string, Dict> _prefabs = new();
+		// Each script's role, by where it is.
+		private readonly Dictionary<Ref, Role> _roles = new();
+		// Every networked root's name by where it is: what saplings name (without opening their bundles).
+		private readonly Dictionary<Ref, string> _names = new();
 		// Saplings: the grown prefabs they name.
 		private readonly Dictionary<string, List<Ref>> _plants = new();
 		// Items by their ItemDrop component (what item stands name), and what stands take.
@@ -40,214 +89,297 @@ public static partial class GameCatalogues
 		private readonly Dictionary<string, (List<long> Types, List<Ref> Take, List<Ref> Refuse)> _stands = new();
 		private readonly Dictionary<string, List<object?>> _armour = new();
 
-		public Dict Json()
+		public void Read(Bundle b, Game game)
 		{
-			var d = new Dict();
-			foreach (var (n, e) in _prefabs)
+			// Each script's role (once per script, from its class's fields).
+			var byScript = new Dictionary<(Bundle.Inner, ushort), Role>();
+			Role RoleIn(Bundle.Inner f, AssetFileInfo info)
 			{
-				d[n] = e;
-			}
-			return d;
-		}
-
-		public void Read(Bundle b)
-		{
-			ReadPrefabs(b);
-			foreach (var f in b.Files)
-			{
-				foreach (var info in f.Assets.file.AssetInfos)
+				ushort index = info.GetScriptIndex(f.Assets.file);
+				if (!byScript.TryGetValue((f, index), out var r))
 				{
-					if (info.TypeId == MonoBehaviourType && b.Field(f, info.PathId) is { } d)
+					var script = index < f.Assets.file.Metadata.ScriptTypes.Count ? f.Assets.file.Metadata.ScriptTypes[index] : null;
+					var at = script != null && f.FileOf(script.FileId) is string cab ? new Ref(cab, script.PathId) : (Ref?)null;
+					if (at == null || !_roles.TryGetValue(at.Value, out r))
 					{
-						ReadPlant(b, f, d);
-						ReadStand(b, f, info.PathId, d);
+						r = RoleOf(b.FieldNames(f, info));
+						if (at != null)
+						{
+							_roles[at.Value] = r;
+						}
 					}
+					byScript[(f, index)] = r;
 				}
+				return r;
 			}
-		}
-
-		private void ReadPrefabs(Bundle b)
-		{
+			var nets = new List<(Bundle.Inner, long)>();
+			var scripts = new List<(Bundle.Inner File, long Pid, Role Role)>();
+			var role = new Dictionary<long, Role>();
 			foreach (var (f, info) in b.Objects)
 			{
-				if (info.TypeId != GameObjectType || b.Field(f, info.PathId) is not { } go)
+				var r = info.TypeId == MonoBehaviourType ? RoleIn(f, info) : Role.None;
+				if (r == Role.None)
 				{
 					continue;
 				}
-				string name = go["m_Name"].AsString;
-				if (_prefabs.ContainsKey(name))
+				role[info.PathId] = r;
+				if ((r & Role.Net) != 0)
 				{
-					continue;
+					nets.Add((f, info.PathId));
 				}
-				bool root = false, creature = false, item = false;
-				AssetTypeValueField? znv = null, plant = null;
-				var extra = new Dict();
-				foreach (var (t, _, c) in b.Components(go))
+				if ((r & Anywhere) != 0)
 				{
-					if (t == TransformType)
-					{
-						root = c["m_Father.m_PathID"].AsLong == 0;
-					}
-					else if (t == MonoBehaviourType)
-					{
-						if (Has(c, "m_persistent") && Has(c, "m_distant") && Has(c, "m_type"))
-						{
-							znv = c;
-						}
-						creature |= Has(c, "m_runSpeed");
-						item |= Has(c, "m_itemData");
-						if (Has(c, "m_grownPrefabs") && Has(c, "m_growRadius"))
-						{
-							plant = c;
-						}
-						if (Has(c, "m_width") && Has(c, "m_height") && Has(c, "m_privacy"))
-						{
-							extra["cw"] = Int(Py(c["m_width"]));
-							extra["ch"] = Int(Py(c["m_height"]));
-						}
-						if (Has(c, "m_radius") && Has(c, "m_areaMarker") && Has(c, "m_enabledEffect"))
-						{
-							extra["ward"] = R(Num(Py(c["m_radius"])), 2);
-						}
-						if (Has(c, "m_rangeBuild"))
-						{
-							extra["build"] = R(Num(Py(c["m_rangeBuild"])), 2);
-						}
-					}
+					scripts.Add((f, info.PathId, r));
 				}
-				if (!root || znv == null)
-				{
-					continue;
-				}
-				var entry = new Dict { ["p"] = Int(Py(znv["m_persistent"])), ["d"] = Int(Py(znv["m_distant"])), ["t"] = Int(Py(znv["m_type"])) };
-				if (creature)
-				{
-					entry["c"] = 1L;
-				}
-				if (item)
-				{
-					entry["i"] = 1L;
-				}
-				if (plant != null)
-				{
-					entry["gr"] = R(Num(Py(plant["m_growRadius"])), 3);
-					entry["cult"] = Int(Get(plant, "m_needCultivatedGround", 0L));
-				}
-				foreach (var (k, v) in extra)
-				{
-					entry[k] = v;
-				}
-				_prefabs[name] = entry;
 			}
-		}
-
-		// The GameObject a component is on (in its file), or null.
-		private static string? OwnerName(Bundle b, Bundle.Inner f, AssetTypeValueField component) =>
-			b.Field(f, component["m_GameObject.m_PathID"].AsLong) is { } go && Has(go, "m_Name") ? go["m_Name"].AsString : null;
-
-		private void ReadPlant(Bundle b, Bundle.Inner f, AssetTypeValueField d)
-		{
-			if (!Has(d, "m_grownPrefabs") || !Has(d, "m_growRadius") || OwnerName(b, f, d) is not string owner)
+			if (role.Count == 0)
 			{
 				return;
 			}
-			_plants[owner] = d["m_grownPrefabs.Array"].Children.Select(p => Bundle.RefOf(f, p)).OfType<Ref>().ToList();
+			// The tree around them read raw, a sweep of the bundle at a time (it is read in blocks, in the
+			// order of its files), with the scripts read anywhere (what they say taken, they are not kept):
+			// the ZNetViews' and the scripts' GameObjects, their Transforms, the items' children; then the
+			// prefabs' scripts. A bundle the block cache cannot hold (the largest, which has most prefabs)
+			// has its whole tree and every script a prefab's root may need read in one sweep instead: each
+			// sweep would read all of it again.
+			bool all = b.Files.Sum(f => f.Assets.file.Header.FileSize) > BlockCache.Bytes;
+			var tree = new Layout.Tree();
+			var owners = new List<(Bundle.Inner, long)>();
+			var said = new Dictionary<(Bundle.Inner, long), Said>();
+			void Take(Bundle.Inner f, long pid, int type, Layout.Bytes d)
+			{
+				if (type != MonoBehaviourType)
+				{
+					tree.Add(f, pid, type, d);
+					return;
+				}
+				var r = role[pid];
+				if (all && (r & OnRoot) != 0)
+				{
+					b.Field(f, pid);
+				}
+				if ((r & Anywhere) != 0 && b.Read(f, pid) is { } s)
+				{
+					said[(f, pid)] = Say(f, r, s);
+				}
+				if ((r & Role.Net) != 0 && d.I32(0) == 0)
+				{
+					owners.Add((f, d.I64(4)));
+				}
+			}
+			var whole = scripts.Select(s => (s.File, s.Pid));
+			List<(Bundle.Inner File, long Go)> items;
+			IEnumerable<(Bundle.Inner, long)> TransformsOf(IEnumerable<(Bundle.Inner File, long Go)> gos) =>
+				gos.Where(tree.GameObjects.ContainsKey).SelectMany(g => tree.GameObjects[g].Components.Where(c => Bundle.TypeOf(g.File, c.Pid) == TransformType).Select(c => (g.File, c.Pid)));
+			IEnumerable<(Bundle.Inner, long)> ChildrenOf(IEnumerable<(Bundle.Inner File, long Go)> gos) =>
+				TransformsOf(gos).Where(tree.Transforms.ContainsKey).SelectMany(t => tree.Transforms[t].Children.Select(c => (t.Item1, c)));
+			if (all)
+			{
+				Layout.Sweep(b, b.Objects.Where(o => o.Info.TypeId is GameObjectType or TransformType || (role.GetValueOrDefault(o.Info.PathId) & (OnRoot | Anywhere)) != 0).Select(o => (o.File, o.Info.PathId)), Take);
+				items = Items();
+			}
+			else
+			{
+				Layout.Sweep(b, nets.Concat(whole), Take);
+				var gos = owners.Concat(said.Select(s => (s.Key.Item1, s.Value.Go))).ToList();
+				Layout.Sweep(b, gos, Take);
+				Layout.Sweep(b, TransformsOf(gos), Take);
+				items = Items();
+				var children = ChildrenOf(items).ToList();
+				Layout.Sweep(b, children, Take);
+				Layout.Sweep(b, children.Where(tree.Transforms.ContainsKey).Select(c => (c.Item1, tree.Transforms[c].Go)), Take);
+			}
+			// The items' GameObjects.
+			List<(Bundle.Inner, long)> Items() => scripts.Where(s => said.TryGetValue((s.File, s.Pid), out var x) && x.Item != null).Select(s => (s.File, said[(s.File, s.Pid)].Go)).Distinct().ToList();
+			// The prefabs: networked roots.
+			var roots = new HashSet<long>();
+			var rootGos = new List<(Bundle.Inner File, long Go)>();
+			foreach (var ((f, go), (_, comps)) in tree.GameObjects)
+			{
+				if (comps.Any(c => (role.GetValueOrDefault(c.Pid) & Role.Net) != 0)
+					&& comps.FirstOrDefault(c => c.File == 0 && Bundle.TypeOf(f, c.Pid) == TransformType) is (_, long tr and not 0) && tree.Transforms.TryGetValue((f, tr), out var node) && node.Root)
+				{
+					roots.Add(go);
+					rootGos.Add((f, go));
+				}
+			}
+			if (rootGos.Count > 0)
+			{
+				// One with children, when there is one: more of the tree checked.
+				var check = rootGos.FirstOrDefault(g => TransformsOf(new[] { g }).Any(t => tree.Transforms.TryGetValue(t, out var n) && n.Children.Length > 0), rootGos[0]);
+				Layout.Check(b, check.File, check.Go, tree);
+			}
+			// The prefabs' scripts read whole (in one more sweep, when not read yet).
+			b.ReadInOrder(rootGos.SelectMany(g => tree.GameObjects[g].Components.Where(c => (role.GetValueOrDefault(c.Pid) & OnRoot) != 0).Select(c => c.Pid)));
+			foreach (var (f, info) in b.Objects)
+			{
+				if (info.TypeId == GameObjectType && roots.Contains(info.PathId))
+				{
+					ReadPrefab(b, new Ref(f.Cab, info.PathId), tree.GameObjects[(f, info.PathId)], role);
+				}
+			}
+			// Each item's children's names.
+			var kids = items.ToDictionary(i => i, i => ChildrenOf(new[] { i }).Where(tree.Transforms.ContainsKey).Select(c => (c.Item1, tree.Transforms[c].Go))
+				.Where(tree.GameObjects.ContainsKey).Select(g => tree.GameObjects[g].Name).ToHashSet());
+			foreach (var (f, pid, _) in scripts)
+			{
+				if (said.TryGetValue((f, pid), out var s) && tree.GameObjects.TryGetValue((f, s.Go), out var go))
+				{
+					Keep(f, pid, go.Name, s, kids.GetValueOrDefault((f, s.Go)) ?? new());
+				}
+			}
 		}
 
-		private void ReadStand(Bundle b, Bundle.Inner f, long pid, AssetTypeValueField d)
+		// A networked root (its name and components), when its ZNetView can be read.
+		private void ReadPrefab(Bundle b, Ref at, (string Name, (int File, long Pid)[] Components) go, Dictionary<long, Role> roles)
 		{
-			bool isItem = Has(d, "m_itemData") && Has(d, "m_autoPickup");
-			bool isStand = Has(d, "m_supportedTypes") && Has(d, "m_attachOther");
-			bool isArmour = Has(d, "m_slots") && Has(d, "m_poseCount");
-			if (!(isItem || isStand || isArmour) || b.Field(f, d["m_GameObject.m_PathID"].AsLong) is not { } go || !Has(go, "m_Name"))
+			bool creature = false, item = false;
+			AssetTypeValueField? znv = null, plant = null;
+			var extra = new Dict();
+			foreach (var (_, pid) in go.Components)
+			{
+				var r = b.TypeOf(pid) == MonoBehaviourType ? roles.GetValueOrDefault(pid) : Role.None;
+				creature |= (r & Role.Creature) != 0;
+				item |= (r & Role.Item) != 0;
+				if ((r & OnRoot) == 0 || b.Field(pid) is not { } c)
+				{
+					continue;
+				}
+				if ((r & Role.Net) != 0)
+				{
+					znv = c;
+				}
+				if ((r & Role.Plant) != 0)
+				{
+					plant = c;
+				}
+				if ((r & Role.Container) != 0)
+				{
+					extra["cw"] = Int(Py(c["m_width"]));
+					extra["ch"] = Int(Py(c["m_height"]));
+				}
+				if ((r & Role.Ward) != 0)
+				{
+					extra["ward"] = R(Num(Py(c["m_radius"])), 2);
+				}
+				if ((r & Role.Station) != 0)
+				{
+					extra["build"] = R(Num(Py(c["m_rangeBuild"])), 2);
+				}
+			}
+			if (znv == null)
 			{
 				return;
 			}
-			string owner = go["m_Name"].AsString;
+			string name = go.Name;
+			_names[at] = name;
+			if (_prefabs.ContainsKey(name))
+			{
+				return;
+			}
+			var entry = new Dict { ["p"] = Int(Py(znv["m_persistent"])), ["d"] = Int(Py(znv["m_distant"])), ["t"] = Int(Py(znv["m_type"])) };
+			if (creature)
+			{
+				entry["c"] = 1L;
+			}
+			if (item)
+			{
+				entry["i"] = 1L;
+			}
+			if (plant != null)
+			{
+				entry["gr"] = R(Num(Py(plant["m_growRadius"])), 3);
+				entry["cult"] = Int(Get(plant, "m_needCultivatedGround", 0L));
+			}
+			foreach (var (k, v) in extra)
+			{
+				entry[k] = v;
+			}
+			_prefabs[name] = entry;
+		}
+
+		// What a script read anywhere says, taken as it is read (the script itself is not kept: items'
+		// are large): its GameObject, what a sapling grows into, an item's entry (without "at", "ats"),
+		// what an item stand takes (types, items taken and refused), an armour stand's slots.
+		private sealed record Said(long Go, List<Ref>? Grows, Dict? Item, (List<long> Types, List<Ref> Take, List<Ref> Refuse)? Stand, List<object?>? Slots);
+
+		private static Said Say(Bundle.Inner f, Role r, AssetTypeValueField d)
+		{
 			static List<long> Types(AssetTypeValueField list) => list["Array"].Children.Select(t => Int(Py(t))).Distinct().Order().ToList();
-			if (isItem)
+			List<Ref> Refs(string name) => Has(d, name) ? d[name]["Array"].Children.Select(p => Bundle.RefOf(f, p)).OfType<Ref>().ToList() : new();
+			Dict? item = null;
+			if ((r & Role.Drop) != 0)
+			{
+				var sh = d["m_itemData"]["m_shared"];
+				item = new Dict { ["it"] = Int(Py(sh["m_itemType"])) };
+				if (Int(Get(sh, "m_attachOverride", 0L)) != 0)
+				{
+					item["ao"] = Int(Py(sh["m_attachOverride"]));
+				}
+				if (Int(Get(sh, "m_variants", 0L)) > 0)
+				{
+					item["var"] = Int(Py(sh["m_variants"]));
+				}
+				if (Int(Get(sh, "m_useDurability", 0L)) != 0)
+				{
+					item["dur"] = R(Num(Py(sh["m_maxDurability"])), 2);
+					if (Num(Get(sh, "m_durabilityPerLevel", 0L)) != 0)
+					{
+						item["durl"] = R(Num(Py(sh["m_durabilityPerLevel"])), 2);
+					}
+				}
+			}
+			return new Said(
+				d["m_GameObject.m_PathID"].AsLong,
+				(r & Role.Plant) != 0 ? Refs("m_grownPrefabs") : null,
+				item,
+				item == null && (r & Role.Stand) != 0 ? (Types(d["m_supportedTypes"]), Refs("m_supportedItems"), Refs("m_unsupportedItems")) : null,
+				item == null && (r & Role.Stand) == 0 && (r & Role.Armour) != 0 ? d["m_slots.Array"].Children.Select(s => (object?)Types(s["m_supportedTypes"])).ToList() : null);
+		}
+
+		// A script's say kept under its GameObject's name (the first of each name for stands), with the
+		// names of an item's children: "attach" (item stands take no item without), "attach_skin" (armour
+		// stands take either, or a chest or legs piece without; ItemStand.GetAttachPrefab).
+		private void Keep(Bundle.Inner f, long pid, string owner, Said said, HashSet<string> kids)
+		{
+			if (said.Grows != null)
+			{
+				_plants[owner] = said.Grows;
+			}
+			if (said.Item != null)
 			{
 				_owners[new Ref(f.Cab, pid)] = owner;
 				if (_items.ContainsKey(owner))
 				{
 					return;
 				}
-				var sh = d["m_itemData"]["m_shared"];
-				var e = new Dict { ["it"] = Int(Py(sh["m_itemType"])) };
-				if (Int(Get(sh, "m_attachOverride", 0L)) != 0)
-				{
-					e["ao"] = Int(Py(sh["m_attachOverride"]));
-				}
-				if (Int(Get(sh, "m_variants", 0L)) > 0)
-				{
-					e["var"] = Int(Py(sh["m_variants"]));
-				}
-				if (Int(Get(sh, "m_useDurability", 0L)) != 0)
-				{
-					e["dur"] = R(Num(Py(sh["m_maxDurability"])), 2);
-					if (Num(Get(sh, "m_durabilityPerLevel", 0L)) != 0)
-					{
-						e["durl"] = R(Num(Py(sh["m_durabilityPerLevel"])), 2);
-					}
-				}
-				var kids = AttachChildren(b, f, go);
 				if (kids.Contains("attach"))
 				{
-					e["at"] = 1L;
+					said.Item["at"] = 1L;
 				}
 				if (kids.Contains("attach_skin"))
 				{
-					e["ats"] = 1L;
+					said.Item["ats"] = 1L;
 				}
-				_items[owner] = e;
+				_items[owner] = said.Item;
 			}
-			else if (isStand && !_stands.ContainsKey(owner))
+			else if (said.Stand is { } stand)
 			{
-				List<Ref> Refs(string name) => Has(d, name) ? d[name]["Array"].Children.Select(p => Bundle.RefOf(f, p)).OfType<Ref>().ToList() : new();
-				_stands[owner] = (Types(d["m_supportedTypes"]), Refs("m_supportedItems"), Refs("m_unsupportedItems"));
+				_stands.TryAdd(owner, stand);
 			}
-			else if (isArmour && !_armour.ContainsKey(owner))
+			else if (said.Slots != null)
 			{
-				_armour[owner] = d["m_slots.Array"].Children.Select(s => (object?)Types(s["m_supportedTypes"])).ToList();
+				_armour.TryAdd(owner, said.Slots);
 			}
 		}
 
-		// Which of "attach" and "attach_skin" an item's root has as children (ItemStand.GetAttachPrefab).
-		private static HashSet<string> AttachChildren(Bundle b, Bundle.Inner f, AssetTypeValueField go)
+		// What needs names from other bundles (the grown prefabs, the items stands name), from what was
+		// read of them.
+		public string Json()
 		{
-			var found = new HashSet<string>();
-			foreach (var c in go["m_Component.Array"].Children)
-			{
-				long pid = c["component.m_PathID"].AsLong;
-				if (Bundle.TypeOf(f, pid) != TransformType || b.Field(f, pid) is not { } t)
-				{
-					continue;
-				}
-				foreach (var ch in t["m_Children.Array"].Children)
-				{
-					if (b.Field(f, ch["m_PathID"].AsLong) is { } ct && b.Field(f, ct["m_GameObject.m_PathID"].AsLong) is { } cg && cg["m_Name"].AsString is "attach" or "attach_skin")
-					{
-						found.Add(cg["m_Name"].AsString);
-					}
-				}
-			}
-			return found;
-		}
-
-		// What needs the other bundles: the names of the grown prefabs.
-		public void Finish(Game game)
-		{
-			var names = new Dictionary<Ref, string>();
-			game.Visit(_plants.Values.SelectMany(r => r), (b, f, pid) =>
-			{
-				if (b.Field(f, pid) is { } go && Has(go, "m_Name"))
-				{
-					names[new Ref(f.Cab, pid)] = go["m_Name"].AsString;
-				}
-			});
 			foreach (var (owner, refs) in _plants)
 			{
-				var grown = refs.Where(names.ContainsKey).Select(r => names[r]).Where(_prefabs.ContainsKey).Distinct().Order(StringComparer.Ordinal).ToList();
+				var grown = refs.Where(_names.ContainsKey).Select(r => _names[r]).Where(_prefabs.ContainsKey).Distinct().Order(StringComparer.Ordinal).ToList();
 				if (_prefabs.TryGetValue(owner, out var entry) && grown.Count > 0)
 				{
 					entry["grows"] = grown;
@@ -287,6 +419,12 @@ public static partial class GameCatalogues
 					entry["as"] = slots;
 				}
 			}
+			var d = new Dict();
+			foreach (var (n, e) in _prefabs)
+			{
+				d[n] = e;
+			}
+			return CatalogueJson.Write(d, new CatalogueJson.Style(",", ":", SortKeys: true));
 		}
 	}
 

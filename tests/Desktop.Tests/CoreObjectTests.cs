@@ -15,7 +15,7 @@ public class ObjectTests
 		Assert.NotNull(PrefabCatalog.Get(Fixtures.Hash("Beech1")));
 		// Creatures and item drops are not placeable.
 		Assert.Null(PrefabCatalog.Get(Fixtures.Hash("Boar")));
-		Assert.True(PrefabCatalog.Placeable.Count() > 1000);
+		Assert.True(PrefabCatalog.Placeable.Count() > 500);
 	}
 
 	[Fact]

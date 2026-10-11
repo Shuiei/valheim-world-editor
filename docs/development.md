@@ -9,7 +9,7 @@
 | `Core/App/` | Settings (`AppSettings`), the log (`Log`), the game's files (`GameLook`, `GameBundles`, `GameLookData`, `GameShader`, `GameTextures`), Regrow, search, blueprint formats, servers and SSH (`ServerConfig`, `Tunnel`), the local game (`LocalGame`), characters, zone statistics, folders (`Places`). |
 | `Core/Save/` | Save reader (`WorldSave`, `ValheimReader`), writer (`WorldWriter`), new worlds (`WorldCreator`), object building (`ZdoTools`: copies and blank objects), the `.db2` zone list, and live mode (`LiveBridge`, `LiveSync`). |
 | `Core/Editing/` | Pending changes: terrain per zone, deleted and added objects, zone resets (`EditStore`); heights of a block of zones (`HeightGrid`). |
-| `Core/WorldGen/` | Valheim's world generator (bit-exact base terrain), map data, location flattening, the prefab catalogue (`prefabs.json`), the vegetation rules (`vegetation.json`) (the game data the editor reads from the player's Valheim, the terrain modifiers, build pieces, object data names, cave rocks and piece costs, is not kept: `Core/App/GameData.cs`). |
+| `Core/WorldGen/` | Valheim's world generator (bit-exact base terrain), map data, location flattening, the vegetation rules (`vegetation.json`) (the game data the editor reads from the player's Valheim, the terrain modifiers, prefabs, build pieces, object data names, cave rocks and piece costs, is not kept: `Core/App/GameData.cs`). |
 | `plugin/WorldEditorBridge/` | The BepInEx plugin for live mode (.NET Framework 4.7.2). |
 | `tests/Desktop.Tests/` | Every test (xUnit v3, Avalonia's headless mode), see [Tests](#tests). `tests/fixtures/` holds the test world. |
 | `tools/WorldCheck/` | Developer checks of the generator and the writer, saved objects byte by byte, and new worlds from a seed, see below. |
@@ -155,12 +155,8 @@ older Python exporter made, where both are on the computer.
 The catalogues that are in git (`Core/WorldGen/`, embedded in the app) are made from the game's files
 by the editor itself, in C# on the same reader (`Core/App/GameCatalogues*.cs`): after a game update,
 `ValheimWorldEditor --export-catalogues Core/WorldGen` makes them all again (about 6 minutes: every
-bundle is read once), and `--export-catalogues <folder> <name> ...` only those named (`prefabs`,
-`piece-place`, `vegetation`...). They are `prefabs.json` (every networked prefab with what a new
-object of it needs in the save; also container sizes, ward radii, crafting station build ranges, what
-each sapling grows into, and what stands may hold: each item's type, attach points, variants and
-durability, each item stand's rule and each armour stand's slots, for the inspector's Holds / Wears
-and Claude's `set_contents`), `piece-place.json.gz` (the hammer's placement flags, snap points and colliders,
+bundle is read once), and `--export-catalogues <folder> <name> ...` only those named (`piece-place`,
+`vegetation`...). They are `piece-place.json.gz` (the hammer's placement flags, snap points and colliders,
 for the Workshop's Build), `piece-support.json` (materials and collider boxes for the stability
 check), `vegetation.json` (the game's vegetation rules for Regrow nature,
 ZoneSystem's and the location lists', with the random draws each kind makes when it is created) and
@@ -172,12 +168,19 @@ Some of the game's data is not kept in the repository at all: the editor reads i
 Valheim at its start (`Core/App/GameData.cs`, one entry per kind), in seconds, and keeps each kind in
 the data folder (`game-<kind>.json`) until the game's files change. No world or Workshop opens without
 it. The kinds found in the bundles are read together, in one pass over them (each bundle opened once
-and given to each kind's reader, `GameCatalogues.ReadAtStart`; about 8 s for them all, the first time
-and after a game update). The kinds so far:
+and given to each kind's reader, `GameCatalogues.ReadAtStart`; about 10 s for them all, the first
+time and after a game update). The kinds so far:
 
 - `terrain-modifiers`: how locations and a few objects shape the ground before the saved edits, found
   from each `TerrainModifier` script (told by the script its file lists for it) up to its prefab,
   rather than through every object.
+- `prefabs`: every networked prefab with what a new object of it needs in the save; also container
+  sizes, ward radii, crafting station build ranges, what each sapling grows into, and what stands may
+  hold: each item's type, attach points, variants and durability, each item stand's rule and each
+  armour stand's slots, for the inspector's Holds / Wears and Claude's `set_contents`. Scripts are told
+  by their fields in the type tree; the prefabs are found from each `ZNetView` up to its root through
+  the bundle's tree read raw (a few numbers per object: the largest bundle's whole tree in one sweep,
+  as the block cache cannot hold it), and only the scripts needed are read whole.
 - `pieces`: each build piece's category, comfort, footprint and snap points, and which build tool's
   menu has it (hammer, hoe, cultivator, feaster: for the builder the editor writes on new pieces),
   found from each `Piece` script up to its prefab; what is below the prefab is read a level at a time,

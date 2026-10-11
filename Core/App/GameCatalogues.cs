@@ -8,15 +8,15 @@ namespace TerrainEditor.App;
 
 // The catalogues in Core/WorldGen (in git, embedded in the app) made again from the game's files, for
 // developers after a game update: --export-catalogues <folder> [name ...]. Each catalogue is what the
-// editor needs of one kind of game component (prefabs, pieces' colliders, vegetation, dungeons...),
-// read from every asset bundle. The bundles are read once, in the order of their file names, each in
-// the order it lists its files and objects: the order entries come in, and which one wins when a name
-// is found twice. What needs names from other bundles (what saplings grow into, the vegetation's
-// prefabs) reads them after. The files are written as they always were (CatalogueJson), so making
-// them again shows in git only what the game changed.
+// editor needs of one kind of game component (pieces' colliders, vegetation, dungeons...), read from
+// every asset bundle. The bundles are read once, in the order of their file names, each in the order
+// it lists its files and objects: the order entries come in, and which one wins when a name is found
+// twice. What needs names from other bundles (the vegetation's prefabs) reads them after. The files
+// are written as they always were (CatalogueJson), so making them again shows in git only what the
+// game changed.
 public static partial class GameCatalogues
 {
-	public static readonly string[] All = { "prefabs", "piece-place", "piece-support", "vegetation", "dungeon-rooms" };
+	public static readonly string[] All = { "piece-place", "piece-support", "vegetation", "dungeon-rooms" };
 
 	// Written gzipped (the largest).
 	private static readonly string[] Gzipped = { "piece-place", "dungeon-rooms" };
@@ -72,12 +72,11 @@ public static partial class GameCatalogues
 	private static Dictionary<string, string> Make(string valheim, GameBundles bundles, HashSet<string> names)
 	{
 		var made = new Dictionary<string, string>();
-		var prefabs = names.Contains("prefabs") ? new PrefabScan() : null;
 		var place = names.Contains("piece-place") ? new PlaceScan() : null;
 		var support = names.Contains("piece-support") ? new SupportScan() : null;
 		var vegetation = names.Contains("vegetation") ? new VegetationScan() : null;
 		var dungeons = names.Contains("dungeon-rooms") ? new DungeonScan() : null;
-		var scans = new IScan?[] { prefabs, place, support, vegetation, dungeons }.OfType<IScan>().ToList();
+		var scans = new IScan?[] { place, support, vegetation, dungeons }.OfType<IScan>().ToList();
 		if (scans.Count > 0)
 		{
 			using var game = new Game(bundles.Folder);
@@ -97,11 +96,6 @@ public static partial class GameCatalogues
 				{
 					Console.WriteLine($"{i} of {game.Bundles.Count} bundles read");
 				}
-			}
-			if (prefabs != null)
-			{
-				prefabs.Finish(game);
-				made["prefabs"] = CatalogueJson.Write(prefabs.Json(), new Style(",", ":", SortKeys: true));
 			}
 			if (place != null)
 			{
@@ -127,7 +121,7 @@ public static partial class GameCatalogues
 	// needs up to their prefabs, not by reading every object of every bundle as the catalogues do
 	// (seconds, not minutes). Every kind asked for is read in one pass: each bundle opened once and
 	// given to each kind's reader.
-	public static readonly string[] AtStart = { "terrain-modifiers", "pieces", "piece-cost" };
+	public static readonly string[] AtStart = { "terrain-modifiers", "prefabs", "pieces", "piece-cost" };
 
 	// The kinds named (of AtStart), as their JSON.
 	public static Dictionary<string, string> ReadAtStart(GameBundles bundles, IReadOnlyList<string> kinds)
@@ -135,6 +129,7 @@ public static partial class GameCatalogues
 		var scans = kinds.Select(k => (Kind: k, Scan: k switch
 		{
 			"terrain-modifiers" => (IStartScan)new ModifierScan(),
+			"prefabs" => new PrefabScan(),
 			"pieces" => new PieceScan(),
 			"piece-cost" => new CostScan(Localization.English(bundles.Folder)),
 			_ => throw new ArgumentException($"no kind {k} is read at the start"),
@@ -359,25 +354,23 @@ public static partial class GameCatalogues
 		public IEnumerable<(Inner File, AssetFileInfo Info)> Objects => Files.SelectMany(f => f.Assets.file.AssetInfos.Select(i => (f, i)));
 
 		// An object's fields, or null when it is not there or cannot be read.
-		public AssetTypeValueField? Field(Inner f, long pid)
+		public AssetTypeValueField? Field(Inner f, long pid) => _fields.TryGetValue((f, pid), out var cached) ? cached : _fields[(f, pid)] = Read(f, pid);
+
+		// An object's fields read and not kept (for the large ones only needed once), or null as Field.
+		public AssetTypeValueField? Read(Inner f, long pid)
 		{
-			if (_fields.TryGetValue((f, pid), out var cached))
-			{
-				return cached;
-			}
-			AssetTypeValueField? field = null;
 			if (f.Assets.file.GetAssetInfo(pid) is { } info)
 			{
 				try
 				{
-					field = _am.GetBaseField(f.Assets, info);
+					return _am.GetBaseField(f.Assets, info);
 				}
 				catch (Exception e) when (e is IOException or InvalidDataException or NotImplementedException or NotSupportedException or IndexOutOfRangeException or ArgumentException or NullReferenceException)
 				{
 					// A script whose fields are not described: not one of the game's.
 				}
 			}
-			return _fields[(f, pid)] = field;
+			return null;
 		}
 
 		// These objects' fields read now, in the order of their files (the bundle is read in blocks: much
@@ -398,6 +391,20 @@ public static partial class GameCatalogues
 		}
 
 		private bool _backwards = true;
+
+		// An object's fields by name (a MonoBehaviour's: its class's), from its file's type tree: nothing of
+		// the object read.
+		public HashSet<string> FieldNames(Inner f, AssetFileInfo info)
+		{
+			try
+			{
+				return _am.CreateTemplateBaseField(f.Assets, info.TypeId, info.GetScriptIndex(f.Assets.file)).Children.Select(c => c.Name).ToHashSet(StringComparer.Ordinal);
+			}
+			catch (Exception e) when (e is IOException or InvalidDataException or NotImplementedException or NotSupportedException or IndexOutOfRangeException or ArgumentException or NullReferenceException)
+			{
+				return new HashSet<string>();
+			}
+		}
 
 		// The file that has this path id (where two have it: the later one).
 		public Inner? FileWith(long pid) => _byId.GetValueOrDefault(pid);
@@ -466,6 +473,9 @@ public static partial class GameCatalogues
 		private const int Size = 1 << 17;
 		private const int Most = 512;
 
+		// How much of a bundle it holds.
+		public const long Bytes = (long)Size * Most;
+
 		private readonly Stream _inner;
 		private readonly Dictionary<long, LinkedListNode<(long Index, byte[] Data)>> _blocks = new();
 		// Last used first.
@@ -505,6 +515,11 @@ public static partial class GameCatalogues
 
 		private byte[] Block(long index)
 		{
+			// The last block used again (most reads are a few bytes): already first.
+			if (_order.First is { } first && first.Value.Index == index)
+			{
+				return first.Value.Data;
+			}
 			if (_blocks.TryGetValue(index, out var kept))
 			{
 				_order.Remove(kept);
