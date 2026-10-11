@@ -29,11 +29,13 @@ jobs:
     executor: dotnet
     steps:
       - checkout
-      # One NuGet cache for both jobs that build (code-analysis, native-tests), made again when a
+      # One NuGet cache for both jobs that build (code-analysis, native-tests), made again on main when a
       # project's packages change.
       - restore_cache:
           keys:
             - nuget-v2-{{ checksum "Directory.Build.props" }}-{{ checksum "Core/ValheimWorldEditor.Core.csproj" }}-{{ checksum "Desktop/ValheimWorldEditor.Desktop.csproj" }}-{{ checksum "tests/Desktop.Tests/Desktop.Tests.csproj" }}
+            # Else main's latest (a branch whose packages changed restores only what it adds).
+            - nuget-v2-
       - run:
           name: Analyzers (every warning is an error)
           command: dotnet build Desktop/ValheimWorldEditor.Desktop.csproj -c Release -warnaserror
@@ -44,10 +46,15 @@ jobs:
               dotnet format whitespace "$p" --verify-no-changes --no-restore
               dotnet format style "$p" --verify-no-changes --no-restore
             done
-      - save_cache:
-          key: nuget-v2-{{ checksum "Directory.Build.props" }}-{{ checksum "Core/ValheimWorldEditor.Core.csproj" }}-{{ checksum "Desktop/ValheimWorldEditor.Desktop.csproj" }}-{{ checksum "tests/Desktop.Tests/Desktop.Tests.csproj" }}
-          paths:
-            - ~/.nuget/packages
+      # Saved from main only: branches reuse main's (each cache is kept 15 days and billed).
+      - when:
+          condition:
+            equal: [main, << pipeline.git.branch >>]
+          steps:
+            - save_cache:
+                key: nuget-v2-{{ checksum "Directory.Build.props" }}-{{ checksum "Core/ValheimWorldEditor.Core.csproj" }}-{{ checksum "Desktop/ValheimWorldEditor.Desktop.csproj" }}-{{ checksum "tests/Desktop.Tests/Desktop.Tests.csproj" }}
+                paths:
+                  - ~/.nuget/packages
 
   native-tests:
     executor: dotnet
@@ -62,6 +69,8 @@ jobs:
       - restore_cache:
           keys:
             - nuget-v2-{{ checksum "Directory.Build.props" }}-{{ checksum "Core/ValheimWorldEditor.Core.csproj" }}-{{ checksum "Desktop/ValheimWorldEditor.Desktop.csproj" }}-{{ checksum "tests/Desktop.Tests/Desktop.Tests.csproj" }}
+            # Else main's latest (a branch whose packages changed restores only what it adds).
+            - nuget-v2-
       - run:
           name: Build the tests (every warning is an error)
           command: dotnet build tests/Desktop.Tests/Desktop.Tests.csproj -c Release -warnaserror
@@ -80,10 +89,15 @@ jobs:
           name: App tests (the windows, headless)
           no_output_timeout: 6m
           command: tools/ci-tests.sh run TerrainEditor.Desktop.Tests app
-      - save_cache:
-          key: nuget-v2-{{ checksum "Directory.Build.props" }}-{{ checksum "Core/ValheimWorldEditor.Core.csproj" }}-{{ checksum "Desktop/ValheimWorldEditor.Desktop.csproj" }}-{{ checksum "tests/Desktop.Tests/Desktop.Tests.csproj" }}
-          paths:
-            - ~/.nuget/packages
+      # Saved from main only: branches reuse main's (each cache is kept 15 days and billed).
+      - when:
+          condition:
+            equal: [main, << pipeline.git.branch >>]
+          steps:
+            - save_cache:
+                key: nuget-v2-{{ checksum "Directory.Build.props" }}-{{ checksum "Core/ValheimWorldEditor.Core.csproj" }}-{{ checksum "Desktop/ValheimWorldEditor.Desktop.csproj" }}-{{ checksum "tests/Desktop.Tests/Desktop.Tests.csproj" }}
+                paths:
+                  - ~/.nuget/packages
       - store_test_results:
           path: /tmp/test-results
       - store_artifacts:
