@@ -296,7 +296,9 @@ public class PlaceTests
 	}
 }
 
-// What the Place tool remembers: your presets, favourites and recent kinds.
+// What the Place tool remembers: your presets, favourites and recent kinds. Alone (DataDir): it reads
+// place.json back, which the other Place tests write too when they place something.
+[Collection("DataDir")]
 public class PlaceMemoryTests
 {
 	[AvaloniaFact]
