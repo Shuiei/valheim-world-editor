@@ -7,7 +7,11 @@ the plugin is unchanged in versions without that part.
 ## Unreleased
 
 ### Added
-- **A new world** (the start page's fifth card): makes a new world, a normal one that players join
+- **The start page** has a side menu: **Home**, then **Edit a world** (my game, a dedicated server,
+  a saved world) apart from **Create** (the Workshop, a new world). Home shows the game when it runs,
+  with **Edit live**, and what you opened last: saved worlds, blueprints (with their pictures) and the
+  servers that connect in one click. The Workshop's page lists every blueprint to open.
+- **A new world** (Create, on the start page): makes a new world, a normal one that players join
   without any mod (crossplay included). The seed's world shows before it is made, from the editor's
   copy of the game's generator: its land and biomes, and exactly where the game will put the start
   temple, the bosses' altars and the traders' spots (Haldor, the Bog Witch, Hildir), with how far

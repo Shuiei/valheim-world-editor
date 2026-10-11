@@ -7,7 +7,7 @@ Sharing a building means sharing its `.blueprint` file (and the `.png` picture b
 
 ## Is Homestead installed?
 
-The start page (under **My game**) and the Blueprints panel look for `Homestead.dll` in your game's
+The start page (on the Workshop's page) and the Blueprints panel look for `Homestead.dll` in your game's
 `BepInEx/plugins` folder and in mod manager profiles (r2modman, Thunderstore Mod Manager, Gale),
 and show the version found. When Homestead is not there, the editor warns you and offers
 **Get Homestead**. Blueprints are still saved where Homestead looks for them, so they show in game
@@ -23,10 +23,10 @@ Blueprints live in Homestead's folder of Valheim's save folder:
 ## The Workshop
 
 The Workshop is a blank, flat meadow plot that is not part of any world. Open it from the start
-page (**The Workshop**: **Open the Workshop**), or from a world's Blueprints panel (**New in
-Workshop**, **Edit**).
+page (**The Workshop** under **Create**: **Open the Workshop**, or one of your blueprints there or on
+**Home**), or from a world's Blueprints panel (**New in Workshop**, **Edit**).
 
-![The Workshop card on the start page](images/start-workshop.jpg)
+![The Workshop on the start page](images/start-workshop.jpg)
 
 ### The Library
 

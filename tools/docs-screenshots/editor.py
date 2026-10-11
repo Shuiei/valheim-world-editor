@@ -7,6 +7,7 @@ are discarded before the next one.
 """
 import json
 import os
+from datetime import datetime, timedelta
 import shutil
 import subprocess
 import tempfile
@@ -65,7 +66,7 @@ def real_bundles():
 
 
 class Editor:
-    def __init__(self, app=None, width=1440, height=900, game_world=None, worlds=(), homestead=None):
+    def __init__(self, app=None, width=1440, height=900, game_world=None, worlds=(), homestead=None, recent=()):
         self.home = Path(tempfile.mkdtemp(prefix="vwe-docs-home-"))
         self.game = None
         # The stand-in home's own data folder (~/.local/share/ValheimWorldEditor): the start page
@@ -91,6 +92,11 @@ class Editor:
         for w in worlds:
             local.mkdir(parents=True, exist_ok=True)
             (local / Path(w).name).symlink_to(Path(w).resolve())
+        if recent:
+            # Worlds opened before (the start page's Home), the first a few hours ago, then a day apart.
+            now = datetime.now()
+            opened = [{"Path": str(local / Path(w).name), "Name": Path(w).name, "Opened": (now - timedelta(hours=3, days=i)).isoformat()} for i, w in enumerate(recent)]
+            (data / "ValheimWorldEditor" / "settings.json").write_text(json.dumps({"Recent": opened}))
         if game_world:
             # The plugin in an r2modman profile, as on many players' computers.
             self.game = FakeGame(game_world)
