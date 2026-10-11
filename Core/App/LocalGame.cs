@@ -6,7 +6,8 @@ namespace TerrainEditor.App;
 /// <summary>
 /// Live editing of the player's own game (single player or hosting): finds the WorldEditorBridge
 /// plugin's settings in the Valheim install or a mod manager profile, and checks whether the game
-/// is running with it, so the start page can offer one click (the token never leaves this program).
+/// is running with it, so the start page can offer one click (the token goes only to the plugin, on
+/// 127.0.0.1; the player never has to copy it).
 /// </summary>
 public static class LocalGame
 {

@@ -67,7 +67,10 @@ public static class WorldWriter
     /// <param name="world">The world as loaded; its save is the base of the new one.</param>
     /// <param name="changed">Zones whose ground was edited.</param>
     /// <param name="deleted">Ids (WorldSave.ObjectRefs) of objects to leave out of the new save.</param>
-    /// <param name="added">New objects copied from a template object of the same prefab.</param>
+    /// <param name="added">
+    /// New objects (WorldSave.NewObjectBytes): their own data when they carry it (Raw), else a copy of an
+    /// object of the same prefab in the world, else a blank object from the game's data.
+    /// </param>
     /// <param name="resets">
     /// Zones handed back to the world generator (their objects are removed and the zone is marked as not generated).
     /// </param>

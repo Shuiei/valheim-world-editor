@@ -62,8 +62,9 @@ public static class Stability
     }
 
     /// <summary>
-    /// Whether the game gives this piece structural support at all (walls, floors, beams: yes; a
-    /// workbench, a chest: no, they rest on what is under them without counting).
+    /// Whether the support data has this piece: a building piece with a WearNTear (a wall, a beam, a
+    /// workbench too), so its support can be worked out. Whether other pieces can rest on it is its
+    /// <c>Data.Supports</c>.
     /// </summary>
     public static bool Known(string prefab) => _pieces.ContainsKey(prefab);
 

@@ -6,7 +6,8 @@ namespace ValheimGen;
 /// A Valheim world made from its seed as the game makes it: seas and continents, biomes, the ground's
 /// height and colour masks, lakes, rivers and streams. Written for the editor, following the game's
 /// formulas step for step, so a seed gives the same terrain to the bit (the reference tests compare it
-/// with values recorded in the game).
+/// with values recorded in the game), but for a few heights in the Deep North, less than a millimetre off
+/// (floating point done in another order than the game's runtime).
 /// </summary>
 /// <remarks>
 /// <para>

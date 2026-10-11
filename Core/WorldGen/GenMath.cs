@@ -1,9 +1,9 @@
 namespace ValheimGen;
 
 /// <summary>
-/// Number helpers for the world generator. The game's terrain is matched to the bit, so each helper
-/// keeps the precision its callers rely on: float inputs worked out in double and rounded back where
-/// the result is a float.
+/// Number helpers for the world generator. The game's terrain is matched to the bit (but for a few Deep
+/// North heights, less than a millimetre off), so each helper keeps the precision its callers rely on:
+/// float inputs worked out in double and rounded back where the result is a float.
 /// </summary>
 public static class GenMath
 {

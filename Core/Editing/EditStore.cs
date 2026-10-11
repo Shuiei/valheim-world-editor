@@ -637,7 +637,8 @@ public sealed class ZoneEdit(int zoneX, int zoneZ)
 /// <param name="Scale">Uniform scale (0 = as the template object).</param>
 /// <param name="SourceId">The object it comes from (else the first object of the prefab).</param>
 /// <param name="Fresh">
-/// A new independent object (only the builder is taken from the source); otherwise, for a moved object,
+/// A new independent object (only the builder and the scale are taken from the source, the scale unless
+/// Scale gives one); otherwise, for a moved object,
 /// all of the source's data (chest contents, health, builder...) is kept.
 /// </param>
 /// <param name="Raw">

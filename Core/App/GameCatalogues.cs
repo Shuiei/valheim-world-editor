@@ -483,7 +483,8 @@ public static partial class GameCatalogues
     }
 
     /// <summary>
-    /// A bundle's data through a larger cache of its blocks than AssetsTools keeps (23 blocks of 128 KiB):
+    /// A bundle's data through a larger cache of its blocks than AssetsTools keeps (it keeps 23 blocks of
+    /// 128 KiB; this one 512, 64 MiB):
     /// the readers at the editor's start go back and forth between thousands of them in the largest
     /// bundle, each decompressed again when it is read after leaving the cache. The block used longest
     /// ago goes first.

@@ -4,7 +4,8 @@ using static TerrainEditor.Editing.DungeonKit;
 namespace TerrainEditor.Editing;
 
 /// <summary>
-/// Dungeons made from settings and a seed (the same settings make the same dungeon), in two ways:
+/// Dungeons made from settings and a seed (the same settings make the same dungeon; from the game's rooms,
+/// the same world too, for kinds whose room contents add the world's seed), in two ways:
 /// <list type="bullet">
 /// <item>from the game's own rooms (Rooms): an entrance, then rooms of the dungeon's kind joined at their
 ///   openings while they fit (the game's rules: Dungeons.Attach, no overlap, inside its space), then the
@@ -32,7 +33,10 @@ public static class DungeonGen
         Pieces,
     }
 
-    /// <summary>What to make; the same settings make the same dungeon.</summary>
+    /// <summary>
+    /// What to make; the same settings make the same dungeon (from the game's rooms, in the same world: some
+    /// kinds add the world's seed to their room contents, <c>Kind.BaseSeed</c>).
+    /// </summary>
     /// <param name="Made">From the game's rooms or from building pieces.</param>
     /// <param name="Biome">
     /// The biome whose style, walls, foes and boss are used where none is picked (Made.Rooms: whose game dungeon).
