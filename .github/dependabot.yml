@@ -2,12 +2,14 @@
 # into one pull request; CircleCI runs the tests on each.
 version: 2
 updates:
-  # The app (Core, Desktop: Avalonia, SkiaSharp, SSH.NET) and the developer checks (WorldCheck).
+  # The app (Core, Desktop: Avalonia, SkiaSharp, SSH.NET), the developer checks (WorldCheck) and the
+  # documentation's pictures (DocsScreenshots: SkiaSharp, kept with the app's).
   - package-ecosystem: nuget
     directories:
       - /Core
       - /Desktop
       - /tools/WorldCheck
+      - /tools/DocsScreenshots
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
