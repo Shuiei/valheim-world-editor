@@ -60,15 +60,20 @@ Asymmetry and height variation between buildings; regularity within one facade.
 - Faces turned away from the editor's sun look dark: judge materials on the sunlit side.
 - `build_walls`/`build_roof` return huge JSON for big jobs: prefer `run_script` for anything large.
 
-## 3. Mock-ups: learn a piece before using it
+## 3. Choosing pieces, and mock-ups
 
-`piece_info` bounds are placeholders (1×1×1) for many marble, grausten and furniture pieces, and nobody
-remembers which way a model faces. Before a new piece goes into a large build:
+Find pieces in the editor's own catalogue, which has all of the game's: `find_prefabs` by words ("roof
+67", "marble", "banner", "feast"; with its build tool and cost) and `piece_info` for sizes and snap
+points. Browse it with the brief in mind — creative reuse is what made the castle (iron gates as bars,
+crystal as glass, cage walls as lattice). `references/pieces.md` adds what the tools can't say: which way
+models face, real origins, how pieces look once placed, and traps.
+
+`piece_info` bounds are placeholders (1×1×1) for many marble, grausten and furniture pieces, and a model's
+front is not knowable from data. Before a piece not in the notes goes into a large build:
 1. Place a swatch row or a one-bay mock-up off to the side (far corner of the plot), each variant at a
    different yaw if orientation is unknown.
 2. Screenshot it close up, from the side that matters.
-3. Write down what you learned (`references/pieces.md` has everything verified so far — read it first,
-   it saves most mock-ups).
+3. Write down what you learned in `references/pieces.md` (read it first: it saves most mock-ups).
 4. Delete the mock-up (remove by area in a script) before building for real.
 
 ## 4. Building with scripts
