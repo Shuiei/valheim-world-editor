@@ -6,133 +6,133 @@ namespace TerrainEditor.App;
 // (~/.local/share/ValheimWorldEditor on Linux, %LOCALAPPDATA%\ValheimWorldEditor on Windows).
 public sealed class AppSettings
 {
-	// The Valheim game folder chosen in Settings (null: found automatically in the Steam libraries).
-	public string? ValheimPath { get; set; }
+    // The Valheim game folder chosen in Settings (null: found automatically in the Steam libraries).
+    public string? ValheimPath { get; set; }
 
-	// Extra places to look for the game's BepInEx: a BepInEx folder, a mod manager profile, or a
-	// folder of profiles (a mod manager with a custom data folder).
-	public List<string> BepInExFolders { get; set; } = new();
+    // Extra places to look for the game's BepInEx: a BepInEx folder, a mod manager profile, or a
+    // folder of profiles (a mod manager with a custom data folder).
+    public List<string> BepInExFolders { get; set; } = new();
 
-	// Extra places with worlds, always listed: a world folder, or a folder of worlds (a server's
-	// -savedir/worlds_local, a backup folder...).
-	public List<string> WorldFolders { get; set; } = new();
+    // Extra places with worlds, always listed: a world folder, or a folder of worlds (a server's
+    // -savedir/worlds_local, a backup folder...).
+    public List<string> WorldFolders { get; set; } = new();
 
-	public List<RecentWorld> Recent { get; set; } = new();
+    public List<RecentWorld> Recent { get; set; } = new();
 
-	public string? LiveUrl { get; set; }
+    public string? LiveUrl { get; set; }
 
-	// Which start-page choice was used last ("game", "server", "offline").
-	public string? LastMode { get; set; }
+    // Which start-page choice was used last ("game", "server", "offline").
+    public string? LastMode { get; set; }
 
-	// The 3D editor's live "Auto" switch (every change sent to the game at once) and Follow (the area
-	// moves by itself when the view nears its edge), kept between runs like the web editor's.
-	public bool AutoApply { get; set; }
+    // The 3D editor's live "Auto" switch (every change sent to the game at once) and Follow (the area
+    // moves by itself when the view nears its edge), kept between runs like the web editor's.
+    public bool AutoApply { get; set; }
 
-	public bool AreaFollow { get; set; }
+    public bool AreaFollow { get; set; }
 
-	// Claude's connection (Settings): the editor's MCP server, on 127.0.0.1 at this port, for callers
-	// that send this token. Off unless chosen.
-	public bool ClaudeConnect { get; set; }
+    // Claude's connection (Settings): the editor's MCP server, on 127.0.0.1 at this port, for callers
+    // that send this token. Off unless chosen.
+    public bool ClaudeConnect { get; set; }
 
-	public int ClaudePort { get; set; } = 5731;
+    public int ClaudePort { get; set; } = 5731;
 
-	public string? ClaudeToken { get; set; }
+    public string? ClaudeToken { get; set; }
 
-	public sealed record RecentWorld(string Path, string Name, DateTime Opened);
+    public sealed record RecentWorld(string Path, string Name, DateTime Opened);
 
-	// The data folder: settings, servers, blueprints, the log (DataDirOverride: another folder, for
-	// the tests' editor). The copied game files stay in the user's (UserDataDir), read only by tests.
-	public static string DataDir
-	{
-		get
-		{
-			if (DataDirOverride is string o)
-			{
-				Directory.CreateDirectory(o);
-				return o;
-			}
-			return UserDataDir;
-		}
-	}
+    // The data folder: settings, servers, blueprints, the log (DataDirOverride: another folder, for
+    // the tests' editor). The copied game files stay in the user's (UserDataDir), read only by tests.
+    public static string DataDir
+    {
+        get
+        {
+            if (DataDirOverride is string o)
+            {
+                Directory.CreateDirectory(o);
+                return o;
+            }
+            return UserDataDir;
+        }
+    }
 
-	public static string? DataDirOverride { get; set; }
+    public static string? DataDirOverride { get; set; }
 
-	public static string UserDataDir
-	{
-		get
-		{
-			string root = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData, Environment.SpecialFolderOption.DoNotVerify);
-			if (string.IsNullOrEmpty(root))
-			{
-				root = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".local", "share");
-			}
-			string dir = Path.Combine(root, "ValheimWorldEditor");
-			Directory.CreateDirectory(dir);
-			return dir;
-		}
-	}
+    public static string UserDataDir
+    {
+        get
+        {
+            string root = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData, Environment.SpecialFolderOption.DoNotVerify);
+            if (string.IsNullOrEmpty(root))
+            {
+                root = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".local", "share");
+            }
+            string dir = Path.Combine(root, "ValheimWorldEditor");
+            Directory.CreateDirectory(dir);
+            return dir;
+        }
+    }
 
-	// Tests: another file, so they never touch the user's settings.
-	public static string? PathOverride { get; set; }
+    // Tests: another file, so they never touch the user's settings.
+    public static string? PathOverride { get; set; }
 
-	private static string FilePath => PathOverride ?? Path.Combine(DataDir, "settings.json");
+    private static string FilePath => PathOverride ?? Path.Combine(DataDir, "settings.json");
 
-	private static readonly object Lock = new();
+    private static readonly object Lock = new();
 
-	public static AppSettings Load()
-	{
-		lock (Lock)
-		{
-			try
-			{
-				return File.Exists(FilePath) ? JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(FilePath)) ?? new AppSettings() : new AppSettings();
-			}
-			catch (JsonException ex)
-			{
-				// Not readable: kept aside as settings.json.bad (the next save would write over it).
-				Console.WriteLine($"Settings: {FilePath} could not be read ({ex.Message}); kept as {FilePath}.bad, starting from the defaults.");
-				try
-				{
-					File.Copy(FilePath, FilePath + ".bad", overwrite: true);
-				}
-				catch (Exception copy) when (copy is IOException or UnauthorizedAccessException)
-				{
-				}
-				return new AppSettings();
-			}
-			catch
-			{
-				return new AppSettings();
-			}
-		}
-	}
+    public static AppSettings Load()
+    {
+        lock (Lock)
+        {
+            try
+            {
+                return File.Exists(FilePath) ? JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(FilePath)) ?? new AppSettings() : new AppSettings();
+            }
+            catch (JsonException ex)
+            {
+                // Not readable: kept aside as settings.json.bad (the next save would write over it).
+                Console.WriteLine($"Settings: {FilePath} could not be read ({ex.Message}); kept as {FilePath}.bad, starting from the defaults.");
+                try
+                {
+                    File.Copy(FilePath, FilePath + ".bad", overwrite: true);
+                }
+                catch (Exception copy) when (copy is IOException or UnauthorizedAccessException)
+                {
+                }
+                return new AppSettings();
+            }
+            catch
+            {
+                return new AppSettings();
+            }
+        }
+    }
 
-	private static readonly JsonSerializerOptions Indented = new() { WriteIndented = true };
+    private static readonly JsonSerializerOptions Indented = new() { WriteIndented = true };
 
-	// A file that cannot be written (locked, read-only) is left as it was: the settings stay in memory.
-	public void Save()
-	{
-		lock (Lock)
-		{
-			try
-			{
-				SafeFile.WriteAllText(FilePath, JsonSerializer.Serialize(this, Indented));
-			}
-			catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-			{
-				Console.WriteLine($"Settings: could not write {FilePath}: {ex.Message}");
-			}
-		}
-	}
+    // A file that cannot be written (locked, read-only) is left as it was: the settings stay in memory.
+    public void Save()
+    {
+        lock (Lock)
+        {
+            try
+            {
+                SafeFile.WriteAllText(FilePath, JsonSerializer.Serialize(this, Indented));
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                Console.WriteLine($"Settings: could not write {FilePath}: {ex.Message}");
+            }
+        }
+    }
 
-	public void AddRecent(string path, string name)
-	{
-		Recent.RemoveAll(r => string.Equals(Path.GetFullPath(r.Path), Path.GetFullPath(path), StringComparison.Ordinal));
-		Recent.Insert(0, new RecentWorld(path, name, DateTime.Now));
-		if (Recent.Count > 12)
-		{
-			Recent.RemoveRange(12, Recent.Count - 12);
-		}
-		Save();
-	}
+    public void AddRecent(string path, string name)
+    {
+        Recent.RemoveAll(r => string.Equals(Path.GetFullPath(r.Path), Path.GetFullPath(path), StringComparison.Ordinal));
+        Recent.Insert(0, new RecentWorld(path, name, DateTime.Now));
+        if (Recent.Count > 12)
+        {
+            Recent.RemoveRange(12, Recent.Count - 12);
+        }
+        Save();
+    }
 }

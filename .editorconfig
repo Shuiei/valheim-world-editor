@@ -8,12 +8,11 @@ end_of_line = lf
 insert_final_newline = true
 trim_trailing_whitespace = true
 
-[*.{cs,csproj,props,targets,xml}]
-indent_style = tab
+[*.{cs,csx}]
+indent_style = space
 indent_size = 4
-tab_width = 4
 
-[*.{json,yml,yaml,md}]
+[*.{csproj,props,targets,xml,axaml,json,yml,yaml,md}]
 indent_style = space
 indent_size = 2
 

@@ -5,12 +5,12 @@ namespace TerrainEditor.Desktop;
 // The version line is added when compiled (GlView/MapView).
 public static class MapShader
 {
-	public const string Vertex = """
+    public const string Vertex = """
 		in vec2 pos;
 		void main() { gl_Position = vec4(pos, 0.0, 1.0); }
 		""";
 
-	public const string Fragment = """
+    public const string Fragment = """
 		uniform vec4 _Time;
 		uniform vec4 _ForestColor, _WaterColor, _WaterColorDeep, _WaterColorAshlands, _WaterColorAshlandsDeep;
 		uniform float _zoom, _normalIntensity, _quant;

@@ -7,58 +7,58 @@ namespace TerrainEditor.Desktop;
 // presets, favourite and recently placed kinds, the chosen kinds and their weights.
 public sealed class PlaceMemory
 {
-	private static readonly JsonSerializerOptions Indented = new() { WriteIndented = true };
+    private static readonly JsonSerializerOptions Indented = new() { WriteIndented = true };
 
-	public List<PlaceTool.Preset> Presets { get; set; } = new();
-	public List<string> Favourites { get; set; } = new();
-	public List<string> Recent { get; set; } = new();
-	public List<string> Chosen { get; set; } = new();
-	public Dictionary<string, int> Weights { get; set; } = new();
-	// The builder chosen for each world (Built by, in the View panel).
-	public Dictionary<string, long> Builders { get; set; } = new();
+    public List<PlaceTool.Preset> Presets { get; set; } = new();
+    public List<string> Favourites { get; set; } = new();
+    public List<string> Recent { get; set; } = new();
+    public List<string> Chosen { get; set; } = new();
+    public Dictionary<string, int> Weights { get; set; } = new();
+    // The builder chosen for each world (Built by, in the View panel).
+    public Dictionary<string, long> Builders { get; set; } = new();
 
-	private static string FilePath => Path.Combine(AppSettings.DataDir, "place.json");
-	// Tests keep theirs elsewhere.
-	internal static string? PathOverride { get; set; }
-	private static string Where => PathOverride ?? FilePath;
+    private static string FilePath => Path.Combine(AppSettings.DataDir, "place.json");
+    // Tests keep theirs elsewhere.
+    internal static string? PathOverride { get; set; }
+    private static string Where => PathOverride ?? FilePath;
 
-	public static PlaceMemory Load()
-	{
-		try
-		{
-			return File.Exists(Where) ? JsonSerializer.Deserialize<PlaceMemory>(File.ReadAllText(Where)) ?? new() : new();
-		}
-		catch (Exception ex) when (ex is IOException or JsonException or UnauthorizedAccessException)
-		{
-			return new();
-		}
-	}
+    public static PlaceMemory Load()
+    {
+        try
+        {
+            return File.Exists(Where) ? JsonSerializer.Deserialize<PlaceMemory>(File.ReadAllText(Where)) ?? new() : new();
+        }
+        catch (Exception ex) when (ex is IOException or JsonException or UnauthorizedAccessException)
+        {
+            return new();
+        }
+    }
 
-	public void Save()
-	{
-		try
-		{
-			Directory.CreateDirectory(Path.GetDirectoryName(Where)!);
-			File.WriteAllText(Where, JsonSerializer.Serialize(this, Indented));
-		}
-		catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-		{
-		}
-	}
+    public void Save()
+    {
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(Where)!);
+            File.WriteAllText(Where, JsonSerializer.Serialize(this, Indented));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+        }
+    }
 
-	// Kinds placed: the newest first, eight at most.
-	public void NoteRecent(IEnumerable<string> names)
-	{
-		Recent = names.Concat(Recent).Distinct().Take(8).ToList();
-		Save();
-	}
+    // Kinds placed: the newest first, eight at most.
+    public void NoteRecent(IEnumerable<string> names)
+    {
+        Recent = names.Concat(Recent).Distinct().Take(8).ToList();
+        Save();
+    }
 
-	public void ToggleFavourite(string name)
-	{
-		if (!Favourites.Remove(name))
-		{
-			Favourites.Add(name);
-		}
-		Save();
-	}
+    public void ToggleFavourite(string name)
+    {
+        if (!Favourites.Remove(name))
+        {
+            Favourites.Add(name);
+        }
+        Save();
+    }
 }

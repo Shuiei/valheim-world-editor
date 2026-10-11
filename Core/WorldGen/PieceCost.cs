@@ -7,76 +7,76 @@ namespace TerrainEditor.Terrain;
 // read from the player's own Valheim (GameData; the tests use tests/fixtures/piece-cost.json).
 public static class PieceCost
 {
-	public sealed record Info(string Name, string? Station, (string Item, int Amount)[] Resources);
+    public sealed record Info(string Name, string? Station, (string Item, int Amount)[] Resources);
 
-	// None until Use: no world or Workshop opens before then (GameData).
-	private static volatile Data Catalogue = new(new(), new());
+    // None until Use: no world or Workshop opens before then (GameData).
+    private static volatile Data Catalogue = new(new(), new());
 
-	private sealed record Data(Dictionary<string, Info> Pieces, Dictionary<string, string> Items);
+    private sealed record Data(Dictionary<string, Info> Pieces, Dictionary<string, string> Items);
 
-	// The pieces and items, as GameCatalogues' CostScan writes them.
-	public static void Use(string json)
-	{
-		using JsonDocument doc = JsonDocument.Parse(json);
-		var pieces = new Dictionary<string, Info>();
-		foreach (JsonProperty p in doc.RootElement.GetProperty("pieces").EnumerateObject())
-		{
-			var res = p.Value.GetProperty("r").EnumerateArray().Select(r => (r[0].GetString()!, r[1].GetInt32())).ToArray();
-			pieces[p.Name] = new Info(p.Value.GetProperty("n").GetString()!, p.Value.TryGetProperty("st", out var st) ? st.GetString() : null, res);
-		}
-		var items = doc.RootElement.GetProperty("items").EnumerateObject().ToDictionary(p => p.Name, p => p.Value.GetString()!);
-		Catalogue = new Data(pieces, items);
-	}
+    // The pieces and items, as GameCatalogues' CostScan writes them.
+    public static void Use(string json)
+    {
+        using JsonDocument doc = JsonDocument.Parse(json);
+        var pieces = new Dictionary<string, Info>();
+        foreach (JsonProperty p in doc.RootElement.GetProperty("pieces").EnumerateObject())
+        {
+            var res = p.Value.GetProperty("r").EnumerateArray().Select(r => (r[0].GetString()!, r[1].GetInt32())).ToArray();
+            pieces[p.Name] = new Info(p.Value.GetProperty("n").GetString()!, p.Value.TryGetProperty("st", out var st) ? st.GetString() : null, res);
+        }
+        var items = doc.RootElement.GetProperty("items").EnumerateObject().ToDictionary(p => p.Name, p => p.Value.GetString()!);
+        Catalogue = new Data(pieces, items);
+    }
 
-	public static Info? Get(string prefab) => Catalogue.Pieces.GetValueOrDefault(prefab);
+    public static Info? Get(string prefab) => Catalogue.Pieces.GetValueOrDefault(prefab);
 
-	// An item's English name (Wood, Fine wood, Bronze nails), else its prefab name.
-	public static string ItemName(string item) => Catalogue.Items.GetValueOrDefault(item, item);
+    // An item's English name (Wood, Fine wood, Bronze nails), else its prefab name.
+    public static string ItemName(string item) => Catalogue.Items.GetValueOrDefault(item, item);
 
-	// A piece's English name, else its prefab name.
-	public static string PieceName(string prefab) => Get(prefab)?.Name ?? prefab;
+    // A piece's English name, else its prefab name.
+    public static string PieceName(string prefab) => Get(prefab)?.Name ?? prefab;
 
-	// What a building costs: materials (most first), the stations it needs, and the kinds of piece the
-	// game has no recipe for (from mods, or not buildable) with how many there are.
-	public sealed record Total(List<(string Item, string Name, int Amount)> Materials, List<string> Stations, Dictionary<string, int> Unknown)
-	{
-		// "Wood 24 · Stone 8 · Resin 2", the first few (… when there are more), and its stations.
-		public string Describe(int most = 4)
-		{
-			if (Materials.Count == 0)
-			{
-				return Unknown.Count > 0 ? "Cost unknown (pieces from mods?)" : "Free";
-			}
-			string text = string.Join(" · ", Materials.Take(most).Select(m => $"{m.Name} {m.Amount}")) + (Materials.Count > most ? " · …" : "");
-			return Stations.Count > 0 ? $"{text} (needs {string.Join(", ", Stations)})" : text;
-		}
-	}
+    // What a building costs: materials (most first), the stations it needs, and the kinds of piece the
+    // game has no recipe for (from mods, or not buildable) with how many there are.
+    public sealed record Total(List<(string Item, string Name, int Amount)> Materials, List<string> Stations, Dictionary<string, int> Unknown)
+    {
+        // "Wood 24 · Stone 8 · Resin 2", the first few (… when there are more), and its stations.
+        public string Describe(int most = 4)
+        {
+            if (Materials.Count == 0)
+            {
+                return Unknown.Count > 0 ? "Cost unknown (pieces from mods?)" : "Free";
+            }
+            string text = string.Join(" · ", Materials.Take(most).Select(m => $"{m.Name} {m.Amount}")) + (Materials.Count > most ? " · …" : "");
+            return Stations.Count > 0 ? $"{text} (needs {string.Join(", ", Stations)})" : text;
+        }
+    }
 
-	// The cost of so many of each piece kind (prefab name → count).
-	public static Total Of(IEnumerable<KeyValuePair<string, int>> kinds)
-	{
-		var amounts = new Dictionary<string, int>();
-		var stations = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
-		var unknown = new Dictionary<string, int>();
-		foreach (var (prefab, count) in kinds)
-		{
-			if (Get(prefab) is not { } info)
-			{
-				unknown[prefab] = unknown.GetValueOrDefault(prefab) + count;
-				continue;
-			}
-			if (info.Station is { Length: > 0 } st)
-			{
-				stations.Add(st);
-			}
-			foreach (var (item, amount) in info.Resources)
-			{
-				amounts[item] = amounts.GetValueOrDefault(item) + amount * count;
-			}
-		}
-		var materials = amounts.Select(a => (a.Key, ItemName(a.Key), a.Value)).OrderByDescending(m => m.Value).ThenBy(m => m.Item2, StringComparer.OrdinalIgnoreCase).ToList();
-		return new Total(materials, stations.ToList(), unknown);
-	}
+    // The cost of so many of each piece kind (prefab name → count).
+    public static Total Of(IEnumerable<KeyValuePair<string, int>> kinds)
+    {
+        var amounts = new Dictionary<string, int>();
+        var stations = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
+        var unknown = new Dictionary<string, int>();
+        foreach (var (prefab, count) in kinds)
+        {
+            if (Get(prefab) is not { } info)
+            {
+                unknown[prefab] = unknown.GetValueOrDefault(prefab) + count;
+                continue;
+            }
+            if (info.Station is { Length: > 0 } st)
+            {
+                stations.Add(st);
+            }
+            foreach (var (item, amount) in info.Resources)
+            {
+                amounts[item] = amounts.GetValueOrDefault(item) + amount * count;
+            }
+        }
+        var materials = amounts.Select(a => (a.Key, ItemName(a.Key), a.Value)).OrderByDescending(m => m.Value).ThenBy(m => m.Item2, StringComparer.OrdinalIgnoreCase).ToList();
+        return new Total(materials, stations.ToList(), unknown);
+    }
 
-	public static Total Of(IEnumerable<string> prefabs) => Of(prefabs.GroupBy(p => p).Select(g => KeyValuePair.Create(g.Key, g.Count())));
+    public static Total Of(IEnumerable<string> prefabs) => Of(prefabs.GroupBy(p => p).Select(g => KeyValuePair.Create(g.Key, g.Count())));
 }

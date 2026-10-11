@@ -9,150 +9,150 @@ namespace TerrainEditor.App;
 // file only this user can read on Linux).
 public static class ServerConfig
 {
-	public sealed class Server
-	{
-		public string Name { get; set; } = "";
+    public sealed class Server
+    {
+        public string Name { get; set; } = "";
 
-		public string Host { get; set; } = "";
+        public string Host { get; set; } = "";
 
-		public int SshPort { get; set; } = 22;
+        public int SshPort { get; set; } = 22;
 
-		public string User { get; set; } = "";
+        public string User { get; set; } = "";
 
-		public string? Password { get; set; }
+        public string? Password { get; set; }
 
-		public string? KeyFile { get; set; }
+        public string? KeyFile { get; set; }
 
-		public string? Token { get; set; }
+        public string? Token { get; set; }
 
-		public int BridgePort { get; set; } = 5182;
+        public int BridgePort { get; set; } = 5182;
 
-		// The server's Valheim folder (with BepInEx), optional: for the plugin's port and precise errors.
-		public string? GameFolder { get; set; }
+        // The server's Valheim folder (with BepInEx), optional: for the plugin's port and precise errors.
+        public string? GameFolder { get; set; }
 
-		// The server's SSH host key, remembered on first connection: a different key is refused.
-		public string? HostKey { get; set; }
+        // The server's SSH host key, remembered on first connection: a different key is refused.
+        public string? HostKey { get; set; }
 
-		public string Id => $"{User}@{Host}:{SshPort}";
-	}
+        public string Id => $"{User}@{Host}:{SshPort}";
+    }
 
-	// Tests: another file, so they never touch the user's servers.
-	public static string? PathOverride { get; set; }
+    // Tests: another file, so they never touch the user's servers.
+    public static string? PathOverride { get; set; }
 
-	public static string FilePath => PathOverride ?? Path.Combine(AppSettings.DataDir, "servers.cfg");
+    public static string FilePath => PathOverride ?? Path.Combine(AppSettings.DataDir, "servers.cfg");
 
-	private static readonly object Lock = new();
+    private static readonly object Lock = new();
 
-	public static List<Server> Load()
-	{
-		lock (Lock)
-		{
-			var list = new List<Server>();
-			if (!File.Exists(FilePath))
-			{
-				return list;
-			}
-			Server? cur = null;
-			foreach (string raw in File.ReadAllLines(FilePath))
-			{
-				string line = raw.Trim();
-				if (line.Length == 0 || line.StartsWith('#') || line.StartsWith(';'))
-				{
-					continue;
-				}
-				Match sec = Regex.Match(line, @"^\[(.*)\]$");
-				if (sec.Success)
-				{
-					cur = new Server { Name = sec.Groups[1].Value.Trim() };
-					list.Add(cur);
-					continue;
-				}
-				int eq = line.IndexOf('=');
-				if (cur == null || eq < 0)
-				{
-					continue;
-				}
-				string key = line[..eq].Trim(), value = line[(eq + 1)..].Trim();
-				// A password is taken as written (spaces at its ends are part of it): after "= ".
-				if (key.Equals("password", StringComparison.OrdinalIgnoreCase))
-				{
-					string after = raw[(raw.IndexOf('=') + 1)..];
-					value = after.StartsWith(' ') ? after[1..] : after;
-				}
-				string? opt = value.Length == 0 ? null : value;
-				switch (key.ToLowerInvariant())
-				{
-					case "host": cur.Host = value; break;
-					case "sshport": cur.SshPort = int.TryParse(value, out int sp) ? sp : 22; break;
-					case "user": cur.User = value; break;
-					case "password": cur.Password = opt; break;
-					case "keyfile": cur.KeyFile = opt; break;
-					case "token": cur.Token = opt; break;
-					case "bridgeport": cur.BridgePort = int.TryParse(value, out int bp) ? bp : 5182; break;
-					case "hostkey": cur.HostKey = opt; break;
-					case "gamefolder": cur.GameFolder = opt; break;
-				}
-			}
-			return list.Where(s => s.Host.Length > 0 && s.User.Length > 0).ToList();
-		}
-	}
+    public static List<Server> Load()
+    {
+        lock (Lock)
+        {
+            var list = new List<Server>();
+            if (!File.Exists(FilePath))
+            {
+                return list;
+            }
+            Server? cur = null;
+            foreach (string raw in File.ReadAllLines(FilePath))
+            {
+                string line = raw.Trim();
+                if (line.Length == 0 || line.StartsWith('#') || line.StartsWith(';'))
+                {
+                    continue;
+                }
+                Match sec = Regex.Match(line, @"^\[(.*)\]$");
+                if (sec.Success)
+                {
+                    cur = new Server { Name = sec.Groups[1].Value.Trim() };
+                    list.Add(cur);
+                    continue;
+                }
+                int eq = line.IndexOf('=');
+                if (cur == null || eq < 0)
+                {
+                    continue;
+                }
+                string key = line[..eq].Trim(), value = line[(eq + 1)..].Trim();
+                // A password is taken as written (spaces at its ends are part of it): after "= ".
+                if (key.Equals("password", StringComparison.OrdinalIgnoreCase))
+                {
+                    string after = raw[(raw.IndexOf('=') + 1)..];
+                    value = after.StartsWith(' ') ? after[1..] : after;
+                }
+                string? opt = value.Length == 0 ? null : value;
+                switch (key.ToLowerInvariant())
+                {
+                    case "host": cur.Host = value; break;
+                    case "sshport": cur.SshPort = int.TryParse(value, out int sp) ? sp : 22; break;
+                    case "user": cur.User = value; break;
+                    case "password": cur.Password = opt; break;
+                    case "keyfile": cur.KeyFile = opt; break;
+                    case "token": cur.Token = opt; break;
+                    case "bridgeport": cur.BridgePort = int.TryParse(value, out int bp) ? bp : 5182; break;
+                    case "hostkey": cur.HostKey = opt; break;
+                    case "gamefolder": cur.GameFolder = opt; break;
+                }
+            }
+            return list.Where(s => s.Host.Length > 0 && s.User.Length > 0).ToList();
+        }
+    }
 
-	// Adds or updates a server (matched by user, host and SSH port), most recent first.
-	public static void Remember(Server server)
-	{
-		lock (Lock)
-		{
-			List<Server> list = Load();
-			Server? old = list.FirstOrDefault(s => s.Id == server.Id);
-			if (old != null)
-			{
-				list.Remove(old);
-				if (string.IsNullOrEmpty(server.Name))
-				{
-					server.Name = old.Name;
-				}
-			}
-			if (string.IsNullOrEmpty(server.Name))
-			{
-				server.Name = server.Host;
-			}
-			list.Insert(0, server);
-			Write(list);
-		}
-	}
+    // Adds or updates a server (matched by user, host and SSH port), most recent first.
+    public static void Remember(Server server)
+    {
+        lock (Lock)
+        {
+            List<Server> list = Load();
+            Server? old = list.FirstOrDefault(s => s.Id == server.Id);
+            if (old != null)
+            {
+                list.Remove(old);
+                if (string.IsNullOrEmpty(server.Name))
+                {
+                    server.Name = old.Name;
+                }
+            }
+            if (string.IsNullOrEmpty(server.Name))
+            {
+                server.Name = server.Host;
+            }
+            list.Insert(0, server);
+            Write(list);
+        }
+    }
 
-	public static void Forget(string id)
-	{
-		lock (Lock)
-		{
-			Write(Load().Where(s => s.Id != id).ToList());
-		}
-	}
+    public static void Forget(string id)
+    {
+        lock (Lock)
+        {
+            Write(Load().Where(s => s.Id != id).ToList());
+        }
+    }
 
-	private static void Write(List<Server> list)
-	{
-		var sb = new StringBuilder();
-		sb.AppendLine("# Valheim World Editor: dedicated servers, saved after connecting. Edit or delete freely.");
-		sb.AppendLine("# Password is only kept when \"Save password\" was ticked (plain text: keep this file private).");
-		foreach (Server s in list)
-		{
-			sb.AppendLine();
-			sb.AppendLine($"[{s.Name.Replace("]", ")")}]");
-			sb.AppendLine($"Host = {s.Host}");
-			sb.AppendLine($"SshPort = {s.SshPort}");
-			sb.AppendLine($"User = {s.User}");
-			sb.AppendLine($"Password = {s.Password}");
-			sb.AppendLine($"KeyFile = {s.KeyFile}");
-			sb.AppendLine($"Token = {s.Token}");
-			sb.AppendLine($"BridgePort = {s.BridgePort}");
-			sb.AppendLine($"GameFolder = {s.GameFolder}");
-			sb.AppendLine($"HostKey = {s.HostKey}");
-		}
-		// Only the user can read it, from the start (it can hold a password).
-		SafeFile.WriteAllText(FilePath, sb.ToString(), UnixFileMode.UserRead | UnixFileMode.UserWrite);
-		if (!OperatingSystem.IsWindows())
-		{
-			File.SetUnixFileMode(FilePath, UnixFileMode.UserRead | UnixFileMode.UserWrite);
-		}
-	}
+    private static void Write(List<Server> list)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine("# Valheim World Editor: dedicated servers, saved after connecting. Edit or delete freely.");
+        sb.AppendLine("# Password is only kept when \"Save password\" was ticked (plain text: keep this file private).");
+        foreach (Server s in list)
+        {
+            sb.AppendLine();
+            sb.AppendLine($"[{s.Name.Replace("]", ")")}]");
+            sb.AppendLine($"Host = {s.Host}");
+            sb.AppendLine($"SshPort = {s.SshPort}");
+            sb.AppendLine($"User = {s.User}");
+            sb.AppendLine($"Password = {s.Password}");
+            sb.AppendLine($"KeyFile = {s.KeyFile}");
+            sb.AppendLine($"Token = {s.Token}");
+            sb.AppendLine($"BridgePort = {s.BridgePort}");
+            sb.AppendLine($"GameFolder = {s.GameFolder}");
+            sb.AppendLine($"HostKey = {s.HostKey}");
+        }
+        // Only the user can read it, from the start (it can hold a password).
+        SafeFile.WriteAllText(FilePath, sb.ToString(), UnixFileMode.UserRead | UnixFileMode.UserWrite);
+        if (!OperatingSystem.IsWindows())
+        {
+            File.SetUnixFileMode(FilePath, UnixFileMode.UserRead | UnixFileMode.UserWrite);
+        }
+    }
 }
