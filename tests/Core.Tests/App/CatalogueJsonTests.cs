@@ -88,7 +88,7 @@ public class CatalogueJsonTests
                   "a": true
                 }
               ],
-              "a": "é\n\t\"\\\b\f\r\u0001~"
+              "a": "\u00e9\n\t\"\\\b\f\r\u0001~"
             }
             """;
         Assert.Equal(python.ReplaceLineEndings("\n"), CatalogueJson.Write(root, new CatalogueJson.Style(ItemSep: ",", Indent: 2)));
