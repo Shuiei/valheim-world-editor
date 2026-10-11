@@ -1,5 +1,4 @@
 using System.Numerics;
-using System.Reflection;
 using System.Text.Json;
 using TerrainEditor.Editing;
 using ValheimGen;
@@ -10,9 +9,9 @@ using Rnd = ValheimGen.UnityEngine.Random;
 namespace TerrainEditor.App;
 
 // "Regrow nature": the trees, rocks, bushes and pickables the game would put in a zone, by its own
-// vegetation rules (WorldGen/vegetation.json, from ZoneSystem.m_vegetation and the LocationLists) and
-// the same random draws (ZoneSystem.PlaceVegetation, Unity's Random seeded per zone and rule), on the
-// ground as it is now. What the editor cannot know is skipped: the physics checks against objects
+// vegetation rules (ZoneSystem.m_vegetation and the LocationLists, read from the player's Valheim:
+// GameData; the tests use tests/fixtures/vegetation.json) and the same random draws
+// (ZoneSystem.PlaceVegetation, Unity's Random seeded per zone and rule), on the ground as it is now. What the editor cannot know is skipped: the physics checks against objects
 // already standing (IsBlocked, snapping onto rocks), clear areas around locations, and the Deep North's
 // alt biomes. The page drops spots taken by objects that are there and keeps those in the selection.
 public static class Regrow
@@ -59,14 +58,13 @@ public static class Regrow
 		public int draws { get; set; }
 	}
 
-	private static readonly Lazy<List<Rule>> Rules = new(() =>
-	{
-		using Stream s = Assembly.GetExecutingAssembly().GetManifestResourceStream("TerrainEditor.vegetation.json")
-			?? throw new InvalidOperationException("vegetation.json is not embedded");
-		return JsonSerializer.Deserialize<List<Rule>>(s)!;
-	});
+	// None until Use: no world opens before then (GameData).
+	private static volatile List<Rule> Rules = new();
 
-	public static int RuleCount => Rules.Value.Count;
+	// The rules as GameCatalogues.VegetationJson writes them.
+	public static void Use(string json) => Rules = JsonSerializer.Deserialize<List<Rule>>(json)!;
+
+	public static int RuleCount => Rules.Count;
 
 
 
@@ -200,7 +198,7 @@ public static class Regrow
 		Dictionary<(int, int), Zone> zones = new();
 		Zone hmap = ZoneAt(terrain, ground, zones, zx * 64f, zz * 64f);
 		float cx = zx * 64f, cz = zz * 64f;
-		foreach (Rule veg in Rules.Value)
+		foreach (Rule veg in Rules)
 		{
 			if (veg.enable == 0 || !hmap.HaveBiome(veg.biome))
 			{
