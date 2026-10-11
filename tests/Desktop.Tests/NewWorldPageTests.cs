@@ -346,6 +346,29 @@ public class NewWorldPageTests
     }
 
     [AvaloniaFact]
+    public async Task ASeedTypedBackWhoseLookWasDroppedIsLookedAtAgain()
+    {
+        using var r = new Run();
+        await r.Look(Seed);
+        // Another seed asked for, then its look dropped before it was shown (as when leaving the page).
+        OnUi(() =>
+        {
+            r.P.SeedBox.Text = "abc";
+            r.P.ShowSeed("abc");
+            r.P.StopAll();
+        });
+        await TestWindows.Until(() => r.P.Pending.IsCompleted, 60000);
+        Settle();
+        // Typed away and back before the pause ends: nothing is making it, so it is looked at again.
+        OnUi(() =>
+        {
+            r.P.SeedBox.Text = "abcd";
+            r.P.SeedBox.Text = "abc";
+        });
+        await TestWindows.Until(() => r.P.Shown?.Seed == "abc" && !r.P.Loading.IsVisible, 60000);
+    }
+
+    [AvaloniaFact]
     public void CreateChecksTheNameTheSeedAndThatTheWorldIsNew()
     {
         using var r = new Run();

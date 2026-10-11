@@ -224,6 +224,10 @@ public sealed class NewWorldPage : IDisposable
     /// The seed last asked for (shown or being made).
     /// </summary>
     private string? _asked;
+    /// <summary>
+    /// The latest seed preview started (done once it is shown, failed or dropped).
+    /// </summary>
+    private Task _making = Task.CompletedTask;
 
     /// <summary>
     /// A distance box: 0..8000 m in steps of 250.
@@ -338,6 +342,11 @@ public sealed class NewWorldPage : IDisposable
                     {
                         SetLoading(null);
                         MarkFound(_asked);
+                    }
+                    else if (_making.IsCompleted)
+                    {
+                        // Its preview failed (or was dropped): nothing left to take the sign away, so made again.
+                        ShowSeed(_asked);
                     }
                     else
                     {
@@ -506,7 +515,7 @@ public sealed class NewWorldPage : IDisposable
         }
         // The game's own location rules first (read once, the first time in a few seconds).
         var rules = GameLocations.UseGameRules(GameLook.Bundles);
-        Pending = Task.Run(async () =>
+        Pending = _making = Task.Run(async () =>
         {
             await rules.ConfigureAwait(false);
             return SeedPreview.Make(seed, _previewSize, parallel: true, landmarks: true, cancel.Token);
