@@ -38,6 +38,8 @@ the plugin is unchanged in versions without that part.
   with the same results to the bit.
 
 ### Fixed
+- **Preparing the game's look** (start page) shows how far it is and what it reads, the game's bundles
+  one by one: the bar stood still at the start until the look was ready.
 - **The world map** no longer holds up the rest of the editor while it is built: it took every
   background thread, so on a computer with few cores a live game's players, its answers and the other
   work in the background waited seconds for it.
