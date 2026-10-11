@@ -312,7 +312,9 @@ public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
 		}
 		catch (Exception ex)
 		{
-			Logger.LogWarning($"WorldEditorBridge request {ctx.Request.Url.AbsolutePath} failed: {ex}");
+			// The path comes from the request: keep line breaks out so it cannot forge log lines.
+			string path = ctx.Request.Url.AbsolutePath.Replace("\r", "").Replace("\n", "");
+			Logger.LogWarning($"WorldEditorBridge request {path} failed: {ex}");
 			try
 			{
 				Reply(res, 500, "text/plain", Encoding.UTF8.GetBytes(ex.Message));
