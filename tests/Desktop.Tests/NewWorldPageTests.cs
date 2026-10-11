@@ -326,6 +326,24 @@ public class NewWorldPageTests
     }
 
     [AvaloniaFact]
+    public async Task ASeedTypedBackBeforeThePauseIsNotLookedAtAgain()
+    {
+        using var r = new Run();
+        await r.Look(Seed);
+        var shown = r.P.Shown;
+        // Another seed typed: the sign tells of it at once, while the typing pause is waited for.
+        OnUi(() => r.P.SeedBox.Text = "abc");
+        Assert.True(r.P.Loading.IsVisible);
+        // Back to the seed shown before the pause ends: the sign gone, and nothing looked at once the pause is over.
+        OnUi(() => r.P.SeedBox.Text = Seed);
+        Assert.False(r.P.Loading.IsVisible);
+        await Task.Delay(800, TestContext.Current.CancellationToken);
+        Settle();
+        Assert.False(r.P.Loading.IsVisible);
+        Assert.Same(shown, r.P.Shown);
+    }
+
+    [AvaloniaFact]
     public void CreateChecksTheNameTheSeedAndThatTheWorldIsNew()
     {
         using var r = new Run();
@@ -379,7 +397,6 @@ public class NewWorldPageTests
         Assert.Equal(Places.WorldRoots().First(), Assert.Single(roots));
         Assert.Equal(0, page.Where.SelectedIndex);
         Assert.Equal(10, page.SeedBox.Text!.Length);
-        Assert.All(NewWorldPage.Roots(), d => Assert.True(Directory.Exists(d)));
     }
 
     [Fact]

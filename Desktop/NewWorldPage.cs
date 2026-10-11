@@ -329,6 +329,21 @@ public sealed class NewWorldPage : IDisposable
             // seed, a search result clicked): not looked at again.
             if ((SeedBox.Text?.Trim() ?? "") == _asked)
             {
+                // Typed back to it before the pause ended: the wait dropped (else it looks at it again), and the sign
+                // as it was for that seed.
+                if (_wait.IsEnabled)
+                {
+                    _wait.Stop();
+                    if (Shown?.Seed == _asked)
+                    {
+                        SetLoading(null);
+                        MarkFound(_asked);
+                    }
+                    else
+                    {
+                        SetLoading(_asked);
+                    }
+                }
                 return;
             }
             _wait.Stop();
