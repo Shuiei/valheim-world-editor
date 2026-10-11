@@ -3,17 +3,27 @@ using System.Text.RegularExpressions;
 
 namespace TerrainEditor.App;
 
-// The terrain's shader (Custom/Heightmap, its deferred G-buffer pass) made into the GLSL GameLookGl
-// links with the editor's vertex shader. From the OpenGL core program when the game copy has one
-// (Linux, Mac); else (Valheim for Windows: Direct3D 11 and Vulkan only) from the Vulkan program, SMOL-V
-// compressed and without its uniforms' names: those are put back from its parameter blob, and
-// SPIRV-Cross turns it into GLSL (TerrainShader).
+/// <summary>
+/// The terrain's shader (Custom/Heightmap, its deferred G-buffer pass) made into the GLSL GameLookGl
+/// links with the editor's vertex shader. From the OpenGL core program when the game copy has one
+/// (Linux, Mac); else (Valheim for Windows: Direct3D 11 and Vulkan only) from the Vulkan program, SMOL-V
+/// compressed and without its uniforms' names: those are put back from its parameter blob, and
+/// SPIRV-Cross turns it into GLSL (TerrainShader).
+/// </summary>
 public static partial class GameShader
 {
+    /// <summary>Unity's shader platform numbers of the OpenGL core and Vulkan program blobs.</summary>
     public const int OpenGlCore = 15, Vulkan = 18;
 
     // ---- OpenGL: one fragment variant of the deferred pass, adapted.
 
+    /// <summary>
+    /// The editor's GLSL fragment shader from the OpenGL core program: one fragment variant of the deferred
+    /// pass that samples the terrain textures and the full paint mask, preferring four G-buffer targets and
+    /// no fog, adapted by <c>Convert</c>.
+    /// </summary>
+    /// <param name="program">The OpenGL core program blob, GLSL source as Latin-1 text.</param>
+    /// <exception cref="InvalidDataException">No usable variant, or the shader changed from what is adapted.</exception>
     public static string FromOpenGl(byte[] program)
     {
         string d = Encoding.Latin1.GetString(program);
@@ -48,6 +58,7 @@ public static partial class GameShader
         return Convert(NotPrintable().Replace(best, ""));
     }
 
+    /// <summary>The header put before the adapted fragment shader: what it is and WebGL 2 precisions.</summary>
     private const string GlHeader = """
 		// Valheim's terrain shader (Custom/Heightmap, deferred G-buffer pass), compiled by Unity for
 		// OpenGL core and adapted to WebGL 2: the four G-buffer targets become globals that main() lights,
@@ -60,6 +71,10 @@ public static partial class GameShader
 
 		""";
 
+    /// <summary>
+    /// The game's per-zone ocean depth interpolation from the <c>_depth</c> uniform, replaced by the
+    /// <c>vs_depth</c> varying.
+    /// </summary>
     private const string DepthBlock = """
 		    u_xlat66 = _depth[2] + (-_depth[3]);
 		    u_xlat66 = vs_TEXCOORD0.x * u_xlat66 + _depth[3];
@@ -69,6 +84,11 @@ public static partial class GameShader
 		    u_xlat66 = vs_TEXCOORD0.y * u_xlat68 + u_xlat66;
 		""";
 
+    /// <summary>
+    /// Adapts a fragment variant: keeps the uniforms to the end of main, drops the location qualifiers, makes the
+    /// G-buffer outputs globals, takes the ocean depth and paint mask UV from varyings and renames main to
+    /// <c>valheimGBuffer</c>. Throws <see cref="InvalidDataException"/> when an expected piece is missing.
+    /// </summary>
     private static string Convert(string src)
     {
         static InvalidDataException Changed(string what) => new($"The terrain shader changed ({what}); the editor needs an update.");
@@ -106,6 +126,7 @@ public static partial class GameShader
         return GlHeader.Replace("\r\n", "\n", StringComparison.Ordinal) + body + "\n";
     }
 
+    /// <summary>Non-overlapping occurrences of <paramref name="what"/> in <paramref name="s"/> (ordinal).</summary>
     private static int Count(string s, string what)
     {
         int n = 0;
@@ -116,28 +137,41 @@ public static partial class GameShader
         return n;
     }
 
+    /// <summary>Assignments to a G-buffer target; group 1 is its number.</summary>
     [GeneratedRegex(@"SV_Target(\d) =")]
     private static partial Regex Targets();
 
+    /// <summary>Characters other than tab, newline and printable ASCII (blob padding), removed.</summary>
     [GeneratedRegex(@"[^\x09\x0a\x20-\x7e]")]
     private static partial Regex NotPrintable();
 
+    /// <summary>Unity's sampler location qualifier, which WebGL does not have.</summary>
     [GeneratedRegex(@"UNITY_LOCATION\(\d+\) uniform ")]
     private static partial Regex Location();
 
+    /// <summary>A G-buffer output declaration; group 1 is its name.</summary>
     [GeneratedRegex(@"layout\(location = \d\) out vec4 (SV_Target\d);")]
     private static partial Regex Output();
 
     // ---- Vulkan: the deferred pass's program with no keywords and no tessellation, named.
 
+    /// <summary>Unity's GPU program type of a SPIR-V sub-program.</summary>
     public const int SpirvProgram = 25;
+    /// <summary>SPIR-V execution models of the fragment and tessellation stages (OpEntryPoint's first operand).</summary>
     private const uint Fragment = 4, TessControl = 1, TessEval = 2;
 
-    // A sub-program of the deferred pass: its GPU program type, keyword count, blob entry and parameter
-    // blob entry.
+    /// <summary>A sub-program of the deferred pass.</summary>
+    /// <param name="GpuProgramType">Unity's GPU program type; <see cref="SpirvProgram"/> for Vulkan.</param>
+    /// <param name="Keywords">How many shader keywords the variant has.</param>
+    /// <param name="BlobIndex">Its program's entry in the platform blob.</param>
+    /// <param name="ParameterBlobIndex">Its parameter blob's entry; <c>int.MaxValue</c> when it has none.</param>
     public sealed record SubProgram(int GpuProgramType, int Keywords, int BlobIndex, int ParameterBlobIndex);
 
-    // The named SPIR-V (bytes) of the terrain's deferred fragment program, from the Vulkan blob.
+    /// <summary>
+    /// The named SPIR-V (bytes) of the terrain's deferred fragment program, from the Vulkan blob: the first
+    /// SPIR-V sub-program with no keywords and no tessellation stages.
+    /// </summary>
+    /// <exception cref="InvalidDataException">No such sub-program.</exception>
     public static byte[] FromVulkan(byte[] blob, IEnumerable<SubProgram> deferred)
     {
         var entries = Entries(blob);
@@ -171,7 +205,10 @@ public static partial class GameShader
         throw new InvalidDataException("The terrain shader has no Vulkan program of the deferred pass without keywords; the editor needs an update.");
     }
 
-    // The blob's entries (programs and parameter blobs).
+    /// <summary>
+    /// The blob's entries (programs and parameter blobs): a count, then an offset and length per entry
+    /// (12-byte records).
+    /// </summary>
     private static List<byte[]> Entries(byte[] blob)
     {
         int n = (int)BitConverter.ToUInt32(blob, 0);
@@ -184,7 +221,10 @@ public static partial class GameShader
         return res;
     }
 
-    // (index, op, index of the first operand, operand count) of each instruction.
+    /// <summary>
+    /// (word index, opcode, index of the first operand) of each instruction after the 5-word header. Throws
+    /// on an instruction of zero length.
+    /// </summary>
     private static IEnumerable<(int At, int Op, int Args)> Instructions(uint[] words)
     {
         int i = 5;
@@ -200,8 +240,10 @@ public static partial class GameShader
         }
     }
 
+    /// <summary>Operand word count of the instruction at <paramref name="at"/>.</summary>
     private static int Length(uint[] words, int at) => (int)(words[at] >> 16) - 1;
 
+    /// <summary>A SPIR-V literal string: UTF-8, nul-terminated, zero-padded to whole words.</summary>
     private static List<uint> StringWords(string s)
     {
         var b = Encoding.UTF8.GetBytes(s + "\0").ToList();
@@ -217,6 +259,9 @@ public static partial class GameShader
         return res;
     }
 
+    /// <summary>
+    /// A SPIR-V literal string from <paramref name="count"/> words at <paramref name="from"/>, up to its nul.
+    /// </summary>
     private static string ReadString(uint[] words, int from, int count)
     {
         byte[] b = new byte[count * 4];
@@ -225,12 +270,17 @@ public static partial class GameShader
         return Encoding.Latin1.GetString(b, 0, end < 0 ? b.Length : end);
     }
 
+    /// <summary>Names read from a parameter blob.</summary>
+    /// <param name="Buffers">Per constant buffer name: member offset (bytes) to member name.</param>
+    /// <param name="Textures">Texture binding to texture name.</param>
     public sealed record Params(Dictionary<string, Dictionary<uint, string>> Buffers, Dictionary<uint, string> Textures);
 
-    // The names of the constant buffers' members and of the textures. Records are a length-prefixed name
-    // (padded to 4 bytes) followed by numbers: a constant buffer (size, member count), a member (type,
-    // rows, columns, is matrix, array size, offset), a texture (0, binding with flags in the top byte,
-    // sampler, dimension).
+    /// <summary>
+    /// The names of the constant buffers' members and of the textures. Records are a length-prefixed name
+    /// (padded to 4 bytes) followed by numbers: a constant buffer (size, member count), a member (type,
+    /// rows, columns, is matrix, array size, offset), a texture (0, binding with flags in the top byte,
+    /// sampler, dimension). Only buffers whose name contains "Globals" are kept.
+    /// </summary>
     internal static Params Parameters(byte[] entry)
     {
         var recs = new List<(string Name, List<uint> Nums)>();
@@ -277,6 +327,9 @@ public static partial class GameShader
         return new Params(buffers, textures);
     }
 
+    /// <summary>
+    /// Whether the bytes are an identifier (ASCII letter or underscore, then letters, digits, underscores).
+    /// </summary>
     private static bool IsName(ReadOnlySpan<byte> s)
     {
         if (s.Length == 0 || !(char.IsAsciiLetter((char)s[0]) || s[0] == '_'))
@@ -293,8 +346,13 @@ public static partial class GameShader
         return true;
     }
 
-    // The SPIR-V with names for the uniform buffer's members, the textures, the inputs (the unnamed one
-    // is vs_COLOR0, as in the OpenGL program) and the outputs (SV_Target0..3).
+    /// <summary>
+    /// The SPIR-V with names for the uniform buffer's members, the textures, the inputs (the unnamed one
+    /// is vs_COLOR0, as in the OpenGL program) and the outputs (SV_Target0..3).
+    /// </summary>
+    /// <exception cref="InvalidDataException">
+    /// The uniform buffer or a texture binding has no match in <paramref name="prm"/>.
+    /// </exception>
     internal static uint[] Named(uint[] words, Params prm)
     {
         var names = new Dictionary<uint, string>();

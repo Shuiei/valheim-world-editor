@@ -3,54 +3,112 @@ using static TerrainEditor.Editing.DungeonKit;
 
 namespace TerrainEditor.Editing;
 
-// Dungeons made from settings and a seed (the same settings make the same dungeon), in two ways:
-// - from the game's own rooms (Rooms): an entrance, then rooms of the dungeon's kind joined at their
-//   openings while they fit (the game's rules: Dungeons.Attach, no overlap, inside its space), then the
-//   game's end cap on every open end; each room with what the game puts in it, and doors where rooms
-//   meet. The game builds it from its room list, like any dungeon.
-// - from building pieces (Pieces): a style (crypt, catacombs, temple, fortress, prison, Dvergr hold,
-//   goblin warren, ruins) gives the rooms and how they are laid out (DungeonPlanner), the walls are the
-//   biome's or those picked (DungeonShell), and each room is furnished for what it is, lit, guarded and
-//   stocked (DungeonDresser): an entrance with the dungeon's name, halls, side rooms, loops, stairs
-//   down, an antechamber, the boss's arena behind a gate whose key lies in a chest somewhere, the
-//   treasury beyond, a hidden cache or two. Floors and roofs are black marble slabs, the one piece the
-//   game never checks for support; everything else stands on them, so it holds anywhere, 5000 m up as
-//   on the ground.
-// Positions are metres from the dungeon's origin (its entrance; y up from the first floor).
+/// <summary>
+/// Dungeons made from settings and a seed (the same settings make the same dungeon), in two ways:
+/// <list type="bullet">
+/// <item>from the game's own rooms (Rooms): an entrance, then rooms of the dungeon's kind joined at their
+///   openings while they fit (the game's rules: Dungeons.Attach, no overlap, inside its space), then the
+///   game's end cap on every open end; each room with what the game puts in it, and doors where rooms
+///   meet. The game builds it from its room list, like any dungeon.</item>
+/// <item>from building pieces (Pieces): a style (crypt, catacombs, temple, fortress, prison, Dvergr hold,
+///   goblin warren, ruins) gives the rooms and how they are laid out (DungeonPlanner), the walls are the
+///   biome's or those picked (DungeonShell), and each room is furnished for what it is, lit, guarded and
+///   stocked (DungeonDresser): an entrance with the dungeon's name, halls, side rooms, loops, stairs
+///   down, an antechamber, the boss's arena behind a gate whose key lies in a chest somewhere, the
+///   treasury beyond, a hidden cache or two. Floors and roofs are black marble slabs, the one piece the
+///   game never checks for support; everything else stands on them, so it holds anywhere, 5000 m up as
+///   on the ground.</item>
+/// </list>
+/// Positions are metres from the dungeon's origin (its entrance; y up from the first floor).
+/// </summary>
 public static class DungeonGen
 {
-    public enum Made { Rooms, Pieces }
+    /// <summary>How a dungeon is made: from the game's own rooms (Rooms), or from building pieces (Pieces).</summary>
+    public enum Made
+    {
+        /// <summary>From the game's own rooms.</summary>
+        Rooms,
+        /// <summary>From building pieces.</summary>
+        Pieces,
+    }
 
-    // Style: a DungeonKit style (none: the biome's); Walls: a material (none: the biome's); Size: 1 small
-    // to 4 huge; Levels: 1 to 4; Monsters: 0 none, 1 usual, up to 3; Respawn: spawners (they come back)
-    // or the creatures once; Foes: spawners or creatures to use (none: the biome's); Boss: its spawner or
-    // creature ("": none, null: the biome's); Loot: 0 none to 2 rich; Light: 0 dark, 1 dim, 2 bright;
-    // Decor: 0 bare, 1 usual, 2 rich; Decay: 0 kept to 1 ruined (null: the style's); Loops: how many ways
-    // round (0 none, 1 usual, 2 many); BossKey: the arena locked, its key in a chest; Secrets: hidden
-    // caches; Name: on the entrance's sign (null: one is made up); Kind: the game dungeon's (rooms).
+    /// <summary>What to make; the same settings make the same dungeon.</summary>
+    /// <param name="Made">From the game's rooms or from building pieces.</param>
+    /// <param name="Biome">
+    /// The biome whose style, walls, foes and boss are used where none is picked (Made.Rooms: whose game dungeon).
+    /// </param>
+    /// <param name="Style">A DungeonKit style (none: the biome's).</param>
+    /// <param name="Walls">A material (none: the biome's).</param>
+    /// <param name="Size">1 small to 4 huge.</param>
+    /// <param name="Levels">1 to 4.</param>
+    /// <param name="Monsters">0 none, 1 usual, up to 3.</param>
+    /// <param name="Respawn">Spawners (they come back) or the creatures once.</param>
+    /// <param name="Foes">Spawners or creatures to use (none: the biome's).</param>
+    /// <param name="Boss">Its spawner or creature ("": none, null: the biome's).</param>
+    /// <param name="Loot">0 none to 2 rich.</param>
+    /// <param name="Light">0 dark, 1 dim, 2 bright.</param>
+    /// <param name="Decor">0 bare, 1 usual, 2 rich.</param>
+    /// <param name="Decay">0 kept to 1 ruined (null: the style's).</param>
+    /// <param name="Loops">How many ways round (0 none, 1 usual, 2 many).</param>
+    /// <param name="BossKey">The arena locked, its key in a chest.</param>
+    /// <param name="Secrets">Hidden caches.</param>
+    /// <param name="Seed">The dungeon's own seed: everything random about it comes from it.</param>
+    /// <param name="Name">On the entrance's sign (null: one is made up).</param>
+    /// <param name="Kind">The game dungeon kind to join rooms of, by name (Made.Rooms; null: the biome's).</param>
     public sealed record Settings(Made Made = Made.Pieces, string Biome = "Black Forest", string? Style = null, string? Walls = null, int Size = 2, int Levels = 2,
         float Monsters = 1, bool Respawn = true, IReadOnlyList<string>? Foes = null, string? Boss = null, float Loot = 1, int Light = 1, int Decor = 1,
         float? Decay = null, float Loops = 1, bool BossKey = true, bool Secrets = true, int Seed = 1, string? Name = null, string? Kind = null);
 
-    // An object to place; Data: values of its object data (section, key, value as text; see ZdoData.Set).
+    /// <summary>An object to place.</summary>
+    /// <param name="Prefab">The object's prefab name.</param>
+    /// <param name="Position">Metres from the dungeon's origin.</param>
+    /// <param name="Rotation">Its rotation.</param>
+    /// <param name="Data">Values of its object data (section, key, value as text; see ZdoData.Set).</param>
     public sealed record Item(string Prefab, Vector3 Position, Quaternion Rotation, IReadOnlyList<(string Section, string Key, string Value)>? Data = null);
 
-    // A room of the plan (metres, its level's floor at Y), for a map.
+    /// <summary>A room of the plan (metres, its level's floor at Y), for a map.</summary>
+    /// <param name="Name">What the room is, as shown.</param>
+    /// <param name="Level">Its level, 0 the first.</param>
+    /// <param name="Y">Its level's floor (metres, below 0 for the levels under the first).</param>
+    /// <param name="X0">Lowest x (metres).</param>
+    /// <param name="Z0">Lowest z (metres).</param>
+    /// <param name="X1">Highest x (metres).</param>
+    /// <param name="Z1">Highest z (metres).</param>
+    /// <param name="Corridor">A corridor rather than a room.</param>
+    /// <param name="Main">On the main way through.</param>
+    /// <param name="Key">The room whose chest holds the boss gate's key.</param>
     public sealed record PlanRoom(string Name, int Level, float Y, float X0, float Z0, float X1, float Z1, bool Corridor, bool Main, bool Key);
 
-    // A way between two rooms of the map (A, B: their indices): a doorway, or Kind "Stairs".
+    /// <summary>A way between two rooms of the map: a doorway, or Kind "Stairs".</summary>
+    /// <param name="Level">The level it is on (for stairs, the foot's).</param>
+    /// <param name="X">Its middle (metres).</param>
+    /// <param name="Z">Its middle (metres).</param>
+    /// <param name="Kind">The door's kind, or "Stairs".</param>
+    /// <param name="A">Index of one room in the map (-1: none).</param>
+    /// <param name="B">Index of the other room in the map (-1: none).</param>
     public sealed record PlanDoor(int Level, float X, float Z, string Kind, int A = -1, int B = -1);
 
-    // Items: the objects to place (pieces, spawners, chests, doors, room contents); Rooms: the game rooms'
-    // list (Made.Rooms) for a dungeon object of Kind at the origin; Arrival: where to stand on arriving
-    // (a portal there faces the way in); Name: the dungeon's; Map: its rooms and doors (pieces).
+    /// <summary>A made dungeon.</summary>
+    /// <param name="Items">The objects to place (pieces, spawners, chests, doors, room contents).</param>
+    /// <param name="Arrival">Where to stand on arriving (a portal there faces the way in).</param>
+    /// <param name="Kind">The game dungeon kind the rooms belong to (Made.Rooms; null for pieces).</param>
+    /// <param name="Rooms">The game rooms' list (Made.Rooms) for a dungeon object of Kind at the origin.</param>
+    /// <param name="Notes">What was made and what could not be, for the user.</param>
+    /// <param name="Name">The dungeon's.</param>
+    /// <param name="Map">Its rooms (pieces).</param>
+    /// <param name="Doors">Its doors and stairs between the rooms of Map (pieces).</param>
     public sealed record Result(List<Item> Items, Vector3 Arrival, Dungeons.Kind? Kind, List<Dungeons.Placed>? Rooms, List<string> Notes, string Name = "",
         IReadOnlyList<PlanRoom>? Map = null, IReadOnlyList<PlanDoor>? Doors = null);
 
+    /// <summary>Makes a dungeon from <paramref name="s"/>.</summary>
+    /// <param name="s">What to make.</param>
+    /// <param name="worldSeed">The world's seed, for the game's own room contents (Made.Rooms only).</param>
     public static Result Make(Settings s, int worldSeed = 0) => s.Made == Made.Rooms ? MakeRooms(s, worldSeed) : MakePieces(s);
 
-    // Locations with a dungeon, which the game lays out 5000 m above them when a player first comes
-    // near: nothing of it is in the save until then.
+    /// <summary>
+    /// Locations with a dungeon (name hashes), which the game lays out 5000 m above them when a player first
+    /// comes near: nothing of it is in the save until then.
+    /// </summary>
     public static readonly HashSet<int> DungeonLocations = [.. new[]
     {
         "Crypt2", "Crypt3", "Crypt4", "HalfBurried_ForestCrypt", "SunkenCrypt4", "MountainCave02", "Hildir_crypt", "Hildir_cave", "Hildir_plainsfortress",
@@ -58,13 +116,21 @@ public static class DungeonGen
         "TheHole01", "TheDarkestHole", "CharredFortress",
     }.Select(Save.StableHash.Of)];
 
+    /// <summary>An axis-aligned box of space (metres).</summary>
+    /// <param name="Min">Its lowest corner.</param>
+    /// <param name="Max">Its highest corner.</param>
     public readonly record struct Box(Vector3 Min, Vector3 Max)
     {
+        /// <summary>Whether the two boxes share any space (touching faces do not count).</summary>
         public bool Overlaps(Box o) => Min.X < o.Max.X && o.Min.X < Max.X && Min.Y < o.Max.Y && o.Min.Y < Max.Y && Min.Z < o.Max.Z && o.Min.Z < Max.Z;
     }
 
-    // What is taken high up: objects above 3000 m (a dungeon object: the whole space its rooms keep),
-    // and the space over every location whose dungeon the game has not laid out yet.
+    /// <summary>
+    /// What is taken high up: objects above 3000 m (a dungeon object: the whole space its rooms keep),
+    /// and the space over every location whose dungeon the game has not laid out yet.
+    /// </summary>
+    /// <param name="high">The objects high up (prefab hash, position).</param>
+    /// <param name="locations">The world's locations (position, name hash); only those in DungeonLocations count.</param>
     public static List<Box> Taken(IEnumerable<(int Prefab, Vector3 Position)> high, IEnumerable<(Vector3 Position, int Location)> locations)
     {
         var boxes = new List<Box>();
@@ -90,8 +156,10 @@ public static class DungeonGen
         return boxes;
     }
 
-    // Where a dungeon made at origin can go: there, or higher by 50 m steps until it is clear of what is
-    // taken.
+    /// <summary>
+    /// Where a dungeon made at origin can go: there, or higher by 50 m steps until it is clear of what is
+    /// taken (at most 80 steps, then it stays where the last step left it).
+    /// </summary>
     public static Vector3 Clear(Vector3 origin, Result r, IReadOnlyList<Box> taken)
     {
         var points = r.Items.Select(i => i.Position).Concat(r.Rooms?.Select(p => p.Position) ?? []).ToList();
@@ -109,7 +177,7 @@ public static class DungeonGen
         return origin;
     }
 
-    // The game's dungeon of a biome, for Made.Rooms.
+    /// <summary>The game's dungeon of a biome, for Made.Rooms.</summary>
     private static string RoomsOf(string biome) => biome switch
     {
         "Meadows" or "Black Forest" => "DG_ForestCrypt",
@@ -120,7 +188,7 @@ public static class DungeonGen
         _ => "DG_Cave",
     };
 
-    // A name for a dungeon of this style (null: the biome's).
+    /// <summary>A name for a dungeon of this style (null: the biome's); the same seed gives the same name.</summary>
     public static string NameFor(int seed, string? style = null, string? biome = null)
     {
         var r = new Random(seed * 7919 + 13);
@@ -129,6 +197,10 @@ public static class DungeonGen
     }
 
     // ---- From the game's rooms.
+    /// <summary>
+    /// Joins the game's rooms of the settings' kind (or the biome's) from an entrance, caps the open ends,
+    /// fills them with the game's contents and doors, then thins or adds spawners and chests.
+    /// </summary>
     private static Result MakeRooms(Settings s, int worldSeed)
     {
         var notes = new List<string>();
@@ -238,9 +310,11 @@ public static class DungeonGen
         return new Result(items, arrival, kind, rooms, notes);
     }
 
+    /// <summary>A dungeon kind's name as shown, without the DG_ prefix.</summary>
     public static string Describe(Dungeons.Kind k) => k.Name.Replace("DG_", "", StringComparison.Ordinal);
 
     // ---- From building pieces.
+    /// <summary>Plans the dungeon, builds its shell and dresses it, and draws its map.</summary>
     private static Result MakePieces(Settings s)
     {
         var rnd = new Random(s.Seed);

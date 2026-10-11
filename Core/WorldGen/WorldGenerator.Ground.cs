@@ -8,9 +8,11 @@ public sealed partial class WorldGenerator
 {
     // ---- The continents.
 
-    // The continents' height: products of wide noise fields, flattened in rings round the middle (no
-    // mountains near the start) and sunk past the world's edge. A point's biome and then its height
-    // both need it: the last one is kept on the thread (by generator and the point's exact bits).
+    /// <summary>
+    /// The continents' height: products of wide noise fields, flattened in rings round the middle (no
+    /// mountains near the start) and sunk past the world's edge. A point's biome and then its height
+    /// both need it: the last one is kept on the thread (by generator and the point's exact bits).
+    /// </summary>
     private float Continent(float x, float z)
     {
         int bx = BitConverter.SingleToInt32Bits(x), bz = BitConverter.SingleToInt32Bits(z);
@@ -23,16 +25,30 @@ public sealed partial class WorldGenerator
         return h;
     }
 
-    // Generators by number (a thread holding a reference would keep one alive).
+    /// <summary>
+    /// Generators made so far, to number them (a thread holding a reference would keep one alive).
+    /// </summary>
     private static int _generators;
+    /// <summary>
+    /// This generator's number, for the thread's last continent height.
+    /// </summary>
     private readonly int _number = Interlocked.Increment(ref _generators);
 
+    /// <summary>
+    /// The generator number and point bits of this thread's last continent height.
+    /// </summary>
     [ThreadStatic]
     private static int _continentOf, _continentX, _continentZ;
 
+    /// <summary>
+    /// This thread's last continent height.
+    /// </summary>
     [ThreadStatic]
     private static float _continent;
 
+    /// <summary>
+    /// The continents' height, worked out (Continent keeps the last one).
+    /// </summary>
     private float WorkOutContinent(float x, float z)
     {
         float fromMiddle = GenMath.Length(x, z);
@@ -65,7 +81,9 @@ public sealed partial class WorldGenerator
         return h * 1f + 0f;
     }
 
-    // The main menu's land: the same swells, nothing else.
+    /// <summary>
+    /// The main menu's land: the same swells, nothing else.
+    /// </summary>
     private float MenuContinent(float x, float z)
     {
         double cx = x, cz = z;
@@ -74,7 +92,9 @@ public sealed partial class WorldGenerator
         return Swells(cx, cz) * 1f + 0f;
     }
 
-    // Three products of noise fields, each finer one weighed by what is there already.
+    /// <summary>
+    /// Three products of noise fields, each finer one weighed by what is there already.
+    /// </summary>
     private static float Swells(double cx, double cz)
     {
         float h = 0f;
@@ -84,7 +104,9 @@ public sealed partial class WorldGenerator
         return (float)((double)h - (double)0.07f);
     }
 
-    // The continents' slope at a point: how much they change a metre to each side.
+    /// <summary>
+    /// The continents' slope at a point: how much they change a metre to each side.
+    /// </summary>
     private float ContinentTilt(float x, float z)
     {
         float west = Continent((float)((double)x - 1.0), z), east = Continent((float)((double)x + 1.0), z);
@@ -94,25 +116,33 @@ public sealed partial class WorldGenerator
 
     // ---- What the biomes add.
 
-    // Where the small detail is read: the point moved by the seed (and far from the noise's origin).
+    /// <summary>
+    /// Where the small detail is read: the point moved by the seed (and far from the noise's origin).
+    /// </summary>
     private float DetailPoint(float v) => (float)((double)v + 100000.0 + _offsetDetail);
 
-    // Rolling hills: two products of noise, the finer weighed by the coarser.
+    /// <summary>
+    /// Rolling hills: two products of noise, the finer weighed by the coarser.
+    /// </summary>
     private static float Hills(double dx, double dz)
     {
         float r = (float)((double)GenMath.Noise(dx * (double)0.01f, dz * (double)0.01f) * GenMath.Noise(dx * (double)0.02f, dz * (double)0.02f));
         return (float)((double)r + (double)GenMath.Noise(dx * (double)0.05f, dz * (double)0.05f) * GenMath.Noise(dx * (double)0.1f, dz * (double)0.1f) * r * 0.5);
     }
 
-    // The ground's grain: two fine noises.
+    /// <summary>
+    /// The ground's grain: two fine noises.
+    /// </summary>
     private static float Grain(float h, double dx, double dz)
     {
         h = (float)((double)h + (double)GenMath.Noise(dx * (double)0.1f, dz * (double)0.1f) * (double)0.01f);
         return (float)((double)h + (double)GenMath.Noise(dx * (double)0.4f, dz * (double)0.4f) * (double)0.003f);
     }
 
-    // Low land kept low: above 0.15, hills are pressed down where the continents are low (the Meadows'
-    // and the Deep North's way; the Plains' rounds its product differently).
+    /// <summary>
+    /// Low land kept low: above 0.15, hills are pressed down where the continents are low (the Meadows'
+    /// and the Deep North's way; the Plains' rounds its product differently).
+    /// </summary>
     private static float Pressed(float h, float land)
     {
         float over = (float)((double)h - (double)0.15f);
@@ -120,6 +150,9 @@ public sealed partial class WorldGenerator
         return over > 0f ? (float)((double)h - (double)over * ((1.0 - lift) * 0.75)) : h;
     }
 
+    /// <summary>
+    /// The Meadows: the continents with hills, pressed, rivers cut, then grain.
+    /// </summary>
     private float MeadowsShape(float x, float z)
     {
         float land = Continent(x, z);
@@ -129,6 +162,10 @@ public sealed partial class WorldGenerator
         return Grain(h, dx, dz);
     }
 
+    /// <summary>
+    /// The Black Forest (and the Mistlands while water is laid out): the continents with hills, rivers cut, then
+    /// grain.
+    /// </summary>
     private float ForestShape(float x, float z)
     {
         float land = Continent(x, z);
@@ -137,6 +174,9 @@ public sealed partial class WorldGenerator
         return Grain(CutRivers(x, z, h), dx, dz);
     }
 
+    /// <summary>
+    /// The Plains: as the Meadows, pressed with the product rounded the Plains' way.
+    /// </summary>
     private float PlainsShape(float x, float z)
     {
         float land = Continent(x, z);
@@ -151,7 +191,9 @@ public sealed partial class WorldGenerator
         return Grain(CutRivers(x, z, h), dx, dz);
     }
 
-    // Swamps: flat at the waterline (0.137) with a little noise, wherever the continents are.
+    /// <summary>
+    /// Swamps: flat at the waterline (0.137) with a little noise, wherever the continents are.
+    /// </summary>
     private float SwampShape(float x, float z)
     {
         double dx = (float)((double)x + 100000.0), dz = (float)((double)z + 100000.0);
@@ -161,7 +203,12 @@ public sealed partial class WorldGenerator
         return Grain(CutRivers(x, z, h), dx, dz);
     }
 
-    // Mountains: the continents' rise doubled above 0.4, bigger hills, and rocks where the land is steep.
+    /// <summary>
+    /// Mountains: the continents' rise doubled above 0.4, bigger hills, and rocks where the land is steep.
+    /// </summary>
+    /// <param name="x">World x.</param>
+    /// <param name="z">World z.</param>
+    /// <param name="menu">On the main menu's land instead of the continents.</param>
     private float MountainShape(float x, float z, bool menu)
     {
         float land = menu ? MenuContinent(x, z) : Continent(x, z);
@@ -173,8 +220,10 @@ public sealed partial class WorldGenerator
         return (float)((double)h + (double)GenMath.Noise(dx * (double)0.2f, dz * (double)0.2f) * 2.0 * steep);
     }
 
-    // The Mistlands: sharp-topped hills, terraced in steps of 1/400 on them, and a mask for the mist's
-    // cliffs (alpha).
+    /// <summary>
+    /// The Mistlands: sharp-topped hills, terraced in steps of 1/400 on them, and a mask for the mist's
+    /// cliffs (alpha).
+    /// </summary>
     private float MistlandsShape(float x, float z, out Color mask)
     {
         float land = Continent(x, z);
@@ -199,7 +248,9 @@ public sealed partial class WorldGenerator
         return GenMath.Lerp(smooth, terraced, steep);
     }
 
-    // The main menu's ground: the menu's land with the hills and grain.
+    /// <summary>
+    /// The main menu's ground: the menu's land with the hills and grain.
+    /// </summary>
     private float MenuShape(float x, float z)
     {
         float land = MenuContinent(x, z);
@@ -207,7 +258,9 @@ public sealed partial class WorldGenerator
         return Grain((float)((double)land + (double)Hills(dx, dz) * (double)0.1f), dx, dz);
     }
 
-    // The Deep North: raised by 0.1, pressed as the Meadows, with a snow mask (green) from noise.
+    /// <summary>
+    /// The Deep North: raised by 0.1, pressed as the Meadows, with a snow mask (green) from noise.
+    /// </summary>
     private float DeepNorthShape(float x, float z, out Color mask)
     {
         float land = Continent(x, z) + 0.1f;
@@ -220,7 +273,9 @@ public sealed partial class WorldGenerator
         return h;
     }
 
-    // The Deep North as the game has it while it lays out streams (raised unless for rivers).
+    /// <summary>
+    /// The Deep North as the game has it while it lays out streams (raised unless for rivers).
+    /// </summary>
     private float DeepNorthRoughShape(float x, float z, bool forRivers)
     {
         float land = Continent(x, z);
@@ -239,7 +294,9 @@ public sealed partial class WorldGenerator
         return (float)((double)land + (double)GenMath.Noise(fx * 0.4f, fz * 0.4f) * (double)0.003f);
     }
 
-    // The Ashlands as the game has it while it lays out streams.
+    /// <summary>
+    /// The Ashlands as the game has it while it lays out streams.
+    /// </summary>
     private float AshlandsRoughShape(float x, float z)
     {
         float land = Continent(x, z);
@@ -249,8 +306,15 @@ public sealed partial class WorldGenerator
         return CutRivers(x, z, Grain(h, dx, dz));
     }
 
-    // The Ashlands: lava fields and crags from cellular noise near the edge, high ground blended with
-    // it, lava (mask alpha) in the cracks. cheap: fewer octaves.
+    /// <summary>
+    /// The Ashlands: lava fields and crags from cellular noise near the edge, high ground blended with
+    /// it, lava (mask alpha) in the cracks.
+    /// </summary>
+    /// <param name="x">World x.</param>
+    /// <param name="z">World z.</param>
+    /// <param name="mask">Lava in alpha (0..1).</param>
+    /// <param name="cheap">Fewer octaves (the map's mask needs no more).</param>
+    /// <returns>The height in the generator's units, not metres.</returns>
     public float GetAshlandsHeight(float x, float z, out Color mask, bool cheap = false)
     {
         double px = x, pz = z;
@@ -303,7 +367,9 @@ public sealed partial class WorldGenerator
 
     // ---- Rivers in the ground.
 
-    // Lowered to the river's bed where a river runs (wider rivers a little deeper).
+    /// <summary>
+    /// Lowered to the river's bed where a river runs (wider rivers a little deeper).
+    /// </summary>
     private float CutRivers(float x, float z, float h)
     {
         RiverAt(x, z, out float weight, out float width);

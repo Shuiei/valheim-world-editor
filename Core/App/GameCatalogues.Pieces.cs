@@ -10,31 +10,64 @@ namespace TerrainEditor.App;
 // start (GameData): the pieces, their support, their placement and their costs.
 public static partial class GameCatalogues
 {
+    /// <summary>
+    /// Unity's class id of a BoxCollider.
+    /// </summary>
     private const int BoxColliderType = (int)AssetClassID.BoxCollider;
+    /// <summary>
+    /// Unity's class id of a MeshCollider.
+    /// </summary>
     private const int MeshColliderType = (int)AssetClassID.MeshCollider;
+    /// <summary>
+    /// Unity's class id of a SphereCollider.
+    /// </summary>
     private const int SphereColliderType = (int)AssetClassID.SphereCollider;
+    /// <summary>
+    /// Unity's class id of a CapsuleCollider.
+    /// </summary>
     private const int CapsuleColliderType = (int)AssetClassID.CapsuleCollider;
+    /// <summary>
+    /// Unity's class id of a Mesh.
+    /// </summary>
     private const int MeshType = (int)AssetClassID.Mesh;
 
+    /// <summary>
+    /// Whether a Unity class id is one of the colliders read here (box, mesh, sphere, capsule).
+    /// </summary>
     private static bool IsCollider(int type) => type is BoxColliderType or MeshColliderType or SphereColliderType or CapsuleColliderType;
 
-    // A collider that counts: enabled, not a trigger.
+    /// <summary>
+    /// A collider that counts: enabled, not a trigger.
+    /// </summary>
     private static bool Solid(AssetTypeValueField c) => Num(Get(c, "m_Enabled", 1L)) == 1 && !Truthy(Get(c, "m_IsTrigger", 0L));
 
+    /// <summary>
+    /// A snap point: tagged "snappoint" (<c>SnapTag</c>), or with "snappoint" in its name.
+    /// </summary>
     private static bool IsSnapPoint(AssetTypeValueField go) => Get(go, "m_Tag", null) is long tag && tag == SnapTag || go["m_Name"].AsString.ToLowerInvariant().Contains("snappoint", StringComparison.Ordinal);
 
+    /// <summary>
+    /// Whether a GameObject is active (m_IsActive, true when missing).
+    /// </summary>
     private static bool Active(AssetTypeValueField go) => Num(Get(go, "m_IsActive", 1L)) == 1;
 
-    // Each prefab with a Piece on its root, in the bundle's order: its file, path id, fields and Piece,
-    // for the readers at the editor's start. Found from the Piece scripts (told by their class) up to
-    // their GameObjects, kept to the prefab roots (the locations have many pieces below theirs); only
-    // these are read whole.
+    /// <summary>
+    /// Each prefab with a Piece on its root, in the bundle's order: its file, path id, fields and Piece,
+    /// for the readers at the editor's start. Found from the Piece scripts (told by their class) up to
+    /// their GameObjects, kept to the prefab roots (the locations have many pieces below theirs); only
+    /// these are read whole.
+    /// </summary>
     private static List<(Bundle.Inner File, long Pid, AssetTypeValueField Go, AssetTypeValueField Piece)> PieceRoots(Bundle b, Game game) =>
         PieceRootsOf.GetValue(b, _ => FindPieceRoots(b, game));
 
-    // Found once for the readers that need them (pieces, piece-support, piece-place, piece-cost).
+    /// <summary>
+    /// Found once for the readers that need them (pieces, piece-support, piece-place, piece-cost).
+    /// </summary>
     private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<Bundle, List<(Bundle.Inner, long, AssetTypeValueField, AssetTypeValueField)>> PieceRootsOf = [];
 
+    /// <summary>
+    /// Finds a bundle's piece roots: see <c>PieceRoots</c>.
+    /// </summary>
     private static List<(Bundle.Inner, long, AssetTypeValueField, AssetTypeValueField)> FindPieceRoots(Bundle b, Game game)
     {
         var res = new List<(Bundle.Inner, long, AssetTypeValueField, AssetTypeValueField)>();
@@ -69,11 +102,13 @@ public static partial class GameCatalogues
         return res;
     }
 
-    // What the pieces' readers walk below the prefabs (pieces, piece-support, piece-place), read once for
-    // all, first, each time in the order of the file (the bundle is read in blocks, and a prefab's objects are far
-    // apart): a level's Transforms, the GameObjects of the level above and the colliders of the one above
-    // that, as many times as there are levels. Below snap points nothing is read; a level is read before
-    // its parent's GameObject tells whether to go there.
+    /// <summary>
+    /// What the pieces' readers walk below the prefabs (pieces, piece-support, piece-place), read once for
+    /// all, first, each time in the order of the file (the bundle is read in blocks, and a prefab's objects are far
+    /// apart): a level's Transforms, the GameObjects of the level above and the colliders of the one above
+    /// that, as many times as there are levels. Below snap points nothing is read; a level is read before
+    /// its parent's GameObject tells whether to go there.
+    /// </summary>
     private static void PieceTrees(Bundle b, Game game) => TreesRead.GetValue(b, _ =>
     {
         IEnumerable<long> Of(long go, Func<int, bool> type) => b.Field(go) is { } g ? b.ComponentIds(g).Where(c => type(c.Type)).Select(c => c.Pid) : [];
@@ -101,39 +136,70 @@ public static partial class GameCatalogues
         return new object();
     });
 
+    /// <summary>
+    /// The bundles <c>PieceTrees</c> has read already.
+    /// </summary>
     private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<Bundle, object> TreesRead = [];
 
-    // A child's frame from its parent's: (position, rotation, scale), all in the prefab's frame.
+    /// <summary>
+    /// A child's frame from its parent's: (position, rotation, scale), all in the prefab's frame.
+    /// </summary>
     private static (V3 P, Quat Q, V3 S) ChildFrame(AssetTypeValueField tr, V3 pos, Quat rot, V3 scale)
     {
         var p = Add(rot.Rotate(Scale(Vec(tr["m_LocalPosition"]), scale)), pos);
         return (p, rot.Mul(Quat.Of(tr["m_LocalRotation"])), Scale(scale, Vec(tr["m_LocalScale"])));
     }
 
-    // A prefab root's position as the files have it: whole numbers.
+    /// <summary>
+    /// A prefab root's position as the files have it: whole numbers.
+    /// </summary>
     private static List<object?> Origin() => [0L, 0L, 0L];
 
-    // The first smallest / largest (as Python's min and max).
+    /// <summary>
+    /// The first smallest (as Python's min).
+    /// </summary>
     private static double Min(IEnumerable<double> xs) => xs.Aggregate((a, x) => x < a ? x : a);
 
+    /// <summary>
+    /// The first largest (as Python's max).
+    /// </summary>
     private static double Max(IEnumerable<double> xs) => xs.Aggregate((a, x) => x > a ? x : a);
 
-    // The build pieces, read at the editor's start (GameData): each piece's category, comfort, snap
-    // points (children tagged "snappoint", inactive ones too) and footprint (the box around its active
-    // box colliders), in its own frame; and which build tool's menu has it ("tool": the game's
-    // PieceTables), for the builder the editor writes on new pieces of these kinds, as the game does when
-    // a player places one. Menu entries that are not networked prefabs (repair, remove, the hoe's ground
-    // tools) are left out.
+    /// <summary>
+    /// The build pieces, read at the editor's start (GameData): each piece's category, comfort, snap
+    /// points (children tagged "snappoint", inactive ones too) and footprint (the box around its active
+    /// box colliders), in its own frame; and which build tool's menu has it ("tool": the game's
+    /// PieceTables), for the builder the editor writes on new pieces of these kinds, as the game does when
+    /// a player places one. Menu entries that are not networked prefabs (repair, remove, the hoe's ground
+    /// tools) are left out.
+    /// </summary>
     private sealed class PieceScan : IStartScan
     {
+        /// <summary>
+        /// The build tools' PieceTable objects, by name, and the tool each stands for.
+        /// </summary>
         private static readonly Dictionary<string, string> Tables = new() { ["_HammerPieceTable"] = "hammer", ["_HoePieceTable"] = "hoe", ["_CultivatorPieceTable"] = "cultivator", ["_FeasterPieceTable"] = "feaster" };
 
+        /// <summary>
+        /// The entries, by piece prefab name.
+        /// </summary>
         private readonly Dict _entries = new();
-        // Each piece's prefab by where it is (what the menus name), the networked ones, and the menus.
+        /// <summary>
+        /// Each piece's prefab by where it is (what the menus name).
+        /// </summary>
         private readonly Dictionary<Ref, string> _names = [];
+        /// <summary>
+        /// The pieces with a ZNetView (only these get a "tool").
+        /// </summary>
         private readonly HashSet<string> _networked = new(StringComparer.Ordinal);
+        /// <summary>
+        /// Each tool's menu: the pieces it lists.
+        /// </summary>
         private readonly Dictionary<string, List<Ref>> _tables = [];
 
+        /// <summary>
+        /// Reads the bundle's pieces (category, comfort, snap points, box) and the build tools' menus in it.
+        /// </summary>
         public void Read(Bundle b, Game game)
         {
             var pieces = PieceRoots(b, game);
@@ -174,6 +240,9 @@ public static partial class GameCatalogues
             }
         }
 
+        /// <summary>
+        /// The "pieces" JSON, each networked piece with the tool whose menu has it (the hammer's when several do).
+        /// </summary>
         public string Json()
         {
             // A piece in several menus: the hammer's.
@@ -190,6 +259,10 @@ public static partial class GameCatalogues
             return CatalogueJson.Write(_entries, new CatalogueJson.Style());
         }
 
+        /// <summary>
+        /// Walks a piece's tree: the corners of its active, solid box colliders into <c>pts</c> and its snap points
+        /// (active or not) into <c>snaps</c>, in the piece's frame; nothing below a snap point.
+        /// </summary>
         private static void Walk(Bundle b, long goPid, V3 pos, Quat rot, V3 scale, bool root, List<V3> pts, List<object?> snaps)
         {
             if (b.Field(goPid) is not { } g)
@@ -249,24 +322,45 @@ public static partial class GameCatalogues
         }
     }
 
-    // What build pieces cost, read at the editor's start (GameData): each piece's English name, the
-    // crafting station it needs nearby and its resources (item and amount, and whether it is given back),
-    // items by prefab name with their English names, for the blueprint library's material cost.
+    /// <summary>
+    /// What build pieces cost, read at the editor's start (GameData): each piece's English name, the
+    /// crafting station it needs nearby and its resources (item and amount, and whether it is given back),
+    /// items by prefab name with their English names, for the blueprint library's material cost.
+    /// </summary>
     private sealed class CostScan : IStartScan
     {
+        /// <summary>
+        /// The game's English texts, by token without "$".
+        /// </summary>
         private readonly Dictionary<string, string> _english;
+        /// <summary>
+        /// The pieces' entries and the items' English names, by prefab name.
+        /// </summary>
         private readonly Dict _pieces = new(), _items = new();
 
+        /// <summary>
+        /// A reader that names things from these English texts.
+        /// </summary>
         public CostScan(Dictionary<string, string> english) => _english = english;
 
+        /// <summary>
+        /// The "piece-cost" JSON, non-ASCII written as it is.
+        /// </summary>
         public string Json() => CatalogueJson.Write(new Dict { ["pieces"] = _pieces, ["items"] = _items }, new CatalogueJson.Style(",", ":", SortKeys: true, Ascii: false));
 
+        /// <summary>
+        /// A localisation token ("$item_wood") as its English text; the token itself when it has none, a plain text as
+        /// it is.
+        /// </summary>
         private string En(string? token)
         {
             string t = Localization.Strip(token ?? "");
             return t.StartsWith('$') ? _english.GetValueOrDefault(t[1..], t) : t;
         }
 
+        /// <summary>
+        /// Reads the cost of each piece in the bundle.
+        /// </summary>
         public void Read(Bundle b, Game game)
         {
             foreach (var (_, _, go, piece) in PieceRoots(b, game))
@@ -275,6 +369,10 @@ public static partial class GameCatalogues
             }
         }
 
+        /// <summary>
+        /// Adds one piece's entry: English name "n", resources "r" ([item, amount, recover]) and crafting station
+        /// "st" when it has one; each resource item's English name goes into the items.
+        /// </summary>
         private void Add(Bundle b, string name, AssetTypeValueField piece)
         {
             var res = new List<object?>();
@@ -300,7 +398,9 @@ public static partial class GameCatalogues
             _pieces[name] = entry;
         }
 
-        // The GameObject a component reference (same file only) is on: its name, and the component.
+        /// <summary>
+        /// The GameObject a component reference (same file only) is on: its name, and the component.
+        /// </summary>
         private static (string? Name, AssetTypeValueField? Component) Owner(Bundle b, AssetTypeValueField pptr)
         {
             if (pptr["m_FileID"].AsInt != 0 || b.Field(pptr["m_PathID"].AsLong) is not { } c)
@@ -311,20 +411,26 @@ public static partial class GameCatalogues
         }
     }
 
-    // Objects read as laid out, a few numbers each rather than their whole fields: for the readers at
-    // the editor's start. The bundle is read in blocks, so they are read in the order of their file.
+    /// <summary>
+    /// Objects read as laid out, a few numbers each rather than their whole fields: for the readers at
+    /// the editor's start. The bundle is read in blocks, so they are read in the order of their file.
+    /// </summary>
     private static class Layout
     {
-        // An object's first reference (a component's m_GameObject): its file id and path id.
+        /// <summary>
+        /// An object's first reference (a component's m_GameObject): its file id and path id.
+        /// </summary>
         public static (int FileId, long PathId) First(Bundle.Inner f, AssetFileInfo info)
         {
             var r = At(f, info);
             return (r.ReadInt32(), r.ReadInt64());
         }
 
-        // The prefab roots among these GameObjects (each in its file): those whose Transform has no
-        // parent. A GameObject has its components first (a count, then each a file id and a path id); a
-        // Transform has its parent after its GameObject, rotation, position, scale and children.
+        /// <summary>
+        /// The prefab roots among these GameObjects (each in its file): those whose Transform has no
+        /// parent. A GameObject has its components first (a count, then each a file id and a path id); a
+        /// Transform has its parent after its GameObject, rotation, position, scale and children.
+        /// </summary>
         public static HashSet<long> Roots(IEnumerable<(Bundle.Inner File, long Go)> gos)
         {
             var transforms = new List<(Bundle.Inner, AssetFileInfo?, long)>();
@@ -357,9 +463,11 @@ public static partial class GameCatalogues
             return roots;
         }
 
-        // The layout read as the type tree says, for one GameObject: whether it is a root agrees with
-        // Roots. A game made with another Unity could lay objects out otherwise: said, rather than read
-        // wrong.
+        /// <summary>
+        /// The layout read as the type tree says, for one GameObject: whether it is a root agrees with
+        /// Roots. A game made with another Unity could lay objects out otherwise: said, rather than read
+        /// wrong. Throws InvalidDataException when it does not.
+        /// </summary>
         public static void Check(Bundle b, long go, HashSet<long> roots)
         {
             if (b.Field(go) is not { } g || b.ComponentIds(g).FirstOrDefault(c => c.Type == TransformType) is not (_, long tr and not 0) || b.Field(tr) is not { } t)
@@ -372,18 +480,28 @@ public static partial class GameCatalogues
             }
         }
 
-        // A bundle's tree, read raw: each GameObject's name and components (file id, path id) and each
-        // Transform's GameObject, whether it is a root (no parent) and its children, by file and path id.
+        /// <summary>
+        /// A bundle's tree, read raw: each GameObject's name and components (file id, path id) and each
+        /// Transform's GameObject, whether it is a root (no parent) and its children, by file and path id.
+        /// </summary>
+        /// <param name="GameObjects">Each GameObject's name and components, by file and path id.</param>
+        /// <param name="Transforms">Each Transform's GameObject, whether it is a root and its children, by file and
+        /// path id.</param>
         public sealed record Tree(Dictionary<(Bundle.Inner, long), (string Name, (int File, long Pid)[] Components)> GameObjects, Dictionary<(Bundle.Inner, long), (long Go, bool Root, long[] Children)> Transforms)
         {
+            /// <summary>
+            /// An empty tree.
+            /// </summary>
             public Tree()
                 : this([], [])
             {
             }
 
-            // A GameObject's or Transform's numbers, from its bytes. A GameObject has its components first
-            // (a count, then each a file id and a path id), then its layer and name; a Transform its
-            // GameObject, rotation, position and scale, then its children and its parent.
+            /// <summary>
+            /// A GameObject's or Transform's numbers, from its bytes. A GameObject has its components first
+            /// (a count, then each a file id and a path id), then its layer and name; a Transform its
+            /// GameObject, rotation, position and scale, then its children and its parent.
+            /// </summary>
             public void Add(Bundle.Inner f, long pid, int type, Bytes d)
             {
                 if (type == GameObjectType)
@@ -409,27 +527,53 @@ public static partial class GameCatalogues
             }
         }
 
-        // An object's bytes, with the file's byte order.
+        /// <summary>
+        /// An object's bytes, with the file's byte order.
+        /// </summary>
+        /// <param name="data">The object's bytes.</param>
+        /// <param name="bigEndian">Whether the file is big-endian.</param>
         public readonly ref struct Bytes(ReadOnlySpan<byte> data, bool bigEndian)
         {
+            /// <summary>
+            /// The bytes.
+            /// </summary>
             private readonly ReadOnlySpan<byte> _data = data;
 
+            /// <summary>
+            /// A 32-bit integer at a byte offset.
+            /// </summary>
             public int I32(int at) => bigEndian ? BinaryPrimitives.ReadInt32BigEndian(_data[at..]) : BinaryPrimitives.ReadInt32LittleEndian(_data[at..]);
 
+            /// <summary>
+            /// A 64-bit integer at a byte offset.
+            /// </summary>
             public long I64(int at) => bigEndian ? BinaryPrimitives.ReadInt64BigEndian(_data[at..]) : BinaryPrimitives.ReadInt64LittleEndian(_data[at..]);
 
+            /// <summary>
+            /// A 32-bit float at a byte offset.
+            /// </summary>
             public float F32(int at) => BitConverter.Int32BitsToSingle(I32(at));
 
+            /// <summary>
+            /// A byte at an offset.
+            /// </summary>
             public byte U8(int at) => _data[at];
 
-            // A string: its length, then its UTF-8 bytes.
+            /// <summary>
+            /// A string: its length, then its UTF-8 bytes.
+            /// </summary>
             public string Text(int at) => System.Text.Encoding.UTF8.GetString(_data.Slice(at + 4, I32(at)));
         }
 
+        /// <summary>
+        /// What <c>Sweep</c> gives each object read raw: its file, path id, Unity class id and bytes.
+        /// </summary>
         public delegate void Parse(Bundle.Inner f, long pid, int type, Bytes data);
 
-        // These objects (each in its file) read raw in one sweep of the bundle, in the order of its files,
-        // each given whole to parse; with: others read whole (Field) in the same sweep.
+        /// <summary>
+        /// These objects (each in its file) read raw in one sweep of the bundle, in the order of its files,
+        /// each given whole to parse; with: others read whole (Field) in the same sweep.
+        /// </summary>
         public static void Sweep(Bundle b, IEnumerable<(Bundle.Inner File, long Pid)> raw, Parse parse, IEnumerable<(Bundle.Inner File, long Pid)>? with = null)
         {
             var rawIn = raw.ToLookup(o => o.File, o => o.Pid);
@@ -454,8 +598,10 @@ public static partial class GameCatalogues
             }
         }
 
-        // The tree as the type tree says, for one GameObject and its Transform: said, rather than read
-        // wrong (as Check above).
+        /// <summary>
+        /// The tree as the type tree says, for one GameObject and its Transform: said, rather than read
+        /// wrong (as Check above). Throws InvalidDataException when they differ.
+        /// </summary>
         public static void Check(Bundle b, Bundle.Inner f, long go, Tree tree)
         {
             if (b.Field(f, go) is not { } g || !tree.GameObjects.TryGetValue((f, go), out var raw))
@@ -475,11 +621,16 @@ public static partial class GameCatalogues
             }
         }
 
-        // By file, then by place in it (those that are not there left out); with what they stand for.
+        /// <summary>
+        /// By file, then by place in it (those that are not there left out); with what they stand for.
+        /// </summary>
         private static IEnumerable<(Bundle.Inner File, AssetFileInfo Info, long Of)> InOrder(IEnumerable<(Bundle.Inner File, AssetFileInfo? Info, long Of)> objects) =>
             objects.Where(o => o.Info != null).Select(o => (o.File, Info: o.Info!, o.Of))
                 .OrderBy(o => o.File.Cab, StringComparer.Ordinal).ThenBy(o => o.Info.GetAbsoluteByteOffset(o.File.Assets.file));
 
+        /// <summary>
+        /// The file's reader, at the start of the object's bytes.
+        /// </summary>
         private static AssetsFileReader At(Bundle.Inner f, AssetFileInfo info)
         {
             var file = f.Assets.file;
@@ -488,26 +639,45 @@ public static partial class GameCatalogues
         }
     }
 
-    // The build ray's layers (Default, static_solid, Default_small, piece, piece_nonsolid, terrain, vehicle).
+    /// <summary>
+    /// The build ray's layers (Default, static_solid, Default_small, piece, piece_nonsolid, terrain, vehicle).
+    /// </summary>
     private static readonly HashSet<long> RayLayers = [0, 15, 20, 10, 16, 11, 28];
 
-    // How the game's hammer places each piece, read at the editor's start (GameData), for the Workshop's
-    // Build: its placement flags, its snap points (its direct children tagged "snappoint") and the
-    // colliders the build ray and the ghost use (enabled, not triggers, on an active object, on a layer
-    // of the build ray), in the piece's own frame (its root at the origin, its root scale applied).
-    // Colliders: ["b", centre, half size, rotation] a box; ["s", centre, r] a sphere; ["c", a, b, r] a
-    // capsule (its segment); ["m", convex, [x,y,z...], [i,j,k...]] a mesh (triangles).
+    /// <summary>
+    /// How the game's hammer places each piece, read at the editor's start (GameData), for the Workshop's Build: its
+    /// placement flags, its snap points (its direct children tagged "snappoint") and the colliders the build ray and
+    /// the ghost use (enabled, not triggers, on an active object, on a layer of the build ray), in the piece's own
+    /// frame (its root at the origin, its root scale applied). Colliders: ["b", centre, half size, rotation] a box;
+    /// ["s", centre, r] a sphere; ["c", a, b, r] a capsule (its segment); ["m", convex, [x,y,z...], [i,j,k...]] a mesh
+    /// (triangles).
+    /// </summary>
     private sealed class PlaceScan : IStartScan
     {
+        /// <summary>
+        /// The placement flags written ("f": key -&gt; 1 when the Piece field is set).
+        /// </summary>
         private static readonly (string Key, string Field)[] Flags = [("g", "m_groundPiece"), ("cg", "m_clipGround"), ("ce", "m_clipEverything"), ("ro", "m_allowRotatedOverlap"), ("w", "m_waterPiece"), ("nw", "m_noInWater")];
 
+        /// <summary>
+        /// The entries, by piece prefab name.
+        /// </summary>
         private readonly Dict _entries = new();
-        // The bundle's mesh colliders' meshes, by path id: vertices and triangles (each read once, not
-        // kept as fields).
+        /// <summary>
+        /// The bundle's mesh colliders' meshes, by path id: vertices and triangles (each read once, not
+        /// kept as fields).
+        /// </summary>
         private readonly Dictionary<long, (float[] Vertices, List<int[]> Triangles)> _meshes = [];
 
+        /// <summary>
+        /// The "piece-place" JSON.
+        /// </summary>
         public string Json() => CatalogueJson.Write(_entries, new CatalogueJson.Style(",", ":"));
 
+        /// <summary>
+        /// Reads the bundle's pieces: their mesh colliders' meshes first, then each piece's flags, snap points and
+        /// colliders.
+        /// </summary>
         public void Read(Bundle b, Game game)
         {
             var pieces = PieceRoots(b, game);
@@ -563,10 +733,15 @@ public static partial class GameCatalogues
             }
         }
 
+        /// <summary>
+        /// A GameObject's Transform, read whole.
+        /// </summary>
         private static AssetTypeValueField? RootTransform(Bundle b, AssetTypeValueField go) =>
             b.ComponentIds(go).Where(c => c.Type == TransformType).Select(c => b.Field(c.Pid)).FirstOrDefault(f => f != null);
 
-        // A piece's colliders; or (meshes) the meshes its mesh colliders need, to read first.
+        /// <summary>
+        /// A piece's colliders; or (meshes) the meshes its mesh colliders need, to read first.
+        /// </summary>
         private void Walk(Bundle b, long goPid, V3 pos, Quat rot, V3 scale, bool root, List<object?>? cols, List<long>? meshes)
         {
             if (b.Field(goPid) is not { } g || !Truthy(Get(g, "m_IsActive", 1L)))
@@ -649,20 +824,33 @@ public static partial class GameCatalogues
         }
     }
 
-    // What the game's support check needs of each piece, read at the editor's start (GameData), for the
-    // editor's stability check: its material, centre of mass offset, whether it supports other pieces,
-    // whether the game checks its support at all ("f": never), and its colliders as boxes in its own
-    // frame: [centre, half size, rotation, aabb, layer] (aabb 1: the bounds of a collider that is not a
-    // box, a mesh collider's as its mesh's box). Colliders of every child count, inactive ones too;
-    // triggers and snap points do not. The pieces with a WearNTear (told by its class) on their root.
+    /// <summary>
+    /// What the game's support check needs of each piece, read at the editor's start (GameData), for the
+    /// editor's stability check: its material, centre of mass offset, whether it supports other pieces,
+    /// whether the game checks its support at all ("f": never), and its colliders as boxes in its own
+    /// frame: [centre, half size, rotation, aabb, layer] (aabb 1: the bounds of a collider that is not a
+    /// box, a mesh collider's as its mesh's box). Colliders of every child count, inactive ones too;
+    /// triggers and snap points do not. The pieces with a WearNTear (told by its class) on their root.
+    /// </summary>
     private sealed class SupportScan : IStartScan
     {
+        /// <summary>
+        /// The entries, by piece prefab name.
+        /// </summary>
         private readonly Dict _entries = new();
-        // The bounds of the meshes of the bundle's mesh colliders, by path id.
+        /// <summary>
+        /// The bounds of the meshes of the bundle's mesh colliders, by path id.
+        /// </summary>
         private readonly Dictionary<long, (V3 C, V3 H)> _meshes = [];
 
+        /// <summary>
+        /// The "piece-support" JSON.
+        /// </summary>
         public string Json() => CatalogueJson.Write(_entries, new CatalogueJson.Style(",", ":"));
 
+        /// <summary>
+        /// Reads the bundle's pieces with a WearNTear: their mesh colliders' bounds first, then each piece's entry.
+        /// </summary>
         public void Read(Bundle b, Game game)
         {
             var pieces = PieceRoots(b, game).Select(p => (p.Pid, p.Go, Wnt: b.ComponentIds(p.Go).FirstOrDefault(c => c.Type == MonoBehaviourType && game.ScriptClass(b, c.Pid) == "WearNTear").Pid))
@@ -701,7 +889,9 @@ public static partial class GameCatalogues
             }
         }
 
-        // A piece's colliders as boxes; or (meshes) the meshes its mesh colliders need, to read first.
+        /// <summary>
+        /// A piece's colliders as boxes; or (meshes) the meshes its mesh colliders need, to read first.
+        /// </summary>
         private void Walk(Bundle b, long goPid, V3 pos, Quat rot, V3 scale, bool root, List<object?>? boxes, List<long>? meshes)
         {
             if (b.Field(goPid) is not { } g || IsSnapPoint(g))
@@ -777,11 +967,20 @@ public static partial class GameCatalogues
         }
     }
 
-    // The game's English texts (its localization tables, in resources.assets): token -> text.
+    /// <summary>
+    /// The game's English texts (its localization tables, in resources.assets): token -&gt; text.
+    /// </summary>
     private static class Localization
     {
+        /// <summary>
+        /// Unity's class id of a TextAsset.
+        /// </summary>
         private const int TextAssetType = (int)AssetClassID.TextAsset;
 
+        /// <summary>
+        /// The English texts of the localisation tables in resources.assets (three folders up from the bundles); the
+        /// first text of a token wins.
+        /// </summary>
         public static Dictionary<string, string> English(string bundlesDir)
         {
             string data = Path.GetFullPath(Path.Combine(bundlesDir, "..", "..", ".."));
@@ -813,8 +1012,10 @@ public static partial class GameCatalogues
             }
         }
 
-        // A TextAsset's name and text: by its fields when the file describes them, else read as laid out
-        // (a name, then the text, each a length and UTF-8 bytes, 4-byte aligned).
+        /// <summary>
+        /// A TextAsset's name and text: by its fields when the file describes them, else read as laid out
+        /// (a name, then the text, each a length and UTF-8 bytes, 4-byte aligned).
+        /// </summary>
         private static (string Name, string Script) TextAsset(AssetsManager am, AssetsFileInstance a, AssetFileInfo info)
         {
             if (a.file.Metadata.TypeTreeEnabled)
@@ -836,7 +1037,9 @@ public static partial class GameCatalogues
             return (name, Next());
         }
 
-        // Whitespace off both ends, as Python's str.strip (which also takes the separators \x1c-\x1f).
+        /// <summary>
+        /// Whitespace off both ends, as Python's str.strip (which also takes the separators \x1c-\x1f).
+        /// </summary>
         public static string Strip(string s)
         {
             static bool Space(char c) => char.IsWhiteSpace(c) || c is >= '\x1c' and <= '\x1f';
@@ -852,8 +1055,11 @@ public static partial class GameCatalogues
             return s[a..b];
         }
 
-        // Rows of comma-separated text as Python's csv module reads them (quoted fields may hold commas,
-        // line breaks and doubled quotes; a quote inside an unquoted field is kept as it is).
+        /// <summary>
+        /// Rows of comma-separated text as Python's csv module reads them (quoted fields may hold commas,
+        /// line breaks and doubled quotes; a quote inside an unquoted field is kept as it is). Throws
+        /// InvalidDataException for a line break in an unquoted field, as Python's csv does.
+        /// </summary>
         public static IEnumerable<List<string>> Csv(string text)
         {
             var row = new List<string>();
@@ -977,7 +1183,9 @@ public static partial class GameCatalogues
             }
         }
 
-        // Lines with their line breaks, split at \n only (as Python's io.StringIO does).
+        /// <summary>
+        /// Lines with their line breaks, split at \n only (as Python's io.StringIO does).
+        /// </summary>
         private static IEnumerable<string> Lines(string text)
         {
             int start = 0;

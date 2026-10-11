@@ -5,27 +5,63 @@ using System.Text.Json.Nodes;
 
 namespace TerrainEditor.App;
 
-// Blueprint files of other Valheim mods, read into the editor's clipboard format and written from it:
-//   PlanBuild .blueprint   "#Name:", "#Creator:", "#Description:", "#Category:", optional "#SnapPoints" and
-//                          "#Terrain" sections, then "#Pieces": name;category;x;y;z;qx;qy;qz;qw;info;sx;sy;sz
-//   .vbuild (BuildShare)   one piece per line: name qx qy qz qw x y z
-// Positions are relative to the blueprint's origin along the world axes; rotations are Unity
-// quaternions. Terrain entries (shape;x;y;z;radius;rotation;smooth;paint) level and paint the ground.
+/// <summary>
+/// Blueprint files of other Valheim mods, read into the editor's clipboard format and written from it:
+///   PlanBuild .blueprint   "#Name:", "#Creator:", "#Description:", "#Category:", optional "#SnapPoints" and
+///                          "#Terrain" sections, then "#Pieces": name;category;x;y;z;qx;qy;qz;qw;info;sx;sy;sz
+///   .vbuild (BuildShare)   one piece per line: name qx qy qz qw x y z
+/// Positions are relative to the blueprint's origin along the world axes; rotations are Unity
+/// quaternions. Terrain entries (shape;x;y;z;radius;rotation;smooth;paint) level and paint the ground.
+/// </summary>
 public static class BlueprintFormats
 {
-    // Data: values of the object's data the editor keeps for it (its own #EditorData lines).
+    /// <summary>
+    /// One piece of a blueprint.
+    /// </summary>
+    /// <param name="Name">The prefab name (any "(Clone)" suffix dropped).</param>
+    /// <param name="Position">Relative to the blueprint's origin, along the world axes (metres).</param>
+    /// <param name="Euler">The rotation as Unity Euler angles in degrees (see <c>ToEuler</c>).</param>
+    /// <param name="Scale">Uniform scale, 1 for none.</param>
+    /// <param name="Data">Values of the object's data the editor keeps for it (its own #EditorData lines).</param>
     public sealed record Piece(string Name, Vector3 Position, Vector3 Euler, float Scale, IReadOnlyList<Editing.ObjectField>? Data = null);
 
+    /// <summary>
+    /// A PlanBuild #Terrain entry: ground levelled to the entry's height and painted.
+    /// </summary>
+    /// <param name="Shape">The shape in lower case: "square", anything else is a circle.</param>
+    /// <param name="Position">The centre, relative to the blueprint's origin; Y is the height the ground is levelled
+    /// to.</param>
+    /// <param name="Radius">The circle's radius, or half the square's side (metres).</param>
+    /// <param name="Rotation">The square's yaw in degrees (Unity: clockwise seen from above).</param>
+    /// <param name="Paint">PlanBuild's paint name ("dirt", "cultivated", "paved"...; empty: none).</param>
     public sealed record TerrainMod(string Shape, Vector3 Position, float Radius, int Rotation, string Paint);
 
-    // Ruin: written by the editor as a ruin (no builder; #EditorRuin), as generated dungeons are.
+    /// <summary>
+    /// A blueprint file as read by <c>Parse</c>.
+    /// </summary>
+    /// <param name="Name">The #Name header, or the file name without extension.</param>
+    /// <param name="Creator">The #Creator header, if any.</param>
+    /// <param name="Description">The #Description header, unquoted, if any.</param>
+    /// <param name="Pieces">The pieces, in file order.</param>
+    /// <param name="Terrain">The #Terrain entries, in file order.</param>
+    /// <param name="SkippedLines">Piece or terrain lines that could not be read.</param>
+    /// <param name="Ruin">Written by the editor as a ruin (no builder; #EditorRuin), as generated dungeons are.</param>
     public sealed record Parsed(string Name, string? Creator, string? Description, List<Piece> Pieces, List<TerrainMod> Terrain, int SkippedLines, bool Ruin = false);
 
-    // The editor's own header lines (other mods skip header lines they do not know): an object's data,
-    // "#EditorData:n;section;key;value" (n: the object's line among the pieces, from 0), and a building
-    // written as a ruin. Homestead and PlanBuild build without them.
+    /// <summary>
+    /// The editor's own header lines (other mods skip header lines they do not know): an object's data,
+    /// "#EditorData:n;section;key;value" (n: the object's line among the pieces, from 0), and a building
+    /// written as a ruin. Homestead and PlanBuild build without them.
+    /// </summary>
     public const string DataHeader = "#EditorData:", RuinHeader = "#EditorRuin:1";
 
+    /// <summary>
+    /// Reads a PlanBuild .blueprint or a .vbuild file (chosen by the file name's extension). Lines that cannot be read
+    /// are counted, not fatal; other mods' sections are skipped. The editor's #EditorData lines are attached to their
+    /// pieces, and a ruin's pieces get the no-builder field.
+    /// </summary>
+    /// <param name="fileName">The file's name or path: gives the format and the fallback name.</param>
+    /// <param name="text">The file's content.</param>
     public static Parsed Parse(string fileName, string text)
     {
         string ext = Path.GetExtension(fileName).ToLowerInvariant();
@@ -104,6 +140,9 @@ public static class BlueprintFormats
         return new Parsed(name, creator, description, pieces, terrain, skipped, ruin);
     }
 
+    /// <summary>
+    /// One PlanBuild "#Pieces" line: name;category;x;y;z;qx;qy;qz;qw;info;sx;sy;sz (scale from sx when present).
+    /// </summary>
     private static Piece ParseBlueprintPiece(string line)
     {
         // Old PlanBuild files were written with a comma as decimal separator.
@@ -117,6 +156,9 @@ public static class BlueprintFormats
         return new Piece(PrefabName(p[0]), new Vector3(F(p[2]), F(p[3]), F(p[4])), ToEuler(q), scale);
     }
 
+    /// <summary>
+    /// One .vbuild line: name qx qy qz qw x y z (no scale).
+    /// </summary>
     private static Piece ParseVBuild(string line)
     {
         if (line.Contains(','))
@@ -128,6 +170,9 @@ public static class BlueprintFormats
         return new Piece(PrefabName(p[0]), new Vector3(F(p[5]), F(p[6]), F(p[7])), ToEuler(q), 1f);
     }
 
+    /// <summary>
+    /// One PlanBuild "#Terrain" line: shape;x;y;z;radius;rotation;smooth;paint.
+    /// </summary>
     private static TerrainMod ParseTerrain(string line)
     {
         string[] p = line.Split(';');
@@ -135,16 +180,29 @@ public static class BlueprintFormats
             (int)MathF.Round(F(p[5])), p.Length > 7 ? p[7] : "");
     }
 
-    // "piece_chest(Clone)" -> "piece_chest", as PlanBuild does.
+    /// <summary>
+    /// "piece_chest(Clone)" -&gt; "piece_chest", as PlanBuild does.
+    /// </summary>
     private static string PrefabName(string s) => s.Split('(')[0].Trim();
 
+    /// <summary>
+    /// Strips the surrounding quotes PlanBuild writes around a description and undoes its \" and \n escapes.
+    /// </summary>
     private static string Unquote(string s) => s.Length >= 2 && s[0] == '"' && s[^1] == '"' ? s[1..^1].Replace("\\\"", "\"").Replace("\\n", "\n") : s;
 
+    /// <summary>
+    /// A number in invariant culture; empty gives 0.
+    /// </summary>
     private static float F(string s) => string.IsNullOrWhiteSpace(s) ? 0f : float.Parse(s.Trim(), NumberStyles.Float, CultureInfo.InvariantCulture);
 
+    /// <summary>
+    /// A number as written to blueprint files: invariant culture, at most five decimals.
+    /// </summary>
     private static string S(float f) => f.ToString("0.#####", CultureInfo.InvariantCulture);
 
-    // Unity's Euler angles (degrees, applied z, then x, then y: R = Ry * Rx * Rz) of a quaternion.
+    /// <summary>
+    /// Unity's Euler angles (degrees, applied z, then x, then y: R = Ry * Rx * Rz) of a quaternion.
+    /// </summary>
     public static Vector3 ToEuler(Quaternion q)
     {
         q = Quaternion.Normalize(q);
@@ -169,7 +227,9 @@ public static class BlueprintFormats
         static float Deg(float r) { float d = r * 180f / MathF.PI; d %= 360f; return d < 0 ? d + 360f : d; }
     }
 
-    // Unity's Quaternion.Euler: z, then x, then y.
+    /// <summary>
+    /// Unity's Quaternion.Euler: z, then x, then y.
+    /// </summary>
     public static Quaternion FromEuler(Vector3 e)
     {
         const float K = MathF.PI / 360f;
@@ -178,15 +238,23 @@ public static class BlueprintFormats
         return Mul(Mul(qy, qx), qz);
     }
 
+    /// <summary>
+    /// Hamilton product a * b written out (a applied after b).
+    /// </summary>
     private static Quaternion Mul(Quaternion a, Quaternion b) => new(
         a.W * b.X + a.X * b.W + a.Y * b.Z - a.Z * b.Y,
         a.W * b.Y - a.X * b.Z + a.Y * b.W + a.Z * b.X,
         a.W * b.Z + a.X * b.Y - a.Y * b.X + a.Z * b.W,
         a.W * b.W - a.X * b.X - a.Y * b.Y - a.Z * b.Z);
 
-    // The editor's clipboard (as stored: heights in cm, -32768 = no ground; weights and paint in 1/255)
-    // from a parsed file. The lowest piece rests on the point where it is pasted; ground from terrain
-    // entries is levelled to their height, relative to the same point.
+    /// <summary>
+    /// The editor's clipboard (as stored: heights in cm, -32768 = no ground; weights and paint in 1/255)
+    /// from a parsed file. The lowest piece rests on the point where it is pasted; ground from terrain
+    /// entries is levelled to their height, relative to the same point.
+    /// </summary>
+    /// <param name="bp">The parsed file.</param>
+    /// <param name="known">Whether a prefab name can be placed; pieces it rejects are left out.</param>
+    /// <param name="unknown">The rejected prefab names, distinct and sorted.</param>
     public static JsonObject ToClip(Parsed bp, Func<string, bool> known, out List<string> unknown)
     {
         var pieces = bp.Pieces.Where(p => known(p.Name)).ToList();
@@ -277,14 +345,25 @@ public static class BlueprintFormats
         static JsonObject Point(float gx, float gz) => new() { ["gx"] = R(gx), ["gz"] = R(gz) };
     }
 
+    /// <summary>
+    /// Rounds to a thousandth, to keep the clipboard JSON short.
+    /// </summary>
     private static float R(float v) => MathF.Round(v * 1000f) / 1000f;
 
-    // An object's data in the clipboard format: its fields as text (ObjectField).
+    /// <summary>
+    /// An object's data in the clipboard format: its fields as text (ObjectField).
+    /// </summary>
     public static JsonArray DataJson(IEnumerable<Editing.ObjectField> fields) => [.. fields.Select(f => (JsonNode)f.ToString()).ToArray()];
 
+    /// <summary>
+    /// The reverse of <c>DataJson</c>: an object's fields from the clipboard's "data" array, null when there are none.
+    /// </summary>
     public static List<Editing.ObjectField>? DataOf(JsonNode? data) =>
         data is JsonArray a && a.Count > 0 ? [.. a.Select(n => Editing.ObjectField.Parse((string?)n ?? "")).OfType<Editing.ObjectField>()] : null;
 
+    /// <summary>
+    /// Whether a terrain entry covers the ground point (x, z): a circle, or a square turned by its rotation.
+    /// </summary>
     private static bool Covers(TerrainMod t, float x, float z)
     {
         float dx = x - t.Position.X, dz = z - t.Position.Z;
@@ -298,7 +377,9 @@ public static class BlueprintFormats
         return MathF.Abs(lx) <= t.Radius && MathF.Abs(lz) <= t.Radius;
     }
 
-    // PlanBuild's paint names -> the game's paint mask (r dirt, g cultivated, b paved, a vegetation).
+    /// <summary>
+    /// PlanBuild's paint names -&gt; the game's paint mask (r dirt, g cultivated, b paved, a vegetation).
+    /// </summary>
     private static float[]? PaintOf(string paint) => paint.ToLowerInvariant() switch
     {
         var p when p.Contains("dirt") => [1f, 0f, 0f, 1f],
@@ -307,8 +388,14 @@ public static class BlueprintFormats
         _ => null,
     };
 
-    // The objects of a clipboard (blueprint file content) as a PlanBuild .blueprint or a .vbuild file.
-    // Ground is not written: PlanBuild's terrain entries cannot describe free-form ground.
+    /// <summary>
+    /// The objects of a clipboard (blueprint file content) as a PlanBuild .blueprint or a .vbuild file.
+    /// Ground is not written: PlanBuild's terrain entries cannot describe free-form ground.
+    /// </summary>
+    /// <param name="clip">The clipboard: its "objects" are written.</param>
+    /// <param name="format">"vbuild" for a .vbuild file, anything else for a PlanBuild .blueprint.</param>
+    /// <param name="name">The blueprint's #Name.</param>
+    /// <param name="category">A prefab's piece category index (0 Misc, 1 Crafting...); out of range gives Misc.</param>
     public static string Write(JsonObject clip, string format, string name, Func<string, int> category)
     {
         var objs = (clip["objects"] as JsonArray ?? []).OfType<JsonObject>().Select(o => (

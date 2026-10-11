@@ -3,26 +3,44 @@ using System.Text.RegularExpressions;
 
 namespace TerrainEditor.App;
 
-// Live editing of the player's own game (single player or hosting): finds the WorldEditorBridge
-// plugin's settings in the Valheim install or a mod manager profile, and checks whether the game
-// is running with it, so the start page can offer one click (the token never leaves this program).
+/// <summary>
+/// Live editing of the player's own game (single player or hosting): finds the WorldEditorBridge
+/// plugin's settings in the Valheim install or a mod manager profile, and checks whether the game
+/// is running with it, so the start page can offer one click (the token never leaves this program).
+/// </summary>
 public static class LocalGame
 {
+    /// <summary>An installed bridge plugin's settings.</summary>
+    /// <param name="ConfigPath">Its .cfg file.</param>
+    /// <param name="Where">Where it is installed, for the player ("Valheim folder", "r2modman profile "x""...).</param>
+    /// <param name="Port">The local port it listens on (5182 when the file does not say).</param>
+    /// <param name="Token">The secret the bridge wants in X-Bridge-Token.</param>
     public sealed record Bridge(string ConfigPath, string Where, int Port, string Token);
 
+    /// <summary>A bridge that answered: the game is running with it.</summary>
+    /// <param name="Bridge">The bridge that answered.</param>
+    /// <param name="World">The world loaded, empty when it did not say.</param>
+    /// <param name="Players">How many players are on it.</param>
     public sealed record Running(Bridge Bridge, string World, int Players);
 
-    // The plugin's settings file in BepInEx/config, and its name before 0.41.0 (an older plugin).
+    /// <summary>The plugin's settings file in BepInEx/config, and its name before 0.41.0 (an older plugin).</summary>
     public const string ConfigName = "Tie.WorldEditorBridge.cfg", OldConfigName = "local.worldeditorbridge.cfg";
 
-    // Tests: only the folders of the settings given, never the player's own install or profiles.
+    /// <summary>Tests: only the folders of the settings given, never the player's own install or profiles.</summary>
     public static bool SearchDefaultPlaces { get; set; } = true;
 
-    // Folders that can hold the game's BepInEx: the Valheim install, and mod manager profiles. Each
-    // once: on Linux the application data folder is ~/.config, so r2modman's would come twice.
+    /// <summary>
+    /// Folders that can hold the game's BepInEx: the Valheim install, and mod manager profiles. Each
+    /// once: on Linux the application data folder is ~/.config, so r2modman's would come twice.
+    /// </summary>
+    /// <returns>Each BepInEx folder (which may not exist) and where it is, for the player.</returns>
     public static IEnumerable<(string BepInEx, string Where)> BepInExFolders(AppSettings settings) =>
         AllBepInExFolders(settings).DistinctBy(f => Path.GetFullPath(f.BepInEx).TrimEnd(Path.DirectorySeparatorChar));
 
+    /// <summary>
+    /// <see cref="BepInExFolders"/> before duplicates are dropped: the Valheim install, the profile the editor
+    /// runs from, the folders added in Settings, then r2modman's and Thunderstore Mod Manager's profiles.
+    /// </summary>
     private static IEnumerable<(string BepInEx, string Where)> AllBepInExFolders(AppSettings settings)
     {
         if (SearchDefaultPlaces && GameLook.FindValheim(settings.ValheimPath) is string valheim)
@@ -86,7 +104,11 @@ public static class LocalGame
         }
     }
 
-    // The BepInEx folder holding the editor, when a mod manager installed it into a profile's plugins.
+    /// <summary>The BepInEx folder holding the editor, when a mod manager installed it into a profile's plugins.</summary>
+    /// <param name="from">The folder to look up from; the editor's own by default.</param>
+    /// <returns>
+    /// The BepInEx folder whose plugins folder is <paramref name="from"/> or holds it, else null.
+    /// </returns>
     public static string? InstalledIn(string? from = null)
     {
         for (var d = new DirectoryInfo(from ?? AppContext.BaseDirectory); d?.Parent != null; d = d.Parent)
@@ -99,6 +121,12 @@ public static class LocalGame
         return null;
     }
 
+    /// <summary>
+    /// The bridge settings found in every BepInEx folder (the current file name first, else the old one).
+    /// </summary>
+    /// <param name="settings">The editor's settings (Valheim path, added BepInEx folders).</param>
+    /// <param name="bepInEx">Whether any of the folders has BepInEx installed (core or plugins).</param>
+    /// <param name="plugin">Whether any has WorldEditorBridge.dll in its plugins.</param>
     public static List<Bridge> FindBridges(AppSettings settings, out bool bepInEx, out bool plugin)
     {
         bepInEx = false;
@@ -126,9 +154,13 @@ public static class LocalGame
         return list;
     }
 
-    // The plugin's settings file (BepInEx .cfg: "Key = value" lines).
+    /// <summary>The plugin's settings file (BepInEx .cfg: "Key = value" lines).</summary>
     public static Bridge? Parse(string path, string where) => ParseText(File.ReadAllText(path), path, where);
 
+    /// <summary>
+    /// The bridge settings in a .cfg file's text: its Token and Port (5182 when missing or not a number). Null
+    /// when there is no token.
+    /// </summary>
     public static Bridge? ParseText(string text, string path, string where)
     {
         string? Get(string key) => Regex.Match(text, $@"^\s*{key}\s*=\s*(.*?)\s*$", RegexOptions.Multiline) is { Success: true } m ? m.Groups[1].Value : null;
@@ -140,7 +172,10 @@ public static class LocalGame
         return new Bridge(path, where, int.TryParse(Get("Port"), out int p) ? p : 5182, token);
     }
 
-    // Which bridge (if any) answers on this computer, and with which world.
+    /// <summary>
+    /// Which bridge (if any) answers on this computer, and with which world: the first whose /status on
+    /// 127.0.0.1 answers within 1.5 seconds.
+    /// </summary>
     public static async Task<Running?> FindRunning(IEnumerable<Bridge> bridges)
     {
         foreach (Bridge b in bridges.DistinctBy(b => (b.Port, b.Token)))
@@ -167,7 +202,11 @@ public static class LocalGame
         return null;
     }
 
-    // For the start page: what the player has, and what to do next.
+    /// <summary>
+    /// For the start page: what the player has, and what to do next. An anonymous object (sent as JSON)
+    /// whose state is "running", "installed", "plugin-not-started", "no-plugin" or "no-bepinex", with the
+    /// world, players, where the bridge is and the Valheim folder.
+    /// </summary>
     public static async Task<object> Status(AppSettings settings)
     {
         List<Bridge> bridges = FindBridges(settings, out bool bepInEx, out bool plugin);

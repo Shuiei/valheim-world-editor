@@ -3,33 +3,46 @@ using System.Text.Json;
 
 namespace TerrainEditor.Editing;
 
-// The game's structural support (WearNTear.UpdateSupport), worked out for a set of building pieces, so
-// the editor shows what would hold and what would fall in game. Each piece has its material's support:
-// full on the ground, else the best it gets from the pieces it rests on (their colliders that its own
-// boxes, grown by 0.3 m, touch), less the material's loss for the distance between their centres of
-// mass and the angle (horizontal loses more than vertical); two supports on opposite sides average.
-// Repeated until nothing changes; pieces below their material's minimum break, then the rest is worked
-// out again (the collapse spreading). The pieces' colliders, materials and centres are read from the
-// player's own Valheim (GameData; the tests use tests/fixtures/piece-support.json). Not counted: other
-// objects (rocks, trees) the game would also take as full support, and mesh colliders' exact shapes
-// (their boxes).
+/// <summary>
+/// The game's structural support (WearNTear.UpdateSupport), worked out for a set of building pieces, so
+/// the editor shows what would hold and what would fall in game. Each piece has its material's support:
+/// full on the ground, else the best it gets from the pieces it rests on (their colliders that its own
+/// boxes, grown by 0.3 m, touch), less the material's loss for the distance between their centres of
+/// mass and the angle (horizontal loses more than vertical); two supports on opposite sides average.
+/// Repeated until nothing changes; pieces below their material's minimum break, then the rest is worked
+/// out again (the collapse spreading). The pieces' colliders, materials and centres are read from the
+/// player's own Valheim (GameData; the tests use tests/fixtures/piece-support.json). Not counted: other
+/// objects (rocks, trees) the game would also take as full support, and mesh colliders' exact shapes
+/// (their boxes).
+/// </summary>
 public static class Stability
 {
-    // A collider of a piece, in its own frame: middle, half size, rotation; Aabb: a non-box collider (its
-    // axis-aligned bounds count); Counts: on a layer the game's support check looks at.
+    /// <summary>A collider of a piece, in its own frame.</summary>
+    /// <param name="C">Its middle.</param>
+    /// <param name="H">Its half size.</param>
+    /// <param name="Q">Its rotation.</param>
+    /// <param name="Aabb">A non-box collider (its axis-aligned bounds count).</param>
+    /// <param name="Counts">On a layer the game's support check looks at.</param>
     private sealed record Box(Vector3 C, Vector3 H, Quaternion Q, bool Aabb, bool Counts);
 
-    // Free: the game never checks its support (WearNTear.m_noSupportWear off): it stays up, at its
-    // material's full support, wherever it is.
+    /// <summary>What support needs of a piece.</summary>
+    /// <param name="Material">Its WearNTear material (0 wood, 1 stone, 2 iron...; see Stability.Material).</param>
+    /// <param name="Supports">Other pieces can rest on it.</param>
+    /// <param name="Com">Its centre of mass, in its own frame.</param>
+    /// <param name="Boxes">Its colliders.</param>
+    /// <param name="Free">
+    /// The game never checks its support (WearNTear.m_noSupportWear off): it stays up, at its material's full
+    /// support, wherever it is.
+    /// </param>
     private sealed record Data(int Material, bool Supports, Vector3 Com, Box[] Boxes, bool Free = false);
 
-    // None until Use: no world or Workshop opens before then (GameData).
+    /// <summary>None until Use: no world or Workshop opens before then (GameData).</summary>
     private static volatile Dictionary<string, Data> _pieces = [];
 
-    // The layers WearNTear's overlap test sees: Default, piece, terrain, static_solid, Default_small.
+    /// <summary>The layers WearNTear's overlap test sees: Default, piece, terrain, static_solid, Default_small.</summary>
     private static readonly HashSet<int> SupportLayers = [0, 10, 11, 15, 20];
 
-    // The pieces by name, as GameCatalogues' SupportScan writes them.
+    /// <summary>Takes the pieces by name, as GameCatalogues' SupportScan writes them, in place of any before.</summary>
     public static void Use(string json)
     {
         using var doc = JsonDocument.Parse(json);
@@ -48,16 +61,20 @@ public static class Stability
         _pieces = result;
     }
 
-    // Whether the game gives this piece structural support at all (walls, floors, beams: yes; a
-    // workbench, a chest: no, they rest on what is under them without counting).
+    /// <summary>
+    /// Whether the game gives this piece structural support at all (walls, floors, beams: yes; a
+    /// workbench, a chest: no, they rest on what is under them without counting).
+    /// </summary>
     public static bool Known(string prefab) => _pieces.ContainsKey(prefab);
 
-    // A piece's material (WearNTear: 0 wood, 1 stone, 2 iron… -1 unknown) and its colliders as boxes in
-    // its own frame (middle, half size, rotation): its rough shape, for pictures without its model.
+    /// <summary>
+    /// A piece's material (WearNTear: 0 wood, 1 stone, 2 iron… -1 unknown) and its colliders as boxes in
+    /// its own frame (middle, half size, rotation): its rough shape, for pictures without its model.
+    /// </summary>
     public static (int Material, List<(Vector3 C, Vector3 H, Quaternion Q)> Boxes) Shape(string prefab) =>
         _pieces.TryGetValue(prefab, out var d) ? (d.Material, d.Boxes.Select(b => (b.C, b.H, b.Q)).ToList()) : (-1, []);
 
-    // WearNTear.GetMaterialProperties: maximum and minimum support, losses per metre.
+    /// <summary>WearNTear.GetMaterialProperties: maximum and minimum support, losses per metre (all 0 for an unknown material).</summary>
     public static (float Max, float Min, float Horizontal, float Vertical) Material(int m) => m switch
     {
         0 => (100f, 10f, 0.2f, 0.125f),          // wood
@@ -72,19 +89,32 @@ public static class Stability
         _ => (0f, 0f, 0f, 0f),
     };
 
+    /// <summary>A building piece to work out.</summary>
+    /// <param name="Prefab">Its prefab name.</param>
+    /// <param name="Position">Where it stands (world space).</param>
+    /// <param name="Rotation">How it is turned.</param>
+    /// <param name="Scale">Its uniform scale (0 or less is taken as 1).</param>
     public sealed record Piece(string Prefab, Vector3 Position, Quaternion Rotation, float Scale = 1f);
 
-    // Per piece: its support, its colour value as the game shows it in build mode (-1: full, on the
-    // ground, blue; else 0 red, about to break, to 1 green), and whether it breaks; Free: pieces the
-    // game does not give support to (not counted). Broken pieces are given in the order they fall.
+    /// <summary>What holds and what falls, per piece in the order given.</summary>
+    /// <param name="Support">Its support.</param>
+    /// <param name="Colour">
+    /// Its colour value as the game shows it in build mode (-1: full, on the ground, blue; else 0 red, about
+    /// to break, to 1 green).
+    /// </param>
+    /// <param name="Breaks">Whether it breaks.</param>
+    /// <param name="Free">Pieces the game does not give support to (not counted).</param>
+    /// <param name="Falls">Broken pieces (their indices), in the order they fall.</param>
     public sealed record Result(float[] Support, float[] Colour, bool[] Breaks, bool[] Free, List<int> Falls)
     {
+        /// <summary>How many pieces break.</summary>
         public int Breaking => Falls.Count;
     }
 
-    // An oriented box in the world.
+    /// <summary>An oriented box in the world: its middle, its three axes (unit length) and its half size along them.</summary>
     private readonly record struct Obb(Vector3 C, Vector3 X, Vector3 Y, Vector3 Z, Vector3 H)
     {
+        /// <summary>Its eight corners.</summary>
         public IEnumerable<Vector3> Corners()
         {
             for (int i = 0; i < 8; i++)
@@ -93,9 +123,10 @@ public static class Stability
             }
         }
 
+        /// <summary>The radius of a sphere round it, from its middle.</summary>
         public float Radius => H.Length();
 
-        // The point of the box nearest to p (Collider.ClosestPoint).
+        /// <summary>The point of the box nearest to p (Collider.ClosestPoint).</summary>
         public Vector3 Closest(Vector3 p)
         {
             var d = p - C;
@@ -103,6 +134,7 @@ public static class Stability
         }
     }
 
+    /// <summary>A piece's collider in the world (its axis-aligned bounds for a non-box), grown by grow metres on every side.</summary>
     private static Obb World(Box b, Piece p, float grow)
     {
         float s = p.Scale > 0 ? p.Scale : 1f;
@@ -123,7 +155,7 @@ public static class Stability
         return obb with { H = obb.H + new Vector3(grow) };
     }
 
-    // Separating axis test of two oriented boxes.
+    /// <summary>Separating axis test of two oriented boxes.</summary>
     private static bool Overlap(in Obb a, in Obb b)
     {
         var d = b.C - a.C;
@@ -158,7 +190,9 @@ public static class Stability
         return true;
     }
 
-    // groundAt: the ground's height at a world x, z.
+    /// <summary>Works out every piece's support and what falls; pieces the scan does not know are left out (Free).</summary>
+    /// <param name="pieces">The pieces.</param>
+    /// <param name="groundAt">The ground's height at a world x, z.</param>
     public static Result Solve(IReadOnlyList<Piece> pieces, Func<float, float, float> groundAt)
     {
         int n = pieces.Count;

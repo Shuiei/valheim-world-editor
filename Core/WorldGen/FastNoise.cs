@@ -37,107 +37,197 @@ using FN_DECIMAL = System.Single;
 
 using System.Runtime.CompilerServices;
 
-// Jordan Peck's FastNoise (github.com/Auburn/FastNoise_CSharp), unchanged except for this namespace and
-// FN_USE_DOUBLES above: Valheim ships the same library built with doubles, so terrain matches the game.
+// Jordan Peck's FastNoise (github.com/Auburn/FastNoise_CSharp), unchanged except for this namespace,
+// FN_USE_DOUBLES above and the doc comments: Valheim ships the same library built with doubles, so terrain
+// matches the game.
 #pragma warning disable
 namespace ValheimGen;
 
+/// <summary>
+/// Jordan Peck's FastNoise: value, Perlin, simplex, cubic, cellular and white noise in 2D to 4D, with
+/// fractal octaves and gradient perturbing. The world generator uses its cellular and simplex noise for
+/// the Ashlands.
+/// </summary>
 public class FastNoise
 {
+    /// <summary>
+    /// MethodImplOptions.AggressiveInlining as a number, for the attributes.
+    /// </summary>
     private const Int16 FN_INLINE = 256; //(Int16)MethodImplOptions.AggressiveInlining;
+    /// <summary>
+    /// The highest distance index the Distance2 return types can use.
+    /// </summary>
     private const int FN_CELLULAR_INDEX_MAX = 3;
 
+    /// <summary>
+    /// The kinds of noise GetNoise can return.
+    /// </summary>
     public enum NoiseType { Value, ValueFractal, Perlin, PerlinFractal, Simplex, SimplexFractal, Cellular, WhiteNoise, Cubic, CubicFractal };
+    /// <summary>
+    /// How noise blends between grid corners (lowest to highest quality).
+    /// </summary>
     public enum Interp { Linear, Hermite, Quintic };
+    /// <summary>
+    /// How fractal noise combines its octaves.
+    /// </summary>
     public enum FractalType { FBM, Billow, RigidMulti };
+    /// <summary>
+    /// How cellular noise measures the distance to a cell point.
+    /// </summary>
     public enum CellularDistanceFunction { Euclidean, Manhattan, Natural };
+    /// <summary>
+    /// What cellular noise returns: the nearest cell's value, lookup noise or distance, or two of the nearest distances
+    /// combined.
+    /// </summary>
     public enum CellularReturnType { CellValue, NoiseLookup, Distance, Distance2, Distance2Add, Distance2Sub, Distance2Mul, Distance2Div };
 
+    /// <summary>
+    /// The seed every noise type starts from.
+    /// </summary>
     private int m_seed = 1337;
+    /// <summary>
+    /// How much the coordinates are scaled before sampling.
+    /// </summary>
     private FN_DECIMAL m_frequency = (FN_DECIMAL)0.01;
+    /// <summary>
+    /// How value and gradient noise and the perturbing blend between grid corners.
+    /// </summary>
     private Interp m_interp = Interp.Quintic;
+    /// <summary>
+    /// What GetNoise returns.
+    /// </summary>
     private NoiseType m_noiseType = NoiseType.Simplex;
 
+    /// <summary>
+    /// Octaves of the fractal types.
+    /// </summary>
     private int m_octaves = 3;
+    /// <summary>
+    /// How much finer each octave is.
+    /// </summary>
     private FN_DECIMAL m_lacunarity = (FN_DECIMAL)2.0;
+    /// <summary>
+    /// How much weaker each octave is.
+    /// </summary>
     private FN_DECIMAL m_gain = (FN_DECIMAL)0.5;
+    /// <summary>
+    /// How the octaves are combined.
+    /// </summary>
     private FractalType m_fractalType = FractalType.FBM;
 
+    /// <summary>
+    /// 1 over the octaves' summed amplitudes (CalculateFractalBounding).
+    /// </summary>
     private FN_DECIMAL m_fractalBounding;
 
+    /// <summary>
+    /// How cellular noise measures distance.
+    /// </summary>
     private CellularDistanceFunction m_cellularDistanceFunction = CellularDistanceFunction.Euclidean;
+    /// <summary>
+    /// What cellular noise returns.
+    /// </summary>
     private CellularReturnType m_cellularReturnType = CellularReturnType.CellValue;
+    /// <summary>
+    /// The noise read at the nearest cell point for the NoiseLookup return type; null when unset.
+    /// </summary>
     private FastNoise m_cellularNoiseLookup = null;
+    /// <summary>
+    /// The first distance index for the Distance2 return types (the lower).
+    /// </summary>
     private int m_cellularDistanceIndex0 = 0;
+    /// <summary>
+    /// The second distance index for the Distance2 return types (the higher).
+    /// </summary>
     private int m_cellularDistanceIndex1 = 1;
+    /// <summary>
+    /// How far a cell point may sit from its grid position.
+    /// </summary>
     private float m_cellularJitter = 0.45f;
 
+    /// <summary>
+    /// The perturbing's greatest move.
+    /// </summary>
     private FN_DECIMAL m_gradientPerturbAmp = (FN_DECIMAL)1.0;
 
+    /// <summary>
+    /// Noise with the default settings and this seed.
+    /// </summary>
     public FastNoise(int seed = 1337)
     {
         m_seed = seed;
         CalculateFractalBounding();
     }
 
-    // Returns a 0 float/double
+    /// <summary>
+    /// 0 in the type the noise works in (double here: FN_USE_DOUBLES).
+    /// </summary>
     public static FN_DECIMAL GetDecimalType() { return 0; }
 
-    // Returns the seed used by this object
+    /// <summary>
+    /// The seed used by this object.
+    /// </summary>
     public int GetSeed() { return m_seed; }
 
-    // Sets seed used for all noise types
-    // Default: 1337
+    /// <summary>
+    /// Sets the seed used for all noise types. Default: 1337.
+    /// </summary>
     public void SetSeed(int seed) { m_seed = seed; }
 
-    // Sets frequency for all noise types
-    // Default: 0.01
+    /// <summary>
+    /// Sets the frequency for all noise types. Default: 0.01.
+    /// </summary>
     public void SetFrequency(FN_DECIMAL frequency) { m_frequency = frequency; }
 
-    // Changes the interpolation method used to smooth between noise values
-    // Possible interpolation methods (lowest to highest quality) :
-    // - Linear
-    // - Hermite
-    // - Quintic
-    // Used in Value, Gradient Noise and Position Perturbing
-    // Default: Quintic
+    /// <summary>
+    /// Changes the interpolation method used to smooth between noise values. Possible interpolation methods (lowest to
+    /// highest quality): Linear, Hermite, Quintic. Used in Value, Gradient Noise and Position Perturbing. Default:
+    /// Quintic.
+    /// </summary>
     public void SetInterp(Interp interp) { m_interp = interp; }
 
-    // Sets noise return type of GetNoise(...)
-    // Default: Simplex
+    /// <summary>
+    /// Sets the noise return type of GetNoise(...). Default: Simplex.
+    /// </summary>
     public void SetNoiseType(NoiseType noiseType) { m_noiseType = noiseType; }
 
 
-    // Sets octave count for all fractal noise types
-    // Default: 3
+    /// <summary>
+    /// Sets the octave count for all fractal noise types. Default: 3.
+    /// </summary>
     public void SetFractalOctaves(int octaves) { m_octaves = octaves; CalculateFractalBounding(); }
 
-    // Sets octave lacunarity for all fractal noise types
-    // Default: 2.0
+    /// <summary>
+    /// Sets the octave lacunarity for all fractal noise types. Default: 2.0.
+    /// </summary>
     public void SetFractalLacunarity(FN_DECIMAL lacunarity) { m_lacunarity = lacunarity; }
 
-    // Sets octave gain for all fractal noise types
-    // Default: 0.5
+    /// <summary>
+    /// Sets the octave gain for all fractal noise types. Default: 0.5.
+    /// </summary>
     public void SetFractalGain(FN_DECIMAL gain) { m_gain = gain; CalculateFractalBounding(); }
 
-    // Sets method for combining octaves in all fractal noise types
-    // Default: FBM
+    /// <summary>
+    /// Sets the method for combining octaves in all fractal noise types. Default: FBM.
+    /// </summary>
     public void SetFractalType(FractalType fractalType) { m_fractalType = fractalType; }
 
 
-    // Sets return type from cellular noise calculations
-    // Note: NoiseLookup requires another FastNoise object be set with SetCellularNoiseLookup() to function
-    // Default: CellValue
+    /// <summary>
+    /// Sets the distance function used in cellular noise calculations. Default: Euclidean.
+    /// </summary>
     public void SetCellularDistanceFunction(CellularDistanceFunction cellularDistanceFunction) { m_cellularDistanceFunction = cellularDistanceFunction; }
 
-    // Sets distance function used in cellular noise calculations
-    // Default: Euclidean
+    /// <summary>
+    /// Sets the return type from cellular noise calculations. Note: NoiseLookup requires another FastNoise object be
+    /// set with SetCellularNoiseLookup() to function. Default: CellValue.
+    /// </summary>
     public void SetCellularReturnType(CellularReturnType cellularReturnType) { m_cellularReturnType = cellularReturnType; }
 
-    // Sets the 2 distance indicies used for distance2 return types
-    // Default: 0, 1
-    // Note: index0 should be lower than index1
-    // Both indicies must be >= 0, index1 must be < 4
+    /// <summary>
+    /// Sets the 2 distance indices used for the Distance2 return types. Default: 0, 1. The lower becomes index0; both
+    /// are held to 0..3.
+    /// </summary>
     public void SetCellularDistance2Indicies(int cellularDistanceIndex0, int cellularDistanceIndex1)
     {
         m_cellularDistanceIndex0 = Math.Min(cellularDistanceIndex0, cellularDistanceIndex1);
@@ -147,23 +237,37 @@ public class FastNoise
         m_cellularDistanceIndex1 = Math.Min(Math.Max(m_cellularDistanceIndex1, 0), FN_CELLULAR_INDEX_MAX);
     }
 
-    // Sets the maximum distance a cellular point can move from it's grid position
-    // Setting this high will make artifacts more common
-    // Default: 0.45
+    /// <summary>
+    /// Sets the maximum distance a cellular point can move from its grid position. Setting this high will make
+    /// artefacts more common. Default: 0.45.
+    /// </summary>
     public void SetCellularJitter(float cellularJitter) { m_cellularJitter = cellularJitter; }
 
-    // Noise used to calculate a cell value if cellular return type is NoiseLookup
-    // The lookup value is acquired through GetNoise() so ensure you SetNoiseType() on the noise lookup, value, gradient or simplex is recommended
+    /// <summary>
+    /// Noise used to calculate a cell value if the cellular return type is NoiseLookup. The lookup value is acquired
+    /// through GetNoise(), so set its noise type; value, gradient or simplex is recommended.
+    /// </summary>
     public void SetCellularNoiseLookup(FastNoise noise) { m_cellularNoiseLookup = noise; }
 
 
-    // Sets the maximum perturb distance from original location when using GradientPerturb{Fractal}(...)
-    // Default: 1.0
+    /// <summary>
+    /// Sets the maximum perturb distance from the original location when using GradientPerturb{Fractal}(...). Default:
+    /// 1.0.
+    /// </summary>
     public void SetGradientPerturbAmp(FN_DECIMAL gradientPerturbAmp) { m_gradientPerturbAmp = gradientPerturbAmp; }
 
+    /// <summary>
+    /// A 2D vector (x, y) of the tables.
+    /// </summary>
     private struct Float2
     {
+        /// <summary>
+        /// The components.
+        /// </summary>
         public readonly FN_DECIMAL x, y;
+        /// <summary>
+        /// The vector (x, y).
+        /// </summary>
         public Float2(FN_DECIMAL x, FN_DECIMAL y)
         {
             this.x = x;
@@ -171,9 +275,18 @@ public class FastNoise
         }
     }
 
+    /// <summary>
+    /// A 3D vector (x, y, z) of the tables.
+    /// </summary>
     private struct Float3
     {
+        /// <summary>
+        /// The components.
+        /// </summary>
         public readonly FN_DECIMAL x, y, z;
+        /// <summary>
+        /// The vector (x, y, z).
+        /// </summary>
         public Float3(FN_DECIMAL x, FN_DECIMAL y, FN_DECIMAL z)
         {
             this.x = x;
@@ -182,11 +295,17 @@ public class FastNoise
         }
     }
 
+    /// <summary>
+    /// The 2D gradients, picked by hash.
+    /// </summary>
     private static readonly Float2[] GRAD_2D = {
         new Float2(-1,-1), new Float2( 1,-1), new Float2(-1, 1), new Float2( 1, 1),
         new Float2( 0,-1), new Float2(-1, 0), new Float2( 0, 1), new Float2( 1, 0),
     };
 
+    /// <summary>
+    /// The 3D gradients (the twelve edge directions, four of them twice), picked by hash.
+    /// </summary>
     private static readonly Float3[] GRAD_3D = {
         new Float3( 1, 1, 0), new Float3(-1, 1, 0), new Float3( 1,-1, 0), new Float3(-1,-1, 0),
         new Float3( 1, 0, 1), new Float3(-1, 0, 1), new Float3( 1, 0,-1), new Float3(-1, 0,-1),
@@ -194,6 +313,9 @@ public class FastNoise
         new Float3( 1, 1, 0), new Float3( 0,-1, 1), new Float3(-1, 1, 0), new Float3( 0,-1,-1),
     };
 
+    /// <summary>
+    /// 256 random unit vectors that place the 2D cell points (times the jitter).
+    /// </summary>
     private static readonly Float2[] CELL_2D =
     {
         new Float2(-0.2700222198f, -0.9628540911f), new Float2(0.3863092627f, -0.9223693152f), new Float2(0.04444859006f, -0.999011673f), new Float2(-0.5992523158f, -0.8005602176f), new Float2(-0.7819280288f, 0.6233687174f), new Float2(0.9464672271f, 0.3227999196f), new Float2(-0.6514146797f, -0.7587218957f), new Float2(0.9378472289f, 0.347048376f),
@@ -230,6 +352,9 @@ public class FastNoise
         new Float2(0.01426758847f, -0.9998982128f), new Float2(-0.6734383991f, 0.7392433447f), new Float2(0.639412098f, -0.7688642071f), new Float2(0.9211571421f, 0.3891908523f), new Float2(-0.146637214f, -0.9891903394f), new Float2(-0.782318098f, 0.6228791163f), new Float2(-0.5039610839f, -0.8637263605f), new Float2(-0.7743120191f, -0.6328039957f),
     };
 
+    /// <summary>
+    /// 256 random unit vectors that place the 3D cell points (times the jitter).
+    /// </summary>
     private static readonly Float3[] CELL_3D =
     {
         new Float3(-0.7292736885f, -0.6618439697f, 0.1735581948f), new Float3(0.790292081f, -0.5480887466f, -0.2739291014f), new Float3(0.7217578935f, 0.6226212466f, -0.3023380997f), new Float3(0.565683137f, -0.8208298145f, -0.0790000257f), new Float3(0.760049034f, -0.5555979497f, -0.3370999617f), new Float3(0.3713945616f, 0.5011264475f, 0.7816254623f), new Float3(-0.1277062463f, -0.4254438999f, -0.8959289049f), new Float3(-0.2881560924f, -0.5815838982f, 0.7607405838f),
@@ -266,21 +391,39 @@ public class FastNoise
         new Float3(-0.7870349638f, 0.03447489231f, 0.6159443543f), new Float3(-0.2015596421f, 0.6859872284f, 0.6991389226f), new Float3(-0.08581082512f, -0.10920836f, -0.9903080513f), new Float3(0.5532693395f, 0.7325250401f, -0.396610771f), new Float3(-0.1842489331f, -0.9777375055f, -0.1004076743f), new Float3(0.0775473789f, -0.9111505856f, 0.4047110257f), new Float3(0.1399838409f, 0.7601631212f, -0.6344734459f), new Float3(0.4484419361f, -0.845289248f, 0.2904925424f),
     };
 
+    /// <summary>
+    /// f rounded down.
+    /// </summary>
     [MethodImplAttribute(FN_INLINE)]
     private static int FastFloor(FN_DECIMAL f) { return (f >= 0 ? (int)f : (int)f - 1); }
 
+    /// <summary>
+    /// f rounded to the nearest whole number, halves away from zero.
+    /// </summary>
     [MethodImplAttribute(FN_INLINE)]
     private static int FastRound(FN_DECIMAL f) { return (f >= 0) ? (int)(f + (FN_DECIMAL)0.5) : (int)(f - (FN_DECIMAL)0.5); }
 
+    /// <summary>
+    /// a to b by t (not clamped).
+    /// </summary>
     [MethodImplAttribute(FN_INLINE)]
     private static FN_DECIMAL Lerp(FN_DECIMAL a, FN_DECIMAL b, FN_DECIMAL t) { return a + t * (b - a); }
 
+    /// <summary>
+    /// The Hermite curve 3t² - 2t³.
+    /// </summary>
     [MethodImplAttribute(FN_INLINE)]
     private static FN_DECIMAL InterpHermiteFunc(FN_DECIMAL t) { return t * t * (3 - 2 * t); }
 
+    /// <summary>
+    /// The quintic curve 6t⁵ - 15t⁴ + 10t³.
+    /// </summary>
     [MethodImplAttribute(FN_INLINE)]
     private static FN_DECIMAL InterpQuinticFunc(FN_DECIMAL t) { return t * t * t * (t * (t * 6 - 15) + 10); }
 
+    /// <summary>
+    /// Cubic interpolation between b (t = 0) and c (t = 1), with a and d the values beyond them.
+    /// </summary>
     [MethodImplAttribute(FN_INLINE)]
     private static FN_DECIMAL CubicLerp(FN_DECIMAL a, FN_DECIMAL b, FN_DECIMAL c, FN_DECIMAL d, FN_DECIMAL t)
     {
@@ -288,6 +431,10 @@ public class FastNoise
         return t * t * t * p + t * t * ((a - b) - p) + t * (c - a) + b;
     }
 
+    /// <summary>
+    /// Works out the fractal bounding: 1 over the sum of the octaves' amplitudes, so fractal noise stays in about
+    /// -1..1.
+    /// </summary>
     private void CalculateFractalBounding()
     {
         FN_DECIMAL amp = m_gain;
@@ -301,11 +448,26 @@ public class FastNoise
     }
 
     // Hashing
+    /// <summary>
+    /// Prime the hashes multiply x by.
+    /// </summary>
     private const int X_PRIME = 1619;
+    /// <summary>
+    /// Prime the hashes multiply y by.
+    /// </summary>
     private const int Y_PRIME = 31337;
+    /// <summary>
+    /// Prime the hashes multiply z by.
+    /// </summary>
     private const int Z_PRIME = 6971;
+    /// <summary>
+    /// Prime the hashes multiply w by.
+    /// </summary>
     private const int W_PRIME = 1013;
 
+    /// <summary>
+    /// The seed and a 2D grid point mixed into a hash.
+    /// </summary>
     [MethodImplAttribute(FN_INLINE)]
     private static int Hash2D(int seed, int x, int y)
     {
@@ -319,6 +481,9 @@ public class FastNoise
         return hash;
     }
 
+    /// <summary>
+    /// The seed and a 3D grid point mixed into a hash.
+    /// </summary>
     [MethodImplAttribute(FN_INLINE)]
     private static int Hash3D(int seed, int x, int y, int z)
     {
@@ -333,6 +498,9 @@ public class FastNoise
         return hash;
     }
 
+    /// <summary>
+    /// The seed and a 4D grid point mixed into a hash.
+    /// </summary>
     [MethodImplAttribute(FN_INLINE)]
     private static int Hash4D(int seed, int x, int y, int z, int w)
     {
@@ -348,6 +516,9 @@ public class FastNoise
         return hash;
     }
 
+    /// <summary>
+    /// A random value, -1..1, for a 2D grid point.
+    /// </summary>
     [MethodImplAttribute(FN_INLINE)]
     private static FN_DECIMAL ValCoord2D(int seed, int x, int y)
     {
@@ -358,6 +529,9 @@ public class FastNoise
         return (n * n * n * 60493) / (FN_DECIMAL)2147483648.0;
     }
 
+    /// <summary>
+    /// A random value, -1..1, for a 3D grid point.
+    /// </summary>
     [MethodImplAttribute(FN_INLINE)]
     private static FN_DECIMAL ValCoord3D(int seed, int x, int y, int z)
     {
@@ -369,6 +543,9 @@ public class FastNoise
         return (n * n * n * 60493) / (FN_DECIMAL)2147483648.0;
     }
 
+    /// <summary>
+    /// A random value, -1..1, for a 4D grid point.
+    /// </summary>
     [MethodImplAttribute(FN_INLINE)]
     private static FN_DECIMAL ValCoord4D(int seed, int x, int y, int z, int w)
     {
@@ -381,6 +558,9 @@ public class FastNoise
         return (n * n * n * 60493) / (FN_DECIMAL)2147483648.0;
     }
 
+    /// <summary>
+    /// The 2D grid point's hashed gradient dotted with the offset (xd, yd) from it.
+    /// </summary>
     [MethodImplAttribute(FN_INLINE)]
     private static FN_DECIMAL GradCoord2D(int seed, int x, int y, FN_DECIMAL xd, FN_DECIMAL yd)
     {
@@ -396,6 +576,9 @@ public class FastNoise
         return xd * g.x + yd * g.y;
     }
 
+    /// <summary>
+    /// The 3D grid point's hashed gradient dotted with the offset (xd, yd, zd) from it.
+    /// </summary>
     [MethodImplAttribute(FN_INLINE)]
     private static FN_DECIMAL GradCoord3D(int seed, int x, int y, int z, FN_DECIMAL xd, FN_DECIMAL yd, FN_DECIMAL zd)
     {
@@ -412,6 +595,10 @@ public class FastNoise
         return xd * g.x + yd * g.y + zd * g.z;
     }
 
+    /// <summary>
+    /// The 4D grid point's hashed gradient (three of the offset's components, signed by the hash) for the offset (xd,
+    /// yd, zd, wd) from it.
+    /// </summary>
     [MethodImplAttribute(FN_INLINE)]
     private static FN_DECIMAL GradCoord4D(int seed, int x, int y, int z, int w, FN_DECIMAL xd, FN_DECIMAL yd, FN_DECIMAL zd, FN_DECIMAL wd)
     {
@@ -435,6 +622,10 @@ public class FastNoise
         return ((hash & 4) == 0 ? -a : a) + ((hash & 2) == 0 ? -b : b) + ((hash & 1) == 0 ? -c : c);
     }
 
+    /// <summary>
+    /// The set noise type's noise (3D) at the point scaled by the frequency (fractal types combined as the fractal type
+    /// says, cellular as the return type says); 0 for an unknown type.
+    /// </summary>
     public FN_DECIMAL GetNoise(FN_DECIMAL x, FN_DECIMAL y, FN_DECIMAL z)
     {
         x *= m_frequency;
@@ -516,6 +707,10 @@ public class FastNoise
         }
     }
 
+    /// <summary>
+    /// The set noise type's noise (2D) at the point scaled by the frequency (fractal types combined as the fractal type
+    /// says, cellular as the return type says); 0 for an unknown type.
+    /// </summary>
     public FN_DECIMAL GetNoise(FN_DECIMAL x, FN_DECIMAL y)
     {
         x *= m_frequency;
@@ -597,6 +792,9 @@ public class FastNoise
     }
 
     // White Noise
+    /// <summary>
+    /// A number's bits folded into an int, for white noise.
+    /// </summary>
     [MethodImplAttribute(FN_INLINE)]
     private int FloatCast2Int(FN_DECIMAL f)
     {
@@ -605,6 +803,10 @@ public class FastNoise
         return (int)(i ^ (i >> 32));
     }
 
+    /// <summary>
+    /// White noise (4D), -1..1, from the coordinates' exact bits (not scaled by the frequency): the same point always
+    /// gives the same value.
+    /// </summary>
     public FN_DECIMAL GetWhiteNoise(FN_DECIMAL x, FN_DECIMAL y, FN_DECIMAL z, FN_DECIMAL w)
     {
         int xi = FloatCast2Int(x);
@@ -615,6 +817,10 @@ public class FastNoise
         return ValCoord4D(m_seed, xi, yi, zi, wi);
     }
 
+    /// <summary>
+    /// White noise (3D), -1..1, from the coordinates' exact bits (not scaled by the frequency): the same point always
+    /// gives the same value.
+    /// </summary>
     public FN_DECIMAL GetWhiteNoise(FN_DECIMAL x, FN_DECIMAL y, FN_DECIMAL z)
     {
         int xi = FloatCast2Int(x);
@@ -624,6 +830,10 @@ public class FastNoise
         return ValCoord3D(m_seed, xi, yi, zi);
     }
 
+    /// <summary>
+    /// White noise (2D), -1..1, from the coordinates' exact bits (not scaled by the frequency): the same point always
+    /// gives the same value.
+    /// </summary>
     public FN_DECIMAL GetWhiteNoise(FN_DECIMAL x, FN_DECIMAL y)
     {
         int xi = FloatCast2Int(x);
@@ -632,22 +842,35 @@ public class FastNoise
         return ValCoord2D(m_seed, xi, yi);
     }
 
+    /// <summary>
+    /// White noise (4D), -1..1, for whole coordinates.
+    /// </summary>
     public FN_DECIMAL GetWhiteNoiseInt(int x, int y, int z, int w)
     {
         return ValCoord4D(m_seed, x, y, z, w);
     }
 
+    /// <summary>
+    /// White noise (3D), -1..1, for whole coordinates.
+    /// </summary>
     public FN_DECIMAL GetWhiteNoiseInt(int x, int y, int z)
     {
         return ValCoord3D(m_seed, x, y, z);
     }
 
+    /// <summary>
+    /// White noise (2D), -1..1, for whole coordinates.
+    /// </summary>
     public FN_DECIMAL GetWhiteNoiseInt(int x, int y)
     {
         return ValCoord2D(m_seed, x, y);
     }
 
     // Value Noise
+    /// <summary>
+    /// Value noise in octaves (3D) as the fractal type combines them, at the point scaled by the frequency; 0 for an
+    /// unknown fractal type.
+    /// </summary>
     public FN_DECIMAL GetValueFractal(FN_DECIMAL x, FN_DECIMAL y, FN_DECIMAL z)
     {
         x *= m_frequency;
@@ -667,6 +890,10 @@ public class FastNoise
         }
     }
 
+    /// <summary>
+    /// Fractal Brownian motion of value noise (3D): the octaves summed, each lacunarity times finer, gain times weaker
+    /// and on the next seed, then scaled by the fractal bounding. The point is already scaled by the frequency.
+    /// </summary>
     private FN_DECIMAL SingleValueFractalFBM(FN_DECIMAL x, FN_DECIMAL y, FN_DECIMAL z)
     {
         int seed = m_seed;
@@ -686,6 +913,10 @@ public class FastNoise
         return sum * m_fractalBounding;
     }
 
+    /// <summary>
+    /// Billow fractal of value noise (3D): octaves of |noise| * 2 - 1, each lacunarity times finer, gain times weaker
+    /// and on the next seed, scaled by the fractal bounding. The point is already scaled by the frequency.
+    /// </summary>
     private FN_DECIMAL SingleValueFractalBillow(FN_DECIMAL x, FN_DECIMAL y, FN_DECIMAL z)
     {
         int seed = m_seed;
@@ -705,6 +936,10 @@ public class FastNoise
         return sum * m_fractalBounding;
     }
 
+    /// <summary>
+    /// Rigid multifractal of value noise (3D): 1 - |noise| of the first octave, less that of each finer and weaker
+    /// octave (next seed each); not scaled by the fractal bounding. The point is already scaled by the frequency.
+    /// </summary>
     private FN_DECIMAL SingleValueFractalRigidMulti(FN_DECIMAL x, FN_DECIMAL y, FN_DECIMAL z)
     {
         int seed = m_seed;
@@ -724,11 +959,18 @@ public class FastNoise
         return sum;
     }
 
+    /// <summary>
+    /// One octave of value noise (3D) at the point scaled by the frequency, on this object's seed.
+    /// </summary>
     public FN_DECIMAL GetValue(FN_DECIMAL x, FN_DECIMAL y, FN_DECIMAL z)
     {
         return SingleValue(m_seed, x * m_frequency, y * m_frequency, z * m_frequency);
     }
 
+    /// <summary>
+    /// One octave of value noise (3D) at a point already scaled by the frequency: random values at the grid corners,
+    /// blended by the interpolation.
+    /// </summary>
     private FN_DECIMAL SingleValue(int seed, FN_DECIMAL x, FN_DECIMAL y, FN_DECIMAL z)
     {
         int x0 = FastFloor(x);
@@ -770,6 +1012,10 @@ public class FastNoise
         return Lerp(yf0, yf1, zs);
     }
 
+    /// <summary>
+    /// Value noise in octaves (2D) as the fractal type combines them, at the point scaled by the frequency; 0 for an
+    /// unknown fractal type.
+    /// </summary>
     public FN_DECIMAL GetValueFractal(FN_DECIMAL x, FN_DECIMAL y)
     {
         x *= m_frequency;
@@ -788,6 +1034,10 @@ public class FastNoise
         }
     }
 
+    /// <summary>
+    /// Fractal Brownian motion of value noise (2D): the octaves summed, each lacunarity times finer, gain times weaker
+    /// and on the next seed, then scaled by the fractal bounding. The point is already scaled by the frequency.
+    /// </summary>
     private FN_DECIMAL SingleValueFractalFBM(FN_DECIMAL x, FN_DECIMAL y)
     {
         int seed = m_seed;
@@ -806,6 +1056,10 @@ public class FastNoise
         return sum * m_fractalBounding;
     }
 
+    /// <summary>
+    /// Billow fractal of value noise (2D): octaves of |noise| * 2 - 1, each lacunarity times finer, gain times weaker
+    /// and on the next seed, scaled by the fractal bounding. The point is already scaled by the frequency.
+    /// </summary>
     private FN_DECIMAL SingleValueFractalBillow(FN_DECIMAL x, FN_DECIMAL y)
     {
         int seed = m_seed;
@@ -823,6 +1077,10 @@ public class FastNoise
         return sum * m_fractalBounding;
     }
 
+    /// <summary>
+    /// Rigid multifractal of value noise (2D): 1 - |noise| of the first octave, less that of each finer and weaker
+    /// octave (next seed each); not scaled by the fractal bounding. The point is already scaled by the frequency.
+    /// </summary>
     private FN_DECIMAL SingleValueFractalRigidMulti(FN_DECIMAL x, FN_DECIMAL y)
     {
         int seed = m_seed;
@@ -841,11 +1099,18 @@ public class FastNoise
         return sum;
     }
 
+    /// <summary>
+    /// One octave of value noise (2D) at the point scaled by the frequency, on this object's seed.
+    /// </summary>
     public FN_DECIMAL GetValue(FN_DECIMAL x, FN_DECIMAL y)
     {
         return SingleValue(m_seed, x * m_frequency, y * m_frequency);
     }
 
+    /// <summary>
+    /// One octave of value noise (2D) at a point already scaled by the frequency: random values at the grid corners,
+    /// blended by the interpolation.
+    /// </summary>
     private FN_DECIMAL SingleValue(int seed, FN_DECIMAL x, FN_DECIMAL y)
     {
         int x0 = FastFloor(x);
@@ -878,6 +1143,10 @@ public class FastNoise
     }
 
     // Gradient Noise
+    /// <summary>
+    /// Perlin (gradient) noise in octaves (3D) as the fractal type combines them, at the point scaled by the frequency;
+    /// 0 for an unknown fractal type.
+    /// </summary>
     public FN_DECIMAL GetPerlinFractal(FN_DECIMAL x, FN_DECIMAL y, FN_DECIMAL z)
     {
         x *= m_frequency;
@@ -897,6 +1166,11 @@ public class FastNoise
         }
     }
 
+    /// <summary>
+    /// Fractal Brownian motion of Perlin (gradient) noise (3D): the octaves summed, each lacunarity times finer, gain
+    /// times weaker and on the next seed, then scaled by the fractal bounding. The point is already scaled by the
+    /// frequency.
+    /// </summary>
     private FN_DECIMAL SinglePerlinFractalFBM(FN_DECIMAL x, FN_DECIMAL y, FN_DECIMAL z)
     {
         int seed = m_seed;
@@ -916,6 +1190,10 @@ public class FastNoise
         return sum * m_fractalBounding;
     }
 
+    /// <summary>
+    /// Billow fractal of Perlin (gradient) noise (3D): octaves of |noise| * 2 - 1, each lacunarity times finer, gain
+    /// times weaker and on the next seed, scaled by the fractal bounding. The point is already scaled by the frequency.
+    /// </summary>
     private FN_DECIMAL SinglePerlinFractalBillow(FN_DECIMAL x, FN_DECIMAL y, FN_DECIMAL z)
     {
         int seed = m_seed;
@@ -935,6 +1213,11 @@ public class FastNoise
         return sum * m_fractalBounding;
     }
 
+    /// <summary>
+    /// Rigid multifractal of Perlin (gradient) noise (3D): 1 - |noise| of the first octave, less that of each finer and
+    /// weaker octave (next seed each); not scaled by the fractal bounding. The point is already scaled by the
+    /// frequency.
+    /// </summary>
     private FN_DECIMAL SinglePerlinFractalRigidMulti(FN_DECIMAL x, FN_DECIMAL y, FN_DECIMAL z)
     {
         int seed = m_seed;
@@ -954,11 +1237,18 @@ public class FastNoise
         return sum;
     }
 
+    /// <summary>
+    /// One octave of Perlin (gradient) noise (3D) at the point scaled by the frequency, on this object's seed.
+    /// </summary>
     public FN_DECIMAL GetPerlin(FN_DECIMAL x, FN_DECIMAL y, FN_DECIMAL z)
     {
         return SinglePerlin(m_seed, x * m_frequency, y * m_frequency, z * m_frequency);
     }
 
+    /// <summary>
+    /// One octave of Perlin (gradient) noise (3D) at a point already scaled by the frequency: gradients at the grid
+    /// corners, blended by the interpolation.
+    /// </summary>
     private FN_DECIMAL SinglePerlin(int seed, FN_DECIMAL x, FN_DECIMAL y, FN_DECIMAL z)
     {
         int x0 = FastFloor(x);
@@ -1007,6 +1297,10 @@ public class FastNoise
         return Lerp(yf0, yf1, zs);
     }
 
+    /// <summary>
+    /// Perlin (gradient) noise in octaves (2D) as the fractal type combines them, at the point scaled by the frequency;
+    /// 0 for an unknown fractal type.
+    /// </summary>
     public FN_DECIMAL GetPerlinFractal(FN_DECIMAL x, FN_DECIMAL y)
     {
         x *= m_frequency;
@@ -1025,6 +1319,11 @@ public class FastNoise
         }
     }
 
+    /// <summary>
+    /// Fractal Brownian motion of Perlin (gradient) noise (2D): the octaves summed, each lacunarity times finer, gain
+    /// times weaker and on the next seed, then scaled by the fractal bounding. The point is already scaled by the
+    /// frequency.
+    /// </summary>
     private FN_DECIMAL SinglePerlinFractalFBM(FN_DECIMAL x, FN_DECIMAL y)
     {
         int seed = m_seed;
@@ -1043,6 +1342,10 @@ public class FastNoise
         return sum * m_fractalBounding;
     }
 
+    /// <summary>
+    /// Billow fractal of Perlin (gradient) noise (2D): octaves of |noise| * 2 - 1, each lacunarity times finer, gain
+    /// times weaker and on the next seed, scaled by the fractal bounding. The point is already scaled by the frequency.
+    /// </summary>
     private FN_DECIMAL SinglePerlinFractalBillow(FN_DECIMAL x, FN_DECIMAL y)
     {
         int seed = m_seed;
@@ -1061,6 +1364,11 @@ public class FastNoise
         return sum * m_fractalBounding;
     }
 
+    /// <summary>
+    /// Rigid multifractal of Perlin (gradient) noise (2D): 1 - |noise| of the first octave, less that of each finer and
+    /// weaker octave (next seed each); not scaled by the fractal bounding. The point is already scaled by the
+    /// frequency.
+    /// </summary>
     private FN_DECIMAL SinglePerlinFractalRigidMulti(FN_DECIMAL x, FN_DECIMAL y)
     {
         int seed = m_seed;
@@ -1079,11 +1387,18 @@ public class FastNoise
         return sum;
     }
 
+    /// <summary>
+    /// One octave of Perlin (gradient) noise (2D) at the point scaled by the frequency, on this object's seed.
+    /// </summary>
     public FN_DECIMAL GetPerlin(FN_DECIMAL x, FN_DECIMAL y)
     {
         return SinglePerlin(m_seed, x * m_frequency, y * m_frequency);
     }
 
+    /// <summary>
+    /// One octave of Perlin (gradient) noise (2D) at a point already scaled by the frequency: gradients at the grid
+    /// corners, blended by the interpolation.
+    /// </summary>
     private FN_DECIMAL SinglePerlin(int seed, FN_DECIMAL x, FN_DECIMAL y)
     {
         int x0 = FastFloor(x);
@@ -1121,6 +1436,10 @@ public class FastNoise
     }
 
     // Simplex Noise
+    /// <summary>
+    /// Simplex noise in octaves (3D) as the fractal type combines them, at the point scaled by the frequency; 0 for an
+    /// unknown fractal type.
+    /// </summary>
     public FN_DECIMAL GetSimplexFractal(FN_DECIMAL x, FN_DECIMAL y, FN_DECIMAL z)
     {
         x *= m_frequency;
@@ -1140,6 +1459,10 @@ public class FastNoise
         }
     }
 
+    /// <summary>
+    /// Fractal Brownian motion of simplex noise (3D): the octaves summed, each lacunarity times finer, gain times
+    /// weaker and on the next seed, then scaled by the fractal bounding. The point is already scaled by the frequency.
+    /// </summary>
     private FN_DECIMAL SingleSimplexFractalFBM(FN_DECIMAL x, FN_DECIMAL y, FN_DECIMAL z)
     {
         int seed = m_seed;
@@ -1159,6 +1482,10 @@ public class FastNoise
         return sum * m_fractalBounding;
     }
 
+    /// <summary>
+    /// Billow fractal of simplex noise (3D): octaves of |noise| * 2 - 1, each lacunarity times finer, gain times weaker
+    /// and on the next seed, scaled by the fractal bounding. The point is already scaled by the frequency.
+    /// </summary>
     private FN_DECIMAL SingleSimplexFractalBillow(FN_DECIMAL x, FN_DECIMAL y, FN_DECIMAL z)
     {
         int seed = m_seed;
@@ -1178,6 +1505,10 @@ public class FastNoise
         return sum * m_fractalBounding;
     }
 
+    /// <summary>
+    /// Rigid multifractal of simplex noise (3D): 1 - |noise| of the first octave, less that of each finer and weaker
+    /// octave (next seed each); not scaled by the fractal bounding. The point is already scaled by the frequency.
+    /// </summary>
     private FN_DECIMAL SingleSimplexFractalRigidMulti(FN_DECIMAL x, FN_DECIMAL y, FN_DECIMAL z)
     {
         int seed = m_seed;
@@ -1197,15 +1528,31 @@ public class FastNoise
         return sum;
     }
 
+    /// <summary>
+    /// One octave of simplex noise (3D) at the point scaled by the frequency, on this object's seed.
+    /// </summary>
     public FN_DECIMAL GetSimplex(FN_DECIMAL x, FN_DECIMAL y, FN_DECIMAL z)
     {
         return SingleSimplex(m_seed, x * m_frequency, y * m_frequency, z * m_frequency);
     }
 
+    /// <summary>
+    /// 3D simplex skew factor.
+    /// </summary>
     private const FN_DECIMAL F3 = (FN_DECIMAL)(1.0 / 3.0);
+    /// <summary>
+    /// 3D simplex unskew factor.
+    /// </summary>
     private const FN_DECIMAL G3 = (FN_DECIMAL)(1.0 / 6.0);
+    /// <summary>
+    /// 3D simplex unskew of the far corner (3 G3 - 1).
+    /// </summary>
     private const FN_DECIMAL G33 = G3 * 3 - 1;
 
+    /// <summary>
+    /// One octave of simplex noise (3D) at a point already scaled by the frequency: gradients at the simplex's corners,
+    /// summed with falloff.
+    /// </summary>
     private FN_DECIMAL SingleSimplex(int seed, FN_DECIMAL x, FN_DECIMAL y, FN_DECIMAL z)
     {
         FN_DECIMAL t = (x + y + z) * F3;
@@ -1299,6 +1646,10 @@ public class FastNoise
         return 32 * (n0 + n1 + n2 + n3);
     }
 
+    /// <summary>
+    /// Simplex noise in octaves (2D) as the fractal type combines them, at the point scaled by the frequency; 0 for an
+    /// unknown fractal type.
+    /// </summary>
     public FN_DECIMAL GetSimplexFractal(FN_DECIMAL x, FN_DECIMAL y)
     {
         x *= m_frequency;
@@ -1317,6 +1668,10 @@ public class FastNoise
         }
     }
 
+    /// <summary>
+    /// Fractal Brownian motion of simplex noise (2D): the octaves summed, each lacunarity times finer, gain times
+    /// weaker and on the next seed, then scaled by the fractal bounding. The point is already scaled by the frequency.
+    /// </summary>
     private FN_DECIMAL SingleSimplexFractalFBM(FN_DECIMAL x, FN_DECIMAL y)
     {
         int seed = m_seed;
@@ -1335,6 +1690,10 @@ public class FastNoise
         return sum * m_fractalBounding;
     }
 
+    /// <summary>
+    /// Billow fractal of simplex noise (2D): octaves of |noise| * 2 - 1, each lacunarity times finer, gain times weaker
+    /// and on the next seed, scaled by the fractal bounding. The point is already scaled by the frequency.
+    /// </summary>
     private FN_DECIMAL SingleSimplexFractalBillow(FN_DECIMAL x, FN_DECIMAL y)
     {
         int seed = m_seed;
@@ -1353,6 +1712,10 @@ public class FastNoise
         return sum * m_fractalBounding;
     }
 
+    /// <summary>
+    /// Rigid multifractal of simplex noise (2D): 1 - |noise| of the first octave, less that of each finer and weaker
+    /// octave (next seed each); not scaled by the fractal bounding. The point is already scaled by the frequency.
+    /// </summary>
     private FN_DECIMAL SingleSimplexFractalRigidMulti(FN_DECIMAL x, FN_DECIMAL y)
     {
         int seed = m_seed;
@@ -1371,6 +1734,9 @@ public class FastNoise
         return sum;
     }
 
+    /// <summary>
+    /// One octave of simplex noise (2D) at the point scaled by the frequency, on this object's seed.
+    /// </summary>
     public FN_DECIMAL GetSimplex(FN_DECIMAL x, FN_DECIMAL y)
     {
         return SingleSimplex(m_seed, x * m_frequency, y * m_frequency);
@@ -1379,10 +1745,23 @@ public class FastNoise
     //private const FN_DECIMAL F2 = (FN_DECIMAL)(1.0 / 2.0);
     //private const FN_DECIMAL G2 = (FN_DECIMAL)(1.0 / 4.0);
 
+    /// <summary>
+    /// The square root of 3.
+    /// </summary>
     private const FN_DECIMAL SQRT3 = (FN_DECIMAL)1.7320508075688772935274463415059;
+    /// <summary>
+    /// 2D simplex skew factor.
+    /// </summary>
     private const FN_DECIMAL F2 = (FN_DECIMAL)0.5 * (SQRT3 - (FN_DECIMAL)1.0);
+    /// <summary>
+    /// 2D simplex unskew factor.
+    /// </summary>
     private const FN_DECIMAL G2 = ((FN_DECIMAL)3.0 - SQRT3) / (FN_DECIMAL)6.0;
 
+    /// <summary>
+    /// One octave of simplex noise (2D) at a point already scaled by the frequency: gradients at the simplex's corners,
+    /// summed with falloff.
+    /// </summary>
     private FN_DECIMAL SingleSimplex(int seed, FN_DECIMAL x, FN_DECIMAL y)
     {
         FN_DECIMAL t = (x + y) * F2;
@@ -1440,11 +1819,17 @@ public class FastNoise
         return 50 * (n0 + n1 + n2);
     }
 
+    /// <summary>
+    /// One octave of simplex noise (4D) at the point scaled by the frequency, on this object's seed.
+    /// </summary>
     public FN_DECIMAL GetSimplex(FN_DECIMAL x, FN_DECIMAL y, FN_DECIMAL z, FN_DECIMAL w)
     {
         return SingleSimplex(m_seed, x * m_frequency, y * m_frequency, z * m_frequency, w * m_frequency);
     }
 
+    /// <summary>
+    /// 4D simplex lookup: the order the corners are visited in, by how the coordinates rank.
+    /// </summary>
     private static readonly byte[] SIMPLEX_4D =
     {
         0,1,2,3,0,1,3,2,0,0,0,0,0,2,3,1,0,0,0,0,0,0,0,0,0,0,0,0,1,2,3,0,
@@ -1457,9 +1842,19 @@ public class FastNoise
         2,1,0,3,0,0,0,0,0,0,0,0,0,0,0,0,3,1,0,2,0,0,0,0,3,2,0,1,3,2,1,0
     };
 
+    /// <summary>
+    /// 4D simplex skew factor.
+    /// </summary>
     private const FN_DECIMAL F4 = (FN_DECIMAL)((2.23606797 - 1.0) / 4.0);
+    /// <summary>
+    /// 4D simplex unskew factor.
+    /// </summary>
     private const FN_DECIMAL G4 = (FN_DECIMAL)((5.0 - 2.23606797) / 20.0);
 
+    /// <summary>
+    /// One octave of simplex noise (4D) at a point already scaled by the frequency: gradients at the simplex's corners,
+    /// summed with falloff.
+    /// </summary>
     private FN_DECIMAL SingleSimplex(int seed, FN_DECIMAL x, FN_DECIMAL y, FN_DECIMAL z, FN_DECIMAL w)
     {
         FN_DECIMAL n0, n1, n2, n3, n4;
@@ -1556,6 +1951,10 @@ public class FastNoise
     }
 
     // Cubic Noise
+    /// <summary>
+    /// Cubic noise in octaves (3D) as the fractal type combines them, at the point scaled by the frequency; 0 for an
+    /// unknown fractal type.
+    /// </summary>
     public FN_DECIMAL GetCubicFractal(FN_DECIMAL x, FN_DECIMAL y, FN_DECIMAL z)
     {
         x *= m_frequency;
@@ -1575,6 +1974,10 @@ public class FastNoise
         }
     }
 
+    /// <summary>
+    /// Fractal Brownian motion of cubic noise (3D): the octaves summed, each lacunarity times finer, gain times weaker
+    /// and on the next seed, then scaled by the fractal bounding. The point is already scaled by the frequency.
+    /// </summary>
     private FN_DECIMAL SingleCubicFractalFBM(FN_DECIMAL x, FN_DECIMAL y, FN_DECIMAL z)
     {
         int seed = m_seed;
@@ -1595,6 +1998,10 @@ public class FastNoise
         return sum * m_fractalBounding;
     }
 
+    /// <summary>
+    /// Billow fractal of cubic noise (3D): octaves of |noise| * 2 - 1, each lacunarity times finer, gain times weaker
+    /// and on the next seed, scaled by the fractal bounding. The point is already scaled by the frequency.
+    /// </summary>
     private FN_DECIMAL SingleCubicFractalBillow(FN_DECIMAL x, FN_DECIMAL y, FN_DECIMAL z)
     {
         int seed = m_seed;
@@ -1615,6 +2022,10 @@ public class FastNoise
         return sum * m_fractalBounding;
     }
 
+    /// <summary>
+    /// Rigid multifractal of cubic noise (3D): 1 - |noise| of the first octave, less that of each finer and weaker
+    /// octave (next seed each); not scaled by the fractal bounding. The point is already scaled by the frequency.
+    /// </summary>
     private FN_DECIMAL SingleCubicFractalRigidMulti(FN_DECIMAL x, FN_DECIMAL y, FN_DECIMAL z)
     {
         int seed = m_seed;
@@ -1635,13 +2046,23 @@ public class FastNoise
         return sum;
     }
 
+    /// <summary>
+    /// One octave of cubic noise (3D) at the point scaled by the frequency, on this object's seed.
+    /// </summary>
     public FN_DECIMAL GetCubic(FN_DECIMAL x, FN_DECIMAL y, FN_DECIMAL z)
     {
         return SingleCubic(m_seed, x * m_frequency, y * m_frequency, z * m_frequency);
     }
 
+    /// <summary>
+    /// Scales 3D cubic noise to about -1..1.
+    /// </summary>
     private const FN_DECIMAL CUBIC_3D_BOUNDING = 1 / (FN_DECIMAL)(1.5 * 1.5 * 1.5);
 
+    /// <summary>
+    /// One octave of cubic noise (3D) at a point already scaled by the frequency: random values at the 4 nearest grid
+    /// lines each way, blended by cubic interpolation.
+    /// </summary>
     private FN_DECIMAL SingleCubic(int seed, FN_DECIMAL x, FN_DECIMAL y, FN_DECIMAL z)
     {
         int x1 = FastFloor(x);
@@ -1691,6 +2112,10 @@ public class FastNoise
     }
 
 
+    /// <summary>
+    /// Cubic noise in octaves (2D) as the fractal type combines them, at the point scaled by the frequency; 0 for an
+    /// unknown fractal type.
+    /// </summary>
     public FN_DECIMAL GetCubicFractal(FN_DECIMAL x, FN_DECIMAL y)
     {
         x *= m_frequency;
@@ -1709,6 +2134,10 @@ public class FastNoise
         }
     }
 
+    /// <summary>
+    /// Fractal Brownian motion of cubic noise (2D): the octaves summed, each lacunarity times finer, gain times weaker
+    /// and on the next seed, then scaled by the fractal bounding. The point is already scaled by the frequency.
+    /// </summary>
     private FN_DECIMAL SingleCubicFractalFBM(FN_DECIMAL x, FN_DECIMAL y)
     {
         int seed = m_seed;
@@ -1728,6 +2157,10 @@ public class FastNoise
         return sum * m_fractalBounding;
     }
 
+    /// <summary>
+    /// Billow fractal of cubic noise (2D): octaves of |noise| * 2 - 1, each lacunarity times finer, gain times weaker
+    /// and on the next seed, scaled by the fractal bounding. The point is already scaled by the frequency.
+    /// </summary>
     private FN_DECIMAL SingleCubicFractalBillow(FN_DECIMAL x, FN_DECIMAL y)
     {
         int seed = m_seed;
@@ -1747,6 +2180,10 @@ public class FastNoise
         return sum * m_fractalBounding;
     }
 
+    /// <summary>
+    /// Rigid multifractal of cubic noise (2D): 1 - |noise| of the first octave, less that of each finer and weaker
+    /// octave (next seed each); not scaled by the fractal bounding. The point is already scaled by the frequency.
+    /// </summary>
     private FN_DECIMAL SingleCubicFractalRigidMulti(FN_DECIMAL x, FN_DECIMAL y)
     {
         int seed = m_seed;
@@ -1766,6 +2203,9 @@ public class FastNoise
         return sum;
     }
 
+    /// <summary>
+    /// One octave of cubic noise (2D) at the point scaled by the frequency, on this object's seed.
+    /// </summary>
     public FN_DECIMAL GetCubic(FN_DECIMAL x, FN_DECIMAL y)
     {
         x *= m_frequency;
@@ -1774,8 +2214,15 @@ public class FastNoise
         return SingleCubic(m_seed, x, y);
     }
 
+    /// <summary>
+    /// Scales 2D cubic noise to about -1..1.
+    /// </summary>
     private const FN_DECIMAL CUBIC_2D_BOUNDING = 1 / (FN_DECIMAL)(1.5 * 1.5);
 
+    /// <summary>
+    /// One octave of cubic noise (2D) at a point already scaled by the frequency: random values at the 4 nearest grid
+    /// lines each way, blended by cubic interpolation.
+    /// </summary>
     private FN_DECIMAL SingleCubic(int seed, FN_DECIMAL x, FN_DECIMAL y)
     {
         int x1 = FastFloor(x);
@@ -1804,6 +2251,9 @@ public class FastNoise
     }
 
     // Cellular Noise
+    /// <summary>
+    /// Cellular noise (3D) at the point scaled by the frequency, as the cellular return type says.
+    /// </summary>
     public FN_DECIMAL GetCellular(FN_DECIMAL x, FN_DECIMAL y, FN_DECIMAL z)
     {
         x *= m_frequency;
@@ -1821,6 +2271,11 @@ public class FastNoise
         }
     }
 
+    /// <summary>
+    /// Cellular noise (3D) for the CellValue, NoiseLookup and Distance return types: the nearest jittered cell point's
+    /// random value, the lookup noise there, or the distance to it (by the distance function); 0 for other types. The
+    /// point is already scaled by the frequency.
+    /// </summary>
     private FN_DECIMAL SingleCellular(FN_DECIMAL x, FN_DECIMAL y, FN_DECIMAL z)
     {
         int xr = FastRound(x);
@@ -1928,6 +2383,10 @@ public class FastNoise
         }
     }
 
+    /// <summary>
+    /// Cellular noise (3D) for the Distance2 return types: the distances to the nearest cell points at the two distance
+    /// indices, combined as the return type says. The point is already scaled by the frequency.
+    /// </summary>
     private FN_DECIMAL SingleCellular2Edge(FN_DECIMAL x, FN_DECIMAL y, FN_DECIMAL z)
     {
         int xr = FastRound(x);
@@ -2025,6 +2484,9 @@ public class FastNoise
         }
     }
 
+    /// <summary>
+    /// Cellular noise (2D) at the point scaled by the frequency, as the cellular return type says.
+    /// </summary>
     public FN_DECIMAL GetCellular(FN_DECIMAL x, FN_DECIMAL y)
     {
         x *= m_frequency;
@@ -2041,6 +2503,11 @@ public class FastNoise
         }
     }
 
+    /// <summary>
+    /// Cellular noise (2D) for the CellValue, NoiseLookup and Distance return types: the nearest jittered cell point's
+    /// random value, the lookup noise there, or the distance to it (by the distance function); 0 for other types. The
+    /// point is already scaled by the frequency.
+    /// </summary>
     private FN_DECIMAL SingleCellular(FN_DECIMAL x, FN_DECIMAL y)
     {
         int xr = FastRound(x);
@@ -2133,6 +2600,10 @@ public class FastNoise
         }
     }
 
+    /// <summary>
+    /// Cellular noise (2D) for the Distance2 return types: the distances to the nearest cell points at the two distance
+    /// indices, combined as the return type says. The point is already scaled by the frequency.
+    /// </summary>
     private FN_DECIMAL SingleCellular2Edge(FN_DECIMAL x, FN_DECIMAL y)
     {
         int xr = FastRound(x);
@@ -2216,11 +2687,19 @@ public class FastNoise
         }
     }
 
+    /// <summary>
+    /// Moves the point (3D, in place) by one octave of gradient noise, up to about the perturb amplitude, at the
+    /// frequency.
+    /// </summary>
     public void GradientPerturb(ref FN_DECIMAL x, ref FN_DECIMAL y, ref FN_DECIMAL z)
     {
         SingleGradientPerturb(m_seed, m_gradientPerturbAmp, m_frequency, ref x, ref y, ref z);
     }
 
+    /// <summary>
+    /// Moves the point (3D, in place) by octaves of gradient noise: each lacunarity times finer, gain times weaker and
+    /// on the next seed, the amplitudes scaled by the fractal bounding.
+    /// </summary>
     public void GradientPerturbFractal(ref FN_DECIMAL x, ref FN_DECIMAL y, ref FN_DECIMAL z)
     {
         int seed = m_seed;
@@ -2237,6 +2716,10 @@ public class FastNoise
         }
     }
 
+    /// <summary>
+    /// Moves the point (3D, in place) by one octave of gradient noise: cell vectors at the grid corners, blended by the
+    /// interpolation, times the amplitude.
+    /// </summary>
     private void SingleGradientPerturb(int seed, FN_DECIMAL perturbAmp, FN_DECIMAL frequency, ref FN_DECIMAL x, ref FN_DECIMAL y, ref FN_DECIMAL z)
     {
         FN_DECIMAL xf = x * frequency;
@@ -2308,11 +2791,19 @@ public class FastNoise
         z += Lerp(lz0y, Lerp(lz0x, lz1x, ys), zs) * perturbAmp;
     }
 
+    /// <summary>
+    /// Moves the point (2D, in place) by one octave of gradient noise, up to about the perturb amplitude, at the
+    /// frequency.
+    /// </summary>
     public void GradientPerturb(ref FN_DECIMAL x, ref FN_DECIMAL y)
     {
         SingleGradientPerturb(m_seed, m_gradientPerturbAmp, m_frequency, ref x, ref y);
     }
 
+    /// <summary>
+    /// Moves the point (2D, in place) by octaves of gradient noise: each lacunarity times finer, gain times weaker and
+    /// on the next seed, the amplitudes scaled by the fractal bounding.
+    /// </summary>
     public void GradientPerturbFractal(ref FN_DECIMAL x, ref FN_DECIMAL y)
     {
         int seed = m_seed;
@@ -2329,6 +2820,10 @@ public class FastNoise
         }
     }
 
+    /// <summary>
+    /// Moves the point (2D, in place) by one octave of gradient noise: cell vectors at the grid corners, blended by the
+    /// interpolation, times the amplitude.
+    /// </summary>
     private void SingleGradientPerturb(int seed, FN_DECIMAL perturbAmp, FN_DECIMAL frequency, ref FN_DECIMAL x, ref FN_DECIMAL y)
     {
         FN_DECIMAL xf = x * frequency;

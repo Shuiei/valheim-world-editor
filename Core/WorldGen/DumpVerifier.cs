@@ -3,28 +3,64 @@ using Rnd = ValheimGen.UnityEngine.Random;
 
 namespace ValheimGen;
 
-// Compares the offline generator with ground truth recorded in the real game by the TerrainDump
-// client plugin (BepInEx/TerrainDump.txt). Every value is compared bit-for-bit.
+/// <summary>
+/// Compares the offline generator with ground truth recorded in the real game by the TerrainDump
+/// client plugin (BepInEx/TerrainDump.txt). Every value is compared bit-for-bit.
+/// </summary>
 public static class DumpVerifier
 {
-    // What was compared and how much matched; Errors: the first mismatches, described.
+    /// <summary>
+    /// What was compared and how much matched.
+    /// </summary>
+    /// <param name="RandomOk">Random calls (value and state after) that matched.</param>
+    /// <param name="RandomWrong">Random calls that did not.</param>
+    /// <param name="PerlinOk">Perlin noise samples that matched.</param>
+    /// <param name="PerlinWrong">Perlin noise samples that did not.</param>
+    /// <param name="HeightsOk">Point heights that matched.</param>
+    /// <param name="HeightsWrong">Point heights that did not.</param>
+    /// <param name="BiomesWrong">Points whose biome did not match.</param>
+    /// <param name="ZonesOk">Zones whose every base height matched.</param>
+    /// <param name="ZonesWrong">Zones with any height that did not.</param>
+    /// <param name="WaterWrong">Lake, river and stream count lines that did not match.</param>
+    /// <param name="Errors">The first mismatches (at most 25), described.</param>
     public sealed record Result(int RandomOk, int RandomWrong, int PerlinOk, int PerlinWrong, int HeightsOk, int HeightsWrong, int BiomesWrong, int ZonesOk, int ZonesWrong, int WaterWrong, List<string> Errors)
     {
-        // The largest differences in metres (heights, and heights inside zones).
+        /// <summary>
+        /// The largest point height difference, metres.
+        /// </summary>
         public double HeightMaxDiff { get; init; }
+        /// <summary>
+        /// The largest height difference inside zones, metres.
+        /// </summary>
         public double ZoneMaxDiff { get; init; }
 
+        /// <summary>
+        /// Whether nothing was wrong.
+        /// </summary>
         public bool AllMatch => RandomWrong + PerlinWrong + HeightsWrong + BiomesWrong + ZonesWrong + WaterWrong == 0;
     }
 
+    /// <summary>
+    /// A float from its bits as hex, as the dump writes them.
+    /// </summary>
     private static float F(string hex) => BitConverter.Int32BitsToSingle(int.Parse(hex, NumberStyles.HexNumber, CultureInfo.InvariantCulture));
 
+    /// <summary>
+    /// The random state as the dump writes it (four words in hex).
+    /// </summary>
     private static string State()
     {
         var s = Rnd.state;
         return $"{s.s0:x8} {s.s1:x8} {s.s2:x8} {s.s3:x8}";
     }
 
+    /// <summary>
+    /// Replays a dump file and compares each line, printing a summary to the console. Lines: "R" Random calls with
+    /// the state after, "P" Perlin samples, "W" lake, river and stream counts, "H" point biome and height, "Z" a
+    /// zone's base heights; others are skipped.
+    /// </summary>
+    /// <param name="path">The dump file.</param>
+    /// <param name="seedName">The world's seed name, for the lines that need a generator.</param>
     public static Result Run(string path, string seedName)
     {
         string[] lines = File.ReadAllLines(path);
@@ -175,6 +211,9 @@ public static class DumpVerifier
         return new Result(rOk, rBad, pOk, pBad, hOk, hBad, bBad, zOk, zBad, wBad, firstErrors) { HeightMaxDiff = hMax, ZoneMaxDiff = zMax };
     }
 
+    /// <summary>
+    /// A generator for a seed name (world gen version 2), timed on the console.
+    /// </summary>
     private static WorldGenerator Init(string seedName)
     {
         var watch = System.Diagnostics.Stopwatch.StartNew();
@@ -185,14 +224,30 @@ public static class DumpVerifier
     }
 }
 
-// Base (unmodified) terrain heights for one zone, exactly as HeightmapBuilder.Build computes them.
+/// <summary>
+/// Base (unmodified) terrain heights for one zone, exactly as HeightmapBuilder.Build computes them.
+/// </summary>
 public static class BaseTerrain
 {
+    /// <summary>
+    /// Metres per zone side; a zone has Width + 1 vertices per side.
+    /// </summary>
     public const int Width = 64;
 
+    /// <summary>
+    /// The 65x65 vertex heights of zone (zx, zz), row by row (row is z), starting at the zone's corner (its
+    /// centre less 32 m on each axis).
+    /// </summary>
     public static float[] BuildZone(WorldGenerator gen, int zx, int zz) => BuildZone(gen, zx, zz, null);
 
-    // mask: optional 65x65 RGBA base paint mask (Heightmap m_baseMask), as GetBiomeHeight reports it.
+    /// <summary>
+    /// The same, also filling a base paint mask.
+    /// </summary>
+    /// <param name="gen">The world's generator.</param>
+    /// <param name="zx">Zone x.</param>
+    /// <param name="zz">Zone z.</param>
+    /// <param name="mask">Optional 65x65 RGBA base paint mask (Heightmap m_baseMask), as GetBiomeHeight reports it,
+    /// filled in place (4 floats per vertex).</param>
     public static float[] BuildZone(WorldGenerator gen, int zx, int zz, float[]? mask)
     {
         const float Scale = 1f;
@@ -239,6 +294,9 @@ public static class BaseTerrain
         return heights;
     }
 
+    /// <summary>
+    /// a to b by t, held to 0..1, per channel.
+    /// </summary>
     private static Color Lerp(Color a, Color b, float t)
     {
         t = Math.Clamp(t, 0f, 1f);

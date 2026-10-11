@@ -4,50 +4,111 @@ using TerrainEditor.Save;
 
 namespace TerrainEditor.Terrain;
 
-// Runtime terrain modifiers (TerrainModifier components) that the game applies to every zone's
-// heightmap before the saved terrain edits: the flattening around locations, plus a few network
-// prefabs. Their settings are read from the player's own Valheim (GameData; the tests use
-// tests/fixtures/terrain-modifiers.json): the editor keeps no copy, which would go out of date.
-// Placement comes from the world save. The maths mirrors Heightmap.ApplyModifiers.
+/// <summary>
+/// Runtime terrain modifiers (TerrainModifier components) that the game applies to every zone's
+/// heightmap before the saved terrain edits: the flattening around locations, plus a few network
+/// prefabs. Their settings are read from the player's own Valheim (GameData; the tests use
+/// tests/fixtures/terrain-modifiers.json): the editor keeps no copy, which would go out of date.
+/// Placement comes from the world save. The maths mirrors Heightmap.ApplyModifiers.
+/// </summary>
 public sealed class TerrainModifiers
 {
+    /// <summary>
+    /// One modifier placed in the world (a TerrainModifier's settings at its world position).
+    /// </summary>
+    /// <param name="Position">World position, metres.</param>
+    /// <param name="Level">Whether it levels the ground to its height.</param>
+    /// <param name="LevelOffset">Height above <paramref name="Position"/> it levels and smooths to.</param>
+    /// <param name="LevelRadius">Radius it levels, metres.</param>
+    /// <param name="Square">Whether the levelled area is a square rather than a disc.</param>
+    /// <param name="Smooth">Whether it blends the ground towards its height.</param>
+    /// <param name="SmoothRadius">Radius it blends, metres.</param>
+    /// <param name="SmoothPower">How the blend falls off towards the edge (exponent of the distance as a share of the radius).</param>
+    /// <param name="PaintCleared">Whether it paints the ground cleared.</param>
+    /// <param name="PaintRadius">Radius it paints, metres.</param>
+    /// <param name="SortOrder">The game's order among modifiers of the same kind.</param>
+    /// <param name="Player">A player-made modifier: applied after the others, its levelling held to the ground ±8 m
+    /// and its smoothing to the levelled ground ±1 m.</param>
+    /// <param name="CreationTime">The object's creation time (0 for locations), which orders modifiers of the same
+    /// sort order.</param>
+    /// <param name="Disc">One of the editor's own ground discs for No limit ground (Uplift).</param>
     public sealed record Modifier(
         Vector3 Position, bool Level, float LevelOffset, float LevelRadius, bool Square, bool Smooth, float SmoothRadius, float SmoothPower,
         bool PaintCleared, float PaintRadius, int SortOrder, bool Player, long CreationTime, bool Disc = false)
     {
-        // TerrainModifier.GetRadius.
+        /// <summary>
+        /// The largest radius of what it does (TerrainModifier.GetRadius).
+        /// </summary>
         public float Radius => Math.Max(Level ? LevelRadius : 0f, Math.Max(Smooth ? SmoothRadius : 0f, PaintCleared ? PaintRadius : 0f));
     }
 
+    /// <summary>
+    /// A modifier as a prefab has it, before it is placed: the same settings as <see cref="Modifier"/>.
+    /// </summary>
+    /// <param name="Offset">Position in the prefab's own frame.</param>
+    /// <param name="Level">Whether it levels.</param>
+    /// <param name="LevelOffset">Height offset it levels to.</param>
+    /// <param name="LevelRadius">Radius it levels.</param>
+    /// <param name="Square">Square levelled area.</param>
+    /// <param name="Smooth">Whether it smooths.</param>
+    /// <param name="SmoothRadius">Radius it smooths.</param>
+    /// <param name="SmoothPower">Smoothing falloff exponent.</param>
+    /// <param name="PaintCleared">Whether it paints cleared ground.</param>
+    /// <param name="PaintRadius">Radius it paints.</param>
+    /// <param name="SortOrder">The game's sort order.</param>
+    /// <param name="Player">A player-made modifier.</param>
     private sealed record Template(Vector3 Offset, bool Level, float LevelOffset, float LevelRadius, bool Square, bool Smooth, float SmoothRadius, float SmoothPower, bool PaintCleared, float PaintRadius, int SortOrder, bool Player);
 
-    // None until Use: no world opens before then (GameData).
+    /// <summary>
+    /// Prefabs and locations with modifiers by name hash. None until Use: no world opens before then (GameData).
+    /// </summary>
     private static volatile Dictionary<int, (string Name, bool Location, List<Template> Mods)> _prefabs = [];
 
-    // Whether the game's modifiers are known (Use was given them).
+    /// <summary>
+    /// Whether the game's modifiers are known (Use was given them).
+    /// </summary>
     public static bool Loaded { get; private set; }
 
-    // The modifiers of the game's prefabs, as terrain-modifiers.json has them (name -> location flag
-    // and modifiers): from the game (GameData) or the tests' copy.
+    /// <summary>
+    /// The modifiers of the game's prefabs, as terrain-modifiers.json has them (name -&gt; location flag
+    /// and modifiers): from the game (GameData) or the tests' copy.
+    /// </summary>
     public static void Use(string json)
     {
         _prefabs = Parse(json);
         Loaded = true;
     }
 
+    /// <summary>
+    /// Hashes of the network prefabs (not locations) that carry modifiers, so the save reader keeps their objects.
+    /// </summary>
     public static IEnumerable<int> NetworkPrefabHashes => _prefabs.Where(p => !p.Value.Location).Select(p => p.Key);
 
+    /// <summary>
+    /// The modifiers touching each zone, in the order the game applies them.
+    /// </summary>
     private readonly Dictionary<(int, int), List<Modifier>> _byZone = [];
 
+    /// <summary>
+    /// How many modifiers were placed in all.
+    /// </summary>
     public int Count { get; }
 
+    /// <summary>
+    /// How many placed locations carry modifiers.
+    /// </summary>
     public int LocationsWithModifiers { get; }
 
+    /// <summary>
+    /// The modifiers of a world's placed locations and objects.
+    /// </summary>
     public TerrainModifiers(WorldSave world) : this(world.Placed)
     {
     }
 
-    // From any set of placed objects (Uplift: the world's with ground discs added or taken away).
+    /// <summary>
+    /// From any set of placed objects (Uplift: the world's with ground discs added or taken away).
+    /// </summary>
     public TerrainModifiers(IEnumerable<PlacedObject> placed)
     {
         List<Modifier> all = [];
@@ -111,10 +172,19 @@ public sealed class TerrainModifiers
         Count = all.Count;
     }
 
+    /// <summary>
+    /// The modifiers that touch zone (zx, zz), in the order the game applies them; empty when none.
+    /// </summary>
     public IReadOnlyList<Modifier> InZone(int zx, int zz) => _byZone.TryGetValue((zx, zz), out var list) ? list : Array.Empty<Modifier>();
 
+    /// <summary>
+    /// Degrees to radians.
+    /// </summary>
     private static float Deg(float d) => d * (MathF.PI / 180f);
 
+    /// <summary>
+    /// Heightmap.TerrainVSModifier: whether the modifier's radius + 4 m reaches the zone's square.
+    /// </summary>
     private static bool Overlaps(Modifier m, int zx, int zz)
     {
         float num = m.Radius + 4f;
@@ -122,8 +192,11 @@ public sealed class TerrainModifiers
         return !(m.Position.X + num < cx - half || m.Position.X - num > cx + half || m.Position.Z + num < cz - half || m.Position.Z - num > cz + half);
     }
 
-    // Applies the zone's modifiers to its 65x65 base heights (in place). Returns the heights the
-    // saved edits are clamped against (TerrainComp.ApplyToHeightmap's baseHeights).
+    /// <summary>
+    /// Applies the zone's modifiers to its 65x65 base heights (in place). Returns the heights the
+    /// saved edits are clamped against (TerrainComp.ApplyToHeightmap's baseHeights).
+    /// </summary>
+    /// <returns>The heights before the first player-made modifier; a copy of the result when there is none.</returns>
     public float[] Apply(int zx, int zz, float[] heights)
     {
         float[]? baseHeights = null, levelOnly = null;
@@ -147,9 +220,14 @@ public sealed class TerrainModifiers
         return baseHeights ?? (float[])heights.Clone();
     }
 
+    /// <summary>
+    /// Metres per zone side.
+    /// </summary>
     private const int Width = 64;
 
-    // Heightmap.LevelTerrain (WorldToVertexMask, square or round area, sets the modifier's height).
+    /// <summary>
+    /// Heightmap.LevelTerrain (WorldToVertexMask, square or round area, sets the modifier's height).
+    /// </summary>
     private static void LevelTerrain(int zx, int zz, float[] h, Vector3 worldPos, float radius, bool square, float[]? baseHeights, float[]? levelOnly, bool player)
     {
         float dx = worldPos.X - zx * 64f, dz = worldPos.Z - zz * 64f;
@@ -177,7 +255,9 @@ public sealed class TerrainModifiers
         }
     }
 
-    // Heightmap.SmoothTerrain2 (WorldToVertex, round area, blend towards the modifier's height).
+    /// <summary>
+    /// Heightmap.SmoothTerrain2 (WorldToVertex, round area, blend towards the modifier's height).
+    /// </summary>
     private static void SmoothTerrain2(int zx, int zz, float[] h, Vector3 worldPos, float radius, float[]? levelOnly, float power, bool player)
     {
         float dx = worldPos.X - zx * 64f, dz = worldPos.Z - zz * 64f;
@@ -213,13 +293,18 @@ public sealed class TerrainModifiers
         }
     }
 
-    // UnityEngine.Vector2.Distance in single precision.
+    /// <summary>
+    /// UnityEngine.Vector2.Distance in single precision.
+    /// </summary>
     private static float Distance(int ax, int ay, int bx, int by)
     {
         float fx = ax - bx, fy = ay - by;
         return (float)Math.Sqrt(fx * fx + fy * fy);
     }
 
+    /// <summary>
+    /// Reads terrain-modifiers.json into modifiers by prefab name hash.
+    /// </summary>
     private static Dictionary<int, (string, bool, List<Template>)> Parse(string json)
     {
         using var doc = JsonDocument.Parse(json);

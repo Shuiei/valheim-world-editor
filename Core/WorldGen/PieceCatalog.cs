@@ -3,44 +3,91 @@ using TerrainEditor.Save;
 
 namespace TerrainEditor.Terrain;
 
-// Build pieces (prefabs with a Piece component), read from the player's own Valheim (GameData; the
-// tests use tests/fixtures/pieces.json): category and footprint (bounds of the non-trigger box
-// colliders in the piece's own frame), so player-built structures can be drawn on the map, and snap
-// points (where the hammer snaps pieces together).
+/// <summary>
+/// Build pieces (prefabs with a Piece component), read from the player's own Valheim (GameData; the
+/// tests use tests/fixtures/pieces.json): category and footprint (bounds of the non-trigger box
+/// colliders in the piece's own frame), so player-built structures can be drawn on the map, and snap
+/// points (where the hammer snaps pieces together).
+/// </summary>
 public static class PieceCatalog
 {
+    /// <summary>
+    /// One piece's catalogue entry. The bounds are those of its non-trigger box colliders in the piece's own frame,
+    /// in metres (a 1 m marker for pieces without box colliders).
+    /// </summary>
+    /// <param name="Name">The prefab name.</param>
+    /// <param name="Index">Its place in <see cref="Names"/>.</param>
+    /// <param name="Category">The game's build menu category number.</param>
+    /// <param name="MinX">Footprint, lowest x.</param>
+    /// <param name="MaxX">Footprint, highest x.</param>
+    /// <param name="MinZ">Footprint, lowest z.</param>
+    /// <param name="MaxZ">Footprint, highest z.</param>
+    /// <param name="MinY">Bottom, relative to the piece's origin (y).</param>
+    /// <param name="MaxY">Top, relative to the piece's origin (y).</param>
     public sealed record Info(string Name, int Index, int Category, float MinX, float MaxX, float MinZ, float MaxZ, float MinY, float MaxY)
     {
-        // Snap points in the piece's own frame (x, y, z each); empty when it has none.
+        /// <summary>
+        /// Snap points in the piece's own frame (x, y, z each); empty when it has none.
+        /// </summary>
         public float[][] Snaps { get; init; } = [];
 
-        // The build tool whose menu has the piece (hammer, hoe, cultivator, feaster: the serving tray);
-        // null for pieces players cannot build (parts of ruins and dungeons).
+        /// <summary>
+        /// The build tool whose menu has the piece (hammer, hoe, cultivator, feaster: the serving tray);
+        /// null for pieces players cannot build (parts of ruins and dungeons).
+        /// </summary>
         public string? Tool { get; init; }
     }
 
-    // None until Use: no world or Workshop opens before then (GameData).
+    /// <summary>
+    /// None until Use: no world or Workshop opens before then (GameData).
+    /// </summary>
     private static volatile Data _catalogue = new([], [], []);
 
+    /// <summary>
+    /// What Use read, swapped in whole so readers never see half of it.
+    /// </summary>
+    /// <param name="ByHash">Entries by prefab name hash (as the save keeps prefabs).</param>
+    /// <param name="Names">Prefab names in catalogue (ordinal) order.</param>
+    /// <param name="Known">The same names, for lookups by name.</param>
     private sealed record Data(Dictionary<int, Info> ByHash, string[] Names, HashSet<string> Known);
 
-    // Every piece with snap points, by name.
+    /// <summary>
+    /// Every piece with snap points.
+    /// </summary>
     public static IEnumerable<Info> WithSnaps => _catalogue.ByHash.Values.Where(i => i.Snaps.Length > 0);
 
-    // Prefab names in catalogue order; Info.Index points into this list.
+    /// <summary>
+    /// Prefab names in catalogue order; Info.Index points into this list.
+    /// </summary>
     public static string[] Names => _catalogue.Names;
 
+    /// <summary>
+    /// How many pieces the catalogue has.
+    /// </summary>
     public static int Count => _catalogue.ByHash.Count;
 
+    /// <summary>
+    /// A piece by prefab name hash; null when the prefab is not a piece.
+    /// </summary>
     public static Info? Get(int prefab) => _catalogue.ByHash.TryGetValue(prefab, out var info) ? info : null;
 
-    // Whether a prefab (by name) is a piece.
+    /// <summary>
+    /// Whether a prefab (by name) is a piece.
+    /// </summary>
     public static bool Has(string name) => _catalogue.Known.Contains(name);
 
-    // Per piece: x, y, z, rotation Y (degrees), footprint minX, maxX, minZ, maxZ, top (y), category, bottom (y),
-    // prefab (index into Names), object id.
+    /// <summary>
+    /// Floats per piece in <see cref="Encode"/>'s output: x, y, z, rotation Y (degrees), footprint minX, maxX, minZ,
+    /// maxZ, top (y), category, bottom (y), prefab (index into Names), object id.
+    /// </summary>
     public const int Stride = 13;
 
+    /// <summary>
+    /// The world's player-built pieces packed for the map, <see cref="Stride"/> floats each, leaving out deleted
+    /// objects and prefabs that are not in the catalogue.
+    /// </summary>
+    /// <param name="world">The world; its piece list is copied under its lock.</param>
+    /// <param name="deleted">Object ids to leave out.</param>
     public static float[] Encode(WorldSave world, ICollection<int> deleted)
     {
         List<float> data = new(world.Pieces.Count * Stride);
@@ -65,7 +112,9 @@ public static class PieceCatalog
         return [.. data];
     }
 
-    // The pieces by name, as GameCatalogues' PieceScan writes them.
+    /// <summary>
+    /// Takes the pieces by name, as GameCatalogues' PieceScan writes them.
+    /// </summary>
     public static void Use(string json)
     {
         using var doc = JsonDocument.Parse(json);

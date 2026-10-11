@@ -3,16 +3,26 @@ using TerrainEditor.Editing;
 
 namespace ValheimGen;
 
-// The inputs of Valheim's world map shader (Minimap.GenerateWorldMap): a biome colour texture, a
-// mask texture (r forest, g mist, b ashlands lava/ocean) and a height texture. The overview uses the
-// game's own layout (2048 texels of 12 m); detail windows use 1 m texels and include terrain edits.
+/// <summary>
+/// The inputs of Valheim's world map shader (Minimap.GenerateWorldMap): a biome colour texture, a
+/// mask texture (r forest, g mist, b ashlands lava/ocean) and a height texture. The overview uses the
+/// game's own layout (2048 texels of 12 m); detail windows use 1 m texels and include terrain edits.
+/// </summary>
 public sealed class MapData
 {
+    /// <summary>
+    /// Texels per side of the overview, as the game's own map.
+    /// </summary>
     public const int GlobalSize = 2048;
 
+    /// <summary>
+    /// Metres per overview texel.
+    /// </summary>
     public const float GlobalPixel = 12f;
 
-    // Colours from the Minimap component in the game's assets (Mistlands keeps its code default).
+    /// <summary>
+    /// Colours from the Minimap component in the game's assets (Mistlands keeps its code default).
+    /// </summary>
     private static readonly (Heightmap.Biome Biome, byte R, byte G, byte B)[] BiomeColors =
     [
         (Heightmap.Biome.Meadows, Byte(0.5725338f), Byte(0.6551003f), Byte(0.3605249f)),
@@ -24,14 +34,29 @@ public sealed class MapData
         (Heightmap.Biome.Mountain, 255, 255, 255),
         (Heightmap.Biome.Mistlands, Byte(0.2f), Byte(0.2f), Byte(0.2f)),
     ];
+    /// <summary>
+    /// Base (unedited) terrain heights by zone, for detail windows.
+    /// </summary>
     private readonly TerrainService _terrain;
 
+    /// <summary>
+    /// The world's terrain edits, laid over the base heights in detail windows.
+    /// </summary>
     private readonly EditStore _edits;
 
+    /// <summary>
+    /// The overview, built once on first use.
+    /// </summary>
     private readonly Lazy<Layers> _global;
 
+    /// <summary>
+    /// Detail windows by position, size and edit version; dropped all at once past a handful.
+    /// </summary>
     private readonly ConcurrentDictionary<string, Layers> _details = new();
 
+    /// <summary>
+    /// Map data for the world whose generator <paramref name="terrain"/> uses.
+    /// </summary>
     public MapData(TerrainService terrain, EditStore edits)
     {
         _terrain = terrain;
@@ -40,12 +65,25 @@ public sealed class MapData
         _global = new Lazy<Layers>(BuildGlobal, LazyThreadSafetyMode.ExecutionAndPublication);
     }
 
+    /// <summary>
+    /// The world's generator (the terrain service's).
+    /// </summary>
     internal WorldGenerator Generator { get; }
 
+    /// <summary>
+    /// The whole-world overview (<see cref="GlobalSize"/> texels of <see cref="GlobalPixel"/> m), built on first
+    /// use; base terrain only, no edits.
+    /// </summary>
     public Layers Global => _global.Value;
 
+    /// <summary>
+    /// A 0..1 value as a byte, rounded and held to 0..255.
+    /// </summary>
     private static byte Byte(float v) => (byte)Math.Clamp((int)Math.Round(v * 255f), 0, 255);
 
+    /// <summary>
+    /// A biome's colour on the map; white for any biome not in the game's list (and for combined flags).
+    /// </summary>
     public static (byte, byte, byte) PixelColor(Heightmap.Biome biome)
     {
         foreach (var (kind, r, g, b) in BiomeColors)
@@ -58,7 +96,9 @@ public sealed class MapData
         return (255, 255, 255);
     }
 
-    // Mirrors Minimap.GetMaskColor.
+    /// <summary>
+    /// The mask texel at a world point (r forest, g mist, b ashlands lava/ocean). Mirrors Minimap.GetMaskColor.
+    /// </summary>
     private (byte, byte, byte) MaskColor(float wx, float wy, float height, Heightmap.Biome biome)
     {
         if (height < 30f)
@@ -88,6 +128,9 @@ public sealed class MapData
         }
     }
 
+    /// <summary>
+    /// Builds the overview from the generator alone, rows in parallel.
+    /// </summary>
     private Layers BuildGlobal()
     {
         int n = GlobalSize;
@@ -109,7 +152,14 @@ public sealed class MapData
         return layers;
     }
 
-    // A 1 m detail window whose texel (0, 0) is the world vertex (x0, z0). Includes terrain edits.
+    /// <summary>
+    /// A 1 m detail window whose texel (0, 0) is the world vertex (x0, z0). Includes terrain edits.
+    /// </summary>
+    /// <param name="x0">World x of the first column, metres.</param>
+    /// <param name="z0">World z of the first row, metres.</param>
+    /// <param name="size">Texels per side.</param>
+    /// <param name="editVersion">The edits' version: a new one builds the window again instead of using the cached
+    /// one.</param>
     public Layers Detail(int x0, int z0, int size, int editVersion)
     {
         string key = $"{x0},{z0},{size},{editVersion}";
@@ -120,6 +170,9 @@ public sealed class MapData
         return _details.GetOrAdd(key, _ => BuildDetail(x0, z0, size));
     }
 
+    /// <summary>
+    /// Builds a detail window: each zone's base heights with its height and paint edits laid over them.
+    /// </summary>
     private Layers BuildDetail(int x0, int z0, int size)
     {
         Layers layers = new(size, size);
@@ -167,21 +220,52 @@ public sealed class MapData
         return layers;
     }
 
+    /// <summary>
+    /// The map textures of one window, row by row (row is world z, column world x).
+    /// </summary>
+    /// <param name="width">Texels per row.</param>
+    /// <param name="height">Rows.</param>
     public sealed class Layers(int width, int height)
     {
+        /// <summary>
+        /// Texels per row.
+        /// </summary>
         public int Width { get; } = width;
 
+        /// <summary>
+        /// Number of rows.
+        /// </summary>
         public int Height { get; } = height;
 
+        /// <summary>
+        /// Ground height per texel, metres.
+        /// </summary>
         public Half[] Heights { get; } = new Half[width * height];
 
+        /// <summary>
+        /// Biome colour per texel (RGBA8, a always 255).
+        /// </summary>
         public byte[] Biome { get; } = new byte[width * height * 4];
 
+        /// <summary>
+        /// Mask per texel (RGBA8: r forest, g mist, b ashlands lava/ocean, a always 255).
+        /// </summary>
         public byte[] Mask { get; } = new byte[width * height * 4];
 
-        // Painted ground (r dirt, g cultivated, b paved, a = 255 where painted).
+        /// <summary>
+        /// Painted ground (r dirt, g cultivated, b paved, a = 255 where painted).
+        /// </summary>
         public byte[] Paint { get; } = new byte[width * height * 4];
 
+        /// <summary>
+        /// Fills texel <paramref name="i"/>.
+        /// </summary>
+        /// <param name="i">The texel's index (row * width + column).</param>
+        /// <param name="h">Ground height, metres.</param>
+        /// <param name="biome">Biome colour.</param>
+        /// <param name="mask">Mask colour.</param>
+        /// <param name="paint">Painted ground; null leaves the texel unpainted. Its alpha is not used: a painted
+        /// texel always gets 255.</param>
         public void Set(int i, float h, (byte R, byte G, byte B) biome, (byte R, byte G, byte B) mask, (byte R, byte G, byte B, byte A)? paint)
         {
             Heights[i] = (Half)h;
@@ -202,7 +286,9 @@ public sealed class MapData
             }
         }
 
-        // Binary blob for the browser: heights (float16) then biome, mask and paint (RGBA8 each).
+        /// <summary>
+        /// Binary blob for the browser: heights (float16, little-endian) then biome, mask and paint (RGBA8 each).
+        /// </summary>
         public byte[] ToBytes()
         {
             int n = Width * Height;

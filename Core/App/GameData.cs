@@ -3,21 +3,32 @@ using TerrainEditor.Terrain;
 
 namespace TerrainEditor.App;
 
-// What the editor needs of the game besides its look, read from the player's own Valheim: the editor
-// keeps no copy, which would go out of date with each game update (and players have different
-// versions). Each kind is read at the editor's start, in seconds (those found in the bundles all in one
-// pass over them), and kept in the data folder (game-<kind>.json) until the game's files change. Without them the editor cannot work right (the
-// ground near locations, the names of object data...), so no world or Workshop opens until Valheim
-// is found (Ensure). The tests, and the smoke tests through the driver, use trimmed copies in
-// tests/fixtures (UseCopies), made again after a game update with --export-test-data.
+/// <summary>
+/// What the editor needs of the game besides its look, read from the player's own Valheim: the editor
+/// keeps no copy, which would go out of date with each game update (and players have different
+/// versions). Each kind is read at the editor's start, in seconds (those found in the bundles all in one
+/// pass over them), and kept in the data folder (game-&lt;kind&gt;.json) until the game's files change.
+/// Without them the editor cannot work right (the ground near locations, the names of object data...), so
+/// no world or Workshop opens until Valheim is found (Ensure). The tests, and the smoke tests through the
+/// driver, use trimmed copies in tests/fixtures (UseCopies), made again after a game update with
+/// --export-test-data.
+/// </summary>
 public static class GameData
 {
-    // One kind: its name (the files' <name>.json), how it is read from the game (Valheim's folder, its
-    // bundles -> JSON; null: in the one pass over the bundles, GameCatalogues.ReadAtStart), who takes it,
-    // and how the tests' copy is trimmed (the game's and the copy's JSON -> what the copy keeps; by
-    // default the entries it has).
+    /// <summary>
+    /// One kind of game data.
+    /// </summary>
+    /// <param name="Name">The kind's name: the files' &lt;name&gt;.json.</param>
+    /// <param name="Read">How it is read from the game (Valheim's folder, its bundles -&gt; JSON); null: in the one
+    /// pass over the bundles, GameCatalogues.ReadAtStart.</param>
+    /// <param name="Use">Who takes it: given the JSON.</param>
+    /// <param name="Trim">How the tests' copy is trimmed (the game's and the copy's JSON -&gt; what the copy keeps);
+    /// null: the entries the copy has.</param>
     private sealed record Kind(string Name, Func<string, GameBundles, string>? Read, Action<string> Use, Func<JsonElement, JsonElement, object>? Trim = null);
 
+    /// <summary>
+    /// Every kind, in the order they are read and used.
+    /// </summary>
     private static readonly Kind[] Kinds =
     [
         new("terrain-modifiers", null, TerrainModifiers.Use),
@@ -32,22 +43,39 @@ public static class GameData
         new("dungeon-rooms", null, Editing.Dungeons.Use, TrimDungeons),
     ];
 
+    /// <summary>
+    /// A kind's cache file in the user's data folder: game-&lt;kind&gt;.json.
+    /// </summary>
     public static string CacheFile(string kind) => Path.Combine(AppSettings.UserDataDir, $"game-{kind}.json");
 
-    // What opening a world says when Valheim's files cannot be read.
+    /// <summary>
+    /// What opening a world says when Valheim's files cannot be read.
+    /// </summary>
     public const string Missing = "Valheim was not found, and the editor needs its files (the game's look and what it knows of the game's objects). Choose its folder on the start page.";
 
-    // What a cache was written by: data read by another editor build is read again.
+    /// <summary>
+    /// What a cache was written by: data read by another editor build is read again.
+    /// </summary>
     private static readonly string CacheVersion = typeof(GameData).Assembly.ManifestModule.ModuleVersionId.ToString();
 
+    /// <summary>
+    /// Serialises loading and using the data.
+    /// </summary>
     private static readonly Lock Lock = new();
-    // Where the data in use came from: a bundles folder, Copies, or none yet.
+    /// <summary>
+    /// Where the data in use came from: a bundles folder, Copies, or none yet.
+    /// </summary>
     private static string? _from;
+    /// <summary>
+    /// <c>_from</c> when the tests' copies are in use.
+    /// </summary>
     private const string Copies = "(copies)";
 
-    // Every kind in use for this game: from the caches, else read from the game; already in use, nothing
-    // to do. False when they cannot all be had: no Valheim, or its files could not be read. The tests'
-    // copies (UseCopies) count as had, whatever game folder the tests stand in.
+    /// <summary>
+    /// Every kind in use for this game: from the caches, else read from the game; already in use, nothing
+    /// to do. False when they cannot all be had: no Valheim, or its files could not be read. The tests'
+    /// copies (UseCopies) count as had, whatever game folder the tests stand in.
+    /// </summary>
     public static bool Ensure(GameBundles? bundles)
     {
         lock (Lock)
@@ -77,8 +105,10 @@ public static class GameData
         }
     }
 
-    // The tests' copies (<folder>/<kind>.json) in use, for where there is no game: the tests, and the
-    // smoke tests through the driver.
+    /// <summary>
+    /// The tests' copies (&lt;folder&gt;/&lt;kind&gt;.json) in use, for where there is no game: the tests, and the
+    /// smoke tests through the driver.
+    /// </summary>
     public static void UseCopies(string folder)
     {
         lock (Lock)
@@ -91,7 +121,9 @@ public static class GameData
         }
     }
 
-    // Valheim's folder from its bundles folder (<Valheim>/valheim_Data/StreamingAssets/SoftRef/Bundles).
+    /// <summary>
+    /// Valheim's folder from its bundles folder (&lt;Valheim&gt;/valheim_Data/StreamingAssets/SoftRef/Bundles).
+    /// </summary>
     private static string ValheimOf(string bundles)
     {
         string? d = Path.TrimEndingDirectorySeparator(bundles);
@@ -102,16 +134,23 @@ public static class GameData
         return d ?? bundles;
     }
 
+    /// <summary>
+    /// The game's data folder, as spelled on Windows and Linux.
+    /// </summary>
     private static readonly string[] DataFolders = ["valheim_Data", "Valheim_Data"];
 
-    // The game's files a kind is read from, by name, size and time: what makes a cache out of date.
+    /// <summary>
+    /// The game's files a kind is read from, by name, size and time: what makes a cache out of date.
+    /// </summary>
     private static string Stamp(string valheim, string bundles) =>
         CacheVersion + " " + JsonSerializer.Serialize(Directory.GetFiles(bundles).Order(StringComparer.Ordinal)
             .Concat(DataFolders.Select(d => Path.Combine(valheim, d, "Managed", "assembly_valheim.dll")).Where(File.Exists))
             .Select(f => new FileInfo(f)).Select(f => $"{f.Name}:{f.Length}:{f.LastWriteTimeUtc.Ticks}"));
 
-    // Every kind as JSON, by name: from its cache when the game and the editor are unchanged, else read
-    // from the game (and kept, with cache); null when one cannot be read.
+    /// <summary>
+    /// Every kind as JSON, by name: from its cache when the game and the editor are unchanged, else read
+    /// from the game (and kept, with cache); null when one cannot be read.
+    /// </summary>
     private static Dictionary<string, string>? Load(GameBundles bundles, bool cache)
     {
         string valheim = ValheimOf(bundles.Folder);
@@ -175,7 +214,9 @@ public static class GameData
         }
     }
 
-    // A cache when it is for this game and editor; else null (read again).
+    /// <summary>
+    /// A cache when it is for this game and editor; else null (read again).
+    /// </summary>
     private static string? Cached(string file, string stamp)
     {
         try
@@ -193,9 +234,11 @@ public static class GameData
         }
     }
 
-    // A copy written one entry per line (an entry's value on its line, compact): small, and a game
-    // update shows in git entry by entry. A few groups of entries (piece-cost's items and pieces) are
-    // opened the same way.
+    /// <summary>
+    /// A copy written one entry per line (an entry's value on its line, compact): small, and a game
+    /// update shows in git entry by entry. A few groups of entries (piece-cost's items and pieces) are
+    /// opened the same way.
+    /// </summary>
     private static string Lines(JsonElement e, string indent = "")
     {
         string inner = indent + "  ";
@@ -213,8 +256,11 @@ public static class GameData
         return e.GetRawText();
     }
 
-    // The tests' copies (<folder>/<kind>.json) made again from the game, each keeping the entries it
-    // already has: --export-test-data <folder>.
+    /// <summary>
+    /// The tests' copies (&lt;folder&gt;/&lt;kind&gt;.json) made again from the game, each keeping the entries it
+    /// already has: --export-test-data &lt;folder&gt;. Returns the exit code: 0 done, 1 no game, a missing copy or the
+    /// game's data not read, 2 no such folder.
+    /// </summary>
     public static int Export(string? folder)
     {
         if (folder == null || !Directory.Exists(folder))
@@ -252,14 +298,18 @@ public static class GameData
         return 0;
     }
 
-    // The game's entries the copy has.
+    /// <summary>
+    /// The game's entries the copy has.
+    /// </summary>
     private static Dictionary<string, object> Entries(JsonElement game, JsonElement copy)
     {
         var kept = copy.EnumerateObject().Select(p => p.Name).ToHashSet();
         return game.EnumerateObject().Where(p => kept.Contains(p.Name)).ToDictionary(p => p.Name, p => (object)p.Value);
     }
 
-    // piece-cost: the pieces the copy has, and the items they take.
+    /// <summary>
+    /// piece-cost: the pieces the copy has, and the items they take.
+    /// </summary>
     private static Dictionary<string, object> TrimPieceCost(JsonElement game, JsonElement copy)
     {
         var pieces = Entries(game.GetProperty("pieces"), copy.GetProperty("pieces"));
@@ -271,24 +321,33 @@ public static class GameData
         };
     }
 
-    // dungeon-rooms: every dungeon kind, and the rooms the copy has.
+    /// <summary>
+    /// dungeon-rooms: every dungeon kind, and the rooms the copy has.
+    /// </summary>
     private static Dictionary<string, object> TrimDungeons(JsonElement game, JsonElement copy) => new()
     {
         ["dungeons"] = game.GetProperty("dungeons"),
         ["rooms"] = Entries(game.GetProperty("rooms"), copy.GetProperty("rooms")),
     };
 
-    // vegetation (a list of rules): the game's rules the copy has, by name and prefab.
+    /// <summary>
+    /// vegetation (a list of rules): the game's rules the copy has, by name and prefab.
+    /// </summary>
     private static List<JsonElement> TrimVegetation(JsonElement game, JsonElement copy)
     {
         var kept = copy.EnumerateArray().Select(RuleKey).ToHashSet();
         return [.. game.EnumerateArray().Where(r => kept.Contains(RuleKey(r)))];
     }
 
+    /// <summary>
+    /// A vegetation rule's key: "name/prefab".
+    /// </summary>
     private static string RuleKey(JsonElement rule) => $"{rule.GetProperty("name").GetString()}/{rule.GetProperty("prefab").GetString()}";
 
-    // What a copy holds, to tell what went: its entries (a list's: its rules), else (trimmed its own
-    // way) those of each part.
+    /// <summary>
+    /// What a copy holds, to tell what went: its entries (a list's: its rules), else (trimmed its own
+    /// way) those of each part.
+    /// </summary>
     private static List<string> Kept(JsonElement copy, bool entries) =>
         copy.ValueKind == JsonValueKind.Array ? [.. copy.EnumerateArray().Select(RuleKey)]
         : [.. copy.EnumerateObject().SelectMany(p => entries ? new[] { p.Name } : p.Value.EnumerateObject().Select(e => $"{p.Name}/{e.Name}"))];

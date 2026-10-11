@@ -5,22 +5,29 @@ using TerrainEditor.Terrain;
 
 namespace TerrainEditor.App;
 
-// What item stands and armour stands hold, as the game saves it. An item stand (ItemStand: itemstand,
-// itemstandh, the boss altars) keeps the item's prefab hash in "item", with its "variant", its
-// "quality" and the way it hangs in "type"; an armour stand (ArmorStand) keeps slot i's item in
-// "<i>_item" and "<i>_variant", and the stand's "pose". Both keep the whole item as
-// ItemDrop.SaveToZDO writes it ("itemData", "<i>_itemData": the item format version in one byte, then
-// the item as an inventory keeps it): that is what a player gets back on taking it.
+/// <summary>
+/// What item stands and armour stands hold, as the game saves it. An item stand (ItemStand: itemstand,
+/// itemstandh, the boss altars) keeps the item's prefab hash in "item", with its "variant", its
+/// "quality" and the way it hangs in "type"; an armour stand (ArmorStand) keeps slot i's item in
+/// "&lt;i&gt;_item" and "&lt;i&gt;_variant", and the stand's "pose". Both keep the whole item as
+/// ItemDrop.SaveToZDO writes it ("itemData", "&lt;i&gt;_itemData": the item format version in one byte, then
+/// the item as an inventory keeps it): that is what a player gets back on taking it.
+/// </summary>
 public static class StandData
 {
-    // An item on a stand: its prefab name, quality (upgrade level) and variant (a shield's style).
+    /// <summary>An item on a stand.</summary>
+    /// <param name="Item">Its prefab name.</param>
+    /// <param name="Quality">Its quality (upgrade level).</param>
+    /// <param name="Variant">Its variant (a shield's style).</param>
     public sealed record Held(string Item, int Quality = 1, int Variant = 0);
 
+    /// <summary>Whether the prefab is an item stand (the catalogue has its rules).</summary>
     public static bool IsItemStand(int prefab) => PrefabCatalog.ItemStandOf(prefab) != null;
 
+    /// <summary>Whether the prefab is an armour stand (the catalogue has its slots).</summary>
     public static bool IsArmourStand(int prefab) => PrefabCatalog.ArmourSlotsOf(prefab) != null;
 
-    // ItemDrop.ItemData.ItemType, as words.
+    /// <summary>ItemDrop.ItemData.ItemType, as words.</summary>
     public static string TypeName(int type) => type switch
     {
         1 => "material",
@@ -49,7 +56,9 @@ public static class StandData
         _ => "item",
     };
 
-    // Why this item stand does not take the item (ItemStand.CanAttach), or null when it does.
+    /// <summary>Why this item stand does not take the item (ItemStand.CanAttach), or null when it does.</summary>
+    /// <param name="stand">The stand's prefab hash.</param>
+    /// <param name="item">The item's prefab name.</param>
     public static string? ItemStandRefusal(int stand, string item)
     {
         string standName = PrefabCatalog.DisplayName(stand) ?? "This object";
@@ -76,8 +85,12 @@ public static class StandData
         return $"{standName} does not take {item} (a {TypeName(kind.Type)}); it takes: {string.Join(", ", rule.Types.Select(TypeName).Distinct())}.";
     }
 
-    // Whether an armour stand's slot takes the item (ArmorStand.CanAttach, and its check that anything
-    // but chest and legs pieces has an attach point).
+    /// <summary>
+    /// Whether an armour stand's slot takes the item (ArmorStand.CanAttach, and its check that anything
+    /// but chest and legs pieces has an attach point).
+    /// </summary>
+    /// <param name="slotTypes">The item types the slot takes; empty: any.</param>
+    /// <param name="kind">The item's kind.</param>
     public static bool FitsArmourSlot(int[] slotTypes, PrefabCatalog.ItemKind kind)
     {
         int type = kind.AttachOverride != 0 ? kind.AttachOverride : kind.Type;
@@ -88,8 +101,11 @@ public static class StandData
         return kind.Type is 7 or 11 || kind.Attach || kind.AttachSkin;
     }
 
-    // The values that make an item stand hold this item (null: nothing), hanging this way (the game's
-    // orientations: 0 is the first). Throws ArgumentException when the stand does not take the item.
+    /// <summary>
+    /// The values that make an item stand hold this item (null: nothing), hanging this way (the game's
+    /// orientations: 0 is the first). Throws ArgumentException when the stand does not take the item.
+    /// Quality is clamped to 1..10, the variant to the item's.
+    /// </summary>
     public static List<FieldChange> ForItemStand(int stand, Held? held, int orientation)
     {
         if (held == null)
@@ -111,8 +127,10 @@ public static class StandData
         ];
     }
 
-    // The values that make an armour stand wear these items (each in the first free slot that takes it;
-    // the other slots emptied), in this pose when given. Throws ArgumentException when one fits nowhere.
+    /// <summary>
+    /// The values that make an armour stand wear these items (each in the first free slot that takes it;
+    /// the other slots emptied), in this pose when given. Throws ArgumentException when one fits nowhere.
+    /// </summary>
     public static List<FieldChange> ForArmourStand(int stand, IReadOnlyList<Held> held, int? pose)
     {
         string standName = PrefabCatalog.DisplayName(stand) ?? "This object";
@@ -156,14 +174,16 @@ public static class StandData
         return set;
     }
 
-    // What an item stand holds (null: nothing) and the way it hangs.
+    /// <summary>What an item stand holds (null: nothing) and the way it hangs.</summary>
     public static (Held? Item, int Orientation) ReadItemStand(ZdoData z)
     {
         int hash = Int(z, "item");
         return (hash == 0 ? null : HeldOf(hash, Int(z, "quality", 1), Int(z, "variant"), z.GetBytes(StableHash.Of("itemData"))), Int(z, "type"));
     }
 
-    // What each slot of an armour stand holds (null: nothing), and its pose.
+    /// <summary>What each slot of an armour stand holds (null: nothing), and its pose.</summary>
+    /// <param name="z">The stand's saved data.</param>
+    /// <param name="slots">How many slots the stand has.</param>
     public static (Held?[] Slots, int Pose) ReadArmourStand(ZdoData z, int slots)
     {
         var held = new Held?[slots];
@@ -176,6 +196,10 @@ public static class StandData
         return (held, Int(z, "pose"));
     }
 
+    /// <summary>
+    /// The held item, its quality and variant from the saved item data when it can be read, else the ones
+    /// given. An unknown prefab keeps its hash as name.
+    /// </summary>
     private static Held HeldOf(int hash, int quality, int variant, byte[]? itemData)
     {
         if (itemData is { Length: > 2 })
@@ -195,9 +219,13 @@ public static class StandData
         return new Held(PrefabCatalog.NameOf(hash) ?? I(hash), quality, variant);
     }
 
+    /// <summary>The variant clamped to the item's variants; 0 for an item without any.</summary>
     private static int Variant(PrefabCatalog.ItemKind kind, int variant) => kind.Variants > 0 ? Math.Clamp(variant, 0, kind.Variants - 1) : 0;
 
-    // ItemDrop.SaveToZDO's bytes for a new item: the item format version, then the item.
+    /// <summary>
+    /// ItemDrop.SaveToZDO's bytes for a new item: the item format version, then the item (full durability for
+    /// its quality). Base64, as a "bytes" value is written.
+    /// </summary>
     private static string ItemData(int hash, PrefabCatalog.ItemKind kind, int quality, int variant)
     {
         using MemoryStream ms = new();
@@ -209,6 +237,7 @@ public static class StandData
         return Convert.ToBase64String(ms.ToArray());
     }
 
+    /// <summary>An int value by key name, or <paramref name="otherwise"/> when the object has none.</summary>
     private static int Int(ZdoData z, string key, int otherwise = 0)
     {
         int k = StableHash.Of(key);
@@ -222,5 +251,6 @@ public static class StandData
         return otherwise;
     }
 
+    /// <summary>A number as invariant text.</summary>
     private static string I(int v) => v.ToString(CultureInfo.InvariantCulture);
 }
