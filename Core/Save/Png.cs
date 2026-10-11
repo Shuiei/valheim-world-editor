@@ -149,17 +149,26 @@ public static class Png
         {
             byte[] buffer = new byte[81920];
             int n;
+            bool more = false;
             try
             {
                 while (o.Length < need && (n = zs.Read(buffer, 0, (int)Math.Min(buffer.Length, need - o.Length))) > 0)
                 {
                     o.Write(buffer, 0, n);
                 }
+                // The rows are all there: what follows must be the data's end, where zlib checks its checksum
+                // (one byte asked for, so a picture claiming more is not unpacked).
+                more = o.Length == need && zs.Read(buffer, 0, 1) > 0;
             }
-            catch (IOException e)
+            catch (Exception e) when (e is IOException or InvalidDataException)
             {
-                // Damaged compressed data (ZLibException): read from memory, nothing else can fail.
+                // Damaged compressed data (a ZLibException, or a wrong checksum): read from memory, nothing else
+                // can fail.
                 throw new InvalidDataException("the PNG picture data is damaged", e);
+            }
+            if (more)
+            {
+                throw new InvalidDataException("the PNG picture holds more data than its size");
             }
             raw = o.ToArray();
         }

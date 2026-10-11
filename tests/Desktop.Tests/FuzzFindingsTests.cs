@@ -81,4 +81,78 @@ public class FuzzFindingsTests
     [Fact]
     public void PngHugeChunkLength() =>
         Refused(() => Png.Read(Convert.FromHexString("89504e470d0a1a0a0000000d4948445200000004000000041000000000dc0a1d217ffffff28bbaa774767765006865696768746d6170067b15070000002c49444154789c63646064626661656367e2e0e4e2494441546714101412161195930700179a8b673a3e0000f20000000000000082")));
+
+    /// <summary>
+    /// A 2 by 1 grayscale 8-bit PNG whose picture data is <paramref name="zlib"/> (the reader does not check chunk
+    /// CRCs: they are left zero).
+    /// </summary>
+    private static byte[] GrayPng(byte[] zlib)
+    {
+        using MemoryStream png = new();
+        png.Write([0x89, (byte)'P', (byte)'N', (byte)'G', 0x0D, 0x0A, 0x1A, 0x0A]);
+        void Chunk(string type, byte[] data)
+        {
+            png.Write([(byte)(data.Length >> 24), (byte)(data.Length >> 16), (byte)(data.Length >> 8), (byte)data.Length]);
+            png.Write(System.Text.Encoding.ASCII.GetBytes(type));
+            png.Write(data);
+            png.Write([0, 0, 0, 0]);
+        }
+        Chunk("IHDR", [0, 0, 0, 2, 0, 0, 0, 1, 8, 0, 0, 0, 0]);
+        Chunk("IDAT", zlib);
+        Chunk("IEND", []);
+        return png.ToArray();
+    }
+
+    private static byte[] Zlib(byte[] data)
+    {
+        using MemoryStream packed = new();
+        using (ZLibStream z = new(packed, CompressionLevel.Optimal, leaveOpen: true))
+        {
+            z.Write(data);
+        }
+        return packed.ToArray();
+    }
+
+    // Picture data that unpacks to more than its rows: refused, not cut to size.
+    [Fact]
+    public void PngMoreDataThanItsSize()
+    {
+        Assert.Equal(2, Png.Read(GrayPng(Zlib([0, 10, 20]))).Values.Length);
+        var e = Assert.Throws<InvalidDataException>(() => Png.Read(GrayPng(Zlib([0, 10, 20, 1, 2, 3, 4]))));
+        Assert.Contains("more data than its size", e.Message);
+    }
+
+    // Picture data whose zlib checksum is wrong: refused as damaged (zlib throws InvalidDataException there, not
+    // the IOException a damaged block gives).
+    [Fact]
+    public void PngWrongChecksum()
+    {
+        byte[] zlib = Zlib([0, 10, 20]);
+        zlib[^1] ^= 0xFF;
+        var e = Assert.Throws<InvalidDataException>(() => Png.Read(GrayPng(zlib)));
+        Assert.Contains("damaged", e.Message);
+    }
+
+    // A zone database from a stream that cannot seek (it cannot tell how much is left): read in full, as from
+    // its file.
+    [Fact]
+    public void ZoneDbFromAStreamThatCannotSeek()
+    {
+        string file = Path.Combine(Fixtures.Root, "CITest", "_main.2.db2");
+        using GZipStream unseekable = new(new MemoryStream(Gzip(File.ReadAllBytes(file))), CompressionMode.Decompress);
+        Assert.False(unseekable.CanSeek);
+        var fromStream = ZoneDb.Load(unseekable);
+        var fromFile = ZoneDb.Load(file);
+        string dir = Directory.CreateTempSubdirectory("vwe-zonedb-").FullName;
+        try
+        {
+            fromStream.Save(Path.Combine(dir, "stream.db2"));
+            fromFile.Save(Path.Combine(dir, "file.db2"));
+            Assert.Equal(File.ReadAllBytes(Path.Combine(dir, "file.db2")), File.ReadAllBytes(Path.Combine(dir, "stream.db2")));
+        }
+        finally
+        {
+            Directory.Delete(dir, recursive: true);
+        }
+    }
 }

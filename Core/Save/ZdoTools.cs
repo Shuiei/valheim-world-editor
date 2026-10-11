@@ -338,7 +338,12 @@ public sealed class ZoneDb
         db.FileVersion = r.ReadInt32();
         db.NetTime = r.ReadDouble();
         byte[] packed = r.ReadExactBytes(r.ReadInt32());
-        db._tail = r.ReadBytes((int)r.Remaining());
+        // The rest as it comes: a stream that cannot seek does not tell how much is left.
+        using (MemoryStream rest = new())
+        {
+            r.BaseStream.CopyTo(rest);
+            db._tail = rest.ToArray();
+        }
         db.ReadPackage(CheckedReads.Gunzip(packed, MaxPackage));
         return db;
     }
