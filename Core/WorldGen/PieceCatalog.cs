@@ -1,12 +1,12 @@
-using System.Reflection;
 using System.Text.Json;
 using TerrainEditor.Save;
 
 namespace TerrainEditor.Terrain;
 
-// Build pieces (prefabs with a Piece component) extracted from the game's asset bundles: category
-// and footprint (bounds of the non-trigger box colliders in the piece's own frame), so player-built
-// structures can be drawn on the map, and snap points (where the hammer snaps pieces together).
+// Build pieces (prefabs with a Piece component), read from the player's own Valheim (GameData; the
+// tests use tests/fixtures/pieces.json): category and footprint (bounds of the non-trigger box
+// colliders in the piece's own frame), so player-built structures can be drawn on the map, and snap
+// points (where the hammer snaps pieces together).
 public static class PieceCatalog
 {
 	public sealed record Info(string Name, int Index, int Category, float MinX, float MaxX, float MinZ, float MaxZ, float MinY, float MaxY)
@@ -19,19 +19,23 @@ public static class PieceCatalog
 		public string? Tool { get; init; }
 	}
 
+	// None until Use: no world or Workshop opens before then (GameData).
+	private static volatile Data Catalogue = new(new(), Array.Empty<string>(), new());
+
+	private sealed record Data(Dictionary<int, Info> ByHash, string[] Names, HashSet<string> Known);
+
 	// Every piece with snap points, by name.
-	public static IEnumerable<Info> WithSnaps => ByHash.Values.Where(i => i.Snaps.Length > 0);
+	public static IEnumerable<Info> WithSnaps => Catalogue.ByHash.Values.Where(i => i.Snaps.Length > 0);
 
-	// Prefab names in catalogue order; Info.Index points into this list. Set by Load: declared before
-	// ByHash, whose initializer runs Load, so this initializer runs first and does not overwrite it.
-	public static string[] Names { get; private set; } = Array.Empty<string>();
+	// Prefab names in catalogue order; Info.Index points into this list.
+	public static string[] Names => Catalogue.Names;
 
-	private static readonly Dictionary<int, Info> ByHash = Load();
+	public static int Count => Catalogue.ByHash.Count;
 
-	public static int Count => ByHash.Count;
+	public static Info? Get(int prefab) => Catalogue.ByHash.TryGetValue(prefab, out var info) ? info : null;
 
-
-	public static Info? Get(int prefab) => ByHash.TryGetValue(prefab, out var info) ? info : null;
+	// Whether a prefab (by name) is a piece.
+	public static bool Has(string name) => Catalogue.Known.Contains(name);
 
 	// Per piece: x, y, z, rotation Y (degrees), footprint minX, maxX, minZ, maxZ, top (y), category, bottom (y),
 	// prefab (index into Names), object id.
@@ -61,11 +65,10 @@ public static class PieceCatalog
 		return data.ToArray();
 	}
 
-	private static Dictionary<int, Info> Load()
+	// The pieces by name, as GameCatalogues' PieceScan writes them.
+	public static void Use(string json)
 	{
-		using Stream s = Assembly.GetExecutingAssembly().GetManifestResourceStream("TerrainEditor.pieces.json")
-			?? throw new InvalidOperationException("pieces.json is not embedded");
-		using JsonDocument doc = JsonDocument.Parse(s);
+		using JsonDocument doc = JsonDocument.Parse(json);
 		Dictionary<int, Info> result = new();
 		List<string> names = new();
 		foreach (JsonProperty p in doc.RootElement.EnumerateObject().OrderBy(p => p.Name, StringComparer.Ordinal))
@@ -78,7 +81,6 @@ public static class PieceCatalog
 			result[StableHash.Of(p.Name)] = new Info(p.Name, names.Count, cat, box[0], box[1], box[2], box[3], box[4], box[5]) { Snaps = snaps, Tool = tool };
 			names.Add(p.Name);
 		}
-		Names = names.ToArray();
-		return result;
+		Catalogue = new Data(result, names.ToArray(), names.ToHashSet(StringComparer.Ordinal));
 	}
 }

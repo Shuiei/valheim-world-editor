@@ -65,6 +65,6 @@ public class ObjectTests
 		// A 2 m wall: snap points at x = -1 and 1.
 		Assert.Equal(2f, wall.Snaps.Max(p => p[0]) - wall.Snaps.Min(p => p[0]), 2);
 		Assert.Contains(PieceCatalog.WithSnaps, i => i.Name == "wood_fence");
-		Assert.True(PieceCatalog.WithSnaps.Count() > 200);
+		Assert.True(PieceCatalog.WithSnaps.Count() > 50);
 	}
 }

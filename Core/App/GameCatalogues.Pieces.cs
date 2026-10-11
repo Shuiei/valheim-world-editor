@@ -6,7 +6,7 @@ using V3 = (double X, double Y, double Z);
 namespace TerrainEditor.App;
 
 // The build pieces' catalogues: every prefab whose root has a Piece component; and what the editor
-// reads of them at its start (GameData): their costs.
+// reads of them at its start (GameData): the pieces and their costs.
 public static partial class GameCatalogues
 {
 	private const int BoxColliderType = (int)AssetClassID.BoxCollider;
@@ -41,6 +41,50 @@ public static partial class GameCatalogues
 		}
 	}
 
+	// Each prefab with a Piece on its root, in the bundle's order: its file, path id, fields and Piece,
+	// for the readers at the editor's start. Found from the Piece scripts (told by their class) up to
+	// their GameObjects, kept to the prefab roots (the locations have many pieces below theirs); only
+	// these are read whole.
+	private static List<(Bundle.Inner File, long Pid, AssetTypeValueField Go, AssetTypeValueField Piece)> PieceRoots(Bundle b, Game game) =>
+		PieceRootsOf.GetValue(b, _ => FindPieceRoots(b, game));
+
+	// Found once for the readers that need them (pieces, piece-cost).
+	private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<Bundle, List<(Bundle.Inner, long, AssetTypeValueField, AssetTypeValueField)>> PieceRootsOf = new();
+
+	private static List<(Bundle.Inner, long, AssetTypeValueField, AssetTypeValueField)> FindPieceRoots(Bundle b, Game game)
+	{
+		var res = new List<(Bundle.Inner, long, AssetTypeValueField, AssetTypeValueField)>();
+		var scripts = new HashSet<long>();
+		var owners = new List<(Bundle.Inner, long)>();
+		foreach (var (f, info) in b.Objects)
+		{
+			if (info.TypeId == MonoBehaviourType && game.ScriptClass(b, f, info) == "Piece" && Layout.First(f, info) is (0, var go))
+			{
+				scripts.Add(info.PathId);
+				owners.Add((f, go));
+			}
+		}
+		if (owners.Count == 0)
+		{
+			return res;
+		}
+		var roots = Layout.Roots(owners);
+		Layout.Check(b, owners[0].Item2, roots);
+		foreach (var (f, info) in b.Objects)
+		{
+			if (info.TypeId != GameObjectType || !roots.Contains(info.PathId) || b.Field(f, info.PathId) is not { } go)
+			{
+				continue;
+			}
+			var piece = b.ComponentIds(go).Where(c => scripts.Contains(c.Pid)).Select(c => b.Field(c.Pid)).FirstOrDefault(p => p != null && IsPiece(p));
+			if (piece != null)
+			{
+				res.Add((f, info.PathId, go, piece));
+			}
+		}
+		return res;
+	}
+
 	// A child's frame from its parent's: (position, rotation, scale), all in the prefab's frame.
 	private static (V3 P, Quat Q, V3 S) ChildFrame(AssetTypeValueField tr, V3 pos, Quat rot, V3 scale)
 	{
@@ -56,17 +100,29 @@ public static partial class GameCatalogues
 
 	private static double Max(IEnumerable<double> xs) => xs.Aggregate((a, x) => x > a ? x : a);
 
-	// pieces.json: each piece's category, comfort, snap points (children tagged "snappoint", inactive
-	// ones too) and footprint (the box around its active box colliders), in its own frame. "tool" is
-	// added by ToolScan.
-	private sealed class PieceScan : IScan
+	// The build pieces, read at the editor's start (GameData): each piece's category, comfort, snap
+	// points (children tagged "snappoint", inactive ones too) and footprint (the box around its active
+	// box colliders), in its own frame; and which build tool's menu has it ("tool": the game's
+	// PieceTables), for the builder the editor writes on new pieces of these kinds, as the game does when
+	// a player places one. Menu entries that are not networked prefabs (repair, remove, the hoe's ground
+	// tools) are left out.
+	private sealed class PieceScan : IStartScan
 	{
-		public Dict Entries { get; } = new();
+		private static readonly Dictionary<string, string> Tables = new() { ["_HammerPieceTable"] = "hammer", ["_HoePieceTable"] = "hoe", ["_CultivatorPieceTable"] = "cultivator", ["_FeasterPieceTable"] = "feaster" };
 
-		public void Read(Bundle b)
+		private readonly Dict _entries = new();
+		// Each piece's prefab by where it is (what the menus name), the networked ones, and the menus.
+		private readonly Dictionary<Ref, string> _names = new();
+		private readonly HashSet<string> _networked = new(StringComparer.Ordinal);
+		private readonly Dictionary<string, List<Ref>> _tables = new();
+
+		public void Read(Bundle b, Game game)
 		{
-			foreach (var (name, pid, _, _, piece) in Pieces(b))
+			var pieces = PieceRoots(b, game);
+			ReadTrees(b, pieces.Select(p => p.Pid));
+			foreach (var (f, pid, go, piece) in pieces)
 			{
+				string name = go["m_Name"].AsString;
 				var pts = new List<V3>();
 				var snaps = new List<object?>();
 				Walk(b, pid, default, Quat.Root, (1, 1, 1), true, pts, snaps);
@@ -79,7 +135,72 @@ public static partial class GameCatalogues
 				{
 					entry["box"] = new List<object?> { R(Min(pts.Select(q => q.X)), 3), R(Max(pts.Select(q => q.X)), 3), R(Min(pts.Select(q => q.Z)), 3), R(Max(pts.Select(q => q.Z)), 3), R(Min(pts.Select(q => q.Y)), 3), R(Max(pts.Select(q => q.Y)), 3) };
 				}
-				Entries[name] = entry;
+				_entries[name] = entry;
+				_names[new Ref(f.Cab, pid)] = name;
+				if (b.ComponentIds(go).Any(c => c.Type == MonoBehaviourType && game.ScriptClass(b, c.Pid) == "ZNetView"))
+				{
+					_networked.Add(name);
+				}
+			}
+			// The menus: PieceTables (told by their class) on the build tools' table objects.
+			foreach (var (f, info) in b.Objects)
+			{
+				if (info.TypeId != MonoBehaviourType || game.ScriptClass(b, f, info) != "PieceTable" || b.Field(f, info.PathId) is not { } d || !Has(d, "m_pieces"))
+				{
+					continue;
+				}
+				if (b.Field(f, d["m_GameObject.m_PathID"].AsLong) is { } owner && Tables.TryGetValue(owner["m_Name"].AsString, out string? tool))
+				{
+					_tables[tool] = d["m_pieces.Array"].Children.Select(p => new Ref(f.FileOf(p["m_FileID"].AsInt) ?? "", p["m_PathID"].AsLong)).ToList();
+				}
+			}
+		}
+
+		public string Json()
+		{
+			// A piece in several menus: the hammer's.
+			foreach (string tool in new[] { "feaster", "cultivator", "hoe", "hammer" })
+			{
+				foreach (var r in _tables.GetValueOrDefault(tool) ?? new())
+				{
+					if (_names.TryGetValue(r, out string? n) && _networked.Contains(n))
+					{
+						((Dict)_entries[n]!)["tool"] = tool;
+					}
+				}
+			}
+			return CatalogueJson.Write(_entries, new CatalogueJson.Style());
+		}
+
+		// What Walk reads below these prefabs, read first, each time in the order of the file (the bundle
+		// is read in blocks, and a prefab's objects are far apart): a level's Transforms, the GameObjects
+		// of the level above and the box colliders of the one above that, as many times as there are
+		// levels. A level is read before its parent's GameObject tells whether Walk goes there.
+		private static void ReadTrees(Bundle b, IEnumerable<long> roots)
+		{
+			bool Walked(long go) => b.Field(go) is { } g && (Active(g) || IsSnapPoint(g));
+			bool Below(long go) => b.Field(go) is { } g && Active(g) && !IsSnapPoint(g);
+			IEnumerable<long> Of(long go, int type) => b.Field(go) is { } g ? b.ComponentIds(g).Where(c => c.Type == type).Select(c => c.Pid) : Enumerable.Empty<long>();
+			var gos = roots.ToList();
+			// The Transforms to read, with their parent's GameObject (0 for a prefab's root).
+			var transforms = gos.SelectMany(g => Of(g, TransformType)).Select(t => (Pid: t, Parent: 0L)).ToList();
+			var boxes = new List<long>();
+			while (transforms.Count + gos.Count + boxes.Count > 0)
+			{
+				b.ReadInOrder(transforms.Select(t => t.Pid).Concat(gos).Concat(boxes));
+				boxes = gos.Where(Walked).SelectMany(g => Of(g, BoxColliderType)).ToList();
+				gos = new List<long>();
+				var next = new List<(long Pid, long Parent)>();
+				foreach (var (t, parent) in transforms)
+				{
+					if ((parent == 0 || Below(parent)) && b.Field(t) is { } tr)
+					{
+						long go = tr["m_GameObject.m_PathID"].AsLong;
+						gos.Add(go);
+						next.AddRange(tr["m_Children.Array"].Children.Select(c => (c["m_PathID"].AsLong, go)));
+					}
+				}
+				transforms = next;
 			}
 		}
 
@@ -95,17 +216,18 @@ public static partial class GameCatalogues
 			{
 				return;
 			}
+			// Only the Transform and box colliders read (not the renderers, scripts...).
 			AssetTypeValueField? tr = null;
 			var boxes = new List<AssetTypeValueField>();
-			foreach (var (t, _, f) in b.Components(g))
+			foreach (var (t, pid) in b.ComponentIds(g))
 			{
-				if (t == TransformType)
+				if (t == TransformType && b.Field(pid) is { } f)
 				{
 					tr = f;
 				}
-				else if (t == BoxColliderType && Solid(f))
+				else if (t == BoxColliderType && b.Field(pid) is { } c && Solid(c))
 				{
-					boxes.Add(f);
+					boxes.Add(c);
 				}
 			}
 			if (tr == null)
@@ -141,87 +263,17 @@ public static partial class GameCatalogues
 		}
 	}
 
-	// pieces.json's "tool": which build tool's menu has each piece (the game's PieceTables). The
-	// editor writes a builder on new pieces of these kinds, as the game does when a player places one.
-	// Entries that are not prefabs (repair, remove, the hoe's ground tools) are left out.
-	private sealed class ToolScan : IScan
-	{
-		private static readonly Dictionary<string, string> Tables = new() { ["_HammerPieceTable"] = "hammer", ["_HoePieceTable"] = "hoe", ["_CultivatorPieceTable"] = "cultivator", ["_FeasterPieceTable"] = "feaster" };
-
-		private readonly Dictionary<string, List<Ref>> _tables = new();
-
-		public void Read(Bundle b)
-		{
-			foreach (var f in b.Files)
-			{
-				foreach (var info in f.Assets.file.AssetInfos)
-				{
-					if (info.TypeId != MonoBehaviourType || b.Field(f, info.PathId) is not { } d || !Has(d, "m_pieces") || !Has(d, "m_canRemovePieces"))
-					{
-						continue;
-					}
-					if (b.Field(f, d["m_GameObject.m_PathID"].AsLong) is not { } owner || !Tables.TryGetValue(owner["m_Name"].AsString, out string? tool))
-					{
-						continue;
-					}
-					_tables[tool] = d["m_pieces.Array"].Children.Select(p => new Ref(f.FileOf(p["m_FileID"].AsInt) ?? "", p["m_PathID"].AsLong)).ToList();
-				}
-			}
-		}
-
-		public void Finish(Game game, Dict pieces, IReadOnlySet<string> prefabs)
-		{
-			var names = new Dictionary<Ref, string>();
-			game.Visit(_tables.Values.SelectMany(t => t), (b, f, pid) =>
-			{
-				if (b.Field(f, pid) is { } go && Has(go, "m_Name"))
-				{
-					names[new Ref(f.Cab, pid)] = go["m_Name"].AsString;
-				}
-			});
-			// A piece in several menus: the hammer's.
-			foreach (string tool in new[] { "feaster", "cultivator", "hoe", "hammer" })
-			{
-				foreach (var r in _tables.GetValueOrDefault(tool) ?? new())
-				{
-					if (names.TryGetValue(r, out string? n) && pieces.TryGetValue(n, out object? entry) && prefabs.Contains(n))
-					{
-						((Dict)entry!)["tool"] = tool;
-					}
-				}
-			}
-		}
-	}
-
-	// What build pieces cost, for the editor to read at its start (GameData): the prefabs found from the
-	// Piece scripts (told by their class, nothing else read), not by reading every GameObject.
-	public static string PieceCostJson(GameBundles bundles)
-	{
-		using var game = new Game(bundles.Folder);
-		game.IndexCabs();
-		var scan = new CostScan(Localization.English(bundles.Folder));
-		foreach (string name in game.Bundles)
-		{
-			using var b = game.Open(name);
-			if (b != null)
-			{
-				scan.Read(b, game);
-			}
-		}
-		return CatalogueJson.Write(scan.Json(), new CatalogueJson.Style(",", ":", SortKeys: true, Ascii: false));
-	}
-
-	// Each piece's English name, the crafting station it needs nearby and its resources (item and amount,
-	// and whether it is given back), items by prefab name with their English names, for the blueprint
-	// library's material cost.
-	private sealed class CostScan
+	// What build pieces cost, read at the editor's start (GameData): each piece's English name, the
+	// crafting station it needs nearby and its resources (item and amount, and whether it is given back),
+	// items by prefab name with their English names, for the blueprint library's material cost.
+	private sealed class CostScan : IStartScan
 	{
 		private readonly Dictionary<string, string> _english;
 		private readonly Dict _pieces = new(), _items = new();
 
 		public CostScan(Dictionary<string, string> english) => _english = english;
 
-		public Dict Json() => new() { ["pieces"] = _pieces, ["items"] = _items };
+		public string Json() => CatalogueJson.Write(new Dict { ["pieces"] = _pieces, ["items"] = _items }, new CatalogueJson.Style(",", ":", SortKeys: true, Ascii: false));
 
 		private string En(string? token)
 		{
@@ -231,35 +283,9 @@ public static partial class GameCatalogues
 
 		public void Read(Bundle b, Game game)
 		{
-			// The Piece scripts (told by their class) and their GameObjects, kept to the prefab roots (the
-			// locations have many pieces below theirs), in the bundle's order; only these are read whole.
-			var scripts = new HashSet<long>();
-			var owners = new List<(Bundle.Inner, long)>();
-			foreach (var (f, info) in b.Objects)
+			foreach (var (_, _, go, piece) in PieceRoots(b, game))
 			{
-				if (info.TypeId == MonoBehaviourType && game.ScriptClass(b, f, info) == "Piece" && Layout.First(f, info) is (0, var go))
-				{
-					scripts.Add(info.PathId);
-					owners.Add((f, go));
-				}
-			}
-			if (owners.Count == 0)
-			{
-				return;
-			}
-			var roots = Layout.Roots(owners);
-			Layout.Check(b, owners[0].Item2, roots);
-			foreach (var (f, info) in b.Objects)
-			{
-				if (info.TypeId != GameObjectType || !roots.Contains(info.PathId) || b.Field(f, info.PathId) is not { } go)
-				{
-					continue;
-				}
-				var piece = b.ComponentIds(go).Where(c => scripts.Contains(c.Pid)).Select(c => b.Field(c.Pid)).FirstOrDefault(p => p != null && IsPiece(p));
-				if (piece != null)
-				{
-					Add(b, go["m_Name"].AsString, piece);
-				}
+				Add(b, go["m_Name"].AsString, piece);
 			}
 		}
 
