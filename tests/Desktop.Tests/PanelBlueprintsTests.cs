@@ -147,10 +147,6 @@ public class PanelBlueprintsTests
 		Click(RowButtons(r, ".vbuild").Single());
 		Assert.StartsWith("Written to ", r.Said);
 		Assert.EndsWith(".vbuild. Only the objects are written, not the ground.", r.Said);
-		string? edit = "none";
-		r.B.EditAsked += p => edit = p;
-		Click(RowButtons(r, "Edit").Single());
-		Assert.Equal(Path.Combine(r.Homestead, "Gate.blueprint"), edit);
 		Click(RowButtons(r, "Paste").Single());
 		Assert.Equal("Gate", r.W.View.Paste.Clip!.Name);
 		Assert.False(r.B.Card.IsVisible);
@@ -164,6 +160,20 @@ public class PanelBlueprintsTests
 		Assert.Empty(r.Listed);
 		Assert.Empty(Directory.GetFiles(r.Homestead));
 		Assert.Contains("No blueprints yet", Texts(r.B.List));
+	}
+
+	// Edit asks for the blueprint's file (the window opens it in the Workshop). Alone in its test: the
+	// Workshop opens in the background and changes the tools, which steps after it would meet half way.
+	[AvaloniaFact]
+	public void EditAsksForTheBlueprintsFile()
+	{
+		using var r = new Run();
+		r.Keep("Gate", "woodwall", "wood_floor");
+		r.B.Toggle(true);
+		string? edit = "none";
+		r.B.EditAsked += p => edit = p;
+		Click(RowButtons(r, "Edit").Single());
+		Assert.Equal(Path.Combine(r.Homestead, "Gate.blueprint"), edit);
 	}
 
 	[AvaloniaFact]
