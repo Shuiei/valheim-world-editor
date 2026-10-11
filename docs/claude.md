@@ -92,3 +92,21 @@ rounds ("the roof overhangs on the east side, fix it"), or start from one of you
 
 When you like the result: **Save to world**, **Apply live** or **Save blueprint**. If not: **Discard**,
 or Ctrl+Z.
+
+## The building skill (Claude Code)
+
+For buildings that should look hand-made rather than placed by numbers, the repository has a Claude Code
+skill, [`.claude/skills/valheim-build`](../.claude/skills/valheim-build/SKILL.md). With it, Claude first
+looks up real Valheim builds and guides for ideas and writes a short design brief, shapes the ground,
+tries unfamiliar pieces in a small mock-up before using them, builds in phases with a library of proven
+helpers (glazed arched windows, storey ledges and cornices, battlements, round towers with spires, tile
+roofs with stepped gables, bartizans, porches, timber-framed halls), then checks its own work: scripts
+that find blocked windows, doubled pieces and stones sitting on windows, and a close look at every
+junction. Interiors get framing, a focal point, lighting and furnishing; the outside gets paths, lights
+and planting.
+
+Claude Code loads it by itself when you work in this repository. To have it everywhere, copy the
+folder to your own skills: `cp -r .claude/skills/valheim-build ~/.claude/skills/`. Then ask as usual,
+for example "Build a Gothic castle with a moat in the Workshop" or "this hall looks bare, furnish it".
+What it learns about pieces (sizes, which way they face) is in its `references/pieces.md`; corrections
+are welcome there.

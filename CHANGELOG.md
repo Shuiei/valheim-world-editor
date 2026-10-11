@@ -7,6 +7,10 @@ the plugin is unchanged in versions without that part.
 ## Unreleased
 
 ### Added
+- **Building skill for Claude Code** (`.claude/skills/valheim-build`): a workflow for buildings and
+  places that look hand-made: research and a design brief first, mock-ups of unfamiliar pieces,
+  phased building with a helper library, checks for blocked windows and other mistakes, then
+  interiors and landscaping. See [docs/claude.md](docs/claude.md#the-building-skill-claude-code).
 - **Claude** can work in the editor (Settings → **Allow Claude to connect**): an MCP server inside
   the editor, on this computer only and with a secret token, for Claude Code or any MCP client. Claude
   looks at the open world or Workshop (its state, heights, biomes, objects, screenshots, the game's
