@@ -11,7 +11,7 @@ namespace TerrainEditor.Editing;
 // their origin at the hit); then, of every snap point of the ghost and every snap point of the pieces
 // within 10 m, the closest pair within 0.5 m meets, unless that puts it right where the same piece
 // already stands. The pieces' colliders, snap points and flags come from the game
-// (piece-place.json.gz, tools/asset-export/scan_piece_place.py). All in world space (Unity's axes).
+// (piece-place.json.gz, --export-catalogues). All in world space (Unity's axes).
 public static class Hammer
 {
 	public const float SnapDistance = 0.5f, SnapRadius = 10f;

@@ -12,11 +12,9 @@
 | `Core/WorldGen/` | Valheim's world generator (bit-exact base terrain), map data, location flattening, the build-piece catalogue (`pieces.json`), the prefab catalogue (`prefabs.json`), the vegetation rules (`vegetation.json`), and the object data names (`zdo-keys.json`). |
 | `plugin/WorldEditorBridge/` | The BepInEx plugin for live mode (.NET Framework 4.7.2). |
 | `tests/Desktop.Tests/` | Every test (xUnit v3, Avalonia's headless mode), see [Tests](#tests). `tests/fixtures/` holds the test world. |
-| `tools/WorldCheck/` | Developer checks of the generator and the writer, and new worlds from a seed, see below. |
-| `tools/asset-export/` | Python (UnityPy) scripts that make the catalogues in `Core/WorldGen/` from the game's files (developers only; not in the release). |
-| `tools/docs-screenshots/` | `scenes.py` builds and takes the pictures in `docs/images/`, through `editor.py`, which drives the app. |
+| `tools/WorldCheck/` | Developer checks of the generator and the writer, saved objects byte by byte, and new worlds from a seed, see below. |
+| `tools/DocsScreenshots/` | `Scenes.cs` builds and takes the pictures in `docs/images/`, through `Editor.cs`, which drives the app. |
 | `tools/release.sh`, `tools/check-package.sh` | The release packages, and their check. |
-| `tools/zdo_scan.py` | Minimal chunk reader, to check saved objects byte by byte. |
 
 ## Command line
 
@@ -49,16 +47,16 @@ The app reads one command per line on its input and answers each with one line, 
 | `picture <file.png>` / `shot <file.png>` | The view shown (3D or map) once it is drawn / the whole window, panels and view, as Avalonia's compositor draws it (never a capture of the screen). |
 | `bench <seconds>` / `state` / `quit` | Frame rates while the camera turns / the state / quit without asking. |
 
-`tools/docs-screenshots/editor.py` wraps it for the documentation's pictures: it starts the app with
+`tools/DocsScreenshots/Editor.cs` wraps it for the documentation's pictures: it starts the app with
 a stand-in home folder (none of this computer's characters, worlds or servers show; driven, the app
 looks for Steam only in that home, so for the game's look its settings name this computer's Valheim), sends commands and saves `shot`s as JPEG, the status bar's message cleared first.
-`tools/docs-screenshots/scenes.py` holds one scene per picture: each opens a fresh editor and builds
+`tools/DocsScreenshots/Scenes.cs` holds one scene per picture: each opens a fresh editor and builds
 only what its picture shows, in worlds made from seeds and never saved:
 
 ```sh
 WorldCheck create <dir>/Docs Docs yjRO99yNTI 16 --flat     # the bare zone the tools are shown on
 WorldCheck create <dir>/Fjordheim Fjordheim Fjord2026 3     # a second world for the start page
-python3 tools/docs-screenshots/scenes.py <dir> [scene ...]  # all scenes, or only those named
+dotnet run --project tools/DocsScreenshots -- <dir> [scene ...]  # all scenes, or only those named
 ```
 
 The pictures go to `docs/images` (or `$DOCS_OUT`). The red on ground at the ±8 m limit is switched
@@ -91,7 +89,8 @@ programs (it rejected the editor packages of 0.3.3), so the editor is only on th
 page, which the plugin's mod page points to. `tools/thunderstore.sh <folder>` builds
 `WorldEditorBridge-<version>.zip` from `tools/thunderstore/bridge/` (`manifest.json` and the mod
 page `README.md`), the editor's `CHANGELOG.md` (made into the plugin's changelog by
-`tools/thunderstore/changelog.py`, with links to the matching editor on GitHub) and the icon, with
+`tools/thunderstore/package.cs`, a .NET file-based app, with links to the matching editor on GitHub)
+and the icon, with
 the DLL of the release packages (reused when that version is already in the folder). It checks
 Thunderstore's rules (name, 250-character description, 256x256 icon). Upload the zip at
 https://thunderstore.io/c/valheim/create/.
@@ -152,28 +151,27 @@ the user chose) and keeps the one reader, `Core/App/GameBundles.cs`:
 `tests/Desktop.Tests/GameFilesTests.cs` (`--filter Category=Game`) checks the models against a copy the
 older Python exporter made, where both are on the computer.
 
-The catalogues that are in git are made by `scan_pieces.py` (`Core/WorldGen/pieces.json`, with each
-piece's snap points), `scan_modifiers.py` (`Core/WorldGen/terrain-modifiers.json`) and
-`scan_prefabs.py` (`Core/WorldGen/prefabs.json`: also container sizes, ward radii and crafting
-station build ranges); each takes the output file as argument and the bundle folder in
-`VWE_BUNDLES`, and follows references between bundles with `tools/asset-export/cab_index.json`, made
-by `make_cab_index.py` (once, and again after a game update; `pip install -r
-tools/asset-export/requirements.txt` first). `scan_vegetation.py Core/WorldGen/vegetation.json` makes the game's vegetation rules
-for Regrow nature (ZoneSystem's and the location lists', with the random draws each kind makes when
-it is created). `scan_grown.py Core/WorldGen/prefabs.json` (run after `scan_prefabs.py`) adds what
-each sapling grows into (grown crops and trees keep their sapling's grow radius).
-`scan_stands.py Core/WorldGen/prefabs.json` (also after `scan_prefabs.py`) adds what stands may hold:
-each item's type, attach points, variants and durability, each item stand's rule (types, items it also
-takes or refuses) and each armour stand's slots, for the inspector's Holds / Wears and Claude's
-`set_contents`.
-`scan_build_tools.py Core/WorldGen/pieces.json Core/WorldGen/prefabs.json` (run after the other two)
-adds which build tool's menu has each piece (hammer, hoe, cultivator, feaster): the editor writes a
-builder on new pieces of those kinds. `scan_zdo_keys.py <Valheim folder>
-Core/WorldGen/zdo-keys.json` makes the names of object data keys for the object inspector, from the
-string literals of `assembly_valheim.dll` (the save only keeps their hashes).
-`scan_dungeon_rooms.py Core/WorldGen/dungeon-rooms.json` (then gzip it to `dungeon-rooms.json.gz`)
-makes the Dungeon tool's catalogue: each dungeon kind's themes and space, and each room's size,
-openings and the objects the game makes in it with the random parts that decide them.
+The catalogues that are in git (`Core/WorldGen/`, embedded in the app) are made from the game's files
+by the editor itself, in C# on the same reader (`Core/App/GameCatalogues*.cs`): after a game update,
+`ValheimWorldEditor --export-catalogues Core/WorldGen` makes them all again (about 6 minutes: every
+bundle is read once), and `--export-catalogues <folder> <name> ...` only those named (`prefabs`,
+`pieces`, `piece-cost`...). They are `pieces.json` (each piece's category, comfort, footprint and snap
+points, and which build tool's menu has it: hammer, hoe, cultivator, feaster, for the builder the
+editor writes on new pieces), `prefabs.json` (every networked prefab with what a new object of it
+needs in the save; also container sizes, ward radii, crafting station build ranges, what each sapling
+grows into, and what stands may hold: each item's type, attach points, variants and durability, each
+item stand's rule and each armour stand's slots, for the inspector's Holds / Wears and Claude's
+`set_contents`), `piece-cost.json` (each piece's English name, station and resources, for the
+blueprint library), `piece-place.json.gz` (the hammer's placement flags, snap points and colliders,
+for the Workshop's Build), `piece-support.json` (materials and collider boxes for the stability
+check), `terrain-modifiers.json`, `vegetation.json` (the game's vegetation rules for Regrow nature,
+ZoneSystem's and the location lists', with the random draws each kind makes when it is created),
+`cave-rocks.json` (the cave roof rocks' meshes), `dungeon-rooms.json.gz` (the Dungeon tool's
+catalogue: each dungeon kind's themes and space, and each room's size, openings and the objects the
+game makes in it with the random parts that decide them) and `zdo-keys.json` (the names of object
+data keys for the object inspector, from the string literals of `assembly_valheim.dll`: the save only
+keeps their hashes). The files are written exactly as before (`Core/App/CatalogueJson.cs`: the same
+number format, key order and separators), so a new export shows in git only what the game changed.
 
 The game's location rules (for the New world page's start, bosses and traders) are read by the editor
 itself, in C# (`Core/App/GameLocations.cs`), from the player's Valheim, and kept in the data folder
@@ -198,6 +196,7 @@ after an update.
 | `inspect <world>` / `summary <world>` | The chunk mapping and terrain objects / the overview map and the most edited zones. |
 | `create <folder> <name> <seed> [radius]` | A new world from a seed, in the game's save format; its middle (`radius` zones around spawn) generated with the game's vegetation rules (no locations). It refuses a folder that already holds a world. |
 | `look <seed> [metres]` | The biomes and water around a seed's spawn, to choose one. |
+| `objects <world> [prefab]` | The most common kinds of saved objects; with a prefab (name or hash), each of its objects and its saved bytes in hex, to check them byte by byte. |
 
 ## Tests
 

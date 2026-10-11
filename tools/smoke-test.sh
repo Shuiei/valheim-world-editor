@@ -19,24 +19,23 @@ show_why() {
   echo "--- its log:"; tail -40 "$home/.local/share/ValheimWorldEditor/ValheimWorldEditor.log" 2>/dev/null || echo "(none)"
 }
 
-printf '%s\n' "$out" | python3 -c '
-import json, sys
-lines = [l.rstrip("\n") for l in sys.stdin if l.startswith("@@ ")]
-if "@@ ready" not in lines:
-    sys.exit("smoke test: the editor never got ready")
-errors = [l for l in lines if l.startswith("@@ error")]
-if errors:
-    sys.exit("smoke test: " + errors[0])
-oks = [json.loads(l[len("@@ ok "):]) for l in lines if l.startswith("@@ ok ")]
-if not oks:
-    sys.exit("smoke test: no answer from the editor")
-s = oks[-1]
-page, frames, gl, objects = s.get("page"), s.get("frames", 0), s.get("glErrors", 0), s.get("objects", 0)
-problems = []
-if page != "editor": problems.append(f"page is {page!r}, not the 3D editor")
-if not frames: problems.append("no frame drawn")
-if gl: problems.append(f"{gl} OpenGL error(s)")
-if problems:
-    sys.exit("smoke test: " + "; ".join(problems))
-print(f"smoke test: ok ({frames} frames, {objects} objects, no OpenGL error)")
-''' || { show_why; exit 1; }
+# The driver's answers: it got ready, said no error, and its last state shows the 3D editor drawing
+# frames with no OpenGL error. The state is one line of JSON; its few numbers are read with sed.
+answers=$(printf '%s\n' "$out" | grep '^@@ ' || true)
+fail() { echo "smoke test: $1"; show_why; exit 1; }
+grep -qx '@@ ready' <<< "$answers" || fail "the editor never got ready"
+err=$(grep -m1 '^@@ error' <<< "$answers" || true)
+[[ -z $err ]] || fail "$err"
+state=$(grep '^@@ ok ' <<< "$answers" | tail -1)
+[[ -n $state ]] || fail "no answer from the editor"
+field() { sed -nE "s/.*\"$1\":(\"([^\"]*)\"|([0-9]+)).*/\\2\\3/p" <<< "$state"; }
+page=$(field page); frames=$(field frames); gl=$(field glErrors); objects=$(field objects)
+problems=()
+[[ $page == editor ]] || problems+=("page is '$page', not the 3D editor")
+(( ${frames:-0} > 0 )) || problems+=("no frame drawn")
+(( ${gl:-0} == 0 )) || problems+=("$gl OpenGL error(s)")
+if (( ${#problems[@]} )); then
+  joined=$(printf '; %s' "${problems[@]}")
+  fail "${joined:2}"
+fi
+echo "smoke test: ok ($frames frames, ${objects:-0} objects, no OpenGL error)"

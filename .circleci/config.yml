@@ -93,7 +93,7 @@ jobs:
       - checkout
       - run:
           name: Tools for packaging
-          command: apt-get update -qq && apt-get install -y -qq zip python3 > /dev/null
+          command: apt-get update -qq && apt-get install -y -qq zip > /dev/null
       - run:
           name: Build the release packages
           command: tools/release.sh /tmp/dist

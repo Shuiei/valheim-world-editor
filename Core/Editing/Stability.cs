@@ -10,7 +10,7 @@ namespace TerrainEditor.Editing;
 // mass and the angle (horizontal loses more than vertical); two supports on opposite sides average.
 // Repeated until nothing changes; pieces below their material's minimum break, then the rest is worked
 // out again (the collapse spreading). The pieces' colliders, materials and centres come from the game
-// (piece-support.json, tools/asset-export/scan_piece_support.py). Not counted: other objects (rocks,
+// (piece-support.json, --export-catalogues). Not counted: other objects (rocks,
 // trees) the game would also take as full support, and mesh colliders' exact shapes (their boxes).
 public static class Stability
 {

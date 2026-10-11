@@ -21,7 +21,7 @@ public class VersionTests
 	[Fact]
 	public void TheChangelogHasASectionForIt()
 	{
-		// The Thunderstore package's changelog is made from this one (tools/thunderstore/changelog.py).
+		// The Thunderstore package's changelog is made from this one (tools/thunderstore/package.cs).
 		Assert.Matches(new Regex($@"^## v{Regex.Escape(Version)}\b", RegexOptions.Multiline), File.ReadAllText(Path.Combine(Repo, "CHANGELOG.md")));
 	}
 
