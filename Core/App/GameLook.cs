@@ -25,11 +25,16 @@ public static class GameLook
     /// </summary>
     private static GameBundles? _bundles;
 
-    /// <summary>How far reading the game's files is (0..1), while running; null before the first step is told.</summary>
-    private static double? _progress;
+    /// <summary>
+    /// How far reading the game's files is, as last told by the reading (null before its first step). Set without the
+    /// lock: the reading tells it from inside the bundles reader's own lock, which Check takes under this one.
+    /// </summary>
+    private static volatile Told? _told;
 
-    /// <summary>What is being read, while running.</summary>
-    private static string? _step;
+    /// <summary>
+    /// A step of the reading: the reader it is about, how far (0..1) and what is being read.
+    /// </summary>
+    private sealed record Told(GameBundles Game, double Progress, string Step);
 
     /// <summary>
     /// Where older editors copied the game's look (game-look): deleted (<c>DeleteOldCopy</c>), nothing reads it
@@ -101,7 +106,8 @@ public static class GameLook
         lock (Lock)
         {
             bool running = State == "running";
-            return new Snapshot(State, Message, ValheimPath, running ? _step : null, State == "ready" ? 1 : running ? _progress : null);
+            var told = running && _told is { } t && ReferenceEquals(t.Game, _bundles) ? t : null;
+            return new Snapshot(State, Message, ValheimPath, told?.Step, State == "ready" ? 1 : told?.Progress);
         }
     }
 
@@ -145,17 +151,7 @@ public static class GameLook
         {
             string state, message;
             // The bar: the bundles' index first (a tenth: its table of contents only), then the game data.
-            void Report(double progress, string step)
-            {
-                lock (Lock)
-                {
-                    if (ReferenceEquals(_bundles, game))
-                    {
-                        _progress = progress;
-                        _step = step;
-                    }
-                }
-            }
+            void Report(double progress, string step) => _told = new Told(game, progress, step);
             try
             {
                 game.EnsureIndexed((done, count) => Report(0.1 * done / Math.Max(1, count), $"Indexing the game's bundles: {done} of {count}"));
@@ -207,8 +203,7 @@ public static class GameLook
         }
         State = state;
         Message = message;
-        _progress = null;
-        _step = null;
+        _told = null;
     }
 
     /// <summary>
