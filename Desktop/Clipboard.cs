@@ -34,9 +34,9 @@ public sealed class CopyData
         }
         float reference = a.Cells.Average(c => g.HeightOf(c.G));
         int w = a.X1 - a.X0 + 1, h = a.Z1 - a.Z0 + 1;
-        var rel = Enumerable.Repeat(float.NaN, w * h).ToArray();
-        var wt = new float[w * h];
-        var pnt = Enumerable.Repeat(-1f, w * h * 4).ToArray();
+        float[] rel = [.. Enumerable.Repeat(float.NaN, w * h)];
+        float[] wt = new float[w * h];
+        float[] pnt = [.. Enumerable.Repeat(-1f, w * h * 4)];
         foreach (var (p, k) in a.Cells)
         {
             int gx = p % g.W, gz = p / g.W, i = (gz - a.Z0) * w + gx - a.X0;
@@ -50,7 +50,7 @@ public sealed class CopyData
         float cx = (a.X0 + a.X1) / 2f, cz = (a.Z0 + a.Z1) / 2f, ox = s.X0 * 64f - 32f, oz = s.Z0 * 64f - 32f;
         var objs = objects.Select(i => s.Things[i]).Where(t => s.World == null || s.World.CanCreate(t.Prefab)).Select(t => new Obj(t.Prefab, nameOf(t.Prefab) ?? t.Prefab.ToString(),
             t.Position.X - ox - cx, t.Position.Z - oz - cz, t.Position.Y - reference, t.Rotation, t.Scale, SourceOf(s, t))).ToList();
-        return new CopyData { W = w, H = h, Rel = rel, Wt = wt, Pnt = pnt, Objects = objs, Poly = a.Poly.Select(p => p - new Vector2(cx, cz)).ToList() };
+        return new CopyData { W = w, H = h, Rel = rel, Wt = wt, Pnt = pnt, Objects = objs, Poly = [.. a.Poly.Select(p => p - new Vector2(cx, cz))] };
     }
 
     // Objects only (Select tool's copy): each keeps its height above the ground where it lands.
@@ -75,8 +75,13 @@ public sealed class CopyData
         }).ToList();
         return new CopyData
         {
-            W = 1, H = 1, Rel = new[] { float.NaN }, Wt = new float[1], Pnt = new[] { -1f, -1, -1, -1 }, Objects = objs,
-            Poly = new() { new(x0, z0), new(x1, z0), new(x1, z1), new(x0, z1) },
+            W = 1,
+            H = 1,
+            Rel = [float.NaN],
+            Wt = new float[1],
+            Pnt = [-1f, -1, -1, -1],
+            Objects = objs,
+            Poly = [new(x0, z0), new(x1, z0), new(x1, z1), new(x0, z1)],
         };
     }
 
@@ -96,7 +101,7 @@ public sealed class PasteTool
     // piece (a metre around it too), and the trees, rocks and the like there go (Site, for the caller).
     public bool ClearSite { get; set; } = true;
     // The grid points the last Apply cleared (its buildings' outlines and the metre around them).
-    public HashSet<(int X, int Z)> Site { get; } = new();
+    public HashSet<(int X, int Z)> Site { get; } = [];
     public float Offset { get; set; }
     public int Copies { get; set; } = 1;
     public enum Along { Width, Depth, Up }
@@ -176,7 +181,7 @@ public sealed class PasteTool
                 var p = ca + Xf(new Vector2(o.Dx, o.Dz));
                 objs.Add(new Vector3(p.X, o.Follow ? heightAt(p) + o.Dy + up : anchor + o.Dy, p.Y));
             }
-            outlines.Add(c.Poly.Select(p => ca + Xf(p)).ToList());
+            outlines.Add([.. c.Poly.Select(p => ca + Xf(p))]);
         }
         return (objs, outlines);
     }
@@ -304,12 +309,12 @@ public sealed class PasteTool
         var to = new Dictionary<(int, int), float>();
         foreach (var (o, _) in placed)
         {
-            string? name = TerrainEditor.Terrain.PrefabCatalog.NameOf(o.Prefab);
+            string? name = PrefabCatalog.NameOf(o.Prefab);
             if (name == null || !Workshop.Buildable(name))
             {
                 continue;
             }
-            var pts = TerrainEditor.Editing.Hammer.Outline(name, TerrainEditor.App.BlueprintFormats.FromEuler(o.Rotation), o.Scale > 0 ? o.Scale : 1).ToList();
+            var pts = Hammer.Outline(name, TerrainEditor.App.BlueprintFormats.FromEuler(o.Rotation), o.Scale > 0 ? o.Scale : 1).ToList();
             if (pts.Count == 0)
             {
                 continue;

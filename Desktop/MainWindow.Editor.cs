@@ -24,7 +24,7 @@ public sealed partial class MainWindow
     internal StackPanel AreaNav { get; } = new() { Orientation = Orientation.Horizontal, Spacing = 2, VerticalAlignment = VerticalAlignment.Center };
     // The area's size, changed on the fly (around the same middle zone).
     internal ComboBox AreaSizeBox { get; } = new() { ItemsSource = AreaSizes.Select(n => $"{n} × {n}").ToArray(), FontSize = 11.5, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(4, 0) };
-    internal static readonly int[] AreaSizes = { 3, 5, 7 };
+    internal static readonly int[] AreaSizes = [3, 5, 7];
     private bool _fillingSize;
     internal TextBlock LocationText { get; } = new() { FontSize = 12, TextWrapping = TextWrapping.Wrap, Foreground = new SolidColorBrush(Color.Parse("#f3d29b")) };
     internal Border LocationNote { get; private set; } = null!;
@@ -33,14 +33,14 @@ public sealed partial class MainWindow
     internal StackPanel PlayersRow { get; } = new() { Spacing = 2, IsVisible = false };
     internal Canvas PlayerLabels { get; } = new() { IsHitTestVisible = false };
     // The live players: name and world position, as the game last said.
-    internal IReadOnlyList<(string Name, Vector3 World)> LivePlayers { get; private set; } = Array.Empty<(string, Vector3)>();
+    internal IReadOnlyList<(string Name, Vector3 World)> LivePlayers { get; private set; } = [];
     private readonly DispatcherTimer _playersTimer = new() { Interval = TimeSpan.FromSeconds(2) };
     private readonly DispatcherTimer _labelsTimer = new() { Interval = TimeSpan.FromMilliseconds(100) };
     private readonly DispatcherTimer _followTimer = new() { Interval = TimeSpan.FromMilliseconds(700) };
     // Live: the game asked every 2 s what changed in the zones shown (WorldSession.FollowGame).
     private readonly DispatcherTimer _gameTimer = new() { Interval = TimeSpan.FromSeconds(2) };
     private string _followSaid = "";
-    internal AppSettings Settings => _settings;
+    internal AppSettings Settings { get; } = AppSettings.Load();
     // Writes the settings (Auto, Follow); tests keep them in memory, so no other window reads them.
     internal Action<AppSettings> SaveSettings { get; set; } = s => s.Save();
     private bool _applying, _applyAgain;
@@ -72,8 +72,8 @@ public sealed partial class MainWindow
         };
         AreaNav.Children.Add(FollowButton);
         FollowButton.Tip("top.follow");
-        FollowButton.Classes.Set("on", _settings.AreaFollow);
-        FollowButton.Click += (_, _) => SetFollow(!_settings.AreaFollow);
+        FollowButton.Classes.Set("on", Settings.AreaFollow);
+        FollowButton.Click += (_, _) => SetFollow(!Settings.AreaFollow);
         _followTimer.Tick += async (_, _) => await CheckFollow();
         // While the window is open (a running timer keeps the window alive).
         Opened += (_, _) => _followTimer.Start();
@@ -83,7 +83,7 @@ public sealed partial class MainWindow
             _gameTimer.Stop();
             _playersTimer.Stop();
             _labelsTimer.Stop();
-            _map?.Stop();
+            MapPage?.Stop();
         };
 
         DiscardButton.Tip("top.discard");
@@ -91,12 +91,12 @@ public sealed partial class MainWindow
         ReloadButton.Tip("top.reload");
         ReloadButton.Click += async (_, _) => await ReloadHere();
         AutoApplyBox.Tip("top.auto");
-        AutoApplyBox.IsChecked = _settings.AutoApply;
+        AutoApplyBox.IsChecked = Settings.AutoApply;
         AutoApplyBox.IsCheckedChanged += async (_, _) =>
         {
-            _settings.AutoApply = AutoApplyBox.IsChecked == true;
-            SaveSettings(_settings);
-            if (_settings.AutoApply && _session is { IsLive: true } s && s.Pending is not (0, 0, 0, 0))
+            Settings.AutoApply = AutoApplyBox.IsChecked == true;
+            SaveSettings(Settings);
+            if (Settings.AutoApply && Session is { IsLive: true } s && s.Pending is not (0, 0, 0, 0))
             {
                 await ApplyNow();
             }
@@ -157,7 +157,7 @@ public sealed partial class MainWindow
         {
             owner.RestoredSaid = true;
             int steps = scene.Session.UndoList.Count(c => c.Earlier) + scene.Session.RedoList.Count(c => c.Earlier);
-            _message.Text = $"History from an earlier session ({kept.SavedAt:g}): {steps} step(s) you can undo, in History.{(kept.Changed ? $" The world {(owner.IsLive ? "may have changed" : "was saved again")} since: you are asked before undoing them." : "")}";
+            MessageText.Text = $"History from an earlier session ({kept.SavedAt:g}): {steps} step(s) you can undo, in History.{(kept.Changed ? $" The world {(owner.IsLive ? "may have changed" : "was saved again")} since: you are asked before undoing them." : "")}";
         }
         bool live = scene.Owner?.IsLive == true;
         PlayersRow.IsVisible = live;
@@ -173,7 +173,7 @@ public sealed partial class MainWindow
             _gameTimer.Stop();
             _playersTimer.Stop();
             _labelsTimer.Stop();
-            SetPlayers(Array.Empty<(string, Vector3)>());
+            SetPlayers([]);
         }
     }
 
@@ -181,7 +181,7 @@ public sealed partial class MainWindow
 
     internal async Task MoveArea(int dx, int dz)
     {
-        if (_view.Scene is not { Owner: not null } s)
+        if (View.Scene is not { Owner: not null } s)
         {
             return;
         }
@@ -191,29 +191,29 @@ public sealed partial class MainWindow
 
     private async Task OpenAreaKeepingView(int zx, int zz, int size)
     {
-        var cam = _view.WorldCamera;
+        var cam = View.WorldCamera;
         await EditArea(zx, zz, size);
-        if (_view.Scene is { } ns && ns.X0 + ns.Size / 2 == zx && ns.Z0 + ns.Size / 2 == zz && cam != null)
+        if (View.Scene is { } ns && ns.X0 + ns.Size / 2 == zx && ns.Z0 + ns.Size / 2 == zz && cam != null)
         {
-            _view.WorldCamera = cam;
+            View.WorldCamera = cam;
         }
     }
 
     // The area made bigger or smaller around its middle zone: the edits, the history and the view stay.
     internal async Task ResizeArea(int size)
     {
-        if (_view.Scene is not { Owner: not null } s || s.Size == size)
+        if (View.Scene is not { Owner: not null } s || s.Size == size)
         {
             return;
         }
         if (MoveBlocker() is string why)
         {
-            _message.Text = $"The area cannot change size now: {why}.";
+            MessageText.Text = $"The area cannot change size now: {why}.";
             ShowAreaSize(s.Size);
             return;
         }
         int mid = s.Size / 2;
-        _message.Text = $"Opening {size} × {size} zones…";
+        MessageText.Text = $"Opening {size} × {size} zones…";
         await OpenAreaKeepingView(s.X0 + mid, s.Z0 + mid, size);
     }
 
@@ -228,25 +228,25 @@ public sealed partial class MainWindow
 
     internal void SetFollow(bool on)
     {
-        _settings.AreaFollow = on;
-        SaveSettings(_settings);
+        Settings.AreaFollow = on;
+        SaveSettings(Settings);
         FollowButton.Classes.Set("on", on);
-        _message.Text = on ? "Follow: the area moves by itself when you look near its edge." : "Follow is off: move the area with the arrows.";
+        MessageText.Text = on ? "Follow: the area moves by itself when you look near its edge." : "Follow is off: move the area with the arrows.";
         _followSaid = "";
     }
 
     // What stops the area from moving now (Follow waits): something unfinished would be lost.
     internal string? MoveBlocker()
     {
-        if (_view.Selected.Count > 0)
+        if (View.Selected.Count > 0)
         {
             return "objects are selected (Esc clears)";
         }
-        if (_session?.Stroking == true)
+        if (Session?.Stroking == true)
         {
             return "a stroke is on";
         }
-        if (_view.Path.Points.Count > 0)
+        if (View.Path.Points.Count > 0)
         {
             return "a path is drawn (apply or clear it)";
         }
@@ -261,11 +261,11 @@ public sealed partial class MainWindow
     // under it (one zone on when that is the middle one already). The zone it moves to, or null.
     internal async Task<(int X, int Z)?> CheckFollow()
     {
-        if (!_settings.AreaFollow || _pages.Content != _editorPage || _view.Scene is not { Owner: not null } s)
+        if (!Settings.AreaFollow || _pages.Content != _editorPage || View.Scene is not { Owner: not null } s)
         {
             return null;
         }
-        var t = _view.Camera.Target;
+        var t = View.Camera.Target;
         bool nearX = MathF.Abs(t.X) > (s.W - 1) / 2f - 12, nearZ = MathF.Abs(t.Z) > (s.H - 1) / 2f - 12;
         if (!nearX && !nearZ)
         {
@@ -276,7 +276,7 @@ public sealed partial class MainWindow
         {
             if (_followSaid != why)
             {
-                _message.Text = $"Follow waits: {why}.";
+                MessageText.Text = $"Follow waits: {why}.";
             }
             _followSaid = why;
             return null;
@@ -284,15 +284,31 @@ public sealed partial class MainWindow
         float wx = t.X + s.Cx, wz = -t.Z + s.Cz;
         int czx = s.X0 + s.Size / 2, czz = s.Z0 + s.Size / 2;
         int zx = (int)MathF.Floor((wx + 32) / 64), zz = (int)MathF.Floor((wz + 32) / 64);
-        if (nearX && zx == czx) zx += Math.Sign(wx - czx * 64);
-        if (nearZ && zz == czz) zz += Math.Sign(wz - czz * 64);
-        if (!nearX) zx = czx;
-        if (!nearZ) zz = czz;
+        if (nearX && zx == czx)
+        {
+            zx += Math.Sign(wx - czx * 64);
+        }
+
+        if (nearZ && zz == czz)
+        {
+            zz += Math.Sign(wz - czz * 64);
+        }
+
+        if (!nearX)
+        {
+            zx = czx;
+        }
+
+        if (!nearZ)
+        {
+            zz = czz;
+        }
+
         if (zx == czx && zz == czz)
         {
             return null;
         }
-        _message.Text = "Moving the area…";
+        MessageText.Text = "Moving the area…";
         await OpenAreaKeepingView(zx, zz, s.Size);
         return (zx, zz);
     }
@@ -303,14 +319,14 @@ public sealed partial class MainWindow
     // Pending changes with no step here (made in another area, or before) need the world read again.
     internal async Task DiscardHere()
     {
-        if (_session is not { } s)
+        if (Session is not { } s)
         {
             return;
         }
-        _view.SelectTool.Commit();
+        View.SelectTool.Commit();
         if (s.Pending is (0, 0, 0, 0))
         {
-            _message.Text = "There is nothing to discard.";
+            MessageText.Text = "There is nothing to discard.";
             return;
         }
         int steps = s.UnappliedSteps;
@@ -323,7 +339,7 @@ public sealed partial class MainWindow
         History.Refresh();
         if (s.Pending is (0, 0, 0, 0))
         {
-            _message.Text = "Discarded. Everything else is kept.";
+            MessageText.Text = "Discarded. Everything else is kept.";
             return;
         }
         if (s.Scene.Owner is not { } w || !await Ask("Discard", "Some of the changes waiting have no step in this area's history (made in another area, or earlier), so they can only be discarded by reading the world again. Read it again now?", "Read it again", "Keep them"))
@@ -337,19 +353,19 @@ public sealed partial class MainWindow
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or IOException or InvalidOperationException)
         {
-            _message.Text = "Could not read the world again: " + ex.Message;
+            MessageText.Text = "Could not read the world again: " + ex.Message;
             Busy(null);
             return;
         }
         Busy(null);
         await ReopenArea(s.Scene);
-        _message.Text = "Discarded: the world was read again.";
+        MessageText.Text = "Discarded: the world was read again.";
     }
 
     // Live: the world loaded again from the game (asks first when something waits).
     internal async Task ReloadHere()
     {
-        if (_session is not { IsLive: true, Scene.Owner: { } w } s)
+        if (Session is not { IsLive: true, Scene.Owner: { } w } s)
         {
             return;
         }
@@ -365,18 +381,18 @@ public sealed partial class MainWindow
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or IOException or InvalidOperationException or System.Text.Json.JsonException)
         {
             Busy(null);
-            _message.Text = "Could not reach the game: " + ex.Message;
+            MessageText.Text = "Could not reach the game: " + ex.Message;
             return;
         }
         Busy(null);
         await ReopenArea(s.Scene);
-        _message.Text = "The world was loaded again from the game.";
+        MessageText.Text = "The world was loaded again from the game.";
     }
 
     // The same area again (the world was read again), the view where it was.
     private async Task ReopenArea(WorldScene old)
     {
-        _session = null;
+        Session = null;
         await OpenAreaKeepingView(old.X0 + old.Size / 2, old.Z0 + old.Size / 2, old.Size);
     }
 
@@ -395,14 +411,14 @@ public sealed partial class MainWindow
             do
             {
                 _applyAgain = false;
-                if (_session is not { IsLive: true } s)
+                if (Session is not { IsLive: true } s)
                 {
                     break;
                 }
                 SaveButton.IsEnabled = false;
-                _message.Text = "Applying to the running game…";
+                MessageText.Text = "Applying to the running game…";
                 var o = await s.ApplyLive(ConfirmOverGame);
-                _message.Text = o.Message;
+                MessageText.Text = o.Message;
                 if (o.Declined)
                 {
                     UpdateSaveBar();
@@ -422,7 +438,7 @@ public sealed partial class MainWindow
     // A change made with Auto on: to the game at once.
     private void AutoApply(EditSession s)
     {
-        if (_settings.AutoApply && s == _session && s.IsLive && !s.Stroking)
+        if (Settings.AutoApply && s == Session && s.IsLive && !s.Stroking)
         {
             _ = ApplyNow();
         }
@@ -438,7 +454,7 @@ public sealed partial class MainWindow
 
     internal async Task FollowGame()
     {
-        if (_followingGame || _session is not { IsLive: true, Scene.Owner: { } owner } s || _gameTooOld == owner)
+        if (_followingGame || Session is not { IsLive: true, Scene.Owner: { } owner } s || _gameTooOld == owner)
         {
             return;
         }
@@ -459,7 +475,7 @@ public sealed partial class MainWindow
             }
             // Merged and shown at once, on this thread: nothing changes the world or the area in between.
             // The area open now gets it, whichever it is (taking it twice changes nothing).
-            if (_session is not { Scene.Owner: { } now } open || now != owner)
+            if (Session is not { Scene.Owner: { } now } open || now != owner)
             {
                 _gameFetched = null;
                 return;
@@ -475,8 +491,8 @@ public sealed partial class MainWindow
             // Changes of the editor's undone where the game changed the ground meanwhile: the game's now.
             else if (_gameFetched == null && !open.Stroking && owner.TakeWaitingGround() is { Count: > 0 } waiting)
             {
-                open.TakeGameChanges(new WorldSession.Followed(new TerrainEditor.Save.WorldSave.Merged(new(), new(), new(), new()), new(), waiting, new()));
-                _message.Text = $"From the game: the ground of {waiting.Count} zone(s), where your changes were undone.";
+                open.TakeGameChanges(new WorldSession.Followed(new Save.WorldSave.Merged([], [], [], []), [], waiting, []));
+                MessageText.Text = $"From the game: the ground of {waiting.Count} zone(s), where your changes were undone.";
             }
             UpdateSaveBar();
         }
@@ -484,7 +500,7 @@ public sealed partial class MainWindow
         {
             // An older plugin on the server: no following (Reload still reads the whole world again).
             _gameTooOld = owner;
-            _message.Text = "The WorldEditorBridge plugin on the server is older than this editor: update it to see what players change while you edit (Reload reads the world again meanwhile).";
+            MessageText.Text = "The WorldEditorBridge plugin on the server is older than this editor: update it to see what players change while you edit (Reload reads the world again meanwhile).";
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or IOException or InvalidDataException or InvalidOperationException or System.Text.Json.JsonException or FormatException)
         {
@@ -502,9 +518,21 @@ public sealed partial class MainWindow
     {
         var parts = new List<string>();
         int added = f.Merged.Added.Count, gone = f.Merged.Vanished.Count + f.Ours.Count;
-        if (added > 0) parts.Add($"{added} new object(s)");
-        if (gone > 0) parts.Add($"{gone} removed");
-        if (f.Ground.Count > 0) parts.Add($"the ground of {f.Ground.Count} zone(s)");
+        if (added > 0)
+        {
+            parts.Add($"{added} new object(s)");
+        }
+
+        if (gone > 0)
+        {
+            parts.Add($"{gone} removed");
+        }
+
+        if (f.Ground.Count > 0)
+        {
+            parts.Add($"the ground of {f.Ground.Count} zone(s)");
+        }
+
         string text = parts.Count > 0 ? $"From the game: {string.Join(", ", parts)}." : "";
         if (f.Kept.Count > 0)
         {
@@ -512,7 +540,7 @@ public sealed partial class MainWindow
         }
         if (text != "")
         {
-            _message.Text = text.Trim();
+            MessageText.Text = text.Trim();
         }
     }
 
@@ -527,14 +555,14 @@ public sealed partial class MainWindow
 
     internal async Task PollPlayers()
     {
-        if (_view.Scene?.Owner?.Live is not { } live)
+        if (View.Scene?.Owner?.Live is not { } live)
         {
             return;
         }
         try
         {
             var json = System.Text.Json.Nodes.JsonNode.Parse(await live.Players())?.AsArray();
-            var players = json?.Where(p => p?["name"] != null).Select(p => ((string)p!["name"]!, new Vector3((float)(p["x"] ?? 0), (float)(p["y"] ?? 0), (float)(p["z"] ?? 0)))).ToList() ?? new();
+            var players = json?.Where(p => p?["name"] != null).Select(p => ((string)p!["name"]!, new Vector3((float)(p["x"] ?? 0), (float)(p["y"] ?? 0), (float)(p["z"] ?? 0)))).ToList() ?? [];
             SetPlayers(players);
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException or InvalidOperationException or FormatException)
@@ -546,7 +574,7 @@ public sealed partial class MainWindow
     internal void SetPlayers(IReadOnlyList<(string Name, Vector3 World)> players)
     {
         LivePlayers = players;
-        _view.Players = players;
+        View.Players = players;
         var names = players.Select(p => p.Name).ToList();
         string? chosen = PlayerBox.SelectedItem as string;
         if (!(PlayerBox.ItemsSource is List<string> old && old.SequenceEqual(names)))
@@ -563,14 +591,14 @@ public sealed partial class MainWindow
     internal void PlaceLabels()
     {
         PlayerLabels.Children.Clear();
-        if (_view.Scene is not { } s || LivePlayers.Count == 0 || _pages.Content != _editorPage)
+        if (View.Scene is not { } s || LivePlayers.Count == 0 || _pages.Content != _editorPage)
         {
             return;
         }
-        var size = _view.Bounds.Size;
+        var size = View.Bounds.Size;
         foreach (var (name, w) in LivePlayers)
         {
-            var q = Vector4.Transform(new Vector4(w.X - s.Cx, w.Y + 4, -(w.Z - s.Cz), 1), _view.ViewProj);
+            var q = Vector4.Transform(new Vector4(w.X - s.Cx, w.Y + 4, -(w.Z - s.Cz), 1), View.ViewProj);
             if (q.W <= 0.01f)
             {
                 continue;
@@ -590,7 +618,7 @@ public sealed partial class MainWindow
     // Go to a player: right here when they are in the area, else the area around them.
     internal async Task GoToPlayer(string? name)
     {
-        if (name == null || _view.Scene is not { } s || LivePlayers.FirstOrDefault(p => p.Name == name) is not { Name: not null } p)
+        if (name == null || View.Scene is not { } s || LivePlayers.FirstOrDefault(p => p.Name == name) is not { Name: not null } p)
         {
             return;
         }
@@ -600,7 +628,7 @@ public sealed partial class MainWindow
             int zx = (int)MathF.Floor((p.World.X + 32) / 64), zz = (int)MathF.Floor((p.World.Z + 32) / 64);
             await EditArea(zx, zz, s.Size);
         }
-        _view.Focus(p.World);
-        _message.Text = $"Looking at {name}.";
+        View.Focus(p.World);
+        MessageText.Text = $"Looking at {name}.";
     }
 }

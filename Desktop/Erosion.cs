@@ -8,13 +8,13 @@ namespace TerrainEditor.Desktop;
 // ±8 m limit applies).
 public static class Erosion
 {
-    private static readonly (int Dx, int Dz)[] N8 = { (1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (1, -1), (-1, 1), (-1, -1) };
+    private static readonly (int Dx, int Dz)[] N8 = [(1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (1, -1), (-1, 1), (-1, -1)];
 
     // h: heights of a w × d window (row by row), wt: how much each point may change (0..1). talus:
     // steepest slope (rise per metre) that stays put. amount: share of the excess moved per pass.
     public static void Thermal(float[] h, float[] wt, int w, int d, float talus, float amount, int passes)
     {
-        var delta = new float[h.Length];
+        float[] delta = new float[h.Length];
         var ds = new List<(int J, float Diff)>(8);
         for (int p = 0; p < passes; p++)
         {
@@ -65,8 +65,8 @@ public static class Erosion
     // Rain drops (after Hans Theobald Beyer's "Implementation of a method for hydraulic erosion").
     public static void Hydraulic(float[] h, float[] wt, int w, int d, int drops, float strength, Random rand)
     {
-        const float inertia = 0.05f, capacityK = 4, deposit = 0.3f, evaporate = 0.02f, gravity = 4, minSlope = 0.01f;
-        const int life = 40;
+        const float Inertia = 0.05f, CapacityK = 4, Deposit = 0.3f, Evaporate = 0.02f, Gravity = 4, MinSlope = 0.01f;
+        const int Life = 40;
         float erode = 0.3f * strength;
         float At(int x, int z) => h[z * w + x];
         (float Gx, float Gz, float H) Gradient(float px, float pz)
@@ -94,11 +94,11 @@ public static class Erosion
                 continue;
             }
             float dirX = 0, dirZ = 0, speed = 1, water = 1, sediment = 0;
-            for (int step = 0; step < life; step++)
+            for (int step = 0; step < Life; step++)
             {
-                var g = Gradient(px, pz);
-                dirX = dirX * inertia - g.Gx * (1 - inertia);
-                dirZ = dirZ * inertia - g.Gz * (1 - inertia);
+                var (gx, gz, height) = Gradient(px, pz);
+                dirX = dirX * Inertia - gx * (1 - Inertia);
+                dirZ = dirZ * Inertia - gz * (1 - Inertia);
                 float len = MathF.Sqrt(dirX * dirX + dirZ * dirZ);
                 if (len < 1e-6f)
                 {
@@ -111,12 +111,12 @@ public static class Erosion
                 {
                     break;
                 }
-                float dh = Gradient(nx, nz).H - g.H;
-                float capacity = MathF.Max(-dh, minSlope) * speed * water * capacityK;
+                float dh = Gradient(nx, nz).H - height;
+                float capacity = MathF.Max(-dh, MinSlope) * speed * water * CapacityK;
                 if (sediment > capacity || dh > 0)
                 {
                     // Uphill or full: drop sediment (enough to fill a pit going uphill).
-                    float amount = dh > 0 ? MathF.Min(dh, sediment) : (sediment - capacity) * deposit;
+                    float amount = dh > 0 ? MathF.Min(dh, sediment) : (sediment - capacity) * Deposit;
                     sediment -= amount;
                     Change(px, pz, amount);
                 }
@@ -126,8 +126,8 @@ public static class Erosion
                     sediment += amount;
                     Change(px, pz, -amount);
                 }
-                speed = MathF.Sqrt(MathF.Max(0, speed * speed + dh * gravity));
-                water *= 1 - evaporate;
+                speed = MathF.Sqrt(MathF.Max(0, speed * speed + dh * Gravity));
+                water *= 1 - Evaporate;
                 px = nx;
                 pz = nz;
             }
@@ -147,8 +147,8 @@ public static class Erosion
         {
             return (x0, z0, x1, z1);
         }
-        var h = new float[w * d];
-        var wt = new float[w * d];
+        float[] h = new float[w * d];
+        float[] wt = new float[w * d];
         for (int z = 0; z < d; z++)
         {
             for (int x = 0; x < w; x++)
@@ -158,7 +158,7 @@ public static class Erosion
                 wt[z * w + x] = g.Locked(gx, gz) ? 0 : weightOf(gx, gz, p);
             }
         }
-        var before = (float[])h.Clone();
+        float[] before = (float[])h.Clone();
         fn(h, wt, w, d);
         for (int i = 0; i < h.Length; i++)
         {

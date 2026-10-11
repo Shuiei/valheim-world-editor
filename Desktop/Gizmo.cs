@@ -42,18 +42,18 @@ public static class Gizmo
                 v.Add(p.Z);
             }
         }
-        const int n = 16;
+        const int N = 16;
         if (h == Handle.Ring)
         {
-            const float r = 0.022f;
-            const int m = 96;
+            const float R = 0.022f;
+            const int M = 96;
             Vector3 P(int i, int j)
             {
-                float a = i * MathF.Tau / m, b = j * MathF.Tau / 6;
-                float rr = RingRadius + r * MathF.Cos(b);
-                return new Vector3(rr * MathF.Cos(a), r * MathF.Sin(b), rr * MathF.Sin(a));
+                float a = i * MathF.Tau / M, b = j * MathF.Tau / 6;
+                float rr = RingRadius + R * MathF.Cos(b);
+                return new Vector3(rr * MathF.Cos(a), R * MathF.Sin(b), rr * MathF.Sin(a));
             }
-            for (int i = 0; i < m; i++)
+            for (int i = 0; i < M; i++)
             {
                 for (int j = 0; j < 6; j++)
                 {
@@ -61,7 +61,7 @@ public static class Gizmo
                     Tri(P(i, j), P(i + 1, j + 1), P(i, j + 1));
                 }
             }
-            return v.ToArray();
+            return [.. v];
         }
         // Along +y, then turned onto the axis.
         var turn = h switch
@@ -71,15 +71,15 @@ public static class Gizmo
             _ => Matrix4x4.Identity,
         };
         Vector3 T(Vector3 p) => Vector3.Transform(p, turn);
-        Vector3 Round(float r, float y, int i) => T(new Vector3(r * MathF.Cos(i * MathF.Tau / n), y, r * MathF.Sin(i * MathF.Tau / n)));
-        for (int i = 0; i < n; i++)
+        Vector3 Round(float r, float y, int i) => T(new Vector3(r * MathF.Cos(i * MathF.Tau / N), y, r * MathF.Sin(i * MathF.Tau / N)));
+        for (int i = 0; i < N; i++)
         {
             Tri(Round(ShaftRadius, ShaftFrom, i), Round(ShaftRadius, ShaftTo, i), Round(ShaftRadius, ShaftTo, i + 1));
             Tri(Round(ShaftRadius, ShaftFrom, i), Round(ShaftRadius, ShaftTo, i + 1), Round(ShaftRadius, ShaftFrom, i + 1));
             Tri(Round(HeadRadius, ShaftTo - 0.02f, i), T(new Vector3(0, HeadTo, 0)), Round(HeadRadius, ShaftTo - 0.02f, i + 1));
             Tri(Round(HeadRadius, ShaftTo - 0.02f, i), Round(HeadRadius, ShaftTo - 0.02f, i + 1), T(new Vector3(0, ShaftTo - 0.02f, 0)));
         }
-        return v.ToArray();
+        return [.. v];
     }
 
     // The handle a ray from the mouse grabs (the arrows a little thicker than drawn), or null.

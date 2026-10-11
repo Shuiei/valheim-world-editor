@@ -51,12 +51,12 @@ public static class DungeonGen
 
     // Locations with a dungeon, which the game lays out 5000 m above them when a player first comes
     // near: nothing of it is in the save until then.
-    public static readonly HashSet<int> DungeonLocations = new[]
+    public static readonly HashSet<int> DungeonLocations = [.. new[]
     {
         "Crypt2", "Crypt3", "Crypt4", "HalfBurried_ForestCrypt", "SunkenCrypt4", "MountainCave02", "Hildir_crypt", "Hildir_cave", "Hildir_plainsfortress",
         "Mistlands_DvergrTownEntrance1", "Mistlands_DvergrTownEntrance2", "Mistlands_DvergrBossEntrance1", "MorgenHole1", "MorgenHole2", "MorgenHole3",
         "TheHole01", "TheDarkestHole", "CharredFortress",
-    }.Select(Save.StableHash.Of).ToHashSet();
+    }.Select(Save.StableHash.Of)];
 
     public readonly record struct Box(Vector3 Min, Vector3 Max)
     {
@@ -94,7 +94,7 @@ public static class DungeonGen
     // taken.
     public static Vector3 Clear(Vector3 origin, Result r, IReadOnlyList<Box> taken)
     {
-        var points = r.Items.Select(i => i.Position).Concat(r.Rooms?.Select(p => p.Position) ?? Enumerable.Empty<Vector3>()).ToList();
+        var points = r.Items.Select(i => i.Position).Concat(r.Rooms?.Select(p => p.Position) ?? []).ToList();
         if (points.Count == 0)
         {
             return origin;
@@ -124,7 +124,7 @@ public static class DungeonGen
     public static string NameFor(int seed, string? style = null, string? biome = null)
     {
         var r = new Random(seed * 7919 + 13);
-        var starts = NameStarts(style ?? BiomeOf(biome).Style);
+        string[] starts = NameStarts(style ?? BiomeOf(biome).Style);
         return $"{starts[r.Next(starts.Length)]} of {NameEnds[r.Next(NameEnds.Length)]}";
     }
 
@@ -247,13 +247,13 @@ public static class DungeonGen
         var biome = BiomeOf(s.Biome);
         var style = StyleOf(s.Style ?? biome.Style);
         var mat = MaterialOf(s.Walls ?? biome.Material);
-        var name = string.IsNullOrWhiteSpace(s.Name) ? NameFor(s.Seed, style.Name) : s.Name!;
+        string name = string.IsNullOrWhiteSpace(s.Name) ? NameFor(s.Seed, style.Name) : s.Name!;
         var plan = DungeonPlanner.Make(s, style, rnd);
         var o = new DungeonOut();
         DungeonShell.Build(plan, mat, o, s);
         DungeonDresser.Dress(plan, mat, biome, style, s, rnd, o, name);
         var e = plan.Entrance;
-        var arrival = new System.Numerics.Vector3(e.CenterX, 0.05f, 2 * e.Z0 + 1.7f);
+        var arrival = new Vector3(e.CenterX, 0.05f, 2 * e.Z0 + 1.7f);
         var map = plan.Spaces.Select(sp => new PlanRoom(sp.Name, sp.Level, DungeonPlan.FloorY(sp.Level), 2 * sp.X0, 2 * sp.Z0, 2 * (sp.X0 + sp.W), 2 * (sp.Z0 + sp.H),
             sp.Corridor, sp.Main, sp.KeyChest)).ToList();
         var index = plan.Spaces.Select((sp, i) => (sp, i)).ToDictionary(p => p.sp, p => p.i);

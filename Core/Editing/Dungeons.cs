@@ -43,7 +43,7 @@ public static class Dungeons
     // Doors: its door types (prefab, opening type, chance; 0 takes DoorChance).
     public sealed record Kind(string Name, int Hash, int Themes, bool Interior, Vector3 ZoneSize, bool CustomInterior = false, bool BaseSeed = false)
     {
-        public (string Prefab, string Type, float Chance)[] Doors { get; init; } = Array.Empty<(string, string, float)>();
+        public (string Prefab, string Type, float Chance)[] Doors { get; init; } = [];
 
         public float DoorChance { get; init; } = 0.5f;
     }
@@ -51,20 +51,20 @@ public static class Dungeons
     private sealed record Catalog(Dictionary<int, Room> Rooms, Dictionary<int, Kind> Kinds);
 
     // None until Use: no world opens before then (GameData).
-    private static volatile Catalog All = new(new(), new());
+    private static volatile Catalog _all = new([], []);
 
     // The dungeons and rooms as GameCatalogues' DungeonScan writes them.
-    public static void Use(string json) => All = Load(json);
+    public static void Use(string json) => _all = Load(json);
 
-    public static Room? RoomOf(int hash) => All.Rooms.GetValueOrDefault(hash);
+    public static Room? RoomOf(int hash) => _all.Rooms.GetValueOrDefault(hash);
 
     public static Room? RoomOf(string name) => RoomOf(StableHash.Of(name));
 
-    public static Kind? KindOf(int prefab) => All.Kinds.GetValueOrDefault(prefab);
+    public static Kind? KindOf(int prefab) => _all.Kinds.GetValueOrDefault(prefab);
 
-    public static IEnumerable<Kind> Kinds => All.Kinds.Values.OrderBy(k => k.Name, StringComparer.Ordinal);
+    public static IEnumerable<Kind> Kinds => _all.Kinds.Values.OrderBy(k => k.Name, StringComparer.Ordinal);
 
-    public static IEnumerable<Room> AllRooms => All.Rooms.Values.OrderBy(r => r.Name, StringComparer.Ordinal);
+    public static IEnumerable<Room> AllRooms => _all.Rooms.Values.OrderBy(r => r.Name, StringComparer.Ordinal);
 
     // The rooms a dungeon of this kind can hold: those of its themes, the game's way
     // (DungeonGenerator.SetupAvailableRooms: enabled rooms whose theme shares a flag with the dungeon's).
@@ -72,7 +72,7 @@ public static class Dungeons
 
     private static Catalog Load(string json)
     {
-        using JsonDocument doc = JsonDocument.Parse(json);
+        using var doc = JsonDocument.Parse(json);
         static Vector3 V(JsonElement a, int i) => new(a[i].GetSingle(), a[i + 1].GetSingle(), a[i + 2].GetSingle());
         static Quaternion Q(JsonElement a, int i) => new(a[i].GetSingle(), a[i + 1].GetSingle(), a[i + 2].GetSingle(), a[i + 3].GetSingle());
         var rooms = new Dictionary<int, Room>();
@@ -82,12 +82,12 @@ public static class Dungeons
             bool B(string k) => r.GetProperty(k).GetInt32() != 0;
             rooms[StableHash.Of(p.Name)] = new Room(p.Name, StableHash.Of(p.Name), r.GetProperty("theme").GetInt32(), V(r.GetProperty("size"), 0),
                 B("endCap"), B("entrance"), B("divider"), r.GetProperty("endCapPrio").GetInt32(), r.GetProperty("weight").GetSingle(), B("perimeter"), B("enabled"),
-                r.GetProperty("openings").EnumerateArray().Select(o => new Opening(o[0].GetString() ?? "", o[1].GetInt32() != 0, o[2].GetInt32() != 0, V(o, 4), Q(o, 7), o[3].GetInt32() != 0)).ToArray(),
-                r.GetProperty("contents").EnumerateArray().Select(c => new Content(c[0].GetString() ?? "", V(c, 1), Q(c, 4), c[8].GetInt32())).ToArray(),
-                r.GetProperty("spawns").EnumerateArray().Select(x => new Spawn(x[0].GetInt32(), x[1].GetSingle(), x[2].GetInt32(), x[3].GetInt32(), x[4].GetInt32(), x[5].GetInt32())).ToArray(),
-                r.GetProperty("picks").EnumerateArray().Select(x => new Pick(x[0].GetInt32(), x[1].GetInt32(),
-                    x[2].EnumerateArray().Select(c => (c[0].GetInt32(), c[1].GetSingle())).ToArray(), x[3].GetInt32(), x[4].GetInt32())).ToArray(),
-                r.GetProperty("nodes").EnumerateArray().Select(n => n.GetInt32()).ToArray());
+                [.. r.GetProperty("openings").EnumerateArray().Select(o => new Opening(o[0].GetString() ?? "", o[1].GetInt32() != 0, o[2].GetInt32() != 0, V(o, 4), Q(o, 7), o[3].GetInt32() != 0))],
+                [.. r.GetProperty("contents").EnumerateArray().Select(c => new Content(c[0].GetString() ?? "", V(c, 1), Q(c, 4), c[8].GetInt32()))],
+                [.. r.GetProperty("spawns").EnumerateArray().Select(x => new Spawn(x[0].GetInt32(), x[1].GetSingle(), x[2].GetInt32(), x[3].GetInt32(), x[4].GetInt32(), x[5].GetInt32()))],
+                [.. r.GetProperty("picks").EnumerateArray().Select(x => new Pick(x[0].GetInt32(), x[1].GetInt32(),
+                    [.. x[2].EnumerateArray().Select(c => (c[0].GetInt32(), c[1].GetSingle()))], x[3].GetInt32(), x[4].GetInt32()))],
+                [.. r.GetProperty("nodes").EnumerateArray().Select(n => n.GetInt32())]);
         }
         var kinds = new Dictionary<int, Kind>();
         foreach (JsonProperty p in doc.RootElement.GetProperty("dungeons").EnumerateObject())
@@ -96,7 +96,7 @@ public static class Dungeons
             kinds[StableHash.Of(p.Name)] = new Kind(p.Name, StableHash.Of(p.Name), d.GetProperty("themes").GetInt32(), d.GetProperty("algorithm").GetInt32() == 0, V(d.GetProperty("zoneSize"), 0),
                 d.GetProperty("customInterior").GetInt32() != 0, d.GetProperty("baseSeed").GetInt32() != 0)
             {
-                Doors = d.GetProperty("doors").EnumerateArray().Select(x => (x[0].GetString() ?? "", x[1].GetString() ?? "", x[2].GetSingle())).ToArray(),
+                Doors = [.. d.GetProperty("doors").EnumerateArray().Select(x => (x[0].GetString() ?? "", x[1].GetString() ?? "", x[2].GetSingle()))],
                 DoorChance = d.GetProperty("doorChance").GetSingle(),
             };
         }
@@ -198,7 +198,7 @@ public static class Dungeons
             return all;
         }
         // The entrance room's way in leads out of the dungeon: it never takes a room.
-        return all.Where(a => !a.Entrance && !all.Any(b => b.Room != a.Room && Vector3.DistanceSquared(a.Position, b.Position) < 0.01f)).ToList();
+        return [.. all.Where(a => !a.Entrance && !all.Any(b => b.Room != a.Room && Vector3.DistanceSquared(a.Position, b.Position) < 0.01f))];
     }
 
     // ---- Doors. Where two rooms meet, the game may put a door (DungeonGenerator.PlaceDoors): at the
@@ -279,10 +279,10 @@ public static class Dungeons
     // Separating axis test of two turned boxes (centre, half size, rotation).
     public static bool BoxesOverlap((Vector3 C, Vector3 H, Quaternion R) a, (Vector3 C, Vector3 H, Quaternion R) b)
     {
-        Vector3[] ax = { Vector3.Transform(Vector3.UnitX, a.R), Vector3.Transform(Vector3.UnitY, a.R), Vector3.Transform(Vector3.UnitZ, a.R) };
-        Vector3[] bx = { Vector3.Transform(Vector3.UnitX, b.R), Vector3.Transform(Vector3.UnitY, b.R), Vector3.Transform(Vector3.UnitZ, b.R) };
+        Vector3[] ax = [Vector3.Transform(Vector3.UnitX, a.R), Vector3.Transform(Vector3.UnitY, a.R), Vector3.Transform(Vector3.UnitZ, a.R)];
+        Vector3[] bx = [Vector3.Transform(Vector3.UnitX, b.R), Vector3.Transform(Vector3.UnitY, b.R), Vector3.Transform(Vector3.UnitZ, b.R)];
         Vector3 d = b.C - a.C;
-        float[] ha = { a.H.X, a.H.Y, a.H.Z }, hb = { b.H.X, b.H.Y, b.H.Z };
+        float[] ha = [a.H.X, a.H.Y, a.H.Z], hb = [b.H.X, b.H.Y, b.H.Z];
         bool Separated(Vector3 axis)
         {
             if (axis.LengthSquared() < 1e-8f)
@@ -326,8 +326,8 @@ public static class Dungeons
         {
             return true;
         }
-        const float zone = 64f;
-        var center = new Vector3(MathF.Floor((dungeonPosition.X + zone / 2) / zone) * zone, dungeonPosition.Y, MathF.Floor((dungeonPosition.Z + zone / 2) / zone) * zone);
+        const float Zone = 64f;
+        var center = new Vector3(MathF.Floor((dungeonPosition.X + Zone / 2) / Zone) * Zone, dungeonPosition.Y, MathF.Floor((dungeonPosition.Z + Zone / 2) / Zone) * Zone);
         Vector3 min = center - kind.ZoneSize / 2, max = center + kind.ZoneSize / 2;
         Vector3 h = room.Size / 2;
         foreach (float sx in new[] { -1f, 1f })
@@ -369,7 +369,7 @@ public static class Dungeons
         }
         Vector3 v = kind.CustomInterior ? p.Position - dungeonPosition : p.Position;
         int seed = unchecked((int)v.X * 4271 + (int)v.Y * 9187 + (int)v.Z * 2134 + (kind.BaseSeed ? Seed(worldSeed, dungeonPosition) : 0));
-        var off = new bool[room.Nodes.Length];
+        bool[] off = new bool[room.Nodes.Length];
         var was = Rnd.state;
         try
         {
@@ -448,22 +448,22 @@ public static class Dungeons
     public static List<Found> In(WorldSave world)
     {
         var found = new List<Found>();
-        foreach (var o in world.Objects)
+        foreach (var (id, prefab, position, _, _) in world.Objects)
         {
-            if (KindOf(o.Prefab) is not { } kind)
+            if (KindOf(prefab) is not { } kind)
             {
                 continue;
             }
             int count = 0;
             try
             {
-                byte[]? data = ZdoData.Parse(world.ObjectBytes(o.Id)).GetBytes(RoomDataKey);
+                byte[]? data = ZdoData.Parse(world.ObjectBytes(id)).GetBytes(RoomDataKey);
                 count = data == null ? 0 : BitConverter.ToInt32(data, 0);
             }
             catch (Exception e) when (e is InvalidDataException or ArgumentException or EndOfStreamException)
             {
             }
-            found.Add(new Found(o.Id, kind, o.Position, count));
+            found.Add(new Found(id, kind, position, count));
         }
         return found;
     }
@@ -471,7 +471,7 @@ public static class Dungeons
     // The dungeon object's bytes with another room list.
     public static byte[] WithRooms(byte[] dungeonObject, IReadOnlyList<Placed> rooms)
     {
-        ZdoData z = ZdoData.Parse(dungeonObject);
+        var z = ZdoData.Parse(dungeonObject);
         z.SetBytes(RoomDataKey, Write(rooms));
         return z.Serialize();
     }

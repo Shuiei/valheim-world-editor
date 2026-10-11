@@ -14,24 +14,24 @@ public sealed partial class WorldGenerator
     private float Continent(float x, float z)
     {
         int bx = BitConverter.SingleToInt32Bits(x), bz = BitConverter.SingleToInt32Bits(z);
-        if (t_continentOf == _number && t_continentX == bx && t_continentZ == bz)
+        if (_continentOf == _number && _continentX == bx && _continentZ == bz)
         {
-            return t_continent;
+            return _continent;
         }
         float h = WorkOutContinent(x, z);
-        (t_continentOf, t_continentX, t_continentZ, t_continent) = (_number, bx, bz, h);
+        (_continentOf, _continentX, _continentZ, _continent) = (_number, bx, bz, h);
         return h;
     }
 
     // Generators by number (a thread holding a reference would keep one alive).
-    private static int s_generators;
-    private readonly int _number = Interlocked.Increment(ref s_generators);
+    private static int _generators;
+    private readonly int _number = Interlocked.Increment(ref _generators);
 
     [ThreadStatic]
-    private static int t_continentOf, t_continentX, t_continentZ;
+    private static int _continentOf, _continentX, _continentZ;
 
     [ThreadStatic]
-    private static float t_continent;
+    private static float _continent;
 
     private float WorkOutContinent(float x, float z)
     {
@@ -46,10 +46,10 @@ public sealed partial class WorldGenerator
         float flat = (float)(1.0 - (double)GenMath.Step(0.02f, 0.12f, Mathf.Abs((float)((double)r1 - r2))));
         flat = (float)((double)flat * GenMath.Smooth(744f, 1000f, fromMiddle));
         h = (float)((double)h * (1.0 - flat));
-        if (fromMiddle > worldSize)
+        if (fromMiddle > WorldSize)
         {
             // Past the world: down to the sea floor, then the edge.
-            h = GenMath.Lerp(h, -0.2f, GenMath.Step(worldSize, EdgeOfWorld, fromMiddle));
+            h = GenMath.Lerp(h, -0.2f, GenMath.Step(WorldSize, EdgeOfWorld, fromMiddle));
             if (fromMiddle > 10490f)
             {
                 h = GenMath.Lerp(h, -2f, Utils.LerpStep(10490f, EdgeOfWorld, fromMiddle));
@@ -60,7 +60,7 @@ public sealed partial class WorldGenerator
         {
             // No mountains near the start: tops held to 0.28..0.38, eased in over 400 m.
             float t = (float)GenMath.Clamp01(((double)h - (double)0.28f) / 0.09999999403953552);
-            h = GenMath.Lerp(GenMath.Lerp(0.28f, 0.38f, t), h, GenMath.Step((float)((double)_mountainFreeRadius - 400.0), _mountainFreeRadius, fromMiddle));
+            h = GenMath.Lerp(GenMath.Lerp(0.28f, 0.38f, t), h, GenMath.Step((float)(_mountainFreeRadius - 400.0), _mountainFreeRadius, fromMiddle));
         }
         return h * 1f + 0f;
     }
@@ -256,7 +256,7 @@ public sealed partial class WorldGenerator
         double px = x, pz = z;
         double land = Continent((float)px, (float)pz);
         // Near the edge (within 1 km, waved), and towards the middle line (east-west within 7.5 km).
-        double nearEdge = GenMath.Length(px, pz + (double)AshlandsShift - (double)AshlandsShift * 0.3) - ((double)EdgeRadius + (double)WorldAngle((float)px, (float)pz) * 100.0);
+        double nearEdge = GenMath.Length(px, pz + AshlandsShift - AshlandsShift * 0.3) - (EdgeRadius + (double)WorldAngle((float)px, (float)pz) * 100.0);
         nearEdge = GenMath.SmoothBlend(0.1, 1.0, 1.0 - GenMath.Clamp01(Math.Abs(nearEdge) / 1000.0));
         nearEdge *= 1.0 - GenMath.Clamp01(Math.Abs(px) / 7500.0);
         // Down to the sea floor at the world's edge.
@@ -275,7 +275,7 @@ public sealed partial class WorldGenerator
         double h = GenMath.Lerp(land, (double)0.15f, 0.75);
         h += crags * 0.5;
         h = GenMath.Lerp(-1.0, h, GenMath.SmoothBlend(0.0, 1.0, inside));
-        const double lavaLevel = 0.15;
+        const double LavaLevel = 0.15;
         double cracks = 0.0;
         weight = 1.0;
         freq = 8.0;
@@ -293,9 +293,9 @@ public sealed partial class WorldGenerator
         lava *= GenMath.Clamp01(GenMath.Remap(nearEdge, 0.0, 0.5, 0.5, 1.0));
         lava = Math.Pow(GenMath.Step((double)0.7f, 1.0, lava), 2.0);
         lava = GenMath.Overlay(lava, cracks);
-        lava *= GenMath.Clamp01((h - lavaLevel - 0.02) / 0.01);
+        lava *= GenMath.Clamp01((h - LavaLevel - 0.02) / 0.01);
         double sink = GenMath.Remap(Math.Pow(GenMath.Noise(px * 0.05 + 5124.0, pz * 0.05 + 5000.0), 2.0), 0.0, 1.0, (double)0.01f, (double)0.055f);
-        double floor = Mathf.Clamp((float)(h - sink), (float)(lavaLevel + (double)0.01f), 5000f);
+        double floor = Mathf.Clamp((float)(h - sink), (float)(LavaLevel + (double)0.01f), 5000f);
         h = GenMath.Lerp(h, floor, lava);
         mask = new Color(0f, 0f, 0f, (float)lava);
         return (float)h;

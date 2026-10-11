@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Numerics;
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
@@ -157,7 +158,7 @@ public class PanelAreaTests
         Assert.NotEmpty(from);
         r.P.FromBox.SelectedIndex = 0;
         string name = from[0].Split(" (")[0];
-        int count = int.Parse(from[0].Split(" (")[1].TrimEnd(')'));
+        int count = int.Parse(from[0].Split(" (")[1].TrimEnd(')'), CultureInfo.InvariantCulture);
         var to = ((IEnumerable<object>)r.P.ToBox.ItemsSource!).Cast<string>().ToList();
         r.P.ToBox.SelectedIndex = to.FindIndex(t => t != name);
         await r.P.Apply();
@@ -231,7 +232,7 @@ public class PanelAreaTests
         r.P.SoftSlider.Value = 10;
         float was = r.H(32, 32), wasEdge = r.H(12, 32), wasOut = r.H(6, 32);
         // Raised and painted everywhere, saved: the backup is the world before.
-        r.S.Shape(32, 32, Formula.Compile("3", new string[0]), 40, 0, "x");
+        r.S.Shape(32, 32, Formula.Compile("3", []), 40, 0, "x");
         r.S.EditGround("paint", g =>
         {
             var touched = new List<int>();
@@ -333,7 +334,7 @@ public class PanelAreaTests
         File.WriteAllText(bad, "not a picture");
         r.P.PickPicture = () => Task.FromResult<string?>(bad);
         Click(r.P.ImportButton);
-        await LiveTests.Until(() => r.Said.StartsWith("That picture cannot be used"));
+        await LiveTests.Until(() => r.Said.StartsWith("That picture cannot be used", StringComparison.Ordinal));
         // The exported one, imported back over the whole area (no selection), then cancelled.
         r.W.View.Area.Clear();
         r.P.PickPicture = () => Task.FromResult<string?>(png);

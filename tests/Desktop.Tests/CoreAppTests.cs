@@ -39,6 +39,7 @@ public class AppTests : IDisposable
         catch
         {
         }
+        GC.SuppressFinalize(this);
     }
 
     [Fact]
@@ -172,6 +173,6 @@ public class AppTests : IDisposable
 }
 
 [CollectionDefinition("DataDir", DisableParallelization = true)]
-public class DataDirCollection
+public class DataDirDefinition
 {
 }

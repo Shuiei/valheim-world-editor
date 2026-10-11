@@ -33,7 +33,7 @@ public class PanelBlueprintsTests
             W.View.Show(s.Scene, null);
             W.Edit(s);
             B.Store = new BlueprintStore(Path.Combine(Dir, "older"));
-            B.FindHomestead = () => new TerrainEditor.App.Homestead.Status(Installed, Installed ? "1.3.2" : null, Installed ? new() { "test profile" } : new(), Homestead);
+            B.FindHomestead = () => new Homestead.Status(Installed, Installed ? "1.3.2" : null, Installed ? new() { "test profile" } : new(), Homestead);
             B.Message += t => Said = t;
         }
 
@@ -44,7 +44,7 @@ public class PanelBlueprintsTests
             File.WriteAllText(Path.Combine(Homestead, TerrainEditor.App.Homestead.FileName(name)), TerrainEditor.App.Homestead.Write(CopyFormat.ToJson(Clip(name, kinds)), name, "test", null, DateTime.Now));
         }
 
-        public List<TerrainEditor.App.Homestead.Entry> Listed => TerrainEditor.App.Homestead.List(Homestead);
+        public List<Homestead.Entry> Listed => TerrainEditor.App.Homestead.List(Homestead);
 
         public void Dispose()
         {
@@ -57,12 +57,13 @@ public class PanelBlueprintsTests
 
     internal static CopyData Clip(string name, params string[] kinds) => new()
     {
-        W = 3, H = 2,
-        Rel = new[] { 0f, 0, 0, 0, 0, 0 },
-        Wt = new[] { 1f, 1, 1, 1, 1, 1 },
-        Pnt = Enumerable.Repeat(-1f, 24).ToArray(),
-        Objects = kinds.Select((k, i) => new CopyData.Obj(StableHash.Of(k), k, i, 0, 0, Vector3.Zero, 0, null)).ToList(),
-        Poly = new() { new(-2, -1), new(2, -1), new(2, 1), new(-2, 1) },
+        W = 3,
+        H = 2,
+        Rel = [0f, 0, 0, 0, 0, 0],
+        Wt = [1f, 1, 1, 1, 1, 1],
+        Pnt = [.. Enumerable.Repeat(-1f, 24)],
+        Objects = [.. kinds.Select((k, i) => new CopyData.Obj(StableHash.Of(k), k, i, 0, 0, Vector3.Zero, 0, null))],
+        Poly = [new(-2, -1), new(2, -1), new(2, 1), new(-2, 1)],
         Name = name,
     };
 
@@ -74,7 +75,7 @@ public class PanelBlueprintsTests
 
     private static string Texts(Control c) => string.Join(" | ", c.GetLogicalDescendants().OfType<TextBlock>().Select(t => t.Text));
 
-    private static List<Button> RowButtons(Run r, string label) => r.B.List.GetLogicalDescendants().OfType<Button>().Where(b => b.Content as string == label).ToList();
+    private static List<Button> RowButtons(Run r, string label) => [.. r.B.List.GetLogicalDescendants().OfType<Button>().Where(b => b.Content as string == label)];
 
     [AvaloniaFact]
     public void TheRailsBlueprintsIsAToolWithItsPanelOnTheLeft()
@@ -134,7 +135,7 @@ public class PanelBlueprintsTests
         Uri? opened = null;
         r.B.OpenUrl = u => { opened = u; return Task.FromResult(true); };
         Click(r.B.GetHomesteadButton);
-        Assert.Equal(TerrainEditor.App.Homestead.PageUrl, opened?.ToString());
+        Assert.Equal(Homestead.PageUrl, opened?.ToString());
     }
 
     [AvaloniaFact]
@@ -240,9 +241,9 @@ public class PanelBlueprintsTests
     {
         using var r = new Run();
         r.W.View.Paste.Clip = Clip("Gate", "woodwall");
-        r.B.AskDetails = (_, _) => Task.FromResult<TerrainEditor.App.Homestead.Details?>(null);
+        r.B.AskDetails = (_, _) => Task.FromResult<Homestead.Details?>(null);
         Assert.Null(await r.B.Save());
-        r.B.AskDetails = (d, _) => Task.FromResult<TerrainEditor.App.Homestead.Details?>(d with { Name = "Gate" });
+        r.B.AskDetails = (d, _) => Task.FromResult<Homestead.Details?>(d with { Name = "Gate" });
         Assert.Equal("Gate", await r.B.Save());
         Assert.True(File.Exists(Path.Combine(r.Homestead, "Gate.png")));
         r.B.Confirm = _ => Task.FromResult(false);
@@ -261,7 +262,7 @@ public class PanelBlueprintsTests
     {
         using var r = new Run();
         r.W.View.Paste.Clip = Clip("Gate", "woodwall", "woodwall", "stone_wall_2x1");
-        r.B.AskDetails = (d, cost) => Task.FromResult<TerrainEditor.App.Homestead.Details?>(new("Gate", "A gate for the north wall", new() { "gate", "stone" }));
+        r.B.AskDetails = (d, cost) => Task.FromResult<Homestead.Details?>(new("Gate", "A gate for the north wall", ["gate", "stone"]));
         Assert.Equal("Gate", await r.B.Save());
         r.Keep("Tower", "woodwall");
         r.B.Toggle(true);
@@ -276,7 +277,7 @@ public class PanelBlueprintsTests
         Assert.Single(RowButtons(r, "Paste"));
         r.B.Search.Text = "";
         // Details…: a new name (the file follows, with its picture) and tags.
-        r.B.AskDetails = (d, _) => Task.FromResult<TerrainEditor.App.Homestead.Details?>(d with { Name = "North gate", Tags = new() { "gate" } });
+        r.B.AskDetails = (d, _) => Task.FromResult<Homestead.Details?>(d with { Name = "North gate", Tags = ["gate"] });
         Assert.True(await r.B.EditDetails(r.Listed.Single(e => e.Name == "Gate")));
         var gate = r.Listed.Single(e => e.Name == "North gate");
         Assert.Equal("North gate.blueprint", Path.GetFileName(gate.Path));
@@ -285,7 +286,7 @@ public class PanelBlueprintsTests
         Assert.Equal("A gate for the north wall", gate.Description);
         Assert.Equal(3, gate.Pieces);
         // Cancelled: nothing changes.
-        r.B.AskDetails = (_, _) => Task.FromResult<TerrainEditor.App.Homestead.Details?>(null);
+        r.B.AskDetails = (_, _) => Task.FromResult<Homestead.Details?>(null);
         Assert.False(await r.B.EditDetails(gate));
     }
 

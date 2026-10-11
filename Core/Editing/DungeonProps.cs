@@ -86,5 +86,5 @@ internal static class DungeonProps
 
     // A chest's contents as the game writes them (the inspector's own writer).
     public static byte[] Inventory(IReadOnlyList<(string Item, int Stack)> items) =>
-        App.ObjectData.BuildInventory(items.Select((it, i) => new App.ItemUpload(it.Item, null, it.Stack, X: i % 4, Y: i / 4)).ToList()).Write();
+        App.ObjectData.BuildInventory([.. items.Select((it, i) => new App.ItemUpload(it.Item, null, it.Stack, X: i % 4, Y: i / 4))]).Write();
 }

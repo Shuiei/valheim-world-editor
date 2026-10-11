@@ -29,7 +29,7 @@ public class InspectorTests
             w.Edit(scene.Session!);
             w.Tools.ChooseSelect();
             int chest = scene.Things.FindIndex(t => t.Prefab == Chest);
-            w.View.Select(new[] { chest });
+            w.View.Select([chest]);
             Avalonia.Threading.Dispatcher.UIThread.RunJobs();
             Assert.True(w.SelectPanel.InspectButton.IsEnabled);
             w.KeyPress(Key.I, RawInputModifiers.None, PhysicalKey.I, "i");
@@ -84,10 +84,7 @@ public class InspectorTests
             Assert.True(ins.Open(chest));
             ins.Added.Add(("strings", "text", "Hello"));
             var creator = ins.FieldList.FirstOrDefault(f => f.Name == "creator");
-            if (creator != null)
-            {
-                creator.Removed = true;
-            }
+            creator?.Removed = true;
             var (set, inv) = ins.Changes();
             Assert.Contains(set, f => f.Key == "text" && f.Value == "Hello");
             Assert.Null(inv);

@@ -144,7 +144,7 @@ public class CoreDungeonTests
         Assert.Equal(dg, z.Prefab);
         var back = Dungeons.Read(z.GetBytes(Dungeons.RoomDataKey)!);
         Assert.Equal(rooms.Select(r => r.Hash), back.Select(r => r.Hash));
-        Assert.Throws<InvalidDataException>(() => Dungeons.Read(new byte[] { 200, 0, 0, 0, 1, 2 }));
+        Assert.Throws<InvalidDataException>(() => Dungeons.Read([200, 0, 0, 0, 1, 2]));
     }
 
     [Fact]
@@ -154,11 +154,28 @@ public class CoreDungeonTests
         // places): the rooms' networked objects its random parts kept, rolled from each room's place.
         var expected = new Dictionary<string, int>
         {
-            ["CastleKit_metal_groundtorch_unlit"] = 6, ["Ice_floor"] = 5, ["MountainKit_brazier"] = 17, ["MountainKit_wood_gate"] = 2,
-            ["Pickable_ForestCryptRemains01"] = 4, ["Pickable_ForestCryptRemains02"] = 5, ["Pickable_ForestCryptRemains03"] = 2, ["Pickable_MeatPile"] = 24,
-            ["Pickable_MountainCaveCrystal"] = 4, ["Pickable_MountainCaveRandom"] = 12, ["Spawner_Cultist"] = 5, ["Spawner_Ulv"] = 16,
-            ["caverock_ice_pillar_wall"] = 2, ["caverock_ice_stalagmite"] = 16, ["caverock_ice_stalagtite"] = 60, ["cloth_hanging_door"] = 4,
-            ["cloth_hanging_long"] = 6, ["fenrirhide_hanging"] = 6, ["hanging_hairstrands"] = 21, ["lox_ribs"] = 6, ["mountainkit_chair"] = 11, ["mountainkit_table"] = 1,
+            ["CastleKit_metal_groundtorch_unlit"] = 6,
+            ["Ice_floor"] = 5,
+            ["MountainKit_brazier"] = 17,
+            ["MountainKit_wood_gate"] = 2,
+            ["Pickable_ForestCryptRemains01"] = 4,
+            ["Pickable_ForestCryptRemains02"] = 5,
+            ["Pickable_ForestCryptRemains03"] = 2,
+            ["Pickable_MeatPile"] = 24,
+            ["Pickable_MountainCaveCrystal"] = 4,
+            ["Pickable_MountainCaveRandom"] = 12,
+            ["Spawner_Cultist"] = 5,
+            ["Spawner_Ulv"] = 16,
+            ["caverock_ice_pillar_wall"] = 2,
+            ["caverock_ice_stalagmite"] = 16,
+            ["caverock_ice_stalagtite"] = 60,
+            ["cloth_hanging_door"] = 4,
+            ["cloth_hanging_long"] = 6,
+            ["fenrirhide_hanging"] = 6,
+            ["hanging_hairstrands"] = 21,
+            ["lox_ribs"] = 6,
+            ["mountainkit_chair"] = 11,
+            ["mountainkit_table"] = 1,
         };
         var kind = Dungeons.KindOf(StableHash.Of("DG_Cave"))!;
         var made = Cave().SelectMany(r => Dungeons.Contents(r, kind, CaveAt, 509094289)).ToList();

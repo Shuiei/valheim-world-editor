@@ -47,7 +47,7 @@ public class CoreStabilityTests
     [Fact]
     public void AFloatingPieceBreaksAndAnOverhangLosesMoreThanATower()
     {
-        var floating = Stability.Solve(new[] { Wall(0, Ground + 10) }, Flat);
+        var floating = Stability.Solve([Wall(0, Ground + 10)], Flat);
         Assert.True(floating.Breaks[0]);
         // Floors out from a wall: horizontal support falls faster than vertical.
         var floors = new List<Stability.Piece> { Wall(0, Ground) };
@@ -56,14 +56,14 @@ public class CoreStabilityTests
             floors.Add(new Stability.Piece("wood_floor", new Vector3(2f * i + 1.1f, Ground + 2, 0), Quaternion.Identity));
         }
         var r = Stability.Solve(floors, Flat);
-        var up = Stability.Solve(Enumerable.Range(0, 3).Select(i => Wall(0, Ground + 2 * i)).ToList(), Flat);
+        var up = Stability.Solve([.. Enumerable.Range(0, 3).Select(i => Wall(0, Ground + 2 * i))], Flat);
         Assert.True(r.Support[2] < up.Support[2], $"second floor out {r.Support[2]}, second wall up {up.Support[2]}");
     }
 
     [Fact]
     public void PiecesWithoutSupportRulesAreFreeAndUnknownOnesToo()
     {
-        var r = Stability.Solve(new[] { new Stability.Piece("piece_workbench", new Vector3(0, Ground, 0), Quaternion.Identity), new Stability.Piece("no_such_piece", Vector3.Zero, Quaternion.Identity) }, Flat);
+        var r = Stability.Solve([new Stability.Piece("piece_workbench", new Vector3(0, Ground, 0), Quaternion.Identity), new Stability.Piece("no_such_piece", Vector3.Zero, Quaternion.Identity)], Flat);
         Assert.False(r.Breaks[1]);
         Assert.True(r.Free[1]);
         Assert.True(Stability.Known("piece_workbench"));

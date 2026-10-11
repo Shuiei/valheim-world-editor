@@ -11,7 +11,7 @@ public static class Formula
 {
     public sealed class Env
     {
-        public Dictionary<string, double> Vars { get; } = new();
+        public Dictionary<string, double> Vars { get; } = [];
         public Func<double, double, double> Noise { get; set; } = (_, _) => 0;
     }
 
@@ -50,7 +50,11 @@ public static class Formula
     // How many numbers each function takes (min and max: any number, none included, as in JavaScript).
     private static readonly Dictionary<string, int> Arity = new()
     {
-        ["pow"] = 2, ["atan2"] = 2, ["clamp"] = 3, ["min"] = -1, ["max"] = -1,
+        ["pow"] = 2,
+        ["atan2"] = 2,
+        ["clamp"] = 3,
+        ["min"] = -1,
+        ["max"] = -1,
     };
 
     // Deeper nesting, or a longer formula, would run out of stack (which closes the app: it cannot be
@@ -181,7 +185,7 @@ public static class Formula
                         throw new FormatException($"{id}(…) takes {(arity == 1 ? "one number" : $"{arity} numbers")}");
                     }
                     var arr = args.ToArray();
-                    return env => f(arr.Select(a => a(env)).ToArray());
+                    return env => f([.. arr.Select(a => a(env))]);
                 }
                 if (id == "pi")
                 {

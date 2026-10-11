@@ -11,10 +11,8 @@ public sealed class TerrainService
 
     public const float MapRadius = 10500f;
 
-    private readonly WorldGenerator _gen;
-
     // This world's generator (the map reads biomes and rivers from it).
-    internal WorldGenerator Generator => _gen;
+    internal WorldGenerator Generator { get; }
 
     private readonly ConcurrentDictionary<(int, int), float[]> _zones = new();
 
@@ -33,7 +31,7 @@ public sealed class TerrainService
     {
         _modifiers = modifiers;
         World world = new() { m_seed = save.Seed, m_seedName = save.SeedName, m_worldGenVersion = save.WorldGenVersion };
-        _gen = WorldGenerator.Create(world);
+        Generator = WorldGenerator.Create(world);
         _overviewPng = new Lazy<byte[]>(() => RenderOverview(overviewSize), LazyThreadSafetyMode.ExecutionAndPublication);
     }
 
@@ -45,7 +43,7 @@ public sealed class TerrainService
     // locations (TerrainModifier), exactly as Heightmap.ApplyModifiers does before TerrainComp.
     public float[] BaseZone(int zx, int zz) => _zones.GetOrAdd((zx, zz), k =>
     {
-        float[] h = BaseTerrain.BuildZone(_gen, k.Item1, k.Item2);
+        float[] h = BaseTerrain.BuildZone(Generator, k.Item1, k.Item2);
         _modifiers?.Apply(k.Item1, k.Item2, h);
         return h;
     });
@@ -63,7 +61,7 @@ public sealed class TerrainService
         {
             for (int j = 0; j < 65; j++)
             {
-                b[i * 65 + j] = (int)_gen.GetBiome(x0 + j, z0 + i);
+                b[i * 65 + j] = (int)Generator.GetBiome(x0 + j, z0 + i);
             }
         }
         return b;
@@ -73,7 +71,7 @@ public sealed class TerrainService
     public float[] BaseMask(int zx, int zz) => _masks.GetOrAdd((zx, zz), k =>
     {
         float[] m = new float[65 * 65 * 4];
-        BaseTerrain.BuildZone(_gen, k.Item1, k.Item2, m);
+        BaseTerrain.BuildZone(Generator, k.Item1, k.Item2, m);
         return m;
     });
 
@@ -83,19 +81,18 @@ public sealed class TerrainService
     {
         static float Snap(float v) => ((int)((v - 6f) / 12f + 1024f) - 1024) * 12f + 6f;
         float x0 = zx * 64f - 32f, z0 = zz * 64f - 32f;
-        return new[] { (x0, z0), (x0 + 64f, z0), (x0, z0 + 64f), (x0 + 64f, z0 + 64f) }
-            .Select(c => { float sx = Snap(c.Item1), sz = Snap(c.Item2); return sx * sx + sz * sz > 110250000f ? (int)Heightmap.Biome.Ocean : (int)_gen.GetBiome(sx, sz); }).ToArray();
+        return [.. new[] { (x0, z0), (x0 + 64f, z0), (x0, z0 + 64f), (x0 + 64f, z0 + 64f) }.Select(c => { float sx = Snap(c.Item1), sz = Snap(c.Item2); return sx * sx + sz * sz > 110250000f ? (int)Heightmap.Biome.Ocean : (int)Generator.GetBiome(sx, sz); })];
     }
 
     // Generated terrain only, without location flattening.
-    public float[] RawZone(int zx, int zz) => BaseTerrain.BuildZone(_gen, zx, zz);
+    public float[] RawZone(int zx, int zz) => BaseTerrain.BuildZone(Generator, zx, zz);
 
-    public Heightmap.Biome BiomeAt(float x, float z) => _gen.GetBiome(x, z);
+    public Heightmap.Biome BiomeAt(float x, float z) => Generator.GetBiome(x, z);
 
     private byte[] RenderOverview(int size)
     {
         float[] heights = new float[size * size];
-        Heightmap.Biome[] biomes = new Heightmap.Biome[size * size];
+        var biomes = new Heightmap.Biome[size * size];
         float step = 2f * MapRadius / size;
         // Row 0 is the north edge so the PNG has north up.
         Parallel.For(0, size, row =>
@@ -111,9 +108,9 @@ public sealed class TerrainService
                     biomes[i] = Heightmap.Biome.Ocean;
                     continue;
                 }
-                Heightmap.Biome biome = _gen.GetBiome(x, z);
+                Heightmap.Biome biome = Generator.GetBiome(x, z);
                 biomes[i] = biome;
-                heights[i] = _gen.GetBiomeHeight(biome, x, z, out _);
+                heights[i] = Generator.GetBiomeHeight(biome, x, z, out _);
             }
         });
         byte[] rgba = new byte[size * size * 4];
@@ -168,7 +165,7 @@ public sealed class TerrainService
 // Minimal PNG writer (8-bit RGBA, no filtering).
 public static class Png
 {
-    private static readonly uint[] CrcTable = Enumerable.Range(0, 256).Select(n =>
+    private static readonly uint[] CrcTable = [.. Enumerable.Range(0, 256).Select(n =>
     {
         uint c = (uint)n;
         for (int k = 0; k < 8; k++)
@@ -176,12 +173,12 @@ public static class Png
             c = (c & 1) != 0 ? 0xEDB88320u ^ (c >> 1) : c >> 1;
         }
         return c;
-    }).ToArray();
+    })];
 
     public static byte[] Encode(int width, int height, byte[] rgba)
     {
         using MemoryStream png = new();
-        png.Write(new byte[] { 137, 80, 78, 71, 13, 10, 26, 10 });
+        png.Write([137, 80, 78, 71, 13, 10, 26, 10]);
         byte[] ihdr = new byte[13];
         WriteBE(ihdr, 0, (uint)width);
         WriteBE(ihdr, 4, (uint)height);
@@ -200,7 +197,7 @@ public static class Png
             }
             Chunk(png, "IDAT", raw.ToArray());
         }
-        Chunk(png, "IEND", Array.Empty<byte>());
+        Chunk(png, "IEND", []);
         return png.ToArray();
     }
 

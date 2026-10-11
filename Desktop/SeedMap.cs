@@ -32,15 +32,14 @@ public sealed class SeedMap : Control, IDisposable
     // Small squares drawn over the map (the dungeons: many, so drawn here rather than as controls).
     public IReadOnlyList<(float X, float Z, IBrush Fill)> Dots
     {
-        get => _dots;
+        get;
         set
         {
-            _dots = value;
+            field = value;
             InvalidateVisual();
         }
-    }
+    } = [];
 
-    private IReadOnlyList<(float X, float Z, IBrush Fill)> _dots = Array.Empty<(float, float, IBrush)>();
     private static readonly Pen DotLine = new(new SolidColorBrush(Avalonia.Media.Color.FromRgb(20, 20, 24)), 1);
 
     public event Action? ViewChanged;
@@ -183,7 +182,7 @@ public sealed class SeedMap : Control, IDisposable
         {
             Draw(context, c.Picture, c.X0, c.Z0, c.X1, c.Z1);
         }
-        foreach (var (x, z, fill) in _dots)
+        foreach (var (x, z, fill) in Dots)
         {
             var at = ScreenOf(x, z);
             if (at.X >= -4 && at.Y >= -4 && at.X <= Bounds.Width + 4 && at.Y <= Bounds.Height + 4)
@@ -289,7 +288,7 @@ public sealed class SeedMap : Control, IDisposable
     {
         var bmp = new WriteableBitmap(new PixelSize(w, h), new Vector(96, 96), PixelFormat.Bgra8888, AlphaFormat.Premul);
         using var fb = bmp.Lock();
-        var row = new byte[w * 4];
+        byte[] row = new byte[w * 4];
         for (int y = 0; y < h; y++)
         {
             int j = h - 1 - y;

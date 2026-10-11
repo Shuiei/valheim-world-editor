@@ -11,13 +11,12 @@ namespace TerrainEditor.Desktop.Tests;
 // and area without undo steps, and ground the editor changed itself is kept and asked about on apply.
 public class LiveFollowTests
 {
-    private static readonly Func<Formula.Env, double> Two = Formula.Compile("2", new string[0]);
+    private static readonly Func<Formula.Env, double> Two = Formula.Compile("2", []);
     private static readonly int TCData = StableHash.Of("TCData");
 
     // What the game has in a zone, as the world was read (its objects' ZDOIDs and bytes).
     private static List<(long, uint, byte[])> AsRead(WorldSave w, (int X, int Z) zone) =>
-        Enumerable.Range(0, w.ObjectRefs.Count).Where(id => !w.Vanished.Contains(id) && w.ObjectRefs[id].Zone == zone)
-            .Select(id => (w.ObjectRefs[id].LiveId.User, w.ObjectRefs[id].LiveId.Id, w.ObjectBytes(id))).ToList();
+        [.. Enumerable.Range(0, w.ObjectRefs.Count).Where(id => !w.Vanished.Contains(id) && w.ObjectRefs[id].Zone == zone).Select(id => (w.ObjectRefs[id].LiveId.User, w.ObjectRefs[id].LiveId.Id, w.ObjectBytes(id)))];
 
     private static async Task<(FakeGame Game, WorldSession World, EditSession Area)> Open()
     {
@@ -44,7 +43,7 @@ public class LiveFollowTests
         var w = world.World;
         int tree = Tree(s);
         int treeId = s.Scene.Things[tree].Id;
-        var bytes = w.ObjectBytes(treeId);
+        byte[] bytes = w.ObjectBytes(treeId);
         var objects = AsRead(w, (0, 0)).Where(o => (o.Item1, o.Item2) != Zdo(w, treeId)).ToList();
         objects.Add((99, 1, bytes));
         game.Zones[(0, 0)] = (1, objects);
@@ -63,7 +62,7 @@ public class LiveFollowTests
         Assert.Equal((99L, 1u), Zdo(w, added));
         Assert.Equal((0, 0, 0, 0), world.Pending);
         // The removed one is not found by the map's search any more.
-        Assert.DoesNotContain(TerrainEditor.App.WorldSearch.Search(w, world.Edits, TerrainEditor.Terrain.PrefabCatalog.DisplayName(w.ObjectRefs[treeId].Prefab)!, "kinds").Hits, h => h.Id == treeId);
+        Assert.DoesNotContain(TerrainEditor.App.WorldSearch.Search(w, world.Edits, Terrain.PrefabCatalog.DisplayName(w.ObjectRefs[treeId].Prefab)!, "kinds").Hits, h => h.Id == treeId);
         // Taken twice (an area opened meanwhile may have it): nothing more.
         int count = s.Scene.Things.Count;
         s.TakeGameChanges(f);
@@ -115,13 +114,13 @@ public class LiveFollowTests
         var w = world.World;
         int mine = Tree(s), cut = Tree(s, 1), taken = Tree(s, 2);
         int mineId = s.Scene.Things[mine].Id, cutId = s.Scene.Things[cut].Id, takenId = s.Scene.Things[taken].Id;
-        s.Delete(new[] { mine });
+        s.Delete([mine]);
         Assert.True((await world.ApplyLive()).Done);
         // Deleted and undone (on the redo list); then removed in the game.
-        s.Delete(new[] { cut });
+        s.Delete([cut]);
         s.Undo();
         // Deleted in the editor, not applied; then removed in the game.
-        s.Delete(new[] { taken });
+        s.Delete([taken]);
         var objects = AsRead(w, (0, 0)).Where(o => (o.Item1, o.Item2) != Zdo(w, mineId) && (o.Item1, o.Item2) != Zdo(w, cutId) && (o.Item1, o.Item2) != Zdo(w, takenId)).ToList();
         game.Zones[(0, 0)] = (1, objects);
         var f = (await Follow(world, (0, 0)))!;
@@ -152,7 +151,7 @@ public class LiveFollowTests
         int tree = Tree(s);
         int id = s.Scene.Things[tree].Id;
         var old = Zdo(w, id);
-        s.Delete(new[] { tree });
+        s.Delete([tree]);
         Assert.True((await world.ApplyLive()).Done);
         s.Undo();
         Assert.True((await world.ApplyLive()).Done);
@@ -178,7 +177,7 @@ public class LiveFollowTests
         using var _ = game;
         var w = world.World;
         var tree = s.Scene.Things[Tree(s)];
-        var placed = s.Commit("Place", null, Array.Empty<int>(), new[] { (new NewObject(0, tree.Prefab, tree.Position + new Vector3(2, 0, 2), Vector3.Zero, 0f), false) });
+        var placed = s.Commit("Place", null, [], [(new NewObject(0, tree.Prefab, tree.Position + new Vector3(2, 0, 2), Vector3.Zero, 0f), false)]);
         Assert.True((await world.ApplyLive()).Done);
         var objects = AsRead(w, (0, 0));
         objects.Add((77, 1000, w.ObjectBytes(tree.Id)));

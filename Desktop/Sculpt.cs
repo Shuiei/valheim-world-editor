@@ -80,10 +80,10 @@ public sealed class Brush
     // The colour each paint tool moves the paint towards (dirt, cultivated, paved, vegetation).
     public static float[]? PaintOf(BrushTool t) => t switch
     {
-        BrushTool.PaintDirt => new[] { 1f, 0, 0, 1 },
-        BrushTool.PaintCultivated => new[] { 0f, 1, 0, 1 },
-        BrushTool.PaintPaved => new[] { 0f, 0, 1, 1 },
-        BrushTool.PaintClear => new[] { 0f, 0, 0, 1 },
+        BrushTool.PaintDirt => [1f, 0, 0, 1],
+        BrushTool.PaintCultivated => [0f, 1, 0, 1],
+        BrushTool.PaintPaved => [0f, 0, 1, 1],
+        BrushTool.PaintClear => [0f, 0, 0, 1],
         _ => null,
     };
 
@@ -158,14 +158,14 @@ public sealed class Stroke
 {
     public required BrushTool Tool { get; init; }
     public required Ground.State Start { get; init; }
-    public HashSet<int> Touched { get; } = new();
-    public Dictionary<int, float> Natural { get; } = new();
+    public HashSet<int> Touched { get; } = [];
+    public Dictionary<int, float> Natural { get; } = [];
     public float? Target { get; set; }
     // The game's ±8 m limit stopped the ground somewhere.
     public bool Clamped { get; set; }
 
     public float StartHeight(Ground g, int p) => g.Base[p] + Start.Lift[p] + (Start.Mod[p] != 0
-        ? Math.Clamp(Start.Level[p] + Start.Smooth[p], -TerrainEditor.Editing.EditStore.MaxLevel, TerrainEditor.Editing.EditStore.MaxLevel)
+        ? Math.Clamp(Start.Level[p] + Start.Smooth[p], -Editing.EditStore.MaxLevel, Editing.EditStore.MaxLevel)
         : 0);
 }
 
@@ -190,7 +190,7 @@ public static class Sculpt
         {
             float r = b.Radius, er = reach + 2, talus = Erosion.Talus(b.RestAngle);
             bool clamped = false;
-            var box = Erosion.Run(g, (int)MathF.Floor(cx - er), (int)MathF.Floor(cz - er), (int)MathF.Ceiling(cx + er), (int)MathF.Ceiling(cz + er),
+            var (ex0, ez0, ex1, ez1) = Erosion.Run(g, (int)MathF.Floor(cx - er), (int)MathF.Floor(cz - er), (int)MathF.Ceiling(cx + er), (int)MathF.Ceiling(cz + er),
                 (gx, gz, p) => b.Weight(gx - cx, gz - cz, ox + gx, oz + gz) * (mask?.Invoke(p) ?? 1),
                 (h, wt, w, d) =>
                 {
@@ -204,13 +204,13 @@ public static class Sculpt
                     }
                 }, s.Touched, ref clamped);
             s.Clamped |= clamped;
-            return (box.X0 - 1, box.Z0 - 1, box.X1 + 1, box.Z1 + 1);
+            return (ex0 - 1, ez0 - 1, ex1 + 1, ez1 + 1);
         }
         // Smoothing reads the heights from before this frame.
         Dictionary<int, float>? snapshot = null;
         if (s.Tool == BrushTool.Smooth)
         {
-            snapshot = new();
+            snapshot = [];
             for (int gz = z0 - 1; gz <= z1 + 1; gz++)
             {
                 for (int gx = x0 - 1; gx <= x1 + 1; gx++)

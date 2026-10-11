@@ -29,7 +29,7 @@ public static class RoomSurfaces
             {
                 continue;
             }
-            var v = md.Vertices;
+            float[] v = md.Vertices;
             // Vertices are 8 floats (position, normal, uv), mirrored in z like the part's matrix; the
             // mirror is taken back off for the room's own (Unity) frame.
             Vector3 At(uint i)
@@ -48,7 +48,7 @@ public static class RoomSurfaces
         }
         var min = corners.Aggregate(Vector3.Min);
         var max = corners.Aggregate(Vector3.Max);
-        return new Mesh(corners.ToArray(), min, max);
+        return new Mesh([.. corners], min, max);
     });
 
     // The distance along the ray (world space, d normalised) to the first room surface it meets below
@@ -100,11 +100,11 @@ public static class RoomSurfaces
         float inv = 1f / det;
         Vector3 s = o - a;
         float u = Vector3.Dot(s, p) * inv;
-        if (u < 0 || u > 1)
+        if (u is < 0 or > 1)
         {
             return null;
         }
-        Vector3 q = Vector3.Cross(s, e1);
+        var q = Vector3.Cross(s, e1);
         float v = Vector3.Dot(d, q) * inv;
         if (v < 0 || u + v > 1)
         {

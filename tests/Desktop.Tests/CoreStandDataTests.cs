@@ -66,7 +66,7 @@ public class CoreStandDataTests
         // A shield's style stays within its variants; emptied, the stand is as the game leaves it.
         Assert.Equal(3, ItemOf(StandData.ForItemStand(Wall, new StandData.Held("ShieldWood", Variant: 9), 0).Single(f => f.Key == "itemData").Value!).Variant);
         var empty = With(StandData.ForItemStand(Wall, null, 0));
-        Assert.Equal(((StandData.Held?)null, 0), StandData.ReadItemStand(empty));
+        Assert.Equal((null, 0), StandData.ReadItemStand(empty));
         Assert.Null(empty.GetBytes(StableHash.Of("itemData")));
         Assert.Throws<ArgumentException>(() => StandData.ForItemStand(Wall, new StandData.Held("Wood"), 0));
     }
@@ -88,11 +88,11 @@ public class CoreStandDataTests
             Assert.Equal(h.Quality, worn[slot]!.Quality);
             Assert.Equal(h.Variant, worn[slot]!.Variant);
         }
-        Assert.Throws<ArgumentException>(() => StandData.ForArmourStand(Armour, new[] { new StandData.Held("CookedMeat") }, null));
+        Assert.Throws<ArgumentException>(() => StandData.ForArmourStand(Armour, [new StandData.Held("CookedMeat")], null));
         // ArmorStand has two helmet slots: a third helmet fits nowhere.
-        Assert.Contains("no free slot", Assert.Throws<ArgumentException>(() => StandData.ForArmourStand(Armour, Enumerable.Repeat(new StandData.Held("HelmetBronze"), 3).ToList(), null)).Message);
+        Assert.Contains("no free slot", Assert.Throws<ArgumentException>(() => StandData.ForArmourStand(Armour, [.. Enumerable.Repeat(new StandData.Held("HelmetBronze"), 3)], null)).Message);
         // Wearing less empties the other slots.
-        var after = With(StandData.ForArmourStand(Armour, new[] { new StandData.Held("HelmetBronze") }, null));
+        var after = With(StandData.ForArmourStand(Armour, [new StandData.Held("HelmetBronze")], null));
         Assert.Single(StandData.ReadArmourStand(after, slots.Length).Slots, h => h != null);
     }
 }

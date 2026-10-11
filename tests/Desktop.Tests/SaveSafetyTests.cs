@@ -8,7 +8,7 @@ namespace TerrainEditor.Desktop.Tests;
 [Collection("World files")]
 public class SaveSafetyTests
 {
-    private static readonly Func<Formula.Env, double> Two = Formula.Compile("2", new string[0]);
+    private static readonly Func<Formula.Env, double> Two = Formula.Compile("2", []);
 
     // The game saving the world: its next save number, made from the latest save (same files).
     private static int GameSaves(string dir)
@@ -54,10 +54,10 @@ public class SaveSafetyTests
         WorldSave save = w.Load();
         int game = GameSaves(w.Dir);
         var t = save.TerrainZones[0];
-        var edit = new TerrainEditor.Editing.ZoneEdit(t.ZoneX, t.ZoneZ);
+        var edit = new Editing.ZoneEdit(t.ZoneX, t.ZoneZ);
         edit.Modified[100] = true;
         edit.Level[100] = 1f;
-        var r = WorldWriter.Save(save, new[] { edit }, options: new WorldWriter.Options(Latest: save.SaveNumber));
+        var r = WorldWriter.Save(save, [edit], options: new WorldWriter.Options(Latest: save.SaveNumber));
         Assert.False(r.Saved);
         Assert.Contains($"save #{game}", r.Message);
         Assert.Equal(game, WorldWriter.LatestNumber(w.Dir));
@@ -124,17 +124,17 @@ public class SaveSafetyTests
         var t = save.TerrainZones[0];
         int id = save.ObjectRefs.FindIndex(o => o.IsTerrain && o.File == t.Source!.File && o.Start == t.Source.Start);
         Assert.True(id >= 0);
-        var copy = new TerrainEditor.Editing.NewObject(-1, t.Prefab, t.Center, System.Numerics.Vector3.Zero, 0f, Raw: save.ObjectBytes(id));
-        var r = WorldWriter.Save(save, Array.Empty<TerrainEditor.Editing.ZoneEdit>(), added: new[] { copy });
+        var copy = new Editing.NewObject(-1, t.Prefab, t.Center, System.Numerics.Vector3.Zero, 0f, Raw: save.ObjectBytes(id));
+        var r = WorldWriter.Save(save, [], added: [copy]);
         Assert.True(r.Saved, r.Message);
         save = w.Load();
         Assert.Equal(2, save.TerrainZones.Count(z => z.ZoneX == t.ZoneX && z.ZoneZ == t.ZoneZ));
 
-        var edit = new TerrainEditor.Editing.EditStore(save).Get(t.ZoneX, t.ZoneZ)!;
+        var edit = new Editing.EditStore(save).Get(t.ZoneX, t.ZoneZ)!;
         edit.Modified[200] = true;
         edit.Level[200] = 3f;
         edit.Smooth[200] = 0f;
-        r = WorldWriter.Save(save, new[] { edit });
+        r = WorldWriter.Save(save, [edit]);
         Assert.True(r.Saved, r.Message);
         var both = w.Load().TerrainZones.Where(z => z.ZoneX == t.ZoneX && z.ZoneZ == t.ZoneZ).ToList();
         Assert.Equal(2, both.Count);
@@ -176,10 +176,10 @@ public class SaveSafetyTests
         var (_, prefab, near, _, _) = save.Objects.First(o => MathF.Abs(o.Position.X) < 200 && MathF.Abs(o.Position.Z) < 200);
         var added = new[]
         {
-            new TerrainEditor.Editing.NewObject(-1, prefab, near + new System.Numerics.Vector3(1, 0, 1), System.Numerics.Vector3.Zero, 0f),
-            new TerrainEditor.Editing.NewObject(-2, prefab, new System.Numerics.Vector3(20000, 30, 0), System.Numerics.Vector3.Zero, 0f),
+            new Editing.NewObject(-1, prefab, near + new System.Numerics.Vector3(1, 0, 1), System.Numerics.Vector3.Zero, 0f),
+            new Editing.NewObject(-2, prefab, new System.Numerics.Vector3(20000, 30, 0), System.Numerics.Vector3.Zero, 0f),
         };
-        var r = WorldWriter.Save(save, Array.Empty<TerrainEditor.Editing.ZoneEdit>(), added: added);
+        var r = WorldWriter.Save(save, [], added: added);
         Assert.True(r.Saved, r.Message + " | " + string.Join(" | ", r.Skipped));
         Assert.Equal(1, r.ObjectsAdded);
         Assert.Contains(r.Skipped, s => s.Contains("outside the world"));

@@ -73,20 +73,20 @@ public sealed class MeasureTool
     {
         if (A == null)
         {
-            return ("Click a first point on the ground.", new());
+            return ("Click a first point on the ground.", []);
         }
         if (Measure(heightAt, water) is not { } r)
         {
-            return ("Click a second point.", new());
+            return ("Click a second point.", []);
         }
-        return (Fixed ? "Click again to start a new measurement." : "Click to fix the second point.", new()
-        {
+        return (Fixed ? "Click again to start a new measurement." : "Click to fix the second point.",
+        [
             ("Distance", $"{r.Distance:0.0} m"),
             ("Along the slope", $"{r.AlongSlope:0.0} m"),
             ("Height A → B", $"{r.HeightA:0.0} → {r.HeightB:0.0} m ({(r.Rise >= 0 ? "+" : "")}{r.Rise:0.0})"),
             ("Slope", $"{(r.SlopePercent is float p ? $"{p:0} %" : "–")} · {r.SlopeDegrees:0.0}°"),
             ("Lowest / highest", $"{r.Lowest:0.0} / {r.Highest:0.0} m"),
             ("Water depth", r.WaterDepth is float d ? $"{d:0.0} m" : "above sea"),
-        });
+        ]);
     }
 }

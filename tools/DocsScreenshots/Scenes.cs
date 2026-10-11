@@ -11,12 +11,11 @@ public sealed class Scenes
     private const int ZoneX = -8, ZoneZ = 1;
     private const double Cx = ZoneX * 64, Cz = ZoneZ * 64;
 
-    private readonly string _dir;
     private readonly string _out;
 
     public Scenes(string dir, string output)
     {
-        _dir = dir;
+        World = $"{dir}/Docs";
         _out = output;
         All =
         [
@@ -54,7 +53,7 @@ public sealed class Scenes
     // A point on the bare zone, dx east and dz north of its middle.
     private static (double X, double Z) P(double dx, double dz) => (Cx + dx, Cz + dz);
 
-    private string World => $"{_dir}/Docs";
+    private string World { get; }
 
     private string Out(string file) => System.IO.Path.Combine(_out, file);
 
@@ -123,8 +122,8 @@ public sealed class Scenes
                 e.Send($"wait {hold}");
             }
         }
-        var end = points[^1];
-        return release ? e.Send(Cmd($"mouse up {end.X} {end.Z} {button} {mods}")) : null;
+        var (endX, endZ) = points[^1];
+        return release ? e.Send(Cmd($"mouse up {endX} {endZ} {button} {mods}")) : null;
     }
 
     private static JsonElement Click(Editor e, (double X, double Z) p, string mods = "")

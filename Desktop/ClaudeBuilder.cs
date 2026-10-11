@@ -19,7 +19,7 @@ public static class ClaudeBuilder
     {
         float len = MathF.Abs(to - from), mid = (from + to) / 2;
         int n = Math.Max(1, (int)MathF.Ceiling(len / 2 - 0.01f));
-        return Enumerable.Range(0, n).Select(i => mid - n + 1 + 2 * i).ToList();
+        return [.. Enumerable.Range(0, n).Select(i => mid - n + 1 + 2 * i)];
     }
 
     private static ClaudeTools.PieceSpec P(string prefab, float x, float y, float z, float yaw) =>
@@ -35,7 +35,7 @@ public static class ClaudeBuilder
             _ => throw new ArgumentException("A floor is wood or stone."),
         };
         float y = top - Info(prefab).MaxY;
-        return (from x in Across(x0, x1) from z in Across(z0, z1) select P(prefab, x, y, z, 0)).ToList();
+        return [.. (from x in Across(x0, x1) from z in Across(z0, z1) select P(prefab, x, y, z, 0))];
     }
 
     // Walls on the rectangle's edges from bottom up to height (wood: 2 m rows; stone: 1 m rows), with
@@ -69,8 +69,8 @@ public static class ClaudeBuilder
         var doorAt = new HashSet<(string, float)>();
         foreach (var d in doors)
         {
-            var side = sides.First(s => s.Name.Equals(d.Side, StringComparison.OrdinalIgnoreCase));
-            doorAt.Add((side.Name, side.Spots.OrderBy(sp => MathF.Abs(sp - d.At)).First()));
+            var (name, alongX, @fixed, spots) = sides.First(s => s.Name.Equals(d.Side, StringComparison.OrdinalIgnoreCase));
+            doorAt.Add((name, spots.OrderBy(sp => MathF.Abs(sp - d.At)).First()));
         }
         foreach (var (name, alongX, fixedAt, spots) in sides)
         {
@@ -109,8 +109,8 @@ public static class ClaudeBuilder
         string slopeName = kind + suffix, ridgeName = kind + "_top" + suffix, gableName = "wood_wall_roof" + suffix;
         var slope = Info(slopeName);
         // The slope's edges: low toward its +z, high toward its -z (snap points).
-        var low = slope.Snaps.OrderByDescending(s => s[2]).First();
-        var high = slope.Snaps.OrderBy(s => s[2]).First();
+        float[] low = slope.Snaps.OrderByDescending(s => s[2]).First();
+        float[] high = slope.Snaps.OrderBy(s => s[2]).First();
         float rise = high[1] - low[1], run = low[2] - high[2], pitch = rise / run;
         bool alongX = hx - lx >= hz - lz;
         float cx = (lx + hx) / 2, cz = (lz + hz) / 2;

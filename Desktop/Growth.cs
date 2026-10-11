@@ -34,14 +34,14 @@ public static class Growth
         List<(float X, float Z, string? Name, ObjectKind Kind)> standing;
         lock (s.Things)
         {
-            standing = s.Things.Where(t => !t.Gone).Select(t => (t.Position.X, t.Position.Z, nameOf(t.Prefab), ObjectKinds.Of(nameOf(t.Prefab), t.Piece, t.Tamed))).ToList();
+            standing = [.. s.Things.Where(t => !t.Gone).Select(t => (t.Position.X, t.Position.Z, nameOf(t.Prefab), ObjectKinds.Of(nameOf(t.Prefab), t.Piece, t.Tamed)))];
         }
         bool Near(Regrow.Spot o, float d, Func<string?, ObjectKind, bool> test) =>
             standing.Any(t => MathF.Abs(t.X - o.X) < d && MathF.Abs(t.Z - o.Z) < d && MathF.Sqrt((t.X - o.X) * (t.X - o.X) + (t.Z - o.Z) * (t.Z - o.Z)) < d && test(t.Name, t.Kind));
-        return spots.Where(o => keep(o) && !Near(o, 1, (_, _) => true) && !Near(o, 3, (n, _) => n == o.Name) && !Near(o, 4, (_, k) => k == ObjectKind.Buildings)).ToList();
+        return [.. spots.Where(o => keep(o) && !Near(o, 1, (_, _) => true) && !Near(o, 3, (n, _) => n == o.Name) && !Near(o, 4, (_, k) => k == ObjectKind.Buildings))];
     }
 
     // The spots as new objects, in one undo step.
     public static void Commit(EditSession session, string label, IEnumerable<Regrow.Spot> spots) =>
-        session.Commit(label, null, Array.Empty<int>(), spots.Select(o => (new NewObject(0, StableHash.Of(o.Name), new Vector3(o.X, o.Y, o.Z), new Vector3(o.Rx, o.Ry, o.Rz), MathF.Abs(o.Scale - 1) < 1e-4f ? 0 : o.Scale), false)).ToList());
+        session.Commit(label, null, [], spots.Select(o => (new NewObject(0, StableHash.Of(o.Name), new Vector3(o.X, o.Y, o.Z), new Vector3(o.Rx, o.Ry, o.Rz), MathF.Abs(o.Scale - 1) < 1e-4f ? 0 : o.Scale), false)).ToList());
 }

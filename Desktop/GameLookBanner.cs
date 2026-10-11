@@ -37,7 +37,7 @@ public sealed class GameLookBanner
 
     // Tests: the game look's state, choosing the game folder, and the folder picker.
     internal Func<GameLook.Snapshot> Read { get; set; } = GameLook.Now;
-    internal Func<string, AppSettings, string?> StartExport { get; set; } = (folder, settings) => GameLook.Start(folder, settings);
+    internal Func<string, AppSettings, string?> StartExport { get; set; } = GameLook.Start;
     internal Func<string, Task<string?>> PickFolder { get; set; } = _ => Task.FromResult<string?>(null);
 
     public GameLookBanner(AppSettings settings)
@@ -55,7 +55,7 @@ public sealed class GameLookBanner
         Retry.Tip("look.retry");
         ShowLog.Tip("look.log");
         ShowLog.Click += async (_, _) => await OpenLog();
-        Browse.Click += async (_, _) => { if (await PickFolder("Choose the Valheim game folder (with valheim_Data)") is string p) PathBox.Text = p; };
+        Browse.Click += async (_, _) => { if (await PickFolder("Choose the Valheim game folder (with valheim_Data)") is string p) { PathBox.Text = p; } };
         Use.Click += (_, _) => Start(PathBox.Text);
         Retry.Click += (_, _) => Start(Read().Valheim ?? _settings.ValheimPath);
         _timer.Tick += (_, _) => Refresh();

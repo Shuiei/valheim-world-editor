@@ -41,14 +41,14 @@ public class SaveTests
         edit.PaintModified[cells[0]] = true;
         edit.Paint[cells[0] * 4 + 2] = 1f;
         edits.Put(edit);
-        WorldWriter.Result r = WorldWriter.Save(world, edits.All().Where(e => e.Changed).ToList());
+        WorldWriter.Result r = WorldWriter.Save(world, [.. edits.All().Where(e => e.Changed)]);
         Assert.True(r.Saved, r.Message);
         Assert.Equal(1, r.ZonesWritten);
         // No backup folder: the old save goes only once the new one has read back right.
         Assert.Null(r.BackupDirectory);
         Assert.Empty(Directory.GetDirectories(Path.GetDirectoryName(w.Dir)!, "*_backup_*"));
 
-        WorldSave again = WorldSave.Load(w.Dir);
+        var again = WorldSave.Load(w.Dir);
         Assert.Equal(3, again.SaveNumber);
         Assert.Equal(world.ObjectCount, again.ObjectCount);
         TerrainZone z2 = again.TerrainZones.Single(t => t.ZoneX == zone.ZoneX && t.ZoneZ == zone.ZoneZ);
@@ -84,7 +84,7 @@ public class SaveTests
         edit.Modified[5] = true;
         edit.Level[5] = 1f;
         edits.Put(edit);
-        WorldWriter.Result r = WorldWriter.Save(world, edits.All().Where(e => e.Changed).ToList());
+        WorldWriter.Result r = WorldWriter.Save(world, [.. edits.All().Where(e => e.Changed)]);
         Assert.False(r.Saved);
         Assert.Contains(r.Skipped, s => s.Contains("not generated"));
         Assert.Equal(2, WorldSave.Load(w.Dir).SaveNumber);
@@ -95,12 +95,12 @@ public class SaveTests
     {
         using var w = new TempWorld();
         WorldSave world = w.Load();
-        var tree = world.Objects.First(o => o.Prefab == Fixtures.Hash("Beech1"));
-        WorldWriter.Result r = WorldWriter.Save(world, new List<ZoneEdit>(), deleted: new[] { tree.Id });
+        var (id, prefab, position, rotation, scale) = world.Objects.First(o => o.Prefab == Fixtures.Hash("Beech1"));
+        WorldWriter.Result r = WorldWriter.Save(world, [], deleted: [id]);
         Assert.True(r.Saved, r.Message);
-        WorldSave again = WorldSave.Load(w.Dir);
+        var again = WorldSave.Load(w.Dir);
         Assert.Equal(world.ObjectCount - 1, again.ObjectCount);
-        Assert.DoesNotContain(again.Objects, o => o.Prefab == tree.Prefab && Vector3.Distance(o.Position, tree.Position) < 0.01f);
+        Assert.DoesNotContain(again.Objects, o => o.Prefab == prefab && Vector3.Distance(o.Position, position) < 0.01f);
     }
 
     [Fact]
@@ -114,15 +114,15 @@ public class SaveTests
         var blank = new NewObject(-2, Fixtures.Hash("sapling_turnip"), near + new Vector3(-2, 0, 2), Vector3.Zero, 0f);
         Assert.False(world.Templates.ContainsKey(blank.Prefab));
         Assert.True(world.CanCreate(blank.Prefab));
-        WorldWriter.Result r = WorldWriter.Save(world, new List<ZoneEdit>(), added: new[] { copy, blank });
+        WorldWriter.Result r = WorldWriter.Save(world, [], added: [copy, blank]);
         Assert.True(r.Saved, r.Message);
         Assert.Equal(2, r.ObjectsAdded);
 
-        WorldSave again = WorldSave.Load(w.Dir);
+        var again = WorldSave.Load(w.Dir);
         Assert.Equal(world.ObjectCount + 2, again.ObjectCount);
-        var c = again.Objects.Single(o => o.Prefab == copy.Prefab && Vector3.Distance(o.Position, copy.Position) < 0.01f);
-        Assert.Equal(90f, c.Rotation.Y, 0);
-        Assert.Equal(1.2f, c.Scale.X, 2);
+        var (id, prefab, position, rotation, scale) = again.Objects.Single(o => o.Prefab == copy.Prefab && Vector3.Distance(o.Position, copy.Position) < 0.01f);
+        Assert.Equal(90f, rotation.Y, 0);
+        Assert.Equal(1.2f, scale.X, 2);
         // A sapling is placed with the cultivator: with a builder chosen it is a player-built piece.
         Assert.Contains(again.Objects.Select(o => (o.Prefab, o.Position)).Concat(again.Pieces.Select(p => (p.Prefab, p.Position))),
             o => o.Prefab == blank.Prefab && Vector3.Distance(o.Position, blank.Position) < 0.01f);
@@ -148,14 +148,14 @@ public class SaveTests
     {
         using var w = new TempWorld();
         WorldSave world = w.Load();
-        var tree = world.Objects.First(o => o.Prefab == Fixtures.Hash("Beech1"));
-        int zx = (int)MathF.Floor((tree.Position.X + 32f) / 64f), zz = (int)MathF.Floor((tree.Position.Z + 32f) / 64f);
+        var (id, prefab, position, rotation, scale) = world.Objects.First(o => o.Prefab == Fixtures.Hash("Beech1"));
+        int zx = (int)MathF.Floor((position.X + 32f) / 64f), zz = (int)MathF.Floor((position.Z + 32f) / 64f);
         int inZone = world.Objects.Count(o => (int)MathF.Floor((o.Position.X + 32f) / 64f) == zx && (int)MathF.Floor((o.Position.Z + 32f) / 64f) == zz);
         Assert.True(inZone > 0);
-        WorldWriter.Result r = WorldWriter.Save(world, new List<ZoneEdit>(), resets: new[] { new ZoneReset(zx, zz, KeepBuildings: true, Ground: true) });
+        WorldWriter.Result r = WorldWriter.Save(world, [], resets: [new ZoneReset(zx, zz, KeepBuildings: true, Ground: true)]);
         Assert.True(r.Saved, r.Message);
-        WorldSave again = WorldSave.Load(w.Dir);
-        Assert.DoesNotContain(again.Objects, o => (int)MathF.Floor((o.Position.X + 32f) / 64f) == zx && (int)MathF.Floor((o.Position.Z + 32f) / 64f) == zz && o.Prefab == tree.Prefab);
+        var again = WorldSave.Load(w.Dir);
+        Assert.DoesNotContain(again.Objects, o => (int)MathF.Floor((o.Position.X + 32f) / 64f) == zx && (int)MathF.Floor((o.Position.Z + 32f) / 64f) == zz && o.Prefab == prefab);
     }
 
     // Bytes before the data sections: flags (2), position (12), prefab (4), rotation (0, 2 or 4).
@@ -176,16 +176,16 @@ public class SaveTests
         using var w = new TempWorld();
         WorldSave world = w.Load();
         var edits = new EditStore(world);
-        var tree = world.Objects.First(o => o.Prefab == Fixtures.Hash("Beech1"));
-        edits.AddObjects(new[] { new NewObject(-1, Fixtures.Hash("Player_tombstone"), tree.Position + new Vector3(1, 0, 1), Vector3.Zero, 0f) });
-        Assert.True(WorldWriter.Save(world, Array.Empty<ZoneEdit>(), edits.Deleted, edits.Added).Saved);
-        WorldSave saved = WorldSave.Load(w.Dir);
-        var zone = saved.ObjectRefs.First(o => o.Prefab == Fixtures.Hash("Player_tombstone")).Zone;
-        var r = WorldWriter.Save(saved, Array.Empty<ZoneEdit>(), null, null, new[] { new ZoneReset(zone.X, zone.Z, true, false) });
+        var (id, prefab, position, rotation, scale) = world.Objects.First(o => o.Prefab == Fixtures.Hash("Beech1"));
+        edits.AddObjects([new NewObject(-1, Fixtures.Hash("Player_tombstone"), position + new Vector3(1, 0, 1), Vector3.Zero, 0f)]);
+        Assert.True(WorldWriter.Save(world, [], edits.Deleted, edits.Added).Saved);
+        var saved = WorldSave.Load(w.Dir);
+        var (x, z) = saved.ObjectRefs.First(o => o.Prefab == Fixtures.Hash("Player_tombstone")).Zone;
+        var r = WorldWriter.Save(saved, [], null, null, [new ZoneReset(x, z, true, false)]);
         Assert.True(r.Saved, r.Message);
-        WorldSave after = WorldSave.Load(w.Dir);
+        var after = WorldSave.Load(w.Dir);
         Assert.Contains(after.ObjectRefs, o => o.Prefab == Fixtures.Hash("Player_tombstone"));
-        Assert.DoesNotContain(after.Objects, o => o.Prefab == Fixtures.Hash("Beech1") && (int)MathF.Floor((o.Position.X + 32) / 64) == zone.X && (int)MathF.Floor((o.Position.Z + 32) / 64) == zone.Z);
+        Assert.DoesNotContain(after.Objects, o => o.Prefab == Fixtures.Hash("Beech1") && (int)MathF.Floor((o.Position.X + 32) / 64) == x && (int)MathF.Floor((o.Position.Z + 32) / 64) == z);
     }
 }
 
@@ -212,26 +212,26 @@ public class BackupTests
         using var w = new TempWorld();
         WorldSave world = w.Load();
         var edits = new EditStore(world);
-        var tree = world.Objects.First(o => o.Prefab == Fixtures.Hash("Beech1"));
-        byte[] original = world.ObjectBytes(tree.Id);
-        edits.SetDeleted(new[] { tree.Id }, true);
+        var (id, prefab, position, rotation, scale) = world.Objects.First(o => o.Prefab == Fixtures.Hash("Beech1"));
+        byte[] original = world.ObjectBytes(id);
+        edits.SetDeleted([id], true);
         string copy = w.Dir.TrimEnd(Path.DirectorySeparatorChar) + "_backup_auto-20261001100000";
         TempWorld.CopyDir(w.Dir, copy);
-        var r = WorldWriter.Save(world, Array.Empty<ZoneEdit>(), edits.Deleted);
+        var r = WorldWriter.Save(world, [], edits.Deleted);
         Assert.True(r.Saved);
 
         WorldSave now = WorldSave.Load(w.Dir), backup = WorldSave.Load(copy);
         Assert.Equal(world.ObjectCount - 1, now.ObjectCount);
-        var inBackup = backup.Objects.Single(o => o.Prefab == tree.Prefab && o.Position == tree.Position);
-        byte[] raw = backup.ObjectBytes(inBackup.Id);
+        var (inBackupId, _, _, _, _) = backup.Objects.Single(o => o.Prefab == prefab && o.Position == position);
+        byte[] raw = backup.ObjectBytes(inBackupId);
         Assert.Equal(original, raw);
         var e2 = new EditStore(now);
-        ZdoData z = ZdoData.Parse(raw);
-        e2.AddObjects(new[] { new NewObject(-1, z.Prefab, z.Position, z.Rotation, 0f, null, false, raw) });
-        Assert.True(WorldWriter.Save(now, Array.Empty<ZoneEdit>(), null, e2.Added).Saved);
-        WorldSave after = WorldSave.Load(w.Dir);
+        var z = ZdoData.Parse(raw);
+        e2.AddObjects([new NewObject(-1, z.Prefab, z.Position, z.Rotation, 0f, null, false, raw)]);
+        Assert.True(WorldWriter.Save(now, [], null, e2.Added).Saved);
+        var after = WorldSave.Load(w.Dir);
         Assert.Equal(world.ObjectCount, after.ObjectCount);
-        int back = after.Objects.Single(o => o.Prefab == tree.Prefab && o.Position == tree.Position).Id;
+        int back = after.Objects.Single(o => o.Prefab == prefab && o.Position == position).Id;
         Assert.Equal(original, after.ObjectBytes(back));
     }
 }

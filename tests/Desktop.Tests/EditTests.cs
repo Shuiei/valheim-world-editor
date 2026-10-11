@@ -1,4 +1,3 @@
-using Avalonia;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Input;
@@ -23,10 +22,22 @@ public class EditTests
         Array.Fill(ground.Base, 30f);
         var scene = new WorldScene
         {
-            World = new WorldSave { Directory = "none", SaveNumber = 1 }, Name = "test", X0 = 0, Z0 = 0, Size = size, W = w, H = w,
-            Heights = Enumerable.Repeat(30f, w * w).ToArray(), Biomes = new int[w * w], Things = things.ToList(), BiomeColor = new byte[w * w * 4],
-            Cx = -32 + (w - 1) / 2f, Cz = -32 + (w - 1) / 2f,
-            Mask = new byte[w * w * 4], OceanDepth = new float[w * w], Limit = new float[w * w],
+            World = new WorldSave { Directory = "none", SaveNumber = 1 },
+            Name = "test",
+            X0 = 0,
+            Z0 = 0,
+            Size = size,
+            W = w,
+            H = w,
+            Heights = [.. Enumerable.Repeat(30f, w * w)],
+            Biomes = new int[w * w],
+            Things = [.. things],
+            BiomeColor = new byte[w * w * 4],
+            Cx = -32 + (w - 1) / 2f,
+            Cz = -32 + (w - 1) / 2f,
+            Mask = new byte[w * w * 4],
+            OceanDepth = new float[w * w],
+            Limit = new float[w * w],
         };
         var session = new EditSession(scene, ground, new EditStore(scene.World));
         scene.Session = session;
@@ -197,9 +208,9 @@ public class EditTests
     public void ZonesOfEdgePointsAreBothSides()
     {
         var g = new Ground(129, 129, 0, 0, 2);
-        Assert.Equal(new[] { (0, 0) }, g.ZonesOf(new[] { 10 * 129 + 10 }));
-        Assert.Equal(new[] { (0, 0), (1, 0) }, g.ZonesOf(new[] { 10 * 129 + 64 }));
-        Assert.Equal(new[] { (0, 0), (1, 0), (0, 1), (1, 1) }, g.ZonesOf(new[] { 64 * 129 + 64 }));
+        Assert.Equal(new[] { (0, 0) }, g.ZonesOf([10 * 129 + 10]));
+        Assert.Equal(new[] { (0, 0), (1, 0) }, g.ZonesOf([10 * 129 + 64]));
+        Assert.Equal(new[] { (0, 0), (1, 0), (0, 1), (1, 1) }, g.ZonesOf([64 * 129 + 64]));
     }
 
     [Fact]

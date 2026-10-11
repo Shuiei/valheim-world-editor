@@ -41,13 +41,13 @@ public sealed partial class DungeonTool
     public bool WithDoors { get; set; } = true;
 
     // Numbers from 0 to 1 for the door rolls (tests set their own).
-    internal Func<float> Random { get; set; } = () => System.Random.Shared.NextSingle();
+    internal Func<float> Random { get; set; } = System.Random.Shared.NextSingle;
 
     // Where two rooms of the open dungeon meet and a door can stand.
-    public List<Dungeons.Joint> DoorJoints => Derive()?.Joints ?? new();
+    public List<Dungeons.Joint> DoorJoints => Derive()?.Joints ?? [];
 
     // The scene's doors (of the dungeon's door kinds) standing at a joint.
-    public List<int> DoorsAt(Dungeons.Joint j) => Derive() is { } c && c.Doors.TryGetValue(Spot(j.Position), out var at) ? at.ToList() : new();
+    public List<int> DoorsAt(Dungeons.Joint j) => Derive() is { } c && c.Doors.TryGetValue(Spot(j.Position), out var at) ? at.ToList() : [];
 
     // How many pairs of the open dungeon's rooms overlap.
     public int OverlappingPairs => Derive()?.Overlapping ?? 0;
@@ -81,7 +81,7 @@ public sealed partial class DungeonTool
                 var t = s.Things[i];
                 if (!t.Gone && kinds.Contains(t.Prefab))
                 {
-                    (doors.TryGetValue(Spot(t.Position), out var l) ? l : doors[Spot(t.Position)] = new()).Add(i);
+                    (doors.TryGetValue(Spot(t.Position), out var l) ? l : doors[Spot(t.Position)] = []).Add(i);
                 }
             }
         }
@@ -97,11 +97,11 @@ public sealed partial class DungeonTool
     // The scene: set by the view when it opens an area.
     public WorldScene? Scene { get; set; }
 
-    public IReadOnlyList<DungeonRooms.Dungeon> All => Scene == null ? Array.Empty<DungeonRooms.Dungeon>() : DungeonRooms.Of(Scene);
+    public IReadOnlyList<DungeonRooms.Dungeon> All => Scene == null ? [] : DungeonRooms.Of(Scene);
 
     public DungeonRooms.Dungeon? Dungeon => Current is { } at ? All.FirstOrDefault(d => Vector3.DistanceSquared(d.Thing.Position, at) < 0.01f) : null;
 
-    public List<Dungeons.OpenEnd> FreeEnds => Derive()?.Free ?? new();
+    public List<Dungeons.OpenEnd> FreeEnds => Derive()?.Free ?? [];
 
     // ---- Names shown for the kinds of dungeon.
     public static string KindName(Dungeons.Kind k) => k.Name switch
@@ -144,7 +144,7 @@ public sealed partial class DungeonTool
     }
 
     // The rooms the open dungeon can take, the game's way (its themes), by name.
-    public IEnumerable<Dungeons.Room> Palette => Dungeon is { } d ? Dungeons.RoomsFor(d.Kind) : Enumerable.Empty<Dungeons.Room>();
+    public IEnumerable<Dungeons.Room> Palette => Dungeon is { } d ? Dungeons.RoomsFor(d.Kind) : [];
 
     // ---- The pointer (a ray in world space).
     public void Hover(Vector3 origin, Vector3 dir)
@@ -154,10 +154,10 @@ public sealed partial class DungeonTool
         {
             // A free opening near the ray (within 1.5 m of it), the nearest along it; else a joint that
             // can take a door; else a room.
-            end = Nearest(FreeEnds.Select(e => e.Position).ToList(), origin, dir);
+            end = Nearest([.. FreeEnds.Select(e => e.Position)], origin, dir);
             if (end == null)
             {
-                joint = Nearest(DoorJoints.Select(j => j.Position).ToList(), origin, dir);
+                joint = Nearest([.. DoorJoints.Select(j => j.Position)], origin, dir);
             }
             if (end == null && joint == null)
             {
@@ -270,7 +270,7 @@ public sealed partial class DungeonTool
             string? problem = Problem(p);
             var rooms = d.Rooms.ToList();
             rooms.Add(p);
-            var made = ContentsOf(d, new[] { p });
+            var made = ContentsOf(d, [p]);
             string with = made.Count > 0 ? $" with {made.Count} object(s)" : "";
             // Its door, as the game rolls one where a room joins (on the opening it took).
             if (WithDoors)
@@ -406,12 +406,12 @@ public sealed partial class DungeonTool
         var there = DoorsAt(j);
         if (there.Count > 0)
         {
-            s.Commit("Dungeon: removed a door", null, there, Array.Empty<(NewObject, bool)>());
+            s.Commit("Dungeon: removed a door", null, there, []);
             Message?.Invoke("Removed the door. Ctrl+Z puts it back.");
         }
         else if (Dungeons.DoorsFor(d.Kind, j.Type).FirstOrDefault() is { Prefab: { Length: > 0 } door })
         {
-            s.Commit("Dungeon: added a door", null, Array.Empty<int>(), new[] { (new NewObject(0, StableHash.Of(door), j.Position, BlueprintFormats.ToEuler(j.Rotation), 0), false) });
+            s.Commit("Dungeon: added a door", null, [], [(new NewObject(0, StableHash.Of(door), j.Position, BlueprintFormats.ToEuler(j.Rotation), 0), false)]);
             Message?.Invoke($"Added a door ({door}). Click it again to take it away.");
         }
         Changed?.Invoke();
@@ -430,7 +430,7 @@ public sealed partial class DungeonTool
             foreach (var m in Dungeons.Contents(r, d.Kind, d.Thing.Position, Scene.World.Seed))
             {
                 int prefab = StableHash.Of(m.Prefab);
-                list.Add((new NewObject(0, prefab, m.Position, BlueprintFormats.ToEuler(m.Rotation), 0), TerrainEditor.Terrain.PieceCatalog.Get(prefab)?.Tool != null));
+                list.Add((new NewObject(0, prefab, m.Position, BlueprintFormats.ToEuler(m.Rotation), 0), Terrain.PieceCatalog.Get(prefab)?.Tool != null));
             }
         }
         return list;
@@ -451,8 +451,8 @@ public sealed partial class DungeonTool
         }
         var z = ZdoData.Parse(Dungeons.WithRooms(bytes, rooms));
         var adds = new List<(NewObject, bool)> { (new NewObject(0, z.Prefab, z.Position, z.Rotation, 0, null, false, z.Serialize()), false) };
-        adds.AddRange(add ?? Array.Empty<(NewObject, bool)>());
-        s.Commit(label, null, new[] { d.Index }.Concat(alsoRemove ?? Array.Empty<int>()).ToArray(), adds);
+        adds.AddRange(add ?? []);
+        s.Commit(label, null, [d.Index, .. alsoRemove ?? []], adds);
         HoverEnd = null;
         Message?.Invoke(message + " Ctrl+Z undoes; Save writes it.");
         Changed?.Invoke();

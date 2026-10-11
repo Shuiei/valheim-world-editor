@@ -73,7 +73,7 @@ public sealed partial class WorldGenerator
         GenMath.Noise((double)(float)((double)offset + x) * (double)0.001f, (double)(float)((double)offset + z) * (double)0.001f);
 
     public static bool IsAshlands(float x, float z) =>
-        (double)GenMath.Length(x, (float)((double)z + AshlandsShift)) > (double)EdgeRadius + (double)WorldAngle(x, z) * 100.0;
+        (double)GenMath.Length(x, (float)((double)z + AshlandsShift)) > EdgeRadius + (double)WorldAngle(x, z) * 100.0;
 
     public static bool IsDeepnorth(float x, float z) =>
         GenMath.Length(x, (float)((double)z + DeepNorthShift)) > (float)(EdgeRadius + (double)(float)((double)WorldAngle(x, z) * 100.0));
@@ -82,7 +82,7 @@ public sealed partial class WorldGenerator
     public static float GetAshlandsOceanGradient(float x, float z)
     {
         float shifted = z + AshlandsShift;
-        return (float)(((double)GenMath.Length(x, shifted) - ((double)EdgeRadius + (double)WorldAngle(x, shifted) * 100.0)) / 300.0);
+        return (float)(((double)GenMath.Length(x, shifted) - (EdgeRadius + (double)WorldAngle(x, shifted) * 100.0)) / 300.0);
     }
 
     public static float GetAshlandsOceanGradient(Vector2 pos) => GetAshlandsOceanGradient(pos.x, pos.y);
@@ -97,13 +97,13 @@ public sealed partial class WorldGenerator
 
     private static double EdgeGap(float sx, float sz, float x, float z)
     {
-        double past = (double)GenMath.Length(sx, sz) - ((double)EdgeRadius + (double)WorldAngle(x, z) * 100.0);
+        double past = (double)GenMath.Length(sx, sz) - (EdgeRadius + (double)WorldAngle(x, z) * 100.0);
         return GenMath.SmoothBlend(0.0, 1.0, (float)GenMath.Clamp01(Math.Abs(past) / 400.0));
     }
 
     // 0 at the Deep North's edge to 1 200 m past it.
     public static double DeepNorthWaveFade(float x, float z) =>
-        GenMath.Clamp01(((double)GenMath.Length(x, z + DeepNorthShift) - ((double)EdgeRadius + (double)WorldAngle(x, z) * 100.0)) / 200.0);
+        GenMath.Clamp01(((double)GenMath.Length(x, z + DeepNorthShift) - (EdgeRadius + (double)WorldAngle(x, z) * 100.0)) / 200.0);
 
     // The wave of the Ashlands' and the Deep North's edges: twenty swings round the world, -1 to 1.
     // A point's height asks for it several times: the last one is kept on the thread (by the exact
@@ -111,23 +111,23 @@ public sealed partial class WorldGenerator
     public static float WorldAngle(float x, float z)
     {
         int bx = BitConverter.SingleToInt32Bits(x), bz = BitConverter.SingleToInt32Bits(z);
-        if (t_angleKnown && t_angleX == bx && t_angleZ == bz)
+        if (_angleKnown && _angleX == bx && _angleZ == bz)
         {
-            return t_angle;
+            return _angle;
         }
         float angle = (float)Math.Sin((float)((double)(float)Math.Atan2(x, z) * 20.0));
-        (t_angleX, t_angleZ, t_angle, t_angleKnown) = (bx, bz, angle, true);
+        (_angleX, _angleZ, _angle, _angleKnown) = (bx, bz, angle, true);
         return angle;
     }
 
     [ThreadStatic]
-    private static int t_angleX, t_angleZ;
+    private static int _angleX, _angleZ;
 
     [ThreadStatic]
-    private static float t_angle;
+    private static float _angle;
 
     [ThreadStatic]
-    private static bool t_angleKnown;
+    private static bool _angleKnown;
 
     // A zone's area by its corner (zone x, z times 64): on a biome's edge when the corner and the
     // corners round it are not all in one biome, else in its middle.
@@ -151,7 +151,7 @@ public sealed partial class WorldGenerator
         return area;
     }
 
-    private static readonly (int, int)[] AroundACorner = { (-64, -64), (64, -64), (64, 64), (-64, 64), (-64, 0), (64, 0), (0, -64), (0, 64) };
+    private static readonly (int, int)[] AroundACorner = [(-64, -64), (64, -64), (64, 64), (-64, 64), (-64, 0), (64, 0), (0, -64), (0, 64)];
 
     private Heightmap.Biome CornerBiome(Vector2s corner)
     {
@@ -166,5 +166,5 @@ public sealed partial class WorldGenerator
     // A point's area as the game finds it from its biome sectors (AltBiomeWorldData). The editor has
     // none, and the game without them sees one sector everywhere: never an edge.
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1822", Justification = "Asked of a world, as the game does.")]
-    public Heightmap.BiomeArea GetBiomeArea(Vector3 point) => Heightmap.BiomeArea.Median;
+    public Heightmap.BiomeArea GetBiomeArea(Vector3 _) => Heightmap.BiomeArea.Median;
 }

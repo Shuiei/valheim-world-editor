@@ -5,7 +5,6 @@ using Avalonia.Threading;
 using TerrainEditor.App;
 using TerrainEditor.Editing;
 using TerrainEditor.Save;
-using TerrainEditor.Terrain;
 using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
@@ -15,7 +14,7 @@ namespace TerrainEditor.Desktop.Tests;
 [Collection("World files")]
 public class LiveTests
 {
-    private static readonly Func<Formula.Env, double> Two = Formula.Compile("2", new string[0]);
+    private static readonly Func<Formula.Env, double> Two = Formula.Compile("2", []);
 
     // Waits for the window's posted work and background tasks.
     internal static async Task Until(Func<bool> done, int ms = 15000)
@@ -44,7 +43,7 @@ public class LiveTests
         s.Shape(32, 32, Two, 3, 0, "raise");
         int tree = scene.Things.FindIndex(t => !t.Gone && !t.Piece);
         Assert.True(tree >= 0);
-        s.Delete(new[] { tree });
+        s.Delete([tree]);
         Assert.Equal((1, 1, 0, 0), world.Pending);
         Assert.StartsWith("Not applied:", s.PendingText);
 
@@ -114,7 +113,7 @@ public class LiveTests
         var scene = WorldScene.Load(world, 0, 0, 1);
         var s = scene.Session!;
         int tree = scene.Things.FindIndex(t => !t.Gone && !t.Piece);
-        s.Delete(new[] { tree });
+        s.Delete([tree]);
         game.Fail["/objects"] = 500;
         var o = await s.ApplyLive();
         Assert.False(o.Done);
@@ -155,11 +154,11 @@ public class LiveTests
         var scene = WorldScene.Load(world, 0, 0, 1);
         var s = scene.Session!;
         var tree = (new NewObject(0, StableHash.Of("Beech1"), new System.Numerics.Vector3(10, 30, 10), System.Numerics.Vector3.Zero, 1), false);
-        s.Commit("plant", null, Array.Empty<int>(), new[] { tree });
+        s.Commit("plant", null, [], [tree]);
         s.Shape(32, 32, Two, 3, 0, "raise");
         var results = await Task.WhenAll(world.ApplyLive(), world.ApplyLive());
         // The first sends everything; the second finds nothing left.
-        Assert.Equal(new[] { "Applied", "Nothing to apply." }, results.Select(r => r.Message.StartsWith("Applied") ? "Applied" : r.Message).Order());
+        Assert.Equal(["Applied", "Nothing to apply."], results.Select(r => r.Message.StartsWith("Applied", StringComparison.Ordinal) ? "Applied" : r.Message).Order());
         Assert.Equal((0, 1), Assert.Single(game.ObjectCalls));
         Assert.Equal(new[] { (0, 0) }, game.Terrain);
         Assert.Equal((0, 0, 0, 0), world.Pending);
@@ -172,7 +171,7 @@ public class LiveTests
         using var game = new FakeGame { Missing = 1 };
         var world = await WorldSession.OpenLive(new LiveBridge(game.Url, game.Token), FakeGame.Label());
         var scene = WorldScene.Load(world, 0, 0, 1);
-        scene.Session!.Delete(new[] { scene.Things.FindIndex(t => !t.Gone && !t.Piece) });
+        scene.Session!.Delete([scene.Things.FindIndex(t => !t.Gone && !t.Piece)]);
         var o = await world.ApplyLive();
         Assert.True(o.Done, o.Message);
         Assert.Contains("1 were already gone", o.Message);
@@ -200,7 +199,7 @@ public class LiveTests
         var live = new LiveBridge(game.Url, game.Token);
         var world = await WorldSession.OpenLive(live, FakeGame.Label());
         game.Dispose();
-        await Assert.ThrowsAnyAsync<Exception>(() => world.Reload());
+        await Assert.ThrowsAnyAsync<Exception>(world.Reload);
         Assert.Contains("Nothing answers", await LiveBridge.Check(game.Url, game.Token, TimeSpan.FromSeconds(2)));
     }
 
@@ -342,13 +341,13 @@ public class LiveTests
             Directory.CreateDirectory(bep);
             Directory.CreateDirectory(worlds);
             var settings = new AppSettings();
-            Assert.Contains("valheim_Data", SettingsDialog.Apply(settings, game, Array.Empty<string>(), Array.Empty<string>()));
-            Assert.Contains("BepInEx folder not found", SettingsDialog.Apply(settings, null, new[] { Path.Combine(root, "nope") }, Array.Empty<string>()));
-            Assert.Contains("World folder not found", SettingsDialog.Apply(settings, null, Array.Empty<string>(), new[] { Path.Combine(root, "nope") }));
+            Assert.Contains("valheim_Data", SettingsDialog.Apply(settings, game, [], []));
+            Assert.Contains("BepInEx folder not found", SettingsDialog.Apply(settings, null, [Path.Combine(root, "nope")], []));
+            Assert.Contains("World folder not found", SettingsDialog.Apply(settings, null, [], [Path.Combine(root, "nope")]));
             Assert.Null(settings.ValheimPath);
             Directory.CreateDirectory(Path.Combine(game, "valheim_Data", "StreamingAssets", "SoftRef", "Bundles"));
             // Blank rows are skipped, the same folder twice counts once.
-            Assert.Null(SettingsDialog.Apply(settings, $"\"{game}\"", new[] { bep, " ", bep }, new[] { worlds }));
+            Assert.Null(SettingsDialog.Apply(settings, $"\"{game}\"", [bep, " ", bep], [worlds]));
             var kept = AppSettings.Load();
             Assert.Equal(game, kept.ValheimPath);
             Assert.Equal(new[] { bep }, kept.BepInExFolders);

@@ -60,7 +60,7 @@ public class CoreUpliftTests
         {
             var plan = Uplift.Make(World, Terrain, Edits, NextId)!;
             Uplift.Apply(plan, Edits);
-            var r = WorldWriter.Save(World, Edits.All().Where(e => e.Changed).ToList(), Edits.Deleted, Edits.Added, Edits.Resets);
+            var r = WorldWriter.Save(World, [.. Edits.All().Where(e => e.Changed)], Edits.Deleted, Edits.Added, Edits.Resets);
             Assert.True(r.Saved, r.Message);
             Assert.True(r.Skipped.Count == 0, string.Join("; ", r.Skipped.Take(3)));
             return plan;
@@ -95,21 +95,21 @@ public class CoreUpliftTests
         using var w = new TempWorld();
         var o = Open.Of(w.Load());
         // Within the test world's saved zones (0 to 15 both ways), over the edge of its trees.
-        const float cx = 40, cz = 30;
-        var hill = Bell(cx, cz, 30, 60);
-        var tree = o.World.Objects.Where(t => ObjectKinds.Of(PrefabCatalog.NameOf(t.Prefab), false) == ObjectKind.Trees)
-            .OrderBy(t => Vector2.Distance(new(t.Position.X, t.Position.Z), new(cx, cz))).First();
-        Assert.True(hill(tree.Position.X, tree.Position.Z) > Uplift.ClearHeight);
+        const float Cx = 40, Cz = 30;
+        var hill = Bell(Cx, Cz, 30, 60);
+        var (id, prefab, position, rotation, scale) = o.World.Objects.Where(t => ObjectKinds.Of(PrefabCatalog.NameOf(t.Prefab), false) == ObjectKind.Trees)
+            .OrderBy(t => Vector2.Distance(new(t.Position.X, t.Position.Z), new(Cx, Cz))).First();
+        Assert.True(hill(position.X, position.Z) > Uplift.ClearHeight);
         var before = new Dictionary<(int, int), float>();
-        for (int z = (int)cz - 70; z <= (int)cz + 70; z += 2)
+        for (int z = (int)Cz - 70; z <= (int)Cz + 70; z += 2)
         {
-            for (int x = (int)cx - 70; x <= (int)cx + 70; x += 2)
+            for (int x = (int)Cx - 70; x <= (int)Cx + 70; x += 2)
             {
                 before[(x, z)] = o.Height(x, z);
             }
         }
-        var piecesBefore = o.World.Pieces.Count;
-        o.Lift(cx, cz, hill);
+        int piecesBefore = o.World.Pieces.Count;
+        o.Lift(Cx, Cz, hill);
         var plan = o.Save();
         Assert.True(plan.Discs > 20, plan.Describe());
         Assert.Equal(0, plan.OldDiscs);
@@ -118,17 +118,17 @@ public class CoreUpliftTests
         Assert.Equal(plan.Discs, after.World.Discs.Count);
         // No lift is left to save: it is all ground discs and edits now.
         Assert.DoesNotContain(after.Edits.All(), e => e.HasLift);
-        var misses = Misses((x, z) => before[((int)x, (int)z)] + hill(x, z), after, cx, cz, 70);
+        var misses = Misses((x, z) => before[((int)x, (int)z)] + hill(x, z), after, Cx, Cz, 70);
         Assert.True(misses[misses.Count * 99 / 100] < 0.5f, $"99% within 0.5 m: {misses[misses.Count * 99 / 100]:0.00}");
         Assert.True(misses[^1] < 4f, $"worst {misses[^1]:0.00} m");
         // The top really is beyond the edits' reach: the ground discs carry it.
-        Assert.True(after.Height(cx, cz) - before[((int)cx, (int)cz)] > 25);
+        Assert.True(after.Height(Cx, Cz) - before[((int)Cx, (int)Cz)] > 25);
         // The tree under the hill is taken away; building pieces are not.
-        Assert.DoesNotContain(after.World.Objects, t => t.Prefab == tree.Prefab && Vector3.Distance(t.Position, tree.Position) < 0.01f);
+        Assert.DoesNotContain(after.World.Objects, t => t.Prefab == prefab && Vector3.Distance(t.Position, position) < 0.01f);
         Assert.Equal(piecesBefore, after.World.Pieces.Count);
         // Invisible: not an object of the View, and not outlined as a location's flattening.
         Assert.DoesNotContain(after.World.Objects, t => t.Prefab == WorldSave.LocationProxyPrefab);
-        Assert.All(new TerrainModifiers(after.World).InZone((int)MathF.Floor((cx + 32) / 64), (int)MathF.Floor((cz + 32) / 64)).Where(m => m.LevelRadius == Uplift.DiscRadius), m => Assert.True(m.Disc));
+        Assert.All(new TerrainModifiers(after.World).InZone((int)MathF.Floor((Cx + 32) / 64), (int)MathF.Floor((Cz + 32) / 64)).Where(m => m.LevelRadius == Uplift.DiscRadius), m => Assert.True(m.Disc));
     }
 
     [Fact]
@@ -136,27 +136,27 @@ public class CoreUpliftTests
     {
         using var w = new TempWorld();
         var o = Open.Of(w.Load());
-        const float cx = 300, cz = 300;
-        float start = o.Height(cx, cz);
-        o.Lift(cx, cz, Bell(cx, cz, 25, 50));
+        const float Cx = 300, Cz = 300;
+        float start = o.Height(Cx, Cz);
+        o.Lift(Cx, Cz, Bell(Cx, Cz, 25, 50));
         o.Save();
 
         // Higher: the old discs are worked out again with new ones.
         var again = Open.Of(w.Load());
         int discs = again.World.Discs.Count;
-        again.Lift(cx, cz, Bell(cx, cz, 15, 50));
+        again.Lift(Cx, Cz, Bell(Cx, Cz, 15, 50));
         var plan = again.Save();
         Assert.True(plan.OldDiscs > 0);
         var third = Open.Of(w.Load());
-        Assert.InRange(third.Height(cx, cz) - start, 38, 42);
+        Assert.InRange(third.Height(Cx, Cz) - start, 38, 42);
         Assert.True(third.World.Discs.Count >= discs / 2);
 
         // All the way back down: no ground disc is needed any more.
-        third.Lift(cx, cz, Bell(cx, cz, -40, 50));
+        third.Lift(Cx, Cz, Bell(Cx, Cz, -40, 50));
         third.Save();
         var back = Open.Of(w.Load());
         Assert.Empty(back.World.Discs);
-        Assert.InRange(back.Height(cx, cz) - start, -1, 1);
+        Assert.InRange(back.Height(Cx, Cz) - start, -1, 1);
     }
 
     [Fact]
@@ -164,13 +164,13 @@ public class CoreUpliftTests
     {
         using var w = new TempWorld();
         var o = Open.Of(w.Load());
-        const float cx = 400, cz = 200;
-        float start = o.Height(cx, cz);
-        o.Lift(cx, cz, Bell(cx, cz, -25, 50));
+        const float Cx = 400, Cz = 200;
+        float start = o.Height(Cx, Cz);
+        o.Lift(Cx, Cz, Bell(Cx, Cz, -25, 50));
         var plan = o.Save();
         Assert.True(plan.Discs > 0);
         var after = Open.Of(w.Load());
-        Assert.InRange(after.Height(cx, cz) - start, -26, -24);
+        Assert.InRange(after.Height(Cx, Cz) - start, -26, -24);
     }
 
     [Fact]

@@ -11,7 +11,7 @@ public class GizmoShapeTests
     private static List<Vector3> Corners(float[] mesh)
     {
         Assert.Equal(0, mesh.Length % 9);
-        return Enumerable.Range(0, mesh.Length / 3).Select(i => new Vector3(mesh[i * 3], mesh[i * 3 + 1], mesh[i * 3 + 2])).ToList();
+        return [.. Enumerable.Range(0, mesh.Length / 3).Select(i => new Vector3(mesh[i * 3], mesh[i * 3 + 1], mesh[i * 3 + 2]))];
     }
 
     [Fact]

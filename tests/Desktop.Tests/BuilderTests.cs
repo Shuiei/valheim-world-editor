@@ -31,7 +31,7 @@ public class BuilderTests
             Assert.Equal(0, WorldSave.Builder);
             int chest = scene.Things.FindIndex(t => t.Prefab == StableHash.Of("piece_chest_wood"));
             w.Tools.ChooseSelect();
-            w.View.Select(new[] { chest });
+            w.View.Select([chest]);
             w.Claim();
             Assert.StartsWith("Built by is set to Nobody", w.MessageText.Text);
             // Someone else: player 12345.
@@ -40,7 +40,7 @@ public class BuilderTests
             Avalonia.Threading.Dispatcher.UIThread.RunJobs();
             Assert.Equal(12345, WorldSave.Builder);
             Assert.Equal(12345, w.PlacePanel.Memory.Builders[world.Name]);
-            w.View.Select(new[] { chest });
+            w.View.Select([chest]);
             w.Claim();
             Assert.StartsWith("1 piece(s) are now player built", w.MessageText.Text);
             var copy = scene.Things[^1];
@@ -48,7 +48,7 @@ public class BuilderTests
             var z = ZdoData.Parse(ObjectData.Bytes(scene.World, scene.Session!.Edits, copy.Id)!);
             Assert.Equal(12345, z.LongList.First(l => l.Key == Builders.CreatorKey).Value);
             // Again: it has a builder now.
-            w.View.Select(new[] { scene.Things.Count - 1 });
+            w.View.Select([scene.Things.Count - 1]);
             w.Claim();
             Assert.StartsWith("Nothing to change", w.MessageText.Text);
         }

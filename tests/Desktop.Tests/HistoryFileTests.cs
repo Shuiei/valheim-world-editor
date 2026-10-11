@@ -24,10 +24,10 @@ public class HistoryFileTests
         float was = H(s, 32, 32);
         int tree = s.Scene.Things.FindIndex(t => !t.Piece);
         var treeThing = s.Scene.Things[tree];
-        s.Shape(32, 32, Formula.Compile("3", new string[0]), 4, 0, "Raise");
-        s.Delete(new[] { tree });
+        s.Shape(32, 32, Formula.Compile("3", []), 4, 0, "Raise");
+        s.Delete([tree]);
         var rock = new Vector3(5, H(s, 37, 37), 5);
-        s.Commit("Place", null, Array.Empty<int>(), new[] { (new TerrainEditor.Editing.NewObject(0, StableHash.Of("Rock_4"), rock, Vector3.Zero, 0f), false) });
+        s.Commit("Place", null, [], [(new Editing.NewObject(0, StableHash.Of("Rock_4"), rock, Vector3.Zero, 0f), false)]);
         Assert.True(s.Save().Saved);
         Assert.True(File.Exists(HistoryFile.PathOf(HistoryFile.KeyOf(scene.Owner!))));
         scene.Owner!.Dispose();
@@ -170,7 +170,7 @@ public class HistoryFileTests
             EditAndSave(dir);
             var scene = WorldScene.Load(dir, 0, 0, 1);
             var s = scene.Session!;
-            s.Shape(20, 20, Formula.Compile("2", new string[0]), 3, 0, "Raise again");
+            s.Shape(20, 20, Formula.Compile("2", []), 3, 0, "Raise again");
             Assert.False(s.UndoList[^1].Earlier);
             Assert.Equal(4, s.UndoList.Count);
             // Not saved: the next run has the three saved steps only.

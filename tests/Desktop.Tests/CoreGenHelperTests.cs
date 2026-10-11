@@ -21,7 +21,7 @@ public class CoreGenHelperTests
         Assert.Equal(new Vector2(4, 6), 2f * new Vector2(2, 3));
         Assert.True(new Vector2(1, 2) != new Vector2(1, 3));
         Assert.False(new Vector2(1, 2) != new Vector2(1, 2));
-        Assert.True(new Vector2(1, 2).Equals((object)new Vector2(1, 2)));
+        Assert.True(new Vector2(1, 2).Equals(new Vector2(1, 2)));
         Assert.False(new Vector2(1, 2).Equals("not a vector"));
         Assert.Equal(new Vector2(1, 2).GetHashCode(), new Vector2(1, 2).GetHashCode());
     }
@@ -50,7 +50,7 @@ public class CoreGenHelperTests
         Assert.True(new Vector2i(1, 2) == new Vector2i(1, 2));
         Assert.True(new Vector2i(1, 2) != new Vector2i(2, 1));
         Assert.True(new Vector2i(1, 2).Equals((object)new Vector2i(1, 2)));
-        Assert.False(new Vector2i(1, 2).Equals((object)7));
+        Assert.False(new Vector2i(1, 2).Equals(7));
         var a = new Vector2s(5, 7);
         var b = new Vector2s(2, 3);
         Assert.Equal(new Vector2s(3, 4), a - b);
@@ -108,14 +108,14 @@ public class CoreGenHelperTests
         // A piece the catalogue does not know is left out.
         world.Pieces.Add((7, TerrainEditor.Save.StableHash.Of("not_a_piece"), new System.Numerics.Vector3(1, 2, 3), 0f));
         const int S = TerrainEditor.Terrain.PieceCatalog.Stride;
-        var all = TerrainEditor.Terrain.PieceCatalog.Encode(world, Array.Empty<int>());
+        float[] all = TerrainEditor.Terrain.PieceCatalog.Encode(world, Array.Empty<int>());
         Assert.Equal(2 * S, all.Length);
         var info = TerrainEditor.Terrain.PieceCatalog.Get(wall)!;
         // Position, turn, footprint, top, category, bottom, index in the names, id.
         Assert.Equal(new[] { 10f, 30f, 20f, 90f, info.MinX, info.MaxX, info.MinZ, info.MaxZ, 30 + info.MaxY, info.Category, 30 + info.MinY, info.Index, 5f }, all[..S]);
         Assert.Equal("wood_wall_half", TerrainEditor.Terrain.PieceCatalog.Names[info.Index]);
         // One deleted: left out.
-        var less = TerrainEditor.Terrain.PieceCatalog.Encode(world, new[] { 5 });
+        float[] less = TerrainEditor.Terrain.PieceCatalog.Encode(world, [5]);
         Assert.Equal(S, less.Length);
         Assert.Equal(6f, less[S - 1]);
     }

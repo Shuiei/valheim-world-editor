@@ -84,7 +84,7 @@ public class AreaTests
     public void RestoreTakesAMountainAway()
     {
         var s = EditTests.Flat(5);
-        Assert.NotNull(s.Mountain(160, 160, new TerrainEditor.Desktop.MountainSpec(TerrainEditor.Desktop.MountainKind.Peak, 80, 60, 0.6f, 0, 42), clear: false, "Mountain: test"));
+        Assert.NotNull(s.Mountain(160, 160, new MountainSpec(MountainKind.Peak, 80, 60, 0.6f, 0, 42), clear: false, "Mountain: test"));
         Assert.True(H(s, 160, 160) > 80);
         var a = Box(100, 100, 220, 220);
         s.EditGround("Area: Restore", g => a.Apply(g, s.Brush, AreaTool.GroundAction.Restore, 0, 0, new float[4]));
@@ -152,7 +152,7 @@ public class AreaTests
         p.Choose(AreaPanel.Act.Replace);
         Assert.StartsWith("Beech1 (2)", (string)p.FromBox.SelectedItem!);
         // Headless there is no world file, so nothing to choose from: replace directly.
-        p.Replace(s, new[] { 0, 1 }, Rock);
+        p.Replace(s, [0, 1], Rock);
         Assert.True(s.Scene.Things[0].Gone);
         var added = s.Scene.Things.Skip(5).ToList();
         Assert.Equal(2, added.Count);
@@ -170,7 +170,7 @@ public class AreaTests
         var p = w.AreaPanel;
         string? asked = null;
         p.Confirm = q => { asked = q; return Task.FromResult(true); };
-        s.Shape(60, 60, Formula.Compile("1", new string[0]), 3, 0, "x");
+        s.Shape(60, 60, Formula.Compile("1", []), 3, 0, "x");
         p.Choose(AreaPanel.Act.Reset);
         await p.Apply();
         Assert.Contains("Reset 4 zone(s)", asked);
@@ -192,7 +192,7 @@ public class AreaTests
         w.AreaPanel.Choose(AreaPanel.Act.Select);
         await w.AreaPanel.Apply();
         Assert.Equal(ToolMode.Select, w.View.Mode);
-        Assert.Equal(new[] { 0, 1, 2 }, w.View.Selected.Order());
+        Assert.Equal([0, 1, 2], w.View.Selected.Order());
     }
 
     [AvaloniaFact]
@@ -254,8 +254,8 @@ public class AreaWorldTests
             float H(int x, int z) => s.Scene.Heights[z * s.Scene.W + x];
             float was = H(32, 32);
             int tree = s.Scene.Things.FindIndex(t => !t.Piece);
-            s.Shape(32, 32, Formula.Compile("3", new string[0]), 4, 0, "x");
-            s.Delete(new[] { tree });
+            s.Shape(32, 32, Formula.Compile("3", []), 4, 0, "x");
+            s.Delete([tree]);
             Assert.True(s.Save().Saved);
             Assert.Equal((0, 0, 0, 0), s.Pending);
             Assert.True(s.CanUndo);
@@ -305,7 +305,7 @@ public class AreaWorldTests
             Assert.StartsWith("Regrew", w.MessageText.Text);
             // Only trees, and only inside.
             var added = s.Scene.Things.Where(t => t.Id < 0 && !t.Gone).ToList();
-            Assert.All(added, t => Assert.Equal(ObjectKind.Trees, ObjectKinds.Of(TerrainEditor.Terrain.PrefabCatalog.DisplayName(t.Prefab), false)));
+            Assert.All(added, t => Assert.Equal(ObjectKind.Trees, ObjectKinds.Of(Terrain.PrefabCatalog.DisplayName(t.Prefab), false)));
             Assert.All(added, t => Assert.InRange(t.Position.X, -30, 30));
             // Again: everything is standing now, so nothing is doubled.
             int before = s.Pending.Added;
@@ -331,10 +331,10 @@ public class AreaWorldTests
             var gone = s.Scene.Things[tree];
             // A backup of how it was (the game's), then the world changed and saved.
             WorldEditor.Tests.TempWorld.CopyDir(dir, dir.TrimEnd(Path.DirectorySeparatorChar) + "_backup_auto-20261001100000");
-            s.Shape(32, 32, Formula.Compile("3", new string[0]), 4, 0, "x");
-            s.Delete(new[] { tree });
+            s.Shape(32, 32, Formula.Compile("3", []), 4, 0, "x");
+            s.Delete([tree]);
             Assert.True(s.Save().Saved);
-            var backup = Assert.Single(TerrainEditor.App.Backups.Find(dir));
+            var backup = Assert.Single(Backups.Find(dir));
             Assert.Equal("game", backup.Kind);
             Assert.Equal(was + 3, H(32, 32), 2);
 

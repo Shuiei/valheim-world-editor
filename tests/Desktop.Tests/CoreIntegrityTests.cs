@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.IO.Compression;
 using System.Numerics;
 using TerrainEditor.Editing;
@@ -28,7 +29,7 @@ public class CoreIntegrityTests
     [Fact]
     public void EveryObjectOfALiveSnapshotReadsAndWritesBackExactly()
     {
-        WorldSave live = WorldSave.LoadLive(File.ReadAllBytes(Fixtures.Snapshot), "test");
+        var live = WorldSave.LoadLive(File.ReadAllBytes(Fixtures.Snapshot), "test");
         for (int id = 0; id < live.ObjectRefs.Count; id++)
         {
             byte[] bytes = live.ObjectBytes(id);
@@ -36,7 +37,7 @@ public class CoreIntegrityTests
         }
     }
 
-    private static string PrefabName(int hash) => TerrainEditor.Terrain.PrefabCatalog.DisplayName(hash) ?? hash.ToString();
+    private static string PrefabName(int hash) => TerrainEditor.Terrain.PrefabCatalog.DisplayName(hash) ?? hash.ToString(CultureInfo.InvariantCulture);
 
     [Fact]
     public void ASaveLeavesEveryOtherObjectByteForByte()
@@ -44,19 +45,19 @@ public class CoreIntegrityTests
         using var w = new TempWorld();
         WorldSave world = w.Load();
         var t = world.TerrainZones[0];
-        var tree = world.Objects.First(o => o.Prefab == Fixtures.Hash("Beech1"));
+        var (id, prefab, position, rotation, scale) = world.Objects.First(o => o.Prefab == Fixtures.Hash("Beech1"));
         var edit = new EditStore(world).Get(t.ZoneX, t.ZoneZ)!.Clone();
         edit.Modified[500] = true;
         edit.Level[500] = 1.25f;
-        var planted = new NewObject(-1, Fixtures.Hash("Beech1"), tree.Position + new Vector3(3, 0, 1), Vector3.Zero, 1f);
+        var planted = new NewObject(-1, Fixtures.Hash("Beech1"), position + new Vector3(3, 0, 1), Vector3.Zero, 1f);
         // What must stay: every object but the deleted tree and the edited zone's terrain object.
         int terrainId = world.ObjectRefs.FindIndex(o => o.IsTerrain && o.Zone == (t.ZoneX, t.ZoneZ));
-        var kept = Enumerable.Range(0, world.ObjectRefs.Count).Where(i => i != tree.Id && i != terrainId).Select(world.ObjectBytes).ToList();
-        var r = WorldWriter.Save(world, new[] { edit }, new[] { tree.Id }, new[] { planted });
+        var kept = Enumerable.Range(0, world.ObjectRefs.Count).Where(i => i != id && i != terrainId).Select(world.ObjectBytes).ToList();
+        var r = WorldWriter.Save(world, [edit], [id], [planted]);
         Assert.True(r.Saved, r.Message);
         var again = WorldSave.Load(w.Dir);
         var after = Enumerable.Range(0, again.ObjectRefs.Count).Select(again.ObjectBytes).Select(Convert.ToBase64String).GroupBy(b => b).ToDictionary(g => g.Key, g => g.Count());
-        foreach (var bytes in kept.Select(Convert.ToBase64String))
+        foreach (string? bytes in kept.Select(Convert.ToBase64String))
         {
             Assert.True(after.TryGetValue(bytes, out int n) && n > 0, "an untouched object changed or went missing");
             after[bytes] = n - 1;
@@ -73,7 +74,7 @@ public class CoreIntegrityTests
         double netTime = r.ReadDouble();
         byte[] packed = r.ReadBytes(r.ReadInt32());
         byte[] tail = r.ReadBytes((int)(r.BaseStream.Length - r.BaseStream.Position));
-        using var gz = new System.IO.Compression.GZipStream(new MemoryStream(packed), System.IO.Compression.CompressionMode.Decompress);
+        using var gz = new GZipStream(new MemoryStream(packed), CompressionMode.Decompress);
         using var raw = new MemoryStream();
         gz.CopyTo(raw);
         return (version, netTime, raw.ToArray(), tail);
@@ -123,7 +124,7 @@ public class CoreIntegrityTests
     public void AMissingChunkFileIsReported()
     {
         using var w = new TempWorld();
-        var chunk = Directory.GetFiles(w.Dir, "*.chunk").First();
+        string chunk = Directory.GetFiles(w.Dir, "*.chunk").First();
         File.Delete(chunk);
         var ex = Assert.Throws<FileNotFoundException>(() => WorldSave.Load(w.Dir));
         Assert.Contains("missing", ex.Message);
@@ -142,16 +143,16 @@ public class CoreIntegrityTests
     [Fact]
     public void ASnapshotThatIsNotOneIsRefused()
     {
-        var ex = Assert.Throws<InvalidDataException>(() => WorldSave.LoadLive(Gzip(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8 }), "x"));
+        var ex = Assert.Throws<InvalidDataException>(() => WorldSave.LoadLive(Gzip([1, 2, 3, 4, 5, 6, 7, 8]), "x"));
         Assert.Equal("not a WorldEditorBridge snapshot", ex.Message);
         // Not even gzip.
-        Assert.ThrowsAny<Exception>(() => WorldSave.LoadLive(new byte[] { 0, 1, 2 }, "x"));
+        Assert.ThrowsAny<Exception>(() => WorldSave.LoadLive([0, 1, 2], "x"));
     }
 
     [Fact]
     public void ANewerSnapshotAsksForANewerEditor()
     {
-        var raw = BitConverter.GetBytes(0x42455756).Concat(BitConverter.GetBytes(2)).ToArray();
+        byte[] raw = [.. BitConverter.GetBytes(0x42455756), .. BitConverter.GetBytes(2)];
         var ex = Assert.Throws<InvalidDataException>(() => WorldSave.LoadLive(Gzip(raw), "x"));
         Assert.Contains("update the editor", ex.Message);
     }

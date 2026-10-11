@@ -15,7 +15,7 @@ public sealed class MaskPanel
     private readonly Control _body;
     private bool _filling;
     internal CheckBox OnBox { get; } = new CheckBox { Content = "Mask", FontSize = 13, FontWeight = FontWeight.SemiBold }.Tip("mask.on");
-    internal Dictionary<int, ToggleButton> BiomeButtons { get; } = new();
+    internal Dictionary<int, ToggleButton> BiomeButtons { get; } = [];
     internal NumericUpDown HeightMin { get; } = Num(0.5m);
     internal NumericUpDown HeightMax { get; } = Num(0.5m);
     internal NumericUpDown SlopeMin { get; } = Num(1m, 0, 90);
@@ -23,7 +23,9 @@ public sealed class MaskPanel
     internal ComboBox PaintBox { get; } = new()
     {
         ItemsSource = new[] { "Any ground", "Only unpainted", "Only painted", "Only dirt", "Only cultivated", "Only paved" },
-        SelectedIndex = 0, FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch,
+        SelectedIndex = 0,
+        FontSize = 12,
+        HorizontalAlignment = HorizontalAlignment.Stretch,
     };
     internal TextBlock WarningText { get; } = new() { FontSize = 11, Foreground = new SolidColorBrush(Color.FromRgb(240, 150, 90)), TextWrapping = TextWrapping.Wrap };
 
@@ -39,7 +41,15 @@ public sealed class MaskPanel
             var t = new ToggleButton { Content = name, FontSize = 11, Padding = new Thickness(6, 2) }.Tip("mask.biome");
             t.IsCheckedChanged += (_, _) =>
             {
-                if (t.IsChecked == true) mask.Biomes.Add(b); else mask.Biomes.Remove(b);
+                if (t.IsChecked == true)
+                {
+                    mask.Biomes.Add(b);
+                }
+                else
+                {
+                    mask.Biomes.Remove(b);
+                }
+
                 Changed();
             };
             BiomeButtons[b] = t;
@@ -56,7 +66,7 @@ public sealed class MaskPanel
             n.ValueChanged += (_, _) => Changed();
         }
         PaintBox.SelectionChanged += (_, _) => Changed();
-        Control Pair(string label, Control a, Control b, string unit)
+        static Control Pair(string label, Control a, Control b, string unit)
         {
             // The same columns on every row (the unit too), so the boxes line up.
             var g = new Grid { ColumnDefinitions = new ColumnDefinitions("50,*,*,14"), ColumnSpacing = 4 };

@@ -41,11 +41,11 @@ public sealed class PathTool
     public sealed record CavePreset(string Name, float Width, float Soft, float Depth, float Headroom, string Help);
 
     public static readonly CavePreset[] CavePresets =
-    {
+    [
         new("Tunnel", 5, 1.5f, 6, 3.5f, "A narrow passage, just high enough to walk through."),
         new("Cave", 8, 2.5f, 7.5f, 4.5f, "A cave to explore or hide a base in."),
         new("Cavern", 14, 3.5f, 8, 5.5f, "A wide hall under the rocks."),
-    };
+    ];
 
     public static string Label(Action a) => a switch
     {
@@ -82,7 +82,7 @@ public sealed class PathTool
     public bool RampEdited { get; set; }
 
     // Changed under its own lock: the drawing thread reads it.
-    public List<Vector2> Points { get; } = new();
+    public List<Vector2> Points { get; } = [];
     // Something about the line or the values changed (to redraw and refill the panel).
     public event System.Action? Changed;
     public void Notify() => Changed?.Invoke();
@@ -138,15 +138,15 @@ public sealed class PathTool
     {
         var curve = Curve();
         int n = curve.Count;
-        var along = new float[n];
+        float[] along = new float[n];
         for (int i = 1; i < n; i++)
         {
             along[i] = along[i - 1] + Vector2.Distance(curve[i].P, curve[i - 1].P);
         }
-        var surface = curve.Select(c => g.HeightOf(Math.Clamp((int)MathF.Round(c.P.Y), 0, g.H - 1) * g.W + Math.Clamp((int)MathF.Round(c.P.X), 0, g.W - 1))).ToArray();
+        float[] surface = [.. curve.Select(c => g.HeightOf(Math.Clamp((int)MathF.Round(c.P.Y), 0, g.H - 1) * g.W + Math.Clamp((int)MathF.Round(c.P.X), 0, g.W - 1)))];
         float total = n > 0 ? along[^1] : 0, entrance = MathF.Max(8, CaveDepth * 2.5f);
-        var depth = new float[n];
-        var floor = new float[n];
+        float[] depth = new float[n];
+        float[] floor = new float[n];
         for (int i = 0; i < n; i++)
         {
             float sum = 0;
@@ -185,7 +185,7 @@ public sealed class PathTool
         float half = Width / 2, soft = Soft, total = Math.Max(Length(curve), 1e-6f);
         // Natural paths can be up to 45% wider and have ragged edges, so look a bit further out.
         float reach = Natural ? half * 1.45f + soft + MathF.Max(soft, 2) * 0.6f * 1.6f : half + soft;
-        var cum = new float[curve.Count];
+        float[] cum = new float[curve.Count];
         for (int i = 1; i < curve.Count; i++)
         {
             cum[i] = cum[i - 1] + Vector2.Distance(curve[i].P, curve[i - 1].P);
@@ -301,7 +301,7 @@ public sealed class PathTool
                         float floor = caveFloor + bump * 0.3f;
                         if (!g.NoLimit)
                         {
-                            floor = MathF.Max(floor, g.Original(p) - TerrainEditor.Editing.EditStore.MaxLevel + 0.1f);
+                            floor = MathF.Max(floor, g.Original(p) - Editing.EditStore.MaxLevel + 0.1f);
                         }
                         if (floor < h)
                         {
@@ -351,10 +351,9 @@ public sealed class PathTool
     // line to add a point there, Ctrl + click a point to remove it; Alt + click picks the height (Alt +
     // Shift: the ramp's end). screen: where a grid point is on the view (null behind the camera).
     private int? _drag;
-    private bool _drawing;
 
     // A drag is drawing the line now (the view then leaves out the cursor's preview).
-    public bool Drawing => _drawing;
+    public bool Drawing { get; private set; }
 
     public void Down(Vector2? hit, Point at, Func<Vector2, Point?> screen, bool ctrl, bool alt, bool shift, Func<Vector2, float> heightAt)
     {
@@ -365,7 +364,15 @@ public sealed class PathTool
                 float h = MathF.Round(heightAt(a), 1);
                 if (Act == Action.Ramp)
                 {
-                    if (shift) End = h; else Start = h;
+                    if (shift)
+                    {
+                        End = h;
+                    }
+                    else
+                    {
+                        Start = h;
+                    }
+
                     RampEdited = true;
                 }
                 else
@@ -401,7 +408,7 @@ public sealed class PathTool
             return;
         }
         lock (Points) { Points.Add(h2); }
-        _drawing = true;
+        Drawing = true;
         Notify();
     }
 
@@ -416,7 +423,7 @@ public sealed class PathTool
             lock (Points) { Points[i] = h; }
             Notify();
         }
-        else if (_drawing && (Points.Count == 0 || Vector2.Distance(Points[^1], h) >= 2))
+        else if (Drawing && (Points.Count == 0 || Vector2.Distance(Points[^1], h) >= 2))
         {
             lock (Points) { Points.Add(h); }
             Notify();
@@ -426,7 +433,7 @@ public sealed class PathTool
     public void Up()
     {
         _drag = null;
-        _drawing = false;
+        Drawing = false;
     }
 
     public void Clear()

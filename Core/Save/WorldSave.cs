@@ -35,7 +35,7 @@ public sealed class WorldSave
     private static readonly int TamedKey = StableHash.Of("tamed");
 
     // Prefabs (besides LocationProxy) whose objects carry terrain modifiers; set before loading.
-    public static HashSet<int> ModifierPrefabs { get; set; } = new();
+    public static HashSet<int> ModifierPrefabs { get; set; } = [];
 
     public required string Directory { get; init; }
 
@@ -53,32 +53,32 @@ public sealed class WorldSave
 
     public int ChunkCount { get; private set; }
 
-    public List<TerrainZone> TerrainZones { get; } = new();
+    public List<TerrainZone> TerrainZones { get; } = [];
 
-    public List<ChunkFile> Chunks { get; } = new();
+    public List<ChunkFile> Chunks { get; } = [];
 
     // Placed locations (villages, trader, dungeons...): their terrain flattening is applied live by
     // the game and is not part of the saved terrain data.
-    public List<(System.Numerics.Vector3 Position, int Location)> Locations { get; } = new();
+    public List<(Vector3 Position, int Location)> Locations { get; } = [];
 
     // The ground discs the editor placed for No limit ground (Uplift): invisible location proxies.
-    public List<(int Id, Vector3 Position)> Discs { get; } = new();
+    public List<(int Id, Vector3 Position)> Discs { get; } = [];
 
     // Every placed object that can modify terrain while the game runs: locations and the prefabs in
     // ModifierPrefabs. Rotation is Euler degrees, as stored.
-    public List<PlacedObject> Placed { get; } = new();
+    public List<PlacedObject> Placed { get; } = [];
 
     // Objects that are tamed creatures (by id).
-    public HashSet<int> Tamed { get; } = new();
+    public HashSet<int> Tamed { get; } = [];
 
     // Player-built pieces (objects with a creator): prefab, position and Y rotation in degrees.
-    public List<(int Id, int Prefab, Vector3 Position, float RotationY)> Pieces { get; } = new();
+    public List<(int Id, int Prefab, Vector3 Position, float RotationY)> Pieces { get; } = [];
 
     // Pieces per builder (the "creator" player id).
-    public Dictionary<long, int> Creators { get; } = new();
+    public Dictionary<long, int> Creators { get; } = [];
 
     // Player names by player id, from the objects that store both.
-    public Dictionary<long, string> PlayerNames { get; } = new();
+    public Dictionary<long, string> PlayerNames { get; } = [];
 
     // The player id written as "creator" on new pieces (things built with the hammer, hoe, cultivator
     // or serving tray), so the game treats them as player built. Chosen in the editor; 0: not set.
@@ -90,10 +90,10 @@ public sealed class WorldSave
     public long TopBuilder => Creators.Count == 0 ? 0 : Creators.MaxBy(c => c.Value).Key;
 
     // Every object in the save by id (its order in the save).
-    public List<ObjectRef> ObjectRefs { get; } = new();
+    public List<ObjectRef> ObjectRefs { get; } = [];
 
     // First object of each prefab: the template new objects of that prefab are copied from.
-    public Dictionary<int, int> Templates { get; } = new();
+    public Dictionary<int, int> Templates { get; } = [];
 
     // The object a new one is built from: its source object when given (and of the same prefab),
     // else the prefab's template.
@@ -107,24 +107,24 @@ public sealed class WorldSave
         return Templates.TryGetValue(prefab, out int t) ? ObjectRefs[t] : null;
     }
 
-    public bool CanCreate(int prefab) => Templates.ContainsKey(prefab) || TerrainEditor.Terrain.PrefabCatalog.Get(prefab) != null || TerrainEditor.Terrain.PrefabCatalog.IsCreature(prefab);
+    public bool CanCreate(int prefab) => Templates.ContainsKey(prefab) || Terrain.PrefabCatalog.Get(prefab) != null || Terrain.PrefabCatalog.IsCreature(prefab);
 
     // Prefabs that can be created: any object in the world, and every placeable game prefab.
-    public IEnumerable<int> Creatable => Templates.Keys.Concat(TerrainEditor.Terrain.PrefabCatalog.Placeable.Select(p => StableHash.Of(p.Name))).Distinct();
+    public IEnumerable<int> Creatable => Templates.Keys.Concat(Terrain.PrefabCatalog.Placeable.Select(p => StableHash.Of(p.Name))).Distinct();
 
     // The save bytes of a new object: a copy of its model when the world has one, else a blank object
     // with the prefab's own flags from the game (what the game writes for a freshly placed object).
     // readSource gives the chunk file bytes the model lives in.
-    public byte[]? NewObjectBytes(TerrainEditor.Editing.NewObject n, Func<ObjectRef, byte[]> readSource)
+    public byte[]? NewObjectBytes(Editing.NewObject n, Func<ObjectRef, byte[]> readSource)
     {
         byte[]? bytes = BuildBytes(n, readSource);
         // A new piece of a kind players build (placed, pasted or built blank) is the chosen builder's,
         // like one built in the game. Without a builder the game takes it for part of a ruin: a third of
         // the materials back, no base for fires, ignored by raids. Moved and edited objects keep theirs.
         if (bytes != null && Builder != 0 && (n.Fresh || n.Raw == null && ModelFor(n.Prefab, n.SourceId) == null)
-            && TerrainEditor.Terrain.PieceCatalog.Get(n.Prefab)?.Tool != null)
+            && Terrain.PieceCatalog.Get(n.Prefab)?.Tool != null)
         {
-            ZdoData z = ZdoData.Parse(bytes);
+            var z = ZdoData.Parse(bytes);
             z.Set("longs", CreatorKey, Builder.ToString(CultureInfo.InvariantCulture));
             bytes = z.Serialize();
         }
@@ -132,15 +132,15 @@ public sealed class WorldSave
         // them with "piece" (ItemDrop.MakePiece). Without it they would be loose items, falling and
         // despawning away from a base.
         if (bytes != null && (n.Fresh || n.Raw == null && ModelFor(n.Prefab, n.SourceId) == null)
-            && TerrainEditor.Terrain.PieceCatalog.Get(n.Prefab)?.Tool == "feaster" && TerrainEditor.Terrain.PrefabCatalog.ItemKindOf(n.Prefab) != null)
+            && Terrain.PieceCatalog.Get(n.Prefab)?.Tool == "feaster" && Terrain.PrefabCatalog.ItemKindOf(n.Prefab) != null)
         {
-            ZdoData z = ZdoData.Parse(bytes);
+            var z = ZdoData.Parse(bytes);
             z.Set("ints", PieceKey, "1");
             bytes = z.Serialize();
         }
         if (bytes != null && n.Data is { Count: > 0 } data)
         {
-            ZdoData z = ZdoData.Parse(bytes);
+            var z = ZdoData.Parse(bytes);
             foreach (var f in data)
             {
                 z.Set(f.Section, f.Key, f.Value);
@@ -150,11 +150,11 @@ public sealed class WorldSave
         return bytes;
     }
 
-    private byte[]? BuildBytes(TerrainEditor.Editing.NewObject n, Func<ObjectRef, byte[]> readSource)
+    private byte[]? BuildBytes(Editing.NewObject n, Func<ObjectRef, byte[]> readSource)
     {
         if (n.Raw != null)
         {
-            ZdoData z = ZdoData.Parse(n.Raw);
+            var z = ZdoData.Parse(n.Raw);
             z.Position = n.Position;
             z.Rotation = n.Rotation;
             if (n.Scale > 0f)
@@ -170,7 +170,7 @@ public sealed class WorldSave
             return ZdoBuilder.Build(readSource(model), model, model.File.WorldVersion, n.Position, n.Rotation, n.Scale, n.Fresh);
         }
         // Also what is not offered for placing (creatures: generated dungeons put some down).
-        return TerrainEditor.Terrain.PrefabCatalog.Details(n.Prefab) is { } info ? ZdoBuilder.Blank(n.Prefab, info.Flags, n.Position, n.Rotation, n.Scale) : null;
+        return Terrain.PrefabCatalog.Details(n.Prefab) is { } info ? ZdoBuilder.Blank(n.Prefab, info.Flags, n.Position, n.Rotation, n.Scale) : null;
     }
 
     // The saved bytes of an object of the save (id >= 0): from its chunk file, or from the live snapshot.
@@ -193,7 +193,7 @@ public sealed class WorldSave
 
     // Everything else that is not terrain data (trees, rocks, bushes, pickables...): prefab, position,
     // rotation (Euler degrees) and scale (zero when the prefab's own scale applies).
-    public List<(int Id, int Prefab, Vector3 Position, Vector3 Rotation, Vector3 Scale)> Objects { get; } = new();
+    public List<(int Id, int Prefab, Vector3 Position, Vector3 Rotation, Vector3 Scale)> Objects { get; } = [];
 
     public static WorldSave Load(string directory)
     {
@@ -261,7 +261,7 @@ public sealed class WorldSave
     private void LoadChunks()
     {
         string indexPath = Path.Combine(Directory, $"_main.{SaveNumber}.chunks");
-        List<(ushort Chunk, byte Size, uint Version, int Count)> chunks = new();
+        List<(ushort Chunk, byte Size, uint Version, int Count)> chunks = [];
         using (ValheimReader index = new(File.OpenRead(indexPath)))
         {
             index.ReadUShort();
@@ -294,13 +294,13 @@ public sealed class WorldSave
 
     // Live: the bytes an object's offsets are in, the snapshot's or those of objects read since from the
     // game (MergeLive: each read is its own little file).
-    private readonly Dictionary<ChunkFile, byte[]> _liveFiles = new();
+    private readonly Dictionary<ChunkFile, byte[]> _liveFiles = [];
 
     public byte[] LiveSource(ChunkFile file) => _liveFiles.TryGetValue(file, out byte[]? b) ? b : LiveBytes!;
 
     // Live: objects the game no longer has (removed in the game). Left out of every list; their ids
     // stay taken, and their bytes stay readable (history).
-    public HashSet<int> Vanished { get; } = new();
+    public HashSet<int> Vanished { get; } = [];
 
     // Live: held while the world's lists change (MergeLive) and while other threads read them (an area
     // loading, the map's search and statistics): what the game changed comes in between.
@@ -316,8 +316,8 @@ public sealed class WorldSave
         {
             return;
         }
-        _byLiveId = new();
-        _byZone = new();
+        _byLiveId = [];
+        _byZone = [];
         for (int id = 0; id < ObjectRefs.Count; id++)
         {
             if (!Vanished.Contains(id))
@@ -331,7 +331,7 @@ public sealed class WorldSave
     {
         ObjectRef o = ObjectRefs[id];
         _byLiveId![o.LiveId] = id;
-        (_byZone!.TryGetValue(o.Zone, out var set) ? set : _byZone[o.Zone] = new()).Add(id);
+        (_byZone!.TryGetValue(o.Zone, out var set) ? set : _byZone[o.Zone] = []).Add(id);
     }
 
     private void Untrack(int id)
@@ -385,7 +385,7 @@ public sealed class WorldSave
         try
         {
             Index();
-            var result = new Merged(new(), new(), new(), new());
+            var result = new Merged([], [], [], []);
             var seen = new HashSet<int>();
             var fresh = new List<(long User, uint Id, byte[] Bytes, int Replace)>();
             foreach (var (user, zid, bytes) in objects)
@@ -418,7 +418,7 @@ public sealed class WorldSave
             }
             if (fresh.Count > 0)
             {
-                byte[] all = fresh.SelectMany(f => f.Bytes).ToArray();
+                byte[] all = [.. fresh.SelectMany(f => f.Bytes)];
                 ChunkFile file = new() { Chunk = 0, Size = 0, Version = 0, IndexCount = 0, WorldVersion = Chunks.Count > 0 ? Chunks[0].WorldVersion : 41, Count = fresh.Count, Length = all.Length };
                 _liveFiles[file] = all;
                 using ValheimReader pkg = new(new MemoryStream(all));
@@ -714,7 +714,7 @@ public sealed class WorldSave
                 byte[] value = pkg.ReadByteArray();
                 if (key == TCDataKey)
                 {
-                    TerrainZone zone = TerrainZone.Decode(position, prefab, value);
+                    var zone = TerrainZone.Decode(position, prefab, value);
                     zone.Source = new ZdoLocation(file, start, -1, valueStart, pkg.Position, flags);
                     TerrainZones.Add(zone);
                 }
@@ -744,11 +744,11 @@ public sealed class WorldSave
         {
             Objects.Add((id, prefab, position, rotation, scale));
         }
-        else if (prefab == LocationProxyPrefab && TerrainEditor.Editing.Uplift.IsDisc(location))
+        else if (prefab == LocationProxyPrefab && Editing.Uplift.IsDisc(location))
         {
             Discs.Add((id, position));
         }
-        else if (prefab == LocationProxyPrefab && TerrainEditor.Terrain.PrefabCatalog.IsRunestone(location))
+        else if (prefab == LocationProxyPrefab && Terrain.PrefabCatalog.IsRunestone(location))
         {
             // A runestone: listed under its location's name (see PrefabCatalog.RunestoneLocations).
             Objects.Add((id, location, position, rotation, scale));
@@ -796,7 +796,7 @@ public sealed class ChunkFile
     public long Length { get; set; }
 
     // Byte range of every object in the file, in file order.
-    public List<(long Start, long End)> Objects { get; } = new();
+    public List<(long Start, long End)> Objects { get; } = [];
 
     // Same naming as ChunkSaveMapping.GetChunkFilename.
     public string FileName => NameFor(Chunk, Size, Version);
@@ -868,7 +868,7 @@ public sealed class TerrainZone
         }
         int paints = pkg.ReadInt();
         bool[] painted = new bool[paints];
-        Vector4[] paint = new Vector4[paints];
+        var paint = new Vector4[paints];
         for (int i = 0; i < paints; i++)
         {
             painted[i] = pkg.ReadBool();

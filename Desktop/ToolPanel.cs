@@ -16,7 +16,7 @@ public enum ToolMode { View, Select, Measure, Shape, Path, Area, Paste, Place, B
 public sealed class ToolPanel
 {
     // The brush shapes before the stamps, in BrushShape's order.
-    private static readonly string[] BuiltInShapes = { "Circle", "Square", "Ring", "Ragged (noise)" };
+    private static readonly string[] BuiltInShapes = ["Circle", "Square", "Ring", "Ragged (noise)"];
 
     public Brush Brush { get; } = new();
     public BrushTool? Tool { get; private set; }
@@ -28,10 +28,10 @@ public sealed class ToolPanel
     public Control Rail { get; }
     public Control Options { get; }
 
-    private readonly Dictionary<BrushTool, Button> _buttons = new();
+    private readonly Dictionary<BrushTool, Button> _buttons = [];
+
     // Blueprints: the library, to paste one (in a world), in place of a tool's options.
-    private readonly Button _blueprintsButton;
-    private readonly Button _viewButton, _selectButton, _measureButton, _shapeButton, _pathButton, _areaButton, _placeButton, _mountainButton, _caveButton, _scriptButton, _dungeonButton;
+    private readonly Button _viewButton, _measureButton, _shapeButton, _pathButton, _areaButton, _placeButton, _mountainButton, _caveButton, _scriptButton, _dungeonButton;
     // The Cave button: the Path tool with its Cave action (the window picks the action).
     public event Action? CaveChosen;
 
@@ -41,13 +41,13 @@ public sealed class ToolPanel
         _caveButton.Classes.Set("on", on && Mode == ToolMode.Path);
         _pathButton.Classes.Set("on", !on && Mode == ToolMode.Path);
     }
-    internal Button SelectButton => _selectButton;
-    internal Button BlueprintsButton => _blueprintsButton;
+    internal Button SelectButton { get; }
+    internal Button BlueprintsButton { get; }
     private readonly TextBlock _title = new() { FontSize = 14, FontWeight = FontWeight.SemiBold };
     private readonly TextBlock _help = new() { FontSize = 12, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
     private readonly Control _flattenRows, _naturalRows, _turnRow, _erodeRows, _falloffRow, _stampOnceRows, _stampHeightRow;
     // The stamps in the Shape list after the four shapes: the built-in ones, then loaded pictures.
-    internal List<Stamps.Stamp> StampList { get; } = Stamps.BuiltIn.Concat(Stamps.LoadKept()).ToList();
+    internal List<Stamps.Stamp> StampList { get; } = [.. Stamps.BuiltIn, .. Stamps.LoadKept()];
     internal Button LoadStampButton { get; } = new() { Content = "Load stamp…", FontSize = 12 };
     internal Button ForgetStampButton { get; } = new() { Content = "Forget stamp", FontSize = 12 };
     internal CheckBox StampOnceBox { get; } = new() { Content = "Stamp once: a click puts the whole stamp in", FontSize = 12 };
@@ -75,10 +75,10 @@ public sealed class ToolPanel
 
     // The keys of the web editor's rail.
     public static readonly (BrushTool Tool, string Key)[] Keys =
-    {
+    [
         (BrushTool.Raise, "1"), (BrushTool.Lower, "2"), (BrushTool.Flatten, "3"), (BrushTool.Smooth, "4"), (BrushTool.Natural, "0"), (BrushTool.Erode, "O"), (BrushTool.Restore, "5"),
         (BrushTool.PaintDirt, "6"), (BrushTool.PaintCultivated, "7"), (BrushTool.PaintPaved, "8"), (BrushTool.PaintClear, "9"),
-    };
+    ];
 
     // The rail's short names, icons and paint colours (the web editor's).
     private static string RailLabel(BrushTool t) => t switch
@@ -212,15 +212,15 @@ public sealed class ToolPanel
         _scriptButton = Make("Script", "", "script");
         ToolTip.SetTip(_scriptButton, "Script: write C# that shapes the ground, paints it and places or removes objects over the open area: anything the tools do, and more. Examples to start from.");
         _scriptButton.Click += (_, _) => ChooseMode(ToolMode.Script);
-        _blueprintsButton = Make("Blueprints", "", "paste");
-        _blueprintsButton.Tip("tools.blueprints");
-        _blueprintsButton.Click += (_, _) => ChooseMode(ToolMode.Blueprints);
+        BlueprintsButton = Make("Blueprints", "", "paste");
+        BlueprintsButton.Tip("tools.blueprints");
+        BlueprintsButton.Click += (_, _) => ChooseMode(ToolMode.Blueprints);
         _placeButton = Make("Place", "T", "place");
         ToolTip.SetTip(_placeButton, "Place (T): paint trees, rocks or bushes with a brush, or put walls, fences and other pieces along lines, circles, rectangles, grids and zones.");
         _placeButton.Click += (_, _) => ChooseMode(ToolMode.Place);
-        _selectButton = Make("Select", "E", "select");
-        ToolTip.SetTip(_selectButton, "Select (E): click objects, or drag on the ground around them; then move, turn, lift or delete them.");
-        _selectButton.Click += (_, _) => ChooseSelect();
+        SelectButton = Make("Select", "E", "select");
+        ToolTip.SetTip(SelectButton, "Select (E): click objects, or drag on the ground around them; then move, turn, lift or delete them.");
+        SelectButton.Click += (_, _) => ChooseSelect();
         _measureButton = Make("Measure", "M", "measure");
         ToolTip.SetTip(_measureButton, "Measure (M): click two points to see the distance, height difference and slope.");
         _measureButton.Click += (_, _) => ChooseMode(ToolMode.Measure);
@@ -348,7 +348,7 @@ public sealed class ToolPanel
         Workshop = on;
         foreach (var c in _rail.Children)
         {
-            c.IsVisible = !on || c == _placeButton || c == _selectButton || c == _viewButton;
+            c.IsVisible = !on || c == _placeButton || c == SelectButton || c == _viewButton;
         }
         var label = ((_placeButton.Content as Grid)!.Children[0] as StackPanel)!.Children[1] as TextBlock;
         label!.Text = on ? "Build" : "Place";
@@ -370,7 +370,7 @@ public sealed class ToolPanel
         Tool = t;
         Mode = t != null ? ToolMode.Brush : mode;
         _viewButton.Classes.Set("on", Mode == ToolMode.View);
-        _selectButton.Classes.Set("on", Mode == ToolMode.Select);
+        SelectButton.Classes.Set("on", Mode == ToolMode.Select);
         _measureButton.Classes.Set("on", Mode == ToolMode.Measure);
         _shapeButton.Classes.Set("on", Mode == ToolMode.Shape);
         _pathButton.Classes.Set("on", Mode == ToolMode.Path);
@@ -379,7 +379,7 @@ public sealed class ToolPanel
         _mountainButton.Classes.Set("on", Mode == ToolMode.Mountain);
         _scriptButton.Classes.Set("on", Mode == ToolMode.Script);
         _dungeonButton.Classes.Set("on", Mode == ToolMode.Dungeon);
-        _blueprintsButton.Classes.Set("on", Mode == ToolMode.Blueprints);
+        BlueprintsButton.Classes.Set("on", Mode == ToolMode.Blueprints);
         _caveButton.Classes.Set("on", false);
         foreach (var (k, b) in _buttons)
         {

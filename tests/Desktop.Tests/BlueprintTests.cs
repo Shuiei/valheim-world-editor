@@ -12,12 +12,13 @@ public class BlueprintTests
 {
     private static CopyData Sample() => new()
     {
-        W = 3, H = 2,
-        Rel = new[] { 0f, 0.5f, float.NaN, -1.25f, 2, 0 },
-        Wt = new[] { 1f, 1, 0, 0.5f, 1, 1 },
-        Pnt = new[] { -1f, -1, -1, -1, 1, 0, 0, 1, -1, -1, -1, -1, -1, -1, -1, -1, 0, 0, 1, 1, -1, -1, -1, -1 },
-        Objects = new() { new(StableHash.Of("woodwall"), "woodwall", 1, -0.5f, 0.25f, new Vector3(0, 90, 0), 0, 42), new(StableHash.Of("Beech1"), "Beech1", -1, 0, 0, Vector3.Zero, 1.1f, null, Follow: true) },
-        Poly = new() { new(-2, -1), new(2, -1), new(2, 1), new(-2, 1) },
+        W = 3,
+        H = 2,
+        Rel = [0f, 0.5f, float.NaN, -1.25f, 2, 0],
+        Wt = [1f, 1, 0, 0.5f, 1, 1],
+        Pnt = [-1f, -1, -1, -1, 1, 0, 0, 1, -1, -1, -1, -1, -1, -1, -1, -1, 0, 0, 1, 1, -1, -1, -1, -1],
+        Objects = [new(StableHash.Of("woodwall"), "woodwall", 1, -0.5f, 0.25f, new Vector3(0, 90, 0), 0, 42), new(StableHash.Of("Beech1"), "Beech1", -1, 0, 0, Vector3.Zero, 1.1f, null, Follow: true)],
+        Poly = [new(-2, -1), new(2, -1), new(2, 1), new(-2, 1)],
         Name = "Sample",
     };
 
@@ -79,7 +80,7 @@ public class BlueprintTests
             var bp = w.Blueprints;
             bp.Store = new BlueprintStore(dir);
             string hs = Path.Combine(dir, "homestead");
-            bp.FindHomestead = () => new Homestead.Status(true, "1.3.2", new() { "test" }, hs);
+            bp.FindHomestead = () => new Homestead.Status(true, "1.3.2", ["test"], hs);
             bp.AskDetails = (d, _) => Task.FromResult<Homestead.Details?>(d with { Name = "Gate" });
             bp.Confirm = _ => Task.FromResult(true);
             Assert.Null(await bp.Save());

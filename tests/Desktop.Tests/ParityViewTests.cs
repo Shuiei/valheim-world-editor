@@ -5,7 +5,6 @@ using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Interactivity;
 using TerrainEditor.App;
-using TerrainEditor.Save;
 using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
@@ -152,11 +151,11 @@ public class ParityViewTests
         var full = w.View.RenderSize();
         w.ResolutionBox.SelectedIndex = 2;
         Assert.Equal(GlView.Resolution.Fast, w.View.Resolution3D);
-        var fast = w.View.RenderSize();
-        Assert.Equal((int)(w.View.Bounds.Width * 0.75), fast.W);
-        Assert.Equal((int)(w.View.Bounds.Height * 0.75), fast.H);
-        Assert.True(fast.W < full.W);
-        Assert.Equal($"3D resolution: Fast, {fast.W}×{fast.H} pixels.", w.MessageText.Text);
+        var (width, h) = w.View.RenderSize();
+        Assert.Equal((int)(w.View.Bounds.Width * 0.75), width);
+        Assert.Equal((int)(w.View.Bounds.Height * 0.75), h);
+        Assert.True(width < full.W);
+        Assert.Equal($"3D resolution: Fast, {width}×{h} pixels.", w.MessageText.Text);
         w.ResolutionBox.SelectedIndex = 1;
         Assert.Equal(GlView.Resolution.Balanced, w.View.Resolution3D);
         Assert.StartsWith("3D resolution: Balanced, ", w.MessageText.Text);
@@ -177,16 +176,20 @@ public class ParityViewTests
     [AvaloniaFact]
     public void AViewOfNoSizeStillDrawsAPixel()
     {
-        var v = new GlView();
-        v.Resolution3D = GlView.Resolution.Fast;
+        var v = new GlView
+        {
+            Resolution3D = GlView.Resolution.Fast
+        };
         Assert.Equal((1, 1), v.RenderSize());
     }
 
     [AvaloniaFact]
     public void SwitchingTheGameLookTwiceTheSameWayChangesNothing()
     {
-        var v = new GlView();
-        v.GameLookOn = true;
+        var v = new GlView
+        {
+            GameLookOn = true
+        };
         Assert.True(v.GameLookOn);
         v.GameLookOn = false;
         v.GameLookOn = false;
@@ -214,7 +217,7 @@ public class ParityViewTests
         Assert.All(ObjectKinds.All, k => Assert.False(w.View.IsShown(k)));
         Assert.False(w.View.ShowWater);
         w.DefaultsButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
-        Assert.Equal(defaults, boxes.Select(b => b.IsChecked == true).ToList());
+        Assert.Equal(defaults, [.. boxes.Select(b => b.IsChecked == true)]);
     }
 
     [AvaloniaFact]

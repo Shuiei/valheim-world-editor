@@ -1,6 +1,5 @@
 using System.Collections.Concurrent;
 using System.Numerics;
-using System.Text.Json;
 using System.Text.Json.Nodes;
 using SkiaSharp;
 using TerrainEditor.App;
@@ -32,7 +31,7 @@ public sealed class ModelStore
     }
 
     // A model with no root scale: as it is.
-    private static readonly float[] UnitScale = { 1f, 1f, 1f };
+    private static readonly float[] UnitScale = [1f, 1f, 1f];
 
     public sealed record Part(string Mesh, int Sub, string Material, Matrix4x4 Matrix);
     public sealed record Model(string Name, List<Part> Parts, Vector3 RootScale);
@@ -82,7 +81,7 @@ public sealed class ModelStore
 
     // A world object's model name, else a dungeon room's (their models are under the room's prefab name,
     // like pieces), else the prefab's.
-    public string? NameOf(int prefab) => _source.ObjectName(prefab) ?? TerrainEditor.Editing.Dungeons.RoomOf(prefab)?.Name ?? PrefabCatalog.DisplayName(prefab);
+    public string? NameOf(int prefab) => _source.ObjectName(prefab) ?? Editing.Dungeons.RoomOf(prefab)?.Name ?? PrefabCatalog.DisplayName(prefab);
 
     public Model? LoadModel(string name) => _models.GetOrAdd(name, n =>
     {
@@ -166,7 +165,7 @@ public sealed class ModelStore
     private sealed class Files : ISource
     {
         private readonly string _root;
-        private readonly Dictionary<int, string> _names = new();
+        private readonly Dictionary<int, string> _names = [];
         private readonly JsonObject _meshInfo, _materials;
 
         public Files(string root)
@@ -196,13 +195,13 @@ public sealed class ModelStore
             var parts = new List<Part>();
             foreach (var p in doc["parts"]!.AsArray())
             {
-                var m = p!["m"]!.AsArray().Select(v => v!.GetValue<float>()).ToArray();
+                float[] m = [.. p!["m"]!.AsArray().Select(v => v!.GetValue<float>())];
                 // three.js keeps matrices column by column; read in order, they are System.Numerics' rows
                 // (row vectors), the same transform.
                 var mat = new Matrix4x4(m[0], m[1], m[2], m[3], m[4], m[5], m[6], m[7], m[8], m[9], m[10], m[11], m[12], m[13], m[14], m[15]);
                 parts.Add(new Part(p["mesh"]!.GetValue<string>(), p["sub"]!.GetValue<int>(), p["mat"]!.GetValue<string>(), mat));
             }
-            var rs = doc["rootScale"]?.AsArray().Select(v => v!.GetValue<float>()).ToArray() ?? UnitScale;
+            float[] rs = doc["rootScale"]?.AsArray().Select(v => v!.GetValue<float>()).ToArray() ?? UnitScale;
             return new Model(name, parts, new Vector3(rs[0], rs[1], rs[2]));
         }
 
@@ -213,12 +212,12 @@ public sealed class ModelStore
                 return null;
             }
             int v = info["v"]!.GetValue<int>();
-            int[] subs = info["sub"]!.AsArray().Select(c => c!.GetValue<int>()).ToArray();
+            int[] subs = [.. info["sub"]!.AsArray().Select(c => c!.GetValue<int>())];
             byte[] bytes = File.ReadAllBytes(Path.Combine(_root, "meshes", id + ".bin"));
             float[] verts = new float[v * 8];
             Buffer.BlockCopy(bytes, 0, verts, 0, v * 32);
             int off = v * 32;
-            var indices = new uint[subs.Length][];
+            uint[][] indices = new uint[subs.Length][];
             for (int s = 0; s < subs.Length; s++)
             {
                 indices[s] = new uint[subs[s]];
@@ -231,9 +230,9 @@ public sealed class ModelStore
         public MaterialData Material(string id)
         {
             var m = _materials[id] as JsonObject;
-            var c = m?["color"]?.AsArray().Select(x => x!.GetValue<float>()).ToArray() ?? new[] { 1f, 1f, 1f, 1f };
+            float[] c = m?["color"]?.AsArray().Select(x => x!.GetValue<float>()).ToArray() ?? [1f, 1f, 1f, 1f];
             float cutoff = m?["cutoff"]?.GetValue<float>() ?? (m?["transparent"]?.GetValue<bool>() == true ? 0.5f : 0f);
-            var uv = m?["uv"]?.AsArray().Select(x => x!.GetValue<float>()).ToArray() ?? new[] { 1f, 1f, 0f, 0f };
+            float[] uv = m?["uv"]?.AsArray().Select(x => x!.GetValue<float>()).ToArray() ?? [1f, 1f, 0f, 0f];
             return new MaterialData(new Vector4(Linear(c[0]), Linear(c[1]), Linear(c[2]), c.Length > 3 ? c[3] : 1f), m?["map"]?.GetValue<string>(),
                 cutoff, m?["doubleSided"]?.GetValue<bool>() == true, new Vector4(uv[0], uv[1], uv[2], uv[3]));
         }

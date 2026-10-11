@@ -3,7 +3,6 @@ using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using Avalonia.Interactivity;
 using Avalonia.LogicalTree;
-using TerrainEditor.Editing;
 using TerrainEditor.Save;
 using Xunit;
 

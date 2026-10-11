@@ -2,7 +2,6 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
-using TerrainEditor.Editing;
 
 namespace TerrainEditor.Desktop;
 
@@ -31,11 +30,13 @@ public sealed class DungeonPanel
     internal CheckBox Doors { get; } = new() { Content = "Doors where the game might put them", IsChecked = true, FontSize = 12 };
     private readonly TextBlock _empty = new()
     {
-        FontSize = 12, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap,
+        FontSize = 12,
+        Foreground = Ui.Muted,
+        TextWrapping = TextWrapping.Wrap,
         Text = "No dungeon in this area. Open the area over a Frost Cave, crypt or other dungeon entrance: the game keeps its rooms 5000 m above it."
     };
     private readonly StackPanel _body;
-    private List<DungeonRooms.Dungeon> _shown = new();
+    private List<DungeonRooms.Dungeon> _shown = [];
     private bool _filling;
 
     public DungeonPanel(GlView view)
@@ -94,7 +95,9 @@ public sealed class DungeonPanel
         _generate = new Expander
         {
             Header = new TextBlock { Text = "Generate a dungeon", FontSize = 12, FontWeight = FontWeight.SemiBold },
-            Content = Gen.View, HorizontalAlignment = HorizontalAlignment.Stretch, IsExpanded = true,
+            Content = Gen.View,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            IsExpanded = true,
         };
         _generate.Tip("dungeon.gen");
         Card = new Border
@@ -132,7 +135,7 @@ public sealed class DungeonPanel
     public void Reload()
     {
         _filling = true;
-        _shown = Tool.All.Where(d => d.Kind.Interior || d.Rooms.Count > 0).ToList();
+        _shown = [.. Tool.All.Where(d => d.Kind.Interior || d.Rooms.Count > 0)];
         DungeonBox.ItemsSource = _shown.Select(DungeonTool.Describe).ToList();
         int i = Tool.Current is { } at ? _shown.FindIndex(d => System.Numerics.Vector3.DistanceSquared(d.Thing.Position, at) < 0.01f) : -1;
         if (i < 0 && _shown.Count > 0)

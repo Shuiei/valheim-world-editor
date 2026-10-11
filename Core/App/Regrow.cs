@@ -16,6 +16,7 @@ namespace TerrainEditor.App;
 // alt biomes. The page drops spots taken by objects that are there and keeps those in the selection.
 public static class Regrow
 {
+#pragma warning disable IDE1006 // named as the JSON keys they are read from
     private sealed class Rule
     {
         public string prefab { get; set; } = "";
@@ -57,16 +58,15 @@ public static class Regrow
         // sequence on for the rest of the rule.
         public int draws { get; set; }
     }
+#pragma warning restore IDE1006
 
     // None until Use: no world opens before then (GameData).
-    private static volatile List<Rule> Rules = new();
+    private static volatile List<Rule> _rules = [];
 
     // The rules as GameCatalogues.VegetationJson writes them.
-    public static void Use(string json) => Rules = JsonSerializer.Deserialize<List<Rule>>(json)!;
+    public static void Use(string json) => _rules = JsonSerializer.Deserialize<List<Rule>>(json)!;
 
-    public static int RuleCount => Rules.Count;
-
-
+    public static int RuleCount => _rules.Count;
 
     // One object the game would place: prefab, Unity world position, Euler rotation (degrees), scale.
     public sealed record Spot(string Name, float X, float Y, float Z, float Rx, float Ry, float Rz, float Scale);
@@ -78,7 +78,7 @@ public static class Regrow
         // The ground one zone around too: groups reach up to 20 m past their zone.
         var (w, h, heights) = HeightGrid.Read(terrain, edits, x0 - 1, z0 - 1, x1 + 1, z1 + 1);
         Ground ground = new(heights, w, h, (x0 - 1) * 64f - 32f, (z0 - 1) * 64f - 32f);
-        List<Spot> spots = new();
+        List<Spot> spots = [];
         // Unity's Random has one state per thread: put back what this thread had.
         Rnd.State saved = Rnd.state;
         try
@@ -142,7 +142,7 @@ public static class Regrow
                 return Corners[0];
             }
             float nx = (x - Cx) / 64f + 0.5f, ny = (z - Cz) / 64f + 0.5f;
-            Dictionary<int, float> weights = new();
+            Dictionary<int, float> weights = [];
             void Add(int b, float cx, float cy)
             {
                 float dx = nx - cx, dy = ny - cy, d = MathF.Sqrt(dx * dx + dy * dy), k = 1.414f - d;
@@ -185,7 +185,7 @@ public static class Regrow
             Corners = terrain.CornerBiomes(zx, zz),
             Mask = terrain.BaseMask(zx, zz),
             // Heightmap corners 0: (0, width), 1: (width, width), 2: (width, 0), 3: (0, 0).
-            OceanDepth = new[] { Depth(cx - 32f, cz + 32f), Depth(cx + 32f, cz + 32f), Depth(cx + 32f, cz - 32f), Depth(cx - 32f, cz - 32f) },
+            OceanDepth = [Depth(cx - 32f, cz + 32f), Depth(cx + 32f, cz + 32f), Depth(cx + 32f, cz - 32f), Depth(cx - 32f, cz - 32f)],
             Cx = cx,
             Cz = cz,
         };
@@ -195,10 +195,10 @@ public static class Regrow
 
     private static void PlaceZone(TerrainService terrain, Ground ground, int seed, int zx, int zz, List<Spot> spots)
     {
-        Dictionary<(int, int), Zone> zones = new();
+        Dictionary<(int, int), Zone> zones = [];
         Zone hmap = ZoneAt(terrain, ground, zones, zx * 64f, zz * 64f);
         float cx = zx * 64f, cz = zz * 64f;
-        foreach (Rule veg in Rules)
+        foreach (Rule veg in _rules)
         {
             if (veg.enable == 0 || !hmap.HaveBiome(veg.biome))
             {
@@ -343,9 +343,9 @@ public static class Regrow
     // Unity's Quaternion.LookRotation(forward, up).
     private static NQuaternion LookRotation(NVector3 forward, NVector3 up)
     {
-        NVector3 z = NVector3.Normalize(forward);
-        NVector3 x = NVector3.Normalize(NVector3.Cross(up, z));
-        NVector3 y = NVector3.Cross(z, x);
+        var z = NVector3.Normalize(forward);
+        var x = NVector3.Normalize(NVector3.Cross(up, z));
+        var y = NVector3.Cross(z, x);
         // Columns x, y, z of the rotation matrix.
         float m00 = x.X, m01 = y.X, m02 = z.X, m10 = x.Y, m11 = y.Y, m12 = z.Y, m20 = x.Z, m21 = y.Z, m22 = z.Z;
         float trace = m00 + m11 + m22;

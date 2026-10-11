@@ -12,7 +12,7 @@ public class LogicEdgeTests
 {
     private static double Eval(string text, double x = 0, double z = 0)
     {
-        var f = Formula.Compile(text, new[] { "x", "z" });
+        var f = Formula.Compile(text, ["x", "z"]);
         var env = new Formula.Env();
         env.Vars["x"] = x;
         env.Vars["z"] = z;
@@ -76,11 +76,11 @@ public class LogicEdgeTests
     public void EveryPaintRuleOfTheMask()
     {
         var g = PaintedGround(out int dirt, out int fields, out int paved, out int faint, out int bare);
-        var biomes = new int[65 * 65];
+        int[] biomes = new int[65 * 65];
         bool[] Pass(Mask.PaintRule rule)
         {
             var f = new Mask { On = true, Paint = rule }.For(g, biomes)!;
-            return new[] { dirt, fields, paved, faint, bare }.Select(p => f(p) > 0).ToArray();
+            return [.. new[] { dirt, fields, paved, faint, bare }.Select(p => f(p) > 0)];
         }
         Assert.Equal(new[] { true, true, true, true, true }, Pass(Mask.PaintRule.Any));
         Assert.Equal(new[] { false, false, false, true, true }, Pass(Mask.PaintRule.Unpainted));
@@ -103,8 +103,8 @@ public class LogicEdgeTests
     [Fact]
     public void APictureThatIsNotOneMakesNoStamp()
     {
-        Assert.Null(Stamps.FromPicture(new byte[] { 1, 2, 3, 4 }));
-        Assert.Null(Stamps.FromPicture(Array.Empty<byte>()));
+        Assert.Null(Stamps.FromPicture([1, 2, 3, 4]));
+        Assert.Null(Stamps.FromPicture([]));
     }
 
     [Fact]
@@ -128,7 +128,7 @@ public class LogicEdgeTests
             // Written into a folder that cannot hold the file: nothing thrown.
             Stamps.PathOverride = Path.Combine(dir, "missing", "stamps.json");
             PlaceMemory.PathOverride = Path.Combine(dir, "missing", "place.json");
-            Stamps.SaveKept(new[] { new Stamps.Stamp("pic:1", "x", new float[Stamps.Size * Stamps.Size], Loaded: true) });
+            Stamps.SaveKept([new Stamps.Stamp("pic:1", "x", new float[Stamps.Size * Stamps.Size], Loaded: true)]);
             memory.Save();
         }
         finally
@@ -188,7 +188,7 @@ public class LogicEdgeTests
         s.World = world;
         var o = Overlays.Build(s, null, _ => null);
         Assert.Equal(1, o.Locations);
-        var m = o.Lines[Overlays.Layer.Markers];
+        float[] m = o.Lines[Overlays.Layer.Markers];
         Assert.NotEmpty(m);
         // Posts from the ground up 14 m.
         Assert.Equal(35 + 14, m.Where((_, i) => i % 3 == 1).Max(), 1);

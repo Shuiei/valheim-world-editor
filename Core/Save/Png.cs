@@ -8,7 +8,7 @@ namespace TerrainEditor.Save;
 // brightness from 0 to 1. Browsers can only read PNGs as 8 bits, so 16-bit heightmaps go through here.
 public static class Png
 {
-    private static readonly byte[] Signature = { 137, 80, 78, 71, 13, 10, 26, 10 };
+    private static readonly byte[] Signature = [137, 80, 78, 71, 13, 10, 26, 10];
 
     public sealed record Image(int Width, int Height, float[] Values, Dictionary<string, string> Text);
 
@@ -55,7 +55,7 @@ public static class Png
             }
             Chunk(png, "IDAT", z.ToArray());
         }
-        Chunk(png, "IEND", Array.Empty<byte>());
+        Chunk(png, "IEND", []);
         return png.ToArray();
     }
 
@@ -66,7 +66,7 @@ public static class Png
             throw new InvalidDataException("not a PNG picture");
         }
         int width = 0, height = 0, depth = 0, color = 0;
-        Dictionary<string, string> text = new();
+        Dictionary<string, string> text = [];
         using MemoryStream idat = new();
         int p = 8;
         while (p + 8 <= bytes.Length)
@@ -108,7 +108,7 @@ public static class Png
             }
         }
         int channels = color switch { 0 => 1, 2 => 3, 4 => 2, 6 => 4, _ => throw new InvalidDataException("palette PNG pictures are not supported; save it as grayscale or RGB") };
-        if (depth != 8 && depth != 16)
+        if (depth is not 8 and not 16)
         {
             throw new InvalidDataException($"{depth}-bit PNG pictures are not supported (8 or 16 bits)");
         }
@@ -175,7 +175,7 @@ public static class Png
         s.Write(c);
     }
 
-    private static readonly uint[] CrcTable = Enumerable.Range(0, 256).Select(n =>
+    private static readonly uint[] CrcTable = [.. Enumerable.Range(0, 256).Select(n =>
     {
         uint c = (uint)n;
         for (int k = 0; k < 8; k++)
@@ -183,7 +183,7 @@ public static class Png
             c = (c & 1) != 0 ? 0xEDB88320 ^ (c >> 1) : c >> 1;
         }
         return c;
-    }).ToArray();
+    })];
 
     private static uint Crc(uint crc, byte[] data)
     {

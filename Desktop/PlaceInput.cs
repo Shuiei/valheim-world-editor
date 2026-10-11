@@ -33,8 +33,8 @@ public sealed class PlaceInput
     }
 
     // What is drawn: the preview (or what a stroke has placed so far), as copies for the drawing thread.
-    public PlaceTool.Placement[] Shown { get; private set; } = Array.Empty<PlaceTool.Placement>();
-    private List<PlaceTool.Placement> _preview = new();
+    public PlaceTool.Placement[] Shown { get; private set; } = [];
+    private List<PlaceTool.Placement> _preview = [];
     public IReadOnlyList<PlaceTool.Placement> PreviewNow => _preview;
     private Vector2? _at;
     private Point? _pointer;
@@ -49,8 +49,8 @@ public sealed class PlaceInput
             return;
         }
         int? under = (Tool.OnTop || Tool.Building) && _pointer is Point p ? _view.ObjectAt(p, _size) : null;
-        _preview = _view.Mode == ToolMode.Place && !(Tool.Mode == PlaceTool.Modes.Brush && _shift) ? Tool.Preview(_at, under) : new();
-        Shown = _preview.ToArray();
+        _preview = _view.Mode == ToolMode.Place && !(Tool.Mode == PlaceTool.Modes.Brush && _shift) ? Tool.Preview(_at, under) : [];
+        Shown = [.. _preview];
         _view.LassoChanged();
         Changed?.Invoke();
     }
@@ -71,9 +71,9 @@ public sealed class PlaceInput
         public bool Erase;
         public Point From;
         public bool Dragging;
-        public List<PlaceTool.Placement> Stamp = new();
-        public List<PlaceTool.Placement> Added = new();
-        public HashSet<int> Removed = new();
+        public List<PlaceTool.Placement> Stamp = [];
+        public List<PlaceTool.Placement> Added = [];
+        public HashSet<int> Removed = [];
         public long Last;
     }
 
@@ -105,7 +105,7 @@ public sealed class PlaceInput
             return;
         }
         s.Added.AddRange(Tool.PaintStep(at, dt, s.Added));
-        Shown = s.Added.ToArray();
+        Shown = [.. s.Added];
         _view.LassoChanged();
     }
 
@@ -121,7 +121,7 @@ public sealed class PlaceInput
     {
         lock (Tool.Points)
         {
-            return Tool.Mode == PlaceTool.Modes.Zone ? Tool.Points.Select(Tool.Xf).ToList() : Tool.Points.ToList();
+            return Tool.Mode == PlaceTool.Modes.Zone ? [.. Tool.Points.Select(Tool.Xf)] : [.. Tool.Points];
         }
     }
 
@@ -147,7 +147,7 @@ public sealed class PlaceInput
     private int SegmentAt(Point at)
     {
         var dense = Tool.Mode == PlaceTool.Modes.Zone
-            ? ShownPoints() is { Count: > 0 } z ? z.Append(z[0]).Select((p, i) => (P: p, Seg: i)).ToList() : new()
+            ? ShownPoints() is { Count: > 0 } z ? z.Append(z[0]).Select((p, i) => (P: p, Seg: i)).ToList() : []
             : Tool.LineCurve();
         int best = -1;
         double bd = 8;
@@ -207,7 +207,7 @@ public sealed class PlaceInput
         if (Tool.Mode == PlaceTool.Modes.Brush)
         {
             // The click's placements are taken now, from what the preview shows.
-            _stroke = new Stroke { Erase = shift, From = at, Stamp = _preview.ToList(), Last = _clock.ElapsedMilliseconds };
+            _stroke = new Stroke { Erase = shift, From = at, Stamp = [.. _preview], Last = _clock.ElapsedMilliseconds };
             _timer.Start();
             return;
         }
@@ -303,7 +303,7 @@ public sealed class PlaceInput
             Refresh();
             return;
         }
-        if (_press is { } p && Tool.Mode == PlaceTool.Modes.Line && Tool.LineShape != PlaceTool.LineShapes.Points)
+        if (_press is { } && Tool.Mode == PlaceTool.Modes.Line && Tool.LineShape != PlaceTool.LineShapes.Points)
         {
             Tool.FigB = h;
             Tool.Notify();
@@ -407,7 +407,7 @@ public sealed class PlaceInput
 
     private void EndStroke(Stroke s)
     {
-        _view.Select(Array.Empty<int>());
+        _view.Select([]);
         if (Session() is not { } session)
         {
             return;
@@ -416,7 +416,7 @@ public sealed class PlaceInput
         {
             if (s.Removed.Count > 0)
             {
-                session.Commit($"Place: removed {s.Removed.Count}", null, s.Removed, Array.Empty<(NewObject, bool)>());
+                session.Commit($"Place: removed {s.Removed.Count}", null, s.Removed, []);
             }
             Message?.Invoke($"Removed {s.Removed.Count} object(s).");
         }
@@ -430,7 +430,7 @@ public sealed class PlaceInput
                 Placed?.Invoke(names);
             }
             Message?.Invoke(Tool.Building
-                ? list.Count == 0 ? "Nothing placed here." : $"Placed {string.Join(", ", list.Select(o => TerrainEditor.Terrain.PieceCost.PieceName(o.Name)).Distinct())}{(Tool.SnappedTo is string to ? $" {to}" : "")}. Ctrl+Z takes it back."
+                ? list.Count == 0 ? "Nothing placed here." : $"Placed {string.Join(", ", list.Select(o => PieceCost.PieceName(o.Name)).Distinct())}{(Tool.SnappedTo is string to ? $" {to}" : "")}. Ctrl+Z takes it back."
                 : $"Placed {list.Count} object(s). Ctrl+Z removes them; Save writes them to the world.");
         }
         Tool.NewLayout();
@@ -444,7 +444,7 @@ public sealed class PlaceInput
             int prefab = StableHash.Of(o.Name);
             return (new NewObject(0, prefab, o.Position, o.Rotation, o.Scale), PieceCatalog.Get(prefab)?.Tool != null);
         }).ToList();
-        session.Commit(label, null, Array.Empty<int>(), adds);
+        session.Commit(label, null, [], adds);
     }
 
     // Enter: places what the line, grid or zone shows.
@@ -458,7 +458,7 @@ public sealed class PlaceInput
         var list = _preview.ToList();
         string where = Tool.Mode == PlaceTool.Modes.Line ? "along a line" : Tool.Mode == PlaceTool.Modes.Zone ? "in a zone" : "in a grid";
         Commit(session, list, $"Placed {list.Count} {where}");
-        Placed?.Invoke(list.Select(o => o.Name).Distinct().ToList());
+        Placed?.Invoke([.. list.Select(o => o.Name).Distinct()]);
         Message?.Invoke($"Placed {list.Count} object(s). Ctrl+Z removes them.");
         Refresh();
     }

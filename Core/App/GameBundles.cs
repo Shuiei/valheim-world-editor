@@ -44,28 +44,27 @@ public sealed class GameBundles
     // ItemDrop (an item).
     public sealed record Kind(bool Networked, bool Creature, bool Item);
 
-    private readonly object _sync = new();
+    private readonly Lock _sync = new();
     private readonly AssetsManager _am = new() { UseTemplateFieldCache = true, UseRefTypeManagerCache = true, UseQuickLookup = true };
-    private readonly string _dir;
     private readonly string? _cacheFile;
-    private readonly Dictionary<string, string> _files = new();
+    private readonly Dictionary<string, string> _files = [];
     private readonly Dictionary<string, string> _cab = new(StringComparer.OrdinalIgnoreCase);
-    private readonly Dictionary<string, (BundleFileInstance Bundle, AssetsFileInstance Assets)> _open = new();
+    private readonly Dictionary<string, (BundleFileInstance Bundle, AssetsFileInstance Assets)> _open = [];
     // Objects read for the model being read (cleared after: the whole game would not fit).
-    private readonly Dictionary<(string, long), AssetTypeValueField?> _fields = new();
-    private readonly Dictionary<string, Kind> _kinds = new();
+    private readonly Dictionary<(string, long), AssetTypeValueField?> _fields = [];
+    private readonly Dictionary<string, Kind> _kinds = [];
     private Dictionary<string, Where>? _index;
-    private Dictionary<string, Where> _assets = new();
+    private Dictionary<string, Where> _assets = [];
 
     // Assets found by their file name in the bundles' tables of contents (besides prefabs): the
     // terrain's material and texture arrays, the world map's material.
-    public static readonly string[] NamedAssets = { "Heightmap_basematerial.mat", "terrain_d_array.texture2darray", "terrain_n_array.texture2darray", "minimap.mat" };
+    public static readonly string[] NamedAssets = ["Heightmap_basematerial.mat", "terrain_d_array.texture2darray", "terrain_n_array.texture2darray", "minimap.mat"];
     private Dictionary<int, string>? _byHash;
 
     // dir: the bundles folder; cacheFile: where the index is kept (null: not kept).
     public GameBundles(string dir, string? cacheFile)
     {
-        _dir = dir;
+        Folder = dir;
         _cacheFile = cacheFile;
         foreach (string f in Directory.GetFiles(dir))
         {
@@ -83,7 +82,7 @@ public sealed class GameBundles
     public int BundleCount => _files.Count;
 
     // The bundles folder read.
-    public string Folder => _dir;
+    public string Folder { get; }
 
     // Whether the index is there already (built or read from the kept file); false: asking for it reads
     // it (a few seconds when it must be built).
@@ -126,7 +125,7 @@ public sealed class GameBundles
         lock (_sync)
         {
             EnsureIndex();
-            return _byHash!.TryGetValue(hash, out var n) ? n : null;
+            return _byHash!.TryGetValue(hash, out string? n) ? n : null;
         }
     }
 
@@ -168,11 +167,11 @@ public sealed class GameBundles
 
     private sealed record IndexFile(List<object[]> Bundles, Dictionary<string, string> Prefabs);
 
-    private List<object[]> BundlesNow() => _files.Keys.Order(StringComparer.Ordinal).Select(n =>
+    private List<object[]> BundlesNow() => [.. _files.Keys.Order(StringComparer.Ordinal).Select(n =>
     {
         var fi = new FileInfo(_files[n]);
         return new object[] { n, fi.Length, new DateTimeOffset(fi.LastWriteTimeUtc).ToUnixTimeSeconds() };
-    }).ToList();
+    })];
 
     private Dictionary<string, Where> EnsureIndex()
     {
@@ -233,7 +232,7 @@ public sealed class GameBundles
 
     private Dictionary<string, Where> SetIndex(Dictionary<string, Where> index)
     {
-        _byHash = new Dictionary<int, string>();
+        _byHash = [];
         foreach (string n in index.Keys)
         {
             _byHash.TryAdd(StableHash.Of(n), n);
@@ -286,7 +285,7 @@ public sealed class GameBundles
                     {
                         if (!twice.TryGetValue(n, out var l))
                         {
-                            twice[n] = l = new List<Where> { res[n] };
+                            twice[n] = l = [res[n]];
                         }
                         l.Add(w);
                     }
@@ -414,7 +413,7 @@ public sealed class GameBundles
         }
         EnsureCabs();
         string cab = externals[file - 1].PathName.Split('/').Last().Split('.')[0];
-        return _cab.TryGetValue(cab, out var b) ? new Where(b, pid) : null;
+        return _cab.TryGetValue(cab, out string? b) ? new Where(b, pid) : null;
     }
 
     // Data kept out of the object, in a resource file of the same bundle (.resS): meshes, textures.
@@ -426,7 +425,7 @@ public sealed class GameBundles
         int idx = b.file.GetFileIndex(streamData["path"].AsString.Split('/').Last());
         if (idx < 0)
         {
-            return Array.Empty<byte>();
+            return [];
         }
         b.file.GetFileRange(idx, out long start, out _);
         lock (b.file.DataReader)
@@ -652,18 +651,18 @@ public sealed class GameBundles
             RoomSkips(root.PathId, true);
         }
         Walk(root.PathId, Matrix.Identity(), true);
-        float[] rootScale = { 1, 1, 1 };
+        float[] rootScale = [1, 1, 1];
         if (Read(bundle, root.PathId) is { } rgo && Components(bundle, rgo).FirstOrDefault(c => c.Type == (int)AssetClassID.Transform).F is { } rt)
         {
             var s = rt["m_LocalScale"];
-            rootScale = new[] { s["x"].AsFloat, s["y"].AsFloat, s["z"].AsFloat };
+            rootScale = [s["x"].AsFloat, s["y"].AsFloat, s["z"].AsFloat];
         }
         return new Model(name, parts, rootScale);
     }
 
     private int SubmeshCount(Where mesh) => Read(mesh.Bundle, mesh.PathId)?["m_SubMeshes.Array"].Children.Count ?? 0;
 
-    private static readonly int[] FormatSize = { 4, 2, 1, 1, 2, 2, 1, 1, 2, 2, 4, 4 };
+    private static readonly int[] FormatSize = [4, 2, 1, 1, 2, 2, 1, 1, 2, 2, 4, 4];
 
     public Mesh? LoadMesh(Where at)
     {
@@ -699,12 +698,12 @@ public sealed class GameBundles
         // Streams follow one another, each starting 16-byte aligned; in a stream a vertex's channels are
         // side by side.
         int streams = used.Select(c => c.Stream).DefaultIfEmpty(0).Max() + 1;
-        var stride = new int[streams];
+        int[] stride = new int[streams];
         foreach (var c in used)
         {
             stride[c.Stream] = Math.Max(stride[c.Stream], c.Offset + c.Dim * FormatSize[c.Format]);
         }
-        var start = new int[streams];
+        int[] start = new int[streams];
         for (int s = 1; s < streams; s++)
         {
             start[s] = (start[s - 1] + stride[s - 1] * n + 15) & ~15;
@@ -716,7 +715,7 @@ public sealed class GameBundles
                 return null;
             }
             var c = channels[i];
-            var res = new float[n * want];
+            float[] res = new float[n * want];
             for (int v = 0; v < n; v++)
             {
                 int p = start[c.Stream] + v * stride[c.Stream] + c.Offset;
@@ -749,17 +748,17 @@ public sealed class GameBundles
             // Triangles only (0); other topologies (lines, points) draw nothing here.
             if (sm["topology"].AsInt != 0 || first + count * (wide ? 4 : 2) > ib.Length)
             {
-                subs.Add(Array.Empty<int>());
+                subs.Add([]);
                 continue;
             }
-            var idx = new int[count - count % 3];
+            int[] idx = new int[count - count % 3];
             for (int k = 0; k < idx.Length; k++)
             {
                 idx[k] = baseV + (wide ? (int)BitConverter.ToUInt32(ib, first + 4 * k) : BitConverter.ToUInt16(ib, first + 2 * k));
             }
             subs.Add(idx);
         }
-        return new Mesh(name, n, Channel(0, 3) ?? new float[n * 3], Channel(1, 3), Channel(4, 2), subs.ToArray());
+        return new Mesh(name, n, Channel(0, 3) ?? new float[n * 3], Channel(1, 3), Channel(4, 2), [.. subs]);
     }
 
     // ---- Materials and textures.
@@ -796,7 +795,7 @@ public sealed class GameBundles
                 foreach (var c in props["m_Colors.Array"].Children)
                 {
                     var v = c["second"];
-                    colors[c["first"].AsString] = new[] { v["r"].AsFloat, v["g"].AsFloat, v["b"].AsFloat, v["a"].AsFloat };
+                    colors[c["first"].AsString] = [v["r"].AsFloat, v["g"].AsFloat, v["b"].AsFloat, v["a"].AsFloat];
                 }
                 return new Material(m["m_Name"].AsString, shader, shaderAt, texs, floats, colors);
             }
@@ -911,7 +910,7 @@ public sealed class GameBundles
                 }
                 // Slice after slice, each with its mip levels.
                 int per = data.Length / depth;
-                return Enumerable.Range(0, depth).Select(i => new TextureLevel($"{t["m_Name"].AsString}[{i}]", format, w, h, data.AsSpan(i * per, size).ToArray())).ToList();
+                return [.. Enumerable.Range(0, depth).Select(i => new TextureLevel($"{t["m_Name"].AsString}[{i}]", format, w, h, data.AsSpan(i * per, size).ToArray()))];
             }
             finally
             {
@@ -934,7 +933,7 @@ public sealed class GameBundles
                 {
                     return null;
                 }
-                int[] platforms = sh["platforms.Array"].Children.Select(c => (int)c.AsUInt).ToArray();
+                int[] platforms = [.. sh["platforms.Array"].Children.Select(c => (int)c.AsUInt)];
                 byte[] blob = sh["compressedBlob.Array"].AsByteArray;
                 var blobs = new Dictionary<int, byte[]>();
                 for (int pi = 0; pi < platforms.Length; pi++)
@@ -945,7 +944,7 @@ public sealed class GameBundles
                     using var ms = new MemoryStream();
                     for (int k = 0; k < offs.Count; k++)
                     {
-                        var outBuf = new byte[full[k]];
+                        byte[] outBuf = new byte[full[k]];
                         int got = LZ4ps.LZ4Codec.Decode32(blob, (int)offs[k], (int)comp[k], outBuf, 0, (int)full[k], true);
                         if (got != full[k])
                         {
@@ -970,7 +969,7 @@ public sealed class GameBundles
                         for (int li = 0; li < lists.Count; li++)
                         {
                             var items = lists[li]["Array"].Children;
-                            var prms = li < paramLists.Count ? Numbers(paramLists[li]).ToList() : new List<uint>();
+                            var prms = li < paramLists.Count ? Numbers(paramLists[li]).ToList() : [];
                             for (int j = 0; j < items.Count; j++)
                             {
                                 var sp = items[j];
@@ -1020,11 +1019,11 @@ public sealed class GameBundles
     // ---- Matrices: row-major 4 x 4, column vectors (Unity's).
     public static class Matrix
     {
-        public static float[] Identity() => new float[] { 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1 };
+        public static float[] Identity() => [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
 
         public static float[] Mul(float[] a, float[] b)
         {
-            var r = new float[16];
+            float[] r = new float[16];
             for (int i = 0; i < 4; i++)
             {
                 for (int j = 0; j < 4; j++)
@@ -1040,13 +1039,13 @@ public sealed class GameBundles
             return r;
         }
 
-        public static float[] Trs(float px, float py, float pz, float x, float y, float z, float w, float sx, float sy, float sz) => new[]
-        {
+        public static float[] Trs(float px, float py, float pz, float x, float y, float z, float w, float sx, float sy, float sz) =>
+        [
             (1 - 2 * (y * y + z * z)) * sx, 2 * (x * y - z * w) * sy, 2 * (x * z + y * w) * sz, px,
             2 * (x * y + z * w) * sx, (1 - 2 * (x * x + z * z)) * sy, 2 * (y * z - x * w) * sz, py,
             2 * (x * z - y * w) * sx, 2 * (y * z + x * w) * sy, (1 - 2 * (x * x + y * y)) * sz, pz,
             0, 0, 0, 1,
-        };
+        ];
 
         internal static float[] Trs(AssetTypeValueField p, AssetTypeValueField q, AssetTypeValueField s) =>
             Trs(p["x"].AsFloat, p["y"].AsFloat, p["z"].AsFloat, q["x"].AsFloat, q["y"].AsFloat, q["z"].AsFloat, q["w"].AsFloat, s["x"].AsFloat, s["y"].AsFloat, s["z"].AsFloat);

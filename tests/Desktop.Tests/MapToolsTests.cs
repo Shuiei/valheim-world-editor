@@ -1,6 +1,5 @@
 using Avalonia.Headless.XUnit;
 using TerrainEditor.App;
-using TerrainEditor.Editing;
 using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
@@ -16,14 +15,14 @@ public class MapToolsTests
     {
         // x, z, biome, pieces, edited, objects, distance to buildings, generated.
         int[] stats =
-        {
+        [
             0, 0, 1, 5, 0, 10, 0, 1,     // buildings
 			1, 0, 1, 0, 0, 3, 1, 1,      // next to them
 			5, 0, 1, 0, 0, 4, 5, 1,      // far enough
 			6, 0, 8, 0, 1, 2, 6, 1,      // ground edited, Black Forest
 			7, 0, 1, 0, 0, 1, 7, 0,      // not generated
 			100, 0, 1, 0, 0, 1, 100, 1,  // 6400 m out
-		};
+		];
         var all = new ZoneFilter(new HashSet<int>(), true, 2, true, true, null, null);
         var (zones, objects) = all.Match(stats);
         Assert.Equal(new[] { (5, 0), (100, 0) }, zones);
@@ -59,7 +58,7 @@ public class MapToolsTests
             Assert.StartsWith(hit.Name, map.PickTitle.Text);
             var (zx, zz) = map.Spot!.Value;
             await w.EditArea(zx, zz, 3);
-            var sel = Assert.Single(w.View.Selected);
+            int sel = Assert.Single(w.View.Selected);
             Assert.Equal(hit.Id, w.Session!.Scene.Things[sel].Id);
             // A plain click on the map forgets the object.
             map.Pick(zx, zz);
@@ -108,7 +107,7 @@ public class MapToolsTests
             Assert.Equal(0, w.World.Pending.Resets);
             // Edited ground: listed; picking one goes there.
             await w.EditArea(0, 0, 1);
-            w.Session!.Shape(32, 32, Formula.Compile("2", new string[0]), 4, 0, "x");
+            w.Session!.Shape(32, 32, Formula.Compile("2", []), 4, 0, "x");
             w.ShowMap();
             var edited = w.World.Edits.All().Where(e => e.HeightCount > 0).ToList();
             Assert.Equal(edited.Count, ((IEnumerable<string>)map.EditedList.ItemsSource!).Count());

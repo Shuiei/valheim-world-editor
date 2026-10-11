@@ -75,7 +75,7 @@ public static class Worlds
                 }
             }
         }
-        return list.OrderByDescending(w => w.Where == "recent").ThenByDescending(w => w.Saved).ToList();
+        return [.. list.OrderByDescending(w => w.Where == "recent").ThenByDescending(w => w.Saved)];
     }
 
     // Why a folder cannot be opened as a world, or null when it can.
@@ -100,9 +100,9 @@ public static class Worlds
         try
         {
             // A worlds_local folder with one world in it: point at the world instead.
-            string[] inside = Directory.GetDirectories(path).Where(Places.HasWorld).ToArray();
+            string[] inside = [.. Directory.GetDirectories(path).Where(Places.HasWorld)];
             return inside.Length > 0
-                ? $"That folder holds worlds; pick one of them ({string.Join(", ", inside.Select(System.IO.Path.GetFileName).Take(4))})."
+                ? $"That folder holds worlds; pick one of them ({string.Join(", ", inside.Select(Path.GetFileName).Take(4))})."
                 : "No Valheim world in that folder (a world folder holds _main.<n>.chunks and *.chunk files).";
         }
         catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)

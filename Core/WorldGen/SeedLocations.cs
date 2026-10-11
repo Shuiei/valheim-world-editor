@@ -18,6 +18,7 @@ namespace ValheimGen;
 // kinds (start, bosses, traders...) come first and never depend on them.
 public static class SeedLocations
 {
+#pragma warning disable IDE1006 // named as the JSON keys they are read from and written as
     public sealed class Rule
     {
         public string prefab { get; set; } = "";
@@ -58,15 +59,15 @@ public static class SeedLocations
     public sealed class AltBiomeRule
     {
         public string name { get; set; } = "";
-        public List<string> blockLocationNames { get; set; } = new();
+        public List<string> blockLocationNames { get; set; } = [];
     }
 
     // The game's rules: its locations in its order (ZoneSystem's list, the location lists, the alt
     // biomes' additions) and the alt biomes.
     public sealed class RuleSet
     {
-        public List<Rule> locations { get; set; } = new();
-        public List<AltBiomeRule> altBiomes { get; set; } = new();
+        public List<Rule> locations { get; set; } = [];
+        public List<AltBiomeRule> altBiomes { get; set; } = [];
 
         // As locations.json keeps them: one location or alt biome a line.
         public string ToJson() =>
@@ -75,6 +76,7 @@ public static class SeedLocations
 
         public static RuleSet FromJson(string json) => JsonSerializer.Deserialize<RuleSet>(json) ?? throw new JsonException("no rules");
     }
+#pragma warning restore IDE1006
 
     private static readonly JsonSerializerOptions JsonOptions = new() { DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull };
 
@@ -82,8 +84,8 @@ public static class SeedLocations
     private sealed class State(RuleSet rules)
     {
         public RuleSet Rules { get; } = rules;
-        public List<Rule> Ordered { get; } = rules.locations.OrderByDescending(l => l.prioritized != 0).Where(l => l.enable != 0 && l.quantity != 0).ToList();
-        public HashSet<string> Blocked { get; } = rules.altBiomes.SelectMany(a => a.blockLocationNames).ToHashSet();
+        public List<Rule> Ordered { get; } = [.. rules.locations.OrderByDescending(l => l.prioritized != 0).Where(l => l.enable != 0 && l.quantity != 0)];
+        public HashSet<string> Blocked { get; } = [.. rules.altBiomes.SelectMany(a => a.blockLocationNames)];
     }
 
     private static volatile State _state = new(new RuleSet());
@@ -98,7 +100,7 @@ public static class SeedLocations
     // editor shows, and all they need.
     public static RuleSet Prioritized(RuleSet rules) => new()
     {
-        locations = rules.locations.Where(l => l.prioritized != 0 && l.enable != 0 && l.quantity != 0).ToList(),
+        locations = [.. rules.locations.Where(l => l.prioritized != 0 && l.enable != 0 && l.quantity != 0)],
     };
 
     public static RuleSet Current => _state.Rules;
@@ -140,7 +142,7 @@ public static class SeedLocations
         private readonly WorldGenerator _gen;
         private readonly bool _parallel;
         private readonly State _state = SeedLocations._state;
-        private readonly object _sync = new();
+        private readonly Lock _sync = new();
         private BiomeMap? _map;
         private Placer _placer;
         private int _done;
@@ -164,13 +166,13 @@ public static class SeedLocations
                 Which.Prioritized => _state.Ordered.Count(r => r.prioritized != 0),
                 _ => _state.Ordered.Count,
             };
-            return Until(count, cancel).Where(p => !Uncertain(_state, p.Rule)).ToList();
+            return [.. Until(count, cancel).Where(p => !Uncertain(_state, p.Rule))];
         }
 
         public List<Placed> PlaceKinds(IReadOnlyCollection<string> prefabs, CancellationToken cancel = default)
         {
             int count = _state.Ordered.FindLastIndex(r => prefabs.Contains(r.prefab)) + 1;
-            return Until(count, cancel).Where(p => prefabs.Contains(p.Rule.prefab) && p.Rule.altBiome == null).ToList();
+            return [.. Until(count, cancel).Where(p => prefabs.Contains(p.Rule.prefab) && p.Rule.altBiome == null)];
         }
 
         // The first count kinds of the game's order laid out (those already done kept): every instance
@@ -200,7 +202,7 @@ public static class SeedLocations
                 {
                     Rnd.state = saved;
                 }
-                return _placer.Instances.Values.ToList();
+                return [.. _placer.Instances.Values];
             }
         }
     }
@@ -213,10 +215,10 @@ public static class SeedLocations
 
         // Heightmap.BiomeIndex order.
         private static readonly Heightmap.Biome[] ByIndex =
-        {
+        [
             Heightmap.Biome.None, Heightmap.Biome.Meadows, Heightmap.Biome.Swamp, Heightmap.Biome.Mountain, Heightmap.Biome.BlackForest,
             Heightmap.Biome.Plains, Heightmap.Biome.AshLands, Heightmap.Biome.DeepNorth, Heightmap.Biome.Ocean, Heightmap.Biome.Mistlands,
-        };
+        ];
 
         private const byte Ash = 6, North = 7, Sea = 8, BiomeBits = 0x0F, Above = 0x10, Visited = 0x20;
 
@@ -321,8 +323,8 @@ public static class SeedLocations
                     }
                 }
             }
-            All[biome] = all.ToArray();
-            AboveSea[biome] = above.ToArray();
+            All[biome] = [.. all];
+            AboveSea[biome] = [.. above];
         }
 
         // How the game turns a set of biomes into one to draw a point from: a single biome is itself;
@@ -331,7 +333,7 @@ public static class SeedLocations
         // another biome than the one they test (Plains gives Black Forest; the eighth step tests
         // Meadows and gives the ocean); past the walk, Mistlands.
         private static readonly (Heightmap.Biome Test, Heightmap.Biome Gives)[] Walk =
-        {
+        [
             (Heightmap.Biome.Meadows, Heightmap.Biome.Meadows),
             (Heightmap.Biome.Swamp, Heightmap.Biome.Swamp),
             (Heightmap.Biome.Mountain, Heightmap.Biome.Mountain),
@@ -340,9 +342,9 @@ public static class SeedLocations
             (Heightmap.Biome.AshLands, Heightmap.Biome.AshLands),
             (Heightmap.Biome.DeepNorth, Heightmap.Biome.DeepNorth),
             (Heightmap.Biome.Meadows, Heightmap.Biome.Ocean),
-        };
+        ];
 
-        private static readonly Heightmap.Biome[] Counted = ByIndex.Skip(1).ToArray();
+        private static readonly Heightmap.Biome[] Counted = [.. ByIndex.Skip(1)];
 
         public static Heightmap.Biome RandomBiome(Heightmap.Biome set)
         {
@@ -385,10 +387,10 @@ public static class SeedLocations
     private sealed class Placer(WorldGenerator gen, Func<BiomeMap> map)
     {
         // The instances by zone (one a zone), and the same by prefab and by group, for the distance checks.
-        public readonly Dictionary<(int X, int Y), Placed> Instances = new();
+        public readonly Dictionary<(int X, int Y), Placed> Instances = [];
         private readonly Neighbours _byPrefab = new(), _byGroup = new(), _byGroupMax = new();
         // The vegetation sums of the kind's spots so far (the "stands out" check).
-        private readonly List<float> _sums = new();
+        private readonly List<float> _sums = [];
 
         private const int SpotsAZone = 6;
 
@@ -564,13 +566,13 @@ public static class SeedLocations
     // Instances by a name (prefab or group), for "is one within this distance" (3D, as the game measures).
     private sealed class Neighbours
     {
-        private readonly Dictionary<string, List<Placed>> _byName = new();
+        private readonly Dictionary<string, List<Placed>> _byName = [];
 
         public void Add(string name, Placed p)
         {
             if (!_byName.TryGetValue(name, out var list))
             {
-                _byName[name] = list = new();
+                _byName[name] = list = [];
             }
             list.Add(p);
         }

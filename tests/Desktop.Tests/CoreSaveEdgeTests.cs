@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Numerics;
 using TerrainEditor.Editing;
 using TerrainEditor.Save;
@@ -64,7 +65,7 @@ public class SaveEdgeTests
         WorldSave world = w.Load();
         var before = Files(w.Dir);
         int backups = Backups(w.Dir);
-        var r = WorldWriter.Save(world, Array.Empty<ZoneEdit>());
+        var r = WorldWriter.Save(world, []);
         Assert.False(r.Saved);
         Assert.Equal("Nothing to save.", r.Message);
         Assert.Null(r.BackupDirectory);
@@ -79,7 +80,7 @@ public class SaveEdgeTests
         WorldSave world = w.Load();
         var (x, z) = FreshZone(world);
         var before = Files(w.Dir);
-        var r = WorldWriter.Save(world, new[] { new ZoneEdit(x, z) });
+        var r = WorldWriter.Save(world, [new ZoneEdit(x, z)]);
         Assert.False(r.Saved);
         Assert.Equal("Nothing could be saved.", r.Message);
         AssertSame(before, w.Dir);
@@ -94,7 +95,7 @@ public class SaveEdgeTests
         var edit = Raised(x, z, 2.5f, 100, 101, 2000);
         edit.PaintModified[300] = true;
         edit.Paint[300 * 4] = 1f;
-        var r = WorldWriter.Save(world, new[] { edit });
+        var r = WorldWriter.Save(world, [edit]);
         Assert.True(r.Saved, r.Message);
         Assert.Equal(0, r.ZonesWritten);
         Assert.Equal(1, r.ZonesCreated);
@@ -117,10 +118,10 @@ public class SaveEdgeTests
         using var w = new TempWorld();
         WorldSave world = w.Load();
         var before = Files(w.Dir);
-        var tree = world.Objects.First(o => o.Prefab == Fixtures.Hash("Beech1"));
-        var unknown = new NewObject(-1, Fixtures.Hash("NoSuchThing_xyz"), tree.Position, Vector3.Zero, 1f);
+        var (id, prefab, position, rotation, scale) = world.Objects.First(o => o.Prefab == Fixtures.Hash("Beech1"));
+        var unknown = new NewObject(-1, Fixtures.Hash("NoSuchThing_xyz"), position, Vector3.Zero, 1f);
         var far = new NewObject(-2, Fixtures.Hash("Beech1"), new Vector3(9000, 0, 9000), Vector3.Zero, 1f);
-        var r = WorldWriter.Save(world, Array.Empty<ZoneEdit>(), added: new[] { unknown, far });
+        var r = WorldWriter.Save(world, [], added: [unknown, far]);
         Assert.False(r.Saved);
         Assert.Contains(r.Skipped, s => s.Contains("unknown kind of object"));
         Assert.Contains(r.Skipped, s => s.Contains("is not generated yet"));
@@ -133,7 +134,7 @@ public class SaveEdgeTests
         using var w = new TempWorld();
         WorldSave world = w.Load();
         var before = Files(w.Dir);
-        var r = WorldWriter.Save(world, Array.Empty<ZoneEdit>(), deleted: new[] { -5, world.ObjectRefs.Count + 10 });
+        var r = WorldWriter.Save(world, [], deleted: [-5, world.ObjectRefs.Count + 10]);
         Assert.False(r.Saved);
         AssertSame(before, w.Dir);
     }
@@ -146,7 +147,7 @@ public class SaveEdgeTests
         var before = Files(w.Dir);
         world.Chunks[0].WorldVersion = 40;
         var t = world.TerrainZones[0];
-        var r = WorldWriter.Save(world, new[] { Raised(t.ZoneX, t.ZoneZ, 1, 500) });
+        var r = WorldWriter.Save(world, [Raised(t.ZoneX, t.ZoneZ, 1, 500)]);
         Assert.False(r.Saved);
         Assert.Contains("save format 40", r.Message);
         AssertSame(before, w.Dir);
@@ -161,7 +162,7 @@ public class SaveEdgeTests
         File.Delete(Path.Combine(w.Dir, $"_main.{world.SaveNumber}.fwl2"));
         var before = Files(w.Dir);
         var t = world.TerrainZones[0];
-        var r = WorldWriter.Save(world, new[] { Raised(t.ZoneX, t.ZoneZ, 1, 500) });
+        var r = WorldWriter.Save(world, [Raised(t.ZoneX, t.ZoneZ, 1, 500)]);
         Assert.False(r.Saved);
         Assert.StartsWith("Saving failed", r.Message);
         Assert.Contains("Nothing changed", r.Message);
@@ -177,15 +178,15 @@ public class SaveEdgeTests
         for (int n = 0; n < 3; n++)
         {
             WorldSave world = w.Load();
-            var r = WorldWriter.Save(world, new[] { Raised(t.ZoneX, t.ZoneZ, n + 1, 500 + n) });
+            var r = WorldWriter.Save(world, [Raised(t.ZoneX, t.ZoneZ, n + 1, 500 + n)]);
             Assert.True(r.Saved, r.Message);
             var again = WorldSave.Load(w.Dir);
             Assert.Equal(world.SaveNumber + 1, again.SaveNumber);
             // Only the new save number's files, and each chunk file once (the replaced version is gone).
             var names = Directory.GetFiles(w.Dir).Select(Path.GetFileName).ToList();
-            Assert.All(names.Where(f => f!.StartsWith("_main.")), f => Assert.StartsWith($"_main.{again.SaveNumber}.", f));
-            Assert.Equal(4, names.Count(f => f!.StartsWith("_main.")));
-            var chunks = names.Where(f => f!.EndsWith(".chunk")).Select(f => f![..f!.LastIndexOf('_')]).ToList();
+            Assert.All(names.Where(f => f!.StartsWith("_main.", StringComparison.Ordinal)), f => Assert.StartsWith($"_main.{again.SaveNumber}.", f));
+            Assert.Equal(4, names.Count(f => f!.StartsWith("_main.", StringComparison.Ordinal)));
+            var chunks = names.Where(f => f!.EndsWith(".chunk", StringComparison.Ordinal)).Select(f => f![..f!.LastIndexOf('_')]).ToList();
             Assert.Equal(chunks.Distinct().Count(), chunks.Count);
             Assert.Equal(n + 1f, again.TerrainZones.Single(q => q.ZoneX == t.ZoneX && q.ZoneZ == t.ZoneZ).LevelDelta[500 + n], 4);
         }
@@ -203,10 +204,10 @@ public class SaveEdgeTests
         IReadOnlyList<string>? last = null;
         for (int n = 0; n < 3; n++)
         {
-            var r = WorldWriter.Save(world, new[] { Raised(t.ZoneX, t.ZoneZ, n + 1, 500 + n) }, options: new WorldWriter.Options(KeepBase: true, Drop: last));
+            var r = WorldWriter.Save(world, [Raised(t.ZoneX, t.ZoneZ, n + 1, 500 + n)], options: new WorldWriter.Options(KeepBase: true, Drop: last));
             Assert.True(r.Saved, r.Message);
             last = r.Files;
-            var saves = Directory.GetFiles(w.Dir, "_main.*.ok").Select(f => int.Parse(Path.GetFileName(f).Split('.')[1])).Order().ToList();
+            var saves = Directory.GetFiles(w.Dir, "_main.*.ok").Select(f => int.Parse(Path.GetFileName(f).Split('.')[1], CultureInfo.InvariantCulture)).Order().ToList();
             // The base and this save only.
             Assert.Equal(new[] { b, b + 1 + n }, saves);
             var again = WorldSave.Load(w.Dir);
@@ -233,7 +234,7 @@ public class SaveEdgeTests
         using var w = new TempWorld();
         WorldSave world = w.Load();
         var t = world.TerrainZones[0];
-        var r = WorldWriter.Save(world, new[] { Raised(t.ZoneX, t.ZoneZ, 3, 500) }, resets: new[] { new ZoneReset(t.ZoneX, t.ZoneZ, true, true) });
+        var r = WorldWriter.Save(world, [Raised(t.ZoneX, t.ZoneZ, 3, 500)], resets: [new ZoneReset(t.ZoneX, t.ZoneZ, true, true)]);
         Assert.True(r.Saved, r.Message);
         Assert.Equal(0, r.ZonesWritten);
         var again = WorldSave.Load(w.Dir);
@@ -247,7 +248,7 @@ public class SaveEdgeTests
         using var w = new TempWorld();
         WorldSave world = w.Load();
         var t = world.TerrainZones[0];
-        var r = WorldWriter.Save(world, new[] { Raised(t.ZoneX, t.ZoneZ, 3, 500) }, resets: new[] { new ZoneReset(t.ZoneX, t.ZoneZ, true, false) });
+        var r = WorldWriter.Save(world, [Raised(t.ZoneX, t.ZoneZ, 3, 500)], resets: [new ZoneReset(t.ZoneX, t.ZoneZ, true, false)]);
         Assert.True(r.Saved, r.Message);
         Assert.Equal(1, r.ZonesWritten);
         var again = WorldSave.Load(w.Dir);
@@ -261,7 +262,7 @@ public class SaveEdgeTests
         WorldSave world = w.Load();
         typeof(WorldSave).GetProperty(nameof(WorldSave.Zones))!.SetValue(world, null);
         var before = Files(w.Dir);
-        var r = WorldWriter.Save(world, Array.Empty<ZoneEdit>(), resets: new[] { new ZoneReset(0, 0, true, false) });
+        var r = WorldWriter.Save(world, [], resets: [new ZoneReset(0, 0, true, false)]);
         Assert.False(r.Saved);
         Assert.Contains(".db2", r.Message);
         AssertSame(before, w.Dir);
@@ -279,8 +280,8 @@ public class SaveEdgeTests
         // A reset far from the rest, in a generated zone without buildings.
         var resetZone = world.Zones!.Generated.Select(g => ((int)g.X, (int)g.Z)).First(g => Math.Abs(g.Item1 - t.ZoneX) > 3 && world.ObjectRefs.All(o => o.Zone != g || !o.IsPiece));
         int inReset = world.ObjectRefs.Count(o => o.Zone == resetZone && !o.IsTerrain && o.Prefab != WorldWriter.TombstonePrefab);
-        var r = WorldWriter.Save(world, new[] { Raised(t.ZoneX, t.ZoneZ, 1, 600), Raised(fx, fz, -2, 700) }, new[] { trees[1].Id }, new[] { planted },
-            new[] { new ZoneReset(resetZone.Item1, resetZone.Item2, true, false) });
+        var r = WorldWriter.Save(world, [Raised(t.ZoneX, t.ZoneZ, 1, 600), Raised(fx, fz, -2, 700)], [trees[1].Id], [planted],
+            [new ZoneReset(resetZone.Item1, resetZone.Item2, true, false)]);
         Assert.True(r.Saved, r.Message);
         Assert.Equal(1, r.ZonesWritten);
         Assert.Equal(1, r.ZonesCreated);

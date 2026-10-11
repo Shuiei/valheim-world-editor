@@ -11,7 +11,7 @@ namespace TerrainEditor.Desktop;
 // settings of the mode; the kinds to choose from open in a list beside it.
 public sealed class PlacePanel
 {
-    private static readonly string[] ChoosePreset = { "Choose a preset…" };
+    private static readonly string[] ChoosePreset = ["Choose a preset…"];
 
     public Control Card { get; }
     public Control Chooser { get; }
@@ -21,8 +21,8 @@ public sealed class PlacePanel
     private readonly Func<int, string?> _nameOf;
     private bool _filling;
 
-    internal Dictionary<PlaceTool.Modes, Button> ModeButtons { get; } = new();
-    internal Dictionary<PlaceTool.LineShapes, Button> ShapeButtons { get; } = new();
+    internal Dictionary<PlaceTool.Modes, Button> ModeButtons { get; } = [];
+    internal Dictionary<PlaceTool.LineShapes, Button> ShapeButtons { get; } = [];
     internal ComboBox PresetBox { get; }
     internal Button SavePresetButton { get; } = new() { Content = "Save as preset…", FontSize = 12 };
     internal Button DeletePresetButton { get; } = new() { Content = "Delete", FontSize = 12, IsEnabled = false };
@@ -45,9 +45,9 @@ public sealed class PlacePanel
     internal Button RecentAllButton { get; } = Link("all");
     internal Button RecentNoneButton { get; } = Link("none");
     // The list's categories that are open (folded ones show only their header); remembered by the window.
-    internal HashSet<ObjectKind> OpenKinds { get; } = new() { ObjectKind.Trees };
+    internal HashSet<ObjectKind> OpenKinds { get; } = [ObjectKind.Trees];
     public event Action? OpenKindsChanged;
-    internal Dictionary<ObjectKind, Expander> Groups { get; } = new();
+    internal Dictionary<ObjectKind, Expander> Groups { get; } = [];
     // Shift held on the last press of a chip (a click takes Shift from its press).
     private bool _shiftPress;
     internal ComboBox ElevationBox { get; } = new() { ItemsSource = new[] { "On the ground", "Above the ground", "At one height" }, SelectedIndex = 0, FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch };
@@ -87,7 +87,6 @@ public sealed class PlacePanel
     private readonly Control _fitRow;
     private readonly Control _elevRow, _pieceBox, _attachRow, _brushRows, _scatterRows, _patchRow, _facingRows, _lineBox, _snapRows, _freeLineRows, _loopRow, _layersRow, _gridRow, _shapeRow, _undoRow, _brushHint;
     private readonly TextBlock _lineHintText = new() { FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
-
 
     private static Slider Slide(double min, double max, double step, double value, TextBlock shown, Func<double, string> fmt, Action<float> set)
     {
@@ -211,7 +210,7 @@ public sealed class PlacePanel
                 return;
             }
             var p = new PlaceTool.Preset(name, t.Chosen.ToDictionary(n => n, t.WeightOf), t.Density, t.Spacing, t.SizeMin, t.SizeMax, t.Tilt, t.Clump, t.Patch);
-            Memory.Presets = Memory.Presets.Where(x => x.Name != name).Append(p).OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase).ToList();
+            Memory.Presets = [.. Memory.Presets.Where(x => x.Name != name).Append(p).OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase)];
             Memory.Save();
             FillPresets(name);
             Say($"Saved the preset {name}.");
@@ -227,7 +226,7 @@ public sealed class PlacePanel
             FillPresets();
         };
         KindsButton.Click += (_, _) => { Chooser!.IsVisible = !Chooser.IsVisible; KindsButton.Content = Chooser.IsVisible ? "Done" : "+ Add kinds"; FillList(); };
-        Search.PropertyChanged += (_, e) => { if (e.Property == TextBox.TextProperty) FillList(); };
+        Search.PropertyChanged += (_, e) => { if (e.Property == TextBox.TextProperty) { FillList(); } };
         PickButton.Click += (_, _) =>
         {
             input.PickOnce = (name, shift) =>
@@ -323,7 +322,7 @@ public sealed class PlacePanel
                 t.Notify();
             }
         };
-        TextBlock Hint(string s) => new() { Text = s, FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
+        static TextBlock Hint(string s) => new() { Text = s, FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
 
         _elevRow = Row("Height", ElevBox, new TextBlock { Text = " m", FontSize = 12, VerticalAlignment = VerticalAlignment.Center });
         _attachRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 2, Children = { BesideButton, OnTopButton } };
@@ -420,12 +419,12 @@ public sealed class PlacePanel
     // The chosen kinds and weights are remembered for the next time.
     private void Remember()
     {
-        Memory.Chosen = T.Chosen.ToList();
+        Memory.Chosen = [.. T.Chosen];
         Memory.Weights = new(T.Weights);
         Memory.Save();
     }
 
-    private static StackPanel ChipHead(string title, Button all, Button none) => new StackPanel
+    private static StackPanel ChipHead(string title, Button all, Button none) => new()
     {
         Orientation = Orientation.Horizontal,
         Spacing = 2,
@@ -436,7 +435,7 @@ public sealed class PlacePanel
     private void TickRow(IEnumerable<string> names, bool on)
     {
         var known = Creatable().Select(c => c.Name).ToHashSet();
-        foreach (var n in names.Where(n => known.Count == 0 || known.Contains(n)).ToList())
+        foreach (string? n in names.Where(n => known.Count == 0 || known.Contains(n)).ToList())
         {
             if (on && !T.Chosen.Contains(n))
             {
@@ -476,7 +475,7 @@ public sealed class PlacePanel
         foreach (var (panel, list, box) in new[] { (Favourites, Memory.Favourites, _favBox), (Recent, Memory.Recent, _recentBox) })
         {
             panel.Children.Clear();
-            foreach (var n in list.Where(n => known.Count == 0 || known.Contains(n)))
+            foreach (string? n in list.Where(n => known.Count == 0 || known.Contains(n)))
             {
                 var b = new ToggleButton { Content = n, IsChecked = T.Chosen.Contains(n), FontSize = 11, Padding = new Thickness(6, 2) }.Tip(ReferenceEquals(panel, Favourites) ? "place.favourite" : "place.recent");
                 b.AddHandler(Avalonia.Input.InputElement.PointerPressedEvent, (_, e) => _shiftPress = e.KeyModifiers.HasFlag(Avalonia.Input.KeyModifiers.Shift), Avalonia.Interactivity.RoutingStrategies.Tunnel, handledEventsToo: true);
@@ -505,17 +504,17 @@ public sealed class PlacePanel
     private void Say(string s) => Message?.Invoke(s);
 
     // The kinds that can be placed in this world, with their kind of object (for the list's order).
-    private List<(string Name, ObjectKind Kind)> _creatable = new();
+    private List<(string Name, ObjectKind Kind)> _creatable = [];
     internal List<(string Name, ObjectKind Kind)> Creatable()
     {
         if (_creatable.Count == 0 && _scene()?.World is { } w)
         {
-            _creatable = w.Creatable.Select(p => _nameOf(p)).Where(n => n != null).Distinct().Select(n => (n!, ObjectKinds.Of(n, false))).ToList();
+            _creatable = [.. w.Creatable.Select(p => _nameOf(p)).Where(n => n != null).Distinct().Select(n => (n!, ObjectKinds.Of(n, false)))];
         }
         return _creatable;
     }
 
-    private static readonly ObjectKind[] Order = { ObjectKind.Trees, ObjectKind.Rocks, ObjectKind.Bushes, ObjectKind.Pickables, ObjectKind.Ore, ObjectKind.Other, ObjectKind.Ruins, ObjectKind.Buildings };
+    private static readonly ObjectKind[] Order = [ObjectKind.Trees, ObjectKind.Rocks, ObjectKind.Bushes, ObjectKind.Pickables, ObjectKind.Ore, ObjectKind.Other, ObjectKind.Ruins, ObjectKind.Buildings];
 
     public void FillList()
     {
@@ -553,12 +552,23 @@ public sealed class PlacePanel
                 {
                     return;
                 }
-                foreach (var n in names)
+                foreach (string? n in names)
                 {
                     var box = new CheckBox { Content = n, IsChecked = T.Chosen.Contains(n), FontSize = 12 }.Tip("place.kind");
                     box.IsCheckedChanged += (_, _) =>
                     {
-                        if (box.IsChecked == true) { if (!T.Chosen.Contains(n)) T.Chosen.Add(n); } else T.Chosen.Remove(n);
+                        if (box.IsChecked == true)
+                        {
+                            if (!T.Chosen.Contains(n))
+                            {
+                                T.Chosen.Add(n);
+                            }
+                        }
+                        else
+                        {
+                            T.Chosen.Remove(n);
+                        }
+
                         Header();
                         Chosen(fillList: false);
                     };
@@ -617,7 +627,7 @@ public sealed class PlacePanel
         Mix.Children.Clear();
         var names = T.Chosen.ToList();
         float total = names.Sum(T.WeightOf);
-        foreach (var n in names)
+        foreach (string? n in names)
         {
             var g = new Grid { ColumnDefinitions = new ColumnDefinitions("*,80,36,24") };
             g.Children.Add(new TextBlock { Text = n, FontSize = 12, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis });

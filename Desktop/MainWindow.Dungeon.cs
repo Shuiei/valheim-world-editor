@@ -21,9 +21,9 @@ public partial class MainWindow
         {
             _dungeonKept = KeepPlaceTool();
             BuildPanel.Start();
-            t.CutY = _view.CutY;
+            t.CutY = View.CutY;
             Tools.ChooseMode(ToolMode.Place);
-            _message.Text = "Building in the dungeon: pick a piece, then click on a room's floor or on a piece. Pieces on a room's floor hold in game.";
+            MessageText.Text = "Building in the dungeon: pick a piece, then click on a room's floor or on a piece. Pieces on a room's floor hold in game.";
         }
         else if (!on && _dungeonKept is { } k)
         {
@@ -38,13 +38,13 @@ public partial class MainWindow
     // its twin at the dungeon's entrance, linked. One step of the history: Ctrl+Z takes it all back.
     internal void PlaceGenerated(DungeonGen.Settings settings, DungeonGen.Result r)
     {
-        if (_view.Scene is not { Session: { } session } scene)
+        if (View.Scene is not { Session: { } session } scene)
         {
-            _message.Text = "Open an area of a world first: the dungeon goes above the middle of the view.";
+            MessageText.Text = "Open an area of a world first: the dungeon goes above the middle of the view.";
             return;
         }
         var world = scene.World;
-        var target = _view.Camera.Target;
+        var target = View.Camera.Target;
         float gx = target.X + scene.Cx, gz = scene.Cz - target.Z;
         int ix = Math.Clamp((int)MathF.Round(gx - scene.Cx + (scene.W - 1) / 2f), 0, scene.W - 1), iz = Math.Clamp((int)MathF.Round(gz - scene.Cz + (scene.H - 1) / 2f), 0, scene.H - 1);
         float ground = Math.Max(scene.Heights[iz * scene.W + ix], scene.Water);
@@ -59,12 +59,12 @@ public partial class MainWindow
         List<(int, Vector3)> high;
         lock (scene.Things)
         {
-            high = scene.Things.Where(t => !t.Gone && t.Position.Y > 3000).Select(t => (t.Prefab, t.Position)).ToList();
+            high = [.. scene.Things.Where(t => !t.Gone && t.Position.Y > 3000).Select(t => (t.Prefab, t.Position))];
         }
         var near = world.Locations.Where(l => MathF.Abs(l.Position.X - origin.X) < 600 && MathF.Abs(l.Position.Z - origin.Z) < 600);
         origin = DungeonGen.Clear(origin, r, DungeonGen.Taken(high, near));
         var files = new Dictionary<ChunkFile, byte[]>();
-        byte[]? Blank(NewObject n) => world.NewObjectBytes(n, m => world.LiveBytes ?? (files.TryGetValue(m.File, out var f) ? f : files[m.File] = File.ReadAllBytes(Path.Combine(world.Directory, m.File.FileName))));
+        byte[]? Blank(NewObject n) => world.NewObjectBytes(n, m => world.LiveBytes ?? (files.TryGetValue(m.File, out byte[]? f) ? f : files[m.File] = File.ReadAllBytes(Path.Combine(world.Directory, m.File.FileName))));
         var adds = new List<(NewObject, bool)>();
         var arrival = origin + r.Arrival;
         if (r.Rooms is { } rooms && r.Kind is { } kind)
@@ -74,7 +74,7 @@ public partial class MainWindow
             var dg = new NewObject(0, kind.Hash, origin, Vector3.Zero, 0);
             if (Blank(dg) is not { } bytes)
             {
-                _message.Text = $"{kind.Name} cannot be made in this world.";
+                MessageText.Text = $"{kind.Name} cannot be made in this world.";
                 return;
             }
             var z = ZdoData.Parse(bytes);
@@ -83,7 +83,7 @@ public partial class MainWindow
             // The portal on the entrance room's floor, found under its middle.
             var dungeon = new DungeonRooms.Dungeon(-1, new WorldScene.Thing(-1, kind.Hash, origin, Vector3.Zero, 1, false), kind, placed, null);
             var above = placed[0].Position + new Vector3(0, 3, 0);
-            arrival = RoomSurfaces.Hit(new[] { dungeon }, _view.Models, above, -Vector3.UnitY) is float down ? above - new Vector3(0, down - 0.05f, 0) : placed[0].Position;
+            arrival = RoomSurfaces.Hit([dungeon], View.Models, above, -Vector3.UnitY) is float down ? above - new Vector3(0, down - 0.05f, 0) : placed[0].Position;
         }
         // Every object with its own data, and no builder: the game takes the dungeon for a ruin, as its
         // own dungeons (monsters do not go for its walls; taking it apart gives back a third). Made fresh
@@ -92,13 +92,13 @@ public partial class MainWindow
         foreach (var it in r.Items)
         {
             int prefab = StableHash.Of(it.Prefab);
-            if (world.ModelFor(prefab, null) == null && TerrainEditor.Terrain.PrefabCatalog.Details(prefab) == null)
+            if (world.ModelFor(prefab, null) == null && Terrain.PrefabCatalog.Details(prefab) == null)
             {
                 skipped++;
                 continue;
             }
-            var data = (it.Data ?? Array.Empty<(string Section, string Key, string Value)>()).Select(d => new ObjectField(d.Section, StableHash.Of(d.Key), d.Value)).Append(ObjectField.NoBuilder).ToList();
-            adds.Add((new NewObject(0, prefab, it.Position + origin, BlueprintFormats.ToEuler(it.Rotation), 0, Data: data), TerrainEditor.Terrain.PieceCatalog.Get(prefab)?.Tool != null));
+            var data = (it.Data ?? []).Select(d => new ObjectField(d.Section, StableHash.Of(d.Key), d.Value)).Append(ObjectField.NoBuilder).ToList();
+            adds.Add((new NewObject(0, prefab, it.Position + origin, BlueprintFormats.ToEuler(it.Rotation), 0, Data: data), Terrain.PieceCatalog.Get(prefab)?.Tool != null));
         }
         // Two portals of the same tag, written linked (the game pairs only portals it sees made, or that
         // a save gives linked).
@@ -115,21 +115,21 @@ public partial class MainWindow
             }
             // The link is no field of the data: set on the object itself.
             var z = ZdoData.Parse(bytes);
-            z.Connection = new[] { kindByte }.Concat(BitConverter.GetBytes(link)).ToArray();
+            z.Connection = [kindByte, .. BitConverter.GetBytes(link)];
             adds.Add((n with { Raw = z.Serialize(), Fresh = false, Data = portalData }, true));
         }
-        session.Commit($"Dungeon: generated {r.Name}", null, Array.Empty<int>(), adds);
-        _message.Text = $"Generated {r.Name}: {adds.Count} objects, 5000 m above here. A portal \u201c{tag}\u201d on the ground here leads in. "
+        session.Commit($"Dungeon: generated {r.Name}", null, [], adds);
+        MessageText.Text = $"Generated {r.Name}: {adds.Count} objects, 5000 m above here. A portal \u201c{tag}\u201d on the ground here leads in. "
             + (skipped > 0 ? $"{skipped} could not be made in this world. " : "") + "Ctrl+Z takes it back; Save writes it.";
-        _view.Orbit(arrival.X, arrival.Z, 30, 55, 60, arrival.Y);
-        _view.CutY = arrival.Y + 3.5f;
+        View.Orbit(arrival.X, arrival.Z, 30, 55, 60, arrival.Y);
+        View.CutY = arrival.Y + 3.5f;
     }
 
     // A generated dungeon as a blueprint (in the game's Homestead folder), opened in the Workshop. What
     // its objects hold (the key in its chest, signs, the boss's stars) goes in the editor's own lines of
     // the file, and the building is written as a ruin (no builder): the editor puts them back when the
     // blueprint is placed in a world. Built in game with Homestead, it is only the objects.
-    private static readonly string[] DungeonTags = { "dungeon", "generated" };
+    private static readonly string[] DungeonTags = ["dungeon", "generated"];
 
     internal async Task OpenGeneratedInWorkshop(DungeonGen.Settings settings)
     {
@@ -167,11 +167,18 @@ public partial class MainWindow
         foreach (var it in r.Items)
         {
             var e = BlueprintFormats.ToEuler(it.Rotation);
-            var data = (it.Data ?? Array.Empty<(string Section, string Key, string Value)>())
+            var data = (it.Data ?? [])
                 .Select(d => new ObjectField(d.Section, StableHash.Of(d.Key), d.Value)).Append(ObjectField.NoBuilder);
             objects.Add(new System.Text.Json.Nodes.JsonObject
             {
-                ["name"] = it.Prefab, ["dx"] = it.Position.X - mx, ["dy"] = it.Position.Y - my, ["dz"] = it.Position.Z - mz, ["rx"] = e.X, ["ry"] = e.Y, ["rz"] = e.Z, ["scale"] = 0,
+                ["name"] = it.Prefab,
+                ["dx"] = it.Position.X - mx,
+                ["dy"] = it.Position.Y - my,
+                ["dz"] = it.Position.Z - mz,
+                ["rx"] = e.X,
+                ["ry"] = e.Y,
+                ["rz"] = e.Z,
+                ["scale"] = 0,
                 ["data"] = BlueprintFormats.DataJson(data),
             });
         }
@@ -192,7 +199,7 @@ public partial class MainWindow
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            _message.Text = $"Could not write the dungeon's blueprint: {ex.Message}";
+            MessageText.Text = $"Could not write the dungeon's blueprint: {ex.Message}";
             return null;
         }
     }

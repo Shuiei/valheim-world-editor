@@ -1,4 +1,3 @@
-using System.Numerics;
 using TerrainEditor.App;
 using TerrainEditor.Editing;
 using TerrainEditor.Save;
@@ -73,14 +72,14 @@ public sealed class WorldScene
     // The game's biome colour for a biome (Heightmap.GetBiomeColor): which terrain textures it blends.
     internal static byte[] BiomeRgba(int biome) => biome switch
     {
-        2 => new byte[] { 255, 0, 0, 0 },
-        4 => new byte[] { 0, 255, 0, 0 },
-        8 => new byte[] { 0, 0, 255, 0 },
-        16 => new byte[] { 0, 0, 0, 255 },
-        32 => new byte[] { 255, 0, 0, 255 },
-        64 => new byte[] { 0, 255, 0, 0 },
-        512 => new byte[] { 0, 0, 255, 255 },
-        _ => new byte[] { 0, 0, 0, 0 },
+        2 => [255, 0, 0, 0],
+        4 => [0, 255, 0, 0],
+        8 => [0, 0, 255, 0],
+        16 => [0, 0, 0, 255],
+        32 => [255, 0, 0, 255],
+        64 => [0, 255, 0, 0],
+        512 => [0, 0, 255, 255],
+        _ => [0, 0, 0, 0],
     };
 
     // The world's folder: a path, a world's name, or (null) the one saved last on this computer.
@@ -123,7 +122,7 @@ public sealed class WorldScene
         {
             int[] b = terrain.VertexBiomes(x, z);
             float[] baseMask = terrain.BaseMask(x, z);
-            byte[][] corners = terrain.CornerBiomes(x, z).Select(BiomeRgba).ToArray();
+            byte[][] corners = [.. terrain.CornerBiomes(x, z).Select(BiomeRgba)];
             var e = edits.Get(x, z);
             int ox = (x - x0) * 64, oz = (z - z0) * 64;
             for (int k = 0; k < 65; k++)
@@ -167,16 +166,29 @@ public sealed class WorldScene
         var things = ReadThings(world, x0, z0, size, edits.Deleted, edits.Added);
         var scene = new WorldScene
         {
-            World = world, Name = world.Name, X0 = x0, Z0 = z0, Size = size, W = w, H = h, Heights = heights, Biomes = biomes,
-            Cx = minX + (w - 1) / 2f, Cz = minZ + (h - 1) / 2f, Things = things,
-            BiomeColor = biomeCol, Mask = mask, OceanDepth = ocean, Limit = limit, Modifiers = modifiers, Terrain = terrain, Owner = owner,
+            World = world,
+            Name = world.Name,
+            X0 = x0,
+            Z0 = z0,
+            Size = size,
+            W = w,
+            H = h,
+            Heights = heights,
+            Biomes = biomes,
+            Cx = minX + (w - 1) / 2f,
+            Cz = minZ + (h - 1) / 2f,
+            Things = things,
+            BiomeColor = biomeCol,
+            Mask = mask,
+            OceanDepth = ocean,
+            Limit = limit,
+            Modifiers = modifiers,
+            Terrain = terrain,
+            Owner = owner,
             LoadInfo = $"{world.Name}: read in {readMs} ms, {size}×{size} zones and {things.Count:N0} objects ready in {watch.ElapsedMilliseconds} ms",
         };
         scene.Session = new EditSession(scene, Ground.Read(terrain, edits, x0, z0, size), edits);
-        if (owner != null)
-        {
-            owner.Area = scene.Session;
-        }
+        owner?.Area = scene.Session;
         // The world's history (made in other areas), fitted to this one.
         if (owner?.History is { } kept)
         {
@@ -264,7 +276,7 @@ public sealed class WorldScene
             }
         }
         // Not the ground discs for No limit ground (invisible: they are just the ground).
-        foreach (var n in added ?? Enumerable.Empty<NewObject>())
+        foreach (var n in added ?? [])
         {
             if (Inside(n.Position) && n.Prefab != WorldSave.LocationProxyPrefab)
             {

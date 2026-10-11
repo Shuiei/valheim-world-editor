@@ -20,7 +20,7 @@ public sealed class Noise
             t ^= t + (t ^ (t >> 7)) * (t | 61);
             return (t ^ (t >> 14)) / 4294967296.0;
         }
-        int[] p = Enumerable.Range(0, 256).ToArray();
+        int[] p = [.. Enumerable.Range(0, 256)];
         for (int i = 255; i > 0; i--)
         {
             int j = (int)Math.Floor(Rnd() * (i + 1));
@@ -42,9 +42,9 @@ public sealed class Noise
             float u = h < 4 ? x : y, v = h < 4 ? y : x;
             return ((h & 1) != 0 ? -u : u) + ((h & 2) != 0 ? -v : v);
         }
-        int X = (int)MathF.Floor(x), Y = (int)MathF.Floor(y), xi = X & 255, yi = Y & 255;
-        x -= X;
-        y -= Y;
+        int x0 = (int)MathF.Floor(x), y0 = (int)MathF.Floor(y), xi = x0 & 255, yi = y0 & 255;
+        x -= x0;
+        y -= y0;
         float u = Fade(x), v = Fade(y);
         int aa = _perm[_perm[xi] + yi], ab = _perm[_perm[xi] + yi + 1], ba = _perm[_perm[xi + 1] + yi], bb = _perm[_perm[xi + 1] + yi + 1];
         return Lerp(Lerp(Grad(aa, x, y), Grad(ba, x - 1, y), u), Lerp(Grad(ab, x, y - 1), Grad(bb, x - 1, y - 1), u), v) * 0.7f;

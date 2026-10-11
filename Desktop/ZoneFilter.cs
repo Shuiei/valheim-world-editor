@@ -9,9 +9,9 @@ public sealed record ZoneFilter(IReadOnlySet<int> Biomes, bool NoBuildings, int 
 {
     // The biomes offered (Heightmap.Biome values), in the web editor's order.
     public static readonly (int Value, string Name)[] BiomeChoices =
-    {
+    [
         (1, "Meadows"), (8, "Black Forest"), (2, "Swamp"), (4, "Mountain"), (16, "Plains"), (512, "Mistlands"), (32, "Ashlands"), (64, "Deep North"), (256, "Ocean"),
-    };
+    ];
 
     public (List<(int X, int Z)> Zones, int Objects) Match(int[] stats)
     {

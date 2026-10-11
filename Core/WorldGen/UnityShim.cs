@@ -28,11 +28,11 @@ public struct Vector2
 
     // Squares and sums in double, as the game's Mono runtime does with these floats (the float result
     // differed now and then: rivers and streams a hair off).
-    public float magnitude => (float)Math.Sqrt((double)x * x + (double)y * y);
+    public readonly float magnitude => (float)Math.Sqrt((double)x * x + (double)y * y);
 
-    public float sqrMagnitude => (float)((double)x * x + (double)y * y);
+    public readonly float sqrMagnitude => (float)((double)x * x + (double)y * y);
 
-    public Vector2 normalized
+    public readonly Vector2 normalized
     {
         get
         {
@@ -66,9 +66,9 @@ public struct Vector2
 
     public static bool operator !=(Vector2 a, Vector2 b) => !(a == b);
 
-    public override bool Equals(object obj) => obj is Vector2 v && x.Equals(v.x) && y.Equals(v.y);
+    public override readonly bool Equals(object obj) => obj is Vector2 v && x.Equals(v.x) && y.Equals(v.y);
 
-    public override int GetHashCode() => x.GetHashCode() ^ (y.GetHashCode() << 2);
+    public override readonly int GetHashCode() => x.GetHashCode() ^ (y.GetHashCode() << 2);
 }
 
 public struct Vector3
@@ -88,9 +88,9 @@ public struct Vector3
 
     public static Vector3 zero => new(0f, 0f, 0f);
 
-    public float magnitude => (float)Math.Sqrt(x * x + y * y + z * z);
+    public readonly float magnitude => (float)Math.Sqrt(x * x + y * y + z * z);
 
-    public Vector3 normalized => Normalize(this);
+    public readonly Vector3 normalized => Normalize(this);
 
     public static Vector3 Normalize(Vector3 v)
     {
@@ -119,12 +119,12 @@ public struct Vector2i : IEquatable<Vector2i>
         this.y = y;
     }
 
-    public bool Equals(Vector2i other) => x == other.x && y == other.y;
+    public readonly bool Equals(Vector2i other) => x == other.x && y == other.y;
 
-    public override bool Equals(object obj) => obj is Vector2i v && Equals(v);
+    public override readonly bool Equals(object obj) => obj is Vector2i v && Equals(v);
 
     // Spread out (x ^ y gave the world's grid cells only about 512 hashes: long chains in a dictionary).
-    public override int GetHashCode() => unchecked(x * 73856093 ^ y * 19349663);
+    public override readonly int GetHashCode() => unchecked(x * 73856093 ^ y * 19349663);
 
     public static bool operator ==(Vector2i a, Vector2i b) => a.Equals(b);
 
@@ -145,11 +145,11 @@ public struct Vector2s : IEquatable<Vector2s>
 
     public static Vector2s operator -(Vector2s a, Vector2s b) => new(a.x - b.x, a.y - b.y);
 
-    public bool Equals(Vector2s other) => x == other.x && y == other.y;
+    public readonly bool Equals(Vector2s other) => x == other.x && y == other.y;
 
-    public override bool Equals(object obj) => obj is Vector2s v && Equals(v);
+    public override readonly bool Equals(object obj) => obj is Vector2s v && Equals(v);
 
-    public override int GetHashCode() => x | (y << 16);
+    public override readonly int GetHashCode() => x | (y << 16);
 }
 
 public struct Color
@@ -207,7 +207,7 @@ public static class Utils
 
 public static class ZLog
 {
-    public static void Log(object message)
+    public static void Log(object _)
     {
     }
 }
@@ -255,7 +255,7 @@ public sealed class AltBiomeWorldData
 
     public BiomeSector[,] PointSectors => null;
 
-    public static int WorldSpaceToMapSpace(float v) => 0;
+    public static int WorldSpaceToMapSpace(float _) => 0;
 }
 
 public sealed class World

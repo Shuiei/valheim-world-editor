@@ -36,27 +36,27 @@ public sealed class BuildPanel
     // tray's pieces (plants, feasts).
     internal const int Plants = 100, Feasts = 101;
     internal static readonly (int Category, string Name)[] Tabs =
-    {
+    [
         (2, "Building"), (3, "Heavy building"), (4, "Furniture"), (1, "Crafting"), (0, "Misc"), (5, "More"), (Plants, "Plants"), (Feasts, "Feasts"),
-    };
+    ];
 
-    private static readonly float[] Grids = { 0, 0.5f, 1, 2 };
-    private static readonly float[] Turns = { 1, 15, 22.5f, 45, 90 };
+    private static readonly float[] Grids = [0, 0.5f, 1, 2];
+    private static readonly float[] Turns = [1, 15, 22.5f, 45, 90];
 
     private readonly PlaceInput _input;
     private readonly WrapPanel _tabs = new() { ItemSpacing = 3, LineSpacing = 3 };
     private int _tab = 2;
-    private readonly Dictionary<string, Bitmap?> _pictures = new();
-    private readonly HashSet<string> _drawing = new();
+    private readonly Dictionary<string, Bitmap?> _pictures = [];
+    private readonly HashSet<string> _drawing = [];
 
     // Everything players build: the hammer's pieces, the cultivator's and the serving tray's (prefab,
     // English name, tab). The hoe's are ground edits, not pieces.
     internal static readonly Lazy<List<(string Prefab, string Name, int Category)>> Pieces = new(() =>
-        PieceCatalog.Names.Select(n => (n, PieceCatalog.Get(StableHash.Of(n))))
+        [.. PieceCatalog.Names.Select(n => (n, PieceCatalog.Get(StableHash.Of(n))))
             .Where(p => p.Item2 is { Tool: "hammer" or "cultivator" or "feaster" })
             .Select(p => (p.n, PieceCost.PieceName(p.n), p.Item2!.Tool switch { "cultivator" => Plants, "feaster" => Feasts, _ => p.Item2.Category }))
             .OrderBy(p => StationRank(PieceCost.Get(p.n)?.Station)).ThenBy(p => PieceCost.Get(p.n)?.Station ?? "", StringComparer.OrdinalIgnoreCase)
-            .ThenBy(p => p.Item2, StringComparer.OrdinalIgnoreCase).ToList());
+            .ThenBy(p => p.Item2, StringComparer.OrdinalIgnoreCase)]);
 
     // Pieces by the station they need, in the order players get them (none first: built anywhere), then
     // by name.
@@ -87,7 +87,7 @@ public sealed class BuildPanel
             b.Click += (_, _) => { _tab = cat; Search.Text = ""; Render(); };
             _tabs.Children.Add(b);
         }
-        Search.PropertyChanged += (_, e) => { if (e.Property == TextBox.TextProperty) Render(); };
+        Search.PropertyChanged += (_, e) => { if (e.Property == TextBox.TextProperty) { Render(); } };
         SnapBox.IsCheckedChanged += (_, _) => { Tool.SnapTo = SnapBox.IsChecked == true; Tool.Notify(); };
         GridBox.SelectionChanged += (_, _) => { Tool.GridStep = Grids[Math.Max(0, GridBox.SelectedIndex)]; Tool.Notify(); };
         TurnBox.SelectionChanged += (_, _) => _input.TurnStep = Turns[Math.Max(0, TurnBox.SelectedIndex)];
@@ -114,7 +114,7 @@ public sealed class BuildPanel
         GenerateButton.Click += (_, _) => ShowDungeon();
         BackToLibrary.Tip("build.backToLibrary");
         BackToLibrary.Click += (_, _) => ShowLibrary(true);
-        LibrarySearch.PropertyChanged += (_, e) => { if (e.Property == TextBox.TextProperty) RenderLibrary(); };
+        LibrarySearch.PropertyChanged += (_, e) => { if (e.Property == TextBox.TextProperty) { RenderLibrary(); } };
         _library = new StackPanel
         {
             Spacing = 6,
@@ -247,7 +247,9 @@ public sealed class BuildPanel
             LibraryList.Children.Add(new TextBlock
             {
                 Text = all.Count == 0 ? "No blueprints yet: build one and Save blueprint, import a file, or drop one here." : "Nothing matches.",
-                FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap,
+                FontSize = 11,
+                Foreground = Ui.Muted,
+                TextWrapping = TextWrapping.Wrap,
             });
             return;
         }
@@ -285,7 +287,7 @@ public sealed class BuildPanel
             Padding = new Thickness(4),
             CornerRadius = new CornerRadius(6),
             Background = Brushes.Transparent,
-            Cursor = new Avalonia.Input.Cursor(Avalonia.Input.StandardCursorType.Hand),
+            Cursor = new Cursor(StandardCursorType.Hand),
             Tag = e.Path,
             Child = new Grid
             {
@@ -309,7 +311,7 @@ public sealed class BuildPanel
         };
         ToolTip.SetTip(row, "Drag onto the plot to add it there.");
         // Dragged a few pixels: a drag and drop carrying the blueprint's file.
-        Avalonia.Input.PointerPressedEventArgs? pressed = null;
+        PointerPressedEventArgs? pressed = null;
         row.PointerPressed += (_, ev) =>
         {
             if (ev.GetCurrentPoint(row).Properties.IsLeftButtonPressed && ev.Source is not Button)
@@ -371,7 +373,7 @@ public sealed class BuildPanel
         Tool.Chosen.Add(prefab);
         Tool.Notify();
         Chosen.Text = PieceCost.PieceName(prefab);
-        Cost.Text = "Costs " + PieceCost.Of(new[] { prefab }).Describe(6);
+        Cost.Text = "Costs " + PieceCost.Of([prefab]).Describe(6);
         foreach (var b in Tiles.Children.OfType<Button>())
         {
             b.Classes.Set("on", b.Tag as string == prefab);
@@ -420,7 +422,7 @@ public sealed class BuildPanel
                     },
                 },
             };
-            ToolTip.SetTip(b, $"{name} ({prefab}) · {PieceCost.Of(new[] { prefab }).Describe(6)}");
+            ToolTip.SetTip(b, $"{name} ({prefab}) · {PieceCost.Of([prefab]).Describe(6)}");
             b.Classes.Set("on", prefab == chosen);
             b.Click += (_, _) => Choose(prefab);
             Tiles.Children.Add(b);
@@ -429,7 +431,7 @@ public sealed class BuildPanel
 
     // A blueprint without its picture (made elsewhere): one drawn from its pieces, kept in memory only
     // (its folder is left as it is), away from the window's thread.
-    private readonly Dictionary<(string, DateTime), Bitmap?> _blueprintPictures = new();
+    private readonly Dictionary<(string, DateTime), Bitmap?> _blueprintPictures = [];
 
     private void DrawPicture(string path, Image image)
     {
@@ -445,7 +447,7 @@ public sealed class BuildPanel
             try
             {
                 var bp = TerrainEditor.App.BlueprintFormats.Parse(path, File.ReadAllText(path));
-                return BuildingPicture.Draw(bp.Pieces.Select(p => new BuildingPicture.Piece(p.Name, p.Position, p.Euler, p.Scale)).ToList(), models, 128);
+                return BuildingPicture.Draw([.. bp.Pieces.Select(p => new BuildingPicture.Piece(p.Name, p.Position, p.Euler, p.Scale))], models, 128);
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
@@ -476,7 +478,7 @@ public sealed class BuildPanel
             var models = Models();
             Task.Run(() =>
             {
-                byte[] png = BuildingPicture.Draw(new[] { new BuildingPicture.Piece(prefab, Vector3.Zero, new Vector3(0, 30, 0), 0) }, models, 96);
+                byte[] png = BuildingPicture.Draw([new BuildingPicture.Piece(prefab, Vector3.Zero, new Vector3(0, 30, 0), 0)], models, 96);
                 Dispatcher.UIThread.Post(() =>
                 {
                     using var ms = new MemoryStream(png);

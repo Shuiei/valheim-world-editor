@@ -27,7 +27,7 @@ public class CoreGenMapTests
         var map = new MapData(terrain, edits);
         // A zone the test world never edited: zone 5, 5 (x and z from 288 to 352).
         var l = map.Detail(288, 288, 64, edits.Version);
-        var b = terrain.BaseZone(5, 5);
+        float[] b = terrain.BaseZone(5, 5);
         for (int row = 0; row < 64; row += 7)
         {
             for (int col = 0; col < 64; col += 7)
@@ -61,7 +61,7 @@ public class CoreGenMapTests
         e.Paint[a * 4] = 1f;
         e.Paint[a * 4 + 3] = 0.5f;
         edits.Put(e);
-        var b = terrain.BaseZone(5, 5);
+        float[] b = terrain.BaseZone(5, 5);
         var l = new MapData(terrain, edits).Detail(288, 288, 64, edits.Version);
         Assert.Equal((float)(Half)(b[a] + 3f), H(l, 10, 10));
         Assert.Equal((float)(Half)(b[c] + 8f), H(l, 30, 20));
@@ -81,7 +81,7 @@ public class CoreGenMapTests
         foreach (var (wx, wz) in new[] { (300, 300), (351, 351), (352, 352), (420, 310), (310, 420), (427, 427) })
         {
             int zx = (int)Math.Floor((wx + 32) / 64.0), zz = (int)Math.Floor((wz + 32) / 64.0);
-            var b = terrain.BaseZone(zx, zz);
+            float[] b = terrain.BaseZone(zx, zz);
             int k = wz - (zz * 64 - 32), m = wx - (zx * 64 - 32);
             Assert.Equal((float)(Half)b[k * EditStore.Grid + m], H(l, wx - 300, wz - 300));
         }
@@ -161,7 +161,7 @@ public class CoreGenMapTests
         // Raw and base ground are the same where no location flattens it (no modifiers given).
         Assert.Equal(terrain.RawZone(5, 5), terrain.BaseZone(5, 5));
         // Vertex biomes and the zone's corner biomes come from the same generator.
-        var vb = terrain.VertexBiomes(5, 5);
+        int[] vb = terrain.VertexBiomes(5, 5);
         Assert.Equal(65 * 65, vb.Length);
         Assert.Equal((int)terrain.BiomeAt(5 * 64 - 32, 5 * 64 - 32), vb[0]);
         Assert.Equal(4, terrain.CornerBiomes(5, 5).Length);

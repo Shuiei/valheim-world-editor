@@ -34,8 +34,7 @@ public static class SettingsDialog
                 problems.Add("The Valheim folder must be the game's folder, the one with valheim_Data (in Steam: right-click Valheim, Manage › Browse local files).");
             }
         }
-        List<string> Clean(IEnumerable<string> list, string what) => list.Select(p => p.Trim()).Where(p => p.Length > 0).Select(Expand).Distinct()
-            .Where(p => { if (Directory.Exists(p)) return true; problems.Add($"{what} not found: {p}"); return false; }).ToList();
+        List<string> Clean(IEnumerable<string> list, string what) => [.. list.Select(p => p.Trim()).Where(p => p.Length > 0).Select(Expand).Distinct().Where(p => { if (Directory.Exists(p)) { return true; } problems.Add($"{what} not found: {p}"); return false; })];
         var bep = Clean(bepInEx, "BepInEx folder");
         var wl = Clean(worlds, "World folder");
         if (problems.Count > 0)
@@ -88,7 +87,7 @@ public static class SettingsDialog
         }
         var valheim = new TextBox { Text = settings.ValheimPath, PlaceholderText = "automatic (Steam libraries)" }.Tip("settings.valheim");
         var browse = new Button { Content = "Browse…" }.Tip("settings.browse");
-        browse.Click += async (_, _) => { if (await Pick("The Valheim game folder (with valheim_Data)") is string p) valheim.Text = p; };
+        browse.Click += async (_, _) => { if (await Pick("The Valheim game folder (with valheim_Data)") is string p) { valheim.Text = p; } };
         var auto = new Button { Content = "Automatic" }.Tip("settings.auto");
         auto.Click += (_, _) => valheim.Text = "";
         StackPanel List(List<string> initial, string pickTitle, out Func<IEnumerable<string>> read)
@@ -101,7 +100,7 @@ public static class SettingsDialog
                 var x = new Button { Content = "✕" }.Tip("settings.remove");
                 var row = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto,Auto"), ColumnSpacing = 4 };
                 var br = new Button { Content = "Browse…" }.Tip("settings.browse");
-                br.Click += async (_, _) => { if (await Pick(pickTitle) is string p) box.Text = p; };
+                br.Click += async (_, _) => { if (await Pick(pickTitle) is string p) { box.Text = p; } };
                 Grid.SetColumn(br, 1);
                 Grid.SetColumn(x, 2);
                 row.Children.Add(box);
@@ -111,7 +110,7 @@ public static class SettingsDialog
                 boxes.Add(box);
                 rows.Children.Add(row);
             }
-            foreach (var f in initial)
+            foreach (string f in initial)
             {
                 Add(f);
             }
@@ -131,7 +130,7 @@ public static class SettingsDialog
         ShowCommand();
         port.TextChanged += (_, _) => ShowCommand();
         var copy = new Button { Content = "Copy" }.Tip("settings.claudeCopy");
-        copy.Click += async (_, _) => { if (TopLevel.GetTopLevel(dialog)?.Clipboard is { } cb) await Avalonia.Input.Platform.ClipboardExtensions.SetTextAsync(cb, command.Text ?? ""); };
+        copy.Click += async (_, _) => { if (TopLevel.GetTopLevel(dialog)?.Clipboard is { } cb) { await Avalonia.Input.Platform.ClipboardExtensions.SetTextAsync(cb, command.Text ?? ""); } };
         var renew = new Button { Content = "New token" }.Tip("settings.claudeToken");
         renew.Click += (_, _) => { token = ClaudeServer.NewToken(); ShowCommand(); };
         var claudeDetails = new StackPanel { Spacing = 6, IsVisible = claude.IsChecked == true };
@@ -142,7 +141,7 @@ public static class SettingsDialog
         // Claude Desktop starts a program: this one, relaying to the running editor (ClaudeRelay).
         var desktop = new TextBox { Name = "ClaudeDesktop", IsReadOnly = true, TextWrapping = TextWrapping.Wrap, FontSize = 12, FontFamily = new FontFamily("monospace"), Text = ClaudeServer.DesktopConfig(Environment.ProcessPath ?? "ValheimWorldEditor") }.Tip("settings.claudeDesktop");
         var copyDesktop = new Button { Content = "Copy" }.Tip("settings.claudeCopy");
-        copyDesktop.Click += async (_, _) => { if (TopLevel.GetTopLevel(dialog)?.Clipboard is { } cb) await Avalonia.Input.Platform.ClipboardExtensions.SetTextAsync(cb, desktop.Text ?? ""); };
+        copyDesktop.Click += async (_, _) => { if (TopLevel.GetTopLevel(dialog)?.Clipboard is { } cb) { await Avalonia.Input.Platform.ClipboardExtensions.SetTextAsync(cb, desktop.Text ?? ""); } };
         claudeDetails.Children.Add(Hint("Claude Desktop: add this to its configuration (Settings > Developer > Edit Config, claude_desktop_config.json), then restart it. The editor must be running:"));
         claudeDetails.Children.Add(new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 4, Children = { desktop, Col(copyDesktop, 1) } });
         if (ClaudeServer.Status is string status)

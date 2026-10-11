@@ -26,7 +26,7 @@ public sealed class MapView : OpenGlControlBase
     private GlObjects _own = null!;
     private bool _es;
     private uint _prog, _vao, _lineProg, _lineVao, _lineVbo, _fillProg, _fillVao, _fillVbo;
-    private readonly Dictionary<string, (uint Tex, int Unit)> _tex = new();
+    private readonly Dictionary<string, (uint Tex, int Unit)> _tex = [];
     private MapData? _data;
     private WorldSession? _session;
     private volatile MapData.Layers? _global;
@@ -46,14 +46,14 @@ public sealed class MapView : OpenGlControlBase
     // Player-built pieces (PieceCatalog.Encode), read in the background; drawn as their footprints.
     public bool ShowBuildings { get; set; } = true;
     private volatile float[]? _pieces;
-    private int[] _pieceOrder = Array.Empty<int>();
+    private int[] _pieceOrder = [];
     public int PieceCount => (_pieces?.Length ?? 0) / PieceCatalog.Stride;
     public event Action? PiecesRead;
     // Live: the players online. Search results (the chosen one larger), and the zone filter's matches.
-    public IReadOnlyList<(string Name, float X, float Z)> Players { get; set; } = Array.Empty<(string, float, float)>();
-    public IReadOnlyList<Vector2> Pins { get; set; } = Array.Empty<Vector2>();
+    public IReadOnlyList<(string Name, float X, float Z)> Players { get; set; } = [];
+    public IReadOnlyList<Vector2> Pins { get; set; } = [];
     public int PinChosen { get; set; } = -1;
-    public IReadOnlyList<(int X, int Z)> Matches { get; set; } = Array.Empty<(int, int)>();
+    public IReadOnlyList<(int X, int Z)> Matches { get; set; } = [];
     // The view moved or zoomed (labels over the map follow).
     public event Action? ViewChanged;
     public event Action<float, float>? Picked;
@@ -118,7 +118,7 @@ public sealed class MapView : OpenGlControlBase
         {
             float[] data = PieceCatalog.Encode(world, deleted);
             // Lower pieces first so roofs end up on top, like looking down from above.
-            int[] order = Enumerable.Range(0, data.Length / PieceCatalog.Stride).OrderBy(i => data[i * PieceCatalog.Stride + 8]).ToArray();
+            int[] order = [.. Enumerable.Range(0, data.Length / PieceCatalog.Stride).OrderBy(i => data[i * PieceCatalog.Stride + 8])];
             Dispatcher.UIThread.Post(() =>
             {
                 if (_session != s)
@@ -139,7 +139,7 @@ public sealed class MapView : OpenGlControlBase
 
     protected override void OnOpenGlInit(GlInterface gl)
     {
-        _gl = GL.GetApi(name => gl.GetProcAddress(name));
+        _gl = GL.GetApi(gl.GetProcAddress);
         _own = new GlObjects(_gl);
         _es = GlVersion.Type == GlProfileType.OpenGLES;
         _prog = Program(MapShader.Vertex, MapShader.Fragment);
@@ -147,7 +147,7 @@ public sealed class MapView : OpenGlControlBase
         _gl.BindVertexArray(_vao);
         uint vbo = _own.Buffer();
         _gl.BindBuffer(BufferTargetARB.ArrayBuffer, vbo);
-        float[] tri = { -1, -1, 3, -1, -1, 3 };
+        float[] tri = [-1, -1, 3, -1, -1, 3];
         unsafe
         {
             fixed (float* p = tri)
@@ -258,9 +258,14 @@ public sealed class MapView : OpenGlControlBase
     // Plain stand-ins (RGBA) when the game's map textures cannot be read (Valheim not found).
     private static readonly Dictionary<string, byte[]> Fallback = new()
     {
-        ["_BackgroundTex"] = new byte[] { 200, 186, 150, 255 }, ["_FogLayerTex"] = new byte[] { 255, 255, 255, 0 }, ["_WaterTex"] = new byte[] { 128, 128, 128, 255 },
-        ["_lavaTex"] = new byte[] { 128, 128, 128, 255 }, ["_MountainTex"] = new byte[] { 255, 255, 255, 255 }, ["_CloudTex"] = new byte[] { 0, 0, 0, 0 },
-        ["_ForestTex"] = new byte[] { 128, 128, 128, 0 }, ["_SpaceTex"] = new byte[] { 10, 10, 16, 255 },
+        ["_BackgroundTex"] = [200, 186, 150, 255],
+        ["_FogLayerTex"] = [255, 255, 255, 0],
+        ["_WaterTex"] = [128, 128, 128, 255],
+        ["_lavaTex"] = [128, 128, 128, 255],
+        ["_MountainTex"] = [255, 255, 255, 255],
+        ["_CloudTex"] = [0, 0, 0, 0],
+        ["_ForestTex"] = [128, 128, 128, 0],
+        ["_SpaceTex"] = [10, 10, 16, 255],
     };
 
     private unsafe void LoadTextures()
@@ -341,12 +346,12 @@ public sealed class MapView : OpenGlControlBase
 
     // Material values from the game's "minimap shader" material, and clear-midday lighting.
     private static readonly (string Name, float[] V)[] Material =
-    {
+    [
         ("_ForestColor", new[] { 0.9191f, 0.8218f, 0.6758f, 1 }), ("_WaterColor", new[] { 0.8429f, 0.9373f, 1.0917f, 1 }), ("_WaterColorDeep", new[] { 0.343f, 0.5337f, 0.7647f, 1 }),
         ("_WaterColorAshlands", new[] { 0.2078f, 0.2078f, 0.2078f, 1 }), ("_WaterColorAshlandsDeep", new[] { 0.2235f, 0.251f, 0.3686f, 1 }),
         ("_lightColor", new[] { 1.2f, 1.2f, 1.2f }), ("_ambientLightColor", new[] { 0.8088f, 0.8418f, 1.0f }), ("_lavaColor1", new[] { 0.4157f, 0.0235f, 0.0f }), ("_lavaColor2", new[] { 4.5126f, 0.2599f, 0.0f }),
         ("_SunColor", new[] { 1.0f, 0.97f, 0.9f, 1 }), ("_AmbientColor", new[] { 0.36f, 0.38f, 0.44f, 1 }), ("_SunFogColor", new[] { 0.9f, 0.9f, 1, 1 }),
-    };
+    ];
 
     private static float ToLinear(float c) => c <= 0.04045f ? c / 12.92f : MathF.Pow((c + 0.055f) / 1.055f, 2.4f);
 
@@ -402,9 +407,20 @@ public sealed class MapView : OpenGlControlBase
         foreach (var (name, v) in Material)
         {
             int loc = U(name);
-            if (loc < 0) continue;
-            var c = v.Select((x, i) => i < 3 ? ToLinear(x) : x).ToArray();
-            if (c.Length == 3) _gl.Uniform3(loc, c[0], c[1], c[2]); else _gl.Uniform4(loc, c[0], c[1], c[2], c[3]);
+            if (loc < 0)
+            {
+                continue;
+            }
+
+            float[] c = [.. v.Select((x, i) => i < 3 ? ToLinear(x) : x)];
+            if (c.Length == 3)
+            {
+                _gl.Uniform3(loc, c[0], c[1], c[2]);
+            }
+            else
+            {
+                _gl.Uniform4(loc, c[0], c[1], c[2], c[3]);
+            }
         }
         _gl.Uniform3(U("_SunDir"), -0.35f, 0.86f, 0.36f);
         _gl.Uniform1(U("_normalIntensity"), 4f);
@@ -421,7 +437,7 @@ public sealed class MapView : OpenGlControlBase
         _gl.Uniform1(U("metersPerPixel"), mpp);
         _gl.Uniform1(U("mapMeters"), mapMeters);
         // Floats (a vec4): whole numbers would pick glUniform4i, which a float uniform refuses.
-        _gl.Uniform4(U("detailRect"), (float)(d?.X0 ?? 0), (float)(d?.Z0 ?? 0), (float)(d?.Size ?? 1), d != null ? 1f : 0f);
+        _gl.Uniform4(U("detailRect"), d?.X0 ?? 0, d?.Z0 ?? 0, d?.Size ?? 1, d != null ? 1f : 0f);
         _gl.Uniform1(U("showPaint"), ShowPaint ? 1f : 0f);
         _gl.Uniform1(U("showClouds"), ShowClouds ? 1f : 0f);
         _gl.BindVertexArray(_vao);
@@ -439,7 +455,7 @@ public sealed class MapView : OpenGlControlBase
         _gl.Disable(EnableCap.Blend);
         _gl.BindVertexArray(0);
         _gl.UseProgram(0);
-        _drawn++;
+        FramesDrawn++;
         if (Options.Driver)
         {
             for (var e = _gl.GetError(); e != GLEnum.NoError; e = _gl.GetError())
@@ -450,7 +466,7 @@ public sealed class MapView : OpenGlControlBase
         }
         // The test driver's pictures: once the world map is in and a few frames are drawn.
         // Zoomed in, the 1 m close-up is read in the background: the picture waits for it.
-        if (_picture is { } req && _drawn > 10 && (mpp >= 6 || (_detailShown != null && _detail == _detailShown && !_asking)))
+        if (_picture is { } req && FramesDrawn > 10 && (mpp >= 6 || (_detailShown != null && _detail == _detailShown && !_asking)))
         {
             _picture = null;
             try
@@ -467,7 +483,6 @@ public sealed class MapView : OpenGlControlBase
 
     // Close up (under 6 m a pixel): the ground in view at 1 m, with the edits, read in the background.
     private bool _asking;
-    private int _drawn;
     private volatile GlPicture.Request? _picture;
 
     internal Task Picture(string path)
@@ -478,7 +493,7 @@ public sealed class MapView : OpenGlControlBase
         return r.Done.Task;
     }
 
-    internal int FramesDrawn => _drawn;
+    internal int FramesDrawn { get; private set; }
 
     // The 1 m close-up is drawn (zoomed in, once read).
     internal bool DetailShown => _detailShown != null;
@@ -538,7 +553,7 @@ public sealed class MapView : OpenGlControlBase
     {
         foreach (var p in new[] { a, b, c, a, c, d })
         {
-            to.AddRange(new[] { p.X, p.Y, col.X, col.Y, col.Z, col.W });
+            to.AddRange([p.X, p.Y, col.X, col.Y, col.Z, col.W]);
         }
     }
 
@@ -547,25 +562,25 @@ public sealed class MapView : OpenGlControlBase
         for (int i = 0; i < sides; i++)
         {
             float a0 = i * MathF.Tau / sides, a1 = (i + 1) * MathF.Tau / sides;
-            to.AddRange(new[] { x, z, col.X, col.Y, col.Z, col.W });
-            to.AddRange(new[] { x + r * MathF.Cos(a0), z + r * MathF.Sin(a0), col.X, col.Y, col.Z, col.W });
-            to.AddRange(new[] { x + r * MathF.Cos(a1), z + r * MathF.Sin(a1), col.X, col.Y, col.Z, col.W });
+            to.AddRange([x, z, col.X, col.Y, col.Z, col.W]);
+            to.AddRange([x + r * MathF.Cos(a0), z + r * MathF.Sin(a0), col.X, col.Y, col.Z, col.W]);
+            to.AddRange([x + r * MathF.Cos(a1), z + r * MathF.Sin(a1), col.X, col.Y, col.Z, col.W]);
         }
     }
 
     // The web map's piece colours per category (fill, edge): misc, crafting, wood, stone, furniture.
     private static readonly (Vector4 Fill, Vector4 Edge)[] PieceStyle =
-    {
+    [
         (new(150 / 255f, 72 / 255f, 34 / 255f, 0.92f), new(60 / 255f, 25 / 255f, 10 / 255f, 0.9f)),
         (new(128 / 255f, 56 / 255f, 40 / 255f, 0.9f), new(55 / 255f, 22 / 255f, 14 / 255f, 0.9f)),
         (new(92 / 255f, 64 / 255f, 40 / 255f, 0.88f), new(38 / 255f, 24 / 255f, 14 / 255f, 0.9f)),
         (new(110 / 255f, 104 / 255f, 96 / 255f, 0.92f), new(45 / 255f, 42 / 255f, 38 / 255f, 0.9f)),
         (new(140 / 255f, 102 / 255f, 62 / 255f, 0.8f), new(60 / 255f, 40 / 255f, 22 / 255f, 0.85f)),
-    };
+    ];
 
     // Built once per zoom kind: footprints close up (edges very close), dots of two pixels further out.
     private (float[]? Pieces, int Kind, float Mpp) _buildingsKey;
-    private float[] _buildingFill = Array.Empty<float>(), _buildingEdge = Array.Empty<float>();
+    private float[] _buildingFill = [], _buildingEdge = [];
 
     private void DrawBuildings()
     {
@@ -602,12 +617,12 @@ public sealed class MapView : OpenGlControlBase
                 {
                     foreach (var (p, q) in new[] { (p0, p1), (p1, p2), (p2, p3), (p3, p0) })
                     {
-                        edge.AddRange(new[] { p.X, p.Y, style.Edge.X, style.Edge.Y, style.Edge.Z, style.Edge.W, q.X, q.Y, style.Edge.X, style.Edge.Y, style.Edge.Z, style.Edge.W });
+                        edge.AddRange([p.X, p.Y, style.Edge.X, style.Edge.Y, style.Edge.Z, style.Edge.W, q.X, q.Y, style.Edge.X, style.Edge.Y, style.Edge.Z, style.Edge.W]);
                     }
                 }
             }
-            _buildingFill = fill.ToArray();
-            _buildingEdge = edge.ToArray();
+            _buildingFill = [.. fill];
+            _buildingEdge = [.. edge];
         }
         Fill(_buildingFill, PrimitiveType.Triangles);
         Fill(_buildingEdge, PrimitiveType.Lines);
@@ -635,7 +650,7 @@ public sealed class MapView : OpenGlControlBase
         {
             Zone(x, z, new Vector4(1, 70 / 255f, 50 / 255f, 0.45f));
         }
-        Fill(data.ToArray(), PrimitiveType.Triangles);
+        Fill([.. data], PrimitiveType.Triangles);
     }
 
     // Search results (orange pins, the chosen one larger with a ring) and, live, the players (blue).
@@ -672,7 +687,7 @@ public sealed class MapView : OpenGlControlBase
             Disc(data, x, z, 8 * m, new Vector4(11 / 255f, 32 / 255f, 48 / 255f, 1));
             Disc(data, x, z, 6 * m, new Vector4(79 / 255f, 195 / 255f, 1, 1));
         }
-        Fill(data.ToArray(), PrimitiveType.Triangles);
+        Fill([.. data], PrimitiveType.Triangles);
     }
 
     // ---- Lines over the map (in screen pixels): the chosen area, edited zones, resets, the grid.
@@ -691,7 +706,7 @@ public sealed class MapView : OpenGlControlBase
             var a = C(x0, z0); var b = C(x1, z0); var c = C(x1, z1); var d = C(x0, z1);
             foreach (var (p, q) in new[] { (a, b), (b, c), (c, d), (d, a) })
             {
-                to.AddRange(new[] { p.X, p.Y, 0, q.X, q.Y, 0 });
+                to.AddRange([p.X, p.Y, 0, q.X, q.Y, 0]);
             }
         }
         float halfW = w / 2f * mpp, halfH = h / 2f * mpp;
@@ -701,12 +716,12 @@ public sealed class MapView : OpenGlControlBase
             for (float x = MathF.Floor((Center.X - halfW + 32) / 64) * 64 - 32; x <= Center.X + halfW; x += 64)
             {
                 var a = C(x, Center.Y - halfH); var b = C(x, Center.Y + halfH);
-                grid.AddRange(new[] { a.X, a.Y, 0, b.X, b.Y, 0 });
+                grid.AddRange([a.X, a.Y, 0, b.X, b.Y, 0]);
             }
             for (float z = MathF.Floor((Center.Y - halfH + 32) / 64) * 64 - 32; z <= Center.Y + halfH; z += 64)
             {
                 var a = C(Center.X - halfW, z); var b = C(Center.X + halfW, z);
-                grid.AddRange(new[] { a.X, a.Y, 0, b.X, b.Y, 0 });
+                grid.AddRange([a.X, a.Y, 0, b.X, b.Y, 0]);
             }
             groups.Add((grid.ToArray(), new Vector4(1, 1, 1, 0.25f)));
         }

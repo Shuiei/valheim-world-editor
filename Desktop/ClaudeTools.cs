@@ -74,13 +74,13 @@ public sealed class ClaudeTools
         {
             return "No area is open (open_area, or the Workshop).";
         }
-        var h = scene.Heights;
+        float[] h = scene.Heights;
         var biomes = scene.Biomes.GroupBy(b => ((ValheimGen.Heightmap.Biome)b).ToString()).OrderByDescending(g => g.Count())
             .Select(g => new { biome = g.Key, share = MathF.Round(100f * g.Count() / scene.Biomes.Length, 1) });
         List<(string Name, string Kind)> things;
         lock (scene.Things)
         {
-            things = scene.Things.Where(t => !t.Gone).Select(t => (Name: _w.NameOfPrefab(t.Prefab) ?? t.Prefab.ToString(), Kind: KindOf(t))).ToList();
+            things = [.. scene.Things.Where(t => !t.Gone).Select(t => (Name: _w.NameOfPrefab(t.Prefab) ?? t.Prefab.ToString(), Kind: KindOf(t)))];
         }
         return ToJson(new
         {
@@ -125,7 +125,7 @@ public sealed class ClaudeTools
                 q = q.Where(p => (p.t.Position.X - px) * (p.t.Position.X - px) + (p.t.Position.Z - pz) * (p.t.Position.Z - pz) <= radius * radius)
                     .OrderBy(p => (p.t.Position.X - px) * (p.t.Position.X - px) + (p.t.Position.Z - pz) * (p.t.Position.Z - pz));
             }
-            found = q.Take(Math.Clamp(limit, 1, 2000)).Select(p => Describe(p.t, p.i)).ToList();
+            found = [.. q.Take(Math.Clamp(limit, 1, 2000)).Select(p => Describe(p.t, p.i))];
         }
         return ToJson(found);
     });
@@ -167,9 +167,14 @@ public sealed class ClaudeTools
 
     private object Describe(WorldScene.Thing t, int i) => new
     {
-        id = i, name = _w.NameOfPrefab(t.Prefab), kind = KindOf(t),
-        x = MathF.Round(t.Position.X, 2), y = MathF.Round(t.Position.Y, 2), z = MathF.Round(t.Position.Z, 2),
-        yaw = MathF.Round(t.Rotation.Y, 1), built = t.Piece,
+        id = i,
+        name = _w.NameOfPrefab(t.Prefab),
+        kind = KindOf(t),
+        x = MathF.Round(t.Position.X, 2),
+        y = MathF.Round(t.Position.Y, 2),
+        z = MathF.Round(t.Position.Z, 2),
+        yaw = MathF.Round(t.Rotation.Y, 1),
+        built = t.Piece,
     };
 
     [McpServerTool(Name = "screenshot", ReadOnly = true, Title = "See the view")]
@@ -297,18 +302,18 @@ public sealed class ClaudeTools
             List<(float X, float Z, string Kind)> things;
             lock (scene.Things)
             {
-                things = scene.Things.Where(t => !t.Gone).Select(t => (t.Position.X, t.Position.Z, KindOf(t))).ToList();
+                things = [.. scene.Things.Where(t => !t.Gone).Select(t => (t.Position.X, t.Position.Z, KindOf(t)))];
             }
             // Paint (dirt, cultivated, paved) per ground point, as the ground has it now.
             var g = _w.Session.Ground;
-            var paint = g.W == scene.W && g.H == scene.H ? Enumerable.Range(0, scene.W * scene.H * 3).Select(k => g.MaskOf(k / 3, k % 3)).ToArray() : null;
+            float[]? paint = g.W == scene.W && g.H == scene.H ? [.. Enumerable.Range(0, scene.W * scene.H * 3).Select(k => g.MaskOf(k / 3, k % 3))] : null;
             return new { scene.W, scene.H, scene.Cx, scene.Cz, scene.Water, Heights = (float[])scene.Heights.Clone(), Paint = paint, Things = things };
         });
         if (data == null)
         {
             return new() { IsError = true, Content = { new ModelContextProtocol.Protocol.TextContentBlock { Text = "No area is open." } } };
         }
-        byte[] jpeg = await Task.Run(() => DrawMap(data.W, data.H, data.Cx, data.Cz, data.Water, data.Heights, data.Paint, objects ? data.Things : new(), MathF.Max(4, grid)));
+        byte[] jpeg = await Task.Run(() => DrawMap(data.W, data.H, data.Cx, data.Cz, data.Water, data.Heights, data.Paint, objects ? data.Things : [], MathF.Max(4, grid)));
         float minX = data.Cx - (data.W - 1) / 2f, minZ = data.Cz - (data.H - 1) / 2f;
         return new()
         {
@@ -415,41 +420,44 @@ public sealed class ClaudeTools
         [Description("At most this many.")] int limit = 60,
         [Description("Items instead (what goes in chests: Coins, Amber, IronScrap, weapons…): true.")] bool items = false) => OnUi(() =>
     {
-        var words = query.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        string[] words = query.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         bool Match(string s) => words.All(w => s.Contains(w, StringComparison.OrdinalIgnoreCase));
         if (items)
         {
-            return ToJson(TerrainEditor.Terrain.PrefabCatalog.Items.Where(Match).Take(Math.Clamp(limit, 1, 500)).Select(i => new { item = i }));
+            return ToJson(Terrain.PrefabCatalog.Items.Where(Match).Take(Math.Clamp(limit, 1, 500)).Select(i => new { item = i }));
         }
-        var pieces = TerrainEditor.Terrain.PieceCatalog.Names
-            .Select(n => (n, p: TerrainEditor.Terrain.PieceCatalog.Get(TerrainEditor.Save.StableHash.Of(n))))
-            .Where(x => x.p is { Tool: not null } && (Match(x.n) || Match(TerrainEditor.Terrain.PieceCost.PieceName(x.n))))
-            .Select(x => (object)new { prefab = x.n, name = TerrainEditor.Terrain.PieceCost.PieceName(x.n), tool = x.p!.Tool, size = SizeOf(x.p!), cost = TerrainEditor.Terrain.PieceCost.Of(new[] { x.n }).Describe(4) });
-        var others = piecesOnly ? Enumerable.Empty<object>() : TerrainEditor.Terrain.PrefabCatalog.Placeable
-            .Where(i => TerrainEditor.Terrain.PieceCatalog.Get(TerrainEditor.Save.StableHash.Of(i.Name)) == null && Match(i.Name))
+        var pieces = Terrain.PieceCatalog.Names
+            .Select(n => (n, p: Terrain.PieceCatalog.Get(Save.StableHash.Of(n))))
+            .Where(x => x.p is { Tool: not null } && (Match(x.n) || Match(Terrain.PieceCost.PieceName(x.n))))
+            .Select(x => (object)new { prefab = x.n, name = Terrain.PieceCost.PieceName(x.n), tool = x.p!.Tool, size = SizeOf(x.p!), cost = Terrain.PieceCost.Of([x.n]).Describe(4) });
+        var others = piecesOnly ? [] : Terrain.PrefabCatalog.Placeable
+            .Where(i => Terrain.PieceCatalog.Get(Save.StableHash.Of(i.Name)) == null && Match(i.Name))
             .Select(i => (object)new { prefab = i.Name, kind = TerrainEditor.App.ObjectKinds.Of(i.Name, false).ToString() });
         return ToJson(pieces.Concat(others).Take(Math.Clamp(limit, 1, 500)));
     });
 
-    private static object SizeOf(TerrainEditor.Terrain.PieceCatalog.Info p) =>
+    private static object SizeOf(Terrain.PieceCatalog.Info p) =>
         new { x = MathF.Round(p.MaxX - p.MinX, 2), y = MathF.Round(p.MaxY - p.MinY, 2), z = MathF.Round(p.MaxZ - p.MinZ, 2) };
 
     [McpServerTool(Name = "piece_info", ReadOnly = true, Title = "About building pieces")]
     [Description("For building pieces (prefab names): English name, tool, size and bounds from the piece's origin (x across, y up, z through, before turning), snap points (where pieces join, from the origin), cost and the station it needs. Use it to place pieces edge to edge.")]
     public static Task<string> PieceInfo([Description("Prefab names, e.g. [\"woodwall\", \"wood_floor\"].")] string[] prefabs) => OnUi(() => ToJson(prefabs.Select(n =>
     {
-        var p = TerrainEditor.Terrain.PieceCatalog.Get(TerrainEditor.Save.StableHash.Of(n));
+        var p = Terrain.PieceCatalog.Get(Save.StableHash.Of(n));
         if (p == null)
         {
             return (object)new { prefab = n, error = "not a building piece the editor knows (find_prefabs)" };
         }
-        var cost = TerrainEditor.Terrain.PieceCost.Get(n);
+        var cost = Terrain.PieceCost.Get(n);
         return new
         {
-            prefab = n, name = TerrainEditor.Terrain.PieceCost.PieceName(n), tool = p.Tool, size = SizeOf(p),
+            prefab = n,
+            name = Terrain.PieceCost.PieceName(n),
+            tool = p.Tool,
+            size = SizeOf(p),
             bounds = new { minX = p.MinX, maxX = p.MaxX, minY = p.MinY, maxY = p.MaxY, minZ = p.MinZ, maxZ = p.MaxZ },
             snaps = p.Snaps,
-            cost = TerrainEditor.Terrain.PieceCost.Of(new[] { n }).Describe(8),
+            cost = Terrain.PieceCost.Of([n]).Describe(8),
             station = cost?.Station,
         };
     })));
@@ -723,26 +731,26 @@ public sealed class ClaudeTools
         var session = _w.Session!;
         var scene = session.Scene;
         float minX = scene.X0 * 64f - 32f, minZ = scene.Z0 * 64f - 32f, maxX = minX + scene.Size * 64f, maxZ = minZ + scene.Size * 64f;
-        var placed = new List<TerrainEditor.Editing.Hammer.Placed>();
+        var placed = new List<Editing.Hammer.Placed>();
         lock (scene.Things)
         {
             for (int i = 0; i < scene.Things.Count; i++)
             {
                 var t = scene.Things[i];
-                if (!t.Gone && _w.NameOfPrefab(t.Prefab) is string n && TerrainEditor.Editing.Hammer.Get(n) != null)
+                if (!t.Gone && _w.NameOfPrefab(t.Prefab) is string n && Editing.Hammer.Get(n) != null)
                 {
                     placed.Add(new(i, n, t.Position, TerrainEditor.App.BlueprintFormats.FromEuler(t.Rotation)));
                 }
             }
         }
-        var adds = new List<(TerrainEditor.Editing.NewObject, bool)>();
+        var adds = new List<(Editing.NewObject, bool)>();
         var report = new List<object>();
         var problems = new List<string>();
         foreach (var (p, k) in pieces.Select((p, k) => (p, k)))
         {
-            int hash = TerrainEditor.Save.StableHash.Of(p.Prefab);
-            var piece = TerrainEditor.Terrain.PieceCatalog.Get(hash);
-            if (piece == null && TerrainEditor.Terrain.PrefabCatalog.Get(hash) == null)
+            int hash = Save.StableHash.Of(p.Prefab);
+            var piece = Terrain.PieceCatalog.Get(hash);
+            if (piece == null && Terrain.PrefabCatalog.Get(hash) == null)
             {
                 problems.Add($"#{k} {p.Prefab}: not an object the game has (find_prefabs)");
                 continue;
@@ -754,22 +762,22 @@ public sealed class ClaudeTools
             }
             var euler = new System.Numerics.Vector3(p.Pitch, p.Yaw, p.Roll);
             var q = TerrainEditor.App.BlueprintFormats.FromEuler(euler);
-            float y = p.Y ?? GroundAt(scene, p.X, p.Z) - TerrainEditor.Editing.Hammer.Bottom(p.Prefab, q);
+            float y = p.Y ?? GroundAt(scene, p.X, p.Z) - Editing.Hammer.Bottom(p.Prefab, q);
             var pos = new System.Numerics.Vector3(p.X, y, p.Z);
             int? to = null;
             if (p.Snap)
             {
-                (pos, to) = TerrainEditor.Editing.Hammer.Snap(p.Prefab, q, pos, placed);
+                (pos, to) = Editing.Hammer.Snap(p.Prefab, q, pos, placed);
             }
             placed.Add(new(-1 - k, p.Prefab, pos, q));
-            adds.Add((new TerrainEditor.Editing.NewObject(0, hash, pos, euler, 0), piece?.Tool != null));
+            adds.Add((new Editing.NewObject(0, hash, pos, euler, 0), piece?.Tool != null));
             report.Add(new { prefab = p.Prefab, x = MathF.Round(pos.X, 3), y = MathF.Round(pos.Y, 3), z = MathF.Round(pos.Z, 3), snapped = to != null });
         }
         if (adds.Count == 0)
         {
             return "Nothing put down: " + string.Join("; ", problems);
         }
-        var ids = session.Commit(label.StartsWith("Claude", StringComparison.Ordinal) ? label : "Claude: " + label, null, Array.Empty<int>(), adds);
+        var ids = session.Commit(label.StartsWith("Claude", StringComparison.Ordinal) ? label : "Claude: " + label, null, [], adds);
         _w.AfterClaudeEdit($"Claude put down {adds.Count} piece(s); Ctrl+Z takes them back.");
         return ToJson(new { placed = report.Select((r, i) => new { id = i < ids.Count ? ids[i] : -1, piece = r }), problems, pending = Pending() });
     }
@@ -812,7 +820,7 @@ public sealed class ClaudeTools
             foreach (var t in scene.Things)
             {
                 if (t.Gone || !t.Piece || _w.NameOfPrefab(t.Prefab) is not string n || (word != null && !n.Contains(word, StringComparison.OrdinalIgnoreCase))
-                    || TerrainEditor.Terrain.PieceCatalog.Get(t.Prefab) is not { } info)
+                    || Terrain.PieceCatalog.Get(t.Prefab) is not { } info)
                 {
                     continue;
                 }
@@ -863,7 +871,7 @@ public sealed class ClaudeTools
         [Description("Doors (optional).")] DoorSpec[]? doors = null,
         [Description("Height of the walls' bottom (optional).")] float? y = null) =>
         Build(scene => ClaudeBuilder.Walls(x0, z0, x1, z1, y ?? HighestPieceTop(scene, x0, z0, x1, z1, "floor") ?? HighestGround(scene, x0, z0, x1, z1, edgesOnly: true),
-            height, material, (doors ?? Array.Empty<DoorSpec>()).Select(d => new ClaudeBuilder.Door(d.Side, d.At)).ToList()), $"walls of {material}");
+            height, material, [.. (doors ?? []).Select(d => new ClaudeBuilder.Door(d.Side, d.At))]), $"walls of {material}");
 
     [McpServerTool(Name = "build_roof", Title = "Build a roof")]
     [Description("Builds a gable roof over a rectangle (the walls' lines), its ridge along the longer side: thatch or shingle, 26 or 45 degrees, its underside meeting the wall lines at the eave height (default: the top of the building pieces in the rectangle, i.e. the walls), overhanging up to 2 m; the two gable ends closed with sloped walls (gables: true). One pending step. Check it with support_check and screenshot (views: 4).")]
@@ -901,7 +909,7 @@ public sealed class ClaudeTools
         {
             return "None of those ids is an object of the area.";
         }
-        session.Commit($"Claude: took {ok.Count} away", null, ok, Array.Empty<(TerrainEditor.Editing.NewObject, bool)>());
+        session.Commit($"Claude: took {ok.Count} away", null, ok, []);
         _w.AfterClaudeEdit($"Claude took {ok.Count} object(s) away; Ctrl+Z puts them back.");
         return $"Took {ok.Count} away{(ok.Count < ids.Length ? $" ({ids.Length - ok.Count} id(s) were not objects of the area)" : "")}. Now pending: {Pending()}";
     });
@@ -923,8 +931,11 @@ public sealed class ClaudeTools
         var things = _w.LastSupportThings;
         object Piece(int k) => new
         {
-            id = things[k], name = _w.NameOfPrefab(scene.Things[things[k]].Prefab),
-            x = MathF.Round(scene.Things[things[k]].Position.X, 2), y = MathF.Round(scene.Things[things[k]].Position.Y, 2), z = MathF.Round(scene.Things[things[k]].Position.Z, 2),
+            id = things[k],
+            name = _w.NameOfPrefab(scene.Things[things[k]].Prefab),
+            x = MathF.Round(scene.Things[things[k]].Position.X, 2),
+            y = MathF.Round(scene.Things[things[k]].Position.Y, 2),
+            z = MathF.Round(scene.Things[things[k]].Position.Z, 2),
             support = MathF.Round(r.Colour[k], 2),
         };
         return ToJson(new
@@ -975,7 +986,7 @@ public sealed class ClaudeTools
             return "No object with that id in the area.";
         }
         var t = things[id];
-        var info = TerrainEditor.Terrain.PrefabCatalog.Details(t.Prefab);
+        var info = Terrain.PrefabCatalog.Details(t.Prefab);
         var set = new List<TerrainEditor.App.FieldChange>();
         List<TerrainEditor.App.ItemUpload>? inv = null;
         bool itemStand = TerrainEditor.App.StandData.IsItemStand(t.Prefab), armourStand = TerrainEditor.App.StandData.IsArmourStand(t.Prefab);
@@ -1006,7 +1017,7 @@ public sealed class ClaudeTools
             {
                 if (items != null)
                 {
-                    set.AddRange(TerrainEditor.App.StandData.ForArmourStand(t.Prefab, items.Select(i => new TerrainEditor.App.StandData.Held(i.Item, i.Quality, i.Variant)).ToList(), pose));
+                    set.AddRange(TerrainEditor.App.StandData.ForArmourStand(t.Prefab, [.. items.Select(i => new TerrainEditor.App.StandData.Held(i.Item, i.Quality, i.Variant))], pose));
                 }
                 else
                 {
@@ -1029,7 +1040,7 @@ public sealed class ClaudeTools
             {
                 return $"{_w.NameOfPrefab(t.Prefab)} has {box.ContainerW * box.ContainerH} slots, not {items.Length}.";
             }
-            inv = items.Select((it, i) => new TerrainEditor.App.ItemUpload(it.Item, null, Math.Max(1, it.Stack), Math.Max(1, it.Quality), X: i % box.ContainerW, Y: i / box.ContainerW)).ToList();
+            inv = [.. items.Select((it, i) => new TerrainEditor.App.ItemUpload(it.Item, null, Math.Max(1, it.Stack), Math.Max(1, it.Quality), X: i % box.ContainerW, Y: i / box.ContainerW))];
         }
         string kindName = _w.NameOfPrefab(t.Prefab) ?? "";
         if (text != null)
@@ -1042,7 +1053,7 @@ public sealed class ClaudeTools
         }
         if (stars is int st)
         {
-            if (!TerrainEditor.Terrain.PrefabCatalog.IsCreature(t.Prefab))
+            if (!Terrain.PrefabCatalog.IsCreature(t.Prefab))
             {
                 return $"{kindName} is not a creature: only creatures have stars.";
             }
@@ -1055,7 +1066,7 @@ public sealed class ClaudeTools
         string name = _w.NameOfPrefab(t.Prefab) ?? "object";
         try
         {
-            TerrainEditor.Editing.NewObject replacement;
+            Editing.NewObject replacement;
             // (The Workshop's plot has no world files behind it: its objects carry their values.)
             if (!_w.InWorkshop && s.Scene.World is { } world && TerrainEditor.App.ObjectData.Bytes(world, s.Edits, t.Id) is { } bytes)
             {
@@ -1066,10 +1077,10 @@ public sealed class ClaudeTools
             else
             {
                 // On the Workshop's plot: its values, with these.
-                var fields = (s.Edits.FindAdded(t.Id)?.Data ?? Array.Empty<TerrainEditor.Editing.ObjectField>()).ToList();
+                var fields = (s.Edits.FindAdded(t.Id)?.Data ?? []).ToList();
                 void Put(string section, string key, string? value)
                 {
-                    int k = TerrainEditor.Save.StableHash.Of(key);
+                    int k = Save.StableHash.Of(key);
                     fields.RemoveAll(f => f.Key == k);
                     if (value != null)
                     {
@@ -1087,7 +1098,7 @@ public sealed class ClaudeTools
                 }
                 replacement = new(0, t.Prefab, t.Position, t.Rotation, t.Scale, Data: fields);
             }
-            var copies = s.Commit($"Claude: filled {name}", null, new[] { id }, new[] { (replacement, t.Piece) });
+            var copies = s.Commit($"Claude: filled {name}", null, [id], [(replacement, t.Piece)]);
             _w.AfterClaudeEdit($"Claude changed what {name} holds; Ctrl+Z puts it back.");
             return $"Changed {name}; its id is now {copies[0]}.";
         }
@@ -1122,10 +1133,10 @@ public sealed class ClaudeTools
     [Description("The user's blueprints (Homestead's library): name, pieces, cost, description, tags. Open one in the Workshop (open_workshop) or add it to the plot (add_blueprint).")]
     public Task<string> ListBlueprints([Description("Words to find in the name, description or tags (optional).")] string? query = null) => OnUi(() =>
     {
-        var words = (query ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        string[] words = (query ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries);
         return ToJson(TerrainEditor.App.Homestead.List(_w.Blueprints.Status.Folder)
             .Where(e => words.All(w => e.Name.Contains(w, StringComparison.OrdinalIgnoreCase) || e.Description.Contains(w, StringComparison.OrdinalIgnoreCase) || e.Tags.Any(t => t.Contains(w, StringComparison.OrdinalIgnoreCase))))
-            .Select(e => new { name = e.Name, pieces = e.Pieces, cost = TerrainEditor.Terrain.PieceCost.Of(e.Kinds).Describe(4), description = e.Description, tags = e.Tags }));
+            .Select(e => new { name = e.Name, pieces = e.Pieces, cost = Terrain.PieceCost.Of(e.Kinds).Describe(4), description = e.Description, tags = e.Tags }));
     });
 
     [McpServerTool(Name = "add_blueprint", Title = "Add a blueprint to the plot")]
@@ -1165,13 +1176,13 @@ public sealed class ClaudeTools
         [Description("In a world: x of the point of the open area it goes above (optional: the view's middle).")] float? x = null,
         [Description("In a world: z of that point.")] float? z = null)
     {
-        var settings = new TerrainEditor.Editing.DungeonGen.Settings(Biome: biome, Style: style, Walls: walls, Size: Math.Clamp(size, 1, 4), Levels: Math.Clamp(levels, 1, 4),
+        var settings = new Editing.DungeonGen.Settings(Biome: biome, Style: style, Walls: walls, Size: Math.Clamp(size, 1, 4), Levels: Math.Clamp(levels, 1, 4),
             Monsters: Math.Clamp(monsters, 0, 3), Loot: Math.Clamp(loot, 0, 2), Light: Math.Clamp(light, 0, 2), Decor: Math.Clamp(decor, 0, 2), Seed: seed, Name: name);
-        if (await OnUi(() => CannotEdit()) is string why)
+        if (await OnUi(CannotEdit) is string why)
         {
             return why;
         }
-        var result = await Task.Run(() => TerrainEditor.Editing.DungeonGen.Make(settings));
+        var result = await Task.Run(() => Editing.DungeonGen.Make(settings));
         return await OnUi(async () =>
         {
             if (_w.InWorkshop)

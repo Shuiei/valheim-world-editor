@@ -22,8 +22,16 @@ public static class CopyFormat
         ["pnt"] = new JsonArray(c.Pnt.Select(v => (JsonNode)(int)MathF.Round(v * 255)).ToArray()),
         ["objects"] = new JsonArray(c.Objects.Select(o => (JsonNode)new JsonObject
         {
-            ["name"] = o.Name, ["dx"] = R(o.Dx), ["dz"] = R(o.Dz), ["dy"] = R(o.Dy), ["rx"] = R(o.Rotation.X), ["ry"] = R(o.Rotation.Y), ["rz"] = R(o.Rotation.Z),
-            ["scale"] = R(o.Scale), ["sourceId"] = o.SourceId, ["follow"] = o.Follow,
+            ["name"] = o.Name,
+            ["dx"] = R(o.Dx),
+            ["dz"] = R(o.Dz),
+            ["dy"] = R(o.Dy),
+            ["rx"] = R(o.Rotation.X),
+            ["ry"] = R(o.Rotation.Y),
+            ["rz"] = R(o.Rotation.Z),
+            ["scale"] = R(o.Scale),
+            ["sourceId"] = o.SourceId,
+            ["follow"] = o.Follow,
             ["data"] = o.Data is { Count: > 0 } d ? BlueprintFormats.DataJson(d) : null,
         }).ToArray()),
         ["poly"] = new JsonArray(c.Poly.Select(p => (JsonNode)new JsonObject { ["gx"] = R(p.X), ["gz"] = R(p.Y) }).ToArray()),
@@ -39,13 +47,13 @@ public static class CopyFormat
     {
         W = I(o["w"]),
         H = I(o["h"]),
-        Rel = o["rel"]!.AsArray().Select(v => I(v) == -32768 ? float.NaN : I(v) / 100f).ToArray(),
-        Wt = o["wt"]!.AsArray().Select(v => I(v) / 255f).ToArray(),
-        Pnt = o["pnt"]!.AsArray().Select(v => I(v) < 0 ? -1f : I(v) / 255f).ToArray(),
-        Objects = o["objects"]!.AsArray().Select(x => new CopyData.Obj(StableHash.OfName((string)x!["name"]!), (string)x["name"]!, F(x["dx"]), F(x["dz"]), F(x["dy"]),
+        Rel = [.. o["rel"]!.AsArray().Select(v => I(v) == -32768 ? float.NaN : I(v) / 100f)],
+        Wt = [.. o["wt"]!.AsArray().Select(v => I(v) / 255f)],
+        Pnt = [.. o["pnt"]!.AsArray().Select(v => I(v) < 0 ? -1f : I(v) / 255f)],
+        Objects = [.. o["objects"]!.AsArray().Select(x => new CopyData.Obj(StableHash.OfName((string)x!["name"]!), (string)x["name"]!, F(x["dx"]), F(x["dz"]), F(x["dy"]),
             new Vector3(F(x["rx"]), F(x["ry"]), F(x["rz"])), F(x["scale"]), keepSources && x["sourceId"] != null ? I(x["sourceId"]) : null, (bool?)x["follow"] ?? false,
-            BlueprintFormats.DataOf(x["data"]))).ToList(),
-        Poly = (o["poly"] as JsonArray)?.Select(p => new Vector2(F(p!["gx"]), F(p["gz"]))).ToList() ?? new(),
+            BlueprintFormats.DataOf(x["data"])))],
+        Poly = (o["poly"] as JsonArray)?.Select(p => new Vector2(F(p!["gx"]), F(p["gz"]))).ToList() ?? [],
         Name = name ?? (string?)o["name"],
     };
 
@@ -58,8 +66,16 @@ public static class CopyFormat
         g.Clear(new SKColor(0x1e, 0x23, 0x2b));
         float x0 = float.MaxValue, x1 = float.MinValue, z0 = float.MaxValue, z1 = float.MinValue;
         void Grow(float x, float z) { x0 = MathF.Min(x0, x); x1 = MathF.Max(x1, x); z0 = MathF.Min(z0, z); z1 = MathF.Max(z1, z); }
-        foreach (var p in c.Poly) Grow(p.X, p.Y);
-        foreach (var o in c.Objects) Grow(o.Dx, o.Dz);
+        foreach (var p in c.Poly)
+        {
+            Grow(p.X, p.Y);
+        }
+
+        foreach (var o in c.Objects)
+        {
+            Grow(o.Dx, o.Dz);
+        }
+
         bool ground = c.Rel.Any(v => !float.IsNaN(v));
         if (ground)
         {

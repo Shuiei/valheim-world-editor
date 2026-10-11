@@ -1,5 +1,4 @@
 using Avalonia;
-using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Styling;
 using Avalonia.Themes.Fluent;
@@ -53,11 +52,11 @@ public static class Program
             System.Diagnostics.Trace.Listeners.Add(new System.Diagnostics.ConsoleTraceListener());
         }
         AppBuilder.Configure<App>().UsePlatformDetect().LogToTrace(Avalonia.Logging.LogEventLevel.Warning)
-            .With(new Win32PlatformOptions { RenderingMode = new[] { Win32RenderingMode.Wgl, Win32RenderingMode.AngleEgl, Win32RenderingMode.Software } })
+            .With(new Win32PlatformOptions { RenderingMode = [Win32RenderingMode.Wgl, Win32RenderingMode.AngleEgl, Win32RenderingMode.Software] })
             // Linux: Avalonia turns OpenGL off for software renderers (Mesa's llvmpipe, VMware's
             // SVGA3D), where its own drawing is faster without it; the 3D view and the map need
             // OpenGL, so they were blank in virtual machines and without GPU drivers.
-            .With(new X11PlatformOptions { GlxRendererBlacklist = new List<string>() })
+            .With(new X11PlatformOptions { GlxRendererBlacklist = [] })
             .StartWithClassicDesktopLifetime(args);
     }
 
@@ -169,7 +168,7 @@ public static class Options
                     break;
                 case "--zone":
                     Direct = true;
-                    var p = args[++i].Split(',');
+                    string[] p = args[++i].Split(',');
                     ZoneX = int.Parse(p[0]);
                     ZoneZ = int.Parse(p[1]);
                     break;
@@ -178,7 +177,7 @@ public static class Options
                     break;
                 case "--window":
                 {
-                    var wh = args[++i].Split('x');
+                    string[] wh = args[++i].Split('x');
                     WindowWidth = Math.Clamp(int.Parse(wh[0]), 640, 7680);
                     WindowHeight = Math.Clamp(int.Parse(wh[1]), 480, 4320);
                     break;

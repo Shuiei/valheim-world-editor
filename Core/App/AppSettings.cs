@@ -11,13 +11,13 @@ public sealed class AppSettings
 
     // Extra places to look for the game's BepInEx: a BepInEx folder, a mod manager profile, or a
     // folder of profiles (a mod manager with a custom data folder).
-    public List<string> BepInExFolders { get; set; } = new();
+    public List<string> BepInExFolders { get; set; } = [];
 
     // Extra places with worlds, always listed: a world folder, or a folder of worlds (a server's
     // -savedir/worlds_local, a backup folder...).
-    public List<string> WorldFolders { get; set; } = new();
+    public List<string> WorldFolders { get; set; } = [];
 
-    public List<RecentWorld> Recent { get; set; } = new();
+    public List<RecentWorld> Recent { get; set; } = [];
 
     public string? LiveUrl { get; set; }
 
@@ -77,7 +77,7 @@ public sealed class AppSettings
 
     private static string FilePath => PathOverride ?? Path.Combine(DataDir, "settings.json");
 
-    private static readonly object Lock = new();
+    private static readonly Lock Lock = new();
 
     public static AppSettings Load()
     {

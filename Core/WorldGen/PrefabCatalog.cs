@@ -18,7 +18,7 @@ public static class PrefabCatalog
     public sealed record Info(string Name, ushort Flags, float GrowRadius, bool NeedsCultivated, int ContainerW = 0, int ContainerH = 0, float WardRadius = 0, float BuildRange = 0);
 
     // None until Use: no world or Workshop opens before then (GameData).
-    private static volatile Data Catalogue = new(new(), new(), new(), new(), new(), new(), new(), new(), new(), new());
+    private static volatile Data _catalogue = new([], [], [], [], [], [], [], [], [], []);
 
     // AllNames: every prefab of the catalogue by hash, placeable or not (items, creatures...), for names.
     // ByHash: the kinds offered for placing; Extra: the others. Creatures: not offered for placing, but
@@ -28,22 +28,22 @@ public static class PrefabCatalog
         Dictionary<string, (float Radius, string Sapling)> GrownFrom, Dictionary<int, ItemKind> ItemKinds, Dictionary<int, StandRule> ItemStands, Dictionary<int, int[][]> ArmourStands,
         Dictionary<string, (float Radius, bool Cultivated)> Grow);
 
-    public static bool IsCreature(int prefab) => Catalogue.Creatures.Contains(prefab);
+    public static bool IsCreature(int prefab) => _catalogue.Creatures.Contains(prefab);
 
     // Kinds the editor offers to place: saved objects (persistent), not creatures, item drops or ragdolls.
-    public static IEnumerable<Info> Placeable => Catalogue.ByHash.Values;
+    public static IEnumerable<Info> Placeable => _catalogue.ByHash.Values;
 
-    public static Info? Get(int prefab) => Catalogue.ByHash.TryGetValue(prefab, out var info) ? info : null;
+    public static Info? Get(int prefab) => _catalogue.ByHash.TryGetValue(prefab, out var info) ? info : null;
 
     // Runestones are not objects but locations: the save keeps a location proxy for each, and the game
     // builds the stone from it whenever the zone loads. The editor lists a runestone's proxy under the
     // location's name (its hash stands for the prefab), so it can be shown, picked and deleted, never
     // moved or copied (that would need the proxy's own prefab).
     public static readonly string[] RunestoneLocations =
-    {
+    [
         "Runestone_Ashlands", "Runestone_BlackForest", "Runestone_Boars", "Runestone_DeepNorth", "Runestone_Draugr", "Runestone_Greydwarfs",
         "Runestone_Meadows", "Runestone_Mistlands", "Runestone_Mountains", "Runestone_Plains", "Runestone_Swamps",
-    };
+    ];
 
     private static readonly Dictionary<int, string> RunestoneNames = RunestoneLocations.ToDictionary(StableHash.Of);
 
@@ -52,21 +52,21 @@ public static class PrefabCatalog
     public static bool IsRunestoneName(string name) => name.StartsWith("Runestone_", StringComparison.Ordinal);
 
     // The game's name of any prefab of the catalogue (also items and creatures), or null.
-    public static string? NameOf(int prefab) => Catalogue.AllNames.TryGetValue(prefab, out string? n) ? n : RunestoneNames.GetValueOrDefault(prefab);
+    public static string? NameOf(int prefab) => _catalogue.AllNames.TryGetValue(prefab, out string? n) ? n : RunestoneNames.GetValueOrDefault(prefab);
 
     // Item prefabs (what containers and item stands can hold), by name.
-    public static IReadOnlyList<string> Items => Catalogue.ItemNames;
+    public static IReadOnlyList<string> Items => _catalogue.ItemNames;
 
     // Container size, ward radius and build range, also for prefabs that are not offered for placing.
-    public static Info? Details(int prefab) => Catalogue.ByHash.TryGetValue(prefab, out var info) ? info : Catalogue.Extra.TryGetValue(prefab, out var e) ? e : null;
+    public static Info? Details(int prefab) => _catalogue.ByHash.TryGetValue(prefab, out var info) ? info : _catalogue.Extra.TryGetValue(prefab, out var e) ? e : null;
 
     // What saplings grow into, with the sapling's grow radius: Pickable_Carrot -> 0.5 m (sapling_carrot),
     // Beech1 -> 2 m (Beech_Sapling). Placed grown, they keep the room they would have grown in.
-    public static IReadOnlyDictionary<string, (float Radius, string Sapling)> GrownFrom => Catalogue.GrownFrom;
+    public static IReadOnlyDictionary<string, (float Radius, string Sapling)> GrownFrom => _catalogue.GrownFrom;
 
     // The free room a kind needs to grow, and whether on cultivated ground: saplings and crops, and what
     // they grow into (placed grown, with their sapling's room).
-    public static IReadOnlyDictionary<string, (float Radius, bool Cultivated)> GrowRoom => Catalogue.Grow;
+    public static IReadOnlyDictionary<string, (float Radius, bool Cultivated)> GrowRoom => _catalogue.Grow;
 
     // What an item is, for the stands that hold items: its type (ItemDrop.ItemData.ItemType), the type it
     // attaches as when that differs (atgeirs), its number of variants (shield styles), and whether it has
@@ -83,22 +83,24 @@ public static class PrefabCatalog
     // type, but never the refused ones.
     public sealed record StandRule(IReadOnlySet<int> Types, IReadOnlySet<string> Takes, IReadOnlySet<string> Refuses);
 
-    public static ItemKind? ItemKindOf(int prefab) => Catalogue.ItemKinds.GetValueOrDefault(prefab);
+    public static ItemKind? ItemKindOf(int prefab) => _catalogue.ItemKinds.GetValueOrDefault(prefab);
 
     // The rule of an item stand (itemstand, itemstandh and the boss altars), or null for anything else.
-    public static StandRule? ItemStandOf(int prefab) => Catalogue.ItemStands.GetValueOrDefault(prefab);
+    public static StandRule? ItemStandOf(int prefab) => _catalogue.ItemStands.GetValueOrDefault(prefab);
 
     // An armour stand's slots in order, each with the item types it takes (empty: any), or null.
-    public static int[][]? ArmourSlotsOf(int prefab) => Catalogue.ArmourStands.GetValueOrDefault(prefab);
+    public static int[][]? ArmourSlotsOf(int prefab) => _catalogue.ArmourStands.GetValueOrDefault(prefab);
 
+#pragma warning disable IDE1006 // named as the JSON keys they are read from
     private sealed record Entry(int p, int d, int t, int c = 0, int i = 0, double gr = 0, int cult = 0, int cw = 0, int ch = 0, double ward = 0, double build = 0, string[]? grows = null,
         int it = -1, int ao = 0, int var = 0, int at = 0, int ats = 0, double dur = 0, double durl = 0, int[]? @is = null, string[]? isi = null, string[]? isu = null, int[][]? @as = null);
+#pragma warning restore IDE1006
 
     // The prefabs by name, as GameCatalogues' PrefabScan writes them.
     public static void Use(string json)
     {
         var all = JsonSerializer.Deserialize<Dictionary<string, Entry>>(json)!;
-        var d = new Data(new(), new(), new(), new(), new(), new(), new(), new(), new(), new());
+        var d = new Data([], [], [], [], [], [], [], [], [], []);
         foreach (var (name, e) in all)
         {
             int hash = StableHash.Of(name);
@@ -117,7 +119,7 @@ public static class PrefabCatalog
             }
             if (e.@is != null)
             {
-                d.ItemStands[hash] = new StandRule(e.@is.ToHashSet(), (e.isi ?? Array.Empty<string>()).ToHashSet(), (e.isu ?? Array.Empty<string>()).ToHashSet());
+                d.ItemStands[hash] = new StandRule(e.@is.ToHashSet(), (e.isi ?? []).ToHashSet(), (e.isu ?? []).ToHashSet());
             }
             if (e.@as != null)
             {
@@ -126,7 +128,7 @@ public static class PrefabCatalog
             // Save-file flags: persistent 0x100, distant 0x200, object type in bits 10-11.
             ushort flags = (ushort)((e.p != 0 ? 0x100 : 0) | (e.d != 0 ? 0x200 : 0) | ((e.t & 3) << 10));
             Info info = new(name, flags, (float)e.gr, e.cult != 0, e.cw, e.ch, (float)e.ward, (float)e.build);
-            foreach (string grown in e.grows ?? Array.Empty<string>())
+            foreach (string grown in e.grows ?? [])
             {
                 if (!d.GrownFrom.TryGetValue(grown, out var g) || g.Radius < e.gr)
                 {
@@ -149,6 +151,6 @@ public static class PrefabCatalog
         {
             d.Grow.TryAdd(name, (g.Radius, false));
         }
-        Catalogue = d;
+        _catalogue = d;
     }
 }

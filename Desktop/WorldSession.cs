@@ -45,7 +45,12 @@ public sealed class WorldSession : IDisposable
         var modifiers = new TerrainModifiers(world);
         var s = new WorldSession
         {
-            World = world, Edits = new EditStore(world), Modifiers = modifiers, Terrain = new TerrainService(world, modifiers), Live = live, Label = label,
+            World = world,
+            Edits = new EditStore(world),
+            Modifiers = modifiers,
+            Terrain = new TerrainService(world, modifiers),
+            Live = live,
+            Label = label,
         };
         s.RestoreHistory();
         return s;
@@ -107,7 +112,7 @@ public sealed class WorldSession : IDisposable
         {
             throw new InvalidOperationException(GameData.Missing);
         }
-        WorldSave.ModifierPrefabs = TerrainModifiers.NetworkPrefabHashes.ToHashSet();
+        WorldSave.ModifierPrefabs = [.. TerrainModifiers.NetworkPrefabHashes];
     }
 
     // A world on this computer (its folder).
@@ -156,17 +161,17 @@ public sealed class WorldSession : IDisposable
     // wrote (removed by the next one).
     private IReadOnlyList<string>? _lastSave;
     private int? _lastNumber;
-    private HashSet<(int, int)> _savedZones = new();
-    private HashSet<int> _savedDeleted = new();
-    private HashSet<NewObject> _savedAdded = new();
+    private HashSet<(int, int)> _savedZones = [];
+    private HashSet<int> _savedDeleted = [];
+    private HashSet<NewObject> _savedAdded = [];
 
     private void ForgetSaves()
     {
         _lastSave = null;
         _lastNumber = null;
-        _savedZones = new();
-        _savedDeleted = new();
-        _savedAdded = new();
+        _savedZones = [];
+        _savedDeleted = [];
+        _savedAdded = [];
     }
 
     public sealed record Outcome(bool Done, string Message, bool Reloaded, WorldWriter.Result? Saved = null)
@@ -181,11 +186,11 @@ public sealed class WorldSession : IDisposable
     // worked out again with them. Null when there was none.
     public Uplift.Plan? LiftToDiscs()
     {
-        var plan = Editing.Uplift.Make(World, Terrain, Edits, NextId);
+        var plan = Uplift.Make(World, Terrain, Edits, NextId);
         if (plan != null)
         {
-            Editing.Uplift.Apply(plan, Edits);
-            UseModifiers(new TerrainModifiers(Editing.Uplift.PlacedNow(World, Edits)));
+            Uplift.Apply(plan, Edits);
+            UseModifiers(new TerrainModifiers(Uplift.PlacedNow(World, Edits)));
         }
         return plan;
     }
@@ -208,7 +213,7 @@ public sealed class WorldSession : IDisposable
         int known = _lastNumber ?? World.SaveNumber;
         if (WorldWriter.Newer(World.Directory, known) is string newer)
         {
-            return new Outcome(false, newer, false, new WorldWriter.Result(false, newer, null, 0, 0, new()));
+            return new Outcome(false, newer, false, new WorldWriter.Result(false, newer, null, 0, 0, []));
         }
         var plan = LiftToDiscs();
         var zones = Edits.All().Where(e => e.Changed).Select(e => (e.ZoneX, e.ZoneZ)).ToHashSet();
@@ -232,8 +237,8 @@ public sealed class WorldSession : IDisposable
             _lastNumber = result.Number;
             _savedZones = zones;
             Edits.MarkApplied(changed.Select(e => (e.ZoneX, e.ZoneZ)));
-            _savedDeleted = Edits.Deleted.ToHashSet();
-            _savedAdded = Edits.Added.ToHashSet();
+            _savedDeleted = [.. Edits.Deleted];
+            _savedAdded = [.. Edits.Added];
             MarkHistoryApplied();
             KeepHistory();
         }
@@ -244,7 +249,7 @@ public sealed class WorldSession : IDisposable
     // Leaving an offline world it saved: the save it was opened from goes (only the latest stays).
     private void PruneSaves()
     {
-        if (!IsLive && _lastSave != null && System.IO.Directory.Exists(World.Directory))
+        if (!IsLive && _lastSave != null && Directory.Exists(World.Directory))
         {
             // The world is left whatever happens: a folder that cannot be read now keeps its files.
             try
@@ -349,7 +354,7 @@ public sealed class WorldSession : IDisposable
     // once on the window's thread): objects made, removed or changed in the game appear as they are, and
     // ground changed there replaces the editor's where it has no changes of its own (where it has, they
     // are kept, and applying them asks first: Edits.PendingOverGame).
-    private readonly Dictionary<(int, int), ulong> _digests = new();
+    private readonly Dictionary<(int, int), ulong> _digests = [];
 
     public sealed record Fetched(WorldSave World, Dictionary<(int X, int Z), ulong> Digests, List<(int X, int Z)> Changed, List<(long User, uint Id, byte[] Bytes)> Objects);
 
@@ -385,7 +390,7 @@ public sealed class WorldSession : IDisposable
     {
         if (f.World != World)
         {
-            return new Followed(new WorldSave.Merged(new(), new(), new(), new()), new(), new(), new());
+            return new Followed(new WorldSave.Merged([], [], [], []), [], [], []);
         }
         if (_applying.CurrentCount == 0)
         {
@@ -403,7 +408,7 @@ public sealed class WorldSession : IDisposable
             _digests[key] = f.Digests[key];
         }
         // Gone from the game while deleted in the editor, not applied yet: nothing left to delete.
-        Edits.SetDeleted(merged.Vanished.Where(deleted.Contains).ToList(), false);
+        Edits.SetDeleted([.. merged.Vanished.Where(deleted.Contains)], false);
         // The editor's new objects the game no longer has in the zones read.
         var changed = f.Changed.ToHashSet();
         var there = f.Objects.Select(o => (o.User, o.Id)).ToHashSet();
@@ -428,7 +433,7 @@ public sealed class WorldSession : IDisposable
         if (merged.Modifiers)
         {
             // (With the editor's ground discs: those it applied are its own, not merged.)
-            UseModifiers(new TerrainModifiers(Editing.Uplift.PlacedNow(World, Edits)));
+            UseModifiers(new TerrainModifiers(Uplift.PlacedNow(World, Edits)));
         }
         return new Followed(merged, ours, ground, kept);
     }

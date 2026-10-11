@@ -27,8 +27,8 @@ public class SelectTests
     {
         var s = Area();
         var changed = new List<int>();
-        s.ThingsChanged += l => changed.AddRange(l);
-        s.Delete(new[] { 0 });
+        s.ThingsChanged += changed.AddRange;
+        s.Delete([0]);
         Assert.True(s.Scene.Things[0].Gone);
         Assert.Contains(10, s.Edits.Deleted);
         Assert.Equal((0, 1, 0, 0), s.Pending);
@@ -45,7 +45,7 @@ public class SelectTests
     public void AMoveReplacesTheObjectWithACopyThatKeepsItsData()
     {
         var s = Area();
-        var copies = s.Move(new[] { (0, new Vector3(25, 31, 20), new Vector3(0, 45, 0)) });
+        var copies = s.Move([(0, new Vector3(25, 31, 20), new Vector3(0, 45, 0))]);
         Assert.Equal(new[] { 2 }, copies);
         Assert.True(s.Scene.Things[0].Gone);
         var copy = s.Scene.Things[2];
@@ -58,7 +58,7 @@ public class SelectTests
         Assert.Equal((0, 1, 1, 0), s.Pending);
 
         // Moving the copy again still copies the original.
-        var again = s.Move(new[] { (2, new Vector3(30, 31, 20), new Vector3(0, 45, 0)) });
+        var again = s.Move([(2, new Vector3(30, 31, 20), new Vector3(0, 45, 0))]);
         var second = s.Edits.FindAdded(s.Scene.Things[again[0]].Id)!;
         Assert.Equal(10, second.SourceId);
         Assert.Single(s.Edits.Added);
@@ -101,7 +101,7 @@ public class SelectTests
     public void TurningAndLiftingWithKeysMovesTheSelectionOnceTheKeysStop()
     {
         var (w, s) = Window();
-        w.View.Select(new[] { 0 });
+        w.View.Select([0]);
         w.KeyPress(Key.OemPeriod, RawInputModifiers.Shift, PhysicalKey.Period, ">");
         w.KeyPress(Key.PageUp, RawInputModifiers.None, PhysicalKey.PageUp, null);
         Assert.True(w.View.SelectTool.Moving);
@@ -112,7 +112,7 @@ public class SelectTests
         // On the ground (30 m) and lifted a quarter metre.
         Assert.Equal(30.25f, moved.Position.Y, 3);
         Assert.Equal(new Vector2(20, 20), new Vector2(moved.Position.X, moved.Position.Z));
-        Assert.Equal(new[] { s.Scene.Things.Count - 1 }, w.View.Selected);
+        Assert.Equal([s.Scene.Things.Count - 1], w.View.Selected);
         // Ctrl+Z puts it back.
         w.KeyPress(Key.Z, RawInputModifiers.Control, PhysicalKey.Z, "z");
         Assert.False(s.Scene.Things[0].Gone);
@@ -122,7 +122,7 @@ public class SelectTests
     public void EscapeCancelsAMove()
     {
         var (w, s) = Window();
-        w.View.Select(new[] { 0 });
+        w.View.Select([0]);
         w.KeyPress(Key.PageUp, RawInputModifiers.None, PhysicalKey.PageUp, null);
         w.KeyPress(Key.Escape, RawInputModifiers.None, PhysicalKey.Escape, null);
         Assert.False(w.View.SelectTool.Moving);
@@ -135,7 +135,7 @@ public class SelectTests
     public void DeleteKeyRemovesTheSelection()
     {
         var (w, s) = Window();
-        w.View.Select(new[] { 0, 1 });
+        w.View.Select([0, 1]);
         w.KeyPress(Key.Delete, RawInputModifiers.None, PhysicalKey.Delete, null);
         Assert.True(s.Scene.Things[0].Gone && s.Scene.Things[1].Gone);
         Assert.Empty(w.View.Selected);
@@ -146,7 +146,7 @@ public class SelectTests
     public void ExactPlaceMovesThereOrBy()
     {
         var (w, s) = Window();
-        w.View.Select(new[] { 1 });
+        w.View.Select([1]);
         Avalonia.Threading.Dispatcher.UIThread.RunJobs();
         var p = w.SelectPanel;
         Assert.Equal(40, (double)p.XBox.Value!, 2);
@@ -169,9 +169,9 @@ public class SelectTests
     [AvaloniaFact]
     public void SameKindAndInvert()
     {
-        var (w, s) = Window();
+        var (w, _) = Window();
         // Headless, nothing is drawn, so nothing counts as shown: both select nothing more.
-        w.View.Select(new[] { 0 });
+        w.View.Select([0]);
         w.View.SelectTool.Invert();
         Assert.Empty(w.View.Selected);
     }
@@ -197,7 +197,7 @@ public class SelectTests
             Assert.True(i >= 0, "the test world has objects in zone 0, 0");
             var t = scene.Things[i];
             var to = t.Position + new Vector3(3, 0.5f, -2);
-            s.Move(new[] { (i, to, t.Rotation) });
+            s.Move([(i, to, t.Rotation)]);
             var res = s.Save();
             Assert.True(res.Saved, res.Message);
             Assert.Equal(1, res.ObjectsAdded);
@@ -261,7 +261,7 @@ public class GizmoTests
         w.View.Show(s.Scene, null);
         w.Edit(s);
         w.Tools.ChooseSelect();
-        w.View.Select(new[] { 0 });
+        w.View.Select([0]);
         // Looking down at the wall from above (a little to the south, so north is up on screen).
         var c = new Vector3(40 - s.Scene.Cx, 30, -(40 - s.Scene.Cz));
         w.View.SetCamera(c + new Vector3(0, 30, 3), c, 1);

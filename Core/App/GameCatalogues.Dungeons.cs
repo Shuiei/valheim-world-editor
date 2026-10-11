@@ -30,7 +30,7 @@ public static partial class GameCatalogues
     // The first room of a name is kept, the last dungeon (as the bundles come, in name order).
     private sealed class DungeonScan : IStartScan
     {
-        private readonly Dictionary<string, Dict> _dungeons = new(), _rooms = new();
+        private readonly Dictionary<string, Dict> _dungeons = [], _rooms = [];
 
         public string Json()
         {
@@ -64,14 +64,14 @@ public static partial class GameCatalogues
         {
             public Bundle B { get; } = b;
 
-            private readonly Dictionary<(int File, ushort Script), string?> _kinds = new();
-            private readonly Dictionary<long, (string Name, long[] Components, bool Active)> _gos = new();
-            private readonly Dictionary<long, (long Go, long[] Children, V3 Pos, Quat Rot)> _transforms = new();
-            private readonly Dictionary<long, bool> _enabled = new();
-            private readonly Dictionary<long, (string Name, bool Active, long Tr, List<(string Kind, long Pid)> Behaviours)> _nodes = new();
-            private readonly Dictionary<long, (V3 Pos, Quat Rot, List<long> Children)> _frames = new();
+            private readonly Dictionary<(int File, ushort Script), string?> _kinds = [];
+            private readonly Dictionary<long, (string Name, long[] Components, bool Active)> _gos = [];
+            private readonly Dictionary<long, (long Go, long[] Children, V3 Pos, Quat Rot)> _transforms = [];
+            private readonly Dictionary<long, bool> _enabled = [];
+            private readonly Dictionary<long, (string Name, bool Active, long Tr, List<(string Kind, long Pid)> Behaviours)> _nodes = [];
+            private readonly Dictionary<long, (V3 Pos, Quat Rot, List<long> Children)> _frames = [];
             // Each GameObject's parent, of those read.
-            private readonly Dictionary<long, long> _parents = new();
+            private readonly Dictionary<long, long> _parents = [];
 
             public bool ParentOf(long go, out long parent) => _parents.TryGetValue(go, out parent);
 
@@ -170,10 +170,10 @@ public static partial class GameCatalogues
             // A RandomSpawn's fields read raw (the many in the rooms), or null when it was read whole.
             public Dictionary<string, object?>? Spawn(long pid) => _spawns.GetValueOrDefault(pid);
 
-            private readonly Dictionary<long, Dictionary<string, object?>> _spawns = new();
-            private readonly Dictionary<(int File, ushort Script), (AssetTypeTemplateField Tree, int Last)?> _plans = new();
+            private readonly Dictionary<long, Dictionary<string, object?>> _spawns = [];
+            private readonly Dictionary<(int File, ushort Script), (AssetTypeTemplateField Tree, int Last)?> _plans = [];
 
-            private static readonly string[] SpawnFields = { "m_Enabled", "m_chanceToSpawn", "m_dungeonRequireTheme", "m_OffObject", "m_minElevation", "m_maxElevation" };
+            private static readonly string[] SpawnFields = ["m_Enabled", "m_chanceToSpawn", "m_dungeonRequireTheme", "m_OffObject", "m_minElevation", "m_maxElevation"];
 
             // How a RandomSpawn's script is read raw: its type tree and its last field that matters; null
             // when one of its fields before that is not of a kind read here.
@@ -202,7 +202,7 @@ public static partial class GameCatalogues
             {
                 if (type == GameObjectType)
                 {
-                    var comps = new long[d.I32(0)];
+                    long[] comps = new long[d.I32(0)];
                     for (int i = 0; i < comps.Length; i++)
                     {
                         comps[i] = d.I64(8 + 12 * i);
@@ -212,7 +212,7 @@ public static partial class GameCatalogues
                 }
                 else if (type == TransformType)
                 {
-                    var children = new long[d.I32(52)];
+                    long[] children = new long[d.I32(52)];
                     for (int i = 0; i < children.Length; i++)
                     {
                         children[i] = d.I64(60 + 12 * i);
@@ -247,7 +247,7 @@ public static partial class GameCatalogues
                 while (transforms.Count > 0)
                 {
                     var nodes = transforms.Where(_transforms.ContainsKey).Select(t => _transforms[t]).ToList();
-                    transforms = nodes.SelectMany(n => n.Children).ToList();
+                    transforms = [.. nodes.SelectMany(n => n.Children)];
                     Layout.Sweep(B, At(nodes.Select(n => n.Go).Concat(transforms)), Take);
                 }
                 foreach (var (tr, t) in _transforms)
@@ -268,7 +268,7 @@ public static partial class GameCatalogues
                         return;
                     }
                     behaviours.AddRange(root ? g.Behaviours.Where(x => x.Kind == "connection") : g.Behaviours);
-                    foreach (long child in Transform(g.Tr)?.Children ?? new List<long>())
+                    foreach (long child in Transform(g.Tr)?.Children ?? [])
                     {
                         Active(child, false);
                     }
@@ -466,7 +466,7 @@ public static partial class GameCatalogues
                 string name = go["m_Name"].AsString;
                 if (kinds.TryGetValue("generator", out var g))
                 {
-                    var zone = Vec(g["m_zoneSize"]);
+                    var (x, y, z) = Vec(g["m_zoneSize"]);
                     _dungeons[name] = new Dict
                     {
                         ["algorithm"] = Py(g["m_algorithm"]),
@@ -474,7 +474,7 @@ public static partial class GameCatalogues
                         ["maxRooms"] = Py(g["m_maxRooms"]),
                         ["minRooms"] = Py(g["m_minRooms"]),
                         ["tileWidth"] = Round(Get(g, "m_tileWidth", 8L), 4),
-                        ["zoneSize"] = new List<object?> { R(zone.X, 4), R(zone.Y, 4), R(zone.Z, 4) },
+                        ["zoneSize"] = new List<object?> { R(x, 4), R(y, 4), R(z, 4) },
                         ["customInterior"] = Int(Get(g, "m_useCustomInteriorTransform", 0L)),
                         ["baseSeed"] = Int(Get(g, "m_addBaseSeedToRandomSpawn", 0L)),
                         ["doorChance"] = Round(Get(g, "m_doorChance", 0.5), 4),
@@ -513,8 +513,8 @@ public static partial class GameCatalogues
             private readonly Open _open;
             private readonly long _root;
             // Node of each GameObject that matters (numbered as first named).
-            private readonly Dictionary<long, long> _node = new();
-            private readonly List<object?> _nodes = new(), _openings = new(), _contents = new(), _spawns = new(), _picks = new();
+            private readonly Dictionary<long, long> _node = [];
+            private readonly List<object?> _nodes = [], _openings = [], _contents = [], _spawns = [], _picks = [];
 
             public RoomReader(Open open, long root)
             {
@@ -599,7 +599,7 @@ public static partial class GameCatalogues
                     pos = Add(pos, rot.Rotate(t.Pos));
                     rot = rot.Mul(t.Rot);
                 }
-                List<object?> Place() => root ? Origin().Concat(rot.Rounded(4)).ToList() : new object?[] { R(pos.X, 4), R(pos.Y, 4), R(pos.Z, 4) }.Concat(rot.Rounded(4)).ToList();
+                List<object?> Place() => root ? [.. Origin(), .. rot.Rounded(4)] : [R(pos.X, 4), R(pos.Y, 4), R(pos.Z, 4), .. rot.Rounded(4)];
                 foreach (var (k, pid) in g.Behaviours)
                 {
                     if (root && k != "connection")

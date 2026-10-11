@@ -36,11 +36,11 @@ public sealed partial class WorldGenerator
     }
 
     private readonly int _riverSeed, _streamSeed;
-    private List<Vector2> _lakes = new();
-    private List<River> _rivers = new();
-    private List<River> _streams = new();
+    private List<Vector2> _lakes = [];
+    private List<River> _rivers = [];
+    private List<River> _streams = [];
     // The river points touching each cell (read by many threads once the world is made).
-    private readonly Dictionary<Vector2i, RiverPoint[]> _riverCells = new();
+    private readonly Dictionary<Vector2i, RiverPoint[]> _riverCells = [];
 
     public List<Vector2> GetLakes() => _lakes;
 
@@ -62,11 +62,11 @@ public sealed partial class WorldGenerator
     private List<Vector2> FindLakes()
     {
         var low = new List<Vector2>();
-        for (float z = -worldSize; z <= worldSize; z = (float)((double)z + 128.0))
+        for (float z = -WorldSize; z <= WorldSize; z = (float)((double)z + 128.0))
         {
-            for (float x = -worldSize; x <= worldSize; x = (float)((double)x + 128.0))
+            for (float x = -WorldSize; x <= WorldSize; x = (float)((double)x + 128.0))
             {
-                if (!(GenMath.Length(x, z) > worldSize) && Continent(x, z) < 0.05f)
+                if (!(GenMath.Length(x, z) > WorldSize) && Continent(x, z) < 0.05f)
                 {
                     low.Add(new Vector2(x, z));
                 }
@@ -175,11 +175,11 @@ public sealed partial class WorldGenerator
     // least once.
     private bool RiverCanRun(Vector2 a, Vector2 b)
     {
-        const float step = 128f;
+        const float Step = 128f;
         float length = Vector2.Distance(a, b);
         var dir = (b - a).normalized;
         bool allWater = true;
-        for (float s = step; s <= (float)((double)length - step); s = (float)((double)s + step))
+        for (float s = Step; s <= (float)((double)length - Step); s = (float)((double)s + Step))
         {
             var q = a + dir * s;
             float land = Continent(q.x, q.y);
@@ -208,7 +208,7 @@ public sealed partial class WorldGenerator
             }
             var middle = (start + end) * 0.5f;
             float h = GetPregenerationHeight(middle.x, middle.y, !deepNorth);
-            if (h < 26f || h > 44f)
+            if (h is < 26f or > 44f)
             {
                 continue;
             }
@@ -227,7 +227,7 @@ public sealed partial class WorldGenerator
         {
             float x = Rnd.Range(-10000f, 10000f), z = Rnd.Range(-10000f, 10000f);
             float h = GetPregenerationHeight(x, z, forRivers);
-            if (h > 26f && h < 31f)
+            if (h is > 26f and < 31f)
             {
                 start = new Vector2(x, z);
                 return true;
@@ -240,17 +240,17 @@ public sealed partial class WorldGenerator
     // Tried at random directions, from 200 m down towards 80 m.
     private bool StreamEnd(Vector2 start, bool forRivers, out Vector2 end)
     {
-        const float longest = 200f, shortest = 80f;
-        const int tries = 100;
-        float step = (float)(((double)longest - shortest) / tries);
-        float length = longest;
-        for (int i = 0; i < tries; i++)
+        const float Longest = 200f, Shortest = 80f;
+        const int Tries = 100;
+        float step = (float)(((double)Longest - Shortest) / Tries);
+        float length = Longest;
+        for (int i = 0; i < Tries; i++)
         {
             length = (float)((double)length - step);
             float angle = Rnd.Range(0f, MathF.PI * 2f);
             var q = start + new Vector2(Mathf.Sin(angle), Mathf.Cos(angle)) * length;
             float h = GetPregenerationHeight(q.x, q.y, forRivers);
-            if (h > 36f && h < 44f)
+            if (h is > 36f and < 44f)
             {
                 end = q;
                 return true;
@@ -287,7 +287,7 @@ public sealed partial class WorldGenerator
         }
         foreach (var (cell, added) in cells)
         {
-            _riverCells[cell] = _riverCells.TryGetValue(cell, out var before) ? [.. before, .. added] : added.ToArray();
+            _riverCells[cell] = _riverCells.TryGetValue(cell, out var before) ? [.. before, .. added] : [.. added];
         }
     }
 
@@ -307,7 +307,7 @@ public sealed partial class WorldGenerator
                 }
                 if (!cells.TryGetValue(cell, out var list))
                 {
-                    cells.Add(cell, list = new());
+                    cells.Add(cell, list = []);
                 }
                 list.Add(new RiverPoint(p, width));
             }
@@ -317,7 +317,7 @@ public sealed partial class WorldGenerator
     // Whether a circle reaches into a cell (the cell and the circle's box overlap).
     public static bool InsideRiverGrid(Vector2i cell, Vector2 p, float r)
     {
-        var away = p - new Vector2((float)((double)cell.x * 64.0), (float)((double)cell.y * 64.0));
+        var away = p - new Vector2((float)(cell.x * 64.0), (float)(cell.y * 64.0));
         float reach = (float)((double)r + 32.0);
         return Math.Abs(away.x) < reach && Math.Abs(away.y) < reach;
     }

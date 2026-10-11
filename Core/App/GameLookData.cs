@@ -15,15 +15,26 @@ public static class GameLookData
     // The terrain material's textures by property, under the names the terrain draws them by.
     public static readonly Dictionary<string, string> TerrainTextures = new()
     {
-        ["_CliffNormal"] = "cliff_n", ["_ColorVarietyNoise"] = "variety", ["_MistlandsCliffNormal"] = "mistcliff_n", ["_NoiseTex"] = "noise",
-        ["_PavedNormal"] = "paved_n", ["_RockNormal"] = "rock_n", ["_SnowNormal"] = "snow_n",
+        ["_CliffNormal"] = "cliff_n",
+        ["_ColorVarietyNoise"] = "variety",
+        ["_MistlandsCliffNormal"] = "mistcliff_n",
+        ["_NoiseTex"] = "noise",
+        ["_PavedNormal"] = "paved_n",
+        ["_RockNormal"] = "rock_n",
+        ["_SnowNormal"] = "snow_n",
     };
 
     // The world map material's textures by property.
     public static readonly Dictionary<string, string> MapTextures = new()
     {
-        ["_BackgroundTex"] = "background", ["_WaterTex"] = "water", ["_MountainTex"] = "mountain", ["_ForestTex"] = "forest",
-        ["_CloudTex"] = "cloud", ["_lavaTex"] = "lava", ["_SpaceTex"] = "space", ["_FogLayerTex"] = "foglayer",
+        ["_BackgroundTex"] = "background",
+        ["_WaterTex"] = "water",
+        ["_MountainTex"] = "mountain",
+        ["_ForestTex"] = "forest",
+        ["_CloudTex"] = "cloud",
+        ["_lavaTex"] = "lava",
+        ["_SpaceTex"] = "space",
+        ["_FogLayerTex"] = "foglayer",
     };
 
     // vulkan: take the shader from its Vulkan program even when there is an OpenGL one (what Valheim
@@ -96,7 +107,7 @@ public static class GameLookData
     {
         var slices = (game.Asset(file) is { } at ? game.LoadTextureArray(at) : null) ?? throw new InvalidDataException($"The terrain's texture array {file} could not be read.");
         int w = slices[0].Width, h = slices[0].Height;
-        var all = new byte[w * h * 4 * slices.Count];
+        byte[] all = new byte[w * h * 4 * slices.Count];
         for (int i = 0; i < slices.Count; i++)
         {
             byte[] rgba = GameTextures.Rgba(slices[i]) ?? throw new InvalidDataException($"The terrain's texture array {file} is in a format not read here ({slices[i].Format}).");
@@ -108,7 +119,7 @@ public static class GameLookData
     private static void Flip(byte[] rgba, int w, int h)
     {
         int row = w * 4;
-        var tmp = new byte[row];
+        byte[] tmp = new byte[row];
         for (int y = 0; y < h / 2; y++)
         {
             Buffer.BlockCopy(rgba, y * row, tmp, 0, row);

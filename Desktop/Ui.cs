@@ -42,7 +42,12 @@ public static class Ui
     // A small grey heading in capitals (VIEW, OVERLAYS...).
     public static TextBlock Heading(string text, double top = 10) => new()
     {
-        Text = text.ToUpperInvariant(), FontSize = 11, FontWeight = FontWeight.SemiBold, Foreground = Muted, LetterSpacing = 0.6, Margin = new Thickness(0, top, 0, 3),
+        Text = text.ToUpperInvariant(),
+        FontSize = 11,
+        FontWeight = FontWeight.SemiBold,
+        Foreground = Muted,
+        LetterSpacing = 0.6,
+        Margin = new Thickness(0, top, 0, 3),
     };
 
     // A name with a count after it in grey, right-aligned (the View panel's switches).
@@ -68,7 +73,7 @@ public static class Ui
     public static TextBlock BrandTitle(double size, VerticalAlignment valign = VerticalAlignment.Stretch)
     {
         var t = new TextBlock { FontSize = size, FontWeight = FontWeight.SemiBold, VerticalAlignment = valign };
-        t.Inlines ??= new Avalonia.Controls.Documents.InlineCollection();
+        t.Inlines ??= [];
         t.Inlines.Add(new Avalonia.Controls.Documents.Run("Valheim") { Foreground = Accent });
         t.Inlines.Add(new Avalonia.Controls.Documents.Run(" World Editor"));
         return t;
@@ -78,7 +83,7 @@ public static class Ui
 
     public static T Classed<T>(this T c, params string[] classes) where T : StyledElement
     {
-        foreach (var k in classes)
+        foreach (string k in classes)
         {
             c.Classes.Add(k);
         }
@@ -120,14 +125,14 @@ public static class Ui
         r["ToggleButtonForeground"] = Text;
         r["ToggleButtonForegroundPointerOver"] = Text;
         var chosenBg = new SolidColorBrush(Color.Parse("#2c2416"));
-        foreach (var state in new[] { "", "PointerOver", "Pressed" })
+        foreach (string? state in new[] { "", "PointerOver", "Pressed" })
         {
             r[$"ToggleButtonBackgroundChecked{state}"] = chosenBg;
             r[$"ToggleButtonForegroundChecked{state}"] = Accent;
             r[$"ToggleButtonBorderBrushChecked{state}"] = Accent;
         }
         // Text boxes, number boxes and lists.
-        foreach (var state in new[] { "", "PointerOver", "Focused" })
+        foreach (string? state in new[] { "", "PointerOver", "Focused" })
         {
             r[$"TextControlBackground{state}"] = Panel2;
             r[$"TextControlForeground{state}"] = Text;
@@ -252,7 +257,7 @@ public static class Ui
         s.Add(new Style(x => x.OfType<CheckBox>().Class("switch")) { Setters = { new Setter(TemplatedControl.TemplateProperty, SwitchTemplate()) } });
     }
 
-    private static FuncControlTemplate<CheckBox> SwitchTemplate() => new FuncControlTemplate<CheckBox>((cb, scope) =>
+    private static FuncControlTemplate<CheckBox> SwitchTemplate() => new((cb, scope) =>
     {
         var knob = new Border { Width = 13, Height = 13, CornerRadius = new CornerRadius(7), Margin = new Thickness(2), HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Center };
         var track = new Border { Width = 30, Height = 17, CornerRadius = new CornerRadius(9), Child = knob, VerticalAlignment = VerticalAlignment.Center };
@@ -265,7 +270,7 @@ public static class Ui
             knob.Background = on ? Brushes.White : new SolidColorBrush(Color.Parse("#cfd5de"));
             knob.HorizontalAlignment = on ? HorizontalAlignment.Right : HorizontalAlignment.Left;
         }
-        cb.PropertyChanged += (_, e) => { if (e.Property == ToggleButton.IsCheckedProperty) Sync(); };
+        cb.PropertyChanged += (_, e) => { if (e.Property == ToggleButton.IsCheckedProperty) { Sync(); } };
         Sync();
         var root = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*"), Background = Brushes.Transparent, Margin = new Thickness(0, 3) };
         Grid.SetColumn(content, 1);

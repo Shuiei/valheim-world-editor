@@ -24,7 +24,7 @@ public sealed class ParityPrefsTests : IDisposable
         {
             Directory.Delete(_dir, true);
         }
-        catch (Exception)
+        catch
         {
         }
     }
@@ -59,7 +59,7 @@ public sealed class ParityPrefsTests : IDisposable
         Assert.False(Prefs.Load(File1).Has("a"));
         // Written sorted and readable.
         string text = File.ReadAllText(File1);
-        Assert.True(text.IndexOf("\"b\"") < text.IndexOf("\"c\""));
+        Assert.True(text.IndexOf("\"b\"", StringComparison.Ordinal) < text.IndexOf("\"c\"", StringComparison.Ordinal));
         Assert.Contains("\n", text);
     }
 
@@ -217,11 +217,11 @@ public sealed class ParityPrefsTests : IDisposable
     {
         W = 2,
         H = 2,
-        Rel = new[] { 0f, 1f, float.NaN, 2f },
-        Wt = new[] { 1f, 1f, 0f, 0.5f },
-        Pnt = new[] { -1f, 0f, 0.5f, 1f },
-        Objects = new List<CopyData.Obj> { new(TerrainEditor.Save.StableHash.Of("Beech1"), "Beech1", 1, 1, 0, new Vector3(0, 90, 0), 1, 1234) },
-        Poly = new List<Vector2> { new(0, 0), new(2, 0), new(2, 2) },
+        Rel = [0f, 1f, float.NaN, 2f],
+        Wt = [1f, 1f, 0f, 0.5f],
+        Pnt = [-1f, 0f, 0.5f, 1f],
+        Objects = [new(Save.StableHash.Of("Beech1"), "Beech1", 1, 1, 0, new Vector3(0, 90, 0), 1, 1234)],
+        Poly = [new(0, 0), new(2, 0), new(2, 2)],
         Name = "kept",
     };
 

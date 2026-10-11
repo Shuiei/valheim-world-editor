@@ -17,17 +17,40 @@ public sealed class InspectorPanel
 {
     private static readonly Dictionary<string, string> Labels = new()
     {
-        ["text"] = "Text (sign)", ["tag"] = "Tag (portal)", ["creator"] = "Builder (player id)", ["creatorName"] = "Builder name", ["author"] = "Author",
-        ["health"] = "Health", ["plantTime"] = "Planted at (game time)", ["items"] = "Contents", ["permitted"] = "Permitted players", ["enabled"] = "Enabled (1 = on)",
-        ["item"] = "Item", ["variant"] = "Variant", ["quality"] = "Quality", ["ownerName"] = "Owner name", ["owner"] = "Owner (player id)", ["fuel"] = "Fuel", ["StartTime"] = "Started at",
-        ["level"] = "Level (stars)", ["tamed"] = "Tamed (1 = yes)", ["support"] = "Support", ["scale"] = "Scale", ["picked"] = "Picked (1 = yes)", ["picked_time"] = "Picked at",
-        ["spawntime"] = "Spawned at", ["lastTime"] = "Last updated (game time)", ["accTime"] = "Time accumulated", ["queued"] = "Queued items", ["state"] = "State",
+        ["text"] = "Text (sign)",
+        ["tag"] = "Tag (portal)",
+        ["creator"] = "Builder (player id)",
+        ["creatorName"] = "Builder name",
+        ["author"] = "Author",
+        ["health"] = "Health",
+        ["plantTime"] = "Planted at (game time)",
+        ["items"] = "Contents",
+        ["permitted"] = "Permitted players",
+        ["enabled"] = "Enabled (1 = on)",
+        ["item"] = "Item",
+        ["variant"] = "Variant",
+        ["quality"] = "Quality",
+        ["ownerName"] = "Owner name",
+        ["owner"] = "Owner (player id)",
+        ["fuel"] = "Fuel",
+        ["StartTime"] = "Started at",
+        ["level"] = "Level (stars)",
+        ["tamed"] = "Tamed (1 = yes)",
+        ["support"] = "Support",
+        ["scale"] = "Scale",
+        ["picked"] = "Picked (1 = yes)",
+        ["picked_time"] = "Picked at",
+        ["spawntime"] = "Spawned at",
+        ["lastTime"] = "Last updated (game time)",
+        ["accTime"] = "Time accumulated",
+        ["queued"] = "Queued items",
+        ["state"] = "State",
     };
 
     private static readonly (string Section, string Name)[] Sections =
-    {
+    [
         ("strings", "text"), ("ints", "whole number"), ("floats", "number"), ("longs", "large number"), ("vec3", "3 numbers (x y z)"), ("quats", "4 numbers (x y z w)"),
-    };
+    ];
 
     public Control Card { get; }
     private readonly Func<EditSession?> _session;
@@ -60,8 +83,8 @@ public sealed class InspectorPanel
         public string? Note;
         public bool Removed;
     }
-    internal List<Field> FieldList { get; private set; } = new();
-    internal List<(string Section, string Key, string Value)> Added { get; } = new();
+    internal List<Field> FieldList { get; private set; } = [];
+    internal List<(string Section, string Key, string Value)> Added { get; } = [];
     internal sealed class ItemRow
     {
         public string Name = "Wood";
@@ -69,7 +92,7 @@ public sealed class InspectorPanel
         public float Durability = 100;
         public string CrafterId = "0", CrafterName = "";
         public bool Equipped, PickedUp, Cheated;
-        public Dictionary<string, string> CustomData = new();
+        public Dictionary<string, string> CustomData = [];
         public ItemUpload Upload() => new(Name, null, Stack, Quality, Durability, X, Y, Variant, WorldLevel, CrafterId, CrafterName, Equipped, PickedUp, Cheated, CustomData);
     }
     internal List<ItemRow>? Items { get; private set; }
@@ -79,7 +102,7 @@ public sealed class InspectorPanel
     internal sealed class StandRow
     {
         public int Slot;
-        public int[] Types = Array.Empty<int>();
+        public int[] Types = [];
         public string Name = "";
         public int Quality = 1, Variant;
     }
@@ -212,14 +235,41 @@ public sealed class InspectorPanel
         var z = _z!;
         var list = new List<Field>();
         void Add(string section, int key, string value, string? note = null) => list.Add(new Field { Section = section, Key = key, Name = ZdoKeys.NameOf(key), Value = value, Now = value, Note = note });
-        foreach (var (k, v) in z.FloatList) Add("floats", k, S(v));
-        foreach (var (k, v) in z.Vec3List) Add("vec3", k, $"{S(v.X)} {S(v.Y)} {S(v.Z)}");
-        foreach (var (k, v) in z.QuatList) Add("quats", k, $"{S(v.X)} {S(v.Y)} {S(v.Z)} {S(v.W)}");
+        foreach (var (k, v) in z.FloatList)
+        {
+            Add("floats", k, S(v));
+        }
+
+        foreach (var (k, v) in z.Vec3List)
+        {
+            Add("vec3", k, $"{S(v.X)} {S(v.Y)} {S(v.Z)}");
+        }
+
+        foreach (var (k, v) in z.QuatList)
+        {
+            Add("quats", k, $"{S(v.X)} {S(v.Y)} {S(v.Z)} {S(v.W)}");
+        }
         // Ints that are prefab or item hashes (item stands, cooking stations…) get the name beside them.
-        foreach (var (k, v) in z.IntList) Add("ints", k, v.ToString(CultureInfo.InvariantCulture), PrefabCatalog.NameOf(v));
-        foreach (var (k, v) in z.LongList) Add("longs", k, v.ToString(CultureInfo.InvariantCulture));
-        foreach (var (k, v) in z.StringList) Add("strings", k, v);
-        foreach (var (k, v) in z.ByteList) Add("bytes", k, Convert.ToBase64String(v), $"{v.Length} bytes");
+        foreach (var (k, v) in z.IntList)
+        {
+            Add("ints", k, v.ToString(CultureInfo.InvariantCulture), PrefabCatalog.NameOf(v));
+        }
+
+        foreach (var (k, v) in z.LongList)
+        {
+            Add("longs", k, v.ToString(CultureInfo.InvariantCulture));
+        }
+
+        foreach (var (k, v) in z.StringList)
+        {
+            Add("strings", k, v);
+        }
+
+        foreach (var (k, v) in z.ByteList)
+        {
+            Add("bytes", k, Convert.ToBase64String(v), $"{v.Length} bytes");
+        }
+
         FieldList = list;
         Added.Clear();
         var details = PrefabCatalog.Details(z.Prefab);
@@ -232,17 +282,28 @@ public sealed class InspectorPanel
             try
             {
                 var inv = items != null ? InventoryData.Read(items) : new InventoryData();
-                Items = inv.Items.Select(i => new ItemRow
+                Items = [.. inv.Items.Select(i => new ItemRow
                 {
-                    Name = PrefabCatalog.NameOf(i.Prefab) ?? i.Prefab.ToString(CultureInfo.InvariantCulture), Stack = i.Stack, Quality = i.Quality, Durability = i.Durability,
-                    X = i.X, Y = i.Y, Variant = i.Variant, WorldLevel = i.WorldLevel, CrafterId = i.CrafterId.ToString(CultureInfo.InvariantCulture), CrafterName = i.CrafterName,
-                    Equipped = i.Equipped, PickedUp = i.PickedUp, Cheated = i.Cheated, CustomData = new(i.CustomData),
-                }).ToList();
+                    Name = PrefabCatalog.NameOf(i.Prefab) ?? i.Prefab.ToString(CultureInfo.InvariantCulture),
+                    Stack = i.Stack,
+                    Quality = i.Quality,
+                    Durability = i.Durability,
+                    X = i.X,
+                    Y = i.Y,
+                    Variant = i.Variant,
+                    WorldLevel = i.WorldLevel,
+                    CrafterId = i.CrafterId.ToString(CultureInfo.InvariantCulture),
+                    CrafterName = i.CrafterName,
+                    Equipped = i.Equipped,
+                    PickedUp = i.PickedUp,
+                    Cheated = i.Cheated,
+                    CustomData = new(i.CustomData),
+                })];
             }
             catch (Exception ex) when (ex is NotSupportedException or EndOfStreamException or IOException)
             {
                 _inventoryError = ex.Message;
-                Items = new();
+                Items = [];
             }
         }
         Stand = null;
@@ -251,14 +312,14 @@ public sealed class InspectorPanel
         if (StandData.IsItemStand(z.Prefab))
         {
             var (held, way) = StandData.ReadItemStand(z);
-            Stand = new() { new StandRow { Name = held?.Item ?? "", Quality = held?.Quality ?? 1, Variant = held?.Variant ?? 0 } };
+            Stand = [new StandRow { Name = held?.Item ?? "", Quality = held?.Quality ?? 1, Variant = held?.Variant ?? 0 }];
             StandWay = way;
         }
         else if (PrefabCatalog.ArmourSlotsOf(z.Prefab) is { } slots)
         {
             _armourStand = true;
             var (held, pose) = StandData.ReadArmourStand(z, slots.Length);
-            Stand = new();
+            Stand = [];
             for (int i = 0; i < slots.Length; i++)
             {
                 // ArmorStand has each of its slots twice: one row per kind, and any slot that holds something.
@@ -282,7 +343,7 @@ public sealed class InspectorPanel
 
     private string StandKey() => Stand == null ? "" : string.Join(";", Stand.Select(r => $"{r.Name},{r.Quality},{r.Variant}")) + "|" + StandWay.ToString(CultureInfo.InvariantCulture);
 
-    private static string Label(Field f) => f.Name is string n ? Labels.TryGetValue(n, out var l) ? l : n : $"#{f.Key}";
+    private static string Label(Field f) => f.Name is string n ? Labels.TryGetValue(n, out string? l) ? l : n : $"#{f.Key}";
 
     private void Render()
     {
@@ -328,7 +389,7 @@ public sealed class InspectorPanel
             {
                 ColumnDefinitions = new ColumnDefinitions("*,170,Auto"),
                 ColumnSpacing = 4,
-                Children = { new TextBlock { Text = $"{(Labels.TryGetValue(a.Key, out var l) ? l : a.Key)} (new)", FontSize = 11 }, Col(new TextBlock { Text = a.Value, FontSize = 11 }, 1), Col(x, 2) },
+                Children = { new TextBlock { Text = $"{(Labels.TryGetValue(a.Key, out string? l) ? l : a.Key)} (new)", FontSize = 11 }, Col(new TextBlock { Text = a.Value, FontSize = 11 }, 1), Col(x, 2) },
             });
         }
         Dirty();
@@ -355,8 +416,11 @@ public sealed class InspectorPanel
         var rows = new StackPanel { Spacing = 3 };
         var details = new Expander
         {
-            Header = new TextBlock { Text = "Every item's details", FontSize = 11 }, Content = rows, IsExpanded = w <= 0 || h <= 0 || Items.Any(i => i.X >= w || i.Y >= h),
-            HorizontalAlignment = HorizontalAlignment.Stretch, Padding = new Thickness(0),
+            Header = new TextBlock { Text = "Every item's details", FontSize = 11 },
+            Content = rows,
+            IsExpanded = w <= 0 || h <= 0 || Items.Any(i => i.X >= w || i.Y >= h),
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            Padding = new Thickness(0),
         }.Tip("inspect.details");
         ItemsBox.Children.Add(details);
         rows.Children.Add(new Grid
@@ -444,9 +508,14 @@ public sealed class InspectorPanel
                 var it = Items!.FirstOrDefault(i => i.X == x && i.Y == y);
                 var cell = new Button
                 {
-                    Margin = new Thickness(1), Padding = new Thickness(2), HorizontalAlignment = HorizontalAlignment.Stretch, VerticalAlignment = VerticalAlignment.Stretch,
-                    HorizontalContentAlignment = HorizontalAlignment.Stretch, VerticalContentAlignment = VerticalAlignment.Stretch,
-                    Background = it != null ? Ui.Panel2 : Ui.Bg, BorderThickness = new Thickness(_slot == at ? 2 : 1),
+                    Margin = new Thickness(1),
+                    Padding = new Thickness(2),
+                    HorizontalAlignment = HorizontalAlignment.Stretch,
+                    VerticalAlignment = VerticalAlignment.Stretch,
+                    HorizontalContentAlignment = HorizontalAlignment.Stretch,
+                    VerticalContentAlignment = VerticalAlignment.Stretch,
+                    Background = it != null ? Ui.Panel2 : Ui.Bg,
+                    BorderThickness = new Thickness(_slot == at ? 2 : 1),
                     BorderBrush = _slot == at ? new SolidColorBrush(Ui.AccentColor) : Ui.Line,
                     Content = it == null ? null : new Grid
                     {
@@ -498,13 +567,17 @@ public sealed class InspectorPanel
         var item = items.FirstOrDefault(i => i.X == sx && i.Y == sy);
         var pick = new AutoCompleteBox
         {
-            Text = item?.Name ?? "", ItemsSource = PrefabCatalog.Items, FilterMode = AutoCompleteFilterMode.ContainsOrdinal, FontSize = 11, MinimumPrefixLength = 1,
+            Text = item?.Name ?? "",
+            ItemsSource = PrefabCatalog.Items,
+            FilterMode = AutoCompleteFilterMode.ContainsOrdinal,
+            FontSize = 11,
+            MinimumPrefixLength = 1,
             PlaceholderText = "Find an item…",
         }.Tip("inspect.slotItem");
         void Chosen()
         {
             string name = pick.Text?.Trim() ?? "";
-            var known = PrefabCatalog.Items.FirstOrDefault(n => string.Equals(n, name, StringComparison.OrdinalIgnoreCase));
+            string? known = PrefabCatalog.Items.FirstOrDefault(n => string.Equals(n, name, StringComparison.OrdinalIgnoreCase));
             // What the slot holds now: a pick and the box then losing focus (once the grid is drawn
             // again) both come here, and must not put the item in twice.
             var now = items.FirstOrDefault(i => i.X == sx && i.Y == sy);
@@ -560,7 +633,8 @@ public sealed class InspectorPanel
         ItemsBox.Children.Add(pick);
         ItemsBox.Children.Add(new StackPanel
         {
-            Orientation = Orientation.Horizontal, Spacing = 6,
+            Orientation = Orientation.Horizontal,
+            Spacing = 6,
             Children =
             {
                 new TextBlock { Text = "How many", FontSize = 11, VerticalAlignment = VerticalAlignment.Center }, count,
@@ -593,7 +667,11 @@ public sealed class InspectorPanel
             string slotName = row.Types.Length == 0 ? "Anything" : string.Join(", ", row.Types.Select(StandData.TypeName).Distinct());
             var name = new AutoCompleteBox
             {
-                Text = row.Name, ItemsSource = choices, FilterMode = AutoCompleteFilterMode.ContainsOrdinal, FontSize = 11, MinimumPrefixLength = 1,
+                Text = row.Name,
+                ItemsSource = choices,
+                FilterMode = AutoCompleteFilterMode.ContainsOrdinal,
+                FontSize = 11,
+                MinimumPrefixLength = 1,
                 PlaceholderText = _armourStand ? slotName : "Find an item…",
             }.Tip("inspect.standItem");
             name.PropertyChanged += (_, e) =>
@@ -772,7 +850,7 @@ public sealed class InspectorPanel
             return;
         }
         string name = PrefabCatalog.DisplayName(z.Prefab) ?? "object";
-        var copies = s.Commit($"Edited {name}", null, new[] { index }, new[] { (new NewObject(0, z.Prefab, z.Position, z.Rotation, 0, null, false, z.Serialize()), t.Piece) });
+        var copies = s.Commit($"Edited {name}", null, [index], [(new NewObject(0, z.Prefab, z.Position, z.Rotation, 0, null, false, z.Serialize()), t.Piece)]);
         Message?.Invoke($"Changed {name}. Ctrl+Z puts the old one back; Save writes it.");
         Open(copies[0]);
         Replaced?.Invoke(copies[0]);

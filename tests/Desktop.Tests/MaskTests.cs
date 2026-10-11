@@ -71,7 +71,7 @@ public class MaskTests
     public void SlopeAndPaintRules()
     {
         var s = Area();
-        s.Shape(30, 30, Formula.Compile("d < 3 ? 6 : 0", new[] { "d" }), 3, 0, "step");
+        s.Shape(30, 30, Formula.Compile("d < 3 ? 6 : 0", ["d"]), 3, 0, "step");
         var m = new Mask { On = true, SlopeMin = 30 };
         var f = m.For(s.Ground, s.Scene.Biomes)!;
         Assert.Equal(1, f(30 * s.Ground.W + 33));
@@ -95,7 +95,7 @@ public class MaskTests
         var s = Area();
         s.Mask.On = true;
         s.Mask.Biomes.Add(1);
-        s.Shape(64, 20, Formula.Compile("2", new string[0]), 8, 0, "x");
+        s.Shape(64, 20, Formula.Compile("2", []), 8, 0, "x");
         Assert.Equal(32, H(s, 60, 20), 3);
         Assert.Equal(30, H(s, 68, 20), 3);
         var a = new AreaTool { Soft = 0 };
@@ -115,7 +115,7 @@ public class MaskTests
         var s = Area();
         s.Mask.On = true;
         s.Mask.SlopeMax = 20;
-        s.Shape(40, 40, Formula.Compile("6", new string[0]), 6, 0, "x");
+        s.Shape(40, 40, Formula.Compile("6", []), 6, 0, "x");
         for (int dx = -4; dx <= 4; dx++)
         {
             for (int dz = -4; dz <= 4; dz++)

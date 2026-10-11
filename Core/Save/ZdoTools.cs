@@ -180,7 +180,7 @@ public static class ZdoBuilder
     {
         public ushort Flag { get; } = flag;
 
-        public List<(int Key, byte[] Value)> Items { get; } = new();
+        public List<(int Key, byte[] Value)> Items { get; } = [];
 
         public byte[]? Raw { get; set; }
 
@@ -205,12 +205,12 @@ public static class ZdoBuilder
         return s;
     }
 
-    private static byte[] Concat(params byte[][] parts) => parts.SelectMany(p => p).ToArray();
+    private static byte[] Concat(params byte[][] parts) => [.. parts.SelectMany(p => p)];
 
     // The data sections of the template, in file order (same reading as WorldSave.ReadZdo).
     private static List<Section> ReadSections(byte[] source, ObjectRef t, int worldVersion)
     {
-        List<Section> result = new();
+        List<Section> result = [];
         if ((t.Flags & 0xFF) == 0)
         {
             return result;
@@ -256,17 +256,17 @@ public sealed class ZoneDb
 
     public double NetTime { get; private set; }
 
-    public HashSet<(short X, short Z)> Generated { get; } = new();
+    public HashSet<(short X, short Z)> Generated { get; } = [];
 
     public int LocationVersion { get; set; }
 
-    public List<string> GlobalKeys { get; } = new();
+    public List<string> GlobalKeys { get; } = [];
 
     public bool LocationsGenerated { get; set; }
 
-    public List<(int Hash, Vector3 Position, bool Placed)> Locations { get; } = new();
+    public List<(int Hash, Vector3 Position, bool Placed)> Locations { get; } = [];
 
-    private byte[] _tail = Array.Empty<byte>();
+    private byte[] _tail = [];
 
     public static ZoneDb Load(string path)
     {

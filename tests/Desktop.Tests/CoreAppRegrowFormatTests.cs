@@ -59,8 +59,8 @@ public class CoreAppFormatTests
         Assert.Empty(unknown);
         Assert.Empty((JsonArray)clip["objects"]!);
         int w = (int)clip["w"]!, h = (int)clip["h"]!;
-        var rel = ((JsonArray)clip["rel"]!).Select(v => (int)v!).ToArray();
-        var pnt = ((JsonArray)clip["pnt"]!).Select(v => (int)v!).ToArray();
+        int[] rel = [.. ((JsonArray)clip["rel"]!).Select(v => (int)v!)];
+        int[] pnt = [.. ((JsonArray)clip["pnt"]!).Select(v => (int)v!)];
         Assert.True(w > 10 && h > 8);
         // Heights in cm above the lowest entry (9 m); points no entry covers have no ground.
         Assert.Contains(100, rel);
@@ -90,7 +90,7 @@ public class CoreAppFormatTests
     {
         var clip = new JsonObject { ["objects"] = new JsonArray() };
         Assert.Equal("", BlueprintFormats.Write(clip, "vbuild", "x", _ => 0));
-        string planbuild = BlueprintFormats.Write(new JsonObject(), "blueprint", "Nothing", _ => 99);
+        string planbuild = BlueprintFormats.Write([], "blueprint", "Nothing", _ => 99);
         Assert.Contains("#Name:Nothing", planbuild);
         Assert.EndsWith("#Pieces\n", planbuild);
     }
@@ -112,7 +112,7 @@ public class CoreAppRegrowTests
     {
         var forward = Vector3.Normalize(new Vector3(fx, fy, fz));
         var up = new Vector3(ux, uy, uz);
-        var q = (Quaternion)LookRotation.Invoke(null, new object[] { forward, up })!;
+        var q = (Quaternion)LookRotation.Invoke(null, [forward, up])!;
         Assert.Equal(1f, q.Length(), 3);
         var f = Vector3.Transform(Vector3.UnitZ, q);
         Assert.True(Vector3.Distance(f, forward) < 1e-3f, $"{f} for {forward}");
@@ -140,7 +140,7 @@ public class CoreAppRegrowTests
                 {
                     continue;
                 }
-                var corners = terrain.CornerBiomes(zx, zz);
+                int[] corners = terrain.CornerBiomes(zx, zz);
                 bool edge = corners.Distinct().Count() > 1;
                 var b = terrain.BiomeAt(zx * 64f, zz * 64f);
                 if (edge && edges < 6)
@@ -169,7 +169,7 @@ public class CoreAppRegrowTests
                 Assert.InRange(s.X, zx * 64f - 32f - 20f, zx * 64f + 32f + 20f);
                 Assert.InRange(s.Z, zz * 64f - 32f - 20f, zz * 64f + 32f + 20f);
                 Assert.True(s.Scale > 0);
-                Assert.All(new[] { s.Rx, s.Ry, s.Rz }, a => Assert.True(float.IsFinite(a)));
+                Assert.All([s.Rx, s.Ry, s.Rz], a => Assert.True(float.IsFinite(a)));
             }
             total += spots.Count;
         }
@@ -193,7 +193,7 @@ public class CoreAppRegrowTests
         {
             for (int zx = -90; zx <= 90 && coasts.Count < 40; zx += 2)
             {
-                var c = terrain.CornerBiomes(zx, zz);
+                int[] c = terrain.CornerBiomes(zx, zz);
                 if (c.Contains((int)ValheimGen.Heightmap.Biome.Ocean) && c.Any(b => b != (int)ValheimGen.Heightmap.Biome.Ocean))
                 {
                     coasts.Add((zx, zz));

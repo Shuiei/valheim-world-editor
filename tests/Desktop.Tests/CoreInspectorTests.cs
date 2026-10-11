@@ -1,5 +1,4 @@
 using System.Numerics;
-using System.Text.Json.Nodes;
 using TerrainEditor.App;
 using TerrainEditor.Editing;
 using TerrainEditor.Save;
@@ -80,17 +79,17 @@ public class InspectorTests
         WorldSave world = w.Load();
         var edits = new EditStore(world);
         int chest = world.Objects.First(o => o.Prefab == Fixtures.Hash("piece_chest_wood")).Id;
-        ZdoData z = ZdoData.Parse(world.ObjectBytes(chest));
+        var z = ZdoData.Parse(world.ObjectBytes(chest));
         var inv = new InventoryData();
         inv.Items.Add(new InventoryData.Item { Prefab = Fixtures.Hash("Wood"), Stack = 42 });
         z.SetBytes(StableHash.Of("items"), inv.Write());
         z.Set("strings", StableHash.Of("text"), "Hello");
-        edits.AddObjects(new[] { new NewObject(-1, z.Prefab, z.Position, z.Rotation, 0f, null, false, z.Serialize()) });
-        edits.SetDeleted(new[] { chest }, true);
-        var r = WorldWriter.Save(world, Array.Empty<ZoneEdit>(), edits.Deleted, edits.Added);
+        edits.AddObjects([new NewObject(-1, z.Prefab, z.Position, z.Rotation, 0f, null, false, z.Serialize())]);
+        edits.SetDeleted([chest], true);
+        var r = WorldWriter.Save(world, [], edits.Deleted, edits.Added);
         Assert.True(r.Saved, r.Message);
 
-        WorldSave again = WorldSave.Load(w.Dir);
+        var again = WorldSave.Load(w.Dir);
         Assert.Equal(world.ObjectCount, again.ObjectCount);
         var found = Enumerable.Range(0, again.ObjectRefs.Count).Select(i => ZdoData.Parse(again.ObjectBytes(i)))
             .Where(o => o.Prefab == Fixtures.Hash("piece_chest_wood") && o.StringList.Any(s => s.Value == "Hello")).ToList();
@@ -107,10 +106,10 @@ public class InspectorTests
         using var w = new TempWorld();
         WorldSave world = w.Load();
         int chest = world.Objects.First(o => o.Prefab == Fixtures.Hash("piece_chest_wood")).Id;
-        ZdoData z = ZdoData.Parse(world.ObjectBytes(chest));
+        var z = ZdoData.Parse(world.ObjectBytes(chest));
         z.Set("strings", StableHash.Of("text"), "Moved");
         var moved = new NewObject(-2, z.Prefab, z.Position + new Vector3(3, 0, 0), new Vector3(0, 90, 0), 0f, null, false, z.Serialize());
-        ZdoData m = ZdoData.Parse(world.NewObjectBytes(moved, _ => throw new InvalidOperationException("no source needed"))!);
+        var m = ZdoData.Parse(world.NewObjectBytes(moved, _ => throw new InvalidOperationException("no source needed"))!);
         Assert.Equal(z.Position.X + 3, m.Position.X, 3);
         Assert.Equal(90f, m.Rotation.Y, 1);
         Assert.Contains(m.StringList, s => s.Value == "Moved");
@@ -131,8 +130,8 @@ public class SearchTests
         Assert.Equal(beeches, r.Counts["Beech1"]);
         Assert.All(r.Hits, h => Assert.Contains("eech", h.Name));
         // Deleted objects are not found, new ones are.
-        edits.SetDeleted(new[] { r.Hits[0].Id }, true);
-        edits.AddObjects(new[] { new NewObject(-5, Fixtures.Hash("Beech1"), new Vector3(1, 2, 3), Vector3.Zero, 0f) });
+        edits.SetDeleted([r.Hits[0].Id], true);
+        edits.AddObjects([new NewObject(-5, Fixtures.Hash("Beech1"), new Vector3(1, 2, 3), Vector3.Zero, 0f)]);
         var again = WorldSearch.Search(world, edits, "Beech1", "kinds");
         Assert.Equal(beeches, again.Total);
         Assert.Contains(again.Hits, h => h.Id == -5);
@@ -148,13 +147,13 @@ public class SearchTests
         WorldSave world = w.Load();
         var edits = new EditStore(world);
         int chest = world.Objects.First(o => o.Prefab == Fixtures.Hash("piece_chest_wood")).Id;
-        ZdoData z = ZdoData.Parse(world.ObjectBytes(chest));
+        var z = ZdoData.Parse(world.ObjectBytes(chest));
         var inv = new InventoryData();
         inv.Items.Add(new InventoryData.Item { Prefab = Fixtures.Hash("Wood"), Stack = 30 });
         inv.Items.Add(new InventoryData.Item { Prefab = Fixtures.Hash("Wood"), Stack = 12, X = 1 });
         z.SetBytes(StableHash.Of("items"), inv.Write());
         z.Set("strings", StableHash.Of("text"), "Odin's stash");
-        edits.AddObjects(new[] { new NewObject(-1, z.Prefab, z.Position, z.Rotation, 0f, null, false, z.Serialize()) });
+        edits.AddObjects([new NewObject(-1, z.Prefab, z.Position, z.Rotation, 0f, null, false, z.Serialize())]);
         var items = WorldSearch.Search(world, edits, "wood", "items");
         var hit = Assert.Single(items.Hits);
         Assert.Equal(-1, hit.Id);
@@ -202,7 +201,7 @@ public class ZoneStatsTests
             Assert.All(rows, r => Assert.Equal(-1, r[6]));
             return;
         }
-        foreach (var r in rows)
+        foreach (int[]? r in rows)
         {
             int expected = world.Pieces.Select(p => { var (x, z) = world.ObjectRefs[p.Id].Zone; return Math.Max(Math.Abs(x - r[0]), Math.Abs(z - r[1])); }).Min();
             Assert.Equal(expected, r[6]);
@@ -242,7 +241,7 @@ public class BuilderTests
             Assert.Equal(0, PieceFlag(Make("woodwall")));
             // A moved object keeps what it had.
             int chest = world.Objects.First(o => o.Prefab == Fixtures.Hash("piece_chest_wood")).Id;
-            ZdoData z = ZdoData.Parse(world.ObjectBytes(chest));
+            var z = ZdoData.Parse(world.ObjectBytes(chest));
             var moved = new NewObject(-6, z.Prefab, z.Position + new Vector3(1, 0, 0), z.Rotation, 0f, chest, false);
             Assert.Equal(0L, CreatorOf(world.NewObjectBytes(moved, Source)!));
         }
@@ -255,9 +254,9 @@ public class BuilderTests
     [Fact]
     public void GrownCropsAndTreesKeepTheirSaplingsGrowRadius()
     {
-        Assert.Equal(0.5f, TerrainEditor.Terrain.PrefabCatalog.GrownFrom["Pickable_Carrot"].Radius);
-        Assert.Equal("Oak_Sapling", TerrainEditor.Terrain.PrefabCatalog.GrownFrom["Oak1"].Sapling);
-        Assert.False(TerrainEditor.Terrain.PrefabCatalog.GrownFrom.ContainsKey("BlueberryBush"));
+        Assert.Equal(0.5f, PrefabCatalog.GrownFrom["Pickable_Carrot"].Radius);
+        Assert.Equal("Oak_Sapling", PrefabCatalog.GrownFrom["Oak1"].Sapling);
+        Assert.False(PrefabCatalog.GrownFrom.ContainsKey("BlueberryBush"));
     }
 
     [Fact]
@@ -265,11 +264,11 @@ public class BuilderTests
     {
         // ... per-world data, then the name, the player id and an empty start seed.
         byte[] name = System.Text.Encoding.UTF8.GetBytes("Shuiei");
-        byte[] file = new byte[] { 1, 2, 3, 6 }.Concat(name).Concat(BitConverter.GetBytes(3349326647L)).Concat(new byte[] { 0, 1, 0, 0 }).ToArray();
-        var c = TerrainEditor.App.Characters.Read(file, "shuiei");
+        byte[] file = [1, 2, 3, 6, .. name, .. BitConverter.GetBytes(3349326647L), .. new byte[] { 0, 1, 0, 0 }];
+        var c = Characters.Read(file, "shuiei");
         Assert.NotNull(c);
         Assert.Equal("Shuiei", c!.Name);
         Assert.Equal(3349326647L, c.Id);
-        Assert.Null(TerrainEditor.App.Characters.Read(file, "someone"));
+        Assert.Null(Characters.Read(file, "someone"));
     }
 }

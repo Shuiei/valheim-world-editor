@@ -17,18 +17,18 @@ public static class BuildingPicture
     public sealed record Piece(string Name, Vector3 Position, Vector3 Euler, float Scale);
 
     // The pieces of a copy (clipboard format: dx, dy, dz from the anchor; Unity's Euler degrees).
-    public static List<Piece> FromClip(JsonObject clip) => (clip["objects"] as JsonArray ?? new()).OfType<JsonObject>()
+    public static List<Piece> FromClip(JsonObject clip) => [.. (clip["objects"] as JsonArray ?? []).OfType<JsonObject>()
         .Select(o => new Piece((string?)o["name"] ?? "", new Vector3(F(o["dx"]), F(o["dy"]), F(o["dz"])), new Vector3(F(o["rx"]), F(o["ry"]), F(o["rz"])), F(o["scale"])))
-        .Where(p => p.Name.Length > 0).ToList();
+        .Where(p => p.Name.Length > 0)];
 
     private static float F(JsonNode? n) => n == null ? 0 : float.Parse(n.ToJsonString(), CultureInfo.InvariantCulture);
 
     // Colours (sRGB) of WearNTear's materials: wood, stone, iron, hardwood, marble, ashstone, ancient, ice, timber.
     private static readonly Vector3[] MaterialColours =
-    {
+    [
         new(152, 110, 70), new(140, 138, 132), new(92, 92, 98), new(118, 84, 54), new(205, 205, 210),
         new(82, 76, 76), new(112, 100, 88), new(170, 210, 230), new(140, 100, 64),
-    };
+    ];
 
     private struct Tri
     {
@@ -90,9 +90,16 @@ public static class BuildingPicture
             {
                 tris.Add(new Tri
                 {
-                    A = P(idx[t]), B = P(idx[t + 1]), C = P(idx[t + 2]),
-                    Ua = U(idx[t]), Ub = U(idx[t + 1]), Uc = U(idx[t + 2]),
-                    Colour = colour, Texture = tex, UvTransform = mat.UvTransform, Cutoff = mat.Cutoff,
+                    A = P(idx[t]),
+                    B = P(idx[t + 1]),
+                    C = P(idx[t + 2]),
+                    Ua = U(idx[t]),
+                    Ub = U(idx[t + 1]),
+                    Uc = U(idx[t + 2]),
+                    Colour = colour,
+                    Texture = tex,
+                    UvTransform = mat.UvTransform,
+                    Cutoff = mat.Cutoff,
                 });
             }
         }
@@ -120,8 +127,8 @@ public static class BuildingPicture
                 corners[i] = new Vector3(w.X, w.Y, -w.Z);
             }
             // The six faces, two triangles each.
-            int[][] faces = { new[] { 0, 1, 3, 2 }, new[] { 4, 6, 7, 5 }, new[] { 0, 4, 5, 1 }, new[] { 2, 3, 7, 6 }, new[] { 0, 2, 6, 4 }, new[] { 1, 5, 7, 3 } };
-            foreach (var f in faces)
+            int[][] faces = [[0, 1, 3, 2], [4, 6, 7, 5], [0, 4, 5, 1], [2, 3, 7, 6], [0, 2, 6, 4], [1, 5, 7, 3]];
+            foreach (int[] f in faces)
             {
                 tris.Add(new Tri { A = corners[f[0]], B = corners[f[1]], C = corners[f[2]], Colour = colour });
                 tris.Add(new Tri { A = corners[f[0]], B = corners[f[2]], C = corners[f[3]], Colour = colour });
@@ -132,7 +139,7 @@ public static class BuildingPicture
     private static byte[] Render(List<Tri> tris, int size)
     {
         int n = size * 2;
-        var rgba = new byte[n * n * 4];
+        byte[] rgba = new byte[n * n * 4];
         if (tris.Count > 0)
         {
             // Seen from the south-east, 35° above (view space), orthographic.
@@ -152,7 +159,7 @@ public static class BuildingPicture
             }
             float scale = n * 0.92f / MathF.Max(MathF.Max(x1 - x0, y1 - y0), 0.5f), mx = (x0 + x1) / 2, my = (y0 + y1) / 2;
             Vector3 Screen(Vector3 c) => new(n / 2f + (c.X - mx) * scale, n / 2f - (c.Y - my) * scale, -c.Z);
-            var depth = new float[n * n];
+            float[] depth = new float[n * n];
             Array.Fill(depth, float.MaxValue);
             for (int i = 0; i < tris.Count; i++)
             {

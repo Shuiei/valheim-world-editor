@@ -30,7 +30,7 @@ public class ClaudeToolsTests
             W.Ask = (_, _, _, _) => Task.FromResult(false);
             W.SaveSettings = _ => { };
             W.Settings.AutoApply = W.Settings.AreaFollow = false;
-            W.Blueprints.FindHomestead = () => new TerrainEditor.App.Homestead.Status(true, "1.3.2", new() { "test" }, Homestead);
+            W.Blueprints.FindHomestead = () => new TerrainEditor.App.Homestead.Status(true, "1.3.2", ["test"], Homestead);
             T = new ClaudeTools(W);
         }
 
@@ -52,7 +52,7 @@ public class ClaudeToolsTests
                 {
                     Directory.Delete(d, true);
                 }
-                catch (Exception)
+                catch
                 {
                 }
             }
@@ -100,8 +100,8 @@ public class ClaudeToolsTests
         await r.OpenLive();
         r.W.Settings.AutoApply = true;
         Assert.Contains("Auto on", await r.T.RunScript("Ground.Raise(0, 0, 3);"));
-        Assert.Contains("Auto on", await r.T.PlacePieces(new[] { new ClaudeTools.PieceSpec { Prefab = "woodwall", X = 0, Z = 0 } }));
-        Assert.Contains("Auto on", await r.T.RemoveObjects(new[] { 0 }));
+        Assert.Contains("Auto on", await r.T.PlacePieces([new ClaudeTools.PieceSpec { Prefab = "woodwall", X = 0, Z = 0 }]));
+        Assert.Contains("Auto on", await r.T.RemoveObjects([0]));
         Assert.Equal((0, 0, 0, 0), r.W.World!.Pending);
         // Auto off: Claude's change waits for Apply live.
         r.W.Settings.AutoApply = false;
@@ -118,18 +118,18 @@ public class ClaudeToolsTests
         Assert.Equal("workshop", state.GetProperty("page").GetString());
         // A wall, then one 0.3 m off where it would join: it snaps to its edge. A floor up in the air
         // (not snapped) would fall. Unknown kinds and points off the plot are said, not placed.
-        var placed = J(await r.T.PlacePieces(new[]
-        {
+        var placed = J(await r.T.PlacePieces(
+        [
             new ClaudeTools.PieceSpec { Prefab = "woodwall", X = 0, Z = 0 },
             new ClaudeTools.PieceSpec { Prefab = "woodwall", X = 2.3f, Z = 0 },
             new ClaudeTools.PieceSpec { Prefab = "wood_floor", X = 10, Z = 10, Y = 40, Snap = false },
             new ClaudeTools.PieceSpec { Prefab = "no_such_piece", X = 0, Z = 0 },
             new ClaudeTools.PieceSpec { Prefab = "woodwall", X = 500, Z = 0 },
-        }, "walls"));
+        ], "walls"));
         var list = placed.GetProperty("placed").EnumerateArray().ToList();
         Assert.Equal(3, list.Count);
         var first = list[0].GetProperty("piece");
-        Assert.Equal(TerrainEditor.Desktop.Workshop.Ground + 1, first.GetProperty("y").GetSingle(), 2);
+        Assert.Equal(Workshop.Ground + 1, first.GetProperty("y").GetSingle(), 2);
         var second = list[1].GetProperty("piece");
         Assert.True(second.GetProperty("snapped").GetBoolean());
         Assert.Equal(2, second.GetProperty("x").GetSingle(), 2);
@@ -139,7 +139,7 @@ public class ClaudeToolsTests
         Assert.Equal(1, support.GetProperty("wouldFall").GetInt32());
         int floating = list[2].GetProperty("id").GetInt32();
         Assert.Equal(floating, support.GetProperty("falling")[0].GetProperty("id").GetInt32());
-        Assert.StartsWith("Took 1 away", await r.T.RemoveObjects(new[] { floating }));
+        Assert.StartsWith("Took 1 away", await r.T.RemoveObjects([floating]));
         Assert.Equal(0, J(await r.T.SupportCheck()).GetProperty("wouldFall").GetInt32());
         // The plot is not saved as a blueprint: no world is opened over it.
         Assert.Contains("blueprint", await r.T.OpenWorld(r.Dir));
@@ -153,18 +153,18 @@ public class ClaudeToolsTests
     public async Task AHouseIsBuiltFromRectanglesAndStands()
     {
         Assert.Equal(12, ClaudeBuilder.Floor(-4, -3, 4, 3, 34, "wood").Count);
-        var walls = ClaudeBuilder.Walls(-4, -3, 4, 3, 34, 4, "wood", new[] { new ClaudeBuilder.Door("south", 0) });
+        var walls = ClaudeBuilder.Walls(-4, -3, 4, 3, 34, 4, "wood", [new ClaudeBuilder.Door("south", 0)]);
         Assert.Equal(28, walls.Count);
         Assert.Single(walls, p => p.Prefab == "wood_door");
         var roof = ClaudeBuilder.Roof(-4, -3, 4, 3, 38, 45, "thatch", gables: true);
         Assert.Equal(18, roof.Count);
         Assert.Equal(4, roof.Count(p => p.Prefab == "wood_roof_top_45"));
         Assert.Throws<ArgumentException>(() => ClaudeBuilder.Roof(-4, -3, 4, 3, 38, 30, "thatch", true));
-        Assert.Throws<ArgumentException>(() => ClaudeBuilder.Walls(-4, -3, 4, 3, 34, 4, "wood", new[] { new ClaudeBuilder.Door("up", 0) }));
+        Assert.Throws<ArgumentException>(() => ClaudeBuilder.Walls(-4, -3, 4, 3, 34, 4, "wood", [new ClaudeBuilder.Door("up", 0)]));
         using var r = new Run();
         await r.T.OpenWorkshop();
         Assert.Contains("\"problems\":[]", await r.T.BuildFloor(-4, -3, 4, 3));
-        Assert.Contains("\"problems\":[]", await r.T.BuildWalls(-4, -3, 4, 3, doors: new[] { new ClaudeTools.DoorSpec { Side = "south", At = 0 } }));
+        Assert.Contains("\"problems\":[]", await r.T.BuildWalls(-4, -3, 4, 3, doors: [new ClaudeTools.DoorSpec { Side = "south", At = 0 }]));
         Assert.Contains("\"problems\":[]", await r.T.BuildRoof(-4, -3, 4, 3));
         var support = J(await r.T.SupportCheck());
         Assert.Equal(58, support.GetProperty("pieces").GetInt32());
@@ -186,36 +186,36 @@ public class ClaudeToolsTests
         Assert.Equal((0, 0, 0, 0), r.W.World!.Pending);
         // The user's own change first.
         // (Shape takes the area's grid points, 0 to 64 across.)
-        s.Shape(8, 56, Formula.Compile("1", new string[0]), 3, 0, "mine");
+        s.Shape(8, 56, Formula.Compile("1", []), 3, 0, "mine");
         await r.T.Flatten(-20, -20, 0, 0, height: 44);
         Assert.Equal(44, s.Scene.Heights[(int)(-10 - s.Scene.Cz + (s.Scene.H - 1) / 2f) * s.Scene.W + (int)(-10 - s.Scene.Cx + (s.Scene.W - 1) / 2f)], 1);
-        Assert.Contains("painted", await r.T.Road(new[] { new[] { -28f, 20f }, new[] { 28f, 20f } }));
+        Assert.Contains("painted", await r.T.Road([[-28f, 20f], [28f, 20f]]));
         Assert.Contains("The paint is", await r.T.PaintArea("lava", x: 0, z: 0, radius: 3));
-        Assert.Contains("object(s) placed", await r.T.Forest(5, -30, 30, -5, new[] { "Birch1" }, spacing: 7));
-        Assert.Contains("not an object", await r.T.Forest(5, -30, 30, -5, new[] { "NoSuchTree" }));
-        await r.T.SelectObjects(new[] { 1, 2 }, focus: false);
+        Assert.Contains("object(s) placed", await r.T.Forest(5, -30, 30, -5, ["Birch1"], spacing: 7));
+        Assert.Contains("not an object", await r.T.Forest(5, -30, 30, -5, ["NoSuchTree"]));
+        await r.T.SelectObjects([1, 2], focus: false);
         Assert.Equal(2, J(await r.T.GetSelection()).GetArrayLength());
-        int chest = J(await r.T.PlacePieces(new[] { new ClaudeTools.PieceSpec { Prefab = "piece_chest_wood", X = -10, Z = -10 } })).GetProperty("placed")[0].GetProperty("id").GetInt32();
-        string filled = await r.T.SetContents(chest, new[] { new ClaudeTools.ItemSpec { Item = "Coins", Stack = 50 } });
+        int chest = J(await r.T.PlacePieces([new ClaudeTools.PieceSpec { Prefab = "piece_chest_wood", X = -10, Z = -10 }])).GetProperty("placed")[0].GetProperty("id").GetInt32();
+        string filled = await r.T.SetContents(chest, [new ClaudeTools.ItemSpec { Item = "Coins", Stack = 50 }]);
         Assert.StartsWith("Changed", filled);
         // Changed, the chest is a new object: its id is the one given back.
         chest = int.Parse(filled[(filled.LastIndexOf(' ') + 1)..].TrimEnd('.'), System.Globalization.CultureInfo.InvariantCulture);
         // Stands: food lying flat, then emptied; an armour stand dressed and posed; what a stand refuses.
-        int tray = J(await r.T.PlacePieces(new[] { new ClaudeTools.PieceSpec { Prefab = "itemstandh", X = -12, Z = -10 } })).GetProperty("placed")[0].GetProperty("id").GetInt32();
-        string held = await r.T.SetContents(tray, new[] { new ClaudeTools.ItemSpec { Item = "CookedMeat" } });
+        int tray = J(await r.T.PlacePieces([new ClaudeTools.PieceSpec { Prefab = "itemstandh", X = -12, Z = -10 }])).GetProperty("placed")[0].GetProperty("id").GetInt32();
+        string held = await r.T.SetContents(tray, [new ClaudeTools.ItemSpec { Item = "CookedMeat" }]);
         Assert.StartsWith("Changed", held);
         tray = int.Parse(held[(held.LastIndexOf(' ') + 1)..].TrimEnd('.'), System.Globalization.CultureInfo.InvariantCulture);
-        Assert.Equal("CookedMeat", TerrainEditor.App.StandData.ReadItemStand(TerrainEditor.Save.ZdoData.Parse(TerrainEditor.App.ObjectData.Bytes(s.Scene.World!, s.Edits, s.Scene.Things[tray].Id)!)).Item?.Item);
-        Assert.Contains("cannot hang", await r.T.SetContents(tray, new[] { new ClaudeTools.ItemSpec { Item = "Wood" } }));
-        Assert.Contains("holds one item", await r.T.SetContents(tray, new[] { new ClaudeTools.ItemSpec { Item = "CookedMeat" }, new ClaudeTools.ItemSpec { Item = "FishCooked" } }));
-        Assert.StartsWith("Changed", await r.T.SetContents(tray, Array.Empty<ClaudeTools.ItemSpec>()));
-        int dummy = J(await r.T.PlacePieces(new[] { new ClaudeTools.PieceSpec { Prefab = "ArmorStand", X = -14, Z = -10 } })).GetProperty("placed")[0].GetProperty("id").GetInt32();
-        Assert.StartsWith("Changed", await r.T.SetContents(dummy, new[] { new ClaudeTools.ItemSpec { Item = "HelmetBronze" }, new ClaudeTools.ItemSpec { Item = "SwordIron", Quality = 2 } }, pose: 1));
+        Assert.Equal("CookedMeat", TerrainEditor.App.StandData.ReadItemStand(ZdoData.Parse(TerrainEditor.App.ObjectData.Bytes(s.Scene.World!, s.Edits, s.Scene.Things[tray].Id)!)).Item?.Item);
+        Assert.Contains("cannot hang", await r.T.SetContents(tray, [new ClaudeTools.ItemSpec { Item = "Wood" }]));
+        Assert.Contains("holds one item", await r.T.SetContents(tray, [new ClaudeTools.ItemSpec { Item = "CookedMeat" }, new ClaudeTools.ItemSpec { Item = "FishCooked" }]));
+        Assert.StartsWith("Changed", await r.T.SetContents(tray, []));
+        int dummy = J(await r.T.PlacePieces([new ClaudeTools.PieceSpec { Prefab = "ArmorStand", X = -14, Z = -10 }])).GetProperty("placed")[0].GetProperty("id").GetInt32();
+        Assert.StartsWith("Changed", await r.T.SetContents(dummy, [new ClaudeTools.ItemSpec { Item = "HelmetBronze" }, new ClaudeTools.ItemSpec { Item = "SwordIron", Quality = 2 }], pose: 1));
         Assert.Contains("not an item stand", await r.T.SetContents(chest, orientation: 1));
         Assert.Contains("not a sign", await r.T.SetContents(1, text: "hello"));
         Assert.Contains("not a creature", await r.T.SetContents(1, stars: 2));
         // Then the user again; Take back removes only Claude's.
-        s.Shape(56, 56, Formula.Compile("1", new string[0]), 3, 0, "mine too");
+        s.Shape(56, 56, Formula.Compile("1", []), 3, 0, "mine too");
         int before = s.UndoList.Count;
         r.W.History.Toggle();
         Assert.True(r.W.History.TakeBackClaude.IsVisible);
@@ -236,7 +236,7 @@ public class ClaudeToolsTests
         var handler = new Answer(req =>
         {
             seen.Add(req);
-            var body = req.Content!.ReadAsStringAsync().Result;
+            string body = req.Content!.ReadAsStringAsync().Result;
             var res = new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = new StringContent(body.Contains("initialize") ? "event: message\ndata: {\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"protocolVersion\":\"2025-06-18\"}}\n\n" : "event: message\ndata: {\"jsonrpc\":\"2.0\",\"id\":2,\"result\":{}}\n\n"),
@@ -247,7 +247,7 @@ public class ClaudeToolsTests
         var on = new TerrainEditor.App.AppSettings { ClaudeConnect = true, ClaudeToken = "tok", ClaudePort = 5799 };
         var output = new StringWriter();
         await ClaudeRelay.RunAsync(new StringReader("{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\"}\n\n{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"tools/list\"}\n"), output, () => on, handler);
-        var lines = output.ToString().Split('\n', StringSplitOptions.RemoveEmptyEntries);
+        string[] lines = output.ToString().Split('\n', StringSplitOptions.RemoveEmptyEntries);
         Assert.Equal(2, lines.Length);
         Assert.Contains("\"protocolVersion\":\"2025-06-18\"", lines[0]);
         Assert.Equal("Bearer tok", seen[0].Headers.Authorization!.ToString());
@@ -256,7 +256,7 @@ public class ClaudeToolsTests
         Assert.Equal("2025-06-18", seen[1].Headers.GetValues("MCP-Protocol-Version").Single());
         var off = new StringWriter();
         await ClaudeRelay.RunAsync(new StringReader("{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/list\"}\n{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\"}\n"), off, () => new TerrainEditor.App.AppSettings(), handler);
-        var refused = off.ToString().Split('\n', StringSplitOptions.RemoveEmptyEntries);
+        string[] refused = off.ToString().Split('\n', StringSplitOptions.RemoveEmptyEntries);
         Assert.Single(refused);
         Assert.Contains("Allow Claude to connect", refused[0]);
         Assert.Contains("\"id\":7", refused[0]);

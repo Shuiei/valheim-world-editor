@@ -82,7 +82,7 @@ public static class Uplift
         if (without != null)
         {
             var drop = without.Select(d => d.Id).ToHashSet();
-            discs = discs.Where(d => !drop.Contains(d.Id)).ToList();
+            discs = [.. discs.Where(d => !drop.Contains(d.Id))];
         }
         var placed = world.Placed.Where(p => !IsDisc(p.Location)).ToList();
         placed.AddRange(discs.Select(d => DiscAt(d.Position)));
@@ -141,7 +141,7 @@ public static class Uplift
         {
             ungenerated.Add((e.ZoneX, e.ZoneZ));
         }
-        var open = new bool[block.N];
+        bool[] open = new bool[block.N];
         foreach (var (zx, zz) in zones.Keys.Where(k => Generated(world, k.Item1, k.Item2)))
         {
             block.Each(zx, zz, (_, p) => open[p] = true);
@@ -160,7 +160,7 @@ public static class Uplift
         }
 
         // Old discs near the lift are worked out again with the new ones.
-        var liftMask = Dilate(block, lift, l => l != 0, (int)DiscRadius + Spacing);
+        bool[] liftMask = Dilate(block, lift, l => l != 0, (int)DiscRadius + Spacing);
         var current = CurrentDiscs(world, edits);
         var old = current.Where(d => block.At(d.Position) is int p && liftMask[p]).ToList();
         var keep = PlacedNow(world, edits, old).Where(p => block.Near(p.Position, 100f)).ToList();
@@ -188,13 +188,13 @@ public static class Uplift
 
         // Where the ground needs a disc: near the lift or the discs replaced (not where ordinary edits
         // are), further from the ground without discs than the edits reach well.
-        var region = (bool[])liftMask.Clone();
-        foreach (var d in old)
+        bool[] region = (bool[])liftMask.Clone();
+        foreach (var (id, position) in old)
         {
-            block.Disc(d.Position, DiscReach, p => region[p] = true);
+            block.Disc(position, DiscReach, p => region[p] = true);
         }
-        float[] bare = Ground(new());
-        var need = new bool[block.N];
+        float[] bare = Ground([]);
+        bool[] need = new bool[block.N];
         for (int p = 0; p < block.N; p++)
         {
             need[p] = region[p] && open[p] && MathF.Abs(want[p] - bare[p]) > Need;
@@ -224,7 +224,7 @@ public static class Uplift
             }
         }
 
-        List<Vector3> Discs() => nodes.Select(n => new Vector3(n.Key.Item1, n.Value, n.Key.Item2)).ToList();
+        List<Vector3> Discs() => [.. nodes.Select(n => new Vector3(n.Key.Item1, n.Value, n.Key.Item2))];
         float[] ground = bare;
         // The game's order changes with the heights, which the fit does not see: each round's discs are
         // checked against the real ground, and the best kept.
@@ -260,7 +260,7 @@ public static class Uplift
                 block.Disc(d, DiscRadius, p => { lo = MathF.Min(lo, want[p]); hi = MathF.Max(hi, want[p]); });
                 return (lo, hi);
             }).ToList();
-            var r = new float[block.N];
+            float[] r = new float[block.N];
             for (int p = 0; p < block.N; p++)
             {
                 r[p] = want[p] - ground[p];
@@ -316,7 +316,7 @@ public static class Uplift
 
         // The zones' new edits: what the discs leave, within ±8 m; the discs' dirt painted back.
         float worst = 0;
-        var painted = new bool[block.N];
+        bool[] painted = new bool[block.N];
         foreach (var d in final)
         {
             block.Disc(d, PaintRadius + 1, p => painted[p] = true);
@@ -370,7 +370,7 @@ public static class Uplift
             && ObjectKinds.Of(PrefabCatalog.NameOf(o.Prefab), false) is ObjectKind.Trees or ObjectKind.Rocks or ObjectKind.Ore or ObjectKind.Bushes or ObjectKind.Pickables)
             .Select(o => o.Id).ToList();
         var add = final.Select(d => new NewObject(nextId(), WorldSave.LocationProxyPrefab, d, Vector3.Zero, 0f, Fresh: false, Raw: DiscBytes(d))).ToList();
-        return new Plan(result, old.Select(d => d.Id).Concat(clear).ToList(), add, final.Count, old.Count, clear.Count, worst) { Ungenerated = ungenerated.Count };
+        return new Plan(result, [.. old.Select(d => d.Id), .. clear], add, final.Count, old.Count, clear.Count, worst) { Ungenerated = ungenerated.Count };
     }
 
     // Applies a plan to the edits (the zones, the objects taken away and added).
@@ -396,13 +396,13 @@ public static class Uplift
             {
                 if (d <= DiscRadius)
                 {
-                    at[p] = new() { (k, 1f) };
+                    at[p] = [(k, 1f)];
                     return;
                 }
                 float u = d / DiscReach, t = 1f - u * u * u;
                 if (!at.TryGetValue(p, out var list))
                 {
-                    at[p] = new() { (k, t) };
+                    at[p] = [(k, t)];
                     return;
                 }
                 for (int i = 0; i < list.Count; i++)
@@ -415,7 +415,7 @@ public static class Uplift
         var columns = new List<(int, float)>[discs.Count];
         for (int k = 0; k < discs.Count; k++)
         {
-            columns[k] = new();
+            columns[k] = [];
         }
         foreach (var (p, list) in at)
         {
@@ -432,41 +432,57 @@ public static class Uplift
 
     private static bool[] Dilate(Block block, float[] values, Func<float, bool> on, int r)
     {
-        var src = new bool[block.N];
+        bool[] src = new bool[block.N];
         for (int p = 0; p < block.N; p++)
         {
             src[p] = on(values[p]);
         }
         // Separable square dilation (rows, then columns): every point within r of one that is on.
-        var rows = new bool[block.N];
+        bool[] rows = new bool[block.N];
         for (int z = 0; z < block.H; z++)
         {
             int last = int.MinValue / 2;
             for (int x = 0; x < block.W; x++)
             {
-                if (src[z * block.W + x]) last = x;
+                if (src[z * block.W + x])
+                {
+                    last = x;
+                }
+
                 rows[z * block.W + x] = x - last <= r;
             }
             last = int.MaxValue / 2;
             for (int x = block.W - 1; x >= 0; x--)
             {
-                if (src[z * block.W + x]) last = x;
+                if (src[z * block.W + x])
+                {
+                    last = x;
+                }
+
                 rows[z * block.W + x] |= last - x <= r;
             }
         }
-        var res = new bool[block.N];
+        bool[] res = new bool[block.N];
         for (int x = 0; x < block.W; x++)
         {
             int last = int.MinValue / 2;
             for (int z = 0; z < block.H; z++)
             {
-                if (rows[z * block.W + x]) last = z;
+                if (rows[z * block.W + x])
+                {
+                    last = z;
+                }
+
                 res[z * block.W + x] = z - last <= r;
             }
             last = int.MaxValue / 2;
             for (int z = block.H - 1; z >= 0; z--)
             {
-                if (rows[z * block.W + x]) last = z;
+                if (rows[z * block.W + x])
+                {
+                    last = z;
+                }
+
                 res[z * block.W + x] |= last - z <= r;
             }
         }

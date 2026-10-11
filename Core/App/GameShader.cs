@@ -159,12 +159,12 @@ public static partial class GameShader
                     }
                 }
             }
-            if (!stages.TryGetValue(Fragment, out var frag) || stages.ContainsKey(TessControl) || stages.ContainsKey(TessEval))
+            if (!stages.TryGetValue(Fragment, out uint[]? frag) || stages.ContainsKey(TessControl) || stages.ContainsKey(TessEval))
             {
                 continue;
             }
             uint[] words = Named(frag, Parameters(entries[sp.ParameterBlobIndex]));
-            var bytes = new byte[words.Length * 4];
+            byte[] bytes = new byte[words.Length * 4];
             Buffer.BlockCopy(words, 0, bytes, 0, bytes.Length);
             return bytes;
         }
@@ -212,14 +212,14 @@ public static partial class GameShader
         var res = new List<uint>();
         for (int i = 0; i < b.Count; i += 4)
         {
-            res.Add(BitConverter.ToUInt32(b.ToArray(), i));
+            res.Add(BitConverter.ToUInt32([.. b], i));
         }
         return res;
     }
 
     private static string ReadString(uint[] words, int from, int count)
     {
-        var b = new byte[count * 4];
+        byte[] b = new byte[count * 4];
         Buffer.BlockCopy(words, from * 4, b, 0, b.Length);
         int end = Array.IndexOf(b, (byte)0);
         return Encoding.Latin1.GetString(b, 0, end < 0 ? b.Length : end);
@@ -314,7 +314,7 @@ public static partial class GameShader
                 case 71:
                     if (!deco.TryGetValue(words[a], out var d))
                     {
-                        deco[words[a]] = d = new Dictionary<uint, uint[]>();
+                        deco[words[a]] = d = [];
                     }
                     d[words[a + 1]] = words.AsSpan(a + 2, len - 2).ToArray();
                     if (words[a + 1] == 2)
@@ -325,7 +325,7 @@ public static partial class GameShader
                 case 72 when words[a + 2] == 35:
                     if (!memberOff.TryGetValue(words[a], out var mo))
                     {
-                        memberOff[words[a]] = mo = new Dictionary<uint, uint>();
+                        memberOff[words[a]] = mo = [];
                     }
                     mo[words[a + 1]] = words[a + 3];
                     break;
@@ -345,7 +345,7 @@ public static partial class GameShader
             {
                 continue;
             }
-            var offs = memberOff.GetValueOrDefault(st) ?? new Dictionary<uint, uint>();
+            var offs = memberOff.GetValueOrDefault(st) ?? [];
             var buf = prm.Buffers.Values.FirstOrDefault(b => offs.Values.All(b.ContainsKey))
                 ?? throw new InvalidDataException("The terrain shader's uniform buffer matches none of its parameter blob's.");
             foreach (var (idx, o) in offs)
@@ -356,8 +356,8 @@ public static partial class GameShader
         }
         foreach (var (v, _, storage) in variables)
         {
-            var d = deco.GetValueOrDefault(v) ?? new Dictionary<uint, uint[]>();
-            if (storage == 0 && d.TryGetValue(33, out var binding))
+            var d = deco.GetValueOrDefault(v) ?? [];
+            if (storage == 0 && d.TryGetValue(33, out uint[]? binding))
             {
                 string name = prm.Textures.GetValueOrDefault(binding[0]) ?? throw new InvalidDataException($"The terrain shader has no texture for binding {binding[0]}.");
                 add.Add((5, new List<uint> { v }.Concat(StringWords(name)).ToList()));
@@ -366,7 +366,7 @@ public static partial class GameShader
             {
                 add.Add((5, new List<uint> { v }.Concat(StringWords("vs_COLOR0")).ToList()));
             }
-            else if (storage == 3 && d.TryGetValue(30, out var loc))
+            else if (storage == 3 && d.TryGetValue(30, out uint[]? loc))
             {
                 add.Add((5, new List<uint> { v }.Concat(StringWords($"SV_Target{loc[0]}")).ToList()));
             }
@@ -388,6 +388,6 @@ public static partial class GameShader
             }
             output.AddRange(words.AsSpan(at, Length(words, at) + 1).ToArray());
         }
-        return output.ToArray();
+        return [.. output];
     }
 }

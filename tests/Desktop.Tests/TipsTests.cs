@@ -1,6 +1,5 @@
 using System.Numerics;
 using Avalonia.Controls;
-using Avalonia.Controls.Primitives;
 using Avalonia.Headless.XUnit;
 using Avalonia.Interactivity;
 using Avalonia.LogicalTree;
@@ -20,7 +19,7 @@ public class TipsTests
 {
     // Controls left without a tip, with the reason. None today: even a dialog's answers say what
     // they do and their key.
-    private static bool Exempt(Control c) => false;
+    private static bool Exempt(Control _) => false;
 
     // The controls shown without a tip, described so they can be found in the code.
     internal static List<string> Untipped(Control root)
@@ -77,7 +76,7 @@ public class TipsTests
     private static void Check(HashSet<string> missing, Control root)
     {
         Dispatcher.UIThread.RunJobs();
-        foreach (var m in Untipped(root))
+        foreach (string m in Untipped(root))
         {
             missing.Add(m);
         }
@@ -115,7 +114,7 @@ public class TipsTests
         }
         w.Tools.ChooseMode(ToolMode.Place);
         w.PlaceTool.Chosen.Clear();
-        w.PlaceTool.Chosen.AddRange(new[] { "Beech1", "woodwall" });
+        w.PlaceTool.Chosen.AddRange(["Beech1", "woodwall"]);
         foreach (var m in Enum.GetValues<PlaceTool.Modes>())
         {
             Click(w.PlacePanel.ModeButtons[m]);
@@ -128,7 +127,7 @@ public class TipsTests
         Click(w.PlacePanel.KindsButton);
         Check(missing, w);
         w.Tools.ChooseSelect();
-        w.View.Select(new[] { 0 });
+        w.View.Select([0]);
         Check(missing, w);
         w.Inspect();
         Check(missing, w);
@@ -142,7 +141,7 @@ public class TipsTests
         var box = new AreaTool { Soft = 0 };
         box.Points.Add(new Vector2(32, 32));
         box.Points.Add(new Vector2(48, 48));
-        w.View.Paste.Clip = CopyData.FromArea(box, s.Ground, s.Scene, Array.Empty<int>(), _ => null);
+        w.View.Paste.Clip = CopyData.FromArea(box, s.Ground, s.Scene, [], _ => null);
         w.StartPaste();
         Check(missing, w);
         NoneMissing(missing);
@@ -180,7 +179,7 @@ public class TipsTests
         var page = w.StartPage!;
         page.FillServers();
         var missing = new HashSet<string>();
-        foreach (var mode in new[] { "game", "server", "offline" })
+        foreach (string? mode in new[] { "game", "server", "offline" })
         {
             page.SetMode(mode);
             Check(missing, w);
@@ -212,7 +211,7 @@ public class TipsTests
     {
         var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
         w.Show();
-        string Tip(Control c) => ToolTip.GetTip(c) as string ?? "";
+        static string Tip(Control c) => ToolTip.GetTip(c) as string ?? "";
         Assert.Contains("[ and ]", Tip(w.Tools.SizeSlider));
         Assert.Contains("[ and ]", Tip(w.PlacePanel.SizeSlider));
         Assert.Contains(", and .", Tip(w.PlacePanel.RotationSlider));
@@ -279,9 +278,9 @@ public class TipsTests
     public void EveryTextIsUsedAndNoneIsEmpty()
     {
         string desktop = Path.Combine(EditorProcess.Fixtures(), "..", "..", "Desktop");
-        string code = string.Join("\n", Directory.GetFiles(desktop, "*.cs").Where(f => !f.EndsWith("Tips.cs")).Select(File.ReadAllText));
+        string code = string.Join("\n", Directory.GetFiles(desktop, "*.cs").Where(f => !f.EndsWith("Tips.cs", StringComparison.Ordinal)).Select(File.ReadAllText));
         // Keys made in code: the area actions, the area's moves, the start page's choices.
-        bool Made(string k) => k.StartsWith("areaAct.") || k is "top.west" or "top.north" or "top.south" or "top.east" or "start.home" or "start.game" or "start.server" or "start.offline" || k.StartsWith("overlay.");
+        static bool Made(string k) => k.StartsWith("areaAct.", StringComparison.Ordinal) || k is "top.west" or "top.north" or "top.south" or "top.east" or "start.home" or "start.game" or "start.server" or "start.offline" || k.StartsWith("overlay.", StringComparison.Ordinal);
         var unused = Tips.Texts.Keys.Where(k => !Made(k) && !code.Contains($"\"{k}\"")).ToList();
         Assert.True(unused.Count == 0, "Tips no control uses: " + string.Join(", ", unused));
         Assert.All(Tips.Texts, kv => Assert.False(string.IsNullOrWhiteSpace(kv.Value), kv.Key));

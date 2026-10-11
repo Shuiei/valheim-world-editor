@@ -19,7 +19,7 @@ public class PasteTests
     private static EditSession Area()
     {
         var s = EditTests.Flat(2, new WorldScene.Thing(1, Beech, new Vector3(8, 33, 8), new Vector3(0, 30, 0), 1, false));
-        s.Shape(40, 40, Formula.Compile("h * smooth(1 - d / r)", new[] { "d", "r", "h" }), 6, 3, "mound");
+        s.Shape(40, 40, Formula.Compile("h * smooth(1 - d / r)", ["d", "r", "h"]), 6, 3, "mound");
         return s;
     }
 
@@ -35,7 +35,7 @@ public class PasteTests
     public void CopyKeepsTheGroundsShapeAndTheObjects()
     {
         var s = Area();
-        var c = CopyData.FromArea(Box(32, 32, 48, 48), s.Ground, s.Scene, new[] { 0 }, _ => "Beech1")!;
+        var c = CopyData.FromArea(Box(32, 32, 48, 48), s.Ground, s.Scene, [0], _ => "Beech1")!;
         Assert.Equal(19, c.W);
         var o = Assert.Single(c.Objects);
         Assert.Equal(new Vector2(0, 0), new Vector2(o.Dx, o.Dz));
@@ -50,9 +50,9 @@ public class PasteTests
     public void PastingPutsTheMoundAndTheTreeElsewhereInOneStep()
     {
         var s = Area();
-        var paste = new PasteTool { Clip = CopyData.FromArea(Box(32, 32, 48, 48), s.Ground, s.Scene, new[] { 0 }, _ => "Beech1") };
-        var add = new List<(TerrainEditor.Editing.NewObject, bool)>();
-        var added = s.Commit("Paste", g => { var (t, r, a) = paste.Apply(g, new Vector2(90, 90)); add.AddRange(a); return (t, r); }, Array.Empty<int>(), add);
+        var paste = new PasteTool { Clip = CopyData.FromArea(Box(32, 32, 48, 48), s.Ground, s.Scene, [0], _ => "Beech1") };
+        var add = new List<(Editing.NewObject, bool)>();
+        var added = s.Commit("Paste", g => { var (t, r, a) = paste.Apply(g, new Vector2(90, 90)); add.AddRange(a); return (t, r); }, [], add);
         // The shape is kept inside (the box's edge points get half: no soft edge).
         Assert.Equal(H(s, 40, 40) - H(s, 36, 40), H(s, 90, 90) - H(s, 86, 90), 2);
         var tree = s.Scene.Things[Assert.Single(added)];
@@ -85,10 +85,10 @@ public class PasteTests
     public void RepeatsGoAlongTheWidthOrUp()
     {
         var s = Area();
-        var paste = new PasteTool { Clip = CopyData.FromArea(Box(32, 32, 48, 48), s.Ground, s.Scene, new[] { 0 }, _ => "Beech1"), Copies = 3, Gap = 2 };
+        var paste = new PasteTool { Clip = CopyData.FromArea(Box(32, 32, 48, 48), s.Ground, s.Scene, [0], _ => "Beech1"), Copies = 3, Gap = 2 };
         var (objs, outlines) = paste.Preview(new Vector2(40, 90), _ => 30);
         Assert.Equal(3, objs.Count);
-        Assert.Equal(new[] { 40f, 58f, 76f }, objs.Select(o => MathF.Round(o.X)));
+        Assert.Equal([40f, 58f, 76f], objs.Select(o => MathF.Round(o.X)));
         paste.Direction = PasteTool.Along.Up;
         (objs, _) = paste.Preview(new Vector2(40, 90), _ => 30);
         Assert.Equal(objs[0].X, objs[2].X);
@@ -131,7 +131,7 @@ public class PasteTests
         w.View.Show(s.Scene, null);
         w.Edit(s);
         w.Tools.ChooseSelect();
-        w.View.Select(new[] { 0 });
+        w.View.Select([0]);
         w.KeyPress(Key.C, RawInputModifiers.Control, PhysicalKey.C, "c");
         var o = Assert.Single(w.View.Paste.Clip!.Objects);
         Assert.True(o.Follow);
@@ -153,16 +153,21 @@ public class PasteTests
         w.Show();
         var s = EditTests.Flat(2, new WorldScene.Thing(1, Beech, new Vector3(60 - 32, 33, 60 - 32), Vector3.Zero, 1, false),
             new WorldScene.Thing(2, Beech, new Vector3(80 - 32, 30, 80 - 32), Vector3.Zero, 1, false));
-        s.Shape(60, 60, Formula.Compile("h * smooth(1 - d / r)", new[] { "d", "r", "h" }), 6, 3, "mound");
+        s.Shape(60, 60, Formula.Compile("h * smooth(1 - d / r)", ["d", "r", "h"]), 6, 3, "mound");
         w.View.Show(s.Scene, null);
         w.Edit(s);
         float before = H(s, 60, 60), foot = H(s, 66, 60);
         // A wall 6 m west of the point clicked (its middle 1 m up: its bottom on the ground clicked).
         var wall = new CopyData
         {
-            W = 1, H = 1, Rel = new[] { float.NaN }, Wt = new[] { 0f }, Pnt = new[] { -1f, -1, -1, -1 },
-            Objects = new() { new CopyData.Obj(StableHash.Of("woodwall"), "woodwall", -6, 0, 1, new Vector3(0, 90, 0), 0, null) },
-            Poly = new() { new(-8, -2), new(2, -2), new(2, 2), new(-8, 2) }, Name = "Wall",
+            W = 1,
+            H = 1,
+            Rel = [float.NaN],
+            Wt = [0f],
+            Pnt = [-1f, -1, -1, -1],
+            Objects = [new CopyData.Obj(StableHash.Of("woodwall"), "woodwall", -6, 0, 1, new Vector3(0, 90, 0), 0, null)],
+            Poly = [new(-8, -2), new(2, -2), new(2, 2), new(-8, 2)],
+            Name = "Wall",
         };
         w.View.Paste.Clip = wall;
         w.PasteAt(new Vector2(66, 60));
@@ -187,14 +192,14 @@ public class PasteTests
     public void TheGhostIsWhereThePastePutsThem()
     {
         var s = Area();
-        var paste = new PasteTool { Clip = CopyData.FromArea(Box(32, 32, 48, 48), s.Ground, s.Scene, new[] { 0 }, _ => "Beech1"), Turn = 90, Offset = -2 };
+        var paste = new PasteTool { Clip = CopyData.FromArea(Box(32, 32, 48, 48), s.Ground, s.Scene, [0], _ => "Beech1"), Turn = 90, Offset = -2 };
         float ox = s.Scene.X0 * 64f - 32f, oz = s.Scene.Z0 * 64f - 32f;
-        var ghost = Assert.Single(paste.Ghosts(new Vector2(90, 90), g => H(s, (int)MathF.Round(g.X), (int)MathF.Round(g.Y)), ox, oz));
+        var (prefab, position, rotation, scale) = Assert.Single(paste.Ghosts(new Vector2(90, 90), g => H(s, (int)MathF.Round(g.X), (int)MathF.Round(g.Y)), ox, oz));
         var (_, _, add) = paste.Apply(s.Ground, new Vector2(90, 90));
         var placed = Assert.Single(add).Item1;
-        Assert.Equal(placed.Position, ghost.Position);
-        Assert.Equal(placed.Rotation, ghost.Rotation);
-        Assert.Equal(Beech, ghost.Prefab);
+        Assert.Equal(placed.Position, position);
+        Assert.Equal(placed.Rotation, rotation);
+        Assert.Equal(Beech, prefab);
     }
 
     // Copied with the Select tool on a slope: building pieces keep the building's shape (each piece's
@@ -210,7 +215,7 @@ public class PasteTests
         s.Scene.Things.Add(new WorldScene.Thing(2, wall, new Vector3(37 + ox, gy + 1, 40 + oz), Vector3.Zero, 0, true));
         s.Scene.Things.Add(new WorldScene.Thing(3, wall, new Vector3(37 + ox, gy + 3, 40 + oz), Vector3.Zero, 0, true));
         float GroundAt(float x, float z) => H(s, (int)MathF.Round(x - ox), (int)MathF.Round(z - oz));
-        var clip = CopyData.FromThings(s.Scene, new[] { 0, 1, 2 }, i => i == StableHash.Of("Beech1") ? "Beech1" : "woodwall", GroundAt)!;
+        var clip = CopyData.FromThings(s.Scene, [0, 1, 2], i => i == StableHash.Of("Beech1") ? "Beech1" : "woodwall", GroundAt)!;
         Assert.True(clip.Objects.Single(o => o.Name == "Beech1").Follow);
         Assert.All(clip.Objects.Where(o => o.Name == "woodwall"), o => Assert.False(o.Follow));
         var paste = new PasteTool { Clip = clip, Ground = false };

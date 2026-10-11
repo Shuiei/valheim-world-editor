@@ -18,11 +18,11 @@ public class SelectPlaceGapTests
     {
         var w = new MainWindow(load: false) { Width = 1000, Height = 1000 };
         w.Show();
-        var s = EditTests.Flat(2, things.Length > 0 ? things : new[] { new WorldScene.Thing(11, StableHash.Of("wood_wall_half"), new Vector3(40, 30, 40), Vector3.Zero, 0, true) });
+        var s = EditTests.Flat(2, things.Length > 0 ? things : [new WorldScene.Thing(11, StableHash.Of("wood_wall_half"), new Vector3(40, 30, 40), Vector3.Zero, 0, true)]);
         w.View.Show(s.Scene, null);
         w.Edit(s);
         w.Tools.ChooseSelect();
-        w.View.Select(new[] { 0 });
+        w.View.Select([0]);
         var c = new Vector3(40 - s.Scene.Cx, 30, -(40 - s.Scene.Cz));
         w.View.SetCamera(c + eyeFromWall, c, 1);
         var size = w.View.Bounds.Size;

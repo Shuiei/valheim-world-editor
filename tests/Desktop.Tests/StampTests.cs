@@ -15,8 +15,8 @@ public class StampTests
     public void TheBuiltInStampsAreTheWebEditors()
     {
         // Values from the web editor's stamps.js for the same pixels.
-        var mountain = Stamps.BuiltIn.Single(s => s.Name == "stamp:mountain").Data;
-        var rocky = Stamps.BuiltIn.Single(s => s.Name == "stamp:rocky").Data;
+        float[] mountain = Stamps.BuiltIn.Single(s => s.Name == "stamp:mountain").Data;
+        float[] rocky = Stamps.BuiltIn.Single(s => s.Name == "stamp:rocky").Data;
         Assert.Equal(0.980590f, mountain[64 * 128 + 64], 4);
         Assert.Equal(0.416947f, mountain[80 * 128 + 40], 4);
         Assert.Equal(0.203913f, rocky[50 * 128 + 70], 4);
@@ -34,10 +34,10 @@ public class StampTests
             g.DrawCircle(150, 150, 100, new SKPaint { Color = SKColors.White, IsAntialias = true });
         }
         using var png = SKImage.FromBitmap(bmp).Encode(SKEncodedImageFormat.Png, 100);
-        var data = Stamps.FromPicture(png.ToArray())!;
+        float[] data = Stamps.FromPicture(png.ToArray())!;
         Assert.Equal(1, Stamps.Sample(data, 0, 0), 2);
         Assert.Equal(0, Stamps.Sample(data, 0.9f, 0.9f), 2);
-        Assert.Null(Stamps.FromPicture(new byte[] { 1, 2, 3 }));
+        Assert.Null(Stamps.FromPicture([1, 2, 3]));
     }
 
     [Fact]
@@ -76,7 +76,7 @@ public class StampTests
         Assert.Equal("Stamp: Mountain", s.UndoLabel);
         // A loaded picture is kept for next time, and can be forgotten.
         int before = t.StampList.Count;
-        t.AddStamp("Disc", Enumerable.Repeat(1f, 128 * 128).ToArray());
+        t.AddStamp("Disc", [.. Enumerable.Repeat(1f, 128 * 128)]);
         Assert.Contains(Stamps.LoadKept(), k => k.Label == "Disc");
         Assert.Equal(before + 1, t.StampList.Count);
         Assert.True(t.ForgetStampButton.IsVisible);

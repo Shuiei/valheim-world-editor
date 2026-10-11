@@ -1,7 +1,6 @@
 using System.Numerics;
 using Avalonia.Headless.XUnit;
 using TerrainEditor.Save;
-using TerrainEditor.Terrain;
 using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
@@ -163,7 +162,7 @@ public class PlaceMouseTests
     {
         var v = Open(PlaceTool.Modes.Brush, new WorldScene.Thing(1, StableHash.Of("Oak1"), new Vector3(64 - 32, 30, 64 - 32), Vector3.Zero, 1, false));
         var s = v.S.Scene;
-        v.W.View.SetBoxes(new[] { (0, new Vector3(64 - 32 - 1 - s.Cx, 30, -(64 - 32 + 1 - s.Cz)), new Vector3(64 - 32 + 1 - s.Cx, 36, -(64 - 32 - 1 - s.Cz))) });
+        v.W.View.SetBoxes([(0, new Vector3(64 - 32 - 1 - s.Cx, 30, -(64 - 32 + 1 - s.Cz)), new Vector3(64 - 32 + 1 - s.Cx, 36, -(64 - 32 - 1 - s.Cz)))]);
         string? picked = null;
         v.In.PickOnce = (n, _) => picked = n;
         v.Click(10, 10);
@@ -207,7 +206,7 @@ public class PlaceMouseTests
         Assert.NotEmpty(before);
         Assert.True(v.In.Key(Avalonia.Input.Key.R, false, false));
         v.In.Moved(v.At(64, 64), v.Size);
-        Assert.NotEqual(before, v.In.Shown.Select(t => t.Position).ToList());
+        Assert.NotEqual(before, [.. v.In.Shown.Select(t => t.Position)]);
         Assert.False(v.In.Key(Avalonia.Input.Key.Q, false, false));
     }
 }

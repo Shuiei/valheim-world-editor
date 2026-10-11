@@ -2,7 +2,6 @@ using System.Numerics;
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using Avalonia.Interactivity;
-using TerrainEditor.App;
 using TerrainEditor.Save;
 using Xunit;
 
@@ -15,13 +14,13 @@ namespace TerrainEditor.Desktop.Tests;
 [Collection("World files")]
 public class ParityEditorTests
 {
-    private static readonly Func<Formula.Env, double> Two = Formula.Compile("2", new string[0]);
+    private static readonly Func<Formula.Env, double> Two = Formula.Compile("2", []);
 
     private sealed class Run : IDisposable
     {
         public MainWindow W { get; } = new(load: false) { Width = 1600, Height = 1000 };
         public string Dir { get; } = EditTests.CopyFixture();
-        public List<string> Asked { get; } = new();
+        public List<string> Asked { get; } = [];
         public Queue<bool> Answers { get; } = new();
         public int Saves;
         public FakeGame? Game { get; private set; }
@@ -62,7 +61,7 @@ public class ParityEditorTests
             {
                 Directory.Delete(Path.GetDirectoryName(Dir)!, true);
             }
-            catch (Exception)
+            catch
             {
             }
         }
@@ -311,7 +310,7 @@ public class ParityEditorTests
         await r.OpenLive();
         await r.W.PollPlayers();
         Assert.True(r.W.PlayersRow.IsVisible);
-        Assert.Equal(new[] { "Ada", "Bjorn" }, r.W.LivePlayers.Select(p => p.Name));
+        Assert.Equal(["Ada", "Bjorn"], r.W.LivePlayers.Select(p => p.Name));
         Assert.Equal(new Vector3(10, 30, -20), r.W.LivePlayers[0].World);
         Assert.Equal(r.W.LivePlayers, r.W.View.Players);
         Assert.Equal("Ada", r.W.PlayerBox.SelectedItem);
@@ -344,7 +343,7 @@ public class ParityEditorTests
         r.W.PlayerBox.SelectedItem = "Bjorn";
         r.Game!.Players = "[{\"name\":\"Bjorn\",\"x\":1,\"y\":2,\"z\":3},{\"name\":\"Cid\",\"x\":4,\"y\":5,\"z\":6},{\"x\":9}]";
         await r.W.PollPlayers();
-        Assert.Equal(new[] { "Bjorn", "Cid" }, r.W.LivePlayers.Select(p => p.Name));
+        Assert.Equal(["Bjorn", "Cid"], r.W.LivePlayers.Select(p => p.Name));
         // The one chosen stays chosen.
         Assert.Equal("Bjorn", r.W.PlayerBox.SelectedItem);
         r.Game.Players = "not json";
@@ -397,13 +396,13 @@ public class ParityEditorTests
     public void APlayersPostIsABodyAndABeam()
     {
         var s = OverlayTests.Flat();
-        var posts = GlView.PlayerPosts(s, new[] { ("Ada", new Vector3(10, 30, -20)) });
+        float[] posts = GlView.PlayerPosts(s, [("Ada", new Vector3(10, 30, -20))]);
         // 12 sides of two rings, 4 sides of the body, the beam: 29 lines of 6 numbers.
         Assert.Equal(29 * 6, posts.Length);
         // The beam: from the feet 40 m up, at the player's place in view space.
-        var beam = posts[^6..];
+        float[] beam = posts[^6..];
         Assert.Equal(new[] { 10 - s.Cx, 30, 20 + s.Cz, 10 - s.Cx, 70, 20 + s.Cz }, beam);
-        Assert.Empty(GlView.PlayerPosts(s, Array.Empty<(string, Vector3)>()));
+        Assert.Empty(GlView.PlayerPosts(s, []));
     }
 
     // ---- Moving the area.
@@ -415,14 +414,14 @@ public class ParityEditorTests
         await r.Open();
         Assert.True(r.W.AreaNav.IsVisible);
         r.Raise();
-        var cam = r.W.View.WorldCamera!.Value;
+        var (yaw, pitch, distance, world) = r.W.View.WorldCamera!.Value;
         Click(r.W.AreaEast);
         await LiveTests.Until(() => r.W.View.Scene!.X0 == 1);
         Assert.Equal(0, r.W.View.Scene!.Z0);
-        var now = r.W.View.WorldCamera!.Value;
-        Assert.Equal(cam.World.X, now.World.X, 3);
-        Assert.Equal(cam.World.Z, now.World.Z, 3);
-        Assert.Equal(cam.Distance, now.Distance);
+        var (_, _, nowDistance, nowWorld) = r.W.View.WorldCamera!.Value;
+        Assert.Equal(world.X, nowWorld.X, 3);
+        Assert.Equal(world.Z, nowWorld.Z, 3);
+        Assert.Equal(distance, nowDistance);
         Assert.Equal(1, r.W.World!.Pending.Zones);
         await r.W.MoveArea(0, 1);
         Assert.Equal((1, 1), (r.W.View.Scene!.X0, r.W.View.Scene.Z0));
@@ -456,17 +455,17 @@ public class ParityEditorTests
         await r.Open(0, 0, 3);
         Assert.Equal(0, r.W.AreaSizeBox.SelectedIndex);
         r.Raise();
-        var cam = r.W.View.WorldCamera!.Value;
+        var (yaw, pitch, distance, world) = r.W.View.WorldCamera!.Value;
         r.W.AreaSizeBox.SelectedIndex = 2;
         await LiveTests.Until(() => r.W.View.Scene!.Size == 7);
         Assert.Equal((-3, -3), (r.W.View.Scene!.X0, r.W.View.Scene.Z0));
-        Assert.Equal(cam.World.X, r.W.View.WorldCamera!.Value.World.X, 3);
+        Assert.Equal(world.X, r.W.View.WorldCamera!.Value.World.X, 3);
         Assert.Equal(1, r.W.World!.Pending.Zones);
         await r.W.ResizeArea(5);
         Assert.Equal((5, -2), (r.W.View.Scene!.Size, r.W.View.Scene.X0));
         Assert.Equal(1, r.W.AreaSizeBox.SelectedIndex);
         // Something selected: it waits, and says why.
-        r.W.View.Select(new[] { 0 });
+        r.W.View.Select([0]);
         if (r.W.View.Selected.Count > 0)
         {
             await r.W.ResizeArea(7);
@@ -487,8 +486,8 @@ public class ParityEditorTests
 
     private static void LookAt(MainWindow w, float wx, float wz)
     {
-        var c = w.View.WorldCamera!.Value;
-        w.View.WorldCamera = (c.Yaw, c.Pitch, c.Distance, new Vector3(wx, 30, wz));
+        var (yaw, pitch, distance, _) = w.View.WorldCamera!.Value;
+        w.View.WorldCamera = (yaw, pitch, distance, new Vector3(wx, 30, wz));
     }
 
     [AvaloniaFact]
@@ -545,14 +544,14 @@ public class ParityEditorTests
         // A selection.
         int i = r.W.View.Scene!.Things.FindIndex(t => !t.Gone);
         Assert.True(i >= 0);
-        r.W.View.Select(new[] { i });
+        r.W.View.Select([i]);
         Assert.Null(await r.W.CheckFollow());
         Assert.Equal("Follow waits: objects are selected (Esc clears).", r.W.MessageText.Text);
         // Said once while the reason stays.
         r.W.MessageText.Text = "other";
         Assert.Null(await r.W.CheckFollow());
         Assert.Equal("other", r.W.MessageText.Text);
-        r.W.View.Select(Array.Empty<int>());
+        r.W.View.Select([]);
         // A path drawn.
         r.W.View.Path.Points.Add(new Vector2(10, 10));
         Assert.Null(await r.W.CheckFollow());
@@ -677,7 +676,7 @@ public class ParityEditorTests
         s.Shape(20, 20, Two, 3, 0, "a");
         s.Undo();
         s.Redo();
-        s.Delete(new[] { 0 });
+        s.Delete([0]);
         s.RemoveChange(s.UndoList[0]);
         s.BeginStroke(BrushTool.Raise, 40, 40);
         s.StrokeStep(40, 40, 0.1f);

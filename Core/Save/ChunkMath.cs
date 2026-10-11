@@ -5,7 +5,7 @@ namespace TerrainEditor.Save;
 // 2^s x 2^s base chunks (ZoneSystem.s_sizeFilters clears the low s bits of x and y).
 public static class ChunkMath
 {
-    private static readonly ushort[] SizeFilters = { 65535, 65278, 64764, 63736, 61680 };
+    private static readonly ushort[] SizeFilters = [65535, 65278, 64764, 63736, 61680];
 
     public static (int X, int Z) SectorOf(float x, float z) => ((int)Math.Floor((x + 32f) / 64f), (int)Math.Floor((z + 32f) / 64f));
 

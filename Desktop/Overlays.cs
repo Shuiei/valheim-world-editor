@@ -40,7 +40,7 @@ public static class Overlays
     {
         float ox = s.X0 * 64f - 32f, oz = s.Z0 * 64f - 32f;
         float minX = ox - 40, maxX = ox + s.W + 40, minZ = oz - 40, maxZ = oz + s.H + 40;
-        return (s.World?.Locations ?? new()).Count(l => l.Position.X >= minX && l.Position.X <= maxX && l.Position.Z >= minZ && l.Position.Z <= maxZ);
+        return (s.World?.Locations ?? []).Count(l => l.Position.X >= minX && l.Position.X <= maxX && l.Position.Z >= minZ && l.Position.Z <= maxZ);
     }
 
     // names: each thing's prefab name (null when unknown).
@@ -58,7 +58,7 @@ public static class Overlays
         {
             for (int i = 1; i < pts.Count; i++)
             {
-                lines[l].AddRange(new[] { pts[i - 1].X, pts[i - 1].Y, pts[i - 1].Z, pts[i].X, pts[i].Y, pts[i].Z });
+                lines[l].AddRange([pts[i - 1].X, pts[i - 1].Y, pts[i - 1].Z, pts[i].X, pts[i].Y, pts[i].Z]);
             }
         }
         float ox = s.X0 * 64f - 32f, oz = s.Z0 * 64f - 32f;
@@ -111,7 +111,7 @@ public static class Overlays
         // Location markers: a post 14 m tall at each location in or near the area.
         float minX = ox - 40, maxX = ox + s.W + 40, minZ = oz - 40, maxZ = oz + s.H + 40;
         int locations = 0;
-        foreach (var (p, _) in s.World?.Locations ?? new())
+        foreach (var (p, _) in s.World?.Locations ?? [])
         {
             if (p.X < minX || p.X > maxX || p.Z < minZ || p.Z > maxZ)
             {
@@ -121,7 +121,7 @@ public static class Overlays
             var b = OnGround(p.X - ox, p.Z - oz, 0);
             foreach (var (dx, dz) in new[] { (0.8f, 0f), (-0.8f, 0f), (0f, 0.8f), (0f, -0.8f), (0f, 0f) })
             {
-                lines[Layer.Markers].AddRange(new[] { b.X + dx, b.Y, b.Z + dz, b.X + dx, b.Y + 14, b.Z + dz });
+                lines[Layer.Markers].AddRange([b.X + dx, b.Y, b.Z + dz, b.X + dx, b.Y + 14, b.Z + dz]);
             }
         }
 

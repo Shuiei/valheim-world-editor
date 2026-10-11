@@ -33,7 +33,7 @@ public static partial class GameCatalogues
         PieceRootsOf.GetValue(b, _ => FindPieceRoots(b, game));
 
     // Found once for the readers that need them (pieces, piece-support, piece-place, piece-cost).
-    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<Bundle, List<(Bundle.Inner, long, AssetTypeValueField, AssetTypeValueField)>> PieceRootsOf = new();
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<Bundle, List<(Bundle.Inner, long, AssetTypeValueField, AssetTypeValueField)>> PieceRootsOf = [];
 
     private static List<(Bundle.Inner, long, AssetTypeValueField, AssetTypeValueField)> FindPieceRoots(Bundle b, Game game)
     {
@@ -76,7 +76,7 @@ public static partial class GameCatalogues
     // its parent's GameObject tells whether to go there.
     private static void PieceTrees(Bundle b, Game game) => TreesRead.GetValue(b, _ =>
     {
-        IEnumerable<long> Of(long go, Func<int, bool> type) => b.Field(go) is { } g ? b.ComponentIds(g).Where(c => type(c.Type)).Select(c => c.Pid) : Enumerable.Empty<long>();
+        IEnumerable<long> Of(long go, Func<int, bool> type) => b.Field(go) is { } g ? b.ComponentIds(g).Where(c => type(c.Type)).Select(c => c.Pid) : [];
         var gos = PieceRoots(b, game).Select(p => p.Pid).ToList();
         // The Transforms to read, with their parent's GameObject (0 for a prefab's root).
         var transforms = gos.SelectMany(g => Of(g, t => t == TransformType)).Select(t => (Pid: t, Parent: 0L)).ToList();
@@ -84,8 +84,8 @@ public static partial class GameCatalogues
         while (transforms.Count + gos.Count + cols.Count > 0)
         {
             b.ReadInOrder(transforms.Select(t => t.Pid).Concat(gos).Concat(cols));
-            cols = gos.SelectMany(g => Of(g, IsCollider)).ToList();
-            gos = new List<long>();
+            cols = [.. gos.SelectMany(g => Of(g, IsCollider))];
+            gos = [];
             var next = new List<(long Pid, long Parent)>();
             foreach (var (t, parent) in transforms)
             {
@@ -101,7 +101,7 @@ public static partial class GameCatalogues
         return new object();
     });
 
-    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<Bundle, object> TreesRead = new();
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<Bundle, object> TreesRead = [];
 
     // A child's frame from its parent's: (position, rotation, scale), all in the prefab's frame.
     private static (V3 P, Quat Q, V3 S) ChildFrame(AssetTypeValueField tr, V3 pos, Quat rot, V3 scale)
@@ -111,7 +111,7 @@ public static partial class GameCatalogues
     }
 
     // A prefab root's position as the files have it: whole numbers.
-    private static List<object?> Origin() => new() { 0L, 0L, 0L };
+    private static List<object?> Origin() => [0L, 0L, 0L];
 
     // The first smallest / largest (as Python's min and max).
     private static double Min(IEnumerable<double> xs) => xs.Aggregate((a, x) => x < a ? x : a);
@@ -130,9 +130,9 @@ public static partial class GameCatalogues
 
         private readonly Dict _entries = new();
         // Each piece's prefab by where it is (what the menus name), the networked ones, and the menus.
-        private readonly Dictionary<Ref, string> _names = new();
+        private readonly Dictionary<Ref, string> _names = [];
         private readonly HashSet<string> _networked = new(StringComparer.Ordinal);
-        private readonly Dictionary<string, List<Ref>> _tables = new();
+        private readonly Dictionary<string, List<Ref>> _tables = [];
 
         public void Read(Bundle b, Game game)
         {
@@ -169,7 +169,7 @@ public static partial class GameCatalogues
                 }
                 if (b.Field(f, d["m_GameObject.m_PathID"].AsLong) is { } owner && Tables.TryGetValue(owner["m_Name"].AsString, out string? tool))
                 {
-                    _tables[tool] = d["m_pieces.Array"].Children.Select(p => new Ref(f.FileOf(p["m_FileID"].AsInt) ?? "", p["m_PathID"].AsLong)).ToList();
+                    _tables[tool] = [.. d["m_pieces.Array"].Children.Select(p => new Ref(f.FileOf(p["m_FileID"].AsInt) ?? "", p["m_PathID"].AsLong))];
                 }
             }
         }
@@ -179,7 +179,7 @@ public static partial class GameCatalogues
             // A piece in several menus: the hammer's.
             foreach (string tool in new[] { "feaster", "cultivator", "hoe", "hammer" })
             {
-                foreach (var r in _tables.GetValueOrDefault(tool) ?? new())
+                foreach (var r in _tables.GetValueOrDefault(tool) ?? [])
                 {
                     if (_names.TryGetValue(r, out string? n) && _networked.Contains(n))
                     {
@@ -223,20 +223,20 @@ public static partial class GameCatalogues
             var (p, r, s) = root ? (default(V3), Quat.Root, (V3)(1.0, 1.0, 1.0)) : ChildFrame(tr, pos, rot, scale);
             if (snap)
             {
-                snaps.Add(root ? Origin() : new List<object?> { R(p.X, 3), R(p.Y, 3), R(p.Z, 3) });
+                snaps.Add(root ? Origin() : [R(p.X, 3), R(p.Y, 3), R(p.Z, 3)]);
                 return;
             }
             foreach (var box in boxes)
             {
-                var c = Vec(box["m_Center"]);
-                var z = Vec(box["m_Size"]);
+                var (cx, cy, cz) = Vec(box["m_Center"]);
+                var (sizeX, sizeY, sizeZ) = Vec(box["m_Size"]);
                 foreach (double dx in new[] { -0.5, 0.5 })
                 {
                     foreach (double dy in new[] { -0.5, 0.5 })
                     {
                         foreach (double dz in new[] { -0.5, 0.5 })
                         {
-                            var v = r.Rotate((c.X + dx * z.X) * s.X, (c.Y + dy * z.Y) * s.Y, (c.Z + dz * z.Z) * s.Z);
+                            var v = r.Rotate((cx + dx * sizeX) * s.X, (cy + dy * sizeY) * s.Y, (cz + dz * sizeZ) * s.Z);
                             pts.Add(Add(v, p));
                         }
                     }
@@ -377,7 +377,7 @@ public static partial class GameCatalogues
         public sealed record Tree(Dictionary<(Bundle.Inner, long), (string Name, (int File, long Pid)[] Components)> GameObjects, Dictionary<(Bundle.Inner, long), (long Go, bool Root, long[] Children)> Transforms)
         {
             public Tree()
-                : this(new(), new())
+                : this([], [])
             {
             }
 
@@ -398,7 +398,7 @@ public static partial class GameCatalogues
                 }
                 else if (type == TransformType)
                 {
-                    var children = new long[d.I32(52)];
+                    long[] children = new long[d.I32(52)];
                     for (int i = 0; i < children.Length; i++)
                     {
                         children[i] = d.I64(60 + 12 * i);
@@ -433,7 +433,7 @@ public static partial class GameCatalogues
         public static void Sweep(Bundle b, IEnumerable<(Bundle.Inner File, long Pid)> raw, Parse parse, IEnumerable<(Bundle.Inner File, long Pid)>? with = null)
         {
             var rawIn = raw.ToLookup(o => o.File, o => o.Pid);
-            var wholeIn = (with ?? Enumerable.Empty<(Bundle.Inner, long)>()).ToLookup(o => o.File, o => o.Pid);
+            var wholeIn = (with ?? []).ToLookup(o => o.File, o => o.Pid);
             foreach (var f in b.Files)
             {
                 var file = f.Assets.file;
@@ -489,7 +489,7 @@ public static partial class GameCatalogues
     }
 
     // The build ray's layers (Default, static_solid, Default_small, piece, piece_nonsolid, terrain, vehicle).
-    private static readonly HashSet<long> RayLayers = new() { 0, 15, 20, 10, 16, 11, 28 };
+    private static readonly HashSet<long> RayLayers = [0, 15, 20, 10, 16, 11, 28];
 
     // How the game's hammer places each piece, read at the editor's start (GameData), for the Workshop's
     // Build: its placement flags, its snap points (its direct children tagged "snappoint") and the
@@ -499,12 +499,12 @@ public static partial class GameCatalogues
     // capsule (its segment); ["m", convex, [x,y,z...], [i,j,k...]] a mesh (triangles).
     private sealed class PlaceScan : IStartScan
     {
-        private static readonly (string Key, string Field)[] Flags = { ("g", "m_groundPiece"), ("cg", "m_clipGround"), ("ce", "m_clipEverything"), ("ro", "m_allowRotatedOverlap"), ("w", "m_waterPiece"), ("nw", "m_noInWater") };
+        private static readonly (string Key, string Field)[] Flags = [("g", "m_groundPiece"), ("cg", "m_clipGround"), ("ce", "m_clipEverything"), ("ro", "m_allowRotatedOverlap"), ("w", "m_waterPiece"), ("nw", "m_noInWater")];
 
         private readonly Dict _entries = new();
         // The bundle's mesh colliders' meshes, by path id: vertices and triangles (each read once, not
         // kept as fields).
-        private readonly Dictionary<long, (float[] Vertices, List<int[]> Triangles)> _meshes = new();
+        private readonly Dictionary<long, (float[] Vertices, List<int[]> Triangles)> _meshes = [];
 
         public string Json() => CatalogueJson.Write(_entries, new CatalogueJson.Style(",", ":"));
 
@@ -545,8 +545,8 @@ public static partial class GameCatalogues
                     }
                     if (b.Field(ct["m_GameObject.m_PathID"].AsLong) is { } g && Get(g, "m_Tag", null) is long tag && tag == SnapTag)
                     {
-                        var lp = Vec(ct["m_LocalPosition"]);
-                        snaps.Add(new List<object?> { R(lp.X * rs.X, 4), R(lp.Y * rs.Y, 4), R(lp.Z * rs.Z, 4) });
+                        var (x, y, z) = Vec(ct["m_LocalPosition"]);
+                        snaps.Add(new List<object?> { R(x * rs.X, 4), R(y * rs.Y, 4), R(z * rs.Z, 4) });
                     }
                 }
                 var cols = new List<object?>();
@@ -599,27 +599,27 @@ public static partial class GameCatalogues
                 {
                     if (t == BoxColliderType)
                     {
-                        var cc = P(Vec(c["m_Center"]));
-                        var z = Vec(c["m_Size"]);
-                        cols?.Add(new List<object?> { "b", R(cc.X, 4), R(cc.Y, 4), R(cc.Z, 4), R(Math.Abs(z.X * s.X) / 2, 4), R(Math.Abs(z.Y * s.Y) / 2, 4), R(Math.Abs(z.Z * s.Z) / 2, 4) }.Concat(q.Rounded(4)).ToList());
+                        var (cx, cy, cz) = P(Vec(c["m_Center"]));
+                        var (sizeX, sizeY, sizeZ) = Vec(c["m_Size"]);
+                        cols?.Add(new List<object?> { "b", R(cx, 4), R(cy, 4), R(cz, 4), R(Math.Abs(sizeX * s.X) / 2, 4), R(Math.Abs(sizeY * s.Y) / 2, 4), R(Math.Abs(sizeZ * s.Z) / 2, 4) }.Concat(q.Rounded(4)).ToList());
                     }
                     else if (t == SphereColliderType)
                     {
-                        var cc = P(Vec(c["m_Center"]));
-                        cols?.Add(new List<object?> { "s", R(cc.X, 4), R(cc.Y, 4), R(cc.Z, 4), R(c["m_Radius"].AsFloat * Max(new[] { Math.Abs(s.X), Math.Abs(s.Y), Math.Abs(s.Z) }), 4) });
+                        var (x, y, z) = P(Vec(c["m_Center"]));
+                        cols?.Add(new List<object?> { "s", R(x, 4), R(y, 4), R(z, 4), R(c["m_Radius"].AsFloat * Max([Math.Abs(s.X), Math.Abs(s.Y), Math.Abs(s.Z)]), 4) });
                     }
                     else if (t == CapsuleColliderType)
                     {
-                        var cc = Vec(c["m_Center"]);
+                        var (x, y, z) = Vec(c["m_Center"]);
                         int d = (int)Int(Get(c, "m_Direction", 1L));
-                        double[] sa = { s.X, s.Y, s.Z };
+                        double[] sa = [s.X, s.Y, s.Z];
                         double rr = c["m_Radius"].AsFloat * Max(Enumerable.Range(0, 3).Where(i => i != d).Select(i => Math.Abs(sa[i])));
                         double half = Max(c["m_Height"].AsFloat * Math.Abs(sa[d]) / 2 - rr, 0);
-                        var ax = new double[3];
+                        double[] ax = new double[3];
                         ax[d] = sa[d] != 0 ? half / Math.Abs(sa[d]) : 0;
-                        var a = P((cc.X + ax[0], cc.Y + ax[1], cc.Z + ax[2]));
-                        var e = P((cc.X - ax[0], cc.Y - ax[1], cc.Z - ax[2]));
-                        cols?.Add(new List<object?> { "c", R(a.X, 4), R(a.Y, 4), R(a.Z, 4), R(e.X, 4), R(e.Y, 4), R(e.Z, 4), R(rr, 4) });
+                        var (fromX, fromY, fromZ) = P((x + ax[0], y + ax[1], z + ax[2]));
+                        var (toX, toY, toZ) = P((x - ax[0], y - ax[1], z - ax[2]));
+                        cols?.Add(new List<object?> { "c", R(fromX, 4), R(fromY, 4), R(fromZ, 4), R(toX, 4), R(toY, 4), R(toZ, 4), R(rr, 4) });
                     }
                     else if (c["m_Mesh"] is { IsDummy: false } mesh && mesh["m_FileID"].AsInt == 0 && b.TypeOf(mesh["m_PathID"].AsLong) == MeshType)
                     {
@@ -633,10 +633,10 @@ public static partial class GameCatalogues
                         var coords = new List<object?>(vertices.Length);
                         for (int i = 0; i + 2 < vertices.Length; i += 3)
                         {
-                            var w = P((vertices[i], vertices[i + 1], vertices[i + 2]));
-                            coords.Add(R(w.X, 4));
-                            coords.Add(R(w.Y, 4));
-                            coords.Add(R(w.Z, 4));
+                            var (x, y, z) = P((vertices[i], vertices[i + 1], vertices[i + 2]));
+                            coords.Add(R(x, 4));
+                            coords.Add(R(y, 4));
+                            coords.Add(R(z, 4));
                         }
                         cols.Add(new List<object?> { "m", Truthy(Get(c, "m_Convex", 0L)) ? 1L : 0L, coords, triangles.SelectMany(x => x).Select(i => (object?)(long)i).ToList() });
                     }
@@ -659,7 +659,7 @@ public static partial class GameCatalogues
     {
         private readonly Dict _entries = new();
         // The bounds of the meshes of the bundle's mesh colliders, by path id.
-        private readonly Dictionary<long, (V3 C, V3 H)> _meshes = new();
+        private readonly Dictionary<long, (V3 C, V3 H)> _meshes = [];
 
         public string Json() => CatalogueJson.Write(_entries, new CatalogueJson.Style(",", ":"));
 
@@ -683,12 +683,12 @@ public static partial class GameCatalogues
                 var wnt = b.Field(wntPid)!;
                 var boxes = new List<object?>();
                 Walk(b, pid, default, Quat.Root, (1, 1, 1), true, boxes, null);
-                var com = Has(wnt, "m_comOffset") ? Vec(wnt["m_comOffset"]) : default;
+                var (x, y, z) = Has(wnt, "m_comOffset") ? Vec(wnt["m_comOffset"]) : default;
                 var entry = new Dict
                 {
                     ["m"] = Py(wnt["m_materialType"]),
                     ["s"] = Int(Get(wnt, "m_supports", 1L)),
-                    ["c"] = Has(wnt, "m_comOffset") ? new List<object?> { R(com.X, 4), R(com.Y, 4), R(com.Z, 4) } : Origin(),
+                    ["c"] = Has(wnt, "m_comOffset") ? [R(x, 4), R(y, 4), R(z, 4)] : Origin(),
                     ["b"] = boxes,
                 };
                 // The game never checks its support (m_noSupportWear off): it never falls, and keeps its
@@ -735,8 +735,8 @@ public static partial class GameCatalogues
                 if (t == BoxColliderType)
                 {
                     c = Vec(cm["m_Center"]);
-                    var z = Vec(cm["m_Size"]);
-                    h = (z.X / 2, z.Y / 2, z.Z / 2);
+                    var (x, y, z) = Vec(cm["m_Size"]);
+                    h = (x / 2, y / 2, z / 2);
                     aabb = 0;
                 }
                 else if (t == MeshColliderType)
@@ -767,8 +767,8 @@ public static partial class GameCatalogues
                     long d = Int(Get(cm, "m_Direction", 1L));
                     h = (d == 0 ? hh : rr, d == 1 ? hh : rr, d == 2 ? hh : rr);
                 }
-                var cs = q.Rotate(Scale(c, s));
-                boxes?.Add(new List<object?> { R(cs.X + p.X, 4), R(cs.Y + p.Y, 4), R(cs.Z + p.Z, 4), R(Math.Abs(h.X * s.X), 4), R(Math.Abs(h.Y * s.Y), 4), R(Math.Abs(h.Z * s.Z), 4) }.Concat(q.Rounded(4)).Append(aabb).Append(layer).ToList());
+                var (cx, cy, cz) = q.Rotate(Scale(c, s));
+                boxes?.Add(new List<object?> { R(cx + p.X, 4), R(cy + p.Y, 4), R(cz + p.Z, 4), R(Math.Abs(h.X * s.X), 4), R(Math.Abs(h.Y * s.Y), 4), R(Math.Abs(h.Z * s.Z), 4) }.Concat(q.Rounded(4)).Append(aabb).Append(layer).ToList());
             }
             foreach (long child in ChildObjects(b, tr))
             {
@@ -871,7 +871,7 @@ public static partial class GameCatalogues
                             break;
                         case 0:
                             rowStarted = true;
-                            if (c == '\n' || c == '\r')
+                            if (c is '\n' or '\r')
                             {
                                 row.Add("");
                                 state = 4;
@@ -891,7 +891,7 @@ public static partial class GameCatalogues
                             }
                             break;
                         case 1:
-                            if (c == '\n' || c == '\r')
+                            if (c is '\n' or '\r')
                             {
                                 row.Add(field.ToString());
                                 field.Clear();
@@ -930,7 +930,7 @@ public static partial class GameCatalogues
                                 field.Clear();
                                 state = 0;
                             }
-                            else if (c == '\n' || c == '\r')
+                            else if (c is '\n' or '\r')
                             {
                                 row.Add(field.ToString());
                                 field.Clear();
@@ -943,7 +943,7 @@ public static partial class GameCatalogues
                             }
                             break;
                         case 4:
-                            if (c != '\n' && c != '\r')
+                            if (c is not '\n' and not '\r')
                             {
                                 throw new InvalidDataException("new-line character seen in unquoted field");
                             }
@@ -964,7 +964,7 @@ public static partial class GameCatalogues
                 if (state != 2)
                 {
                     yield return row;
-                    row = new List<string>();
+                    row = [];
                     state = 0;
                     rowStarted = false;
                 }

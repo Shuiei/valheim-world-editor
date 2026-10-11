@@ -14,7 +14,7 @@ public sealed class MapData
 
     // Colours from the Minimap component in the game's assets (Mistlands keeps its code default).
     private static readonly (Heightmap.Biome Biome, byte R, byte G, byte B)[] BiomeColors =
-    {
+    [
         (Heightmap.Biome.Meadows, Byte(0.5725338f), Byte(0.6551003f), Byte(0.3605249f)),
         (Heightmap.Biome.AshLands, Byte(0.4811321f), Byte(0.124822f), Byte(0.124822f)),
         (Heightmap.Biome.BlackForest, Byte(0.4196384f), Byte(0.4548104f), Byte(0.2466926f)),
@@ -23,10 +23,7 @@ public sealed class MapData
         (Heightmap.Biome.Swamp, Byte(0.6394598f), Byte(0.4469825f), Byte(0.3448844f)),
         (Heightmap.Biome.Mountain, 255, 255, 255),
         (Heightmap.Biome.Mistlands, Byte(0.2f), Byte(0.2f), Byte(0.2f)),
-    };
-
-    private readonly WorldGenerator _gen;
-
+    ];
     private readonly TerrainService _terrain;
 
     private readonly EditStore _edits;
@@ -39,11 +36,11 @@ public sealed class MapData
     {
         _terrain = terrain;
         _edits = edits;
-        _gen = terrain.Generator;
+        Generator = terrain.Generator;
         _global = new Lazy<Layers>(BuildGlobal, LazyThreadSafetyMode.ExecutionAndPublication);
     }
 
-    internal WorldGenerator GeneratorForTests => _gen;
+    internal WorldGenerator Generator { get; }
 
     public Layers Global => _global.Value;
 
@@ -51,11 +48,11 @@ public sealed class MapData
 
     public static (byte, byte, byte) PixelColor(Heightmap.Biome biome)
     {
-        foreach (var c in BiomeColors)
+        foreach (var (kind, r, g, b) in BiomeColors)
         {
-            if (c.Biome == biome)
+            if (kind == biome)
             {
-                return (c.R, c.G, c.B);
+                return (r, g, b);
             }
         }
         return (255, 255, 255);
@@ -84,7 +81,7 @@ public sealed class MapData
                 return (0, Byte(1f - t * t * (3f - 2f * t)), 0);
             }
             case Heightmap.Biome.AshLands:
-                _gen.GetAshlandsHeight(wx, wy, out Color mask, cheap: true);
+                Generator.GetAshlandsHeight(wx, wy, out Color mask, cheap: true);
                 return (0, 0, Byte(mask.a));
             default:
                 return (0, 0, 0);
@@ -104,8 +101,8 @@ public sealed class MapData
             for (int j = 0; j < n; j++)
             {
                 float wx = (j - half) * pix + pix / 2f;
-                Heightmap.Biome biome = _gen.GetBiome(wx, wy);
-                float h = _gen.GetBiomeHeight(biome, wx, wy, out _);
+                Heightmap.Biome biome = Generator.GetBiome(wx, wy);
+                float h = Generator.GetBiomeHeight(biome, wx, wy, out _);
                 layers.Set(i * n + j, h, PixelColor(biome), MaskColor(wx, wy, h, biome), null);
             }
         });
@@ -163,7 +160,7 @@ public sealed class MapData
                         paint = (Byte(e.Paint[vi * 4]), Byte(e.Paint[vi * 4 + 1]), Byte(e.Paint[vi * 4 + 2]), Byte(e.Paint[vi * 4 + 3]));
                     }
                 }
-                Heightmap.Biome biome = _gen.GetBiome(wx, wz);
+                Heightmap.Biome biome = Generator.GetBiome(wx, wz);
                 layers.Set(row * size + col, h, PixelColor(biome), MaskColor(wx, wz, h, biome), paint);
             }
         });

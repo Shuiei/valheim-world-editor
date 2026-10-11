@@ -13,13 +13,13 @@ public readonly record struct LiveTarget(long User, uint Id, int Prefab, Vector3
 // applying: a deleted object is created again from its snapshot bytes, a new one is destroyed.
 public sealed class LiveSync
 {
-    private readonly object _lock = new();
+    private readonly Lock _lock = new();
 
     // Snapshot objects (ids >= 0) currently destroyed in the game.
-    private readonly HashSet<int> _destroyed = new();
+    private readonly HashSet<int> _destroyed = [];
 
     // Objects whose live ZDOID is not the snapshot's: new objects (ids < 0) and restored ones.
-    private readonly Dictionary<int, LiveTarget> _liveIds = new();
+    private readonly Dictionary<int, LiveTarget> _liveIds = [];
 
     public void Reset()
     {
@@ -63,7 +63,7 @@ public sealed class LiveSync
     {
         lock (_lock)
         {
-            return _liveIds.Where(kv => kv.Key < 0).Select(kv => (kv.Key, kv.Value)).ToList();
+            return [.. _liveIds.Where(kv => kv.Key < 0).Select(kv => (kv.Key, kv.Value))];
         }
     }
 
@@ -81,7 +81,7 @@ public sealed class LiveSync
         lock (_lock)
         {
             HashSet<int> deleted = edits.Deleted;
-            HashSet<int> added = edits.Added.Select(a => a.Id).ToHashSet();
+            var added = edits.Added.Select(a => a.Id).ToHashSet();
             int d = deleted.Count(id => id >= 0 && !_destroyed.Contains(id)) + _destroyed.Count(id => !deleted.Contains(id));
             int a = added.Count(id => !_liveIds.ContainsKey(id)) + _liveIds.Keys.Count(id => id < 0 && !added.Contains(id));
             return (d, a);
@@ -90,19 +90,19 @@ public sealed class LiveSync
 
     public async Task<string> Apply(WorldSave world, EditStore edits, LiveBridge live)
     {
-        List<LiveTarget> destroy = new();
-        List<byte[]> create = new();
-        List<int> createFor = new();
+        List<LiveTarget> destroy = [];
+        List<byte[]> create = [];
+        List<int> createFor = [];
         // What each creation is and where (for its LiveTarget once the game gives its ZDOID).
-        List<(int Prefab, Vector3 Position)> createWhat = new();
-        List<string> skipped = new();
+        List<(int Prefab, Vector3 Position)> createWhat = [];
+        List<string> skipped = [];
         // What the game has once it accepts the call (nothing is recorded before: a refused call is sent
         // again next time).
-        List<int> destroyIds = new(), restoreIds = new(), dropNew = new();
+        List<int> destroyIds = [], restoreIds = [], dropNew = [];
         lock (_lock)
         {
             HashSet<int> deleted = edits.Deleted;
-            Dictionary<int, NewObject> added = edits.Added.ToDictionary(a => a.Id);
+            var added = edits.Added.ToDictionary(a => a.Id);
             LiveTarget LiveId(int id)
             {
                 if (_liveIds.TryGetValue(id, out var l))
@@ -150,7 +150,7 @@ public sealed class LiveSync
             return "";
         }
         string reply = await live.ApplyObjects(destroy, create);
-        using JsonDocument doc = JsonDocument.Parse(reply);
+        using var doc = JsonDocument.Parse(reply);
         var ids = doc.RootElement.GetProperty("created").EnumerateArray().Select(e => e.GetString()!.Split(':')).ToList();
         lock (_lock)
         {

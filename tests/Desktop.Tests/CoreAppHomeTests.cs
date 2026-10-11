@@ -15,7 +15,7 @@ namespace WorldEditor.Tests;
 [Collection("DataDir")]
 public sealed class CoreAppHomeTests : IDisposable
 {
-    private static readonly string[] Vars = { "HOME", "XDG_CONFIG_HOME", "XDG_DATA_HOME", "LOCALAPPDATA" };
+    private static readonly string[] Vars = ["HOME", "XDG_CONFIG_HOME", "XDG_DATA_HOME", "LOCALAPPDATA"];
     private readonly Dictionary<string, string?> _old = Vars.ToDictionary(v => v, Environment.GetEnvironmentVariable);
     private readonly string? _settings = AppSettings.PathOverride, _servers = ServerConfig.PathOverride, _dataDir = AppSettings.DataDirOverride;
     private readonly bool _defaults = LocalGame.SearchDefaultPlaces;
@@ -57,12 +57,12 @@ public sealed class CoreAppHomeTests : IDisposable
         {
             Directory.Delete(_home, true);
         }
-        catch (Exception)
+        catch
         {
         }
     }
 
-    private string Local(params string[] parts) => Path.Combine(new[] { _home }.Concat(parts).ToArray());
+    private string Local(params string[] parts) => Path.Combine([_home, .. parts]);
 
     private static void CopyWorld(string to)
     {
@@ -145,7 +145,7 @@ public sealed class CoreAppHomeTests : IDisposable
         var ancient = Assert.Single(found, w => w.Name == "Ancient");
         Assert.False(ancient.Usable);
         Assert.StartsWith("Old save format", ancient.Problem);
-        Assert.DoesNotContain(found, w => w.Path.EndsWith("Converted.db"));
+        Assert.DoesNotContain(found, w => w.Path.EndsWith("Converted.db", StringComparison.Ordinal));
         Assert.Single(found, w => w.Name == "Converted");
     }
 
@@ -213,14 +213,16 @@ public sealed class CoreAppHomeTests : IDisposable
     // A character file as the game writes it, around the bits that are read: name, id, seed.
     private static byte[] Fch(string name, long id, string seed = "AbCdEfGh", byte[]? before = null)
     {
-        var b = new List<byte>(before ?? new byte[] { 0x26, 0x00, 0x00, 0x00, 0x05 });
-        b.Add((byte)Encoding.UTF8.GetByteCount(name));
+        var b = new List<byte>(before ?? [0x26, 0x00, 0x00, 0x00, 0x05])
+        {
+            (byte)Encoding.UTF8.GetByteCount(name)
+        };
         b.AddRange(Encoding.UTF8.GetBytes(name));
         b.AddRange(BitConverter.GetBytes(id));
         b.Add((byte)seed.Length);
         b.AddRange(Encoding.ASCII.GetBytes(seed));
         b.AddRange(new byte[16]);
-        return b.ToArray();
+        return [.. b];
     }
 
     [Fact]
@@ -231,13 +233,13 @@ public sealed class CoreAppHomeTests : IDisposable
         File.WriteAllBytes(Path.Combine(chars, "ragnar.fch"), Fch("Ragnar", 1234567890123));
         // The same character twice (a backup copy) counts once.
         File.WriteAllBytes(Path.Combine(chars, "ragnar_copy.fch"), Fch("ragnar_copy", 1234567890123));
-        File.WriteAllBytes(Path.Combine(chars, "junk.fch"), new byte[] { 1, 2, 3 });
+        File.WriteAllBytes(Path.Combine(chars, "junk.fch"), [1, 2, 3]);
         var list = Characters.Local();
         var r = Assert.Single(list);
         Assert.Equal("Ragnar", r.Name);
         Assert.Equal(1234567890123, r.Id);
         Assert.Contains(Characters.Roots(), d => d == chars);
-        Assert.Contains(Characters.Roots(), d => d.EndsWith(Path.Combine("Valheim", "characters")));
+        Assert.Contains(Characters.Roots(), d => d.EndsWith(Path.Combine("Valheim", "characters"), StringComparison.Ordinal));
     }
 
     [Fact]
@@ -268,7 +270,7 @@ public sealed class CoreAppHomeTests : IDisposable
         Assert.Null(Characters.Read(Fch("Bjorn", 42), ""));
         Assert.Null(Characters.Read(Fch("Bjorn", 42), new string('x', 200)));
         // A first match that does not fit (no id) is skipped for a later one that does.
-        var twice = Fch("Bjorn", 0).Concat(Fch("Bjorn", 77)).ToArray();
+        byte[] twice = [.. Fch("Bjorn", 0), .. Fch("Bjorn", 77)];
         Assert.Equal(77, Characters.Read(twice, "bjorn")!.Id);
     }
 
@@ -389,7 +391,7 @@ public sealed class CoreAppHomeTests : IDisposable
         Assert.Equal("installed", await State());
         using var running = new Status(200, "{\"world\":\"Midgard\",\"players\":3}").Start();
         Plugin(bep, running.Port, "t");
-        var status = await LocalGame.Status(settings);
+        object status = await LocalGame.Status(settings);
         var t = status.GetType();
         Assert.Equal("running", t.GetProperty("state")!.GetValue(status));
         Assert.Equal("Midgard", t.GetProperty("world")!.GetValue(status));
@@ -553,7 +555,7 @@ public sealed class CoreAppHomeTests : IDisposable
             File.WriteAllText(Local("key"), TestKey);
             var r = await Tunnel.Start(Req("127.0.0.1", port, key: Local("key")));
             Assert.NotNull(r.Error);
-            Assert.True(r.Error!.StartsWith("Could not connect") || r.Error.StartsWith("No answer from"), r.Error);
+            Assert.True(r.Error!.StartsWith("Could not connect", StringComparison.Ordinal) || r.Error.StartsWith("No answer from", StringComparison.Ordinal), r.Error);
         }
         finally
         {

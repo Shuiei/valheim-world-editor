@@ -46,8 +46,18 @@ public class PickingTests
         // A flat ground at 5 m, 65 × 65 points around 0.
         var s = new WorldScene
         {
-            World = null!, Name = "test", W = 65, H = 65, Size = 1, Heights = Enumerable.Repeat(5f, 65 * 65).ToArray(), Biomes = new int[65 * 65],
-            Things = new(), BiomeColor = new byte[65 * 65 * 4], Mask = new byte[65 * 65 * 4], OceanDepth = new float[65 * 65], Limit = new float[65 * 65],
+            World = null!,
+            Name = "test",
+            W = 65,
+            H = 65,
+            Size = 1,
+            Heights = [.. Enumerable.Repeat(5f, 65 * 65)],
+            Biomes = new int[65 * 65],
+            Things = [],
+            BiomeColor = new byte[65 * 65 * 4],
+            Mask = new byte[65 * 65 * 4],
+            OceanDepth = new float[65 * 65],
+            Limit = new float[65 * 65],
         };
         Assert.Equal(5f, Picking.HeightAt(s, 3.3f, -7.1f), 4);
         float t = Picking.HitGround(s, new Vector3(0, 25, 0), new Vector3(0, -1, 0))!.Value;

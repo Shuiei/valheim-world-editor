@@ -1,3 +1,4 @@
+
 namespace TerrainEditor.App;
 
 // Console output also goes to a log file in the data folder (a window app has no console on Windows),
@@ -46,7 +47,7 @@ public static class Log
     // The file, written by both the output and the error streams: the time before each line.
     private sealed class Sink(TextWriter file)
     {
-        private readonly object _lock = new();
+        private readonly Lock _lock = new();
         private bool _lineStart = true;
 
         public void Write(string? text)

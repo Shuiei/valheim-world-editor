@@ -27,7 +27,7 @@ public static class WorldSearch
     private static Result SearchIn(WorldSave world, EditStore edits, string query, string what, int limit)
     {
         query = query.Trim();
-        List<Hit> hits = new();
+        List<Hit> hits = [];
         Dictionary<string, int> counts = new(StringComparer.Ordinal);
         int total = 0;
         if (query.Length == 0)
@@ -77,7 +77,7 @@ public static class WorldSearch
 
         // Items and texts: only objects with byte arrays (containers) or strings are read.
         ushort needed = what == "items" ? ZdoData.ByteArrays : ZdoData.Strings;
-        Dictionary<ChunkFile, byte[]> files = new();
+        Dictionary<ChunkFile, byte[]> files = [];
         byte[] Source(ObjectRef o) => world.IsLive ? world.LiveSource(o.File) : (files.TryGetValue(o.File, out byte[]? f) ? f : files[o.File] = File.ReadAllBytes(Path.Combine(world.Directory, o.File.FileName)));
         IEnumerable<(int Id, Func<byte[]> Bytes)> Candidates()
         {
@@ -91,7 +91,7 @@ public static class WorldSearch
             }
             foreach (NewObject n in edits.Added)
             {
-                yield return (n.Id, () => world.NewObjectBytes(n, Source) ?? Array.Empty<byte>());
+                yield return (n.Id, () => world.NewObjectBytes(n, Source) ?? []);
             }
         }
         foreach (var (id, bytes) in Candidates())

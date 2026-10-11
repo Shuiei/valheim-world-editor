@@ -18,24 +18,24 @@ public class CoreAppDataTests
 
     // ---- Zone statistics.
 
-    private static int[][] Rows(int[] data) => Enumerable.Range(0, data.Length / ZoneStats.Stride).Select(i => data.Skip(i * ZoneStats.Stride).Take(ZoneStats.Stride).ToArray()).ToArray();
+    private static int[][] Rows(int[] data) => [.. Enumerable.Range(0, data.Length / ZoneStats.Stride).Select(i => data.Skip(i * ZoneStats.Stride).Take(ZoneStats.Stride).ToArray())];
 
     [Fact]
     public void ZoneStatsCountBuildingsAndTheDistanceToThem()
     {
         using var w = new TempWorld();
         WorldSave world = w.Load();
-        var tree = world.Objects.First(o => o.Prefab == Beech);
+        var (id, prefab, position, rotation, scale) = world.Objects.First(o => o.Prefab == Beech);
         // Two player-built walls in the tree's zone (built by player 777).
         long before = WorldSave.Builder;
         try
         {
             WorldSave.Builder = 777;
-            var r = WorldWriter.Save(world, Array.Empty<ZoneEdit>(), added: new[]
-            {
-                new NewObject(-1, Wall, tree.Position + new Vector3(2, 0, 2), Vector3.Zero, 0f),
-                new NewObject(-2, Wall, tree.Position + new Vector3(4, 0, 2), Vector3.Zero, 0f),
-            });
+            var r = WorldWriter.Save(world, [], added:
+            [
+                new NewObject(-1, Wall, position + new Vector3(2, 0, 2), Vector3.Zero, 0f),
+                new NewObject(-2, Wall, position + new Vector3(4, 0, 2), Vector3.Zero, 0f),
+            ]);
             Assert.True(r.Saved, r.Message);
         }
         finally
@@ -44,18 +44,18 @@ public class CoreAppDataTests
         }
         world = w.Load();
         Assert.Equal(2, world.Pieces.Count);
-        var home = world.ObjectRefs[world.Pieces[0].Id].Zone;
+        var (zoneX, zoneZ) = world.ObjectRefs[world.Pieces[0].Id].Zone;
         var edits = new EditStore(world);
-        var rows = Rows(ZoneStats.Compute(world, edits, (x, z) => x == home.X && z == home.Z ? 8 : 1));
-        var at = rows.Single(r => r[0] == home.X && r[1] == home.Z);
+        int[][] rows = Rows(ZoneStats.Compute(world, edits, (x, z) => x == zoneX && z == zoneZ ? 8 : 1));
+        int[] at = rows.Single(r => r[0] == zoneX && r[1] == zoneZ);
         Assert.Equal(8, at[2]);
         Assert.Equal(2, at[3]);
         Assert.Equal(0, at[6]);
         // Every other zone: as many zones away as the larger of the x and z steps.
-        Assert.All(rows.Where(r => r != at), r => Assert.Equal(Math.Max(Math.Abs(r[0] - home.X), Math.Abs(r[1] - home.Z)), r[6]));
+        Assert.All(rows.Where(r => r != at), r => Assert.Equal(Math.Max(Math.Abs(r[0] - zoneX), Math.Abs(r[1] - zoneZ)), r[6]));
         // Deleted walls are not buildings any more.
         edits.SetDeleted(world.Pieces.Select(p => p.Id), true);
-        var after = Rows(ZoneStats.Compute(world, edits, (_, _) => 1));
+        int[][] after = Rows(ZoneStats.Compute(world, edits, (_, _) => 1));
         Assert.All(after, r => Assert.Equal(0, r[3]));
         Assert.All(after, r => Assert.Equal(-1, r[6]));
     }
@@ -85,12 +85,12 @@ public class CoreAppDataTests
         z.Set("strings", StableHash.Of("text"), "Welcome home");
         // A second chest whose contents cannot be read.
         var broken = ZdoData.Parse(world.ObjectBytes(chest));
-        broken.SetBytes(ObjectData.ItemsKey, new byte[] { 9, 9, 9 });
-        var r = WorldWriter.Save(world, Array.Empty<ZoneEdit>(), added: new[]
-        {
+        broken.SetBytes(ObjectData.ItemsKey, "\t\t\t"u8.ToArray());
+        var r = WorldWriter.Save(world, [], added:
+        [
             new NewObject(-1, z.Prefab, z.Position + new Vector3(3, 0, 3), Vector3.Zero, 0f, Fresh: false, Raw: z.Serialize()),
             new NewObject(-2, z.Prefab, z.Position + new Vector3(6, 0, 3), Vector3.Zero, 0f, Fresh: false, Raw: broken.Serialize()),
-        });
+        ]);
         Assert.True(r.Saved, r.Message);
         world = w.Load();
         chestId = Enumerable.Range(0, world.ObjectRefs.Count).Single(i => ZdoData.Parse(world.ObjectBytes(i)).StringList.Any(s => s.Value == "Welcome home"));
@@ -110,7 +110,7 @@ public class CoreAppDataTests
         Assert.Equal(50, r.Counts["Wood"]);
         Assert.Empty(WorldSearch.Search(world, edits, "Silver", "items").Hits);
         // Deleted: no longer found.
-        edits.SetDeleted(new[] { chest }, true);
+        edits.SetDeleted([chest], true);
         Assert.Empty(WorldSearch.Search(world, edits, "wood", "items").Hits);
     }
 
@@ -134,16 +134,16 @@ public class CoreAppDataTests
         var edits = new EditStore(world);
         var copy = ZdoData.Parse(world.ObjectBytes(chest));
         copy.Set("strings", StableHash.Of("text"), "Copied sign");
-        edits.AddObjects(new[]
-        {
+        edits.AddObjects(
+        [
             new NewObject(-5, copy.Prefab, copy.Position + new Vector3(1, 0, 0), Vector3.Zero, 0f, Fresh: false, Raw: copy.Serialize()),
             new NewObject(-6, Beech, copy.Position + new Vector3(2, 0, 0), Vector3.Zero, 1f),
-        });
+        ]);
         Assert.Contains(WorldSearch.Search(world, edits, "copied", "texts").Hits, h => h.Id == -5);
         Assert.Contains(WorldSearch.Search(world, edits, "wood", "items").Hits, h => h.Id == -5);
         Assert.Contains(WorldSearch.Search(world, edits, "beech1", "kinds").Hits, h => h.Id == -6);
         // An added object of a kind the game does not have holds nothing to search.
-        edits.AddObjects(new[] { new NewObject(-7, StableHash.Of("NoSuchKind_x"), copy.Position, Vector3.Zero, 1f) });
+        edits.AddObjects([new NewObject(-7, StableHash.Of("NoSuchKind_x"), copy.Position, Vector3.Zero, 1f)]);
         Assert.DoesNotContain(WorldSearch.Search(world, edits, "a", "texts").Hits, h => h.Id == -7);
     }
 
@@ -167,7 +167,7 @@ public class CoreAppDataTests
     [Fact]
     public void TheLiveWorldIsSearchedInItsSnapshot()
     {
-        WorldSave live = WorldSave.LoadLive(File.ReadAllBytes(Fixtures.Snapshot), "test");
+        var live = WorldSave.LoadLive(File.ReadAllBytes(Fixtures.Snapshot), "test");
         var edits = new EditStore(live);
         Assert.NotEmpty(WorldSearch.Search(live, edits, "beech", "kinds").Hits);
         // Containers and texts are read from the snapshot's bytes (no files).
@@ -187,30 +187,30 @@ public class CoreAppDataTests
         Assert.NotNull(ObjectData.Bytes(world, edits, 0));
         Assert.Null(ObjectData.Bytes(world, edits, world.ObjectRefs.Count));
         Assert.Null(ObjectData.Bytes(world, edits, -9));
-        var tree = world.Objects.First(o => o.Prefab == Beech);
-        edits.AddObjects(new[] { new NewObject(-9, Beech, tree.Position + Vector3.UnitX, Vector3.Zero, 1f) });
+        var (id, prefab, position, rotation, scale) = world.Objects.First(o => o.Prefab == Beech);
+        edits.AddObjects([new NewObject(-9, Beech, position + Vector3.UnitX, Vector3.Zero, 1f)]);
         var z = ZdoData.Parse(ObjectData.Bytes(world, edits, -9)!);
         Assert.Equal(Beech, z.Prefab);
         // Deleted again, it is still there for undo.
-        edits.SetDeleted(new[] { -9 }, true);
+        edits.SetDeleted([-9], true);
         Assert.NotNull(ObjectData.Bytes(world, edits, -9));
     }
 
     [Fact]
     public void ContentsAreBuiltFromItemsWithinTheGamesLimits()
     {
-        var inv = ObjectData.BuildInventory(new()
-        {
+        var inv = ObjectData.BuildInventory(
+        [
             new ItemUpload("Wood", null, Stack: 0, Quality: 99999, X: 300, Y: -4, WorldLevel: 900, CrafterId: "123", CrafterName: "Ragnar"),
             new ItemUpload(null, StableHash.Of("Stone"), Stack: 70000, CrafterId: "not a number"),
-        });
+        ]);
         var wood = inv.Items[0];
         Assert.Equal((1, 65535, 255, 0, 255, 123L, "Ragnar"), (wood.Stack, wood.Quality, wood.X, wood.Y, wood.WorldLevel, wood.CrafterId, wood.CrafterName));
         Assert.Equal(65535, inv.Items[1].Stack);
         Assert.Equal(0, inv.Items[1].CrafterId);
-        var ex = Assert.Throws<ArgumentException>(() => ObjectData.BuildInventory(new() { new ItemUpload("NoSuchItem", null) }));
+        var ex = Assert.Throws<ArgumentException>(() => ObjectData.BuildInventory([new ItemUpload("NoSuchItem", null)]));
         Assert.Contains("NoSuchItem", ex.Message);
-        Assert.Throws<ArgumentException>(() => ObjectData.BuildInventory(new() { new ItemUpload(null, 12345) }));
+        Assert.Throws<ArgumentException>(() => ObjectData.BuildInventory([new ItemUpload(null, 12345)]));
     }
 
     [Fact]
@@ -218,8 +218,8 @@ public class CoreAppDataTests
     {
         using var w = new TempWorld();
         WorldSave world = w.Load();
-        var bytes = world.ObjectBytes(world.Objects.First(o => o.Prefab == StableHash.Of("piece_chest_wood")).Id);
-        var z = ObjectData.Edited(bytes, new() { new FieldChange("strings", "text", "Hi"), new FieldChange("ints", "health_level", "3") }, new() { new ItemUpload("Wood", null, Stack: 7) });
+        byte[] bytes = world.ObjectBytes(world.Objects.First(o => o.Prefab == StableHash.Of("piece_chest_wood")).Id);
+        var z = ObjectData.Edited(bytes, [new FieldChange("strings", "text", "Hi"), new FieldChange("ints", "health_level", "3")], [new ItemUpload("Wood", null, Stack: 7)]);
         Assert.Equal("Hi", z.StringList.Single(s => s.Key == StableHash.Of("text")).Value);
         Assert.Equal(7, InventoryData.Read(z.GetBytes(ObjectData.ItemsKey)!).Items.Single().Stack);
         // Nothing asked: the same object.
@@ -230,7 +230,8 @@ public class CoreAppDataTests
 
     private static JsonObject Clip(int objects = 1, bool ground = false) => new()
     {
-        ["w"] = 2, ["h"] = 1,
+        ["w"] = 2,
+        ["h"] = 1,
         ["rel"] = new JsonArray(ground ? 120 : -32768, -32768),
         ["objects"] = new JsonArray(Enumerable.Range(0, objects).Select(_ => (JsonNode)new JsonObject { ["name"] = "Beech1" }).ToArray()),
     };
@@ -307,7 +308,7 @@ public class CoreAppDataTests
     [Fact]
     public void FlatGroundStillMakesAHeightmap()
     {
-        float[] flat = Enumerable.Repeat(30f, 4).ToArray();
+        float[] flat = [.. Enumerable.Repeat(30f, 4)];
         byte[] png = Heightmaps.Encode(2, 2, flat, "flat", out float min, out float max);
         Assert.Equal(30f, min);
         Assert.Equal(30.01f, max, 4);
@@ -319,7 +320,7 @@ public class CoreAppDataTests
     [Fact]
     public void APictureWithoutTheEditorsHeightsIsJustBrightness()
     {
-        byte[] png = Png.WriteGray16(2, 1, new ushort[] { 0, 65535 });
+        byte[] png = Png.WriteGray16(2, 1, [0, 65535]);
         var p = Heightmaps.Read(png, 3, 1);
         Assert.Null(p.Min);
         Assert.Null(p.Max);

@@ -19,12 +19,12 @@ public sealed class FakeBridge : IDisposable
 
     public int Status { get; set; } = 200;
 
-    public List<(int Destroy, int Create)> ObjectCalls { get; } = new();
+    public List<(int Destroy, int Create)> ObjectCalls { get; } = [];
 
-    public List<(long, uint)> Destroyed { get; } = new();
-    public List<(int Prefab, Vector3 Position)> Places { get; } = new();
+    public List<(long, uint)> Destroyed { get; } = [];
+    public List<(int Prefab, Vector3 Position)> Places { get; } = [];
 
-    public List<(int X, int Z, bool Keep, bool Ground)> Resets { get; } = new();
+    public List<(int X, int Z, bool Keep, bool Ground)> Resets { get; } = [];
 
     private uint _next = 1000;
 
@@ -165,7 +165,7 @@ public class LiveTests
     [Fact]
     public void SnapshotLoadsLikeTheSave()
     {
-        WorldSave live = WorldSave.LoadLive(File.ReadAllBytes(Fixtures.Snapshot), "test");
+        var live = WorldSave.LoadLive(File.ReadAllBytes(Fixtures.Snapshot), "test");
         Assert.True(live.IsLive);
         Assert.Equal("CITest", live.Name);
         Assert.Equal(WorldSave.Load(Fixtures.World).ObjectCount, live.ObjectCount);
@@ -175,15 +175,15 @@ public class LiveTests
     public async Task ApplySendsOnlyTheDifferenceAndUndoWorksAfterApplying()
     {
         using var bridge = new FakeBridge();
-        WorldSave world = WorldSave.LoadLive(File.ReadAllBytes(Fixtures.Snapshot), "test");
+        var world = WorldSave.LoadLive(File.ReadAllBytes(Fixtures.Snapshot), "test");
         var edits = new EditStore(world);
         var sync = new LiveSync();
         var live = new LiveBridge($"http://127.0.0.1:{bridge.Port}", bridge.Token);
-        var tree = world.Objects.First(o => o.Prefab == Fixtures.Hash("Beech1"));
+        var (id, prefab, position, rotation, scale) = world.Objects.First(o => o.Prefab == Fixtures.Hash("Beech1"));
 
         // Plant one, delete one: one call, with one creation and one destruction.
-        edits.AddObjects(new[] { new NewObject(-1, Fixtures.Hash("Beech1"), tree.Position + new Vector3(3, 0, 3), Vector3.Zero, 0f) });
-        edits.SetDeleted(new[] { tree.Id }, true);
+        edits.AddObjects([new NewObject(-1, Fixtures.Hash("Beech1"), position + new Vector3(3, 0, 3), Vector3.Zero, 0f)]);
+        edits.SetDeleted([id], true);
         Assert.Equal((1, 1), sync.Pending(edits));
         await sync.Apply(world, edits, live);
         Assert.Equal((1, 1), bridge.ObjectCalls.Single());
@@ -194,15 +194,15 @@ public class LiveTests
         Assert.Single(bridge.ObjectCalls);
 
         // Undo both: the planted one is destroyed in the game (by its live id), the deleted one comes back.
-        edits.SetDeleted(new[] { -1 }, true);
-        edits.SetDeleted(new[] { tree.Id }, false);
+        edits.SetDeleted([-1], true);
+        edits.SetDeleted([id], false);
         Assert.Equal((1, 1), sync.Pending(edits));
         await sync.Apply(world, edits, live);
         Assert.Equal((1, 1), bridge.ObjectCalls[1]);
         Assert.Contains((77L, 1000u), bridge.Destroyed);
         // With what it is and where: a mod that made it again under a new id has it there.
-        Assert.Contains((Fixtures.Hash("Beech1"), tree.Position + new Vector3(3, 0, 3)), bridge.Places);
-        Assert.Contains((tree.Prefab, tree.Position), bridge.Places);
+        Assert.Contains((Fixtures.Hash("Beech1"), position + new Vector3(3, 0, 3)), bridge.Places);
+        Assert.Contains((prefab, position), bridge.Places);
         Assert.Equal((0, 0), sync.Pending(edits));
     }
 
@@ -211,7 +211,7 @@ public class LiveTests
     {
         using var bridge = new FakeBridge();
         var live = new LiveBridge($"http://127.0.0.1:{bridge.Port}", bridge.Token);
-        string reply = await live.ResetZones(new[] { new ZoneReset(3, -2, true, false), new ZoneReset(-7, 9, false, true) });
+        string reply = await live.ResetZones([new ZoneReset(3, -2, true, false), new ZoneReset(-7, 9, false, true)]);
         Assert.Contains("\"zones\":2", reply);
         Assert.Equal(new[] { (3, -2, true, false), (-7, 9, false, true) }, bridge.Resets);
     }

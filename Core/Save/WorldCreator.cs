@@ -1,4 +1,3 @@
-using System.IO.Compression;
 using TerrainEditor.App;
 using TerrainEditor.Editing;
 
@@ -61,7 +60,7 @@ public static class WorldCreator
 
     // After the random events' state, what the game's save holds: an empty list, brotli-compressed
     // JSON {"list":[]} behind its length (copied from a world the game made).
-    private static readonly byte[] EmptyListBlock = { 0x0f, 0, 0, 0, 0x0b, 0x05, 0x80, (byte)'{', (byte)'"', (byte)'l', (byte)'i', (byte)'s', (byte)'t', (byte)'"', (byte)':', (byte)'[', (byte)']', (byte)'}', 0x03 };
+    private static readonly byte[] EmptyListBlock = [0x0f, 0, 0, 0, 0x0b, 0x05, 0x80, (byte)'{', (byte)'"', (byte)'l', (byte)'i', (byte)'s', (byte)'t', (byte)'"', (byte)':', (byte)'[', (byte)']', (byte)'}', 0x03];
 
     public static Created Create(string folder, string name, string seedName, int radius = 0, long? uid = null, bool flat = false)
     {
@@ -71,11 +70,11 @@ public static class WorldCreator
         {
             throw new ArgumentException("The world needs a name that can be a file name.", nameof(name));
         }
-        if (seedName.Length == 0 || seedName.Length > 10)
+        if (seedName.Length is 0 or > 10)
         {
             throw new ArgumentException("The seed is 1 to 10 characters, as in the game.", nameof(seedName));
         }
-        if (radius < 0 || radius > MaxRadius)
+        if (radius is < 0 or > MaxRadius)
         {
             throw new ArgumentOutOfRangeException(nameof(radius), $"The generated zones reach 0 to {MaxRadius} zones from the middle.");
         }
@@ -91,7 +90,7 @@ public static class WorldCreator
         int seed = SeedOf(seedName);
         string main = Path.Combine(folder, "_main.1");
         WriteMetadata(main + ".fwl2", name, seedName, seed, uid ?? Random.Shared.NextInt64(1, long.MaxValue));
-        WriteIndex(main + ".chunks", new List<(ushort Chunk, int Count)>());
+        WriteIndex(main + ".chunks", []);
         var db = ZoneDb.Empty(SaveFileVersion, LocationVersion, Tail());
         db.Save(main + ".db2");
 
@@ -100,7 +99,7 @@ public static class WorldCreator
         if (radius > 0)
         {
             // The game's vegetation on the seed's own ground, zone by zone, in base chunk files.
-            WorldSave empty = WorldSave.Load(folder);
+            var empty = WorldSave.Load(folder);
             var terrain = new ValheimGen.TerrainService(empty);
             var spots = Regrow.Zones(terrain, new EditStore(empty), seed, -radius, -radius, radius, radius);
             if (flat)
@@ -108,13 +107,13 @@ public static class WorldCreator
                 flatZone = FlattestZone(terrain, radius) ?? throw new InvalidOperationException("No zone of dry, even Meadows near the middle: try another seed or a larger radius.");
                 var (fx, fz, _) = flatZone.Value;
                 // Nothing grows on it.
-                spots = spots.Where(s => (int)MathF.Floor((s.X + 32) / 64) != fx || (int)MathF.Floor((s.Z + 32) / 64) != fz).ToList();
+                spots = [.. spots.Where(s => (int)MathF.Floor((s.X + 32) / 64) != fx || (int)MathF.Floor((s.Z + 32) / 64) != fz)];
             }
             var byChunk = new SortedDictionary<ushort, List<byte[]>>();
             foreach (var s in spots)
             {
                 int prefab = StableHash.Of(s.Name);
-                if (TerrainEditor.Terrain.PrefabCatalog.Get(prefab) is not { } info)
+                if (Terrain.PrefabCatalog.Get(prefab) is not { } info)
                 {
                     continue;
                 }
@@ -124,13 +123,13 @@ public static class WorldCreator
                 {
                     continue;
                 }
-                (byChunk.TryGetValue(chunk, out var list) ? list : byChunk[chunk] = new()).Add(ZdoBuilder.Blank(prefab, info.Flags, new System.Numerics.Vector3(s.X, s.Y, s.Z), new System.Numerics.Vector3(s.Rx, s.Ry, s.Rz), s.Scale));
+                (byChunk.TryGetValue(chunk, out var list) ? list : byChunk[chunk] = []).Add(ZdoBuilder.Blank(prefab, info.Flags, new System.Numerics.Vector3(s.X, s.Y, s.Z), new System.Numerics.Vector3(s.Rx, s.Ry, s.Rz), s.Scale));
                 objects++;
             }
             // One terrain compiler object, with no edit, in the middle zone: the writer copies it for
             // every zone whose ground is edited later (the game makes the first one on the first edit).
             ushort middle = ChunkMath.BaseChunk(0, 0);
-            (byChunk.TryGetValue(middle, out var mid) ? mid : byChunk[middle] = new()).Add(EmptyTerrainObject());
+            (byChunk.TryGetValue(middle, out var mid) ? mid : byChunk[middle] = []).Add(EmptyTerrainObject());
             objects++;
             var index = new List<(ushort Chunk, int Count)>();
             foreach (var (chunk, list) in byChunk)
@@ -160,8 +159,8 @@ public static class WorldCreator
     // form, the prefab's object flags, and the TCData the writer encodes for an untouched zone.
     internal static byte[] EmptyTerrainObject()
     {
-        ushort flags = TerrainEditor.Terrain.PrefabCatalog.Get(TerrainCompiler)?.Flags ?? 0x0D00;
-        ZdoData z = ZdoData.Parse(ZdoBuilder.Blank(TerrainCompiler, flags, System.Numerics.Vector3.Zero, System.Numerics.Vector3.Zero, 0f));
+        ushort flags = Terrain.PrefabCatalog.Get(TerrainCompiler)?.Flags ?? 0x0D00;
+        var z = ZdoData.Parse(ZdoBuilder.Blank(TerrainCompiler, flags, System.Numerics.Vector3.Zero, System.Numerics.Vector3.Zero, 0f));
         z.SmallPosition = true;
         z.SetBytes(StableHash.Of("TCData"), WorldWriter.EncodeTerrain(new ZoneEdit(0, 0)));
         return z.Serialize();

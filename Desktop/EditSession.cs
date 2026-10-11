@@ -21,15 +21,15 @@ public sealed class EditSession
 
     // The mask over the ground as it is now (null when off).
     public Func<int, float>? MaskNow() => Mask.For(Ground, Scene.Biomes);
-    private readonly object _lock = new();
+    private readonly Lock _lock = new();
 
     // A change that can be undone: the ground points it changed, before and after, and the things it
     // took away or brought (index into the scene's things, gone before and after).
     public sealed record Change(string Label, int[] Points, Ground.State Before, Ground.State After, List<(int X, int Z)> Zones)
     {
-        public (int Index, bool Before, bool After)[] Things { get; init; } = Array.Empty<(int, bool, bool)>();
+        public (int Index, bool Before, bool After)[] Things { get; init; } = [];
         // Zones marked for reset (on) or not.
-        public (ZoneReset Reset, bool Before, bool After)[] Resets { get; init; } = Array.Empty<(ZoneReset, bool, bool)>();
+        public (ZoneReset Reset, bool Before, bool After)[] Resets { get; init; } = [];
         public DateTime Time { get; init; } = DateTime.Now;
         // Taken out (History panel: Remove), and the change a removal takes out.
         public bool Removed { get; set; }
@@ -43,18 +43,34 @@ public sealed class EditSession
         public string Describe()
         {
             var parts = new List<string>();
-            if (Zones.Count > 0) parts.Add($"{Zones.Count} zone{(Zones.Count > 1 ? "s" : "")}");
+            if (Zones.Count > 0)
+            {
+                parts.Add($"{Zones.Count} zone{(Zones.Count > 1 ? "s" : "")}");
+            }
+
             int added = Things.Count(t => t.Before && !t.After), removed = Things.Count(t => !t.Before && t.After);
-            if (added > 0) parts.Add($"{added} new");
-            if (removed > 0) parts.Add($"{removed} removed");
-            if (Resets.Length > 0) parts.Add($"{Resets.Length} zone reset");
+            if (added > 0)
+            {
+                parts.Add($"{added} new");
+            }
+
+            if (removed > 0)
+            {
+                parts.Add($"{removed} removed");
+            }
+
+            if (Resets.Length > 0)
+            {
+                parts.Add($"{Resets.Length} zone reset");
+            }
+
             return string.Join(" · ", parts);
         }
     }
 
     // The history, oldest first: what can be undone, and what was undone (the next redo last).
-    public IReadOnlyList<Change> UndoList { get { lock (_lock) { return _undo.ToList(); } } }
-    public IReadOnlyList<Change> RedoList { get { lock (_lock) { return _redo.ToList(); } } }
+    public IReadOnlyList<Change> UndoList { get { lock (_lock) { return [.. _undo]; } } }
+    public IReadOnlyList<Change> RedoList { get { lock (_lock) { return [.. _redo]; } } }
 
     // Undoes every change made after this one.
     public void BackTo(Change c)
@@ -128,13 +144,13 @@ public sealed class EditSession
         AddChange(removal);
         if (removal.Things.Length > 0)
         {
-            ThingsChanged?.Invoke(removal.Things.Select(t => t.Index).ToList());
+            ThingsChanged?.Invoke([.. removal.Things.Select(t => t.Index)]);
         }
         Edited();
         return $"Removed “{c.Label}”; everything else is kept. Ctrl+Z brings it back.";
     }
-    private static readonly Ground.State NoPoints = new(Array.Empty<float>(), Array.Empty<float>(), Array.Empty<byte>(), Array.Empty<float>(), Array.Empty<byte>(), Array.Empty<float>());
-    private readonly List<Change> _undo = new(), _redo = new();
+    private static readonly Ground.State NoPoints = new([], [], [], [], [], []);
+    private readonly List<Change> _undo = [], _redo = [];
     public const int HistoryLength = 200;
 
     private Stroke? _stroke;
@@ -269,7 +285,7 @@ public sealed class EditSession
 
     // Natural objects (trees, rocks, ore, bushes, pickables): what new ground buries or leaves floating.
     internal static bool Natural(WorldScene.Thing t) => !t.Piece && !t.Tamed
-        && ObjectKinds.Of(TerrainEditor.Terrain.PrefabCatalog.NameOf(t.Prefab), false) is ObjectKind.Trees or ObjectKind.Rocks or ObjectKind.Ore or ObjectKind.Bushes or ObjectKind.Pickables;
+        && ObjectKinds.Of(Terrain.PrefabCatalog.NameOf(t.Prefab), false) is ObjectKind.Trees or ObjectKind.Rocks or ObjectKind.Ore or ObjectKind.Bushes or ObjectKind.Pickables;
 
     // Puts a mountain into the ground around grid point (cx, cz) (Mountain tool), past the game's ±8 m
     // (saving turns it into ground discs). clear: the natural objects where the ground rises more than
@@ -283,7 +299,7 @@ public sealed class EditSession
         {
             return null;
         }
-        var shape = TerrainEditor.Desktop.Mountain.Shape(m);
+        var shape = Desktop.Mountain.Shape(m);
         var mask = MaskNow();
         float ox = Scene.X0 * 64 - 32, oz = Scene.Z0 * 64 - 32;
         var remove = new List<int>();
@@ -296,7 +312,7 @@ public sealed class EditSession
                     var t = Scene.Things[i];
                     float gx = t.Position.X - ox, gz = t.Position.Z - oz;
                     if (!t.Gone && Natural(t) && MathF.Abs(gx - cx) <= reach && MathF.Abs(gz - cz) <= reach
-                        && shape(gx - cx, gz - cz) * (mask?.Invoke((int)MathF.Round(gz) * g.W + (int)MathF.Round(gx)) ?? 1) > TerrainEditor.Editing.Uplift.ClearHeight)
+                        && shape(gx - cx, gz - cz) * (mask?.Invoke((int)MathF.Round(gz) * g.W + (int)MathF.Round(gx)) ?? 1) > Uplift.ClearHeight)
                     {
                         remove.Add(i);
                     }
@@ -332,7 +348,7 @@ public sealed class EditSession
             gr.NoLimit = was;
             touchedCount = touched.Count;
             return (touched, (x0 - 1, z0 - 1, x1 + 1, z1 + 1));
-        }, remove, Array.Empty<(NewObject, bool)>());
+        }, remove, []);
         return (touchedCount, remove.Count);
     }
 
@@ -407,14 +423,14 @@ public sealed class EditSession
 
     // The values of these points only.
     private static Ground.State Pick(Ground.State all, int[] pts) => new(
-        pts.Select(p => all.Level[p]).ToArray(), pts.Select(p => all.Smooth[p]).ToArray(), pts.Select(p => all.Mod[p]).ToArray(),
-        pts.SelectMany(p => new[] { all.Paint[p * 4], all.Paint[p * 4 + 1], all.Paint[p * 4 + 2], all.Paint[p * 4 + 3] }).ToArray(), pts.Select(p => all.PMod[p]).ToArray(),
-        pts.Select(p => all.Lift[p]).ToArray());
+        [.. pts.Select(p => all.Level[p])], [.. pts.Select(p => all.Smooth[p])], [.. pts.Select(p => all.Mod[p])],
+        [.. pts.SelectMany(p => new[] { all.Paint[p * 4], all.Paint[p * 4 + 1], all.Paint[p * 4 + 2], all.Paint[p * 4 + 3] })], [.. pts.Select(p => all.PMod[p])],
+        [.. pts.Select(p => all.Lift[p])]);
 
     private void Record(string label, Ground.State start, IEnumerable<int> touched, List<(int X, int Z)> zones)
     {
         Interlocked.Increment(ref _generation);
-        int[] pts = touched.Distinct().Order().ToArray();
+        int[] pts = [.. touched.Distinct().Order()];
         var now = Ground.Snapshot();
         _undo.Add(new Change(label, pts, Pick(start, pts), Pick(now, pts), zones));
         if (_undo.Count > HistoryLength)
@@ -518,14 +534,11 @@ public sealed class EditSession
             {
                 Edits.SetReset(r, after ? a : b);
             }
-            if (c.RevertOf != null)
-            {
-                c.RevertOf.Removed = after;
-            }
+            c.RevertOf?.Removed = after;
         }
         if (c.Things.Length > 0)
         {
-            ThingsChanged?.Invoke(c.Things.Select(t => t.Index).ToList());
+            ThingsChanged?.Invoke([.. c.Things.Select(t => t.Index)]);
         }
         Edited();
         return true;
@@ -547,7 +560,7 @@ public sealed class EditSession
                     continue;
                 }
                 list[i] = list[i] with { Gone = gone };
-                Edits.SetDeleted(new[] { list[i].Id }, gone);
+                Edits.SetDeleted([list[i].Id], gone);
             }
         }
     }
@@ -569,13 +582,13 @@ public sealed class EditSession
     // Removes things from the world (on the next save).
     public void Delete(IReadOnlyCollection<int> indices)
     {
-        var live = indices.Where(i => !Scene.Things[i].Gone).Distinct().ToArray();
+        int[] live = [.. indices.Where(i => !Scene.Things[i].Gone).Distinct()];
         if (live.Length == 0)
         {
             return;
         }
         SetGone(live.Select(i => (i, true)));
-        AddChange(new Change($"Deleted {live.Length}", Array.Empty<int>(), NoPoints, NoPoints, new()) { Things = live.Select(i => (i, false, true)).ToArray() });
+        AddChange(new Change($"Deleted {live.Length}", [], NoPoints, NoPoints, []) { Things = [.. live.Select(i => (i, false, true))] });
         ThingsChanged?.Invoke(live);
         Edited();
     }
@@ -592,7 +605,7 @@ public sealed class EditSession
             var from = t.Id < 0 ? Edits.FindAdded(t.Id) : null;
             return (new NewObject(0, t.Prefab, m.Position, m.Rotation, t.Scale, t.Id < 0 ? from?.SourceId : t.Id, t.Id < 0 && (from?.Fresh ?? true), from?.Raw), t.Piece);
         }).ToList();
-        return Commit(label ?? $"Moved {live.Count}", null, live.Select(m => m.Index).ToList(), adds);
+        return Commit(label ?? $"Moved {live.Count}", null, [.. live.Select(m => m.Index)], adds);
     }
 
     // One undo step that may change the ground (ground: as EditGround), take things away (remove:
@@ -605,7 +618,7 @@ public sealed class EditSession
         var added = new List<NewObject>();
         var indices = new List<int>();
         var changes = new List<(int, bool, bool)>();
-        int[] points = Array.Empty<int>();
+        int[] points = [];
         Ground.State before = NoPoints, after = NoPoints;
         var zones = new List<(int X, int Z)>();
         lock (_lock)
@@ -618,7 +631,7 @@ public sealed class EditSession
                 {
                     Touch(rect);
                     zones = Ground.ZonesOf(touched);
-                    points = touched.Distinct().Order().ToArray();
+                    points = [.. touched.Distinct().Order()];
                     (before, after) = (Pick(start, points), Pick(Ground.Snapshot(), points));
                     Send(zones);
                 }
@@ -648,7 +661,7 @@ public sealed class EditSession
             Edits.AddObjects(added);
         }
         SetGone(changes.Where(c => c.Item3).Select(c => (c.Item1, true)));
-        foreach (var (r, _, on) in resets ?? Array.Empty<(ZoneReset, bool, bool)>())
+        foreach (var (r, _, on) in resets ?? [])
         {
             Edits.SetReset(r, on);
         }
@@ -656,10 +669,10 @@ public sealed class EditSession
         {
             return indices;
         }
-        AddChange(new Change(label, points, before, after, zones) { Things = changes.ToArray(), Resets = resets ?? Array.Empty<(ZoneReset, bool, bool)>() });
+        AddChange(new Change(label, points, before, after, zones) { Things = [.. changes], Resets = resets ?? [] });
         if (changes.Count > 0)
         {
-            ThingsChanged?.Invoke(changes.Select(c => c.Item1).ToList());
+            ThingsChanged?.Invoke([.. changes.Select(c => c.Item1)]);
         }
         if (indices.Count > 0)
         {
@@ -752,7 +765,7 @@ public sealed class EditSession
         List<Change> before;
         lock (_lock)
         {
-            before = _undo.ToList();
+            before = [.. _undo];
         }
         var o = await owner.ApplyLive(confirm);
         lock (_lock)
@@ -793,9 +806,9 @@ public sealed class EditSession
             var ids = new Dictionary<Change, int[]>();
             foreach (var c in _undo.Concat(_redo))
             {
-                ids[c] = c.Things.Select(t => Scene.Things[t.Index].Id).ToArray();
+                ids[c] = [.. c.Things.Select(t => Scene.Things[t.Index].Id)];
             }
-            return new Kept(_undo.ToList(), _redo.ToList(), Scene.X0 * 64 - 32, Scene.Z0 * 64 - 32, Ground.W, Scene.X0, Scene.Z0, ids);
+            return new Kept([.. _undo], [.. _redo], Scene.X0 * 64 - 32, Scene.Z0 * 64 - 32, Ground.W, Scene.X0, Scene.Z0, ids);
         }
     }
 
@@ -813,7 +826,7 @@ public sealed class EditSession
                 index.TryAdd(Scene.Things[i].Id, i);
             }
             var missing = k.Ids.Values.SelectMany(v => v).Where(id => !index.ContainsKey(id)).Distinct().ToList();
-            var found = missing.Count > 0 ? find(missing) : new();
+            var found = missing.Count > 0 ? find(missing) : [];
             float minX = Scene.X0 * 64f - 32f, maxX = (Scene.X0 + Scene.Size - 1) * 64f + 32f, minZ = Scene.Z0 * 64f - 32f, maxZ = (Scene.Z0 + Scene.Size - 1) * 64f + 32f;
             int? Thing(int id)
             {
@@ -834,7 +847,7 @@ public sealed class EditSession
             }
             int[]? Points(int[] pts)
             {
-                var r = new int[pts.Length];
+                int[] r = new int[pts.Length];
                 for (int n = 0; n < pts.Length; n++)
                 {
                     int gx = pts[n] % k.W + k.Ox - ox, gz = pts[n] / k.W + k.Oz - oz;
@@ -858,7 +871,7 @@ public sealed class EditSession
                 {
                     return null;
                 }
-                var ids = k.Ids[c];
+                int[] ids = k.Ids[c];
                 var things = new (int, bool, bool)[ids.Length];
                 for (int n = 0; n < ids.Length; n++)
                 {
@@ -870,7 +883,12 @@ public sealed class EditSession
                 }
                 var f = new Change(c.Label, pts, c.Before, c.After, zones)
                 {
-                    Things = things, Resets = c.Resets, Time = c.Time, Removed = c.Removed, Applied = c.Applied, Earlier = c.Earlier,
+                    Things = things,
+                    Resets = c.Resets,
+                    Time = c.Time,
+                    Removed = c.Removed,
+                    Applied = c.Applied,
+                    Earlier = c.Earlier,
                     RevertOf = c.RevertOf != null && map.TryGetValue(c.RevertOf, out var r) ? r : null,
                 };
                 map[c] = f;

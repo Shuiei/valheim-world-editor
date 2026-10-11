@@ -37,10 +37,17 @@ public class WorkshopTests
         try
         {
             Directory.CreateDirectory(dir);
-            string items = Convert.ToBase64String(ObjectData.BuildInventory(new() { new ItemUpload("CryptKey", null), new ItemUpload("Coins", null, 50, X: 1) }).Write());
+            string items = Convert.ToBase64String(ObjectData.BuildInventory([new ItemUpload("CryptKey", null), new ItemUpload("Coins", null, 50, X: 1)]).Write());
             System.Text.Json.Nodes.JsonObject Obj(string name, float dx, params ObjectField[] data) => new()
             {
-                ["name"] = name, ["dx"] = dx, ["dy"] = 0, ["dz"] = 0, ["rx"] = 0, ["ry"] = 0, ["rz"] = 0, ["scale"] = 0,
+                ["name"] = name,
+                ["dx"] = dx,
+                ["dy"] = 0,
+                ["dz"] = 0,
+                ["rx"] = 0,
+                ["ry"] = 0,
+                ["rz"] = 0,
+                ["scale"] = 0,
                 ["data"] = BlueprintFormats.DataJson(data.Append(ObjectField.NoBuilder)),
             };
             var clip = new System.Text.Json.Nodes.JsonObject
@@ -116,14 +123,14 @@ public class WorkshopTests
             var (placed, unknown, lift, _) = Workshop.Open(s, Hut(dir));
             Assert.Equal(3, placed);
             // Its lowest point (the floor's collider, a little below its origin) on the ground.
-            Assert.Equal(-TerrainEditor.Editing.Hammer.Bottom("wood_floor", Quaternion.Identity), lift, 3);
+            Assert.Equal(-Hammer.Bottom("wood_floor", Quaternion.Identity), lift, 3);
             Assert.Equal(new[] { "no_such_piece_xyz" }, unknown);
             Assert.True(s.CanUndo);
             Assert.Equal(3, Workshop.Pieces(scene));
             Assert.Contains(scene.Things, t => !t.Gone && Vector3.Distance(t.Position, Workshop.Anchor(scene) + new Vector3(1, 1 + lift, 0)) < 1e-3f);
             // Saved back: as it was, from Homestead's anchor.
             var clip = Workshop.Building(scene, "Hut", lift);
-            var text = Homestead.Write(clip, "Hut", "test", null, DateTime.Now);
+            string text = Homestead.Write(clip, "Hut", "test", null, DateTime.Now);
             var back = BlueprintFormats.Parse("Hut.blueprint", text);
             Assert.Equal(3, back.Pieces.Count);
             Assert.Contains(back.Pieces, p => p.Name == "woodwall" && Vector3.Distance(p.Position, new Vector3(1, 1, 0)) < 1e-3f && MathF.Abs(p.Euler.Y - 90) < 0.5f);
@@ -172,7 +179,7 @@ public class WorkshopTests
         w.SupportBox.IsChecked = true;
         Assert.NotNull(w.LastSupport);
         // Something changed: leaving asks, and staying stays.
-        w.Session!.Commit("Moved", null, new[] { w.Session.Scene.Things.FindIndex(t => !t.Gone) }, Array.Empty<(NewObject, bool)>());
+        w.Session!.Commit("Moved", null, [w.Session.Scene.Things.FindIndex(t => !t.Gone)], []);
         Dispatcher.UIThread.RunJobs();
         Assert.Contains("not saved as a blueprint", w.PendingText.Text);
         await w.LeaveWorkshop();
@@ -181,7 +188,7 @@ public class WorkshopTests
         // Saving asks first, since a piece would fall; then writes the building only.
         // The details asked start from the blueprint's own, with its cost.
         string? costAsked = null;
-        r.B.AskDetails = (d, cost) => { costAsked = cost; return Task.FromResult<Homestead.Details?>(d with { Name = "Hut 2", Tags = new() { "hut" } }); };
+        r.B.AskDetails = (d, cost) => { costAsked = cost; return Task.FromResult<Homestead.Details?>(d with { Name = "Hut 2", Tags = ["hut"] }); };
         Assert.StartsWith("Wood ", w.WorkshopCost);
         answer = true;
         await w.SaveWorkshop();
@@ -265,7 +272,7 @@ public class WorkshopTests
         Assert.DoesNotContain(pieces, p => p.Prefab == "Beech1");
         for (int i = 1; i < pieces.Count; i++)
         {
-            string? a = TerrainEditor.Terrain.PieceCost.Get(pieces[i - 1].Prefab)?.Station, b = TerrainEditor.Terrain.PieceCost.Get(pieces[i].Prefab)?.Station;
+            string? a = PieceCost.Get(pieces[i - 1].Prefab)?.Station, b = PieceCost.Get(pieces[i].Prefab)?.Station;
             Assert.True(BuildPanel.StationRank(a) <= BuildPanel.StationRank(b));
             if (a == b)
             {
@@ -297,7 +304,7 @@ public class WorkshopTests
         Aim(0, 0);
         var first = t.Preview(new Vector2(c, c)).Single();
         Assert.Equal(Workshop.Ground + 1, first.Position.Y, 2);
-        s.Commit("wall", null, Array.Empty<int>(), new[] { (new NewObject(0, StableHash.Of("woodwall"), first.Position, first.Rotation, 0), true) });
+        s.Commit("wall", null, [], [(new NewObject(0, StableHash.Of("woodwall"), first.Position, first.Rotation, 0), true)]);
         // Pointed at its top: on it.
         Aim(0.3f, 0);
         var up = t.Preview(new Vector2(c, c)).Single();
@@ -373,15 +380,15 @@ public class WorkshopTests
         w.Session.Undo();
         Assert.Equal(2, Workshop.Pieces(w.Session.Scene));
         // Dropped: from the Library, and a file from elsewhere (imported, then added).
-        w.Drop(Path.Combine(r.Homestead, "Tower.blueprint"), Array.Empty<string>(), new Avalonia.Point(0, 0), new Avalonia.Size(0, 0));
+        w.Drop(Path.Combine(r.Homestead, "Tower.blueprint"), [], new Avalonia.Point(0, 0), new Avalonia.Size(0, 0));
         Assert.Equal(3, Workshop.Pieces(w.Session.Scene));
         string other = Path.Combine(r.Dir, "Wall.vbuild");
         File.WriteAllText(other, BlueprintFormats.Write(System.Text.Json.Nodes.JsonNode.Parse(CopyFormat.ToJson(PanelBlueprintsTests.Clip("Wall", "woodwall", "woodwall")).ToJsonString())!.AsObject(), "vbuild", "Wall", _ => 0));
-        w.Drop(null, new[] { other, Path.Combine(r.Dir, "notes.txt") }, new Avalonia.Point(0, 0), new Avalonia.Size(0, 0));
+        w.Drop(null, [other, Path.Combine(r.Dir, "notes.txt")], new Avalonia.Point(0, 0), new Avalonia.Size(0, 0));
         Assert.Equal(5, Workshop.Pieces(w.Session.Scene));
         Assert.Contains(r.Listed, e => e.Name == "Wall");
         Assert.Equal(3, bp.LibraryList.Children.Count);
-        w.Drop(null, new[] { Path.Combine(r.Dir, "notes.txt") }, new Avalonia.Point(0, 0), new Avalonia.Size(0, 0));
+        w.Drop(null, [Path.Combine(r.Dir, "notes.txt")], new Avalonia.Point(0, 0), new Avalonia.Size(0, 0));
         Assert.Equal("Drop .blueprint (Homestead, PlanBuild) or .vbuild files.", w.MessageText.Text);
         // Open: that one alone (the plot was not saved: asked first).
         await w.OpenWorkshop(Path.Combine(r.Homestead, "Gate.blueprint"));

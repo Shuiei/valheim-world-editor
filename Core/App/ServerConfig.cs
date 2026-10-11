@@ -41,7 +41,7 @@ public static class ServerConfig
 
     public static string FilePath => PathOverride ?? Path.Combine(AppSettings.DataDir, "servers.cfg");
 
-    private static readonly object Lock = new();
+    private static readonly Lock Lock = new();
 
     public static List<Server> Load()
     {
@@ -93,7 +93,7 @@ public static class ServerConfig
                     case "gamefolder": cur.GameFolder = opt; break;
                 }
             }
-            return list.Where(s => s.Host.Length > 0 && s.User.Length > 0).ToList();
+            return [.. list.Where(s => s.Host.Length > 0 && s.User.Length > 0)];
         }
     }
 
@@ -125,7 +125,7 @@ public static class ServerConfig
     {
         lock (Lock)
         {
-            Write(Load().Where(s => s.Id != id).ToList());
+            Write([.. Load().Where(s => s.Id != id)]);
         }
     }
 

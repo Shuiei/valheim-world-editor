@@ -30,24 +30,24 @@ public class CoreSaveSmallTests
     [Fact]
     public void ItemCountsAreOneOrTwoBytes()
     {
-        using (var r = new ValheimReader(new MemoryStream(new byte[] { 0x7F })))
+        using (var r = new ValheimReader(new MemoryStream([0x7F])))
         {
             Assert.Equal(127, r.ReadNumItems(WorldVersion.NumItems));
         }
         // High bit set: two bytes, big end first.
-        using (var r = new ValheimReader(new MemoryStream(new byte[] { 0x81, 0x02 })))
+        using (var r = new ValheimReader(new MemoryStream([0x81, 0x02])))
         {
             Assert.Equal(258, r.ReadNumItems(WorldVersion.NumItems));
         }
         // Older worlds: always one byte.
-        using (var r = new ValheimReader(new MemoryStream(new byte[] { 0x81, 0x02 })))
+        using (var r = new ValheimReader(new MemoryStream([0x81, 0x02])))
         {
             Assert.Equal(0x81, r.ReadNumItems(WorldVersion.NumItems - 1));
         }
     }
 
     // A 2 × 2 heightmap picture, then changed in its header (the reader does not check checksums).
-    private static byte[] Picture() => Png.WriteGray16(2, 2, new ushort[] { 0, 1000, 2000, 65535 });
+    private static byte[] Picture() => Png.WriteGray16(2, 2, [0, 1000, 2000, 65535]);
 
     private static string Refused(byte[] bytes) => Assert.Throws<InvalidDataException>(() => Png.Read(bytes)).Message;
 
@@ -55,22 +55,22 @@ public class CoreSaveSmallTests
     public void PicturesThatCannotBeReadSayWhy()
     {
         Assert.Equal(4, Png.Read(Picture()).Values.Length);
-        Assert.Equal("not a PNG picture", Refused(new byte[] { 1, 2, 3 }));
+        Assert.Equal("not a PNG picture", Refused([1, 2, 3]));
         Assert.Equal("the PNG picture is cut short", Refused(Picture()[..30]));
-        var interlaced = Picture();
+        byte[] interlaced = Picture();
         interlaced[28] = 1;
         Assert.StartsWith("interlaced PNG pictures are not supported", Refused(interlaced));
-        var fourBit = Picture();
+        byte[] fourBit = Picture();
         fourBit[24] = 4;
         Assert.Equal("4-bit PNG pictures are not supported (8 or 16 bits)", Refused(fourBit));
-        var palette = Picture();
+        byte[] palette = Picture();
         palette[25] = 3;
         Assert.StartsWith("palette PNG pictures are not supported", Refused(palette));
-        var empty = Picture();
+        byte[] empty = Picture();
         empty[16] = empty[17] = empty[18] = empty[19] = 0;
         Assert.Equal("the picture is empty or too large", Refused(empty));
         // Taller than its data: the rows run out.
-        var tall = Picture();
+        byte[] tall = Picture();
         tall[23] = 50;
         Assert.Equal("the PNG picture data is cut short", Refused(tall));
     }
@@ -89,7 +89,7 @@ public class CoreSaveSmallTests
         var live = new LiveBridge(game.Url, game.Token);
         Assert.Contains("\"world\":\"CITest\"", await live.Status());
         game.Fail["/players"] = 500;
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => live.Players());
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(live.Players);
         Assert.Equal("bridge players: 500 broken", ex.Message);
         game.Fail["/status"] = 500;
         Assert.Contains("answered with an error (500)", await LiveBridge.Check(game.Url, game.Token, TimeSpan.FromSeconds(5)));
@@ -106,12 +106,12 @@ public class CoreSaveSmallTests
         var live = new LiveBridge(game.Url, game.Token);
         var world = await live.LoadWorld();
         var edits = new EditStore(world);
-        var tree = world.Objects.First(o => o.Prefab == StableHash.Of("Beech1"));
-        edits.AddObjects(new[]
-        {
-            new NewObject(-1, StableHash.Of("Beech1"), tree.Position + new Vector3(3, 0, 3), Vector3.Zero, 1f),
+        var (id, prefab, position, rotation, scale) = world.Objects.First(o => o.Prefab == StableHash.Of("Beech1"));
+        edits.AddObjects(
+        [
+            new NewObject(-1, StableHash.Of("Beech1"), position + new Vector3(3, 0, 3), Vector3.Zero, 1f),
             new NewObject(-2, StableHash.Of("NoSuchThing_xyz"), new Vector3(7, 30, 9), Vector3.Zero, 1f),
-        });
+        ]);
         var sync = new LiveSync();
         string msg = await sync.Apply(world, edits, live);
         Assert.Equal((0, 1), Assert.Single(game.ObjectCalls));

@@ -134,7 +134,11 @@ public class CoreSaveDataTests
         world.TerrainZones.Add(new TerrainZone
         {
             Center = new Vector3(64, 0, 0),
-            ModifiedHeight = new bool[33 * 33], LevelDelta = new float[33 * 33], SmoothDelta = new float[33 * 33], ModifiedPaint = new bool[33 * 33], Paint = new Vector4[33 * 33],
+            ModifiedHeight = new bool[33 * 33],
+            LevelDelta = new float[33 * 33],
+            SmoothDelta = new float[33 * 33],
+            ModifiedPaint = new bool[33 * 33],
+            Paint = new Vector4[33 * 33],
         });
         var store = new EditStore(world);
         Assert.Null(store.Get(1, 0));
@@ -151,7 +155,7 @@ public class CoreSaveDataTests
         store.Put(e);
         Assert.Equal(1, store.ChangedZoneCount);
         int v = store.Version;
-        store.MarkUnchanged(new[] { (2, 3), (9, 9) });
+        store.MarkUnchanged([(2, 3), (9, 9)]);
         Assert.Equal(0, store.ChangedZoneCount);
         Assert.True(store.Version > v);
     }
@@ -197,7 +201,7 @@ public class CoreSaveDataTests
         {
             z.Set("vec3", StableHash.Of("scale"), scale);
         }
-        var r = WorldWriter.Save(world, Array.Empty<ZoneEdit>(), added: new[] { new NewObject(-1, z.Prefab, z.Position + new Vector3(4, 0, 4), Vector3.Zero, 0f, Fresh: false, Raw: z.Serialize()) });
+        var r = WorldWriter.Save(world, [], added: [new NewObject(-1, z.Prefab, z.Position + new Vector3(4, 0, 4), Vector3.Zero, 0f, Fresh: false, Raw: z.Serialize())]);
         Assert.True(r.Saved, r.Message);
         world = w.Load();
         return (world, Enumerable.Range(0, world.ObjectRefs.Count).Single(i => ZdoData.Parse(world.ObjectBytes(i)).StringList.Any(s => s.Value == "only text")));

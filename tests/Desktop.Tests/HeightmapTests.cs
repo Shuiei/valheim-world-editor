@@ -20,7 +20,7 @@ public class HeightmapTests
             var s = EditTests.Flat(2);
             w.View.Show(s.Scene, null);
             w.Edit(s);
-            s.Shape(64, 64, Formula.Compile("h * smooth(1 - d / r)", new[] { "d", "r", "h" }), 20, 6, "hill");
+            s.Shape(64, 64, Formula.Compile("h * smooth(1 - d / r)", ["d", "r", "h"]), 20, 6, "hill");
             float top = H(s, 64, 64);
             var p = w.AreaPanel;
             string said = p.ExportHeightmap(dir)!;
@@ -57,7 +57,7 @@ public class HeightmapTests
             var s = EditTests.Flat(2);
             w.View.Show(s.Scene, null);
             w.Edit(s);
-            s.Shape(64, 64, Formula.Compile("x > 0 ? 4 : 0", new[] { "x" }), 60, 0, "step");
+            s.Shape(64, 64, Formula.Compile("x > 0 ? 4 : 0", ["x"]), 60, 0, "step");
             var p = w.AreaPanel;
             p.ExportHeightmap(dir);
             s.Undo();

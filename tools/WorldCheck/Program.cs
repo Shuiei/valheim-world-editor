@@ -89,8 +89,8 @@ if (!GameData.Ensure(GameBundles.ForGame(GameLook.FindValheim(AppSettings.Load()
     Console.Error.WriteLine(GameData.Missing);
     return 1;
 }
-WorldSave.ModifierPrefabs = TerrainEditor.Terrain.TerrainModifiers.NetworkPrefabHashes.ToHashSet();
-WorldSave world = WorldSave.Load(worldDir);
+WorldSave.ModifierPrefabs = [.. TerrainEditor.Terrain.TerrainModifiers.NetworkPrefabHashes];
+var world = WorldSave.Load(worldDir);
 WorldSave.Builder = Builders.Default(world);
 Console.WriteLine($"Loaded save #{world.SaveNumber}: {world.ObjectCount:N0} objects in {world.ChunkCount} chunks, {world.TerrainZones.Count} zones with terrain edits ({stopwatch.ElapsedMilliseconds} ms).");
 stopwatch.Restart();
@@ -108,16 +108,16 @@ switch (args[0])
         }
         // Compare the editor's ground (generated + location flattening + saved edits, combined like
         // TerrainComp.ApplyToHeightmap) with heightmaps recorded in the game by the TerrainCheck plugin.
-        var lines = File.ReadAllLines(args[2]);
+        string[] lines = File.ReadAllLines(args[2]);
         Console.WriteLine(lines.FirstOrDefault(l => l.StartsWith('#')) ?? "");
         int zonesExact = 0, zonesClose = 0, zonesOff = 0, rawBetter = 0;
         double maxWith = 0, maxWithout = 0;
         var report = new List<string>();
         foreach (string line in lines.Where(l => l.StartsWith("Z ")))
         {
-            var p = line.Split(' ');
+            string[] p = line.Split(' ');
             int zx = int.Parse(p[1]), zz = int.Parse(p[2]);
-            float[] game = p.Skip(3).Select(h => BitConverter.Int32BitsToSingle(int.Parse(h, System.Globalization.NumberStyles.HexNumber))).ToArray();
+            float[] game = [.. p.Skip(3).Select(h => BitConverter.Int32BitsToSingle(int.Parse(h, NumberStyles.HexNumber)))];
             var zone = world.TerrainZones.FirstOrDefault(t => t.ZoneX == zx && t.ZoneZ == zz);
             float[] Combine(float[] ground)
             {
@@ -127,7 +127,10 @@ switch (args[0])
                     for (int i = 0; i < r.Length; i++)
                     {
                         float l = zone.LevelDelta[i], sm = zone.SmoothDelta[i];
-                        if (l != 0f || sm != 0f) r[i] = Math.Clamp(ground[i] + l + sm, ground[i] - 8f, ground[i] + 8f);
+                        if (l != 0f || sm != 0f)
+                        {
+                            r[i] = Math.Clamp(ground[i] + l + sm, ground[i] - 8f, ground[i] + 8f);
+                        }
                     }
                 }
                 return r;
@@ -136,8 +139,11 @@ switch (args[0])
             double dWith = game.Zip(with, (a, b) => (double)Math.Abs(a - b)).Max(), dWithout = game.Zip(without, (a, b) => (double)Math.Abs(a - b)).Max();
             maxWith = Math.Max(maxWith, dWith); maxWithout = Math.Max(maxWithout, dWithout);
             int mods = modifiers.InZone(zx, zz).Count;
-            if (dWith < 1e-4) zonesExact++; else if (dWith < 0.01) zonesClose++; else { zonesOff++; report.Add($"  zone ({zx},{zz}): max diff {dWith:0.000} m with flattening, {dWithout:0.000} m without; {mods} modifiers, edits: {zone != null}"); }
-            if (dWithout > dWith + 1e-3) rawBetter++;
+            if (dWith < 1e-4) { zonesExact++; } else if (dWith < 0.01) { zonesClose++; } else { zonesOff++; report.Add($"  zone ({zx},{zz}): max diff {dWith:0.000} m with flattening, {dWithout:0.000} m without; {mods} modifiers, edits: {zone != null}"); }
+            if (dWithout > dWith + 1e-3)
+            {
+                rawBetter++;
+            }
         }
         Console.WriteLine($"Zones compared: {zonesExact + zonesClose + zonesOff}: {zonesExact} exact, {zonesClose} within 1 cm, {zonesOff} off");
         Console.WriteLine($"Max difference: {maxWith:0.0000} m with location flattening, {maxWithout:0.0000} m without ({rawBetter} zones improved by the flattening)");
@@ -160,30 +166,30 @@ switch (args[0])
         for (int i = 0; i < 300; i++) { e1.Modified[i] = true; e1.Level[i] = 1.25f; }
         e1.PaintModified[2000] = true; e1.Paint[8000] = 0f; e1.Paint[8001] = 0f; e1.Paint[8002] = 1f; e1.Paint[8003] = 1f;
         store.Put(e1);
-        (int zx, int zz) fresh = (from z in Enumerable.Range(-6, 13)
-                                  from x in Enumerable.Range(-6, 13)
-                                  let k = (x, z)
-                                  where !world.TerrainZones.Any(t => t.ZoneX == k.x && t.ZoneZ == k.z) && ChunkMath.Find(world.Chunks, k.x, k.z) != null
-                                  select k).First();
-        var e2 = new TerrainEditor.Editing.ZoneEdit(fresh.zx, fresh.zz);
+        (int zx, int zz) = (from z in Enumerable.Range(-6, 13)
+                            from x in Enumerable.Range(-6, 13)
+                            let k = (x, z)
+                            where !world.TerrainZones.Any(t => t.ZoneX == k.x && t.ZoneZ == k.z) && ChunkMath.Find(world.Chunks, k.x, k.z) != null
+                            select k).First();
+        var e2 = new TerrainEditor.Editing.ZoneEdit(zx, zz);
         for (int i = 2000; i < 2100; i++) { e2.Modified[i] = true; e2.Level[i] = -2f; e2.Smooth[i] = 0.5f; }
         store.Put(e2);
         var e3 = new TerrainEditor.Editing.ZoneEdit(150, 150);
         e3.Modified[5] = true; e3.Level[5] = 3f;
         store.Put(e3);
         var hashesBefore = Directory.GetFiles(world.Directory, "*.chunk").ToDictionary(f => Path.GetFileName(f), f => Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(f))));
-        var result = WorldWriter.Save(world, store.All().Where(z => z.Changed).ToList());
+        var result = WorldWriter.Save(world, [.. store.All().Where(z => z.Changed)]);
         Console.WriteLine($"Result: saved={result.Saved} '{result.Message}' written={result.ZonesWritten} created={result.ZonesCreated} skipped=[{string.Join("; ", result.Skipped)}]");
         Console.WriteLine($"Backup: {result.BackupDirectory}");
         var after = WorldSave.Load(world.Directory);
         Console.WriteLine($"After: save #{after.SaveNumber}, {after.ObjectCount:N0} objects (was {world.ObjectCount:N0}), {after.TerrainZones.Count} terrain zones (was {world.TerrainZones.Count})");
         var z1 = after.TerrainZones.First(t => t.ZoneX == exist.ZoneX && t.ZoneZ == exist.ZoneZ);
-        var z2 = after.TerrainZones.FirstOrDefault(t => t.ZoneX == fresh.zx && t.ZoneZ == fresh.zz);
+        var z2 = after.TerrainZones.FirstOrDefault(t => t.ZoneX == zx && t.ZoneZ == zz);
         Console.WriteLine($"Existing zone ({exist.ZoneX},{exist.ZoneZ}): point 0 level {z1.LevelDelta[0]}, point 299 {z1.LevelDelta[299]}, paint 2000 {z1.Paint[2000]}; untouched point 4000 same as before: {z1.LevelDelta[4000] == exist.LevelDelta[4000] && z1.ModifiedHeight[4000] == exist.ModifiedHeight[4000]}");
-        Console.WriteLine($"New zone ({fresh.zx},{fresh.zz}): {(z2 == null ? "MISSING" : $"found in {z2.Source!.File.FileName}, point 2050 level {z2.LevelDelta[2050]} smooth {z2.SmoothDelta[2050]}, {z2.ModifiedHeight.Count(m => m)} edited points")}");
+        Console.WriteLine($"New zone ({zx},{zz}): {(z2 == null ? "MISSING" : $"found in {z2.Source!.File.FileName}, point 2050 level {z2.LevelDelta[2050]} smooth {z2.SmoothDelta[2050]}, {z2.ModifiedHeight.Count(m => m)} edited points")}");
         Console.WriteLine($"Ungenerated zone (150,150) written: {after.TerrainZones.Any(t => t.ZoneX == 150 && t.ZoneZ == 150)}");
         var hashesAfter = Directory.GetFiles(world.Directory, "*.chunk").ToDictionary(f => Path.GetFileName(f), f => Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(f))));
-        int same = hashesBefore.Count(kv => hashesAfter.TryGetValue(kv.Key, out var h) && h == kv.Value);
+        int same = hashesBefore.Count(kv => hashesAfter.TryGetValue(kv.Key, out string? h) && h == kv.Value);
         Console.WriteLine($"Chunk files byte-identical to before: {same} of {hashesBefore.Count}; new files: {string.Join(", ", hashesAfter.Keys.Except(hashesBefore.Keys))}; removed: {string.Join(", ", hashesBefore.Keys.Except(hashesAfter.Keys))}");
         Console.WriteLine($"Main files now: {string.Join(", ", Directory.GetFiles(world.Directory, "_main.*").Select(Path.GetFileName).OrderBy(n => n))}");
         return 0;
@@ -196,7 +202,10 @@ switch (args[0])
         {
             var (sx, sz) = ChunkMath.SectorOf(z.Center.X, z.Center.Z);
             ChunkFile? expected = ChunkMath.Find(world.Chunks, sx, sz);
-            if (expected == z.Source!.File) ok++;
+            if (expected == z.Source!.File)
+            {
+                ok++;
+            }
             else { bad++; Console.WriteLine($"  zone ({z.ZoneX},{z.ZoneZ}) is in {z.Source.File.FileName}, mapping says {expected?.FileName ?? "none"}"); }
         }
         Console.WriteLine($"Chunk mapping: {ok} terrain objects in the expected file, {bad} elsewhere.");
@@ -227,14 +236,17 @@ switch (args[0])
         if (args.Length < 3)
         {
             foreach (var kind in world.Objects.GroupBy(o => o.Prefab).OrderByDescending(g => g.Count()).Take(30))
+            {
                 Console.WriteLine($"  prefab {kind.Key}: {kind.Count():N0} objects");
+            }
+
             return 0;
         }
         int prefab = StableHash.OfName(args[2]);
-        foreach (var o in world.Objects.Where(o => o.Prefab == prefab))
+        foreach (var (id, _, position, rotation, scale) in world.Objects.Where(o => o.Prefab == prefab))
         {
-            byte[] bytes = world.ObjectBytes(o.Id);
-            Console.WriteLine($"  object {o.Id} at ({o.Position.X:0.00}, {o.Position.Y:0.00}, {o.Position.Z:0.00}), {bytes.Length} B: {Convert.ToHexString(bytes)}");
+            byte[] bytes = world.ObjectBytes(id);
+            Console.WriteLine($"  object {id} at ({position.X:0.00}, {position.Y:0.00}, {position.Z:0.00}), {bytes.Length} B: {Convert.ToHexString(bytes)}");
         }
         return 0;
     }

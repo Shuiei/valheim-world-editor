@@ -16,13 +16,13 @@ public class CoreGameFilesTests
     {
         // Alpha8: black with that alpha; R8: grey; RGB24: opaque.
         Assert.Equal(new byte[] { 0, 0, 0, 7, 0, 0, 0, 200 }, GameTextures.Rgba(Level(1, 2, 1, 7, 200)));
-        Assert.Equal(new byte[] { 9, 9, 9, 255 }, GameTextures.Rgba(Level(63, 1, 1, 9)));
+        Assert.Equal(new byte[] { 9, 9, 9, 255 }, GameTextures.Rgba(Level(63, 1, 1, "\t"u8.ToArray())));
         Assert.Equal(new byte[] { 1, 2, 3, 255 }, GameTextures.Rgba(Level(3, 1, 1, 1, 2, 3)));
         // ARGB32 and BGRA32 reordered.
         Assert.Equal(new byte[] { 1, 2, 3, 4 }, GameTextures.Rgba(Level(5, 1, 1, 4, 1, 2, 3)));
         Assert.Equal(new byte[] { 1, 2, 3, 4 }, GameTextures.Rgba(Level(14, 1, 1, 3, 2, 1, 4)));
         // One DXT1 block of pure red (colour 0 = 0xF800, every pixel index 0): 4 x 4 red, opaque.
-        var red = GameTextures.Rgba(Level(10, 4, 4, 0x00, 0xF8, 0, 0, 0, 0, 0, 0))!;
+        byte[] red = GameTextures.Rgba(Level(10, 4, 4, 0x00, 0xF8, 0, 0, 0, 0, 0, 0))!;
         for (int i = 0; i < 16; i++)
         {
             Assert.Equal(new byte[] { 255, 0, 0, 255 }, red[(i * 4)..(i * 4 + 4)]);
@@ -37,7 +37,7 @@ public class CoreGameFilesTests
     public void CutOutTexturesTakeTheColourOfTheirOpaquePixels()
     {
         // 4 x 4, one opaque red pixel, the rest transparent black: all red, alpha untouched.
-        var px = new byte[4 * 4 * 4];
+        byte[] px = new byte[4 * 4 * 4];
         px[5 * 4] = 255;
         px[5 * 4 + 3] = 255;
         GameTextures.Bleed(px, 4, 4);
@@ -48,7 +48,7 @@ public class CoreGameFilesTests
             Assert.Equal(i == 5 ? 255 : 0, px[i * 4 + 3]);
         }
         // Nothing opaque: left as it is.
-        var none = new byte[] { 10, 20, 30, 0 };
+        byte[] none = [10, 20, 30, 0];
         GameTextures.Bleed(none, 1, 1);
         Assert.Equal(new byte[] { 10, 20, 30, 0 }, none);
     }
@@ -66,7 +66,7 @@ public class CoreGameFilesTests
         Assert.Equal(0, x.X, 4);
         Assert.Equal(1, x.Z, 4);
         // Meshes: z mirrored, an up normal when there is none, uv as they are.
-        var mesh = BundleModels.ViewMesh(new GameBundles.Mesh("m", 1, new[] { 1f, 2f, 3f }, null, new[] { 0.25f, 0.75f }, new[] { new[] { 0, 0, 0 } }));
+        var mesh = BundleModels.ViewMesh(new GameBundles.Mesh("m", 1, [1f, 2f, 3f], null, [0.25f, 0.75f], [[0, 0, 0]]));
         Assert.Equal(new[] { 1f, 2f, -3f, 0f, 1f, 0f, 0.25f, 0.75f }, mesh.Vertices);
         Assert.Equal(new uint[] { 0, 0, 0 }, mesh.Submeshes[0]);
     }
@@ -98,7 +98,7 @@ public class CoreGameFilesTests
     [Fact]
     public void MaterialsAreJudgedAsTheExporterDid()
     {
-        var plain = BundleModels.ViewMaterial(Mat("Standard", color: new[] { 0.5f, 1f, 0f, 0.8f }));
+        var plain = BundleModels.ViewMaterial(Mat("Standard", color: [0.5f, 1f, 0f, 0.8f]));
         Assert.Equal(0, plain.Cutoff);
         Assert.False(plain.DoubleSided);
         Assert.Equal("b:5", plain.Map);

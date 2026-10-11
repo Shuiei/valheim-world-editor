@@ -51,7 +51,7 @@ public class PathTests
         Assert.Equal(34, H(s, 60, 64), 3);
         Assert.Equal(34, H(s, 60, 68), 3);
         float edge = H(s, 60, 70);
-        Assert.True(edge > 30 && edge < 34, $"{edge}");
+        Assert.True(edge is > 30 and < 34, $"{edge}");
         Assert.Equal(30, H(s, 60, 73), 3);
         Assert.Equal("Path", s.UndoLabel);
     }
@@ -229,7 +229,7 @@ public class PathTests
         Assert.True(w.View.Path.RampEdited);
         Assert.Equal(37, w.View.Path.End);
         // Alt + Shift + click: the ground's height for the end.
-        s.Shape(64, 20, Formula.Compile("2", new string[0]), 3, 0, "x");
+        s.Shape(64, 20, Formula.Compile("2", []), 3, 0, "x");
         Click(w, screen(64, 20), RawInputModifiers.Alt | RawInputModifiers.Shift);
         Assert.Equal(32, w.View.Path.End, 1);
         Assert.Equal(2, w.View.Path.Points.Count);

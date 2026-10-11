@@ -20,7 +20,7 @@ public class CoreGenReferenceTests
     public void TheGeneratorMatchesTheGame()
     {
         var r = DumpVerifier.Run(Reference, "5DCcdIcuYJ");
-        string why = $"{r with { Errors = new() }}\n" + string.Join("\n", r.Errors);
+        string why = $"{r with { Errors = [] }}\n" + string.Join("\n", r.Errors);
         Assert.True(r.RandomOk == 57 && r.RandomWrong == 0, why);
         Assert.True(r.PerlinOk == 1207 && r.PerlinWrong == 0, why);
         Assert.True(r.BiomesWrong == 0 && r.WaterWrong == 0, why);
@@ -42,8 +42,8 @@ public class CoreGenReferenceTests
         Assert.Equal(57, r.RandomOk);
         Assert.Equal(1207, r.PerlinOk);
         // A few places do not depend on the seed (beyond the world's edge): most do.
-        Assert.True(r.HeightsWrong > 2800, $"{r with { Errors = new() }}");
-        Assert.True(r.BiomesWrong > 1000, $"{r with { Errors = new() }}");
+        Assert.True(r.HeightsWrong > 2800, $"{r with { Errors = [] }}");
+        Assert.True(r.BiomesWrong > 1000, $"{r with { Errors = [] }}");
         Assert.Equal(8, r.ZonesWrong);
         Assert.Equal(1, r.WaterWrong);
         Assert.Equal(25, r.Errors.Count);
@@ -57,18 +57,18 @@ public class CoreGenReferenceTests
         try
         {
             // A value that does not follow from the state, and a Perlin value off by one bit.
-            File.WriteAllLines(bad, new[]
-            {
+            File.WriteAllLines(bad,
+            [
                 "R init 1 | 00000001 6c078966 714acb3f dbffe6dc",
                 "R value 3f000000 | 6c078966 714acb3f dbffe6dc dbfff5aa",
-                File.ReadLines(Reference).First(l => l.StartsWith("P ")) is var p ? p[..^1] + (p[^1] == '0' ? '1' : '0') : "",
-            });
+                File.ReadLines(Reference).First(l => l.StartsWith("P ", StringComparison.Ordinal)) is var p ? p[..^1] + (p[^1] == '0' ? '1' : '0') : "",
+            ]);
             var r = DumpVerifier.Run(bad, "5DCcdIcuYJ");
             Assert.Equal(1, r.RandomOk);
             Assert.Equal(1, r.RandomWrong);
             Assert.Equal(1, r.PerlinWrong);
-            Assert.Contains(r.Errors, e => e.StartsWith("Random: expected [value 3f000000"));
-            Assert.Contains(r.Errors, e => e.StartsWith("Perlin("));
+            Assert.Contains(r.Errors, e => e.StartsWith("Random: expected [value 3f000000", StringComparison.Ordinal));
+            Assert.Contains(r.Errors, e => e.StartsWith("Perlin(", StringComparison.Ordinal));
         }
         finally
         {

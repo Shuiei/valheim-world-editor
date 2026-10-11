@@ -96,15 +96,15 @@ public class ParityKeysTests
     {
         var (w, s, screen) = Open(Wall());
         w.Tools.ChooseSelect();
-        var before = w.View.Camera;
+        var (yaw, pitch, distance, target) = w.View.Camera;
         w.KeyPress(Key.Space, RawInputModifiers.None, PhysicalKey.Space, " ");
         w.MouseDown(screen(40, 40), MouseButton.Left);
         Assert.True(w.View.Panning);
         w.MouseMove(screen(60, 70));
         w.MouseUp(screen(60, 70), MouseButton.Left);
         Assert.False(w.View.Panning);
-        Assert.NotEqual(before.Target, w.View.Camera.Target);
-        Assert.Equal(before.Yaw, w.View.Camera.Yaw);
+        Assert.NotEqual(target, w.View.Camera.Target);
+        Assert.Equal(yaw, w.View.Camera.Yaw);
         // The Select tool did not take the click (the wall under it stays unselected).
         Assert.Empty(w.View.Selected);
         // Let go of Space: the left button is the tool's again.
@@ -131,18 +131,18 @@ public class ParityKeysTests
     public void ShiftAndRightDragSlideTheViewInsteadOfTurningIt()
     {
         var (w, _, screen) = Open();
-        var before = w.View.Camera;
+        var (yaw, pitch, distance, target) = w.View.Camera;
         w.MouseDown(screen(64, 64), MouseButton.Right, RawInputModifiers.Shift);
         w.MouseMove(screen(90, 64), RawInputModifiers.Shift);
         w.MouseUp(screen(90, 64), MouseButton.Right, RawInputModifiers.Shift);
-        Assert.Equal(before.Yaw, w.View.Camera.Yaw);
-        Assert.Equal(before.Pitch, w.View.Camera.Pitch);
-        Assert.NotEqual(before.Target, w.View.Camera.Target);
+        Assert.Equal(yaw, w.View.Camera.Yaw);
+        Assert.Equal(pitch, w.View.Camera.Pitch);
+        Assert.NotEqual(target, w.View.Camera.Target);
         // Without Shift the right button turns.
         w.MouseDown(screen(64, 64), MouseButton.Right);
         w.MouseMove(screen(90, 64));
         w.MouseUp(screen(90, 64), MouseButton.Right);
-        Assert.NotEqual(before.Yaw, w.View.Camera.Yaw);
+        Assert.NotEqual(yaw, w.View.Camera.Yaw);
     }
 
     [AvaloniaFact]
@@ -195,7 +195,7 @@ public class ParityKeysTests
     {
         var (a, sa, screenA) = Open(Wall());
         a.Tools.ChooseSelect();
-        a.View.Select(new[] { 0 });
+        a.View.Select([0]);
         float distance = a.View.Camera.Distance;
         // Towards you (down) as ".", 1°.
         a.MouseWheel(screenA(64, 64), new Avalonia.Vector(0, -1), RawInputModifiers.Alt);
@@ -203,7 +203,7 @@ public class ParityKeysTests
         Assert.Equal(distance, a.View.Camera.Distance);
         var (b, sb, _) = Open(Wall());
         b.Tools.ChooseSelect();
-        b.View.Select(new[] { 0 });
+        b.View.Select([0]);
         b.KeyPress(Key.OemPeriod, RawInputModifiers.None, PhysicalKey.Period, ".");
         b.View.SelectTool.Commit();
         Assert.Equal(sb.Scene.Things[^1].Rotation, sa.Scene.Things[^1].Rotation);
@@ -215,12 +215,12 @@ public class ParityKeysTests
     {
         var (a, sa, screen) = Open(Wall());
         a.Tools.ChooseSelect();
-        a.View.Select(new[] { 0 });
+        a.View.Select([0]);
         a.MouseWheel(screen(64, 64), new Avalonia.Vector(0, 1), RawInputModifiers.Alt | RawInputModifiers.Shift);
         a.View.SelectTool.Commit();
         var (b, sb, _) = Open(Wall());
         b.Tools.ChooseSelect();
-        b.View.Select(new[] { 0 });
+        b.View.Select([0]);
         b.KeyPress(Key.OemComma, RawInputModifiers.Shift, PhysicalKey.Comma, ",");
         b.View.SelectTool.Commit();
         Assert.Equal(sb.Scene.Things[^1].Rotation, sa.Scene.Things[^1].Rotation);
@@ -240,7 +240,7 @@ public class ParityKeysTests
         w.MouseWheel(screen(64, 64), new Avalonia.Vector(0, -1), RawInputModifiers.Alt);
         Assert.True(w.View.Camera.Distance > d);
         w.Tools.ChooseSelect();
-        w.View.Select(new[] { 0 });
+        w.View.Select([0]);
         d = w.View.Camera.Distance;
         w.MouseWheel(screen(64, 64), new Avalonia.Vector(0, 1));
         Assert.True(w.View.Camera.Distance < d);
@@ -271,7 +271,7 @@ public class ParityKeysTests
         var box = new AreaTool { Soft = 0 };
         box.Points.Add(new Vector2(32, 32));
         box.Points.Add(new Vector2(48, 48));
-        w.View.Paste.Clip = CopyData.FromArea(box, s.Ground, s.Scene, Array.Empty<int>(), _ => null);
+        w.View.Paste.Clip = CopyData.FromArea(box, s.Ground, s.Scene, [], _ => null);
         w.StartPaste();
         Assert.Equal(ToolMode.Paste, w.Tools.Mode);
         w.MouseWheel(screen(64, 64), new Avalonia.Vector(0, 1), RawInputModifiers.Alt);

@@ -17,7 +17,7 @@ public static class Places
         }
         catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
         {
-            return Array.Empty<string>();
+            return [];
         }
     }
 

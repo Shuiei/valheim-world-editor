@@ -180,7 +180,7 @@ public class PlaceTests
         Assert.Equal("Elevation: above the ground by 2.5 m.", t.NudgeElevation(0.5f));
         // Under water nothing grows (sea level is 30 in this test area: lower it there).
         t.Elevation = PlaceTool.Elevations.Ground;
-        s.Shape(50, 50, Formula.Compile("-3", new string[0]), 3, 0, "pond");
+        s.Shape(50, 50, Formula.Compile("-3", []), 3, 0, "pond");
         Assert.Empty(t.Preview(new Vector2(50, 50)));
     }
 
@@ -278,7 +278,7 @@ public class PlaceTests
         var (w, s, screen) = Open();
         w.PlacePanel.ModeButtons[PlaceTool.Modes.Line].RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Avalonia.Controls.Button.ClickEvent));
         Assert.Equal(PlaceTool.Modes.Line, w.PlaceTool.Mode);
-        foreach (var x in new[] { 44f, 84f })
+        foreach (float x in new[] { 44f, 84f })
         {
             w.MouseDown(screen(x, 64), MouseButton.Left);
             w.MouseUp(screen(x, 64), MouseButton.Left);
@@ -326,8 +326,8 @@ public class PlaceMemoryTests
         Assert.Equal("My birches", again.Presets.Single().Name);
         p.Memory.ToggleFavourite("Oak1");
         Assert.Contains("Oak1", PlaceMemory.Load().Favourites);
-        p.Memory.NoteRecent(new[] { "Beech1", "Oak1" });
-        p.Memory.NoteRecent(new[] { "Rock_3" });
+        p.Memory.NoteRecent(["Beech1", "Oak1"]);
+        p.Memory.NoteRecent(["Rock_3"]);
         Assert.Equal(new[] { "Rock_3", "Beech1", "Oak1" }, PlaceMemory.Load().Recent);
         p.DeletePresetButton.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Avalonia.Controls.Button.ClickEvent));
         await Task.Delay(10);

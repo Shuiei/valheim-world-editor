@@ -34,7 +34,7 @@ public sealed class ParitySelectionTests : IDisposable
 
     private static WorldScene.Thing T(int id, int prefab, float x, float y, float z, bool gone = false) => new(id, prefab, new Vector3(x, y, z), Vector3.Zero, 1, false) { Gone = gone };
 
-    private static SavedSelections.Saved S(params SavedSelections.Item[] items) => new("s", items.ToList());
+    private static SavedSelections.Saved S(params SavedSelections.Item[] items) => new("s", [.. items]);
 
     private static SavedSelections.Item I(int prefab, float x, float y, float z) => new(prefab, x, y, z);
 
@@ -44,16 +44,16 @@ public sealed class ParitySelectionTests : IDisposable
     public void SelectionsAreKeptPerWorldAndReplacedByName()
     {
         Assert.Empty(SavedSelections.For("A"));
-        Assert.True(SavedSelections.Keep("A", "trees", new[] { new SavedSelections.Item(Beech, 1.23456f, 2, 3) }));
-        Assert.True(SavedSelections.Keep("A", "walls", new[] { new SavedSelections.Item(Wall, 4, 5, 6) }));
-        Assert.True(SavedSelections.Keep("B", "trees", Array.Empty<SavedSelections.Item>()));
-        Assert.Equal(new[] { "trees", "walls" }, SavedSelections.For("A").Select(s => s.Name));
+        Assert.True(SavedSelections.Keep("A", "trees", [new SavedSelections.Item(Beech, 1.23456f, 2, 3)]));
+        Assert.True(SavedSelections.Keep("A", "walls", [new SavedSelections.Item(Wall, 4, 5, 6)]));
+        Assert.True(SavedSelections.Keep("B", "trees", []));
+        Assert.Equal(["trees", "walls"], SavedSelections.For("A").Select(s => s.Name));
         // Rounded to the millimetre.
         Assert.Equal(1.235f, SavedSelections.For("A")[0].Items[0].X, 4);
         // The same name again: replaced, and now the last.
-        SavedSelections.Keep("A", "trees", new[] { new SavedSelections.Item(Beech, 9, 9, 9), new SavedSelections.Item(Beech, 8, 8, 8) });
+        SavedSelections.Keep("A", "trees", [new SavedSelections.Item(Beech, 9, 9, 9), new SavedSelections.Item(Beech, 8, 8, 8)]);
         var a = SavedSelections.For("A");
-        Assert.Equal(new[] { "walls", "trees" }, a.Select(s => s.Name));
+        Assert.Equal(["walls", "trees"], a.Select(s => s.Name));
         Assert.Equal(2, a[1].Items.Count);
         Assert.Single(SavedSelections.For("B"));
         // Forgetting: only that world's, and the world goes when it has none left.
@@ -78,7 +78,7 @@ public sealed class ParitySelectionTests : IDisposable
         // A folder in the file's place: nothing written, said so.
         File.Delete(SavedSelections.PathOverride!);
         Directory.CreateDirectory(SavedSelections.PathOverride!);
-        Assert.False(SavedSelections.Keep("A", "x", new[] { new SavedSelections.Item(Beech, 0, 0, 0) }));
+        Assert.False(SavedSelections.Keep("A", "x", [new SavedSelections.Item(Beech, 0, 0, 0)]));
         Assert.Empty(SavedSelections.For("A"));
     }
 
@@ -101,7 +101,7 @@ public sealed class ParitySelectionTests : IDisposable
         Assert.Equal(4, missing);
         Assert.Empty(SavedSelections.Find(S(), things).Ids);
         Assert.Equal(0, SavedSelections.Find(S(), things).Missing);
-        Assert.Equal(1, SavedSelections.Find(S(I(Beech, 0, 0, 0)), Array.Empty<WorldScene.Thing>()).Missing);
+        Assert.Equal(1, SavedSelections.Find(S(I(Beech, 0, 0, 0)), []).Missing);
     }
 
     // ---- The Select panel.
@@ -117,7 +117,7 @@ public sealed class ParitySelectionTests : IDisposable
         var messages = new List<string>();
         w.SelectPanel.Message += messages.Add;
         w.SelectPanel.WorldName = () => "World one";
-        w.SelectPanel.AskName = n => Task.FromResult<string?>(n);
+        w.SelectPanel.AskName = Task.FromResult<string?>;
         w.SelectPanel.Confirm = _ => Task.FromResult(true);
         return (w, s, messages);
     }
@@ -136,28 +136,28 @@ public sealed class ParitySelectionTests : IDisposable
         await p.Keep();
         Assert.Equal("Select something first.", messages[^1]);
         // Kept under the name offered (Selection 1), then under a name typed.
-        w.View.Select(new[] { 0, 1 });
+        w.View.Select([0, 1]);
         await p.Keep();
         Assert.Equal("Kept the selection “Selection 1” (2 object(s)). It can be picked again here, also after saving the world.", messages[^1]);
         Assert.Equal("Selection 1 (2)", p.SavedBox.SelectedItem);
         Assert.Equal("Saved selections…", p.SavedBox.PlaceholderText);
-        w.View.Select(new[] { 2 });
+        w.View.Select([2]);
         p.AskName = n => Task.FromResult<string?>("  The wall  ");
         await p.Keep();
-        Assert.Equal(new[] { "Selection 1 (2)", "The wall (1)" }, p.SavedBox.Items.Cast<string>());
+        Assert.Equal(["Selection 1 (2)", "The wall (1)"], p.SavedBox.Items.Cast<string>());
         Assert.Equal(1, p.SavedBox.SelectedIndex);
         // Select it again: only the wall; Add: the trees too.
-        w.View.Select(Array.Empty<int>());
+        w.View.Select([]);
         p.UseSaved(false);
-        Assert.Equal(new[] { 2 }, w.View.Selected);
+        Assert.Equal([2], w.View.Selected);
         Assert.Equal("Selected 1 object(s) of “The wall”.", messages[^1]);
         p.SavedBox.SelectedIndex = 0;
         p.UseSaved(true);
-        Assert.Equal(new[] { 0, 1, 2 }, w.View.Selected.OrderBy(i => i));
+        Assert.Equal([0, 1, 2], w.View.Selected.OrderBy(i => i));
         // One tree deleted since: said, the rest selected.
-        s.Delete(new[] { 1 });
+        s.Delete([1]);
         p.UseSaved(false);
-        Assert.Equal(new[] { 0 }, w.View.Selected);
+        Assert.Equal([0], w.View.Selected);
         Assert.Equal("Selected 1 object(s) of “Selection 1”; 1 are not in this area or no longer where they were.", messages[^1]);
         // Forget, after asking (no: kept).
         p.Confirm = _ => Task.FromResult(false);
@@ -167,7 +167,7 @@ public sealed class ParitySelectionTests : IDisposable
         p.Confirm = t => { asked = t; return Task.FromResult(true); };
         await p.Forget();
         Assert.Equal("Forget the selection “Selection 1”?", asked);
-        Assert.Equal(new[] { "The wall (1)" }, p.SavedBox.Items.Cast<string>());
+        Assert.Equal(["The wall (1)"], p.SavedBox.Items.Cast<string>());
         Assert.Equal(-1, p.SavedBox.SelectedIndex);
         // Nothing chosen: the buttons do nothing.
         int count = messages.Count;
@@ -181,7 +181,7 @@ public sealed class ParitySelectionTests : IDisposable
     {
         var (w, _, messages) = Window(T(1, Beech, 40, 30, 40));
         var p = w.SelectPanel;
-        w.View.Select(new[] { 0 });
+        w.View.Select([0]);
         p.AskName = _ => Task.FromResult<string?>(null);
         await p.Keep();
         p.AskName = _ => Task.FromResult<string?>("   ");
@@ -195,7 +195,7 @@ public sealed class ParitySelectionTests : IDisposable
     {
         var (w, _, messages) = Window(T(1, Beech, 40, 30, 40));
         var p = w.SelectPanel;
-        w.View.Select(new[] { 0 });
+        w.View.Select([0]);
         await p.Keep();
         p.WorldName = () => "Another world";
         p.FillSaved();
@@ -214,18 +214,18 @@ public sealed class ParitySelectionTests : IDisposable
     {
         var (w, _, _) = Window(T(1, Beech, 40, 30, 40), T(2, Wall, 44, 30, 40));
         var p = w.SelectPanel;
-        w.View.Select(new[] { 1 });
+        w.View.Select([1]);
         Click(p.KeepButton);
         await Task.Delay(20);
         Assert.Single(SavedSelections.For("World one"));
         // The row of buttons shows once one is chosen.
         Assert.True(p.LoadButton.IsVisible || p.LoadButton.Parent is Control { IsVisible: true });
-        w.View.Select(new[] { 0 });
+        w.View.Select([0]);
         Click(p.LoadButton);
-        Assert.Equal(new[] { 1 }, w.View.Selected);
-        w.View.Select(new[] { 0 });
+        Assert.Equal([1], w.View.Selected);
+        w.View.Select([0]);
         Click(p.AddSavedButton);
-        Assert.Equal(new[] { 0, 1 }, w.View.Selected.OrderBy(i => i));
+        Assert.Equal([0, 1], w.View.Selected.OrderBy(i => i));
         Click(p.ForgetButton);
         await Task.Delay(20);
         Assert.Empty(SavedSelections.For("World one"));
@@ -236,14 +236,14 @@ public sealed class ParitySelectionTests : IDisposable
     public async Task ASelectionIsFoundAgainAfterTheIdsChanged()
     {
         // Kept in one area; the "saved world" has the same objects under new ids, and moved ones.
-        var (w, _, messages) = Window(T(1, Beech, 40, 30, 40), T(2, Wall, 44, 31, 40));
-        w.View.Select(new[] { 0, 1 });
+        var (w, _, _) = Window(T(1, Beech, 40, 30, 40), T(2, Wall, 44, 31, 40));
+        w.View.Select([0, 1]);
         await w.SelectPanel.Keep();
         var (w2, _, messages2) = Window(T(900, Wall, 44, 31.1f, 40.02f), T(901, Beech, 41, 30, 40));
         w2.SelectPanel.FillSaved();
         w2.SelectPanel.SavedBox.SelectedIndex = 0;
         w2.SelectPanel.UseSaved(false);
-        Assert.Equal(new[] { 0 }, w2.View.Selected);
+        Assert.Equal([0], w2.View.Selected);
         Assert.Equal("Selected 1 object(s) of “Selection 1”; 1 are not in this area or no longer where they were.", messages2[^1]);
         // Selecting switches to the Select tool.
         w2.Tools.ChooseMode(ToolMode.Measure);
@@ -278,12 +278,12 @@ public sealed class ParitySelectionTests : IDisposable
         w.Edit(s);
         var c = new Vector3(40 - s.Scene.Cx, 30, -(40 - s.Scene.Cz));
         // The wall's box, as drawing would know it (no models here): 2 m wide, 2 m high.
-        w.View.SetBoxes(new[] { (0, c + new Vector3(-1, 0, -0.2f), c + new Vector3(1, 2, 0.2f)) });
+        w.View.SetBoxes([(0, c + new Vector3(-1, 0, -0.2f), c + new Vector3(1, 2, 0.2f))]);
         w.View.SetCamera(c + new Vector3(0, 6, 8), c, 1);
         // Laid out and drawn once: hit tests use the last frame (with one app for the whole run, the
         // window is not always drawn yet here).
         w.UpdateLayout();
-        Avalonia.Headless.AvaloniaHeadlessPlatform.ForceRenderTimerTick();
+        AvaloniaHeadlessPlatform.ForceRenderTimerTick();
         Avalonia.Threading.Dispatcher.UIThread.RunJobs();
         return (w, s, ScreenOf(w, c + new Vector3(0, 1, 0.2f)), ScreenOf(w, c + new Vector3(0, 0, 3)));
     }
@@ -303,7 +303,7 @@ public sealed class ParitySelectionTests : IDisposable
         Assert.Null(w.View.PickObjectOnce);
         // The next click is the tool's again.
         Press(w, wall, MouseButton.Left);
-        Assert.Equal(new[] { 0 }, w.View.Selected);
+        Assert.Equal([0], w.View.Selected);
     }
 
     [AvaloniaFact]
@@ -312,9 +312,9 @@ public sealed class ParitySelectionTests : IDisposable
         var (w, _, _, empty) = PickWindow();
         w.Tools.ChooseMode(ToolMode.Area);
         w.UpdateLayout();
-        Avalonia.Headless.AvaloniaHeadlessPlatform.ForceRenderTimerTick();
+        AvaloniaHeadlessPlatform.ForceRenderTimerTick();
         Avalonia.Threading.Dispatcher.UIThread.RunJobs();
-        var hit = Avalonia.Input.InputExtensions.InputHitTest(w, empty);
+        var hit = InputExtensions.InputHitTest(w, empty);
         Assert.True(hit == w.Surface, $"{empty} hit {hit?.GetType().Name} {(hit as Control)?.Parent?.GetType().Name}");
         bool called = false;
         w.PickKind("Replace", _ => called = true);
@@ -363,7 +363,7 @@ public sealed class ParitySelectionTests : IDisposable
         var messages = new List<string>();
         a.Message += messages.Add;
         a.Refresh();
-        var creatable = s.Scene.World.Creatable.Where(p => w.NameOfPrefab(p) != null).OrderBy(p => w.NameOfPrefab(p), StringComparer.OrdinalIgnoreCase).ToList();
+        var creatable = s.Scene.World.Creatable.Where(p => w.NameOfPrefab(p) != null).OrderBy(w.NameOfPrefab, StringComparer.OrdinalIgnoreCase).ToList();
         Assert.NotEmpty(creatable);
         a.UsePicked(creatable[^1]);
         Assert.Equal(creatable.Count - 1, a.ToBox.SelectedIndex);

@@ -157,7 +157,7 @@ public static class Smolv
                     uint index = Varint() + prevIndex;
                     prevIndex = index;
                     uint dec = Varint();
-                    int extra = dec == 0 || dec is >= 2 and <= 5 ? 0 : dec is >= 29 and <= 37 ? 1 : -1;
+                    int extra = dec is 0 or >= 2 and <= 5 ? 0 : dec is >= 29 and <= 37 ? 1 : -1;
                     int mlen = extra < 0 ? (int)Varint() + 4 : 4 + extra;
                     if (m > 0)
                     {
@@ -220,7 +220,7 @@ public static class Smolv
         {
             throw new InvalidDataException("SMOL-V data decodes to the wrong size");
         }
-        return output.ToArray();
+        return [.. output];
     }
 
     // (offset, SPIR-V words) of every SMOL-V program in a blob.

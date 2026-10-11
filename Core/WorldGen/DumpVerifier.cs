@@ -30,7 +30,7 @@ public static class DumpVerifier
         string[] lines = File.ReadAllLines(path);
         int rOk = 0, rBad = 0, pOk = 0, pBad = 0, hOk = 0, hBad = 0, bBad = 0, zOk = 0, zBad = 0, wBad = 0;
         double pMax = 0, hMax = 0, zMax = 0;
-        List<string> firstErrors = new();
+        List<string> firstErrors = [];
         void Error(string msg)
         {
             if (firstErrors.Count < 25)
@@ -195,23 +195,23 @@ public static class BaseTerrain
     // mask: optional 65x65 RGBA base paint mask (Heightmap m_baseMask), as GetBiomeHeight reports it.
     public static float[] BuildZone(WorldGenerator gen, int zx, int zz, float[]? mask)
     {
-        const float scale = 1f;
+        const float Scale = 1f;
         int num = Width + 1;
         float[] heights = new float[num * num];
-        float vx = zx * 64f + Width * scale * -0.5f;
-        float vz = zz * 64f + Width * scale * -0.5f;
-        float far = (float)((double)Width * scale);
+        float vx = zx * 64f + Width * Scale * -0.5f;
+        float vz = zz * 64f + Width * Scale * -0.5f;
+        float far = (float)((double)Width * Scale);
         Heightmap.Biome b1 = gen.GetBiome(vx, vz);
         Heightmap.Biome b2 = gen.GetBiome((float)((double)vx + far), vz);
         Heightmap.Biome b3 = gen.GetBiome(vx, (float)((double)vz + far));
         Heightmap.Biome b4 = gen.GetBiome((float)((double)vx + far), (float)((double)vz + far));
         for (int k = 0; k < num; k++)
         {
-            float wy = (float)((double)vz + k * (double)scale);
+            float wy = (float)((double)vz + k * (double)Scale);
             float t = GenMath.Smooth(0f, 1f, (float)((double)k / Width));
             for (int l = 0; l < num; l++)
             {
-                float wx = (float)((double)vx + l * (double)scale);
+                float wx = (float)((double)vx + l * (double)Scale);
                 float t2 = GenMath.Smooth(0f, 1f, (float)((double)l / Width));
                 float h;
                 Color m;

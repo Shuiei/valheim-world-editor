@@ -13,14 +13,15 @@ namespace TerrainEditor.Desktop.Tests;
 public class EditorProcess : IDisposable
 {
     private readonly Process? _p;
-    private readonly string _data = Path.Combine(Path.GetTempPath(), "vwe-visual-" + Guid.NewGuid().ToString("N")[..8]);
+    private readonly Lock _sendLock = new();
+
     public string? Why { get; }
     public bool Available => _p != null;
     // The editor's data folder (--data): its settings, log...
-    public string Data => _data;
+    public string Data { get; } = Path.Combine(Path.GetTempPath(), "vwe-visual-" + Guid.NewGuid().ToString("N")[..8]);
 
     public EditorProcess()
-        : this(Array.Empty<string>())
+        : this([])
     {
     }
 
@@ -37,7 +38,7 @@ public class EditorProcess : IDisposable
         string app = Path.Combine(root, "Desktop", "bin", config, "net10.0", "ValheimWorldEditor.dll");
         string dotnet = Path.GetFullPath(Path.Combine(System.Runtime.InteropServices.RuntimeEnvironment.GetRuntimeDirectory(), "..", "..", "..", OperatingSystem.IsWindows() ? "dotnet.exe" : "dotnet"));
         var psi = new ProcessStartInfo(dotnet) { RedirectStandardInput = true, RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false };
-        foreach (string a in new[] { app, "--data", _data, "--driver" }.Concat(extra))
+        foreach (string a in new[] { app, "--data", Data, "--driver" }.Concat(extra))
         {
             psi.ArgumentList.Add(a);
         }
@@ -84,7 +85,7 @@ public class EditorProcess : IDisposable
             {
                 return null;
             }
-            if (read.Result.StartsWith("@@ "))
+            if (read.Result.StartsWith("@@ ", StringComparison.Ordinal))
             {
                 return read.Result;
             }
@@ -95,13 +96,13 @@ public class EditorProcess : IDisposable
     // Sends a command; its answer's JSON (an error fails the test).
     public JsonElement Send(string command)
     {
-        lock (this)
+        lock (_sendLock)
         {
             _p!.StandardInput.WriteLine(command);
             _p.StandardInput.Flush();
             string? answer = Next(TimeSpan.FromSeconds(120));
             Assert.NotNull(answer);
-            Assert.True(answer!.StartsWith("@@ ok "), $"{command}: {answer}");
+            Assert.True(answer!.StartsWith("@@ ok ", StringComparison.Ordinal), $"{command}: {answer}");
             return JsonDocument.Parse(answer["@@ ok ".Length..]).RootElement.Clone();
         }
     }
@@ -119,17 +120,18 @@ public class EditorProcess : IDisposable
                     _p.Kill();
                 }
             }
-            catch (Exception)
+            catch
             {
             }
         }
         try
         {
-            Directory.Delete(_data, true);
+            Directory.Delete(Data, true);
         }
-        catch (Exception)
+        catch
         {
         }
+        GC.SuppressFinalize(this);
     }
 }
 
@@ -147,7 +149,7 @@ public sealed class DirectEditorProcess() : EditorProcess(Start())
         {
             File.Copy(f, Path.Combine(world, Path.GetFileName(f)));
         }
-        return new[] { "--world", world, "--zone", "0,0", "--size", "2" };
+        return ["--world", world, "--zone", "0,0", "--size", "2"];
     }
 
     public override void Dispose()
@@ -157,7 +159,7 @@ public sealed class DirectEditorProcess() : EditorProcess(Start())
         {
             Directory.Delete(_copy!, true);
         }
-        catch (Exception)
+        catch
         {
         }
     }
@@ -178,7 +180,7 @@ public sealed class TinyBudgetEditorProcess() : EditorProcess(Start(), new Dicti
         {
             File.Copy(f, Path.Combine(world, Path.GetFileName(f)));
         }
-        return new[] { "--world", world, "--zone", "0,0", "--size", "2" };
+        return ["--world", world, "--zone", "0,0", "--size", "2"];
     }
 
     public override void Dispose()
@@ -188,7 +190,7 @@ public sealed class TinyBudgetEditorProcess() : EditorProcess(Start(), new Dicti
         {
             Directory.Delete(_copy!, true);
         }
-        catch (Exception)
+        catch
         {
         }
     }
@@ -208,7 +210,7 @@ public sealed class FolderEditorProcess() : EditorProcess(Start())
         {
             File.Copy(f, Path.Combine(world, Path.GetFileName(f)));
         }
-        return new[] { world };
+        return [world];
     }
 
     public override void Dispose()
@@ -218,7 +220,7 @@ public sealed class FolderEditorProcess() : EditorProcess(Start())
         {
             Directory.Delete(_copy!, true);
         }
-        catch (Exception)
+        catch
         {
         }
     }
@@ -228,12 +230,13 @@ public sealed class FolderEditorProcess() : EditorProcess(Start())
 public sealed class LiveEditorProcess() : EditorProcess(Start())
 {
     private static FakeGame? _game;
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Tests reach the game through their fixture.")]
     public FakeGame Game => _game!;
 
     private static string[] Start()
     {
         _game = new FakeGame();
-        return new[] { "--live", _game.Url, "--token", _game.Token };
+        return ["--live", _game.Url, "--token", _game.Token];
     }
 
     public override void Dispose()
@@ -275,7 +278,7 @@ public sealed class VisualTests(EditorProcess editor) : IDisposable
         {
             Directory.Delete(_dir, true);
         }
-        catch (Exception)
+        catch
         {
         }
     }
@@ -300,10 +303,10 @@ public sealed class VisualTests(EditorProcess editor) : IDisposable
     {
         string path = Path.Combine(_dir, name + ".png");
         editor.Send($"picture {path}");
-        return Picture(name, path);
+        return PictureAt(path);
     }
 
-    private static Look Picture(string name, string path)
+    private static Look PictureAt(string path)
     {
         using var bmp = SKBitmap.Decode(path);
         Assert.NotNull(bmp);
@@ -339,7 +342,7 @@ public sealed class VisualTests(EditorProcess editor) : IDisposable
         string path = Path.Combine(_dir, name + ".png");
         editor.Send($"shot {path}");
         Assert.True(File.Exists(path));
-        return Picture(name, path);
+        return PictureAt(path);
     }
 
     [Fact]
@@ -452,7 +455,7 @@ public sealed class VisualTests(EditorProcess editor) : IDisposable
     private JsonElement Do(params string[] commands)
     {
         JsonElement last = default;
-        foreach (var c in commands)
+        foreach (string c in commands)
         {
             last = editor.Send(c);
         }
@@ -697,7 +700,7 @@ public sealed class LiveVisualTests(LiveEditorProcess editor)
 }
 
 [CollectionDefinition("Visual budget")]
-public sealed class VisualBudgetCollection : ICollectionFixture<TinyBudgetEditorProcess>
+public sealed class VisualBudgetDefinition : ICollectionFixture<TinyBudgetEditorProcess>
 {
 }
 
@@ -727,8 +730,8 @@ public sealed class BudgetVisualTests(TinyBudgetEditorProcess editor)
             Assert.Equal(0, editor.Send("state").GetProperty("glErrors").GetInt32());
             string log = File.ReadAllText(Path.Combine(editor.Data, "ValheimWorldEditor.log"));
             Assert.Contains("Models let go from the graphics card", log);
-            using var a = SkiaSharp.SKBitmap.Decode(Path.Combine(dir, "a.png"));
-            using var b = SkiaSharp.SKBitmap.Decode(Path.Combine(dir, "b.png"));
+            using var a = SKBitmap.Decode(Path.Combine(dir, "a.png"));
+            using var b = SKBitmap.Decode(Path.Combine(dir, "b.png"));
             Assert.Equal(Mean(a), Mean(b), 0);
         }
         finally
@@ -737,7 +740,7 @@ public sealed class BudgetVisualTests(TinyBudgetEditorProcess editor)
         }
     }
 
-    private static double Mean(SkiaSharp.SKBitmap bmp)
+    private static double Mean(SKBitmap bmp)
     {
         double sum = 0;
         int n = 0;

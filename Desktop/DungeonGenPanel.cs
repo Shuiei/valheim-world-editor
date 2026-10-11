@@ -26,14 +26,14 @@ public sealed class DungeonGenPanel
     public event Action<DungeonGen.Settings, DungeonGen.Result, bool>? PlotAsked;
 
     internal ComboBox Made { get; } = Combo("Building pieces", "The game's own rooms");
-    internal ComboBox Biome { get; } = Combo(DungeonKit.Biomes.Select(b => b.Name).ToArray());
-    internal ComboBox Style { get; } = Combo(new[] { "The biome's" }.Concat(DungeonKit.Styles.Select(s => s.Name)).ToArray());
-    internal ComboBox Walls { get; } = Combo(new[] { "The biome's" }.Concat(DungeonKit.Materials.Select(m => m.Name)).ToArray());
+    internal ComboBox Biome { get; } = Combo([.. DungeonKit.Biomes.Select(b => b.Name)]);
+    internal ComboBox Style { get; } = Combo(["The biome's", .. DungeonKit.Styles.Select(s => s.Name)]);
+    internal ComboBox Walls { get; } = Combo(["The biome's", .. DungeonKit.Materials.Select(m => m.Name)]);
     internal ComboBox Size { get; } = Combo("Small", "Medium", "Large", "Huge");
     internal ComboBox Levels { get; } = Combo("1 level", "2 levels", "3 levels", "4 levels");
     internal Slider Monsters { get; } = Slide(0, 3, 1, 0.25);
     internal CheckBox Respawn { get; } = new() { Content = "Monsters come back (spawners)", IsChecked = true, FontSize = 12 };
-    internal ComboBox Boss { get; } = Combo(new[] { "The biome's boss", "No boss" }.Concat(Bosses).ToArray());
+    internal ComboBox Boss { get; } = Combo(["The biome's boss", "No boss", .. Bosses]);
     internal Slider Loot { get; } = Slide(0, 2, 1, 0.25);
     internal ComboBox Light { get; } = Combo("Dark", "Dim", "Bright");
     internal ComboBox Decor { get; } = Combo("Bare", "Furnished", "Rich");
@@ -52,7 +52,7 @@ public sealed class DungeonGenPanel
     private readonly TextBlock _monstersText = new() { FontSize = 12 }, _lootText = new() { FontSize = 12 }, _decayText = new() { FontSize = 12 }, _loopsText = new() { FontSize = 12 };
     private readonly Canvas _plan = new() { Width = 258, Height = 190, Background = Ui.Bg, ClipToBounds = true };
     private readonly StackPanel _levelButtons = new() { Orientation = Orientation.Horizontal, Spacing = 4 };
-    private readonly List<Control> _piecesOnly = new();
+    private readonly List<Control> _piecesOnly = [];
     private DungeonGen.Result? _result;
     // Made again once the settings stop changing for a moment, away from the window's thread; only the
     // newest is shown.
@@ -64,7 +64,7 @@ public sealed class DungeonGenPanel
     private int _level;
 
     // Bosses and elites of every biome, by creature.
-    private static string[] Bosses => DungeonKit.Biomes.SelectMany(b => b.Elites.Append(b.Boss)).Select(f => f.Creature).Distinct().ToArray();
+    private static string[] Bosses => [.. DungeonKit.Biomes.SelectMany(b => b.Elites.Append(b.Boss)).Select(f => f.Creature).Distinct()];
 
     private static ComboBox Combo(params string[] items) => new() { ItemsSource = items, SelectedIndex = 0, HorizontalAlignment = HorizontalAlignment.Stretch, FontSize = 12 };
 
@@ -136,8 +136,8 @@ public sealed class DungeonGenPanel
             }
         };
         ToWorkshop.Click += (_, _) => WorkshopAsked?.Invoke(Settings() with { Made = DungeonGen.Made.Pieces });
-        OpenOnPlot.Click += (_, _) => { if (_result != null) PlotAsked?.Invoke(Settings(), _result, false); };
-        AddToPlot.Click += (_, _) => { if (_result != null) PlotAsked?.Invoke(Settings(), _result, true); };
+        OpenOnPlot.Click += (_, _) => { if (_result != null) { PlotAsked?.Invoke(Settings(), _result, false); } };
+        AddToPlot.Click += (_, _) => { if (_result != null) { PlotAsked?.Invoke(Settings(), _result, true); } };
         var pieces = new StackPanel
         {
             Spacing = 6,
@@ -157,7 +157,7 @@ public sealed class DungeonGenPanel
         var made = Row("Made of", Made);
         made.IsVisible = !inWorkshop;
         var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
-        actions.Children.AddRange(inWorkshop ? new Control[] { OpenOnPlot, AddToPlot } : new Control[] { Place, ToWorkshop });
+        actions.Children.AddRange(inWorkshop ? new Control[] { OpenOnPlot, AddToPlot } : [Place, ToWorkshop]);
         Actions = actions;
         View = new StackPanel
         {
@@ -224,15 +224,15 @@ public sealed class DungeonGenPanel
         var s = Settings();
         int generation = ++_generation;
         Summary.Text = "Making it…";
-        Pending = Task.Run(() =>
+        Pending = Task.Run<(DungeonGen.Result? Result, string? Error)>(() =>
         {
             try
             {
-                return (Result: DungeonGen.Make(s), Error: (string?)null);
+                return (Result: DungeonGen.Make(s), Error: null);
             }
             catch (Exception e)
             {
-                return (Result: (DungeonGen.Result?)null, Error: e.Message);
+                return (Result: null, Error: e.Message);
             }
         }).ContinueWith(t =>
         {
@@ -248,7 +248,7 @@ public sealed class DungeonGenPanel
         _result = result;
         Summary.Text = result != null ? string.Join(" ", result.Notes) : "Could not make it: " + error;
         Place.IsEnabled = OpenOnPlot.IsEnabled = AddToPlot.IsEnabled = _result != null;
-        var levels = _result?.Map?.Select(r => r.Level).Distinct().Order().ToList() ?? new List<int>();
+        var levels = _result?.Map?.Select(r => r.Level).Distinct().Order().ToList() ?? [];
         _level = Math.Clamp(_level, 0, Math.Max(0, levels.Count - 1));
         _levelButtons.Children.Clear();
         foreach (int l in levels)
@@ -290,8 +290,11 @@ public sealed class DungeonGenPanel
                 : r.Name is "Treasury" or "Hidden cache" ? Color.Parse("#9a8424") : r.Main ? Color.Parse("#7a5c3a") : Color.Parse("#5a4632");
             var rect = new Rectangle
             {
-                Width = Math.Max(1, (r.X1 - r.X0) * scale), Height = Math.Max(1, (r.Z1 - r.Z0) * scale),
-                Fill = new SolidColorBrush(fill), Stroke = r.Corridor ? null : new SolidColorBrush(Color.Parse("#b8b2a8")), StrokeThickness = 0.6,
+                Width = Math.Max(1, (r.X1 - r.X0) * scale),
+                Height = Math.Max(1, (r.Z1 - r.Z0) * scale),
+                Fill = new SolidColorBrush(fill),
+                Stroke = r.Corridor ? null : new SolidColorBrush(Color.Parse("#b8b2a8")),
+                StrokeThickness = 0.6,
             };
             ToolTip.SetTip(rect, r.Name);
             Canvas.SetLeft(rect, X(r.X0));
@@ -302,7 +305,8 @@ public sealed class DungeonGenPanel
         {
             var dot = new Ellipse
             {
-                Width = 4, Height = 4,
+                Width = 4,
+                Height = 4,
                 Fill = new SolidColorBrush(d.Kind switch { "Key" => Colors.Magenta, "Secret" => Colors.Cyan, "Open" => Color.Parse("#7bc47f"), _ => Color.Parse("#e0a64b") }),
             };
             Canvas.SetLeft(dot, X(d.X) - 2);

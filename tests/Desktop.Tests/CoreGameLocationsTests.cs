@@ -10,7 +10,7 @@ public class CoreGameLocationsTests
     [Fact]
     public void TheListsOrderComesFromTheLastRunInTheGamesLog()
     {
-        string Added(int locations, int vegetation) =>
+        static string Added(int locations, int vegetation) =>
             $"10/10/2026 06:59:10: Added {locations} locations, {vegetation} vegetations, 0 environments, 0 biome env-setups, 0 clutter  from main";
         var log = new List<string>
         {
@@ -23,8 +23,8 @@ public class CoreGameLocationsTests
         };
         Assert.Equal(new[] { (3, 0), (2, 0), (27, 25), (4, 0), (25, 33), (25, 35) }, GameLocations.OrderFromLog(log));
         // Two runs one after the other (no line between): the second.
-        Assert.Equal(new[] { (3, 0), (5, 1), (6, 2) }, GameLocations.OrderFromLog(new[] { Added(3, 0), Added(4, 0), Added(3, 0), Added(5, 1), Added(6, 2) }));
+        Assert.Equal(new[] { (3, 0), (5, 1), (6, 2) }, GameLocations.OrderFromLog([Added(3, 0), Added(4, 0), Added(3, 0), Added(5, 1), Added(6, 2)]));
         // No such lines: none.
-        Assert.Null(GameLocations.OrderFromLog(new[] { "Zonesystem Start 1", "nothing" }));
+        Assert.Null(GameLocations.OrderFromLog(["Zonesystem Start 1", "nothing"]));
     }
 }

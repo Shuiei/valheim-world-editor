@@ -1,7 +1,6 @@
 using System.Collections.Concurrent;
 using System.Numerics;
 using TerrainEditor.App;
-using TerrainEditor.Save;
 using TerrainEditor.Terrain;
 
 namespace TerrainEditor.Desktop;
@@ -62,7 +61,7 @@ internal sealed class BundleModels : ModelStore.ISource
 
     public ModelStore.Model? Model(string name)
     {
-        if (_game.LoadModel(name, room: TerrainEditor.Editing.Dungeons.RoomOf(name) != null) is not { } m)
+        if (_game.LoadModel(name, room: Editing.Dungeons.RoomOf(name) != null) is not { } m)
         {
             return null;
         }
@@ -95,7 +94,7 @@ internal sealed class BundleModels : ModelStore.ISource
     internal static ModelStore.MeshData ViewMesh(GameBundles.Mesh m)
     {
         int n = m.VertexCount;
-        var v = new float[n * 8];
+        float[] v = new float[n * 8];
         for (int i = 0; i < n; i++)
         {
             v[i * 8] = m.Positions[i * 3];
@@ -117,7 +116,7 @@ internal sealed class BundleModels : ModelStore.ISource
                 v[i * 8 + 7] = m.Uv[i * 2 + 1];
             }
         }
-        var subs = m.Submeshes.Select(s => s.Select(i => (uint)i).ToArray()).ToArray();
+        uint[][] subs = [.. m.Submeshes.Select(s => s.Select(i => (uint)i).ToArray())];
         return new ModelStore.MeshData(v, subs);
     }
 
@@ -141,7 +140,7 @@ internal sealed class BundleModels : ModelStore.ISource
         bool transparent = mode is 2 or 3 || m.Shader.Contains("transparent", StringComparison.OrdinalIgnoreCase);
         float cutoff = cut ? (m.Floats.GetValueOrDefault("_Cutoff", 0.5f) is float c and not 0 ? MathF.Round(c, 3) : 0.5f) : transparent ? 0.5f : 0f;
         bool doubleSided = m.Floats.GetValueOrDefault("_Cull", 2) == 0 || vegetation;
-        var col = m.Colors.GetValueOrDefault("_Color") ?? new[] { 1f, 1f, 1f, 1f };
+        float[] col = m.Colors.GetValueOrDefault("_Color") ?? [1f, 1f, 1f, 1f];
         var color = new Vector4(ModelStore.Linear(col[0]), ModelStore.Linear(col[1]), ModelStore.Linear(col[2]), col[3]);
         string? map = null;
         var uv = new Vector4(1, 1, 0, 0);

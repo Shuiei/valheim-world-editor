@@ -33,7 +33,7 @@ public sealed class Ground
     // points, and saved zones do not always agree on them. A point unchanged since loading is given
     // back with the zone's own value, so an untouched zone stays identical to what is saved.
     private State _loaded;
-    private readonly Dictionary<(int, int), ZoneEdit?> _own = new();
+    private readonly Dictionary<(int, int), ZoneEdit?> _own = [];
 
     public Ground(int w, int h, int x0, int z0, int size)
     {
@@ -178,7 +178,7 @@ public sealed class Ground
                 }
             }
         }
-        return set.OrderBy(z => z.Item2).ThenBy(z => z.Item1).ToList();
+        return [.. set.OrderBy(z => z.Item2).ThenBy(z => z.Item1)];
     }
 
     private bool UnchangedSinceLoad(int g)

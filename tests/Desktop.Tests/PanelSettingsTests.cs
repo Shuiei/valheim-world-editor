@@ -39,7 +39,7 @@ public class PanelSettingsTests
             {
                 Directory.Delete(Root, true);
             }
-            catch (Exception)
+            catch
             {
             }
         }
@@ -53,11 +53,11 @@ public class PanelSettingsTests
     }
 
     // The folders' boxes (not Claude's port and command).
-    private static List<TextBox> Boxes(Window d) => d.GetLogicalDescendants().OfType<TextBox>().Where(b => b.Name?.StartsWith("Claude", StringComparison.Ordinal) != true).ToList();
+    private static List<TextBox> Boxes(Window d) => [.. d.GetLogicalDescendants().OfType<TextBox>().Where(b => b.Name?.StartsWith("Claude", StringComparison.Ordinal) != true)];
 
     private static TextBox Named(Window d, string name) => d.GetLogicalDescendants().OfType<TextBox>().Single(b => b.Name == name);
 
-    private static List<Button> Buttons(Window d, string label) => d.GetLogicalDescendants().OfType<Button>().Where(b => b.Content as string == label).ToList();
+    private static List<Button> Buttons(Window d, string label) => [.. d.GetLogicalDescendants().OfType<Button>().Where(b => b.Content as string == label)];
 
     private static void Click(Button b)
     {
@@ -79,7 +79,7 @@ public class PanelSettingsTests
         Assert.Equal("Settings: folders on this computer", d.Title);
         var boxes = Boxes(d);
         // The Valheim folder (empty: automatic), then one row per folder.
-        Assert.Equal(new[] { null, bep, worlds }, boxes.Select(b => b.Text));
+        Assert.Equal([null, bep, worlds], boxes.Select(b => b.Text));
         Assert.Matches("^(Found automatically: |Not found automatically: choose the folder.)", Texts(d).Split(" | ").First(x => x.Contains("automatically")));
         boxes[0].Text = game;
         Click(Buttons(d, "Save").Single());
@@ -150,7 +150,7 @@ public class PanelSettingsTests
         string game = t.Game(), bep = t.Dir("bep"), extra = t.Dir("extra");
         var settings = new AppSettings();
         var owner = Owner();
-        var picks = new Queue<string?>(new[] { game, bep, null });
+        var picks = new Queue<string?>([game, bep, null]);
         var asked = new List<string>();
         SettingsDialog.PickFolder = title => { asked.Add(title); return Task.FromResult(picks.Dequeue()); };
         try
@@ -194,7 +194,7 @@ public class PanelSettingsTests
     {
         var settings = new AppSettings();
         string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        string? problem = SettingsDialog.Apply(settings, null, new[] { "\"~/no-such-folder-for-vwe-tests\"" }, Array.Empty<string>());
+        string? problem = SettingsDialog.Apply(settings, null, ["\"~/no-such-folder-for-vwe-tests\""], []);
         Assert.Contains(Path.Combine(home, "no-such-folder-for-vwe-tests"), problem);
     }
 }

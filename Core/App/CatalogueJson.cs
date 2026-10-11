@@ -16,7 +16,7 @@ internal static class CatalogueJson
     // A dictionary that keeps its keys in the order they came (setting a key that is there keeps its place).
     public sealed class Dict : IEnumerable<KeyValuePair<string, object?>>
     {
-        private readonly List<string> _keys = new();
+        private readonly List<string> _keys = [];
         private readonly Dictionary<string, object?> _values = new(StringComparer.Ordinal);
 
         public object? this[string key]
@@ -81,7 +81,7 @@ internal static class CatalogueJson
                 Quote(sb, s, style.Ascii);
                 break;
             case Dict dict:
-                var items = style.SortKeys ? dict.OrderBy(kv => kv.Key, StringComparer.Ordinal).ToList() : dict.ToList();
+                var items = style.SortKeys ? dict.OrderBy(kv => kv.Key, StringComparer.Ordinal).ToList() : [.. dict];
                 Container(sb, '{', '}', items.Count, style, level, (k, lv) =>
                 {
                     Quote(sb, items[k].Key, style.Ascii);
@@ -188,7 +188,7 @@ internal static class CatalogueJson
         digits = digits[lead..].TrimEnd('0');
         point -= lead;
         int exp = point - 1;
-        if (exp < -4 || exp >= 16)
+        if (exp is < (-4) or >= 16)
         {
             string mant = digits.Length > 1 ? digits[..1] + "." + digits[1..] : digits;
             return $"{sign}{mant}e{(exp < 0 ? '-' : '+')}{Math.Abs(exp):00}";
@@ -204,7 +204,7 @@ internal static class CatalogueJson
         return $"{sign}{digits[..point]}.{digits[point..]}";
     }
 
-    private static readonly double[] Pow10 = Enumerable.Range(0, 23).Select(i => Math.Pow(10, i)).ToArray();
+    private static readonly double[] Pow10 = [.. Enumerable.Range(0, 23).Select(i => Math.Pow(10, i))];
 
     // Python's round(x, n): the exact value rounded half to even at n decimals, read back as the nearest
     // double (the sign kept, -0.0 included).

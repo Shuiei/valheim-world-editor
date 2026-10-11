@@ -58,7 +58,7 @@ public class CoreSaveWriterTests
         // As in a world nobody has dug in yet.
         world.TerrainZones.Clear();
         var before = Files(w.Dir);
-        var r = WorldWriter.Save(world, new[] { Raised(x, z, 1, 100) });
+        var r = WorldWriter.Save(world, [Raised(x, z, 1, 100)]);
         Assert.False(r.Saved);
         Assert.Contains(r.Skipped, s => s.Contains("no terrain object to copy yet"));
         AssertSame(before, w.Dir);
@@ -74,7 +74,7 @@ public class CoreSaveWriterTests
         // Something already uses the next version's name (a crashed save, say): the writer goes past it.
         string taken = Path.Combine(w.Dir, ChunkFile.NameFor(file.Chunk, file.Size, file.Version + 1));
         File.WriteAllText(taken, "not ours");
-        var r = WorldWriter.Save(world, new[] { Raised(t.ZoneX, t.ZoneZ, 1.5f, 500) });
+        var r = WorldWriter.Save(world, [Raised(t.ZoneX, t.ZoneZ, 1.5f, 500)]);
         Assert.True(r.Saved, r.Message);
         Assert.True(File.Exists(Path.Combine(w.Dir, ChunkFile.NameFor(file.Chunk, file.Size, file.Version + 2))));
         Assert.Equal("not ours", File.ReadAllText(taken));
@@ -90,7 +90,7 @@ public class CoreSaveWriterTests
         var t = world.TerrainZones[0];
         t.Source = t.Source! with { Flags = (ushort)(t.Source.Flags & ~0x2000) };
         var before = Files(w.Dir);
-        var ex = Assert.Throws<InvalidOperationException>(() => WorldWriter.Save(world, new[] { Raised(x, z, 1, 100) }));
+        var ex = Assert.Throws<InvalidOperationException>(() => WorldWriter.Save(world, [Raised(x, z, 1, 100)]));
         Assert.Contains("Unexpected terrain object layout", ex.Message);
         AssertSame(before, w.Dir);
     }
@@ -106,7 +106,7 @@ public class CoreSaveWriterTests
         e.Modified[500] = true;
         e.Level[500] = float.NaN;
         var before = Files(w.Dir);
-        var r = WorldWriter.Save(world, new[] { e });
+        var r = WorldWriter.Save(world, [e]);
         Assert.False(r.Saved);
         Assert.StartsWith("The saved world did not read back correctly (zone", r.Message);
         Assert.Contains("differs at point 500", r.Message);
@@ -124,7 +124,7 @@ public class CoreSaveWriterTests
         e.PaintModified[600] = true;
         e.Paint[600 * 4] = float.NaN;
         var before = Files(w.Dir);
-        var r = WorldWriter.Save(world, new[] { e });
+        var r = WorldWriter.Save(world, [e]);
         Assert.False(r.Saved);
         Assert.Contains("paint differs at point 600", r.Message);
         AssertSame(before, w.Dir);

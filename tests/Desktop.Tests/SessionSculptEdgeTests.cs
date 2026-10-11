@@ -11,7 +11,7 @@ namespace TerrainEditor.Desktop.Tests;
 [Collection("World files")]
 public class SessionSculptEdgeTests
 {
-    private static readonly Func<Formula.Env, double> Two = Formula.Compile("2", new string[0]);
+    private static readonly Func<Formula.Env, double> Two = Formula.Compile("2", []);
 
     [Fact]
     public void TheHistoryKeepsTheLast200Changes()
@@ -29,7 +29,7 @@ public class SessionSculptEdgeTests
         {
             t.Shape(20, 20, Two, 1, 0, "x");
         }
-        t.Delete(new[] { 0 });
+        t.Delete([0]);
         Assert.Equal(EditSession.HistoryLength, t.UndoList.Count);
         Assert.Equal("Deleted 1", t.UndoLabel);
     }
@@ -47,7 +47,7 @@ public class SessionSculptEdgeTests
         Assert.True(s.Stroking);
         Assert.False(s.Undo());
         Assert.Equal("", s.RemoveChange(s.UndoList[0]));
-        Assert.Throws<InvalidOperationException>(() => s.Save());
+        Assert.Throws<InvalidOperationException>(s.Save);
         s.EndStroke();
         Assert.True(s.Undo());
     }
@@ -101,7 +101,7 @@ public class SessionSculptEdgeTests
     {
         var s = EditTests.Flat(2);
         var reset = new ZoneReset(0, 0, true, false);
-        s.Commit("Area: Reset", null, Array.Empty<int>(), Array.Empty<(NewObject, bool)>(), new[] { (reset, false, true) });
+        s.Commit("Area: Reset", null, [], [], [(reset, false, true)]);
         Assert.Equal(1, s.Pending.Resets);
         Assert.StartsWith("Removed", s.RemoveChange(s.UndoList[0]));
         Assert.Equal(0, s.Pending.Resets);
@@ -168,8 +168,8 @@ public class SessionSculptEdgeTests
     public void RainErodesTheGround()
     {
         var s = EditTests.Flat(2);
-        s.Shape(64, 64, Formula.Compile("8 * (1 - d / r)", new[] { "x", "z", "d", "r", "h" }), 12, 0, "cone");
-        var before = (float[])s.Scene.Heights.Clone();
+        s.Shape(64, 64, Formula.Compile("8 * (1 - d / r)", ["x", "z", "d", "r", "h"]), 12, 0, "cone");
+        float[] before = (float[])s.Scene.Heights.Clone();
         s.Brush.ErodeWater = true;
         s.Brush.Radius = 12;
         s.Brush.Strength = 1;

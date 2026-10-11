@@ -98,14 +98,14 @@ public static class Tunnel
         {
             methods.Add(new PasswordAuthenticationMethod(user, r.Password));
             var kbd = new KeyboardInteractiveAuthenticationMethod(user);
-            kbd.AuthenticationPrompt += (_, e) => { foreach (var p in e.Prompts) p.Response = r.Password; };
+            kbd.AuthenticationPrompt += (_, e) => { foreach (var p in e.Prompts) { p.Response = r.Password; } };
             methods.Add(kbd);
         }
         if (methods.Count == 0)
         {
             return Fail("Enter the password, or choose your SSH key file.");
         }
-        var info = new Renci.SshNet.ConnectionInfo(host, port, user, methods.ToArray()) { Timeout = TimeSpan.FromSeconds(12) };
+        var info = new ConnectionInfo(host, port, user, [.. methods]) { Timeout = TimeSpan.FromSeconds(12) };
         var client = new SshClient(info) { KeepAliveInterval = TimeSpan.FromSeconds(30) };
         string id = $"{user}@{host}:{port}";
         // The server's key as known for this address and port, whatever the account (logging in as
@@ -129,7 +129,7 @@ public static class Tunnel
         };
         try
         {
-            await Task.Run(() => client.Connect());
+            await Task.Run(client.Connect);
         }
         catch (Exception ex)
         {
@@ -188,7 +188,7 @@ public static class Tunnel
         };
         return new Result(local, token, null, seen, remember);
 
-        Result Fail(string message) => new(0, "", message, null);
+        static Result Fail(string message) => new(0, "", message, null);
     }
 
     // Why the plugin does not answer, from what the server's Valheim folder holds (while connected).

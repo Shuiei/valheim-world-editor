@@ -19,7 +19,7 @@ public static class GameLocations
 {
     // The lists' wake order, by (locations, vegetations), as the game's log showed it for Valheim 0.221:
     // used when no log of the game is found (ListOrder reads it from the player's own log first).
-    private static readonly (int Locations, int Vegetation)[] BuiltInOrder = { (3, 0), (2, 0), (27, 25), (4, 0), (25, 33), (25, 35) };
+    private static readonly (int Locations, int Vegetation)[] BuiltInOrder = [(3, 0), (2, 0), (27, 25), (4, 0), (25, 33), (25, 35)];
 
     // The lists' order from the game's own log (Player.log, or Player-prev.log, beside its saves: the
     // newest that has it), else the built-in one; and where it came from (for the log).
@@ -77,13 +77,13 @@ public static class GameLocations
                 }
                 continue;
             }
-            run ??= new();
+            run ??= [];
             var list = (int.Parse(m.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture), int.Parse(m.Groups[2].Value, System.Globalization.CultureInfo.InvariantCulture));
             // A list met again: the lines of another run, right after.
             if (run.Contains(list))
             {
                 last = run;
-                run = new();
+                run = [];
             }
             if (list.Item1 > 0)
             {
@@ -96,7 +96,7 @@ public static class GameLocations
 
     public static string CacheFile => Path.Combine(AppSettings.UserDataDir, "game-locations.json");
 
-    private static readonly object Lock = new();
+    private static readonly Lock Lock = new();
     private static (GameBundles Bundles, Task Task)? _using;
 
     // The game's rules in use (SeedLocations.Use) when they can be read, else none: read once for a
@@ -169,7 +169,7 @@ public static class GameLocations
     // them): where ZoneSystem and the LocationLists are (also the vegetation rules, GameCatalogues).
     internal static List<string> MainSceneBundles(GameBundles bundles) => MainSceneBundles(bundles, Manifest.Read(bundles.Folder));
 
-    private static List<string> MainSceneBundles(GameBundles bundles, Manifest manifest) => manifest.SceneBundles("main").Where(bundles.HasBundle).ToList();
+    private static List<string> MainSceneBundles(GameBundles bundles, Manifest manifest) => [.. manifest.SceneBundles("main").Where(bundles.HasBundle)];
 
     // The cached rules when they are for this game and editor and can be read; else null (read again).
     private static SeedLocations.RuleSet? Cached(string file, string stamp)
@@ -234,7 +234,7 @@ public static class GameLocations
         foreach (var a in Items(alts))
         {
             string name = a["m_name"].AsString;
-            rules.altBiomes.Add(new SeedLocations.AltBiomeRule { name = name, blockLocationNames = Items(a["m_blockLocationNames"]).Select(s => s.AsString).ToList() });
+            rules.altBiomes.Add(new SeedLocations.AltBiomeRule { name = name, blockLocationNames = [.. Items(a["m_blockLocationNames"]).Select(s => s.AsString)] });
             rules.locations.AddRange(Items(a["m_addLocations"]).Select(l => Location(l, manifest, name)));
         }
         return rules;
@@ -300,9 +300,9 @@ public static class GameLocations
     // bundle's dependencies.
     private sealed class Manifest
     {
-        public Dictionary<string, string> Names { get; } = new();
-        private readonly Dictionary<string, List<string>> _needs = new();
-        private readonly Dictionary<string, string> _sceneBundle = new();
+        public Dictionary<string, string> Names { get; } = [];
+        private readonly Dictionary<string, List<string>> _needs = [];
+        private readonly Dictionary<string, string> _sceneBundle = [];
 
         public static Manifest Read(string bundlesDir)
         {
@@ -314,7 +314,7 @@ public static class GameLocations
                 if (raw.StartsWith("- bundle: ", StringComparison.Ordinal))
                 {
                     depsOf = line[10..];
-                    m._needs[depsOf] = new();
+                    m._needs[depsOf] = [];
                 }
                 else if (depsOf != null && raw.StartsWith("  - ", StringComparison.Ordinal))
                 {
@@ -345,7 +345,7 @@ public static class GameLocations
 
         // A scene's bundle, then the bundles it needs.
         public List<string> SceneBundles(string scene) => _sceneBundle.TryGetValue(scene, out string? b)
-            ? new[] { b }.Concat(_needs.GetValueOrDefault(b) ?? new()).ToList()
-            : new();
+            ? [b, .. _needs.GetValueOrDefault(b) ?? []]
+            : [];
     }
 }

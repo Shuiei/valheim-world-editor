@@ -13,7 +13,7 @@ public class ScriptTests
     {
         var (image, pdb, errors) = ScriptHost.Compile(code);
         Assert.True(image != null, string.Join("\n", errors));
-        return ScriptHost.Run(image!, pdb, ScriptHost.Take(s, p => TerrainEditor.Terrain.PrefabCatalog.NameOf(p)), cancel ?? TestContext.Current.CancellationToken);
+        return ScriptHost.Run(image!, pdb, ScriptHost.Take(s, Terrain.PrefabCatalog.NameOf), cancel ?? TestContext.Current.CancellationToken);
     }
 
     private static float At(EditSession s, float x, float z) => s.Ground.HeightOf((int)(z + 32) * s.Ground.W + (int)(x + 32));
@@ -73,7 +73,7 @@ public class ScriptTests
     {
         var s = EditTests.Flat(2);
         int g0 = s.Generation;
-        s.Shape(40, 40, Formula.Compile("2", new string[0]), 4, 0, "x");
+        s.Shape(40, 40, Formula.Compile("2", []), 4, 0, "x");
         int g1 = s.Generation;
         Assert.NotEqual(g0, g1);
         s.Undo();

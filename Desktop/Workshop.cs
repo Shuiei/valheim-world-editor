@@ -22,12 +22,22 @@ public static class Workshop
         var scene = new WorldScene
         {
             World = new WorldSave { Directory = "", SaveNumber = 0 },
-            Name = title, X0 = -(Zones / 2), Z0 = -(Zones / 2), Size = Zones, W = w, H = w,
-            Heights = Enumerable.Repeat(Ground, w * w).ToArray(),
+            Name = title,
+            X0 = -(Zones / 2),
+            Z0 = -(Zones / 2),
+            Size = Zones,
+            W = w,
+            H = w,
+            Heights = [.. Enumerable.Repeat(Ground, w * w)],
             // Meadows everywhere (biome 1: the terrain shader's plain grass).
-            Biomes = Enumerable.Repeat((int)ValheimGen.Heightmap.Biome.Meadows, w * w).ToArray(),
-            Things = new(), BiomeColor = new byte[w * w * 4], Mask = new byte[w * w * 4], OceanDepth = new float[w * w], Limit = new float[w * w],
-            Cx = 0, Cz = 0,
+            Biomes = [.. Enumerable.Repeat((int)ValheimGen.Heightmap.Biome.Meadows, w * w)],
+            Things = [],
+            BiomeColor = new byte[w * w * 4],
+            Mask = new byte[w * w * 4],
+            OceanDepth = new float[w * w],
+            Limit = new float[w * w],
+            Cx = 0,
+            Cz = 0,
             LoadInfo = "The Workshop: a blank plot to build on. Save blueprint keeps the building pieces as a Homestead blueprint.",
         };
         var ground = new Ground(w, w, scene.X0, scene.Z0, Zones);
@@ -72,7 +82,7 @@ public static class Workshop
         }
         var adds = known.Select(p => (new NewObject(0, StableHash.Of(p.Name), anchor + p.Position + shift, p.Euler, MathF.Abs(p.Scale - 1) < 1e-3f ? 0 : p.Scale, Data: p.Data),
             PieceCatalog.Get(StableHash.Of(p.Name))?.Tool != null)).ToList();
-        s.Commit($"{(at == null ? "Opened" : "Added")} {parsed.Name}", null, Array.Empty<int>(), adds);
+        s.Commit($"{(at == null ? "Opened" : "Added")} {parsed.Name}", null, [], adds);
         // The ground it stood on in game, for the support check: Homestead's terrain contacts when the file
         // has them, else the bottom of its lowest piece at each spot (the terrain reached each post).
         var contacts = text.Split('\n').Select(l => l.Trim()).Where(l => l.StartsWith("#HomesteadTerrainContact:", StringComparison.OrdinalIgnoreCase))
@@ -144,8 +154,15 @@ public static class Workshop
             {
                 var o = new JsonObject
                 {
-                    ["name"] = PrefabCatalog.NameOf(t.Prefab), ["dx"] = R(t.Position.X - anchor.X), ["dz"] = R(t.Position.Z - anchor.Z), ["dy"] = R(t.Position.Y - anchor.Y),
-                    ["rx"] = R(t.Rotation.X), ["ry"] = R(t.Rotation.Y), ["rz"] = R(t.Rotation.Z), ["scale"] = R(t.Scale), ["sourceId"] = null,
+                    ["name"] = PrefabCatalog.NameOf(t.Prefab),
+                    ["dx"] = R(t.Position.X - anchor.X),
+                    ["dz"] = R(t.Position.Z - anchor.Z),
+                    ["dy"] = R(t.Position.Y - anchor.Y),
+                    ["rx"] = R(t.Rotation.X),
+                    ["ry"] = R(t.Rotation.Y),
+                    ["rz"] = R(t.Rotation.Z),
+                    ["scale"] = R(t.Scale),
+                    ["sourceId"] = null,
                 };
                 var data = DataOf(s, t);
                 if (data.Count > 0)
@@ -158,7 +175,11 @@ public static class Workshop
         float half = objects.Count == 0 ? 1 : objects.OfType<JsonObject>().Max(o => MathF.Max(MathF.Abs((float)o["dx"]!), MathF.Abs((float)o["dz"]!))) + 2;
         return new JsonObject
         {
-            ["w"] = 1, ["h"] = 1, ["rel"] = new JsonArray(-32768), ["wt"] = new JsonArray(0), ["pnt"] = new JsonArray(-255, -255, -255, -255),
+            ["w"] = 1,
+            ["h"] = 1,
+            ["rel"] = new JsonArray(-32768),
+            ["wt"] = new JsonArray(0),
+            ["pnt"] = new JsonArray(-255, -255, -255, -255),
             ["objects"] = objects,
             ["poly"] = new JsonArray(P(-half, -half), P(half, -half), P(half, half), P(-half, half)),
             ["name"] = name,

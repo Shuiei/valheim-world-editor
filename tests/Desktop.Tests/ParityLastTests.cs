@@ -55,13 +55,13 @@ public class ParityLastTests
         Dispatcher.UIThread.RunJobs();
     }
 
-    private static List<CheckBox> Ticks(Run r) => r.P.List.GetLogicalDescendants().OfType<CheckBox>().ToList();
+    private static List<CheckBox> Ticks(Run r) => [.. r.P.List.GetLogicalDescendants().OfType<CheckBox>()];
 
     private static void Choose(Run r, params string[] names)
     {
         r.T.Chosen.Clear();
         r.T.Chosen.AddRange(names);
-        typeof(PlacePanel).GetMethod("Chosen", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.Invoke(r.P, new object[] { true });
+        typeof(PlacePanel).GetMethod("Chosen", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.Invoke(r.P, [true]);
         Dispatcher.UIThread.RunJobs();
     }
 
@@ -126,7 +126,7 @@ public class ParityLastTests
         Assert.Equal(8, deep.Widest().Width, 3);
         // No model known: nothing.
         var none = new PlaceTool();
-        Assert.Equal((0f, (string?)null), none.Widest());
+        Assert.Equal((0f, null), none.Widest());
         Assert.Null(none.FitHint());
         Assert.False(none.Fit());
     }
@@ -262,7 +262,7 @@ public class ParityLastTests
         // The chips show what is ticked.
         var chips = r.P.Favourites.Children.OfType<ToggleButton>().ToList();
         Assert.Equal(kinds, chips.Select(c => (string)c.Content!));
-        Assert.Equal(new[] { false, false, true }, chips.Select(c => c.IsChecked == true));
+        Assert.Equal([false, false, true], chips.Select(c => c.IsChecked == true));
     }
 
     [AvaloniaFact]
@@ -294,8 +294,8 @@ public class ParityLastTests
     {
         using var r = new Run();
         var kinds = r.P.Creatable().Select(c => c.Name).Take(4).ToList();
-        r.P.Memory.Favourites.AddRange(new[] { kinds[0], kinds[1], "NotAThing_xyz" });
-        r.P.Memory.Recent.AddRange(new[] { kinds[2], kinds[3] });
+        r.P.Memory.Favourites.AddRange([kinds[0], kinds[1], "NotAThing_xyz"]);
+        r.P.Memory.Recent.AddRange([kinds[2], kinds[3]]);
         Choose(r, kinds[3]);
         Click(r.P.FavAllButton);
         // Only kinds this world can place.
@@ -392,7 +392,7 @@ public class ParityLastTests
         using var r = new Run();
         var s = r.S;
         Assert.Empty(r.W.View.NewMarkers(s.Scene));
-        var added = s.Commit("Placed", null, Array.Empty<int>(), new[] { (Tree(s, "Beech1", 20, 20), false), (Tree(s, "Pickable_Stone", 30, 30), false) });
+        var added = s.Commit("Placed", null, [], [(Tree(s, "Beech1", 20, 20), false), (Tree(s, "Pickable_Stone", 30, 30), false)]);
         Dispatcher.UIThread.RunJobs();
         var marks = r.W.View.NewMarkers(s.Scene);
         Assert.Equal(2, marks.Count);
@@ -404,7 +404,7 @@ public class ParityLastTests
         Assert.Single(r.W.View.NewMarkers(s.Scene));
         r.W.KindBoxes[ObjectKind.Pickables].IsChecked = true;
         // Deleted: no marker.
-        s.Delete(new[] { added[1] });
+        s.Delete([added[1]]);
         Assert.Single(r.W.View.NewMarkers(s.Scene));
         // Objects that were in the world already never have one.
         Assert.DoesNotContain(s.Scene.Things.Where(x => x.Id >= 0), x => marks.Contains(new Vector3(x.Position.X - s.Scene.Cx, x.Position.Y + 0.4f, -(x.Position.Z - s.Scene.Cz))));
@@ -421,13 +421,13 @@ public class ParityLastTests
         var s = scene.Session!;
         w.View.Show(scene, null);
         w.Edit(s);
-        s.Commit("Placed", null, Array.Empty<int>(), new[] { (Tree(s, "Beech1", 20, 20), false) });
+        s.Commit("Placed", null, [], [(Tree(s, "Beech1", 20, 20), false)]);
         Assert.Single(w.View.NewMarkers(scene));
         var o = await s.ApplyLive();
         Assert.True(o.Done, o.Message);
         Assert.Empty(w.View.NewMarkers(scene));
         // Another one placed afterwards: marked until it is applied too.
-        s.Commit("Placed", null, Array.Empty<int>(), new[] { (Tree(s, "Beech1", 25, 25), false) });
+        s.Commit("Placed", null, [], [(Tree(s, "Beech1", 25, 25), false)]);
         Assert.Single(w.View.NewMarkers(scene));
     }
 
@@ -437,7 +437,7 @@ public class ParityLastTests
         using var game = new FakeGame();
         var world = await WorldSession.OpenLive(new LiveBridge(game.Url, game.Token), FakeGame.Label());
         var s = WorldScene.Load(world, 0, 0, 1).Session!;
-        var i = s.Commit("Placed", null, Array.Empty<int>(), new[] { (Tree(s, "Beech1", 20, 20), false) })[0];
+        int i = s.Commit("Placed", null, [], [(Tree(s, "Beech1", 20, 20), false)])[0];
         int id = s.Scene.Things[i].Id;
         Assert.False(world.LiveSync.IsLive(id));
         await s.ApplyLive();
@@ -456,7 +456,7 @@ public class ParityLastTests
         box.IsChecked = false;
         Assert.False(r.W.View.IsShown(ObjectKind.Pickables));
         r.W.MessageText.Text = "Placed 1 object.";
-        s.Commit("Placed", null, Array.Empty<int>(), new[] { (Tree(s, "Pickable_Stone", 20, 20), false) });
+        s.Commit("Placed", null, [], [(Tree(s, "Pickable_Stone", 20, 20), false)]);
         Dispatcher.UIThread.RunJobs();
         Assert.True(box.IsChecked);
         Assert.True(r.W.View.IsShown(ObjectKind.Pickables));
@@ -469,14 +469,14 @@ public class ParityLastTests
         using var r = new Run();
         var s = r.S;
         r.W.MessageText.Text = "Placed.";
-        s.Commit("Placed", null, Array.Empty<int>(), new[] { (Tree(s, "Beech1", 20, 20), false) });
+        s.Commit("Placed", null, [], [(Tree(s, "Beech1", 20, 20), false)]);
         Dispatcher.UIThread.RunJobs();
         Assert.Equal("Placed.", r.W.MessageText.Text);
         // Two kinds off: both named, in one sentence; no message of the tool before it: just this.
         r.W.KindBoxes[ObjectKind.Pickables].IsChecked = false;
         r.W.KindBoxes[ObjectKind.Rocks].IsChecked = false;
         r.W.MessageText.Text = "";
-        s.Commit("Pasted", null, Array.Empty<int>(), new[] { (Tree(s, "Pickable_Stone", 20, 20), false), (Tree(s, "Rock_3", 22, 22), false), (Tree(s, "Rock_3", 24, 24), false) });
+        s.Commit("Pasted", null, [], [(Tree(s, "Pickable_Stone", 20, 20), false), (Tree(s, "Rock_3", 22, 22), false), (Tree(s, "Rock_3", 24, 24), false)]);
         Dispatcher.UIThread.RunJobs();
         Assert.True(r.W.KindBoxes[ObjectKind.Rocks].IsChecked);
         Assert.True(r.W.KindBoxes[ObjectKind.Pickables].IsChecked);

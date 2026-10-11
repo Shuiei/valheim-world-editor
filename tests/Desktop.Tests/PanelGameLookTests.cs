@@ -179,13 +179,13 @@ public class PanelGameLookTests
         try
         {
             var settings = new AppSettings();
-            Assert.Null(SettingsDialog.Apply(settings, game, Array.Empty<string>(), Array.Empty<string>()));
+            Assert.Null(SettingsDialog.Apply(settings, game, [], []));
             Assert.Equal(new[] { Path.GetFullPath(game) }, checkedFor);
             // The same folder again: nothing to check.
-            Assert.Null(SettingsDialog.Apply(settings, game, Array.Empty<string>(), Array.Empty<string>()));
+            Assert.Null(SettingsDialog.Apply(settings, game, [], []));
             Assert.Single(checkedFor);
             // Back to automatic: checked again.
-            Assert.Null(SettingsDialog.Apply(settings, " ", Array.Empty<string>(), Array.Empty<string>()));
+            Assert.Null(SettingsDialog.Apply(settings, " ", [], []));
             Assert.Equal(2, checkedFor.Count);
             Assert.Null(checkedFor[1]);
         }
@@ -245,7 +245,7 @@ public class PanelGameLookTests
             try
             {
                 var settings = new AppSettings();
-                Assert.Null(SettingsDialog.Apply(settings, Path.Combine(root, "steamapps"), Array.Empty<string>(), Array.Empty<string>()));
+                Assert.Null(SettingsDialog.Apply(settings, Path.Combine(root, "steamapps"), [], []));
                 Assert.Equal(Path.GetFullPath(game), settings.ValheimPath);
             }
             finally

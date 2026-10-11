@@ -49,14 +49,14 @@ public class PanelPlaceTests
 
     private static string Texts(Control c) => string.Join(" | ", c.GetLogicalDescendants().OfType<TextBlock>().Select(t => t.Text));
 
-    private static List<CheckBox> Ticks(Run r) => r.P.List.GetLogicalDescendants().OfType<CheckBox>().ToList();
+    private static List<CheckBox> Ticks(Run r) => [.. r.P.List.GetLogicalDescendants().OfType<CheckBox>()];
 
     private static void Choose(Run r, params string[] names)
     {
         r.T.Chosen.Clear();
         r.T.Chosen.AddRange(names);
         // What ticking a kind does in the panel.
-        typeof(PlacePanel).GetMethod("Chosen", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.Invoke(r.P, new object[] { true });
+        typeof(PlacePanel).GetMethod("Chosen", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.Invoke(r.P, [true]);
         Dispatcher.UIThread.RunJobs();
     }
 
@@ -65,7 +65,7 @@ public class PanelPlaceTests
     {
         using var r = new Run();
         var memory = new PlaceMemory { Chosen = { "Oak1", "Beech1" }, Weights = { ["Oak1"] = 7 } };
-        _ = new PlacePanel(r.W.PlaceInput, () => r.Scene, p => PrefabCatalog.DisplayName(p), memory);
+        _ = new PlacePanel(r.W.PlaceInput, () => r.Scene, PrefabCatalog.DisplayName, memory);
         Assert.Equal(new[] { "Oak1", "Beech1" }, r.T.Chosen);
         Assert.Equal(7, r.T.WeightOf("Oak1"));
     }
@@ -118,7 +118,7 @@ public class PanelPlaceTests
         Choose(r, "Beech1");
         // Placing notes the kinds as recent (the input's Placed event); the chip ticks the kind.
         var raise = typeof(PlaceInput).GetField("Placed", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(r.W.PlaceInput) as Action<IReadOnlyList<string>>;
-        raise!(new[] { "Oak1" });
+        raise!(["Oak1"]);
         var chip = r.P.Recent.Children.OfType<ToggleButton>().Single(c => (string)c.Content! == "Oak1");
         chip.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         Dispatcher.UIThread.RunJobs();

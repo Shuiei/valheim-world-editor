@@ -22,12 +22,12 @@ public sealed class ModelStoreTests : IDisposable
         File.WriteAllText(Path.Combine(_dir, "pieces", "Thing.json"), "{\"parts\": [{\"m\": [1,0,0,0, 0,1,0,0, 0,0,1,0, 5,6,7,1], \"mesh\": \"m1\", \"sub\": 0, \"mat\": \"mat\"}], \"rootScale\": [2, 2, 2]}");
         File.WriteAllText(Path.Combine(_dir, "pieces", "Empty.json"), "{\"parts\": []}");
         // Three vertices of 8 floats (position, normal, uv), then one triangle.
-        var v = new float[] { 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 2, 3, 0, 1, 0, 0, 1 };
-        var bytes = new byte[v.Length * 4 + 12];
+        float[] v = [0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 2, 3, 0, 1, 0, 0, 1];
+        byte[] bytes = new byte[v.Length * 4 + 12];
         Buffer.BlockCopy(v, 0, bytes, 0, v.Length * 4);
         Buffer.BlockCopy(new uint[] { 0, 1, 2 }, 0, bytes, v.Length * 4, 12);
         File.WriteAllBytes(Path.Combine(_dir, "meshes", "m1.bin"), bytes);
-        File.WriteAllBytes(Path.Combine(_dir, "meshes", "empty.bin"), Array.Empty<byte>());
+        File.WriteAllBytes(Path.Combine(_dir, "meshes", "empty.bin"), []);
         using (var bmp = new SKBitmap(2, 2))
         {
             bmp.SetPixel(0, 0, SKColors.Red);

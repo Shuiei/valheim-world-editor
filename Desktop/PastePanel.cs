@@ -47,7 +47,7 @@ public sealed class PastePanel
         AlongBox.Tip("paste.along");
         GapBox.Tip("paste.gap");
         paste.Changed += Refresh;
-        Control Row(string label, Control input, string? unit = null)
+        static Control Row(string label, Control input, string? unit = null)
         {
             var g = new Grid { ColumnDefinitions = new ColumnDefinitions("70,*,Auto") };
             var l = new TextBlock { Text = label, FontSize = 12, VerticalAlignment = VerticalAlignment.Center };

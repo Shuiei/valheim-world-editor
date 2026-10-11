@@ -12,7 +12,7 @@ namespace WorldEditor.Tests;
 [Collection("World files")]
 public class CoreSaveCheckTests
 {
-    private static readonly HashSet<(int, int)> NoReset = new();
+    private static readonly HashSet<(int, int)> NoReset = [];
 
     private static (string Dir, WorldSave Before) Copy()
     {
@@ -37,7 +37,7 @@ public class CoreSaveCheckTests
         var (dir, before) = Copy();
         try
         {
-            Assert.Null(WorldWriter.Verify(dir, before, new List<ZoneEdit>(), 0, 0, NoReset, new List<ZoneReset>()));
+            Assert.Null(WorldWriter.Verify(dir, before, [], 0, 0, NoReset, []));
         }
         finally
         {
@@ -52,7 +52,7 @@ public class CoreSaveCheckTests
         try
         {
             var (x, z) = before.Zones!.Generated.First();
-            string? problem = WorldWriter.Verify(dir, before, new List<ZoneEdit>(), 0, 0, NoReset, new[] { new ZoneReset(x, z, false, true) });
+            string? problem = WorldWriter.Verify(dir, before, [], 0, 0, NoReset, [new ZoneReset(x, z, false, true)]);
             Assert.Equal($"zone {x}, {z} is still marked as generated", problem);
         }
         finally
@@ -70,7 +70,7 @@ public class CoreSaveCheckTests
         try
         {
             int expected = before.ObjectCount + created - removed;
-            Assert.Equal($"{before.ObjectCount} objects, expected {expected}", WorldWriter.Verify(dir, before, new List<ZoneEdit>(), created, removed, NoReset, new List<ZoneReset>()));
+            Assert.Equal($"{before.ObjectCount} objects, expected {expected}", WorldWriter.Verify(dir, before, [], created, removed, NoReset, []));
         }
         finally
         {
@@ -84,7 +84,7 @@ public class CoreSaveCheckTests
         var (dir, before) = Copy();
         try
         {
-            Assert.Equal("zone 99, -99 is missing", WorldWriter.Verify(dir, before, new[] { new ZoneEdit(99, -99) }, 0, 0, NoReset, new List<ZoneReset>()));
+            Assert.Equal("zone 99, -99 is missing", WorldWriter.Verify(dir, before, [new ZoneEdit(99, -99)], 0, 0, NoReset, []));
         }
         finally
         {
@@ -101,9 +101,9 @@ public class CoreSaveCheckTests
             // What the world held before differs from the file: as if the writer had touched that zone.
             var t = before.TerrainZones[0];
             t.LevelDelta[100] += 1;
-            Assert.Equal($"unchanged zone {t.ZoneX}, {t.ZoneZ} was altered", WorldWriter.Verify(dir, before, new List<ZoneEdit>(), 0, 0, NoReset, new List<ZoneReset>()));
+            Assert.Equal($"unchanged zone {t.ZoneX}, {t.ZoneZ} was altered", WorldWriter.Verify(dir, before, [], 0, 0, NoReset, []));
             // A zone whose ground was reset may change.
-            Assert.Null(WorldWriter.Verify(dir, before, new List<ZoneEdit>(), 0, 0, new HashSet<(int, int)> { (t.ZoneX, t.ZoneZ) }, new List<ZoneReset>()));
+            Assert.Null(WorldWriter.Verify(dir, before, [], 0, 0, [(t.ZoneX, t.ZoneZ)], []));
         }
         finally
         {
@@ -157,11 +157,11 @@ public class CoreSaveCheckTests
         var world = WorldSave.LoadLive(OldSnapshot(beech, new Vector3(10, 30, 20), new Vector3(0, 90, 0), 2f), "test");
         Assert.Equal(39, world.Chunks.Single().WorldVersion);
         Assert.Equal(1, world.ObjectCount);
-        var o = world.Objects.Single();
-        Assert.Equal(beech, o.Prefab);
-        Assert.Equal(new Vector3(10, 30, 20), o.Position);
-        Assert.Equal(new Vector3(0, 90, 0), o.Rotation);
-        Assert.Equal(new Vector3(2), o.Scale);
+        var (_, prefab, position, rotation, scale) = world.Objects.Single();
+        Assert.Equal(beech, prefab);
+        Assert.Equal(new Vector3(10, 30, 20), position);
+        Assert.Equal(new Vector3(0, 90, 0), rotation);
+        Assert.Equal(new Vector3(2), scale);
         Assert.Equal((77L, 5u), world.ObjectRefs.Single().LiveId);
     }
 

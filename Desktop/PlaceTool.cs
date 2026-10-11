@@ -27,8 +27,8 @@ public sealed class PlaceTool
     // ---- Settings.
     public Modes Mode { get; set; } = Modes.Brush;
     public LineShapes LineShape { get; set; } = LineShapes.Points;
-    public List<string> Chosen { get; } = new() { "Beech1" };
-    public Dictionary<string, int> Weights { get; } = new();
+    public List<string> Chosen { get; } = ["Beech1"];
+    public Dictionary<string, int> Weights { get; } = [];
     public float Density { get; set; } = 3;
     public float Spacing { get; set; } = 4;
     public float Clump { get; set; }
@@ -76,7 +76,7 @@ public sealed class PlaceTool
     {
         float w = 0;
         string? who = null;
-        foreach (var n in Chosen)
+        foreach (string n in Chosen)
         {
             if (ModelBox(n) is var (lo, hi) && MathF.Max(hi.X - lo.X, hi.Z - lo.Z) is float x && x > w)
             {
@@ -131,7 +131,7 @@ public sealed class PlaceTool
         return true;
     }
 
-    private Random _rand = new();
+    private readonly Random _rand = new();
     private float _clumpSeed = Random.Shared.NextSingle() * 1000;
     public const int MaxShape = 2000;
 
@@ -141,7 +141,7 @@ public sealed class PlaceTool
     public string PickName(IReadOnlyList<string> names, float t)
     {
         float total = names.Sum(WeightOf), x = t * total;
-        foreach (var n in names)
+        foreach (string n in names)
         {
             x -= WeightOf(n);
             if (x < 0)
@@ -152,7 +152,7 @@ public sealed class PlaceTool
         return names[^1];
     }
 
-    public static float[][] SnapsOf(string name) => PieceCatalog.Get(StableHash.Of(name))?.Snaps ?? Array.Empty<float[]>();
+    public static float[][] SnapsOf(string name) => PieceCatalog.Get(StableHash.Of(name))?.Snaps ?? [];
     public static bool IsPiece(string name) => SnapsOf(name).Length >= 2;
     public bool PiecesChosen => Chosen.Any(IsPiece);
 
@@ -177,19 +177,19 @@ public sealed class PlaceTool
     private static IReadOnlyDictionary<string, (float Radius, bool Cultivated)> GrowInfo => PrefabCatalog.GrowRoom;
 
     public bool GrowMatters => Chosen.Any(n => GrowInfo.TryGetValue(n, out var g) && g.Radius > 0);
-    public List<string> NeedCultivated => Chosen.Where(n => GrowInfo.TryGetValue(n, out var g) && g.Cultivated).ToList();
+    public List<string> NeedCultivated => [.. Chosen.Where(n => GrowInfo.TryGetValue(n, out var g) && g.Cultivated)];
     private float GrowNeed(string name) => GrowMatters && GrowRoom && GrowInfo.TryGetValue(name, out var g) ? g.Radius : 0;
 
     // ---- Where objects can go.
     private sealed class Hash
     {
         public readonly float Cell;
-        private readonly Dictionary<(int, int), List<Vector2>> _map = new();
+        private readonly Dictionary<(int, int), List<Vector2>> _map = [];
         public Hash(float cell) => Cell = cell;
         public void Add(Vector2 p)
         {
             var k = ((int)MathF.Floor(p.X / Cell), (int)MathF.Floor(p.Y / Cell));
-            (_map.TryGetValue(k, out var l) ? l : _map[k] = new()).Add(p);
+            (_map.TryGetValue(k, out var l) ? l : _map[k] = []).Add(p);
         }
         public bool Free(Vector2 p, float spacing)
         {
@@ -301,7 +301,7 @@ public sealed class PlaceTool
     }
 
     // ---- Brush: the layout under the cursor (offsets), kept until the settings change or R.
-    private List<(Vector2 D, Draw Draw)> _pattern = new();
+    private List<(Vector2 D, Draw Draw)> _pattern = [];
     private string _patternKey = "";
     private string SettingsKey => $"{Brush.Radius}|{Density}|{Spacing}|{OneAtATime}|{string.Join(",", Chosen)}";
 
@@ -318,7 +318,7 @@ public sealed class PlaceTool
     {
         float r = Brush.Radius;
         int n = Math.Min(400, (int)MathF.Round(Density / 100 * MathF.PI * r * r));
-        _pattern = new();
+        _pattern = [];
         if (OneAtATime)
         {
             _pattern.Add((Vector2.Zero, NewDraw()));
@@ -341,12 +341,12 @@ public sealed class PlaceTool
     }
 
     // ---- Line, grid and zone shapes.
-    public List<Vector2> Points { get; } = new();
+    public List<Vector2> Points { get; } = [];
     public Vector2? GridA { get; set; }
     public Vector2? GridB { get; set; }
     public Vector2? FigA { get; set; }
     public Vector2? FigB { get; set; }
-    private readonly List<Draw> _draws = new();
+    private readonly List<Draw> _draws = [];
     private Draw DrawAt(int i)
     {
         while (_draws.Count <= i)
@@ -383,7 +383,7 @@ public sealed class PlaceTool
 
     public bool TurnShape(float degrees)
     {
-        var pts = Mode == Modes.Zone ? Points.ToList() : GridA is { } a && GridB is { } b ? new List<Vector2> { a, b } : new();
+        var pts = Mode == Modes.Zone ? [.. Points] : GridA is { } a && GridB is { } b ? new List<Vector2> { a, b } : [];
         if (pts.Count == 0)
         {
             return false;
@@ -425,11 +425,11 @@ public sealed class PlaceTool
         List<Vector2> p;
         lock (Points)
         {
-            p = Points.ToList();
+            p = [.. Points];
         }
         if (p.Count < 3 || !Curve)
         {
-            return p.Select((q, i) => (q, Math.Min(i, Math.Max(0, p.Count - 2)))).ToList();
+            return [.. p.Select((q, i) => (q, Math.Min(i, Math.Max(0, p.Count - 2))))];
         }
         var outp = new List<(Vector2, int)>();
         for (int i = 0; i < p.Count - 1; i++)
@@ -464,12 +464,12 @@ public sealed class PlaceTool
 
     public Ends? EndsOf(string name)
     {
-        var sp = SnapsOf(name);
-        if (sp.Length >= 2 && EndsFrom(sp.Select(p => p[0]).ToArray(), sp.Select(p => p[1]).ToArray(), sp.Select(p => p[2]).ToArray()) is { } e)
+        float[][] sp = SnapsOf(name);
+        if (sp.Length >= 2 && EndsFrom([.. sp.Select(p => p[0])], [.. sp.Select(p => p[1])], [.. sp.Select(p => p[2])]) is { } e)
         {
             return e;
         }
-        return ModelBox(name) is var (lo, hi) ? EndsFrom(new[] { lo.X, hi.X }, new[] { lo.Y, hi.Y }, new[] { lo.Z, hi.Z }) : null;
+        return ModelBox(name) is var (lo, hi) ? EndsFrom([lo.X, hi.X], [lo.Y, hi.Y], [lo.Z, hi.Z]) : null;
     }
 
     // End to end: the figure's size snaps so that whole pieces close it.
@@ -487,8 +487,8 @@ public sealed class PlaceTool
         }
         float r = Vector2.Distance(a, b);
         int n = Math.Max(3, (int)MathF.Round(MathF.Tau * r / e.Len));
-        float R = e.Len / (2 * MathF.Sin(MathF.PI / n)), t = MathF.Atan2(b.Y - a.Y, b.X - a.X);
-        return new Vector2(a.X + MathF.Cos(t) * R, a.Y + MathF.Sin(t) * R);
+        float radius = e.Len / (2 * MathF.Sin(MathF.PI / n)), t = MathF.Atan2(b.Y - a.Y, b.X - a.X);
+        return new Vector2(a.X + MathF.Cos(t) * radius, a.Y + MathF.Sin(t) * radius);
     }
 
     // The line as runs of points: one run, or a rectangle's four sides each on their own when placing
@@ -506,28 +506,28 @@ public sealed class PlaceTool
         }
         if (FigA is not { } a || FigB is not { } fb)
         {
-            return new();
+            return [];
         }
         var b = SnapFigure(a, fb);
         if (LineShape == LineShapes.Rect)
         {
             if (MathF.Abs(b.X - a.X) < 0.5f || MathF.Abs(b.Y - a.Y) < 0.5f)
             {
-                return new();
+                return [];
             }
             var c = new List<Vector2> { a, new(b.X, a.Y), b, new(a.X, b.Y) };
-            return EndToEnd ? Enumerable.Range(0, 4).Select(i => new List<Vector2> { c[i], c[(i + 1) % 4] }).ToList() : new() { c.Append(c[0]).ToList() };
+            return EndToEnd ? [.. Enumerable.Range(0, 4).Select(i => new List<Vector2> { c[i], c[(i + 1) % 4] })] : new() { c.Append(c[0]).ToList() };
         }
-        float R = Vector2.Distance(a, b);
-        if (R < 0.5f)
+        float r = Vector2.Distance(a, b);
+        if (r < 0.5f)
         {
-            return new();
+            return [];
         }
         // End to end: one point per piece, so the pieces meet at the corners of a regular polygon.
         var e = EndToEnd && Chosen.Count > 0 ? EndsOf(Chosen[0]) : null;
-        int n = e != null ? Math.Max(3, (int)MathF.Round(MathF.Tau * R / e.Len)) : Math.Max(16, (int)MathF.Ceiling(MathF.Tau * R / 1.5f));
+        int n = e != null ? Math.Max(3, (int)MathF.Round(MathF.Tau * r / e.Len)) : Math.Max(16, (int)MathF.Ceiling(MathF.Tau * r / 1.5f));
         float t0 = MathF.Atan2(b.Y - a.Y, b.X - a.X);
-        return new() { Enumerable.Range(0, n + 1).Select(i => a + new Vector2(MathF.Cos(t0 + i / (float)n * MathF.Tau), MathF.Sin(t0 + i / (float)n * MathF.Tau)) * R).ToList() };
+        return [[.. Enumerable.Range(0, n + 1).Select(i => a + new Vector2(MathF.Cos(t0 + i / (float)n * MathF.Tau), MathF.Sin(t0 + i / (float)n * MathF.Tau)) * r)]];
     }
 
     // How much of the line is left at the end once no whole piece fits (end to end).
@@ -540,15 +540,15 @@ public sealed class PlaceTool
         for (; seg < pts.Count - 1; seg++, t0 = 0)
         {
             Vector2 a = pts[seg], d = pts[seg + 1] - a, f = a - s;
-            float A = d.LengthSquared(), B = 2 * Vector2.Dot(f, d), C = f.LengthSquared() - dist * dist, disc = B * B - 4 * A * C;
-            if (A < 1e-9f || disc < 0)
+            float dd = d.LengthSquared(), b = 2 * Vector2.Dot(f, d), c = f.LengthSquared() - dist * dist, disc = b * b - 4 * dd * c;
+            if (dd < 1e-9f || disc < 0)
             {
                 continue;
             }
-            float t = (-B + MathF.Sqrt(disc)) / (2 * A);
+            float t = (-b + MathF.Sqrt(disc)) / (2 * dd);
             // A millimetre of slack at the end: float rounding over a whole ring of pieces otherwise
             // leaves the last one just past the end, and the ring one piece short.
-            float slack = 1e-3f / MathF.Sqrt(A);
+            float slack = 1e-3f / MathF.Sqrt(dd);
             if (t >= t0 - 1e-6f && t <= 1 + slack)
             {
                 t = MathF.Min(t, 1);
@@ -676,7 +676,7 @@ public sealed class PlaceTool
         List<Vector2> poly;
         lock (Points)
         {
-            poly = Points.ToList();
+            poly = [.. Points];
         }
         float key = poly.Sum(p => p.X * 31 + p.Y * 17) + Density * 1000 + Spacing * 7;
         if (_scatter is { } sc && sc.Key == key)
@@ -848,7 +848,7 @@ public sealed class PlaceTool
         // Beside: turned like the nearest piece (the quarter turn that meets best, the facing asked for
         // first), then the closest pair of snap points along the ground (within 1 m) meets.
         var close = near.OrderBy(x => Vector2.Distance(x.G, o.G)).First();
-        var yaws = Vector2.Distance(close.G, o.G) < 5 ? new[] { 0f, 180, 90, 270 }.Select(k => AlignYaw(close.Rotation.Y) + k).ToArray() : new[] { o.Rotation.Y };
+        float[] yaws = Vector2.Distance(close.G, o.G) < 5 ? [.. new[] { 0f, 180, 90, 270 }.Select(k => AlignYaw(close.Rotation.Y) + k)] : [o.Rotation.Y];
         (float Score, Vector3 Q, Vector3 M, float Ry, string Name)? bestB = null;
         for (int k = 0; k < yaws.Length; k++)
         {
@@ -913,7 +913,7 @@ public sealed class PlaceTool
         SnappedTo = null;
         if (s == null || names.Count == 0 || Mode == Modes.Brush && at == null)
         {
-            return new();
+            return [];
         }
         if (Building)
         {
@@ -935,7 +935,7 @@ public sealed class PlaceTool
             }
             // The layout turns with the rotation (clockwise from above, like the objects' facing).
             float t = RotationNow * MathF.PI / 180, c = MathF.Cos(t), sn = MathF.Sin(t);
-            placed = new();
+            placed = [];
             foreach (var (d, dr) in _pattern)
             {
                 var g = new Vector2(at!.Value.X + d.X * c + d.Y * sn, at.Value.Y - d.X * sn + d.Y * c);
@@ -1097,14 +1097,14 @@ public sealed class PlaceTool
     public sealed record Preset(string Name, Dictionary<string, int> Kinds, float Density, float Spacing, float SizeMin, float SizeMax, float Tilt, float Clump = 0, float Patch = 30);
 
     public static readonly Preset[] BuiltIn =
-    {
+    [
         new("Meadows woods", new() { ["Beech1"] = 4, ["Birch1"] = 1, ["Birch2"] = 1, ["Oak1"] = 1, ["Bush01"] = 2 }, 3, 4, 80, 120, 3, 50, 35),
         new("Black forest", new() { ["FirTree"] = 3, ["Pinetree_01"] = 3, ["FirTree_big"] = 1, ["Bush01"] = 1 }, 4, 3.5f, 80, 130, 2, 30, 40),
         new("Swamp", new() { ["SwampTree1"] = 3, ["SwampTree2"] = 1 }, 2, 5, 80, 120, 4),
         new("Berry patch", new() { ["RaspberryBush"] = 2, ["BlueberryBush"] = 1 }, 6, 3, 90, 110, 0, 70, 15),
         new("Forest floor", new() { ["Pickable_Branch"] = 3, ["Pickable_Stone"] = 2, ["Pickable_Mushroom"] = 1, ["Pickable_Dandelion"] = 1 }, 2, 3, 100, 100, 0),
         new("Meadows rocks", new() { ["Rock_3"] = 2, ["Rock_4"] = 1, ["Rock_7"] = 1 }, 1, 6, 60, 140, 10, 40, 25),
-    };
+    ];
 
     // Loads a preset (kinds the world cannot make are left out). Returns what to say.
     public string Load(Preset p, Func<string, bool> canMake)

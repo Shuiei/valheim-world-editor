@@ -10,8 +10,8 @@ namespace TerrainEditor.Desktop;
 public sealed class GlObjects
 {
     private readonly GL _gl;
-    private readonly HashSet<uint> _buffers = new(), _arrays = new(), _textures = new(), _programs = new(),
-        _framebuffers = new(), _renderbuffers = new();
+    private readonly HashSet<uint> _buffers = [], _arrays = [], _textures = [], _programs = [],
+        _framebuffers = [], _renderbuffers = [];
 
     public GlObjects(GL gl)
     {

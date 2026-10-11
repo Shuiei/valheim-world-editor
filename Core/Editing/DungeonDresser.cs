@@ -34,7 +34,7 @@ internal sealed class DungeonDresser
         _o = o;
         _name = name;
         _decay = Math.Clamp(s.Decay ?? style.Decay, 0, 1);
-        _foes = s.Foes is { Count: > 0 } chosen ? chosen.Select(FoeOf).ToArray() : b.Foes;
+        _foes = s.Foes is { Count: > 0 } chosen ? [.. chosen.Select(FoeOf)] : b.Foes;
         _boss = s.Boss == null ? b.Boss : s.Boss.Length == 0 ? null : FoeOf(s.Boss);
     }
 
@@ -43,7 +43,7 @@ internal sealed class DungeonDresser
         var d = new DungeonDresser(mat, b, style, s, rnd, o, name);
         foreach (var sp in plan.Spaces)
         {
-            d.Furnish(new Frame(sp, mat, plan));
+            d.Furnish(new Frame(sp, mat));
         }
     }
 
@@ -66,10 +66,10 @@ internal sealed class DungeonDresser
         public readonly DungeonPlan.Space S;
         public readonly float F, Top, H, Cx, Cz, HalfA, HalfD;
         public readonly (int X, int Z) D, A;
-        public readonly List<(float X, float Z, float R)> Taken = new();
-        public readonly List<(float X, float Z, (int X, int Z) In, DungeonPlan.Doorway Door)> Mouths = new();
+        public readonly List<(float X, float Z, float R)> Taken = [];
+        public readonly List<(float X, float Z, (int X, int Z) In, DungeonPlan.Doorway Door)> Mouths = [];
 
-        public Frame(DungeonPlan.Space s, Material mat, DungeonPlan plan)
+        public Frame(DungeonPlan.Space s, Material mat)
         {
             S = s;
             F = DungeonPlan.FloorY(s.Level);
@@ -136,7 +136,7 @@ internal sealed class DungeonDresser
                 spots.Add((-HalfA, v, 90));
                 spots.Add((HalfA, v, -90));
             }
-            return spots.Where(s => !NearDoor(s.Item1, s.Item2, clear)).ToList();
+            return [.. spots.Where(s => !NearDoor(s.Item1, s.Item2, clear))];
         }
     }
 
@@ -246,7 +246,7 @@ internal sealed class DungeonDresser
     // ---- What hangs on walls.
     private void Hangings(Frame f, int count, params string[] choice)
     {
-        var options = choice.Length > 0 ? choice : _b.Hanging;
+        string[] options = choice.Length > 0 ? choice : _b.Hanging;
         var spots = f.WallSpots(3.2f, 3f).OrderBy(_ => _rnd.Next()).Take(count).ToList();
         foreach (var s in spots)
         {
@@ -269,25 +269,25 @@ internal sealed class DungeonDresser
     // A runner rug down the middle, from v0 to v1.
     private void Runner(Frame f, float v0, float v1, float u = 0)
     {
-        const float len = 4.36f;
-        int n = (int)MathF.Floor((v1 - v0) / len);
+        const float Len = 4.36f;
+        int n = (int)MathF.Floor((v1 - v0) / Len);
         if (n < 2)
         {
             Put(f, One("rug_wolf", "rug_fur", "rug_deer"), u, (v0 + v1) / 2, 0, 0, force: true);
             return;
         }
-        float start = (v0 + v1) / 2 - n * len / 2 + len / 2;
+        float start = (v0 + v1) / 2 - n * Len / 2 + Len / 2;
         for (int i = 0; i < n; i++)
         {
             string piece = i == 0 ? "Morkhalla_Rug_end1" : i == n - 1 ? "Morkhalla_Rug_end2" : "Morkhalla_Rug_middle";
-            _o.Add(piece, f.W(u, start + i * len, f.Top + 0.06f), f.Yaw(i == n - 1 ? 180 : 0));
+            _o.Add(piece, f.W(u, start + i * Len, f.Top + 0.06f), f.Yaw(i == n - 1 ? 180 : 0));
         }
     }
 
     // ---- What lies about.
     private void Clutter(Frame f, float perArea, params string[] choice)
     {
-        var options = choice.Length > 0 ? choice : _b.Clutter;
+        string[] options = choice.Length > 0 ? choice : _b.Clutter;
         int n = Count(f.Area * perArea * (0.5f + 0.5f * _s.Decor));
         var walls = f.WallSpots(1.3f, 2.5f).OrderBy(_ => _rnd.Next()).ToList();
         for (int i = 0; i < n; i++)
@@ -434,36 +434,36 @@ internal sealed class DungeonDresser
         }
         switch (f.S.Room)
         {
-            case DungeonKit.Room.Entrance: Entrance(f); break;
-            case DungeonKit.Room.Hall: Hall(f); break;
-            case DungeonKit.Room.Hub: Hub(f); break;
-            case DungeonKit.Room.Gallery: Gallery(f); break;
-            case DungeonKit.Room.Burial: Burial(f); break;
-            case DungeonKit.Room.Ossuary: Ossuary(f); break;
-            case DungeonKit.Room.Chapel: Chapel(f); break;
-            case DungeonKit.Room.Shrine: Shrine(f); break;
-            case DungeonKit.Room.Tomb: Tomb(f); break;
-            case DungeonKit.Room.Throne: Throne(f); break;
-            case DungeonKit.Room.Barracks: Barracks(f); break;
-            case DungeonKit.Room.Armory: Armory(f); break;
-            case DungeonKit.Room.Feast: Feast(f); break;
-            case DungeonKit.Room.Kitchen: Kitchen(f); break;
-            case DungeonKit.Room.Store: Store(f); break;
-            case DungeonKit.Room.Forge: Forge(f); break;
-            case DungeonKit.Room.Library: Library(f); break;
-            case DungeonKit.Room.Cells: Cells(f); break;
-            case DungeonKit.Room.Torture: Torture(f); break;
-            case DungeonKit.Room.Guard: Guard(f); break;
-            case DungeonKit.Room.Treasury: Treasury(f); break;
-            case DungeonKit.Room.Boss: Boss(f); break;
-            case DungeonKit.Room.Antechamber: Antechamber(f); break;
-            case DungeonKit.Room.Den: Den(f); break;
-            case DungeonKit.Room.Totem: Totem(f); break;
-            case DungeonKit.Room.Mine: Mine(f); break;
-            case DungeonKit.Room.Workshop: Workshop(f); break;
-            case DungeonKit.Room.Quarters: Quarters(f); break;
-            case DungeonKit.Room.Secret: Secret(f); break;
-            case DungeonKit.Room.StairTop or DungeonKit.Room.StairBottom: Stairwell(f); break;
+            case Room.Entrance: Entrance(f); break;
+            case Room.Hall: Hall(f); break;
+            case Room.Hub: Hub(f); break;
+            case Room.Gallery: Gallery(f); break;
+            case Room.Burial: Burial(f); break;
+            case Room.Ossuary: Ossuary(f); break;
+            case Room.Chapel: Chapel(f); break;
+            case Room.Shrine: Shrine(f); break;
+            case Room.Tomb: Tomb(f); break;
+            case Room.Throne: Throne(f); break;
+            case Room.Barracks: Barracks(f); break;
+            case Room.Armory: Armory(f); break;
+            case Room.Feast: Feast(f); break;
+            case Room.Kitchen: Kitchen(f); break;
+            case Room.Store: Store(f); break;
+            case Room.Forge: Forge(f); break;
+            case Room.Library: Library(f); break;
+            case Room.Cells: Cells(f); break;
+            case Room.Torture: Torture(f); break;
+            case Room.Guard: Guard(f); break;
+            case Room.Treasury: Treasury(f); break;
+            case Room.Boss: Boss(f); break;
+            case Room.Antechamber: Antechamber(f); break;
+            case Room.Den: Den(f); break;
+            case Room.Totem: Totem(f); break;
+            case Room.Mine: Mine(f); break;
+            case Room.Workshop: Workshop(f); break;
+            case Room.Quarters: Quarters(f); break;
+            case Room.Secret: Secret(f); break;
+            case Room.StairTop or Room.StairBottom: Stairwell(f); break;
         }
         if (f.S.KeyChest)
         {
@@ -475,7 +475,7 @@ internal sealed class DungeonDresser
     // The wall hangings that suit the style: banners in keeps and temples, the biome's own elsewhere.
     private string[] Drapes => _style.Name switch
     {
-        "Fortress" or "Temple" => new[] { "piece_banner01", "piece_banner02", "piece_banner05", "piece_banner06", "piece_banner07", "cloth_hanging_door" },
+        "Fortress" or "Temple" => ["piece_banner01", "piece_banner02", "piece_banner05", "piece_banner06", "piece_banner07", "cloth_hanging_door"],
         _ => _b.Hanging,
     };
 
@@ -507,7 +507,7 @@ internal sealed class DungeonDresser
         f.Take(-2.5f, 0, 2f);
         f.Take(-2.5f, f.HalfD - 4, 2f);
         f.Take(-2.5f, -f.HalfD + 4, 2f);
-        if (f.S.Room == DungeonKit.Room.StairTop)
+        if (f.S.Room == Room.StairTop)
         {
             // Only its first cell has a floor.
             Put(f, Torch, f.HalfA - 0.6f, -f.HalfD + 1, -90, 0.4f);
@@ -526,7 +526,7 @@ internal sealed class DungeonDresser
         // The portal stands before the back wall; the dungeon's name on a sign beside it.
         f.Take(0, -f.HalfD + 1.2f, 1.9f);
         _o.Add("sign", f.W(2.6f, -f.HalfD + 0.04f, f.Top + 2.1f), f.Yaw(DungeonProps.Turn("sign")),
-            new[] { ("strings", "text", _name) });
+            [("strings", "text", _name)]);
         Runner(f, -f.HalfD + 2.5f, f.HalfD - 1);
         Brazier(f, -2.8f, f.HalfD - 1.3f);
         Brazier(f, 2.8f, f.HalfD - 1.3f);
@@ -665,10 +665,10 @@ internal sealed class DungeonDresser
     private void Gallery(Frame f)
     {
         // The dead in niches along both walls, pilasters between.
-        var remains = _b.Clutter.Where(c => c.Contains("Remains", StringComparison.Ordinal) || c == "Skull1" || c == "LargeBone").ToArray();
+        string[] remains = [.. _b.Clutter.Where(c => c.Contains("Remains", StringComparison.Ordinal) || c == "Skull1" || c == "LargeBone")];
         if (remains.Length == 0)
         {
-            remains = new[] { "Skull1", "LargeBone" };
+            remains = ["Skull1", "LargeBone"];
         }
         for (float v = -f.HalfD + 2; v <= f.HalfD - 2; v += 2)
         {
@@ -729,7 +729,7 @@ internal sealed class DungeonDresser
         if (_s.Monsters > 0)
         {
             // A heap of bones that keeps raising the dead until broken.
-            Put(f, _b.Name == "Swamp" ? "Spawner_DraugrPile" : _b.Name == "Black Forest" || _b.Name == "Meadows" ? "BonePileSpawner" : "BonePileSpawner_swamp", 0, R(-1, 1), R(0, 360), 1.3f);
+            Put(f, _b.Name == "Swamp" ? "Spawner_DraugrPile" : _b.Name is "Black Forest" or "Meadows" ? "BonePileSpawner" : "BonePileSpawner_swamp", 0, R(-1, 1), R(0, 360), 1.3f);
         }
         Clutter(f, 0.04f, "Skull1", "LargeBone", "LargeBone_half01", "Skull1");
         Lights(f);
@@ -741,7 +741,7 @@ internal sealed class DungeonDresser
     {
         float far = f.HalfD - 1.6f;
         Put(f, One("Ashlands_Altar", "offeraltar_FrozenKing_bossroom", "blackmarble_altar_crystal") is var altar && altar == "blackmarble_altar_crystal" ? "Ashlands_Altar" : altar, 0, far, 180, 1.4f);
-        var statues = _decay > 0.4f ? new[] { "StatueFreya_broken_left", "StatueThor_broken_top" } : new[] { "StatueFreya", "StatueThor" };
+        string[] statues = _decay > 0.4f ? ["StatueFreya_broken_left", "StatueThor_broken_top"] : ["StatueFreya", "StatueThor"];
         Put(f, statues[0], -2.6f, far + 0.3f, 180, 0.6f);
         Put(f, statues[1], 2.6f, far + 0.3f, 180, 0.6f);
         Brazier(f, -1.6f, far - 1.8f);
@@ -845,8 +845,8 @@ internal sealed class DungeonDresser
 
     private void Trophies(Frame f, int n)
     {
-        var options = new[] { "prop_itemstand_TrophyDraugrElite", "prop_itemstand_TrophyGoblinBrute", "prop_itemstand_TrophyGoblinShaman", "prop_itemstand_TrophyGreydwarf",
-            "prop_itemstand_TrophyGreydwarfBrute", "prop_itemstand_TrophySeekerBrute" };
+        string[] options = [ "prop_itemstand_TrophyDraugrElite", "prop_itemstand_TrophyGoblinBrute", "prop_itemstand_TrophyGoblinShaman", "prop_itemstand_TrophyGreydwarf",
+            "prop_itemstand_TrophyGreydwarfBrute", "prop_itemstand_TrophySeekerBrute" ];
         foreach (var s in f.WallSpots(3, 3).OrderBy(_ => _rnd.Next()).Take(n))
         {
             var (u, v) = In(s, 0.06f);
@@ -959,7 +959,7 @@ internal sealed class DungeonDresser
 
     private void Store(Frame f)
     {
-        var stock = _mat.Name == "Dvergr" ? new[] { "dvergrprops_barrel", "dvergrprops_crate", "dvergrprops_crate_long" } : new[] { "barrell", "CargoCrate", "barrell", "prop_wood_stack" };
+        string[] stock = _mat.Name == "Dvergr" ? ["dvergrprops_barrel", "dvergrprops_crate", "dvergrprops_crate_long"] : ["barrell", "CargoCrate", "barrell", "prop_wood_stack"];
         foreach (var s in f.WallSpots(1.2f, 2.6f))
         {
             var (u, v) = In(s, 0.6f);
@@ -1204,15 +1204,15 @@ internal sealed class DungeonDresser
         foreach (var m in f.Mouths.Where(m => m.Door.Kind is Door.Key or Door.Grand))
         {
             var (u, v) = f.Local(m.X, m.Z);
-            var side = (U: m.In.X * f.A.X + m.In.Z * f.A.Z, V: m.In.X * f.D.X + m.In.Z * f.D.Z);
-            var along = (U: side.V, V: -side.U);
-            Brazier(f, u + side.U * 1.2f + along.U * 3.2f, v + side.V * 1.2f + along.V * 3.2f);
-            Brazier(f, u + side.U * 1.2f - along.U * 3.2f, v + side.V * 1.2f - along.V * 3.2f);
+            var (sideU, sideV) = (m.In.X * f.A.X + m.In.Z * f.A.Z, m.In.X * f.D.X + m.In.Z * f.D.Z);
+            var (alongU, alongV) = (sideV, -sideU);
+            Brazier(f, u + sideU * 1.2f + alongU * 3.2f, v + sideV * 1.2f + alongV * 3.2f);
+            Brazier(f, u + sideU * 1.2f - alongU * 3.2f, v + sideV * 1.2f - alongV * 3.2f);
             if (m.Door.Kind == Door.Key)
             {
-                float yaw = MathF.Atan2(side.U, side.V) * 180 / MathF.PI;
-                _o.Add("sign", f.W(u + along.U * 2.6f - side.U * 0.04f, v + along.V * 2.6f - side.V * 0.04f, f.Top + 2.1f), f.Yaw(yaw + DungeonProps.Turn("sign")),
-                    new[] { ("strings", "text", "Sealed. The key lies within these halls.") });
+                float yaw = MathF.Atan2(sideU, sideV) * 180 / MathF.PI;
+                _o.Add("sign", f.W(u + alongU * 2.6f - sideU * 0.04f, v + alongV * 2.6f - sideV * 0.04f, f.Top + 2.1f), f.Yaw(yaw + DungeonProps.Turn("sign")),
+                    [("strings", "text", "Sealed. The key lies within these halls.")]);
             }
         }
         Hangings(f, 2, Drapes);
@@ -1253,7 +1253,7 @@ internal sealed class DungeonDresser
             Put(f, "skull_pile", u, v, R(0, 360), 0.6f);
         }
         Hangings(f, 2);
-        Foes(f, 1f, _foes.Where(x => x.Creature.Contains("Shaman", StringComparison.Ordinal)).DefaultIfEmpty(_foes[0]).ToArray());
+        Foes(f, 1f, [.. _foes.Where(x => x.Creature.Contains("Shaman", StringComparison.Ordinal)).DefaultIfEmpty(_foes[0])]);
         Foes(f, 0.6f);
         Clutter(f, 0.02f);
         Decay(f);

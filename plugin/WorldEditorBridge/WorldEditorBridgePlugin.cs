@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO;
 using System.IO.Compression;
@@ -28,10 +29,11 @@ namespace WorldEditorBridge;
 //   POST /zones/reset  int n + n x (int x, int z, bool keep buildings, bool reset ground): the zones'
 //                   objects are removed and the zones are generated again (at once where players are)
 // Game objects are only read on Unity's main thread; the HTTP thread waits for the answer.
-[BepInPlugin(Guid, "WorldEditorBridge", Version)]
+[BepInPlugin(PluginGuid, "WorldEditorBridge", Version)]
+[SuppressMessage("Design", "CA1001:Types that own disposable fields should be disposable", Justification = "Unity owns its lifetime; OnDestroy stops the listener.")]
 public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
 {
-    public const string Guid = "Tie.WorldEditorBridge";
+    public const string PluginGuid = "Tie.WorldEditorBridge";
 
     // The id before 0.41.0, which named the settings file.
     private const string OldGuid = "local.worldeditorbridge";
@@ -63,6 +65,7 @@ public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
 
     private static readonly FieldInfo GlobalKeys = typeof(ZoneSystem).GetField("m_globalKeys", BindingFlags.Instance | BindingFlags.NonPublic);
 
+    [SuppressMessage("Design", "CA1001:Types that own disposable fields should be disposable", Justification = "Both threads hold Done; it is left to the GC, as before.")]
     private sealed class Job
     {
         public Func<byte[]> Work;
@@ -77,6 +80,7 @@ public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
         public int State;
     }
 
+    [SuppressMessage("CodeQuality", "IDE0051:Remove unused private members", Justification = "Unity calls it by name.")]
     private void Awake()
     {
         // Settings made under the old id (port, token) move to the new file, so editors that saved the
@@ -88,7 +92,7 @@ public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
             {
                 File.Move(old, Config.ConfigFilePath);
                 Config.Reload();
-                Logger.LogInfo($"Settings moved from {OldGuid}.cfg to {Guid}.cfg");
+                Logger.LogInfo($"Settings moved from {OldGuid}.cfg to {PluginGuid}.cfg");
             }
             catch (IOException ex)
             {
@@ -120,7 +124,7 @@ public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
             _running = true;
             _thread = new Thread(Serve) { IsBackground = true, Name = "WorldEditorBridge" };
             _thread.Start();
-            Logger.LogInfo($"WorldEditorBridge {Version} listening on http://{_bind.Value}:{_port.Value}/ (token in BepInEx/config/{Guid}.cfg)");
+            Logger.LogInfo($"WorldEditorBridge {Version} listening on http://{_bind.Value}:{_port.Value}/ (token in BepInEx/config/{PluginGuid}.cfg)");
         }
         catch (Exception ex)
         {
@@ -128,6 +132,7 @@ public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
         }
     }
 
+    [SuppressMessage("CodeQuality", "IDE0051:Remove unused private members", Justification = "Unity calls it by name.")]
     private void OnDestroy()
     {
         _running = false;
@@ -140,6 +145,7 @@ public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
         }
     }
 
+    [SuppressMessage("CodeQuality", "IDE0051:Remove unused private members", Justification = "Unity calls it by name.")]
     private void Update()
     {
         // At most a few jobs per frame; each is quick except the snapshot.
@@ -341,7 +347,7 @@ public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
         ZPackage pkg = new(body);
         int count = pkg.ReadInt();
         var dict = (Dictionary<ZDOID, ZDO>)ObjectsById.GetValue(ZDOMan.instance);
-        Dictionary<Vector2s, ZDO> compilers = new();
+        Dictionary<Vector2s, ZDO> compilers = [];
         foreach (ZDO zdo in dict.Values)
         {
             if (zdo.GetPrefab() == TerrainCompilerPrefab)
@@ -384,7 +390,7 @@ public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
         ZPackage pkg = new(body);
         long session = ZDOMan.GetSessionID();
         int destroyCount = pkg.ReadInt();
-        ZDOID[] destroyIds = new ZDOID[destroyCount];
+        var destroyIds = new ZDOID[destroyCount];
         for (int i = 0; i < destroyCount; i++)
         {
             destroyIds[i] = new ZDOID(pkg.ReadLong(), pkg.ReadUInt());
@@ -392,7 +398,7 @@ public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
         int createCount = pkg.ReadInt();
         // Every object to make is read first: a malformed one fails the call before anything changed,
         // so the editor, which records nothing then, can send it again without doubles.
-        Func<ZDO>[] creates = new Func<ZDO>[createCount];
+        var creates = new Func<ZDO>[createCount];
         for (int i = 0; i < createCount; i++)
         {
             creates[i] = ReadSaveFormat(new ZPackage(pkg.ReadByteArray()));
@@ -407,7 +413,7 @@ public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
             }
         }
         int destroyed = 0, refound = 0;
-        List<int> lost = new();
+        List<int> lost = [];
         for (int i = 0; i < destroyCount; i++)
         {
             ZDO zdo = ZDOMan.instance.GetZDO(destroyIds[i]);
@@ -422,7 +428,7 @@ public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
         }
         if (lost.Count > 0 && where != null)
         {
-            refound = DestroyAtPlace(lost.Select(i => where[i]).ToList(), session);
+            refound = DestroyAtPlace([.. lost.Select(i => where[i])], session);
         }
         int missing = lost.Count - refound;
         StringBuilder ids = new();
@@ -443,12 +449,12 @@ public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
     // each at most once; returns how many were found and destroyed.
     private static int DestroyAtPlace(List<(int Prefab, Vector3 Position)> wanted, long session)
     {
-        Dictionary<int, List<Vector3>> byPrefab = new();
+        Dictionary<int, List<Vector3>> byPrefab = [];
         foreach (var (prefab, pos) in wanted)
         {
             if (!byPrefab.TryGetValue(prefab, out var list))
             {
-                byPrefab[prefab] = list = new List<Vector3>();
+                byPrefab[prefab] = list = [];
             }
             list.Add(pos);
         }
@@ -483,7 +489,7 @@ public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
     {
         ZPackage pkg = new(body);
         int count = pkg.ReadInt();
-        Dictionary<Vector2s, (bool Keep, bool Ground)> zones = new();
+        Dictionary<Vector2s, (bool Keep, bool Ground)> zones = [];
         for (int i = 0; i < count; i++)
         {
             Vector2s key = new((short)pkg.ReadInt(), (short)pkg.ReadInt());
@@ -542,7 +548,7 @@ public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
         }
         int prefab = p.ReadInt();
         Vector3 euler = (flags & 0x1000) != 0 ? p.ReadSmallRotation() : Vector3.zero;
-        List<Action<ZDO>> values = new();
+        List<Action<ZDO>> values = [];
         var linkType = ZDOExtraData.ConnectionType.None;
         int linkHash = 0;
         if ((flags & 0xFF) != 0)
@@ -596,7 +602,9 @@ public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
     private static ZDO CreateTerrainCompiler(Vector2s zone)
     {
         GameObject prefab = ZNetScene.instance.GetPrefab(TerrainCompilerPrefab);
+#pragma warning disable IDE0031 // Unity's == null also catches destroyed objects; ?. does not
         ZNetView view = prefab != null ? prefab.GetComponent<ZNetView>() : null;
+#pragma warning restore IDE0031
         ZDO zdo = ZDOMan.instance.CreateNewZDO(ZoneSystem.GetZonePos(zone), TerrainCompilerPrefab);
         zdo.Persistent = view == null || view.m_persistent;
         zdo.Type = view != null ? view.m_type : ZDO.ObjectType.Terrain;
@@ -769,7 +777,7 @@ public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
 
     // Kinds that move by themselves (creatures, ships, carts, items: they sync their transform): their
     // moves are not changes to the world worth reading again.
-    private static readonly Dictionary<int, bool> Movers = new();
+    private static readonly Dictionary<int, bool> Movers = [];
 
     // And kinds that rewrite their data on their own every few seconds while a player is near (fires and
     // torches their fuel time, smelters, cooking stations, beehives, fermenters, sap collectors): that is
@@ -778,7 +786,9 @@ public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
     {
         if (!Movers.TryGetValue(prefab, out bool moves))
         {
+#pragma warning disable IDE0031 // Unity's == null also catches destroyed objects; ?. does not
             GameObject go = ZNetScene.instance != null ? ZNetScene.instance.GetPrefab(prefab) : null;
+#pragma warning restore IDE0031
             Movers[prefab] = moves = go != null && (go.GetComponent<ZSyncTransform>() != null || go.GetComponent<Fireplace>() != null
                 || go.GetComponent<Smelter>() != null || go.GetComponent<CookingStation>() != null || go.GetComponent<Beehive>() != null
                 || go.GetComponent<Fermenter>() != null || go.GetComponent<SapCollector>() != null);
@@ -789,7 +799,7 @@ public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
     // One number per zone that changes when an object there is made, removed or changed (its data or
     // place; a mover or a ticking kind only when made or removed): the editor reads a zone again when it
     // changes, and then sees every object as it is.
-    private byte[] Watch(byte[] body)
+    private static byte[] Watch(byte[] body)
     {
         StringBuilder sb = new("{\"zones\":[");
         bool first = true;
@@ -812,10 +822,10 @@ public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
 
     // The saved objects of the zones asked for, in the snapshot's format: int count, then for each its
     // ZDOID (long, uint) and its bytes (int length, bytes).
-    private byte[] ZoneObjects(byte[] body)
+    private static byte[] ZoneObjects(byte[] body)
     {
         var links = SnapshotLinks();
-        List<(ZDOID Id, byte[] Bytes)> found = new();
+        List<(ZDOID Id, byte[] Bytes)> found = [];
         foreach (Vector2s zone in ReadZones(body))
         {
             foreach (ZDO zdo in ZoneZdos(zone))
@@ -840,7 +850,7 @@ public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
     // hash on the object holding the link and the same hash, marked Target, on its target. The hash is
     // kept with both objects' ids (main thread only), so an object made again from the snapshot (an
     // undone delete) gets its link back, and links to it follow it to its new id.
-    private static readonly Dictionary<int, (ZDOExtraData.ConnectionType Type, ZDOID Source, ZDOID Target)> Links = new();
+    private static readonly Dictionary<int, (ZDOExtraData.ConnectionType Type, ZDOID Source, ZDOID Target)> Links = [];
 
     private static int LinkHash(ZDOID source) => unchecked((int)(source.UserID * 486187739L) ^ (int)source.ID * 16777619) | 1;
 
@@ -917,21 +927,54 @@ public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
         ZDOExtraData.GetData(zdo.m_uid, out var floats, out var vec3s, out var quats, out var ints, out var longs, out var strings, out var bytes, out ZDOConnection _);
         int flags = 0;
         bool hasConn = links.TryGetValue(zdo.m_uid, out var conn);
-        if (hasConn) flags |= 0x1;
-        if (floats.Count > 0) flags |= 0x2;
-        if (vec3s.Count > 0) flags |= 0x4;
-        if (quats.Count > 0) flags |= 0x8;
-        if (ints.Count > 0) flags |= 0x10;
-        if (longs.Count > 0) flags |= 0x20;
-        if (strings.Count > 0) flags |= 0x40;
-        if (bytes.Count > 0) flags |= 0x80;
-        if (zdo.Persistent) flags |= 0x100;
-        if (zdo.Distant) flags |= 0x200;
+        if (hasConn)
+        {
+            flags |= 0x1;
+        }
+        if (floats.Count > 0)
+        {
+            flags |= 0x2;
+        }
+        if (vec3s.Count > 0)
+        {
+            flags |= 0x4;
+        }
+        if (quats.Count > 0)
+        {
+            flags |= 0x8;
+        }
+        if (ints.Count > 0)
+        {
+            flags |= 0x10;
+        }
+        if (longs.Count > 0)
+        {
+            flags |= 0x20;
+        }
+        if (strings.Count > 0)
+        {
+            flags |= 0x40;
+        }
+        if (bytes.Count > 0)
+        {
+            flags |= 0x80;
+        }
+        if (zdo.Persistent)
+        {
+            flags |= 0x100;
+        }
+        if (zdo.Distant)
+        {
+            flags |= 0x200;
+        }
         flags |= ((int)zdo.Type & 3) << 10;
         Vector3 euler = ZdoRotation != null ? (Vector3)ZdoRotation.GetValue(zdo) : zdo.GetRotation().eulerAngles;
         // Same test as ZDO.Save (Vector3.CloseToZero).
         bool rotated = Mathf.Abs(euler.x) > 1E-05f || Mathf.Abs(euler.y) > 1E-05f || Mathf.Abs(euler.z) > 1E-05f;
-        if (rotated) flags |= 0x1000;
+        if (rotated)
+        {
+            flags |= 0x1000;
+        }
         pkg.Write((ushort)flags);
         pkg.Write(zdo.GetPosition());
         pkg.Write(zdo.GetPrefab());
@@ -948,13 +991,13 @@ public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
             pkg.Write((byte)conn.Type);
             pkg.Write(conn.Hash);
         }
-        Section(pkg, floats, v => pkg.Write(v));
-        Section(pkg, vec3s, v => pkg.Write(v));
-        Section(pkg, quats, v => pkg.Write(v));
-        Section(pkg, ints, v => pkg.Write(v));
-        Section(pkg, longs, v => pkg.Write(v));
-        Section(pkg, strings, v => pkg.Write(v));
-        Section(pkg, bytes, v => pkg.Write(v));
+        Section(pkg, floats, pkg.Write);
+        Section(pkg, vec3s, pkg.Write);
+        Section(pkg, quats, pkg.Write);
+        Section(pkg, ints, pkg.Write);
+        Section(pkg, longs, pkg.Write);
+        Section(pkg, strings, pkg.Write);
+        Section(pkg, bytes, pkg.Write);
     }
 
     private static void Section<T>(ZPackage pkg, List<KeyValuePair<int, T>> items, Action<T> write)

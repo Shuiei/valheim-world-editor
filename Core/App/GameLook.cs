@@ -10,7 +10,7 @@ public static class GameLook
 {
     public const int ValheimAppId = 892970;
 
-    private static readonly object Lock = new();
+    private static readonly Lock Lock = new();
 
     private static GameBundles? _bundles;
 
@@ -223,7 +223,7 @@ public static class GameLook
         return null;
     }
 
-    private static readonly string[] SystemSteamRoots = { "/opt/Steam", "/usr/share/steam" };
+    private static readonly string[] SystemSteamRoots = ["/opt/Steam", "/usr/share/steam"];
 
     private static IEnumerable<string> SteamLibraries()
     {
@@ -249,11 +249,11 @@ public static class GameLook
         }
         else
         {
-            roots.AddRange(new[]
-            {
+            roots.AddRange(
+            [
                 Path.Combine(home, ".steam", "steam"), Path.Combine(home, ".local", "share", "Steam"), Path.Combine(home, ".steam", "root"),
                 Path.Combine(home, ".var", "app", "com.valvesoftware.Steam", ".local", "share", "Steam"),
-            });
+            ]);
             if (SearchOutsideHome)
             {
                 roots.AddRange(SystemSteamRoots);

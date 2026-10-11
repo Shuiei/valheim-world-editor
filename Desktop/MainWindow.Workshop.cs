@@ -20,7 +20,7 @@ public partial class MainWindow
     internal StackPanel CutBox { get; } = new() { Orientation = Orientation.Horizontal, Spacing = 6, IsVisible = false };
 
     internal CheckBox SupportBox { get; } = new CheckBox { Content = "Support check", FontSize = 12, IsVisible = false, IsChecked = true, VerticalAlignment = VerticalAlignment.Center }.Classed("switch");
-    private bool _inWorkshop;
+
     private string? _workshopName;
     // The blueprint's details (name, description, tags) and the file it was opened from (saving there again
     // does not ask before replacing it).
@@ -29,19 +29,19 @@ public partial class MainWindow
     // when it is saved).
     private float _workshopLift;
     // The ground the blueprints opened or added stood on in game (per metre; Workshop.GroundAt).
-    private Dictionary<(int, int), float> _workshopTerrain = new();
+    private Dictionary<(int, int), float> _workshopTerrain = [];
     private string? _workshopFile;
     // The edits' version when the building was last saved (or opened).
     private int _workshopSaved;
 
-    internal bool InWorkshop => _inWorkshop;
-    internal bool WorkshopDirty => _inWorkshop && _session != null && _session.Edits.Version != _workshopSaved;
+    internal bool InWorkshop { get; private set; }
+    internal bool WorkshopDirty => InWorkshop && Session != null && Session.Edits.Version != _workshopSaved;
 
     // The last support check (null: off, or not in the Workshop).
     internal Stability.Result? LastSupport { get; private set; }
 
     // The things (indices in the scene) the last support check's pieces are, in its order.
-    internal IReadOnlyList<int> LastSupportThings { get; private set; } = Array.Empty<int>();
+    internal IReadOnlyList<int> LastSupportThings { get; private set; } = [];
 
     private void SetUpWorkshop()
     {
@@ -51,7 +51,7 @@ public partial class MainWindow
         CutSlider.Tip("workshop.cut");
         CutSlider.PropertyChanged += (_, e) =>
         {
-            if (e.Property == Slider.ValueProperty)
+            if (e.Property == Avalonia.Controls.Primitives.RangeBase.ValueProperty)
             {
                 SetCut((float)CutSlider.Value);
             }
@@ -75,7 +75,7 @@ public partial class MainWindow
             }
             catch (Exception ex)
             {
-                _message.Text = $"Could not put the dungeon on the plot: {ex.Message}";
+                MessageText.Text = $"Could not put the dungeon on the plot: {ex.Message}";
             }
         };
         BuildPanel.ImportAsked += async () =>
@@ -92,15 +92,15 @@ public partial class MainWindow
     // dropped; in a world, files are only imported.
     private void SetUpDrops(Control surface)
     {
-        Avalonia.Input.DragDrop.SetAllowDrop(surface, true);
-        surface.AddHandler(Avalonia.Input.DragDrop.DragOverEvent, (_, e) =>
+        DragDrop.SetAllowDrop(surface, true);
+        surface.AddHandler(DragDrop.DragOverEvent, (_, e) =>
         {
-            bool ours = e.DataTransfer.Contains(BuildPanel.BlueprintFormat) && _inWorkshop || e.DataTransfer.Contains(Avalonia.Input.DataFormat.File);
-            e.DragEffects = ours ? Avalonia.Input.DragDropEffects.Copy : Avalonia.Input.DragDropEffects.None;
+            bool ours = e.DataTransfer.Contains(BuildPanel.BlueprintFormat) && InWorkshop || e.DataTransfer.Contains(DataFormat.File);
+            e.DragEffects = ours ? DragDropEffects.Copy : DragDropEffects.None;
         });
-        surface.AddHandler(Avalonia.Input.DragDrop.DropEvent, (_, e) =>
+        surface.AddHandler(DragDrop.DropEvent, (_, e) =>
         {
-            var files = (e.DataTransfer.TryGetFiles() ?? Array.Empty<Avalonia.Platform.Storage.IStorageItem>())
+            var files = (e.DataTransfer.TryGetFiles() ?? [])
                 .Select(f => Avalonia.Platform.Storage.StorageProviderExtensions.TryGetLocalPath(f)).OfType<string>().ToList();
             Drop(e.DataTransfer.TryGetValue(BuildPanel.BlueprintFormat), files, e.GetPosition(surface), surface.Bounds.Size);
         });
@@ -110,7 +110,7 @@ public partial class MainWindow
     internal void Drop(string? blueprint, IReadOnlyList<string> files, Avalonia.Point at, Avalonia.Size size)
     {
         Vector2? world = null;
-        if (_session is { } s && _view.GridAt(at, size) is { } g)
+        if (Session is { } s && View.GridAt(at, size) is { } g)
         {
             world = new Vector2(s.Scene.X0 * 64f - 32f + g.X, s.Scene.Z0 * 64f - 32f + g.Y);
         }
@@ -128,11 +128,11 @@ public partial class MainWindow
         }
         if (files.Count > 0 && paths.Count == (blueprint != null ? 1 : 0))
         {
-            _message.Text = "Drop .blueprint (Homestead, PlanBuild) or .vbuild files.";
+            MessageText.Text = "Drop .blueprint (Homestead, PlanBuild) or .vbuild files.";
             return;
         }
         BuildPanel.RenderLibrary();
-        if (!_inWorkshop)
+        if (!InWorkshop)
         {
             return;
         }
@@ -145,7 +145,7 @@ public partial class MainWindow
     // A blueprint added to the building on the plot (at a world point x, z; null: the middle).
     internal void AddToWorkshop(string path, Vector2? at)
     {
-        if (!_inWorkshop || _session is not { } s)
+        if (!InWorkshop || Session is not { } s)
         {
             return;
         }
@@ -157,11 +157,11 @@ public partial class MainWindow
                 _workshopTerrain[cell] = _workshopTerrain.TryGetValue(cell, out float was) ? MathF.Min(was, y) : y;
             }
             RefreshSupport();
-            _message.Text = $"Added “{Homestead.Read(path)?.Name ?? Path.GetFileNameWithoutExtension(path)}”: {placed} piece(s).{(unknown.Count > 0 ? $" {unknown.Count} kind(s) the game does not know were left out (mods?): {string.Join(", ", unknown.Take(5))}." : "")} Ctrl+Z takes it back.";
+            MessageText.Text = $"Added “{Homestead.Read(path)?.Name ?? Path.GetFileNameWithoutExtension(path)}”: {placed} piece(s).{(unknown.Count > 0 ? $" {unknown.Count} kind(s) the game does not know were left out (mods?): {string.Join(", ", unknown.Take(5))}." : "")} Ctrl+Z takes it back.";
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            _message.Text = "Could not add that blueprint: " + ex.Message;
+            MessageText.Text = "Could not add that blueprint: " + ex.Message;
         }
         UpdateSaveBar();
     }
@@ -173,17 +173,17 @@ public partial class MainWindow
         // The game's files are needed here too (its pieces, and how ground discs shape the plot).
         if (!await Task.Run(() => GameData.Ensure(GameLook.Bundles)))
         {
-            if (_world == null && !_inWorkshop)
+            if (World == null && !InWorkshop)
             {
                 ShowStart(GameData.Missing);
             }
             else
             {
-                _message.Text = GameData.Missing;
+                MessageText.Text = GameData.Missing;
             }
             return;
         }
-        if (_world is { } w && w.Pending is not (0, 0, 0, 0)
+        if (World is { } w && w.Pending is not (0, 0, 0, 0)
             && !await Ask("Leave the world", $"{(w.IsLive ? "Not applied" : "Unsaved")}: {Describe(w.Pending)}. Leave the world for the Workshop without {(w.IsLive ? "applying" : "saving")} them?", "Leave anyway", "Stay"))
         {
             return;
@@ -201,29 +201,29 @@ public partial class MainWindow
                 text = await File.ReadAllTextAsync(path);
                 var parsed = BlueprintFormats.Parse(path, text);
                 name = parsed.Name;
-                details = Homestead.Read(path)?.Details is { } d ? d with { Name = name } : new Homestead.Details(name, parsed.Description ?? "", new());
+                details = Homestead.Read(path)?.Details is { } d ? d with { Name = name } : new Homestead.Details(name, parsed.Description ?? "", []);
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
                 // The world stays open as it was.
-                _message.Text = "Could not open that blueprint: " + ex.Message;
+                MessageText.Text = "Could not open that blueprint: " + ex.Message;
                 return;
             }
         }
         // Left only once the blueprint could be read.
-        if (_world is { } open)
+        if (World is { } open)
         {
             open.Dispose();
-            _world = null;
-            _session = null;
+            World = null;
+            Session = null;
             Tunnel.Close();
         }
         var scene = Workshop.Create(name != null ? $"Workshop · {name}" : "Workshop");
         await ShowEditor(scene);
-        _inWorkshop = true;
+        InWorkshop = true;
         _workshopName = name;
         _workshopLift = 0;
-        _workshopTerrain = new();
+        _workshopTerrain = [];
         _workshopDetails = details;
         // Only Homestead's own folder is saved back to without asking.
         _workshopFile = path != null && string.Equals(Path.GetDirectoryName(Path.GetFullPath(path)), Path.GetFullPath(Blueprints.Status.Folder), StringComparison.Ordinal) ? path : null;
@@ -246,20 +246,20 @@ public partial class MainWindow
         BuildPanel.Card.IsVisible = true;
         RefreshSupport();
         UpdateSaveBar();
-        _message.Text = msg;
+        MessageText.Text = msg;
     }
 
     // Leaving an area: no Workshop any more (ShowEditor calls it for every area).
     private void ResetWorkshop()
     {
         LeaveBuilding();
-        _inWorkshop = false;
+        InWorkshop = false;
         ToolTip.SetTip(_subtitle, null);
         MapButton.Content = Icons.With("back", "Map");
         SupportBox.IsVisible = false;
         DiscardButton.IsVisible = true;
         LastSupport = null;
-        _view.ShowSupport(null);
+        View.ShowSupport(null);
     }
 
     internal async Task LeaveWorkshop()
@@ -269,7 +269,7 @@ public partial class MainWindow
             return;
         }
         ResetWorkshop();
-        _session = null;
+        Session = null;
         ShowStart();
     }
 
@@ -277,11 +277,11 @@ public partial class MainWindow
     // support check says some would fall in game).
     internal async Task SaveWorkshop()
     {
-        if (_session is not { } s)
+        if (Session is not { } s)
         {
             return;
         }
-        _view.SelectTool.Commit();
+        View.SelectTool.Commit();
         if (Workshop.Pieces(s.Scene) == 0)
         {
             await Tell("There is no building piece on the plot yet: place some first (Place tool).");
@@ -294,7 +294,7 @@ public partial class MainWindow
             return;
         }
         var clip = Workshop.Building(s.Scene, _workshopName ?? "My building", _workshopLift);
-        if (await Blueprints.SaveBuilding(clip, _workshopDetails ?? new Homestead.Details(_workshopName ?? "My building", "", new()), _workshopFile) is { } details)
+        if (await Blueprints.SaveBuilding(clip, _workshopDetails ?? new Homestead.Details(_workshopName ?? "My building", "", []), _workshopFile) is { } details)
         {
             string saved = details.Name;
             _workshopName = saved;
@@ -310,10 +310,10 @@ public partial class MainWindow
     // The support check over the plot's building pieces (Stability), shown as coloured outlines.
     internal void RefreshSupport()
     {
-        if (!_inWorkshop || SupportBox.IsChecked != true || _session is not { } s)
+        if (!InWorkshop || SupportBox.IsChecked != true || Session is not { } s)
         {
             LastSupport = null;
-            _view.ShowSupport(null);
+            View.ShowSupport(null);
             return;
         }
         var index = new List<int>();
@@ -344,7 +344,7 @@ public partial class MainWindow
                 show[index[k]] = r.Breaks[k] ? -2 : r.Colour[k];
             }
         }
-        _view.ShowSupport(show);
+        View.ShowSupport(show);
     }
 
     // What the building on the plot costs to build in game, under the title (all of it in the tip).
@@ -352,11 +352,11 @@ public partial class MainWindow
 
     private void ShowWorkshopCost()
     {
-        if (!_inWorkshop || _session is not { } s)
+        if (!InWorkshop || Session is not { } s)
         {
             return;
         }
-        var cost = TerrainEditor.Terrain.PieceCost.Of(Workshop.Kinds(s.Scene));
+        var cost = PieceCost.Of(Workshop.Kinds(s.Scene));
         WorkshopCost = cost.Describe(5);
         _subtitle.Text = Workshop.Pieces(s.Scene) == 0 ? "A blank plot: only the building is kept in the blueprint" : "Cost: " + WorkshopCost;
         ToolTip.SetTip(_subtitle, cost.Materials.Count == 0 ? null
@@ -370,13 +370,13 @@ public partial class MainWindow
         int n = Workshop.Pieces(s.Scene);
         bool dirty = WorkshopDirty;
         string falls = LastSupport is { Breaking: > 0 } r ? $" · {r.Breaking} would fall" : "";
-        _pending.Text = n == 0 ? "No pieces yet" : $"{n} piece(s){falls}{(dirty ? " · not saved as a blueprint" : " · saved")}";
+        PendingText.Text = n == 0 ? "No pieces yet" : $"{n} piece(s){falls}{(dirty ? " · not saved as a blueprint" : " · saved")}";
         SaveButton.IsEnabled = n > 0;
         SaveButton.Content = "Save blueprint";
         SaveButton.Tip("top.saveBlueprint");
         _pendingPill.Background = dirty ? new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse("#2c2416")) : Avalonia.Media.Brushes.Transparent;
         _pendingPill.BorderBrush = dirty ? new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse("#7a5a2a")) : Ui.Line;
-        _pending.Foreground = dirty ? new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse("#f3d29b")) : Ui.Muted;
+        PendingText.Foreground = dirty ? new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse("#f3d29b")) : Ui.Muted;
         _liveBadge.IsVisible = false;
         UndoButton.IsEnabled = s.CanUndo;
         RedoButton.IsEnabled = s.CanRedo;
@@ -385,7 +385,7 @@ public partial class MainWindow
     // After a change Claude made (ClaudeTools): the save bar, the support check, the message.
     internal void AfterClaudeEdit(string message)
     {
-        _message.Text = message;
+        MessageText.Text = message;
         UpdateSaveBar();
         QueueSupport();
     }
@@ -395,7 +395,7 @@ public partial class MainWindow
 
     private void QueueSupport()
     {
-        if (!_inWorkshop || _supportQueued)
+        if (!InWorkshop || _supportQueued)
         {
             return;
         }
@@ -404,7 +404,7 @@ public partial class MainWindow
         {
             _supportQueued = false;
             RefreshSupport();
-            if (_session is { } s)
+            if (Session is { } s)
             {
                 WorkshopSaveBar(s);
             }
@@ -425,8 +425,8 @@ public partial class MainWindow
     private Kept KeepPlaceTool()
     {
         var t = PlaceTool;
-        return new Kept(t.Chosen.ToList(), t.Mode, t.OneAtATime, t.OneAtATimeByHand, t.RandomYaw, t.Tilt, t.SizeMin, t.SizeMax, t.Elevation, t.SnapTo, t.OnTop, t.Rotation,
-            _view.IsOverlayShown(Overlays.Layer.Borders));
+        return new Kept([.. t.Chosen], t.Mode, t.OneAtATime, t.OneAtATimeByHand, t.RandomYaw, t.Tilt, t.SizeMin, t.SizeMax, t.Elevation, t.SnapTo, t.OnTop, t.Rotation,
+            View.IsOverlayShown(Overlays.Layer.Borders));
     }
 
     // The Place tool as it was kept, out of Build.
@@ -454,12 +454,12 @@ public partial class MainWindow
         }
         _kept ??= KeepPlaceTool();
         Tools.SetWorkshop(true);
-        _view.SetOverlay(Overlays.Layer.Borders, false);
-        _view.ShowNewMarkers = false;
+        View.SetOverlay(Overlays.Layer.Borders, false);
+        View.ShowNewMarkers = false;
         CutBox.IsVisible = true;
         CutSlider.Value = 0;
         // Solid pieces (the View panel and its See-through switch are away).
-        _view.SeeThroughBuildings = false;
+        View.SeeThroughBuildings = false;
         ShowRight(null);
         ViewButton.IsVisible = false;
         MaskPanel.Card.IsVisible = false;
@@ -475,11 +475,11 @@ public partial class MainWindow
         _kept = null;
         RestorePlaceTool(k);
         Tools.SetWorkshop(false);
-        _view.SetOverlay(Overlays.Layer.Borders, k.Borders);
+        View.SetOverlay(Overlays.Layer.Borders, k.Borders);
         CutBox.IsVisible = false;
         CutSlider.Value = 0;
-        _view.ShowNewMarkers = UnsavedBox.IsChecked == true;
-        _view.SeeThroughBuildings = SeeThroughBox.IsChecked == true;
+        View.ShowNewMarkers = UnsavedBox.IsChecked == true;
+        View.SeeThroughBuildings = SeeThroughBox.IsChecked == true;
         ViewButton.IsVisible = true;
         BuildPanel.Card.IsVisible = false;
         PlacePanel.Fill();
@@ -491,7 +491,7 @@ public partial class MainWindow
     private void SetCut(float metres)
     {
         float? y = metres > 0 ? Workshop.Ground + metres : null;
-        _view.CutY = y;
+        View.CutY = y;
         PlaceTool.CutY = y;
         CutText.Text = metres > 0 ? $"Cut at {metres:0} m" : "Cut: off";
         PlaceInput.Refresh();

@@ -63,7 +63,7 @@ public static class Heightmaps
     {
         Png.Image img = Png.Read(bytes);
         float? Num(string key) => img.Text.TryGetValue(key, out string? s) && float.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out float v) ? v : null;
-        float[] values = Resample(img, w, h).Select(v => MathF.Round(v * 100000f) / 100000f).ToArray();
+        float[] values = [.. Resample(img, w, h).Select(v => MathF.Round(v * 100000f) / 100000f)];
         return new Picture(img.Width, img.Height, Num(MinKey), Num(MaxKey), img.Text.GetValueOrDefault(AreaKey), values);
     }
 }

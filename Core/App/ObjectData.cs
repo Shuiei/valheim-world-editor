@@ -25,7 +25,7 @@ public static class ObjectData
         {
             return null;
         }
-        Dictionary<ChunkFile, byte[]> files = new();
+        Dictionary<ChunkFile, byte[]> files = [];
         return w.NewObjectBytes(n, m => w.IsLive ? w.LiveSource(m.File) : (files.TryGetValue(m.File, out byte[]? f) ? f : files[m.File] = File.ReadAllBytes(Path.Combine(w.Directory, m.File.FileName))));
     }
 
@@ -41,9 +41,20 @@ public static class ObjectData
             }
             inv.Items.Add(new InventoryData.Item
             {
-                Prefab = prefab, Stack = Math.Clamp(u.Stack, 1, 65535), Quality = Math.Clamp(u.Quality, 1, 65535), Durability = u.Durability, X = Math.Clamp(u.X, 0, 255), Y = Math.Clamp(u.Y, 0, 255),
-                Variant = u.Variant, WorldLevel = Math.Clamp(u.WorldLevel, 0, 255), CrafterId = long.TryParse(u.CrafterId, NumberStyles.Integer, CultureInfo.InvariantCulture, out long c) ? c : 0,
-                CrafterName = u.CrafterName ?? "", Equipped = u.Equipped, PickedUp = u.PickedUp, Cheated = u.Cheated, CustomData = u.CustomData ?? new(),
+                Prefab = prefab,
+                Stack = Math.Clamp(u.Stack, 1, 65535),
+                Quality = Math.Clamp(u.Quality, 1, 65535),
+                Durability = u.Durability,
+                X = Math.Clamp(u.X, 0, 255),
+                Y = Math.Clamp(u.Y, 0, 255),
+                Variant = u.Variant,
+                WorldLevel = Math.Clamp(u.WorldLevel, 0, 255),
+                CrafterId = long.TryParse(u.CrafterId, NumberStyles.Integer, CultureInfo.InvariantCulture, out long c) ? c : 0,
+                CrafterName = u.CrafterName ?? "",
+                Equipped = u.Equipped,
+                PickedUp = u.PickedUp,
+                Cheated = u.Cheated,
+                CustomData = u.CustomData ?? [],
             });
         }
         return inv;
@@ -53,8 +64,8 @@ public static class ObjectData
     // ArgumentException or OverflowException for values that do not fit.
     public static ZdoData Edited(byte[] bytes, List<FieldChange>? set, List<ItemUpload>? inventory)
     {
-        ZdoData z = ZdoData.Parse(bytes);
-        foreach (FieldChange f in set ?? new())
+        var z = ZdoData.Parse(bytes);
+        foreach (FieldChange f in set ?? [])
         {
             z.Set(f.Section, ZdoKeys.Parse(f.Key), f.Value);
         }

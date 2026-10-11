@@ -17,7 +17,7 @@ public sealed class PerfLog
     private double _work, _gap;
     private long _lastFrame;
     private string _header = "";
-    private readonly List<string> _lines = new();
+    private readonly List<string> _lines = [];
     private long _sentAt;
 
     public void Frame(long now, double work, bool moved, bool busy, string about)

@@ -19,7 +19,7 @@ public static class GameData
     private sealed record Kind(string Name, Func<string, GameBundles, string>? Read, Action<string> Use, Func<JsonElement, JsonElement, object>? Trim = null);
 
     private static readonly Kind[] Kinds =
-    {
+    [
         new("terrain-modifiers", null, TerrainModifiers.Use),
         new("prefabs", null, PrefabCatalog.Use),
         new("pieces", null, PieceCatalog.Use),
@@ -30,7 +30,7 @@ public static class GameData
         new("piece-cost", null, PieceCost.Use, TrimPieceCost),
         new("vegetation", (_, bundles) => GameCatalogues.VegetationJson(bundles), Regrow.Use, TrimVegetation),
         new("dungeon-rooms", null, Editing.Dungeons.Use, TrimDungeons),
-    };
+    ];
 
     public static string CacheFile(string kind) => Path.Combine(AppSettings.UserDataDir, $"game-{kind}.json");
 
@@ -40,7 +40,7 @@ public static class GameData
     // What a cache was written by: data read by another editor build is read again.
     private static readonly string CacheVersion = typeof(GameData).Assembly.ManifestModule.ModuleVersionId.ToString();
 
-    private static readonly object Lock = new();
+    private static readonly Lock Lock = new();
     // Where the data in use came from: a bundles folder, Copies, or none yet.
     private static string? _from;
     private const string Copies = "(copies)";
@@ -102,7 +102,7 @@ public static class GameData
         return d ?? bundles;
     }
 
-    private static readonly string[] DataFolders = { "valheim_Data", "Valheim_Data" };
+    private static readonly string[] DataFolders = ["valheim_Data", "Valheim_Data"];
 
     // The game's files a kind is read from, by name, size and time: what makes a cache out of date.
     private static string Stamp(string valheim, string bundles) =>
@@ -243,7 +243,7 @@ public static class GameData
             string path = Path.Combine(folder, kind.Name + ".json");
             using var copy = JsonDocument.Parse(File.ReadAllText(path));
             using var game = JsonDocument.Parse(read[kind.Name]);
-            var trimmed = (kind.Trim ?? Entries)(game.RootElement, copy.RootElement);
+            object trimmed = (kind.Trim ?? Entries)(game.RootElement, copy.RootElement);
             File.WriteAllText(path, Lines(JsonSerializer.SerializeToElement(trimmed)) + "\n");
             var kept = Kept(copy.RootElement, kind.Trim == null);
             var now = Kept(JsonSerializer.SerializeToElement(trimmed), kind.Trim == null);
@@ -282,7 +282,7 @@ public static class GameData
     private static List<JsonElement> TrimVegetation(JsonElement game, JsonElement copy)
     {
         var kept = copy.EnumerateArray().Select(RuleKey).ToHashSet();
-        return game.EnumerateArray().Where(r => kept.Contains(RuleKey(r))).ToList();
+        return [.. game.EnumerateArray().Where(r => kept.Contains(RuleKey(r)))];
     }
 
     private static string RuleKey(JsonElement rule) => $"{rule.GetProperty("name").GetString()}/{rule.GetProperty("prefab").GetString()}";
@@ -290,6 +290,6 @@ public static class GameData
     // What a copy holds, to tell what went: its entries (a list's: its rules), else (trimmed its own
     // way) those of each part.
     private static List<string> Kept(JsonElement copy, bool entries) =>
-        copy.ValueKind == JsonValueKind.Array ? copy.EnumerateArray().Select(RuleKey).ToList()
-        : copy.EnumerateObject().SelectMany(p => entries ? new[] { p.Name } : p.Value.EnumerateObject().Select(e => $"{p.Name}/{e.Name}")).ToList();
+        copy.ValueKind == JsonValueKind.Array ? [.. copy.EnumerateArray().Select(RuleKey)]
+        : [.. copy.EnumerateObject().SelectMany(p => entries ? new[] { p.Name } : p.Value.EnumerateObject().Select(e => $"{p.Name}/{e.Name}"))];
 }

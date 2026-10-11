@@ -22,10 +22,17 @@ public class WorkshopRuinTests
             Directory.CreateDirectory(dir);
             string hut = Path.Combine(dir, "hut.blueprint");
             File.WriteAllText(hut, "#Name:Hut\n#Creator:test\n#HomesteadVersion:1\n#Pieces\nwood_floor;Building;0;0;0;0;0;0;1;\"\";1;1;1\n");
-            System.Text.Json.Nodes.JsonObject Obj(string name) => new()
+            static System.Text.Json.Nodes.JsonObject Obj(string name) => new()
             {
-                ["name"] = name, ["dx"] = 0, ["dy"] = 0, ["dz"] = 0, ["rx"] = 0, ["ry"] = 0, ["rz"] = 0, ["scale"] = 0,
-                ["data"] = BlueprintFormats.DataJson(new[] { ObjectField.NoBuilder }),
+                ["name"] = name,
+                ["dx"] = 0,
+                ["dy"] = 0,
+                ["dz"] = 0,
+                ["rx"] = 0,
+                ["ry"] = 0,
+                ["rz"] = 0,
+                ["scale"] = 0,
+                ["data"] = BlueprintFormats.DataJson([ObjectField.NoBuilder]),
             };
             string vault = Path.Combine(dir, "vault.blueprint");
             File.WriteAllText(vault, Homestead.Write(new System.Text.Json.Nodes.JsonObject { ["objects"] = new System.Text.Json.Nodes.JsonArray(Obj("stone_wall_4x2")) },
@@ -39,7 +46,7 @@ public class WorkshopRuinTests
             var again = BlueprintFormats.Parse("hut.blueprint", Homestead.Write(Workshop.Building(scene, "Hut", lift), "Hut", "test", null, DateTime.Now));
             Assert.False(again.Ruin);
             Assert.Contains(ObjectField.NoBuilder, again.Pieces.Single(p => p.Name == "stone_wall_4x2").Data!);
-            Assert.DoesNotContain(ObjectField.NoBuilder, again.Pieces.Single(p => p.Name == "wood_floor").Data ?? new List<ObjectField>());
+            Assert.DoesNotContain(ObjectField.NoBuilder, again.Pieces.Single(p => p.Name == "wood_floor").Data ?? []);
         }
         finally
         {

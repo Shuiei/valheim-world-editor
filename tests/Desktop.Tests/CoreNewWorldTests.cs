@@ -22,12 +22,12 @@ public sealed class CoreNewWorldTests : IDisposable
         {
             Directory.Delete(_dir, true);
         }
-        catch (Exception)
+        catch
         {
         }
     }
 
-    private string Fixture(string file) => Path.Combine(EditorProcess.Fixtures(), "CITest", file);
+    private static string Fixture(string file) => Path.Combine(EditorProcess.Fixtures(), "CITest", file);
 
     private string Folder(string name) => Path.Combine(_dir, name);
 
@@ -71,7 +71,7 @@ public sealed class CoreNewWorldTests : IDisposable
     public void TheRestOfTheZoneFileIsTheGamesWithNoEventRunning()
     {
         WorldCreator.Create(Folder("Tail"), "Tail", Seed);
-        byte[] Tail(string path)
+        static byte[] Tail(string path)
         {
             byte[] b = File.ReadAllBytes(path);
             int packed = BitConverter.ToInt32(b, 12);
@@ -106,9 +106,9 @@ public sealed class CoreNewWorldTests : IDisposable
         float[][] Ground(WorldSave w)
         {
             var t = new ValheimGen.TerrainService(w);
-            return zones.Select(z => t.RawZone(z.Item1, z.Item2).Concat(Enumerable.Range(0, 9).Select(k => (float)t.BiomeAt(z.Item1 * 64 + k * 7, z.Item2 * 64 - k * 7))).ToArray()).ToArray();
+            return [.. zones.Select(z => t.RawZone(z.Item1, z.Item2).Concat(Enumerable.Range(0, 9).Select(k => (float)t.BiomeAt(z.Item1 * 64 + k * 7, z.Item2 * 64 - k * 7))).ToArray())];
         }
-        var alone = saves.Select(Ground).ToArray();
+        float[][][] alone = [.. saves.Select(Ground)];
         // Each thread makes its world's generator again and again while the others make theirs.
         var together = Enumerable.Range(0, 8).AsParallel().WithDegreeOfParallelism(8)
             .Select(i => (i % 2, Enumerable.Range(0, 3).Select(_ => Ground(saves[i % 2])).ToList())).ToList();
@@ -157,7 +157,7 @@ public sealed class CoreNewWorldTests : IDisposable
         Assert.All(w.Chunks, c => Assert.Equal((0, 1u), (c.Size, c.Version)));
         Assert.DoesNotContain(w.Chunks, c => c.Chunk == ChunkMath.PortalChunk);
         // Known kinds only, in or just around the generated zones (groups reach 20 m past theirs).
-        Assert.All(w.Objects, o => Assert.NotNull(TerrainEditor.Terrain.PrefabCatalog.Get(o.Prefab)));
+        Assert.All(w.Objects, o => Assert.NotNull(Terrain.PrefabCatalog.Get(o.Prefab)));
         Assert.All(w.Objects, o => Assert.InRange(o.Position.X, -96 - 20, 96 + 20));
         Assert.All(w.Objects, o => Assert.InRange(o.Position.Z, -96 - 20, 96 + 20));
         // The same seed grows the same world.
@@ -191,14 +191,14 @@ public sealed class CoreNewWorldTests : IDisposable
         outside.Modified[0] = true;
         outside.Level[0] = 1f;
         store.Put(outside);
-        var r = WorldWriter.Save(w, store.All().Where(z => z.Changed).ToList());
+        var r = WorldWriter.Save(w, [.. store.All().Where(z => z.Changed)]);
         Assert.True(r.Saved, r.Message);
         Assert.Equal((1, 1), (r.ZonesWritten, r.ZonesCreated));
-        Assert.Contains(r.Skipped, m => m.StartsWith("zone 40, 40: not generated yet"));
+        Assert.Contains(r.Skipped, m => m.StartsWith("zone 40, 40: not generated yet", StringComparison.Ordinal));
         var after = WorldSave.Load(Folder("Edit"));
         Assert.Equal(2, after.SaveNumber);
         Assert.Equal(w.ObjectCount + 1, after.ObjectCount);
-        Assert.Equal(new[] { (0, 0), (5, 5) }, after.TerrainZones.Select(z => (z.ZoneX, z.ZoneZ)).Order());
+        Assert.Equal([(0, 0), (5, 5)], after.TerrainZones.Select(z => (z.ZoneX, z.ZoneZ)).Order());
         var zone = after.TerrainZones.Single(z => z.ZoneX == 0);
         Assert.Equal(1.5f, zone.LevelDelta[50]);
         Assert.Equal(("Edit", -1261093776), (after.Name, after.Seed));
@@ -230,7 +230,7 @@ public sealed class CoreNewWorldTests : IDisposable
         e.Modified[0] = true;
         e.Level[0] = 1f;
         store.Put(e);
-        var r = WorldWriter.Save(w, store.All().Where(z => z.Changed).ToList());
+        var r = WorldWriter.Save(w, [.. store.All().Where(z => z.Changed)]);
         Assert.False(r.Saved);
         Assert.Equal(1, WorldSave.Load(Folder("Bare")).SaveNumber);
     }
@@ -256,7 +256,7 @@ public sealed class CoreNewWorldTests : IDisposable
         // A chunk file alone is a world too.
         string g = Folder("Chunks");
         Directory.CreateDirectory(g);
-        File.WriteAllBytes(Path.Combine(g, "20_20__0_1.chunk"), new byte[] { 41, 0, 0, 0, 0, 0 });
+        File.WriteAllBytes(Path.Combine(g, "20_20__0_1.chunk"), [41, 0, 0, 0, 0, 0]);
         Assert.Throws<InvalidOperationException>(() => WorldCreator.Create(g, "Other", "Other1"));
         // Other files do not stop it.
         string h = Folder("Notes");

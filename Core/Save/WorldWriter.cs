@@ -24,7 +24,7 @@ public static class WorldWriter
     public sealed record Result(bool Saved, string Message, string? BackupDirectory, int ZonesWritten, int ZonesCreated, List<string> Skipped, int ObjectsDeleted = 0, int ObjectsAdded = 0, int ZonesReset = 0)
     {
         // The files the save wrote (its _main files and new chunk files).
-        public IReadOnlyList<string> Files { get; init; } = Array.Empty<string>();
+        public IReadOnlyList<string> Files { get; init; } = [];
         // The save number written (-1: none).
         public int Number { get; init; } = -1;
     }
@@ -41,17 +41,17 @@ public static class WorldWriter
     public static Result Save(WorldSave world, IReadOnlyList<ZoneEdit> changed, IReadOnlyCollection<int>? deleted = null, IReadOnlyList<NewObject>? added = null, IReadOnlyList<ZoneReset>? resets = null, Options? options = null)
     {
         options ??= new Options();
-        List<string> skipped = new();
-        deleted ??= Array.Empty<int>();
-        added ??= Array.Empty<NewObject>();
-        resets ??= Array.Empty<ZoneReset>();
+        List<string> skipped = [];
+        deleted ??= [];
+        added ??= [];
+        resets ??= [];
         if (resets.Count > 0 && world.Zones == null)
         {
             return new Result(false, "Zones can't be reset: the world's .db2 file could not be read.", null, 0, 0, skipped);
         }
         // Terrain edits of zones whose ground is reset are dropped.
-        HashSet<(int, int)> groundReset = resets.Where(r => r.Ground).Select(r => (r.X, r.Z)).ToHashSet();
-        changed = changed.Where(e => !groundReset.Contains((e.ZoneX, e.ZoneZ))).ToList();
+        HashSet<(int, int)> groundReset = [.. resets.Where(r => r.Ground).Select(r => (r.X, r.Z))];
+        changed = [.. changed.Where(e => !groundReset.Contains((e.ZoneX, e.ZoneZ)))];
         if (changed.Count == 0 && deleted.Count == 0 && added.Count == 0 && resets.Count == 0)
         {
             return new Result(false, "Nothing to save.", null, 0, 0, skipped);
@@ -68,8 +68,8 @@ public static class WorldWriter
         // the zone's ground, so whichever one the game uses has it.
         Dictionary<(int, int), List<TerrainZone>> existing = world.TerrainZones.Where(z => z.Source != null).GroupBy(z => (z.ZoneX, z.ZoneZ)).ToDictionary(g => g.Key, g => g.ToList());
         TerrainZone? template = world.TerrainZones.FirstOrDefault(z => z.Source != null);
-        Dictionary<ChunkFile, HashSet<long>> removals = new();
-        void Remove(ObjectRef o) => (removals.TryGetValue(o.File, out var set) ? set : removals[o.File] = new()).Add(o.Start);
+        Dictionary<ChunkFile, HashSet<long>> removals = [];
+        void Remove(ObjectRef o) => (removals.TryGetValue(o.File, out var set) ? set : removals[o.File] = []).Add(o.Start);
         foreach (int id in deleted)
         {
             if (id >= 0 && id < world.ObjectRefs.Count)
@@ -89,9 +89,9 @@ public static class WorldWriter
         int removed = removals.Values.Sum(s => s.Count);
 
         // Plan: which chunk files change, and how.
-        Dictionary<ChunkFile, Dictionary<long, (ZdoLocation Loc, byte[] Data)>> patches = new();     // object start -> new TCData
-        HashSet<(int, int)> notSaved = new();
-        Dictionary<ChunkFile, List<byte[]>> additions = new();
+        Dictionary<ChunkFile, Dictionary<long, (ZdoLocation Loc, byte[] Data)>> patches = [];     // object start -> new TCData
+        HashSet<(int, int)> notSaved = [];
+        Dictionary<ChunkFile, List<byte[]>> additions = [];
         int written = 0, created = 0;
         foreach (ZoneEdit edit in changed)
         {
@@ -100,7 +100,7 @@ public static class WorldWriter
             {
                 foreach (TerrainZone zone in zones)
                 {
-                    (patches.TryGetValue(zone.Source!.File, out var p) ? p : patches[zone.Source.File] = new())[zone.Source.Start] = (zone.Source, data);
+                    (patches.TryGetValue(zone.Source!.File, out var p) ? p : patches[zone.Source.File] = [])[zone.Source.Start] = (zone.Source, data);
                 }
                 written++;
                 continue;
@@ -123,11 +123,11 @@ public static class WorldWriter
                 notSaved.Add((edit.ZoneX, edit.ZoneZ));
                 continue;
             }
-            (additions.TryGetValue(target, out var a) ? a : additions[target] = new()).Add(NewTerrainObject(world, template, edit, data));
+            (additions.TryGetValue(target, out var a) ? a : additions[target] = []).Add(NewTerrainObject(world, template, edit, data));
             created++;
         }
         // New objects: a copy of the first object of the same prefab, in the chunk file of their zone.
-        Dictionary<ChunkFile, byte[]> sources = new();
+        Dictionary<ChunkFile, byte[]> sources = [];
         int addedCount = 0;
         foreach (NewObject n in added)
         {
@@ -144,7 +144,7 @@ public static class WorldWriter
                 skipped.Add($"a new object at {n.Position.X:F0}, {n.Position.Z:F0}: unknown kind of object");
                 continue;
             }
-            (additions.TryGetValue(target, out var list) ? list : additions[target] = new()).Add(bytes);
+            (additions.TryGetValue(target, out var list) ? list : additions[target] = []).Add(bytes);
             addedCount++;
         }
         if (written + created + removed + addedCount + resets.Count == 0)
@@ -154,8 +154,8 @@ public static class WorldWriter
 
         string dir = world.Directory;
         int newNumber = Math.Max(world.SaveNumber, LatestNumber(dir)) + 1;
-        List<string> newFiles = new();
-        Dictionary<ChunkFile, (uint Version, int Count)> updated = new();
+        List<string> newFiles = [];
+        Dictionary<ChunkFile, (uint Version, int Count)> updated = [];
         try
         {
             // 2. Changed chunk files under a new version.
@@ -177,11 +177,11 @@ public static class WorldWriter
             // 3. New save number: index, world data, metadata.
             string main = Path.Combine(dir, $"_main.{newNumber}");
             // Each file is listed before it is written: a failure halfway removes it too.
-            newFiles.AddRange(new[] { main + ".chunks", main + ".db2", main + ".fwl2", main + ".ok" });
+            newFiles.AddRange([main + ".chunks", main + ".db2", main + ".fwl2", main + ".ok"]);
             WriteIndex(main + ".chunks", world.Chunks, updated);
             if (resets.Count > 0)
             {
-                ZoneDb db = ZoneDb.Load(Path.Combine(dir, $"_main.{world.SaveNumber}.db2"));
+                var db = ZoneDb.Load(Path.Combine(dir, $"_main.{world.SaveNumber}.db2"));
                 foreach (ZoneReset r in resets)
                 {
                     db.ResetZone(r.X, r.Z);
@@ -196,7 +196,7 @@ public static class WorldWriter
             // 4. Commit marker, written last like the game does.
             WriteAllBytesDurable(main + ".ok", BitConverter.GetBytes(SaveFileVersion));
             // 5. Read back and compare with what was meant to be written (nothing old removed yet).
-            string? problem = Verify(dir, world, changed.Where(e => !notSaved.Contains((e.ZoneX, e.ZoneZ))).ToList(), created + addedCount, removed, groundReset, resets);
+            string? problem = Verify(dir, world, [.. changed.Where(e => !notSaved.Contains((e.ZoneX, e.ZoneZ)))], created + addedCount, removed, groundReset, resets);
             if (problem != null)
             {
                 RemoveAll(newFiles);
@@ -316,7 +316,7 @@ public static class WorldWriter
                     w.Write(source, (int)start, (int)(end - start));
                 }
             }
-            foreach (byte[] obj in additions ?? new())
+            foreach (byte[] obj in additions ?? [])
             {
                 w.Write(obj);
             }
@@ -352,7 +352,7 @@ public static class WorldWriter
         fs.Flush(flushToDisk: true);
     }
 
-    private static readonly string[] MainExtensions = { ".ok", ".chunks", ".db2", ".fwl2" };
+    private static readonly string[] MainExtensions = [".ok", ".chunks", ".db2", ".fwl2"];
 
     private static void RemoveAll(IEnumerable<string> files)
     {
@@ -389,7 +389,7 @@ public static class WorldWriter
         {
             return;
         }
-        WorldSave now = WorldSave.Load(dir);
+        var now = WorldSave.Load(dir);
         int latest = now.SaveNumber;
         var keep = now.Chunks.Select(c => c.FileName).ToHashSet();
         var old = Directory.GetFiles(dir, "_main.*").Where(f => Path.GetFileName(f).Split('.') is [_, var n, _]
@@ -398,12 +398,12 @@ public static class WorldWriter
         {
             old = old.Concat(Directory.GetFiles(dir, "*.chunk").Where(f => !keep.Contains(Path.GetFileName(f))));
         }
-        RemoveAll(old.ToList());
+        RemoveAll([.. old]);
     }
 
     internal static string? Verify(string dir, WorldSave before, IReadOnlyList<ZoneEdit> saved, int created, int removed, HashSet<(int, int)> groundReset, IReadOnlyList<ZoneReset> resets)
     {
-        WorldSave after = WorldSave.Load(dir);
+        var after = WorldSave.Load(dir);
         foreach (ZoneReset r in resets)
         {
             if (after.Zones == null || after.Zones.Generated.Contains(((short)r.X, (short)r.Z)))

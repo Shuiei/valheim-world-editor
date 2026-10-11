@@ -1,5 +1,4 @@
 using System.Numerics;
-using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
@@ -13,7 +12,7 @@ namespace TerrainEditor.Desktop.Tests;
 public class HistoryTests
 {
     private static float H(EditSession s, int x, int z) => s.Scene.Heights[z * s.Scene.W + x];
-    private static readonly Func<Formula.Env, double> Two = Formula.Compile("2", new string[0]);
+    private static readonly Func<Formula.Env, double> Two = Formula.Compile("2", []);
 
     [Fact]
     public void BackToAndForwardTo()
@@ -37,7 +36,7 @@ public class HistoryTests
     {
         var s = EditTests.Flat(2, new WorldScene.Thing(1, StableHash.Of("Beech1"), new Vector3(0, 30, 0), Vector3.Zero, 1, false));
         s.Shape(60, 60, Two, 3, 0, "raise");
-        s.Delete(new[] { 0 });
+        s.Delete([0]);
         // Raised again on the same spot afterwards: that stays.
         s.Shape(60, 60, Two, 3, 0, "raise more");
         Assert.Equal(34, H(s, 60, 60), 3);
@@ -95,7 +94,7 @@ public class HistoryTests
         w.View.Show(s.Scene, null);
         w.Edit(s);
         w.Tools.ChooseSelect();
-        w.View.Select(new[] { 0 });
+        w.View.Select([0]);
         int i = w.SelectPanel.ReplaceKinds.IndexOf(StableHash.Of("Oak1"));
         Assert.True(i >= 0);
         w.SelectPanel.ReplaceBox.SelectedIndex = i;
@@ -126,7 +125,7 @@ public class HistoryTests
             int tree = s.Scene.Things.FindIndex(t => !t.Gone && !t.Piece);
             Assert.True(tree >= 0);
             int id = s.Scene.Things[tree].Id;
-            s.Delete(new[] { tree });
+            s.Delete([tree]);
             Dispatcher.UIThread.RunJobs();
             Assert.Equal("2 change(s)", w.History.Count.Text);
             // To the map and back to the same area: both are there, and undo brings the object back.
@@ -135,7 +134,7 @@ public class HistoryTests
             w.ShowRight(w.History.Card);
             Dispatcher.UIThread.RunJobs();
             s = w.Session!;
-            Assert.Equal(new[] { "raise", $"Deleted 1" }, s.UndoList.Select(c => c.Label));
+            Assert.Equal(["raise", $"Deleted 1"], s.UndoList.Select(c => c.Label));
             Assert.Equal("2 change(s)", w.History.Count.Text);
             s.Undo();
             var back = s.Scene.Things.Single(t => t.Id == id);
@@ -146,7 +145,7 @@ public class HistoryTests
             w.ShowMap();
             await w.EditArea(0, 0, 5);
             s = w.Session!;
-            Assert.Equal(new[] { "raise" }, s.UndoList.Select(c => c.Label));
+            Assert.Equal(["raise"], s.UndoList.Select(c => c.Label));
             Assert.Single(s.RedoList);
             s.Undo();
             Assert.Equal(0, w.World.Pending.Zones);

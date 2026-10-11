@@ -42,7 +42,7 @@ namespace TerrainEditor.Desktop;
 public static class Driver
 {
     // The View panel's 3D resolution choices, in their list's order.
-    private static readonly string[] Resolutions = { "sharp", "balanced", "fast" };
+    private static readonly string[] Resolutions = ["sharp", "balanced", "fast"];
 
     public static void Start(MainWindow w)
     {
@@ -73,9 +73,11 @@ public static class Driver
                 }
             }
             Dispatcher.UIThread.Post(w.CloseWithoutAsking);
-        });
-        thread.IsBackground = true;
-        thread.Name = "Driver";
+        })
+        {
+            IsBackground = true,
+            Name = "Driver"
+        };
         thread.Start();
         Console.WriteLine("@@ ready");
         Console.Out.Flush();
@@ -84,7 +86,7 @@ public static class Driver
     private static async Task<string> Run(MainWindow w, string cmd)
     {
         string[] a = cmd.Split(' ', 2);
-        string[] args = a.Length > 1 ? a[1].Split(' ') : Array.Empty<string>();
+        string[] args = a.Length > 1 ? a[1].Split(' ') : [];
         float F(int i) => float.Parse(args[i], System.Globalization.CultureInfo.InvariantCulture);
         switch (a[0])
         {
@@ -120,7 +122,7 @@ public static class Driver
             case "mouse":
             {
                 var p = ScreenAt(w, F(1), F(2));
-                var button = args.Length > 3 ? args[3] : "left";
+                string button = args.Length > 3 ? args[3] : "left";
                 Mouse(w, args[0], p, button, Mods(args.Skip(4)));
                 return State(w);
             }
@@ -208,7 +210,7 @@ public static class Driver
                 string label = a[1][..bar], value = a[1][(bar + 1)..];
                 var tb = Find<Avalonia.Controls.TextBlock>(w, t => string.Equals(t.Text?.Trim(), label, StringComparison.OrdinalIgnoreCase)) ?? throw new InvalidOperationException($"no label \"{label}\"");
                 // The row holding the label: the first control after it.
-                var row = (Avalonia.Visual?)Avalonia.VisualTree.VisualExtensions.GetVisualParent(tb);
+                var row = Avalonia.VisualTree.VisualExtensions.GetVisualParent(tb);
                 for (int up = 0; up < 3 && row != null; up++, row = Avalonia.VisualTree.VisualExtensions.GetVisualParent(row))
                 {
                     var c = Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(row).OfType<Avalonia.Controls.Control>()
@@ -222,7 +224,7 @@ public static class Driver
                         {
                             // Several boxes in the row (Height min, max): in order, comma separated; empty for none.
                             var boxes = Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(row).OfType<Avalonia.Controls.NumericUpDown>().Where(b => b.IsEffectivelyVisible).ToList();
-                            var values = value.Split(',');
+                            string[] values = value.Split(',');
                             for (int k = 0; k < Math.Min(values.Length, boxes.Count); k++)
                             {
                                 boxes[k].Value = values[k].Trim().Length == 0 ? null : decimal.Parse(values[k], System.Globalization.CultureInfo.InvariantCulture);
@@ -233,7 +235,7 @@ public static class Driver
                         {
                             // Several boxes in the row (Size % from, to): the values in order, comma separated.
                             var boxes = Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(row).OfType<Avalonia.Controls.TextBox>().Where(b => b.IsEffectivelyVisible).ToList();
-                            var values = value.Split(',');
+                            string[] values = value.Split(',');
                             for (int k = 0; k < Math.Min(values.Length, boxes.Count); k++)
                             {
                                 boxes[k].Text = values[k].Trim();
@@ -261,15 +263,15 @@ public static class Driver
                 // inspect <prefab>: the first such object selected, its inspector open.
                 var scene = w.View.Scene ?? throw new InvalidOperationException("no area open");
                 // One holding something first (a chest with contents).
-                var all = Enumerable.Range(0, scene.Things.Count).Where(k => !scene.Things[k].Gone && scene.Things[k].Prefab == TerrainEditor.Save.StableHash.Of(a[1])).ToList();
+                var all = Enumerable.Range(0, scene.Things.Count).Where(k => !scene.Things[k].Gone && scene.Things[k].Prefab == Save.StableHash.Of(a[1])).ToList();
                 int i = all.Cast<int?>().FirstOrDefault(k => scene.Session is { } ss && TerrainEditor.App.ObjectData.Bytes(scene.World, ss.Edits, scene.Things[k!.Value].Id) is { } b
-                    && TerrainEditor.Save.ZdoData.Parse(b).GetBytes(TerrainEditor.App.ObjectData.ItemsKey) != null) ?? (all.Count > 0 ? all[0] : -1);
+                    && Save.ZdoData.Parse(b).GetBytes(TerrainEditor.App.ObjectData.ItemsKey) != null) ?? (all.Count > 0 ? all[0] : -1);
                 if (i < 0)
                 {
                     throw new InvalidOperationException($"no {a[1]} here");
                 }
                 w.Tools.ChooseMode(ToolMode.Select);
-                w.View.Select(new[] { i });
+                w.View.Select([i]);
                 w.View.Focus(scene.Things[i].Position);
                 w.Inspect();
                 return State(w);
@@ -325,7 +327,7 @@ public static class Driver
     private static Avalonia.Input.KeyModifiers Mods(IEnumerable<string> names)
     {
         var m = Avalonia.Input.KeyModifiers.None;
-        foreach (var n in names)
+        foreach (string n in names)
         {
             m |= n switch { "shift" => Avalonia.Input.KeyModifiers.Shift, "ctrl" => Avalonia.Input.KeyModifiers.Control, "alt" => Avalonia.Input.KeyModifiers.Alt, _ => Avalonia.Input.KeyModifiers.None };
         }
@@ -357,7 +359,7 @@ public static class Driver
     private static int IndexOf(Avalonia.Controls.ComboBox box, string text)
     {
         int i = 0;
-        foreach (var item in box.Items)
+        foreach (object? item in box.Items)
         {
             string? name = item is Avalonia.Controls.ContentControl cc ? cc.Content?.ToString() : item?.ToString();
             if (string.Equals(name?.Trim(), text, StringComparison.OrdinalIgnoreCase))

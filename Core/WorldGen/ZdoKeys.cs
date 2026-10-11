@@ -8,13 +8,13 @@ namespace TerrainEditor.Terrain;
 public static class ZdoKeys
 {
     // None until Use: no world opens before then (GameData).
-    private static volatile Dictionary<int, string> ByHash = new();
+    private static volatile Dictionary<int, string> _byHash = [];
 
     // The names by hash, as GameCatalogues.ZdoKeysJson writes them.
     public static void Use(string json) =>
-        ByHash = JsonSerializer.Deserialize<Dictionary<string, string>>(json)!.ToDictionary(kv => int.Parse(kv.Key, System.Globalization.CultureInfo.InvariantCulture), kv => kv.Value);
+        _byHash = JsonSerializer.Deserialize<Dictionary<string, string>>(json)!.ToDictionary(kv => int.Parse(kv.Key, System.Globalization.CultureInfo.InvariantCulture), kv => kv.Value);
 
-    public static string? NameOf(int key) => ByHash.TryGetValue(key, out string? n) ? n : null;
+    public static string? NameOf(int key) => _byHash.TryGetValue(key, out string? n) ? n : null;
 
     // A key given by name or as a number ("text", "-1234").
     public static int Parse(string key) => int.TryParse(key, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out int k) ? k : StableHash.Of(key);

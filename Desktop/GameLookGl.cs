@@ -244,7 +244,7 @@ public sealed class GameLookGl
     private GlObjects _own = null!;
     private uint _terrain, _sky, _water;
     private uint _skyVao, _skyCount, _waterVao;
-    private readonly Dictionary<string, (uint Tex, TextureTarget Target)> _tex = new();
+    private readonly Dictionary<string, (uint Tex, TextureTarget Target)> _tex = [];
     private uint _maskTex, _heightTex;
     private WorldScene _scene = null!;
 
@@ -268,7 +268,7 @@ public sealed class GameLookGl
         _tex["_RockNormal"] = (Tex2D(f.Rock), TextureTarget.Texture2D);
         _tex["_SnowNormal"] = (Tex2D(f.Snow), TextureTarget.Texture2D);
         _tex["_ColorVarietyNoise"] = (Tex2D(f.Variety), TextureTarget.Texture2D);
-        _tex["_SkyAlphaTexture"] = (Tex2D(new Image(1, 1, new byte[] { 255, 255, 255, 255 })), TextureTarget.Texture2D);
+        _tex["_SkyAlphaTexture"] = (Tex2D(new Image(1, 1, [255, 255, 255, 255])), TextureTarget.Texture2D);
         _tex["_CurlNoise"] = (Noise3D(32, 7), TextureTarget.Texture3D);
         _tex["_SnowGlintOffsetNoise"] = (Noise3D(32, 11), TextureTarget.Texture3D);
         _maskTex = Tex2D(new Image(s.W, s.H, s.Mask), mipmaps: false, repeat: false);
@@ -297,7 +297,7 @@ public sealed class GameLookGl
         {
             _gl.TexSubImage2D(TextureTarget.Texture2D, 0, 0, z0, (uint)s.W, (uint)n, PixelFormat.Rgba, PixelType.UnsignedByte, p);
         }
-        Half[] h = new Half[s.W * n];
+        var h = new Half[s.W * n];
         for (int i = 0; i < h.Length; i++)
         {
             h[i] = (Half)s.Heights[z0 * s.W + i];
@@ -323,7 +323,7 @@ public sealed class GameLookGl
         }
         _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)(mipmaps ? TextureMinFilter.LinearMipmapLinear : TextureMinFilter.Linear));
         _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
-        var wrap = (int)(repeat ? TextureWrapMode.Repeat : TextureWrapMode.ClampToEdge);
+        int wrap = (int)(repeat ? TextureWrapMode.Repeat : TextureWrapMode.ClampToEdge);
         _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, wrap);
         _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, wrap);
         return t;
@@ -378,7 +378,7 @@ public sealed class GameLookGl
     // The ground's height per grid point (half floats: filterable everywhere), for the water's depth.
     private unsafe uint HeightTexture(WorldScene s)
     {
-        Half[] h = s.Heights.Select(v => (Half)v).ToArray();
+        Half[] h = [.. s.Heights.Select(v => (Half)v)];
         uint t = _own.Texture();
         _gl.BindTexture(TextureTarget.Texture2D, t);
         fixed (Half* p = h)
@@ -395,36 +395,36 @@ public sealed class GameLookGl
     private unsafe void BuildSky()
     {
         // A sphere around the camera (drawn at the far plane), 48 × 24 segments like look.js.
-        const int segW = 48, segH = 24;
-        const float r = 2000;
+        const int SegW = 48, SegH = 24;
+        const float R = 2000;
         var v = new List<float>();
         var idx = new List<uint>();
-        for (int y = 0; y <= segH; y++)
+        for (int y = 0; y <= SegH; y++)
         {
-            for (int x = 0; x <= segW; x++)
+            for (int x = 0; x <= SegW; x++)
             {
-                float u = x / (float)segW, vv = y / (float)segH;
-                v.Add(-r * MathF.Cos(u * MathF.Tau) * MathF.Sin(vv * MathF.PI));
-                v.Add(r * MathF.Cos(vv * MathF.PI));
-                v.Add(r * MathF.Sin(u * MathF.Tau) * MathF.Sin(vv * MathF.PI));
+                float u = x / (float)SegW, vv = y / (float)SegH;
+                v.Add(-R * MathF.Cos(u * MathF.Tau) * MathF.Sin(vv * MathF.PI));
+                v.Add(R * MathF.Cos(vv * MathF.PI));
+                v.Add(R * MathF.Sin(u * MathF.Tau) * MathF.Sin(vv * MathF.PI));
             }
         }
-        for (int y = 0; y < segH; y++)
+        for (int y = 0; y < SegH; y++)
         {
-            for (int x = 0; x < segW; x++)
+            for (int x = 0; x < SegW; x++)
             {
-                uint a = (uint)(y * (segW + 1) + x), b = a + segW + 1;
-                idx.AddRange(new[] { a, b, a + 1, b, b + 1, a + 1 });
+                uint a = (uint)(y * (SegW + 1) + x), b = a + SegW + 1;
+                idx.AddRange([a, b, a + 1, b, b + 1, a + 1]);
             }
         }
-        _skyVao = Mesh(v.ToArray(), idx.ToArray());
+        _skyVao = Mesh([.. v], [.. idx]);
         _skyCount = (uint)idx.Count;
     }
 
     private void BuildWater(WorldScene s)
     {
         float half = 4000, y = s.Water;
-        _waterVao = Mesh(new[] { -half, y, -half, half, y, -half, half, y, half, -half, y, half }, new uint[] { 0, 2, 1, 0, 3, 2 });
+        _waterVao = Mesh([-half, y, -half, half, y, -half, half, y, half, -half, y, half], [0, 2, 1, 0, 3, 2]);
     }
 
     private unsafe uint Mesh(float[] v, uint[] idx)
@@ -484,8 +484,8 @@ public sealed class GameLookGl
     {
         Shared(_terrain, vp, eye, time);
         void F(string n, float v) => _gl.Uniform1(_gl.GetUniformLocation(_terrain, n), v);
-        var shr = new[] { Ambient.X, Ambient.Y, Ambient.Z };
-        string[] sh = { "unity_SHAr", "unity_SHAg", "unity_SHAb" };
+        float[] shr = [Ambient.X, Ambient.Y, Ambient.Z];
+        string[] sh = ["unity_SHAr", "unity_SHAg", "unity_SHAb"];
         for (int c = 0; c < 3; c++)
         {
             _gl.Uniform4(_gl.GetUniformLocation(_terrain, sh[c]), 0, 0, 0, shr[c]);

@@ -11,18 +11,18 @@ namespace TerrainEditor.App;
 // traders will be.
 public static class SeedPreview
 {
-    public const float Radius = WorldGenerator.worldSize;
+    public const float Radius = WorldGenerator.WorldSize;
 
     // The biomes counted, in the order players meet them.
     public static readonly Heightmap.Biome[] Biomes =
-    {
+    [
         Heightmap.Biome.Meadows, Heightmap.Biome.BlackForest, Heightmap.Biome.Swamp, Heightmap.Biome.Mountain,
         Heightmap.Biome.Plains, Heightmap.Biome.Mistlands, Heightmap.Biome.AshLands, Heightmap.Biome.DeepNorth,
-    };
+    ];
 
     // The places worth knowing about before playing: the start, the traders, the bosses' altars.
     public static readonly (string Prefab, string Name, string Kind)[] Landmarks =
-    {
+    [
         ("StartTemple", "The start", "start"),
         ("Vendor_BlackForest", "Haldor", "trader"),
         ("BogWitch_Camp", "The Bog Witch", "trader"),
@@ -34,12 +34,12 @@ public static class SeedPreview
         ("GoblinKing", "Yagluth", "boss"),
         ("Mistlands_DvergrBossEntrance1", "The Queen", "boss"),
         ("FaderLocation", "Fader", "boss"),
-    };
+    ];
 
     // The dungeons, by kind: the game's locations that lead into one (or are one, as the Ashlands'
     // fortresses), and their biome.
     public static readonly (string Name, Heightmap.Biome Biome, string[] Prefabs)[] Dungeons =
-    {
+    [
         ("Burial chambers", Heightmap.Biome.BlackForest, new[] { "Crypt2", "Crypt3", "Crypt4" }),
         ("Troll caves", Heightmap.Biome.BlackForest, new[] { "TrollCave02" }),
         ("Sunken crypts", Heightmap.Biome.Swamp, new[] { "SunkenCrypt4" }),
@@ -47,7 +47,7 @@ public static class SeedPreview
         ("Infested mines", Heightmap.Biome.Mistlands, new[] { "Mistlands_DvergrTownEntrance1", "Mistlands_DvergrTownEntrance2" }),
         ("Charred fortresses", Heightmap.Biome.AshLands, new[] { "CharredFortress" }),
         ("Hildir's dungeons", Heightmap.Biome.None, new[] { "Hildir_cave", "Hildir_crypt", "Hildir_plainsfortress" }),
-    };
+    ];
 
     // Where the seed's dungeons will be (Kind "dungeon", Name the Dungeons kind). The game's smaller
     // locations before them are laid out too: a few seconds.
@@ -58,13 +58,11 @@ public static class SeedPreview
     public static List<Landmark> FindDungeons(SeedLocations.Layout layout, CancellationToken cancel = default)
     {
         var byPrefab = Dungeons.SelectMany(d => d.Prefabs.Select(p => (p, d.Name))).ToDictionary(x => x.p, x => x.Name);
-        return layout.PlaceKinds(byPrefab.Keys, cancel)
-            .Select(p => new Landmark(byPrefab[p.Rule.prefab], "dungeon", p.X, p.Z, false))
-            .ToList();
+        return [.. layout.PlaceKinds(byPrefab.Keys, cancel).Select(p => new Landmark(byPrefab[p.Rule.prefab], "dungeon", p.X, p.Z, false))];
     }
 
     // The bosses of the first five biomes, for the "bosses within" wish.
-    public static readonly string[] EarlyBosses = { "Eikthyr", "The Elder", "Bonemass", "Moder", "Yagluth" };
+    public static readonly string[] EarlyBosses = ["Eikthyr", "The Elder", "Bonemass", "Moder", "Yagluth"];
 
     // One landmark: OneOf when the game lays out several spots and keeps only the first a player comes
     // near (the traders), the rest vanishing.
@@ -98,7 +96,9 @@ public static class SeedPreview
 
     public static WorldGenerator Generator(string seedName) => WorldGenerator.Create(new World
     {
-        m_seedName = seedName, m_seed = WorldCreator.SeedOf(seedName), m_worldGenVersion = WorldCreator.WorldGenVersion,
+        m_seedName = seedName,
+        m_seed = WorldCreator.SeedOf(seedName),
+        m_worldGenVersion = WorldCreator.WorldGenVersion,
     });
 
     // The seed's preview on size x size cells (128: a quick look, 256: a clearer one); landmarks: where the
@@ -140,8 +140,8 @@ public static class SeedPreview
     // on every core but one (a search runs seeds side by side instead).
     public static (byte[] Biome, float[] Height) Sample(WorldGenerator gen, float x0, float z0, float cell, int w, int h, bool parallel, CancellationToken cancel = default)
     {
-        var biome = new byte[w * h];
-        var height = new float[w * h];
+        byte[] biome = new byte[w * h];
+        float[] height = new float[w * h];
         var options = new ParallelOptions { CancellationToken = cancel, MaxDegreeOfParallelism = parallel ? Math.Max(1, Environment.ProcessorCount - 1) : 1 };
         Parallel.For(0, h, options, j =>
         {
@@ -173,7 +173,7 @@ public static class SeedPreview
     internal static Stats Measure(byte[] biome, int size, float cell, (float X, float Z)? startAt = null)
     {
         int inside = 0, land = 0;
-        var counts = new int[Biomes.Length];
+        int[] counts = new int[Biomes.Length];
         for (int j = 0; j < size; j++)
         {
             for (int i = 0; i < size; i++)
@@ -192,7 +192,7 @@ public static class SeedPreview
             }
         }
         // Landmasses: land cells joined side by side.
-        var mass = new int[size * size];
+        int[] mass = new int[size * size];
         Array.Fill(mass, -1);
         var sizes = new List<int>();
         var queue = new Queue<int>();
@@ -407,7 +407,7 @@ public static class SeedPreview
         }
         lock (found)
         {
-            return found.ToList();
+            return [.. found];
         }
     }
 }

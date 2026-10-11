@@ -138,7 +138,7 @@ public sealed class LiveBridge(string url, string token) : IDisposable
 
     // Zones to hand back to the world generator in the running game: int count, then per zone int x,
     // int z, bool keep buildings, bool reset ground. Returns the plugin's JSON.
-    public async Task<string> ResetZones(IReadOnlyList<TerrainEditor.Editing.ZoneReset> zones)
+    public async Task<string> ResetZones(IReadOnlyList<Editing.ZoneReset> zones)
     {
         using MemoryStream ms = new();
         using (BinaryWriter w = new(ms, System.Text.Encoding.UTF8, leaveOpen: true))

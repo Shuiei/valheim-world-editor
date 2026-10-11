@@ -31,15 +31,15 @@ public static class Builders
         var local = Characters.Local();
         var ids = w.Creators.OrderByDescending(c => c.Value).Select(c => c.Key)
             .Concat(local.Select(c => c.Id)).Concat(w.PlayerNames.Keys).Append(WorldSave.Builder).Where(id => id != 0).Distinct();
-        return ids.Select(id => new Player(id, local.FirstOrDefault(c => c.Id == id)?.Name ?? w.PlayerNames.GetValueOrDefault(id) ?? (id == Unknown ? "Unknown player" : null),
-            w.Creators.GetValueOrDefault(id), local.Any(c => c.Id == id))).ToList();
+        return [.. ids.Select(id => new Player(id, local.FirstOrDefault(c => c.Id == id)?.Name ?? w.PlayerNames.GetValueOrDefault(id) ?? (id == Unknown ? "Unknown player" : null),
+            w.Creators.GetValueOrDefault(id), local.Any(c => c.Id == id)))];
     }
 
     // A piece made player built: a copy of its data with the builder, or null when it is not a kind
     // players build or it already has a builder.
     public static ZdoData? Claimed(byte[] bytes, long builder)
     {
-        ZdoData z = ZdoData.Parse(bytes);
+        var z = ZdoData.Parse(bytes);
         if (PieceCatalog.Get(z.Prefab)?.Tool == null || z.LongList.FirstOrDefault(l => l.Key == CreatorKey).Value != 0)
         {
             return null;

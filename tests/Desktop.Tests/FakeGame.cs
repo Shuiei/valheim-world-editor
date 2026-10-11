@@ -17,23 +17,25 @@ public sealed class FakeGame : IDisposable
     public string Url => $"http://127.0.0.1:{Port}";
     public string Token { get; } = "test-token";
     public string Players { get; set; } = "[{\"name\":\"Ada\",\"x\":10,\"y\":30,\"z\":-20,\"yaw\":0},{\"name\":\"Bjorn\",\"x\":-40,\"y\":31,\"z\":5,\"yaw\":90}]";
-    public int Snapshots;
+    private int _snapshots;
+    public int Snapshots => _snapshots;
     // A label of its own for each game opened (what the window shows; the history kept on disk goes by
     // it), so tests running together never share one.
     public static string Label() => "test " + Guid.NewGuid().ToString("N")[..8];
-    public List<(int X, int Z)> Terrain { get; } = new();
-    public List<(int Destroy, int Create)> ObjectCalls { get; } = new();
-    public List<(int X, int Z, bool Keep, bool Ground)> Resets { get; } = new();
+    public List<(int X, int Z)> Terrain { get; } = [];
+    public List<(int Destroy, int Create)> ObjectCalls { get; } = [];
+    public List<(int X, int Z, bool Keep, bool Ground)> Resets { get; } = [];
     private uint _next = 1000;
     // Answer this path with this status (an error from the game, or an older plugin without it).
-    public Dictionary<string, int> Fail { get; } = new();
+    public Dictionary<string, int> Fail { get; } = [];
     // Set: ground sent to the game waits for it before the game answers (TerrainArrived says it came).
     public TaskCompletionSource? HoldTerrain { get; set; }
     public TaskCompletionSource TerrainArrived { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
     // What the game has in its zones, for /watch and /zone: each zone's number (it changes with the zone)
     // and its objects (ZDOID and bytes). Zones not set are not watched.
-    public Dictionary<(int X, int Z), (ulong Digest, List<(long User, uint Id, byte[] Bytes)> Objects)> Zones { get; } = new();
-    public int ZoneReads;
+    public Dictionary<(int X, int Z), (ulong Digest, List<(long User, uint Id, byte[] Bytes)> Objects)> Zones { get; } = [];
+    private int _zoneReads;
+    public int ZoneReads => _zoneReads;
     // Objects the game no longer had when asked to destroy them.
     public int Missing { get; set; }
 
@@ -74,7 +76,7 @@ public sealed class FakeGame : IDisposable
             {
                 return;
             }
-            byte[] body = Array.Empty<byte>();
+            byte[] body = [];
             string type = "application/json";
             int status = ctx.Request.Headers["X-Bridge-Token"] == Token ? 200 : 401;
             string path = ctx.Request.Url!.AbsolutePath;
@@ -95,7 +97,7 @@ public sealed class FakeGame : IDisposable
                 }
                 else if (path == "/snapshot")
                 {
-                    Interlocked.Increment(ref Snapshots);
+                    Interlocked.Increment(ref _snapshots);
                     body = _snapshot;
                     type = "application/octet-stream";
                 }
@@ -145,7 +147,7 @@ public sealed class FakeGame : IDisposable
                     }
                     body = Encoding.UTF8.GetBytes($"{{\"destroyed\":{destroy - Missing},\"missing\":{Missing},\"created\":[{string.Join(",", ids)}]}}");
                 }
-                else if (path == "/watch" || path == "/zone")
+                else if (path is "/watch" or "/zone")
                 {
                     using var r = new BinaryReader(ctx.Request.InputStream);
                     int n = r.ReadInt32();
@@ -164,8 +166,8 @@ public sealed class FakeGame : IDisposable
                         }
                         else
                         {
-                            Interlocked.Increment(ref ZoneReads);
-                            var all = asked.SelectMany(z => Zones.TryGetValue(z, out var e) ? e.Objects : new()).ToList();
+                            Interlocked.Increment(ref _zoneReads);
+                            var all = asked.SelectMany(z => Zones.TryGetValue(z, out var e) ? e.Objects : []).ToList();
                             using var raw = new MemoryStream();
                             using (var w = new BinaryWriter(raw, Encoding.UTF8, leaveOpen: true))
                             {

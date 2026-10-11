@@ -35,12 +35,12 @@ public sealed class InventoryData
 
         public string CrafterName { get; set; } = "";
 
-        public Dictionary<string, string> CustomData { get; set; } = new();
+        public Dictionary<string, string> CustomData { get; set; } = [];
 
         public bool Cheated { get; set; }
     }
 
-    public List<Item> Items { get; } = new();
+    public List<Item> Items { get; } = [];
 
     public static InventoryData Read(byte[] bytes)
     {
@@ -81,7 +81,7 @@ public sealed class InventoryData
         {
             it.CustomData[r.ReadString()] = r.ReadString();
         }
-        if (version >= 109 || version == 107)
+        if (version is >= 109 or 107)
         {
             it.Cheated = (r.ReadByte() & 1) != 0;
         }
@@ -112,11 +112,27 @@ public sealed class InventoryData
         w.Write((byte)it.Y);
         w.Write((byte)it.WorldLevel);
         w.Write((byte)flags);
-        if ((flags & 4) != 0) w.Write((ushort)it.Quality);
-        if ((flags & 8) != 0) w.Write((ushort)it.Stack);
-        if ((flags & 0x10) != 0) w.Write(it.Variant);
+        if ((flags & 4) != 0)
+        {
+            w.Write((ushort)it.Quality);
+        }
+
+        if ((flags & 8) != 0)
+        {
+            w.Write((ushort)it.Stack);
+        }
+
+        if ((flags & 0x10) != 0)
+        {
+            w.Write(it.Variant);
+        }
+
         if ((flags & 0x20) != 0) { w.Write(it.CrafterId); w.Write(it.CrafterName); }
-        if ((flags & 0x40) != 0) w.Write(it.Prefab);
+        if ((flags & 0x40) != 0)
+        {
+            w.Write(it.Prefab);
+        }
+
         if ((flags & 0x80) != 0)
         {
             ZdoBuilder.WriteNumItems(w, it.CustomData.Count);

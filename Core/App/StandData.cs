@@ -95,7 +95,7 @@ public static class StandData
         if (held == null)
         {
             // As ItemStand.DropItem leaves it.
-            return new() { new("ints", "item", "0"), new("ints", "type", "0"), new("bytes", "itemData", null) };
+            return [new("ints", "item", "0"), new("ints", "type", "0"), new("bytes", "itemData", null)];
         }
         if (ItemStandRefusal(stand, held.Item) is string why)
         {
@@ -104,11 +104,11 @@ public static class StandData
         int hash = StableHash.Of(held.Item);
         var kind = PrefabCatalog.ItemKindOf(hash)!;
         int quality = Math.Clamp(held.Quality, 1, 10), variant = Variant(kind, held.Variant);
-        return new()
-        {
+        return
+        [
             new("ints", "item", I(hash)), new("ints", "variant", I(variant)), new("ints", "quality", I(quality)),
             new("ints", "type", I(Math.Max(0, orientation))), new("bytes", "itemData", ItemData(hash, kind, quality, variant)),
-        };
+        ];
     }
 
     // The values that make an armour stand wear these items (each in the first free slot that takes it;

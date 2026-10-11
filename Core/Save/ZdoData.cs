@@ -8,7 +8,7 @@ namespace TerrainEditor.Save;
 public sealed class ZdoData
 {
     // Between the numbers of a vector or quaternion typed in the inspector.
-    private static readonly char[] NumberSeparators = { ' ', ',', ';' };
+    private static readonly char[] NumberSeparators = [' ', ',', ';'];
 
     public const ushort Connections = 0x1, Floats = 0x2, Vec3s = 0x4, Quats = 0x8, Ints = 0x10, Longs = 0x20, Strings = 0x40, ByteArrays = 0x80;
 
@@ -31,19 +31,19 @@ public sealed class ZdoData
     // The connection section (type and target) kept as it was.
     public byte[]? Connection { get; set; }
 
-    public List<(int Key, float Value)> FloatList { get; } = new();
+    public List<(int Key, float Value)> FloatList { get; } = [];
 
-    public List<(int Key, Vector3 Value)> Vec3List { get; } = new();
+    public List<(int Key, Vector3 Value)> Vec3List { get; } = [];
 
-    public List<(int Key, Quaternion Value)> QuatList { get; } = new();
+    public List<(int Key, Quaternion Value)> QuatList { get; } = [];
 
-    public List<(int Key, int Value)> IntList { get; } = new();
+    public List<(int Key, int Value)> IntList { get; } = [];
 
-    public List<(int Key, long Value)> LongList { get; } = new();
+    public List<(int Key, long Value)> LongList { get; } = [];
 
-    public List<(int Key, string Value)> StringList { get; } = new();
+    public List<(int Key, string Value)> StringList { get; } = [];
 
-    public List<(int Key, byte[] Value)> ByteList { get; } = new();
+    public List<(int Key, byte[] Value)> ByteList { get; } = [];
 
     public static ZdoData Parse(byte[] bytes, int worldVersion = 41)
     {
@@ -106,16 +106,56 @@ public sealed class ZdoData
         bool rotated = euler.LengthSquared() > 1e-6f;
         ushort flags = (ushort)(BaseFlags & 0x0F00);
         bool small = SmallPosition && Position.Y == 0f && Fits(Position.X) && Fits(Position.Z);
-        if (small) flags |= SmallPositionFlag;
-        if (rotated) flags |= RotationFlag;
-        if (Connection != null) flags |= Connections;
-        if (FloatList.Count > 0) flags |= Floats;
-        if (Vec3List.Count > 0) flags |= Vec3s;
-        if (QuatList.Count > 0) flags |= Quats;
-        if (IntList.Count > 0) flags |= Ints;
-        if (LongList.Count > 0) flags |= Longs;
-        if (StringList.Count > 0) flags |= Strings;
-        if (ByteList.Count > 0) flags |= ByteArrays;
+        if (small)
+        {
+            flags |= SmallPositionFlag;
+        }
+
+        if (rotated)
+        {
+            flags |= RotationFlag;
+        }
+
+        if (Connection != null)
+        {
+            flags |= Connections;
+        }
+
+        if (FloatList.Count > 0)
+        {
+            flags |= Floats;
+        }
+
+        if (Vec3List.Count > 0)
+        {
+            flags |= Vec3s;
+        }
+
+        if (QuatList.Count > 0)
+        {
+            flags |= Quats;
+        }
+
+        if (IntList.Count > 0)
+        {
+            flags |= Ints;
+        }
+
+        if (LongList.Count > 0)
+        {
+            flags |= Longs;
+        }
+
+        if (StringList.Count > 0)
+        {
+            flags |= Strings;
+        }
+
+        if (ByteList.Count > 0)
+        {
+            flags |= ByteArrays;
+        }
+
         using MemoryStream ms = new();
         using BinaryWriter w = new(ms, Encoding.UTF8);
         w.Write(flags);
@@ -150,12 +190,12 @@ public sealed class ZdoData
                 write(v);
             }
         }
-        Each(FloatList, v => w.Write(v));
+        Each(FloatList, w.Write);
         Each(Vec3List, v => { w.Write(v.X); w.Write(v.Y); w.Write(v.Z); });
         Each(QuatList, v => { w.Write(v.X); w.Write(v.Y); w.Write(v.Z); w.Write(v.W); });
-        Each(IntList, v => w.Write(v));
-        Each(LongList, v => w.Write(v));
-        Each(StringList, v => w.Write(v));
+        Each(IntList, w.Write);
+        Each(LongList, w.Write);
+        Each(StringList, w.Write);
         Each(ByteList, v => { w.Write(v.Length); w.Write(v); });
         w.Flush();
         return ms.ToArray();
@@ -171,7 +211,7 @@ public sealed class ZdoData
         static float F(string s) => float.Parse(s, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture);
         static float[] Fs(string s, int n)
         {
-            float[] v = s.Split(NumberSeparators, StringSplitOptions.RemoveEmptyEntries).Select(F).ToArray();
+            float[] v = [.. s.Split(NumberSeparators, StringSplitOptions.RemoveEmptyEntries).Select(F)];
             return v.Length == n ? v : throw new FormatException($"{n} numbers expected");
         }
         switch (section)

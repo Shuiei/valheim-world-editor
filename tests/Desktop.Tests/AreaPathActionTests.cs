@@ -25,7 +25,7 @@ public class AreaPathActionTests
     private static EditSession Bumpy()
     {
         var s = EditTests.Flat(2);
-        s.Shape(64, 64, Formula.Compile("sin(x) + cos(z)", new[] { "x", "z", "d", "r", "h" }), 60, 0, "ripple");
+        s.Shape(64, 64, Formula.Compile("sin(x) + cos(z)", ["x", "z", "d", "r", "h"]), 60, 0, "ripple");
         return s;
     }
 
@@ -90,8 +90,8 @@ public class AreaPathActionTests
     public void AnAreaPaintsInsideAndBlendsOverOldPaint()
     {
         var s = EditTests.Flat(2);
-        var dirt = Brush.PaintOf(BrushTool.PaintDirt)!;
-        var paved = Brush.PaintOf(BrushTool.PaintPaved)!;
+        float[] dirt = Brush.PaintOf(BrushTool.PaintDirt)!;
+        float[] paved = Brush.PaintOf(BrushTool.PaintPaved)!;
         Area(s, Box(40, 40, 60, 60), AreaTool.GroundAction.Paint, paint: dirt);
         int p = 50 * s.Ground.W + 50, outside = 70 * s.Ground.W + 70;
         Assert.Equal(1, s.Ground.PMod[p]);

@@ -9,13 +9,13 @@ public sealed class PlaceMemory
 {
     private static readonly JsonSerializerOptions Indented = new() { WriteIndented = true };
 
-    public List<PlaceTool.Preset> Presets { get; set; } = new();
-    public List<string> Favourites { get; set; } = new();
-    public List<string> Recent { get; set; } = new();
-    public List<string> Chosen { get; set; } = new();
-    public Dictionary<string, int> Weights { get; set; } = new();
+    public List<PlaceTool.Preset> Presets { get; set; } = [];
+    public List<string> Favourites { get; set; } = [];
+    public List<string> Recent { get; set; } = [];
+    public List<string> Chosen { get; set; } = [];
+    public Dictionary<string, int> Weights { get; set; } = [];
     // The builder chosen for each world (Built by, in the View panel).
-    public Dictionary<string, long> Builders { get; set; } = new();
+    public Dictionary<string, long> Builders { get; set; } = [];
 
     private static string FilePath => Path.Combine(AppSettings.DataDir, "place.json");
     // Tests keep theirs elsewhere.
@@ -49,7 +49,7 @@ public sealed class PlaceMemory
     // Kinds placed: the newest first, eight at most.
     public void NoteRecent(IEnumerable<string> names)
     {
-        Recent = names.Concat(Recent).Distinct().Take(8).ToList();
+        Recent = [.. names.Concat(Recent).Distinct().Take(8)];
         Save();
     }
 

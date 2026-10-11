@@ -37,12 +37,12 @@ public static class Hammer
     };
 
     // None until Use: no world or Workshop opens before then (GameData).
-    private static volatile Dictionary<string, Data> All = new();
+    private static volatile Dictionary<string, Data> _all = [];
 
     // The pieces by name, as GameCatalogues' PlaceScan writes them.
     public static void Use(string json)
     {
-        using JsonDocument doc = JsonDocument.Parse(json);
+        using var doc = JsonDocument.Parse(json);
         var result = new Dictionary<string, Data>();
         foreach (JsonProperty p in doc.RootElement.EnumerateObject())
         {
@@ -65,18 +65,18 @@ public static class Hammer
                         shapes.Add(new Capsule(new(F(1), F(2), F(3)), new(F(4), F(5), F(6)), F(7)));
                         break;
                     case "m":
-                        var v = c[2].EnumerateArray().Select(x => x.GetSingle()).ToArray();
-                        shapes.Add(new Mesh(c[1].GetInt32() != 0, Enumerable.Range(0, v.Length / 3).Select(i => new Vector3(v[i * 3], v[i * 3 + 1], v[i * 3 + 2])).ToArray(),
-                            c[3].EnumerateArray().Select(x => x.GetInt32()).ToArray()));
+                        float[] v = [.. c[2].EnumerateArray().Select(x => x.GetSingle())];
+                        shapes.Add(new Mesh(c[1].GetInt32() != 0, [.. Enumerable.Range(0, v.Length / 3).Select(i => new Vector3(v[i * 3], v[i * 3 + 1], v[i * 3 + 2]))],
+                            [.. c[3].EnumerateArray().Select(x => x.GetInt32())]));
                         break;
                 }
             }
-            result[p.Name] = new Data(Flag("g"), Flag("cg"), Flag("ce"), Flag("ro"), snaps, shapes.ToArray());
+            result[p.Name] = new Data(Flag("g"), Flag("cg"), Flag("ce"), Flag("ro"), snaps, [.. shapes]);
         }
-        All = result;
+        _all = result;
     }
 
-    public static Data? Get(string prefab) => All.GetValueOrDefault(prefab);
+    public static Data? Get(string prefab) => _all.GetValueOrDefault(prefab);
 
     // The points of a piece's colliders (box corners, mesh vertices, the bottoms and sides of spheres
     // and capsules), turned and scaled, from its origin; none for a piece the game gives no collider.
@@ -94,7 +94,7 @@ public static class Hammer
                 Sphere sp => Round(sp.C, sp.R),
                 Capsule cp => Round(cp.A, cp.R).Concat(Round(cp.B, cp.R)),
                 Mesh m => m.V,
-                _ => Array.Empty<Vector3>(),
+                _ => [],
             };
             foreach (var v in pts)
             {
@@ -434,7 +434,7 @@ public static class Hammer
             float inv = 1 / det;
             var tv = o - a;
             float u = Vector3.Dot(tv, pv) * inv;
-            if (u < 0 || u > 1)
+            if (u is < 0 or > 1)
             {
                 continue;
             }

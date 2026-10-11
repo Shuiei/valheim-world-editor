@@ -4,7 +4,6 @@ using Avalonia.Interactivity;
 using Avalonia.LogicalTree;
 using Avalonia.Threading;
 using TerrainEditor.App;
-using TerrainEditor.Save;
 using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
@@ -20,8 +19,8 @@ public class PanelStartTests
     {
         public StartPage P { get; }
         public AppSettings Settings { get; } = new();
-        public List<Tunnel.Request> Tunnels { get; } = new();
-        public List<string> Opened { get; } = new();
+        public List<Tunnel.Request> Tunnels { get; } = [];
+        public List<string> Opened { get; } = [];
         public Func<Task<WorldSession>>? Open;
         private readonly string? _servers = ServerConfig.PathOverride;
         public string Temp { get; } = Path.Combine(Path.GetTempPath(), "vwe-start-" + Guid.NewGuid().ToString("N")[..8]);
@@ -49,7 +48,7 @@ public class PanelStartTests
             {
                 Directory.Delete(Temp, true);
             }
-            catch (Exception)
+            catch
             {
             }
         }
@@ -156,17 +155,17 @@ public class PanelStartTests
     public void SavedWorldsAreCardsAndNoneIsSaid()
     {
         using var r = new Run();
-        r.P.FindWorlds = _ => new();
+        r.P.FindWorlds = _ => [];
         r.P.FillWorlds();
         Assert.Contains("No worlds found on this computer", Texts(r.P.WorldCards));
         string dir = EditTests.CopyFixture();
         try
         {
-            r.P.FindWorlds = _ => new()
-            {
+            r.P.FindWorlds = _ =>
+            [
                 new Worlds.Info("CITest", dir, DateTime.Now, 2, "a test folder", true, null),
                 new Worlds.Info("Broken", "/nowhere", DateTime.Now, 0, "elsewhere", false, "No save files in it."),
-            };
+            ];
             r.P.FillWorlds();
             var cards = r.P.WorldCards.Children.OfType<Button>().ToList();
             Assert.Equal(2, cards.Count);
@@ -207,7 +206,7 @@ public class PanelStartTests
         File.WriteAllText(cfg, $"Port = {FakeGame.FreePort()}\nToken = t\n");
         r.Settings.BepInExFolders.Add(r.Temp);
         await r.P.PollGame();
-        var shown = r.P.GameState.Content;
+        object? shown = r.P.GameState.Content;
         Assert.Contains("Start Valheim and load your world", Texts((Control)shown!));
         // The game is now running, but its settings cannot be read: the page stays as it was.
         using var game = new FakeGame();

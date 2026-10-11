@@ -36,8 +36,8 @@ public class DungeonToolTests
             W.Edit(Scene.Session!);
             // A Frost Cave of one room: its entrance, three open ends.
             var entrance = new Dungeons.Placed(StableHash.Of("cave_new_entrance02"), At, Quaternion.Identity);
-            byte[] blank = ZdoBuilder.Blank(Cave, TerrainEditor.Terrain.PrefabCatalog.Get(Cave)!.Flags, At, Vector3.Zero, 0f);
-            Scene.Session!.Commit("A dungeon", null, Array.Empty<int>(), new[] { (new NewObject(0, Cave, At, Vector3.Zero, 0, null, false, Dungeons.WithRooms(blank, new[] { entrance })), false) });
+            byte[] blank = ZdoBuilder.Blank(Cave, Terrain.PrefabCatalog.Get(Cave)!.Flags, At, Vector3.Zero, 0f);
+            Scene.Session!.Commit("A dungeon", null, [], [(new NewObject(0, Cave, At, Vector3.Zero, 0, null, false, Dungeons.WithRooms(blank, [entrance])), false)]);
             T.Message += t => Said = t;
             W.Tools.ChooseMode(ToolMode.Dungeon);
         }
@@ -56,7 +56,7 @@ public class DungeonToolTests
     private static List<Dungeons.Placed> Saved(Run r)
     {
         var d = r.T.Dungeon!;
-        var bytes = ObjectData.Bytes(r.Scene.World, r.Scene.Session!.Edits, d.Thing.Id)!;
+        byte[] bytes = ObjectData.Bytes(r.Scene.World, r.Scene.Session!.Edits, d.Thing.Id)!;
         return Dungeons.Read(ZdoData.Parse(bytes).GetBytes(Dungeons.RoomDataKey)!);
     }
 
@@ -117,7 +117,7 @@ public class DungeonToolTests
         // A big room at an end that faces the entrance's other side runs into it.
         r.T.Choose("cave_new_sloperoom05");
         string? problem = null;
-        foreach (var e in Enumerable.Range(0, r.T.FreeEnds.Count))
+        foreach (int e in Enumerable.Range(0, r.T.FreeEnds.Count))
         {
             r.PointAt(r.T.FreeEnds[e]);
             for (int k = 0; k < 8 && problem == null; k++, r.T.Turn())
@@ -189,7 +189,7 @@ public class DungeonToolTests
     {
         using var r = new Run();
         Click(r.P.GoInside);
-        var cut = r.W.View.CutY;
+        float? cut = r.W.View.CutY;
         Assert.NotNull(cut);
         Click(r.P.BuildHere);
         // Building under the dungeon's cut: the roofs stay away, the pieces go on the floors.
@@ -209,11 +209,11 @@ public class DungeonToolTests
         // A chest in a cap, and one in the entrance room.
         var cap = r.Rooms[1];
         int chest = StableHash.Of("piece_chest_wood");
-        r.Scene.Session!.Commit("Chests", null, Array.Empty<int>(), new[]
-        {
+        r.Scene.Session!.Commit("Chests", null, [],
+        [
             (new NewObject(0, chest, cap.Position + new Vector3(0, -2, 0), Vector3.Zero, 0), true),
             (new NewObject(0, chest, At + new Vector3(4, -2, 0), Vector3.Zero, 0), true),
-        });
+        ]);
         int before = r.Scene.Things.Count(t => !t.Gone && t.Prefab == chest);
         r.T.Hover(cap.Position + new Vector3(0, 1, 0), -Vector3.UnitY);
         r.T.Click();

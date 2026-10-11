@@ -76,18 +76,18 @@ public static partial class GameCatalogues
             return r;
         }
 
-        private readonly Dictionary<string, Dict> _prefabs = new();
+        private readonly Dictionary<string, Dict> _prefabs = [];
         // Each script's role, by where it is.
-        private readonly Dictionary<Ref, Role> _roles = new();
+        private readonly Dictionary<Ref, Role> _roles = [];
         // Every networked root's name by where it is: what saplings name (without opening their bundles).
-        private readonly Dictionary<Ref, string> _names = new();
+        private readonly Dictionary<Ref, string> _names = [];
         // Saplings: the grown prefabs they name.
-        private readonly Dictionary<string, List<Ref>> _plants = new();
+        private readonly Dictionary<string, List<Ref>> _plants = [];
         // Items by their ItemDrop component (what item stands name), and what stands take.
-        private readonly Dictionary<Ref, string> _owners = new();
-        private readonly Dictionary<string, Dict> _items = new();
-        private readonly Dictionary<string, (List<long> Types, List<Ref> Take, List<Ref> Refuse)> _stands = new();
-        private readonly Dictionary<string, List<object?>> _armour = new();
+        private readonly Dictionary<Ref, string> _owners = [];
+        private readonly Dictionary<string, Dict> _items = [];
+        private readonly Dictionary<string, (List<long> Types, List<Ref> Take, List<Ref> Refuse)> _stands = [];
+        private readonly Dictionary<string, List<object?>> _armour = [];
 
         public void Read(Bundle b, Game game)
         {
@@ -190,7 +190,7 @@ public static partial class GameCatalogues
                 Layout.Sweep(b, children.Where(tree.Transforms.ContainsKey).Select(c => (c.Item1, tree.Transforms[c].Go)), Take);
             }
             // The items' GameObjects.
-            List<(Bundle.Inner, long)> Items() => scripts.Where(s => said.TryGetValue((s.File, s.Pid), out var x) && x.Item != null).Select(s => (s.File, said[(s.File, s.Pid)].Go)).Distinct().ToList();
+            List<(Bundle.Inner, long)> Items() => [.. scripts.Where(s => said.TryGetValue((s.File, s.Pid), out var x) && x.Item != null).Select(s => (s.File, said[(s.File, s.Pid)].Go)).Distinct()];
             // The prefabs: networked roots.
             var roots = new HashSet<long>();
             var rootGos = new List<(Bundle.Inner File, long Go)>();
@@ -206,7 +206,7 @@ public static partial class GameCatalogues
             if (rootGos.Count > 0)
             {
                 // One with children, when there is one: more of the tree checked.
-                var check = rootGos.FirstOrDefault(g => TransformsOf(new[] { g }).Any(t => tree.Transforms.TryGetValue(t, out var n) && n.Children.Length > 0), rootGos[0]);
+                var check = rootGos.FirstOrDefault(g => TransformsOf([g]).Any(t => tree.Transforms.TryGetValue(t, out var n) && n.Children.Length > 0), rootGos[0]);
                 Layout.Check(b, check.File, check.Go, tree);
             }
             // The prefabs' scripts read whole (in one more sweep, when not read yet).
@@ -219,13 +219,13 @@ public static partial class GameCatalogues
                 }
             }
             // Each item's children's names.
-            var kids = items.ToDictionary(i => i, i => ChildrenOf(new[] { i }).Where(tree.Transforms.ContainsKey).Select(c => (c.Item1, tree.Transforms[c].Go))
+            var kids = items.ToDictionary(i => i, i => ChildrenOf([i]).Where(tree.Transforms.ContainsKey).Select(c => (c.Item1, tree.Transforms[c].Go))
                 .Where(tree.GameObjects.ContainsKey).Select(g => tree.GameObjects[g].Name).ToHashSet());
             foreach (var (f, pid, _) in scripts)
             {
                 if (said.TryGetValue((f, pid), out var s) && tree.GameObjects.TryGetValue((f, s.Go), out var go))
                 {
-                    Keep(f, pid, go.Name, s, kids.GetValueOrDefault((f, s.Go)) ?? new());
+                    Keep(f, pid, go.Name, s, kids.GetValueOrDefault((f, s.Go)) ?? []);
                 }
             }
         }
@@ -305,8 +305,8 @@ public static partial class GameCatalogues
 
         private static Said Say(Bundle.Inner f, Role r, AssetTypeValueField d)
         {
-            static List<long> Types(AssetTypeValueField list) => list["Array"].Children.Select(t => Int(Py(t))).Distinct().Order().ToList();
-            List<Ref> Refs(string name) => Has(d, name) ? d[name]["Array"].Children.Select(p => Bundle.RefOf(f, p)).OfType<Ref>().ToList() : new();
+            static List<long> Types(AssetTypeValueField list) => [.. list["Array"].Children.Select(t => Int(Py(t))).Distinct().Order()];
+            List<Ref> Refs(string name) => Has(d, name) ? [.. d[name]["Array"].Children.Select(p => Bundle.RefOf(f, p)).OfType<Ref>()] : [];
             Dict? item = null;
             if ((r & Role.Drop) != 0)
             {
@@ -334,7 +334,7 @@ public static partial class GameCatalogues
                 (r & Role.Plant) != 0 ? Refs("m_grownPrefabs") : null,
                 item,
                 item == null && (r & Role.Stand) != 0 ? (Types(d["m_supportedTypes"]), Refs("m_supportedItems"), Refs("m_unsupportedItems")) : null,
-                item == null && (r & Role.Stand) == 0 && (r & Role.Armour) != 0 ? d["m_slots.Array"].Children.Select(s => (object?)Types(s["m_supportedTypes"])).ToList() : null);
+                item == null && (r & Role.Stand) == 0 && (r & Role.Armour) != 0 ? [.. d["m_slots.Array"].Children.Select(s => (object?)Types(s["m_supportedTypes"]))] : null);
         }
 
         // A script's say kept under its GameObject's name (the first of each name for stands), with the
@@ -395,7 +395,7 @@ public static partial class GameCatalogues
                     }
                 }
             }
-            List<string> Owners(List<Ref> refs) => refs.Where(_owners.ContainsKey).Select(r => _owners[r]).Distinct().Order(StringComparer.Ordinal).ToList();
+            List<string> Owners(List<Ref> refs) => [.. refs.Where(_owners.ContainsKey).Select(r => _owners[r]).Distinct().Order(StringComparer.Ordinal)];
             foreach (var (n, (types, take, refuse)) in _stands)
             {
                 if (!_prefabs.TryGetValue(n, out var entry))
@@ -459,13 +459,13 @@ public static partial class GameCatalogues
 
     private sealed class VegetationScan
     {
-        private static readonly string[] Keep = { "m_name", "m_enable", "m_min", "m_max", "m_forcePlacement", "m_scaleMin", "m_scaleMax", "m_randTilt", "m_chanceToUseGroundTilt", "m_biome", "m_biomeArea", "m_blockCheck", "m_snapToStaticSolid", "m_minAltitude", "m_maxAltitude", "m_minVegetation", "m_maxVegetation", "m_surroundCheckVegetation", "m_surroundCheckDistance", "m_surroundCheckLayers", "m_surroundBetterThanAverage", "m_minOceanDepth", "m_maxOceanDepth", "m_minTilt", "m_maxTilt", "m_terrainDeltaRadius", "m_maxTerrainDelta", "m_minTerrainDelta", "m_snapToWater", "m_groundOffset", "m_groupSizeMin", "m_groupSizeMax", "m_groupRadius", "m_minDistanceFromCenter", "m_maxDistanceFromCenter", "m_inForest", "m_forestTresholdMin", "m_forestTresholdMax" };
+        private static readonly string[] Keep = ["m_name", "m_enable", "m_min", "m_max", "m_forcePlacement", "m_scaleMin", "m_scaleMax", "m_randTilt", "m_chanceToUseGroundTilt", "m_biome", "m_biomeArea", "m_blockCheck", "m_snapToStaticSolid", "m_minAltitude", "m_maxAltitude", "m_minVegetation", "m_maxVegetation", "m_surroundCheckVegetation", "m_surroundCheckDistance", "m_surroundCheckLayers", "m_surroundBetterThanAverage", "m_minOceanDepth", "m_maxOceanDepth", "m_minTilt", "m_maxTilt", "m_terrainDeltaRadius", "m_maxTerrainDelta", "m_minTerrainDelta", "m_snapToWater", "m_groundOffset", "m_groupSizeMin", "m_groupSizeMax", "m_groupRadius", "m_minDistanceFromCenter", "m_maxDistanceFromCenter", "m_inForest", "m_forestTresholdMin", "m_forestTresholdMax"];
 
         private static readonly Dictionary<string, int> Draws = new() { ["LodFadeInOut"] = 1, ["MineRock5"] = 1, ["Floating"] = 1, ["LightFlicker"] = 1, ["Fish"] = 1, ["RandomFlyingBird"] = 2 };
 
         private List<(Dict Rule, Ref Prefab)>? _zone;
         // The LocationLists, each once (some bundles repeat them): by (sort order, first rule's name, rules).
-        private readonly Dictionary<(long Order, string First, int Count), List<(Dict Rule, Ref Prefab)>> _lists = new();
+        private readonly Dictionary<(long Order, string First, int Count), List<(Dict Rule, Ref Prefab)>> _lists = [];
 
         public bool Found => _zone != null;
 
@@ -504,7 +504,7 @@ public static partial class GameCatalogues
             }
         }
 
-        private static List<(Dict, Ref)> Rules(Bundle.Inner f, List<AssetTypeValueField> vegs) => vegs.Select(v =>
+        private static List<(Dict, Ref)> Rules(Bundle.Inner f, List<AssetTypeValueField> vegs) => [.. vegs.Select(v =>
         {
             var rule = new Dict();
             foreach (string k in Keep.Where(k => Has(v, k)))
@@ -513,11 +513,11 @@ public static partial class GameCatalogues
             }
             var p = v["m_prefab"];
             return (rule, new Ref(f.FileOf(p["m_FileID"].AsInt) ?? "", p["m_PathID"].AsLong));
-        }).ToList();
+        })];
 
         public List<object?> Finish(Game game)
         {
-            var all = (_zone ?? new()).Concat(_lists.OrderBy(kv => kv.Key.Order).ThenBy(kv => kv.Key.First, StringComparer.Ordinal).ThenBy(kv => kv.Key.Count).SelectMany(kv => kv.Value)).ToList();
+            var all = (_zone ?? []).Concat(_lists.OrderBy(kv => kv.Key.Order).ThenBy(kv => kv.Key.First, StringComparer.Ordinal).ThenBy(kv => kv.Key.Count).SelectMany(kv => kv.Value)).ToList();
             // The prefabs' names and the scripts on their active objects: (script, LODGroup on the same
             // object, respawns).
             var names = new Dictionary<Ref, string>();
@@ -544,7 +544,7 @@ public static partial class GameCatalogues
             {
                 string? name = names.GetValueOrDefault(prefab);
                 rule["prefab"] = name;
-                rule["draws"] = (long)(scripts.GetValueOrDefault(prefab) ?? new()).Sum(s => classes.GetValueOrDefault(s.Script) switch
+                rule["draws"] = (long)(scripts.GetValueOrDefault(prefab) ?? []).Sum(s => classes.GetValueOrDefault(s.Script) switch
                 {
                     "LodFadeInOut" => s.Lod ? 1 : 0,
                     "Pickable" => s.Respawns ? 1 : 0,
@@ -631,7 +631,7 @@ public static partial class GameCatalogues
                 }
                 var g = b.Field(m["m_GameObject.m_PathID"].AsLong)!;
                 int place = g["m_Component.Array"].Children.FindIndex(c => c["component.m_PathID"].AsLong == info.PathId);
-                (found.TryGetValue(root, out var list) ? list : found[root] = new()).Add((index, place, Entry(m, chain.Count == 0, p)));
+                (found.TryGetValue(root, out var list) ? list : found[root] = []).Add((index, place, Entry(m, chain.Count == 0, p)));
             }
             if (found.Count == 0)
             {
@@ -714,7 +714,7 @@ public static partial class GameCatalogues
         // One modifier as the catalogue has it (pos: where it is in the prefab's frame).
         private static Dict Entry(AssetTypeValueField m, bool atRoot, V3 p) => new()
         {
-            ["pos"] = atRoot ? Origin() : new List<object?> { R(p.X, 4), R(p.Y, 4), R(p.Z, 4) },
+            ["pos"] = atRoot ? Origin() : [R(p.X, 4), R(p.Y, 4), R(p.Z, 4)],
             ["level"] = Py(m["m_level"]),
             ["levelOffset"] = Py(m["m_levelOffset"]),
             ["levelRadius"] = Py(m["m_levelRadius"]),
@@ -805,7 +805,7 @@ public static partial class GameCatalogues
         return n is >= 0 and <= 256 ? System.Text.Encoding.UTF8.GetString(file.Reader.ReadBytes(n)) : null;
     }
 
-    private static readonly string[] DataFolders = { "valheim_Data", "Valheim_Data" };
+    private static readonly string[] DataFolders = ["valheim_Data", "Valheim_Data"];
 
     private static readonly System.Text.RegularExpressions.Regex KeyName = new(@"\A[A-Za-z_][A-Za-z0-9_ ]{0,39}\z");
 
@@ -835,7 +835,7 @@ public static partial class GameCatalogues
         // Built at run time by the game.
         for (int i = 0; i < 64; i++)
         {
-            names.UnionWith(new[] { $"pu_id{i}", $"pu_name{i}", $"{i}_seed", $"data_{i}", $"data__{i}" });
+            names.UnionWith([$"pu_id{i}", $"pu_name{i}", $"{i}_seed", $"data_{i}", $"data__{i}"]);
         }
         for (int i = 0; i < 16; i++)
         {

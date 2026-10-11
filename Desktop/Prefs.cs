@@ -16,7 +16,7 @@ public sealed class Prefs
 {
     private readonly string? _path;
     private readonly Dictionary<string, JsonNode?> _values;
-    private readonly object _lock = new();
+    private readonly Lock _lock = new();
     private Timer? _timer;
 
     // Tests: another file, never the user's.
@@ -52,7 +52,7 @@ public sealed class Prefs
     }
 
     // Remembered only while the program runs (the tests' windows: never written, never shared).
-    public static Prefs InMemory() => new(null, new());
+    public static Prefs InMemory() => new(null, []);
 
     public bool Has(string key)
     {

@@ -38,26 +38,26 @@ public static partial class TerrainShader
             w.Add(((uint)(a.Length + 1) << 16) | op);
             w.AddRange(a);
         }
-        const uint main = 1, output = 2, tVoid = 3, tFn = 4, tFloat = 5, tVec4 = 6, tPtr = 7, one = 8, white = 9, label = 10;
+        const uint Main = 1, Output = 2, TVoid = 3, TFn = 4, TFloat = 5, TVec4 = 6, TPtr = 7, One = 8, White = 9, Label = 10;
         Op(17, 1); // OpCapability Shader
         Op(14, 0, 1); // OpMemoryModel Logical GLSL450
-        Op(15, 4, main, 0x6E69616D, 0, output); // OpEntryPoint Fragment %main "main" %output
-        Op(16, main, 8); // OpExecutionMode OriginUpperLeft
-        Op(71, output, 30, 0); // OpDecorate Location 0
-        Op(19, tVoid);
-        Op(33, tFn, tVoid);
-        Op(22, tFloat, 32);
-        Op(23, tVec4, tFloat, 4);
-        Op(32, tPtr, 3, tVec4);
-        Op(59, tPtr, output, 3);
-        Op(43, tFloat, one, 0x3F800000);
-        Op(44, tVec4, white, one, one, one, one);
-        Op(54, tVoid, main, 0, tFn);
-        Op(248, label);
-        Op(62, output, white);
+        Op(15, 4, Main, 0x6E69616D, 0, Output); // OpEntryPoint Fragment %main "main" %output
+        Op(16, Main, 8); // OpExecutionMode OriginUpperLeft
+        Op(71, Output, 30, 0); // OpDecorate Location 0
+        Op(19, TVoid);
+        Op(33, TFn, TVoid);
+        Op(22, TFloat, 32);
+        Op(23, TVec4, TFloat, 4);
+        Op(32, TPtr, 3, TVec4);
+        Op(59, TPtr, Output, 3);
+        Op(43, TFloat, One, 0x3F800000);
+        Op(44, TVec4, White, One, One, One, One);
+        Op(54, TVoid, Main, 0, TFn);
+        Op(248, Label);
+        Op(62, Output, White);
         Op(253);
         Op(56);
-        return w.SelectMany(BitConverter.GetBytes).ToArray();
+        return [.. w.SelectMany(BitConverter.GetBytes)];
     }
 
     // SPIR-V to GLSL ES 3.0 (the editor's ANGLE target; desktop OpenGL takes it too), all highp.
@@ -125,7 +125,7 @@ public static partial class TerrainShader
             string path = Path.Combine(d, file);
             if (File.Exists(path))
             {
-                return new Cross(Cross.CreateDefaultContext(new[] { path }));
+                return new Cross(Cross.CreateDefaultContext([path]));
             }
         }
         return Cross.GetApi();

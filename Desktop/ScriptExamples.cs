@@ -6,7 +6,7 @@ public static class ScriptExamples
     public sealed record Example(string Name, string Code);
 
     public static readonly Example[] All =
-    {
+    [
         new("Mountain range across the area", """
 			// A range of peaks across the area, from south-west to north-east, each one different.
 			Rnd.Seed = 7;
@@ -118,5 +118,5 @@ public static class ScriptExamples
 			    Ground.Raise(x, z, h * edge);
 			}
 			"""),
-    };
+    ];
 }

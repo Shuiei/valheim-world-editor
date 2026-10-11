@@ -18,14 +18,14 @@ public static class Mountain
     public sealed record Preset(string Name, MountainKind Kind, (float Min, float Max) Height, (float Min, float Max) Radius, (float Min, float Max) Rough, string Help);
 
     public static readonly Preset[] Presets =
-    {
+    [
         new("Lone peak", MountainKind.Peak, (50, 110), (120, 240), (0.4f, 0.8f), "One mountain rising to a peak, with ridges down its sides."),
         new("Ridge", MountainKind.Ridge, (35, 80), (140, 260), (0.4f, 0.8f), "A long crest (Turn sets its direction)."),
         new("Mountain range", MountainKind.Range, (40, 90), (180, 280), (0.4f, 0.8f), "Several peaks along a line (Turn sets its direction)."),
         new("Mesa", MountainKind.Mesa, (20, 50), (70, 150), (0.2f, 0.6f), "A flat top with steep, rocky sides: room to build up there."),
         new("Volcano", MountainKind.Volcano, (45, 100), (130, 240), (0.3f, 0.7f), "A cone with a crater at the top."),
         new("Rolling hills", MountainKind.Hills, (12, 30), (100, 220), (0.3f, 0.7f), "A few gentle hills together."),
-    };
+    ];
 
     // A new mountain of the preset: its size picked within the preset's ranges.
     public static MountainSpec Roll(Preset p, Random r) => new(p.Kind, Pick(r, p.Height), Pick(r, p.Radius), Pick(r, p.Rough), r.Next(0, 180), r.Next());
@@ -37,7 +37,7 @@ public static class Mountain
     {
         var noise = new Noise(m.Seed);
         var rnd = new Random(m.Seed);
-        float a = m.Turn * MathF.PI / 180, ca = MathF.Cos(a), sa = MathF.Sin(a), R = m.Radius, H = m.Height;
+        float a = m.Turn * MathF.PI / 180, ca = MathF.Cos(a), sa = MathF.Sin(a), r = m.Radius, h = m.Height;
         // Hills and ranges: bumps of their own (along the line for a range), picked once from the seed.
         var bumps = new List<(float X, float Z, float R, float H)>();
         if (m.Kind == MountainKind.Hills)
@@ -64,10 +64,10 @@ public static class Mountain
         return (x, z) =>
         {
             // The outline warped by noise, so no mountain is a perfect circle.
-            float wx = x + R * 0.18f * noise.Fbm(x / (R * 0.6f) + 3.1f, z / (R * 0.6f) - 7.7f);
-            float wz = z + R * 0.18f * noise.Fbm(x / (R * 0.6f) - 5.3f, z / (R * 0.6f) + 1.9f);
+            float wx = x + r * 0.18f * noise.Fbm(x / (r * 0.6f) + 3.1f, z / (r * 0.6f) - 7.7f);
+            float wz = z + r * 0.18f * noise.Fbm(x / (r * 0.6f) - 5.3f, z / (r * 0.6f) + 1.9f);
             // Turned, in radii: u along the Turn direction, v across.
-            float u = (wx * ca + wz * sa) / R, v = (-wx * sa + wz * ca) / R;
+            float u = (wx * ca + wz * sa) / r, v = (-wx * sa + wz * ca) / r;
             float d = MathF.Sqrt(u * u + v * v);
             float body = m.Kind switch
             {
@@ -90,9 +90,9 @@ public static class Mountain
             // Detail: broad swells, then ridges with gullies between them (ridged noise) down the slopes,
             // both in proportion to the mountain, and a little fine detail capped at a few metres (deep,
             // narrow cuts look torn, and the ground discs cannot follow them).
-            float swell = noise.Fbm(x / (R * 0.45f) + 11.3f, z / (R * 0.45f) - 4.2f);
-            float ridged = 1 - MathF.Abs(noise.Fbm(x / (R * 0.3f) - 2.6f, z / (R * 0.3f) + 8.4f));
-            float fine = noise.Fbm(x / 18f + 5.5f, z / 18f - 3.3f) * MathF.Min(0.03f * H, 3f) / H;
+            float swell = noise.Fbm(x / (r * 0.45f) + 11.3f, z / (r * 0.45f) - 4.2f);
+            float ridged = 1 - MathF.Abs(noise.Fbm(x / (r * 0.3f) - 2.6f, z / (r * 0.3f) + 8.4f));
+            float fine = noise.Fbm(x / 18f + 5.5f, z / 18f - 3.3f) * MathF.Min(0.03f * h, 3f) / h;
             float detail = m.Rough * (0.18f * swell + 0.22f * (ridged - 0.55f) * MathF.Sqrt(body) + fine / MathF.Max(0.05f, body));
             // A mesa keeps its top flat: detail only on its sides.
             if (m.Kind == MountainKind.Mesa)
@@ -101,7 +101,7 @@ public static class Mountain
             }
             // Back to nothing at the edge.
             float edge = 1 - Smooth((d - 0.85f) / 0.3f);
-            return H * MathF.Max(0, body + detail * body) * edge;
+            return h * MathF.Max(0, body + detail * body) * edge;
         };
     }
 }

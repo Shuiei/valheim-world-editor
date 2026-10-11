@@ -19,9 +19,9 @@ public sealed class EditStore
     // what the game draws: about -400 to +1000 m).
     public const float MaxLift = 400f;
 
-    private readonly object _lock = new();
+    private readonly Lock _lock = new();
 
-    private readonly Dictionary<(int, int), ZoneEdit> _zones = new();
+    private readonly Dictionary<(int, int), ZoneEdit> _zones = [];
 
     // Bumped on every change so cached map detail can be rebuilt.
     public int Version { get; private set; }
@@ -94,7 +94,7 @@ public sealed class EditStore
     // its own there, not applied yet, with the game's ground. Applying them would write over what was done
     // in the game, so the editor asks first; once the editor's changes there are undone the game's ground
     // comes in (TakeWaitingGround); applying clears it (or discarding).
-    private readonly Dictionary<(int, int), ZoneEdit> _gameChanged = new();
+    private readonly Dictionary<(int, int), ZoneEdit> _gameChanged = [];
 
     public IReadOnlyList<(int X, int Z)> GameChanged
     {
@@ -113,7 +113,7 @@ public sealed class EditStore
     {
         lock (_lock)
         {
-            return _gameChanged.Keys.Where(k => _zones.TryGetValue(k, out ZoneEdit? e) && e.Changed).ToList();
+            return [.. _gameChanged.Keys.Where(k => _zones.TryGetValue(k, out ZoneEdit? e) && e.Changed)];
         }
     }
 
@@ -174,13 +174,13 @@ public sealed class EditStore
             {
                 Version++;
             }
-            return ready.Select(kv => kv.Key).ToList();
+            return [.. ready.Select(kv => kv.Key)];
         }
     }
 
     // Each zone as saved / applied: a zone is pending only while it differs from this, so undoing back
     // to it clears the change.
-    private readonly Dictionary<(int, int), ZoneEdit> _baseline = new();
+    private readonly Dictionary<(int, int), ZoneEdit> _baseline = [];
 
     public ZoneEdit? Get(int zx, int zz)
     {
@@ -194,12 +194,12 @@ public sealed class EditStore
     {
         lock (_lock)
         {
-            return _zones.Values.Select(e => e.Clone()).ToList();
+            return [.. _zones.Values.Select(e => e.Clone())];
         }
     }
 
     // Objects (by WorldSave id) to leave out of the next save.
-    private readonly HashSet<int> _deleted = new();
+    private readonly HashSet<int> _deleted = [];
 
     public HashSet<int> Deleted
     {
@@ -207,7 +207,7 @@ public sealed class EditStore
         {
             lock (_lock)
             {
-                return new HashSet<int>(_deleted);
+                return [.. _deleted];
             }
         }
     }
@@ -224,13 +224,13 @@ public sealed class EditStore
     }
 
     // New objects placed in the editor (planted, pasted, replacements), by the negative id the browser gave them.
-    private readonly Dictionary<int, NewObject> _added = new();
+    private readonly Dictionary<int, NewObject> _added = [];
 
     // Added objects that were deleted again (kept so undo can bring them back).
-    private readonly Dictionary<int, NewObject> _addedTrash = new();
+    private readonly Dictionary<int, NewObject> _addedTrash = [];
 
     // Zones to give back to the world generator.
-    private readonly Dictionary<(int, int), ZoneReset> _resets = new();
+    private readonly Dictionary<(int, int), ZoneReset> _resets = [];
 
     public List<NewObject> Added
     {
@@ -238,7 +238,7 @@ public sealed class EditStore
         {
             lock (_lock)
             {
-                return _added.Values.ToList();
+                return [.. _added.Values];
             }
         }
     }
@@ -295,7 +295,7 @@ public sealed class EditStore
         {
             lock (_lock)
             {
-                return _resets.Values.ToList();
+                return [.. _resets.Values];
             }
         }
     }
@@ -556,7 +556,7 @@ public sealed record NewObject(int Id, int Prefab, System.Numerics.Vector3 Posit
 // As text (blueprints, the clipboard): "section;key;value in base64" ("-" for none).
 public sealed record ObjectField(string Section, int Key, string? Value)
 {
-    public static readonly int CreatorKey = TerrainEditor.Save.StableHash.Of("creator");
+    public static readonly int CreatorKey = StableHash.Of("creator");
 
     // No builder: the game takes the object for part of a ruin (generated dungeons).
     public static readonly ObjectField NoBuilder = new("longs", CreatorKey, null);
@@ -576,7 +576,7 @@ public sealed record ObjectField(string Section, int Key, string? Value)
         {
             string? value = p[2] == "-" ? null : System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(p[2]));
             // A value the save cannot take (a damaged or hand-edited line) is left out here, not when the world is written.
-            return TerrainEditor.Save.ZdoData.Valid(p[0], value) ? new ObjectField(p[0], key, value) : null;
+            return ZdoData.Valid(p[0], value) ? new ObjectField(p[0], key, value) : null;
         }
         catch (FormatException)
         {

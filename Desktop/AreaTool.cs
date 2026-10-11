@@ -10,14 +10,14 @@ public sealed class AreaTool
 {
     public bool Box { get; set; } = true;
     public float Soft { get; set; } = 3;
-    public List<Vector2> Points { get; } = new();
+    public List<Vector2> Points { get; } = [];
     public bool Closed { get; private set; }
     private bool _dragging;
     public event Action? Changed;
     public void Notify() => Changed?.Invoke();
 
     // The kinds of objects the object actions work on.
-    public HashSet<ObjectKind> Kinds { get; } = new() { ObjectKind.Trees, ObjectKind.Rocks, ObjectKind.Bushes, ObjectKind.Pickables };
+    public HashSet<ObjectKind> Kinds { get; } = [ObjectKind.Trees, ObjectKind.Rocks, ObjectKind.Bushes, ObjectKind.Pickables];
 
     // The selection's outline, or null while there is none.
     public List<Vector2>? Polygon()
@@ -31,9 +31,9 @@ public sealed class AreaTool
                     return null;
                 }
                 Vector2 a = Points[0], b = Points[1];
-                return new() { a, new(b.X, a.Y), b, new(a.X, b.Y) };
+                return [a, new(b.X, a.Y), b, new(a.X, b.Y)];
             }
-            return Points.Count >= 3 ? Points.ToList() : null;
+            return Points.Count >= 3 ? [.. Points] : null;
         }
     }
 
@@ -230,10 +230,10 @@ public sealed class AreaTool
         if (act == GroundAction.Erode)
         {
             var set = new HashSet<int>();
-            var box = Erosion.Area(g, a, b.RestAngle, b.Random, set);
-            return (set.ToList(), (box.X0 - 1, box.Z0 - 1, box.X1 + 1, box.Z1 + 1));
+            var (x0, z0, x1, z1) = Erosion.Area(g, a, b.RestAngle, b.Random, set);
+            return (set.ToList(), (x0 - 1, z0 - 1, x1 + 1, z1 + 1));
         }
-        var before = new float[g.W * g.H];
+        float[] before = new float[g.W * g.H];
         for (int i = 0; i < before.Length; i++)
         {
             before[i] = g.HeightOf(i);
@@ -337,9 +337,25 @@ public sealed class AreaTool
                 continue;
             }
             float h = g.HeightOf(p), b = g.Original(p), d = (h - b) * w;
-            if (d > 0) up += d; else down -= d;
+            if (d > 0)
+            {
+                up += d;
+            }
+            else
+            {
+                down -= d;
+            }
+
             float want = h + (height - h) * w, got = Math.Clamp(want, b - 8, b + 8);
-            if (got > h) fill += got - h; else cut += h - got;
+            if (got > h)
+            {
+                fill += got - h;
+            }
+            else
+            {
+                cut += h - got;
+            }
+
             outOfReach += MathF.Abs(want - got);
             raise += MathF.Max(0, MathF.Min(b + 8, h + amount * w) - h);
             lower += MathF.Max(0, h - MathF.Max(b - 8, h - amount * w));
@@ -370,7 +386,7 @@ public sealed class AreaTool
         var set = new SortedSet<(int, int)>();
         if (WeightsIn(g.W, g.H) is not { } a)
         {
-            return new();
+            return [];
         }
         foreach (var (p, w) in a.Cells)
         {
@@ -381,6 +397,6 @@ public sealed class AreaTool
             int zx = Math.Min(g.Size - 1, p % g.W / 64), zz = Math.Min(g.Size - 1, p / g.W / 64);
             set.Add((g.X0 + zx, g.Z0 + zz));
         }
-        return set.ToList();
+        return [.. set];
     }
 }

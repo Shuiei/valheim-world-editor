@@ -29,9 +29,9 @@ public class CoreCopyTests
         z.Set("floats", StableHash.Of("health"), "750.5");
         z.Set("vec3", StableHash.Of("spawnpoint"), "1 2 3");
         z.Set("quats", StableHash.Of("look"), "0 0.7071 0 0.7071");
-        z.Connection = new byte[] { 1, 0x78, 0x56, 0x34, 0x12 };
+        z.Connection = [1, 0x78, 0x56, 0x34, 0x12];
         var rich = new NewObject(-1, z.Prefab, z.Position + new Vector3(4, 0, 4), Vector3.Zero, 0f, Fresh: false, Raw: z.Serialize());
-        var r = WorldWriter.Save(world, Array.Empty<ZoneEdit>(), added: new[] { rich });
+        var r = WorldWriter.Save(world, [], added: [rich]);
         Assert.True(r.Saved, r.Message);
         world = w.Load();
         int id = Enumerable.Range(0, world.ObjectRefs.Count).Single(i => ZdoData.Parse(world.ObjectBytes(i)).StringList.Any(s => s.Value == "Hello there"));
@@ -128,7 +128,7 @@ public class CoreCopyTests
     [Fact]
     public void AKindTheWorldHasNoExampleOfIsBuiltBlank()
     {
-        var bytes = ZdoBuilder.Blank(StableHash.Of("Rock_7"), 0x0100, new Vector3(5, 6, 7), new Vector3(0, 30, 0), 2f);
+        byte[] bytes = ZdoBuilder.Blank(StableHash.Of("Rock_7"), 0x0100, new Vector3(5, 6, 7), new Vector3(0, 30, 0), 2f);
         var z = ZdoData.Parse(bytes);
         Assert.Equal(new Vector3(5, 6, 7), z.Position);
         Assert.Equal(30f, z.Rotation.Y, 1);

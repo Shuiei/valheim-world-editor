@@ -4,7 +4,6 @@ using System.Security.Cryptography;
 using System.Text;
 using TerrainEditor.App;
 using TerrainEditor.Editing;
-using TerrainEditor.Save;
 
 namespace TerrainEditor.Desktop;
 
@@ -39,7 +38,7 @@ public static class HistoryFile
         {
             return null;
         }
-        var latest = Directory.GetFiles(w.World.Directory, "_main.*.chunks")
+        string latest = Directory.GetFiles(w.World.Directory, "_main.*.chunks")
             .Select(f => (File: f, Parts: Path.GetFileName(f).Split('.')))
             .Where(p => p.Parts.Length == 3 && int.TryParse(p.Parts[1], out _))
             .MaxBy(p => int.Parse(p.Parts[1], System.Globalization.CultureInfo.InvariantCulture)).File;
@@ -152,7 +151,7 @@ public static class HistoryFile
                     o.Write(x + k.X0);
                     o.Write(z + k.Z0);
                 }
-                var cids = k.Ids[c];
+                int[] cids = k.Ids[c];
                 var kept = Enumerable.Range(0, cids.Length).Where(n => index.ContainsKey(cids[n])).ToList();
                 o.Write(kept.Count);
                 foreach (int n in kept)
@@ -187,31 +186,46 @@ public static class HistoryFile
 
     private static void WriteState(BinaryWriter o, Ground.State s)
     {
-        foreach (float f in s.Level) o.Write(f);
-        foreach (float f in s.Smooth) o.Write(f);
+        foreach (float f in s.Level)
+        {
+            o.Write(f);
+        }
+
+        foreach (float f in s.Smooth)
+        {
+            o.Write(f);
+        }
+
         o.Write(s.Mod);
-        foreach (float f in s.Paint) o.Write(f);
+        foreach (float f in s.Paint)
+        {
+            o.Write(f);
+        }
+
         o.Write(s.PMod);
-        foreach (float f in s.Lift) o.Write(f);
+        foreach (float f in s.Lift)
+        {
+            o.Write(f);
+        }
     }
 
     private static Ground.State ReadState(BinaryReader i, int n)
     {
         float[] Floats(int count)
         {
-            var a = new float[count];
+            float[] a = new float[count];
             for (int k = 0; k < count; k++)
             {
                 a[k] = i.ReadSingle();
             }
             return a;
         }
-        var level = Floats(n);
-        var smooth = Floats(n);
-        var mod = i.ReadBytes(n);
-        var paint = Floats(n * 4);
-        var pmod = i.ReadBytes(n);
-        var lift = Floats(n);
+        float[] level = Floats(n);
+        float[] smooth = Floats(n);
+        byte[] mod = i.ReadBytes(n);
+        float[] paint = Floats(n * 4);
+        byte[] pmod = i.ReadBytes(n);
+        float[] lift = Floats(n);
         return new Ground.State(level, smooth, mod, paint, pmod, lift);
     }
 
@@ -277,7 +291,7 @@ public static class HistoryFile
             Add(id, prefab, p);
         }
         int count = i.ReadInt32();
-        var ids = new int[count];
+        int[] ids = new int[count];
         var gone = new List<NewObject>();
         for (int n = 0; n < count; n++)
         {
@@ -326,7 +340,7 @@ public static class HistoryFile
             }
             int nt = i.ReadInt32();
             var things = new (int Index, bool Before, bool After)[nt];
-            var tids = new int[nt];
+            int[] tids = new int[nt];
             for (int k = 0; k < nt; k++)
             {
                 int t = i.ReadInt32();
@@ -340,9 +354,14 @@ public static class HistoryFile
                 resets[k] = (new ZoneReset(i.ReadInt32(), i.ReadInt32(), i.ReadBoolean(), i.ReadBoolean()), i.ReadBoolean(), i.ReadBoolean());
             }
             // Points are fitted below, once the grid holding all of them is known.
-            var c = new EditSession.Change(label, Array.Empty<int>(), before, after, zones)
+            var c = new EditSession.Change(label, [], before, after, zones)
             {
-                Things = things, Resets = resets, Time = time, Removed = removed, Applied = applied || n < undoCount, Earlier = true,
+                Things = things,
+                Resets = resets,
+                Time = time,
+                Removed = removed,
+                Applied = applied || n < undoCount,
+                Earlier = true,
             };
             changes.Add((c, revertOf));
             points.Add(pts);
@@ -362,14 +381,14 @@ public static class HistoryFile
             var (c, revertOf) = changes[n];
             var f = c with
             {
-                Points = points[n].Select(p => (p.Z - oz) * width + (p.X - ox)).ToArray(),
+                Points = [.. points[n].Select(p => (p.Z - oz) * width + (p.X - ox))],
                 RevertOf = revertOf >= 0 && revertOf < n ? fitted[revertOf] : null,
             };
             fitted.Add(f);
             keptIds[f] = thingIds[n];
         }
         w.Edits.KeepGone(gone);
-        var kept = new EditSession.Kept(fitted.Take(undoCount).ToList(), fitted.Skip(undoCount).ToList(), ox, oz, width, 0, 0, keptIds);
+        var kept = new EditSession.Kept([.. fitted.Take(undoCount)], [.. fitted.Skip(undoCount)], ox, oz, width, 0, 0, keptIds);
         return new Restored(kept, changes.Count, changed, savedAt.ToLocalTime());
     }
 }

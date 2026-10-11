@@ -35,7 +35,7 @@ public sealed class PathPanel
     internal Button ApplyButton { get; } = new Button { Content = "Apply (Enter)", FontSize = 12 }.Classed("primary");
     internal Button ClearButton { get; } = new() { Content = "Clear (Esc)", FontSize = 12 };
     internal TextBlock Info { get; } = new() { FontSize = 12, Foreground = Ui.Muted };
-    private readonly Dictionary<Control, PathTool.Action[]> _rows = new();
+    private readonly Dictionary<Control, PathTool.Action[]> _rows = [];
     private readonly Control _naturalRows;
     // Apply was asked for (the window does it: it has the edit session).
     public event Action? ApplyAsked;
@@ -85,8 +85,8 @@ public sealed class PathPanel
         SoftSlider = Slide(0, 15, 0.5, _path.Soft, softV, "m", v => _path.Soft = v);
         HeightBox.ValueChanged += (_, e) => _path.Height = (float)(e.NewValue ?? 0);
         AmountBox.ValueChanged += (_, e) => _path.Amount = (float)(e.NewValue ?? 0);
-        StartBox.ValueChanged += (_, e) => { _path.Start = (float)(e.NewValue ?? 0); if (!_filling) _path.RampEdited = true; };
-        EndBox.ValueChanged += (_, e) => { _path.End = (float)(e.NewValue ?? 0); if (!_filling) _path.RampEdited = true; };
+        StartBox.ValueChanged += (_, e) => { _path.Start = (float)(e.NewValue ?? 0); if (!_filling) { _path.RampEdited = true; } };
+        EndBox.ValueChanged += (_, e) => { _path.End = (float)(e.NewValue ?? 0); if (!_filling) { _path.RampEdited = true; } };
         DepthBox.ValueChanged += (_, e) => _path.Depth = (float)(e.NewValue ?? 0);
         CavePresetBox = new ComboBox { ItemsSource = PathTool.CavePresets.Select(p => p.Name).ToArray(), SelectedIndex = 1, FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch };
         var rocks = Enum.GetValues<PathTool.CaveRock>();

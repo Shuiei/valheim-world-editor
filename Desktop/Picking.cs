@@ -84,7 +84,14 @@ public static class Picking
                 for (int i = 0; i < 20; i++)
                 {
                     float mid = (lo + hi) / 2;
-                    if (Below(mid) > 0) lo = mid; else hi = mid;
+                    if (Below(mid) > 0)
+                    {
+                        lo = mid;
+                    }
+                    else
+                    {
+                        hi = mid;
+                    }
                 }
                 return (lo + hi) / 2;
             }

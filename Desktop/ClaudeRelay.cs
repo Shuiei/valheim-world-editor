@@ -82,9 +82,9 @@ public static class ClaudeRelay
                     }
                     continue;
                 }
-                var answers = response.Content.Headers.ContentType?.MediaType == "text/event-stream"
-                    ? body.Split('\n').Where(l => l.StartsWith("data:", StringComparison.Ordinal)).Select(l => l[5..].Trim()).ToList()
-                    : body.Trim().Length > 0 ? new List<string> { body.Trim() } : new List<string>();
+                List<string> answers = response.Content.Headers.ContentType?.MediaType == "text/event-stream"
+                    ? [.. body.Split('\n').Where(l => l.StartsWith("data:", StringComparison.Ordinal)).Select(l => l[5..].Trim())]
+                    : body.Trim().Length > 0 ? [body.Trim()] : [];
                 foreach (string a in answers.Where(a => a.Length > 0))
                 {
                     if (method == "initialize" && JsonNode.Parse(a)?["result"]?["protocolVersion"]?.GetValue<string>() is string v)

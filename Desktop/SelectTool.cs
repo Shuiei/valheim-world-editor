@@ -51,7 +51,7 @@ public sealed class SelectTool
     }
 
     private static IEnumerable<Vector3> SnapsAt(int prefab, Vector3 at, Vector3 rot) =>
-        (PieceCatalog.Get(prefab)?.Snaps ?? Array.Empty<float[]>()).Select(p => at + Rotate(new Vector3(p[0], p[1], p[2]), rot));
+        (PieceCatalog.Get(prefab)?.Snaps ?? []).Select(p => at + Rotate(new Vector3(p[0], p[1], p[2]), rot));
 
     // ---- A move in progress.
     private sealed class Item
@@ -102,11 +102,14 @@ public sealed class SelectTool
                 runestones++;
                 continue;
             }
-            var snaps = PieceCatalog.Get(t.Prefab)?.Snaps;
+            float[][]? snaps = PieceCatalog.Get(t.Prefab)?.Snaps;
             items.Add(new Item
             {
-                Index = i, Thing = t, Lift = t.Position.Y - GroundAt(t.Position.X, t.Position.Z),
-                Bottom = snaps is { Length: > 0 } ? snaps.Min(p => p[1]) : 0, Piece = IsPiece(t),
+                Index = i,
+                Thing = t,
+                Lift = t.Position.Y - GroundAt(t.Position.X, t.Position.Z),
+                Bottom = snaps is { Length: > 0 } ? snaps.Min(p => p[1]) : 0,
+                Piece = IsPiece(t),
             });
         }
         if (items.Count == 0)
@@ -171,7 +174,7 @@ public sealed class SelectTool
         if (m.Others == null)
         {
             var sel = m.Items.Select(it => it.Index).ToHashSet();
-            m.Others = new();
+            m.Others = [];
             for (int i = 0; i < s.Things.Count; i++)
             {
                 var t = s.Things[i];
@@ -414,7 +417,7 @@ public sealed class SelectTool
             return;
         }
         session.Delete(sel);
-        _view.Select(Array.Empty<int>());
+        _view.Select([]);
         Message?.Invoke($"Deleted {sel.Count} object(s). Ctrl+Z brings them back; they leave the world when it is saved.", false);
     }
 
@@ -481,20 +484,26 @@ public sealed class SelectTool
             var (lo, hi) = _view.BoundsOf(i);
             boxes[i] = (lo - new Vector3(0.15f), hi + new Vector3(0.15f));
         }
-        const float cell = 4;
+        const float Cell = 4;
         var grid = new Dictionary<(int, int, int), List<int>>();
-        IEnumerable<(int, int, int)> Cells((Vector3 Min, Vector3 Max) b)
+        static IEnumerable<(int, int, int)> Cells((Vector3 Min, Vector3 Max) b)
         {
-            for (int x = (int)MathF.Floor(b.Min.X / cell); x <= (int)MathF.Floor(b.Max.X / cell); x++)
-                for (int y = (int)MathF.Floor(b.Min.Y / cell); y <= (int)MathF.Floor(b.Max.Y / cell); y++)
-                    for (int z = (int)MathF.Floor(b.Min.Z / cell); z <= (int)MathF.Floor(b.Max.Z / cell); z++)
+            for (int x = (int)MathF.Floor(b.Min.X / Cell); x <= (int)MathF.Floor(b.Max.X / Cell); x++)
+            {
+                for (int y = (int)MathF.Floor(b.Min.Y / Cell); y <= (int)MathF.Floor(b.Max.Y / Cell); y++)
+                {
+                    for (int z = (int)MathF.Floor(b.Min.Z / Cell); z <= (int)MathF.Floor(b.Max.Z / Cell); z++)
+                    {
                         yield return (x, y, z);
+                    }
+                }
+            }
         }
         foreach (var (i, b) in boxes)
         {
             foreach (var c in Cells(b))
             {
-                (grid.TryGetValue(c, out var l) ? l : grid[c] = new()).Add(i);
+                (grid.TryGetValue(c, out var l) ? l : grid[c] = []).Add(i);
             }
         }
         static bool Touch((Vector3 Min, Vector3 Max) a, (Vector3 Min, Vector3 Max) b) =>
@@ -506,7 +515,7 @@ public sealed class SelectTool
             var b = boxes[queue.Pop()];
             foreach (var c in Cells(b))
             {
-                foreach (int o in grid.GetValueOrDefault(c) ?? new())
+                foreach (int o in grid.GetValueOrDefault(c) ?? [])
                 {
                     if (!seen.Contains(o) && Touch(boxes[o], b))
                     {
@@ -586,9 +595,9 @@ public sealed class SelectTool
         var ground = _view.WorldAt(at, size);
         // A double click on a building piece: the whole building; on a chest, the chest alone (its
         // inspector opens: GlView.InspectAsked).
-        if (clicks >= 2 && hit is int dbl && IsPiece(s.Things[dbl]) && !(TerrainEditor.Terrain.PrefabCatalog.Details(s.Things[dbl].Prefab)?.ContainerW > 0))
+        if (clicks >= 2 && hit is int dbl && IsPiece(s.Things[dbl]) && !(PrefabCatalog.Details(s.Things[dbl].Prefab)?.ContainerW > 0))
         {
-            WholeBuilding(new[] { dbl });
+            WholeBuilding([dbl]);
             return;
         }
         if (hit is int h && _view.Selected.Contains(h) && !shift && ground is { } g)
@@ -661,7 +670,7 @@ public sealed class SelectTool
                 l.Points.Add(new Vector2(g.X, g.Z));
             }
             _lasso = l with { Drawing = drawing };
-            Lasso = l.Points.ToArray();
+            Lasso = [.. l.Points];
             _view.LassoChanged();
             return;
         }
@@ -700,7 +709,7 @@ public sealed class SelectTool
             {
                 if (!l.Add)
                 {
-                    _view.Select(Array.Empty<int>());
+                    _view.Select([]);
                 }
                 return;
             }
@@ -743,7 +752,7 @@ public sealed class SelectTool
     }
 
     // The tool's keys; true when the key was one.
-    public bool Key(Avalonia.Input.Key key, bool shift, bool ctrl)
+    public bool Key(Avalonia.Input.Key key, bool shift)
     {
         switch (key)
         {

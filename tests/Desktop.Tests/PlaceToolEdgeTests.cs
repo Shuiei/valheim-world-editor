@@ -54,9 +54,9 @@ public class PlaceToolEdgeTests
     {
         var (t, _) = Tool();
         t.Chosen.Clear();
-        Assert.Empty(t.PaintStep(new Vector2(64, 64), 0.1f, new()));
+        Assert.Empty(t.PaintStep(new Vector2(64, 64), 0.1f, []));
         var none = new PlaceTool { Scene = () => null };
-        Assert.Empty(none.PaintStep(new Vector2(64, 64), 0.1f, new()));
+        Assert.Empty(none.PaintStep(new Vector2(64, 64), 0.1f, []));
         Assert.Empty(none.EraseAt(new Vector2(64, 64)));
     }
 

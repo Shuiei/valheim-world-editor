@@ -73,7 +73,7 @@ public sealed class HistoryPanel
 
     // Claude's changes still in, newest first.
     private static List<EditSession.Change> ClaudesChanges(EditSession s) =>
-        s.UndoList.Where(c => ByClaude(c) && !c.Removed && c.RevertOf == null).Reverse().ToList();
+        [.. s.UndoList.Where(c => ByClaude(c) && !c.Removed && c.RevertOf == null).Reverse()];
 
     // Every change of Claude's taken out (newest first), the user's kept.
     internal async Task TakeBackClaudes()
@@ -104,8 +104,8 @@ public sealed class HistoryPanel
         }
         Rows.Children.Clear();
         var s = _session();
-        var undo = s?.UndoList ?? Array.Empty<EditSession.Change>();
-        var redo = s?.RedoList ?? Array.Empty<EditSession.Change>();
+        var undo = s?.UndoList ?? [];
+        var redo = s?.RedoList ?? [];
         Count.Text = undo.Count > 0 ? $"{undo.Count} change(s)" : "";
         TakeBackClaude.IsVisible = s != null && ClaudesChanges(s).Count > 0;
         if (s == null || undo.Count + redo.Count == 0)
@@ -145,17 +145,17 @@ public sealed class HistoryPanel
         }
         if (undone)
         {
-            Act("Redo to here", "Redo up to this change", () => s.RedoList.SkipWhile(r => r != c).ToList(), () => s.ForwardTo(c));
+            Act("Redo to here", "Redo up to this change", () => [.. s.RedoList.SkipWhile(r => r != c)], () => s.ForwardTo(c));
         }
         else
         {
             if (!current)
             {
-                Act("Back to here", "Undo every change after this one", () => s.UndoList.SkipWhile(u => u != c).Skip(1).ToList(), () => s.BackTo(c));
+                Act("Back to here", "Undo every change after this one", () => [.. s.UndoList.SkipWhile(u => u != c).Skip(1)], () => s.BackTo(c));
             }
             if (!c.Removed && c.RevertOf == null)
             {
-                Act("Remove", "Take out only this change", () => new[] { c }, () => Message?.Invoke(s.RemoveChange(c)));
+                Act("Remove", "Take out only this change", () => [c], () => Message?.Invoke(s.RemoveChange(c)));
             }
         }
         // Steps from an earlier session of the editor show their day too.
@@ -171,7 +171,11 @@ public sealed class HistoryPanel
             // Live: sent to the game already (the web editor's tag).
             label.Children.Add(new Border
             {
-                CornerRadius = new CornerRadius(999), BorderThickness = new Thickness(1), BorderBrush = new SolidColorBrush(Color.Parse("#2a6a4a")), Padding = new Thickness(5, 0), VerticalAlignment = VerticalAlignment.Center,
+                CornerRadius = new CornerRadius(999),
+                BorderThickness = new Thickness(1),
+                BorderBrush = new SolidColorBrush(Color.Parse("#2a6a4a")),
+                Padding = new Thickness(5, 0),
+                VerticalAlignment = VerticalAlignment.Center,
                 Child = new TextBlock { Text = "applied", FontSize = 10, Foreground = Ui.Live },
             });
         }
@@ -179,7 +183,11 @@ public sealed class HistoryPanel
         {
             label.Children.Add(new Border
             {
-                CornerRadius = new CornerRadius(999), BorderThickness = new Thickness(1), BorderBrush = new SolidColorBrush(Color.Parse("#7a5a2a")), Padding = new Thickness(5, 0), VerticalAlignment = VerticalAlignment.Center,
+                CornerRadius = new CornerRadius(999),
+                BorderThickness = new Thickness(1),
+                BorderBrush = new SolidColorBrush(Color.Parse("#7a5a2a")),
+                Padding = new Thickness(5, 0),
+                VerticalAlignment = VerticalAlignment.Center,
                 Child = new TextBlock { Text = "Claude", FontSize = 10, Foreground = Ui.Accent },
             }.Tip("history.byClaude"));
         }
@@ -188,7 +196,11 @@ public sealed class HistoryPanel
             // Kept from an earlier session of the editor (HistoryFile).
             label.Children.Add(new Border
             {
-                CornerRadius = new CornerRadius(999), BorderThickness = new Thickness(1), BorderBrush = Ui.Line, Padding = new Thickness(5, 0), VerticalAlignment = VerticalAlignment.Center,
+                CornerRadius = new CornerRadius(999),
+                BorderThickness = new Thickness(1),
+                BorderBrush = Ui.Line,
+                Padding = new Thickness(5, 0),
+                VerticalAlignment = VerticalAlignment.Center,
                 Child = new TextBlock { Text = "earlier session", FontSize = 10, Foreground = Ui.Muted },
             }.Tip("history.earlier"));
         }

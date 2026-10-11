@@ -18,15 +18,20 @@ public sealed class ScriptPanel
     internal ComboBox ScriptBox { get; }
     internal TextBox CodeBox { get; } = new()
     {
-        AcceptsReturn = true, AcceptsTab = true, TextWrapping = TextWrapping.NoWrap, FontFamily = new FontFamily("monospace"), FontSize = 12,
-        Height = 330, Width = 520,
+        AcceptsReturn = true,
+        AcceptsTab = true,
+        TextWrapping = TextWrapping.NoWrap,
+        FontFamily = new FontFamily("monospace"),
+        FontSize = 12,
+        Height = 330,
+        Width = 520,
     };
     internal TextBox NameBox { get; } = new() { PlaceholderText = "name to save it as", FontSize = 12, Width = 180 };
     internal Button SaveButton { get; } = new() { Content = "Save", FontSize = 12 };
     internal Button RunButton { get; } = new Button { Content = "Run (Ctrl+Enter)", FontSize = 12 }.Classed("primary");
     internal Button StopButton { get; } = new() { Content = "Stop", FontSize = 12, IsEnabled = false };
     internal SelectableTextBlock Output { get; } = new() { FontFamily = new FontFamily("monospace"), FontSize = 11.5, TextWrapping = TextWrapping.Wrap };
-    private List<(string Name, string Code)> _entries = new();
+    private List<(string Name, string Code)> _entries = [];
     private bool _filling;
 
     // The folder saved scripts go in.
@@ -101,7 +106,7 @@ public sealed class ScriptPanel
     public void Fill(string? select = null)
     {
         _filling = true;
-        _entries = ScriptExamples.All.Select(e => ("Example: " + e.Name, e.Code)).ToList();
+        _entries = [.. ScriptExamples.All.Select(e => ("Example: " + e.Name, e.Code))];
         try
         {
             if (Directory.Exists(Folder))

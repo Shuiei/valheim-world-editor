@@ -39,7 +39,7 @@ public static class ScriptHost
         SyntaxTree Tree(string text, string path) => CSharpSyntaxTree.ParseText(Microsoft.CodeAnalysis.Text.SourceText.From(text, Encoding.UTF8), parse, path);
         var user = Tree(code, "script");
         var compilation = CSharpCompilation.Create("Script" + Guid.NewGuid().ToString("N")[..8],
-            new[] { Tree(Api.Value, "api"), Tree(Usings, "usings"), user },
+            [Tree(Api.Value, "api"), Tree(Usings, "usings"), user],
             Basic.Reference.Assemblies.Net100.References.All,
             new CSharpCompilationOptions(OutputKind.ConsoleApplication, optimizationLevel: OptimizationLevel.Release, nullableContextOptions: NullableContextOptions.Disable));
         using var ms = new MemoryStream();
@@ -57,10 +57,10 @@ public static class ScriptHost
     // (indices into the scene's things) and new ones (NaN height: on the ground at the end).
     public sealed class Changes
     {
-        public Dictionary<int, float> Heights { get; } = new();
-        public Dictionary<int, float[]> Paint { get; } = new();
-        public HashSet<int> Remove { get; } = new();
-        public List<(int Prefab, Vector3 Position, float Yaw, float Scale)> Add { get; } = new();
+        public Dictionary<int, float> Heights { get; } = [];
+        public Dictionary<int, float[]> Paint { get; } = [];
+        public HashSet<int> Remove { get; } = [];
+        public List<(int Prefab, Vector3 Position, float Yaw, float Scale)> Add { get; } = [];
         public StringBuilder Output { get; } = new();
         public bool NoLimit { get; set; } = true;
         public bool Empty => Heights.Count == 0 && Paint.Count == 0 && Remove.Count == 0 && Add.Count == 0;
@@ -74,8 +74,8 @@ public static class ScriptHost
     {
         var g = s.Ground;
         var scene = s.Scene;
-        var original = new float[g.W * g.H];
-        var locked = new bool[g.W * g.H];
+        float[] original = new float[g.W * g.H];
+        bool[] locked = new bool[g.W * g.H];
         for (int p = 0; p < original.Length; p++)
         {
             original[p] = g.Original(p);
@@ -84,8 +84,7 @@ public static class ScriptHost
         List<(int, string, Vector3, string, bool)> things;
         lock (scene.Things)
         {
-            things = scene.Things.Select((t, i) => (t, i)).Where(x => !x.t.Gone)
-                .Select(x => (x.i, nameOf(x.t.Prefab) ?? "", x.t.Position, ObjectKinds.Of(nameOf(x.t.Prefab), x.t.Piece, x.t.Tamed).ToString(), x.t.Piece)).ToList();
+            things = [.. scene.Things.Select((t, i) => (t, i)).Where(x => !x.t.Gone).Select(x => (x.i, nameOf(x.t.Prefab) ?? "", x.t.Position, ObjectKinds.Of(nameOf(x.t.Prefab), x.t.Piece, x.t.Tamed).ToString(), x.t.Piece))];
         }
         var world = scene.World;
         return new Snapshot(g.W, g.H, scene.X0 * 64f - 32f, scene.Z0 * 64f - 32f, (float[])scene.Heights.Clone(), original, (int[])scene.Biomes.Clone(), (byte[])scene.Mask.Clone(), locked,
@@ -96,7 +95,7 @@ public static class ScriptHost
     public static Changes Run(byte[] image, byte[]? pdb, Snapshot snap, CancellationToken cancel)
     {
         var ch = new Changes();
-        var heights = (float[])snap.Heights.Clone();
+        float[] heights = (float[])snap.Heights.Clone();
         int lines = 0;
         var noises = new Dictionary<int, Noise>();
         int Point(float x, float z)
@@ -147,9 +146,9 @@ public static class ScriptHost
                 {
                     return;
                 }
-                float[] now = ch.Paint.TryGetValue(p, out var c) ? c : Enumerable.Range(0, 4).Select(i => snap.Mask[p * 4 + i] / 255f).ToArray();
+                float[] now = ch.Paint.TryGetValue(p, out float[]? c) ? c : [.. Enumerable.Range(0, 4).Select(i => snap.Mask[p * 4 + i] / 255f)];
                 float k = Math.Clamp(strength, 0, 1);
-                ch.Paint[p] = now.Select((v, i) => v + (colour[i] - v) * k).ToArray();
+                ch.Paint[p] = [.. now.Select((v, i) => v + (colour[i] - v) * k)];
             }));
             Fill("Mountain", new Action<float, float, string, float, float, float, float, int>((x, z, preset, height, radius, rough, turn, seed) =>
             {
@@ -285,7 +284,7 @@ public static class ScriptHost
                 touched.Add(p);
             }
             return (touched, touched.Count == 0 ? (0, 0, 0, 0) : (touched.Min(p => p % g.W) - 1, touched.Min(p => p / g.W) - 1, touched.Max(p => p % g.W) + 1, touched.Max(p => p / g.W) + 1));
-        }, ch.Remove.ToList(), adds);
+        }, [.. ch.Remove], adds);
         return clamped;
     }
 }

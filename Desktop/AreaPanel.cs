@@ -20,17 +20,17 @@ public sealed class AreaPanel
     public enum Act { Flatten, Raise, Lower, Smooth, Natural, Restore, Erode, Paint, Remove, Select, Replace, Regrow, Copy, Heightmap, Backup, Reset }
 
     private static readonly (Act Act, string Label)[] Actions =
-    {
+    [
         (Act.Flatten, "Flatten"), (Act.Raise, "Raise"), (Act.Lower, "Lower"), (Act.Smooth, "Smooth"), (Act.Natural, "Naturalize"),
         (Act.Restore, "Restore the ground"), (Act.Erode, "Erode"), (Act.Paint, "Paint"),
         (Act.Remove, "Remove objects"), (Act.Select, "Select objects"), (Act.Replace, "Replace objects"), (Act.Regrow, "Regrow nature"), (Act.Copy, "Copy and paste"), (Act.Heightmap, "Heightmap"),
         (Act.Backup, "Restore from a backup"), (Act.Reset, "Reset zones"),
-    };
+    ];
 
     private static readonly (string Label, BrushTool Tool)[] Paints =
-    {
+    [
         ("Dirt", BrushTool.PaintDirt), ("Cultivated", BrushTool.PaintCultivated), ("Paved", BrushTool.PaintPaved), ("Clear paint", BrushTool.PaintClear),
-    };
+    ];
 
     public Control Card { get; }
     public AreaTool Area { get; }
@@ -53,7 +53,7 @@ public sealed class AreaPanel
     internal NumericUpDown AmountBox { get; } = new() { Value = 2, Increment = 0.1m, FormatString = "0.0#", FontSize = 12 };
     internal ComboBox PaintBox { get; } = new() { ItemsSource = Paints.Select(p => p.Label).ToArray(), SelectedIndex = 0, FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch };
     internal TextBlock VolumeText { get; } = new() { FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
-    internal Dictionary<ObjectKind, ToggleButton> KindButtons { get; } = new();
+    internal Dictionary<ObjectKind, ToggleButton> KindButtons { get; } = [];
     internal ComboBox FromBox { get; } = new() { FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch };
     internal ComboBox ToBox { get; } = new() { FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch, MaxDropDownHeight = 400 };
     // Eyedropper: the "with" kind picked from the world (the window takes the next click on an object).
@@ -63,8 +63,8 @@ public sealed class AreaPanel
     internal CheckBox ResetGroundBox { get; } = new() { Content = "Reset ground edits too", IsChecked = true, FontSize = 12 };
     internal Button UnresetButton { get; } = new() { Content = "Cancel reset", FontSize = 12 };
     internal Button ApplyButton { get; } = new Button { FontSize = 12 }.Classed("primary");
-    private readonly Dictionary<Control, Act[]> _rows = new();
-    private List<int> _creatable = new();
+    private readonly Dictionary<Control, Act[]> _rows = [];
+    private List<int> _creatable = [];
 
     public Act Current => Actions[Math.Max(0, ActionBox.SelectedIndex)].Act;
 
@@ -75,10 +75,12 @@ public sealed class AreaPanel
     internal CheckBox BackupObjectsBox { get; } = new() { Content = "Objects of the kinds chosen above", IsChecked = true, FontSize = 12 };
     internal TextBlock BackupInfo { get; } = new()
     {
-        FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap,
+        FontSize = 11,
+        Foreground = Ui.Muted,
+        TextWrapping = TextWrapping.Wrap,
         Text = "Puts the selection back as it was in a backup: the editor's backups and the game's own are listed. Choose Your buildings above to bring buildings back too."
     };
-    private List<string> _backupPaths = new();
+    private List<string> _backupPaths = [];
     // Asks for another backup folder (the window's folder picker).
     internal Func<Task<string?>> PickFolder { get; set; } = () => Task.FromResult<string?>(null);
     private (string Path, WorldSave World, EditStore Edits)? _backup;
@@ -99,7 +101,7 @@ public sealed class AreaPanel
     internal Button PutButton { get; } = new Button { Content = "Put it into the ground", FontSize = 12 }.Classed("primary");
     internal Button CancelPictureButton { get; } = new() { Content = "Cancel", FontSize = 12 };
     internal TextBlock PictureInfo { get; } = new() { FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
-    private Control _pictureBox = null!;
+    private readonly Control _pictureBox = null!;
     internal Func<Task<string?>> PickPicture { get; set; } = () => Task.FromResult<string?>(null);
     private (float[] Values, int X0, int Z0, int W, int H, List<(int G, float W)> Cells)? _picture;
 
@@ -117,7 +119,7 @@ public sealed class AreaPanel
         BoxButton.Click += (_, _) => { Area.Box = true; Area.Clear(); ShowShape(); };
         PolyButton.Click += (_, _) => { Area.Box = false; Area.Clear(); ShowShape(); };
         ClearButton.Click += (_, _) => { Area.Clear(); Message?.Invoke("Selection cleared."); };
-        ActionBox.SelectionChanged += (_, _) => { ShowRows(); RefreshVolume(); if (Current == Act.Backup) FillBackups(); };
+        ActionBox.SelectionChanged += (_, _) => { ShowRows(); RefreshVolume(); if (Current == Act.Backup) { FillBackups(); } };
         BackupBox.SelectionChanged += async (_, _) =>
         {
             // The last entry: another folder.
@@ -173,7 +175,17 @@ public sealed class AreaPanel
         {
             var b = new ToggleButton { Content = ObjectKinds.Label(k), IsChecked = Area.Kinds.Contains(k), FontSize = 11, Padding = new Thickness(6, 2) };
             ToolTip.SetTip(b, $"{Tips.Kind(k)} {Tips.Of("area.kind")}");
-            b.IsCheckedChanged += (_, _) => { if (b.IsChecked == true) Area.Kinds.Add(k); else Area.Kinds.Remove(k); };
+            b.IsCheckedChanged += (_, _) =>
+            {
+                if (b.IsChecked == true)
+                {
+                    Area.Kinds.Add(k);
+                }
+                else
+                {
+                    Area.Kinds.Remove(k);
+                }
+            };
             KindButtons[k] = b;
             kinds.Children.Add(b);
         }
@@ -185,7 +197,7 @@ public sealed class AreaPanel
         ClipInfo.Text = "Copies the ground (shape and paint) and the shown objects inside the selection.";
         ExportButton.Click += (_, _) => Message?.Invoke(ExportHeightmap() ?? "");
         ExportButton.Tip("area.export");
-        ImportButton.Click += async (_, _) => { if (await PickPicture() is string path) LoadPicture(path); };
+        ImportButton.Click += async (_, _) => { if (await PickPicture() is string path) { LoadPicture(path); } };
         ImportButton.Tip("area.import");
         CancelPictureButton.Click += (_, _) => { _picture = null; _pictureBox.IsVisible = false; };
         PutButton.Click += (_, _) => PutPicture();
@@ -279,7 +291,6 @@ public sealed class AreaPanel
         ShowShape();
         ShowRows();
     }
-
 
     private void ShowShape()
     {
@@ -391,10 +402,9 @@ public sealed class AreaPanel
         {
             b.Content = $"{ObjectKinds.Label(k)} {(_view.IsShown(k) ? byKind.GetValueOrDefault(k).ToString() : "hidden")}";
         }
-        var keep = FromBox.SelectedItem as string;
         var names = inside.GroupBy(i => NameOf(s.Things[i].Prefab)).OrderByDescending(x => x.Count()).Select(x => $"{x.Key} ({x.Count()})").ToList();
         FromBox.ItemsSource = names;
-        FromBox.SelectedIndex = keep != null && names.Contains(keep) ? names.IndexOf(keep) : names.Count > 0 ? 0 : -1;
+        FromBox.SelectedIndex = FromBox.SelectedItem is string keep && names.Contains(keep) ? names.IndexOf(keep) : names.Count > 0 ? 0 : -1;
         FillCreatable();
         _view.LassoChanged();
     }
@@ -404,7 +414,7 @@ public sealed class AreaPanel
     {
         if (_creatable.Count == 0 && _view.Scene?.World is { } w)
         {
-            _creatable = w.Creatable.Where(p => _nameOf(p) != null).OrderBy(p => _nameOf(p), StringComparer.OrdinalIgnoreCase).ToList();
+            _creatable = [.. w.Creatable.Where(p => _nameOf(p) != null).OrderBy(p => _nameOf(p), StringComparer.OrdinalIgnoreCase)];
             ToBox.ItemsSource = _creatable.Select(p => _nameOf(p)!).ToList();
         }
     }
@@ -438,7 +448,7 @@ public sealed class AreaPanel
         var act = Current;
         if (Ground(act) is { } ga)
         {
-            var paint = Brush.PaintOf(Paints[Math.Max(0, PaintBox.SelectedIndex)].Tool)!;
+            float[] paint = Brush.PaintOf(Paints[Math.Max(0, PaintBox.SelectedIndex)].Tool)!;
             string name = act == Act.Paint ? $"Paint {Paints[Math.Max(0, PaintBox.SelectedIndex)].Label.ToLowerInvariant()}" : AreaTool.Label(ga);
             var touched = session.EditGround($"Area: {name}", g => Area.Apply(g, session.Brush, ga, Value(HeightBox), Value(AmountBox), paint, session.MaskNow()));
             Message?.Invoke($"{name} applied to {touched.Count} point(s).");
@@ -455,7 +465,7 @@ public sealed class AreaPanel
                     Message?.Invoke("No objects of the chosen kinds inside the selection.");
                     return;
                 }
-                session.Commit($"Area: removed {list.Count} object(s)", null, list, Array.Empty<(NewObject, bool)>());
+                session.Commit($"Area: removed {list.Count} object(s)", null, list, []);
                 Message?.Invoke($"Removed {list.Count} object(s). Ctrl+Z brings them back.");
                 break;
             }
@@ -559,7 +569,7 @@ public sealed class AreaPanel
         }
         else
         {
-            cells = Enumerable.Range(0, g.W * g.H).Select(p => (p, mask?.Invoke(p) ?? 1f)).Where(c => c.Item2 > 0).ToList();
+            cells = [.. Enumerable.Range(0, g.W * g.H).Select(p => (p, mask?.Invoke(p) ?? 1f)).Where(c => c.Item2 > 0)];
             (x0, z0, w, h) = (0, 0, g.W, g.H);
         }
         Heightmaps.Picture pic;
@@ -643,11 +653,11 @@ public sealed class AreaPanel
     private void FillBackups(string? select = null)
     {
         var s = _view.Scene;
-        var keep = select ?? (BackupBox.SelectedIndex >= 0 && BackupBox.SelectedIndex < _backupPaths.Count ? _backupPaths[BackupBox.SelectedIndex] : null);
+        string? keep = select ?? (BackupBox.SelectedIndex >= 0 && BackupBox.SelectedIndex < _backupPaths.Count ? _backupPaths[BackupBox.SelectedIndex] : null);
         // A world without a folder (live from a game) has no backups of its own; folders chosen by hand stay.
-        var found = s?.World != null && !string.IsNullOrEmpty(s.World.Directory) && Directory.Exists(s.World.Directory) ? Backups.Find(s.World.Directory) : new List<Backups.Info>();
+        var found = s?.World != null && !string.IsNullOrEmpty(s.World.Directory) && Directory.Exists(s.World.Directory) ? Backups.Find(s.World.Directory) : [];
         var extra = _backupPaths.Where(p => !found.Any(f => f.Path == p)).ToList();
-        _backupPaths = found.Select(b => b.Path).Concat(extra).ToList();
+        _backupPaths = [.. found.Select(b => b.Path), .. extra];
         // The list keeps the selected text across a new source: with "Another folder…" still selected it
         // would ask for a folder again.
         BackupBox.SelectedIndex = -1;
@@ -767,7 +777,7 @@ public sealed class AreaPanel
                 .Where(o => !o.Runestone && AreaTool.Inside(poly, o.Position.X - ox, o.Position.Z - oz) && Area.Kinds.Contains(KindOf(o))).ToList();
             var current = ThingsInside(poly, chosenKindsOnly: true, includeHidden: true).Where(i => !s.Things[i].Runestone).ToList();
             // Unchanged since the backup (same kind, place and facing): kept as they are.
-            bool Same(WorldScene.Thing r, WorldScene.Thing o) => r.Prefab == o.Prefab && MathF.Abs(r.Position.X - o.Position.X) < 0.01f
+            static bool Same(WorldScene.Thing r, WorldScene.Thing o) => r.Prefab == o.Prefab && MathF.Abs(r.Position.X - o.Position.X) < 0.01f
                 && MathF.Abs(r.Position.Y - o.Position.Y) < 0.01f && MathF.Abs(r.Position.Z - o.Position.Z) < 0.01f
                 && MathF.Abs(((r.Rotation.Y - o.Rotation.Y) % 360 + 540) % 360 - 180) < 0.6f;
             var kept = new HashSet<int>();
@@ -779,11 +789,11 @@ public sealed class AreaPanel
                     kept.Add(r);
                     continue;
                 }
-                var raw = bw.ObjectBytes(o.Id);
+                byte[] raw = bw.ObjectBytes(o.Id);
                 var z = ZdoData.Parse(raw);
                 adds.Add((new NewObject(0, z.Prefab, z.Position, z.Rotation, 0, null, false, raw), o.Piece));
             }
-            remove = current.Where(i => !kept.Contains(i)).ToList();
+            remove = [.. current.Where(i => !kept.Contains(i))];
         }
         if (ground == null && remove.Count == 0 && adds.Count == 0)
         {
@@ -838,7 +848,7 @@ public sealed class AreaPanel
             }
             return (touched, (0, 0, g.W - 1, g.H - 1));
         };
-        session.Commit($"Reset {zones.Count} zone(s)", clearGround, Array.Empty<int>(), Array.Empty<(NewObject, bool)>(), resets);
+        session.Commit($"Reset {zones.Count} zone(s)", clearGround, [], [], resets);
         Message?.Invoke($"{zones.Count} zone(s) marked for reset (red outline). Save to apply; Ctrl+Z cancels.");
     }
 
@@ -855,8 +865,8 @@ public sealed class AreaPanel
             Message?.Invoke("No zone marked for reset under the selection.");
             return;
         }
-        session.Commit($"Cancelled reset of {zones.Count} zone(s)", null, Array.Empty<int>(), Array.Empty<(NewObject, bool)>(),
-            zones.Select(z => (marked[z], true, false)).ToArray());
+        session.Commit($"Cancelled reset of {zones.Count} zone(s)", null, [], [],
+            [.. zones.Select(z => (marked[z], true, false))]);
         Message?.Invoke($"Reset cancelled for {zones.Count} zone(s).");
     }
 }

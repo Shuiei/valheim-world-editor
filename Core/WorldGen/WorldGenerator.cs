@@ -16,7 +16,7 @@ namespace ValheimGen;
 public sealed partial class WorldGenerator
 {
     // The world's radius (metres); past it, the sea deepens to the edge at 10500 m.
-    public const float worldSize = 10000f;
+    public const float WorldSize = 10000f;
 
     private const float EdgeOfWorld = 10500f;
 
@@ -99,7 +99,7 @@ public sealed partial class WorldGenerator
     public float GetBiomeHeight(Heightmap.Biome biome, float x, float z, out Color mask, bool preGeneration = false, bool riverPreDN = true)
     {
         // The ground flattens towards the sea along the Ashlands' and Deep North's edges.
-        float scale = preGeneration ? HeightScale : (float)((double)HeightScale * AshlandsGap(x, z) * CreateDeepNorthGap(x, z));
+        float scale = preGeneration ? HeightScale : (float)(HeightScale * AshlandsGap(x, z) * CreateDeepNorthGap(x, z));
         mask = Color.black;
         if (_world.m_menu)
         {
@@ -110,29 +110,19 @@ public sealed partial class WorldGenerator
         {
             return -2f * HeightScale;
         }
-        switch (biome)
+        return biome switch
         {
-            case Heightmap.Biome.Meadows:
-                return Scaled(MeadowsShape(x, z), scale);
-            case Heightmap.Biome.BlackForest:
-                return Scaled(ForestShape(x, z), scale);
-            case Heightmap.Biome.Swamp:
-                return Scaled(SwampShape(x, z), scale);
-            case Heightmap.Biome.Mountain:
-                return Scaled(MountainShape(x, z, menu: false), scale);
-            case Heightmap.Biome.Plains:
-                return Scaled(PlainsShape(x, z), scale);
-            case Heightmap.Biome.Mistlands:
-                return Scaled(preGeneration ? ForestShape(x, z) : MistlandsShape(x, z, out mask), scale);
-            case Heightmap.Biome.AshLands:
-                return Scaled(preGeneration ? AshlandsRoughShape(x, z) : GetAshlandsHeight(x, z, out mask), scale);
-            case Heightmap.Biome.DeepNorth:
-                return Scaled(preGeneration ? DeepNorthRoughShape(x, z, riverPreDN) : DeepNorthShape(x, z, out mask), scale);
-            case Heightmap.Biome.Ocean:
-                return Scaled(Continent(x, z), scale);
-            default:
-                return 0f;
-        }
+            Heightmap.Biome.Meadows => Scaled(MeadowsShape(x, z), scale),
+            Heightmap.Biome.BlackForest => Scaled(ForestShape(x, z), scale),
+            Heightmap.Biome.Swamp => Scaled(SwampShape(x, z), scale),
+            Heightmap.Biome.Mountain => Scaled(MountainShape(x, z, menu: false), scale),
+            Heightmap.Biome.Plains => Scaled(PlainsShape(x, z), scale),
+            Heightmap.Biome.Mistlands => Scaled(preGeneration ? ForestShape(x, z) : MistlandsShape(x, z, out mask), scale),
+            Heightmap.Biome.AshLands => Scaled(preGeneration ? AshlandsRoughShape(x, z) : GetAshlandsHeight(x, z, out mask), scale),
+            Heightmap.Biome.DeepNorth => Scaled(preGeneration ? DeepNorthRoughShape(x, z, riverPreDN) : DeepNorthShape(x, z, out mask), scale),
+            Heightmap.Biome.Ocean => Scaled(Continent(x, z), scale),
+            _ => 0f,
+        };
     }
 
     // A shape in metres (the + 0.0 turns a negative zero to a positive one, as the game's sum does).
@@ -167,6 +157,7 @@ public sealed partial class WorldGenerator
     }
 
     // The ground's normal from its heights a metre to each side (radius is not used, as in the game).
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0060:Remove unused parameter", Justification = "The game's signature; it ignores radius too.")]
     public Vector3 GetNormal(Vector2 point, float radius = 1f)
     {
         float east = GetHeight(point + Vector2.right), west = GetHeight(point + Vector2.left);

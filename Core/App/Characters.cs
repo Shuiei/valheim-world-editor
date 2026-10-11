@@ -15,7 +15,7 @@ public static class Characters
 
     public static List<Character> Local()
     {
-        List<Character> list = new();
+        List<Character> list = [];
         foreach (string root in Roots().Where(Directory.Exists))
         {
             // In name order, not the file system's (it differs between file systems): of a character

@@ -21,7 +21,7 @@ public class CoreSeedPreviewTests
         // Valheim's worlds: about a third land (the rest ocean), every biome present.
         Assert.InRange(s.Land, 0.15f, 0.7f);
         Assert.Equal(1, s.Shares.Values.Sum(), 2);
-        Assert.All(new[] { Heightmap.Biome.Meadows, Heightmap.Biome.BlackForest, Heightmap.Biome.Swamp, Heightmap.Biome.Mountain, Heightmap.Biome.Plains }, b => Assert.True(s.Shares[b] > 0, b.ToString()));
+        Assert.All([Heightmap.Biome.Meadows, Heightmap.Biome.BlackForest, Heightmap.Biome.Swamp, Heightmap.Biome.Mountain, Heightmap.Biome.Plains], b => Assert.True(s.Shares[b] > 0, b.ToString()));
         // The start: the game's start temple, in Meadows near the middle.
         Assert.True(MathF.Sqrt(s.Start.X * s.Start.X + s.Start.Z * s.Start.Z) < 1500, $"start at {s.Start}");
         Assert.Equal(Heightmap.Biome.Meadows, SeedPreview.Generator("abc").GetBiome(s.Start.X, s.Start.Z));

@@ -23,12 +23,12 @@ public sealed class StartupTests : IDisposable
         Stamps.PathOverride = _stamps;
         AppSettings.DataDirOverride = _data;
         Environment.SetEnvironmentVariable("WORLD_BRIDGE_TOKEN", _token);
-        Options.Parse(Array.Empty<string>());
+        Options.Parse([]);
         try
         {
             Directory.Delete(_dir, true);
         }
-        catch (Exception)
+        catch
         {
         }
     }
@@ -36,12 +36,12 @@ public sealed class StartupTests : IDisposable
     [Fact]
     public void AWorldFolderAloneOpensItsMap()
     {
-        Options.Parse(new[] { "/worlds/Midgard" });
+        Options.Parse(["/worlds/Midgard"]);
         Assert.Equal("/worlds/Midgard", Options.Folder);
         Assert.False(Options.Direct);
         Assert.Null(Options.LiveUrl);
         // The first one counts; options and their values are not folders.
-        Options.Parse(new[] { "--size", "3", "/a", "/b" });
+        Options.Parse(["--size", "3", "/a", "/b"]);
         Assert.Equal("/a", Options.Folder);
         Assert.Equal(3, Options.Size);
     }
@@ -50,18 +50,18 @@ public sealed class StartupTests : IDisposable
     public void ALiveGameTakesItsTokenFromTheLineOrTheEnvironment()
     {
         Environment.SetEnvironmentVariable("WORLD_BRIDGE_TOKEN", null);
-        Options.Parse(new[] { "--live", "http://127.0.0.1:5182", "--token", "abc" });
+        Options.Parse(["--live", "http://127.0.0.1:5182", "--token", "abc"]);
         Assert.Equal("http://127.0.0.1:5182", Options.LiveUrl);
         Assert.Equal("abc", Options.LiveToken);
         Assert.Null(Options.Folder);
         Environment.SetEnvironmentVariable("WORLD_BRIDGE_TOKEN", "from-env");
-        Options.Parse(new[] { "--live", "http://server:5182" });
+        Options.Parse(["--live", "http://server:5182"]);
         Assert.Equal("from-env", Options.LiveToken);
         // The line wins over the environment.
-        Options.Parse(new[] { "--live", "http://server:5182", "--token", "typed" });
+        Options.Parse(["--live", "http://server:5182", "--token", "typed"]);
         Assert.Equal("typed", Options.LiveToken);
         // Nothing left over from the last start.
-        Options.Parse(Array.Empty<string>());
+        Options.Parse([]);
         Assert.Null(Options.LiveUrl);
         Assert.Null(Options.Folder);
     }
@@ -69,13 +69,13 @@ public sealed class StartupTests : IDisposable
     [Fact]
     public void AnAreaOpensStraightInTheEditor()
     {
-        Options.Parse(new[] { "--world", "Midgard", "--zone", "-3,7", "--size", "12" });
+        Options.Parse(["--world", "Midgard", "--zone", "-3,7", "--size", "12"]);
         Assert.True(Options.Direct);
         Assert.Equal("Midgard", Options.World);
         Assert.Equal((-3, 7), (Options.ZoneX, Options.ZoneZ));
         // At most 9 zones across, at least 1.
         Assert.Equal(9, Options.Size);
-        Options.Parse(new[] { "--size", "0" });
+        Options.Parse(["--size", "0"]);
         Assert.Equal(1, Options.Size);
         Assert.Equal((0, 0), (Options.WindowWidth, Options.WindowHeight));
     }
@@ -83,9 +83,9 @@ public sealed class StartupTests : IDisposable
     [Fact]
     public void TheWindowsSizeCanBeGivenWithinLimits()
     {
-        Options.Parse(new[] { "--window", "1440x900" });
+        Options.Parse(["--window", "1440x900"]);
         Assert.Equal((1440, 900), (Options.WindowWidth, Options.WindowHeight));
-        Options.Parse(new[] { "--window", "10x99999" });
+        Options.Parse(["--window", "10x99999"]);
         Assert.Equal((640, 4320), (Options.WindowWidth, Options.WindowHeight));
     }
 
@@ -93,7 +93,7 @@ public sealed class StartupTests : IDisposable
     public void TheTestsDataFolderTakesEverythingButTheGamesLook()
     {
         string data = Path.Combine(_dir, "data");
-        Options.Parse(new[] { "--data", data, "--driver" });
+        Options.Parse(["--data", data, "--driver"]);
         Assert.True(Options.Driver);
         Assert.Equal(data, AppSettings.DataDir);
         Assert.Equal(Path.Combine(data, "settings.json"), AppSettings.PathOverride);
@@ -123,11 +123,11 @@ public sealed class StartupTests : IDisposable
             Console.SetOut(stdout);
             Console.SetError(stderr);
         }
-        var lines = Log.Read().Split('\n');
+        string[] lines = Log.Read().Split('\n');
         Assert.StartsWith("Valheim World Editor 9.9.9, ", lines[0]);
         Assert.Equal("Data folder: " + Path.Combine(_dir, "logdata"), lines[1]);
         // Each line with its time, like the game's LogOutput.log; a line written in parts gets one.
-        Assert.Equal(new[] { "hello log", "an error", "!tail" }, lines[2..].Select(l => System.Text.RegularExpressions.Regex.Replace(l, @"^\d\d:\d\d:\d\d ", "")));
+        Assert.Equal(["hello log", "an error", "!tail"], lines[2..].Select(l => System.Text.RegularExpressions.Regex.Replace(l, @"^\d\d:\d\d:\d\d ", "")));
         Assert.All(lines[2..], l => Assert.Matches(@"^\d\d:\d\d:\d\d \S", l));
     }
 
@@ -197,8 +197,8 @@ public sealed class StartupTests : IDisposable
         {
             AppSettings.PathOverride = Path.Combine(_dir, "settings.json");
             // Only ever this test's folder (never the user's).
-            Assert.True(GameLook.Dir.StartsWith(_dir), $"game look in {GameLook.Dir}");
-            Assert.True(GameLook.IndexFile.StartsWith(_dir), $"index in {GameLook.IndexFile}");
+            Assert.True(GameLook.Dir.StartsWith(_dir, StringComparison.Ordinal), $"game look in {GameLook.Dir}");
+            Assert.True(GameLook.IndexFile.StartsWith(_dir, StringComparison.Ordinal), $"index in {GameLook.IndexFile}");
             GameLook.Check(new AppSettings { ValheimPath = Path.Combine(_dir, "nowhere") });
             Assert.Equal("missing", GameLook.Now().State);
             Assert.Null(GameLook.Bundles);
@@ -237,7 +237,7 @@ public sealed class StartupTests : IDisposable
         try
         {
             // An empty home: no Valheim, wherever else the computer has one.
-            Options.Parse(new[] { "--driver" });
+            Options.Parse(["--driver"]);
             Assert.False(GameLook.SearchOutsideHome);
             Assert.Null(GameLook.FindValheim(null));
             // One in the home's Steam library is found.

@@ -13,7 +13,7 @@ namespace TerrainEditor.Desktop.Tests;
 public sealed class CloseWindowsAfterEachTestAttribute : BeforeAfterTestAttribute
 {
     // Open windows and the test that opened each (xUnit's id of the test running when it opened).
-    private static readonly List<(Window Window, string? Test)> Open = new();
+    private static readonly List<(Window Window, string? Test)> Open = [];
     private static int _hooked;
     private static volatile int _uiThread = -1;
 
@@ -38,7 +38,7 @@ public sealed class CloseWindowsAfterEachTestAttribute : BeforeAfterTestAttribut
     }
 
     // Windows of tests that have ended, waiting to be closed on Avalonia's thread.
-    private static readonly List<Window> Ended = new();
+    private static readonly List<Window> Ended = [];
 
     public override void After(MethodInfo methodUnderTest, IXunitTest test)
     {
@@ -56,7 +56,7 @@ public sealed class CloseWindowsAfterEachTestAttribute : BeforeAfterTestAttribut
         List<Window> close;
         lock (Open)
         {
-            close = Ended.ToList();
+            close = [.. Ended];
             Ended.Clear();
         }
         foreach (var w in close)

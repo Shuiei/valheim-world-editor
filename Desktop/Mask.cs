@@ -6,16 +6,16 @@ namespace TerrainEditor.Desktop;
 public sealed class Mask
 {
     public static readonly (int Biome, string Name)[] BiomeNames =
-    {
+    [
         (1, "Meadows"), (8, "Black Forest"), (2, "Swamp"), (4, "Mountain"), (16, "Plains"),
         (512, "Mistlands"), (32, "Ashlands"), (64, "Deep North"), (256, "Ocean"),
-    };
+    ];
 
     public enum PaintRule { Any, Unpainted, Painted, Dirt, Cultivated, Paved }
 
     public bool On { get; set; }
     // None chosen: every biome.
-    public HashSet<int> Biomes { get; } = new();
+    public HashSet<int> Biomes { get; } = [];
     public float? HeightMin { get; set; }
     public float? HeightMax { get; set; }
     public float? SlopeMin { get; set; }

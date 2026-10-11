@@ -11,7 +11,7 @@ public static class GameTextures
     public static byte[]? Rgba(GameBundles.TextureLevel t)
     {
         int n = t.Width * t.Height;
-        var rgba = new byte[n * 4];
+        byte[] rgba = new byte[n * 4];
         switch (t.Format)
         {
             case 10 or 12 or 25 or 26 or 27:
@@ -83,7 +83,7 @@ public static class GameTextures
     public static void Bleed(byte[] rgba, int w, int h)
     {
         int n = w * h;
-        var filled = new bool[n];
+        bool[] filled = new bool[n];
         int opaque = 0;
         long sr = 0, sg = 0, sb = 0;
         for (int i = 0; i < n; i++)

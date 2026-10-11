@@ -1,9 +1,9 @@
+using System.Globalization;
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using Avalonia.Interactivity;
 using Avalonia.LogicalTree;
 using Avalonia.Threading;
-using TerrainEditor.App;
 using TerrainEditor.Save;
 using Xunit;
 
@@ -57,7 +57,7 @@ public class PanelInspectorTests
     {
         Assert.True(r.I.Open(r.ChestIndex));
         r.I.Added.Add(("strings", "text", "Hello"));
-        r.I.Added.Add(("ints", "item", StableHash.Of("Wood").ToString()));
+        r.I.Added.Add(("ints", "item", StableHash.Of("Wood").ToString(CultureInfo.InvariantCulture)));
         r.I.Added.Add(("floats", "health", "250.5"));
         await r.I.Apply();
         Assert.True(r.I.IsOpen);
@@ -72,8 +72,8 @@ public class PanelInspectorTests
         using var r = new Run();
         Assert.True(r.I.Open(r.ChestIndex));
         var grid = r.I.ItemsBox.Children.OfType<Grid>().First(g => g.RowDefinitions.Count > 0);
-        var free = r.I.FreeSlot()!.Value;
-        var slot = grid.Children.OfType<Button>().First(b => Grid.GetColumn(b) == free.X && Grid.GetRow(b) == free.Y);
+        var (x, y) = r.I.FreeSlot()!.Value;
+        var slot = grid.Children.OfType<Button>().First(b => Grid.GetColumn(b) == x && Grid.GetRow(b) == y);
         Click(slot);
         var pick = r.I.ItemsBox.GetLogicalDescendants().OfType<AutoCompleteBox>().First(b => b.PlaceholderText == "Find an item…");
         pick.Text = "Coins";
@@ -81,8 +81,8 @@ public class PanelInspectorTests
         Dispatcher.UIThread.RunJobs();
         pick.RaiseEvent(new Avalonia.Input.FocusChangedEventArgs(Avalonia.Input.InputElement.LostFocusEvent));
         Dispatcher.UIThread.RunJobs();
-        Assert.Single(r.I.Items!, i => i.X == free.X && i.Y == free.Y);
-        Assert.Equal("Coins", r.I.Items!.Single(i => i.X == free.X && i.Y == free.Y).Name);
+        Assert.Single(r.I.Items!, i => i.X == x && i.Y == y);
+        Assert.Equal("Coins", r.I.Items!.Single(i => i.X == x && i.Y == y).Name);
         Assert.True(r.I.ApplyButton.IsEnabled);
     }
 

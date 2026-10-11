@@ -12,14 +12,14 @@ namespace TerrainEditor.Desktop.Tests;
 [Collection("World files")]
 public class WindowFlowTests
 {
-    private static readonly Func<Formula.Env, double> Two = Formula.Compile("2", new string[0]);
+    private static readonly Func<Formula.Env, double> Two = Formula.Compile("2", []);
 
     private sealed class Run : IDisposable
     {
         public MainWindow W { get; } = new(load: false) { Width = 1600, Height = 1000 };
         public string Dir { get; } = EditTests.CopyFixture();
-        public List<string> Told { get; } = new();
-        public List<string> Asked { get; } = new();
+        public List<string> Told { get; } = [];
+        public List<string> Asked { get; } = [];
         public bool Answer { get; set; }
 
         public Run()
@@ -53,7 +53,7 @@ public class WindowFlowTests
             {
                 Directory.Delete(Path.GetDirectoryName(Dir)!, true);
             }
-            catch (Exception)
+            catch
             {
             }
         }

@@ -32,7 +32,7 @@ public sealed class SelectPanel
     // Replace with: the kinds this world can make (filled by the window), and the button.
     internal ComboBox ReplaceBox { get; } = new() { FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch, MaxDropDownHeight = 400 };
     internal Button ReplaceButton { get; } = new() { Content = "Replace the selection", FontSize = 12 };
-    public List<int> ReplaceKinds { get; set; } = new();
+    public List<int> ReplaceKinds { get; set; } = [];
     public event Action<int>? ReplaceAsked;
     // Eyedropper: the "Replace with" kind picked from the world.
     internal Button ReplacePickButton { get; } = new() { Content = "pick", FontSize = 11, Padding = new Thickness(6, 2) };
@@ -47,13 +47,13 @@ public sealed class SelectPanel
     internal Button AddSavedButton { get; } = new() { Content = "Add", FontSize = 12 };
     internal Button ForgetButton { get; } = new() { Content = "Forget", FontSize = 12 };
     private readonly StackPanel _savedRow;
-    private List<SavedSelections.Saved> _saved = new();
+    private List<SavedSelections.Saved> _saved = [];
     // The window's: the open world's name, its things, the selection, selecting, and the questions.
     internal Func<string?> WorldName { get; set; } = () => null;
     internal Func<IReadOnlyList<WorldScene.Thing>?> Things { get; set; } = () => null;
     internal Func<IReadOnlyCollection<int>> SelectedIds { get; set; } = Array.Empty<int>;
     internal Action<IEnumerable<int>> SelectIds { get; set; } = _ => { };
-    internal Func<string, Task<string?>> AskName { get; set; } = n => Task.FromResult<string?>(n);
+    internal Func<string, Task<string?>> AskName { get; set; } = Task.FromResult<string?>;
     internal Func<string, Task<bool>> Confirm { get; set; } = _ => Task.FromResult(true);
 
     private static NumericUpDown Num(decimal step) => new() { Increment = step, FormatString = "0.##", FontSize = 12, MinWidth = 90 };
@@ -198,7 +198,7 @@ public sealed class SelectPanel
     {
         string? world = WorldName();
         int keep = SavedBox.SelectedIndex;
-        _saved = world == null ? new() : SavedSelections.For(world);
+        _saved = world == null ? [] : SavedSelections.For(world);
         SavedBox.ItemsSource = _saved.Select(s => $"{s.Name} ({s.Items.Count})").ToList();
         SavedBox.PlaceholderText = _saved.Count > 0 ? "Saved selections…" : "No saved selections";
         SavedBox.SelectedIndex = keep >= 0 && keep < _saved.Count ? keep : -1;
@@ -209,8 +209,7 @@ public sealed class SelectPanel
     {
         string? world = WorldName();
         var things = Things();
-        var items = things == null ? new List<SavedSelections.Item>() : SelectedIds().Where(i => i >= 0 && i < things.Count && !things[i].Gone)
-            .Select(i => new SavedSelections.Item(things[i].Prefab, things[i].Position.X, things[i].Position.Y, things[i].Position.Z)).ToList();
+        var items = things == null ? new List<SavedSelections.Item>() : [.. SelectedIds().Where(i => i >= 0 && i < things.Count && !things[i].Gone).Select(i => new SavedSelections.Item(things[i].Prefab, things[i].Position.X, things[i].Position.Y, things[i].Position.Z))];
         if (world == null || items.Count == 0)
         {
             Message?.Invoke("Select something first.");
@@ -241,7 +240,7 @@ public sealed class SelectPanel
         }
         var s = _saved[i];
         var (ids, missing) = SavedSelections.Find(s, things);
-        SelectIds(add ? SelectedIds().Concat(ids).Distinct().ToList() : ids);
+        SelectIds(add ? [.. SelectedIds().Concat(ids).Distinct()] : ids);
         Message?.Invoke($"Selected {ids.Count} object(s) of “{s.Name}”{(missing > 0 ? $"; {missing} are not in this area or no longer where they were" : "")}.");
     }
 
@@ -289,7 +288,7 @@ public sealed class SelectPanel
 
     private void Apply()
     {
-        float V(NumericUpDown b) => (float)(b.Value ?? 0);
+        static float V(NumericUpDown b) => (float)(b.Value ?? 0);
         _tool.PlaceAt(V(XBox), V(YBox), V(ZBox), V(TurnBox), _by);
         SetBy(false);
     }

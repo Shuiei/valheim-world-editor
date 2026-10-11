@@ -22,8 +22,8 @@ public static class Stamps
 
     private static double VNoise(double x, double y)
     {
-        double X = Math.Floor(x), Y = Math.Floor(y), fx = x - X, fy = y - Y, sx = fx * fx * (3 - 2 * fx), sy = fy * fy * (3 - 2 * fy);
-        double a = Hash(X, Y), b = Hash(X + 1, Y), c = Hash(X, Y + 1), d = Hash(X + 1, Y + 1);
+        double ix = Math.Floor(x), iy = Math.Floor(y), fx = x - ix, fy = y - iy, sx = fx * fx * (3 - 2 * fx), sy = fy * fy * (3 - 2 * fy);
+        double a = Hash(ix, iy), b = Hash(ix + 1, iy), c = Hash(ix, iy + 1), d = Hash(ix + 1, iy + 1);
         return (a + (b - a) * sx) * (1 - sy) + (c + (d - c) * sx) * sy;
     }
 
@@ -42,7 +42,7 @@ public static class Stamps
 
     private static float[] Render(Func<double, double, double> f)
     {
-        var data = new float[Size * Size];
+        float[] data = new float[Size * Size];
         for (int y = 0; y < Size; y++)
         {
             for (int x = 0; x < Size; x++)
@@ -54,13 +54,13 @@ public static class Stamps
     }
 
     public static readonly Stamp[] BuiltIn =
-    {
+    [
         new("stamp:mountain", "Mountain", Render((u, v) => { double d = Math.Sqrt(u * u + v * v); return d >= 1 ? 0 : Math.Pow(1 - d, 1.6) * (0.75 + 0.5 * Fractal(u * 4 + 7, v * 4 + 3)); })),
         new("stamp:mesa", "Mesa (flat top)", Render((u, v) => { double d = Math.Sqrt(u * u + v * v) * (1 + 0.12 * (Fractal(u * 3, v * 3) - 0.5)); return d >= 1 ? 0 : d < 0.62 ? 1 : 1 - Math.Pow((d - 0.62) / 0.38, 0.7); })),
         new("stamp:crater", "Crater rim", Render((u, v) => { double d = Math.Sqrt(u * u + v * v); return d >= 1 ? 0 : Math.Pow(Math.Max(0, 1 - Math.Abs(d - 0.72) / 0.28), 1.5); })),
-        new("stamp:dunes", "Dunes", Render((u, v) => { double d = Math.Sqrt(u * u + v * v); if (d >= 1) return 0; double edge = Math.Min(1, (1 - d) * 3); return edge * Math.Pow(0.5 + 0.5 * Math.Sin(u * 9 + Fractal(u * 2, v * 2) * 3), 2); })),
-        new("stamp:rocky", "Rocky ground", Render((u, v) => { double d = Math.Sqrt(u * u + v * v); if (d >= 1) return 0; return Math.Min(1, (1 - d) * 2.5) * Math.Max(0, Fractal(u * 6 + 11, v * 6 - 5) * 1.6 - 0.45); })),
-    };
+        new("stamp:dunes", "Dunes", Render((u, v) => { double d = Math.Sqrt(u * u + v * v); if (d >= 1) { return 0; } double edge = Math.Min(1, (1 - d) * 3); return edge * Math.Pow(0.5 + 0.5 * Math.Sin(u * 9 + Fractal(u * 2, v * 2) * 3), 2); })),
+        new("stamp:rocky", "Rocky ground", Render((u, v) => { double d = Math.Sqrt(u * u + v * v); if (d >= 1) { return 0; } return Math.Min(1, (1 - d) * 2.5) * Math.Max(0, Fractal(u * 6 + 11, v * 6 - 5) * 1.6 - 0.45); })),
+    ];
 
     // The weight at (u, v) in -1..1 (north up), between the four nearest pixels.
     public static float Sample(float[] data, float u, float v)
@@ -96,7 +96,7 @@ public static class Stamps
         {
             return null;
         }
-        var data = new float[Size * Size];
+        float[] data = new float[Size * Size];
         for (int y = 0; y < Size; y++)
         {
             for (int x = 0; x < Size; x++)
@@ -119,17 +119,17 @@ public static class Stamps
         {
             if (!File.Exists(FilePath))
             {
-                return new();
+                return [];
             }
             // (Entries without their weights, as a file changed by hand can have, are left out.)
-            return (JsonSerializer.Deserialize<List<Kept?>>(File.ReadAllText(FilePath)) ?? new())
+            return [.. (JsonSerializer.Deserialize<List<Kept?>>(File.ReadAllText(FilePath)) ?? [])
                 .Where(k => k is { Name: not null, Weights: not null }).Select(k => k!)
-                .Select(k => new Stamp(k.Name, k.Label, Convert.FromBase64String(k.Weights).Select(b => b / 255f).ToArray(), Loaded: true))
-                .Where(s => s.Data.Length == Size * Size).ToList();
+                .Select(k => new Stamp(k.Name, k.Label, [.. Convert.FromBase64String(k.Weights).Select(b => b / 255f)], Loaded: true))
+                .Where(s => s.Data.Length == Size * Size)];
         }
         catch (Exception ex) when (ex is IOException or JsonException or FormatException or UnauthorizedAccessException)
         {
-            return new();
+            return [];
         }
     }
 

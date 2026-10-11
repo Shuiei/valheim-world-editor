@@ -35,7 +35,6 @@ using FN_DECIMAL = System.Double;
 using FN_DECIMAL = System.Single;
 #endif
 
-using System;
 using System.Runtime.CompilerServices;
 
 // Jordan Peck's FastNoise (github.com/Auburn/FastNoise_CSharp), unchanged except for this namespace and

@@ -13,10 +13,10 @@ public static class DungeonRooms
 
     private sealed record Cache(int Version, int Count, IReadOnlyList<Dungeon> Dungeons);
 
-    private static readonly ConditionalWeakTable<WorldScene, Cache> Caches = new();
+    private static readonly ConditionalWeakTable<WorldScene, Cache> Caches = [];
 
     // Scenes whose dungeons are being read again for the view.
-    private static readonly ConditionalWeakTable<WorldScene, object> Reading = new();
+    private static readonly ConditionalWeakTable<WorldScene, object> Reading = [];
 
     private static (int Version, int Count) Now(WorldScene s)
     {
@@ -51,7 +51,7 @@ public static class DungeonRooms
                 ready();
             });
         }
-        return c?.Dungeons ?? Array.Empty<Dungeon>();
+        return c?.Dungeons ?? [];
     }
 
     public static IReadOnlyList<Dungeon> Of(WorldScene s)
@@ -65,7 +65,7 @@ public static class DungeonRooms
         WorldScene.Thing[] things;
         lock (s.Things)
         {
-            things = s.Things.ToArray();
+            things = [.. s.Things];
         }
         for (int i = 0; i < things.Length; i++)
         {
@@ -74,7 +74,7 @@ public static class DungeonRooms
             {
                 continue;
             }
-            List<Dungeons.Placed> rooms = new();
+            List<Dungeons.Placed> rooms = [];
             string? problem = null;
             try
             {

@@ -1,6 +1,4 @@
-using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
-using Avalonia.Threading;
 using TerrainEditor.Editing;
 using TerrainEditor.Save;
 using Xunit;
@@ -17,7 +15,7 @@ public class PanelMapTests
     {
         public MainWindow W { get; } = new(load: false) { Width = 1600, Height = 1000 };
         public string Dir { get; } = EditTests.CopyFixture();
-        public List<string> Told { get; } = new();
+        public List<string> Told { get; } = [];
         public MapPage M => W.MapPage!;
 
         public async Task Open()
@@ -110,10 +108,10 @@ public class PanelMapTests
         using var r = new Run();
         // A sign with a text, saved into the world first (the test world has none).
         var world = WorldSave.Load(r.Dir);
-        var tree = world.Objects.First(o => o.Prefab == StableHash.Of("Beech1"));
-        var sign = new ZdoData { Prefab = StableHash.Of("sign"), Position = tree.Position + new System.Numerics.Vector3(2, 0, 2) };
+        var (id, prefab, position, rotation, scale) = world.Objects.First(o => o.Prefab == StableHash.Of("Beech1"));
+        var sign = new ZdoData { Prefab = StableHash.Of("sign"), Position = position + new System.Numerics.Vector3(2, 0, 2) };
         sign.Set("strings", StableHash.Of("text"), "Welcome home");
-        Assert.True(WorldWriter.Save(world, Array.Empty<ZoneEdit>(), added: new[] { new NewObject(-1, sign.Prefab, sign.Position, default, 0, Fresh: false, Raw: sign.Serialize()) }).Saved);
+        Assert.True(WorldWriter.Save(world, [], added: [new NewObject(-1, sign.Prefab, sign.Position, default, 0, Fresh: false, Raw: sign.Serialize())]).Saved);
         await r.Open();
         r.M.SearchBox.Text = "beech";
         await r.M.Search();
@@ -124,7 +122,7 @@ public class PanelMapTests
         Assert.Equal("", r.M.SearchInfo.Text);
         Assert.Null(r.M.Hits.ItemsSource);
         // Texts are read from the chunk files: gone, the search fails with the reason.
-        foreach (var f in Directory.GetFiles(r.Dir, "*.chunk"))
+        foreach (string f in Directory.GetFiles(r.Dir, "*.chunk"))
         {
             File.Delete(f);
         }

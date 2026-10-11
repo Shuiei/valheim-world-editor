@@ -24,9 +24,9 @@ public class PagesTests
             var b = WorldScene.Load(world, 1, 0, 1);
             Assert.Same(world.Edits, a.Session!.Edits);
             // A tree placed in the first area, and one in the second: different ids.
-            var tree = (new TerrainEditor.Editing.NewObject(0, StableHash.Of("Beech1"), new Vector3(10, 30, 10), Vector3.Zero, 1), false);
-            var i = a.Session.Commit("x", null, Array.Empty<int>(), new[] { tree });
-            var j = b.Session!.Commit("y", null, Array.Empty<int>(), new[] { tree with { Item1 = tree.Item1 with { Position = new Vector3(70, 30, 10) } } });
+            var tree = (new Editing.NewObject(0, StableHash.Of("Beech1"), new Vector3(10, 30, 10), Vector3.Zero, 1), false);
+            var i = a.Session.Commit("x", null, [], [tree]);
+            var j = b.Session!.Commit("y", null, [], [tree with { Item1 = tree.Item1 with { Position = new Vector3(70, 30, 10) } }]);
             Assert.NotEqual(a.Things[i[0]].Id, b.Things[j[0]].Id);
             Assert.Equal(2, world.Pending.Added);
             // Opened again, the first area shows the tree it got.
@@ -52,7 +52,7 @@ public class PagesTests
         {
             var world = WorldSession.Open(dir);
             var a = WorldScene.Load(world, 0, 0, 1);
-            a.Session!.Shape(32, 32, Formula.Compile("2", new string[0]), 4, 0, "x");
+            a.Session!.Shape(32, 32, Formula.Compile("2", []), 4, 0, "x");
             Assert.Equal(1, world.Pending.Zones);
             world.Discard();
             Assert.Equal((0, 0, 0, 0), world.Pending);
@@ -92,7 +92,7 @@ public class PagesTests
             map.SizeBox.SelectedIndex = 0;
             await w.EditArea(0, 0, map.Size);
             Assert.True(w.MapButton.IsVisible);
-            w.Session!.Shape(96, 96, Formula.Compile("2", new string[0]), 4, 0, "x");
+            w.Session!.Shape(96, 96, Formula.Compile("2", []), 4, 0, "x");
             w.ShowMap();
             Assert.StartsWith("Not saved yet: 1 zone of ground", map.Pending.Text);
             Assert.True(map.SaveButton.IsEnabled);
@@ -124,7 +124,7 @@ public class PagesTests
     [AvaloniaFact]
     public void EveryIconParses()
     {
-        foreach (var name in Icons.Paths.Keys)
+        foreach (string name in Icons.Paths.Keys)
         {
             Assert.NotNull(Icons.Make(name));
         }
@@ -142,7 +142,7 @@ public class PagesTests
             await w.OpenWorld(() => Task.Run(() => WorldSession.Open(dir)), "Opening…");
             await w.EditArea(0, 0, 3);
             var s = w.Session!;
-            s.Shape(96, 96, Formula.Compile("2", new string[0]), 4, 0, "x");
+            s.Shape(96, 96, Formula.Compile("2", []), 4, 0, "x");
             Assert.Single(s.UndoList);
             w.ShowMap();
             w.KeyPress(Key.Z, RawInputModifiers.Control, PhysicalKey.Z, "z");

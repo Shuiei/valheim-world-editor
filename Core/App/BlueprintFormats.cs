@@ -14,7 +14,7 @@ namespace TerrainEditor.App;
 public static class BlueprintFormats
 {
     // Data: values of the object's data the editor keeps for it (its own #EditorData lines).
-    public sealed record Piece(string Name, Vector3 Position, Vector3 Euler, float Scale, IReadOnlyList<TerrainEditor.Editing.ObjectField>? Data = null);
+    public sealed record Piece(string Name, Vector3 Position, Vector3 Euler, float Scale, IReadOnlyList<Editing.ObjectField>? Data = null);
 
     public sealed record TerrainMod(string Shape, Vector3 Position, float Radius, int Rotation, string Paint);
 
@@ -32,11 +32,11 @@ public static class BlueprintFormats
         bool vbuild = ext == ".vbuild";
         string name = Path.GetFileNameWithoutExtension(fileName);
         string? creator = null, description = null;
-        List<Piece> pieces = new();
-        List<TerrainMod> terrain = new();
+        List<Piece> pieces = [];
+        List<TerrainMod> terrain = [];
         int skipped = 0, line0 = 0;
         bool ruin = false;
-        var data = new Dictionary<int, List<TerrainEditor.Editing.ObjectField>>();
+        var data = new Dictionary<int, List<Editing.ObjectField>>();
         var lines = new List<int>();
         string section = "pieces";
         foreach (string raw in text.Split('\n'))
@@ -55,9 +55,9 @@ public static class BlueprintFormats
             {
                 string rest = line[DataHeader.Length..];
                 int bar = rest.IndexOf(';');
-                if (bar > 0 && int.TryParse(rest[..bar], NumberStyles.Integer, CultureInfo.InvariantCulture, out int at) && TerrainEditor.Editing.ObjectField.Parse(rest[(bar + 1)..]) is { } f)
+                if (bar > 0 && int.TryParse(rest[..bar], NumberStyles.Integer, CultureInfo.InvariantCulture, out int at) && Editing.ObjectField.Parse(rest[(bar + 1)..]) is { } f)
                 {
-                    (data.TryGetValue(at, out var l) ? l : data[at] = new()).Add(f);
+                    (data.TryGetValue(at, out var l) ? l : data[at] = []).Add(f);
                 }
                 continue;
             }
@@ -93,10 +93,10 @@ public static class BlueprintFormats
         {
             for (int k = 0; k < pieces.Count; k++)
             {
-                var d = data.TryGetValue(lines[k], out var held) ? held : new List<TerrainEditor.Editing.ObjectField>();
+                var d = data.TryGetValue(lines[k], out var held) ? held : [];
                 if (ruin)
                 {
-                    d.Add(TerrainEditor.Editing.ObjectField.NoBuilder);
+                    d.Add(Editing.ObjectField.NoBuilder);
                 }
                 pieces[k] = pieces[k] with { Data = d };
             }
@@ -112,7 +112,7 @@ public static class BlueprintFormats
             line = line.Replace(',', '.');
         }
         string[] p = line.Split(';');
-        Quaternion q = Quaternion.Normalize(new Quaternion(F(p[5]), F(p[6]), F(p[7]), F(p[8])));
+        var q = Quaternion.Normalize(new Quaternion(F(p[5]), F(p[6]), F(p[7]), F(p[8])));
         float scale = p.Length > 12 ? F(p[10]) : 1f;
         return new Piece(PrefabName(p[0]), new Vector3(F(p[2]), F(p[3]), F(p[4])), ToEuler(q), scale);
     }
@@ -124,7 +124,7 @@ public static class BlueprintFormats
             line = line.Replace(',', '.');
         }
         string[] p = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        Quaternion q = Quaternion.Normalize(new Quaternion(F(p[1]), F(p[2]), F(p[3]), F(p[4])));
+        var q = Quaternion.Normalize(new Quaternion(F(p[1]), F(p[2]), F(p[3]), F(p[4])));
         return new Piece(PrefabName(p[0]), new Vector3(F(p[5]), F(p[6]), F(p[7])), ToEuler(q), 1f);
     }
 
@@ -172,8 +172,8 @@ public static class BlueprintFormats
     // Unity's Quaternion.Euler: z, then x, then y.
     public static Quaternion FromEuler(Vector3 e)
     {
-        const float k = MathF.PI / 360f;
-        Quaternion qx = new(MathF.Sin(e.X * k), 0, 0, MathF.Cos(e.X * k)), qy = new(0, MathF.Sin(e.Y * k), 0, MathF.Cos(e.Y * k)), qz = new(0, 0, MathF.Sin(e.Z * k), MathF.Cos(e.Z * k));
+        const float K = MathF.PI / 360f;
+        Quaternion qx = new(MathF.Sin(e.X * K), 0, 0, MathF.Cos(e.X * K)), qy = new(0, MathF.Sin(e.Y * K), 0, MathF.Cos(e.Y * K)), qz = new(0, 0, MathF.Sin(e.Z * K), MathF.Cos(e.Z * K));
         // System.Numerics multiplies right to left like Unity: qy * qx * qz applies qz first.
         return Mul(Mul(qy, qx), qz);
     }
@@ -189,25 +189,36 @@ public static class BlueprintFormats
     // entries is levelled to their height, relative to the same point.
     public static JsonObject ToClip(Parsed bp, Func<string, bool> known, out List<string> unknown)
     {
-        List<Piece> pieces = bp.Pieces.Where(p => known(p.Name)).ToList();
-        unknown = bp.Pieces.Select(p => p.Name).Where(n => !known(n)).Distinct().OrderBy(n => n).ToList();
+        var pieces = bp.Pieces.Where(p => known(p.Name)).ToList();
+        unknown = [.. bp.Pieces.Select(p => p.Name).Where(n => !known(n)).Distinct().OrderBy(n => n)];
         float minY = pieces.Count > 0 ? pieces.Min(p => p.Position.Y) : bp.Terrain.Count > 0 ? bp.Terrain.Min(t => t.Position.Y) : 0f;
         float x0 = float.MaxValue, x1 = float.MinValue, z0 = float.MaxValue, z1 = float.MinValue;
         void Grow(float x, float z) { x0 = Math.Min(x0, x); x1 = Math.Max(x1, x); z0 = Math.Min(z0, z); z1 = Math.Max(z1, z); }
-        foreach (Piece p in pieces) Grow(p.Position.X, p.Position.Z);
+        foreach (Piece p in pieces)
+        {
+            Grow(p.Position.X, p.Position.Z);
+        }
+
         foreach (TerrainMod t in bp.Terrain) { Grow(t.Position.X - t.Radius, t.Position.Z - t.Radius); Grow(t.Position.X + t.Radius, t.Position.Z + t.Radius); }
         if (x0 > x1)
         {
             x0 = x1 = z0 = z1 = 0f;
         }
         float cx = (x0 + x1) / 2f, cz = (z0 + z1) / 2f;
-        JsonArray objects = new();
+        JsonArray objects = [];
         foreach (Piece p in pieces)
         {
             objects.Add(new JsonObject
             {
-                ["name"] = p.Name, ["dx"] = R(p.Position.X - cx), ["dz"] = R(p.Position.Z - cz), ["dy"] = R(p.Position.Y - minY),
-                ["rx"] = R(p.Euler.X), ["ry"] = R(p.Euler.Y), ["rz"] = R(p.Euler.Z), ["scale"] = MathF.Abs(p.Scale - 1f) < 1e-3f ? 0 : R(p.Scale), ["sourceId"] = null,
+                ["name"] = p.Name,
+                ["dx"] = R(p.Position.X - cx),
+                ["dz"] = R(p.Position.Z - cz),
+                ["dy"] = R(p.Position.Y - minY),
+                ["rx"] = R(p.Euler.X),
+                ["ry"] = R(p.Euler.Y),
+                ["rz"] = R(p.Euler.Z),
+                ["scale"] = MathF.Abs(p.Scale - 1f) < 1e-3f ? 0 : R(p.Scale),
+                ["sourceId"] = null,
             });
             if (p.Data is { Count: > 0 } fields)
             {
@@ -215,14 +226,14 @@ public static class BlueprintFormats
             }
         }
         int w = 1, h = 1;
-        int[] rel = { -32768 }, wt = { 0 }, pnt = { -255, -255, -255, -255 };
+        int[] rel = [-32768], wt = [0], pnt = [-255, -255, -255, -255];
         if (bp.Terrain.Count > 0)
         {
             w = (int)MathF.Ceiling(x1 - x0) + 1;
             h = (int)MathF.Ceiling(z1 - z0) + 1;
-            rel = Enumerable.Repeat(-32768, w * h).ToArray();
+            rel = [.. Enumerable.Repeat(-32768, w * h)];
             wt = new int[w * h];
-            pnt = Enumerable.Repeat(-255, w * h * 4).ToArray();
+            pnt = [.. Enumerable.Repeat(-255, w * h * 4)];
             for (int iz = 0; iz < h; iz++)
             {
                 for (int ix = 0; ix < w; ix++)
@@ -248,13 +259,14 @@ public static class BlueprintFormats
                 }
             }
         }
-        const float pad = 1f;
+        const float Pad = 1f;
         JsonArray poly = new(
-            Point(x0 - cx - pad, z0 - cz - pad), Point(x1 - cx + pad, z0 - cz - pad),
-            Point(x1 - cx + pad, z1 - cz + pad), Point(x0 - cx - pad, z1 - cz + pad));
+            Point(x0 - cx - Pad, z0 - cz - Pad), Point(x1 - cx + Pad, z0 - cz - Pad),
+            Point(x1 - cx + Pad, z1 - cz + Pad), Point(x0 - cx - Pad, z1 - cz + Pad));
         return new JsonObject
         {
-            ["w"] = w, ["h"] = h,
+            ["w"] = w,
+            ["h"] = h,
             ["rel"] = new JsonArray(rel.Select(v => (JsonNode)v).ToArray()),
             ["wt"] = new JsonArray(wt.Select(v => (JsonNode)v).ToArray()),
             ["pnt"] = new JsonArray(pnt.Select(v => (JsonNode)v).ToArray()),
@@ -268,10 +280,10 @@ public static class BlueprintFormats
     private static float R(float v) => MathF.Round(v * 1000f) / 1000f;
 
     // An object's data in the clipboard format: its fields as text (ObjectField).
-    public static JsonArray DataJson(IEnumerable<TerrainEditor.Editing.ObjectField> fields) => new(fields.Select(f => (JsonNode)f.ToString()).ToArray());
+    public static JsonArray DataJson(IEnumerable<Editing.ObjectField> fields) => [.. fields.Select(f => (JsonNode)f.ToString()).ToArray()];
 
-    public static List<TerrainEditor.Editing.ObjectField>? DataOf(JsonNode? data) =>
-        data is JsonArray a && a.Count > 0 ? a.Select(n => TerrainEditor.Editing.ObjectField.Parse((string?)n ?? "")).OfType<TerrainEditor.Editing.ObjectField>().ToList() : null;
+    public static List<Editing.ObjectField>? DataOf(JsonNode? data) =>
+        data is JsonArray a && a.Count > 0 ? a.Select(n => Editing.ObjectField.Parse((string?)n ?? "")).OfType<Editing.ObjectField>().ToList() : null;
 
     private static bool Covers(TerrainMod t, float x, float z)
     {
@@ -289,9 +301,9 @@ public static class BlueprintFormats
     // PlanBuild's paint names -> the game's paint mask (r dirt, g cultivated, b paved, a vegetation).
     private static float[]? PaintOf(string paint) => paint.ToLowerInvariant() switch
     {
-        var p when p.Contains("dirt") => new[] { 1f, 0f, 0f, 1f },
-        var p when p.Contains("cultiv") => new[] { 0f, 1f, 0f, 1f },
-        var p when p.Contains("paved") => new[] { 0f, 0f, 1f, 1f },
+        var p when p.Contains("dirt") => [1f, 0f, 0f, 1f],
+        var p when p.Contains("cultiv") => [0f, 1f, 0f, 1f],
+        var p when p.Contains("paved") => [0f, 0f, 1f, 1f],
         _ => null,
     };
 
@@ -299,7 +311,7 @@ public static class BlueprintFormats
     // Ground is not written: PlanBuild's terrain entries cannot describe free-form ground.
     public static string Write(JsonObject clip, string format, string name, Func<string, int> category)
     {
-        var objs = (clip["objects"] as JsonArray ?? new()).OfType<JsonObject>().Select(o => (
+        var objs = (clip["objects"] as JsonArray ?? []).OfType<JsonObject>().Select(o => (
             Name: (string?)o["name"] ?? "", X: (float?)o["dx"] ?? 0, Y: (float?)o["dy"] ?? 0, Z: (float?)o["dz"] ?? 0,
             Rot: FromEuler(new Vector3((float?)o["rx"] ?? 0, (float?)o["ry"] ?? 0, (float?)o["rz"] ?? 0)), Scale: (float?)o["scale"] ?? 0)).ToList();
         // PlanBuild measures from the lowest corner; ground level stays where the copy had it.
@@ -307,25 +319,25 @@ public static class BlueprintFormats
         StringBuilder sb = new();
         if (format == "vbuild")
         {
-            foreach (var o in objs.OrderBy(o => o.Y))
+            foreach (var (prefab, x, y, z, rot, scale) in objs.OrderBy(o => o.Y))
             {
-                sb.Append(o.Name).Append(' ').Append(S(o.Rot.X)).Append(' ').Append(S(o.Rot.Y)).Append(' ').Append(S(o.Rot.Z)).Append(' ').Append(S(o.Rot.W))
-                    .Append(' ').Append(S(o.X - minX)).Append(' ').Append(S(o.Y)).Append(' ').Append(S(o.Z - minZ)).Append('\n');
+                sb.Append(prefab).Append(' ').Append(S(rot.X)).Append(' ').Append(S(rot.Y)).Append(' ').Append(S(rot.Z)).Append(' ').Append(S(rot.W))
+                    .Append(' ').Append(S(x - minX)).Append(' ').Append(S(y)).Append(' ').Append(S(z - minZ)).Append('\n');
             }
             return sb.ToString();
         }
-        string[] categories = { "Misc", "Crafting", "BuildingWorkbench", "BuildingStonecutter", "Furniture", "DeepNorth", "Feasts", "Food", "Meads" };
+        string[] categories = ["Misc", "Crafting", "BuildingWorkbench", "BuildingStonecutter", "Furniture", "DeepNorth", "Feasts", "Food", "Meads"];
         sb.Append("#Name:").Append(name).Append('\n');
         sb.Append("#Creator:Valheim World Editor\n");
         sb.Append("#Description:\"\"\n");
         sb.Append("#Category:Misc\n");
         sb.Append("#Pieces\n");
-        foreach (var o in objs.OrderBy(o => o.Y).ThenBy(o => o.X).ThenBy(o => o.Z))
+        foreach (var (prefab, x, y, z, rot, scale) in objs.OrderBy(o => o.Y).ThenBy(o => o.X).ThenBy(o => o.Z))
         {
-            int cat = category(o.Name);
-            float s = o.Scale > 0 ? o.Scale : 1f;
-            sb.Append(string.Join(";", o.Name, cat >= 0 && cat < categories.Length ? categories[cat] : "Misc",
-                S(o.X - minX), S(o.Y), S(o.Z - minZ), S(o.Rot.X), S(o.Rot.Y), S(o.Rot.Z), S(o.Rot.W), "\"\"", S(s), S(s), S(s))).Append('\n');
+            int cat = category(prefab);
+            float s = scale > 0 ? scale : 1f;
+            sb.Append(string.Join(";", prefab, cat >= 0 && cat < categories.Length ? categories[cat] : "Misc",
+                S(x - minX), S(y), S(z - minZ), S(rot.X), S(rot.Y), S(rot.Z), S(rot.W), "\"\"", S(s), S(s), S(s))).Append('\n');
         }
         return sb.ToString();
     }

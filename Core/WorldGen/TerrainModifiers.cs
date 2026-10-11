@@ -22,7 +22,7 @@ public sealed class TerrainModifiers
     private sealed record Template(Vector3 Offset, bool Level, float LevelOffset, float LevelRadius, bool Square, bool Smooth, float SmoothRadius, float SmoothPower, bool PaintCleared, float PaintRadius, int SortOrder, bool Player);
 
     // None until Use: no world opens before then (GameData).
-    private static volatile Dictionary<int, (string Name, bool Location, List<Template> Mods)> Prefabs = new();
+    private static volatile Dictionary<int, (string Name, bool Location, List<Template> Mods)> _prefabs = [];
 
     // Whether the game's modifiers are known (Use was given them).
     public static bool Loaded { get; private set; }
@@ -31,13 +31,13 @@ public sealed class TerrainModifiers
     // and modifiers): from the game (GameData) or the tests' copy.
     public static void Use(string json)
     {
-        Prefabs = Parse(json);
+        _prefabs = Parse(json);
         Loaded = true;
     }
 
-    public static IEnumerable<int> NetworkPrefabHashes => Prefabs.Where(p => !p.Value.Location).Select(p => p.Key);
+    public static IEnumerable<int> NetworkPrefabHashes => _prefabs.Where(p => !p.Value.Location).Select(p => p.Key);
 
-    private readonly Dictionary<(int, int), List<Modifier>> _byZone = new();
+    private readonly Dictionary<(int, int), List<Modifier>> _byZone = [];
 
     public int Count { get; }
 
@@ -50,11 +50,11 @@ public sealed class TerrainModifiers
     // From any set of placed objects (Uplift: the world's with ground discs added or taken away).
     public TerrainModifiers(IEnumerable<PlacedObject> placed)
     {
-        List<Modifier> all = new();
+        List<Modifier> all = [];
         foreach (PlacedObject p in placed)
         {
             int key = p.Location != 0 ? p.Location : p.Prefab;
-            if (!Prefabs.TryGetValue(key, out var prefab) || prefab.Location != (p.Location != 0))
+            if (!_prefabs.TryGetValue(key, out var prefab) || prefab.Location != (p.Location != 0))
             {
                 continue;
             }
@@ -63,20 +63,32 @@ public sealed class TerrainModifiers
                 LocationsWithModifiers++;
             }
             // Quaternion.Euler in Unity applies z, then x, then y: the same as yaw/pitch/roll here.
-            Quaternion rot = Quaternion.CreateFromYawPitchRoll(Deg(p.Rotation.Y), Deg(p.Rotation.X), Deg(p.Rotation.Z));
+            var rot = Quaternion.CreateFromYawPitchRoll(Deg(p.Rotation.Y), Deg(p.Rotation.X), Deg(p.Rotation.Z));
             foreach (Template t in prefab.Mods)
             {
                 Vector3 pos = p.Position + Vector3.Transform(t.Offset, rot);
                 all.Add(new Modifier(pos, t.Level, t.LevelOffset, t.LevelRadius, t.Square, t.Smooth, t.SmoothRadius, t.SmoothPower, t.PaintCleared, t.PaintRadius, t.SortOrder, t.Player, prefab.Location ? 0 : p.TimeCreated,
-                    prefab.Location && TerrainEditor.Editing.Uplift.IsDisc(p.Location)));
+                    prefab.Location && Editing.Uplift.IsDisc(p.Location)));
             }
         }
         // TerrainModifier.SortByModifiers.
         all.Sort((a, b) =>
         {
-            if (a.Player != b.Player) return a.Player.CompareTo(b.Player);
-            if (a.SortOrder != b.SortOrder) return a.SortOrder.CompareTo(b.SortOrder);
-            if (a.CreationTime != b.CreationTime) return a.CreationTime.CompareTo(b.CreationTime);
+            if (a.Player != b.Player)
+            {
+                return a.Player.CompareTo(b.Player);
+            }
+
+            if (a.SortOrder != b.SortOrder)
+            {
+                return a.SortOrder.CompareTo(b.SortOrder);
+            }
+
+            if (a.CreationTime != b.CreationTime)
+            {
+                return a.CreationTime.CompareTo(b.CreationTime);
+            }
+
             return a.Position.LengthSquared().CompareTo(b.Position.LengthSquared());
         });
         foreach (Modifier m in all)
@@ -91,7 +103,7 @@ public sealed class TerrainModifiers
                 {
                     if (Overlaps(m, zx, zz))
                     {
-                        (_byZone.TryGetValue((zx, zz), out var list) ? list : _byZone[(zx, zz)] = new()).Add(m);
+                        (_byZone.TryGetValue((zx, zz), out var list) ? list : _byZone[(zx, zz)] = []).Add(m);
                     }
                 }
             }
@@ -210,11 +222,11 @@ public sealed class TerrainModifiers
 
     private static Dictionary<int, (string, bool, List<Template>)> Parse(string json)
     {
-        using JsonDocument doc = JsonDocument.Parse(json);
-        Dictionary<int, (string, bool, List<Template>)> result = new();
+        using var doc = JsonDocument.Parse(json);
+        Dictionary<int, (string, bool, List<Template>)> result = [];
         foreach (JsonProperty p in doc.RootElement.EnumerateObject())
         {
-            List<Template> mods = new();
+            List<Template> mods = [];
             foreach (JsonElement m in p.Value.GetProperty("modifiers").EnumerateArray())
             {
                 JsonElement pos = m.GetProperty("pos");

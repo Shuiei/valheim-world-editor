@@ -60,9 +60,9 @@ public sealed class BlueprintsPanel
         var close = new Button { Content = "✕", FontSize = 11, Padding = new Thickness(6, 0) }.Tip("card.close");
         Search.Tip("blueprints.search");
         close.Click += (_, _) => { Card!.IsVisible = false; Closed?.Invoke(); };
-        Search.PropertyChanged += (_, e) => { if (e.Property == TextBox.TextProperty) Render(); };
+        Search.PropertyChanged += (_, e) => { if (e.Property == TextBox.TextProperty) { Render(); } };
         ImportButton.Tip("blueprints.import");
-        ImportButton.Click += async (_, _) => { if (await PickFile() is string path) Import(path); };
+        ImportButton.Click += async (_, _) => { if (await PickFile() is string path) { Import(path); } };
         NewButton.Tip("blueprints.new");
         NewButton.Click += (_, _) => EditAsked?.Invoke(null);
         GetHomesteadButton.Tip("blueprints.getHomestead");
@@ -112,16 +112,15 @@ public sealed class BlueprintsPanel
         Refresh();
     }
 
-    private List<BlueprintStore.Summary> _older = new();
-    private List<Homestead.Entry> _homestead = new();
+    private List<BlueprintStore.Summary> _older = [];
+    private List<Homestead.Entry> _homestead = [];
 
     // Homestead as found when the panel was last refreshed (looked for when first needed).
-    private Homestead.Status? _status;
-    internal Homestead.Status Status => _status ??= FindHomestead();
+    internal Homestead.Status Status { get => field ??= FindHomestead(); private set; }
 
     public void Refresh()
     {
-        _status = FindHomestead();
+        Status = FindHomestead();
         if (!Card.IsVisible)
         {
             return;
@@ -250,7 +249,9 @@ public sealed class BlueprintsPanel
             List.Children.Add(new TextBlock
             {
                 Text = _homestead.Count + _older.Count > 0 ? "Nothing matches." : "No blueprints yet. Copy something (Area or Select tool, Ctrl+C), then “Save blueprint…”.",
-                FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap,
+                FontSize = 11,
+                Foreground = Ui.Muted,
+                TextWrapping = TextWrapping.Wrap,
             });
             return;
         }
@@ -258,7 +259,7 @@ public sealed class BlueprintsPanel
         {
             string id = HomesteadId + Path.GetFileName(e.Path);
             string meta = $"{e.Pieces} piece(s){(e.Creator is { Length: > 0 } c ? $" · by {c}" : "")}{(e.World != null ? $" · from {e.World}" : "")}";
-            var cost = TerrainEditor.Terrain.PieceCost.Of(e.Kinds);
+            var cost = Terrain.PieceCost.Of(e.Kinds);
             List.Children.Add(Row(PictureFile(e.Picture), e.Name, meta, act =>
             {
                 act("Paste", "Put this blueprint on the clipboard and start pasting it", () => Paste(id));
@@ -297,7 +298,7 @@ public sealed class BlueprintsPanel
             }
             var parsed = BlueprintFormats.Parse(path, File.ReadAllText(path));
             var world = _scene()?.World;
-            var clip = BlueprintFormats.ToClip(parsed, n => world?.CanCreate(StableHash.OfName(n)) ?? TerrainEditor.Terrain.PrefabCatalog.Get(StableHash.OfName(n)) != null, out _);
+            var clip = BlueprintFormats.ToClip(parsed, n => world?.CanCreate(StableHash.OfName(n)) ?? Terrain.PrefabCatalog.Get(StableHash.OfName(n)) != null, out _);
             return (clip, parsed.Name, null);
         }
         if (Store.Read(id) is not string json || JsonNode.Parse(json) is not JsonObject doc || doc["clip"] is not JsonObject c)
@@ -319,12 +320,12 @@ public sealed class BlueprintsPanel
         return path;
     }
 
-    private static Homestead.Details Named(string name) => new(name, "", new());
+    private static Homestead.Details Named(string name) => new(name, "", []);
 
     // Asks for the details (none: null), and before replacing a blueprint of that name.
     private async Task<Homestead.Details?> Ask(Homestead.Details start, JsonObject clip, string? keep = null)
     {
-        var cost = TerrainEditor.Terrain.PieceCost.Of(BuildingPicture.FromClip(clip).Select(p => p.Name));
+        var cost = Terrain.PieceCost.Of(BuildingPicture.FromClip(clip).Select(p => p.Name));
         var d = await AskDetails(start, cost.Describe(8));
         if (d == null || string.IsNullOrWhiteSpace(d.Name))
         {
@@ -355,7 +356,7 @@ public sealed class BlueprintsPanel
             Message?.Invoke("Copy something first (Area or Select tool, Ctrl+C), then save it as a blueprint.");
             return null;
         }
-        _status = FindHomestead();
+        Status = FindHomestead();
         var json = CopyFormat.ToJson(clip);
         if (await Ask(Named(clip.Name ?? $"Blueprint {DateTime.Now:yyyy-MM-dd HH.mm}"), json) is not { } details)
         {
@@ -383,7 +384,7 @@ public sealed class BlueprintsPanel
     // name is replaced after asking, except the file it was opened from). What was saved, or null.
     public async Task<Homestead.Details?> SaveBuilding(JsonObject clip, Homestead.Details suggested, string? openedFrom = null)
     {
-        _status = FindHomestead();
+        Status = FindHomestead();
         if (await Ask(suggested, clip, openedFrom != null ? Path.GetFileName(openedFrom) : null) is not { } details)
         {
             return null;
@@ -408,7 +409,7 @@ public sealed class BlueprintsPanel
     // picture when the name changes and the new file name is free).
     public async Task<bool> EditDetails(Homestead.Entry e)
     {
-        var d = await AskDetails(e.Details, TerrainEditor.Terrain.PieceCost.Of(e.Kinds).Describe(8));
+        var d = await AskDetails(e.Details, Terrain.PieceCost.Of(e.Kinds).Describe(8));
         if (d == null || string.IsNullOrWhiteSpace(d.Name))
         {
             return false;
@@ -513,7 +514,7 @@ public sealed class BlueprintsPanel
             Message?.Invoke("Could not export that blueprint.");
             return null;
         }
-        string text = BlueprintFormats.Write(clip, format, name, n => TerrainEditor.Terrain.PieceCatalog.Get(StableHash.Of(n))?.Category ?? 0);
+        string text = BlueprintFormats.Write(clip, format, name, n => Terrain.PieceCatalog.Get(StableHash.Of(n))?.Category ?? 0);
         string dir = Path.Combine(Store.Directory, "export");
         string path = Path.Combine(dir, Path.GetFileNameWithoutExtension(Homestead.FileName(name)) + "." + format);
         try
@@ -550,9 +551,9 @@ public sealed class BlueprintsPanel
             Message?.Invoke("Could not import that file: no pieces found in it. Is it a .blueprint (Homestead, PlanBuild) or a .vbuild file?");
             return null;
         }
-        _status = FindHomestead();
+        Status = FindHomestead();
         var world = _scene()?.World;
-        var clip = BlueprintFormats.ToClip(parsed, n => world?.CanCreate(StableHash.OfName(n)) ?? TerrainEditor.Terrain.PrefabCatalog.Get(StableHash.OfName(n)) != null, out var unknown);
+        var clip = BlueprintFormats.ToClip(parsed, n => world?.CanCreate(StableHash.OfName(n)) ?? Terrain.PrefabCatalog.Get(StableHash.OfName(n)) != null, out var unknown);
         string baseName = string.IsNullOrWhiteSpace(parsed.Name) ? "Imported" : parsed.Name, name = baseName;
         for (int n = 2; HomesteadExists(name); n++)
         {

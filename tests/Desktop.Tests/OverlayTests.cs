@@ -12,8 +12,20 @@ public class OverlayTests
     // A flat 1 × 1 zone area at 35 m, with the given objects.
     internal static WorldScene Flat(params WorldScene.Thing[] things) => new()
     {
-        World = null!, Name = "test", X0 = 0, Z0 = 0, Size = 1, W = 65, H = 65, Heights = Enumerable.Repeat(35f, 65 * 65).ToArray(), Biomes = new int[65 * 65],
-        Things = things.ToList(), BiomeColor = new byte[65 * 65 * 4], Mask = new byte[65 * 65 * 4], OceanDepth = new float[65 * 65], Limit = new float[65 * 65],
+        World = null!,
+        Name = "test",
+        X0 = 0,
+        Z0 = 0,
+        Size = 1,
+        W = 65,
+        H = 65,
+        Heights = [.. Enumerable.Repeat(35f, 65 * 65)],
+        Biomes = new int[65 * 65],
+        Things = [.. things],
+        BiomeColor = new byte[65 * 65 * 4],
+        Mask = new byte[65 * 65 * 4],
+        OceanDepth = new float[65 * 65],
+        Limit = new float[65 * 65],
     };
 
     [Fact]
@@ -38,7 +50,7 @@ public class OverlayTests
             new WorldScene.Thing(1, StableHash.Of("guard_stone"), new Vector3(0, 35, 0), Vector3.Zero, 0, true),
             new WorldScene.Thing(2, StableHash.Of("piece_workbench"), new Vector3(10, 35, 10), Vector3.Zero, 0, true),
         };
-        string?[] names = { "guard_stone", "piece_workbench" };
+        string?[] names = ["guard_stone", "piece_workbench"];
         var o = Overlays.Build(Flat(things), null, i => names[i]);
         Assert.Equal(1, o.Wards);
         Assert.Equal(1, o.Stations);

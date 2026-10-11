@@ -1,6 +1,5 @@
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Media;
@@ -45,10 +44,10 @@ public sealed class NewWorldPage : IDisposable
     internal CheckBox ShowHildir { get; } = Toggle("trader", "Hildir", "Hildir");
     // One switch a kind of dungeon (off at first: they are looked for only when one is on, a few seconds),
     // the shown seed's dungeons (null: not looked for yet) and those of the seeds seen.
-    private readonly List<(SeedPreview.Landmark Mark, Control Control)> _marks = new();
+    private readonly List<(SeedPreview.Landmark Mark, Control Control)> _marks = [];
     internal Dictionary<string, CheckBox> ShowDungeons { get; } = SeedPreview.Dungeons.ToDictionary(d => d.Name, d => DungeonToggle(d.Name));
     internal List<SeedPreview.Landmark>? DungeonMarks { get; private set; }
-    private readonly Dictionary<string, List<SeedPreview.Landmark>> _dungeonsSeen = new();
+    private readonly Dictionary<string, List<SeedPreview.Landmark>> _dungeonsSeen = [];
     private readonly StackPanel _dungeonList = new() { Spacing = 2 };
     internal TextBlock Readout { get; } = new() { FontSize = 11, Foreground = Ui.Muted, Margin = new Thickness(8, 0, 0, 6), VerticalAlignment = VerticalAlignment.Bottom, HorizontalAlignment = HorizontalAlignment.Left, IsHitTestVisible = false };
     // Shown over the map while a seed's world is being looked at.
@@ -75,7 +74,7 @@ public sealed class NewWorldPage : IDisposable
 
     // The preview shown (null while it is made) and the search's results.
     internal SeedPreview.Preview? Shown { get; private set; }
-    internal List<(SeedPreview.Preview Preview, float Score)> Results { get; private set; } = new();
+    internal List<(SeedPreview.Preview Preview, float Score)> Results { get; private set; } = [];
     internal Task Pending { get; private set; } = Task.CompletedTask;
 
     private CancellationTokenSource? _search, _preview, _dungeons;
@@ -85,11 +84,17 @@ public sealed class NewWorldPage : IDisposable
 
     private static NumericUpDown Near(double metres) => new()
     {
-        Minimum = 0, Maximum = 8000, Increment = 250, Value = (decimal)metres, FormatString = "0", Width = 110, FontSize = 12,
+        Minimum = 0,
+        Maximum = 8000,
+        Increment = 250,
+        Value = (decimal)metres,
+        FormatString = "0",
+        Width = 110,
+        FontSize = 12,
     };
 
     // The game's world folders (that exist, the local ones first), for Where.
-    internal static List<string> Roots() => Places.WorldRoots().Where(Directory.Exists).Distinct().ToList();
+    internal static List<string> Roots() => [.. Places.WorldRoots().Where(Directory.Exists).Distinct()];
 
     public NewWorldPage(IReadOnlyList<string>? roots = null)
     {
@@ -300,7 +305,7 @@ public sealed class NewWorldPage : IDisposable
     {
         _preview?.Cancel();
         Problem.Text = "";
-        if (seed.Length == 0 || seed.Length > 10)
+        if (seed.Length is 0 or > 10)
         {
             Note("The seed is 1 to 10 characters, as in the game.");
             SetLoading(null);
@@ -483,8 +488,8 @@ public sealed class NewWorldPage : IDisposable
             });
             return;
         }
-        var start = Shown.Stats.Start;
-        float Far(SeedPreview.Landmark m) => MathF.Sqrt((m.X - start.X) * (m.X - start.X) + (m.Z - start.Z) * (m.Z - start.Z));
+        var (x, z) = Shown.Stats.Start;
+        float Far(SeedPreview.Landmark m) => MathF.Sqrt((m.X - x) * (m.X - x) + (m.Z - z) * (m.Z - z));
         foreach (var (name, biome, _) in SeedPreview.Dungeons)
         {
             var all = DungeonMarks.Where(m => m.Name == name).ToList();
@@ -560,9 +565,9 @@ public sealed class NewWorldPage : IDisposable
             string detail = all.Count == 0 ? "" : kind == "trader" ? $"{all.Count} spots" : all.Count == 1 ? "1 altar" : $"{all.Count} altars";
             return Item(Mark(kind, name), name, value, detail, near == null ? null : () => Map.LookAt(near.X, near.Z));
         }
-        Info.Children.Add(Section("Traders (the nearest spot)", SeedPreview.Landmarks.Where(l => l.Kind == "trader").Select(l => Of("trader", l.Name)).ToArray()));
+        Info.Children.Add(Section("Traders (the nearest spot)", [.. SeedPreview.Landmarks.Where(l => l.Kind == "trader").Select(l => Of("trader", l.Name))]));
         Info.Children.Add(Ui.Hint("Each trader has several spots: the first one players come near becomes the trader's camp, the others vanish."));
-        Info.Children.Add(Section("Bosses (the nearest altar)", SeedPreview.Landmarks.Where(l => l.Kind == "boss").Select(l => Of("boss", l.Name)).ToArray()));
+        Info.Children.Add(Section("Bosses (the nearest altar)", [.. SeedPreview.Landmarks.Where(l => l.Kind == "boss").Select(l => Of("boss", l.Name))]));
         (_dungeonList.Parent as Panel)?.Children.Remove(_dungeonList);
         Info.Children.Add(_dungeonList);
     }
@@ -619,7 +624,7 @@ public sealed class NewWorldPage : IDisposable
     }.Classed("switch");
 
     // The landmark kinds' looks: the start red, bosses purple diamonds, each trader a colour of its own.
-    private static SolidColorBrush Fill(string kind, string name = "") => new SolidColorBrush(kind switch
+    private static SolidColorBrush Fill(string kind, string name = "") => new(kind switch
     {
         "start" => Avalonia.Media.Color.FromRgb(230, 40, 40),
         "boss" => Avalonia.Media.Color.FromRgb(176, 96, 232),
@@ -649,7 +654,7 @@ public sealed class NewWorldPage : IDisposable
         {
             return;
         }
-        var start = Shown.Stats.Start;
+        var (x, z) = Shown.Stats.Start;
         bool Showing(SeedPreview.Landmark m) => (m.Kind switch
         {
             "start" => ShowStart,
@@ -660,7 +665,7 @@ public sealed class NewWorldPage : IDisposable
         foreach (var m in marks.OrderBy(m => m.Kind == "start").Where(Showing))
         {
             var c = Mark(m.Kind, m.Name);
-            float d = MathF.Sqrt((m.X - start.X) * (m.X - start.X) + (m.Z - start.Z) * (m.Z - start.Z));
+            float d = MathF.Sqrt((m.X - x) * (m.X - x) + (m.Z - z) * (m.Z - z));
             string what = m.Kind == "boss" ? $"{m.Name}'s altar" : m.Name;
             string tip = m.Kind == "start" ? $"The start: {m.X:0}, {m.Z:0}" : $"{what}: {m.X:0}, {m.Z:0}, {Km(d)} from the start";
             if (m.OneOf)
@@ -727,7 +732,7 @@ public sealed class NewWorldPage : IDisposable
     {
         var bmp = new WriteableBitmap(new PixelSize(px, px), new Vector(96, 96), PixelFormat.Bgra8888, AlphaFormat.Premul);
         using var fb = bmp.Lock();
-        var row = new byte[px * 4];
+        byte[] row = new byte[px * 4];
         int startI = (int)((p.Stats.Start.X + SeedPreview.Radius) / p.Cell), startJ = (int)((p.Stats.Start.Z + SeedPreview.Radius) / p.Cell);
         for (int y = 0; y < px; y++)
         {
@@ -851,7 +856,7 @@ public sealed class NewWorldPage : IDisposable
             Problem.Text = "Give the world a name that can be a file name (no / \\ : * ? \" < > |).";
             return;
         }
-        if (seed.Length == 0 || seed.Length > 10)
+        if (seed.Length is 0 or > 10)
         {
             Problem.Text = "The seed is 1 to 10 characters, as in the game.";
             return;

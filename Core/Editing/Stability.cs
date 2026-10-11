@@ -24,15 +24,15 @@ public static class Stability
     private sealed record Data(int Material, bool Supports, Vector3 Com, Box[] Boxes, bool Free = false);
 
     // None until Use: no world or Workshop opens before then (GameData).
-    private static volatile Dictionary<string, Data> Pieces = new();
+    private static volatile Dictionary<string, Data> _pieces = [];
 
     // The layers WearNTear's overlap test sees: Default, piece, terrain, static_solid, Default_small.
-    private static readonly HashSet<int> SupportLayers = new() { 0, 10, 11, 15, 20 };
+    private static readonly HashSet<int> SupportLayers = [0, 10, 11, 15, 20];
 
     // The pieces by name, as GameCatalogues' SupportScan writes them.
     public static void Use(string json)
     {
-        using JsonDocument doc = JsonDocument.Parse(json);
+        using var doc = JsonDocument.Parse(json);
         var result = new Dictionary<string, Data>();
         foreach (JsonProperty p in doc.RootElement.EnumerateObject())
         {
@@ -45,17 +45,17 @@ public static class Stability
             result[p.Name] = new Data(p.Value.GetProperty("m").GetInt32(), p.Value.GetProperty("s").GetInt32() != 0,
                 new Vector3(c[0].GetSingle(), c[1].GetSingle(), c[2].GetSingle()), boxes, p.Value.TryGetProperty("f", out var f) && f.GetInt32() != 0);
         }
-        Pieces = result;
+        _pieces = result;
     }
 
     // Whether the game gives this piece structural support at all (walls, floors, beams: yes; a
     // workbench, a chest: no, they rest on what is under them without counting).
-    public static bool Known(string prefab) => Pieces.ContainsKey(prefab);
+    public static bool Known(string prefab) => _pieces.ContainsKey(prefab);
 
     // A piece's material (WearNTear: 0 wood, 1 stone, 2 iron… -1 unknown) and its colliders as boxes in
     // its own frame (middle, half size, rotation): its rough shape, for pictures without its model.
     public static (int Material, List<(Vector3 C, Vector3 H, Quaternion Q)> Boxes) Shape(string prefab) =>
-        Pieces.TryGetValue(prefab, out var d) ? (d.Material, d.Boxes.Select(b => (b.C, b.H, b.Q)).ToList()) : (-1, new());
+        _pieces.TryGetValue(prefab, out var d) ? (d.Material, d.Boxes.Select(b => (b.C, b.H, b.Q)).ToList()) : (-1, []);
 
     // WearNTear.GetMaterialProperties: maximum and minimum support, losses per metre.
     public static (float Max, float Min, float Horizontal, float Vertical) Material(int m) => m switch
@@ -162,23 +162,23 @@ public static class Stability
     public static Result Solve(IReadOnlyList<Piece> pieces, Func<float, float, float> groundAt)
     {
         int n = pieces.Count;
-        var catalogue = Pieces;
+        var catalogue = _pieces;
         var data = pieces.Select(p => catalogue.GetValueOrDefault(p.Prefab)).ToArray();
         // Each piece's grown boxes (what it looks with) and its colliders that others see.
         var grown = new Obb[n][];
         var seen = new Obb[n][];
         var com = new Vector3[n];
-        var grounded = new bool[n];
+        bool[] grounded = new bool[n];
         for (int i = 0; i < n; i++)
         {
             var d = data[i];
             if (d == null)
             {
-                grown[i] = seen[i] = Array.Empty<Obb>();
+                grown[i] = seen[i] = [];
                 continue;
             }
-            grown[i] = d.Boxes.Select(b => World(b, pieces[i], 0.15f)).ToArray();
-            seen[i] = d.Boxes.Where(b => b.Counts).Select(b => World(b, pieces[i], 0f)).ToArray();
+            grown[i] = [.. d.Boxes.Select(b => World(b, pieces[i], 0.15f))];
+            seen[i] = [.. d.Boxes.Where(b => b.Counts).Select(b => World(b, pieces[i], 0f))];
             com[i] = pieces[i].Position + Vector3.Transform(d.Com, pieces[i].Rotation);
             // Touching the terrain: a grown box reaching the ground anywhere under it.
             grounded[i] = d.Free || grown[i].Any(g => g.Corners().Append(g.C).Any(c => c.Y <= groundAt(c.X, c.Z)));
@@ -188,7 +188,7 @@ public static class Stability
         var touches = new List<(int J, Obb Collider)>[n];
         for (int i = 0; i < n; i++)
         {
-            touches[i] = new();
+            touches[i] = [];
             if (data[i] == null)
             {
                 continue;
@@ -208,8 +208,8 @@ public static class Stability
                 }
             }
         }
-        var support = new float[n];
-        var alive = new bool[n];
+        float[] support = new float[n];
+        bool[] alive = new bool[n];
         for (int i = 0; i < n; i++)
         {
             alive[i] = data[i] != null;
@@ -222,7 +222,7 @@ public static class Stability
             for (int round = 0; round < 400; round++)
             {
                 float change = 0;
-                var next = (float[])support.Clone();
+                float[] next = (float[])support.Clone();
                 for (int i = 0; i < n; i++)
                 {
                     if (!alive[i])
@@ -309,9 +309,9 @@ public static class Stability
                 falls.Add(i);
             }
         }
-        var colour = new float[n];
-        var breaks = new bool[n];
-        var free = new bool[n];
+        float[] colour = new float[n];
+        bool[] breaks = new bool[n];
+        bool[] free = new bool[n];
         foreach (int i in falls)
         {
             breaks[i] = true;

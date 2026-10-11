@@ -14,7 +14,7 @@ public sealed class MeasurePanel
     private readonly GlView _view;
     internal Button ClearButton { get; } = new() { Content = "Clear (Esc)", FontSize = 12 };
     // For tests: the values shown, by label.
-    internal Dictionary<string, string> Shown { get; } = new();
+    internal Dictionary<string, string> Shown { get; } = [];
 
     public MeasurePanel(GlView view)
     {

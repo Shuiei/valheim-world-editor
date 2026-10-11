@@ -20,7 +20,7 @@ if (args.Length < 1)
 string dir = args[0];
 string output = Environment.GetEnvironmentVariable("DOCS_OUT") is { Length: > 0 } o ? o : Path.Combine(Editor.Repo, "docs", "images");
 var scenes = new Scenes(dir, output);
-var names = args.Length > 1 ? args[1..] : scenes.All.Select(s => s.Name).ToArray();
+string[] names = args.Length > 1 ? args[1..] : [.. scenes.All.Select(s => s.Name)];
 Directory.CreateDirectory(output);
 string? homestead = Environment.GetEnvironmentVariable("HOMESTEAD_DLL") is { Length: > 0 } h ? h : null;
 foreach (string name in names)

@@ -11,10 +11,10 @@ namespace TerrainEditor.Desktop;
 public sealed class ShapePanel
 {
     // What a formula can use: metres east and north of the click, distance, radius, ground height.
-    private static readonly string[] FormulaVars = { "x", "z", "d", "r", "h" };
+    private static readonly string[] FormulaVars = ["x", "z", "d", "r", "h"];
 
     public static readonly (string Key, string Name, string Formula)[] Presets =
-    {
+    [
         ("mound", "Mound", "h * smooth(1 - d / r)"),
         ("cone", "Cone", "h * max(0, 1 - d / r)"),
         ("mesa", "Mesa", "h * smooth((r - d) / (0.35 * r))"),
@@ -22,7 +22,7 @@ public sealed class ShapePanel
         ("moat", "Moat (ring ditch)", "-h * bell((d - 0.75 * r) / (0.12 * r))"),
         ("bowl", "Bowl", "-h * smooth(1 - (d / r) ^ 2)"),
         ("ridges", "Ridged hill", "h * smooth(1 - d / r) * (0.75 + 0.25 * abs(sin(x / 3 + n(x / 9, z / 9) * 2)))"),
-    };
+    ];
 
     public Control Card { get; }
     public float Radius { get; private set; } = 16;
@@ -76,7 +76,7 @@ public sealed class ShapePanel
         RadiusSlider.Tip("shape.radius");
         HeightBox.Tip("shape.height");
         FormulaBox.Tip("shape.formula");
-        Control Row(string label, Control input, Control? after = null)
+        static Control Row(string label, Control input, Control? after = null)
         {
             var g = new Grid { ColumnDefinitions = new ColumnDefinitions("60,*,Auto") };
             var l = new TextBlock { Text = label, FontSize = 12, VerticalAlignment = VerticalAlignment.Center };

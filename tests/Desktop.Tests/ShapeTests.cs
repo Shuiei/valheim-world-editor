@@ -11,7 +11,7 @@ public class ShapeTests
 {
     private static double Eval(string src, double x = 0, double z = 0)
     {
-        var f = Formula.Compile(src, new[] { "x", "z" });
+        var f = Formula.Compile(src, ["x", "z"]);
         var env = new Formula.Env();
         env.Vars["x"] = x;
         env.Vars["z"] = z;
@@ -52,7 +52,7 @@ public class ShapeTests
     [InlineData("clamp(x, 0)", "clamp(…) takes 3 numbers")]
     public void MistakesAreExplained(string src, string message)
     {
-        var ex = Assert.Throws<FormatException>(() => Formula.Compile(src, new[] { "x", "z" }));
+        var ex = Assert.Throws<FormatException>(() => Formula.Compile(src, ["x", "z"]));
         Assert.Equal(message, ex.Message);
     }
 
@@ -60,7 +60,7 @@ public class ShapeTests
     [Fact]
     public void DeepOrHugeFormulasAreRefused()
     {
-        var names = new[] { "x", "z" };
+        string[] names = ["x", "z"];
         Assert.Equal("the formula is nested too deeply", Assert.Throws<FormatException>(() => Formula.Compile(new string('(', 1000) + "1" + new string(')', 1000), names)).Message);
         Assert.Equal("the formula is nested too deeply", Assert.Throws<FormatException>(() => Formula.Compile(new string('-', 3000) + "1", names)).Message);
         Assert.Equal("the formula is too long", Assert.Throws<FormatException>(() => Formula.Compile(string.Join("+", Enumerable.Repeat("1", 3000)), names)).Message);
@@ -70,9 +70,9 @@ public class ShapeTests
     [Fact]
     public void EveryPresetCompiles()
     {
-        foreach (var (_, name, src) in ShapePanel.Presets)
+        foreach (var (_, _, src) in ShapePanel.Presets)
         {
-            Formula.Compile(src, new[] { "x", "z", "d", "r", "h" });
+            Formula.Compile(src, ["x", "z", "d", "r", "h"]);
         }
     }
 
@@ -80,7 +80,7 @@ public class ShapeTests
     public void AMoundRisesInTheMiddleAndUndoesInOneStep()
     {
         var s = EditTests.Flat(2);
-        var f = Formula.Compile(ShapePanel.Presets[0].Formula, new[] { "x", "z", "d", "r", "h" });
+        var f = Formula.Compile(ShapePanel.Presets[0].Formula, ["x", "z", "d", "r", "h"]);
         var (touched, clamped, bad) = s.Shape(64, 64, f, 10, 5, "Shape: Mound");
         Assert.True(touched > 250);
         Assert.False(clamped);
@@ -88,7 +88,7 @@ public class ShapeTests
         float H(int x, int z) => s.Scene.Heights[z * s.Scene.W + x];
         Assert.Equal(35, H(64, 64), 3);
         Assert.Equal(30, H(74, 64), 3);
-        Assert.True(H(69, 64) > 30 && H(69, 64) < 35);
+        Assert.True(H(69, 64) is > 30 and < 35);
         Assert.Equal("Shape: Mound", s.UndoLabel);
         s.Undo();
         Assert.Equal(30, H(64, 64), 3);
@@ -98,7 +98,7 @@ public class ShapeTests
     public void ShapesStopAtTheGameLimit()
     {
         var s = EditTests.Flat(2);
-        var (_, clamped, _) = s.Shape(64, 64, Formula.Compile("h", new[] { "h" }), 5, 20, "Shape");
+        var (_, clamped, _) = s.Shape(64, 64, Formula.Compile("h", ["h"]), 5, 20, "Shape");
         Assert.True(clamped);
         Assert.Equal(38, s.Scene.Heights[64 * s.Scene.W + 64], 3);
     }
@@ -107,7 +107,7 @@ public class ShapeTests
     public void FormulasThatGiveNoNumberAreCounted()
     {
         var s = EditTests.Flat(2);
-        var (touched, _, bad) = s.Shape(64, 64, Formula.Compile("sqrt(x) / 0 - 1 / 0", new[] { "x" }), 3, 1, "Shape");
+        var (touched, _, bad) = s.Shape(64, 64, Formula.Compile("sqrt(x) / 0 - 1 / 0", ["x"]), 3, 1, "Shape");
         Assert.Equal(0, touched);
         Assert.True(bad > 0);
     }

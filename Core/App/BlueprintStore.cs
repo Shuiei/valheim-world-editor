@@ -19,14 +19,14 @@ public sealed class BlueprintStore(string directory)
     {
         if (!System.IO.Directory.Exists(Directory))
         {
-            return new();
+            return [];
         }
-        List<Summary> list = new();
+        List<Summary> list = [];
         foreach (string file in System.IO.Directory.GetFiles(Directory, "*.json"))
         {
             try
             {
-                JsonNode? doc = JsonNode.Parse(File.ReadAllText(file));
+                var doc = JsonNode.Parse(File.ReadAllText(file));
                 if (doc?["clip"] is not JsonObject clip)
                 {
                     continue;
@@ -40,7 +40,7 @@ public sealed class BlueprintStore(string directory)
                 // Not a blueprint (or a half-written file): left out of the list.
             }
         }
-        return list.OrderBy(b => b.Name, StringComparer.OrdinalIgnoreCase).ToList();
+        return [.. list.OrderBy(b => b.Name, StringComparer.OrdinalIgnoreCase)];
     }
 
     // The whole file, or null when there is no such blueprint.
@@ -90,7 +90,7 @@ public sealed class BlueprintStore(string directory)
     // A file name from the blueprint's name: letters, digits, spaces, dashes and dots are kept.
     public static string IdFor(string name)
     {
-        string id = new(name.Trim().Select(c => char.IsLetterOrDigit(c) || c is ' ' or '-' or '_' or '.' ? c : '_').ToArray());
+        string id = new([.. name.Trim().Select(c => char.IsLetterOrDigit(c) || c is ' ' or '-' or '_' or '.' ? c : '_')]);
         id = id.Trim('.', ' ');
         if (id.Length == 0)
         {

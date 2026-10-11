@@ -27,7 +27,7 @@ public class CoreTerrainShaderTests
     [Fact]
     public void SomethingElseIsNotTakenForSpirv()
     {
-        Assert.Throws<InvalidDataException>(() => TerrainShader.FromSpirv(new byte[] { 1, 2, 3 }));
+        Assert.Throws<InvalidDataException>(() => TerrainShader.FromSpirv([1, 2, 3]));
         var e = Assert.Throws<InvalidDataException>(() => TerrainShader.FromSpirv(new byte[64]));
         Assert.Contains("SPIRV-Cross could not read the terrain shader", e.Message);
     }

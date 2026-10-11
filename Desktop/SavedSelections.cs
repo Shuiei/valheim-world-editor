@@ -34,7 +34,7 @@ public static class SavedSelections
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or NotSupportedException)
         {
         }
-        return new();
+        return [];
     }
 
     private static bool SaveAll(Dictionary<string, List<Saved>> all)
@@ -52,16 +52,16 @@ public static class SavedSelections
     }
 
     // This world's saved selections, oldest first.
-    public static List<Saved> For(string world) => LoadAll().TryGetValue(world, out var list) ? list : new();
+    public static List<Saved> For(string world) => LoadAll().TryGetValue(world, out var list) ? list : [];
 
     // Keeps a selection under this name (one of the same name is replaced; the new one goes last).
     // False when the file could not be written.
     public static bool Keep(string world, string name, IEnumerable<Item> items)
     {
         var all = LoadAll();
-        var list = all.TryGetValue(world, out var l) ? l : new();
+        var list = all.TryGetValue(world, out var l) ? l : [];
         list.RemoveAll(s => s.Name == name);
-        list.Add(new Saved(name, items.Select(i => new Item(i.Prefab, MathF.Round(i.X, 3), MathF.Round(i.Y, 3), MathF.Round(i.Z, 3))).ToList()));
+        list.Add(new Saved(name, [.. items.Select(i => new Item(i.Prefab, MathF.Round(i.X, 3), MathF.Round(i.Y, 3), MathF.Round(i.Z, 3)))]));
         all[world] = list;
         return SaveAll(all);
     }

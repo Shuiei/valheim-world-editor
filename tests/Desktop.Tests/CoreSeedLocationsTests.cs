@@ -39,7 +39,7 @@ public class CoreSeedLocationsTests
         var placed = SeedLocations.Place(Seed(), SeedLocations.Which.Prioritized, parallel: true, cancel: TestContext.Current.CancellationToken);
         var crypts = placed.Where(p => p.Rule.prefab == "SunkenCrypt4").Select(p => (p.X, p.Z)).ToHashSet();
         Assert.NotEmpty(crypts);
-        Assert.Equal(crypts, dungeons.Where(d => d.Name == "Sunken crypts").Select(d => (d.X, d.Z)).ToHashSet());
+        Assert.Equal(crypts, [.. dungeons.Where(d => d.Name == "Sunken crypts").Select(d => (d.X, d.Z))]);
         Assert.All(dungeons, d => Assert.Equal("dungeon", d.Kind));
         Assert.Contains(dungeons, d => d.Name == "Infested mines");
         Assert.DoesNotContain(dungeons, d => d.Name == "Haldor");

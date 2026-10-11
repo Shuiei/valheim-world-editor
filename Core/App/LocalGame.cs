@@ -155,7 +155,7 @@ public static class LocalGame
                 {
                     continue;
                 }
-                using JsonDocument doc = JsonDocument.Parse(await res.Content.ReadAsStringAsync());
+                using var doc = JsonDocument.Parse(await res.Content.ReadAsStringAsync());
                 string world = doc.RootElement.TryGetProperty("world", out var w) ? w.GetString() ?? "" : "";
                 int players = doc.RootElement.TryGetProperty("players", out var pl) && pl.TryGetInt32(out int n) ? n : 0;
                 return new Running(b, world, players);

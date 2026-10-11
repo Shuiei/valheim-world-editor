@@ -80,7 +80,7 @@ public static class Homestead
             return FolderOverride;
         }
         var saves = Places.WorldRoots().Select(r => Path.GetDirectoryName(r)!).Distinct().ToList();
-        string Of(string save) => Path.Combine(save, "Homestead", "Blueprints");
+        static string Of(string save) => Path.Combine(save, "Homestead", "Blueprints");
         return saves.Select(Of).FirstOrDefault(Directory.Exists) ?? Of(saves.FirstOrDefault(Directory.Exists) ?? saves[0]);
     }
 
@@ -90,8 +90,8 @@ public static class Homestead
     public sealed record Details(string Name, string Description, List<string> Tags)
     {
         // "house, Viking,stone ,house" → house, Viking, stone.
-        public static List<string> ParseTags(string? text) => (text ?? "").Split(',', ';').Select(t => t.Trim()).Where(t => t.Length > 0)
-            .Distinct(StringComparer.OrdinalIgnoreCase).Take(12).ToList();
+        public static List<string> ParseTags(string? text) => [.. (text ?? "").Split(',', ';').Select(t => t.Trim()).Where(t => t.Length > 0)
+            .Distinct(StringComparer.OrdinalIgnoreCase).Take(12)];
     }
 
     // One blueprint of the folder: its name, creator, description and tags, how many of each piece kind
@@ -99,8 +99,8 @@ public static class Homestead
     public sealed record Entry(string Path, string Name, string? Creator, string? World, int Pieces, string? Picture, DateTime Saved)
     {
         public string Description { get; init; } = "";
-        public List<string> Tags { get; init; } = new();
-        public Dictionary<string, int> Kinds { get; init; } = new();
+        public List<string> Tags { get; init; } = [];
+        public Dictionary<string, int> Kinds { get; init; } = [];
         public Details Details => new(Name, Description, Tags);
     }
 
@@ -108,9 +108,9 @@ public static class Homestead
     {
         if (!Directory.Exists(folder))
         {
-            return new();
+            return [];
         }
-        return Directory.GetFiles(folder, "*.blueprint").Select(Read).OfType<Entry>().OrderBy(e => e.Name, StringComparer.OrdinalIgnoreCase).ToList();
+        return [.. Directory.GetFiles(folder, "*.blueprint").Select(Read).OfType<Entry>().OrderBy(e => e.Name, StringComparer.OrdinalIgnoreCase)];
     }
 
     // One blueprint file (null when it cannot be read).
@@ -125,12 +125,30 @@ public static class Homestead
             foreach (string raw in File.ReadLines(file))
             {
                 string line = raw.Trim();
-                if (line.StartsWith("#Name:", StringComparison.OrdinalIgnoreCase)) name = line[6..].Trim();
-                else if (line.StartsWith("#Creator:", StringComparison.OrdinalIgnoreCase)) creator = line[9..].Trim();
-                else if (line.StartsWith("#Description:", StringComparison.OrdinalIgnoreCase)) description = line[13..].Trim().Trim('"');
-                else if (line.StartsWith("#Tags:", StringComparison.OrdinalIgnoreCase)) tags = line[6..];
-                else if (line.StartsWith("#HomesteadWorld:", StringComparison.OrdinalIgnoreCase)) world = line[16..].Trim();
-                else if (line.StartsWith('#')) inPieces = line.Equals("#Pieces", StringComparison.OrdinalIgnoreCase);
+                if (line.StartsWith("#Name:", StringComparison.OrdinalIgnoreCase))
+                {
+                    name = line[6..].Trim();
+                }
+                else if (line.StartsWith("#Creator:", StringComparison.OrdinalIgnoreCase))
+                {
+                    creator = line[9..].Trim();
+                }
+                else if (line.StartsWith("#Description:", StringComparison.OrdinalIgnoreCase))
+                {
+                    description = line[13..].Trim().Trim('"');
+                }
+                else if (line.StartsWith("#Tags:", StringComparison.OrdinalIgnoreCase))
+                {
+                    tags = line[6..];
+                }
+                else if (line.StartsWith("#HomesteadWorld:", StringComparison.OrdinalIgnoreCase))
+                {
+                    world = line[16..].Trim();
+                }
+                else if (line.StartsWith('#'))
+                {
+                    inPieces = line.Equals("#Pieces", StringComparison.OrdinalIgnoreCase);
+                }
                 else if (inPieces && line.Length > 0)
                 {
                     pieces++;
@@ -138,11 +156,13 @@ public static class Homestead
                     kinds[kind] = kinds.GetValueOrDefault(kind) + 1;
                 }
             }
-            string png = System.IO.Path.ChangeExtension(file, ".png");
-            return new Entry(file, string.IsNullOrWhiteSpace(name) ? System.IO.Path.GetFileNameWithoutExtension(file) : name, creator,
+            string png = Path.ChangeExtension(file, ".png");
+            return new Entry(file, string.IsNullOrWhiteSpace(name) ? Path.GetFileNameWithoutExtension(file) : name, creator,
                 string.IsNullOrWhiteSpace(world) ? null : world, pieces, File.Exists(png) ? png : null, File.GetLastWriteTime(file))
             {
-                Description = description ?? "", Tags = Details.ParseTags(tags), Kinds = kinds,
+                Description = description ?? "",
+                Tags = Details.ParseTags(tags),
+                Kinds = kinds,
             };
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
@@ -176,7 +196,7 @@ public static class Homestead
     // A file name for a blueprint name: what Windows and Linux both allow.
     public static string FileName(string name)
     {
-        string f = new(name.Trim().Select(c => System.IO.Path.GetInvalidFileNameChars().Contains(c) || c is '<' or '>' or ':' or '"' or '/' or '\\' or '|' or '?' or '*' ? '_' : c).ToArray());
+        string f = new([.. name.Trim().Select(c => Path.GetInvalidFileNameChars().Contains(c) || c is '<' or '>' or ':' or '"' or '/' or '\\' or '|' or '?' or '*' ? '_' : c)]);
         f = f.Trim('.', ' ');
         return (f.Length == 0 ? "blueprint" : f.Length > 64 ? f[..64] : f) + ".blueprint";
     }
@@ -185,12 +205,12 @@ public static class Homestead
     // from the copy's middle, dy from its ground: Homestead's anchor. Rotations become quaternions.
     public static string Write(JsonObject clip, string name, string creator, string? world, DateTime saved, string description = "", IReadOnlyCollection<string>? tags = null)
     {
-        var objs = (clip["objects"] as JsonArray ?? new()).OfType<JsonObject>().Select(o => (
+        var objs = (clip["objects"] as JsonArray ?? []).OfType<JsonObject>().Select(o => (
             Name: (string?)o["name"] ?? "", X: F(o["dx"]), Y: F(o["dy"]), Z: F(o["dz"]),
             Rot: BlueprintFormats.FromEuler(new Vector3(F(o["rx"]), F(o["ry"]), F(o["rz"]))), Scale: F(o["scale"]),
-            Data: BlueprintFormats.DataOf(o["data"]) ?? new List<TerrainEditor.Editing.ObjectField>())).Where(o => o.Name.Length > 0).ToList();
+            Data: BlueprintFormats.DataOf(o["data"]) ?? [])).Where(o => o.Name.Length > 0).ToList();
         // Written as a ruin when every object is (no builder): one line for all, not one each.
-        bool ruin = objs.Count > 0 && objs.All(o => o.Data.Contains(TerrainEditor.Editing.ObjectField.NoBuilder));
+        bool ruin = objs.Count > 0 && objs.All(o => o.Data.Contains(Editing.ObjectField.NoBuilder));
         var ordered = objs.OrderBy(o => o.Y).ThenBy(o => o.X).ThenBy(o => o.Z).ToList();
         float radius = objs.Count == 0 ? 0 : MathF.Sqrt(objs.Max(o => o.X * o.X + o.Z * o.Z)) + 1f;
         StringBuilder sb = new();
@@ -213,17 +233,17 @@ public static class Homestead
         }
         for (int k = 0; k < ordered.Count; k++)
         {
-            foreach (var f in ordered[k].Data.Where(f => !(ruin && f == TerrainEditor.Editing.ObjectField.NoBuilder)))
+            foreach (var f in ordered[k].Data.Where(f => !(ruin && f == Editing.ObjectField.NoBuilder)))
             {
                 sb.Append(BlueprintFormats.DataHeader).Append(k.ToString(CultureInfo.InvariantCulture)).Append(';').Append(f.ToString()).Append('\n');
             }
         }
         sb.Append("#Pieces\n");
-        foreach (var o in ordered)
+        foreach (var (prefab, x, y, z, rot, scale, data) in ordered)
         {
-            float s = o.Scale > 0 ? o.Scale : 1f;
-            sb.Append(string.Join(";", Header(o.Name).Replace(";", "", StringComparison.Ordinal), "Building", S(o.X), S(o.Y), S(o.Z),
-                S(o.Rot.X), S(o.Rot.Y), S(o.Rot.Z), S(o.Rot.W), "\"\"", S(s), S(s), S(s))).Append('\n');
+            float s = scale > 0 ? scale : 1f;
+            sb.Append(string.Join(";", Header(prefab).Replace(";", "", StringComparison.Ordinal), "Building", S(x), S(y), S(z),
+                S(rot.X), S(rot.Y), S(rot.Z), S(rot.W), "\"\"", S(s), S(s), S(s))).Append('\n');
         }
         return sb.ToString();
     }

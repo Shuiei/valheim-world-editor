@@ -138,7 +138,7 @@ public static class CaveRoof
         {
             int i = Math.Max(1, Array.FindIndex(c.Along, a => a >= s));
             float t = (s - c.Along[i - 1]) / MathF.Max(1e-4f, c.Along[i] - c.Along[i - 1]);
-            Vector2 p = Vector2.Lerp(c.Curve[i - 1].P, c.Curve[i].P, t);
+            var p = Vector2.Lerp(c.Curve[i - 1].P, c.Curve[i].P, t);
             if (c.Depth[i - 1] + (c.Depth[i] - c.Depth[i - 1]) * t >= path.Headroom + 1.5f)
             {
                 Place(p.X + ((float)rnd.NextDouble() - 0.5f) * half * 0.4f, p.Y + ((float)rnd.NextDouble() - 0.5f) * half * 0.4f);

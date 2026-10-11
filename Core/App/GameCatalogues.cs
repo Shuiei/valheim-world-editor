@@ -12,7 +12,7 @@ public static partial class GameCatalogues
     // prefabs, not by reading every object of every bundle (seconds, not minutes). Each bundle is opened
     // once and given to each kind's reader, in the order of their file names: the order entries come in,
     // and which one wins when a name is found twice.
-    public static readonly string[] AtStart = { "terrain-modifiers", "prefabs", "pieces", "piece-support", "piece-place", "piece-cost", "dungeon-rooms" };
+    public static readonly string[] AtStart = ["terrain-modifiers", "prefabs", "pieces", "piece-support", "piece-place", "piece-cost", "dungeon-rooms"];
 
     // The kinds named (of AtStart), as their JSON.
     public static Dictionary<string, string> ReadAtStart(GameBundles bundles, IReadOnlyList<string> kinds)
@@ -73,7 +73,7 @@ public static partial class GameCatalogues
         public Game(string dir)
         {
             _dir = dir;
-            Bundles = Directory.GetFiles(dir).Select(Path.GetFileName).OfType<string>().Order(StringComparer.Ordinal).ToList();
+            Bundles = [.. Directory.GetFiles(dir).Select(Path.GetFileName).OfType<string>().Order(StringComparer.Ordinal)];
         }
 
         // A bundle, or null when it is not one.
@@ -117,7 +117,7 @@ public static partial class GameCatalogues
         }
 
         // The class of each script (MonoScript) met, by where it is; and the bundles opened for them.
-        private readonly Dictionary<Ref, string?> _scripts = new();
+        private readonly Dictionary<Ref, string?> _scripts = [];
         private readonly Dictionary<string, Bundle?> _scriptBundles = new(StringComparer.Ordinal);
 
         // A MonoBehaviour's class ("TerrainModifier", "ZNetView"...), from the script its file lists for
@@ -209,10 +209,10 @@ public static partial class GameCatalogues
         private readonly AssetsManager _am;
         private readonly BundleFileInstance _bundle;
         // Objects by path id over the whole bundle (where two files have the same id: the later file's).
-        private readonly Dictionary<long, Inner> _byId = new();
-        private readonly Dictionary<(Inner, long), AssetTypeValueField?> _fields = new();
+        private readonly Dictionary<long, Inner> _byId = [];
+        private readonly Dictionary<(Inner, long), AssetTypeValueField?> _fields = [];
 
-        public List<Inner> Files { get; } = new();
+        public List<Inner> Files { get; } = [];
 
         public Bundle(AssetsManager am, BundleFileInstance bundle)
         {
@@ -301,7 +301,7 @@ public static partial class GameCatalogues
         // An object's fields by name (a MonoBehaviour's: its class's), from its file's type tree: nothing of
         // the object read.
         public HashSet<string> FieldNames(Inner f, AssetFileInfo info) =>
-            Template(f, info)?.Children.Select(c => c.Name).ToHashSet(StringComparer.Ordinal) ?? new HashSet<string>();
+            Template(f, info)?.Children.Select(c => c.Name).ToHashSet(StringComparer.Ordinal) ?? [];
 
         // An object's type tree (a MonoBehaviour's: its class's), or null when it cannot be had.
         public AssetTypeTemplateField? Template(Inner f, AssetFileInfo info)
@@ -343,7 +343,7 @@ public static partial class GameCatalogues
             int idx = _bundle.file.GetFileIndex(streamData["path"].AsString.Split('/').Last());
             if (idx < 0)
             {
-                return Array.Empty<byte>();
+                return [];
             }
             _bundle.file.GetFileRange(idx, out long start, out _);
             _bundle.file.DataReader.Position = start + streamData["offset"].AsLong;
@@ -373,7 +373,7 @@ public static partial class GameCatalogues
         public const long Bytes = (long)Size * Most;
 
         private readonly Stream _inner;
-        private readonly Dictionary<long, LinkedListNode<(long Index, byte[] Data)>> _blocks = new();
+        private readonly Dictionary<long, LinkedListNode<(long Index, byte[] Data)>> _blocks = [];
         // Last used first.
         private readonly LinkedList<(long Index, byte[] Data)> _order = new();
 
@@ -593,14 +593,14 @@ public static partial class GameCatalogues
         public (double X, double Y, double Z) Rotate((double X, double Y, double Z) v) => Rotate(v.X, v.Y, v.Z);
 
         // Its parts rounded to n decimals (whole numbers stay whole).
-        public object[] Rounded(int n) => Whole ? new object[] { 0L, 0L, 0L, 1L } : new object[] { R(X, n), R(Y, n), R(Z, n), R(W, n) };
+        public object[] Rounded(int n) => Whole ? [0L, 0L, 0L, 1L] : [R(X, n), R(Y, n), R(Z, n), R(W, n)];
     }
 
     private static (double X, double Y, double Z) Add((double X, double Y, double Z) a, (double X, double Y, double Z) b) => (a.X + b.X, a.Y + b.Y, a.Z + b.Z);
 
     private static (double X, double Y, double Z) Scale((double X, double Y, double Z) a, (double X, double Y, double Z) s) => (a.X * s.X, a.Y * s.Y, a.Z * s.Z);
 
-    private static readonly int[] VertexFormatSize = { 4, 2, 1, 1, 2, 2, 1, 1, 2, 2, 4, 4 };
+    private static readonly int[] VertexFormatSize = [4, 2, 1, 1, 2, 2, 1, 1, 2, 2, 4, 4];
 
     // A mesh's vertices (x, y, z each) and each submesh's triangles, as UnityPy reads them (the
     // submesh's base vertex not added); null when it has no vertex data, or one not read here.
@@ -624,8 +624,8 @@ public static partial class GameCatalogues
         }
         // Streams one after another, each 16-byte aligned; in a stream a vertex's channels side by side.
         int streams = channels.Max(c => c.Stream) + 1;
-        var stride = new int[streams];
-        var start = new int[streams];
+        int[] stride = new int[streams];
+        int[] start = new int[streams];
         foreach (var c in channels.Where(c => c.Dim > 0))
         {
             stride[c.Stream] += c.Dim * VertexFormatSize[c.Format];
@@ -635,7 +635,7 @@ public static partial class GameCatalogues
             start[s] = (start[s - 1] + n * stride[s - 1] + 15) & ~15;
         }
         var pos = channels[0];
-        var vertices = new float[n * 3];
+        float[] vertices = new float[n * 3];
         for (int v = 0; v < n; v++)
         {
             int p = start[pos.Stream] + v * stride[pos.Stream] + pos.Offset;
@@ -647,7 +647,7 @@ public static partial class GameCatalogues
         byte[] ib = m["m_IndexBuffer.Array"].AsByteArray;
         bool wide = m["m_IndexFormat"].AsInt == 1;
         int count = ib.Length / (wide ? 4 : 2);
-        var indices = new int[count];
+        int[] indices = new int[count];
         for (int k = 0; k < count; k++)
         {
             indices[k] = wide ? (int)BitConverter.ToUInt32(ib, 4 * k) : BitConverter.ToUInt16(ib, 2 * k);
@@ -661,7 +661,7 @@ public static partial class GameCatalogues
                 return null;
             }
             int first = (int)sm["firstByte"].AsUInt / (wide ? 4 : 2), end = Math.Min(first + (int)sm["indexCount"].AsUInt, count);
-            triangles.Add(first < end ? indices[first..end] : Array.Empty<int>());
+            triangles.Add(first < end ? indices[first..end] : []);
         }
         return (vertices, triangles);
     }

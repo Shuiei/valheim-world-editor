@@ -1,5 +1,4 @@
 using Avalonia;
-using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Input;
@@ -61,26 +60,26 @@ public class InputTests
     public void RightDragTurnsTheCamera()
     {
         var (w, v) = Open();
-        var before = v.Camera;
+        var (yaw, pitch, _, target) = v.Camera;
         w.MouseDown(new Point(400, 300), MouseButton.Right);
         w.MouseMove(new Point(500, 340));
         w.MouseUp(new Point(500, 340), MouseButton.Right);
-        var after = v.Camera;
-        Assert.Equal(before.Yaw - 100 * 0.005f, after.Yaw, 3);
-        Assert.Equal(before.Pitch + 40 * 0.005f, after.Pitch, 3);
-        Assert.Equal(before.Target, after.Target);
+        var (afterYaw, afterPitch, _, afterTarget) = v.Camera;
+        Assert.Equal(yaw - 100 * 0.005f, afterYaw, 3);
+        Assert.Equal(pitch + 40 * 0.005f, afterPitch, 3);
+        Assert.Equal(target, afterTarget);
     }
 
     [AvaloniaFact]
     public void MiddleDragSlidesTheCamera()
     {
         var (w, v) = Open();
-        var before = v.Camera;
+        var (yaw, _, _, target) = v.Camera;
         w.MouseDown(new Point(400, 300), MouseButton.Middle);
         w.MouseMove(new Point(460, 300));
         w.MouseUp(new Point(460, 300), MouseButton.Middle);
-        Assert.NotEqual(before.Target, v.Camera.Target);
-        Assert.Equal(before.Yaw, v.Camera.Yaw);
+        Assert.NotEqual(target, v.Camera.Target);
+        Assert.Equal(yaw, v.Camera.Yaw);
     }
 
     [AvaloniaFact]
@@ -109,10 +108,10 @@ public class InputTests
     {
         // A drag that starts on the panel (top left) leaves the camera alone.
         var (w, v) = Open();
-        var before = v.Camera;
+        var (yaw, _, _, _) = v.Camera;
         w.MouseDown(new Point(30, 20), MouseButton.Right);
         w.MouseMove(new Point(130, 20));
         w.MouseUp(new Point(130, 20), MouseButton.Right);
-        Assert.Equal(before.Yaw, v.Camera.Yaw);
+        Assert.Equal(yaw, v.Camera.Yaw);
     }
 }

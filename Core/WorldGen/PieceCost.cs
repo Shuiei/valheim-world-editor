@@ -10,14 +10,14 @@ public static class PieceCost
     public sealed record Info(string Name, string? Station, (string Item, int Amount)[] Resources);
 
     // None until Use: no world or Workshop opens before then (GameData).
-    private static volatile Data Catalogue = new(new(), new());
+    private static volatile Data _catalogue = new([], []);
 
     private sealed record Data(Dictionary<string, Info> Pieces, Dictionary<string, string> Items);
 
     // The pieces and items, as GameCatalogues' CostScan writes them.
     public static void Use(string json)
     {
-        using JsonDocument doc = JsonDocument.Parse(json);
+        using var doc = JsonDocument.Parse(json);
         var pieces = new Dictionary<string, Info>();
         foreach (JsonProperty p in doc.RootElement.GetProperty("pieces").EnumerateObject())
         {
@@ -25,13 +25,13 @@ public static class PieceCost
             pieces[p.Name] = new Info(p.Value.GetProperty("n").GetString()!, p.Value.TryGetProperty("st", out var st) ? st.GetString() : null, res);
         }
         var items = doc.RootElement.GetProperty("items").EnumerateObject().ToDictionary(p => p.Name, p => p.Value.GetString()!);
-        Catalogue = new Data(pieces, items);
+        _catalogue = new Data(pieces, items);
     }
 
-    public static Info? Get(string prefab) => Catalogue.Pieces.GetValueOrDefault(prefab);
+    public static Info? Get(string prefab) => _catalogue.Pieces.GetValueOrDefault(prefab);
 
     // An item's English name (Wood, Fine wood, Bronze nails), else its prefab name.
-    public static string ItemName(string item) => Catalogue.Items.GetValueOrDefault(item, item);
+    public static string ItemName(string item) => _catalogue.Items.GetValueOrDefault(item, item);
 
     // A piece's English name, else its prefab name.
     public static string PieceName(string prefab) => Get(prefab)?.Name ?? prefab;
@@ -75,7 +75,7 @@ public static class PieceCost
             }
         }
         var materials = amounts.Select(a => (a.Key, ItemName(a.Key), a.Value)).OrderByDescending(m => m.Value).ThenBy(m => m.Item2, StringComparer.OrdinalIgnoreCase).ToList();
-        return new Total(materials, stations.ToList(), unknown);
+        return new Total(materials, [.. stations], unknown);
     }
 
     public static Total Of(IEnumerable<string> prefabs) => Of(prefabs.GroupBy(p => p).Select(g => KeyValuePair.Create(g.Key, g.Count())));

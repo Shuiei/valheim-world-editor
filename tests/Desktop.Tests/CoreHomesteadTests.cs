@@ -18,6 +18,7 @@ public class CoreHomesteadTests : IDisposable
         {
             Directory.Delete(_dir, recursive: true);
         }
+        GC.SuppressFinalize(this);
     }
 
     [Fact]
@@ -43,10 +44,21 @@ public class CoreHomesteadTests : IDisposable
 
     private static JsonObject Clip(params (string Name, float X, float Y, float Z, float Yaw)[] pieces) => new()
     {
-        ["w"] = 1, ["h"] = 1, ["rel"] = new JsonArray(-32768), ["wt"] = new JsonArray(0), ["pnt"] = new JsonArray(-255, -255, -255, -255),
+        ["w"] = 1,
+        ["h"] = 1,
+        ["rel"] = new JsonArray(-32768),
+        ["wt"] = new JsonArray(0),
+        ["pnt"] = new JsonArray(-255, -255, -255, -255),
         ["objects"] = new JsonArray(pieces.Select(p => (JsonNode)new JsonObject
         {
-            ["name"] = p.Name, ["dx"] = p.X, ["dy"] = p.Y, ["dz"] = p.Z, ["rx"] = 0, ["ry"] = p.Yaw, ["rz"] = 0, ["scale"] = 0,
+            ["name"] = p.Name,
+            ["dx"] = p.X,
+            ["dy"] = p.Y,
+            ["dz"] = p.Z,
+            ["rx"] = 0,
+            ["ry"] = p.Yaw,
+            ["rz"] = 0,
+            ["scale"] = 0,
         }).ToArray()),
         ["poly"] = new JsonArray(),
     };
@@ -72,11 +84,11 @@ public class CoreHomesteadTests : IDisposable
     {
         Directory.CreateDirectory(_dir);
         File.WriteAllText(Path.Combine(_dir, "Hut.blueprint"), Homestead.Write(Clip(("wood_floor", 0, 0, 0, 0), ("woodwall", 0, 1, 1, 0)), "Hut", "Tester", null, DateTime.Now));
-        File.WriteAllBytes(Path.Combine(_dir, "Hut.png"), new byte[] { 1 });
+        File.WriteAllBytes(Path.Combine(_dir, "Hut.png"), [1]);
         File.WriteAllText(Path.Combine(_dir, "Old.blueprint"), "#Name:Old one\n#Pieces\nwood_floor;Misc;0;0;0;0;0;0;1;\"\";1;1;1\n");
         File.WriteAllText(Path.Combine(_dir, "notes.txt"), "not a blueprint");
         var list = Homestead.List(_dir);
-        Assert.Equal(new[] { "Hut", "Old one" }, list.Select(e => e.Name));
+        Assert.Equal(["Hut", "Old one"], list.Select(e => e.Name));
         Assert.Equal(2, list[0].Pieces);
         Assert.Equal("Tester", list[0].Creator);
         Assert.NotNull(list[0].Picture);
@@ -90,7 +102,7 @@ public class CoreHomesteadTests : IDisposable
     {
         Directory.CreateDirectory(_dir);
         string file = Path.Combine(_dir, "Hut.blueprint");
-        string text = Homestead.Write(Clip(("wood_floor", 0, 0, 0, 0), ("wood_floor", 2, 0, 0, 0)), "Hut", "Tester", null, DateTime.Now, "A small\nhut", new[] { "house", "wood" });
+        string text = Homestead.Write(Clip(("wood_floor", 0, 0, 0, 0), ("wood_floor", 2, 0, 0, 0)), "Hut", "Tester", null, DateTime.Now, "A small\nhut", ["house", "wood"]);
         // Homestead skips header lines it does not know, as long as they come before "#Pieces".
         Assert.True(text.IndexOf("#Tags:house, wood\n", StringComparison.Ordinal) < text.IndexOf("#Pieces", StringComparison.Ordinal));
         Assert.Contains("#Description:A small hut\n", text);
@@ -98,10 +110,10 @@ public class CoreHomesteadTests : IDisposable
         var e = Homestead.Read(file)!;
         Assert.Equal(("A small hut", 2), (e.Description, e.Kinds["wood_floor"]));
         Assert.Equal(new[] { "house", "wood" }, e.Tags);
-        string changed = Homestead.WithDetails(text, new Homestead.Details("Big hut", "Bigger", new() { "house" }));
+        string changed = Homestead.WithDetails(text, new Homestead.Details("Big hut", "Bigger", ["house"]));
         Assert.StartsWith("#Name:Big hut\n#Creator:Tester\n#Description:Bigger\n#Tags:house\n#Category:Blueprints\n", changed);
         Assert.EndsWith(text[text.IndexOf("#Pieces", StringComparison.Ordinal)..], changed);
-        Assert.DoesNotContain("#Tags:", Homestead.WithDetails(text, new Homestead.Details("Hut", "", new())));
+        Assert.DoesNotContain("#Tags:", Homestead.WithDetails(text, new Homestead.Details("Hut", "", [])));
         Assert.Equal(new[] { "house", "Viking", "stone" }, Homestead.Details.ParseTags("house, Viking,stone ,HOUSE;; "));
     }
 }

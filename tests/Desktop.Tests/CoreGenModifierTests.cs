@@ -24,7 +24,7 @@ public class CoreGenModifierTests
 
     private static PlacedObject Loc(string location, float x, float y, float z, float turn = 0) => new(0, StableHash.Of(location), new Vector3(x, y, z), new Vector3(0, turn, 0), 0);
 
-    private static float[] Flat() => Enumerable.Repeat(30f, N * N).ToArray();
+    private static float[] Flat() => [.. Enumerable.Repeat(30f, N * N)];
 
     // The vertex of zone 0, 0 at world x, z (the zone spans -32..32).
     private static float At(float[] h, int x, int z) => h[(z + 32) * N + x + 32];
@@ -34,7 +34,7 @@ public class CoreGenModifierTests
     {
         var m = new TerrainModifiers(World(Net("raise", 0, 31, 0)));
         Assert.Equal(1, m.Count);
-        var h = Flat();
+        float[] h = Flat();
         float[] before = m.Apply(0, 0, h);
         // Raise: half a metre above where it was placed, within 1.5 m (a round area).
         Assert.Equal(31.5f, At(h, 0, 0));
@@ -49,7 +49,7 @@ public class CoreGenModifierTests
     public void WhatPlayersDoStaysWithinEightMetres()
     {
         var m = new TerrainModifiers(World(Net("raise", 0, 60, 0), Net("digg", 10, 0, 10, time: 5)));
-        var h = Flat();
+        float[] h = Flat();
         m.Apply(0, 0, h);
         Assert.Equal(38f, At(h, 0, 0));
         Assert.Equal(22f, At(h, 10, 10));
@@ -59,7 +59,7 @@ public class CoreGenModifierTests
     public void TheNewDigIsSquare()
     {
         var m = new TerrainModifiers(World(Net("digg_v2", 0, 30, 0)));
-        var h = Flat();
+        float[] h = Flat();
         m.Apply(0, 0, h);
         // One metre down over a square of 3 × 3 vertices, corners included.
         Assert.Equal(29f, At(h, 1, 1));
@@ -71,7 +71,7 @@ public class CoreGenModifierTests
     public void CultivatingSmoothsWithinAMetreOfTheLevelledGround()
     {
         var m = new TerrainModifiers(World(Net("cultivate", 0, 35, 0)));
-        var h = Flat();
+        float[] h = Flat();
         m.Apply(0, 0, h);
         // It pulls towards 35 m but a player's smoothing stays within 1 m of the ground under it.
         Assert.Equal(31f, At(h, 0, 0));
@@ -86,7 +86,7 @@ public class CoreGenModifierTests
         // it does not level.
         var m = new TerrainModifiers(World(Loc("GoblinHut02", 0, 33, 0)));
         Assert.Equal(1, m.LocationsWithModifiers);
-        var h = Flat();
+        float[] h = Flat();
         float[] before = m.Apply(0, 0, h);
         Assert.Equal(33f, At(h, 0, 0));
         float t = 1f - MathF.Pow(3f / 7f, 3f);
@@ -103,7 +103,7 @@ public class CoreGenModifierTests
     {
         // The statue group levels a 1.5 m circle 1 m above its height, smoothing out to 4 m.
         var m = new TerrainModifiers(World(Loc("Mistlands_StatueGroup1", 0, 32, 0)));
-        var h = Flat();
+        float[] h = Flat();
         m.Apply(0, 0, h);
         Assert.Equal(33f, At(h, 0, 0));
         Assert.Equal(33f, At(h, 1, 1));
@@ -115,9 +115,9 @@ public class CoreGenModifierTests
     {
         // The goblin hut's second modifier sits 4.1 m to its west; turned 90°, it is to the north
         // or south instead. The heights there differ from the unturned hut's.
-        var straight = Flat();
+        float[] straight = Flat();
         new TerrainModifiers(World(Loc("GoblinHut02", 0, 33, 0))).Apply(0, 0, straight);
-        var turned = Flat();
+        float[] turned = Flat();
         new TerrainModifiers(World(Loc("GoblinHut02", 0, 33, 0, turn: 90))).Apply(0, 0, turned);
         Assert.NotEqual(straight, turned);
         // The middle is levelled the same.
@@ -134,7 +134,7 @@ public class CoreGenModifierTests
         Assert.Empty(m.InZone(2, 2));
         Assert.Empty(m.InZone(-1, -1));
         // In the next zone, its vertices are levelled too (the zone shares that edge).
-        var h = Flat();
+        float[] h = Flat();
         m.Apply(1, 1, h);
         Assert.Equal(31.5f, h[0]);
     }
@@ -162,7 +162,7 @@ public class CoreGenModifierTests
             Loc("raise", 0, 30, 0)));
         Assert.Equal(0, m.Count);
         Assert.Equal(0, m.LocationsWithModifiers);
-        var h = Flat();
+        float[] h = Flat();
         Assert.All(m.Apply(0, 0, h), v => Assert.Equal(30f, v));
         Assert.All(h, v => Assert.Equal(30f, v));
     }

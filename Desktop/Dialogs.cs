@@ -101,7 +101,7 @@ public static class Dialogs
         };
         var cancel = new Button { Content = "Cancel", IsCancel = true }.Tip("dialog.cancel");
         cancel.Click += (_, _) => dialog.Close();
-        TextBlock Label(string t) => new() { Text = t, FontSize = 12, Foreground = Brushes.Gray };
+        static TextBlock Label(string t) => new() { Text = t, FontSize = 12, Foreground = Brushes.Gray };
         dialog.Content = new StackPanel
         {
             Margin = new Thickness(18),

@@ -61,11 +61,11 @@ public sealed class MapPage
     internal Button FindButton { get; } = new Button { Content = Icons.With("search", "Find"), FontSize = 12.5, VerticalAlignment = VerticalAlignment.Stretch }.Classed("primary");
     internal TextBlock SearchInfo { get; } = new() { FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
     internal ListBox Hits { get; } = new() { MaxHeight = 220, FontSize = 11 };
-    private List<WorldSearch.Hit> _hits = new();
+    private List<WorldSearch.Hit> _hits = [];
     private string _searchWhat = "kinds";
 
     // Zone filter.
-    internal readonly Dictionary<int, ToggleButton> BiomeButtons = new();
+    internal readonly Dictionary<int, ToggleButton> BiomeButtons = [];
     internal CheckBox NoBuildBox { get; } = new() { Content = "No buildings in the zone or within", IsChecked = true, FontSize = 12 };
     internal NumericUpDown DistBox { get; } = new() { Value = 2, Minimum = 0, Maximum = 50, Increment = 1, FormatString = "0", FontSize = 12, MinWidth = 70 };
     internal CheckBox NoEditBox { get; } = new() { Content = "No ground edits", IsChecked = true, FontSize = 12 };
@@ -79,12 +79,12 @@ public sealed class MapPage
     internal TextBlock ZoneInfo { get; } = new() { FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
     private int[]? _stats;
     private bool _filtered;
-    internal List<(int X, int Z)> Matches { get; private set; } = new();
+    internal List<(int X, int Z)> Matches { get; private set; } = [];
 
     // Zone detail and the edited zones.
     internal ListBox EditedList { get; } = new() { MaxHeight = 200, FontSize = 11 };
     private readonly Expander _editedSection;
-    private List<ZoneEdit> _edited = new();
+    private List<ZoneEdit> _edited = [];
 
     private static readonly IBrush PanelBg = Ui.Panel, Line = Ui.Line;
 
@@ -116,7 +116,7 @@ public sealed class MapPage
         EditedBox.IsCheckedChanged += (_, _) => { Map.ShowEdited = EditedBox.IsChecked == true; Map.RequestNextFrameRendering(); };
         PaintBox.IsCheckedChanged += (_, _) => { Map.ShowPaint = PaintBox.IsChecked == true; Map.RequestNextFrameRendering(); };
         CloudsBox.IsCheckedChanged += (_, _) => { Map.ShowClouds = CloudsBox.IsChecked == true; Map.RequestNextFrameRendering(); };
-        EditButton.Click += (_, _) => { if (Spot is var (x, z)) EditRequested?.Invoke(x, z, Size); };
+        EditButton.Click += (_, _) => { if (Spot is var (x, z)) { EditRequested?.Invoke(x, z, Size); } };
         SizeBox.SelectionChanged += (_, _) => ShowChosen();
         SizeBox.Tip("map.size");
         Map.Picked += (x, z) => Pick((int)MathF.Floor((x + 32) / 64), (int)MathF.Floor((z + 32) / 64));
@@ -132,8 +132,8 @@ public sealed class MapPage
         SearchBox.Tip("map.search");
         FindButton.Tip("map.find");
         FindButton.Click += async (_, _) => await Search();
-        SearchBox.KeyDown += async (_, e) => { if (e.Key == Avalonia.Input.Key.Enter) await Search(); };
-        SearchWhat.SelectionChanged += async (_, _) => { if (!string.IsNullOrWhiteSpace(SearchBox.Text)) await Search(); };
+        SearchBox.KeyDown += async (_, e) => { if (e.Key == Avalonia.Input.Key.Enter) { await Search(); } };
+        SearchWhat.SelectionChanged += async (_, _) => { if (!string.IsNullOrWhiteSpace(SearchBox.Text)) { await Search(); } };
         Hits.SelectionChanged += (_, _) => ShowHit(Hits.SelectedIndex);
         var searchRow = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), RowDefinitions = new RowDefinitions("Auto,Auto"), ColumnSpacing = 6, RowSpacing = 4 };
         searchRow.Children.Add(SearchBox);
@@ -166,8 +166,8 @@ public sealed class MapPage
             c.IsCheckedChanged += (_, _) => Refilter();
         }
         DistBox.ValueChanged += (_, _) => Refilter();
-        RMinBox.PropertyChanged += (_, e) => { if (e.Property == TextBox.TextProperty) Refilter(); };
-        RMaxBox.PropertyChanged += (_, e) => { if (e.Property == TextBox.TextProperty) Refilter(); };
+        RMinBox.PropertyChanged += (_, e) => { if (e.Property == TextBox.TextProperty) { Refilter(); } };
+        RMaxBox.PropertyChanged += (_, e) => { if (e.Property == TextBox.TextProperty) { Refilter(); } };
         ShowMatchButton.Click += async (_, _) => await ShowMatching();
         MarkButton.Click += async (_, _) => await MarkMatching();
         UnmarkButton.Click += async (_, _) => await UnmarkAll();
@@ -231,11 +231,21 @@ public sealed class MapPage
         var surface = new Border { Background = Brushes.Transparent };
         Map.Attach(surface);
         var cursor = new Border { Background = PanelBg, BorderBrush = Line, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(10), Padding = Ui.Pad, Margin = new Thickness(10), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Bottom, Child = Cursor };
-        var status = new Border { Background = PanelBg, BorderBrush = Line, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(10), Padding = Ui.Pad, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Child = _status };
-        status.IsVisible = false;
+        var status = new Border
+        {
+            Background = PanelBg,
+            BorderBrush = Line,
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(10),
+            Padding = Ui.Pad,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center,
+            Child = _status,
+            IsVisible = false
+        };
         Map.Status += t => status.IsVisible = !string.IsNullOrEmpty(t);
         cursor.IsVisible = false;
-        Cursor.PropertyChanged += (_, e) => { if (e.Property == TextBlock.TextProperty) cursor.IsVisible = !string.IsNullOrEmpty(Cursor.Text); };
+        Cursor.PropertyChanged += (_, e) => { if (e.Property == TextBlock.TextProperty) { cursor.IsVisible = !string.IsNullOrEmpty(Cursor.Text); } };
         View = new Grid { Background = new SolidColorBrush(Color.FromRgb(20, 23, 28)), Children = { Map, surface, _labels, side, cursor, status } };
         _players.Tick += async (_, _) => await PollPlayers();
     }
@@ -274,12 +284,12 @@ public sealed class MapPage
             Target = null;
             Map.Chosen = null;
             _pickBox.IsVisible = false;
-            _hits = new();
+            _hits = [];
             Hits.ItemsSource = null;
             SearchInfo.Text = "";
-            Map.Pins = Array.Empty<Vector2>();
+            Map.Pins = [];
             Map.PinChosen = -1;
-            Matches = new();
+            Matches = [];
             Map.Matches = Matches;
             _filtered = false;
             ZoneInfo.Text = "";
@@ -309,7 +319,7 @@ public sealed class MapPage
         UpdatePending();
         FillEdited();
         _players.Stop();
-        Map.Players = Array.Empty<(string, float, float)>();
+        Map.Players = [];
         PlaceLabels();
         if (session.IsLive)
         {
@@ -342,7 +352,7 @@ public sealed class MapPage
         try
         {
             var json = System.Text.Json.Nodes.JsonNode.Parse(await live.Players())?.AsArray();
-            var players = json?.Where(p => p?["name"] != null).Select(p => ((string)p!["name"]!, (float)(p["x"] ?? 0), (float)(p["z"] ?? 0))).ToList() ?? new();
+            var players = json?.Where(p => p?["name"] != null).Select(p => ((string)p!["name"]!, (float)(p["x"] ?? 0), (float)(p["z"] ?? 0))).ToList() ?? [];
             LiveText.Text = $"Live world · {players.Count} player(s) online{(players.Count > 0 ? ": " + string.Join(", ", players.Select(p => p.Item1)) : "")}";
             Map.Players = players;
             PlaceLabels();
@@ -417,10 +427,10 @@ public sealed class MapPage
         _searchWhat = SearchWhat.SelectedIndex switch { 1 => "items", 2 => "texts", _ => "kinds" };
         if (q.Length == 0)
         {
-            _hits = new();
+            _hits = [];
             Hits.ItemsSource = null;
             SearchInfo.Text = "";
-            Map.Pins = Array.Empty<Vector2>();
+            Map.Pins = [];
             Map.RequestNextFrameRendering();
             return;
         }
@@ -437,7 +447,7 @@ public sealed class MapPage
             return;
         }
         _hits = res.Hits;
-        Map.Pins = _hits.Select(h => new Vector2(h.X, h.Z)).ToList();
+        Map.Pins = [.. _hits.Select(h => new Vector2(h.X, h.Z))];
         Map.PinChosen = -1;
         if (res.Total == 0)
         {
@@ -580,7 +590,7 @@ public sealed class MapPage
         {
             return;
         }
-        _edited = s.Edits.All().Where(e => e.HeightCount + e.PaintCount > 0).OrderByDescending(e => e.HeightCount + e.PaintCount).ToList();
+        _edited = [.. s.Edits.All().Where(e => e.HeightCount + e.PaintCount > 0).OrderByDescending(e => e.HeightCount + e.PaintCount)];
         EditedList.ItemsSource = _edited.Select(e =>
         {
             var (lo, hi) = Range(e);

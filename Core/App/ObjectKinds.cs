@@ -66,16 +66,51 @@ public static class ObjectKinds
         {
             return ObjectKind.Other;
         }
-        if (PrefabCatalog.IsRunestoneName(name)) return ObjectKind.Runestones;
+        if (PrefabCatalog.IsRunestoneName(name))
+        {
+            return ObjectKind.Runestones;
+        }
         // A dungeon (its rooms are drawn from its data, see Dungeons) and the rooms themselves.
-        if (name.StartsWith("DG_", StringComparison.Ordinal) || Editing.Dungeons.RoomOf(name) != null) return ObjectKind.Dungeons;
-        if (PieceCatalog.Has(name) || Ruin.IsMatch(name)) return ObjectKind.Ruins;
-        if (Pickable.IsMatch(name)) return ObjectKind.Pickables;
-        if (Tree.IsMatch(name)) return ObjectKind.Trees;
-        if (Tomb.IsMatch(name)) return ObjectKind.Other;
-        if (Ore.IsMatch(name)) return ObjectKind.Ore;
-        if (Rock.IsMatch(name)) return ObjectKind.Rocks;
-        if (Bush.IsMatch(name)) return ObjectKind.Bushes;
+        if (name.StartsWith("DG_", StringComparison.Ordinal) || Editing.Dungeons.RoomOf(name) != null)
+        {
+            return ObjectKind.Dungeons;
+        }
+
+        if (PieceCatalog.Has(name) || Ruin.IsMatch(name))
+        {
+            return ObjectKind.Ruins;
+        }
+
+        if (Pickable.IsMatch(name))
+        {
+            return ObjectKind.Pickables;
+        }
+
+        if (Tree.IsMatch(name))
+        {
+            return ObjectKind.Trees;
+        }
+
+        if (Tomb.IsMatch(name))
+        {
+            return ObjectKind.Other;
+        }
+
+        if (Ore.IsMatch(name))
+        {
+            return ObjectKind.Ore;
+        }
+
+        if (Rock.IsMatch(name))
+        {
+            return ObjectKind.Rocks;
+        }
+
+        if (Bush.IsMatch(name))
+        {
+            return ObjectKind.Bushes;
+        }
+
         return ObjectKind.Other;
     }
 }

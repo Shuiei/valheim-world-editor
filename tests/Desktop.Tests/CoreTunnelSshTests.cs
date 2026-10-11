@@ -64,7 +64,7 @@ public sealed class LocalSshd : IDisposable
         }
         _p = Process.Start(psi)!;
         var log = new StringBuilder();
-        _p.ErrorDataReceived += (_, e) => { lock (log) log.AppendLine(e.Data); };
+        _p.ErrorDataReceived += (_, e) => { lock (log) { log.AppendLine(e.Data); } };
         _p.BeginErrorReadLine();
         var watch = Stopwatch.StartNew();
         while (watch.Elapsed < TimeSpan.FromSeconds(15))
@@ -127,14 +127,14 @@ public sealed class LocalSshd : IDisposable
                 _p.WaitForExit(5000);
             }
         }
-        catch (Exception)
+        catch
         {
         }
         try
         {
             Directory.Delete(Dir, true);
         }
-        catch (Exception)
+        catch
         {
         }
     }
@@ -173,7 +173,7 @@ public sealed class CoreTunnelSshTests : IClassFixture<LocalSshd>, IDisposable
                     await c.GetStream().WriteAsync(Encoding.ASCII.GetBytes("hello from the plugin\n"));
                 }
             }
-            catch (Exception)
+            catch
             {
             }
         });
@@ -191,7 +191,7 @@ public sealed class CoreTunnelSshTests : IClassFixture<LocalSshd>, IDisposable
         {
             Directory.Delete(_dir, true);
         }
-        catch (Exception)
+        catch
         {
         }
     }
