@@ -315,6 +315,35 @@ public sealed class GameBundles
 
 	// ---- Reading objects.
 
+	// Whether the folder has this bundle (by file name).
+	public bool HasBundle(string name) => _files.ContainsKey(name);
+
+	// The bundle's file, for what is read from its size and date.
+	public string? PathOf(string name) => _files.GetValueOrDefault(name);
+
+	// Every MonoBehaviour of a bundle, its fields read whole (not kept): data the game keeps on its scene
+	// objects, such as the location rules (GameLocations). Objects that cannot be read are skipped.
+	public List<AssetTypeValueField> MonoBehaviours(string bundle)
+	{
+		lock (_sync)
+		{
+			var (_, a) = Open(bundle);
+			var list = new List<AssetTypeValueField>();
+			foreach (var info in a.file.GetAssetsOfType(AssetClassID.MonoBehaviour))
+			{
+				try
+				{
+					list.Add(_am.GetBaseField(a, info));
+				}
+				catch (Exception e) when (e is IOException or InvalidDataException or NotImplementedException or NotSupportedException or IndexOutOfRangeException or ArgumentException)
+				{
+					// A script whose fields are not described (no type tree): not one of ours.
+				}
+			}
+			return list;
+		}
+	}
+
 	private (BundleFileInstance Bundle, AssetsFileInstance Assets) Open(string bundle)
 	{
 		if (!_open.TryGetValue(bundle, out var o))
