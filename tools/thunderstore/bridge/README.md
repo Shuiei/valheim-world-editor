@@ -28,6 +28,11 @@ and everyone online sees it appear, as if a very fast Viking had done it by hand
 - **Bring in a building.** Design it in the editor's Workshop (or use a
   [Homestead](https://thunderstore.io/c/valheim/p/sighsorry/Homestead/) blueprint) and paste it into
   the world: the hill in its way is dug out, trees and rocks there are cleared.
+- **Ask Claude to build it.** Let Claude (Claude Code or Claude Desktop) work in the editor from a
+  prompt: shape the ground, lay roads, plant forests, build houses and dungeons. You watch it happen,
+  and nothing changes in the game until you apply it.
+- **Dress the hall.** Fill chests, write signs, hang weapons and trophies on item stands, set the
+  table with food that stays put, and dress armour stands.
 - **Tidy up.** Plant a forest, clear the rocks off a field, remove every tree in an area, find the
   chest that holds the last of your black metal.
 
