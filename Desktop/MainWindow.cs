@@ -131,9 +131,11 @@ public sealed partial class MainWindow : Window
 		try
 		{
 			await Task.Run(() => TerrainEditor.Save.WorldCreator.Create(folder, name, seed));
+			Console.WriteLine($"New world: made {name} (seed {seed}) in {folder}.");
 		}
 		catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
 		{
+			Console.WriteLine($"New world: could not make {name} (seed {seed}) in {folder}: {ex}");
 			Busy(null);
 			if (NewWorld is { } p)
 			{

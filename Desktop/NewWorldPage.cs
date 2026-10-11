@@ -7,6 +7,7 @@ using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using TerrainEditor.App;
 using ValheimGen;
 
@@ -44,6 +45,7 @@ public sealed class NewWorldPage : IDisposable
 	internal CheckBox ShowHildir { get; } = Toggle("trader", "Hildir", "Hildir");
 	// One switch a kind of dungeon (off at first: they are looked for only when one is on, a few seconds),
 	// the shown seed's dungeons (null: not looked for yet) and those of the seeds seen.
+	private readonly List<(SeedPreview.Landmark Mark, Control Control)> _marks = new();
 	internal Dictionary<string, CheckBox> ShowDungeons { get; } = SeedPreview.Dungeons.ToDictionary(d => d.Name, d => DungeonToggle(d.Name));
 	internal List<SeedPreview.Landmark>? DungeonMarks { get; private set; }
 	private readonly Dictionary<string, List<SeedPreview.Landmark>> _dungeonsSeen = new();
@@ -78,6 +80,7 @@ public sealed class NewWorldPage : IDisposable
 
 	private CancellationTokenSource? _search, _preview, _dungeons;
 	private bool _dungeonWait;
+	private string? _dungeonError;
 	private readonly DispatcherTimer _wait = new() { Interval = TimeSpan.FromMilliseconds(350) };
 
 	private static NumericUpDown Near(double metres) => new()
@@ -156,7 +159,7 @@ public sealed class NewWorldPage : IDisposable
 		{
 			t.IsCheckedChanged += (_, _) => PlaceMarks();
 		}
-		Map.ViewChanged += PlaceMarks;
+		Map.ViewChanged += MoveMarks;
 		Map.Hovered += (x, z) => Readout.Text = $"{x:0}, {z:0}";
 		Find.Tip("newWorld.find");
 		Roll.Click += (_, _) => SeedBox.Text = SeedPreview.RandomSeed();
@@ -270,11 +273,15 @@ public sealed class NewWorldPage : IDisposable
 		ShowSeed(SeedBox.Text);
 	}
 
+	// Everything running stopped, and the page left as it is now (no loading sign left waiting for
+	// work that will not finish).
 	internal void StopAll()
 	{
 		_search?.Cancel();
 		_preview?.Cancel();
-		_dungeons?.Cancel();
+		StopDungeons();
+		Loading.IsVisible = false;
+		FillDungeons();
 	}
 
 	// Leaving the page: what runs is stopped.
@@ -326,6 +333,7 @@ public sealed class NewWorldPage : IDisposable
 			if (t.Status != TaskStatus.RanToCompletion)
 			{
 				Note($"The seed could not be looked at: {t.Exception?.GetBaseException().Message}");
+				Console.WriteLine($"New world: seed {seed} could not be looked at: {t.Exception?.GetBaseException()}");
 				return;
 			}
 			Show(t.Result);
@@ -394,6 +402,7 @@ public sealed class NewWorldPage : IDisposable
 	private void FindDungeons(SeedPreview.Preview p)
 	{
 		StopDungeons();
+		_dungeonError = null;
 		if (p.Layout is not { } layout || p.Landmarks == null)
 		{
 			return;
@@ -413,7 +422,17 @@ public sealed class NewWorldPage : IDisposable
 				_dungeonWait = false;
 				Loading.IsVisible = false;
 			}
-			DungeonMarks = t.Status == TaskStatus.RanToCompletion ? t.Result : new();
+			if (t.Status != TaskStatus.RanToCompletion)
+			{
+				// Said in the list, not kept: switching a kind on again tries again.
+				_dungeonError = t.Exception?.GetBaseException().Message ?? "stopped";
+				Console.WriteLine($"The dungeons of {p.Seed} could not be found: {t.Exception?.GetBaseException()}");
+				FillDungeons();
+				return;
+			}
+			_dungeonError = null;
+			DungeonMarks = t.Result;
+			Console.WriteLine($"New world: {DungeonMarks.Count} dungeons found for {p.Seed}.");
 			if (_dungeonsSeen.Count >= 20)
 			{
 				_dungeonsSeen.Clear();
@@ -448,6 +467,10 @@ public sealed class NewWorldPage : IDisposable
 		}
 		if (DungeonMarks == null && _dungeons == null)
 		{
+			if (_dungeonError != null)
+			{
+				_dungeonList.Children.Add(Ui.Hint($"The dungeons could not be found ({_dungeonError}). Switch a kind on to try again."));
+			}
 			return;
 		}
 		if (DungeonMarks == null)
@@ -616,10 +639,12 @@ public sealed class NewWorldPage : IDisposable
 			: new Avalonia.Controls.Shapes.Ellipse { Width = kind == "start" ? 11 : 9, Height = kind == "start" ? 11 : 9, Fill = Fill(kind, name), Stroke = kind == "start" ? Brushes.White : outline, StrokeThickness = kind == "start" ? 2 : 1 };
 	}
 
-	// The shown seed's landmarks over the map, each with what it is and how far.
+	// The shown seed's landmarks over the map (the kinds switched on), each with what it is and how far:
+	// made when the seed or the switches change, only moved when the view does.
 	internal void PlaceMarks()
 	{
 		Marks.Children.Clear();
+		_marks.Clear();
 		if (Shown?.Landmarks is not { } marks)
 		{
 			return;
@@ -632,13 +657,8 @@ public sealed class NewWorldPage : IDisposable
 			_ => m.Name switch { "The Bog Witch" => ShowBogWitch, "Hildir" => ShowHildir, _ => ShowHaldor },
 		}).IsChecked == true;
 		// The start last: on top.
-		foreach (var m in marks.OrderBy(m => m.Kind == "start"))
+		foreach (var m in marks.OrderBy(m => m.Kind == "start").Where(Showing))
 		{
-			var at = Map.ScreenOf(m.X, m.Z);
-			if (!Showing(m) || at.X < -10 || at.Y < -10 || at.X > Map.Bounds.Width + 10 || at.Y > Map.Bounds.Height + 10)
-			{
-				continue;
-			}
 			var c = Mark(m.Kind, m.Name);
 			float d = MathF.Sqrt((m.X - start.X) * (m.X - start.X) + (m.Z - start.Z) * (m.Z - start.Z));
 			string what = m.Kind == "boss" ? $"{m.Name}'s altar" : m.Name;
@@ -648,10 +668,25 @@ public sealed class NewWorldPage : IDisposable
 				tip += $"\nOne of {marks.Count(o => o.Name == m.Name)} spots: the first one players come near becomes the camp, the others vanish.";
 			}
 			ToolTip.SetTip(c, tip);
-			double size = c.Width;
-			Canvas.SetLeft(c, at.X - size / 2);
-			Canvas.SetTop(c, at.Y - size / 2);
 			Marks.Children.Add(c);
+			_marks.Add((m, c));
+		}
+		MoveMarks();
+	}
+
+	// The marks where the view puts them (those out of it hidden).
+	private void MoveMarks()
+	{
+		foreach (var (m, c) in _marks)
+		{
+			var at = Map.ScreenOf(m.X, m.Z);
+			bool inView = at.X >= -10 && at.Y >= -10 && at.X <= Map.Bounds.Width + 10 && at.Y <= Map.Bounds.Height + 10;
+			c.IsVisible = inView;
+			if (inView)
+			{
+				Canvas.SetLeft(c, at.X - c.Width / 2);
+				Canvas.SetTop(c, at.Y - c.Height / 2);
+			}
 		}
 	}
 
@@ -732,7 +767,7 @@ public sealed class NewWorldPage : IDisposable
 		Find.IsEnabled = false;
 		Stop.IsVisible = Progress.IsVisible = true;
 		Progress.Value = 0;
-		Found.Children.Clear();
+		ClearFound();
 		var rules = GameLocations.UseGameRules(GameLook.Bundles);
 		Pending = Task.Run(async () =>
 		{
@@ -745,16 +780,20 @@ public sealed class NewWorldPage : IDisposable
 				Stop.IsVisible = Progress.IsVisible = false;
 				if (t.Status != TaskStatus.RanToCompletion)
 				{
+					ClearFound();
+					Found.Children.Add(Ui.Hint($"The search failed: {t.Exception?.GetBaseException().Message}"));
+					Console.WriteLine($"New world: the seed search failed: {t.Exception?.GetBaseException()}");
 					return;
 				}
 				Results = t.Result;
+				Console.WriteLine($"New world: searched {count} seeds{(cancel.IsCancellationRequested ? " (stopped)" : "")}, best {(Results.Count > 0 ? $"{Results[0].Preview.Seed} (score {Results[0].Score:0.0})" : "none")}.");
 				ShowResults();
 			}, TaskScheduler.FromCurrentSynchronizationContext());
 	}
 
 	private void ShowResults()
 	{
-		Found.Children.Clear();
+		ClearFound();
 		if (Results.Count == 0)
 		{
 			Found.Children.Add(Ui.Hint("No seed looked at yet."));
@@ -788,6 +827,17 @@ public sealed class NewWorldPage : IDisposable
 			Found.Children.Add(b);
 		}
 		MarkFound(Shown?.Seed);
+	}
+
+	// The search results taken away, their pictures freed.
+	private void ClearFound()
+	{
+		foreach (var image in Found.GetVisualDescendants().OfType<Image>())
+		{
+			(image.Source as IDisposable)?.Dispose();
+			image.Source = null;
+		}
+		Found.Children.Clear();
 	}
 
 	// Create: checked here, made by the window (CreateRequested).

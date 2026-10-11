@@ -23,25 +23,33 @@ public static class GameLocations
 	public static string CacheFile => Path.Combine(AppSettings.UserDataDir, "game-locations.json");
 
 	private static readonly object Lock = new();
-	private static Task? _using;
+	private static (GameBundles Bundles, Task Task)? _using;
 
-	// Once a run: the game's rules in use (SeedLocations.Use) when they can be read, else the copy stays.
+	// The game's rules in use (SeedLocations.Use) when they can be read, else none: read once for a
+	// game folder, again when Valheim is found later or another folder is chosen.
 	public static Task UseGameRules(GameBundles? bundles)
 	{
 		lock (Lock)
 		{
-			return _using ??= bundles == null ? Task.CompletedTask : Task.Run(() =>
+			if (bundles == null)
 			{
-				if (Load(bundles, CacheFile) is { } rules)
-				{
-					SeedLocations.Use(rules);
-				}
-			});
+				return Task.CompletedTask;
+			}
+			if (_using is { } u && ReferenceEquals(u.Bundles, bundles))
+			{
+				return u.Task;
+			}
+			var task = Task.Run(() => SeedLocations.Use(Load(bundles, CacheFile) ?? new SeedLocations.RuleSet()));
+			_using = (bundles, task);
+			return task;
 		}
 	}
 
-	// The rules from the game (from the cache when the game is unchanged), or null when they cannot be
-	// read.
+	// What the cache was written by: rules read by another editor build are read again.
+	private static readonly string CacheVersion = "rules-1 " + typeof(GameLocations).Assembly.ManifestModule.ModuleVersionId;
+
+	// The rules from the game (from the cache when the game and the editor are unchanged), or null when
+	// they cannot be read (whatever goes wrong: the page then shows no bosses or traders).
 	public static SeedLocations.RuleSet? Load(GameBundles bundles, string? cacheFile)
 	{
 		try
@@ -52,26 +60,50 @@ public static class GameLocations
 			{
 				return null;
 			}
-			string stamp = JsonSerializer.Serialize(scanned.Select(b => new FileInfo(bundles.PathOf(b)!)).Select(f => $"{f.Name}:{f.Length}:{f.LastWriteTimeUtc.Ticks}"));
-			if (cacheFile != null && File.Exists(cacheFile))
+			string stamp = CacheVersion + " " + JsonSerializer.Serialize(scanned.Select(b => new FileInfo(bundles.PathOf(b)!)).Select(f => $"{f.Name}:{f.Length}:{f.LastWriteTimeUtc.Ticks}"));
+			if (cacheFile != null && Cached(cacheFile, stamp) is { } cached)
 			{
-				string[] cached = File.ReadAllText(cacheFile).Split('\n', 2);
-				if (cached.Length == 2 && cached[0] == stamp)
-				{
-					return SeedLocations.RuleSet.FromJson(cached[1]);
-				}
+				Console.WriteLine($"Location rules: {cached.locations.Count} kinds, from the cache.");
+				return cached;
 			}
+			var watch = System.Diagnostics.Stopwatch.StartNew();
 			var rules = Read(bundles, scanned, manifest);
+			if (rules != null)
+			{
+				Console.WriteLine($"Location rules: {rules.locations.Count} kinds and {rules.altBiomes.Count} alt biomes read from the game ({scanned.Count} bundles) in {watch.ElapsedMilliseconds} ms.");
+			}
 			if (rules != null && cacheFile != null)
 			{
+				// Written whole or not at all (a crash half way leaves the old file, or none).
 				Directory.CreateDirectory(Path.GetDirectoryName(cacheFile)!);
-				File.WriteAllText(cacheFile, stamp + "\n" + rules.ToJson());
+				string part = cacheFile + ".part";
+				File.WriteAllText(part, stamp + "\n" + rules.ToJson());
+				File.Move(part, cacheFile, overwrite: true);
 			}
 			return rules;
 		}
-		catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException or InvalidDataException or KeyNotFoundException)
+		catch (Exception e)
 		{
-			Console.WriteLine($"The game's location rules could not be read ({e.Message}): no bosses or traders on the New world page.");
+			// Anything in the game's files can fail the reading: the page goes on without bosses or traders.
+			Console.WriteLine($"The game's location rules could not be read ({e.GetType().Name}: {e.Message}): no bosses or traders on the New world page.");
+			return null;
+		}
+	}
+
+	// The cached rules when they are for this game and editor and can be read; else null (read again).
+	private static SeedLocations.RuleSet? Cached(string file, string stamp)
+	{
+		try
+		{
+			if (!File.Exists(file))
+			{
+				return null;
+			}
+			string[] cached = File.ReadAllText(file).Split('\n', 2);
+			return cached.Length == 2 && cached[0] == stamp ? SeedLocations.RuleSet.FromJson(cached[1]) : null;
+		}
+		catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException)
+		{
 			return null;
 		}
 	}

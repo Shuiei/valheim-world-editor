@@ -384,8 +384,11 @@ public static class SeedPreview
 		{
 			Parallel.For(0, count, options, _ =>
 			{
-				var p = Make(RandomSeed(), size, landmarks: wishes.NeedsLandmarks, cancel: cancel);
-				float score = Score(p.Stats, wishes);
+				var made = Make(RandomSeed(), size, landmarks: wishes.NeedsLandmarks, cancel: cancel);
+				float score = Score(made.Stats, wishes);
+				// Kept light: the generator and its layout (the biome map: tens of MB) are made again when
+				// a result is looked at.
+				var p = made with { Generator = null, Layout = null };
 				lock (found)
 				{
 					found.Add((p, score));

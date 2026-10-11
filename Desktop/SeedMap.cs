@@ -67,14 +67,30 @@ public sealed class SeedMap : Control, IDisposable
 		_closeWork?.Cancel();
 		_closeWork?.Dispose();
 		_closeWork = null;
+		Replace(ref _world, null);
+		DropClose();
+	}
+
+	// Pictures freed as they are replaced (their pixels are not the garbage collector's to count: a
+	// close look the size of the screen is tens of MB).
+	private static void Replace(ref WriteableBitmap? picture, WriteableBitmap? by)
+	{
+		picture?.Dispose();
+		picture = by;
+	}
+
+	private void DropClose()
+	{
+		_close?.Picture.Dispose();
+		_close = null;
 	}
 
 	// A new preview; keepView: stay where the view is (the same seed again).
 	public void Show(SeedPreview.Preview p, bool keepView = false)
 	{
 		_preview = p;
-		_world = Picture(p.Biome, p.Height, p.Size, p.Size);
-		_close = null;
+		Replace(ref _world, Picture(p.Biome, p.Height, p.Size, p.Size));
+		DropClose();
 		if (!keepView)
 		{
 			Fit();
@@ -85,8 +101,8 @@ public sealed class SeedMap : Control, IDisposable
 	public void Clear()
 	{
 		_preview = null;
-		_world = null;
-		_close = null;
+		Replace(ref _world, null);
+		DropClose();
 		InvalidateVisual();
 	}
 
@@ -194,7 +210,7 @@ public sealed class SeedMap : Control, IDisposable
 		{
 			if (_close != null)
 			{
-				_close = null;
+				DropClose();
 				InvalidateVisual();
 			}
 			return;
@@ -216,6 +232,7 @@ public sealed class SeedMap : Control, IDisposable
 			{
 				return;
 			}
+			DropClose();
 			_close = (Picture(t.Result.Biome, t.Result.Height, w, h), x0, z0, x0 + w * cell, z0 + h * cell);
 			InvalidateVisual();
 		}, TaskScheduler.FromCurrentSynchronizationContext());

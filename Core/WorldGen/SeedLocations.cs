@@ -174,7 +174,7 @@ public static class SeedLocations
 		}
 
 		// The first count kinds of the game's order laid out (those already done kept): every instance
-		// so far. Stopped half way, it starts again next time (a kind half laid out is no use).
+		// so far. Stopped or failed half way, it starts again next time (a kind half laid out is no use).
 		private List<Placed> Until(int count, CancellationToken cancel)
 		{
 			lock (_sync)
@@ -189,8 +189,9 @@ public static class SeedLocations
 						_placer.Generate(_state.Ordered[_done]);
 					}
 				}
-				catch (OperationCanceledException)
+				catch
 				{
+					// Stopped or failed half way through a kind: nothing of it is kept.
 					_placer = NewPlacer();
 					_done = 0;
 					throw;

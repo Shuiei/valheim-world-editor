@@ -74,6 +74,8 @@ public class CoreSeedPreviewTests
 		Assert.Equal(3, found.Count);
 		Assert.Equal(6, told);
 		Assert.True(found[0].Score >= found[1].Score && found[1].Score >= found[2].Score);
+		// Results are kept light (no generator or biome map: made again when one is looked at).
+		Assert.All(found, f => Assert.True(f.Preview.Generator == null && f.Preview.Layout == null));
 		// Stopped at once: what was found so far (nothing), no error.
 		Assert.Empty(SeedPreview.Search(wishes, 50, 3, cancel: new CancellationToken(true)));
 	}
