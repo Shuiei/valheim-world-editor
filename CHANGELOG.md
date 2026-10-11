@@ -29,6 +29,11 @@ the plugin is unchanged in versions without that part.
 - **The world generator is about a third faster** (worlds' map previews, Regrow nature, new worlds),
   with the same results to the bit.
 
+### Fixed
+- **Generate dungeon** could offer the dungeon made for the settings before: changing a setting while
+  the last one was still being made, then placing it, placed the old one (and **Open on the plot**
+  then opened another). A dungeon made for settings that changed since is no longer shown.
+
 ## v1.18.0 — 2026-10-10
 
 ### Added
