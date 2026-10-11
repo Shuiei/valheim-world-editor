@@ -59,7 +59,7 @@ The editor must be running for Claude to reach it. Turn the switch off and nothi
 | `find_prefabs`, `piece_info` | The game's objects and building pieces: names, sizes, snap points, cost |
 | `list_blueprints` | Your blueprint library |
 
-| Changing (pending) | |
+| Changing | |
 |---|---|
 | `run_script` | A C# script on the area, as the [Script tool](scripting.md) runs it (`script_reference` gives Claude the API): ground, paint, objects; a dry run says what it would change |
 | `flatten`, `paint_area`, `road`, `forest` | Level a rectangle, paint ground, lay a road through points, plant trees or rocks |
@@ -70,6 +70,11 @@ The editor must be running for Claude to reach it. Turn the switch off and nothi
 | `open_workshop`, `add_blueprint` | The Workshop, empty or with a blueprint; add a blueprint to the plot |
 | `generate_dungeon` | A dungeon on the plot, or above a point of the world with its portals |
 | `undo`, `redo` | As Ctrl+Z and Ctrl+Y |
+
+Each of these changes is one step of the history, and it stays pending: nothing reaches the world's
+files or the game until you **Save to world** or **Apply live**, and the Workshop's building becomes
+a blueprint when you **Save blueprint**. (A dungeon generated on the plot is also kept in your
+library as its own blueprint, as the Workshop's **Generate dungeon** does.)
 
 While the open world is **live with Auto on**, Claude changes nothing (each change would reach the
 game at once): turn Auto off, and Claude's changes wait for **Apply live**.
@@ -92,3 +97,21 @@ rounds ("the roof overhangs on the east side, fix it"), or start from one of you
 
 When you like the result: **Save to world**, **Apply live** or **Save blueprint**. If not: **Discard**,
 or Ctrl+Z.
+
+## The building skill (Claude Code)
+
+For buildings that should look hand-made rather than placed by numbers, the repository has a Claude Code
+skill, [`.claude/skills/valheim-build`](../.claude/skills/valheim-build/SKILL.md). With it, Claude first
+looks up real Valheim builds and guides for ideas and writes a short design brief, shapes the ground,
+tries unfamiliar pieces in a small mock-up before using them, builds in phases with a library of proven
+helpers (glazed arched windows, storey ledges and cornices, battlements, round towers with spires, tile
+roofs with stepped gables, bartizans, porches, timber-framed halls), then checks its own work: scripts
+that find blocked windows, doubled pieces and stones sitting on windows, and a close look at every
+junction. Interiors get framing, a focal point, lighting and furnishing; the outside gets paths, lights
+and planting.
+
+Claude Code loads it by itself when you work in this repository. To have it everywhere, copy the
+folder to your own skills: `cp -r .claude/skills/valheim-build ~/.claude/skills/`. Then ask as usual,
+for example "Build a Gothic castle with a moat in the Workshop" or "this hall looks bare, furnish it".
+What it learns about pieces (sizes, which way they face) is in its `references/pieces.md`; corrections
+are welcome there.
