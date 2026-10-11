@@ -26,13 +26,34 @@ public class SeedMapTests
     /// <summary>
     /// A map alone in a shown window of that size, laid out and drawn once (so the pointer can hit it).
     /// </summary>
-    private static (Window Window, SeedMap Map) Open(int width = 400, int height = 300)
+    private static OpenMap Open(int width = 400, int height = 300)
     {
         var map = new SeedMap();
         var w = new Window { Width = width, Height = height, Content = map };
         w.Show();
         Settle();
-        return (w, map);
+        return new OpenMap(w, map);
+    }
+
+    /// <summary>
+    /// A map in its window; disposing it closes the window and stops the map's work (its timer, the close look being
+    /// sampled), so nothing of a test runs on into the next.
+    /// </summary>
+    private sealed class OpenMap(Window window, SeedMap map) : IDisposable
+    {
+        /// <summary>
+        /// The window and the map in it.
+        /// </summary>
+        public void Deconstruct(out Window w, out SeedMap m) => (w, m) = (window, map);
+
+        /// <summary>
+        /// Closes the window, then stops the map.
+        /// </summary>
+        public void Dispose()
+        {
+            window.Close();
+            map.Dispose();
+        }
     }
 
     /// <summary>
@@ -80,7 +101,8 @@ public class SeedMapTests
     [AvaloniaFact]
     public void TheWholeWorldFitsTheViewAndPointsGoBothWays()
     {
-        var (_, map) = Open(400, 300);
+        using var open = Open(400, 300);
+        var (_, map) = open;
         int changed = 0;
         map.ViewChanged += () => changed++;
         map.Show(Preview());
@@ -99,7 +121,8 @@ public class SeedMapTests
     [AvaloniaFact]
     public void LookingAtAPointIsHeldToTheWorldAndTheZoomsLimits()
     {
-        var (_, map) = Open(400, 300);
+        using var open = Open(400, 300);
+        var (_, map) = open;
         map.Show(Preview());
         map.LookAt(1000, -2000);
         Assert.Equal((1000f, -2000f, 4f), (map.CenterX, map.CenterZ, map.MetersPerPixel));
@@ -116,7 +139,8 @@ public class SeedMapTests
     [AvaloniaFact]
     public void ZoomingKeepsThePointUnderItWhereItWas()
     {
-        var (_, map) = Open(400, 300);
+        using var open = Open(400, 300);
+        var (_, map) = open;
         map.Show(Preview());
         map.LookAt(500, 500, 20);
         var at = new Point(100, 80);
@@ -136,7 +160,8 @@ public class SeedMapTests
     [AvaloniaFact]
     public void TheWheelZoomsADragMovesAndTheMouseIsTold()
     {
-        var (w, map) = Open(400, 300);
+        using var open = Open(400, 300);
+        var (w, map) = open;
         map.Show(Preview());
         map.LookAt(0, 0, 20);
         (float X, float Z)? hovered = null;
@@ -167,7 +192,8 @@ public class SeedMapTests
     [AvaloniaFact]
     public void ADoubleClickShowsTheWholeWorldAgain()
     {
-        var (w, map) = Open(400, 300);
+        using var open = Open(400, 300);
+        var (w, map) = open;
         map.Show(Preview());
         map.LookAt(3000, 3000, 2);
         var p = new Point(200, 150);
@@ -182,7 +208,8 @@ public class SeedMapTests
     [AvaloniaFact]
     public void AResizeKeepsTheWholeWorldInViewUntilTheViewIsMoved()
     {
-        var (w, map) = Open(400, 300);
+        using var open = Open(400, 300);
+        var (w, map) = open;
         map.Show(Preview());
         w.Height = 200;
         Settle();
@@ -202,7 +229,8 @@ public class SeedMapTests
     [AvaloniaFact]
     public async Task ZoomedInThePartInViewIsSampledAgainAndDroppedZoomedOut()
     {
-        var (_, map) = Open(160, 120);
+        using var open = Open(160, 120);
+        var (_, map) = open;
         // Cells fine enough that all the world in view is coarser than them.
         var p = Preview(size: 128);
         map.Show(p);
@@ -225,7 +253,8 @@ public class SeedMapTests
     [AvaloniaFact]
     public async Task ClearedOrDisposedNothingIsLeftRunning()
     {
-        var (_, map) = Open(160, 120);
+        using var open = Open(160, 120);
+        var (_, map) = open;
         var p = Preview();
         map.Show(p);
         map.Clear();
