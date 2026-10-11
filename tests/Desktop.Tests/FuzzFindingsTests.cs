@@ -44,4 +44,9 @@ public class FuzzFindingsTests
     [Fact]
     public void InventoryNegativeStringLength() =>
         Refused(() => InventoryData.Read(Convert.FromHexString("266d000000d9ffffd9ff01006f27040affffffff0a27040affffffff0a")));
+
+    // A .db2 file whose zone package has a negative length.
+    [Fact]
+    public void ZoneDbNegativePackageLength() =>
+        Refused(() => ZoneDb.Load(new MemoryStream(Convert.FromHexString("00000000ff00ff0000000000ff0000ff"))));
 }

@@ -1,3 +1,4 @@
+using System.IO.Compression;
 using System.Numerics;
 using System.Text;
 
@@ -149,6 +150,24 @@ public static class CheckedReads
     /// negative one makes BinaryReader throw a plain IOException.
     /// </summary>
     public static string ReadCheckedString(this BinaryReader r) => Encoding.UTF8.GetString(r.ReadExactBytes(r.Read7BitEncodedInt()));
+
+    // The content of gzip data, refused past limit bytes: a few kilobytes can unpack to gigabytes.
+    public static byte[] Gunzip(byte[] gzipped, int limit)
+    {
+        using GZipStream gz = new(new MemoryStream(gzipped), CompressionMode.Decompress);
+        using MemoryStream raw = new();
+        byte[] buffer = new byte[81920];
+        int n;
+        while ((n = gz.Read(buffer)) > 0)
+        {
+            if (raw.Length + n > limit)
+            {
+                throw new InvalidDataException($"the data unpacks to more than {limit} bytes");
+            }
+            raw.Write(buffer, 0, n);
+        }
+        return raw.ToArray();
+    }
 }
 
 /// <summary>World save format versions at which the encoding changed.</summary>
