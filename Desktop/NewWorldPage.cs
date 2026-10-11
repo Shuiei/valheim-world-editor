@@ -60,8 +60,8 @@ public sealed class NewWorldPage : IDisposable
 	internal NumericUpDown Hildir { get; } = Near(0);
 	internal NumericUpDown Bosses { get; } = Near(0);
 	internal ComboBox Count { get; } = new() { ItemsSource = new[] { "60 seeds", "150 seeds", "400 seeds" }, SelectedIndex = 1, FontSize = 12 };
-	internal Button Find { get; } = new() { Content = "Find seeds", FontSize = 12 };
-	internal Button Stop { get; } = new() { Content = "Stop", FontSize = 12, IsVisible = false };
+	internal Button Find { get; } = new Button { Content = "Find seeds", FontSize = 12 }.Classed("primary");
+	internal Button Stop { get; } = new Button { Content = "Stop", FontSize = 12, IsVisible = false }.Classed("primary");
 	internal ProgressBar Progress { get; } = new() { Minimum = 0, Maximum = 1, Height = 6, MinHeight = 6, IsVisible = false };
 	internal WrapPanel Found { get; } = new() { ItemSpacing = 6, LineSpacing = 6 };
 
