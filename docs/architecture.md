@@ -154,7 +154,9 @@ the next person knows what to compare with after a game update.
 
 ## The world generator matches the game to the bit
 
-`Core/WorldGen/WorldGenerator*.cs` makes a world from its seed as the game does. The ground under
+`Core/WorldGen/WorldGenerator*.cs` makes a world from its seed as the game does: to the bit, but for 8 of
+the 3000 heights the reference test samples, all in the Deep North and less than a millimetre off
+(floating point done in another order than the game's runtime; `CoreGenReferenceTests`). The ground under
 every saved edit is "generated height + location flattening + edit", so a generator that is off by
 a float's last bit puts the edits at the wrong height, and seams show where the editor's ground meets
 the game's. So:
