@@ -220,6 +220,10 @@ public sealed class NewWorldPage : IDisposable
     /// The seed's map, in cells on a side.
     /// </summary>
     private readonly int _previewSize;
+    /// <summary>
+    /// The seed last asked for (shown or being made).
+    /// </summary>
+    private string? _asked;
 
     /// <summary>
     /// A distance box: 0..8000 m in steps of 250.
@@ -321,6 +325,12 @@ public sealed class NewWorldPage : IDisposable
         Roll.Click += (_, _) => SeedBox.Text = SeedPreview.RandomSeed();
         SeedBox.TextChanged += (_, _) =>
         {
+            // The box told of a seed already asked for (the text box tells of a change after it is made: the first
+            // seed, a search result clicked): not looked at again.
+            if ((SeedBox.Text?.Trim() ?? "") == _asked)
+            {
+                return;
+            }
             _wait.Stop();
             _wait.Start();
             // At once, while the typing pause is waited for: the change is seen.
@@ -460,6 +470,7 @@ public sealed class NewWorldPage : IDisposable
     /// </summary>
     internal void ShowSeed(string seed)
     {
+        _asked = seed;
         _preview?.Cancel();
         Problem.Text = "";
         if (seed.Length is 0 or > 10)
