@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Coverage of the tests (dotnet test --settings tests/Desktop.Tests/coverage.runsettings, as
+<!-- Coverage of the tests (dotnet test with this file as its settings, as
      tools/ci-tests.sh runs them), written as Cobertura for CI's coverage job (tools/coverage.sh).
      Only code written for the editor counts: the core and the app, not the tests, the libraries or
      generated code. Left out too: Jordan Peck's FastNoise library (which CoreGenReferenceTests still
