@@ -92,6 +92,7 @@ public sealed class ScriptPanelTests : IDisposable
         var window = new Window { Content = p.Card, Width = 800, Height = 700 };
         window.Show();
         p.CodeBox.Focus();
+        Assert.True(p.CodeBox.IsFocused);
         window.KeyPress(Key.Enter, RawInputModifiers.None, PhysicalKey.Enter, "\r");
         Assert.Equal(0, run);
         window.KeyPress(Key.Enter, RawInputModifiers.Control, PhysicalKey.Enter, null);

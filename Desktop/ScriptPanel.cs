@@ -69,14 +69,15 @@ public sealed class ScriptPanel
         RunButton.Click += (_, _) => RunAsked?.Invoke();
         StopButton.Click += (_, _) => StopAsked?.Invoke();
         SaveButton.Click += (_, _) => Save();
-        CodeBox.KeyDown += (_, e) =>
+        // On the way down (tunnel), before the text box takes Enter for a new line.
+        CodeBox.AddHandler(Avalonia.Input.InputElement.KeyDownEvent, (_, e) =>
         {
             if (e.Key == Avalonia.Input.Key.Enter && e.KeyModifiers.HasFlag(Avalonia.Input.KeyModifiers.Control))
             {
                 e.Handled = true;
                 RunAsked?.Invoke();
             }
-        };
+        }, Avalonia.Interactivity.RoutingStrategies.Tunnel);
         ScriptBox.Tip("script.pick");
         CodeBox.Tip("script.code");
         NameBox.Tip("script.name");
