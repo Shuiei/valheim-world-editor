@@ -46,7 +46,10 @@ public sealed class WorldScene
     public float Cz { get; init; }
     /// <summary>The sea level in metres.</summary>
     public float Water { get; init; } = TerrainService.WaterLevel;
-    /// <summary>The objects and building pieces in the block; only ever added to (see <see cref="Thing"/>). Lock it to read.</summary>
+    /// <summary>
+    /// The objects and building pieces in the block; only ever added to until the world is read again (see
+    /// <see cref="Thing"/>). Lock it to read.
+    /// </summary>
     public required List<Thing> Things { get; init; }
     /// <summary>The ground the world's locations and pieces flatten (for the Location flattening overlay).</summary>
     public TerrainModifiers? Modifiers { get; set; }
@@ -74,8 +77,9 @@ public sealed class WorldScene
     public WorldSession? Owner { get; init; }
 
     /// <summary>
-    /// An object or building piece. Things are only ever added to the list (indices stay valid): a
-    /// deleted one is kept, Gone, so undo can bring it back; a moved one is a new thing (see EditSession).
+    /// An object or building piece. Things are only ever added to the list, so indices stay valid until the
+    /// world is read again (after a save or a reload, EditSession.Reread fills the list anew and the history
+    /// starts over): a deleted one is kept, Gone, so undo can bring it back; a moved one is a new thing.
     /// </summary>
     /// <param name="Id">The object's id in the save; negative for one added in this session.</param>
     /// <param name="Prefab">The prefab's hash.</param>

@@ -42,7 +42,10 @@ public sealed class AreaPanel
         Remove,
         /// <summary>Selects the objects of the chosen kinds inside.</summary>
         Select,
-        /// <summary>Replaces the objects of the chosen kinds inside.</summary>
+        /// <summary>
+        /// Replaces every object inside of the prefab chosen in Replace with the one chosen in With, whatever
+        /// the kind toggles say.
+        /// </summary>
         Replace,
         /// <summary>Puts back what the game grows here, by its vegetation rules, for the chosen kinds.</summary>
         Regrow,

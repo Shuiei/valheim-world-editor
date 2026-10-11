@@ -214,7 +214,11 @@ public sealed class WorldSession : IDisposable
     /// <summary>What a save or Apply live did.</summary>
     /// <param name="Done">Saved, or something was applied.</param>
     /// <param name="Message">What to tell the user.</param>
-    /// <param name="Reloaded">The world was read again (zone resets, No limit ground): areas must be read again too.</param>
+    /// <param name="Reloaded">
+    /// The world was read again (a save after zone resets or No limit ground; live, after zone resets only):
+    /// areas must be read again too. Live No limit ground shows in <see cref="Lifted"/> alone, which callers
+    /// check as well.
+    /// </param>
     /// <param name="Saved">The writer's result (offline only).</param>
     public sealed record Outcome(bool Done, string Message, bool Reloaded, WorldWriter.Result? Saved = null)
     {
