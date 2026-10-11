@@ -390,7 +390,6 @@ public static class Tips
 		["newWorld.showStart"] = "Show where the game will put its start temple.",
 		["newWorld.showBosses"] = "Show where the bosses' altars will be.",
 		["newWorld.showTrader"] = "Show this trader's spots: the first one players come near becomes the camp, the others vanish.",
-		["newWorld.map"] = "The seed's world, north up. Wheel: zoom where the pointer is. Drag: move. Double click: all of it. Zoomed in, the part in view is drawn again from the game's generator.",
 		["newWorld.zoomIn"] = "Closer.",
 		["newWorld.zoomOut"] = "Farther.",
 		["newWorld.fit"] = "All of the world.",

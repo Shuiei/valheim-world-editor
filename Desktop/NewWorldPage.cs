@@ -43,6 +43,9 @@ public sealed class NewWorldPage : IDisposable
 	internal CheckBox ShowBogWitch { get; } = Toggle("trader", "The Bog Witch", "Bog Witch");
 	internal CheckBox ShowHildir { get; } = Toggle("trader", "Hildir", "Hildir");
 	internal TextBlock Readout { get; } = new() { FontSize = 11, Foreground = Ui.Muted, Margin = new Thickness(8, 0, 0, 6), VerticalAlignment = VerticalAlignment.Bottom, HorizontalAlignment = HorizontalAlignment.Left, IsHitTestVisible = false };
+	// Shown over the map while a seed's world is being looked at.
+	internal TextBlock LoadingText { get; } = new() { FontSize = 12, HorizontalAlignment = HorizontalAlignment.Center };
+	internal Border Loading { get; }
 	// What the seed's world holds, as lists.
 	internal StackPanel Info { get; } = new() { Spacing = 14 };
 	// Finding a seed.
@@ -80,6 +83,19 @@ public sealed class NewWorldPage : IDisposable
 
 	public NewWorldPage(IReadOnlyList<string>? roots = null)
 	{
+		Loading = new Border
+		{
+			Background = Ui.Panel,
+			BorderBrush = Ui.Line,
+			BorderThickness = new Thickness(1),
+			CornerRadius = new CornerRadius(10),
+			Padding = new Thickness(14, 10),
+			HorizontalAlignment = HorizontalAlignment.Center,
+			VerticalAlignment = VerticalAlignment.Center,
+			IsVisible = false,
+			IsHitTestVisible = false,
+			Child = new StackPanel { Spacing = 8, Children = { LoadingText, new ProgressBar { IsIndeterminate = true, Width = 220, Height = 4, MinHeight = 4 } } },
+		};
 		var where = (roots ?? Roots()).ToList();
 		if (where.Count == 0)
 		{
@@ -116,12 +132,17 @@ public sealed class NewWorldPage : IDisposable
 		{
 			t.IsCheckedChanged += (_, _) => PlaceMarks();
 		}
-		Map.Tip("newWorld.map");
 		Map.ViewChanged += PlaceMarks;
 		Map.Hovered += (x, z) => Readout.Text = $"{x:0}, {z:0}";
 		Find.Tip("newWorld.find");
 		Roll.Click += (_, _) => SeedBox.Text = SeedPreview.RandomSeed();
-		SeedBox.TextChanged += (_, _) => { _wait.Stop(); _wait.Start(); };
+		SeedBox.TextChanged += (_, _) =>
+		{
+			_wait.Stop();
+			_wait.Start();
+			// At once, while the typing pause is waited for: the change is seen.
+			SetLoading(SeedBox.Text?.Trim() ?? "");
+		};
 		_wait.Tick += (_, _) => { _wait.Stop(); ShowSeed(SeedBox.Text?.Trim() ?? ""); };
 		Create.Click += (_, _) => AskCreate();
 		Find.Click += (_, _) => StartSearch();
@@ -201,7 +222,7 @@ public sealed class NewWorldPage : IDisposable
 			BorderThickness = new Thickness(1),
 			CornerRadius = new CornerRadius(6),
 			ClipToBounds = true,
-			Child = new Panel { Children = { Map, Marks, Readout, toggles, zoom } },
+			Child = new Panel { Children = { Map, Marks, Readout, toggles, zoom, Loading } },
 		};
 		var info = new ScrollViewer { Content = Info, Padding = new Thickness(0, 0, 8, 0) };
 		var right = new Grid { ColumnDefinitions = new ColumnDefinitions("*,14,320") };
@@ -244,12 +265,14 @@ public sealed class NewWorldPage : IDisposable
 		if (seed.Length == 0 || seed.Length > 10)
 		{
 			Note("The seed is 1 to 10 characters, as in the game.");
+			SetLoading(null);
 			Map.Clear();
 			Marks.Children.Clear();
 			Shown = null;
 			return;
 		}
 		var cancel = _preview = new CancellationTokenSource();
+		SetLoading(seed);
 		if (Shown == null)
 		{
 			Note("Looking at the world…");
@@ -262,18 +285,49 @@ public sealed class NewWorldPage : IDisposable
 			return SeedPreview.Make(seed, 512, parallel: true, landmarks: true, cancel.Token);
 		}, cancel.Token).ContinueWith(t =>
 		{
-			if (cancel.IsCancellationRequested || t.Status != TaskStatus.RanToCompletion)
+			// A newer seed asked for since: that one's answer will come.
+			if (cancel.IsCancellationRequested)
 			{
+				return;
+			}
+			SetLoading(null);
+			if (t.Status != TaskStatus.RanToCompletion)
+			{
+				Note($"The seed could not be looked at: {t.Exception?.GetBaseException().Message}");
 				return;
 			}
 			Show(t.Result);
 		}, TaskScheduler.FromCurrentSynchronizationContext());
 	}
 
+	// The loading sign over the map (null: none), and the search result for that seed marked.
+	private void SetLoading(string? seed)
+	{
+		bool valid = seed is { Length: > 0 and <= 10 };
+		Loading.IsVisible = valid;
+		if (valid)
+		{
+			LoadingText.Text = $"Looking at {seed}'s world…";
+			MarkFound(seed);
+		}
+	}
+
+	// The search result for this seed framed (the one chosen or shown), the others not.
+	private void MarkFound(string? seed)
+	{
+		foreach (var b in Found.Children.OfType<Button>())
+		{
+			bool chosen = Equals(b.Tag, seed);
+			b.BorderBrush = chosen ? Ui.Accent : null;
+			b.BorderThickness = new Thickness(chosen ? 2 : 0);
+		}
+	}
+
 	private void Show(SeedPreview.Preview p)
 	{
 		bool same = Shown?.Seed == p.Seed;
 		Shown = p;
+		MarkFound(p.Seed);
 		Map.Show(p, keepView: same);
 		ShowInfo(p);
 		PlaceMarks();
@@ -557,9 +611,16 @@ public sealed class NewWorldPage : IDisposable
 				},
 			};
 			ToolTip.SetTip(b, Describe(p.Stats));
-			b.Click += (_, _) => SeedBox.Text = p.Seed;
+			b.Click += (_, _) =>
+			{
+				// Looked at at once (no typing pause to wait for).
+				SeedBox.Text = p.Seed;
+				_wait.Stop();
+				ShowSeed(p.Seed);
+			};
 			Found.Children.Add(b);
 		}
+		MarkFound(Shown?.Seed);
 	}
 
 	// Create: checked here, made by the window (CreateRequested).
