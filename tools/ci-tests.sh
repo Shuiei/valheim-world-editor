@@ -4,7 +4,8 @@
 # failed tests", gives only the classes that failed.
 # Usage: tools/ci-tests.sh list <namespace>       the namespace's test classes, one per line
 #        tools/ci-tests.sh run <name> <class>...  runs those classes (no visual tests), results in
-#                                                 /tmp/test-results/<name>/results.xml
+#                                                 /tmp/test-results/<name>/results.xml and their
+#                                                 coverage (Cobertura) under /tmp/coverage/<name>-<node>
 # Needs the tests built (-c Release). Every test runs, so one run shows every failure; a test stuck 5
 # minutes ends the run (with a dump).
 set -euo pipefail
@@ -23,7 +24,11 @@ case "${1:?list or run}" in
     shift 2
     # FullyQualifiedName~<class>. matches that class's tests only (a class name ends at the dot).
     filter="Category!=Visual&($(printf 'FullyQualifiedName~%s.|' "$@" | sed 's/|$//'))"
+    # The coverage of this container's share, merged with the others' by CI's coverage job
+    # (tools/coverage.sh); the node index keeps the app tests' containers apart.
     dotnet test "$project" -c Release --no-build --filter "$filter" --blame-hang-timeout 5m \
+      --settings tests/Desktop.Tests/coverage.runsettings --collect "Code Coverage" \
+      --results-directory "/tmp/coverage/$name-${CIRCLE_NODE_INDEX:-0}" \
       --logger "junit;LogFilePath=/tmp/test-results/$name/results.xml" --logger "console;verbosity=normal"
     ;;
   *)

@@ -8,6 +8,8 @@
 #                  the test classes out by their last times and can rerun only the failed ones
 #                  (circleci tests run, tools/ci-tests.sh). Every test runs, failing or not; a test
 #                  stuck for 5 minutes ends its run.
+#   coverage       the code coverage of both test jobs, merged (tools/coverage.sh): an HTML report in
+#                  the artifacts, and the job fails when the line coverage is under 95%
 #   packages       the Windows and Linux release packages: they build, hold no source code or game
 #                  files (the plugin is left out: it builds against the game's own DLLs), and the
 #                  Linux one starts and draws the test world (tools/smoke-test.sh, under Xvfb)
@@ -67,6 +69,11 @@ commands:
                 key: nuget-v2-{{ checksum "Directory.Build.props" }}-{{ checksum "Core/ValheimWorldEditor.Core.csproj" }}-{{ checksum "Desktop/ValheimWorldEditor.Desktop.csproj" }}-{{ checksum "tests/Desktop.Tests/Desktop.Tests.csproj" }}
                 paths:
                   - ~/.nuget/packages
+      # The coverage of this container's tests, for the coverage job.
+      - persist_to_workspace:
+          root: /tmp/coverage
+          paths:
+            - "*"
       - store_test_results:
           path: /tmp/test-results
       - store_artifacts:
@@ -121,6 +128,23 @@ jobs:
           namespace: TerrainEditor.Desktop.Tests
           what: App tests (the windows, headless)
           results: app
+
+  # The coverage of every test container, merged: under the minimum, the job fails.
+  coverage:
+    executor: dotnet
+    steps:
+      # The sources, for the report's pages of covered and uncovered lines.
+      - checkout
+      - attach_workspace:
+          at: /tmp/coverage
+      - run:
+          name: Coverage report (line coverage at least 95%)
+          command: |
+            dotnet tool restore
+            tools/coverage.sh /tmp/coverage /tmp/coverage-report 95
+      - store_artifacts:
+          path: /tmp/coverage-report
+          destination: coverage
 
   packages:
     executor: dotnet
@@ -192,3 +216,7 @@ workflows:
       - windows-smoke:
           requires:
             - packages
+      - coverage:
+          requires:
+            - core-tests
+            - app-tests

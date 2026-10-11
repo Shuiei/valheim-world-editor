@@ -264,6 +264,7 @@ CircleCI (`.circleci/config.yml`) runs on every push and pull request:
 |---|---|
 | `core-tests` | The core's tests of `tests/Desktop.Tests` (namespace `WorldEditor.Tests`), with OpenSSH's server installed (`VWE_NEED_SSHD=1`). |
 | `app-tests` | The app's window tests (`TerrainEditor.Desktop.Tests`) without the visual tests, on three containers. Both test jobs let CircleCI share the classes out by their last times (`circleci tests run`, `tools/ci-tests.sh`), so **Rerun failed tests** runs only the classes that failed; every test runs, failing or not. |
+| `coverage` | The code coverage of both test jobs, merged by `tools/coverage.sh` (ReportGenerator): fails when the line coverage is under **95%**. The HTML report, with each file's covered and uncovered lines, is in the job's artifacts (`coverage/index.html`). |
 | `packages` | Both release packages build (without the plugin), and `tools/check-package.sh` finds everything they need and no source code, debug files or game files. |
 
 Not covered by CI: the visual tests (no display), building the plugin and reading the game's data
@@ -276,9 +277,13 @@ Running them locally:
 dotnet test tests/Desktop.Tests                                  # everything (visual tests need a display)
 dotnet test tests/Desktop.Tests --filter "Category!=Visual"     # without the visual tests
 dotnet test tests/Desktop.Tests --filter "Category=Visual"      # only them
-dotnet-coverage collect -s tests/Desktop.Tests/coverage.config -f cobertura -o cov.xml "dotnet test tests/Desktop.Tests --filter Category!=Visual"
+dotnet test tests/Desktop.Tests --filter "Category!=Visual" --settings tests/Desktop.Tests/coverage.runsettings \
+  --collect "Code Coverage" --results-directory /tmp/coverage                       # with coverage
+dotnet tool restore && tools/coverage.sh /tmp/coverage /tmp/coverage-report 95      # its report
 tools/release.sh /tmp/dist && tools/check-package.sh /tmp/dist/*.tar.gz
 ```
 
-The coverage counts only our own code: `coverage.config` leaves out the FastNoise library, which the
-test against the game's values checks along with the world generator.
+The coverage counts only our own code (`coverage.runsettings`): the core and the app, not the tests,
+the libraries or generated code, and not the FastNoise library either, which the test against the
+game's values checks along with the world generator. Code that CI cannot run (it needs a display, the
+game's files or a real game) can be left out with `[ExcludeFromCodeCoverage(Justification = "...")]`.
