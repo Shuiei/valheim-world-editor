@@ -154,8 +154,10 @@ public class PanelBlueprintsTests
 		Click(RowButtons(r, "Paste").Single());
 		Assert.Equal("Gate", r.W.View.Paste.Clip!.Name);
 		Assert.False(r.B.Card.IsVisible);
-		// Delete asks first, and takes the picture too.
-		r.B.Toggle(true);
+		// Delete asks first, and takes the picture too. Opened again as a player does (the tool, not the
+		// card alone): pasting leaves the Paste tool on, which closes a card opened beside it.
+		Click(r.W.Tools.BlueprintsButton);
+		Assert.True(r.B.Card.IsVisible);
 		r.B.Confirm = _ => Task.FromResult(false);
 		Click(RowButtons(r, "Delete").Single());
 		Assert.Single(r.Listed);
