@@ -837,10 +837,59 @@ public class WorldGenerator
 
 	public static float WorldAngle(float wx, float wy)
 	{
-		return (float)Math.Sin((float)((double)(float)Math.Atan2(wx, wy) * 20.0));
+		// A point's height asks for its angle five times (biome, Ashlands and Deep North edges, their
+		// gaps): the last one is kept, by the exact bits of the point (the same answer, computed once).
+		int bx = BitConverter.SingleToInt32Bits(wx), by = BitConverter.SingleToInt32Bits(wy);
+		if (t_angleKnown && t_angleX == bx && t_angleY == by)
+		{
+			return t_angle;
+		}
+		float angle = (float)Math.Sin((float)((double)(float)Math.Atan2(wx, wy) * 20.0));
+		(t_angleX, t_angleY, t_angle, t_angleKnown) = (bx, by, angle, true);
+		return angle;
 	}
 
+	[ThreadStatic]
+	private static int t_angleX, t_angleY;
+
+	[ThreadStatic]
+	private static float t_angle;
+
+	[ThreadStatic]
+	private static bool t_angleKnown;
+
+	// The last base height worked out on this thread: a point's biome and then its height both need it
+	// (kept by generator and exact bits of the point, so the answer is the one computed again). The
+	// generator by its number, not a reference: a thread would keep it alive.
+	private static int s_generators;
+	private readonly int _number = Interlocked.Increment(ref s_generators);
+
+	[ThreadStatic]
+	private static int t_baseOf;
+
+	[ThreadStatic]
+	private static int t_baseX, t_baseY;
+
+	[ThreadStatic]
+	private static float t_base;
+
 	private float GetBaseHeight(float wx, float wy, bool menuTerrain)
+	{
+		if (menuTerrain)
+		{
+			return BaseHeight(wx, wy, menuTerrain: true);
+		}
+		int bx = BitConverter.SingleToInt32Bits(wx), by = BitConverter.SingleToInt32Bits(wy);
+		if (t_baseOf == _number && t_baseX == bx && t_baseY == by)
+		{
+			return t_base;
+		}
+		float h = BaseHeight(wx, wy, menuTerrain: false);
+		(t_baseOf, t_baseX, t_baseY, t_base) = (_number, bx, by, h);
+		return h;
+	}
+
+	private float BaseHeight(float wx, float wy, bool menuTerrain)
 	{
 		float num = 0f;
 		float num2 = 1f;

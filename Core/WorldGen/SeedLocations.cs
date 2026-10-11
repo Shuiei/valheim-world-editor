@@ -456,11 +456,13 @@ public static class SeedLocations
 			{
 				return false;
 			}
-			if ((biomes & gen.GetBiome(p)) == 0)
+			var biome = gen.GetBiome(p);
+			if ((biomes & biome) == 0)
 			{
 				return false;
 			}
-			p.y = gen.GetHeight(p.x, p.z, out Color mask);
+			// GetHeight, with the biome just found.
+			p.y = gen.GetBiomeHeight(biome, p.x, p.z, out Color mask);
 			float altitude = (float)(p.y - 30.0);
 			if (altitude < rule.minAltitude || altitude > rule.maxAltitude)
 			{

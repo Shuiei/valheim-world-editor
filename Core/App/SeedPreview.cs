@@ -155,9 +155,9 @@ public static class SeedPreview
 					height[k] = Outside;
 					continue;
 				}
-				float ground = gen.GetHeight(new Vector2(x, z));
-				height[k] = ground;
 				var b = gen.GetBiome(x, z);
+				float ground = gen.GetBiomeHeight(b, x, z, out _);
+				height[k] = ground;
 				int index = Array.IndexOf(Biomes, b);
 				// Land: ground a player can stand on or wade through (at most 1 m under water; 3 m in a
 				// Swamp, whose pools are part of it). The game names much of the shallow sea after the land
