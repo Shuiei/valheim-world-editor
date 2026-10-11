@@ -129,7 +129,7 @@ public static class GameLocations
 		try
 		{
 			var manifest = Manifest.Read(bundles.Folder);
-			var scanned = manifest.SceneBundles("main").Where(bundles.HasBundle).ToList();
+			var scanned = MainSceneBundles(bundles, manifest);
 			if (scanned.Count == 0)
 			{
 				return null;
@@ -164,6 +164,12 @@ public static class GameLocations
 			return null;
 		}
 	}
+
+	// The main scene's bundle and the bundles it needs, those the folder has (the SoftRef manifest lists
+	// them): where ZoneSystem and the LocationLists are (also the vegetation rules, GameCatalogues).
+	internal static List<string> MainSceneBundles(GameBundles bundles) => MainSceneBundles(bundles, Manifest.Read(bundles.Folder));
+
+	private static List<string> MainSceneBundles(GameBundles bundles, Manifest manifest) => manifest.SceneBundles("main").Where(bundles.HasBundle).ToList();
 
 	// The cached rules when they are for this game and editor and can be read; else null (read again).
 	private static SeedLocations.RuleSet? Cached(string file, string stamp)

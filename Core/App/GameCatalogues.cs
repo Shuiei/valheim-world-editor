@@ -8,15 +8,13 @@ namespace TerrainEditor.App;
 
 // The catalogues in Core/WorldGen (in git, embedded in the app) made again from the game's files, for
 // developers after a game update: --export-catalogues <folder> [name ...]. Each catalogue is what the
-// editor needs of one kind of game component (vegetation, dungeons), read from
-// every asset bundle. The bundles are read once, in the order of their file names, each in the order
-// it lists its files and objects: the order entries come in, and which one wins when a name is found
-// twice. What needs names from other bundles (the vegetation's prefabs) reads them after. The files
-// are written as they always were (CatalogueJson), so making them again shows in git only what the
-// game changed.
+// editor needs of one kind of game component (dungeons), read from every asset bundle. The bundles are
+// read once, in the order of their file names, each in the order it lists its files and objects: the
+// order entries come in, and which one wins when a name is found twice. The files are written as they
+// always were (CatalogueJson), so making them again shows in git only what the game changed.
 public static partial class GameCatalogues
 {
-	public static readonly string[] All = { "vegetation", "dungeon-rooms" };
+	public static readonly string[] All = { "dungeon-rooms" };
 
 	// Written gzipped (the largest).
 	private static readonly string[] Gzipped = { "dungeon-rooms" };
@@ -72,9 +70,8 @@ public static partial class GameCatalogues
 	private static Dictionary<string, string> Make(string valheim, GameBundles bundles, HashSet<string> names)
 	{
 		var made = new Dictionary<string, string>();
-		var vegetation = names.Contains("vegetation") ? new VegetationScan() : null;
 		var dungeons = names.Contains("dungeon-rooms") ? new DungeonScan() : null;
-		var scans = new IScan?[] { vegetation, dungeons }.OfType<IScan>().ToList();
+		var scans = new IScan?[] { dungeons }.OfType<IScan>().ToList();
 		if (scans.Count > 0)
 		{
 			using var game = new Game(bundles.Folder);
@@ -94,10 +91,6 @@ public static partial class GameCatalogues
 				{
 					Console.WriteLine($"{i} of {game.Bundles.Count} bundles read");
 				}
-			}
-			if (vegetation != null)
-			{
-				made["vegetation"] = CatalogueJson.Write(vegetation.Finish(game), new Style(",", Indent: 0));
 			}
 			if (dungeons != null)
 			{

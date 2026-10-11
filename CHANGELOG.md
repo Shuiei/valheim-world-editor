@@ -29,10 +29,11 @@ the plugin is unchanged in versions without that part.
 - **The editor reads how the game's locations shape the ground, the game's objects (what new ones
   need in the save, containers, wards, saplings, what stands hold), the build pieces (their
   footprints, snap points, build tools, what holds them up and how the hammer places them), the names
-  of object data, the cave roof rocks' shapes and what pieces cost from your Valheim**, like the
-  game's look, instead of keeping its own copy, which went out of date with game updates: they always
-  match your version of the game. It takes a few seconds the first time and after a game update.
-  Valheim is now needed: without it, no world or Workshop opens (the start page asks for its folder).
+  of object data, the cave roof rocks' shapes, what pieces cost and the vegetation rules Regrow nature
+  follows from your Valheim**, like the game's look, instead of keeping its own copy, which went out
+  of date with game updates: they always match your version of the game. It takes a few seconds the
+  first time and after a game update. Valheim is now needed: without it, no world or Workshop opens
+  (the start page asks for its folder).
 - **The world generator is about a third faster** (worlds' map previews, Regrow nature, new worlds),
   with the same results to the bit.
 
