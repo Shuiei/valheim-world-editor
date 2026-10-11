@@ -18,9 +18,10 @@ namespace TerrainEditor.Desktop.Tests;
 public class DriverTests
 {
     /// <summary>
-    /// A shown window and a copy of the test world, deleted when disposed.
+    /// A shown window and a copy of the test world; disposed, the world is left (its session released), the window
+    /// closed, then the copy deleted.
     /// </summary>
-    private sealed class Run : IDisposable
+    private sealed class Run : IAsyncDisposable
     {
         public MainWindow W { get; } = new(load: false) { Width = 1600, Height = 1000 };
         public string Dir { get; } = Fixtures.CopyFixture();
@@ -42,7 +43,12 @@ public class DriverTests
             return JsonDocument.Parse(answer).RootElement.Clone();
         }
 
-        public void Dispose() => Directory.Delete(Path.GetDirectoryName(Dir)!, recursive: true);
+        public async ValueTask DisposeAsync()
+        {
+            await W.LeaveWorld();
+            W.CloseWithoutAsking();
+            Directory.Delete(Path.GetDirectoryName(Dir)!, recursive: true);
+        }
     }
 
     /// <summary>
@@ -57,7 +63,7 @@ public class DriverTests
     [AvaloniaFact]
     public async Task TheMapsCommandsOpenAWorldLookSearchAndPick()
     {
-        using var r = new Run();
+        await using var r = new Run();
         Assert.Equal("{}", (await r.Send($"gamedata {Fixtures.Root}")).GetRawText());
         var state = await r.Send($"world {r.Dir}");
         Assert.Equal("map", state.GetProperty("page").GetString());
@@ -90,7 +96,7 @@ public class DriverTests
     [AvaloniaFact]
     public async Task TheEditorsCommandsShapeTurnInspectAndSwitch()
     {
-        using var r = new Run();
+        await using var r = new Run();
         await r.Send($"world {r.Dir}");
         var (zx, zz) = ChestZone(r.Dir);
         var state = await r.Send($"area {zx} {zz} 1");
@@ -151,7 +157,7 @@ public class DriverTests
     [AvaloniaFact]
     public async Task AWrongCommandThrowsWithWhatIsWrong()
     {
-        using var r = new Run();
+        await using var r = new Run();
         Assert.Equal("unknown command fly", (await Assert.ThrowsAsync<InvalidOperationException>(() => r.Send("fly"))).Message);
         Assert.Equal("no area open", (await Assert.ThrowsAsync<InvalidOperationException>(() => r.Send("stroke raise 0 0 1"))).Message);
         Assert.Equal("no area open", (await Assert.ThrowsAsync<InvalidOperationException>(() => r.Send("inspect piece_chest_wood"))).Message);

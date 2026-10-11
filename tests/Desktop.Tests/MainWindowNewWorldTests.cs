@@ -15,9 +15,9 @@ public class MainWindowNewWorldTests
     public async Task ANewWorldIsMadeAndOpened()
     {
         string dir = Path.Combine(Path.GetTempPath(), "vwe-newworld-" + Guid.NewGuid().ToString("N")[..8]);
+        var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
         try
         {
-            var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
             w.Show();
             w.ShowNewWorld();
             Assert.NotNull(w.NewWorld);
@@ -33,6 +33,9 @@ public class MainWindowNewWorldTests
         }
         finally
         {
+            // The world left (its session released) and the window closed before its folder goes.
+            await w.LeaveWorld();
+            w.CloseWithoutAsking();
             if (Directory.Exists(dir))
             {
                 Directory.Delete(dir, recursive: true);
@@ -44,9 +47,9 @@ public class MainWindowNewWorldTests
     public async Task AFolderHoldingAWorldIsNeverWrittenOver()
     {
         string dir = Fixtures.CopyFixture();
+        var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
         try
         {
-            var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
             w.Show();
             w.ShowNewWorld();
             var page = w.NewWorld!;
@@ -58,6 +61,7 @@ public class MainWindowNewWorldTests
         }
         finally
         {
+            w.CloseWithoutAsking();
             Directory.Delete(Path.GetDirectoryName(dir)!, recursive: true);
         }
     }
