@@ -6,11 +6,16 @@ language: en-US
 reviews:
   profile: chill
   request_changes_workflow: true
+  # Not `@coderabbitai approve` by a pull request's own author: the approval stays CodeRabbit's.
+  allow_author_approval: false
   high_level_summary: true
   poem: false
   auto_review:
     enabled: true
     drafts: false
+    # Every push reviewed, however many commits (else it pauses after 5, and the latest commit, so
+    # the approval, waits).
+    auto_pause_after_reviewed_commits: 0
     # Every pull request, also those stacked on another branch than main.
     base_branches:
       - ".*"
