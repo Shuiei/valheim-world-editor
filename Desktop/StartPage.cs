@@ -68,7 +68,7 @@ public sealed class StartPage
 	internal Button GetHomesteadButton { get; } = new() { Content = "Get Homestead", FontSize = 11, Padding = new Thickness(6, 1), IsVisible = false };
 	private readonly TextBlock _gameError = Err();
 
-	private static readonly IBrush Panel = Ui.Panel, Line = Ui.Line, Accent = Ui.Accent, Muted = Ui.Muted;
+	private static readonly IBrush Line = Ui.Line, Muted = Ui.Muted;
 
 	internal static string Tilde(string path) => Ui.Tilde(path);
 

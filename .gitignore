@@ -3,7 +3,6 @@ obj/
 *.user
 # Build output placed inside the source folder by mistake
 out/
-__pycache__/
 
 # Image viewer (RawTherapee) settings written beside pictures
 *.pp3
