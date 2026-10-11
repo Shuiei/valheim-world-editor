@@ -76,4 +76,9 @@ public class FuzzFindingsTests
         }
         Refused(() => CheckedReads.Gunzip(damaged, 1 << 20));
     }
+
+    // A chunk length near int.MaxValue: p + 12 + length overflowed and passed the bounds check.
+    [Fact]
+    public void PngHugeChunkLength() =>
+        Refused(() => Png.Read(Convert.FromHexString("89504e470d0a1a0a0000000d4948445200000004000000041000000000dc0a1d217ffffff28bbaa774767765006865696768746d6170067b15070000002c49444154789c63646064626661656367e2e0e4e2494441546714101412161195930700179a8b673a3e0000f20000000000000082")));
 }

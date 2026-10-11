@@ -92,7 +92,8 @@ public static class Png
         {
             int len = (bytes[p] << 24) | (bytes[p + 1] << 16) | (bytes[p + 2] << 8) | bytes[p + 3];
             string type = Encoding.ASCII.GetString(bytes, p + 4, 4);
-            if (len < 0 || p + 12 + len > bytes.Length)
+            // Compared as what remains: p + 12 + len overflows for a length near int.MaxValue.
+            if (len < 0 || len > bytes.Length - p - 12)
             {
                 throw new InvalidDataException("the PNG picture is cut short");
             }
