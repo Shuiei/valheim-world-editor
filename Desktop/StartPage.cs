@@ -306,24 +306,30 @@ public sealed class StartPage
 
     // ---- My game: is Valheim running with the plugin?
     private string _gameKey = "";
-    private bool _polling;
+    private Task? _poll;
+    private bool _pollAgain;
 
     // One check at a time: the timer does not wait for a slow one, and an older one finishing last
-    // would show its stale state (or error) over the newer one's.
-    internal async Task PollGame()
+    // would show its stale state (or error) over the newer one's. Asked during a check, it waits for it
+    // and one more check after (asks during the same check make that one more check together), so the
+    // state shown once it returns is newer than the ask. All on the window's thread.
+    internal Task PollGame()
     {
-        if (_polling)
+        if (_poll is { IsCompleted: false })
         {
-            return;
+            _pollAgain = true;
+            return _poll;
         }
-        _polling = true;
-        try
+        return _poll = Checks();
+
+        async Task Checks()
         {
-            await CheckGame();
-        }
-        finally
-        {
-            _polling = false;
+            do
+            {
+                _pollAgain = false;
+                await CheckGame();
+            }
+            while (_pollAgain);
         }
     }
 
