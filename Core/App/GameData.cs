@@ -21,6 +21,7 @@ public static class GameData
 	private static readonly Kind[] Kinds =
 	{
 		new("terrain-modifiers", null, TerrainModifiers.Use),
+		new("prefabs", null, PrefabCatalog.Use),
 		new("pieces", null, PieceCatalog.Use),
 		new("zdo-keys", (valheim, _) => GameCatalogues.ZdoKeysJson(valheim), ZdoKeys.Use),
 		new("cave-rocks", (_, bundles) => GameCatalogues.CaveRocksJson(bundles), CaveRocks.Use),

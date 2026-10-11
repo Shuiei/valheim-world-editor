@@ -28,6 +28,12 @@ if (args[0] == "create")
 		Console.Error.WriteLine("create needs <folder> <name> <seed> [radius] [--flat]");
 		return 2;
 	}
+	// The game's prefabs, for the new world's objects.
+	if (!GameData.Ensure(GameBundles.ForGame(GameLook.FindValheim(AppSettings.Load().ValheimPath), GameLook.IndexFile)))
+	{
+		Console.Error.WriteLine(GameData.Missing);
+		return 1;
+	}
 	try
 	{
 		int radius = args.Length > 4 && args[4] != "--flat" ? int.Parse(args[4], CultureInfo.InvariantCulture) : 0;

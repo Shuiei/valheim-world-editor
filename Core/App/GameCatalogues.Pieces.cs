@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using AssetsTools.NET;
 using AssetsTools.NET.Extra;
 using Dict = TerrainEditor.App.CatalogueJson.Dict;
@@ -381,6 +382,105 @@ public static partial class GameCatalogues
 				return;
 			}
 			if ((t["m_Father.m_PathID"].AsLong == 0) != roots.Contains(go))
+			{
+				throw new InvalidDataException("The game's objects are not laid out as the editor expects (another Unity version?).");
+			}
+		}
+
+		// A bundle's tree, read raw: each GameObject's name and components (file id, path id) and each
+		// Transform's GameObject, whether it is a root (no parent) and its children, by file and path id.
+		public sealed record Tree(Dictionary<(Bundle.Inner, long), (string Name, (int File, long Pid)[] Components)> GameObjects, Dictionary<(Bundle.Inner, long), (long Go, bool Root, long[] Children)> Transforms)
+		{
+			public Tree()
+				: this(new(), new())
+			{
+			}
+
+			// A GameObject's or Transform's numbers, from its bytes. A GameObject has its components first
+			// (a count, then each a file id and a path id), then its layer and name; a Transform its
+			// GameObject, rotation, position and scale, then its children and its parent.
+			public void Add(Bundle.Inner f, long pid, int type, Bytes d)
+			{
+				if (type == GameObjectType)
+				{
+					var comps = new (int, long)[d.I32(0)];
+					for (int i = 0; i < comps.Length; i++)
+					{
+						comps[i] = (d.I32(4 + 12 * i), d.I64(8 + 12 * i));
+					}
+					int name = 8 + 12 * comps.Length;
+					GameObjects[(f, pid)] = (d.Text(name), comps);
+				}
+				else if (type == TransformType)
+				{
+					var children = new long[d.I32(52)];
+					for (int i = 0; i < children.Length; i++)
+					{
+						children[i] = d.I64(60 + 12 * i);
+					}
+					int father = 56 + 12 * children.Length;
+					Transforms[(f, pid)] = (d.I64(4), d.I32(father) == 0 && d.I64(father + 4) == 0, children);
+				}
+			}
+		}
+
+		// An object's bytes, with the file's byte order.
+		public readonly ref struct Bytes(ReadOnlySpan<byte> data, bool bigEndian)
+		{
+			private readonly ReadOnlySpan<byte> _data = data;
+
+			public int I32(int at) => bigEndian ? BinaryPrimitives.ReadInt32BigEndian(_data[at..]) : BinaryPrimitives.ReadInt32LittleEndian(_data[at..]);
+
+			public long I64(int at) => bigEndian ? BinaryPrimitives.ReadInt64BigEndian(_data[at..]) : BinaryPrimitives.ReadInt64LittleEndian(_data[at..]);
+
+			// A string: its length, then its UTF-8 bytes.
+			public string Text(int at) => System.Text.Encoding.UTF8.GetString(_data.Slice(at + 4, I32(at)));
+		}
+
+		public delegate void Parse(Bundle.Inner f, long pid, int type, Bytes data);
+
+		// These objects (each in its file) read raw in one sweep of the bundle, in the order of its files,
+		// each given whole to parse; with: others read whole (Field) in the same sweep.
+		public static void Sweep(Bundle b, IEnumerable<(Bundle.Inner File, long Pid)> raw, Parse parse, IEnumerable<(Bundle.Inner File, long Pid)>? with = null)
+		{
+			var rawIn = raw.ToLookup(o => o.File, o => o.Pid);
+			var wholeIn = (with ?? Enumerable.Empty<(Bundle.Inner, long)>()).ToLookup(o => o.File, o => o.Pid);
+			foreach (var f in b.Files)
+			{
+				var file = f.Assets.file;
+				// Where each starts; read whole: -1 as its size.
+				var objects = rawIn[f].Distinct().Select(p => (Info: file.GetAssetInfo(p), Whole: false)).Concat(wholeIn[f].Distinct().Select(p => (Info: file.GetAssetInfo(p), Whole: true)))
+					.Where(o => o.Info != null).Select(o => (o.Info!.PathId, At: o.Info.GetAbsoluteByteOffset(file), Size: o.Whole ? -1 : (int)o.Info.ByteSize, o.Info.TypeId)).ToArray();
+				Array.Sort(objects, (x, y) => x.At.CompareTo(y.At));
+				foreach (var (pid, at, size, type) in objects)
+				{
+					if (size < 0)
+					{
+						b.Field(f, pid);
+						continue;
+					}
+					file.Reader.Position = at;
+					parse(f, pid, type, new Bytes(file.Reader.ReadBytes(size), file.Reader.BigEndian));
+				}
+			}
+		}
+
+		// The tree as the type tree says, for one GameObject and its Transform: said, rather than read
+		// wrong (as Check above).
+		public static void Check(Bundle b, Bundle.Inner f, long go, Tree tree)
+		{
+			if (b.Field(f, go) is not { } g || !tree.GameObjects.TryGetValue((f, go), out var raw))
+			{
+				return;
+			}
+			var comps = raw.Components;
+			bool same = g["m_Name"].AsString == raw.Name && g["m_Component.Array"].Children.Select(c => (c["component.m_FileID"].AsInt, c["component.m_PathID"].AsLong)).SequenceEqual(comps);
+			if (comps.FirstOrDefault(c => Bundle.TypeOf(f, c.Pid) == TransformType) is (_, long tr and not 0) && b.Field(f, tr) is { } t && tree.Transforms.TryGetValue((f, tr), out var node))
+			{
+				same &= t["m_GameObject.m_PathID"].AsLong == node.Go && (t["m_Father.m_FileID"].AsInt == 0 && t["m_Father.m_PathID"].AsLong == 0) == node.Root
+					&& t["m_Children.Array"].Children.Select(c => c["m_PathID"].AsLong).SequenceEqual(node.Children);
+			}
+			if (!same)
 			{
 				throw new InvalidDataException("The game's objects are not laid out as the editor expects (another Unity version?).");
 			}
