@@ -1,5 +1,7 @@
 # Development
 
+How the parts fit and the rules to keep when changing them: [architecture.md](architecture.md).
+
 ## Project layout
 
 | Path | What it holds |
