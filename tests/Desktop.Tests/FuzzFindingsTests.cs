@@ -39,4 +39,9 @@ public class FuzzFindingsTests
     [Fact]
     public void SnapshotNegativeZonePackageLength() =>
         Refused(() => WorldSave.LoadLive(Gzip(Convert.FromHexString("56574542010000000000000073740a47e5c22722c3e2f2d8f9ffffffff88")), "fuzz"));
+
+    // A container's crafter name with a negative length (BinaryReader threw a plain IOException).
+    [Fact]
+    public void InventoryNegativeStringLength() =>
+        Refused(() => InventoryData.Read(Convert.FromHexString("266d000000d9ffffd9ff01006f27040affffffff0a27040affffffff0a")));
 }
