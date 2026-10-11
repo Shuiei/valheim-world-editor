@@ -264,7 +264,8 @@ public sealed class GameBundles
             try
             {
                 bool znv = false, creature = false, item = false;
-                foreach (var (t, _, f) in Components(at.Bundle, Read(at.Bundle, at.PathId)!))
+                // A root that cannot be read (its bundle without type trees): nothing known of it.
+                foreach (var (t, _, f) in Read(at.Bundle, at.PathId) is { } root ? Components(at.Bundle, root) : [])
                 {
                     if (t != (int)AssetClassID.MonoBehaviour)
                     {
@@ -472,7 +473,8 @@ public sealed class GameBundles
         {
             var (_, a) = Open(bundle);
             var list = new List<AssetTypeValueField>();
-            foreach (var info in a.file.GetAssetsOfType(AssetClassID.MonoBehaviour))
+            // Without type trees no script's fields are described: none read.
+            foreach (var info in a.file.Metadata.TypeTreeEnabled ? a.file.GetAssetsOfType(AssetClassID.MonoBehaviour) : [])
             {
                 try
                 {
@@ -527,7 +529,8 @@ public sealed class GameBundles
     }
 
     /// <summary>
-    /// An object's fields, null when the bundle has no such object; kept in <c>_fields</c> until the read is over.
+    /// An object's fields, null when the bundle has no such object or does not describe its objects' fields (no type
+    /// trees: the editor has no class database to read them by); kept in <c>_fields</c> until the read is over.
     /// </summary>
     private AssetTypeValueField? Read(string bundle, long pathId)
     {
@@ -537,7 +540,7 @@ public sealed class GameBundles
         }
         var (_, a) = Open(bundle);
         var info = a.file.GetAssetInfo(pathId);
-        var f = info == null ? null : _am.GetBaseField(a, info);
+        var f = info == null || !a.file.Metadata.TypeTreeEnabled ? null : _am.GetBaseField(a, info);
         _fields[(bundle, pathId)] = f;
         return f;
     }
@@ -1163,7 +1166,16 @@ public sealed class GameBundles
                     for (int k = 0; k < offs.Count; k++)
                     {
                         byte[] outBuf = new byte[full[k]];
-                        int got = LZ4ps.LZ4Codec.Decode32(blob, (int)offs[k], (int)comp[k], outBuf, 0, (int)full[k], true);
+                        int got;
+                        try
+                        {
+                            got = LZ4ps.LZ4Codec.Decode32(blob, (int)offs[k], (int)comp[k], outBuf, 0, (int)full[k], true);
+                        }
+                        catch (Exception e) when (e is IndexOutOfRangeException or ArgumentException)
+                        {
+                            // LZ4ps's own errors for a broken block or one shorter than said.
+                            got = -1;
+                        }
                         if (got != full[k])
                         {
                             throw new InvalidDataException("the terrain shader's program could not be unpacked");

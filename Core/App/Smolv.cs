@@ -104,6 +104,14 @@ public static class Smolv
             return v;
         }
         static uint Zig(uint u) => (u & 1) != 0 ? (u >> 1) ^ 0xFFFFFFFF : u >> 1;
+        byte Byte()
+        {
+            if (p >= n)
+            {
+                throw new InvalidDataException("SMOL-V data ends early");
+            }
+            return data[p++];
+        }
         uint Word()
         {
             if (p + 4 > n)
@@ -166,7 +174,7 @@ public static class Smolv
             }
             if (op == MemberDecorate)
             {
-                int count = data[p++];
+                int count = Byte();
                 uint prevIndex = 0, prevOffset = 0;
                 for (int m = 0; m < count; m++)
                 {
@@ -208,7 +216,7 @@ public static class Smolv
             }
             if (swizzle && length <= 9)
             {
-                byte s = data[p++];
+                byte s = Byte();
                 foreach (var (at2, sh) in new[] { (5, 6), (6, 4), (7, 2), (8, 0) })
                 {
                     if (length > at2)
