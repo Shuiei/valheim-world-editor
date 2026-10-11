@@ -110,6 +110,10 @@ release:
 3. Keep the BepInExPack dependency in the `tools/thunderstore/*/manifest.json` current.
 4. `tools/release.sh <folder>` and `tools/thunderstore.sh <folder>`; tag `v<version>`, publish the
    GitHub release, upload the Thunderstore zip (Thunderstore refuses a version it already has).
+   Publishing the release signs its files (`.github/workflows/sign-release.yml`, Sigstore): each
+   gets a `<file>.sigstore.json` on the release a minute later. Attach every file before publishing
+   (`gh release create` with the files does); a file added afterwards is signed by running the
+   workflow by hand (Actions > Sign release, with the tag).
 
 ## The game's files
 
