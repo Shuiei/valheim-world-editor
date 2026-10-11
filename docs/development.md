@@ -13,7 +13,6 @@
 | `plugin/WorldEditorBridge/` | The BepInEx plugin for live mode (.NET Framework 4.7.2). |
 | `tests/Desktop.Tests/` | Every test (xUnit v3, Avalonia's headless mode), see [Tests](#tests). `tests/fixtures/` holds the test world. |
 | `tools/WorldCheck/` | Developer checks of the generator and the writer, saved objects byte by byte, and new worlds from a seed, see below. |
-| `tools/asset-export/` | Python (UnityPy) scripts that make the catalogues in `Core/WorldGen/` from the game's files (developers only; not in the release). |
 | `tools/DocsScreenshots/` | `Scenes.cs` builds and takes the pictures in `docs/images/`, through `Editor.cs`, which drives the app. |
 | `tools/release.sh`, `tools/check-package.sh` | The release packages, and their check. |
 
@@ -152,28 +151,27 @@ the user chose) and keeps the one reader, `Core/App/GameBundles.cs`:
 `tests/Desktop.Tests/GameFilesTests.cs` (`--filter Category=Game`) checks the models against a copy the
 older Python exporter made, where both are on the computer.
 
-The catalogues that are in git are made by `scan_pieces.py` (`Core/WorldGen/pieces.json`, with each
-piece's snap points), `scan_modifiers.py` (`Core/WorldGen/terrain-modifiers.json`) and
-`scan_prefabs.py` (`Core/WorldGen/prefabs.json`: also container sizes, ward radii and crafting
-station build ranges); each takes the output file as argument and the bundle folder in
-`VWE_BUNDLES`, and follows references between bundles with `tools/asset-export/cab_index.json`, made
-by `make_cab_index.py` (once, and again after a game update; `pip install -r
-tools/asset-export/requirements.txt` first). `scan_vegetation.py Core/WorldGen/vegetation.json` makes the game's vegetation rules
-for Regrow nature (ZoneSystem's and the location lists', with the random draws each kind makes when
-it is created). `scan_grown.py Core/WorldGen/prefabs.json` (run after `scan_prefabs.py`) adds what
-each sapling grows into (grown crops and trees keep their sapling's grow radius).
-`scan_stands.py Core/WorldGen/prefabs.json` (also after `scan_prefabs.py`) adds what stands may hold:
-each item's type, attach points, variants and durability, each item stand's rule (types, items it also
-takes or refuses) and each armour stand's slots, for the inspector's Holds / Wears and Claude's
-`set_contents`.
-`scan_build_tools.py Core/WorldGen/pieces.json Core/WorldGen/prefabs.json` (run after the other two)
-adds which build tool's menu has each piece (hammer, hoe, cultivator, feaster): the editor writes a
-builder on new pieces of those kinds. `scan_zdo_keys.py <Valheim folder>
-Core/WorldGen/zdo-keys.json` makes the names of object data keys for the object inspector, from the
-string literals of `assembly_valheim.dll` (the save only keeps their hashes).
-`scan_dungeon_rooms.py Core/WorldGen/dungeon-rooms.json` (then gzip it to `dungeon-rooms.json.gz`)
-makes the Dungeon tool's catalogue: each dungeon kind's themes and space, and each room's size,
-openings and the objects the game makes in it with the random parts that decide them.
+The catalogues that are in git (`Core/WorldGen/`, embedded in the app) are made from the game's files
+by the editor itself, in C# on the same reader (`Core/App/GameCatalogues*.cs`): after a game update,
+`ValheimWorldEditor --export-catalogues Core/WorldGen` makes them all again (about 6 minutes: every
+bundle is read once), and `--export-catalogues <folder> <name> ...` only those named (`prefabs`,
+`pieces`, `piece-cost`...). They are `pieces.json` (each piece's category, comfort, footprint and snap
+points, and which build tool's menu has it: hammer, hoe, cultivator, feaster, for the builder the
+editor writes on new pieces), `prefabs.json` (every networked prefab with what a new object of it
+needs in the save; also container sizes, ward radii, crafting station build ranges, what each sapling
+grows into, and what stands may hold: each item's type, attach points, variants and durability, each
+item stand's rule and each armour stand's slots, for the inspector's Holds / Wears and Claude's
+`set_contents`), `piece-cost.json` (each piece's English name, station and resources, for the
+blueprint library), `piece-place.json.gz` (the hammer's placement flags, snap points and colliders,
+for the Workshop's Build), `piece-support.json` (materials and collider boxes for the stability
+check), `terrain-modifiers.json`, `vegetation.json` (the game's vegetation rules for Regrow nature,
+ZoneSystem's and the location lists', with the random draws each kind makes when it is created),
+`cave-rocks.json` (the cave roof rocks' meshes), `dungeon-rooms.json.gz` (the Dungeon tool's
+catalogue: each dungeon kind's themes and space, and each room's size, openings and the objects the
+game makes in it with the random parts that decide them) and `zdo-keys.json` (the names of object
+data keys for the object inspector, from the string literals of `assembly_valheim.dll`: the save only
+keeps their hashes). The files are written exactly as before (`Core/App/CatalogueJson.cs`: the same
+number format, key order and separators), so a new export shows in git only what the game changed.
 
 The game's location rules (for the New world page's start, bosses and traders) are read by the editor
 itself, in C# (`Core/App/GameLocations.cs`), from the player's Valheim, and kept in the data folder
