@@ -5,23 +5,23 @@ namespace TerrainEditor.App;
 // the file has it from the start (no moment where others can read a saved password).
 public static class SafeFile
 {
-	public static void WriteAllText(string path, string text, UnixFileMode? mode = null)
-	{
-		Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
-		string temp = path + ".tmp";
-		var options = new FileStreamOptions { Mode = FileMode.Create, Access = FileAccess.Write };
-		if (mode is { } m && !OperatingSystem.IsWindows())
-		{
-			options.UnixCreateMode = m;
-		}
-		File.Delete(temp);
-		using (var stream = new FileStream(temp, options))
-		using (var writer = new StreamWriter(stream))
-		{
-			writer.Write(text);
-			writer.Flush();
-			stream.Flush(flushToDisk: true);
-		}
-		File.Move(temp, path, overwrite: true);
-	}
+    public static void WriteAllText(string path, string text, UnixFileMode? mode = null)
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
+        string temp = path + ".tmp";
+        var options = new FileStreamOptions { Mode = FileMode.Create, Access = FileAccess.Write };
+        if (mode is { } m && !OperatingSystem.IsWindows())
+        {
+            options.UnixCreateMode = m;
+        }
+        File.Delete(temp);
+        using (var stream = new FileStream(temp, options))
+        using (var writer = new StreamWriter(stream))
+        {
+            writer.Write(text);
+            writer.Flush();
+            stream.Flush(flushToDisk: true);
+        }
+        File.Move(temp, path, overwrite: true);
+    }
 }

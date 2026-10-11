@@ -14,35 +14,35 @@ using TerrainEditor.DocsScreenshots;
 // BepInEx, so the start page and the Blueprints panel show it installed.
 if (args.Length < 1)
 {
-	Console.Error.WriteLine("usage: DocsScreenshots <dir> [scene ...]");
-	return 2;
+    Console.Error.WriteLine("usage: DocsScreenshots <dir> [scene ...]");
+    return 2;
 }
 string dir = args[0];
 string output = Environment.GetEnvironmentVariable("DOCS_OUT") is { Length: > 0 } o ? o : Path.Combine(Editor.Repo, "docs", "images");
 var scenes = new Scenes(dir, output);
-var names = args.Length > 1 ? args[1..] : scenes.All.Select(s => s.Name).ToArray();
+string[] names = args.Length > 1 ? args[1..] : [.. scenes.All.Select(s => s.Name)];
 Directory.CreateDirectory(output);
 string? homestead = Environment.GetEnvironmentVariable("HOMESTEAD_DLL") is { Length: > 0 } h ? h : null;
 foreach (string name in names)
 {
-	var started = Stopwatch.StartNew();
-	// Each scene in a fresh editor: nothing carries over, nothing is saved.
-	bool start = name == "start";
-	using (var e = new Editor(gameWorld: start ? "Docs" : null, worlds: start ? [$"{dir}/Docs", $"{dir}/Fjordheim"] : null,
-		homestead: homestead, recent: start ? [$"{dir}/Fjordheim", $"{dir}/Docs"] : null))
-	{
-		try
-		{
-			var scene = scenes.All.FirstOrDefault(s => s.Name == name).Run
-				?? throw new ArgumentException($"no scene named {name}");
-			scene(e);
-		}
-		catch (Exception ex)
-		{
-			Console.WriteLine($"{name}: FAILED {ex.Message}");
-			continue;
-		}
-	}
-	Console.WriteLine($"{name}: {started.Elapsed.TotalSeconds:0} s");
+    var started = Stopwatch.StartNew();
+    // Each scene in a fresh editor: nothing carries over, nothing is saved.
+    bool start = name == "start";
+    using (var e = new Editor(gameWorld: start ? "Docs" : null, worlds: start ? [$"{dir}/Docs", $"{dir}/Fjordheim"] : null,
+        homestead: homestead, recent: start ? [$"{dir}/Fjordheim", $"{dir}/Docs"] : null))
+    {
+        try
+        {
+            var scene = scenes.All.FirstOrDefault(s => s.Name == name).Run
+                ?? throw new ArgumentException($"no scene named {name}");
+            scene(e);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"{name}: FAILED {ex.Message}");
+            continue;
+        }
+    }
+    Console.WriteLine($"{name}: {started.Elapsed.TotalSeconds:0} s");
 }
 return 0;
