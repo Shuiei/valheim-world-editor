@@ -14,7 +14,7 @@
 #                  Linux one starts and draws the test world (tools/smoke-test.sh, under Xvfb)
 #   windows-smoke  the Windows package does the same on a Windows machine (tools/smoke-test.ps1)
 # Security and bug patterns (CodeQL) are checked by GitHub's code scanning, set up on GitHub itself.
-# What CI cannot cover: the plugin build and the game-look export (both need Valheim's files), the
+# What CI cannot cover: the plugin build and reading the game's data (both need Valheim's files), the
 # visual tests (they need a display and OpenGL) and live mode against a real game.
 version: 2.1
 

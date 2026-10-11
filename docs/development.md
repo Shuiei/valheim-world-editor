@@ -149,8 +149,8 @@ the user chose) and keeps the one reader, `Core/App/GameBundles.cs`:
   SPIRV-Cross turns it into the same GLSL (`Core/App/TerrainShader.cs`). If a game update changes the
   shader, the converter says so instead of drawing a broken one.
 
-`tests/Desktop.Tests/GameFilesTests.cs` (`--filter Category=Game`) checks the models against a copy the
-older Python exporter made, where both are on the computer.
+`tests/Desktop.Tests/GameFilesTests.cs` (`--filter Category=Game`) checks the terrain and map read from
+the game, where Valheim is on the computer.
 
 None of the game's data is kept in the repository or the app: the editor reads what it needs from
 the player's Valheim at its start (`Core/App/GameData.cs`, one entry per kind; the readers are in
@@ -265,8 +265,9 @@ CircleCI (`.circleci/config.yml`) runs on every push and pull request:
 | `native-tests` | `tests/Desktop.Tests` without the visual tests, with OpenSSH's server installed (`VWE_NEED_SSHD=1`), on three containers that each run a third of the test classes, shared out by their last times (`tools/ci-tests.sh`). |
 | `packages` | Both release packages build (without the plugin), and `tools/check-package.sh` finds everything they need and no source code, debug files or game files. |
 
-Not covered by CI: the visual tests (no display), building the plugin and the game-look export
-(both need Valheim's own files), and live mode against a real game.
+Not covered by CI: the visual tests (no display), building the plugin and reading the game's data
+(both need Valheim's own files: the tests use their copies in `tests/fixtures`), and live mode
+against a real game.
 
 Running them locally:
 
