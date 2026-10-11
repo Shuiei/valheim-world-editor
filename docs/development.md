@@ -330,8 +330,9 @@ read). Any other exception, a hang or a huge allocation is a bug.
   fails the run, shows in code scanning (category `clusterfuzzlite`) and its input is the run's
   artifact. Not on pull requests: it takes too long; run the workflow by hand from the Actions tab to
   fuzz a change first. `cflite_cron.yml` prunes the corpus once a week.
-- **`FuzzPropertiesTests`** (FsCheck, `tests/Core.Tests/Integration`) checks the same readers in the test suite on every pull request:
-  made-up and cut-short inputs are read or refused, and what the editor writes reads back.
+- **`FuzzPropertiesTests`** (FsCheck, `tests/Core.Tests/Integration`) checks the same readers in the
+  test suite on every pull request: made-up and cut-short inputs are read or refused, and what the
+  editor writes reads back.
 
 To fuzz on your computer, with OSS-Fuzz's helper (`git clone https://github.com/google/oss-fuzz`) and
 Docker or Podman:
@@ -351,6 +352,6 @@ of the corpus folder.
 
 A crash found is fixed in the reader (a damaged input refused with `InvalidDataException`), and its
 minimized input (`-minimize_crash=1`) becomes a test in `FuzzFindingsTests`
-(`tests/Core.Tests/Integration`). A new reader of outside
-files gets a target in `tests/Fuzz/Program.cs` and the `TARGETS` list of `.clusterfuzzlite/build.sh`,
-seeds and a dictionary, and a property in `FuzzPropertiesTests`.
+(`tests/Core.Tests/Integration`). A new reader of outside files gets a target in
+`tests/Fuzz/Program.cs` and the `TARGETS` list of `.clusterfuzzlite/build.sh`, seeds and a
+dictionary, and a property in `FuzzPropertiesTests`.
