@@ -3,19 +3,21 @@ using System.Text.Json;
 namespace TerrainEditor.Terrain;
 
 // What build pieces cost in game, for the blueprint library: each piece's English name, its resources
-// (item and amount, as the hammer takes them) and the crafting station that must be near to build it
-// (piece-cost.json, --export-catalogues, from the game's Piece components).
+// (item and amount, as the hammer takes them) and the crafting station that must be near to build it,
+// read from the player's own Valheim (GameData; the tests use tests/fixtures/piece-cost.json).
 public static class PieceCost
 {
 	public sealed record Info(string Name, string? Station, (string Item, int Amount)[] Resources);
 
-	private static readonly Lazy<(Dictionary<string, Info> Pieces, Dictionary<string, string> Items)> Data = new(Load);
+	// None until Use: no world or Workshop opens before then (GameData).
+	private static volatile Data Catalogue = new(new(), new());
 
-	private static (Dictionary<string, Info>, Dictionary<string, string>) Load()
+	private sealed record Data(Dictionary<string, Info> Pieces, Dictionary<string, string> Items);
+
+	// The pieces and items, as GameCatalogues.PieceCostJson writes them.
+	public static void Use(string json)
 	{
-		using Stream s = typeof(PieceCost).Assembly.GetManifestResourceStream("TerrainEditor.piece-cost.json")
-			?? throw new InvalidOperationException("piece-cost.json is not embedded");
-		using JsonDocument doc = JsonDocument.Parse(s);
+		using JsonDocument doc = JsonDocument.Parse(json);
 		var pieces = new Dictionary<string, Info>();
 		foreach (JsonProperty p in doc.RootElement.GetProperty("pieces").EnumerateObject())
 		{
@@ -23,13 +25,13 @@ public static class PieceCost
 			pieces[p.Name] = new Info(p.Value.GetProperty("n").GetString()!, p.Value.TryGetProperty("st", out var st) ? st.GetString() : null, res);
 		}
 		var items = doc.RootElement.GetProperty("items").EnumerateObject().ToDictionary(p => p.Name, p => p.Value.GetString()!);
-		return (pieces, items);
+		Catalogue = new Data(pieces, items);
 	}
 
-	public static Info? Get(string prefab) => Data.Value.Pieces.GetValueOrDefault(prefab);
+	public static Info? Get(string prefab) => Catalogue.Pieces.GetValueOrDefault(prefab);
 
 	// An item's English name (Wood, Fine wood, Bronze nails), else its prefab name.
-	public static string ItemName(string item) => Data.Value.Items.GetValueOrDefault(item, item);
+	public static string ItemName(string item) => Catalogue.Items.GetValueOrDefault(item, item);
 
 	// A piece's English name, else its prefab name.
 	public static string PieceName(string prefab) => Get(prefab)?.Name ?? prefab;

@@ -5,7 +5,8 @@ using V3 = (double X, double Y, double Z);
 
 namespace TerrainEditor.App;
 
-// The build pieces' catalogues: every prefab whose root has a Piece component.
+// The build pieces' catalogues: every prefab whose root has a Piece component; and what the editor
+// reads of them at its start (GameData): their costs.
 public static partial class GameCatalogues
 {
 	private const int BoxColliderType = (int)AssetClassID.BoxCollider;
@@ -192,10 +193,28 @@ public static partial class GameCatalogues
 		}
 	}
 
-	// piece-cost.json: each piece's English name, the crafting station it needs nearby and its
-	// resources (item and amount, and whether it is given back), items by prefab name with their English
-	// names, for the blueprint library's material cost.
-	private sealed class CostScan : IScan
+	// What build pieces cost, for the editor to read at its start (GameData): the prefabs found from the
+	// Piece scripts (told by their class, nothing else read), not by reading every GameObject.
+	public static string PieceCostJson(GameBundles bundles)
+	{
+		using var game = new Game(bundles.Folder);
+		game.IndexCabs();
+		var scan = new CostScan(Localization.English(bundles.Folder));
+		foreach (string name in game.Bundles)
+		{
+			using var b = game.Open(name);
+			if (b != null)
+			{
+				scan.Read(b, game);
+			}
+		}
+		return CatalogueJson.Write(scan.Json(), new CatalogueJson.Style(",", ":", SortKeys: true, Ascii: false));
+	}
+
+	// Each piece's English name, the crafting station it needs nearby and its resources (item and amount,
+	// and whether it is given back), items by prefab name with their English names, for the blueprint
+	// library's material cost.
+	private sealed class CostScan
 	{
 		private readonly Dictionary<string, string> _english;
 		private readonly Dict _pieces = new(), _items = new();
@@ -210,32 +229,63 @@ public static partial class GameCatalogues
 			return t.StartsWith('$') ? _english.GetValueOrDefault(t[1..], t) : t;
 		}
 
-		public void Read(Bundle b)
+		public void Read(Bundle b, Game game)
 		{
-			foreach (var (name, _, _, _, piece) in Pieces(b))
+			// The Piece scripts (told by their class) and their GameObjects, kept to the prefab roots (the
+			// locations have many pieces below theirs), in the bundle's order; only these are read whole.
+			var scripts = new HashSet<long>();
+			var owners = new List<(Bundle.Inner, long)>();
+			foreach (var (f, info) in b.Objects)
 			{
-				var res = new List<object?>();
-				foreach (var r in piece["m_resources.Array"].Children)
+				if (info.TypeId == MonoBehaviourType && game.ScriptClass(b, f, info) == "Piece" && Layout.First(f, info) is (0, var go))
 				{
-					var (item, drop) = Owner(b, r["m_resItem"]);
-					if (string.IsNullOrEmpty(item) || Num(Get(r, "m_amount", 0L)) <= 0)
-					{
-						continue;
-					}
-					if (!_items.ContainsKey(item))
-					{
-						var shared = drop!["m_itemData"]["m_shared"];
-						_items[item] = En(Has(shared, "m_name") ? shared["m_name"].AsString : item);
-					}
-					res.Add(new List<object?> { item, Py(r["m_amount"]), Get(r, "m_recover", 1L) });
+					scripts.Add(info.PathId);
+					owners.Add((f, go));
 				}
-				var entry = new Dict { ["n"] = En(Has(piece, "m_name") ? piece["m_name"].AsString : name), ["r"] = res };
-				if (Owner(b, piece["m_craftingStation"]).Component is { } station && station.Children.Count > 0)
-				{
-					entry["st"] = En(Has(station, "m_name") ? station["m_name"].AsString : "");
-				}
-				_pieces[name] = entry;
 			}
+			if (owners.Count == 0)
+			{
+				return;
+			}
+			var roots = Layout.Roots(owners);
+			Layout.Check(b, owners[0].Item2, roots);
+			foreach (var (f, info) in b.Objects)
+			{
+				if (info.TypeId != GameObjectType || !roots.Contains(info.PathId) || b.Field(f, info.PathId) is not { } go)
+				{
+					continue;
+				}
+				var piece = b.ComponentIds(go).Where(c => scripts.Contains(c.Pid)).Select(c => b.Field(c.Pid)).FirstOrDefault(p => p != null && IsPiece(p));
+				if (piece != null)
+				{
+					Add(b, go["m_Name"].AsString, piece);
+				}
+			}
+		}
+
+		private void Add(Bundle b, string name, AssetTypeValueField piece)
+		{
+			var res = new List<object?>();
+			foreach (var r in piece["m_resources.Array"].Children)
+			{
+				var (item, drop) = Owner(b, r["m_resItem"]);
+				if (string.IsNullOrEmpty(item) || Num(Get(r, "m_amount", 0L)) <= 0)
+				{
+					continue;
+				}
+				if (!_items.ContainsKey(item))
+				{
+					var shared = drop!["m_itemData"]["m_shared"];
+					_items[item] = En(Has(shared, "m_name") ? shared["m_name"].AsString : item);
+				}
+				res.Add(new List<object?> { item, Py(r["m_amount"]), Get(r, "m_recover", 1L) });
+			}
+			var entry = new Dict { ["n"] = En(Has(piece, "m_name") ? piece["m_name"].AsString : name), ["r"] = res };
+			if (Owner(b, piece["m_craftingStation"]).Component is { } station && station.Children.Count > 0)
+			{
+				entry["st"] = En(Has(station, "m_name") ? station["m_name"].AsString : "");
+			}
+			_pieces[name] = entry;
 		}
 
 		// The GameObject a component reference (same file only) is on: its name, and the component.
@@ -246,6 +296,80 @@ public static partial class GameCatalogues
 				return (null, null);
 			}
 			return (b.Field(c["m_GameObject.m_PathID"].AsLong)?["m_Name"].AsString, c);
+		}
+	}
+
+	// Objects read as laid out, a few numbers each rather than their whole fields: for the readers at
+	// the editor's start. The bundle is read in blocks, so they are read in the order of their file.
+	private static class Layout
+	{
+		// An object's first reference (a component's m_GameObject): its file id and path id.
+		public static (int FileId, long PathId) First(Bundle.Inner f, AssetFileInfo info)
+		{
+			var r = At(f, info);
+			return (r.ReadInt32(), r.ReadInt64());
+		}
+
+		// The prefab roots among these GameObjects (each in its file): those whose Transform has no
+		// parent. A GameObject has its components first (a count, then each a file id and a path id); a
+		// Transform has its parent after its GameObject, rotation, position, scale and children.
+		public static HashSet<long> Roots(IEnumerable<(Bundle.Inner File, long Go)> gos)
+		{
+			var transforms = new List<(Bundle.Inner, AssetFileInfo?, long)>();
+			foreach (var (f, info, go) in InOrder(gos.Distinct().Select(g => (g.File, (AssetFileInfo?)g.File.Assets.file.GetAssetInfo(g.Go), g.Go))))
+			{
+				var r = At(f, info);
+				for (int i = r.ReadInt32(); i > 0; i--)
+				{
+					int file = r.ReadInt32();
+					long pid = r.ReadInt64();
+					if (file == 0 && f.Assets.file.GetAssetInfo(pid) is { TypeId: TransformType } t)
+					{
+						transforms.Add((f, t, go));
+						break;
+					}
+				}
+			}
+			var roots = new HashSet<long>();
+			foreach (var (f, info, go) in InOrder(transforms))
+			{
+				var r = At(f, info);
+				r.Position += 12 + 40;
+				int children = r.ReadInt32();
+				r.Position += 12L * children;
+				if (r.ReadInt32() == 0 && r.ReadInt64() == 0)
+				{
+					roots.Add(go);
+				}
+			}
+			return roots;
+		}
+
+		// The layout read as the type tree says, for one GameObject: whether it is a root agrees with
+		// Roots. A game made with another Unity could lay objects out otherwise: said, rather than read
+		// wrong.
+		public static void Check(Bundle b, long go, HashSet<long> roots)
+		{
+			if (b.Field(go) is not { } g || b.ComponentIds(g).FirstOrDefault(c => c.Type == TransformType) is not (_, long tr and not 0) || b.Field(tr) is not { } t)
+			{
+				return;
+			}
+			if ((t["m_Father.m_PathID"].AsLong == 0) != roots.Contains(go))
+			{
+				throw new InvalidDataException("The game's objects are not laid out as the editor expects (another Unity version?).");
+			}
+		}
+
+		// By file, then by place in it (those that are not there left out); with what they stand for.
+		private static IEnumerable<(Bundle.Inner File, AssetFileInfo Info, long Of)> InOrder(IEnumerable<(Bundle.Inner File, AssetFileInfo? Info, long Of)> objects) =>
+			objects.Where(o => o.Info != null).Select(o => (o.File, Info: o.Info!, o.Of))
+				.OrderBy(o => o.File.Cab, StringComparer.Ordinal).ThenBy(o => o.Info.GetAbsoluteByteOffset(o.File.Assets.file));
+
+		private static AssetsFileReader At(Bundle.Inner f, AssetFileInfo info)
+		{
+			var file = f.Assets.file;
+			file.Reader.Position = info.GetAbsoluteByteOffset(file);
+			return file.Reader;
 		}
 	}
 

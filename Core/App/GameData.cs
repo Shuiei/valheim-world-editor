@@ -13,14 +13,16 @@ namespace TerrainEditor.App;
 public static class GameData
 {
 	// One kind: its name (the files' <name>.json), how it is read from the game (Valheim's folder, its
-	// bundles -> JSON), and who takes it.
-	private sealed record Kind(string Name, Func<string, GameBundles, string> Read, Action<string> Use);
+	// bundles -> JSON), who takes it, and how the tests' copy is trimmed (the game's and the copy's
+	// JSON -> what the copy keeps; by default the entries it has).
+	private sealed record Kind(string Name, Func<string, GameBundles, string> Read, Action<string> Use, Func<JsonElement, JsonElement, Dictionary<string, object>>? Trim = null);
 
 	private static readonly Kind[] Kinds =
 	{
 		new("terrain-modifiers", (_, bundles) => GameCatalogues.TerrainModifiersJson(bundles.Folder), TerrainModifiers.Use),
 		new("zdo-keys", (valheim, _) => GameCatalogues.ZdoKeysJson(valheim), ZdoKeys.Use),
 		new("cave-rocks", (_, bundles) => GameCatalogues.CaveRocksJson(bundles), CaveRocks.Use),
+		new("piece-cost", (_, bundles) => GameCatalogues.PieceCostJson(bundles), PieceCost.Use, TrimPieceCost),
 	};
 
 	public static string CacheFile(string kind) => Path.Combine(AppSettings.UserDataDir, $"game-{kind}.json");
@@ -184,12 +186,37 @@ public static class GameData
 				Console.Error.WriteLine(File.Exists(path) ? $"The game's {kind.Name} could not be read (see the log)." : $"{path} is missing.");
 				return 1;
 			}
-			var kept = JsonDocument.Parse(File.ReadAllText(path)).RootElement.EnumerateObject().Select(p => p.Name).ToHashSet();
+			using var copy = JsonDocument.Parse(File.ReadAllText(path));
 			using var game = JsonDocument.Parse(json);
-			var trimmed = game.RootElement.EnumerateObject().Where(p => kept.Contains(p.Name)).ToDictionary(p => p.Name, p => p.Value);
+			var trimmed = (kind.Trim ?? Entries)(game.RootElement, copy.RootElement);
 			File.WriteAllText(path, JsonSerializer.Serialize(trimmed, Indented) + "\n");
-			Console.WriteLine($"{path}: {trimmed.Count} of {kept.Count} entries" + (trimmed.Count < kept.Count ? $" (not in the game any more: {string.Join(", ", kept.Except(trimmed.Keys))})" : ""));
+			var kept = Kept(copy.RootElement, kind.Trim == null);
+			var now = Kept(JsonSerializer.SerializeToElement(trimmed), kind.Trim == null);
+			Console.WriteLine($"{path}: {now.Count} of {kept.Count} entries" + (now.Count < kept.Count ? $" (not in the game any more: {string.Join(", ", kept.Except(now))})" : ""));
 		}
 		return 0;
 	}
+
+	// The game's entries the copy has.
+	private static Dictionary<string, object> Entries(JsonElement game, JsonElement copy)
+	{
+		var kept = copy.EnumerateObject().Select(p => p.Name).ToHashSet();
+		return game.EnumerateObject().Where(p => kept.Contains(p.Name)).ToDictionary(p => p.Name, p => (object)p.Value);
+	}
+
+	// piece-cost: the pieces the copy has, and the items they take.
+	private static Dictionary<string, object> TrimPieceCost(JsonElement game, JsonElement copy)
+	{
+		var pieces = Entries(game.GetProperty("pieces"), copy.GetProperty("pieces"));
+		var items = pieces.Values.Cast<JsonElement>().SelectMany(p => p.GetProperty("r").EnumerateArray().Select(r => r[0].GetString())).ToHashSet();
+		return new()
+		{
+			["items"] = game.GetProperty("items").EnumerateObject().Where(p => items.Contains(p.Name)).ToDictionary(p => p.Name, p => p.Value),
+			["pieces"] = pieces,
+		};
+	}
+
+	// What a copy holds, to tell what went: its entries, else (trimmed its own way) those of each part.
+	private static List<string> Kept(JsonElement copy, bool entries) =>
+		copy.EnumerateObject().SelectMany(p => entries ? new[] { p.Name } : p.Value.EnumerateObject().Select(e => $"{p.Name}/{e.Name}")).ToList();
 }
