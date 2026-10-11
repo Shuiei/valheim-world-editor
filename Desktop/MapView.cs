@@ -710,7 +710,8 @@ public sealed class MapView : OpenGlControlBase
             }
         }
         float halfW = w / 2f * mpp, halfH = h / 2f * mpp;
-        if (ShowGrid && mpp < 8)
+        // Shown from 8 m a screen pixel, whatever the screen's scaling (mpp is per device pixel).
+        if (ShowGrid && MetersPerPixel < 8)
         {
             var grid = new List<float>();
             for (float x = MathF.Floor((Center.X - halfW + 32) / 64) * 64 - 32; x <= Center.X + halfW; x += 64)

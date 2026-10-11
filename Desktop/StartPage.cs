@@ -65,6 +65,7 @@ public sealed class StartPage
     // Homestead (the building library's in-game side): found in the game's BepInEx or not.
     internal TextBlock HomesteadText { get; } = new() { TextWrapping = TextWrapping.Wrap, FontSize = 12 };
     internal Button GetHomesteadButton { get; } = new() { Content = "Get Homestead", FontSize = 11, Padding = new Thickness(6, 1), IsVisible = false };
+    // Why the game could not be checked (the folders or the plugin), until a check works again.
     private readonly TextBlock _gameError = Err();
 
     private static readonly IBrush Line = Ui.Line, Muted = Ui.Muted;
@@ -323,7 +324,19 @@ public sealed class StartPage
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or HttpRequestException)
         {
+            // Polled every few seconds: the log gets a failure once, not at each poll.
+            string why = $"Your game could not be checked: {ex.Message}";
+            if (_gameError.Text != why)
+            {
+                Console.Error.WriteLine($"My game: {ex}");
+                _gameError.Text = why;
+            }
             return;
+        }
+        if (!string.IsNullOrEmpty(_gameError.Text))
+        {
+            Console.Error.WriteLine("My game: checked again.");
+            _gameError.Text = "";
         }
         string where = running?.Bridge.Where ?? bridges.FirstOrDefault()?.Where ?? "";
         string state = running != null ? "running" : bridges.Count > 0 ? "installed" : plugin ? "plugin-not-started" : bepInEx ? "no-plugin" : "no-bepinex";
@@ -589,9 +602,6 @@ public sealed class StartPage
     internal TextBlock ServerError { get; } = Err();
     internal TextBlock UrlError { get; } = Err();
     internal ContentControl GameState { get; } = new();
-
-    // The Workshop's card: whether Homestead is installed (its blueprints are the Workshop's Library).
-    internal void FillWorkshop() => ShowHomestead(Homestead.Find(_settings));
 
     // Whether Homestead is in the game: the editor's blueprints are Homestead's, built in game with it.
     internal void ShowHomestead(Homestead.Status hs)

@@ -42,58 +42,58 @@ public static class DungeonKit
     public sealed record Foe(string Spawner, string Creature);
 
     // A biome's dungeon: its walls and style when none is picked; Torch: a light standing by walls;
-    // Brazier (its position is its top: Bottom below); Flame: a light on top of pillars; Foes, Elites
+    // Brazier (lifted to its foot by DungeonProps); Flame: a light on top of pillars; Foes, Elites
     // (guards, wardens) and Boss; Chest: its treasure chest, Pickable: loot lying about; Bars: the metal
     // stacks of a treasury (taken by deconstructing); Clutter: on the ground; Hanging: on the walls;
     // Loot: items for the key chest (name, most of a stack).
-    public sealed record Biome(string Name, string Material, string Style, string Torch, string Brazier, float BrazierBottom, string Flame,
+    public sealed record Biome(string Name, string Material, string Style, string Torch, string Brazier, string Flame,
         Foe[] Foes, Foe[] Elites, Foe Boss, string Chest, string Pickable, string Bars, string[] Clutter, string[] Hanging, (string Item, int Max)[] Loot);
 
     public static readonly Biome[] Biomes =
     [
-        new("Meadows", "Stone", "Crypt", "CastleKit_groundtorch", "CastleKit_brazier", 1.06f, "Morkhalla_giant_railing_torch",
+        new("Meadows", "Stone", "Crypt", "CastleKit_groundtorch", "CastleKit_brazier", "Morkhalla_giant_railing_torch",
             [new("Spawner_Skeleton_Meadows", "Skeleton_Meadows"), new("Spawner_Skeleton", "Skeleton"), new("Spawner_Ghost", "Ghost")],
             [new("Spawner_Greydwarf_Elite", "Greydwarf_Elite")], new("Spawner_Skeleton_hildir", "Skeleton_Hildir"),
             "TreasureChest_meadows", "Pickable_DolmenTreasure", "bar_copper_stack",
             ["Pickable_ForestCryptRemains01", "Pickable_ForestCryptRemains02", "Skull1", "LargeBone", "piece_pot1_cracked", "piece_pot3_cracked"],
             ["cloth_hanging_door", "Morkhalla_WallChain1"], [("Coins", 60), ("Amber", 4), ("Flint", 10), ("LeatherScraps", 10)]),
-        new("Black Forest", "Stone", "Crypt", "CastleKit_groundtorch_green", "CastleKit_brazier", 1.06f, "Morkhalla_giant_railing_torch",
+        new("Black Forest", "Stone", "Crypt", "CastleKit_groundtorch_green", "CastleKit_brazier", "Morkhalla_giant_railing_torch",
             [new("Spawner_Skeleton", "Skeleton"), new("Spawner_Greydwarf", "Greydwarf"), new("Spawner_Greydwarf_Shaman", "Greydwarf_Shaman"), new("Spawner_Ghost", "Ghost")],
             [new("Spawner_Greydwarf_Elite", "Greydwarf_Elite"), new("Spawner_Skeleton", "Skeleton_NoArcher")], new("Spawner_Troll", "Troll"),
             "TreasureChest_forestcrypt", "Pickable_ForestCryptRandom", "bar_bronze_stack",
             ["Pickable_ForestCryptRemains01", "Pickable_ForestCryptRemains02", "Pickable_ForestCryptRemains03", "Skull1", "LargeBone", "LargeBone_half01", "piece_pot2_cracked"],
             ["cloth_hanging_door", "Morkhalla_WallChain1", "hanging_hairstrands"], [("Coins", 120), ("Amber", 6), ("AmberPearl", 3), ("Ruby", 2), ("SurtlingCore", 3)]),
-        new("Swamp", "Stone", "Crypt", "CastleKit_groundtorch_green", "MountainKit_brazier", 1.06f, "Morkhalla_giant_railing_torch",
+        new("Swamp", "Stone", "Crypt", "CastleKit_groundtorch_green", "MountainKit_brazier", "Morkhalla_giant_railing_torch",
             [new("Spawner_Draugr", "Draugr"), new("Spawner_Draugr_Ranged", "Draugr_Ranged"), new("Spawner_Skeleton_poison", "Skeleton_Poison"), new("Spawner_Blob", "Blob")],
             [new("Spawner_Draugr_Elite", "Draugr_Elite"), new("Spawner_Wraith", "Wraith")], new("Spawner_Draugr_Elite", "Draugr_Elite"),
             "TreasureChest_sunkencrypt", "Pickable_SunkenCryptRandom", "bar_iron_stack",
             ["Pickable_ForestCryptRemains02", "Pickable_ForestCryptRemains04", "Skull1", "LargeBone", "lox_ribs", "piece_pot1_cracked", "piece_pot2_cracked"],
             ["Morkhalla_WallChain1", "hanging_hairstrands", "cloth_hanging_door"], [("Coins", 200), ("Amber", 8), ("AmberPearl", 5), ("Ruby", 4), ("Iron", 6)]),
-        new("Mountain", "Stone", "Fortress", "CastleKit_groundtorch_blue", "MountainKit_brazier_blue", 1.06f, "Morkhalla_giant_railing_torch",
+        new("Mountain", "Stone", "Fortress", "CastleKit_groundtorch_blue", "MountainKit_brazier_blue", "Morkhalla_giant_railing_torch",
             [new("Spawner_Skeleton_Mountains", "Skeleton_Mountains"), new("Spawner_Ulv", "Ulv"), new("Spawner_Cultist", "Fenring_Cultist"), new("Spawner_Bat", "Bat")],
             [new("Spawner_Fenring", "Fenring"), new("Spawner_Cultist", "Fenring_Cultist")], new("Spawner_StoneGolem", "StoneGolem"),
             "TreasureChest_mountaincave", "Pickable_MountainCaveRandom", "bar_silver_stack",
             ["lox_ribs", "Skull1", "LargeBone", "Pickable_MountainCaveCrystal", "piece_pot3_cracked"],
             ["fenrirhide_hanging", "Morkhalla_WallChain1", "hanging_hairstrands"], [("Coins", 300), ("Ruby", 6), ("Silver", 6), ("Obsidian", 10), ("FreezeGland", 4)]),
-        new("Plains", "Goblin", "Goblin warren", "CastleKit_groundtorch", "CastleKit_brazier", 1.06f, "Morkhalla_giant_railing_torch",
+        new("Plains", "Goblin", "Goblin warren", "CastleKit_groundtorch", "CastleKit_brazier", "Morkhalla_giant_railing_torch",
             [new("Spawner_Goblin", "Goblin"), new("Spawner_GoblinArcher", "GoblinArcher"), new("Spawner_GoblinShaman", "GoblinShaman")],
             [new("Spawner_GoblinBrute", "GoblinBrute")], new("Spawner_GoblinBrute", "GoblinBrute"),
             "TreasureChest_plains_stone", "Pickable_DolmenTreasure", "bar_blackmetal_stack",
             ["goblin_trashpile", "goblin_strawpile", "lox_ribs", "Skull1", "LargeBone", "piece_pot3_cracked"],
             ["goblin_banner", "hanging_hairstrands"], [("Coins", 400), ("BlackMetalScrap", 10), ("Barley", 20), ("Flax", 20), ("GoblinTotem", 2)]),
-        new("Mistlands", "Dvergr", "Dvergr hold", "dvergrprops_lantern_standing", "MountainKit_brazier_purple", 1.06f, "Morkhalla_giant_railing_torch",
+        new("Mistlands", "Dvergr", "Dvergr hold", "dvergrprops_lantern_standing", "MountainKit_brazier_purple", "Morkhalla_giant_railing_torch",
             [new("Spawner_Seeker", "Seeker"), new("Spawner_Tick", "Tick"), new("Spawner_Seeker", "Seeker")],
             [new("Spawner_SeekerBrute", "SeekerBrute")], new("Spawner_SeekerBrute", "SeekerBrute"),
             "TreasureChest_dvergrtown", "Pickable_DvergrMineTreasure", "bar_iron_stack",
             ["dvergrprops_crate", "dvergrprops_barrel", "dvergrprops_pickaxe", "Skull1", "LargeBone"],
             ["dvergrprops_banner", "dvergrprops_curtain"], [("Coins", 400), ("Softtissue", 10), ("BlackCore", 2), ("DvergrNeedle", 6), ("Copper", 10)]),
-        new("Ashlands", "Grausten", "Fortress", "Morkhalla_giant_railing_torch", "CastleKit_brazier", 1.06f, "Morkhalla_giant_railing_torch",
+        new("Ashlands", "Grausten", "Fortress", "Morkhalla_giant_railing_torch", "CastleKit_brazier", "Morkhalla_giant_railing_torch",
             [new("Spawner_Charred", "Charred_Melee"), new("Spawner_Charred_Archer", "Charred_Archer"), new("Spawner_Charred_Mage", "Charred_Mage")],
             [new("Spawner_FallenValkyrie", "FallenValkyrie"), new("Spawner_Morgen", "Morgen_NonSleeping")], new("Spawner_Charred_Dyrnwyn", "Charred_Melee_Dyrnwyn"),
             "TreasureChest_charredfortress", "Pickable_MorkHallaTreasure", "bar_flametal_stack",
             ["Morkhalla_Rubble2", "ashland_pot1_red", "ashland_pot2_red", "ashland_pot3_green", "Skull1", "LargeBone"],
             ["CharredBanner3", "Morkhalla_WallChain1"], [("Coins", 500), ("CharredBone", 10), ("Grausten", 20), ("MoltenCore", 2), ("FlametalOreNew", 6)]),
-        new("Deep North", "Stave", "Temple", "deepnorth_lantern_standing", "MountainKit_brazier_blue", 1.06f, "Morkhalla_giant_railing_torch",
+        new("Deep North", "Stave", "Temple", "deepnorth_lantern_standing", "MountainKit_brazier_blue", "Morkhalla_giant_railing_torch",
             [new("Spawner_JotunWarrior", "JotunWarrior"), new("Spawner_JotunWitch", "JotunWitch"), new("Spawner_Frysling", "Frysling"), new("Spawner_Skeleton", "Skeleton_DeepNorth")],
             [new("Spawner_JotunWarrior", "JotunWarrior")], new("Spawner_JotunDualWield", "JotunWarrior"),
             "TreasureChest_deepnorth_village", "Pickable_DolmenTreasure", "bar_gold_stack",
