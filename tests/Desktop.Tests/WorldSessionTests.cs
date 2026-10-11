@@ -37,7 +37,7 @@ public sealed class WorldSessionTests : IDisposable
     public void TheNativeAppOpensIt()
     {
         WorldCreator.Create(Folder("Open"), "Open", Seed, radius: 1);
-        var world = WorldSession.Open(Folder("Open"));
+        using var world = WorldSession.Open(Folder("Open"));
         var scene = WorldScene.Load(world, 0, 0, 1);
         Assert.NotEmpty(scene.Things);
         Assert.Equal("Open", world.World.Name);
