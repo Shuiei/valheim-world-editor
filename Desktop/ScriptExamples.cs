@@ -3,11 +3,11 @@ namespace TerrainEditor.Desktop;
 // The Script tool's examples: ready to run on any open area, and to start a script of one's own from.
 public static class ScriptExamples
 {
-	public sealed record Example(string Name, string Code);
+    public sealed record Example(string Name, string Code);
 
-	public static readonly Example[] All =
-	{
-		new("Mountain range across the area", """
+    public static readonly Example[] All =
+    [
+        new("Mountain range across the area", """
 			// A range of peaks across the area, from south-west to north-east, each one different.
 			Rnd.Seed = 7;
 			int peaks = 4;
@@ -20,7 +20,7 @@ public static class ScriptExamples
 			}
 			Print("Done: Save to keep it (it becomes ground discs).");
 			"""),
-		new("Terraced hill", """
+        new("Terraced hill", """
 			// A hill in the middle of the area with flat terraces, like rice fields, painted dirt at the edges.
 			float cx = Area.CenterX, cz = Area.CenterZ, radius = 60, height = 30, steps = 6;
 			// The trees, rocks and bushes it would bury go first (buildings stay).
@@ -43,7 +43,7 @@ public static class ScriptExamples
 			        Ground.Paint(x, z, "dirt", 0.8f);
 			}
 			"""),
-		new("Canyon with a river", """
+        new("Canyon with a river", """
 			// A winding canyon across the area, 25 m deep, with water at its bottom.
 			Ground.NoLimit = true;
 			float width = 18;
@@ -59,7 +59,7 @@ public static class ScriptExamples
 			    Ground.Set(x, z, Ground.Height(x, z) + (target - Ground.Height(x, z)) * edge);
 			}
 			"""),
-		new("Scatter boulders", """
+        new("Scatter boulders", """
 			// Big boulders scattered where the noise is high, more on slopes, sized at random.
 			Rnd.Seed = 11;
 			int placed = 0;
@@ -75,7 +75,7 @@ public static class ScriptExamples
 			}
 			Print($"{placed} boulders placed.");
 			"""),
-		new("Ring of trees", """
+        new("Ring of trees", """
 			// A ring of beeches around the middle of the area (the trees standing inside it are taken away).
 			float cx = Area.CenterX, cz = Area.CenterZ, radius = 40;
 			foreach (var o in Objects.OfKind("Trees").ToList())
@@ -87,7 +87,7 @@ public static class ScriptExamples
 			    Objects.Place("Beech1", cx + MathF.Cos(a) * radius, cz + MathF.Sin(a) * radius, yaw: Rnd.Range(0, 360), scale: Rnd.Range(0.9f, 1.2f));
 			}
 			"""),
-		new("Flat paved base", """
+        new("Flat paved base", """
 			// A flat, paved square for a base in the middle of the area, at its average height, with a
 			// gentle slope back to the ground around it.
 			float cx = Area.CenterX, cz = Area.CenterZ, half = 20, blend = 10;
@@ -107,7 +107,7 @@ public static class ScriptExamples
 			    }
 			Print($"Levelled to {level:0.0} m.");
 			"""),
-		new("Noise landscape", """
+        new("Noise landscape", """
 			// Rolling land over the whole area: broad hills and valleys from noise, up to 25 m either way.
 			Ground.NoLimit = true;
 			foreach (var (x, z) in Area.Points())
@@ -118,5 +118,5 @@ public static class ScriptExamples
 			    Ground.Raise(x, z, h * edge);
 			}
 			"""),
-	};
+    ];
 }
