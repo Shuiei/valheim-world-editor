@@ -16,7 +16,7 @@ namespace TerrainEditor.App;
 // so making them again shows in git only what the game changed.
 public static partial class GameCatalogues
 {
-	public static readonly string[] All = { "prefabs", "pieces", "piece-cost", "piece-place", "piece-support", "vegetation", "cave-rocks", "dungeon-rooms" };
+	public static readonly string[] All = { "prefabs", "pieces", "piece-cost", "piece-place", "piece-support", "vegetation", "dungeon-rooms" };
 
 	// Written gzipped (the largest).
 	private static readonly string[] Gzipped = { "piece-place", "dungeon-rooms" };
@@ -132,10 +132,6 @@ public static partial class GameCatalogues
 			{
 				made["dungeon-rooms"] = CatalogueJson.Write(dungeons.Json(), new Style(",", ":"));
 			}
-		}
-		if (names.Contains("cave-rocks"))
-		{
-			made["cave-rocks"] = CatalogueJson.Write(CaveRocks(bundles), new Style(",", ":"));
 		}
 		return made;
 	}
