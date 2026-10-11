@@ -8,7 +8,7 @@ namespace TerrainEditor.App;
 
 // The catalogues in Core/WorldGen (in git, embedded in the app) made again from the game's files, for
 // developers after a game update: --export-catalogues <folder> [name ...]. Each catalogue is what the
-// editor needs of one kind of game component (pieces' colliders, vegetation, dungeons...), read from
+// editor needs of one kind of game component (vegetation, dungeons), read from
 // every asset bundle. The bundles are read once, in the order of their file names, each in the order
 // it lists its files and objects: the order entries come in, and which one wins when a name is found
 // twice. What needs names from other bundles (the vegetation's prefabs) reads them after. The files
@@ -16,10 +16,10 @@ namespace TerrainEditor.App;
 // game changed.
 public static partial class GameCatalogues
 {
-	public static readonly string[] All = { "piece-place", "vegetation", "dungeon-rooms" };
+	public static readonly string[] All = { "vegetation", "dungeon-rooms" };
 
 	// Written gzipped (the largest).
-	private static readonly string[] Gzipped = { "piece-place", "dungeon-rooms" };
+	private static readonly string[] Gzipped = { "dungeon-rooms" };
 
 	// --export-catalogues <folder> [name ...]: all catalogues, or those named (with or without .json).
 	public static int Export(string[] args)
@@ -72,10 +72,9 @@ public static partial class GameCatalogues
 	private static Dictionary<string, string> Make(string valheim, GameBundles bundles, HashSet<string> names)
 	{
 		var made = new Dictionary<string, string>();
-		var place = names.Contains("piece-place") ? new PlaceScan() : null;
 		var vegetation = names.Contains("vegetation") ? new VegetationScan() : null;
 		var dungeons = names.Contains("dungeon-rooms") ? new DungeonScan() : null;
-		var scans = new IScan?[] { place, vegetation, dungeons }.OfType<IScan>().ToList();
+		var scans = new IScan?[] { vegetation, dungeons }.OfType<IScan>().ToList();
 		if (scans.Count > 0)
 		{
 			using var game = new Game(bundles.Folder);
@@ -96,10 +95,6 @@ public static partial class GameCatalogues
 					Console.WriteLine($"{i} of {game.Bundles.Count} bundles read");
 				}
 			}
-			if (place != null)
-			{
-				made["piece-place"] = CatalogueJson.Write(place.Entries, new Style(",", ":"));
-			}
 			if (vegetation != null)
 			{
 				made["vegetation"] = CatalogueJson.Write(vegetation.Finish(game), new Style(",", Indent: 0));
@@ -116,7 +111,7 @@ public static partial class GameCatalogues
 	// needs up to their prefabs, not by reading every object of every bundle as the catalogues do
 	// (seconds, not minutes). Every kind asked for is read in one pass: each bundle opened once and
 	// given to each kind's reader.
-	public static readonly string[] AtStart = { "terrain-modifiers", "prefabs", "pieces", "piece-support", "piece-cost" };
+	public static readonly string[] AtStart = { "terrain-modifiers", "prefabs", "pieces", "piece-support", "piece-place", "piece-cost" };
 
 	// The kinds named (of AtStart), as their JSON.
 	public static Dictionary<string, string> ReadAtStart(GameBundles bundles, IReadOnlyList<string> kinds)
@@ -127,6 +122,7 @@ public static partial class GameCatalogues
 			"prefabs" => new PrefabScan(),
 			"pieces" => new PieceScan(),
 			"piece-support" => new SupportScan(),
+			"piece-place" => new PlaceScan(),
 			"piece-cost" => new CostScan(Localization.English(bundles.Folder)),
 			_ => throw new ArgumentException($"no kind {k} is read at the start"),
 		})).ToList();
@@ -434,20 +430,6 @@ public static partial class GameCatalogues
 
 		public int TypeOf(long pid) => _byId.TryGetValue(pid, out var f) ? TypeOf(f, pid) : -1;
 
-		// A GameObject's components that can be read: (type, path id, fields), looked up by path id.
-		public IEnumerable<(int Type, long Pid, AssetTypeValueField F)> Components(AssetTypeValueField go)
-		{
-			foreach (var c in go["m_Component.Array"].Children)
-			{
-				long pid = c["component.m_PathID"].AsLong;
-				int t = TypeOf(pid);
-				if (t >= 0 && Field(pid) is { } f)
-				{
-					yield return (t, pid, f);
-				}
-			}
-		}
-
 		// A reference (m_FileID, m_PathID) made in a file: null for none (path id 0).
 		public static Ref? RefOf(Inner f, AssetTypeValueField pptr)
 		{
@@ -677,14 +659,6 @@ public static partial class GameCatalogues
 				yield return ct["m_GameObject.m_PathID"].AsLong;
 			}
 		}
-	}
-
-	// A prefab: a GameObject whose Transform has no parent. Its components, or null for any other object.
-	private static List<(int Type, long Pid, AssetTypeValueField F)>? RootComponents(Bundle b, AssetTypeValueField go)
-	{
-		var comps = b.Components(go).ToList();
-		var tr = comps.FirstOrDefault(c => c.Type == TransformType);
-		return tr.F != null && tr.F["m_Father.m_PathID"].AsLong == 0 ? comps : null;
 	}
 
 	private static bool IsPiece(AssetTypeValueField f) => Has(f, "m_category") && Has(f, "m_resources") && Has(f, "m_craftingStation");

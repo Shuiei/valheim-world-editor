@@ -9,7 +9,7 @@
 | `Core/App/` | Settings (`AppSettings`), the log (`Log`), the game's files (`GameLook`, `GameBundles`, `GameLookData`, `GameShader`, `GameTextures`), Regrow, search, blueprint formats, servers and SSH (`ServerConfig`, `Tunnel`), the local game (`LocalGame`), characters, zone statistics, folders (`Places`). |
 | `Core/Save/` | Save reader (`WorldSave`, `ValheimReader`), writer (`WorldWriter`), new worlds (`WorldCreator`), object building (`ZdoTools`: copies and blank objects), the `.db2` zone list, and live mode (`LiveBridge`, `LiveSync`). |
 | `Core/Editing/` | Pending changes: terrain per zone, deleted and added objects, zone resets (`EditStore`); heights of a block of zones (`HeightGrid`). |
-| `Core/WorldGen/` | Valheim's world generator (bit-exact base terrain), map data, location flattening, the vegetation rules (`vegetation.json`) (the game data the editor reads from the player's Valheim, the terrain modifiers, prefabs, build pieces, pieces' support, object data names, cave rocks and piece costs, is not kept: `Core/App/GameData.cs`). |
+| `Core/WorldGen/` | Valheim's world generator (bit-exact base terrain), map data, location flattening, the vegetation rules (`vegetation.json`) (the game data the editor reads from the player's Valheim, the terrain modifiers, prefabs, build pieces, pieces' support and placement, object data names, cave rocks and piece costs, is not kept: `Core/App/GameData.cs`). |
 | `plugin/WorldEditorBridge/` | The BepInEx plugin for live mode (.NET Framework 4.7.2). |
 | `tests/Desktop.Tests/` | Every test (xUnit v3, Avalonia's headless mode), see [Tests](#tests). `tests/fixtures/` holds the test world. |
 | `tools/WorldCheck/` | Developer checks of the generator and the writer, saved objects byte by byte, and new worlds from a seed, see below. |
@@ -155,9 +155,8 @@ older Python exporter made, where both are on the computer.
 The catalogues that are in git (`Core/WorldGen/`, embedded in the app) are made from the game's files
 by the editor itself, in C# on the same reader (`Core/App/GameCatalogues*.cs`): after a game update,
 `ValheimWorldEditor --export-catalogues Core/WorldGen` makes them all again (about 6 minutes: every
-bundle is read once), and `--export-catalogues <folder> <name> ...` only those named (`piece-place`,
-`vegetation`...). They are `piece-place.json.gz` (the hammer's placement flags, snap points and colliders,
-for the Workshop's Build), `vegetation.json` (the game's vegetation rules for Regrow nature,
+bundle is read once), and `--export-catalogues <folder> <name> ...` only those named (`vegetation`,
+`dungeon-rooms`). They are `vegetation.json` (the game's vegetation rules for Regrow nature,
 ZoneSystem's and the location lists', with the random draws each kind makes when it is created) and
 `dungeon-rooms.json.gz` (the Dungeon tool's catalogue: each dungeon kind's themes and space, and each
 room's size, openings and the objects the game makes in it with the random parts that decide them). The files are written exactly as before (`Core/App/CatalogueJson.cs`: the same
@@ -187,8 +186,11 @@ time and after a game update). The kinds so far:
 - `piece-support`: each piece's material, centre of mass, whether it holds others and its colliders as
   boxes, for the Workshop's stability check (and Claude's `support_check`) and the blueprint pictures'
   stand-in shapes; the pieces with a `WearNTear` script on their root. The trees below the pieces are
-  read once for `pieces` and `piece-support` together (inactive branches and every collider kind too);
-  of the mesh colliders' meshes only the bounds are kept.
+  read once for `pieces`, `piece-support` and `piece-place` together (inactive branches and every
+  collider kind too); of the mesh colliders' meshes only the bounds are kept here.
+- `piece-place`: how the game's hammer places each piece, for the Workshop's Build (and Claude's
+  `place_pieces`): its placement flags, snap points and the colliders the build ray meets (mesh
+  colliders as their triangles: each mesh read once, its vertices and triangles kept, not its fields).
 - `zdo-keys`: the names of object data keys for the object inspector, from the string literals of
   `assembly_valheim.dll` (the save only keeps their hashes).
 - `cave-rocks`: the meshes of the rocks the Path tool's Cave hangs as its roof, from the two prefabs'

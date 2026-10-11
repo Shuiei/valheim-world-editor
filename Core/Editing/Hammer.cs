@@ -1,4 +1,3 @@
-using System.IO.Compression;
 using System.Numerics;
 using System.Text.Json;
 
@@ -10,8 +9,8 @@ namespace TerrainEditor.Editing;
 // moved so its collider point nearest the hit touches it (ground pieces and "clip everything" pieces:
 // their origin at the hit); then, of every snap point of the ghost and every snap point of the pieces
 // within 10 m, the closest pair within 0.5 m meets, unless that puts it right where the same piece
-// already stands. The pieces' colliders, snap points and flags come from the game
-// (piece-place.json.gz, --export-catalogues). All in world space (Unity's axes).
+// already stands. The pieces' colliders, snap points and flags are read from the player's own Valheim
+// (GameData; the tests use tests/fixtures/piece-place.json). All in world space (Unity's axes).
 public static class Hammer
 {
 	public const float SnapDistance = 0.5f, SnapRadius = 10f;
@@ -37,14 +36,13 @@ public static class Hammer
 		_ => 0,
 	};
 
-	private static readonly Lazy<Dictionary<string, Data>> All = new(Load);
+	// None until Use: no world or Workshop opens before then (GameData).
+	private static volatile Dictionary<string, Data> All = new();
 
-	private static Dictionary<string, Data> Load()
+	// The pieces by name, as GameCatalogues' PlaceScan writes them.
+	public static void Use(string json)
 	{
-		using Stream gz = typeof(Hammer).Assembly.GetManifestResourceStream("TerrainEditor.piece-place.json.gz")
-			?? throw new InvalidOperationException("piece-place.json.gz is not embedded");
-		using var s = new GZipStream(gz, CompressionMode.Decompress);
-		using JsonDocument doc = JsonDocument.Parse(s);
+		using JsonDocument doc = JsonDocument.Parse(json);
 		var result = new Dictionary<string, Data>();
 		foreach (JsonProperty p in doc.RootElement.EnumerateObject())
 		{
@@ -75,10 +73,10 @@ public static class Hammer
 			}
 			result[p.Name] = new Data(Flag("g"), Flag("cg"), Flag("ce"), Flag("ro"), snaps, shapes.ToArray());
 		}
-		return result;
+		All = result;
 	}
 
-	public static Data? Get(string prefab) => All.Value.GetValueOrDefault(prefab);
+	public static Data? Get(string prefab) => All.GetValueOrDefault(prefab);
 
 	// The points of a piece's colliders (box corners, mesh vertices, the bottoms and sides of spheres
 	// and capsules), turned and scaled, from its origin; none for a piece the game gives no collider.

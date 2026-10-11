@@ -27,7 +27,6 @@
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="WorldGen/vegetation.json" LogicalName="TerrainEditor.vegetation.json" />
-    <EmbeddedResource Include="WorldGen/piece-place.json.gz" LogicalName="TerrainEditor.piece-place.json.gz" />
     <EmbeddedResource Include="WorldGen/dungeon-rooms.json.gz" LogicalName="TerrainEditor.dungeon-rooms.json.gz" />
   </ItemGroup>
 </Project>

@@ -6,8 +6,8 @@ using V3 = (double X, double Y, double Z);
 
 namespace TerrainEditor.App;
 
-// The build pieces' catalogues: every prefab whose root has a Piece component; and what the editor
-// reads of them at its start (GameData): the pieces, their support and their costs.
+// What the editor reads of the build pieces (every prefab whose root has a Piece component) at its
+// start (GameData): the pieces, their support, their placement and their costs.
 public static partial class GameCatalogues
 {
 	private const int BoxColliderType = (int)AssetClassID.BoxCollider;
@@ -25,23 +25,6 @@ public static partial class GameCatalogues
 
 	private static bool Active(AssetTypeValueField go) => Num(Get(go, "m_IsActive", 1L)) == 1;
 
-	// Each prefab with a Piece on its root: its fields and the root's components.
-	private static IEnumerable<(string Name, long Pid, AssetTypeValueField Go, List<(int Type, long Pid, AssetTypeValueField F)> Comps, AssetTypeValueField Piece)> Pieces(Bundle b)
-	{
-		foreach (var (f, info) in b.Objects)
-		{
-			if (info.TypeId != GameObjectType || b.Field(f, info.PathId) is not { } go || RootComponents(b, go) is not { } comps)
-			{
-				continue;
-			}
-			var piece = comps.FirstOrDefault(c => c.Type == MonoBehaviourType && IsPiece(c.F)).F;
-			if (piece != null)
-			{
-				yield return (go["m_Name"].AsString, info.PathId, go, comps, piece);
-			}
-		}
-	}
-
 	// Each prefab with a Piece on its root, in the bundle's order: its file, path id, fields and Piece,
 	// for the readers at the editor's start. Found from the Piece scripts (told by their class) up to
 	// their GameObjects, kept to the prefab roots (the locations have many pieces below theirs); only
@@ -49,7 +32,7 @@ public static partial class GameCatalogues
 	private static List<(Bundle.Inner File, long Pid, AssetTypeValueField Go, AssetTypeValueField Piece)> PieceRoots(Bundle b, Game game) =>
 		PieceRootsOf.GetValue(b, _ => FindPieceRoots(b, game));
 
-	// Found once for the readers that need them (pieces, piece-cost).
+	// Found once for the readers that need them (pieces, piece-support, piece-place, piece-cost).
 	private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<Bundle, List<(Bundle.Inner, long, AssetTypeValueField, AssetTypeValueField)>> PieceRootsOf = new();
 
 	private static List<(Bundle.Inner, long, AssetTypeValueField, AssetTypeValueField)> FindPieceRoots(Bundle b, Game game)
@@ -86,8 +69,8 @@ public static partial class GameCatalogues
 		return res;
 	}
 
-	// What the pieces' readers walk below the prefabs (pieces, piece-support), read once for both, first,
-	// each time in the order of the file (the bundle is read in blocks, and a prefab's objects are far
+	// What the pieces' readers walk below the prefabs (pieces, piece-support, piece-place), read once for
+	// all, first, each time in the order of the file (the bundle is read in blocks, and a prefab's objects are far
 	// apart): a level's Transforms, the GameObjects of the level above and the colliders of the one above
 	// that, as many times as there are levels. Below snap points nothing is read; a level is read before
 	// its parent's GameObject tells whether to go there.
@@ -504,27 +487,50 @@ public static partial class GameCatalogues
 	// The build ray's layers (Default, static_solid, Default_small, piece, piece_nonsolid, terrain, vehicle).
 	private static readonly HashSet<long> RayLayers = new() { 0, 15, 20, 10, 16, 11, 28 };
 
-	// piece-place.json.gz: how the game's hammer places each piece, for the Workshop's Build: its
-	// placement flags, its snap points (its direct children tagged "snappoint") and the colliders the
-	// build ray and the ghost use (enabled, not triggers, on an active object, on a layer of the build
-	// ray), in the piece's own frame (its root at the origin, its root scale applied). Colliders:
-	// ["b", centre, half size, rotation] a box; ["s", centre, r] a sphere; ["c", a, b, r] a capsule (its
-	// segment); ["m", convex, [x,y,z...], [i,j,k...]] a mesh (triangles).
-	private sealed class PlaceScan : IScan
+	// How the game's hammer places each piece, read at the editor's start (GameData), for the Workshop's
+	// Build: its placement flags, its snap points (its direct children tagged "snappoint") and the
+	// colliders the build ray and the ghost use (enabled, not triggers, on an active object, on a layer
+	// of the build ray), in the piece's own frame (its root at the origin, its root scale applied).
+	// Colliders: ["b", centre, half size, rotation] a box; ["s", centre, r] a sphere; ["c", a, b, r] a
+	// capsule (its segment); ["m", convex, [x,y,z...], [i,j,k...]] a mesh (triangles).
+	private sealed class PlaceScan : IStartScan
 	{
 		private static readonly (string Key, string Field)[] Flags = { ("g", "m_groundPiece"), ("cg", "m_clipGround"), ("ce", "m_clipEverything"), ("ro", "m_allowRotatedOverlap"), ("w", "m_waterPiece"), ("nw", "m_noInWater") };
 
-		public Dict Entries { get; } = new();
+		private readonly Dict _entries = new();
+		// The bundle's mesh colliders' meshes, by path id: vertices and triangles (each read once, not
+		// kept as fields).
+		private readonly Dictionary<long, (float[] Vertices, List<int[]> Triangles)> _meshes = new();
 
-		// The bundle's meshes read so far.
-		private readonly Dictionary<long, (float[] Vertices, List<int[]> Triangles)?> _meshes = new();
+		public string Json() => CatalogueJson.Write(_entries, new CatalogueJson.Style(",", ":"));
 
-		public void Read(Bundle b)
+		public void Read(Bundle b, Game game)
 		{
+			var pieces = PieceRoots(b, game);
+			PieceTrees(b, game);
+			// The meshes first, in the order of the file.
 			_meshes.Clear();
-			foreach (var (name, pid, _, comps, piece) in Pieces(b))
+			var meshes = new List<long>();
+			foreach (var (_, pid, go, _) in pieces)
 			{
-				var root = comps.First(c => c.Type == TransformType).F;
+				if (RootTransform(b, go) is { } root)
+				{
+					Walk(b, pid, default, Quat.Root, Vec(root["m_LocalScale"]), true, null, meshes);
+				}
+			}
+			b.ReadInOrder(meshes, (pid, m) =>
+			{
+				if (MeshData(b, m) is { } mesh)
+				{
+					_meshes[pid] = mesh;
+				}
+			});
+			foreach (var (_, pid, go, piece) in pieces)
+			{
+				if (RootTransform(b, go) is not { } root)
+				{
+					continue;
+				}
 				var rs = Vec(root["m_LocalScale"]);
 				var snaps = new List<object?>();
 				foreach (var ch in root["m_Children.Array"].Children)
@@ -540,7 +546,7 @@ public static partial class GameCatalogues
 					}
 				}
 				var cols = new List<object?>();
-				Walk(b, pid, default, Quat.Root, rs, true, rs, cols);
+				Walk(b, pid, default, Quat.Root, rs, true, cols, null);
 				var flags = new Dict();
 				foreach (var (key, field) in Flags)
 				{
@@ -549,34 +555,39 @@ public static partial class GameCatalogues
 						flags[key] = 1L;
 					}
 				}
-				Entries[name] = new Dict { ["f"] = flags, ["s"] = snaps, ["c"] = cols };
+				_entries[go["m_Name"].AsString] = new Dict { ["f"] = flags, ["s"] = snaps, ["c"] = cols };
 			}
 		}
 
-		private void Walk(Bundle b, long goPid, V3 pos, Quat rot, V3 scale, bool root, V3 rootScale, List<object?> cols)
+		private static AssetTypeValueField? RootTransform(Bundle b, AssetTypeValueField go) =>
+			b.ComponentIds(go).Where(c => c.Type == TransformType).Select(c => b.Field(c.Pid)).FirstOrDefault(f => f != null);
+
+		// A piece's colliders; or (meshes) the meshes its mesh colliders need, to read first.
+		private void Walk(Bundle b, long goPid, V3 pos, Quat rot, V3 scale, bool root, List<object?>? cols, List<long>? meshes)
 		{
 			if (b.Field(goPid) is not { } g || !Truthy(Get(g, "m_IsActive", 1L)))
 			{
 				return;
 			}
+			// Only the Transform and colliders read (not the renderers, scripts...).
 			AssetTypeValueField? tr = null;
 			var colliders = new List<(int Type, AssetTypeValueField F)>();
-			foreach (var (t, _, f) in b.Components(g))
+			foreach (var (t, pid) in b.ComponentIds(g))
 			{
-				if (t == TransformType)
+				if (t == TransformType && b.Field(pid) is { } f)
 				{
 					tr = f;
 				}
-				else if (IsCollider(t) && f.Children.Count > 0 && Solid(f))
+				else if (IsCollider(t) && b.Field(pid) is { } c && c.Children.Count > 0 && Solid(c))
 				{
-					colliders.Add((t, f));
+					colliders.Add((t, c));
 				}
 			}
 			if (tr == null)
 			{
 				return;
 			}
-			var (pp, q, s) = root ? (default(V3), Quat.Root, rootScale) : ChildFrame(tr, pos, rot, scale);
+			var (pp, q, s) = root ? (default(V3), Quat.Root, scale) : ChildFrame(tr, pos, rot, scale);
 			if (RayLayers.Contains(Int(Get(g, "m_Layer", 0L))))
 			{
 				V3 P(V3 v) => Add(q.Rotate(Scale(v, s)), pp);
@@ -586,12 +597,12 @@ public static partial class GameCatalogues
 					{
 						var cc = P(Vec(c["m_Center"]));
 						var z = Vec(c["m_Size"]);
-						cols.Add(new List<object?> { "b", R(cc.X, 4), R(cc.Y, 4), R(cc.Z, 4), R(Math.Abs(z.X * s.X) / 2, 4), R(Math.Abs(z.Y * s.Y) / 2, 4), R(Math.Abs(z.Z * s.Z) / 2, 4) }.Concat(q.Rounded(4)).ToList());
+						cols?.Add(new List<object?> { "b", R(cc.X, 4), R(cc.Y, 4), R(cc.Z, 4), R(Math.Abs(z.X * s.X) / 2, 4), R(Math.Abs(z.Y * s.Y) / 2, 4), R(Math.Abs(z.Z * s.Z) / 2, 4) }.Concat(q.Rounded(4)).ToList());
 					}
 					else if (t == SphereColliderType)
 					{
 						var cc = P(Vec(c["m_Center"]));
-						cols.Add(new List<object?> { "s", R(cc.X, 4), R(cc.Y, 4), R(cc.Z, 4), R(c["m_Radius"].AsFloat * Max(new[] { Math.Abs(s.X), Math.Abs(s.Y), Math.Abs(s.Z) }), 4) });
+						cols?.Add(new List<object?> { "s", R(cc.X, 4), R(cc.Y, 4), R(cc.Z, 4), R(c["m_Radius"].AsFloat * Max(new[] { Math.Abs(s.X), Math.Abs(s.Y), Math.Abs(s.Z) }), 4) });
 					}
 					else if (t == CapsuleColliderType)
 					{
@@ -604,10 +615,17 @@ public static partial class GameCatalogues
 						ax[d] = sa[d] != 0 ? half / Math.Abs(sa[d]) : 0;
 						var a = P((cc.X + ax[0], cc.Y + ax[1], cc.Z + ax[2]));
 						var e = P((cc.X - ax[0], cc.Y - ax[1], cc.Z - ax[2]));
-						cols.Add(new List<object?> { "c", R(a.X, 4), R(a.Y, 4), R(a.Z, 4), R(e.X, 4), R(e.Y, 4), R(e.Z, 4), R(rr, 4) });
+						cols?.Add(new List<object?> { "c", R(a.X, 4), R(a.Y, 4), R(a.Z, 4), R(e.X, 4), R(e.Y, 4), R(e.Z, 4), R(rr, 4) });
 					}
-					else if (Mesh(b, c["m_Mesh"]) is var (vertices, triangles))
+					else if (c["m_Mesh"] is { IsDummy: false } mesh && mesh["m_FileID"].AsInt == 0 && b.TypeOf(mesh["m_PathID"].AsLong) == MeshType)
 					{
+						long id = mesh["m_PathID"].AsLong;
+						meshes?.Add(id);
+						if (cols == null || !_meshes.TryGetValue(id, out var m))
+						{
+							continue;
+						}
+						var (vertices, triangles) = m;
 						var coords = new List<object?>(vertices.Length);
 						for (int i = 0; i + 2 < vertices.Length; i += 3)
 						{
@@ -622,24 +640,8 @@ public static partial class GameCatalogues
 			}
 			foreach (long child in ChildObjects(b, tr))
 			{
-				Walk(b, child, pp, q, s, false, rootScale, cols);
+				Walk(b, child, pp, q, s, false, cols, meshes);
 			}
-		}
-
-		// A mesh collider's mesh (in the same file), or null.
-		private (float[] Vertices, List<int[]> Triangles)? Mesh(Bundle b, AssetTypeValueField pptr)
-		{
-			if (pptr.IsDummy || pptr["m_FileID"].AsInt != 0)
-			{
-				return null;
-			}
-			long pid = pptr["m_PathID"].AsLong;
-			if (!_meshes.TryGetValue(pid, out var mesh))
-			{
-				mesh = b.TypeOf(pid) == MeshType && b.Field(pid) is { } m ? MeshData(b, m) : null;
-				_meshes[pid] = mesh;
-			}
-			return mesh;
 		}
 	}
 
