@@ -10,6 +10,7 @@ namespace WorldEditor.Tests;
 /// <summary>
 /// The live bridge client (LiveBridge) against FakeBridge.
 /// </summary>
+[Collection("Timed answers")]
 public class LiveBridgeTests
 {
     [Fact]
