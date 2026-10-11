@@ -387,6 +387,7 @@ public static class Tips
 		["newWorld.near"] = "Prefer seeds where this biome's nearest land is within so many metres of the start (0: no wish).",
 		["newWorld.trader"] = "Prefer seeds where one of this trader's spots is within so many metres of the start (0: no wish). The game lays out several spots for each trader; the first one players come near becomes the camp. Looking for traders or bosses makes the search slower.",
 		["newWorld.bosses"] = "Prefer seeds where an altar of each of the first five bosses (Eikthyr, the Elder, Bonemass, Moder, Yagluth) is within so many metres of the start (0: no wish).",
+		["newWorld.showDungeons"] = "Show where this kind of dungeon will be.",
 		["newWorld.showStart"] = "Show where the game will put its start temple.",
 		["newWorld.showBosses"] = "Show where the bosses' altars will be.",
 		["newWorld.showTrader"] = "Show this trader's spots: the first one players come near becomes the camp, the others vanish.",

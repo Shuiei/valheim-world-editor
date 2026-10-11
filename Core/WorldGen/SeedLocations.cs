@@ -107,7 +107,7 @@ public static class SeedLocations
 	public sealed record Placed(Rule Rule, float X, float Y, float Z);
 
 	// The kinds whose spots depend on the alt biomes (added by one, or blocked by one somewhere).
-	public static bool Uncertain(Rule r) => r.altBiome != null || _state.Blocked.Contains(r.name);
+	public static bool Uncertain(Rule r) => Uncertain(_state, r);
 
 	// The game's order: prioritized kinds first, otherwise as listed; disabled and empty kinds left out.
 	public static IReadOnlyList<Rule> Ordered => _state.Ordered;
@@ -124,12 +124,31 @@ public static class SeedLocations
 	public static List<Placed> Place(WorldGenerator gen, Which which = Which.Prioritized, bool parallel = false, CancellationToken cancel = default)
 	{
 		var state = _state;
-		var rules = state.Ordered.Take(which switch
+		int count = which switch
 		{
 			Which.Start => 1,
 			Which.Prioritized => state.Ordered.Count(r => r.prioritized != 0),
 			_ => state.Ordered.Count,
-		}).ToList();
+		};
+		return Run(gen, state, count, parallel, cancel).Where(p => !Uncertain(state, p.Rule)).ToList();
+	}
+
+	// The instances of these kinds (prefab names), the game's kinds before them laid out too (a few
+	// seconds when it goes past the prioritized ones). A kind an alt biome blocks somewhere is given
+	// everywhere (close to the game: an alt biome covers a few areas only).
+	public static List<Placed> PlaceKinds(WorldGenerator gen, IReadOnlyCollection<string> prefabs, bool parallel = false, CancellationToken cancel = default)
+	{
+		var state = _state;
+		int count = state.Ordered.FindLastIndex(r => prefabs.Contains(r.prefab)) + 1;
+		return Run(gen, state, count, parallel, cancel).Where(p => prefabs.Contains(p.Rule.prefab) && p.Rule.altBiome == null).ToList();
+	}
+
+	private static bool Uncertain(State state, Rule r) => r.altBiome != null || state.Blocked.Contains(r.name);
+
+	// The first count kinds of the game's order laid out.
+	private static List<Placed> Run(WorldGenerator gen, State state, int count, bool parallel, CancellationToken cancel)
+	{
+		var rules = state.Ordered.Take(count).ToList();
 		// The biomes these kinds can draw a zone from (RandomBiome's slips included).
 		var needed = Heightmap.Biome.None;
 		foreach (Rule r in rules.Where(r => r.centerFirst == 0))
@@ -155,7 +174,7 @@ public static class SeedLocations
 		{
 			Rnd.state = saved;
 		}
-		return placer.Instances.Values.Where(p => p.Rule.altBiome == null && !state.Blocked.Contains(p.Rule.name)).ToList();
+		return placer.Instances.Values.ToList();
 	}
 
 	// AltBiomeWorldData's points (GenerateBiomePoints) and the order its flood fill lists them in

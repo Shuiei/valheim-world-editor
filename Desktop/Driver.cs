@@ -283,6 +283,15 @@ public static class Driver
 				c.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Avalonia.Controls.Button.ClickEvent));
 				return State(w);
 			}
+			case "check":
+			{
+				// check <label>|on|off: a check box or switch by its text.
+				int bar = a[1].IndexOf('|');
+				string label = a[1][..bar];
+				var box = Find<Avalonia.Controls.CheckBox>(w, b => string.Equals(TextOf(b).Trim(), label, StringComparison.OrdinalIgnoreCase)) ?? throw new InvalidOperationException($"no check box \"{label}\"");
+				box.IsChecked = a[1][(bar + 1)..] == "on";
+				return State(w);
+			}
 			case "choose":
 			{
 				var box = Find<Avalonia.Controls.ComboBox>(w, b => IndexOf(b, a[1]) >= 0) ?? throw new InvalidOperationException($"no list with \"{a[1]}\"");

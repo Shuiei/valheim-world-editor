@@ -30,6 +30,22 @@ public class CoreSeedLocationsTests
 	}
 
 	[Fact]
+	public void DungeonsAreFoundByKind()
+	{
+		Fixtures.UseLocations();
+		// The tests' copy holds the dungeons laid out first (sunken crypts, infested mines, Hildir's,
+		// the charred fortresses): the same spots as when every kind before them is laid out.
+		var dungeons = TerrainEditor.App.SeedPreview.FindDungeons(Seed(), parallel: true, cancel: TestContext.Current.CancellationToken);
+		var placed = SeedLocations.Place(Seed(), SeedLocations.Which.Prioritized, parallel: true, cancel: TestContext.Current.CancellationToken);
+		var crypts = placed.Where(p => p.Rule.prefab == "SunkenCrypt4").Select(p => (p.X, p.Z)).ToHashSet();
+		Assert.NotEmpty(crypts);
+		Assert.Equal(crypts, dungeons.Where(d => d.Name == "Sunken crypts").Select(d => (d.X, d.Z)).ToHashSet());
+		Assert.All(dungeons, d => Assert.Equal("dungeon", d.Kind));
+		Assert.Contains(dungeons, d => d.Name == "Infested mines");
+		Assert.DoesNotContain(dungeons, d => d.Name == "Haldor");
+	}
+
+	[Fact]
 	public void TheStartIsWhereTheGamePutsItsTemple()
 	{
 		Fixtures.UseLocations();

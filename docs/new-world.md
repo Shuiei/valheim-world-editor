@@ -22,7 +22,15 @@ placement rules:
   others vanish.
 
 Hover a mark for its coordinates and its distance from the start. The switches in the map's corner
-(**On the map**) show or hide the start, the bosses and each trader. These are exactly where the game puts them. (The smaller places, villages,
+(**On the map**) show or hide the start, the bosses and each trader.
+
+The **Dungeons** switches show where each kind of dungeon will be: burial chambers, troll caves,
+sunken crypts, frost caves, infested mines, the Ashlands' charred fortresses and Hildir's dungeons.
+They are off at first; the first one switched on looks for the seed's dungeons (a few seconds: the
+game lays out its smaller places before them), and they are kept for the seed. The **Dungeons** list
+then gives, for each kind, the nearest from the start, how many there are and how many lie within
+2 km. Burial chambers, troll caves and frost caves are close to where the game puts them, but some may
+be elsewhere (the game's alt biomes move a few). These are exactly where the game puts them. (The smaller places, villages,
 ruins and the like, are not shown: some of them depend on an alt biome, such as Dark Meadows, that the
 game picks at random each time it loads a world.)
 

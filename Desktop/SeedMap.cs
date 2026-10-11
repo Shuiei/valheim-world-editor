@@ -29,6 +29,20 @@ public sealed class SeedMap : Control, IDisposable
 	public float CenterZ { get; private set; }
 	public float MetersPerPixel { get; private set; } = 40;
 
+	// Small squares drawn over the map (the dungeons: many, so drawn here rather than as controls).
+	public IReadOnlyList<(float X, float Z, IBrush Fill)> Dots
+	{
+		get => _dots;
+		set
+		{
+			_dots = value;
+			InvalidateVisual();
+		}
+	}
+
+	private IReadOnlyList<(float X, float Z, IBrush Fill)> _dots = Array.Empty<(float, float, IBrush)>();
+	private static readonly Pen DotLine = new(new SolidColorBrush(Avalonia.Media.Color.FromRgb(20, 20, 24)), 1);
+
 	public event Action? ViewChanged;
 	public event Action<float, float>? Hovered;
 
@@ -152,6 +166,14 @@ public sealed class SeedMap : Control, IDisposable
 		if (_close is { } c)
 		{
 			Draw(context, c.Picture, c.X0, c.Z0, c.X1, c.Z1);
+		}
+		foreach (var (x, z, fill) in _dots)
+		{
+			var at = ScreenOf(x, z);
+			if (at.X >= -4 && at.Y >= -4 && at.X <= Bounds.Width + 4 && at.Y <= Bounds.Height + 4)
+			{
+				context.DrawRectangle(fill, DotLine, new Rect(at.X - 3, at.Y - 3, 6, 6));
+			}
 		}
 	}
 

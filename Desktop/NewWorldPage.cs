@@ -42,6 +42,12 @@ public sealed class NewWorldPage : IDisposable
 	internal CheckBox ShowHaldor { get; } = Toggle("trader", "Haldor", "Haldor");
 	internal CheckBox ShowBogWitch { get; } = Toggle("trader", "The Bog Witch", "Bog Witch");
 	internal CheckBox ShowHildir { get; } = Toggle("trader", "Hildir", "Hildir");
+	// One switch a kind of dungeon (off at first: they are looked for only when one is on, a few seconds),
+	// the shown seed's dungeons (null: not looked for yet) and those of the seeds seen.
+	internal Dictionary<string, CheckBox> ShowDungeons { get; } = SeedPreview.Dungeons.ToDictionary(d => d.Name, d => DungeonToggle(d.Name));
+	internal List<SeedPreview.Landmark>? DungeonMarks { get; private set; }
+	private readonly Dictionary<string, List<SeedPreview.Landmark>> _dungeonsSeen = new();
+	private readonly StackPanel _dungeonList = new() { Spacing = 2 };
 	internal TextBlock Readout { get; } = new() { FontSize = 11, Foreground = Ui.Muted, Margin = new Thickness(8, 0, 0, 6), VerticalAlignment = VerticalAlignment.Bottom, HorizontalAlignment = HorizontalAlignment.Left, IsHitTestVisible = false };
 	// Shown over the map while a seed's world is being looked at.
 	internal TextBlock LoadingText { get; } = new() { FontSize = 12, HorizontalAlignment = HorizontalAlignment.Center };
@@ -70,7 +76,7 @@ public sealed class NewWorldPage : IDisposable
 	internal List<(SeedPreview.Preview Preview, float Score)> Results { get; private set; } = new();
 	internal Task Pending { get; private set; } = Task.CompletedTask;
 
-	private CancellationTokenSource? _search, _preview;
+	private CancellationTokenSource? _search, _preview, _dungeons;
 	private readonly DispatcherTimer _wait = new() { Interval = TimeSpan.FromMilliseconds(350) };
 
 	private static NumericUpDown Near(double metres) => new()
@@ -127,6 +133,18 @@ public sealed class NewWorldPage : IDisposable
 		foreach (var t in new[] { ShowHaldor, ShowBogWitch, ShowHildir })
 		{
 			t.Tip("newWorld.showTrader");
+		}
+		foreach (var t in ShowDungeons.Values)
+		{
+			t.Tip("newWorld.showDungeons");
+			t.IsCheckedChanged += (_, _) =>
+			{
+				if (t.IsChecked == true && DungeonMarks == null && _dungeons == null && Shown != null)
+				{
+					FindDungeons(Shown);
+				}
+				PlaceDots();
+			};
 		}
 		foreach (var t in new[] { ShowStart, ShowBosses, ShowHaldor, ShowBogWitch, ShowHildir })
 		{
@@ -212,9 +230,14 @@ public sealed class NewWorldPage : IDisposable
 				{
 					new TextBlock { Text = "On the map", FontSize = 12, FontWeight = FontWeight.SemiBold },
 					ShowStart, ShowBosses, ShowHaldor, ShowBogWitch, ShowHildir,
+					new TextBlock { Text = "Dungeons", FontSize = 12, FontWeight = FontWeight.SemiBold, Margin = new Thickness(0, 6, 0, 0) },
 				},
 			},
 		};
+		foreach (var t in ShowDungeons.Values)
+		{
+			((StackPanel)toggles.Child!).Children.Add(t);
+		}
 		var zoom = new StackPanel { Spacing = 4, Margin = new Thickness(10), HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Bottom, Children = { zoomIn, zoomOut, fit } };
 		var map = new Border
 		{
@@ -245,6 +268,7 @@ public sealed class NewWorldPage : IDisposable
 	{
 		_search?.Cancel();
 		_preview?.Cancel();
+		_dungeons?.Cancel();
 	}
 
 	// Leaving the page: what runs is stopped.
@@ -255,6 +279,7 @@ public sealed class NewWorldPage : IDisposable
 		Map.Dispose();
 		_search?.Dispose();
 		_preview?.Dispose();
+		_dungeons?.Dispose();
 	}
 
 	// The seed's preview, made away from the window's thread (only the newest is shown).
@@ -272,6 +297,7 @@ public sealed class NewWorldPage : IDisposable
 			return;
 		}
 		var cancel = _preview = new CancellationTokenSource();
+		StopDungeons();
 		SetLoading(seed);
 		if (Shown == null)
 		{
@@ -329,9 +355,123 @@ public sealed class NewWorldPage : IDisposable
 		Shown = p;
 		MarkFound(p.Seed);
 		Map.Show(p, keepView: same);
+		DungeonMarks = _dungeonsSeen.GetValueOrDefault(p.Seed);
 		ShowInfo(p);
 		PlaceMarks();
+		PlaceDots();
+		// A kind still switched on: this seed's looked for too.
+		if (DungeonMarks == null && ShowDungeons.Values.Any(t => t.IsChecked == true))
+		{
+			FindDungeons(p);
+		}
 	}
+
+	// The seed's dungeons looked for (a few seconds: the game's smaller locations come first in its
+	// order), with the loading sign; kept for the seed.
+	private void FindDungeons(SeedPreview.Preview p)
+	{
+		StopDungeons();
+		if (p.Generator is not { } gen || p.Landmarks == null)
+		{
+			return;
+		}
+		var cancel = _dungeons = new CancellationTokenSource();
+		FillDungeons();
+		Loading.IsVisible = true;
+		LoadingText.Text = $"Finding {p.Seed}'s dungeons…";
+		Task.Run(() => SeedPreview.FindDungeons(gen, parallel: true, cancel.Token), cancel.Token).ContinueWith(t =>
+		{
+			if (cancel.IsCancellationRequested || Shown != p)
+			{
+				return;
+			}
+			cancel.Dispose();
+			_dungeons = null;
+			Loading.IsVisible = false;
+			DungeonMarks = t.Status == TaskStatus.RanToCompletion ? t.Result : new();
+			if (_dungeonsSeen.Count >= 20)
+			{
+				_dungeonsSeen.Clear();
+			}
+			_dungeonsSeen[p.Seed] = DungeonMarks;
+			FillDungeons();
+			PlaceDots();
+		}, TaskScheduler.FromCurrentSynchronizationContext());
+	}
+
+	private void StopDungeons()
+	{
+		_dungeons?.Cancel();
+		_dungeons?.Dispose();
+		_dungeons = null;
+	}
+
+	// The dungeons the switches show, as dots on the map.
+	private void PlaceDots() => Map.Dots = DungeonMarks == null
+		? Array.Empty<(float, float, IBrush)>()
+		: DungeonMarks.Where(m => ShowDungeons[m.Name].IsChecked == true).Select(m => (m.X, m.Z, (IBrush)DungeonFill(m.Name))).ToList();
+
+	// The Dungeons list: each kind's nearest, how many in the world and near the start.
+	private void FillDungeons()
+	{
+		_dungeonList.Children.Clear();
+		_dungeonList.Children.Add(new TextBlock { Text = "Dungeons (the nearest)", FontSize = 13, FontWeight = FontWeight.SemiBold, Margin = new Thickness(0, 0, 0, 4) });
+		if (Shown?.Landmarks == null)
+		{
+			return;
+		}
+		if (DungeonMarks == null && _dungeons == null)
+		{
+			_dungeonList.Children.Add(Ui.Hint("Switch a kind on, on the map (Dungeons), to look for them: a few seconds."));
+			return;
+		}
+		if (DungeonMarks == null)
+		{
+			_dungeonList.Children.Add(new StackPanel
+			{
+				Spacing = 6,
+				Margin = new Thickness(6, 2, 0, 0),
+				Children = { Ui.Hint("Finding the dungeons (a few seconds)…"), new ProgressBar { IsIndeterminate = true, Height = 4, MinHeight = 4, Width = 200, HorizontalAlignment = HorizontalAlignment.Left } },
+			});
+			return;
+		}
+		var start = Shown.Stats.Start;
+		float Far(SeedPreview.Landmark m) => MathF.Sqrt((m.X - start.X) * (m.X - start.X) + (m.Z - start.Z) * (m.Z - start.Z));
+		foreach (var (name, biome, _) in SeedPreview.Dungeons)
+		{
+			var all = DungeonMarks.Where(m => m.Name == name).ToList();
+			var near = all.OrderBy(Far).FirstOrDefault();
+			int close = all.Count(m => Far(m) <= 2000);
+			string where = biome == Heightmap.Biome.None ? "" : $"{Name(biome)} · ";
+			_dungeonList.Children.Add(Item(DungeonMark(name), name, near == null ? "none" : Km(Far(near)), $"{where}{all.Count} in the world, {close} within 2 km",
+				near == null ? null : () =>
+				{
+					ShowDungeons[name].IsChecked = true;
+					Map.LookAt(near.X, near.Z);
+				}));
+		}
+	}
+
+	// Each dungeon kind's colour (squares, apart from the round traders and the bosses' diamonds).
+	private static SolidColorBrush DungeonFill(string name) => new(name switch
+	{
+		"Burial chambers" => Avalonia.Media.Color.FromRgb(226, 206, 156),
+		"Troll caves" => Avalonia.Media.Color.FromRgb(64, 170, 150),
+		"Sunken crypts" => Avalonia.Media.Color.FromRgb(160, 116, 78),
+		"Frost caves" => Avalonia.Media.Color.FromRgb(132, 210, 255),
+		"Infested mines" => Avalonia.Media.Color.FromRgb(104, 120, 255),
+		"Charred fortresses" => Avalonia.Media.Color.FromRgb(255, 126, 44),
+		_ => Avalonia.Media.Color.FromRgb(255, 176, 214),
+	});
+
+	private static Border DungeonMark(string name) => new() { Width = 8, Height = 8, Background = DungeonFill(name), BorderBrush = new SolidColorBrush(Avalonia.Media.Color.FromRgb(20, 20, 24)), BorderThickness = new Thickness(1) };
+
+	private static CheckBox DungeonToggle(string name) => new CheckBox
+	{
+		IsChecked = false,
+		FontSize = 12.5,
+		Content = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { DungeonMark(name), new TextBlock { Text = name, VerticalAlignment = VerticalAlignment.Center } } },
+	}.Classed("switch");
 
 	private void Note(string text)
 	{
@@ -375,6 +515,8 @@ public sealed class NewWorldPage : IDisposable
 		Info.Children.Add(Section("Traders (the nearest spot)", SeedPreview.Landmarks.Where(l => l.Kind == "trader").Select(l => Of("trader", l.Name)).ToArray()));
 		Info.Children.Add(Ui.Hint("Each trader has several spots: the first one players come near becomes the trader's camp, the others vanish."));
 		Info.Children.Add(Section("Bosses (the nearest altar)", SeedPreview.Landmarks.Where(l => l.Kind == "boss").Select(l => Of("boss", l.Name)).ToArray()));
+		(_dungeonList.Parent as Panel)?.Children.Remove(_dungeonList);
+		Info.Children.Add(_dungeonList);
 	}
 
 	private static StackPanel Section(string title, params Control[] items)

@@ -36,6 +36,29 @@ public static class SeedPreview
 		("FaderLocation", "Fader", "boss"),
 	};
 
+	// The dungeons, by kind: the game's locations that lead into one (or are one, as the Ashlands'
+	// fortresses), and their biome.
+	public static readonly (string Name, Heightmap.Biome Biome, string[] Prefabs)[] Dungeons =
+	{
+		("Burial chambers", Heightmap.Biome.BlackForest, new[] { "Crypt2", "Crypt3", "Crypt4" }),
+		("Troll caves", Heightmap.Biome.BlackForest, new[] { "TrollCave02" }),
+		("Sunken crypts", Heightmap.Biome.Swamp, new[] { "SunkenCrypt4" }),
+		("Frost caves", Heightmap.Biome.Mountain, new[] { "MountainCave02" }),
+		("Infested mines", Heightmap.Biome.Mistlands, new[] { "Mistlands_DvergrTownEntrance1", "Mistlands_DvergrTownEntrance2" }),
+		("Charred fortresses", Heightmap.Biome.AshLands, new[] { "CharredFortress" }),
+		("Hildir's dungeons", Heightmap.Biome.None, new[] { "Hildir_cave", "Hildir_crypt", "Hildir_plainsfortress" }),
+	};
+
+	// Where the seed's dungeons will be (Kind "dungeon", Name the Dungeons kind). The game's smaller
+	// locations before them are laid out too: a few seconds.
+	public static List<Landmark> FindDungeons(WorldGenerator gen, bool parallel = false, CancellationToken cancel = default)
+	{
+		var byPrefab = Dungeons.SelectMany(d => d.Prefabs.Select(p => (p, d.Name))).ToDictionary(x => x.p, x => x.Name);
+		return SeedLocations.PlaceKinds(gen, byPrefab.Keys, parallel, cancel)
+			.Select(p => new Landmark(byPrefab[p.Rule.prefab], "dungeon", p.X, p.Z, false))
+			.ToList();
+	}
+
 	// The bosses of the first five biomes, for the "bosses within" wish.
 	public static readonly string[] EarlyBosses = { "Eikthyr", "The Elder", "Bonemass", "Moder", "Yagluth" };
 
