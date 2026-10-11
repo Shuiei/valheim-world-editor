@@ -4,14 +4,13 @@
   <!-- Code analysis for every project, as the .NET SDK has it
        (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/overview): the .NET analyzers'
        recommended rules, the code style of .editorconfig checked by the build, Roslynator's analyzers,
-       and no warning left: each one fails the build. IDE0005 (unnecessary usings) needs the
-       documentation file; its comments are not required (CS1591). -->
+       and no warning left: each one fails the build. Every public type and member has a doc
+       comment (CS1591), except in the tests, whose names say what they check. -->
   <PropertyGroup>
     <AnalysisLevel>latest-recommended</AnalysisLevel>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <NoWarn>$(NoWarn);CS1591</NoWarn>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Roslynator.Analyzers" Version="5.0.1" PrivateAssets="all" IncludeAssets="runtime; build; native; contentfiles; analyzers" />
