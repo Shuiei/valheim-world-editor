@@ -22,9 +22,10 @@ public sealed class GameLookBanner
     private readonly Border _card;
     private readonly AppSettings _settings;
     /// <summary>
-    /// Reads the game look's state again every 1.5 s while the card is on screen.
+    /// Reads the game look's state again every half second while the card is on screen (often enough for the bar
+    /// to move smoothly; a read is only a snapshot under a lock).
     /// </summary>
-    private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromSeconds(1.5) };
+    private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromSeconds(0.5) };
     /// <summary>
     /// The state last shown, so the path box is filled only when it changes.
     /// </summary>
