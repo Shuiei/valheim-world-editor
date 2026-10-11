@@ -100,6 +100,10 @@ public static class Png
             switch (type)
             {
                 case "IHDR":
+                    if (len < 13)
+                    {
+                        throw new InvalidDataException("the PNG picture's header is cut short");
+                    }
                     width = (data[0] << 24) | (data[1] << 16) | (data[2] << 8) | data[3];
                     height = (data[4] << 24) | (data[5] << 16) | (data[6] << 8) | data[7];
                     depth = data[8];
@@ -136,14 +140,21 @@ public static class Png
             throw new InvalidDataException("the picture is empty or too large");
         }
         int bpp = channels * depth / 8, stride = width * bpp;
+        // Only as much as the rows need is unpacked: the data may claim far more.
+        int need = (stride + 1) * height;
         byte[] raw;
         using (ZLibStream zs = new(new MemoryStream(idat.ToArray()), CompressionMode.Decompress))
         using (MemoryStream o = new())
         {
-            zs.CopyTo(o);
+            byte[] buffer = new byte[81920];
+            int n;
+            while (o.Length < need && (n = zs.Read(buffer, 0, (int)Math.Min(buffer.Length, need - o.Length))) > 0)
+            {
+                o.Write(buffer, 0, n);
+            }
             raw = o.ToArray();
         }
-        if (raw.Length < (stride + 1) * height)
+        if (raw.Length < need)
         {
             throw new InvalidDataException("the PNG picture data is cut short");
         }

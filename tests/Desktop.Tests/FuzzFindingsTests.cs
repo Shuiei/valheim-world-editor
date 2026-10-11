@@ -49,4 +49,9 @@ public class FuzzFindingsTests
     [Fact]
     public void ZoneDbNegativePackageLength() =>
         Refused(() => ZoneDb.Load(new MemoryStream(Convert.FromHexString("00000000ff00ff0000000000ff0000ff"))));
+
+    // A PNG whose header chunk is empty.
+    [Fact]
+    public void PngShortHeader() =>
+        Refused(() => Png.Read(Convert.FromHexString("89504e470d0a1a0a000000004948445200006082")));
 }
