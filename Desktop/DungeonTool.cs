@@ -6,61 +6,112 @@ using TerrainEditor.Save;
 
 namespace TerrainEditor.Desktop;
 
-// The Dungeon tool: the rooms of a dungeon of the open area (Frost Cave, crypt...), edited the game's
-// way. A room is added at a free opening of another (turned and moved so the two openings meet, see
-// Dungeons.Attach), selected, deleted, and the open ends closed with end caps. Each change rewrites the
-// dungeon object's room list as one step of the history (Commit), so undo, saving and Apply live work as
-// for any other object. Everything here is in Unity's world space; the view hands in rays.
+/// <summary>
+/// The Dungeon tool: the rooms of a dungeon of the open area (Frost Cave, crypt...), edited the game's way. A room is
+/// added at a free opening of another (turned and moved so the two openings meet, see Dungeons.Attach), selected,
+/// deleted, and the open ends closed with end caps. Each change rewrites the dungeon object's room list as one step of
+/// the history (Commit), so undo, saving and Apply live work as for any other object. Everything here is in Unity's
+/// world space; the view hands in rays.
+/// </summary>
 public sealed partial class DungeonTool
 {
-    // The dungeon being edited: its object's position (an edit makes it a new object of the scene, at
-    // the same place).
+    /// <summary>
+    /// The dungeon being edited: its object's position (an edit makes it a new object of the scene, at the same place).
+    /// </summary>
     public Vector3? Current { get; private set; }
 
-    // The room the next click adds (a name of the catalogue), and which of its openings joins.
+    /// <summary>
+    /// The room the next click adds (a name of the catalogue); null when none is chosen.
+    /// </summary>
     public string? Chosen { get; private set; }
 
+    /// <summary>
+    /// Which of the chosen room's openings that fit the hovered one joins it (counted by Turn, taken modulo how many
+    /// fit).
+    /// </summary>
     public int Join { get; private set; }
 
-    // Rooms added with what the game makes in them (chests, creatures' spawners, torches, ice): rolled
-    // from the room's place the way the game rolls them (Dungeons.Contents).
+    /// <summary>
+    /// Rooms added with what the game makes in them (chests, creatures' spawners, torches, ice): rolled from the room's
+    /// place the way the game rolls them (Dungeons.Contents).
+    /// </summary>
     public bool WithContents { get; set; } = true;
 
-    // The room clicked last (an index into the current dungeon's list).
+    /// <summary>
+    /// The room clicked last (an index into the current dungeon's list).
+    /// </summary>
     public int? Selected { get; private set; }
 
-    // What the pointer is over: a free opening (its index in FreeEnds) or a room.
+    /// <summary>
+    /// The free opening the pointer is over (its index in FreeEnds); null when none.
+    /// </summary>
     public int? HoverEnd { get; private set; }
 
+    /// <summary>
+    /// The room the pointer is over (an index into the current dungeon's list); null when it is over an opening, a
+    /// joint or nothing.
+    /// </summary>
     public int? HoverRoom { get; private set; }
 
-    // A joint that can take a door (its index in DoorJoints), pointed at.
+    /// <summary>
+    /// A joint that can take a door (its index in DoorJoints), pointed at.
+    /// </summary>
     public int? HoverJoint { get; private set; }
 
-    // A door where an added room joins, by the game's chance (Dungeons.RollDoor).
+    /// <summary>
+    /// A door where an added room joins, by the game's chance (Dungeons.RollDoor).
+    /// </summary>
     public bool WithDoors { get; set; } = true;
 
-    // Numbers from 0 to 1 for the door rolls (tests set their own).
+    /// <summary>
+    /// Numbers from 0 to 1 for the door rolls (tests set their own).
+    /// </summary>
     internal Func<float> Random { get; set; } = System.Random.Shared.NextSingle;
 
-    // Where two rooms of the open dungeon meet and a door can stand.
+    /// <summary>
+    /// Where two rooms of the open dungeon meet and a door can stand.
+    /// </summary>
     public List<Dungeons.Joint> DoorJoints => Derive()?.Joints ?? [];
 
-    // The scene's doors (of the dungeon's door kinds) standing at a joint.
+    /// <summary>
+    /// The scene's doors (of the dungeon's door kinds) standing at a joint.
+    /// </summary>
+    /// <returns>Indices into the scene's things; empty when there is none or no dungeon is open.</returns>
     public List<int> DoorsAt(Dungeons.Joint j) => Derive() is { } c && c.Doors.TryGetValue(Spot(j.Position), out var at) ? [.. at] : [];
 
-    // How many pairs of the open dungeon's rooms overlap.
+    /// <summary>
+    /// How many pairs of the open dungeon's rooms overlap.
+    /// </summary>
     public int OverlappingPairs => Derive()?.Overlapping ?? 0;
 
-    // What the drawing, the pointer and the panel ask of the open dungeon (its open ends, door joints,
-    // doors, overlaps), worked out once for each change of it, not for each frame or pointer move.
+    /// <summary>
+    /// What the drawing, the pointer and the panel ask of the open dungeon (its open ends, door joints, doors,
+    /// overlaps), worked out once for each change of it, not for each frame or pointer move.
+    /// </summary>
+    /// <param name="D">The dungeon it was worked out for.</param>
+    /// <param name="Version">The edit store's version then.</param>
+    /// <param name="Count">How many things the scene had then.</param>
+    /// <param name="Free">The free openings.</param>
+    /// <param name="Joints">The joints that can take one of the dungeon's doors.</param>
+    /// <param name="Doors">The scene's doors of the dungeon's kinds, by their place rounded to 5 cm (see Spot).</param>
+    /// <param name="Overlapping">How many pairs of rooms overlap.</param>
     private sealed record Derived(DungeonRooms.Dungeon D, int Version, int Count, List<Dungeons.OpenEnd> Free, List<Dungeons.Joint> Joints,
         Dictionary<(long, long, long), List<int>> Doors, int Overlapping);
 
+    /// <summary>
+    /// The last Derived, kept while the dungeon, the edit version and the thing count stay the same.
+    /// </summary>
     private Derived? _derived;
 
+    /// <summary>
+    /// A position rounded to 5 cm, as a dictionary key for doors standing at a joint.
+    /// </summary>
     private static (long, long, long) Spot(Vector3 p) => ((long)MathF.Round(p.X * 20), (long)MathF.Round(p.Y * 20), (long)MathF.Round(p.Z * 20));
 
+    /// <summary>
+    /// The Derived of the open dungeon, worked out again only when it, the edits or the scene's thing count changed;
+    /// null when no scene or dungeon is open.
+    /// </summary>
     private Derived? Derive()
     {
         if (Scene is not { } s || Dungeon is not { } d)
@@ -90,20 +141,43 @@ public sealed partial class DungeonTool
         return _derived = new Derived(d, version, count, Dungeons.Openings(d.Rooms, freeOnly: true), joints, doors, overlapping);
     }
 
+    /// <summary>
+    /// Raised when what the tool shows changed (the open dungeon, the choice, the hover, the selection, or an edit):
+    /// the view redraws and the panel updates.
+    /// </summary>
     public event Action? Changed;
 
+    /// <summary>
+    /// A line for the status bar: what a change did, or why it did nothing.
+    /// </summary>
     public event Action<string>? Message;
 
-    // The scene: set by the view when it opens an area.
+    /// <summary>
+    /// The scene: set by the view when it opens an area.
+    /// </summary>
     public WorldScene? Scene { get; set; }
 
+    /// <summary>
+    /// The dungeons of the open area (empty without a scene).
+    /// </summary>
     public IReadOnlyList<DungeonRooms.Dungeon> All => Scene == null ? [] : DungeonRooms.Of(Scene);
 
+    /// <summary>
+    /// The open dungeon: the one whose object stands at Current (within 10 cm); null when none is open or it is not
+    /// found.
+    /// </summary>
     public DungeonRooms.Dungeon? Dungeon => Current is { } at ? All.FirstOrDefault(d => Vector3.DistanceSquared(d.Thing.Position, at) < 0.01f) : null;
 
+    /// <summary>
+    /// The open dungeon's openings no room joins yet.
+    /// </summary>
     public List<Dungeons.OpenEnd> FreeEnds => Derive()?.Free ?? [];
 
     // ---- Names shown for the kinds of dungeon.
+    /// <summary>
+    /// The name shown for a kind of dungeon: the game's own for the known ones, else its prefab name without DG_ and
+    /// split into words.
+    /// </summary>
     public static string KindName(Dungeons.Kind k) => k.Name switch
     {
         "DG_Cave" => "Frost Cave",
@@ -121,13 +195,22 @@ public sealed partial class DungeonTool
         _ => Words().Replace(k.Name.Replace("DG_", "", StringComparison.Ordinal).Replace('_', ' '), " $1").Trim(),
     };
 
+    /// <summary>
+    /// A capital letter after a small one: where KindName puts a space.
+    /// </summary>
     [GeneratedRegex("(?<=[a-z])([A-Z])")]
     private static partial Regex Words();
 
+    /// <summary>
+    /// One line for a dungeon in a list: its kind, how many rooms, and where it is (x, z in metres).
+    /// </summary>
     public static string Describe(DungeonRooms.Dungeon d) =>
         $"{KindName(d.Kind)}, {d.Rooms.Count} rooms, at {MathF.Round(d.Thing.Position.X) + 0f:0}, {MathF.Round(d.Thing.Position.Z) + 0f:0}";
 
     // ---- Choosing.
+    /// <summary>
+    /// Opens a dungeon for editing (null closes it); the selection and the hovered opening and room are cleared.
+    /// </summary>
     public void Open(DungeonRooms.Dungeon? d)
     {
         Current = d?.Thing.Position;
@@ -136,6 +219,9 @@ public sealed partial class DungeonTool
         Changed?.Invoke();
     }
 
+    /// <summary>
+    /// Chooses the room the next click adds (null: none), starting again at its first fitting opening.
+    /// </summary>
     public void Choose(string? room)
     {
         Chosen = room;
@@ -143,10 +229,18 @@ public sealed partial class DungeonTool
         Changed?.Invoke();
     }
 
-    // The rooms the open dungeon can take, the game's way (its themes), by name.
+    /// <summary>
+    /// The rooms the open dungeon can take, the game's way (its themes), by name.
+    /// </summary>
     public IEnumerable<Dungeons.Room> Palette => Dungeon is { } d ? Dungeons.RoomsFor(d.Kind) : [];
 
     // ---- The pointer (a ray in world space).
+    /// <summary>
+    /// Works out what the pointer's ray is over: a free opening first, else a joint that can take a door, else a room.
+    /// Raises Changed when that changed.
+    /// </summary>
+    /// <param name="origin">Where the ray starts, in world space.</param>
+    /// <param name="dir">Its direction (of length 1: distances along it are metres).</param>
     public void Hover(Vector3 origin, Vector3 dir)
     {
         int? end = null, room = null, joint = null;
@@ -171,7 +265,10 @@ public sealed partial class DungeonTool
         }
     }
 
-    // The point nearest along the ray that it passes within 1.5 m of.
+    /// <summary>
+    /// The point nearest along the ray that it passes within 1.5 m of.
+    /// </summary>
+    /// <returns>The point's index, or null when the ray passes none within 1.5 m in front of it.</returns>
     private static int? Nearest(List<Vector3> points, Vector3 origin, Vector3 dir)
     {
         int? found = null;
@@ -188,8 +285,11 @@ public sealed partial class DungeonTool
         return found;
     }
 
-    // The room whose box the ray meets first from outside, or the smallest box it starts in (the camera
-    // inside a room sees the rooms around it through their walls only with a cut).
+    /// <summary>
+    /// The room whose box the ray meets first from outside, or the smallest box it starts in (the camera inside a room
+    /// sees the rooms around it through their walls only with a cut).
+    /// </summary>
+    /// <returns>The room's index, or null when the ray meets none.</returns>
     public static int? RoomAt(IReadOnlyList<Dungeons.Placed> rooms, Vector3 origin, Vector3 dir)
     {
         int? hit = null;
@@ -218,7 +318,9 @@ public sealed partial class DungeonTool
         return hit;
     }
 
-    // Where the chosen room would go at the hovered opening; null when nothing would be added.
+    /// <summary>
+    /// Where the chosen room would go at the hovered opening; null when nothing would be added.
+    /// </summary>
     public Dungeons.Placed? Preview
     {
         get
@@ -238,8 +340,13 @@ public sealed partial class DungeonTool
         }
     }
 
-    // Why the preview would not fit: overlapping rooms, outside the dungeon's box (the game's own checks
-    // when it generates; a list made here is built anyway, so these are warnings).
+    /// <summary>
+    /// Why a room placed there would not fit: overlapping rooms, or outside the dungeon's box (the game's own checks
+    /// when it generates; a list made here is built anyway, so these are warnings).
+    /// </summary>
+    /// <param name="p">The placed room.</param>
+    /// <param name="skip">A room of the list not to check against (the one being replaced), or -1.</param>
+    /// <returns>The warning, or null when it fits.</returns>
     public string? Problem(Dungeons.Placed p, int skip = -1)
     {
         if (Dungeon is not { } d)
@@ -255,7 +362,9 @@ public sealed partial class DungeonTool
             : $"Goes past the dungeon's space ({d.Kind.ZoneSize.X:0} × {d.Kind.ZoneSize.Z:0} m around its zone's middle): the game keeps its own rooms inside it.";
     }
 
-    // R: the next of the chosen room's openings that can join the hovered one.
+    /// <summary>
+    /// R: the next of the chosen room's openings that can join the hovered one.
+    /// </summary>
     public void Turn()
     {
         Join++;
@@ -263,6 +372,11 @@ public sealed partial class DungeonTool
     }
 
     // ---- Changes: each one a step of the history.
+    /// <summary>
+    /// A click: adds the chosen room at the hovered opening (with its contents and door rolls) as one step of the
+    /// history, or adds or removes a door at the hovered joint, or else selects the hovered room.
+    /// </summary>
+    /// <returns>Whether the click did something (false: it was over nothing).</returns>
     public bool Click()
     {
         if (Preview is { } p && Dungeon is { } d)
@@ -303,6 +417,11 @@ public sealed partial class DungeonTool
         return HoverRoom != null;
     }
 
+    /// <summary>
+    /// Removes the selected room as one step of the history, with the objects in it (Inside) and the doors at its
+    /// joints.
+    /// </summary>
+    /// <returns>False when no room is selected.</returns>
     public bool Delete()
     {
         if (Selected is not int i || Dungeon is not { } d || i >= d.Rooms.Count)
@@ -326,9 +445,12 @@ public sealed partial class DungeonTool
         return true;
     }
 
-    // The scene's objects (not the dungeon itself) the room holds: within its box, and nearer its middle
-    // than any other room's whose box holds them too (rooms meet at their walls; an end cap, flat, gets
-    // 1.5 m of depth each side).
+    /// <summary>
+    /// The scene's objects (not the dungeon itself) the room holds: within its box, and nearer its middle than any
+    /// other room's whose box holds them too (rooms meet at their walls; an end cap, flat, gets 1.5 m of depth each
+    /// side).
+    /// </summary>
+    /// <returns>Indices into the scene's things.</returns>
     public List<int> Inside(Dungeons.Placed room, IReadOnlyList<Dungeons.Placed> others)
     {
         var found = new List<int>();
@@ -361,8 +483,12 @@ public sealed partial class DungeonTool
         return found;
     }
 
-    // An end cap on every free opening: of the open dungeon's rooms, one whose only opening has that
-    // type (the game's end caps, highest EndCapPrio first, as DungeonGenerator.PlaceEndCaps prefers).
+    /// <summary>
+    /// Puts an end cap on every free opening as one step of the history: of the open dungeon's rooms, one whose only
+    /// opening has that type and is not an entrance (the game's end caps, highest EndCapPrio first, as
+    /// DungeonGenerator.PlaceEndCaps prefers).
+    /// </summary>
+    /// <returns>How many end caps were added.</returns>
     public int CloseOpenEnds()
     {
         if (Dungeon is not { } d)
@@ -395,8 +521,10 @@ public sealed partial class DungeonTool
         return added;
     }
 
-    // A door at a joint: the one there taken away, or the dungeon's door for that kind of opening put
-    // there (facing as the first room's opening, where the game puts it).
+    /// <summary>
+    /// A door at a joint: the one there taken away, or the dungeon's door for that kind of opening put there (facing as
+    /// the first room's opening, where the game puts it).
+    /// </summary>
     public void ToggleDoor(DungeonRooms.Dungeon d, Dungeons.Joint j)
     {
         if (Scene?.Session is not { } s)
@@ -417,7 +545,10 @@ public sealed partial class DungeonTool
         Changed?.Invoke();
     }
 
-    // The objects the game makes with these rooms of the dungeon (none when WithContents is off).
+    /// <summary>
+    /// The objects the game makes with these rooms of the dungeon (none when WithContents is off), each with whether it
+    /// is a player-built piece.
+    /// </summary>
     private List<(NewObject, bool)> ContentsOf(DungeonRooms.Dungeon d, IEnumerable<Dungeons.Placed> rooms)
     {
         var list = new List<(NewObject, bool)>();
@@ -436,6 +567,16 @@ public sealed partial class DungeonTool
         return list;
     }
 
+    /// <summary>
+    /// Rewrites the dungeon object with this room list as one step of the history: the old object goes and a copy with
+    /// the new list comes (with the other objects added), then Message tells what was done.
+    /// </summary>
+    /// <param name="d">The dungeon changed.</param>
+    /// <param name="rooms">Its new room list.</param>
+    /// <param name="label">The history's name for the step.</param>
+    /// <param name="message">What the status line says it did.</param>
+    /// <param name="alsoRemove">Other things to take away (indices into the scene's things).</param>
+    /// <param name="add">Other objects to add, each with whether it is a player-built piece.</param>
     private void Commit(DungeonRooms.Dungeon d, List<Dungeons.Placed> rooms, string label, string message, IReadOnlyCollection<int>? alsoRemove = null,
         IReadOnlyList<(NewObject, bool)>? add = null)
     {

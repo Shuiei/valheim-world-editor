@@ -1,15 +1,25 @@
 namespace TerrainEditor.Desktop;
 
-// The world map shader: Valheim's own map shader (Custom/mapshader, GLSL taken from the game), as the
-// web editor's mapview.js has it (the same text), with a 1 m detail window that includes the edits.
-// The version line is added when compiled (GlView/MapView).
+/// <summary>
+/// The world map shader: Valheim's own map shader (Custom/mapshader, GLSL taken from the game), as the web editor's
+/// mapview.js has it (the same text), with a 1 m detail window that includes the edits. The version line is added when
+/// compiled (GlView/MapView).
+/// </summary>
 public static class MapShader
 {
+    /// <summary>
+    /// The vertex shader: a full-screen quad, positions already in clip space.
+    /// </summary>
     public const string Vertex = """
 		in vec2 pos;
 		void main() { gl_Position = vec4(pos, 0.0, 1.0); }
 		""";
 
+    /// <summary>
+    /// The fragment shader: works out each pixel's world point from the view centre and scale, and samples the
+    /// whole-world textures (g*) or, inside the detail window, the 1 m detail textures (d*), with optional paint and
+    /// clouds.
+    /// </summary>
     public const string Fragment = """
 		uniform vec4 _Time;
 		uniform vec4 _ForestColor, _WaterColor, _WaterColorDeep, _WaterColorAshlands, _WaterColorAshlandsDeep;

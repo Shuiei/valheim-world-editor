@@ -9,50 +9,71 @@ using TerrainEditor.Save;
 
 namespace TerrainEditor.Desktop;
 
-// Blueprints (WorldEdit's schematics): copies kept under a name, pasted again in any area or world. They
-// are Homestead's blueprints (Homestead.cs): .blueprint files with a picture in Homestead's folder of
-// Valheim's save folder, the same files Homestead lists in game, so a building saved here is built in
-// game with Homestead (and one saved in game is pasted here). The panel says whether Homestead is
-// installed in the game's BepInEx (or a mod manager profile), and warns when it is not. Blueprints
-// kept in the editor's own format before (the data folder's blueprints/) are still listed, and can be
-// moved to Homestead. Other mods' files (PlanBuild .blueprint, .vbuild) are imported, and written.
-// Each blueprint shows its picture (BuildingPicture), what it costs to build in game (PieceCost), its
-// description and tags; the search looks through all of them.
+/// <summary>
+/// Blueprints (WorldEdit's schematics): copies kept under a name, pasted again in any area or world. They
+/// are Homestead's blueprints (Homestead.cs): .blueprint files with a picture in Homestead's folder of
+/// Valheim's save folder, the same files Homestead lists in game, so a building saved here is built in
+/// game with Homestead (and one saved in game is pasted here). The panel says whether Homestead is
+/// installed in the game's BepInEx (or a mod manager profile), and warns when it is not. Blueprints
+/// kept in the editor's own format before (the data folder's blueprints/) are still listed, and can be
+/// moved to Homestead. Other mods' files (PlanBuild .blueprint, .vbuild) are imported, and written.
+/// Each blueprint shows its picture (BuildingPicture), what it costs to build in game (PieceCost), its
+/// description and tags; the search looks through all of them.
+/// </summary>
 public sealed class BlueprintsPanel
 {
+    /// <summary>The panel itself, hidden until opened.</summary>
     public Control Card { get; }
-    // The editor's own blueprints from before (blueprints/ of the data folder).
+    /// <summary>The editor's own blueprints from before (blueprints/ of the data folder).</summary>
     public BlueprintStore Store { get; set; } = BlueprintStore.Default;
-    // Whether Homestead is installed, and its blueprint folder (tests give their own).
+    /// <summary>Whether Homestead is installed, and its blueprint folder (tests give their own).</summary>
     internal Func<Homestead.Status> FindHomestead { get; set; } = () => Homestead.Find(AppSettings.Load());
+    /// <summary>Filters the list: every word somewhere in a blueprint's name, creator, description or tags.</summary>
     internal TextBox Search { get; } = new() { PlaceholderText = "Search blueprints", FontSize = 12 };
+    /// <summary>Imports another mod's blueprint file (see <see cref="Import"/>).</summary>
     internal Button ImportButton { get; } = new() { Content = "Import file…", FontSize = 12 };
+    /// <summary>Opens an empty Workshop to build a new blueprint in.</summary>
     internal Button NewButton { get; } = new() { Content = "New in Workshop", FontSize = 12 };
-    // Edit (a blueprint file) or New in Workshop (null): the window opens the Workshop.
+    /// <summary>Edit (a blueprint file) or New in Workshop (null): the window opens the Workshop.</summary>
     public event Action<string?>? EditAsked;
+    /// <summary>Opens Homestead's download page; shown only while it is not installed.</summary>
     internal Button GetHomesteadButton { get; } = new() { Content = "Get Homestead", FontSize = 11, Padding = new Thickness(6, 1) };
+    /// <summary>The blueprint rows.</summary>
     internal StackPanel List { get; } = new() { Spacing = 4 };
+    /// <summary>Whether Homestead is installed, and what that means for the blueprints.</summary>
     internal TextBlock Banner { get; } = new() { FontSize = 11.5, TextWrapping = TextWrapping.Wrap };
+    /// <summary>The banner's box, coloured as a warning while Homestead is not installed.</summary>
     private readonly Border _bannerBox;
+    /// <summary>Where the blueprints are kept.</summary>
     private readonly TextBlock _folder = new() { FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
+    /// <summary>The open world's scene, null when none is open.</summary>
     private readonly Func<WorldScene?> _scene;
+    /// <summary>The paste tool whose clipboard blueprints are saved from and loaded onto.</summary>
     private readonly PasteTool _paste;
+    /// <summary>A line for the status bar.</summary>
     public event Action<string>? Message;
-    // ✕: the window goes back to View.
+    /// <summary>✕: the window goes back to View.</summary>
     public event Action? Closed;
-    // A blueprint went onto the clipboard: the window starts pasting.
+    /// <summary>A blueprint went onto the clipboard: the window starts pasting.</summary>
     public event Action? Pasting;
-    // Asks for a blueprint's name, description and tags (given the ones to start from, and what it costs).
+    /// <summary>Asks for a blueprint's name, description and tags (given the ones to start from, and what it costs).</summary>
+    /// <remarks>Null: cancelled.</remarks>
     internal Func<Homestead.Details, string, Task<Homestead.Details?>> AskDetails { get; set; } = (_, _) => Task.FromResult<Homestead.Details?>(null);
-    // The game's models, for the blueprints' pictures (null: their boxes are drawn).
+    /// <summary>The game's models, for the blueprints' pictures (null: their boxes are drawn).</summary>
     internal Func<ModelStore?> Models { get; set; } = () => null;
+    /// <summary>Asks a yes/no question (the window's dialog): before deleting or replacing a blueprint.</summary>
     internal Func<string, Task<bool>> Confirm { get; set; } = _ => Task.FromResult(true);
+    /// <summary>Asks for a blueprint file to import (the window's file picker).</summary>
     internal Func<Task<string?>> PickFile { get; set; } = () => Task.FromResult<string?>(null);
+    /// <summary>Opens a web page in the browser.</summary>
     internal Func<Uri, Task<bool>> OpenUrl { get; set; } = _ => Task.FromResult(false);
 
-    // Homestead's blueprints have ids "hs:<file name>"; the editor's older ones their store id.
+    /// <summary>Homestead's blueprints have ids "hs:&lt;file name&gt;"; the editor's older ones their store id.</summary>
     private const string HomesteadId = "hs:";
 
+    /// <summary>Builds the panel (hidden).</summary>
+    /// <param name="paste">The paste tool whose clipboard is saved and filled.</param>
+    /// <param name="scene">The open world's scene, null when none is open.</param>
     public BlueprintsPanel(PasteTool paste, Func<WorldScene?> scene)
     {
         _paste = paste;
@@ -100,24 +121,30 @@ public sealed class BlueprintsPanel
         };
     }
 
+    /// <summary>Puts a control in a grid column.</summary>
     private static Control Col(Control c, int col)
     {
         Grid.SetColumn(c, col);
         return c;
     }
 
+    /// <summary>Shows or hides the panel, and refreshes it.</summary>
+    /// <param name="open">True shows, false hides, null switches.</param>
     public void Toggle(bool? open = null)
     {
         Card.IsVisible = open ?? !Card.IsVisible;
         Refresh();
     }
 
+    /// <summary>The editor's older blueprints, as last listed.</summary>
     private List<BlueprintStore.Summary> _older = [];
+    /// <summary>Homestead's blueprints, as last listed.</summary>
     private List<Homestead.Entry> _homestead = [];
 
-    // Homestead as found when the panel was last refreshed (looked for when first needed).
+    /// <summary>Homestead as last looked for (on refresh and before saving or importing; first when needed).</summary>
     internal Homestead.Status Status { get => field ??= FindHomestead(); private set; }
 
+    /// <summary>Looks for Homestead again and, while the panel is shown, lists the blueprints again.</summary>
     public void Refresh()
     {
         Status = FindHomestead();
@@ -146,6 +173,7 @@ public sealed class BlueprintsPanel
         Render();
     }
 
+    /// <summary>An older blueprint's thumbnail (a PNG data URL), null when there is none or it cannot be read.</summary>
     private static Bitmap? Picture(string? dataUrl)
     {
         if (dataUrl == null || !dataUrl.StartsWith("data:image/png;base64,", StringComparison.Ordinal))
@@ -163,6 +191,7 @@ public sealed class BlueprintsPanel
         }
     }
 
+    /// <summary>A Homestead blueprint's picture file, null when there is none or it cannot be read.</summary>
     private static Bitmap? PictureFile(string? path)
     {
         if (path == null)
@@ -180,7 +209,14 @@ public sealed class BlueprintsPanel
         }
     }
 
-    // One row: picture, name, what it holds, its buttons.
+    /// <summary>One row: picture, name, what it holds, its buttons.</summary>
+    /// <param name="picture">The picture, null: none.</param>
+    /// <param name="name">The blueprint's name.</param>
+    /// <param name="meta">What it holds, where from.</param>
+    /// <param name="buttons">Adds the row's buttons through the function it is given (text, tip, click).</param>
+    /// <param name="cost">What it costs to build, shown under the meta line (null: not shown).</param>
+    /// <param name="description">Shown in up to three lines (null or blank: not shown).</param>
+    /// <param name="tags">Shown as chips (null or none: not shown).</param>
     private Border Row(Bitmap? picture, string name, string meta, Action<Func<string, string, Action, Button>> buttons, string? cost = null, string? description = null, IReadOnlyList<string>? tags = null)
     {
         var acts = new WrapPanel { ItemSpacing = 4, LineSpacing = 4 };
@@ -233,6 +269,7 @@ public sealed class BlueprintsPanel
         return new Border { Padding = new Thickness(4), CornerRadius = new CornerRadius(6), Child = grid };
     }
 
+    /// <summary>Fills the list with the blueprints that match the search: Homestead's first, then the older ones.</summary>
     private void Render()
     {
         List.Children.Clear();
@@ -286,7 +323,7 @@ public sealed class BlueprintsPanel
         }
     }
 
-    // A blueprint as a copy (the clipboard format), its name and the world it came from, or null.
+    /// <summary>A blueprint as a copy (the clipboard format), its name and the world it came from, or null.</summary>
     private (JsonObject Clip, string Name, string? World)? Load(string id)
     {
         if (id.StartsWith(HomesteadId, StringComparison.Ordinal))
@@ -308,7 +345,8 @@ public sealed class BlueprintsPanel
         return (c, (string?)doc["name"] ?? id, (string?)doc["world"]);
     }
 
-    // Writes a Homestead blueprint and its picture; the name of the file written.
+    /// <summary>Writes a Homestead blueprint and its picture (named after the blueprint, replacing one of that name).</summary>
+    /// <returns>The path of the file written.</returns>
     private string WriteHomestead(JsonObject clip, Homestead.Details details, string? world)
     {
         Directory.CreateDirectory(Status.Folder);
@@ -320,9 +358,13 @@ public sealed class BlueprintsPanel
         return path;
     }
 
+    /// <summary>Details with only a name.</summary>
     private static Homestead.Details Named(string name) => new(name, "", []);
 
-    // Asks for the details (none: null), and before replacing a blueprint of that name.
+    /// <summary>Asks for the details (none: null), and before replacing a blueprint of that name.</summary>
+    /// <param name="start">The details to start from.</param>
+    /// <param name="clip">The copy, for what it costs.</param>
+    /// <param name="keep">The file name being saved over on purpose (the one the building was opened from): no question for it.</param>
     private async Task<Homestead.Details?> Ask(Homestead.Details start, JsonObject clip, string? keep = null)
     {
         var cost = Terrain.PieceCost.Of(BuildingPicture.FromClip(clip).Select(p => p.Name));
@@ -340,14 +382,20 @@ public sealed class BlueprintsPanel
         return d;
     }
 
+    /// <summary>Whether a Homestead blueprint of that name is already there.</summary>
     private bool HomesteadExists(string name) => File.Exists(Path.Combine(Status.Folder, Homestead.FileName(name)));
 
+    /// <summary>Whether a copy holds ground (heights other than the "none" marker, -32768).</summary>
     private static bool HasGround(JsonObject clip) => clip["rel"] is JsonArray rel && rel.Any(v => v != null && (int)v != -32768);
 
+    /// <summary>The end of a message while Homestead is not installed, empty when it is.</summary>
     private string Reminder => Status.Installed ? "" : " Homestead is not installed in your game yet: it shows there once you install it.";
 
-    // Saves the clipboard as a Homestead blueprint (asks for the name; one with that name is replaced
-    // after asking). Homestead blueprints hold pieces only: copied ground is not kept.
+    /// <summary>
+    /// Saves the clipboard as a Homestead blueprint (asks for the name; one with that name is replaced
+    /// after asking). Homestead blueprints hold pieces only: copied ground is not kept.
+    /// </summary>
+    /// <returns>The name it was saved under, null when not saved.</returns>
     public async Task<string?> Save()
     {
         var clip = _paste.Clip;
@@ -380,8 +428,10 @@ public sealed class BlueprintsPanel
         return name;
     }
 
-    // The Workshop's building as a Homestead blueprint (asks for the details, suggested; one with that
-    // name is replaced after asking, except the file it was opened from). What was saved, or null.
+    /// <summary>
+    /// The Workshop's building as a Homestead blueprint (asks for the details, suggested; one with that
+    /// name is replaced after asking, except the file it was opened from). What was saved, or null.
+    /// </summary>
     public async Task<Homestead.Details?> SaveBuilding(JsonObject clip, Homestead.Details suggested, string? openedFrom = null)
     {
         Status = FindHomestead();
@@ -405,8 +455,11 @@ public sealed class BlueprintsPanel
         return details;
     }
 
-    // Details…: a blueprint's name, description and tags, changed in its file (renamed with its
-    // picture when the name changes and the new file name is free).
+    /// <summary>
+    /// Details…: a blueprint's name, description and tags, changed in its file (renamed with its
+    /// picture when the name changes and the new file name is free).
+    /// </summary>
+    /// <returns>Whether the details were saved.</returns>
     public async Task<bool> EditDetails(Homestead.Entry e)
     {
         var d = await AskDetails(e.Details, Terrain.PieceCost.Of(e.Kinds).Describe(8));
@@ -438,8 +491,10 @@ public sealed class BlueprintsPanel
         return true;
     }
 
-    // Loads a blueprint onto the clipboard and starts pasting. Object ids only mean something in the
-    // world the copy came from; kinds this world cannot make are left out.
+    /// <summary>
+    /// Loads a blueprint onto the clipboard and starts pasting. Object ids only mean something in the
+    /// world the copy came from; kinds this world cannot make are left out.
+    /// </summary>
     public void Paste(string id)
     {
         if (Load(id) is not var (clip, name, from))
@@ -459,7 +514,8 @@ public sealed class BlueprintsPanel
         Message?.Invoke($"“{name}” is on the clipboard: click to place it.{(missing.Count > 0 ? $" {missing.Count} kind(s) are unknown here and are left out: {string.Join(", ", missing.Take(5))}{(missing.Count > 5 ? "…" : "")}." : "")}");
     }
 
-    // An older editor blueprint as a Homestead blueprint (objects only).
+    /// <summary>An older editor blueprint as a Homestead blueprint (objects only).</summary>
+    /// <returns>The name it was saved under (numbered when taken), null when not saved.</returns>
     public string? ToHomestead(string id)
     {
         if (Load(id) is not var (clip, name, world))
@@ -481,6 +537,7 @@ public sealed class BlueprintsPanel
         return target;
     }
 
+    /// <summary>Deletes a blueprint after asking: a Homestead one with its picture, or an older one from its store.</summary>
     public async Task Delete(string id, string name)
     {
         if (!await Confirm($"Delete the blueprint “{name}”? Its file is removed."))
@@ -506,7 +563,10 @@ public sealed class BlueprintsPanel
         Refresh();
     }
 
-    // Writes a blueprint for PlanBuild (or as .vbuild) into the export folder (objects only).
+    /// <summary>Writes a blueprint for PlanBuild (or as .vbuild) into the export folder (objects only).</summary>
+    /// <param name="id">The blueprint's id ("hs:" and its file name, or its store id).</param>
+    /// <param name="format">The file extension and format: "blueprint" or "vbuild".</param>
+    /// <returns>The file written, null when not.</returns>
     public string? Export(string id, string format)
     {
         if (Load(id) is not var (clip, name, _))
@@ -531,8 +591,11 @@ public sealed class BlueprintsPanel
         return path;
     }
 
-    // Other mods' blueprint files (PlanBuild .blueprint, .vbuild, Homestead's from elsewhere): read, then
-    // kept as a Homestead blueprint.
+    /// <summary>
+    /// Other mods' blueprint files (PlanBuild .blueprint, .vbuild, Homestead's from elsewhere): read, then
+    /// kept as a Homestead blueprint.
+    /// </summary>
+    /// <returns>The name it was saved under (numbered when taken), null when not imported.</returns>
     public string? Import(string path)
     {
         string text;
@@ -572,7 +635,7 @@ public sealed class BlueprintsPanel
         return name;
     }
 
-    // A blueprint file written or removed; when the folder refuses (read-only, locked), says so (false).
+    /// <summary>A blueprint file written or removed; when the folder refuses (read-only, locked), says so (false).</summary>
     private bool TryWrite(Action write)
     {
         try
@@ -587,6 +650,6 @@ public sealed class BlueprintsPanel
         }
     }
 
-    // The "#Tags:" line of a blueprint file (null when it has none).
+    /// <summary>The "#Tags:" line of a blueprint file (null when it has none).</summary>
     private static string? TagsOf(string text) => text.Split('\n').Select(l => l.Trim()).FirstOrDefault(l => l.StartsWith("#Tags:", StringComparison.OrdinalIgnoreCase))?[6..];
 }

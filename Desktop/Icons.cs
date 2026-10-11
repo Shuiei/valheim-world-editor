@@ -6,10 +6,13 @@ using Avalonia.Media;
 
 namespace TerrainEditor.Desktop;
 
-// The web editor's line icons (24 × 24 SVG paths, drawn with a 1.8 px stroke in the text colour), so
-// both editors look alike.
+/// <summary>
+/// The web editor's line icons (24 × 24 SVG paths, drawn with a 1.8 px stroke in the text colour), so
+/// both editors look alike.
+/// </summary>
 public static class Icons
 {
+    /// <summary>Each icon's SVG path data by name, in a 24 × 24 box.</summary>
     public static readonly Dictionary<string, string> Paths = new()
     {
         ["raise"] = "M12 19V5M6 11l6-6 6 6",
@@ -51,7 +54,10 @@ public static class Icons
         ["trash"] = "M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13",
     };
 
-    // An icon in the colour of the text around it (a button's, for example).
+    /// <summary>An icon in the colour of the text around it (a button's, for example).</summary>
+    /// <param name="name">A key of <c>Paths</c>.</param>
+    /// <param name="size">Width and height on screen, in pixels.</param>
+    /// <param name="stroke">Line width, in the icon's 24 × 24 units.</param>
     public static Control Make(string name, double size = 18, double stroke = 1.8)
     {
         var path = new Avalonia.Controls.Shapes.Path
@@ -67,7 +73,7 @@ public static class Icons
         return new Viewbox { Width = size, Height = size, Child = path, IsHitTestVisible = false };
     }
 
-    // An icon and a label side by side (button content).
+    /// <summary>An icon and a label side by side (button content).</summary>
     public static Control With(string name, string text, double size = 16) => new StackPanel
     {
         Orientation = Avalonia.Layout.Orientation.Horizontal,

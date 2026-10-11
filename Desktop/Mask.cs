@@ -1,30 +1,82 @@
 namespace TerrainEditor.Desktop;
 
-// The Mask, like the web editor's (editor/masks.js; WorldEdit's masks, WorldPainter's filters): limits
-// brushes, paths, shapes, area actions and pastes to some biomes, a height range, a slope range or
-// painted / unpainted ground. Off, everything passes.
+/// <summary>
+/// The Mask, like the web editor's (editor/masks.js; WorldEdit's masks, WorldPainter's filters): limits brushes, paths,
+/// shapes, area actions and pastes to some biomes, a height range, a slope range or painted / unpainted ground. Off,
+/// everything passes.
+/// </summary>
 public sealed class Mask
 {
+    /// <summary>
+    /// The biomes the Mask panel offers, in its order: the game's biome flag and its display name.
+    /// </summary>
     public static readonly (int Biome, string Name)[] BiomeNames =
     [
         (1, "Meadows"), (8, "Black Forest"), (2, "Swamp"), (4, "Mountain"), (16, "Plains"),
         (512, "Mistlands"), (32, "Ashlands"), (64, "Deep North"), (256, "Ocean"),
     ];
 
-    public enum PaintRule { Any, Unpainted, Painted, Dirt, Cultivated, Paved }
+    /// <summary>
+    /// Which ground passes by its paint. Dirt, Cultivated and Paved need painted ground with that colour channel (red,
+    /// green, blue) at least half.
+    /// </summary>
+    public enum PaintRule
+    {
+        /// <summary>Paint does not matter.</summary>
+        Any,
+        /// <summary>Ground never painted, or painted almost black.</summary>
+        Unpainted,
+        /// <summary>Painted ground.</summary>
+        Painted,
+        /// <summary>Painted with red (dirt) at least half.</summary>
+        Dirt,
+        /// <summary>Painted with green (cultivated) at least half.</summary>
+        Cultivated,
+        /// <summary>Painted with blue (paved) at least half.</summary>
+        Paved,
+    }
 
+    /// <summary>
+    /// Whether the mask applies at all; off, <c>For</c> returns null and everything passes.
+    /// </summary>
     public bool On { get; set; }
-    // None chosen: every biome.
+    /// <summary>
+    /// The biome flags that pass. None chosen: every biome.
+    /// </summary>
     public HashSet<int> Biomes { get; } = [];
+    /// <summary>
+    /// Lowest ground height that passes, in metres; null for no limit.
+    /// </summary>
     public float? HeightMin { get; set; }
+    /// <summary>
+    /// Highest ground height that passes, in metres; null for no limit.
+    /// </summary>
     public float? HeightMax { get; set; }
+    /// <summary>
+    /// Smallest slope that passes, in degrees; null for no limit.
+    /// </summary>
     public float? SlopeMin { get; set; }
+    /// <summary>
+    /// Largest slope that passes, in degrees; null for no limit.
+    /// </summary>
     public float? SlopeMax { get; set; }
+    /// <summary>
+    /// The rule on painted ground.
+    /// </summary>
     public PaintRule Paint { get; set; }
+    /// <summary>
+    /// Raised by <c>Notify</c> after the settings change.
+    /// </summary>
     public event Action? Changed;
+    /// <summary>
+    /// Tells listeners the settings changed; call after setting the properties.
+    /// </summary>
     public void Notify() => Changed?.Invoke();
 
-    // Settings that let (almost) nothing through.
+    /// <summary>
+    /// Settings that let (almost) nothing through.
+    /// </summary>
+    /// <returns>The warnings joined in one line, or empty when the settings are fine.</returns>
     public string Warning()
     {
         var w = new List<string>();
@@ -43,10 +95,15 @@ public sealed class Mask
         return string.Join(" ", w);
     }
 
-    // The mask over a ground (1 where it passes, 0 elsewhere), or null when off. biomes: each point's
-    // biome. The ground is judged as it is now, when the mask is made: an edit that changes it while
-    // asking (a mountain, a shape, a paste, a brush stroke) is not judged against its own changes (a
-    // slope then mixed changed and unchanged neighbours). frozen: each point is also judged only once.
+    /// <summary>
+    /// The mask over a ground (1 where it passes, 0 elsewhere), or null when off. The ground is judged as it is now,
+    /// when the mask is made: an edit that changes it while asking (a mountain, a shape, a paste, a brush stroke) is
+    /// not judged against its own changes (a slope then mixed changed and unchanged neighbours).
+    /// </summary>
+    /// <param name="g">The ground to judge; its heights and paint are copied now.</param>
+    /// <param name="biomes">Each point's biome, by ground point index.</param>
+    /// <param name="frozen">Each point is also judged only once (the answer is remembered).</param>
+    /// <returns>A test by ground point index, or null when the mask is off.</returns>
     public Func<int, float>? For(Ground g, int[] biomes, bool frozen = false)
     {
         if (!On)
@@ -125,7 +182,10 @@ public sealed class Mask
         return p => seen.TryGetValue(p, out float v) ? v : seen[p] = Test(p);
     }
 
-    // Alt + Shift + click: the height range around the clicked ground (±2 m).
+    /// <summary>
+    /// Alt + Shift + click: the height range around the clicked ground (±2 m). Turns the mask on.
+    /// </summary>
+    /// <param name="h">The clicked ground's height, in metres.</param>
     public void PickHeight(float h)
     {
         On = true;

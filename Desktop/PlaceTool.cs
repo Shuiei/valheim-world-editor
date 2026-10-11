@@ -6,72 +6,173 @@ using TerrainEditor.Terrain;
 
 namespace TerrainEditor.Desktop;
 
-// The Place tool, like the web editor's (editor/plant.js): any kind of object, painted with a brush (a
-// density and a minimum spacing, like WorldPainter's tree layers; Shift + drag removes the chosen
-// kinds), or along lines, circles and rectangles (pieces end to end at their snap points, like the
-// hammer), in grids and in zones. Positions are grid points of the block (x east, z north).
+/// <summary>
+/// The Place tool, like the web editor's (editor/plant.js): any kind of object, painted with a brush (a density and a
+/// minimum spacing, like WorldPainter's tree layers; Shift + drag removes the chosen kinds), or along lines, circles
+/// and rectangles (pieces end to end at their snap points, like the hammer), in grids and in zones. Positions are grid
+/// points of the block (x east, z north).
+/// </summary>
 public sealed class PlaceTool
 {
-    public enum Modes { Brush, Line, Grid, Zone }
-    public enum LineShapes { Points, Circle, Rect }
-    public enum Elevations { Ground, Above, At }
+    /// <summary>
+    /// How objects are laid out: painted with a brush, along a line (or circle, rectangle), in a grid, or scattered in
+    /// a zone.
+    /// </summary>
+    public enum Modes
+    {
+        /// <summary>Painted with a brush.</summary>
+        Brush,
+        /// <summary>Along a line, circle or rectangle.</summary>
+        Line,
+        /// <summary>In a grid.</summary>
+        Grid,
+        /// <summary>Scattered in a zone.</summary>
+        Zone,
+    }
+    /// <summary>
+    /// Line mode: points clicked along the way, a circle (centre and radius) or a rectangle (two corners).
+    /// </summary>
+    public enum LineShapes
+    {
+        /// <summary>Points clicked along the way.</summary>
+        Points,
+        /// <summary>A circle: centre and radius.</summary>
+        Circle,
+        /// <summary>A rectangle: two corners.</summary>
+        Rect,
+    }
+    /// <summary>
+    /// Where objects stand: on the ground, <c>Elev</c> metres above it, or all at the one height <c>Elev</c>.
+    /// </summary>
+    public enum Elevations
+    {
+        /// <summary>On the ground.</summary>
+        Ground,
+        /// <summary><c>Elev</c> metres above the ground.</summary>
+        Above,
+        /// <summary>All at the one height <c>Elev</c>.</summary>
+        At,
+    }
 
     // ---- What the tool needs from the scene (set by the window).
+    /// <summary>The scene objects go in (null while no world is open).</summary>
     public Func<WorldScene?> Scene { get; set; } = () => null;
+    /// <summary>The mask now: a weight per grid point (0 keeps objects off it), or null for none.</summary>
     public Func<Func<int, float>?> Mask { get; set; } = () => null;
-    // A kind's model box in its own frame (Unity axes, scaled), or null while unknown.
+    /// <summary>A kind's model box in its own frame (Unity axes, scaled), or null while unknown.</summary>
     public Func<string, (Vector3 Min, Vector3 Max)?> ModelBox { get; set; } = _ => null;
-    // The brush's radius (shared with the sculpt brushes) and strength.
+    /// <summary>
+    /// The brush's radius (shared with the sculpt brushes) and strength; its noise also drives Clumping.
+    /// </summary>
     public Brush Brush { get; set; } = new();
 
     // ---- Settings.
+    /// <summary>The layout mode.</summary>
     public Modes Mode { get; set; } = Modes.Brush;
+    /// <summary>Line mode: the shape drawn.</summary>
     public LineShapes LineShape { get; set; } = LineShapes.Points;
+    /// <summary>The kinds to place, by prefab name; each placement picks one by weight.</summary>
     public List<string> Chosen { get; } = ["Beech1"];
+    /// <summary>Each chosen kind's weight in the mix (1 when not set; the panel offers 1 to 10).</summary>
     public Dictionary<string, int> Weights { get; } = [];
+    /// <summary>Brush and Zone: objects per 100 m².</summary>
     public float Density { get; set; } = 3;
+    /// <summary>
+    /// Brush and Zone: the least distance between objects in metres, also from objects already there.
+    /// </summary>
     public float Spacing { get; set; } = 4;
+    /// <summary>
+    /// Brush and Zone: clumping from 0 to 100%: how much objects gather in groves and leave clearings (0: even).
+    /// </summary>
     public float Clump { get; set; }
+    /// <summary>Clumping: the size of the groves and clearings' pattern, in metres.</summary>
     public float Patch { get; set; } = 30;
+    /// <summary>The smallest random scale, in percent.</summary>
     public float SizeMin { get; set; } = 80;
+    /// <summary>The largest random scale, in percent (at least SizeMin).</summary>
     public float SizeMax { get; set; } = 120;
+    /// <summary>The most an object leans at random about x and z, in degrees.</summary>
     public float Tilt { get; set; } = 3;
+    /// <summary>
+    /// The turn added to every object's facing, in degrees from -180 to 180; the brush layout turns with it too.
+    /// </summary>
     public float Rotation { get; set; }
+    /// <summary>Objects face a random way (plus the rotation); off: all face the rotation.</summary>
     public bool RandomYaw { get; set; } = true;
+    /// <summary>
+    /// Brush: one object exactly at the cursor instead of a scatter; only an object right there (0.3 m) blocks it.
+    /// </summary>
     public bool OneAtATime { get; set; }
+    /// <summary>Line: the distance between objects along the line, in metres.</summary>
     public float Every { get; set; } = 4;
+    /// <summary>Line: how far objects stray to either side of the line at random, in metres.</summary>
     public float Wiggle { get; set; }
+    /// <summary>
+    /// Line (Points): objects face along the line, plus the rotation, instead of a random facing. Circles and
+    /// rectangles always do.
+    /// </summary>
     public bool Along { get; set; } = true;
+    /// <summary>
+    /// Line (Points): a smooth curve through the points (with 3 or more) instead of straight stretches.
+    /// </summary>
     public bool Curve { get; set; } = true;
+    /// <summary>
+    /// Line: pieces end to end at their snap points, like the hammer, instead of every <c>Every</c> metres.
+    /// </summary>
     public bool EndToEnd { get; set; }
+    /// <summary>
+    /// End to end: how many pieces high each one is stacked (1 to 20; pieces under 0.1 m tall get one).
+    /// </summary>
     public int Layers { get; set; } = 1;
+    /// <summary>Line (Points): the line goes back to its first point (with 3 or more points).</summary>
     public bool Loop { get; set; }
+    /// <summary>Grid: the spacing, centre to centre, in metres.</summary>
     public float Cell { get; set; } = 4;
+    /// <summary>Where objects stand (see <c>Elev</c>).</summary>
     public Elevations Elevation { get; set; } = Elevations.Ground;
+    /// <summary>The height above the ground, or the one height for all, in metres (unused On the ground).</summary>
     public float Elev { get; set; }
+    /// <summary>
+    /// Pieces snap to the pieces already there (beside or on top, and end-to-end runs start from one).
+    /// </summary>
     public bool SnapTo { get; set; } = true;
-    // One at a time in Brush: the cursor's point rounded to this grid (m; 0: off), from the area's middle.
+    /// <summary>
+    /// Building: where the build ray meets the ground outside (not a piece, not a dungeon floor) is rounded to this
+    /// grid, in metres from the area's middle (0: off).
+    /// </summary>
     public float GridStep { get; set; }
-    // Building pieces one by one (the Workshop's Build): no brush circle, no painting by dragging.
+    /// <summary>Building pieces one by one (the Workshop's Build): no brush circle, no painting by dragging.</summary>
     public bool Building { get; set; }
-    // Building: the build ray (world space: origin, direction, where it meets the ground). The piece
-    // goes where the game's hammer would put it (Hammer).
+    /// <summary>
+    /// Building: the build ray (world space: origin, direction, where it meets the ground). The piece goes where the
+    /// game's hammer would put it (Hammer).
+    /// </summary>
     public (Vector3 O, Vector3 D, float? GroundT)? AimRay { get; set; }
-    // Building: Ctrl + wheel lifts (or lowers) the piece from where the cursor points, in metres.
+    /// <summary>Building: Ctrl + wheel lifts (or lowers) the piece from where the cursor points, in metres.</summary>
     public float HeightNudge { get; set; }
-    // Building: the cut (world height); pieces above it are not pointed at.
+    /// <summary>Building: the cut (world height); pieces above it are not pointed at.</summary>
     public float? CutY { get; set; }
+    /// <summary>
+    /// Brush, a single piece: snap on top of the piece under the cursor instead of beside the nearest one.
+    /// </summary>
     public bool OnTop { get; set; }
+    /// <summary>
+    /// Saplings and crops: keep their grow radius free (from what stands and from each other), so the game lets them
+    /// grow.
+    /// </summary>
     public bool GrowRoom { get; set; } = true;
-    // Settings or the line changed: the preview is worked out again.
+    /// <summary>Settings or the line changed: the preview is worked out again.</summary>
     public event Action? Changed;
+    /// <summary>Raises <see cref="Changed"/>.</summary>
     public void Notify() => Changed?.Invoke();
 
-    // The largest value of each spacing setting (the panel's sliders end there).
+    /// <summary>The largest value of each spacing setting (the panel's sliders end there).</summary>
     public const float MaxSpacing = 15, MaxEvery = 30, MaxCell = 30;
 
-    // The chosen kind that is widest at its largest size (m, across its model's box), for the fit
-    // hint; (0, null) while no chosen kind's model is known.
+    /// <summary>
+    /// The chosen kind that is widest at its largest size (m, across its model's box), for the fit hint; (0, null)
+    /// while no chosen kind's model is known.
+    /// </summary>
     public (float Width, string? Who) Widest()
     {
         float w = 0;
@@ -86,8 +187,10 @@ public sealed class PlaceTool
         return (w * MathF.Max(SizeMin, SizeMax) / 100, who);
     }
 
-    // The spacing the mode goes by: centre to centre in Grid and Line, the least distance in Brush and
-    // Zone; none for End to end lines (the pieces' own length sets it).
+    /// <summary>
+    /// The spacing the mode goes by: centre to centre in Grid and Line, the least distance in Brush and Zone; none for
+    /// End to end lines (the pieces' own length sets it).
+    /// </summary>
     public float? SpacingNow => Mode switch
     {
         Modes.Grid => Cell,
@@ -95,7 +198,10 @@ public sealed class PlaceTool
         _ => Spacing,
     };
 
-    // Says when the widest chosen kind is wider than the spacing (so they overlap), as the web editor did.
+    /// <summary>
+    /// Says when the widest chosen kind is wider than the spacing (so they overlap), as the web editor did; null when
+    /// they fit.
+    /// </summary>
     public string? FitHint()
     {
         if (SpacingNow is not float v || Widest() is not (var w, string who) || w <= v + 0.25f)
@@ -105,8 +211,10 @@ public sealed class PlaceTool
         return $"{who} is about {w:0.0} m wide: {v:0.##} m apart they overlap.";
     }
 
-    // Fit: the spacing set to the widest chosen kind (to the next half metre, within the setting's
-    // range), so they stand side by side without overlapping. False when there is nothing to fit.
+    /// <summary>
+    /// Fit: the spacing set to the widest chosen kind (to the next half metre, within the setting's range), so they
+    /// stand side by side without overlapping. False when there is nothing to fit.
+    /// </summary>
     public bool Fit()
     {
         var (w, who) = Widest();
@@ -131,13 +239,17 @@ public sealed class PlaceTool
         return true;
     }
 
+    /// <summary>The random draws for layouts, scatters and paint strokes.</summary>
     private readonly Random _rand = new();
+    /// <summary>Offsets the clumping noise; a new layout picks a new one.</summary>
     private float _clumpSeed = Random.Shared.NextSingle() * 1000;
+    /// <summary>The most objects a line, grid or zone places at once.</summary>
     public const int MaxShape = 2000;
 
+    /// <summary>A kind's weight in the mix (1 when not set).</summary>
     public int WeightOf(string n) => Weights.GetValueOrDefault(n, 1);
 
-    // The kind for a random draw t in [0, 1), by weight.
+    /// <summary>The kind for a random draw t in [0, 1), by weight.</summary>
     public string PickName(IReadOnlyList<string> names, float t)
     {
         float total = names.Sum(WeightOf), x = t * total;
@@ -152,14 +264,27 @@ public sealed class PlaceTool
         return names[^1];
     }
 
+    /// <summary>A piece's snap points (x, y, z in its own frame), or none for kinds that are not pieces.</summary>
     public static float[][] SnapsOf(string name) => PieceCatalog.Get(StableHash.Of(name))?.Snaps ?? [];
+    /// <summary>A building piece the game snaps: one with at least two snap points.</summary>
     public static bool IsPiece(string name) => SnapsOf(name).Length >= 2;
+    /// <summary>Whether any chosen kind is a piece the game snaps.</summary>
     public bool PiecesChosen => Chosen.Any(IsPiece);
 
-    // End to end switches itself on when every chosen kind is a piece the game snaps (fences, walls…),
-    // and pieces go one at a time under the cursor, until those are set by hand.
+    /// <summary>
+    /// End to end was set by hand: <see cref="AutoSnap"/> leaves it alone. End to end otherwise switches itself on when
+    /// every chosen kind is a piece the game snaps (fences, walls…).
+    /// </summary>
     public bool EndToEndByHand { get; set; }
+    /// <summary>
+    /// One at a time was set by hand: <see cref="AutoSnap"/> leaves it alone. Otherwise it switches itself on when
+    /// every chosen kind is a piece the game snaps, so pieces go one at a time under the cursor.
+    /// </summary>
     public bool OneAtATimeByHand { get; set; }
+    /// <summary>
+    /// Turns End to end and One at a time on when every chosen kind is a snapping piece (off otherwise), unless they
+    /// were set by hand.
+    /// </summary>
     public void AutoSnap()
     {
         bool pieces = Chosen.Count > 0 && Chosen.All(IsPiece);
@@ -173,24 +298,38 @@ public sealed class PlaceTool
         }
     }
 
-    // ---- Saplings and crops: the game lets them grow only with nothing within their grow radius.
+    /// <summary>
+    /// Saplings and crops: the game lets them grow only with nothing within their grow radius; some only on cultivated
+    /// ground. By prefab name.
+    /// </summary>
     private static IReadOnlyDictionary<string, (float Radius, bool Cultivated)> GrowInfo => PrefabCatalog.GrowRoom;
 
+    /// <summary>Whether any chosen kind needs room to grow.</summary>
     public bool GrowMatters => Chosen.Any(n => GrowInfo.TryGetValue(n, out var g) && g.Radius > 0);
+    /// <summary>The chosen kinds that only grow on cultivated ground.</summary>
     public List<string> NeedCultivated => [.. Chosen.Where(n => GrowInfo.TryGetValue(n, out var g) && g.Cultivated)];
+    /// <summary>The room a kind needs to grow, in metres (0 when it needs none or Leave room to grow is off).</summary>
     private float GrowNeed(string name) => GrowMatters && GrowRoom && GrowInfo.TryGetValue(name, out var g) ? g.Radius : 0;
 
     // ---- Where objects can go.
+    /// <summary>
+    /// A spatial hash of points (grid positions), to test quickly whether a spot is the spacing away from all of them.
+    /// </summary>
     private sealed class Hash
     {
+        /// <summary>The size of a hash cell, in metres.</summary>
         public readonly float Cell;
+        /// <summary>The points in each cell.</summary>
         private readonly Dictionary<(int, int), List<Vector2>> _map = [];
+        /// <summary>An empty hash with cells this many metres wide.</summary>
         public Hash(float cell) => Cell = cell;
+        /// <summary>Adds a point.</summary>
         public void Add(Vector2 p)
         {
             var k = ((int)MathF.Floor(p.X / Cell), (int)MathF.Floor(p.Y / Cell));
             (_map.TryGetValue(k, out var l) ? l : _map[k] = []).Add(p);
         }
+        /// <summary>Whether no point is closer than <c>spacing</c> to <c>p</c>.</summary>
         public bool Free(Vector2 p, float spacing)
         {
             int cx = (int)MathF.Floor(p.X / Cell), cz = (int)MathF.Floor(p.Y / Cell), n = Math.Max(1, (int)MathF.Ceiling(spacing / Cell));
@@ -208,7 +347,7 @@ public sealed class PlaceTool
         }
     }
 
-    // Every object standing in the block (grid positions), for the spacing check.
+    /// <summary>Every object standing in the block (grid positions), for the spacing check.</summary>
     private static Hash Standing(WorldScene s, float cell)
     {
         var h = new Hash(cell);
@@ -226,16 +365,35 @@ public sealed class PlaceTool
         return h;
     }
 
+    /// <summary>
+    /// One object's random draws, each from 0 to 1 unless said, kept so the preview stays put while the cursor moves.
+    /// </summary>
+    /// <param name="T">Picks the kind, by weight.</param>
+    /// <param name="K">Clumping: kept where it is under the noise pattern's density.</param>
+    /// <param name="Rx">Tilt about x, from -1 to 1 (times Tilt).</param>
+    /// <param name="Ry">Facing, as a fraction of a turn (Random facing).</param>
+    /// <param name="Rz">Tilt about z, from -1 to 1 (times Tilt).</param>
+    /// <param name="S">Size between SizeMin and SizeMax.</param>
+    /// <param name="W">Line: the sideways wiggle.</param>
     public sealed record Draw(float T, float K, float Rx, float Ry, float Rz, float S, float W);
+    /// <summary>A fresh set of random draws.</summary>
     private Draw NewDraw() => new(_rand.NextSingle(), _rand.NextSingle(), _rand.NextSingle() * 2 - 1, _rand.NextSingle(), _rand.NextSingle() * 2 - 1, _rand.NextSingle(), _rand.NextSingle());
 
-    // A placement: the kind, where (world position, and the grid point), turned and scaled.
+    /// <summary>A placement: the kind, where (world position, and the grid point), turned and scaled.</summary>
+    /// <param name="Name">The kind, by prefab name.</param>
+    /// <param name="Position">World position.</param>
+    /// <param name="Rotation">Unity Euler rotation, in degrees.</param>
+    /// <param name="Scale">Uniform scale (0: as the template object, as for pieces).</param>
+    /// <param name="G">The grid point of the block it stands on.</param>
     public sealed record Placement(string Name, Vector3 Position, Vector3 Rotation, float Scale, Vector2 G);
 
+    /// <summary>The ground's height at a grid point of the block.</summary>
     private static float HeightAt(WorldScene s, Vector2 g) => Picking.HeightAt(s, g.X - (s.W - 1) / 2f, -(g.Y - (s.H - 1) / 2f));
 
-    // Clumping (Brush and Zone): the density follows a noise pattern in world coordinates, so objects
-    // gather in groves and leave clearings. 0: even.
+    /// <summary>
+    /// Clumping (Brush and Zone): the density follows a noise pattern in world coordinates, so objects gather in groves
+    /// and leave clearings. 0: even.
+    /// </summary>
     private bool ClumpKeeps(WorldScene s, Vector2 g, float k)
     {
         float c = Clump / 100;
@@ -249,24 +407,51 @@ public sealed class PlaceTool
         return k < t * t * (3 - 2 * t);
     }
 
+    /// <summary>
+    /// Kelp and seaweed may go under water; other kinds on the ground are left out below the water line.
+    /// </summary>
     private static bool UnderwaterOk(IEnumerable<string> names) => names.Any(n => n.Contains("kelp", StringComparison.OrdinalIgnoreCase) || n.Contains("seaweed", StringComparison.OrdinalIgnoreCase));
 
-    // A piece's bottom below its origin (its lowest snap point: walls have their origin in the middle).
+    /// <summary>
+    /// A piece's bottom below its origin (its lowest snap point: walls have their origin in the middle).
+    /// </summary>
     private static float? BottomOf(string name) => SnapsOf(name) is { Length: > 0 } sp ? sp.Min(p => p[1]) : null;
 
-    // Elevation: on the ground, a height above it, or one height for all.
+    /// <summary>
+    /// The height an object's origin goes at for the Elevation: on the ground, a height above it, or one height for
+    /// all; a piece's bottom (its lowest snap point) is what stands there.
+    /// </summary>
+    /// <param name="name">The kind, by prefab name.</param>
+    /// <param name="groundY">The ground's height under it.</param>
     public float Elevated(string name, float groundY)
     {
         float? b = BottomOf(name);
         return Elevation == Elevations.At ? Elev - (b ?? 0) : groundY - (b ?? 0.05f) + (Elevation == Elevations.Above ? Elev : 0);
     }
 
-    // Zone and grid shapes can be turned as a whole; their objects turn with them.
+    /// <summary>
+    /// Zone and grid shapes can be turned as a whole, by this many degrees (-180 to 180); their objects turn with them.
+    /// </summary>
     public float ShapeTurn { get; private set; }
+    /// <summary>The point the shape turns about: its bounding box's middle when first turned.</summary>
     private Vector2? _pivot;
+    /// <summary>The mode's shape can be turned (Zone and Grid).</summary>
     private bool Turnable => Mode is Modes.Zone or Modes.Grid;
+    /// <summary>The rotation plus the shape's turn where it turns.</summary>
     private float RotationNow => Rotation + (Turnable ? ShapeTurn : 0);
 
+    /// <summary>
+    /// One object at a grid point, or null where it cannot go: off the block's edge, masked, thinned out by clumping,
+    /// too close to another (or its grow room), or under water.
+    /// </summary>
+    /// <param name="s">The scene.</param>
+    /// <param name="g">The grid point.</param>
+    /// <param name="d">The object's random draws.</param>
+    /// <param name="names">The kinds to pick from.</param>
+    /// <param name="hash">What stands already, for the spacing.</param>
+    /// <param name="mask">The mask, or null.</param>
+    /// <param name="minDist">The distance to keep from others instead of the mode's own.</param>
+    /// <param name="yaw">The facing to use instead of a random one (degrees, before the rotation).</param>
     private Placement? PlacementAt(WorldScene s, Vector2 g, Draw d, IReadOnlyList<string> names, Hash hash, Func<int, float>? mask, float? minDist = null, float? yaw = null)
     {
         if (g.X < 1 || g.Y < 1 || g.X > s.W - 2 || g.Y > s.H - 2)
@@ -300,11 +485,19 @@ public sealed class PlaceTool
         return new Placement(name, new Vector3(ox + g.X, Elevated(name, y), oz + g.Y), new Vector3(d.Rx * Tilt, ry, d.Rz * Tilt), smin + d.S * (smax - smin), g);
     }
 
-    // ---- Brush: the layout under the cursor (offsets), kept until the settings change or R.
+    // ---- Brush.
+    /// <summary>
+    /// Brush: the layout under the cursor (offsets from it, with their draws), kept until the settings change or R.
+    /// </summary>
     private List<(Vector2 D, Draw Draw)> _pattern = [];
+    /// <summary>The settings the brush layout was made for (empty: make a new one).</summary>
     private string _patternKey = "";
+    /// <summary>The settings the brush layout depends on.</summary>
     private string SettingsKey => $"{Brush.Radius}|{Density}|{Spacing}|{OneAtATime}|{string.Join(",", Chosen)}";
 
+    /// <summary>
+    /// New random choices (R): a new brush layout, new draws for shapes, new zone spots and new clumping.
+    /// </summary>
     public void NewLayout()
     {
         _patternKey = "";
@@ -314,6 +507,10 @@ public sealed class PlaceTool
         Notify();
     }
 
+    /// <summary>
+    /// Makes the brush layout: one object at the cursor (One at a time), or random points in the disc at least the
+    /// spacing apart (400 at most).
+    /// </summary>
     private void MakePattern()
     {
         float r = Brush.Radius;
@@ -341,12 +538,22 @@ public sealed class PlaceTool
     }
 
     // ---- Line, grid and zone shapes.
+    /// <summary>
+    /// Line and Zone: the points clicked, grid points of the block (a zone's kept unturned). Changed under its own
+    /// lock: the drawing thread reads it.
+    /// </summary>
     public List<Vector2> Points { get; } = [];
+    /// <summary>Grid: the box's first corner.</summary>
     public Vector2? GridA { get; set; }
+    /// <summary>Grid: the box's opposite corner.</summary>
     public Vector2? GridB { get; set; }
+    /// <summary>Circle: its centre; Rectangle: its first corner.</summary>
     public Vector2? FigA { get; set; }
+    /// <summary>Circle: a point on its edge; Rectangle: the opposite corner (before end-to-end snapping).</summary>
     public Vector2? FigB { get; set; }
+    /// <summary>Shapes: each object's draws, by its index in the shape.</summary>
     private readonly List<Draw> _draws = [];
+    /// <summary>The draws of a shape's i-th object, made as needed.</summary>
     private Draw DrawAt(int i)
     {
         while (_draws.Count <= i)
@@ -356,6 +563,7 @@ public sealed class PlaceTool
         return _draws[i];
     }
 
+    /// <summary>A point turned by the shape's turn about its pivot.</summary>
     public Vector2 Xf(Vector2 p)
     {
         if (ShapeTurn == 0 || _pivot is not { } c)
@@ -367,6 +575,7 @@ public sealed class PlaceTool
         return new Vector2(c.X + d.X * co + d.Y * sn, c.Y - d.X * sn + d.Y * co);
     }
 
+    /// <summary>A point turned back: the opposite of <see cref="Xf"/>.</summary>
     public Vector2 Inv(Vector2 p)
     {
         if (ShapeTurn == 0 || _pivot is not { } c)
@@ -378,9 +587,10 @@ public sealed class PlaceTool
         return new Vector2(c.X + d.X * co + d.Y * sn, c.Y - d.X * sn + d.Y * co);
     }
 
-    // A point as kept: zone outlines are kept unturned.
+    /// <summary>A point as kept: zone outlines are kept unturned.</summary>
     public Vector2 Local(Vector2 p) => Mode == Modes.Zone ? Inv(p) : p;
 
+    /// <summary>Turns the zone or the grid box by this many degrees; false when there is none to turn.</summary>
     public bool TurnShape(float degrees)
     {
         var pts = Mode == Modes.Zone ? [.. Points] : GridA is { } a && GridB is { } b ? new List<Vector2> { a, b } : [];
@@ -394,13 +604,14 @@ public sealed class PlaceTool
         return true;
     }
 
-    // A new grid box starts unturned.
+    /// <summary>A new grid box starts unturned.</summary>
     public void ClearTurn()
     {
         ShapeTurn = 0;
         _pivot = null;
     }
 
+    /// <summary>Removes the line, zone, figure and grid box, and their turn.</summary>
     public void ClearShape()
     {
         lock (Points)
@@ -413,13 +624,16 @@ public sealed class PlaceTool
         Notify();
     }
 
+    /// <summary>Turns the rotation by this many degrees (kept within -180 to 180).</summary>
     public void TurnBy(float degrees)
     {
         Rotation = ((Rotation + degrees + 180) % 360 + 360) % 360 - 180;
         Notify();
     }
 
-    // The line through the points: a smooth curve or straight stretches (Seg: the point each starts from).
+    /// <summary>
+    /// The line through the points: a smooth curve or straight stretches (Seg: the point each starts from).
+    /// </summary>
     public List<(Vector2 P, int Seg)> LineCurve()
     {
         List<Vector2> p;
@@ -447,10 +661,22 @@ public sealed class PlaceTool
         return outp;
     }
 
-    // ---- End to end: a piece's two ends are the middles of the faces along its longer side, from its
-    // snap points or, for kinds without any, from its model's box.
+    /// <summary>
+    /// End to end: a piece's two ends are the middles of the faces along its longer side, from its snap points or, for
+    /// kinds without any, from its model's box.
+    /// </summary>
+    /// <param name="A">The start end, in the piece's own frame, at its lowest height.</param>
+    /// <param name="B">The far end, likewise.</param>
+    /// <param name="Len">The distance between the ends along the ground, in metres.</param>
+    /// <param name="H">How tall it is (highest less lowest point), for stacking layers.</param>
+    /// <param name="Heading">The direction from A to B in its own frame, in radians (Unity yaw: clockwise from
+    /// +z).</param>
     public sealed record Ends(Vector3 A, Vector3 B, float Len, float H, float Heading);
 
+    /// <summary>
+    /// The ends of a set of points (snap points or box corners) given as separate x, y and z lists; null when shorter
+    /// than 5 cm.
+    /// </summary>
     private static Ends? EndsFrom(float[] xs, float[] ys, float[] zs)
     {
         float x0 = xs.Min(), x1 = xs.Max(), z0 = zs.Min(), z1 = zs.Max(), y = ys.Min();
@@ -462,6 +688,7 @@ public sealed class PlaceTool
         return len > 0.05f ? new Ends(a, b, len, ys.Max() - y, MathF.Atan2(b.X - a.X, b.Z - a.Z)) : null;
     }
 
+    /// <summary>A kind's ends, from its snap points or else its model box; null while neither is known.</summary>
     public Ends? EndsOf(string name)
     {
         float[][] sp = SnapsOf(name);
@@ -472,7 +699,12 @@ public sealed class PlaceTool
         return ModelBox(name) is var (lo, hi) ? EndsFrom([lo.X, hi.X], [lo.Y, hi.Y], [lo.Z, hi.Z]) : null;
     }
 
-    // End to end: the figure's size snaps so that whole pieces close it.
+    /// <summary>
+    /// End to end: the figure's size snaps so that whole pieces of the first chosen kind close it; returns the corner
+    /// or edge point to use instead of <c>b</c>.
+    /// </summary>
+    /// <param name="a">The circle's centre or the rectangle's first corner.</param>
+    /// <param name="b">The point dragged to.</param>
     public Vector2 SnapFigure(Vector2 a, Vector2 b)
     {
         var e = EndToEnd && Chosen.Count > 0 ? EndsOf(Chosen[0]) : null;
@@ -491,8 +723,10 @@ public sealed class PlaceTool
         return new Vector2(a.X + MathF.Cos(t) * radius, a.Y + MathF.Sin(t) * radius);
     }
 
-    // The line as runs of points: one run, or a rectangle's four sides each on their own when placing
-    // end to end (so its corners stay exact).
+    /// <summary>
+    /// The line as runs of points: one run, or a rectangle's four sides each on their own when placing end to end (so
+    /// its corners stay exact).
+    /// </summary>
     public List<List<Vector2>> LineRuns()
     {
         if (LineShape == LineShapes.Points)
@@ -530,11 +764,13 @@ public sealed class PlaceTool
         return [[.. Enumerable.Range(0, n + 1).Select(i => a + new Vector2(MathF.Cos(t0 + i / (float)n * MathF.Tau), MathF.Sin(t0 + i / (float)n * MathF.Tau)) * r)]];
     }
 
-    // How much of the line is left at the end once no whole piece fits (end to end).
+    /// <summary>How much of the line is left at the end once no whole piece fits (end to end).</summary>
     public float SnapGap { get; private set; }
 
-    // The point along the run at a straight distance dist from s, searching from segment seg at
-    // fraction t0 (forwards only), or null past its end.
+    /// <summary>
+    /// The point along the run at a straight distance dist from s, searching from segment seg at fraction t0 (forwards
+    /// only), or null past its end.
+    /// </summary>
     private static (Vector2 Q, int Seg, float T)? AlongRun(List<Vector2> pts, Vector2 s, int seg, float t0, float dist)
     {
         for (; seg < pts.Count - 1; seg++, t0 = 0)
@@ -558,7 +794,7 @@ public sealed class PlaceTool
         return null;
     }
 
-    // Unity's rotation (Euler degrees: z, then x, then y) of a local point.
+    /// <summary>Unity's rotation (Euler degrees: z, then x, then y) of a local point.</summary>
     public static Vector3 RotU(Vector3 p, Vector3 r)
     {
         const float D = MathF.PI / 180;
@@ -569,8 +805,15 @@ public sealed class PlaceTool
         return new Vector3(x * cy + z * sy, y, -x * sy + z * cy);
     }
 
-    // The snap points of every piece in the block (grid x, height, grid z).
+    /// <summary>A piece already in the block, for snapping.</summary>
+    /// <param name="Index">Its index in the scene's things.</param>
+    /// <param name="Name">Its prefab name.</param>
+    /// <param name="G">Its grid position.</param>
+    /// <param name="Rotation">Its Unity Euler rotation, in degrees.</param>
+    /// <param name="Pts">Its snap points (grid x, height, grid z).</param>
+    /// <param name="Low">The height of its lowest snap point.</param>
     private sealed record Other(int Index, string Name, Vector2 G, Vector3 Rotation, List<Vector3> Pts, float Low);
+    /// <summary>The snap points of every piece in the block.</summary>
     private static List<Other> OtherSnaps(WorldScene s, Func<int, string?> nameOf)
     {
         var list = new List<Other>();
@@ -592,9 +835,10 @@ public sealed class PlaceTool
         return list;
     }
 
+    /// <summary>A prefab hash's name (null when unknown); set by the window.</summary>
     public Func<int, string?> NameOf { get; set; } = _ => null;
 
-    // The snap point of a piece already there nearest to p (along the ground), within d metres.
+    /// <summary>The snap point of a piece already there nearest to p (along the ground), within d metres.</summary>
     private static Vector3? NearestSnap(List<Other> others, Vector2 p, float d)
     {
         Vector3? best = null;
@@ -618,8 +862,18 @@ public sealed class PlaceTool
         return best;
     }
 
-    // Places pieces end to end along one run, from its start; on a slope each one is a little higher or
-    // lower than the last, touching it. k: pieces placed so far.
+    /// <summary>
+    /// Places pieces end to end along one run, from its start; on a slope each one is a little higher or lower than the
+    /// last, touching it. Adds the leftover length to <see cref="SnapGap"/>.
+    /// </summary>
+    /// <param name="s">The scene.</param>
+    /// <param name="pts">The run.</param>
+    /// <param name="names">The kinds, used in turn.</param>
+    /// <param name="k">Pieces placed so far (picks the next kind; stops at MaxShape).</param>
+    /// <param name="outp">Where the placements go.</param>
+    /// <param name="mask">The mask, or null.</param>
+    /// <param name="others">Pieces already there to start from (null: no snapping).</param>
+    /// <returns>The pieces laid so far, this run included (masked-out spots count; extra layers do not).</returns>
     private int SnappedRun(WorldScene s, List<Vector2> pts, List<string> names, int k, List<Placement> outp, Func<int, float>? mask, List<Other>? others)
     {
         if (pts.Count < 2)
@@ -669,8 +923,11 @@ public sealed class PlaceTool
         return k;
     }
 
+    /// <summary>Zone: the spots, with a key of the zone and settings they were made for.</summary>
     private (float Key, List<Vector2> Pts)? _scatter;
-    // Random spots inside the zone (Density, Spacing), kept while the zone stays the same (R: new ones).
+    /// <summary>
+    /// Random spots inside the zone (Density, Spacing), kept while the zone stays the same (R: new ones).
+    /// </summary>
     private List<Vector2> ZoneSpots()
     {
         List<Vector2> poly;
@@ -701,6 +958,9 @@ public sealed class PlaceTool
         return pts;
     }
 
+    /// <summary>
+    /// What the line, grid or zone would place (Zone: needs 3 points). Also works out <see cref="SnapGap"/>.
+    /// </summary>
     private List<Placement> ShapePlacements(WorldScene s, IReadOnlyList<string> names, Hash hash, Func<int, float>? mask, List<Other>? others)
     {
         var outp = new List<Placement>();
@@ -800,11 +1060,23 @@ public sealed class PlaceTool
         return outp;
     }
 
-    // ---- Snapping a single piece to the pieces already there: beside one (end to end, at its level)
-    // or on top of the one under the cursor. Its turn follows that piece (in quarter turns).
+    /// <summary>
+    /// Snapping a single piece to the pieces already there: beside one (end to end, at its level) or on top of the one
+    /// under the cursor; its turn follows that piece (in quarter turns). What the last preview snapped to ("beside X",
+    /// "on top of X"), or null.
+    /// </summary>
     public string? SnappedTo { get; private set; }
+    /// <summary>A piece's facing: the reference facing plus the rotation rounded to quarter turns.</summary>
     private float AlignYaw(float reference) => reference + 90 * MathF.Round(Rotation / 90);
 
+    /// <summary>
+    /// Snaps one piece to the pieces within 12 m: on top of the one under the cursor (or the nearest within 3 m), or
+    /// beside the nearest where a pair of snap points meets within 1 m. Returns it unchanged when nothing snaps.
+    /// </summary>
+    /// <param name="s">The scene.</param>
+    /// <param name="o">The piece where the cursor puts it.</param>
+    /// <param name="others">The pieces already there.</param>
+    /// <param name="under">The thing under the cursor, for On top.</param>
     private Placement SnapSingle(WorldScene s, Placement o, List<Other> others, int? under)
     {
         SnappedTo = null;
@@ -882,7 +1154,7 @@ public sealed class PlaceTool
         return Place(o.G + new Vector2(bb.Q.X - bb.M.X, bb.Q.Z - bb.M.Z), o.Position.Y + bb.Q.Y - bb.M.Y, bb.Ry);
     }
 
-    // Saplings and crops: the grow radius is kept between the placements themselves too.
+    /// <summary>Saplings and crops: the grow radius is kept between the placements themselves too.</summary>
     private List<Placement> RoomToGrow(List<Placement> list)
     {
         if (!GrowMatters || !GrowRoom || !list.Any(o => GrowNeed(o.Name) > 0))
@@ -904,8 +1176,9 @@ public sealed class PlaceTool
         return outp;
     }
 
-    // ---- The preview: what a click (Brush) or Enter (shapes) would place. at: the cursor's grid point;
-    // under: the thing under the cursor (for On top).
+    /// <summary>The preview: what a click (Brush) or Enter (shapes) would place.</summary>
+    /// <param name="at">The cursor's grid point (null off the ground).</param>
+    /// <param name="under">The thing under the cursor (for On top).</param>
     public List<Placement> Preview(Vector2? at, int? under = null)
     {
         var s = Scene();
@@ -952,9 +1225,11 @@ public sealed class PlaceTool
         return RoomToGrow(placed);
     }
 
-    // ---- Building (the Workshop): one piece where the game's hammer puts it (Hammer): on what the build
-    // ray hits, turned by Rotation, lifted by HeightNudge, snapped (SnapTo). On the ground, the Grid can
-    // round where the ray meets it (from the area's middle) first.
+    /// <summary>
+    /// Building (the Workshop): one piece where the game's hammer puts it (Hammer): on what the build ray hits, turned
+    /// by Rotation, lifted by HeightNudge, snapped (SnapTo). On the ground, the Grid can round where the ray meets it
+    /// (from the area's middle) first.
+    /// </summary>
     private Placement? BuildAt(WorldScene s, string name)
     {
         if (AimRay is not var (o, d, groundT))
@@ -997,8 +1272,13 @@ public sealed class PlaceTool
         return new Placement(name, pos, new Vector3(0, yaw, 0), 0, g);
     }
 
-    // ---- Brush painting: placements a frame of a drag adds (around the cursor), kept apart from what
-    // stands and from what this stroke already placed.
+    /// <summary>
+    /// Brush painting: the placements a frame of a drag adds (around the cursor), kept apart from what stands and from
+    /// what this stroke already placed. More per second with a stronger brush.
+    /// </summary>
+    /// <param name="at">The cursor's grid point.</param>
+    /// <param name="dt">Seconds since the last step (counted as 0.1 at most).</param>
+    /// <param name="already">What this stroke has placed so far.</param>
     public List<Placement> PaintStep(Vector2 at, float dt, List<Placement> already)
     {
         var s = Scene();
@@ -1030,7 +1310,10 @@ public sealed class PlaceTool
         return outp;
     }
 
-    // Shift + drag: the things of the chosen kinds under the brush (indices).
+    /// <summary>
+    /// Shift + drag: the things of the chosen kinds under the brush (indices into the scene's things), where the mask
+    /// allows.
+    /// </summary>
     public List<int> EraseAt(Vector2 at)
     {
         var s = Scene();
@@ -1062,7 +1345,12 @@ public sealed class PlaceTool
         return outp;
     }
 
-    // Alt + click: one height for all, from the top of the piece clicked (to build on it) or the ground.
+    /// <summary>
+    /// Alt + click: one height for all, from the top of the piece clicked (to build on it) or the ground.
+    /// </summary>
+    /// <param name="thing">The thing clicked, if any.</param>
+    /// <param name="groundY">The height clicked on the ground.</param>
+    /// <returns>The line for the status bar.</returns>
     public string PickElevation(int? thing, float groundY)
     {
         var s = Scene();
@@ -1080,7 +1368,10 @@ public sealed class PlaceTool
         return $"Elevation: everything at {Elev:0.00} m{where}. PgUp / PgDn change it.";
     }
 
-    // PgUp / PgDn: up or down; from the ground they start lifting above it.
+    /// <summary>
+    /// PgUp / PgDn: the elevation up or down by <c>d</c> metres; from the ground they start lifting above it. Returns
+    /// the line for the status bar.
+    /// </summary>
     public string NudgeElevation(float d)
     {
         if (Elevation == Elevations.Ground)
@@ -1093,9 +1384,19 @@ public sealed class PlaceTool
         return $"Elevation: {(Elevation == Elevations.At ? "at" : "above the ground by")} {Elev} m.";
     }
 
-    // ---- Presets: kinds with their weights and the scatter settings.
+    /// <summary>A preset: kinds with their weights and the scatter settings.</summary>
+    /// <param name="Name">The preset as listed.</param>
+    /// <param name="Kinds">The kinds by prefab name, with their weights.</param>
+    /// <param name="Density">Objects per 100 m².</param>
+    /// <param name="Spacing">The least distance between objects, in metres.</param>
+    /// <param name="SizeMin">Smallest scale, in percent.</param>
+    /// <param name="SizeMax">Largest scale, in percent.</param>
+    /// <param name="Tilt">Most random lean, in degrees.</param>
+    /// <param name="Clump">Clumping, 0 to 100%.</param>
+    /// <param name="Patch">The clumping pattern's size, in metres.</param>
     public sealed record Preset(string Name, Dictionary<string, int> Kinds, float Density, float Spacing, float SizeMin, float SizeMax, float Tilt, float Clump = 0, float Patch = 30);
 
+    /// <summary>The presets that come with the editor.</summary>
     public static readonly Preset[] BuiltIn =
     [
         new("Meadows woods", new() { ["Beech1"] = 4, ["Birch1"] = 1, ["Birch2"] = 1, ["Oak1"] = 1, ["Bush01"] = 2 }, 3, 4, 80, 120, 3, 50, 35),
@@ -1106,7 +1407,9 @@ public sealed class PlaceTool
         new("Meadows rocks", new() { ["Rock_3"] = 2, ["Rock_4"] = 1, ["Rock_7"] = 1 }, 1, 6, 60, 140, 10, 40, 25),
     ];
 
-    // Loads a preset (kinds the world cannot make are left out). Returns what to say.
+    /// <summary>Loads a preset (kinds the world cannot make are left out). Returns what to say.</summary>
+    /// <param name="p">The preset.</param>
+    /// <param name="canMake">Whether the world can make a kind (by prefab name).</param>
     public string Load(Preset p, Func<string, bool> canMake)
     {
         var kinds = p.Kinds.Where(k => canMake(k.Key)).ToList();

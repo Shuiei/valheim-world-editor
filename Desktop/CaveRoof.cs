@@ -3,24 +3,43 @@ using TerrainEditor.Terrain;
 
 namespace TerrainEditor.Desktop;
 
-// A cave's roof of the game's boulders (the Path tool's Cave): each boulder upside down, turned, tilted
-// and sized at random, and hung by its real underside (the game's mesh, CaveRocks) so it clears the headroom
-// over the whole floor beneath it. Boulders are added until the floor and the foot of the walls are
-// covered, then the walls are raised into the rock wherever its underside is above them: no daylight
-// at the sides.
+/// <summary>
+/// A cave's roof of the game's boulders (the Path tool's Cave): each boulder upside down, turned, tilted
+/// and sized at random, and hung by its real underside (the game's mesh, CaveRocks) so it clears the headroom
+/// over the whole floor beneath it. Boulders are added until the floor and the foot of the walls are
+/// covered, then the walls are raised into the rock wherever its underside is above them: no daylight
+/// at the sides.
+/// </summary>
 public static class CaveRoof
 {
-    // A boulder of the roof: world position, Unity Euler rotation (degrees), scale, prefab.
+    /// <summary>A boulder of the roof.</summary>
+    /// <param name="Prefab">The boulder's prefab.</param>
+    /// <param name="Position">World position, in metres.</param>
+    /// <param name="Rotation">Unity Euler rotation, in degrees.</param>
+    /// <param name="Scale">Its scale.</param>
     public sealed record Rock(string Prefab, Vector3 Position, Vector3 Rotation, float Scale);
 
-    // The roof's boulders, and the walls' new heights (grid point → height it is raised to, at least).
+    /// <summary>The roof's boulders, and the walls' new heights.</summary>
+    /// <param name="Rocks">The boulders.</param>
+    /// <param name="Seal">The walls' new heights: grid point → height it is raised to, at least.</param>
+    /// <param name="Uncovered">How many points of the floor and the foot of the walls no boulder covers.</param>
     public sealed record Result(List<Rock> Rocks, Dictionary<int, float> Seal, int Uncovered);
 
-    // The rock4 boulders share one model (coast, forest, heath).
+    /// <summary>A boulder's shape; the rock4 boulders share one model (coast, forest, heath).</summary>
     private static CaveRocks.Shape ShapeOf(string prefab) => CaveRocks.Of(prefab.StartsWith("rock4_", StringComparison.Ordinal) ? "rock4_forest" : prefab);
 
-    // The underside of a boulder (its pivot at height 0) over the grid: the lowest point of the model
-    // above each grid point it covers. (px, pz): the pivot in grid coordinates.
+    /// <summary>
+    /// The underside of a boulder (its pivot at height 0) over the grid: the lowest point of the model
+    /// above each grid point it covers.
+    /// </summary>
+    /// <param name="prefab">The boulder's prefab.</param>
+    /// <param name="px">The pivot's x in grid coordinates.</param>
+    /// <param name="pz">The pivot's z in grid coordinates.</param>
+    /// <param name="rotation">Unity Euler rotation, in degrees.</param>
+    /// <param name="scale">The boulder's scale.</param>
+    /// <param name="w">The grid's width.</param>
+    /// <param name="h">The grid's height.</param>
+    /// <returns>Grid point (z * w + x) → the underside's height there, relative to the pivot.</returns>
     internal static Dictionary<int, float> Underside(string prefab, float px, float pz, Vector3 rotation, float scale, int w, int h)
     {
         var shape = ShapeOf(prefab);
@@ -59,8 +78,14 @@ public static class CaveRoof
         return low;
     }
 
-    // The roof over a cave (grid w × h, ox/oz the grid's world corner). rockAt: the boulders for a
-    // world point.
+    /// <summary>The roof over a cave.</summary>
+    /// <param name="path">The Path tool: its seed, width, soft edge and headroom.</param>
+    /// <param name="c">The cave's plan: its line, floor and depth along it.</param>
+    /// <param name="w">The grid's width.</param>
+    /// <param name="h">The grid's height.</param>
+    /// <param name="ox">The grid's world corner, x.</param>
+    /// <param name="oz">The grid's world corner, z.</param>
+    /// <param name="rockAt">The boulders for a world point.</param>
     public static Result Build(PathTool path, PathTool.CavePlan c, int w, int h, float ox, float oz, Func<float, float, PathTool.CaveRock> rockAt)
     {
         var rnd = new Random(path.Seed);

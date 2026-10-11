@@ -1,52 +1,117 @@
 namespace TerrainEditor.Desktop;
 
-// The sculpt and paint tools, as the web editor applies them every frame while the button is held
-// (editor.html applyBrush), with the brush shapes and falloffs of editor/brushes.js.
+/// <summary>
+/// The sculpt and paint tools, as the web editor applies them every frame while the button is held (editor.html
+/// applyBrush), with the brush shapes and falloffs of editor/brushes.js.
+/// </summary>
 public enum BrushTool
 {
+    /// <summary>Lifts the ground under the brush.</summary>
     Raise,
+    /// <summary>Digs the ground down under the brush.</summary>
     Lower,
+    /// <summary>Levels the ground to one height (the brush's Target, or where the stroke starts).</summary>
     Flatten,
+    /// <summary>Evens out bumps and sharp edges.</summary>
     Smooth,
+    /// <summary>Naturalize: flat, tool-made ground towards natural-looking bumps.</summary>
     Natural,
+    /// <summary>Weathering: Thermal (slopes slide to the rest angle) or Water (rain).</summary>
     Erode,
+    /// <summary>Back towards the ground as the world generated it.</summary>
     Restore,
+    /// <summary>Paints bare dirt, like a path.</summary>
     PaintDirt,
+    /// <summary>Paints cultivated soil for planting.</summary>
     PaintCultivated,
+    /// <summary>Paints paved stone ground.</summary>
     PaintPaved,
+    /// <summary>Removes paint: back to the biome's own ground.</summary>
     PaintClear,
 }
 
-public enum BrushShape { Circle, Square, Ring, Noise, Stamp }
+/// <summary>
+/// The brush's shape: Ring works on a band near the edge, Noise has a ragged edge, Stamp uses a picture
+/// (<see cref="Brush.StampData"/>).
+/// </summary>
+public enum BrushShape
+{
+    /// <summary>A round brush.</summary>
+    Circle,
+    /// <summary>A square brush.</summary>
+    Square,
+    /// <summary>Works on a band near the edge.</summary>
+    Ring,
+    /// <summary>A round brush with a ragged edge.</summary>
+    Noise,
+    /// <summary>Shaped by a picture (<see cref="Brush.StampData"/>).</summary>
+    Stamp,
+}
 
-public enum Falloff { Smooth, Linear, Dome, Flat, Peak, Sharp }
+/// <summary>How the brush fades from its middle to its edge (see <see cref="Brush.Fade"/>).</summary>
+public enum Falloff
+{
+    /// <summary>An S-curve (smoothstep): soft at both ends.</summary>
+    Smooth,
+    /// <summary>Straight from the middle to the edge.</summary>
+    Linear,
+    /// <summary>Round on top, falling fast near the edge.</summary>
+    Dome,
+    /// <summary>Full strength, fading only in the outer fifth.</summary>
+    Flat,
+    /// <summary>Strong only near the middle (cubic).</summary>
+    Peak,
+    /// <summary>Full strength right up to the edge: steep walls, like the game's pickaxe.</summary>
+    Sharp,
+}
 
+/// <summary>
+/// The brush the sculpt and paint tools use (also the Place tool's radius and the noise of natural looks): shape,
+/// falloff, size, strength and each tool's own values.
+/// </summary>
 public sealed class Brush
 {
+    /// <summary>The shape.</summary>
     public BrushShape Shape { get; set; } = BrushShape.Circle;
+    /// <summary>How it fades towards its edge (not for Stamp: a picture has its own).</summary>
     public Falloff Falloff { get; set; } = Falloff.Smooth;
-    // The picture of the Stamp shape (Stamps.Size squared weights), and Stamp once: a click of Raise or
-    // Lower puts the whole picture in, this many metres high.
+    /// <summary>The picture of the Stamp shape (Stamps.Size squared weights), or null.</summary>
     public float[]? StampData { get; set; }
+    /// <summary>The stamp's name, for the undo step's label.</summary>
     public string StampLabel { get; set; } = "";
+    /// <summary>
+    /// Stamp once: a click of Raise or Lower puts the whole picture in, <see cref="StampHeight"/> metres high.
+    /// </summary>
     public bool StampOnce { get; set; }
+    /// <summary>Stamp once: how high the picture goes in, in metres.</summary>
     public float StampHeight { get; set; } = 4;
-    // Square brushes and stamps turn (degrees).
+    /// <summary>Square brushes and stamps turn (degrees).</summary>
     public float Turn { get; set; }
+    /// <summary>The radius in metres (half the side for squares).</summary>
     public float Radius { get; set; } = 6;
+    /// <summary>How fast the tools work, from 0 to 1.</summary>
     public float Strength { get; set; } = 0.4f;
-    // Flatten: the height to level to, or the ground's where the stroke starts.
+    /// <summary>Flatten: the height to level to, in metres.</summary>
     public float Target { get; set; } = 35;
+    /// <summary>
+    /// Flatten: level to the ground's height where the stroke starts instead of <see cref="Target"/> (which then takes
+    /// it).
+    /// </summary>
     public bool TargetFromClick { get; set; } = true;
-    // Naturalize: how big the bumps are (m) and how wide.
+    /// <summary>Naturalize (and natural looks): how big the bumps are, in metres.</summary>
     public float NoiseAmp { get; set; } = 1.2f;
+    /// <summary>Naturalize (and natural looks): how wide the bumps are, in metres.</summary>
     public float NoiseSize { get; set; } = 16;
+    /// <summary>The noise for the bumps, the Noise shape's edge and the Place tool's clumping.</summary>
     public Noise Noise { get; set; } = new(Random.Shared.Next());
-    // Erode: rain (Water) or sliding to the rest angle (Thermal, degrees).
+    /// <summary>Erode: rain (Water) instead of sliding to the rest angle (Thermal).</summary>
     public bool ErodeWater { get; set; }
+    /// <summary>Erode, Thermal: the slope ground slides down to, in degrees.</summary>
     public float RestAngle { get; set; } = 33;
+    /// <summary>Erode, Water: where the raindrops fall.</summary>
     public Random Random { get; set; } = new();
 
+    /// <summary>The tool's name on its button.</summary>
     public static string Label(BrushTool t) => t switch
     {
         BrushTool.Raise => "Raise",
@@ -62,6 +127,7 @@ public sealed class Brush
         _ => "Clear paint",
     };
 
+    /// <summary>What the tool does, in a line.</summary>
     public static string Help(BrushTool t) => t switch
     {
         BrushTool.Raise => "Lift the ground under the brush.",
@@ -77,7 +143,10 @@ public sealed class Brush
         _ => "Remove paint: back to the biome's own ground.",
     };
 
-    // The colour each paint tool moves the paint towards (dirt, cultivated, paved, vegetation).
+    /// <summary>
+    /// The colour each paint tool moves the paint towards (dirt, cultivated, paved, vegetation weights); null for the
+    /// sculpt tools.
+    /// </summary>
     public static float[]? PaintOf(BrushTool t) => t switch
     {
         BrushTool.PaintDirt => [1f, 0, 0, 1],
@@ -87,7 +156,7 @@ public sealed class Brush
         _ => null,
     };
 
-    // t: 1 at the middle of the brush, 0 at its edge.
+    /// <summary>The falloff's weight, from 0 to 1, at <c>t</c>: 1 at the middle of the brush, 0 at its edge.</summary>
     public static float Fade(Falloff f, float t) => f switch
     {
         Falloff.Linear => t,
@@ -99,9 +168,14 @@ public sealed class Brush
         _ => t * t * (3 - 2 * t),
     };
 
+    /// <summary>Square brushes and stamps turn.</summary>
     private bool Turnable => Shape is BrushShape.Square or BrushShape.Stamp;
 
-    // The weight of a point (dx, dz) from the brush middle (0..1). wx, wz: its world position, for the noise.
+    /// <summary>The weight of a point (dx, dz) from the brush middle, from 0 to 1.</summary>
+    /// <param name="dx">East of the middle, in metres.</param>
+    /// <param name="dz">North of the middle, in metres.</param>
+    /// <param name="wx">Its world x, for the noise.</param>
+    /// <param name="wz">Its world z, for the noise.</param>
     public float Weight(float dx, float dz, float wx = 0, float wz = 0)
     {
         float r = Radius, u = dx / r, v = dz / r;
@@ -125,10 +199,10 @@ public sealed class Brush
         return d >= 1 ? 0 : Fade(Falloff, 1 - d);
     }
 
-    // How far from the middle a point can be affected (a turned square reaches its corners).
+    /// <summary>How far from the middle a point can be affected (a turned square reaches its corners).</summary>
     public float Reach => Turnable || Shape == BrushShape.Noise ? Radius * 1.42f : Radius;
 
-    // The outline drawn on the ground: n points around the brush, as offsets from its middle.
+    /// <summary>The outline drawn on the ground: n points around the brush, as offsets from its middle.</summary>
     public List<(float X, float Z)> Outline(int n)
     {
         var pts = new List<(float, float)>();
@@ -148,32 +222,49 @@ public sealed class Brush
         return pts;
     }
 
-    // The Ring shape works on a band from 40% of the radius to the edge: its inner edge, or null.
+    /// <summary>The Ring shape works on a band from 40% of the radius to the edge: its inner edge, or null.</summary>
     public List<(float X, float Z)>? InnerOutline(int n) => Shape != BrushShape.Ring ? null
         : Enumerable.Range(0, n).Select(i => (MathF.Cos(i / (float)n * MathF.Tau) * Radius * 0.4f, MathF.Sin(i / (float)n * MathF.Tau) * Radius * 0.4f)).ToList();
 }
 
-// One stroke of a brush: from the button going down to it coming up.
+/// <summary>One stroke of a brush: from the button going down to it coming up.</summary>
 public sealed class Stroke
 {
+    /// <summary>The tool of the stroke.</summary>
     public required BrushTool Tool { get; init; }
+    /// <summary>The ground as it was when the stroke started.</summary>
     public required Ground.State Start { get; init; }
+    /// <summary>The grid points the stroke changed.</summary>
     public HashSet<int> Touched { get; } = [];
+    /// <summary>Naturalize: each point's aim, worked out once per stroke.</summary>
     public Dictionary<int, float> Natural { get; } = [];
+    /// <summary>
+    /// Flatten: the height taken from the ground where the stroke started (Target from click), or null for the brush's.
+    /// </summary>
     public float? Target { get; set; }
-    // The game's ±8 m limit stopped the ground somewhere.
+    /// <summary>The game's ±8 m limit stopped the ground somewhere.</summary>
     public bool Clamped { get; set; }
 
+    /// <summary>A point's height when the stroke started.</summary>
     public float StartHeight(Ground g, int p) => g.Base[p] + Start.Lift[p] + (Start.Mod[p] != 0
         ? Math.Clamp(Start.Level[p] + Start.Smooth[p], -Editing.EditStore.MaxLevel, Editing.EditStore.MaxLevel)
         : 0);
 }
 
+/// <summary>Applies the sculpt and paint tools to the ground.</summary>
 public static class Sculpt
 {
-    // One frame of a stroke with the brush's middle at grid point (cx, cz), dt seconds after the last.
-    // mask: how much each point may change (1 everywhere when null). Returns the grid rectangle
-    // changed (to redraw), or null.
+    /// <summary>
+    /// One frame of a stroke with the brush's middle at grid point (cx, cz), <c>dt</c> seconds after the last (counted
+    /// as 0.1 at most). Returns the grid rectangle changed (to redraw), or null.
+    /// </summary>
+    /// <param name="g">The ground.</param>
+    /// <param name="b">The brush.</param>
+    /// <param name="s">The stroke.</param>
+    /// <param name="cx">The brush middle's grid x.</param>
+    /// <param name="cz">The brush middle's grid z.</param>
+    /// <param name="dt">Seconds since the last frame.</param>
+    /// <param name="mask">How much each point may change (1 everywhere when null).</param>
     public static (int X0, int Z0, int X1, int Z1)? Apply(Ground g, Brush b, Stroke s, float cx, float cz, float dt, Func<int, float>? mask = null)
     {
         float reach = b.Reach;
@@ -311,7 +402,10 @@ public static class Sculpt
         return (x0 - 1, z0 - 1, x1 + 1, z1 + 1);
     }
 
-    // Stamp once: the ground under the stamp moves by amount (metres) times the picture, all at once.
+    /// <summary>
+    /// Stamp once: the ground under the stamp moves by <c>amount</c> metres times the picture, all at once. Returns the
+    /// points changed, the rectangle around them, and whether the game's limit stopped some.
+    /// </summary>
     public static (List<int> Touched, (int X0, int Z0, int X1, int Z1) Rect, bool Clamped) StampOnce(Ground g, Brush b, float cx, float cz, float amount, Func<int, float>? mask)
     {
         var touched = new List<int>();
@@ -340,8 +434,10 @@ public static class Sculpt
         return (touched, (x0 - 1, z0 - 1, x1 + 1, z1 + 1), clamped);
     }
 
-    // Naturalize's aim: the ground's broad shape (blurred, from the start of the stroke) plus detail noise,
-    // in world coordinates so the pattern is continuous across areas.
+    /// <summary>
+    /// Naturalize's aim: the ground's broad shape (blurred, from the start of the stroke) plus detail noise, in world
+    /// coordinates so the pattern is continuous across areas.
+    /// </summary>
     private static float NaturalTarget(Ground g, Brush b, Stroke s, int p)
     {
         if (s.Natural.TryGetValue(p, out float t))

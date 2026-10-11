@@ -6,20 +6,55 @@ using Avalonia.Media;
 
 namespace TerrainEditor.Desktop;
 
-// The Mask's panel (brushes, Path, Shape and Area), like the web editor's: on or off, biomes, height
-// and slope ranges, and paint. An empty box means no limit.
+/// <summary>
+/// The Mask's panel (brushes, Path, Shape and Area), like the web editor's: on or off, biomes, height and slope ranges,
+/// and paint. An empty box means no limit.
+/// </summary>
 public sealed class MaskPanel
 {
+    /// <summary>
+    /// The panel's card.
+    /// </summary>
     public Control Card { get; }
+    /// <summary>
+    /// The mask the panel edits.
+    /// </summary>
     private readonly Mask _mask;
+    /// <summary>
+    /// Everything under the on/off box, hidden while the mask is off.
+    /// </summary>
     private readonly Control _body;
+    /// <summary>
+    /// True while <c>Fill</c> sets the boxes from the mask, so they do not write back.
+    /// </summary>
     private bool _filling;
+    /// <summary>
+    /// Turns the mask on or off.
+    /// </summary>
     internal CheckBox OnBox { get; } = new CheckBox { Content = "Mask", FontSize = 13, FontWeight = FontWeight.SemiBold }.Tip("mask.on");
+    /// <summary>
+    /// One toggle per biome, by its biome flag.
+    /// </summary>
     internal Dictionary<int, ToggleButton> BiomeButtons { get; } = [];
+    /// <summary>
+    /// Lowest height in metres; empty for no limit.
+    /// </summary>
     internal NumericUpDown HeightMin { get; } = Num(0.5m);
+    /// <summary>
+    /// Highest height in metres; empty for no limit.
+    /// </summary>
     internal NumericUpDown HeightMax { get; } = Num(0.5m);
+    /// <summary>
+    /// Smallest slope in degrees (0..90); empty for no limit.
+    /// </summary>
     internal NumericUpDown SlopeMin { get; } = Num(1m, 0, 90);
+    /// <summary>
+    /// Largest slope in degrees (0..90); empty for no limit.
+    /// </summary>
     internal NumericUpDown SlopeMax { get; } = Num(1m, 0, 90);
+    /// <summary>
+    /// The paint rule, in the order of <c>Mask.PaintRule</c>.
+    /// </summary>
     internal ComboBox PaintBox { get; } = new()
     {
         ItemsSource = new[] { "Any ground", "Only unpainted", "Only painted", "Only dirt", "Only cultivated", "Only paved" },
@@ -27,11 +62,20 @@ public sealed class MaskPanel
         FontSize = 12,
         HorizontalAlignment = HorizontalAlignment.Stretch,
     };
+    /// <summary>
+    /// The mask's warning about settings that let (almost) nothing through; hidden when there is none.
+    /// </summary>
     internal TextBlock WarningText { get; } = new() { FontSize = 11, Foreground = new SolidColorBrush(Color.FromRgb(240, 150, 90)), TextWrapping = TextWrapping.Wrap };
 
+    /// <summary>
+    /// A number box that starts empty (no limit).
+    /// </summary>
     private static NumericUpDown Num(decimal step, decimal min = -1000, decimal max = 2000) =>
         new() { Value = null, Increment = step, Minimum = min, Maximum = max, FormatString = "0.#", FontSize = 12, MinWidth = 80, PlaceholderText = "none" };
 
+    /// <summary>
+    /// Builds the card for <paramref name="mask"/> and keeps the two in step both ways.
+    /// </summary>
     public MaskPanel(Mask mask)
     {
         _mask = mask;
@@ -109,14 +153,23 @@ public sealed class MaskPanel
         Fill();
     }
 
+    /// <summary>
+    /// <paramref name="c"/> set in grid column <paramref name="col"/>, for use inside an initializer.
+    /// </summary>
     private static Control Column(Control c, int col)
     {
         Grid.SetColumn(c, col);
         return c;
     }
 
+    /// <summary>
+    /// A box's value, or null when it is empty.
+    /// </summary>
     private static float? F(NumericUpDown n) => n.Value is decimal d ? (float)d : null;
 
+    /// <summary>
+    /// A box changed: the mask takes the panel's settings and the warning is updated.
+    /// </summary>
     private void Changed()
     {
         if (_filling)
@@ -134,7 +187,9 @@ public sealed class MaskPanel
         WarningText.IsVisible = WarningText.Text != "";
     }
 
-    // The mask changed elsewhere (Alt + Shift + click): the boxes follow.
+    /// <summary>
+    /// The mask changed elsewhere (Alt + Shift + click): the boxes follow.
+    /// </summary>
     private void Fill()
     {
         _filling = true;

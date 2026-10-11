@@ -7,31 +7,41 @@ using TerrainEditor.Editing;
 
 namespace TerrainEditor.Desktop;
 
-// The history kept on disk, so it is there again when the editor is closed and the world opened later
-// (history/ of the data folder, one file per world). It is written after each save or Apply live, so its
-// steps are what the world holds. Ground points and zones are kept by world position; objects by their
-// kind and exact place (their ids change at every save), each with its full data, so one that is gone
-// when the world is opened again can be brought back by an undo or redo, chest contents and all.
+/// <summary>
+/// The history kept on disk, so it is there again when the editor is closed and the world opened later
+/// (history/ of the data folder, one file per world). It is written after each save or Apply live, so its
+/// steps are what the world holds. Ground points and zones are kept by world position; objects by their
+/// kind and exact place (their ids change at every save), each with its full data, so one that is gone
+/// when the world is opened again can be brought back by an undo or redo, chest contents and all.
+/// </summary>
 public static class HistoryFile
 {
+    /// <summary>The first four bytes of the file's (gzipped) contents ("VWEH").</summary>
     private const int Magic = 0x48455756; // "VWEH"
+    /// <summary>The file layout's version; a file of another version is not read.</summary>
     private const int Version = 1;
 
+    /// <summary>Where the history files are: history/ of the data folder.</summary>
     public static string Folder => Path.Combine(AppSettings.DataDir, "history");
 
-    // A world on this computer by its folder; a live one by where it runs, its name and seed.
+    /// <summary>A world on this computer by its folder; a live one by where it runs, its name and seed.</summary>
     public static string KeyOf(WorldSession w) => w.IsLive
         ? $"live\n{w.Label}\n{w.World.Name}\n{w.World.Seed}"
         : $"file\n{Path.GetFullPath(w.World.Directory)}";
 
+    /// <summary>
+    /// The history file of a world key (<c>KeyOf</c>): a short hash of it, so any key makes a safe file name.
+    /// </summary>
     public static string PathOf(string key)
     {
         string hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(key)))[..16].ToLowerInvariant();
         return Path.Combine(Folder, hash + ".history");
     }
 
-    // What a world on disk looks like: its latest save (index file name, time and size). A game that
-    // saved the world since makes another. Null for a live world (it changes all the time).
+    /// <summary>
+    /// What a world on disk looks like: its latest save (index file name, time and size). A game that
+    /// saved the world since makes another. Null for a live world (it changes all the time).
+    /// </summary>
     public static string? Stamp(WorldSession w)
     {
         if (w.IsLive || !Directory.Exists(w.World.Directory))
@@ -50,6 +60,7 @@ public static class HistoryFile
         return $"{info.Name}|{info.LastWriteTimeUtc.Ticks}|{info.Length}";
     }
 
+    /// <summary>Removes the world's history file; a file that cannot be removed is left as it is.</summary>
     public static void Delete(WorldSession w)
     {
         try
@@ -66,8 +77,16 @@ public static class HistoryFile
 
     // ---- Writing.
 
+    /// <summary>
+    /// An object one of the steps needs, as written: what it is, where, and its saved data (null when it could not be
+    /// read).
+    /// </summary>
     private sealed record KeptThing(int Prefab, bool Piece, Vector3 Position, Vector3 Rotation, float Scale, byte[]? Bytes);
 
+    /// <summary>
+    /// Writes the world's undo and redo steps (replacing the file in one move, so a crash leaves the old one);
+    /// with no steps the file is removed.
+    /// </summary>
     public static void Write(WorldSession w, EditSession.Kept k)
     {
         var all = k.Undo.Concat(k.Redo).ToList();
@@ -175,6 +194,7 @@ public static class HistoryFile
         File.Move(temp, path, overwrite: true);
     }
 
+    /// <summary>Writes a vector as three floats.</summary>
     private static void WriteVector(BinaryWriter o, Vector3 v)
     {
         o.Write(v.X);
@@ -182,8 +202,12 @@ public static class HistoryFile
         o.Write(v.Z);
     }
 
+    /// <summary>Reads a vector written by <c>WriteVector</c>.</summary>
     private static Vector3 ReadVector(BinaryReader i) => new(i.ReadSingle(), i.ReadSingle(), i.ReadSingle());
 
+    /// <summary>
+    /// Writes a step's ground values; the point count is written by the caller, so it is not repeated here.
+    /// </summary>
     private static void WriteState(BinaryWriter o, Ground.State s)
     {
         foreach (float f in s.Level)
@@ -209,6 +233,7 @@ public static class HistoryFile
         }
     }
 
+    /// <summary>Reads ground values written by <c>WriteState</c> for <paramref name="n"/> points.</summary>
     private static Ground.State ReadState(BinaryReader i, int n)
     {
         float[] Floats(int count)
@@ -231,11 +256,18 @@ public static class HistoryFile
 
     // ---- Reading.
 
-    // What was kept for this world, fitted to it as it is now: objects found again by kind and place,
-    // the others ready to come back. Steps: how many; Changed: the world may differ from when they were
-    // kept (live, or a save made since). Null when nothing was kept (or the file cannot be read).
+    /// <summary>
+    /// What was kept for this world, fitted to it as it is now: objects found again by kind and place,
+    /// the others ready to come back.
+    /// </summary>
+    /// <param name="Kept">The undo and redo steps, with the objects' ids in the world as it is now.</param>
+    /// <param name="Steps">How many steps were kept.</param>
+    /// <param name="Changed">The world may differ from when they were kept (live, or a save made since).</param>
+    /// <param name="SavedAt">When the history was written, local time.</param>
     public sealed record Restored(EditSession.Kept Kept, int Steps, bool Changed, DateTime SavedAt);
 
+    /// <summary>The history kept for the world.</summary>
+    /// <returns>Null when nothing was kept (or the file cannot be read).</returns>
     public static Restored? Read(WorldSession w)
     {
         string path = PathOf(KeyOf(w));
@@ -257,6 +289,11 @@ public static class HistoryFile
         }
     }
 
+    /// <summary>
+    /// Reads a history file and fits it to the world: objects found again by kind and place (to the centimetre),
+    /// the others kept as gone objects an undo or redo brings back, and the points on one grid holding them all.
+    /// </summary>
+    /// <returns>Null when the file is for another world or layout version, or holds no steps.</returns>
     private static Restored? ReadFile(WorldSession w, string path)
     {
         using var file = File.OpenRead(path);

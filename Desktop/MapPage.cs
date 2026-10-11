@@ -10,86 +10,263 @@ using Vector2 = System.Numerics.Vector2;
 
 namespace TerrainEditor.Desktop;
 
-// The world map page, like the web editor's (index.html): the world drawn like the game's map, what is
-// waiting to be saved (Save, or Apply live, and Discard), the map's options, search across the world,
-// zones picked by filter to reset, the edited zones, and the spot picked with a click, opened in the
-// 3D editor with the size chosen.
+/// <summary>
+/// The world map page, like the web editor's (index.html): the world drawn like the game's map, what is waiting to be
+/// saved (Save, or Apply live, and Discard), the map's options, search across the world, zones picked by filter to
+/// reset, the edited zones, and the spot picked with a click, opened in the 3D editor with the size chosen.
+/// </summary>
 public sealed class MapPage
 {
+    /// <summary>
+    /// The page: the map with the side panel, the cursor readout and the status over it.
+    /// </summary>
     public Control View { get; }
+    /// <summary>
+    /// The map itself.
+    /// </summary>
     public MapView Map { get; } = new();
+    /// <summary>
+    /// The world shown, or null before one is.
+    /// </summary>
     private WorldSession? _session;
-    // Where a newly shown world's map looks first (the place remembered from the last run; null: the whole world).
+    /// <summary>
+    /// Where a newly shown world's map looks first (the place remembered from the last run; null: the whole world).
+    /// </summary>
     internal Func<(float X, float Z, float Mpp)?> StartView { get; set; } = () => null;
 
+    /// <summary>
+    /// The Worlds button: back to the world list.
+    /// </summary>
     public event Action? BackToWorlds;
-    // Edit in 3D: the zone and the size in zones (Target: an object found to select there).
+    /// <summary>
+    /// Edit in 3D: the zone and the size in zones (Target: an object found to select there).
+    /// </summary>
     public event Action<int, int, int>? EditRequested;
-    // Save, apply live, discard: the window does them (it asks first).
+    /// <summary>
+    /// Save, apply live, discard, and reload from the game: the window does them (saving and discarding ask first).
+    /// </summary>
     public event Action? SaveRequested, DiscardRequested, ReloadRequested;
+    /// <summary>
+    /// Asks the user a yes/no question; the window sets it (tests answer yes).
+    /// </summary>
     internal Func<string, Task<bool>> Confirm { get; set; } = _ => Task.FromResult(true);
+    /// <summary>
+    /// Tells the user something; the window sets it.
+    /// </summary>
     internal Func<string, Task> Tell { get; set; } = _ => Task.CompletedTask;
 
+    /// <summary>
+    /// The world's name, seed, save number and object count.
+    /// </summary>
     internal TextBlock Meta { get; } = new() { FontSize = 12, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
+    /// <summary>
+    /// What is waiting to be saved or applied.
+    /// </summary>
     internal TextBlock Pending { get; } = new() { FontSize = 12, TextWrapping = TextWrapping.Wrap };
+    /// <summary>
+    /// Save to world, or Apply live for a live world.
+    /// </summary>
     internal Button SaveButton { get; } = new Button { Content = "Save to world…", FontSize = 12.5 }.Classed("primary");
+    /// <summary>
+    /// Throws away what is waiting.
+    /// </summary>
     internal Button DiscardButton { get; } = new() { Content = "Discard", FontSize = 12 };
+    /// <summary>
+    /// Live: the players online, or that the game does not answer.
+    /// </summary>
     internal TextBlock LiveText { get; } = new() { FontSize = 12, Foreground = new SolidColorBrush(Color.FromRgb(143, 240, 180)), TextWrapping = TextWrapping.Wrap };
+    /// <summary>
+    /// Live: reads the world from the game again.
+    /// </summary>
     internal Button ReloadButton { get; } = new() { Content = Icons.With("reload", "Reload from the game"), FontSize = 12 };
+    /// <summary>
+    /// The live box (shown only for a live world) and the waiting-changes box.
+    /// </summary>
     private readonly Control _liveBox, _changesBox;
+    /// <summary>
+    /// Show player-built pieces; its text gets their count once read.
+    /// </summary>
     internal CheckBox BuildingsBox { get; } = new() { Content = "Show buildings (player-built pieces)", IsChecked = true, FontSize = 12 };
+    /// <summary>
+    /// Show the zone grid.
+    /// </summary>
     internal CheckBox GridBox { get; } = new() { Content = "Zone grid", FontSize = 12 };
+    /// <summary>
+    /// Outline edited zones.
+    /// </summary>
     internal CheckBox EditedBox { get; } = new() { Content = "Outline edited zones", IsChecked = true, FontSize = 12 };
+    /// <summary>
+    /// Show painted ground when zoomed in.
+    /// </summary>
     internal CheckBox PaintBox { get; } = new() { Content = "Show painted ground (dirt, paved, fields) when zoomed in", IsChecked = true, FontSize = 12 };
+    /// <summary>
+    /// Show the game's map clouds.
+    /// </summary>
     internal CheckBox CloudsBox { get; } = new() { Content = "Clouds (as in game)", FontSize = 12 };
+    /// <summary>
+    /// The picked zone (or search result) and its biome.
+    /// </summary>
     internal TextBlock PickTitle { get; } = new() { FontSize = 14, FontWeight = FontWeight.SemiBold, TextWrapping = TextWrapping.Wrap };
+    /// <summary>
+    /// Opens the picked spot in the 3D editor.
+    /// </summary>
     internal Button EditButton { get; } = new Button { Content = "Edit in 3D", FontSize = 12.5 }.Classed("primary");
+    /// <summary>
+    /// The area to open: 3, 5 or 7 zones a side.
+    /// </summary>
     internal ComboBox SizeBox { get; } = new() { ItemsSource = new[] { "3 × 3 zones (192 m)", "5 × 5 zones (320 m)", "7 × 7 zones (448 m)" }, SelectedIndex = 1, FontSize = 12 };
+    /// <summary>
+    /// The picked spot's box, hidden until a spot is picked.
+    /// </summary>
     private readonly Control _pickBox;
+    /// <summary>
+    /// The world point, zone and biome under the mouse; its box hides while empty.
+    /// </summary>
     internal TextBlock Cursor { get; } = new() { FontSize = 12, Foreground = Ui.Muted };
+    /// <summary>
+    /// The map's status line (shown while the map is being built).
+    /// </summary>
     private readonly TextBlock _status = new() { FontSize = 13, Foreground = Brushes.White };
+    /// <summary>
+    /// The picked zone, or null when none is.
+    /// </summary>
     public (int X, int Z)? Spot { get; private set; }
-    // An object found by the search: selected (and, for items and texts, inspected) once the area opens.
+    /// <summary>
+    /// An object found by the search: selected (and, for items and texts, inspected) once the area opens.
+    /// </summary>
     public (int Id, bool Inspect)? Target { get; private set; }
+    /// <summary>
+    /// The area to open, in zones a side.
+    /// </summary>
     public int Size => new[] { 3, 5, 7 }[Math.Max(0, SizeBox.SelectedIndex)];
+    /// <summary>
+    /// Live: asks the game for the players online every five seconds.
+    /// </summary>
     private readonly DispatcherTimer _players = new() { Interval = TimeSpan.FromSeconds(5) };
+    /// <summary>
+    /// The players' name labels over the map.
+    /// </summary>
     private readonly Canvas _labels = new() { IsHitTestVisible = false };
 
     // Search.
+    /// <summary>
+    /// What to search for.
+    /// </summary>
     internal TextBox SearchBox { get; } = new() { PlaceholderText = "Beech, Wood, a sign's text…", FontSize = 12 };
+    /// <summary>
+    /// What to search: object kinds, items in containers, or texts.
+    /// </summary>
     internal ComboBox SearchWhat { get; } = new() { ItemsSource = new[] { "Objects (by kind)", "Items in containers", "Texts (signs, portals, wards…)" }, SelectedIndex = 0, FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch };
+    /// <summary>
+    /// Runs the search.
+    /// </summary>
     internal Button FindButton { get; } = new Button { Content = Icons.With("search", "Find"), FontSize = 12.5, VerticalAlignment = VerticalAlignment.Stretch }.Classed("primary");
+    /// <summary>
+    /// The search's counts, or what went wrong.
+    /// </summary>
     internal TextBlock SearchInfo { get; } = new() { FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
+    /// <summary>
+    /// The search results (the first 300); picking one goes there.
+    /// </summary>
     internal ListBox Hits { get; } = new() { MaxHeight = 220, FontSize = 11 };
+    /// <summary>
+    /// The last search's results, pinned on the map.
+    /// </summary>
     private List<WorldSearch.Hit> _hits = [];
+    /// <summary>
+    /// What the last search looked for: "kinds", "items" or "texts".
+    /// </summary>
     private string _searchWhat = "kinds";
 
     // Zone filter.
+    /// <summary>
+    /// The zone filter's biome toggles, by biome value.
+    /// </summary>
     internal readonly Dictionary<int, ToggleButton> BiomeButtons = [];
+    /// <summary>
+    /// Only zones with no buildings in them or within <c>DistBox</c> zones.
+    /// </summary>
     internal CheckBox NoBuildBox { get; } = new() { Content = "No buildings in the zone or within", IsChecked = true, FontSize = 12 };
+    /// <summary>
+    /// How many zones around a match must have no buildings, 0..50.
+    /// </summary>
     internal NumericUpDown DistBox { get; } = new() { Value = 2, Minimum = 0, Maximum = 50, Increment = 1, FormatString = "0", FontSize = 12, MinWidth = 70 };
+    /// <summary>
+    /// Only zones without ground edits.
+    /// </summary>
     internal CheckBox NoEditBox { get; } = new() { Content = "No ground edits", IsChecked = true, FontSize = 12 };
+    /// <summary>
+    /// Only zones the game generated.
+    /// </summary>
     internal CheckBox OnlyGenBox { get; } = new() { Content = "Only zones the game generated", IsChecked = true, FontSize = 12 };
+    /// <summary>
+    /// Smallest distance from the world centre, in metres; empty for none.
+    /// </summary>
     internal TextBox RMinBox { get; } = new() { PlaceholderText = "0", FontSize = 12, Width = 70 };
+    /// <summary>
+    /// Largest distance from the world centre, in metres; empty for none.
+    /// </summary>
     internal TextBox RMaxBox { get; } = new() { PlaceholderText = "10500", FontSize = 12, Width = 70 };
+    /// <summary>
+    /// Resetting also undoes the zones' ground edits.
+    /// </summary>
     internal CheckBox GroundBox { get; } = new() { Content = "Also undo their ground edits", FontSize = 12 };
+    /// <summary>
+    /// Shows the zones that match the filter on the map.
+    /// </summary>
     internal Button ShowMatchButton { get; } = new() { Content = "Show matching", FontSize = 12 };
+    /// <summary>
+    /// Marks the matching zones for reset (after asking).
+    /// </summary>
     internal Button MarkButton { get; } = new Button { Content = "Mark for reset…", FontSize = 12 }.Classed("primary");
+    /// <summary>
+    /// Unmarks every zone marked for reset.
+    /// </summary>
     internal Button UnmarkButton { get; } = new() { Content = "Unmark all", FontSize = 12 };
+    /// <summary>
+    /// How many zones match, and how many are marked.
+    /// </summary>
     internal TextBlock ZoneInfo { get; } = new() { FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
+    /// <summary>
+    /// Every zone's counts (<c>ZoneStats.Compute</c>), read when first needed; null after the world changes.
+    /// </summary>
     private int[]? _stats;
+    /// <summary>
+    /// Whether matches are shown, so changing the filter shows them again at once.
+    /// </summary>
     private bool _filtered;
+    /// <summary>
+    /// The zones that matched the filter last.
+    /// </summary>
     internal List<(int X, int Z)> Matches { get; private set; } = [];
 
     // Zone detail and the edited zones.
+    /// <summary>
+    /// The edited zones, most edited first; picking one goes there.
+    /// </summary>
     internal ListBox EditedList { get; } = new() { MaxHeight = 200, FontSize = 11 };
+    /// <summary>
+    /// The edited zones' section, its header carrying their count.
+    /// </summary>
     private readonly Expander _editedSection;
+    /// <summary>
+    /// The zones listed in <c>EditedList</c>, in its order.
+    /// </summary>
     private List<ZoneEdit> _edited = [];
 
+    /// <summary>
+    /// The side panel's background and border brushes.
+    /// </summary>
     private static readonly IBrush PanelBg = Ui.Panel, Line = Ui.Line;
 
+    /// <summary>
+    /// A section heading.
+    /// </summary>
     private static TextBlock H2(string t) => Ui.Heading(t, 4);
 
+    /// <summary>
+    /// Builds the page; a world is shown with <c>Show</c>.
+    /// </summary>
     public MapPage()
     {
         var worlds = new Button { Content = Icons.With("back", "Worlds"), FontSize = 12.5 }.Classed("ghost");
@@ -250,6 +427,12 @@ public sealed class MapPage
         _players.Tick += async (_, _) => await PollPlayers();
     }
 
+    /// <summary>
+    /// A collapsible section of the side panel.
+    /// </summary>
+    /// <param name="title">Its header.</param>
+    /// <param name="open">Whether it starts open.</param>
+    /// <param name="children">Its contents, top to bottom.</param>
     private static Expander Section(string title, bool open, params Control[] children)
     {
         var panel = new StackPanel { Spacing = 6 };
@@ -260,12 +443,18 @@ public sealed class MapPage
         return new Expander { Header = new TextBlock { Text = title, FontSize = 13, FontWeight = FontWeight.SemiBold }, IsExpanded = open, Content = panel, HorizontalAlignment = HorizontalAlignment.Stretch };
     }
 
+    /// <summary>
+    /// <paramref name="c"/> with a margin to its right and below, for a wrapping row of buttons.
+    /// </summary>
     private static Control Spaced(Control c)
     {
         c.Margin = new Thickness(0, 0, 6, 4);
         return c;
     }
 
+    /// <summary>
+    /// <paramref name="c"/> set in a grid column; column 2 is right-aligned, others take <paramref name="align"/>.
+    /// </summary>
     private static Control Col(Control c, int col, HorizontalAlignment align = HorizontalAlignment.Left)
     {
         Grid.SetColumn(c, col);
@@ -273,6 +462,10 @@ public sealed class MapPage
         return c;
     }
 
+    /// <summary>
+    /// Shows a world: a new one starts afresh (pick, search and matches cleared, the view where it was last looked at);
+    /// the same one again just refreshes. Live worlds poll their players.
+    /// </summary>
     public void Show(WorldSession session)
     {
         bool same = _session == session;
@@ -328,8 +521,14 @@ public sealed class MapPage
         }
     }
 
+    /// <summary>
+    /// Stops polling the live players (the page is left).
+    /// </summary>
     public void Stop() => _players.Stop();
 
+    /// <summary>
+    /// Shows what is waiting to be saved or applied; Save and Discard are enabled only when something is.
+    /// </summary>
     public void UpdatePending()
     {
         if (_session == null)
@@ -343,6 +542,9 @@ public sealed class MapPage
         Map.RequestNextFrameRendering();
     }
 
+    /// <summary>
+    /// Live: asks the game for the players online and puts them on the map.
+    /// </summary>
     private async Task PollPlayers()
     {
         if (_session?.Live is not { } live)
@@ -364,7 +566,9 @@ public sealed class MapPage
         }
     }
 
-    // The players' names next to their dots.
+    /// <summary>
+    /// The players' names next to their dots.
+    /// </summary>
     private void PlaceLabels()
     {
         _labels.Children.Clear();
@@ -378,6 +582,9 @@ public sealed class MapPage
         }
     }
 
+    /// <summary>
+    /// A biome's name as the game shows it.
+    /// </summary>
     private static string BiomeName(ValheimGen.Heightmap.Biome b) => b switch
     {
         ValheimGen.Heightmap.Biome.BlackForest => "Black Forest",
@@ -386,7 +593,9 @@ public sealed class MapPage
         _ => b.ToString(),
     };
 
-    // A zone picked: its name, the area the 3D editor would open around it, and its edits.
+    /// <summary>
+    /// A zone picked: its name, the area the 3D editor would open around it, and its edits.
+    /// </summary>
     public void Pick(int zx, int zz)
     {
         Spot = (zx, zz);
@@ -397,6 +606,9 @@ public sealed class MapPage
         ShowChosen();
     }
 
+    /// <summary>
+    /// Outlines the area the 3D editor would open around the picked zone.
+    /// </summary>
     private void ShowChosen()
     {
         if (Spot is var (x, z))
@@ -406,6 +618,9 @@ public sealed class MapPage
         }
     }
 
+    /// <summary>
+    /// The mouse is over (x, z): shows the point, its zone and its biome.
+    /// </summary>
     private void Hover(float x, float z)
     {
         if (_session == null)
@@ -417,6 +632,9 @@ public sealed class MapPage
     }
 
     // ---- Search: every object of the world by kind, items in containers, or texts.
+    /// <summary>
+    /// Searches the world for the search box's text and pins what is found; an empty box clears the results.
+    /// </summary>
     internal async Task Search()
     {
         if (_session is not { } s)
@@ -464,7 +682,9 @@ public sealed class MapPage
         Map.RequestNextFrameRendering();
     }
 
-    // A result picked: the map goes there, and Edit in 3D selects it (items and texts: in the inspector).
+    /// <summary>
+    /// A result picked: the map goes there, and Edit in 3D selects it (items and texts: in the inspector).
+    /// </summary>
     internal void ShowHit(int i)
     {
         if (i < 0 || i >= _hits.Count)
@@ -481,6 +701,9 @@ public sealed class MapPage
     }
 
     // ---- Zones across the world, picked by filter, to reset.
+    /// <summary>
+    /// The zone filter as the boxes set it.
+    /// </summary>
     private ZoneFilter Filter()
     {
         static float? Num(TextBox b) => float.TryParse(b.Text?.Trim(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float v) ? v : null;
@@ -488,6 +711,9 @@ public sealed class MapPage
             NoEditBox.IsChecked == true, OnlyGenBox.IsChecked == true, Num(RMinBox), Num(RMaxBox));
     }
 
+    /// <summary>
+    /// Every zone's counts, read once (in the background) until the world changes; null when no world is shown.
+    /// </summary>
     private async Task<int[]?> Stats()
     {
         if (_session is not { } s)
@@ -502,6 +728,9 @@ public sealed class MapPage
         return _stats;
     }
 
+    /// <summary>
+    /// The filter changed: matches shown are worked out again.
+    /// </summary>
     private void Refilter()
     {
         if (_stats != null && _filtered)
@@ -510,6 +739,9 @@ public sealed class MapPage
         }
     }
 
+    /// <summary>
+    /// Works out the matching zones and shows them on the map with their count.
+    /// </summary>
     private void ApplyFilter()
     {
         if (_stats is not { } stats || _session is not { } s)
@@ -525,6 +757,9 @@ public sealed class MapPage
         Map.RequestNextFrameRendering();
     }
 
+    /// <summary>
+    /// Show matching: reads the zones if needed, then shows the matches.
+    /// </summary>
     internal async Task ShowMatching()
     {
         if (await Stats() != null)
@@ -533,6 +768,9 @@ public sealed class MapPage
         }
     }
 
+    /// <summary>
+    /// Mark for reset: after asking, marks every matching zone for reset (with its ground edits when the box says so).
+    /// </summary>
     internal async Task MarkMatching()
     {
         if (_session is not { } s || await Stats() == null)
@@ -560,6 +798,9 @@ public sealed class MapPage
         UpdatePending();
     }
 
+    /// <summary>
+    /// Unmark all: drops every zone reset still waiting.
+    /// </summary>
     internal async Task UnmarkAll()
     {
         if (_session is not { } s)
@@ -584,6 +825,9 @@ public sealed class MapPage
     }
 
     // ---- The edited zones, most edited first, and the picked zone's edits up close.
+    /// <summary>
+    /// Lists the zones with ground or paint edits, most edited first, with their range of change.
+    /// </summary>
     private void FillEdited()
     {
         if (_session is not { } s)
@@ -599,6 +843,9 @@ public sealed class MapPage
         ((TextBlock)_editedSection.Header!).Text = $"Edited zones ({_edited.Count:N0})";
     }
 
+    /// <summary>
+    /// The lowest and highest height change in a zone's edited points, in metres; 0, 0 when none.
+    /// </summary>
     private static (float Lo, float Hi) Range(ZoneEdit e)
     {
         float lo = 0, hi = 0;

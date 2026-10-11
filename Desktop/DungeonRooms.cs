@@ -4,20 +4,31 @@ using TerrainEditor.Editing;
 
 namespace TerrainEditor.Desktop;
 
-// The dungeons of an open area and their rooms, as they are now (edits included): each dungeon object
-// (DG_Cave, DG_SunkenCrypt...) and the room list in its data. Read again after each edit; the 3D view
-// draws the rooms and the Dungeon tool edits them.
+/// <summary>
+/// The dungeons of an open area and their rooms, as they are now (edits included): each dungeon object
+/// (DG_Cave, DG_SunkenCrypt...) and the room list in its data. Read again after each edit; the 3D view
+/// draws the rooms and the Dungeon tool edits them.
+/// </summary>
 public static class DungeonRooms
 {
+    /// <summary>A dungeon of the area.</summary>
+    /// <param name="Index">Its object's index in the scene's things.</param>
+    /// <param name="Thing">Its dungeon object.</param>
+    /// <param name="Kind">What kind of dungeon it is.</param>
+    /// <param name="Rooms">Its rooms, as its data lists them (none when it could not be read).</param>
+    /// <param name="Problem">Why its rooms could not be read (or are not laid out yet), null when they were.</param>
     public sealed record Dungeon(int Index, WorldScene.Thing Thing, Dungeons.Kind Kind, List<Dungeons.Placed> Rooms, string? Problem);
 
+    /// <summary>The dungeons read for a scene, with the edit version and object count they were read at.</summary>
     private sealed record Cache(int Version, int Count, IReadOnlyList<Dungeon> Dungeons);
 
+    /// <summary>What was read last, per scene.</summary>
     private static readonly ConditionalWeakTable<WorldScene, Cache> Caches = [];
 
-    // Scenes whose dungeons are being read again for the view.
+    /// <summary>Scenes whose dungeons are being read again for the view.</summary>
     private static readonly ConditionalWeakTable<WorldScene, object> Reading = [];
 
+    /// <summary>The scene's edit version and object count: when either changes, the dungeons are read again.</summary>
     private static (int Version, int Count) Now(WorldScene s)
     {
         lock (s.Things)
@@ -26,8 +37,10 @@ public static class DungeonRooms
         }
     }
 
-    // For drawing (each frame): what was read last, without waiting; after an edit they are read again on
-    // a worker (chunk files, each dungeon's data), and ready is called when they are.
+    /// <summary>
+    /// For drawing (each frame): what was read last, without waiting; after an edit they are read again on
+    /// a worker (chunk files, each dungeon's data), and ready is called when they are.
+    /// </summary>
     public static IReadOnlyList<Dungeon> Shown(WorldScene s, Action ready)
     {
         var (version, count) = Now(s);
@@ -54,6 +67,7 @@ public static class DungeonRooms
         return c?.Dungeons ?? [];
     }
 
+    /// <summary>The scene's dungeons as they are now, read when the cache is out of date (on the caller's thread).</summary>
     public static IReadOnlyList<Dungeon> Of(WorldScene s)
     {
         var (version, count) = Now(s);

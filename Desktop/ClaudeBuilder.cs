@@ -3,18 +3,27 @@ using TerrainEditor.Terrain;
 
 namespace TerrainEditor.Desktop;
 
-// Floors, walls and roofs over a rectangle, laid out piece by piece from the game's pieces (their
-// bounds and snap points, PieceCatalog) for Claude's build_floor, build_walls and build_roof. Pure: the
-// pieces to put down, in world coordinates (x east, z north, y up), on the 2 m grid of wood pieces.
+/// <summary>
+/// Floors, walls and roofs over a rectangle, laid out piece by piece from the game's pieces (their
+/// bounds and snap points, PieceCatalog) for Claude's build_floor, build_walls and build_roof. Pure: the
+/// pieces to put down, in world coordinates (x east, z north, y up), on the 2 m grid of wood pieces.
+/// </summary>
 public static class ClaudeBuilder
 {
+    /// <summary>A door in a wall.</summary>
+    /// <param name="Side">The rectangle's side: north, south, east or west (any case).</param>
+    /// <param name="At">Where along that side, in world metres (x on north and south, z on east and west); the door
+    /// goes in the 2 m of wall nearest it.</param>
     public sealed record Door(string Side, float At);
 
+    /// <summary>A piece's bounds and snap points; throws <see cref="ArgumentException"/> for a prefab that is not a piece.</summary>
     private static PieceCatalog.Info Info(string prefab) =>
         PieceCatalog.Get(StableHash.Of(prefab)) ?? throw new ArgumentException($"{prefab} is not a piece the editor knows.");
 
-    // Pieces of 2 m across a span: their middles, centred on the span (a span not a multiple of 2 m
-    // overhangs a little on both ends).
+    /// <summary>
+    /// Pieces of 2 m across a span: their middles, centred on the span (a span not a multiple of 2 m
+    /// overhangs a little on both ends).
+    /// </summary>
     private static List<float> Across(float from, float to)
     {
         float len = MathF.Abs(to - from), mid = (from + to) / 2;
@@ -22,10 +31,17 @@ public static class ClaudeBuilder
         return [.. Enumerable.Range(0, n).Select(i => mid - n + 1 + 2 * i)];
     }
 
+    /// <summary>A piece put exactly there (not snapped), yaw in degrees.</summary>
     private static ClaudeTools.PieceSpec P(string prefab, float x, float y, float z, float yaw) =>
         new() { Prefab = prefab, X = x, Y = y, Z = z, Yaw = yaw, Snap = false };
 
-    // Floor tiles over the rectangle, their tops at top.
+    /// <summary>Floor tiles over the rectangle, their tops at top.</summary>
+    /// <param name="x0">One corner, x.</param>
+    /// <param name="z0">One corner, z.</param>
+    /// <param name="x1">The opposite corner, x.</param>
+    /// <param name="z1">The opposite corner, z.</param>
+    /// <param name="top">The height of the floor's top, in metres.</param>
+    /// <param name="material">"wood" or "stone" (any case); anything else throws <see cref="ArgumentException"/>.</param>
     public static List<ClaudeTools.PieceSpec> Floor(float x0, float z0, float x1, float z1, float top, string material)
     {
         string prefab = material.ToLowerInvariant() switch
@@ -38,8 +54,18 @@ public static class ClaudeBuilder
         return [.. (from x in Across(x0, x1) from z in Across(z0, z1) select P(prefab, x, y, z, 0))];
     }
 
-    // Walls on the rectangle's edges from bottom up to height (wood: 2 m rows; stone: 1 m rows), with
-    // doors (a 2 m wood door in place of the bottom of the 2 m of wall at that point of that side).
+    /// <summary>
+    /// Walls on the rectangle's edges from bottom up to height (wood: 2 m rows; stone: 1 m rows), with
+    /// doors (a 2 m wood door in place of the bottom of the 2 m of wall at that point of that side).
+    /// </summary>
+    /// <param name="x0">One corner, x.</param>
+    /// <param name="z0">One corner, z.</param>
+    /// <param name="x1">The opposite corner, x.</param>
+    /// <param name="z1">The opposite corner, z.</param>
+    /// <param name="bottom">The height the walls stand on, in metres.</param>
+    /// <param name="height">How tall, in metres (rounded to whole rows, at least one).</param>
+    /// <param name="material">"wood" or "stone" (any case); anything else throws <see cref="ArgumentException"/>.</param>
+    /// <param name="doors">The doors; a side that is not north, south, east or west throws.</param>
     public static List<ClaudeTools.PieceSpec> Walls(float x0, float z0, float x1, float z1, float bottom, float height, string material, IReadOnlyList<Door> doors)
     {
         (float lx, float hx, float lz, float hz) = (MathF.Min(x0, x1), MathF.Max(x0, x1), MathF.Min(z0, z1), MathF.Max(z0, z1));
@@ -93,9 +119,19 @@ public static class ClaudeBuilder
         return list;
     }
 
-    // A gable roof over the rectangle (its wall lines), the ridge along the longer side: slopes of
-    // 26 or 45 degrees whose underside meets the wall lines at eave, a ridge, and (gables) the two ends
-    // closed with sloped walls over full and half walls. material: thatch or shingle.
+    /// <summary>
+    /// A gable roof over the rectangle (its wall lines), the ridge along the longer side: slopes of
+    /// 26 or 45 degrees whose underside meets the wall lines at eave, a ridge, and (gables) the two ends
+    /// closed with sloped walls over full and half walls.
+    /// </summary>
+    /// <param name="x0">One corner, x.</param>
+    /// <param name="z0">One corner, z.</param>
+    /// <param name="x1">The opposite corner, x.</param>
+    /// <param name="z1">The opposite corner, z.</param>
+    /// <param name="eave">The height where the roof's underside meets the wall lines, in metres.</param>
+    /// <param name="angle">26 or 45; anything else throws <see cref="ArgumentException"/>.</param>
+    /// <param name="material">Thatch or shingle (any case); anything else throws.</param>
+    /// <param name="gables">Also close the two ends.</param>
     public static List<ClaudeTools.PieceSpec> Roof(float x0, float z0, float x1, float z1, float eave, int angle, string material, bool gables)
     {
         (float lx, float hx, float lz, float hz) = (MathF.Min(x0, x1), MathF.Max(x0, x1), MathF.Min(z0, z1), MathF.Max(z0, z1));
