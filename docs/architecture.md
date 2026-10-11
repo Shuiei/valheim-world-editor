@@ -30,8 +30,8 @@ game's data (`TerrainModifiers`, `PrefabCatalog`, `PieceCatalog`, `PieceCost`, `
 A world is a folder in Valheim's chunked save format (world version 40 and up, the Deep North save):
 `_main.<n>.chunks` (the index of chunk files), `XX_YY__<size>_<version>.chunk` (the objects, ZDOs),
 `_main.<n>.db2` (generated zones, locations), `_main.<n>.fwl2` (name, seed) and `_main.<n>.ok`, the
-marker the game writes last. The current save is the highest `<n>` that has its `.ok`
-(`WorldSave.CommittedSave`). There is no reader for the older `.db`/`.fwl` worlds: `WorldSave.Load`
+marker the game writes last. The current save is the highest `<n>` that has its `.ok`; in a folder
+where no save has one, the highest `<n>` with an index (`WorldSave.CommittedSave`). There is no reader for the older `.db`/`.fwl` worlds: `WorldSave.Load`
 refuses a folder without a `_main.<n>.chunks`.
 
 ```mermaid
