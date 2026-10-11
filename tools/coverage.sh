@@ -1,12 +1,22 @@
 #!/usr/bin/env bash
 # CI's coverage job (.circleci/config.yml): merges the Cobertura files the test containers wrote
 # (tools/ci-tests.sh) into one report, and fails when the editor's line coverage is under the minimum.
-# Usage: tools/coverage.sh <coverage dir> <report dir> <minimum %>
+# Usage: tools/coverage.sh <coverage dir> <report dir> <minimum %> [<container>...]
+# Each <container> (core-0, app-2...: tools/ci-tests.sh's <name>-<node>) must have written its
+# coverage, so the minimum is never checked against only part of the tests.
 # Needs the repository's .NET tools (dotnet tool restore: ReportGenerator).
 set -euo pipefail
 input=${1:?coverage dir}
 report=${2:?report dir}
 minimum=${3:?minimum line coverage, in %}
+shift 3
+
+for container in "$@"; do
+  if [ -z "$(find "$input/$container" -name '*.cobertura.xml' 2>/dev/null)" ]; then
+    echo "No coverage from the $container test container (under $input/$container)" >&2
+    exit 1
+  fi
+done
 
 files=$(find "$input" -name '*.cobertura.xml' | sort)
 if [ -z "$files" ]; then

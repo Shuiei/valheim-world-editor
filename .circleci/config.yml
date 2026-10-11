@@ -139,9 +139,10 @@ jobs:
           at: /tmp/coverage
       - run:
           name: Coverage report (line coverage at least 95%)
+          # Every test container's coverage: core-tests' one and app-tests' three (its parallelism).
           command: |
             dotnet tool restore
-            tools/coverage.sh /tmp/coverage /tmp/coverage-report 95
+            tools/coverage.sh /tmp/coverage /tmp/coverage-report 95 core-0 app-0 app-1 app-2
       - store_artifacts:
           path: /tmp/coverage-report
           destination: coverage
