@@ -151,7 +151,10 @@ public static class CheckedReads
     /// </summary>
     public static string ReadCheckedString(this BinaryReader r) => Encoding.UTF8.GetString(r.ReadExactBytes(r.Read7BitEncodedInt()));
 
-    // The content of gzip data, refused past limit bytes: a few kilobytes can unpack to gigabytes.
+    /// <summary>
+    /// The content of gzip data, refused past <paramref name="limit"/> bytes (a few kilobytes can unpack to
+    /// gigabytes) or when the compressed data is damaged.
+    /// </summary>
     public static byte[] Gunzip(byte[] gzipped, int limit)
     {
         using GZipStream gz = new(new MemoryStream(gzipped), CompressionMode.Decompress);

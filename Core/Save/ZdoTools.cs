@@ -330,7 +330,7 @@ public sealed class ZoneDb
         return Load(file);
     }
 
-    // A .db2 file's content.
+    /// <summary>A .db2 file's content, from a stream (the fuzz tests read it from bytes).</summary>
     public static ZoneDb Load(Stream stream)
     {
         ZoneDb db = new();
