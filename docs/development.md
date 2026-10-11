@@ -264,7 +264,7 @@ CircleCI (`.circleci/config.yml`) runs on every push and pull request:
 
 | Job | What it checks |
 |---|---|
-| `core-tests` | The core's tests of `tests/Desktop.Tests` (namespace `WorldEditor.Tests`), with OpenSSH's server installed (`VWE_NEED_SSHD=1`). |
+| `core-tests` | The core's tests of `tests/Desktop.Tests` (namespace `WorldEditor.Tests`), with OpenSSH's server installed (`VWE_NEED_SSHD=1`), on three containers (the world generator's tests run several times slower under coverage). |
 | `app-tests` | The app's window tests (`TerrainEditor.Desktop.Tests`) without the visual tests, on three containers. Both test jobs let CircleCI share the classes out by their last times (`circleci tests run`, `tools/ci-tests.sh`), so **Rerun failed tests** runs only the classes that failed; every test runs, failing or not. |
 | `packages` | Both release packages build (without the plugin), and `tools/check-package.sh` finds everything they need and no source code, debug files or game files. |
 
@@ -278,9 +278,18 @@ Running them locally:
 dotnet test tests/Desktop.Tests                                  # everything (visual tests need a display)
 dotnet test tests/Desktop.Tests --filter "Category!=Visual"     # without the visual tests
 dotnet test tests/Desktop.Tests --filter "Category=Visual"      # only them
-dotnet-coverage collect -s tests/Desktop.Tests/coverage.config -f cobertura -o cov.xml "dotnet test tests/Desktop.Tests --filter Category!=Visual"
+dotnet test tests/Desktop.Tests --filter "Category!=Visual" --settings tests/Desktop.Tests/coverage.runsettings \
+  --collect "Code Coverage" --results-directory /tmp/coverage                       # with coverage (Cobertura)
 tools/release.sh /tmp/dist && tools/check-package.sh /tmp/dist/*.tar.gz
 ```
 
-The coverage counts only our own code: `coverage.config` leaves out the FastNoise library, which the
-test against the game's values checks along with the world generator.
+**Coverage**: each test container sends its coverage to
+[Codecov](https://app.codecov.io/gh/Shuiei/valheim-world-editor), which merges the six (`codecov.yml`)
+and checks it on every pull request: `codecov/project` fails when the editor's line coverage is under
+**95%**; `codecov/patch` shows the coverage of the lines a pull request changes. Codecov's page shows
+each file's covered and uncovered lines.
+
+The coverage counts only our own code (`coverage.runsettings`): the core and the app, not the tests,
+the libraries or generated code, and not the FastNoise library either, which the test against the
+game's values checks along with the world generator. Code that CI cannot run (it needs a display, the
+game's files or a real game) can be left out with `[ExcludeFromCodeCoverage(Justification = "...")]`.
