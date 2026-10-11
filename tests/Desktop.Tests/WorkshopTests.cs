@@ -161,7 +161,7 @@ public class WorkshopTests
     [AvaloniaFact]
     public async Task TheWorkshopOpensChecksSupportSavesAndAsksBeforeLeaving()
     {
-        using var r = new PanelBlueprintsTests.Run();
+        using var r = new BlueprintsPanelRun();
         var w = r.W;
         string path = Hut(r.Homestead);
         var asked = new List<string>();
@@ -220,7 +220,7 @@ public class WorkshopTests
     [AvaloniaFact]
     public async Task TheWorkshopOnlyBuildsAndGivesTheToolsBackWhenLeft()
     {
-        using var r = new PanelBlueprintsTests.Run();
+        using var r = new BlueprintsPanelRun();
         var w = r.W;
         w.Ask = (_, _, _, _) => Task.FromResult(true);
         w.PlaceTool.Chosen.Clear();
@@ -293,7 +293,7 @@ public class WorkshopTests
     [AvaloniaFact]
     public async Task PiecesGoUpWhereTheCursorPointsAndKeepTheirTurn()
     {
-        using var r = new PanelBlueprintsTests.Run();
+        using var r = new BlueprintsPanelRun();
         var w = r.W;
         // As an earlier test may leave it (the Place tool's choice is remembered): another piece chosen.
         w.PlaceTool.Chosen.Clear();
@@ -362,7 +362,7 @@ public class WorkshopTests
     [AvaloniaFact]
     public async Task TheLibraryOpensAddsAndTakesDrops()
     {
-        using var r = new PanelBlueprintsTests.Run();
+        using var r = new BlueprintsPanelRun();
         var w = r.W;
         r.Keep("Gate", "woodwall", "wood_floor");
         r.Keep("Tower", "woodwall");
@@ -389,7 +389,7 @@ public class WorkshopTests
         w.Drop(Path.Combine(r.Homestead, "Tower.blueprint"), [], new Avalonia.Point(0, 0), new Avalonia.Size(0, 0));
         Assert.Equal(3, Workshop.Pieces(w.Session.Scene));
         string other = Path.Combine(r.Dir, "Wall.vbuild");
-        File.WriteAllText(other, BlueprintFormats.Write(System.Text.Json.Nodes.JsonNode.Parse(CopyFormat.ToJson(PanelBlueprintsTests.Clip("Wall", "woodwall", "woodwall")).ToJsonString())!.AsObject(), "vbuild", "Wall", _ => 0));
+        File.WriteAllText(other, BlueprintFormats.Write(System.Text.Json.Nodes.JsonNode.Parse(CopyFormat.ToJson(BlueprintsPanelRun.Clip("Wall", "woodwall", "woodwall")).ToJsonString())!.AsObject(), "vbuild", "Wall", _ => 0));
         w.Drop(null, [other, Path.Combine(r.Dir, "notes.txt")], new Avalonia.Point(0, 0), new Avalonia.Size(0, 0));
         Assert.Equal(5, Workshop.Pieces(w.Session.Scene));
         Assert.Contains(r.Listed, e => e.Name == "Wall");
@@ -410,7 +410,7 @@ public class WorkshopTests
     [AvaloniaFact]
     public async Task TheLibraryGeneratesADungeonOntoThePlot()
     {
-        using var r = new PanelBlueprintsTests.Run();
+        using var r = new BlueprintsPanelRun();
         var w = r.W;
         r.Keep("Tower", "woodwall");
         int asked = 0;
@@ -482,7 +482,7 @@ public class WorkshopTests
         Assert.True(green.Y > green.X && green.Y > green.Z && green.X > 0.4f, green.ToString());
         var middle = GlView.SupportTint(0.5f);
         Assert.True(middle.X > 0.5f && middle.Y > 0.5f && middle.Z < middle.X, middle.ToString());
-        using var r = new PanelBlueprintsTests.Run();
+        using var r = new BlueprintsPanelRun();
         var w = r.W;
         await w.OpenWorkshop(null);
         Assert.True(w.CutBox.IsVisible);

@@ -14,7 +14,7 @@ Modes affected: <!-- My game, dedicated server, saved world, Workshop -->
 
 <!-- Tests added or run, and what was checked by hand (on a local or scratch world, never a live server). -->
 
-- [ ] `dotnet test tests/Desktop.Tests` passes
+- [ ] `dotnet test tests/Core.Tests` and `dotnet test tests/Desktop.Tests` pass
 - [ ] Tried in the app
 
 ## Checklist

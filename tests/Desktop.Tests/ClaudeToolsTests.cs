@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Json;
 using Avalonia.Headless.XUnit;
 using TerrainEditor.Save;
+using WorldEditor.Tests;
 using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
@@ -24,7 +25,7 @@ public class ClaudeToolsTests
     private sealed class Run : IDisposable
     {
         public MainWindow W { get; } = new(load: false) { Width = 1600, Height = 1000 };
-        public string Dir { get; } = EditTests.CopyFixture();
+        public string Dir { get; } = Fixtures.CopyFixture();
         public string Homestead { get; } = Path.Combine(Path.GetTempPath(), "vwe-claude-" + Guid.NewGuid().ToString("N")[..8]);
         public FakeGame? Game { get; private set; }
         public ClaudeTools T { get; }

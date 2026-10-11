@@ -19,9 +19,11 @@ updates:
       app:
         patterns: ["*"]
 
-  # The C# tests (xUnit, test SDK, JUnit logger).
+  # The C# tests (xUnit, test SDK, JUnit logger; SkiaSharp for Core's).
   - package-ecosystem: nuget
-    directory: /tests/Desktop.Tests
+    directories:
+      - /tests/Core.Tests
+      - /tests/Desktop.Tests
     schedule:
       interval: weekly
     open-pull-requests-limit: 3
