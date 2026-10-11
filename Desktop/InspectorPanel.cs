@@ -73,6 +73,21 @@ public sealed class InspectorPanel
 		public ItemUpload Upload() => new(Name, null, Stack, Quality, Durability, X, Y, Variant, WorldLevel, CrafterId, CrafterName, Equipped, PickedUp, Cheated, CustomData);
 	}
 	internal List<ItemRow>? Items { get; private set; }
+
+	// A stand's items: an item stand's one item, or an armour stand's slots (one row per kind of slot,
+	// and any slot that holds something); the item stand's orientation or the armour stand's pose.
+	internal sealed class StandRow
+	{
+		public int Slot;
+		public int[] Types = Array.Empty<int>();
+		public string Name = "";
+		public int Quality = 1, Variant;
+	}
+	internal List<StandRow>? Stand { get; private set; }
+	internal int StandWay { get; set; }
+	private bool _armourStand;
+	private string _standAtOpen = "";
+	private string? _standError;
 	private string _itemsAtOpen = "";
 	private (int W, int H) _grid;
 	private (int X, int Y)? _slot; // the slot picked in the grid
@@ -230,6 +245,33 @@ public sealed class InspectorPanel
 				Items = new();
 			}
 		}
+		Stand = null;
+		_armourStand = false;
+		_standError = null;
+		if (StandData.IsItemStand(z.Prefab))
+		{
+			var (held, way) = StandData.ReadItemStand(z);
+			Stand = new() { new StandRow { Name = held?.Item ?? "", Quality = held?.Quality ?? 1, Variant = held?.Variant ?? 0 } };
+			StandWay = way;
+		}
+		else if (PrefabCatalog.ArmourSlotsOf(z.Prefab) is { } slots)
+		{
+			_armourStand = true;
+			var (held, pose) = StandData.ReadArmourStand(z, slots.Length);
+			Stand = new();
+			for (int i = 0; i < slots.Length; i++)
+			{
+				// ArmorStand has each of its slots twice: one row per kind, and any slot that holds something.
+				int slot = i;
+				if (held[i] == null && Enumerable.Range(0, i).Any(j => slots[j].SequenceEqual(slots[slot])))
+				{
+					continue;
+				}
+				Stand.Add(new StandRow { Slot = i, Types = slots[i], Name = held[i]?.Item ?? "", Quality = held[i]?.Quality ?? 1, Variant = held[i]?.Variant ?? 0 });
+			}
+			StandWay = pose;
+		}
+		_standAtOpen = StandKey();
 		_itemsAtOpen = ItemsKey();
 		_slot = null;
 		_moving = false;
@@ -237,6 +279,8 @@ public sealed class InspectorPanel
 	}
 
 	private string ItemsKey() => Items == null ? "" : string.Join(";", Items.Select(i => $"{i.Name},{i.Stack},{i.Quality},{i.Durability},{i.X},{i.Y}"));
+
+	private string StandKey() => Stand == null ? "" : string.Join(";", Stand.Select(r => $"{r.Name},{r.Quality},{r.Variant}")) + "|" + StandWay.ToString(CultureInfo.InvariantCulture);
 
 	private static string Label(Field f) => f.Name is string n ? Labels.TryGetValue(n, out var l) ? l : n : $"#{f.Key}";
 
@@ -249,6 +293,7 @@ public sealed class InspectorPanel
 		int id = Index is int ix && s != null ? s.Scene.Things[ix].Id : 0;
 		_where.Text = $"Object {id} · x {z.Position.X:0.00}, y {z.Position.Y:0.00}, z {z.Position.Z:0.00} · turned {z.Rotation.Y:0.0}°{(z.Connection != null ? " · has a connection (kept)" : "")}";
 		RenderItems();
+		RenderStand();
 		Fields.Children.Clear();
 		if (FieldList.Count == 0 && Added.Count == 0)
 		{
@@ -524,6 +569,93 @@ public sealed class InspectorPanel
 		});
 	}
 
+	// An item stand's item and orientation, or an armour stand's slots and pose; each list offers only
+	// what the game lets that stand or slot take.
+	private void RenderStand()
+	{
+		if (Stand == null || _z == null)
+		{
+			return;
+		}
+		int prefab = _z.Prefab;
+		ItemsBox.Children.Add(new TextBlock { Text = _armourStand ? "WEARS" : "HOLDS", FontSize = 10, Foreground = Ui.Muted });
+		ItemsBox.Children.Add(new Grid
+		{
+			ColumnDefinitions = new ColumnDefinitions("*,44,44,26"),
+			ColumnSpacing = 3,
+			Children = { Head("Item", 0), Head("Qual.", 1), Head("Style", 2) },
+		});
+		foreach (var row in Stand)
+		{
+			var choices = PrefabCatalog.Items.Where(n => _armourStand
+				? PrefabCatalog.ItemKindOf(StableHash.Of(n)) is { } k && StandData.FitsArmourSlot(row.Types, k)
+				: StandData.ItemStandRefusal(prefab, n) == null).ToList();
+			string slotName = row.Types.Length == 0 ? "Anything" : string.Join(", ", row.Types.Select(StandData.TypeName).Distinct());
+			var name = new AutoCompleteBox
+			{
+				Text = row.Name, ItemsSource = choices, FilterMode = AutoCompleteFilterMode.ContainsOrdinal, FontSize = 11, MinimumPrefixLength = 1,
+				PlaceholderText = _armourStand ? slotName : "Find an item…",
+			}.Tip("inspect.standItem");
+			name.PropertyChanged += (_, e) =>
+			{
+				if (e.Property == AutoCompleteBox.TextProperty)
+				{
+					row.Name = name.Text?.Trim() ?? "";
+					Dirty();
+				}
+			};
+			var empty = new Button { Content = "✕", FontSize = 11, Padding = new Thickness(4, 0), IsEnabled = row.Name != "" }.Tip("inspect.emptyStand");
+			empty.Click += (_, _) =>
+			{
+				row.Name = "";
+				Dirty();
+				RenderItems();
+				RenderStand();
+			};
+			if (_armourStand)
+			{
+				ItemsBox.Children.Add(new TextBlock { Text = slotName, FontSize = 10, Foreground = Ui.Muted });
+			}
+			ItemsBox.Children.Add(new Grid
+			{
+				ColumnDefinitions = new ColumnDefinitions("*,44,44,26"),
+				ColumnSpacing = 3,
+				Children =
+				{
+					name,
+					Col(StandNum(row.Quality, 1, 10, v => row.Quality = v, "inspect.quality"), 1),
+					Col(StandNum(row.Variant, 0, 99, v => row.Variant = v, "inspect.variant"), 2),
+					Col(empty, 3),
+				},
+			});
+		}
+		ItemsBox.Children.Add(new StackPanel
+		{
+			Orientation = Orientation.Horizontal,
+			Spacing = 6,
+			Children =
+			{
+				new TextBlock { Text = _armourStand ? "Pose" : "Hangs", FontSize = 11, VerticalAlignment = VerticalAlignment.Center },
+				StandNum(StandWay, 0, 99, v => StandWay = v, _armourStand ? "inspect.pose" : "inspect.orientation"),
+			},
+		});
+		if (_standError != null)
+		{
+			ItemsBox.Children.Add(new TextBlock { Text = _standError, FontSize = 11, Foreground = Brushes.Orange, TextWrapping = TextWrapping.Wrap });
+		}
+	}
+
+	private NumericUpDown StandNum(int v, int min, int max, Action<int> set, string tip)
+	{
+		var n = new NumericUpDown { Value = v, Minimum = min, Maximum = max, Increment = 1, FormatString = "0", FontSize = 11, ShowButtonSpinner = false, Width = 60 }.Tip(tip);
+		n.ValueChanged += (_, e) =>
+		{
+			set((int)(e.NewValue ?? min));
+			Dirty();
+		};
+		return n;
+	}
+
 	private static Control Head(string t, int col) => Col(new TextBlock { Text = t, FontSize = 10, Foreground = Ui.Muted }, col);
 
 	private static NumericUpDown WithBorder(NumericUpDown n, bool bad)
@@ -573,6 +705,19 @@ public sealed class InspectorPanel
 			set.Add(new FieldChange(section, key, value));
 		}
 		var inv = Items != null && _inventoryError == null && ItemsKey() != _itemsAtOpen ? Items.Select(i => i.Upload()).ToList() : null;
+		_standError = null;
+		if (Stand != null && _z != null && StandKey() != _standAtOpen)
+		{
+			try
+			{
+				var held = Stand.Where(r => r.Name != "").Select(r => new StandData.Held(r.Name, r.Quality, r.Variant)).ToList();
+				set.AddRange(_armourStand ? StandData.ForArmourStand(_z.Prefab, held, StandWay) : StandData.ForItemStand(_z.Prefab, held.FirstOrDefault(), StandWay));
+			}
+			catch (ArgumentException ex)
+			{
+				_standError = ex.Message;
+			}
+		}
 		return (set, inv);
 	}
 
@@ -589,6 +734,11 @@ public sealed class InspectorPanel
 			return;
 		}
 		var (set, inv) = Changes();
+		if (_standError != null)
+		{
+			Message?.Invoke(_standError);
+			return;
+		}
 		var (w, h) = _grid;
 		if (inv != null && w > 0 && inv.Any(i => i.X >= w || i.Y >= h)
 			&& !await Confirm($"Some items are outside the {w} × {h} slots of this container: the game would not show them. Apply anyway?"))

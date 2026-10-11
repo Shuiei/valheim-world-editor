@@ -158,6 +158,10 @@ tools/asset-export/requirements.txt` first). `scan_vegetation.py Core/WorldGen/v
 for Regrow nature (ZoneSystem's and the location lists', with the random draws each kind makes when
 it is created). `scan_grown.py Core/WorldGen/prefabs.json` (run after `scan_prefabs.py`) adds what
 each sapling grows into (grown crops and trees keep their sapling's grow radius).
+`scan_stands.py Core/WorldGen/prefabs.json` (also after `scan_prefabs.py`) adds what stands may hold:
+each item's type, attach points, variants and durability, each item stand's rule (types, items it also
+takes or refuses) and each armour stand's slots, for the inspector's Holds / Wears and Claude's
+`set_contents`.
 `scan_build_tools.py Core/WorldGen/pieces.json Core/WorldGen/prefabs.json` (run after the other two)
 adds which build tool's menu has each piece (hammer, hoe, cultivator, feaster): the editor writes a
 builder on new pieces of those kinds. `scan_zdo_keys.py <Valheim folder>

@@ -34,6 +34,13 @@ public static class PrefabCatalog
 	// run in the file's order, so one written after ByHash would replace the filled table with an empty one.
 	private static readonly Dictionary<string, (float Radius, string Sapling)> GrownFromStart = new();
 
+	// Filled by Load: declared before ByHash for the reason above.
+	private static readonly Dictionary<int, ItemKind> ItemKinds = new();
+
+	private static readonly Dictionary<int, StandRule> ItemStands = new();
+
+	private static readonly Dictionary<int, int[][]> ArmourStands = new();
+
 	private static readonly Dictionary<int, Info> ByHash = Load();
 
 	// Kinds the editor offers to place: saved objects (persistent), not creatures, item drops or ragdolls.
@@ -71,7 +78,31 @@ public static class PrefabCatalog
 	// Filled by Load (see GrownFromStart).
 	public static Dictionary<string, (float Radius, string Sapling)> GrownFrom { get; private set; } = GrownFromStart;
 
-	private sealed record Entry(int p, int d, int t, int c = 0, int i = 0, double gr = 0, int cult = 0, int cw = 0, int ch = 0, double ward = 0, double build = 0, string[]? grows = null);
+	// What an item is, for the stands that hold items: its type (ItemDrop.ItemData.ItemType), the type it
+	// attaches as when that differs (atgeirs), its number of variants (shield styles), and whether it has
+	// an "attach" child (item stands take no item without) or an "attach_skin" one (armour stands take
+	// either, or chest and legs pieces without), and for items that wear, their durability when new at
+	// quality 1 and what each further level adds (0 for items that do not wear).
+	public sealed record ItemKind(int Type, int AttachOverride, int Variants, bool Attach, bool AttachSkin, float Durability = 0, float DurabilityPerLevel = 0)
+	{
+		// A new item's durability at this quality (ItemDrop.ItemData.GetMaxDurability); 100 for items that do not wear.
+		public float NewDurability(int quality) => Durability > 0 ? Durability + Math.Max(0, quality - 1) * DurabilityPerLevel : 100f;
+	}
+
+	// An item stand's rule (ItemStand.CanAttach): items of these types, and these items whatever their
+	// type, but never the refused ones.
+	public sealed record StandRule(IReadOnlySet<int> Types, IReadOnlySet<string> Takes, IReadOnlySet<string> Refuses);
+
+	public static ItemKind? ItemKindOf(int prefab) => ItemKinds.GetValueOrDefault(prefab);
+
+	// The rule of an item stand (itemstand, itemstandh and the boss altars), or null for anything else.
+	public static StandRule? ItemStandOf(int prefab) => ItemStands.GetValueOrDefault(prefab);
+
+	// An armour stand's slots in order, each with the item types it takes (empty: any), or null.
+	public static int[][]? ArmourSlotsOf(int prefab) => ArmourStands.GetValueOrDefault(prefab);
+
+	private sealed record Entry(int p, int d, int t, int c = 0, int i = 0, double gr = 0, int cult = 0, int cw = 0, int ch = 0, double ward = 0, double build = 0, string[]? grows = null,
+		int it = -1, int ao = 0, int var = 0, int at = 0, int ats = 0, double dur = 0, double durl = 0, int[]? @is = null, string[]? isi = null, string[]? isu = null, int[][]? @as = null);
 
 	private static Dictionary<int, Info> Load()
 	{
@@ -91,6 +122,18 @@ public static class PrefabCatalog
 			if (e.i != 0)
 			{
 				ItemNames.Add(name);
+			}
+			if (e.it >= 0)
+			{
+				ItemKinds[hash] = new ItemKind(e.it, e.ao, e.var, e.at != 0, e.ats != 0, (float)e.dur, (float)e.durl);
+			}
+			if (e.@is != null)
+			{
+				ItemStands[hash] = new StandRule(e.@is.ToHashSet(), (e.isi ?? Array.Empty<string>()).ToHashSet(), (e.isu ?? Array.Empty<string>()).ToHashSet());
+			}
+			if (e.@as != null)
+			{
+				ArmourStands[hash] = e.@as;
 			}
 			// Save-file flags: persistent 0x100, distant 0x200, object type in bits 10-11.
 			ushort flags = (ushort)((e.p != 0 ? 0x100 : 0) | (e.d != 0 ? 0x200 : 0) | ((e.t & 3) << 10));

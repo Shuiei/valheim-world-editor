@@ -282,7 +282,12 @@ public class WorkshopTests
 	{
 		using var r = new PanelBlueprintsTests.Run();
 		var w = r.W;
+		// As an earlier test may leave it (the Place tool's choice is remembered): another piece chosen.
+		w.PlaceTool.Chosen.Clear();
+		w.PlaceTool.Chosen.Add("wood_floor");
 		await w.OpenWorkshop(null);
+		// The wall chosen in Build, as the user would (the Workshop keeps a piece already chosen).
+		w.BuildPanel.Choose("woodwall");
 		var s = w.Session!;
 		var t = w.PlaceTool;
 		int c = (s.Scene.W - 1) / 2;

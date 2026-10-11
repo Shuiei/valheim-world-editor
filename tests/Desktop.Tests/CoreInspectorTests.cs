@@ -234,6 +234,12 @@ public class BuilderTests
 			Assert.Equal(1234567890123L, CreatorOf(Make("woodwall")));        // hammer
 			Assert.Equal(1234567890123L, CreatorOf(Make("sapling_turnip")));  // cultivator
 			Assert.Equal(0L, CreatorOf(Make("Beech1")));                      // not built by players
+			// Food set out with the serving tray is an item made a piece: marked so, it stays put.
+			int PieceFlag(byte[] b) => ZdoData.Parse(b).IntList.FirstOrDefault(i => i.Key == StableHash.Of("piece")).Value;
+			byte[] chicken = Make("HoneyGlazedChicken");
+			Assert.Equal(1, PieceFlag(chicken));
+			Assert.Equal(1234567890123L, CreatorOf(chicken));                 // feaster
+			Assert.Equal(0, PieceFlag(Make("woodwall")));
 			// A moved object keeps what it had.
 			int chest = world.Objects.First(o => o.Prefab == Fixtures.Hash("piece_chest_wood")).Id;
 			ZdoData z = ZdoData.Parse(world.ObjectBytes(chest));

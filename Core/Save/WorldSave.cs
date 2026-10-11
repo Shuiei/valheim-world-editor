@@ -84,6 +84,8 @@ public sealed class WorldSave
 	// or serving tray), so the game treats them as player built. Chosen in the editor; 0: not set.
 	public static long Builder { get; set; }
 
+	private static readonly int PieceKey = StableHash.Of("piece");
+
 	// The player who built the most pieces in this world (0 if nobody did).
 	public long TopBuilder => Creators.Count == 0 ? 0 : Creators.MaxBy(c => c.Value).Key;
 
@@ -124,6 +126,16 @@ public sealed class WorldSave
 		{
 			ZdoData z = ZdoData.Parse(bytes);
 			z.Set("longs", CreatorKey, Builder.ToString(CultureInfo.InvariantCulture));
+			bytes = z.Serialize();
+		}
+		// Food and drink set out with the serving tray (Feaster) are items made pieces: the game marks
+		// them with "piece" (ItemDrop.MakePiece). Without it they would be loose items, falling and
+		// despawning away from a base.
+		if (bytes != null && (n.Fresh || n.Raw == null && ModelFor(n.Prefab, n.SourceId) == null)
+			&& TerrainEditor.Terrain.PieceCatalog.Get(n.Prefab)?.Tool == "feaster" && TerrainEditor.Terrain.PrefabCatalog.ItemKindOf(n.Prefab) != null)
+		{
+			ZdoData z = ZdoData.Parse(bytes);
+			z.Set("ints", PieceKey, "1");
 			bytes = z.Serialize();
 		}
 		if (bytes != null && n.Data is { Count: > 0 } data)

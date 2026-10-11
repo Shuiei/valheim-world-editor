@@ -64,7 +64,7 @@ The editor must be running for Claude to reach it. Turn the switch off and nothi
 | `run_script` | A C# script on the area, as the [Script tool](scripting.md) runs it (`script_reference` gives Claude the API): ground, paint, objects; a dry run says what it would change |
 | `flatten`, `paint_area`, `road`, `forest` | Level a rectangle, paint ground, lay a road through points, plant trees or rocks |
 | `build_floor`, `build_walls`, `build_roof` | A floor, walls with doors and a gable roof (26° or 45°, thatch or shingle, gable ends closed) over a rectangle, from the game's pieces |
-| `set_contents` | Fill a chest, write a sign, give a creature stars |
+| `set_contents` | Fill a chest, put an item on an item stand (food on a flat one, a trophy or weapon on a wall) or dress an armour stand, write a sign, give a creature stars |
 | `place_pieces`, `remove_objects` | Put down building pieces and other objects (they snap like the game's hammer); take objects away |
 | `support_check` | The Workshop's support check: which pieces would fall |
 | `open_workshop`, `add_blueprint` | The Workshop, empty or with a blueprint; add a blueprint to the plot |

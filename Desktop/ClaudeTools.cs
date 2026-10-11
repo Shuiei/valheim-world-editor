@@ -949,15 +949,20 @@ public sealed class ClaudeTools
 
 		[Description("Quality (upgrade level) for weapons and armour (default 1).")]
 		public int Quality { get; set; } = 1;
+
+		[Description("Variant: a shield's or banner's style, from 0 (default 0).")]
+		public int Variant { get; set; }
 	}
 
-	[McpServerTool(Name = "set_contents", Title = "Fill a chest, write a sign, set stars")]
-	[Description("Changes what an object holds, as the editor's inspector does: a container's items (they replace what it held, laid out in its slots in order), a sign's text, a creature's stars (0 to 2). One pending step; the object keeps everything else it holds.")]
+	[McpServerTool(Name = "set_contents", Title = "Fill a chest or a stand, write a sign, set stars")]
+	[Description("Changes what an object holds, as the editor's inspector does: a container's items (they replace what it held, laid out in its slots in order); an item stand's item (itemstand on a wall, itemstandh lying flat: a table's food, a trophy, a weapon; one item, none to empty it) and the way it hangs; an armour stand's armour, cape, belt, shield and weapon (each in the slot that takes it; the others emptied) and its pose; a sign's text; a creature's stars (0 to 2). Stands take what the game lets them (find_prefabs with items: true for names). One pending step; the object keeps everything else it holds.")]
 	public Task<string> SetContents(
 		[Description("The object's id (list_objects, place_pieces).")] int id,
-		[Description("For a container (chest, barrel…): its items (optional).")] ItemSpec[]? items = null,
+		[Description("For a container (chest, barrel…): its items; for an item stand: one item (or none: empty); for an armour stand: what it wears (optional).")] ItemSpec[]? items = null,
 		[Description("For a sign: its text (optional).")] string? text = null,
-		[Description("For a creature: its stars, 0 to 2 (optional).")] int? stars = null) => OnUi(() =>
+		[Description("For a creature: its stars, 0 to 2 (optional).")] int? stars = null,
+		[Description("For an item stand: the way the item hangs, from 0 (the game's orientations, as alt + use cycles them; optional).")] int? orientation = null,
+		[Description("For an armour stand: its pose, from 0 (optional).")] int? pose = null) => OnUi(() =>
 	{
 		if (CannotEdit() is string why)
 		{
@@ -973,11 +978,52 @@ public sealed class ClaudeTools
 		var info = TerrainEditor.Terrain.PrefabCatalog.Details(t.Prefab);
 		var set = new List<TerrainEditor.App.FieldChange>();
 		List<TerrainEditor.App.ItemUpload>? inv = null;
+		bool itemStand = TerrainEditor.App.StandData.IsItemStand(t.Prefab), armourStand = TerrainEditor.App.StandData.IsArmourStand(t.Prefab);
+		if ((orientation != null && !itemStand) || (pose != null && !armourStand))
+		{
+			return $"{_w.NameOfPrefab(t.Prefab)} is not {(orientation != null ? "an item stand: only item stands take an orientation" : "an armour stand: only armour stands take a pose")}.";
+		}
+		try
+		{
+			if (itemStand && (items != null || orientation != null))
+			{
+				if (items is { Length: > 1 })
+				{
+					return $"{_w.NameOfPrefab(t.Prefab)} holds one item, not {items.Length}.";
+				}
+				if (items != null)
+				{
+					var held = items.Length == 0 ? null : new TerrainEditor.App.StandData.Held(items[0].Item, items[0].Quality, items[0].Variant);
+					set.AddRange(TerrainEditor.App.StandData.ForItemStand(t.Prefab, held, orientation ?? 0));
+				}
+				else
+				{
+					set.Add(new("ints", "type", Math.Max(0, orientation!.Value).ToString(System.Globalization.CultureInfo.InvariantCulture)));
+				}
+				items = null;
+			}
+			if (armourStand && (items != null || pose != null))
+			{
+				if (items != null)
+				{
+					set.AddRange(TerrainEditor.App.StandData.ForArmourStand(t.Prefab, items.Select(i => new TerrainEditor.App.StandData.Held(i.Item, i.Quality, i.Variant)).ToList(), pose));
+				}
+				else
+				{
+					set.Add(new("ints", "pose", Math.Max(0, pose!.Value).ToString(System.Globalization.CultureInfo.InvariantCulture)));
+				}
+				items = null;
+			}
+		}
+		catch (ArgumentException ex)
+		{
+			return ex.Message;
+		}
 		if (items != null)
 		{
 			if (info is not { ContainerW: > 0 } box)
 			{
-				return $"{_w.NameOfPrefab(t.Prefab)} is not a container.";
+				return $"{_w.NameOfPrefab(t.Prefab)} is not a container or a stand.";
 			}
 			if (items.Length > box.ContainerW * box.ContainerH)
 			{
@@ -1004,7 +1050,7 @@ public sealed class ClaudeTools
 		}
 		if (set.Count == 0 && inv == null)
 		{
-			return "Nothing to change: give items, text or stars.";
+			return "Nothing to change: give items, text, stars, an orientation or a pose.";
 		}
 		string name = _w.NameOfPrefab(t.Prefab) ?? "object";
 		try
@@ -1025,7 +1071,10 @@ public sealed class ClaudeTools
 				{
 					int k = TerrainEditor.Save.StableHash.Of(key);
 					fields.RemoveAll(f => f.Key == k);
-					fields.Add(new(section, k, value));
+					if (value != null)
+					{
+						fields.Add(new(section, k, value));
+					}
 				}
 				foreach (var f in set)
 				{
