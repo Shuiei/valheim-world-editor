@@ -7,13 +7,14 @@ namespace TerrainEditor.Desktop.Tests;
 
 /// <summary>
 /// The history on disk with a zone reset among its steps (written and read back with its zone and options), and a
-/// world folder whose save is gone having no stamp to compare. On a copy of the test world.
+/// world folder whose save is gone having no stamp to compare (it threw). On a copy of the test world.
 /// </summary>
 [Collection("World files")]
 public class HistoryFileResetsTests
 {
+    // Saving a reset reads the area again and clears the history: the step is kept on disk while it is pending.
     [AvaloniaFact]
-    public void AZoneResetStepComesBackWhenTheWorldIsOpenedAgain()
+    public void AZoneResetStepIsWrittenAndReadBack()
     {
         string dir = Fixtures.CopyFixture();
         try
@@ -23,13 +24,11 @@ public class HistoryFileResetsTests
             var reset = new ZoneReset(0, 0, KeepBuildings: true, Ground: false);
             s.Commit("Reset zone", null, [], [], [(reset, false, true)]);
             Assert.Equal("1 zone reset", s.UndoList[^1].Describe());
-            Assert.True(s.Save().Saved);
-            scene.Owner!.Dispose();
-            var again = WorldScene.Load(dir, 0, 0, 1);
-            var step = Assert.Single(again.Session!.UndoList);
+            HistoryFile.Write(scene.Owner!, s.Export());
+            var step = Assert.Single(HistoryFile.Read(scene.Owner!)!.Kept.Undo);
             Assert.Equal("Reset zone", step.Label);
             Assert.Equal([(reset, false, true)], step.Resets);
-            again.Owner!.Dispose();
+            scene.Owner!.Dispose();
         }
         finally
         {
