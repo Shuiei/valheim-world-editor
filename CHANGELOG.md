@@ -14,7 +14,16 @@ the plugin is unchanged in versions without that part.
   each is from the start and whether you need to sail to each biome. **Find a seed** tries many
   random seeds and keeps the best for what you ask: the start on a large landmass, land around it,
   Swamp, Mountain or Plains within a distance, every early biome on foot, a trader or the first five
-  bosses within a distance. See [docs/new-world.md](docs/new-world.md).
+  bosses within a distance. The map zooms (wheel, drag, double click) and stays sharp; switches in
+  its corner show or hide each kind of mark, and the seed's facts are listed beside it. The
+  **Dungeons** switches show where the burial chambers, troll caves, sunken crypts, frost caves,
+  infested mines, charred fortresses and Hildir's dungeons will be, with how many lie near the start.
+  The rules are read from your Valheim, so they follow game updates. See
+  [docs/new-world.md](docs/new-world.md).
+
+### Changed
+- **The world generator is about a third faster** (worlds' map previews, Regrow nature, new worlds),
+  with the same results to the bit.
 
 ## v1.18.0 — 2026-10-10
 
