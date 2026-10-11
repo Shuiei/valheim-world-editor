@@ -347,6 +347,7 @@ plugin's (`WorldEditorBridge-<version>.zip`). The tests, as CircleCI runs
 them on every push (the visual tests need a display and are left out):
 
 ```sh
+dotnet test tests/Core.Tests/Core.Tests.csproj -c Release
 dotnet test tests/Desktop.Tests/Desktop.Tests.csproj -c Release --filter "Category!=Visual"
 ```
 

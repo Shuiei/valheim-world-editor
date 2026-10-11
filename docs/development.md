@@ -13,7 +13,7 @@ How the parts fit and the rules to keep when changing them: [architecture.md](ar
 | `Core/Editing/` | Pending changes: terrain per zone, deleted and added objects, zone resets (`EditStore`); heights of a block of zones (`HeightGrid`). |
 | `Core/WorldGen/` | Valheim's world generator (bit-exact base terrain), map data, location flattening; no game data (what the editor needs of the game, the terrain modifiers, prefabs, build pieces, pieces' support and placement, object data names, cave rocks, piece costs, vegetation rules and dungeon rooms, is read from the player's Valheim: `Core/App/GameData.cs`). |
 | `plugin/WorldEditorBridge/` | The BepInEx plugin for live mode (.NET Framework 4.7.2). |
-| `tests/Desktop.Tests/` | Every test (xUnit v3, Avalonia's headless mode), see [Tests](#tests). `tests/fixtures/` holds the test world. |
+| `tests/Core.Tests/`, `tests/Desktop.Tests/` | Core's tests and the app's (xUnit v3, the app's in Avalonia's headless mode), laid out like `Core/` and `Desktop/`, see [Tests](#tests). `tests/Support/` holds the helpers both share, `tests/fixtures/` the test world. |
 | `tools/WorldCheck/` | Developer checks of the generator and the writer, saved objects byte by byte, and new worlds from a seed, see below. |
 | `tools/DocsScreenshots/` | `Scenes.cs` builds and takes the pictures in `docs/images/`, through `Editor.cs`, which drives the app. |
 | `tools/release.sh`, `tools/check-package.sh` | The release packages, and their check. |
@@ -151,7 +151,7 @@ the user chose) and keeps the one reader, `Core/App/GameBundles.cs`:
   SPIRV-Cross turns it into the same GLSL (`Core/App/TerrainShader.cs`). If a game update changes the
   shader, the converter says so instead of drawing a broken one.
 
-`tests/Desktop.Tests/GameFilesTests.cs` (`--filter Category=Game`) checks the terrain and map read from
+`tests/Core.Tests/Integration/GameFilesTests.cs` (`--filter Category=Game`) checks the terrain and map read from
 the game, where Valheim is on the computer.
 
 None of the game's data is kept in the repository or the app: the editor reads what it needs from
@@ -235,21 +235,32 @@ after an update.
 
 ## Tests
 
-Every test is in `tests/Desktop.Tests` (xUnit v3): the windows and panels run in Avalonia's
-headless mode, driven with real mouse and keyboard events, and the core (save round trips, the
-generator against values recorded in the game, live mode against a stand-in bridge, settings,
-servers, the SSH tunnel) is tested there too.
+The tests (xUnit v3) are in two projects, laid out like the code they test:
 
-- **Visual tests** (`[Trait("Category", "Visual")]`, in `VisualTests.cs`) start the real app with
+- `tests/Core.Tests` tests `Core/` without a window (save round trips, the generator against values
+  recorded in the game, live mode against a stand-in bridge, settings, servers, the SSH tunnel), in
+  `App/`, `Editing/`, `Save/` and `WorldGen/` as in `Core/`.
+- `tests/Desktop.Tests` tests `Desktop/`: the windows and panels run in Avalonia's headless mode,
+  driven with real mouse and keyboard events.
+
+Each test class is in a file of its own, named after the file it tests (`Core/Save/WorldWriter.cs` is
+tested by `tests/Core.Tests/Save/WorldWriterTests.cs`). Several classes for one file are told apart by
+what they test (`PlaceToolTests`, `PlaceToolMouseTests`, `PlaceToolEdgeTests`). Tests that go through
+several files at once (window workflows, live mode, saving safely, the start-up, the visual tests) are
+in each project's `Integration/` folder, named after what they test. The helpers are in `Support/`:
+each project's own, and `tests/Support/` for those both use (the test world `TempWorld`, `Fixtures`,
+the stand-in game `FakeGame`, the `DataDir` collection), compiled into both projects.
+
+- **Visual tests** (`[Trait("Category", "Visual")]`, in `Integration/*VisualTests.cs`) start the real app with
   `--driver` and check what it draws with OpenGL: one app per group of tests (`EditorProcess`),
   each test opening a fresh copy of the test world. They need a display and skip without one. One
   group starts the app with `VWE_GPU_BUDGET=1`: the models and textures on the graphics card past
   that many bytes (1 GiB by default) are let go when another area opens, so every area reads its
   models again.
-- **The user's files are never touched.** A module initializer (`TestApp` in `InputTests.cs`) points
-  the settings, servers, Place memory, stamps, preferences, saved selections and the data folder at
-  temporary files before any test runs, and turns off the search of the computer's own Valheim and
-  mod manager profiles. Tests that change the environment or these paths (`HOME`, `XDG_*`, the data
+- **The user's files are never touched.** Module initializers (`TestFiles` in `tests/Support`, and
+  `TestApp` for the app's own) point the settings, servers, Place memory, stamps, preferences, saved
+  selections and the data folder at temporary files before any test runs, and turn off the search of
+  the computer's own Valheim and mod manager profiles. Tests that change the environment or these paths (`HOME`, `XDG_*`, the data
   folder) run in the non-parallel `DataDir` collection and put everything back. The visual tests'
   app gets `--data` and never copies the game look.
 - **The SSH tunnel** is tested against a real `sshd` (`LocalSshd`): run as the test user on a free
@@ -264,8 +275,8 @@ CircleCI (`.circleci/config.yml`) runs on every push and pull request:
 
 | Job | What it checks |
 |---|---|
-| `core-tests` | The core's tests of `tests/Desktop.Tests` (namespace `WorldEditor.Tests`), with OpenSSH's server installed (`VWE_NEED_SSHD=1`), on three containers (the world generator's tests run several times slower under coverage). |
-| `app-tests` | The app's window tests (`TerrainEditor.Desktop.Tests`) without the visual tests, on three containers. Both test jobs let CircleCI share the classes out by their last times (`circleci tests run`, `tools/ci-tests.sh`), so **Rerun failed tests** runs only the classes that failed; every test runs, failing or not. |
+| `core-tests` | `tests/Core.Tests`, with OpenSSH's server installed (`VWE_NEED_SSHD=1`), on three containers (the world generator's tests run several times slower under coverage). |
+| `app-tests` | `tests/Desktop.Tests` without the visual tests, on three containers. Both test jobs let CircleCI share the classes out by their last times (`circleci tests run`, `tools/ci-tests.sh`), so **Rerun failed tests** runs only the classes that failed; every test runs, failing or not. |
 | `packages` | Both release packages build (without the plugin), and `tools/check-package.sh` finds everything they need and no source code, debug files or game files. |
 
 Not covered by CI: the visual tests (no display), building the plugin and reading the game's data
@@ -275,21 +286,26 @@ against a real game.
 Running them locally:
 
 ```sh
-dotnet test tests/Desktop.Tests                                  # everything (visual tests need a display)
+dotnet test tests/Core.Tests                                     # Core's tests
+dotnet test tests/Desktop.Tests                                  # the app's (visual tests need a display)
 dotnet test tests/Desktop.Tests --filter "Category!=Visual"     # without the visual tests
 dotnet test tests/Desktop.Tests --filter "Category=Visual"      # only them
-dotnet test tests/Desktop.Tests --filter "Category!=Visual" --settings tests/Desktop.Tests/coverage.runsettings \
-  --collect "Code Coverage" --results-directory /tmp/coverage                       # with coverage (Cobertura)
+for p in Core.Tests Desktop.Tests; do                           # with coverage (Cobertura)
+  dotnet test tests/$p --filter "Category!=Visual" --settings tests/coverage.runsettings \
+    --collect "Code Coverage" --results-directory /tmp/coverage/$p
+done
 tools/release.sh /tmp/dist && tools/check-package.sh /tmp/dist/*.tar.gz
 ```
 
-**Coverage**: each test container sends its coverage to
+**Coverage**: on `main` only, each test container sends its coverage to
 [Codecov](https://app.codecov.io/gh/Shuiei/valheim-world-editor), which merges the six (`codecov.yml`)
-and checks it on every pull request: `codecov/project` fails when the editor's line coverage is under
-**95%**; `codecov/patch` shows the coverage of the lines a pull request changes. Codecov's page shows
-each file's covered and uncovered lines.
+and checks each of main's commits: `codecov/project` fails when the editor's line coverage is under
+**95%**. Pull requests run the tests without coverage, several times faster, so they get no coverage
+check: a drop shows on `main` once merged. Codecov's page shows each file's covered and uncovered
+lines.
 
-The coverage counts only our own code (`coverage.runsettings`): the core and the app, not the tests,
-the libraries or generated code, and not the FastNoise library either, which the test against the
-game's values checks along with the world generator. Code that CI cannot run (it needs a display, the
-game's files or a real game) can be left out with `[ExcludeFromCodeCoverage(Justification = "...")]`.
+The coverage counts only our own code (`tests/coverage.runsettings`, for both test projects): the core
+and the app, not the tests, the libraries or generated code, and not the FastNoise library either, which
+the test against the game's values checks along with the world generator. Code that CI cannot run (it
+needs a display, the game's files or a real game) can be left out with
+`[ExcludeFromCodeCoverage(Justification = "...")]`.

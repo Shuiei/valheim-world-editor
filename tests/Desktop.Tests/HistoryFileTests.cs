@@ -1,6 +1,7 @@
 using System.Numerics;
 using Avalonia.Headless.XUnit;
 using TerrainEditor.Save;
+using WorldEditor.Tests;
 using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
@@ -49,7 +50,7 @@ public class HistoryFileTests
     [AvaloniaFact]
     public void ADamagedHistoryFileDoesNotStopTheWorldOpening()
     {
-        string dir = EditTests.CopyFixture();
+        string dir = Fixtures.CopyFixture();
         try
         {
             EditAndSave(dir);
@@ -92,7 +93,7 @@ public class HistoryFileTests
     [AvaloniaFact]
     public void TheHistoryComesBackWhenTheWorldIsOpenedAgain()
     {
-        string dir = EditTests.CopyFixture();
+        string dir = Fixtures.CopyFixture();
         try
         {
             var (was, tree, rock) = EditAndSave(dir);
@@ -137,7 +138,7 @@ public class HistoryFileTests
     [AvaloniaFact]
     public async Task AWorldSavedAgainSinceAsksOnceBeforeUndoing()
     {
-        string dir = EditTests.CopyFixture();
+        string dir = Fixtures.CopyFixture();
         try
         {
             var (was, _, _) = EditAndSave(dir);
@@ -174,7 +175,7 @@ public class HistoryFileTests
     [AvaloniaFact]
     public void ANewStepAfterAReopenIsNotFromAnEarlierSession()
     {
-        string dir = EditTests.CopyFixture();
+        string dir = Fixtures.CopyFixture();
         try
         {
             EditAndSave(dir);

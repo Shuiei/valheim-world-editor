@@ -21,7 +21,7 @@ public class MaskTests
     /// </summary>
     private static EditSession Area()
     {
-        var s = EditTests.Flat(2);
+        var s = TestScenes.Flat(2);
         for (int i = 0; i < s.Scene.Biomes.Length; i++)
         {
             s.Scene.Biomes[i] = i % s.Scene.W >= 64 ? 8 : 1;

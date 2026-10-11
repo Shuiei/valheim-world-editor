@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Core's tests: saves, the world generator against the game's values, live mode against a stand-in
+       game, the SSH tunnel against a local sshd. Laid out like Core (App/, Editing/, Save/, WorldGen/),
+       one test class per file named after the file it tests; Integration/ holds the tests of several
+       files at once, Support/ (here and tests/Support) their helpers. -->
+  <PropertyGroup>
+    <!-- CI builds them with warnings as errors (.circleci/config.yml). -->
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>WorldEditor.Tests</RootNamespace>
+    <!-- Test methods need no doc comment: their names say what they check. -->
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.10.1" />
+    <PackageReference Include="xunit.v3" Version="3.2.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />
+    <PackageReference Include="JunitXml.TestLogger" Version="7.1.0" />
+    <!-- The map's overview picture decoded with its transparency (MapDataTests). -->
+    <PackageReference Include="SkiaSharp" Version="4.153.1" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="4.153.1" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Win32" Version="4.153.1" />
+    <PackageReference Include="SkiaSharp.NativeAssets.macOS" Version="4.153.1" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- The helpers both test projects share: the test world, the fixtures, a stand-in game. -->
+    <Compile Include="../Support/**/*.cs" LinkBase="Support/Shared" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../Core/ValheimWorldEditor.Core.csproj" />
+  </ItemGroup>
+</Project>
