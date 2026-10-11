@@ -9,12 +9,18 @@ using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
-// The Place panel through its controls on the test world (zone 0, 0): what its memory brings back, the
-// kind chooser (search, ticks, favourite stars, long groups cut), the favourites and recent chips, the
-// weight sliders and ✕, presets (built in, saved, deleted), Pick from world, and its hints and notes.
+/// <summary>
+/// The Place panel through its controls on the test world (zone 0, 0): what its memory brings back, the kind chooser
+/// (search, ticks, favourite stars, long groups cut), the favourites and recent chips, the weight sliders and ✕,
+/// presets (built in, saved, deleted), Pick from world, and its hints and notes.
+/// </summary>
 [Collection("World files")]
 public class PanelPlaceTests
 {
+    /// <summary>
+    /// A main window on its own copy of the test world (zone 0, 0) in the Place tool, with the panel's memory emptied;
+    /// deleted when disposed.
+    /// </summary>
     private sealed class Run : IDisposable
     {
         public MainWindow W { get; } = new(load: false) { Width = 1600, Height = 1000 };
@@ -38,19 +44,32 @@ public class PanelPlaceTests
             P.Memory.Recent.Clear();
         }
 
+        /// <inheritdoc/>
         public void Dispose() => Directory.Delete(Path.GetDirectoryName(Dir)!, recursive: true);
     }
 
+    /// <summary>
+    /// Clicks the button and runs the posted work it starts.
+    /// </summary>
     private static void Click(Button b)
     {
         b.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         Dispatcher.UIThread.RunJobs();
     }
 
+    /// <summary>
+    /// Every text block's text under the control, joined with " | ", for asserting on what it shows.
+    /// </summary>
     private static string Texts(Control c) => string.Join(" | ", c.GetLogicalDescendants().OfType<TextBlock>().Select(t => t.Text));
 
+    /// <summary>
+    /// The kind chooser's tick boxes.
+    /// </summary>
     private static List<CheckBox> Ticks(Run r) => [.. r.P.List.GetLogicalDescendants().OfType<CheckBox>()];
 
+    /// <summary>
+    /// Chooses these kinds, as ticking them in the panel does.
+    /// </summary>
     private static void Choose(Run r, params string[] names)
     {
         r.T.Chosen.Clear();

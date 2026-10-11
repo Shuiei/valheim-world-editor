@@ -10,10 +10,18 @@ namespace TerrainEditor.Desktop;
 // points at. Pieces resting on a room hold in game: its floor counts as ground for their support.
 public partial class MainWindow
 {
+    /// <summary>
+    /// The Place tool's settings from before Build here (restored when it ends); null when not building in a dungeon.
+    /// </summary>
     private Kept? _dungeonKept;
 
+    /// <summary>True while Build here is on.</summary>
     internal bool BuildingInDungeon => _dungeonKept != null;
 
+    /// <summary>
+    /// Turns Build here on (the Place tool's settings are kept aside, the Workshop's Build starts and the Place
+    /// tool cuts at the view's cut height) or off (the Place tool gets its settings back).
+    /// </summary>
     internal void BuildInDungeon(bool on)
     {
         var t = PlaceTool;
@@ -33,9 +41,11 @@ public partial class MainWindow
         }
     }
 
-    // A generated dungeon into the world, 5000 m above the ground at the view's centre (the game builds
-    // dungeons there, and treats what is above 3000 m as indoors), with a portal on the ground there and
-    // its twin at the dungeon's entrance, linked. One step of the history: Ctrl+Z takes it all back.
+    /// <summary>
+    /// A generated dungeon into the world, 5000 m above the ground at the view's centre (the game builds
+    /// dungeons there, and treats what is above 3000 m as indoors), with a portal on the ground there and
+    /// its twin at the dungeon's entrance, linked. One step of the history: Ctrl+Z takes it all back.
+    /// </summary>
     internal void PlaceGenerated(DungeonGen.Settings settings, DungeonGen.Result r)
     {
         if (View.Scene is not { Session: { } session } scene)
@@ -125,12 +135,15 @@ public partial class MainWindow
         View.CutY = arrival.Y + 3.5f;
     }
 
-    // A generated dungeon as a blueprint (in the game's Homestead folder), opened in the Workshop. What
-    // its objects hold (the key in its chest, signs, the boss's stars) goes in the editor's own lines of
-    // the file, and the building is written as a ruin (no builder): the editor puts them back when the
-    // blueprint is placed in a world. Built in game with Homestead, it is only the objects.
+    /// <summary>The tags a generated dungeon's blueprint is written with.</summary>
     private static readonly string[] DungeonTags = ["dungeon", "generated"];
 
+    /// <summary>
+    /// A generated dungeon as a blueprint (in the game's Homestead folder), opened in the Workshop. What
+    /// its objects hold (the key in its chest, signs, the boss's stars) goes in the editor's own lines of
+    /// the file, and the building is written as a ruin (no builder): the editor puts them back when the
+    /// blueprint is placed in a world. Built in game with Homestead, it is only the objects.
+    /// </summary>
     internal async Task OpenGeneratedInWorkshop(DungeonGen.Settings settings)
     {
         if (await WriteGeneratedBlueprint(settings, DungeonGen.Make(settings)) is string path)
@@ -139,8 +152,10 @@ public partial class MainWindow
         }
     }
 
-    // The Workshop's Generate dungeon: the dungeon made onto the plot, alone (asking first when what is
-    // there is not saved) or added to it in its middle. Its blueprint stays in the Library.
+    /// <summary>
+    /// The Workshop's Generate dungeon: the dungeon made onto the plot, alone (asking first when what is
+    /// there is not saved) or added to it in its middle. Its blueprint stays in the Library.
+    /// </summary>
     internal async Task GeneratedOntoPlot(DungeonGen.Settings settings, DungeonGen.Result r, bool add)
     {
         if (await WriteGeneratedBlueprint(settings, r) is not string path)
@@ -158,7 +173,9 @@ public partial class MainWindow
         }
     }
 
-    // A generated dungeon written as a blueprint; its file, or null when it could not be written (said).
+    /// <summary>
+    /// A generated dungeon written as a blueprint; its file, or null when it could not be written (said).
+    /// </summary>
     private async Task<string?> WriteGeneratedBlueprint(DungeonGen.Settings settings, DungeonGen.Result r)
     {
         float mx = (r.Items.Min(i => i.Position.X) + r.Items.Max(i => i.Position.X)) / 2, mz = (r.Items.Min(i => i.Position.Z) + r.Items.Max(i => i.Position.Z)) / 2;

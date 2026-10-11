@@ -1,13 +1,25 @@
 namespace TerrainEditor.Desktop;
 
-// Natural-looking detail: seeded gradient noise layered at several scales (fractal noise), the same
-// family of noise Valheim's own terrain is built from. The web editor's noise2 and fbm (editor.html),
-// with the same seeding, so a seed gives the same pattern in both.
+/// <summary>
+/// Natural-looking detail: seeded gradient noise layered at several scales (fractal noise), the same family of noise
+/// Valheim's own terrain is built from. The web editor's noise2 and fbm (editor.html), with the same seeding, so a seed
+/// gives the same pattern in both.
+/// </summary>
 public sealed class Noise
 {
+    /// <summary>
+    /// The permutation table, shuffled from the seed and doubled to 512 so lookups need no wrap.
+    /// </summary>
     private readonly byte[] _perm = new byte[512];
+    /// <summary>
+    /// The seed the permutation table was shuffled from.
+    /// </summary>
     public int Seed { get; }
 
+    /// <summary>
+    /// A noise whose pattern is fixed by <paramref name="seed"/>.
+    /// </summary>
+    /// <param name="seed">Any int; the same seed gives the same pattern here and in the web editor.</param>
     public Noise(int seed)
     {
         Seed = seed;
@@ -32,6 +44,10 @@ public sealed class Noise
         }
     }
 
+    /// <summary>
+    /// One octave of gradient noise at (x, y), one lattice cell per unit, scaled by 0.7 as in the web editor. Repeats
+    /// every 256 units.
+    /// </summary>
     public float Noise2(float x, float y)
     {
         static float Fade(float t) => t * t * t * (t * (t * 6 - 15) + 10);
@@ -50,7 +66,10 @@ public sealed class Noise
         return Lerp(Lerp(Grad(aa, x, y), Grad(ba, x - 1, y), u), Lerp(Grad(ab, x, y - 1), Grad(bb, x - 1, y - 1), u), v) * 0.7f;
     }
 
-    // About -1..1, four octaves.
+    /// <summary>
+    /// About -1..1, four octaves: each one twice the frequency and half the amplitude of the last, offset so they do
+    /// not line up.
+    /// </summary>
     public float Fbm(float x, float y)
     {
         float sum = 0, amp = 1, norm = 0;

@@ -9,25 +9,33 @@ using Avalonia.Styling;
 
 namespace TerrainEditor.Desktop;
 
-// The look of the whole app, the web editor's (editor.html's :root): dark cards, amber accent, rounded
-// buttons (plain, "primary" amber, "ghost" flat, "on" chosen), switches, and the same colours for every
-// box and list. Applied once to the application; panels use Card and the classes below.
+/// <summary>
+/// The look of the whole app, the web editor's (editor.html's :root): dark cards, amber accent, rounded
+/// buttons (plain, "primary" amber, "ghost" flat, "on" chosen), switches, and the same colours for every
+/// box and list. Applied once to the application; panels use Card and the classes below.
+/// </summary>
 public static class Ui
 {
+    /// <summary>The palette's colours, editor.html's :root variables (background, panels, lines, text, accent...).</summary>
     public static readonly Color BgColor = Color.Parse("#14171c"), Panel2Color = Color.Parse("#1e232b"), LineColor = Color.Parse("#2e353f"), Line2Color = Color.Parse("#3c4552"),
         TextColor = Color.Parse("#e6e9ee"), MutedColor = Color.Parse("#8e97a6"), AccentColor = Color.Parse("#e0a64b"), AccentInkColor = Color.Parse("#1b1508"),
         WarnColor = Color.Parse("#e0604b"), OkColor = Color.Parse("#7bc47f"), HoverColor = Color.Parse("#252b35");
 
+    /// <summary>
+    /// Brushes of the palette's colours; Panel is the cards' slightly see-through background, Live the green tag of
+    /// changes already sent to the running game.
+    /// </summary>
     public static readonly IBrush Bg = new SolidColorBrush(BgColor), Panel = new SolidColorBrush(Color.FromArgb(242, 24, 28, 34)), Panel2 = new SolidColorBrush(Panel2Color),
         Line = new SolidColorBrush(LineColor), Line2 = new SolidColorBrush(Line2Color), Text = new SolidColorBrush(TextColor), Muted = new SolidColorBrush(MutedColor),
         Accent = new SolidColorBrush(AccentColor), AccentInk = new SolidColorBrush(AccentInkColor), Warn = new SolidColorBrush(WarnColor), Ok = new SolidColorBrush(OkColor),
         Hover = new SolidColorBrush(HoverColor), Live = new SolidColorBrush(Color.Parse("#8ff0b4"));
 
-    // The space inside every card, the same for all of them (whatever their size), and between them.
+    /// <summary>The space inside every card, the same for all of them (whatever their size).</summary>
     public static readonly Thickness Pad = new(10);
+    /// <summary>The space between cards.</summary>
     public const double Gap = 10;
 
-    // A floating card (tool options, the View panel...).
+    /// <summary>A floating card (tool options, the View panel...).</summary>
     public static Border Card(Control child) => new()
     {
         Background = Panel,
@@ -39,7 +47,9 @@ public static class Ui
         Child = child,
     };
 
-    // A small grey heading in capitals (VIEW, OVERLAYS...).
+    /// <summary>A small grey heading in capitals (VIEW, OVERLAYS...).</summary>
+    /// <param name="text">The heading, turned to capitals.</param>
+    /// <param name="top">The space above it.</param>
     public static TextBlock Heading(string text, double top = 10) => new()
     {
         Text = text.ToUpperInvariant(),
@@ -50,7 +60,7 @@ public static class Ui
         Margin = new Thickness(0, top, 0, 3),
     };
 
-    // A name with a count after it in grey, right-aligned (the View panel's switches).
+    /// <summary>A name with a count after it in grey, right-aligned (the View panel's switches).</summary>
     public static Control Counted(string name, int count)
     {
         var g = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 8 };
@@ -61,15 +71,17 @@ public static class Ui
         return g;
     }
 
-    // A path under the home folder as ~/… (Linux and macOS, as a terminal shows it): shorter, and no
-    // one's user name on screen.
+    /// <summary>
+    /// A path under the home folder as ~/… (Linux and macOS, as a terminal shows it): shorter, and no
+    /// one's user name on screen. Unchanged on Windows and outside the home folder.
+    /// </summary>
     public static string Tilde(string path)
     {
         string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile).TrimEnd('/');
         return !OperatingSystem.IsWindows() && home.Length > 1 && (path == home || path.StartsWith(home + "/")) ? "~" + path[home.Length..] : path;
     }
 
-    // "Valheim World Editor", "Valheim" in the accent colour (the start page's and the map's title).
+    /// <summary>"Valheim World Editor", "Valheim" in the accent colour (the start page's and the map's title).</summary>
     public static TextBlock BrandTitle(double size, VerticalAlignment valign = VerticalAlignment.Stretch)
     {
         var t = new TextBlock { FontSize = size, FontWeight = FontWeight.SemiBold, VerticalAlignment = valign };
@@ -79,8 +91,10 @@ public static class Ui
         return t;
     }
 
+    /// <summary>A small grey wrapped explanation under a control.</summary>
     public static TextBlock Hint(string text) => new() { Text = text, FontSize = 11.5, Foreground = Muted, TextWrapping = TextWrapping.Wrap };
 
+    /// <summary>Adds style classes ("primary", "ghost", "on", "rail", "switch"...) to an element and returns it.</summary>
     public static T Classed<T>(this T c, params string[] classes) where T : StyledElement
     {
         foreach (string k in classes)
@@ -90,6 +104,10 @@ public static class Ui
         return c;
     }
 
+    /// <summary>
+    /// Applies the look to the application, once at start: Fluent's colour resources set to the palette, and the
+    /// styles for windows, buttons and their classes, lists, number boxes and switches.
+    /// </summary>
     public static void Apply(Application app)
     {
         var r = app.Resources;
@@ -257,6 +275,10 @@ public static class Ui
         s.Add(new Style(x => x.OfType<CheckBox>().Class("switch")) { Setters = { new Setter(TemplatedControl.TemplateProperty, SwitchTemplate()) } });
     }
 
+    /// <summary>
+    /// The "switch" class's template: a check box drawn as a small track and knob (amber, knob right, when on),
+    /// with its content to the right.
+    /// </summary>
     private static FuncControlTemplate<CheckBox> SwitchTemplate() => new((cb, scope) =>
     {
         var knob = new Border { Width = 13, Height = 13, CornerRadius = new CornerRadius(7), Margin = new Thickness(2), HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Center };

@@ -13,38 +13,66 @@ namespace TerrainEditor.Desktop;
 // world in the view with their names and Go to, and a note about the locations of the area.
 public sealed partial class MainWindow
 {
+    /// <summary>Moves the area one zone west.</summary>
     internal Button AreaWest { get; } = NavButton("◀", "West");
+    /// <summary>Moves the area one zone north.</summary>
     internal Button AreaNorth { get; } = NavButton("▲", "North");
+    /// <summary>Moves the area one zone south.</summary>
     internal Button AreaSouth { get; } = NavButton("▼", "South");
+    /// <summary>Moves the area one zone east.</summary>
     internal Button AreaEast { get; } = NavButton("▶", "East");
+    /// <summary>Turns Follow on or off (the area moves by itself near its edge).</summary>
     internal Button FollowButton { get; } = new Button { Content = "Follow", FontSize = 12.5 }.Classed("ghost");
+    /// <summary>Discard: undoes what is not saved or applied yet; enabled while something is.</summary>
     internal Button DiscardButton { get; } = new Button { Content = "Discard", FontSize = 12.5, IsEnabled = false }.Classed("ghost");
+    /// <summary>Live: loads the world again from the game; shown for live worlds only.</summary>
     internal Button ReloadButton { get; } = new Button { Content = Icons.With("reload", "Reload"), FontSize = 12.5, IsVisible = false }.Classed("ghost");
+    /// <summary>Live: Auto apply, every change sent to the game at once; shown for live worlds only.</summary>
     internal CheckBox AutoApplyBox { get; } = new CheckBox { Content = "Auto", FontSize = 12, IsVisible = false, VerticalAlignment = VerticalAlignment.Center }.Classed("switch");
+    /// <summary>
+    /// The top bar's area controls: the arrows, the size and Follow; shown when the area belongs to a world.
+    /// </summary>
     internal StackPanel AreaNav { get; } = new() { Orientation = Orientation.Horizontal, Spacing = 2, VerticalAlignment = VerticalAlignment.Center };
-    // The area's size, changed on the fly (around the same middle zone).
+    /// <summary>The area's size, changed on the fly (around the same middle zone).</summary>
     internal ComboBox AreaSizeBox { get; } = new() { ItemsSource = AreaSizes.Select(n => $"{n} × {n}").ToArray(), FontSize = 11.5, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(4, 0) };
+    /// <summary>The sizes the area can have, in zones across.</summary>
     internal static readonly int[] AreaSizes = [3, 5, 7];
+    /// <summary>True while <c>ShowAreaSize</c> sets the size box, so its change is not taken for the user's.</summary>
     private bool _fillingSize;
+    /// <summary>The note about the area's locations.</summary>
     internal TextBlock LocationText { get; } = new() { FontSize = 12, TextWrapping = TextWrapping.Wrap, Foreground = new SolidColorBrush(Color.Parse("#f3d29b")) };
+    /// <summary>
+    /// The card holding <c>LocationText</c>, over the view's lower left; made in <c>SetUpEditorWorld</c>.
+    /// </summary>
     internal Border LocationNote { get; private set; } = null!;
+    /// <summary>The live players to go to, by name.</summary>
     internal ComboBox PlayerBox { get; } = new() { FontSize = 12, MinWidth = 130 };
+    /// <summary>Goes to the player chosen in <c>PlayerBox</c>.</summary>
     internal Button GoPlayerButton { get; } = new Button { Content = "Go", FontSize = 12 };
+    /// <summary>The View panel's players section; shown for live worlds only.</summary>
     internal StackPanel PlayersRow { get; } = new() { Spacing = 2, IsVisible = false };
+    /// <summary>The players' names over the view (<c>PlaceLabels</c>).</summary>
     internal Canvas PlayerLabels { get; } = new() { IsHitTestVisible = false };
-    // The live players: name and world position, as the game last said.
+    /// <summary>The live players: name and world position, as the game last said.</summary>
     internal IReadOnlyList<(string Name, Vector3 World)> LivePlayers { get; private set; } = [];
+    /// <summary>Live: asks the game for its players every 2 s.</summary>
     private readonly DispatcherTimer _playersTimer = new() { Interval = TimeSpan.FromSeconds(2) };
+    /// <summary>Live: places the players' names over the view ten times a second, following the camera.</summary>
     private readonly DispatcherTimer _labelsTimer = new() { Interval = TimeSpan.FromMilliseconds(100) };
+    /// <summary>Checks Follow (<c>CheckFollow</c>) while the window is open.</summary>
     private readonly DispatcherTimer _followTimer = new() { Interval = TimeSpan.FromMilliseconds(700) };
-    // Live: the game asked every 2 s what changed in the zones shown (WorldSession.FollowGame).
+    /// <summary>Live: the game asked every 2 s what changed in the zones shown (WorldSession.FollowGame).</summary>
     private readonly DispatcherTimer _gameTimer = new() { Interval = TimeSpan.FromSeconds(2) };
+    /// <summary>Why Follow last waited, so the same reason is not said again at every tick.</summary>
     private string _followSaid = "";
+    /// <summary>The editor's settings, loaded when the window is made.</summary>
     internal AppSettings Settings { get; } = AppSettings.Load();
-    // Writes the settings (Auto, Follow); tests keep them in memory, so no other window reads them.
+    /// <summary>Writes the settings (Auto, Follow); tests keep them in memory, so no other window reads them.</summary>
     internal Action<AppSettings> SaveSettings { get; set; } = s => s.Save();
+    /// <summary>An apply is under way; another was asked for meanwhile (run when this one ends).</summary>
     private bool _applying, _applyAgain;
 
+    /// <summary>An arrow button of the area controls; <paramref name="where"/> names its tip (top.west…).</summary>
     private static Button NavButton(string arrow, string where)
     {
         var b = new Button { Content = arrow, FontSize = 11, Padding = new Thickness(6, 3) }.Classed("ghost");
@@ -52,7 +80,7 @@ public sealed partial class MainWindow
         return b;
     }
 
-    // Set up once, from the constructor (after the top bar).
+    /// <summary>Set up once, from the constructor (after the top bar).</summary>
     private void SetUpEditorWorld()
     {
         AreaNav.Children.Add(new TextBlock { Text = "Area", FontSize = 11, Foreground = Ui.Muted, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 4, 0) });
@@ -126,7 +154,7 @@ public sealed partial class MainWindow
         _labelsTimer.Tick += (_, _) => PlaceLabels();
     }
 
-    // The View panel's Go to a player (live worlds).
+    /// <summary>The View panel's Go to a player (live worlds).</summary>
     private StackPanel PlayersControl()
     {
         PlayersRow.Children.Add(new TextBlock { Text = "PLAYERS", FontSize = 11, FontWeight = FontWeight.SemiBold, Foreground = Ui.Muted, Margin = new Thickness(0, 8, 0, 2) });
@@ -136,14 +164,14 @@ public sealed partial class MainWindow
         return PlayersRow;
     }
 
-    // After the top bar's save line is updated: the editor's own buttons.
+    /// <summary>After the top bar's save line is updated: the editor's own buttons.</summary>
     private void UpdateEditorWorld(EditSession s, bool dirty)
     {
         DiscardButton.IsEnabled = dirty;
         ReloadButton.IsVisible = AutoApplyBox.IsVisible = s.IsLive;
     }
 
-    // An area was opened: the area buttons, the locations note, the players.
+    /// <summary>An area was opened: the area buttons, the locations note, the players.</summary>
     private void EditorOpened(WorldScene scene)
     {
         AreaNav.IsVisible = scene.Owner != null;
@@ -179,6 +207,9 @@ public sealed partial class MainWindow
 
     // ---- Moving the area. The edits and the history stay with the world, the view comes along.
 
+    /// <summary>
+    /// Moves the area by zones (+X east, +Z north), keeping the view; the edits and the history stay with the world.
+    /// </summary>
     internal async Task MoveArea(int dx, int dz)
     {
         if (View.Scene is not { Owner: not null } s)
@@ -189,6 +220,9 @@ public sealed partial class MainWindow
         await OpenAreaKeepingView(s.X0 + mid + dx, s.Z0 + mid + dz, s.Size);
     }
 
+    /// <summary>
+    /// Opens the area centred on zone (zx, zz); when it did open there, the camera stays where it was in the world.
+    /// </summary>
     private async Task OpenAreaKeepingView(int zx, int zz, int size)
     {
         var cam = View.WorldCamera;
@@ -199,7 +233,7 @@ public sealed partial class MainWindow
         }
     }
 
-    // The area made bigger or smaller around its middle zone: the edits, the history and the view stay.
+    /// <summary>The area made bigger or smaller around its middle zone: the edits, the history and the view stay.</summary>
     internal async Task ResizeArea(int size)
     {
         if (View.Scene is not { Owner: not null } s || s.Size == size)
@@ -217,6 +251,7 @@ public sealed partial class MainWindow
         await OpenAreaKeepingView(s.X0 + mid, s.Z0 + mid, size);
     }
 
+    /// <summary>Shows the area's size in the size box without resizing.</summary>
     private void ShowAreaSize(int size)
     {
         _fillingSize = true;
@@ -226,6 +261,7 @@ public sealed partial class MainWindow
         _fillingSize = false;
     }
 
+    /// <summary>Turns Follow on or off and keeps the choice in the settings.</summary>
     internal void SetFollow(bool on)
     {
         Settings.AreaFollow = on;
@@ -235,7 +271,7 @@ public sealed partial class MainWindow
         _followSaid = "";
     }
 
-    // What stops the area from moving now (Follow waits): something unfinished would be lost.
+    /// <summary>What stops the area from moving now (Follow waits): something unfinished would be lost.</summary>
     internal string? MoveBlocker()
     {
         if (View.Selected.Count > 0)
@@ -257,8 +293,10 @@ public sealed partial class MainWindow
         return null;
     }
 
-    // Follow: when the view's centre comes within 12 m of the area's edge, the area moves to the zone
-    // under it (one zone on when that is the middle one already). The zone it moves to, or null.
+    /// <summary>
+    /// Follow: when the view's centre comes within 12 m of the area's edge, the area moves to the zone
+    /// under it (one zone on when that is the middle one already). The zone it moves to, or null.
+    /// </summary>
     internal async Task<(int X, int Z)?> CheckFollow()
     {
         if (!Settings.AreaFollow || _pages.Content != _editorPage || View.Scene is not { Owner: not null } s)
@@ -315,8 +353,10 @@ public sealed partial class MainWindow
 
     // ---- Discard and Reload, here in the editor.
 
-    // Undoes the steps not saved or applied yet, keeping the view, the tool and the rest of the history.
-    // Pending changes with no step here (made in another area, or before) need the world read again.
+    /// <summary>
+    /// Undoes the steps not saved or applied yet, keeping the view, the tool and the rest of the history.
+    /// Pending changes with no step here (made in another area, or before) need the world read again.
+    /// </summary>
     internal async Task DiscardHere()
     {
         if (Session is not { } s)
@@ -362,7 +402,7 @@ public sealed partial class MainWindow
         MessageText.Text = "Discarded: the world was read again.";
     }
 
-    // Live: the world loaded again from the game (asks first when something waits).
+    /// <summary>Live: the world loaded again from the game (asks first when something waits).</summary>
     internal async Task ReloadHere()
     {
         if (Session is not { IsLive: true, Scene.Owner: { } w } s)
@@ -389,7 +429,7 @@ public sealed partial class MainWindow
         MessageText.Text = "The world was loaded again from the game.";
     }
 
-    // The same area again (the world was read again), the view where it was.
+    /// <summary>The same area again (the world was read again), the view where it was.</summary>
     private async Task ReopenArea(WorldScene old)
     {
         Session = null;
@@ -398,6 +438,10 @@ public sealed partial class MainWindow
 
     // ---- Live: Apply (the button, and every change when Auto is on). Calls while one runs are merged.
 
+    /// <summary>
+    /// Live: Apply (the button, and every change when Auto is on). Calls while one runs are merged into one more run
+    /// after it.
+    /// </summary>
     internal async Task ApplyNow()
     {
         if (_applying)
@@ -435,7 +479,7 @@ public sealed partial class MainWindow
         }
     }
 
-    // A change made with Auto on: to the game at once.
+    /// <summary>A change made with Auto on: to the game at once.</summary>
     private void AutoApply(EditSession s)
     {
         if (Settings.AutoApply && s == Session && s.IsLive && !s.Stroking)
@@ -445,13 +489,20 @@ public sealed partial class MainWindow
     }
 
     // ---- Live: following the game in the zones shown.
+    /// <summary>True while <c>FollowGame</c> runs, so the timer does not start another.</summary>
     private bool _followingGame;
-    // The world whose plugin is too old to follow (asked again for another world).
+    /// <summary>The world whose plugin is too old to follow (asked again for another world).</summary>
     private WorldSession? _gameTooOld;
-    // Read from the game, not merged yet (a stroke was being drawn, an apply was under way): merged at
-    // the next tick, before anything new is read.
+    /// <summary>
+    /// Read from the game, not merged yet (a stroke was being drawn, an apply was under way): merged at
+    /// the next tick, before anything new is read.
+    /// </summary>
     private WorldSession.Fetched? _gameFetched;
 
+    /// <summary>
+    /// Live: reads what changed in the game in the zones shown and merges it into the open area (the timer's tick).
+    /// A game that does not answer is asked again at the next tick.
+    /// </summary>
     internal async Task FollowGame()
     {
         if (_followingGame || Session is not { IsLive: true, Scene.Owner: { } owner } s || _gameTooOld == owner)
@@ -512,8 +563,10 @@ public sealed partial class MainWindow
         }
     }
 
-    // Said in the status bar: what came from the game that shows (objects come, go or move; ground). A
-    // change of data alone (a fire burning down, a chest used) is taken in without a word.
+    /// <summary>
+    /// Said in the status bar: what came from the game that shows (objects come, go or move; ground). A
+    /// change of data alone (a fire burning down, a chest used) is taken in without a word.
+    /// </summary>
     private void SayFromGame(WorldSession.Followed f)
     {
         var parts = new List<string>();
@@ -544,8 +597,10 @@ public sealed partial class MainWindow
         }
     }
 
-    // Asked by Apply live before writing over ground the game changed where the editor has changes not
-    // applied yet (whatever was dug or built there since). True to go on.
+    /// <summary>
+    /// Asked by Apply live before writing over ground the game changed where the editor has changes not
+    /// applied yet (whatever was dug or built there since). True to go on.
+    /// </summary>
     internal async Task<bool> ConfirmOverGame(IReadOnlyList<(int X, int Z)> over) =>
         await Ask("Apply over the game's changes",
             $"The ground of {over.Count} zone(s) ({string.Join("; ", over.Take(6).Select(z => $"{z.X}, {z.Z}"))}{(over.Count > 6 ? "…" : "")}) was changed in the game since you started editing it. "
@@ -553,6 +608,7 @@ public sealed partial class MainWindow
 
     // ---- Live players.
 
+    /// <summary>Live: the players' names and positions from the game; the last ones stay when it does not answer.</summary>
     internal async Task PollPlayers()
     {
         if (View.Scene?.Owner?.Live is not { } live)
@@ -571,6 +627,7 @@ public sealed partial class MainWindow
         }
     }
 
+    /// <summary>Shows these players: in the view, the Go to list and the names over the view.</summary>
     internal void SetPlayers(IReadOnlyList<(string Name, Vector3 World)> players)
     {
         LivePlayers = players;
@@ -587,7 +644,7 @@ public sealed partial class MainWindow
         PlaceLabels();
     }
 
-    // The players' names over their posts (4 m above their feet), where the camera sees them.
+    /// <summary>The players' names over their posts (4 m above their feet), where the camera sees them.</summary>
     internal void PlaceLabels()
     {
         PlayerLabels.Children.Clear();
@@ -615,7 +672,7 @@ public sealed partial class MainWindow
         }
     }
 
-    // Go to a player: right here when they are in the area, else the area around them.
+    /// <summary>Go to a player: right here when they are in the area, else the area around them.</summary>
     internal async Task GoToPlayer(string? name)
     {
         if (name == null || View.Scene is not { } s || LivePlayers.FirstOrDefault(p => p.Name == name) is not { Name: not null } p)

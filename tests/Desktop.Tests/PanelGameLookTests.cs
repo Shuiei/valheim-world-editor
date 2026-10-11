@@ -5,15 +5,20 @@ using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
-// The start page's game-look card: hidden while the look is there, the copy's progress while it
-// runs, how to find the Valheim folder and a field to choose it when the game is not found, Try again
-// when the copy failed, and a word once it is done; a folder near the game taken as the game folder;
-// and a changed game folder in Settings checking the look again. The copy
-// itself never runs here: the card is given the states.
-// Alone (DataDir): it swaps SettingsDialog.CheckGameLook, which other tests' Settings call too.
+/// <summary>
+/// The start page's game-look card: hidden while the look is there, the copy's progress while it runs, how to find the
+/// Valheim folder and a field to choose it when the game is not found, Try again when the copy failed, and a word once
+/// it is done; a folder near the game taken as the game folder; and a changed game folder in Settings checking the look
+/// again. The copy itself never runs here: the card is given the states. Alone (DataDir): it swaps
+/// SettingsDialog.CheckGameLook, which other tests' Settings call too.
+/// </summary>
 [Collection("DataDir")]
 public class PanelGameLookTests
 {
+    /// <summary>
+    /// A game-look card in a shown window, first reading <c>first</c>: what copies it started (the folder and
+    /// settings), and a setter for the state it reads next. A folder with "bad" in its name fails to start.
+    /// </summary>
     private static (GameLookBanner B, List<(string Folder, AppSettings S)> Started, Func<GameLook.Snapshot, GameLook.Snapshot> Set) Banner(GameLook.Snapshot first)
     {
         var settings = new AppSettings();

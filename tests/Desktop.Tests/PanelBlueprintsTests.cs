@@ -10,13 +10,19 @@ using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
-// The Blueprints panel through its list: Homestead's blueprints (its folder: a temporary one here) and
-// the editor's older ones, empty, searched, each row's buttons (Paste, Edit, .vbuild, Delete; To Homestead
-// for older ones), thumbnails that are not pictures, Import file…, what it says for files that are
-// missing, empty or not blueprints, a name already taken, kinds a world cannot make, and whether
-// Homestead is installed (a warning when not). Never the user's own folders.
+/// <summary>
+/// The Blueprints panel through its list: Homestead's blueprints (its folder: a temporary one here) and the editor's
+/// older ones, empty, searched, each row's buttons (Paste, Edit, .vbuild, Delete; To Homestead for older ones),
+/// thumbnails that are not pictures, Import file…, what it says for files that are missing, empty or not blueprints, a
+/// name already taken, kinds a world cannot make, and whether Homestead is installed (a warning when not). Never the
+/// user's own folders.
+/// </summary>
 public class PanelBlueprintsTests
 {
+    /// <summary>
+    /// A main window with a flat area (or the session given), its Blueprints panel pointed at a temporary folder for
+    /// Homestead's and the older blueprints, and whether Homestead is installed; the folder is deleted when disposed.
+    /// </summary>
     internal sealed class Run : IDisposable
     {
         public MainWindow W { get; } = new(load: false) { Width = 1600, Height = 1000 };
@@ -37,7 +43,9 @@ public class PanelBlueprintsTests
             B.Message += t => Said = t;
         }
 
-        // A Homestead blueprint in the folder.
+        /// <summary>
+        /// A Homestead blueprint in the folder.
+        /// </summary>
         public void Keep(string name, params string[] kinds)
         {
             Directory.CreateDirectory(Homestead);
@@ -46,6 +54,7 @@ public class PanelBlueprintsTests
 
         public List<Homestead.Entry> Listed => TerrainEditor.App.Homestead.List(Homestead);
 
+        /// <inheritdoc/>
         public void Dispose()
         {
             if (Directory.Exists(Dir))
@@ -55,6 +64,9 @@ public class PanelBlueprintsTests
         }
     }
 
+    /// <summary>
+    /// A small 3 × 2 blueprint named <c>name</c> holding one object of each kind given.
+    /// </summary>
     internal static CopyData Clip(string name, params string[] kinds) => new()
     {
         W = 3,
@@ -67,14 +79,23 @@ public class PanelBlueprintsTests
         Name = name,
     };
 
+    /// <summary>
+    /// Clicks the button and runs the posted work it starts.
+    /// </summary>
     private static void Click(Button b)
     {
         b.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         Dispatcher.UIThread.RunJobs();
     }
 
+    /// <summary>
+    /// Every text block's text under the control, joined with " | ", for asserting on what it shows.
+    /// </summary>
     private static string Texts(Control c) => string.Join(" | ", c.GetLogicalDescendants().OfType<TextBlock>().Select(t => t.Text));
 
+    /// <summary>
+    /// The buttons with this label in the panel's list (one per row that has it).
+    /// </summary>
     private static List<Button> RowButtons(Run r, string label) => [.. r.B.List.GetLogicalDescendants().OfType<Button>().Where(b => b.Content as string == label)];
 
     [AvaloniaFact]
@@ -306,7 +327,9 @@ public class PanelBlueprintsTests
     }
 }
 
-// A blueprint pasted into a world that cannot make some of its kinds (opens the test world).
+/// <summary>
+/// A blueprint pasted into a world that cannot make some of its kinds (opens the test world).
+/// </summary>
 [Collection("World files")]
 public class PanelBlueprintsWorldTests
 {

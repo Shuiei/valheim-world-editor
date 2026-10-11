@@ -4,13 +4,17 @@ using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
-// What a save must never throw away or break: the game's own saves, made while the world is open.
+/// <summary>
+/// What a save must never throw away or break: the game's own saves, made while the world is open.
+/// </summary>
 [Collection("World files")]
 public class SaveSafetyTests
 {
     private static readonly Func<Formula.Env, double> Two = Formula.Compile("2", []);
 
-    // The game saving the world: its next save number, made from the latest save (same files).
+    /// <summary>
+    /// The game saving the world: its next save number, made from the latest save (same files).
+    /// </summary>
     private static int GameSaves(string dir)
     {
         int n = WorldWriter.LatestNumber(dir);
@@ -21,6 +25,9 @@ public class SaveSafetyTests
         return n + 1;
     }
 
+    /// <summary>
+    /// Each file in the folder with its last write time (UTC).
+    /// </summary>
     private static Dictionary<string, DateTime> Files(string dir) => Directory.GetFiles(dir).ToDictionary(f => f, File.GetLastWriteTimeUtc);
 
     // Save, play test in the game, save again: the second save is refused and the game's save stays,

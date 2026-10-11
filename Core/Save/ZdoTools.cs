@@ -3,56 +3,79 @@ using System.Numerics;
 
 namespace TerrainEditor.Save;
 
-// One object (ZDO) of the save: where its bytes are, and what the editor needs to know about it.
+/// <summary>One object (ZDO) of the save: where its bytes are, and what the editor needs to know about it.</summary>
 public sealed class ObjectRef
 {
+    /// <summary>The chunk file (or live snapshot file) its bytes are in.</summary>
     public required ChunkFile File { get; init; }
 
+    /// <summary>Where the object starts in that file.</summary>
     public required long Start { get; init; }
 
-    // End of the object, and where its data sections start (after position, prefab and rotation).
+    /// <summary>End of the object.</summary>
     public long End { get; set; }
 
+    /// <summary>Where its data sections start (after position, prefab and rotation).</summary>
     public long DataStart { get; set; }
 
+    /// <summary>The ZDO flags as saved (which sections follow, rotation and position form, type bits).</summary>
     public ushort Flags { get; set; }
 
+    /// <summary>The prefab name hash.</summary>
     public int Prefab { get; set; }
 
+    /// <summary>World position in metres.</summary>
     public Vector3 Position { get; set; }
 
-    // Player-built piece (has a creator) / terrain modification object.
+    /// <summary>Player-built piece (has a creator).</summary>
     public bool IsPiece { get; set; }
 
+    /// <summary>Terrain modification object (it carries TCData).</summary>
     public bool IsTerrain { get; set; }
 
-    // The player who built it (its "creator"; 0: none).
+    /// <summary>The player who built it (its "creator"; 0: none).</summary>
     public long Creator { get; set; }
 
-    // The object's ZDOID in the running game (live snapshots only).
+    /// <summary>The object's ZDOID in the running game (live snapshots only).</summary>
     public (long User, uint Id) LiveId { get; set; }
 
+    /// <summary>The 64 m zone the object is in.</summary>
     public (int X, int Z) Zone => ((int)MathF.Floor((Position.X + 32f) / 64f), (int)MathF.Floor((Position.Z + 32f) / 64f));
 }
 
-// Builds new objects by copying an existing object of the same prefab (so all its data, such as
-// health or a creator, stays valid) with a new position, rotation and optionally scale.
+/// <summary>
+/// Builds new objects by copying an existing object of the same prefab (so all its data, such as health or a creator,
+/// stays valid) with a new position, rotation and optionally scale.
+/// </summary>
 public static class ZdoBuilder
 {
+    /// <summary>The ZDO flag bits that say which data sections follow.</summary>
     private const ushort Connections = 0x1, Floats = 0x2, Vec3 = 0x4, Quats = 0x8, Ints = 0x10, Longs = 0x20, Strings = 0x40, ByteArrays = 0x80;
 
+    /// <summary>ZDO flag bits: a rotation is stored; the position is in the short form.</summary>
     private const ushort RotationFlag = 0x1000, SmallPositionFlag = 0x2000;
 
+    /// <summary>Vec3 data key of a per-axis scale.</summary>
     private static readonly int ScaleKey = StableHash.Of("scale");
 
+    /// <summary>Float data key of a uniform scale.</summary>
     private static readonly int ScaleScalarKey = StableHash.Of("scaleScalar");
 
+    /// <summary>Long data key of the player id that built a piece.</summary>
     private static readonly int CreatorKey = StableHash.Of("creator");
 
-    // euler: Unity Euler angles in degrees. scale <= 0 keeps the template's scale data.
-    // fresh: a new, independent object of the same kind: only the builder (creator) and scale are kept,
-    // none of what made the source unique (chest contents, sign text, health, portal tag...).
-    // Otherwise (moving an object) all of its data is kept.
+    /// <summary>A copy of the template object at a new place, in the world version 41 format.</summary>
+    /// <param name="source">The chunk file bytes the template lives in.</param>
+    /// <param name="template">The object to copy.</param>
+    /// <param name="worldVersion">The world version the source was written in.</param>
+    /// <param name="position">World position in metres (always written in the full form).</param>
+    /// <param name="euler">Unity Euler angles in degrees.</param>
+    /// <param name="scale">The new uniform scale; &lt;= 0 keeps the template's scale data.</param>
+    /// <param name="fresh">
+    /// A new, independent object of the same kind: only the builder (creator) and scale are kept, none of what made the
+    /// source unique (chest contents, sign text, health, portal tag...). Otherwise (moving an object) all of its data
+    /// is kept.
+    /// </param>
     public static byte[] Build(byte[] source, ObjectRef template, int worldVersion, Vector3 position, Vector3 euler, float scale, bool fresh = false)
     {
         euler = new Vector3(Wrap(euler.X), Wrap(euler.Y), Wrap(euler.Z));
@@ -111,8 +134,15 @@ public static class ZdoBuilder
         return ms.ToArray();
     }
 
-    // A new object with no data, for a prefab the world has no example of. baseFlags: the prefab's
-    // persistent / distant / type bits (PrefabCatalog); the game fills in the rest when it loads it.
+    /// <summary>
+    /// A new object with no data, for a prefab the world has no example of; the game fills in the rest when it loads
+    /// it.
+    /// </summary>
+    /// <param name="prefab">The prefab name hash.</param>
+    /// <param name="baseFlags">The prefab's persistent / distant / type bits (PrefabCatalog).</param>
+    /// <param name="position">World position in metres.</param>
+    /// <param name="euler">Unity Euler angles in degrees.</param>
+    /// <param name="scale">Uniform scale; stored only when above 0 and not 1.</param>
     public static byte[] Blank(int prefab, ushort baseFlags, Vector3 position, Vector3 euler, float scale)
     {
         euler = new Vector3(Wrap(euler.X), Wrap(euler.Y), Wrap(euler.Z));
@@ -145,13 +175,14 @@ public static class ZdoBuilder
         return ms.ToArray();
     }
 
+    /// <summary>An angle in degrees brought into 0..360.</summary>
     internal static float Wrap(float a)
     {
         a %= 360f;
         return a < 0f ? a + 360f : a;
     }
 
-    // Mirrors ZPackage.WriteSmallRotation / ReadSmallRotation (half degrees, 2 bytes for pure Y).
+    /// <summary>Mirrors ZPackage.WriteSmallRotation / ReadSmallRotation (half degrees, 2 bytes for pure Y).</summary>
     internal static void WriteSmallRotation(BinaryWriter w, Vector3 e)
     {
         uint x = (uint)MathF.Round(e.X * 2f) % 720, y = (uint)MathF.Round(e.Y * 2f) % 720, z = (uint)MathF.Round(e.Z * 2f) % 720;
@@ -165,6 +196,7 @@ public static class ZdoBuilder
         w.Write((ushort)(v & 0xFFFF));
     }
 
+    /// <summary>Mirrors ZPackage.WriteNumItems: one byte below 128, else two bytes with the high bit set.</summary>
     internal static void WriteNumItems(BinaryWriter w, int n)
     {
         if (n < 128)
@@ -176,14 +208,20 @@ public static class ZdoBuilder
         w.Write((byte)n);
     }
 
+    /// <summary>One data section of an object being copied, its values kept as raw bytes.</summary>
+    /// <param name="flag">The section's ZDO flag bit.</param>
     private sealed class Section(ushort flag)
     {
+        /// <summary>The section's ZDO flag bit.</summary>
         public ushort Flag { get; } = flag;
 
+        /// <summary>The values by key hash, each as its saved bytes.</summary>
         public List<(int Key, byte[] Value)> Items { get; } = [];
 
+        /// <summary>The connection section's five bytes (type and target), kept whole.</summary>
         public byte[]? Raw { get; set; }
 
+        /// <summary>Replaces the value with this key, or adds it.</summary>
         public void Set(int key, byte[] value)
         {
             int i = Items.FindIndex(t => t.Key == key);
@@ -198,6 +236,7 @@ public static class ZdoBuilder
         }
     }
 
+    /// <summary>Adds an empty section of that flag.</summary>
     private static Section AddSection(List<Section> sections, ushort flag)
     {
         Section s = new(flag);
@@ -205,9 +244,10 @@ public static class ZdoBuilder
         return s;
     }
 
+    /// <summary>The byte arrays joined in order.</summary>
     private static byte[] Concat(params byte[][] parts) => [.. parts.SelectMany(p => p)];
 
-    // The data sections of the template, in file order (same reading as WorldSave.ReadZdo).
+    /// <summary>The data sections of the template, in file order (same reading as WorldSave.ReadZdo).</summary>
     private static List<Section> ReadSections(byte[] source, ObjectRef t, int worldVersion)
     {
         List<Section> result = [];
@@ -247,27 +287,39 @@ public static class ZdoBuilder
     }
 }
 
-// The ZoneSystem part of _main.<n>.db2 (ZoneSystem.Save / Load): which zones the game has already
-// generated, and every location instance with whether it has been placed. Everything else in the
-// file is kept byte for byte.
+/// <summary>
+/// The ZoneSystem part of _main.&lt;n&gt;.db2 (ZoneSystem.Save / Load): which zones the game has already generated, and
+/// every location instance with whether it has been placed. Everything else in the file is kept byte for byte.
+/// </summary>
 public sealed class ZoneDb
 {
+    /// <summary>The save format version at the head of the file.</summary>
     public int FileVersion { get; private set; }
 
+    /// <summary>The game's network time when it saved, in seconds.</summary>
     public double NetTime { get; private set; }
 
+    /// <summary>The zones the game has generated.</summary>
     public HashSet<(short X, short Z)> Generated { get; } = [];
 
+    /// <summary>ZoneSystem.m_locationVersion of the location list.</summary>
     public int LocationVersion { get; set; }
 
+    /// <summary>The world's global keys (bosses beaten and such).</summary>
     public List<string> GlobalKeys { get; } = [];
 
+    /// <summary>Whether the game has laid out the location instances yet.</summary>
     public bool LocationsGenerated { get; set; }
 
+    /// <summary>Every location instance: its name hash, position and whether it has been placed.</summary>
     public List<(int Hash, Vector3 Position, bool Placed)> Locations { get; } = [];
 
+    /// <summary>
+    /// The rest of the file after the ZoneSystem package (the random events' state...), kept byte for byte.
+    /// </summary>
     private byte[] _tail = [];
 
+    /// <summary>Reads a .db2 file.</summary>
     public static ZoneDb Load(string path)
     {
         ZoneDb db = new();
@@ -284,12 +336,14 @@ public sealed class ZoneDb
         return db;
     }
 
-    // A new world's: no zone generated, no location laid out yet (the game does it on first load), and
-    // the rest of the file (the random events' state...) as given.
+    /// <summary>
+    /// A new world's: no zone generated, no location laid out yet (the game does it on first load), and the rest of the
+    /// file (the random events' state...) as given.
+    /// </summary>
     public static ZoneDb Empty(int fileVersion, int locationVersion, byte[] tail) =>
         new() { FileVersion = fileVersion, NetTime = 0, LocationVersion = locationVersion, LocationsGenerated = false, _tail = tail };
 
-    // The uncompressed ZoneSystem package, as the live bridge sends it.
+    /// <summary>The uncompressed ZoneSystem package, as the live bridge sends it.</summary>
     public static ZoneDb FromPackage(byte[] package, double netTime)
     {
         ZoneDb db = new() { FileVersion = 41, NetTime = netTime };
@@ -297,6 +351,9 @@ public sealed class ZoneDb
         return db;
     }
 
+    /// <summary>
+    /// Reads the ZoneSystem package: generated zones, location version, global keys, then the locations.
+    /// </summary>
     private void ReadPackage(byte[] package)
     {
         ZoneDb db = this;
@@ -320,6 +377,7 @@ public sealed class ZoneDb
         }
     }
 
+    /// <summary>Writes the .db2 file: version, net time, the gzip-compressed package, then the kept tail.</summary>
     public void Save(string path)
     {
         using MemoryStream raw = new();
@@ -362,8 +420,10 @@ public sealed class ZoneDb
         fs.Flush(flushToDisk: true);
     }
 
-    // Forget that a zone was generated: the game builds it again (vegetation, and every location in it
-    // that is marked unplaced) the next time a player comes near.
+    /// <summary>
+    /// Forget that a zone was generated: the game builds it again (vegetation, and every location in it that is marked
+    /// unplaced) the next time a player comes near.
+    /// </summary>
     public void ResetZone(int zx, int zz)
     {
         Generated.Remove(((short)zx, (short)zz));

@@ -6,11 +6,16 @@ using Xunit;
 
 namespace WorldEditor.Tests;
 
-// Generated dungeons (DungeonGen): the same settings make the same dungeon; every object is one of the
-// game's; it holds in the sky (black marble slabs, nothing falls); every room can be reached, the
-// boss's key without going through the boss's gate; doorways open between rooms, not into walls.
+/// <summary>
+/// Generated dungeons (DungeonGen): the same settings make the same dungeon; every object is one of the game's; it
+/// holds in the sky (black marble slabs, nothing falls); every room can be reached, the boss's key without going
+/// through the boss's gate; doorways open between rooms, not into walls.
+/// </summary>
 public class CoreDungeonGenTests
 {
+    /// <summary>
+    /// Settings to make dungeons with: every style in six biomes, sizes and levels 1 to 3, each with its own seed.
+    /// </summary>
     public static IEnumerable<object[]> Samples()
     {
         int seed = 1;
@@ -23,9 +28,14 @@ public class CoreDungeonGenTests
         }
     }
 
-    // The samples of two styles only (the same seeds as in Samples).
+    /// <summary>
+    /// The samples of two styles only (the same seeds as in Samples).
+    /// </summary>
     public static IEnumerable<object[]> SamplesOf(string style1, string style2) => Samples().Where(s => (string)s[0] == style1 || (string)s[0] == style2);
 
+    /// <summary>
+    /// Makes a dungeon with these settings.
+    /// </summary>
     private static DungeonGen.Result Make(string style, string biome, int size, int levels, int seed) =>
         DungeonGen.Make(new DungeonGen.Settings(Biome: biome, Style: style, Size: size, Levels: levels, Seed: seed));
 
@@ -39,8 +49,10 @@ public class CoreDungeonGenTests
         Assert.NotEqual(a.Items.Count, Make("Crypt", "Swamp", 3, 2, 43).Items.Count);
     }
 
-    // Checked in CoreDungeonHolds*Tests: the slowest check (the stability of every piece), split in
-    // classes of two styles that run side by side.
+    /// <summary>
+    /// Checked in CoreDungeonHolds*Tests: the slowest check (the stability of every piece), split in classes of two
+    /// styles that run side by side.
+    /// </summary>
     internal static void MadeOfTheGamesObjectsAndHolds(string style, string biome, int size, int levels, int seed)
     {
         var r = Make(style, biome, size, levels, seed);
@@ -187,6 +199,9 @@ public class CoreDungeonGenTests
     }
 }
 
+/// <summary>
+/// The Temple and Goblin warren dungeons are made of the game's objects and hold.
+/// </summary>
 public class CoreDungeonHoldsTempleAndGoblinWarrenTests
 {
     [Theory]
@@ -195,6 +210,9 @@ public class CoreDungeonHoldsTempleAndGoblinWarrenTests
         CoreDungeonGenTests.MadeOfTheGamesObjectsAndHolds(style, biome, size, levels, seed);
 }
 
+/// <summary>
+/// The Crypt and Ruins dungeons are made of the game's objects and hold.
+/// </summary>
 public class CoreDungeonHoldsCryptAndRuinsTests
 {
     [Theory]
@@ -203,6 +221,9 @@ public class CoreDungeonHoldsCryptAndRuinsTests
         CoreDungeonGenTests.MadeOfTheGamesObjectsAndHolds(style, biome, size, levels, seed);
 }
 
+/// <summary>
+/// The Catacombs and Prison dungeons are made of the game's objects and hold.
+/// </summary>
 public class CoreDungeonHoldsCatacombsAndPrisonTests
 {
     [Theory]
@@ -211,6 +232,9 @@ public class CoreDungeonHoldsCatacombsAndPrisonTests
         CoreDungeonGenTests.MadeOfTheGamesObjectsAndHolds(style, biome, size, levels, seed);
 }
 
+/// <summary>
+/// The Fortress and Dvergr hold dungeons are made of the game's objects and hold.
+/// </summary>
 public class CoreDungeonHoldsFortressAndDvergrHoldTests
 {
     [Theory]

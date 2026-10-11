@@ -5,29 +5,51 @@ using Avalonia.Media;
 
 namespace TerrainEditor.Desktop;
 
-// The Dungeon tool's panel: which dungeon of the area, going inside and cutting its roofs away, the
-// rooms it can take, and the changes (turn, delete, close the open ends).
+/// <summary>
+/// The Dungeon tool's panel: which dungeon of the area, going inside and cutting its roofs away, the
+/// rooms it can take, and the changes (turn, delete, close the open ends).
+/// </summary>
 public sealed class DungeonPanel
 {
+    /// <summary>The panel itself.</summary>
     public Control Card { get; }
+    /// <summary>Generate a dungeon, at the top of the panel (open when the area has no dungeon).</summary>
     internal DungeonGenPanel Gen { get; } = new();
+    /// <summary>The generator's expander.</summary>
     private readonly Expander _generate;
+    /// <summary>The view: its dungeon tool, camera and roof cut.</summary>
     private readonly GlView _view;
+    /// <summary>The view's Dungeon tool the panel drives.</summary>
     private DungeonTool Tool => _view.Dungeon;
+    /// <summary>Which of the area's dungeons is edited.</summary>
     internal ComboBox DungeonBox { get; } = new() { HorizontalAlignment = HorizontalAlignment.Stretch, FontSize = 12 };
+    /// <summary>The camera into the dungeon (see <see cref="Inside"/>).</summary>
     internal Button GoInside { get; } = new() { Content = "Go inside", FontSize = 12 };
+    /// <summary>Build with the hammer's pieces in this dungeon (<see cref="BuildAsked"/>).</summary>
     internal Button BuildHere { get; } = new() { Content = "Build here", FontSize = 12 };
+    /// <summary>Build here was clicked: the window switches to building in the dungeon.</summary>
     public event Action? BuildAsked;
+    /// <summary>The roof cut, 0 (off) to 30 m above the floor of the dungeon's entrance.</summary>
     internal Slider CutSlider { get; } = new() { Minimum = 0, Maximum = 30, Value = 0, SmallChange = 1, TickFrequency = 1, IsSnapToTickEnabled = true };
+    /// <summary>The cut slider's label.</summary>
     private readonly TextBlock _cutText = new() { FontSize = 12 };
+    /// <summary>Filters the rooms by name.</summary>
     internal TextBox Filter { get; } = new() { PlaceholderText = "Find a room…", FontSize = 12 };
+    /// <summary>The rooms the dungeon can take; the one chosen is added at the next green opening clicked.</summary>
     internal ListBox Rooms { get; } = new() { MaxHeight = 260, FontSize = 12 };
+    /// <summary>Turns the room chosen (R).</summary>
     internal Button TurnButton { get; } = new() { Content = "Turn (R)", FontSize = 12 };
+    /// <summary>Closes the dungeon's open ends; enabled while it has some.</summary>
     internal Button CloseEnds { get; } = new() { Content = "Close open ends", FontSize = 12 };
+    /// <summary>Deletes the selected room (Del); enabled while one is selected.</summary>
     internal Button DeleteButton { get; } = new() { Content = "Delete room (Del)", FontSize = 12 };
+    /// <summary>Rooms, open ends, overlaps and problems of the dungeon, and of the room about to be added.</summary>
     internal TextBlock Info { get; } = new() { FontSize = 12, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
+    /// <summary>Rooms added with what the game puts in them.</summary>
     internal CheckBox Contents { get; } = new() { Content = "With what the game puts in them", IsChecked = true, FontSize = 12 };
+    /// <summary>Rooms added with doors where the game might put them.</summary>
     internal CheckBox Doors { get; } = new() { Content = "Doors where the game might put them", IsChecked = true, FontSize = 12 };
+    /// <summary>Shown when the area has no dungeon.</summary>
     private readonly TextBlock _empty = new()
     {
         FontSize = 12,
@@ -35,10 +57,15 @@ public sealed class DungeonPanel
         TextWrapping = TextWrapping.Wrap,
         Text = "No dungeon in this area. Open the area over a Frost Cave, crypt or other dungeon entrance: the game keeps its rooms 5000 m above it."
     };
+    /// <summary>The dungeon rows, shown when the area has a dungeon.</summary>
     private readonly StackPanel _body;
+    /// <summary>The dungeons on <see cref="DungeonBox"/>, in its order.</summary>
     private List<DungeonRooms.Dungeon> _shown = [];
+    /// <summary>While the lists are being filled: their selection changes are not the user's.</summary>
     private bool _filling;
 
+    /// <summary>Builds the panel for the view's Dungeon tool.</summary>
+    /// <param name="view">The 3D view.</param>
     public DungeonPanel(GlView view)
     {
         _view = view;
@@ -131,7 +158,7 @@ public sealed class DungeonPanel
         SetCut(0);
     }
 
-    // The area's dungeons again (a new area, or an edit).
+    /// <summary>The area's dungeons again (on entering the tool, and after an edit or undo).</summary>
     public void Reload()
     {
         _filling = true;
@@ -154,6 +181,7 @@ public sealed class DungeonPanel
         SetCut(CutSlider.Value);
     }
 
+    /// <summary>Lists the rooms the dungeon can take that match the filter, the one chosen selected.</summary>
     private void FillRooms()
     {
         _filling = true;
@@ -165,6 +193,7 @@ public sealed class DungeonPanel
         _filling = false;
     }
 
+    /// <summary>Fills <see cref="Info"/> and enables the buttons that apply.</summary>
     private void Refresh()
     {
         if (Tool.Dungeon is not { } d)
@@ -192,7 +221,10 @@ public sealed class DungeonPanel
         CloseEnds.IsEnabled = open > 0;
     }
 
-    // The camera to the dungeon (its rooms 5000 m above the entrance), looking down into it.
+    /// <summary>
+    /// The camera to the middle of the dungeon's rooms (its dungeon object when it has none), looking down into it;
+    /// the cut on (4 m when off).
+    /// </summary>
     internal void Inside()
     {
         if (Tool.Dungeon is not { } d)
@@ -208,6 +240,10 @@ public sealed class DungeonPanel
         SetCut(CutSlider.Value);
     }
 
+    /// <summary>
+    /// Cuts the view's roofs away above a height: from about the floor of the dungeon's entrance (3 m under the
+    /// dungeon object); 0 metres: off.
+    /// </summary>
     private void SetCut(double metres)
     {
         // From about the floor of the dungeon's entrance (3 m under the dungeon object, as in the game's caves).
@@ -216,6 +252,6 @@ public sealed class DungeonPanel
         _cutText.Text = metres > 0 ? $"Cut {metres:0} m above the floor" : "Cut: off (roofs shown)";
     }
 
-    // Leaving the tool: the cut off.
+    /// <summary>Leaving the tool: the cut off.</summary>
     public void Leave() => _view.CutY = null;
 }

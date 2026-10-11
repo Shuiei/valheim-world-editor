@@ -4,15 +4,22 @@ using Xunit;
 
 namespace WorldEditor.Tests;
 
-// The game's structural support (Stability, after WearNTear.UpdateSupport) on simple buildings: a piece
-// on the ground is full, support falls with each piece up or out, a floating piece breaks, and what
-// rested on a broken piece breaks after it.
+/// <summary>
+/// The game's structural support (Stability, after WearNTear.UpdateSupport) on simple buildings: a piece on the ground
+/// is full, support falls with each piece up or out, a floating piece breaks, and what rested on a broken piece breaks
+/// after it.
+/// </summary>
 public class CoreStabilityTests
 {
     private const float Ground = 30;
+    /// <summary>
+    /// Flat ground at 30 m.
+    /// </summary>
     private static float Flat(float x, float z) => Ground;
 
-    // A wood wall (2 × 2 m, its middle at its pivot) standing with its foot at height y.
+    /// <summary>
+    /// A wood wall (2 × 2 m, its middle at its pivot) standing with its foot at height y.
+    /// </summary>
     private static Stability.Piece Wall(float x, float y) => new("woodwall", new Vector3(x, y + 1, 0), Quaternion.Identity);
 
     [Fact]

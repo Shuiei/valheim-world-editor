@@ -3,27 +3,38 @@ using static TerrainEditor.Editing.DungeonKit;
 
 namespace TerrainEditor.Editing;
 
-// What makes a generated dungeon's rooms what they are: their furniture and set pieces (colonnades,
-// thrones on a dais, pews before an altar, sarcophagi, cells behind bars...), their lights, what hangs
-// on their walls and lies on their floors, their decay, who guards them and what they hold. Each room
-// is dressed in its own frame: u across (right of the way in), v deep (0 its middle, the way in behind).
+/// <summary>
+/// What makes a generated dungeon's rooms what they are: their furniture and set pieces (colonnades,
+/// thrones on a dais, pews before an altar, sarcophagi, cells behind bars...), their lights, what hangs
+/// on their walls and lies on their floors, their decay, who guards them and what they hold. Each room
+/// is dressed in its own frame: u across (right of the way in), v deep (0 its middle, the way in behind).
+/// </summary>
 internal sealed class DungeonDresser
 {
-    // What stands on a floor goes 5 cm up: a piece whose middle of mass is right on a floor's surface
-    // gets no support from it in game.
+    /// <summary>
+    /// What stands on a floor goes 5 cm up: a piece whose middle of mass is right on a floor's surface
+    /// gets no support from it in game.
+    /// </summary>
     private const float Lift = 0.05f;
 
     private readonly Material _mat;
+    /// <summary>The biome's palette (lights, foes, loot, clutter).</summary>
     private readonly Biome _b;
     private readonly Style _style;
     private readonly DungeonGen.Settings _s;
     private readonly Random _rnd;
+    /// <summary>Where the dungeon's objects go.</summary>
     private readonly DungeonOut _o;
+    /// <summary>How ruined (0 kept to 1): the settings' Decay, else the style's.</summary>
     private readonly float _decay;
+    /// <summary>The foes to use: those picked in the settings, else the biome's.</summary>
     private readonly Foe[] _foes;
+    /// <summary>The arena's boss: the one picked, the biome's when none is, null when "" is.</summary>
     private readonly Foe? _boss;
+    /// <summary>The dungeon's name, for the entrance's sign.</summary>
     private readonly string _name;
 
+    /// <summary>Sets up a dresser for one dungeon.</summary>
     private DungeonDresser(Material mat, Biome b, Style style, DungeonGen.Settings s, Random rnd, DungeonOut o, string name)
     {
         _mat = mat;
@@ -38,6 +49,7 @@ internal sealed class DungeonDresser
         _boss = s.Boss == null ? b.Boss : s.Boss.Length == 0 ? null : FoeOf(s.Boss);
     }
 
+    /// <summary>Furnishes, lights, guards and stocks every space of the plan.</summary>
     public static void Dress(DungeonPlan plan, Material mat, Biome b, Style style, DungeonGen.Settings s, Random rnd, DungeonOut o, string name)
     {
         var d = new DungeonDresser(mat, b, style, s, rnd, o, name);
@@ -47,7 +59,10 @@ internal sealed class DungeonDresser
         }
     }
 
-    // A foe by its spawner's or its creature's name.
+    /// <summary>
+    /// A foe by its spawner's or its creature's name; one not in any biome is taken as it is (a Spawner_
+    /// name for both, its creature the name without the prefix).
+    /// </summary>
     public static Foe FoeOf(string name)
     {
         foreach (var f in Biomes.SelectMany(b => b.Foes.Concat(b.Elites).Append(b.Boss)))
@@ -61,14 +76,27 @@ internal sealed class DungeonDresser
     }
 
     // ---- A room's frame.
+    /// <summary>
+    /// A space's own frame (u across, right of the way in; v deep, 0 its middle) and what is already taken
+    /// in it.
+    /// </summary>
     private sealed class Frame
     {
+        /// <summary>The space.</summary>
         public readonly DungeonPlan.Space S;
+        /// <summary>
+        /// Its floor (the marble's top), the top of its floor finish, its wall height, its middle (world x, z)
+        /// and the half width and half depth to the walls' inner faces (metres).
+        /// </summary>
         public readonly float F, Top, H, Cx, Cz, HalfA, HalfD;
+        /// <summary>The way in (deep, +v) and the way across (+u, to its right), in world axes.</summary>
         public readonly (int X, int Z) D, A;
+        /// <summary>Circles kept free (world x, z, radius in metres).</summary>
         public readonly List<(float X, float Z, float R)> Taken = [];
+        /// <summary>Its doorways: their middle (world x, z), the way into the room from them, the doorway.</summary>
         public readonly List<(float X, float Z, (int X, int Z) In, DungeonPlan.Doorway Door)> Mouths = [];
 
+        /// <summary>The frame of a space, with the floor before each doorway kept free.</summary>
         public Frame(DungeonPlan.Space s, Material mat)
         {
             S = s;
@@ -90,14 +118,19 @@ internal sealed class DungeonDresser
             }
         }
 
+        /// <summary>Its floor area inside the walls (square metres).</summary>
         public float Area => 4 * HalfA * HalfD;
 
+        /// <summary>A point of the frame (u, v; y as given) in world space.</summary>
         public Vector3 W(float u, float v, float y) => new(Cx + A.X * u + D.X * v, y, Cz + A.Z * u + D.Z * v);
 
+        /// <summary>A world point (x, z) in the frame.</summary>
         public (float U, float V) Local(float x, float z) => ((x - Cx) * A.X + (z - Cz) * A.Z, (x - Cx) * D.X + (z - Cz) * D.Z);
 
+        /// <summary>A turn in the frame (0 faces the far end) as a world turn (degrees).</summary>
         public float Yaw(float local) => DungeonOut.YawOf(D) + local;
 
+        /// <summary>Whether a circle of radius r at (u, v) is inside the walls and clear of what is taken.</summary>
         public bool Free(float u, float v, float r)
         {
             if (Math.Abs(u) > HalfA - r + 0.15f || Math.Abs(v) > HalfD - r + 0.15f)
@@ -108,21 +141,24 @@ internal sealed class DungeonDresser
             return Taken.All(t => (t.X - p.X) * (t.X - p.X) + (t.Z - p.Z) * (t.Z - p.Z) >= (t.R + r) * (t.R + r));
         }
 
+        /// <summary>Keeps a circle of radius r at (u, v) for something.</summary>
         public void Take(float u, float v, float r)
         {
             var p = W(u, v, 0);
             Taken.Add((p.X, p.Z, r));
         }
 
-        // Whether a point on a wall is in front of a doorway.
+        /// <summary>Whether a point on a wall is in front of a doorway (within clear metres of its middle).</summary>
         public bool NearDoor(float u, float v, float clear)
         {
             var p = W(u, v, 0);
             return Mouths.Any(m => (m.X - p.X) * (m.X - p.X) + (m.Z - p.Z) * (m.Z - p.Z) < clear * clear);
         }
 
-        // Spots along the walls (on their inner face), every step metres, facing in (local yaw), not by
-        // doorways.
+        /// <summary>
+        /// Spots along the walls (on their inner face), every step metres, facing in (local yaw), not by
+        /// doorways.
+        /// </summary>
         public List<(float U, float V, float Yaw)> WallSpots(float step, float clear = 3f)
         {
             var spots = new List<(float, float, float)>();
@@ -140,24 +176,32 @@ internal sealed class DungeonDresser
         }
     }
 
-    // Moves a wall spot in by depth metres.
+    /// <summary>Moves a wall spot in by depth metres.</summary>
     private static (float U, float V) In((float U, float V, float Yaw) s, float depth) =>
         (s.U + depth * MathF.Sin(s.Yaw * MathF.PI / 180), s.V + depth * MathF.Cos(s.Yaw * MathF.PI / 180));
 
+    /// <summary>A random number from a to b.</summary>
     private float R(float a, float b) => a + (float)_rnd.NextDouble() * (b - a);
 
+    /// <summary>One of the list at random.</summary>
     private T One<T>(T[] list) => list[_rnd.Next(list.Length)];
 
+    /// <summary>One of the names at random.</summary>
     private string One(params string[] list) => list[_rnd.Next(list.Length)];
 
+    /// <summary>True with chance p (0 to 1).</summary>
     private bool Chance(double p) => _rnd.NextDouble() < p;
 
+    /// <summary>n as a whole count: its whole part, plus one with the chance of its fraction (0 for n &lt;= 0).</summary>
     private int Count(float n) => n <= 0 ? 0 : (int)MathF.Floor(n) + (_rnd.NextDouble() < n - MathF.Floor(n) ? 1 : 0);
 
     // ---- Placing.
 
-    // Places an object at (u, v) of a room, y above its floor (its foot, from the model), turned yaw
-    // (local; 0 faces the far end), keeping r metres around it for itself unless forced.
+    /// <summary>
+    /// Places an object at (u, v) of a room, y above its floor (its foot, from the model), turned yaw
+    /// (local; 0 faces the far end), keeping r metres around it for itself unless forced.
+    /// </summary>
+    /// <returns>False when the spot is not free (and it is not forced): nothing is placed.</returns>
     private bool Put(Frame f, string prefab, float u, float v, float yaw, float r, float y = 0, bool force = false,
         IReadOnlyList<(string, string, string)>? data = null)
     {
@@ -173,7 +217,7 @@ internal sealed class DungeonDresser
         return true;
     }
 
-    // Tries a few spots near (u, v).
+    /// <summary>Tries a few spots near (u, v), up to spread metres off; false when none is free.</summary>
     private bool PutNear(Frame f, string prefab, float u, float v, float yaw, float r, float spread = 1.5f, float y = 0)
     {
         for (int i = 0; i < 8; i++)
@@ -186,7 +230,7 @@ internal sealed class DungeonDresser
         return false;
     }
 
-    // Somewhere free in the room.
+    /// <summary>Somewhere free in the room for a circle of radius r, margin metres from the walls; null after 30 tries.</summary>
     private (float U, float V)? Spot(Frame f, float r, float margin = 0.8f)
     {
         for (int i = 0; i < 30; i++)
@@ -200,6 +244,7 @@ internal sealed class DungeonDresser
         return null;
     }
 
+    /// <summary>A column of the material's segments from floor to roof at (u, v), keeping the floor round it.</summary>
     private void Column(Frame f, float u, float v)
     {
         var p = f.W(u, v, 0);
@@ -213,7 +258,7 @@ internal sealed class DungeonDresser
         f.Take(u, v, 0.8f);
     }
 
-    // A wall of the material inside a room: across (u0..u1 at depth v) or along (v0..v1 at u).
+    /// <summary>A wall of the material inside a room: across (u0..u1 at depth v) or along (v0..v1 at u), y0..y1 above the floor.</summary>
     private void InnerWall(Frame f, float u0, float v0, float u1, float v1, float y0, float y1)
     {
         var a = f.W(u0, v0, 0);
@@ -224,10 +269,16 @@ internal sealed class DungeonDresser
     }
 
     // ---- Light.
+    /// <summary>The biome's standing torch; a castle torch is now and then unlit in a decayed dungeon.</summary>
     private string Torch => _decay > 0 && _b.Torch.StartsWith("CastleKit_groundtorch", StringComparison.Ordinal) && Chance(_decay * 0.5) ? "CastleKit_groundtorch_unlit" : _b.Torch;
 
+    /// <summary>The biome's brazier at (u, v), if the spot is free.</summary>
     private void Brazier(Frame f, float u, float v) => Put(f, _b.Brazier, u, v, 0, 0.6f, force: false);
 
+    /// <summary>
+    /// Torches along the walls, closer the brighter the settings' Light. In the dark (Light 0) most rooms
+    /// get none, unless important.
+    /// </summary>
     private void Lights(Frame f, bool important = false)
     {
         if (_s.Light <= 0 && !important && !Chance(0.3))
@@ -244,6 +295,7 @@ internal sealed class DungeonDresser
     }
 
     // ---- What hangs on walls.
+    /// <summary>Up to count hangings on the walls, from choice or else the biome's.</summary>
     private void Hangings(Frame f, int count, params string[] choice)
     {
         string[] options = choice.Length > 0 ? choice : _b.Hanging;
@@ -254,6 +306,7 @@ internal sealed class DungeonDresser
         }
     }
 
+    /// <summary>Hangs a prefab at a wall spot as <see cref="DungeonProps.Hanging"/> says; nothing when it does not fit.</summary>
     private void Hang(Frame f, string prefab, (float U, float V, float Yaw) s)
     {
         var h = DungeonProps.Hanging(prefab, f.H);
@@ -266,7 +319,7 @@ internal sealed class DungeonDresser
         f.Take(u, v, 0.3f);
     }
 
-    // A runner rug down the middle, from v0 to v1.
+    /// <summary>A runner rug down the middle, from v0 to v1 (one small rug when there is no room for two pieces).</summary>
     private void Runner(Frame f, float v0, float v1, float u = 0)
     {
         const float Len = 4.36f;
@@ -285,6 +338,10 @@ internal sealed class DungeonDresser
     }
 
     // ---- What lies about.
+    /// <summary>
+    /// Things lying about, perArea a square metre (more with Decor), mostly by the walls; from choice or
+    /// else the biome's clutter.
+    /// </summary>
     private void Clutter(Frame f, float perArea, params string[] choice)
     {
         string[] options = choice.Length > 0 ? choice : _b.Clutter;
@@ -304,6 +361,7 @@ internal sealed class DungeonDresser
         }
     }
 
+    /// <summary>Rubble in the corners, broken walls and pots, now and then a fallen pillar: more the more decayed.</summary>
     private void Decay(Frame f)
     {
         if (_decay <= 0)
@@ -336,6 +394,10 @@ internal sealed class DungeonDresser
     }
 
     // ---- Who guards it.
+    /// <summary>
+    /// A foe at (u, v): its spawner, or the creature itself when once or the settings do not respawn (only
+    /// then is level written: 2 is one star).
+    /// </summary>
     private void Spawn(Frame f, Foe foe, float u, float v, float yaw, int level = 1, bool once = false, bool force = false)
     {
         bool creature = once || !_s.Respawn;
@@ -343,6 +405,7 @@ internal sealed class DungeonDresser
         Put(f, creature ? foe.Creature : foe.Spawner, u, v, yaw, 0.6f, force: force, data: data);
     }
 
+    /// <summary>Foes about the room, perArea for every 75 square metres times the settings' Monsters; from pool, else the dungeon's.</summary>
     private void Foes(Frame f, float perArea, Foe[]? pool = null, int level = 1)
     {
         int n = Count(f.Area * perArea / 75f * _s.Monsters);
@@ -357,6 +420,7 @@ internal sealed class DungeonDresser
         }
     }
 
+    /// <summary>One of the biome's elites at (u, v), level 2 when Monsters is 2 or more; none when there are no monsters.</summary>
     private void Elite(Frame f, float u, float v, float yaw)
     {
         if (_s.Monsters > 0 && _b.Elites.Length > 0)
@@ -366,6 +430,7 @@ internal sealed class DungeonDresser
     }
 
     // ---- What it holds.
+    /// <summary>The biome's treasure chest at (u, v), unless there is no loot (and it is not forced).</summary>
     private void Chest(Frame f, float u, float v, float yaw, bool force = false)
     {
         if (force || _s.Loot > 0)
@@ -374,6 +439,7 @@ internal sealed class DungeonDresser
         }
     }
 
+    /// <summary>A chest at a free spot along the walls, tried in random order; none when no spot is free.</summary>
     private void ChestAgainstWall(Frame f)
     {
         foreach (var s in f.WallSpots(2, 3f).OrderBy(_ => _rnd.Next()))
@@ -387,8 +453,10 @@ internal sealed class DungeonDresser
         }
     }
 
-    // A chest holding the boss's key (the crypt key opens the arena's gate) and some loot. Its contents
-    // are written in, and the game told it already has them, or it would fill it with its own.
+    /// <summary>
+    /// A chest holding the boss's key (the crypt key opens the arena's gate) and some loot. Its contents
+    /// are written in, and the game told it already has them, or it would fill it with its own.
+    /// </summary>
     private void KeyChest(Frame f)
     {
         var items = new List<(string, int)> { ("CryptKey", 1) };
@@ -413,6 +481,7 @@ internal sealed class DungeonDresser
         Put(f, _b.Chest, 0, 0, 0, 0.8f, force: true, data: data);
     }
 
+    /// <summary>About n of the biome's pickable loot lying about, more with the settings' Loot.</summary>
     private void Pickables(Frame f, float n)
     {
         for (int i = 0; i < Count(n * (0.5f + 0.5f * _s.Loot)); i++)
@@ -425,6 +494,7 @@ internal sealed class DungeonDresser
     }
 
     // ---- The rooms.
+    /// <summary>Dresses a space for what it is, and puts the key chest and its guard in if it holds the key.</summary>
     private void Furnish(Frame f)
     {
         if (f.S.Corridor)
@@ -472,13 +542,14 @@ internal sealed class DungeonDresser
         }
     }
 
-    // The wall hangings that suit the style: banners in keeps and temples, the biome's own elsewhere.
+    /// <summary>The wall hangings that suit the style: banners in keeps and temples, the biome's own elsewhere.</summary>
     private string[] Drapes => _style.Name switch
     {
         "Fortress" or "Temple" => ["piece_banner01", "piece_banner02", "piece_banner05", "piece_banner06", "piece_banner07", "cloth_hanging_door"],
         _ => _b.Hanging,
     };
 
+    /// <summary>A corridor: torches, a few things lying about, now and then rubble or a foe.</summary>
     private void Corridor(Frame f)
     {
         // Torches every few metres, on alternate sides; a few things lying about; now and then a foe.
@@ -501,6 +572,7 @@ internal sealed class DungeonDresser
         Foes(f, 0.25f);
     }
 
+    /// <summary>The top or the foot of the stairs: the stairs' side kept free, torches on the other.</summary>
     private void Stairwell(Frame f)
     {
         // The stairs keep the side at u -3.5..-1.5; torches on the other.
@@ -521,6 +593,7 @@ internal sealed class DungeonDresser
         }
     }
 
+    /// <summary>The entrance hall: room for the portal, the name sign, a runner, braziers, benches.</summary>
     private void Entrance(Frame f)
     {
         // The portal stands before the back wall; the dungeon's name on a sign beside it.
@@ -539,6 +612,7 @@ internal sealed class DungeonDresser
         Clutter(f, 0.01f);
     }
 
+    /// <summary>A great hall: colonnades if wide enough, a set piece at the far end, a runner, braziers and banners.</summary>
     private void Hall(Frame f)
     {
         bool cols = f.HalfA >= 5;
@@ -572,7 +646,7 @@ internal sealed class DungeonDresser
         Decay(f);
     }
 
-    // The set piece at the far end of a hall: an altar, a throne, a statue, a table.
+    /// <summary>The set piece at the far end of a hall: an altar, a throne, a statue, a table.</summary>
     private void Feature(Frame f, float v)
     {
         switch (_style.Name)
@@ -593,6 +667,7 @@ internal sealed class DungeonDresser
         }
     }
 
+    /// <summary>A throne that suits the material (a bone throne in a stone crypt).</summary>
     private string ThronePiece => _mat.Name switch
     {
         "Marble" or "Grausten" => "piece_blackmarble_throne",
@@ -601,8 +676,10 @@ internal sealed class DungeonDresser
         _ => _style.Name == "Crypt" ? "piece_bone_throne" : One("piece_throne01", "piece_throne02"),
     };
 
-    // A dais of stone 1 m high across the far end, steps in front, the throne on it. It stands on the
-    // marble, through any wooden floor (stone on wood would not hold).
+    /// <summary>
+    /// A dais of stone 1 m high across the far end, steps in front, the throne on it. It stands on the
+    /// marble, through any wooden floor (stone on wood would not hold).
+    /// </summary>
     private void Dais(Frame f, float v)
     {
         float back = Math.Min(f.HalfD - 0.6f, v + 1.2f);
@@ -623,6 +700,7 @@ internal sealed class DungeonDresser
         Brazier(f, 3.6f, back - 1.5f);
     }
 
+    /// <summary>A crossing: a statue, a ring of braziers, a column or an altar in the middle; columns round it if large.</summary>
     private void Hub(Frame f)
     {
         switch (_rnd.Next(4))
@@ -662,6 +740,7 @@ internal sealed class DungeonDresser
         Decay(f);
     }
 
+    /// <summary>A gallery: the dead in niches along both walls, pilasters between.</summary>
     private void Gallery(Frame f)
     {
         // The dead in niches along both walls, pilasters between.
@@ -695,6 +774,7 @@ internal sealed class DungeonDresser
         Decay(f);
     }
 
+    /// <summary>A burial chamber: rows of sarcophagi each side of an aisle; sleeping draugr in the swamp.</summary>
     private void Burial(Frame f)
     {
         // Rows of sarcophagi each side of an aisle.
@@ -719,6 +799,7 @@ internal sealed class DungeonDresser
         Decay(f);
     }
 
+    /// <summary>An ossuary: bones along every wall and, with monsters, a bone pile that raises the dead.</summary>
     private void Ossuary(Frame f)
     {
         foreach (var s in f.WallSpots(1.25f, 2.6f))
@@ -737,6 +818,7 @@ internal sealed class DungeonDresser
         Decay(f);
     }
 
+    /// <summary>A chapel: an altar between two statues at the far end, pews either side of the aisle facing it.</summary>
     private void Chapel(Frame f)
     {
         float far = f.HalfD - 1.6f;
@@ -774,6 +856,7 @@ internal sealed class DungeonDresser
         Decay(f);
     }
 
+    /// <summary>A shrine: a statue or altar in the middle, braziers and skull piles in a ring round it.</summary>
     private void Shrine(Frame f)
     {
         Put(f, f.S.Tall ? "StatueEvil" : One("StatueSeed", "blackmarble_altar_crystal", "StatueDeer"), 0, 0, 180, 1.3f, y: 0);
@@ -797,6 +880,7 @@ internal sealed class DungeonDresser
         Decay(f);
     }
 
+    /// <summary>A tomb: a sarcophagus and grave stone among four columns, treasure, an elite guard.</summary>
     private void Tomb(Frame f)
     {
         Put(f, "crypt_skeleton_chest", 0, 0.5f, 90, 1.6f);
@@ -817,6 +901,7 @@ internal sealed class DungeonDresser
         Decay(f);
     }
 
+    /// <summary>A throne room: the dais, colonnades, a runner, armour stands, banners, trophies and elite guards.</summary>
     private void Throne(Frame f)
     {
         Dais(f, f.HalfD - 2);
@@ -843,6 +928,7 @@ internal sealed class DungeonDresser
         Decay(f);
     }
 
+    /// <summary>n trophies on item stands on the walls.</summary>
     private void Trophies(Frame f, int n)
     {
         string[] options = [ "prop_itemstand_TrophyDraugrElite", "prop_itemstand_TrophyGoblinBrute", "prop_itemstand_TrophyGoblinShaman", "prop_itemstand_TrophyGreydwarf",
@@ -854,8 +940,10 @@ internal sealed class DungeonDresser
         }
     }
 
+    /// <summary>A bed that suits the material.</summary>
     private string Bed => _mat.Name switch { "Goblin" => "goblin_bed", "Grausten" => "prop_ashwood_bed", _ => "dvergrprops_bed" };
 
+    /// <summary>Barracks: beds along both walls, a table with stools, an armour stand.</summary>
     private void Barracks(Frame f)
     {
         foreach (int side in new[] { -1, 1 })
@@ -887,6 +975,7 @@ internal sealed class DungeonDresser
         Decay(f);
     }
 
+    /// <summary>An armoury: armour stands along the walls, a table with tools, trophies, a chest.</summary>
     private void Armory(Frame f)
     {
         foreach (var s in f.WallSpots(1.6f, 2.8f))
@@ -903,8 +992,10 @@ internal sealed class DungeonDresser
         Decay(f);
     }
 
+    /// <summary>The feast laid out on tables, the biome's where the game has one.</summary>
     private string FeastFood => _b.Name switch { "Ashlands" => "prop_FeastAshlands", "Deep North" => "PropFeastDeepNorth", _ => "prop_FeastMeadows" };
 
+    /// <summary>A feast hall: long tables end to end down the middle, benches each side, the hearth at the end.</summary>
     private void Feast(Frame f)
     {
         // Long tables end to end down the middle, benches each side, the hearth at the end.
@@ -937,6 +1028,7 @@ internal sealed class DungeonDresser
         Decay(f);
     }
 
+    /// <summary>A kitchen: hearth and cauldron, preparation and butcher's tables, stores by the walls.</summary>
     private void Kitchen(Frame f)
     {
         Put(f, "prop_hearth", 0, f.HalfD - 1.6f, 180, 1.6f);
@@ -957,6 +1049,7 @@ internal sealed class DungeonDresser
         Decay(f);
     }
 
+    /// <summary>A storeroom: barrels and crates along the walls, shelves, loot lying about, maybe a chest.</summary>
     private void Store(Frame f)
     {
         string[] stock = _mat.Name == "Dvergr" ? ["dvergrprops_barrel", "dvergrprops_crate", "dvergrprops_crate_long"] : ["barrell", "CargoCrate", "barrell", "prop_wood_stack"];
@@ -983,6 +1076,7 @@ internal sealed class DungeonDresser
         Decay(f);
     }
 
+    /// <summary>A forge: forge and workbench pieces, wood, and metal bars when there is loot.</summary>
     private void Forge(Frame f)
     {
         Put(f, "prop_forge_ext2", 0, 0.6f, 0, 0.6f);
@@ -1002,6 +1096,7 @@ internal sealed class DungeonDresser
         Decay(f);
     }
 
+    /// <summary>A study: shelves along the walls, a rug, a table with chairs and a lantern, a chest.</summary>
     private void Library(Frame f)
     {
         foreach (var s in f.WallSpots(2, 2.8f))
@@ -1020,7 +1115,7 @@ internal sealed class DungeonDresser
         Decay(f);
     }
 
-    // A block of cells either side of an aisle 4 m wide, each 4 m along it behind a grate.
+    /// <summary>A block of cells either side of an aisle 4 m wide, each 4 m along it behind a grate.</summary>
     private void Cells(Frame f)
     {
         float aisle = 2;
@@ -1068,6 +1163,7 @@ internal sealed class DungeonDresser
         Foes(f, 0.3f, _b.Elites.Length > 0 ? _b.Elites : null);
     }
 
+    /// <summary>A torture chamber: a butcher's table, chains on the walls, bones about.</summary>
     private void Torture(Frame f)
     {
         Put(f, "prop_cauldron_ext3_butchertable", 0, 0, R(0, 360), 1.1f);
@@ -1087,6 +1183,7 @@ internal sealed class DungeonDresser
         Decay(f);
     }
 
+    /// <summary>A guard room: a table with stools, armour stands or barrels, an elite guard.</summary>
     private void Guard(Frame f)
     {
         Put(f, "dvergrprops_table", 0, 0, 90, 1f);
@@ -1104,6 +1201,7 @@ internal sealed class DungeonDresser
         Decay(f);
     }
 
+    /// <summary>The treasury: treasure piles and stacks, metal bars, chests, braziers in the corners.</summary>
     private void Treasury(Frame f)
     {
         float loot = Math.Max(0.5f, _s.Loot);
@@ -1131,6 +1229,7 @@ internal sealed class DungeonDresser
         Pickables(f, 2);
     }
 
+    /// <summary>The arena: a ring of columns and braziers, a statue or altar, a great rug with the boss upon it and its followers.</summary>
     private void Boss(Frame f)
     {
         // A ring of columns, braziers between, the master in the middle.
@@ -1198,6 +1297,7 @@ internal sealed class DungeonDresser
         Lights(f, important: true);
     }
 
+    /// <summary>The antechamber: braziers either side of the boss's gate, a warning sign at the key gate, elite guards.</summary>
     private void Antechamber(Frame f)
     {
         // The way to the boss: braziers either side of its gate, guards, a warning.
@@ -1222,6 +1322,7 @@ internal sealed class DungeonDresser
         Lights(f, important: true);
     }
 
+    /// <summary>A goblin den: straw piles and beds by the walls, a trash pile, a totem pole and banner.</summary>
     private void Den(Frame f)
     {
         foreach (var s in f.WallSpots(2.2f, 2.8f).OrderBy(_ => _rnd.Next()).Take(4))
@@ -1239,6 +1340,7 @@ internal sealed class DungeonDresser
         Decay(f);
     }
 
+    /// <summary>A totem hall: a brazier ringed by totem poles, skull piles, shamans if there are any.</summary>
     private void Totem(Frame f)
     {
         Brazier(f, 0, 0);
@@ -1259,6 +1361,7 @@ internal sealed class DungeonDresser
         Decay(f);
     }
 
+    /// <summary>A mine gallery: timber frames every 6 m, crates and tools by the walls, loot lying about.</summary>
     private void Mine(Frame f)
     {
         // Timber frames across the gallery, every 6 m.
@@ -1280,6 +1383,7 @@ internal sealed class DungeonDresser
         Decay(f);
     }
 
+    /// <summary>A workshop: work tables with stools and a lantern, workbench pieces, shelves.</summary>
     private void Workshop(Frame f)
     {
         Put(f, "dvergrprops_table", -1.4f, 0, 90, 1.1f);
@@ -1300,6 +1404,7 @@ internal sealed class DungeonDresser
         Decay(f);
     }
 
+    /// <summary>Quarters: two beds, a wardrobe, a rug and table with chairs, a trophy, maybe a chest.</summary>
     private void Quarters(Frame f)
     {
         Put(f, Bed, -(f.HalfA - 1.2f), f.HalfD - 1.6f, 90, 1f);
@@ -1320,6 +1425,7 @@ internal sealed class DungeonDresser
         Decay(f);
     }
 
+    /// <summary>A hidden cache: two chests (whatever the Loot), treasure, bars, a brazier.</summary>
     private void Secret(Frame f)
     {
         Chest(f, -1.4f, f.HalfD - 1, 180, force: true);

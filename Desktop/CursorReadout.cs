@@ -2,12 +2,18 @@ using System.Globalization;
 
 namespace TerrainEditor.Desktop;
 
-// The status bar's cursor readout (the web editor's): where the pointer is on the ground in world
-// metres, the ground's height there against the original (and whether it is at the game's ±8 m
-// limit), and the zone. Grid coordinates as the 3D view gives them (one point per metre from the
-// area's south-west corner).
+/// <summary>
+/// The status bar's cursor readout (the web editor's): where the pointer is on the ground in world
+/// metres, the ground's height there against the original (and whether it is at the game's ±8 m
+/// limit), and the zone. Grid coordinates as the 3D view gives them (one point per metre from the
+/// area's south-west corner).
+/// </summary>
 public static class CursorReadout
 {
+    /// <summary>The readout for a grid point (rounded and clamped to the area).</summary>
+    /// <param name="s">The scene; without a session only the height is given.</param>
+    /// <param name="gx">Grid x.</param>
+    /// <param name="gz">Grid z.</param>
     public static string Text(WorldScene s, float gx, float gz)
     {
         var c = CultureInfo.InvariantCulture;

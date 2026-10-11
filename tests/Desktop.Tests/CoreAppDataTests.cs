@@ -7,10 +7,12 @@ using Xunit;
 
 namespace WorldEditor.Tests;
 
-// The shared data code on copies of the test world: zone statistics with player-built pieces (distance to
-// buildings), searching objects, container contents and texts (saved, added and live), an object's data
-// for the inspector, the blueprint store, heightmap pictures, the saved server list and backups.
-// Opening worlds and setting the builder of new pieces: one world at a time.
+/// <summary>
+/// The shared data code on copies of the test world: zone statistics with player-built pieces (distance to buildings),
+/// searching objects, container contents and texts (saved, added and live), an object's data for the inspector, the
+/// blueprint store, heightmap pictures, the saved server list and backups. Opening worlds and setting the builder of
+/// new pieces: one world at a time.
+/// </summary>
 [Collection("World files")]
 public class CoreAppDataTests
 {
@@ -18,6 +20,9 @@ public class CoreAppDataTests
 
     // ---- Zone statistics.
 
+    /// <summary>
+    /// Zone statistics cut into rows of ZoneStats.Stride values, one per zone.
+    /// </summary>
     private static int[][] Rows(int[] data) => [.. Enumerable.Range(0, data.Length / ZoneStats.Stride).Select(i => data.Skip(i * ZoneStats.Stride).Take(ZoneStats.Stride).ToArray())];
 
     [Fact]
@@ -71,7 +76,9 @@ public class CoreAppDataTests
 
     // ---- Search.
 
-    // The test world's objects carry little data: a chest with contents and a sign text is saved first.
+    /// <summary>
+    /// The test world's objects carry little data: a chest with contents and a sign text is saved first.
+    /// </summary>
     private static WorldSave WithChest(TempWorld w, out int chestId)
     {
         WorldSave world = w.Load();
@@ -228,6 +235,9 @@ public class CoreAppDataTests
 
     // ---- The blueprint store.
 
+    /// <summary>
+    /// A 2 × 1 clipboard copy holding this many beeches, with ground in its first cell or none.
+    /// </summary>
     private static JsonObject Clip(int objects = 1, bool ground = false) => new()
     {
         ["w"] = 2,

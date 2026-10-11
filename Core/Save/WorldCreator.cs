@@ -3,31 +3,47 @@ using TerrainEditor.Editing;
 
 namespace TerrainEditor.Save;
 
-// A brand-new world from a seed, in the chunked save format the editor reads (as the game with the
-// Deep North save writes it, see WorldSave): save #1 with its metadata (.fwl2), its zone list and the
-// random events' state (.db2), its chunk index (.chunks) and the commit marker (.ok), written last.
-// The ground is the seed's own (the world generator); the zones within `radius` of the middle are
-// generated with the game's vegetation rules (Regrow), the rest is left for the game to generate;
-// zone 0, 0 also gets an unedited terrain compiler object, so the editor can save ground edits.
-// flat: the most even zone of dry Meadows left without vegetation, its ground untouched (no edit, so
-// the tools keep their whole ±8 m on it): a clean square to show them on (the documentation's pictures).
-// Location instances (the start altar, villages, dungeons...) are not placed: the world is marked as
-// not having them yet, so the game lays them out when it first loads it.
+/// <summary>
+/// A brand-new world from a seed, in the chunked save format the editor reads (as the game with the Deep North save
+/// writes it, see WorldSave): save #1 with its metadata (.fwl2), its zone list and the random events' state (.db2), its
+/// chunk index (.chunks) and the commit marker (.ok), written last. The ground is the seed's own (the world generator);
+/// the zones within <c>radius</c> of the middle are generated with the game's vegetation rules (Regrow), the rest is
+/// left for the game to generate; zone 0, 0 also gets an unedited terrain compiler object, so the editor can save
+/// ground edits. Location instances (the start altar, villages, dungeons...) are not placed: the world is marked as not
+/// having them yet, so the game lays them out when it first loads it.
+/// </summary>
 public static class WorldCreator
 {
+    /// <summary>The save format version written into every file of the new world.</summary>
     public const int SaveFileVersion = 41;
 
-    // The generator's version for new worlds (World.m_worldGenVersion) and the location list's
-    // (ZoneSystem.m_locationVersion), as the game writes them today.
+    /// <summary>
+    /// The generator's version for new worlds (World.m_worldGenVersion) and the location list's
+    /// (ZoneSystem.m_locationVersion), as the game writes them today.
+    /// </summary>
     public const int WorldGenVersion = 2, LocationVersion = 32;
 
-    // The largest square of generated zones around the middle (radius in zones).
+    /// <summary>The largest square of generated zones around the middle (radius in zones).</summary>
     public const int MaxRadius = 16;
 
+    /// <summary>What <c>Create</c> made.</summary>
+    /// <param name="Directory">The world's folder.</param>
+    /// <param name="Seed">The seed number of the seed name.</param>
+    /// <param name="Zones">How many zones were generated (0 with radius 0).</param>
+    /// <param name="Objects">How many objects were written, the terrain compiler object included.</param>
+    /// <param name="Flat">The bare zone left for pictures, or null when none was asked for.</param>
+    /// <param name="FlatSpan">
+    /// How many metres the bare zone's ground spans from lowest to highest (0 without one).
+    /// </param>
     public sealed record Created(string Directory, int Seed, int Zones, int Objects, (int X, int Z)? Flat = null, float FlatSpan = 0);
 
-    // The most even zone of dry Meadows within `radius` zones of the middle (not on its edge): the
-    // one whose ground spans the fewest metres. Null when none is wholly above the water.
+    /// <summary>
+    /// The most even zone of dry Meadows within <c>radius</c> zones of the middle (not on its edge): the one whose
+    /// ground spans the fewest metres. Null when none is wholly above the water.
+    /// </summary>
+    /// <returns>
+    /// The zone and its ground's span in metres (dry: its lowest point at least 1.5 m above the water).
+    /// </returns>
     public static (int X, int Z, float Span)? FlattestZone(ValheimGen.TerrainService terrain, int radius)
     {
         (int, int, float)? best = null;
@@ -55,13 +71,33 @@ public static class WorldCreator
         return best;
     }
 
-    // The game's seed number for a seed name (World: m_seed = m_seedName.GetStableHashCode()).
+    /// <summary>The game's seed number for a seed name (World: m_seed = m_seedName.GetStableHashCode()).</summary>
     public static int SeedOf(string seedName) => StableHash.Of(seedName);
 
-    // After the random events' state, what the game's save holds: an empty list, brotli-compressed
-    // JSON {"list":[]} behind its length (copied from a world the game made).
+    /// <summary>
+    /// After the random events' state, what the game's save holds: an empty list, brotli-compressed JSON {"list":[]}
+    /// behind its length (copied from a world the game made).
+    /// </summary>
     private static readonly byte[] EmptyListBlock = [0x0f, 0, 0, 0, 0x0b, 0x05, 0x80, (byte)'{', (byte)'"', (byte)'l', (byte)'i', (byte)'s', (byte)'t', (byte)'"', (byte)':', (byte)'[', (byte)']', (byte)'}', 0x03];
 
+    /// <summary>Writes a new world into a folder that holds none yet.</summary>
+    /// <param name="folder">The folder to write into; created when missing.</param>
+    /// <param name="name">The world's name, which must also be a valid file name.</param>
+    /// <param name="seedName">The seed, 1 to 10 characters as in the game.</param>
+    /// <param name="radius">
+    /// How many zones from the middle (0 to <c>MaxRadius</c>) are generated with vegetation; 0 leaves every zone to the
+    /// game.
+    /// </param>
+    /// <param name="uid">The world's unique id, or null for a random one.</param>
+    /// <param name="flat">
+    /// The most even zone of dry Meadows left without vegetation, its ground untouched (no edit, so the tools keep
+    /// their whole ±8 m on it): a clean square to show them on (the documentation's pictures). Needs a radius of 2 or
+    /// more.
+    /// </param>
+    /// <exception cref="ArgumentException">A bad name, seed, radius or flat request.</exception>
+    /// <exception cref="InvalidOperationException">
+    /// The folder already holds a world, or no zone is fit to be the flat one.
+    /// </exception>
     public static Created Create(string folder, string name, string seedName, int radius = 0, long? uid = null, bool flat = false)
     {
         name = name.Trim();
@@ -153,10 +189,13 @@ public static class WorldCreator
         return new Created(folder, seed, zones, objects, flatZone is var (cx, cz, _) ? (cx, cz) : null, flatZone?.Span ?? 0);
     }
 
+    /// <summary>Prefab hash of the game's per-zone terrain compiler object.</summary>
     private static readonly int TerrainCompiler = StableHash.Of("_TerrainCompiler");
 
-    // The game's terrain compiler object of zone 0, 0 with nothing edited: its position in the short
-    // form, the prefab's object flags, and the TCData the writer encodes for an untouched zone.
+    /// <summary>
+    /// The game's terrain compiler object of zone 0, 0 with nothing edited: its position in the short form, the
+    /// prefab's object flags, and the TCData the writer encodes for an untouched zone.
+    /// </summary>
     internal static byte[] EmptyTerrainObject()
     {
         ushort flags = Terrain.PrefabCatalog.Get(TerrainCompiler)?.Flags ?? 0x0D00;
@@ -166,9 +205,10 @@ public static class WorldCreator
         return z.Serialize();
     }
 
-    // World.SaveWorldMetaData: a length, then the package (version, name, seed name, seed, unique id,
-    // generator version, "has a database", no starting global keys, and the trailing count the game
-    // writes after them).
+    /// <summary>
+    /// World.SaveWorldMetaData: a length, then the package (version, name, seed name, seed, unique id, generator
+    /// version, "has a database", no starting global keys, and the trailing count the game writes after them).
+    /// </summary>
     private static void WriteMetadata(string path, string name, string seedName, int seed, long uid)
     {
         using MemoryStream pkg = new();
@@ -189,6 +229,10 @@ public static class WorldCreator
         w.Write(pkg.ToArray());
     }
 
+    /// <summary>
+    /// The .chunks index: version, total object count, chunk count, then per chunk its id, size 0, file version 1 and
+    /// object count.
+    /// </summary>
     private static void WriteIndex(string path, List<(ushort Chunk, int Count)> chunks)
     {
         using BinaryWriter w = new(File.Create(path));
@@ -204,6 +248,7 @@ public static class WorldCreator
         }
     }
 
+    /// <summary>One chunk file: version, object count, then the objects' save-format bytes back to back.</summary>
     private static void WriteChunk(string path, List<byte[]> objects)
     {
         using BinaryWriter w = new(File.Create(path));
@@ -215,7 +260,9 @@ public static class WorldCreator
         }
     }
 
-    // RandEventSystem's save with no event running (timer, event name, time, position), then the list.
+    /// <summary>
+    /// RandEventSystem's save with no event running (timer, event name, time, position), then the list.
+    /// </summary>
     private static byte[] Tail()
     {
         using MemoryStream ms = new();

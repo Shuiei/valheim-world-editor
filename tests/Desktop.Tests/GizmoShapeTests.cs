@@ -3,11 +3,16 @@ using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
-// The Select tool's handles as drawn: the ring lies flat at its radius, each arrow points along its
-// own axis from just off the middle to its tip, the colours tell them apart (the hot one highlighted),
-// and rays that cannot meet a handle give no answer.
+/// <summary>
+/// The Select tool's handles as drawn: the ring lies flat at its radius, each arrow points along its own axis from just
+/// off the middle to its tip, the colours tell them apart (the hot one highlighted), and rays that cannot meet a handle
+/// give no answer.
+/// </summary>
 public class GizmoShapeTests
 {
+    /// <summary>
+    /// A triangle mesh's corners (nine floats per triangle).
+    /// </summary>
     private static List<Vector3> Corners(float[] mesh)
     {
         Assert.Equal(0, mesh.Length % 9);

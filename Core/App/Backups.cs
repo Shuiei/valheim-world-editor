@@ -1,12 +1,23 @@
 namespace TerrainEditor.App;
 
-// A world's backups: the editor's own (<World>_backup_terraineditor-<date>) and the game's
-// (<World>_backup_auto-<date>), next to the world folder. Used to restore an area from a backup.
+/// <summary>
+/// A world's backups: the editor's own (&lt;World&gt;_backup_terraineditor-&lt;date&gt;) and the game's
+/// (&lt;World&gt;_backup_auto-&lt;date&gt;), next to the world folder. Used to restore an area from a backup.
+/// </summary>
 public static class Backups
 {
+    /// <summary>
+    /// One backup of a world.
+    /// </summary>
+    /// <param name="Path">The backup's folder.</param>
+    /// <param name="Name">The folder's name.</param>
+    /// <param name="Date">The folder's last write time.</param>
+    /// <param name="Kind">"game" for the game's own auto backups, "editor" for the editor's.</param>
     public sealed record Info(string Path, string Name, DateTime Date, string Kind);
 
-    // The backups found next to a world folder, newest first.
+    /// <summary>
+    /// The backups found next to a world folder, newest first.
+    /// </summary>
     public static List<Info> Find(string worldDir)
     {
         string trimmed = worldDir.TrimEnd(Path.DirectorySeparatorChar);

@@ -3,17 +3,31 @@ using System.Text;
 
 namespace TerrainEditor.Save;
 
-// Just enough PNG for heightmaps: writes 16-bit grayscale pictures (with text notes), and reads the
-// pictures other programs make (gray, gray + alpha, RGB, RGBA; 8 or 16 bits; not interlaced), as
-// brightness from 0 to 1. Browsers can only read PNGs as 8 bits, so 16-bit heightmaps go through here.
+/// <summary>
+/// Just enough PNG for heightmaps: writes 16-bit grayscale pictures (with text notes), and reads the pictures other
+/// programs make (gray, gray + alpha, RGB, RGBA; 8 or 16 bits; not interlaced), as brightness from 0 to 1. Browsers can
+/// only read PNGs as 8 bits, so 16-bit heightmaps go through here.
+/// </summary>
 public static class Png
 {
+    /// <summary>The eight bytes every PNG file starts with.</summary>
     private static readonly byte[] Signature = [137, 80, 78, 71, 13, 10, 26, 10];
 
+    /// <summary>A picture read by <c>Read</c>.</summary>
+    /// <param name="Width">Width in pixels.</param>
+    /// <param name="Height">Height in pixels.</param>
+    /// <param name="Values">Brightness per pixel, 0..1, width * height, row by row from the top.</param>
+    /// <param name="Text">The picture's tEXt notes, keyword to text.</param>
     public sealed record Image(int Width, int Height, float[] Values, Dictionary<string, string> Text);
 
-    // values: width * height, row by row from the top, 0..65535. filter: the PNG row filter to use
-    // (0 none ... 4 Paeth; the default 1 Sub compresses heightmaps well).
+    /// <summary>A 16-bit grayscale PNG file.</summary>
+    /// <param name="width">Width in pixels.</param>
+    /// <param name="height">Height in pixels.</param>
+    /// <param name="values">width * height, row by row from the top, 0..65535.</param>
+    /// <param name="text">Notes to store as tEXt chunks (Latin-1), or null for none.</param>
+    /// <param name="filter">
+    /// The PNG row filter to use (0 none ... 4 Paeth; the default 1 Sub compresses heightmaps well).
+    /// </param>
     public static byte[] WriteGray16(int width, int height, ushort[] values, IReadOnlyDictionary<string, string>? text = null, int filter = 1)
     {
         using MemoryStream png = new();
@@ -59,6 +73,11 @@ public static class Png
         return png.ToArray();
     }
 
+    /// <summary>Reads a PNG picture as brightness per pixel; colour becomes luminance and alpha is ignored.</summary>
+    /// <exception cref="InvalidDataException">
+    /// Not a PNG, cut short, interlaced, palette-based, not 8 or 16 bits, an unknown row filter, empty, or more than
+    /// 64 Mi (2^26) pixels.
+    /// </exception>
     public static Image Read(byte[] bytes)
     {
         if (bytes.Length < 8 || !bytes.AsSpan(0, 8).SequenceEqual(Signature))
@@ -150,17 +169,20 @@ public static class Png
         return new Image(width, height, values, text);
     }
 
+    /// <summary>The PNG Paeth predictor: whichever of left, up and up-left is nearest to left + up - up-left.</summary>
     private static int Paeth(int a, int b, int c)
     {
         int p = a + b - c, pa = Math.Abs(p - a), pb = Math.Abs(p - b), pc = Math.Abs(p - c);
         return pa <= pb && pa <= pc ? a : pb <= pc ? b : c;
     }
 
+    /// <summary>Writes an int big-endian (PNG byte order) at offset o.</summary>
     private static void BigEndian(byte[] b, int o, int v)
     {
         b[o] = (byte)(v >> 24); b[o + 1] = (byte)(v >> 16); b[o + 2] = (byte)(v >> 8); b[o + 3] = (byte)v;
     }
 
+    /// <summary>Writes one PNG chunk: length, type, data and CRC-32 of type and data.</summary>
     private static void Chunk(Stream s, string type, byte[] data)
     {
         byte[] len = new byte[4];
@@ -175,6 +197,7 @@ public static class Png
         s.Write(c);
     }
 
+    /// <summary>The CRC-32 lookup table (polynomial 0xEDB88320) PNG chunks use.</summary>
     private static readonly uint[] CrcTable = [.. Enumerable.Range(0, 256).Select(n =>
     {
         uint c = (uint)n;
@@ -185,6 +208,7 @@ public static class Png
         return c;
     })];
 
+    /// <summary>Folds data into a running CRC-32 (not inverted at either end).</summary>
     private static uint Crc(uint crc, byte[] data)
     {
         foreach (byte b in data)

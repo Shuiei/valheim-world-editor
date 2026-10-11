@@ -6,8 +6,10 @@ using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
-// In a short window (900 px is common: 1080p at 125%), the panels over the 3D view stop above the
-// status bar and scroll instead of running under it.
+/// <summary>
+/// In a short window (900 px is common: 1080p at 125%), the panels over the 3D view stop above the status bar and
+/// scroll instead of running under it.
+/// </summary>
 public class LayoutTests
 {
     [AvaloniaTheory]

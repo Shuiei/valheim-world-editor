@@ -2,99 +2,153 @@ using static TerrainEditor.Editing.DungeonKit;
 
 namespace TerrainEditor.Editing;
 
-// The layout of a generated dungeon: levels of rooms and corridors on a 2 m grid (tiles), and the
-// doorways between them. Rooms are rectangles, entered in the middle of a side (Dir: the way in) and
-// joined to the room they come from wall to wall or by a straight corridor, so the plan reads like
-// a building: axes, wings, twins on both sides. Then loops: rooms far apart on the way that happen to
-// lie close are joined, so there is more than one way round (Jaquays). Floor and roof slabs cover
-// whole 8 m cells, so what needs a cell to itself (a stairwell, a hall two floors high) is aligned to
-// cells and keeps them. Level k's floor is 6k m below the first.
+/// <summary>
+/// The layout of a generated dungeon: levels of rooms and corridors on a 2 m grid (tiles), and the
+/// doorways between them. Rooms are rectangles, entered in the middle of a side (Dir: the way in) and
+/// joined to the room they come from wall to wall or by a straight corridor, so the plan reads like
+/// a building: axes, wings, twins on both sides. Then loops: rooms far apart on the way that happen to
+/// lie close are joined, so there is more than one way round (Jaquays). Floor and roof slabs cover
+/// whole 8 m cells, so what needs a cell to itself (a stairwell, a hall two floors high) is aligned to
+/// cells and keeps them. Level k's floor is 6k m below the first.
+/// </summary>
 internal sealed class DungeonPlan
 {
+    /// <summary>A room or a corridor of the plan.</summary>
     public sealed class Space
     {
+        /// <summary>Its number in the order spaces were made.</summary>
         public int Id;
+        /// <summary>The level it is on, 0 the first.</summary>
         public int Level;
+        /// <summary>What kind of room it is (a corridor is a Hub with <see cref="Corridor"/> set).</summary>
         public Room Room;
+        /// <summary>As shown on the plan's map and in the notes.</summary>
         public string Name = "";
+        /// <summary>A corridor rather than a room.</summary>
         public bool Corridor;
+        /// <summary>Rises through two floors (aligned to cells, nothing above it).</summary>
         public bool Tall;
+        /// <summary>On the main way through (the entrance, the way's main rooms, both ends of the stairs).</summary>
         public bool Main;
+        /// <summary>Holds the chest with the boss gate's key.</summary>
         public bool KeyChest;
+        /// <summary>The tiles it covers (for a room, its whole box).</summary>
         public readonly HashSet<(int I, int J)> Tiles = [];
-        public int X0, Z0, W, H; // box (tiles, world axes)
-        public (int X, int Z) Dir; // the way in
+        /// <summary>Its box (tiles, world axes).</summary>
+        public int X0, Z0, W, H;
+        /// <summary>The way in.</summary>
+        public (int X, int Z) Dir;
+        /// <summary>The doorways on its walls, to either side.</summary>
         public readonly List<Doorway> Doors = [];
+        /// <summary>The space it was placed off (null for the entrance).</summary>
         public Space? Parent;
-        public int Shift, Length; // how it was placed off its parent: shifted across, corridor tiles
+        /// <summary>How it was placed off its parent: shifted across, corridor tiles.</summary>
+        public int Shift, Length;
 
+        /// <summary>Whether it is a room (not a corridor).</summary>
         public bool IsRoom => !Corridor;
 
+        /// <summary>The middle of its box along x (metres).</summary>
         public float CenterX => (X0 + W / 2f) * 2;
 
+        /// <summary>The middle of its box along z (metres).</summary>
         public float CenterZ => (Z0 + H / 2f) * 2;
 
-        // Tiles across (perpendicular to Dir) and deep (along Dir).
+        /// <summary>Tiles across (perpendicular to Dir).</summary>
         public int Across => Dir.X != 0 ? H : W;
 
+        /// <summary>Tiles deep (along Dir).</summary>
         public int Deep => Dir.X != 0 ? W : H;
     }
 
-    // A 4 m doorway: A's tiles T1 and T2 along its side, B beyond (Dir from A to B).
+    /// <summary>A 4 m doorway: A's tiles T1 and T2 along its side, B beyond (Dir from A to B).</summary>
     public sealed class Doorway
     {
+        /// <summary>The space it opens from, and the one beyond.</summary>
         public Space A = null!, B = null!;
+        /// <summary>A's two tiles along the side it opens on.</summary>
         public (int I, int J) T1, T2;
+        /// <summary>The way from A to B.</summary>
         public (int X, int Z) Dir;
+        /// <summary>What stands in it.</summary>
         public Door Kind;
+        /// <summary>Made to close a loop rather than to reach a new space.</summary>
         public bool Loop;
 
+        /// <summary>The space on the other side from <paramref name="s"/>.</summary>
         public Space Other(Space s) => s == A ? B : A;
 
-        // The middle of the doorway (metres), on the wall line.
+        /// <summary>The middle of the doorway (metres), on the wall line.</summary>
         public (float X, float Z) Center => (T1.I + T2.I + 1 + Dir.X, T1.J + T2.J + 1 + Dir.Z);
     }
 
+    /// <summary>One floor of the dungeon.</summary>
     public sealed class Level
     {
+        /// <summary>0 the first, counting down.</summary>
         public int Index;
+        /// <summary>The space each taken tile belongs to.</summary>
         public readonly Dictionary<(int, int), Space> Owner = [];
-        public readonly HashSet<(int, int)> Holes = []; // cells with no floor: a stairwell
-        public readonly HashSet<(int, int)> Open = []; // cells with no roof: under a stairwell
+        /// <summary>Cells with no floor: a stairwell.</summary>
+        public readonly HashSet<(int, int)> Holes = [];
+        /// <summary>Cells with no roof: under a stairwell.</summary>
+        public readonly HashSet<(int, int)> Open = [];
+        /// <summary>The level's rooms and corridors, in the order made.</summary>
         public readonly List<Space> Spaces = [];
     }
 
+    /// <summary>The levels, first (top) to last.</summary>
     public readonly List<Level> Levels = [];
+    /// <summary>Every space of every level, in the order made.</summary>
     public readonly List<Space> Spaces = [];
+    /// <summary>Every doorway of every level.</summary>
     public readonly List<Doorway> Doors = [];
+    /// <summary>What could not be made, for the user.</summary>
     public readonly List<string> Notes = [];
+    /// <summary>The entrance hall on the first level, at the origin.</summary>
     public Space Entrance = null!;
+    /// <summary>The boss's arena and the treasury beyond it (null when there was no room for them).</summary>
     public Space? Boss, Treasury;
 
+    /// <summary>The 8 m cell (4 × 4 tiles) a tile is in.</summary>
     public static (int, int) CellOf((int I, int J) t) => (FloorDiv(t.I, 4), FloorDiv(t.J, 4));
 
+    /// <summary>Integer division rounding down, also for negatives.</summary>
     public static int FloorDiv(int a, int b) => (int)MathF.Floor(a / (float)b);
 
+    /// <summary>The height of a level's floor (metres): 6 m below the one above.</summary>
     public static float FloorY(int level) => -6f * level;
 
-    // How high a space's walls go above its floor.
+    /// <summary>How high a space's walls go above its floor (metres; 0 for none).</summary>
     public static float HeightOf(Space? s) => s == null ? 0 : s.Tall ? 10 : 4;
 
+    /// <summary>The space that owns a tile on a level, if any.</summary>
     public Space? At(int level, (int, int) tile) => Levels[level].Owner.GetValueOrDefault(tile);
 }
 
+/// <summary>
+/// Lays out a <see cref="DungeonPlan"/> from the settings and a style: on each level the way through, stairs
+/// down or the antechamber, arena and treasury, rooms off the way (some twinned), then loops; then the
+/// boss's key and hidden caches, and what stands in each doorway.
+/// </summary>
 internal sealed class DungeonPlanner
 {
+    /// <summary>The four ways along the grid: +z, +x, -z, -x.</summary>
     private static readonly (int X, int Z)[] Dirs = [(0, 1), (1, 0), (0, -1), (-1, 0)];
 
+    /// <summary>The plan being made.</summary>
     private readonly DungeonPlan _plan = new();
     private readonly DungeonGen.Settings _s;
     private readonly Style _style;
     private readonly Random _rnd;
-    private readonly int _extent; // tiles from the origin a level may reach
+    /// <summary>Tiles from the origin a level may reach.</summary>
+    private readonly int _extent;
+    /// <summary>The kinds of room made so far, so unique ones come once.</summary>
     private readonly HashSet<Room> _used = [];
+    /// <summary>The next space's <c>Id</c>.</summary>
     private int _next;
 
+    /// <summary>Sets up a planner; the size of the settings decides how far a level may reach.</summary>
     private DungeonPlanner(DungeonGen.Settings s, Style style, Random rnd)
     {
         _s = s;
@@ -103,6 +157,7 @@ internal sealed class DungeonPlanner
         _extent = 14 + 6 * Math.Clamp(s.Size, 1, 4);
     }
 
+    /// <summary>Lays out a dungeon; everything random comes from <paramref name="rnd"/>.</summary>
     public static DungeonPlan Make(DungeonGen.Settings s, Style style, Random rnd)
     {
         var p = new DungeonPlanner(s, style, rnd);
@@ -110,12 +165,16 @@ internal sealed class DungeonPlanner
         return p._plan;
     }
 
+    /// <summary>The way to the right of one facing <paramref name="d"/>.</summary>
     private static (int X, int Z) Right((int X, int Z) d) => (d.Z, -d.X);
 
+    /// <summary>The tile <paramref name="n"/> steps from <paramref name="t"/> along <paramref name="d"/>.</summary>
     private static (int, int) Add((int I, int J) t, (int X, int Z) d, int n = 1) => (t.I + d.X * n, t.J + d.Z * n);
 
+    /// <summary>A random number from min to max in steps of 2 (min, min + 2, ...).</summary>
     private int Even(int min, int max) => min + 2 * _rnd.Next((max - min) / 2 + 1);
 
+    /// <summary>One of the items at random, each as likely as its weight.</summary>
     private T Pick<T>(IReadOnlyList<(T Item, float Weight)> items)
     {
         float total = items.Sum(i => i.Weight), roll = (float)_rnd.NextDouble() * total;
@@ -129,6 +188,7 @@ internal sealed class DungeonPlanner
         return items[^1].Item;
     }
 
+    /// <summary>Makes the whole plan into <see cref="_plan"/>.</summary>
     private void Build()
     {
         int levels = Math.Clamp(_s.Levels, 1, 4);
@@ -261,11 +321,17 @@ internal sealed class DungeonPlanner
         AssignDoors();
     }
 
+    /// <summary>The squared distance between two spaces' middles (square metres).</summary>
     private static float Dist2(DungeonPlan.Space a, DungeonPlan.Space b) =>
         (a.CenterX - b.CenterX) * (a.CenterX - b.CenterX) + (a.CenterZ - b.CenterZ) * (a.CenterZ - b.CenterZ);
 
+    /// <summary>A box of tiles from its corner and size.</summary>
     private static (int X0, int Z0, int W, int H) Rect(int x0, int z0, int w, int h) => (x0, z0, w, h);
 
+    /// <summary>
+    /// Adds a space of a kind of room to the level and the plan, taking its tiles (the whole box unless
+    /// <paramref name="tiles"/> are given) and marking the kind as used.
+    /// </summary>
     private DungeonPlan.Space NewSpace(DungeonPlan.Level l, Room room, (int, int) dir, (int X0, int Z0, int W, int H) box, IEnumerable<(int, int)>? tiles = null)
     {
         var s = new DungeonPlan.Space
@@ -291,6 +357,7 @@ internal sealed class DungeonPlanner
         return s;
     }
 
+    /// <summary>Every tile of a box.</summary>
     private static IEnumerable<(int, int)> Box((int X0, int Z0, int W, int H) b)
     {
         for (int i = b.X0; i < b.X0 + b.W; i++)
@@ -302,6 +369,7 @@ internal sealed class DungeonPlanner
         }
     }
 
+    /// <summary>Adds a corridor over the given tiles, its box their bounds.</summary>
     private DungeonPlan.Space NewCorridor(DungeonPlan.Level l, List<(int, int)> tiles, (int, int) dir)
     {
         int x0 = tiles.Min(t => t.Item1), z0 = tiles.Min(t => t.Item2);
@@ -311,6 +379,7 @@ internal sealed class DungeonPlanner
         return c;
     }
 
+    /// <summary>Adds a doorway from a to b at a's tiles t1, t2 (open unless a kind is given) to both spaces and the plan.</summary>
     private DungeonPlan.Doorway Connect(DungeonPlan.Space a, DungeonPlan.Space b, (int, int) t1, (int, int) t2, (int X, int Z) dir, Door? kind = null, bool loop = false)
     {
         var d = new DungeonPlan.Doorway { A = a, B = b, T1 = t1, T2 = t2, Dir = dir, Kind = kind ?? Door.Open, Loop = loop };
@@ -320,15 +389,17 @@ internal sealed class DungeonPlanner
         return d;
     }
 
-    // Rooms that can lead on to others.
+    /// <summary>Rooms that can lead on to others.</summary>
     private static bool CanParent(DungeonPlan.Space s) => s.IsRoom && s.Room is not (Room.StairTop or Room.Boss or Room.Treasury or Room.Secret);
 
-    // The arena leads only to its treasury.
+    /// <summary>Rooms that can lead on to a room of kind <paramref name="child"/>: the arena leads only to its treasury.</summary>
     private static bool CanParent(DungeonPlan.Space s, Room child) => CanParent(s) || s.Room == Room.Boss && child == Room.Treasury;
 
+    /// <summary>A random space of the level that can lead on (on the main way if <paramref name="main"/>), else its first.</summary>
     private DungeonPlan.Space AnyParent(DungeonPlan.Level l, bool main) =>
         l.Spaces.Where(s => CanParent(s) && (!main || s.Main)).OrderBy(_ => _rnd.Next()).FirstOrDefault() ?? l.Spaces[0];
 
+    /// <summary>A space to put a side room off, weighted towards crossings and long halls; null when none can lead on.</summary>
     private DungeonPlan.Space? SideParent(DungeonPlan.Level l)
     {
         var options = l.Spaces.Where(s => CanParent(s) && s.Room != Room.Antechamber)
@@ -337,14 +408,14 @@ internal sealed class DungeonPlanner
         return options.Count == 0 ? null : Pick(options);
     }
 
-    // The tiles along a side of a space: those whose neighbour in dir is outside it.
+    /// <summary>The tiles along a side of a space: those whose neighbour in dir is outside it, in order along the side.</summary>
     private static List<(int, int)> SideTiles(DungeonPlan.Space s, (int X, int Z) dir)
     {
         var (x, z) = Right(dir);
         return [.. s.Tiles.Where(t => !s.Tiles.Contains(Add(t, dir))).OrderBy(t => t.I * x + t.J * z)];
     }
 
-    // Whether a doorway may open at tiles t1, t2 on side dir of s.
+    /// <summary>Whether a doorway may open at tiles t1, t2 on side dir of s.</summary>
     private static bool SlotAllowed(DungeonPlan.Space s, (int I, int J) t1, (int I, int J) t2, (int X, int Z) dir)
     {
         if (s.Room == Room.Entrance && dir == (-s.Dir.X, -s.Dir.Z))
@@ -389,13 +460,26 @@ internal sealed class DungeonPlanner
         return true;
     }
 
+    /// <summary>Whether a tile is not taken on the level and lies within the reach of the origin (more room ahead than behind).</summary>
     private bool Free(DungeonPlan.Level l, (int I, int J) t) => !l.Owner.ContainsKey(t) && Math.Abs(t.I) <= _extent && t.J >= -_extent && t.J <= 2 * _extent;
 
-    // What a placement would make: the room's tiles, the corridor's, where they meet.
+    /// <summary>What a placement would make: the room's tiles, the corridor's, where they meet.</summary>
+    /// <param name="Box">The room's box (tiles).</param>
+    /// <param name="Corridor">The corridor's tiles (none: wall to wall).</param>
+    /// <param name="T1">The parent's first tile of the doorway.</param>
+    /// <param name="T2">The parent's second tile of the doorway.</param>
+    /// <param name="Dir">The way from the parent into the room.</param>
+    /// <param name="Shift">Tiles the room is shifted across from centred.</param>
+    /// <param name="Length">The corridor's length (tiles).</param>
+    /// <param name="Tall">The room rises through two floors.</param>
     private sealed record Placement((int X0, int Z0, int W, int H) Box, List<(int, int)> Corridor, (int, int) T1, (int, int) T2, (int X, int Z) Dir, int Shift, int Length, bool Tall);
 
-    // Tries to place a room of w × d tiles (across, deep) off side dir of parent, at slot t1/t2, with a
-    // corridor of len tiles and the room shifted across by shift tiles from centred.
+    /// <summary>
+    /// Tries to place a room of w × d tiles (across, deep) off side dir of parent, at slot t1/t2, with a
+    /// corridor of len tiles and the room shifted across by shift tiles from centred. Aligned: the box must
+    /// cover whole cells; tall: nothing may be in its cells on the level above.
+    /// </summary>
+    /// <returns>Null when it does not fit.</returns>
     private Placement? TryPlace(DungeonPlan.Level l, (int I, int J) t1, (int I, int J) t2, (int X, int Z) dir, int w, int d, int len, int shift,
         bool aligned, bool tall)
     {
@@ -443,6 +527,17 @@ internal sealed class DungeonPlanner
         return new Placement(box, corridor, t1, t2, dir, shift, len, tall);
     }
 
+    /// <summary>
+    /// Places a room of a kind off parent, trying many sides, slots, sizes and corridors and keeping the best
+    /// (near the dungeon's middle, centred, straight ahead on the main way, tall when wanted, short corridor).
+    /// </summary>
+    /// <param name="l">The level.</param>
+    /// <param name="parent">The space it opens off.</param>
+    /// <param name="room">The kind of room.</param>
+    /// <param name="main">On the main way: straight ahead is favoured.</param>
+    /// <param name="forward">Only straight ahead (the parent's way in).</param>
+    /// <param name="door">What stands in the doorway (null: decided later); Secret hides the way from the parent.</param>
+    /// <returns>The new room, or null when it fits nowhere or parent cannot lead on.</returns>
     private DungeonPlan.Space? Attach(DungeonPlan.Level l, DungeonPlan.Space parent, Room room, bool main, bool forward = false, Door? door = null)
     {
         if (!CanParent(parent, room))
@@ -519,6 +614,7 @@ internal sealed class DungeonPlanner
         return n;
     }
 
+    /// <summary>Joins a placed room to its parent: wall to wall, or by a new corridor with a doorway at each end.</summary>
     private void Join(DungeonPlan.Level l, DungeonPlan.Space parent, DungeonPlan.Space n, Placement p, Door? door)
     {
         n.Shift = p.Shift;
@@ -534,7 +630,10 @@ internal sealed class DungeonPlanner
         Connect(c, n, Add(p.T1, p.Dir, p.Length), Add(p.T2, p.Dir, p.Length), p.Dir, door == Door.Secret ? Door.Open : door);
     }
 
-    // The same room on the other side of its parent, mirrored across the parent's middle.
+    /// <summary>
+    /// The same room on the other side of its parent, mirrored across the parent's middle; null when it is
+    /// not a centred, ordinary side room or the mirror does not fit.
+    /// </summary>
     private DungeonPlan.Space? Twin(DungeonPlan.Level l, DungeonPlan.Space n)
     {
         var parent = n.Parent;
@@ -572,8 +671,11 @@ internal sealed class DungeonPlanner
         return twin;
     }
 
-    // Stairs down: an aligned 1 × 3 cells room (the first cell to stand in, then the stairwell), and on
-    // the level below the 1 × 2 cells under the stairwell.
+    /// <summary>
+    /// Stairs down: an aligned 1 × 3 cells room (the first cell to stand in, then the stairwell), and on
+    /// the level below the 1 × 2 cells under the stairwell.
+    /// </summary>
+    /// <returns>The stairs' top, or null when there is no room for them off parent.</returns>
     private DungeonPlan.Space? AttachStairs(DungeonPlan.Level l, DungeonPlan.Space parent)
     {
         if (!CanParent(parent))
@@ -630,10 +732,14 @@ internal sealed class DungeonPlanner
         return null;
     }
 
-    // How far tile t is from the back of a box entered along dir (tiles).
+    /// <summary>How far tile t is from the back of a box entered along dir (tiles).</summary>
     public static int Depth((int X0, int Z0, int W, int H) box, (int X, int Z) dir, (int I, int J) t) =>
         dir.X > 0 ? t.I - box.X0 : dir.X < 0 ? box.X0 + box.W - 1 - t.I : dir.Z > 0 ? t.J - box.Z0 : box.Z0 + box.H - 1 - t.J;
 
+    /// <summary>
+    /// How many rooms away each space is from <paramref name="from"/>, through doorways and stairs
+    /// (corridors do not count); spaces not reached are missing.
+    /// </summary>
     private Dictionary<DungeonPlan.Space, int> Distances(DungeonPlan.Space from)
     {
         var dist = new Dictionary<DungeonPlan.Space, int> { [from] = 0 };
@@ -657,10 +763,13 @@ internal sealed class DungeonPlanner
         return dist;
     }
 
+    /// <summary>Rooms a loop may join: not the arena, treasury, hidden caches or stairs.</summary>
     private static bool Loopable(DungeonPlan.Space s) => s.IsRoom && s.Room is not (Room.Boss or Room.Treasury or Room.Secret or Room.StairTop or Room.StairBottom);
 
-    // Joins rooms that are far apart on the way but close in space: through a shared wall, or by a
-    // short straight corridor.
+    /// <summary>
+    /// Joins rooms that are far apart on the way but close in space: through a shared wall, or by a
+    /// short straight corridor. How many follows the settings' Loops and the level's rooms.
+    /// </summary>
     private void AddLoops(DungeonPlan.Level l)
     {
         int want = (int)MathF.Round(_s.Loops * l.Spaces.Count(s => s.IsRoom) / 5f);
@@ -726,6 +835,10 @@ internal sealed class DungeonPlanner
         }
     }
 
+    /// <summary>
+    /// Decides what stands in each doorway: the key gate (or a grand one) before the arena, a gate to the
+    /// treasury and on the way between levels, the style's doors elsewhere.
+    /// </summary>
     private void AssignDoors()
     {
         foreach (var d in _plan.Doors)

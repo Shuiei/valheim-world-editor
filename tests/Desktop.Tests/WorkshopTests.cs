@@ -9,11 +9,17 @@ using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
-// The Workshop: a blueprint opened onto the blank plot and saved back the same (measured from the
-// anchor, with what its objects hold), and in the window: opening one, the support check (on and off, a floating
-// floor in pink), saving it as a Homestead blueprint, and leaving (asking when it is not saved).
+/// <summary>
+/// The Workshop: a blueprint opened onto the blank plot and saved back the same (measured from the anchor, with what
+/// its objects hold), and in the window: opening one, the support check (on and off, a floating floor in pink), saving
+/// it as a Homestead blueprint, and leaving (asking when it is not saved).
+/// </summary>
 public class WorkshopTests
 {
+    /// <summary>
+    /// Writes a small Homestead blueprint (a floor, a wall, a floor floating 12 m up and an unknown kind) into the
+    /// folder; returns its path.
+    /// </summary>
     private static string Hut(string dir, string name = "Hut")
     {
         Directory.CreateDirectory(dir);
@@ -448,7 +454,9 @@ public class WorkshopTests
         Assert.Equal(3, bp.LibraryList.Children.Count);
     }
 
-    // Waits (a few seconds at most) for what the window does after a click, the generator's dungeon too.
+    /// <summary>
+    /// Waits (a few seconds at most) for what the window does after a click, the generator's dungeon too.
+    /// </summary>
     private static async Task Until(DungeonGenPanel g, Func<bool> done)
     {
         for (int i = 0; i < 300 && !done(); i++)

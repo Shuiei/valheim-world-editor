@@ -7,11 +7,16 @@ using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
-// The Place tool: brush, line (also end to end), grid and zone placements.
+/// <summary>
+/// The Place tool: brush, line (also end to end), grid and zone placements.
+/// </summary>
 public class PlaceTests
 {
     private const string Wall = "woodwall";
 
+    /// <summary>
+    /// A Place tool on a flat 2 × 2 zone area with these objects, Beech1 chosen and no tilt.
+    /// </summary>
     private static (PlaceTool T, EditSession S) Tool(params WorldScene.Thing[] things)
     {
         var s = EditTests.Flat(2, things);
@@ -22,6 +27,9 @@ public class PlaceTests
         return (t, s);
     }
 
+    /// <summary>
+    /// The placement's turn in degrees, 0 to 360.
+    /// </summary>
     private static float Yaw(PlaceTool.Placement p) => (p.Rotation.Y % 360 + 360) % 360;
 
     [Fact]
@@ -217,6 +225,10 @@ public class PlaceTests
         Assert.StartsWith("None of the kinds", t.Load(PlaceTool.BuiltIn[0], _ => false));
     }
 
+    /// <summary>
+    /// A shown main window editing a flat 2 × 2 zone area in the Place tool with Beech1 chosen, looking straight down;
+    /// with the screen point of a grid point.
+    /// </summary>
     private static (MainWindow W, EditSession S, Func<float, float, Avalonia.Point> Screen) Open()
     {
         var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
@@ -296,8 +308,10 @@ public class PlaceTests
     }
 }
 
-// What the Place tool remembers: your presets, favourites and recent kinds. Alone (DataDir): it reads
-// place.json back, which the other Place tests write too when they place something.
+/// <summary>
+/// What the Place tool remembers: your presets, favourites and recent kinds. Alone (DataDir): it reads
+/// place.json back, which the other Place tests write too when they place something.
+/// </summary>
 [Collection("DataDir")]
 public class PlaceMemoryTests
 {

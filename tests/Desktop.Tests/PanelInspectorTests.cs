@@ -9,15 +9,20 @@ using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
-// The object inspector through its own controls, on the test world's chest and a tree: typing a value
-// then Revert, ✕ and ↺ on a value, Add (with and without a name), the contents table (Add item until
-// the chest is full, Tidy slots, ✕, an item outside the slots and its question), unreadable contents,
-// an object with no data, one that cannot be read, and closing.
+/// <summary>
+/// The object inspector through its own controls, on the test world's chest and a tree: typing a value then Revert, ✕
+/// and ↺ on a value, Add (with and without a name), the contents table (Add item until the chest is full, Tidy slots,
+/// ✕, an item outside the slots and its question), unreadable contents, an object with no data, one that cannot be
+/// read, and closing.
+/// </summary>
 [Collection("World files")]
 public class PanelInspectorTests
 {
     private static readonly int Chest = StableHash.Of("piece_chest_wood");
 
+    /// <summary>
+    /// A main window on its own copy of the test world, opened on the zone with the chest; deleted when disposed.
+    /// </summary>
     private sealed class Run : IDisposable
     {
         public MainWindow W { get; } = new(load: false) { Width = 1600, Height = 1000 };
@@ -39,20 +44,32 @@ public class PanelInspectorTests
 
         public int ChestIndex => Scene.Things.FindLastIndex(t => t.Prefab == Chest && !t.Gone);
 
+        /// <inheritdoc/>
         public void Dispose() => Directory.Delete(Path.GetDirectoryName(Dir)!, recursive: true);
     }
 
+    /// <summary>
+    /// Clicks the button and runs the posted work it starts.
+    /// </summary>
     private static void Click(Button b)
     {
         b.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         Dispatcher.UIThread.RunJobs();
     }
 
+    /// <summary>
+    /// The first button with this label under the control.
+    /// </summary>
     private static Button Labelled(Control c, string label) => c.GetLogicalDescendants().OfType<Button>().First(b => b.Content as string == label);
 
+    /// <summary>
+    /// Every text block's text under the control, joined with " | ", for asserting on what it shows.
+    /// </summary>
     private static string Texts(Control c) => string.Join(" | ", c.GetLogicalDescendants().OfType<TextBlock>().Select(t => t.Text));
 
-    // Gives the chest a value of each kind the panel shows (through Apply), and reopens it.
+    /// <summary>
+    /// Gives the chest a value of each kind the panel shows (through Apply), and reopens it.
+    /// </summary>
     private static async Task<int> WithValues(Run r)
     {
         Assert.True(r.I.Open(r.ChestIndex));

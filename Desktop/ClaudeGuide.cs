@@ -3,11 +3,14 @@ using ModelContextProtocol.Server;
 
 namespace TerrainEditor.Desktop;
 
-// What Claude is told about working in the editor: the instructions sent when it connects (the
-// workflow, coordinates, what it may and may not do), the building guide (Valheim's pieces and support,
-// from the game's data), and prompts to start from.
+/// <summary>
+/// What Claude is told about working in the editor: the instructions sent when it connects (the
+/// workflow, coordinates, what it may and may not do), the building guide (Valheim's pieces and support,
+/// from the game's data), and prompts to start from.
+/// </summary>
 public static class ClaudeGuide
 {
+    /// <summary>The server's instructions, sent when Claude connects: the workflow, coordinates and what stays pending.</summary>
     public const string Instructions = """
 		You are connected to Valheim World Editor, running on the user's computer. You change the world or
 		the Workshop open in it, as the user would, and the user watches in the 3D view.
@@ -37,6 +40,7 @@ public static class ClaudeGuide
 		first. Ask the user before changing things they did not ask for.
 		""";
 
+    /// <summary>The building guide (grid, origins, roofs, dressing, support), in building_guide and the build_in_workshop prompt.</summary>
     public const string Building = """
 		Building in Valheim (from the game's data; piece_info gives any piece's exact size and snap points).
 
@@ -77,6 +81,7 @@ public static class ClaudeGuide
 		- support_check names what would fall: add posts or walls under it, or move it closer to support.
 		""";
 
+    /// <summary>The guide to shaping ground and placing objects, in building_guide and the shape_area prompt.</summary>
     public const string Shaping = """
 		Shaping an area. The game lets ground move at most 8 m from its original height (scripts:
 		Ground.NoLimit = true goes further, through locations the game understands). Water is at y = 30;
@@ -88,10 +93,12 @@ public static class ClaudeGuide
 		""";
 }
 
-// The prompts Claude's clients offer to start from (registered with WithPrompts).
+/// <summary>The prompts Claude's clients offer to start from (registered with WithPrompts).</summary>
 [McpServerPromptType]
 public sealed class ClaudePrompts
 {
+    /// <summary>Build in the Workshop: the building guide and the steps, with what to build.</summary>
+    /// <param name="what">What to build, as the user put it.</param>
     [McpServerPrompt(Name = "build_in_workshop", Title = "Build in the Workshop")]
     [Description("Build something in the Workshop from a description, then check that it stands.")]
     public static string BuildInWorkshop([Description("What to build, e.g. \"a small longhouse with a stone floor and a thatch roof\".")] string what) =>
@@ -105,6 +112,8 @@ public sealed class ClaudePrompts
 		from a few sides, and fix what would fall or looks wrong. Tell me when it is ready: I save the blueprint.
 		""";
 
+    /// <summary>Shape an area of the open world: the shaping guide and the steps, with what to make.</summary>
+    /// <param name="what">What to make, as the user put it.</param>
     [McpServerPrompt(Name = "shape_area", Title = "Shape an area")]
     [Description("Change the ground and objects of an area of the open world from a description.")]
     public static string ShapeArea([Description("What to make, e.g. \"a valley with a river running north, birches along it\".")] string what) =>

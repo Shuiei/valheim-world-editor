@@ -1,23 +1,41 @@
 namespace TerrainEditor.Editing;
 
-// What generated dungeons are built from: wall materials, biome palettes (lights, monsters, loot,
-// clutter) and styles (which rooms a crypt, a keep or a Dvergr hold has, and how they are laid out).
-// Every name is a prefab of the game; the tests check they all exist. Sizes come from the game's models
-// (metres; Bottom: how far a piece's foot is below its position).
+/// <summary>
+/// What generated dungeons are built from: wall materials, biome palettes (lights, monsters, loot,
+/// clutter) and styles (which rooms a crypt, a keep or a Dvergr hold has, and how they are laid out).
+/// Every name is a prefab of the game; the tests check they all exist. Sizes come from the game's models
+/// (metres; Bottom: how far a piece's foot is below its position).
+/// </summary>
 public static class DungeonKit
 {
-    // A wall piece: W wide (along the wall), H high.
+    /// <summary>A wall piece.</summary>
+    /// <param name="Prefab">The piece's prefab name.</param>
+    /// <param name="W">How wide it is along the wall (metres).</param>
+    /// <param name="H">How high it is (metres).</param>
+    /// <param name="Bottom">How far its foot is below its position (metres).</param>
     public sealed record Part(string Prefab, float W, float H, float Bottom);
 
-    // A pillar or post segment, stacked to the height wanted.
+    /// <summary>A pillar or post segment, stacked to the height wanted.</summary>
+    /// <param name="Prefab">The segment's prefab name.</param>
+    /// <param name="H">How high one segment is (metres).</param>
+    /// <param name="Bottom">How far its foot is below its position (metres).</param>
     public sealed record Column(string Prefab, float H, float Bottom);
 
-    // Walls: pieces largest first; Thick: how deep they are; Column: inside rooms; Post: at corners
-    // (none for thick walls, which meet anyway); Arch: over an open doorway (2 m wide, 1 m high);
-    // Floor: a 2 m finish over the marble (none: the marble is the floor); Beam: under the ceiling, 4 m.
+    /// <summary>A wall material and the pieces that go with it.</summary>
+    /// <param name="Name">As picked in the settings (matched ignoring case).</param>
+    /// <param name="Walls">Pieces largest first.</param>
+    /// <param name="Thick">How deep they are (metres).</param>
+    /// <param name="Column">Inside rooms.</param>
+    /// <param name="Post">At corners (none for thick walls, which meet anyway).</param>
+    /// <param name="Arch">Over an open doorway (2 m wide, 1 m high).</param>
+    /// <param name="Floor">A 2 m finish over the marble (none: the marble is the floor).</param>
+    /// <param name="FloorTop">How far the finish's top is above the marble (metres).</param>
+    /// <param name="Beam">Under the ceiling, 4 m.</param>
+    /// <param name="BeamTop">How far the beam's position is below the ceiling (metres).</param>
     public sealed record Material(string Name, Part[] Walls, float Thick, Column[] Column, Column? Post, string? Arch, string? Floor, float FloorTop,
         string? Beam, float BeamTop);
 
+    /// <summary>The wall materials; the first (Stone) is the fallback.</summary>
     public static readonly Material[] Materials =
     [
         new("Stone", [new("stone_wall_4x2", 4, 2, 1), new("stone_wall_2x1", 2, 1, 0.5f), new("stone_wall_1x1", 1, 1, 0.5f)], 1,
@@ -36,19 +54,35 @@ public static class DungeonKit
             [new("goblin_pole", 4.95f, 0.49f)], new("goblin_pole_small", 4.95f, 0.49f), null, null, 0, null, 0),
     ];
 
+    /// <summary>The material of that name (ignoring case), or Stone when there is none.</summary>
     public static Material MaterialOf(string? name) => Materials.FirstOrDefault(m => string.Equals(m.Name, name, StringComparison.OrdinalIgnoreCase)) ?? Materials[0];
 
-    // A monster: its spawner (comes back) and the creature itself (placed once, can have stars).
+    /// <summary>A monster.</summary>
+    /// <param name="Spawner">Its spawner (comes back).</param>
+    /// <param name="Creature">The creature itself (placed once, can have stars).</param>
     public sealed record Foe(string Spawner, string Creature);
 
-    // A biome's dungeon: its walls and style when none is picked; Torch: a light standing by walls;
-    // Brazier (its position is its top: Bottom below); Flame: a light on top of pillars; Foes, Elites
-    // (guards, wardens) and Boss; Chest: its treasure chest, Pickable: loot lying about; Bars: the metal
-    // stacks of a treasury (taken by deconstructing); Clutter: on the ground; Hanging: on the walls;
-    // Loot: items for the key chest (name, most of a stack).
+    /// <summary>A biome's dungeon palette.</summary>
+    /// <param name="Name">The biome's name (matched ignoring case).</param>
+    /// <param name="Material">Its walls when none is picked.</param>
+    /// <param name="Style">Its style when none is picked.</param>
+    /// <param name="Torch">A light standing by walls.</param>
+    /// <param name="Brazier">A brazier (its position is its top: BrazierBottom below).</param>
+    /// <param name="BrazierBottom">How far the brazier's foot is below its position (metres).</param>
+    /// <param name="Flame">A light on top of pillars.</param>
+    /// <param name="Foes">The usual monsters.</param>
+    /// <param name="Elites">Guards, wardens.</param>
+    /// <param name="Boss">The boss of the arena.</param>
+    /// <param name="Chest">Its treasure chest.</param>
+    /// <param name="Pickable">Loot lying about.</param>
+    /// <param name="Bars">The metal stacks of a treasury (taken by deconstructing).</param>
+    /// <param name="Clutter">On the ground.</param>
+    /// <param name="Hanging">On the walls.</param>
+    /// <param name="Loot">Items for the key chest (name, most of a stack).</param>
     public sealed record Biome(string Name, string Material, string Style, string Torch, string Brazier, float BrazierBottom, string Flame,
         Foe[] Foes, Foe[] Elites, Foe Boss, string Chest, string Pickable, string Bars, string[] Clutter, string[] Hanging, (string Item, int Max)[] Loot);
 
+    /// <summary>The biomes' palettes; the second (Black Forest) is the fallback.</summary>
     public static readonly Biome[] Biomes =
     [
         new("Meadows", "Stone", "Crypt", "CastleKit_groundtorch", "CastleKit_brazier", 1.06f, "Morkhalla_giant_railing_torch",
@@ -101,20 +135,91 @@ public static class DungeonKit
             ["fenrirhide_hanging", "cloth_hanging_door"], [("Coins", 600), ("Ruby", 8), ("AmberPearl", 8)]),
     ];
 
+    /// <summary>The biome of that name (ignoring case), or Black Forest when there is none.</summary>
     public static Biome BiomeOf(string? name) => Biomes.FirstOrDefault(b => string.Equals(b.Name, name, StringComparison.OrdinalIgnoreCase)) ?? Biomes[1];
 
-    // The kinds of room. Their purpose decides their size, their furniture, who guards them and what
-    // they hold.
+    /// <summary>
+    /// The kinds of room. Their purpose decides their size, their furniture, who guards them and what
+    /// they hold.
+    /// </summary>
     public enum Room
     {
-        Entrance, Hall, Hub, Gallery, Burial, Ossuary, Chapel, Shrine, Tomb, Throne, Barracks, Armory, Feast, Kitchen, Store, Forge,
-        Library, Cells, Torture, Guard, Treasury, Boss, Antechamber, Den, Totem, Mine, Workshop, Quarters, Secret, StairTop, StairBottom,
+        /// <summary>The entrance hall, where the way in starts.</summary>
+        Entrance,
+        /// <summary>A great hall; may rise through two floors.</summary>
+        Hall,
+        /// <summary>A crossing, where ways branch.</summary>
+        Hub,
+        /// <summary>A long, narrow gallery.</summary>
+        Gallery,
+        /// <summary>A burial chamber.</summary>
+        Burial,
+        /// <summary>An ossuary.</summary>
+        Ossuary,
+        /// <summary>A chapel; may rise through two floors.</summary>
+        Chapel,
+        /// <summary>A shrine.</summary>
+        Shrine,
+        /// <summary>A tomb.</summary>
+        Tomb,
+        /// <summary>The throne room; at most one, may rise through two floors.</summary>
+        Throne,
+        /// <summary>Barracks.</summary>
+        Barracks,
+        /// <summary>An armory.</summary>
+        Armory,
+        /// <summary>The feast hall; at most one.</summary>
+        Feast,
+        /// <summary>The kitchen; at most one.</summary>
+        Kitchen,
+        /// <summary>A storeroom.</summary>
+        Store,
+        /// <summary>The forge; at most one.</summary>
+        Forge,
+        /// <summary>A study.</summary>
+        Library,
+        /// <summary>A cell block.</summary>
+        Cells,
+        /// <summary>A torture chamber.</summary>
+        Torture,
+        /// <summary>A guard room.</summary>
+        Guard,
+        /// <summary>The treasury, past the boss; at most one.</summary>
+        Treasury,
+        /// <summary>The boss's arena, past the antechamber; at most one.</summary>
+        Boss,
+        /// <summary>The antechamber before the boss's arena; at most one.</summary>
+        Antechamber,
+        /// <summary>A den.</summary>
+        Den,
+        /// <summary>A totem hall.</summary>
+        Totem,
+        /// <summary>A mine gallery.</summary>
+        Mine,
+        /// <summary>A workshop.</summary>
+        Workshop,
+        /// <summary>Living quarters.</summary>
+        Quarters,
+        /// <summary>A hidden cache behind a secret door.</summary>
+        Secret,
+        /// <summary>The top of a stairwell, going down to the next level.</summary>
+        StairTop,
+        /// <summary>The foot of a stairwell, on the level below.</summary>
+        StairBottom,
     }
 
-    // Its size in 2 m tiles: across (W) and deep (D, along the way in), each a range; Tall: may rise
-    // through two floors; Unique: at most once a dungeon.
+    /// <summary>A kind of room's name and size.</summary>
+    /// <param name="Room">The kind.</param>
+    /// <param name="Name">As shown on the plan's map and in the notes.</param>
+    /// <param name="WMin">Fewest tiles across (2 m tiles, perpendicular to the way in).</param>
+    /// <param name="WMax">Most tiles across.</param>
+    /// <param name="DMin">Fewest tiles deep (along the way in).</param>
+    /// <param name="DMax">Most tiles deep.</param>
+    /// <param name="Tall">May rise through two floors.</param>
+    /// <param name="Unique">At most once a dungeon.</param>
     public sealed record RoomSpec(Room Room, string Name, int WMin, int WMax, int DMin, int DMax, bool Tall = false, bool Unique = false);
 
+    /// <summary>Every kind of room's spec, one each.</summary>
     public static readonly RoomSpec[] Rooms =
     [
         new(Room.Entrance, "Entrance hall", 6, 8, 6, 8),
@@ -150,20 +255,48 @@ public static class DungeonKit
         new(Room.StairBottom, "Stairs foot", 4, 4, 8, 8),
     ];
 
+    /// <summary>The spec of a kind of room.</summary>
     public static RoomSpec SpecOf(Room r) => Rooms.First(s => s.Room == r);
 
-    // The kinds of doorway: Open (an arch), Wood (a crypt's wooden door), Gate (iron bars), Grand (two
-    // tall gates, 4 m), Grate (a cell's bars), Curtain (cloth, to cut through), Key (needs the crypt key),
-    // Secret (a cracked wall to break, or a tapestry hiding the way).
-    public enum Door { Open, Wood, Gate, Grand, Grate, Curtain, Key, Secret }
+    /// <summary>
+    /// The kinds of doorway: Open (an arch), Wood (a crypt's wooden door), Gate (iron bars), Grand (two
+    /// tall gates, 4 m), Grate (a cell's bars), Curtain (cloth, to cut through), Key (needs the crypt key),
+    /// Secret (a cracked wall to break, or a tapestry hiding the way).
+    /// </summary>
+    public enum Door
+    {
+        /// <summary>An open arch.</summary>
+        Open,
+        /// <summary>A crypt's wooden door.</summary>
+        Wood,
+        /// <summary>Iron bars.</summary>
+        Gate,
+        /// <summary>Two tall gates, 4 m.</summary>
+        Grand,
+        /// <summary>A cell's bars.</summary>
+        Grate,
+        /// <summary>Cloth, to cut through.</summary>
+        Curtain,
+        /// <summary>A door that needs the crypt key.</summary>
+        Key,
+        /// <summary>A cracked wall to break, or a tapestry hiding the way.</summary>
+        Secret,
+    }
 
-    // A style: Main: the rooms along the way through a level, in order; Side: the rooms off it (weights:
-    // how often, any number); Symmetry: how often a side room gets a twin on the other side; Corridor:
-    // shortest and longest way between rooms (tiles; 0: wall to wall); Doors: what stands in doorways;
-    // TallChance: how often a room that may rise through two floors does.
+    /// <summary>A dungeon style: which rooms it has and how they are laid out.</summary>
+    /// <param name="Name">As picked in the settings (matched ignoring case).</param>
+    /// <param name="Main">The rooms along the way through a level, in order.</param>
+    /// <param name="Side">The rooms off it (weights: how often, any number).</param>
+    /// <param name="Symmetry">How often a side room gets a twin on the other side (0 to 1).</param>
+    /// <param name="CorridorMin">Shortest way between rooms (tiles; 0: wall to wall).</param>
+    /// <param name="CorridorMax">Longest way between rooms (tiles).</param>
+    /// <param name="Doors">What stands in doorways (weights: how often).</param>
+    /// <param name="TallChance">How often a room that may rise through two floors does (0 to 1).</param>
+    /// <param name="Decay">How ruined it is when the settings do not say (0 kept to 1 ruined).</param>
     public sealed record Style(string Name, Room[] Main, (Room Room, float Weight)[] Side, float Symmetry, int CorridorMin, int CorridorMax,
         (Door Door, float Weight)[] Doors, float TallChance, float Decay);
 
+    /// <summary>The styles; the first (Crypt) is the fallback.</summary>
     public static readonly Style[] Styles =
     [
         new("Crypt", [Room.Hall, Room.Hub, Room.Gallery, Room.Chapel],
@@ -193,9 +326,10 @@ public static class DungeonKit
             0.5f, 1, 6, [(Door.Open, 4f), (Door.Gate, 1.5f), (Door.Wood, 1.5f)], 0.4f, 0.7f),
     ];
 
+    /// <summary>The style of that name (ignoring case), or Crypt when there is none.</summary>
     public static Style StyleOf(string? name) => Styles.FirstOrDefault(s => string.Equals(s.Name, name, StringComparison.OrdinalIgnoreCase)) ?? Styles[0];
 
-    // Names for the dungeon (on the sign at its entrance).
+    /// <summary>First words for a dungeon's name of this style (on the sign at its entrance), as in "Barrow of ...".</summary>
     public static string[] NameStarts(string style) => style switch
     {
         "Crypt" => ["Barrow", "Crypt", "Tomb", "Halls"],
@@ -208,6 +342,7 @@ public static class DungeonKit
         _ => ["Ruins", "Halls", "Vault", "Deep"],
     };
 
+    /// <summary>Last words for a dungeon's name, after "of": a person or a dark thing.</summary>
     public static readonly string[] NameEnds =
     [
         "Hrafnkel", "the Drowned King", "Sigrun", "the Grey Jarl", "Ulfhild", "Bones", "Ash and Iron", "the Forgotten", "Thorgrim", "the Nine Oaths",

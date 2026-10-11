@@ -5,10 +5,15 @@ using Avalonia.Media;
 
 namespace TerrainEditor.Desktop;
 
-// Small modal questions and messages (Avalonia has no message box of its own).
+/// <summary>Small modal questions and messages (Avalonia has no message box of its own).</summary>
 public static class Dialogs
 {
-    // True when the first button is chosen.
+    /// <summary>A question with one or two buttons. True when the first button is chosen.</summary>
+    /// <param name="owner">The window it is modal to.</param>
+    /// <param name="title">The dialog's title.</param>
+    /// <param name="text">The question (selectable, to copy).</param>
+    /// <param name="yes">The first button (Enter).</param>
+    /// <param name="no">The second button (Esc); null: none.</param>
     public static async Task<bool> Ask(Window owner, string title, string text, string yes, string? no = "Cancel")
     {
         bool result = false;
@@ -42,9 +47,14 @@ public static class Dialogs
         return result;
     }
 
+    /// <summary>A message with an OK button.</summary>
     public static Task Tell(Window owner, string title, string text) => Ask(owner, title, text, "OK", null);
 
-    // A line of text (null: cancelled).
+    /// <summary>A line of text (null: cancelled).</summary>
+    /// <param name="owner">The window it is modal to.</param>
+    /// <param name="title">The dialog's title.</param>
+    /// <param name="text">The question.</param>
+    /// <param name="initial">The text to start from.</param>
     public static async Task<string?> AskText(Window owner, string title, string text, string initial = "")
     {
         string? result = null;
@@ -75,8 +85,13 @@ public static class Dialogs
         return result;
     }
 
-    // A blueprint's name, description and tags (comma separated), with what it costs to build; null
-    // when cancelled.
+    /// <summary>
+    /// A blueprint's name, description and tags (comma separated), with what it costs to build; null
+    /// when cancelled. Line breaks in the description become spaces.
+    /// </summary>
+    /// <param name="owner">The window it is modal to.</param>
+    /// <param name="start">The details to start from.</param>
+    /// <param name="cost">What it costs, in words.</param>
     public static async Task<TerrainEditor.App.Homestead.Details?> AskBlueprint(Window owner, TerrainEditor.App.Homestead.Details start, string cost)
     {
         TerrainEditor.App.Homestead.Details? result = null;

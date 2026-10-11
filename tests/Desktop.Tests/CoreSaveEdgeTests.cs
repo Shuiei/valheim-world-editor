@@ -6,14 +6,20 @@ using Xunit;
 
 namespace WorldEditor.Tests;
 
-// The world writer's edge cases: what it refuses (and then leaves every file alone), ground in a zone
-// the game never edited, a failure halfway (the backup comes back byte for byte), several saves in a
-// row, and everything at once.
+/// <summary>
+/// The world writer's edge cases: what it refuses (and then leaves every file alone), ground in a zone the game never
+/// edited, a failure halfway (the backup comes back byte for byte), several saves in a row, and everything at once.
+/// </summary>
 public class SaveEdgeTests
 {
-    // Every file of the folder, by name.
+    /// <summary>
+    /// Every file of the folder, by name.
+    /// </summary>
     private static Dictionary<string, byte[]> Files(string dir) => Directory.GetFiles(dir).ToDictionary(f => Path.GetFileName(f), File.ReadAllBytes);
 
+    /// <summary>
+    /// Asserts the folder holds the same files with the same bytes as before.
+    /// </summary>
     private static void AssertSame(Dictionary<string, byte[]> before, string dir)
     {
         var after = Files(dir);
@@ -24,9 +30,14 @@ public class SaveEdgeTests
         }
     }
 
+    /// <summary>
+    /// How many folders sit next to the world's folder (the backups, with the world itself).
+    /// </summary>
     private static int Backups(string worldDir) => Directory.GetDirectories(Path.GetDirectoryName(worldDir)!).Length;
 
-    // A zone that has world data (a chunk file) but no ground edits yet.
+    /// <summary>
+    /// A zone that has world data (a chunk file) but no ground edits yet.
+    /// </summary>
     private static (int X, int Z) FreshZone(WorldSave world)
     {
         var t = world.TerrainZones[0];
@@ -47,6 +58,9 @@ public class SaveEdgeTests
         throw new InvalidOperationException("no fresh zone near the edited one");
     }
 
+    /// <summary>
+    /// A ground edit of this zone raising these points by this many metres.
+    /// </summary>
     private static ZoneEdit Raised(int zx, int zz, float by, params int[] points)
     {
         var e = new ZoneEdit(zx, zz);

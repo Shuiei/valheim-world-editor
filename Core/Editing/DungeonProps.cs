@@ -1,11 +1,13 @@
 namespace TerrainEditor.Editing;
 
-// Facts about the props generated dungeons use, from the game's models: how far a prop's position is
-// above its foot, which way it faces, how it hangs on a wall; and the game's way of writing a chest's
-// contents.
+/// <summary>
+/// Facts about the props generated dungeons use, from the game's models: how far a prop's position is
+/// above its foot, which way it faces, how it hangs on a wall; and the game's way of writing a chest's
+/// contents.
+/// </summary>
 internal static class DungeonProps
 {
-    // Position above foot (metres), where it is not 0: the lowest point of the model, negated.
+    /// <summary>Position above foot (metres), where it is not 0: the lowest point of the model, negated.</summary>
     private static readonly Dictionary<string, float> Feet = new()
     {
         ["BonePileSpawner"] = 0.06f,
@@ -55,20 +57,27 @@ internal static class DungeonProps
         ["stone_wall_2x1_ruin"] = 0.58f,
     };
 
+    /// <summary>How far the prop's position is above its foot, in metres (0 for props not listed).</summary>
     public static float Foot(string prefab) => Feet.GetValueOrDefault(prefab);
 
-    // Turned this much more (degrees), so its front faces where it is turned to.
-    // The models' fronts are +z (seats' backs, beds' heads at -z) but for these, measured from them.
+    /// <summary>
+    /// Turned this much more (degrees), so its front faces where it is turned to.
+    /// The models' fronts are +z (seats' backs, beds' heads at -z) but for these, measured from them.
+    /// </summary>
     private static readonly Dictionary<string, float> Turns = new()
     {
         ["dvergrprops_shelf"] = 180,
         ["prop_piece_workbench_ext2"] = 180,
     };
 
+    /// <summary>The extra turn (degrees) the prop needs so its front faces where it is turned to; 0 for most.</summary>
     public static float Turn(string prefab) => Turns.GetValueOrDefault(prefab);
 
-    // How a hanging is put on a wall in a room h metres high: its position above the floor, how far in
-    // from the wall's face, and its turn from facing into the room. None: it does not fit.
+    /// <summary>
+    /// How a hanging is put on a wall in a room <paramref name="h"/> metres high: its position above the floor,
+    /// how far in from the wall's face, and its turn from facing into the room.
+    /// </summary>
+    /// <returns>Null when the prop is not a known hanging or does not fit a room that high.</returns>
     public static (float Y, float Inward, float Turn)? Hanging(string prefab, float h) => prefab switch
     {
         _ when prefab.StartsWith("piece_banner", StringComparison.Ordinal) => (h - 0.1f, 0.2f, 90),
@@ -84,7 +93,8 @@ internal static class DungeonProps
         _ => null,
     };
 
-    // A chest's contents as the game writes them (the inspector's own writer).
+    /// <summary>A chest's contents as the game writes them (the inspector's own writer).</summary>
+    /// <param name="items">Item prefabs and stack sizes, laid out four to a row in order.</param>
     public static byte[] Inventory(IReadOnlyList<(string Item, int Stack)> items) =>
         App.ObjectData.BuildInventory([.. items.Select((it, i) => new App.ItemUpload(it.Item, null, it.Stack, X: i % 4, Y: i / 4))]).Write();
 }

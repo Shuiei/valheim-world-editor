@@ -5,8 +5,10 @@ using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
-// The cursor on a dungeon's rooms: a ray meets a room's model where its triangles are, with the room
-// turned and moved, the model files' mirrored z taken back off, and nothing above the cut.
+/// <summary>
+/// The cursor on a dungeon's rooms: a ray meets a room's model where its triangles are, with the room turned and moved,
+/// the model files' mirrored z taken back off, and nothing above the cut.
+/// </summary>
 public sealed class RoomSurfaceTests : IDisposable
 {
     private readonly string _dir = Path.Combine(Path.GetTempPath(), "vwe-rooms-" + Guid.NewGuid().ToString("N")[..8]);
@@ -31,6 +33,7 @@ public sealed class RoomSurfaceTests : IDisposable
         File.WriteAllBytes(Path.Combine(_dir, "meshes", "floor.bin"), bytes);
     }
 
+    /// <inheritdoc/>
     public void Dispose() => Directory.Delete(_dir, true);
 
     [Fact]

@@ -5,14 +5,18 @@ using Xunit;
 
 namespace WorldEditor.Tests;
 
-// Objects built from another one (ZdoBuilder): a move keeps everything the object holds, a fresh copy
-// keeps only its builder and scale; turning, tilting and scaling are written the game's way.
-// Opening worlds sets the builder for new pieces (WorldSave.Builder): one world at a time.
+/// <summary>
+/// Objects built from another one (ZdoBuilder): a move keeps everything the object holds, a fresh copy keeps only its
+/// builder and scale; turning, tilting and scaling are written the game's way. Opening worlds sets the builder for new
+/// pieces (WorldSave.Builder): one world at a time.
+/// </summary>
 [Collection("World files")]
 public class CoreCopyTests
 {
-    // The test world's saved objects carry little data: a chest holding one of every kind of value the
-    // game stores is saved into it first (through the editor's own writer), then used as the source.
+    /// <summary>
+    /// The test world's saved objects carry little data: a chest holding one of every kind of value the game stores is
+    /// saved into it first (through the editor's own writer), then used as the source.
+    /// </summary>
     private static (WorldSave World, int Id, ZdoData Data, byte[] Source) Richest(TempWorld w)
     {
         WorldSave world = w.Load();
@@ -41,6 +45,9 @@ public class CoreCopyTests
         return (world, id, data, File.ReadAllBytes(Path.Combine(world.Directory, o.File.FileName)));
     }
 
+    /// <summary>
+    /// Asserts that two objects hold the same values in every data section.
+    /// </summary>
     private static void SameData(ZdoData a, ZdoData b)
     {
         Assert.Equal(a.FloatList, b.FloatList);

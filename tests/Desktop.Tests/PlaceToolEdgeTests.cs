@@ -4,14 +4,19 @@ using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
-// The Place tool's less common paths: painting while dragging (how many per moment, spacing kept),
-// erasing under the brush, turning a grid or zone and the view's turn, a ring of walls end to end, a
-// closed loop, shapes too small to hold anything, a line continuing a wall already there, and picking
-// the height from a piece's top.
+/// <summary>
+/// The Place tool's less common paths: painting while dragging (how many per moment, spacing kept), erasing under the
+/// brush, turning a grid or zone and the view's turn, a ring of walls end to end, a closed loop, shapes too small to
+/// hold anything, a line continuing a wall already there, and picking the height from a piece's top.
+/// </summary>
 public class PlaceToolEdgeTests
 {
     private const string Wall = "woodwall";
 
+    /// <summary>
+    /// A Place tool on a flat 2 × 2 zone area with these objects, Beech1 chosen, no tilt, and names known for Beech1
+    /// and the wall.
+    /// </summary>
     private static (PlaceTool T, EditSession S) Tool(params WorldScene.Thing[] things)
     {
         var s = EditTests.Flat(2, things);
@@ -22,6 +27,9 @@ public class PlaceToolEdgeTests
         return (t, s);
     }
 
+    /// <summary>
+    /// A Beech1 at grid point (gx, gz), on the ground at 30 m.
+    /// </summary>
     private static WorldScene.Thing Tree(int id, float gx, float gz) => new(id, StableHash.Of("Beech1"), new Vector3(gx - 32, 30, gz - 32), Vector3.Zero, 1, false);
 
     [Fact]

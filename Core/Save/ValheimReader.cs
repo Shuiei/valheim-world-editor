@@ -2,42 +2,61 @@ using System.Numerics;
 
 namespace TerrainEditor.Save;
 
-// Mirrors the read side of Valheim's ZPackage (little-endian BinaryReader plus a few custom encodings).
+/// <summary>
+/// Mirrors the read side of Valheim's ZPackage (little-endian BinaryReader plus a few custom encodings).
+/// </summary>
+/// <param name="stream">The data to read; disposing the reader closes it.</param>
 public sealed class ValheimReader(Stream stream) : IDisposable
 {
     private readonly BinaryReader _reader = new(stream);
 
+    /// <summary>The read position in the underlying stream, in bytes.</summary>
     public long Position => _reader.BaseStream.Position;
 
+    /// <summary>One byte.</summary>
     public byte ReadByte() => _reader.ReadByte();
 
+    /// <summary>A bool stored as one byte.</summary>
     public bool ReadBool() => _reader.ReadBoolean();
 
+    /// <summary>A little-endian 16-bit int.</summary>
     public short ReadShort() => _reader.ReadInt16();
 
+    /// <summary>A little-endian unsigned 16-bit int.</summary>
     public ushort ReadUShort() => _reader.ReadUInt16();
 
+    /// <summary>A little-endian 32-bit int.</summary>
     public int ReadInt() => _reader.ReadInt32();
 
+    /// <summary>A little-endian unsigned 32-bit int.</summary>
     public uint ReadUInt() => _reader.ReadUInt32();
 
+    /// <summary>A little-endian 64-bit int.</summary>
     public long ReadLong() => _reader.ReadInt64();
 
+    /// <summary>A little-endian 32-bit float.</summary>
     public float ReadSingle() => _reader.ReadSingle();
 
+    /// <summary>A string with a 7-bit encoded length prefix, as ZPackage and BinaryWriter write it.</summary>
     public string ReadString() => _reader.ReadString();
 
+    /// <summary>An int byte count followed by that many bytes.</summary>
     public byte[] ReadByteArray() => _reader.ReadBytes(_reader.ReadInt32());
 
+    /// <summary>That many raw bytes (fewer at the end of the stream).</summary>
     public byte[] ReadBytes(int count) => _reader.ReadBytes(count);
 
+    /// <summary>Three floats: x, y, z.</summary>
     public Vector3 ReadVector3() => new(ReadSingle(), ReadSingle(), ReadSingle());
 
+    /// <summary>Skips a full quaternion (four floats) the editor does not need.</summary>
     public void SkipQuaternion() => _reader.BaseStream.Seek(16, SeekOrigin.Current);
 
+    /// <summary>A Vector2s: two shorts, such as a sector's x and y.</summary>
     public (short X, short Y) ReadVector2s() => (_reader.ReadInt16(), _reader.ReadInt16());
 
-    // ZPackage.ReadSmallRotation: Euler angles in half degrees; 2 bytes for a pure Y rotation.
+    /// <summary>ZPackage.ReadSmallRotation: Euler angles in half degrees; 2 bytes for a pure Y rotation.</summary>
+    /// <returns>The Euler angles in degrees.</returns>
     public Vector3 ReadSmallRotation()
     {
         uint num = _reader.ReadUInt16();
@@ -49,7 +68,7 @@ public sealed class ValheimReader(Stream stream) : IDisposable
         return new Vector3(num & 0x3FF, (num >> 10) & 0x3FF, (num >> 20) & 0x3FF) * 0.5f;
     }
 
-    // ZPackage.ReadNumItems: 1 byte, or 2 bytes when the high bit is set (world version >= 33).
+    /// <summary>ZPackage.ReadNumItems: 1 byte, or 2 bytes when the high bit is set (world version &gt;= 33).</summary>
     public int ReadNumItems(int worldVersion)
     {
         if (worldVersion < WorldVersion.NumItems)
@@ -64,19 +83,27 @@ public sealed class ValheimReader(Stream stream) : IDisposable
         return num;
     }
 
+    /// <inheritdoc/>
     public void Dispose() => _reader.Dispose();
 }
 
+/// <summary>World save format versions at which the encoding changed.</summary>
 public static class WorldVersion
 {
+    /// <summary>From this version counts read by ReadNumItems can take the two-byte form.</summary>
     public const int NumItems = 33;
 
+    /// <summary>
+    /// From this version the world is saved in chunk files, and objects no longer carry their sector and store their
+    /// rotation in the small form.
+    /// </summary>
     public const int ChunkedSave = 40;
 }
 
+/// <summary>The game's string hashing, for prefab names and data keys.</summary>
 public static class StableHash
 {
-    // Valheim's StringExtensionMethods.GetStableHashCode, used for prefab and data keys.
+    /// <summary>Valheim's StringExtensionMethods.GetStableHashCode, used for prefab and data keys.</summary>
     public static int Of(string str)
     {
         unchecked
@@ -96,8 +123,10 @@ public static class StableHash
         }
     }
 
-    // The prefab an object's name in a copy or blueprint stands for: a kind with no known name (from a
-    // mod, or not in the catalogue) is written as its hash, a number, which stands for itself.
+    /// <summary>
+    /// The prefab an object's name in a copy or blueprint stands for: a kind with no known name (from a mod, or not in
+    /// the catalogue) is written as its hash, a number, which stands for itself.
+    /// </summary>
     public static int OfName(string name) =>
         int.TryParse(name, System.Globalization.NumberStyles.AllowLeadingSign, System.Globalization.CultureInfo.InvariantCulture, out int hash) ? hash : Of(name);
 }

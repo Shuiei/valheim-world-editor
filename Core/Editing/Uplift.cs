@@ -5,64 +5,79 @@ using TerrainEditor.Terrain;
 
 namespace TerrainEditor.Editing;
 
-// No limit: ground beyond the game's ±8 m. The game clamps its saved ground edits (TerrainComp) to
-// the original ground ± 8 m, but not the flattening of locations: every player's game (console too)
-// levels a location's ground before it takes the original ground. So the editor places invisible
-// locations of the game's own (DevGround1: no model, it only levels a disc of 8 m radius to its
-// height and blends 5 m around it) as location proxies, and the game counts their ground as
-// generated. A shape sculpted past the limit (ZoneEdit.Lift) becomes, when saving or applying:
-// discs on a grid whose heights are fitted by working out the ground exactly as the game does
-// (TerrainModifiers), the rest as ordinary ground edits (within ±8 m of the new ground), the discs'
-// dirt painted over with the biome's own ground, and the trees, rocks and bushes where the ground
-// moved far taken away. The discs are worked out again wherever the ground is lifted again.
+/// <summary>
+/// No limit: ground beyond the game's ±8 m. The game clamps its saved ground edits (TerrainComp) to
+/// the original ground ± 8 m, but not the flattening of locations: every player's game (console too)
+/// levels a location's ground before it takes the original ground. So the editor places invisible
+/// locations of the game's own (DevGround1: no model, it only levels a disc of 8 m radius to its
+/// height and blends 5 m around it) as location proxies, and the game counts their ground as
+/// generated. A shape sculpted past the limit (ZoneEdit.Lift) becomes, when saving or applying:
+/// discs on a grid whose heights are fitted by working out the ground exactly as the game does
+/// (TerrainModifiers), the rest as ordinary ground edits (within ±8 m of the new ground), the discs'
+/// dirt painted over with the biome's own ground, and the trees, rocks and bushes where the ground
+/// moved far taken away. The discs are worked out again wherever the ground is lifted again.
+/// </summary>
 public static class Uplift
 {
+    /// <summary>The game location used as a ground disc.</summary>
     public const string DiscName = "DevGround1";
 
+    /// <summary>The disc location's name hash.</summary>
     public static readonly int Disc = StableHash.Of(DiscName);
 
+    /// <summary>Whether a location (name hash) is a ground disc.</summary>
     public static bool IsDisc(int location) => location == Disc;
 
-    // DevGround1's TerrainModifier (as the game has it, GameData): level radius, smoothing radius, paint radius.
+    /// <summary>DevGround1's TerrainModifier (as the game has it, GameData): level radius, smoothing radius, paint radius (metres).</summary>
     public const float DiscRadius = 8f, DiscReach = 12.96f, PaintRadius = 9.19f;
 
-    // The modifier's place in the location (it decides the order the game applies discs in).
+    /// <summary>The modifier's place in the location (it decides the order the game applies discs in).</summary>
     private static readonly Vector3 DiscOffset = new(-0.0006f, 0f, 0.1006f);
 
-    // Grid of disc middles (m), within reach of the ground they make.
+    /// <summary>Grid of disc middles (m), within reach of the ground they make.</summary>
     public const int Spacing = 6;
 
-    // A point further than this from the ground without discs needs one (the edits make up the rest).
+    /// <summary>A point further than this (metres) from the ground without discs needs one (the edits make up the rest).</summary>
     private const float Need = 5f;
 
-    // How many times the disc heights are fitted against the ground the game would make, the passes
-    // over the discs each time, and how much a disc resists moving (for discs with few points).
+    /// <summary>How many times the disc heights are fitted against the ground the game would make, and the passes over the discs each time.</summary>
     private const int Rounds = 8, Sweeps = 12;
+    /// <summary>How much a disc resists moving (for discs with few points).</summary>
     private const double Damping = 0.25;
 
-    // Each fitting step moves a disc this share of the way (the game's order shifts as discs move).
+    /// <summary>Each fitting step moves a disc this share of the way (the game's order shifts as discs move).</summary>
     private const double Step = 0.8;
 
-    // Natural objects further than this from the ground they stood on are taken away.
+    /// <summary>Natural objects further than this (metres) from the ground they stood on are taken away.</summary>
     public const float ClearHeight = 2f;
 
+    /// <summary>The object data keys of a location proxy's location and seed.</summary>
     private static readonly int LocationKey = StableHash.Of("location"), SeedKey = StableHash.Of("seed");
 
-    // What a save or an apply does to the edits: the zones' new ground, objects to take away (old
-    // discs, natural objects), and the new discs. Worst: the largest difference left between the
-    // ground asked for and what the game will make (beyond the edits' ±8 m).
+    /// <summary>What a save or an apply does to the edits.</summary>
+    /// <param name="Zones">The zones' new ground.</param>
+    /// <param name="Delete">Objects to take away (old discs, natural objects), by id.</param>
+    /// <param name="Add">The new discs.</param>
+    /// <param name="Discs">How many discs there are now.</param>
+    /// <param name="OldDiscs">How many discs they replace.</param>
+    /// <param name="Cleared">How many natural objects are taken away.</param>
+    /// <param name="Worst">
+    /// The largest difference left between the ground asked for and what the game will make (beyond the
+    /// edits' ±8 m).
+    /// </param>
     public sealed record Plan(List<ZoneEdit> Zones, List<int> Delete, List<NewObject> Add, int Discs, int OldDiscs, int Cleared, float Worst)
     {
-        // Lifted zones the game has not generated yet: their lift was dropped.
+        /// <summary>Lifted zones the game has not generated yet: their lift was dropped.</summary>
         public int Ungenerated { get; init; }
 
+        /// <summary>The plan in a sentence for the user: discs, objects taken away, ground still off, zones left out.</summary>
         public string Describe() => $"{Discs} ground disc(s){(OldDiscs > 0 ? $" ({OldDiscs} replaced)" : "")}"
             + (Cleared > 0 ? $", {Cleared} tree(s)/rock(s) taken away" : "")
             + (Worst > EditStore.MaxLevel + 0.5f ? $"; some ground is up to {Worst - EditStore.MaxLevel:0.#} m off (too steep)" : "")
             + (Ungenerated > 0 ? $"; {Ungenerated} zone(s) not generated yet were left as they were (visit them in game first)" : "");
     }
 
-    // The editor's discs as they are now: the world's (not deleted) and the new ones not saved yet.
+    /// <summary>The editor's discs as they are now: the world's (not deleted) and the new ones not saved yet.</summary>
     public static List<(int Id, Vector3 Position)> CurrentDiscs(WorldSave world, EditStore edits)
     {
         var deleted = edits.Deleted;
@@ -71,11 +86,14 @@ public static class Uplift
         return list;
     }
 
+    /// <summary>Whether a new object is a location proxy of the disc location.</summary>
     private static bool IsDiscObject(NewObject n) =>
         n.Prefab == WorldSave.LocationProxyPrefab && n.Raw != null && ZdoData.Parse(n.Raw).IntList.Any(i => i.Key == LocationKey && i.Value == Disc);
 
-    // The world's placed objects with modifiers as the game will have them: the world's discs replaced
-    // by the current ones (and, for a plan, without the ones it replaces).
+    /// <summary>
+    /// The world's placed objects with modifiers as the game will have them: the world's discs replaced
+    /// by the current ones (and, for a plan, without the ones it replaces).
+    /// </summary>
     public static List<PlacedObject> PlacedNow(WorldSave world, EditStore edits, IEnumerable<(int Id, Vector3 Position)>? without = null)
     {
         var discs = CurrentDiscs(world, edits);
@@ -89,9 +107,10 @@ public static class Uplift
         return placed;
     }
 
+    /// <summary>A disc at a place, as a placed location for TerrainModifiers.</summary>
     private static PlacedObject DiscAt(Vector3 p) => new(WorldSave.LocationProxyPrefab, Disc, p, Vector3.Zero, 0);
 
-    // The disc as a saved object: a location proxy (persistent, solid, like the game's own).
+    /// <summary>The disc as a saved object: a location proxy (persistent, solid, like the game's own).</summary>
     public static byte[] DiscBytes(Vector3 position)
     {
         var z = ZdoData.Parse(ZdoBuilder.Blank(WorldSave.LocationProxyPrefab, 0x100 | (2 << 10), position, Vector3.Zero, 0f));
@@ -100,10 +119,14 @@ public static class Uplift
         return z.Serialize();
     }
 
-    // A zone the save has room for (a chunk file: what WorldWriter needs); the running game takes any.
+    /// <summary>A zone the save has room for (a chunk file: what WorldWriter needs); the running game takes any.</summary>
     public static bool Generated(WorldSave world, int zx, int zz) => world.IsLive || ChunkMath.Find(world.Chunks, zx, zz) != null;
 
-    // The plan for every lift waiting in the edits, or null when there is none.
+    /// <summary>The plan for every lift waiting in the edits, or null when there is none.</summary>
+    /// <param name="world">The world, for its discs, objects and generated zones.</param>
+    /// <param name="terrain">The generated ground the discs are fitted on.</param>
+    /// <param name="edits">The edits with the lift; not changed (see <see cref="Apply"/>).</param>
+    /// <param name="nextId">Gives each new disc object its (negative) id.</param>
     public static Plan? Make(WorldSave world, ValheimGen.TerrainService terrain, EditStore edits, Func<int> nextId)
     {
         var lifted = edits.All().Where(e => e.HasLift).ToList();
@@ -373,7 +396,7 @@ public static class Uplift
         return new Plan(result, [.. old.Select(d => d.Id), .. clear], add, final.Count, old.Count, clear.Count, worst) { Ungenerated = ungenerated.Count };
     }
 
-    // Applies a plan to the edits (the zones, the objects taken away and added).
+    /// <summary>Applies a plan to the edits (the zones, the objects taken away and added).</summary>
     public static void Apply(Plan plan, EditStore edits)
     {
         foreach (ZoneEdit z in plan.Zones)
@@ -384,9 +407,11 @@ public static class Uplift
         edits.AddObjects(plan.Add);
     }
 
-    // For each disc, the points it reaches and how much of its height each ends up with: the game's
-    // Heightmap.LevelTerrain (the point takes the disc's height) then SmoothTerrain2 (the point moves a
-    // share 1 - (d/r)^3 towards it), discs in TerrainModifier.SortByModifiers order.
+    /// <summary>
+    /// For each disc, the points it reaches and how much of its height each ends up with: the game's
+    /// Heightmap.LevelTerrain (the point takes the disc's height) then SmoothTerrain2 (the point moves a
+    /// share 1 - (d/r)^3 towards it), discs in TerrainModifier.SortByModifiers order.
+    /// </summary>
     private static List<(int P, float W)>[] Weights(Block block, List<Vector3> discs)
     {
         var at = new Dictionary<int, List<(int K, float W)>>();
@@ -430,6 +455,7 @@ public static class Uplift
         return columns;
     }
 
+    /// <summary>The points within r (a square, in points) of one whose value is on.</summary>
     private static bool[] Dilate(Block block, float[] values, Func<float, bool> on, int r)
     {
         bool[] src = new bool[block.N];
@@ -489,24 +515,30 @@ public static class Uplift
         return res;
     }
 
-    // A block of zones as one grid of world points, one per metre (zones share their edge points).
+    /// <summary>A block of zones as one grid of world points, one per metre (zones share their edge points).</summary>
     private sealed class Block(int zx0, int zz0, int zx1, int zz1)
     {
+        /// <summary>The world position of the block's first point (metres).</summary>
         public readonly int X0 = zx0 * 64 - 32, Z0 = zz0 * 64 - 32;
+        /// <summary>The block's size in points.</summary>
         public readonly int W = (zx1 - zx0 + 1) * 64 + 1, H = (zz1 - zz0 + 1) * 64 + 1;
+        /// <summary>How many points it has.</summary>
         public int N => W * H;
 
+        /// <summary>A point's world position (metres).</summary>
         public (int X, int Z) World(int p) => (X0 + p % W, Z0 + p / W);
 
+        /// <summary>The point nearest a world position, or null outside the block.</summary>
         public int? At(Vector3 v)
         {
             int x = (int)MathF.Round(v.X) - X0, z = (int)MathF.Round(v.Z) - Z0;
             return x >= 0 && z >= 0 && x < W && z < H ? z * W + x : null;
         }
 
+        /// <summary>Whether a world position is within margin metres of the block.</summary>
         public bool Near(Vector3 v, float margin) => v.X >= X0 - margin && v.Z >= Z0 - margin && v.X <= X0 + W - 1 + margin && v.Z <= Z0 + H - 1 + margin;
 
-        // A zone's 65x65 points: (index in the zone, point in the block).
+        /// <summary>A zone's 65x65 points: (index in the zone, point in the block).</summary>
         public void Each(int zx, int zz, Action<int, int> f)
         {
             int ox = zx * 64 - 32 - X0, oz = zz * 64 - 32 - Z0;
@@ -519,9 +551,10 @@ public static class Uplift
             }
         }
 
-        // The points within r of a disc's middle (as Heightmap.LevelTerrain counts them).
+        /// <summary>The points within r of a disc's middle (as Heightmap.LevelTerrain counts them).</summary>
         public void Disc(Vector3 c, float r, Action<int> f) => Disc(c, r, (p, _) => f(p));
 
+        /// <summary>The points within r of a disc's middle, with their distance from it (metres).</summary>
         public void Disc(Vector3 c, float r, Action<int, float> f)
         {
             int cx = (int)MathF.Floor(c.X + 0.5f) - X0, cz = (int)MathF.Floor(c.Z + 0.5f) - Z0, n = (int)MathF.Ceiling(r);

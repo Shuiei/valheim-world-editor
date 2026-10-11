@@ -1,12 +1,16 @@
 namespace TerrainEditor.App;
 
-// SMOL-V to SPIR-V, for Unity's Vulkan shaders (Unity keeps each Vulkan program SMOL-V compressed): a
-// port of the decoder in SMOL-V by Aras Pranckevicius (https://github.com/aras-p/smol-v, MIT license,
-// Copyright (c) 2016-2024 Aras Pranckevicius), encoding versions 0 and 1.
+/// <summary>
+/// SMOL-V to SPIR-V, for Unity's Vulkan shaders (Unity keeps each Vulkan program SMOL-V compressed): a
+/// port of the decoder in SMOL-V by Aras Pranckevicius (https://github.com/aras-p/smol-v, MIT license,
+/// Copyright (c) 2016-2024 Aras Pranckevicius), encoding versions 0 and 1.
+/// </summary>
 public static class Smolv
 {
-    // Per SPIR-V op (0..366), four digits: has a result id, has a type id, how many ids after them are
-    // kept as deltas from the result, whether the other words are varints (SMOL-V's kSpirvOpData).
+    /// <summary>
+    /// Per SPIR-V op (0..366), four digits: has a result id, has a type id, how many ids after them are
+    /// kept as deltas from the result, whether the other words are varints (SMOL-V's kSpirvOpData).
+    /// </summary>
     private const string Table =
         "000011000000000100000000000000000001110000001000110111210001000100010001110010011001100110011001" +
         "100110011001100110011001100110011001100110011001100110011001000111001100110011001190110111001100" +
@@ -25,17 +29,27 @@ public static class Smolv
         "111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111" +
         "1111111111111111111111111111";
 
-    // The ops each encoding version knows (version 0: up to OpModuleProcessed).
+    /// <summary>
+    /// The ops each encoding version knows (version 0: up to OpModuleProcessed): ops from this number up are
+    /// read without <see cref="Table"/>'s data.
+    /// </summary>
     private static readonly Dictionary<int, int> Known = new() { [0] = 331, [1] = 367 };
 
+    /// <summary>The first word of a SPIR-V module.</summary>
     private const uint SpirvMagic = 0x07230203;
+    /// <summary>The first four bytes of a SMOL-V program.</summary>
     private static readonly byte[] Magic = "LOMS"u8.ToArray();
 
+    /// <summary>
+    /// The ops SMOL-V encodes specially (OpVectorShuffle, its compact form, OpDecorate, OpMemberDecorate,
+    /// OpLoad, OpAccessChain).
+    /// </summary>
     private const int Shuffle = 79, ShuffleCompact = 13, Decorate = 71, MemberDecorate = 72, Load = 61, AccessChain = 65;
 
-    // The most common ops are swapped with rare small ones, to fit a one-byte varint.
+    /// <summary>The most common ops are swapped with rare small ones, to fit a one-byte varint.</summary>
     private static readonly Dictionary<int, int> Swap = BuildSwap();
 
+    /// <summary>The swaps both ways (each pair maps to the other).</summary>
     private static Dictionary<int, int> BuildSwap()
     {
         var s = new Dictionary<int, int>();
@@ -47,14 +61,16 @@ public static class Smolv
         return s;
     }
 
+    /// <summary>An op's four <see cref="Table"/> digits.</summary>
     private static (int Result, int Type, int Deltas, int Varints) Op(int op) =>
         (Table[op * 4] - '0', Table[op * 4 + 1] - '0', Table[op * 4 + 2] - '0', Table[op * 4 + 3] - '0');
 
-    // The SPIR-V size in bytes of the SMOL-V program at data[at..], or 0 when it is not one.
+    /// <summary>The SPIR-V size in bytes of the SMOL-V program at data[at..], or 0 when it is not one.</summary>
     public static int DecodedSize(byte[] data, int at = 0) =>
         at + 24 <= data.Length && data.AsSpan(at, 4).SequenceEqual(Magic) ? (int)BitConverter.ToUInt32(data, at + 20) : 0;
 
-    // The SPIR-V words of the SMOL-V program starting at data[at..] (data may hold more after it).
+    /// <summary>The SPIR-V words of the SMOL-V program starting at data[at..] (data may hold more after it).</summary>
+    /// <exception cref="InvalidDataException">Not SMOL-V, an unknown encoding version, or broken data.</exception>
     public static uint[] Decode(byte[] data, int at = 0)
     {
         int size = DecodedSize(data, at);
@@ -223,7 +239,7 @@ public static class Smolv
         return [.. output];
     }
 
-    // (offset, SPIR-V words) of every SMOL-V program in a blob.
+    /// <summary>(offset, SPIR-V words) of every SMOL-V program in a blob.</summary>
     public static IEnumerable<(int At, uint[] Words)> Programs(byte[] data)
     {
         int at = data.AsSpan().IndexOf(Magic);

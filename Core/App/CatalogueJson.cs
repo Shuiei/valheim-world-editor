@@ -4,21 +4,42 @@ using System.Text;
 
 namespace TerrainEditor.App;
 
-// The JSON of the game data read at the editor's start (GameCatalogues), written the way the
-// catalogues once kept in Core/WorldGen were (Python's json module), so each kind reads exactly as its
-// catalogue did: floats in their shortest form ("1.0", "0.30000001192092896", "1e-05"), numbers
-// rounded half to even, keys in the order they were added (or sorted), the same separators and line
-// breaks. Values: null, bool, long (ints), double (floats), string, IList, JsonDict.
+/// <summary>
+/// The JSON of the game data read at the editor's start (GameCatalogues), written the way the
+/// catalogues once kept in Core/WorldGen were (Python's json module), so each kind reads exactly as its
+/// catalogue did: floats in their shortest form ("1.0", "0.30000001192092896", "1e-05"), numbers
+/// rounded half to even, keys in the order they were added (or sorted), the same separators and line
+/// breaks. Values: null, bool, int or long (ints), double (floats), string, IList, <c>Dict</c>.
+/// </summary>
 internal static class CatalogueJson
 {
+    /// <summary>
+    /// How a catalogue is written, as Python's json.dumps arguments.
+    /// </summary>
+    /// <param name="ItemSep">Between items (Python's separators[0]); with an indent the line break follows it.</param>
+    /// <param name="KeySep">Between a key and its value (separators[1]).</param>
+    /// <param name="Indent">Spaces per level, each item on its own line; null: all on one line.</param>
+    /// <param name="SortKeys">Keys in ordinal order instead of the order they were added (sort_keys).</param>
+    /// <param name="Ascii">Characters past '~' written as \u escapes (ensure_ascii).</param>
     public sealed record Style(string ItemSep = ", ", string KeySep = ": ", int? Indent = null, bool SortKeys = false, bool Ascii = true);
 
-    // A dictionary that keeps its keys in the order they came (setting a key that is there keeps its place).
+    /// <summary>
+    /// A dictionary that keeps its keys in the order they came (setting a key that is there keeps its place).
+    /// </summary>
     public sealed class Dict : IEnumerable<KeyValuePair<string, object?>>
     {
+        /// <summary>
+        /// The keys in the order they were first set.
+        /// </summary>
         private readonly List<string> _keys = [];
+        /// <summary>
+        /// The values by key.
+        /// </summary>
         private readonly Dictionary<string, object?> _values = new(StringComparer.Ordinal);
 
+        /// <summary>
+        /// A key's value (throws when missing); setting a new key adds it at the end.
+        /// </summary>
         public object? this[string key]
         {
             get => _values[key];
@@ -32,12 +53,24 @@ internal static class CatalogueJson
             }
         }
 
+        /// <summary>
+        /// How many keys there are.
+        /// </summary>
         public int Count => _keys.Count;
 
+        /// <summary>
+        /// Whether the key is there.
+        /// </summary>
         public bool ContainsKey(string key) => _values.ContainsKey(key);
 
+        /// <summary>
+        /// The key's value, if it is there.
+        /// </summary>
         public bool TryGetValue(string key, out object? value) => _values.TryGetValue(key, out value);
 
+        /// <summary>
+        /// Removes a key (nothing when it is not there).
+        /// </summary>
         public void Remove(string key)
         {
             if (_values.Remove(key))
@@ -46,11 +79,18 @@ internal static class CatalogueJson
             }
         }
 
+        /// <summary>
+        /// The pairs in key order.
+        /// </summary>
         public IEnumerator<KeyValuePair<string, object?>> GetEnumerator() => _keys.Select(k => new KeyValuePair<string, object?>(k, _values[k])).GetEnumerator();
 
+        /// <inheritdoc/>
         System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
     }
 
+    /// <summary>
+    /// A value (null, bool, int, long, double, string, Dict or IList, nested) as JSON text in the given style.
+    /// </summary>
     public static string Write(object? value, Style style)
     {
         var sb = new StringBuilder();
@@ -58,6 +98,9 @@ internal static class CatalogueJson
         return sb.ToString();
     }
 
+    /// <summary>
+    /// Writes one value at a nesting level; anything else than the kinds <c>Write</c> takes throws ArgumentException.
+    /// </summary>
     private static void Append(StringBuilder sb, object? v, Style style, int level)
     {
         switch (v)
@@ -97,7 +140,9 @@ internal static class CatalogueJson
         }
     }
 
-    // A list or dictionary: with an indent, each item on a line of its own (Python's indent=0: no spaces).
+    /// <summary>
+    /// A list or dictionary: with an indent, each item on a line of its own (Python's indent=0: no spaces).
+    /// </summary>
     private static void Container(StringBuilder sb, char open, char close, int count, Style style, int level, Action<int, int> item)
     {
         if (count == 0)
@@ -123,6 +168,10 @@ internal static class CatalogueJson
         sb.Append(close);
     }
 
+    /// <summary>
+    /// A JSON string as Python writes it: the short escapes, \u for other control characters and, with ascii, for
+    /// anything past '~'.
+    /// </summary>
     private static void Quote(StringBuilder sb, string s, bool ascii)
     {
         sb.Append('"');
@@ -152,8 +201,10 @@ internal static class CatalogueJson
         sb.Append('"');
     }
 
-    // A float as Python prints it: the shortest digits that read back the same, with ".0" on whole
-    // numbers, and an exponent below 1e-4 and from 1e16.
+    /// <summary>
+    /// A float as Python prints it: the shortest digits that read back the same, with ".0" on whole
+    /// numbers, and an exponent below 1e-4 and from 1e16. NaN and infinities as Python writes them (NaN, Infinity).
+    /// </summary>
     public static string Repr(double d)
     {
         if (double.IsNaN(d))
@@ -204,10 +255,15 @@ internal static class CatalogueJson
         return $"{sign}{digits[..point]}.{digits[point..]}";
     }
 
+    /// <summary>
+    /// Powers of ten that are exact doubles (10^0 to 10^22), for dividing back without a rounding step.
+    /// </summary>
     private static readonly double[] Pow10 = [.. Enumerable.Range(0, 23).Select(i => Math.Pow(10, i))];
 
-    // Python's round(x, n): the exact value rounded half to even at n decimals, read back as the nearest
-    // double (the sign kept, -0.0 included).
+    /// <summary>
+    /// Python's round(x, n): the exact value rounded half to even at n decimals, read back as the nearest
+    /// double (the sign kept, -0.0 included).
+    /// </summary>
     public static double Round(double x, int n)
     {
         if (!double.IsFinite(x) || x == 0)
@@ -246,7 +302,9 @@ internal static class CatalogueJson
         return double.IsNegative(x) ? -r : r;
     }
 
-    // Python's float("%.9G" % x): x to 9 significant digits (UnityPy's mesh export writes vertices so).
+    /// <summary>
+    /// Python's float("%.9G" % x): x to 9 significant digits (UnityPy's mesh export writes vertices so).
+    /// </summary>
     public static double Significant9(double x)
     {
         if (!double.IsFinite(x) || x == 0)

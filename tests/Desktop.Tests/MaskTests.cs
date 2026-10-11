@@ -6,12 +6,19 @@ using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
-// The Mask: brushes, paths, shapes and area actions only change ground that matches it.
+/// <summary>
+/// The Mask: brushes, paths, shapes and area actions only change ground that matches it.
+/// </summary>
 public class MaskTests
 {
+    /// <summary>
+    /// The height at grid point (x, z) of the area.
+    /// </summary>
     private static float H(EditSession s, int x, int z) => s.Scene.Heights[z * s.Scene.W + x];
 
-    // Flat at 30 m, with the east half (x >= 64) Black Forest and the west Meadows.
+    /// <summary>
+    /// Flat at 30 m, with the east half (x &gt;= 64) Black Forest and the west Meadows.
+    /// </summary>
     private static EditSession Area()
     {
         var s = EditTests.Flat(2);

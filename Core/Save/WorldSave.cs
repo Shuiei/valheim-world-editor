@@ -4,100 +4,135 @@ using System.Numerics;
 
 namespace TerrainEditor.Save;
 
-// Read-only loader for Valheim's chunked world save (world version >= 40):
-//   _main.<n>.chunks  index of chunk files and how many objects each holds
-//   XX_YY__<size>_<version>.chunk  objects (ZDOs) of one chunk
-// Only what the terrain editor needs is kept: every object's prefab and position, and the
-// terrain modification data ("TCData") of each zone's terrain compiler object.
+/// <summary>
+/// Read-only loader for Valheim's chunked world save (world version &gt;= 40):
+/// <list type="bullet">
+/// <item><description>_main.&lt;n&gt;.chunks: index of chunk files and how many objects each holds</description></item>
+/// <item><description>XX_YY__&lt;size&gt;_&lt;version&gt;.chunk: objects (ZDOs) of one chunk</description></item>
+/// </list>
+/// Only what the terrain editor needs is kept: every object's prefab and position, and the terrain modification data
+/// ("TCData") of each zone's terrain compiler object.
+/// </summary>
 public sealed class WorldSave
 {
+    /// <summary>Data key of a terrain compiler's saved ground edits.</summary>
     private static readonly int TCDataKey = StableHash.Of("TCData");
 
+    /// <summary>Prefab hash of the proxy object that stands for a placed location.</summary>
     public static readonly int LocationProxyPrefab = StableHash.Of("LocationProxy");
 
+    /// <summary>Int data key on a location proxy: the location's name hash.</summary>
     public static readonly int LocationKey = StableHash.Of("location");
 
+    /// <summary>Long data key of a terrain modifier's creation time.</summary>
     private static readonly int TimeCreatedKey = StableHash.Of("terrainModifierTimeCreated");
 
+    /// <summary>Long data key of the player id that built a piece.</summary>
     private static readonly int CreatorKey = StableHash.Of("creator");
 
-    // Player ids and the names stored with them: bed and tombstone owners, ward builders, players
-    // (live: the players that are online).
+    /// <summary>
+    /// Player ids and the names stored with them: bed and tombstone owners, ward builders, players (live: the players
+    /// that are online).
+    /// </summary>
     private static readonly int OwnerKey = StableHash.Of("owner"), OwnerNameKey = StableHash.Of("ownerName");
+    /// <summary>String data key of the builder's name stored with <c>creator</c>.</summary>
     private static readonly int CreatorNameKey = StableHash.Of("creatorName");
+    /// <summary>Player id and name keys on player objects.</summary>
     private static readonly int PlayerIdKey = StableHash.Of("playerID"), PlayerNameKey = StableHash.Of("playerName");
 
+    /// <summary>Vec3 data key of a per-axis scale.</summary>
     private static readonly int ScaleKey = StableHash.Of("scale");
 
+    /// <summary>Float data key of a uniform scale.</summary>
     private static readonly int ScaleScalarKey = StableHash.Of("scaleScalar");
 
-    // Tameable.SetTamed writes it (an int, 1 when tamed).
+    /// <summary>Tameable.SetTamed writes it (an int, 1 when tamed).</summary>
     private static readonly int TamedKey = StableHash.Of("tamed");
 
-    // Prefabs (besides LocationProxy) whose objects carry terrain modifiers; set before loading.
+    /// <summary>Prefabs (besides LocationProxy) whose objects carry terrain modifiers; set before loading.</summary>
     public static HashSet<int> ModifierPrefabs { get; set; } = [];
 
+    /// <summary>
+    /// The world's folder, or for a live world a description of its source ("live: " and the bridge address).
+    /// </summary>
     public required string Directory { get; init; }
 
+    /// <summary>The rolling save number (the n of _main.n.*) loaded; 0 for a live world.</summary>
     public required int SaveNumber { get; init; }
 
+    /// <summary>The world's name from its metadata.</summary>
     public string Name { get; private set; } = "";
 
+    /// <summary>The seed as typed in the game.</summary>
     public string SeedName { get; private set; } = "";
 
+    /// <summary>The seed number the generator uses (the seed name's stable hash).</summary>
     public int Seed { get; private set; }
 
+    /// <summary>World.m_worldGenVersion (0 for metadata older than version 26).</summary>
     public int WorldGenVersion { get; private set; }
 
+    /// <summary>How many objects were read (live: grows as new objects come in).</summary>
     public int ObjectCount { get; private set; }
 
+    /// <summary>How many chunk files were read (1 for a live world).</summary>
     public int ChunkCount { get; private set; }
 
+    /// <summary>Every object with saved ground data (TCData), one entry each: a zone can have two.</summary>
     public List<TerrainZone> TerrainZones { get; } = [];
 
+    /// <summary>The chunk files read, in index order (live: the one snapshot file).</summary>
     public List<ChunkFile> Chunks { get; } = [];
 
-    // Placed locations (villages, trader, dungeons...): their terrain flattening is applied live by
-    // the game and is not part of the saved terrain data.
+    /// <summary>
+    /// Placed locations (villages, trader, dungeons...): their terrain flattening is applied live by the game and is
+    /// not part of the saved terrain data.
+    /// </summary>
     public List<(Vector3 Position, int Location)> Locations { get; } = [];
 
-    // The ground discs the editor placed for No limit ground (Uplift): invisible location proxies.
+    /// <summary>The ground discs the editor placed for No limit ground (Uplift): invisible location proxies.</summary>
     public List<(int Id, Vector3 Position)> Discs { get; } = [];
 
-    // Every placed object that can modify terrain while the game runs: locations and the prefabs in
-    // ModifierPrefabs. Rotation is Euler degrees, as stored.
+    /// <summary>
+    /// Every placed object that can modify terrain while the game runs: locations and the prefabs in ModifierPrefabs.
+    /// Rotation is Euler degrees, as stored.
+    /// </summary>
     public List<PlacedObject> Placed { get; } = [];
 
-    // Objects that are tamed creatures (by id).
+    /// <summary>Objects that are tamed creatures (by id).</summary>
     public HashSet<int> Tamed { get; } = [];
 
-    // Player-built pieces (objects with a creator): prefab, position and Y rotation in degrees.
+    /// <summary>Player-built pieces (objects with a creator): prefab, position and Y rotation in degrees.</summary>
     public List<(int Id, int Prefab, Vector3 Position, float RotationY)> Pieces { get; } = [];
 
-    // Pieces per builder (the "creator" player id).
+    /// <summary>Pieces per builder (the "creator" player id).</summary>
     public Dictionary<long, int> Creators { get; } = [];
 
-    // Player names by player id, from the objects that store both.
+    /// <summary>Player names by player id, from the objects that store both.</summary>
     public Dictionary<long, string> PlayerNames { get; } = [];
 
-    // The player id written as "creator" on new pieces (things built with the hammer, hoe, cultivator
-    // or serving tray), so the game treats them as player built. Chosen in the editor; 0: not set.
+    /// <summary>
+    /// The player id written as "creator" on new pieces (things built with the hammer, hoe, cultivator or serving
+    /// tray), so the game treats them as player built. Chosen in the editor; 0: not set.
+    /// </summary>
     public static long Builder { get; set; }
 
+    /// <summary>Int data key ItemDrop.MakePiece sets on items set out as pieces.</summary>
     private static readonly int PieceKey = StableHash.Of("piece");
 
-    // The player who built the most pieces in this world (0 if nobody did).
+    /// <summary>The player who built the most pieces in this world (0 if nobody did).</summary>
     public long TopBuilder => Creators.Count == 0 ? 0 : Creators.MaxBy(c => c.Value).Key;
 
-    // Every object in the save by id (its order in the save).
+    /// <summary>Every object in the save by id (its order in the save).</summary>
     public List<ObjectRef> ObjectRefs { get; } = [];
 
-    // First object of each prefab: the template new objects of that prefab are copied from.
+    /// <summary>First object of each prefab: the template new objects of that prefab are copied from.</summary>
     public Dictionary<int, int> Templates { get; } = [];
 
-    // The object a new one is built from: its source object when given (and of the same prefab),
-    // else the prefab's template.
-    // null when the world has no object of the prefab: it is then built blank (NewObjectBytes).
+    /// <summary>
+    /// The object a new one is built from: its source object when given (and of the same prefab), else the prefab's
+    /// template. null when the world has no object of the prefab: it is then built blank (NewObjectBytes).
+    /// </summary>
     public ObjectRef? ModelFor(int prefab, int? sourceId)
     {
         if (sourceId is int s && s >= 0 && s < ObjectRefs.Count && ObjectRefs[s].Prefab == prefab)
@@ -107,14 +142,22 @@ public sealed class WorldSave
         return Templates.TryGetValue(prefab, out int t) ? ObjectRefs[t] : null;
     }
 
+    /// <summary>
+    /// Whether the editor can make an object of this prefab: the world has one to copy, or the game's catalogue knows
+    /// it (placeable prefab or creature).
+    /// </summary>
     public bool CanCreate(int prefab) => Templates.ContainsKey(prefab) || Terrain.PrefabCatalog.Get(prefab) != null || Terrain.PrefabCatalog.IsCreature(prefab);
 
-    // Prefabs that can be created: any object in the world, and every placeable game prefab.
+    /// <summary>Prefabs that can be created: any object in the world, and every placeable game prefab.</summary>
     public IEnumerable<int> Creatable => Templates.Keys.Concat(Terrain.PrefabCatalog.Placeable.Select(p => StableHash.Of(p.Name))).Distinct();
 
-    // The save bytes of a new object: a copy of its model when the world has one, else a blank object
-    // with the prefab's own flags from the game (what the game writes for a freshly placed object).
-    // readSource gives the chunk file bytes the model lives in.
+    /// <summary>
+    /// The save bytes of a new object: a copy of its model when the world has one, else a blank object with the
+    /// prefab's own flags from the game (what the game writes for a freshly placed object).
+    /// </summary>
+    /// <param name="n">The new object.</param>
+    /// <param name="readSource">Gives the chunk file bytes the model lives in.</param>
+    /// <returns>The bytes, or null when the prefab is unknown to both the world and the game.</returns>
     public byte[]? NewObjectBytes(Editing.NewObject n, Func<ObjectRef, byte[]> readSource)
     {
         byte[]? bytes = BuildBytes(n, readSource);
@@ -150,6 +193,10 @@ public sealed class WorldSave
         return bytes;
     }
 
+    /// <summary>
+    /// The new object's bytes before the builder and data fields: its raw bytes moved, else a copy of its model, else a
+    /// blank object from the catalogue (null when the game does not know the prefab).
+    /// </summary>
     private byte[]? BuildBytes(Editing.NewObject n, Func<ObjectRef, byte[]> readSource)
     {
         if (n.Raw != null)
@@ -173,7 +220,9 @@ public sealed class WorldSave
         return Terrain.PrefabCatalog.Details(n.Prefab) is { } info ? ZdoBuilder.Blank(n.Prefab, info.Flags, n.Position, n.Rotation, n.Scale) : null;
     }
 
-    // The saved bytes of an object of the save (id >= 0): from its chunk file, or from the live snapshot.
+    /// <summary>
+    /// The saved bytes of an object of the save (id &gt;= 0): from its chunk file, or from the live snapshot.
+    /// </summary>
     public byte[] ObjectBytes(int id)
     {
         ObjectRef o = ObjectRefs[id];
@@ -188,13 +237,20 @@ public sealed class WorldSave
         return b;
     }
 
-    // Generated zones and location instances from the .db2 file (null if it could not be read).
+    /// <summary>Generated zones and location instances from the .db2 file (null if it could not be read).</summary>
     public ZoneDb? Zones { get; private set; }
 
-    // Everything else that is not terrain data (trees, rocks, bushes, pickables...): prefab, position,
-    // rotation (Euler degrees) and scale (zero when the prefab's own scale applies).
+    /// <summary>
+    /// Everything else that is not terrain data (trees, rocks, bushes, pickables...): prefab, position, rotation (Euler
+    /// degrees) and scale (zero when the prefab's own scale applies).
+    /// </summary>
     public List<(int Id, int Prefab, Vector3 Position, Vector3 Rotation, Vector3 Scale)> Objects { get; } = [];
 
+    /// <summary>
+    /// Loads the current save of a world folder (see <c>CommittedSave</c>); a .db2 that cannot be read leaves
+    /// <c>Zones</c> null.
+    /// </summary>
+    /// <exception cref="InvalidDataException">The folder holds no chunked world save.</exception>
     public static WorldSave Load(string directory)
     {
         int saveNumber = FindLatestSave(directory);
@@ -212,7 +268,7 @@ public sealed class WorldSave
         return save;
     }
 
-    // Mirrors World.LoadWorld: an int length prefix, then a ZPackage with version, names and seed.
+    /// <summary>Mirrors World.LoadWorld: an int length prefix, then a ZPackage with version, names and seed.</summary>
     private void LoadMetadata()
     {
         string path = Path.Combine(Directory, $"_main.{SaveNumber}.fwl2");
@@ -227,6 +283,8 @@ public sealed class WorldSave
         WorldGenVersion = version >= 26 ? pkg.ReadInt() : 0;
     }
 
+    /// <summary>The save number to load, as <c>CommittedSave</c> picks it.</summary>
+    /// <exception cref="InvalidDataException">No save index is in the folder.</exception>
     private static int FindLatestSave(string directory)
     {
         int best = CommittedSave(directory);
@@ -237,9 +295,11 @@ public sealed class WorldSave
         return best;
     }
 
-    // The game keeps rolling saves (_main.<n>.*); the current one is the highest number with an index
-    // file and the commit marker (.ok, written last: a save without it was cut short, or is being
-    // written right now). A folder where no save has the marker: the highest index. -1: none.
+    /// <summary>
+    /// The game keeps rolling saves (_main.&lt;n&gt;.*); the current one is the highest number with an index file and
+    /// the commit marker (.ok, written last: a save without it was cut short, or is being written right now). A folder
+    /// where no save has the marker: the highest index. -1: none.
+    /// </summary>
     public static int CommittedSave(string directory)
     {
         int best = -1, committed = -1;
@@ -258,6 +318,8 @@ public sealed class WorldSave
         return committed >= 0 ? committed : best;
     }
 
+    /// <summary>Reads the .chunks index, then every chunk file it lists.</summary>
+    /// <exception cref="FileNotFoundException">A chunk file the index lists is missing.</exception>
     private void LoadChunks()
     {
         string indexPath = Path.Combine(Directory, $"_main.{SaveNumber}.chunks");
@@ -286,30 +348,41 @@ public sealed class WorldSave
         }
     }
 
-    // True when the world came from the live bridge plugin instead of save files.
+    /// <summary>True when the world came from the live bridge plugin instead of save files.</summary>
     public bool IsLive { get; private set; }
 
-    // The decompressed live snapshot; object byte ranges (ObjectRef.Start .. End) point into it.
+    /// <summary>The decompressed live snapshot; object byte ranges (ObjectRef.Start .. End) point into it.</summary>
     public byte[]? LiveBytes { get; private set; }
 
-    // Live: the bytes an object's offsets are in, the snapshot's or those of objects read since from the
-    // game (MergeLive: each read is its own little file).
+    /// <summary>
+    /// Live: the bytes an object's offsets are in, the snapshot's or those of objects read since from the game
+    /// (MergeLive: each read is its own little file).
+    /// </summary>
     private readonly Dictionary<ChunkFile, byte[]> _liveFiles = [];
 
+    /// <summary>
+    /// Live: the bytes a chunk file's object offsets point into (the snapshot unless MergeLive made the file).
+    /// </summary>
     public byte[] LiveSource(ChunkFile file) => _liveFiles.TryGetValue(file, out byte[]? b) ? b : LiveBytes!;
 
-    // Live: objects the game no longer has (removed in the game). Left out of every list; their ids
-    // stay taken, and their bytes stay readable (history).
+    /// <summary>
+    /// Live: objects the game no longer has (removed in the game). Left out of every list; their ids stay taken, and
+    /// their bytes stay readable (history).
+    /// </summary>
     public HashSet<int> Vanished { get; } = [];
 
-    // Live: held while the world's lists change (MergeLive) and while other threads read them (an area
-    // loading, the map's search and statistics): what the game changed comes in between.
+    /// <summary>
+    /// Live: held while the world's lists change (MergeLive) and while other threads read them (an area loading, the
+    /// map's search and statistics): what the game changed comes in between.
+    /// </summary>
     public object Sync { get; } = new();
 
-    // Live: the objects by ZDOID and by zone (not the vanished ones), made at the first merge.
+    /// <summary>Live: the objects by ZDOID and by zone (not the vanished ones), made at the first merge.</summary>
     private Dictionary<(long, uint), int>? _byLiveId;
+    /// <summary>Live: object ids by zone; see <c>_byLiveId</c>.</summary>
     private Dictionary<(int, int), HashSet<int>>? _byZone;
 
+    /// <summary>Builds the ZDOID and zone lookups once, from every object not vanished.</summary>
     private void Index()
     {
         if (_byLiveId != null)
@@ -327,6 +400,7 @@ public sealed class WorldSave
         }
     }
 
+    /// <summary>Adds an object to the ZDOID and zone lookups.</summary>
     private void Track(int id)
     {
         ObjectRef o = ObjectRefs[id];
@@ -334,6 +408,7 @@ public sealed class WorldSave
         (_byZone!.TryGetValue(o.Zone, out var set) ? set : _byZone[o.Zone] = []).Add(id);
     }
 
+    /// <summary>Removes an object from the ZDOID and zone lookups.</summary>
     private void Untrack(int id)
     {
         ObjectRef o = ObjectRefs[id];
@@ -344,8 +419,10 @@ public sealed class WorldSave
         }
     }
 
-    // Live: the object is in the game under another ZDOID now (the editor made it again there: an applied
-    // delete undone); followed by that one from then on.
+    /// <summary>
+    /// Live: the object is in the game under another ZDOID now (the editor made it again there: an applied delete
+    /// undone); followed by that one from then on.
+    /// </summary>
     public void SetLiveId(int id, (long User, uint Id) zdo)
     {
         lock (Sync)
@@ -363,18 +440,27 @@ public sealed class WorldSave
         }
     }
 
-    // Added: objects new to the editor (new ids); Updated: objects the game changed (data, place), read
-    // again under their own id; Vanished: objects gone from the game; TerrainZones: zones whose ground
-    // data came or went; Modifiers: objects that shape the ground as the game runs came, went or changed.
+    /// <summary>What a <c>MergeLive</c> call changed.</summary>
+    /// <param name="Added">Objects new to the editor (new ids).</param>
+    /// <param name="Updated">Objects the game changed (data, place), read again under their own id.</param>
+    /// <param name="Vanished">Objects gone from the game.</param>
+    /// <param name="TerrainZones">Zones whose ground data came or went.</param>
     public sealed record Merged(List<int> Added, List<int> Updated, List<int> Vanished, HashSet<(int X, int Z)> TerrainZones)
     {
+        /// <summary>Objects that shape the ground as the game runs came, went or changed.</summary>
         public bool Modifiers { get; set; }
     }
 
-    // Live: the zones' objects as the game has them now (ZDOID and bytes, as the plugin's /zone sends
-    // them), merged in. keep: objects not to vanish though the game lacks them (the editor's own applied
-    // deletions: undo brings them back); ours: ZDOIDs of objects the editor made itself (its new
-    // objects). Null when the world's lists are being read elsewhere right now: try again later.
+    /// <summary>
+    /// Live: the zones' objects as the game has them now (ZDOID and bytes, as the plugin's /zone sends them), merged
+    /// in. Null when the world's lists are being read elsewhere right now: try again later.
+    /// </summary>
+    /// <param name="zones">The zones the objects were read from; objects of them the game lacks vanish.</param>
+    /// <param name="objects">Every object the game has in those zones.</param>
+    /// <param name="keep">
+    /// Objects not to vanish though the game lacks them (the editor's own applied deletions: undo brings them back).
+    /// </param>
+    /// <param name="ours">ZDOIDs of objects the editor made itself (its new objects).</param>
     public Merged? MergeLive(IReadOnlyCollection<(int X, int Z)> zones, IReadOnlyList<(long User, uint Id, byte[] Bytes)> objects,
         Func<int, bool> keep, Func<(long User, uint Id), bool> ours)
     {
@@ -453,9 +539,12 @@ public sealed class WorldSave
         }
     }
 
+    /// <summary>
+    /// Whether objects of this prefab shape the ground as the game runs (location proxies and ModifierPrefabs).
+    /// </summary>
     private static bool Shapes(int prefab) => prefab == LocationProxyPrefab || ModifierPrefabs.Contains(prefab);
 
-    // These objects out of every list (their ids stay; the changed ones are read again after).
+    /// <summary>These objects out of every list (their ids stay; the changed ones are read again after).</summary>
     private void Drop(HashSet<int> ids, Merged result)
     {
         Objects.RemoveAll(x => ids.Contains(x.Id));
@@ -495,6 +584,12 @@ public sealed class WorldSave
         TerrainZones.RemoveAll(z => z.Source is { } src && sources.Contains((src.File, src.Start)));
     }
 
+    /// <summary>Loads a world from a WorldEditorBridge snapshot (gzip-compressed, snapshot version 1).</summary>
+    /// <param name="gzipped">The snapshot as <c>LiveBridge.Snapshot</c> returns it.</param>
+    /// <param name="source">What to show as the world's <c>Directory</c>.</param>
+    /// <exception cref="InvalidDataException">
+    /// Not a bridge snapshot, or a version this editor does not read.
+    /// </exception>
     public static WorldSave LoadLive(byte[] gzipped, string source)
     {
         using MemoryStream raw = new();
@@ -531,12 +626,16 @@ public sealed class WorldSave
         return save;
     }
 
+    /// <summary>Reads every object of one chunk file.</summary>
     private void LoadChunk(string path, ChunkFile file)
     {
         using ValheimReader pkg = new(new BufferedStream(File.OpenRead(path), 1 << 20));
         ReadObjects(pkg, file);
     }
 
+    /// <summary>
+    /// A chunk's objects: its world version, the object count, then each object; records the file's length.
+    /// </summary>
     private void ReadObjects(ValheimReader pkg, ChunkFile file)
     {
         file.WorldVersion = pkg.ReadShort();
@@ -549,9 +648,15 @@ public sealed class WorldSave
         file.Length = pkg.Position;
     }
 
-    // Mirrors ZDO.Load(ZPackage, Version.World), recording where things are in the file so a
-    // writer can later copy objects unchanged or patch just the terrain data.
-    // replace: read in place of that object (live: changed in the game), else a new one. Returns its id.
+    /// <summary>
+    /// Mirrors ZDO.Load(ZPackage, Version.World), recording where things are in the file so a writer can later copy
+    /// objects unchanged or patch just the terrain data.
+    /// </summary>
+    /// <param name="pkg">Reader positioned at the object.</param>
+    /// <param name="worldVersion">The world version the object was written in.</param>
+    /// <param name="file">The chunk file the bytes belong to.</param>
+    /// <param name="replace">Read in place of that object (live: changed in the game), else a new one.</param>
+    /// <returns>The object's id.</returns>
     private int ReadZdo(ValheimReader pkg, int worldVersion, ChunkFile file, int replace = -1)
     {
         long start = pkg.Position;
@@ -762,6 +867,7 @@ public sealed class WorldSave
         return id;
     }
 
+    /// <summary>Skips one data section (count, then key and value each) when its flag is set.</summary>
     private static void Skip(ValheimReader pkg, int worldVersion, ushort flags, ushort flag, Action<ValheimReader> readValue)
     {
         if ((flags & flag) == 0)
@@ -777,69 +883,108 @@ public sealed class WorldSave
     }
 }
 
+/// <summary>An object that can modify terrain while the game runs.</summary>
+/// <param name="Prefab">Its prefab hash.</param>
+/// <param name="Location">For a location proxy, the location's name hash; else 0.</param>
+/// <param name="Position">World position in metres.</param>
+/// <param name="Rotation">Euler degrees, as stored.</param>
+/// <param name="TimeCreated">Its terrainModifierTimeCreated value, 0 when not stored.</param>
 public sealed record PlacedObject(int Prefab, int Location, Vector3 Position, Vector3 Rotation, long TimeCreated);
 
+/// <summary>One chunk file of a save, as its index lists it and as read.</summary>
 public sealed class ChunkFile
 {
+    /// <summary>The base chunk id (see ChunkMath).</summary>
     public ushort Chunk { get; init; }
 
+    /// <summary>How many low bits of x and y the chunk merges (see ChunkMath).</summary>
     public byte Size { get; init; }
 
+    /// <summary>The file's version number, part of its name.</summary>
     public uint Version { get; init; }
 
+    /// <summary>The object count the index lists for the file.</summary>
     public int IndexCount { get; init; }
 
+    /// <summary>The world version written at the start of the file.</summary>
     public int WorldVersion { get; set; }
 
+    /// <summary>The object count read from the file itself.</summary>
     public int Count { get; set; }
 
+    /// <summary>Bytes read from the file, header and objects.</summary>
     public long Length { get; set; }
 
-    // Byte range of every object in the file, in file order.
+    /// <summary>Byte range of every object in the file, in file order.</summary>
     public List<(long Start, long End)> Objects { get; } = [];
 
-    // Same naming as ChunkSaveMapping.GetChunkFilename.
+    /// <summary>Same naming as ChunkSaveMapping.GetChunkFilename.</summary>
     public string FileName => NameFor(Chunk, Size, Version);
 
+    /// <summary>A chunk file's name: chunk high and low byte in hex, then size and version.</summary>
     public static string NameFor(ushort chunk, byte size, uint version) => $"{chunk >> 8:x2}_{chunk & 0xFF:x2}__{size}_{version}.chunk";
 }
 
-// Where a terrain object lives in its chunk file, and where its TCData value (int length + bytes) is.
+/// <summary>
+/// Where a terrain object lives in its chunk file, and where its TCData value (int length + bytes) is.
+/// </summary>
+/// <param name="File">The chunk file.</param>
+/// <param name="Start">Where the object starts.</param>
+/// <param name="End">Where the object ends (-1 while it is still being read).</param>
+/// <param name="DataStart">Where the TCData value starts.</param>
+/// <param name="DataEnd">Where the TCData value ends.</param>
+/// <param name="Flags">The object's ZDO flags.</param>
 public sealed record ZdoLocation(ChunkFile File, long Start, long End, long DataStart, long DataEnd, ushort Flags);
 
-// One zone's terrain modifications, decoded from TerrainComp's saved data.
+/// <summary>One zone's terrain modifications, decoded from TerrainComp's saved data.</summary>
 public sealed class TerrainZone
 {
+    /// <summary>Where the data sits in the save (set by the loader once the value is read).</summary>
     public ZdoLocation? Source { get; set; }
 
+    /// <summary>A zone's side in metres.</summary>
     public const float ZoneSize = 64f;
 
+    /// <summary>The terrain compiler object's position: the zone's centre.</summary>
     public required Vector3 Center { get; init; }
 
+    /// <summary>The zone's x index.</summary>
     public int ZoneX => (int)MathF.Floor((Center.X + ZoneSize / 2f) / ZoneSize);
 
+    /// <summary>The zone's z index.</summary>
     public int ZoneZ => (int)MathF.Floor((Center.Z + ZoneSize / 2f) / ZoneSize);
 
+    /// <summary>The prefab hash of the terrain compiler object.</summary>
     public int Prefab { get; init; }
 
+    /// <summary>TerrainComp's count of operations applied to the zone.</summary>
     public int Operations { get; init; }
 
-    // (Width+1)^2 vertices, row-major along world Z then X.
+    /// <summary>(Width+1)^2 vertices, row-major along world Z then X.</summary>
     public required bool[] ModifiedHeight { get; init; }
 
+    /// <summary>Level change per vertex, in metres (0 where not modified).</summary>
     public required float[] LevelDelta { get; init; }
 
+    /// <summary>Smoothing change per vertex, in metres (0 where not modified).</summary>
     public required float[] SmoothDelta { get; init; }
 
+    /// <summary>Which points of the paint grid carry paint.</summary>
     public required bool[] ModifiedPaint { get; init; }
 
+    /// <summary>Paint mask per point of the paint grid (RGBA, as saved; zero where not painted).</summary>
     public required Vector4[] Paint { get; init; }
 
+    /// <summary>Vertices per row of the height grid.</summary>
     public int HeightWidth => (int)Math.Round(Math.Sqrt(ModifiedHeight.Length));
 
+    /// <summary>Points per row of the paint grid.</summary>
     public int PaintWidth => (int)Math.Round(Math.Sqrt(ModifiedPaint.Length));
 
-    // Mirrors TerrainComp.Load.
+    /// <summary>Mirrors TerrainComp.Load.</summary>
+    /// <param name="center">The terrain compiler object's position.</param>
+    /// <param name="prefab">Its prefab hash.</param>
+    /// <param name="compressed">The gzip-compressed TCData value.</param>
     public static TerrainZone Decode(Vector3 center, int prefab, byte[] compressed)
     {
         using MemoryStream raw = new();
