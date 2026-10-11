@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Fuzz targets for the editor's readers of files from outside (worlds, snapshots, blueprints,
+       pictures), run by libFuzzer through SharpFuzz and libfuzzer-dotnet. Built and run in
+       ClusterFuzzLite's image (.clusterfuzzlite/build.sh); see Program.cs. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <RootNamespace>TerrainEditor.Fuzz</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../Core/ValheimWorldEditor.Core.csproj" />
+    <PackageReference Include="SharpFuzz" Version="2.3.0" />
+  </ItemGroup>
+</Project>

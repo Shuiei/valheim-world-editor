@@ -43,6 +43,10 @@ the plugin is unchanged in versions without that part.
 - **The world map** no longer holds up the rest of the editor while it is built: it took every
   background thread, so on a computer with few cores a live game's players, its answers and the other
   work in the background waited seconds for it.
+- **Damaged or tampered files are refused cleanly.** A save, live snapshot, blueprint or heightmap
+  picture with wrong lengths or counts, damaged compressed data or a broken PNG header now says it is
+  damaged, where it could fail with an unrelated error or ask for gigabytes of memory. Found by fuzzing
+  the editor's file readers (tests/Fuzz, run with ClusterFuzzLite).
 - **Generate dungeon** could offer the dungeon made for the settings before: changing a setting while
   the last one was still being made, then placing it, placed the old one (and **Open on the plot**
   then opened another). A dungeon made for settings that changed since is no longer shown.

@@ -255,13 +255,14 @@ public sealed class LiveBridge(string url, string token) : IDisposable
         }
         raw.Position = 0;
         using var r = new BinaryReader(raw);
-        int count = r.ReadInt32();
+        // Each: ZDOID (8 + 4), then the bytes' length (4).
+        int count = r.CheckCount(r.ReadInt32(), 16);
         var list = new List<(long, uint, byte[])>(count);
         for (int i = 0; i < count; i++)
         {
             long user = r.ReadInt64();
             uint id = r.ReadUInt32();
-            list.Add((user, id, r.ReadBytes(r.ReadInt32())));
+            list.Add((user, id, r.ReadExactBytes(r.ReadInt32())));
         }
         return list;
     }
