@@ -5,8 +5,8 @@
 # Usage: tools/ci-tests.sh share            this container's classes, into /tmp/test-share.txt
 #        tools/ci-tests.sh run <ns> <name>  runs this container's classes of namespace <ns> (no visual
 #                                           tests), results in /tmp/test-results/<name>/results.xml
-# Needs the tests built (-c Release). Fail fast: xUnit stops at the first failure (StopOnFail), a test
-# stuck 5 minutes ends the run (with a dump).
+# Needs the tests built (-c Release). Every test runs, so one run shows every failure; a test stuck 5
+# minutes ends the run (with a dump).
 set -euo pipefail
 project=tests/Desktop.Tests/Desktop.Tests.csproj
 share=/tmp/test-share.txt
@@ -29,8 +29,7 @@ case "${1:?share or run}" in
     # FullyQualifiedName~<class>. matches that class's tests only (a class name ends at the dot).
     filter="Category!=Visual&($(echo "$classes" | sed 's/.*/FullyQualifiedName~&./' | paste -sd '|'))"
     dotnet test "$project" -c Release --no-build --filter "$filter" --blame-hang-timeout 5m \
-      --logger "junit;LogFilePath=/tmp/test-results/$name/results.xml" --logger "console;verbosity=normal" \
-      -- xUnit.StopOnFail=true
+      --logger "junit;LogFilePath=/tmp/test-results/$name/results.xml" --logger "console;verbosity=normal"
     ;;
   *)
     echo "usage: tools/ci-tests.sh share | run <namespace> <name>" >&2

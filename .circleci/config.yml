@@ -6,9 +6,10 @@
 #                  mode against a stand-in bridge), the SSH tunnel against a local sshd; the visual
 #                  tests skip (no display). Three containers each run a third of the test classes,
 #                  shared out by their last times (tools/ci-tests.sh).
-#                  Fail fast: the first failing test stops its run, a test stuck for 5 minutes ends
-#                  it, and in each container the core and the windows run as two processes, one after
-#                  the other (the windows' run does not start when the core fails; half the memory each)
+#                  Every test runs, failing or not, so one run shows every failure; a test stuck for
+#                  5 minutes ends its run. In each container the core and the windows run as two
+#                  processes, one after the other (the windows' run also when the core failed; half
+#                  the memory each)
 #   packages       the Windows and Linux release packages: they build, hold no source code or game
 #                  files (the plugin is left out: it builds against the game's own DLLs), and the
 #                  Linux one starts and draws the test world (tools/smoke-test.sh, under Xvfb)
@@ -77,16 +78,18 @@ jobs:
       - run:
           name: This container's share of the test classes (by their last times)
           command: tools/ci-tests.sh share
-      # Fail fast: xUnit stops at the first failure, a test stuck 5 minutes ends the run (with a dump),
-      # and silence ends the step sooner than CircleCI's 10 minutes.
+      # Every test runs (a failure does not stop the others); a test stuck 5 minutes ends the run (with
+      # a dump), and silence ends the step sooner than CircleCI's 10 minutes.
       - run:
           name: Core tests (saves, world generator, live mode, SSH tunnel)
           no_output_timeout: 6m
           environment:
             VWE_NEED_SSHD: "1"
           command: tools/ci-tests.sh run WorldEditor.Tests core
+      # Also when the core tests failed: the job fails either way, with both runs' failures shown.
       - run:
           name: App tests (the windows, headless)
+          when: always
           no_output_timeout: 6m
           command: tools/ci-tests.sh run TerrainEditor.Desktop.Tests app
       # Saved from main only: branches reuse main's (each cache is kept 15 days and billed).
