@@ -8,7 +8,7 @@ namespace TerrainEditor.Desktop;
 // from the game's data), and prompts to start from.
 public static class ClaudeGuide
 {
-	public const string Instructions = """
+    public const string Instructions = """
 		You are connected to Valheim World Editor, running on the user's computer. You change the world or
 		the Workshop open in it, as the user would, and the user watches in the 3D view.
 
@@ -37,7 +37,7 @@ public static class ClaudeGuide
 		first. Ask the user before changing things they did not ask for.
 		""";
 
-	public const string Building = """
+    public const string Building = """
 		Building in Valheim (from the game's data; piece_info gives any piece's exact size and snap points).
 
 		Grid and origins
@@ -77,7 +77,7 @@ public static class ClaudeGuide
 		- support_check names what would fall: add posts or walls under it, or move it closer to support.
 		""";
 
-	public const string Shaping = """
+    public const string Shaping = """
 		Shaping an area. The game lets ground move at most 8 m from its original height (scripts:
 		Ground.NoLimit = true goes further, through locations the game understands). Water is at y = 30;
 		ground below it is under water. Paint kinds: dirt, cultivated, paved, clear (the biome's own). Kinds
@@ -92,10 +92,10 @@ public static class ClaudeGuide
 [McpServerPromptType]
 public sealed class ClaudePrompts
 {
-	[McpServerPrompt(Name = "build_in_workshop", Title = "Build in the Workshop")]
-	[Description("Build something in the Workshop from a description, then check that it stands.")]
-	public static string BuildInWorkshop([Description("What to build, e.g. \"a small longhouse with a stone floor and a thatch roof\".")] string what) =>
-		$"""
+    [McpServerPrompt(Name = "build_in_workshop", Title = "Build in the Workshop")]
+    [Description("Build something in the Workshop from a description, then check that it stands.")]
+    public static string BuildInWorkshop([Description("What to build, e.g. \"a small longhouse with a stone floor and a thatch roof\".")] string what) =>
+        $"""
 		In Valheim World Editor, build this in the Workshop: {what}
 
 		{ClaudeGuide.Building}
@@ -105,10 +105,10 @@ public sealed class ClaudePrompts
 		from a few sides, and fix what would fall or looks wrong. Tell me when it is ready: I save the blueprint.
 		""";
 
-	[McpServerPrompt(Name = "shape_area", Title = "Shape an area")]
-	[Description("Change the ground and objects of an area of the open world from a description.")]
-	public static string ShapeArea([Description("What to make, e.g. \"a valley with a river running north, birches along it\".")] string what) =>
-		$"""
+    [McpServerPrompt(Name = "shape_area", Title = "Shape an area")]
+    [Description("Change the ground and objects of an area of the open world from a description.")]
+    public static string ShapeArea([Description("What to make, e.g. \"a valley with a river running north, birches along it\".")] string what) =>
+        $"""
 		In Valheim World Editor, change the area of the open world: {what}
 
 		{ClaudeGuide.Shaping}
