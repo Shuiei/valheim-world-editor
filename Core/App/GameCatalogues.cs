@@ -23,8 +23,9 @@ public static partial class GameCatalogues
     /// </summary>
     /// <param name="bundles">The game's bundles (its folder is what is read).</param>
     /// <param name="kinds">The kinds to read, of <c>AtStart</c>.</param>
+    /// <param name="progress">Told the bundles read, of all of them, before each.</param>
     /// <returns>Each kind's JSON, by kind.</returns>
-    public static Dictionary<string, string> ReadAtStart(GameBundles bundles, IReadOnlyList<string> kinds)
+    public static Dictionary<string, string> ReadAtStart(GameBundles bundles, IReadOnlyList<string> kinds, Action<int, int>? progress = null)
     {
         var scans = kinds.Select(k => (Kind: k, Scan: k switch
         {
@@ -39,8 +40,10 @@ public static partial class GameCatalogues
         })).ToList();
         using var game = new Game(bundles.Folder);
         game.IndexCabs();
+        int done = 0;
         foreach (string name in game.Bundles)
         {
+            progress?.Invoke(done++, game.Bundles.Count);
             using var b = game.Open(name);
             if (b != null)
             {
