@@ -214,21 +214,23 @@ public class NewWorldPageTests
         // Looked for at once, out of sight; the list says so until they are found.
         await TestWindows.Until(() => r.P.DungeonMarks != null, 120000);
         Assert.Empty(r.P.Map.Dots);
-        var burial = r.P.ShowDungeons["Burial chambers"];
-        burial.IsChecked = true;
-        int burials = r.P.DungeonMarks!.Count(m => m.Name == "Burial chambers");
-        Assert.True(burials > 0);
-        Assert.Equal(burials, r.P.Map.Dots.Count);
+        // Kinds the fixtures' rules have (they have no burial chambers, troll caves or frost caves).
+        var sunken = r.P.ShowDungeons["Sunken crypts"];
+        sunken.IsChecked = true;
+        int crypts = r.P.DungeonMarks!.Count(m => m.Name == "Sunken crypts");
+        Assert.True(crypts > 0);
+        Assert.Equal(crypts, r.P.Map.Dots.Count);
         string list = Texts(r.P.Info);
         Assert.Contains("Dungeons (the nearest)", list);
-        Assert.Contains($"{burials} in the world", list);
-        burial.IsChecked = false;
+        Assert.Contains($"{crypts} in the world", list);
+        sunken.IsChecked = false;
         Assert.Empty(r.P.Map.Dots);
         // A dungeon's row switches its kind on and shows the nearest.
-        ClickRow(r, r.P.Info, "Troll caves");
-        Assert.True(r.P.ShowDungeons["Troll caves"].IsChecked);
+        ClickRow(r, r.P.Info, "Infested mines");
+        Assert.True(r.P.ShowDungeons["Infested mines"].IsChecked);
         Assert.Equal(4, r.P.Map.MetersPerPixel);
-        Assert.All(r.P.Map.Dots, d => Assert.Equal(((ISolidColorBrush)d.Fill).Color, Avalonia.Media.Color.FromRgb(64, 170, 150)));
+        Assert.NotEmpty(r.P.Map.Dots);
+        Assert.All(r.P.Map.Dots, d => Assert.Equal(((ISolidColorBrush)d.Fill).Color, Avalonia.Media.Color.FromRgb(104, 120, 255)));
     }
 
     [AvaloniaFact]
