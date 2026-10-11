@@ -29,9 +29,13 @@ jobs:
     executor: dotnet
     steps:
       - checkout
+      # One NuGet cache for both jobs that build (code-analysis, native-tests), made again on main when a
+      # project's packages change.
       - restore_cache:
           keys:
-            - nuget-analysis-v1-{{ checksum "Desktop/ValheimWorldEditor.Desktop.csproj" }}-{{ checksum "Core/ValheimWorldEditor.Core.csproj" }}
+            - nuget-v2-{{ checksum "Directory.Build.props" }}-{{ checksum "Core/ValheimWorldEditor.Core.csproj" }}-{{ checksum "Desktop/ValheimWorldEditor.Desktop.csproj" }}-{{ checksum "tests/Desktop.Tests/Desktop.Tests.csproj" }}
+            # Else main's latest (a branch whose packages changed restores only what it adds).
+            - nuget-v2-
       - run:
           name: Analyzers (every warning is an error)
           command: dotnet build Desktop/ValheimWorldEditor.Desktop.csproj -c Release -warnaserror
@@ -42,10 +46,15 @@ jobs:
               dotnet format whitespace "$p" --verify-no-changes --no-restore
               dotnet format style "$p" --verify-no-changes --no-restore
             done
-      - save_cache:
-          key: nuget-analysis-v1-{{ checksum "Desktop/ValheimWorldEditor.Desktop.csproj" }}-{{ checksum "Core/ValheimWorldEditor.Core.csproj" }}
-          paths:
-            - ~/.nuget/packages
+      # Saved from main only: branches reuse main's (each cache is kept 15 days and billed).
+      - when:
+          condition:
+            equal: [main, << pipeline.git.branch >>]
+          steps:
+            - save_cache:
+                key: nuget-v2-{{ checksum "Directory.Build.props" }}-{{ checksum "Core/ValheimWorldEditor.Core.csproj" }}-{{ checksum "Desktop/ValheimWorldEditor.Desktop.csproj" }}-{{ checksum "tests/Desktop.Tests/Desktop.Tests.csproj" }}
+                paths:
+                  - ~/.nuget/packages
 
   native-tests:
     executor: dotnet
@@ -59,7 +68,9 @@ jobs:
           command: apt-get update -qq && apt-get install -y -qq openssh-server libfontconfig1 > /dev/null && mkdir -p /run/sshd
       - restore_cache:
           keys:
-            - nuget-native-v1-{{ checksum "Desktop/ValheimWorldEditor.Desktop.csproj" }}-{{ checksum "tests/Desktop.Tests/Desktop.Tests.csproj" }}
+            - nuget-v2-{{ checksum "Directory.Build.props" }}-{{ checksum "Core/ValheimWorldEditor.Core.csproj" }}-{{ checksum "Desktop/ValheimWorldEditor.Desktop.csproj" }}-{{ checksum "tests/Desktop.Tests/Desktop.Tests.csproj" }}
+            # Else main's latest (a branch whose packages changed restores only what it adds).
+            - nuget-v2-
       - run:
           name: Build the tests (every warning is an error)
           command: dotnet build tests/Desktop.Tests/Desktop.Tests.csproj -c Release -warnaserror
@@ -78,10 +89,15 @@ jobs:
           name: App tests (the windows, headless)
           no_output_timeout: 6m
           command: tools/ci-tests.sh run TerrainEditor.Desktop.Tests app
-      - save_cache:
-          key: nuget-native-v1-{{ checksum "Desktop/ValheimWorldEditor.Desktop.csproj" }}-{{ checksum "tests/Desktop.Tests/Desktop.Tests.csproj" }}
-          paths:
-            - ~/.nuget/packages
+      # Saved from main only: branches reuse main's (each cache is kept 15 days and billed).
+      - when:
+          condition:
+            equal: [main, << pipeline.git.branch >>]
+          steps:
+            - save_cache:
+                key: nuget-v2-{{ checksum "Directory.Build.props" }}-{{ checksum "Core/ValheimWorldEditor.Core.csproj" }}-{{ checksum "Desktop/ValheimWorldEditor.Desktop.csproj" }}-{{ checksum "tests/Desktop.Tests/Desktop.Tests.csproj" }}
+                paths:
+                  - ~/.nuget/packages
       - store_test_results:
           path: /tmp/test-results
       - store_artifacts:
@@ -110,8 +126,15 @@ jobs:
             # The OpenGL the virtual screen offers (Mesa's software renderer, llvmpipe).
             xvfb-run -a -s "-screen 0 1600x1000x24" glxinfo -B | grep -E 'renderer|version' || true
             xvfb-run -a -s "-screen 0 1600x1000x24" tools/smoke-test.sh /tmp/smoke/ValheimWorldEditor/ValheimWorldEditor tests/fixtures/CITest
-      - store_artifacts:
-          path: /tmp/dist
+      # The packages kept as artifacts only for main (releases take them from there: about 135 MB a
+      # run, kept 30 days); other branches only test them.
+      - when:
+          condition:
+            equal: [main, << pipeline.git.branch >>]
+          steps:
+            - store_artifacts:
+                path: /tmp/dist
+      # The Windows package for windows-smoke, in the same workflow.
       - persist_to_workspace:
           root: /tmp/dist
           paths:
