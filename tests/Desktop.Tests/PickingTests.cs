@@ -3,9 +3,14 @@ using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
-// Picking: the ray through the mouse, against boxes and the ground.
+/// <summary>
+/// Picking: the ray through the mouse, against boxes and the ground.
+/// </summary>
 public class PickingTests
 {
+    /// <summary>
+    /// The view-projection of a camera at <c>eye</c> looking at <c>target</c> (60° field of view, 1.5 aspect).
+    /// </summary>
     private static Matrix4x4 Camera(Vector3 eye, Vector3 target)
     {
         return Matrix4x4.CreateLookAt(eye, target, Vector3.UnitY) * GlView.Perspective(MathF.PI / 3, 1.5f, 0.5f, 6000);

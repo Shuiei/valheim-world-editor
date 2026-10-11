@@ -4,13 +4,16 @@ using Silk.NET.SPIRV.Cross;
 
 namespace TerrainEditor.App;
 
-// The terrain shader from a game copy without OpenGL programs (Valheim for Windows has Direct3D 11
-// and Vulkan only): the deferred pass's Vulkan program as SPIR-V, with its names put back
-// (GameShader.FromVulkan), turned into the GLSL the OpenGL path makes (GameShader.FromOpenGl): plain
-// uniforms, the four G-buffer targets as globals, the ocean depth and the paint mask as varyings,
-// main() renamed.
+/// <summary>
+/// The terrain shader from a game copy without OpenGL programs (Valheim for Windows has Direct3D 11
+/// and Vulkan only): the deferred pass's Vulkan program as SPIR-V, with its names put back
+/// (GameShader.FromVulkan), turned into the GLSL the OpenGL path makes (GameShader.FromOpenGl): plain
+/// uniforms, the four G-buffer targets as globals, the ocean depth and the paint mask as varyings,
+/// main() renamed.
+/// </summary>
 public static partial class TerrainShader
 {
+    /// <summary>The header put before the adapted shader: what it is and the precisions (all highp).</summary>
     private const string Header = """
 		// Valheim's terrain shader (Custom/Heightmap, deferred G-buffer pass), compiled by Unity for
 		// Vulkan, turned into GLSL by SPIRV-Cross and adapted like the OpenGL one: the four G-buffer
@@ -24,12 +27,16 @@ public static partial class TerrainShader
 
 		""";
 
+    /// <summary>The editor's GLSL fragment shader from the named SPIR-V (bytes). Throws InvalidDataException.</summary>
     public static string FromSpirv(byte[] spirv) => Adapt(CrossCompile(spirv));
 
-    // SPIRV-Cross loads and runs here (the smoke tests ask, through the driver's "spirv"): the GLSL of
-    // a fragment shader that writes white.
+    /// <summary>
+    /// SPIRV-Cross loads and runs here (the smoke tests ask, through the driver's "spirv"): the GLSL of
+    /// a fragment shader that writes white.
+    /// </summary>
     public static string SelfTest() => CrossCompile(WhiteFragment());
 
+    /// <summary>A minimal SPIR-V fragment shader (bytes) whose one output is white.</summary>
     internal static byte[] WhiteFragment()
     {
         var w = new List<uint> { 0x07230203, 0x00010000, 0, 11, 0 };
@@ -60,7 +67,10 @@ public static partial class TerrainShader
         return [.. w.SelectMany(BitConverter.GetBytes)];
     }
 
-    // SPIR-V to GLSL ES 3.0 (the editor's ANGLE target; desktop OpenGL takes it too), all highp.
+    /// <summary>
+    /// SPIR-V to GLSL ES 3.0 (the editor's ANGLE target; desktop OpenGL takes it too), all highp, uniform
+    /// buffers as plain uniforms. Throws InvalidDataException with SPIRV-Cross's error.
+    /// </summary>
     internal static unsafe string CrossCompile(byte[] spirv)
     {
         if (spirv.Length < 20 || spirv.Length % 4 != 0)
@@ -106,9 +116,11 @@ public static partial class TerrainShader
         }
     }
 
-    // SPIRV-Cross's native library: next to the program, in the folder a single-file app unpacks its
-    // native libraries into, or under runtimes/<system>/native (builds made without a target system,
-    // where Silk.NET's own search does not look).
+    /// <summary>
+    /// SPIRV-Cross's native library: next to the program, in the folder a single-file app unpacks its
+    /// native libraries into, or under runtimes/&lt;system&gt;/native (builds made without a target system,
+    /// where Silk.NET's own search does not look). Else Silk.NET's own search.
+    /// </summary>
     private static Cross Api()
     {
         string file = OperatingSystem.IsWindows() ? "spirv-cross.dll" : OperatingSystem.IsMacOS() ? "libspirv-cross.dylib" : "libspirv-cross.so";
@@ -131,7 +143,10 @@ public static partial class TerrainShader
         return Cross.GetApi();
     }
 
-    // The SPIRV-Cross output made into what GameLookGl links with the editor's vertex shader.
+    /// <summary>
+    /// The SPIRV-Cross output made into what GameLookGl links with the editor's vertex shader. Throws
+    /// InvalidDataException when an expected piece is missing (the game's shader changed).
+    /// </summary>
     internal static string Adapt(string src)
     {
         static string Need(string s, string what, string why)
@@ -178,15 +193,19 @@ public static partial class TerrainShader
         return Header + body.Trim() + "\n";
     }
 
+    /// <summary>SPIRV-Cross's #version and precision lines, replaced by <see cref="Header"/>.</summary>
     [GeneratedRegex(@"^(#version[^\n]*|precision [^\n]*;)\n", RegexOptions.Multiline)]
     private static partial Regex VersionOrPrecision();
 
+    /// <summary>The _Globals uniform buffer as SPIRV-Cross writes it: a struct and one uniform of it.</summary>
     [GeneratedRegex(@"struct (?<type>\w+)\n\{\n(?<members>[^}]*)\};\n\nuniform \k<type> _Globals;\n")]
     private static partial Regex UniformStruct();
 
+    /// <summary>A G-buffer output declaration; group 1 is its name.</summary>
     [GeneratedRegex(@"layout\(location = \d+\) out vec4 (SV_Target\d);")]
     private static partial Regex Outputs();
 
+    /// <summary>A fragment input's location qualifier.</summary>
     [GeneratedRegex(@"layout\(location = \d+\) in ")]
     private static partial Regex InputLocation();
 }

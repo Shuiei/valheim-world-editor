@@ -14,35 +14,74 @@ namespace TerrainEditor.Desktop;
 // building piece outlined in the colour the game gives its support, pieces that would fall in pink.
 public partial class MainWindow
 {
-    // The cut: the building seen from a height (1 m steps, a half wall's height), to build inside it.
+    /// <summary>
+    /// The cut: the building seen from a height (1 m steps, a half wall's height), to build inside it. 0..40 m above
+    /// the plot; 0 is off.
+    /// </summary>
     internal Slider CutSlider { get; } = new() { Minimum = 0, Maximum = 40, SmallChange = 1, LargeChange = 2, TickFrequency = 1, IsSnapToTickEnabled = true, Width = 120, VerticalAlignment = VerticalAlignment.Center };
+    /// <summary>
+    /// The cut's height, or that it is off.
+    /// </summary>
     internal TextBlock CutText { get; } = new() { FontSize = 12, VerticalAlignment = VerticalAlignment.Center, Width = 74 };
+    /// <summary>
+    /// The cut's slider and text, shown in the Workshop.
+    /// </summary>
     internal StackPanel CutBox { get; } = new() { Orientation = Orientation.Horizontal, Spacing = 6, IsVisible = false };
 
+    /// <summary>
+    /// Turns the support check on or off; shown in the Workshop.
+    /// </summary>
     internal CheckBox SupportBox { get; } = new CheckBox { Content = "Support check", FontSize = 12, IsVisible = false, IsChecked = true, VerticalAlignment = VerticalAlignment.Center }.Classed("switch");
 
+    /// <summary>
+    /// The building's name (null: not named yet, "My building" when saved).
+    /// </summary>
     private string? _workshopName;
-    // The blueprint's details (name, description, tags) and the file it was opened from (saving there again
-    // does not ask before replacing it).
+    /// <summary>
+    /// The blueprint's details (name, description, tags); null for a blank plot.
+    /// </summary>
     private Homestead.Details? _workshopDetails;
-    // How far the blueprint opened was lifted to put its lowest point on the ground (taken off again
-    // when it is saved).
+    /// <summary>
+    /// How far the blueprint opened was lifted to put its lowest point on the ground (taken off again when it is
+    /// saved).
+    /// </summary>
     private float _workshopLift;
-    // The ground the blueprints opened or added stood on in game (per metre; Workshop.GroundAt).
+    /// <summary>
+    /// The ground the blueprints opened or added stood on in game (per metre; Workshop.GroundAt).
+    /// </summary>
     private Dictionary<(int, int), float> _workshopTerrain = [];
+    /// <summary>
+    /// The file the blueprint was opened from or saved to (saving there again does not ask before replacing it); null
+    /// when it is not in Homestead's own folder.
+    /// </summary>
     private string? _workshopFile;
-    // The edits' version when the building was last saved (or opened).
+    /// <summary>
+    /// The edits' version when the building was last saved (or opened).
+    /// </summary>
     private int _workshopSaved;
 
+    /// <summary>
+    /// Whether the Workshop's plot is open.
+    /// </summary>
     internal bool InWorkshop { get; private set; }
+    /// <summary>
+    /// The building on the plot changed since it was last saved as a blueprint (or opened).
+    /// </summary>
     internal bool WorkshopDirty => InWorkshop && Session != null && Session.Edits.Version != _workshopSaved;
 
-    // The last support check (null: off, or not in the Workshop).
+    /// <summary>
+    /// The last support check (null: off, or not in the Workshop).
+    /// </summary>
     internal Stability.Result? LastSupport { get; private set; }
 
-    // The things (indices in the scene) the last support check's pieces are, in its order.
+    /// <summary>
+    /// The things (indices in the scene) the last support check's pieces are, in its order.
+    /// </summary>
     internal IReadOnlyList<int> LastSupportThings { get; private set; } = [];
 
+    /// <summary>
+    /// Wires the cut slider, the support switch and the Blueprints panel's Edit to the Workshop.
+    /// </summary>
     private void SetUpWorkshop()
     {
         SupportBox.Tip("workshop.support");
@@ -61,7 +100,10 @@ public partial class MainWindow
         Blueprints.EditAsked += async path => await OpenWorkshop(path);
     }
 
-    // The Build panel's Library (once the panel is made).
+    /// <summary>
+    /// Wires the Build panel's Library (once the panel is made): open, add and import blueprints, and dungeons onto
+    /// the plot.
+    /// </summary>
     private void SetUpLibrary()
     {
         BuildPanel.Folder = () => Blueprints.Status.Folder;
@@ -87,9 +129,11 @@ public partial class MainWindow
         };
     }
 
-    // Drag and drop onto the 3D view: a blueprint from the Library, or .blueprint and .vbuild files from
-    // the computer's files (imported into the library first). In the Workshop each goes where it is
-    // dropped; in a world, files are only imported.
+    /// <summary>
+    /// Drag and drop onto the 3D view: a blueprint from the Library, or .blueprint and .vbuild files from the
+    /// computer's files (imported into the library first). In the Workshop each goes where it is dropped; in a world,
+    /// files are only imported.
+    /// </summary>
     private void SetUpDrops(Control surface)
     {
         DragDrop.SetAllowDrop(surface, true);
@@ -106,7 +150,13 @@ public partial class MainWindow
         });
     }
 
-    // What was dropped at a point of the view.
+    /// <summary>
+    /// What was dropped at a point of the view.
+    /// </summary>
+    /// <param name="blueprint">A Library blueprint's path, or null.</param>
+    /// <param name="files">Files from the computer; only .blueprint and .vbuild ones are taken.</param>
+    /// <param name="at">Where it was dropped, on the view.</param>
+    /// <param name="size">The view's size, to find the ground under that point.</param>
     internal void Drop(string? blueprint, IReadOnlyList<string> files, Avalonia.Point at, Avalonia.Size size)
     {
         Vector2? world = null;
@@ -142,7 +192,9 @@ public partial class MainWindow
         }
     }
 
-    // A blueprint added to the building on the plot (at a world point x, z; null: the middle).
+    /// <summary>
+    /// A blueprint added to the building on the plot (at a world point x, z; null: the middle). Only in the Workshop.
+    /// </summary>
     internal void AddToWorkshop(string path, Vector2? at)
     {
         if (!InWorkshop || Session is not { } s)
@@ -166,8 +218,11 @@ public partial class MainWindow
         UpdateSaveBar();
     }
 
-    // The Workshop, empty or with a blueprint's pieces on it. Leaves the open world first (asking when
-    // something is not saved), and a building not saved as a blueprint (asking too).
+    /// <summary>
+    /// The Workshop, empty or with a blueprint's pieces on it. Leaves the open world first (asking when something is
+    /// not saved), and a building not saved as a blueprint (asking too).
+    /// </summary>
+    /// <param name="path">The blueprint to open, or null for a blank plot.</param>
     internal async Task OpenWorkshop(string? path)
     {
         // The game's files are needed here too (its pieces, and how ground discs shape the plot).
@@ -249,7 +304,9 @@ public partial class MainWindow
         MessageText.Text = msg;
     }
 
-    // Leaving an area: no Workshop any more (ShowEditor calls it for every area).
+    /// <summary>
+    /// Leaving an area: no Workshop any more (ShowEditor calls it for every area).
+    /// </summary>
     private void ResetWorkshop()
     {
         LeaveBuilding();
@@ -262,6 +319,9 @@ public partial class MainWindow
         View.ShowSupport(null);
     }
 
+    /// <summary>
+    /// Start: back to the start page, asking first when the building is not saved as a blueprint.
+    /// </summary>
     internal async Task LeaveWorkshop()
     {
         if (WorkshopDirty && !await Ask("Leave the Workshop", "The building on the plot is not saved as a blueprint. Leave without saving it?", "Leave anyway", "Stay"))
@@ -273,8 +333,10 @@ public partial class MainWindow
         ShowStart();
     }
 
-    // Save blueprint: the building pieces on the plot, as a Homestead blueprint (asks first when the
-    // support check says some would fall in game).
+    /// <summary>
+    /// Save blueprint: the building pieces on the plot, as a Homestead blueprint (asks first when the support check
+    /// says some would fall in game).
+    /// </summary>
     internal async Task SaveWorkshop()
     {
         if (Session is not { } s)
@@ -307,7 +369,10 @@ public partial class MainWindow
         }
     }
 
-    // The support check over the plot's building pieces (Stability), shown as coloured outlines.
+    /// <summary>
+    /// The support check over the plot's building pieces (Stability), shown as coloured outlines; pieces that would
+    /// fall in pink.
+    /// </summary>
     internal void RefreshSupport()
     {
         if (!InWorkshop || SupportBox.IsChecked != true || Session is not { } s)
@@ -347,9 +412,14 @@ public partial class MainWindow
         View.ShowSupport(show);
     }
 
-    // What the building on the plot costs to build in game, under the title (all of it in the tip).
+    /// <summary>
+    /// What the building on the plot costs to build in game, under the title (all of it in the tip).
+    /// </summary>
     internal string WorkshopCost { get; private set; } = "";
 
+    /// <summary>
+    /// Shows the building's cost under the title, the full list of materials and stations in its tip.
+    /// </summary>
     private void ShowWorkshopCost()
     {
         if (!InWorkshop || Session is not { } s)
@@ -364,6 +434,9 @@ public partial class MainWindow
                 + (cost.Unknown.Count > 0 ? $"\nNo recipe known for: {string.Join(", ", cost.Unknown.Keys.Take(5))}" : ""));
     }
 
+    /// <summary>
+    /// The save bar in the Workshop: the piece count, how many would fall, whether it is saved, and Save blueprint.
+    /// </summary>
     private void WorkshopSaveBar(EditSession s)
     {
         ShowWorkshopCost();
@@ -382,7 +455,9 @@ public partial class MainWindow
         RedoButton.IsEnabled = s.CanRedo;
     }
 
-    // After a change Claude made (ClaudeTools): the save bar, the support check, the message.
+    /// <summary>
+    /// After a change Claude made (ClaudeTools): the save bar, the support check, the message.
+    /// </summary>
     internal void AfterClaudeEdit(string message)
     {
         MessageText.Text = message;
@@ -390,9 +465,14 @@ public partial class MainWindow
         QueueSupport();
     }
 
-    // After an edit in the Workshop: the support check again (a moment later, once per batch of edits).
+    /// <summary>
+    /// True while a support check is queued.
+    /// </summary>
     private bool _supportQueued;
 
+    /// <summary>
+    /// After an edit in the Workshop: the support check again (a moment later, once per batch of edits).
+    /// </summary>
     private void QueueSupport()
     {
         if (!InWorkshop || _supportQueued)
@@ -411,17 +491,35 @@ public partial class MainWindow
         }, DispatcherPriority.Background);
     }
 
-    // What the Workshop changes and gives back when it closes: the Place tool's settings (Build sets
-    // them for building pieces) and the zone borders (the plot is no world).
+    /// <summary>
+    /// What the Workshop changes and gives back when it closes: the Place tool's settings (Build sets them for building
+    /// pieces) and the zone borders (the plot is no world).
+    /// </summary>
+    /// <param name="Chosen">The Place tool's chosen kinds.</param>
+    /// <param name="Mode">Its mode.</param>
+    /// <param name="OneAtATime">Whether it placed one at a time.</param>
+    /// <param name="OneAtATimeByHand">Whether One at a time was set by hand.</param>
+    /// <param name="RandomYaw">Whether it turned each object at random.</param>
+    /// <param name="Tilt">The most it leaned an object at random, in degrees.</param>
+    /// <param name="SizeMin">Its smallest random scale, in percent.</param>
+    /// <param name="SizeMax">Its largest random scale, in percent.</param>
+    /// <param name="Elevation">Where objects stood.</param>
+    /// <param name="SnapTo">Whether pieces snapped to the pieces already there.</param>
+    /// <param name="OnTop">Whether a single piece snapped on top of the piece under the cursor.</param>
+    /// <param name="Rotation">The turn it added to every object's facing, in degrees.</param>
+    /// <param name="Borders">Whether the zone borders were shown.</param>
     private sealed record Kept(List<string> Chosen, PlaceTool.Modes Mode, bool OneAtATime, bool OneAtATimeByHand, bool RandomYaw, float Tilt, float SizeMin,
         float SizeMax, PlaceTool.Elevations Elevation, bool SnapTo, bool OnTop, float Rotation, bool Borders);
     // (The unsaved marks: everything on the plot is new, so they would only cover the building.)
 
+    /// <summary>
+    /// The Place tool's settings kept while building; null when not building.
+    /// </summary>
     private Kept? _kept;
 
-    // The world tools away (the rail keeps Build, Select and View), the View panel and the Mask closed,
-    // no zone borders; the Place tool set for building.
-    // The Place tool's settings, kept while the Workshop's Build (or building in a dungeon) uses it.
+    /// <summary>
+    /// The Place tool's settings, kept while the Workshop's Build (or building in a dungeon) uses it.
+    /// </summary>
     private Kept KeepPlaceTool()
     {
         var t = PlaceTool;
@@ -429,7 +527,9 @@ public partial class MainWindow
             View.IsOverlayShown(Overlays.Layer.Borders));
     }
 
-    // The Place tool as it was kept, out of Build.
+    /// <summary>
+    /// The Place tool as it was kept, out of Build.
+    /// </summary>
     private void RestorePlaceTool(Kept k)
     {
         var t = PlaceTool;
@@ -445,6 +545,10 @@ public partial class MainWindow
         PlaceInput.TurnStep = null;
     }
 
+    /// <summary>
+    /// The world tools away (the rail keeps Build, Select and View), the View panel and the Mask closed, no zone
+    /// borders; the Place tool set for building.
+    /// </summary>
     private void EnterBuilding()
     {
         // Building in a dungeon ends first: its kept settings are the ones the Workshop keeps.
@@ -466,6 +570,9 @@ public partial class MainWindow
         BuildPanel.Start();
     }
 
+    /// <summary>
+    /// Out of building: the Place tool, the zone borders and the View panel as they were.
+    /// </summary>
     private void LeaveBuilding()
     {
         if (_kept is not { } k)
@@ -486,8 +593,10 @@ public partial class MainWindow
         PlaceTool.Notify();
     }
 
-    // The cut at so many metres above the plot (0: none): nothing drawn above it, and the cursor goes
-    // through what it hides.
+    /// <summary>
+    /// The cut at so many metres above the plot (0: none): nothing drawn above it, and the cursor goes through what it
+    /// hides.
+    /// </summary>
     private void SetCut(float metres)
     {
         float? y = metres > 0 ? Workshop.Ground + metres : null;

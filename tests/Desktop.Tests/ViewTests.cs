@@ -4,7 +4,9 @@ using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
-// The View panel: objects sorted into kinds like the web editor, and switches that hide them.
+/// <summary>
+/// The View panel: objects sorted into kinds like the web editor, and switches that hide them.
+/// </summary>
 public class ViewTests
 {
     [Theory]

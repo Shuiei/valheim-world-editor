@@ -8,9 +8,11 @@ using Xunit;
 
 namespace WorldEditor.Tests;
 
-// Runestones and tamed animals in the save: a runestone is a location proxy, listed as an object under
-// its location's name (so it can be shown, picked and deleted); a creature with "tamed" set is its own
-// View kind. The objects are saved into the test world through the editor's own writer first.
+/// <summary>
+/// Runestones and tamed animals in the save: a runestone is a location proxy, listed as an object under its location's
+/// name (so it can be shown, picked and deleted); a creature with "tamed" set is its own View kind. The objects are
+/// saved into the test world through the editor's own writer first.
+/// </summary>
 [Collection("World files")]
 public class CoreRunestoneTamedTests
 {
@@ -18,6 +20,9 @@ public class CoreRunestoneTamedTests
     private static readonly int Meadows = StableHash.Of("Runestone_Meadows");
     private static readonly int Boar = StableHash.Of("Boar");
 
+    /// <summary>
+    /// A new blank object of this prefab at this spot, with these ints set.
+    /// </summary>
     private static NewObject Make(int prefab, Vector3 at, params (string Key, int Value)[] ints)
     {
         var z = ZdoData.Parse(ZdoBuilder.Blank(prefab, 0x100, at, new Vector3(0, 30, 0), 0f));
@@ -28,6 +33,9 @@ public class CoreRunestoneTamedTests
         return new NewObject(-1, prefab, at, new Vector3(0, 30, 0), 0f, Fresh: false, Raw: z.Serialize());
     }
 
+    /// <summary>
+    /// The test world with a Meadows runestone, a tamed boar and others saved into it, read again.
+    /// </summary>
     private static WorldSave WithStoneAndBoars(TempWorld w)
     {
         var world = w.Load();

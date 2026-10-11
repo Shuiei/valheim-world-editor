@@ -7,22 +7,33 @@ using System.Text.Json.Nodes;
 
 namespace TerrainEditor.App;
 
-// Homestead (sighsorry-Homestead), the in-game building mod: its blueprints are the editor's building
-// library. They are PlanBuild .blueprint files with Homestead's own header lines, a .png picture
-// beside each, in Homestead/Blueprints of Valheim's save folder (next to worlds_local), where Homestead
-// lists them in its hammer tab and players build them in game with a materials chest. Each piece is
-// "prefab;category;x;y;z;qx;qy;qz;qw;"text";sx;sy;sz", measured from the blueprint's anchor: the
-// middle of the saved area at ground level, turned with it (ZoneBlueprintFileFormat.cs, Homestead's
-// source on GitHub).
+/// <summary>
+/// Homestead (sighsorry-Homestead), the in-game building mod: its blueprints are the editor's building
+/// library. They are PlanBuild .blueprint files with Homestead's own header lines, a .png picture
+/// beside each, in Homestead/Blueprints of Valheim's save folder (next to worlds_local), where Homestead
+/// lists them in its hammer tab and players build them in game with a materials chest. Each piece is
+/// "prefab;category;x;y;z;qx;qy;qz;qw;"text";sx;sy;sz", measured from the blueprint's anchor: the
+/// middle of the saved area at ground level, turned with it (ZoneBlueprintFileFormat.cs, Homestead's
+/// source on GitHub).
+/// </summary>
 public static class Homestead
 {
+    /// <summary>Homestead's Thunderstore page, for players who do not have it.</summary>
     public const string PageUrl = "https://thunderstore.io/c/valheim/p/sighsorry/Homestead/";
+    /// <summary>The #HomesteadVersion written into blueprints.</summary>
     public const int FormatVersion = 1;
 
-    // Whether Homestead is installed (in the game's BepInEx or a mod manager profile, its version and
-    // where), and its blueprint folder (made when the first blueprint is saved).
+    /// <summary>
+    /// Whether Homestead is installed (in the game's BepInEx or a mod manager profile, its version and
+    /// where), and its blueprint folder (made when the first blueprint is saved).
+    /// </summary>
+    /// <param name="Installed">Whether a Homestead.dll was found in any BepInEx plugins folder.</param>
+    /// <param name="Version">The first found copy's version, null when unknown.</param>
+    /// <param name="Where">The places (game, profile names) that have it.</param>
+    /// <param name="Folder">The blueprint folder (<c>Homestead.Folder()</c>), which may not exist yet.</param>
     public sealed record Status(bool Installed, string? Version, List<string> Where, string Folder);
 
+    /// <summary>Looks for Homestead.dll in every BepInEx folder <c>LocalGame.BepInExFolders</c> knows.</summary>
     public static Status Find(AppSettings settings)
     {
         var where = new List<string>();
@@ -50,7 +61,10 @@ public static class Homestead
         return new Status(where.Count > 0, version, where, Folder());
     }
 
-    // The mod package's manifest.json (as mod managers install it), else the DLL's own version.
+    /// <summary>
+    /// The mod package's manifest.json (as mod managers install it), else the DLL's own version; null when
+    /// neither can be read.
+    /// </summary>
     private static string? VersionOf(string dll)
     {
         try
@@ -68,11 +82,13 @@ public static class Homestead
         }
     }
 
-    // Another folder than the player's (the tests': they must never write into the game's folders).
+    /// <summary>Another folder than the player's (the tests': they must never write into the game's folders).</summary>
     public static string? FolderOverride { get; set; }
 
-    // Homestead/Blueprints in Valheim's save folder: the one that has it already, else the first save
-    // folder the game made (where its worlds are), else the usual one for this system.
+    /// <summary>
+    /// Homestead/Blueprints in Valheim's save folder: the one that has it already, else the first save
+    /// folder the game made (where its worlds are), else the usual one for this system.
+    /// </summary>
     public static string Folder()
     {
         if (FolderOverride != null)
@@ -84,26 +100,48 @@ public static class Homestead
         return saves.Select(Of).FirstOrDefault(Directory.Exists) ?? Of(saves.FirstOrDefault(Directory.Exists) ?? saves[0]);
     }
 
-    // What a player writes about a blueprint: its name, a description and tags (house, viking, stone…).
-    // Homestead reads the name; the description is PlanBuild's "#Description:" line and the tags the
-    // editor's own "#Tags:" line, which Homestead skips (any header line before "#Pieces").
+    /// <summary>
+    /// What a player writes about a blueprint: its name, a description and tags (house, viking, stone…).
+    /// Homestead reads the name; the description is PlanBuild's "#Description:" line and the tags the
+    /// editor's own "#Tags:" line, which Homestead skips (any header line before "#Pieces").
+    /// </summary>
+    /// <param name="Name">The blueprint's name (#Name:).</param>
+    /// <param name="Description">Its description (#Description:), empty when none.</param>
+    /// <param name="Tags">Its tags (#Tags:).</param>
     public sealed record Details(string Name, string Description, List<string> Tags)
     {
-        // "house, Viking,stone ,house" → house, Viking, stone.
+        /// <summary>
+        /// "house, Viking,stone ,house" → house, Viking, stone. Split on commas or semicolons, duplicates
+        /// dropped ignoring case, 12 at most.
+        /// </summary>
         public static List<string> ParseTags(string? text) => [.. (text ?? "").Split(',', ';').Select(t => t.Trim()).Where(t => t.Length > 0)
             .Distinct(StringComparer.OrdinalIgnoreCase).Take(12)];
     }
 
-    // One blueprint of the folder: its name, creator, description and tags, how many of each piece kind
-    // (for its cost) and its picture (.png beside it).
+    /// <summary>
+    /// One blueprint of the folder: its name, creator, description and tags, how many of each piece kind
+    /// (for its cost) and its picture (.png beside it).
+    /// </summary>
+    /// <param name="Path">The .blueprint file.</param>
+    /// <param name="Name">Its #Name:, else the file name.</param>
+    /// <param name="Creator">Its #Creator:, if any.</param>
+    /// <param name="World">The world it was saved in (#HomesteadWorld:), null when not given.</param>
+    /// <param name="Pieces">How many pieces it has.</param>
+    /// <param name="Picture">The .png beside it, null when there is none.</param>
+    /// <param name="Saved">The file's last write time (local).</param>
     public sealed record Entry(string Path, string Name, string? Creator, string? World, int Pieces, string? Picture, DateTime Saved)
     {
+        /// <summary>Its #Description:, empty when none.</summary>
         public string Description { get; init; } = "";
+        /// <summary>Its #Tags:.</summary>
         public List<string> Tags { get; init; } = [];
+        /// <summary>How many pieces of each prefab it has.</summary>
         public Dictionary<string, int> Kinds { get; init; } = [];
+        /// <summary>Its name, description and tags, as the player edits them.</summary>
         public Details Details => new(Name, Description, Tags);
     }
 
+    /// <summary>The readable blueprints of a folder, by name (empty when the folder does not exist).</summary>
     public static List<Entry> List(string folder)
     {
         if (!Directory.Exists(folder))
@@ -113,7 +151,7 @@ public static class Homestead
         return [.. Directory.GetFiles(folder, "*.blueprint").Select(Read).OfType<Entry>().OrderBy(e => e.Name, StringComparer.OrdinalIgnoreCase)];
     }
 
-    // One blueprint file (null when it cannot be read).
+    /// <summary>One blueprint file (null when it cannot be read).</summary>
     public static Entry? Read(string file)
     {
         try
@@ -171,7 +209,13 @@ public static class Homestead
         }
     }
 
-    // A blueprint's name, description and tags changed in its file (the pieces stay as they are).
+    /// <summary>
+    /// A blueprint's name, description and tags changed in its file (the pieces stay as they are). The name
+    /// goes first, the description and tags after #Creator: (else after the name).
+    /// </summary>
+    /// <param name="text">The blueprint file's text.</param>
+    /// <param name="details">What to write; no #Tags: line when it has no tags.</param>
+    /// <returns>The new text, with \n line ends.</returns>
     public static string WithDetails(string text, Details details)
     {
         var lines = text.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n').ToList();
@@ -193,7 +237,10 @@ public static class Homestead
         return string.Join("\n", head.Concat(lines.Skip(pieces)));
     }
 
-    // A file name for a blueprint name: what Windows and Linux both allow.
+    /// <summary>
+    /// A file name for a blueprint name: what Windows and Linux both allow. Forbidden characters become _,
+    /// at most 64 characters before ".blueprint", "blueprint" when nothing is left.
+    /// </summary>
     public static string FileName(string name)
     {
         string f = new([.. name.Trim().Select(c => Path.GetInvalidFileNameChars().Contains(c) || c is '<' or '>' or ':' or '"' or '/' or '\\' or '|' or '?' or '*' ? '_' : c)]);
@@ -201,8 +248,18 @@ public static class Homestead
         return (f.Length == 0 ? "blueprint" : f.Length > 64 ? f[..64] : f) + ".blueprint";
     }
 
-    // The objects of a copy (the editor's clipboard format) as a Homestead blueprint. dx, dz are metres
-    // from the copy's middle, dy from its ground: Homestead's anchor. Rotations become quaternions.
+    /// <summary>
+    /// The objects of a copy (the editor's clipboard format) as a Homestead blueprint. dx, dz are metres
+    /// from the copy's middle, dy from its ground: Homestead's anchor. Rotations become quaternions.
+    /// </summary>
+    /// <param name="clip">The copy, with its "objects" array.</param>
+    /// <param name="name">The blueprint's name.</param>
+    /// <param name="creator">Who made it.</param>
+    /// <param name="world">The world it comes from, if known.</param>
+    /// <param name="saved">When it was saved, written with its UTC offset.</param>
+    /// <param name="description">Its description.</param>
+    /// <param name="tags">Its tags; no #Tags: line when null or empty.</param>
+    /// <returns>The .blueprint file's text, pieces ordered by height then x then z.</returns>
     public static string Write(JsonObject clip, string name, string creator, string? world, DateTime saved, string description = "", IReadOnlyCollection<string>? tags = null)
     {
         var objs = (clip["objects"] as JsonArray ?? []).OfType<JsonObject>().Select(o => (
@@ -248,10 +305,12 @@ public static class Homestead
         return sb.ToString();
     }
 
+    /// <summary>A JSON number as a float, 0 when missing.</summary>
     private static float F(JsonNode? n) => n == null ? 0 : float.Parse(n.ToJsonString(), CultureInfo.InvariantCulture);
 
-    // Homestead writes numbers with three decimals at most.
+    /// <summary>Homestead writes numbers with three decimals at most.</summary>
     private static string S(float v) => v.ToString("0.###", CultureInfo.InvariantCulture);
 
+    /// <summary>A value made one header line: line breaks become spaces, trimmed.</summary>
     private static string Header(string v) => v.Replace('\r', ' ').Replace('\n', ' ').Trim();
 }

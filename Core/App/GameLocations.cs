@@ -4,25 +4,31 @@ using ValheimGen;
 
 namespace TerrainEditor.App;
 
-// The game's location rules (SeedLocations.RuleSet) read from its files (the editor has no copy of its
-// own: Valheim is needed anyway, and a copy would go out of date): the main scene's ZoneSystem
-// and LocationLists, and the alt biomes (in the main scene's bundle and the bundles it needs, which the
-// SoftRef manifest lists), kept in the data folder until the game changes.
-//
-// The order is the game's (ZoneSystem.SetupLocations): ZoneSystem's own m_locations, then the
-// LocationLists by m_sortOrder (they share one: the game keeps the order they wake in, which its log
-// shows as "Added N locations, M vegetations ... from main": read from the player's log, so it
-// follows game updates), then the alt biomes' m_addLocations.
-// A prefab's name is the file name the manifest lists for its asset ID (what SoftReference.Name gives;
-// m_prefabName is not always saved, and sometimes out of date).
+/// <summary>
+/// The game's location rules (SeedLocations.RuleSet) read from its files (the editor has no copy of its
+/// own: Valheim is needed anyway, and a copy would go out of date): the main scene's ZoneSystem
+/// and LocationLists, and the alt biomes (in the main scene's bundle and the bundles it needs, which the
+/// SoftRef manifest lists), kept in the data folder until the game changes.
+///
+/// The order is the game's (ZoneSystem.SetupLocations): ZoneSystem's own m_locations, then the
+/// LocationLists by m_sortOrder (they share one: the game keeps the order they wake in, which its log
+/// shows as "Added N locations, M vegetations ... from main": read from the player's log, so it
+/// follows game updates), then the alt biomes' m_addLocations.
+/// A prefab's name is the file name the manifest lists for its asset ID (what SoftReference.Name gives;
+/// m_prefabName is not always saved, and sometimes out of date).
+/// </summary>
 public static class GameLocations
 {
-    // The lists' wake order, by (locations, vegetations), as the game's log showed it for Valheim 0.221:
-    // used when no log of the game is found (ListOrder reads it from the player's own log first).
+    /// <summary>
+    /// The lists' wake order, by (locations, vegetations), as the game's log showed it for Valheim 0.221:
+    /// used when no log of the game is found (ListOrder reads it from the player's own log first).
+    /// </summary>
     private static readonly (int Locations, int Vegetation)[] BuiltInOrder = [(3, 0), (2, 0), (27, 25), (4, 0), (25, 33), (25, 35)];
 
-    // The lists' order from the game's own log (Player.log, or Player-prev.log, beside its saves: the
-    // newest that has it), else the built-in one; and where it came from (for the log).
+    /// <summary>
+    /// The lists' order from the game's own log (Player.log, or Player-prev.log, beside its saves: the
+    /// newest that has it), else the built-in one; and where it came from (for the log).
+    /// </summary>
     internal static ((int Locations, int Vegetation)[] Order, string From) ListOrder()
     {
         var logs = Places.WorldRoots().Select(Path.GetDirectoryName).Where(d => d != null).Distinct()
@@ -56,11 +62,16 @@ public static class GameLocations
         }
     }
 
+    /// <summary>
+    /// A log line of a list being added: its location and vegetation counts.
+    /// </summary>
     private static readonly System.Text.RegularExpressions.Regex Added = new(@"Added (\d+) locations, (\d+) vegetations.* from main\s*$");
 
-    // The game writes a line for each list as it adds them ("Added 27 locations, 25 vegetations, ...
-    // from main"), at each start: the last run's lines in their order (lists with no location left out:
-    // they add none), or null when the log has none.
+    /// <summary>
+    /// The game writes a line for each list as it adds them ("Added 27 locations, 25 vegetations, ...
+    /// from main"), at each start: the last run's lines in their order (lists with no location left out:
+    /// they add none), or null when the log has none.
+    /// </summary>
     internal static (int Locations, int Vegetation)[]? OrderFromLog(IEnumerable<string> lines)
     {
         List<(int, int)>? last = null, run = null;
@@ -94,13 +105,24 @@ public static class GameLocations
         return last is { Count: > 0 } ? last.ToArray() : null;
     }
 
+    /// <summary>
+    /// The rules' cache file in the user's data folder.
+    /// </summary>
     public static string CacheFile => Path.Combine(AppSettings.UserDataDir, "game-locations.json");
 
+    /// <summary>
+    /// Serialises starting the reading.
+    /// </summary>
     private static readonly Lock Lock = new();
+    /// <summary>
+    /// The bundles whose rules are in use (or being read), with the task reading them.
+    /// </summary>
     private static (GameBundles Bundles, Task Task)? _using;
 
-    // The game's rules in use (SeedLocations.Use) when they can be read, else none: read once for a
-    // game folder, again when Valheim is found later or another folder is chosen.
+    /// <summary>
+    /// The game's rules in use (SeedLocations.Use) when they can be read, else none: read once for a
+    /// game folder, again when Valheim is found later or another folder is chosen.
+    /// </summary>
     public static Task UseGameRules(GameBundles? bundles)
     {
         lock (Lock)
@@ -119,11 +141,17 @@ public static class GameLocations
         }
     }
 
-    // What the cache was written by: rules read by another editor build are read again.
+    /// <summary>
+    /// What the cache was written by: rules read by another editor build are read again.
+    /// </summary>
     private static readonly string CacheVersion = "rules-1 " + typeof(GameLocations).Assembly.ManifestModule.ModuleVersionId;
 
-    // The rules from the game (from the cache when the game and the editor are unchanged), or null when
-    // they cannot be read (whatever goes wrong: the page then shows no bosses or traders).
+    /// <summary>
+    /// The rules from the game (from the cache when the game and the editor are unchanged), or null when
+    /// they cannot be read (whatever goes wrong: the page then shows no bosses or traders).
+    /// </summary>
+    /// <param name="bundles">The game's bundles.</param>
+    /// <param name="cacheFile">Where the rules are kept; null: not kept nor read from a file.</param>
     public static SeedLocations.RuleSet? Load(GameBundles bundles, string? cacheFile)
     {
         try
@@ -165,13 +193,20 @@ public static class GameLocations
         }
     }
 
-    // The main scene's bundle and the bundles it needs, those the folder has (the SoftRef manifest lists
-    // them): where ZoneSystem and the LocationLists are (also the vegetation rules, GameCatalogues).
+    /// <summary>
+    /// The main scene's bundle and the bundles it needs, those the folder has (the SoftRef manifest lists
+    /// them): where ZoneSystem and the LocationLists are (also the vegetation rules, GameCatalogues).
+    /// </summary>
     internal static List<string> MainSceneBundles(GameBundles bundles) => MainSceneBundles(bundles, Manifest.Read(bundles.Folder));
 
+    /// <summary>
+    /// The main scene's bundles of the manifest that the folder has.
+    /// </summary>
     private static List<string> MainSceneBundles(GameBundles bundles, Manifest manifest) => [.. manifest.SceneBundles("main").Where(bundles.HasBundle)];
 
-    // The cached rules when they are for this game and editor and can be read; else null (read again).
+    /// <summary>
+    /// The cached rules when they are for this game and editor and can be read; else null (read again).
+    /// </summary>
     private static SeedLocations.RuleSet? Cached(string file, string stamp)
     {
         try
@@ -189,6 +224,10 @@ public static class GameLocations
         }
     }
 
+    /// <summary>
+    /// Finds ZoneSystem's locations, the LocationLists named by the order and the alt biomes in these bundles and makes
+    /// the rule set; null (and a log line) when one is missing.
+    /// </summary>
     private static SeedLocations.RuleSet? Read(GameBundles bundles, List<string> scanned, Manifest manifest, (int Locations, int Vegetation)[] order)
     {
         AssetTypeValueField? zone = null, alts = null;
@@ -240,11 +279,21 @@ public static class GameLocations
         return rules;
     }
 
+    /// <summary>
+    /// A list field's items (its Array's, when it has one).
+    /// </summary>
     private static List<AssetTypeValueField> Items(AssetTypeValueField list) => list["Array"].IsDummy ? list.Children : list["Array"].Children;
 
+    /// <summary>
+    /// How many items a list field has (0 when it is missing).
+    /// </summary>
     private static int Count(AssetTypeValueField list) => list.IsDummy ? 0 : Items(list).Count;
 
-    // One ZoneLocation: each rule property from the field of the same name (m_ before it).
+    /// <summary>
+    /// One ZoneLocation: each rule property from the field of the same name (m_ before it). <c>altBiome</c>: the alt
+    /// biome adding it, null for the main lists. The prefab is named by the manifest from its asset ID, else by
+    /// m_prefabName.
+    /// </summary>
     private static SeedLocations.Rule Location(AssetTypeValueField l, Manifest manifest, string? altBiome)
     {
         var rule = new SeedLocations.Rule { altBiome = altBiome };
@@ -274,8 +323,11 @@ public static class GameLocations
         return rule;
     }
 
-    // The tests' copy (tests/fixtures/locations.json: the kinds laid out first) made again from the game:
-    // --export-locations <file>.
+    /// <summary>
+    /// The tests' copy (tests/fixtures/locations.json: the kinds laid out first) made again from the game:
+    /// --export-locations &lt;file&gt;. Returns the exit code: 0 done, 1 no game or the rules not read, 2 no file
+    /// named.
+    /// </summary>
     public static int Export(string? path)
     {
         if (path == null)
@@ -296,14 +348,28 @@ public static class GameLocations
         return 0;
     }
 
-    // The SoftRef manifest beside the bundles folder: each asset's file name by its ID, and each
-    // bundle's dependencies.
+    /// <summary>
+    /// The SoftRef manifest beside the bundles folder: each asset's file name by its ID, and each
+    /// bundle's dependencies.
+    /// </summary>
     private sealed class Manifest
     {
+        /// <summary>
+        /// Each asset's file name (without extension) by its asset ID.
+        /// </summary>
         public Dictionary<string, string> Names { get; } = [];
+        /// <summary>
+        /// Each bundle's dependencies.
+        /// </summary>
         private readonly Dictionary<string, List<string>> _needs = [];
+        /// <summary>
+        /// Each scene's bundle, by scene name.
+        /// </summary>
         private readonly Dictionary<string, string> _sceneBundle = [];
 
+        /// <summary>
+        /// Reads the manifest beside a bundles folder (its parent's "manifest" file).
+        /// </summary>
         public static Manifest Read(string bundlesDir)
         {
             var m = new Manifest();
@@ -343,7 +409,9 @@ public static class GameLocations
             return m;
         }
 
-        // A scene's bundle, then the bundles it needs.
+        /// <summary>
+        /// A scene's bundle, then the bundles it needs.
+        /// </summary>
         public List<string> SceneBundles(string scene) => _sceneBundle.TryGetValue(scene, out string? b)
             ? [b, .. _needs.GetValueOrDefault(b) ?? []]
             : [];

@@ -3,8 +3,10 @@ using Xunit;
 
 namespace WorldEditor.Tests;
 
-// The order of the game's location lists, as its own log (Player.log) shows them added at each start
-// (GameLocations.OrderFromLog): the last run's, lists that add no location left out.
+/// <summary>
+/// The order of the game's location lists, as its own log (Player.log) shows them added at each start
+/// (GameLocations.OrderFromLog): the last run's, lists that add no location left out.
+/// </summary>
 public class CoreGameLocationsTests
 {
     [Fact]

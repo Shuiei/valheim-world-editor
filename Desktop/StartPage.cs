@@ -8,70 +8,109 @@ using TerrainEditor.Save;
 
 namespace TerrainEditor.Desktop;
 
-// The start page, like the web editor's (start.html): how to edit (your game live, a dedicated server
-// live, or a saved world offline), the worlds found on this computer, saved servers, and the settings.
-// Choosing one opens the world (OpenRequested), then the map.
+/// <summary>
+/// The start page, like the web editor's (start.html): how to edit (your game live, a dedicated server
+/// live, or a saved world offline), the worlds found on this computer, saved servers, and the settings.
+/// Choosing one opens the world (OpenRequested), then the map.
+/// </summary>
 public sealed class StartPage
 {
+    /// <summary>The page itself: the side menu and the chosen page.</summary>
     public Control View { get; }
+    /// <summary>The settings (last mode, recent worlds, folders), saved when a world is opened.</summary>
     private readonly AppSettings _settings;
 
+    /// <summary>A world to open: how to open it (run by the window, which shows the progress) and what to say meanwhile.</summary>
     public event Action<Func<Task<WorldSession>>, string>? OpenRequested;
-    // The Workshop: a blueprint file to open in it, or null for a blank plot.
+    /// <summary>The Workshop: a blueprint file to open in it, or null for a blank plot.</summary>
     public event Action<string?>? WorkshopRequested;
-    // Asks the window for a folder or a file (Browse…).
+    /// <summary>Asks the window for a folder (Browse…), with the picker's title; null when cancelled.</summary>
     internal Func<string, Task<string?>> PickFolder { get; set; } = _ => Task.FromResult<string?>(null);
+    /// <summary>Asks the window for a file (Browse…), with the picker's title; null when cancelled.</summary>
     internal Func<string, Task<string?>> PickFile { get; set; } = _ => Task.FromResult<string?>(null);
+    /// <summary>Asks the window a yes/no question (forgetting a server).</summary>
     internal Func<string, Task<bool>> Confirm { get; set; } = _ => Task.FromResult(true);
-    // Tests: the SSH tunnel and the worlds found on this computer (the real ones otherwise).
+    /// <summary>Tests: the SSH tunnel (the real one otherwise).</summary>
     internal Func<Tunnel.Request, Task<Tunnel.Result>> StartTunnel { get; set; } = Tunnel.Start;
+    /// <summary>Tests: the worlds found on this computer (the real ones otherwise).</summary>
     internal Func<AppSettings, List<Worlds.Info>> FindWorlds { get; set; } = Worlds.Find;
+    /// <summary>The Settings button was clicked.</summary>
     public event Action? SettingsRequested;
+    /// <summary>The project's page, which Documentation opens.</summary>
     public const string DocsUrl = "https://github.com/Shuiei/valheim-world-editor#readme";
-    // Documentation: the project's page, in the web browser.
+    /// <summary>Documentation: the project's page, in the web browser.</summary>
     internal Button DocsLink { get; } = new Button { Content = Icons.With("help", "Documentation"), FontSize = 11, Padding = new Thickness(6, 2) }.Classed("ghost");
+    /// <summary>Opens a web page or file with the system (the window's launcher); does nothing until set.</summary>
     internal Func<Uri, Task<bool>> OpenUrl { get; set; } = _ => Task.FromResult(false);
-    // Open log: ValheimWorldEditor.log in the system's text viewer, to attach to a bug report.
+    /// <summary>Open log: ValheimWorldEditor.log in the system's text viewer, to attach to a bug report.</summary>
     internal Button LogLink { get; } = new Button { Content = "Open log", FontSize = 11, Padding = new Thickness(6, 2) }.Classed("ghost");
 
+    /// <summary>The card about reading the game's look from Valheim (or finding its folder), above every page.</summary>
     internal GameLookBanner LookBanner { get; }
+    /// <summary>The side menu's buttons by page key ("home", "game", "server", "offline", "workshop", "new").</summary>
     internal Dictionary<string, Button> ModeButtons { get; } = [];
+    /// <summary>My game's page: the game's state and what to do.</summary>
     internal StackPanel GamePanel { get; } = new() { Spacing = 8 };
+    /// <summary>A dedicated server's page: saved servers, then the form.</summary>
     internal StackPanel ServerPanel { get; } = new() { Spacing = 8 };
+    /// <summary>The form to connect to a new server (folded away once there are saved servers).</summary>
     internal Expander ServerForm { get; } = new() { Header = new TextBlock { Text = "Connect to a server", FontWeight = FontWeight.SemiBold }, HorizontalAlignment = HorizontalAlignment.Stretch };
+    /// <summary>A saved world's page: the worlds found, and another folder to open.</summary>
     internal StackPanel OfflinePanel { get; } = new() { Spacing = 8 };
-    // Making something new, apart from editing a world: the Workshop and a new world.
+    /// <summary>Making something new, apart from editing a world: a new world.</summary>
     internal Button NewWorldButton { get; } = new Button { Content = "Make a new world", FontSize = 13, HorizontalAlignment = HorizontalAlignment.Left }.Classed("primary");
+    /// <summary>Make a new world was clicked.</summary>
     public event Action? NewWorldRequested;
+    /// <summary>Open the Workshop on a blank plot.</summary>
     internal Button NewBuildingButton { get; } = new Button { Content = "Open the Workshop", FontSize = 13, HorizontalAlignment = HorizontalAlignment.Left }.Classed("primary");
+    /// <summary>The Workshop page's copy of Homestead's state.</summary>
     internal TextBlock WorkshopHomestead { get; } = new() { TextWrapping = TextWrapping.Wrap, FontSize = 12 };
     // The pages the side menu shows (one at a time), and what Home and the Workshop list.
+    /// <summary>Home's page: the running game's card, then the recent tiles.</summary>
     internal StackPanel HomePanel { get; } = new() { Spacing = 10 };
+    /// <summary>The Workshop's page: open it, Homestead's state, the blueprints.</summary>
     internal StackPanel WorkshopPanel { get; } = new() { Spacing = 10 };
+    /// <summary>A new world's page.</summary>
     internal StackPanel NewWorldPanel { get; } = new() { Spacing = 10 };
+    /// <summary>Home's tiles: recent worlds and blueprints, then one-click servers.</summary>
     internal WrapPanel RecentTiles { get; } = new() { ItemSpacing = 12, LineSpacing = 12 };
+    /// <summary>The Workshop's tiles: every blueprint.</summary>
     internal WrapPanel BlueprintTiles { get; } = new() { ItemSpacing = 12, LineSpacing = 12 };
+    /// <summary>Home's card for the running game (empty while it does not run).</summary>
     private readonly ContentControl _running = new();
+    /// <summary>Home's error line (a server tile that could not connect).</summary>
     private readonly TextBlock _homeError = Err();
+    /// <summary>The chosen page's title.</summary>
     private readonly TextBlock _pageTitle = new() { FontSize = 26, FontWeight = FontWeight.SemiBold };
+    /// <summary>What the chosen page is for (hidden when empty).</summary>
     private readonly TextBlock _pageText = new() { Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap, FontSize = 13.5, MaxWidth = 760, HorizontalAlignment = HorizontalAlignment.Left };
+    /// <summary>The "running" tag beside My game in the menu.</summary>
     private readonly TextBlock _gameTag = new() { FontSize = 11, Foreground = new SolidColorBrush(Color.FromRgb(123, 196, 127)), VerticalAlignment = VerticalAlignment.Center };
+    /// <summary>A card per world found on this computer.</summary>
     internal WrapPanel WorldCards { get; } = new() { ItemSpacing = 10, LineSpacing = 10 };
+    /// <summary>Another world folder to open.</summary>
     internal TextBox PathBox { get; } = new() { PlaceholderText = "Folder of the world (with _main.<n>.chunks files)", FontSize = 13 };
+    /// <summary>Why that folder cannot be opened.</summary>
     internal TextBlock PathError { get; } = Err();
+    /// <summary>The error that brought the window back here (a world that could not open), above every page.</summary>
     private readonly TextBlock _lastError = new() { Foreground = new SolidColorBrush(Color.FromRgb(224, 96, 75)), TextWrapping = TextWrapping.Wrap, IsVisible = false };
+    /// <summary>Polls whether the game runs (on Home and My game): every 2.5 s, 5 s while it runs.</summary>
     private readonly DispatcherTimer _gameTimer = new() { Interval = TimeSpan.FromSeconds(2.5) };
 
-    // Homestead (the building library's in-game side): found in the game's BepInEx or not.
+    /// <summary>Homestead (the building library's in-game side): found in the game's BepInEx or not.</summary>
     internal TextBlock HomesteadText { get; } = new() { TextWrapping = TextWrapping.Wrap, FontSize = 12 };
+    /// <summary>Opens Homestead's page; shown while it is not installed.</summary>
     internal Button GetHomesteadButton { get; } = new() { Content = "Get Homestead", FontSize = 11, Padding = new Thickness(6, 1), IsVisible = false };
+    /// <summary>My game's error line.</summary>
     private readonly TextBlock _gameError = Err();
 
+    /// <summary>Shorthands for the app's line and muted text brushes.</summary>
     private static readonly IBrush Line = Ui.Line, Muted = Ui.Muted;
 
+    /// <summary>A path under the home folder as ~/… (see Ui.Tilde).</summary>
     internal static string Tilde(string path) => Ui.Tilde(path);
 
-    // An error line: takes no room while it says nothing.
+    /// <summary>An error line: takes no room while it says nothing.</summary>
     private static TextBlock Err()
     {
         var t = new TextBlock { Foreground = new SolidColorBrush(Color.FromRgb(224, 96, 75)), TextWrapping = TextWrapping.Wrap, FontSize = 12, IsVisible = false };
@@ -84,10 +123,16 @@ public sealed class StartPage
         };
         return t;
     }
+    /// <summary>A small grey wrapped explanation.</summary>
     private static TextBlock Hint(string t) => new() { Text = t, Foreground = Muted, TextWrapping = TextWrapping.Wrap, FontSize = 12 };
+    /// <summary>A floating card (Ui.Card).</summary>
     private static Border Card(Control c) => Ui.Card(c);
+    /// <summary>A section heading in grey capitals.</summary>
     private static TextBlock H2(string t) => new() { Text = t.ToUpperInvariant(), FontSize = 12, Foreground = Muted, FontWeight = FontWeight.SemiBold, Margin = new Thickness(0, 18, 0, 6) };
 
+    /// <summary>Builds the page on Home, and looks for Homestead in the background.</summary>
+    /// <param name="settings">The app's settings.</param>
+    /// <param name="lastError">Why the window came back here (shown at the top); null for none.</param>
     public StartPage(AppSettings settings, string? lastError = null)
     {
         _settings = settings;
@@ -241,15 +286,17 @@ public sealed class StartPage
         SetMode("home");
     }
 
+    /// <summary>Puts a control in a grid column and returns it.</summary>
     private static Control Col(Control c, int col)
     {
         Grid.SetColumn(c, col);
         return c;
     }
 
+    /// <summary>The page shown (a <c>ModeButtons</c> key).</summary>
     public string Mode { get; private set; } = "";
 
-    // Each page's title and what it is for.
+    /// <summary>Each page's title and what it is for.</summary>
     private static readonly Dictionary<string, (string Title, string Text)> Pages = new()
     {
         ["home"] = ("Pick up where you left off", ""),
@@ -260,6 +307,10 @@ public sealed class StartPage
         ["new"] = ("A new world", "Look at seeds before their world exists: land, biomes, and exactly where the game will put the start, the bosses, the traders and the dungeons. Let the editor search many seeds for one that suits you, then make the world."),
     };
 
+    /// <summary>
+    /// Shows a page ("home", "game", "server", "offline", "workshop", "new") and fills it; the game is polled
+    /// on Home and My game only.
+    /// </summary>
     public void SetMode(string mode)
     {
         Mode = mode;
@@ -301,11 +352,17 @@ public sealed class StartPage
         }
     }
 
+    /// <summary>Stops polling the game (the page is left).</summary>
     public void Stop() => _gameTimer.Stop();
 
     // ---- My game: is Valheim running with the plugin?
+    /// <summary>The game's state as last shown (state, world, players, where), so an unchanged poll redraws nothing.</summary>
     private string _gameKey = "";
 
+    /// <summary>
+    /// Is Valheim running with the plugin? Looks for the plugin's installs and a running game, and shows the state
+    /// (running, installed, not started once, no plugin, no BepInEx) with what to do. A failed look changes nothing.
+    /// </summary>
     internal async Task PollGame()
     {
         List<LocalGame.Bridge> bridges;
@@ -379,6 +436,11 @@ public sealed class StartPage
     }
 
     // ---- Opening.
+    /// <summary>Opens a live world through the bridge, remembering the mode as the last one used.</summary>
+    /// <param name="live">The connection to the plugin.</param>
+    /// <param name="label">The session's label ("my game", "server " and the host, "live " and the address).</param>
+    /// <param name="mode">The page to come back to next time (LastMode).</param>
+    /// <param name="what">What to say while it loads.</param>
     private void OpenLive(LiveBridge live, string label, string mode, string what)
     {
         _settings.LastMode = mode;
@@ -386,8 +448,13 @@ public sealed class StartPage
         OpenRequested?.Invoke(() => WorldSession.OpenLive(live, label), what);
     }
 
+    /// <summary>Opens the editor's log file with the system.</summary>
     internal Task<bool> OpenLog() => OpenUrl(new Uri(Path.GetFullPath(Log.FilePath)));
 
+    /// <summary>
+    /// Opens a world folder offline (a leading ~ is the home folder), adding it to Recent; a folder that is no
+    /// world says why in <c>PathError</c>.
+    /// </summary>
     internal void OpenFolder(string path)
     {
         path = path.Trim().Trim('"');
@@ -409,7 +476,7 @@ public sealed class StartPage
     }
 
     // ---- Saved worlds.
-    // Home's card when the game runs with the plugin: its world, and Edit live.
+    /// <summary>Home's card when the game runs with the plugin: its world, and Edit live.</summary>
     private Border RunningCard(LocalGame.Running running, string where)
     {
         var edit = new Button { Content = "Edit live", VerticalAlignment = VerticalAlignment.Center, FontSize = 13 }.Classed("primary").Tip("start.editLive");
@@ -437,8 +504,10 @@ public sealed class StartPage
         };
     }
 
-    // Home's tiles: saved worlds and blueprints opened or saved last (newest first), then the servers
-    // that connect in one click.
+    /// <summary>
+    /// Home's tiles: saved worlds and blueprints opened or saved last (newest first), then the servers
+    /// that connect in one click (token and password or key saved).
+    /// </summary>
     internal void FillHome()
     {
         RecentTiles.Children.Clear();
@@ -470,7 +539,7 @@ public sealed class StartPage
         }
     }
 
-    // The Workshop's tiles: every blueprint, newest first.
+    /// <summary>The Workshop's tiles: every blueprint, newest first.</summary>
     internal void FillBlueprints()
     {
         BlueprintTiles.Children.Clear();
@@ -485,6 +554,7 @@ public sealed class StartPage
         }
     }
 
+    /// <summary>The blueprints in Homestead's folder, newest first; empty when the folder cannot be read.</summary>
     private static List<Homestead.Entry> Blueprints()
     {
         try
@@ -497,7 +567,14 @@ public sealed class StartPage
         }
     }
 
-    // A tile: a picture (or the kind's icon on its colour), the name, a line under it.
+    /// <summary>A tile: a picture (or the kind's icon on its colour), the name, a line under it.</summary>
+    /// <param name="picture">A picture file; null or unreadable shows the icon instead.</param>
+    /// <param name="icon">The kind's icon.</param>
+    /// <param name="tint">The icon's background colour.</param>
+    /// <param name="name">The name, in bold.</param>
+    /// <param name="line">The line under it.</param>
+    /// <param name="tip">The tile's tooltip.</param>
+    /// <param name="open">What a click does.</param>
     private static Button Tile(string? picture, string icon, Color tint, string name, string line, string tip, Action open)
     {
         Control top = new Border { Background = new SolidColorBrush(tint), Child = new Viewbox { Width = 30, Height = 30, Child = Icons.Make(icon, 30), Opacity = 0.7 } };
@@ -542,12 +619,14 @@ public sealed class StartPage
         return tile;
     }
 
+    /// <summary>A date as "today", "yesterday", "n days ago" (under two weeks) or the date itself.</summary>
     private static string Ago(DateTime when)
     {
         int days = (DateTime.Now.Date - when.Date).Days;
         return days <= 0 ? "today" : days == 1 ? "yesterday" : days < 14 ? $"{days} days ago" : when.ToString("d MMM yyyy", System.Globalization.CultureInfo.InvariantCulture);
     }
 
+    /// <summary>A card per world found on this computer (worlds that cannot be opened greyed out, with why).</summary>
     internal void FillWorlds()
     {
         WorldCards.Children.Clear();
@@ -584,16 +663,21 @@ public sealed class StartPage
     }
 
     // ---- Dedicated servers.
+    /// <summary>A row per saved server, to connect, edit or forget it.</summary>
     internal StackPanel SavedServers { get; } = new() { Spacing = 6 };
+    /// <summary>A saved server's connection error.</summary>
     private readonly TextBlock _savedError = Err();
+    /// <summary>The server form's error (or progress) line.</summary>
     internal TextBlock ServerError { get; } = Err();
+    /// <summary>The own tunnel's error line.</summary>
     internal TextBlock UrlError { get; } = Err();
+    /// <summary>My game's card: the game's state and what to do.</summary>
     internal ContentControl GameState { get; } = new();
 
-    // The Workshop's card: whether Homestead is installed (its blueprints are the Workshop's Library).
+    /// <summary>The Workshop's card: whether Homestead is installed (its blueprints are the Workshop's Library).</summary>
     internal void FillWorkshop() => ShowHomestead(Homestead.Find(_settings));
 
-    // Whether Homestead is in the game: the editor's blueprints are Homestead's, built in game with it.
+    /// <summary>Whether Homestead is in the game: the editor's blueprints are Homestead's, built in game with it.</summary>
     internal void ShowHomestead(Homestead.Status hs)
     {
         if (hs.Installed)
@@ -610,20 +694,34 @@ public sealed class StartPage
         WorkshopHomestead.Text = HomesteadText.Text;
         WorkshopHomestead.Foreground = HomesteadText.Foreground;
     }
+    /// <summary>The server form: the name it shows under in the list (optional).</summary>
     internal TextBox SName { get; } = new() { PlaceholderText = "how it shows in your list, e.g. Friends server (optional)" };
+    /// <summary>The server's address.</summary>
     internal TextBox SHost { get; } = new() { PlaceholderText = "my.server.com or 203.0.113.10" };
+    /// <summary>The SSH port (22).</summary>
     internal NumericUpDown SPort { get; } = new() { Value = 22, Minimum = 1, Maximum = 65535, FormatString = "0" };
+    /// <summary>The SSH user.</summary>
     internal TextBox SUser { get; } = new() { PlaceholderText = "the account you log in with" };
+    /// <summary>The SSH password (or a key file instead).</summary>
     internal TextBox SPass { get; } = new() { PasswordChar = '•', PlaceholderText = "or use a key file below" };
+    /// <summary>The SSH key file (optional).</summary>
     internal TextBox SKey { get; } = new() { PlaceholderText = "~/.ssh/id_ed25519" };
+    /// <summary>The plugin's token, from its config file on the server.</summary>
     internal TextBox SToken { get; } = new() { PlaceholderText = "the Token line in BepInEx/config/Tie.WorldEditorBridge.cfg on the server" };
+    /// <summary>The server's Valheim folder (optional: the plugin's port and precise errors).</summary>
     internal TextBox SFolder { get; } = new() { PlaceholderText = "/home/valheim/server, the folder with BepInEx (for the plugin's port and precise errors)" };
+    /// <summary>Save the password with the server.</summary>
     internal CheckBox SSave { get; } = new() { Content = "Save password" };
+    /// <summary>The key file's passphrase (never saved).</summary>
     internal TextBox SPhrase { get; } = new() { PasswordChar = '•' };
+    /// <summary>The plugin's port on the server, when not the default.</summary>
     internal NumericUpDown SBridge { get; } = new() { Minimum = 1, Maximum = 65535, FormatString = "0", PlaceholderText = "5182" };
+    /// <summary>I made my own tunnel: the bridge's address.</summary>
     internal TextBox LiveUrl { get; } = new() { Text = "127.0.0.1:5182" };
+    /// <summary>I made my own tunnel: the plugin's token.</summary>
     internal TextBox LiveToken { get; } = new() { PlaceholderText = "from BepInEx/config/Tie.WorldEditorBridge.cfg" };
 
+    /// <summary>Builds the dedicated server page: the saved servers, then the form (with More options).</summary>
     private void BuildServerPanel()
     {
         Control Field(string label, Control box)
@@ -691,6 +789,10 @@ public sealed class StartPage
         ServerPanel.Children.Add(Card(ServerForm));
     }
 
+    /// <summary>
+    /// A row per saved server: Connect (asking for what is not saved: token, password, key passphrase), edit (into
+    /// the form) and forget.
+    /// </summary>
     internal void FillServers()
     {
         SavedServers.Children.Clear();
@@ -758,6 +860,7 @@ public sealed class StartPage
         }
     }
 
+    /// <summary>Connects to the server the form describes (address and token required).</summary>
     internal async Task ConnectNew()
     {
         if (string.IsNullOrWhiteSpace(SHost.Text))
@@ -774,9 +877,16 @@ public sealed class StartPage
             SBridge.Value is decimal b ? (int)b : null, SSave.IsChecked == true, NullIfEmpty(SName.Text), NullIfEmpty(SFolder.Text)), ServerError, $"Connecting to {SHost.Text.Trim()}…");
     }
 
+    /// <summary>Trimmed text, or null when blank.</summary>
     private static string? NullIfEmpty(string? s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim();
 
-    // Opens the SSH tunnel, checks the plugin answers through it, remembers the server, then opens.
+    /// <summary>
+    /// Opens the SSH tunnel, checks the plugin answers through it, remembers the server, then opens. Progress and
+    /// problems go to <paramref name="error"/>; a plugin that does not answer closes the tunnel again.
+    /// </summary>
+    /// <param name="t">The server and how to log in.</param>
+    /// <param name="error">The line for progress and errors.</param>
+    /// <param name="what">What to say while connecting.</param>
     private async Task Connect(Tunnel.Request t, TextBlock error, string what)
     {
         error.Text = what;
@@ -803,6 +913,7 @@ public sealed class StartPage
         OpenLive(new LiveBridge(url, tr.Token), "server " + t.Host, "server", "Loading the world from the server…");
     }
 
+    /// <summary>I made my own tunnel: connects to the bridge address typed (http:// added when missing).</summary>
     internal async Task ConnectUrl()
     {
         string url = LiveUrl.Text?.Trim() ?? "";

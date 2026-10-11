@@ -5,12 +5,17 @@ using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
-// The map page's edges on the test world: nothing happens without a world, the players' line when the
-// game errors or sends garbage, the biomes' names, the cursor's line when the mouse is over the map, an
-// empty search and one that fails, and the zone filter's messages and questions.
+/// <summary>
+/// The map page's edges on the test world: nothing happens without a world, the players' line when the game errors or
+/// sends garbage, the biomes' names, the cursor's line when the mouse is over the map, an empty search and one that
+/// fails, and the zone filter's messages and questions.
+/// </summary>
 [Collection("World files")]
 public class PanelMapTests
 {
+    /// <summary>
+    /// A main window on its own copy of the test world, with the map page's messages collected; deleted when disposed.
+    /// </summary>
     private sealed class Run : IDisposable
     {
         public MainWindow W { get; } = new(load: false) { Width = 1600, Height = 1000 };
@@ -18,6 +23,9 @@ public class PanelMapTests
         public List<string> Told { get; } = [];
         public MapPage M => W.MapPage!;
 
+        /// <summary>
+        /// Opens the world (its map page) and collects what the map tells.
+        /// </summary>
         public async Task Open()
         {
             W.Show();
@@ -25,6 +33,7 @@ public class PanelMapTests
             M.Tell = t => { Told.Add(t); return Task.CompletedTask; };
         }
 
+        /// <inheritdoc/>
         public void Dispose() => Directory.Delete(Path.GetDirectoryName(Dir)!, recursive: true);
     }
 
@@ -84,8 +93,10 @@ public class PanelMapTests
         }
     }
 
-    // What the map raises when the mouse moves over it (headless windows put an overlay above the map,
-    // so the event is raised as the map does).
+    /// <summary>
+    /// What the map raises when the mouse moves over it (headless windows put an overlay above the map, so the event is
+    /// raised as the map does).
+    /// </summary>
     private static void Hovered(MapPage m, float x, float z) =>
         (typeof(MapView).GetField("Hovered", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(m.Map) as Action<float, float>)!(x, z);
 

@@ -7,15 +7,20 @@ using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
-// The 3D editor's world controls, as the web editor had them: Discard (undoing the steps not saved or
-// applied, or reading the world again for older ones) and Reload in the top bar, Auto apply, the
-// players of a live world with Go to, the area moved by one zone or following the view, and the note
-// about the area's locations.
+/// <summary>
+/// The 3D editor's world controls, as the web editor had them: Discard (undoing the steps not saved or applied, or
+/// reading the world again for older ones) and Reload in the top bar, Auto apply, the players of a live world with Go
+/// to, the area moved by one zone or following the view, and the note about the area's locations.
+/// </summary>
 [Collection("World files")]
 public class ParityEditorTests
 {
     private static readonly Func<Formula.Env, double> Two = Formula.Compile("2", []);
 
+    /// <summary>
+    /// A main window on its own copy of the test world, with its questions answered from a queue (no when empty), saves
+    /// of the settings counted, and Auto apply and following the view off; deleted when disposed.
+    /// </summary>
     private sealed class Run : IDisposable
     {
         public MainWindow W { get; } = new(load: false) { Width = 1600, Height = 1000 };
@@ -35,6 +40,9 @@ public class ParityEditorTests
             W.Settings.AutoApply = W.Settings.AreaFollow = false;
         }
 
+        /// <summary>
+        /// Opens the world and edits the area at zone (x, z), <c>size</c> zones across.
+        /// </summary>
         public async Task Open(int x = 0, int z = 0, int size = 1)
         {
             await W.OpenWorld(() => Task.Run(() => WorldSession.Open(Dir)), "Opening…");
@@ -42,6 +50,9 @@ public class ParityEditorTests
             Assert.NotNull(W.Session);
         }
 
+        /// <summary>
+        /// Opens a stand-in live game and edits the area at zone (x, z), <c>size</c> zones across.
+        /// </summary>
         public async Task OpenLive(int x = 0, int z = 0, int size = 1)
         {
             Game = new FakeGame();
@@ -52,8 +63,12 @@ public class ParityEditorTests
             Assert.True(W.Session!.IsLive);
         }
 
+        /// <summary>
+        /// Raises the ground 2 m in a 3 m circle at grid point (gx, gz), as one undo step with this label.
+        /// </summary>
         public void Raise(float gx = 32, float gz = 32, string label = "raise") => W.Session!.Shape(gx, gz, Two, 3, 0, label);
 
+        /// <inheritdoc/>
         public void Dispose()
         {
             Game?.Dispose();
@@ -67,6 +82,9 @@ public class ParityEditorTests
         }
     }
 
+    /// <summary>
+    /// Raises the button's click (no posted work run).
+    /// </summary>
     private static void Click(Button b) => b.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
 
     // ---- Discard.
@@ -484,6 +502,9 @@ public class ParityEditorTests
         Assert.Null(await r.W.CheckFollow());
     }
 
+    /// <summary>
+    /// Moves the view's target to world point (wx, wz), keeping its turn, pitch and distance.
+    /// </summary>
     private static void LookAt(MainWindow w, float wx, float wz)
     {
         var (yaw, pitch, distance, _) = w.View.WorldCamera!.Value;

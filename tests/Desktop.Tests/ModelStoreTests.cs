@@ -4,9 +4,11 @@ using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
-// The copied game models, read from a tiny store made here: a model's parts and scale, a mesh's
-// vertices and triangles (turned for the mirrored z), a material's colour and options with their
-// defaults, a texture's pixels, and everything missing or broken giving nothing instead of failing.
+/// <summary>
+/// The copied game models, read from a tiny store made here: a model's parts and scale, a mesh's vertices and triangles
+/// (turned for the mirrored z), a material's colour and options with their defaults, a texture's pixels, and everything
+/// missing or broken giving nothing instead of failing.
+/// </summary>
 public sealed class ModelStoreTests : IDisposable
 {
     private readonly string _dir = Path.Combine(Path.GetTempPath(), "vwe-models-" + Guid.NewGuid().ToString("N")[..8]);
@@ -37,6 +39,9 @@ public sealed class ModelStoreTests : IDisposable
         File.WriteAllText(Path.Combine(_dir, "tex", "broken.png"), "not a picture");
     }
 
+    /// <summary>
+    /// Deletes the tiny store.
+    /// </summary>
     public void Dispose() => Directory.Delete(_dir, true);
 
     [Fact]

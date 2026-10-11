@@ -5,29 +5,43 @@ using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
-// The Place tool's shapes with the mouse, looking down on a flat 2 × 2 zone area: line points dragged,
-// removed and inserted, freehand lines, a double-click to place, grid boxes, circles and rectangles,
-// the eyedropper, picking a height, and the keys.
+/// <summary>
+/// The Place tool's shapes with the mouse, looking down on a flat 2 × 2 zone area: line points dragged, removed and
+/// inserted, freehand lines, a double-click to place, grid boxes, circles and rectangles, the eyedropper, picking a
+/// height, and the keys.
+/// </summary>
 public class PlaceMouseTests
 {
+    /// <summary>
+    /// The window, its edit session and the view's size, with the Place tool's mouse driven at grid points and its last
+    /// message kept.
+    /// </summary>
     private sealed record View(MainWindow W, EditSession S, Avalonia.Size Size)
     {
         public PlaceInput In => W.PlaceInput;
         public PlaceTool Tool => W.PlaceTool;
 
-        // Grid point (gx, gz) on screen (the ground is at 30 m).
+        /// <summary>
+        /// Grid point (gx, gz) on screen (the ground is at 30 m).
+        /// </summary>
         public Avalonia.Point At(float gx, float gz)
         {
             var q = Vector4.Transform(new Vector4(gx - 64, 30, -(gz - 64), 1), W.View.ViewProj);
             return new Avalonia.Point((q.X / q.W + 1) / 2 * Size.Width, (1 - q.Y / q.W) / 2 * Size.Height);
         }
 
+        /// <summary>
+        /// A click at grid point (gx, gz), with Ctrl or Alt held and as many clicks as given.
+        /// </summary>
         public void Click(float gx, float gz, bool ctrl = false, int clicks = 1, bool alt = false)
         {
             In.Down(At(gx, gz), Size, false, ctrl, alt, clicks);
             In.Up(At(gx, gz), Size);
         }
 
+        /// <summary>
+        /// A drag along these grid points.
+        /// </summary>
         public void Drag(params (float X, float Z)[] path)
         {
             In.Down(At(path[0].X, path[0].Z), Size, false, false, false, 1);
@@ -41,6 +55,10 @@ public class PlaceMouseTests
         public string? Said;
     }
 
+    /// <summary>
+    /// A shown main window editing a flat 2 × 2 zone area with these objects, in the Place tool's given mode with
+    /// Beech1 chosen, looking straight down.
+    /// </summary>
     private static View Open(PlaceTool.Modes mode, params WorldScene.Thing[] things)
     {
         var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
@@ -58,6 +76,9 @@ public class PlaceMouseTests
         return v;
     }
 
+    /// <summary>
+    /// The tool's i-th line point.
+    /// </summary>
     private static Vector2 Pt(View v, int i) => v.Tool.Points[i];
 
     [AvaloniaFact]

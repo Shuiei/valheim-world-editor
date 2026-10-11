@@ -7,10 +7,11 @@ using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
-// A real SSH server for the tunnel's tests: OpenSSH's sshd run as the test's own user on a free local
-// port, with its own host key, its own authorized keys and its own settings in a temporary folder
-// (never ~/.ssh, never port 22). Without sshd the tests skip, unless VWE_NEED_SSHD=1 (CI) makes that a
-// failure.
+/// <summary>
+/// A real SSH server for the tunnel's tests: OpenSSH's sshd run as the test's own user on a free local port, with its
+/// own host key, its own authorized keys and its own settings in a temporary folder (never ~/.ssh, never port 22).
+/// Without sshd the tests skip, unless VWE_NEED_SSHD=1 (CI) makes that a failure.
+/// </summary>
 public sealed class LocalSshd : IDisposable
 {
     private readonly Process? _p;
@@ -94,7 +95,9 @@ public sealed class LocalSshd : IDisposable
 
     public bool Available => _p != null;
 
-    // Skips the test without sshd (fails instead when CI asks for it).
+    /// <summary>
+    /// Skips the test without sshd (fails instead when CI asks for it).
+    /// </summary>
     public void Need()
     {
         if (!Available && Environment.GetEnvironmentVariable("VWE_NEED_SSHD") == "1")
@@ -104,6 +107,9 @@ public sealed class LocalSshd : IDisposable
         Assert.SkipUnless(Available, Why ?? "");
     }
 
+    /// <summary>
+    /// Runs a program with these arguments and returns what it wrote to standard output.
+    /// </summary>
     private static string Exec(string file, params string[] args)
     {
         var psi = new ProcessStartInfo(file) { RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false };
@@ -140,10 +146,11 @@ public sealed class LocalSshd : IDisposable
     }
 }
 
-// The tunnel against a real SSH server (LocalSshd): logging in with a key, the forward to the plugin's
-// port, trusting the server's key on first use and refusing it once it changes, the saved server's
-// token and port, the plugin's port read from the server's game folder, and every diagnosis of a
-// plugin that does not answer.
+/// <summary>
+/// The tunnel against a real SSH server (LocalSshd): logging in with a key, the forward to the plugin's port, trusting
+/// the server's key on first use and refusing it once it changes, the saved server's token and port, the plugin's port
+/// read from the server's game folder, and every diagnosis of a plugin that does not answer.
+/// </summary>
 [Collection("DataDir")]
 public sealed class CoreTunnelSshTests : IClassFixture<LocalSshd>, IDisposable
 {
@@ -196,9 +203,15 @@ public sealed class CoreTunnelSshTests : IClassFixture<LocalSshd>, IDisposable
         }
     }
 
+    /// <summary>
+    /// A tunnel request to the local sshd as the test's user, with its key unless another is given.
+    /// </summary>
     private Tunnel.Request Req(string? key = null, string? token = "tok", int? bridge = null, string? password = null, bool savePassword = false, string? name = null, string? folder = null) =>
         new("127.0.0.1", _ssh.Port, _ssh.User, password, key ?? _ssh.Key, null, token, bridge, savePassword, name, folder);
 
+    /// <summary>
+    /// The first line a local port answers (10 s at most).
+    /// </summary>
     private static string ReadThrough(int localPort)
     {
         using var c = new TcpClient();

@@ -4,29 +4,56 @@ using TerrainEditor.Save;
 
 namespace ValheimGen;
 
-// Base (unmodified) terrain for a world, computed offline with the ported world generator.
+/// <summary>
+/// Base (unmodified) terrain for a world, computed offline with the ported world generator.
+/// </summary>
 public sealed class TerrainService
 {
+    /// <summary>
+    /// Sea level, metres.
+    /// </summary>
     public const float WaterLevel = 30f;
 
+    /// <summary>
+    /// The edge of the world, metres from the middle: the overview's reach, ocean beyond it.
+    /// </summary>
     public const float MapRadius = 10500f;
 
-    // This world's generator (the map reads biomes and rivers from it).
+    /// <summary>
+    /// This world's generator (the map reads biomes and rivers from it).
+    /// </summary>
     internal WorldGenerator Generator { get; }
 
+    /// <summary>
+    /// BaseZone's heights by zone, built on first use.
+    /// </summary>
     private readonly ConcurrentDictionary<(int, int), float[]> _zones = new();
 
+    /// <summary>
+    /// The overview PNG, rendered on first use.
+    /// </summary>
     private readonly Lazy<byte[]> _overviewPng;
 
+    /// <summary>
+    /// The runtime modifiers laid over generated terrain in BaseZone; null for none.
+    /// </summary>
     private TerrainEditor.Terrain.TerrainModifiers? _modifiers;
 
-    // New modifiers (ground discs added or taken away): the zones' ground is worked out again.
+    /// <summary>
+    /// New modifiers (ground discs added or taken away): the zones' ground is worked out again.
+    /// </summary>
     public void UseModifiers(TerrainEditor.Terrain.TerrainModifiers modifiers)
     {
         _modifiers = modifiers;
         _zones.Clear();
     }
 
+    /// <summary>
+    /// The terrain of a saved world: its generator is made from the save's seed and world gen version.
+    /// </summary>
+    /// <param name="save">The world.</param>
+    /// <param name="modifiers">Runtime modifiers to lay over BaseZone's ground; null for none.</param>
+    /// <param name="overviewSize">Texels per side of <see cref="OverviewPng"/>.</param>
     public TerrainService(WorldSave save, TerrainEditor.Terrain.TerrainModifiers? modifiers = null, int overviewSize = 1024)
     {
         _modifiers = modifiers;
@@ -35,12 +62,21 @@ public sealed class TerrainService
         _overviewPng = new Lazy<byte[]>(() => RenderOverview(overviewSize), LazyThreadSafetyMode.ExecutionAndPublication);
     }
 
+    /// <summary>
+    /// The overview's default size, 1024; it does not follow the constructor's overviewSize.
+    /// </summary>
     public int OverviewSize { get; } = 1024;
 
+    /// <summary>
+    /// A shaded PNG of the whole world, north up, transparent outside the world's edge; rendered on first use.
+    /// </summary>
     public byte[] OverviewPng => _overviewPng.Value;
 
-    // The ground the game's saved edits apply to: generated terrain plus the runtime flattening of
-    // locations (TerrainModifier), exactly as Heightmap.ApplyModifiers does before TerrainComp.
+    /// <summary>
+    /// The ground the game's saved edits apply to: generated terrain plus the runtime flattening of
+    /// locations (TerrainModifier), exactly as Heightmap.ApplyModifiers does before TerrainComp.
+    /// 65x65 vertex heights, row = z, cached; callers must not change the array.
+    /// </summary>
     public float[] BaseZone(int zx, int zz) => _zones.GetOrAdd((zx, zz), k =>
     {
         float[] h = BaseTerrain.BuildZone(Generator, k.Item1, k.Item2);
@@ -48,11 +84,19 @@ public sealed class TerrainService
         return h;
     });
 
+    /// <summary>
+    /// BaseMask's masks by zone, built on first use.
+    /// </summary>
     private readonly ConcurrentDictionary<(int, int), float[]> _masks = new();
 
+    /// <summary>
+    /// VertexBiomes' biomes by zone, built on first use.
+    /// </summary>
     private readonly ConcurrentDictionary<(int, int), int[]> _biomes = new();
 
-    // Biome at every vertex of a zone (65 x 65, row = z), for brush masks.
+    /// <summary>
+    /// Biome at every vertex of a zone (65 x 65, row = z), for brush masks.
+    /// </summary>
     public int[] VertexBiomes(int zx, int zz) => _biomes.GetOrAdd((zx, zz), k =>
     {
         int[] b = new int[65 * 65];
@@ -67,7 +111,9 @@ public sealed class TerrainService
         return b;
     });
 
-    // The game's base paint mask for a zone (biome-specific; Color.black elsewhere).
+    /// <summary>
+    /// The game's base paint mask for a zone (biome-specific; Color.black elsewhere): 65x65 RGBA floats, cached.
+    /// </summary>
     public float[] BaseMask(int zx, int zz) => _masks.GetOrAdd((zx, zz), k =>
     {
         float[] m = new float[65 * 65 * 4];
@@ -75,8 +121,11 @@ public sealed class TerrainService
         return m;
     });
 
-    // Heightmap.m_cornerBiomes: the biome sector at each zone corner. Sectors sample GetBiome on the
-    // 12 m grid of AltBiomeWorldData (WorldSpaceToMapSpace / MapSpaceToWorldSpace).
+    /// <summary>
+    /// Heightmap.m_cornerBiomes: the biome sector at each zone corner. Sectors sample GetBiome on the
+    /// 12 m grid of AltBiomeWorldData (WorldSpaceToMapSpace / MapSpaceToWorldSpace).
+    /// </summary>
+    /// <returns>Four biomes: corners (-x, -z), (+x, -z), (-x, +z), (+x, +z); Ocean beyond the world's edge.</returns>
     public int[] CornerBiomes(int zx, int zz)
     {
         static float Snap(float v) => ((int)((v - 6f) / 12f + 1024f) - 1024) * 12f + 6f;
@@ -84,11 +133,19 @@ public sealed class TerrainService
         return [.. new[] { (x0, z0), (x0 + 64f, z0), (x0, z0 + 64f), (x0 + 64f, z0 + 64f) }.Select(c => { float sx = Snap(c.Item1), sz = Snap(c.Item2); return sx * sx + sz * sz > 110250000f ? (int)Heightmap.Biome.Ocean : (int)Generator.GetBiome(sx, sz); })];
     }
 
-    // Generated terrain only, without location flattening.
+    /// <summary>
+    /// Generated terrain only, without location flattening (not cached).
+    /// </summary>
     public float[] RawZone(int zx, int zz) => BaseTerrain.BuildZone(Generator, zx, zz);
 
+    /// <summary>
+    /// The biome at a world point.
+    /// </summary>
     public Heightmap.Biome BiomeAt(float x, float z) => Generator.GetBiome(x, z);
 
+    /// <summary>
+    /// Renders the overview PNG: biome colours, water by depth, hill shading on land.
+    /// </summary>
     private byte[] RenderOverview(int size)
     {
         float[] heights = new float[size * size];
@@ -140,6 +197,9 @@ public sealed class TerrainService
         return Png.Encode(size, size, rgba);
     }
 
+    /// <summary>
+    /// The overview's colour (0..255 per channel) for a biome at a height: blue, darker with depth, below sea level.
+    /// </summary>
     internal static (float, float, float) BiomeColor(Heightmap.Biome biome, float h)
     {
         if (h < WaterLevel)
@@ -162,9 +222,14 @@ public sealed class TerrainService
     }
 }
 
-// Minimal PNG writer (8-bit RGBA, no filtering).
+/// <summary>
+/// Minimal PNG writer (8-bit RGBA, no filtering).
+/// </summary>
 public static class Png
 {
+    /// <summary>
+    /// The CRC-32 table PNG chunks are checked with.
+    /// </summary>
     private static readonly uint[] CrcTable = [.. Enumerable.Range(0, 256).Select(n =>
     {
         uint c = (uint)n;
@@ -175,6 +240,9 @@ public static class Png
         return c;
     })];
 
+    /// <summary>
+    /// A PNG file of an image, rows top first, 4 bytes per pixel.
+    /// </summary>
     public static byte[] Encode(int width, int height, byte[] rgba)
     {
         using MemoryStream png = new();
@@ -201,6 +269,9 @@ public static class Png
         return png.ToArray();
     }
 
+    /// <summary>
+    /// Writes one chunk: length, type, data and CRC.
+    /// </summary>
     private static void Chunk(Stream s, string type, byte[] data)
     {
         byte[] len = new byte[4];
@@ -218,6 +289,9 @@ public static class Png
         s.Write(len);
     }
 
+    /// <summary>
+    /// Writes v big-endian at b[o].
+    /// </summary>
     private static void WriteBE(byte[] b, int o, uint v)
     {
         b[o] = (byte)(v >> 24);

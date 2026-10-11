@@ -3,18 +3,27 @@ using AssetsTools.NET.Extra;
 
 namespace TerrainEditor.App;
 
-// What the editor reads of the game's files at its start (GameData), in C# on the same reader as the
-// models: the kinds found in the bundles, all in one pass over them (ReadAtStart), and those with their
-// own readers. Each is written as CatalogueJson writes it.
+/// <summary>
+/// What the editor reads of the game's files at its start (GameData), in C# on the same reader as the
+/// models: the kinds found in the bundles, all in one pass over them (ReadAtStart), and those with their
+/// own readers. Each is written as CatalogueJson writes it.
+/// </summary>
 public static partial class GameCatalogues
 {
-    // The kinds read in the one pass over the bundles, each found from the scripts it needs up to their
-    // prefabs, not by reading every object of every bundle (seconds, not minutes). Each bundle is opened
-    // once and given to each kind's reader, in the order of their file names: the order entries come in,
-    // and which one wins when a name is found twice.
+    /// <summary>
+    /// The kinds read in the one pass over the bundles, each found from the scripts it needs up to their
+    /// prefabs, not by reading every object of every bundle (seconds, not minutes). Each bundle is opened
+    /// once and given to each kind's reader, in the order of their file names: the order entries come in,
+    /// and which one wins when a name is found twice.
+    /// </summary>
     public static readonly string[] AtStart = ["terrain-modifiers", "prefabs", "pieces", "piece-support", "piece-place", "piece-cost", "dungeon-rooms"];
 
-    // The kinds named (of AtStart), as their JSON.
+    /// <summary>
+    /// The kinds named (of AtStart), as their JSON. Throws ArgumentException for a kind not in <c>AtStart</c>.
+    /// </summary>
+    /// <param name="bundles">The game's bundles (its folder is what is read).</param>
+    /// <param name="kinds">The kinds to read, of <c>AtStart</c>.</param>
+    /// <returns>Each kind's JSON, by kind.</returns>
     public static Dictionary<string, string> ReadAtStart(GameBundles bundles, IReadOnlyList<string> kinds)
     {
         var scans = kinds.Select(k => (Kind: k, Scan: k switch
@@ -44,39 +53,68 @@ public static partial class GameCatalogues
         return scans.ToDictionary(s => s.Kind, s => s.Scan.Json());
     }
 
-    // One kind's reading of every bundle at the editor's start (the game's other bundles are found
-    // through game), and its JSON.
+    /// <summary>
+    /// One kind's reading of every bundle at the editor's start (the game's other bundles are found
+    /// through game), and its JSON.
+    /// </summary>
     private interface IStartScan
     {
+        /// <summary>
+        /// Reads what this kind needs of one bundle; <c>game</c> gives the others (scripts, references).
+        /// </summary>
         void Read(Bundle b, Game game);
 
+        /// <summary>
+        /// The kind's JSON, once every bundle is read.
+        /// </summary>
         string Json();
     }
 
     // ---- The bundles.
 
-    // An object of another internal file of the bundles: the file's name (lower case) and its path id.
+    /// <summary>
+    /// An object of another internal file of the bundles: the file's name (lower case) and its path id.
+    /// </summary>
+    /// <param name="Cab">The internal file's name, lower case.</param>
+    /// <param name="PathId">The object's path id in that file.</param>
     private readonly record struct Ref(string Cab, long PathId);
 
-    // The game's bundles, opened one at a time (all of them at once do not fit in memory).
+    /// <summary>
+    /// The game's bundles, opened one at a time (all of them at once do not fit in memory).
+    /// </summary>
     private sealed class Game : IDisposable
     {
+        /// <summary>
+        /// AssetsTools.NET's manager for every bundle opened here.
+        /// </summary>
         private readonly AssetsManager _am = new() { UseTemplateFieldCache = true, UseMonoTemplateFieldCache = true, UseRefTypeManagerCache = true, UseQuickLookup = true };
+        /// <summary>
+        /// The bundles folder.
+        /// </summary>
         private readonly string _dir;
 
-        // The bundles' file names, in order.
+        /// <summary>
+        /// The bundles' file names, in order.
+        /// </summary>
         public List<string> Bundles { get; }
 
-        // Each internal file (lower case) -> its bundle: filled as the bundles are read.
+        /// <summary>
+        /// Each internal file (lower case) -&gt; its bundle: filled as the bundles are read.
+        /// </summary>
         public Dictionary<string, string> CabBundle { get; } = new(StringComparer.Ordinal);
 
+        /// <summary>
+        /// The bundles of a bundles folder (every file in it, by name).
+        /// </summary>
         public Game(string dir)
         {
             _dir = dir;
             Bundles = [.. Directory.GetFiles(dir).Select(Path.GetFileName).OfType<string>().Order(StringComparer.Ordinal)];
         }
 
-        // A bundle, or null when it is not one.
+        /// <summary>
+        /// A bundle, or null when it is not one. Its internal files are added to <c>CabBundle</c>.
+        /// </summary>
         public Bundle? Open(string name)
         {
             try
@@ -94,8 +132,10 @@ public static partial class GameCatalogues
             }
         }
 
-        // Every bundle's internal files, from their headers only (what Open fills as it goes): for
-        // references into bundles not opened yet.
+        /// <summary>
+        /// Every bundle's internal files, from their headers only (what Open fills as it goes): for
+        /// references into bundles not opened yet.
+        /// </summary>
         public void IndexCabs()
         {
             foreach (string name in Bundles)
@@ -116,12 +156,19 @@ public static partial class GameCatalogues
             }
         }
 
-        // The class of each script (MonoScript) met, by where it is; and the bundles opened for them.
+        /// <summary>
+        /// The class of each script (MonoScript) met, by where it is (null: could not be told).
+        /// </summary>
         private readonly Dictionary<Ref, string?> _scripts = [];
+        /// <summary>
+        /// The bundles opened for scripts, by file name (null: not a bundle), kept open until the end.
+        /// </summary>
         private readonly Dictionary<string, Bundle?> _scriptBundles = new(StringComparer.Ordinal);
 
-        // A MonoBehaviour's class ("TerrainModifier", "ZNetView"...), from the script its file lists for
-        // it: nothing of the object itself is read. Null when it cannot be told.
+        /// <summary>
+        /// A MonoBehaviour's class ("TerrainModifier", "ZNetView"...), from the script its file lists for
+        /// it: nothing of the object itself is read. Null when it cannot be told.
+        /// </summary>
         public string? ScriptClass(Bundle b, Bundle.Inner f, AssetFileInfo info)
         {
             var file = f.Assets.file;
@@ -153,11 +200,16 @@ public static partial class GameCatalogues
             return _scripts[r] = inner == null ? null : sb!.Field(inner, r.PathId)?["m_ClassName"].AsString;
         }
 
+        /// <summary>
+        /// The class of a MonoBehaviour by its path id in the bundle; null when it is not there or cannot be told.
+        /// </summary>
         public string? ScriptClass(Bundle b, long pid) =>
             b.FileWith(pid) is { } f && f.Assets.file.GetAssetInfo(pid) is { } info ? ScriptClass(b, f, info) : null;
 
-        // Each reference's object, read in the bundle that has its file (each bundle opened once);
-        // references to files no bundle has are left out.
+        /// <summary>
+        /// Each reference's object, read in the bundle that has its file (each bundle opened once);
+        /// references to files no bundle has are left out.
+        /// </summary>
         public void Visit(IEnumerable<Ref> refs, Action<Bundle, Bundle.Inner, long> visit)
         {
             foreach (var group in refs.Distinct().Where(r => CabBundle.ContainsKey(r.Cab)).GroupBy(r => CabBundle[r.Cab]).OrderBy(g => g.Key, StringComparer.Ordinal))
@@ -177,6 +229,9 @@ public static partial class GameCatalogues
             }
         }
 
+        /// <summary>
+        /// Closes the bundles kept open for scripts and everything else the manager still holds.
+        /// </summary>
         public void Dispose()
         {
             foreach (var b in _scriptBundles.Values)
@@ -188,13 +243,22 @@ public static partial class GameCatalogues
         }
     }
 
-    // A bundle open for a scan: its internal files with objects (scene bundles have two), and every
-    // object read once (kept until the bundle is closed).
+    /// <summary>
+    /// A bundle open for a scan: its internal files with objects (scene bundles have two), and every
+    /// object read once (kept until the bundle is closed).
+    /// </summary>
     private sealed class Bundle : IDisposable
     {
+        /// <summary>
+        /// One internal file of a bundle that has objects.
+        /// </summary>
+        /// <param name="Cab">The file's name, lower case.</param>
+        /// <param name="Assets">The file as AssetsTools opened it.</param>
         public sealed record Inner(string Cab, AssetsFileInstance Assets)
         {
-            // A reference's file (m_FileID > 0: one this file lists as needed), by name (lower case).
+            /// <summary>
+            /// A reference's file (m_FileID &gt; 0: one this file lists as needed), by name (lower case).
+            /// </summary>
             public string? FileOf(int fileId)
             {
                 if (fileId == 0)
@@ -206,14 +270,31 @@ public static partial class GameCatalogues
             }
         }
 
+        /// <summary>
+        /// The manager the bundle was opened with.
+        /// </summary>
         private readonly AssetsManager _am;
+        /// <summary>
+        /// The bundle itself.
+        /// </summary>
         private readonly BundleFileInstance _bundle;
-        // Objects by path id over the whole bundle (where two files have the same id: the later file's).
+        /// <summary>
+        /// Objects by path id over the whole bundle (where two files have the same id: the later file's).
+        /// </summary>
         private readonly Dictionary<long, Inner> _byId = [];
+        /// <summary>
+        /// Objects read once, by file and path id (null: not there or not readable).
+        /// </summary>
         private readonly Dictionary<(Inner, long), AssetTypeValueField?> _fields = [];
 
+        /// <summary>
+        /// The internal files with objects, in the bundle's order.
+        /// </summary>
         public List<Inner> Files { get; } = [];
 
+        /// <summary>
+        /// Wraps a loaded bundle: its reads go through a <c>BlockCache</c>, and each assets file in it is opened.
+        /// </summary>
         public Bundle(AssetsManager am, BundleFileInstance bundle)
         {
             _am = am;
@@ -238,13 +319,19 @@ public static partial class GameCatalogues
             }
         }
 
-        // Every object, in the bundle's order.
+        /// <summary>
+        /// Every object, in the bundle's order.
+        /// </summary>
         public IEnumerable<(Inner File, AssetFileInfo Info)> Objects => Files.SelectMany(f => f.Assets.file.AssetInfos.Select(i => (f, i)));
 
-        // An object's fields, or null when it is not there or cannot be read.
+        /// <summary>
+        /// An object's fields, or null when it is not there or cannot be read.
+        /// </summary>
         public AssetTypeValueField? Field(Inner f, long pid) => _fields.TryGetValue((f, pid), out var cached) ? cached : _fields[(f, pid)] = Read(f, pid);
 
-        // An object's fields read and not kept (for the large ones only needed once), or null as Field.
+        /// <summary>
+        /// An object's fields read and not kept (for the large ones only needed once), or null as Field.
+        /// </summary>
         public AssetTypeValueField? Read(Inner f, long pid)
         {
             if (f.Assets.file.GetAssetInfo(pid) is { } info)
@@ -261,8 +348,10 @@ public static partial class GameCatalogues
             return null;
         }
 
-        // These objects' fields read now, in the order of their files (the bundle is read in blocks: much
-        // faster than one by one in another order); Field then has them.
+        /// <summary>
+        /// These objects' fields read now, in the order of their files (the bundle is read in blocks: much
+        /// faster than one by one in another order); Field then has them.
+        /// </summary>
         public void ReadInOrder(IEnumerable<long> pids)
         {
             foreach (var (f, pid) in InOrder(pids))
@@ -271,8 +360,10 @@ public static partial class GameCatalogues
             }
         }
 
-        // The same, each given to take and not kept (for large ones of which little is needed); those that
-        // cannot be read left out.
+        /// <summary>
+        /// The same, each given to take and not kept (for large ones of which little is needed); those that
+        /// cannot be read left out.
+        /// </summary>
         public void ReadInOrder(IEnumerable<long> pids, Action<long, AssetTypeValueField> take)
         {
             foreach (var (f, pid) in InOrder(pids))
@@ -284,6 +375,10 @@ public static partial class GameCatalogues
             }
         }
 
+        /// <summary>
+        /// The objects of the bundle among these path ids, in file and byte order, every other call the other way
+        /// round.
+        /// </summary>
         private List<(Inner File, long Pid)> InOrder(IEnumerable<long> pids)
         {
             var objects = pids.Distinct().Where(_byId.ContainsKey).Select(p => (File: _byId[p], Pid: p))
@@ -296,14 +391,21 @@ public static partial class GameCatalogues
             return objects;
         }
 
+        /// <summary>
+        /// Whether the last <c>InOrder</c> went backwards; each call flips it first.
+        /// </summary>
         private bool _backwards = true;
 
-        // An object's fields by name (a MonoBehaviour's: its class's), from its file's type tree: nothing of
-        // the object read.
+        /// <summary>
+        /// An object's fields by name (a MonoBehaviour's: its class's), from its file's type tree: nothing of
+        /// the object read.
+        /// </summary>
         public HashSet<string> FieldNames(Inner f, AssetFileInfo info) =>
             Template(f, info)?.Children.Select(c => c.Name).ToHashSet(StringComparer.Ordinal) ?? [];
 
-        // An object's type tree (a MonoBehaviour's: its class's), or null when it cannot be had.
+        /// <summary>
+        /// An object's type tree (a MonoBehaviour's: its class's), or null when it cannot be had.
+        /// </summary>
         public AssetTypeTemplateField? Template(Inner f, AssetFileInfo info)
         {
             try
@@ -316,28 +418,45 @@ public static partial class GameCatalogues
             }
         }
 
-        // The file that has this path id (where two have it: the later one).
+        /// <summary>
+        /// The file that has this path id (where two have it: the later one).
+        /// </summary>
         public Inner? FileWith(long pid) => _byId.GetValueOrDefault(pid);
 
-        // A GameObject's components as (type, path id), nothing read.
+        /// <summary>
+        /// A GameObject's components as (type, path id), nothing read.
+        /// </summary>
         public IEnumerable<(int Type, long Pid)> ComponentIds(AssetTypeValueField go) =>
             go["m_Component.Array"].Children.Select(c => c["component.m_PathID"].AsLong).Select(pid => (TypeOf(pid), pid)).Where(c => c.Item1 >= 0);
 
-        // By path id anywhere in the bundle.
+        /// <summary>
+        /// By path id anywhere in the bundle.
+        /// </summary>
         public AssetTypeValueField? Field(long pid) => _byId.TryGetValue(pid, out var f) ? Field(f, pid) : null;
 
+        /// <summary>
+        /// An object's Unity class id in a file, -1 when it is not there.
+        /// </summary>
         public static int TypeOf(Inner f, long pid) => f.Assets.file.GetAssetInfo(pid)?.TypeId ?? -1;
 
+        /// <summary>
+        /// An object's Unity class id anywhere in the bundle, -1 when it is not there.
+        /// </summary>
         public int TypeOf(long pid) => _byId.TryGetValue(pid, out var f) ? TypeOf(f, pid) : -1;
 
-        // A reference (m_FileID, m_PathID) made in a file: null for none (path id 0).
+        /// <summary>
+        /// A reference (m_FileID, m_PathID) made in a file: null for none (path id 0).
+        /// </summary>
         public static Ref? RefOf(Inner f, AssetTypeValueField pptr)
         {
             long pid = pptr["m_PathID"].AsLong;
             return pid != 0 && f.FileOf(pptr["m_FileID"].AsInt) is string cab ? new Ref(cab, pid) : null;
         }
 
-        // Data kept out of the object, in a resource file of the bundle (.resS): meshes.
+        /// <summary>
+        /// Data kept out of the object, in a resource file of the bundle (.resS): meshes. Empty when the bundle has no
+        /// such resource file.
+        /// </summary>
         public byte[] StreamBytes(AssetTypeValueField streamData)
         {
             int idx = _bundle.file.GetFileIndex(streamData["path"].AsString.Split('/').Last());
@@ -350,6 +469,9 @@ public static partial class GameCatalogues
             return _bundle.file.DataReader.ReadBytes((int)streamData["size"].AsUInt);
         }
 
+        /// <summary>
+        /// Unloads the bundle's assets files and the bundle.
+        /// </summary>
         public void Dispose()
         {
             foreach (var f in Files)
@@ -360,35 +482,63 @@ public static partial class GameCatalogues
         }
     }
 
-    // A bundle's data through a larger cache of its blocks than AssetsTools keeps (23 blocks of 128 KiB):
-    // the readers at the editor's start go back and forth between thousands of them in the largest
-    // bundle, each decompressed again when it is read after leaving the cache. The block used longest
-    // ago goes first.
+    /// <summary>
+    /// A bundle's data through a larger cache of its blocks than AssetsTools keeps (it keeps 23 blocks of
+    /// 128 KiB; this one 512, 64 MiB):
+    /// the readers at the editor's start go back and forth between thousands of them in the largest
+    /// bundle, each decompressed again when it is read after leaving the cache. The block used longest
+    /// ago goes first.
+    /// </summary>
     private sealed class BlockCache : Stream
     {
+        /// <summary>
+        /// A block's size: 128 KiB.
+        /// </summary>
         private const int Size = 1 << 17;
+        /// <summary>
+        /// How many blocks are kept at most.
+        /// </summary>
         private const int Most = 512;
 
-        // How much of a bundle it holds.
+        /// <summary>
+        /// How much of a bundle it holds.
+        /// </summary>
         public const long Bytes = (long)Size * Most;
 
+        /// <summary>
+        /// The bundle's own stream, read a block at a time.
+        /// </summary>
         private readonly Stream _inner;
+        /// <summary>
+        /// The blocks kept, by block index (Position / Size).
+        /// </summary>
         private readonly Dictionary<long, LinkedListNode<(long Index, byte[] Data)>> _blocks = [];
-        // Last used first.
+        /// <summary>
+        /// Last used first.
+        /// </summary>
         private readonly LinkedList<(long Index, byte[] Data)> _order = new();
 
+        /// <summary>
+        /// A cache over a bundle's data stream.
+        /// </summary>
         public BlockCache(Stream inner) => _inner = inner;
 
+        /// <inheritdoc/>
         public override bool CanRead => true;
 
+        /// <inheritdoc/>
         public override bool CanSeek => true;
 
+        /// <inheritdoc/>
         public override bool CanWrite => false;
 
+        /// <inheritdoc/>
         public override long Length => _inner.Length;
 
+        /// <inheritdoc/>
         public override long Position { get; set; }
 
+        /// <inheritdoc/>
         public override int Read(byte[] buffer, int offset, int count)
         {
             int done = 0;
@@ -409,6 +559,9 @@ public static partial class GameCatalogues
             return done;
         }
 
+        /// <summary>
+        /// A block's bytes (the last block may be shorter), read from the inner stream when it is not kept.
+        /// </summary>
         private byte[] Block(long index)
         {
             // The last block used again (most reads are a few bytes): already first.
@@ -439,6 +592,7 @@ public static partial class GameCatalogues
             return block;
         }
 
+        /// <inheritdoc/>
         public override long Seek(long offset, SeekOrigin origin) => Position = origin switch
         {
             SeekOrigin.Begin => offset,
@@ -446,28 +600,53 @@ public static partial class GameCatalogues
             _ => Length + offset,
         };
 
+        /// <summary>
+        /// Nothing to flush: the stream is read only.
+        /// </summary>
         public override void Flush()
         {
         }
 
+        /// <summary>
+        /// Not supported: the stream is read only.
+        /// </summary>
         public override void SetLength(long value) => throw new NotSupportedException();
 
+        /// <summary>
+        /// Not supported: the stream is read only.
+        /// </summary>
         public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
     }
 
     // ---- Values, as the game data's JSON has them.
 
+    /// <summary>
+    /// Unity's class id of a GameObject.
+    /// </summary>
     private const int GameObjectType = (int)AssetClassID.GameObject;
+    /// <summary>
+    /// Unity's class id of a Transform.
+    /// </summary>
     private const int TransformType = (int)AssetClassID.Transform;
+    /// <summary>
+    /// Unity's class id of a MonoBehaviour.
+    /// </summary>
     private const int MonoBehaviourType = (int)AssetClassID.MonoBehaviour;
 
-    // The "snappoint" tag (the first custom tag).
+    /// <summary>
+    /// The "snappoint" tag (the first custom tag).
+    /// </summary>
     private const int SnapTag = 20000;
 
+    /// <summary>
+    /// Whether a field is present (AssetsTools gives a dummy for a missing one).
+    /// </summary>
     private static bool Has(AssetTypeValueField f, string name) => !f[name].IsDummy;
 
-    // A field's value: ints (the game's bools are bytes: 0 or 1), floats (as doubles), strings; lists
-    // and structures as lists and dictionaries; null when there is none.
+    /// <summary>
+    /// A field's value: ints (the game's bools are bytes: 0 or 1), floats (as doubles), strings; lists
+    /// and structures as lists and dictionaries; null when there is none.
+    /// </summary>
     private static object? Py(AssetTypeValueField f)
     {
         if (f.IsDummy)
@@ -509,9 +688,14 @@ public static partial class GameCatalogues
         return d;
     }
 
-    // A field's value, or the fallback when there is no such field.
+    /// <summary>
+    /// A field's value, or the fallback when there is no such field.
+    /// </summary>
     private static object? Get(AssetTypeValueField f, string name, object? fallback) => Has(f, name) ? Py(f[name]) : fallback;
 
+    /// <summary>
+    /// A value read by <c>Py</c> as a double (a bool as 0 or 1); throws InvalidDataException for anything else.
+    /// </summary>
     private static double Num(object? v) => v switch
     {
         long l => l,
@@ -520,7 +704,9 @@ public static partial class GameCatalogues
         _ => throw new InvalidDataException($"not a number: {v}"),
     };
 
-    // As Python's int(): floats cut toward zero.
+    /// <summary>
+    /// As Python's int(): floats cut toward zero.
+    /// </summary>
     private static long Int(object? v) => v switch
     {
         long l => l,
@@ -529,6 +715,9 @@ public static partial class GameCatalogues
         _ => throw new InvalidDataException($"not a number: {v}"),
     };
 
+    /// <summary>
+    /// Whether a value is true as Python sees it (0, empty strings and empty collections are not).
+    /// </summary>
     private static bool Truthy(object? v) => v switch
     {
         null => false,
@@ -541,15 +730,24 @@ public static partial class GameCatalogues
         _ => true,
     };
 
-    // Rounded to n decimals: floats only (an int stays one).
+    /// <summary>
+    /// Rounded to n decimals: floats only (an int stays one).
+    /// </summary>
     private static object? Round(object? v, int n) => v is double d ? CatalogueJson.Round(d, n) : v;
 
+    /// <summary>
+    /// Rounded half to even at n decimals, as Python's round.
+    /// </summary>
     private static double R(double v, int n) => CatalogueJson.Round(v, n);
 
-    // The larger, the first when they are equal (as Python's max: -0.0 before 0 stays -0.0).
+    /// <summary>
+    /// The larger, the first when they are equal (as Python's max: -0.0 before 0 stays -0.0).
+    /// </summary>
     private static double Max(double a, double b) => b > a ? b : a;
 
-    // The children of a Transform, as GameObjects' path ids (children that cannot be read left out).
+    /// <summary>
+    /// The children of a Transform, as GameObjects' path ids (children that cannot be read left out).
+    /// </summary>
     private static IEnumerable<long> ChildObjects(Bundle b, AssetTypeValueField tr)
     {
         foreach (var ch in tr["m_Children.Array"].Children)
@@ -561,28 +759,55 @@ public static partial class GameCatalogues
         }
     }
 
+    /// <summary>
+    /// Whether a MonoBehaviour's fields are a Piece's (m_category, m_resources, m_craftingStation).
+    /// </summary>
     private static bool IsPiece(AssetTypeValueField f) => Has(f, "m_category") && Has(f, "m_resources") && Has(f, "m_craftingStation");
 
+    /// <summary>
+    /// A Vector3 field as doubles.
+    /// </summary>
     private static (double X, double Y, double Z) Vec(AssetTypeValueField v) => (v["x"].AsFloat, v["y"].AsFloat, v["z"].AsFloat);
 
-    // A rotation (x, y, z, w). A prefab root's frame is the identity in whole numbers (Whole): turned
-    // negative, its zeros stay 0.0 where computed ones turn -0.0, and the sign of a zero shows in the
-    // files ("-0.0"); written, its parts are whole numbers ("0", "1").
+    /// <summary>
+    /// A rotation (x, y, z, w). A prefab root's frame is the identity in whole numbers (Whole): turned
+    /// negative, its zeros stay 0.0 where computed ones turn -0.0, and the sign of a zero shows in the
+    /// files ("-0.0"); written, its parts are whole numbers ("0", "1").
+    /// </summary>
+    /// <param name="X">The x part.</param>
+    /// <param name="Y">The y part.</param>
+    /// <param name="Z">The z part.</param>
+    /// <param name="W">The w part.</param>
+    /// <param name="Whole">The root's identity in whole numbers, written as such (see the summary).</param>
     private readonly record struct Quat(double X, double Y, double Z, double W, bool Whole = false)
     {
+        /// <summary>
+        /// The prefab root's frame: the identity, in whole numbers.
+        /// </summary>
         public static readonly Quat Root = new(0, 0, 0, 1, true);
 
+        /// <summary>
+        /// A Quaternion field's rotation.
+        /// </summary>
         public static Quat Of(AssetTypeValueField q) => new(q["x"].AsFloat, q["y"].AsFloat, q["z"].AsFloat, q["w"].AsFloat);
 
+        /// <summary>
+        /// Negated: for a whole rotation 0 - v, so a zero stays 0.0.
+        /// </summary>
         private double Neg(double v) => Whole ? 0 - v : -v;
 
+        /// <summary>
+        /// The product this * b (b applied first).
+        /// </summary>
         public Quat Mul(Quat b) => new(
             W * b.X + X * b.W + Y * b.Z - Z * b.Y,
             W * b.Y - X * b.Z + Y * b.W + Z * b.X,
             W * b.Z + X * b.Y - Y * b.X + Z * b.W,
             W * b.W - X * b.X - Y * b.Y - Z * b.Z);
 
-        // v turned by this rotation (q v q^-1).
+        /// <summary>
+        /// v turned by this rotation (q v q^-1).
+        /// </summary>
         public (double X, double Y, double Z) Rotate(double vx, double vy, double vz)
         {
             double nx = Neg(X), ny = Neg(Y), nz = Neg(Z);
@@ -590,20 +815,37 @@ public static partial class GameCatalogues
             return (ix * W + iw * nx + iy * nz - iz * ny, iy * W + iw * ny + iz * nx - ix * nz, iz * W + iw * nz + ix * ny - iy * nx);
         }
 
+        /// <summary>
+        /// v turned by this rotation.
+        /// </summary>
         public (double X, double Y, double Z) Rotate((double X, double Y, double Z) v) => Rotate(v.X, v.Y, v.Z);
 
-        // Its parts rounded to n decimals (whole numbers stay whole).
+        /// <summary>
+        /// Its parts rounded to n decimals (whole numbers stay whole).
+        /// </summary>
         public object[] Rounded(int n) => Whole ? [0L, 0L, 0L, 1L] : [R(X, n), R(Y, n), R(Z, n), R(W, n)];
     }
 
+    /// <summary>
+    /// The sum of two vectors.
+    /// </summary>
     private static (double X, double Y, double Z) Add((double X, double Y, double Z) a, (double X, double Y, double Z) b) => (a.X + b.X, a.Y + b.Y, a.Z + b.Z);
 
+    /// <summary>
+    /// Two vectors multiplied part by part.
+    /// </summary>
     private static (double X, double Y, double Z) Scale((double X, double Y, double Z) a, (double X, double Y, double Z) s) => (a.X * s.X, a.Y * s.Y, a.Z * s.Z);
 
+    /// <summary>
+    /// Bytes per component, by Unity's VertexFormat (Float, Float16, UNorm8, SNorm8, UNorm16, SNorm16, UInt8, SInt8,
+    /// UInt16, SInt16, UInt32, SInt32).
+    /// </summary>
     private static readonly int[] VertexFormatSize = [4, 2, 1, 1, 2, 2, 1, 1, 2, 2, 4, 4];
 
-    // A mesh's vertices (x, y, z each) and each submesh's triangles, as UnityPy reads them (the
-    // submesh's base vertex not added); null when it has no vertex data, or one not read here.
+    /// <summary>
+    /// A mesh's vertices (x, y, z each) and each submesh's triangles, as UnityPy reads them (the
+    /// submesh's base vertex not added); null when it has no vertex data, or one not read here.
+    /// </summary>
     private static (float[] Vertices, List<int[]> Triangles)? MeshData(Bundle b, AssetTypeValueField m)
     {
         var vd = m["m_VertexData"];

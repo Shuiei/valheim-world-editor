@@ -7,8 +7,10 @@ using Xunit;
 
 namespace WorldEditor.Tests;
 
-// What protects a world: every object reads and writes back exactly, a save changes nothing it was
-// not asked to, the zone list survives a round trip, and broken inputs are refused with a reason.
+/// <summary>
+/// What protects a world: every object reads and writes back exactly, a save changes nothing it was not asked to, the
+/// zone list survives a round trip, and broken inputs are refused with a reason.
+/// </summary>
 public class CoreIntegrityTests
 {
     [Fact]
@@ -37,6 +39,9 @@ public class CoreIntegrityTests
         }
     }
 
+    /// <summary>
+    /// A prefab's name for messages, or its hash when unknown.
+    /// </summary>
     private static string PrefabName(int hash) => TerrainEditor.Terrain.PrefabCatalog.DisplayName(hash) ?? hash.ToString(CultureInfo.InvariantCulture);
 
     [Fact]
@@ -66,7 +71,9 @@ public class CoreIntegrityTests
         Assert.Equal(2, after.Values.Sum());
     }
 
-    // A .db2 file's parts: version and time, the zone list package (unpacked) and what follows it.
+    /// <summary>
+    /// A .db2 file's parts: version and time, the zone list package (unpacked) and what follows it.
+    /// </summary>
     private static (int Version, double NetTime, byte[] Package, byte[] Tail) DbParts(string path)
     {
         using var r = new BinaryReader(File.OpenRead(path));
@@ -130,6 +137,9 @@ public class CoreIntegrityTests
         Assert.Contains("missing", ex.Message);
     }
 
+    /// <summary>
+    /// These bytes gzipped.
+    /// </summary>
     private static byte[] Gzip(byte[] raw)
     {
         using var ms = new MemoryStream();

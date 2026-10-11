@@ -8,10 +8,12 @@ using Xunit;
 
 namespace WorldEditor.Tests;
 
-// Blueprint files of other mods at their edges (old comma decimals, other mods' sections, pieces seen
-// from straight above, terrain only, square and round terrain with paint), and "Regrow nature" over
-// zones of every biome of the test world's map: always the same draws, inside the zones, on the ground
-// (or the water), Unity's random state put back, and Unity's LookRotation in each of its cases.
+/// <summary>
+/// Blueprint files of other mods at their edges (old comma decimals, other mods' sections, pieces seen from straight
+/// above, terrain only, square and round terrain with paint), and "Regrow nature" over zones of every biome of the test
+/// world's map: always the same draws, inside the zones, on the ground (or the water), Unity's random state put back,
+/// and Unity's LookRotation in each of its cases.
+/// </summary>
 public class CoreAppFormatTests
 {
     [Fact]
@@ -96,7 +98,9 @@ public class CoreAppFormatTests
     }
 }
 
-// Regrow over many zones uses the world generator (static state): one world at a time.
+/// <summary>
+/// Regrow over many zones uses the world generator (static state): one world at a time.
+/// </summary>
 [Collection("World files")]
 public class CoreAppRegrowTests
 {

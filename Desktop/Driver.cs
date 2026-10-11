@@ -3,47 +3,58 @@ using Avalonia.Threading;
 
 namespace TerrainEditor.Desktop;
 
-// --driver: the editor driven by another program (the visual tests), one command per line on its
-// input, one answer per line on its output ("@@ ok <json>" or "@@ error <message>"), so a single
-// editor serves many tests. Commands:
-//   gamedata <folder>              the game's data from the tests' copies (tests/fixtures): where
-//                                  there is no Valheim (CI), so that worlds open
-//   world <folder>                 open a world (its map)
-//   area <zx> <zz> <size>          open an area in the 3D editor
-//   map                            back to the map
-//   stroke <tool> <x> <z> <steps>  a brush stroke at world x, z (tool: raise, lower, smooth...)
-//   picture <file.png>             a picture of the view shown (3D or map), once it is drawn
-//   shot <file.png>                a picture of the whole window, panels and view (documentation)
-//   look <game|seethrough> <on|off>, look res <sharp|balanced|fast>
-//                                  the View panel's Look switches
-//   camera <x> <z> <yaw°> <pitch°> <distance> [y]  the 3D view's camera on world x, z (at height y:
-//                                              inside a dungeon)
-//   click <text>                   the visible button, switch or box labelled so, or whose words
-//                                  begin so (windows and dialogs)
-//   choose <text>                  the entry so named in whichever visible list has it
-//   type <hint>|<text>             the visible text box whose placeholder contains hint gets text
-//   set <label>|<value>            the slider, text box(es: a,b) or list beside the label so worded
-//   panel <view|history|help|none> the right-hand panel shown
-//   message [text]                 the status bar's message (none: cleared)
-//   wait <ms>                      a pause (a brush stroke works frame by frame while held)
-//   bench <seconds>                the 3D camera turns on its own; the frame rates come back
-//   mouse <down|move|up> <x> <z> [left|right|middle] [shift|ctrl|alt ...]
-//                                  the mouse at world x, z over the 3D view (real pointer events)
-//   wheel <x> <z> <steps>          the wheel there (positive: zoom in)
-//   key <name> [shift|ctrl|alt ...] a key pressed in the window (Avalonia key names: E, Escape, Enter, D1...)
-//   mapview <x> <z> <m per pixel>  the map looking there
-//   mappick <zone x> <zone z>      the map's zone picked (as a click on it)
-//   search <text>                  the map's search (objects by kind)
-//   hit <n>                        the search's result n (from 0) picked, as a click in its list
-//   zones                          the map's zone filter: show the matching zones
-//   workshop [file.blueprint]      the Workshop opened (on that blueprint); how long it took
-//   state                          what is shown, the objects, what is pending, frames drawn
-//   quit
+/// <summary>
+/// --driver: the editor driven by another program (the visual tests), one command per line on its
+/// input, one answer per line on its output ("@@ ok &lt;json&gt;" or "@@ error &lt;message&gt;"), so a single
+/// editor serves many tests. Commands:
+/// </summary>
+/// <remarks>
+/// <code>
+///    gamedata &lt;folder&gt;              the game's data from the tests' copies (tests/fixtures): where
+///                                   there is no Valheim (CI), so that worlds open
+///    world &lt;folder&gt;                 open a world (its map)
+///    area &lt;zx&gt; &lt;zz&gt; &lt;size&gt;          open an area in the 3D editor
+///    map                            back to the map
+///    stroke &lt;tool&gt; &lt;x&gt; &lt;z&gt; &lt;steps&gt;  a brush stroke at world x, z (tool: raise, lower, smooth...)
+///    picture &lt;file.png&gt;             a picture of the view shown (3D or map), once it is drawn
+///    shot &lt;file.png&gt;                a picture of the whole window, panels and view (documentation)
+///    look &lt;game|seethrough&gt; &lt;on|off&gt;, look res &lt;sharp|balanced|fast&gt;
+///                                   the View panel's Look switches
+///    camera &lt;x&gt; &lt;z&gt; &lt;yaw°&gt; &lt;pitch°&gt; &lt;distance&gt; [y]  the 3D view's camera on world x, z (at height y:
+///                                               inside a dungeon)
+///    click &lt;text&gt;                   the visible button, switch or box labelled so, or whose words
+///                                   begin so (windows and dialogs)
+///    choose &lt;text&gt;                  the entry so named in whichever visible list has it
+///    type &lt;hint&gt;|&lt;text&gt;             the visible text box whose placeholder contains hint gets text
+///    set &lt;label&gt;|&lt;value&gt;            the slider, text box(es: a,b) or list beside the label so worded
+///    panel &lt;view|history|help|none&gt; the right-hand panel shown
+///    message [text]                 the status bar's message (none: cleared)
+///    wait &lt;ms&gt;                      a pause (a brush stroke works frame by frame while held)
+///    bench &lt;seconds&gt;                the 3D camera turns on its own; the frame rates come back
+///    mouse &lt;down|move|up&gt; &lt;x&gt; &lt;z&gt; [left|right|middle] [shift|ctrl|alt ...]
+///                                   the mouse at world x, z over the 3D view (real pointer events)
+///    wheel &lt;x&gt; &lt;z&gt; &lt;steps&gt;          the wheel there (positive: zoom in)
+///    key &lt;name&gt; [shift|ctrl|alt ...] a key pressed in the window (Avalonia key names: E, Escape, Enter, D1...)
+///    mapview &lt;x&gt; &lt;z&gt; &lt;m per pixel&gt;  the map looking there
+///    mappick &lt;zone x&gt; &lt;zone z&gt;      the map's zone picked (as a click on it)
+///    search &lt;text&gt;                  the map's search (objects by kind)
+///    hit &lt;n&gt;                        the search's result n (from 0) picked, as a click in its list
+///    zones                          the map's zone filter: show the matching zones
+///    workshop [file.blueprint]      the Workshop opened (on that blueprint); how long it took
+///    state                          what is shown, the objects, what is pending, frames drawn
+///    quit
+/// </code>
+/// Also spirv (SPIRV-Cross loads), mouse3 (a point in the air), inspect &lt;prefab&gt; and check &lt;label&gt;|on|off.
+/// </remarks>
 public static class Driver
 {
-    // The View panel's 3D resolution choices, in their list's order.
+    /// <summary>The View panel's 3D resolution choices, in their list's order.</summary>
     private static readonly string[] Resolutions = ["sharp", "balanced", "fast"];
 
+    /// <summary>
+    /// Reads commands on a thread of its own, runs each on the window's thread and writes its answer; "@@ ready" once
+    /// listening. The window closes when the input ends or after quit.
+    /// </summary>
     public static void Start(MainWindow w)
     {
         var thread = new Thread(() =>
@@ -83,6 +94,7 @@ public static class Driver
         Console.Out.Flush();
     }
 
+    /// <summary>Runs one command; its answer's JSON (usually <see cref="State"/>). Throws for an unknown or failed command.</summary>
     private static async Task<string> Run(MainWindow w, string cmd)
     {
         string[] a = cmd.Split(' ', 2);
@@ -324,6 +336,7 @@ public static class Driver
         }
     }
 
+    /// <summary>Key modifiers from their names (shift, ctrl, alt; others ignored).</summary>
     private static Avalonia.Input.KeyModifiers Mods(IEnumerable<string> names)
     {
         var m = Avalonia.Input.KeyModifiers.None;
@@ -334,8 +347,7 @@ public static class Driver
         return m;
     }
 
-    // Where world x, z (on the ground) is over the 3D view.
-    // The first visible, enabled control of that type in the window or its open dialogs.
+    /// <summary>The first visible, enabled control of that type in the window or its open dialogs (the newest first).</summary>
     private static T? Find<T>(MainWindow w, Func<T, bool> match) where T : Avalonia.Controls.Control
     {
         IEnumerable<Avalonia.Controls.Window> windows = new Avalonia.Controls.Window[] { w }.Concat(w.OwnedWindows);
@@ -352,10 +364,11 @@ public static class Driver
         return null;
     }
 
-    // A control's own words: its text content, or every text inside it.
+    /// <summary>A control's own words: its text content, or every text inside it.</summary>
     private static string TextOf(Avalonia.Controls.ContentControl c) => c.Content is string s ? s.Trim()
         : string.Join(" ", Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(c).OfType<Avalonia.Controls.TextBlock>().Select(t => t.Text?.Trim()).Where(t => !string.IsNullOrEmpty(t))).Trim();
 
+    /// <summary>The index of a list's entry by its text (any case), -1 when none.</summary>
     private static int IndexOf(Avalonia.Controls.ComboBox box, string text)
     {
         int i = 0;
@@ -371,6 +384,7 @@ public static class Driver
         return -1;
     }
 
+    /// <summary>Where world x, z (on the ground) is over the 3D view; throws when it is not in view.</summary>
     private static Avalonia.Point ScreenAt(MainWindow w, float x, float z)
     {
         var s = w.View.Scene ?? throw new InvalidOperationException("no area open");
@@ -378,8 +392,10 @@ public static class Driver
         return w.View.ScreenOfGrid(g, 0) ?? throw new InvalidOperationException($"{x}, {z} is not in view");
     }
 
+    /// <summary>The one mouse pointer the driver's events come from.</summary>
     private static readonly Avalonia.Input.Pointer TheMouse = new(Avalonia.Input.Pointer.GetNextFreeId(), Avalonia.Input.PointerType.Mouse, true);
 
+    /// <summary>A real pointer event over the 3D view: down, move (with the button held) or up.</summary>
     private static void Mouse(MainWindow w, string what, Avalonia.Point p, string button, Avalonia.Input.KeyModifiers mods)
     {
         var raw = (Avalonia.Input.RawInputModifiers)mods;
@@ -406,8 +422,10 @@ public static class Driver
         }
     }
 
+    /// <summary>The mouse button held since the last down, for the moves.</summary>
     private static Avalonia.Input.RawInputModifiers _held;
 
+    /// <summary>What is shown, as JSON: page, objects, pending, frames drawn, the camera, the map, models and more.</summary>
     private static string State(MainWindow w)
     {
         var s = w.Session;

@@ -6,20 +6,28 @@ using Xunit;
 
 namespace WorldEditor.Tests;
 
-// The writer's read-back check catching each kind of damage (a zone still marked generated after a
-// reset, objects lost or gained, a saved zone missing, another zone altered), an object in the format
-// saved before chunk files (world version 39), and the player who built the most.
+/// <summary>
+/// The writer's read-back check catching each kind of damage (a zone still marked generated after a reset, objects lost
+/// or gained, a saved zone missing, another zone altered), an object in the format saved before chunk files (world
+/// version 39), and the player who built the most.
+/// </summary>
 [Collection("World files")]
 public class CoreSaveCheckTests
 {
     private static readonly HashSet<(int, int)> NoReset = [];
 
+    /// <summary>
+    /// A copy of the test world, and the world read from it.
+    /// </summary>
     private static (string Dir, WorldSave Before) Copy()
     {
         string dir = TerrainEditor.Desktop.Tests.EditTests.CopyFixture();
         return (dir, WorldSave.Load(dir));
     }
 
+    /// <summary>
+    /// Deletes a copy of the test world, quietly.
+    /// </summary>
     private static void Delete(string dir)
     {
         try
@@ -111,8 +119,10 @@ public class CoreSaveCheckTests
         }
     }
 
-    // A live snapshot holding one tree saved in the old format: before chunk files (version 40) each
-    // object also carried its sector, and a rotation was three whole floats.
+    /// <summary>
+    /// A live snapshot holding one tree saved in the old format: before chunk files (version 40) each object also
+    /// carried its sector, and a rotation was three whole floats.
+    /// </summary>
     private static byte[] OldSnapshot(int prefab, Vector3 position, Vector3 rotation, float scale)
     {
         using var raw = new MemoryStream();

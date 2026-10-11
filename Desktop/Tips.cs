@@ -3,11 +3,14 @@ using TerrainEditor.App;
 
 namespace TerrainEditor.Desktop;
 
-// Hover help for every control, in one place (the web editor's tips.js): the same wording as the
-// documentation (docs/), so the two stay in step. A control takes its text with .Tip("key"); a row's
-// label shows its control's tip too (Tips.Label).
+/// <summary>
+/// Hover help for every control, in one place (the web editor's tips.js): the same wording as the
+/// documentation (docs/), so the two stay in step. A control takes its text with .Tip("key"); a row's
+/// label shows its control's tip too (Tips.Label).
+/// </summary>
 public static class Tips
 {
+    /// <summary>Every tip by key ("area.reset", "place.search"...), grouped by where the control is.</summary>
     public static readonly IReadOnlyDictionary<string, string> Texts = new Dictionary<string, string>
     {
         // ---- Top bar of the editor
@@ -469,16 +472,17 @@ public static class Tips
         ["dialog.blueprintTags"] = "Words to find it by, separated by commas: house, viking, stone, gate… The library's search looks through them.",
     };
 
+    /// <summary>The tip for a key; throws <c>KeyNotFoundException</c> for an unknown key, so a typo is caught at once.</summary>
     public static string Of(string key) => Texts.TryGetValue(key, out string? t) ? t : throw new KeyNotFoundException("No tip " + key);
 
-    // The control explains itself on hover.
+    /// <summary>The control explains itself on hover: sets its tooltip to the key's tip and returns it.</summary>
     public static T Tip<T>(this T c, string key) where T : Control
     {
         ToolTip.SetTip(c, Of(key));
         return c;
     }
 
-    // A row's label tells the same as its control.
+    /// <summary>A row's label tells the same as its control (nothing when the control has no tip yet).</summary>
     public static void Label(Control label, Control input)
     {
         if (ToolTip.GetTip(input) is { } t)
@@ -487,7 +491,7 @@ public static class Tips
         }
     }
 
-    // The object kinds, as the View panel and the Area chips switch them.
+    /// <summary>The object kinds' tips, as the View panel and the Area chips switch them.</summary>
     public static string Kind(ObjectKind k) => k switch
     {
         ObjectKind.Buildings => "Pieces built by players.",
@@ -503,6 +507,7 @@ public static class Tips
         _ => "Everything else the save holds.",
     };
 
+    /// <summary>An overlay layer's tip (the View panel's overlay switches).</summary>
     public static string Overlay(Overlays.Layer l) => l switch
     {
         Overlays.Layer.Borders => Of("overlay.borders"),

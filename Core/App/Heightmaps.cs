@@ -3,13 +3,29 @@ using TerrainEditor.Save;
 
 namespace TerrainEditor.App;
 
-// Heightmaps (WorldPainter's heightmap import and export): the ground of an area as a 16-bit grayscale
-// PNG, north at the top, one pixel per metre, to change in an image editor or a terrain tool and bring
-// back. The lowest and highest heights are written into the picture, so an export comes back exactly.
+/// <summary>
+/// Heightmaps (WorldPainter's heightmap import and export): the ground of an area as a 16-bit grayscale
+/// PNG, north at the top, one pixel per metre, to change in an image editor or a terrain tool and bring
+/// back. The lowest and highest heights are written into the picture, so an export comes back exactly.
+/// </summary>
 public static class Heightmaps
 {
+    /// <summary>PNG text keys of the lowest and highest heights (metres) and of the exported area.</summary>
     public const string MinKey = "vwe-min", MaxKey = "vwe-max", AreaKey = "vwe-area";
 
+    /// <summary>
+    /// The heights as a 16-bit grayscale PNG, lowest black and highest white, with the range and area in
+    /// its text chunks.
+    /// </summary>
+    /// <param name="w">Width in points.</param>
+    /// <param name="h">Height in points.</param>
+    /// <param name="heights">Heights in metres, w × h, rows from south to north.</param>
+    /// <param name="area">Text saying which area this is, kept in the picture.</param>
+    /// <param name="min">The lowest height written.</param>
+    /// <param name="max">
+    /// The highest height written: at least 0.01 m above <paramref name="min"/>, even on flat ground.
+    /// </param>
+    /// <returns>The PNG file's bytes.</returns>
     public static byte[] Encode(int w, int h, float[] heights, string area, out float min, out float max)
     {
         float lo = heights.Min(), hi = heights.Max();
@@ -37,7 +53,9 @@ public static class Heightmaps
         });
     }
 
-    // The picture resampled (between the four nearest pixels) to w x h points, rows from south to north.
+    /// <summary>
+    /// The picture resampled (between the four nearest pixels) to w x h points, rows from south to north.
+    /// </summary>
     public static float[] Resample(Png.Image img, int w, int h)
     {
         float[] o = new float[w * h];
@@ -55,10 +73,19 @@ public static class Heightmaps
         return o;
     }
 
+    /// <summary>A heightmap picture as read back.</summary>
+    /// <param name="Width">The picture's width in pixels.</param>
+    /// <param name="Height">The picture's height in pixels.</param>
+    /// <param name="Min">The lowest height written in it (metres), null when the editor did not export it.</param>
+    /// <param name="Max">The highest height written in it (metres), null when the editor did not export it.</param>
+    /// <param name="Area">The area written in it, if any.</param>
+    /// <param name="Values">Brightness 0..1 resampled to the requested points, rows from south to north.</param>
     public sealed record Picture(int Width, int Height, float? Min, float? Max, string? Area, float[] Values);
 
-    // A picture's brightness (0..1) resampled to w × h points, rows from south to north, with the
-    // heights written in it when the editor exported it. Throws InvalidDataException or IOException.
+    /// <summary>
+    /// A picture's brightness (0..1) resampled to w × h points, rows from south to north, with the
+    /// heights written in it when the editor exported it. Throws InvalidDataException or IOException.
+    /// </summary>
     public static Picture Read(byte[] bytes, int w, int h)
     {
         Png.Image img = Png.Read(bytes);

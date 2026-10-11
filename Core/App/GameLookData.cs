@@ -1,18 +1,33 @@
 namespace TerrainEditor.App;
 
-// The game's look besides models, read from its bundles (GameBundles): the terrain's shader and
-// textures (its material Heightmap_basematerial and two texture arrays), and the world map's textures
-// (material "minimap"). What the Python copy made as files (game-look/terrain, game-look/maptex).
+/// <summary>
+/// The game's look besides models, read from its bundles (GameBundles): the terrain's shader and
+/// textures (its material Heightmap_basematerial and two texture arrays), and the world map's textures
+/// (material "minimap"). What the Python copy made as files (game-look/terrain, game-look/maptex).
+/// </summary>
 public static class GameLookData
 {
-    // Pixels, RGBA, rows in the order asked (Unity keeps them bottom first).
+    /// <summary>
+    /// Pixels, RGBA, rows in the order asked (Unity keeps them bottom first).
+    /// </summary>
+    /// <param name="Width">Width in pixels.</param>
+    /// <param name="Height">Height in pixels (all slices, for a texture array).</param>
+    /// <param name="Rgba">Four bytes per pixel.</param>
     public sealed record Picture(int Width, int Height, byte[] Rgba);
 
-    // The terrain: its fragment shader (GLSL) and textures, rows bottom first; a texture array is its
-    // slices one after the other.
+    /// <summary>
+    /// The terrain: its fragment shader (GLSL) and textures, rows bottom first; a texture array is its slices one after
+    /// the other.
+    /// </summary>
+    /// <param name="Fragment">The fragment shader's GLSL source.</param>
+    /// <param name="DiffuseArray">terrain_d_array's slices.</param>
+    /// <param name="NormalArray">terrain_n_array's slices.</param>
+    /// <param name="Textures">The other textures, by the names of <c>TerrainTextures</c>.</param>
     public sealed record Terrain(string Fragment, Picture DiffuseArray, Picture NormalArray, Dictionary<string, Picture> Textures);
 
-    // The terrain material's textures by property, under the names the terrain draws them by.
+    /// <summary>
+    /// The terrain material's textures by property, under the names the terrain draws them by.
+    /// </summary>
     public static readonly Dictionary<string, string> TerrainTextures = new()
     {
         ["_CliffNormal"] = "cliff_n",
@@ -24,7 +39,9 @@ public static class GameLookData
         ["_SnowNormal"] = "snow_n",
     };
 
-    // The world map material's textures by property.
+    /// <summary>
+    /// The world map material's textures by property.
+    /// </summary>
     public static readonly Dictionary<string, string> MapTextures = new()
     {
         ["_BackgroundTex"] = "background",
@@ -37,8 +54,13 @@ public static class GameLookData
         ["_FogLayerTex"] = "foglayer",
     };
 
-    // vulkan: take the shader from its Vulkan program even when there is an OpenGL one (what Valheim
-    // for Windows gives; for testing).
+    /// <summary>
+    /// Reads the terrain's shader (from its OpenGL program, else its Vulkan one through SPIR-V) and textures. Throws
+    /// InvalidDataException when any of them cannot be read.
+    /// </summary>
+    /// <param name="game">The game's bundles.</param>
+    /// <param name="vulkan">Take the shader from its Vulkan program even when there is an OpenGL one (what Valheim for
+    /// Windows gives; for testing).</param>
     public static Terrain ReadTerrain(GameBundles game, bool vulkan = false)
     {
         var matAt = game.Asset("Heightmap_basematerial.mat") ?? throw new InvalidDataException("The game has no terrain material (Heightmap_basematerial).");
@@ -72,7 +94,10 @@ public static class GameLookData
         return new Terrain(fragment, Array(game, "terrain_d_array.texture2darray"), Array(game, "terrain_n_array.texture2darray"), textures);
     }
 
-    // The world map's textures by name, rows top first (as the map uploads them).
+    /// <summary>
+    /// The world map's textures by name, rows top first (as the map uploads them). Empty when the game has no minimap
+    /// material; textures that cannot be read are left out.
+    /// </summary>
     public static Dictionary<string, Picture> ReadMap(GameBundles game)
     {
         var res = new Dictionary<string, Picture>();
@@ -90,6 +115,10 @@ public static class GameLookData
         return res;
     }
 
+    /// <summary>
+    /// A texture's top mip level as RGBA, rows turned top first with <c>flip</c>; null when it cannot be read or
+    /// converted.
+    /// </summary>
     private static Picture? Texture(GameBundles game, GameBundles.Where at, bool flip)
     {
         if (game.LoadTexture(at, int.MaxValue) is not { } t || GameTextures.Rgba(t) is not { } rgba)
@@ -103,6 +132,10 @@ public static class GameLookData
         return new Picture(t.Width, t.Height, rgba);
     }
 
+    /// <summary>
+    /// A texture array's slices as one picture, one below the other (rows bottom first). Throws InvalidDataException
+    /// when it cannot be read.
+    /// </summary>
     private static Picture Array(GameBundles game, string file)
     {
         var slices = (game.Asset(file) is { } at ? game.LoadTextureArray(at) : null) ?? throw new InvalidDataException($"The terrain's texture array {file} could not be read.");
@@ -116,6 +149,9 @@ public static class GameLookData
         return new Picture(w, h * slices.Count, all);
     }
 
+    /// <summary>
+    /// Turns an RGBA picture upside down, in place.
+    /// </summary>
     private static void Flip(byte[] rgba, int w, int h)
     {
         int row = w * 4;

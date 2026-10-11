@@ -4,9 +4,14 @@ using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
-// Heightmaps: the area's ground out to a picture and back.
+/// <summary>
+/// Heightmaps: the area's ground out to a picture and back.
+/// </summary>
 public class HeightmapTests
 {
+    /// <summary>
+    /// The height at grid point (x, z) of the area.
+    /// </summary>
     private static float H(EditSession s, int x, int z) => s.Scene.Heights[z * s.Scene.W + x];
 
     [AvaloniaFact]

@@ -9,9 +9,11 @@ using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
-// The web editor's view features in the native app: the status bar's cursor readout (world x/z, the
-// ground against the original and the ±8 m limit, the zone), and the View panel's Look section (game
-// look on/off, see-through buildings, 3D resolution) and presets (Defaults, All, Ground).
+/// <summary>
+/// The web editor's view features in the native app: the status bar's cursor readout (world x/z, the ground against the
+/// original and the ±8 m limit, the zone), and the View panel's Look section (game look on/off, see-through buildings,
+/// 3D resolution) and presets (Defaults, All, Ground).
+/// </summary>
 [Collection("World files")]
 public class ParityViewTests
 {
@@ -77,6 +79,10 @@ public class ParityViewTests
         Assert.Equal("x -22, z -12   ground 30.00 m   zone 0, 0", CursorReadout.Text(s, 10, 20));
     }
 
+    /// <summary>
+    /// A shown main window editing a flat 2 × 2 zone area with these objects, looking straight down; with the screen
+    /// point of a grid point (on the ground at 30 m).
+    /// </summary>
     private static (MainWindow W, EditSession S, Func<float, float, Avalonia.Point> Screen) Open(params WorldScene.Thing[] things)
     {
         var w = new MainWindow(load: false) { Width = 1000, Height = 1000 };

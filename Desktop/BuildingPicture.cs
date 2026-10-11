@@ -7,40 +7,58 @@ using TerrainEditor.Editing;
 
 namespace TerrainEditor.Desktop;
 
-// A blueprint's picture: its building seen from above at an angle, drawn on the CPU (no window needed)
-// with a depth buffer. Pieces are the game's models with their textures when the game's look has been
-// copied (ModelStore, placed as GlView places them), else their colliders' boxes in their material's
-// colour (Stability's shapes), else a stand-in box. Transparent around the building; drawn twice the
-// size, then halved, for smooth edges. Homestead shows the .png in its hammer tab.
+/// <summary>
+/// A blueprint's picture: its building seen from above at an angle, drawn on the CPU (no window needed)
+/// with a depth buffer. Pieces are the game's models with their textures when the game's look has been
+/// copied (ModelStore, placed as GlView places them), else their colliders' boxes in their material's
+/// colour (Stability's shapes), else a stand-in box. Transparent around the building; drawn twice the
+/// size, then halved, for smooth edges. Homestead shows the .png in its hammer tab.
+/// </summary>
 public static class BuildingPicture
 {
+    /// <summary>One piece to draw.</summary>
+    /// <param name="Name">The prefab name.</param>
+    /// <param name="Position">Where it stands, in metres (any origin: the picture is fitted around the pieces).</param>
+    /// <param name="Euler">Its rotation, Unity's Euler degrees.</param>
+    /// <param name="Scale">Its scale; 0 or less: the model's own (1 for boxes).</param>
     public sealed record Piece(string Name, Vector3 Position, Vector3 Euler, float Scale);
 
-    // The pieces of a copy (clipboard format: dx, dy, dz from the anchor; Unity's Euler degrees).
+    /// <summary>The pieces of a copy (clipboard format: dx, dy, dz from the anchor; Unity's Euler degrees).</summary>
     public static List<Piece> FromClip(JsonObject clip) => [.. (clip["objects"] as JsonArray ?? []).OfType<JsonObject>()
         .Select(o => new Piece((string?)o["name"] ?? "", new Vector3(F(o["dx"]), F(o["dy"]), F(o["dz"])), new Vector3(F(o["rx"]), F(o["ry"]), F(o["rz"])), F(o["scale"])))
         .Where(p => p.Name.Length > 0)];
 
+    /// <summary>A JSON number as a float, 0 when missing.</summary>
     private static float F(JsonNode? n) => n == null ? 0 : float.Parse(n.ToJsonString(), CultureInfo.InvariantCulture);
 
-    // Colours (sRGB) of WearNTear's materials: wood, stone, iron, hardwood, marble, ashstone, ancient, ice, timber.
+    /// <summary>Colours (sRGB, 0 to 255) of WearNTear's materials: wood, stone, iron, hardwood, marble, ashstone, ancient, ice, timber.</summary>
     private static readonly Vector3[] MaterialColours =
     [
         new(152, 110, 70), new(140, 138, 132), new(92, 92, 98), new(118, 84, 54), new(205, 205, 210),
         new(82, 76, 76), new(112, 100, 88), new(170, 210, 230), new(140, 100, 64),
     ];
 
+    /// <summary>A triangle to draw, in view space.</summary>
     private struct Tri
     {
+        /// <summary>The corners.</summary>
         public Vector3 A, B, C;
+        /// <summary>The corners' texture coordinates (only used with a texture).</summary>
         public Vector2 Ua, Ub, Uc;
+        /// <summary>The colour, sRGB 0 to 255; multiplied by the texture when there is one.</summary>
         public Vector3 Colour;
+        /// <summary>The material's texture, null for a plain colour.</summary>
         public ModelStore.ImageData? Texture;
+        /// <summary>The material's texture scale (x, y) and offset (z, w).</summary>
         public Vector4 UvTransform;
+        /// <summary>The alpha cutoff, 0 to 1: texels less opaque are not drawn (0: none).</summary>
         public float Cutoff;
     }
 
-    // A PNG of the pieces, size × size pixels.
+    /// <summary>A PNG of the pieces, size × size pixels.</summary>
+    /// <param name="pieces">The pieces.</param>
+    /// <param name="models">The game's models, null: boxes only.</param>
+    /// <param name="size">The picture's width and height in pixels.</param>
     public static byte[] Draw(IReadOnlyList<Piece> pieces, ModelStore? models, int size = 256)
     {
         var tris = new List<Tri>();
@@ -55,7 +73,8 @@ public static class BuildingPicture
         return Render(tris, size);
     }
 
-    // The game's model, placed as GlView.Placement does (view space: z mirrored).
+    /// <summary>The game's model, placed as GlView.Placement does (view space: z mirrored).</summary>
+    /// <returns>Whether the model was found and gave triangles (otherwise boxes are drawn).</returns>
     private static bool AddModel(List<Tri> tris, Piece p, ModelStore models, Dictionary<string, ModelStore.ImageData?> textures)
     {
         if (models.LoadModel(p.Name) is not { } model)
@@ -106,7 +125,7 @@ public static class BuildingPicture
         return tris.Count > before;
     }
 
-    // The piece's colliders as boxes in its material's colour (a stand-in box when the game has none).
+    /// <summary>The piece's colliders as boxes in its material's colour (a stand-in box when the game has none).</summary>
     private static void AddBoxes(List<Tri> tris, Piece p)
     {
         var (material, boxes) = Stability.Shape(p.Name);
@@ -136,6 +155,10 @@ public static class BuildingPicture
         }
     }
 
+    /// <summary>
+    /// Draws the triangles at twice the size, seen from the south-east, orthographic and fitted to the picture, with
+    /// simple lighting, then halves it into a PNG.
+    /// </summary>
     private static byte[] Render(List<Tri> tris, int size)
     {
         int n = size * 2;
@@ -187,6 +210,10 @@ public static class BuildingPicture
         return png.ToArray();
     }
 
+    /// <summary>
+    /// Rasterises one triangle (screen space, z the depth) into the picture, with the depth test, the texture and
+    /// its cutoff, times the shade.
+    /// </summary>
     private static void Fill(Vector3 a, Vector3 b, Vector3 c, Tri t, float shade, int n, float[] depth, byte[] rgba)
     {
         float area = (b.X - a.X) * (c.Y - a.Y) - (b.Y - a.Y) * (c.X - a.X);

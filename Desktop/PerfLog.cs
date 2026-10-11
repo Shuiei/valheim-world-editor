@@ -2,24 +2,46 @@ using TerrainEditor.App;
 
 namespace TerrainEditor.Desktop;
 
-// Frame rates, in the same format as the web editor's logs (perf-window.log, perf-browser.log), in
-// perf-native.log in the data folder, to compare: a sample every 0.2 s while the view is used (the
-// camera moving, or still while something else happens), with a header line saying what is shown.
-// Written only while switched on (Record frame rates).
+/// <summary>
+/// Frame rates, in the same format as the web editor's logs (perf-window.log, perf-browser.log), in perf-native.log in
+/// the data folder, to compare: a sample every 0.2 s while the view is used (the camera moving, or still while
+/// something else happens), with a header line saying what is shown. Written only while switched on (Record frame
+/// rates).
+/// </summary>
 public sealed class PerfLog
 {
+    /// <summary>
+    /// Whether Record frame rates is switched on; frames are still counted while off, but nothing is written.
+    /// </summary>
     public bool On { get; set; }
+    /// <summary>perf-native.log in the data folder (rolled over to .old past 5 MB).</summary>
     public static string FilePath => Path.Combine(AppSettings.DataDir, "perf-native.log");
 
+    /// <summary>When the current 0.2 s sample began (ms), or -1 before the first frame.</summary>
     private long _t0 = -1;
+    /// <summary>Whether the camera moved, or something else kept the view busy, during the current sample.</summary>
     private bool _moved, _busy;
+    /// <summary>Frames drawn in the current sample.</summary>
     private int _frames;
+    /// <summary>The current sample's total drawing work and longest gap between frames, in ms.</summary>
     private double _work, _gap;
+    /// <summary>When the last frame was drawn (ms), 0 before the first.</summary>
     private long _lastFrame;
+    /// <summary>What the last header line said is shown; a new header is written when it changes.</summary>
     private string _header = "";
+    /// <summary>Lines waiting to be written to the file.</summary>
     private readonly List<string> _lines = [];
+    /// <summary>When the lines were last written (ms); they are written at most every 2 s.</summary>
     private long _sentAt;
 
+    /// <summary>
+    /// Counts one drawn frame; every 0.2 s closes the sample and, when on and the view was in use, adds a line.
+    /// </summary>
+    /// <param name="now">The time now, in ms.</param>
+    /// <param name="work">How long drawing this frame took, in ms.</param>
+    /// <param name="moved">The camera moved this frame.</param>
+    /// <param name="busy">Something other than the camera kept the view drawing.</param>
+    /// <param name="about">What is shown (view size, renderer, world, objects, area), for the header line.</param>
     public void Frame(long now, double work, bool moved, bool busy, string about)
     {
         if (_t0 < 0)
@@ -59,6 +81,8 @@ public sealed class PerfLog
         }
     }
 
+    /// <summary>Writes the waiting lines to the file (IO errors are ignored).</summary>
+    /// <param name="now">The time now in ms, to space out the next write.</param>
     public void Flush(long now = 0)
     {
         _sentAt = now;
@@ -80,5 +104,6 @@ public sealed class PerfLog
         _lines.Clear();
     }
 
+    /// <summary>Makes the next sample start with a header line again.</summary>
     public void Restart() => _header = "";
 }

@@ -5,59 +5,105 @@ using Avalonia.Media;
 
 namespace TerrainEditor.Desktop;
 
-// The Select tool's options, next to the rail: what to do with the selection (delete, select more),
-// how moves land, the exact place, and the keys.
+/// <summary>
+/// The Select tool's options, next to the rail: what to do with the selection (delete, select more), how moves land,
+/// the exact place, and the keys.
+/// </summary>
 public sealed class SelectPanel
 {
+    /// <summary>The panel itself, shown next to the rail while the Select tool is on.</summary>
     public Control Card { get; }
+    /// <summary>The Select tool the panel drives.</summary>
     private readonly SelectTool _tool;
+    /// <summary>Explains the exact place boxes (where the selection is, or what Move by means).</summary>
     private readonly TextBlock _info = new() { FontSize = 12, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
+    /// <summary>
+    /// The exact place: X, Y, Z and Turn, with Move there and Move by; shown while something is selected.
+    /// </summary>
     private readonly Control _exact;
+    /// <summary>Move by: the boxes are offsets from where the selection is, not a place.</summary>
     private bool _by;
 
     // For tests.
+    /// <summary>Deletes the selection.</summary>
     internal Button DeleteButton { get; }
+    /// <summary>Adds every building piece connected to the selected ones to the selection.</summary>
     internal Button BuildingButton { get; }
+    /// <summary>Selects every shown object of the selected kinds.</summary>
     internal Button SameButton { get; }
+    /// <summary>Selects the shown objects that are not selected, and only those.</summary>
     internal Button InvertButton { get; }
+    /// <summary>Puts each object on the ground when moving.</summary>
     internal CheckBox GroundBox { get; }
+    /// <summary>Snaps moved pieces to other pieces.</summary>
     internal CheckBox SnapBox { get; }
+    /// <summary>The exact place's X (east), in metres.</summary>
     internal NumericUpDown XBox { get; } = Num(0.1m);
+    /// <summary>The exact place's Y (height), in metres.</summary>
     internal NumericUpDown YBox { get; } = Num(0.1m);
+    /// <summary>The exact place's Z (north), in metres.</summary>
     internal NumericUpDown ZBox { get; } = Num(0.1m);
+    /// <summary>The exact turn, in degrees clockwise seen from above.</summary>
     internal NumericUpDown TurnBox { get; } = Num(1m);
+    /// <summary>Moves the selection there (or by the boxes' values with Move by).</summary>
     internal Button ApplyButton { get; } = new() { Content = "Move there", FontSize = 12 };
+    /// <summary>Opens the data of the one selected object (the window handles it).</summary>
     internal Button InspectButton { get; } = new() { Content = "Inspect data (I)", FontSize = 12, IsEnabled = false };
+    /// <summary>Make player built: gives the selected pieces the chosen builder (the window handles it).</summary>
     internal Button ClaimButton { get; } = new() { Content = "Make player built", FontSize = 12, IsEnabled = false };
-    // Replace with: the kinds this world can make (filled by the window), and the button.
+    /// <summary>
+    /// Replace with: the kinds this world can make (filled by the window, in <see cref="ReplaceKinds"/> order).
+    /// </summary>
     internal ComboBox ReplaceBox { get; } = new() { FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch, MaxDropDownHeight = 400 };
+    /// <summary>Replaces the selection with the kind chosen (raises <see cref="ReplaceAsked"/>).</summary>
     internal Button ReplaceButton { get; } = new() { Content = "Replace the selection", FontSize = 12 };
+    /// <summary>The prefab hashes of <see cref="ReplaceBox"/>'s entries, in its order.</summary>
     public List<int> ReplaceKinds { get; set; } = [];
+    /// <summary>Replace the selection with this prefab.</summary>
     public event Action<int>? ReplaceAsked;
-    // Eyedropper: the "Replace with" kind picked from the world.
+    /// <summary>Eyedropper: the "Replace with" kind picked from the world.</summary>
     internal Button ReplacePickButton { get; } = new() { Content = "pick", FontSize = 11, Padding = new Thickness(6, 2) };
+    /// <summary>
+    /// Asks the window to take the next click on an object: the action's name for the prompt, and what to do with the
+    /// picked prefab hash.
+    /// </summary>
     public event Action<string, Action<int>>? PickKindAsked;
+    /// <summary>A line for the status bar.</summary>
     public event Action<string>? Message;
+    /// <summary>Switches Move by on or off.</summary>
     internal Button ByButton { get; } = new() { Content = "Move by", FontSize = 12 };
 
-    // Saved selections (per world): keep the selection under a name, select it again (or add it), forget it.
+    /// <summary>Saved selections (per world): the open world's, with their object counts.</summary>
     internal ComboBox SavedBox { get; } = new() { FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch, MaxDropDownHeight = 300 };
+    /// <summary>Keeps the selection under a name.</summary>
     internal Button KeepButton { get; } = new() { Content = "Keep…", FontSize = 12 };
+    /// <summary>Selects the saved selection.</summary>
     internal Button LoadButton { get; } = new() { Content = "Select", FontSize = 12 };
+    /// <summary>Adds the saved selection to what is selected.</summary>
     internal Button AddSavedButton { get; } = new() { Content = "Add", FontSize = 12 };
+    /// <summary>Forgets the saved selection.</summary>
     internal Button ForgetButton { get; } = new() { Content = "Forget", FontSize = 12 };
+    /// <summary>Select, Add and Forget, shown while a saved selection is chosen.</summary>
     private readonly StackPanel _savedRow;
+    /// <summary>The open world's saved selections, in the list's order.</summary>
     private List<SavedSelections.Saved> _saved = [];
-    // The window's: the open world's name, its things, the selection, selecting, and the questions.
+    /// <summary>The window's: the open world's name (null while none).</summary>
     internal Func<string?> WorldName { get; set; } = () => null;
+    /// <summary>The window's: the scene's things (null while none).</summary>
     internal Func<IReadOnlyList<WorldScene.Thing>?> Things { get; set; } = () => null;
+    /// <summary>The window's: the selection, as indices into the things.</summary>
     internal Func<IReadOnlyCollection<int>> SelectedIds { get; set; } = Array.Empty<int>;
+    /// <summary>The window's: selects these things.</summary>
     internal Action<IEnumerable<int>> SelectIds { get; set; } = _ => { };
+    /// <summary>The window's: asks for a name, suggesting one; null or empty: cancelled.</summary>
     internal Func<string, Task<string?>> AskName { get; set; } = Task.FromResult<string?>;
+    /// <summary>The window's: asks a yes/no question.</summary>
     internal Func<string, Task<bool>> Confirm { get; set; } = _ => Task.FromResult(true);
 
+    /// <summary>A number box that steps by <c>step</c>.</summary>
     private static NumericUpDown Num(decimal step) => new() { Increment = step, FormatString = "0.##", FontSize = 12, MinWidth = 90 };
 
+    /// <summary>An action button with its tip.</summary>
     private static Button Act(string text, string tip)
     {
         var b = new Button { Content = text, FontSize = 12, Padding = new Thickness(8, 3) };
@@ -65,6 +111,7 @@ public sealed class SelectPanel
         return b;
     }
 
+    /// <summary>Builds the panel for the Select tool.</summary>
     public SelectPanel(SelectTool tool)
     {
         _tool = tool;
@@ -179,7 +226,7 @@ public sealed class SelectPanel
         Refresh();
     }
 
-    // The eyedropper's kind into "Replace with", when the game can make it.
+    /// <summary>The eyedropper's kind into "Replace with", when the game can make it.</summary>
     internal void UsePicked(int prefab)
     {
         int i = ReplaceKinds.IndexOf(prefab);
@@ -193,7 +240,7 @@ public sealed class SelectPanel
         Message?.Invoke($"Replace with {name}.");
     }
 
-    // The open world's saved selections into the list (the chosen one kept when it is still there).
+    /// <summary>The open world's saved selections into the list (the chosen one kept when it is still there).</summary>
     internal void FillSaved()
     {
         string? world = WorldName();
@@ -205,6 +252,7 @@ public sealed class SelectPanel
         _savedRow.IsVisible = SavedBox.SelectedIndex >= 0;
     }
 
+    /// <summary>Keeps the selected objects under a name asked for (one of that name is replaced).</summary>
     internal async Task Keep()
     {
         string? world = WorldName();
@@ -230,6 +278,10 @@ public sealed class SelectPanel
         Message?.Invoke($"Kept the selection “{name}” ({items.Count} object(s)). It can be picked again here, also after saving the world.");
     }
 
+    /// <summary>
+    /// Selects the chosen saved selection's objects (with <c>add</c>, as well as what is selected), and says how many
+    /// were not found.
+    /// </summary>
     internal void UseSaved(bool add)
     {
         int i = SavedBox.SelectedIndex;
@@ -244,6 +296,7 @@ public sealed class SelectPanel
         Message?.Invoke($"Selected {ids.Count} object(s) of “{s.Name}”{(missing > 0 ? $"; {missing} are not in this area or no longer where they were" : "")}.");
     }
 
+    /// <summary>Forgets the chosen saved selection, once confirmed.</summary>
     internal async Task Forget()
     {
         int i = SavedBox.SelectedIndex;
@@ -261,15 +314,17 @@ public sealed class SelectPanel
         FillSaved();
     }
 
-    // The name of a kind (the window's models), for messages.
+    /// <summary>The name of a kind (the window's models), for messages.</summary>
     public Func<int, string?>? NameOf { get; set; }
 
+    /// <summary>Puts a control in a grid column; returns it.</summary>
     private static Control Col(Control c, int col)
     {
         Grid.SetColumn(c, col);
         return c;
     }
 
+    /// <summary>Switches Move by: on, the boxes start at 0; off, they show where the selection is.</summary>
     private void SetBy(bool by)
     {
         _by = by;
@@ -286,6 +341,7 @@ public sealed class SelectPanel
         }
     }
 
+    /// <summary>Moves the selection to (or by) the boxes' values, then back to showing where it is.</summary>
     private void Apply()
     {
         static float V(NumericUpDown b) => (float)(b.Value ?? 0);
@@ -293,7 +349,7 @@ public sealed class SelectPanel
         SetBy(false);
     }
 
-    // The selection changed or moved: the exact place shows where it is now.
+    /// <summary>The selection changed or moved: the exact place shows where it is now.</summary>
     public void Refresh()
     {
         var w = _tool.Where();

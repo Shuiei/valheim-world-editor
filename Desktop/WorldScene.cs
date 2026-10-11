@@ -7,69 +7,105 @@ using Vector3 = System.Numerics.Vector3;
 
 namespace TerrainEditor.Desktop;
 
-// What the 3D view shows: a square block of zones of a world, its ground (heights and biomes, edits
-// included) and the objects and building pieces in it. Read once from the save through the shared
-// library, the same way the web editor's session does.
-//
-// Coordinates: the grid starts at the block's south-west corner (one point per metre, 64 per zone,
-// shared edges once); the 3D view puts the block's middle at 0 and mirrors z (OpenGL is right-handed,
-// Unity left-handed), like the web editor: view = (x - Cx, y, -(z - Cz)) in world metres.
+/// <summary>
+/// What the 3D view shows: a square block of zones of a world, its ground (heights and biomes, edits
+/// included) and the objects and building pieces in it. Read once from the save through the shared
+/// library, the same way the web editor's session does.
+/// </summary>
+/// <remarks>
+/// Coordinates: the grid starts at the block's south-west corner (one point per metre, 64 per zone,
+/// shared edges once); the 3D view puts the block's middle at 0 and mirrors z (OpenGL is right-handed,
+/// Unity left-handed), like the web editor: view = (x - Cx, y, -(z - Cz)) in world metres.
+/// </remarks>
 public sealed class WorldScene
 {
-    // Replaced by a fresh read after saving.
+    /// <summary>The save the block was read from. Replaced by a fresh read after saving.</summary>
     public required WorldSave World { get; set; }
 
-    // The Workshop's: the blueprint open was written as a ruin (no builder), and is saved as one.
+    /// <summary>The Workshop's: the blueprint open was written as a ruin (no builder), and is saved as one.</summary>
     public bool Ruin { get; set; }
+    /// <summary>The world's name (the Workshop's title for the plot).</summary>
     public required string Name { get; init; }
+    /// <summary>The block's south-west zone, x.</summary>
     public int X0 { get; init; }
+    /// <summary>The block's south-west zone, z.</summary>
     public int Z0 { get; init; }
+    /// <summary>The block's size in zones across (it is square).</summary>
     public int Size { get; init; }
+    /// <summary>Grid points west to east (Size × 64 + 1).</summary>
     public int W { get; init; }
+    /// <summary>Grid points south to north (Size × 64 + 1).</summary>
     public int H { get; init; }
+    /// <summary>The ground height in metres per grid point, edits included, row by row from the south (z × W + x).</summary>
     public required float[] Heights { get; init; }
+    /// <summary>The biome (Heightmap.Biome value) per grid point, laid out like Heights.</summary>
     public required int[] Biomes { get; init; }
-    // World coordinates of the block's middle.
+    /// <summary>World x of the block's middle, in metres.</summary>
     public float Cx { get; init; }
+    /// <summary>World z of the block's middle, in metres.</summary>
     public float Cz { get; init; }
+    /// <summary>The sea level in metres.</summary>
     public float Water { get; init; } = TerrainService.WaterLevel;
+    /// <summary>
+    /// The objects and building pieces in the block; only ever added to until the world is read again (see
+    /// <see cref="Thing"/>). Lock it to read.
+    /// </summary>
     public required List<Thing> Things { get; init; }
-    // The ground the world's locations and pieces flatten (for the Location flattening overlay).
+    /// <summary>The ground the world's locations and pieces flatten (for the Location flattening overlay).</summary>
     public TerrainModifiers? Modifiers { get; set; }
-    // The world generator's ground (regrow asks it what grows where); null in tests that only draw.
+    /// <summary>The world generator's ground (regrow asks it what grows where); null in tests that only draw.</summary>
     public TerrainService? Terrain { get; init; }
-    // For the game's terrain shader, per grid point: the biome colour the game puts in its mesh (corner
-    // biomes blended like Heightmap.GetBiomeColor, RGBA bytes), the paint mask (_ClearedMaskTex: the
-    // paint where it was edited, the generated ground's otherwise), the depth below sea level the game
-    // gives each zone's corners (blended across the zone) and points at the ±8 m edit limit.
+    /// <summary>
+    /// For the game's terrain shader, per grid point: the biome colour the game puts in its mesh (corner
+    /// biomes blended like Heightmap.GetBiomeColor, RGBA bytes).
+    /// </summary>
     public required byte[] BiomeColor { get; init; }
+    /// <summary>
+    /// The paint mask per grid point, RGBA bytes (_ClearedMaskTex: the paint where it was edited, the generated
+    /// ground's otherwise).
+    /// </summary>
     public required byte[] Mask { get; init; }
+    /// <summary>The depth below sea level the game gives each zone's corners (blended across the zone), per grid point.</summary>
     public required float[] OceanDepth { get; init; }
+    /// <summary>1 at grid points at the ±8 m edit limit, 0 elsewhere.</summary>
     public required float[] Limit { get; init; }
+    /// <summary>A line on how the block was read (timings, zones, objects), for the status bar.</summary>
     public string LoadInfo { get; init; } = "";
-    // Editing the ground (null in tests that only draw).
+    /// <summary>Editing the ground (null in tests that only draw).</summary>
     public EditSession? Session { get; set; }
-    // The open world this area belongs to (shared by every area opened from the map).
+    /// <summary>The open world this area belongs to (shared by every area opened from the map); null in the Workshop.</summary>
     public WorldSession? Owner { get; init; }
 
-    // An object or building piece. Things are only ever added to the list (indices stay valid): a
-    // deleted one is kept, Gone, so undo can bring it back; a moved one is a new thing (see EditSession).
+    /// <summary>
+    /// An object or building piece. Things are only ever added to the list, so indices stay valid until the
+    /// world is read again (after a save or a reload, EditSession.Reread fills the list anew and the history
+    /// starts over): a deleted one is kept, Gone, so undo can bring it back; a moved one is a new thing.
+    /// </summary>
+    /// <param name="Id">The object's id in the save; negative for one added in this session.</param>
+    /// <param name="Prefab">The prefab's hash.</param>
+    /// <param name="Position">World position in metres.</param>
+    /// <param name="Rotation">Euler angles in degrees, as stored (a building piece read from the save turns about y only).</param>
+    /// <param name="Scale">Uniform scale; zero when the prefab's own scale applies.</param>
+    /// <param name="Piece">A building piece (a building tool's) rather than a plain object.</param>
     public readonly record struct Thing(int Id, int Prefab, Vector3 Position, Vector3 Rotation, float Scale, bool Piece)
     {
+        /// <summary>Deleted (or added and undone): kept so undo can bring it back, not drawn.</summary>
         public bool Gone { get; init; }
 
-        // A creature a player tamed (its own View kind).
+        /// <summary>A creature a player tamed (its own View kind).</summary>
         public bool Tamed { get; init; }
 
-        // A runestone: in the save a location proxy, listed under the location's name. It can be
-        // picked and deleted, not moved or copied (see PrefabCatalog.RunestoneLocations).
+        /// <summary>
+        /// A runestone: in the save a location proxy, listed under the location's name. It can be
+        /// picked and deleted, not moved or copied (see PrefabCatalog.RunestoneLocations).
+        /// </summary>
         public bool Runestone => PrefabCatalog.IsRunestone(Prefab);
     }
 
-    // A new object is tamed when it is a moved tamed creature (a move keeps the object's own data).
+    /// <summary>A new object is tamed when it is a moved tamed creature (a move keeps the object's own data).</summary>
     public static bool TamedOf(WorldSave world, NewObject n) => !n.Fresh && n.SourceId is int s && world.Tamed.Contains(s);
 
-    // The game's biome colour for a biome (Heightmap.GetBiomeColor): which terrain textures it blends.
+    /// <summary>The game's biome colour for a biome (Heightmap.GetBiomeColor): which terrain textures it blends, as RGBA bytes.</summary>
     internal static byte[] BiomeRgba(int biome) => biome switch
     {
         2 => [255, 0, 0, 0],
@@ -82,7 +118,10 @@ public sealed class WorldScene
         _ => [0, 0, 0, 0],
     };
 
-    // The world's folder: a path, a world's name, or (null) the one saved last on this computer.
+    /// <summary>
+    /// The world's folder: a path, a world's name, or (null) the one saved last on this computer. Throws
+    /// <c>InvalidOperationException</c> when there is no such world.
+    /// </summary>
     public static string FindWorld(string? want)
     {
         if (want != null && Directory.Exists(want))
@@ -94,6 +133,7 @@ public sealed class WorldScene
         return pick?.Path ?? throw new InvalidOperationException(want == null ? "No Valheim world found on this computer." : $"No world called {want}.");
     }
 
+    /// <summary>Opens the world in <paramref name="dir"/> and reads an area of it (see the other overload).</summary>
     public static WorldScene Load(string dir, int zx, int zz, int size)
     {
         var watch = System.Diagnostics.Stopwatch.StartNew();
@@ -101,7 +141,15 @@ public sealed class WorldScene
         return Load(owner, zx, zz, size, watch.ElapsedMilliseconds);
     }
 
-    // An area (size × size zones around zone zx, zz) of an open world.
+    /// <summary>
+    /// An area (size × size zones around zone zx, zz) of an open world, with its edit session; the world's kept
+    /// history is fitted to it, and it becomes the world's current area.
+    /// </summary>
+    /// <param name="owner">The open world.</param>
+    /// <param name="zx">The middle zone, x.</param>
+    /// <param name="zz">The middle zone, z.</param>
+    /// <param name="size">Zones across.</param>
+    /// <param name="readMs">How long the save took to read, for <c>LoadInfo</c>.</param>
     public static WorldScene Load(WorldSession owner, int zx, int zz, int size, long readMs = 0)
     {
         var watch = System.Diagnostics.Stopwatch.StartNew();
@@ -197,8 +245,10 @@ public sealed class WorldScene
         return scene;
     }
 
-    // Objects by id wherever they are, as things gone or not (deleted, or added and undone, they are gone):
-    // what a history fitted to an area needs that the area does not show.
+    /// <summary>
+    /// Objects by id wherever they are, as things gone or not (deleted, or added and undone, they are gone):
+    /// what a history fitted to an area needs that the area does not show. Ids not found are left out.
+    /// </summary>
     public static Dictionary<int, Thing> FindThings(WorldSave world, EditStore edits, IReadOnlyCollection<int> ids)
     {
         lock (world.Sync)
@@ -207,6 +257,7 @@ public sealed class WorldScene
         }
     }
 
+    /// <summary><c>FindThings</c>' work, with the world's lock held.</summary>
     private static Dictionary<int, Thing> FindThingsIn(WorldSave world, EditStore edits, IReadOnlyCollection<int> ids)
     {
         var want = ids.ToHashSet();
@@ -246,8 +297,13 @@ public sealed class WorldScene
         return found;
     }
 
-    // The objects and building pieces of the block's zones (those not deleted).
-    // added: objects added in this session (other areas of the world may have placed or moved some here).
+    /// <summary>The objects and building pieces of the block's zones (those not deleted).</summary>
+    /// <param name="world">The save.</param>
+    /// <param name="x0">The block's south-west zone, x.</param>
+    /// <param name="z0">The block's south-west zone, z.</param>
+    /// <param name="size">Zones across.</param>
+    /// <param name="deleted">Ids of deleted objects, left out.</param>
+    /// <param name="added">Objects added in this session (other areas of the world may have placed or moved some here).</param>
     public static List<Thing> ReadThings(WorldSave world, int x0, int z0, int size, ICollection<int> deleted, IEnumerable<NewObject>? added = null)
     {
         lock (world.Sync)
@@ -256,6 +312,7 @@ public sealed class WorldScene
         }
     }
 
+    /// <summary><c>ReadThings</c>' work, with the world's lock held.</summary>
     private static List<Thing> ReadThingsIn(WorldSave world, int x0, int z0, int size, ICollection<int> deleted, IEnumerable<NewObject>? added)
     {
         float minX = x0 * 64f - 32f, maxX = (x0 + size - 1) * 64f + 32f, minZ = z0 * 64f - 32f, maxZ = (z0 + size - 1) * 64f + 32f;
@@ -286,7 +343,10 @@ public sealed class WorldScene
         return things;
     }
 
-    // After an edit: the heights, paint mask and limit marks of a rectangle of grid points from the ground.
+    /// <summary>
+    /// After an edit: the heights, paint mask and limit marks of a rectangle of grid points from the ground
+    /// (grid points x0..x1, z0..z1, inclusive).
+    /// </summary>
     public void Refresh(Ground g, int x0, int z0, int x1, int z1)
     {
         for (int gz = z0; gz <= z1; gz++)

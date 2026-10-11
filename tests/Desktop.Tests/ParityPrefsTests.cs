@@ -6,11 +6,13 @@ using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
-// What the editor remembers between runs (Prefs, as the web editor kept it in the browser): the
-// store's edge cases (missing, broken, unwritable files, wrong types, the delayed write), the controls
-// bound to it, and a window closed and opened again with the View switches, the brush, the Area
-// action, Select's options, the Shape preset and formula, the right-hand panel, the clipboard and the
-// map's place as they were. The tests' windows remember in memory only unless given a file.
+/// <summary>
+/// What the editor remembers between runs (Prefs, as the web editor kept it in the browser): the store's edge cases
+/// (missing, broken, unwritable files, wrong types, the delayed write), the controls bound to it, and a window closed
+/// and opened again with the View switches, the brush, the Area action, Select's options, the Shape preset and formula,
+/// the right-hand panel, the clipboard and the map's place as they were. The tests' windows remember in memory only
+/// unless given a file.
+/// </summary>
 public sealed class ParityPrefsTests : IDisposable
 {
     private readonly string _dir = Path.Combine(Path.GetTempPath(), "vwe-prefs-" + Guid.NewGuid().ToString("N")[..8]);
@@ -18,6 +20,7 @@ public sealed class ParityPrefsTests : IDisposable
 
     public ParityPrefsTests() => Directory.CreateDirectory(_dir);
 
+    /// <inheritdoc/>
     public void Dispose()
     {
         try
@@ -206,6 +209,9 @@ public sealed class ParityPrefsTests : IDisposable
 
     // ---- A window closed and opened again.
 
+    /// <summary>
+    /// A shown main window remembering in the test's prefs file.
+    /// </summary>
     private MainWindow Window()
     {
         var w = new MainWindow(load: false, prefs: Prefs.Load(File1)) { Width = 1200, Height = 900 };
@@ -213,6 +219,9 @@ public sealed class ParityPrefsTests : IDisposable
         return w;
     }
 
+    /// <summary>
+    /// A small 2 × 2 clipboard with a missing height and mixed weights, to see it remembered as it was.
+    /// </summary>
     private static CopyData Clip() => new()
     {
         W = 2,
@@ -377,12 +386,15 @@ public sealed class ParityPrefsTests : IDisposable
     }
 }
 
-// The map's place, remembered: where a world's map first looks.
+/// <summary>
+/// The map's place, remembered: where a world's map first looks.
+/// </summary>
 [Collection("World files")]
 public sealed class ParityPrefsMapTests : IDisposable
 {
     private readonly string _file = Path.Combine(Path.GetTempPath(), "vwe-prefs-map-" + Guid.NewGuid().ToString("N")[..8] + ".json");
 
+    /// <inheritdoc/>
     public void Dispose() => File.Delete(_file);
 
     [AvaloniaFact]

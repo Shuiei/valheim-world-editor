@@ -5,10 +5,17 @@ using Avalonia.Themes.Fluent;
 
 namespace TerrainEditor.Desktop;
 
-// The native editor: an Avalonia window, the 3D view and the map drawn with OpenGL. It opens on the
-// start page; the options (see Options) open an area directly or let a program drive it.
+/// <summary>
+/// The native editor: an Avalonia window, the 3D view and the map drawn with OpenGL. It opens on the start page; the
+/// options (see Options) open an area directly or let a program drive it.
+/// </summary>
 public static class Program
 {
+    /// <summary>
+    /// Starts the editor, or with <c>--mcp-stdio</c>, <c>--export-test-data</c> or <c>--export-locations</c> does only
+    /// that and ends.
+    /// </summary>
+    /// <param name="args">The command line (see <see cref="Options"/>).</param>
     [STAThread]
     public static void Main(string[] args)
     {
@@ -60,6 +67,10 @@ public static class Program
             .StartWithClassicDesktopLifetime(args);
     }
 
+    /// <summary>
+    /// SIGTERM or SIGHUP: closes the tunnel, then shuts the app down on the UI thread (instead of the process ending at
+    /// once).
+    /// </summary>
     private static void Quit(System.Runtime.InteropServices.PosixSignalContext c)
     {
         c.Cancel = true;
@@ -69,8 +80,10 @@ public static class Program
     }
 }
 
+/// <summary>The Avalonia application: the Fluent theme in dark with the editor's styles, and the main window.</summary>
 public sealed class App : Application
 {
+    /// <inheritdoc/>
     public override void Initialize()
     {
         Styles.Add(new FluentTheme());
@@ -78,6 +91,10 @@ public sealed class App : Application
         RequestedThemeVariant = ThemeVariant.Dark;
     }
 
+    /// <summary>
+    /// Opens the main window, and catches errors in the UI thread's handlers: logged and shown instead of closing the
+    /// app and losing what is not saved.
+    /// </summary>
     public override void OnFrameworkInitializationCompleted()
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
@@ -97,41 +114,59 @@ public sealed class App : Application
     }
 }
 
-// Command line options.
-//   <world folder>                                     that world's map
-//   --live <bridge url> --token <token>                a live game's map (the token also from WORLD_BRIDGE_TOKEN)
-//   --world <folder or name> [--zone x,z] [--size n]   straight into the 3D editor with that area
-//   --driver                                           driven by another program (see Driver)
-//   --window <width>x<height>                          the window's size (the documentation's pictures)
-//   --data <folder>                                    settings and memory kept there (tests)
-//   --mcp-stdio                                        no window: relays Claude's MCP messages on stdin/stdout to
-//                                                      the running editor (Claude Desktop; see ClaudeRelay)
+/// <summary>
+/// Command line options.
+/// <code>
+///   &lt;world folder&gt;                                     that world's map
+///   --live &lt;bridge url&gt; --token &lt;token&gt;                a live game's map (the token also from
+///                                                      WORLD_BRIDGE_TOKEN)
+///   --world &lt;folder or name&gt; [--zone x,z] [--size n]   straight into the 3D editor with that area
+///   --driver                                           driven by another program (see Driver)
+///   --window &lt;width&gt;x&lt;height&gt;                          the window's size (the documentation's pictures)
+///   --data &lt;folder&gt;                                    settings and memory kept there (tests)
+///   --mcp-stdio                                        no window: relays Claude's MCP messages on stdin/stdout to
+///                                                      the running editor (Claude Desktop; see ClaudeRelay)
+/// </code>
+/// </summary>
 public static class Options
 {
+    /// <summary>--world: the world (folder or name) to open straight in the 3D editor.</summary>
     public static string? World { get; private set; }
-    // --world or --zone given: straight into the 3D editor, not the start page.
+    /// <summary>--world or --zone given: straight into the 3D editor, not the start page.</summary>
     public static bool Direct { get; private set; }
+    /// <summary>--zone: the x of the zone to open the area at.</summary>
     public static int ZoneX { get; private set; }
+    /// <summary>--zone: the z of the zone to open the area at.</summary>
     public static int ZoneZ { get; private set; }
+    /// <summary>--size: the area, in zones each way (1 to 9; 5 by default).</summary>
     public static int Size { get; private set; } = 5;
-    // Driven by another program, one command per line (see Driver).
+    /// <summary>Driven by another program, one command per line (see Driver).</summary>
     public static bool Driver { get; private set; }
-    // --data <folder>: settings, saved servers, Place tool memory and stamps go there instead of the
-    // user's (the visual tests). The game's look is still read from the usual place.
+    /// <summary>
+    /// --data &lt;folder&gt;: settings, saved servers, Place tool memory and stamps go there instead of the user's (the
+    /// visual tests). The game's look is still read from the usual place.
+    /// </summary>
     public static string? Data { get; private set; }
 
-    // <world folder>: its map, as if picked on the start page.
+    /// <summary>&lt;world folder&gt;: its map, as if picked on the start page.</summary>
     public static string? Folder { get; private set; }
-    // --live <url> --token <token>: the game's world, as if connected on the start page.
+    /// <summary>--live: the bridge's URL of a game's world, as if connected on the start page.</summary>
     public static string? LiveUrl { get; private set; }
+    /// <summary>--token: the bridge's token (else WORLD_BRIDGE_TOKEN).</summary>
     public static string? LiveToken { get; private set; }
 
-    // --window <w>x<h>: the window's size (0: the usual).
+    /// <summary>--window: the window's width (0: the usual).</summary>
     public static int WindowWidth { get; private set; }
+    /// <summary>--window: the window's height (0: the usual).</summary>
     public static int WindowHeight { get; private set; }
 
+    /// <summary>Writes a line on the console (the log takes it too once started).</summary>
     public static void Say(string line) => Console.WriteLine(line);
 
+    /// <summary>
+    /// Reads the command line, starting from the defaults each time (the tests parse several in one process). --data
+    /// also points the settings, servers, Place memory and stamps there.
+    /// </summary>
     public static void Parse(string[] args)
     {
         // Each start from nothing (the tests parse several lines in one process).

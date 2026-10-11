@@ -8,74 +8,119 @@ using TerrainEditor.Editing;
 
 namespace TerrainEditor.Desktop;
 
-// Generating a dungeon (the Dungeon panel's Generate): its settings, a plan of what they make (made
-// again at each change; the same settings and seed always make the same dungeon), and where it goes:
-// into the world above the view's centre, a portal pair joining it to the ground, or into the
-// Workshop as a blueprint. In the Workshop (the Build panel's Generate dungeon) it is made of building
-// pieces only, and goes onto the plot: alone (Open on the plot) or with what is there (Add to the plot).
+/// <summary>
+/// Generating a dungeon (the Dungeon panel's Generate): its settings, a plan of what they make (made
+/// again at each change; the same settings and seed always make the same dungeon), and where it goes:
+/// into the world above the view's centre, a portal pair joining it to the ground, or into the
+/// Workshop as a blueprint. In the Workshop (the Build panel's Generate dungeon) it is made of building
+/// pieces only, and goes onto the plot: alone (Open on the plot) or with what is there (Add to the plot).
+/// </summary>
 public sealed class DungeonGenPanel
 {
+    /// <summary>The settings, the plan and the summary (and, outside the Workshop, <see cref="Actions"/>).</summary>
     public Control View { get; }
-    // What the dungeon made goes to: under the settings, or (in the Workshop) where the host puts it, so
-    // that it stays in sight when the settings scroll.
+    /// <summary>
+    /// What the dungeon made goes to: under the settings, or (in the Workshop) where the host puts it, so
+    /// that it stays in sight when the settings scroll.
+    /// </summary>
     public Control Actions { get; }
 
+    /// <summary>Place in the world: the settings and the dungeon they made.</summary>
     public event Action<DungeonGen.Settings, DungeonGen.Result>? PlaceAsked;
+    /// <summary>Open in the Workshop: the settings, made of building pieces.</summary>
     public event Action<DungeonGen.Settings>? WorkshopAsked;
-    // In the Workshop: the dungeon made onto the plot (true: added to what is there).
+    /// <summary>In the Workshop: the dungeon made onto the plot (true: added to what is there).</summary>
     public event Action<DungeonGen.Settings, DungeonGen.Result, bool>? PlotAsked;
 
+    /// <summary>Made of building pieces or of the game's own rooms (not shown in the Workshop).</summary>
     internal ComboBox Made { get; } = Combo("Building pieces", "The game's own rooms");
+    /// <summary>The biome (Black Forest at first).</summary>
     internal ComboBox Biome { get; } = Combo([.. DungeonKit.Biomes.Select(b => b.Name)]);
+    /// <summary>The style, or the biome's.</summary>
     internal ComboBox Style { get; } = Combo(["The biome's", .. DungeonKit.Styles.Select(s => s.Name)]);
+    /// <summary>The wall material, or the biome's.</summary>
     internal ComboBox Walls { get; } = Combo(["The biome's", .. DungeonKit.Materials.Select(m => m.Name)]);
+    /// <summary>Rooms per level: Small to Huge (1 to 4).</summary>
     internal ComboBox Size { get; } = Combo("Small", "Medium", "Large", "Huge");
+    /// <summary>Levels, 1 to 4.</summary>
     internal ComboBox Levels { get; } = Combo("1 level", "2 levels", "3 levels", "4 levels");
+    /// <summary>Monsters, 0 (none) to 3 times the usual.</summary>
     internal Slider Monsters { get; } = Slide(0, 3, 1, 0.25);
+    /// <summary>Monsters come back (spawners).</summary>
     internal CheckBox Respawn { get; } = new() { Content = "Monsters come back (spawners)", IsChecked = true, FontSize = 12 };
+    /// <summary>The boss: the biome's, none, or any biome's boss or elite.</summary>
     internal ComboBox Boss { get; } = Combo(["The biome's boss", "No boss", .. Bosses]);
+    /// <summary>Loot, 0 (none) to 2 times the usual.</summary>
     internal Slider Loot { get; } = Slide(0, 2, 1, 0.25);
+    /// <summary>Light: dark, dim or bright.</summary>
     internal ComboBox Light { get; } = Combo("Dark", "Dim", "Bright");
+    /// <summary>Furniture: bare, furnished or rich.</summary>
     internal ComboBox Decor { get; } = Combo("Bare", "Furnished", "Rich");
+    /// <summary>Ruin, 0 to 1 (set to the style's own when the style changes).</summary>
     internal Slider Decay { get; } = Slide(0, 1, 0.15, 0.05);
+    /// <summary>Ways round, 0 (a tree) to 2 times the usual.</summary>
     internal Slider Loops { get; } = Slide(0, 2, 1, 0.25);
+    /// <summary>Boss behind a gate, its key in a chest.</summary>
     internal CheckBox BossKey { get; } = new() { Content = "Boss behind a gate, its key in a chest", IsChecked = true, FontSize = 12 };
+    /// <summary>Hidden caches.</summary>
     internal CheckBox Secrets { get; } = new() { Content = "Hidden caches", IsChecked = true, FontSize = 12 };
+    /// <summary>The name on the entrance sign; empty: the made-up one shown as its placeholder.</summary>
     internal TextBox Name { get; } = new() { FontSize = 12 };
+    /// <summary>The seed (a whole number; anything else counts as 0).</summary>
     internal TextBox Seed { get; } = new() { FontSize = 12, Width = 110, Text = "1" };
+    /// <summary>Puts a random seed in.</summary>
     internal Button Randomize { get; } = new() { Content = "Randomize", FontSize = 12 };
+    /// <summary>Raises <see cref="PlaceAsked"/>.</summary>
     internal Button Place { get; } = new() { Content = "Place in the world", FontSize = 12 };
+    /// <summary>Raises <see cref="WorkshopAsked"/>.</summary>
     internal Button ToWorkshop { get; } = new() { Content = "Open in the Workshop", FontSize = 12 };
+    /// <summary>In the Workshop: the dungeon alone on the plot (<see cref="PlotAsked"/>, false).</summary>
     internal Button OpenOnPlot { get; } = new() { Content = "Open on the plot", FontSize = 12 };
+    /// <summary>In the Workshop: the dungeon added to what is on the plot (<see cref="PlotAsked"/>, true).</summary>
     internal Button AddToPlot { get; } = new() { Content = "Add to the plot", FontSize = 12 };
+    /// <summary>What the dungeon made holds (its notes), or why it could not be made.</summary>
     internal TextBlock Summary { get; } = new() { FontSize = 12, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
+    /// <summary>The sliders' labels, with their values.</summary>
     private readonly TextBlock _monstersText = new() { FontSize = 12 }, _lootText = new() { FontSize = 12 }, _decayText = new() { FontSize = 12 }, _loopsText = new() { FontSize = 12 };
+    /// <summary>The plan of the level shown.</summary>
     private readonly Canvas _plan = new() { Width = 258, Height = 190, Background = Ui.Bg, ClipToBounds = true };
+    /// <summary>One button per level, shown when there are several.</summary>
     private readonly StackPanel _levelButtons = new() { Orientation = Orientation.Horizontal, Spacing = 4 };
+    /// <summary>The rows shown only for a dungeon of building pieces.</summary>
     private readonly List<Control> _piecesOnly = [];
+    /// <summary>The dungeon last made, null before the first or when it failed (its buttons are off while another is made).</summary>
     private DungeonGen.Result? _result;
-    // Made again once the settings stop changing for a moment, away from the window's thread; only the
-    // newest is shown.
+    /// <summary>
+    /// Made again once the settings stop changing for a moment, away from the window's thread; only the
+    /// newest is shown.
+    /// </summary>
     private readonly Avalonia.Threading.DispatcherTimer _wait = new() { Interval = TimeSpan.FromMilliseconds(300) };
+    /// <summary>Counts the changes, so that only the newest dungeon made is shown.</summary>
     private int _generation;
 
-    // The dungeon being made for the settings shown (tests wait for it).
+    /// <summary>The dungeon being made for the settings shown (tests wait for it).</summary>
     internal Task Pending { get; private set; } = Task.CompletedTask;
+    /// <summary>The level shown on the plan (from 0).</summary>
     private int _level;
 
-    // Bosses and elites of every biome, by creature.
+    /// <summary>Bosses and elites of every biome, by creature.</summary>
     private static string[] Bosses => [.. DungeonKit.Biomes.SelectMany(b => b.Elites.Append(b.Boss)).Select(f => f.Creature).Distinct()];
 
+    /// <summary>A list of these entries, the first chosen.</summary>
     private static ComboBox Combo(params string[] items) => new() { ItemsSource = items, SelectedIndex = 0, HorizontalAlignment = HorizontalAlignment.Stretch, FontSize = 12 };
 
+    /// <summary>A slider that steps.</summary>
     private static Slider Slide(double min, double max, double value, double step) =>
         new() { Minimum = min, Maximum = max, Value = value, SmallChange = step, TickFrequency = step, IsSnapToTickEnabled = true };
 
+    /// <summary>A labelled row.</summary>
     private static DockPanel Row(string label, Control c) => new()
     {
         Children = { new TextBlock { Text = label, FontSize = 12, Width = 80, VerticalAlignment = VerticalAlignment.Center }, c },
     };
 
+    /// <summary>Builds the panel; the first dungeon is made after the usual pause.</summary>
+    /// <param name="inWorkshop">In the Workshop: building pieces only, and Open and Add to the plot in <see cref="Actions"/>.</param>
     public DungeonGenPanel(bool inWorkshop = false)
     {
         Biome.SelectedIndex = 1;
@@ -181,6 +226,7 @@ public sealed class DungeonGenPanel
         Changed();
     }
 
+    /// <summary>The settings shown.</summary>
     public DungeonGen.Settings Settings()
     {
         int.TryParse(Seed.Text?.Trim(), System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out int seed);
@@ -197,6 +243,7 @@ public sealed class DungeonGenPanel
             Name: string.IsNullOrWhiteSpace(Name.Text) ? null : Name.Text.Trim());
     }
 
+    /// <summary>A setting changed: the labels follow, and the dungeon is made again after a pause.</summary>
     private void Changed()
     {
         var s = Settings();
@@ -218,6 +265,7 @@ public sealed class DungeonGenPanel
         _wait.Start();
     }
 
+    /// <summary>Makes the dungeon for the settings shown, away from the window's thread (see <see cref="Pending"/>).</summary>
     private void Make()
     {
         _wait.Stop();
@@ -243,6 +291,7 @@ public sealed class DungeonGenPanel
         }, TaskScheduler.FromCurrentSynchronizationContext());
     }
 
+    /// <summary>Shows a dungeon made (or why not): its summary, the level buttons and the plan.</summary>
     private void Show(DungeonGen.Result? result, string? error)
     {
         _result = result;
@@ -271,8 +320,10 @@ public sealed class DungeonGenPanel
         DrawPlan();
     }
 
-    // The level's rooms seen from above: the way through brighter, the boss red, treasure gold, the key
-    // chest's room green, doorways as dots (the boss's gate magenta, hidden ones cyan).
+    /// <summary>
+    /// The level's rooms seen from above: the way through brighter, the boss red, treasure gold, the key
+    /// chest's room green, doorways as dots (the boss's gate magenta, hidden ones cyan).
+    /// </summary>
     private void DrawPlan()
     {
         _plan.Children.Clear();

@@ -2,11 +2,16 @@ using System.Numerics;
 
 namespace TerrainEditor.Desktop;
 
-// Finding what is under the mouse: a ray from the camera through the pointer, against the objects'
-// boxes and the ground. All in view space (see WorldScene).
+/// <summary>
+/// Finding what is under the mouse: a ray from the camera through the pointer, against the objects' boxes and the
+/// ground. All in view space (see WorldScene).
+/// </summary>
 public static class Picking
 {
-    // The ray through a point of the view (nx, ny from -1 to 1, y up) for the camera's view × projection.
+    /// <summary>
+    /// The ray through a point of the view (nx, ny from -1 to 1, y up) for the camera's view × projection.
+    /// </summary>
+    /// <returns>The ray's start on the near plane and its unit direction.</returns>
     public static (Vector3 Origin, Vector3 Dir) Ray(Matrix4x4 viewProj, float nx, float ny)
     {
         Matrix4x4.Invert(viewProj, out var inv);
@@ -19,7 +24,11 @@ public static class Picking
         return (near, Vector3.Normalize(Unproject(1) - near));
     }
 
-    // Where the ray enters a box (distance along it), or null.
+    /// <summary>Where the ray enters a box (distance along it, 0 when it starts inside), or null.</summary>
+    /// <param name="o">The ray's origin.</param>
+    /// <param name="d">The ray's direction.</param>
+    /// <param name="min">The box's lowest corner.</param>
+    /// <param name="max">The box's highest corner.</param>
     public static float? HitBox(Vector3 o, Vector3 d, Vector3 min, Vector3 max)
     {
         float t0 = 0, t1 = float.MaxValue;
@@ -50,7 +59,7 @@ public static class Picking
         return t0;
     }
 
-    // The box around a box moved by a matrix (its eight corners).
+    /// <summary>The box around a box moved by a matrix (its eight corners).</summary>
     public static (Vector3 Min, Vector3 Max) Transform(Vector3 min, Vector3 max, Matrix4x4 m)
     {
         Vector3 lo = new(float.MaxValue), hi = new(float.MinValue);
@@ -63,9 +72,15 @@ public static class Picking
         return (lo, hi);
     }
 
-    // Where the ray meets the ground (distance), stepping half a metre then narrowing down, or null.
-    // Only the area's ground: outside it, where HeightAt is very low, the ray never hits (it hit 1000 m
-    // down past the edge, a point the tools then took).
+    /// <summary>
+    /// Where the ray meets the ground (distance), stepping half a metre then narrowing down, or null. Only the area's
+    /// ground: outside it, where HeightAt is very low, the ray never hits (it hit 1000 m down past the edge, a point
+    /// the tools then took).
+    /// </summary>
+    /// <param name="s">The scene whose ground to test.</param>
+    /// <param name="o">The ray's origin (view space).</param>
+    /// <param name="d">The ray's unit direction.</param>
+    /// <param name="maxDist">How far along the ray to look, in metres.</param>
     public static float? HitGround(WorldScene s, Vector3 o, Vector3 d, float maxDist = 4000)
     {
         float Below(float t)
@@ -101,14 +116,16 @@ public static class Picking
         return null;
     }
 
-    // A view-space point over the area's ground.
+    /// <summary>Whether a view-space point (x, z) is over the area's ground.</summary>
     public static bool Inside(WorldScene s, float x, float z)
     {
         float gx = x + (s.W - 1) / 2f, gz = -z + (s.H - 1) / 2f;
         return gx >= 0 && gz >= 0 && gx <= s.W - 1 && gz <= s.H - 1;
     }
 
-    // The ground's height under a view-space point (between the grid points), or very low outside.
+    /// <summary>
+    /// The ground's height under a view-space point (between the grid points), or -1000 outside the area.
+    /// </summary>
     public static float HeightAt(WorldScene s, float x, float z)
     {
         float gx = x + (s.W - 1) / 2f, gz = -z + (s.H - 1) / 2f;

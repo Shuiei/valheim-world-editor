@@ -3,8 +3,10 @@ using Xunit;
 
 namespace WorldEditor.Tests;
 
-// Settings, saved servers, plugin settings and world discovery. These use the app's data folder,
-// so they point it at a temporary one (XDG_DATA_HOME, and their own servers file) and run alone.
+/// <summary>
+/// Settings, saved servers, plugin settings and world discovery. These use the app's data folder, so they point it at a
+/// temporary one (XDG_DATA_HOME, and their own servers file) and run alone.
+/// </summary>
 [Collection("DataDir")]
 public class AppTests : IDisposable
 {
@@ -27,6 +29,9 @@ public class AppTests : IDisposable
 
     private readonly string? _oldServers, _oldDataDir;
 
+    /// <summary>
+    /// Puts the data folder and servers file back and deletes the temporary data folder.
+    /// </summary>
     public void Dispose()
     {
         Environment.SetEnvironmentVariable("XDG_DATA_HOME", _old);
@@ -98,6 +103,10 @@ public class AppTests : IDisposable
         }
     }
 
+    /// <summary>
+    /// Checks the settings file at this path: a broken one is kept aside as .bad and read as defaults, a save leaves no
+    /// .tmp behind, and a save where a folder blocks the file fails quietly.
+    /// </summary>
     private static void Check(string path)
     {
         File.WriteAllText(path, "{\"ValheimPath\": \"/games/Valh");
@@ -172,6 +181,10 @@ public class AppTests : IDisposable
     }
 }
 
+/// <summary>
+/// The "DataDir" collection: tests that point the app's data folder, settings or servers file elsewhere never run in
+/// parallel.
+/// </summary>
 [CollectionDefinition("DataDir", DisableParallelization = true)]
 public class DataDirDefinition
 {

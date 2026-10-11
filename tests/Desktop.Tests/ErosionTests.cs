@@ -6,10 +6,14 @@ using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
-// Erosion: slopes settle to their rest angle, rain moves ground downhill.
+/// <summary>
+/// Erosion: slopes settle to their rest angle, rain moves ground downhill.
+/// </summary>
 public class ErosionTests
 {
-    // A 20 × 20 window with a 10 m cliff in the middle (x >= 10 is high).
+    /// <summary>
+    /// A 20 × 20 window with a 10 m cliff in the middle (x &gt;= 10 is high).
+    /// </summary>
     private static (float[] H, float[] Wt) Cliff()
     {
         float[] h = new float[400];

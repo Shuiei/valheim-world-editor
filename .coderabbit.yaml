@@ -19,6 +19,11 @@ reviews:
     # Every pull request, also those stacked on another branch than main.
     base_branches:
       - ".*"
+  pre_merge_checks:
+    # The build requires a doc comment on every public type and member (CS1591, Directory.Build.props);
+    # test methods have none on purpose (their names say what they check), which this check counts.
+    docstrings:
+      mode: "off"
   path_filters:
     # The tests' copies of the game's data and the documentation's pictures: data, not code.
     - "!tests/fixtures/**"

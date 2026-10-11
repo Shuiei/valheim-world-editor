@@ -8,12 +8,17 @@ using TerrainService = ValheimGen.TerrainService;
 
 namespace WorldEditor.Tests;
 
-// No limit ground (Uplift): ground lifted past the game's ±8 m becomes invisible ground discs (location
-// proxies the game levels the ground for) plus ordinary edits. After saving, the ground the game makes
-// from the save (generated ground, the discs, the edits clamped to ±8 m) must be the ground asked for.
+/// <summary>
+/// No limit ground (Uplift): ground lifted past the game's ±8 m becomes invisible ground discs (location proxies the
+/// game levels the ground for) plus ordinary edits. After saving, the ground the game makes from the save (generated
+/// ground, the discs, the edits clamped to ±8 m) must be the ground asked for.
+/// </summary>
 [Collection("World files")]
 public class CoreUpliftTests
 {
+    /// <summary>
+    /// A world with its terrain (with modifiers) and edits: the ground as the editor shows it, lifted, and saved.
+    /// </summary>
     private sealed class Open
     {
         public required WorldSave World { get; init; }
@@ -67,14 +72,18 @@ public class CoreUpliftTests
         }
     }
 
-    // A smooth hill (or hollow) of the given height and radius.
+    /// <summary>
+    /// A smooth hill (or hollow) of the given height and radius.
+    /// </summary>
     private static Func<float, float, float> Bell(float cx, float cz, float height, float radius) => (x, z) =>
     {
         float d = MathF.Sqrt((x - cx) * (x - cx) + (z - cz) * (z - cz)) / radius;
         return d >= 1 ? 0 : height * (1 - d * d) * (1 - d * d);
     };
 
-    // The ground asked for and the ground the saved world makes, over a square around (cx, cz).
+    /// <summary>
+    /// The ground asked for and the ground the saved world makes, over a square around (cx, cz).
+    /// </summary>
     private static List<float> Misses(Func<float, float, float> want, Open after, float cx, float cz, int half)
     {
         var misses = new List<float>();

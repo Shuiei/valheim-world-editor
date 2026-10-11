@@ -6,12 +6,17 @@ using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
-// What item stands and armour stands hold (StandData): what the game lets each take (ItemStand.CanAttach,
-// ArmorStand.CanAttach), the values written as the game writes them, and reading them back.
+/// <summary>
+/// What item stands and armour stands hold (StandData): what the game lets each take (ItemStand.CanAttach,
+/// ArmorStand.CanAttach), the values written as the game writes them, and reading them back.
+/// </summary>
 public class CoreStandDataTests
 {
     private static readonly int Wall = StableHash.Of("itemstand"), Flat = StableHash.Of("itemstandh"), Armour = StableHash.Of("ArmorStand");
 
+    /// <summary>
+    /// An object holding these values.
+    /// </summary>
     private static ZdoData With(List<FieldChange> set)
     {
         var z = new ZdoData();
@@ -22,6 +27,9 @@ public class CoreStandDataTests
         return z;
     }
 
+    /// <summary>
+    /// Reads one item from its base64 bytes (a version byte, then the item), asserting every byte is used.
+    /// </summary>
     private static InventoryData.Item ItemOf(string base64)
     {
         byte[] bytes = Convert.FromBase64String(base64);

@@ -5,39 +5,52 @@ using ModelContextProtocol.Server;
 
 namespace TerrainEditor.Desktop;
 
-// What Claude can do in the editor (ClaudeServer): look at what is open, and change it as the user would,
-// on the window's thread. Coordinates are the game's: x east, z north, y up, in metres. Every change
-// stays pending, one step of the history each: the user saves, applies live or saves the blueprint.
+/// <summary>
+/// What Claude can do in the editor (ClaudeServer): look at what is open, and change it as the user would,
+/// on the window's thread. Coordinates are the game's: x east, z north, y up, in metres. Every change
+/// stays pending, one step of the history each: the user saves, applies live or saves the blueprint.
+/// </summary>
+/// <remarks>
+/// Each tool's description for Claude is its <c>[Description]</c> attribute; the summaries here are for the code.
+/// </remarks>
 [McpServerToolType]
 public sealed class ClaudeTools
 {
+    /// <summary>The editor's window, whose world, session and view the tools work on.</summary>
     private readonly MainWindow _w;
 
+    /// <summary>The tools for this window.</summary>
     internal ClaudeTools(MainWindow window)
     {
         _w = window;
     }
 
+    /// <summary>Compact JSON for the answers.</summary>
     private static readonly JsonSerializerOptions Json = new() { WriteIndented = false };
 
+    /// <summary>An answer as compact JSON.</summary>
     internal static string ToJson(object o) => JsonSerializer.Serialize(o, Json);
 
-    // On the window's thread, as a click would be.
+    /// <summary>On the window's thread, as a click would be.</summary>
     private static Task<T> OnUi<T>(Func<Task<T>> f) => Dispatcher.UIThread.InvokeAsync(f);
 
+    /// <summary>On the window's thread, as a click would be.</summary>
     private static Task<T> OnUi<T>(Func<T> f) => Dispatcher.UIThread.InvokeAsync(f).GetTask();
 
+    /// <summary>editor_state: the page shown, the world, the area's bounds, what is pending (see <see cref="StateOf"/>).</summary>
     [McpServerTool(Name = "editor_state", ReadOnly = true, Title = "What the editor shows")]
     [Description("What the editor shows now: the start page, a world's map, an area of a world in 3D, or the Workshop (a blank plot to build a blueprint on); the world, the area's bounds in world coordinates, the changes not saved yet, and the editor's last message. Call it first.")]
     public Task<string> EditorState() => OnUi(() => ToJson(StateOf(_w)));
 
     // ---- Looking.
 
+    /// <summary>list_worlds: the start page's worlds.</summary>
     [McpServerTool(Name = "list_worlds", ReadOnly = true, Title = "Worlds on this computer")]
     [Description("The Valheim worlds on this computer (the start page's list): name, folder, last save. Open one with open_world.")]
     public Task<string> ListWorlds() => OnUi(() => ToJson(TerrainEditor.App.Worlds.Find(_w.Settings)
         .Select(i => new { name = i.Name, folder = i.Path, saved = i.Saved, where = i.Where, usable = i.Usable, problem = i.Problem })));
 
+    /// <summary>open_world: opens a world offline, refused while there are unsaved changes.</summary>
     [McpServerTool(Name = "open_world", Title = "Open a world")]
     [Description("Opens a world from its folder (from list_worlds), offline, and shows its map. Refused while the open world or the Workshop has changes not saved: ask the user to save or discard them first.")]
     public Task<string> OpenWorld([Description("The world's folder, as list_worlds gives it.")] string folder) => OnUi(async () =>
@@ -50,6 +63,7 @@ public sealed class ClaudeTools
         return _w.World != null ? ToJson(StateOf(_w)) : "Could not open it: " + _w.MessageText.Text;
     });
 
+    /// <summary>open_area: opens the zones around a world point in 3D (size clamped to 1 to 5 zones).</summary>
     [McpServerTool(Name = "open_area", Title = "Open an area in 3D")]
     [Description("Opens the square area around a point of the open world in the 3D editor, where it can be looked at and changed. The world is made of 64 m zones; size is how many zones across (1 to 5; 3 = 192 m is usual). Changes made in another area stay pending.")]
     public Task<string> OpenArea(
@@ -66,6 +80,7 @@ public sealed class ClaudeTools
         return ToJson(StateOf(_w));
     });
 
+    /// <summary>describe_area: the open area's bounds, heights, biomes and objects counted by kind and by name (the top 40).</summary>
     [McpServerTool(Name = "describe_area", ReadOnly = true, Title = "Describe the open area")]
     [Description("The open area (or the Workshop's plot): its bounds, ground heights (lowest, highest, average; the water level), its biomes, and its objects counted by kind and by name.")]
     public Task<string> DescribeArea() => OnUi(() =>
@@ -92,8 +107,10 @@ public sealed class ClaudeTools
         });
     });
 
+    /// <summary>A thing's object kind, as describe_area and list_objects name it.</summary>
     private string KindOf(WorldScene.Thing t) => TerrainEditor.App.ObjectKinds.Of(_w.NameOfPrefab(t.Prefab), t.Piece, t.Tamed).ToString();
 
+    /// <summary>list_objects: objects of the open area, filtered by kind, name and distance (limit clamped to 1 to 2000).</summary>
     [McpServerTool(Name = "list_objects", ReadOnly = true, Title = "List objects")]
     [Description("Objects of the open area: id, name, kind, position (x, y, z), turn (yaw in degrees) and whether a player built it. Filter by kind (Buildings, Trees, Rocks…), by a word of the name, and/or near a point; at most limit of them, nearest first when near a point.")]
     public Task<string> ListObjects(
@@ -130,6 +147,7 @@ public sealed class ClaudeTools
         return ToJson(found);
     });
 
+    /// <summary>get_selection: the objects selected in the view.</summary>
     [McpServerTool(Name = "get_selection", ReadOnly = true, Title = "What the user selected")]
     [Description("The objects the user has selected in the editor (Select tool): id, name, kind, position, turn. Use it when the user says \"these\", \"the selected trees\", \"this building\".")]
     public Task<string> GetSelection() => OnUi(() =>
@@ -144,6 +162,7 @@ public sealed class ClaudeTools
         }
     });
 
+    /// <summary>select_objects: selects objects by id and points the camera at them; changes nothing in the world.</summary>
     [McpServerTool(Name = "select_objects", Title = "Select objects for the user")]
     [Description("Selects objects in the editor (by id), so the user sees which ones are meant, and points the camera at them. Changes nothing in the world.")]
     public Task<string> SelectObjects(
@@ -165,6 +184,7 @@ public sealed class ClaudeTools
         return $"Selected {ok.Count}{(ok.Count < ids.Length ? $" ({ids.Length - ok.Count} id(s) were not objects of the area)" : "")}.";
     });
 
+    /// <summary>An object as the tools give it: id (its index in the scene), name, kind, position, yaw, built.</summary>
     private object Describe(WorldScene.Thing t, int i) => new
     {
         id = i,
@@ -177,6 +197,10 @@ public sealed class ClaudeTools
         built = t.Piece,
     };
 
+    /// <summary>
+    /// screenshot: the 3D view (from the camera given, else as it is) or the map, as a JPEG no wider than 1280
+    /// pixels; four views in one with <c>views</c> 4 or more.
+    /// </summary>
     [McpServerTool(Name = "screenshot", ReadOnly = true, Title = "See the view")]
     [Description("A picture of what the editor shows: the 3D view of the area or the Workshop (optionally from a camera: looking at x, z from yaw degrees round, pitch degrees down, distance metres away), or the world's map when the map is shown. Use it to see the result of a change.")]
     public async Task<ModelContextProtocol.Protocol.CallToolResult> Screenshot(
@@ -225,7 +249,7 @@ public sealed class ClaudeTools
         }
     }
 
-    // Four views of a point (the area's middle when none is given), as one picture with their names.
+    /// <summary>Four views of a point (the area's middle when none is given), as one picture with their names.</summary>
     private async Task<ModelContextProtocol.Protocol.CallToolResult> FourViews(float? x, float? z, float distance, float? height)
     {
         var cams = new (string Name, float Yaw, float Pitch)[] { ("from above (north up)", 0, 89), ("from the south-west", 225, 35), ("from the east", 90, 35), ("from the north-west", 315, 35) };
@@ -287,6 +311,7 @@ public sealed class ClaudeTools
         }
     }
 
+    /// <summary>area_map: a top-down map of the open area drawn from its data (see <see cref="DrawMap"/>), with its bounds in words.</summary>
     [McpServerTool(Name = "area_map", ReadOnly = true, Title = "A map of the area with coordinates")]
     [Description("A top-down map of the open area (or the plot), drawn from its data, north up: ground heights in colour with hill shading, painted ground (paved grey, dirt brown, cultivated dark), water in blue, objects as dots (trees green, rocks grey, buildings orange, others white), and a grid labelled in world metres. Use it to read exact places, plan, and check ground work.")]
     public async Task<ModelContextProtocol.Protocol.CallToolResult> AreaMap(
@@ -325,6 +350,19 @@ public sealed class ClaudeTools
         };
     }
 
+    /// <summary>
+    /// The area's map, north up: heights in colour with hill shading, paint, water, objects as dots by kind, and a grid
+    /// labelled in world metres, as a JPEG.
+    /// </summary>
+    /// <param name="w">The grid's width (points, one per metre).</param>
+    /// <param name="h">The grid's height.</param>
+    /// <param name="cx">World x of the grid's middle.</param>
+    /// <param name="cz">World z of the grid's middle.</param>
+    /// <param name="water">The water level, in metres.</param>
+    /// <param name="heights">The ground heights, row by row from the south.</param>
+    /// <param name="paint">Dirt, cultivated and paved weights per point (three each), null: none.</param>
+    /// <param name="things">The objects: world x, z and kind.</param>
+    /// <param name="grid">The grid lines' spacing, in metres.</param>
     internal static byte[] DrawMap(int w, int h, float cx, float cz, float water, float[] heights, float[]? paint, List<(float X, float Z, string Kind)> things, float grid)
     {
         const int Margin = 40;
@@ -402,7 +440,7 @@ public sealed class ClaudeTools
         return image.Encode(SkiaSharp.SKEncodedImageFormat.Jpeg, 85).ToArray();
     }
 
-    // A picture no wider than 1280 pixels, as a JPEG (smaller to send and to look at).
+    /// <summary>A picture no wider than 1280 pixels, as a JPEG (smaller to send and to look at).</summary>
     internal static byte[] Shrink(byte[] png)
     {
         using var bitmap = SkiaSharp.SKBitmap.Decode(png);
@@ -412,6 +450,7 @@ public sealed class ClaudeTools
         return image.Encode(SkiaSharp.SKEncodedImageFormat.Jpeg, 82).ToArray();
     }
 
+    /// <summary>find_prefabs: building pieces (with name, tool, size and cost) and other placeable objects, or items, by words of the name.</summary>
     [McpServerTool(Name = "find_prefabs", ReadOnly = true, Title = "Find what can be placed")]
     [Description("Searches the game's objects by name (prefab names such as Beech1, rock4_forest, woodwall, stone_floor_2x2): what can be placed in a world, and the building pieces with their English name, tool (hammer for building pieces), size and cost. Every word must match.")]
     public static Task<string> FindPrefabs(
@@ -436,9 +475,11 @@ public sealed class ClaudeTools
         return ToJson(pieces.Concat(others).Take(Math.Clamp(limit, 1, 500)));
     });
 
+    /// <summary>A piece's size (x, y, z) in metres, before turning.</summary>
     private static object SizeOf(Terrain.PieceCatalog.Info p) =>
         new { x = MathF.Round(p.MaxX - p.MinX, 2), y = MathF.Round(p.MaxY - p.MinY, 2), z = MathF.Round(p.MaxZ - p.MinZ, 2) };
 
+    /// <summary>piece_info: name, tool, size, bounds, snap points, cost and station of building pieces.</summary>
     [McpServerTool(Name = "piece_info", ReadOnly = true, Title = "About building pieces")]
     [Description("For building pieces (prefab names): English name, tool, size and bounds from the piece's origin (x across, y up, z through, before turning), snap points (where pieces join, from the origin), cost and the station it needs. Use it to place pieces edge to edge.")]
     public static Task<string> PieceInfo([Description("Prefab names, e.g. [\"woodwall\", \"wood_floor\"].")] string[] prefabs) => OnUi(() => ToJson(prefabs.Select(n =>
@@ -462,18 +503,22 @@ public sealed class ClaudeTools
         };
     })));
 
+    /// <summary>building_guide: <see cref="ClaudeGuide.Building"/> and <see cref="ClaudeGuide.Shaping"/>.</summary>
     [McpServerTool(Name = "building_guide", ReadOnly = true, Title = "How to build and shape")]
     [Description("How Valheim's building works, from the game's data: the 2 m grid, pieces' origins and turns, roofs, and support (what holds and what falls); and how to shape ground. Read it before building.")]
     public static string BuildingGuide() => ClaudeGuide.Building + "\n\n" + ClaudeGuide.Shaping;
 
+    /// <summary>script_reference: the script API's source.</summary>
     [McpServerTool(Name = "script_reference", ReadOnly = true, Title = "The script API")]
     [Description("The C# API run_script scripts use, as its source with comments: Area (bounds, points), Ground (Height, Set, Raise, Lower, Paint, Shape, Mountain, Biome), Objects (All, OfKind, Near, Place, Remove, CanPlace), Noise, Rnd, Print. Read it before writing a script.")]
     public static string ScriptReference() => ScriptHost.ApiSource;
 
     // ---- Changing (pending changes only, one step of the history each).
 
-    // Why Claude cannot change the open area now, or null: nothing open, or live with Auto on (each change
-    // would go to the game at once, and Claude's must wait for the user).
+    /// <summary>
+    /// Why Claude cannot change the open area now, or null: nothing open, or live with Auto on (each change
+    /// would go to the game at once, and Claude's must wait for the user).
+    /// </summary>
     private string? CannotEdit()
     {
         if (_w.Session == null)
@@ -487,6 +532,7 @@ public sealed class ClaudeTools
         return null;
     }
 
+    /// <summary>run_script: runs a C# script as the Script tool does, as one pending step (or only says what it would change).</summary>
     [McpServerTool(Name = "run_script", Title = "Run a script on the area")]
     [Description("Runs a C# script on the open area (or the Workshop's plot), as the editor's Script tool does: the script's statements are the body of a program using the API script_reference gives (Area, Ground, Objects, Noise, Rnd, Print). What it changes (ground heights, paint, objects placed or taken away) goes in as one step of the history, pending until the user saves; nothing changes when it has mistakes or fails (the errors say which line). Returns what it printed and what it changed. Ground stays within the game's ±8 m of the original unless Ground.NoLimit = true.")]
     public Task<string> RunScript(
@@ -505,10 +551,13 @@ public sealed class ClaudeTools
 
     // ---- Common tasks, as scripts the Script tool runs (one pending step each).
 
+    /// <summary>A number as C# source (invariant culture, up to three decimals).</summary>
     private static string N(float v) => v.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture);
 
+    /// <summary>The paints paint_area and road take.</summary>
     private static readonly HashSet<string> PaintKinds = new(StringComparer.OrdinalIgnoreCase) { "dirt", "cultivated", "paved", "clear" };
 
+    /// <summary>Runs a script written by a tool as one pending step labelled "Claude: label".</summary>
     private Task<string> RunGenerated(string code, string label) => OnUi(async () =>
     {
         if (CannotEdit() is string why)
@@ -520,6 +569,7 @@ public sealed class ClaudeTools
         return r.Output;
     });
 
+    /// <summary>flatten: levels a rectangle to a height (default: its average), with a cosine soft edge outside it.</summary>
     [McpServerTool(Name = "flatten", Title = "Flatten a rectangle")]
     [Description("Levels the ground of a rectangle of the open area to one height (default: its average), blending into the ground around over a soft edge. One pending step. The game's ±8 m limit from the original ground holds.")]
     public Task<string> Flatten(
@@ -548,6 +598,7 @@ public sealed class ClaudeTools
 			Print($"levelled to {target:0.0} m");
 			""", "flatten");
 
+    /// <summary>paint_area: paints a rectangle or a circle.</summary>
     [McpServerTool(Name = "paint_area", Title = "Paint the ground")]
     [Description("Paints the ground of a rectangle (x0, z0, x1, z1) or a circle (x, z, radius) of the open area: dirt, cultivated, paved, or clear (back to the biome's own). One pending step.")]
     public Task<string> PaintArea(
@@ -577,6 +628,7 @@ public sealed class ClaudeTools
 			""", $"paint {kind.ToLowerInvariant()}");
     }
 
+    /// <summary>road: levels the ground along a line of points to a smooth slope, blends its edges (3 m) and paints it.</summary>
     [McpServerTool(Name = "road", Title = "Lay a road")]
     [Description("Lays a road along points of the open area: the ground along it levelled to a smooth slope from point to point (its heights there, or given), the edges blended, and painted (paved by default). One pending step.")]
     public Task<string> Road(
@@ -620,6 +672,7 @@ public sealed class ClaudeTools
 			""", "road");
     }
 
+    /// <summary>forest: plants a mix of prefabs on a jittered grid, off water and away from buildings, trees and rocks.</summary>
     [McpServerTool(Name = "forest", Title = "Plant trees or rocks")]
     [Description("Plants objects (trees, bushes, rocks: prefab names from find_prefabs) over a rectangle of the open area, about spacing metres apart with some randomness, turned at random, kept off water, off buildings and away from what is already there. One pending step.")]
     public Task<string> Forest(
@@ -653,6 +706,7 @@ public sealed class ClaudeTools
 			""", "forest");
     }
 
+    /// <summary>undo: the last change of the area, anyone's, as Ctrl+Z.</summary>
     [McpServerTool(Name = "undo", Title = "Undo")]
     [Description("Takes back the last change of the area (anyone's: Claude's or the user's), as Ctrl+Z.")]
     public Task<string> Undo() => OnUi(async () =>
@@ -669,6 +723,7 @@ public sealed class ClaudeTools
         return "Undone. Now pending: " + Pending();
     });
 
+    /// <summary>redo: the last change undone, as Ctrl+Y.</summary>
     [McpServerTool(Name = "redo", Title = "Redo")]
     [Description("Puts back the last change undone, as Ctrl+Y.")]
     public Task<string> Redo() => OnUi(async () =>
@@ -687,41 +742,53 @@ public sealed class ClaudeTools
 
     // ---- Building.
 
-    // A piece (or any object) to put down.
+    /// <summary>A piece (or any object) to put down (place_pieces, and ClaudeBuilder's layouts).</summary>
     public sealed class PieceSpec
     {
+        /// <summary>The prefab name.</summary>
         [Description("Prefab name, e.g. woodwall, wood_floor, stone_wall_2x1, wood_roof_45, Beech1.")]
         public string Prefab { get; set; } = "";
 
+        /// <summary>World x (east), in metres.</summary>
         [Description("World x (east), metres.")]
         public float X { get; set; }
 
+        /// <summary>World z (north), in metres.</summary>
         [Description("World z (north), metres.")]
         public float Z { get; set; }
 
+        /// <summary>The height of the piece's origin; null: standing on the ground there, its lowest point touching it.</summary>
         [Description("Height of the piece's origin (optional: it stands on the ground there, its lowest point touching it). The Workshop's plot is at y = 34.")]
         public float? Y { get; set; }
 
+        /// <summary>Turn round the vertical, in degrees (0: front faces north).</summary>
         [Description("Turn round the vertical, degrees (0: the piece's front faces north; 90: east).")]
         public float Yaw { get; set; }
 
+        /// <summary>Tilt forward, in degrees.</summary>
         [Description("Tilt forward, degrees (usually 0).")]
         public float Pitch { get; set; }
 
+        /// <summary>Tilt sideways, in degrees.</summary>
         [Description("Tilt sideways, degrees (usually 0).")]
         public float Roll { get; set; }
 
+        /// <summary>Snap to the snap points of pieces already there (and earlier in the list) within 0.5 m.</summary>
         [Description("Snap to the snap points of pieces already there (and of those before it in the list) within 0.5 m, as the game's hammer does (default: true).")]
         public bool Snap { get; set; } = true;
     }
 
+    /// <summary>place_pieces: puts down pieces and objects as one pending step (see <see cref="Place"/>).</summary>
     [McpServerTool(Name = "place_pieces", Title = "Put down pieces and objects")]
     [Description("Puts down building pieces (and any other objects: trees, rocks…) in the open area or on the Workshop's plot, all as one step of the history (pending). Pieces snap to the snap points of pieces already there within 0.5 m, as the game's hammer does, so place them where they should join and let the snap make them meet; piece_info gives sizes and snap points. Returns where each went (after snapping) and its id. Check the result with support_check (Workshop) and screenshot.")]
     public Task<string> PlacePieces(
         [Description("The pieces, in the order they are put down.")] PieceSpec[] pieces,
         [Description("A few words for the history.")] string label = "Claude: building") => OnUi(() => Place(pieces, label));
 
-    // The pieces put down as one step (on the window's thread): where each went and its id, or why not.
+    /// <summary>
+    /// The pieces put down as one step (on the window's thread): where each went and its id, or why not. Pieces
+    /// outside the area or unknown to the game are left out and named in the problems.
+    /// </summary>
     private string Place(IReadOnlyList<PieceSpec> pieces, string label)
     {
         if (CannotEdit() is string why)
@@ -784,16 +851,19 @@ public sealed class ClaudeTools
 
     // ---- Building in larger pieces (ClaudeBuilder: floors, walls, roofs over a rectangle).
 
+    /// <summary>A door for build_walls.</summary>
     public sealed class DoorSpec
     {
+        /// <summary>Which wall: north, south, east or west.</summary>
         [Description("Which wall: north, south, east or west.")]
         public string Side { get; set; } = "south";
 
+        /// <summary>Where along it, in world metres: x on a north or south wall, z on an east or west one.</summary>
         [Description("Where along it: x for a north or south wall, z for an east or west one (a 2 m door at the 2 m of wall holding that point).")]
         public float At { get; set; }
     }
 
-    // The highest ground under a rectangle (every metre).
+    /// <summary>The highest ground under a rectangle (every metre); edgesOnly: only within a metre of its edges.</summary>
     private static float HighestGround(WorldScene scene, float x0, float z0, float x1, float z1, bool edgesOnly = false)
     {
         float best = float.MinValue;
@@ -811,7 +881,10 @@ public sealed class ClaudeTools
         return best;
     }
 
-    // The highest top of the building pieces within a rectangle (whose names hold word, when given), or null.
+    /// <summary>
+    /// The highest top of the building pieces within a rectangle (0.6 m around it counts; whose names hold word, when
+    /// given), or null.
+    /// </summary>
     private float? HighestPieceTop(WorldScene scene, float x0, float z0, float x1, float z1, string? word = null)
     {
         float? best = null;
@@ -836,6 +909,7 @@ public sealed class ClaudeTools
         return best;
     }
 
+    /// <summary>Puts down a layout worked out from the open scene; a layout's <see cref="ArgumentException"/> is the answer.</summary>
     private Task<string> Build(Func<WorldScene, List<PieceSpec>> layout, string label) => OnUi(() =>
     {
         if (CannotEdit() is string why)
@@ -852,6 +926,7 @@ public sealed class ClaudeTools
         }
     });
 
+    /// <summary>build_floor: <see cref="ClaudeBuilder.Floor"/>, its top on the highest ground under it by default.</summary>
     [McpServerTool(Name = "build_floor", Title = "Build a floor")]
     [Description("Lays a floor of 2 x 2 m tiles (wood or stone) over a rectangle, its top at y (default: the highest ground under it, so that it rests on the ground). One pending step. Sizes that are not multiples of 2 m overhang a little.")]
     public Task<string> BuildFloor(
@@ -861,6 +936,10 @@ public sealed class ClaudeTools
         [Description("Height of its top (optional).")] float? y = null) =>
         Build(scene => ClaudeBuilder.Floor(x0, z0, x1, z1, y ?? HighestGround(scene, x0, z0, x1, z1), material), $"floor of {material}");
 
+    /// <summary>
+    /// build_walls: <see cref="ClaudeBuilder.Walls"/>, from the top of a floor in the rectangle by default, else the
+    /// highest ground on its edges.
+    /// </summary>
     [McpServerTool(Name = "build_walls", Title = "Build walls")]
     [Description("Builds walls on the four edges of a rectangle (the walls' middle lines on its edges), from the bottom up to a height: wood (2 m rows) or stone (1 m rows); doors are 2 m wood doors in the walls at the given points. Bottom: the top of a floor already in the rectangle, else the highest ground on its edges. One pending step. Use the floor's own rectangle so that they meet.")]
     public Task<string> BuildWalls(
@@ -873,6 +952,7 @@ public sealed class ClaudeTools
         Build(scene => ClaudeBuilder.Walls(x0, z0, x1, z1, y ?? HighestPieceTop(scene, x0, z0, x1, z1, "floor") ?? HighestGround(scene, x0, z0, x1, z1, edgesOnly: true),
             height, material, [.. (doors ?? []).Select(d => new ClaudeBuilder.Door(d.Side, d.At))]), $"walls of {material}");
 
+    /// <summary>build_roof: <see cref="ClaudeBuilder.Roof"/>, its eave at the top of the pieces in the rectangle by default.</summary>
     [McpServerTool(Name = "build_roof", Title = "Build a roof")]
     [Description("Builds a gable roof over a rectangle (the walls' lines), its ridge along the longer side: thatch or shingle, 26 or 45 degrees, its underside meeting the wall lines at the eave height (default: the top of the building pieces in the rectangle, i.e. the walls), overhanging up to 2 m; the two gable ends closed with sloped walls (gables: true). One pending step. Check it with support_check and screenshot (views: 4).")]
     public Task<string> BuildRoof(
@@ -886,7 +966,7 @@ public sealed class ClaudeTools
             eave ?? HighestPieceTop(scene, x0, z0, x1, z1) ?? throw new ArgumentException("No walls under the roof: build the walls first, or give eave."),
             angle, material, gables), $"{material} roof");
 
-    // The ground's height at a world point of the area (its nearest grid point).
+    /// <summary>The ground's height at a world point of the area (its nearest grid point, clamped to the area).</summary>
     private static float GroundAt(WorldScene scene, float x, float z)
     {
         int i = Math.Clamp((int)MathF.Round(x - scene.Cx + (scene.W - 1) / 2f), 0, scene.W - 1);
@@ -894,6 +974,7 @@ public sealed class ClaudeTools
         return scene.Heights[j * scene.W + i];
     }
 
+    /// <summary>remove_objects: takes objects away by id, as one pending step.</summary>
     [McpServerTool(Name = "remove_objects", Title = "Take objects away")]
     [Description("Takes objects of the open area (or the plot) away, by their ids (list_objects, place_pieces), as one step of the history (pending).")]
     public Task<string> RemoveObjects([Description("Their ids.")] int[] ids) => OnUi(() =>
@@ -914,6 +995,7 @@ public sealed class ClaudeTools
         return $"Took {ok.Count} away{(ok.Count < ids.Length ? $" ({ids.Length - ok.Count} id(s) were not objects of the area)" : "")}. Now pending: {Pending()}";
     });
 
+    /// <summary>support_check: the Workshop's support check, the pieces that would fall and the weakest still standing.</summary>
     [McpServerTool(Name = "support_check", ReadOnly = true, Title = "Would it stand?")]
     [Description("The Workshop's support check, as the game computes it: for the building pieces on the plot, which would fall (nothing holds them up enough) and the weakest ones still standing (support 0 about to fall, 1 strong). Pieces on the ground hold best; support drops with each piece away from it (wood less far than stone, iron further).")]
     public Task<string> SupportCheck() => OnUi(() =>
@@ -949,22 +1031,30 @@ public sealed class ClaudeTools
         });
     });
 
-    // What a container gets.
+    /// <summary>What a container (or a stand) gets: one stack.</summary>
     public sealed class ItemSpec
     {
+        /// <summary>The item's prefab name.</summary>
         [Description("The item's prefab name, e.g. Coins, Amber, Ruby, IronScrap, SwordIron (find_prefabs with items: true).")]
         public string Item { get; set; } = "";
 
+        /// <summary>How many in the stack.</summary>
         [Description("How many in the stack (default 1).")]
         public int Stack { get; set; } = 1;
 
+        /// <summary>Quality (upgrade level).</summary>
         [Description("Quality (upgrade level) for weapons and armour (default 1).")]
         public int Quality { get; set; } = 1;
 
+        /// <summary>Variant: a shield's or banner's style, from 0.</summary>
         [Description("Variant: a shield's or banner's style, from 0 (default 0).")]
         public int Variant { get; set; }
     }
 
+    /// <summary>
+    /// set_contents: a container's items, a stand's item or armour (with orientation or pose), a sign's text or a
+    /// creature's stars, as the inspector changes them; the object is replaced by a changed copy (a new id).
+    /// </summary>
     [McpServerTool(Name = "set_contents", Title = "Fill a chest or a stand, write a sign, set stars")]
     [Description("Changes what an object holds, as the editor's inspector does: a container's items (they replace what it held, laid out in its slots in order); an item stand's item (itemstand on a wall, itemstandh lying flat: a table's food, a trophy, a weapon; one item, none to empty it) and the way it hangs; an armour stand's armour, cape, belt, shield and weapon (each in the slot that takes it; the others emptied) and its pose; a sign's text; a creature's stars (0 to 2). Stands take what the game lets them (find_prefabs with items: true for names). One pending step; the object keeps everything else it holds.")]
     public Task<string> SetContents(
@@ -1108,6 +1198,7 @@ public sealed class ClaudeTools
         }
     });
 
+    /// <summary>open_workshop: the blank plot, optionally with a library blueprint; refused while there are unsaved changes.</summary>
     [McpServerTool(Name = "open_workshop", Title = "Open the Workshop")]
     [Description("Opens the Workshop: a blank 192 m plot (ground at y = 34, its middle at x = 0, z = 0) to build a blueprint on, optionally with a blueprint of the library on it (list_blueprints). Refused while a world or the Workshop has changes not saved. The user saves the building as a blueprint.")]
     public Task<string> OpenWorkshop([Description("A blueprint's name from list_blueprints (optional: an empty plot).")] string? blueprint = null) => OnUi(async () =>
@@ -1129,6 +1220,7 @@ public sealed class ClaudeTools
         return ToJson(StateOf(_w));
     });
 
+    /// <summary>list_blueprints: Homestead's library, filtered by words of the name, description or tags.</summary>
     [McpServerTool(Name = "list_blueprints", ReadOnly = true, Title = "The blueprint library")]
     [Description("The user's blueprints (Homestead's library): name, pieces, cost, description, tags. Open one in the Workshop (open_workshop) or add it to the plot (add_blueprint).")]
     public Task<string> ListBlueprints([Description("Words to find in the name, description or tags (optional).")] string? query = null) => OnUi(() =>
@@ -1139,6 +1231,7 @@ public sealed class ClaudeTools
             .Select(e => new { name = e.Name, pieces = e.Pieces, cost = Terrain.PieceCost.Of(e.Kinds).Describe(4), description = e.Description, tags = e.Tags }));
     });
 
+    /// <summary>add_blueprint: a library blueprint onto the Workshop's plot, with what is there.</summary>
     [McpServerTool(Name = "add_blueprint", Title = "Add a blueprint to the plot")]
     [Description("Adds a blueprint of the library to the Workshop's plot, with what is there, centred on x, z (default: the plot's middle), standing on the ground; one step of the history.")]
     public Task<string> AddBlueprint(
@@ -1159,6 +1252,10 @@ public sealed class ClaudeTools
         return _w.MessageText.Text + " Now pending: " + Pending();
     });
 
+    /// <summary>
+    /// generate_dungeon: a dungeon from the Dungeon panel's settings (clamped to their ranges), onto the Workshop's plot
+    /// or 5000 m above a point of the open world with a portal pair.
+    /// </summary>
     [McpServerTool(Name = "generate_dungeon", Title = "Generate a dungeon")]
     [Description("Generates a dungeon, as the Dungeon panel does, and puts it on the Workshop's plot (with what is there) or, in a world, 5000 m above the point x, z (where the game keeps its dungeons) with a linked portal pair on the ground there. One step of the history (pending).")]
     public async Task<string> GenerateDungeon(
@@ -1208,12 +1305,12 @@ public sealed class ClaudeTools
         });
     }
 
-    // The changes not saved yet, in words.
+    /// <summary>The changes not saved yet, in words.</summary>
     private string Pending() => _w.World is { } w
         ? w.Pending is (0, 0, 0, 0) ? "nothing." : $"{w.Pending.Zones} zone(s) of ground, {w.Pending.Added} object(s) added, {w.Pending.Deleted} taken away."
         : _w.Session is { } s ? $"{Workshop.Pieces(s.Scene)} building piece(s) on the plot, not saved as a blueprint." : "nothing.";
 
-    // Why a world cannot be left now (changes the user has not saved), or null.
+    /// <summary>Why a world cannot be left now (changes the user has not saved), or null.</summary>
     private string? Unsaved()
     {
         if (_w.World is { } w && w.Pending is not (0, 0, 0, 0))
@@ -1227,6 +1324,10 @@ public sealed class ClaudeTools
         return null;
     }
 
+    /// <summary>
+    /// What the window shows, for editor_state and other answers: the page (start, map, area or workshop), the world,
+    /// the area's bounds in world metres, what is pending, whether undo is possible, and the last message.
+    /// </summary>
     internal static object StateOf(MainWindow w)
     {
         var s = w.Session;

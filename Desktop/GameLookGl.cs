@@ -4,19 +4,44 @@ using TerrainEditor.App;
 
 namespace TerrainEditor.Desktop;
 
-// The game's look, as the web editor's terrain/look.js draws it: Valheim's own terrain shader
-// (read from the game's files, see GameLookData) lit like the game's deferred
-// renderer, the ocean and a sky with clouds, at midday in the default "Clear" weather. Inside the
-// shaders everything is in Unity's left-handed world space: view (x, y, z) is Unity (x + Cx, y, Cz - z).
+/// <summary>
+/// The game's look, as the web editor's terrain/look.js draws it: Valheim's own terrain shader (read from the game's
+/// files, see GameLookData) lit like the game's deferred renderer, the ocean and a sky with clouds, at midday in the
+/// default "Clear" weather. Inside the shaders everything is in Unity's left-handed world space: view (x, y, z) is
+/// Unity (x + Cx, y, Cz - z).
+/// </summary>
 public sealed class GameLookGl
 {
     // ---- Files, read on a worker thread (Read), then sent to the graphics card (Init).
+    /// <summary>
+    /// The terrain's shader and textures as read from the game's files.
+    /// </summary>
+    /// <param name="Fragment">The game's terrain fragment shader (GLSL ES), which writes its G-buffer in
+    /// valheimGBuffer.</param>
+    /// <param name="DiffuseArray">The ground textures' colours, a texture array (its square slices one above the
+    /// other).</param>
+    /// <param name="NormalArray">Their normal maps, a texture array likewise.</param>
+    /// <param name="Noise">The shader's noise texture.</param>
+    /// <param name="Cliff">The cliff normal map.</param>
+    /// <param name="MistCliff">The Mistlands cliff normal map.</param>
+    /// <param name="Paved">The paved ground normal map.</param>
+    /// <param name="Rock">The rock normal map.</param>
+    /// <param name="Snow">The snow normal map.</param>
+    /// <param name="Variety">The colour variety noise.</param>
     public sealed record Files(string Fragment, Image DiffuseArray, Image NormalArray, Image Noise, Image Cliff, Image MistCliff,
         Image Paved, Image Rock, Image Snow, Image Variety);
+    /// <summary>
+    /// A picture of the game's files, rows bottom first (Unity's origin).
+    /// </summary>
+    /// <param name="Width">Width in pixels.</param>
+    /// <param name="Height">Height in pixels.</param>
+    /// <param name="Rgba">Four bytes per pixel, row by row.</param>
     public sealed record Image(int Width, int Height, byte[] Rgba);
 
-    // The terrain's shader and textures, read from the game's files (rows bottom first, Unity's
-    // origin; a texture array is its square slices one above the other). Null when Valheim is not found.
+    /// <summary>
+    /// The terrain's shader and textures, read from the game's files (rows bottom first, Unity's origin; a texture
+    /// array is its square slices one above the other). Null when Valheim is not found.
+    /// </summary>
     public static Files? Read()
     {
         if (GameLook.Bundles is not { } game)
@@ -31,22 +56,60 @@ public sealed class GameLookGl
 
     // ---- Midday in the game's default "Clear" environment (EnvMan.m_environments), like look.js DAY:
     // the game's gamma-space colours turned linear.
+    /// <summary>
+    /// An sRGB (gamma-space) colour channel, 0..1, as linear.
+    /// </summary>
     private static float Lin(float c) => c <= 0.04045f ? c / 12.92f : MathF.Pow((c + 0.055f) / 1.055f, 2.4f);
+    /// <summary>
+    /// An sRGB colour as linear.
+    /// </summary>
     private static Vector3 Srgb(float r, float g, float b) => new(Lin(r), Lin(g), Lin(b));
+    /// <summary>
+    /// The direction towards the sun, in Unity's world space.
+    /// </summary>
     public static readonly Vector3 SunDir = Vector3.Normalize(new Vector3(-0.42f, 0.72f, 0.55f));
+    /// <summary>
+    /// The sun's light (linear, past 1).
+    /// </summary>
     public static readonly Vector3 SunColor = Srgb(1.0f, 0.886f, 0.742f) * 1.7f;
+    /// <summary>
+    /// The ambient light (linear), given to the terrain shader as its constant spherical harmonics term.
+    /// </summary>
     public static readonly Vector3 Ambient = Srgb(0.463f, 0.574f, 0.706f);
+    /// <summary>
+    /// The fog's colour (linear).
+    /// </summary>
     public static readonly Vector3 FogColor = Srgb(0.302f, 0.581f, 0.747f);
+    /// <summary>
+    /// The fog's colour looking towards the sun (linear).
+    /// </summary>
     public static readonly Vector3 SunFogColor = Srgb(0.801f, 0.687f, 0.43f);
+    /// <summary>
+    /// The exponential-squared fog's density, per metre.
+    /// </summary>
     public const float FogDensity = 0.003f;
-    // Where the fog starts, in metres from the camera (the view sets it each frame: the orbit's
-    // distance, so zooming out does not fog the area over; 0 walking or flying, as in game).
+    /// <summary>
+    /// Where the fog starts, in metres from the camera (the view sets it each frame: the orbit's distance, so zooming
+    /// out does not fog the area over; 0 walking or flying, as in game).
+    /// </summary>
     public static float FogStart { get; set; }
+    /// <summary>
+    /// The sky's colour straight up (linear).
+    /// </summary>
     public static readonly Vector3 SkyTop = Srgb(0.2f, 0.42f, 0.68f);
+    /// <summary>
+    /// The sky's colour at the horizon (linear).
+    /// </summary>
     public static readonly Vector3 SkyHorizon = Srgb(0.55f, 0.72f, 0.84f);
-    // The sun in view space (z mirrored), for the objects' simpler lighting.
+    /// <summary>
+    /// The sun in view space (z mirrored), for the objects' simpler lighting.
+    /// </summary>
     public static Vector3 SunDirView => new(SunDir.X, SunDir.Y, -SunDir.Z);
 
+    /// <summary>
+    /// GLSL shared by the terrain, sky, water and object shaders: the fog (applyFogDir, fogColorFor) and toSRGB (linear
+    /// to the screen's sRGB with a soft shoulder).
+    /// </summary>
     public const string Common = """
 		uniform vec3 uFogColor;
 		uniform vec3 uSunFogColor;
@@ -70,6 +133,10 @@ public sealed class GameLookGl
 		}
 		""";
 
+    /// <summary>
+    /// The terrain's vertex shader: hands the game's fragment shader its inputs as Unity names them (tangent frame and
+    /// world position in vs_TEXCOORD1..3, biome colour, ocean depth).
+    /// </summary>
     private const string TerrainVs = """
 		layout(location = 0) in vec3 position;
 		layout(location = 1) in vec3 normal;
@@ -108,6 +175,10 @@ public sealed class GameLookGl
 		}
 		""";
 
+    /// <summary>
+    /// The terrain fragment shader's main, after the game's shader: runs its G-buffer pass, lights it like Unity's
+    /// deferred Standard BRDF, then the view's slope colours, contour lines and limit marks, and the fog.
+    /// </summary>
     private const string TerrainMain = """
 		uniform vec3 uSunDir;
 		uniform vec3 uSunColor;
@@ -154,6 +225,9 @@ public sealed class GameLookGl
 		}
 		""";
 
+    /// <summary>
+    /// The sky's vertex shader: the sphere follows the camera and is drawn at the far plane.
+    /// </summary>
     private const string SkyVs = """
 		layout(location = 0) in vec3 position;
 		uniform mat4 uViewProj;
@@ -162,6 +236,9 @@ public sealed class GameLookGl
 		void main() { vDir = position; gl_Position = (uViewProj * vec4(position + uEye, 1.0)).xyww; }
 		""";
 
+    /// <summary>
+    /// The sky's fragment shader: the gradient, moving clouds on a flat layer, the sun and the fog at the horizon.
+    /// </summary>
     private const string SkyFs = """
 		uniform vec3 uTop, uHorizon, uSunDir, uSunColor;
 		uniform vec4 _Time;
@@ -191,6 +268,9 @@ public sealed class GameLookGl
 		}
 		""";
 
+    /// <summary>
+    /// The water's vertex shader: passes on the point in Unity's world space.
+    /// </summary>
     private const string WaterVs = """
 		layout(location = 0) in vec3 position;
 		uniform mat4 uViewProj;
@@ -199,6 +279,10 @@ public sealed class GameLookGl
 		void main() { vWorld = vec3(position.x + uOffset.x, position.y, uOffset.z - position.z); gl_Position = uViewProj * vec4(position, 1.0); }
 		""";
 
+    /// <summary>
+    /// The water's fragment shader: moving waves, colour by depth over the area's ground (uHeight), sky reflection, sun
+    /// glints, shore foam and fog. Beyond the area the water is deep and opaque.
+    /// </summary>
     private const string WaterFs = """
 		uniform sampler2D uHeight;
 		uniform vec4 uRegion;
@@ -240,14 +324,42 @@ public sealed class GameLookGl
 		""";
 
     // ---- On the graphics card.
+    /// <summary>
+    /// The view's OpenGL (set by Init).
+    /// </summary>
     private GL _gl = null!;
+    /// <summary>
+    /// Everything made on the graphics card, deleted together by Delete.
+    /// </summary>
     private GlObjects _own = null!;
+    /// <summary>
+    /// The three programs.
+    /// </summary>
     private uint _terrain, _sky, _water;
+    /// <summary>
+    /// The sky sphere's mesh and index count, and the water plane's mesh.
+    /// </summary>
     private uint _skyVao, _skyCount, _waterVao;
+    /// <summary>
+    /// The terrain shader's textures by their uniform's name, bound to units in this order by UseTerrain.
+    /// </summary>
     private readonly Dictionary<string, (uint Tex, TextureTarget Target)> _tex = [];
+    /// <summary>
+    /// The area's paint mask and its heights (for the water's depth), updated by UpdateRows.
+    /// </summary>
     private uint _maskTex, _heightTex;
+    /// <summary>
+    /// The area drawn (its offset, size and water level).
+    /// </summary>
     private WorldScene _scene = null!;
 
+    /// <summary>
+    /// Sends the shaders, textures and meshes to the graphics card for an area. The view's context must be current.
+    /// </summary>
+    /// <param name="gl">The view's OpenGL.</param>
+    /// <param name="program">Compiles and links a program from vertex and fragment source.</param>
+    /// <param name="f">The game's files (Read).</param>
+    /// <param name="s">The area to draw.</param>
     public void Init(GL gl, Func<string, string, uint> program, Files f, WorldScene s)
     {
         _gl = gl;
@@ -278,8 +390,10 @@ public sealed class GameLookGl
         BuildWater(s);
     }
 
-    // Its programs, textures and meshes off the graphics card (another area, or the view's context
-    // going). The drawing's context must be current.
+    /// <summary>
+    /// Its programs, textures and meshes off the graphics card (another area, or the view's context going). The
+    /// drawing's context must be current.
+    /// </summary>
     public void Delete()
     {
         _own?.DeleteAll();
@@ -287,7 +401,9 @@ public sealed class GameLookGl
         _terrain = _sky = _water = _skyVao = _waterVao = _maskTex = _heightTex = 0;
     }
 
-    // After an edit: the paint mask and the heights (the water's depth) of rows z0..z1 again.
+    /// <summary>
+    /// After an edit: the paint mask and the heights (the water's depth) of grid rows z0..z1 (included) again.
+    /// </summary>
     public unsafe void UpdateRows(WorldScene s, int z0, int z1)
     {
         int n = z1 - z0 + 1;
@@ -309,6 +425,13 @@ public sealed class GameLookGl
         }
     }
 
+    /// <summary>
+    /// Sends a picture as a 2D texture.
+    /// </summary>
+    /// <param name="img">The picture.</param>
+    /// <param name="mipmaps">Whether it gets mipmaps (and trilinear filtering).</param>
+    /// <param name="repeat">Whether it repeats (else it is clamped at its edges).</param>
+    /// <param name="srgb">Whether its colours are sRGB (turned linear when sampled).</param>
     private unsafe uint Tex2D(Image img, bool mipmaps = true, bool repeat = true, bool srgb = false)
     {
         uint t = _own.Texture();
@@ -329,6 +452,11 @@ public sealed class GameLookGl
         return t;
     }
 
+    /// <summary>
+    /// Sends a picture of square slices one above the other as a texture array, with mipmaps, repeating.
+    /// </summary>
+    /// <param name="img">The picture: its width is the slices' size.</param>
+    /// <param name="srgb">Whether its colours are sRGB.</param>
     private unsafe uint Array2D(Image img, bool srgb)
     {
         int s = img.Width, n = img.Height / s;
@@ -346,8 +474,12 @@ public sealed class GameLookGl
         return t;
     }
 
-    // Stand-ins for the game's global 3D noise textures (_CurlNoise, _SnowGlintOffsetNoise): random
-    // bytes, the same generator and seeds as look.js.
+    /// <summary>
+    /// Stand-ins for the game's global 3D noise textures (_CurlNoise, _SnowGlintOffsetNoise): random bytes, the same
+    /// generator and seeds as look.js.
+    /// </summary>
+    /// <param name="size">Its size in texels along each side.</param>
+    /// <param name="seed">The generator's seed.</param>
     private unsafe uint Noise3D(int size, uint seed)
     {
         byte[] data = new byte[size * size * size * 4];
@@ -375,7 +507,9 @@ public sealed class GameLookGl
         return tex;
     }
 
-    // The ground's height per grid point (half floats: filterable everywhere), for the water's depth.
+    /// <summary>
+    /// The ground's height per grid point (half floats: filterable everywhere), for the water's depth.
+    /// </summary>
     private unsafe uint HeightTexture(WorldScene s)
     {
         Half[] h = [.. s.Heights.Select(v => (Half)v)];
@@ -392,6 +526,9 @@ public sealed class GameLookGl
         return t;
     }
 
+    /// <summary>
+    /// Makes the sky's mesh: a sphere of radius 2000 m, which the sky's vertex shader keeps around the camera.
+    /// </summary>
     private unsafe void BuildSky()
     {
         // A sphere around the camera (drawn at the far plane), 48 × 24 segments like look.js.
@@ -421,12 +558,20 @@ public sealed class GameLookGl
         _skyCount = (uint)idx.Count;
     }
 
+    /// <summary>
+    /// Makes the water's mesh: a flat square 8 km wide at the area's water level, centred on the area.
+    /// </summary>
     private void BuildWater(WorldScene s)
     {
         float half = 4000, y = s.Water;
         _waterVao = Mesh([-half, y, -half, half, y, -half, half, y, half, -half, y, half], [0, 2, 1, 0, 3, 2]);
     }
 
+    /// <summary>
+    /// Sends an indexed triangle mesh with positions only (attribute 0) and returns its vertex array.
+    /// </summary>
+    /// <param name="v">Positions, x, y, z per corner.</param>
+    /// <param name="idx">Three corner indices per triangle.</param>
     private unsafe uint Mesh(float[] v, uint[] idx)
     {
         uint vao = _own.VertexArray();
@@ -450,6 +595,14 @@ public sealed class GameLookGl
     }
 
     // ---- Drawing. eye: the camera in view space; time: seconds since the start (water, clouds, glints).
+    /// <summary>
+    /// Uses a program and sets the uniforms all three share (fog, sun, area offset, camera, sky colours, Unity's
+    /// _Time).
+    /// </summary>
+    /// <param name="prog">The program.</param>
+    /// <param name="vp">View × projection.</param>
+    /// <param name="eye">The camera in view space.</param>
+    /// <param name="time">Seconds since the start (water, clouds, glints).</param>
     private unsafe void Shared(uint prog, Matrix4x4 vp, Vector3 eye, float time)
     {
         _gl.UseProgram(prog);
@@ -469,6 +622,12 @@ public sealed class GameLookGl
         _gl.Uniform4(_gl.GetUniformLocation(prog, "_Time"), time / 20, time, time * 2, time * 3);
     }
 
+    /// <summary>
+    /// Draws the sky behind everything, at the far plane (without writing depth).
+    /// </summary>
+    /// <param name="vp">View × projection.</param>
+    /// <param name="eye">The camera in view space.</param>
+    /// <param name="time">Seconds since the start (water, clouds, glints).</param>
     public unsafe void DrawSky(Matrix4x4 vp, Vector3 eye, float time)
     {
         Shared(_sky, vp, eye, time);
@@ -479,7 +638,15 @@ public sealed class GameLookGl
         _gl.DepthMask(true);
     }
 
-    // Binds the terrain shader with its textures and settings; the caller draws the ground mesh.
+    /// <summary>
+    /// Binds the terrain shader with its textures and settings; the caller draws the ground mesh.
+    /// </summary>
+    /// <param name="vp">View × projection.</param>
+    /// <param name="eye">The camera in view space.</param>
+    /// <param name="time">Seconds since the start (water, clouds, glints).</param>
+    /// <param name="slope">View: slope colours.</param>
+    /// <param name="contour">View: contour lines every so many metres (0: none).</param>
+    /// <param name="limit">View: Limit marks (the points at the game's ±8 m edit limit).</param>
     public void UseTerrain(Matrix4x4 vp, Vector3 eye, float time, bool slope, float contour, bool limit)
     {
         Shared(_terrain, vp, eye, time);
@@ -509,6 +676,12 @@ public sealed class GameLookGl
         _gl.ActiveTexture(TextureUnit.Texture0);
     }
 
+    /// <summary>
+    /// Draws the water, blended over the ground (without writing depth).
+    /// </summary>
+    /// <param name="vp">View × projection.</param>
+    /// <param name="eye">The camera in view space.</param>
+    /// <param name="time">Seconds since the start (water, clouds, glints).</param>
     public unsafe void DrawWater(Matrix4x4 vp, Vector3 eye, float time)
     {
         Shared(_water, vp, eye, time);

@@ -4,23 +4,35 @@ using TerrainEditor.Editing;
 
 namespace TerrainEditor.Save;
 
-// An object in the running game: its ZDOID, and what it is and where, to find it again when another
-// mod has made it again under a new ZDOID.
+/// <summary>
+/// An object in the running game: its ZDOID, and what it is and where, to find it again when another mod has made it
+/// again under a new ZDOID.
+/// </summary>
+/// <param name="User">The ZDOID's user (owner peer) part.</param>
+/// <param name="Id">The ZDOID's id part.</param>
+/// <param name="Prefab">The object's prefab name hash.</param>
+/// <param name="Position">The object's world position, in metres.</param>
 public readonly record struct LiveTarget(long User, uint Id, int Prefab, Vector3 Position);
 
-// Keeps the running game's objects in step with the editor's deletions and new objects. It remembers
-// what has already been applied, so each apply sends only the difference, and undo works after
-// applying: a deleted object is created again from its snapshot bytes, a new one is destroyed.
+/// <summary>
+/// Keeps the running game's objects in step with the editor's deletions and new objects. It remembers what has already
+/// been applied, so each apply sends only the difference, and undo works after applying: a deleted object is created
+/// again from its snapshot bytes, a new one is destroyed.
+/// </summary>
 public sealed class LiveSync
 {
+    /// <summary>
+    /// Guards the two collections below; Apply records the game's answer after an await, possibly on another thread.
+    /// </summary>
     private readonly Lock _lock = new();
 
-    // Snapshot objects (ids >= 0) currently destroyed in the game.
+    /// <summary>Snapshot objects (ids &gt;= 0) currently destroyed in the game.</summary>
     private readonly HashSet<int> _destroyed = [];
 
-    // Objects whose live ZDOID is not the snapshot's: new objects (ids < 0) and restored ones.
+    /// <summary>Objects whose live ZDOID is not the snapshot's: new objects (ids &lt; 0) and restored ones.</summary>
     private readonly Dictionary<int, LiveTarget> _liveIds = [];
 
+    /// <summary>Forgets everything applied, once the world was read again or its pending changes dropped.</summary>
     public void Reset()
     {
         lock (_lock)
@@ -30,7 +42,7 @@ public sealed class LiveSync
         }
     }
 
-    // Whether the game has this new object already (it was sent and accepted).
+    /// <summary>Whether the game has this new object already (it was sent and accepted).</summary>
     public bool IsLive(int id)
     {
         lock (_lock)
@@ -39,7 +51,7 @@ public sealed class LiveSync
         }
     }
 
-    // Whether the game no longer has this object because the editor removed it (applied).
+    /// <summary>Whether the game no longer has this object because the editor removed it (applied).</summary>
     public bool IsDestroyed(int id)
     {
         lock (_lock)
@@ -48,8 +60,10 @@ public sealed class LiveSync
         }
     }
 
-    // The game removed an object the editor made (a player picked or destroyed it): no longer the
-    // editor's to remove or to count.
+    /// <summary>
+    /// The game removed an object the editor made (a player picked or destroyed it): no longer the editor's to remove
+    /// or to count.
+    /// </summary>
     public void Forget(int id)
     {
         lock (_lock)
@@ -58,7 +72,7 @@ public sealed class LiveSync
         }
     }
 
-    // The editor's new objects the game has, by id (ids < 0).
+    /// <summary>The editor's new objects the game has, by id (ids &lt; 0).</summary>
     public List<(int Id, LiveTarget Target)> NewObjects()
     {
         lock (_lock)
@@ -67,7 +81,7 @@ public sealed class LiveSync
         }
     }
 
-    // Whether this ZDOID is one the editor made (a new object, or a removed one brought back).
+    /// <summary>Whether this ZDOID is one the editor made (a new object, or a removed one brought back).</summary>
     public bool IsOurs((long User, uint Id) zdo)
     {
         lock (_lock)
@@ -76,6 +90,10 @@ public sealed class LiveSync
         }
     }
 
+    /// <summary>
+    /// How many object deletions and additions the next Apply would send: edits not in the game yet plus applied ones
+    /// since undone.
+    /// </summary>
     public (int Deleted, int Added) Pending(EditStore edits)
     {
         lock (_lock)
@@ -88,6 +106,12 @@ public sealed class LiveSync
         }
     }
 
+    /// <summary>
+    /// Sends the object changes since the last apply to the game in one call, and records what the game accepted
+    /// (nothing when the call fails, so it is sent again next time). New objects of kinds the editor cannot write are
+    /// skipped.
+    /// </summary>
+    /// <returns>A one-line summary for the user, or "" when there was nothing to send.</returns>
     public async Task<string> Apply(WorldSave world, EditStore edits, LiveBridge live)
     {
         List<LiveTarget> destroy = [];
