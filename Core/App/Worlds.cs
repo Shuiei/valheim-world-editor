@@ -2,11 +2,20 @@ using System.Text.RegularExpressions;
 
 namespace TerrainEditor.App;
 
-// The worlds on this computer: recent ones, folders added in Settings, and Valheim's own world folders.
+/// <summary>The worlds on this computer: recent ones, folders added in Settings, and Valheim's own world folders.</summary>
 public static class Worlds
 {
+    /// <summary>One world found.</summary>
+    /// <param name="Name">The world's name (its folder's).</param>
+    /// <param name="Path">Its folder, or the .db file of an old single-file world.</param>
+    /// <param name="Saved">When its latest save was written (local time).</param>
+    /// <param name="SaveNumber">The n of its latest _main.&lt;n&gt;.chunks; 0 for an old world.</param>
+    /// <param name="Where">"recent", "yours" (a folder added in Settings) or "local" (the game's folders).</param>
+    /// <param name="Usable">Whether the editor can open it.</param>
+    /// <param name="Problem">Why it cannot, for the player; null when it can.</param>
     public sealed record Info(string Name, string Path, DateTime Saved, int SaveNumber, string Where, bool Usable, string? Problem);
 
+    /// <summary>Every world found, each once: recent ones first, then the newest saves first.</summary>
     public static List<Info> Find(AppSettings settings)
     {
         var list = new List<Info>();
@@ -78,7 +87,7 @@ public static class Worlds
         return [.. list.OrderByDescending(w => w.Where == "recent").ThenByDescending(w => w.Saved)];
     }
 
-    // Why a folder cannot be opened as a world, or null when it can.
+    /// <summary>Why a folder cannot be opened as a world, or null when it can.</summary>
     public static string? Check(string path)
     {
         if (string.IsNullOrWhiteSpace(path))
@@ -111,12 +120,14 @@ public static class Worlds
         }
     }
 
+    /// <summary>A world's name: its folder's name.</summary>
     public static string WorldName(string path)
     {
         // The name is in _main.<n>.fwl2; the folder is named after the world anyway.
         return Path.GetFileName(Path.GetFullPath(path).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
     }
 
+    /// <summary>The highest n of the folder's _main.&lt;n&gt;.chunks and its write time; (0, MinValue) when none.</summary>
     private static (int, DateTime) LatestSave(string dir)
     {
         int best = 0;

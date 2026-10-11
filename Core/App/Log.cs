@@ -1,14 +1,19 @@
 
 namespace TerrainEditor.App;
 
-// Console output also goes to a log file in the data folder (a window app has no console on Windows),
-// each line with its time. Like BepInEx's LogOutput.log, the file is started over at each run: after a
-// problem it holds that run, for the person to attach to a bug report (Open log on the start page).
+/// <summary>
+/// Console output also goes to a log file in the data folder (a window app has no console on Windows),
+/// each line with its time. Like BepInEx's LogOutput.log, the file is started over at each run: after a
+/// problem it holds that run, for the person to attach to a bug report (Open log on the start page).
+/// </summary>
 public static class Log
 {
+    /// <summary>The log file: ValheimWorldEditor.log in the data folder.</summary>
     public static string FilePath => Path.Combine(AppSettings.DataDir, "ValheimWorldEditor.log");
 
-    // The log so far (it stays open for writing: read shared).
+    /// <summary>
+    /// The log so far (it stays open for writing: read shared). When it cannot be read, a line saying why.
+    /// </summary>
     public static string Read()
     {
         try
@@ -23,7 +28,11 @@ public static class Log
         }
     }
 
-    // Starts the log (a new one each run), with what is running first.
+    /// <summary>
+    /// Starts the log (a new one each run), with what is running first: the editor's version, the system,
+    /// .NET and the data folder. Console output and errors then go both to the console and to the file.
+    /// Failing to start the log is ignored.
+    /// </summary>
     public static void Start(string version)
     {
         try
@@ -44,12 +53,15 @@ public static class Log
         }
     }
 
-    // The file, written by both the output and the error streams: the time before each line.
+    /// <summary>The file, written by both the output and the error streams: the time before each line.</summary>
     private sealed class Sink(TextWriter file)
     {
+        /// <summary>Keeps lines from the two streams whole.</summary>
         private readonly Lock _lock = new();
+        /// <summary>Whether the next text starts a line, so gets the time.</summary>
         private bool _lineStart = true;
 
+        /// <summary>Writes text, the time (HH:mm:ss) before each line it starts; write errors are ignored.</summary>
         public void Write(string? text)
         {
             if (string.IsNullOrEmpty(text))
@@ -87,22 +99,30 @@ public static class Log
         }
     }
 
+    /// <summary>
+    /// A console stream that also writes into the log file; a console that cannot be written (none on
+    /// Windows) is ignored.
+    /// </summary>
     private sealed class Tee(TextWriter console, Sink file) : TextWriter
     {
+        /// <inheritdoc/>
         public override System.Text.Encoding Encoding => console.Encoding;
 
+        /// <inheritdoc/>
         public override void Write(char value)
         {
             try { console.Write(value); } catch { }
             file.Write(value.ToString());
         }
 
+        /// <inheritdoc/>
         public override void Write(string? value)
         {
             try { console.Write(value); } catch { }
             file.Write(value);
         }
 
+        /// <inheritdoc/>
         public override void WriteLine(string? value)
         {
             try { console.WriteLine(value); } catch { }

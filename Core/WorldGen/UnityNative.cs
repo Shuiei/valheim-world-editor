@@ -4,10 +4,19 @@
 // Both are verified bit-for-bit against values recorded in the real game (TerrainDump plugin).
 namespace ValheimGen
 {
+    /// <summary>
+    /// Unity's Mathf.PerlinNoise, bit for bit.
+    /// </summary>
     public static class UnityPerlin
     {
+        /// <summary>
+        /// Ken Perlin's permutation, repeated to 512 entries so lookups need no wrap.
+        /// </summary>
         private static readonly int[] Perm = BuildPermutation();
 
+        /// <summary>
+        /// Ken Perlin's 256-entry permutation, twice over.
+        /// </summary>
         private static int[] BuildPermutation()
         {
             int[] p =
@@ -34,14 +43,23 @@ namespace ValheimGen
         // Everything below mirrors the machine code of Mathf.PerlinNoise in UnityPlayer.so
         // (Unity 6000.0): Ken Perlin's improved noise in 3D with z = 0, evaluated on |x| and |y|,
         // in single precision and in the same operation order. Matches 1,207 game samples bit for bit.
+        /// <summary>
+        /// The fade curve 6t⁵ - 15t⁴ + 10t³, t held to at most 1.
+        /// </summary>
         private static float Fade(float t)
         {
             t = Math.Min(1f, t);
             return t * t * t * ((t * 6f + -15f) * t + 10f);
         }
 
+        /// <summary>
+        /// a to b by t (not clamped).
+        /// </summary>
         private static float Lerp(float t, float a, float b) => a + t * (b - a);
 
+        /// <summary>
+        /// The improved noise gradient for a hash, dotted with (x, y, 0).
+        /// </summary>
         private static float Grad(int hash, float x, float y)
         {
             int h = hash & 15;
@@ -50,9 +68,15 @@ namespace ValheimGen
             return ((h & 1) == 0 ? u : -u) + ((h & 2) == 0 ? v : -v);
         }
 
-        // The table read without bounds checks (every index stays below 512).
+        /// <summary>
+        /// The table read without bounds checks (every index stays below 512).
+        /// </summary>
         private static int P(int i) => System.Runtime.CompilerServices.Unsafe.Add(ref System.Runtime.InteropServices.MemoryMarshal.GetArrayDataReference(Perm), i);
 
+        /// <summary>
+        /// Perlin noise at (x, y), about 0..1 (Unity's own scaling). Taken at |x| and |y|, so it is mirrored about
+        /// both axes.
+        /// </summary>
         public static float Noise(float x, float y)
         {
             x = Math.Abs(x);
@@ -78,34 +102,66 @@ namespace ValheimGen
 
     namespace UnityEngine
     {
-        // Unity's UnityEngine.Random: Xorshift128 with Unity's seeding and float conversion. The game only
-        // draws from it on the main thread; here worlds are made and regrown on several threads at once, so
-        // each thread has its own state (shared, they would mix their draws and make other rivers).
+        /// <summary>
+        /// Unity's UnityEngine.Random: Xorshift128 with Unity's seeding and float conversion. The game only
+        /// draws from it on the main thread; here worlds are made and regrown on several threads at once, so
+        /// each thread has its own state (shared, they would mix their draws and make other rivers).
+        /// </summary>
         public static class Random
         {
+            /// <summary>
+            /// The generator's four state words, as Random.state saves and restores them.
+            /// </summary>
             public struct State
             {
+                /// <summary>
+                /// First state word.
+                /// </summary>
                 internal uint s0;
 
+                /// <summary>
+                /// Second state word.
+                /// </summary>
                 internal uint s1;
 
+                /// <summary>
+                /// Third state word.
+                /// </summary>
                 internal uint s2;
 
+                /// <summary>
+                /// Fourth state word.
+                /// </summary>
                 internal uint s3;
             }
 
+            /// <summary>
+            /// This thread's state, first word.
+            /// </summary>
             [ThreadStatic]
             private static uint _s0;
 
+            /// <summary>
+            /// This thread's state, second word.
+            /// </summary>
             [ThreadStatic]
             private static uint _s1;
 
+            /// <summary>
+            /// This thread's state, third word.
+            /// </summary>
             [ThreadStatic]
             private static uint _s2;
 
+            /// <summary>
+            /// This thread's state, fourth word.
+            /// </summary>
             [ThreadStatic]
             private static uint _s3;
 
+            /// <summary>
+            /// This thread's state, to save and restore around draws (as the game does).
+            /// </summary>
             public static State state
             {
                 get => new() { s0 = _s0, s1 = _s1, s2 = _s2, s3 = _s3 };
@@ -118,6 +174,9 @@ namespace ValheimGen
                 }
             }
 
+            /// <summary>
+            /// Seeds this thread's state as Unity's Random.InitState does.
+            /// </summary>
             public static void InitState(int seed)
             {
                 _s0 = (uint)seed;
@@ -126,6 +185,9 @@ namespace ValheimGen
                 _s3 = _s2 * 1812433253u + 1u;
             }
 
+            /// <summary>
+            /// The next raw 32-bit draw (one Xorshift128 step).
+            /// </summary>
             public static uint NextUInt()
             {
                 uint t = _s0 ^ (_s0 << 11);
@@ -136,8 +198,14 @@ namespace ValheimGen
                 return _s3;
             }
 
+            /// <summary>
+            /// A float in 0..1, both ends included, from the low 23 bits of one draw.
+            /// </summary>
             public static float value => (NextUInt() & 0x7FFFFF) * (1f / 8388607f);
 
+            /// <summary>
+            /// A float between min and max, both included (one draw).
+            /// </summary>
             public static float Range(float min, float max)
             {
                 // Unity interpolates from max to min, not min to max.
@@ -145,6 +213,10 @@ namespace ValheimGen
                 return t * min + (1f - t) * max;
             }
 
+            /// <summary>
+            /// An int from min up to but not including max (one draw); min when they are equal. With min &gt; max it
+            /// counts down from min, as Unity's does.
+            /// </summary>
             public static int Range(int min, int max)
             {
                 if (min < max)
@@ -158,6 +230,9 @@ namespace ValheimGen
                 return min;
             }
 
+            /// <summary>
+            /// A point in the unit disc (two draws: angle, then radius).
+            /// </summary>
             public static Vector2 insideUnitCircle
             {
                 get

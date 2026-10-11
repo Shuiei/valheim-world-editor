@@ -3,11 +3,16 @@ using BCnEncoder.Shared;
 
 namespace TerrainEditor.App;
 
-// The game's textures as pixels: one mip level (GameBundles.LoadTexture) made RGBA, rows bottom first
-// as Unity keeps them. Block-compressed ones (DXT1, DXT5, BC7...) are decoded with BCnEncoder.Net.
+/// <summary>
+/// The game's textures as pixels: one mip level (GameBundles.LoadTexture) made RGBA, rows bottom first
+/// as Unity keeps them. Block-compressed ones (DXT1, DXT5, BC7...) are decoded with BCnEncoder.Net.
+/// </summary>
 public static class GameTextures
 {
-    // RGBA bytes of a level, or null for a format not read here.
+    /// <summary>
+    /// RGBA bytes of a level, or null for a format not read here. Read: Unity's Alpha8, RGB24, RGBA32, ARGB32,
+    /// BGRA32, R8, DXT1, DXT5, BC4, BC5 and BC7.
+    /// </summary>
     public static byte[]? Rgba(GameBundles.TextureLevel t)
     {
         int n = t.Width * t.Height;
@@ -77,9 +82,12 @@ public static class GameTextures
         }
     }
 
-    // Cut-out textures: transparent pixels take the colour of nearby opaque ones (up to 16 pixels away,
-    // wrapping around: textures tile), the rest the average opaque colour, so that filtering and mipmaps
-    // do not bleed the hidden colour (often beige) into leaf edges. Alpha is kept.
+    /// <summary>
+    /// Cut-out textures: transparent pixels take the colour of nearby opaque ones (up to 16 pixels away,
+    /// wrapping around: textures tile), the rest the average opaque colour, so that filtering and mipmaps
+    /// do not bleed the hidden colour (often beige) into leaf edges. Alpha is kept. Opaque means alpha of
+    /// 128 or more; fully opaque or fully transparent textures are left alone. Works in place.
+    /// </summary>
     public static void Bleed(byte[] rgba, int w, int h)
     {
         int n = w * h;

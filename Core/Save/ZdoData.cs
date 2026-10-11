@@ -3,48 +3,70 @@ using System.Text;
 
 namespace TerrainEditor.Save;
 
-// Everything one saved object (ZDO) holds, read into typed lists that can be looked at and changed,
-// then written back in the save format (world version 41). The object inspector works on this.
+/// <summary>
+/// Everything one saved object (ZDO) holds, read into typed lists that can be looked at and changed, then written back
+/// in the save format (world version 41). The object inspector works on this.
+/// </summary>
 public sealed class ZdoData
 {
-    // Between the numbers of a vector or quaternion typed in the inspector.
+    /// <summary>Between the numbers of a vector or quaternion typed in the inspector.</summary>
     private static readonly char[] NumberSeparators = [' ', ',', ';'];
 
+    /// <summary>
+    /// The ZDO flag bits that say which data sections follow (the connection, then one bit per value type).
+    /// </summary>
     public const ushort Connections = 0x1, Floats = 0x2, Vec3s = 0x4, Quats = 0x8, Ints = 0x10, Longs = 0x20, Strings = 0x40, ByteArrays = 0x80;
 
+    /// <summary>ZDO flag bits: a rotation is stored; the position is in the short form.</summary>
     private const ushort RotationFlag = 0x1000, SmallPositionFlag = 0x2000;
 
-    // Persistent / distant / object type bits (0x0F00) as saved.
+    /// <summary>Persistent / distant / object type bits (0x0F00) as saved.</summary>
     public ushort BaseFlags { get; set; }
 
+    /// <summary>World position in metres.</summary>
     public Vector3 Position { get; set; }
 
-    // Saved in the game's short form (whole metres as two shorts, height 0), as the game does for
-    // objects such as the terrain compiler: written back the same way while the position still fits.
+    /// <summary>
+    /// Saved in the game's short form (whole metres as two shorts, height 0), as the game does for objects such as the
+    /// terrain compiler: written back the same way while the position still fits.
+    /// </summary>
     public bool SmallPosition { get; set; }
 
+    /// <summary>The prefab name hash.</summary>
     public int Prefab { get; set; }
 
-    // Unity Euler angles in degrees.
+    /// <summary>Unity Euler angles in degrees.</summary>
     public Vector3 Rotation { get; set; }
 
-    // The connection section (type and target) kept as it was.
+    /// <summary>The connection section (type and target) kept as it was.</summary>
     public byte[]? Connection { get; set; }
 
+    /// <summary>Float values by key hash, in save order.</summary>
     public List<(int Key, float Value)> FloatList { get; } = [];
 
+    /// <summary>Vector values by key hash, in save order.</summary>
     public List<(int Key, Vector3 Value)> Vec3List { get; } = [];
 
+    /// <summary>Quaternion values by key hash, in save order.</summary>
     public List<(int Key, Quaternion Value)> QuatList { get; } = [];
 
+    /// <summary>Int values by key hash, in save order.</summary>
     public List<(int Key, int Value)> IntList { get; } = [];
 
+    /// <summary>Long values by key hash, in save order.</summary>
     public List<(int Key, long Value)> LongList { get; } = [];
 
+    /// <summary>String values by key hash, in save order.</summary>
     public List<(int Key, string Value)> StringList { get; } = [];
 
+    /// <summary>Byte array values by key hash, in save order.</summary>
     public List<(int Key, byte[] Value)> ByteList { get; } = [];
 
+    /// <summary>Reads one object's save bytes.</summary>
+    /// <param name="bytes">The object as saved, from its flags to its last value.</param>
+    /// <param name="worldVersion">
+    /// The world version it was written in (older ones carry a sector and a full rotation).
+    /// </param>
     public static ZdoData Parse(byte[] bytes, int worldVersion = 41)
     {
         using ValheimReader r = new(new MemoryStream(bytes));
@@ -100,6 +122,10 @@ public sealed class ZdoData
         return z;
     }
 
+    /// <summary>
+    /// The object in the save format of world version 41; empty sections are left out and a near-zero rotation is not
+    /// stored.
+    /// </summary>
     public byte[] Serialize()
     {
         Vector3 euler = new(ZdoBuilder.Wrap(Rotation.X), ZdoBuilder.Wrap(Rotation.Y), ZdoBuilder.Wrap(Rotation.Z));
@@ -201,11 +227,22 @@ public sealed class ZdoData
         return ms.ToArray();
     }
 
+    /// <summary>
+    /// Whether a coordinate can be stored in the short position form (a whole number within a short).
+    /// </summary>
     private static bool Fits(float v) => v == MathF.Round(v) && v >= short.MinValue && v <= short.MaxValue;
 
-    // Sets a value (replacing one with the same key in the same section), or removes it (value null).
-    // section: floats, vec3, quats, ints, longs, strings, bytes. Values come as text from the editor:
-    // numbers, "x y z" (vec3), "x y z w" (quats), base64 (bytes).
+    /// <summary>
+    /// Sets a value (replacing one with the same key in the same section), or removes it (value null).
+    /// </summary>
+    /// <param name="section">floats, vec3, quats, ints, longs, strings, bytes.</param>
+    /// <param name="key">The data key hash.</param>
+    /// <param name="value">
+    /// Values come as text from the editor: numbers, "x y z" (vec3), "x y z w" (quats), base64 (bytes). Null removes
+    /// the value.
+    /// </param>
+    /// <exception cref="ArgumentException">An unknown section.</exception>
+    /// <exception cref="FormatException">The value does not parse for that section.</exception>
     public void Set(string section, int key, string? value)
     {
         static float F(string s) => float.Parse(s, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture);
@@ -227,7 +264,7 @@ public sealed class ZdoData
         }
     }
 
-    // Whether Set takes this value for that section (the numbers it needs, base64 for bytes).
+    /// <summary>Whether Set takes this value for that section (the numbers it needs, base64 for bytes).</summary>
     public static bool Valid(string section, string? value)
     {
         try
@@ -241,10 +278,13 @@ public sealed class ZdoData
         }
     }
 
+    /// <summary>Sets a byte array value, replacing one with the same key.</summary>
     public void SetBytes(int key, byte[] value) => Put(ByteList, key, value, v => v);
 
+    /// <summary>The byte array value with this key, or null when there is none.</summary>
     public byte[]? GetBytes(int key) => ByteList.FirstOrDefault(i => i.Key == key).Value;
 
+    /// <summary>Replaces or adds the value for the key in a section, or removes it when the value is null.</summary>
     private static void Put<T, TIn>(List<(int Key, T Value)> list, int key, TIn? value, Func<TIn, T> parse)
     {
         int i = list.FindIndex(e => e.Key == key);

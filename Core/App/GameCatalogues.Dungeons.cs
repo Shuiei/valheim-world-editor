@@ -6,32 +6,40 @@ namespace TerrainEditor.App;
 
 public static partial class GameCatalogues
 {
-    // What the editor's Dungeon mode needs of the game's dungeons, read at the editor's start (GameData)
-    // in the one pass over the bundles. A dungeon (DG_Cave, DG_SunkenCrypt...) is a DungeonGenerator
-    // object whose saved "roomData" lists rooms by the stable hash of their prefab name, with position
-    // and rotation; the game rebuilds them from that list. For each dungeon kind: its algorithm, room
-    // themes, the box its rooms must stay in (m_zoneSize, around the zone centre at the dungeon's
-    // height), its door types ([prefab, opening type, chance (0: the dungeon's doorChance)]) and baseSeed
-    // (its seed is added to each room's roll). For each room prefab (a root with a Room component):
-    //   theme, size, endCap, entrance, divider, endCapPrio, weight, perimeter, enabled;
-    //   openings (RoomConnection children): [type, entrance, allowDoor, onlyIfOtherAllowsDoor, x, y, z, qx,
-    //     qy, qz, qw] in the room's frame (the game joins two rooms where openings meet, the new room
-    //     turned so its opening faces the other);
-    //   contents: the networked objects (ZNetView children) the game makes when it first generates the
-    //     room: [prefab, x, y, z, qx, qy, qz, qw, node], and what decides whether each is there, in the
-    //     order the game rolls them: spawns (RandomSpawn: [node, chance %, required theme, off node, min
-    //     elevation, max elevation]) and picks (RandomObject: [node, required theme, [[choice node,
-    //     weight]...], min elevation, max elevation]), with nodes: the parent of every node that matters
-    //     (-1 the room).
-    // Only what is active and enabled in the prefab counts (as the game's GetEnabledComponentsInChildren).
-    // Found from the Room and DungeonGenerator scripts (told by their class) up to their prefab roots. A
-    // room's tree is read raw, level by level; of its scripts only those that matter (told once per
-    // script by their fields in the type tree) where it is active, the ZNetViews and RandomSpawns raw.
-    // The first room of a name is kept, the last dungeon (as the bundles come, in name order).
+    /// <summary>
+    /// What the editor's Dungeon mode needs of the game's dungeons, read at the editor's start (GameData)
+    /// in the one pass over the bundles. A dungeon (DG_Cave, DG_SunkenCrypt...) is a DungeonGenerator
+    /// object whose saved "roomData" lists rooms by the stable hash of their prefab name, with position
+    /// and rotation; the game rebuilds them from that list. For each dungeon kind: its algorithm, room
+    /// themes, the box its rooms must stay in (m_zoneSize, around the zone centre at the dungeon's
+    /// height), its door types ([prefab, opening type, chance (0: the dungeon's doorChance)]) and baseSeed
+    /// (its seed is added to each room's roll). For each room prefab (a root with a Room component):
+    ///   theme, size, endCap, entrance, divider, endCapPrio, weight, perimeter, enabled;
+    ///   openings (RoomConnection children): [type, entrance, allowDoor, onlyIfOtherAllowsDoor, x, y, z, qx,
+    ///     qy, qz, qw] in the room's frame (the game joins two rooms where openings meet, the new room
+    ///     turned so its opening faces the other);
+    ///   contents: the networked objects (ZNetView children) the game makes when it first generates the
+    ///     room: [prefab, x, y, z, qx, qy, qz, qw, node], and what decides whether each is there, in the
+    ///     order the game rolls them: spawns (RandomSpawn: [node, chance %, required theme, off node, min
+    ///     elevation, max elevation]) and picks (RandomObject: [node, required theme, [[choice node,
+    ///     weight]...], min elevation, max elevation]), with nodes: the parent of every node that matters
+    ///     (-1 the room).
+    /// Only what is active and enabled in the prefab counts (as the game's GetEnabledComponentsInChildren).
+    /// Found from the Room and DungeonGenerator scripts (told by their class) up to their prefab roots. A
+    /// room's tree is read raw, level by level; of its scripts only those that matter (told once per
+    /// script by their fields in the type tree) where it is active, the ZNetViews and RandomSpawns raw.
+    /// The first room of a name is kept, the last dungeon (as the bundles come, in name order).
+    /// </summary>
     private sealed class DungeonScan : IStartScan
     {
+        /// <summary>
+        /// The dungeons and the rooms found, by prefab name.
+        /// </summary>
         private readonly Dictionary<string, Dict> _dungeons = [], _rooms = [];
 
+        /// <summary>
+        /// The "dungeon-rooms" JSON: {"dungeons": ..., "rooms": ...}, each sorted by name, compact.
+        /// </summary>
         public string Json()
         {
             static Dict Sorted(Dictionary<string, Dict> d)
@@ -46,7 +54,9 @@ public static partial class GameCatalogues
             return CatalogueJson.Write(new Dict { ["dungeons"] = Sorted(_dungeons), ["rooms"] = Sorted(_rooms) }, new CatalogueJson.Style(",", ":"));
         }
 
-        // What a script is to the scan, by its fields.
+        /// <summary>
+        /// What a script is to the scan, by its fields. Null: none that matters.
+        /// </summary>
         private static string? Kind(HashSet<string> f) =>
             f.Contains("m_theme") && f.Contains("m_endCap") && f.Contains("m_size") ? "room"
             : f.Contains("m_entrance") && f.Contains("m_allowDoor") ? "connection"
@@ -56,28 +66,62 @@ public static partial class GameCatalogues
             : f.Contains("m_algorithm") && f.Contains("m_themes") && f.Contains("m_maxRooms") ? "generator"
             : null;
 
-        // The bundle being read: what each of its scripts is (once per script), and the rooms' trees read
-        // raw (Layout.Sweep): each GameObject's name, components and m_IsActive, each Transform's
-        // GameObject, children and local position and rotation, each ZNetView's m_Enabled. By path id
-        // over the bundle, as Bundle.Field(pid) finds them.
+        /// <summary>
+        /// The bundle being read: what each of its scripts is (once per script), and the rooms' trees read
+        /// raw (Layout.Sweep): each GameObject's name, components and m_IsActive, each Transform's
+        /// GameObject, children and local position and rotation, each ZNetView's m_Enabled. By path id
+        /// over the bundle, as Bundle.Field(pid) finds them.
+        /// </summary>
         private sealed class Open(Bundle b)
         {
+            /// <summary>
+            /// The bundle.
+            /// </summary>
             public Bundle B { get; } = b;
 
+            /// <summary>
+            /// What each script is (<c>Kind</c>), by its file and script index.
+            /// </summary>
             private readonly Dictionary<(int File, ushort Script), string?> _kinds = [];
+            /// <summary>
+            /// The GameObjects read raw: name, component path ids, m_IsActive.
+            /// </summary>
             private readonly Dictionary<long, (string Name, long[] Components, bool Active)> _gos = [];
+            /// <summary>
+            /// The Transforms read raw: GameObject, children (Transform path ids), local position and rotation.
+            /// </summary>
             private readonly Dictionary<long, (long Go, long[] Children, V3 Pos, Quat Rot)> _transforms = [];
+            /// <summary>
+            /// Each ZNetView's m_Enabled, read raw.
+            /// </summary>
             private readonly Dictionary<long, bool> _enabled = [];
+            /// <summary>
+            /// <c>Node</c>'s answers, by GameObject.
+            /// </summary>
             private readonly Dictionary<long, (string Name, bool Active, long Tr, List<(string Kind, long Pid)> Behaviours)> _nodes = [];
+            /// <summary>
+            /// <c>Transform</c>'s answers, by Transform.
+            /// </summary>
             private readonly Dictionary<long, (V3 Pos, Quat Rot, List<long> Children)> _frames = [];
-            // Each GameObject's parent, of those read.
+            /// <summary>
+            /// Each GameObject's parent, of those read.
+            /// </summary>
             private readonly Dictionary<long, long> _parents = [];
 
+            /// <summary>
+            /// A GameObject's parent GameObject, false when it was not read.
+            /// </summary>
             public bool ParentOf(long go, out long parent) => _parents.TryGetValue(go, out parent);
 
-            // A MonoBehaviour's script: its file (by place) and its index there.
+            /// <summary>
+            /// A MonoBehaviour's script: its file (by place) and its index there.
+            /// </summary>
             private (int File, ushort Script) ScriptOf(Bundle.Inner f, AssetFileInfo info) => (B.Files.FindIndex(x => ReferenceEquals(x, f)), info.GetScriptIndex(f.Assets.file));
 
+            /// <summary>
+            /// What a MonoBehaviour is to the scan (by its script's fields, told once per script); null: not a
+            /// MonoBehaviour or none that matters.
+            /// </summary>
             private string? KindOf(long pid)
             {
                 if (B.FileWith(pid) is not { } f || f.Assets.file.GetAssetInfo(pid) is not { TypeId: MonoBehaviourType } info)
@@ -92,8 +136,10 @@ public static partial class GameCatalogues
                 return k;
             }
 
-            // A GameObject's Transform and the MonoBehaviours that matter (with what they are), from its
-            // components (path ids).
+            /// <summary>
+            /// A GameObject's Transform and the MonoBehaviours that matter (with what they are), from its
+            /// components (path ids).
+            /// </summary>
             private (long Tr, List<(string Kind, long Pid)> Behaviours) Ids(IEnumerable<long> components)
             {
                 long tr = 0;
@@ -113,7 +159,9 @@ public static partial class GameCatalogues
                 return (tr, behaviours);
             }
 
-            // A prefab root's Transform and MonoBehaviours that matter (those that can be read), read whole.
+            /// <summary>
+            /// A prefab root's Transform and MonoBehaviours that matter (those that can be read), read whole.
+            /// </summary>
             public (AssetTypeValueField? Tr, List<(string Kind, AssetTypeValueField F)> Behaviours) Parts(AssetTypeValueField go)
             {
                 var (tr, ids) = Ids(go["m_Component.Array"].Children.Select(c => c["component.m_PathID"].AsLong));
@@ -128,8 +176,10 @@ public static partial class GameCatalogues
                 return (tr == 0 ? null : B.Field(tr), behaviours);
             }
 
-            // A GameObject of the trees read: its name, whether it is active, its Transform (0: none) and
-            // the MonoBehaviours that matter (path ids); null when it was not read.
+            /// <summary>
+            /// A GameObject of the trees read: its name, whether it is active, its Transform (0: none) and
+            /// the MonoBehaviours that matter (path ids); null when it was not read.
+            /// </summary>
             public (string Name, bool Active, long Tr, List<(string Kind, long Pid)> Behaviours)? Node(long go)
             {
                 if (_nodes.TryGetValue(go, out var node))
@@ -144,8 +194,10 @@ public static partial class GameCatalogues
                 return _nodes[go] = (g.Name, g.Active, tr, ids);
             }
 
-            // A Transform of the trees: its local position and rotation, and its children's GameObjects
-            // (children not read left out); null when it was not read.
+            /// <summary>
+            /// A Transform of the trees: its local position and rotation, and its children's GameObjects
+            /// (children not read left out); null when it was not read.
+            /// </summary>
             public (V3 Pos, Quat Rot, List<long> Children)? Transform(long tr)
             {
                 if (_frames.TryGetValue(tr, out var frame))
@@ -167,16 +219,29 @@ public static partial class GameCatalogues
                 return _frames[tr] = (t.Pos, t.Rot, children);
             }
 
-            // A RandomSpawn's fields read raw (the many in the rooms), or null when it was read whole.
+            /// <summary>
+            /// A RandomSpawn's fields read raw (the many in the rooms), or null when it was read whole.
+            /// </summary>
             public Dictionary<string, object?>? Spawn(long pid) => _spawns.GetValueOrDefault(pid);
 
+            /// <summary>
+            /// RandomSpawns read raw, by path id.
+            /// </summary>
             private readonly Dictionary<long, Dictionary<string, object?>> _spawns = [];
+            /// <summary>
+            /// <c>Plan</c>'s answers, by script.
+            /// </summary>
             private readonly Dictionary<(int File, ushort Script), (AssetTypeTemplateField Tree, int Last)?> _plans = [];
 
+            /// <summary>
+            /// The RandomSpawn fields the scan needs.
+            /// </summary>
             private static readonly string[] SpawnFields = ["m_Enabled", "m_chanceToSpawn", "m_dungeonRequireTheme", "m_OffObject", "m_minElevation", "m_maxElevation"];
 
-            // How a RandomSpawn's script is read raw: its type tree and its last field that matters; null
-            // when one of its fields before that is not of a kind read here.
+            /// <summary>
+            /// How a RandomSpawn's script is read raw: its type tree and its last field that matters; null
+            /// when one of its fields before that is not of a kind read here.
+            /// </summary>
             private (AssetTypeTemplateField Tree, int Last)? Plan(long pid)
             {
                 var f = B.FileWith(pid)!;
@@ -191,13 +256,17 @@ public static partial class GameCatalogues
                 return plan;
             }
 
-            // Whether a ZNetView is enabled (read raw: nothing else of it is needed).
+            /// <summary>
+            /// Whether a ZNetView is enabled (read raw: nothing else of it is needed).
+            /// </summary>
             public bool Enabled(long netview) => _enabled.TryGetValue(netview, out bool on) && on;
 
-            // A GameObject has its components first (a count, then each a file id and a path id), then its
-            // layer, name (aligned to 4 bytes), tag (2 bytes) and m_IsActive. A Transform has its
-            // GameObject, rotation (x, y, z, w), position and scale, then its children. A MonoBehaviour has
-            // its GameObject, then m_Enabled.
+            /// <summary>
+            /// Keeps what the scan needs of one object read raw. A GameObject has its components first (a count,
+            /// then each a file id and a path id), then its layer, name (aligned to 4 bytes), tag (2 bytes) and
+            /// m_IsActive. A Transform has its GameObject, rotation (x, y, z, w), position and scale, then its
+            /// children. A MonoBehaviour has its GameObject, then m_Enabled.
+            /// </summary>
             private void Take(Bundle.Inner f, long pid, int type, Layout.Bytes d)
             {
                 if (type == GameObjectType)
@@ -225,6 +294,9 @@ public static partial class GameCatalogues
                 }
             }
 
+            /// <summary>
+            /// Each path id with the file in the bundle that has it (those not there left out).
+            /// </summary>
             private IEnumerable<(Bundle.Inner, long)> At(IEnumerable<long> pids)
             {
                 foreach (long pid in pids)
@@ -236,9 +308,11 @@ public static partial class GameCatalogues
                 }
             }
 
-            // These GameObjects' trees read raw, in the order of their files, a level at a time (a level's
-            // GameObjects with the next level's Transforms); then the MonoBehaviours that matter where the
-            // rooms are active (on a root: its openings), the ZNetViews raw, the others whole.
+            /// <summary>
+            /// These GameObjects' trees read raw, in the order of their files, a level at a time (a level's
+            /// GameObjects with the next level's Transforms); then the MonoBehaviours that matter where the
+            /// rooms are active (on a root: its openings), the ZNetViews raw, the others whole.
+            /// </summary>
             public void ReadTrees(List<long> roots)
             {
                 Layout.Sweep(B, At(roots), Take);
@@ -301,8 +375,10 @@ public static partial class GameCatalogues
                 }
             }
 
-            // The raw reading as the type tree says, for one GameObject and its Transform: said, rather
-            // than read wrong (as Layout.Check).
+            /// <summary>
+            /// The raw reading as the type tree says, for one GameObject and its Transform: said, rather
+            /// than read wrong (as Layout.Check). Throws InvalidDataException when they differ.
+            /// </summary>
             private void Check(long go)
             {
                 if (!_gos.TryGetValue(go, out var raw) || B.Field(go) is not { } g)
@@ -323,13 +399,21 @@ public static partial class GameCatalogues
                 }
             }
 
+            /// <summary>
+            /// The error for objects not laid out as the raw reading expects.
+            /// </summary>
             private static InvalidDataException Unexpected() => new("The game's objects are not laid out as the editor expects (another Unity version?).");
         }
 
-        // Fields of an object read raw, as its type tree lays them out: each field after the other, a
-        // list or text as its count then its items, padded to 4 bytes after those marked so.
+        /// <summary>
+        /// Fields of an object read raw, as its type tree lays them out: each field after the other, a
+        /// list or text as its count then its items, padded to 4 bytes after those marked so.
+        /// </summary>
         private static class Raw
         {
+            /// <summary>
+            /// The byte size of a number type, 0 for others.
+            /// </summary>
             private static int Size(AssetValueType t) => t switch
             {
                 AssetValueType.Bool or AssetValueType.Int8 or AssetValueType.UInt8 => 1,
@@ -339,15 +423,24 @@ public static partial class GameCatalogues
                 _ => 0,
             };
 
+            /// <summary>
+            /// Whether a field can be stepped over raw: numbers, texts, byte arrays, lists of such, and structures of
+            /// such.
+            /// </summary>
             public static bool CanSkip(AssetTypeTemplateField t) =>
                 t.IsArray ? t.Children.Count == 2 && CanSkip(t.Children[1])
                 : t.ValueType is AssetValueType.String or AssetValueType.ByteArray || Size(t.ValueType) > 0 || t.ValueType == AssetValueType.None && t.Children.Count > 0 && t.Children.All(CanSkip);
 
-            // A number, a yes/no, a text, or a reference (its path id).
+            /// <summary>
+            /// A number, a yes/no, a text, or a reference (its path id).
+            /// </summary>
             public static bool CanRead(AssetTypeTemplateField t) =>
                 t.ValueType is AssetValueType.Bool or AssetValueType.Int8 or AssetValueType.UInt8 or AssetValueType.Int32 or AssetValueType.Float or AssetValueType.String
                 || t.ValueType == AssetValueType.None && t.Children.Count == 2 && t.Children[0].Name == "m_FileID" && t.Children[1].Name == "m_PathID";
 
+            /// <summary>
+            /// Moves <c>at</c> past one field, with its padding.
+            /// </summary>
             private static void Skip(AssetTypeTemplateField t, Layout.Bytes d, ref int at)
             {
                 if (t.IsArray)
@@ -384,7 +477,9 @@ public static partial class GameCatalogues
                 }
             }
 
-            // The named fields up to the last-th, as Py has them (a reference: its path id).
+            /// <summary>
+            /// The named fields up to the last-th, as Py has them (a reference: its path id).
+            /// </summary>
             public static Dictionary<string, object?> Fields(AssetTypeTemplateField tree, int last, string[] names, Layout.Bytes d)
             {
                 var res = new Dictionary<string, object?>();
@@ -411,15 +506,24 @@ public static partial class GameCatalogues
             }
         }
 
+        /// <summary>
+        /// The characters a prefab name ends at.
+        /// </summary>
         private static readonly System.Buffers.SearchValues<char> NameEnd = System.Buffers.SearchValues.Create("( ");
 
-        // Name up to the first '(' or space (the game's Utils.GetPrefabName).
+        /// <summary>
+        /// Name up to the first '(' or space (the game's Utils.GetPrefabName).
+        /// </summary>
         private static string PrefabName(string name)
         {
             int i = name.AsSpan().IndexOfAny(NameEnd);
             return i < 0 ? name : name[..i];
         }
 
+        /// <summary>
+        /// Finds the Room and DungeonGenerator scripts of a bundle, up to their prefab roots, and reads each dungeon
+        /// and each room not met yet.
+        /// </summary>
         public void Read(Bundle b, Game game)
         {
             var owners = new List<(Bundle.Inner, long)>();
@@ -488,6 +592,9 @@ public static partial class GameCatalogues
             }
         }
 
+        /// <summary>
+        /// A dungeon's door types: [prefab, opening type, chance] for each one whose prefab is in the same file.
+        /// </summary>
         private static List<object?> Doors(Bundle b, AssetTypeValueField g)
         {
             var res = new List<object?>();
@@ -507,21 +614,41 @@ public static partial class GameCatalogues
             return res;
         }
 
-        // One room prefab's openings, contents and random parts.
+        /// <summary>
+        /// One room prefab's openings, contents and random parts.
+        /// </summary>
         private sealed class RoomReader
         {
+            /// <summary>
+            /// The bundle's trees.
+            /// </summary>
             private readonly Open _open;
+            /// <summary>
+            /// The room's root GameObject.
+            /// </summary>
             private readonly long _root;
-            // Node of each GameObject that matters (numbered as first named).
+            /// <summary>
+            /// Node of each GameObject that matters (numbered as first named).
+            /// </summary>
             private readonly Dictionary<long, long> _node = [];
+            /// <summary>
+            /// The JSON lists: each node's parent node, the openings, contents, spawns and picks.
+            /// </summary>
             private readonly List<object?> _nodes = [], _openings = [], _contents = [], _spawns = [], _picks = [];
 
+            /// <summary>
+            /// A reader for the room whose root is <c>root</c>.
+            /// </summary>
             public RoomReader(Open open, long root)
             {
                 _open = open;
                 _root = root;
             }
 
+            /// <summary>
+            /// The room's JSON: its Room fields, then openings, contents, spawns, picks and nodes from a walk over its
+            /// tree.
+            /// </summary>
             public Dict Read(AssetTypeValueField room)
             {
                 var info = new Dict
@@ -545,6 +672,9 @@ public static partial class GameCatalogues
                 return info;
             }
 
+            /// <summary>
+            /// A GameObject's node number (-1 the room's root); its parents are numbered first.
+            /// </summary>
             private long Node(long pid)
             {
                 if (pid == _root)
@@ -561,7 +691,9 @@ public static partial class GameCatalogues
                 return n;
             }
 
-            // Whether an object is in the room (below its root): those the random parts name.
+            /// <summary>
+            /// Whether an object is in the room (below its root): those the random parts name.
+            /// </summary>
             private bool Below(long pid)
             {
                 while (_open.ParentOf(pid, out pid))
@@ -574,7 +706,9 @@ public static partial class GameCatalogues
                 return false;
             }
 
-            // A RandomSpawn, from its fields (m_OffObject: its path id).
+            /// <summary>
+            /// A RandomSpawn, from its fields (m_OffObject: its path id).
+            /// </summary>
             private void AddSpawn(long gid, Func<string, object?, object?> get)
             {
                 long off = (long)get("m_OffObject", 0L)!;
@@ -582,8 +716,10 @@ public static partial class GameCatalogues
                 _spawns.Add(new List<object?> { node, Round(get("m_chanceToSpawn", null), 4), get("m_dungeonRequireTheme", 0L), off != 0 && Below(off) ? Node(off) : -1L, get("m_minElevation", -10000L), get("m_maxElevation", 10000L) });
             }
 
-            // Depth first, in child order: the order the game finds the components in, so the order it
-            // rolls the random parts in. Inactive objects and their children are left out.
+            /// <summary>
+            /// Depth first, in child order: the order the game finds the components in, so the order it
+            /// rolls the random parts in. Inactive objects and their children are left out.
+            /// </summary>
             private void Walk(long gid, V3 pos, Quat rot, bool root)
             {
                 if (_open.Node(gid) is not { } g || _open.Transform(g.Tr) is not { } t)

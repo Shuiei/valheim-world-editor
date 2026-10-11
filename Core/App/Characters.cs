@@ -2,17 +2,30 @@ using System.Text;
 
 namespace TerrainEditor.App;
 
-// The player's own Valheim characters (.fch files on this computer): name and player id, the id the
-// game writes as "creator" on everything the character builds.
+/// <summary>
+/// The player's own Valheim characters (.fch files on this computer): name and player id, the id the
+/// game writes as "creator" on everything the character builds.
+/// </summary>
 public static class Characters
 {
+    /// <summary>
+    /// One character.
+    /// </summary>
+    /// <param name="Name">The character's name as stored in its profile.</param>
+    /// <param name="Id">The player id the game writes as "creator".</param>
     public sealed record Character(string Name, long Id);
 
-    // Character folders next to the world folders (characters_local and characters).
+    /// <summary>
+    /// Character folders next to the world folders (characters_local and characters).
+    /// </summary>
     public static IEnumerable<string> Roots() => Places.WorldRoots()
         .Select(r => Path.Combine(Path.GetDirectoryName(r)!, Path.GetFileName(r) == "worlds_local" ? "characters_local" : "characters"))
         .Distinct();
 
+    /// <summary>
+    /// This computer's characters, each player id once (the first file by name wins); files that cannot be read are
+    /// passed over.
+    /// </summary>
     public static List<Character> Local()
     {
         List<Character> list = [];
@@ -38,9 +51,16 @@ public static class Characters
         return list;
     }
 
-    // The profile stores the name (a length-prefixed string), then the player id (8 bytes), then the
-    // start seed (a short string), after the per-world data. The file is named after the character, so
-    // the first place the name appears followed by an id and a seed is it.
+    /// <summary>
+    /// The name and player id from a character file's bytes. The profile stores the name (a length-prefixed
+    /// string), then the player id (8 bytes), then the start seed (a short string), after the per-world data.
+    /// The file is named after the character, so the first place the name appears followed by an id and a seed
+    /// is it.
+    /// </summary>
+    /// <param name="b">The .fch file's bytes.</param>
+    /// <param name="fileName">The file name without extension: the character's name, matched ignoring ASCII
+    /// case.</param>
+    /// <returns>The character, or null when no name followed by a plausible id and seed is found.</returns>
     public static Character? Read(byte[] b, string fileName)
     {
         byte[] want = Encoding.UTF8.GetBytes(fileName.ToLowerInvariant());
@@ -66,6 +86,9 @@ public static class Characters
         return null;
     }
 
+    /// <summary>
+    /// Whether the bytes at <c>at</c> equal <c>lower</c> with ASCII capitals lowered.
+    /// </summary>
     private static bool Matches(byte[] b, int at, byte[] lower)
     {
         for (int k = 0; k < lower.Length; k++)
