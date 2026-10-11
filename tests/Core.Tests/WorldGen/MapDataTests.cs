@@ -159,6 +159,17 @@ public class MapDataTests
         Assert.Same(first, new MapData(again, againEdits).Global);
     }
 
+    // Cancelled before it is asked for: thrown, as when it is built, though the world map is kept.
+    [Fact]
+    public void ACancelledWorldMapThrowsEvenWhenItIsKept()
+    {
+        using var w = new TempWorld();
+        var (_, terrain, edits) = Open(w);
+        _ = new MapData(terrain, edits).Global;
+        var (_, again, againEdits) = Open(w);
+        Assert.Throws<OperationCanceledException>(() => new MapData(again, againEdits, new CancellationToken(canceled: true)).Global);
+    }
+
     [Fact]
     public void TheOverviewIsAPngOfTheRequestedSize()
     {

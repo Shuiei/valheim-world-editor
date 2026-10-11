@@ -151,6 +151,8 @@ public sealed class MapData
     /// </summary>
     private Layers BuildGlobal()
     {
+        // Cancelled before it starts: thrown as a build would, kept overview or not.
+        _cancel.ThrowIfCancellationRequested();
         var key = Generator.Identity;
         lock (LastGlobalLock)
         {
