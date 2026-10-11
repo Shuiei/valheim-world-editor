@@ -63,7 +63,7 @@ for Windows or Linux. Unpack it and start it. You don't need to install anything
 
 ## Three ways to edit
 
-All three start from the editor's start page.
+All three start from the editor's start page, under **Edit a world** in its side menu.
 
 | | What it edits | What you need |
 |---|---|---|
@@ -71,10 +71,12 @@ All three start from the editor's start page.
 | **A dedicated server** (live) | Your server's world, while people play. The editor logs in over SSH and opens its own encrypted tunnel. | BepInEx and the plugin on the server, and an SSH login to it. |
 | **A saved world** (offline) | World files on this computer, with the game closed. | Nothing. |
 
-**The Workshop**, the fourth card on the start page, needs no world at all. **A new world**, the
-fifth, makes a new world and helps you choose its seed ([docs/new-world.md](docs/new-world.md)).
+Under **Create**, **The Workshop** needs no world at all, and **A new world** makes a new world and
+helps you choose its seed ([docs/new-world.md](docs/new-world.md)). The start page opens on **Home**:
+the game when it runs (to edit it live), the worlds and blueprints you opened last, and the servers
+that connect in one click.
 
-![The start page, with the Workshop card open](docs/images/start-workshop.jpg)
+![The start page](docs/images/start-workshop.jpg)
 
 One program runs on Windows and Linux, and everything happens on your computer. Nothing is sent
 anywhere else.

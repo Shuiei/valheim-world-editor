@@ -1,6 +1,6 @@
 # A new world
 
-The start page's fifth card, **A new world**, makes a new Valheim world and helps you choose its
+**A new world**, under **Create** in the start page's side menu, makes a new Valheim world and helps you choose its
 seed. The world is a normal one, made by the game's own rules from its seed: everyone can join it
 without any mod, console players on crossplay included.
 

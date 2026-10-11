@@ -318,6 +318,7 @@ public static class Tips
 		["start.settings"] = "Where the game, BepInEx and worlds are on this computer.",
 		["start.docs"] = "The editor's documentation, in your web browser.",
 		["start.log"] = "Opens the editor's log (ValheimWorldEditor.log, started over at each run). Attach it to a bug report on GitHub: it says what the editor did and what went wrong.",
+		["start.home"] = "Pick up where you left off: the game when it runs (to edit it live), the worlds and blueprints you opened last, and the servers that connect in one click.",
 		["start.game"] = "Edit the world you are playing in, single player or the one you host. You see the changes in game right away.",
 		["start.server"] = "Edit your server's world while people play. The editor connects to the server itself.",
 		["start.offline"] = "Edit world files on this computer with the game closed, then start the game again.",

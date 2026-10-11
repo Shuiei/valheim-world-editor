@@ -281,7 +281,7 @@ public class TipsTests
 		string desktop = Path.Combine(EditorProcess.Fixtures(), "..", "..", "Desktop");
 		string code = string.Join("\n", Directory.GetFiles(desktop, "*.cs").Where(f => !f.EndsWith("Tips.cs")).Select(File.ReadAllText));
 		// Keys made in code: the area actions, the area's moves, the start page's choices.
-		bool Made(string k) => k.StartsWith("areaAct.") || k is "top.west" or "top.north" or "top.south" or "top.east" or "start.game" or "start.server" or "start.offline" || k.StartsWith("overlay.");
+		bool Made(string k) => k.StartsWith("areaAct.") || k is "top.west" or "top.north" or "top.south" or "top.east" or "start.home" or "start.game" or "start.server" or "start.offline" || k.StartsWith("overlay.");
 		var unused = Tips.Texts.Keys.Where(k => !Made(k) && !code.Contains($"\"{k}\"")).ToList();
 		Assert.True(unused.Count == 0, "Tips no control uses: " + string.Join(", ", unused));
 		Assert.All(Tips.Texts, kv => Assert.False(string.IsNullOrWhiteSpace(kv.Value), kv.Key));

@@ -41,12 +41,22 @@ public sealed class StartPage
 	internal StackPanel ServerPanel { get; } = new() { Spacing = 8 };
 	internal Expander ServerForm { get; } = new() { Header = new TextBlock { Text = "Connect to a server", FontWeight = FontWeight.SemiBold }, HorizontalAlignment = HorizontalAlignment.Stretch };
 	internal StackPanel OfflinePanel { get; } = new() { Spacing = 8 };
-	internal StackPanel WorkshopPanel { get; } = new() { Spacing = 8 };
-	internal StackPanel NewWorldPanel { get; } = new() { Spacing = 8 };
-	internal Button NewWorldButton { get; } = new Button { Content = "Make a new world", FontSize = 13 }.Classed("primary");
+	// Making something new, apart from editing a world: the Workshop and a new world.
+	internal Button NewWorldButton { get; } = new Button { Content = "Make a new world", FontSize = 13, HorizontalAlignment = HorizontalAlignment.Left }.Classed("primary");
 	public event Action? NewWorldRequested;
-	internal Button NewBuildingButton { get; } = new Button { Content = "Open the Workshop", FontSize = 13 }.Classed("primary");
+	internal Button NewBuildingButton { get; } = new Button { Content = "Open the Workshop", FontSize = 13, HorizontalAlignment = HorizontalAlignment.Left }.Classed("primary");
 	internal TextBlock WorkshopHomestead { get; } = new() { TextWrapping = TextWrapping.Wrap, FontSize = 12 };
+	// The pages the side menu shows (one at a time), and what Home and the Workshop list.
+	internal StackPanel HomePanel { get; } = new() { Spacing = 10 };
+	internal StackPanel WorkshopPanel { get; } = new() { Spacing = 10 };
+	internal StackPanel NewWorldPanel { get; } = new() { Spacing = 10 };
+	internal WrapPanel RecentTiles { get; } = new() { ItemSpacing = 12, LineSpacing = 12 };
+	internal WrapPanel BlueprintTiles { get; } = new() { ItemSpacing = 12, LineSpacing = 12 };
+	private readonly ContentControl _running = new();
+	private readonly TextBlock _homeError = Err();
+	private readonly TextBlock _pageTitle = new() { FontSize = 26, FontWeight = FontWeight.SemiBold };
+	private readonly TextBlock _pageText = new() { Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap, FontSize = 13.5, MaxWidth = 760, HorizontalAlignment = HorizontalAlignment.Left };
+	private readonly TextBlock _gameTag = new() { FontSize = 11, Foreground = new SolidColorBrush(Color.FromRgb(123, 196, 127)), VerticalAlignment = VerticalAlignment.Center };
 	internal WrapPanel WorldCards { get; } = new() { ItemSpacing = 10, LineSpacing = 10 };
 	internal TextBox PathBox { get; } = new() { PlaceholderText = "Folder of the world (with _main.<n>.chunks files)", FontSize = 13 };
 	internal TextBlock PathError { get; } = Err();
@@ -90,38 +100,32 @@ public sealed class StartPage
 		DocsLink.Click += async (_, _) => await OpenUrl(new Uri(DocsUrl));
 		LogLink.Tip("start.log");
 		LogLink.Click += async (_, _) => await OpenLog();
-		var modes = new UniformGrid { Columns = 5 };
-		foreach (var (key, title, tag, text, icon) in new[]
+		// The side menu: Home, the ways to edit a world, the ways to make something new.
+		var menu = new StackPanel { Spacing = 2 };
+		void Item(string key, string title, string icon, Control? tag = null)
 		{
-			("game", "My game", "live", "Edit the world you are playing in, single player or the one you host. You see the changes in game right away.", "game"),
-			("server", "A dedicated server", "live", "Edit your server's world while people play. The editor connects to the server itself.", "server"),
-			("offline", "A saved world", "offline", "Edit world files on this computer with the game closed, then start the game again.", "folder"),
-			("workshop", "The Workshop", "build", "Build a building on a blank plot and keep it as a blueprint, to build in game with Homestead.", "shape"),
-			("new", "A new world", "create", "Look at seeds before their world exists, find one that suits you, and make the world for the game.", "globe"),
-		})
-		{
-			var b = new Button
+			var label = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), ColumnSpacing = 10 };
+			label.Children.Add(Icons.Make(icon, 16));
+			label.Children.Add(Col(new TextBlock { Text = title, FontSize = 13.5, VerticalAlignment = VerticalAlignment.Center }, 1));
+			if (tag != null)
 			{
-				HorizontalAlignment = HorizontalAlignment.Stretch,
-				HorizontalContentAlignment = HorizontalAlignment.Left,
-				VerticalAlignment = VerticalAlignment.Stretch,
-				Margin = new Thickness(0, 0, 10, 0),
-				Padding = Ui.Pad,
-				Content = new StackPanel
-				{
-					Spacing = 4,
-					Children =
-					{
-						new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = { Icons.Make(icon, 20), new TextBlock { Text = title, FontSize = 15, FontWeight = FontWeight.SemiBold }, new TextBlock { Text = tag, FontSize = 11, Foreground = tag == "live" ? new SolidColorBrush(Color.FromRgb(123, 196, 127)) : Muted, VerticalAlignment = VerticalAlignment.Center } } },
-						new TextBlock { Text = text, FontSize = 12, Foreground = Muted, TextWrapping = TextWrapping.Wrap },
-					},
-				},
-			};
+				label.Children.Add(Col(tag, 2));
+			}
+			var b = new Button { Content = label, HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Stretch, Padding = new Thickness(12, 9) }.Classed("ghost");
 			b.Tip($"start.{key}");
 			b.Click += (_, _) => SetMode(key);
 			ModeButtons[key] = b;
-			modes.Children.Add(b);
+			menu.Children.Add(b);
 		}
+		TextBlock Section(string t) => new() { Text = t.ToUpperInvariant(), FontSize = 11, Foreground = Muted, FontWeight = FontWeight.SemiBold, Margin = new Thickness(12, 16, 0, 4) };
+		Item("home", "Home", "home");
+		menu.Children.Add(Section("Edit a world"));
+		Item("game", "My game", "game", _gameTag);
+		Item("server", "A dedicated server", "server");
+		Item("offline", "A saved world", "folder");
+		menu.Children.Add(Section("Create"));
+		Item("workshop", "The Workshop", "shape");
+		Item("new", "A new world", "globe");
 		if (lastError != null)
 		{
 			_lastError.Text = lastError;
@@ -133,7 +137,7 @@ public sealed class StartPage
 		GamePanel.Children.Add(_gameError);
 		GetHomesteadButton.Tip("blueprints.getHomestead");
 		GetHomesteadButton.Click += async (_, _) => await OpenUrl(new Uri(Homestead.PageUrl));
-		GamePanel.Children.Add(new StackPanel { Spacing = 4, Margin = new Thickness(2, 6, 0, 0), Children = { HomesteadText, GetHomesteadButton } });
+
 		_gameTimer.Tick += async (_, _) => await PollGame();
 
 		// A dedicated server.
@@ -159,75 +163,83 @@ public sealed class StartPage
 			},
 		}));
 
-		View = new ScrollViewer
+		NewBuildingButton.Tip("start.workshop");
+		NewBuildingButton.Click += (_, _) => WorkshopRequested?.Invoke(null);
+		NewWorldButton.Tip("start.new");
+		NewWorldButton.Click += (_, _) => NewWorldRequested?.Invoke();
+
+		// Home: the game when it runs, then what was opened last.
+		HomePanel.Children.Add(_running);
+		HomePanel.Children.Add(_homeError);
+		HomePanel.Children.Add(H2("Recent"));
+		HomePanel.Children.Add(RecentTiles);
+
+		// The Workshop: open it, Homestead's state, the blueprints to open in it.
+		WorkshopPanel.Children.Add(NewBuildingButton);
+		WorkshopPanel.Children.Add(new StackPanel { Spacing = 4, Children = { WorkshopHomestead, GetHomesteadButton } });
+		WorkshopPanel.Children.Add(H2("Your blueprints"));
+		WorkshopPanel.Children.Add(BlueprintTiles);
+
+		// A new world.
+		NewWorldPanel.Children.Add(NewWorldButton);
+		NewWorldPanel.Children.Add(Hint("The world is a normal Valheim world: players join it without any mod, consoles on crossplay included."));
+
+		var footer = new StackPanel
 		{
-			Background = Ui.Bg,
-			Content = new StackPanel
+			Spacing = 2,
+			Children =
 			{
-				MaxWidth = 980,
-				Margin = new Thickness(20, 30, 20, 50),
-				Spacing = 4,
+				settingsButton, DocsLink, LogLink,
+				new TextBlock { Text = $"v{BuildInfo.Version}", Foreground = Muted, FontSize = 11, Margin = new Thickness(12, 8, 0, 0) },
+				new TextBlock { Text = $"Settings, saved servers and log: {Tilde(AppSettings.DataDir)}", Foreground = Muted, FontSize = 10.5, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(12, 2, 8, 0) },
+			},
+		};
+		foreach (var b in new[] { settingsButton, DocsLink, LogLink })
+		{
+			b.HorizontalAlignment = HorizontalAlignment.Stretch;
+			b.HorizontalContentAlignment = HorizontalAlignment.Left;
+			b.Padding = new Thickness(12, 7);
+			b.FontSize = 12.5;
+		}
+		DockPanel.SetDock(footer, Dock.Bottom);
+		var side = new Border
+		{
+			Background = new SolidColorBrush(Color.FromRgb(24, 27, 33)),
+			BorderBrush = Line,
+			BorderThickness = new Thickness(0, 0, 1, 0),
+			Padding = new Thickness(14, 26, 14, 18),
+			Child = new DockPanel
+			{
 				Children =
 				{
-					new Grid
-					{
-						ColumnDefinitions = new ColumnDefinitions("Auto,Auto,*,Auto"),
-						Children =
-						{
-							Ui.BrandTitle(26),
-							Col(new TextBlock { Text = $"  v{BuildInfo.Version}", Foreground = Muted, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(6, 0, 0, 6) }, 1),
-							Col(settingsButton, 3),
-						},
-					},
-					new TextBlock { Text = "Shape the ground, paint it, build paths, place and move trees, rocks, crops and building pieces, copy and paste whole areas.", Foreground = Muted, TextWrapping = TextWrapping.Wrap },
-					_lastError,
-					LookBanner.View,
-					H2("How do you want to edit?"),
-					modes,
-					new Border { Height = 14 },
-					GamePanel,
-					ServerPanel,
-					OfflinePanel,
-					WorkshopPanel,
-					NewWorldPanel,
-					new StackPanel
-					{
-						Orientation = Orientation.Horizontal,
-						Spacing = 10,
-						Margin = new Thickness(0, 24, 0, 0),
-						Children = { DocsLink, LogLink, new TextBlock { Text = $"Settings, saved servers and log: {Tilde(AppSettings.DataDir)}", Foreground = Muted, FontSize = 11, VerticalAlignment = VerticalAlignment.Center } },
-					},
+					footer,
+					new StackPanel { Spacing = 0, Children = { Ui.BrandTitle(19), new Border { Height = 18 }, menu } },
 				},
 			},
 		};
-		NewBuildingButton.Tip("start.workshop");
-		NewBuildingButton.Click += (_, _) => WorkshopRequested?.Invoke(null);
-		WorkshopPanel.Children.Add(Card(new StackPanel
+		var main = new ScrollViewer
 		{
-			Spacing = 8,
-			Children =
+			Content = new StackPanel
 			{
-				new TextBlock { Text = "Build on a blank plot", FontSize = 15, FontWeight = FontWeight.SemiBold },
-				Hint("Place building pieces as with the game's hammer, move and turn them, see what would hold in game, then save it as a blueprint. Only the building is kept. "
-					+ "Your blueprints are in the Workshop's Library: open them, add them, or drag them onto the plot."),
-				NewBuildingButton,
+				MaxWidth = 1040,
+				HorizontalAlignment = HorizontalAlignment.Left,
+				Margin = new Thickness(40, 32, 30, 50),
+				Spacing = 6,
+				Children = { _lastError, LookBanner.View, _pageTitle, _pageText, new Border { Height = 8 }, HomePanel, GamePanel, ServerPanel, OfflinePanel, WorkshopPanel, NewWorldPanel },
 			},
-		}));
-		WorkshopPanel.Children.Add(WorkshopHomestead);
-		NewWorldButton.Tip("start.new");
-		NewWorldButton.Click += (_, _) => NewWorldRequested?.Invoke();
-		NewWorldPanel.Children.Add(Card(new StackPanel
+		};
+		Grid.SetColumn(main, 1);
+		View = new Grid { Background = Ui.Bg, ColumnDefinitions = new ColumnDefinitions("260,*"), Children = { side, main } };
+		// Homestead's state for the Workshop (looked for away from the window's thread).
+		_ = Task.Run(() => Homestead.Find(settings)).ContinueWith(t =>
 		{
-			Spacing = 8,
-			Children =
+			if (t.Status == TaskStatus.RanToCompletion)
 			{
-				new TextBlock { Text = "Make a new world", FontSize = 15, FontWeight = FontWeight.SemiBold },
-				Hint("See a seed's whole world from above before it exists (land, biomes, where the start is likely), or let the editor look through many seeds for one that suits you: "
-					+ "the start on a large landmass, the first Swamp or Mountain close by. The world is a normal Valheim world: friends on consoles can play it too."),
-				NewWorldButton,
-			},
-		}));
-		SetMode(settings.LastMode is "game" or "server" or "offline" or "workshop" or "new" ? settings.LastMode : "game");
+				ShowHomestead(t.Result);
+			}
+		}, TaskScheduler.FromCurrentSynchronizationContext());
+		// Home first: it shows the game when it runs and what was opened last.
+		SetMode("home");
 	}
 
 	private static Control Col(Control c, int col)
@@ -238,28 +250,47 @@ public sealed class StartPage
 
 	public string Mode => _mode;
 
+	// Each page's title and what it is for.
+	private static readonly Dictionary<string, (string Title, string Text)> Pages = new()
+	{
+		["home"] = ("Pick up where you left off", ""),
+		["game"] = ("My game", "Edit the world you are playing in, single player or the one you host. You see the changes in game right away."),
+		["server"] = ("A dedicated server", "Edit your server's world while people play. The editor connects to the server itself."),
+		["offline"] = ("A saved world", "Edit world files on this computer with the game closed, then start the game again."),
+		["workshop"] = ("The Workshop", "Build on a blank plot with every piece the game has, see what would hold, and keep it as a blueprint to build in game with Homestead. Your blueprints are in the Workshop's Library too: open them, add them, or drag them onto the plot."),
+		["new"] = ("A new world", "Look at seeds before their world exists: land, biomes, and exactly where the game will put the start, the bosses, the traders and the dungeons. Let the editor search many seeds for one that suits you, then make the world."),
+	};
+
 	public void SetMode(string mode)
 	{
 		_mode = mode;
 		foreach (var (k, b) in ModeButtons)
 		{
 			b.Classes.Set("on", k == mode);
-			b.BorderThickness = new Thickness(k == mode ? 2 : 1);
+			b.Background = k == mode ? Ui.Panel2 : Brushes.Transparent;
 		}
+		(_pageTitle.Text, _pageText.Text) = Pages[mode];
+		_pageText.IsVisible = _pageText.Text.Length > 0;
+		HomePanel.IsVisible = mode == "home";
 		GamePanel.IsVisible = mode == "game";
 		ServerPanel.IsVisible = mode == "server";
 		OfflinePanel.IsVisible = mode == "offline";
 		WorkshopPanel.IsVisible = mode == "workshop";
 		NewWorldPanel.IsVisible = mode == "new";
-		if (mode == "workshop")
-		{
-			FillWorkshop();
-		}
 		_gameTimer.Stop();
-		if (mode == "game")
+		// The game is watched on Home too (it offers to edit it live).
+		if (mode is "game" or "home")
 		{
 			_ = PollGame();
 			_gameTimer.Start();
+		}
+		if (mode == "home")
+		{
+			FillHome();
+		}
+		if (mode == "workshop")
+		{
+			FillBlueprints();
 		}
 		if (mode == "server")
 		{
@@ -303,6 +334,8 @@ public sealed class StartPage
 			return;
 		}
 		_gameKey = key;
+		_gameTag.Text = running != null ? "running" : "";
+		_running.Content = running == null ? null : RunningCard(running, where);
 		Control content;
 		if (running != null)
 		{
@@ -377,6 +410,145 @@ public sealed class StartPage
 	}
 
 	// ---- Saved worlds.
+	// Home's card when the game runs with the plugin: its world, and Edit live.
+	private Border RunningCard(LocalGame.Running running, string where)
+	{
+		var edit = new Button { Content = "Edit live", VerticalAlignment = VerticalAlignment.Center, FontSize = 13 }.Classed("primary").Tip("start.editLive");
+		var bridge = running.Bridge;
+		edit.Click += (_, _) => OpenLive(new LiveBridge($"http://127.0.0.1:{bridge.Port}", bridge.Token), "my game", "game", "Connecting to your game…");
+		return new Border
+		{
+			Background = new SolidColorBrush(Color.FromRgb(31, 42, 34)),
+			BorderBrush = new SolidColorBrush(Color.FromRgb(62, 107, 69)),
+			BorderThickness = new Thickness(1),
+			CornerRadius = new CornerRadius(10),
+			Padding = new Thickness(18, 14),
+			MaxWidth = 900,
+			HorizontalAlignment = HorizontalAlignment.Left,
+			Child = new Grid
+			{
+				ColumnDefinitions = new ColumnDefinitions("*,Auto"),
+				ColumnSpacing = 20,
+				Children =
+				{
+					new StackPanel { Children = { new TextBlock { Text = $"Valheim is running with the world {running.World}", FontSize = 15, FontWeight = FontWeight.SemiBold }, Hint($"{running.Players} player(s) connected · changes show in game at once{(where != "" ? $" ({where})" : "")}") } },
+					Col(edit, 1),
+				},
+			},
+		};
+	}
+
+	// Home's tiles: saved worlds and blueprints opened or saved last (newest first), then the servers
+	// that connect in one click.
+	internal void FillHome()
+	{
+		RecentTiles.Children.Clear();
+		var dated = new List<(DateTime When, Button Tile)>();
+		foreach (var r in _settings.Recent.Where(r => Directory.Exists(r.Path)).Take(8))
+		{
+			string path = r.Path;
+			dated.Add((r.Opened, Tile(null, "folder", Color.FromRgb(42, 58, 44), r.Name, $"Saved world · {Ago(r.Opened)}", Ui.Tilde(path), () => OpenFolder(path))));
+		}
+		foreach (var b in Blueprints().Take(4))
+		{
+			string path = b.Path;
+			dated.Add((b.Saved, Tile(b.Picture, "shape", Color.FromRgb(58, 48, 36), b.Name, $"Blueprint · {b.Pieces} pieces", "Open it in the Workshop", () => WorkshopRequested?.Invoke(path))));
+		}
+		foreach (var (_, tile) in dated.OrderByDescending(d => d.When).Take(8))
+		{
+			RecentTiles.Children.Add(tile);
+		}
+		foreach (var s in ServerConfig.Load().Where(s => s.Token != null && (s.Password != null || s.KeyFile != null)))
+		{
+			var server = s;
+			RecentTiles.Children.Add(Tile(null, "server", Color.FromRgb(40, 51, 70), s.Name, "Server · connects in one click", $"{s.User}@{s.Host}", async () =>
+				await Connect(new Tunnel.Request(server.Host, server.SshPort, server.User, server.Password, server.KeyFile, null, server.Token, null,
+					server.Password != null, server.Name, server.GameFolder), _homeError, $"Connecting to {server.Name}…")));
+		}
+		if (RecentTiles.Children.Count == 0)
+		{
+			RecentTiles.Children.Add(Hint("Nothing opened yet. Choose how to edit a world, or what to make, on the left."));
+		}
+	}
+
+	// The Workshop's tiles: every blueprint, newest first.
+	internal void FillBlueprints()
+	{
+		BlueprintTiles.Children.Clear();
+		foreach (var b in Blueprints())
+		{
+			string path = b.Path;
+			BlueprintTiles.Children.Add(Tile(b.Picture, "shape", Color.FromRgb(58, 48, 36), b.Name, $"{b.Pieces} pieces · {Ago(b.Saved)}", "Open it in the Workshop", () => WorkshopRequested?.Invoke(path)));
+		}
+		if (BlueprintTiles.Children.Count == 0)
+		{
+			BlueprintTiles.Children.Add(Hint("No blueprints yet: build one in the Workshop and save it."));
+		}
+	}
+
+	private static List<Homestead.Entry> Blueprints()
+	{
+		try
+		{
+			return Homestead.List(Homestead.Folder()).OrderByDescending(b => b.Saved).ToList();
+		}
+		catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+		{
+			return new();
+		}
+	}
+
+	// A tile: a picture (or the kind's icon on its colour), the name, a line under it.
+	private static Button Tile(string? picture, string icon, Color tint, string name, string line, string tip, Action open)
+	{
+		Control top = new Border { Background = new SolidColorBrush(tint), Child = new Viewbox { Width = 30, Height = 30, Child = Icons.Make(icon, 30), Opacity = 0.7 } };
+		if (picture != null && File.Exists(picture))
+		{
+			try
+			{
+				using var s = File.OpenRead(picture);
+				top = new Image { Source = new Avalonia.Media.Imaging.Bitmap(s), Stretch = Stretch.UniformToFill };
+			}
+			catch (Exception e) when (e is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
+			{
+				// The kind's icon instead.
+			}
+		}
+		var tile = new Button
+		{
+			Width = 220,
+			Padding = new Thickness(0),
+			HorizontalContentAlignment = HorizontalAlignment.Stretch,
+			VerticalContentAlignment = VerticalAlignment.Stretch,
+			Content = new StackPanel
+			{
+				Children =
+				{
+					new Border { Height = 100, ClipToBounds = true, CornerRadius = new CornerRadius(6, 6, 0, 0), Child = top },
+					new StackPanel
+					{
+						Margin = new Thickness(12, 10),
+						Spacing = 2,
+						Children =
+						{
+							new TextBlock { Text = name, FontSize = 14, FontWeight = FontWeight.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis },
+							new TextBlock { Text = line, FontSize = 12, Foreground = Muted, TextTrimming = TextTrimming.CharacterEllipsis },
+						},
+					},
+				},
+			},
+		};
+		ToolTip.SetTip(tile, tip);
+		tile.Click += (_, _) => open();
+		return tile;
+	}
+
+	private static string Ago(DateTime when)
+	{
+		int days = (DateTime.Now.Date - when.Date).Days;
+		return days <= 0 ? "today" : days == 1 ? "yesterday" : days < 14 ? $"{days} days ago" : when.ToString("d MMM yyyy", System.Globalization.CultureInfo.InvariantCulture);
+	}
+
 	internal void FillWorlds()
 	{
 		WorldCards.Children.Clear();
