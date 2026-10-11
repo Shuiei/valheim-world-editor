@@ -1,0 +1,13 @@
+#Name:Hut
+#Creator:Thor
+#Description:A small hut
+#Tags:house, viking
+#Category:Blueprints
+#HomesteadVersion:1
+#HomesteadWorld:CITest
+#HomesteadSavedAt:2026-10-01 12:00:00 +02:00
+#HomesteadRadius:4.5
+#EditorData:0;strings;-1234;Hello
+#Pieces
+wood_floor;Building;0;0;0;0;0;0;1;"";1;1;1
+wood_wall_half;Building;1.5;0.25;-2.5;0;0.7071068;0;0.7071068;"";1;1;1

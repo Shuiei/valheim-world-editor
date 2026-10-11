@@ -2610,7 +2610,7 @@ public sealed partial class MainWindow : Window
         };
         View.Status += t => { Options.Say(t); Dispatcher.UIThread.Post(() => _info.Text = t + "\n" + _info.Text); };
         // Once really closed (Closing also comes when "Keep editing" keeps the window open).
-        Closed += (_, _) => { _perf.Flush(); Prefs.Flush(); };
+        Closed += (_, _) => { MapPage?.Dispose(); _perf.Flush(); Prefs.Flush(); };
         RememberPrefs();
         _info.Text = "Loading the world…";
         Opened += async (_, _) =>

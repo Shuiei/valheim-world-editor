@@ -100,13 +100,13 @@ public sealed class InventoryData
         if ((b & 0x20) != 0)
         {
             it.CrafterId = r.ReadInt64();
-            it.CrafterName = r.ReadString();
+            it.CrafterName = r.ReadCheckedString();
         }
         it.Prefab = (b & 0x40) != 0 ? r.ReadInt32() : 0;
         int custom = (b & 0x80) != 0 ? ReadNumItems(r) : 0;
         for (int c = 0; c < custom; c++)
         {
-            it.CustomData[r.ReadString()] = r.ReadString();
+            it.CustomData[r.ReadCheckedString()] = r.ReadCheckedString();
         }
         if (version is >= 109 or 107)
         {

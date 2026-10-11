@@ -156,57 +156,66 @@ public static class Homestead
     {
         try
         {
-            string? name = null, creator = null, world = null, description = null, tags = null;
-            int pieces = 0;
-            var kinds = new Dictionary<string, int>();
-            bool inPieces = false;
-            foreach (string raw in File.ReadLines(file))
-            {
-                string line = raw.Trim();
-                if (line.StartsWith("#Name:", StringComparison.OrdinalIgnoreCase))
-                {
-                    name = line[6..].Trim();
-                }
-                else if (line.StartsWith("#Creator:", StringComparison.OrdinalIgnoreCase))
-                {
-                    creator = line[9..].Trim();
-                }
-                else if (line.StartsWith("#Description:", StringComparison.OrdinalIgnoreCase))
-                {
-                    description = line[13..].Trim().Trim('"');
-                }
-                else if (line.StartsWith("#Tags:", StringComparison.OrdinalIgnoreCase))
-                {
-                    tags = line[6..];
-                }
-                else if (line.StartsWith("#HomesteadWorld:", StringComparison.OrdinalIgnoreCase))
-                {
-                    world = line[16..].Trim();
-                }
-                else if (line.StartsWith('#'))
-                {
-                    inPieces = line.Equals("#Pieces", StringComparison.OrdinalIgnoreCase);
-                }
-                else if (inPieces && line.Length > 0)
-                {
-                    pieces++;
-                    string kind = line.Split(';')[0].Trim();
-                    kinds[kind] = kinds.GetValueOrDefault(kind) + 1;
-                }
-            }
+            Entry entry = Read(file, File.ReadLines(file));
             string png = Path.ChangeExtension(file, ".png");
-            return new Entry(file, string.IsNullOrWhiteSpace(name) ? Path.GetFileNameWithoutExtension(file) : name, creator,
-                string.IsNullOrWhiteSpace(world) ? null : world, pieces, File.Exists(png) ? png : null, File.GetLastWriteTime(file))
-            {
-                Description = description ?? "",
-                Tags = Details.ParseTags(tags),
-                Kinds = kinds,
-            };
+            return entry with { Picture = File.Exists(png) ? png : null, Saved = File.GetLastWriteTime(file) };
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             return null;
         }
+    }
+
+    /// <summary>A blueprint from its lines, without its picture or time yet.</summary>
+    /// <param name="file">Its path, for the entry's name when it has no #Name:.</param>
+    /// <param name="lines">The file's lines.</param>
+    public static Entry Read(string file, IEnumerable<string> lines)
+    {
+        string? name = null, creator = null, world = null, description = null, tags = null;
+        int pieces = 0;
+        var kinds = new Dictionary<string, int>();
+        bool inPieces = false;
+        foreach (string raw in lines)
+        {
+            string line = raw.Trim();
+            if (line.StartsWith("#Name:", StringComparison.OrdinalIgnoreCase))
+            {
+                name = line[6..].Trim();
+            }
+            else if (line.StartsWith("#Creator:", StringComparison.OrdinalIgnoreCase))
+            {
+                creator = line[9..].Trim();
+            }
+            else if (line.StartsWith("#Description:", StringComparison.OrdinalIgnoreCase))
+            {
+                description = line[13..].Trim().Trim('"');
+            }
+            else if (line.StartsWith("#Tags:", StringComparison.OrdinalIgnoreCase))
+            {
+                tags = line[6..];
+            }
+            else if (line.StartsWith("#HomesteadWorld:", StringComparison.OrdinalIgnoreCase))
+            {
+                world = line[16..].Trim();
+            }
+            else if (line.StartsWith('#'))
+            {
+                inPieces = line.Equals("#Pieces", StringComparison.OrdinalIgnoreCase);
+            }
+            else if (inPieces && line.Length > 0)
+            {
+                pieces++;
+                string kind = line.Split(';')[0].Trim();
+                kinds[kind] = kinds.GetValueOrDefault(kind) + 1;
+            }
+        }
+        return new Entry(file, string.IsNullOrWhiteSpace(name) ? Path.GetFileNameWithoutExtension(file) : name, creator,
+            string.IsNullOrWhiteSpace(world) ? null : world, pieces, null, default)
+        {
+            Description = description ?? "",
+            Tags = Details.ParseTags(tags),
+            Kinds = kinds,
+        };
     }
 
     /// <summary>

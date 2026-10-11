@@ -21,7 +21,7 @@ namespace TerrainEditor.Desktop;
 /// (toward the mouse), click to pick a spot. Lines on top: the chosen area, edited zones, zones marked for reset, and
 /// the zone grid.
 /// </summary>
-public sealed class MapView : OpenGlControlBase
+public sealed class MapView : OpenGlControlBase, IDisposable
 {
     /// <summary>
     /// The OpenGL functions of the current context.
@@ -47,6 +47,10 @@ public sealed class MapView : OpenGlControlBase
     /// The open world's map data (made from its terrain and edits), or null before a world is shown.
     /// </summary>
     private MapData? _data;
+    /// <summary>
+    /// Stops the world map's build when another world is shown.
+    /// </summary>
+    private CancellationTokenSource? _build;
     /// <summary>
     /// The world shown, or null before one is.
     /// </summary>
@@ -177,7 +181,10 @@ public sealed class MapView : OpenGlControlBase
     public void Show(WorldSession session)
     {
         _session = session;
-        _data = new MapData(session.Terrain, session.Edits);
+        // The last world's map is no longer wanted: its build stops, and gives its threads back.
+        StopBuild();
+        var build = _build = new CancellationTokenSource();
+        _data = new MapData(session.Terrain, session.Edits, build.Token);
         _global = null;
         _globalShown = false;
         _detail = null;
@@ -185,17 +192,49 @@ public sealed class MapView : OpenGlControlBase
         ReadPieces();
         Status?.Invoke("Building the world map (same as the game does)…");
         var data = _data;
-        Task.Run(() =>
+        // On a thread of its own (LongRunning), not one of the pool's: the build keeps all the cores but one
+        // busy, and the pool keeps the rest for everything else.
+        Task.Factory.StartNew(() =>
         {
-            var g = data.Global;
-            if (_data == data)
+            MapData.Layers g;
+            try
             {
-                _global = g;
-                Dispatcher.UIThread.Post(() => { Status?.Invoke(""); RequestNextFrameRendering(); });
+                g = data.Global;
             }
-        });
+            catch (OperationCanceledException)
+            {
+                return;
+            }
+            // Kept on the UI thread, where Show and Dispose change _data: only if this world is still the one shown.
+            Dispatcher.UIThread.Post(() =>
+            {
+                if (_data != data)
+                {
+                    return;
+                }
+                _global = g;
+                Status?.Invoke("");
+                RequestNextFrameRendering();
+            });
+        }, build.Token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
         RequestNextFrameRendering();
     }
+
+    /// <summary>
+    /// Stops the world map's build, if one runs; one that finishes anyway is not shown.
+    /// </summary>
+    private void StopBuild()
+    {
+        _data = null;
+        _build?.Cancel();
+        _build?.Dispose();
+        _build = null;
+    }
+
+    /// <summary>
+    /// Leaving the map for good: its build is stopped.
+    /// </summary>
+    public void Dispose() => StopBuild();
 
     /// <summary>
     /// The map data changed (edits saved, discarded): the close-up and the player-built pieces are read again.
@@ -690,18 +729,24 @@ public sealed class MapView : OpenGlControlBase
         var data = _data;
         Task.Run(() =>
         {
+            MapData.Layers? layers = null;
             try
             {
-                var layers = data.Detail(x0, z0, size, version);
-                if (_data == data)
-                {
-                    _detail = (layers, x0, z0, size, version);
-                }
+                layers = data.Detail(x0, z0, size, version);
             }
             finally
             {
-                _asking = false;
-                Dispatcher.UIThread.Post(RequestNextFrameRendering);
+                // As the world map: kept on the UI thread, only if this world is still the one shown. Asking again
+                // only once it is there (or failed), else a frame drawn meanwhile would ask for the same close-up.
+                Dispatcher.UIThread.Post(() =>
+                {
+                    if (layers != null && _data == data)
+                    {
+                        _detail = (layers, x0, z0, size, version);
+                    }
+                    _asking = false;
+                    RequestNextFrameRendering();
+                });
             }
         });
     }
