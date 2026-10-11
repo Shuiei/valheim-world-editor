@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
+using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
@@ -32,12 +33,18 @@ public sealed class NewWorldPage : IDisposable
 	internal ComboBox Where { get; } = new() { HorizontalAlignment = HorizontalAlignment.Stretch, FontSize = 12 };
 	internal Button Create { get; } = new Button { Content = "Create world", FontSize = 13 }.Classed("primary");
 	internal TextBlock Problem { get; } = new() { Foreground = new SolidColorBrush(Avalonia.Media.Color.FromRgb(224, 96, 75)), TextWrapping = TextWrapping.Wrap, FontSize = 12 };
-	internal Image Picture { get; } = new() { Width = 460, Height = 460, Stretch = Stretch.Uniform };
-	// The landmarks over the picture, and which kinds show.
-	internal Canvas Marks { get; } = new() { Width = 460, Height = 460 };
-	internal CheckBox ShowBosses { get; } = new() { IsChecked = true, FontSize = 12 };
-	internal CheckBox ShowTraders { get; } = new() { IsChecked = true, FontSize = 12 };
-	internal TextBlock Stats { get; } = new() { FontSize = 12, TextWrapping = TextWrapping.Wrap, Width = 460 };
+	// The seed's map, the landmarks over it, and which kinds show (switches over the map's corner, as
+	// the editor's View panel).
+	internal SeedMap Map { get; } = new();
+	internal Canvas Marks { get; } = new() { ClipToBounds = true };
+	internal CheckBox ShowStart { get; } = Toggle("start", "", "The start");
+	internal CheckBox ShowBosses { get; } = Toggle("boss", "", "Bosses' altars");
+	internal CheckBox ShowHaldor { get; } = Toggle("trader", "Haldor", "Haldor");
+	internal CheckBox ShowBogWitch { get; } = Toggle("trader", "The Bog Witch", "Bog Witch");
+	internal CheckBox ShowHildir { get; } = Toggle("trader", "Hildir", "Hildir");
+	internal TextBlock Readout { get; } = new() { FontSize = 11, Foreground = Ui.Muted, Margin = new Thickness(8, 0, 0, 6), VerticalAlignment = VerticalAlignment.Bottom, HorizontalAlignment = HorizontalAlignment.Left, IsHitTestVisible = false };
+	// What the seed's world holds, as lists.
+	internal StackPanel Info { get; } = new() { Spacing = 14 };
 	// Finding a seed.
 	internal CheckBox BigLand { get; } = new() { Content = "The start on a large landmass", IsChecked = true, FontSize = 12 };
 	internal CheckBox LandAround { get; } = new() { Content = "Land all around the start", IsChecked = true, FontSize = 12 };
@@ -99,10 +106,19 @@ public sealed class NewWorldPage : IDisposable
 		BogWitch.Tip("newWorld.trader");
 		Hildir.Tip("newWorld.trader");
 		Bosses.Tip("newWorld.bosses");
+		ShowStart.Tip("newWorld.showStart");
 		ShowBosses.Tip("newWorld.showBosses");
-		ShowTraders.Tip("newWorld.showTraders");
-		ShowBosses.IsCheckedChanged += (_, _) => PlaceMarks();
-		ShowTraders.IsCheckedChanged += (_, _) => PlaceMarks();
+		foreach (var t in new[] { ShowHaldor, ShowBogWitch, ShowHildir })
+		{
+			t.Tip("newWorld.showTrader");
+		}
+		foreach (var t in new[] { ShowStart, ShowBosses, ShowHaldor, ShowBogWitch, ShowHildir })
+		{
+			t.IsCheckedChanged += (_, _) => PlaceMarks();
+		}
+		Map.Tip("newWorld.map");
+		Map.ViewChanged += PlaceMarks;
+		Map.Hovered += (x, z) => Readout.Text = $"{x:0}, {z:0}";
 		Find.Tip("newWorld.find");
 		Roll.Click += (_, _) => SeedBox.Text = SeedPreview.RandomSeed();
 		SeedBox.TextChanged += (_, _) => { _wait.Stop(); _wait.Start(); };
@@ -150,43 +166,57 @@ public sealed class NewWorldPage : IDisposable
 				new ScrollViewer { MaxHeight = 330, Content = Found },
 			},
 		});
-		var left = new StackPanel { Spacing = 10, Width = 420, Children = { world, search } };
-		var right = Ui.Card(new StackPanel
+		var left = new ScrollViewer { Content = new StackPanel { Spacing = 10, Children = { world, search } }, Padding = new Thickness(0, 0, 10, 0) };
+		static Button ZoomButton(string text, string tip) => new Button { Content = text, FontSize = 13, Width = 30, Height = 30, Padding = new Thickness(0), HorizontalContentAlignment = HorizontalAlignment.Center }.Tip(tip);
+		var zoomIn = ZoomButton("+", "newWorld.zoomIn");
+		var zoomOut = ZoomButton("−", "newWorld.zoomOut");
+		var fit = ZoomButton("⤢", "newWorld.fit");
+		zoomIn.Click += (_, _) => Map.Zoom(1 / 1.6);
+		zoomOut.Click += (_, _) => Map.Zoom(1.6);
+		fit.Click += (_, _) => Map.Fit();
+		var toggles = new Border
 		{
-			Spacing = 8,
-			Children =
+			Background = Ui.Panel,
+			BorderBrush = Ui.Line,
+			BorderThickness = new Thickness(1),
+			CornerRadius = new CornerRadius(10),
+			Padding = new Thickness(12, 10),
+			Margin = new Thickness(10),
+			HorizontalAlignment = HorizontalAlignment.Right,
+			VerticalAlignment = VerticalAlignment.Top,
+			Child = new StackPanel
 			{
-				new Border { BorderBrush = Ui.Line, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(4), Child = new Panel { Children = { Picture, Marks } }, HorizontalAlignment = HorizontalAlignment.Left },
-				new StackPanel
-				{
-					Orientation = Orientation.Horizontal, Spacing = 14,
-					Children =
-					{
-						Legend(Mark("start"), "The start"),
-						Legend(Mark("boss"), "Bosses' altars", ShowBosses),
-						Legend(new StackPanel
-						{
-							Orientation = Orientation.Horizontal, Spacing = 10,
-							Children = { Legend(Mark("trader", "Haldor"), "Haldor"), Legend(Mark("trader", "The Bog Witch"), "Bog Witch"), Legend(Mark("trader", "Hildir"), "Hildir") },
-						}, "", ShowTraders),
-					},
-				},
-				Stats,
-			},
-		});
-		View = new ScrollViewer
-		{
-			Content = new StackPanel
-			{
-				Margin = new Thickness(20),
-				Spacing = 12,
+				Spacing = 8,
 				Children =
 				{
-					new StackPanel { Orientation = Orientation.Horizontal, Spacing = 12, Children = { back, new TextBlock { Text = "A new world", FontSize = 20, FontWeight = FontWeight.SemiBold, VerticalAlignment = VerticalAlignment.Center } } },
-					new StackPanel { Orientation = Orientation.Horizontal, Spacing = 14, Children = { left, new StackPanel { VerticalAlignment = VerticalAlignment.Top, Children = { right } } } },
+					new TextBlock { Text = "On the map", FontSize = 12, FontWeight = FontWeight.SemiBold },
+					ShowStart, ShowBosses, ShowHaldor, ShowBogWitch, ShowHildir,
 				},
 			},
 		};
+		var zoom = new StackPanel { Spacing = 4, Margin = new Thickness(10), HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Bottom, Children = { zoomIn, zoomOut, fit } };
+		var map = new Border
+		{
+			BorderBrush = Ui.Line,
+			BorderThickness = new Thickness(1),
+			CornerRadius = new CornerRadius(6),
+			ClipToBounds = true,
+			Child = new Panel { Children = { Map, Marks, Readout, toggles, zoom } },
+		};
+		var info = new ScrollViewer { Content = Info, Padding = new Thickness(0, 0, 8, 0) };
+		var right = new Grid { ColumnDefinitions = new ColumnDefinitions("*,14,320") };
+		right.Children.Add(map);
+		Grid.SetColumn(info, 2);
+		right.Children.Add(info);
+		var body = new Grid { ColumnDefinitions = new ColumnDefinitions("440,14,*") };
+		body.Children.Add(left);
+		Grid.SetColumn(right, 2);
+		body.Children.Add(right);
+		var page = new Grid { RowDefinitions = new RowDefinitions("Auto,*"), Margin = new Thickness(20), RowSpacing = 12 };
+		page.Children.Add(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 12, Children = { back, new TextBlock { Text = "A new world", FontSize = 20, FontWeight = FontWeight.SemiBold, VerticalAlignment = VerticalAlignment.Center } } });
+		Grid.SetRow(body, 1);
+		page.Children.Add(body);
+		View = page;
 		ShowSeed(SeedBox.Text);
 	}
 
@@ -201,6 +231,7 @@ public sealed class NewWorldPage : IDisposable
 	{
 		StopAll();
 		_wait.Stop();
+		Map.Dispose();
 		_search?.Dispose();
 		_preview?.Dispose();
 	}
@@ -212,19 +243,23 @@ public sealed class NewWorldPage : IDisposable
 		Problem.Text = "";
 		if (seed.Length == 0 || seed.Length > 10)
 		{
-			Stats.Text = "The seed is 1 to 10 characters, as in the game.";
-			Picture.Source = null;
+			Note("The seed is 1 to 10 characters, as in the game.");
+			Map.Clear();
+			Marks.Children.Clear();
 			Shown = null;
 			return;
 		}
 		var cancel = _preview = new CancellationTokenSource();
-		Stats.Text = "Looking at the world…";
+		if (Shown == null)
+		{
+			Note("Looking at the world…");
+		}
 		// The game's own location rules first (read once, the first time in a few seconds).
 		var rules = GameLocations.UseGameRules(GameLook.Bundles);
 		Pending = Task.Run(async () =>
 		{
 			await rules.ConfigureAwait(false);
-			return SeedPreview.Make(seed, 200, parallel: true, landmarks: true, cancel.Token);
+			return SeedPreview.Make(seed, 512, parallel: true, landmarks: true, cancel.Token);
 		}, cancel.Token).ContinueWith(t =>
 		{
 			if (cancel.IsCancellationRequested || t.Status != TaskStatus.RanToCompletion)
@@ -237,13 +272,107 @@ public sealed class NewWorldPage : IDisposable
 
 	private void Show(SeedPreview.Preview p)
 	{
+		bool same = Shown?.Seed == p.Seed;
 		Shown = p;
-		Picture.Source = Draw(p, 460, startDot: false);
-		Stats.Text = Describe(p.Stats) + (p.Landmarks == null
-			? "\nThe bosses and traders could not be read from the game's files (the log says why): they are not shown, and the search cannot look for them."
-			: "");
+		Map.Show(p, keepView: same);
+		ShowInfo(p);
 		PlaceMarks();
 	}
+
+	private void Note(string text)
+	{
+		Info.Children.Clear();
+		Info.Children.Add(Ui.Hint(text));
+	}
+
+	// The lists beside the map: the world, its biomes, the traders, the bosses. A trader's or boss's row
+	// shows the nearest on the map.
+	private void ShowInfo(SeedPreview.Preview p)
+	{
+		var s = p.Stats;
+		Info.Children.Clear();
+		Info.Children.Add(Section("The world",
+			Item(null, "Land", $"{s.Land * 100:0} % of the world"),
+			Item(null, "The start's landmass", $"{s.StartContinent * 100:0} % of the land"),
+			Item(null, "The largest landmass", $"{s.MainContinent * 100:0} % of the land"),
+			Item(null, "Land around the start", $"{s.LandNearStart * 100:0} %"),
+			Item(Mark("start"), "The start", $"{s.Start.X:0}, {s.Start.Z:0}", s.TempleStart ? "where the game will put its start temple" : "likely: the game puts it in Meadows close to the middle", () => Map.LookAt(s.Start.X, s.Start.Z))));
+		var biomes = SeedPreview.Biomes.Where(b => s.Shares[b] > 0.0005f || b == Heightmap.Biome.Meadows).Select(b =>
+		{
+			var (r, g, bl) = MapData.PixelColor(b);
+			var swatch = new Border { Width = 10, Height = 10, CornerRadius = new CornerRadius(2), Background = new SolidColorBrush(Avalonia.Media.Color.FromRgb(r, g, bl)) };
+			string nearest = b == Heightmap.Biome.Meadows ? "" : Km(s.Distance[b]) + (s.SameLand[b] || float.IsPositiveInfinity(s.Distance[b]) ? "" : " by sea");
+			return Item(swatch, Name(b), nearest, $"{s.Shares[b] * 100:0} % of the land");
+		}).ToArray();
+		Info.Children.Add(Section("Biomes (the nearest from the start)", biomes));
+		if (p.Landmarks is not { } marks)
+		{
+			Info.Children.Add(Ui.Hint("The bosses and traders could not be read from the game's files (the log says why): they are not shown, and the search cannot look for them."));
+			return;
+		}
+		Control Of(string kind, string name)
+		{
+			var all = marks.Where(m => m.Name == name).ToList();
+			var near = all.OrderBy(m => (m.X - s.Start.X) * (m.X - s.Start.X) + (m.Z - s.Start.Z) * (m.Z - s.Start.Z)).FirstOrDefault();
+			string value = near == null ? "none" : Km(MathF.Sqrt((near.X - s.Start.X) * (near.X - s.Start.X) + (near.Z - s.Start.Z) * (near.Z - s.Start.Z)));
+			string detail = all.Count == 0 ? "" : kind == "trader" ? $"{all.Count} spots" : all.Count == 1 ? "1 altar" : $"{all.Count} altars";
+			return Item(Mark(kind, name), name, value, detail, near == null ? null : () => Map.LookAt(near.X, near.Z));
+		}
+		Info.Children.Add(Section("Traders (the nearest spot)", SeedPreview.Landmarks.Where(l => l.Kind == "trader").Select(l => Of("trader", l.Name)).ToArray()));
+		Info.Children.Add(Ui.Hint("Each trader has several spots: the first one players come near becomes the trader's camp, the others vanish."));
+		Info.Children.Add(Section("Bosses (the nearest altar)", SeedPreview.Landmarks.Where(l => l.Kind == "boss").Select(l => Of("boss", l.Name)).ToArray()));
+	}
+
+	private static StackPanel Section(string title, params Control[] items)
+	{
+		var list = new StackPanel { Spacing = 2 };
+		list.Children.Add(new TextBlock { Text = title, FontSize = 13, FontWeight = FontWeight.SemiBold, Margin = new Thickness(0, 0, 0, 4) });
+		foreach (var c in items)
+		{
+			list.Children.Add(c);
+		}
+		return list;
+	}
+
+	// One row: a mark, the name, the value, a detail under it; show: what clicking it does.
+	private static Border Item(Control? mark, string name, string value, string detail = "", Action? show = null)
+	{
+		var row = new Grid { ColumnDefinitions = new ColumnDefinitions("18,*,Auto") };
+		if (mark != null)
+		{
+			mark.VerticalAlignment = VerticalAlignment.Center;
+			mark.HorizontalAlignment = HorizontalAlignment.Left;
+			row.Children.Add(mark);
+		}
+		var label = new StackPanel { Spacing = 1, VerticalAlignment = VerticalAlignment.Center, Children = { new TextBlock { Text = name, FontSize = 12.5 } } };
+		if (detail.Length > 0)
+		{
+			label.Children.Add(new TextBlock { Text = detail, FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap });
+		}
+		Grid.SetColumn(label, 1);
+		row.Children.Add(label);
+		var v = new TextBlock { Text = value, FontSize = 12.5, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(8, 0, 0, 0) };
+		Grid.SetColumn(v, 2);
+		row.Children.Add(v);
+		var item = new Border { Child = row, Padding = new Thickness(6, 4), CornerRadius = new CornerRadius(5), Background = Brushes.Transparent };
+		if (show != null)
+		{
+			item.Cursor = new Cursor(StandardCursorType.Hand);
+			ToolTip.SetTip(item, "Show it on the map");
+			item.PointerEntered += (_, _) => item.Background = Ui.Panel2;
+			item.PointerExited += (_, _) => item.Background = Brushes.Transparent;
+			item.PointerPressed += (_, _) => show();
+		}
+		return item;
+	}
+
+	// A switch for one kind of mark, with its mark beside the name.
+	private static CheckBox Toggle(string kind, string name, string text) => new CheckBox
+	{
+		IsChecked = true,
+		FontSize = 12.5,
+		Content = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { Mark(kind, name), new TextBlock { Text = text, VerticalAlignment = VerticalAlignment.Center } } },
+	}.Classed("switch");
 
 	// The landmark kinds' looks: the start red, bosses purple diamonds, each trader a colour of its own.
 	private static SolidColorBrush Fill(string kind, string name = "") => new SolidColorBrush(kind switch
@@ -266,23 +395,7 @@ public sealed class NewWorldPage : IDisposable
 			: new Avalonia.Controls.Shapes.Ellipse { Width = kind == "start" ? 11 : 9, Height = kind == "start" ? 11 : 9, Fill = Fill(kind, name), Stroke = kind == "start" ? Brushes.White : outline, StrokeThickness = kind == "start" ? 2 : 1 };
 	}
 
-	private static Control Legend(Control mark, string text, CheckBox? toggle = null)
-	{
-		mark.VerticalAlignment = VerticalAlignment.Center;
-		var label = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 5, Children = { mark } };
-		if (text.Length > 0)
-		{
-			label.Children.Add(new TextBlock { Text = text, FontSize = 11, VerticalAlignment = VerticalAlignment.Center });
-		}
-		if (toggle is null)
-		{
-			return label;
-		}
-		toggle.Content = label;
-		return toggle;
-	}
-
-	// The shown seed's landmarks over the picture (north up), each with what it is and how far.
+	// The shown seed's landmarks over the map, each with what it is and how far.
 	internal void PlaceMarks()
 	{
 		Marks.Children.Clear();
@@ -291,10 +404,17 @@ public sealed class NewWorldPage : IDisposable
 			return;
 		}
 		var start = Shown.Stats.Start;
+		bool Showing(SeedPreview.Landmark m) => (m.Kind switch
+		{
+			"start" => ShowStart,
+			"boss" => ShowBosses,
+			_ => m.Name switch { "The Bog Witch" => ShowBogWitch, "Hildir" => ShowHildir, _ => ShowHaldor },
+		}).IsChecked == true;
 		// The start last: on top.
 		foreach (var m in marks.OrderBy(m => m.Kind == "start"))
 		{
-			if ((m.Kind == "boss" && ShowBosses.IsChecked != true) || (m.Kind == "trader" && ShowTraders.IsChecked != true))
+			var at = Map.ScreenOf(m.X, m.Z);
+			if (!Showing(m) || at.X < -10 || at.Y < -10 || at.X > Map.Bounds.Width + 10 || at.Y > Map.Bounds.Height + 10)
 			{
 				continue;
 			}
@@ -308,8 +428,8 @@ public sealed class NewWorldPage : IDisposable
 			}
 			ToolTip.SetTip(c, tip);
 			double size = c.Width;
-			Canvas.SetLeft(c, (m.X + SeedPreview.Radius) / (2 * SeedPreview.Radius) * Marks.Width - size / 2);
-			Canvas.SetTop(c, (SeedPreview.Radius - m.Z) / (2 * SeedPreview.Radius) * Marks.Height - size / 2);
+			Canvas.SetLeft(c, at.X - size / 2);
+			Canvas.SetTop(c, at.Y - size / 2);
 			Marks.Children.Add(c);
 		}
 	}
@@ -345,8 +465,8 @@ public sealed class NewWorldPage : IDisposable
 		_ => b.ToString(),
 	};
 
-	// The preview as a picture of px pixels: the game map's biome colours, shaded by height, the sea by
-	// depth, the start in red, north up.
+	// The preview as a small picture of px pixels (a search's results): the map's colours (SeedMap.Shade),
+	// the start in red, north up.
 	internal static WriteableBitmap Draw(SeedPreview.Preview p, int px, bool startDot = true)
 	{
 		var bmp = new WriteableBitmap(new PixelSize(px, px), new Vector(96, 96), PixelFormat.Bgra8888, AlphaFormat.Premul);
@@ -359,31 +479,7 @@ public sealed class NewWorldPage : IDisposable
 			for (int x = 0; x < px; x++)
 			{
 				int i = x * p.Size / px, k = j * p.Size + i;
-				byte r, g, b;
-				var (cx, cz) = p.CellCenter(i, j);
-				if (cx * cx + cz * cz > SeedPreview.Radius * SeedPreview.Radius)
-				{
-					(r, g, b) = (18, 22, 28);
-				}
-				else if (p.Biome[k] == SeedPreview.Ocean)
-				{
-					float d = Math.Clamp((TerrainService.WaterLevel - p.Height[k]) / 60f, 0, 1);
-					(r, g, b) = ((byte)(48 - 28 * d), (byte)(98 - 50 * d), (byte)(150 - 50 * d));
-				}
-				else
-				{
-					var (br, bg, bb) = MapData.PixelColor(SeedPreview.Biomes[p.Biome[k]]);
-					if (p.Height[k] < TerrainService.WaterLevel)
-					{
-						// Water on land (swamp pools, rivers, lakes): the biome under a blue tint.
-						(r, g, b) = ((byte)((br + 2 * 48) / 3), (byte)((bg + 2 * 98) / 3), (byte)((bb + 2 * 150) / 3));
-					}
-					else
-					{
-						float lift = Math.Clamp((p.Height[k] - TerrainService.WaterLevel) / 120f, 0, 1) * 0.35f;
-						(r, g, b) = ((byte)(br + (255 - br) * lift), (byte)(bg + (255 - bg) * lift), (byte)(bb + (255 - bb) * lift));
-					}
-				}
+				var (r, g, b) = SeedMap.Shade(p.Biome[k], p.Height[k]);
 				if (startDot && Math.Abs(i - startI) <= Math.Max(1, p.Size / 100) && Math.Abs(j - startJ) <= Math.Max(1, p.Size / 100))
 				{
 					(r, g, b) = (230, 40, 40);

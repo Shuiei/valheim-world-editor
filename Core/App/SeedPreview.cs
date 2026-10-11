@@ -57,12 +57,16 @@ public static class SeedPreview
 
 	// Size x Size cells of Cell metres over the world, row 0 the south: biome (index in Biomes, 255
 	// ocean or outside), ground height.
-	public sealed record Preview(string Seed, int Size, float Cell, byte[] Biome, float[] Height, Stats Stats, IReadOnlyList<Landmark>? Landmarks = null)
+	// Generator: the seed's, for a closer look at a part (Sample).
+	public sealed record Preview(string Seed, int Size, float Cell, byte[] Biome, float[] Height, Stats Stats, IReadOnlyList<Landmark>? Landmarks = null, WorldGenerator? Generator = null)
 	{
 		public (float X, float Z) CellCenter(int i, int j) => (-Radius + (i + 0.5f) * Cell, -Radius + (j + 0.5f) * Cell);
 	}
 
 	public const byte Ocean = 255;
+
+	// The height of a cell past the world's edge.
+	public const float Outside = float.NegativeInfinity;
 
 	public static WorldGenerator Generator(string seedName) => WorldGenerator.Create(new World
 	{
@@ -75,34 +79,7 @@ public static class SeedPreview
 	{
 		var gen = Generator(seedName);
 		float cell = 2 * Radius / size;
-		var biome = new byte[size * size];
-		var height = new float[size * size];
-		// Rows side by side on every core but one when asked (the page's preview); one at a time in a
-		// search, which runs seeds side by side instead.
-		var options = new ParallelOptions { CancellationToken = cancel, MaxDegreeOfParallelism = parallel ? Math.Max(1, Environment.ProcessorCount - 1) : 1 };
-		Parallel.For(0, size, options, j =>
-		{
-			for (int i = 0; i < size; i++)
-			{
-				float x = -Radius + (i + 0.5f) * cell, z = -Radius + (j + 0.5f) * cell;
-				int k = j * size + i;
-				if (x * x + z * z > Radius * Radius)
-				{
-					biome[k] = Ocean;
-					height[k] = 0;
-					continue;
-				}
-				float h = gen.GetHeight(new Vector2(x, z));
-				height[k] = h;
-				var b = gen.GetBiome(x, z);
-				int index = Array.IndexOf(Biomes, b);
-				// Land: ground a player can stand on or wade through (at most 1 m under water; 3 m in a
-				// Swamp, whose pools are part of it). The game names much of the shallow sea after the land
-				// biome near it (and the southern sea Ashlands): deeper than that, it is sea here.
-				bool swamp = b == Heightmap.Biome.Swamp;
-				biome[k] = index < 0 || h < TerrainService.WaterLevel - (swamp ? 3 : 1) ? Ocean : (byte)index;
-			}
-		});
+		var (biome, height) = Sample(gen, -Radius, -Radius, cell, size, size, parallel, cancel);
 		var placed = SeedLocations.Place(gen, landmarks ? SeedLocations.Which.Prioritized : SeedLocations.Which.Start, parallel, cancel);
 		var marks = new List<Landmark>();
 		foreach (var p in placed)
@@ -125,7 +102,42 @@ public static class SeedPreview
 					.DefaultIfEmpty(float.PositiveInfinity).Min()),
 			};
 		}
-		return new Preview(seedName, size, cell, biome, height, stats, landmarks ? marks : null);
+		return new Preview(seedName, size, cell, biome, height, stats, landmarks ? marks : null, gen);
+	}
+
+	// The generator sampled on w x h cells of cell metres from (x0, z0) (row 0 the south): each cell's
+	// biome (index in Biomes, Ocean for the sea and outside the world) and ground height (Outside past the
+	// world's edge; the deepest sea floor is at 0). parallel: rows
+	// on every core but one (a search runs seeds side by side instead).
+	public static (byte[] Biome, float[] Height) Sample(WorldGenerator gen, float x0, float z0, float cell, int w, int h, bool parallel, CancellationToken cancel = default)
+	{
+		var biome = new byte[w * h];
+		var height = new float[w * h];
+		var options = new ParallelOptions { CancellationToken = cancel, MaxDegreeOfParallelism = parallel ? Math.Max(1, Environment.ProcessorCount - 1) : 1 };
+		Parallel.For(0, h, options, j =>
+		{
+			for (int i = 0; i < w; i++)
+			{
+				float x = x0 + (i + 0.5f) * cell, z = z0 + (j + 0.5f) * cell;
+				int k = j * w + i;
+				if (x * x + z * z > Radius * Radius)
+				{
+					biome[k] = Ocean;
+					height[k] = Outside;
+					continue;
+				}
+				float ground = gen.GetHeight(new Vector2(x, z));
+				height[k] = ground;
+				var b = gen.GetBiome(x, z);
+				int index = Array.IndexOf(Biomes, b);
+				// Land: ground a player can stand on or wade through (at most 1 m under water; 3 m in a
+				// Swamp, whose pools are part of it). The game names much of the shallow sea after the land
+				// biome near it (and the southern sea Ashlands): deeper than that, it is sea here.
+				bool swamp = b == Heightmap.Biome.Swamp;
+				biome[k] = index < 0 || ground < TerrainService.WaterLevel - (swamp ? 3 : 1) ? Ocean : (byte)index;
+			}
+		});
+		return (biome, height);
 	}
 
 	// start: where the game puts its start temple (null: the Meadows cell nearest the middle).

@@ -8,7 +8,9 @@ without any mod, console players on crossplay included.
 
 Type a seed (up to 10 letters and digits) or press **Roll** for a random one. The map on the right
 shows that seed's world as the game will make it, from the editor's copy of the game's world
-generator: land coloured by biome, sea shaded by depth, north up.
+generator: land coloured by biome, sea shaded by depth, north up. The mouse wheel zooms where the
+pointer is, dragging moves the map, and a double click (or the bottom right buttons) shows all of it
+again; zoomed in, the part in view is drawn again from the generator, so coasts and rivers stay sharp.
 
 Over it, the places the game will lay out when the world first loads, found by following its own
 placement rules:
@@ -19,12 +21,13 @@ placement rules:
   several spots for each trader; the first one players come near becomes the trader's camp and the
   others vanish.
 
-Hover a mark for its coordinates and its distance from the start; the boxes under the map hide the
-bosses or the traders. These are exactly where the game puts them. (The smaller places, villages,
+Hover a mark for its coordinates and its distance from the start. The switches in the map's corner
+(**On the map**) show or hide the start, the bosses and each trader. These are exactly where the game puts them. (The smaller places, villages,
 ruins and the like, are not shown: some of them depend on an alt biome, such as Dark Meadows, that the
 game picks at random each time it loads a world.)
 
-Below the map:
+Beside the map, the seed's world as lists (click a trader's or boss's row to see the nearest on the
+map):
 
 - **Land**: how much of the world is land, how big the start's landmass is, and the largest one.
 - **Land around the start**: how much of the ground within 400 m of the start is land.
