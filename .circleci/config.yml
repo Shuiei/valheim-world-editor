@@ -8,8 +8,8 @@
 #                  the test classes out by their last times and can rerun only the failed ones
 #                  (circleci tests run, tools/ci-tests.sh). Every test runs, failing or not; a test
 #                  stuck for 5 minutes ends its run.
-#   coverage       the code coverage of both test jobs, merged (tools/coverage.sh): an HTML report in
-#                  the artifacts, and the job fails when the line coverage is under 95%
+#                  Each test container sends its code coverage to Codecov, which merges the six
+#                  (codecov.yml) and fails its own check (codecov/project) under 95% line coverage.
 #   packages       the Windows and Linux release packages: they build, hold no source code or game
 #                  files (the plugin is left out: it builds against the game's own DLLs), and the
 #                  Linux one starts and draws the test world (tools/smoke-test.sh, under Xvfb)
@@ -18,6 +18,11 @@
 # What CI cannot cover: the plugin build and reading the game's data (both need Valheim's files), the
 # visual tests (they need a display and OpenGL) and live mode against a real game.
 version: 2.1
+
+orbs:
+  # Uploads the coverage with Codecov's CLI, checked against its signature (needs gpg). The token is
+  # the project's CODECOV_TOKEN.
+  codecov: codecov/codecov@6.1.0
 
 executors:
   dotnet:
@@ -42,8 +47,8 @@ commands:
     steps:
       - checkout
       - run:
-          name: OpenSSH server (the tunnel's tests) and fonts (Avalonia headless)
-          command: apt-get update -qq && apt-get install -y -qq openssh-server libfontconfig1 > /dev/null && mkdir -p /run/sshd
+          name: OpenSSH server (the tunnel's tests), fonts (Avalonia headless) and gpg (Codecov's CLI)
+          command: apt-get update -qq && apt-get install -y -qq openssh-server libfontconfig1 gnupg > /dev/null && mkdir -p /run/sshd
       - restore_cache:
           keys:
             - nuget-v2-{{ checksum "Directory.Build.props" }}-{{ checksum "Core/ValheimWorldEditor.Core.csproj" }}-{{ checksum "Desktop/ValheimWorldEditor.Desktop.csproj" }}-{{ checksum "tests/Desktop.Tests/Desktop.Tests.csproj" }}
@@ -69,11 +74,14 @@ commands:
                 key: nuget-v2-{{ checksum "Directory.Build.props" }}-{{ checksum "Core/ValheimWorldEditor.Core.csproj" }}-{{ checksum "Desktop/ValheimWorldEditor.Desktop.csproj" }}-{{ checksum "tests/Desktop.Tests/Desktop.Tests.csproj" }}
                 paths:
                   - ~/.nuget/packages
-      # The coverage of this container's tests, for the coverage job.
-      - persist_to_workspace:
-          root: /tmp/coverage
-          paths:
-            - "*"
+      # The coverage of this container's tests, merged with the other containers' by Codecov. A failed
+      # upload fails the job: Codecov's check waits for every container's.
+      - codecov/upload:
+          dir: /tmp/coverage
+          flags: << parameters.results >>
+          plugins: noop
+          fail_on_error: true
+          when: on_success
       - store_test_results:
           path: /tmp/test-results
       - store_artifacts:
@@ -131,24 +139,6 @@ jobs:
           namespace: TerrainEditor.Desktop.Tests
           what: App tests (the windows, headless)
           results: app
-
-  # The coverage of every test container, merged: under the minimum, the job fails.
-  coverage:
-    executor: dotnet
-    steps:
-      # The sources, for the report's pages of covered and uncovered lines.
-      - checkout
-      - attach_workspace:
-          at: /tmp/coverage
-      - run:
-          name: Coverage report (line coverage at least 95%)
-          # Every test container's coverage: core-tests' three and app-tests' three (their parallelism).
-          command: |
-            dotnet tool restore
-            tools/coverage.sh /tmp/coverage /tmp/coverage-report 95 core-0 core-1 core-2 app-0 app-1 app-2
-      - store_artifacts:
-          path: /tmp/coverage-report
-          destination: coverage
 
   packages:
     executor: dotnet
@@ -220,7 +210,3 @@ workflows:
       - windows-smoke:
           requires:
             - packages
-      - coverage:
-          requires:
-            - core-tests
-            - app-tests

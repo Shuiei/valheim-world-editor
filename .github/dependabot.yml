@@ -17,12 +17,9 @@ updates:
       app:
         patterns: ["*"]
 
-  # The C# tests (xUnit, test SDK, JUnit logger) and the repository's .NET tools (ReportGenerator,
-  # .config/dotnet-tools.json).
+  # The C# tests (xUnit, test SDK, JUnit logger).
   - package-ecosystem: nuget
-    directories:
-      - /tests/Desktop.Tests
-      - /
+    directory: /tests/Desktop.Tests
     schedule:
       interval: weekly
     open-pull-requests-limit: 3

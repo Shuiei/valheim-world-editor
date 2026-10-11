@@ -24,8 +24,8 @@ case "${1:?list or run}" in
     shift 2
     # FullyQualifiedName~<class>. matches that class's tests only (a class name ends at the dot).
     filter="Category!=Visual&($(printf 'FullyQualifiedName~%s.|' "$@" | sed 's/|$//'))"
-    # The coverage of this container's share, merged with the others' by CI's coverage job
-    # (tools/coverage.sh); the node index keeps the app tests' containers apart.
+    # The coverage of this container's share, which the job sends to Codecov (merged there with the
+    # other containers').
     dotnet test "$project" -c Release --no-build --filter "$filter" --blame-hang-timeout 5m \
       --settings tests/Desktop.Tests/coverage.runsettings --collect "Code Coverage" \
       --results-directory "/tmp/coverage/$name-${CIRCLE_NODE_INDEX:-0}" \
