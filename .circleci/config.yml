@@ -78,17 +78,23 @@ commands:
                 key: nuget-v2-{{ checksum "Directory.Build.props" }}-{{ checksum "Core/ValheimWorldEditor.Core.csproj" }}-{{ checksum "Desktop/ValheimWorldEditor.Desktop.csproj" }}-{{ checksum "tests/Core.Tests/Core.Tests.csproj" }}-{{ checksum "tests/Desktop.Tests/Desktop.Tests.csproj" }}
                 paths:
                   - ~/.nuget/packages
-      # On main, the coverage of this container's tests, merged with the other containers' by Codecov.
-      # A failed upload fails the job: Codecov's check waits for every container's.
+      # On main, the coverage of this container's tests, merged with the other containers' by Codecov
+      # (its check waits for every container's). The orb's fail_on_error does nothing (its
+      # set_codecov_envs.sh empties CODECOV_FAIL_ON_ERROR, so the CLI never fails the step): a missing
+      # report is caught here instead.
       - when:
           condition:
             equal: [main, << pipeline.git.branch >>]
           steps:
+            - run:
+                name: This container's coverage report is there
+                command: |
+                  ls /tmp/coverage/<< parameters.results >>-*/coverage.*.cobertura.xml \
+                    || { echo "No coverage report: Codecov would get nothing from this container."; exit 1; }
             - codecov/upload:
                 dir: /tmp/coverage
                 flags: << parameters.results >>
                 plugins: noop
-                fail_on_error: true
                 when: on_success
       - store_test_results:
           path: /tmp/test-results
