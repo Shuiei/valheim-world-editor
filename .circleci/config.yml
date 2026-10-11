@@ -1,14 +1,13 @@
 # Valheim World Editor: tests and build checks on every push and pull request.
 #   code-analysis  the editor (Core, Desktop) builds with no .NET analyzer warning (warnings are
 #                  errors) and is formatted as .editorconfig says (dotnet format)
-#   native-tests   the app's tests (tests/Desktop.Tests, built with warnings as errors): its windows
-#                  headless, the core (saves, the world generator against the game's values, live
-#                  mode against a stand-in bridge), the SSH tunnel against a local sshd; the visual
-#                  tests skip (no display). Three containers each run a third of the test classes,
-#                  shared out by their last times (tools/ci-tests.sh).
-#                  Fail fast: the first failing test stops its run, a test stuck for 5 minutes ends
-#                  it, and in each container the core and the windows run as two processes, one after
-#                  the other (the windows' run does not start when the core fails; half the memory each)
+#   core-tests     the core's tests (saves, the world generator against the game's values, live mode
+#                  against a stand-in bridge, the SSH tunnel against a local sshd), and
+#   app-tests      the app's windows, headless, on three containers (the visual tests skip: no
+#                  display). Both build tests/Desktop.Tests with warnings as errors; CircleCI shares
+#                  the test classes out by their last times and can rerun only the failed ones
+#                  (circleci tests run, tools/ci-tests.sh). Every test runs, failing or not; a test
+#                  stuck for 5 minutes ends its run.
 #   packages       the Windows and Linux release packages: they build, hold no source code or game
 #                  files (the plugin is left out: it builds against the game's own DLLs), and the
 #                  Linux one starts and draws the test world (tools/smoke-test.sh, under Xvfb)
@@ -23,6 +22,55 @@ executors:
     docker:
       - image: mcr.microsoft.com/dotnet/sdk:10.0
     resource_class: medium
+
+commands:
+  # One namespace's test classes (no visual tests), shared out between the job's containers by
+  # CircleCI by the time each class took in the last runs (circleci tests run). It also gives the job
+  # "Rerun failed tests": a rerun runs only the classes that failed. Every test runs (a failure does
+  # not stop the others); a test stuck 5 minutes ends the run (with a dump), and silence ends the step
+  # sooner than CircleCI's 10 minutes.
+  test-classes:
+    parameters:
+      namespace:
+        type: string
+      what:
+        type: string
+      results:
+        type: string
+    steps:
+      - checkout
+      - run:
+          name: OpenSSH server (the tunnel's tests) and fonts (Avalonia headless)
+          command: apt-get update -qq && apt-get install -y -qq openssh-server libfontconfig1 > /dev/null && mkdir -p /run/sshd
+      - restore_cache:
+          keys:
+            - nuget-v2-{{ checksum "Directory.Build.props" }}-{{ checksum "Core/ValheimWorldEditor.Core.csproj" }}-{{ checksum "Desktop/ValheimWorldEditor.Desktop.csproj" }}-{{ checksum "tests/Desktop.Tests/Desktop.Tests.csproj" }}
+            # Else main's latest (a branch whose packages changed restores only what it adds).
+            - nuget-v2-
+      - run:
+          name: Build the tests (every warning is an error)
+          command: dotnet build tests/Desktop.Tests/Desktop.Tests.csproj -c Release -warnaserror
+      - run:
+          name: << parameters.what >>
+          no_output_timeout: 6m
+          environment:
+            VWE_NEED_SSHD: "1"
+          command: |
+            tools/ci-tests.sh list << parameters.namespace >> \
+              | circleci tests run --command="xargs tools/ci-tests.sh run << parameters.results >>" --split-by=timings --timings-type=classname --verbose
+      # Saved from main only: branches reuse main's (each cache is kept 15 days and billed).
+      - when:
+          condition:
+            equal: [main, << pipeline.git.branch >>]
+          steps:
+            - save_cache:
+                key: nuget-v2-{{ checksum "Directory.Build.props" }}-{{ checksum "Core/ValheimWorldEditor.Core.csproj" }}-{{ checksum "Desktop/ValheimWorldEditor.Desktop.csproj" }}-{{ checksum "tests/Desktop.Tests/Desktop.Tests.csproj" }}
+                paths:
+                  - ~/.nuget/packages
+      - store_test_results:
+          path: /tmp/test-results
+      - store_artifacts:
+          path: /tmp/test-results
 
 jobs:
   code-analysis:
@@ -56,52 +104,23 @@ jobs:
                 paths:
                   - ~/.nuget/packages
 
-  native-tests:
+  core-tests:
     executor: dotnet
-    # Three containers, each with a third of the test classes (tools/ci-tests.sh): the window tests run
-    # one at a time (one UI thread), so more containers is what makes them faster.
+    steps:
+      - test-classes:
+          namespace: WorldEditor.Tests
+          what: Core tests (saves, world generator, live mode, SSH tunnel)
+          results: core
+
+  app-tests:
+    executor: dotnet
+    # The window tests run one at a time (one UI thread): more containers is what makes them faster.
     parallelism: 3
     steps:
-      - checkout
-      - run:
-          name: OpenSSH server (the tunnel's tests) and fonts (Avalonia headless)
-          command: apt-get update -qq && apt-get install -y -qq openssh-server libfontconfig1 > /dev/null && mkdir -p /run/sshd
-      - restore_cache:
-          keys:
-            - nuget-v2-{{ checksum "Directory.Build.props" }}-{{ checksum "Core/ValheimWorldEditor.Core.csproj" }}-{{ checksum "Desktop/ValheimWorldEditor.Desktop.csproj" }}-{{ checksum "tests/Desktop.Tests/Desktop.Tests.csproj" }}
-            # Else main's latest (a branch whose packages changed restores only what it adds).
-            - nuget-v2-
-      - run:
-          name: Build the tests (every warning is an error)
-          command: dotnet build tests/Desktop.Tests/Desktop.Tests.csproj -c Release -warnaserror
-      - run:
-          name: This container's share of the test classes (by their last times)
-          command: tools/ci-tests.sh share
-      # Fail fast: xUnit stops at the first failure, a test stuck 5 minutes ends the run (with a dump),
-      # and silence ends the step sooner than CircleCI's 10 minutes.
-      - run:
-          name: Core tests (saves, world generator, live mode, SSH tunnel)
-          no_output_timeout: 6m
-          environment:
-            VWE_NEED_SSHD: "1"
-          command: tools/ci-tests.sh run WorldEditor.Tests core
-      - run:
-          name: App tests (the windows, headless)
-          no_output_timeout: 6m
-          command: tools/ci-tests.sh run TerrainEditor.Desktop.Tests app
-      # Saved from main only: branches reuse main's (each cache is kept 15 days and billed).
-      - when:
-          condition:
-            equal: [main, << pipeline.git.branch >>]
-          steps:
-            - save_cache:
-                key: nuget-v2-{{ checksum "Directory.Build.props" }}-{{ checksum "Core/ValheimWorldEditor.Core.csproj" }}-{{ checksum "Desktop/ValheimWorldEditor.Desktop.csproj" }}-{{ checksum "tests/Desktop.Tests/Desktop.Tests.csproj" }}
-                paths:
-                  - ~/.nuget/packages
-      - store_test_results:
-          path: /tmp/test-results
-      - store_artifacts:
-          path: /tmp/test-results
+      - test-classes:
+          namespace: TerrainEditor.Desktop.Tests
+          what: App tests (the windows, headless)
+          results: app
 
   packages:
     executor: dotnet
@@ -164,7 +183,10 @@ workflows:
       - code-analysis:
           requires:
             - packages
-      - native-tests:
+      - core-tests:
+          requires:
+            - packages
+      - app-tests:
           requires:
             - packages
       - windows-smoke:
