@@ -359,12 +359,10 @@ public class NewWorldPageTests
         });
         await TestWindows.Until(() => r.P.Pending.IsCompleted, 60000);
         Settle();
-        // Typed away and back before the pause ends: nothing is making it, so it is looked at again.
-        OnUi(() =>
-        {
-            r.P.SeedBox.Text = "abcd";
-            r.P.SeedBox.Text = "abc";
-        });
+        // Typed away and back before the pause ends: nothing is making it, so it is looked at again. One key each, as
+        // typed: the box tells of a change after it is made, and two changes told together both read "abc".
+        OnUi(() => r.P.SeedBox.Text = "abcd");
+        OnUi(() => r.P.SeedBox.Text = "abc");
         await TestWindows.Until(() => r.P.Shown?.Seed == "abc" && !r.P.Loading.IsVisible, 60000);
     }
 
