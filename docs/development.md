@@ -38,6 +38,7 @@ The app reads one command per line on its input and answers each with one line, 
 
 | Command | What it does |
 |---|---|
+| `modifiers <file>` | The game's terrain modifiers from a copy (`tests/fixtures/terrain-modifiers.json`), where there is no Valheim (CI): without them no world opens. |
 | `world <folder>` / `area <zx> <zz> <size>` / `map` | Open a world (its map), an area in the 3D editor, back to the map. |
 | `camera <x> <z> <yaw°> <pitch°> <distance>` | The 3D camera on world x, z. |
 | `mouse <down\|move\|up> <x> <z> [button] [mods]`, `wheel`, `key <name> [mods]` | Real pointer and key events at world positions. |
@@ -164,7 +165,7 @@ item stand's rule and each armour stand's slots, for the inspector's Holds / Wea
 `set_contents`), `piece-cost.json` (each piece's English name, station and resources, for the
 blueprint library), `piece-place.json.gz` (the hammer's placement flags, snap points and colliders,
 for the Workshop's Build), `piece-support.json` (materials and collider boxes for the stability
-check), `terrain-modifiers.json`, `vegetation.json` (the game's vegetation rules for Regrow nature,
+check), `vegetation.json` (the game's vegetation rules for Regrow nature,
 ZoneSystem's and the location lists', with the random draws each kind makes when it is created),
 `cave-rocks.json` (the cave roof rocks' meshes), `dungeon-rooms.json.gz` (the Dungeon tool's
 catalogue: each dungeon kind's themes and space, and each room's size, openings and the objects the
@@ -172,6 +173,15 @@ game makes in it with the random parts that decide them) and `zdo-keys.json` (th
 data keys for the object inspector, from the string literals of `assembly_valheim.dll`: the save only
 keeps their hashes). The files are written exactly as before (`Core/App/CatalogueJson.cs`: the same
 number format, key order and separators), so a new export shows in git only what the game changed.
+
+The game's terrain modifiers (how locations and a few objects shape the ground before the saved
+edits) are not a catalogue: the editor reads them from the player's Valheim at its start
+(`Core/App/GameModifiers.cs`), from each `TerrainModifier` script up to its prefab rather than through
+every object (a few seconds), and keeps them in the data folder until the game changes. No world or
+Workshop opens without them. The tests use `tests/fixtures/terrain-modifiers.json` (the prefabs they
+meet; the driver's `modifiers <file>` gives it to the smoke tests): after a game update, make it again
+with `ValheimWorldEditor --export-terrain-modifiers tests/fixtures/terrain-modifiers.json`, which keeps
+the prefabs it lists.
 
 The game's location rules (for the New world page's start, bosses and traders) are read by the editor
 itself, in C# (`Core/App/GameLocations.cs`), from the player's Valheim, and kept in the data folder

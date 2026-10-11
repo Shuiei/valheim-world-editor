@@ -63,6 +63,14 @@ public static class Fixtures
 	public static void UseLocations() =>
 		ValheimGen.SeedLocations.Use(ValheimGen.SeedLocations.RuleSet.FromJson(File.ReadAllText(Path.Combine(Root, "locations.json"))));
 
+	// The game's terrain modifiers for the prefabs the tests meet (the test world's, the location
+	// rules' kinds, every networked one), as `ValheimWorldEditor --export-terrain-modifiers` reads them
+	// from the game: the editor reads them from the player's Valheim, which CI does not have. Given
+	// before any test runs, as the editor has them before any world opens.
+	[System.Runtime.CompilerServices.ModuleInitializer]
+	internal static void UseTerrainModifiers() =>
+		TerrainEditor.Terrain.TerrainModifiers.Use(File.ReadAllText(Path.Combine(Root, "terrain-modifiers.json")));
+
 	// The same world as the running game sends it (WorldEditorBridge /snapshot, gzip).
 	public static string Snapshot => Path.Combine(Root, "CITest.snapshot");
 

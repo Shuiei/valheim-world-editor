@@ -6,6 +6,9 @@ namespace TerrainEditor.Desktop;
 // --driver: the editor driven by another program (the visual tests), one command per line on its
 // input, one answer per line on its output ("@@ ok <json>" or "@@ error <message>"), so a single
 // editor serves many tests. Commands:
+//   modifiers <file>               the game's terrain modifiers from a copy (tests/fixtures/
+//                                  terrain-modifiers.json): where there is no Valheim (CI), so that
+//                                  worlds open
 //   world <folder>                 open a world (its map)
 //   area <zx> <zz> <size>          open an area in the 3D editor
 //   map                            back to the map
@@ -90,6 +93,9 @@ public static class Driver
 				// SPIRV-Cross (the terrain shader from Valheim for Windows) loads in this build.
 				TerrainEditor.App.TerrainShader.SelfTest();
 				return "{\"spirvCross\":\"ok\"}";
+			case "modifiers":
+				TerrainEditor.Terrain.TerrainModifiers.Use(await File.ReadAllTextAsync(a[1]));
+				return "{}";
 			case "world":
 				await w.OpenWorld(() => Task.Run(() => WorldSession.Open(a[1])), "Opening the world…");
 				return State(w);
