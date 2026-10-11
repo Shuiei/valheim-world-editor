@@ -564,8 +564,11 @@ def scene_map(e):
 # ---- The start page and its settings (no world opened).
 
 def scene_start(e):
-    e.send("click My game")
+    # Home: the running game (the stand-in plugin) and the worlds opened before.
     e.send("wait 3000")
+    e.shot(OUT / "start-home.jpg")
+    e.send("click My game")
+    e.send("wait 1500")
     e.shot(OUT / "start-game.jpg")
     e.send("click A dedicated server")
     e.shot(OUT / "start-server.jpg")
@@ -593,7 +596,7 @@ def main():
         # Each scene in a fresh editor: nothing carries over, nothing is saved.
         start = name == "start"
         with Editor(game_world="Docs" if start else None, worlds=(f"{DIR}/Docs", f"{DIR}/Fjordheim") if start else (),
-                    homestead=os.environ.get("HOMESTEAD_DLL")) as e:
+                    homestead=os.environ.get("HOMESTEAD_DLL"), recent=(f"{DIR}/Fjordheim", f"{DIR}/Docs") if start else ()) as e:
             try:
                 SCENES[name](e)
             except Exception as ex:

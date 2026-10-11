@@ -61,9 +61,24 @@ for Windows or Linux. Unpack it and start it. You don't need to install anything
 - **Undo anything.** The history panel goes back to any point, or takes out one change only. It is
   kept with the world after each save, so you can still undo after closing the editor.
 
-## Three ways to edit
+## The start page
 
-All three start from the editor's start page, under **Edit a world** in its side menu.
+The editor opens on its start page. Its side menu has three parts:
+
+- **Home** picks up where you left off: when Valheim is running with the plugin, a card to
+  **Edit live** its world; then the saved worlds and blueprints you opened last (blueprints with
+  their pictures), and the servers that connect in one click. Click one to open it.
+- **Edit a world**: the three ways to edit, below.
+- **Create**: **The Workshop**, a blank plot to build on and keep as a blueprint, needing no world
+  at all ([docs/workshop.md](docs/workshop.md)); and **A new world**, to choose a seed by what is
+  near its start and make the world ([docs/new-world.md](docs/new-world.md)).
+
+At the bottom of the menu: **Settings**, **Documentation**, **Open log** and the folder of the
+editor's settings and log.
+
+![The start page's Home: the game running, and the worlds opened last](docs/images/start-home.jpg)
+
+## Three ways to edit
 
 | | What it edits | What you need |
 |---|---|---|
@@ -71,12 +86,7 @@ All three start from the editor's start page, under **Edit a world** in its side
 | **A dedicated server** (live) | Your server's world, while people play. The editor logs in over SSH and opens its own encrypted tunnel. | BepInEx and the plugin on the server, and an SSH login to it. |
 | **A saved world** (offline) | World files on this computer, with the game closed. | Nothing. |
 
-Under **Create**, **The Workshop** needs no world at all, and **A new world** makes a new world and
-helps you choose its seed ([docs/new-world.md](docs/new-world.md)). The start page opens on **Home**:
-the game when it runs (to edit it live), the worlds and blueprints you opened last, and the servers
-that connect in one click.
-
-![The start page](docs/images/start-workshop.jpg)
+![The Workshop, under Create on the start page](docs/images/start-workshop.jpg)
 
 One program runs on Windows and Linux, and everything happens on your computer. Nothing is sent
 anywhere else.
@@ -86,8 +96,8 @@ anywhere else.
 1. Download `ValheimWorldEditor-<version>-win-x64.zip` (Windows) or `-linux-x64.tar.gz` (Linux) from
    the [releases page](https://github.com/Shuiei/valheim-world-editor/releases/latest).
 2. Unpack it anywhere and double-click **ValheimWorldEditor**.
-3. Pick a way to edit on the start page. To try it safely, open **A saved world** with the game
-   closed, or **The Workshop**.
+3. Pick a way to edit in the start page's side menu. To try it safely, open **A saved world** with
+   the game closed, or **The Workshop**. Next time, **Home** lists what you opened.
 
 The sections below cover each step in more detail.
 
@@ -117,10 +127,8 @@ Windows it falls back to Direct3D when the driver has no OpenGL).
    editing, the WorldEditorBridge plugin is a separate download: `WorldEditorBridge-<version>.zip`
    on the same page, or from a mod manager (below).
 3. Double-click **ValheimWorldEditor** (`ValheimWorldEditor.exe` on Windows). It opens in its own
-   window, on the start page. (Windows may say "Windows protected your PC" the first time: the
-   program is not signed. Click "More info", then "Run anyway".)
-
-![The start page](docs/images/start-game.jpg)
+   window, on the start page's **Home**. (Windows may say "Windows protected your PC" the first
+   time: the program is not signed. Click "More info", then "Run anyway".)
 
 The editor reads the game's look (textures, models, the terrain and map) straight from your Valheim
 install: nothing is copied. The first time, and after a Valheim update, it reads the game's files for
@@ -152,8 +160,12 @@ from it. The folder can be changed later in **Settings**.
    game to host it). On this first start the plugin writes its settings,
    `BepInEx/config/Tie.WorldEditorBridge.cfg`, with a random token. The editor reads that file, so
    the game has to have started once with the plugin.
-4. On the start page, **My game** shows "Valheim is running with the world …": click **Edit live**.
-   On your own computer it finds the plugin and its token by itself, also in mod manager profiles.
+4. The start page notices the game by itself: **Home** shows "Valheim is running with the world …"
+   (and **My game**, in the menu, says *running*): click **Edit live**. On your own computer it finds
+   the plugin and its token by itself, also in mod manager profiles. Until then, **My game** says
+   what is missing.
+
+![My game on the start page](docs/images/start-game.jpg)
 
 Edit, then **Apply live** (or switch on **Auto** to apply every change right away): you see it in
 game at once, and the game saves it as usual.
@@ -177,7 +189,8 @@ game at once, and the game saves it as usual.
    password again.
 4. **Connect.** The editor logs in, opens its own encrypted tunnel to the plugin and loads the
    world. The plugin only listens on the server itself, so it is never exposed to the internet.
-5. The server is then **saved** in the list, with its token: next time it is one click.
+5. The server is then **saved** in the list, with its token: next time it is one click, here or on
+   **Home** (when its password is saved or it logs in with a key).
 
 If something is wrong, the editor says what: login refused, no answer, wrong token, plugin not
 running on the server, or a server whose identity changed since last time (it refuses to connect
@@ -191,8 +204,8 @@ have your own tunnel (`ssh -L`, PuTTY)? Use **More options → I made my own tun
 
 1. **Close Valheim, or stop the server** that uses the world. A running game saves over the files
    the editor writes.
-2. On the start page, **A saved world**: click the world. Worlds in Valheim's usual folders are listed
-   by themselves; for another one (a copy of a server's world, for example) use **Another world
+2. On the start page, **A saved world**: click the world (the worlds you opened last are on **Home**
+   too). Worlds in Valheim's usual folders are listed by themselves; for another one (a copy of a server's world, for example) use **Another world
    folder** with **Browse…** or by typing it (`<savedir>/worlds_local/<World>` for a server).
 3. Edit, then **Save to world**. The editor writes your changes as the next save and reads them back
    to check them (if they do not read back right, the new files are removed and nothing changed).
@@ -229,14 +242,14 @@ with the server; **edit** next to a saved server changes it. (The token is still
 
 Settings, saved servers (`servers.cfg`), what the editor remembers between runs, blueprints, the
 index of the game's files (`game-index.json`) and a log (`ValheimWorldEditor.log`, a new one each run) are in `~/.local/share/ValheimWorldEditor`
-(Linux) or `%LOCALAPPDATA%\ValheimWorldEditor` (Windows). The bottom of the start page shows the
-folder.
+(Linux) or `%LOCALAPPDATA%\ValheimWorldEditor` (Windows). The bottom of the start page's menu shows
+the folder.
 
 ## Documentation
 
 | Page | Covers |
 |---|---|
-| [Getting around](docs/editor-basics.md) | Camera, top bar, saving, discarding, history, View panel, shortcuts |
+| [Getting around](docs/editor-basics.md) | The start page (Home, Edit a world, Create), camera, top bar, saving, discarding, history, View panel, shortcuts |
 | [World map](docs/map.md) | The overview map and opening an area in 3D |
 | [Ground tools](docs/terrain.md) | Raise, Lower, Flatten, Smooth, Naturalize, Restore, ground paint, No limit (past ±8 m), Mountain |
 | [Path](docs/path.md) | Roads, ramps, rivers, caves and paint along a line |
@@ -301,7 +314,7 @@ of both.
 
 **Something is wrong or missing.**
 [Open an issue](https://github.com/Shuiei/valheim-world-editor/issues) and attach the editor's log:
-**Open log** at the bottom of the start page opens it (`ValheimWorldEditor.log`, started over at
+**Open log** at the bottom of the start page's menu opens it (`ValheimWorldEditor.log`, started over at
 each run, so attach it before starting the editor again).
 
 ## For developers

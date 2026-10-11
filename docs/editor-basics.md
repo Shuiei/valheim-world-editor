@@ -146,7 +146,7 @@ view is only drawn at full speed while something happens; otherwise a few times 
 
 Everything the editor says also goes to `ValheimWorldEditor.log` in the same folder, each line with
 its time, started over at each run (like the game's `LogOutput.log`). **Open log** at the bottom of
-the start page opens it: attach it when you report a problem.
+the start page's menu opens it: attach it when you report a problem.
 
 | Key | Action |
 |---|---|
@@ -175,3 +175,23 @@ the start page opens it: attach it when you report a problem.
   without a step. To edit there, move the area with the arrows.
 - Villages, the trader and similar locations flatten the ground around them while the game runs;
   the editor's ground already includes it.
+
+## The start page
+
+The editor opens on its start page, and comes back to it from a world's map (**Worlds**) or the
+Workshop (**Start**). Its side menu:
+
+| | What it shows |
+|---|---|
+| **Home** | Where you left off: when Valheim is running with the WorldEditorBridge plugin, its world and **Edit live**; then the saved worlds and blueprints you opened or saved last (blueprints with their pictures), newest first, and the saved servers that connect in one click (password saved, or a key file). Click one to open it. |
+| **My game** | Your game, live: what is missing (BepInEx, the plugin, a first start), or the world it runs with and **Edit live**. *running* shows beside it while the game runs. See [live mode](live-mode.md). |
+| **A dedicated server** | The saved servers (**Connect**, **edit**, **forget**) and the form to connect to another one. See [live mode](live-mode.md#a-dedicated-server). |
+| **A saved world** | The worlds on this computer, to open with the game closed, and **Another world folder**. |
+| **The Workshop** | **Open the Workshop**, whether Homestead is installed, and every blueprint, newest first: click one to open it in the Workshop. See [the Workshop](workshop.md). |
+| **A new world** | **Make a new world**: a seed's world before it exists, and a search for one that suits you. See [a new world](new-world.md). |
+
+At the bottom of the menu: **Settings**, **Documentation** (this documentation, in the browser),
+**Open log**, the version and the folder of the editor's settings and log.
+
+![The start page's Home](images/start-home.jpg)
+
