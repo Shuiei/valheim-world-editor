@@ -50,17 +50,24 @@ public sealed class MapData
     private readonly Lazy<Layers> _global;
 
     /// <summary>
+    /// Stops the overview's build (the map data is dropped for another world's).
+    /// </summary>
+    private readonly CancellationToken _cancel;
+
+    /// <summary>
     /// Detail windows by position, size and edit version; dropped all at once past a handful.
     /// </summary>
     private readonly ConcurrentDictionary<string, Layers> _details = new();
 
     /// <summary>
-    /// Map data for the world whose generator <paramref name="terrain"/> uses.
+    /// Map data for the world whose generator <paramref name="terrain"/> uses; <paramref name="cancel"/> stops
+    /// the overview's build (<see cref="Global"/> then throws <see cref="OperationCanceledException"/>).
     /// </summary>
-    public MapData(TerrainService terrain, EditStore edits)
+    public MapData(TerrainService terrain, EditStore edits, CancellationToken cancel = default)
     {
         _terrain = terrain;
         _edits = edits;
+        _cancel = cancel;
         Generator = terrain.Generator;
         _global = new Lazy<Layers>(BuildGlobal, LazyThreadSafetyMode.ExecutionAndPublication);
     }
@@ -137,8 +144,10 @@ public sealed class MapData
         Layers layers = new(n, n);
         int half = n / 2;
         float pix = GlobalPixel;
-        // Same sample positions as Minimap.GenerateWorldMap; row i is world z.
-        Parallel.For(0, n, i =>
+        // Same sample positions as Minimap.GenerateWorldMap; row i is world z. All the cores but one: unbounded,
+        // the loop took every thread of the pool for as long as it ran (seconds), so nothing else that needs
+        // one ran meanwhile (an HTTP answer from the game, a timer).
+        Parallel.For(0, n, new ParallelOptions { MaxDegreeOfParallelism = Math.Max(1, Environment.ProcessorCount - 1), CancellationToken = _cancel }, i =>
         {
             float wy = (i - half) * pix + pix / 2f;
             for (int j = 0; j < n; j++)

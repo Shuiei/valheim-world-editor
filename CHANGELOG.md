@@ -38,6 +38,9 @@ the plugin is unchanged in versions without that part.
   with the same results to the bit.
 
 ### Fixed
+- **The world map** no longer holds up the rest of the editor while it is built: it took every
+  background thread, so on a computer with few cores a live game's players, its answers and the other
+  work in the background waited seconds for it.
 - **Generate dungeon** could offer the dungeon made for the settings before: changing a setting while
   the last one was still being made, then placing it, placed the old one (and **Open on the plot**
   then opened another). A dungeon made for settings that changed since is no longer shown.

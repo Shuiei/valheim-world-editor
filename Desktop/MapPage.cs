@@ -15,7 +15,7 @@ namespace TerrainEditor.Desktop;
 /// saved (Save, or Apply live, and Discard), the map's options, search across the world, zones picked by filter to
 /// reset, the edited zones, and the spot picked with a click, opened in the 3D editor with the size chosen.
 /// </summary>
-public sealed class MapPage
+public sealed class MapPage : IDisposable
 {
     /// <summary>
     /// The page: the map with the side panel, the cursor readout and the status over it.
@@ -525,6 +525,15 @@ public sealed class MapPage
     /// Stops polling the live players (the page is left).
     /// </summary>
     public void Stop() => _players.Stop();
+
+    /// <summary>
+    /// Leaving the map for good (the window closed): what runs is stopped.
+    /// </summary>
+    public void Dispose()
+    {
+        Stop();
+        Map.Dispose();
+    }
 
     /// <summary>
     /// Shows what is waiting to be saved or applied; Save and Discard are enabled only when something is.
