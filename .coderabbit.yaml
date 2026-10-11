@@ -1,0 +1,38 @@
+# CodeRabbit's reviews of pull requests (free for public repositories). It approves a pull request
+# once its review of the latest commit is done, every thread it opened is resolved and no check fails
+# (request_changes_workflow): the approval main's branch rules ask for. Reference:
+# https://docs.coderabbit.ai/reference/configuration
+language: en-US
+reviews:
+  profile: chill
+  request_changes_workflow: true
+  # Not `@coderabbitai approve` by a pull request's own author: the approval stays CodeRabbit's.
+  allow_author_approval: false
+  high_level_summary: true
+  poem: false
+  auto_review:
+    enabled: true
+    drafts: false
+    # Every push reviewed, however many commits (else it pauses after 5, and the latest commit, so
+    # the approval, waits).
+    auto_pause_after_reviewed_commits: 0
+    # Every pull request, also those stacked on another branch than main.
+    base_branches:
+      - ".*"
+  path_filters:
+    # The tests' copies of the game's data and the documentation's pictures: data, not code.
+    - "!tests/fixtures/**"
+    - "!docs/images/**"
+  path_instructions:
+    - path: "Core/WorldGen/**"
+      instructions: >-
+        The world generator follows the game's formulas bit for bit (WorldCheck checks it against
+        values recorded in the game): flag any change to arithmetic, casts or the order of random
+        draws.
+    - path: "plugin/**"
+      instructions: >-
+        A BepInEx plugin for Valheim (Unity, .NET Framework 4.7.2): Unity calls Awake, Update and
+        OnDestroy by name, Unity's == null also catches destroyed objects, and Harmony finds patch
+        arguments by their names (__instance, __result).
+chat:
+  auto_reply: true
