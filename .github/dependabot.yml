@@ -6,6 +6,8 @@ updates:
   # documentation's pictures (DocsScreenshots: SkiaSharp, kept with the app's).
   - package-ecosystem: nuget
     directories:
+      # Directory.Build.props: the analyzers every project uses (Roslynator).
+      - /
       - /Core
       - /Desktop
       - /tools/WorldCheck
