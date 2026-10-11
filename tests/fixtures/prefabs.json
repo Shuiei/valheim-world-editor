@@ -1,0 +1,4863 @@
+{
+  "Acorn": {
+    "d": 0,
+    "i": 1,
+    "it": 1,
+    "p": 1,
+    "t": 0
+  },
+  "Amber": {
+    "at": 1,
+    "d": 0,
+    "i": 1,
+    "it": 1,
+    "p": 1,
+    "t": 0
+  },
+  "AmberPearl": {
+    "at": 1,
+    "d": 0,
+    "i": 1,
+    "it": 1,
+    "p": 1,
+    "t": 0
+  },
+  "ArmorBronzeChest": {
+    "ats": 1,
+    "d": 0,
+    "dur": 1000.0,
+    "durl": 200.0,
+    "i": 1,
+    "it": 7,
+    "p": 1,
+    "t": 0
+  },
+  "ArmorStand": {
+    "as": [
+      [
+        7
+      ],
+      [
+        11
+      ],
+      [
+        6
+      ],
+      [
+        5
+      ],
+      [
+        3,
+        4,
+        14,
+        15,
+        19,
+        20
+      ],
+      [
+        17
+      ],
+      [
+        18
+      ],
+      [
+        7
+      ],
+      [
+        11
+      ],
+      [
+        6
+      ],
+      [
+        5
+      ],
+      [
+        3,
+        4,
+        14,
+        15,
+        19,
+        20
+      ],
+      [
+        17
+      ],
+      [
+        18
+      ]
+    ],
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "ArmorStand_Female": {
+    "as": [
+      [
+        7
+      ],
+      [
+        11
+      ],
+      [
+        6
+      ],
+      [
+        3,
+        4,
+        5,
+        14,
+        15,
+        19
+      ],
+      [
+        3,
+        4,
+        14,
+        15,
+        19
+      ],
+      [
+        3,
+        4,
+        14,
+        15,
+        19
+      ],
+      [
+        5
+      ],
+      [
+        17
+      ],
+      [
+        18
+      ]
+    ],
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "ArmorStand_Male": {
+    "as": [
+      [
+        7
+      ],
+      [
+        11
+      ],
+      [
+        6
+      ],
+      [
+        3,
+        4,
+        5,
+        14,
+        15,
+        19
+      ],
+      [
+        3,
+        4,
+        14,
+        15,
+        19
+      ],
+      [
+        3,
+        4,
+        14,
+        15,
+        19
+      ],
+      [
+        5
+      ],
+      [
+        17
+      ],
+      [
+        18
+      ]
+    ],
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Ashland_Steepstair": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "AshlandsBranch1": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "AshlandsBranch2": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "AshlandsBranch3": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "AshlandsBush1": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "AshlandsTree1": {
+    "d": 1,
+    "p": 1,
+    "t": 2
+  },
+  "AshlandsTree3": {
+    "d": 1,
+    "p": 1,
+    "t": 2
+  },
+  "AshlandsTree6": {
+    "d": 1,
+    "p": 1,
+    "t": 2
+  },
+  "Ashlands_Altar": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "Ashlands_ArchRoofDamaged": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "Ashlands_ArchRoofDamaged_half1": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "Ashlands_ArchRoofDamaged_half2": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "Ashlands_Floor": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "Ashlands_Pillar4": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "Ashlands_Pillar4_tip_broken1": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "Ashlands_Pillar4_tip_broken2": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "Ashlands_PillarBase3_double": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "Ashlands_Ruins_Floor_1point5x1point5": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "Ashlands_Ruins_Floor_3x3_broken1": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "Ashlands_Ruins_Floor_3x3_broken2": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "Ashlands_Ruins_Floor_3x3_broken3": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "Ashlands_Ruins_Ramp": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "Ashlands_Ruins_Ramp_Upsidedown": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "Ashlands_Ruins_TopStone": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "Ashlands_Ruins_Wall_Broken3_4x6": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "Ashlands_Ruins_Wall_Broken4_4x6": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "Ashlands_Ruins_Wall_Broken5_4x6": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "Ashlands_Ruins_Wall_Top_wHole": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "Ashlands_Ruins_Wall_Window_4x6_broken2": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "Ashlands_Ruins_Wall_Window_4x6_broken3": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "Ashlands_Ruins_Wall_Window_4x6_broken4": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "Ashlands_Ruins_Wall_Window_4x6_broken5": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "Ashlands_Ruins_Wall_Window_4x6_broken6": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "Ashlands_Ruins_Wall_Windows_Broken_4x6": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "Ashlands_Ruins_twist_ArchBig": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "Ashlands_Ruins_twist_PillarBase": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "Ashlands_Ruins_twist_PillarBaseSmall": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "Ashlands_WallBlock": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "Ashlands_floor_large": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "Ashlands_rock1": {
+    "d": 1,
+    "p": 1,
+    "t": 2
+  },
+  "Ashlands_rock2": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "Asksvin": {
+    "c": 1,
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Asksvin_hatchling": {
+    "c": 1,
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Barley": {
+    "d": 0,
+    "i": 1,
+    "it": 1,
+    "p": 1,
+    "t": 0
+  },
+  "Bat": {
+    "c": 1,
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Beech1": {
+    "d": 1,
+    "p": 1,
+    "t": 2
+  },
+  "Beech_Sapling": {
+    "cult": 0,
+    "d": 0,
+    "gr": 2.0,
+    "grows": [
+      "Beech1"
+    ],
+    "p": 1,
+    "t": 0
+  },
+  "Beech_small1": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Beech_small2": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Beehive": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Bell": {
+    "at": 1,
+    "d": 0,
+    "i": 1,
+    "it": 16,
+    "p": 1,
+    "t": 0
+  },
+  "Birch1": {
+    "d": 1,
+    "p": 1,
+    "t": 2
+  },
+  "Birch1_aut": {
+    "d": 1,
+    "p": 1,
+    "t": 2
+  },
+  "Birch2": {
+    "d": 1,
+    "p": 1,
+    "t": 2
+  },
+  "Birch2_aut": {
+    "d": 1,
+    "p": 1,
+    "t": 2
+  },
+  "Bjorn": {
+    "c": 1,
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "BlackCore": {
+    "at": 1,
+    "d": 0,
+    "i": 1,
+    "it": 1,
+    "p": 1,
+    "t": 0
+  },
+  "BlackIce_Start": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "BlackMarble": {
+    "at": 1,
+    "d": 0,
+    "i": 1,
+    "it": 1,
+    "p": 1,
+    "t": 0
+  },
+  "BlackMetal": {
+    "d": 0,
+    "i": 1,
+    "it": 1,
+    "p": 1,
+    "t": 0
+  },
+  "BlackMetalScrap": {
+    "d": 0,
+    "i": 1,
+    "it": 1,
+    "p": 1,
+    "t": 0
+  },
+  "Blob": {
+    "c": 1,
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "BlobMorkBig": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Bloodbag": {
+    "d": 0,
+    "i": 1,
+    "it": 1,
+    "p": 1,
+    "t": 0
+  },
+  "Blueberries": {
+    "at": 1,
+    "d": 0,
+    "i": 1,
+    "it": 2,
+    "p": 1,
+    "t": 0
+  },
+  "BlueberryBush": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Boar": {
+    "c": 1,
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Boar_piggy": {
+    "c": 1,
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "BogWitch": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "BoneFragments": {
+    "at": 1,
+    "d": 0,
+    "i": 1,
+    "it": 1,
+    "p": 1,
+    "t": 0
+  },
+  "BonePileSpawner": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "BonePileSpawner_swamp": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Bonemass": {
+    "c": 1,
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Bread": {
+    "at": 1,
+    "d": 0,
+    "i": 1,
+    "it": 2,
+    "p": 1,
+    "t": 0
+  },
+  "Bronze": {
+    "d": 0,
+    "i": 1,
+    "it": 1,
+    "p": 1,
+    "t": 0
+  },
+  "BronzeNails": {
+    "d": 0,
+    "i": 1,
+    "it": 1,
+    "p": 1,
+    "t": 0
+  },
+  "Bush01": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Bush01_deepnorth": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Bush01_heath": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Bush02_en": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "CapeDeerHide": {
+    "ats": 1,
+    "d": 0,
+    "dur": 400.0,
+    "durl": 50.0,
+    "i": 1,
+    "it": 17,
+    "p": 1,
+    "t": 0
+  },
+  "CargoCrate": {
+    "ch": 2,
+    "cw": 2,
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "CastleKit_brazier": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "CastleKit_groundtorch": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "CastleKit_groundtorch_blue": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "CastleKit_groundtorch_green": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "CastleKit_groundtorch_unlit": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "CastleKit_metal_groundtorch_unlit": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Chain": {
+    "d": 0,
+    "i": 1,
+    "it": 1,
+    "p": 1,
+    "t": 0
+  },
+  "CharcoalResin": {
+    "d": 0,
+    "i": 1,
+    "it": 1,
+    "p": 1,
+    "t": 0
+  },
+  "CharredBanner1": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "CharredBanner3": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "CharredBone": {
+    "d": 0,
+    "i": 1,
+    "it": 1,
+    "p": 1,
+    "t": 0
+  },
+  "Charred_Archer": {
+    "c": 1,
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Charred_Mage": {
+    "c": 1,
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Charred_Melee": {
+    "c": 1,
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Charred_Melee_Dyrnwyn": {
+    "c": 1,
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Charredskull": {
+    "d": 0,
+    "i": 1,
+    "it": 1,
+    "p": 1,
+    "t": 0
+  },
+  "Chest": {
+    "ch": 3,
+    "cw": 5,
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Chicken": {
+    "c": 1,
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Cloudberry": {
+    "at": 1,
+    "d": 0,
+    "i": 1,
+    "it": 2,
+    "p": 1,
+    "t": 0
+  },
+  "CloudberryBush": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Coal": {
+    "at": 1,
+    "d": 0,
+    "i": 1,
+    "it": 1,
+    "p": 1,
+    "t": 0
+  },
+  "Coins": {
+    "at": 1,
+    "d": 0,
+    "i": 1,
+    "it": 1,
+    "p": 1,
+    "t": 0
+  },
+  "CookedMeat": {
+    "at": 1,
+    "d": 0,
+    "i": 1,
+    "it": 2,
+    "p": 1,
+    "t": 0
+  },
+  "Copper": {
+    "d": 0,
+    "i": 1,
+    "it": 1,
+    "p": 1,
+    "t": 0
+  },
+  "CreepProp_egg_hanging01": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "CreepProp_hanging01": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "CreepProp_wall01": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Crow": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "CryptKey": {
+    "at": 1,
+    "d": 0,
+    "i": 1,
+    "it": 16,
+    "p": 1,
+    "t": 0
+  },
+  "DG_AshlandRuins": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "DG_Cave": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "DG_DvergrBoss": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "DG_DvergrTown": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "DG_ForestCrypt": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "DG_FortressRuins": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "DG_GoblinCamp": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "DG_HalfBurried_ForestCrypt": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "DG_Hildir_Cave": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "DG_Hildir_ForestCrypt": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "DG_Hildir_PlainsFortress": {
+    "d": 1,
+    "p": 1,
+    "t": 2
+  },
+  "DG_Hole": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "DG_MeadowsFarm": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "DG_MeadowsVillage": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "DG_MorkHalla": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "DG_NorthVillage": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "DG_SunkenCrypt": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "Dandelion": {
+    "at": 1,
+    "d": 0,
+    "i": 1,
+    "it": 1,
+    "p": 1,
+    "t": 0
+  },
+  "Deer": {
+    "c": 1,
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "DeerHide": {
+    "d": 0,
+    "i": 1,
+    "it": 1,
+    "p": 1,
+    "t": 0
+  },
+  "Draugr": {
+    "c": 1,
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Draugr_Elite": {
+    "c": 1,
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Draugr_Ranged": {
+    "c": 1,
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Draugr_Ranged_sleeping": {
+    "c": 1,
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Draugr_sleeping": {
+    "c": 1,
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "DvergrNeedle": {
+    "d": 0,
+    "i": 1,
+    "it": 1,
+    "p": 1,
+    "t": 0
+  },
+  "Eikthyr": {
+    "c": 1,
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Fader": {
+    "c": 1,
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "FallenValkyrie": {
+    "c": 1,
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "FeastAshlands": {
+    "at": 1,
+    "d": 0,
+    "i": 1,
+    "it": 2,
+    "p": 1,
+    "t": 2
+  },
+  "FeastMeadows": {
+    "at": 1,
+    "d": 0,
+    "i": 1,
+    "it": 2,
+    "p": 1,
+    "t": 2
+  },
+  "Feaster": {
+    "ao": 23,
+    "at": 1,
+    "d": 0,
+    "dur": 100.0,
+    "durl": 100.0,
+    "i": 1,
+    "it": 19,
+    "p": 1,
+    "t": 0
+  },
+  "Fenring": {
+    "c": 1,
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Fenring_Cultist": {
+    "c": 1,
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "FernAshlands": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "FineWood": {
+    "at": 1,
+    "d": 0,
+    "i": 1,
+    "it": 1,
+    "p": 1,
+    "t": 0
+  },
+  "FirTree": {
+    "d": 1,
+    "p": 1,
+    "t": 2
+  },
+  "FirTree_big": {
+    "d": 1,
+    "p": 1,
+    "t": 2
+  },
+  "FirTree_log": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "FirTree_oldLog": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "FirTree_oldLog_deepnorth": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "FirTree_small": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "FirTree_small_dead": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Fish4_cave": {
+    "at": 1,
+    "d": 0,
+    "i": 1,
+    "it": 21,
+    "p": 1,
+    "t": 0
+  },
+  "FishCooked": {
+    "at": 1,
+    "d": 0,
+    "i": 1,
+    "it": 2,
+    "p": 1,
+    "t": 0
+  },
+  "Flametal": {
+    "d": 0,
+    "i": 1,
+    "it": 1,
+    "p": 1,
+    "t": 0
+  },
+  "FlametalNew": {
+    "d": 0,
+    "i": 1,
+    "it": 1,
+    "p": 1,
+    "t": 0
+  },
+  "FlametalOreNew": {
+    "d": 0,
+    "i": 1,
+    "it": 1,
+    "p": 1,
+    "t": 0
+  },
+  "Flax": {
+    "d": 0,
+    "i": 1,
+    "it": 1,
+    "p": 1,
+    "t": 0
+  },
+  "Flies": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Flint": {
+    "d": 0,
+    "i": 1,
+    "it": 1,
+    "p": 1,
+    "t": 0
+  },
+  "FreezeGland": {
+    "at": 1,
+    "d": 0,
+    "i": 1,
+    "it": 1,
+    "p": 1,
+    "t": 0
+  },
+  "Frostwood": {
+    "d": 0,
+    "i": 1,
+    "it": 1,
+    "p": 1,
+    "t": 0
+  },
+  "FrozenGD": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "FrozenSkeleton_Pose1": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "FrozenSkeleton_Pose2": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Frysling": {
+    "c": 1,
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Ghost": {
+    "c": 1,
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "GlowingMushroom": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Goblin": {
+    "c": 1,
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "GoblinArcher": {
+    "c": 1,
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "GoblinBrute": {
+    "c": 1,
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "GoblinKing": {
+    "c": 1,
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "GoblinShaman": {
+    "c": 1,
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "GoblinTotem": {
+    "at": 1,
+    "d": 0,
+    "i": 1,
+    "it": 16,
+    "p": 1,
+    "t": 0
+  },
+  "Gold": {
+    "d": 0,
+    "i": 1,
+    "it": 1,
+    "p": 1,
+    "t": 0
+  },
+  "Grausten": {
+    "d": 0,
+    "i": 1,
+    "it": 1,
+    "p": 1,
+    "t": 0
+  },
+  "GraveStone_Broken_World": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Greydwarf": {
+    "c": 1,
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "GreydwarfEye": {
+    "d": 0,
+    "i": 1,
+    "it": 1,
+    "p": 1,
+    "t": 0
+  },
+  "Greydwarf_Elite": {
+    "c": 1,
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Greydwarf_Shaman": {
+    "c": 1,
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Guck": {
+    "d": 0,
+    "i": 1,
+    "it": 1,
+    "p": 1,
+    "t": 0
+  },
+  "Haldor": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Hammer": {
+    "at": 1,
+    "d": 0,
+    "dur": 100.0,
+    "durl": 100.0,
+    "i": 1,
+    "it": 19,
+    "p": 1,
+    "t": 0
+  },
+  "HeathRockPillar": {
+    "d": 1,
+    "p": 1,
+    "t": 0
+  },
+  "HeathRockPillar_frac": {
+    "d": 1,
+    "p": 1,
+    "t": 0
+  },
+  "HelmetBronze": {
+    "at": 1,
+    "d": 0,
+    "dur": 1000.0,
+    "durl": 200.0,
+    "i": 1,
+    "it": 6,
+    "p": 1,
+    "t": 0
+  },
+  "Hen": {
+    "c": 1,
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Hildir": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "HoleRock_root1": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "HoleRock_rootBush1": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "HoleRock_rootFloor1": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "HoleRock_rootWall1": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "Honey": {
+    "d": 0,
+    "i": 1,
+    "it": 2,
+    "p": 1,
+    "t": 0
+  },
+  "HoneyGlazedChicken": {
+    "at": 1,
+    "d": 0,
+    "i": 1,
+    "it": 2,
+    "p": 1,
+    "t": 0
+  },
+  "Hook": {
+    "d": 0,
+    "i": 1,
+    "it": 1,
+    "p": 1,
+    "t": 0
+  },
+  "HugeRoot1": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "IceShore_1": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "Ice_floor": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "Iron": {
+    "d": 0,
+    "i": 1,
+    "it": 1,
+    "p": 1,
+    "t": 0
+  },
+  "IronNails": {
+    "d": 0,
+    "i": 1,
+    "it": 1,
+    "p": 1,
+    "t": 0
+  },
+  "IronScrap": {
+    "d": 0,
+    "i": 1,
+    "it": 1,
+    "p": 1,
+    "t": 0
+  },
+  "JotunWarrior": {
+    "c": 1,
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "JotunWitch": {
+    "c": 1,
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Kale": {
+    "at": 1,
+    "d": 0,
+    "i": 1,
+    "it": 2,
+    "p": 1,
+    "t": 0
+  },
+  "LargeBone": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "LargeBone_half01": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "LeatherScraps": {
+    "at": 1,
+    "d": 0,
+    "i": 1,
+    "it": 1,
+    "p": 1,
+    "t": 0
+  },
+  "Leviathan": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "LeviathanLava": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "LingonberryBush": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "LocationProxy": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "Lox": {
+    "c": 1,
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "LoxPelt": {
+    "d": 0,
+    "i": 1,
+    "it": 1,
+    "p": 1,
+    "t": 0
+  },
+  "Lox_Calf": {
+    "c": 1,
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "MeadTasty": {
+    "ao": 19,
+    "at": 1,
+    "d": 0,
+    "i": 1,
+    "it": 2,
+    "p": 1,
+    "t": 0
+  },
+  "MineRock_Copper": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "MineRock_Obsidian": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "MineRock_Tin": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "MistArea": {
+    "d": 1,
+    "p": 1,
+    "t": 2
+  },
+  "MistArea_edge": {
+    "d": 1,
+    "p": 1,
+    "t": 2
+  },
+  "MistArea_small": {
+    "d": 1,
+    "p": 1,
+    "t": 2
+  },
+  "MoltenCore": {
+    "at": 1,
+    "d": 0,
+    "i": 1,
+    "it": 1,
+    "p": 1,
+    "t": 0
+  },
+  "Moose": {
+    "c": 1,
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "MooseHide": {
+    "d": 0,
+    "i": 1,
+    "it": 1,
+    "p": 1,
+    "t": 0
+  },
+  "Morgen_NonSleeping": {
+    "c": 1,
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Morkhalla_Banner1": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "Morkhalla_Banner2": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "Morkhalla_Bedroll1": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "Morkhalla_Bedroll2": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "Morkhalla_Bench": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "Morkhalla_Block": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Morkhalla_Chain": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Morkhalla_ChestAncient": {
+    "ch": 4,
+    "cw": 8,
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Morkhalla_Drawbridge": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "Morkhalla_Eye1": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Morkhalla_Eye2": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Morkhalla_Eye3": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Morkhalla_Eye4": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Morkhalla_Eye5_gemstone": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Morkhalla_Eye6_gemstone": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Morkhalla_Eye7_gemstone": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Morkhalla_Floor_2x2": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Morkhalla_Floor_4x4": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Morkhalla_Floor_4x4_broken01": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Morkhalla_Floor_4x4_broken02": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Morkhalla_GateDoor": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Morkhalla_GateDoor02": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Morkhalla_GateDoor03": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Morkhalla_MetalBar": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Morkhalla_Rubble1": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Morkhalla_Rubble2": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Morkhalla_Rubble3": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Morkhalla_Rubble4": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Morkhalla_Rug_corner": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Morkhalla_Rug_end1": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Morkhalla_Rug_end2": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Morkhalla_Rug_middle": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Morkhalla_Rug_stair": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Morkhalla_Stairs_giant_railing": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Morkhalla_Stairs_giant_short": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Morkhalla_Stairs_giant_short_broken1": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Morkhalla_Stairs_giant_short_broken2": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Morkhalla_StatuePieceArmL": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Morkhalla_StatuePieceArmL_big": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Morkhalla_StatuePieceArmR": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Morkhalla_StatuePieceArmR_big": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Morkhalla_StatuePieceFace": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Morkhalla_StatuePieceFace_big": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Morkhalla_StatuePieceFeet": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Morkhalla_StatuePieceFeet_big": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Morkhalla_StatuePieceHorn": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Morkhalla_StatuePieceHorn2": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Morkhalla_StatuePieceHorn2_big": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Morkhalla_StatuePieceHorn_big": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Morkhalla_StatuePieceLegs": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Morkhalla_StatuePieceLegs_big": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Morkhalla_StatuePieceSword": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Morkhalla_StatuePieceSword_big": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Morkhalla_StatuePieceTorso": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Morkhalla_StatuePieceTorso_big": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Morkhalla_StatueSword": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Morkhalla_StatueSword_hanging": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Morkhalla_Stool": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "Morkhalla_Table": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Morkhalla_Trainingdummy1": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Morkhalla_Trainingdummy2": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Morkhalla_WallChain1": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Morkhalla_WeaponStand": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "Morkhalla_WoodBoards": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Morkhalla_bridge_davinci": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Morkhalla_coal_pile_memorial": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "Morkhalla_firepit": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "Morkhalla_giant_railing": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Morkhalla_giant_railing_corner": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Morkhalla_giant_railing_deco": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Morkhalla_giant_railing_half": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Morkhalla_giant_railing_single": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Morkhalla_giant_railing_torch": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Morkhalla_giant_railing_torch_unlit": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Morkhalla_rubble_trashpile": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "MountainGraveStone01": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "MountainKit_brazier": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "MountainKit_brazier_blue": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "MountainKit_brazier_purple": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "MountainKit_wood_gate": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Neck": {
+    "c": 1,
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Oak1": {
+    "d": 1,
+    "p": 1,
+    "t": 2
+  },
+  "Oak_Sapling": {
+    "cult": 0,
+    "d": 0,
+    "gr": 3.0,
+    "grows": [
+      "Oak1"
+    ],
+    "p": 1,
+    "t": 0
+  },
+  "Obsidian": {
+    "d": 0,
+    "i": 1,
+    "it": 1,
+    "p": 1,
+    "t": 0
+  },
+  "Pickable_Ashstone": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Pickable_Barley": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Pickable_Barley_Wild": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Pickable_BlackCoreStand": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Pickable_BogIronOre": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Pickable_Branch": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Pickable_Branch_Snow": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Pickable_Carrot": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Pickable_Charredskull": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Pickable_Dandelion": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Pickable_DolmenTreasure": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Pickable_DvergrMineTreasure": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Pickable_Fiddlehead": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Pickable_Fishingrod": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Pickable_Flax_Wild": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Pickable_Flint": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Pickable_ForestCryptRandom": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Pickable_ForestCryptRemains01": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Pickable_ForestCryptRemains02": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Pickable_ForestCryptRemains03": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Pickable_ForestCryptRemains04": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Pickable_FrostCoreHanger": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Pickable_GlowWorm": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Pickable_Item": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Pickable_MeatPile": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Pickable_MorkHallaTreasure": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Pickable_MountainCaveCrystal": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Pickable_MountainCaveRandom": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Pickable_Mushroom": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Pickable_Mushroom_JotunPuffs": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Pickable_Mushroom_Magecap": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Pickable_Mushroom_yellow": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Pickable_Pot_Shard": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Pickable_RoyalJelly": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Pickable_SeedCarrot": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Pickable_SeedKale": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Pickable_SeedTurnip": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Pickable_SmokePuff": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Pickable_Snowball": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Pickable_Stone": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Pickable_StoneRock": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Pickable_SunkenCryptRandom": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Pickable_SurtlingCoreStand": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Pickable_Thistle": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Pickable_Tin": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Piece_grausten_wall_1x2": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "Piece_grausten_wall_2x2": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "Piece_grausten_wall_4x2": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "Piece_grausten_wall_arch": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "Pinetree_01": {
+    "d": 1,
+    "p": 1,
+    "t": 2
+  },
+  "Pinetree_Snow": {
+    "d": 1,
+    "p": 1,
+    "t": 2
+  },
+  "Pinetree_Snow_dead": {
+    "d": 1,
+    "p": 1,
+    "t": 2
+  },
+  "Placeable_Stone": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Player": {
+    "c": 1,
+    "d": 0,
+    "p": 0,
+    "t": 1
+  },
+  "Player_tombstone": {
+    "ch": 4,
+    "cw": 8,
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Pot_Shard_Green": {
+    "at": 1,
+    "d": 0,
+    "i": 1,
+    "it": 1,
+    "p": 1,
+    "t": 0
+  },
+  "PropFeastDeepNorth": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "Raspberry": {
+    "at": 1,
+    "d": 0,
+    "i": 1,
+    "it": 2,
+    "p": 1,
+    "t": 0
+  },
+  "RaspberryBush": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Resin": {
+    "d": 0,
+    "i": 1,
+    "it": 1,
+    "p": 1,
+    "t": 0
+  },
+  "Rock_3": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "Rock_3_deepnorth": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "Rock_4": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "Rock_4_deepnorth": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "Rock_4_plains": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "Rock_7": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "Rock_7_deepnorth": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "Root": {
+    "d": 0,
+    "i": 1,
+    "it": 1,
+    "p": 1,
+    "t": 0
+  },
+  "RoundLog": {
+    "at": 1,
+    "d": 0,
+    "i": 1,
+    "it": 1,
+    "p": 1,
+    "t": 0
+  },
+  "Ruby": {
+    "at": 1,
+    "d": 0,
+    "i": 1,
+    "it": 1,
+    "p": 1,
+    "t": 0
+  },
+  "ScaleHide": {
+    "d": 0,
+    "i": 1,
+    "it": 1,
+    "p": 1,
+    "t": 0
+  },
+  "Seal": {
+    "c": 1,
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Seeker": {
+    "c": 1,
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "SeekerBrute": {
+    "c": 1,
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "SeekerEgg": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "SeekerQueen": {
+    "c": 1,
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "ShieldWood": {
+    "at": 1,
+    "d": 0,
+    "dur": 200.0,
+    "durl": 50.0,
+    "i": 1,
+    "it": 5,
+    "p": 1,
+    "t": 0,
+    "var": 4
+  },
+  "Silver": {
+    "d": 0,
+    "i": 1,
+    "it": 1,
+    "p": 1,
+    "t": 0
+  },
+  "Skeleton": {
+    "c": 1,
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Skeleton_DeepNorth": {
+    "c": 1,
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Skeleton_Hildir": {
+    "c": 1,
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Skeleton_Meadows": {
+    "c": 1,
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Skeleton_Mountains": {
+    "c": 1,
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Skeleton_NoArcher": {
+    "c": 1,
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Skeleton_Poison": {
+    "c": 1,
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Skull1": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Skull2": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "SnowFirTree": {
+    "d": 1,
+    "p": 1,
+    "t": 2
+  },
+  "SnowFirTree 2": {
+    "d": 1,
+    "p": 1,
+    "t": 2
+  },
+  "SnowFirTree_small": {
+    "d": 1,
+    "p": 1,
+    "t": 2
+  },
+  "Softtissue": {
+    "d": 0,
+    "i": 1,
+    "it": 1,
+    "p": 1,
+    "t": 0
+  },
+  "Spawner_Bat": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Spawner_Blob": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Spawner_Boar": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Spawner_Charred": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Spawner_Charred_Archer": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Spawner_Charred_Dyrnwyn": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Spawner_Charred_Mage": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Spawner_Cultist": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Spawner_Cultist_Hildir": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Spawner_Cultist_Hildir_bossroom": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Spawner_Draugr": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Spawner_DraugrPile": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Spawner_Draugr_Elite": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Spawner_Draugr_Ranged": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Spawner_DvergerDeepNorth": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Spawner_ElakingMole_Wakeup": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Spawner_FallenValkyrie": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Spawner_Fenring": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Spawner_Fish4": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Spawner_Frysling": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Spawner_Ghost": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Spawner_Goblin": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Spawner_GoblinArcher": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Spawner_GoblinBrute": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Spawner_GoblinBrute_Hildir": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Spawner_GoblinDeepNorth": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Spawner_GoblinShaman": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Spawner_Greydwarf": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Spawner_Greydwarf_Elite": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Spawner_Greydwarf_Shaman": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Spawner_Hole": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Spawner_JotunDualWield": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Spawner_JotunWarrior": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Spawner_JotunWitch": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Spawner_Morgen": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Spawner_Morgen_wakeup": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Spawner_Seeker": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Spawner_SeekerBrute": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Spawner_SeekerBrute_respawn_240": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Spawner_Seeker_respawn_240": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Spawner_ShadowPerson": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Spawner_Skeleton": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Spawner_Skeleton_Meadows": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Spawner_Skeleton_Mountains": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Spawner_Skeleton_hildir": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Spawner_Skeleton_hildir_bossroom": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Spawner_Skeleton_poison": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Spawner_StoneGolem": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Spawner_Tick": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Spawner_Tick_stared": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Spawner_Tick_stared_respawn_240": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Spawner_Troll": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Spawner_Twitcher": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Spawner_Ulv": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Spawner_Wraith": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "StartPlatform": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "StatueDeer": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "StatueEvil": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "StatueFreya": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "StatueFreya_broken_left": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "StatueSeed": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "StatueThor": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "StatueThor_broken_top": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Stone": {
+    "at": 1,
+    "d": 0,
+    "i": 1,
+    "it": 1,
+    "p": 1,
+    "t": 0
+  },
+  "StoneGolem": {
+    "c": 1,
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "StumpHole": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "StumpHut": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "StumpLog": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "SunkenKit_int_towerwall_LOD": {
+    "d": 1,
+    "p": 1,
+    "t": 0
+  },
+  "Surtling": {
+    "c": 1,
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "SurtlingCore": {
+    "ao": 16,
+    "at": 1,
+    "d": 0,
+    "i": 1,
+    "it": 1,
+    "p": 1,
+    "t": 0
+  },
+  "SwampTree1": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "SwampTree2": {
+    "d": 1,
+    "p": 1,
+    "t": 2
+  },
+  "SwampTree2_darkland": {
+    "d": 1,
+    "p": 1,
+    "t": 2
+  },
+  "SwampTree2_log": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "SwordIron": {
+    "at": 1,
+    "d": 0,
+    "dur": 200.0,
+    "durl": 50.0,
+    "i": 1,
+    "it": 3,
+    "p": 1,
+    "t": 0
+  },
+  "Tar": {
+    "d": 0,
+    "i": 1,
+    "it": 1,
+    "p": 1,
+    "t": 0
+  },
+  "Thistle": {
+    "at": 1,
+    "d": 0,
+    "i": 1,
+    "it": 1,
+    "p": 1,
+    "t": 0
+  },
+  "Tick": {
+    "c": 1,
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Torch": {
+    "at": 1,
+    "d": 0,
+    "dur": 20.0,
+    "durl": 50.0,
+    "i": 1,
+    "it": 15,
+    "p": 1,
+    "t": 0
+  },
+  "TreasureChest_charredfortress": {
+    "ch": 2,
+    "cw": 4,
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "TreasureChest_deepnorth_village": {
+    "ch": 2,
+    "cw": 4,
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "TreasureChest_dvergrtown": {
+    "ch": 2,
+    "cw": 4,
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "TreasureChest_forestcrypt": {
+    "ch": 2,
+    "cw": 4,
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "TreasureChest_heath": {
+    "ch": 2,
+    "cw": 4,
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "TreasureChest_heath_hildir": {
+    "ch": 2,
+    "cw": 4,
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "TreasureChest_meadows": {
+    "ch": 2,
+    "cw": 4,
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "TreasureChest_morkhalla": {
+    "ch": 2,
+    "cw": 4,
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "TreasureChest_mountaincave": {
+    "ch": 2,
+    "cw": 4,
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "TreasureChest_plains_stone": {
+    "ch": 2,
+    "cw": 4,
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "TreasureChest_sunkencrypt": {
+    "ch": 2,
+    "cw": 4,
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "TriggerSpawner_Seeker": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Troll": {
+    "c": 1,
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "TrophyDeer": {
+    "at": 1,
+    "d": 0,
+    "i": 1,
+    "it": 13,
+    "p": 1,
+    "t": 0
+  },
+  "TrophyMoose": {
+    "at": 1,
+    "d": 0,
+    "i": 1,
+    "it": 13,
+    "p": 1,
+    "t": 0
+  },
+  "Turnip": {
+    "at": 1,
+    "d": 0,
+    "i": 1,
+    "it": 1,
+    "p": 1,
+    "t": 0
+  },
+  "TurnipSeeds": {
+    "d": 0,
+    "i": 1,
+    "it": 1,
+    "p": 1,
+    "t": 0
+  },
+  "Ulv": {
+    "c": 1,
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "UnstableLavaRock": {
+    "d": 1,
+    "p": 1,
+    "t": 0
+  },
+  "WallSnow1": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "WallSnow2": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "WallSnow3": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Wolf": {
+    "c": 1,
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "WolfPelt": {
+    "d": 0,
+    "i": 1,
+    "it": 1,
+    "p": 1,
+    "t": 0
+  },
+  "Wolf_cub": {
+    "c": 1,
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "Wood": {
+    "d": 0,
+    "i": 1,
+    "it": 1,
+    "p": 1,
+    "t": 0
+  },
+  "Wraith": {
+    "c": 1,
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "YggaShoot1": {
+    "d": 1,
+    "p": 1,
+    "t": 2
+  },
+  "YggaShoot2": {
+    "d": 1,
+    "p": 1,
+    "t": 2
+  },
+  "YggaShoot3": {
+    "d": 1,
+    "p": 1,
+    "t": 2
+  },
+  "YggaShoot_small1": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "YggdrasilRoot": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "YggdrasilWood": {
+    "at": 1,
+    "d": 0,
+    "i": 1,
+    "it": 1,
+    "p": 1,
+    "t": 0
+  },
+  "_TerrainCompiler": {
+    "d": 0,
+    "p": 1,
+    "t": 3
+  },
+  "_ZoneCtrl": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "ashland_pot1_red": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "ashland_pot2_red": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "ashland_pot3_green": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "bar_blackmetal_stack": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "bar_bronze_stack": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "bar_copper_stack": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "bar_flametal_stack": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "bar_gold_stack": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "bar_iron_stack": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "bar_silver_stack": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "barrell": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "bed": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "blackmarble_altar_crystal": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "blackmarble_arch": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "blackmarble_column_3": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "blackmarble_creep_4x1x1": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "blackmarble_creep_4x2x1": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "blackmarble_creep_slope_inverted_1x1x2": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "blackmarble_creep_slope_inverted_2x2x1": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "blackmarble_creep_stair": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "blackmarble_floor_large": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "blackmarble_tile_floor_2x2": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "blackmarble_tile_wall_1x1": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "blackmarble_tile_wall_2x2": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "blackmarble_tile_wall_2x4": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "blackmarble_tip": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "bone_stack": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "bonfire": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "caverock_ice_pillar_wall": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "caverock_ice_stalagmite": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "caverock_ice_stalagtite": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "cliff_ashlands1": {
+    "d": 1,
+    "p": 1,
+    "t": 2
+  },
+  "cliff_ashlands2": {
+    "d": 1,
+    "p": 1,
+    "t": 2
+  },
+  "cliff_ashlands3_Arch_1": {
+    "d": 1,
+    "p": 1,
+    "t": 2
+  },
+  "cliff_ashlands4": {
+    "d": 1,
+    "p": 1,
+    "t": 2
+  },
+  "cliff_ashlands5": {
+    "d": 1,
+    "p": 1,
+    "t": 2
+  },
+  "cliff_ashlands6": {
+    "d": 1,
+    "p": 1,
+    "t": 2
+  },
+  "cliff_ashlands7_HalfArch": {
+    "d": 1,
+    "p": 1,
+    "t": 2
+  },
+  "cliff_ashlands8": {
+    "d": 1,
+    "p": 1,
+    "t": 2
+  },
+  "cliff_mistlands1": {
+    "d": 1,
+    "p": 1,
+    "t": 2
+  },
+  "cliff_mistlands2": {
+    "d": 1,
+    "p": 1,
+    "t": 2
+  },
+  "cloth_hanging_door": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "cloth_hanging_door_double": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "cloth_hanging_long": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "crypt_skeleton_chest": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "cultivate": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "darkwood_beam4x4": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "darkwood_gate": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "darkwood_roof": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "darkwood_roof_45": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "darkwood_roof_67": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "darkwood_roof_icorner_67": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "darkwood_roof_top": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "darkwood_roof_top_45": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "deepnorth_lantern_standing": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "digg": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "digg_v2": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "dungeon_forestcrypt_door": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "dungeon_sunkencrypt_irongate": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "dungeon_sunkencrypt_irongate_rusty": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "dverger_demister": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "dvergrprops_banner": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "dvergrprops_barrel": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "dvergrprops_bed": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "dvergrprops_chair": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "dvergrprops_crate": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "dvergrprops_crate_long": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "dvergrprops_curtain": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "dvergrprops_hooknchain": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "dvergrprops_lantern": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "dvergrprops_lantern_standing": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "dvergrprops_pickaxe": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "dvergrprops_shelf": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "dvergrprops_stool": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "dvergrprops_table": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "dvergrprops_wood_floor": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "dvergrprops_wood_pole": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "dvergrtown_arch": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "dvergrtown_creep_door": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "dvergrtown_secretdoor": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "dvergrtown_slidingdoor": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "dvergrtown_wood_beam": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "dvergrtown_wood_pole": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "dvergrtown_wood_support": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "dvergrtown_wood_wall02": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "elaking_trashpile": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "fenrirhide_hanging": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "fire_pit": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "forge": {
+    "build": 20.0,
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "fuling_trap": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "giant_helmet1": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "giant_helmet2": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "giant_ribs": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "giant_skull": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "giant_sword1": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "giant_sword2": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "goblin_banner": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "goblin_bed": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "goblin_fence": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "goblin_pole": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "goblin_pole_small": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "goblin_roof_45d": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "goblin_roof_45d_corner": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "goblin_roof_cap": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "goblin_stairs": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "goblin_stepladder": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "goblin_strawpile": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "goblin_totempole": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "goblin_trashpile": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "goblin_woodwall_1m": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "goblin_woodwall_2m": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "goblin_woodwall_2m_ribs": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "guard_stone": {
+    "d": 0,
+    "p": 1,
+    "t": 2,
+    "ward": 32.0
+  },
+  "hanging_hairstrands": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "hearth": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "highstone_2": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "horizontal_web": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "ice1": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "ice_rock1": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "iron_grate": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "iron_wall_1x1": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "iron_wall_1x1_rusty": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "itemstand": {
+    "d": 0,
+    "is": [
+      3,
+      4,
+      5,
+      6,
+      9,
+      13,
+      14,
+      16,
+      19,
+      21,
+      22,
+      24
+    ],
+    "isi": [
+      "AncientCoin",
+      "AncientGemstoneBlack",
+      "AncientGemstoneGreen",
+      "AncientGemstoneOrange",
+      "AncientGemstonePurple",
+      "BlackCore",
+      "BombSiege",
+      "CelestialFeather",
+      "Dandelion",
+      "ElakingHairBundle",
+      "FragrantBundle",
+      "FreshSeaweed",
+      "FrostCore",
+      "MoltenCore",
+      "NornThread",
+      "OrbFrostFire",
+      "OrbThunderBlood",
+      "ProustitePowder",
+      "ShieldCore",
+      "SurtlingCore",
+      "Thistle",
+      "Turnip",
+      "Upgrader0Armor",
+      "Upgrader0Weapon",
+      "Upgrader1Armor",
+      "Upgrader1Weapon",
+      "Upgrader2Armor",
+      "Upgrader2Weapon",
+      "Upgrader3Armor",
+      "Upgrader3Weapon",
+      "Upgrader4Armor",
+      "Upgrader4Weapon",
+      "Upgrader5Armor",
+      "Upgrader5Weapon",
+      "Upgrader6Armor",
+      "Upgrader6Weapon",
+      "Upgrader7Armor",
+      "Upgrader7Weapon"
+    ],
+    "isu": [
+      "BarleyFlour",
+      "ChickenEgg",
+      "MeadTasty",
+      "Tankard",
+      "TankardAnniversary",
+      "TankardOdin",
+      "Tankard_dvergr",
+      "chest_hildir1",
+      "chest_hildir2",
+      "chest_hildir3"
+    ],
+    "p": 1,
+    "t": 0
+  },
+  "itemstandh": {
+    "d": 0,
+    "is": [
+      2,
+      3,
+      4,
+      5,
+      6,
+      9,
+      13,
+      14,
+      16,
+      19,
+      21,
+      22,
+      24
+    ],
+    "isi": [
+      "AncientCoin",
+      "AncientGemstoneBlack",
+      "AncientGemstoneGreen",
+      "AncientGemstoneOrange",
+      "AncientGemstonePurple",
+      "BlackCore",
+      "BombSiege",
+      "CelestialFeather",
+      "Dandelion",
+      "ElakingHairBundle",
+      "FragrantBundle",
+      "FreshSeaweed",
+      "FrostCore",
+      "MoltenCore",
+      "NornThread",
+      "OrbFrostFire",
+      "OrbThunderBlood",
+      "ProustitePowder",
+      "ShieldCore",
+      "SurtlingCore",
+      "Thistle",
+      "Turnip",
+      "Upgrader0Armor",
+      "Upgrader0Weapon",
+      "Upgrader1Armor",
+      "Upgrader1Weapon",
+      "Upgrader2Armor",
+      "Upgrader2Weapon",
+      "Upgrader3Armor",
+      "Upgrader3Weapon",
+      "Upgrader4Armor",
+      "Upgrader4Weapon",
+      "Upgrader5Armor",
+      "Upgrader5Weapon",
+      "Upgrader6Armor",
+      "Upgrader6Weapon",
+      "Upgrader7Armor",
+      "Upgrader7Weapon",
+      "YagluthDrop"
+    ],
+    "p": 1,
+    "t": 0
+  },
+  "jute_carpet": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "jute_carpet_blue": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "loot_deepNorth_Granary": {
+    "ch": 2,
+    "cw": 6,
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "loot_deepNorth_TimberHall": {
+    "ch": 2,
+    "cw": 6,
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "lox_ribs": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "morkhalla_web_corner": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "morkhalla_web_tunnel": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "mountainkit_chair": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "mountainkit_table": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "mud_road": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "mudpile": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "mudpile2": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "mudpile_beacon": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "odin": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "offeraltar_FrozenKing_bossroom": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "path": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "paved_road": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "piece_banner01": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "piece_banner02": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "piece_banner03": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "piece_banner04": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "piece_banner05": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "piece_banner06": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "piece_banner07": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "piece_bench01": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "piece_blackmarble_bench": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "piece_blackmarble_throne": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "piece_blackwood_bench01": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "piece_bone_throne": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "piece_chair": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "piece_chair02": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "piece_chair03": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "piece_chest": {
+    "ch": 4,
+    "cw": 6,
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "piece_chest_wood": {
+    "ch": 2,
+    "cw": 5,
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "piece_dvergr_metal_wall_2x2": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "piece_dvergr_pole": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "piece_groundtorch_wood": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "piece_maypole": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "piece_moose_throne": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "piece_pot1_cracked": {
+    "ch": 2,
+    "cw": 1,
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "piece_pot2_cracked": {
+    "ch": 3,
+    "cw": 1,
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "piece_pot3_cracked": {
+    "ch": 1,
+    "cw": 1,
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "piece_sharpstakes": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "piece_table": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "piece_table_oak": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "piece_throne01": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "piece_throne02": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "piece_workbench": {
+    "build": 20.0,
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "piece_workbench_ext2": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "portal": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "portal_wood": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "prop_FeastAshlands": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "prop_FeastMeadows": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "prop_Tankard": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "prop_ashwood_bed": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "prop_bed02": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "prop_cauldron_ext3_butchertable": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "prop_cauldron_ext5_mortarandpestle": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "prop_cauldron_ext6_rollingpins": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "prop_chest_warderobe": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "prop_forge_ext2": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "prop_forge_ext5": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "prop_hearth": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "prop_itemstand": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "prop_itemstand_TrophyDraugrElite": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "prop_itemstand_TrophyGoblinBrute": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "prop_itemstand_TrophyGoblinShaman": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "prop_itemstand_TrophyGreydwarf": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "prop_itemstand_TrophyGreydwarfBrute": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "prop_itemstand_TrophySeekerBrute": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "prop_piece_bench_runed": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "prop_piece_brazierfloor01": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "prop_piece_cauldron": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "prop_piece_chair03": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "prop_piece_cookingstation": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "prop_piece_workbench_ext1": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "prop_piece_workbench_ext2": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "prop_piece_workbench_ext3": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "prop_piece_workbench_ext4": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "prop_preptable": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "prop_wood_stack": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "raise": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "replant": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "rock1_mountain": {
+    "d": 1,
+    "p": 1,
+    "t": 2
+  },
+  "rock2_heath": {
+    "d": 1,
+    "p": 1,
+    "t": 2
+  },
+  "rock2_mountain": {
+    "d": 1,
+    "p": 1,
+    "t": 2
+  },
+  "rock3_mountain": {
+    "d": 1,
+    "p": 1,
+    "t": 2
+  },
+  "rock3_silver": {
+    "d": 1,
+    "p": 1,
+    "t": 2
+  },
+  "rock4_ashlands_frac": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "rock4_coast": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "rock4_coast_frac": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "rock4_copper": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "rock4_copper_frac": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "rock4_forest": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "rock4_forest_frac": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "rock4_heath": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "rock4_heath_frac": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "rock_mistlands1": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "rock_mistlands2": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "rockformation1": {
+    "d": 1,
+    "p": 1,
+    "t": 2
+  },
+  "root07": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "root08": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "root11": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "root12": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "rug_deer": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "rug_fur": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "rug_moose": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "rug_straw": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "rug_wolf": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "sapling_carrot": {
+    "cult": 1,
+    "d": 0,
+    "gr": 0.5,
+    "grows": [
+      "Pickable_Carrot"
+    ],
+    "p": 1,
+    "t": 0
+  },
+  "sapling_turnip": {
+    "cult": 1,
+    "d": 0,
+    "gr": 0.5,
+    "grows": [
+      "Pickable_Turnip"
+    ],
+    "p": 1,
+    "t": 0
+  },
+  "scale_halfwall_1x2": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "scale_quarterwall_1x1": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "scale_wall_2x2": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "scale_wall_roof_26": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "scale_wall_roof_26_flipped": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "scale_wall_roof_45": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "scale_wall_roof_45_flipped": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "scale_wall_roof_45_upsidedown": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "scale_wall_roof_45_upsidedown_flipped": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "scale_wall_roof_67": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "scale_wall_roof_67_flipped": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "ship_construction": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "shrub_2": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "shrub_2_heath": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "sign": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "sign_notext": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "silvervein": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "skull_pile": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "stake_wall": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "stave_beam_26": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "stave_beam_2m": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "stave_beam_45": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "stave_beam_4m": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "stave_beam_67": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "stave_deco_beam_2m": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "stave_deco_wall_2x2": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "stave_pole_2m": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "stave_pole_4m": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "stave_wall_2x2": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "stave_wall_cross_26": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "stave_wall_cross_45": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "stave_wall_cross_67": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "stone_arch": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "stone_fence": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "stone_floor_2x2": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "stone_pillar": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "stone_stair": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "stone_wall_1x1": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "stone_wall_1x1_ruin": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "stone_wall_2x1": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "stone_wall_2x1_ruin": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "stone_wall_4x2": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "stone_wall_ruin_2": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "stonewall_2": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "stubbe": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "stubbe_deepnorth": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "sunken_crypt_gate": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "treasure_pile": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "treasure_stack": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "tunnel_web": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "vertical_web": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "vfx_edge_clouds": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "vfx_mistlands_mist": {
+    "d": 1,
+    "p": 1,
+    "t": 0
+  },
+  "vfx_ocean_clouds": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "vfx_swamp_mist": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "vines": {
+    "d": 0,
+    "p": 1,
+    "t": 0
+  },
+  "widestone": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "widestone_2": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "wood_beam": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "wood_beam_26": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "wood_beam_45": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "wood_door": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "wood_fence": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "wood_floor": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "wood_floor_1x1": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "wood_gate": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "wood_pole": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "wood_pole2": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "wood_pole_log_4": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "wood_roof": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "wood_roof_45": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "wood_roof_icorner": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "wood_roof_icorner_45": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "wood_roof_ocorner": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "wood_roof_top": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "wood_roof_top_45": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "wood_stack": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "wood_stair": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "wood_stepladder": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "wood_wall_half": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "wood_wall_log": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "wood_wall_quarter": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "wood_wall_roof": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "wood_wall_roof_45": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "wood_wall_roof_top": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "wood_wall_roof_top_45": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  },
+  "woodwall": {
+    "d": 0,
+    "p": 1,
+    "t": 2
+  }
+}
