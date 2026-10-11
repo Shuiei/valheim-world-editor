@@ -309,3 +309,47 @@ and the app, not the tests, the libraries or generated code, and not the FastNoi
 the test against the game's values checks along with the world generator. Code that CI cannot run (it
 needs a display, the game's files or a real game) can be left out with
 `[ExcludeFromCodeCoverage(Justification = "...")]`.
+
+## Fuzzing
+
+The readers of files that come from outside the editor (blueprints, saves, live snapshots, heightmap
+pictures) are fuzzed: given millions of made-up and damaged inputs, each must read the input or refuse
+it as damaged (`InvalidDataException`, `EndOfStreamException`, `FormatException`, `JsonException`).
+Any other exception, a hang or a huge allocation is a bug.
+
+- **`tests/Fuzz`**: one target per reader, run by libFuzzer through
+  [SharpFuzz](https://github.com/Metalnem/sharpfuzz): `blueprint`, `homestead`, `zdo`, `inventory`,
+  `dungeon`, `zonedb`, `snapshot`, `chunk`, `png`. Each has its seeds (`tests/Fuzz/seeds/<target>`,
+  taken from the test fixtures) and a dictionary of its format's words (`tests/Fuzz/dict`).
+- **`.clusterfuzzlite/`**: how [ClusterFuzzLite](https://google.github.io/clusterfuzzlite/) builds them.
+  It has no .NET of its own, so each target is a native libFuzzer binary: libfuzzer-dotnet compiled
+  with `tests/Fuzz/target.cc`, which points it at the .NET program and the target's name
+  (`project.yaml` says `c++`). Only `ValheimWorldEditor.Core.dll` is instrumented.
+- **Every night on main** (`.github/workflows/cflite_batch.yml`): an hour over every target. A crash
+  fails the run, shows in code scanning (category `clusterfuzzlite`) and its input is the run's
+  artifact. Not on pull requests: it takes too long; run the workflow by hand from the Actions tab to
+  fuzz a change first. `cflite_cron.yml` prunes the corpus once a week.
+- **`FuzzPropertiesTests`** (FsCheck, `tests/Core.Tests/Integration`) checks the same readers in the test suite on every pull request:
+  made-up and cut-short inputs are read or refused, and what the editor writes reads back.
+
+To fuzz on your computer, with OSS-Fuzz's helper (`git clone https://github.com/google/oss-fuzz`) and
+Docker or Podman:
+
+```sh
+python3 oss-fuzz/infra/helper.py build_image --external <repository>
+python3 oss-fuzz/infra/helper.py build_fuzzers --external --sanitizer address <repository>
+python3 oss-fuzz/infra/helper.py check_build --external --sanitizer address <repository>
+python3 oss-fuzz/infra/helper.py run_fuzzer --external --corpus-dir=<folder> <repository> blueprint -- -max_total_time=300
+```
+
+`build_image` copies the sources in: run it again after a change. With SELinux (Fedora and the like)
+the helper's own folders cannot be read in the container; run the runner yourself with `:z` mounts:
+`podman run --rm --privileged -v <out>:/out:z -v <corpus>:/corpus:z gcr.io/oss-fuzz-base/base-runner
+/out/<target> /corpus -dict=/out/<target>.dict`. To reproduce a crash, give its input file in place
+of the corpus folder.
+
+A crash found is fixed in the reader (a damaged input refused with `InvalidDataException`), and its
+minimized input (`-minimize_crash=1`) becomes a test in `FuzzFindingsTests`
+(`tests/Core.Tests/Integration`). A new reader of outside
+files gets a target in `tests/Fuzz/Program.cs` and the `TARGETS` list of `.clusterfuzzlite/build.sh`,
+seeds and a dictionary, and a property in `FuzzPropertiesTests`.
