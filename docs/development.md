@@ -314,8 +314,9 @@ needs a display, the game's files or a real game) can be left out with
 
 The readers of files that come from outside the editor (blueprints, saves, live snapshots, heightmap
 pictures) are fuzzed: given millions of made-up and damaged inputs, each must read the input or refuse
-it as damaged (`InvalidDataException`, `EndOfStreamException`, `FormatException`, `JsonException`).
-Any other exception, a hang or a huge allocation is a bug.
+it as damaged (`InvalidDataException`, `EndOfStreamException`, `FormatException`, `JsonException`;
+the `inventory` target also `NotSupportedException`, for an older item format the editor does not
+read). Any other exception, a hang or a huge allocation is a bug.
 
 - **`tests/Fuzz`**: one target per reader, run by libFuzzer through
   [SharpFuzz](https://github.com/Metalnem/sharpfuzz): `blueprint`, `homestead`, `zdo`, `inventory`,
