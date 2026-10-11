@@ -23,6 +23,7 @@ public static class GameData
 		new("terrain-modifiers", null, TerrainModifiers.Use),
 		new("prefabs", null, PrefabCatalog.Use),
 		new("pieces", null, PieceCatalog.Use),
+		new("piece-support", null, Editing.Stability.Use),
 		new("zdo-keys", (valheim, _) => GameCatalogues.ZdoKeysJson(valheim), ZdoKeys.Use),
 		new("cave-rocks", (_, bundles) => GameCatalogues.CaveRocksJson(bundles), CaveRocks.Use),
 		new("piece-cost", null, PieceCost.Use, TrimPieceCost),

@@ -7,7 +7,7 @@ using V3 = (double X, double Y, double Z);
 namespace TerrainEditor.App;
 
 // The build pieces' catalogues: every prefab whose root has a Piece component; and what the editor
-// reads of them at its start (GameData): the pieces and their costs.
+// reads of them at its start (GameData): the pieces, their support and their costs.
 public static partial class GameCatalogues
 {
 	private const int BoxColliderType = (int)AssetClassID.BoxCollider;
@@ -86,6 +86,40 @@ public static partial class GameCatalogues
 		return res;
 	}
 
+	// What the pieces' readers walk below the prefabs (pieces, piece-support), read once for both, first,
+	// each time in the order of the file (the bundle is read in blocks, and a prefab's objects are far
+	// apart): a level's Transforms, the GameObjects of the level above and the colliders of the one above
+	// that, as many times as there are levels. Below snap points nothing is read; a level is read before
+	// its parent's GameObject tells whether to go there.
+	private static void PieceTrees(Bundle b, Game game) => TreesRead.GetValue(b, _ =>
+	{
+		IEnumerable<long> Of(long go, Func<int, bool> type) => b.Field(go) is { } g ? b.ComponentIds(g).Where(c => type(c.Type)).Select(c => c.Pid) : Enumerable.Empty<long>();
+		var gos = PieceRoots(b, game).Select(p => p.Pid).ToList();
+		// The Transforms to read, with their parent's GameObject (0 for a prefab's root).
+		var transforms = gos.SelectMany(g => Of(g, t => t == TransformType)).Select(t => (Pid: t, Parent: 0L)).ToList();
+		var cols = new List<long>();
+		while (transforms.Count + gos.Count + cols.Count > 0)
+		{
+			b.ReadInOrder(transforms.Select(t => t.Pid).Concat(gos).Concat(cols));
+			cols = gos.SelectMany(g => Of(g, IsCollider)).ToList();
+			gos = new List<long>();
+			var next = new List<(long Pid, long Parent)>();
+			foreach (var (t, parent) in transforms)
+			{
+				if ((parent == 0 || b.Field(parent) is { } p && !IsSnapPoint(p)) && b.Field(t) is { } tr)
+				{
+					long go = tr["m_GameObject.m_PathID"].AsLong;
+					gos.Add(go);
+					next.AddRange(tr["m_Children.Array"].Children.Select(c => (c["m_PathID"].AsLong, go)));
+				}
+			}
+			transforms = next;
+		}
+		return new object();
+	});
+
+	private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<Bundle, object> TreesRead = new();
+
 	// A child's frame from its parent's: (position, rotation, scale), all in the prefab's frame.
 	private static (V3 P, Quat Q, V3 S) ChildFrame(AssetTypeValueField tr, V3 pos, Quat rot, V3 scale)
 	{
@@ -120,7 +154,7 @@ public static partial class GameCatalogues
 		public void Read(Bundle b, Game game)
 		{
 			var pieces = PieceRoots(b, game);
-			ReadTrees(b, pieces.Select(p => p.Pid));
+			PieceTrees(b, game);
 			foreach (var (f, pid, go, piece) in pieces)
 			{
 				string name = go["m_Name"].AsString;
@@ -171,38 +205,6 @@ public static partial class GameCatalogues
 				}
 			}
 			return CatalogueJson.Write(_entries, new CatalogueJson.Style());
-		}
-
-		// What Walk reads below these prefabs, read first, each time in the order of the file (the bundle
-		// is read in blocks, and a prefab's objects are far apart): a level's Transforms, the GameObjects
-		// of the level above and the box colliders of the one above that, as many times as there are
-		// levels. A level is read before its parent's GameObject tells whether Walk goes there.
-		private static void ReadTrees(Bundle b, IEnumerable<long> roots)
-		{
-			bool Walked(long go) => b.Field(go) is { } g && (Active(g) || IsSnapPoint(g));
-			bool Below(long go) => b.Field(go) is { } g && Active(g) && !IsSnapPoint(g);
-			IEnumerable<long> Of(long go, int type) => b.Field(go) is { } g ? b.ComponentIds(g).Where(c => c.Type == type).Select(c => c.Pid) : Enumerable.Empty<long>();
-			var gos = roots.ToList();
-			// The Transforms to read, with their parent's GameObject (0 for a prefab's root).
-			var transforms = gos.SelectMany(g => Of(g, TransformType)).Select(t => (Pid: t, Parent: 0L)).ToList();
-			var boxes = new List<long>();
-			while (transforms.Count + gos.Count + boxes.Count > 0)
-			{
-				b.ReadInOrder(transforms.Select(t => t.Pid).Concat(gos).Concat(boxes));
-				boxes = gos.Where(Walked).SelectMany(g => Of(g, BoxColliderType)).ToList();
-				gos = new List<long>();
-				var next = new List<(long Pid, long Parent)>();
-				foreach (var (t, parent) in transforms)
-				{
-					if ((parent == 0 || Below(parent)) && b.Field(t) is { } tr)
-					{
-						long go = tr["m_GameObject.m_PathID"].AsLong;
-						gos.Add(go);
-						next.AddRange(tr["m_Children.Array"].Children.Select(c => (c["m_PathID"].AsLong, go)));
-					}
-				}
-				transforms = next;
-			}
 		}
 
 		private static void Walk(Bundle b, long goPid, V3 pos, Quat rot, V3 scale, bool root, List<V3> pts, List<object?> snaps)
@@ -641,35 +643,40 @@ public static partial class GameCatalogues
 		}
 	}
 
-	// piece-support.json: what the game's support check needs of every piece, for the editor's
-	// stability check: its material, centre of mass offset, whether it supports other pieces, whether
-	// the game checks its support at all ("f": never), and its colliders as boxes in its own frame:
-	// [centre, half size, rotation, aabb, layer] (aabb 1: the bounds of a collider that is not a box, a
-	// mesh collider's as its mesh's box). Colliders of every child count, inactive ones too; triggers
-	// and snap points do not.
-	private sealed class SupportScan : IScan
+	// What the game's support check needs of each piece, read at the editor's start (GameData), for the
+	// editor's stability check: its material, centre of mass offset, whether it supports other pieces,
+	// whether the game checks its support at all ("f": never), and its colliders as boxes in its own
+	// frame: [centre, half size, rotation, aabb, layer] (aabb 1: the bounds of a collider that is not a
+	// box, a mesh collider's as its mesh's box). Colliders of every child count, inactive ones too;
+	// triggers and snap points do not. The pieces with a WearNTear (told by its class) on their root.
+	private sealed class SupportScan : IStartScan
 	{
-		public Dict Entries { get; } = new();
+		private readonly Dict _entries = new();
+		// The bounds of the meshes of the bundle's mesh colliders, by path id.
+		private readonly Dictionary<long, (V3 C, V3 H)> _meshes = new();
 
-		public void Read(Bundle b)
+		public string Json() => CatalogueJson.Write(_entries, new CatalogueJson.Style(",", ":"));
+
+		public void Read(Bundle b, Game game)
 		{
-			foreach (var (f, info) in b.Objects)
+			var pieces = PieceRoots(b, game).Select(p => (p.Pid, p.Go, Wnt: b.ComponentIds(p.Go).FirstOrDefault(c => c.Type == MonoBehaviourType && game.ScriptClass(b, c.Pid) == "WearNTear").Pid))
+				.Where(p => p.Wnt != 0).ToList();
+			b.ReadInOrder(pieces.Select(p => p.Wnt));
+			pieces.RemoveAll(p => b.Field(p.Wnt) is not { } w || !Has(w, "m_materialType") || !Has(w, "m_supports"));
+			PieceTrees(b, game);
+			// The mesh colliders' meshes, only their bounds kept (their vertices are not needed).
+			_meshes.Clear();
+			var meshes = new List<long>();
+			foreach (var (pid, _, _) in pieces)
 			{
-				if (info.TypeId != GameObjectType || b.Field(f, info.PathId) is not { } go || RootComponents(b, go) is not { } comps)
-				{
-					continue;
-				}
-				if (!comps.Any(c => c.Type == MonoBehaviourType && Has(c.F, "m_category") && Has(c.F, "m_resources")))
-				{
-					continue;
-				}
-				var wnt = comps.FirstOrDefault(c => c.Type == MonoBehaviourType && Has(c.F, "m_materialType") && Has(c.F, "m_supports")).F;
-				if (wnt == null)
-				{
-					continue;
-				}
+				Walk(b, pid, default, Quat.Root, (1, 1, 1), true, null, meshes);
+			}
+			b.ReadInOrder(meshes, (pid, m) => _meshes[pid] = (Vec(m["m_LocalAABB.m_Center"]), Vec(m["m_LocalAABB.m_Extent"])));
+			foreach (var (pid, go, wntPid) in pieces)
+			{
+				var wnt = b.Field(wntPid)!;
 				var boxes = new List<object?>();
-				Walk(b, info.PathId, default, Quat.Root, (1, 1, 1), true, boxes);
+				Walk(b, pid, default, Quat.Root, (1, 1, 1), true, boxes, null);
 				var com = Has(wnt, "m_comOffset") ? Vec(wnt["m_comOffset"]) : default;
 				var entry = new Dict
 				{
@@ -684,28 +691,30 @@ public static partial class GameCatalogues
 				{
 					entry["f"] = 1L;
 				}
-				Entries[go["m_Name"].AsString] = entry;
+				_entries[go["m_Name"].AsString] = entry;
 			}
 		}
 
-		private static void Walk(Bundle b, long goPid, V3 pos, Quat rot, V3 scale, bool root, List<object?> boxes)
+		// A piece's colliders as boxes; or (meshes) the meshes its mesh colliders need, to read first.
+		private void Walk(Bundle b, long goPid, V3 pos, Quat rot, V3 scale, bool root, List<object?>? boxes, List<long>? meshes)
 		{
 			if (b.Field(goPid) is not { } g || IsSnapPoint(g))
 			{
 				return;
 			}
 			object? layer = Get(g, "m_Layer", 0L);
+			// Only the Transform and colliders read (not the renderers, scripts...).
 			AssetTypeValueField? tr = null;
 			var cols = new List<(int Type, AssetTypeValueField F)>();
-			foreach (var (t, _, f) in b.Components(g))
+			foreach (var (t, pid) in b.ComponentIds(g))
 			{
-				if (t == TransformType)
+				if (t == TransformType && b.Field(pid) is { } f)
 				{
 					tr = f;
 				}
-				else if (IsCollider(t) && f.Children.Count > 0 && Solid(f))
+				else if (IsCollider(t) && b.Field(pid) is { } c && c.Children.Count > 0 && Solid(c))
 				{
-					cols.Add((t, f));
+					cols.Add((t, c));
 				}
 			}
 			if (tr == null)
@@ -727,13 +736,16 @@ public static partial class GameCatalogues
 				else if (t == MeshColliderType)
 				{
 					var mesh = cm["m_Mesh"];
-					var mf = !mesh.IsDummy && mesh["m_FileID"].AsInt == 0 ? b.Field(mesh["m_PathID"].AsLong) : null;
-					if (mf == null)
+					if (mesh.IsDummy || mesh["m_FileID"].AsInt != 0)
 					{
 						continue;
 					}
-					c = Vec(mf["m_LocalAABB.m_Center"]);
-					h = Vec(mf["m_LocalAABB.m_Extent"]);
+					meshes?.Add(mesh["m_PathID"].AsLong);
+					if (!_meshes.TryGetValue(mesh["m_PathID"].AsLong, out var bounds))
+					{
+						continue;
+					}
+					(c, h) = bounds;
 				}
 				else if (t == SphereColliderType)
 				{
@@ -750,11 +762,11 @@ public static partial class GameCatalogues
 					h = (d == 0 ? hh : rr, d == 1 ? hh : rr, d == 2 ? hh : rr);
 				}
 				var cs = q.Rotate(Scale(c, s));
-				boxes.Add(new List<object?> { R(cs.X + p.X, 4), R(cs.Y + p.Y, 4), R(cs.Z + p.Z, 4), R(Math.Abs(h.X * s.X), 4), R(Math.Abs(h.Y * s.Y), 4), R(Math.Abs(h.Z * s.Z), 4) }.Concat(q.Rounded(4)).Append(aabb).Append(layer).ToList());
+				boxes?.Add(new List<object?> { R(cs.X + p.X, 4), R(cs.Y + p.Y, 4), R(cs.Z + p.Z, 4), R(Math.Abs(h.X * s.X), 4), R(Math.Abs(h.Y * s.Y), 4), R(Math.Abs(h.Z * s.Z), 4) }.Concat(q.Rounded(4)).Append(aabb).Append(layer).ToList());
 			}
 			foreach (long child in ChildObjects(b, tr))
 			{
-				Walk(b, child, p, q, s, false, boxes);
+				Walk(b, child, p, q, s, false, boxes, meshes);
 			}
 		}
 	}
