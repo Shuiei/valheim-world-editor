@@ -9,8 +9,8 @@ using V3 = (double X, double Y, double Z);
 
 namespace TerrainEditor.App;
 
-// The catalogues of the game's other objects: prefabs, vegetation and cave rocks; and what the editor
-// reads at its start (GameData): the terrain modifiers and the names of object data.
+// The catalogues of the game's other objects: prefabs and vegetation; and what the editor reads at its
+// start (GameData): the terrain modifiers, the names of object data and the cave rocks.
 public static partial class GameCatalogues
 {
 	private const int LodGroupType = (int)AssetClassID.LODGroup;
@@ -562,41 +562,75 @@ public static partial class GameCatalogues
 
 	}
 
-	// cave-rocks.json: the cave roof rocks' shapes, each prefab's mesh in its own frame (the model's scale
-	// applied: its rock is a child scaled 4 times), as vertices and triangles.
+	// The cave roof rocks' shapes, each prefab's mesh in its own frame (the model's scale applied: its
+	// rock is a child scaled 4 times), as vertices and triangles, for the Path tool's Cave (CaveRoof),
+	// read at the editor's start (GameData): only the bundle that has them is opened (the index tells it).
+	public static string CaveRocksJson(GameBundles bundles) => CatalogueJson.Write(CaveRocks(bundles), new CatalogueJson.Style(",", ":"));
+
 	private static Dict CaveRocks(GameBundles bundles)
 	{
 		var res = new Dict();
 		using var game = new Game(bundles.Folder);
-		foreach (var (prefab, mesh, scale) in new[] { ("rock4_forest", "Rock4", 4.0), ("rock3_mountain", "Rock3", 4.0) })
+		// Each bundle opened once (both rocks are in the same one).
+		var open = new Dictionary<string, Bundle>(StringComparer.Ordinal);
+		try
 		{
-			if (!bundles.Index.TryGetValue(prefab, out var at))
+			foreach (var (prefab, mesh, scale) in new[] { ("rock4_forest", "Rock4", 4.0), ("rock3_mountain", "Rock3", 4.0) })
 			{
-				throw new InvalidDataException($"{prefab} is not in the game's files");
-			}
-			using var b = game.Open(at.Bundle) ?? throw new InvalidDataException($"{at.Bundle} cannot be read");
-			var m = b.Objects.Where(o => o.Info.TypeId == MeshType).Select(o => b.Field(o.File, o.Info.PathId)).FirstOrDefault(m => m != null && m["m_Name"].AsString == mesh);
-			var (vertices, triangles) = (m == null ? null : MeshData(b, m)) ?? throw new InvalidDataException($"{prefab}'s mesh {mesh} cannot be read");
-			// As written to an OBJ file and read back (UnityPy's export: 9 significant digits, x mirrored and
-			// back, triangles wound the other way).
-			var vs = new List<object?>();
-			for (int i = 0; i + 2 < vertices.Length; i += 3)
-			{
-				vs.Add(new List<object?> { R(-CatalogueJson.Significant9(-(double)vertices[i]) * scale, 3), R(CatalogueJson.Significant9(vertices[i + 1]) * scale, 3), R(CatalogueJson.Significant9(vertices[i + 2]) * scale, 3) });
-			}
-			var tris = new List<object?>();
-			foreach (int[] sub in triangles)
-			{
-				for (int k = 0; k + 2 < sub.Length; k += 3)
+				if (!bundles.Index.TryGetValue(prefab, out var at))
 				{
-					tris.Add((long)sub[k + 2]);
-					tris.Add((long)sub[k + 1]);
-					tris.Add((long)sub[k]);
+					throw new InvalidDataException($"{prefab} is not in the game's files");
 				}
+				if (!open.TryGetValue(at.Bundle, out var b))
+				{
+					open[at.Bundle] = b = game.Open(at.Bundle) ?? throw new InvalidDataException($"{at.Bundle} cannot be read");
+				}
+				res[prefab] = RockShape(b, prefab, mesh, scale);
 			}
-			res[prefab] = new Dict { ["v"] = vs, ["t"] = tris };
+		}
+		finally
+		{
+			foreach (var b in open.Values)
+			{
+				b.Dispose();
+			}
 		}
 		return res;
+	}
+
+	// One rock's mesh (named mesh in its prefab's bundle), scaled, as cave-rocks has it.
+	private static Dict RockShape(Bundle b, string prefab, string mesh, double scale)
+	{
+		// Told by its name, read alone first (the bundle has many meshes).
+		var m = b.Objects.Where(o => o.Info.TypeId == MeshType && NameOf(o.File, o.Info) == mesh).Select(o => b.Field(o.File, o.Info.PathId)).FirstOrDefault(m => m != null);
+		var (vertices, triangles) = (m == null ? null : MeshData(b, m)) ?? throw new InvalidDataException($"{prefab}'s mesh {mesh} cannot be read");
+		// As written to an OBJ file and read back (UnityPy's export: 9 significant digits, x mirrored and
+		// back, triangles wound the other way).
+		var vs = new List<object?>();
+		for (int i = 0; i + 2 < vertices.Length; i += 3)
+		{
+			vs.Add(new List<object?> { R(-CatalogueJson.Significant9(-(double)vertices[i]) * scale, 3), R(CatalogueJson.Significant9(vertices[i + 1]) * scale, 3), R(CatalogueJson.Significant9(vertices[i + 2]) * scale, 3) });
+		}
+		var tris = new List<object?>();
+		foreach (int[] sub in triangles)
+		{
+			for (int k = 0; k + 2 < sub.Length; k += 3)
+			{
+				tris.Add((long)sub[k + 2]);
+				tris.Add((long)sub[k + 1]);
+				tris.Add((long)sub[k]);
+			}
+		}
+		return new Dict { ["v"] = vs, ["t"] = tris };
+	}
+
+	// A named object's name (m_Name, its first field), nothing else read.
+	private static string? NameOf(Bundle.Inner f, AssetFileInfo info)
+	{
+		var file = f.Assets.file;
+		file.Reader.Position = info.GetAbsoluteByteOffset(file);
+		int n = file.Reader.ReadInt32();
+		return n is >= 0 and <= 256 ? System.Text.Encoding.UTF8.GetString(file.Reader.ReadBytes(n)) : null;
 	}
 
 	private static readonly string[] DataFolders = { "valheim_Data", "Valheim_Data" };
