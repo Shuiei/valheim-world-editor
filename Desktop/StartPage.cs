@@ -101,7 +101,7 @@ public sealed class StartPage
     internal TextBlock HomesteadText { get; } = new() { TextWrapping = TextWrapping.Wrap, FontSize = 12 };
     /// <summary>Opens Homestead's page; shown while it is not installed.</summary>
     internal Button GetHomesteadButton { get; } = new() { Content = "Get Homestead", FontSize = 11, Padding = new Thickness(6, 1), IsVisible = false };
-    /// <summary>My game's error line.</summary>
+    /// <summary>Why the game could not be checked (the folders or the plugin), until a check works again.</summary>
     private readonly TextBlock _gameError = Err();
 
     /// <summary>Shorthands for the app's line and muted text brushes.</summary>
@@ -182,7 +182,15 @@ public sealed class StartPage
         GetHomesteadButton.Tip("blueprints.getHomestead");
         GetHomesteadButton.Click += async (_, _) => await OpenUrl(new Uri(Homestead.PageUrl));
 
-        _gameTimer.Tick += async (_, _) => await PollGame();
+        // A tick during a check skips: asking for one more after it would chain slow checks without a pause.
+        _gameTimer.Tick += async (_, _) =>
+        {
+            if (_poll is { IsCompleted: false })
+            {
+                return;
+            }
+            await PollGame();
+        };
 
         // A dedicated server.
         BuildServerPanel();
@@ -358,12 +366,43 @@ public sealed class StartPage
     // ---- My game: is Valheim running with the plugin?
     /// <summary>The game's state as last shown (state, world, players, where), so an unchanged poll redraws nothing.</summary>
     private string _gameKey = "";
+    /// <summary>The check of the game running or last run (see <see cref="PollGame"/>).</summary>
+    private Task? _poll;
+    /// <summary>Asked for during the running check: one more runs after it.</summary>
+    private bool _pollAgain;
+
+    /// <summary>
+    /// One check of the game at a time: the timer does not wait for a slow one, and an older one finishing
+    /// last would show its stale state (or error) over the newer one's. Asked during a check, it waits for
+    /// it and one more check after (asks during the same check make that one more check together), so the
+    /// state shown once it returns is newer than the ask. All on the window's thread.
+    /// </summary>
+    internal Task PollGame()
+    {
+        if (_poll is { IsCompleted: false })
+        {
+            _pollAgain = true;
+            return _poll;
+        }
+        return _poll = Checks();
+
+        async Task Checks()
+        {
+            do
+            {
+                _pollAgain = false;
+                await CheckGame();
+            }
+            while (_pollAgain);
+        }
+    }
 
     /// <summary>
     /// Is Valheim running with the plugin? Looks for the plugin's installs and a running game, and shows the state
-    /// (running, installed, not started once, no plugin, no BepInEx) with what to do. A failed look changes nothing.
+    /// (running, installed, not started once, no plugin, no BepInEx) with what to do. A failed look shows why on the
+    /// card and in the log, the state shown before staying.
     /// </summary>
-    internal async Task PollGame()
+    private async Task CheckGame()
     {
         List<LocalGame.Bridge> bridges;
         bool bepInEx, plugin;
@@ -380,7 +419,19 @@ public sealed class StartPage
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or HttpRequestException)
         {
+            // Polled every few seconds: the log gets a failure once, not at each poll.
+            string why = $"Your game could not be checked: {ex.Message}";
+            if (_gameError.Text != why)
+            {
+                Console.Error.WriteLine($"My game: {ex}");
+                _gameError.Text = why;
+            }
             return;
+        }
+        if (!string.IsNullOrEmpty(_gameError.Text))
+        {
+            Console.Error.WriteLine("My game: checked again.");
+            _gameError.Text = "";
         }
         string where = running?.Bridge.Where ?? bridges.FirstOrDefault()?.Where ?? "";
         string state = running != null ? "running" : bridges.Count > 0 ? "installed" : plugin ? "plugin-not-started" : bepInEx ? "no-plugin" : "no-bepinex";
@@ -673,9 +724,6 @@ public sealed class StartPage
     internal TextBlock UrlError { get; } = Err();
     /// <summary>My game's card: the game's state and what to do.</summary>
     internal ContentControl GameState { get; } = new();
-
-    /// <summary>The Workshop's card: whether Homestead is installed (its blueprints are the Workshop's Library).</summary>
-    internal void FillWorkshop() => ShowHomestead(Homestead.Find(_settings));
 
     /// <summary>Whether Homestead is in the game: the editor's blueprints are Homestead's, built in game with it.</summary>
     internal void ShowHomestead(Homestead.Status hs)
