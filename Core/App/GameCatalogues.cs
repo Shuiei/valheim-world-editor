@@ -1,110 +1,18 @@
-using System.IO.Compression;
-using System.Text;
 using AssetsTools.NET;
 using AssetsTools.NET.Extra;
-using Style = TerrainEditor.App.CatalogueJson.Style;
 
 namespace TerrainEditor.App;
 
-// The catalogues in Core/WorldGen (in git, embedded in the app) made again from the game's files, for
-// developers after a game update: --export-catalogues <folder> [name ...]. Each catalogue is what the
-// editor needs of one kind of game component (dungeons), read from every asset bundle. The bundles are
-// read once, in the order of their file names, each in the order it lists its files and objects: the
-// order entries come in, and which one wins when a name is found twice. The files are written as they
-// always were (CatalogueJson), so making them again shows in git only what the game changed.
+// What the editor reads of the game's files at its start (GameData), in C# on the same reader as the
+// models: the kinds found in the bundles, all in one pass over them (ReadAtStart), and those with their
+// own readers. Each is written as CatalogueJson writes it.
 public static partial class GameCatalogues
 {
-	public static readonly string[] All = { "dungeon-rooms" };
-
-	// Written gzipped (the largest).
-	private static readonly string[] Gzipped = { "dungeon-rooms" };
-
-	// --export-catalogues <folder> [name ...]: all catalogues, or those named (with or without .json).
-	public static int Export(string[] args)
-	{
-		if (args.Length == 0 || args[0].StartsWith("--", StringComparison.Ordinal))
-		{
-			Console.Error.WriteLine($"--export-catalogues needs the folder to write to, then optionally the catalogues to make ({string.Join(", ", All)}).");
-			return 2;
-		}
-		var names = args.Skip(1).Select(n => n.Replace(".gz", "", StringComparison.Ordinal).Replace(".json", "", StringComparison.Ordinal)).ToHashSet();
-		if (names.FirstOrDefault(n => Array.IndexOf(All, n) < 0) is string unknown)
-		{
-			Console.Error.WriteLine($"No catalogue \"{unknown}\" (there are {string.Join(", ", All)}).");
-			return 2;
-		}
-		if (names.Count == 0)
-		{
-			names = All.ToHashSet();
-		}
-		string? valheim = GameLook.FindValheim(AppSettings.Load().ValheimPath);
-		var bundles = valheim == null ? null : GameBundles.ForGame(valheim, null);
-		if (valheim == null || bundles == null)
-		{
-			Console.Error.WriteLine("Valheim was not found.");
-			return 1;
-		}
-		var watch = System.Diagnostics.Stopwatch.StartNew();
-		var made = Make(valheim, bundles, names);
-		Directory.CreateDirectory(args[0]);
-		foreach (string name in All.Where(made.ContainsKey))
-		{
-			byte[] json = new UTF8Encoding(false).GetBytes(made[name]);
-			string path = Path.Combine(args[0], name + (Gzipped.Contains(name) ? ".json.gz" : ".json"));
-			if (Gzipped.Contains(name))
-			{
-				using var gz = new GZipStream(File.Create(path), CompressionLevel.SmallestSize);
-				gz.Write(json);
-			}
-			else
-			{
-				File.WriteAllBytes(path, json);
-			}
-			Console.WriteLine($"{path}: {json.Length} bytes");
-		}
-		Console.WriteLine($"{made.Count} catalogues made in {watch.Elapsed.TotalSeconds:0} s");
-		return 0;
-	}
-
-	// Each catalogue asked for, as its JSON.
-	private static Dictionary<string, string> Make(string valheim, GameBundles bundles, HashSet<string> names)
-	{
-		var made = new Dictionary<string, string>();
-		var dungeons = names.Contains("dungeon-rooms") ? new DungeonScan() : null;
-		var scans = new IScan?[] { dungeons }.OfType<IScan>().ToList();
-		if (scans.Count > 0)
-		{
-			using var game = new Game(bundles.Folder);
-			for (int i = 0; i < game.Bundles.Count; i++)
-			{
-				using (var b = game.Open(game.Bundles[i]))
-				{
-					if (b != null)
-					{
-						foreach (var scan in scans)
-						{
-							scan.Read(b);
-						}
-					}
-				}
-				if (i % 100 == 0)
-				{
-					Console.WriteLine($"{i} of {game.Bundles.Count} bundles read");
-				}
-			}
-			if (dungeons != null)
-			{
-				made["dungeon-rooms"] = CatalogueJson.Write(dungeons.Json(), new Style(",", ":"));
-			}
-		}
-		return made;
-	}
-
-	// What the editor reads of the bundles at its start (GameData), each kind found from the scripts it
-	// needs up to their prefabs, not by reading every object of every bundle as the catalogues do
-	// (seconds, not minutes). Every kind asked for is read in one pass: each bundle opened once and
-	// given to each kind's reader.
-	public static readonly string[] AtStart = { "terrain-modifiers", "prefabs", "pieces", "piece-support", "piece-place", "piece-cost" };
+	// The kinds read in the one pass over the bundles, each found from the scripts it needs up to their
+	// prefabs, not by reading every object of every bundle (seconds, not minutes). Each bundle is opened
+	// once and given to each kind's reader, in the order of their file names: the order entries come in,
+	// and which one wins when a name is found twice.
+	public static readonly string[] AtStart = { "terrain-modifiers", "prefabs", "pieces", "piece-support", "piece-place", "piece-cost", "dungeon-rooms" };
 
 	// The kinds named (of AtStart), as their JSON.
 	public static Dictionary<string, string> ReadAtStart(GameBundles bundles, IReadOnlyList<string> kinds)
@@ -117,6 +25,7 @@ public static partial class GameCatalogues
 			"piece-support" => new SupportScan(),
 			"piece-place" => new PlaceScan(),
 			"piece-cost" => new CostScan(Localization.English(bundles.Folder)),
+			"dungeon-rooms" => new DungeonScan(),
 			_ => throw new ArgumentException($"no kind {k} is read at the start"),
 		})).ToList();
 		using var game = new Game(bundles.Folder);
@@ -142,12 +51,6 @@ public static partial class GameCatalogues
 		void Read(Bundle b, Game game);
 
 		string Json();
-	}
-
-	// One catalogue's reading of every bundle.
-	private interface IScan
-	{
-		void Read(Bundle b);
 	}
 
 	// ---- The bundles.
@@ -397,15 +300,19 @@ public static partial class GameCatalogues
 
 		// An object's fields by name (a MonoBehaviour's: its class's), from its file's type tree: nothing of
 		// the object read.
-		public HashSet<string> FieldNames(Inner f, AssetFileInfo info)
+		public HashSet<string> FieldNames(Inner f, AssetFileInfo info) =>
+			Template(f, info)?.Children.Select(c => c.Name).ToHashSet(StringComparer.Ordinal) ?? new HashSet<string>();
+
+		// An object's type tree (a MonoBehaviour's: its class's), or null when it cannot be had.
+		public AssetTypeTemplateField? Template(Inner f, AssetFileInfo info)
 		{
 			try
 			{
-				return _am.CreateTemplateBaseField(f.Assets, info.TypeId, info.GetScriptIndex(f.Assets.file)).Children.Select(c => c.Name).ToHashSet(StringComparer.Ordinal);
+				return _am.CreateTemplateBaseField(f.Assets, info.TypeId, info.GetScriptIndex(f.Assets.file));
 			}
 			catch (Exception e) when (e is IOException or InvalidDataException or NotImplementedException or NotSupportedException or IndexOutOfRangeException or ArgumentException or NullReferenceException)
 			{
-				return new HashSet<string>();
+				return null;
 			}
 		}
 
@@ -548,7 +455,7 @@ public static partial class GameCatalogues
 		public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
 	}
 
-	// ---- Values, as the catalogues have them.
+	// ---- Values, as the game data's JSON has them.
 
 	private const int GameObjectType = (int)AssetClassID.GameObject;
 	private const int TransformType = (int)AssetClassID.Transform;

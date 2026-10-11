@@ -418,6 +418,10 @@ public static partial class GameCatalogues
 
 			public long I64(int at) => bigEndian ? BinaryPrimitives.ReadInt64BigEndian(_data[at..]) : BinaryPrimitives.ReadInt64LittleEndian(_data[at..]);
 
+			public float F32(int at) => BitConverter.Int32BitsToSingle(I32(at));
+
+			public byte U8(int at) => _data[at];
+
 			// A string: its length, then its UTF-8 bytes.
 			public string Text(int at) => System.Text.Encoding.UTF8.GetString(_data.Slice(at + 4, I32(at)));
 		}

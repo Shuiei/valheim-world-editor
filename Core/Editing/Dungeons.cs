@@ -1,4 +1,3 @@
-using System.IO.Compression;
 using System.Numerics;
 using System.Text.Json;
 using TerrainEditor.App;
@@ -11,8 +10,8 @@ namespace TerrainEditor.Editing;
 // A dungeon is one object (DG_Cave, DG_SunkenCrypt...) whose byte array "roomData" lists its rooms: the
 // stable hash of each room prefab's name, its position and rotation. The game builds the rooms from
 // that list when the dungeon loads (DungeonGenerator.Load/Spawn) and never checks it against its own
-// generator, so a list made here is built as it is. Rooms and their openings come from
-// dungeon-rooms.json.gz (--export-catalogues). All in Unity's world space.
+// generator, so a list made here is built as it is. Rooms and their openings come from the player's
+// Valheim (GameData; the tests use tests/fixtures/dungeon-rooms.json). All in Unity's world space.
 public static class Dungeons
 {
 	public static readonly int RoomDataKey = StableHash.Of("roomData");
@@ -51,28 +50,29 @@ public static class Dungeons
 
 	private sealed record Catalog(Dictionary<int, Room> Rooms, Dictionary<int, Kind> Kinds);
 
-	private static readonly Lazy<Catalog> All = new(Load);
+	// None until Use: no world opens before then (GameData).
+	private static volatile Catalog All = new(new(), new());
 
-	public static Room? RoomOf(int hash) => All.Value.Rooms.GetValueOrDefault(hash);
+	// The dungeons and rooms as GameCatalogues' DungeonScan writes them.
+	public static void Use(string json) => All = Load(json);
+
+	public static Room? RoomOf(int hash) => All.Rooms.GetValueOrDefault(hash);
 
 	public static Room? RoomOf(string name) => RoomOf(StableHash.Of(name));
 
-	public static Kind? KindOf(int prefab) => All.Value.Kinds.GetValueOrDefault(prefab);
+	public static Kind? KindOf(int prefab) => All.Kinds.GetValueOrDefault(prefab);
 
-	public static IEnumerable<Kind> Kinds => All.Value.Kinds.Values.OrderBy(k => k.Name, StringComparer.Ordinal);
+	public static IEnumerable<Kind> Kinds => All.Kinds.Values.OrderBy(k => k.Name, StringComparer.Ordinal);
 
-	public static IEnumerable<Room> AllRooms => All.Value.Rooms.Values.OrderBy(r => r.Name, StringComparer.Ordinal);
+	public static IEnumerable<Room> AllRooms => All.Rooms.Values.OrderBy(r => r.Name, StringComparer.Ordinal);
 
 	// The rooms a dungeon of this kind can hold: those of its themes, the game's way
 	// (DungeonGenerator.SetupAvailableRooms: enabled rooms whose theme shares a flag with the dungeon's).
 	public static IEnumerable<Room> RoomsFor(Kind kind) => AllRooms.Where(r => r.Enabled && (r.Theme & kind.Themes) != 0);
 
-	private static Catalog Load()
+	private static Catalog Load(string json)
 	{
-		using Stream gz = typeof(Dungeons).Assembly.GetManifestResourceStream("TerrainEditor.dungeon-rooms.json.gz")
-			?? throw new InvalidOperationException("dungeon-rooms.json.gz is not embedded");
-		using var s = new GZipStream(gz, CompressionMode.Decompress);
-		using JsonDocument doc = JsonDocument.Parse(s);
+		using JsonDocument doc = JsonDocument.Parse(json);
 		static Vector3 V(JsonElement a, int i) => new(a[i].GetSingle(), a[i + 1].GetSingle(), a[i + 2].GetSingle());
 		static Quaternion Q(JsonElement a, int i) => new(a[i].GetSingle(), a[i + 1].GetSingle(), a[i + 2].GetSingle(), a[i + 3].GetSingle());
 		var rooms = new Dictionary<int, Room>();

@@ -4,11 +4,11 @@ using System.Text;
 
 namespace TerrainEditor.App;
 
-// The catalogues' JSON, written the way the files in Core/WorldGen have always been written (Python's
-// json module), so that making them again changes nothing that the game did not change: floats in
-// their shortest form ("1.0", "0.30000001192092896", "1e-05"), numbers rounded half to even, keys in
-// the order they were added (or sorted), the same separators and line breaks. Values: null, bool,
-// long (ints), double (floats), string, IList, JsonDict.
+// The JSON of the game data read at the editor's start (GameCatalogues), written the way the
+// catalogues once kept in Core/WorldGen were (Python's json module), so each kind reads exactly as its
+// catalogue did: floats in their shortest form ("1.0", "0.30000001192092896", "1e-05"), numbers
+// rounded half to even, keys in the order they were added (or sorted), the same separators and line
+// breaks. Values: null, bool, long (ints), double (floats), string, IList, JsonDict.
 internal static class CatalogueJson
 {
 	public sealed record Style(string ItemSep = ", ", string KeySep = ": ", int? Indent = null, bool SortKeys = false, bool Ascii = true);
