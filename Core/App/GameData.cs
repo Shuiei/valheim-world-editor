@@ -29,6 +29,7 @@ public static class GameData
 		new("cave-rocks", (_, bundles) => GameCatalogues.CaveRocksJson(bundles), CaveRocks.Use),
 		new("piece-cost", null, PieceCost.Use, TrimPieceCost),
 		new("vegetation", (_, bundles) => GameCatalogues.VegetationJson(bundles), Regrow.Use, TrimVegetation),
+		new("dungeon-rooms", null, Editing.Dungeons.Use, TrimDungeons),
 	};
 
 	public static string CacheFile(string kind) => Path.Combine(AppSettings.UserDataDir, $"game-{kind}.json");
@@ -251,6 +252,13 @@ public static class GameData
 			["pieces"] = pieces,
 		};
 	}
+
+	// dungeon-rooms: every dungeon kind, and the rooms the copy has.
+	private static Dictionary<string, object> TrimDungeons(JsonElement game, JsonElement copy) => new()
+	{
+		["dungeons"] = game.GetProperty("dungeons"),
+		["rooms"] = Entries(game.GetProperty("rooms"), copy.GetProperty("rooms")),
+	};
 
 	// vegetation (a list of rules): the game's rules the copy has, by name and prefab.
 	private static List<JsonElement> TrimVegetation(JsonElement game, JsonElement copy)

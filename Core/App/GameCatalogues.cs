@@ -6,18 +6,14 @@ using Style = TerrainEditor.App.CatalogueJson.Style;
 
 namespace TerrainEditor.App;
 
-// The catalogues in Core/WorldGen (in git, embedded in the app) made again from the game's files, for
-// developers after a game update: --export-catalogues <folder> [name ...]. Each catalogue is what the
-// editor needs of one kind of game component (dungeons), read from every asset bundle. The bundles are
-// read once, in the order of their file names, each in the order it lists its files and objects: the
-// order entries come in, and which one wins when a name is found twice. The files are written as they
-// always were (CatalogueJson), so making them again shows in git only what the game changed.
+// The catalogues in Core/WorldGen made again from the game's files: --export-catalogues <folder>
+// [name ...]. None is left: everything is read at the editor's start (GameData).
 public static partial class GameCatalogues
 {
-	public static readonly string[] All = { "dungeon-rooms" };
+	public static readonly string[] All = Array.Empty<string>();
 
 	// Written gzipped (the largest).
-	private static readonly string[] Gzipped = { "dungeon-rooms" };
+	private static readonly string[] Gzipped = Array.Empty<string>();
 
 	// --export-catalogues <folder> [name ...]: all catalogues, or those named (with or without .json).
 	public static int Export(string[] args)
@@ -66,45 +62,14 @@ public static partial class GameCatalogues
 		return 0;
 	}
 
-	// Each catalogue asked for, as its JSON.
-	private static Dictionary<string, string> Make(string valheim, GameBundles bundles, HashSet<string> names)
-	{
-		var made = new Dictionary<string, string>();
-		var dungeons = names.Contains("dungeon-rooms") ? new DungeonScan() : null;
-		var scans = new IScan?[] { dungeons }.OfType<IScan>().ToList();
-		if (scans.Count > 0)
-		{
-			using var game = new Game(bundles.Folder);
-			for (int i = 0; i < game.Bundles.Count; i++)
-			{
-				using (var b = game.Open(game.Bundles[i]))
-				{
-					if (b != null)
-					{
-						foreach (var scan in scans)
-						{
-							scan.Read(b);
-						}
-					}
-				}
-				if (i % 100 == 0)
-				{
-					Console.WriteLine($"{i} of {game.Bundles.Count} bundles read");
-				}
-			}
-			if (dungeons != null)
-			{
-				made["dungeon-rooms"] = CatalogueJson.Write(dungeons.Json(), new Style(",", ":"));
-			}
-		}
-		return made;
-	}
+	// Each catalogue asked for, as its JSON: none is left (all are read at the editor's start).
+	private static Dictionary<string, string> Make(string valheim, GameBundles bundles, HashSet<string> names) => new();
 
 	// What the editor reads of the bundles at its start (GameData), each kind found from the scripts it
 	// needs up to their prefabs, not by reading every object of every bundle as the catalogues do
 	// (seconds, not minutes). Every kind asked for is read in one pass: each bundle opened once and
 	// given to each kind's reader.
-	public static readonly string[] AtStart = { "terrain-modifiers", "prefabs", "pieces", "piece-support", "piece-place", "piece-cost" };
+	public static readonly string[] AtStart = { "terrain-modifiers", "prefabs", "pieces", "piece-support", "piece-place", "piece-cost", "dungeon-rooms" };
 
 	// The kinds named (of AtStart), as their JSON.
 	public static Dictionary<string, string> ReadAtStart(GameBundles bundles, IReadOnlyList<string> kinds)
@@ -117,6 +82,7 @@ public static partial class GameCatalogues
 			"piece-support" => new SupportScan(),
 			"piece-place" => new PlaceScan(),
 			"piece-cost" => new CostScan(Localization.English(bundles.Folder)),
+			"dungeon-rooms" => new DungeonScan(),
 			_ => throw new ArgumentException($"no kind {k} is read at the start"),
 		})).ToList();
 		using var game = new Game(bundles.Folder);
@@ -397,15 +363,19 @@ public static partial class GameCatalogues
 
 		// An object's fields by name (a MonoBehaviour's: its class's), from its file's type tree: nothing of
 		// the object read.
-		public HashSet<string> FieldNames(Inner f, AssetFileInfo info)
+		public HashSet<string> FieldNames(Inner f, AssetFileInfo info) =>
+			Template(f, info)?.Children.Select(c => c.Name).ToHashSet(StringComparer.Ordinal) ?? new HashSet<string>();
+
+		// An object's type tree (a MonoBehaviour's: its class's), or null when it cannot be had.
+		public AssetTypeTemplateField? Template(Inner f, AssetFileInfo info)
 		{
 			try
 			{
-				return _am.CreateTemplateBaseField(f.Assets, info.TypeId, info.GetScriptIndex(f.Assets.file)).Children.Select(c => c.Name).ToHashSet(StringComparer.Ordinal);
+				return _am.CreateTemplateBaseField(f.Assets, info.TypeId, info.GetScriptIndex(f.Assets.file));
 			}
 			catch (Exception e) when (e is IOException or InvalidDataException or NotImplementedException or NotSupportedException or IndexOutOfRangeException or ArgumentException or NullReferenceException)
 			{
-				return new HashSet<string>();
+				return null;
 			}
 		}
 
