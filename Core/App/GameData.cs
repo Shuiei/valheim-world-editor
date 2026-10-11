@@ -185,7 +185,8 @@ public static class GameData
                     own.Add(kind);
                 }
             }
-            double ownShare = pass.Count > 0 ? 0.2 : 1;
+            // No kind of its own left to read (all from the caches): the pass starts at nothing read.
+            double ownShare = own.Count == 0 ? 0 : pass.Count > 0 ? 0.2 : 1;
             for (int i = 0; i < own.Count; i++)
             {
                 var kind = own[i];
