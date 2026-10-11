@@ -26,6 +26,17 @@ public static class GameLook
     private static GameBundles? _bundles;
 
     /// <summary>
+    /// How far reading the game's files is, as last told by the reading (null before its first step). Set without the
+    /// lock: the reading tells it from inside the bundles reader's own lock, which Check takes under this one.
+    /// </summary>
+    private static volatile Told? _told;
+
+    /// <summary>
+    /// A step of the reading: the reader it is about, how far (0..1) and what is being read.
+    /// </summary>
+    private sealed record Told(GameBundles Game, double Progress, string Step);
+
+    /// <summary>
     /// Where older editors copied the game's look (game-look): deleted (<c>DeleteOldCopy</c>), nothing reads it
     /// any more.
     /// </summary>
@@ -83,7 +94,7 @@ public static class GameLook
     /// <param name="State">The state (see <c>State</c>).</param>
     /// <param name="Message">Its message.</param>
     /// <param name="Valheim">The Valheim folder.</param>
-    /// <param name="LastLine">A detail line (null from <c>Now</c>).</param>
+    /// <param name="LastLine">What is being read, while running; else null.</param>
     /// <param name="Progress">The progress (0..1, null when not known).</param>
     public sealed record Snapshot(string State, string? Message, string? Valheim, string? LastLine, double? Progress);
 
@@ -94,7 +105,9 @@ public static class GameLook
     {
         lock (Lock)
         {
-            return new Snapshot(State, Message, ValheimPath, null, State == "ready" ? 1 : null);
+            bool running = State == "running";
+            var told = running && _told is { } t && ReferenceEquals(t.Game, _bundles) ? t : null;
+            return new Snapshot(State, Message, ValheimPath, told?.Step, State == "ready" ? 1 : told?.Progress);
         }
     }
 
@@ -137,11 +150,14 @@ public static class GameLook
         Task.Run(() =>
         {
             string state, message;
+            // The bar: the bundles' index first (a tenth: its table of contents only), then the game data.
+            void Report(double progress, string step) => _told = new Told(game, progress, step);
             try
             {
+                game.EnsureIndexed((done, count) => Report(0.1 * done / Math.Max(1, count), $"Indexing the game's bundles: {done} of {count}"));
                 int n = game.Index.Count;
                 (state, message) = n == 0 ? ("failed", "No models were found in the game's files.")
-                    : !GameData.Ensure(game) ? ("failed", "Some of the game's data could not be read (see the log).")
+                    : !GameData.Ensure(game, (p, step) => Report(0.1 + (0.9 * p), step)) ? ("failed", "Some of the game's data could not be read (see the log).")
                     : ("ready", "The game's look is ready.");
             }
             catch (Exception e) when (e is IOException or InvalidDataException or UnauthorizedAccessException or NotSupportedException or NotImplementedException)
@@ -187,6 +203,7 @@ public static class GameLook
         }
         State = state;
         Message = message;
+        _told = null;
     }
 
     /// <summary>

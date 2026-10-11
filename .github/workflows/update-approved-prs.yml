@@ -3,6 +3,10 @@
 # requires branches to be up to date, so without this auto-merge waits for someone to click it.
 # Drafts and pull requests already up to date are left alone; one that cannot be updated (a conflict,
 # a fork) gets a warning in the run and is skipped.
+# The merge is a new push: main's rules dismiss the approval it had (CodeRabbit's) and want the latest
+# push approved, which CodeRabbit does not do for a merge of main alone. So the workflow asks it to
+# approve again (@coderabbitai approve): the pull request was approved, and main's commits were reviewed
+# when they were merged. A pull request's author cannot ask that (.coderabbit.yaml, allow_author_approval).
 name: Update approved PRs
 
 on:
@@ -50,6 +54,32 @@ jobs:
             # expected_head_sha: no update if someone pushed to the pull request meanwhile.
             if gh api -X PUT "repos/$GH_REPO/pulls/$pr/update-branch" -f expected_head_sha="$sha" --silent; then
               echo "#$pr: updated ($behind commits behind main)"
+              # Its approval back: only main's reviewed commits were added. Asked once the merge commit is
+              # the pull request's head (update-branch only starts it), else the approval would be the old
+              # commit's and dismissed at once.
+              head=$sha
+              for _ in $(seq 30); do
+                head=$(gh pr view "$pr" --json headRefOid --jq .headRefOid) || head=$sha
+                [ "$head" != "$sha" ] && break
+                sleep 2
+              done
+              # The new head must be that merge: the old head and a commit of main as parents, nothing else.
+              # A push by the author meanwhile would be a head without that review, not to approve.
+              from_main=
+              if [ "$head" != "$sha" ]; then
+                parents=$(gh api "repos/$GH_REPO/commits/$head" --jq '[.parents[].sha] | join(" ")') || parents=
+                read -r first second extra <<< "$parents"
+                if [ "$first" = "$sha" ] && [ -n "$second" ] && [ -z "$extra" ]; then
+                  from_main=$(gh api "repos/$GH_REPO/compare/$second...main" --jq '.status | test("^(identical|ahead)$")') || from_main=
+                fi
+              fi
+              if [ "$head" = "$sha" ]; then
+                echo "::warning::#$pr: the merge commit did not show within a minute; CodeRabbit was not asked to approve"
+              elif [ "$from_main" != true ]; then
+                echo "::warning::#$pr: its new head $head is not only main merged in; CodeRabbit was not asked to approve"
+              elif ! gh pr comment "$pr" --body "@coderabbitai approve" > /dev/null; then
+                echo "::warning::#$pr was updated but CodeRabbit could not be asked to approve it again"
+              fi
             else
               echo "::warning::#$pr could not be updated (a conflict with main?)"
             fi
