@@ -19,7 +19,10 @@ public class PlaceMemoryTests
         w.View.Show(s.Scene, null);
         w.Edit(s);
         var p = w.PlacePanel;
+        // From an empty memory: the tests before it in the run may have left favourites and recent kinds.
         p.Memory.Presets.Clear();
+        p.Memory.Favourites.Clear();
+        p.Memory.Recent.Clear();
         w.PlaceTool.Chosen.Clear();
         w.PlaceTool.Chosen.Add("Birch1");
         w.PlaceTool.Weights["Birch1"] = 3;
