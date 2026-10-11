@@ -18,8 +18,15 @@ mkdir -p "$dist"
 package() {   # $1 runtime id, $2 program file name (users start it by double-clicking), $3 readme
   local rid=$1 exe=$2 readme=$3
   local dir="$work/$rid/ValheimWorldEditor"
-  "$dotnet" publish "$repo/Desktop/ValheimWorldEditor.Desktop.csproj" -c Release -r "$rid" --self-contained \
-    -p:PublishSingleFile=true -p:DebugType=none -p:DebugSymbols=false -o "$work/$rid/publish" >/dev/null
+  # Quiet when it works; when it fails, what dotnet said (its errors and warnings) is shown.
+  if ! "$dotnet" publish "$repo/Desktop/ValheimWorldEditor.Desktop.csproj" -c Release -r "$rid" --self-contained \
+    -p:PublishSingleFile=true -p:DebugType=none -p:DebugSymbols=false -o "$work/$rid/publish" > "$work/publish-$rid.log" 2>&1; then
+    echo "Publishing for $rid failed:" >&2
+    grep -E ": (error|warning) " "$work/publish-$rid.log" | sort -u >&2 || true
+    echo "--- the last lines of dotnet publish:" >&2
+    tail -30 "$work/publish-$rid.log" >&2
+    exit 1
+  fi
   mkdir -p "$dir"
   # The program, and on Windows its native libraries beside it (ANGLE, Skia, HarfBuzz, SPIRV-Cross: not
   # unpacked to a temporary folder at start, see the project file); on Linux they are inside it.
