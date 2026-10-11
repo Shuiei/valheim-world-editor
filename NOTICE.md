@@ -15,10 +15,10 @@ These files hold data read from the game's files, which remains theirs; the MIT 
 cover them:
 
 - In `Core/WorldGen/`: `prefabs.json`, `pieces.json`, `piece-cost.json`, `piece-place.json.gz`,
-  `piece-support.json`, `vegetation.json`, `cave-rocks.json`, `zdo-keys.json` and
-  `dungeon-rooms.json.gz`.
-- `tests/fixtures/locations.json` and `tests/fixtures/terrain-modifiers.json`: some of the game's
-  location rules and terrain modifiers, for the tests (the editor reads them from the player's game).
+  `piece-support.json`, `vegetation.json`, `cave-rocks.json` and `dungeon-rooms.json.gz`.
+- In `tests/fixtures/`: `locations.json`, `terrain-modifiers.json` and `zdo-keys.json`, some of the
+  game's location rules, terrain modifiers and object data names, for the tests (the editor reads
+  them from the player's game).
 
 The game's textures and models are not in this repository or in the releases: the editor copies
 them from the player's own Valheim install, on their computer.

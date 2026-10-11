@@ -26,9 +26,9 @@ the plugin is unchanged in versions without that part.
   [docs/new-world.md](docs/new-world.md).
 
 ### Changed
-- **The editor reads how the game's locations shape the ground from your Valheim**, like the game's
-  look, instead of keeping its own copy, which went out of date with game updates: the ground around
-  locations always matches your version of the game. It takes a few seconds the first time and after
+- **The editor reads how the game's locations shape the ground, and the names of object data, from
+  your Valheim**, like the game's look, instead of keeping its own copy, which went out of date with
+  game updates: they always match your version of the game. It takes a few seconds the first time and after
   a game update. Valheim is now needed: without it, no world or Workshop opens (the start page asks
   for its folder).
 - **The world generator is about a third faster** (worlds' map previews, Regrow nature, new worlds),

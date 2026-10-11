@@ -9,8 +9,8 @@ using V3 = (double X, double Y, double Z);
 
 namespace TerrainEditor.App;
 
-// The catalogues of the game's other objects: prefabs, vegetation, cave rocks and the names of object
-// data; and the terrain modifiers the editor reads at its start.
+// The catalogues of the game's other objects: prefabs, vegetation and cave rocks; and what the editor
+// reads at its start (GameData): the terrain modifiers and the names of object data.
 public static partial class GameCatalogues
 {
 	private const int LodGroupType = (int)AssetClassID.LODGroup;
@@ -427,7 +427,7 @@ public static partial class GameCatalogues
 	}
 
 	// The TerrainModifiers of locations and networked prefabs (active and enabled ones, in the prefab's
-	// frame), as TerrainModifiers.Use takes them: read at the editor's start (GameModifiers).
+	// frame), as TerrainModifiers.Use takes them: read at the editor's start (GameData).
 	private sealed class ModifierScan
 	{
 		public Dict Entries { get; } = new();
@@ -603,10 +603,12 @@ public static partial class GameCatalogues
 
 	private static readonly System.Text.RegularExpressions.Regex KeyName = new(@"\A[A-Za-z_][A-Za-z0-9_ ]{0,39}\z");
 
-	// zdo-keys.json: names of the data an object (ZDO) can hold, by hash (the save keeps only the hash
-	// of each name), for the object inspector. Every string literal of the game's code (the user strings
+	// The names of the data an object (ZDO) can hold, by hash (the save keeps only the hash of each
+	// name), for the object inspector (ZdoKeys), read at the editor's start (GameData). Every string literal of the game's code (the user strings
 	// of assembly_valheim.dll) is a candidate, plus the names the game builds at run time ("pu_id" + i
 	// for ward permissions, "{index}_item" for armour stands...).
+	public static string ZdoKeysJson(string valheim) => CatalogueJson.Write(ZdoKeyNames(valheim), new CatalogueJson.Style(",", ":", SortKeys: true));
+
 	private static Dict ZdoKeyNames(string valheim)
 	{
 		string dll = DataFolders.Select(d => Path.Combine(valheim, d, "Managed", "assembly_valheim.dll")).FirstOrDefault(File.Exists)

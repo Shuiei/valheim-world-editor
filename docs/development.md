@@ -9,7 +9,7 @@
 | `Core/App/` | Settings (`AppSettings`), the log (`Log`), the game's files (`GameLook`, `GameBundles`, `GameLookData`, `GameShader`, `GameTextures`), Regrow, search, blueprint formats, servers and SSH (`ServerConfig`, `Tunnel`), the local game (`LocalGame`), characters, zone statistics, folders (`Places`). |
 | `Core/Save/` | Save reader (`WorldSave`, `ValheimReader`), writer (`WorldWriter`), new worlds (`WorldCreator`), object building (`ZdoTools`: copies and blank objects), the `.db2` zone list, and live mode (`LiveBridge`, `LiveSync`). |
 | `Core/Editing/` | Pending changes: terrain per zone, deleted and added objects, zone resets (`EditStore`); heights of a block of zones (`HeightGrid`). |
-| `Core/WorldGen/` | Valheim's world generator (bit-exact base terrain), map data, location flattening, the build-piece catalogue (`pieces.json`), the prefab catalogue (`prefabs.json`), the vegetation rules (`vegetation.json`), and the object data names (`zdo-keys.json`). |
+| `Core/WorldGen/` | Valheim's world generator (bit-exact base terrain), map data, location flattening, the build-piece catalogue (`pieces.json`), the prefab catalogue (`prefabs.json`), the vegetation rules (`vegetation.json`) (the game data the editor reads from the player's Valheim, the terrain modifiers and object data names, is not kept: `Core/App/GameData.cs`). |
 | `plugin/WorldEditorBridge/` | The BepInEx plugin for live mode (.NET Framework 4.7.2). |
 | `tests/Desktop.Tests/` | Every test (xUnit v3, Avalonia's headless mode), see [Tests](#tests). `tests/fixtures/` holds the test world. |
 | `tools/WorldCheck/` | Developer checks of the generator and the writer, saved objects byte by byte, and new worlds from a seed, see below. |
@@ -38,7 +38,7 @@ The app reads one command per line on its input and answers each with one line, 
 
 | Command | What it does |
 |---|---|
-| `modifiers <file>` | The game's terrain modifiers from a copy (`tests/fixtures/terrain-modifiers.json`), where there is no Valheim (CI): without them no world opens. |
+| `gamedata <folder>` | The game's data from the tests' copies (`tests/fixtures`), where there is no Valheim (CI): without it no world opens. |
 | `world <folder>` / `area <zx> <zz> <size>` / `map` | Open a world (its map), an area in the 3D editor, back to the map. |
 | `camera <x> <z> <yaw°> <pitch°> <distance>` | The 3D camera on world x, z. |
 | `mouse <down\|move\|up> <x> <z> [button] [mods]`, `wheel`, `key <name> [mods]` | Real pointer and key events at world positions. |
@@ -167,21 +167,25 @@ blueprint library), `piece-place.json.gz` (the hammer's placement flags, snap po
 for the Workshop's Build), `piece-support.json` (materials and collider boxes for the stability
 check), `vegetation.json` (the game's vegetation rules for Regrow nature,
 ZoneSystem's and the location lists', with the random draws each kind makes when it is created),
-`cave-rocks.json` (the cave roof rocks' meshes), `dungeon-rooms.json.gz` (the Dungeon tool's
+`cave-rocks.json` (the cave roof rocks' meshes) and `dungeon-rooms.json.gz` (the Dungeon tool's
 catalogue: each dungeon kind's themes and space, and each room's size, openings and the objects the
-game makes in it with the random parts that decide them) and `zdo-keys.json` (the names of object
-data keys for the object inspector, from the string literals of `assembly_valheim.dll`: the save only
-keeps their hashes). The files are written exactly as before (`Core/App/CatalogueJson.cs`: the same
+game makes in it with the random parts that decide them). The files are written exactly as before (`Core/App/CatalogueJson.cs`: the same
 number format, key order and separators), so a new export shows in git only what the game changed.
 
-The game's terrain modifiers (how locations and a few objects shape the ground before the saved
-edits) are not a catalogue: the editor reads them from the player's Valheim at its start
-(`Core/App/GameModifiers.cs`), from each `TerrainModifier` script up to its prefab rather than through
-every object (a few seconds), and keeps them in the data folder until the game changes. No world or
-Workshop opens without them. The tests use `tests/fixtures/terrain-modifiers.json` (the prefabs they
-meet; the driver's `modifiers <file>` gives it to the smoke tests): after a game update, make it again
-with `ValheimWorldEditor --export-terrain-modifiers tests/fixtures/terrain-modifiers.json`, which keeps
-the prefabs it lists.
+Some of the game's data is not kept in the repository at all: the editor reads it from the player's
+Valheim at its start (`Core/App/GameData.cs`, one entry per kind), in seconds, and keeps each kind in
+the data folder (`game-<kind>.json`) until the game's files change. No world or Workshop opens without
+it. The kinds so far:
+
+- `terrain-modifiers`: how locations and a few objects shape the ground before the saved edits, found
+  from each `TerrainModifier` script (told by the script its file lists for it) up to its prefab,
+  rather than through every object (about 4 s).
+- `zdo-keys`: the names of object data keys for the object inspector, from the string literals of
+  `assembly_valheim.dll` (the save only keeps their hashes).
+
+The tests use trimmed copies, `tests/fixtures/<kind>.json` (what they meet; the driver's
+`gamedata <folder>` gives them to the smoke tests). After a game update, make them again with
+`ValheimWorldEditor --export-test-data tests/fixtures`, which keeps the entries each copy has.
 
 The game's location rules (for the New world page's start, bosses and traders) are read by the editor
 itself, in C# (`Core/App/GameLocations.cs`), from the player's Valheim, and kept in the data folder
