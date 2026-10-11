@@ -42,6 +42,9 @@ public sealed class StartPage
 	internal Expander ServerForm { get; } = new() { Header = new TextBlock { Text = "Connect to a server", FontWeight = FontWeight.SemiBold }, HorizontalAlignment = HorizontalAlignment.Stretch };
 	internal StackPanel OfflinePanel { get; } = new() { Spacing = 8 };
 	internal StackPanel WorkshopPanel { get; } = new() { Spacing = 8 };
+	internal StackPanel NewWorldPanel { get; } = new() { Spacing = 8 };
+	internal Button NewWorldButton { get; } = new Button { Content = "Make a new world", FontSize = 13 }.Classed("primary");
+	public event Action? NewWorldRequested;
 	internal Button NewBuildingButton { get; } = new Button { Content = "Open the Workshop", FontSize = 13 }.Classed("primary");
 	internal TextBlock WorkshopHomestead { get; } = new() { TextWrapping = TextWrapping.Wrap, FontSize = 12 };
 	internal WrapPanel WorldCards { get; } = new() { ItemSpacing = 10, LineSpacing = 10 };
@@ -87,13 +90,14 @@ public sealed class StartPage
 		DocsLink.Click += async (_, _) => await OpenUrl(new Uri(DocsUrl));
 		LogLink.Tip("start.log");
 		LogLink.Click += async (_, _) => await OpenLog();
-		var modes = new UniformGrid { Columns = 4 };
+		var modes = new UniformGrid { Columns = 5 };
 		foreach (var (key, title, tag, text, icon) in new[]
 		{
 			("game", "My game", "live", "Edit the world you are playing in, single player or the one you host. You see the changes in game right away.", "game"),
 			("server", "A dedicated server", "live", "Edit your server's world while people play. The editor connects to the server itself.", "server"),
 			("offline", "A saved world", "offline", "Edit world files on this computer with the game closed, then start the game again.", "folder"),
 			("workshop", "The Workshop", "build", "Build a building on a blank plot and keep it as a blueprint, to build in game with Homestead.", "shape"),
+			("new", "A new world", "create", "Look at seeds before their world exists, find one that suits you, and make the world for the game.", "globe"),
 		})
 		{
 			var b = new Button
@@ -185,6 +189,7 @@ public sealed class StartPage
 					ServerPanel,
 					OfflinePanel,
 					WorkshopPanel,
+					NewWorldPanel,
 					new StackPanel
 					{
 						Orientation = Orientation.Horizontal,
@@ -209,7 +214,20 @@ public sealed class StartPage
 			},
 		}));
 		WorkshopPanel.Children.Add(WorkshopHomestead);
-		SetMode(settings.LastMode is "game" or "server" or "offline" or "workshop" ? settings.LastMode : "game");
+		NewWorldButton.Tip("start.new");
+		NewWorldButton.Click += (_, _) => NewWorldRequested?.Invoke();
+		NewWorldPanel.Children.Add(Card(new StackPanel
+		{
+			Spacing = 8,
+			Children =
+			{
+				new TextBlock { Text = "Make a new world", FontSize = 15, FontWeight = FontWeight.SemiBold },
+				Hint("See a seed's whole world from above before it exists (land, biomes, where the start is likely), or let the editor look through many seeds for one that suits you: "
+					+ "the start on a large landmass, the first Swamp or Mountain close by. The world is a normal Valheim world: friends on consoles can play it too."),
+				NewWorldButton,
+			},
+		}));
+		SetMode(settings.LastMode is "game" or "server" or "offline" or "workshop" or "new" ? settings.LastMode : "game");
 	}
 
 	private static Control Col(Control c, int col)
@@ -232,6 +250,7 @@ public sealed class StartPage
 		ServerPanel.IsVisible = mode == "server";
 		OfflinePanel.IsVisible = mode == "offline";
 		WorkshopPanel.IsVisible = mode == "workshop";
+		NewWorldPanel.IsVisible = mode == "new";
 		if (mode == "workshop")
 		{
 			FillWorkshop();

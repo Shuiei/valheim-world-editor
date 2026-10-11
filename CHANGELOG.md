@@ -4,6 +4,27 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## Unreleased
+
+### Added
+- **A new world** (the start page's fifth card): makes a new world, a normal one that players join
+  without any mod (crossplay included). The seed's world shows before it is made, from the editor's
+  copy of the game's generator: its land and biomes, and exactly where the game will put the start
+  temple, the bosses' altars and the traders' spots (Haldor, the Bog Witch, Hildir), with how far
+  each is from the start and whether you need to sail to each biome. **Find a seed** tries many
+  random seeds and keeps the best for what you ask: the start on a large landmass, land around it,
+  Swamp, Mountain or Plains within a distance, every early biome on foot, a trader or the first five
+  bosses within a distance. The map zooms (wheel, drag, double click) and stays sharp; switches in
+  its corner show or hide each kind of mark, and the seed's facts are listed beside it. The
+  **Dungeons** switches show where the burial chambers, troll caves, sunken crypts, frost caves,
+  infested mines, charred fortresses and Hildir's dungeons will be, with how many lie near the start.
+  The rules are read from your Valheim, so they follow game updates. See
+  [docs/new-world.md](docs/new-world.md).
+
+### Changed
+- **The world generator is about a third faster** (worlds' map previews, Regrow nature, new worlds),
+  with the same results to the bit.
+
 ## v1.18.0 — 2026-10-10
 
 ### Added
