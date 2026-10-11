@@ -3,8 +3,9 @@
 #                  errors) and is formatted as .editorconfig says (dotnet format)
 #   core-tests     the core's tests on three containers (saves, the world generator against the game's
 #                  values, live mode against a stand-in bridge, the SSH tunnel against a local sshd), and
-#   app-tests      the app's windows, headless, on three containers (the visual tests skip: no
-#                  display). Each builds its test project (tests/Core.Tests, tests/Desktop.Tests)
+#   app-tests      the app's windows, headless, on three containers, and the visual tests: the real
+#                  editor drawing with OpenGL on a virtual screen (Xvfb, Mesa's software OpenGL),
+#                  driven by the tests. Each builds its test project (tests/Core.Tests, tests/Desktop.Tests)
 #                  with warnings as errors; CircleCI shares the test classes out by their last times
 #                  and can rerun only the failed ones (circleci tests run, tools/ci-tests.sh). Every
 #                  test runs, failing or not; a test stuck for 5 minutes ends its run.
@@ -17,7 +18,8 @@
 #   windows-smoke  the Windows package does the same on a Windows machine (tools/smoke-test.ps1)
 # Security and bug patterns (CodeQL) are checked by GitHub's code scanning, set up on GitHub itself.
 # What CI cannot cover: the plugin build and reading the game's data (both need Valheim's files), the
-# visual tests (they need a display and OpenGL) and live mode against a real game.
+# game's look in the visual tests (copied from Valheim: CI's editor draws plain colours) and live mode
+# against a real game.
 version: 2.1
 
 orbs:
@@ -33,7 +35,7 @@ executors:
     resource_class: medium
 
 commands:
-  # One test project's classes (no visual tests), shared out between the job's containers by
+  # One test project's classes, shared out between the job's containers by
   # CircleCI by the time each class took in the last runs (circleci tests run). It also gives the job
   # "Rerun failed tests": a rerun runs only the classes that failed. Every test runs (a failure does
   # not stop the others); a test stuck 5 minutes ends the run (with a dump), and silence ends the step
@@ -46,11 +48,28 @@ commands:
         type: string
       results:
         type: string
+      display:
+        description: A virtual screen with OpenGL (Xvfb, Mesa's software renderer) for the visual tests.
+        type: boolean
+        default: false
     steps:
       - checkout
       - run:
           name: OpenSSH server (the tunnel's tests), fonts (Avalonia headless) and gpg (Codecov's CLI)
           command: apt-get update -qq && apt-get install -y -qq openssh-server libfontconfig1 gnupg > /dev/null && mkdir -p /run/sshd
+      - when:
+          condition: << parameters.display >>
+          steps:
+            - run:
+                name: Xvfb and Mesa's software OpenGL (the visual tests' virtual screen)
+                command: |
+                  apt-get install -y -qq --no-install-recommends xvfb xauth libgl1 libglx-mesa0 libgl1-mesa-dri libegl1 libegl-mesa0 \
+                    libgles2 libx11-6 libxrandr2 libxi6 libxcursor1 libice6 libsm6 > /dev/null
+            # For the rest of the job (the tests' step finds it at :99).
+            - run:
+                name: The virtual screen
+                background: true
+                command: Xvfb :99 -screen 0 1600x1000x24 -nolisten tcp
       - restore_cache:
           keys:
             - nuget-v2-{{ checksum "Directory.Build.props" }}-{{ checksum "Core/ValheimWorldEditor.Core.csproj" }}-{{ checksum "Desktop/ValheimWorldEditor.Desktop.csproj" }}-{{ checksum "tests/Core.Tests/Core.Tests.csproj" }}-{{ checksum "tests/Desktop.Tests/Desktop.Tests.csproj" }}
@@ -67,6 +86,12 @@ commands:
           command: |
             # Coverage on main only (Codecov reports main's).
             if [ "$CIRCLE_BRANCH" = main ]; then export VWE_COVERAGE=1; fi
+            # The virtual screen, where there is one (it starts in the background: a moment): the visual
+            # tests draw on it, else they skip.
+            if command -v Xvfb > /dev/null; then
+              for _ in $(seq 100); do [ -e /tmp/.X11-unix/X99 ] && break; sleep 0.1; done
+              export DISPLAY=:99
+            fi
             tools/ci-tests.sh list << parameters.project >> \
               | circleci tests run --command="xargs tools/ci-tests.sh run << parameters.project >> << parameters.results >>" --split-by=timings --timings-type=classname --verbose
       # Saved from main only: branches reuse main's (each cache is kept 15 days and billed).
@@ -151,8 +176,9 @@ jobs:
     steps:
       - test-classes:
           project: tests/Desktop.Tests/Desktop.Tests.csproj
-          what: App tests (the windows, headless)
+          what: App tests (the windows, headless; the real editor drawing, on the virtual screen)
           results: app
+          display: true
 
   packages:
     executor: dotnet

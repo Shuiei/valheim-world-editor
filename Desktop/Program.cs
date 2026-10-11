@@ -124,6 +124,8 @@ public sealed class App : Application
 ///   --driver                                           driven by another program (see Driver)
 ///   --window &lt;width&gt;x&lt;height&gt;                          the window's size (the documentation's pictures)
 ///   --data &lt;folder&gt;                                    settings and memory kept there (tests)
+///   --gamedata &lt;folder&gt;                                the game's data from the tests' copies (tests/fixtures):
+///                                                      where there is no Valheim (CI), so that worlds open
 ///   --mcp-stdio                                        no window: relays Claude's MCP messages on stdin/stdout to
 ///                                                      the running editor (Claude Desktop; see ClaudeRelay)
 /// </code>
@@ -200,6 +202,10 @@ public static class Options
                     TerrainEditor.App.AppSettings.DataDirOverride = Data;
                     // The tests' editor: "My game" never finds the player's own profiles.
                     TerrainEditor.App.LocalGame.SearchDefaultPlaces = false;
+                    break;
+                case "--gamedata":
+                    // As the driver's gamedata, but before a world given on the command line opens.
+                    TerrainEditor.App.GameData.UseCopies(Path.GetFullPath(args[++i]));
                     break;
                 case "--zone":
                     Direct = true;

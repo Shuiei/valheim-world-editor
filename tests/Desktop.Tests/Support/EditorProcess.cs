@@ -41,7 +41,9 @@ public class EditorProcess : IDisposable
         string app = Path.Combine(root, "Desktop", "bin", config, "net10.0", "ValheimWorldEditor.dll");
         string dotnet = Path.GetFullPath(Path.Combine(System.Runtime.InteropServices.RuntimeEnvironment.GetRuntimeDirectory(), "..", "..", "..", OperatingSystem.IsWindows() ? "dotnet.exe" : "dotnet"));
         var psi = new ProcessStartInfo(dotnet) { RedirectStandardInput = true, RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false };
-        foreach (string a in new[] { app, "--data", Data, "--driver" }.Concat(extra))
+        // The game's data from the tests' copies, as the tests in this process have it (Fixtures.UseGameData): the
+        // same with or without Valheim on the computer (CI has none).
+        foreach (string a in new[] { app, "--data", Data, "--gamedata", Fixtures.Root, "--driver" }.Concat(extra))
         {
             psi.ArgumentList.Add(a);
         }
