@@ -196,7 +196,10 @@ public class ClaudeToolsTests
 		await r.T.SelectObjects(new[] { 1, 2 }, focus: false);
 		Assert.Equal(2, J(await r.T.GetSelection()).GetArrayLength());
 		int chest = J(await r.T.PlacePieces(new[] { new ClaudeTools.PieceSpec { Prefab = "piece_chest_wood", X = -10, Z = -10 } })).GetProperty("placed")[0].GetProperty("id").GetInt32();
-		Assert.StartsWith("Changed", await r.T.SetContents(chest, new[] { new ClaudeTools.ItemSpec { Item = "Coins", Stack = 50 } }));
+		string filled = await r.T.SetContents(chest, new[] { new ClaudeTools.ItemSpec { Item = "Coins", Stack = 50 } });
+		Assert.StartsWith("Changed", filled);
+		// Changed, the chest is a new object: its id is the one given back.
+		chest = int.Parse(filled[(filled.LastIndexOf(' ') + 1)..].TrimEnd('.'), System.Globalization.CultureInfo.InvariantCulture);
 		// Stands: food lying flat, then emptied; an armour stand dressed and posed; what a stand refuses.
 		int tray = J(await r.T.PlacePieces(new[] { new ClaudeTools.PieceSpec { Prefab = "itemstandh", X = -12, Z = -10 } })).GetProperty("placed")[0].GetProperty("id").GetInt32();
 		string held = await r.T.SetContents(tray, new[] { new ClaudeTools.ItemSpec { Item = "CookedMeat" } });
