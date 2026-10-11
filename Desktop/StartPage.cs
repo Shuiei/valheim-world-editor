@@ -306,8 +306,28 @@ public sealed class StartPage
 
     // ---- My game: is Valheim running with the plugin?
     private string _gameKey = "";
+    private bool _polling;
 
+    // One check at a time: the timer does not wait for a slow one, and an older one finishing last
+    // would show its stale state (or error) over the newer one's.
     internal async Task PollGame()
+    {
+        if (_polling)
+        {
+            return;
+        }
+        _polling = true;
+        try
+        {
+            await CheckGame();
+        }
+        finally
+        {
+            _polling = false;
+        }
+    }
+
+    private async Task CheckGame()
     {
         List<LocalGame.Bridge> bridges;
         bool bepInEx, plugin;
