@@ -16,7 +16,7 @@ namespace TerrainEditor.App;
 // so making them again shows in git only what the game changed.
 public static partial class GameCatalogues
 {
-	public static readonly string[] All = { "prefabs", "pieces", "piece-cost", "piece-place", "piece-support", "vegetation", "dungeon-rooms" };
+	public static readonly string[] All = { "prefabs", "pieces", "piece-place", "piece-support", "vegetation", "dungeon-rooms" };
 
 	// Written gzipped (the largest).
 	private static readonly string[] Gzipped = { "piece-place", "dungeon-rooms" };
@@ -76,12 +76,11 @@ public static partial class GameCatalogues
 		var prefabs = names.Contains("prefabs") || names.Contains("pieces") ? new PrefabScan() : null;
 		var pieces = names.Contains("pieces") ? new PieceScan() : null;
 		var tools = names.Contains("pieces") ? new ToolScan() : null;
-		var cost = names.Contains("piece-cost") ? new CostScan(Localization.English(bundles.Folder)) : null;
 		var place = names.Contains("piece-place") ? new PlaceScan() : null;
 		var support = names.Contains("piece-support") ? new SupportScan() : null;
 		var vegetation = names.Contains("vegetation") ? new VegetationScan() : null;
 		var dungeons = names.Contains("dungeon-rooms") ? new DungeonScan() : null;
-		var scans = new IScan?[] { prefabs, pieces, tools, cost, place, support, vegetation, dungeons }.OfType<IScan>().ToList();
+		var scans = new IScan?[] { prefabs, pieces, tools, place, support, vegetation, dungeons }.OfType<IScan>().ToList();
 		if (scans.Count > 0)
 		{
 			using var game = new Game(bundles.Folder);
@@ -111,10 +110,6 @@ public static partial class GameCatalogues
 			{
 				tools!.Finish(game, pieces.Entries, prefabs!.Names);
 				made["pieces"] = CatalogueJson.Write(pieces.Entries, new Style());
-			}
-			if (cost != null)
-			{
-				made["piece-cost"] = CatalogueJson.Write(cost.Json(), new Style(",", ":", SortKeys: true, Ascii: false));
 			}
 			if (place != null)
 			{
