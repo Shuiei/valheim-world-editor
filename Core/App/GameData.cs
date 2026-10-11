@@ -44,6 +44,11 @@ public static class GameData
     ];
 
     /// <summary>
+    /// The kinds' names, in the order they are read and used.
+    /// </summary>
+    internal static IEnumerable<string> KindNames => Kinds.Select(k => k.Name);
+
+    /// <summary>
     /// A kind's cache file in the user's data folder: game-&lt;kind&gt;.json.
     /// </summary>
     public static string CacheFile(string kind) => Path.Combine(AppSettings.UserDataDir, $"game-{kind}.json");
@@ -122,6 +127,17 @@ public static class GameData
     }
 
     /// <summary>
+    /// No data in use any more (the tests: Ensure is then tried as the editor does at its start).
+    /// </summary>
+    internal static void Forget()
+    {
+        lock (Lock)
+        {
+            _from = null;
+        }
+    }
+
+    /// <summary>
     /// Valheim's folder from its bundles folder (&lt;Valheim&gt;/valheim_Data/StreamingAssets/SoftRef/Bundles).
     /// </summary>
     private static string ValheimOf(string bundles)
@@ -142,7 +158,7 @@ public static class GameData
     /// <summary>
     /// The game's files a kind is read from, by name, size and time: what makes a cache out of date.
     /// </summary>
-    private static string Stamp(string valheim, string bundles) =>
+    internal static string Stamp(string valheim, string bundles) =>
         CacheVersion + " " + JsonSerializer.Serialize(Directory.GetFiles(bundles).Order(StringComparer.Ordinal)
             .Concat(DataFolders.Select(d => Path.Combine(valheim, d, "Managed", "assembly_valheim.dll")).Where(File.Exists))
             .Select(f => new FileInfo(f)).Select(f => $"{f.Name}:{f.Length}:{f.LastWriteTimeUtc.Ticks}"));
@@ -151,7 +167,7 @@ public static class GameData
     /// Every kind as JSON, by name: from its cache when the game and the editor are unchanged, else read
     /// from the game (and kept, with cache); null when one cannot be read.
     /// </summary>
-    private static Dictionary<string, string>? Load(GameBundles bundles, bool cache)
+    internal static Dictionary<string, string>? Load(GameBundles bundles, bool cache)
     {
         string valheim = ValheimOf(bundles.Folder);
         string what = "files";
@@ -287,15 +303,24 @@ public static class GameData
         foreach (var kind in Kinds)
         {
             string path = Path.Combine(folder, kind.Name + ".json");
-            using var copy = JsonDocument.Parse(File.ReadAllText(path));
-            using var game = JsonDocument.Parse(read[kind.Name]);
-            object trimmed = (kind.Trim ?? Entries)(game.RootElement, copy.RootElement);
-            File.WriteAllText(path, Lines(JsonSerializer.SerializeToElement(trimmed)) + "\n");
-            var kept = Kept(copy.RootElement, kind.Trim == null);
-            var now = Kept(JsonSerializer.SerializeToElement(trimmed), kind.Trim == null);
+            var (text, kept, now) = Trim(kind.Name, read[kind.Name], File.ReadAllText(path));
+            File.WriteAllText(path, text);
             Console.WriteLine($"{path}: {now.Count} of {kept.Count} entries" + (now.Count < kept.Count ? $" (not in the game any more: {string.Join(", ", kept.Except(now))})" : ""));
         }
         return 0;
+    }
+
+    /// <summary>
+    /// A tests' copy made again: the game's JSON of a kind trimmed to what the copy (its JSON) holds, as the
+    /// copy's text, with what the copy held and what it holds now (entries, or groups' entries).
+    /// </summary>
+    internal static (string Text, List<string> Kept, List<string> Now) Trim(string name, string game, string copy)
+    {
+        var kind = Kinds.First(k => k.Name == name);
+        using var c = JsonDocument.Parse(copy);
+        using var g = JsonDocument.Parse(game);
+        var trimmed = JsonSerializer.SerializeToElement((kind.Trim ?? Entries)(g.RootElement, c.RootElement));
+        return (Lines(trimmed) + "\n", Kept(c.RootElement, kind.Trim == null), Kept(trimmed, kind.Trim == null));
     }
 
     /// <summary>
