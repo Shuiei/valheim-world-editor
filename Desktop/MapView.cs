@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 using Avalonia;
 using Avalonia.Controls;
@@ -21,6 +22,7 @@ namespace TerrainEditor.Desktop;
 /// (toward the mouse), click to pick a spot. Lines on top: the chosen area, edited zones, zones marked for reset, and
 /// the zone grid.
 /// </summary>
+[SuppressMessage("Design", "CA1001:Types that own disposable fields should be disposable", Justification = "The map lives as long as the window; a token source without a timer holds nothing to free.")]
 public sealed class MapView : OpenGlControlBase
 {
     /// <summary>
@@ -47,6 +49,10 @@ public sealed class MapView : OpenGlControlBase
     /// The open world's map data (made from its terrain and edits), or null before a world is shown.
     /// </summary>
     private MapData? _data;
+    /// <summary>
+    /// Stops the world map's build when another world is shown.
+    /// </summary>
+    private CancellationTokenSource? _build;
     /// <summary>
     /// The world shown, or null before one is.
     /// </summary>
@@ -177,7 +183,10 @@ public sealed class MapView : OpenGlControlBase
     public void Show(WorldSession session)
     {
         _session = session;
-        _data = new MapData(session.Terrain, session.Edits);
+        // The last world's map is no longer wanted: its build stops, and gives its threads back.
+        _build?.Cancel();
+        var build = _build = new CancellationTokenSource();
+        _data = new MapData(session.Terrain, session.Edits, build.Token);
         _global = null;
         _globalShown = false;
         _detail = null;
@@ -189,13 +198,21 @@ public sealed class MapView : OpenGlControlBase
         // busy, and the pool keeps the rest for everything else.
         Task.Factory.StartNew(() =>
         {
-            var g = data.Global;
+            MapData.Layers g;
+            try
+            {
+                g = data.Global;
+            }
+            catch (OperationCanceledException)
+            {
+                return;
+            }
             if (_data == data)
             {
                 _global = g;
                 Dispatcher.UIThread.Post(() => { Status?.Invoke(""); RequestNextFrameRendering(); });
             }
-        }, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+        }, build.Token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
         RequestNextFrameRendering();
     }
 
