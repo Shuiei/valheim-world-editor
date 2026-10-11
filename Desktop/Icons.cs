@@ -42,6 +42,7 @@ public static class Icons
 		["save"] = "M5 3h11l3 3v15H5zM8 3v6h8V3M8 21v-7h8v7",
 		["close"] = "M6 6l12 12M18 6L6 18",
 		["folder"] = "M3 6h6l2 2h10v11H3z",
+		["home"] = "M3 11l9-7 9 7M5 10v10h14V10M10 20v-6h4v6",
 		["server"] = "M4 4h16v6H4zM4 14h16v6H4zM8 7h.01M8 17h.01",
 		["game"] = "M6 9h12a4 4 0 0 1 0 8l-2-2H8l-2 2a4 4 0 0 1 0-8zM8 12v2M7 13h2M15 12h.01M17 14h.01",
 		["settings"] = "M12 9a3 3 0 1 0 0 6a3 3 0 1 0 0-6M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1",

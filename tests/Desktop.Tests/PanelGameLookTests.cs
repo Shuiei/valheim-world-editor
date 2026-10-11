@@ -162,7 +162,9 @@ public class PanelGameLookTests
 	public void TheStartPageShowsTheCardAndPassesItsFolderPicker()
 	{
 		var page = new StartPage(new AppSettings()) { PickFolder = _ => Task.FromResult<string?>("/picked") };
-		Assert.Contains(page.LookBanner.View, ((StackPanel)((ScrollViewer)page.View).Content!).Children);
+		// Over every page, beside the side menu.
+		var main = ((Grid)page.View).Children.OfType<ScrollViewer>().Single();
+		Assert.Contains(page.LookBanner.View, ((StackPanel)main.Content!).Children);
 		Assert.Equal("/picked", page.LookBanner.PickFolder("x").Result);
 	}
 
