@@ -2,6 +2,7 @@
 
 [![CircleCI](https://dl.circleci.com/status-badge/img/gh/Shuiei/valheim-world-editor/tree/main.svg?style=svg)](https://dl.circleci.com/status-badge/redirect/gh/Shuiei/valheim-world-editor/tree/main)
 [![Latest release](https://img.shields.io/github/v/release/Shuiei/valheim-world-editor)](https://github.com/Shuiei/valheim-world-editor/releases/latest)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/Shuiei/valheim-world-editor/badge)](https://scorecard.dev/viewer/?uri=github.com/Shuiei/valheim-world-editor)
 
 **A world editor for Valheim, in the spirit of Minecraft's MCEdit, WorldEdit and WorldPainter.**
 Open a world, saved or running, in a 3D window that draws it with the game's own terrain, textures
@@ -285,6 +286,7 @@ What changed and when: [CHANGELOG.md](CHANGELOG.md).
 - **Claude only connects if you allow it** (Settings), only from this computer, with a secret token,
   and what it changes stays pending like your own changes.
 - Keep your own copies of worlds you care about anyway.
+- Found a security problem? Report it privately, see [SECURITY.md](SECURITY.md).
 
 ## Questions
 
