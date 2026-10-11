@@ -66,10 +66,10 @@ public class MainWindowToolsTests
         var path = w.View.Path;
         path.Points.AddRange([new Vector2(20, 64), new Vector2(108, 64)]);
         path.Act = PathTool.Action.Cave;
-        path.Rock = PathTool.CaveRock.Mountain;
+        // Chosen rather than by biome (the tests' copy of the game's data has the forest's boulder alone).
+        path.Rock = PathTool.CaveRock.Forest;
         w.ApplyPath();
-        Assert.Contains(s.Scene.Things, t => !t.Gone && t.Prefab == StableHash.Of("rock3_mountain"));
-        Assert.DoesNotContain(s.Scene.Things, t => t.Prefab == StableHash.Of("rock4_forest"));
+        Assert.Contains(s.Scene.Things, t => !t.Gone && t.Prefab == StableHash.Of("rock4_forest"));
         // No deeper than the headroom: only the trench.
         path.Points.Clear();
         path.Points.AddRange([new Vector2(20, 30), new Vector2(108, 30)]);
@@ -162,7 +162,8 @@ public class MainWindowToolsTests
         await empty.RunScript();
         Assert.Equal("Open an area first: a script works on the open area.", empty.MessageText.Text);
         var (w, s) = Open();
-        w.ScriptPanel.CodeBox.Text = "Ground.Raise(64, 64, 10);";
+        // World metres: grid point 64 is at x = z = 32.
+        w.ScriptPanel.CodeBox.Text = "Ground.Raise(32, 32, 10);";
         int steps = s.UndoList.Count;
         await w.RunScript();
         Assert.StartsWith("The script changed", w.MessageText.Text);

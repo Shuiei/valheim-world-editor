@@ -103,6 +103,8 @@ public class DriverTests
         // The camera over the spot, then the mouse and the wheel there.
         state = await r.Send(FormattableString.Invariant($"camera {x} {z} 30 50 70"));
         Assert.Equal(70, state.GetProperty("distance").GetSingle(), 0.01f);
+        // Headless windows draw no frame: the camera's matrix the mouse commands use is set as a frame would.
+        r.W.View.SetCamera(new System.Numerics.Vector3(0, 200, 1), new System.Numerics.Vector3(0, 30, 0), 1.6f);
         await r.Send(FormattableString.Invariant($"mouse move {x} {z}"));
         await r.Send(FormattableString.Invariant($"mouse3 move {x} 5 {z}"));
         state = await r.Send(FormattableString.Invariant($"wheel {x} {z} 3"));
