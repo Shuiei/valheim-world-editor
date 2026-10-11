@@ -302,9 +302,22 @@ public sealed class GameBundles
     })];
 
     /// <summary>
+    /// Makes sure the index is there (see <c>Index</c>), telling how far building it is: bundles done, of all of
+    /// them. Nothing is told when it is there already or read from the kept file.
+    /// </summary>
+    public void EnsureIndexed(Action<int, int>? progress)
+    {
+        lock (_sync)
+        {
+            EnsureIndex(progress);
+        }
+    }
+
+    /// <summary>
     /// The index: already there, read from the kept file when the bundles have not changed, else built (and kept).
     /// </summary>
-    private Dictionary<string, Where> EnsureIndex()
+    /// <param name="progress">Told the bundles done, of all of them, while it is built.</param>
+    private Dictionary<string, Where> EnsureIndex(Action<int, int>? progress = null)
     {
         if (_index != null)
         {
@@ -344,7 +357,7 @@ public sealed class GameBundles
             }
         }
         var sw = System.Diagnostics.Stopwatch.StartNew();
-        var index = BuildIndex();
+        var index = BuildIndex(progress);
         Console.WriteLine($"game files: {index.Count} prefabs in {_files.Count} bundles indexed in {sw.ElapsedMilliseconds} ms");
         if (_cacheFile != null)
         {
@@ -379,13 +392,16 @@ public sealed class GameBundles
     /// bundles (a model asset and the prefab made from it): the one with a ZNetView, the prefab the game
     /// spawns.
     /// </summary>
-    private Dictionary<string, Where> BuildIndex()
+    /// <param name="progress">Told the bundles done, of all of them, before each.</param>
+    private Dictionary<string, Where> BuildIndex(Action<int, int>? progress)
     {
         var res = new Dictionary<string, Where>();
         var twice = new Dictionary<string, List<Where>>();
         var assets = new Dictionary<string, Where>();
+        int done = 0;
         foreach (string bundle in _files.Keys.Order(StringComparer.Ordinal))
         {
+            progress?.Invoke(done++, _files.Count);
             BundleFileInstance b;
             try
             {

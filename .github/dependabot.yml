@@ -37,6 +37,9 @@ updates:
         update-types: ["version-update:semver-major"]
       - dependency-name: xunit.runner.visualstudio
         update-types: ["version-update:semver-major"]
+      # FsCheck.Xunit.v3 3.4 needs xUnit 4 too.
+      - dependency-name: FsCheck.Xunit.v3
+        versions: [">=3.4.0"]
 
   # The GitHub Actions workflows (Scorecard, dependency review). Actions are pinned to commits;
   # Dependabot moves the pin and the version comment together.
