@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 using Avalonia;
 using Avalonia.Controls;
@@ -22,8 +21,7 @@ namespace TerrainEditor.Desktop;
 /// (toward the mouse), click to pick a spot. Lines on top: the chosen area, edited zones, zones marked for reset, and
 /// the zone grid.
 /// </summary>
-[SuppressMessage("Design", "CA1001:Types that own disposable fields should be disposable", Justification = "The map lives as long as the window; a token source without a timer holds nothing to free.")]
-public sealed class MapView : OpenGlControlBase
+public sealed class MapView : OpenGlControlBase, IDisposable
 {
     /// <summary>
     /// The OpenGL functions of the current context.
@@ -184,7 +182,7 @@ public sealed class MapView : OpenGlControlBase
     {
         _session = session;
         // The last world's map is no longer wanted: its build stops, and gives its threads back.
-        _build?.Cancel();
+        StopBuild();
         var build = _build = new CancellationTokenSource();
         _data = new MapData(session.Terrain, session.Edits, build.Token);
         _global = null;
@@ -215,6 +213,21 @@ public sealed class MapView : OpenGlControlBase
         }, build.Token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
         RequestNextFrameRendering();
     }
+
+    /// <summary>
+    /// Stops the world map's build, if one runs.
+    /// </summary>
+    private void StopBuild()
+    {
+        _build?.Cancel();
+        _build?.Dispose();
+        _build = null;
+    }
+
+    /// <summary>
+    /// Leaving the map for good: its build is stopped.
+    /// </summary>
+    public void Dispose() => StopBuild();
 
     /// <summary>
     /// The map data changed (edits saved, discarded): the close-up and the player-built pieces are read again.
