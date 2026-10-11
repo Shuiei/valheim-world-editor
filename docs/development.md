@@ -12,11 +12,10 @@
 | `Core/WorldGen/` | Valheim's world generator (bit-exact base terrain), map data, location flattening, the build-piece catalogue (`pieces.json`), the prefab catalogue (`prefabs.json`), the vegetation rules (`vegetation.json`), and the object data names (`zdo-keys.json`). |
 | `plugin/WorldEditorBridge/` | The BepInEx plugin for live mode (.NET Framework 4.7.2). |
 | `tests/Desktop.Tests/` | Every test (xUnit v3, Avalonia's headless mode), see [Tests](#tests). `tests/fixtures/` holds the test world. |
-| `tools/WorldCheck/` | Developer checks of the generator and the writer, and new worlds from a seed, see below. |
+| `tools/WorldCheck/` | Developer checks of the generator and the writer, saved objects byte by byte, and new worlds from a seed, see below. |
 | `tools/asset-export/` | Python (UnityPy) scripts that make the catalogues in `Core/WorldGen/` from the game's files (developers only; not in the release). |
 | `tools/docs-screenshots/` | `scenes.py` builds and takes the pictures in `docs/images/`, through `editor.py`, which drives the app. |
 | `tools/release.sh`, `tools/check-package.sh` | The release packages, and their check. |
-| `tools/zdo_scan.py` | Minimal chunk reader, to check saved objects byte by byte. |
 
 ## Command line
 
@@ -91,7 +90,8 @@ programs (it rejected the editor packages of 0.3.3), so the editor is only on th
 page, which the plugin's mod page points to. `tools/thunderstore.sh <folder>` builds
 `WorldEditorBridge-<version>.zip` from `tools/thunderstore/bridge/` (`manifest.json` and the mod
 page `README.md`), the editor's `CHANGELOG.md` (made into the plugin's changelog by
-`tools/thunderstore/changelog.py`, with links to the matching editor on GitHub) and the icon, with
+`tools/thunderstore/package.cs`, a .NET file-based app, with links to the matching editor on GitHub)
+and the icon, with
 the DLL of the release packages (reused when that version is already in the folder). It checks
 Thunderstore's rules (name, 250-character description, 256x256 icon). Upload the zip at
 https://thunderstore.io/c/valheim/create/.
@@ -198,6 +198,7 @@ after an update.
 | `inspect <world>` / `summary <world>` | The chunk mapping and terrain objects / the overview map and the most edited zones. |
 | `create <folder> <name> <seed> [radius]` | A new world from a seed, in the game's save format; its middle (`radius` zones around spawn) generated with the game's vegetation rules (no locations). It refuses a folder that already holds a world. |
 | `look <seed> [metres]` | The biomes and water around a seed's spawn, to choose one. |
+| `objects <world> [prefab]` | The most common kinds of saved objects; with a prefab (name or hash), each of its objects and its saved bytes in hex, to check them byte by byte. |
 
 ## Tests
 
