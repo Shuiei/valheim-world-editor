@@ -1,0 +1,29 @@
+# ClusterFuzzLite once a week, on main: the corpus the nightly runs grew, pruned to the inputs that still
+# add coverage. (Its coverage
+# reports are left out: ClusterFuzzLite cannot measure a .NET program's coverage.)
+name: ClusterFuzzLite corpus pruning
+
+on:
+  schedule:
+    - cron: "41 1 * * 0"
+  workflow_dispatch:
+
+permissions: read-all
+
+jobs:
+  prune:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Build fuzzers
+        uses: google/clusterfuzzlite/actions/build_fuzzers@884713a6c30a92e5e8544c39945cd7cb630abcd1 # v1
+        with:
+          language: c++
+      - name: Prune the corpus
+        uses: google/clusterfuzzlite/actions/run_fuzzers@884713a6c30a92e5e8544c39945cd7cb630abcd1 # v1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          fuzz-seconds: 600
+          mode: prune

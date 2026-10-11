@@ -22,6 +22,10 @@ token (see [Safety](README.md#safety)). Anything that lets another computer reac
 the token, or makes a world, blueprint or settings file run code or write outside its folder is a
 vulnerability.
 
+The editor's readers of saves, live snapshots, blueprints and heightmap pictures are fuzzed every night
+(ClusterFuzzLite, see [Fuzzing](docs/development.md#fuzzing)): a file that crashes or freezes the editor
+is a bug worth reporting too, here or as an issue.
+
 ## Checking a download
 
 Each file on the [releases page](https://github.com/Shuiei/valheim-world-editor/releases) has a
