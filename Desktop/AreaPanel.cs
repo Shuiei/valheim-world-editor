@@ -11,14 +11,52 @@ using TerrainEditor.Terrain;
 
 namespace TerrainEditor.Desktop;
 
-// The Area tool's panel, like the web editor's (editor/area.js): the selection's shape and soft edge,
-// one action at a time with only its own settings, and Apply (Enter). Ground actions change the ground
-// inside; object actions remove, select or replace the objects of the chosen kinds inside; Reset zones
-// hands the zones under the selection back to the world generator when saving.
+/// <summary>
+/// The Area tool's panel, like the web editor's (editor/area.js): the selection's shape and soft edge,
+/// one action at a time with only its own settings, and Apply (Enter). Ground actions change the ground
+/// inside; object actions remove, select or replace the objects of the chosen kinds inside; Reset zones
+/// hands the zones under the selection back to the world generator when saving.
+/// </summary>
 public sealed class AreaPanel
 {
-    public enum Act { Flatten, Raise, Lower, Smooth, Natural, Restore, Erode, Paint, Remove, Select, Replace, Regrow, Copy, Heightmap, Backup, Reset }
+    /// <summary>The actions on the Action list, in its order; each shows only its own rows.</summary>
+    public enum Act
+    {
+        /// <summary>Flattens the ground inside to one height.</summary>
+        Flatten,
+        /// <summary>Raises the ground inside.</summary>
+        Raise,
+        /// <summary>Lowers the ground inside.</summary>
+        Lower,
+        /// <summary>Evens out bumps inside.</summary>
+        Smooth,
+        /// <summary>Natural-looking bumps (Naturalize), with the Naturalize brush's Bumps and Size.</summary>
+        Natural,
+        /// <summary>Back to the ground the game generated, paint removed.</summary>
+        Restore,
+        /// <summary>Weathers the ground inside: slopes settle and rain cuts gullies.</summary>
+        Erode,
+        /// <summary>Paints the ground inside.</summary>
+        Paint,
+        /// <summary>Removes the objects of the chosen kinds inside.</summary>
+        Remove,
+        /// <summary>Selects the objects of the chosen kinds inside.</summary>
+        Select,
+        /// <summary>Replaces the objects of the chosen kinds inside.</summary>
+        Replace,
+        /// <summary>Puts back what the game grows here, by its vegetation rules, for the chosen kinds.</summary>
+        Regrow,
+        /// <summary>Copies the selection, to paste it elsewhere.</summary>
+        Copy,
+        /// <summary>Exports the ground inside as a heightmap picture, or imports one.</summary>
+        Heightmap,
+        /// <summary>Restores the selection from a backup.</summary>
+        Backup,
+        /// <summary>Hands the zones under the selection back to the world generator when saving.</summary>
+        Reset,
+    }
 
+    /// <summary>The Action list: each action with its label.</summary>
     private static readonly (Act Act, string Label)[] Actions =
     [
         (Act.Flatten, "Flatten"), (Act.Raise, "Raise"), (Act.Lower, "Lower"), (Act.Smooth, "Smooth"), (Act.Natural, "Naturalize"),
@@ -27,52 +65,87 @@ public sealed class AreaPanel
         (Act.Backup, "Restore from a backup"), (Act.Reset, "Reset zones"),
     ];
 
+    /// <summary>The Paint action's paints, with the brush tool whose paint they put down.</summary>
     private static readonly (string Label, BrushTool Tool)[] Paints =
     [
         ("Dirt", BrushTool.PaintDirt), ("Cultivated", BrushTool.PaintCultivated), ("Paved", BrushTool.PaintPaved), ("Clear paint", BrushTool.PaintClear),
     ];
 
+    /// <summary>The panel itself, shown over the view while the Area tool is on.</summary>
     public Control Card { get; }
+    /// <summary>The view's selection (box or polygon) the actions work on.</summary>
     public AreaTool Area { get; }
     private readonly GlView _view;
     private readonly Func<EditSession?> _session;
     private readonly Func<int, string?> _nameOf;
+    /// <summary>Asks a yes/no question (the window's dialog); resetting zones goes on only on true.</summary>
     internal Func<string, Task<bool>> Confirm { get; set; } = _ => Task.FromResult(true);
+    /// <summary>A line for the status bar.</summary>
     public event Action<string>? Message;
-    // Select objects: the window switches to the Select tool.
+    /// <summary>Select objects: the window switches to the Select tool.</summary>
     public event Action? SwitchToSelect;
 
+    /// <summary>Switches the selection to a box dragged on the ground (clears the current one).</summary>
     internal Button BoxButton { get; } = new() { Content = "Box", FontSize = 12 };
+    /// <summary>Switches the selection to a polygon clicked point by point (clears the current one).</summary>
     internal Button PolyButton { get; } = new() { Content = "Polygon", FontSize = 12 };
+    /// <summary>Clears the selection.</summary>
     internal Button ClearButton { get; } = new() { Content = "Clear (Esc)", FontSize = 12 };
+    /// <summary>The selection's size and what is inside, or how to make one.</summary>
     internal TextBlock Info { get; } = new() { FontSize = 12, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
+    /// <summary>The soft edge, 0 to 20 m: how far inwards from the outline an action fades in.</summary>
     internal Slider SoftSlider { get; }
+    /// <summary>The action list.</summary>
     internal ComboBox ActionBox { get; }
+    /// <summary>Flatten: the height to flatten to, in metres.</summary>
     internal NumericUpDown HeightBox { get; } = new() { Value = 35, Increment = 0.1m, FormatString = "0.0#", FontSize = 12 };
+    /// <summary>Puts the average ground height inside the selection into <see cref="HeightBox"/>.</summary>
     internal Button AverageButton { get; } = new() { Content = "avg", FontSize = 11, Padding = new Thickness(6, 2) };
+    /// <summary>Raise and Lower: by how much, in metres.</summary>
     internal NumericUpDown AmountBox { get; } = new() { Value = 2, Increment = 0.1m, FormatString = "0.0#", FontSize = 12 };
+    /// <summary>Paint: which paint (one of <c>Paints</c>).</summary>
     internal ComboBox PaintBox { get; } = new() { ItemsSource = Paints.Select(p => p.Label).ToArray(), SelectedIndex = 0, FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch };
+    /// <summary>Flatten, Raise and Lower: the cut and fill the action would move.</summary>
     internal TextBlock VolumeText { get; } = new() { FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
+    /// <summary>One toggle per object kind: the kinds the object actions (and a backup restore) work on.</summary>
     internal Dictionary<ObjectKind, ToggleButton> KindButtons { get; } = [];
+    /// <summary>Replace: the kind to replace, from those inside the selection (shown as "name (count)").</summary>
     internal ComboBox FromBox { get; } = new() { FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch };
+    /// <summary>Replace: the kind to put in their place, from the kinds the world can make.</summary>
     internal ComboBox ToBox { get; } = new() { FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch, MaxDropDownHeight = 400 };
-    // Eyedropper: the "with" kind picked from the world (the window takes the next click on an object).
+    /// <summary>Eyedropper: the "with" kind picked from the world (the window takes the next click on an object).</summary>
     internal Button ToPickButton { get; } = new() { Content = "pick", FontSize = 11, Padding = new Thickness(6, 2), Margin = new Thickness(4, 0, 0, 0) };
+    /// <summary>
+    /// Asks the window to take the next click on an object: the action's name for the prompt, and what to do with
+    /// the picked prefab hash.
+    /// </summary>
     public event Action<string, Action<int>>? PickKindAsked;
+    /// <summary>Reset zones: keep the player's buildings in the zones.</summary>
     internal CheckBox KeepBuildingsBox { get; } = new() { Content = "Keep my buildings", IsChecked = true, FontSize = 12 };
+    /// <summary>Reset zones: also undo the zones' ground edits.</summary>
     internal CheckBox ResetGroundBox { get; } = new() { Content = "Reset ground edits too", IsChecked = true, FontSize = 12 };
+    /// <summary>Reset zones: unmarks the zones under the selection.</summary>
     internal Button UnresetButton { get; } = new() { Content = "Cancel reset", FontSize = 12 };
+    /// <summary>Runs the current action (Enter); its text names the action. Hidden for Copy and Heightmap.</summary>
     internal Button ApplyButton { get; } = new Button { FontSize = 12 }.Classed("primary");
+    /// <summary>The rows shown only for some actions, with those actions.</summary>
     private readonly Dictionary<Control, Act[]> _rows = [];
+    /// <summary>The prefab hashes behind <see cref="ToBox"/>'s entries, in its order (filled once).</summary>
     private List<int> _creatable = [];
 
+    /// <summary>The action chosen on the list.</summary>
     public Act Current => Actions[Math.Max(0, ActionBox.SelectedIndex)].Act;
 
+    /// <summary>Chooses an action on the list.</summary>
     internal void Choose(Act a) => ActionBox.SelectedIndex = Array.FindIndex(Actions, x => x.Act == a);
 
+    /// <summary>Restore from a backup: the backup, from <c>_backupPaths</c>, then "Another folder…".</summary>
     internal ComboBox BackupBox { get; } = new() { FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch };
+    /// <summary>Restore from a backup: put the ground back.</summary>
     internal CheckBox BackupGroundBox { get; } = new() { Content = "Ground (height and paint)", IsChecked = true, FontSize = 12 };
+    /// <summary>Restore from a backup: put the objects of the chosen kinds back.</summary>
     internal CheckBox BackupObjectsBox { get; } = new() { Content = "Objects of the kinds chosen above", IsChecked = true, FontSize = 12 };
+    /// <summary>Restore from a backup: what it does, then the backup read or why it cannot be used.</summary>
     internal TextBlock BackupInfo { get; } = new()
     {
         FontSize = 11,
@@ -80,31 +153,56 @@ public sealed class AreaPanel
         TextWrapping = TextWrapping.Wrap,
         Text = "Puts the selection back as it was in a backup: the editor's backups and the game's own are listed. Choose Your buildings above to bring buildings back too."
     };
+    /// <summary>The backup folders behind <see cref="BackupBox"/>'s entries, in its order.</summary>
     private List<string> _backupPaths = [];
-    // Asks for another backup folder (the window's folder picker).
+    /// <summary>Asks for another backup folder (the window's folder picker).</summary>
     internal Func<Task<string?>> PickFolder { get; set; } = () => Task.FromResult<string?>(null);
+    /// <summary>The last backup read by <see cref="OpenBackup"/>, kept for the next restore from it.</summary>
     private (string Path, WorldSave World, EditStore Edits)? _backup;
 
     // Copy and paste: the window copies, pastes and keeps blueprints.
+    /// <summary>Asks the window to copy the selection.</summary>
     internal Button CopyButton { get; } = new() { Content = "Copy (Ctrl+C)", FontSize = 12 };
+    /// <summary>Asks the window to paste.</summary>
     internal Button PasteButton { get; } = new() { Content = "Paste (Ctrl+V)", FontSize = 12 };
+    /// <summary>Asks the window to save the selection as a blueprint.</summary>
     internal Button SaveBlueprintButton { get; } = new() { Content = "Save blueprint…", FontSize = 12 };
+    /// <summary>Asks the window to open the blueprint library.</summary>
     internal Button LibraryButton { get; } = new() { Content = "Blueprints…", FontSize = 12 };
+    /// <summary>What copying takes.</summary>
     internal TextBlock ClipInfo { get; } = new() { FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
+    /// <summary>The Copy and paste buttons, handled by the window.</summary>
     public event Action? CopyAsked, PasteAsked, SaveBlueprintAsked, LibraryAsked;
 
     // Heightmap: export the area, or import a picture into the selection (or the whole area).
+    /// <summary>Writes the area's heightmap (see <see cref="ExportHeightmap"/>).</summary>
     internal Button ExportButton { get; } = new() { Content = "Export the area", FontSize = 12 };
+    /// <summary>Reads a picture to import (see <see cref="LoadPicture"/>).</summary>
     internal Button ImportButton { get; } = new() { Content = "Import…", FontSize = 12 };
+    /// <summary>Import: the height black stands for, in metres.</summary>
     internal NumericUpDown LowestBox { get; } = new() { Increment = 0.5m, FormatString = "0.###", FontSize = 12 };
+    /// <summary>Import: the height white stands for, in metres.</summary>
     internal NumericUpDown HighestBox { get; } = new() { Increment = 0.5m, FormatString = "0.###", FontSize = 12 };
+    /// <summary>Import: puts the picture read into the ground (see <see cref="PutPicture"/>).</summary>
     internal Button PutButton { get; } = new Button { Content = "Put it into the ground", FontSize = 12 }.Classed("primary");
+    /// <summary>Import: drops the picture read.</summary>
     internal Button CancelPictureButton { get; } = new() { Content = "Cancel", FontSize = 12 };
+    /// <summary>Import: the picture read and where it is fitted.</summary>
     internal TextBlock PictureInfo { get; } = new() { FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
+    /// <summary>The import rows, shown once a picture is read.</summary>
     private readonly Control _pictureBox = null!;
+    /// <summary>Asks for a picture to import (the window's file picker).</summary>
     internal Func<Task<string?>> PickPicture { get; set; } = () => Task.FromResult<string?>(null);
+    /// <summary>
+    /// The picture read: its values (0 to 1, row by row), the box of the ground it is fitted to (grid points),
+    /// and the ground points it goes into with their weights.
+    /// </summary>
     private (float[] Values, int X0, int Z0, int W, int H, List<(int G, float W)> Cells)? _picture;
 
+    /// <summary>Builds the panel.</summary>
+    /// <param name="view">The view: its selection, scene and shown kinds.</param>
+    /// <param name="session">The open edit session, null when no world is open.</param>
+    /// <param name="nameOf">A prefab hash's name, null when unknown.</param>
     public AreaPanel(GlView view, Func<EditSession?> session, Func<int, string?> nameOf)
     {
         _view = view;
@@ -292,6 +390,7 @@ public sealed class AreaPanel
         ShowRows();
     }
 
+    /// <summary>Marks the Box or Polygon button as on.</summary>
     private void ShowShape()
     {
         BoxButton.Classes.Set("on", Area.Box);
@@ -299,6 +398,7 @@ public sealed class AreaPanel
         Refresh();
     }
 
+    /// <summary>Shows only the rows of the current action, and names the action on Apply and in the tips.</summary>
     private void ShowRows()
     {
         var act = Current;
@@ -325,10 +425,15 @@ public sealed class AreaPanel
         Refresh();
     }
 
+    /// <summary>A number box's value, 0 when empty.</summary>
     private static float Value(NumericUpDown b) => (float)(b.Value ?? 0);
 
-    // The things inside the selection (indices), not deleted, of shown kinds (or added in this session).
-    // includeHidden: also kinds switched off in View (a backup restore compares with everything there).
+    /// <summary>
+    /// The things inside the selection (indices), not deleted, of shown kinds (or added in this session).
+    /// </summary>
+    /// <param name="poly">The selection, in metres from the scene's corner.</param>
+    /// <param name="chosenKindsOnly">Only the kinds toggled on, and only where the Mask lets the ground through.</param>
+    /// <param name="includeHidden">Also kinds switched off in View (a backup restore compares with everything there).</param>
     internal List<int> ThingsInside(List<Vector2> poly, bool chosenKindsOnly, bool includeHidden = false)
     {
         var out_ = new List<int>();
@@ -356,7 +461,7 @@ public sealed class AreaPanel
         return out_;
     }
 
-    // Whether the Mask lets the ground at a grid point through (the object actions pick only there).
+    /// <summary>Whether the Mask lets the ground at a grid point through (the object actions pick only there).</summary>
     private bool MaskAt(float gx, float gz)
     {
         if (_session() is not { } s || s.MaskNow() is not { } m)
@@ -367,18 +472,22 @@ public sealed class AreaPanel
         return m(z * s.Ground.W + x) > 0;
     }
 
+    /// <summary>A thing's object kind.</summary>
     private ObjectKind KindOf(WorldScene.Thing t) => ObjectKinds.Of(_nameOf(t.Prefab), t.Piece, t.Tamed);
+    /// <summary>A prefab hash's name, or the hash itself when unknown.</summary>
     private string NameOf(int prefab) => _nameOf(prefab) ?? prefab.ToString();
 
-    // The selection changed: its size, what is inside, the lists and the volumes.
-    // Cut and fill: what Flatten, Raise or Lower would move, and how much the ground inside was raised
-    // and dug since generated (again after every change of the ground, as the web editor did).
+    /// <summary>
+    /// Cut and fill: what Flatten, Raise or Lower would move, and how much the ground inside was raised
+    /// and dug since generated (again after every change of the ground, as the web editor did).
+    /// </summary>
     public void RefreshVolume()
     {
         var g = _session()?.Ground;
         VolumeText.Text = g != null ? Area.Volume(g, Ground(Current) ?? AreaTool.GroundAction.Flatten, Value(HeightBox), Value(AmountBox), _session()?.MaskNow()) : "";
     }
 
+    /// <summary>The selection changed: its size, what is inside, the lists and the volumes.</summary>
     public void Refresh()
     {
         var poly = Area.Polygon();
@@ -409,7 +518,7 @@ public sealed class AreaPanel
         _view.LassoChanged();
     }
 
-    // The kinds the world can make, for the "with" list (once: they are the game's).
+    /// <summary>The kinds the world can make, for the "with" list (once: they are the game's).</summary>
     private void FillCreatable()
     {
         if (_creatable.Count == 0 && _view.Scene?.World is { } w)
@@ -419,6 +528,7 @@ public sealed class AreaPanel
         }
     }
 
+    /// <summary>The ground action behind an action, null for the object and other actions.</summary>
     private static AreaTool.GroundAction? Ground(Act a) => a switch
     {
         Act.Flatten => AreaTool.GroundAction.Flatten,
@@ -432,7 +542,7 @@ public sealed class AreaPanel
         _ => null,
     };
 
-    // The action (Apply, Enter).
+    /// <summary>The action (Apply, Enter).</summary>
     public async Task Apply()
     {
         if (_session() is not { } session)
@@ -500,7 +610,7 @@ public sealed class AreaPanel
         Refresh();
     }
 
-    // The eyedropper's kind into the "with" list, when the game can make it.
+    /// <summary>The eyedropper's kind into the "with" list, when the game can make it.</summary>
     internal void UsePicked(int prefab)
     {
         FillCreatable();
@@ -514,7 +624,10 @@ public sealed class AreaPanel
         Message?.Invoke($"Replace with {NameOf(prefab)}.");
     }
 
-    // Replaces things with objects of another kind, where they are and turned as they are.
+    /// <summary>Replaces things with objects of another kind, where they are and turned as they are.</summary>
+    /// <param name="session">The session the change is committed to (one undo step).</param>
+    /// <param name="things">The things, as indices into the scene's things.</param>
+    /// <param name="prefab">The prefab hash of the new kind.</param>
     public void Replace(EditSession session, IReadOnlyList<int> things, int prefab)
     {
         var s = session.Scene;
@@ -526,9 +639,15 @@ public sealed class AreaPanel
 
     // ---- Heightmaps: the area's ground as a 16-bit picture (with its lowest and highest heights), and a
     // picture back into the ground, fitted to the selection or the whole area.
-    // Where Export writes (null: the heightmaps folder in the app's data folder). Tests use their own.
+    /// <summary>Where Export writes (null: the heightmaps folder in the app's data folder). Tests use their own.</summary>
     internal string? HeightmapFolder { get; set; }
 
+    /// <summary>
+    /// Writes the whole area's ground as a 16-bit PNG, with its lowest and highest heights in it, named after the
+    /// world and its zones.
+    /// </summary>
+    /// <param name="folder">Where to write it; null: <see cref="HeightmapFolder"/>.</param>
+    /// <returns>The message for the status bar, or null when no world is open.</returns>
     internal string? ExportHeightmap(string? folder = null)
     {
         if (_view.Scene is not { World: { } world } s)
@@ -552,6 +671,10 @@ public sealed class AreaPanel
         return $"Heightmap written to {path} ({s.W} × {s.H}, {min:0.0} to {max:0.0} m).";
     }
 
+    /// <summary>
+    /// Reads a picture to import, fitted to the selection's box or else the whole area (as far as the Mask lets it),
+    /// and fills Lowest and Highest with the heights it was exported with, else the range of the ground it covers.
+    /// </summary>
     internal void LoadPicture(string path)
     {
         if (_session() is not { } session)
@@ -591,6 +714,10 @@ public sealed class AreaPanel
         _pictureBox.IsVisible = true;
     }
 
+    /// <summary>
+    /// Puts the picture read into the ground, from Lowest (black) to Highest (white), faded by the soft edge.
+    /// Locked points are skipped; points the game's ±8 m keeps from their height are counted in the message.
+    /// </summary>
     internal void PutPicture()
     {
         if (_picture is not { } p || _session() is not { } session)
@@ -625,9 +752,11 @@ public sealed class AreaPanel
             : $"Imported the heightmap into {touched.Count} point(s). Ctrl+Z undoes it.");
     }
 
-    // ---- Regrow nature: the game's own vegetation for the zones under the selection (by its rules, on
-    // the ground as it is now), kept inside the selection, for the chosen kinds, and not where something
-    // already stands (a tree still there is not doubled) or near buildings.
+    /// <summary>
+    /// Regrow nature: the game's own vegetation for the zones under the selection (by its rules, on
+    /// the ground as it is now), kept inside the selection, for the chosen kinds, and not where something
+    /// already stands (a tree still there is not doubled) or near buildings.
+    /// </summary>
     private async Task RegrowNature(EditSession session, List<Vector2> poly)
     {
         var s = session.Scene;
@@ -650,6 +779,11 @@ public sealed class AreaPanel
 
     // ---- Restore from a backup (WorldEdit's //restore): the ground and objects inside the selection as
     // they were in a backup of this world. Objects unchanged since then are left alone.
+    /// <summary>
+    /// Lists the world's backups (the editor's and the game's), then the folders chosen by hand, then
+    /// "Another folder…".
+    /// </summary>
+    /// <param name="select">The folder to select; null keeps the one selected.</param>
     private void FillBackups(string? select = null)
     {
         var s = _view.Scene;
@@ -665,8 +799,11 @@ public sealed class AreaPanel
         BackupBox.SelectedIndex = keep != null ? _backupPaths.IndexOf(keep) : -1;
     }
 
-    // A backup's world (read once; the last one is kept, and only ever used for a world of its seed: a
-    // folder chosen by hand stays in the list when another world is opened).
+    /// <summary>
+    /// A backup's world (read once; the last one is kept, and only ever used for a world of its seed: a
+    /// folder chosen by hand stays in the list when another world is opened).
+    /// </summary>
+    /// <returns>The backup and its edits, or null when it cannot be read or is another world (BackupInfo says why).</returns>
     internal async Task<(WorldSave World, EditStore Edits)?> OpenBackup(string path, WorldSave current)
     {
         if (_backup is { } b && b.Path == path && b.World.Seed == current.Seed && b.World.SeedName == current.SeedName)
@@ -694,6 +831,14 @@ public sealed class AreaPanel
         }
     }
 
+    /// <summary>
+    /// Puts the ground and the objects of the chosen kinds inside the selection back as they were in a backup (each
+    /// when its box is ticked), as one undo step. Objects unchanged since then (same kind, place and facing) are left
+    /// alone; runestones are not touched.
+    /// </summary>
+    /// <param name="session">The session the restore is committed to (one undo step).</param>
+    /// <param name="poly">The selection, in metres from the scene's corner.</param>
+    /// <param name="path">The backup folder; null: the one chosen on the list.</param>
     internal async Task RestoreBackup(EditSession session, List<Vector2> poly, string? path = null)
     {
         var s = session.Scene;
@@ -809,6 +954,10 @@ public sealed class AreaPanel
         Message?.Invoke($"Restored from the backup: {(groundPoints > 0 ? "the ground, " : "")}{added.Count} object(s) brought back, {remove.Count} removed. Ctrl+Z undoes it.");
     }
 
+    /// <summary>
+    /// Marks the zones under the selection for reset when saving (after asking), with the Keep buildings and Reset
+    /// ground choices; resetting the ground also clears their ground edits now.
+    /// </summary>
     private async Task ResetZones(EditSession session)
     {
         var zones = Area.ZonesUnder(session.Ground);
@@ -852,6 +1001,7 @@ public sealed class AreaPanel
         Message?.Invoke($"{zones.Count} zone(s) marked for reset (red outline). Save to apply; Ctrl+Z cancels.");
     }
 
+    /// <summary>Unmarks the zones under the selection that are marked for reset.</summary>
     private void CancelReset()
     {
         if (_session() is not { } session)

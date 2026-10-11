@@ -6,40 +6,59 @@ using TerrainService = ValheimGen.TerrainService;
 
 namespace TerrainEditor.Desktop;
 
-// One open world, for as long as it is open: the save (or the running game's world, live), the edits
-// waiting to be saved, and the world generator's ground. Every area opened from the map shares it, so
-// edits stay pending while you move around the world (like the web editor's session).
+/// <summary>
+/// One open world, for as long as it is open: the save (or the running game's world, live), the edits
+/// waiting to be saved, and the world generator's ground. Every area opened from the map shares it, so
+/// edits stay pending while you move around the world (like the web editor's session).
+/// </summary>
 public sealed class WorldSession : IDisposable
 {
+    /// <summary>The world as read; replaced when it is read again (a save that rereads, zone resets, Reload, Discard).</summary>
     public required WorldSave World { get; set; }
+    /// <summary>The edits waiting to be saved (live: to be applied), shared by every area.</summary>
     public required EditStore Edits { get; init; }
+    /// <summary>The ground the world's locations and pieces flatten; replaced when they change.</summary>
     public required TerrainModifiers Modifiers { get; set; }
+    /// <summary>The world generator's ground, with <c>Modifiers</c> applied.</summary>
     public required TerrainService Terrain { get; init; }
-    // Live: the running game (through WorldEditorBridge), and which object changes it already has.
+    /// <summary>Live: the running game (through WorldEditorBridge); null offline.</summary>
     public LiveBridge? Live { get; init; }
+    /// <summary>Live: which object changes the game already has.</summary>
     public LiveSync LiveSync { get; } = new();
+    /// <summary>The world is the running game's (Apply live, not Save).</summary>
     public bool IsLive => Live != null;
+    /// <summary>
+    /// Where the world comes from: the world's name offline, the connection's name live ("my game"...), shown in
+    /// the map's title and part of a live world's history key.
+    /// </summary>
     public string Label { get; init; } = "";
 
-    // The history while no area is open, or another one (see EditSession.Export); gone when the world
-    // is read again (zone resets, No limit ground). It is kept on disk after each save or Apply live
-    // (HistoryFile) and comes back when the world is opened again.
+    /// <summary>
+    /// The history while no area is open, or another one (see EditSession.Export); gone when the world
+    /// is read again (zone resets, No limit ground). It is kept on disk after each save or Apply live
+    /// (HistoryFile) and comes back when the world is opened again.
+    /// </summary>
     public EditSession.Kept? History { get; set; }
-    // The open area's session, whose history is the world's while it is open.
+    /// <summary>The open area's session, whose history is the world's while it is open.</summary>
     public EditSession? Area { get; set; }
-    // The history kept from an earlier session of the editor, when the world was opened (null: none).
+    /// <summary>The history kept from an earlier session of the editor, when the world was opened (null: none).</summary>
     public HistoryFile.Restored? Restored { get; private set; }
-    // Its steps may not match the world any more (live, or saved by the game since): asked once before
-    // undoing or redoing them (Earlier).
+    /// <summary>
+    /// Its steps may not match the world any more (live, or saved by the game since): asked once before
+    /// undoing or redoing them (Earlier).
+    /// </summary>
     public bool EarlierMayDiffer => Restored?.Changed == true && !EarlierAllowed;
+    /// <summary>The user said yes once to undoing or redoing the earlier session's steps; not asked again.</summary>
     public bool EarlierAllowed { get; set; }
-    // The window said so already.
+    /// <summary>The window said so already (that a history from an earlier session came back).</summary>
     public bool RestoredSaid { get; set; }
 
-    // Ids for objects added in this session: negative, like the web editor's, unique across every area.
+    /// <summary>Ids for objects added in this session: negative, like the web editor's, unique across every area.</summary>
     private int _nextId = -1;
+    /// <summary>The next id for an added object (-1, -2...); thread-safe.</summary>
     public int NextId() => Interlocked.Decrement(ref _nextId) + 1;
 
+    /// <summary>A session for a world just read, with its kept history restored.</summary>
     private static WorldSession From(WorldSave world, LiveBridge? live, string label)
     {
         var modifiers = new TerrainModifiers(world);
@@ -56,15 +75,17 @@ public sealed class WorldSession : IDisposable
         return s;
     }
 
-    // The history kept on disk for this world, if any (the first area opened takes it).
+    /// <summary>The history kept on disk for this world, if any (the first area opened takes it).</summary>
     private void RestoreHistory()
     {
         Restored = HistoryFile.Read(this);
         History = Restored?.Kept;
     }
 
-    // After a save or Apply live: the history as it is now (it matches what the world holds) goes to
-    // disk. A failure to write it is only logged: the save itself is done.
+    /// <summary>
+    /// After a save or Apply live: the history as it is now (it matches what the world holds) goes to
+    /// disk. A failure to write it is only logged: the save itself is done.
+    /// </summary>
     private void KeepHistory()
     {
         try
@@ -80,8 +101,10 @@ public sealed class WorldSession : IDisposable
         }
     }
 
-    // Saved or applied from the map (no area open): the kept steps are in the world now, as an open
-    // area's are once it saves (EditSession), so a later Discard does not undo them.
+    /// <summary>
+    /// Saved or applied from the map (no area open): the kept steps are in the world now, as an open
+    /// area's are once it saves (EditSession), so a later Discard does not undo them.
+    /// </summary>
     private void MarkHistoryApplied()
     {
         if (Area == null && History != null)
@@ -96,7 +119,7 @@ public sealed class WorldSession : IDisposable
         }
     }
 
-    // The world was read again: the steps do not match it any more.
+    /// <summary>The world was read again: the steps do not match it any more (the kept file is deleted too).</summary>
     private void ForgetHistory()
     {
         History = null;
@@ -104,8 +127,11 @@ public sealed class WorldSession : IDisposable
         HistoryFile.Delete(this);
     }
 
-    // The game's data, needed before any world opens: refused without Valheim (the ground near
-    // locations, and the edits saved there, depend on it).
+    /// <summary>
+    /// The game's data, needed before any world opens: refused without Valheim (the ground near
+    /// locations, and the edits saved there, depend on it). Throws <c>InvalidOperationException</c> with
+    /// what is missing.
+    /// </summary>
     private static void NeedGame()
     {
         if (!GameData.Ensure(GameLook.Bundles))
@@ -115,7 +141,7 @@ public sealed class WorldSession : IDisposable
         WorldSave.ModifierPrefabs = [.. TerrainModifiers.NetworkPrefabHashes];
     }
 
-    // A world on this computer (its folder).
+    /// <summary>A world on this computer (its folder). Throws when the game's data is missing.</summary>
     public static WorldSession Open(string dir)
     {
         NeedGame();
@@ -124,7 +150,9 @@ public sealed class WorldSession : IDisposable
         return From(world, null, world.Name);
     }
 
-    // The world of a running game or server (live).
+    /// <summary>The world of a running game or server (live).</summary>
+    /// <param name="live">The connection to the game's WorldEditorBridge; the session owns it from here.</param>
+    /// <param name="label">The connection's name, for <c>Label</c>.</param>
     public static async Task<WorldSession> OpenLive(LiveBridge live, string label)
     {
         await Task.Run(NeedGame);
@@ -133,7 +161,10 @@ public sealed class WorldSession : IDisposable
         return From(world, live, label);
     }
 
-    // What is waiting to be saved (live: to be applied to the game).
+    /// <summary>
+    /// What is waiting to be saved (live: to be applied to the game): changed zones, deletions, added objects,
+    /// zone resets. Once saved offline, the objects count what differs from that save.
+    /// </summary>
     public (int Zones, int Deleted, int Added, int Resets) Pending
     {
         get
@@ -159,12 +190,18 @@ public sealed class WorldSession : IDisposable
     // Offline, once saved: the open world saves again from the save it was opened from (kept until the
     // world is left), with every change since; the zones and objects of the last save, the files it
     // wrote (removed by the next one).
+    /// <summary>The files the session's last save wrote (removed by the next one); null before any save.</summary>
     private IReadOnlyList<string>? _lastSave;
+    /// <summary>The last save's number, the one a newer game save is checked against.</summary>
     private int? _lastNumber;
+    /// <summary>The zones the last save wrote changes for (written again by the next).</summary>
     private HashSet<(int, int)> _savedZones = [];
+    /// <summary>The deletions as of the last save.</summary>
     private HashSet<int> _savedDeleted = [];
+    /// <summary>The added objects as of the last save.</summary>
     private HashSet<NewObject> _savedAdded = [];
 
+    /// <summary>Forgets the session's saves (the world was read again, or left).</summary>
     private void ForgetSaves()
     {
         _lastSave = null;
@@ -174,16 +211,23 @@ public sealed class WorldSession : IDisposable
         _savedAdded = [];
     }
 
+    /// <summary>What a save or Apply live did.</summary>
+    /// <param name="Done">Saved, or something was applied.</param>
+    /// <param name="Message">What to tell the user.</param>
+    /// <param name="Reloaded">The world was read again (zone resets, No limit ground): areas must be read again too.</param>
+    /// <param name="Saved">The writer's result (offline only).</param>
     public sealed record Outcome(bool Done, string Message, bool Reloaded, WorldWriter.Result? Saved = null)
     {
-        // No limit ground was turned into ground discs: the ground under the area changed.
+        /// <summary>No limit ground was turned into ground discs: the ground under the area changed.</summary>
         public bool Lifted { get; init; }
-        // Live: not applied, the answer to "apply over the game's changes?" was no.
+        /// <summary>Live: not applied, the answer to "apply over the game's changes?" was no.</summary>
         public bool Declined { get; init; }
     }
 
-    // No limit ground waiting (lifts): turned into ground discs and ordinary edits (Uplift), the ground
-    // worked out again with them. Null when there was none.
+    /// <summary>
+    /// No limit ground waiting (lifts): turned into ground discs and ordinary edits (Uplift), the ground
+    /// worked out again with them. Null when there was none.
+    /// </summary>
     public Uplift.Plan? LiftToDiscs()
     {
         var plan = Uplift.Make(World, Terrain, Edits, NextId);
@@ -195,19 +239,22 @@ public sealed class WorldSession : IDisposable
         return plan;
     }
 
+    /// <summary>Switches the session and its generator to new flattening modifiers.</summary>
     private void UseModifiers(TerrainModifiers modifiers)
     {
         Modifiers = modifiers;
         Terrain.UseModifiers(modifiers);
     }
 
-    // Writes everything into the world's files, like Apply live: the world stays open as it is, with
-    // its history (an undo, saved again, is saved). Each save is made from the save the world was opened
-    // from, with every change since (so a zone saved before and not changed since is written again),
-    // and the previous save of the session goes. After zone resets or when No limit ground became ground
-    // discs, the world is read again from what was written (the ground or zones are not the same).
-    // A save the game made after the world was read (a play test between two saves) is never thrown
-    // away: the save is refused before anything changes, No limit ground included.
+    /// <summary>
+    /// Writes everything into the world's files, like Apply live: the world stays open as it is, with
+    /// its history (an undo, saved again, is saved). Each save is made from the save the world was opened
+    /// from, with every change since (so a zone saved before and not changed since is written again),
+    /// and the previous save of the session goes. After zone resets or when No limit ground became ground
+    /// discs, the world is read again from what was written (the ground or zones are not the same).
+    /// A save the game made after the world was read (a play test between two saves) is never thrown
+    /// away: the save is refused before anything changes, No limit ground included.
+    /// </summary>
     public Outcome Save()
     {
         int known = _lastNumber ?? World.SaveNumber;
@@ -246,7 +293,7 @@ public sealed class WorldSession : IDisposable
         return new Outcome(result.Saved, message, result.Saved && reread, result with { Message = message }) { Lifted = plan != null };
     }
 
-    // Leaving an offline world it saved: the save it was opened from goes (only the latest stays).
+    /// <summary>Leaving an offline world it saved: the save it was opened from goes (only the latest stays).</summary>
     private void PruneSaves()
     {
         if (!IsLive && _lastSave != null && Directory.Exists(World.Directory))
@@ -264,12 +311,15 @@ public sealed class WorldSession : IDisposable
         ForgetSaves();
     }
 
-    // Live: the changed zones' ground and the object changes go into the running game; zone resets last
-    // (the game regenerates them), after which the world is read again from the game.
-    // One apply at a time: a second one (a double click) waits and sends only what is still pending.
+    /// <summary>
+    /// Apply live's lock. One apply at a time: a second one (a double click) waits and sends only what is
+    /// still pending. Held while applying (<c>MergeGame</c> waits for it).
+    /// </summary>
     private readonly SemaphoreSlim _applying = new(1, 1);
 
-    // When the world is left: the live connection closes.
+    /// <summary>
+    /// When the world is left: the save it was opened from goes (offline, once saved again) and the live connection closes.
+    /// </summary>
     public void Dispose()
     {
         PruneSaves();
@@ -277,8 +327,12 @@ public sealed class WorldSession : IDisposable
         _applying.Dispose();
     }
 
-    // confirm: asked, with the zones, when applying would write over ground the game changed under the
-    // editor's changes (asked here, while no follow can come in between).
+    /// <summary>
+    /// Live: the changed zones' ground and the object changes go into the running game; zone resets last
+    /// (the game regenerates them), after which the world is read again from the game.
+    /// </summary>
+    /// <param name="confirm">Asked, with the zones, when applying would write over ground the game changed under
+    /// the editor's changes (asked here, while no follow can come in between); null applies without asking.</param>
     public async Task<Outcome> ApplyLive(Func<IReadOnlyList<(int X, int Z)>, Task<bool>>? confirm = null)
     {
         await _applying.WaitAsync();
@@ -296,6 +350,7 @@ public sealed class WorldSession : IDisposable
         }
     }
 
+    /// <summary>One Apply live, with the lock held; a failure of the game's answer comes back as the outcome.</summary>
     private async Task<Outcome> ApplyLiveOnce()
     {
         var live = Live!;
@@ -354,19 +409,31 @@ public sealed class WorldSession : IDisposable
     // once on the window's thread): objects made, removed or changed in the game appear as they are, and
     // ground changed there replaces the editor's where it has no changes of its own (where it has, they
     // are kept, and applying them asks first: Edits.PendingOverGame).
+    /// <summary>Each zone's digest as last merged (the game's one number per zone); cleared when the world is read again.</summary>
     private readonly Dictionary<(int, int), ulong> _digests = [];
 
+    /// <summary>What <c>FetchGame</c> read from the game, for <c>MergeGame</c>.</summary>
+    /// <param name="World">The world it was read for (dropped if the world was read again since).</param>
+    /// <param name="Digests">Every zone asked about, with its digest now.</param>
+    /// <param name="Changed">The zones whose digest changed.</param>
+    /// <param name="Objects">The changed zones' objects, as the game sends them (owner, id, data).</param>
     public sealed record Fetched(WorldSave World, Dictionary<(int X, int Z), ulong> Digests, List<(int X, int Z)> Changed, List<(long User, uint Id, byte[] Bytes)> Objects);
 
-    // Ours: the editor's own new objects the game removed (players picked or destroyed them). Ground:
-    // zones whose ground came in; Kept: zones whose ground the game changed under the editor's changes.
+    /// <summary>What a merge of the game's changes did.</summary>
+    /// <param name="Merged">The objects added, updated and vanished in the world.</param>
+    /// <param name="Ours">The editor's own new objects the game removed (players picked or destroyed them).</param>
+    /// <param name="Ground">Zones whose ground came in.</param>
+    /// <param name="Kept">Zones whose ground the game changed under the editor's changes.</param>
     public sealed record Followed(WorldSave.Merged Merged, List<int> Ours, List<(int X, int Z)> Ground, List<(int X, int Z)> Kept)
     {
+        /// <summary>Anything changed at all.</summary>
         public bool Any => Merged.Added.Count + Merged.Updated.Count + Merged.Vanished.Count + Ours.Count + Ground.Count + Kept.Count > 0;
     }
 
-    // The zones that changed since they were last merged, read from the game (null: none). The plugin's
-    // errors and an unreachable game are the caller's to show.
+    /// <summary>
+    /// The zones that changed since they were last merged, read from the game (null: none, or not live). The
+    /// plugin's errors and an unreachable game are the caller's to show.
+    /// </summary>
     public async Task<Fetched?> FetchGame(IReadOnlyCollection<(int X, int Z)> zones)
     {
         if (Live is not { } live || zones.Count == 0)
@@ -383,9 +450,11 @@ public sealed class WorldSession : IDisposable
         return new Fetched(world, now, changed, await live.ZoneObjects(changed));
     }
 
-    // What was read, merged into the world (on the window's thread, at once: nothing else changes the
-    // world meanwhile). Null: not now (an apply is under way, or the world's lists are being read): merge
-    // it again later. Read for a world read again since: dropped (empty).
+    /// <summary>
+    /// What was read, merged into the world (on the window's thread, at once: nothing else changes the
+    /// world meanwhile). Null: not now (an apply is under way, or the world's lists are being read): merge
+    /// it again later. Read for a world read again since: dropped (empty).
+    /// </summary>
     public Followed? MergeGame(Fetched f)
     {
         if (f.World != World)
@@ -438,12 +507,13 @@ public sealed class WorldSession : IDisposable
         return new Followed(merged, ours, ground, kept);
     }
 
-    // Zones whose changes of the editor's were undone since the game changed their ground: theirs now.
+    /// <summary>Zones whose changes of the editor's were undone since the game changed their ground: theirs now.</summary>
     public List<(int X, int Z)> TakeWaitingGround() => Edits.TakeWaitingGround();
 
+    /// <summary>The zone a world position is in (zones are 64 m, centred on multiples of 64).</summary>
     private static (int, int) Zone(System.Numerics.Vector3 p) => ((int)MathF.Floor((p.X + 32f) / 64f), (int)MathF.Floor((p.Z + 32f) / 64f));
 
-    // Live: the world read again from the game (what players changed since); pending edits are dropped.
+    /// <summary>Live: the world read again from the game (what players changed since); pending edits are dropped.</summary>
     public async Task Reload()
     {
         World = await Live!.LoadWorld();
@@ -454,7 +524,10 @@ public sealed class WorldSession : IDisposable
         History = null;
     }
 
-    // Drops every pending change (offline: the world is read again from its files).
+    /// <summary>
+    /// Drops every pending change (offline: the world is read again from its files, and the history kept at the
+    /// last save comes back).
+    /// </summary>
     public void Discard()
     {
         if (!IsLive)

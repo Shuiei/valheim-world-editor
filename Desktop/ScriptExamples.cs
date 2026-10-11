@@ -1,10 +1,16 @@
 namespace TerrainEditor.Desktop;
 
-// The Script tool's examples: ready to run on any open area, and to start a script of one's own from.
+/// <summary>
+/// The Script tool's examples: ready to run on any open area, and to start a script of one's own from.
+/// </summary>
 public static class ScriptExamples
 {
+    /// <summary>An example script.</summary>
+    /// <param name="Name">Its name in the examples list.</param>
+    /// <param name="Code">The script.</param>
     public sealed record Example(string Name, string Code);
 
+    /// <summary>The examples, in the list's order.</summary>
     public static readonly Example[] All =
     [
         new("Mountain range across the area", """

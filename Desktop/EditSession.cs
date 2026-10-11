@@ -4,42 +4,92 @@ using TerrainEditor.Save;
 
 namespace TerrainEditor.Desktop;
 
-// Editing a scene: brush strokes on the ground, deleting and moving objects, undo and redo, what is
-// waiting to be saved, and saving. Edits go to the EditStore and are written by WorldWriter, the same code the web editor's
-// session uses (/api/zones, /api/save). Strokes run on the drawing thread, the buttons on the window's:
-// everything here takes the lock. Objects are changed on the window's thread only.
+/// <summary>
+/// Editing a scene: brush strokes on the ground, deleting and moving objects, undo and redo, what is waiting to be
+/// saved, and saving. Edits go to the EditStore and are written by WorldWriter, the same code the web editor's session
+/// uses (/api/zones, /api/save). Strokes run on the drawing thread, the buttons on the window's: everything here takes
+/// the lock. Objects are changed on the window's thread only.
+/// </summary>
 public sealed class EditSession
 {
+    /// <summary>
+    /// The open area being edited.
+    /// </summary>
     public WorldScene Scene { get; }
+    /// <summary>
+    /// The area's ground grid the brushes and tools change.
+    /// </summary>
     public Ground Ground { get; }
+    /// <summary>
+    /// Where the edits wait to be saved or applied live (zones, deleted and added objects, zone resets).
+    /// </summary>
     public EditStore Edits { get; }
-    // The window shares its brush settings with the session.
+    /// <summary>
+    /// The window shares its brush settings with the session.
+    /// </summary>
     public Brush Brush { get; set; } = new();
-    // The window's Mask too.
+    /// <summary>
+    /// The window's Mask too: which ground the brushes and tools may change.
+    /// </summary>
     public Mask Mask { get; set; } = new();
+    /// <summary>
+    /// The mask of the stroke going on, judged as the ground was when it started (null when off or between strokes).
+    /// </summary>
     private Func<int, float>? _strokeMask;
 
-    // The mask over the ground as it is now (null when off).
+    /// <summary>
+    /// The mask over the ground as it is now (null when off).
+    /// </summary>
+    /// <returns>How much each grid point (by index) may change, 0 to 1; null when the mask is off.</returns>
     public Func<int, float>? MaskNow() => Mask.For(Ground, Scene.Biomes);
+    /// <summary>
+    /// Guards the ground, the history and the stroke: strokes run on the drawing thread, the buttons on the window's.
+    /// </summary>
     private readonly Lock _lock = new();
 
-    // A change that can be undone: the ground points it changed, before and after, and the things it
-    // took away or brought (index into the scene's things, gone before and after).
+    /// <summary>
+    /// A change that can be undone: the ground points it changed, before and after, and the things it took away or
+    /// brought.
+    /// </summary>
+    /// <param name="Label">The name shown in the history and on Undo.</param>
+    /// <param name="Points">The ground grid points it changed (indices, sorted).</param>
+    /// <param name="Before">Those points' values before it, in the same order.</param>
+    /// <param name="After">Those points' values after it.</param>
+    /// <param name="Zones">The zones of the area it touched (sent to the edit store on undo and redo).</param>
     public sealed record Change(string Label, int[] Points, Ground.State Before, Ground.State After, List<(int X, int Z)> Zones)
     {
+        /// <summary>
+        /// The things it took away or brought: index into the scene's things, gone before and after.
+        /// </summary>
         public (int Index, bool Before, bool After)[] Things { get; init; } = [];
-        // Zones marked for reset (on) or not.
+        /// <summary>
+        /// Zones marked for reset (on) or not.
+        /// </summary>
         public (ZoneReset Reset, bool Before, bool After)[] Resets { get; init; } = [];
+        /// <summary>
+        /// When it was made (local time).
+        /// </summary>
         public DateTime Time { get; init; } = DateTime.Now;
-        // Taken out (History panel: Remove), and the change a removal takes out.
+        /// <summary>
+        /// Taken out (History panel: Remove).
+        /// </summary>
         public bool Removed { get; set; }
+        /// <summary>
+        /// For a removal, the change it takes out; null otherwise.
+        /// </summary>
         public Change? RevertOf { get; init; }
-        // Live: already sent to the running game (Apply live); still undoable, which makes a new change.
+        /// <summary>
+        /// Live: already sent to the running game (Apply live); still undoable, which makes a new change.
+        /// </summary>
         public bool Applied { get; set; }
-        // From an earlier session of the editor (HistoryFile): the world may have changed since.
+        /// <summary>
+        /// From an earlier session of the editor (HistoryFile): the world may have changed since.
+        /// </summary>
         public bool Earlier { get; init; }
 
-        // "3 zones · 2 new · 1 removed · 1 zone reset", like the web editor's history.
+        /// <summary>
+        /// A short line of what it did, like the web editor's history: "3 zones · 2 new · 1 removed · 1 zone reset".
+        /// </summary>
         public string Describe()
         {
             var parts = new List<string>();
@@ -68,11 +118,18 @@ public sealed class EditSession
         }
     }
 
-    // The history, oldest first: what can be undone, and what was undone (the next redo last).
+    /// <summary>
+    /// The undo list, oldest first (the next undo last).
+    /// </summary>
     public IReadOnlyList<Change> UndoList { get { lock (_lock) { return [.. _undo]; } } }
+    /// <summary>
+    /// What was undone, the next redo last.
+    /// </summary>
     public IReadOnlyList<Change> RedoList { get { lock (_lock) { return [.. _redo]; } } }
 
-    // Undoes every change made after this one.
+    /// <summary>
+    /// Undoes every change made after this one.
+    /// </summary>
     public void BackTo(Change c)
     {
         while (UndoList.Count > 0 && UndoList[^1] != c && Undo())
@@ -80,7 +137,9 @@ public sealed class EditSession
         }
     }
 
-    // Redoes up to and including this one.
+    /// <summary>
+    /// Redoes up to and including this one.
+    /// </summary>
     public void ForwardTo(Change c)
     {
         while (RedoList.Count > 0 && (UndoList.Count == 0 || UndoList[^1] != c) && Redo())
@@ -88,9 +147,12 @@ public sealed class EditSession
         }
     }
 
-    // Takes out one change and keeps everything done after it: its height change is taken off the points
-    // it touched (later edits there stay), paint goes back where nothing repainted it since, its objects
-    // and zone resets go back. The removal is itself a change that can be undone.
+    /// <summary>
+    /// Takes out one change and keeps everything done after it: its height change is taken off the points it touched
+    /// (later edits there stay), paint goes back where nothing repainted it since, its objects and zone resets go back.
+    /// The removal is itself a change that can be undone.
+    /// </summary>
+    /// <returns>A message for the status line ("" during a stroke, when nothing was done).</returns>
     public string RemoveChange(Change c)
     {
         if (c.Removed || c.RevertOf != null)
@@ -149,32 +211,66 @@ public sealed class EditSession
         Edited();
         return $"Removed “{c.Label}”; everything else is kept. Ctrl+Z brings it back.";
     }
+    /// <summary>
+    /// The ground state of a change that touched no ground points.
+    /// </summary>
     private static readonly Ground.State NoPoints = new([], [], [], [], [], []);
+    /// <summary>
+    /// The history: what can be undone (the next undo last) and what can be redone (the next redo last).
+    /// </summary>
     private readonly List<Change> _undo = [], _redo = [];
+    /// <summary>
+    /// How many steps the undo list keeps; the oldest go first.
+    /// </summary>
     public const int HistoryLength = 200;
 
+    /// <summary>
+    /// The brush stroke going on; null between strokes (during one, undo and redo do nothing and saving throws).
+    /// </summary>
     private Stroke? _stroke;
-    // The grid rectangle changed since the view last took it (to send to the graphics card).
+    /// <summary>
+    /// The grid rectangle changed since the view last took it (to send to the graphics card).
+    /// </summary>
     private (int X0, int Z0, int X1, int Z1)? _dirty;
+    /// <summary>
+    /// Raised after anything here changed (an edit, a save, an apply): what is pending and the undo buttons may differ.
+    /// </summary>
     public event Action? Changed;
-    // A change made by the user (a stroke, a tool, undo, redo, a change taken out): not a save or an
-    // apply. Live auto-apply sends these to the game.
+    /// <summary>
+    /// A change made by the user (a stroke, a tool, undo, redo, a change taken out): not a save or an apply. Live
+    /// auto-apply sends these to the game.
+    /// </summary>
     public event Action? EditMade;
 
+    /// <summary>
+    /// Raises Changed and EditMade after an edit by the user.
+    /// </summary>
     private void Edited()
     {
         Changed?.Invoke();
         EditMade?.Invoke();
     }
-    // Things that appeared, went or came back (indices into the scene's things); after a save, every
-    // thing is read again (ThingsReset).
+    /// <summary>
+    /// Things that appeared, went or came back (indices into the scene's things).
+    /// </summary>
     public event Action<IReadOnlyList<int>>? ThingsChanged;
+    /// <summary>
+    /// After a save or an apply that read the world again, every thing is read again: the scene's things are a new
+    /// list.
+    /// </summary>
     public event Action? ThingsReset;
-    // New objects were added (placed, pasted, copied, restored...): their indices in Scene.Things.
+    /// <summary>
+    /// New objects were added (placed, pasted, copied, restored...): their indices in Scene.Things.
+    /// </summary>
     public event Action<IReadOnlyList<int>>? ThingsAdded;
-    // Ids for objects added in this session: negative, like the web editor's.
+    /// <summary>
+    /// Ids for objects added in this session: negative, like the web editor's.
+    /// </summary>
     private int _nextId = -1;
 
+    /// <summary>
+    /// A session over an open area, its ground and the edit store its edits go to.
+    /// </summary>
     public EditSession(WorldScene scene, Ground ground, EditStore edits)
     {
         Scene = scene;
@@ -182,16 +278,41 @@ public sealed class EditSession
         Edits = edits;
     }
 
+    /// <summary>
+    /// Whether there is a step to undo.
+    /// </summary>
     public bool CanUndo { get { lock (_lock) { return _undo.Count > 0; } } }
+    /// <summary>
+    /// Whether there is a step to redo.
+    /// </summary>
     public bool CanRedo { get { lock (_lock) { return _redo.Count > 0; } } }
+    /// <summary>
+    /// The label of the next undo; null when there is none.
+    /// </summary>
     public string? UndoLabel { get { lock (_lock) { return _undo.Count > 0 ? _undo[^1].Label : null; } } }
+    /// <summary>
+    /// The label of the next redo; null when there is none.
+    /// </summary>
     public string? RedoLabel { get { lock (_lock) { return _redo.Count > 0 ? _redo[^1].Label : null; } } }
+    /// <summary>
+    /// Whether a brush stroke is going on.
+    /// </summary>
     public bool Stroking { get { lock (_lock) { return _stroke != null; } } }
 
-    // What is waiting to be saved, like the web editor's line under the Save button.
+    /// <summary>
+    /// What is waiting to be saved (or applied live), like the web editor's line under the Save button: the open
+    /// world's counts when there is one, else the edit store's.
+    /// </summary>
     public (int Zones, int Deleted, int Added, int Resets) Pending => Scene.Owner?.Pending ?? (Edits.ChangedZoneCount, Edits.DeletedCount, Edits.AddedCount, Edits.ResetCount);
+    /// <summary>
+    /// Whether the area belongs to a world followed live in the running game (Apply live rather than Save).
+    /// </summary>
     public bool IsLive => Scene.Owner?.IsLive == true;
 
+    /// <summary>
+    /// Pending as a line for the window, e.g. "Unsaved: 3 zones, 1 deleted" or "All saved" ("Not applied" and "All
+    /// applied" when live).
+    /// </summary>
     public string PendingText
     {
         get
@@ -202,7 +323,10 @@ public sealed class EditSession
         }
     }
 
-    // The brush goes down at grid point (cx, cz).
+    /// <summary>
+    /// The brush goes down at grid point (cx, cz). Flatten with TargetFromClick takes its target height from the ground
+    /// there.
+    /// </summary>
     public void BeginStroke(BrushTool tool, float cx, float cz)
     {
         Interlocked.Increment(ref _generation);
@@ -221,7 +345,10 @@ public sealed class EditSession
         }
     }
 
-    // One frame of the stroke, the brush at (cx, cz), dt seconds after the last.
+    /// <summary>
+    /// One frame of the stroke, the brush at (cx, cz), dt seconds after the last.
+    /// </summary>
+    /// <returns>False when no stroke is going on or the step changed nothing.</returns>
     public bool StrokeStep(float cx, float cz, float dt)
     {
         lock (_lock)
@@ -235,8 +362,11 @@ public sealed class EditSession
         }
     }
 
-    // The brush comes up: the zones it touched go to the edit store and the stroke to the history.
-    // Returns a message for the status line ("" when there is nothing to say).
+    /// <summary>
+    /// The brush comes up: the zones it touched go to the edit store and the stroke to the history.
+    /// </summary>
+    /// <returns>A message for the status line ("" when there is nothing to say): the game's ±8 m limit reached, or the
+    /// Mask leaving out all the ground.</returns>
     public string EndStroke()
     {
         string message;
@@ -262,8 +392,11 @@ public sealed class EditSession
         return message;
     }
 
-    // A change of the ground made all at once (a path, an area action): change gets the ground and returns
-    // the points it changed and the grid rectangle around them. One undo step.
+    /// <summary>
+    /// A change of the ground made all at once (a path, an area action): change gets the ground and returns the points
+    /// it changed and the grid rectangle around them. One undo step.
+    /// </summary>
+    /// <returns>The ground points changed (none: no undo step).</returns>
     public List<int> EditGround(string label, Func<Ground, (List<int> Touched, (int X0, int Z0, int X1, int Z1) Rect)> change)
     {
         List<int> touched;
@@ -283,14 +416,24 @@ public sealed class EditSession
         return touched;
     }
 
-    // Natural objects (trees, rocks, ore, bushes, pickables): what new ground buries or leaves floating.
+    /// <summary>
+    /// Natural objects (trees, rocks, ore, bushes, pickables): what new ground buries or leaves floating.
+    /// </summary>
     internal static bool Natural(WorldScene.Thing t) => !t.Piece && !t.Tamed
         && ObjectKinds.Of(Terrain.PrefabCatalog.NameOf(t.Prefab), false) is ObjectKind.Trees or ObjectKind.Rocks or ObjectKind.Ore or ObjectKind.Bushes or ObjectKind.Pickables;
 
-    // Puts a mountain into the ground around grid point (cx, cz) (Mountain tool), past the game's ±8 m
-    // (saving turns it into ground discs). clear: the natural objects where the ground rises more than
-    // Uplift.ClearHeight go (saving would take them away anyway). One undo step. Null when the mountain
-    // does not fit in the open area.
+    /// <summary>
+    /// Puts a mountain into the ground around grid point (cx, cz) (Mountain tool), past the game's ±8 m (saving turns
+    /// it into ground discs). One undo step.
+    /// </summary>
+    /// <param name="cx">The middle, a grid x.</param>
+    /// <param name="cz">The middle, a grid z.</param>
+    /// <param name="m">The mountain's shape.</param>
+    /// <param name="clear">Whether the natural objects where the ground rises more than Uplift.ClearHeight go (saving
+    /// would take them away anyway).</param>
+    /// <param name="label">The history's name for the step.</param>
+    /// <returns>How many ground points changed and how many objects were cleared; null when the mountain does not fit
+    /// in the open area.</returns>
     public (int Touched, int Cleared)? Mountain(float cx, float cz, MountainSpec m, bool clear, string label)
     {
         var g = Ground;
@@ -352,9 +495,18 @@ public sealed class EditSession
         return (touchedCount, remove.Count);
     }
 
-    // Puts a shape into the ground around grid point (cx, cz) (Shape tool): the formula gives the metres
-    // to add at each point within the radius (x, z metres east and north of the middle, d the distance,
-    // r the radius, h the height, n(x, z) the brushes' noise). One undo step.
+    /// <summary>
+    /// Puts a shape into the ground around grid point (cx, cz) (Shape tool). One undo step.
+    /// </summary>
+    /// <param name="cx">The middle, a grid x.</param>
+    /// <param name="cz">The middle, a grid z.</param>
+    /// <param name="f">The formula: the metres to add at each point within the radius (x, z metres east and north of
+    /// the middle, d the distance, r the radius, h the height, n(x, z) the brushes' noise).</param>
+    /// <param name="r">The radius in metres.</param>
+    /// <param name="h">The height, h in the formula.</param>
+    /// <param name="label">The history's name for the step.</param>
+    /// <returns>How many points changed, whether any reached the game's ±8 m limit, and how many points the formula
+    /// gave no number for (they are left as they were).</returns>
     public (int Touched, bool Clamped, int Bad) Shape(float cx, float cz, Func<Formula.Env, double> f, float r, float h, string label)
     {
         // The web editor gives shapes its fractal noise scaled to about -1..1.
@@ -421,12 +573,18 @@ public sealed class EditSession
         return (touchedCount, clamped, bad);
     }
 
-    // The values of these points only.
+    /// <summary>
+    /// The values of these points only, in their order.
+    /// </summary>
     private static Ground.State Pick(Ground.State all, int[] pts) => new(
         [.. pts.Select(p => all.Level[p])], [.. pts.Select(p => all.Smooth[p])], [.. pts.Select(p => all.Mod[p])],
         [.. pts.SelectMany(p => new[] { all.Paint[p * 4], all.Paint[p * 4 + 1], all.Paint[p * 4 + 2], all.Paint[p * 4 + 3] })], [.. pts.Select(p => all.PMod[p])],
         [.. pts.Select(p => all.Lift[p])]);
 
+    /// <summary>
+    /// Puts a ground change on the undo list (its points' values from start to now) and clears the redo list. Called
+    /// inside the lock.
+    /// </summary>
     private void Record(string label, Ground.State start, IEnumerable<int> touched, List<(int X, int Z)> zones)
     {
         Interlocked.Increment(ref _generation);
@@ -440,9 +598,15 @@ public sealed class EditSession
         _redo.Clear();
     }
 
+    /// <summary>
+    /// Undoes the last step.
+    /// </summary>
+    /// <returns>False during a stroke or when there is nothing to undo.</returns>
     public bool Undo() => Step(_undo, _redo, after: false);
 
-    // The steps at the end of the history not saved (offline) or applied (live) yet.
+    /// <summary>
+    /// The steps at the end of the history not saved (offline) or applied (live) yet.
+    /// </summary>
     public int UnappliedSteps
     {
         get
@@ -459,8 +623,11 @@ public sealed class EditSession
         }
     }
 
-    // The editor's Discard: undoes those steps, newest first, and drops what could be redone; the
-    // rest of the history stays. How many were undone (none during a stroke).
+    /// <summary>
+    /// The editor's Discard: undoes those steps, newest first, and drops what could be redone; the rest of the history
+    /// stays.
+    /// </summary>
+    /// <returns>How many were undone (none during a stroke).</returns>
     public int UndoUnapplied()
     {
         int n = 0;
@@ -490,13 +657,27 @@ public sealed class EditSession
         return n;
     }
 
+    /// <summary>
+    /// Redoes the last undone step.
+    /// </summary>
+    /// <returns>False during a stroke or when there is nothing to redo.</returns>
     public bool Redo() => Step(_redo, _undo, after: true);
 
-    // Counts every change to the area (a step made, undone or redone, the area read again): what was
-    // worked out from it earlier (a script's run) is out of date once it moved.
+    /// <summary>
+    /// Counts every change to the area (a step made, undone or redone, the area read again): what was worked out from
+    /// it earlier (a script's run) is out of date once it moved.
+    /// </summary>
     public int Generation => Volatile.Read(ref _generation);
+    /// <summary>
+    /// Backs Generation; changed with Interlocked.
+    /// </summary>
     private int _generation;
 
+    /// <summary>
+    /// Undo or redo: moves the last change of one list to the other and puts its ground points, things and zone resets
+    /// as they were before it (after: false) or after it (after: true).
+    /// </summary>
+    /// <returns>False during a stroke or when the list is empty.</returns>
     private bool Step(List<Change> from, List<Change> to, bool after)
     {
         Interlocked.Increment(ref _generation);
@@ -544,8 +725,10 @@ public sealed class EditSession
         return true;
     }
 
-    // Takes things away or brings them back, in the scene and in the edit store (an object added in this
-    // session goes to its trash, so it can come back).
+    /// <summary>
+    /// Takes things away or brings them back, in the scene and in the edit store (an object added in this session goes
+    /// to its trash, so it can come back).
+    /// </summary>
     private void SetGone(IEnumerable<(int Index, bool Gone)> things)
     {
         var list = Scene.Things;
@@ -565,6 +748,9 @@ public sealed class EditSession
         }
     }
 
+    /// <summary>
+    /// Puts a change on the undo list (dropping the oldest past HistoryLength) and clears the redo list.
+    /// </summary>
     private void AddChange(Change c)
     {
         Interlocked.Increment(ref _generation);
@@ -579,7 +765,10 @@ public sealed class EditSession
         }
     }
 
-    // Removes things from the world (on the next save).
+    /// <summary>
+    /// Removes things from the world (on the next save) as one undo step; those already gone are skipped.
+    /// </summary>
+    /// <param name="indices">Indices into the scene's things.</param>
     public void Delete(IReadOnlyCollection<int> indices)
     {
         int[] live = [.. indices.Where(i => !Scene.Things[i].Gone).Distinct()];
@@ -593,8 +782,11 @@ public sealed class EditSession
         Edited();
     }
 
-    // Moves (and turns) things: each is replaced by a copy at its new place that keeps its own data
-    // (chest contents, builder...), like the web editor's moves. Returns the copies' indices.
+    /// <summary>
+    /// Moves (and turns) things as one undo step: each is replaced by a copy at its new place that keeps its own data
+    /// (chest contents, builder...), like the web editor's moves. Rotations are Euler angles in degrees.
+    /// </summary>
+    /// <returns>The copies' indices.</returns>
     public List<int> Move(IReadOnlyList<(int Index, System.Numerics.Vector3 Position, System.Numerics.Vector3 Rotation)> moves, string? label = null)
     {
         var live = moves.Where(m => !Scene.Things[m.Index].Gone).ToList();
@@ -608,9 +800,18 @@ public sealed class EditSession
         return Commit(label ?? $"Moved {live.Count}", null, [.. live.Select(m => m.Index)], adds);
     }
 
-    // One undo step that may change the ground (ground: as EditGround), take things away (remove:
-    // indices) and add new objects (add: their ids are given here; Piece: a player-built piece; read after
-    // the ground step, which may fill it). Returns the indices of the things added.
+    /// <summary>
+    /// One undo step that may change the ground, take things away, add new objects and mark zones for reset. Nothing
+    /// goes on the history when it changes nothing.
+    /// </summary>
+    /// <param name="label">The history's name for the step.</param>
+    /// <param name="ground">As EditGround's change; null leaves the ground alone.</param>
+    /// <param name="remove">Things to take away, indices into the scene's things (bad or already gone ones are
+    /// skipped).</param>
+    /// <param name="add">New objects (their ids are given here; Piece: a player-built piece; read after the ground
+    /// step, which may fill it).</param>
+    /// <param name="resets">Zones marked for reset or unmarked, with their state before and after.</param>
+    /// <returns>The indices of the things added.</returns>
     public List<int> Commit(string label, Func<Ground, (List<int> Touched, (int X0, int Z0, int X1, int Z1) Rect)>? ground,
         IReadOnlyCollection<int> remove, IReadOnlyList<(NewObject Object, bool Piece)> add, (ZoneReset Reset, bool Before, bool After)[]? resets = null)
     {
@@ -682,10 +883,14 @@ public sealed class EditSession
         return indices;
     }
 
-    // The zones marked to be given back to the world generator (to draw them).
+    /// <summary>
+    /// The zones marked to be given back to the world generator (to draw them).
+    /// </summary>
     public List<ZoneReset> Resets => Edits.Resets;
 
-    // The zones to the edit store, as the web page uploads them.
+    /// <summary>
+    /// The zones to the edit store, as the web page uploads them.
+    /// </summary>
     private void Send(List<(int X, int Z)> zones)
     {
         foreach (var (zx, zz) in zones)
@@ -694,7 +899,10 @@ public sealed class EditSession
         }
     }
 
-    // The scene's heights, paint mask and limit marks follow the ground over a rectangle.
+    /// <summary>
+    /// The scene's heights, paint mask and limit marks follow the ground over a grid rectangle (clamped to the grid),
+    /// which joins the dirty rectangle.
+    /// </summary>
     private void Touch((int X0, int Z0, int X1, int Z1) r)
     {
         int x0 = Math.Max(0, r.X0), z0 = Math.Max(0, r.Z0), x1 = Math.Min(Ground.W - 1, r.X1), z1 = Math.Min(Ground.H - 1, r.Z1);
@@ -702,7 +910,9 @@ public sealed class EditSession
         _dirty = _dirty is { } d ? (Math.Min(d.X0, x0), Math.Min(d.Z0, z0), Math.Max(d.X1, x1), Math.Max(d.Z1, z1)) : (x0, z0, x1, z1);
     }
 
-    // The rectangle changed since the last call (null: nothing).
+    /// <summary>
+    /// The grid rectangle changed since the last call (null: nothing), for the view to send to the graphics card.
+    /// </summary>
     public (int X0, int Z0, int X1, int Z1)? TakeDirty()
     {
         lock (_lock)
@@ -713,8 +923,12 @@ public sealed class EditSession
         }
     }
 
-    // Writes the changes into the world's files (WorldSession.Save); the history stays, its steps saved
-    // (an undo is then pending, saved by the next save), as with Apply live.
+    /// <summary>
+    /// Writes the changes into the world's files (WorldSession.Save); the history stays, its steps saved (an undo is
+    /// then pending, saved by the next save), as with Apply live. After zone resets or No limit ground the area is read
+    /// again and the history cleared.
+    /// </summary>
+    /// <returns>What the writer did.</returns>
     public WorldWriter.Result Save()
     {
         WorldWriter.Result result;
@@ -754,10 +968,12 @@ public sealed class EditSession
         return result;
     }
 
-    // Live: applies everything to the running game. After zone resets the world is read again from the
-    // game (like a save), and after No limit ground became ground discs the area is (the ground under it
-    // changed); otherwise the history stays.
-    // confirm: see WorldSession.ApplyLive (asked before writing over ground the game changed).
+    /// <summary>
+    /// Live: applies everything to the running game. After zone resets the world is read again from the game (like a
+    /// save), and after No limit ground became ground discs the area is (the ground under it changed); otherwise the
+    /// history stays.
+    /// </summary>
+    /// <param name="confirm">See WorldSession.ApplyLive (asked before writing over ground the game changed).</param>
     public async Task<WorldSession.Outcome> ApplyLive(Func<IReadOnlyList<(int X, int Z)>, Task<bool>>? confirm = null)
     {
         var owner = Scene.Owner!;
@@ -797,8 +1013,23 @@ public sealed class EditSession
     // ---- The history follows the open world from area to area (like the web editor's, kept by the
     // server): while another area is open it is kept with the world, ground points by world position and
     // objects by id, and fitted to the next area opened.
+    /// <summary>
+    /// A history kept with the open world while another area is open, to fit into the next area opened (Import), and
+    /// what HistoryFile writes.
+    /// </summary>
+    /// <param name="Undo">The undo list, oldest first.</param>
+    /// <param name="Redo">The redo list, the next redo last.</param>
+    /// <param name="Ox">The world x in metres of the grid's first point in the area it came from.</param>
+    /// <param name="Oz">Its world z in metres.</param>
+    /// <param name="W">That area's grid width (ground points are its indices).</param>
+    /// <param name="X0">That area's first zone x.</param>
+    /// <param name="Z0">That area's first zone z.</param>
+    /// <param name="Ids">For each change, the ids of its things, in the order of its Things.</param>
     public sealed record Kept(List<Change> Undo, List<Change> Redo, int Ox, int Oz, int W, int X0, int Z0, Dictionary<Change, int[]> Ids);
 
+    /// <summary>
+    /// The history as Kept: ground points by world position and objects by id, to follow the world to the next area.
+    /// </summary>
     public Kept Export()
     {
         lock (_lock)
@@ -812,9 +1043,14 @@ public sealed class EditSession
         }
     }
 
-    // The kept history fitted to this area: a change whose ground or objects are not all in it (and
-    // every change before it) is left out, as it could not be undone here. Objects it needs that the area
-    // does not show (deleted, or added and undone) come back as gone things. Returns how many were left out.
+    /// <summary>
+    /// The kept history fitted to this area: a change whose ground or objects are not all in it (and every change
+    /// before it) is left out, as it could not be undone here. Objects it needs that the area does not show (deleted,
+    /// or added and undone) come back as gone things.
+    /// </summary>
+    /// <param name="k">The kept history.</param>
+    /// <param name="find">Finds things of the world by id (those this area does not have).</param>
+    /// <returns>How many were left out.</returns>
     public int Import(Kept k, Func<IReadOnlyCollection<int>, Dictionary<int, WorldScene.Thing>> find)
     {
         lock (_lock)
@@ -909,11 +1145,13 @@ public sealed class EditSession
         }
     }
 
-    // Live: what the game changed (WorldSession.MergeGame), taken into the area without an undo step:
-    // objects removed in the game go, changed ones are shown as they are now (same thing, same place in
-    // the history), new ones come, and the ground of the zones given is read again. Taking the same
-    // changes twice changes nothing (an area opened meanwhile may already have them). Not during a stroke
-    // (false: given again next time).
+    /// <summary>
+    /// Live: what the game changed (WorldSession.MergeGame), taken into the area without an undo step: objects removed
+    /// in the game go, changed ones are shown as they are now (same thing, same place in the history), new ones come,
+    /// and the ground of the zones given is read again. Taking the same changes twice changes nothing (an area opened
+    /// meanwhile may already have them). Not during a stroke (false: given again next time).
+    /// </summary>
+    /// <returns>False during a stroke: given again next time.</returns>
     public bool TakeGameChanges(WorldSession.Followed f)
     {
         var list = Scene.Things;
@@ -990,7 +1228,9 @@ public sealed class EditSession
         return true;
     }
 
-    // The world was read again (saved, reloaded): the ground and the objects from it, no history.
+    /// <summary>
+    /// The world was read again (saved, reloaded): the ground and the objects from it, no history.
+    /// </summary>
     private void Reread(WorldSave fresh)
     {
         Interlocked.Increment(ref _generation);

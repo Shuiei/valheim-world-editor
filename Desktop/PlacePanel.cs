@@ -7,87 +7,162 @@ using TerrainEditor.App;
 
 namespace TerrainEditor.Desktop;
 
-// The Place tool's panel, like the web editor's: the mode, a preset, the kinds (with weights), and the
-// settings of the mode; the kinds to choose from open in a list beside it.
+/// <summary>
+/// The Place tool's panel, like the web editor's: the mode, a preset, the kinds (with weights), and the settings of the
+/// mode; the kinds to choose from open in a list beside it.
+/// </summary>
 public sealed class PlacePanel
 {
+    /// <summary>The preset list's first entry, which loads nothing.</summary>
     private static readonly string[] ChoosePreset = ["Choose a preset…"];
 
+    /// <summary>The panel itself, shown over the view while the Place tool is on.</summary>
     public Control Card { get; }
+    /// <summary>The list of kinds to choose from, beside the panel (hidden until + Add kinds).</summary>
     public Control Chooser { get; }
+    /// <summary>The Place tool's input, for placing shapes and the preview count.</summary>
     private readonly PlaceInput _input;
+    /// <summary>The Place tool.</summary>
     private PlaceTool T => _input.Tool;
+    /// <summary>The open scene, for the kinds this world can place.</summary>
     private readonly Func<WorldScene?> _scene;
+    /// <summary>A prefab hash's name (null when unknown).</summary>
     private readonly Func<int, string?> _nameOf;
+    /// <summary>
+    /// Set while the panel fills its controls from the tool, so their change events leave the tool alone.
+    /// </summary>
     private bool _filling;
 
+    /// <summary>One button per mode.</summary>
     internal Dictionary<PlaceTool.Modes, Button> ModeButtons { get; } = [];
+    /// <summary>Line mode: one button per shape (Points, Circle, Rectangle).</summary>
     internal Dictionary<PlaceTool.LineShapes, Button> ShapeButtons { get; } = [];
+    /// <summary>The presets: "Choose a preset…", the built-in ones, then your own.</summary>
     internal ComboBox PresetBox { get; }
+    /// <summary>Saves the chosen kinds, weights and scatter settings as your own preset.</summary>
     internal Button SavePresetButton { get; } = new() { Content = "Save as preset…", FontSize = 12 };
+    /// <summary>Deletes the selected preset (your own only).</summary>
     internal Button DeletePresetButton { get; } = new() { Content = "Delete", FontSize = 12, IsEnabled = false };
+    /// <summary>The favourite kinds as chips.</summary>
     internal WrapPanel Favourites { get; } = new() { ItemSpacing = 4, LineSpacing = 4 };
+    /// <summary>The recently placed kinds as chips.</summary>
     internal WrapPanel Recent { get; } = new() { ItemSpacing = 4, LineSpacing = 4 };
+    /// <summary>The favourites and recent sections, hidden while empty.</summary>
     private readonly Control _favBox, _recentBox;
+    /// <summary>What the tool remembers between runs.</summary>
     public PlaceMemory Memory { get; }
-    // Asks for a preset's name, and whether to delete one (the window's dialogs; replaced by tests).
+    /// <summary>Asks for a preset's name (the window's dialog; replaced by tests). Null or empty: cancelled.</summary>
     internal Func<Task<string?>> AskName { get; set; } = () => Task.FromResult<string?>(null);
+    /// <summary>Asks whether to delete a preset (the window's dialog; replaced by tests).</summary>
     internal Func<string, Task<bool>> Confirm { get; set; } = _ => Task.FromResult(true);
+    /// <summary>The chosen kinds, each with its weight slider and share, and a button to unchoose it.</summary>
     internal StackPanel Mix { get; } = new() { Spacing = 3 };
+    /// <summary>Shows or hides the list of kinds.</summary>
     internal Button KindsButton { get; } = new() { Content = "+ Add kinds", FontSize = 12 };
+    /// <summary>Filters the list of kinds by name.</summary>
     internal TextBox Search { get; } = new() { PlaceholderText = "Search kinds (oak, rock, bush…)", FontSize = 12 };
+    /// <summary>The kinds this world can place, by category.</summary>
     internal StackPanel List { get; } = new() { Spacing = 1 };
+    /// <summary>The next click on an object takes its kind (Shift + click adds it).</summary>
     internal Button PickButton { get; } = new() { Content = "Pick from world", FontSize = 12 };
+    /// <summary>Unchooses every kind.</summary>
     internal Button UntickAllButton { get; } = new() { Content = "Untick all", FontSize = 12 };
-    // all / none for the favourites and the recent kinds.
+    /// <summary>Ticks every favourite kind.</summary>
     internal Button FavAllButton { get; } = Link("all");
+    /// <summary>Unticks every favourite kind.</summary>
     internal Button FavNoneButton { get; } = Link("none");
+    /// <summary>Ticks every recent kind.</summary>
     internal Button RecentAllButton { get; } = Link("all");
+    /// <summary>Unticks every recent kind.</summary>
     internal Button RecentNoneButton { get; } = Link("none");
-    // The list's categories that are open (folded ones show only their header); remembered by the window.
+    /// <summary>
+    /// The list's categories that are open (folded ones show only their header); remembered by the window.
+    /// </summary>
     internal HashSet<ObjectKind> OpenKinds { get; } = [ObjectKind.Trees];
+    /// <summary>A category was opened or folded (not while searching), for the window to remember.</summary>
     public event Action? OpenKindsChanged;
+    /// <summary>The list's categories as last filled.</summary>
     internal Dictionary<ObjectKind, Expander> Groups { get; } = [];
-    // Shift held on the last press of a chip (a click takes Shift from its press).
+    /// <summary>Shift held on the last press of a chip (a click takes Shift from its press).</summary>
     private bool _shiftPress;
+    /// <summary>Where objects stand, in <c>PlaceTool.Elevations</c> order.</summary>
     internal ComboBox ElevationBox { get; } = new() { ItemsSource = new[] { "On the ground", "Above the ground", "At one height" }, SelectedIndex = 0, FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch };
+    /// <summary>The height above the ground, or the one height for all, in metres.</summary>
     internal NumericUpDown ElevBox { get; } = new() { Value = 0, Increment = 0.5m, FormatString = "0.0#", FontSize = 12 };
+    /// <summary>Snap pieces to the pieces already there (shown when pieces are chosen).</summary>
     internal CheckBox SnapToBox { get; } = new() { Content = "Snap to pieces already there", IsChecked = true, FontSize = 12 };
+    /// <summary>Brush: snap a single piece beside the nearest one.</summary>
     internal Button BesideButton { get; } = new() { Content = "Beside", FontSize = 12 };
+    /// <summary>Brush: snap a single piece on top of the one under the cursor.</summary>
     internal Button OnTopButton { get; } = new() { Content = "On top", FontSize = 12 };
+    /// <summary>Leave saplings and crops room to grow (shown when one is chosen).</summary>
     internal CheckBox GrowBox { get; } = new() { Content = "Leave saplings and crops room to grow", IsChecked = true, FontSize = 12 };
+    /// <summary>A warning: nothing to place yet, or chosen kinds that only grow on cultivated ground.</summary>
     internal TextBlock Note { get; } = new() { FontSize = 11, Foreground = new SolidColorBrush(Color.FromRgb(240, 190, 90)), TextWrapping = TextWrapping.Wrap };
+    /// <summary>Brush: its radius, 1 to 30 m.</summary>
     internal Slider SizeSlider { get; private set; } = null!;
+    /// <summary>Objects per 100 m², 0.2 to 20.</summary>
     internal Slider DensitySlider { get; private set; } = null!;
+    /// <summary>The least distance between objects, 0.5 m to <c>PlaceTool.MaxSpacing</c>.</summary>
     internal Slider SpacingSlider { get; private set; } = null!;
+    /// <summary>Clumping, 0 to 100%.</summary>
     internal Slider ClumpSlider { get; private set; } = null!;
+    /// <summary>The clumping pattern's size, 5 to 120 m (shown when clumping is on).</summary>
     internal Slider PatchSlider { get; private set; } = null!;
+    /// <summary>The smallest random scale, 10 to 300%.</summary>
     internal NumericUpDown SizeMinBox { get; } = new() { Value = 80, Minimum = 10, Maximum = 300, Increment = 5, FormatString = "0", FontSize = 12 };
+    /// <summary>The largest random scale, 10 to 300%.</summary>
     internal NumericUpDown SizeMaxBox { get; } = new() { Value = 120, Minimum = 10, Maximum = 300, Increment = 5, FormatString = "0", FontSize = 12 };
+    /// <summary>The most random lean, 0 to 20 degrees.</summary>
     internal Slider TiltSlider { get; private set; } = null!;
+    /// <summary>The turn added to every facing, -180 to 180 degrees.</summary>
     internal Slider RotationSlider { get; private set; } = null!;
+    /// <summary>Random facing, or all facing the rotation.</summary>
     internal CheckBox RandomYawBox { get; } = new() { Content = "Random facing (off: all face the rotation)", IsChecked = true, FontSize = 12 };
+    /// <summary>
+    /// Brush: one at a time, exactly at the cursor (setting it by hand stops it following the chosen kinds).
+    /// </summary>
     internal CheckBox SingleBox { get; } = new() { Content = "One at a time, exactly at the cursor", FontSize = 12 };
+    /// <summary>Line: pieces end to end (setting it by hand stops it following the chosen kinds).</summary>
     internal CheckBox EndToEndBox { get; } = new() { Content = "End to end (snap together, like in game)", FontSize = 12 };
+    /// <summary>End to end: how many pieces high, 1 to 20.</summary>
     internal NumericUpDown LayersBox { get; } = new() { Value = 1, Minimum = 1, Maximum = 20, Increment = 1, FormatString = "0", FontSize = 12 };
+    /// <summary>Line (Points): back to the first point.</summary>
     internal CheckBox LoopBox { get; } = new() { Content = "Close the loop (back to the first point)", FontSize = 12 };
+    /// <summary>Line: the distance between objects, 0.5 m to <c>PlaceTool.MaxEvery</c>.</summary>
     internal Slider EverySlider { get; private set; } = null!;
+    /// <summary>Line: the random sideways stray, 0 to 5 m.</summary>
     internal Slider WiggleSlider { get; private set; } = null!;
+    /// <summary>Line (Points): objects face along the line.</summary>
     internal CheckBox AlongBox { get; } = new() { Content = "Follow the line (plus the rotation; replaces random facing)", IsChecked = true, FontSize = 12 };
+    /// <summary>Line (Points): a smooth curve through the points.</summary>
     internal CheckBox CurveBox { get; } = new() { Content = "Smooth curve through the points", IsChecked = true, FontSize = 12 };
+    /// <summary>Grid: the spacing, 1 m to <c>PlaceTool.MaxCell</c>.</summary>
     internal Slider CellSlider { get; private set; } = null!;
+    /// <summary>Places what the line, grid or zone shows (Enter).</summary>
     internal Button PlaceButton { get; } = new Button { Content = "Place (Enter)", FontSize = 12 }.Classed("primary");
+    /// <summary>Clears the line, grid box or zone.</summary>
     internal Button ClearButton { get; } = new() { Content = "Clear (Esc)", FontSize = 12 };
+    /// <summary>Removes the line's or zone's last point.</summary>
     internal Button UndoPointButton { get; } = new() { Content = "Remove last point (Backspace)", FontSize = 12 };
+    /// <summary>New random choices (R).</summary>
     internal Button NewLayoutButton { get; } = new() { Content = "New layout (R)", FontSize = 12 };
+    /// <summary>What the preview shows and the keys that go with it.</summary>
     internal TextBlock Info { get; } = new() { FontSize = 12, TextWrapping = TextWrapping.Wrap };
-    // Kinds wider than the spacing: says so, and fit sets the spacing to them.
+    /// <summary>Kinds wider than the spacing: says so (the fit button then sets the spacing to them).</summary>
     internal TextBlock FitText { get; } = new() { FontSize = 12, TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center };
+    /// <summary>Sets the spacing to the widest chosen kind.</summary>
     internal Button FitButton { get; } = new() { Content = "fit", FontSize = 11, Padding = new Thickness(6, 2), VerticalAlignment = VerticalAlignment.Center };
+    /// <summary>The fit hint and its button, shown only when a chosen kind is wider than the spacing.</summary>
     private readonly Control _fitRow;
+    /// <summary>Rows and groups that <see cref="Sync"/> shows or hides by mode, shape and what is chosen.</summary>
     private readonly Control _elevRow, _pieceBox, _attachRow, _brushRows, _scatterRows, _patchRow, _facingRows, _lineBox, _snapRows, _freeLineRows, _loopRow, _layersRow, _gridRow, _shapeRow, _undoRow, _brushHint;
+    /// <summary>Line mode: how to draw the chosen shape.</summary>
     private readonly TextBlock _lineHintText = new() { FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
 
+    /// <summary>
+    /// A slider that shows its value through <c>fmt</c> in <c>shown</c> and passes each new value to <c>set</c>.
+    /// </summary>
     private static Slider Slide(double min, double max, double step, double value, TextBlock shown, Func<double, string> fmt, Action<float> set)
     {
         var s = new Slider { Minimum = min, Maximum = max, SmallChange = step, TickFrequency = step, IsSnapToTickEnabled = true, Value = value };
@@ -99,8 +174,10 @@ public sealed class PlacePanel
         return s;
     }
 
+    /// <summary>A small flat button like a link (the all / none of the chips).</summary>
     private static Button Link(string text) => new() { Content = text, FontSize = 10, Padding = new Thickness(4, 0), Background = Brushes.Transparent, Foreground = Ui.Muted };
 
+    /// <summary>A labelled row: the label, the input, and optionally something after it (a value or a unit).</summary>
     private static Grid Row(string label, Control input, Control? after = null)
     {
         var g = new Grid { ColumnDefinitions = new ColumnDefinitions("72,*,Auto") };
@@ -117,6 +194,7 @@ public sealed class PlacePanel
         return g;
     }
 
+    /// <summary>A floating card of the given width that scrolls when the window is too short.</summary>
     private static Border CardOf(Control child, double width) => new()
     {
         Background = Ui.Panel,
@@ -130,6 +208,13 @@ public sealed class PlacePanel
         Child = new ScrollViewer { Content = new StackPanel { Width = width, Spacing = 6, Children = { child } } },
     };
 
+    /// <summary>
+    /// Builds the panel and the list of kinds, and restores the chosen kinds and weights from the memory.
+    /// </summary>
+    /// <param name="input">The Place tool's input.</param>
+    /// <param name="scene">The open scene (null while none).</param>
+    /// <param name="nameOf">A prefab hash's name (null when unknown).</param>
+    /// <param name="memory">What to remember with; null loads place.json (tests pass their own).</param>
     public PlacePanel(PlaceInput input, Func<WorldScene?> scene, Func<int, string?> nameOf, PlaceMemory? memory = null)
     {
         _input = input;
@@ -401,11 +486,16 @@ public sealed class PlacePanel
         RenderChips();
     }
 
+    /// <summary>A preset in the list.</summary>
+    /// <param name="Preset">The preset.</param>
+    /// <param name="Own">One of yours (it can be deleted), not a built-in one.</param>
     private sealed record PresetEntry(PlaceTool.Preset Preset, bool Own);
 
+    /// <summary>The preset at an index of the list, or null for the first entry or past the end.</summary>
     private PresetEntry? PresetAt(int i) => i <= 0 ? null : i <= PlaceTool.BuiltIn.Length ? new(PlaceTool.BuiltIn[i - 1], false)
         : i - 1 - PlaceTool.BuiltIn.Length < Memory.Presets.Count ? new(Memory.Presets[i - 1 - PlaceTool.BuiltIn.Length], true) : null;
 
+    /// <summary>Fills the preset list, selecting your own preset of that name if given.</summary>
     private void FillPresets(string? select = null)
     {
         _filling = true;
@@ -416,7 +506,7 @@ public sealed class PlacePanel
         _filling = false;
     }
 
-    // The chosen kinds and weights are remembered for the next time.
+    /// <summary>Remembers the chosen kinds and weights for the next time (saves the memory).</summary>
     private void Remember()
     {
         Memory.Chosen = [.. T.Chosen];
@@ -424,6 +514,7 @@ public sealed class PlacePanel
         Memory.Save();
     }
 
+    /// <summary>The heading of a chip row, with its all and none buttons.</summary>
     private static StackPanel ChipHead(string title, Button all, Button none) => new()
     {
         Orientation = Orientation.Horizontal,
@@ -431,7 +522,7 @@ public sealed class PlacePanel
         Children = { new TextBlock { Text = title, FontSize = 10, Foreground = Ui.Muted, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 4, 0) }, all, none },
     };
 
-    // all / none: tick or untick every kind of the row (those this world can place).
+    /// <summary>all / none: tick or untick every kind of the row (those this world can place).</summary>
     private void TickRow(IEnumerable<string> names, bool on)
     {
         var known = Creatable().Select(c => c.Name).ToHashSet();
@@ -449,7 +540,7 @@ public sealed class PlacePanel
         Chosen();
     }
 
-    // A kind chosen from a chip or the world: add (or take away if ticked), or place only it.
+    /// <summary>A kind chosen from a chip or the world: add (or take away if ticked), or place only it.</summary>
     internal void Choose(string name, bool add)
     {
         if (!add)
@@ -464,11 +555,12 @@ public sealed class PlacePanel
         Chosen();
     }
 
-    // A chip clicked: ticks or unticks that kind; with Shift, places only it.
+    /// <summary>A chip clicked: ticks or unticks that kind; with Shift, places only it.</summary>
     internal void ChipClicked(string name, bool shift) => Choose(name, add: !shift);
 
-    // Favourites and recent kinds as buttons: a click ticks or unticks that kind, Shift + click places
-    // only it.
+    /// <summary>
+    /// Favourites and recent kinds as buttons: a click ticks or unticks that kind, Shift + click places only it.
+    /// </summary>
     private void RenderChips()
     {
         var known = Creatable().Select(c => c.Name).ToHashSet();
@@ -494,17 +586,24 @@ public sealed class PlacePanel
         }
     }
 
+    /// <summary>Puts a control in a grid column; returns it.</summary>
     private static Control Col(Control c, int col)
     {
         Grid.SetColumn(c, col);
         return c;
     }
 
+    /// <summary>A line for the status bar.</summary>
     public event Action<string>? Message;
+    /// <summary>Raises <see cref="Message"/>.</summary>
     private void Say(string s) => Message?.Invoke(s);
 
-    // The kinds that can be placed in this world, with their kind of object (for the list's order).
+    /// <summary>The kinds that can be placed in this world, with their kind of object (for the list's order).</summary>
     private List<(string Name, ObjectKind Kind)> _creatable = [];
+    /// <summary>
+    /// The kinds that can be placed in this world, with their kind of object; worked out once from the open world
+    /// (empty while none).
+    /// </summary>
     internal List<(string Name, ObjectKind Kind)> Creatable()
     {
         if (_creatable.Count == 0 && _scene()?.World is { } w)
@@ -514,8 +613,13 @@ public sealed class PlacePanel
         return _creatable;
     }
 
+    /// <summary>The list's categories, in order.</summary>
     private static readonly ObjectKind[] Order = [ObjectKind.Trees, ObjectKind.Rocks, ObjectKind.Bushes, ObjectKind.Pickables, ObjectKind.Ore, ObjectKind.Other, ObjectKind.Ruins, ObjectKind.Buildings];
 
+    /// <summary>
+    /// Fills the list of kinds (while it shows), filtered by the search: a folding category per kind of object, its
+    /// checkboxes made when it opens.
+    /// </summary>
     public void FillList()
     {
         if (!Chooser.IsVisible)
@@ -605,7 +709,10 @@ public sealed class PlacePanel
         }
     }
 
-    // The chosen kinds changed.
+    /// <summary>
+    /// The chosen kinds changed: updates End to end and One at a time, the panel and the list, remembers them and makes
+    /// a new layout.
+    /// </summary>
     private void Chosen(bool fillList = true)
     {
         T.AutoSnap();
@@ -622,6 +729,9 @@ public sealed class PlacePanel
         T.NewLayout();
     }
 
+    /// <summary>
+    /// Fills the mix: each chosen kind, with a weight slider (1 to 10) and its share when there are several.
+    /// </summary>
     private void RenderMix()
     {
         Mix.Children.Clear();
@@ -648,6 +758,7 @@ public sealed class PlacePanel
         }
     }
 
+    /// <summary>Switches the mode.</summary>
     private void SetMode(PlaceTool.Modes m)
     {
         T.Mode = m;
@@ -655,7 +766,9 @@ public sealed class PlacePanel
         T.Notify();
     }
 
-    // The settings shown follow the mode and what is chosen.
+    /// <summary>
+    /// Fills the controls from the tool's settings; the settings shown follow the mode and what is chosen.
+    /// </summary>
     public void Fill()
     {
         _filling = true;
@@ -680,6 +793,9 @@ public sealed class PlacePanel
         Sync();
     }
 
+    /// <summary>
+    /// Shows the rows the mode, shape and chosen kinds use, marks the buttons that are on, and updates the hints.
+    /// </summary>
     private void Sync()
     {
         var t = T;
@@ -727,7 +843,7 @@ public sealed class PlacePanel
         ShowFit();
     }
 
-    // The fit hint: only when a chosen kind is wider than the spacing.
+    /// <summary>The fit hint: only when a chosen kind is wider than the spacing.</summary>
     private void ShowFit()
     {
         string? hint = T.FitHint();
@@ -735,7 +851,7 @@ public sealed class PlacePanel
         _fitRow.IsVisible = hint != null;
     }
 
-    // What the preview shows.
+    /// <summary>What the preview shows, and the keys that go with it.</summary>
     private void ShowInfo()
     {
         var t = T;

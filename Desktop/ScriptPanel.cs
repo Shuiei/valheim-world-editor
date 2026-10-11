@@ -6,16 +6,23 @@ using TerrainEditor.App;
 
 namespace TerrainEditor.Desktop;
 
-// The Script tool's panel: a C# script (with the editor's API: Area, Ground, Objects, Noise, Rnd,
-// Print), examples to start from, the scripts saved in the data folder (scripts/*.csx), Run and Stop,
-// and what the script printed or got wrong. The window runs it (it has the edit session).
+/// <summary>
+/// The Script tool's panel: a C# script (with the editor's API: Area, Ground, Objects, Noise, Rnd, Print), examples to
+/// start from, the scripts saved in the data folder (scripts/*.csx), Run and Stop, and what the script printed or got
+/// wrong. The window runs it (it has the edit session).
+/// </summary>
 public sealed class ScriptPanel
 {
+    /// <summary>The panel itself, shown over the view while the Script tool is on.</summary>
     public Control Card { get; }
+    /// <summary>Run (or Ctrl+Enter in the code) was asked for; the window runs it.</summary>
     public event Action? RunAsked;
+    /// <summary>Stop was asked for.</summary>
     public event Action? StopAsked;
 
+    /// <summary>The examples and the saved scripts; choosing one puts its code in the editor.</summary>
     internal ComboBox ScriptBox { get; }
+    /// <summary>The script's code.</summary>
     internal TextBox CodeBox { get; } = new()
     {
         AcceptsReturn = true,
@@ -26,17 +33,25 @@ public sealed class ScriptPanel
         Height = 330,
         Width = 520,
     };
+    /// <summary>The name to save the script as (filled with a saved script's name, empty for an example).</summary>
     internal TextBox NameBox { get; } = new() { PlaceholderText = "name to save it as", FontSize = 12, Width = 180 };
+    /// <summary>Saves the code as name.csx in <see cref="Folder"/>.</summary>
     internal Button SaveButton { get; } = new() { Content = "Save", FontSize = 12 };
+    /// <summary>Runs the script.</summary>
     internal Button RunButton { get; } = new Button { Content = "Run (Ctrl+Enter)", FontSize = 12 }.Classed("primary");
+    /// <summary>Stops the running script.</summary>
     internal Button StopButton { get; } = new() { Content = "Stop", FontSize = 12, IsEnabled = false };
+    /// <summary>What the script printed or got wrong.</summary>
     internal SelectableTextBlock Output { get; } = new() { FontFamily = new FontFamily("monospace"), FontSize = 11.5, TextWrapping = TextWrapping.Wrap };
+    /// <summary>The list's entries: the examples ("Example: " and their name), then the saved scripts.</summary>
     private List<(string Name, string Code)> _entries = [];
+    /// <summary>Set while the list is filled, so choosing the selection does not replace the code.</summary>
     private bool _filling;
 
-    // The folder saved scripts go in.
+    /// <summary>The folder saved scripts go in.</summary>
     public static string Folder => Path.Combine(AppSettings.DataDir, "scripts");
 
+    /// <summary>Builds the panel, starting with the first example's code.</summary>
     public ScriptPanel()
     {
         ScriptBox = new ComboBox { FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch, MaxDropDownHeight = 420 };
@@ -102,7 +117,10 @@ public sealed class ScriptPanel
         };
     }
 
-    // The examples, then the saved scripts (newest first).
+    /// <summary>
+    /// Fills the list: the examples, then the saved scripts (newest first); selects the entry of that name if given,
+    /// else none.
+    /// </summary>
     public void Fill(string? select = null)
     {
         _filling = true;
@@ -126,8 +144,12 @@ public sealed class ScriptPanel
         _filling = false;
     }
 
+    /// <summary>A line for the status bar.</summary>
     public event Action<string>? Message;
 
+    /// <summary>
+    /// Saves the code under the typed name (characters a file name cannot have become _), and selects it.
+    /// </summary>
     private void Save()
     {
         string name = string.Concat((NameBox.Text ?? "").Trim().Select(c => Path.GetInvalidFileNameChars().Contains(c) ? '_' : c));
@@ -149,7 +171,7 @@ public sealed class ScriptPanel
         }
     }
 
-    // While a script runs: Stop instead of Run.
+    /// <summary>While a script runs: Stop instead of Run.</summary>
     public void Running(bool on)
     {
         RunButton.IsEnabled = !on;

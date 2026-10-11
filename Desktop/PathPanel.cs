@@ -5,44 +5,76 @@ using Avalonia.Media;
 
 namespace TerrainEditor.Desktop;
 
-// The Path tool's panel, like the web editor's: the action, width and soft edge, each action's own
-// values, curve and natural look, Apply and Clear, and how long the line is.
+/// <summary>
+/// The Path tool's panel, like the web editor's: the action, width and soft edge, each action's own values, curve and
+/// natural look, Apply and Clear, and how long the line is.
+/// </summary>
 public sealed class PathPanel
 {
+    /// <summary>The panel itself, shown over the view while the Path tool is on.</summary>
     public Control Card { get; }
+    /// <summary>The view's Path tool the panel drives.</summary>
     private readonly PathTool _path;
+    /// <summary>The view, for the ground height at the line's ends and to redraw the line.</summary>
     private readonly GlView _view;
+    /// <summary>
+    /// Set while Refresh fills the boxes, so filling the ramp boxes does not count as typing them in.
+    /// </summary>
     private bool _filling;
 
+    /// <summary>The action list, in <c>PathTool.Action</c> order.</summary>
     internal ComboBox ActionBox { get; }
+    /// <summary>The path width, 1 to 40 m.</summary>
     internal Slider WidthSlider { get; }
+    /// <summary>The soft edge, 0 to 15 m.</summary>
     internal Slider SoftSlider { get; }
+    /// <summary>Flatten: the height to flatten to, in metres.</summary>
     internal NumericUpDown HeightBox { get; } = Num(32, 0.1m);
+    /// <summary>Raise and Lower: by how much, in metres.</summary>
     internal NumericUpDown AmountBox { get; } = Num(2, 0.1m);
+    /// <summary>Ramp: the height at the line's start; typing in it stops it following the ground.</summary>
     internal NumericUpDown StartBox { get; } = Num(32, 0.1m);
+    /// <summary>Ramp: the height at the line's end; typing in it stops it following the ground.</summary>
     internal NumericUpDown EndBox { get; } = Num(32, 0.1m);
+    /// <summary>River: how far below the water level the bed goes, at least 0.25 m.</summary>
     internal NumericUpDown DepthBox { get; } = Num(2, 0.25m);
-    // Cave: a preset and Randomize, depth below the ground, headroom inside, the roof's boulders.
+    /// <summary>Cave: the preset; choosing one fills width, soft edge, depth and headroom from it.</summary>
     internal ComboBox CavePresetBox { get; }
+    /// <summary>Cave: the preset's values each varied by about 15%, and new boulders.</summary>
     internal Button CaveRandomButton { get; } = new() { Content = "Randomize", FontSize = 12 };
+    /// <summary>Cave: depth below the ground, 2 to 20 m.</summary>
     internal NumericUpDown CaveDepthBox { get; } = Num(7.5m, 0.5m);
+    /// <summary>Cave: headroom inside, 2 to 15 m.</summary>
     internal NumericUpDown HeadroomBox { get; } = Num(4.5m, 0.5m);
+    /// <summary>Cave: the roof's boulders, in <c>PathTool.CaveRock</c> order.</summary>
     internal ComboBox RockBox { get; }
+    /// <summary>Cave: the preset's description (and a note after Randomize).</summary>
     internal TextBlock CaveHelp { get; } = new() { FontSize = 12, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
+    /// <summary>For Randomize: the varied values and the new boulder seed.</summary>
     private readonly Random _random = new();
+    /// <summary>Smooth curve through the points, or straight stretches.</summary>
     internal CheckBox CurveBox { get; } = new() { Content = "Smooth curve through the points", IsChecked = true, FontSize = 12 };
+    /// <summary>Natural look; shows the bump rows when on.</summary>
     internal CheckBox NaturalBox { get; } = new() { Content = "Natural look (ragged edges, bumps)", FontSize = 12 };
+    /// <summary>Asks for the action to be applied (raises <see cref="ApplyAsked"/>).</summary>
     internal Button ApplyButton { get; } = new Button { Content = "Apply (Enter)", FontSize = 12 }.Classed("primary");
+    /// <summary>Removes the line.</summary>
     internal Button ClearButton { get; } = new() { Content = "Clear (Esc)", FontSize = 12 };
+    /// <summary>How many points the line has and how long it is.</summary>
     internal TextBlock Info { get; } = new() { FontSize = 12, Foreground = Ui.Muted };
+    /// <summary>The rows only some actions show, with the actions that show them.</summary>
     private readonly Dictionary<Control, PathTool.Action[]> _rows = [];
+    /// <summary>The Natural look's bump rows (the brush's noise amplitude and size).</summary>
     private readonly Control _naturalRows;
-    // Apply was asked for (the window does it: it has the edit session).
+    /// <summary>Apply was asked for (the window does it: it has the edit session).</summary>
     public event Action? ApplyAsked;
+    /// <summary>The action was changed in the list.</summary>
     public event Action<PathTool.Action>? ActionChanged;
 
+    /// <summary>A number box starting at <c>v</c> that steps by <c>step</c>.</summary>
     private static NumericUpDown Num(decimal v, decimal step) => new() { Value = v, Increment = step, FormatString = "0.0#", FontSize = 12 };
 
+    /// <summary>A labelled row: the label, the input, and optionally something after it (a unit or a button).</summary>
     private static Grid Row(string label, Control input, Control? after = null)
     {
         var g = new Grid { ColumnDefinitions = new ColumnDefinitions("70,*,46") };
@@ -59,6 +91,10 @@ public sealed class PathPanel
         return g;
     }
 
+    /// <summary>
+    /// A slider that shows its value with the unit in <c>shown</c> and passes each new value to
+    /// <c>set</c>.
+    /// </summary>
     private static Slider Slide(double min, double max, double step, double value, TextBlock shown, string unit, Action<float> set)
     {
         var s = new Slider { Minimum = min, Maximum = max, SmallChange = step, TickFrequency = step, IsSnapToTickEnabled = true, Value = value };
@@ -70,8 +106,12 @@ public sealed class PathPanel
         return s;
     }
 
+    /// <summary>A " m" unit label.</summary>
     private static TextBlock M() => new() { Text = " m", FontSize = 12, VerticalAlignment = VerticalAlignment.Center };
 
+    /// <summary>Builds the panel for the view's Path tool.</summary>
+    /// <param name="view">The view whose Path tool the panel drives.</param>
+    /// <param name="brush">The brush whose noise the Natural look's bump rows set.</param>
     public PathPanel(GlView view, Brush brush)
     {
         _view = view;
@@ -191,7 +231,7 @@ public sealed class PathPanel
         Refresh();
     }
 
-    // The cave preset's values (random: each within about 15% of them, and new boulders).
+    /// <summary>The cave preset's values (random: each within about 15% of them, and new boulders).</summary>
     private void CavePreset(bool random)
     {
         var p = PathTool.CavePresets[Math.Max(0, CavePresetBox.SelectedIndex)];
@@ -205,13 +245,14 @@ public sealed class PathPanel
         CaveHelp.Text = p.Help + (random ? " Randomized: new sizes and boulders for the next Apply (Ctrl+Z takes the last one back)." : "");
     }
 
-    // The Cave button: the Cave action with its preset's values.
+    /// <summary>The Cave button: the Cave action with its preset's values.</summary>
     public void ChooseCave()
     {
         ActionBox.SelectedIndex = Array.IndexOf(Enum.GetValues<PathTool.Action>(), PathTool.Action.Cave);
         CavePreset(false);
     }
 
+    /// <summary>Shows only the rows of the current action, and the bump rows when Natural look is on.</summary>
     private void ShowRows()
     {
         foreach (var (row, for_) in _rows)
@@ -221,7 +262,10 @@ public sealed class PathPanel
         _naturalRows.IsVisible = _path.Natural;
     }
 
-    // The line or a value picked with Alt changed: the boxes and the line's length.
+    /// <summary>
+    /// The line or a value picked with Alt changed: refills the boxes (the ramp's ends follow the ground at the line's
+    /// ends until typed in), shows the line's length and redraws it.
+    /// </summary>
     public void Refresh()
     {
         _filling = true;

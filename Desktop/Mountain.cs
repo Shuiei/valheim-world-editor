@@ -1,22 +1,63 @@
 namespace TerrainEditor.Desktop;
 
-// The Mountain tool's shapes: how many metres a mountain adds to the ground at each point around its
-// middle, made from a seed so a mountain can be made again or rolled anew (Randomize). Natural detail
-// comes from the editor's fractal noise (Noise): the outline is warped, the slopes get ridges and
-// gullies. The ground goes past the game's ±8 m (No limit), so saving turns it into ground discs.
-public enum MountainKind { Peak, Ridge, Range, Mesa, Volcano, Hills }
+/// <summary>
+/// The Mountain tool's kinds of shape; each has a preset in <c>Mountain.Presets</c>.
+/// </summary>
+public enum MountainKind
+{
+    /// <summary>One mountain rising to a peak.</summary>
+    Peak,
+    /// <summary>A long crest; Turn sets its direction.</summary>
+    Ridge,
+    /// <summary>Several peaks along a line; Turn sets its direction.</summary>
+    Range,
+    /// <summary>A flat top with steep sides.</summary>
+    Mesa,
+    /// <summary>A cone with a crater at the top.</summary>
+    Volcano,
+    /// <summary>A few gentle hills together.</summary>
+    Hills,
+}
 
+/// <summary>
+/// One mountain: what <c>Mountain.Shape</c> builds its shape from.
+/// </summary>
+/// <param name="Kind">Which shape.</param>
+/// <param name="Height">About how many metres it adds at its highest (detail adds or takes a little).</param>
+/// <param name="Radius">Metres from the middle to the foot, before the outline is warped.</param>
+/// <param name="Rough">How much natural detail (swells, ridges, gullies), 0..1.</param>
+/// <param name="Turn">Direction of a ridge or range, in degrees (the panel offers 0..179).</param>
+/// <param name="Seed">Seeds the noise and the bumps, so the same spec makes the same mountain.</param>
 public sealed record MountainSpec(MountainKind Kind, float Height, float Radius, float Rough, float Turn, int Seed)
 {
-    // How far from the middle the mountain reaches (its outline is warped up to this).
+    /// <summary>
+    /// How far from the middle the mountain reaches (its outline is warped up to this).
+    /// </summary>
     public float Reach => Radius * 1.15f;
 }
 
+/// <summary>
+/// The Mountain tool's shapes: how many metres a mountain adds to the ground at each point around its middle, made from
+/// a seed so a mountain can be made again or rolled anew (Randomize). Natural detail comes from the editor's fractal
+/// noise (Noise): the outline is warped, the slopes get ridges and gullies. The ground goes past the game's ±8 m (No
+/// limit), so saving turns it into ground discs.
+/// </summary>
 public static class Mountain
 {
-    // The presets: a kind with the ranges Randomize picks its size from.
+    /// <summary>
+    /// The presets: a kind with the ranges Randomize picks its size from.
+    /// </summary>
+    /// <param name="Name">Shown in the panel's preset list.</param>
+    /// <param name="Kind">The shape it makes.</param>
+    /// <param name="Height">Range of heights, in metres.</param>
+    /// <param name="Radius">Range of radii, in metres.</param>
+    /// <param name="Rough">Range of roughness, 0..1.</param>
+    /// <param name="Help">One line shown under the preset in the panel.</param>
     public sealed record Preset(string Name, MountainKind Kind, (float Min, float Max) Height, (float Min, float Max) Radius, (float Min, float Max) Rough, string Help);
 
+    /// <summary>
+    /// The presets the Mountain panel offers, in its order.
+    /// </summary>
     public static readonly Preset[] Presets =
     [
         new("Lone peak", MountainKind.Peak, (50, 110), (120, 240), (0.4f, 0.8f), "One mountain rising to a peak, with ridges down its sides."),
@@ -27,12 +68,20 @@ public static class Mountain
         new("Rolling hills", MountainKind.Hills, (12, 30), (100, 220), (0.3f, 0.7f), "A few gentle hills together."),
     ];
 
-    // A new mountain of the preset: its size picked within the preset's ranges.
+    /// <summary>
+    /// A new mountain of the preset: its size picked within the preset's ranges, with a random turn and seed.
+    /// </summary>
     public static MountainSpec Roll(Preset p, Random r) => new(p.Kind, Pick(r, p.Height), Pick(r, p.Radius), Pick(r, p.Rough), r.Next(0, 180), r.Next());
 
+    /// <summary>
+    /// A whole number within the range.
+    /// </summary>
     private static float Pick(Random r, (float Min, float Max) range) => MathF.Round(range.Min + (float)r.NextDouble() * (range.Max - range.Min));
 
-    // The shape's maker for a spec: metres to add at (x, z) metres east and north of the middle.
+    /// <summary>
+    /// The shape's maker for a spec: metres to add at (x, z) metres east and north of the middle.
+    /// </summary>
+    /// <returns>A function of (x, z) giving the metres to add there; 0 beyond the outline.</returns>
     public static Func<float, float, float> Shape(MountainSpec m)
     {
         var noise = new Noise(m.Seed);

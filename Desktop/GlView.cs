@@ -13,37 +13,59 @@ using TerrainEditor.Editing;
 
 namespace TerrainEditor.Desktop;
 
-// The 3D view: the ground, the water and every object and building piece of a WorldScene, drawn with
-// OpenGL (OpenGL 3.3, or OpenGL ES 3.0 where Avalonia gives that, e.g. ANGLE on Windows). Objects are
-// drawn with GPU instancing: one draw per model part for all its copies. Models load on worker threads
-// and appear as they arrive. Drawn only while something happens (the camera moves, keys, the mouse),
-// a few times a second otherwise.
+/// <summary>
+/// The 3D view: the ground, the water and every object and building piece of a WorldScene, drawn with
+/// OpenGL (OpenGL 3.3, or OpenGL ES 3.0 where Avalonia gives that, e.g. ANGLE on Windows). Objects are
+/// drawn with GPU instancing: one draw per model part for all its copies. Models load on worker threads
+/// and appear as they arrive. Drawn only while something happens (the camera moves, keys, the mouse),
+/// a few times a second otherwise.
+/// </summary>
 public sealed class GlView : OpenGlControlBase
 {
+    /// <summary>The OpenGL calls, set up when the context is made.</summary>
     private GL _gl = null!;
-    // Every OpenGL object this view made, deleted with its context (see GlObjects).
+    /// <summary>Every OpenGL object this view made, deleted with its context (see GlObjects).</summary>
     private GlObjects _own = null!;
+    /// <summary>True on OpenGL ES (the shaders get its header).</summary>
     private bool _es;
 
+    /// <summary>The models of the area's objects, null when there are none (plain boxes).</summary>
     internal ModelStore? Models { get; private set; }
 
-    // The last frame-rate report (the test driver reads it).
+    /// <summary>The last frame-rate report (the test driver reads it).</summary>
     internal Stats? LastStats { get; private set; }
 
     // ---- Camera: orbit around a target point (view space), like the web editor's.
+    /// <summary>Guards the camera's values, which the drawing thread and the UI thread both use.</summary>
     private readonly Lock _camLock = new();
+    /// <summary>The point the orbit camera turns around, in view space.</summary>
     private Vector3 _target;
+    /// <summary>The orbit camera's distance (metres), turn and tilt (radians).</summary>
     private float _distance = 140, _yaw = 0.8f, _pitch = 0.9f;
-    // Walk and Fly (F): the camera itself at _eyePos, looking along yaw and pitch (positive: down).
-    public enum EyeMode { Orbit, Walk, Fly }
+    /// <summary>Walk and Fly (F): the camera itself at _eyePos, looking along yaw and pitch (positive: down).</summary>
+    public enum EyeMode
+    {
+        /// <summary>Turning around a target point.</summary>
+        Orbit,
+        /// <summary>On the ground, 6 m/s (Shift: 12).</summary>
+        Walk,
+        /// <summary>Free in the air, 15 m/s (Shift: 45), kept above the ground.</summary>
+        Fly,
+    }
+    /// <summary>How the camera moves now.</summary>
     private EyeMode _eye = EyeMode.Orbit;
+    /// <summary>Walk and Fly: where the camera is, in view space.</summary>
     private Vector3 _eyePos;
+    /// <summary>How the camera moves now (F changes it).</summary>
     public EyeMode Eye { get { lock (_camLock) { return _eye; } } }
+    /// <summary>Raised on the UI thread when F changes how the camera moves.</summary>
     public event Action<EyeMode>? EyeChanged;
+    /// <summary>A player's eye height over the ground, in metres.</summary>
     private const float EyeHeight = 1.8f;
+    /// <summary>Walk and Fly: the way the camera looks, from yaw and pitch.</summary>
     private Vector3 Forward => new(-MathF.Sin(_yaw) * MathF.Cos(_pitch), -MathF.Sin(_pitch), -MathF.Cos(_yaw) * MathF.Cos(_pitch));
 
-    // F: the usual view, then walking at a player's eye height, then flying, then back.
+    /// <summary>F: the usual view, then walking at a player's eye height, then flying, then back.</summary>
     internal void CycleEye()
     {
         lock (_camLock)
@@ -75,12 +97,16 @@ public sealed class GlView : OpenGlControlBase
         Wake();
     }
 
-    // Above this the game takes a place for indoors (Character.InInterior): dungeons are built there,
-    // 5000 m over their entrances. The camera does not keep to the ground up there.
+    /// <summary>
+    /// Above this the game takes a place for indoors (Character.InInterior): dungeons are built there,
+    /// 5000 m over their entrances. The camera does not keep to the ground up there.
+    /// </summary>
     internal const float InteriorHeight = 3000f;
 
-    // Walking: the eyes 1.8 m over the ground (or the water); flying: never below that. Not in a
-    // dungeon (the ground is far below).
+    /// <summary>
+    /// Walking: the eyes 1.8 m over the ground (or the water); flying: never below that. Not in a
+    /// dungeon (the ground is far below).
+    /// </summary>
     private void KeepOverGround(bool walk)
     {
         var s = Scene;
@@ -91,36 +117,65 @@ public sealed class GlView : OpenGlControlBase
         float floor = Math.Max(Picking.HeightAt(s, _eyePos.X, _eyePos.Z), s.Water) + EyeHeight;
         _eyePos.Y = walk ? floor : Math.Max(_eyePos.Y, floor);
     }
+    /// <summary>The keys held now (moving the camera with them).</summary>
     private readonly HashSet<Key> _keys = [];
+    /// <summary>Where a mouse drag started, null when none is on.</summary>
     private Point? _dragFrom;
+    /// <summary>The mouse button the drag is made with.</summary>
     private PointerUpdateKind _dragButton;
+    /// <summary>
+    /// Milliseconds on the view's clock: when it was last woken (<c>Wake</c>), the last frame, the last idle frame.
+    /// </summary>
     private long _wokeAt, _lastFrame, _idleAt;
+    /// <summary>The camera of the last frame, to tell whether it moved.</summary>
     private Matrix4x4 _lastView;
 
     // ---- Frame rate: shown by the window, and sampled every 0.2 s for the log when it is on.
+    /// <summary>A frame-rate report.</summary>
+    /// <param name="Fps">Frames over the last second.</param>
+    /// <param name="WorkMs">Average time spent drawing a frame, in milliseconds.</param>
+    /// <param name="Objects">The area's things.</param>
+    /// <param name="Batches">Draw calls for the objects.</param>
+    /// <param name="Instances">Copies drawn by those batches.</param>
+    /// <param name="PendingModels">Models still being read.</param>
     public sealed record Stats(int Fps, double WorkMs, int Objects, int Batches, int Instances, int PendingModels);
+    /// <summary>A new frame-rate report (twice a second while drawing).</summary>
     public event Action<Stats>? StatsChanged;
+    /// <summary>
+    /// A status line to show (OpenGL version, game look loaded or not…); may be raised from a worker thread.
+    /// </summary>
     public event Action<string>? Status;
+    /// <summary>The view's clock, in milliseconds.</summary>
     private readonly Stopwatch _clock = Stopwatch.StartNew();
+    /// <summary>The frames of the last second: when, and how long the drawing took (ms).</summary>
     private readonly List<(long At, double Work)> _frames = [];
+    /// <summary>When the last frame-rate report was made.</summary>
     private long _statsAt;
+    /// <summary>The frame-rate log, null when it is off.</summary>
     public PerfLog? Perf { get; set; }
 
     // ---- View switches: which kinds of objects are drawn, and the water.
+    /// <summary>Which kinds of objects are drawn, by kind.</summary>
     private readonly bool[] _shown = [.. ObjectKinds.All.Select(ObjectKinds.ShownAtFirst)];
+    /// <summary>Whether objects of this kind are drawn.</summary>
     public bool IsShown(ObjectKind k) => _shown[(int)k];
+    /// <summary>Shows or hides objects of a kind.</summary>
     public void SetShown(ObjectKind k, bool on)
     {
         _shown[(int)k] = on;
         Wake();
     }
+    /// <summary>Whether the water is drawn.</summary>
     private volatile bool _showWater = true;
+    /// <summary>Whether the water is drawn.</summary>
     public bool ShowWater { get => _showWater; set { _showWater = value; Wake(); } }
 
-    // View, Look: the game's look (its terrain shader, sky and sea, the models) or plain colours and
-    // boxes, as the web editor's switch; see-through buildings (players' pieces drawn faint, to see
-    // what is inside or behind them); and how many pixels the 3D view draws (Sharp: the screen's;
-    // Balanced: one per point; Fast: three quarters of that), fewer pixels for more frames.
+    /// <summary>
+    /// View, Look: the game's look (its terrain shader, sky and sea, the models) or plain colours and
+    /// boxes, as the web editor's switch; see-through buildings (players' pieces drawn faint, to see
+    /// what is inside or behind them); and how many pixels the 3D view draws (Sharp: the screen's;
+    /// Balanced: one per point; Fast: three quarters of that), fewer pixels for more frames.
+    /// </summary>
     public bool GameLookOn
     {
         get => _gameLookOn;
@@ -135,16 +190,30 @@ public sealed class GlView : OpenGlControlBase
             }
         }
     }
+    /// <summary>The game's look on (backs <c>GameLookOn</c>).</summary>
     private volatile bool _gameLookOn = true;
-    // Whether the game's look is there to switch on (copied from the game, set up for this area).
+    /// <summary>Whether the game's look is there to switch on (copied from the game, set up for this area).</summary>
     public bool GameLookLoaded => _look != null;
+    /// <summary>Players' pieces drawn faint, to see what is inside or behind them.</summary>
     public bool SeeThroughBuildings { get => _seeThrough; set { _seeThrough = value; Wake(); } }
+    /// <summary>Backs <c>SeeThroughBuildings</c>.</summary>
     private volatile bool _seeThrough;
-    public enum Resolution { Sharp, Balanced, Fast }
+    /// <summary>How many pixels the 3D view draws: the screen's, one per point, or three quarters of that.</summary>
+    public enum Resolution
+    {
+        /// <summary>One pixel per screen pixel.</summary>
+        Sharp,
+        /// <summary>One pixel per point (fewer on a scaled screen).</summary>
+        Balanced,
+        /// <summary>Three quarters of Balanced.</summary>
+        Fast,
+    }
+    /// <summary>How many pixels the 3D view draws (see <c>PixelScale</c>).</summary>
     public Resolution Resolution3D { get => _resolution; set { _resolution = value; Wake(); } }
+    /// <summary>Backs <c>Resolution3D</c>.</summary>
     private volatile Resolution _resolution = Resolution.Sharp;
 
-    // Pixels drawn per screen point for a resolution, on a screen of this scaling.
+    /// <summary>Pixels drawn per screen point for a resolution, on a screen of this scaling.</summary>
     internal static double PixelScale(Resolution r, double screen) => r switch
     {
         Resolution.Balanced => Math.Min(screen, 1),
@@ -152,25 +221,33 @@ public sealed class GlView : OpenGlControlBase
         _ => screen,
     };
 
-    // The size in pixels the 3D view draws at now.
+    /// <summary>The size in pixels the 3D view draws at now.</summary>
     internal (int W, int H) RenderSize()
     {
         double scale = PixelScale(_resolution, TopLevel.GetTopLevel(this)?.RenderScaling ?? 1);
         return (Math.Max(1, (int)(Bounds.Width * scale)), Math.Max(1, (int)(Bounds.Height * scale)));
     }
 
-    // Alt + wheel: the tools that turn take it (the window decides: true when taken); otherwise it zooms.
-    // The direction is that of the , and . keys: towards you (down) as . and away (up) as ,.
+    /// <summary>
+    /// Alt + wheel: the tools that turn take it (the window decides: true when taken); otherwise it zooms.
+    /// The direction is that of the , and . keys: towards you (down) as . and away (up) as ,.
+    /// </summary>
     internal Func<Key, bool, bool>? AltWheel { get; set; }
-    // Ctrl + wheel (up: 1, down: -1; with Shift): what the tool does with it (true), else the view zooms.
+    /// <summary>
+    /// Ctrl + wheel (up: 1, down: -1; with Shift): what the tool does with it (true), else the view zooms.
+    /// </summary>
     internal Func<int, bool, bool>? CtrlWheel { get; set; }
+    /// <summary>The wheel's turns not used yet (a touchpad gives fractions of a notch).</summary>
     private double _wheelSum;
-    // How many objects of each kind the area has (once the models' names are known).
+    /// <summary>How many objects of each kind the area has (once the models' names are known).</summary>
     public event Action<Dictionary<ObjectKind, int>>? KindCounts;
 
     // ---- Overlays (zone borders at first) and the ground's measuring colours (game look only).
+    /// <summary>Which overlays are drawn, by layer: the zone borders at first.</summary>
     private readonly bool[] _overlay = [.. Overlays.All.Select(l => l == Overlays.Layer.Borders)];
+    /// <summary>Whether an overlay is drawn.</summary>
     public bool IsOverlayShown(Overlays.Layer l) => _overlay[(int)l];
+    /// <summary>Shows or hides an overlay (Flatten takes its edge along).</summary>
     public void SetOverlay(Overlays.Layer l, bool on)
     {
         _overlay[(int)l] = on;
@@ -180,25 +257,34 @@ public sealed class GlView : OpenGlControlBase
         }
         Wake();
     }
+    /// <summary>Backs <c>SlopeColours</c>.</summary>
     private volatile bool _slope;
 
+    /// <summary>Ground coloured by slope (game look only).</summary>
     public bool SlopeColours { get => _slope; set { _slope = value; Wake(); } }
+    /// <summary>The height between contour lines on the ground, in metres; 0 for none (game look only).</summary>
     public float ContourStep { get; set { field = value; Wake(); } }
-    // The red on ground at the game's ±8 m limit can be hidden (View: Limit marks).
+    /// <summary>The red on ground at the game's ±8 m limit can be hidden (View: Limit marks).</summary>
     private volatile bool _limit = true;
+    /// <summary>The red on ground at the game's ±8 m limit (View: Limit marks).</summary>
     public bool LimitMarks { get => _limit; set { _limit = value; Wake(); } }
-    // How many wards, crafting stations, flattened places and locations the overlays show.
+    /// <summary>How many wards, crafting stations, flattened places and locations the overlays show.</summary>
     public event Action<Overlays.Built>? OverlaysBuilt;
+    /// <summary>The overlays as last built.</summary>
     private Overlays.Built? _overlays;
+    /// <summary>Each overlay's lines on the graphics card.</summary>
     private readonly Dictionary<Overlays.Layer, (uint Vao, int Count, uint Vbo)> _overlayGl = [];
 
-    // For tests: the camera, and the keys held.
+    /// <summary>For tests: the camera (orbit: turn, tilt, distance and target).</summary>
     internal (float Yaw, float Pitch, float Distance, Vector3 Target) Camera { get { lock (_camLock) { return (_yaw, _pitch, _distance, _target); } } }
+    /// <summary>For tests: where the camera is in Walk and Fly.</summary>
     internal Vector3 EyePosition { get { lock (_camLock) { return _eyePos; } } }
-    // For tests: move as if the keys were held for dt seconds.
+    /// <summary>For tests: move as if the keys were held for dt seconds.</summary>
     internal bool Step(float dt) => MoveWithKeys(dt);
+    /// <summary>For tests: the keys held.</summary>
     internal Key[] KeysHeld { get { lock (_keys) { return [.. _keys]; } } }
 
+    /// <summary>An empty view; the idle timer runs only while it is shown.</summary>
     public GlView()
     {
         SelectTool = new SelectTool(this);
@@ -211,6 +297,12 @@ public sealed class GlView : OpenGlControlBase
         DetachedFromVisualTree += (_, _) => idle.Stop();
     }
 
+    /// <summary>
+    /// Shows a scene: the camera over its middle, the selection cleared, the game look read again for it
+    /// (on a worker thread) and its session's changes followed.
+    /// </summary>
+    /// <param name="scene">The area to show.</param>
+    /// <param name="models">Its objects' models, null to draw them as boxes.</param>
     public void Show(WorldScene scene, ModelStore? models)
     {
         Scene = scene;
@@ -273,10 +365,16 @@ public sealed class GlView : OpenGlControlBase
         });
         Wake();
     }
+    /// <summary>The game look's files as read, null until read (or when Valheim was not found).</summary>
     private volatile GameLookGl.Files? _lookFiles;
+    /// <summary>The game look set up for this area, null until set up (at a frame).</summary>
     private GameLookGl? _look;
+    /// <summary>
+    /// Game looks of earlier areas, deleted at the next frame (only the drawing may touch the graphics card).
+    /// </summary>
     private readonly List<GameLookGl> _looksDropped = [];
 
+    /// <summary>Deletes the game looks of earlier areas (drawing thread).</summary>
     private void DropLooks()
     {
         lock (_looksDropped)
@@ -289,8 +387,10 @@ public sealed class GlView : OpenGlControlBase
         }
     }
 
-    // Asks for frames at full speed for a second. Avalonia takes frame requests on its own (UI) thread
-    // only: from a worker thread (a model or the game look finished loading) the request goes there.
+    /// <summary>
+    /// Asks for frames at full speed for a second. Avalonia takes frame requests on its own (UI) thread
+    /// only: from a worker thread (a model or the game look finished loading) the request goes there.
+    /// </summary>
     private void Wake()
     {
         _wokeAt = _clock.ElapsedMilliseconds;
@@ -305,66 +405,103 @@ public sealed class GlView : OpenGlControlBase
     }
 
     // ---------------------------------------------------------------- GL objects
+    /// <summary>The ground's, the objects' and the water's shader programs.</summary>
     private uint _terrainProg, _objectProg, _waterProg;
+    /// <summary>The ground's and the water's vertex arrays and buffers, and the ground's index count.</summary>
     private uint _terrainVao, _terrainIndexCount, _waterVao, _terrainVbo, _terrainExtraVbo;
+    /// <summary>More of the ground's and the water's buffers.</summary>
     private uint _terrainEbo, _terrainBiomeVbo, _waterVbo, _waterEbo;
+    /// <summary>The scene changed: the ground and the water are built again at the next frame.</summary>
     private bool _sceneDirty;
 
+    /// <summary>One draw: a model part (mesh and material) with all its copies, as instances.</summary>
     private sealed class Batch
     {
+        /// <summary>The View kind it belongs to (hidden with it).</summary>
         public ObjectKind Kind;
+        /// <summary>Its vertex array, and the buffer of its instances' matrices.</summary>
         public uint Vao, InstanceVbo;
+        /// <summary>Indices per copy, and how many copies.</summary>
         public int IndexCount, Instances;
+        /// <summary>Its texture, 0 for none.</summary>
         public uint Texture;
+        /// <summary>Its material (colour, cut-out, two-sided…).</summary>
         public ModelStore.MaterialData Material = null!;
     }
+    /// <summary>Every batch drawn.</summary>
     private readonly List<Batch> _batches = [];
 
-    // The things of one kind of object (a building piece a player placed apart from the same piece in a
-    // ruin): one model, drawn with one batch per model part. Its batches' instances are rebuilt when one
-    // of its things changes (deleted, moved, added, or shown elsewhere while being moved).
+    /// <summary>
+    /// The things of one kind of object (a building piece a player placed apart from the same piece in a
+    /// ruin): one model, drawn with one batch per model part. Its batches' instances are rebuilt when one
+    /// of its things changes (deleted, moved, added, or shown elsewhere while being moved).
+    /// </summary>
     private sealed class Group
     {
+        /// <summary>Prefab, piece or not, tamed or not.</summary>
         public required (int Prefab, bool Piece, bool Tamed) Key { get; init; }
+        /// <summary>The View kind of its things.</summary>
         public required ObjectKind Kind { get; init; }
+        /// <summary>Its things, as indices into the scene's things.</summary>
         public readonly List<int> Things = [];
-        // The same, to ask whether one is in (a list's Contains made opening an area with tens of
-        // thousands of one piece take seconds: every object asked it).
+        /// <summary>
+        /// The same, to ask whether one is in (a list's Contains made opening an area with tens of
+        /// thousands of one piece take seconds: every object asked it).
+        /// </summary>
         public readonly HashSet<int> Members = [];
+        /// <summary>The model's root scale, applied to every copy.</summary>
         public Vector3 RootScale = Vector3.One;
-        // The model's box in its own frame (for picking), known once read.
+        /// <summary>The model's box in its own frame (for picking), known once read.</summary>
         public (Vector3 Min, Vector3 Max)? Box;
+        /// <summary>Its batches, each with the part's own matrix within the model.</summary>
         public readonly List<(Batch Batch, Matrix4x4 Pre)> Batches = [];
+        /// <summary>Its batches are made (the model read, or the box set up in its place).</summary>
         public bool Ready;
-        // A model was read (else the batches are the stand-in box).
+        /// <summary>A model was read (else the batches are the stand-in box).</summary>
         public bool HasModel;
     }
-    // By prefab, piece or not and tamed or not: tamed creatures are their own View kind.
+    /// <summary>By prefab, piece or not and tamed or not: tamed creatures are their own View kind.</summary>
     private readonly Dictionary<(int, bool, bool), Group> _groups = [];
+    /// <summary>Groups whose instances are built again at the next frame.</summary>
     private readonly HashSet<Group> _dirtyGroups = [];
-    // Things shown somewhere else than where they are, while a move is being made (Select tool).
+    /// <summary>Things shown somewhere else than where they are, while a move is being made (Select tool).</summary>
     private Dictionary<int, WorldScene.Thing> _previews = [];
+    /// <summary>The things were read again (rebuild every group); the overlays are built again.</summary>
     private volatile bool _thingsReset, _overlaysDirty;
-    // The overlays wait for the ground only (not for objects, which show at once): built again 200 ms
-    // after the last time at the most.
+    /// <summary>
+    /// The overlays wait for the ground only (not for objects, which show at once): built again 200 ms
+    /// after the last time at the most.
+    /// </summary>
     private bool _overlaysGroundOnly;
+    /// <summary>When the overlays were last built, on the view's clock.</summary>
     private long _overlaysBuiltAt;
+    /// <summary>
+    /// Each mesh on the graphics card, by name: its vertex buffer, and an index buffer and count per part.
+    /// </summary>
     private readonly Dictionary<string, (uint Vbo, uint[] Ebos, int[] Counts)> _meshGl = [];
-    // Meshes on the graphics card (read by the loaders on worker threads), and about how much the
-    // models and their textures take there. Past the budget, opening another area lets them all go
-    // (that area's are read again): they piled up over a long session, gigabytes with Valheim open.
+    /// <summary>
+    /// Meshes on the graphics card (read by the loaders on worker threads), and about how much the
+    /// models and their textures take there. Past the budget, opening another area lets them all go
+    /// (that area's are read again): they piled up over a long session, gigabytes with Valheim open.
+    /// </summary>
     private readonly ConcurrentDictionary<string, bool> _onGpu = new();
+    /// <summary>About how many bytes the models and their textures take on the graphics card.</summary>
     private long _gpuBytes;
-    // VWE_GPU_BUDGET (bytes): another budget, for the tests.
+    /// <summary>The graphics card budget in bytes (1 GiB); VWE_GPU_BUDGET (bytes): another budget, for the tests.</summary>
     private static readonly long GpuBudget = long.TryParse(Environment.GetEnvironmentVariable("VWE_GPU_BUDGET"), out long b) ? b : 1L << 30;
+    /// <summary>Textures on the graphics card, by name.</summary>
     private readonly Dictionary<string, uint> _textures = [];
-    // Models read on worker threads, waiting to go to the graphics card (on the drawing thread).
+    /// <summary>Models read on worker threads, waiting to go to the graphics card (on the drawing thread).</summary>
     private sealed record ReadyModel(Group Group, ModelStore.Model? Model, Dictionary<string, ModelStore.MeshData> Meshes,
         Dictionary<string, ModelStore.MaterialData> Materials, Dictionary<string, ModelStore.ImageData?> Images);
+    /// <summary>Models read, waiting for the drawing thread.</summary>
     private readonly ConcurrentQueue<ReadyModel> _ready = new();
+    /// <summary>Models still being read.</summary>
     private int _pending;
+    /// <summary>The stand-in box's vertex and index buffers.</summary>
     private uint _boxVbo, _boxEbo;
 
+    /// <summary>Sets up the OpenGL calls and the shader programs.</summary>
     protected override void OnOpenGlInit(GlInterface gl)
     {
         _gl = GL.GetApi(gl.GetProcAddress);
@@ -376,11 +513,13 @@ public sealed class GlView : OpenGlControlBase
         Status?.Invoke($"OpenGL {(_es ? "ES " : "")}{GlVersion.Major}.{GlVersion.Minor}: {_gl.GetStringS(StringName.Renderer)}");
     }
 
-    // The view left the window (the map page is shown): Avalonia drops its OpenGL context and makes a
-    // new one when it comes back. Its buffers, textures and programs are shared with Avalonia's own
-    // context, so they outlive it: all are deleted here (the context is still current), then every name
-    // is forgotten and the next frame builds them again in the new one. Keeping the names drew with
-    // names that meant nothing, or something else, in the new context.
+    /// <summary>
+    /// The view left the window (the map page is shown): Avalonia drops its OpenGL context and makes a
+    /// new one when it comes back. Its buffers, textures and programs are shared with Avalonia's own
+    /// context, so they outlive it: all are deleted here (the context is still current), then every name
+    /// is forgotten and the next frame builds them again in the new one. Keeping the names drew with
+    /// names that meant nothing, or something else, in the new context.
+    /// </summary>
     protected override void OnOpenGlDeinit(GlInterface gl)
     {
         DropLooks();
@@ -419,9 +558,10 @@ public sealed class GlView : OpenGlControlBase
         _sceneDirty = true;
     }
 
+    /// <summary>A shader program owned by this view (deleted with its context).</summary>
     private uint Program(string vs, string fs) => _own.Program(Link(vs, fs));
 
-    // A program not yet anyone's (the game look keeps its own).
+    /// <summary>A program not yet anyone's (the game look keeps its own).</summary>
     private uint Link(string vs, string fs)
     {
         string head = _es ? "#version 300 es\nprecision highp float;\nprecision highp int;\n" : "#version 330 core\n";
@@ -453,7 +593,7 @@ public sealed class GlView : OpenGlControlBase
     }
 
     // ---- The ground: one point per metre, normals from the neighbours, colour from the biome.
-    // Position, normal and colour of rows z0..z1 (9 floats a point).
+    /// <summary>Position, normal and colour of rows z0..z1 (9 floats a point).</summary>
     private static float[] TerrainRows(WorldScene s, int z0, int z1)
     {
         int w = s.W, h = s.H;
@@ -474,7 +614,7 @@ public sealed class GlView : OpenGlControlBase
         return v;
     }
 
-    // Mask uv, ocean depth and limit tint of rows z0..z1 (4 floats a point).
+    /// <summary>Mask uv, ocean depth and limit tint of rows z0..z1 (4 floats a point).</summary>
     private static float[] ExtraRows(WorldScene s, int z0, int z1)
     {
         int w = s.W, h = s.H;
@@ -489,7 +629,7 @@ public sealed class GlView : OpenGlControlBase
         return extra;
     }
 
-    // After an edit: the changed rows (and their neighbours, whose normals move) to the graphics card.
+    /// <summary>After an edit: the changed rows (and their neighbours, whose normals move) to the graphics card.</summary>
     private unsafe void UpdateTerrain(WorldScene s, int z0, int z1)
     {
         z0 = Math.Max(0, z0 - 1);
@@ -508,7 +648,7 @@ public sealed class GlView : OpenGlControlBase
         _look?.UpdateRows(s, z0, z1);
     }
 
-    // The last area's ground and sea.
+    /// <summary>The last area's ground and sea.</summary>
     private void DeleteTerrain()
     {
         _own.DeleteVertexArray(_terrainVao);
@@ -520,6 +660,10 @@ public sealed class GlView : OpenGlControlBase
         _terrainVao = _waterVao = _terrainVbo = _terrainEbo = _terrainBiomeVbo = _terrainExtraVbo = _waterVbo = _waterEbo = 0;
     }
 
+    /// <summary>
+    /// The ground (one point per metre, with the game's terrain shader's extra values) and the sea, on the graphics
+    /// card.
+    /// </summary>
     private unsafe void BuildTerrain(WorldScene s)
     {
         DeleteTerrain();
@@ -603,8 +747,10 @@ public sealed class GlView : OpenGlControlBase
     }
 
     // ---- Objects: read each kind's model on worker threads; the drawing thread uploads them.
+    /// <summary>A prefab's name: the model store's, else the catalogue's display name; null when unknown.</summary>
     private string? NameOf(int prefab) => Models?.NameOf(prefab) ?? Terrain.PrefabCatalog.DisplayName(prefab);
 
+    /// <summary>A new area's objects: every thing in its group, and every group's model read on worker threads.</summary>
     private void StartModels(WorldScene s)
     {
         lock (_groups)
@@ -633,7 +779,7 @@ public sealed class GlView : OpenGlControlBase
         _overlaysDirty = true;
     }
 
-    // The group a thing belongs to (made, and its model read, if it is the first of its kind).
+    /// <summary>The group a thing belongs to (made, and its model read, if it is the first of its kind).</summary>
     private Group GroupOf(WorldScene s, int i, bool start = true)
     {
         var t = s.Things[i];
@@ -659,7 +805,7 @@ public sealed class GlView : OpenGlControlBase
         return g;
     }
 
-    // A kind's group without things yet (the Place tool's ghosts), its model read if new.
+    /// <summary>A kind's group without things yet (the Place tool's ghosts), its model read if new.</summary>
     private Group KindGroup(int prefab, bool piece)
     {
         lock (_groups)
@@ -674,12 +820,15 @@ public sealed class GlView : OpenGlControlBase
         }
     }
 
+    /// <summary>The buffer of the ghosts' and rooms' instances, made at first use.</summary>
     private uint _ghostVbo;
-    // The kinds the paste's ghost drew this frame (their posts are left out).
+    /// <summary>The kinds the paste's ghost drew this frame (their posts are left out).</summary>
     private HashSet<int>? _pasteGhosts;
-    // The Place tool's preview, or the Paste tool's (the building where it would land), drawn with the
-    // models, see-through. Kinds whose model is not there yet keep their posts (DrawPlace, the paste's
-    // outline). Returns the prefabs drawn.
+    /// <summary>
+    /// The Place tool's preview, or the Paste tool's (the building where it would land), drawn with the
+    /// models, see-through. Kinds whose model is not there yet keep their posts (DrawPlace, the paste's
+    /// outline). Returns the prefabs drawn.
+    /// </summary>
     private unsafe HashSet<int> DrawGhosts(WorldScene s)
     {
         var drawn = new HashSet<int>();
@@ -701,9 +850,11 @@ public sealed class GlView : OpenGlControlBase
         return drawn;
     }
 
-    // Models at places that are not things of the scene, one draw per model part: see-through (ghost:
-    // the Place and Paste previews) or solid (dungeon rooms). Kinds whose model is not read yet, or that
-    // have none, are skipped (and left out of `drawn`).
+    /// <summary>
+    /// Models at places that are not things of the scene, one draw per model part: see-through (ghost:
+    /// the Place and Paste previews) or solid (dungeon rooms). Kinds whose model is not read yet, or that
+    /// have none, are skipped (and left out of <paramref name="drawn"/>).
+    /// </summary>
     private unsafe void DrawInstances(WorldScene s, IEnumerable<(int Prefab, Vector3 Position, Vector3 Rotation, float Scale)> shown, bool ghost, HashSet<int>? drawn = null)
     {
         if (_ghostVbo == 0)
@@ -783,8 +934,10 @@ public sealed class GlView : OpenGlControlBase
         _gl.BindVertexArray(0);
     }
 
-    // The rooms of the area's dungeons (not objects of the save: entries in their dungeon's data, see
-    // DungeonRooms), drawn like objects; a room shown elsewhere by the Dungeon tool (moving, adding) too.
+    /// <summary>
+    /// The rooms of the area's dungeons (not objects of the save: entries in their dungeon's data, see
+    /// DungeonRooms), drawn like objects; a room shown elsewhere by the Dungeon tool (moving, adding) too.
+    /// </summary>
     private void DrawRooms(WorldScene s)
     {
         var shown = new List<(int, Vector3, Vector3, float)>();
@@ -801,6 +954,7 @@ public sealed class GlView : OpenGlControlBase
         }
     }
 
+    /// <summary>Grows the per-thing arrays (boxes, kinds) to hold at least <paramref name="n"/> things.</summary>
     private void EnsureSize(int n)
     {
         lock (_objLock)
@@ -817,6 +971,7 @@ public sealed class GlView : OpenGlControlBase
         }
     }
 
+    /// <summary>Counts the things still there by kind and sends it (<c>KindCounts</c>, on the UI thread).</summary>
     private void SendKindCounts(WorldScene s)
     {
         var counts = new Dictionary<ObjectKind, int>();
@@ -838,7 +993,7 @@ public sealed class GlView : OpenGlControlBase
         Dispatcher.UIThread.Post(() => KindCounts?.Invoke(counts));
     }
 
-    // Things appeared, went or came back (EditSession): their groups are drawn again.
+    /// <summary>Things appeared, went or came back (EditSession): their groups are drawn again.</summary>
     private void OnThingsChanged(IReadOnlyList<int> indices)
     {
         var s = Scene;
@@ -866,6 +1021,7 @@ public sealed class GlView : OpenGlControlBase
         Wake();
     }
 
+    /// <summary>Has a group's instances built again at the next frame.</summary>
     private void MarkDirty(Group g)
     {
         lock (_dirtyGroups)
@@ -874,7 +1030,7 @@ public sealed class GlView : OpenGlControlBase
         }
     }
 
-    // Shows things somewhere else than where they are (a move in progress), or (null) where they are.
+    /// <summary>Shows things somewhere else than where they are (a move in progress), or (null) where they are.</summary>
     internal void SetPreviews(Dictionary<int, WorldScene.Thing>? previews)
     {
         var s = Scene;
@@ -899,9 +1055,11 @@ public sealed class GlView : OpenGlControlBase
         Wake();
     }
 
-    // Reads a group's model on a worker thread; the drawing thread sends it to the graphics card. Waiting
-    // for its turn holds no thread (hundreds of kinds each blocking one starved the thread pool: the
-    // next area's loading and the map's search waited seconds behind them).
+    /// <summary>
+    /// Reads a group's model on a worker thread; the drawing thread sends it to the graphics card. Waiting
+    /// for its turn holds no thread (hundreds of kinds each blocking one starved the thread pool: the
+    /// next area's loading and the map's search waited seconds behind them).
+    /// </summary>
     private void Load(Group g)
     {
         Task.Run(async () =>
@@ -982,11 +1140,15 @@ public sealed class GlView : OpenGlControlBase
             Wake();
         });
     }
-    // Static: one 3D view lives as long as the app (and an instance field would make the view disposable).
+    /// <summary>
+    /// How many models are read at once (half the processors, at least two). Static: one 3D view lives as long as
+    /// the app (and an instance field would make the view disposable).
+    /// </summary>
     private static readonly SemaphoreSlim LoadGate = new(Math.Max(2, Environment.ProcessorCount / 2));
+    /// <summary>Guards the per-thing arrays (boxes, kinds), which the loaders and the drawing thread both use.</summary>
     private readonly Lock _objLock = new();
 
-    // A group's instances (and its things' boxes) from where its things are now.
+    /// <summary>A group's instances (and its things' boxes) from where its things are now.</summary>
     private unsafe void Rebuild(WorldScene s, Group g)
     {
         var list = new List<Matrix4x4>();
@@ -1032,7 +1194,7 @@ public sealed class GlView : OpenGlControlBase
         }
     }
 
-    // Every model and texture off the graphics card (after DropObjects: no batch uses them).
+    /// <summary>Every model and texture off the graphics card (after DropObjects: no batch uses them).</summary>
     private void DropModels()
     {
         foreach (var (vbo, ebos, _) in _meshGl.Values)
@@ -1058,7 +1220,7 @@ public sealed class GlView : OpenGlControlBase
         _gpuBytes = 0;
     }
 
-    // Everything read again (after a save): the old batches go.
+    /// <summary>Everything read again (after a save): the old batches go.</summary>
     private void DropObjects()
     {
         foreach (var b in _batches)
@@ -1079,10 +1241,13 @@ public sealed class GlView : OpenGlControlBase
             Array.Clear(_known);
         }
     }
+    /// <summary>Textures a loader has taken to read (guarded by <c>_textures</c>), so no other reads them too.</summary>
     private readonly HashSet<string> _claimed = [];
 
-    // Where an object goes, in view space: Unity's rotation (Euler degrees, applied z, x, then y)
-    // mirrored in z, like the web editor's objects.js.
+    /// <summary>
+    /// Where an object goes, in view space: Unity's rotation (Euler degrees, applied z, x, then y)
+    /// mirrored in z, like the web editor's objects.js.
+    /// </summary>
     private static Matrix4x4 Placement(WorldScene s, WorldScene.Thing t, Vector3 rootScale)
     {
         const float D = MathF.PI / 180f;
@@ -1093,8 +1258,10 @@ public sealed class GlView : OpenGlControlBase
         return Matrix4x4.CreateScale(scale) * Matrix4x4.CreateFromQuaternion(q) * Matrix4x4.CreateTranslation(pos);
     }
 
-    // A loaded model's textures, then its batches. A model read for an area (or a look) left since
-    // keeps only its textures: its group is gone, and its things' indices are another scene's.
+    /// <summary>
+    /// A loaded model's textures, then its batches. A model read for an area (or a look) left since
+    /// keeps only its textures: its group is gone, and its things' indices are another scene's.
+    /// </summary>
     private unsafe void Upload(ReadyModel r)
     {
         UploadTextures(r);
@@ -1104,7 +1271,7 @@ public sealed class GlView : OpenGlControlBase
         }
     }
 
-    // The group is still the view's (not one of an area left since).
+    /// <summary>The group is still the view's (not one of an area left since).</summary>
     private bool Current(Group g)
     {
         lock (_groups)
@@ -1113,8 +1280,10 @@ public sealed class GlView : OpenGlControlBase
         }
     }
 
-    // A loaded model's textures. Also for a model dropped before it was drawn (a new area): its loader
-    // claimed them, so no other loader reads them.
+    /// <summary>
+    /// A loaded model's textures. Also for a model dropped before it was drawn (a new area): its loader
+    /// claimed them, so no other loader reads them.
+    /// </summary>
     private unsafe void UploadTextures(ReadyModel r)
     {
         foreach (var (file, img) in r.Images)
@@ -1143,6 +1312,7 @@ public sealed class GlView : OpenGlControlBase
         }
     }
 
+    /// <summary>A loaded model's batches (or the stand-in box when there is no model), then its instances.</summary>
     private unsafe void UploadModel(ReadyModel r)
     {
         var g = r.Group;
@@ -1178,6 +1348,10 @@ public sealed class GlView : OpenGlControlBase
         Interlocked.Decrement(ref _pending);
     }
 
+    /// <summary>
+    /// A mesh on the graphics card: its vertex buffer and one index buffer per part, uploaded the first time
+    /// (<paramref name="md"/> may be null only when it is already there). The model store then forgets the mesh.
+    /// </summary>
     private unsafe (uint Vbo, uint[] Ebos, int[] Counts) MeshGl(string id, ModelStore.MeshData? md)
     {
         if (_meshGl.TryGetValue(id, out var m))
@@ -1211,6 +1385,7 @@ public sealed class GlView : OpenGlControlBase
         return _meshGl[id] = (vbo, ebos, counts);
     }
 
+    /// <summary>The stand-in box's mesh: a unit cube centred on 0, flat normals per face.</summary>
     private (uint, uint[], int[]) BoxMesh()
     {
         const string Id = "\0box";
@@ -1237,6 +1412,9 @@ public sealed class GlView : OpenGlControlBase
         return MeshGl(Id, new ModelStore.MeshData([.. verts], [[.. idx]]));
     }
 
+    /// <summary>
+    /// A batch for one part of a group's model: the mesh part, its material, and the part's matrix within the model.
+    /// </summary>
     private unsafe void AddBatch(Group g, (uint Vbo, uint[] Ebos, int[] Counts) mesh, int sub, ModelStore.MaterialData mat, Matrix4x4 pre)
     {
         var b = new Batch { Kind = g.Kind, Material = mat, IndexCount = mesh.Counts[sub], Instances = 0 };
@@ -1268,6 +1446,11 @@ public sealed class GlView : OpenGlControlBase
     }
 
     // ---------------------------------------------------------------- drawing
+    /// <summary>
+    /// Draws a frame: a new area's ground and objects set up first, models that arrived uploaded (a few a frame),
+    /// the camera moved by the keys, then the ground, objects, tools and water. Asks for the next frame while
+    /// something happens.
+    /// </summary>
     protected override unsafe void OnOpenGlRender(GlInterface gl, int fb)
     {
         long now = _clock.ElapsedMilliseconds;
@@ -1567,10 +1750,12 @@ public sealed class GlView : OpenGlControlBase
         }
     }
 
-    // The smaller picture for a lower 3D resolution (made again when the size changes).
+    /// <summary>The smaller picture for a lower 3D resolution (made again when the size changes).</summary>
     private uint _lowFbo, _lowColor, _lowDepth;
+    /// <summary>The smaller picture's size in pixels.</summary>
     private int _lowW, _lowH;
 
+    /// <summary>The smaller picture, made again when <paramref name="w"/> × <paramref name="h"/> is not its size.</summary>
     private void LowResolution(int w, int h)
     {
         if (_lowFbo != 0 && w == _lowW && h == _lowH)
@@ -1597,6 +1782,7 @@ public sealed class GlView : OpenGlControlBase
         _gl.FramebufferRenderbuffer(FramebufferTarget.Framebuffer, FramebufferAttachment.DepthAttachment, RenderbufferTarget.Renderbuffer, _lowDepth);
     }
 
+    /// <summary>Counts a frame for the frame rate and the log, and makes a report twice a second.</summary>
     private void Measure(long now, double work, bool camMoved, int pw, int ph)
     {
         _frames.Add((now, work));
@@ -1614,12 +1800,18 @@ public sealed class GlView : OpenGlControlBase
         }
     }
 
-    // --shot and --bench (Options): once every model is loaded, save a picture, then turn the camera
-    // for the given time and print the frame rates, then close the app.
+    /// <summary>
+    /// When the area and its models were all in, on the view's clock (-1 until then). --shot and --bench
+    /// (Options) wait for it: once every model is loaded, save a picture, then turn the camera for the given
+    /// time and print the frame rates, then close the app.
+    /// </summary>
     private long _loadedAt = -1;
+    /// <summary>The area <c>_loadedAt</c> was measured for (a picture of another area waits for it to load).</summary>
     private WorldScene? _loadedScene;
-    // The test driver: its pictures (once the area and its models are in) and its frame-rate measure
-    // (the camera turns on its own for a while, then the rates are given back).
+    /// <summary>
+    /// The test driver: its pictures (once the area and its models are in) and its frame-rate measure
+    /// (the camera turns on its own for a while, then the rates are given back).
+    /// </summary>
     private unsafe void Automate(long now, int pw, int ph)
     {
         if (_picture == null && _bench == null)
@@ -1669,17 +1861,23 @@ public sealed class GlView : OpenGlControlBase
         }
     }
 
+    /// <summary>A frame-rate measure under way.</summary>
     private sealed class Bench
     {
+        /// <summary>How long the camera turns.</summary>
         public required double Seconds { get; init; }
+        /// <summary>When it started, on the view's clock (-1 until the first frame).</summary>
         public long From { get; set; } = -1;
+        /// <summary>When each frame was drawn.</summary>
         public List<long> Frames { get; } = [];
+        /// <summary>The frame rates, as a line of text.</summary>
         public TaskCompletionSource<string> Done { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
     }
 
+    /// <summary>The frame-rate measure under way, null when none.</summary>
     private volatile Bench? _bench;
 
-    // The camera turns on its own for this many seconds; the frame rates come back.
+    /// <summary>The camera turns on its own for this many seconds; the frame rates come back.</summary>
     internal Task<string> Benchmark(double seconds)
     {
         var b = new Bench { Seconds = seconds };
@@ -1688,7 +1886,7 @@ public sealed class GlView : OpenGlControlBase
         return b.Done.Task;
     }
 
-    // OpenGL's perspective (depth from -1 to 1), as a System.Numerics (row vector) matrix.
+    /// <summary>OpenGL's perspective (depth from -1 to 1), as a System.Numerics (row vector) matrix.</summary>
     internal static Matrix4x4 Perspective(float fovY, float aspect, float near, float far)
     {
         float f = 1 / MathF.Tan(fovY / 2);
@@ -1700,6 +1898,10 @@ public sealed class GlView : OpenGlControlBase
     }
 
     // ---------------------------------------------------------------- camera input
+    /// <summary>
+    /// Moves the camera by the keys held (WASD or arrows; Space and C up and down when flying; Shift faster when
+    /// walking or flying) for <paramref name="dt"/> seconds (at most 0.1). True when it moved.
+    /// </summary>
     private bool MoveWithKeys(float dt)
     {
         Vector3 d = Vector3.Zero;
@@ -1768,7 +1970,7 @@ public sealed class GlView : OpenGlControlBase
         return true;
     }
 
-    // The target point stays on the ground (or the water) under it; in a dungeon, at its height.
+    /// <summary>The target point stays on the ground (or the water) under it; in a dungeon, at its height.</summary>
     private void FollowGround()
     {
         var s = Scene;
@@ -1780,9 +1982,11 @@ public sealed class GlView : OpenGlControlBase
         _target.Y = Math.Max(s.Heights[gz * s.W + gx], s.Water);
     }
 
-    // Mouse and keys. The OpenGL picture is not something Avalonia can hit-test (pointer events go
-    // through it), so a transparent surface laid over the view takes them and hands them here; keys
-    // come from the window, whatever has the focus.
+    /// <summary>
+    /// Mouse and keys. The OpenGL picture is not something Avalonia can hit-test (pointer events go
+    /// through it), so a transparent surface laid over the view takes them and hands them here; keys
+    /// come from the window, whatever has the focus.
+    /// </summary>
     public void Attach(Control surface, Window window)
     {
         surface.PointerPressed += (_, e) =>
@@ -2123,25 +2327,43 @@ public sealed class GlView : OpenGlControlBase
         window.Deactivated += (_, _) => { lock (_keys) { _keys.Clear(); } };
     }
 
+    /// <summary>Where the mouse button went down, to tell a click from a drag.</summary>
     private Point? _pressAt;
 
-    // The drag slides the view (Space + left, Shift + right).
+    /// <summary>The drag slides the view (Space + left, Shift + right).</summary>
     internal bool Panning { get; private set; }
 
+    /// <summary>The area shown, null before one is.</summary>
     internal WorldScene? Scene { get; private set; }
-    // The Select tool takes the left button (see SelectTool); otherwise it slides the view and clicks pick.
+    /// <summary>
+    /// The Select tool takes the left button (see SelectTool); otherwise it slides the view and clicks pick.
+    /// </summary>
     public SelectTool SelectTool { get; }
 
+    /// <summary>The tool in use; leaving Select commits a move under way.</summary>
     public ToolMode Mode { get; set { if (value != ToolMode.Select) { SelectTool.Commit(); } field = value; Wake(); } }
+    /// <summary>True while the Select tool is in use.</summary>
     public bool SelectMode => Mode == ToolMode.Select;
+    /// <summary>The Measure tool's tape.</summary>
     public MeasureTool Tape { get; } = new();
 
     // ---- The Dungeon tool: its state, and what it shows (the free openings, the room selected or
     // pointed at, and the room a click would add, see-through).
+    /// <summary>
+    /// The Dungeon tool: its state, and what it shows (the free openings, the room selected or pointed at, and
+    /// the room a click would add, see-through).
+    /// </summary>
     public DungeonTool Dungeon { get; } = new();
 
+    /// <summary>
+    /// The Dungeon tool's lines on the graphics card: openings, the picked room, the room to add, door joints.
+    /// </summary>
     private uint _dungeonVao, _dungeonVbo, _dungeonPickVao, _dungeonPickVbo, _dungeonAddVao, _dungeonAddVbo, _dungeonDoorVao, _dungeonDoorVbo, _dungeonJointVao, _dungeonJointVbo;
 
+    /// <summary>
+    /// The Dungeon tool's marks: free openings (green), joints that can take a door (blue with one, orange without),
+    /// the room selected or pointed at, and the room a click adds (yellow, red when it would not fit).
+    /// </summary>
     private void DrawDungeon(WorldScene s, Matrix4x4 vp)
     {
         if (Mode != ToolMode.Dungeon || Dungeon.Dungeon is not { } d)
@@ -2224,6 +2446,10 @@ public sealed class GlView : OpenGlControlBase
         }
     }
 
+    /// <summary>
+    /// The twelve edges of a turned box (centre, half size at least 25 cm, turn) as line pairs, through
+    /// <paramref name="view"/>.
+    /// </summary>
     private static void BoxLines(List<float> into, (Vector3 C, Vector3 H, Quaternion R) box, Func<Vector3, Vector3> view)
     {
         Vector3 h = new(Math.Max(box.H.X, 0.25f), Math.Max(box.H.Y, 0.25f), Math.Max(box.H.Z, 0.25f));
@@ -2235,12 +2461,15 @@ public sealed class GlView : OpenGlControlBase
             into.AddRange([p.X, p.Y, p.Z, q.X, q.Y, q.Z]);
         }
     }
-    // Shape tool: a click on the ground (grid point), and the radius its outline shows.
+    /// <summary>Shape tool: a click on the ground (grid point).</summary>
     public event Action<float, float>? ShapeClicked;
+    /// <summary>The radius the Shape tool's outline shows, in metres.</summary>
     public float ShapeRadius { get; set; } = 16;
 
-    // The Mountain tool's shape (metres added east and north of the middle), drawn under the pointer as
-    // a mesh on the ground before clicking; null: none.
+    /// <summary>
+    /// The Mountain tool's shape (metres added east and north of the middle), drawn under the pointer as
+    /// a mesh on the ground before clicking; null: none.
+    /// </summary>
     internal Func<float, float, float>? MountainPreview
     {
         get; set
@@ -2250,22 +2479,28 @@ public sealed class GlView : OpenGlControlBase
             RequestNextFrameRendering();
         }
     }
+    /// <summary>The Path tool's state (its points, width, soft edge).</summary>
     public PathTool Path { get; } = new();
-    // Stamp once: a click on the ground (grid point).
+    /// <summary>Stamp once: a click on the ground (grid point).</summary>
     public event Action<float, float>? StampClicked;
-    // Alt + click with a brush: the ground's height there (shift: Alt + Shift).
+    /// <summary>Alt + click with a brush: the ground's height there (shift: Alt + Shift).</summary>
     public event Action<float, bool>? BrushAltClick;
+    /// <summary>The Area tool's state (its outline).</summary>
     public AreaTool Area { get; } = new();
-    // The Place tool's mouse (set by the window).
+    /// <summary>The Place tool's mouse (set by the window).</summary>
     public PlaceInput? Place { get; set; }
+    /// <summary>The left button went down with the Place tool.</summary>
     private bool _placeDown;
+    /// <summary>The Paste tool's state (what is pasted, and where).</summary>
     public PasteTool Paste { get; } = new();
-    // Paste tool: a click on the ground (grid point).
+    /// <summary>Paste tool: a click on the ground (grid point).</summary>
     public event Action<Vector2>? PasteClicked;
+    /// <summary>The left button went down with the Area tool.</summary>
     private bool _areaDown;
+    /// <summary>The left button went down with the Path tool.</summary>
     private bool _pathDown;
 
-    // Where a grid point (on the ground, lifted a little) is on the view, or null behind the camera.
+    /// <summary>Where a grid point (on the ground, lifted a little) is on the view, or null behind the camera.</summary>
     internal Point? ScreenOfGrid(Vector2 g, float lift = 0.6f)
     {
         var s = Scene;
@@ -2283,17 +2518,19 @@ public sealed class GlView : OpenGlControlBase
         return new Point((q.X / q.W + 1) / 2 * size.Width, (1 - q.Y / q.W) / 2 * size.Height);
     }
 
-    // The grid point of the ground under a point of the view (null: none).
+    /// <summary>The grid point of the ground under a point of the view (null: none).</summary>
     internal Vector2? GridAt(Point at, Size size) => Scene is { } s && GroundAt(s, _lastViewProj, at, size) is { } g ? new Vector2(g.X, g.Z) : null;
 
+    /// <summary>The ground's height at a grid point (0 with no area).</summary>
     internal float GridHeight(Vector2 g)
     {
         var s = Scene;
         return s == null ? 0 : Picking.HeightAt(s, g.X - (s.W - 1) / 2f, -(g.Y - (s.H - 1) / 2f));
     }
+    /// <summary>The left button went down with the Select tool.</summary>
     private bool _selectDown;
 
-    // The world point (x east, height, z north) of the ground under a point of the view, or null.
+    /// <summary>The world point (x east, height, z north) of the ground under a point of the view, or null.</summary>
     internal Vector3? WorldAt(Point at, Size size)
     {
         var s = Scene;
@@ -2305,12 +2542,13 @@ public sealed class GlView : OpenGlControlBase
         return new Vector3(wx, Picking.HeightAt(s, g.X - (s.W - 1) / 2f, -(g.Z - (s.H - 1) / 2f)), wz);
     }
 
+    /// <summary>Where the camera was at the last frame, in view space.</summary>
     private Vector3 _lastEye;
-    // For tests (nothing is drawn headless): the camera the mouse is read with.
-    // The camera turned onto a world point, close (the map's search: the object found).
-    // The orbit camera on world point (x, z) at the ground, turned yaw° around it, looking down pitch°
-    // (the documentation's pictures, through the driver).
-    // height: around that height instead (inside a dungeon).
+    /// <summary>
+    /// The orbit camera on world point (x, z) at the ground, turned yaw° around it, looking down pitch°
+    /// (the documentation's pictures, through the driver).
+    /// height: around that height instead (inside a dungeon).
+    /// </summary>
     internal void Orbit(float x, float z, float yawDegrees, float pitchDegrees, float distance, float? height = null)
     {
         if (Scene is not { } s)
@@ -2330,6 +2568,7 @@ public sealed class GlView : OpenGlControlBase
         Wake();
     }
 
+    /// <summary>The camera turned onto a world point, close (the map's search: the object found).</summary>
     internal void Focus(Vector3 world, float distance = 35)
     {
         if (Scene is not { } s)
@@ -2344,7 +2583,7 @@ public sealed class GlView : OpenGlControlBase
         Wake();
     }
 
-    // The camera with its target in world metres: kept when another area opens (null: no area).
+    /// <summary>The camera with its target in world metres: kept when another area opens (null: no area).</summary>
     internal (float Yaw, float Pitch, float Distance, Vector3 World)? WorldCamera
     {
         get
@@ -2373,8 +2612,10 @@ public sealed class GlView : OpenGlControlBase
         }
     }
 
-    // Live: the players online, in world metres (blue posts with a beam up; their names are labels
-    // the window places over the view).
+    /// <summary>
+    /// Live: the players online, in world metres (blue posts with a beam up; their names are labels
+    /// the window places over the view).
+    /// </summary>
     internal IReadOnlyList<(string Name, Vector3 World)> Players
     {
         get; set
@@ -2384,9 +2625,10 @@ public sealed class GlView : OpenGlControlBase
         }
     } = [];
 
+    /// <summary>The players' posts on the graphics card.</summary>
     private uint _playersVao, _playersVbo;
 
-    // A player's post: a body 1.9 m tall (rings and sides) and a 40 m beam, in view space.
+    /// <summary>A player's post: a body 1.9 m tall (rings and sides) and a 40 m beam, in view space.</summary>
     internal static float[] PlayerPosts(WorldScene s, IEnumerable<(string Name, Vector3 World)> players)
     {
         var data = new List<float>();
@@ -2411,6 +2653,7 @@ public sealed class GlView : OpenGlControlBase
         return [.. data];
     }
 
+    /// <summary>The live players' posts, light blue.</summary>
     private void DrawPlayers(WorldScene s, Matrix4x4 vp)
     {
         if (Players.Count == 0)
@@ -2420,19 +2663,23 @@ public sealed class GlView : OpenGlControlBase
         DrawLines(ref _playersVao, ref _playersVbo, PlayerPosts(s, Players), vp, new Vector4(0.31f, 0.76f, 1, 1));
     }
 
+    /// <summary>For tests (nothing is drawn headless): the camera the mouse is read with.</summary>
     internal void SetCamera(Vector3 eye, Vector3 target, float aspect)
     {
         _lastEye = eye;
         _lastViewProj = Matrix4x4.CreateLookAt(eye, target, Vector3.UnitY) * Perspective(60 * MathF.PI / 180, aspect, 0.5f, 6000);
     }
+    /// <summary>The camera's view × projection of the last frame (or <c>SetCamera</c>).</summary>
     internal Matrix4x4 ViewProj => _lastViewProj;
 
-    // The ray from the camera through a point of the view (view space).
+    /// <summary>The ray from the camera through a point of the view (view space).</summary>
     internal (Vector3 O, Vector3 D) RayAt(Point at, Size size) =>
         Picking.Ray(_lastViewProj, (float)(at.X / size.Width * 2 - 1), (float)(1 - at.Y / size.Height * 2));
 
-    // Where the Select tool's handles go: the middle of the selection (following a move in progress), in
-    // view space, and their scale (they keep their size on screen). Null when nothing is selected.
+    /// <summary>
+    /// Where the Select tool's handles go: the middle of the selection (following a move in progress), in
+    /// view space, and their scale (they keep their size on screen). Null when nothing is selected.
+    /// </summary>
     internal (Vector3 Centre, float Scale)? GizmoAt()
     {
         var s = Scene;
@@ -2464,7 +2711,11 @@ public sealed class GlView : OpenGlControlBase
         return (c, Vector3.Distance(_lastEye, c) * 0.07f);
     }
 
+    /// <summary>Each move handle's triangles on the graphics card, made at first use.</summary>
     private readonly Dictionary<Gizmo.Handle, (uint Vao, int Count)> _gizmoGl = [];
+    /// <summary>
+    /// The Select tool's move handles over the selection, over everything; the one under the pointer lit.
+    /// </summary>
     private unsafe void DrawGizmo(WorldScene s, Matrix4x4 vp)
     {
         if (GizmoAt() is not var (c, scale))
@@ -2513,7 +2764,9 @@ public sealed class GlView : OpenGlControlBase
         _gl.Enable(EnableCap.DepthTest);
     }
 
+    /// <summary>The lasso changed: its lines are made again at the next frame.</summary>
     private volatile bool _lassoDirty;
+    /// <summary>Tells the view the Select tool's lasso changed.</summary>
     internal void LassoChanged()
     {
         _lassoDirty = true;
@@ -2521,18 +2774,24 @@ public sealed class GlView : OpenGlControlBase
     }
 
     // ---- Tools: a sculpt or paint brush (null: looking around and picking objects).
+    /// <summary>The sculpt or paint brush in use; null: looking around and picking objects.</summary>
     public BrushTool? Tool { get; set { field = value; Wake(); } }
-    // A stroke finished, with what to say about it ("" when nothing).
+    /// <summary>A stroke finished, with what to say about it ("" when nothing).</summary>
     public event Action<string>? StrokeEnded;
+    /// <summary>Where the pointer is over the view, null when it is outside.</summary>
     private Point? _pointer;
+    /// <summary>The size of the surface taking the mouse, in its own units.</summary>
     private Size _surfaceSize;
+    /// <summary>A brush stroke is on (the left button held).</summary>
     private volatile bool _brushDown;
+    /// <summary>The brush's grid point under the pointer at the last frame, null when off the ground.</summary>
     private (float X, float Z)? _hover;
-    // For tests: the brush's grid point under the mouse, and whether it is painting.
+    /// <summary>For tests: the brush's grid point under the mouse.</summary>
     internal (float X, float Z)? Hover => _hover;
+    /// <summary>For tests: whether the brush is painting.</summary>
     internal bool BrushDown => _brushDown;
 
-    // The grid point (fractional) of the ground under a point of the view, or null.
+    /// <summary>The grid point (fractional) of the ground under a point of the view, or null.</summary>
     private static (float X, float Z)? GroundAt(WorldScene s, Matrix4x4 vp, Point at, Size size)
     {
         if (size.Width <= 0 || size.Height <= 0)
@@ -2548,19 +2807,20 @@ public sealed class GlView : OpenGlControlBase
         return (p.X + (s.W - 1) / 2f, -p.Z + (s.H - 1) / 2f);
     }
 
-    // The ground's height at a world point.
+    /// <summary>The ground's height at a world point.</summary>
     internal float GroundHeight(float wx, float wz)
     {
         var s = Scene;
         return s == null ? 0 : Picking.HeightAt(s, wx - s.Cx, -(wz - s.Cz));
     }
 
-    // Lines (pairs of view-space points) drawn over everything in one colour, refilled every call.
-    // Half a tool line's width per metre from the eye (set each frame from the view's size).
+    /// <summary>Half a tool line's width per metre from the eye (set each frame from the view's size).</summary>
     private float _linePx = 0.0015f;
 
-    // Line segments (pairs of points) as thin strips facing the eye, `width` times a tool line's
-    // width: they stay whole at any resolution and angle, where 1-pixel lines broke into dashes.
+    /// <summary>
+    /// Line segments (pairs of points) as thin strips facing the eye, <paramref name="width"/> times a tool line's
+    /// width: they stay whole at any resolution and angle, where 1-pixel lines broke into dashes.
+    /// </summary>
     private float[] Thicken(float[] seg, float width)
     {
         float[] o = new float[seg.Length / 6 * 18];
@@ -2595,7 +2855,18 @@ public sealed class GlView : OpenGlControlBase
         return n == o.Length ? o : o[..n];
     }
 
-    // width: for line segments, times a tool line's width (0: 1-pixel lines).
+    /// <summary>
+    /// Lines (pairs of view-space points) drawn over everything in one colour, refilled every call;
+    /// <paramref name="vao"/> and <paramref name="vbo"/> are made at the first.
+    /// </summary>
+    /// <param name="vao">The vertex array kept for these lines (0 until made).</param>
+    /// <param name="vbo">Its buffer (0 until made).</param>
+    /// <param name="data">The points, three floats each.</param>
+    /// <param name="vp">The camera's view × projection.</param>
+    /// <param name="color">The colour, with alpha (used when <paramref name="blend"/>).</param>
+    /// <param name="kind">Lines, or triangles as they are.</param>
+    /// <param name="blend">See-through (alpha).</param>
+    /// <param name="width">For line segments, times a tool line's width (0: 1-pixel lines).</param>
     private unsafe void DrawLines(ref uint vao, ref uint vbo, float[] data, Matrix4x4 vp, Vector4 color, PrimitiveType kind = PrimitiveType.Lines, bool blend = false, float width = 1)
     {
         if (kind == PrimitiveType.Lines && width > 0)
@@ -2647,14 +2918,18 @@ public sealed class GlView : OpenGlControlBase
         _gl.Enable(EnableCap.DepthTest);
     }
 
-    // Whether a new object (id < 0) is in the game already (live: applied); such objects lose their marker.
+    /// <summary>
+    /// Whether a new object (id &lt; 0) is in the game already (live: applied); such objects lose their marker.
+    /// </summary>
     public Func<int, bool> InGame { get; set; } = _ => false;
 
-    // The green marks on new objects can be hidden (View: Unsaved marks).
+    /// <summary>The green marks on new objects can be hidden (View: Unsaved marks).</summary>
     public bool ShowNewMarkers { get; set; } = true;
 
-    // The new objects not saved (or applied) yet, as the web editor marked them: a green dot of the same
-    // size on screen just above each, drawn over everything, for the kinds shown.
+    /// <summary>
+    /// The new objects not saved (or applied) yet, as the web editor marked them: a green dot of the same
+    /// size on screen just above each, drawn over everything, for the kinds shown.
+    /// </summary>
     internal List<Vector3> NewMarkers(WorldScene s)
     {
         var list = new List<Vector3>();
@@ -2675,10 +2950,13 @@ public sealed class GlView : OpenGlControlBase
         return list;
     }
 
-    // The support check (the Workshop): each building piece tinted as the game's build mode shows its
-    // support (SupportTint). Per thing index: -1 full, 0..1, or -2 breaks. Null: off.
+    /// <summary>
+    /// The support check (the Workshop): each building piece tinted as the game's build mode shows its
+    /// support (SupportTint). Per thing index: -1 full, 0..1, or -2 breaks. Null: off.
+    /// </summary>
     private volatile Dictionary<int, float>? _support;
 
+    /// <summary>Turns the support check on (values per thing index, see <c>_support</c>) or off (null).</summary>
     public void ShowSupport(Dictionary<int, float>? support)
     {
         _support = support;
@@ -2693,11 +2971,14 @@ public sealed class GlView : OpenGlControlBase
         Wake();
     }
 
+    /// <summary>The support values shown, null when the check is off.</summary>
     internal Dictionary<int, float>? Support => _support;
 
-    // The game's colour for a support value (WearNTear.Highlight): light blue at full support (on the
-    // ground), else red to green as it gets stronger, more saturated and brighter the weaker; one that
-    // breaks as the weakest (red).
+    /// <summary>
+    /// The game's colour for a support value (WearNTear.Highlight): light blue at full support (on the
+    /// ground), else red to green as it gets stronger, more saturated and brighter the weaker; one that
+    /// breaks as the weakest (red).
+    /// </summary>
     internal static Vector3 SupportTint(float v)
     {
         if (v is > (-1.5f) and < 0)
@@ -2710,13 +2991,16 @@ public sealed class GlView : OpenGlControlBase
         return HsvToRgb(h, 1 - 0.5f * t, 1.2f - 0.3f * t);
     }
 
+    /// <summary>A colour from hue (0..1), saturation and value (value may go above 1).</summary>
     private static Vector3 HsvToRgb(float h, float s, float v)
     {
         float r = Math.Clamp(MathF.Abs(h * 6 - 3) - 1, 0, 1), g = Math.Clamp(2 - MathF.Abs(h * 6 - 2), 0, 1), b = Math.Clamp(2 - MathF.Abs(h * 6 - 4), 0, 1);
         return new Vector3((1 - s + s * r) * v, (1 - s + s * g) * v, (1 - s + s * b) * v);
     }
 
+    /// <summary>The new objects' markers on the graphics card.</summary>
     private uint _markVao, _markVbo;
+    /// <summary>The new objects' green dots (<c>NewMarkers</c>), about 9 pixels across at any distance.</summary>
     private void DrawNewMarkers(WorldScene s, Matrix4x4 vp)
     {
         var marks = NewMarkers(s);
@@ -2746,14 +3030,21 @@ public sealed class GlView : OpenGlControlBase
         DrawLines(ref _markVao, ref _markVbo, [.. tri], vp, new Vector4(0x5d / 255f, 1, 0x8a / 255f, 1), PrimitiveType.Triangles);
     }
 
+    /// <summary>The Path tool's lines on the graphics card: centre line, edges, points.</summary>
     private uint _pathVao, _pathVbo, _pathEdgeVao, _pathEdgeVbo, _pathDotVao, _pathDotVbo;
+    /// <summary>The Place tool's brush ring on the graphics card.</summary>
     private uint _placeRingVao, _placeRingVbo;
+    /// <summary>
+    /// The Path tool's bands on the graphics card: the ground it covers, the soft edge, and the next point's preview.
+    /// </summary>
     private uint _pathBandVao, _pathBandVbo, _pathSoftVao, _pathSoftVbo, _pathPreviewVao, _pathPreviewVbo, _pathPreviewSoftVao, _pathPreviewSoftVbo;
-    // The Path tool: the ground it covers (a light band), its width's edges and the soft edge's outer
-    // line, the centre line (red) and its points; under the cursor, the width (and the soft edge) the
-    // next point brings, with the stretch from the last point to it. Lines are flat ribbons on the
-    // ground a few pixels wide, so they stay whole at any resolution and angle (1-pixel lines broke
-    // into dashes once the view was scaled up).
+    /// <summary>
+    /// The Path tool: the ground it covers (a light band), its width's edges and the soft edge's outer
+    /// line, the centre line (red) and its points; under the cursor, the width (and the soft edge) the
+    /// next point brings, with the stretch from the last point to it. Lines are flat ribbons on the
+    /// ground a few pixels wide, so they stay whole at any resolution and angle (1-pixel lines broke
+    /// into dashes once the view was scaled up).
+    /// </summary>
     private void DrawPath(WorldScene s, Matrix4x4 vp)
     {
         if (Mode != ToolMode.Path)
@@ -2911,10 +3202,14 @@ public sealed class GlView : OpenGlControlBase
         DrawLines(ref _pathDotVao, ref _pathDotVbo, [.. dots], vp, new Vector4(1, 0.69f, 0.63f, 1));
     }
 
+    /// <summary>The Place tool's posts and its line, zone or grid on the graphics card.</summary>
     private uint _placeVao, _placeVbo, _placeShapeVao, _placeShapeVbo;
+    /// <summary>The prefabs drawn as ghosts this frame: they get no post.</summary>
     private HashSet<int> _ghostsDrawn = [];
-    // The Place tool: a post at each placement the preview (or a stroke) shows, and the line, zone or
-    // grid being drawn with its points.
+    /// <summary>
+    /// The Place tool: a post at each placement the preview (or a stroke) shows, and the line, zone or
+    /// grid being drawn with its points.
+    /// </summary>
     private void DrawPlace(WorldScene s, Matrix4x4 vp)
     {
         if (Mode != ToolMode.Place || Place is not { } pl)
@@ -2999,8 +3294,12 @@ public sealed class GlView : OpenGlControlBase
         DrawLines(ref _placeShapeVao, ref _placeShapeVbo, [.. data], vp, new Vector4(0.62f, 0.88f, 1, 1));
     }
 
+    /// <summary>The Area selection's (or the paste's) lines, and the reset zones', on the graphics card.</summary>
     private uint _areaVao, _areaVbo, _resetVao, _resetVbo;
-    // The Area selection (in the Area tool), following the ground, and the zones marked for reset (red, always).
+    /// <summary>
+    /// The Area selection (in the Area tool), following the ground, and the zones marked for reset (red, always).
+    /// With the Paste tool, where the paste would go: its outlines, and a post at each object not drawn as a ghost.
+    /// </summary>
     private void DrawArea(WorldScene s, Matrix4x4 vp)
     {
         Vector3 V(Vector2 g, float lift)
@@ -3079,9 +3378,12 @@ public sealed class GlView : OpenGlControlBase
         }
     }
 
+    /// <summary>The tape's lines on the graphics card.</summary>
     private uint _measureVao, _measureVbo;
-    // The tape: following the ground from A to B (its profile), and a cross at each end. Shown in the
-    // Measure tool, and kept once fixed.
+    /// <summary>
+    /// The tape: following the ground from A to B (its profile), and a cross at each end. Shown in the
+    /// Measure tool, and kept once fixed.
+    /// </summary>
     private void DrawMeasure(WorldScene s, Matrix4x4 vp)
     {
         var (a, b) = (Tape.A, Tape.B);
@@ -3114,8 +3416,9 @@ public sealed class GlView : OpenGlControlBase
         DrawLines(ref _measureVao, ref _measureVbo, [.. data], vp, new Vector4(1, 0.88f, 0.54f, 1));
     }
 
+    /// <summary>The lasso's lines on the graphics card.</summary>
     private uint _lassoVao, _lassoVbo;
-    // The zone being drawn with the Select tool, on the ground.
+    /// <summary>The zone being drawn with the Select tool, on the ground.</summary>
     private unsafe void DrawLasso(WorldScene s, Matrix4x4 vp)
     {
         if (_lassoDirty)
@@ -3148,20 +3451,25 @@ public sealed class GlView : OpenGlControlBase
         DrawLines(ref _lassoVao, ref _lassoVbo, _lassoSegs, vp, new Vector4(1, 0.76f, 0.29f, 1));
     }
 
+    /// <summary>The lasso's lines, made again when it changes (<c>LassoChanged</c>).</summary>
     private float[] _lassoSegs = [];
 
+    /// <summary>The brush ring's lines, and the mountain preview's, on the graphics card.</summary>
     private uint _ringVao, _ringVbo, _previewVao, _previewVbo;
-    // The mountain preview's lines, kept while the pointer stays on the same grid point.
+    /// <summary>The mountain preview's lines, kept while the pointer stays on the same grid point.</summary>
     private float[] _previewSegs = [];
+    /// <summary>The grid point (and area width) the mountain preview was made for; null to make it again.</summary>
     private (int X, int Z, int W)? _previewKey;
 
-    // Whether a Mountain click at a grid point fits in the open area (what EditSession.Mountain needs).
+    /// <summary>Whether a Mountain click at a grid point fits in the open area (what EditSession.Mountain needs).</summary>
     internal static bool MountainFits(WorldScene s, float gx, float gz, float reach) => gx - reach >= 1 && gz - reach >= 1 && gx + reach <= s.W - 2 && gz + reach <= s.H - 2;
 
-    // The brush's outline on the ground (and the Ring shape's inner edge), seen through what stands on it.
-    // Short segments, so a wide ring follows hills instead of cutting through them; none outside the open
-    // area (no ground there). For the Mountain tool: the mountain itself as a mesh, and the ring in red
-    // where it does not fit.
+    /// <summary>
+    /// The brush's outline on the ground (and the Ring shape's inner edge), seen through what stands on it.
+    /// Short segments, so a wide ring follows hills instead of cutting through them; none outside the open
+    /// area (no ground there). For the Mountain tool: the mountain itself as a mesh, and the ring in red
+    /// where it does not fit.
+    /// </summary>
     private unsafe void DrawBrush(WorldScene s, Matrix4x4 vp)
     {
         if (_hover is not { } h || s.Session is not { } session || Tool == null && Mode is not (ToolMode.Shape or ToolMode.Mountain))
@@ -3205,8 +3513,10 @@ public sealed class GlView : OpenGlControlBase
         }
     }
 
-    // The mountain as it would rise at grid point (cx, cz): lines along x and z every few metres, each
-    // point at the ground plus the shape's height; flat ground (under half a metre added) left out.
+    /// <summary>
+    /// The mountain as it would rise at grid point (cx, cz): lines along x and z every few metres, each
+    /// point at the ground plus the shape's height; flat ground (under half a metre added) left out.
+    /// </summary>
     internal static float[] MountainMesh(WorldScene s, int cx, int cz, float reach, Func<float, float, float> shape)
     {
         const int Cells = 40;
@@ -3253,24 +3563,32 @@ public sealed class GlView : OpenGlControlBase
     }
 
     // ---- Selection: the objects picked (indices into the scene's things), drawn as orange boxes.
+    /// <summary>Each thing's box in view space (for picking and the selection), by thing index.</summary>
     private (Vector3 Min, Vector3 Max)[] _bounds = [];
+    /// <summary>Whether a thing's box is known (its model read, and it is not gone).</summary>
     private bool[] _known = [];
-    // Where each thing was when its box was made (a move's preview may be ahead of the boxes).
+    /// <summary>Where each thing was when its box was made (a move's preview may be ahead of the boxes).</summary>
     private Vector3[] _boundsAt = [];
+    /// <summary>Each thing's View kind, by thing index.</summary>
     private ObjectKind[] _kinds = [];
+    /// <summary>The objects picked, as indices into the scene's things.</summary>
     private readonly HashSet<int> _selection = [];
+    /// <summary>The camera's view × projection of the last frame, which the mouse is read with.</summary>
     private Matrix4x4 _lastViewProj;
+    /// <summary>The selection changed: its boxes are made again at the next frame.</summary>
     private bool _selectionDirty;
+    /// <summary>The selection changed: the things now selected.</summary>
     public event Action<IReadOnlyList<WorldScene.Thing>>? SelectionChanged;
 
-    // A double click in Select mode.
+    /// <summary>A double click in Select mode.</summary>
     public event Action? InspectAsked;
+    /// <summary>The objects picked, as indices into the scene's things (a copy).</summary>
     internal IReadOnlyCollection<int> Selected { get { lock (_selection) { return [.. _selection]; } } }
 
-    // The shown object under a point of the view (null: the ground or nothing is nearer), like the web
-    // editor: the nearest box the ray enters, unless the ground is hit first (half a metre of slack).
-    // The Workshop's cut: nothing drawn above this height (world y), and the cursor goes through what is
-    // hidden; null: none.
+    /// <summary>
+    /// The Workshop's cut: nothing drawn above this height (world y), and the cursor goes through what is
+    /// hidden; null: none.
+    /// </summary>
     internal float? CutY
     {
         get; set
@@ -3280,8 +3598,10 @@ public sealed class GlView : OpenGlControlBase
         }
     }
 
-    // The view's ray through a point, in world space (x east, up, z north), and how far along it the
-    // ground is (null: it does not meet it).
+    /// <summary>
+    /// The view's ray through a point, in world space (x east, up, z north), and how far along it the
+    /// ground is (null: it does not meet it).
+    /// </summary>
     internal (Vector3 O, Vector3 D, float? GroundT)? WorldRay(Point at, Size size)
     {
         var s = Scene;
@@ -3302,6 +3622,10 @@ public sealed class GlView : OpenGlControlBase
         return (wo, wd, g);
     }
 
+    /// <summary>
+    /// The shown object under a point of the view (null: the ground or nothing is nearer), like the web
+    /// editor: the nearest box the ray enters, unless the ground is hit first (half a metre of slack).
+    /// </summary>
     internal int? ObjectAt(Point at, Size size)
     {
         var s = Scene;
@@ -3332,8 +3656,10 @@ public sealed class GlView : OpenGlControlBase
         return hit;
     }
 
-    // A click on an object: it alone, or (add) added or taken out; range (Shift): every shown object in
-    // a row from the last one clicked to this one (w1, Shift + click w3: w1, w2 and w3).
+    /// <summary>
+    /// A click on an object: it alone, or (add) added or taken out; range (Shift): every shown object in
+    /// a row from the last one clicked to this one (w1, Shift + click w3: w1, w2 and w3).
+    /// </summary>
     internal void Pick(Point at, Size size, bool add, bool range = false)
     {
         int? i = ObjectAt(at, size);
@@ -3363,11 +3689,13 @@ public sealed class GlView : OpenGlControlBase
         SelectionDone();
     }
 
-    // The object a Shift + click's row starts from: the last one clicked.
+    /// <summary>The object a Shift + click's row starts from: the last one clicked.</summary>
     private int? _anchor;
 
-    // The shown objects on the line from object a to object b (their middles within 0.75 m of it), both
-    // ends included.
+    /// <summary>
+    /// The shown objects on the line from object a to object b (their middles within 0.75 m of it), both
+    /// ends included.
+    /// </summary>
     internal IEnumerable<int> Between(WorldScene s, int a, int b)
     {
         var pa = s.Things[a].Position;
@@ -3389,12 +3717,15 @@ public sealed class GlView : OpenGlControlBase
         }
     }
 
-    // Eyedropper: the next left click gives the object under it (null: none) instead of going to
-    // the tool; its release is swallowed too.
+    /// <summary>
+    /// Eyedropper: the next left click gives the object under it (null: none) instead of going to
+    /// the tool; its release is swallowed too.
+    /// </summary>
     internal Action<int?>? PickObjectOnce { get; set; }
+    /// <summary>The eyedropper's click was taken: its release is swallowed.</summary>
     private bool _pickSwallow;
 
-    // Selects these things (add: to what is selected).
+    /// <summary>Selects these things (add: to what is selected).</summary>
     internal void Select(IEnumerable<int> things, bool add = false)
     {
         var s = Scene;
@@ -3415,6 +3746,7 @@ public sealed class GlView : OpenGlControlBase
         SelectionDone();
     }
 
+    /// <summary>The selection changed: its boxes made again, and <c>SelectionChanged</c> raised on the UI thread.</summary>
     private void SelectionDone()
     {
         _selectionDirty = true;
@@ -3427,8 +3759,7 @@ public sealed class GlView : OpenGlControlBase
         Wake();
     }
 
-    // Whether a thing is drawn (not gone, its kind shown, its model known): only those can be picked.
-    // Tests (headless, so nothing is drawn): the boxes drawing gives things, in view space.
+    /// <summary>Tests (headless, so nothing is drawn): the boxes drawing gives things, in view space.</summary>
     internal void SetBoxes(IEnumerable<(int Index, Vector3 Min, Vector3 Max)> boxes)
     {
         var s = Scene!;
@@ -3446,9 +3777,10 @@ public sealed class GlView : OpenGlControlBase
         }
     }
 
-    // The test driver's pictures: the next frame once the area and its models are in.
+    /// <summary>The test driver's pictures: the next frame once the area and its models are in.</summary>
     private volatile GlPicture.Request? _picture;
 
+    /// <summary>Saves a picture of the view to <paramref name="path"/> once the area and its models are in.</summary>
     internal Task Picture(string path)
     {
         var r = new GlPicture.Request { Path = path };
@@ -3463,11 +3795,13 @@ public sealed class GlView : OpenGlControlBase
         return r.Done.Task;
     }
 
+    /// <summary>Frames drawn over the last second.</summary>
     internal int FramesDrawn => _frames.Count;
 
-    // The test driver checks drawing raised no OpenGL error (counted only when driven).
+    /// <summary>The test driver checks drawing raised no OpenGL error (counted only when driven).</summary>
     internal int GlErrors { get; private set; }
 
+    /// <summary>Counts (and says) the OpenGL errors of the frame, only when the test driver runs.</summary>
     private void CountGlErrors()
     {
         if (!Options.Driver)
@@ -3481,6 +3815,7 @@ public sealed class GlView : OpenGlControlBase
         }
     }
 
+    /// <summary>Whether a thing is drawn (not gone, its kind shown, its model known): only those can be picked.</summary>
     internal bool IsPickable(int i)
     {
         lock (_objLock)
@@ -3489,7 +3824,7 @@ public sealed class GlView : OpenGlControlBase
         }
     }
 
-    // A thing's box and the position it was made at (world coordinates).
+    /// <summary>A thing's box (view space) and the position it was made at (world coordinates).</summary>
     internal (Vector3 Min, Vector3 Max, Vector3 At) BoxOf(int i)
     {
         lock (_objLock)
@@ -3498,6 +3833,7 @@ public sealed class GlView : OpenGlControlBase
         }
     }
 
+    /// <summary>A thing's box, in view space.</summary>
     internal (Vector3 Min, Vector3 Max) BoundsOf(int i)
     {
         lock (_objLock)
@@ -3506,6 +3842,7 @@ public sealed class GlView : OpenGlControlBase
         }
     }
 
+    /// <summary>A thing's View kind.</summary>
     internal ObjectKind KindOf(int i)
     {
         lock (_objLock)
@@ -3514,6 +3851,7 @@ public sealed class GlView : OpenGlControlBase
         }
     }
 
+    /// <summary>The overlays' lines to the graphics card, each layer's buffer filled again.</summary>
     private unsafe void UploadOverlays(Overlays.Built o)
     {
         foreach (var (layer, data) in o.Lines)
@@ -3537,6 +3875,10 @@ public sealed class GlView : OpenGlControlBase
         _gl.BindVertexArray(0);
     }
 
+    /// <summary>
+    /// The overlays that are on; each layer's style says whether it is hidden behind what stands in front of it
+    /// or shows through (the rings).
+    /// </summary>
     private unsafe void DrawOverlays(Matrix4x4 vp)
     {
         if (_lineProg == 0)
@@ -3574,7 +3916,9 @@ public sealed class GlView : OpenGlControlBase
         _gl.Disable(EnableCap.Blend);
     }
 
+    /// <summary>The line shader (made at first use), and the selection's lines on the graphics card.</summary>
     private uint _lineProg, _lineVao, _lineVbo;
+    /// <summary>The selected objects' boxes, orange, seen through what is in front of them.</summary>
     private unsafe void DrawSelection(Matrix4x4 vp)
     {
         if (_selectionDirty)
@@ -3597,12 +3941,15 @@ public sealed class GlView : OpenGlControlBase
         DrawLines(ref _lineVao, ref _lineVbo, _selectionSegs, vp, new Vector4(1, 0.66f, 0.2f, 1));
     }
 
+    /// <summary>The selection's box lines, made again when it changes.</summary>
     private float[] _selectionSegs = [];
 
-    // The Select tool: the object under the pointer, outlined faintly before a click picks it.
+    /// <summary>The Select tool: the object under the pointer, outlined faintly before a click picks it.</summary>
     private int? _hoverObject;
+    /// <summary>The hovered object's box lines on the graphics card.</summary>
     private uint _hoverBoxVao, _hoverBoxVbo;
 
+    /// <summary>Sets the object under the pointer (null: none).</summary>
     private void SetHoverObject(int? i)
     {
         if (i != _hoverObject)
@@ -3612,6 +3959,7 @@ public sealed class GlView : OpenGlControlBase
         }
     }
 
+    /// <summary>The object under the pointer's box, faint, when a click can pick it.</summary>
     private void DrawHoverObject(Matrix4x4 vp)
     {
         // Only what a click can pick: drawn and not deleted (a deleted object stays under the pointer).
@@ -3631,7 +3979,7 @@ public sealed class GlView : OpenGlControlBase
         DrawLines(ref _hoverBoxVao, ref _hoverBoxVbo, [.. v], vp, new Vector4(1, 0.85f, 0.55f, 0.6f), blend: true, width: 0.8f);
     }
 
-    // Slides the view along the ground by a drag of (dx, dy) points (under the camera lock).
+    /// <summary>Slides the view along the ground by a drag of (dx, dy) points (under the camera lock).</summary>
     private void Slide(float dx, float dy)
     {
         float k = _distance * 0.0015f, c = MathF.Cos(_yaw), sn = MathF.Sin(_yaw);
@@ -3639,6 +3987,10 @@ public sealed class GlView : OpenGlControlBase
         FollowGround();
     }
 
+    /// <summary>
+    /// A mouse drag: slides the view (Panning; in Orbit also the left or middle button) or turns it (right
+    /// button).
+    /// </summary>
     private void Drag(Point p)
     {
         if (_dragFrom is Point from)

@@ -7,15 +7,20 @@ using TerrainEditor.Terrain;
 
 namespace TerrainEditor.Desktop;
 
-// The Workshop: a blank, flat meadow plot that is no world, to build a building on (Place and Select,
-// as in a world) and keep it as a Homestead blueprint (BlueprintsPanel). Blueprints open in it to be
-// changed. Its middle at ground level is the blueprint's anchor, as Homestead measures it.
+/// <summary>
+/// The Workshop: a blank, flat meadow plot that is no world, to build a building on (Place and Select,
+/// as in a world) and keep it as a Homestead blueprint (BlueprintsPanel). Blueprints open in it to be
+/// changed. Its middle at ground level is the blueprint's anchor, as Homestead measures it.
+/// </summary>
 public static class Workshop
 {
+    /// <summary>The plot's ground height in metres, everywhere.</summary>
     public const float Ground = 34f;
+    /// <summary>The plot's size in zones (64 m each) across, centred on the world's middle.</summary>
     public const int Zones = 3;
 
-    // The plot, with nothing on it.
+    /// <summary>The plot, with nothing on it, and its edit session.</summary>
+    /// <param name="title">The scene's name, shown as the title.</param>
     public static WorldScene Create(string title)
     {
         int w = Zones * 64 + 1;
@@ -46,17 +51,30 @@ public static class Workshop
         return scene;
     }
 
-    // The middle of the plot at ground level: the blueprint's anchor.
+    /// <summary>The middle of the plot at ground level: the blueprint's anchor.</summary>
     public static Vector3 Anchor(WorldScene s) => new(s.Cx, Ground, s.Cz);
 
-    // A blueprint file's pieces onto the plot (one undo step), its anchor at the plot's middle.
+    /// <summary>
+    /// A blueprint file's pieces onto the plot (one undo step), its anchor at the plot's middle; the plot takes the
+    /// blueprint's ruin flag. Returns what <c>Add</c> does.
+    /// </summary>
     public static (int Placed, List<string> Unknown, float Lift, Dictionary<(int, int), float> Terrain) Open(EditSession s, string path, string? text = null) => Add(s, path, text, null);
 
-    // A blueprint file's pieces added to what is on the plot (one undo step), its anchor at world point
-    // at (x, z; on the ground there), or the plot's middle, its lowest point on the ground. Homestead's are
-    // measured from their anchor; others (PlanBuild, .vbuild) from a corner, so they are centred.
-    // Returns how many were put, the kinds the editor cannot make, how far it was lifted (saving it back
-    // takes that off: Homestead's anchor keeps its height), and the ground it stood on (GroundAt).
+    /// <summary>
+    /// A blueprint file's pieces added to what is on the plot (one undo step), its anchor at world point
+    /// at (x, z; on the ground there), or the plot's middle, its lowest point on the ground. Homestead's are
+    /// measured from their anchor; others (PlanBuild, .vbuild) from a corner, so they are centred.
+    /// </summary>
+    /// <param name="s">The Workshop's edit session.</param>
+    /// <param name="path">The blueprint file (its name picks the format).</param>
+    /// <param name="text">The file's text when already read; null reads <paramref name="path"/>.</param>
+    /// <param name="at">Where its anchor goes (world x, z); null for the plot's middle, which also takes the
+    /// blueprint's ruin flag.</param>
+    /// <returns>
+    /// How many were put, the kinds the editor cannot make, how far it was lifted (saving it back
+    /// takes that off: Homestead's anchor keeps its height), and the ground it stood on (GroundAt), lowest height
+    /// per whole metre (x, z).
+    /// </returns>
     public static (int Placed, List<string> Unknown, float Lift, Dictionary<(int, int), float> Terrain) Add(EditSession s, string path, string? text, Vector2? at)
     {
         text ??= File.ReadAllText(path);
@@ -132,18 +150,24 @@ public static class Workshop
         return (adds.Count, unknown, shift.Y, terrain);
     }
 
-    // Pieces players build: the hammer's, the cultivator's, the serving tray's (not the hoe's rocks).
+    /// <summary>Pieces players build: the hammer's, the cultivator's, the serving tray's (not the hoe's rocks).</summary>
     public static bool Buildable(string prefab) => PieceCatalog.Get(StableHash.Of(prefab))?.Tool is "hammer" or "cultivator" or "feaster";
 
-    // The ground the support check counts at a world point: the plot's, or (higher) the ground a
-    // blueprint stood on in game at that metre (Add's terrain).
+    /// <summary>
+    /// The ground the support check counts at a world point: the plot's, or (higher) the ground a
+    /// blueprint stood on in game at that metre (Add's terrain).
+    /// </summary>
     public static float GroundAt(IReadOnlyDictionary<(int, int), float> terrain, float x, float z) =>
         terrain.TryGetValue(((int)MathF.Floor(x), (int)MathF.Floor(z)), out float y) ? MathF.Max(Ground, y) : Ground;
 
-    // What is on the plot as a copy (the clipboard format, for BlueprintsPanel): every object standing
-    // (the plot starts bare: all on it was put there), measured from the anchor, with what it holds (a
-    // chest's contents, a sign's text, a creature's stars...).
-    // lift: how far the blueprint opened was lifted (its anchor that much below the ground).
+    /// <summary>
+    /// What is on the plot as a copy (the clipboard format, for BlueprintsPanel): every object standing
+    /// (the plot starts bare: all on it was put there), measured from the anchor, with what it holds (a
+    /// chest's contents, a sign's text, a creature's stars...).
+    /// </summary>
+    /// <param name="s">The Workshop scene.</param>
+    /// <param name="name">The copy's name.</param>
+    /// <param name="lift">How far the blueprint opened was lifted (its anchor that much below the ground).</param>
     public static JsonObject Building(WorldScene s, string name, float lift = 0)
     {
         var anchor = Anchor(s) + new Vector3(0, lift, 0);
@@ -187,9 +211,11 @@ public static class Workshop
         static JsonObject P(float x, float z) => new() { ["gx"] = x, ["gz"] = z };
     }
 
-    // What an object of the plot holds: every value of its data but its builder and scale (a blueprint
-    // has its own), and no builder at all on a ruin's: the plot opened from one, or a building piece
-    // without a builder (added from one: the others got the chosen builder when they were put).
+    /// <summary>
+    /// What an object of the plot holds: every value of its data but its builder and scale (a blueprint
+    /// has its own), and no builder at all on a ruin's: the plot opened from one, or a building piece
+    /// without a builder (added from one: the others got the chosen builder when they were put).
+    /// </summary>
     private static List<ObjectField> DataOf(WorldScene s, WorldScene.Thing t)
     {
         var list = new List<ObjectField>();
@@ -215,7 +241,7 @@ public static class Workshop
         return list;
     }
 
-    // How many of each kind of building piece stand on the plot (prefab name → count).
+    /// <summary>How many of each kind of building piece stand on the plot (prefab name → count).</summary>
     public static Dictionary<string, int> Kinds(WorldScene s)
     {
         lock (s.Things)
@@ -224,7 +250,7 @@ public static class Workshop
         }
     }
 
-    // How many building pieces stand on the plot.
+    /// <summary>How many building pieces stand on the plot.</summary>
     public static int Pieces(WorldScene s)
     {
         lock (s.Things)
@@ -233,5 +259,6 @@ public static class Workshop
         }
     }
 
+    /// <summary>Rounds to the millimetre (or thousandth) for the copy's numbers.</summary>
     private static float R(float v) => MathF.Round(v * 1000f) / 1000f;
 }

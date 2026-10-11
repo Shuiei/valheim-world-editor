@@ -4,17 +4,24 @@ using TerrainEditor.Editing;
 
 namespace TerrainEditor.Desktop;
 
-// Where a ray meets the rooms of the area's dungeons: their models' triangles (the game's look), so
-// the cursor can point at a room's floor or wall, as at the ground outside (building in a dungeon,
-// measuring there). Pieces resting on a room are held by it in game: its walls and floors are not
-// pieces, so they count as ground for the support check (WearNTear.UpdateSupport).
+/// <summary>
+/// Where a ray meets the rooms of the area's dungeons: their models' triangles (the game's look), so the cursor can
+/// point at a room's floor or wall, as at the ground outside (building in a dungeon, measuring there). Pieces resting
+/// on a room are held by it in game: its walls and floors are not pieces, so they count as ground for the support check
+/// (WearNTear.UpdateSupport).
+/// </summary>
 public static class RoomSurfaces
 {
-    // A room model's triangles in the room's own frame (Unity's axes), with their box.
+    /// <summary>A room model's triangles in the room's own frame (Unity's axes), with their box.</summary>
+    /// <param name="Corners">The triangles, three corners each.</param>
+    /// <param name="Min">The lowest corner of their box.</param>
+    /// <param name="Max">The highest corner of their box.</param>
     private sealed record Mesh(Vector3[] Corners, Vector3 Min, Vector3 Max);
 
+    /// <summary>Each room model's triangles, by model store and room hash, made once (null: no model).</summary>
     private static readonly ConcurrentDictionary<(ModelStore, int), Mesh?> Meshes = new();
 
+    /// <summary>A room's triangles from its model's parts, or null when the room or its model is unknown.</summary>
     private static Mesh? MeshOf(ModelStore models, int room) => Meshes.GetOrAdd((models, room), key =>
     {
         var (m, hash) = key;
@@ -51,8 +58,15 @@ public static class RoomSurfaces
         return new Mesh([.. corners], min, max);
     });
 
-    // The distance along the ray (world space, d normalised) to the first room surface it meets below
-    // maxY (the cut), or null.
+    /// <summary>
+    /// The distance along the ray (world space, d normalised) to the first room surface it meets below maxY (the cut),
+    /// or null.
+    /// </summary>
+    /// <param name="dungeons">The area's dungeons.</param>
+    /// <param name="models">The game's models; null: no hit.</param>
+    /// <param name="o">The ray's origin (world space).</param>
+    /// <param name="d">The ray's direction, normalised.</param>
+    /// <param name="maxY">The cut: surfaces met above this world height do not count.</param>
     public static float? Hit(IReadOnlyList<DungeonRooms.Dungeon> dungeons, ModelStore? models, Vector3 o, Vector3 d, float maxY = float.MaxValue)
     {
         if (models == null)
@@ -88,7 +102,10 @@ public static class RoomSurfaces
         return best < float.MaxValue ? best : null;
     }
 
-    // Möller–Trumbore, both sides (the game's rooms are seen from inside and out).
+    /// <summary>
+    /// Where the ray meets a triangle (distance along it, at least 0.1 mm), or null; Möller–Trumbore, both sides (the
+    /// game's rooms are seen from inside and out).
+    /// </summary>
     private static float? Triangle(Vector3 o, Vector3 d, Vector3 a, Vector3 b, Vector3 c)
     {
         Vector3 e1 = b - a, e2 = c - a, p = Vector3.Cross(d, e2);

@@ -11,46 +11,69 @@ using TerrainEditor.Terrain;
 
 namespace TerrainEditor.Desktop;
 
-// The Workshop's Build panel: the hammer's pieces in its tabs (Building, Heavy building, Furniture…),
-// each with a small picture, searchable; the one clicked is what the Place tool puts down, one at a
-// time under the cursor. Snapping to the pieces already there, stacking on the one under the cursor,
-// a grid for the rest, and the step , and . turn by. What the piece costs in game. Its Library: the
-// blueprints, and Generate dungeon (a dungeon of building pieces made onto the plot).
+/// <summary>
+/// The Workshop's Build panel: the hammer's pieces in its tabs (Building, Heavy building, Furniture…),
+/// each with a small picture, searchable; the one clicked is what the Place tool puts down, one at a
+/// time under the cursor. Snapping to the pieces already there, stacking on the one under the cursor,
+/// a grid for the rest, and the step , and . turn by. What the piece costs in game. Its Library: the
+/// blueprints, and Generate dungeon (a dungeon of building pieces made onto the plot).
+/// </summary>
 public sealed class BuildPanel
 {
+    /// <summary>The panel itself, hidden until the Workshop opens.</summary>
     public Control Card { get; }
+    /// <summary>Searches all pieces by English name or prefab (every word must match), across the tabs.</summary>
     internal TextBox Search { get; } = new() { PlaceholderText = "Search pieces", FontSize = 12 };
+    /// <summary>The piece tiles of the tab or search, with a heading per station.</summary>
     internal WrapPanel Tiles { get; } = new() { ItemSpacing = 4, LineSpacing = 4 };
+    /// <summary>Snap to the snap points of the pieces already there.</summary>
     internal CheckBox SnapBox { get; } = new CheckBox { Content = "Snap to pieces", FontSize = 12, IsChecked = true }.Classed("switch");
+    /// <summary>The grid step for pieces not snapped (Off, 0.5, 1 or 2 m).</summary>
     internal ComboBox GridBox { get; } = new() { ItemsSource = new[] { "Off", "0.5 m", "1 m", "2 m" }, SelectedIndex = 0, FontSize = 12 };
-    // The game turns the hammer's piece by 22.5° a step.
+    /// <summary>The step , and . turn the piece by. The game turns the hammer's piece by 22.5° a step.</summary>
     internal ComboBox TurnBox { get; } = new() { ItemsSource = new[] { "1°", "15°", "22.5°", "45°", "90°" }, SelectedIndex = 2, FontSize = 12 };
+    /// <summary>The chosen piece's English name.</summary>
     internal TextBlock Chosen { get; } = new() { FontSize = 12, FontWeight = FontWeight.SemiBold, TextWrapping = TextWrapping.Wrap };
+    /// <summary>What the chosen piece costs in game.</summary>
     internal TextBlock Cost { get; } = new() { FontSize = 11, Foreground = new SolidColorBrush(Color.FromRgb(214, 190, 140)), TextWrapping = TextWrapping.Wrap };
+    /// <summary>The lift Ctrl + wheel gives (see <see cref="ShowLift"/>).</summary>
     internal TextBlock LiftText { get; } = new() { FontSize = 12, VerticalAlignment = VerticalAlignment.Center };
+    /// <summary>Takes the lift back to none.</summary>
     internal Button LiftReset { get; } = new() { Content = "Reset", FontSize = 11, Padding = new Thickness(6, 1) };
-    // The game's models, for the pictures (null: each piece's boxes).
+    /// <summary>The game's models, for the pictures (null: each piece's boxes).</summary>
     internal Func<ModelStore?> Models { get; set; } = () => null;
 
-    // The hammer's tabs (Piece.PieceCategory), in its order, then the cultivator's and the serving
-    // tray's pieces (plants, feasts).
+    /// <summary>The tab numbers of the cultivator's pieces (plants) and the serving tray's (feasts): not hammer categories.</summary>
     internal const int Plants = 100, Feasts = 101;
+    /// <summary>
+    /// The hammer's tabs (Piece.PieceCategory), in its order, then the cultivator's and the serving
+    /// tray's pieces (plants, feasts).
+    /// </summary>
     internal static readonly (int Category, string Name)[] Tabs =
     [
         (2, "Building"), (3, "Heavy building"), (4, "Furniture"), (1, "Crafting"), (0, "Misc"), (5, "More"), (Plants, "Plants"), (Feasts, "Feasts"),
     ];
 
+    /// <summary>The grid steps behind <see cref="GridBox"/>'s entries, in metres (0: off).</summary>
     private static readonly float[] Grids = [0, 0.5f, 1, 2];
+    /// <summary>The turn steps behind <see cref="TurnBox"/>'s entries, in degrees.</summary>
     private static readonly float[] Turns = [1, 15, 22.5f, 45, 90];
 
+    /// <summary>The Place tool's input, whose tool puts the pieces down.</summary>
     private readonly PlaceInput _input;
+    /// <summary>The tab buttons.</summary>
     private readonly WrapPanel _tabs = new() { ItemSpacing = 3, LineSpacing = 3 };
+    /// <summary>The tab shown (a category of <see cref="Tabs"/>).</summary>
     private int _tab = 2;
+    /// <summary>The pieces' pictures by prefab, once drawn.</summary>
     private readonly Dictionary<string, Bitmap?> _pictures = [];
+    /// <summary>The prefabs whose pictures are being drawn (or were), so each is drawn once.</summary>
     private readonly HashSet<string> _drawing = [];
 
-    // Everything players build: the hammer's pieces, the cultivator's and the serving tray's (prefab,
-    // English name, tab). The hoe's are ground edits, not pieces.
+    /// <summary>
+    /// Everything players build: the hammer's pieces, the cultivator's and the serving tray's (prefab,
+    /// English name, tab). The hoe's are ground edits, not pieces. Ordered by station, then by name.
+    /// </summary>
     internal static readonly Lazy<List<(string Prefab, string Name, int Category)>> Pieces = new(() =>
         [.. PieceCatalog.Names.Select(n => (n, PieceCatalog.Get(StableHash.Of(n))))
             .Where(p => p.Item2 is { Tool: "hammer" or "cultivator" or "feaster" })
@@ -58,8 +81,10 @@ public sealed class BuildPanel
             .OrderBy(p => StationRank(PieceCost.Get(p.n)?.Station)).ThenBy(p => PieceCost.Get(p.n)?.Station ?? "", StringComparer.OrdinalIgnoreCase)
             .ThenBy(p => p.Item2, StringComparer.OrdinalIgnoreCase)]);
 
-    // Pieces by the station they need, in the order players get them (none first: built anywhere), then
-    // by name.
+    /// <summary>
+    /// A station's rank, to list pieces by the station they need, in the order players get them (none first:
+    /// built anywhere; one not listed last), then by name.
+    /// </summary>
     internal static int StationRank(string? station) => station?.ToLowerInvariant() switch
     {
         null or "" => 0,
@@ -72,6 +97,8 @@ public sealed class BuildPanel
         _ => 7,
     };
 
+    /// <summary>Builds the panel (hidden), on the Pieces tab.</summary>
+    /// <param name="input">The Place tool's input: its tool puts the pieces down, its turn step is set here.</param>
     public BuildPanel(PlaceInput input)
     {
         _input = input;
@@ -185,6 +212,7 @@ public sealed class BuildPanel
         ShowLibrary(false);
     }
 
+    /// <summary>Puts a control in a grid column.</summary>
     private static Control Col(Control c, int col = 1)
     {
         Grid.SetColumn(c, col);
@@ -192,27 +220,39 @@ public sealed class BuildPanel
     }
 
     // ---- The Library tab: Homestead's blueprints, opened on the plot, added to it, or dragged onto it.
+    /// <summary>Shows the pieces.</summary>
     internal Button PiecesTab { get; } = new() { Content = "Pieces", FontSize = 12, Padding = new Thickness(8, 2) };
+    /// <summary>Shows the Library: the blueprints.</summary>
     internal Button LibraryTab { get; } = new() { Content = "Library", FontSize = 12, Padding = new Thickness(8, 2) };
+    /// <summary>Searches the blueprints by name, description and tags (every word must match).</summary>
     internal TextBox LibrarySearch { get; } = new() { PlaceholderText = "Search blueprints", FontSize = 12 };
+    /// <summary>Imports another mod's blueprint file (the window handles it).</summary>
     internal Button ImportButton { get; } = new() { Content = "Import file…", FontSize = 12 };
+    /// <summary>The blueprint rows.</summary>
     internal StackPanel LibraryList { get; } = new() { Spacing = 4 };
-    // Generate dungeon: the Dungeon panel's generator, made of building pieces, onto the plot.
+    /// <summary>Generate dungeon: the Dungeon panel's generator, made of building pieces, onto the plot.</summary>
     internal Button GenerateButton { get; } = new() { Content = "Generate dungeon…", FontSize = 12 };
+    /// <summary>From the generator back to the Library.</summary>
     internal Button BackToLibrary { get; } = new() { Content = "← Library", FontSize = 12 };
+    /// <summary>The dungeon generator, in its Workshop form.</summary>
     internal DungeonGenPanel Dungeon { get; } = new(inWorkshop: true);
+    /// <summary>The Pieces, Library and generator views, one shown at a time.</summary>
     private readonly StackPanel _pieces, _library, _dungeon;
-    // The blueprints' folder (Homestead's).
+    /// <summary>The blueprints' folder (Homestead's).</summary>
     internal Func<string> Folder { get; set; } = () => "";
-    // Open: the blueprint alone on the plot; Add: with what is there (in the middle).
+    /// <summary>Open: the blueprint alone on the plot; Add: with what is there (in the middle). Given its file.</summary>
     public event Action<string>? OpenAsked, AddAsked;
+    /// <summary>Import file… was clicked.</summary>
     public event Action? ImportAsked;
-    // What a blueprint dragged from the list carries: its file.
+    /// <summary>What a blueprint dragged from the list carries: its file.</summary>
     internal static readonly DataFormat<string> BlueprintFormat = DataFormat.CreateInProcessFormat<string>("vwe-blueprint");
 
+    /// <summary>Whether the Library is shown.</summary>
     internal bool LibraryShown => _library.IsVisible;
+    /// <summary>Whether the dungeon generator is shown.</summary>
     internal bool DungeonShown => _dungeon.IsVisible;
 
+    /// <summary>Shows the Library (true, listed again) or the pieces (false).</summary>
     public void ShowLibrary(bool on)
     {
         _library.IsVisible = on;
@@ -226,7 +266,7 @@ public sealed class BuildPanel
         }
     }
 
-    // The generator, in the Library's place (its tab stays lit).
+    /// <summary>The generator, in the Library's place (its tab stays lit).</summary>
     internal void ShowDungeon()
     {
         _library.IsVisible = _pieces.IsVisible = false;
@@ -235,6 +275,7 @@ public sealed class BuildPanel
         LibraryTab.Classes.Set("on", true);
     }
 
+    /// <summary>Lists the blueprints in the folder that match the search.</summary>
     internal void RenderLibrary()
     {
         LibraryList.Children.Clear();
@@ -259,6 +300,10 @@ public sealed class BuildPanel
         }
     }
 
+    /// <summary>
+    /// One blueprint in the Library: its picture (drawn from its pieces when it has none), name, pieces and cost,
+    /// Open and Add; dragged a few pixels it is dropped onto the plot.
+    /// </summary>
     private Border LibraryRow(TerrainEditor.App.Homestead.Entry e)
     {
         Bitmap? pic = null;
@@ -334,10 +379,13 @@ public sealed class BuildPanel
         return row;
     }
 
+    /// <summary>The Place tool the panel sets.</summary>
     private PlaceTool Tool => _input.Tool;
 
-    // Into the Workshop: the Place tool set for building (one piece at a time, as it is, facing the
-    // turn), the first piece of the tab chosen when none is.
+    /// <summary>
+    /// Into the Workshop: the Place tool set for building (one piece at a time, as it is, facing the
+    /// turn), woodwall (else the first piece) chosen when no single piece of the list is.
+    /// </summary>
     public void Start()
     {
         var t = Tool;
@@ -360,13 +408,15 @@ public sealed class BuildPanel
         Render();
     }
 
-    // The lift Ctrl + wheel gives.
+    /// <summary>Shows the lift Ctrl + wheel gives.</summary>
     public void ShowLift()
     {
         LiftText.Text = Tool.HeightNudge == 0 ? "none (Ctrl + wheel)" : $"{Tool.HeightNudge:+0.0#;-0.0#} m";
         LiftReset.IsEnabled = Tool.HeightNudge != 0;
     }
 
+    /// <summary>Makes a piece the one the Place tool puts down, and shows its name and cost.</summary>
+    /// <param name="prefab">The piece's prefab name.</param>
     public void Choose(string prefab)
     {
         Tool.Chosen.Clear();
@@ -380,6 +430,7 @@ public sealed class BuildPanel
         }
     }
 
+    /// <summary>Fills the tiles with the tab's pieces, or with those matching the search across all tabs.</summary>
     internal void Render()
     {
         Tiles.Children.Clear();
@@ -429,10 +480,16 @@ public sealed class BuildPanel
         }
     }
 
-    // A blueprint without its picture (made elsewhere): one drawn from its pieces, kept in memory only
-    // (its folder is left as it is), away from the window's thread.
+    /// <summary>
+    /// Pictures of blueprints without one (made elsewhere), drawn from their pieces, by file and its last write time.
+    /// Kept in memory only (the folder is left as it is).
+    /// </summary>
     private readonly Dictionary<(string, DateTime), Bitmap?> _blueprintPictures = [];
 
+    /// <summary>
+    /// A blueprint without its picture (made elsewhere): one drawn from its pieces, kept in memory only
+    /// (its folder is left as it is), away from the window's thread.
+    /// </summary>
     private void DrawPicture(string path, Image image)
     {
         var key = (path, File.GetLastWriteTimeUtc(path));
@@ -466,7 +523,8 @@ public sealed class BuildPanel
         }), TaskScheduler.Default);
     }
 
-    // A piece's picture: drawn once, away from the window's thread, then shown.
+    /// <summary>A piece's picture: drawn once, away from the window's thread, then shown.</summary>
+    /// <returns>The picture, or null while it is being drawn (its tiles get it when done).</returns>
     private Bitmap? Picture(string prefab)
     {
         if (_pictures.TryGetValue(prefab, out var known))

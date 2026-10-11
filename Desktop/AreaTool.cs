@@ -3,23 +3,35 @@ using TerrainEditor.App;
 
 namespace TerrainEditor.Desktop;
 
-// The Area tool's selection, like the web editor's (editor/area.js): a box (drag) or a polygon (click
-// points; double-click or Enter closes it) of grid points, with a soft edge inwards; and the ground
-// actions done inside it. Points are grid points of the block (x east, z north, one per metre).
+/// <summary>
+/// The Area tool's selection, like the web editor's (editor/area.js): a box (drag) or a polygon (click
+/// points; double-click or Enter closes it) of grid points, with a soft edge inwards; and the ground
+/// actions done inside it. Points are grid points of the block (x east, z north, one per metre).
+/// </summary>
 public sealed class AreaTool
 {
+    /// <summary>A box dragged on the ground (true) or a polygon clicked point by point (false).</summary>
     public bool Box { get; set; } = true;
+    /// <summary>The soft edge in metres: how far inwards from the outline the actions fade in (0: a hard edge).</summary>
     public float Soft { get; set; } = 3;
+    /// <summary>
+    /// The points clicked: for a box its two opposite corners, for a polygon its corners in order. Lock it to
+    /// read or change it from another thread.
+    /// </summary>
     public List<Vector2> Points { get; } = [];
+    /// <summary>Whether the polygon is closed: the next click then starts a new one.</summary>
     public bool Closed { get; private set; }
+    /// <summary>Whether a box is being dragged.</summary>
     private bool _dragging;
+    /// <summary>The selection changed.</summary>
     public event Action? Changed;
+    /// <summary>Raises <see cref="Changed"/>.</summary>
     public void Notify() => Changed?.Invoke();
 
-    // The kinds of objects the object actions work on.
+    /// <summary>The kinds of objects the object actions work on.</summary>
     public HashSet<ObjectKind> Kinds { get; } = [ObjectKind.Trees, ObjectKind.Rocks, ObjectKind.Bushes, ObjectKind.Pickables];
 
-    // The selection's outline, or null while there is none.
+    /// <summary>The selection's outline, or null while there is none.</summary>
     public List<Vector2>? Polygon()
     {
         lock (Points)
@@ -37,6 +49,7 @@ public sealed class AreaTool
         }
     }
 
+    /// <summary>Drops the selection.</summary>
     public void Clear()
     {
         lock (Points)
@@ -49,6 +62,12 @@ public sealed class AreaTool
     }
 
     // ---- The mouse and keys.
+    /// <summary>
+    /// A mouse button pressed on the ground: a box starts there; a polygon gets a point (a new polygon after a
+    /// closed one), or closes on a double-click.
+    /// </summary>
+    /// <param name="hit">The grid point under the mouse, null when off the ground.</param>
+    /// <param name="clicks">The click count (2 for a double-click).</param>
     public void Down(Vector2? hit, int clicks)
     {
         if (hit is not { } h)
@@ -85,6 +104,7 @@ public sealed class AreaTool
         Notify();
     }
 
+    /// <summary>The mouse moved: a box being dragged follows it to its far corner.</summary>
     public void Moved(Vector2? hit)
     {
         if (_dragging && hit is { } h)
@@ -97,6 +117,7 @@ public sealed class AreaTool
         }
     }
 
+    /// <summary>The mouse button released: a box ends there, or is dropped if smaller than a metre.</summary>
     public void Up()
     {
         if (!_dragging)
@@ -114,7 +135,7 @@ public sealed class AreaTool
         }
     }
 
-    // Enter on an open polygon closes it (true); otherwise Enter applies the action.
+    /// <summary>Enter on an open polygon closes it (true); otherwise Enter applies the action.</summary>
     public bool CloseWithEnter()
     {
         if (!Box && !Closed && Points.Count >= 3)
@@ -126,6 +147,7 @@ public sealed class AreaTool
         return false;
     }
 
+    /// <summary>Backspace: removes the polygon's last point.</summary>
     public void RemoveLast()
     {
         if (!Box && Points.Count > 0)
@@ -139,8 +161,10 @@ public sealed class AreaTool
     }
 
     // ---- Geometry.
+    /// <summary>Whether a point is inside an outline.</summary>
     public static bool Inside(List<Vector2> poly, float x, float z) => SelectTool.Inside(poly, x, z);
 
+    /// <summary>The distance from a point to an outline's nearest edge, in the outline's units.</summary>
     public static float EdgeDistance(List<Vector2> poly, float x, float z)
     {
         float best = float.MaxValue;
@@ -154,6 +178,7 @@ public sealed class AreaTool
         return best;
     }
 
+    /// <summary>An outline's area (shoelace formula), in square units of its points (m² for grid points).</summary>
     public static float Area(List<Vector2> poly)
     {
         float a = 0;
@@ -164,10 +189,22 @@ public sealed class AreaTool
         return MathF.Abs(a / 2);
     }
 
+    /// <summary>The grid points an action works on.</summary>
+    /// <param name="Poly">The selection's outline.</param>
+    /// <param name="X0">The box around it (grid points, one more all round, clamped to the block): west.</param>
+    /// <param name="Z0">South edge of that box.</param>
+    /// <param name="X1">East edge of that box.</param>
+    /// <param name="Z1">North edge of that box.</param>
+    /// <param name="Cells">The grid points (index z * width + x) with their weights, 0 to 1.</param>
     public sealed record Weights(List<Vector2> Poly, int X0, int Z0, int X1, int Z1, List<(int G, float W)> Cells);
 
-    // The grid points inside the selection and their weights (the soft edge going inwards).
-    // mask: also times the Mask (null: not).
+    /// <summary>
+    /// The grid points inside the selection and their weights (the soft edge going inwards).
+    /// </summary>
+    /// <param name="w">The block's width in grid points.</param>
+    /// <param name="h">The block's height in grid points.</param>
+    /// <param name="mask">Also times the Mask (null: not).</param>
+    /// <returns>The points, or null while there is no selection.</returns>
     public Weights? WeightsIn(int w, int h, Func<int, float>? mask = null)
     {
         if (Polygon() is not { } poly)
@@ -210,8 +247,28 @@ public sealed class AreaTool
     }
 
     // ---- Ground actions.
-    public enum GroundAction { Flatten, Raise, Lower, Smooth, Natural, Restore, Erode, Paint }
+    /// <summary>The actions that change the ground inside the selection.</summary>
+    public enum GroundAction
+    {
+        /// <summary>Towards one height.</summary>
+        Flatten,
+        /// <summary>Up by an amount.</summary>
+        Raise,
+        /// <summary>Down by an amount.</summary>
+        Lower,
+        /// <summary>Bumps evened out.</summary>
+        Smooth,
+        /// <summary>Natural-looking bumps (Naturalize).</summary>
+        Natural,
+        /// <summary>Back to the generated ground, paint removed.</summary>
+        Restore,
+        /// <summary>Weathered: slopes settle and rain cuts gullies.</summary>
+        Erode,
+        /// <summary>Painted with a ground colour.</summary>
+        Paint,
+    }
 
+    /// <summary>An action's name as shown to the player.</summary>
     public static string Label(GroundAction a) => a switch
     {
         GroundAction.Natural => "Naturalize",
@@ -219,7 +276,15 @@ public sealed class AreaTool
         _ => a.ToString(),
     };
 
-    // The action inside the selection. height: Flatten's; amount: Raise and Lower's; paint: the colour.
+    /// <summary>The action inside the selection, faded by the soft edge; locked points are left alone.</summary>
+    /// <param name="g">The ground to change.</param>
+    /// <param name="b">The brush: Naturalize's bumps and size, Erode's rest angle and random.</param>
+    /// <param name="act">The action.</param>
+    /// <param name="height">Flatten's height, in metres.</param>
+    /// <param name="amount">Raise and Lower's amount, in metres.</param>
+    /// <param name="paint">The colour (four weights, as the paint brushes put down).</param>
+    /// <param name="mask">The Mask's weight per grid point (null: none).</param>
+    /// <returns>The grid points changed and the box to redraw.</returns>
     public (List<int> Touched, (int X0, int Z0, int X1, int Z1) Rect) Apply(Ground g, Brush b, GroundAction act, float height, float amount, float[] paint, Func<int, float>? mask = null)
     {
         var touched = new List<int>();
@@ -319,9 +384,12 @@ public sealed class AreaTool
         return (touched, (a.X0 - 1, a.Z0 - 1, a.X1 + 1, a.Z1 + 1));
     }
 
-    // Cut and fill (each point stands for 1 m²): what Flatten, Raise or Lower would move within the
-    // game's ±8 m limit (and what is out of its reach), and how much the ground inside has been raised
-    // and dug since it was generated.
+    /// <summary>
+    /// Cut and fill (each point stands for 1 m²): what Flatten, Raise or Lower would move within the
+    /// game's ±8 m limit (and what is out of its reach), and how much the ground inside has been raised
+    /// and dug since it was generated.
+    /// </summary>
+    /// <returns>The text for the panel, empty while there is no selection.</returns>
     public string Volume(Ground g, GroundAction act, float height, float amount, Func<int, float>? mask = null)
     {
         if (WeightsIn(g.W, g.H, mask) is not { } a)
@@ -370,7 +438,7 @@ public sealed class AreaTool
         return (first == "" ? "" : first + "\n") + $"Ground inside: {M3(up)} raised, {M3(down)} dug since generated.";
     }
 
-    // The average height of the ground inside (for Flatten's "avg").
+    /// <summary>The average height of the ground inside (for Flatten's "avg"), null without a selection.</summary>
     public float? Average(Ground g)
     {
         if (WeightsIn(g.W, g.H) is not { Cells.Count: > 0 } a)
@@ -380,7 +448,7 @@ public sealed class AreaTool
         return a.Cells.Average(c => g.HeightOf(c.G));
     }
 
-    // The zones under the selection (world zone coordinates); a point just outside the outline does not count.
+    /// <summary>The zones under the selection (world zone coordinates); a point just outside the outline does not count.</summary>
     public List<(int X, int Z)> ZonesUnder(Ground g)
     {
         var set = new SortedSet<(int, int)>();

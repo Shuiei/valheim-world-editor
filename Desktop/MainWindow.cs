@@ -7,20 +7,48 @@ using TerrainEditor.App;
 
 namespace TerrainEditor.Desktop;
 
-// The prototype's window: the 3D view filling it, and a small panel with the frame rate, what is
-// loaded, and the Record frame rates switch.
+/// <summary>
+/// The editor's window: its pages (the start page, a new world, the world map, and the 3D editor of an area or the
+/// Workshop), the top and save bars, the tool panels, and the help card with the frame rate, what is loaded, and the
+/// Record frame rates switch.
+/// </summary>
 public sealed partial class MainWindow : Window
 {
+    /// <summary>
+    /// The help card's frame rate, and what was loaded (newest first).
+    /// </summary>
     private readonly TextBlock _fps = new() { FontSize = 12.5, TextWrapping = TextWrapping.Wrap }, _info = new() { FontSize = 12, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
+    /// <summary>
+    /// Writes frame rates to a file while Record frame rates is on.
+    /// </summary>
     private readonly PerfLog _perf = new();
+    /// <summary>
+    /// Walking or flying: how to move, in the status bar; empty otherwise.
+    /// </summary>
     private readonly TextBlock _eye = new() { FontSize = 12, Foreground = new SolidColorBrush(Color.FromRgb(143, 240, 180)), TextWrapping = TextWrapping.Wrap };
-    // Help (?, F3): the controls, the graphics card, what was loaded, the frame rate.
+    /// <summary>
+    /// Help (?, F3): the controls, the graphics card, what was loaded, the frame rate.
+    /// </summary>
     internal Border HelpCard { get; private set; } = null!;
+    /// <summary>
+    /// Shows or hides the help card.
+    /// </summary>
     internal Button HelpButton { get; } = new Button { Content = Icons.Make("help", 18), Padding = new Thickness(7, 5) }.Classed("ghost");
+    /// <summary>
+    /// Opens the View panel.
+    /// </summary>
     internal Button ViewButton { get; } = new Button { Content = Icons.With("view", "View"), FontSize = 12.5 }.Classed("ghost");
-    // The top bar's names: the world, and the area open.
+    /// <summary>
+    /// The top bar's names: the world, and the area open.
+    /// </summary>
     private readonly TextBlock _title = new() { FontSize = 14, FontWeight = FontWeight.SemiBold, Text = "Valheim World Editor", TextTrimming = TextTrimming.CharacterEllipsis };
+    /// <summary>
+    /// Under the title: the area open, or in the Workshop the building's cost.
+    /// </summary>
     private readonly TextBlock _subtitle = new() { FontSize = 12, Foreground = Ui.Muted, TextTrimming = TextTrimming.CharacterEllipsis };
+    /// <summary>
+    /// The LIVE badge, shown while the world is the game's live one.
+    /// </summary>
     private readonly Border _liveBadge = new()
     {
         IsVisible = false,
@@ -41,76 +69,206 @@ public sealed partial class MainWindow : Window
             },
         },
     };
+    /// <summary>
+    /// The save bar's pill around what is waiting, tinted while something is.
+    /// </summary>
     private readonly Border _pendingPill = new() { CornerRadius = new CornerRadius(999), BorderThickness = new Thickness(1), Padding = new Thickness(9, 4), VerticalAlignment = VerticalAlignment.Center };
+    /// <summary>
+    /// What is selected, in the status bar.
+    /// </summary>
     private readonly TextBlock _selection = new() { FontSize = 12, Foreground = new SolidColorBrush(Color.FromRgb(224, 166, 75)), TextWrapping = TextWrapping.Wrap };
+    /// <summary>
+    /// The game's models once opened; null before, or without the game.
+    /// </summary>
     private ModelStore? _models;
-    // The game's models being opened at start (the bundles indexed the first time: a few seconds).
+    /// <summary>
+    /// The game's models being opened at start (the bundles indexed the first time: a few seconds).
+    /// </summary>
     private Task<ModelStore?>? _modelsLoading;
-    // The file pickers' patterns.
+    /// <summary>
+    /// The file pickers' patterns.
+    /// </summary>
     private static readonly string[] BlueprintPatterns = ["*.blueprint", "*.vbuild"], PicturePatterns = ["*.png", "*.jpg", "*.jpeg", "*.bmp", "*.webp"], PngPatterns = ["*.png"];
+    /// <summary>
+    /// A thing's name for people: its model's, else its prefab's, else the prefab hash.
+    /// </summary>
     private string ThingName(WorldScene.Thing t) => _models?.NameOf(t.Prefab) ?? Terrain.PrefabCatalog.DisplayName(t.Prefab) ?? t.Prefab.ToString();
 
+    /// <summary>
+    /// The 3D view.
+    /// </summary>
     public GlView View { get; } = new();
+    /// <summary>
+    /// The tool rail and the tool options.
+    /// </summary>
     internal ToolPanel Tools { get; } = new();
+    /// <summary>
+    /// The Select tool's panel.
+    /// </summary>
     internal SelectPanel SelectPanel { get; }
+    /// <summary>
+    /// The Measure tool's panel.
+    /// </summary>
     internal MeasurePanel MeasurePanel { get; }
+    /// <summary>
+    /// The Dungeon tool's panel.
+    /// </summary>
     internal DungeonPanel DungeonPanel { get; }
+    /// <summary>
+    /// The Shape tool's panel.
+    /// </summary>
     internal ShapePanel ShapePanel { get; } = new();
+    /// <summary>
+    /// The Mountain tool's panel.
+    /// </summary>
     internal MountainPanel MountainPanel { get; } = new();
+    /// <summary>
+    /// The Workshop's Build panel (made once the models are there).
+    /// </summary>
     internal BuildPanel BuildPanel { get; private set; } = null!;
+    /// <summary>
+    /// The Script tool's panel.
+    /// </summary>
     internal ScriptPanel ScriptPanel { get; } = new();
-    // Stops the running script (null: none runs).
+    /// <summary>
+    /// Stops the running script (null: none runs).
+    /// </summary>
     private Action? _stopScript;
+    /// <summary>
+    /// The Mask that limits brushes, paths, shapes, area actions and pastes.
+    /// </summary>
     internal Mask Mask { get; } = new();
+    /// <summary>
+    /// The Mask's panel.
+    /// </summary>
     internal MaskPanel MaskPanel { get; }
+    /// <summary>
+    /// The Path tool's panel.
+    /// </summary>
     internal PathPanel PathPanel { get; }
+    /// <summary>
+    /// The Area tool's panel.
+    /// </summary>
     internal AreaPanel AreaPanel { get; }
+    /// <summary>
+    /// The Paste tool's panel.
+    /// </summary>
     internal PastePanel PastePanel { get; }
+    /// <summary>
+    /// The Place tool's settings and work.
+    /// </summary>
     internal PlaceTool PlaceTool { get; } = new();
+    /// <summary>
+    /// The Place tool's mouse and keys over the 3D view.
+    /// </summary>
     internal PlaceInput PlaceInput { get; }
+    /// <summary>
+    /// The Place tool's panel.
+    /// </summary>
     internal PlacePanel PlacePanel { get; }
 
     // The save bar (top middle): what is waiting to be saved, undo, redo, Save, and the last message.
-    // The status bar's message (the driver clears it before a documentation picture).
+    /// <summary>
+    /// The status bar's message (the driver clears it before a documentation picture).
+    /// </summary>
     internal string StatusMessage { get => MessageText.Text ?? ""; set => MessageText.Text = value; }
+    /// <summary>
+    /// Takes the last edit back.
+    /// </summary>
     internal Button UndoButton { get; } = new Button { Content = Icons.Make("undo", 18), IsEnabled = false, Padding = new Thickness(7, 5) }.Classed("ghost");
+    /// <summary>
+    /// Does the edit taken back again.
+    /// </summary>
     internal Button RedoButton { get; } = new Button { Content = Icons.Make("redo", 18), IsEnabled = false, Padding = new Thickness(7, 5) }.Classed("ghost");
+    /// <summary>
+    /// Save to world, Apply live, or in the Workshop Save blueprint.
+    /// </summary>
     internal Button SaveButton { get; } = new Button { Content = "Save to world", FontSize = 12.5, IsEnabled = false }.Classed("primary");
+    /// <summary>
+    /// Opens the History panel.
+    /// </summary>
     internal Button HistoryButton { get; } = new Button { Content = Icons.With("history", "History"), FontSize = 12.5 }.Classed("ghost");
+    /// <summary>
+    /// The History panel: the edits so far, to go back to one.
+    /// </summary>
     internal HistoryPanel History { get; }
+    /// <summary>
+    /// Back to the map (in the Workshop: to the start page).
+    /// </summary>
     internal Button MapButton { get; } = new Button { Content = Icons.With("back", "Map"), FontSize = 12.5, IsVisible = false }.Classed("ghost");
 
     // ---- Pages: the start page, the world map, and the 3D editor of an area.
+    /// <summary>
+    /// Where the shown page goes.
+    /// </summary>
     private readonly ContentControl _pages = new();
+    /// <summary>
+    /// The 3D editor's page.
+    /// </summary>
     private readonly Control _editorPage = null!;
+    /// <summary>
+    /// The busy veil over the window while something long runs.
+    /// </summary>
     private readonly Border _busy = new() { Background = new SolidColorBrush(Color.FromArgb(200, 10, 12, 16)), IsVisible = false };
+    /// <summary>
+    /// What the busy veil says is being done.
+    /// </summary>
     private readonly TextBlock _busyText = new() { FontSize = 16, Foreground = Brushes.White, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, TextWrapping = TextWrapping.Wrap };
 
+    /// <summary>
+    /// The world open, or null on the start page or in the Workshop.
+    /// </summary>
     internal WorldSession? World { get; private set; }
 
+    /// <summary>
+    /// The start page, kept once made (until an error is shown on a new one).
+    /// </summary>
     internal StartPage? StartPage { get; private set; }
+    /// <summary>
+    /// The world map page, kept once made.
+    /// </summary>
     internal MapPage? MapPage { get; private set; }
+    /// <summary>
+    /// Whether the world map is the page shown.
+    /// </summary>
     internal bool MapShown => MapPage != null && _pages.Content == MapPage.View;
-    // The transparent control over the 3D view that takes the mouse (the test driver sends it input).
+    /// <summary>
+    /// The transparent control over the 3D view that takes the mouse (the test driver sends it input).
+    /// </summary>
     internal Control Surface { get; private set; } = null!;
 
+    /// <summary>
+    /// What is waiting to be saved, as a list for people ("3 zone(s) of ground, 2 deleted").
+    /// </summary>
     private static string Describe((int Zones, int Deleted, int Added, int Resets) p)
     {
         var (z, d, a, r) = p;
         return string.Join(", ", new[] { z > 0 ? $"{z} zone(s) of ground" : "", d > 0 ? $"{d} deleted" : "", a > 0 ? $"{a} added" : "", r > 0 ? $"{r} zone reset" : "" }.Where(x => x != ""));
     }
 
+    /// <summary>
+    /// Whether the busy veil is up.
+    /// </summary>
     internal bool IsBusy => _busy.IsVisible;
 
+    /// <summary>
+    /// The busy veil with what is being done, or none (null).
+    /// </summary>
     private void Busy(string? text)
     {
         _busyText.Text = text ?? "";
         _busy.IsVisible = text != null;
     }
 
-    // A new world: the seed's preview and search, then Create (a world in the game's folder, opened).
+    /// <summary>
+    /// A new world: the seed's preview and search, then Create (a world in the game's folder, opened). Null when that
+    /// page is not shown.
+    /// </summary>
     internal NewWorldPage? NewWorld { get; private set; }
 
+    /// <summary>
+    /// Shows a new New world page.
+    /// </summary>
     internal void ShowNewWorld()
     {
         var page = NewWorld = new NewWorldPage();
@@ -120,6 +278,9 @@ public sealed partial class MainWindow : Window
         _pages.Content = page.View;
     }
 
+    /// <summary>
+    /// Makes a world in <paramref name="folder"/> and opens it; on failure the New world page says why.
+    /// </summary>
     internal async Task CreateWorld(string folder, string name, string seed)
     {
         Busy($"Making the world {name}…");
@@ -145,7 +306,10 @@ public sealed partial class MainWindow : Window
         MessageText.Text = $"Made {name} (seed {seed}). The game lays out its start, traders and dungeons the first time it loads it, and makes each place as players reach it: play it before reshaping an area here.";
     }
 
-    // The start page: how to edit, and which world.
+    /// <summary>
+    /// The start page: how to edit, and which world.
+    /// </summary>
+    /// <param name="error">Shown on a newly made start page; null to keep the page made before.</param>
     internal void ShowStart(string? error = null)
     {
         MapPage?.Stop();
@@ -186,7 +350,11 @@ public sealed partial class MainWindow : Window
         _pages.Content = StartPage.View;
     }
 
-    // Opens a world (offline or live), then shows its map.
+    /// <summary>
+    /// Opens a world (offline or live), then shows its map; back to the start page, with why, when it cannot be opened.
+    /// </summary>
+    /// <param name="open">Opens it (off the UI thread).</param>
+    /// <param name="what">What the busy veil says meanwhile.</param>
     internal async Task OpenWorld(Func<Task<WorldSession>> open, string what)
     {
         Busy(what);
@@ -209,7 +377,9 @@ public sealed partial class MainWindow : Window
         ShowMap();
     }
 
-    // The world map (what is not saved stays pending).
+    /// <summary>
+    /// The world map (what is not saved stays pending).
+    /// </summary>
     internal void ShowMap()
     {
         if (World == null)
@@ -245,7 +415,9 @@ public sealed partial class MainWindow : Window
         _pages.Content = MapPage.View;
     }
 
-    // Leaving an area: its history stays with the world, for the next area opened.
+    /// <summary>
+    /// Leaving an area: its history stays with the world, for the next area opened.
+    /// </summary>
     private void KeepHistory()
     {
         if (Session is { Scene.Owner: { } owner } s && _pages.Content == _editorPage)
@@ -255,7 +427,12 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    // An area of the world in the 3D editor.
+    /// <summary>
+    /// An area of the world in the 3D editor; an object the map's search found there is selected, the camera on it.
+    /// </summary>
+    /// <param name="x">The middle zone, east.</param>
+    /// <param name="z">The middle zone, north.</param>
+    /// <param name="size">The area's side, in zones.</param>
     internal async Task EditArea(int x, int z, int size)
     {
         if (World is not { } world)
@@ -294,6 +471,10 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    /// <summary>
+    /// Shows a loaded area (or the Workshop's plot) in the 3D editor, the game's models opened first if they are not
+    /// yet.
+    /// </summary>
     internal async Task ShowEditor(WorldScene scene)
     {
         if (_models == null && _modelsLoading != null)
@@ -324,7 +505,10 @@ public sealed partial class MainWindow : Window
         EditorOpened(scene);
     }
 
-    // Map: Save (or Apply live) for the whole world, after asking.
+    /// <summary>
+    /// Map: Save (or Apply live) for the whole world; saving asks first, applying only when it would overwrite the
+    /// game's changes.
+    /// </summary>
     internal async Task SaveWorld()
     {
         if (World is not { } w)
@@ -386,6 +570,9 @@ public sealed partial class MainWindow : Window
         MapPage?.Show(w);
     }
 
+    /// <summary>
+    /// Map: Discard, after asking: the unsaved changes dropped and the world read again.
+    /// </summary>
     internal async Task DiscardWorld()
     {
         if (World is not { } w || !await Ask("Discard", $"Discard the unsaved changes ({Describe(w.Pending)})? The world is read again{(w.IsLive ? " from the game" : " from disk")}.", "Discard", "Keep them"))
@@ -408,6 +595,9 @@ public sealed partial class MainWindow : Window
         MapPage?.Show(w);
     }
 
+    /// <summary>
+    /// Map, live: reads the world from the game again.
+    /// </summary>
     internal async Task ReloadWorld()
     {
         if (World is not { IsLive: true } w)
@@ -427,7 +617,9 @@ public sealed partial class MainWindow : Window
         MapPage?.Show(w);
     }
 
-    // Worlds: back to the start page (asks first when something is not saved).
+    /// <summary>
+    /// Worlds: back to the start page (asks first when something is not saved).
+    /// </summary>
     internal async Task LeaveWorld()
     {
         if (World is { } w && w.Pending is not (0, 0, 0, 0)
@@ -441,8 +633,10 @@ public sealed partial class MainWindow : Window
         Tunnel.Close();
         ShowStart();
     }
-    // An error no part of the window caught (App): said in the status bar, so the editor stays open
-    // with the changes not saved yet.
+    /// <summary>
+    /// An error no part of the window caught (App): said in the status bar, so the editor stays open with the changes
+    /// not saved yet.
+    /// </summary>
     internal void ShowError(Exception ex)
     {
         Busy(null);
@@ -455,28 +649,63 @@ public sealed partial class MainWindow : Window
             _ = Tell(text).ContinueWith(_ => _errorShown = false, TaskScheduler.FromCurrentSynchronizationContext());
         }
     }
+    /// <summary>
+    /// A dialog about an error is open: more errors go only to the status bar.
+    /// </summary>
     private bool _errorShown;
+    /// <summary>
+    /// The Inspector panel: one object's data.
+    /// </summary>
     internal InspectorPanel Inspector { get; }
+    /// <summary>
+    /// The Blueprints panel.
+    /// </summary>
     internal BlueprintsPanel Blueprints { get; }
+    /// <summary>
+    /// The View panel's card.
+    /// </summary>
     internal Control ViewPanelCard { get; } = null!;
+    /// <summary>
+    /// What is waiting to be saved, in the save bar.
+    /// </summary>
     internal TextBlock PendingText { get; } = new() { FontSize = 12, VerticalAlignment = VerticalAlignment.Center, Text = "All saved" };
+    /// <summary>
+    /// The status bar's last message.
+    /// </summary>
     internal TextBlock MessageText { get; } = new() { FontSize = 12.5, TextWrapping = TextWrapping.Wrap, MaxLines = 2, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center };
-    // Asks before writing into the world (replaced by tests).
+    /// <summary>
+    /// Asks before writing into the world (replaced by tests).
+    /// </summary>
     internal Func<string, Task<bool>> ConfirmSave { get; set; }
-    // A yes / no question (title, text, yes, no): Discard, Leave, Quit with unsaved changes. Tests answer it.
+    /// <summary>
+    /// A yes / no question (title, text, yes, no): Discard, Leave, Quit with unsaved changes. Tests answer it.
+    /// </summary>
     internal Func<string, string, string, string, Task<bool>> Ask { get; set; }
+    /// <summary>
+    /// Tells the user something in a dialog (tests replace it).
+    /// </summary>
     internal Func<string, Task> Tell { get; set; }
+    /// <summary>
+    /// The area being edited, or null when none is open.
+    /// </summary>
     internal EditSession? Session { get; private set; }
+    /// <summary>
+    /// Close without asking about what is not saved.
+    /// </summary>
     private bool _closeAnyway;
 
-    // The test driver's quit: what is pending is dropped without asking.
+    /// <summary>
+    /// The test driver's quit: what is pending is dropped without asking.
+    /// </summary>
     internal void CloseWithoutAsking()
     {
         _closeAnyway = true;
         Close();
     }
 
-    // Starts editing a loaded scene (also used by tests with a scene of their own).
+    /// <summary>
+    /// Starts editing a loaded scene (also used by tests with a scene of their own).
+    /// </summary>
     internal void Edit(EditSession session)
     {
         // Another area: building in the last one's dungeon (and its cut) ends.
@@ -530,6 +759,9 @@ public sealed partial class MainWindow : Window
         UpdateSaveBar();
     }
 
+    /// <summary>
+    /// The save bar and the editor's world card as the session now stands (in the Workshop: its own save bar).
+    /// </summary>
     private void UpdateSaveBar()
     {
         var s = Session;
@@ -560,6 +792,9 @@ public sealed partial class MainWindow : Window
         UpdateEditorWorld(s, dirty);
     }
 
+    /// <summary>
+    /// Ctrl+Z: takes the last step back (asking first for a step from an earlier session).
+    /// </summary>
     internal async Task Undo()
     {
         View.SelectTool.Commit();
@@ -570,6 +805,9 @@ public sealed partial class MainWindow : Window
         UpdateSaveBar();
     }
 
+    /// <summary>
+    /// Ctrl+Shift+Z: does the last step taken back again (asking first for a step from an earlier session).
+    /// </summary>
     internal async Task Redo()
     {
         View.SelectTool.Commit();
@@ -580,8 +818,11 @@ public sealed partial class MainWindow : Window
         UpdateSaveBar();
     }
 
-    // Steps from an earlier session of the editor (kept on disk), when the world may have changed since
-    // (live, or saved again by the game): asked once per open world before undoing or redoing them.
+    /// <summary>
+    /// Steps from an earlier session of the editor (kept on disk), when the world may have changed since (live, or
+    /// saved again by the game): asked once per open world before undoing or redoing them.
+    /// </summary>
+    /// <returns>Whether to go ahead.</returns>
     internal async Task<bool> AllowEarlier(IEnumerable<EditSession.Change> steps)
     {
         if (Session?.Scene.Owner is not { EarlierMayDiffer: true } w || !steps.Any(c => c.Earlier))
@@ -598,7 +839,10 @@ public sealed partial class MainWindow : Window
         return true;
     }
 
-    // Like the web editor's Save: asks first, writes (with a backup), then says what was done.
+    /// <summary>
+    /// Like the web editor's Save: asks first, writes (with a backup), then says what was done. Live, it applies
+    /// instead; in the Workshop it saves the blueprint.
+    /// </summary>
     internal async Task Save()
     {
         var s = Session;
@@ -652,11 +896,19 @@ public sealed partial class MainWindow : Window
         UpdateSaveBar();
     }
 
+    /// <summary>
+    /// A prefab's name for people (its model's, else the catalogue's); null when unknown.
+    /// </summary>
     internal string? NameOfPrefab(int prefab) => _models?.NameOf(prefab) ?? Terrain.PrefabCatalog.DisplayName(prefab);
 
-    // A kind's model box in its own frame, in Unity's axes (the models are stored with z mirrored) and
-    // scaled like the model; null while unknown.
+    /// <summary>
+    /// Model boxes by kind name, worked out once (null: no model).
+    /// </summary>
     private readonly Dictionary<string, (System.Numerics.Vector3, System.Numerics.Vector3)?> _boxes = [];
+    /// <summary>
+    /// A kind's model box in its own frame, in Unity's axes (the models are stored with z mirrored) and scaled like the
+    /// model; null when it has no model (or the game's models are not open).
+    /// </summary>
     private (System.Numerics.Vector3 Min, System.Numerics.Vector3 Max)? ModelBox(string name)
     {
         if (_boxes.TryGetValue(name, out var known))
@@ -685,7 +937,9 @@ public sealed partial class MainWindow : Window
         return _boxes[name] = (new System.Numerics.Vector3(lo.X * sc.X, lo.Y * sc.Y, -hi.Z * sc.Z), new System.Numerics.Vector3(hi.X * sc.X, hi.Y * sc.Y, -lo.Z * sc.Z));
     }
 
-    // Ctrl+C: the Area selection (ground and shown objects), or the Select tool's objects.
+    /// <summary>
+    /// Ctrl+C: the Area selection (ground and shown objects), or the Select tool's objects.
+    /// </summary>
     internal void Copy()
     {
         if (Session is not { } s)
@@ -720,7 +974,9 @@ public sealed partial class MainWindow : Window
             : $"Copied {clip.W} × {clip.H} m and {clip.Objects.Count} object(s). Ctrl+V to paste, here or in another area.";
     }
 
-    // Ctrl+V: the Paste tool.
+    /// <summary>
+    /// Ctrl+V: the Paste tool.
+    /// </summary>
     internal void StartPaste()
     {
         if (View.Paste.Clip == null)
@@ -733,7 +989,10 @@ public sealed partial class MainWindow : Window
         PastePanel.Refresh();
     }
 
-    // A click in the Paste tool: one paste (with its repeats) is one undo step.
+    /// <summary>
+    /// A click in the Paste tool: one paste (with its repeats) is one undo step.
+    /// </summary>
+    /// <param name="at">The grid point clicked.</param>
     internal void PasteAt(System.Numerics.Vector2 at)
     {
         if (Session is not { } s || View.Paste.Clip == null)
@@ -775,7 +1034,9 @@ public sealed partial class MainWindow : Window
         UpdateSaveBar();
     }
 
-    // Built by: the world's builders, this computer's characters, named players, another id, or nobody.
+    /// <summary>
+    /// Built by: the world's builders, this computer's characters, named players, another id, or nobody.
+    /// </summary>
     private void FillBuilders()
     {
         if (Session?.Scene.World is not { } w)
@@ -793,9 +1054,14 @@ public sealed partial class MainWindow : Window
         _fillingBuilders = false;
     }
 
-    // Asks for a player id ("Other player id…"; replaced by tests).
+    /// <summary>
+    /// Asks for a player id ("Other player id…"; replaced by tests).
+    /// </summary>
     internal Func<Task<string?>> AskPlayerId { get; set; }
 
+    /// <summary>
+    /// A Built by choice: new pieces get that builder, remembered for the world ("Other player id…" asks for one).
+    /// </summary>
     private async Task BuilderChosen()
     {
         if (_fillingBuilders || BuilderBox.SelectedIndex < 0 || Session?.Scene.World is not { } w)
@@ -824,7 +1090,9 @@ public sealed partial class MainWindow : Window
             : $"New pieces are built by {Builders.Players(w).FirstOrDefault(p => p.Id == id)?.Label ?? $"player {id}"}.";
     }
 
-    // Make player built: the selected pieces players build that have no builder get the chosen one.
+    /// <summary>
+    /// Make player built: the selected pieces players build that have no builder get the chosen one.
+    /// </summary>
     internal void Claim()
     {
         View.SelectTool.Commit();
@@ -860,7 +1128,9 @@ public sealed partial class MainWindow : Window
         UpdateSaveBar();
     }
 
-    // The inspector on the one selected object (the View panel makes room for it).
+    /// <summary>
+    /// The inspector on the one selected object (the View panel makes room for it).
+    /// </summary>
     internal void Inspect()
     {
         View.SelectTool.Commit();
@@ -875,7 +1145,9 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    // The Path tool's Apply: the action along the line, in one undo step. The line is kept.
+    /// <summary>
+    /// The Path tool's Apply: the action along the line, in one undo step. The line is kept.
+    /// </summary>
     internal void ApplyPath()
     {
         if (Session is not { } s)
@@ -908,8 +1180,9 @@ public sealed partial class MainWindow : Window
         UpdateSaveBar();
     }
 
-    // The Cave action: the trench, the trees and rocks in it taken away and the roof's boulders, in one
-    // undo step.
+    /// <summary>
+    /// The Cave action: the trench, the trees and rocks in it taken away and the roof's boulders, in one undo step.
+    /// </summary>
     private void ApplyCave(EditSession s, PathTool path)
     {
         var scene = s.Scene;
@@ -990,7 +1263,11 @@ public sealed partial class MainWindow : Window
         UpdateSaveBar();
     }
 
-    // Stamp once (Raise or Lower with a stamp): the whole picture into the ground, one undo step.
+    /// <summary>
+    /// Stamp once (Raise or Lower with a stamp): the whole picture into the ground, one undo step.
+    /// </summary>
+    /// <param name="gx">Grid point, east.</param>
+    /// <param name="gz">Grid point, north.</param>
     internal void StampAt(float gx, float gz)
     {
         if (Session is not { } s)
@@ -1011,7 +1288,9 @@ public sealed partial class MainWindow : Window
         UpdateSaveBar();
     }
 
-    // The Script tool's Run: the panel's script on the open area (RunScriptCode), its output below it.
+    /// <summary>
+    /// The Script tool's Run: the panel's script on the open area (RunScriptCode), its output below it.
+    /// </summary>
     internal async Task RunScript()
     {
         if (Session == null)
@@ -1038,14 +1317,23 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    // What a script gave: what it printed and what became of it (Output), the status bar's line (Message),
-    // and whether its changes went in (Changed).
+    /// <summary>
+    /// What a script gave.
+    /// </summary>
+    /// <param name="Changed">Whether its changes went in.</param>
+    /// <param name="Output">What it printed and what became of it.</param>
+    /// <param name="Message">The status bar's line.</param>
     internal sealed record ScriptOutcome(bool Changed, string Output, string Message);
 
-    // A script on the open area (the Script tool's Run, Claude's run_script): compiled and run in the
-    // background on a snapshot of the area, then what it changed goes in as one undo step (label), nothing
-    // when it fails, is stopped, runs 2 minutes, or the area changed meanwhile. progress: "Compiling…",
-    // "Running…". apply false: a dry run, only what it would change is said.
+    /// <summary>
+    /// A script on the open area (the Script tool's Run, Claude's run_script): compiled and run in the background on a
+    /// snapshot of the area, then what it changed goes in as one undo step, nothing when it fails, is stopped, runs 2
+    /// minutes, or the area changed meanwhile.
+    /// </summary>
+    /// <param name="code">The script's C# source.</param>
+    /// <param name="label">The undo step's name.</param>
+    /// <param name="progress">Told "Compiling…", then "Running…".</param>
+    /// <param name="apply">False: a dry run, only what it would change is said.</param>
     internal async Task<ScriptOutcome> RunScriptCode(string code, string label, Action<string>? progress = null, bool apply = true)
     {
         if (Session is not { } s)
@@ -1131,8 +1419,10 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    // The Mountain tool's click: the mountain goes into the ground there (grid point), then the biome's
-    // trees and rocks grow on it (a second undo step).
+    /// <summary>
+    /// The Mountain tool's click: the mountain goes into the ground there (grid point), then the biome's trees and
+    /// rocks grow on it (a second undo step).
+    /// </summary>
     internal async Task PutMountain(float gx, float gz)
     {
         if (Session is not { } s)
@@ -1168,7 +1458,9 @@ public sealed partial class MainWindow : Window
         UpdateSaveBar();
     }
 
-    // The Shape tool's click: the shape goes into the ground there (grid point).
+    /// <summary>
+    /// The Shape tool's click: the shape goes into the ground there (grid point).
+    /// </summary>
     internal void PutShape(float gx, float gz)
     {
         if (Session is not { } s)
@@ -1187,10 +1479,14 @@ public sealed partial class MainWindow : Window
         UpdateSaveBar();
     }
 
-    // The right-hand panels share the place under the top bar: one at a time (null: none).
-    // The driver: the right-hand panel by name (view, history, help or none).
+    /// <summary>
+    /// The driver: the right-hand panel by name (view, history, help or none).
+    /// </summary>
     internal void ShowRightPanel(string name) => ShowRight(name switch { "view" => ViewPanelCard, "history" => History.Card, "help" => HelpCard, _ => null });
 
+    /// <summary>
+    /// The right-hand panels share the place under the top bar: one at a time (null: none). The choice is remembered.
+    /// </summary>
     internal void ShowRight(Control? panel)
     {
         if (panel == ViewPanelCard || panel == HelpCard || panel == History.Card || panel == null)
@@ -1208,10 +1504,15 @@ public sealed partial class MainWindow : Window
         HelpButton.Classes.Set("on", HelpCard.IsVisible);
     }
 
+    /// <summary>
+    /// A thin upright line between groups of the top bar.
+    /// </summary>
     private static Border Sep() => new() { Width = 1, Height = 26, Background = Ui.Line, Margin = new Thickness(4, 0), VerticalAlignment = VerticalAlignment.Center };
 
-    // The top bar (the web editor's): back to the map, the names, undo and redo, what is waiting to be
-    // saved and Save, and the right-hand panels.
+    /// <summary>
+    /// The top bar (the web editor's): back to the map, the names, undo and redo, what is waiting to be saved and Save,
+    /// and the right-hand panels.
+    /// </summary>
     private Border TopBar()
     {
         UndoButton.Click += async (_, _) => await Undo();
@@ -1262,17 +1563,27 @@ public sealed partial class MainWindow : Window
         return card;
     }
 
-    // The status bar's cursor readout: where the pointer is on the ground (see CursorReadout).
+    /// <summary>
+    /// The status bar's cursor readout: where the pointer is on the ground (see CursorReadout).
+    /// </summary>
     internal TextBlock CursorText { get; } = new() { FontSize = 12, Foreground = Ui.Muted, VerticalAlignment = VerticalAlignment.Center, TextWrapping = TextWrapping.NoWrap };
+    /// <summary>
+    /// Where the pointer last was on the 3D view (null: off it), so the readout can follow a stroke's changes.
+    /// </summary>
     private Point? _cursorAt;
 
+    /// <summary>
+    /// The readout for a point of the 3D view (null: the pointer left it).
+    /// </summary>
     internal void ShowCursor(Point? at)
     {
         _cursorAt = at;
         CursorText.Text = at is Point p && View.Scene is { } s && Surface is { } surface && View.GridAt(p, surface.Bounds.Size) is { } g ? CursorReadout.Text(s, g.X, g.Y) : "";
     }
 
-    // The status bar (bottom): the cursor, the last message, the selection, walking or flying, and the controls.
+    /// <summary>
+    /// The status bar (bottom): the cursor, the last message, the selection, walking or flying, and the controls.
+    /// </summary>
     private Border StatusBar()
     {
         var bar = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto,Auto,Auto"), ColumnSpacing = 18 };
@@ -1296,7 +1607,10 @@ public sealed partial class MainWindow : Window
         return card;
     }
 
-    // Help: the controls (the web editor's list), then what the program knows about this computer.
+    /// <summary>
+    /// Help: the controls (the web editor's list), then what the program knows about this computer.
+    /// </summary>
+    /// <param name="record">The Record frame rates switch, shown at its end.</param>
     private Border Help(CheckBox record)
     {
         var list = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*"), ColumnSpacing = 12, RowSpacing = 5 };
@@ -1349,8 +1663,10 @@ public sealed partial class MainWindow : Window
         return card;
     }
 
-    // What is remembered between runs (Prefs, as the web editor kept it in the browser): each control set
-    // from it now and remembered as it changes.
+    /// <summary>
+    /// What is remembered between runs (Prefs, as the web editor kept it in the browser): each control set from it now
+    /// and remembered as it changes.
+    /// </summary>
     private void RememberPrefs()
     {
         var p = Prefs;
@@ -1431,10 +1747,17 @@ public sealed partial class MainWindow : Window
         };
     }
 
+    /// <summary>
+    /// The clipboard last remembered (or read back at start), so it is written only when it changes.
+    /// </summary>
     private CopyData? _keptClip;
 
-    // Placing (or pasting) a kind switched off in View switches it on, so what was placed is seen; said
-    // after what the tool says about the placing, as the web editor did.
+    /// <summary>
+    /// Placing (or pasting) a kind switched off in View switches it on, so what was placed is seen; said after what the
+    /// tool says about the placing, as the web editor did.
+    /// </summary>
+    /// <param name="scene">The scene the objects are in.</param>
+    /// <param name="indices">The new objects' indices in it.</param>
     internal void ShowKindsOf(WorldScene scene, IReadOnlyList<int> indices)
     {
         var turned = new List<string>();
@@ -1458,7 +1781,11 @@ public sealed partial class MainWindow : Window
         }, DispatcherPriority.Background);
     }
 
-    // Eyedropper for the Replace lists: the next click on an object gives its kind (Esc cancels).
+    /// <summary>
+    /// Eyedropper for the Replace lists: the next click on an object gives its kind (Esc cancels).
+    /// </summary>
+    /// <param name="label">What the kind is for, in the message.</param>
+    /// <param name="done">Given the picked object's prefab.</param>
     internal void PickKind(string label, Action<int> done)
     {
         View.PickObjectOnce = i =>
@@ -1474,7 +1801,10 @@ public sealed partial class MainWindow : Window
         };
         MessageText.Text = $"Click an object to pick its kind for {label}. Esc cancels.";
     }
-    // , . turn the paste by 1° (Shift: 15°); . is clockwise seen from above, like the other tools.
+    /// <summary>
+    /// , . turn the paste by 1° (Shift: 15°); . is clockwise seen from above, like the other tools.
+    /// </summary>
+    /// <returns>Always true: the key is taken.</returns>
     private bool TurnPaste(Avalonia.Input.Key key, bool shift)
     {
         float step = shift ? 15 : 1;
@@ -1482,7 +1812,10 @@ public sealed partial class MainWindow : Window
         return true;
     }
 
-    // Alt + wheel: the tool that turns things turns them, as its , and . keys do; otherwise (false) it zooms.
+    /// <summary>
+    /// Alt + wheel: the tool that turns things turns them, as its , and . keys do; otherwise (false) it zooms.
+    /// </summary>
+    /// <returns>Whether a tool took it.</returns>
     internal bool AltWheel(Avalonia.Input.Key key, bool shift) => Tools.Mode switch
     {
         ToolMode.Paste => TurnPaste(key, shift),
@@ -1491,6 +1824,10 @@ public sealed partial class MainWindow : Window
         _ => false,
     };
 
+    /// <summary>
+    /// The 3D editor's keys (shortcuts for the tools, the panels, undo, save and the like); none while typing in a box
+    /// or away from the editor.
+    /// </summary>
     private void OnKey(object? sender, Avalonia.Input.KeyEventArgs e)
     {
         // Typing in a box: its keys are its own. The keys below are the 3D editor's: on the start page or
@@ -1652,36 +1989,104 @@ public sealed partial class MainWindow : Window
     }
 
     // The View panel (top right): which kinds of objects are drawn, with how many the area has, and the water.
+    /// <summary>
+    /// One switch per kind of object.
+    /// </summary>
     private readonly Dictionary<ObjectKind, CheckBox> _kindBoxes = [];
+    /// <summary>
+    /// The View panel's switch per kind of object.
+    /// </summary>
     internal IReadOnlyDictionary<ObjectKind, CheckBox> KindBoxes => _kindBoxes;
+    /// <summary>
+    /// Draw the water.
+    /// </summary>
     internal CheckBox WaterBox { get; } = new() { Content = "Water", IsChecked = true, FontSize = 12 };
+    /// <summary>
+    /// Mark what is not saved yet (new objects keep a green marker).
+    /// </summary>
     internal CheckBox UnsavedBox { get; } = new() { Content = "Unsaved marks", IsChecked = true, FontSize = 12 };
+    /// <summary>
+    /// Mark ground points at the game's ±8 m limit in red.
+    /// </summary>
     internal CheckBox LimitBox { get; } = new() { Content = "Limit marks", IsChecked = true, FontSize = 12 };
+    /// <summary>
+    /// One switch per overlay layer.
+    /// </summary>
     private readonly Dictionary<Overlays.Layer, CheckBox> _overlayBoxes = [];
+    /// <summary>
+    /// The View panel's switch per overlay layer.
+    /// </summary>
     internal IReadOnlyDictionary<Overlays.Layer, CheckBox> OverlayBoxes => _overlayBoxes;
+    /// <summary>
+    /// Colour the ground by its slope.
+    /// </summary>
     internal CheckBox SlopeBox { get; } = new() { Content = "Slope colours", FontSize = 12 };
-    // Building: who new pieces are built by (the player ids: the list's entries).
+    /// <summary>
+    /// Building: who new pieces are built by (the player ids: the list's entries).
+    /// </summary>
     internal ComboBox BuilderBox { get; } = new() { FontSize = 12, MinWidth = 200, MaxWidth = 260 };
+    /// <summary>
+    /// The player id of each Built by entry, in order: the players, then -1 (another id, asked for) and 0 (nobody).
+    /// </summary>
     internal List<long> BuilderIds { get; } = [];
+    /// <summary>
+    /// True while the Built by list is filled, so it is not taken for a choice.
+    /// </summary>
     private bool _fillingBuilders;
+    /// <summary>
+    /// Draw height lines.
+    /// </summary>
     internal CheckBox ContourBox { get; } = new() { Content = "Height lines every", FontSize = 12 };
+    /// <summary>
+    /// How far apart the height lines are, in metres.
+    /// </summary>
     internal ComboBox ContourStepBox { get; } = new() { ItemsSource = new[] { "1", "2", "5", "10" }, SelectedIndex = 1, FontSize = 12, MinWidth = 60 };
 
+    /// <summary>
+    /// A small heading of the View panel.
+    /// </summary>
     private static TextBlock Heading(string t) => Ui.Heading(t, 12);
 
     // View, Look: the game's look or plain colours and boxes, see-through buildings, and the 3D
     // resolution (GlView). Presets switch every kind and overlay to the defaults, all on, or only the
     // ground (the web editor's buttons).
+    /// <summary>
+    /// The game's look, or plain colours and boxes.
+    /// </summary>
     internal CheckBox GameLookBox { get; } = new() { Content = "Game look", IsChecked = true, FontSize = 12 };
+    /// <summary>
+    /// Draw buildings see-through.
+    /// </summary>
     internal CheckBox SeeThroughBox { get; } = new() { Content = "See-through buildings", FontSize = 12 };
+    /// <summary>
+    /// The 3D view's resolution: the screen's, balanced, or fast.
+    /// </summary>
     internal ComboBox ResolutionBox { get; } = new() { ItemsSource = new[] { "Sharp (the screen's)", "Balanced", "Fast" }, SelectedIndex = 0, FontSize = 12, MinWidth = 150 };
+    /// <summary>
+    /// Every kind, the water and the overlays as they start.
+    /// </summary>
     internal Button DefaultsButton { get; } = new() { Content = "Defaults", FontSize = 12 };
+    /// <summary>
+    /// Every kind, the water and the overlays on.
+    /// </summary>
     internal Button AllButton { get; } = new() { Content = "All", FontSize = 12 };
+    /// <summary>
+    /// Only the ground: every kind, the water and the overlays off.
+    /// </summary>
     internal Button GroundButton { get; } = new() { Content = "Ground", FontSize = 12 };
+    /// <summary>
+    /// Each preset switch and whether it starts on (the defaults).
+    /// </summary>
     private readonly Dictionary<CheckBox, bool> _viewDefaults = [];
 
+    /// <summary>
+    /// The View panel's presets.
+    /// </summary>
     internal enum ViewPreset { Defaults, All, Ground }
 
+    /// <summary>
+    /// Sets every kind, the water and the overlays as the preset says.
+    /// </summary>
     internal void ShowPreset(ViewPreset preset)
     {
         foreach (var (box, on) in _viewDefaults)
@@ -1690,6 +2095,9 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    /// <summary>
+    /// Builds the View panel.
+    /// </summary>
     private Border ViewPanel()
     {
         var list = new StackPanel { Spacing = 2 };
@@ -1802,10 +2210,17 @@ public sealed partial class MainWindow : Window
         };
     }
 
-    // load: false opens the window without a world (tests).
-    // What is remembered between runs (the tests' windows: in memory only, unless a test gives one).
+    /// <summary>
+    /// What is remembered between runs (the tests' windows: in memory only, unless a test gives one).
+    /// </summary>
     internal Prefs Prefs { get; }
 
+    /// <summary>
+    /// The window, its panels wired to each other; with <paramref name="load"/> it opens on the start page (or, with
+    /// --world, straight into that area).
+    /// </summary>
+    /// <param name="load">False opens the window without a world (tests), its prefs in memory.</param>
+    /// <param name="prefs">What is remembered between runs; null for the default.</param>
     public MainWindow(bool load = true, Prefs? prefs = null)
     {
         Prefs = prefs ?? (load ? Prefs.Load() : Prefs.InMemory());
