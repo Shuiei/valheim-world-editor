@@ -729,22 +729,24 @@ public sealed class MapView : OpenGlControlBase, IDisposable
         var data = _data;
         Task.Run(() =>
         {
+            MapData.Layers? layers = null;
             try
             {
-                var layers = data.Detail(x0, z0, size, version);
-                // As the world map: kept on the UI thread, only if this world is still the one shown.
-                Dispatcher.UIThread.Post(() =>
-                {
-                    if (_data == data)
-                    {
-                        _detail = (layers, x0, z0, size, version);
-                    }
-                });
+                layers = data.Detail(x0, z0, size, version);
             }
             finally
             {
-                _asking = false;
-                Dispatcher.UIThread.Post(RequestNextFrameRendering);
+                // As the world map: kept on the UI thread, only if this world is still the one shown. Asking again
+                // only once it is there (or failed), else a frame drawn meanwhile would ask for the same close-up.
+                Dispatcher.UIThread.Post(() =>
+                {
+                    if (layers != null && _data == data)
+                    {
+                        _detail = (layers, x0, z0, size, version);
+                    }
+                    _asking = false;
+                    RequestNextFrameRendering();
+                });
             }
         });
     }
