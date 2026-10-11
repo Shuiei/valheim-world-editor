@@ -186,6 +186,10 @@ public sealed class NewWorldPage : IDisposable
     /// The search's results, as pictures to click.
     /// </summary>
     internal WrapPanel Found { get; } = new() { ItemSpacing = 6, LineSpacing = 6 };
+    /// <summary>
+    /// The least height of the found seeds' list, in pixels: two rows of pictures.
+    /// </summary>
+    private const double MinResults = 330;
 
     /// <summary>
     /// The preview shown (null while it is made).
@@ -361,10 +365,29 @@ public sealed class NewWorldPage : IDisposable
                 Metres("Bosses 1–5 within", Bosses),
                 findRow,
                 Progress,
-                new ScrollViewer { MaxHeight = 330, Content = Found },
             },
         });
-        var left = new ScrollViewer { Content = new StackPanel { Spacing = 10, Children = { world, search } }, Padding = new Thickness(0, 0, 10, 0) };
+        Found.Children.Add(Ui.Hint("The seeds found show here, best first: click one to look at it."));
+        var results = new ScrollViewer { Content = Found, Height = 330 };
+        var found = Ui.Card(new StackPanel
+        {
+            Spacing = 6,
+            Children = { new TextBlock { Text = "Found seeds", FontSize = 15, FontWeight = FontWeight.SemiBold }, results },
+        });
+        var column = new StackPanel { Spacing = 10, Children = { world, search, found } };
+        var left = new ScrollViewer { Content = column, Padding = new Thickness(0, 0, 10, 0) };
+        // The found seeds take the height the window has left, never less than two rows of them.
+        void FitResults()
+        {
+            double rest = column.Bounds.Height - results.Bounds.Height;
+            double height = Math.Max(MinResults, left.Bounds.Height - rest);
+            if (Math.Abs(height - results.Height) > 1)
+            {
+                results.Height = height;
+            }
+        }
+        column.SizeChanged += (_, _) => FitResults();
+        left.SizeChanged += (_, _) => FitResults();
         static Button ZoomButton(string text, string tip) => new Button { Content = text, FontSize = 13, Width = 30, Height = 30, Padding = new Thickness(0), HorizontalContentAlignment = HorizontalAlignment.Center }.Tip(tip);
         var zoomIn = ZoomButton("+", "newWorld.zoomIn");
         var zoomOut = ZoomButton("−", "newWorld.zoomOut");
