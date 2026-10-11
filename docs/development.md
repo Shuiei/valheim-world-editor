@@ -262,7 +262,8 @@ CircleCI (`.circleci/config.yml`) runs on every push and pull request:
 
 | Job | What it checks |
 |---|---|
-| `native-tests` | `tests/Desktop.Tests` without the visual tests, with OpenSSH's server installed (`VWE_NEED_SSHD=1`), on three containers that each run a third of the test classes, shared out by their last times (`tools/ci-tests.sh`). |
+| `core-tests` | The core's tests of `tests/Desktop.Tests` (namespace `WorldEditor.Tests`), with OpenSSH's server installed (`VWE_NEED_SSHD=1`). |
+| `app-tests` | The app's window tests (`TerrainEditor.Desktop.Tests`) without the visual tests, on three containers. Both test jobs let CircleCI share the classes out by their last times (`circleci tests run`, `tools/ci-tests.sh`), so **Rerun failed tests** runs only the classes that failed; every test runs, failing or not. |
 | `packages` | Both release packages build (without the plugin), and `tools/check-package.sh` finds everything they need and no source code, debug files or game files. |
 
 Not covered by CI: the visual tests (no display), building the plugin and reading the game's data
