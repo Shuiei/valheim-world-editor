@@ -1,0 +1,56 @@
+# Update approved pull requests: each time main moves (a pull request merged), merges main into every
+# open pull request that is approved and has auto-merge on, as the Update branch button does. Main
+# requires branches to be up to date, so without this auto-merge waits for someone to click it.
+# Drafts and pull requests already up to date are left alone; one that cannot be updated (a conflict,
+# a fork) gets a warning in the run and is skipped.
+name: Update approved PRs
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: update-approved-prs
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    permissions:
+      # Merge main into the pull requests' branches.
+      contents: write
+      pull-requests: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Update the approved pull requests with auto-merge on
+        run: |
+          prs=$(gh pr list --base main --state open --limit 100 \
+            --json number,headRefOid,isDraft,reviewDecision,autoMergeRequest \
+            --jq '.[] | select(.autoMergeRequest != null and .reviewDecision == "APPROVED" and (.isDraft | not)) | "\(.number) \(.headRefOid)"')
+          if [ -z "$prs" ]; then
+            echo "No approved pull request with auto-merge on."
+            exit 0
+          fi
+          while read -r pr sha; do
+            # In an if: a failed call (rate limit, a fork's commit) skips this pull request, not the others.
+            if ! behind=$(gh api "repos/$GH_REPO/compare/main...$sha" --jq .behind_by); then
+              echo "::warning::#$pr could not be compared with main"
+              continue
+            fi
+            if [ "$behind" = 0 ]; then
+              echo "#$pr: up to date"
+              continue
+            fi
+            # expected_head_sha: no update if someone pushed to the pull request meanwhile.
+            if gh api -X PUT "repos/$GH_REPO/pulls/$pr/update-branch" -f expected_head_sha="$sha" --silent; then
+              echo "#$pr: updated ($behind commits behind main)"
+            else
+              echo "::warning::#$pr could not be updated (a conflict with main?)"
+            fi
+          done <<< "$prs"
