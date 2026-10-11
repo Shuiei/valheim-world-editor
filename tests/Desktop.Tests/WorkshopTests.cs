@@ -431,9 +431,8 @@ public class WorkshopTests
 		// (its blueprint numbered: the first one is kept).
 		var before = w.Session;
 		g.OpenOnPlot.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Avalonia.Controls.Button.ClickEvent));
-		// The new plot fills as its pieces load: counted once they are all there (or the wait ends).
-		await Until(g, () => asked == 1 && w.InWorkshop && w.Session != before && Workshop.Pieces(w.Session.Scene) >= pieces);
-		Assert.Equal(pieces, Workshop.Pieces(w.Session!.Scene));
+		await Until(g, () => asked == 1 && w.InWorkshop && w.Session != before);
+		Assert.Equal(pieces, Workshop.Pieces(w.Session.Scene));
 		Assert.Equal(2, r.Listed.Count(e => e.Tags.Contains("dungeon")));
 		Assert.True(bp.DungeonShown);
 		bp.BackToLibrary.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Avalonia.Controls.Button.ClickEvent));

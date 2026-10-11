@@ -211,6 +211,9 @@ public sealed class DungeonGenPanel
 		_loopsText.Text = $"Ways round: {(s.Loops == 0 ? "none (a tree)" : $"× {s.Loops:0.##}")}";
 		Name.PlaceholderText = DungeonGen.NameFor(s.Seed, s.Style, s.Biome);
 		Place.IsEnabled = OpenOnPlot.IsEnabled = AddToPlot.IsEnabled = false;
+		// A dungeon still being made for the settings before is not shown when it is done: it would come
+		// back as the one to place, made for other settings.
+		_generation++;
 		_wait.Stop();
 		_wait.Start();
 	}
