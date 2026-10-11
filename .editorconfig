@@ -176,20 +176,34 @@ csharp_style_unused_value_assignment_preference = discard_variable:warning
 csharp_style_unused_value_expression_statement_preference = discard_variable:silent
 
 # Rules with no option of their own, raised to warnings.
-dotnet_diagnostic.IDE0001.severity = warning # simplify names
-dotnet_diagnostic.IDE0002.severity = warning # simplify member access
-dotnet_diagnostic.IDE0004.severity = warning # unnecessary cast
-dotnet_diagnostic.IDE0005.severity = warning # unnecessary using
-dotnet_diagnostic.IDE0035.severity = warning # unreachable code
-dotnet_diagnostic.IDE0051.severity = warning # unused private member
-dotnet_diagnostic.IDE0052.severity = warning # private member never read
-dotnet_diagnostic.IDE0055.severity = warning # formatting
-dotnet_diagnostic.IDE0079.severity = warning # unnecessary suppression
-dotnet_diagnostic.IDE0080.severity = warning # unnecessary ! operator
-dotnet_diagnostic.IDE0100.severity = warning # == true
-dotnet_diagnostic.IDE0110.severity = warning # unnecessary discard
-dotnet_diagnostic.IDE0240.severity = warning # redundant #nullable
-dotnet_diagnostic.IDE0241.severity = warning # unnecessary #nullable
+# simplify names
+dotnet_diagnostic.IDE0001.severity = warning
+# simplify member access
+dotnet_diagnostic.IDE0002.severity = warning
+# unnecessary cast
+dotnet_diagnostic.IDE0004.severity = warning
+# unnecessary using
+dotnet_diagnostic.IDE0005.severity = warning
+# unreachable code
+dotnet_diagnostic.IDE0035.severity = warning
+# unused private member
+dotnet_diagnostic.IDE0051.severity = warning
+# private member never read
+dotnet_diagnostic.IDE0052.severity = warning
+# formatting
+dotnet_diagnostic.IDE0055.severity = warning
+# unnecessary suppression
+dotnet_diagnostic.IDE0079.severity = warning
+# unnecessary ! operator
+dotnet_diagnostic.IDE0080.severity = warning
+# == true
+dotnet_diagnostic.IDE0100.severity = warning
+# unnecessary discard
+dotnet_diagnostic.IDE0110.severity = warning
+# redundant #nullable
+dotnet_diagnostic.IDE0240.severity = warning
+# unnecessary #nullable
+dotnet_diagnostic.IDE0241.severity = warning
 
 #### Naming (IDE1006) ####
 
