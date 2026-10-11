@@ -16,7 +16,7 @@ namespace TerrainEditor.App;
 // game changed.
 public static partial class GameCatalogues
 {
-	public static readonly string[] All = { "piece-place", "piece-support", "vegetation", "dungeon-rooms" };
+	public static readonly string[] All = { "piece-place", "vegetation", "dungeon-rooms" };
 
 	// Written gzipped (the largest).
 	private static readonly string[] Gzipped = { "piece-place", "dungeon-rooms" };
@@ -73,10 +73,9 @@ public static partial class GameCatalogues
 	{
 		var made = new Dictionary<string, string>();
 		var place = names.Contains("piece-place") ? new PlaceScan() : null;
-		var support = names.Contains("piece-support") ? new SupportScan() : null;
 		var vegetation = names.Contains("vegetation") ? new VegetationScan() : null;
 		var dungeons = names.Contains("dungeon-rooms") ? new DungeonScan() : null;
-		var scans = new IScan?[] { place, support, vegetation, dungeons }.OfType<IScan>().ToList();
+		var scans = new IScan?[] { place, vegetation, dungeons }.OfType<IScan>().ToList();
 		if (scans.Count > 0)
 		{
 			using var game = new Game(bundles.Folder);
@@ -101,10 +100,6 @@ public static partial class GameCatalogues
 			{
 				made["piece-place"] = CatalogueJson.Write(place.Entries, new Style(",", ":"));
 			}
-			if (support != null)
-			{
-				made["piece-support"] = CatalogueJson.Write(support.Entries, new Style(",", ":"));
-			}
 			if (vegetation != null)
 			{
 				made["vegetation"] = CatalogueJson.Write(vegetation.Finish(game), new Style(",", Indent: 0));
@@ -121,7 +116,7 @@ public static partial class GameCatalogues
 	// needs up to their prefabs, not by reading every object of every bundle as the catalogues do
 	// (seconds, not minutes). Every kind asked for is read in one pass: each bundle opened once and
 	// given to each kind's reader.
-	public static readonly string[] AtStart = { "terrain-modifiers", "prefabs", "pieces", "piece-cost" };
+	public static readonly string[] AtStart = { "terrain-modifiers", "prefabs", "pieces", "piece-support", "piece-cost" };
 
 	// The kinds named (of AtStart), as their JSON.
 	public static Dictionary<string, string> ReadAtStart(GameBundles bundles, IReadOnlyList<string> kinds)
@@ -131,6 +126,7 @@ public static partial class GameCatalogues
 			"terrain-modifiers" => (IStartScan)new ModifierScan(),
 			"prefabs" => new PrefabScan(),
 			"pieces" => new PieceScan(),
+			"piece-support" => new SupportScan(),
 			"piece-cost" => new CostScan(Localization.English(bundles.Folder)),
 			_ => throw new ArgumentException($"no kind {k} is read at the start"),
 		})).ToList();
@@ -377,6 +373,27 @@ public static partial class GameCatalogues
 		// faster than one by one in another order); Field then has them.
 		public void ReadInOrder(IEnumerable<long> pids)
 		{
+			foreach (var (f, pid) in InOrder(pids))
+			{
+				Field(f, pid);
+			}
+		}
+
+		// The same, each given to take and not kept (for large ones of which little is needed); those that
+		// cannot be read left out.
+		public void ReadInOrder(IEnumerable<long> pids, Action<long, AssetTypeValueField> take)
+		{
+			foreach (var (f, pid) in InOrder(pids))
+			{
+				if (Read(f, pid) is { } field)
+				{
+					take(pid, field);
+				}
+			}
+		}
+
+		private List<(Inner File, long Pid)> InOrder(IEnumerable<long> pids)
+		{
 			var objects = pids.Distinct().Where(_byId.ContainsKey).Select(p => (File: _byId[p], Pid: p))
 				.OrderBy(o => Files.IndexOf(o.File)).ThenBy(o => o.File.Assets.file.GetAssetInfo(o.Pid)!.GetAbsoluteByteOffset(o.File.Assets.file)).ToList();
 			// Backwards every other time: what the last read left in the block cache comes first.
@@ -384,10 +401,7 @@ public static partial class GameCatalogues
 			{
 				objects.Reverse();
 			}
-			foreach (var (f, pid) in objects)
-			{
-				Field(f, pid);
-			}
+			return objects;
 		}
 
 		private bool _backwards = true;
