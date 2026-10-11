@@ -3,27 +3,47 @@ using System.Text.RegularExpressions;
 
 namespace TerrainEditor.Desktop;
 
-// A small, safe formula language, the same as the web editor's (editor/shapes.js compile): numbers,
-// named variables, + - * / % ^, comparisons, && ||, !, a ? b : c, pi, n(x, z) (smooth noise) and the
-// functions below. Compiled once into a function of an environment; a mistake throws a
-// FormatException with a plain message.
+/// <summary>
+/// A small, safe formula language, the same as the web editor's (editor/shapes.js compile): numbers, named variables, +
+/// - * / % ^, comparisons, &amp;&amp; ||, !, a ? b : c, pi, n(x, z) (smooth noise) and the functions below. Compiled
+/// once into a function of an environment; a mistake throws a FormatException with a plain message.
+/// </summary>
 public static class Formula
 {
+    /// <summary>
+    /// What a compiled formula reads: its variables' values and the noise behind n(x, z). One is reused from point to
+    /// point.
+    /// </summary>
     public sealed class Env
     {
+        /// <summary>
+        /// The variables' values by name (those given to Compile); a missing one throws when the formula runs.
+        /// </summary>
         public Dictionary<string, double> Vars { get; } = [];
+        /// <summary>
+        /// The smooth noise of n(x, z) (0 everywhere unless set).
+        /// </summary>
         public Func<double, double, double> Noise { get; set; } = (_, _) => 0;
     }
 
-    // JavaScript's truth: 0 and NaN are false.
+    /// <summary>
+    /// JavaScript's truth: 0 and NaN are false.
+    /// </summary>
     private static bool Truthy(double v) => v != 0 && !double.IsNaN(v);
 
+    /// <summary>
+    /// smooth(t): 0 to 1 eased (smoothstep), t clamped to 0..1.
+    /// </summary>
     private static double Smooth(double t)
     {
         t = Math.Clamp(t, 0, 1);
         return t * t * (3 - 2 * t);
     }
 
+    /// <summary>
+    /// The functions a formula can call, by name, as in JavaScript's Math where they share a name; sqrt and log take no
+    /// negative numbers (they clamp), bell(t) is a bell curve exp(-2.5 t²).
+    /// </summary>
     private static readonly Dictionary<string, Func<double[], double>> Funcs = new()
     {
         ["sin"] = a => Math.Sin(a[0]),
@@ -47,7 +67,10 @@ public static class Formula
         ["bell"] = a => Math.Exp(-a[0] * a[0] * 2.5),
     };
 
-    // How many numbers each function takes (min and max: any number, none included, as in JavaScript).
+    /// <summary>
+    /// How many numbers each function takes when not one (-1, min and max: any number, none included, as in
+    /// JavaScript).
+    /// </summary>
     private static readonly Dictionary<string, int> Arity = new()
     {
         ["pow"] = 2,
@@ -57,17 +80,37 @@ public static class Formula
         ["max"] = -1,
     };
 
-    // Deeper nesting, or a longer formula, would run out of stack (which closes the app: it cannot be
-    // caught) when it is read or worked out.
+    /// <summary>
+    /// Deeper nesting, or a longer formula, would run out of stack (which closes the app: it cannot be caught) when it
+    /// is read or worked out.
+    /// </summary>
     private const int MaxDepth = 100, MaxTokens = 4000;
 
+    /// <summary>
+    /// A token of the formula: a number, a name or an operator (only one is set).
+    /// </summary>
+    /// <param name="N">A number.</param>
+    /// <param name="Id">A name (variable, function, pi).</param>
+    /// <param name="Op">An operator or bracket.</param>
     private sealed record Tok(double? N = null, string? Id = null, string? Op = null)
     {
+        /// <summary>
+        /// The token as it is written, for messages.
+        /// </summary>
         public override string ToString() => Op ?? Id ?? N?.ToString(CultureInfo.InvariantCulture) ?? "";
     }
 
+    /// <summary>
+    /// One token from where it is asked for (\G), spaces before it skipped: a number, a name, or an operator.
+    /// </summary>
     private static readonly Regex Token = new(@"\G\s*(?:(\d+\.?\d*(?:e[+-]?\d+)?|\.\d+)|([A-Za-z_]\w*)|(<=|>=|==|!=|&&|\|\||[-+*/%^(),<>?:!]))", RegexOptions.Compiled);
 
+    /// <summary>
+    /// Compiles a formula once into a function of an environment.
+    /// </summary>
+    /// <param name="src">The formula.</param>
+    /// <param name="names">The variables it may use (their values go in Env.Vars).</param>
+    /// <returns>The formula's value for an environment (NaN and infinities are possible: x / 0).</returns>
     public static Func<Env, double> Compile(string src, IReadOnlyList<string> names)
     {
         src = src.Trim();

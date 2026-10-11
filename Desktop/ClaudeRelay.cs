@@ -5,12 +5,15 @@ using TerrainEditor.App;
 
 namespace TerrainEditor.Desktop;
 
-// --mcp-stdio: for MCP clients that start a program and talk to it on its standard input and output
-// (Claude Desktop): each message read from stdin goes to the running editor's server (ClaudeServer),
-// with the token from the settings, and its answers are written to stdout, one per line. No window;
-// nothing else is written to stdout.
+/// <summary>
+/// --mcp-stdio: for MCP clients that start a program and talk to it on its standard input and output
+/// (Claude Desktop): each message read from stdin goes to the running editor's server (ClaudeServer),
+/// with the token from the settings, and its answers are written to stdout, one per line. No window;
+/// nothing else is written to stdout.
+/// </summary>
 public static class ClaudeRelay
 {
+    /// <summary>Relays stdin to the editor and its answers to stdout (UTF-8, no BOM) until stdin ends.</summary>
     public static void Run()
     {
         using var input = new StreamReader(Console.OpenStandardInput(), new UTF8Encoding(false));
@@ -18,7 +21,16 @@ public static class ClaudeRelay
         RunAsync(input, output, AppSettings.Load).GetAwaiter().GetResult();
     }
 
-    // settings: read again for each message (the switch may be turned on while the client runs).
+    /// <summary>
+    /// Relays each line read to the editor's server and writes its answers (JSON, or the data lines of an event
+    /// stream), one per line. A line that is not JSON gets a JSON-RPC error; a message that cannot be passed on
+    /// (switch off, no token, editor not running, request refused) gets one only when it has an id. The
+    /// protocol version agreed at initialize is sent with the messages after it.
+    /// </summary>
+    /// <param name="input">The client's messages, one JSON-RPC message per line.</param>
+    /// <param name="output">Where the answers go.</param>
+    /// <param name="settings">Read again for each message (the switch may be turned on while the client runs).</param>
+    /// <param name="handler">The HTTP handler (tests give their own); null: a plain one.</param>
     internal static async Task RunAsync(TextReader input, TextWriter output, Func<AppSettings> settings, HttpMessageHandler? handler = null)
     {
         using var http = new HttpClient(handler ?? new HttpClientHandler()) { Timeout = TimeSpan.FromMinutes(5) };
@@ -97,6 +109,7 @@ public static class ClaudeRelay
         }
     }
 
+    /// <summary>A JSON-RPC error answer, one line.</summary>
     private static string Error(JsonNode? id, int code, string text) =>
         new JsonObject { ["jsonrpc"] = "2.0", ["id"] = id, ["error"] = new JsonObject { ["code"] = code, ["message"] = text } }.ToJsonString();
 }

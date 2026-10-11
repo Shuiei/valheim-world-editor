@@ -6,10 +6,13 @@ using TerrainEditor.App;
 
 namespace TerrainEditor.Desktop;
 
-// Settings: folders on this computer (the web start page's settings): the Valheim game folder, more
-// BepInEx folders to look for the plugin in, more world folders to list; and Claude's connection.
+/// <summary>
+/// Settings: folders on this computer (the web start page's settings): the Valheim game folder, more
+/// BepInEx folders to look for the plugin in, more world folders to list; and Claude's connection.
+/// </summary>
 public static class SettingsDialog
 {
+    /// <summary>A typed folder made absolute: trimmed, quotes dropped, a leading ~ turned into the home folder.</summary>
     private static string Expand(string path)
     {
         path = path.Trim().Trim('"');
@@ -20,7 +23,15 @@ public static class SettingsDialog
         return Path.GetFullPath(path);
     }
 
-    // Checks and applies the choices; the problems, or null when saved.
+    /// <summary>
+    /// Checks and applies the folder choices, saving the settings; nothing is changed when there is a problem. A
+    /// changed game folder starts <c>CheckGameLook</c>.
+    /// </summary>
+    /// <param name="settings">The settings to change and save.</param>
+    /// <param name="valheim">The game folder typed; null or blank to find it automatically.</param>
+    /// <param name="bepInEx">More BepInEx folders; blank entries are dropped, each must exist.</param>
+    /// <param name="worlds">More world folders; blank entries are dropped, each must exist.</param>
+    /// <returns>The problems, as one line, or null when saved.</returns>
     public static string? Apply(AppSettings settings, string? valheim, IEnumerable<string> bepInEx, IEnumerable<string> worlds)
     {
         var problems = new List<string>();
@@ -54,12 +65,14 @@ public static class SettingsDialog
         return null;
     }
 
-    // Tests: what a changed game folder starts (reading the game's files otherwise).
+    /// <summary>Tests: what a changed game folder starts (reading the game's files otherwise).</summary>
     internal static Action<AppSettings> CheckGameLook { get; set; } = GameLook.Check;
 
-    // Tests: the folder picker (null: the system's).
+    /// <summary>Tests: the folder picker (null: the system's).</summary>
     internal static Func<string, Task<string?>>? PickFolder { get; set; }
 
+    /// <summary>Shows the Settings dialog over <paramref name="owner"/> and waits for it to close.</summary>
+    /// <returns>True when the user saved (the folders and Claude's connection settings), false when cancelled or closed.</returns>
     public static async Task<bool> Show(Window owner, AppSettings settings)
     {
         bool saved = false;
@@ -202,6 +215,7 @@ public static class SettingsDialog
         return saved;
     }
 
+    /// <summary>Puts a control in a grid column and returns it, for building rows inline.</summary>
     private static Control Col(Control c, int col)
     {
         Grid.SetColumn(c, col);

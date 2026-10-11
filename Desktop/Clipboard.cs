@@ -4,28 +4,50 @@ using TerrainEditor.Terrain;
 
 namespace TerrainEditor.Desktop;
 
-// What Copy keeps, like the web editor's clipboard (editor/area.js): the ground's shape relative to its
-// average height (NaN: not copied), each point's weight (the soft edge), its paint (-1: not painted),
-// the objects relative to the middle, and the outline. W × H grid points around the middle.
+/// <summary>
+/// What Copy keeps, like the web editor's clipboard (editor/area.js): the ground's shape relative to its
+/// average height (NaN: not copied), each point's weight (the soft edge), its paint (-1: not painted),
+/// the objects relative to the middle, and the outline. W × H grid points around the middle.
+/// </summary>
 public sealed class CopyData
 {
+    /// <summary>The copy's width in grid points (one per metre).</summary>
     public required int W { get; init; }
+    /// <summary>The copy's depth in grid points.</summary>
     public required int H { get; init; }
+    /// <summary>Each point's height relative to the reference height, row by row; NaN: not copied.</summary>
     public required float[] Rel { get; init; }
+    /// <summary>Each point's weight, 0 to 1 (the soft edge).</summary>
     public required float[] Wt { get; init; }
+    /// <summary>Each point's paint, four values a point; -1: not painted.</summary>
     public required float[] Pnt { get; init; }
+    /// <summary>The objects copied.</summary>
     public required List<Obj> Objects { get; init; }
+    /// <summary>The outline, relative to the middle (metres east, north).</summary>
     public required List<Vector2> Poly { get; init; }
+    /// <summary>The blueprint's name, when it came from or went to one.</summary>
     public string? Name { get; set; }
 
-    // An object: offsets from the middle (east, north) and from the reference height (or, Follow, from
-    // the ground under it: objects copied with the Select tool), its turn and scale, and what it was
-    // copied from (its data goes with it).
-    // Data: what it holds, set on it as it is made (blueprints keep it; see ObjectField).
+    /// <summary>An object of a copy.</summary>
+    /// <param name="Prefab">Its prefab hash.</param>
+    /// <param name="Name">Its prefab name.</param>
+    /// <param name="Dx">Offset east from the middle, in metres.</param>
+    /// <param name="Dz">Offset north from the middle, in metres.</param>
+    /// <param name="Dy">Offset from the reference height (or, Follow, from the ground under it).</param>
+    /// <param name="Rotation">Its turn, Unity Euler degrees.</param>
+    /// <param name="Scale">Its scale.</param>
+    /// <param name="SourceId">What it was copied from (its data goes with it), null when nothing.</param>
+    /// <param name="Follow">Dy is from the ground under it: objects copied with the Select tool.</param>
+    /// <param name="Data">What it holds, set on it as it is made (blueprints keep it; see ObjectField).</param>
     public sealed record Obj(int Prefab, string Name, float Dx, float Dz, float Dy, Vector3 Rotation, float Scale, int? SourceId, bool Follow = false,
         IReadOnlyList<ObjectField>? Data = null);
 
-    // The ground and the shown objects inside an Area selection.
+    /// <summary>The ground and the shown objects inside an Area selection; null without a selection.</summary>
+    /// <param name="area">The selection.</param>
+    /// <param name="g">The ground.</param>
+    /// <param name="s">The scene the objects are in.</param>
+    /// <param name="objects">The objects to copy, as indices into the scene's things (kinds the world cannot make are left out).</param>
+    /// <param name="nameOf">A prefab hash's name, null when unknown.</param>
     public static CopyData? FromArea(AreaTool area, Ground g, WorldScene s, IReadOnlyList<int> objects, Func<int, string?> nameOf)
     {
         if (area.WeightsIn(g.W, g.H) is not { Cells.Count: > 0 } a)
@@ -53,7 +75,14 @@ public sealed class CopyData
         return new CopyData { W = w, H = h, Rel = rel, Wt = wt, Pnt = pnt, Objects = objs, Poly = [.. a.Poly.Select(p => p - new Vector2(cx, cz))] };
     }
 
-    // Objects only (Select tool's copy): each keeps its height above the ground where it lands.
+    /// <summary>
+    /// Objects only (Select tool's copy): each keeps its height above the ground where it lands; building pieces keep
+    /// the building's shape instead. Null when none can be copied.
+    /// </summary>
+    /// <param name="s">The scene the objects are in.</param>
+    /// <param name="things">The objects, as indices into the scene's things.</param>
+    /// <param name="nameOf">A prefab hash's name, null when unknown.</param>
+    /// <param name="groundAt">The ground's height at a world point (x, z).</param>
     public static CopyData? FromThings(WorldScene s, IReadOnlyList<int> things, Func<int, string?> nameOf, Func<float, float, float> groundAt)
     {
         var list = things.Select(i => s.Things[i]).Where(t => !t.Gone && (s.World == null || s.World.CanCreate(t.Prefab))).ToList();
@@ -85,40 +114,69 @@ public sealed class CopyData
         };
     }
 
+    /// <summary>
+    /// The saved object a thing was copied from: its own id, or for one added in this session the id it was itself
+    /// copied from (null: none).
+    /// </summary>
     private static int? SourceOf(WorldScene s, WorldScene.Thing t) => t.Id >= 0 ? t.Id : s.Session?.Edits.FindAdded(t.Id)?.SourceId;
 }
 
-// Pasting a clip (the Paste tool): where it goes, turned (degrees, counter-clockwise seen from above)
-// and mirrored, with a height offset and repeats (like WorldEdit's //stack).
+/// <summary>
+/// Pasting a clip (the Paste tool): where it goes, turned (degrees, counter-clockwise seen from above)
+/// and mirrored, with a height offset and repeats (like WorldEdit's //stack).
+/// </summary>
 public sealed class PasteTool
 {
+    /// <summary>What is pasted, null before the first copy.</summary>
     public CopyData? Clip { get; set; }
+    /// <summary>The turn, in degrees, 0 to 360 (counter-clockwise seen from above).</summary>
     public float Turn { get; set; }
+    /// <summary>Mirror east to west (before turning).</summary>
     public bool Mirror { get; set; }
+    /// <summary>Paste the ground (shape and paint).</summary>
     public bool Ground { get; set; } = true;
+    /// <summary>Paste the objects.</summary>
     public bool Objects { get; set; } = true;
-    // Clear the site: where the pasted building stands, the ground in its way is dug down to its lowest
-    // piece (a metre around it too), and the trees, rocks and the like there go (Site, for the caller).
+    /// <summary>
+    /// Clear the site: where the pasted building stands, the ground in its way is dug down to its lowest
+    /// piece (a metre around it too), and the trees, rocks and the like there go (Site, for the caller).
+    /// </summary>
     public bool ClearSite { get; set; } = true;
-    // The grid points the last Apply cleared (its buildings' outlines and the metre around them).
+    /// <summary>The grid points the last Apply cleared (its buildings' outlines and the metre around them).</summary>
     public HashSet<(int X, int Z)> Site { get; } = [];
+    /// <summary>The height added to the paste, in metres.</summary>
     public float Offset { get; set; }
+    /// <summary>How many copies (see <see cref="Count"/>).</summary>
     public int Copies { get; set; } = 1;
-    public enum Along { Width, Depth, Up }
+    /// <summary>Which way the copies repeat: east along the copy's width, north along its depth, or stacked up.</summary>
+    public enum Along
+    {
+        /// <summary>East, along the copy's width.</summary>
+        Width,
+        /// <summary>North, along the copy's depth.</summary>
+        Depth,
+        /// <summary>Stacked up.</summary>
+        Up,
+    }
+    /// <summary>Which way the copies repeat (turned and mirrored with the paste).</summary>
     public Along Direction { get; set; } = Along.Width;
+    /// <summary>The gap between copies, in metres.</summary>
     public float Gap { get; set; }
-    // Where the mouse is (grid point), for the preview.
+    /// <summary>Where the mouse is (grid point), for the preview.</summary>
     public Vector2? At { get; set; }
+    /// <summary>A setting or the clip changed.</summary>
     public event Action? Changed;
+    /// <summary>Raises <see cref="Changed"/>.</summary>
     public void Notify() => Changed?.Invoke();
 
+    /// <summary>Turns the paste by some degrees (kept 0 to 360).</summary>
     public void TurnBy(float degrees)
     {
         Turn = ((Turn + degrees) % 360 + 360) % 360;
         Notify();
     }
 
-    // Source offset (from the clip's middle) → offset where it lands.
+    /// <summary>Source offset (from the clip's middle) → offset where it lands: mirrored, then turned.</summary>
     public Vector2 Xf(Vector2 d)
     {
         if (Mirror)
@@ -129,6 +187,7 @@ public sealed class PasteTool
         return new Vector2(d.X * c - d.Y * s, d.X * s + d.Y * c);
     }
 
+    /// <summary>Offset where it lands → source offset: the inverse of <see cref="Xf"/>.</summary>
     public Vector2 Inv(Vector2 d)
     {
         float t = -Turn * MathF.PI / 180, c = MathF.Cos(t), s = MathF.Sin(t);
@@ -140,7 +199,7 @@ public sealed class PasteTool
         return d;
     }
 
-    // The step between two copies: the size of the copy plus the gap along the chosen direction.
+    /// <summary>The step between two copies: the size of the copy plus the gap along the chosen direction.</summary>
     private (Vector2 D, float Up) Step()
     {
         var c = Clip!;
@@ -153,16 +212,19 @@ public sealed class PasteTool
         return Direction == Along.Width ? (new Vector2(x1 - x0 + Gap, 0), 0) : (new Vector2(0, z1 - z0 + Gap), 0);
     }
 
-    // Copy k's anchor (grid point) and the height added to it.
+    /// <summary>Copy k's anchor (grid point) and the height added to it.</summary>
     public (Vector2 At, float Up) CopyAt(Vector2 at, int k)
     {
         var (d, up) = Step();
         return (at + Xf(d * k), up * k);
     }
 
+    /// <summary>The number of copies, 1 to 50.</summary>
     public int Count => Math.Clamp(Copies, 1, 50);
 
-    // Where the objects of every copy would land (grid x, height, grid z), and each extra copy's outline.
+    /// <summary>Where the objects of every copy would land (grid x, height, grid z), and each copy's outline.</summary>
+    /// <param name="at">The grid point pasted at.</param>
+    /// <param name="heightAt">The ground's height at a grid point.</param>
     public (List<Vector3> Objects, List<List<Vector2>> Outlines) Preview(Vector2 at, Func<Vector2, float> heightAt)
     {
         var objs = new List<Vector3>();
@@ -186,8 +248,14 @@ public sealed class PasteTool
         return (objs, outlines);
     }
 
-    // The objects a paste at grid point at would place (as Apply places them, the ground as it is now):
-    // name, world position, rotation, scale; for drawing them as ghosts.
+    /// <summary>
+    /// The objects a paste at grid point at would place (as Apply places them, the ground as it is now):
+    /// prefab, world position, rotation, scale; for drawing them as ghosts.
+    /// </summary>
+    /// <param name="at">The grid point pasted at.</param>
+    /// <param name="heightAt">The ground's height at a grid point.</param>
+    /// <param name="ox">World x of grid x 0.</param>
+    /// <param name="oz">World z of grid z 0.</param>
     public List<(int Prefab, Vector3 Position, Vector3 Rotation, float Scale)> Ghosts(Vector2 at, Func<Vector2, float> heightAt, float ox, float oz)
     {
         var list = new List<(int, Vector3, Vector3, float)>();
@@ -211,9 +279,14 @@ public sealed class PasteTool
         return list;
     }
 
-    // Pastes at a grid point: the ground (shape and paint, with the copy's soft edge) and the objects,
-    // as new objects copied from the originals. Returns the ground points changed and their rectangle,
-    // and the objects to add (Piece: a player-built piece).
+    /// <summary>
+    /// Pastes at a grid point: the ground (shape and paint, with the copy's soft edge) and the objects,
+    /// as new objects copied from the originals. Returns the ground points changed and their rectangle,
+    /// and the objects to add (Piece: a player-built piece).
+    /// </summary>
+    /// <param name="g">The ground to change.</param>
+    /// <param name="at">The grid point pasted at.</param>
+    /// <param name="mask">The Mask's weight per grid point (null: none).</param>
     public (List<int> Touched, (int X0, int Z0, int X1, int Z1) Rect, List<(NewObject, bool)> Add) Apply(Ground g, Vector2 at, Func<int, float>? mask = null)
     {
         var c = Clip!;
@@ -300,9 +373,11 @@ public sealed class PasteTool
         return (touched, (Math.Min(bx0, bx1) - 1, Math.Min(bz0, bz1) - 1, bx1 + 1, bz1 + 1), add);
     }
 
-    // Each grid point under (or within a metre of) a pasted buildable piece: the ground there dug down
-    // to the lowest such piece's bottom (its colliders, as the game has them), never raised; past the
-    // game's ±8 m if need be (a building dug into a mountain).
+    /// <summary>
+    /// Each grid point under (or within a metre of) a pasted buildable piece: the ground there dug down
+    /// to the lowest such piece's bottom (its colliders, as the game has them), never raised; past the
+    /// game's ±8 m if need be (a building dug into a mountain).
+    /// </summary>
     private (List<int> Dug, (int X0, int Z0, int X1, int Z1) Rect) Clear(Ground g, List<(NewObject O, bool Piece)> placed, Func<int, float>? mask)
     {
         float ox = g.X0 * 64 - 32, oz = g.Z0 * 64 - 32;
@@ -350,5 +425,6 @@ public sealed class PasteTool
         return (dug, (rx0, rz0, rx1, rz1));
     }
 
+    /// <summary>The ground point nearest a grid position, clamped to the ground.</summary>
     private static int Index(Ground g, Vector2 p) => Math.Clamp((int)MathF.Round(p.Y), 0, g.H - 1) * g.W + Math.Clamp((int)MathF.Round(p.X), 0, g.W - 1);
 }

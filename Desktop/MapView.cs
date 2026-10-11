@@ -15,53 +15,152 @@ using Vector4 = System.Numerics.Vector4;
 
 namespace TerrainEditor.Desktop;
 
-// The world map, drawn like the game's (the web editor's mapview.js, with Valheim's own map shader):
-// the whole world from the game's map data, and a 1 m close-up that includes the edits when zoomed in.
-// Drag to slide, wheel to zoom (toward the mouse), click to pick a spot. Lines on top: the chosen
-// area, edited zones, zones marked for reset, and the zone grid.
+/// <summary>
+/// The world map, drawn like the game's (the web editor's mapview.js, with Valheim's own map shader): the whole world
+/// from the game's map data, and a 1 m close-up that includes the edits when zoomed in. Drag to slide, wheel to zoom
+/// (toward the mouse), click to pick a spot. Lines on top: the chosen area, edited zones, zones marked for reset, and
+/// the zone grid.
+/// </summary>
 public sealed class MapView : OpenGlControlBase
 {
+    /// <summary>
+    /// The OpenGL functions of the current context.
+    /// </summary>
     private GL _gl = null!;
-    // Every OpenGL object the map made, deleted with its context (see GlObjects).
+    /// <summary>
+    /// Every OpenGL object the map made, deleted with its context (see GlObjects).
+    /// </summary>
     private GlObjects _own = null!;
+    /// <summary>
+    /// Whether the context is OpenGL ES (it needs another version line on the shaders).
+    /// </summary>
     private bool _es;
+    /// <summary>
+    /// The map shader's, the overlay lines' and the overlay fills' programs, vertex arrays and buffers.
+    /// </summary>
     private uint _prog, _vao, _lineProg, _lineVao, _lineVbo, _fillProg, _fillVao, _fillVbo;
+    /// <summary>
+    /// The map shader's textures by sampler name, each on its own texture unit.
+    /// </summary>
     private readonly Dictionary<string, (uint Tex, int Unit)> _tex = [];
+    /// <summary>
+    /// The open world's map data (made from its terrain and edits), or null before a world is shown.
+    /// </summary>
     private MapData? _data;
+    /// <summary>
+    /// The world shown, or null before one is.
+    /// </summary>
     private WorldSession? _session;
+    /// <summary>
+    /// The whole world's map layers, set by a worker thread once worked out; null until then.
+    /// </summary>
     private volatile MapData.Layers? _global;
+    /// <summary>
+    /// The latest 1 m close-up read (with its corner, size in metres and edit version), and the one uploaded to the
+    /// textures.
+    /// </summary>
     private (MapData.Layers Layers, int X0, int Z0, int Size, int Version)? _detail, _detailShown;
+    /// <summary>
+    /// Whether the whole-world layers, and the game's map textures, are uploaded into the current context.
+    /// </summary>
     private bool _globalShown, _texturesLoaded;
+    /// <summary>
+    /// Time since the map was made, for the shader's moving water, lava and clouds.
+    /// </summary>
     private readonly Stopwatch _clock = Stopwatch.StartNew();
 
-    // The view: the world point at the middle, and metres per pixel (screen pixels, not device ones).
+    /// <summary>
+    /// The view: the world point at the middle (x east, y north).
+    /// </summary>
     public Vector2 Center { get; set; }
+    /// <summary>
+    /// Metres per pixel (screen pixels, not device ones); the wheel keeps it within 0.25..40.
+    /// </summary>
     public float MetersPerPixel { get; set; } = 12;
+    /// <summary>
+    /// Draw the zone grid (zoomed in under 8 m a pixel).
+    /// </summary>
     public bool ShowGrid { get; set; }
+    /// <summary>
+    /// Outline the zones with ground or paint edits, and those changed since the world was loaded.
+    /// </summary>
     public bool ShowEdited { get; set; } = true;
+    /// <summary>
+    /// Tint painted ground (dirt, cultivated, paved) in the close-up.
+    /// </summary>
     public bool ShowPaint { get; set; } = true;
+    /// <summary>
+    /// Draw the game's map clouds.
+    /// </summary>
     public bool ShowClouds { get; set; }
-    // The area chosen to edit: its middle zone and size in zones (null: none).
+    /// <summary>
+    /// The area chosen to edit: its middle zone and size in zones (null: none).
+    /// </summary>
     public (int X, int Z, int Size)? Chosen { get; set; }
-    // Player-built pieces (PieceCatalog.Encode), read in the background; drawn as their footprints.
+    /// <summary>
+    /// Draw player-built pieces as their footprints (dots further out; none beyond 10 m a pixel).
+    /// </summary>
     public bool ShowBuildings { get; set; } = true;
+    /// <summary>
+    /// Player-built pieces (PieceCatalog.Encode), read in the background: <c>PieceCatalog.Stride</c> floats per piece.
+    /// </summary>
     private volatile float[]? _pieces;
+    /// <summary>
+    /// Piece indices, lowest first, so roofs are drawn over what is under them.
+    /// </summary>
     private int[] _pieceOrder = [];
+    /// <summary>
+    /// How many player-built pieces were read.
+    /// </summary>
     public int PieceCount => (_pieces?.Length ?? 0) / PieceCatalog.Stride;
+    /// <summary>
+    /// Raised on the UI thread when the player-built pieces have been read.
+    /// </summary>
     public event Action? PiecesRead;
-    // Live: the players online. Search results (the chosen one larger), and the zone filter's matches.
+    /// <summary>
+    /// Live: the players online, by name and world position.
+    /// </summary>
     public IReadOnlyList<(string Name, float X, float Z)> Players { get; set; } = [];
+    /// <summary>
+    /// Search results, as world points (x east, y north).
+    /// </summary>
     public IReadOnlyList<Vector2> Pins { get; set; } = [];
+    /// <summary>
+    /// The chosen search result (drawn larger, with a ring), or -1 for none.
+    /// </summary>
     public int PinChosen { get; set; } = -1;
+    /// <summary>
+    /// The zone filter's matching zones, filled in blue.
+    /// </summary>
     public IReadOnlyList<(int X, int Z)> Matches { get; set; } = [];
-    // The view moved or zoomed (labels over the map follow).
+    /// <summary>
+    /// The view moved or zoomed (labels over the map follow).
+    /// </summary>
     public event Action? ViewChanged;
+    /// <summary>
+    /// A left click (not a drag) on the map, with the world point clicked (x east, z north).
+    /// </summary>
     public event Action<float, float>? Picked;
+    /// <summary>
+    /// The mouse moved over the map, with the world point under it.
+    /// </summary>
     public event Action<float, float>? Hovered;
+    /// <summary>
+    /// A line for the status bar; empty once the work it told of is done.
+    /// </summary>
     public event Action<string>? Status;
+    /// <summary>
+    /// Whether the whole-world map has been worked out.
+    /// </summary>
     public bool Ready => _global != null;
+    /// <summary>
+    /// The world map's side in metres.
+    /// </summary>
     public static float MapMeters => MapData.GlobalSize * MapData.GlobalPixel;
 
+    /// <summary>
+    /// A map that redraws ten times a second while it is in the window (for the shader's moving water and clouds).
+    /// </summary>
     public MapView()
     {
         // Only while the map is shown (see GlView: a running timer keeps its view alive).
@@ -72,7 +171,9 @@ public sealed class MapView : OpenGlControlBase
         ClipToBounds = true;
     }
 
-    // Shows a world (its map data is worked out in the background: a few seconds).
+    /// <summary>
+    /// Shows a world (its map data is worked out in the background: a few seconds).
+    /// </summary>
     public void Show(WorldSession session)
     {
         _session = session;
@@ -96,7 +197,9 @@ public sealed class MapView : OpenGlControlBase
         RequestNextFrameRendering();
     }
 
-    // The map data changed (edits saved, discarded): the close-up is read again.
+    /// <summary>
+    /// The map data changed (edits saved, discarded): the close-up and the player-built pieces are read again.
+    /// </summary>
     public void Refresh()
     {
         _detailShown = null;
@@ -105,6 +208,10 @@ public sealed class MapView : OpenGlControlBase
         RequestNextFrameRendering();
     }
 
+    /// <summary>
+    /// Reads the world's player-built pieces in the background (deleted ones left out); dropped if another world is
+    /// shown meanwhile.
+    /// </summary>
     private void ReadPieces()
     {
         var s = _session;
@@ -134,9 +241,14 @@ public sealed class MapView : OpenGlControlBase
         });
     }
 
-    // Where a world point is on the control (its own units, not device pixels).
+    /// <summary>
+    /// Where a world point is on the control (its own units, not device pixels).
+    /// </summary>
     public Point ScreenOf(float x, float z) => new(Bounds.Width / 2 + (x - Center.X) / MetersPerPixel, Bounds.Height / 2 - (z - Center.Y) / MetersPerPixel);
 
+    /// <summary>
+    /// Compiles the map, line and fill programs and makes their buffers.
+    /// </summary>
     protected override void OnOpenGlInit(GlInterface gl)
     {
         _gl = GL.GetApi(gl.GetProcAddress);
@@ -183,7 +295,9 @@ public sealed class MapView : OpenGlControlBase
         _gl.BindVertexArray(0);
     }
 
-    // Shapes in world metres with a colour per corner (buildings, zone fills, pins, players).
+    /// <summary>
+    /// Shapes in world metres with a colour per corner (buildings, zone fills, pins, players).
+    /// </summary>
     private const string FillVs = """
 		layout(location = 0) in vec2 aPos;
 		layout(location = 1) in vec4 aCol;
@@ -192,15 +306,20 @@ public sealed class MapView : OpenGlControlBase
 		void main() { gl_Position = vec4((aPos - uView.xy) * uView.zw, 0.0, 1.0); vCol = aCol; }
 		""";
 
+    /// <summary>
+    /// The fill program's fragment shader: the corner colours as they are.
+    /// </summary>
     private const string FillFs = """
 		in vec4 vCol;
 		out vec4 frag;
 		void main() { frag = vCol; }
 		""";
 
-    // The map left the window (the 3D editor is shown): its OpenGL context goes. Its textures, buffers
-    // and programs are shared with Avalonia's own context and would outlive it: they are deleted, then
-    // uploaded again into the next context.
+    /// <summary>
+    /// The map left the window (the 3D editor is shown): its OpenGL context goes. Its textures, buffers and programs
+    /// are shared with Avalonia's own context and would outlive it: they are deleted, then uploaded again into the next
+    /// context.
+    /// </summary>
     protected override void OnOpenGlDeinit(GlInterface gl)
     {
         _own.DeleteAll();
@@ -210,6 +329,10 @@ public sealed class MapView : OpenGlControlBase
         _detailShown = null;
     }
 
+    /// <summary>
+    /// A linked program from vertex and fragment source, with the version line for this context put in front.
+    /// </summary>
+    /// <returns>The program, owned by <c>_own</c>.</returns>
     private uint Program(string vs, string fs)
     {
         string head = _es ? "#version 300 es\nprecision highp float;\nprecision highp int;\n" : "#version 330 core\n";
@@ -240,7 +363,11 @@ public sealed class MapView : OpenGlControlBase
         return _own.Program(p);
     }
 
-    // A texture on its own unit, bound to the sampler of that name.
+    /// <summary>
+    /// A texture on its own unit, bound to the sampler of that name.
+    /// </summary>
+    /// <param name="name">The map shader's sampler name; the texture is made on first use.</param>
+    /// <param name="fill">Uploads the pixels and sets the filters, the texture already bound.</param>
     private unsafe void Texture(string name, Action<uint> fill)
     {
         if (!_tex.TryGetValue(name, out var t))
@@ -255,7 +382,9 @@ public sealed class MapView : OpenGlControlBase
         _gl.Uniform1(_gl.GetUniformLocation(_prog, name), t.Unit);
     }
 
-    // Plain stand-ins (RGBA) when the game's map textures cannot be read (Valheim not found).
+    /// <summary>
+    /// Plain stand-ins (RGBA) when the game's map textures cannot be read (Valheim not found).
+    /// </summary>
     private static readonly Dictionary<string, byte[]> Fallback = new()
     {
         ["_BackgroundTex"] = [200, 186, 150, 255],
@@ -268,6 +397,9 @@ public sealed class MapView : OpenGlControlBase
         ["_SpaceTex"] = [10, 10, 16, 255],
     };
 
+    /// <summary>
+    /// Uploads the game's map textures (or the plain stand-ins) and a small placeholder close-up.
+    /// </summary>
     private unsafe void LoadTextures()
     {
         _texturesLoaded = true;
@@ -318,6 +450,11 @@ public sealed class MapView : OpenGlControlBase
         Upload("d", new MapData.Layers(16, 16));
     }
 
+    /// <summary>
+    /// Uploads map layers as the shader's height, main and mask textures (and paint for the close-up).
+    /// </summary>
+    /// <param name="prefix">"g" for the whole world, "d" for the 1 m close-up.</param>
+    /// <param name="l">The layers.</param>
     private unsafe void Upload(string prefix, MapData.Layers l)
     {
         void Set(string name, InternalFormat internalFormat, PixelFormat format, PixelType type, void* data) => Texture(name, _ =>
@@ -344,7 +481,10 @@ public sealed class MapView : OpenGlControlBase
         }
     }
 
-    // Material values from the game's "minimap shader" material, and clear-midday lighting.
+    /// <summary>
+    /// Material values from the game's "minimap shader" material, and clear-midday lighting. sRGB colours, made linear
+    /// when set.
+    /// </summary>
     private static readonly (string Name, float[] V)[] Material =
     [
         ("_ForestColor", new[] { 0.9191f, 0.8218f, 0.6758f, 1 }), ("_WaterColor", new[] { 0.8429f, 0.9373f, 1.0917f, 1 }), ("_WaterColorDeep", new[] { 0.343f, 0.5337f, 0.7647f, 1 }),
@@ -353,10 +493,17 @@ public sealed class MapView : OpenGlControlBase
         ("_SunColor", new[] { 1.0f, 0.97f, 0.9f, 1 }), ("_AmbientColor", new[] { 0.36f, 0.38f, 0.44f, 1 }), ("_SunFogColor", new[] { 0.9f, 0.9f, 1, 1 }),
     ];
 
+    /// <summary>
+    /// One sRGB channel (0..1) to linear.
+    /// </summary>
     private static float ToLinear(float c) => c <= 0.04045f ? c / 12.92f : MathF.Pow((c + 0.055f) / 1.055f, 2.4f);
 
+    /// <summary>
+    /// Device pixels per control unit.
+    /// </summary>
     private double Scaling => TopLevel.GetTopLevel(this)?.RenderScaling ?? 1;
 
+    /// <inheritdoc/>
     protected override unsafe void OnOpenGlRender(GlInterface gl, int fb)
     {
         var g = _global;
@@ -481,10 +628,22 @@ public sealed class MapView : OpenGlControlBase
         }
     }
 
-    // Close up (under 6 m a pixel): the ground in view at 1 m, with the edits, read in the background.
+    /// <summary>
+    /// Close up (under 6 m a pixel): the ground in view at 1 m, with the edits, read in the background. True while one
+    /// is being read.
+    /// </summary>
     private bool _asking;
+    /// <summary>
+    /// The test driver's pending picture, saved once the map is drawn.
+    /// </summary>
     private volatile GlPicture.Request? _picture;
 
+    /// <summary>
+    /// For the test driver: saves a picture of the map once the world map is in, a few frames are drawn and (zoomed in)
+    /// the close-up is shown.
+    /// </summary>
+    /// <param name="path">The file to write.</param>
+    /// <returns>Done when the picture is saved.</returns>
     internal Task Picture(string path)
     {
         var r = new GlPicture.Request { Path = path };
@@ -493,13 +652,27 @@ public sealed class MapView : OpenGlControlBase
         return r.Done.Task;
     }
 
+    /// <summary>
+    /// Frames drawn since the map was made.
+    /// </summary>
     internal int FramesDrawn { get; private set; }
 
-    // The 1 m close-up is drawn (zoomed in, once read).
+    /// <summary>
+    /// The 1 m close-up is drawn (zoomed in, once read).
+    /// </summary>
     internal bool DetailShown => _detailShown != null;
 
-    // The test driver checks drawing raised no OpenGL error (counted only when driven).
+    /// <summary>
+    /// The test driver checks drawing raised no OpenGL error (counted only when driven).
+    /// </summary>
     internal int GlErrors { get; private set; }
+    /// <summary>
+    /// Zoomed in under 6 m a pixel: reads a close-up covering the view (a bit more, in whole zones) in the background,
+    /// unless the one read covers it at the current edit version.
+    /// </summary>
+    /// <param name="mpp">Metres per device pixel.</param>
+    /// <param name="w">The view's width, in device pixels.</param>
+    /// <param name="h">The view's height, in device pixels.</param>
     private void AskDetail(float mpp, int w, int h)
     {
         if (_data == null || _session == null || mpp >= 6 || _asking)
@@ -534,6 +707,9 @@ public sealed class MapView : OpenGlControlBase
     }
 
     // ---- Shapes over the map in world metres (one colour per corner, drawn in order).
+    /// <summary>
+    /// Draws shapes from <paramref name="data"/>: x, z then RGBA, 6 floats per corner.
+    /// </summary>
     private unsafe void Fill(float[] data, PrimitiveType type)
     {
         if (data.Length == 0)
@@ -549,6 +725,9 @@ public sealed class MapView : OpenGlControlBase
         _gl.DrawArrays(type, 0, (uint)(data.Length / 6));
     }
 
+    /// <summary>
+    /// Adds a quad (two triangles a-b-c, a-c-d) of one colour.
+    /// </summary>
     private static void Quad(List<float> to, Vector2 a, Vector2 b, Vector2 c, Vector2 d, Vector4 col)
     {
         foreach (var p in new[] { a, b, c, a, c, d })
@@ -557,6 +736,15 @@ public sealed class MapView : OpenGlControlBase
         }
     }
 
+    /// <summary>
+    /// Adds a disc of one colour, as a fan of <paramref name="sides"/> triangles.
+    /// </summary>
+    /// <param name="to">Where the corners go.</param>
+    /// <param name="x">Middle, east.</param>
+    /// <param name="z">Middle, north.</param>
+    /// <param name="r">Radius in metres.</param>
+    /// <param name="col">Its colour.</param>
+    /// <param name="sides">How many triangles.</param>
     private static void Disc(List<float> to, float x, float z, float r, Vector4 col, int sides = 12)
     {
         for (int i = 0; i < sides; i++)
@@ -568,7 +756,9 @@ public sealed class MapView : OpenGlControlBase
         }
     }
 
-    // The web map's piece colours per category (fill, edge): misc, crafting, wood, stone, furniture.
+    /// <summary>
+    /// The web map's piece colours per category (fill, edge): misc, crafting, wood, stone, furniture.
+    /// </summary>
     private static readonly (Vector4 Fill, Vector4 Edge)[] PieceStyle =
     [
         (new(150 / 255f, 72 / 255f, 34 / 255f, 0.92f), new(60 / 255f, 25 / 255f, 10 / 255f, 0.9f)),
@@ -578,10 +768,20 @@ public sealed class MapView : OpenGlControlBase
         (new(140 / 255f, 102 / 255f, 62 / 255f, 0.8f), new(60 / 255f, 40 / 255f, 22 / 255f, 0.85f)),
     ];
 
-    // Built once per zoom kind: footprints close up (edges very close), dots of two pixels further out.
+    /// <summary>
+    /// Built once per zoom kind: footprints close up (edges very close), dots of two pixels further out. What the
+    /// building shapes were last built for (the pieces, the kind, and for dots the zoom).
+    /// </summary>
     private (float[]? Pieces, int Kind, float Mpp) _buildingsKey;
+    /// <summary>
+    /// The building shapes last built: footprints or dots, and close up their edges.
+    /// </summary>
     private float[] _buildingFill = [], _buildingEdge = [];
 
+    /// <summary>
+    /// Draws the player-built pieces: footprints under 2.5 m a pixel (outlined under 0.8 m), dots up to 10 m, nothing
+    /// further out.
+    /// </summary>
     private void DrawBuildings()
     {
         float[]? pc = _pieces;
@@ -628,7 +828,9 @@ public sealed class MapView : OpenGlControlBase
         Fill(_buildingEdge, PrimitiveType.Lines);
     }
 
-    // The zone filter's matches (blue) and the zones marked for reset (red).
+    /// <summary>
+    /// The zone filter's matches (blue) and the zones marked for reset (red).
+    /// </summary>
     private void DrawZoneFills()
     {
         var s = _session;
@@ -653,7 +855,9 @@ public sealed class MapView : OpenGlControlBase
         Fill([.. data], PrimitiveType.Triangles);
     }
 
-    // Search results (orange pins, the chosen one larger with a ring) and, live, the players (blue).
+    /// <summary>
+    /// Search results (orange pins, the chosen one larger with a ring) and, live, the players (blue).
+    /// </summary>
     private void DrawPins()
     {
         float m = MetersPerPixel;
@@ -691,6 +895,13 @@ public sealed class MapView : OpenGlControlBase
     }
 
     // ---- Lines over the map (in screen pixels): the chosen area, edited zones, resets, the grid.
+    /// <summary>
+    /// Draws the lines: the zone grid, edited zones (yellow; orange where changed since the world was loaded),
+    /// resets and the chosen area.
+    /// </summary>
+    /// <param name="w">The view's width, in device pixels.</param>
+    /// <param name="h">The view's height, in device pixels.</param>
+    /// <param name="mpp">Metres per device pixel.</param>
     private unsafe void DrawLines(int w, int h, float mpp)
     {
         var s = _session;
@@ -769,13 +980,20 @@ public sealed class MapView : OpenGlControlBase
     }
 
     // ---- The mouse.
+    /// <summary>
+    /// Where the mouse was pressed, and where it was last while dragging; null when not pressed.
+    /// </summary>
     private Point? _press, _last;
 
-    // The world point (x east, z north) under a point of the control.
+    /// <summary>
+    /// The world point (x east, z north) under a point of the control.
+    /// </summary>
     public Vector2 WorldAt(Point p) => new(Center.X + (float)(p.X - Bounds.Width / 2) * MetersPerPixel, Center.Y - (float)(p.Y - Bounds.Height / 2) * MetersPerPixel);
 
-    // The OpenGL picture cannot be hit by the pointer (like the 3D view): a transparent surface laid
-    // over it takes the mouse and hands it here.
+    /// <summary>
+    /// The OpenGL picture cannot be hit by the pointer (like the 3D view): a transparent surface laid over it takes the
+    /// mouse and hands it here.
+    /// </summary>
     public void Attach(Control surface)
     {
         surface.PointerPressed += (_, e) =>
@@ -821,7 +1039,12 @@ public sealed class MapView : OpenGlControlBase
         };
     }
 
-    // Looks at a zone, close enough to see it.
+    /// <summary>
+    /// Looks at a zone, close enough to see it.
+    /// </summary>
+    /// <param name="x">World point to centre on, east.</param>
+    /// <param name="z">World point to centre on, north.</param>
+    /// <param name="metersPerPixel">The zoom to show it at.</param>
     public void LookAt(float x, float z, float metersPerPixel = 2)
     {
         Center = new Vector2(x, z);

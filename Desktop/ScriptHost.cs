@@ -11,12 +11,15 @@ using TerrainEditor.Terrain;
 
 namespace TerrainEditor.Desktop;
 
-// The Script tool's engine: a C# script (top-level statements, with the editor's API: ScriptApi.csx) is
-// compiled in the app (Roslyn, against .NET's reference assemblies carried inside), then run on a
-// background thread against a snapshot of the open area. What it changes (ground, paint, objects) is
-// kept aside and goes into the area afterwards as one undo step (Apply), on the window's thread.
+/// <summary>
+/// The Script tool's engine: a C# script (top-level statements, with the editor's API: ScriptApi.csx) is compiled in
+/// the app (Roslyn, against .NET's reference assemblies carried inside), then run on a background thread against a
+/// snapshot of the open area. What it changes (ground, paint, objects) is kept aside and goes into the area afterwards
+/// as one undo step (Apply), on the window's thread.
+/// </summary>
 public static class ScriptHost
 {
+    /// <summary>The script API's source (ScriptApi.csx), embedded in the app; read once.</summary>
     private static readonly Lazy<string> Api = new(() =>
     {
         using Stream s = typeof(ScriptHost).Assembly.GetManifestResourceStream("TerrainEditor.ScriptApi.csx")
@@ -25,13 +28,17 @@ public static class ScriptHost
         return r.ReadToEnd();
     });
 
-    // The API scripts are compiled with, as its source (Claude's script_reference).
+    /// <summary>The API scripts are compiled with, as its source (Claude's script_reference).</summary>
     internal static string ApiSource => Api.Value;
 
+    /// <summary>The usings every script gets, the API's globals among them.</summary>
     private const string Usings = "global using System;\nglobal using System.Linq;\nglobal using System.Collections.Generic;\nglobal using static Globals;\n";
 
-    // The script compiled (its assembly's bytes and debug information, for the line an error happens
-    // on), or its mistakes ("line 3: ..."), the script's own lines.
+    /// <summary>
+    /// Compiles a script: its assembly's bytes and debug information (for the line an error happens on), or its
+    /// mistakes ("line 3: ..." for the script's own lines; 20 at most). Image and Pdb are null when it does not
+    /// compile.
+    /// </summary>
     public static (byte[]? Image, byte[]? Pdb, List<string> Errors) Compile(string code)
     {
         var parse = new CSharpParseOptions(LanguageVersion.CSharp12);
@@ -53,23 +60,54 @@ public static class ScriptHost
         return (result.Success ? ms.ToArray() : null, result.Success ? pdb.ToArray() : null, errors);
     }
 
-    // What a script did: the ground's new heights (grid points changed), paint, objects taken away
-    // (indices into the scene's things) and new ones (NaN height: on the ground at the end).
+    /// <summary>
+    /// What a script did: the ground's new heights (grid points changed), paint, objects taken away (indices into the
+    /// scene's things) and new ones (NaN height: on the ground at the end).
+    /// </summary>
     public sealed class Changes
     {
+        /// <summary>New heights by grid point.</summary>
         public Dictionary<int, float> Heights { get; } = [];
+        /// <summary>New paint by grid point: four weights from 0 to 1.</summary>
         public Dictionary<int, float[]> Paint { get; } = [];
+        /// <summary>Things to take away, indices into the scene's things.</summary>
         public HashSet<int> Remove { get; } = [];
+        /// <summary>
+        /// New objects: prefab hash, world position (NaN height: on the ground at the end), yaw in degrees and scale.
+        /// </summary>
         public List<(int Prefab, Vector3 Position, float Yaw, float Scale)> Add { get; } = [];
+        /// <summary>What the script printed (2000 lines at most).</summary>
         public StringBuilder Output { get; } = new();
+        /// <summary>
+        /// Whether the heights may go past the game's ±8 m (the script's Ground.NoLimit when it ended).
+        /// </summary>
         public bool NoLimit { get; set; } = true;
+        /// <summary>The script changed nothing.</summary>
         public bool Empty => Heights.Count == 0 && Paint.Count == 0 && Remove.Count == 0 && Add.Count == 0;
     }
 
-    // The area as the script sees it: taken on the window's thread before the script runs.
+    /// <summary>The area as the script sees it: taken on the window's thread before the script runs.</summary>
+    /// <param name="W">Grid points across (x).</param>
+    /// <param name="H">Grid points deep (z).</param>
+    /// <param name="Ox">World x of the first grid point.</param>
+    /// <param name="Oz">World z of the first grid point.</param>
+    /// <param name="Heights">The heights now, by grid point.</param>
+    /// <param name="Original">The heights as the world generator made them.</param>
+    /// <param name="Biomes">The biome of each grid point.</param>
+    /// <param name="Mask">The paint, four bytes per grid point.</param>
+    /// <param name="Locked">Grid points the script must leave alone.</param>
+    /// <param name="Things">The objects standing: index into the scene's things, prefab name, position, kind of object
+    /// and whether it is a player-built piece.</param>
+    /// <param name="Water">The water level.</param>
+    /// <param name="Seed">The world's seed (0 without a world).</param>
+    /// <param name="World">The world's name.</param>
+    /// <param name="CanCreate">Whether the editor can make a prefab (by hash).</param>
     public sealed record Snapshot(int W, int H, float Ox, float Oz, float[] Heights, float[] Original, int[] Biomes, byte[] Mask, bool[] Locked,
         List<(int Index, string Prefab, Vector3 Position, string Kind, bool Piece)> Things, float Water, int Seed, string World, Func<int, bool> CanCreate);
 
+    /// <summary>Takes the snapshot of the session's area, on the window's thread.</summary>
+    /// <param name="s">The edit session.</param>
+    /// <param name="nameOf">A prefab hash's name (null when unknown).</param>
     public static Snapshot Take(EditSession s, Func<int, string?> nameOf)
     {
         var g = s.Ground;
@@ -91,7 +129,14 @@ public static class ScriptHost
             things, scene.Water, world?.Seed ?? 0, world?.Name ?? "", prefab => world?.CanCreate(prefab) ?? PrefabCatalog.Get(prefab) != null);
     }
 
-    // Runs the compiled script against the snapshot (on the calling thread: call it on a background one).
+    /// <summary>
+    /// Runs the compiled script against the snapshot (on the calling thread: call it on a background one).
+    /// </summary>
+    /// <param name="image">The compiled assembly.</param>
+    /// <param name="pdb">Its debug information, or null (errors then have no line).</param>
+    /// <param name="snap">The area as the script sees it.</param>
+    /// <param name="cancel">Stops the script at its next Check or Mountain row.</param>
+    /// <returns>What the script changed; the script's own exceptions are thrown on.</returns>
     public static Changes Run(byte[] image, byte[]? pdb, Snapshot snap, CancellationToken cancel)
     {
         var ch = new Changes();
@@ -251,14 +296,18 @@ public static class ScriptHost
         }
     }
 
-    // Where in the script an error happened ("line 12: "), when it did in the script's own code.
+    /// <summary>
+    /// Where in the script an error happened ("line 12: "), when it did in the script's own code; otherwise empty.
+    /// </summary>
     public static string Where(Exception ex)
     {
         var frame = new System.Diagnostics.StackTrace(ex, true).GetFrames().FirstOrDefault(f => f.GetFileName() == "script" && f.GetFileLineNumber() > 0);
         return frame != null ? $"line {frame.GetFileLineNumber()}: " : "";
     }
 
-    // The script's changes into the area, one undo step. Returns the points the game's ±8 m stopped.
+    /// <summary>
+    /// The script's changes into the area, one undo step. Returns how many points the game's ±8 m stopped.
+    /// </summary>
     public static int Apply(EditSession s, Changes ch, string label)
     {
         int clamped = 0;

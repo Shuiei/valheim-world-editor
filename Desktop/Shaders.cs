@@ -2,10 +2,13 @@ using System.Numerics;
 
 namespace TerrainEditor.Desktop;
 
-// The 3D view's shaders: GLSL that runs as OpenGL 3.3 and as OpenGL ES 3.0 (the version line is added
-// by GlView). Lighting is done in linear colours; the result is turned back to sRGB at the end.
+/// <summary>
+/// The 3D view's shaders: GLSL that runs as OpenGL 3.3 and as OpenGL ES 3.0 (the version line is added
+/// by GlView). Lighting is done in linear colours; the result is turned back to sRGB at the end.
+/// </summary>
 public static class Shaders
 {
+    /// <summary>The plain terrain's vertex shader: position, normal and vertex colour.</summary>
     public const string TerrainVs = """
 		layout(location = 0) in vec3 aPos;
 		layout(location = 1) in vec3 aNor;
@@ -15,6 +18,7 @@ public static class Shaders
 		void main() { vNor = aNor; vCol = aCol; vY = aPos.y; gl_Position = uViewProj * vec4(aPos, 1.0); }
 		""";
 
+    /// <summary>The plain terrain's fragment shader: vertex colour lit by the sun with a fixed ambient.</summary>
     public const string TerrainFs = """
 		in vec3 vNor; in vec3 vCol; in float vY;
 		uniform vec3 uSun;
@@ -25,6 +29,10 @@ public static class Shaders
 		}
 		""";
 
+    /// <summary>
+    /// The objects' vertex shader, instanced: each instance's placement matrix comes as an attribute, with the
+    /// support check's tint carried in its unused corner (zero: none).
+    /// </summary>
     public const string ObjectVs = """
 		layout(location = 0) in vec3 aPos;
 		layout(location = 1) in vec3 aNor;
@@ -43,7 +51,11 @@ public static class Shaders
 		}
 		""";
 
-    // Lit like the game look's day (sun, flat ambient, fog), in view space (the sun's z mirrored).
+    /// <summary>
+    /// The objects' fragment shader. Lit like the game look's day (sun, flat ambient, fog), in view space (the
+    /// sun's z mirrored); also draws the Place tool's ghosts, see-through buildings, the Workshop's cut and the
+    /// support check's tint.
+    /// </summary>
     public const string ObjectFs = GameLookGl.Common + """
 		in vec3 vNor; in vec2 vUv; in vec3 vPos; in vec3 vTint;
 		uniform sampler2D uMap; uniform int uHasMap;
@@ -77,30 +89,35 @@ public static class Shaders
 		}
 		""";
 
+    /// <summary>The line drawing's vertex shader (3D view and map overlays): position only.</summary>
     public const string LineVs = """
 		layout(location = 0) in vec3 aPos;
 		uniform mat4 uViewProj;
 		void main() { gl_Position = uViewProj * vec4(aPos, 1.0); }
 		""";
 
+    /// <summary>The lines' fragment shader: one flat colour.</summary>
     public const string LineFs = """
 		uniform vec4 uColor;
 		out vec4 frag;
 		void main() { frag = uColor; }
 		""";
 
+    /// <summary>The water plane's vertex shader: position only.</summary>
     public const string WaterVs = """
 		layout(location = 0) in vec3 aPos;
 		uniform mat4 uViewProj;
 		void main() { gl_Position = uViewProj * vec4(aPos, 1.0); }
 		""";
 
+    /// <summary>The water plane's fragment shader: one fixed see-through blue.</summary>
     public const string WaterFs = """
 		out vec4 frag;
 		void main() { frag = vec4(0.16, 0.36, 0.52, 0.72); }
 		""";
 
-    // A biome's ground colour (linear), close to the game's map colours.
+    /// <summary>A biome's ground colour (linear), close to the game's map colours; grey for an unknown biome.</summary>
+    /// <param name="biome">A Heightmap.Biome value.</param>
     public static Vector3 BiomeColor(int biome)
     {
         Vector3 s = biome switch

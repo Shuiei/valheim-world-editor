@@ -3,23 +3,66 @@ using Avalonia;
 
 namespace TerrainEditor.Desktop;
 
-// The Path tool, like the web editor's (editor.html, Path tool): draw a line, then apply an action
-// along it with a width and a soft edge: flatten to a height, ramp from start to end, raise or lower,
-// smooth, dig a river, dig a cave, or paint. The line is kept after applying, so another action can follow.
-// Cave: a trench along the line (its floor follows the ground's lie below it, deepest in the middle,
-// with an entrance slope at each end), roofed over with the game's boulders where it is deep enough
-// (CaveRoof):
-// the ground cannot overhang (one height per point), so the roof is rocks, like the game's own caves.
-// Points are grid points of the block (x east, z north, one per metre).
+/// <summary>
+/// The Path tool, like the web editor's (editor.html, Path tool): draw a line, then apply an action along it with a
+/// width and a soft edge: flatten to a height, ramp from start to end, raise or lower, smooth, dig a river, dig a cave,
+/// or paint. The line is kept after applying, so another action can follow. Cave: a trench along the line (its floor
+/// follows the ground's lie below it, deepest in the middle, with an entrance slope at each end), roofed over with the
+/// game's boulders where it is deep enough (CaveRoof): the ground cannot overhang (one height per point), so the roof
+/// is rocks, like the game's own caves. Points are grid points of the block (x east, z north, one per metre).
+/// </summary>
 public sealed class PathTool
 {
-    public enum Action { Flatten, Ramp, Raise, Lower, Smooth, River, Cave, PaintDirt, PaintPaved, PaintCultivated, PaintClear }
+    /// <summary>What Apply does along the line; the panel lists them in this order.</summary>
+    public enum Action
+    {
+        /// <summary>Flattens the ground to a height.</summary>
+        Flatten,
+        /// <summary>A slope from the start's height to the end's.</summary>
+        Ramp,
+        /// <summary>Raises the ground.</summary>
+        Raise,
+        /// <summary>Lowers the ground.</summary>
+        Lower,
+        /// <summary>Evens out bumps.</summary>
+        Smooth,
+        /// <summary>Digs a river bed.</summary>
+        River,
+        /// <summary>Digs a trench roofed over with the game's boulders.</summary>
+        Cave,
+        /// <summary>Paints dirt.</summary>
+        PaintDirt,
+        /// <summary>Paints paving.</summary>
+        PaintPaved,
+        /// <summary>Paints cultivated ground.</summary>
+        PaintCultivated,
+        /// <summary>Removes paint.</summary>
+        PaintClear,
+    }
 
-    // The boulders a cave's roof is made of: the game's big world rocks (they keep a saved size), how wide
-    // they are at least (m, unscaled) and how far their lowest point is below their middle (CaveRoof
-    // hangs them by their real underside).
-    public enum CaveRock { Auto, Forest, Coast, Heath, Mountain }
+    /// <summary>
+    /// The boulders a cave's roof is made of. Auto picks them by the biome under each boulder; the others are the
+    /// game's big world rocks of that biome (see <see cref="RoofRocks"/>).
+    /// </summary>
+    public enum CaveRock
+    {
+        /// <summary>Picked by the biome under each boulder.</summary>
+        Auto,
+        /// <summary>Forest boulders (rock4_forest); Auto's pick in most biomes.</summary>
+        Forest,
+        /// <summary>Coast boulders (rock4_coast); Auto's pick over Ocean.</summary>
+        Coast,
+        /// <summary>Heath boulders (rock4_heath); Auto's pick in the Plains.</summary>
+        Heath,
+        /// <summary>Mountain boulders (rock3_mountain); Auto's pick in the Mountains and Deep North.</summary>
+        Mountain,
+    }
 
+    /// <summary>
+    /// Each roof boulder's prefab, how wide it is at least (m, unscaled) and how far its lowest point is below its
+    /// middle (CaveRoof hangs them by their real underside). These rocks keep a saved size. Auto has no entry: it
+    /// stands for one of the others.
+    /// </summary>
     public static readonly Dictionary<CaveRock, (string Prefab, float Footprint, float Bottom)> RoofRocks = new()
     {
         [CaveRock.Forest] = ("rock4_forest", 24.2f, 12.9f),
@@ -28,6 +71,7 @@ public sealed class PathTool
         [CaveRock.Mountain] = ("rock3_mountain", 12.7f, 8.2f),
     };
 
+    /// <summary>The roof choice as the panel lists it.</summary>
     public static string Label(CaveRock r) => r switch
     {
         CaveRock.Auto => "By biome",
@@ -37,9 +81,16 @@ public sealed class PathTool
         _ => "Mountain rocks",
     };
 
-    // Cave presets: width, soft edge (the walls' slope), depth below the ground and headroom inside.
+    /// <summary>A cave preset the panel offers.</summary>
+    /// <param name="Name">The preset as listed.</param>
+    /// <param name="Width">Width in metres.</param>
+    /// <param name="Soft">Soft edge in metres: the walls' slope.</param>
+    /// <param name="Depth">Depth below the ground in metres.</param>
+    /// <param name="Headroom">Headroom inside in metres.</param>
+    /// <param name="Help">The line the panel shows under the preset.</param>
     public sealed record CavePreset(string Name, float Width, float Soft, float Depth, float Headroom, string Help);
 
+    /// <summary>Tunnel, Cave and Cavern, as the panel lists them.</summary>
     public static readonly CavePreset[] CavePresets =
     [
         new("Tunnel", 5, 1.5f, 6, 3.5f, "A narrow passage, just high enough to walk through."),
@@ -47,6 +98,7 @@ public sealed class PathTool
         new("Cavern", 14, 3.5f, 8, 5.5f, "A wide hall under the rocks."),
     ];
 
+    /// <summary>The action as the panel lists it (also used in the status line after applying).</summary>
     public static string Label(Action a) => a switch
     {
         Action.Flatten => "Flatten to height",
@@ -62,33 +114,58 @@ public sealed class PathTool
         _ => "Clear paint",
     };
 
+    /// <summary>The action Apply does.</summary>
     public Action Act { get; set; } = Action.Flatten;
+    /// <summary>The full width of the path in metres.</summary>
     public float Width { get; set; } = 8;
+    /// <summary>The soft edge in metres: how far beyond the width the action fades out (0: a hard edge).</summary>
     public float Soft { get; set; } = 4;
+    /// <summary>Flatten: the height to flatten to, in metres.</summary>
     public float Height { get; set; } = 32;
+    /// <summary>Raise and Lower: by how much, in metres.</summary>
     public float Amount { get; set; } = 2;
+    /// <summary>Ramp: the height at the line's first point, in metres.</summary>
     public float Start { get; set; } = 32;
+    /// <summary>Ramp: the height at the line's last point, in metres.</summary>
     public float End { get; set; } = 32;
+    /// <summary>River: how far below the water level the bed goes in the middle, in metres.</summary>
     public float Depth { get; set; } = 2;
+    /// <summary>
+    /// Whether the line is a smooth curve through the points (with 3 or more points) instead of straight stretches.
+    /// </summary>
     public bool Curved { get; set; } = true;
-    // Cave: depth below the ground in the middle, headroom inside, the roof's boulders, and the seed
-    // that turns and sizes them.
+    /// <summary>Cave: depth below the ground in the middle, in metres.</summary>
     public float CaveDepth { get; set; } = 7.5f;
+    /// <summary>Cave: headroom inside, in metres.</summary>
     public float Headroom { get; set; } = 4.5f;
+    /// <summary>Cave: the roof's boulders.</summary>
     public CaveRock Rock { get; set; }
+    /// <summary>Cave: the seed that turns and sizes the roof boulders.</summary>
     public int Seed { get; set; } = Random.Shared.Next();
+    /// <summary>
+    /// Natural look: the width varies along the line, the edges are ragged and the surface gets bumps (from the brush
+    /// noise).
+    /// </summary>
     public bool Natural { get; set; }
-    // The ramp's ends follow the ground at the line's ends until typed in.
+    /// <summary>
+    /// Whether the ramp's ends were typed in or picked with Alt; until then they follow the ground at the line's ends.
+    /// </summary>
     public bool RampEdited { get; set; }
 
-    // Changed under its own lock: the drawing thread reads it.
+    /// <summary>
+    /// The points the user placed, in grid coordinates of the block. Changed under its own lock: the drawing thread
+    /// reads it.
+    /// </summary>
     public List<Vector2> Points { get; } = [];
-    // Something about the line or the values changed (to redraw and refill the panel).
+    /// <summary>Something about the line or the values changed (to redraw and refill the panel).</summary>
     public event System.Action? Changed;
+    /// <summary>Raises <see cref="Changed"/>.</summary>
     public void Notify() => Changed?.Invoke();
 
-    // The dense line (about 1 m apart): a Catmull-Rom curve through the points, or straight stretches;
-    // Seg is the index of the point each stretch starts from.
+    /// <summary>
+    /// The dense line (about 1 m apart): a Catmull-Rom curve through the points, or straight stretches; Seg is the
+    /// index of the point each stretch starts from.
+    /// </summary>
     public List<(Vector2 P, int Seg)> Curve()
     {
         var p = Points;
@@ -119,6 +196,7 @@ public sealed class PathTool
         return outp;
     }
 
+    /// <summary>The length of a dense line, in metres.</summary>
     public static float Length(List<(Vector2 P, int Seg)> curve)
     {
         float l = 0;
@@ -129,11 +207,18 @@ public sealed class PathTool
         return l;
     }
 
-    // A cave along the line: for each point of the dense line, how far along it is, the ground's lie
-    // there (the ground averaged over 6 m each way, so bumps do not show in the floor), how deep the cave
-    // is (Depth in the middle, an entrance slope at each end) and its floor.
+    /// <summary>
+    /// A cave along the line, worked out before the ground changes: for each point of the dense line, how far along it
+    /// is, how deep the cave is (CaveDepth in the middle, an entrance slope at each end) and its floor.
+    /// </summary>
+    /// <param name="Curve">The dense line, as <see cref="PathTool.Curve"/> gives it.</param>
+    /// <param name="Along">How far along the line each point is, in metres.</param>
+    /// <param name="Depth">How deep the cave is below the ground's lie there, in metres.</param>
+    /// <param name="Floor">The floor's height: the ground averaged over 6 m each way along the line (so bumps do not
+    /// show in the floor), less the depth.</param>
     public sealed record CavePlan(List<(Vector2 P, int Seg)> Curve, float[] Along, float[] Depth, float[] Floor);
 
+    /// <summary>Works out the cave along the current line from the ground as it is now.</summary>
     public CavePlan PlanCave(Ground g)
     {
         var curve = Curve();
@@ -166,9 +251,15 @@ public sealed class PathTool
         return new CavePlan(curve, along, depth, floor);
     }
 
-    // The action along the line. heightAt: the ground's height at a grid point (for the ramp's ends).
-    // Returns the points changed, the rectangle around them, and whether the game's limit stopped some.
-    // cave: the cave worked out before the ground changes (Cave; worked out here when not given).
+    /// <summary>
+    /// Applies the action along the line. Returns the points changed (grid indices), the rectangle around them (one
+    /// point wider each way), and whether the game's limit stopped some. Does nothing with fewer than two points.
+    /// </summary>
+    /// <param name="g">The ground to change.</param>
+    /// <param name="b">The brush, for its noise (Natural look).</param>
+    /// <param name="water">The water level, for River.</param>
+    /// <param name="mask">Per grid point weight from 0 to 1 (0 leaves it alone); null changes every point.</param>
+    /// <param name="cave">Cave: the cave worked out before the ground changes; worked out here when not given.</param>
     public (List<int> Touched, (int X0, int Z0, int X1, int Z1) Rect, bool Clamped) Apply(Ground g, Brush b, float water, Func<int, float>? mask = null, CavePlan? cave = null)
     {
         var curve = Curve();
@@ -350,11 +441,23 @@ public sealed class PathTool
     // ---- The mouse: click points along the route, or hold and drag; drag a point to move it, drag the
     // line to add a point there, Ctrl + click a point to remove it; Alt + click picks the height (Alt +
     // Shift: the ramp's end). screen: where a grid point is on the view (null behind the camera).
+    /// <summary>The point being dragged (index into <see cref="Points"/>), or null.</summary>
     private int? _drag;
 
-    // A drag is drawing the line now (the view then leaves out the cursor's preview).
+    /// <summary>A drag is drawing the line now (the view then leaves out the cursor's preview).</summary>
     public bool Drawing { get; private set; }
 
+    /// <summary>
+    /// A mouse press: picks a height with Alt, removes a point with Ctrl, starts dragging a point, inserts a point on
+    /// the line, or starts a new point and drawing.
+    /// </summary>
+    /// <param name="hit">The grid point under the mouse; null off the ground.</param>
+    /// <param name="at">The mouse on the view, in pixels.</param>
+    /// <param name="screen">Where a grid point is on the view (null behind the camera).</param>
+    /// <param name="ctrl">Ctrl held: remove the point under the mouse.</param>
+    /// <param name="alt">Alt held: pick the height under the mouse instead.</param>
+    /// <param name="shift">With Alt on a Ramp: pick the ramp's end instead of its start.</param>
+    /// <param name="heightAt">The ground's height at a grid point.</param>
     public void Down(Vector2? hit, Point at, Func<Vector2, Point?> screen, bool ctrl, bool alt, bool shift, Func<Vector2, float> heightAt)
     {
         if (alt)
@@ -412,6 +515,9 @@ public sealed class PathTool
         Notify();
     }
 
+    /// <summary>
+    /// The mouse moved: moves the dragged point, or while drawing adds a point once the mouse is 2 m from the last one.
+    /// </summary>
     public void Moved(Vector2? hit)
     {
         if (hit is not { } h)
@@ -430,12 +536,14 @@ public sealed class PathTool
         }
     }
 
+    /// <summary>The mouse was let go: ends any drag or drawing.</summary>
     public void Up()
     {
         _drag = null;
         Drawing = false;
     }
 
+    /// <summary>Removes the line, and lets the ramp ends follow the ground again.</summary>
     public void Clear()
     {
         lock (Points) { Points.Clear(); }
@@ -443,6 +551,7 @@ public sealed class PathTool
         Notify();
     }
 
+    /// <summary>Removes the last point (Backspace).</summary>
     public void RemoveLast()
     {
         if (Points.Count > 0)
@@ -452,7 +561,7 @@ public sealed class PathTool
         }
     }
 
-    // The point within 10 px of the mouse, or -1.
+    /// <summary>The point within 10 px of the mouse, or -1.</summary>
     public int PointAt(Point at, Func<Vector2, Point?> screen)
     {
         int best = -1;
@@ -468,7 +577,9 @@ public sealed class PathTool
         return best;
     }
 
-    // The stretch of the line within 8 px of the mouse: the index of the point it starts from, or -1.
+    /// <summary>
+    /// The stretch of the line within 8 px of the mouse: the index of the point it starts from, or -1.
+    /// </summary>
     public int SegmentAt(Point at, Func<Vector2, Point?> screen)
     {
         var dense = Curve();

@@ -10,11 +10,14 @@ using TerrainEditor.Terrain;
 
 namespace TerrainEditor.Desktop;
 
-// The object inspector, like the web editor's (editor/inspector.js; MCEdit's NBT editor): everything the
-// selected object holds in the save, by name, and editing it: sign text, portal tag, chest contents,
-// ward permissions, crop timers… Applying replaces the object by a copy with the new data, one undo step.
+/// <summary>
+/// The object inspector, like the web editor's (editor/inspector.js; MCEdit's NBT editor): everything the
+/// selected object holds in the save, by name, and editing it: sign text, portal tag, chest contents,
+/// ward permissions, crop timers… Applying replaces the object by a copy with the new data, one undo step.
+/// </summary>
 public sealed class InspectorPanel
 {
+    /// <summary>Plain labels for the data names players meet most; other names are shown as they are.</summary>
     private static readonly Dictionary<string, string> Labels = new()
     {
         ["text"] = "Text (sign)",
@@ -47,76 +50,130 @@ public sealed class InspectorPanel
         ["state"] = "State",
     };
 
+    /// <summary>The object data's sections (as ObjectData names them) and what each holds, for the Add row.</summary>
     private static readonly (string Section, string Name)[] Sections =
     [
         ("strings", "text"), ("ints", "whole number"), ("floats", "number"), ("longs", "large number"), ("vec3", "3 numbers (x y z)"), ("quats", "4 numbers (x y z w)"),
     ];
 
+    /// <summary>The floating card, hidden until an object is opened.</summary>
     public Control Card { get; }
+    /// <summary>The current edit session, null when no world is open.</summary>
     private readonly Func<EditSession?> _session;
+    /// <summary>The object's name.</summary>
     private readonly TextBlock _title = new() { FontSize = 14, FontWeight = FontWeight.SemiBold };
+    /// <summary>The object's id, place and turn.</summary>
     private readonly TextBlock _where = new() { FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
+    /// <summary>The contents and stand sections, rebuilt by <c>RenderItems</c> and <c>RenderStand</c>.</summary>
     internal StackPanel ItemsBox { get; } = new() { Spacing = 3 };
+    /// <summary>One row per data value, rebuilt by <c>Render</c>.</summary>
     internal StackPanel Fields { get; } = new() { Spacing = 2 };
+    /// <summary>The section of a value to add.</summary>
     internal ComboBox AddSection { get; } = new() { ItemsSource = Sections.Select(s => s.Name).ToList(), SelectedIndex = 0, FontSize = 11, Width = 100 };
+    /// <summary>The name of a value to add.</summary>
     internal TextBox AddKey { get; } = new() { PlaceholderText = "name (text, tag…)", FontSize = 11 };
+    /// <summary>The value to add.</summary>
     internal TextBox AddValue { get; } = new() { PlaceholderText = "value", FontSize = 11 };
+    /// <summary>Adds the value to <c>Added</c> (written on Apply).</summary>
     internal Button AddButton { get; } = new() { Content = "Add", FontSize = 11 };
+    /// <summary>Applies the changes (<c>Apply</c>); enabled only while there are some.</summary>
     internal Button ApplyButton { get; } = new() { Content = "Apply changes", FontSize = 12, IsEnabled = false };
+    /// <summary>Throws away the changes, back to the object's data as opened.</summary>
     internal Button RevertButton { get; } = new() { Content = "Revert", FontSize = 12, IsEnabled = false };
+    /// <summary>A status line to show (what happened, or why nothing did).</summary>
     public event Action<string>? Message;
-    // After applying: the copy that replaced the object (to select it).
+    /// <summary>After applying: the copy that replaced the object (to select it).</summary>
     public event Action<int>? Replaced;
+    /// <summary>Asks a yes/no question before going on (the window shows it; true by default).</summary>
     internal Func<string, Task<bool>> Confirm { get; set; } = _ => Task.FromResult(true);
 
-    // What is shown: the thing (index), its data, and what has been changed.
+    /// <summary>What is shown: the thing (index into the scene's things), null when closed.</summary>
     public int? Index { get; private set; }
+    /// <summary>The object's data as parsed when opened.</summary>
     private ZdoData? _z;
+    /// <summary>The object's data as read when opened; Apply compares it with the world's to see a live change.</summary>
     private byte[]? _bytes;
+    /// <summary>A value of the object's data, as opened and as edited.</summary>
     internal sealed class Field
     {
+        /// <summary>The data section ("floats", "vec3", "quats", "ints", "longs", "strings" or "bytes").</summary>
         public required string Section;
+        /// <summary>The key's hash.</summary>
         public required int Key;
+        /// <summary>The key's name when known, null otherwise.</summary>
         public required string? Name;
+        /// <summary>The value as opened, as text.</summary>
         public required string Value;
+        /// <summary>The value as edited, as text.</summary>
         public string Now = "";
+        /// <summary>Shown beside the value: the prefab or item name of a hash, or the length of bytes.</summary>
         public string? Note;
+        /// <summary>Taken out on Apply.</summary>
         public bool Removed;
     }
+    /// <summary>The object's values, as built when opened.</summary>
     internal List<Field> FieldList { get; private set; } = [];
+    /// <summary>Values to add, as typed (section, name, value).</summary>
     internal List<(string Section, string Key, string Value)> Added { get; } = [];
+    /// <summary>An item in the container, as edited.</summary>
     internal sealed class ItemRow
     {
+        /// <summary>The item's prefab name.</summary>
         public string Name = "Wood";
+        /// <summary>How many; quality; slot (X across, Y down); style variant; the world level it was made at.</summary>
         public int Stack = 1, Quality = 1, X, Y, Variant, WorldLevel;
+        /// <summary>Durability points, as the game saves them.</summary>
         public float Durability = 100;
+        /// <summary>Who made it: player id (as text) and name.</summary>
         public string CrafterId = "0", CrafterName = "";
+        /// <summary>The item's flags as the game keeps them (equipped, picked up, given by a cheat).</summary>
         public bool Equipped, PickedUp, Cheated;
+        /// <summary>The key/value data mods and the game attach to the item, kept as it was.</summary>
         public Dictionary<string, string> CustomData = [];
+        /// <summary>The item as ObjectData writes it.</summary>
         public ItemUpload Upload() => new(Name, null, Stack, Quality, Durability, X, Y, Variant, WorldLevel, CrafterId, CrafterName, Equipped, PickedUp, Cheated, CustomData);
     }
+    /// <summary>The container's items; null when the object is not a container.</summary>
     internal List<ItemRow>? Items { get; private set; }
 
-    // A stand's items: an item stand's one item, or an armour stand's slots (one row per kind of slot,
-    // and any slot that holds something); the item stand's orientation or the armour stand's pose.
+    /// <summary>
+    /// A stand's items: an item stand's one item, or an armour stand's slots (one row per kind of slot,
+    /// and any slot that holds something); the item stand's orientation or the armour stand's pose.
+    /// </summary>
     internal sealed class StandRow
     {
+        /// <summary>The armour stand's slot index (0 on an item stand).</summary>
         public int Slot;
+        /// <summary>The item types the slot takes; empty for an item stand.</summary>
         public int[] Types = [];
+        /// <summary>The item's prefab name, empty when the slot holds nothing.</summary>
         public string Name = "";
+        /// <summary>The item's quality and style variant.</summary>
         public int Quality = 1, Variant;
     }
+    /// <summary>The stand's rows; null when the object is not a stand.</summary>
     internal List<StandRow>? Stand { get; private set; }
+    /// <summary>The item stand's orientation or the armour stand's pose.</summary>
     internal int StandWay { get; set; }
+    /// <summary>True for an armour stand, false for an item stand.</summary>
     private bool _armourStand;
+    /// <summary>The stand as opened (<c>StandKey</c>), to tell whether it changed.</summary>
     private string _standAtOpen = "";
+    /// <summary>Why the stand's changes cannot be written (an item it does not take), null when they can.</summary>
     private string? _standError;
+    /// <summary>The contents as opened (<c>ItemsKey</c>), to tell whether they changed.</summary>
     private string _itemsAtOpen = "";
+    /// <summary>The container's size in slots; 0 × 0 when unknown.</summary>
     private (int W, int H) _grid;
-    private (int X, int Y)? _slot; // the slot picked in the grid
-    private bool _moving; // the next slot clicked takes the picked slot's item
+    /// <summary>The slot picked in the grid.</summary>
+    private (int X, int Y)? _slot;
+    /// <summary>The next slot clicked takes the picked slot's item.</summary>
+    private bool _moving;
+    /// <summary>Why the contents cannot be read, null when they can (they are then not edited).</summary>
     private string? _inventoryError;
 
+    /// <summary>The card, hidden until an object is opened.</summary>
+    /// <param name="session">Gives the current edit session (null when no world is open).</param>
     public InspectorPanel(Func<EditSession?> session)
     {
         _session = session;
@@ -181,23 +238,27 @@ public sealed class InspectorPanel
         };
     }
 
+    /// <summary>Puts a control in a grid column.</summary>
     private static Control Col(Control c, int col)
     {
         Grid.SetColumn(c, col);
         return c;
     }
 
+    /// <summary>True while the card is shown.</summary>
     public bool IsOpen => Card.IsVisible;
 
+    /// <summary>Hides the card and forgets the object.</summary>
     public void Close()
     {
         Card.IsVisible = false;
         Index = null;
         Closed?.Invoke();
     }
+    /// <summary>Raised when the card is closed.</summary>
     public event Action? Closed;
 
-    // Opens on a thing of the scene; false when its data cannot be read.
+    /// <summary>Opens on a thing of the scene; false when its data cannot be read.</summary>
     public bool Open(int index)
     {
         var s = _session();
@@ -228,8 +289,10 @@ public sealed class InspectorPanel
         return true;
     }
 
+    /// <summary>A float as text that reads back to the same value, whatever the culture.</summary>
     private static string S(float v) => v.ToString("R", CultureInfo.InvariantCulture);
 
+    /// <summary>Back to the object's data as opened: its values, contents and stand, nothing changed.</summary>
     private void Reset()
     {
         var z = _z!;
@@ -339,12 +402,16 @@ public sealed class InspectorPanel
         Render();
     }
 
+    /// <summary>The contents in a short text form, to tell whether they changed.</summary>
     private string ItemsKey() => Items == null ? "" : string.Join(";", Items.Select(i => $"{i.Name},{i.Stack},{i.Quality},{i.Durability},{i.X},{i.Y}"));
 
+    /// <summary>The stand's items and orientation or pose in a short text form, to tell whether they changed.</summary>
     private string StandKey() => Stand == null ? "" : string.Join(";", Stand.Select(r => $"{r.Name},{r.Quality},{r.Variant}")) + "|" + StandWay.ToString(CultureInfo.InvariantCulture);
 
+    /// <summary>A value's label: the plain one, else its name, else its key's hash.</summary>
     private static string Label(Field f) => f.Name is string n ? Labels.TryGetValue(n, out string? l) ? l : n : $"#{f.Key}";
 
+    /// <summary>Builds the whole card again from what is shown and changed.</summary>
     private void Render()
     {
         var z = _z!;
@@ -395,6 +462,9 @@ public sealed class InspectorPanel
         Dirty();
     }
 
+    /// <summary>
+    /// The contents section: the slot grid (size known) and every item's details, with Add item and Tidy slots.
+    /// </summary>
     private void RenderItems()
     {
         ItemsBox.Children.Clear();
@@ -487,8 +557,10 @@ public sealed class InspectorPanel
         rows.Children.Add(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Children = { add, tidy } });
     }
 
-    // The container's slots as in game, w × h: each shows its item and how many. Click one to choose
-    // what it holds (or empty it); Move, then another slot, moves the item there (or swaps the two).
+    /// <summary>
+    /// The container's slots as in game, w × h: each shows its item and how many. Click one to choose
+    /// what it holds (or empty it); Move, then another slot, moves the item there (or swaps the two).
+    /// </summary>
     private void SlotGrid(int w, int h)
     {
         var grid = new Grid { HorizontalAlignment = HorizontalAlignment.Left };
@@ -643,8 +715,10 @@ public sealed class InspectorPanel
         });
     }
 
-    // An item stand's item and orientation, or an armour stand's slots and pose; each list offers only
-    // what the game lets that stand or slot take.
+    /// <summary>
+    /// An item stand's item and orientation, or an armour stand's slots and pose; each list offers only
+    /// what the game lets that stand or slot take.
+    /// </summary>
     private void RenderStand()
     {
         if (Stand == null || _z == null)
@@ -723,6 +797,7 @@ public sealed class InspectorPanel
         }
     }
 
+    /// <summary>A number box for the stand section that marks the card changed.</summary>
     private NumericUpDown StandNum(int v, int min, int max, Action<int> set, string tip)
     {
         var n = new NumericUpDown { Value = v, Minimum = min, Maximum = max, Increment = 1, FormatString = "0", FontSize = 11, ShowButtonSpinner = false, Width = 60 }.Tip(tip);
@@ -734,8 +809,10 @@ public sealed class InspectorPanel
         return n;
     }
 
+    /// <summary>A column heading.</summary>
     private static Control Head(string t, int col) => Col(new TextBlock { Text = t, FontSize = 10, Foreground = Ui.Muted }, col);
 
+    /// <summary>Outlines a number box in orange when <paramref name="bad"/> (a slot outside the container).</summary>
     private static NumericUpDown WithBorder(NumericUpDown n, bool bad)
     {
         if (bad)
@@ -745,7 +822,7 @@ public sealed class InspectorPanel
         return n;
     }
 
-    // The first free slot, row by row (size unknown: 4 wide, 2 rows: the smallest containers).
+    /// <summary>The first free slot, row by row (size unknown: 4 wide, 2 rows: the smallest containers).</summary>
     internal (int X, int Y)? FreeSlot()
     {
         var (w, h) = _grid;
@@ -763,7 +840,7 @@ public sealed class InspectorPanel
         return null;
     }
 
-    // The changes made: values set (null: removed), and the contents when they changed.
+    /// <summary>The changes made: values set (null: removed), and the contents when they changed.</summary>
     internal (List<FieldChange> Set, List<ItemUpload>? Inventory) Changes()
     {
         var set = new List<FieldChange>();
@@ -799,12 +876,17 @@ public sealed class InspectorPanel
         return (set, inv);
     }
 
+    /// <summary>Enables Apply and Revert when something changed.</summary>
     private void Dirty()
     {
         var (set, inv) = Changes();
         ApplyButton.IsEnabled = RevertButton.IsEnabled = set.Count > 0 || inv != null;
     }
 
+    /// <summary>
+    /// Writes the changes: the object is replaced by a copy with the new data, in one undo step, and the copy
+    /// opened. Nothing is done when the object changed or went in the game since it was opened.
+    /// </summary>
     internal async Task Apply()
     {
         if (_session() is not { } s || Index is not int index || _bytes == null)

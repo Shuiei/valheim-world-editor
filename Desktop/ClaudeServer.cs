@@ -11,34 +11,42 @@ using TerrainEditor.App;
 
 namespace TerrainEditor.Desktop;
 
-// Claude's connection (Settings: Allow Claude to connect): an MCP server inside the editor
-// (ClaudeTools), so that Claude (Claude Code, Claude Desktop) can look at the open world and change it
-// as the user would. Only on 127.0.0.1, only for callers that send the token (which also keeps web
-// pages out: they cannot send it, nor a Host other than this computer's address). What Claude changes
-// stays pending: it never saves, applies live or saves a blueprint.
+/// <summary>
+/// Claude's connection (Settings: Allow Claude to connect): an MCP server inside the editor
+/// (ClaudeTools), so that Claude (Claude Code, Claude Desktop) can look at the open world and change it
+/// as the user would. Only on 127.0.0.1, only for callers that send the token (which also keeps web
+/// pages out: they cannot send it, nor a Host other than this computer's address). What Claude changes
+/// stays pending: it never saves, applies live or saves a blueprint.
+/// </summary>
 public sealed class ClaudeServer
 {
+    /// <summary>The server the settings started, null when off.</summary>
     private static ClaudeServer? _running;
+    /// <summary>One <see cref="Apply"/> at a time.</summary>
     private static readonly SemaphoreSlim Gate = new(1, 1);
 
+    /// <summary>The web host the server runs in.</summary>
     private readonly WebApplication _app;
 
+    /// <summary>The port it listens on, on 127.0.0.1.</summary>
     public int Port { get; }
 
+    /// <summary>A server already started (see <see cref="Start"/>).</summary>
     private ClaudeServer(WebApplication app, int port)
     {
         _app = app;
         Port = port;
     }
 
-    // The address Claude connects to.
+    /// <summary>The address Claude connects to.</summary>
     public static string Url(int port) => $"http://127.0.0.1:{port}/mcp";
 
-    // What to type to connect Claude Code to the editor.
+    /// <summary>What to type to connect Claude Code to the editor.</summary>
     public static string ClaudeCodeCommand(int port, string token) =>
         $"claude mcp add --transport http valheim-editor {Url(port)} --header \"Authorization: Bearer {token}\"";
 
-    // What to add to Claude Desktop's configuration: this program, started as the relay (--mcp-stdio).
+    /// <summary>What to add to Claude Desktop's configuration: this program, started as the relay (--mcp-stdio).</summary>
+    /// <param name="program">The path of the editor's program.</param>
     public static string DesktopConfig(string program) => new System.Text.Json.Nodes.JsonObject
     {
         ["mcpServers"] = new System.Text.Json.Nodes.JsonObject
@@ -47,13 +55,16 @@ public sealed class ClaudeServer
         },
     }.ToJsonString(new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
 
-    // A new secret, for the settings.
+    /// <summary>A new secret, for the settings: 24 random bytes as lower-case hex.</summary>
     public static string NewToken() => Convert.ToHexString(RandomNumberGenerator.GetBytes(24)).ToLowerInvariant();
 
-    // "Listening on …", the problem when it could not start, or null when off.
+    /// <summary>"Listening on …", the problem when it could not start, or null when off.</summary>
     public static string? Status { get; private set; }
 
-    // Started or stopped as the settings say (again when they changed). The problem, or null.
+    /// <summary>
+    /// Started or stopped as the settings say (again when they changed). The problem, or null. A token is made
+    /// and saved when the settings have none.
+    /// </summary>
     public static async Task<string?> Apply(AppSettings settings, MainWindow window)
     {
         await Gate.WaitAsync();
@@ -95,7 +106,10 @@ public sealed class ClaudeServer
         }
     }
 
-    // The server on 127.0.0.1:port with these tools (tests start their own).
+    /// <summary>The server on 127.0.0.1:port with these tools (tests start their own).</summary>
+    /// <param name="port">The port to listen on.</param>
+    /// <param name="token">The secret callers must send as "Authorization: Bearer &lt;token&gt;".</param>
+    /// <param name="tools">The tools Claude is given.</param>
     internal static async Task<ClaudeServer> Start(int port, string token, ClaudeTools tools)
     {
         var builder = WebApplication.CreateSlimBuilder(new WebApplicationOptions { ContentRootPath = AppContext.BaseDirectory });
@@ -139,17 +153,23 @@ public sealed class ClaudeServer
         return new ClaudeServer(app, port);
     }
 
+    /// <summary>Stops the server and frees its port.</summary>
     internal async Task Stop()
     {
         await _app.StopAsync();
         await _app.DisposeAsync();
     }
 
-    // A host lifetime that leaves the process's signals alone.
+    /// <summary>
+    /// A host lifetime that leaves the process's signals alone: Ctrl+C is the editor's (Program); the console
+    /// lifetime would take it and stop only this server.
+    /// </summary>
     private sealed class NoSignals : IHostLifetime
     {
+        /// <inheritdoc/>
         public Task WaitForStartAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
+        /// <inheritdoc/>
         public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
     }
 }

@@ -2,12 +2,17 @@ using SkiaSharp;
 
 namespace TerrainEditor.Desktop;
 
-// A picture of the whole window as the screen shows it, panels and OpenGL views together (the
-// documentation's screenshots, through the test driver): a snapshot taken by Avalonia's compositor,
-// inside the app, never a capture of the screen. An open dialog (Settings, a question) is drawn
-// over it, centred, the window dimmed behind it as it looks while the dialog waits.
+/// <summary>
+/// A picture of the whole window as the screen shows it, panels and OpenGL views together (the
+/// documentation's screenshots, through the test driver): a snapshot taken by Avalonia's compositor,
+/// inside the app, never a capture of the screen. An open dialog (Settings, a question) is drawn
+/// over it, centred, the window dimmed behind it as it looks while the dialog waits.
+/// </summary>
 public static class WindowShot
 {
+    /// <summary>Saves the window, with any visible owned dialogs drawn over it, as a PNG file.</summary>
+    /// <param name="window">The window to picture; it must be shown.</param>
+    /// <param name="path">The PNG file to write (overwritten).</param>
     public static async Task Save(Avalonia.Controls.Window window, string path)
     {
         using var main = await Snapshot(window);
@@ -34,12 +39,16 @@ public static class WindowShot
         data.SaveTo(file);
     }
 
+    /// <summary>
+    /// A compositor snapshot of one window at its render scaling; throws when the window is not shown.
+    /// </summary>
     private static async Task<Avalonia.Media.Imaging.Bitmap> Snapshot(Avalonia.Controls.Window window)
     {
         var visual = Avalonia.Rendering.Composition.ElementComposition.GetElementVisual(window) ?? throw new InvalidOperationException("The window is not shown.");
         return await visual.Compositor.CreateCompositionVisualSnapshot(visual, window.RenderScaling);
     }
 
+    /// <summary>Turns an Avalonia bitmap into a Skia one (through PNG) so it can be drawn on.</summary>
     private static SKBitmap Decode(Avalonia.Media.Imaging.Bitmap bitmap)
     {
         using var ms = new MemoryStream();

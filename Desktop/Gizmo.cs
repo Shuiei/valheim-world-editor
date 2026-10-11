@@ -2,14 +2,32 @@ using System.Numerics;
 
 namespace TerrainEditor.Desktop;
 
-// The Select tool's handles, like the web editor's (editor/transform.js, after Blender's): a red X
-// (east), green Y (up) and blue Z (north) arrow at the middle of the selection, and an orange ring
-// flat around it to turn it. Sizes are for a gizmo of scale 1 (the view scales it with the distance,
-// so it keeps its size on screen). View space: x east, y up, z south.
+/// <summary>
+/// The Select tool's handles, like the web editor's (editor/transform.js, after Blender's): a red X (east), green Y
+/// (up) and blue Z (north) arrow at the middle of the selection, and an orange ring flat around it to turn it. Sizes
+/// are for a gizmo of scale 1 (the view scales it with the distance, so it keeps its size on screen). View space: x
+/// east, y up, z south.
+/// </summary>
 public static class Gizmo
 {
-    public enum Handle { X, Y, Z, Ring }
+    /// <summary>
+    /// A handle of the gizmo: the X (east), Y (up) and Z (north) arrows, and the Ring that turns the selection.
+    /// </summary>
+    public enum Handle
+    {
+        /// <summary>The east arrow.</summary>
+        X,
+        /// <summary>The up arrow.</summary>
+        Y,
+        /// <summary>The north arrow.</summary>
+        Z,
+        /// <summary>The ring that turns the selection.</summary>
+        Ring,
+    }
 
+    /// <summary>
+    /// The direction an arrow points, in view space (Z north is -z); the ring gives -z too, which nothing uses.
+    /// </summary>
     public static Vector3 Axis(Handle h) => h switch
     {
         Handle.X => Vector3.UnitX,
@@ -17,6 +35,9 @@ public static class Gizmo
         _ => -Vector3.UnitZ,
     };
 
+    /// <summary>
+    /// A handle's colour (RGBA, 0..1): red, green, blue or orange, yellow while hot (hovered or dragged).
+    /// </summary>
     public static Vector4 Color(Handle h, bool hot) => hot ? new Vector4(1, 0.88f, 0.29f, 1) : h switch
     {
         Handle.X => new Vector4(1, 0.3f, 0.37f, 1),
@@ -25,11 +46,19 @@ public static class Gizmo
         _ => new Vector4(1, 0.65f, 0.3f, 0.85f),
     };
 
-    // The arrows start a bit out from the middle, so the object itself can still be grabbed.
+    /// <summary>
+    /// The arrows' shape at scale 1: shaft from and to, its radius, the head's tip and radius. The arrows start a bit
+    /// out from the middle, so the object itself can still be grabbed.
+    /// </summary>
     private const float ShaftFrom = 0.3f, ShaftTo = 1.0f, ShaftRadius = 0.025f, HeadTo = 1.22f, HeadRadius = 0.08f;
+    /// <summary>
+    /// The ring's radius at scale 1.
+    /// </summary>
     public const float RingRadius = 1.45f;
 
-    // Triangles (x, y, z per corner) of a handle at scale 1 around 0.
+    /// <summary>
+    /// Triangles (x, y, z per corner) of a handle at scale 1 around 0.
+    /// </summary>
     public static float[] Mesh(Handle h)
     {
         var v = new List<float>();
@@ -82,7 +111,14 @@ public static class Gizmo
         return [.. v];
     }
 
-    // The handle a ray from the mouse grabs (the arrows a little thicker than drawn), or null.
+    /// <summary>
+    /// The handle a ray from the mouse grabs (the arrows a little thicker than drawn, the nearest along the ray first;
+    /// the ring only when no arrow is hit), or null.
+    /// </summary>
+    /// <param name="o">Where the ray starts, in view space.</param>
+    /// <param name="d">Its direction, of length 1.</param>
+    /// <param name="centre">The gizmo's middle.</param>
+    /// <param name="scale">The gizmo's scale (as drawn).</param>
     public static Handle? Hit(Vector3 o, Vector3 d, Vector3 centre, float scale)
     {
         Handle? best = null;
@@ -118,7 +154,10 @@ public static class Gizmo
         return null;
     }
 
-    // The closest points of the ray (o + d t) and the axis line (c + a s): t, s and the distance between them.
+    /// <summary>
+    /// The closest points of the ray (o + d t) and the axis line (c + a s): t, s and the distance between them. d and a
+    /// are of length 1; parallel, t is 0.
+    /// </summary>
     public static (float T, float S, float Distance) Closest(Vector3 o, Vector3 d, Vector3 c, Vector3 a)
     {
         var w = o - c;
@@ -132,15 +171,19 @@ public static class Gizmo
         return (t, s, Vector3.Distance(o + d * t, c + a * s));
     }
 
-    // How far along the axis (through c) the mouse ray passes closest, or null looking straight down it.
+    /// <summary>
+    /// How far along the axis (through c) the mouse ray passes closest, or null looking straight down it.
+    /// </summary>
     public static float? Along(Vector3 o, Vector3 d, Vector3 c, Vector3 a)
     {
         float b = Vector3.Dot(a, d);
         return 1 - b * b < 1e-4f ? null : Closest(o, d, c, a).S;
     }
 
-    // The heading (Unity yaw, degrees: clockwise from north seen from above) from the middle to where
-    // the ray meets the flat plane through it, or null.
+    /// <summary>
+    /// The heading (Unity yaw, degrees: clockwise from north seen from above, -180..180) from the middle to where the
+    /// ray meets the flat plane through it, or null when it does not (looking level, or away from it).
+    /// </summary>
     public static float? Heading(Vector3 o, Vector3 d, Vector3 centre)
     {
         if (MathF.Abs(d.Y) < 1e-4f)

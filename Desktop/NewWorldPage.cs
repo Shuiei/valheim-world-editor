@@ -12,76 +12,214 @@ using ValheimGen;
 
 namespace TerrainEditor.Desktop;
 
-// A new world (the start page's "A new world"): a name and a seed, the seed's world seen from above
-// before it exists (SeedPreview: the game's own generator, with where it will put the start, the
-// bosses' altars and the traders), a search through random seeds for one that suits (the start on a
-// large landmass, the first Swamp or Mountain close, Haldor near...), and Create: a normal Valheim world
-// in the game's world folder. The game lays out its locations when it first loads it, and generates its
-// zones as players explore them; the editor edits what is generated.
+/// <summary>
+/// A new world (the start page's "A new world"): a name and a seed, the seed's world seen from above before it exists
+/// (SeedPreview: the game's own generator, with where it will put the start, the bosses' altars and the traders), a
+/// search through random seeds for one that suits (the start on a large landmass, the first Swamp or Mountain close,
+/// Haldor near...), and Create: a normal Valheim world in the game's world folder. The game lays out its locations when
+/// it first loads it, and generates its zones as players explore them; the editor edits what is generated.
+/// </summary>
 public sealed class NewWorldPage : IDisposable
 {
+    /// <summary>
+    /// The page.
+    /// </summary>
     public Control View { get; }
 
+    /// <summary>
+    /// The Start button: back to the start page (what runs is stopped first).
+    /// </summary>
     public event Action? BackRequested;
 
-    // The world's folder (inside a world folder of the game), its name and seed.
+    /// <summary>
+    /// Create, once checked: the world's folder (inside a world folder of the game), its name and seed.
+    /// </summary>
     public event Action<string, string, string>? CreateRequested;
 
+    /// <summary>
+    /// The world's name; it must be a valid file name.
+    /// </summary>
     internal TextBox NameBox { get; } = new() { Text = "", PlaceholderText = "My world", FontSize = 13 };
+    /// <summary>
+    /// The seed, up to 10 characters; its world is shown after a short typing pause.
+    /// </summary>
     internal TextBox SeedBox { get; } = new() { FontSize = 13, MaxLength = 10, PlaceholderText = "Up to 10 letters or digits" };
+    /// <summary>
+    /// Puts a random seed in the seed box.
+    /// </summary>
     internal Button Roll { get; } = new() { Content = "Roll", FontSize = 12 };
+    /// <summary>
+    /// Which of the game's world folders to create the world in; its <c>Tag</c> holds the full paths.
+    /// </summary>
     internal ComboBox Where { get; } = new() { HorizontalAlignment = HorizontalAlignment.Stretch, FontSize = 12 };
+    /// <summary>
+    /// Checks the name and seed, then asks the window to create the world.
+    /// </summary>
     internal Button Create { get; } = new Button { Content = "Create world", FontSize = 13 }.Classed("primary");
+    /// <summary>
+    /// Why Create refused, or empty.
+    /// </summary>
     internal TextBlock Problem { get; } = new() { Foreground = new SolidColorBrush(Avalonia.Media.Color.FromRgb(224, 96, 75)), TextWrapping = TextWrapping.Wrap, FontSize = 12 };
-    // The seed's map, the landmarks over it, and which kinds show (switches over the map's corner, as
-    // the editor's View panel).
+    /// <summary>
+    /// The seed's map, the landmarks over it, and which kinds show (switches over the map's corner, as the editor's
+    /// View panel).
+    /// </summary>
     internal SeedMap Map { get; } = new();
+    /// <summary>
+    /// The landmarks over the map.
+    /// </summary>
     internal Canvas Marks { get; } = new() { ClipToBounds = true };
+    /// <summary>
+    /// Show the start.
+    /// </summary>
     internal CheckBox ShowStart { get; } = Toggle("start", "", "The start");
+    /// <summary>
+    /// Show the bosses' altars.
+    /// </summary>
     internal CheckBox ShowBosses { get; } = Toggle("boss", "", "Bosses' altars");
+    /// <summary>
+    /// Show Haldor's spots.
+    /// </summary>
     internal CheckBox ShowHaldor { get; } = Toggle("trader", "Haldor", "Haldor");
+    /// <summary>
+    /// Show the Bog Witch's spots.
+    /// </summary>
     internal CheckBox ShowBogWitch { get; } = Toggle("trader", "The Bog Witch", "Bog Witch");
+    /// <summary>
+    /// Show Hildir's spots.
+    /// </summary>
     internal CheckBox ShowHildir { get; } = Toggle("trader", "Hildir", "Hildir");
-    // One switch a kind of dungeon (off at first: they are looked for only when one is on, a few seconds),
-    // the shown seed's dungeons (null: not looked for yet) and those of the seeds seen.
+    /// <summary>
+    /// The landmarks placed over the map, with their controls, so they can be moved when the view does.
+    /// </summary>
     private readonly List<(SeedPreview.Landmark Mark, Control Control)> _marks = [];
+    /// <summary>
+    /// One switch a kind of dungeon, by name (off at first: they are looked for only when one is on, a few seconds).
+    /// </summary>
     internal Dictionary<string, CheckBox> ShowDungeons { get; } = SeedPreview.Dungeons.ToDictionary(d => d.Name, d => DungeonToggle(d.Name));
+    /// <summary>
+    /// The shown seed's dungeons (null: not looked for yet).
+    /// </summary>
     internal List<SeedPreview.Landmark>? DungeonMarks { get; private set; }
+    /// <summary>
+    /// The dungeons of the seeds seen, by seed (cleared past 20).
+    /// </summary>
     private readonly Dictionary<string, List<SeedPreview.Landmark>> _dungeonsSeen = [];
+    /// <summary>
+    /// The Dungeons list beside the map.
+    /// </summary>
     private readonly StackPanel _dungeonList = new() { Spacing = 2 };
+    /// <summary>
+    /// The world point under the mouse, at the map's bottom left.
+    /// </summary>
     internal TextBlock Readout { get; } = new() { FontSize = 11, Foreground = Ui.Muted, Margin = new Thickness(8, 0, 0, 6), VerticalAlignment = VerticalAlignment.Bottom, HorizontalAlignment = HorizontalAlignment.Left, IsHitTestVisible = false };
-    // Shown over the map while a seed's world is being looked at.
+    /// <summary>
+    /// Shown over the map while a seed's world is being looked at: what is being done.
+    /// </summary>
     internal TextBlock LoadingText { get; } = new() { FontSize = 12, HorizontalAlignment = HorizontalAlignment.Center };
+    /// <summary>
+    /// The loading sign over the map.
+    /// </summary>
     internal Border Loading { get; }
-    // What the seed's world holds, as lists.
+    /// <summary>
+    /// What the seed's world holds, as lists.
+    /// </summary>
     internal StackPanel Info { get; } = new() { Spacing = 14 };
     // Finding a seed.
+    /// <summary>
+    /// Wish: the start on a large landmass.
+    /// </summary>
     internal CheckBox BigLand { get; } = new() { Content = "The start on a large landmass", IsChecked = true, FontSize = 12 };
+    /// <summary>
+    /// Wish: land all around the start.
+    /// </summary>
     internal CheckBox LandAround { get; } = new() { Content = "Land all around the start", IsChecked = true, FontSize = 12 };
+    /// <summary>
+    /// Wish: each biome reachable on foot from the start.
+    /// </summary>
     internal CheckBox OnFoot { get; } = new() { Content = "Each biome reachable on foot from the start", FontSize = 12 };
+    /// <summary>
+    /// Wish: a Swamp within this many metres of the start (0: no wish).
+    /// </summary>
     internal NumericUpDown Swamp { get; } = Near(1500);
+    /// <summary>
+    /// Wish: a Mountain within this many metres of the start (0: no wish).
+    /// </summary>
     internal NumericUpDown Mountain { get; } = Near(2000);
+    /// <summary>
+    /// Wish: Plains within this many metres of the start (0: no wish).
+    /// </summary>
     internal NumericUpDown Plains { get; } = Near(0);
+    /// <summary>
+    /// Wish: one of Haldor's spots within this many metres of the start (0: no wish).
+    /// </summary>
     internal NumericUpDown Haldor { get; } = Near(0);
+    /// <summary>
+    /// Wish: one of the Bog Witch's spots within this many metres of the start (0: no wish).
+    /// </summary>
     internal NumericUpDown BogWitch { get; } = Near(0);
+    /// <summary>
+    /// Wish: one of Hildir's spots within this many metres of the start (0: no wish).
+    /// </summary>
     internal NumericUpDown Hildir { get; } = Near(0);
+    /// <summary>
+    /// Wish: the first five bosses' altars within this many metres of the start (0: no wish).
+    /// </summary>
     internal NumericUpDown Bosses { get; } = Near(0);
+    /// <summary>
+    /// How many random seeds to look at: 60, 150 or 400.
+    /// </summary>
     internal ComboBox Count { get; } = new() { ItemsSource = new[] { "60 seeds", "150 seeds", "400 seeds" }, SelectedIndex = 1, FontSize = 12 };
+    /// <summary>
+    /// Starts the search.
+    /// </summary>
     internal Button Find { get; } = new Button { Content = "Find seeds", FontSize = 12 }.Classed("primary");
+    /// <summary>
+    /// Stops the search; the best so far are shown.
+    /// </summary>
     internal Button Stop { get; } = new Button { Content = "Stop", FontSize = 12, IsVisible = false }.Classed("primary");
+    /// <summary>
+    /// The search's progress, 0..1.
+    /// </summary>
     internal ProgressBar Progress { get; } = new() { Minimum = 0, Maximum = 1, Height = 6, MinHeight = 6, IsVisible = false };
+    /// <summary>
+    /// The search's results, as pictures to click.
+    /// </summary>
     internal WrapPanel Found { get; } = new() { ItemSpacing = 6, LineSpacing = 6 };
 
-    // The preview shown (null while it is made) and the search's results.
+    /// <summary>
+    /// The preview shown (null while it is made).
+    /// </summary>
     internal SeedPreview.Preview? Shown { get; private set; }
+    /// <summary>
+    /// The search's results, best first, with their scores.
+    /// </summary>
     internal List<(SeedPreview.Preview Preview, float Score)> Results { get; private set; } = [];
+    /// <summary>
+    /// The latest preview or search started, for tests to wait on.
+    /// </summary>
     internal Task Pending { get; private set; } = Task.CompletedTask;
 
+    /// <summary>
+    /// Cancel the search, the seed preview, and the dungeon finding.
+    /// </summary>
     private CancellationTokenSource? _search, _preview, _dungeons;
+    /// <summary>
+    /// A dungeon kind was switched on while they are found: the loading sign stays until they are.
+    /// </summary>
     private bool _dungeonWait;
+    /// <summary>
+    /// Why finding the dungeons failed, or null.
+    /// </summary>
     private string? _dungeonError;
+    /// <summary>
+    /// The typing pause before a typed seed is looked at.
+    /// </summary>
     private readonly DispatcherTimer _wait = new() { Interval = TimeSpan.FromMilliseconds(350) };
 
+    /// <summary>
+    /// A distance box: 0..8000 m in steps of 250.
+    /// </summary>
     private static NumericUpDown Near(double metres) => new()
     {
         Minimum = 0,
@@ -93,9 +231,16 @@ public sealed class NewWorldPage : IDisposable
         FontSize = 12,
     };
 
-    // The game's world folders (that exist, the local ones first), for Where.
+    /// <summary>
+    /// The game's world folders (that exist, the local ones first), for Where.
+    /// </summary>
     internal static List<string> Roots() => [.. Places.WorldRoots().Where(Directory.Exists).Distinct()];
 
+    /// <summary>
+    /// Builds the page and starts looking at a random seed.
+    /// </summary>
+    /// <param name="roots">The world folders to offer (tests); null for the game's own. With none, the first the game
+    /// would use.</param>
     public NewWorldPage(IReadOnlyList<string>? roots = null)
     {
         Loading = new Border
@@ -278,8 +423,10 @@ public sealed class NewWorldPage : IDisposable
         ShowSeed(SeedBox.Text);
     }
 
-    // Everything running stopped, and the page left as it is now (no loading sign left waiting for
-    // work that will not finish).
+    /// <summary>
+    /// Everything running stopped, and the page left as it is now (no loading sign left waiting for work that will not
+    /// finish).
+    /// </summary>
     internal void StopAll()
     {
         _search?.Cancel();
@@ -289,7 +436,9 @@ public sealed class NewWorldPage : IDisposable
         FillDungeons();
     }
 
-    // Leaving the page: what runs is stopped.
+    /// <summary>
+    /// Leaving the page: what runs is stopped.
+    /// </summary>
     public void Dispose()
     {
         StopAll();
@@ -300,7 +449,9 @@ public sealed class NewWorldPage : IDisposable
         _dungeons?.Dispose();
     }
 
-    // The seed's preview, made away from the window's thread (only the newest is shown).
+    /// <summary>
+    /// The seed's preview, made away from the window's thread (only the newest is shown).
+    /// </summary>
     internal void ShowSeed(string seed)
     {
         _preview?.Cancel();
@@ -345,7 +496,9 @@ public sealed class NewWorldPage : IDisposable
         }, TaskScheduler.FromCurrentSynchronizationContext());
     }
 
-    // The loading sign over the map (null: none), and the search result for that seed marked.
+    /// <summary>
+    /// The loading sign over the map (null: none), and the search result for that seed marked.
+    /// </summary>
     private void SetLoading(string? seed)
     {
         bool valid = seed is { Length: > 0 and <= 10 };
@@ -357,7 +510,9 @@ public sealed class NewWorldPage : IDisposable
         }
     }
 
-    // The search result for this seed framed (the one chosen or shown), the others not.
+    /// <summary>
+    /// The search result for this seed framed (the one chosen or shown), the others not.
+    /// </summary>
     private void MarkFound(string? seed)
     {
         foreach (var b in Found.Children.OfType<Button>())
@@ -368,6 +523,10 @@ public sealed class NewWorldPage : IDisposable
         }
     }
 
+    /// <summary>
+    /// Shows a made preview: the map (its view kept for the same seed), the lists and the marks; its dungeons are
+    /// looked for unless known.
+    /// </summary>
     private void Show(SeedPreview.Preview p)
     {
         bool same = Shown?.Seed == p.Seed;
@@ -390,7 +549,9 @@ public sealed class NewWorldPage : IDisposable
         }
     }
 
-    // A dungeon kind switched on before they are found: the loading sign until they are.
+    /// <summary>
+    /// A dungeon kind switched on before they are found: the loading sign until they are.
+    /// </summary>
     private void WaitForDungeons(SeedPreview.Preview p)
     {
         if (_dungeons == null)
@@ -402,8 +563,10 @@ public sealed class NewWorldPage : IDisposable
         LoadingText.Text = $"Finding {p.Seed}'s dungeons…";
     }
 
-    // The seed's dungeons looked for (a few seconds, on one core: the game's smaller locations come first
-    // in its order; what the preview laid out is gone on from), kept for the seed.
+    /// <summary>
+    /// The seed's dungeons looked for (a few seconds, on one core: the game's smaller locations come first in its
+    /// order; what the preview laid out is gone on from), kept for the seed.
+    /// </summary>
     private void FindDungeons(SeedPreview.Preview p)
     {
         StopDungeons();
@@ -448,6 +611,9 @@ public sealed class NewWorldPage : IDisposable
         }, TaskScheduler.FromCurrentSynchronizationContext());
     }
 
+    /// <summary>
+    /// Stops looking for dungeons.
+    /// </summary>
     private void StopDungeons()
     {
         _dungeonWait = false;
@@ -456,12 +622,16 @@ public sealed class NewWorldPage : IDisposable
         _dungeons = null;
     }
 
-    // The dungeons the switches show, as dots on the map.
+    /// <summary>
+    /// The dungeons the switches show, as dots on the map.
+    /// </summary>
     private void PlaceDots() => Map.Dots = DungeonMarks == null
         ? Array.Empty<(float, float, IBrush)>()
         : DungeonMarks.Where(m => ShowDungeons[m.Name].IsChecked == true).Select(m => (m.X, m.Z, (IBrush)DungeonFill(m.Name))).ToList();
 
-    // The Dungeons list: each kind's nearest, how many in the world and near the start.
+    /// <summary>
+    /// The Dungeons list: each kind's nearest, how many in the world and near the start.
+    /// </summary>
     private void FillDungeons()
     {
         _dungeonList.Children.Clear();
@@ -505,7 +675,9 @@ public sealed class NewWorldPage : IDisposable
         }
     }
 
-    // Each dungeon kind's colour (squares, apart from the round traders and the bosses' diamonds).
+    /// <summary>
+    /// Each dungeon kind's colour (squares, apart from the round traders and the bosses' diamonds).
+    /// </summary>
     private static SolidColorBrush DungeonFill(string name) => new(name switch
     {
         "Burial chambers" => Avalonia.Media.Color.FromRgb(226, 206, 156),
@@ -517,8 +689,14 @@ public sealed class NewWorldPage : IDisposable
         _ => Avalonia.Media.Color.FromRgb(255, 176, 214),
     });
 
+    /// <summary>
+    /// A dungeon kind's square mark.
+    /// </summary>
     private static Border DungeonMark(string name) => new() { Width = 8, Height = 8, Background = DungeonFill(name), BorderBrush = new SolidColorBrush(Avalonia.Media.Color.FromRgb(20, 20, 24)), BorderThickness = new Thickness(1) };
 
+    /// <summary>
+    /// A switch for one dungeon kind, off at first.
+    /// </summary>
     private static CheckBox DungeonToggle(string name) => new CheckBox
     {
         IsChecked = false,
@@ -526,14 +704,19 @@ public sealed class NewWorldPage : IDisposable
         Content = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { DungeonMark(name), new TextBlock { Text = name, VerticalAlignment = VerticalAlignment.Center } } },
     }.Classed("switch");
 
+    /// <summary>
+    /// Replaces the lists beside the map with one line.
+    /// </summary>
     private void Note(string text)
     {
         Info.Children.Clear();
         Info.Children.Add(Ui.Hint(text));
     }
 
-    // The lists beside the map: the world, its biomes, the traders, the bosses. A trader's or boss's row
-    // shows the nearest on the map.
+    /// <summary>
+    /// The lists beside the map: the world, its biomes, the traders, the bosses. A trader's or boss's row shows the
+    /// nearest on the map.
+    /// </summary>
     private void ShowInfo(SeedPreview.Preview p)
     {
         var s = p.Stats;
@@ -572,6 +755,9 @@ public sealed class NewWorldPage : IDisposable
         Info.Children.Add(_dungeonList);
     }
 
+    /// <summary>
+    /// A titled list of rows.
+    /// </summary>
     private static StackPanel Section(string title, params Control[] items)
     {
         var list = new StackPanel { Spacing = 2 };
@@ -583,7 +769,9 @@ public sealed class NewWorldPage : IDisposable
         return list;
     }
 
-    // One row: a mark, the name, the value, a detail under it; show: what clicking it does.
+    /// <summary>
+    /// One row: a mark, the name, the value, a detail under it; show: what clicking it does.
+    /// </summary>
     private static Border Item(Control? mark, string name, string value, string detail = "", Action? show = null)
     {
         var row = new Grid { ColumnDefinitions = new ColumnDefinitions("18,*,Auto") };
@@ -615,7 +803,9 @@ public sealed class NewWorldPage : IDisposable
         return item;
     }
 
-    // A switch for one kind of mark, with its mark beside the name.
+    /// <summary>
+    /// A switch for one kind of mark, with its mark beside the name.
+    /// </summary>
     private static CheckBox Toggle(string kind, string name, string text) => new CheckBox
     {
         IsChecked = true,
@@ -623,7 +813,9 @@ public sealed class NewWorldPage : IDisposable
         Content = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { Mark(kind, name), new TextBlock { Text = text, VerticalAlignment = VerticalAlignment.Center } } },
     }.Classed("switch");
 
-    // The landmark kinds' looks: the start red, bosses purple diamonds, each trader a colour of its own.
+    /// <summary>
+    /// The landmark kinds' looks: the start red, bosses purple diamonds, each trader a colour of its own.
+    /// </summary>
     private static SolidColorBrush Fill(string kind, string name = "") => new(kind switch
     {
         "start" => Avalonia.Media.Color.FromRgb(230, 40, 40),
@@ -636,6 +828,9 @@ public sealed class NewWorldPage : IDisposable
         },
     });
 
+    /// <summary>
+    /// A landmark's mark: a diamond for a boss, a dot otherwise (the start's larger, outlined white).
+    /// </summary>
     private static Control Mark(string kind, string name = "")
     {
         var outline = new SolidColorBrush(Avalonia.Media.Color.FromRgb(20, 20, 24));
@@ -644,8 +839,10 @@ public sealed class NewWorldPage : IDisposable
             : new Avalonia.Controls.Shapes.Ellipse { Width = kind == "start" ? 11 : 9, Height = kind == "start" ? 11 : 9, Fill = Fill(kind, name), Stroke = kind == "start" ? Brushes.White : outline, StrokeThickness = kind == "start" ? 2 : 1 };
     }
 
-    // The shown seed's landmarks over the map (the kinds switched on), each with what it is and how far:
-    // made when the seed or the switches change, only moved when the view does.
+    /// <summary>
+    /// The shown seed's landmarks over the map (the kinds switched on), each with what it is and how far: made when the
+    /// seed or the switches change, only moved when the view does.
+    /// </summary>
     internal void PlaceMarks()
     {
         Marks.Children.Clear();
@@ -679,7 +876,9 @@ public sealed class NewWorldPage : IDisposable
         MoveMarks();
     }
 
-    // The marks where the view puts them (those out of it hidden).
+    /// <summary>
+    /// The marks where the view puts them (those out of it hidden).
+    /// </summary>
     private void MoveMarks()
     {
         foreach (var (m, c) in _marks)
@@ -695,8 +894,14 @@ public sealed class NewWorldPage : IDisposable
         }
     }
 
+    /// <summary>
+    /// A distance for people: hundreds of metres under 1 km, else km to one decimal; "none" for infinity.
+    /// </summary>
     internal static string Km(float m) => float.IsPositiveInfinity(m) ? "none" : m < 1000 ? $"{m / 100:0}00 m" : $"{m / 1000:0.0} km";
 
+    /// <summary>
+    /// A seed's stats as text, for a search result's tooltip.
+    /// </summary>
     internal static string Describe(SeedPreview.Stats s)
     {
         var lines = new List<string>
@@ -718,6 +923,9 @@ public sealed class NewWorldPage : IDisposable
         return string.Join("\n", lines);
     }
 
+    /// <summary>
+    /// A biome's name as the game shows it.
+    /// </summary>
     internal static string Name(Heightmap.Biome b) => b switch
     {
         Heightmap.Biome.BlackForest => "Black Forest",
@@ -726,8 +934,13 @@ public sealed class NewWorldPage : IDisposable
         _ => b.ToString(),
     };
 
-    // The preview as a small picture of px pixels (a search's results): the map's colours (SeedMap.Shade),
-    // the start in red, north up.
+    /// <summary>
+    /// The preview as a small picture of px pixels (a search's results): the map's colours (SeedMap.Shade), the start
+    /// in red, north up.
+    /// </summary>
+    /// <param name="p">The preview.</param>
+    /// <param name="px">The picture's side, in pixels.</param>
+    /// <param name="startDot">Mark the start with a red square.</param>
     internal static WriteableBitmap Draw(SeedPreview.Preview p, int px, bool startDot = true)
     {
         var bmp = new WriteableBitmap(new PixelSize(px, px), new Vector(96, 96), PixelFormat.Bgra8888, AlphaFormat.Premul);
@@ -755,6 +968,9 @@ public sealed class NewWorldPage : IDisposable
         return bmp;
     }
 
+    /// <summary>
+    /// The search's wishes as the boxes set them.
+    /// </summary>
     internal SeedPreview.Wishes Wishes() => new(
         BigStartLand: BigLand.IsChecked == true, LandAroundStart: LandAround.IsChecked == true,
         MaxSwampDistance: (float)(Swamp.Value ?? 0), MaxMountainDistance: (float)(Mountain.Value ?? 0), MaxPlainsDistance: (float)(Plains.Value ?? 0),
@@ -762,7 +978,9 @@ public sealed class NewWorldPage : IDisposable
         MaxHaldorDistance: (float)(Haldor.Value ?? 0), MaxBogWitchDistance: (float)(BogWitch.Value ?? 0), MaxHildirDistance: (float)(Hildir.Value ?? 0),
         MaxBossDistance: (float)(Bosses.Value ?? 0));
 
-    // Random seeds looked at in the background; the best shown as they come.
+    /// <summary>
+    /// Random seeds looked at in the background; the best shown when done (or stopped).
+    /// </summary>
     internal void StartSearch()
     {
         _search?.Cancel();
@@ -796,6 +1014,9 @@ public sealed class NewWorldPage : IDisposable
             }, TaskScheduler.FromCurrentSynchronizationContext());
     }
 
+    /// <summary>
+    /// The search results as pictures to click, each with its seed and score.
+    /// </summary>
     private void ShowResults()
     {
         ClearFound();
@@ -834,7 +1055,9 @@ public sealed class NewWorldPage : IDisposable
         MarkFound(Shown?.Seed);
     }
 
-    // The search results taken away, their pictures freed.
+    /// <summary>
+    /// The search results taken away, their pictures freed.
+    /// </summary>
     private void ClearFound()
     {
         foreach (var image in Found.GetVisualDescendants().OfType<Image>())
@@ -845,7 +1068,9 @@ public sealed class NewWorldPage : IDisposable
         Found.Children.Clear();
     }
 
-    // Create: checked here, made by the window (CreateRequested).
+    /// <summary>
+    /// Create: checked here, made by the window (CreateRequested).
+    /// </summary>
     internal void AskCreate()
     {
         string name = (NameBox.Text ?? "").Trim(), seed = (SeedBox.Text ?? "").Trim();

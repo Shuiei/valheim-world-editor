@@ -5,44 +5,111 @@ using Avalonia.Media;
 
 namespace TerrainEditor.Desktop;
 
-// The Mountain tool's panel: a preset (peak, ridge, range, mesa, volcano, hills), its size and
-// roughness, the direction of ridges and ranges, and the seed that makes its detail. Randomize rolls
-// a new mountain of the preset; a click on the ground puts it there.
+/// <summary>
+/// The Mountain tool's panel: a preset (peak, ridge, range, mesa, volcano, hills), its size and roughness, the
+/// direction of ridges and ranges, and the seed that makes its detail. Randomize rolls a new mountain of the preset; a
+/// click on the ground puts it there.
+/// </summary>
 public sealed class MountainPanel
 {
+    /// <summary>
+    /// The panel's card, shown while the Mountain tool is on.
+    /// </summary>
     public Control Card { get; }
+    /// <summary>
+    /// Raised when any setting changes (not while Randomize fills them), so the preview can follow.
+    /// </summary>
     public event Action? Changed;
 
+    /// <summary>
+    /// The preset list; choosing one rolls a new mountain of it.
+    /// </summary>
     internal ComboBox PresetBox { get; }
+    /// <summary>
+    /// Height in metres, 5..300.
+    /// </summary>
     internal Slider HeightSlider { get; }
+    /// <summary>
+    /// Radius in metres, 20..280.
+    /// </summary>
     internal Slider RadiusSlider { get; }
+    /// <summary>
+    /// Roughness, 0..1 in steps of 0.05.
+    /// </summary>
     internal Slider RoughSlider { get; }
+    /// <summary>
+    /// Direction of ridges and ranges in degrees, 0..179; its row shows only for those kinds.
+    /// </summary>
     internal Slider TurnSlider { get; }
+    /// <summary>
+    /// The seed of the mountain's detail.
+    /// </summary>
     internal NumericUpDown SeedBox { get; } = new() { Minimum = 0, Maximum = int.MaxValue, Increment = 1, FormatString = "0", FontSize = 12 };
+    /// <summary>
+    /// Rolls a new mountain of the chosen preset.
+    /// </summary>
     internal Button RandomizeButton { get; } = new Button { Content = "Randomize", FontSize = 12 }.Classed("primary");
+    /// <summary>
+    /// Take away the trees and rocks the mountain buries.
+    /// </summary>
     internal CheckBox ClearBox { get; } = new() { Content = "Take away the trees and rocks it buries", IsChecked = true, FontSize = 12 };
+    /// <summary>
+    /// Grow the biome's trees and rocks on the new mountain.
+    /// </summary>
     internal CheckBox GrowBox { get; } = new() { Content = "Grow the biome's trees and rocks on it", IsChecked = true, FontSize = 12 };
+    /// <summary>
+    /// The chosen preset's help line.
+    /// </summary>
     internal TextBlock HelpText { get; } = new() { FontSize = 12, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
+    /// <summary>
+    /// The Turn row, hidden for kinds without a direction.
+    /// </summary>
     private readonly Control _turnRow;
+    /// <summary>
+    /// True while Randomize sets the controls, so they raise one Changed at the end instead of one each.
+    /// </summary>
     private bool _filling;
+    /// <summary>
+    /// Where Randomize's sizes and seeds come from.
+    /// </summary>
     private readonly Random _random = new();
-    // The largest radius that fits in the open area (with its ragged outline), clicked in its middle.
+    /// <summary>
+    /// The largest radius that fits in the open area (with its ragged outline), clicked in its middle.
+    /// </summary>
     private float _maxRadius = 280;
 
-    // The open area changed: Randomize keeps mountains that fit in it.
+    /// <summary>
+    /// The open area changed: Randomize keeps mountains that fit in it.
+    /// </summary>
+    /// <param name="gridSize">The open area's width, in ground points.</param>
     public void FitTo(int gridSize)
     {
         _maxRadius = MathF.Max(20, ((gridSize - 1) / 2f - 2) / 1.15f);
     }
 
+    /// <summary>
+    /// The chosen preset (the first when none is chosen).
+    /// </summary>
     public Mountain.Preset Preset => Mountain.Presets[Math.Max(0, PresetBox.SelectedIndex)];
 
+    /// <summary>
+    /// The mountain the controls describe now.
+    /// </summary>
     public MountainSpec Spec => new(Preset.Kind, (float)HeightSlider.Value, (float)RadiusSlider.Value, (float)RoughSlider.Value, (float)TurnSlider.Value, (int)(SeedBox.Value ?? 0));
 
+    /// <summary>
+    /// Whether to take away the trees and rocks the mountain buries.
+    /// </summary>
     public bool Clear => ClearBox.IsChecked == true;
 
+    /// <summary>
+    /// Whether to grow the biome's trees and rocks on it.
+    /// </summary>
     public bool Grow => GrowBox.IsChecked == true;
 
+    /// <summary>
+    /// A labelled row: the label, the input, and an optional value text on the right.
+    /// </summary>
     private static Grid Row(string label, Control input, Control? after = null)
     {
         var g = new Grid { ColumnDefinitions = new ColumnDefinitions("70,*,46") };
@@ -59,6 +126,10 @@ public sealed class MountainPanel
         return g;
     }
 
+    /// <summary>
+    /// A slider snapping to <paramref name="step"/> that writes its value into <paramref name="shown"/> and raises
+    /// Changed.
+    /// </summary>
     private Slider Slide(double min, double max, double step, TextBlock shown, Func<double, string> format)
     {
         var s = new Slider { Minimum = min, Maximum = max, SmallChange = step, TickFrequency = step, IsSnapToTickEnabled = true };
@@ -76,6 +147,9 @@ public sealed class MountainPanel
         return s;
     }
 
+    /// <summary>
+    /// Builds the card and rolls a first mountain.
+    /// </summary>
     public MountainPanel()
     {
         PresetBox = new ComboBox { ItemsSource = Mountain.Presets.Select(p => p.Name).ToArray(), SelectedIndex = 0, FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch };
@@ -141,7 +215,10 @@ public sealed class MountainPanel
         Randomize();
     }
 
-    // A new mountain of the chosen preset: its size within the preset's ranges, and a new seed.
+    /// <summary>
+    /// A new mountain of the chosen preset: its size within the preset's ranges, and a new seed. Scaled down (height
+    /// too) when it would not fit the open area.
+    /// </summary>
     public void Randomize()
     {
         var p = Preset;

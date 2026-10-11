@@ -5,17 +5,39 @@ using Avalonia.Media;
 
 namespace TerrainEditor.Desktop;
 
-// The Measure tool's panel: what the tape measures, and Clear.
+/// <summary>
+/// The Measure tool's panel: what the tape measures, and Clear.
+/// </summary>
 public sealed class MeasurePanel
 {
+    /// <summary>
+    /// The panel's card.
+    /// </summary>
     public Control Card { get; }
+    /// <summary>
+    /// The tape's hint: what to click next.
+    /// </summary>
     private readonly TextBlock _hint = new() { FontSize = 12, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
+    /// <summary>
+    /// The measured values, a label and a value per row.
+    /// </summary>
     private readonly Grid _rows = new() { ColumnDefinitions = new ColumnDefinitions("Auto,*"), ColumnSpacing = 12, RowSpacing = 3 };
+    /// <summary>
+    /// The 3D view whose tape the panel shows.
+    /// </summary>
     private readonly GlView _view;
+    /// <summary>
+    /// Clears the tape.
+    /// </summary>
     internal Button ClearButton { get; } = new() { Content = "Clear (Esc)", FontSize = 12 };
-    // For tests: the values shown, by label.
+    /// <summary>
+    /// For tests: the values shown, by label.
+    /// </summary>
     internal Dictionary<string, string> Shown { get; } = [];
 
+    /// <summary>
+    /// Builds the card for the view's tape; it refreshes whenever the tape changes.
+    /// </summary>
     public MeasurePanel(GlView view)
     {
         _view = view;
@@ -46,6 +68,9 @@ public sealed class MeasurePanel
         Refresh();
     }
 
+    /// <summary>
+    /// Shows the tape's hint and values again, against the ground as it is now (water at 30 m when no world is open).
+    /// </summary>
     public void Refresh()
     {
         float water = _view.Scene?.Water ?? 30;

@@ -5,82 +5,141 @@ using Avalonia.Media;
 
 namespace TerrainEditor.Desktop;
 
-// The tool rail (left edge) and the chosen tool's options next to it, like the web editor's: View
-// (look around and pick objects), Select (move, turn and delete objects: see SelectPanel), the sculpt
-// brushes and the paint brushes. Keys as in the web editor: 1-9 and 0 pick the brushes, E selects,
-// Esc goes back to View.
-// Which tool is in use: View (look around, click picks), Select, Measure, Shape, Path, Area, Paste (from the
-// Area tool, Ctrl+V), Place, Blueprints (the library, to paste one), or a brush (Tool says which).
-public enum ToolMode { View, Select, Measure, Shape, Path, Area, Paste, Place, Brush, Mountain, Script, Blueprints, Dungeon }
+/// <summary>
+/// Which tool is in use: View (look around, click picks), Select, Measure, Shape, Path, Area, Paste (from the
+/// Area tool, Ctrl+V), Place, Blueprints (the library, to paste one), or a brush (Tool says which).
+/// </summary>
+public enum ToolMode
+{
+    /// <summary>Look around; a click picks an object.</summary>
+    View,
+    /// <summary>The Select tool.</summary>
+    Select,
+    /// <summary>The Measure tool.</summary>
+    Measure,
+    /// <summary>The Shape tool.</summary>
+    Shape,
+    /// <summary>The Path tool.</summary>
+    Path,
+    /// <summary>The Area tool.</summary>
+    Area,
+    /// <summary>Pasting what the Area tool copied (Ctrl+V).</summary>
+    Paste,
+    /// <summary>The Place tool.</summary>
+    Place,
+    /// <summary>A sculpt or paint brush (Tool says which).</summary>
+    Brush,
+    /// <summary>The Mountain tool.</summary>
+    Mountain,
+    /// <summary>The Script tool.</summary>
+    Script,
+    /// <summary>The Blueprints library, to paste one.</summary>
+    Blueprints,
+    /// <summary>The Dungeon tool.</summary>
+    Dungeon,
+}
 
+/// <summary>
+/// The tool rail (left edge) and the chosen tool's options next to it, like the web editor's: View
+/// (look around and pick objects), Select (move, turn and delete objects: see SelectPanel), the sculpt
+/// brushes and the paint brushes. Keys as in the web editor: 1-9 and 0 pick the brushes, E selects,
+/// Esc goes back to View.
+/// </summary>
 public sealed class ToolPanel
 {
-    // The brush shapes before the stamps, in BrushShape's order.
+    /// <summary>The brush shapes before the stamps, in BrushShape's order.</summary>
     private static readonly string[] BuiltInShapes = ["Circle", "Square", "Ring", "Ragged (noise)"];
 
+    /// <summary>The brush settings the options change (size, strength, shape, falloff, each tool's own).</summary>
     public Brush Brush { get; } = new();
+    /// <summary>The brush in use; null when the mode is not Brush.</summary>
     public BrushTool? Tool { get; private set; }
+    /// <summary>The tool in use (Brush when <c>Tool</c> is set).</summary>
     public ToolMode Mode { get; private set; }
+    /// <summary>The Select tool is in use.</summary>
     public bool SelectMode => Mode == ToolMode.Select;
-    // The tool changed (Mode and Tool say which).
+    /// <summary>The tool changed (Mode and Tool say which).</summary>
     public event Action<BrushTool?>? ToolChanged;
 
+    /// <summary>The tool rail card, on the window's left edge.</summary>
     public Control Rail { get; }
+    /// <summary>The brush options card, shown only while a brush is in use.</summary>
     public Control Options { get; }
 
+    /// <summary>The rail button of each brush.</summary>
     private readonly Dictionary<BrushTool, Button> _buttons = [];
 
-    // Blueprints: the library, to paste one (in a world), in place of a tool's options.
+    /// <summary>The rail buttons of the other tools (Blueprints, the library, has its own property).</summary>
     private readonly Button _viewButton, _measureButton, _shapeButton, _pathButton, _areaButton, _placeButton, _mountainButton, _caveButton, _scriptButton, _dungeonButton;
-    // The Cave button: the Path tool with its Cave action (the window picks the action).
+    /// <summary>The Cave button: the Path tool with its Cave action (the window picks the action).</summary>
     public event Action? CaveChosen;
 
-    // The Path tool lit as Cave while its action is Cave (the window says so when the action changes).
+    /// <summary>The Path tool lit as Cave while its action is Cave (the window says so when the action changes).</summary>
     public void MarkCave(bool on)
     {
         _caveButton.Classes.Set("on", on && Mode == ToolMode.Path);
         _pathButton.Classes.Set("on", !on && Mode == ToolMode.Path);
     }
+    /// <summary>The Select tool's rail button.</summary>
     internal Button SelectButton { get; }
+    /// <summary>Blueprints: the library, to paste one (in a world), in place of a tool's options.</summary>
     internal Button BlueprintsButton { get; }
+    /// <summary>The options card's title: the brush's name.</summary>
     private readonly TextBlock _title = new() { FontSize = 14, FontWeight = FontWeight.SemiBold };
+    /// <summary>The options card's help line for the brush.</summary>
     private readonly TextBlock _help = new() { FontSize = 12, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
+    /// <summary>The option rows shown only for some brushes or shapes (Flatten, Naturalize, Turn, Erode, Falloff, stamps).</summary>
     private readonly Control _flattenRows, _naturalRows, _turnRow, _erodeRows, _falloffRow, _stampOnceRows, _stampHeightRow;
-    // The stamps in the Shape list after the four shapes: the built-in ones, then loaded pictures.
+    /// <summary>The stamps in the Shape list after the four shapes: the built-in ones, then loaded pictures.</summary>
     internal List<Stamps.Stamp> StampList { get; } = [.. Stamps.BuiltIn, .. Stamps.LoadKept()];
+    /// <summary>Load stamp…: asks the window for a picture (<c>LoadStampAsked</c>).</summary>
     internal Button LoadStampButton { get; } = new() { Content = "Load stamp…", FontSize = 12 };
+    /// <summary>Forget stamp: drops the loaded picture chosen as Shape (built-in stamps stay).</summary>
     internal Button ForgetStampButton { get; } = new() { Content = "Forget stamp", FontSize = 12 };
+    /// <summary>Stamp once: a click of Raise or Lower puts the whole stamp in.</summary>
     internal CheckBox StampOnceBox { get; } = new() { Content = "Stamp once: a click puts the whole stamp in", FontSize = 12 };
+    /// <summary>How high, in metres, Stamp once puts the stamp in.</summary>
     internal NumericUpDown StampHeightBox { get; } = new() { Value = 4, Increment = 0.5m, FormatString = "0.0#", FontSize = 12 };
-    // Load stamp…: the window picks the picture.
+    /// <summary>Load stamp…: the window picks the picture (and calls <c>AddStamp</c>).</summary>
     public event Action? LoadStampAsked;
+    /// <summary>A line for the window's message bar.</summary>
     public event Action<string>? Message;
-    // No limit: the ground tools go past the game's ±8 m (Ground.NoLimit); off at every start.
+    /// <summary>No limit: the ground tools go past the game's ±8 m (Ground.NoLimit); off at every start.</summary>
     internal CheckBox NoLimitBox { get; } = new() { Content = "No limit: past the game's ±8 m", FontSize = 12 };
+    /// <summary>No limit was switched (on: true).</summary>
     public event Action<bool>? NoLimitChanged;
+    /// <summary>Erode's Thermal mode: slopes steeper than the rest angle slide down.</summary>
     internal Button ThermalButton { get; } = new() { Content = "Thermal", FontSize = 12 };
+    /// <summary>Erode's Water mode (the rest angle does not apply).</summary>
     internal Button WaterButton { get; } = new() { Content = "Water", FontSize = 12 };
+    /// <summary>Thermal erosion's rest angle, in degrees (10..60).</summary>
     internal Slider RestSlider { get; }
 
-    // For tests.
+    /// <summary>The brush radius in metres (1..30). For tests too.</summary>
     internal Slider SizeSlider { get; }
-    // Naturalize: a new noise pattern for the next stroke (and natural paths).
+    /// <summary>Naturalize: a new noise pattern for the next stroke (and natural paths).</summary>
     internal Button NewPatternButton { get; } = new() { Content = "New pattern", FontSize = 12 };
+    /// <summary>The brush strength (0.05..1).</summary>
     internal Slider StrengthSlider { get; }
+    /// <summary>The brush shape: the four shapes, then the stamps.</summary>
     internal ComboBox ShapeBox { get; }
+    /// <summary>The brush falloff, in Falloff's order.</summary>
     internal ComboBox FalloffBox { get; }
+    /// <summary>Flatten: level to the height where the stroke starts, not the typed height.</summary>
     internal CheckBox TargetFromClickBox { get; }
+    /// <summary>Flatten's height in metres (off while it comes from the stroke's start).</summary>
     internal NumericUpDown TargetBox { get; }
+    /// <summary>A brush's rail button (tests).</summary>
     internal Button ButtonOf(BrushTool t) => _buttons[t];
 
-    // The keys of the web editor's rail.
+    /// <summary>The keys of the web editor's rail.</summary>
     public static readonly (BrushTool Tool, string Key)[] Keys =
     [
         (BrushTool.Raise, "1"), (BrushTool.Lower, "2"), (BrushTool.Flatten, "3"), (BrushTool.Smooth, "4"), (BrushTool.Natural, "0"), (BrushTool.Erode, "O"), (BrushTool.Restore, "5"),
         (BrushTool.PaintDirt, "6"), (BrushTool.PaintCultivated, "7"), (BrushTool.PaintPaved, "8"), (BrushTool.PaintClear, "9"),
     ];
 
-    // The rail's short names, icons and paint colours (the web editor's).
+    /// <summary>The rail's short names (the web editor's).</summary>
     private static string RailLabel(BrushTool t) => t switch
     {
         BrushTool.Natural => "Natural",
@@ -89,6 +148,7 @@ public sealed class ToolPanel
         _ => Brush.Label(t),
     };
 
+    /// <summary>A brush's rail icon (sculpt brushes) or paint colour (paint brushes), the web editor's.</summary>
     private static (string? Icon, IBrush? Swatch) Look(BrushTool t) => t switch
     {
         BrushTool.Raise => ("raise", null),
@@ -109,6 +169,7 @@ public sealed class ToolPanel
         }),
     };
 
+    /// <summary>The options card's frame.</summary>
     private static Border Card(Control child) => new()
     {
         Background = Ui.Panel,
@@ -120,6 +181,7 @@ public sealed class ToolPanel
         Child = child,
     };
 
+    /// <summary>An option row: label, control, and the value shown after it when there is one.</summary>
     private static Grid Row(string label, Control input, TextBlock? value = null)
     {
         var g = new Grid { ColumnDefinitions = new ColumnDefinitions("70,*,46") };
@@ -139,6 +201,7 @@ public sealed class ToolPanel
         return g;
     }
 
+    /// <summary>A snapping slider whose value is shown (formatted) in <paramref name="shown"/> and passed to <paramref name="set"/>.</summary>
     private static Slider Slide(double min, double max, double step, double value, TextBlock shown, Func<double, string> format, Action<double> set)
     {
         var s = new Slider { Minimum = min, Maximum = max, SmallChange = step, TickFrequency = step, IsSnapToTickEnabled = true, Value = value };
@@ -147,6 +210,7 @@ public sealed class ToolPanel
         return s;
     }
 
+    /// <summary>Builds the rail and the options, with View in use.</summary>
     public ToolPanel()
     {
         var rail = _rail = new StackPanel { Spacing = 0 };
@@ -334,15 +398,21 @@ public sealed class ToolPanel
         Choose(null);
     }
 
+    /// <summary>Picks the Select tool.</summary>
     public void ChooseSelect() => ChooseMode(ToolMode.Select);
 
+    /// <summary>Picks a tool other than a brush.</summary>
     public void ChooseMode(ToolMode mode) => Choose(null, mode);
 
-    // The Workshop: only Build (the Place tool, for building pieces), Select and View on the rail; the
-    // other tools (and their keys) are for worlds.
+    /// <summary>The rail's buttons and captions.</summary>
     private readonly StackPanel _rail;
+    /// <summary>
+    /// The Workshop: only Build (the Place tool, for building pieces), Select and View on the rail; the
+    /// other tools (and their keys) are for worlds.
+    /// </summary>
     public bool Workshop { get; private set; }
 
+    /// <summary>Switches the rail to the Workshop's (Place shown as Build) or back; switching on, another tool in use goes back to View.</summary>
     public void SetWorkshop(bool on)
     {
         Workshop = on;
@@ -360,7 +430,7 @@ public sealed class ToolPanel
         }
     }
 
-    // A brush, or (null) the mode's tool.
+    /// <summary>A brush, or (null) the mode's tool. In the Workshop only View, Place and Select can be picked.</summary>
     public void Choose(BrushTool? t, ToolMode mode = ToolMode.View)
     {
         if (Workshop && (t != null || mode is not (ToolMode.View or ToolMode.Place or ToolMode.Select)))
@@ -398,17 +468,18 @@ public sealed class ToolPanel
         ToolChanged?.Invoke(t);
     }
 
-    // The rail's keys; true when the key was one.
-    // A new pattern of natural bumps (the web editor's New pattern): another seed for the noise.
+    /// <summary>A new pattern of natural bumps (the web editor's New pattern): another seed for the noise.</summary>
+    /// <param name="seed">The noise's seed; null for a random one.</param>
     internal void NewPattern(int? seed = null)
     {
         Brush.Noise = new Noise(seed ?? Random.Shared.Next());
         Message?.Invoke("New natural pattern. The next Naturalize stroke or natural path uses it.");
     }
 
-    // [ and ]: the brush one metre smaller or bigger (within the Size slider's range).
+    /// <summary>[ and ]: the brush one metre smaller or bigger (within the Size slider's range).</summary>
     internal void ResizeBrush(int metres) => SizeSlider.Value = Math.Clamp(SizeSlider.Value + metres, SizeSlider.Minimum, SizeSlider.Maximum);
 
+    /// <summary>The rail's keys (Avalonia key names, digits as "0".."9"); true when the key was one.</summary>
     public bool Key(string key)
     {
         if (key is "Escape" or "H")
@@ -457,8 +528,10 @@ public sealed class ToolPanel
         return false;
     }
 
+    /// <summary>Fills the Shape list: the built-in shapes, then every stamp.</summary>
     private void FillShapes() => ShapeBox.ItemsSource = BuiltInShapes.Concat(StampList.Select(s => $"Stamp: {s.Label}")).ToList();
 
+    /// <summary>The Shape list's choice into the brush (a stamp's weights and name too).</summary>
     private void ShapeChosen()
     {
         int i = Math.Max(0, ShapeBox.SelectedIndex);
@@ -475,7 +548,10 @@ public sealed class ToolPanel
         SyncStamp();
     }
 
-    // A stamp: no falloff (the picture has its own), it turns, and Raise and Lower can stamp it once.
+    /// <summary>
+    /// Shows the rows that fit the shape. A stamp: no falloff (the picture has its own), it turns, and Raise and
+    /// Lower can stamp it once.
+    /// </summary>
     private void SyncStamp()
     {
         bool stamp = Brush.Shape == BrushShape.Stamp;
@@ -487,7 +563,9 @@ public sealed class ToolPanel
         _stampHeightRow.IsVisible = Brush.StampOnce;
     }
 
-    // A picture loaded as a stamp: chosen as the Shape, and kept for next time.
+    /// <summary>A picture loaded as a stamp: chosen as the Shape, and kept for next time.</summary>
+    /// <param name="label">Its name in the Shape list.</param>
+    /// <param name="data">Its weights (see Stamps.FromPicture).</param>
     public void AddStamp(string label, float[] data)
     {
         var st = new Stamps.Stamp($"pic:{DateTime.Now.Ticks}", label, data, Loaded: true);
@@ -498,10 +576,10 @@ public sealed class ToolPanel
         Message?.Invoke($"Loaded the stamp “{label}”: white parts work fully, black parts not at all.");
     }
 
-    // The flatten height follows the ground where a stroke started.
+    /// <summary>The flatten height follows the ground where a stroke started (shown rounded to 0.1 m).</summary>
     public void ShowTarget(float h) => TargetBox.Value = (decimal)MathF.Round(h, 1);
 
-    // Alt + click with a brush: level to that height (Flatten, not from the stroke's start).
+    /// <summary>Alt + click with a brush: level to that height (Flatten, not from the stroke's start).</summary>
     public void FlattenTo(float h)
     {
         TargetFromClickBox.IsChecked = false;

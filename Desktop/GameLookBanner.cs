@@ -7,39 +7,107 @@ using TerrainEditor.App;
 
 namespace TerrainEditor.Desktop;
 
-// The game's look (terrain textures, map textures, models) is read from the player's own Valheim
-// (GameLook): the start page's card that follows it. While its files are first read (indexed), a
-// word; when Valheim is not found, how to find its folder and a field to choose it; when it failed,
-// Try again; once it is done, a word that the next area opened has it. Hidden when there is nothing to say.
+/// <summary>
+/// The game's look (terrain textures, map textures, models) is read from the player's own Valheim (GameLook): the start
+/// page's card that follows it. While its files are first read (indexed), a word; when Valheim is not found, how to
+/// find its folder and a field to choose it; when it failed, Try again; once it is done, a word that the next area
+/// opened has it. Hidden when there is nothing to say.
+/// </summary>
 public sealed class GameLookBanner
 {
+    /// <summary>
+    /// The card to put on the start page (hidden when there is nothing to say).
+    /// </summary>
     public Control View => _card;
     private readonly Border _card;
     private readonly AppSettings _settings;
+    /// <summary>
+    /// Reads the game look's state again every 1.5 s while the card is on screen.
+    /// </summary>
     private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromSeconds(1.5) };
+    /// <summary>
+    /// The state last shown, so the path box is filled only when it changes.
+    /// </summary>
     private string _state = "";
+    /// <summary>
+    /// Whether the files were read while the card was up: then "ready" is said too, else the card stays hidden.
+    /// </summary>
     private bool _sawRunning;
 
+    /// <summary>
+    /// The card's heading.
+    /// </summary>
     internal TextBlock Title { get; } = new() { FontWeight = FontWeight.SemiBold, TextWrapping = TextWrapping.Wrap };
+    /// <summary>
+    /// What is going on, or what went wrong.
+    /// </summary>
     internal TextBlock Message { get; } = new() { TextWrapping = TextWrapping.Wrap };
+    /// <summary>
+    /// How far the reading is (0..1), while it runs.
+    /// </summary>
     internal ProgressBar Bar { get; } = new() { Minimum = 0, Maximum = 1, Height = 6, MinHeight = 6 };
+    /// <summary>
+    /// The reading's last detail line, while it runs.
+    /// </summary>
     internal TextBlock LastLine { get; } = Ui.Hint("");
+    /// <summary>
+    /// The Valheim folder to use, when it was not found.
+    /// </summary>
     internal TextBox PathBox { get; } = new() { PlaceholderText = "…/steamapps/common/Valheim", FontSize = 13 };
+    /// <summary>
+    /// Picks the folder for PathBox.
+    /// </summary>
     internal Button Browse { get; } = new() { Content = "Browse…" };
+    /// <summary>
+    /// Starts reading from the folder in PathBox.
+    /// </summary>
     internal Button Use { get; } = new Button { Content = "Use" }.Classed("primary");
+    /// <summary>
+    /// Starts reading again after a failure (from the folder last tried, else the settings').
+    /// </summary>
     internal Button Retry { get; } = new Button { Content = "Try again" }.Classed("primary");
+    /// <summary>
+    /// Opens the editor's log after a failure (OpenLog).
+    /// </summary>
     internal Button ShowLog { get; } = new() { Content = "Open log" };
+    /// <summary>
+    /// Opens the editor's log; set by the start page.
+    /// </summary>
     internal Func<Task<bool>> OpenLog { get; set; } = () => Task.FromResult(false);
+    /// <summary>
+    /// Why the chosen folder could not be used (hidden when empty).
+    /// </summary>
     internal TextBlock Error { get; } = new() { Foreground = new SolidColorBrush(Color.FromRgb(224, 96, 75)), TextWrapping = TextWrapping.Wrap, FontSize = 12 };
+    /// <summary>
+    /// A note under the card's state (hidden when empty).
+    /// </summary>
     internal TextBlock Hint { get; } = Ui.Hint("");
+    /// <summary>
+    /// How to find the game folder (SetupSteps), when Valheim was not found.
+    /// </summary>
     internal TextBlock Steps { get; } = new() { Text = SetupSteps(OperatingSystem.IsWindows()), TextWrapping = TextWrapping.Wrap, FontSize = 12.5, LineHeight = 19 };
+    /// <summary>
+    /// PathBox with Browse and Use.
+    /// </summary>
     internal Grid PathRow { get; }
 
-    // Tests: the game look's state, choosing the game folder, and the folder picker.
+    /// <summary>
+    /// The game look's state (tests set their own).
+    /// </summary>
     internal Func<GameLook.Snapshot> Read { get; set; } = GameLook.Now;
+    /// <summary>
+    /// Keeps a Valheim folder in the settings and starts reading it: the problem, or null (tests set their own).
+    /// </summary>
     internal Func<string, AppSettings, string?> StartExport { get; set; } = GameLook.Start;
+    /// <summary>
+    /// The folder picker, given its title: the folder, or null when cancelled (set by the start page; tests set their
+    /// own).
+    /// </summary>
     internal Func<string, Task<string?>> PickFolder { get; set; } = _ => Task.FromResult<string?>(null);
 
+    /// <summary>
+    /// Builds the card; it follows the game look while it is on screen.
+    /// </summary>
     public GameLookBanner(AppSettings settings)
     {
         _settings = settings;
@@ -63,7 +131,9 @@ public sealed class GameLookBanner
         _card.DetachedFromVisualTree += (_, _) => _timer.Stop();
     }
 
-    // How to find the game folder, for this system.
+    /// <summary>
+    /// How to find the game folder, for Windows or for Linux (numbered lines).
+    /// </summary>
     internal static string SetupSteps(bool windows) => string.Join("\n", new[]
     {
         "1. Install Valheim with Steam on this computer (owning it is enough: the editor needs its files, not the game running).",
@@ -74,6 +144,10 @@ public sealed class GameLookBanner
         "4. Paste it below or use Browse…, then Use. A folder near it works too (steamapps, common, valheim_Data).",
     });
 
+    /// <summary>
+    /// Starts reading the game's files from a Valheim folder (or says to choose one when it is empty) and shows the new
+    /// state.
+    /// </summary>
     internal void Start(string? folder)
     {
         if (string.IsNullOrWhiteSpace(folder))
@@ -86,7 +160,9 @@ public sealed class GameLookBanner
         Refresh();
     }
 
-    // Shows the game look's state (rebuilt when it changes; the progress every time).
+    /// <summary>
+    /// Shows the game look's state (rebuilt when it changes; the progress every time).
+    /// </summary>
     internal void Refresh()
     {
         var s = Read();
