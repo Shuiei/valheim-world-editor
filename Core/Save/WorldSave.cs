@@ -328,7 +328,8 @@ public sealed class WorldSave
         {
             index.ReadUShort();
             index.ReadInt();
-            int count = index.ReadInt();
+            // Each: chunk (2), size (1), version (4), object count (4).
+            int count = index.ReadCount(11);
             for (int i = 0; i < count; i++)
             {
                 chunks.Add((index.ReadUShort(), index.ReadByte(), index.ReadUInt(), index.ReadInt()));
@@ -650,7 +651,8 @@ public sealed class WorldSave
     private void ReadObjects(ValheimReader pkg, ChunkFile file)
     {
         file.WorldVersion = pkg.ReadShort();
-        file.Count = pkg.ReadInt();
+        // The smallest object: flags (2), a small position (4), its prefab (4).
+        file.Count = pkg.ReadCount(10);
         for (int i = 0; i < file.Count; i++)
         {
             ReadZdo(pkg, file.WorldVersion, file);
@@ -1009,7 +1011,7 @@ public sealed class TerrainZone
         int operations = pkg.ReadInt();
         pkg.ReadVector3();
         pkg.ReadSingle();
-        int heights = pkg.ReadInt();
+        int heights = pkg.ReadCount(1);
         bool[] modified = new bool[heights];
         float[] level = new float[heights];
         float[] smooth = new float[heights];
@@ -1022,7 +1024,7 @@ public sealed class TerrainZone
                 smooth[i] = pkg.ReadSingle();
             }
         }
-        int paints = pkg.ReadInt();
+        int paints = pkg.ReadCount(1);
         bool[] painted = new bool[paints];
         var paint = new Vector4[paints];
         for (int i = 0; i < paints; i++)
