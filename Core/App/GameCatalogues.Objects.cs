@@ -40,8 +40,6 @@ public static partial class GameCatalogues
 		private readonly Dictionary<string, (List<long> Types, List<Ref> Take, List<Ref> Refuse)> _stands = new();
 		private readonly Dictionary<string, List<object?>> _armour = new();
 
-		public IReadOnlySet<string> Names => _prefabs.Keys.ToHashSet();
-
 		public Dict Json()
 		{
 			var d = new Dict();
