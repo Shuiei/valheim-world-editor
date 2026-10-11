@@ -99,10 +99,21 @@ public sealed class WorldSession : IDisposable
 		HistoryFile.Delete(this);
 	}
 
+	// The game's terrain modifiers, needed before any world opens: refused without Valheim (the ground
+	// near locations, and the edits saved there, depend on them).
+	private static void NeedGame()
+	{
+		if (!GameModifiers.Ensure(GameLook.Bundles))
+		{
+			throw new InvalidOperationException(GameModifiers.Missing);
+		}
+		WorldSave.ModifierPrefabs = TerrainModifiers.NetworkPrefabHashes.ToHashSet();
+	}
+
 	// A world on this computer (its folder).
 	public static WorldSession Open(string dir)
 	{
-		WorldSave.ModifierPrefabs = TerrainModifiers.NetworkPrefabHashes.ToHashSet();
+		NeedGame();
 		var world = WorldSave.Load(dir);
 		WorldSave.Builder = Builders.Default(world);
 		return From(world, null, world.Name);
@@ -111,7 +122,7 @@ public sealed class WorldSession : IDisposable
 	// The world of a running game or server (live).
 	public static async Task<WorldSession> OpenLive(LiveBridge live, string label)
 	{
-		WorldSave.ModifierPrefabs = TerrainModifiers.NetworkPrefabHashes.ToHashSet();
+		await Task.Run(NeedGame);
 		var world = await live.LoadWorld();
 		WorldSave.Builder = Builders.Default(world);
 		return From(world, live, label);

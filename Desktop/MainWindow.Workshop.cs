@@ -170,6 +170,19 @@ public partial class MainWindow
 	// something is not saved), and a building not saved as a blueprint (asking too).
 	internal async Task OpenWorkshop(string? path)
 	{
+		// The game's files are needed here too (its pieces, and how ground discs shape the plot).
+		if (!await Task.Run(() => GameModifiers.Ensure(GameLook.Bundles)))
+		{
+			if (_world == null && !_inWorkshop)
+			{
+				ShowStart(GameModifiers.Missing);
+			}
+			else
+			{
+				_message.Text = GameModifiers.Missing;
+			}
+			return;
+		}
 		if (_world is { } w && w.Pending is not (0, 0, 0, 0)
 			&& !await Ask("Leave the world", $"{(w.IsLive ? "Not applied" : "Unsaved")}: {Describe(w.Pending)}. Leave the world for the Workshop without {(w.IsLive ? "applying" : "saving")} them?", "Leave anyway", "Stay"))
 		{

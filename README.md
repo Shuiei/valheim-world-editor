@@ -108,9 +108,10 @@ The sections below cover each step in more detail.
 ### What you need
 
 - **Windows 10/11 or Linux**, 64-bit.
-- **Valheim** installed through Steam on the same computer, for the game's look. The editor finds it
-  by itself and reads the textures and models it needs straight from the game's files (nothing is
-  copied). Without it the editor still works, with plain colours and no object models.
+- **Valheim** installed through Steam on the same computer. The editor finds it by itself and reads
+  what it needs straight from the game's files (nothing is copied): the textures and models, and how
+  the game's locations shape the ground. Without it no world or Workshop opens: the start page asks
+  for its folder.
 - For the **live** ways: **BepInEx** in the game that hosts the world (your Valheim, or the
   server), using [BepInExPack for Valheim](https://thunderstore.io/c/valheim/p/denikson/BepInExPack_Valheim/),
   plus the WorldEditorBridge plugin (its own download, next to the editor's). Players who join need
@@ -132,9 +133,10 @@ Windows it falls back to Direct3D when the driver has no OpenGL).
    window, on the start page's **Home**. (Windows may say "Windows protected your PC" the first
    time: the program is not signed. Click "More info", then "Run anyway".)
 
-The editor reads the game's look (textures, models, the terrain and map) straight from your Valheim
-install: nothing is copied. The first time, and after a Valheim update, it reads the game's files for
-a few seconds (a card on the start page says so). If Valheim is not found, the card explains how to
+The editor reads the game's look (textures, models, the terrain and map) and how its locations shape
+the ground straight from your Valheim install: nothing is copied, so it always matches your version of
+the game. The first time, and after a Valheim update, it reads the game's files for a few seconds (a
+card on the start page says so). If Valheim is not found, the card explains how to
 find its folder and asks for it: in Steam, right-click Valheim, then **Manage › Browse local files**;
 the folder that opens (the one with `valheim_Data`) is the one to choose. Usual places:
 
