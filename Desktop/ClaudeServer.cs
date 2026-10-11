@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using TerrainEditor.App;
 
@@ -99,6 +100,9 @@ public sealed class ClaudeServer
 	{
 		var builder = WebApplication.CreateSlimBuilder(new WebApplicationOptions { ContentRootPath = AppContext.BaseDirectory });
 		builder.Logging.ClearProviders();
+		// The host's console lifetime would take Ctrl+C (SIGINT) from the editor started in a terminal
+		// and stop only this server, leaving the editor open: the signals are the editor's (Program).
+		builder.Services.AddSingleton<IHostLifetime, NoSignals>();
 		builder.WebHost.ConfigureKestrel(k => k.Listen(IPAddress.Loopback, port));
 		builder.Services.AddMcpServer(o =>
 			{
@@ -139,5 +143,13 @@ public sealed class ClaudeServer
 	{
 		await _app.StopAsync();
 		await _app.DisposeAsync();
+	}
+
+	// A host lifetime that leaves the process's signals alone.
+	private sealed class NoSignals : IHostLifetime
+	{
+		public Task WaitForStartAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+
+		public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 	}
 }
