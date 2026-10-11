@@ -297,11 +297,12 @@ done
 tools/release.sh /tmp/dist && tools/check-package.sh /tmp/dist/*.tar.gz
 ```
 
-**Coverage**: each test container sends its coverage to
+**Coverage**: on `main` only, each test container sends its coverage to
 [Codecov](https://app.codecov.io/gh/Shuiei/valheim-world-editor), which merges the six (`codecov.yml`)
-and checks it on every pull request: `codecov/project` fails when the editor's line coverage is under
-**95%**; `codecov/patch` shows the coverage of the lines a pull request changes. Codecov's page shows
-each file's covered and uncovered lines.
+and checks each of main's commits: `codecov/project` fails when the editor's line coverage is under
+**95%**. Pull requests run the tests without coverage, several times faster, so they get no coverage
+check: a drop shows on `main` once merged. Codecov's page shows each file's covered and uncovered
+lines.
 
 The coverage counts only our own code (`tests/coverage.runsettings`, for both test projects): the core
 and the app, not the tests, the libraries or generated code, and not the FastNoise library either, which
