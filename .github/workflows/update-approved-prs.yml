@@ -38,7 +38,11 @@ jobs:
             exit 0
           fi
           while read -r pr sha; do
-            behind=$(gh api "repos/$GH_REPO/compare/main...$sha" --jq .behind_by)
+            # In an if: a failed call (rate limit, a fork's commit) skips this pull request, not the others.
+            if ! behind=$(gh api "repos/$GH_REPO/compare/main...$sha" --jq .behind_by); then
+              echo "::warning::#$pr could not be compared with main"
+              continue
+            fi
             if [ "$behind" = 0 ]; then
               echo "#$pr: up to date"
               continue
