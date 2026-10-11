@@ -3,7 +3,6 @@ using Avalonia.Controls.Primitives;
 using Avalonia.Headless.XUnit;
 using Avalonia.Interactivity;
 using Avalonia.LogicalTree;
-using Avalonia.Threading;
 using TerrainEditor.Editing;
 using Xunit;
 
@@ -15,17 +14,14 @@ namespace TerrainEditor.Desktop.Tests;
 /// </summary>
 public class DungeonGenPanelButtonsTests
 {
-    /// <summary>Waits (4 s at most) until the panel's newest dungeon is made.</summary>
+    /// <summary>
+    /// Waits (15 s at most) until the panel's newest dungeon is made, after its pause. A making that failed ends the wait
+    /// too (the panel says why): told apart from one that never ended, and failed with the panel's reason.
+    /// </summary>
     private static async Task Settled(DungeonGenPanel p)
     {
-        Dispatcher.UIThread.RunJobs();
-        for (int i = 0; i < 200 && (!p.Place.IsEnabled || !p.Pending.IsCompleted); i++)
-        {
-            Dispatcher.UIThread.RunJobs();
-            await p.Pending;
-            await Task.Delay(20);
-        }
-        Dispatcher.UIThread.RunJobs();
+        await TestWindows.Until(() => p.Pending.IsCompleted && (p.Place.IsEnabled || p.Summary.Text?.StartsWith("Could not make it", StringComparison.Ordinal) == true));
+        Assert.True(p.Place.IsEnabled, p.Summary.Text);
     }
 
     [AvaloniaFact]
