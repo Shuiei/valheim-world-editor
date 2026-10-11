@@ -9,9 +9,10 @@ namespace TerrainEditor.Editing;
 // boxes, grown by 0.3 m, touch), less the material's loss for the distance between their centres of
 // mass and the angle (horizontal loses more than vertical); two supports on opposite sides average.
 // Repeated until nothing changes; pieces below their material's minimum break, then the rest is worked
-// out again (the collapse spreading). The pieces' colliders, materials and centres come from the game
-// (piece-support.json, --export-catalogues). Not counted: other objects (rocks,
-// trees) the game would also take as full support, and mesh colliders' exact shapes (their boxes).
+// out again (the collapse spreading). The pieces' colliders, materials and centres are read from the
+// player's own Valheim (GameData; the tests use tests/fixtures/piece-support.json). Not counted: other
+// objects (rocks, trees) the game would also take as full support, and mesh colliders' exact shapes
+// (their boxes).
 public static class Stability
 {
 	// A collider of a piece, in its own frame: middle, half size, rotation; Aabb: a non-box collider (its
@@ -22,16 +23,16 @@ public static class Stability
 	// material's full support, wherever it is.
 	private sealed record Data(int Material, bool Supports, Vector3 Com, Box[] Boxes, bool Free = false);
 
-	private static readonly Lazy<Dictionary<string, Data>> Pieces = new(Load);
+	// None until Use: no world or Workshop opens before then (GameData).
+	private static volatile Dictionary<string, Data> Pieces = new();
 
 	// The layers WearNTear's overlap test sees: Default, piece, terrain, static_solid, Default_small.
 	private static readonly HashSet<int> SupportLayers = new() { 0, 10, 11, 15, 20 };
 
-	private static Dictionary<string, Data> Load()
+	// The pieces by name, as GameCatalogues' SupportScan writes them.
+	public static void Use(string json)
 	{
-		using Stream s = typeof(Stability).Assembly.GetManifestResourceStream("TerrainEditor.piece-support.json")
-			?? throw new InvalidOperationException("piece-support.json is not embedded");
-		using JsonDocument doc = JsonDocument.Parse(s);
+		using JsonDocument doc = JsonDocument.Parse(json);
 		var result = new Dictionary<string, Data>();
 		foreach (JsonProperty p in doc.RootElement.EnumerateObject())
 		{
@@ -44,17 +45,17 @@ public static class Stability
 			result[p.Name] = new Data(p.Value.GetProperty("m").GetInt32(), p.Value.GetProperty("s").GetInt32() != 0,
 				new Vector3(c[0].GetSingle(), c[1].GetSingle(), c[2].GetSingle()), boxes, p.Value.TryGetProperty("f", out var f) && f.GetInt32() != 0);
 		}
-		return result;
+		Pieces = result;
 	}
 
 	// Whether the game gives this piece structural support at all (walls, floors, beams: yes; a
 	// workbench, a chest: no, they rest on what is under them without counting).
-	public static bool Known(string prefab) => Pieces.Value.ContainsKey(prefab);
+	public static bool Known(string prefab) => Pieces.ContainsKey(prefab);
 
 	// A piece's material (WearNTear: 0 wood, 1 stone, 2 iron… -1 unknown) and its colliders as boxes in
 	// its own frame (middle, half size, rotation): its rough shape, for pictures without its model.
 	public static (int Material, List<(Vector3 C, Vector3 H, Quaternion Q)> Boxes) Shape(string prefab) =>
-		Pieces.Value.TryGetValue(prefab, out var d) ? (d.Material, d.Boxes.Select(b => (b.C, b.H, b.Q)).ToList()) : (-1, new());
+		Pieces.TryGetValue(prefab, out var d) ? (d.Material, d.Boxes.Select(b => (b.C, b.H, b.Q)).ToList()) : (-1, new());
 
 	// WearNTear.GetMaterialProperties: maximum and minimum support, losses per metre.
 	public static (float Max, float Min, float Horizontal, float Vertical) Material(int m) => m switch
@@ -161,7 +162,8 @@ public static class Stability
 	public static Result Solve(IReadOnlyList<Piece> pieces, Func<float, float, float> groundAt)
 	{
 		int n = pieces.Count;
-		var data = pieces.Select(p => Pieces.Value.GetValueOrDefault(p.Prefab)).ToArray();
+		var catalogue = Pieces;
+		var data = pieces.Select(p => catalogue.GetValueOrDefault(p.Prefab)).ToArray();
 		// Each piece's grown boxes (what it looks with) and its colliders that others see.
 		var grown = new Obb[n][];
 		var seen = new Obb[n][];
