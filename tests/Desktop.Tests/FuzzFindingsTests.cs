@@ -69,7 +69,7 @@ public class FuzzFindingsTests
     [Fact]
     public void GzipDamagedData()
     {
-        byte[] damaged = Gzip(Enumerable.Range(0, 4096).Select(i => (byte)(i * 7)).ToArray());
+        byte[] damaged = Gzip([.. Enumerable.Range(0, 4096).Select(i => (byte)(i * 7))]);
         for (int i = 12; i < damaged.Length - 8; i += 5)
         {
             damaged[i] ^= 0xA5;
