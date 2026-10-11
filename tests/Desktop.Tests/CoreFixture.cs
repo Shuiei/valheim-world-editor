@@ -58,6 +58,11 @@ public static class Fixtures
 
 	public static string World => Path.Combine(Root, "CITest");
 
+	// The game's location rules for the kinds laid out first (start, bosses, traders), as
+	// `ValheimWorldEditor --export-locations` reads them from Valheim 0.221: CI has no game.
+	public static void UseLocations() =>
+		ValheimGen.SeedLocations.Use(ValheimGen.SeedLocations.RuleSet.FromJson(File.ReadAllText(Path.Combine(Root, "locations.json"))));
+
 	// The same world as the running game sends it (WorldEditorBridge /snapshot, gzip).
 	public static string Snapshot => Path.Combine(Root, "CITest.snapshot");
 

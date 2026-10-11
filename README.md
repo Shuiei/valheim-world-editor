@@ -71,7 +71,8 @@ All three start from the editor's start page.
 | **A dedicated server** (live) | Your server's world, while people play. The editor logs in over SSH and opens its own encrypted tunnel. | BepInEx and the plugin on the server, and an SSH login to it. |
 | **A saved world** (offline) | World files on this computer, with the game closed. | Nothing. |
 
-**The Workshop**, the fourth card on the start page, needs no world at all.
+**The Workshop**, the fourth card on the start page, needs no world at all. **A new world**, the
+fifth, makes a new world and helps you choose its seed ([docs/new-world.md](docs/new-world.md)).
 
 ![The start page, with the Workshop card open](docs/images/start-workshop.jpg)
 
@@ -240,6 +241,7 @@ folder.
 | [Mask](docs/masks.md) | Limiting any tool by biome, height, slope or paint |
 | [Area, copy and paste](docs/area.md) | Box and polygon selections, bulk actions, paste, zone reset |
 | [Dungeons](docs/dungeons.md) | Editing a dungeon's rooms: adding them at openings, their contents, deleting, closing open ends, building inside |
+| [A new world](docs/new-world.md) | Seeing a seed's world before making it (biomes, start, bosses, traders), finding seeds with what you want near the start, creating the world |
 | [The Workshop](docs/workshop.md) | Building on a blank plot, the support check, Homestead blueprints: library, cost, pictures, tags, sharing |
 | [Place](docs/place.md) | Any kind of object: trees and rocks with a brush, walls and fences end to end along lines, circles and rectangles, grids and zones |
 | [Select](docs/select.md) | Selecting, moving with arrows, turning, dropping, copying, deleting |

@@ -113,6 +113,41 @@ public sealed partial class MainWindow : Window
 		_busy.IsVisible = text != null;
 	}
 
+	// A new world: the seed's preview and search, then Create (a world in the game's folder, opened).
+	internal NewWorldPage? NewWorld { get; private set; }
+
+	internal void ShowNewWorld()
+	{
+		var page = NewWorld = new NewWorldPage();
+		page.BackRequested += () => { page.Dispose(); NewWorld = null; ShowStart(); };
+		page.CreateRequested += async (folder, name, seed) => await CreateWorld(folder, name, seed);
+		Title = $"Valheim World Editor {BuildInfo.Version} · A new world";
+		_pages.Content = page.View;
+	}
+
+	internal async Task CreateWorld(string folder, string name, string seed)
+	{
+		Busy($"Making the world {name}…");
+		try
+		{
+			await Task.Run(() => TerrainEditor.Save.WorldCreator.Create(folder, name, seed));
+		}
+		catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
+		{
+			Busy(null);
+			if (NewWorld is { } p)
+			{
+				p.Problem.Text = $"Could not make the world: {ex.Message}";
+			}
+			return;
+		}
+		Busy(null);
+		NewWorld?.Dispose();
+		NewWorld = null;
+		await OpenWorld(() => Task.Run(() => WorldSession.Open(folder)), $"Opening {name}…");
+		_message.Text = $"Made {name} (seed {seed}). The game lays out its start, traders and dungeons the first time it loads it, and makes each place as players reach it: play it before reshaping an area here.";
+	}
+
 	// The start page: how to edit, and which world.
 	internal void ShowStart(string? error = null)
 	{
@@ -123,6 +158,7 @@ public sealed partial class MainWindow : Window
 			_start = new StartPage(_settings, error);
 			_start.OpenRequested += async (open, what) => await OpenWorld(open, what);
 			_start.WorkshopRequested += async path => await OpenWorkshop(path);
+			_start.NewWorldRequested += ShowNewWorld;
 			_start.OpenUrl = uri => Launcher.LaunchUriAsync(uri);
 			_start.SettingsRequested += async () =>
 			{

@@ -20,6 +20,14 @@ public static class Program
 			ClaudeRelay.Run();
 			return;
 		}
+		// --export-locations <file>: the tests' copy of the game's location rules made again (for
+		// developers, after a game update: tests/fixtures/locations.json).
+		int export = Array.IndexOf(args, "--export-locations");
+		if (export >= 0)
+		{
+			Environment.ExitCode = TerrainEditor.App.GameLocations.Export(args.ElementAtOrDefault(export + 1));
+			return;
+		}
 		Options.Parse(args);
 		// Everything said also goes to ValheimWorldEditor.log in the data folder (a window app has no console on Windows).
 		TerrainEditor.App.Log.Start(BuildInfo.Version);

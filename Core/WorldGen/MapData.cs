@@ -49,7 +49,7 @@ public sealed class MapData
 
 	private static byte Byte(float v) => (byte)Math.Clamp((int)Math.Round(v * 255f), 0, 255);
 
-	private static (byte, byte, byte) PixelColor(Heightmap.Biome biome)
+	public static (byte, byte, byte) PixelColor(Heightmap.Biome biome)
 	{
 		foreach (var c in BiomeColors)
 		{

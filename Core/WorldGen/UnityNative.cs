@@ -50,6 +50,9 @@ namespace ValheimGen
 			return ((h & 1) == 0 ? u : -u) + ((h & 2) == 0 ? v : -v);
 		}
 
+		// The table read without bounds checks (every index stays below 512).
+		private static int P(int i) => System.Runtime.CompilerServices.Unsafe.Add(ref System.Runtime.InteropServices.MemoryMarshal.GetArrayDataReference(Perm), i);
+
 		public static float Noise(float x, float y)
 		{
 			x = Math.Abs(x);
@@ -60,10 +63,10 @@ namespace ValheimGen
 			y -= yi;
 			xi &= 255;
 			yi &= 255;
-			int aa = Perm[Perm[Perm[xi] + yi]];
-			int ba = Perm[Perm[Perm[xi + 1] + yi]];
-			int ab = Perm[Perm[Perm[xi] + yi + 1]];
-			int bb = Perm[Perm[Perm[xi + 1] + yi + 1]];
+			int aa = P(P(P(xi) + yi));
+			int ba = P(P(P(xi + 1) + yi));
+			int ab = P(P(P(xi) + yi + 1));
+			int bb = P(P(P(xi + 1) + yi + 1));
 			float u = Fade(x);
 			float v = Fade(y);
 			float x1 = x + -1f;
