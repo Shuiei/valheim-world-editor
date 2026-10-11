@@ -185,7 +185,9 @@ public sealed class MapView : OpenGlControlBase
         ReadPieces();
         Status?.Invoke("Building the world map (same as the game does)…");
         var data = _data;
-        Task.Run(() =>
+        // On a thread of its own (LongRunning), not one of the pool's: the build keeps all the cores but one
+        // busy, and the pool keeps the rest for everything else.
+        Task.Factory.StartNew(() =>
         {
             var g = data.Global;
             if (_data == data)
@@ -193,7 +195,7 @@ public sealed class MapView : OpenGlControlBase
                 _global = g;
                 Dispatcher.UIThread.Post(() => { Status?.Invoke(""); RequestNextFrameRendering(); });
             }
-        });
+        }, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default);
         RequestNextFrameRendering();
     }
 

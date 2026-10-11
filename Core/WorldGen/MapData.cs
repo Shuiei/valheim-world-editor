@@ -137,8 +137,10 @@ public sealed class MapData
         Layers layers = new(n, n);
         int half = n / 2;
         float pix = GlobalPixel;
-        // Same sample positions as Minimap.GenerateWorldMap; row i is world z.
-        Parallel.For(0, n, i =>
+        // Same sample positions as Minimap.GenerateWorldMap; row i is world z. All the cores but one: unbounded,
+        // the loop took every thread of the pool for as long as it ran (seconds), so nothing else that needs
+        // one ran meanwhile (an HTTP answer from the game, a timer).
+        Parallel.For(0, n, new ParallelOptions { MaxDegreeOfParallelism = Math.Max(1, Environment.ProcessorCount - 1) }, i =>
         {
             float wy = (i - half) * pix + pix / 2f;
             for (int j = 0; j < n; j++)
