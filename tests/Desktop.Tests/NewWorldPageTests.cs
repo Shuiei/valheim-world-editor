@@ -44,7 +44,10 @@ public class NewWorldPageTests
             Fixtures.UseLocations();
             Directory.CreateDirectory(Path.Combine(Root, "local"));
             Directory.CreateDirectory(Path.Combine(Root, "cloud"));
-            P = new NewWorldPage([Path.Combine(Root, "local"), Path.Combine(Root, "cloud")], previewSize: 64);
+            // Made on the window's thread, as the app makes it: the random seed it shows first comes back there.
+            NewWorldPage? page = null;
+            OnUi(() => page = new NewWorldPage([Path.Combine(Root, "local"), Path.Combine(Root, "cloud")], previewSize: 64));
+            P = page!;
             P.CreateRequested += (folder, name, seed) => Created.Add((folder, name, seed));
             P.BackRequested += () => Back++;
             W = new Window { Width = 1600, Height = 1000, Content = P.View };
@@ -58,7 +61,7 @@ public class NewWorldPageTests
         /// </summary>
         public async Task Look(string seed)
         {
-            P.ShowSeed(seed);
+            OnUi(() => P.ShowSeed(seed));
             await TestWindows.Until(() => P.Shown?.Seed == seed && !P.Loading.IsVisible, 60000);
             Settle();
         }
@@ -88,13 +91,19 @@ public class NewWorldPageTests
     }
 
     /// <summary>
-    /// Clicks the button and runs the posted work it starts.
+    /// Runs this on the window's thread as the app does (posted, so the page's background work comes back to the
+    /// window's thread, not to the test's), with the posted work it starts.
     /// </summary>
-    private static void Click(Button b)
+    private static void OnUi(Action action)
     {
-        b.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        Dispatcher.UIThread.Post(action);
         Dispatcher.UIThread.RunJobs();
     }
+
+    /// <summary>
+    /// Clicks the button (on the window's thread) and runs the posted work it starts.
+    /// </summary>
+    private static void Click(Button b) => OnUi(() => b.RaiseEvent(new RoutedEventArgs(Button.ClickEvent)));
 
     /// <summary>
     /// Every text block's text under the control, joined with " | ", for asserting on what it shows.
@@ -231,7 +240,7 @@ public class NewWorldPageTests
         var first = r.P.DungeonMarks;
         r.P.ShowDungeons["Frost caves"].IsChecked = true;
         // Another seed: the loading sign says the dungeons are being found, until they are.
-        r.P.ShowSeed("abc");
+        OnUi(() => r.P.ShowSeed("abc"));
         await TestWindows.Until(() => r.P.Shown?.Seed == "abc", 60000);
         Assert.Null(r.P.DungeonMarks);
         Assert.True(r.P.Loading.IsVisible);
@@ -240,7 +249,7 @@ public class NewWorldPageTests
         await TestWindows.Until(() => r.P.DungeonMarks != null && !r.P.Loading.IsVisible, 120000);
         Assert.Equal(r.P.DungeonMarks!.Count(m => m.Name == "Frost caves"), r.P.Map.Dots.Count);
         // Back to the first seed: its dungeons are known at once.
-        r.P.ShowSeed(Seed);
+        OnUi(() => r.P.ShowSeed(Seed));
         await TestWindows.Until(() => r.P.Shown?.Seed == Seed, 60000);
         Assert.Same(first, r.P.DungeonMarks);
     }
