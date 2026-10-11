@@ -20,9 +20,10 @@
 version: 2.1
 
 orbs:
-  # Uploads the coverage with Codecov's CLI, checked against its signature (needs gpg). The token is
-  # the project's CODECOV_TOKEN.
-  codecov: codecov/codecov@6.1.0
+  # Codecov's official orb: uploads the coverage with Codecov's CLI, checked against its signature
+  # (needs gpg). The token is the project's CODECOV_TOKEN. Any 6.x (the latest); a new major version is
+  # taken by hand.
+  codecov: codecov/codecov@6
 
 executors:
   dotnet:
