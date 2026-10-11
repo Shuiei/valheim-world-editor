@@ -50,6 +50,16 @@ public sealed class StartupTests : IDisposable
     }
 
     [Fact]
+    public void AnOptionGivenLastWithoutItsValueIsAnError()
+    {
+        foreach (string option in new[] { "--world", "--data", "--gamedata", "--zone", "--size", "--window", "--live", "--token" })
+        {
+            var e = Assert.Throws<ArgumentException>(() => Options.Parse(["/worlds/Midgard", option]));
+            Assert.Equal($"{option} needs a value after it.", e.Message);
+        }
+    }
+
+    [Fact]
     public void ALiveGameTakesItsTokenFromTheLineOrTheEnvironment()
     {
         Environment.SetEnvironmentVariable("WORLD_BRIDGE_TOKEN", null);
