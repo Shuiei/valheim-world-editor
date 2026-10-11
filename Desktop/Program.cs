@@ -13,6 +13,13 @@ public static class Program
 	[STAThread]
 	public static void Main(string[] args)
 	{
+		// --mcp-stdio: only the relay to the running editor for Claude (nothing else on stdout: no log,
+		// no window).
+		if (args.Contains("--mcp-stdio"))
+		{
+			ClaudeRelay.Run();
+			return;
+		}
 		Options.Parse(args);
 		// Everything said also goes to ValheimWorldEditor.log in the data folder (a window app has no console on Windows).
 		TerrainEditor.App.Log.Start(BuildInfo.Version);
@@ -82,6 +89,8 @@ public sealed class App : Application
 //   --driver                                           driven by another program (see Driver)
 //   --window <width>x<height>                          the window's size (the documentation's pictures)
 //   --data <folder>                                    settings and memory kept there (tests)
+//   --mcp-stdio                                        no window: relays Claude's MCP messages on stdin/stdout to
+//                                                      the running editor (Claude Desktop; see ClaudeRelay)
 public static class Options
 {
 	public static string? World { get; private set; }

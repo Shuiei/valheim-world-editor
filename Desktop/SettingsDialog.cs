@@ -139,6 +139,12 @@ public static class SettingsDialog
 		claudeDetails.Children.Add(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = { new TextBlock { Text = "Port", VerticalAlignment = VerticalAlignment.Center }, port, renew } });
 		claudeDetails.Children.Add(Hint("To connect Claude Code, run this once in a terminal (other MCP clients: the address, with the header):"));
 		claudeDetails.Children.Add(new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 4, Children = { command, Col(copy, 1) } });
+		// Claude Desktop starts a program: this one, relaying to the running editor (ClaudeRelay).
+		var desktop = new TextBox { Name = "ClaudeDesktop", IsReadOnly = true, TextWrapping = TextWrapping.Wrap, FontSize = 12, FontFamily = new FontFamily("monospace"), Text = ClaudeServer.DesktopConfig(Environment.ProcessPath ?? "ValheimWorldEditor") }.Tip("settings.claudeDesktop");
+		var copyDesktop = new Button { Content = "Copy" }.Tip("settings.claudeCopy");
+		copyDesktop.Click += async (_, _) => { if (TopLevel.GetTopLevel(dialog)?.Clipboard is { } cb) await Avalonia.Input.Platform.ClipboardExtensions.SetTextAsync(cb, desktop.Text ?? ""); };
+		claudeDetails.Children.Add(Hint("Claude Desktop: add this to its configuration (Settings > Developer > Edit Config, claude_desktop_config.json), then restart it. The editor must be running:"));
+		claudeDetails.Children.Add(new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 4, Children = { desktop, Col(copyDesktop, 1) } });
 		if (ClaudeServer.Status is string status)
 		{
 			claudeDetails.Children.Add(Hint(status));

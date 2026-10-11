@@ -6,7 +6,8 @@ dungeons. You describe what you want in a prompt; Claude does it in the editor, 
 watch it happen in the 3D view.
 
 Whatever Claude changes stays **pending**, like your own changes: one step of the history each
-(Ctrl+Z takes it back), shown in the save bar. Claude never saves a world, never applies anything to a
+(Ctrl+Z takes it back), shown in the save bar. In **History**, Claude's steps carry a *Claude* tag,
+and **Take back Claude's changes** removes all of them while keeping yours, even those you made after. Claude never saves a world, never applies anything to a
 live game and never saves a blueprint: you do, when you like what you see.
 
 ## Turning it on
@@ -20,7 +21,22 @@ live game and never saves a blueprint: you do, when you like what you see.
    claude mcp add --transport http valheim-editor http://127.0.0.1:5731/mcp --header "Authorization: Bearer <token>"
    ```
 
-Other MCP clients connect to the same address (streamable HTTP) with the same `Authorization` header.
+**Claude Desktop** starts a program rather than connecting to an address: Settings shows the lines
+to add to its configuration (Claude Desktop → Settings → Developer → Edit Config,
+`claude_desktop_config.json`), then restart it:
+
+```json
+{
+  "mcpServers": {
+    "valheim-editor": { "command": "/path/to/ValheimWorldEditor", "args": ["--mcp-stdio"] }
+  }
+}
+```
+
+`--mcp-stdio` opens no window: it passes Claude's messages to the editor that is running (which must
+have **Allow Claude to connect** on), with the token from its settings.
+
+Other MCP clients connect to the address (streamable HTTP) with the same `Authorization` header.
 
 The token is a secret made for your editor: only a program that sends it is answered, so other
 programs on the computer and web pages you visit cannot reach the editor. **New token** makes another
@@ -36,13 +52,19 @@ The editor must be running for Claude to reach it. Turn the switch off and nothi
 | `list_worlds`, `open_world` | The worlds on this computer; open one (offline). Refused while the open world has changes not saved |
 | `open_area` | Open the area around a point in 3D (1 to 5 zones of 64 m across) |
 | `describe_area`, `list_objects` | Heights, biomes and objects of the area; objects by kind, name or place, with their ids |
-| `screenshot` | A picture of the 3D view (from any camera) or of the map, so Claude sees what it did |
+| `screenshot` | A picture of the 3D view (from any camera, or four views of a place in one picture) or of the map, so Claude sees what it did |
+| `area_map` | A map of the area from above, drawn from its data: heights, water, painted ground, objects, a grid in world metres |
+| `get_selection`, `select_objects` | What you selected in the editor ("these trees"); Claude selecting objects to show you which it means |
+| `building_guide` | How Valheim's pieces fit and hold (the 2 m grid, roofs, support), from the game's data |
 | `find_prefabs`, `piece_info` | The game's objects and building pieces: names, sizes, snap points, cost |
 | `list_blueprints` | Your blueprint library |
 
 | Changing (pending) | |
 |---|---|
-| `run_script` | A C# script on the area, as the [Script tool](scripting.md) runs it (`script_reference` gives Claude the API): ground, paint, objects |
+| `run_script` | A C# script on the area, as the [Script tool](scripting.md) runs it (`script_reference` gives Claude the API): ground, paint, objects; a dry run says what it would change |
+| `flatten`, `paint_area`, `road`, `forest` | Level a rectangle, paint ground, lay a road through points, plant trees or rocks |
+| `build_floor`, `build_walls`, `build_roof` | A floor, walls with doors and a gable roof (26° or 45°, thatch or shingle, gable ends closed) over a rectangle, from the game's pieces |
+| `set_contents` | Fill a chest, write a sign, give a creature stars |
 | `place_pieces`, `remove_objects` | Put down building pieces and other objects (they snap like the game's hammer); take objects away |
 | `support_check` | The Workshop's support check: which pieces would fall |
 | `open_workshop`, `add_blueprint` | The Workshop, empty or with a blueprint; add a blueprint to the plot |
@@ -60,7 +82,8 @@ Open the world (or the Workshop) yourself, or ask Claude to. Then, for example:
   it."
 - "Flatten a 40 m square in the middle of the area, pave it, and put a ring of torches round it."
 - "In the Workshop, build a small longhouse: stone floor, wooden walls with two doors, a 45° thatch
-  roof. Check that it stands."
+  roof. Check that it stands." (Claude Code and Claude Desktop also offer the editor's prompts:
+  *build_in_workshop* and *shape_area*.)
 - "Open the area around 800, 950 and generate a two-level Swamp crypt above it."
 
 Claude checks its work with screenshots and, for buildings, the support check. Ground work, forests

@@ -146,6 +146,115 @@ public class ClaudeToolsTests
 		Assert.Contains("No blueprint", await r.T.AddBlueprint("Nothing like this"));
 	}
 
+	// Floors, walls and roofs over a rectangle, from the game's pieces: an 8 x 6 m house is 12 floor tiles,
+	// 28 wall pieces with its door, 18 roof pieces with its gables (the 2 m under the ridge closed), and
+	// it stands.
+	[AvaloniaFact]
+	public async Task AHouseIsBuiltFromRectanglesAndStands()
+	{
+		Assert.Equal(12, ClaudeBuilder.Floor(-4, -3, 4, 3, 34, "wood").Count);
+		var walls = ClaudeBuilder.Walls(-4, -3, 4, 3, 34, 4, "wood", new[] { new ClaudeBuilder.Door("south", 0) });
+		Assert.Equal(28, walls.Count);
+		Assert.Single(walls, p => p.Prefab == "wood_door");
+		var roof = ClaudeBuilder.Roof(-4, -3, 4, 3, 38, 45, "thatch", gables: true);
+		Assert.Equal(18, roof.Count);
+		Assert.Equal(4, roof.Count(p => p.Prefab == "wood_roof_top_45"));
+		Assert.Throws<ArgumentException>(() => ClaudeBuilder.Roof(-4, -3, 4, 3, 38, 30, "thatch", true));
+		Assert.Throws<ArgumentException>(() => ClaudeBuilder.Walls(-4, -3, 4, 3, 34, 4, "wood", new[] { new ClaudeBuilder.Door("up", 0) }));
+		using var r = new Run();
+		await r.T.OpenWorkshop();
+		Assert.Contains("\"problems\":[]", await r.T.BuildFloor(-4, -3, 4, 3));
+		Assert.Contains("\"problems\":[]", await r.T.BuildWalls(-4, -3, 4, 3, doors: new[] { new ClaudeTools.DoorSpec { Side = "south", At = 0 } }));
+		Assert.Contains("\"problems\":[]", await r.T.BuildRoof(-4, -3, 4, 3));
+		var support = J(await r.T.SupportCheck());
+		Assert.Equal(58, support.GetProperty("pieces").GetInt32());
+		Assert.Equal(0, support.GetProperty("wouldFall").GetInt32());
+		Assert.Contains("build the walls first", await r.T.BuildRoof(20, 20, 26, 26));
+	}
+
+	// The ready tasks: one pending step each, as asked; a dry run changes nothing; what does not fit is
+	// said. Selection both ways; a chest filled (and text only for signs); Claude's changes taken back,
+	// the user's kept.
+	[AvaloniaFact]
+	public async Task ReadyTasksSelectionContentsAndTakingBack()
+	{
+		using var r = new Run();
+		await r.T.OpenWorld(r.Dir);
+		await r.T.OpenArea(0, 0, 1);
+		var s = r.W.Session!;
+		Assert.StartsWith("Dry run:", await r.T.RunScript("Ground.Raise(0, 0, 2);", dryRun: true));
+		Assert.Equal((0, 0, 0, 0), r.W.World!.Pending);
+		// The user's own change first.
+		// (Shape takes the area's grid points, 0 to 64 across.)
+		s.Shape(8, 56, Formula.Compile("1", new string[0]), 3, 0, "mine");
+		await r.T.Flatten(-20, -20, 0, 0, height: 44);
+		Assert.Equal(44, s.Scene.Heights[(int)(-10 - s.Scene.Cz + (s.Scene.H - 1) / 2f) * s.Scene.W + (int)(-10 - s.Scene.Cx + (s.Scene.W - 1) / 2f)], 1);
+		Assert.Contains("painted", await r.T.Road(new[] { new[] { -28f, 20f }, new[] { 28f, 20f } }));
+		Assert.Contains("The paint is", await r.T.PaintArea("lava", x: 0, z: 0, radius: 3));
+		Assert.Contains("object(s) placed", await r.T.Forest(5, -30, 30, -5, new[] { "Birch1" }, spacing: 7));
+		Assert.Contains("not an object", await r.T.Forest(5, -30, 30, -5, new[] { "NoSuchTree" }));
+		await r.T.SelectObjects(new[] { 1, 2 }, focus: false);
+		Assert.Equal(2, J(await r.T.GetSelection()).GetArrayLength());
+		int chest = J(await r.T.PlacePieces(new[] { new ClaudeTools.PieceSpec { Prefab = "piece_chest_wood", X = -10, Z = -10 } })).GetProperty("placed")[0].GetProperty("id").GetInt32();
+		Assert.StartsWith("Changed", await r.T.SetContents(chest, new[] { new ClaudeTools.ItemSpec { Item = "Coins", Stack = 50 } }));
+		Assert.Contains("not a sign", await r.T.SetContents(1, text: "hello"));
+		Assert.Contains("not a creature", await r.T.SetContents(1, stars: 2));
+		// Then the user again; Take back removes only Claude's.
+		s.Shape(56, 56, Formula.Compile("1", new string[0]), 3, 0, "mine too");
+		int before = s.UndoList.Count;
+		r.W.History.Toggle();
+		Assert.True(r.W.History.TakeBackClaude.IsVisible);
+		await r.W.History.TakeBackClaudes();
+		Assert.All(s.UndoList.Where(c => c.Label.StartsWith("Claude:", StringComparison.Ordinal)), c => Assert.True(c.Removed));
+		Assert.Contains(s.UndoList, c => c.Label == "mine" && !c.Removed);
+		Assert.Contains(s.UndoList, c => c.Label == "mine too" && !c.Removed);
+		Assert.False(r.W.History.TakeBackClaude.IsVisible);
+		Assert.True(s.UndoList.Count >= before);
+	}
+
+	// --mcp-stdio: messages relayed with the token, the protocol remembered; refused clearly when the
+	// switch is off or the editor does not answer.
+	[Fact]
+	public async Task TheRelayPassesMessagesWithTheToken()
+	{
+		var seen = new List<HttpRequestMessage>();
+		var handler = new Answer(req =>
+		{
+			seen.Add(req);
+			var body = req.Content!.ReadAsStringAsync().Result;
+			var res = new HttpResponseMessage(HttpStatusCode.OK)
+			{
+				Content = new StringContent(body.Contains("initialize") ? "event: message\ndata: {\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"protocolVersion\":\"2025-06-18\"}}\n\n" : "event: message\ndata: {\"jsonrpc\":\"2.0\",\"id\":2,\"result\":{}}\n\n"),
+			};
+			res.Content.Headers.ContentType = new MediaTypeHeaderValue("text/event-stream");
+			return res;
+		});
+		var on = new TerrainEditor.App.AppSettings { ClaudeConnect = true, ClaudeToken = "tok", ClaudePort = 5799 };
+		var output = new StringWriter();
+		await ClaudeRelay.RunAsync(new StringReader("{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\"}\n\n{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"tools/list\"}\n"), output, () => on, handler);
+		var lines = output.ToString().Split('\n', StringSplitOptions.RemoveEmptyEntries);
+		Assert.Equal(2, lines.Length);
+		Assert.Contains("\"protocolVersion\":\"2025-06-18\"", lines[0]);
+		Assert.Equal("Bearer tok", seen[0].Headers.Authorization!.ToString());
+		Assert.Equal("http://127.0.0.1:5799/mcp", seen[0].RequestUri!.ToString());
+		Assert.False(seen[0].Headers.Contains("MCP-Protocol-Version"));
+		Assert.Equal("2025-06-18", seen[1].Headers.GetValues("MCP-Protocol-Version").Single());
+		var off = new StringWriter();
+		await ClaudeRelay.RunAsync(new StringReader("{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/list\"}\n{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\"}\n"), off, () => new TerrainEditor.App.AppSettings(), handler);
+		var refused = off.ToString().Split('\n', StringSplitOptions.RemoveEmptyEntries);
+		Assert.Single(refused);
+		Assert.Contains("Allow Claude to connect", refused[0]);
+		Assert.Contains("\"id\":7", refused[0]);
+		var down = new StringWriter();
+		await ClaudeRelay.RunAsync(new StringReader("{\"jsonrpc\":\"2.0\",\"id\":3,\"method\":\"tools/list\"}\n"), down, () => on, new Answer(_ => throw new HttpRequestException("refused")));
+		Assert.Contains("not running", down.ToString());
+	}
+
+	private sealed class Answer(Func<HttpRequestMessage, HttpResponseMessage> answer) : HttpMessageHandler
+	{
+		protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) => Task.FromResult(answer(request));
+	}
+
 	// The server: only for callers with the token, only under this computer's address; then MCP.
 	[AvaloniaFact]
 	public async Task TheServerAnswersOnlyWithTheTokenOnThisComputer()
@@ -184,11 +293,19 @@ public class ClaudeToolsTests
 			Assert.Equal(HttpStatusCode.Forbidden, (await http.SendAsync(Rpc("initialize", "secret", $"evil.example:{port}"), ct)).StatusCode);
 			var init = await http.SendAsync(Rpc("initialize", "secret"), ct);
 			Assert.Equal(HttpStatusCode.OK, init.StatusCode);
-			Assert.Contains("valheim-world-editor", await init.Content.ReadAsStringAsync(ct));
+			string initialized = await init.Content.ReadAsStringAsync(ct);
+			Assert.Contains("valheim-world-editor", initialized);
+			Assert.Contains("You are connected to Valheim World Editor", initialized);
+			var prompts = Rpc("prompts/list", "secret");
+			prompts.Headers.Add("MCP-Protocol-Version", "2025-06-18");
+			string promptList = await (await http.SendAsync(prompts, ct)).Content.ReadAsStringAsync(ct);
+			Assert.Contains("build_in_workshop", promptList);
+			Assert.Contains("shape_area", promptList);
 			var tools = Rpc("tools/list", "secret");
 			tools.Headers.Add("MCP-Protocol-Version", "2025-06-18");
 			string listed = await (await http.SendAsync(tools, ct)).Content.ReadAsStringAsync(ct);
-			foreach (string name in new[] { "editor_state", "open_world", "open_area", "screenshot", "run_script", "place_pieces", "support_check", "generate_dungeon" })
+			foreach (string name in new[] { "editor_state", "open_world", "open_area", "screenshot", "area_map", "run_script", "place_pieces", "support_check", "generate_dungeon",
+				"building_guide", "get_selection", "select_objects", "flatten", "paint_area", "road", "forest", "set_contents", "build_floor", "build_walls", "build_roof" })
 			{
 				Assert.Contains($"\"{name}\"", listed);
 			}

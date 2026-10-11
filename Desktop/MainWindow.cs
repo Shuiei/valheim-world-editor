@@ -1009,8 +1009,8 @@ public sealed partial class MainWindow : Window
 	// A script on the open area (the Script tool's Run, Claude's run_script): compiled and run in the
 	// background on a snapshot of the area, then what it changed goes in as one undo step (label), nothing
 	// when it fails, is stopped, runs 2 minutes, or the area changed meanwhile. progress: "Compiling…",
-	// "Running…".
-	internal async Task<ScriptOutcome> RunScriptCode(string code, string label, Action<string>? progress = null)
+	// "Running…". apply false: a dry run, only what it would change is said.
+	internal async Task<ScriptOutcome> RunScriptCode(string code, string label, Action<string>? progress = null, bool apply = true)
 	{
 		if (_session is not { } s)
 		{
@@ -1049,12 +1049,17 @@ public sealed partial class MainWindow : Window
 			{
 				return new(false, ch.Output + "The script ran and changed nothing.", "The script ran and changed nothing.");
 			}
-			int clamped = ScriptHost.Apply(s, ch, label);
 			var parts = new List<string>();
 			if (ch.Heights.Count > 0) parts.Add($"{ch.Heights.Count:N0} ground point(s)");
 			if (ch.Paint.Count > 0) parts.Add($"{ch.Paint.Count:N0} painted");
 			if (ch.Add.Count > 0) parts.Add($"{ch.Add.Count:N0} object(s) placed");
 			if (ch.Remove.Count > 0) parts.Add($"{ch.Remove.Count:N0} taken away");
+			if (!apply)
+			{
+				string would = $"Dry run: the script would change {string.Join(", ", parts)}; nothing changed.";
+				return new(false, ch.Output + would, would);
+			}
+			int clamped = ScriptHost.Apply(s, ch, label);
 			string what = $"The script changed {string.Join(", ", parts)} in {watch.Elapsed.TotalSeconds:0.0} s; Ctrl+Z takes it all back."
 				+ (clamped > 0 ? $" {clamped:N0} point(s) stopped at the game's ±8 m (Ground.NoLimit = true lets them go further)." : "");
 			UpdateSaveBar();

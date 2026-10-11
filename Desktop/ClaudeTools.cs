@@ -125,15 +125,52 @@ public sealed class ClaudeTools
 				q = q.Where(p => (p.t.Position.X - px) * (p.t.Position.X - px) + (p.t.Position.Z - pz) * (p.t.Position.Z - pz) <= radius * radius)
 					.OrderBy(p => (p.t.Position.X - px) * (p.t.Position.X - px) + (p.t.Position.Z - pz) * (p.t.Position.Z - pz));
 			}
-			found = q.Take(Math.Clamp(limit, 1, 2000)).Select(p => (object)new
-			{
-				id = p.i, name = _w.NameOfPrefab(p.t.Prefab), kind = KindOf(p.t),
-				x = MathF.Round(p.t.Position.X, 2), y = MathF.Round(p.t.Position.Y, 2), z = MathF.Round(p.t.Position.Z, 2),
-				yaw = MathF.Round(p.t.Rotation.Y, 1), built = p.t.Piece,
-			}).ToList();
+			found = q.Take(Math.Clamp(limit, 1, 2000)).Select(p => Describe(p.t, p.i)).ToList();
 		}
 		return ToJson(found);
 	});
+
+	[McpServerTool(Name = "get_selection", ReadOnly = true, Title = "What the user selected")]
+	[Description("The objects the user has selected in the editor (Select tool): id, name, kind, position, turn. Use it when the user says \"these\", \"the selected trees\", \"this building\".")]
+	public Task<string> GetSelection() => OnUi(() =>
+	{
+		if (_w.Session?.Scene is not { } scene)
+		{
+			return "No area is open.";
+		}
+		lock (scene.Things)
+		{
+			return ToJson(_w.View.Selected.Where(i => i >= 0 && i < scene.Things.Count && !scene.Things[i].Gone).Select(i => Describe(scene.Things[i], i)).ToList());
+		}
+	});
+
+	[McpServerTool(Name = "select_objects", Title = "Select objects for the user")]
+	[Description("Selects objects in the editor (by id), so the user sees which ones are meant, and points the camera at them. Changes nothing in the world.")]
+	public Task<string> SelectObjects(
+		[Description("Their ids (list_objects).")] int[] ids,
+		[Description("Point the camera at them (default: true).")] bool focus = true) => OnUi(() =>
+	{
+		if (_w.Session?.Scene is not { } scene)
+		{
+			return "No area is open.";
+		}
+		var ok = ids.Distinct().Where(i => i >= 0 && i < scene.Things.Count && !scene.Things[i].Gone).ToList();
+		_w.View.Select(ok);
+		if (focus && ok.Count > 0)
+		{
+			var mid = ok.Select(i => scene.Things[i].Position).Aggregate(System.Numerics.Vector3.Zero, (a, b) => a + b) / ok.Count;
+			float spread = ok.Select(i => System.Numerics.Vector3.Distance(scene.Things[i].Position, mid)).DefaultIfEmpty(0).Max();
+			_w.View.Focus(mid, MathF.Max(20, spread * 2.5f));
+		}
+		return $"Selected {ok.Count}{(ok.Count < ids.Length ? $" ({ids.Length - ok.Count} id(s) were not objects of the area)" : "")}.";
+	});
+
+	private object Describe(WorldScene.Thing t, int i) => new
+	{
+		id = i, name = _w.NameOfPrefab(t.Prefab), kind = KindOf(t),
+		x = MathF.Round(t.Position.X, 2), y = MathF.Round(t.Position.Y, 2), z = MathF.Round(t.Position.Z, 2),
+		yaw = MathF.Round(t.Rotation.Y, 1), built = t.Piece,
+	};
 
 	[McpServerTool(Name = "screenshot", ReadOnly = true, Title = "See the view")]
 	[Description("A picture of what the editor shows: the 3D view of the area or the Workshop (optionally from a camera: looking at x, z from yaw degrees round, pitch degrees down, distance metres away), or the world's map when the map is shown. Use it to see the result of a change.")]
@@ -143,8 +180,13 @@ public sealed class ClaudeTools
 		[Description("Round the point, in degrees (0: looking north).")] float yaw = 45,
 		[Description("Down from level, in degrees (90: from straight above).")] float pitch = 55,
 		[Description("Metres from the point.")] float distance = 120,
-		[Description("Height of the point looked at (optional: the ground's).")] float? height = null)
+		[Description("Height of the point looked at (optional: the ground's).")] float? height = null,
+		[Description("4: four pictures in one (from above, and from the south-west, east and north-west, all at the point, or the area's middle), to see a building or a place from every side. 1: one picture (default).")] int views = 1)
 	{
+		if (views >= 4)
+		{
+			return await FourViews(x, z, distance, height);
+		}
 		string path = Path.Combine(Path.GetTempPath(), $"vwe-claude-{Guid.NewGuid():N}.png");
 		try
 		{
@@ -178,6 +220,183 @@ public sealed class ClaudeTools
 		}
 	}
 
+	// Four views of a point (the area's middle when none is given), as one picture with their names.
+	private async Task<ModelContextProtocol.Protocol.CallToolResult> FourViews(float? x, float? z, float distance, float? height)
+	{
+		var cams = new (string Name, float Yaw, float Pitch)[] { ("from above (north up)", 0, 89), ("from the south-west", 225, 35), ("from the east", 90, 35), ("from the north-west", 315, 35) };
+		var pictures = new List<SkiaSharp.SKBitmap>();
+		try
+		{
+			foreach (var (name, yaw, pitch) in cams)
+			{
+				string path = Path.Combine(Path.GetTempPath(), $"vwe-claude-{Guid.NewGuid():N}.png");
+				try
+				{
+					string? problem = await OnUi(async () =>
+					{
+						if (_w.Session?.Scene is not { } scene || _w.MapShown)
+						{
+							return "Four views need an area or the Workshop open in 3D.";
+						}
+						float cx = x ?? scene.Cx, cz = z ?? scene.Cz;
+						_w.View.Orbit(cx, cz, yaw, pitch, distance, height);
+						await _w.View.Picture(path).WaitAsync(TimeSpan.FromSeconds(60));
+						return null;
+					});
+					if (problem != null)
+					{
+						return new() { IsError = true, Content = { new ModelContextProtocol.Protocol.TextContentBlock { Text = problem } } };
+					}
+					var bmp = SkiaSharp.SKBitmap.Decode(await File.ReadAllBytesAsync(path));
+					pictures.Add(bmp);
+				}
+				finally
+				{
+					File.Delete(path);
+				}
+			}
+			int w = 640, h = (int)(640f * pictures[0].Height / pictures[0].Width);
+			using var sheet = new SkiaSharp.SKBitmap(w * 2, h * 2);
+			using (var canvas = new SkiaSharp.SKCanvas(sheet))
+			{
+				using var font = new SkiaSharp.SKFont(SkiaSharp.SKTypeface.Default, 20);
+				using var back = new SkiaSharp.SKPaint { Color = new SkiaSharp.SKColor(0, 0, 0, 160) };
+				using var ink = new SkiaSharp.SKPaint { Color = SkiaSharp.SKColors.White, IsAntialias = true };
+				for (int i = 0; i < 4; i++)
+				{
+					var r = SkiaSharp.SKRect.Create(i % 2 * w, i / 2 * h, w, h);
+					canvas.DrawBitmap(pictures[i], r);
+					canvas.DrawRect(r.Left, r.Top, w, 30, back);
+					canvas.DrawText(cams[i].Name, r.Left + 8, r.Top + 22, SkiaSharp.SKTextAlign.Left, font, ink);
+				}
+			}
+			using var image = SkiaSharp.SKImage.FromBitmap(sheet);
+			return new() { Content = { ModelContextProtocol.Protocol.ImageContentBlock.FromBytes(image.Encode(SkiaSharp.SKEncodedImageFormat.Jpeg, 82).ToArray(), "image/jpeg") } };
+		}
+		finally
+		{
+			foreach (var p in pictures)
+			{
+				p.Dispose();
+			}
+		}
+	}
+
+	[McpServerTool(Name = "area_map", ReadOnly = true, Title = "A map of the area with coordinates")]
+	[Description("A top-down map of the open area (or the plot), drawn from its data, north up: ground heights in colour with hill shading, painted ground (paved grey, dirt brown, cultivated dark), water in blue, objects as dots (trees green, rocks grey, buildings orange, others white), and a grid labelled in world metres. Use it to read exact places, plan, and check ground work.")]
+	public async Task<ModelContextProtocol.Protocol.CallToolResult> AreaMap(
+		[Description("Grid spacing in metres (default 16).")] float grid = 16,
+		[Description("Draw the objects (default true).")] bool objects = true)
+	{
+		var data = await OnUi(() =>
+		{
+			if (_w.Session?.Scene is not { } scene)
+			{
+				return null;
+			}
+			List<(float X, float Z, string Kind)> things;
+			lock (scene.Things)
+			{
+				things = scene.Things.Where(t => !t.Gone).Select(t => (t.Position.X, t.Position.Z, KindOf(t))).ToList();
+			}
+			// Paint (dirt, cultivated, paved) per ground point, as the ground has it now.
+			var g = _w.Session.Ground;
+			var paint = g.W == scene.W && g.H == scene.H ? Enumerable.Range(0, scene.W * scene.H * 3).Select(k => g.MaskOf(k / 3, k % 3)).ToArray() : null;
+			return new { scene.W, scene.H, scene.Cx, scene.Cz, scene.Water, Heights = (float[])scene.Heights.Clone(), Paint = paint, Things = things };
+		});
+		if (data == null)
+		{
+			return new() { IsError = true, Content = { new ModelContextProtocol.Protocol.TextContentBlock { Text = "No area is open." } } };
+		}
+		byte[] jpeg = await Task.Run(() => DrawMap(data.W, data.H, data.Cx, data.Cz, data.Water, data.Heights, data.Paint, objects ? data.Things : new(), MathF.Max(4, grid)));
+		float minX = data.Cx - (data.W - 1) / 2f, minZ = data.Cz - (data.H - 1) / 2f;
+		return new()
+		{
+			Content =
+			{
+				new ModelContextProtocol.Protocol.TextContentBlock { Text = $"x {minX:0} to {minX + data.W - 1:0} (left to right), z {minZ:0} to {minZ + data.H - 1:0} (bottom to top); heights {data.Heights.Min():0.0} to {data.Heights.Max():0.0} m, water at {data.Water:0.0} m." },
+				ModelContextProtocol.Protocol.ImageContentBlock.FromBytes(jpeg, "image/jpeg"),
+			},
+		};
+	}
+
+	internal static byte[] DrawMap(int w, int h, float cx, float cz, float water, float[] heights, float[]? paint, List<(float X, float Z, string Kind)> things, float grid)
+	{
+		const int Margin = 40;
+		float k = MathF.Min(12, 760f / MathF.Max(w, h));
+		int pw = (int)(w * k), ph = (int)(h * k);
+		float lo = heights.Min(), hi = MathF.Max(heights.Max(), lo + 1);
+		using var ground = new SkiaSharp.SKBitmap(w, h);
+		for (int j = 0; j < h; j++)
+		{
+			for (int i = 0; i < w; i++)
+			{
+				float y = heights[j * w + i];
+				// Hill shading: lit from the north-west.
+				float dx = heights[j * w + Math.Min(w - 1, i + 1)] - heights[j * w + Math.Max(0, i - 1)];
+				float dz = heights[Math.Min(h - 1, j + 1) * w + i] - heights[Math.Max(0, j - 1) * w + i];
+				float light = Math.Clamp(0.8f + (dz - dx) * 0.12f, 0.45f, 1.2f);
+				SkiaSharp.SKColor c;
+				if (y < water)
+				{
+					float d = Math.Clamp((water - y) / 20, 0, 1);
+					c = new SkiaSharp.SKColor((byte)(40 - 20 * d), (byte)(110 - 50 * d), (byte)(170 - 40 * d));
+				}
+				else
+				{
+					float t = Math.Clamp((y - lo) / (hi - lo), 0, 1);
+					var (r, g, b) = t < 0.5f ? (90 + 120 * t, 140 + 40 * t, 70 + 20 * t) : (150 + 200 * (t - 0.5f), 160 + 160 * (t - 0.5f), 80 + 300 * (t - 0.5f));
+					if (paint != null)
+					{
+						// Painted ground over it: dirt brown, cultivated dark, paved grey.
+						int q = (j * w + i) * 3;
+						float dirt = Math.Clamp(paint[q], 0, 1), tilled = Math.Clamp(paint[q + 1], 0, 1), paved = Math.Clamp(paint[q + 2], 0, 1);
+						(r, g, b) = (r + (125 - r) * dirt, g + (95 - g) * dirt, b + (60 - b) * dirt);
+						(r, g, b) = (r + (85 - r) * tilled, g + (60 - g) * tilled, b + (40 - b) * tilled);
+						(r, g, b) = (r + (160 - r) * paved, g + (158 - g) * paved, b + (150 - b) * paved);
+					}
+					c = new SkiaSharp.SKColor((byte)Math.Clamp(r * light, 0, 255), (byte)Math.Clamp(g * light, 0, 255), (byte)Math.Clamp(b * light, 0, 255));
+				}
+				// North up: the last row of the grid (largest z) at the top.
+				ground.SetPixel(i, h - 1 - j, c);
+			}
+		}
+		using var sheet = new SkiaSharp.SKBitmap(pw + 2 * Margin, ph + 2 * Margin);
+		using (var canvas = new SkiaSharp.SKCanvas(sheet))
+		{
+			canvas.Clear(new SkiaSharp.SKColor(24, 28, 34));
+			using (var groundImage = SkiaSharp.SKImage.FromBitmap(ground))
+			{
+				canvas.DrawImage(groundImage, SkiaSharp.SKRect.Create(Margin, Margin, pw, ph), new SkiaSharp.SKSamplingOptions(SkiaSharp.SKFilterMode.Linear));
+			}
+			float minX = cx - (w - 1) / 2f, minZ = cz - (h - 1) / 2f;
+			float Px(float x) => Margin + (x - minX) * k;
+			float Py(float z) => Margin + ph - (z - minZ) * k;
+			using var dot = new SkiaSharp.SKPaint { IsAntialias = true };
+			foreach (var (x, z, kind) in things)
+			{
+				dot.Color = kind switch { "Trees" => new SkiaSharp.SKColor(30, 90, 30), "Rocks" or "Ore" => new SkiaSharp.SKColor(130, 130, 130), "Buildings" => new SkiaSharp.SKColor(240, 150, 40), _ => SkiaSharp.SKColors.White };
+				canvas.DrawCircle(Px(x), Py(z), kind == "Buildings" ? 2.2f : 1.8f, dot);
+			}
+			using var line = new SkiaSharp.SKPaint { Color = new SkiaSharp.SKColor(255, 255, 255, 70), StrokeWidth = 1 };
+			using var ink = new SkiaSharp.SKPaint { Color = new SkiaSharp.SKColor(220, 220, 220), IsAntialias = true };
+			using var font = new SkiaSharp.SKFont(SkiaSharp.SKTypeface.Default, 11);
+			for (float gx = MathF.Ceiling(minX / grid) * grid; gx <= minX + w - 1; gx += grid)
+			{
+				canvas.DrawLine(Px(gx), Margin, Px(gx), Margin + ph, line);
+				canvas.DrawText($"{gx:0}", Px(gx), Margin + ph + 14, SkiaSharp.SKTextAlign.Center, font, ink);
+			}
+			for (float gz = MathF.Ceiling(minZ / grid) * grid; gz <= minZ + h - 1; gz += grid)
+			{
+				canvas.DrawLine(Margin, Py(gz), Margin + pw, Py(gz), line);
+				canvas.DrawText($"{gz:0}", Margin - 4, Py(gz) + 4, SkiaSharp.SKTextAlign.Right, font, ink);
+			}
+			canvas.DrawText("north up; x left to right, z bottom to top; paint: paved grey, dirt brown, cultivated dark", Margin, Margin - 12, SkiaSharp.SKTextAlign.Left, font, ink);
+		}
+		using var image = SkiaSharp.SKImage.FromBitmap(sheet);
+		return image.Encode(SkiaSharp.SKEncodedImageFormat.Jpeg, 85).ToArray();
+	}
+
 	// A picture no wider than 1280 pixels, as a JPEG (smaller to send and to look at).
 	internal static byte[] Shrink(byte[] png)
 	{
@@ -193,10 +412,15 @@ public sealed class ClaudeTools
 	public static Task<string> FindPrefabs(
 		[Description("Words of the name, e.g. \"stone wall\", \"pine\", \"roof 26\".")] string query,
 		[Description("Only building pieces (the hammer's): true; anything: false.")] bool piecesOnly = false,
-		[Description("At most this many.")] int limit = 60) => OnUi(() =>
+		[Description("At most this many.")] int limit = 60,
+		[Description("Items instead (what goes in chests: Coins, Amber, IronScrap, weapons…): true.")] bool items = false) => OnUi(() =>
 	{
 		var words = query.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 		bool Match(string s) => words.All(w => s.Contains(w, StringComparison.OrdinalIgnoreCase));
+		if (items)
+		{
+			return ToJson(TerrainEditor.Terrain.PrefabCatalog.Items.Where(Match).Take(Math.Clamp(limit, 1, 500)).Select(i => new { item = i }));
+		}
 		var pieces = TerrainEditor.Terrain.PieceCatalog.Names
 			.Select(n => (n, p: TerrainEditor.Terrain.PieceCatalog.Get(TerrainEditor.Save.StableHash.Of(n))))
 			.Where(x => x.p is { Tool: not null } && (Match(x.n) || Match(TerrainEditor.Terrain.PieceCost.PieceName(x.n))))
@@ -230,6 +454,10 @@ public sealed class ClaudeTools
 		};
 	})));
 
+	[McpServerTool(Name = "building_guide", ReadOnly = true, Title = "How to build and shape")]
+	[Description("How Valheim's building works, from the game's data: the 2 m grid, pieces' origins and turns, roofs, and support (what holds and what falls); and how to shape ground. Read it before building.")]
+	public static string BuildingGuide() => ClaudeGuide.Building + "\n\n" + ClaudeGuide.Shaping;
+
 	[McpServerTool(Name = "script_reference", ReadOnly = true, Title = "The script API")]
 	[Description("The C# API run_script scripts use, as its source with comments: Area (bounds, points), Ground (Height, Set, Raise, Lower, Paint, Shape, Mountain, Biome), Objects (All, OfKind, Near, Place, Remove, CanPlace), Noise, Rnd, Print. Read it before writing a script.")]
 	public static string ScriptReference() => ScriptHost.ApiSource;
@@ -255,16 +483,167 @@ public sealed class ClaudeTools
 	[Description("Runs a C# script on the open area (or the Workshop's plot), as the editor's Script tool does: the script's statements are the body of a program using the API script_reference gives (Area, Ground, Objects, Noise, Rnd, Print). What it changes (ground heights, paint, objects placed or taken away) goes in as one step of the history, pending until the user saves; nothing changes when it has mistakes or fails (the errors say which line). Returns what it printed and what it changed. Ground stays within the game's ±8 m of the original unless Ground.NoLimit = true.")]
 	public Task<string> RunScript(
 		[Description("The script: C# statements, e.g. \"Ground.Mountain(Area.CenterX, Area.CenterZ, height: 30, radius: 50);\"")] string code,
-		[Description("A few words for the history (\"Claude: river valley\").")] string label = "Claude: script") => OnUi(async () =>
+		[Description("A few words for the history (\"Claude: river valley\").")] string label = "Claude: script",
+		[Description("true: only say what it would change (ground points, paint, objects placed and taken away), changing nothing. Use it before a large change.")] bool dryRun = false) => OnUi(async () =>
 	{
 		if (CannotEdit() is string why)
 		{
 			return why;
 		}
-		var r = await _w.RunScriptCode(code, label.StartsWith("Claude", StringComparison.Ordinal) ? label : "Claude: " + label);
+		var r = await _w.RunScriptCode(code, label.StartsWith("Claude", StringComparison.Ordinal) ? label : "Claude: " + label, apply: !dryRun);
 		_w.MessageText.Text = r.Message;
 		return r.Output;
 	});
+
+	// ---- Common tasks, as scripts the Script tool runs (one pending step each).
+
+	private static string N(float v) => v.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture);
+
+	private static readonly HashSet<string> PaintKinds = new(StringComparer.OrdinalIgnoreCase) { "dirt", "cultivated", "paved", "clear" };
+
+	private Task<string> RunGenerated(string code, string label) => OnUi(async () =>
+	{
+		if (CannotEdit() is string why)
+		{
+			return why;
+		}
+		var r = await _w.RunScriptCode(code, "Claude: " + label);
+		_w.MessageText.Text = r.Message;
+		return r.Output;
+	});
+
+	[McpServerTool(Name = "flatten", Title = "Flatten a rectangle")]
+	[Description("Levels the ground of a rectangle of the open area to one height (default: its average), blending into the ground around over a soft edge. One pending step. The game's ±8 m limit from the original ground holds.")]
+	public Task<string> Flatten(
+		[Description("West edge (smallest x).")] float x0, [Description("South edge (smallest z).")] float z0,
+		[Description("East edge (largest x).")] float x1, [Description("North edge (largest z).")] float z1,
+		[Description("The height to level to (optional: the rectangle's average).")] float? height = null,
+		[Description("Width of the soft edge outside the rectangle, metres (0: a hard edge).")] float edge = 4) =>
+		RunGenerated($$"""
+			float x0 = {{N(MathF.Min(x0, x1))}}f, x1 = {{N(MathF.Max(x0, x1))}}f, z0 = {{N(MathF.Min(z0, z1))}}f, z1 = {{N(MathF.Max(z0, z1))}}f, edge = {{N(MathF.Max(0, edge))}}f;
+			float target = {{(height is float h ? N(h) + "f" : "float.NaN")}};
+			if (float.IsNaN(target))
+			{
+				float sum = 0; int n = 0;
+				foreach (var (x, z) in Area.Points()) if (x >= x0 && x <= x1 && z >= z0 && z <= z1) { sum += Ground.Height(x, z); n++; }
+				target = n > 0 ? sum / n : 0;
+			}
+			foreach (var (x, z) in Area.Points())
+			{
+				float dx = MathF.Max(0, MathF.Max(x0 - x, x - x1)), dz = MathF.Max(0, MathF.Max(z0 - z, z - z1));
+				float d = MathF.Sqrt(dx * dx + dz * dz);
+				if (d > edge) continue;
+				float w = edge <= 0 || d <= 0 ? 1 : 0.5f + 0.5f * MathF.Cos(MathF.PI * d / edge);
+				float h = Ground.Height(x, z);
+				Ground.Set(x, z, h + (target - h) * w);
+			}
+			Print($"levelled to {target:0.0} m");
+			""", "flatten");
+
+	[McpServerTool(Name = "paint_area", Title = "Paint the ground")]
+	[Description("Paints the ground of a rectangle (x0, z0, x1, z1) or a circle (x, z, radius) of the open area: dirt, cultivated, paved, or clear (back to the biome's own). One pending step.")]
+	public Task<string> PaintArea(
+		[Description("dirt, cultivated, paved or clear.")] string kind,
+		[Description("Rectangle: west edge.")] float? x0 = null, [Description("Rectangle: south edge.")] float? z0 = null,
+		[Description("Rectangle: east edge.")] float? x1 = null, [Description("Rectangle: north edge.")] float? z1 = null,
+		[Description("Circle: middle x.")] float? x = null, [Description("Circle: middle z.")] float? z = null,
+		[Description("Circle: radius, metres.")] float? radius = null)
+	{
+		if (!PaintKinds.Contains(kind))
+		{
+			return Task.FromResult("The paint is dirt, cultivated, paved or clear.");
+		}
+		string inside = x0 is float a && z0 is float b && x1 is float c && z1 is float d
+			? $"x >= {N(MathF.Min(a, c))}f && x <= {N(MathF.Max(a, c))}f && z >= {N(MathF.Min(b, d))}f && z <= {N(MathF.Max(b, d))}f"
+			: x is float cx && z is float cz && radius is float r
+				? $"(x - {N(cx)}f) * (x - {N(cx)}f) + (z - {N(cz)}f) * (z - {N(cz)}f) <= {N(r * r)}f"
+				: null!;
+		if (inside == null)
+		{
+			return Task.FromResult("Give a rectangle (x0, z0, x1, z1) or a circle (x, z, radius).");
+		}
+		return RunGenerated($$"""
+			int n = 0;
+			foreach (var (x, z) in Area.Points()) if ({{inside}}) { Ground.Paint(x, z, "{{kind.ToLowerInvariant()}}"); n++; }
+			Print($"painted {n} points");
+			""", $"paint {kind.ToLowerInvariant()}");
+	}
+
+	[McpServerTool(Name = "road", Title = "Lay a road")]
+	[Description("Lays a road along points of the open area: the ground along it levelled to a smooth slope from point to point (its heights there, or given), the edges blended, and painted (paved by default). One pending step.")]
+	public Task<string> Road(
+		[Description("The road's points, in order: [[x, z], [x, z], …] (at least 2).")] float[][] points,
+		[Description("Width, metres.")] float width = 4,
+		[Description("Paint: paved, dirt, or none.")] string paint = "paved",
+		[Description("Heights of the points, in order (optional: the ground's there).")] float[]? heights = null)
+	{
+		if (points.Length < 2 || points.Any(p => p.Length < 2))
+		{
+			return Task.FromResult("A road needs at least 2 points, each [x, z].");
+		}
+		if (paint != "none" && !PaintKinds.Contains(paint))
+		{
+			return Task.FromResult("The paint is paved, dirt or none.");
+		}
+		string px = string.Join(", ", points.Select(p => N(p[0]) + "f")), pz = string.Join(", ", points.Select(p => N(p[1]) + "f"));
+		string ph = heights is { } hs && hs.Length == points.Length ? string.Join(", ", hs.Select(h => N(h) + "f")) : "";
+		return RunGenerated($$"""
+			float[] px = { {{px}} }, pz = { {{pz}} };
+			float[] ph = { {{ph}} };
+			if (ph.Length != px.Length) { ph = new float[px.Length]; for (int i = 0; i < px.Length; i++) ph[i] = Ground.Height(px[i], pz[i]); }
+			float half = {{N(MathF.Max(1, width) / 2)}}f, edge = 3;
+			foreach (var (x, z) in Area.Points())
+			{
+				float best = float.MaxValue, at = 0;
+				for (int i = 0; i + 1 < px.Length; i++)
+				{
+					float ax = px[i], az = pz[i], bx = px[i + 1] - ax, bz = pz[i + 1] - az;
+					float len2 = bx * bx + bz * bz, t = len2 > 0 ? Math.Clamp(((x - ax) * bx + (z - az) * bz) / len2, 0, 1) : 0;
+					float dx = x - (ax + bx * t), dz = z - (az + bz * t), d = MathF.Sqrt(dx * dx + dz * dz);
+					if (d < best) { best = d; at = ph[i] + (ph[i + 1] - ph[i]) * t; }
+				}
+				if (best > half + edge) continue;
+				float w = best <= half ? 1 : 0.5f + 0.5f * MathF.Cos(MathF.PI * (best - half) / edge);
+				float h = Ground.Height(x, z);
+				Ground.Set(x, z, h + (at - h) * w);
+				if ({{(paint == "none" ? "false" : "true")}} && best <= half) Ground.Paint(x, z, "{{paint.ToLowerInvariant()}}");
+			}
+			Print($"road of {px.Length - 1} segment(s)");
+			""", "road");
+	}
+
+	[McpServerTool(Name = "forest", Title = "Plant trees or rocks")]
+	[Description("Plants objects (trees, bushes, rocks: prefab names from find_prefabs) over a rectangle of the open area, about spacing metres apart with some randomness, turned at random, kept off water, off buildings and away from what is already there. One pending step.")]
+	public Task<string> Forest(
+		[Description("West edge.")] float x0, [Description("South edge.")] float z0,
+		[Description("East edge.")] float x1, [Description("North edge.")] float z1,
+		[Description("Prefab names to mix, e.g. [\"Beech1\", \"Birch1\", \"Oak1\"].")] string[] kinds,
+		[Description("About how far apart, metres.")] float spacing = 6,
+		[Description("Any number: another layout with the same choices.")] int seed = 1)
+	{
+		if (kinds.Length == 0)
+		{
+			return Task.FromResult("Give at least one prefab name (find_prefabs).");
+		}
+		string list = string.Join(", ", kinds.Select(k => "\"" + k.Replace("\"", "", StringComparison.Ordinal) + "\""));
+		return RunGenerated($$"""
+			string[] kinds = { {{list}} };
+			foreach (var k in kinds) if (!Objects.CanPlace(k)) { Print($"{k}: not an object this world can have"); return; }
+			Rnd.Seed = {{seed}};
+			float x0 = {{N(MathF.Min(x0, x1))}}f, x1 = {{N(MathF.Max(x0, x1))}}f, z0 = {{N(MathF.Min(z0, z1))}}f, z1 = {{N(MathF.Max(z0, z1))}}f, step = {{N(MathF.Max(1, spacing))}}f;
+			int n = 0;
+			for (float z = z0 + step / 2; z < z1; z += step)
+				for (float x = x0 + step / 2; x < x1; x += step)
+				{
+					float px = x + Rnd.Range(-0.4f, 0.4f) * step, pz = z + Rnd.Range(-0.4f, 0.4f) * step;
+					if (!Area.Inside(px, pz) || Ground.Height(px, pz) < Area.Water + 0.5f) continue;
+					if (Objects.Near(px, pz, step * 0.5f).Any(o => o.Building || o.Kind is "Trees" or "Rocks")) continue;
+					Objects.Place(Rnd.Pick(kinds), px, pz, yaw: Rnd.Range(0, 360));
+					n++;
+				}
+			Print($"placed {n}");
+			""", "forest");
+	}
 
 	[McpServerTool(Name = "undo", Title = "Undo")]
 	[Description("Takes back the last change of the area (anyone's: Claude's or the user's), as Ctrl+Z.")]
@@ -332,7 +711,10 @@ public sealed class ClaudeTools
 	[Description("Puts down building pieces (and any other objects: trees, rocks…) in the open area or on the Workshop's plot, all as one step of the history (pending). Pieces snap to the snap points of pieces already there within 0.5 m, as the game's hammer does, so place them where they should join and let the snap make them meet; piece_info gives sizes and snap points. Returns where each went (after snapping) and its id. Check the result with support_check (Workshop) and screenshot.")]
 	public Task<string> PlacePieces(
 		[Description("The pieces, in the order they are put down.")] PieceSpec[] pieces,
-		[Description("A few words for the history.")] string label = "Claude: building") => OnUi(() =>
+		[Description("A few words for the history.")] string label = "Claude: building") => OnUi(() => Place(pieces, label));
+
+	// The pieces put down as one step (on the window's thread): where each went and its id, or why not.
+	private string Place(IReadOnlyList<PieceSpec> pieces, string label)
 	{
 		if (CannotEdit() is string why)
 		{
@@ -390,7 +772,111 @@ public sealed class ClaudeTools
 		var ids = session.Commit(label.StartsWith("Claude", StringComparison.Ordinal) ? label : "Claude: " + label, null, Array.Empty<int>(), adds);
 		_w.AfterClaudeEdit($"Claude put down {adds.Count} piece(s); Ctrl+Z takes them back.");
 		return ToJson(new { placed = report.Select((r, i) => new { id = i < ids.Count ? ids[i] : -1, piece = r }), problems, pending = Pending() });
+	}
+
+	// ---- Building in larger pieces (ClaudeBuilder: floors, walls, roofs over a rectangle).
+
+	public sealed class DoorSpec
+	{
+		[Description("Which wall: north, south, east or west.")]
+		public string Side { get; set; } = "south";
+
+		[Description("Where along it: x for a north or south wall, z for an east or west one (a 2 m door at the 2 m of wall holding that point).")]
+		public float At { get; set; }
+	}
+
+	// The highest ground under a rectangle (every metre).
+	private static float HighestGround(WorldScene scene, float x0, float z0, float x1, float z1, bool edgesOnly = false)
+	{
+		float best = float.MinValue;
+		for (float x = MathF.Min(x0, x1); x <= MathF.Max(x0, x1); x += 1)
+		{
+			for (float z = MathF.Min(z0, z1); z <= MathF.Max(z0, z1); z += 1)
+			{
+				bool edge = x - MathF.Min(x0, x1) < 1 || MathF.Max(x0, x1) - x < 1 || z - MathF.Min(z0, z1) < 1 || MathF.Max(z0, z1) - z < 1;
+				if (!edgesOnly || edge)
+				{
+					best = MathF.Max(best, GroundAt(scene, x, z));
+				}
+			}
+		}
+		return best;
+	}
+
+	// The highest top of the building pieces within a rectangle (whose names hold word, when given), or null.
+	private float? HighestPieceTop(WorldScene scene, float x0, float z0, float x1, float z1, string? word = null)
+	{
+		float? best = null;
+		lock (scene.Things)
+		{
+			foreach (var t in scene.Things)
+			{
+				if (t.Gone || !t.Piece || _w.NameOfPrefab(t.Prefab) is not string n || (word != null && !n.Contains(word, StringComparison.OrdinalIgnoreCase))
+					|| TerrainEditor.Terrain.PieceCatalog.Get(t.Prefab) is not { } info)
+				{
+					continue;
+				}
+				var p = t.Position;
+				if (p.X < MathF.Min(x0, x1) - 0.6f || p.X > MathF.Max(x0, x1) + 0.6f || p.Z < MathF.Min(z0, z1) - 0.6f || p.Z > MathF.Max(z0, z1) + 0.6f)
+				{
+					continue;
+				}
+				float top = p.Y + info.MaxY;
+				best = best is float b ? MathF.Max(b, top) : top;
+			}
+		}
+		return best;
+	}
+
+	private Task<string> Build(Func<WorldScene, List<PieceSpec>> layout, string label) => OnUi(() =>
+	{
+		if (CannotEdit() is string why)
+		{
+			return why;
+		}
+		try
+		{
+			return Place(layout(_w.Session!.Scene), label);
+		}
+		catch (ArgumentException ex)
+		{
+			return ex.Message;
+		}
 	});
+
+	[McpServerTool(Name = "build_floor", Title = "Build a floor")]
+	[Description("Lays a floor of 2 x 2 m tiles (wood or stone) over a rectangle, its top at y (default: the highest ground under it, so that it rests on the ground). One pending step. Sizes that are not multiples of 2 m overhang a little.")]
+	public Task<string> BuildFloor(
+		[Description("West edge (x).")] float x0, [Description("South edge (z).")] float z0,
+		[Description("East edge (x).")] float x1, [Description("North edge (z).")] float z1,
+		[Description("wood or stone.")] string material = "wood",
+		[Description("Height of its top (optional).")] float? y = null) =>
+		Build(scene => ClaudeBuilder.Floor(x0, z0, x1, z1, y ?? HighestGround(scene, x0, z0, x1, z1), material), $"floor of {material}");
+
+	[McpServerTool(Name = "build_walls", Title = "Build walls")]
+	[Description("Builds walls on the four edges of a rectangle (the walls' middle lines on its edges), from the bottom up to a height: wood (2 m rows) or stone (1 m rows); doors are 2 m wood doors in the walls at the given points. Bottom: the top of a floor already in the rectangle, else the highest ground on its edges. One pending step. Use the floor's own rectangle so that they meet.")]
+	public Task<string> BuildWalls(
+		[Description("West edge (x).")] float x0, [Description("South edge (z).")] float z0,
+		[Description("East edge (x).")] float x1, [Description("North edge (z).")] float z1,
+		[Description("Height, metres (2 or 4 for one storey).")] float height = 4,
+		[Description("wood or stone.")] string material = "wood",
+		[Description("Doors (optional).")] DoorSpec[]? doors = null,
+		[Description("Height of the walls' bottom (optional).")] float? y = null) =>
+		Build(scene => ClaudeBuilder.Walls(x0, z0, x1, z1, y ?? HighestPieceTop(scene, x0, z0, x1, z1, "floor") ?? HighestGround(scene, x0, z0, x1, z1, edgesOnly: true),
+			height, material, (doors ?? Array.Empty<DoorSpec>()).Select(d => new ClaudeBuilder.Door(d.Side, d.At)).ToList()), $"walls of {material}");
+
+	[McpServerTool(Name = "build_roof", Title = "Build a roof")]
+	[Description("Builds a gable roof over a rectangle (the walls' lines), its ridge along the longer side: thatch or shingle, 26 or 45 degrees, its underside meeting the wall lines at the eave height (default: the top of the building pieces in the rectangle, i.e. the walls), overhanging up to 2 m; the two gable ends closed with sloped walls (gables: true). One pending step. Check it with support_check and screenshot (views: 4).")]
+	public Task<string> BuildRoof(
+		[Description("West edge (x).")] float x0, [Description("South edge (z).")] float z0,
+		[Description("East edge (x).")] float x1, [Description("North edge (z).")] float z1,
+		[Description("26 or 45 degrees.")] int angle = 45,
+		[Description("thatch or shingle.")] string material = "thatch",
+		[Description("Close the gable ends with sloped walls (default true).")] bool gables = true,
+		[Description("Height of the walls' tops (optional).")] float? eave = null) =>
+		Build(scene => ClaudeBuilder.Roof(x0, z0, x1, z1,
+			eave ?? HighestPieceTop(scene, x0, z0, x1, z1) ?? throw new ArgumentException("No walls under the roof: build the walls first, or give eave."),
+			angle, material, gables), $"{material} roof");
 
 	// The ground's height at a world point of the area (its nearest grid point).
 	private static float GroundAt(WorldScene scene, float x, float z)
@@ -450,6 +936,116 @@ public sealed class ClaudeTools
 			weakest = Enumerable.Range(0, things.Count).Where(k => !r.Free[k] && !r.Breaks[k] && r.Colour[k] >= 0).OrderBy(k => r.Colour[k]).Take(10).Select(Piece),
 			onTheGround = Enumerable.Range(0, things.Count).Count(k => r.Colour[k] < 0),
 		});
+	});
+
+	// What a container gets.
+	public sealed class ItemSpec
+	{
+		[Description("The item's prefab name, e.g. Coins, Amber, Ruby, IronScrap, SwordIron (find_prefabs with items: true).")]
+		public string Item { get; set; } = "";
+
+		[Description("How many in the stack (default 1).")]
+		public int Stack { get; set; } = 1;
+
+		[Description("Quality (upgrade level) for weapons and armour (default 1).")]
+		public int Quality { get; set; } = 1;
+	}
+
+	[McpServerTool(Name = "set_contents", Title = "Fill a chest, write a sign, set stars")]
+	[Description("Changes what an object holds, as the editor's inspector does: a container's items (they replace what it held, laid out in its slots in order), a sign's text, a creature's stars (0 to 2). One pending step; the object keeps everything else it holds.")]
+	public Task<string> SetContents(
+		[Description("The object's id (list_objects, place_pieces).")] int id,
+		[Description("For a container (chest, barrel…): its items (optional).")] ItemSpec[]? items = null,
+		[Description("For a sign: its text (optional).")] string? text = null,
+		[Description("For a creature: its stars, 0 to 2 (optional).")] int? stars = null) => OnUi(() =>
+	{
+		if (CannotEdit() is string why)
+		{
+			return why;
+		}
+		var s = _w.Session!;
+		var things = s.Scene.Things;
+		if (id < 0 || id >= things.Count || things[id].Gone)
+		{
+			return "No object with that id in the area.";
+		}
+		var t = things[id];
+		var info = TerrainEditor.Terrain.PrefabCatalog.Details(t.Prefab);
+		var set = new List<TerrainEditor.App.FieldChange>();
+		List<TerrainEditor.App.ItemUpload>? inv = null;
+		if (items != null)
+		{
+			if (info is not { ContainerW: > 0 } box)
+			{
+				return $"{_w.NameOfPrefab(t.Prefab)} is not a container.";
+			}
+			if (items.Length > box.ContainerW * box.ContainerH)
+			{
+				return $"{_w.NameOfPrefab(t.Prefab)} has {box.ContainerW * box.ContainerH} slots, not {items.Length}.";
+			}
+			inv = items.Select((it, i) => new TerrainEditor.App.ItemUpload(it.Item, null, Math.Max(1, it.Stack), Math.Max(1, it.Quality), X: i % box.ContainerW, Y: i / box.ContainerW)).ToList();
+		}
+		string kindName = _w.NameOfPrefab(t.Prefab) ?? "";
+		if (text != null)
+		{
+			if (!kindName.Contains("sign", StringComparison.OrdinalIgnoreCase))
+			{
+				return $"{kindName} is not a sign: only signs take a text.";
+			}
+			set.Add(new("strings", "text", text));
+		}
+		if (stars is int st)
+		{
+			if (!TerrainEditor.Terrain.PrefabCatalog.IsCreature(t.Prefab))
+			{
+				return $"{kindName} is not a creature: only creatures have stars.";
+			}
+			set.Add(new("ints", "level", (Math.Clamp(st, 0, 2) + 1).ToString(System.Globalization.CultureInfo.InvariantCulture)));
+		}
+		if (set.Count == 0 && inv == null)
+		{
+			return "Nothing to change: give items, text or stars.";
+		}
+		string name = _w.NameOfPrefab(t.Prefab) ?? "object";
+		try
+		{
+			TerrainEditor.Editing.NewObject replacement;
+			// (The Workshop's plot has no world files behind it: its objects carry their values.)
+			if (!_w.InWorkshop && s.Scene.World is { } world && TerrainEditor.App.ObjectData.Bytes(world, s.Edits, t.Id) is { } bytes)
+			{
+				// A world's object: its own data, changed (as the inspector does).
+				var z = TerrainEditor.App.ObjectData.Edited(bytes, set, inv);
+				replacement = new(0, z.Prefab, z.Position, z.Rotation, 0, null, false, z.Serialize());
+			}
+			else
+			{
+				// On the Workshop's plot: its values, with these.
+				var fields = (s.Edits.FindAdded(t.Id)?.Data ?? Array.Empty<TerrainEditor.Editing.ObjectField>()).ToList();
+				void Put(string section, string key, string? value)
+				{
+					int k = TerrainEditor.Save.StableHash.Of(key);
+					fields.RemoveAll(f => f.Key == k);
+					fields.Add(new(section, k, value));
+				}
+				foreach (var f in set)
+				{
+					Put(f.Section, f.Key, f.Value);
+				}
+				if (inv != null)
+				{
+					Put("bytes", "items", Convert.ToBase64String(TerrainEditor.App.ObjectData.BuildInventory(inv).Write()));
+					Put("ints", "addedDefaultItems", "1");
+				}
+				replacement = new(0, t.Prefab, t.Position, t.Rotation, t.Scale, Data: fields);
+			}
+			var copies = s.Commit($"Claude: filled {name}", null, new[] { id }, new[] { (replacement, t.Piece) });
+			_w.AfterClaudeEdit($"Claude changed what {name} holds; Ctrl+Z puts it back.");
+			return $"Changed {name}; its id is now {copies[0]}.";
+		}
+		catch (Exception ex) when (ex is FormatException or ArgumentException or OverflowException)
+		{
+			return $"Could not change it: {ex.Message}";
+		}
 	});
 
 	[McpServerTool(Name = "open_workshop", Title = "Open the Workshop")]

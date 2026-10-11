@@ -37,6 +37,15 @@ public sealed class ClaudeServer
 	public static string ClaudeCodeCommand(int port, string token) =>
 		$"claude mcp add --transport http valheim-editor {Url(port)} --header \"Authorization: Bearer {token}\"";
 
+	// What to add to Claude Desktop's configuration: this program, started as the relay (--mcp-stdio).
+	public static string DesktopConfig(string program) => new System.Text.Json.Nodes.JsonObject
+	{
+		["mcpServers"] = new System.Text.Json.Nodes.JsonObject
+		{
+			["valheim-editor"] = new System.Text.Json.Nodes.JsonObject { ["command"] = program, ["args"] = new System.Text.Json.Nodes.JsonArray("--mcp-stdio") },
+		},
+	}.ToJsonString(new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+
 	// A new secret, for the settings.
 	public static string NewToken() => Convert.ToHexString(RandomNumberGenerator.GetBytes(24)).ToLowerInvariant();
 
@@ -91,9 +100,15 @@ public sealed class ClaudeServer
 		var builder = WebApplication.CreateSlimBuilder(new WebApplicationOptions { ContentRootPath = AppContext.BaseDirectory });
 		builder.Logging.ClearProviders();
 		builder.WebHost.ConfigureKestrel(k => k.Listen(IPAddress.Loopback, port));
-		builder.Services.AddMcpServer(o => o.ServerInfo = new() { Name = "valheim-world-editor", Version = BuildInfo.Version })
+		builder.Services.AddMcpServer(o =>
+			{
+				o.ServerInfo = new() { Name = "valheim-world-editor", Version = BuildInfo.Version };
+				// How to work in the editor, given to Claude when it connects.
+				o.ServerInstructions = ClaudeGuide.Instructions;
+			})
 			.WithHttpTransport(o => o.Stateless = true)
-			.WithTools(tools);
+			.WithTools(tools)
+			.WithPrompts<ClaudePrompts>();
 		var app = builder.Build();
 		byte[] expected = Encoding.UTF8.GetBytes("Bearer " + token);
 		app.Use(async (ctx, next) =>
