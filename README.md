@@ -3,6 +3,7 @@
 [![CircleCI](https://dl.circleci.com/status-badge/img/gh/Shuiei/valheim-world-editor/tree/main.svg?style=svg)](https://dl.circleci.com/status-badge/redirect/gh/Shuiei/valheim-world-editor/tree/main)
 [![Latest release](https://img.shields.io/github/v/release/Shuiei/valheim-world-editor)](https://github.com/Shuiei/valheim-world-editor/releases/latest)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/Shuiei/valheim-world-editor/badge)](https://scorecard.dev/viewer/?uri=github.com/Shuiei/valheim-world-editor)
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/15376/badge)](https://www.bestpractices.dev/projects/15376)
 
 **A world editor for Valheim, in the spirit of Minecraft's MCEdit, WorldEdit and WorldPainter.**
 Open a world, saved or running, in a 3D window that draws it with the game's own terrain, textures
