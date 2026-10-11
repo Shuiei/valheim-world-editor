@@ -216,6 +216,10 @@ public sealed class NewWorldPage : IDisposable
     /// The typing pause before a typed seed is looked at.
     /// </summary>
     private readonly DispatcherTimer _wait = new() { Interval = TimeSpan.FromMilliseconds(350) };
+    /// <summary>
+    /// The seed's map, in cells on a side.
+    /// </summary>
+    private readonly int _previewSize;
 
     /// <summary>
     /// A distance box: 0..8000 m in steps of 250.
@@ -241,8 +245,10 @@ public sealed class NewWorldPage : IDisposable
     /// </summary>
     /// <param name="roots">The world folders to offer (tests); null for the game's own. With none, the first the game
     /// would use.</param>
-    public NewWorldPage(IReadOnlyList<string>? roots = null)
+    /// <param name="previewSize">The seed's map, in cells on a side (tests: smaller is quicker).</param>
+    public NewWorldPage(IReadOnlyList<string>? roots = null, int previewSize = 512)
     {
+        _previewSize = previewSize;
         Loading = new Border
         {
             Background = Ui.Panel,
@@ -477,7 +483,7 @@ public sealed class NewWorldPage : IDisposable
         Pending = Task.Run(async () =>
         {
             await rules.ConfigureAwait(false);
-            return SeedPreview.Make(seed, 512, parallel: true, landmarks: true, cancel.Token);
+            return SeedPreview.Make(seed, _previewSize, parallel: true, landmarks: true, cancel.Token);
         }, cancel.Token).ContinueWith(t =>
         {
             // A newer seed asked for since: that one's answer will come.

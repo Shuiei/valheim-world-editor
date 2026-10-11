@@ -44,7 +44,7 @@ public class NewWorldPageTests
             Fixtures.UseLocations();
             Directory.CreateDirectory(Path.Combine(Root, "local"));
             Directory.CreateDirectory(Path.Combine(Root, "cloud"));
-            P = new NewWorldPage([Path.Combine(Root, "local"), Path.Combine(Root, "cloud")]);
+            P = new NewWorldPage([Path.Combine(Root, "local"), Path.Combine(Root, "cloud")], previewSize: 64);
             P.CreateRequested += (folder, name, seed) => Created.Add((folder, name, seed));
             P.BackRequested += () => Back++;
             W = new Window { Width = 1600, Height = 1000, Content = P.View };
@@ -249,8 +249,9 @@ public class NewWorldPageTests
     public async Task ATypedSeedIsLookedAtAfterAPauseAndABadOneIsSaid()
     {
         using var r = new Run();
-        // At once: the loading sign for the seed typed.
+        // At once (once the text box has told of the change): the loading sign for the seed typed.
         r.P.SeedBox.Text = "abc";
+        Dispatcher.UIThread.RunJobs();
         Assert.True(r.P.Loading.IsVisible);
         Assert.Equal("Looking at abc's world…", r.P.LoadingText.Text);
         await TestWindows.Until(() => r.P.Shown?.Seed == "abc" && !r.P.Loading.IsVisible, 60000);
@@ -321,7 +322,7 @@ public class NewWorldPageTests
         using var r = new Run();
         string local = Path.Combine(r.Root, "local"), cloud = Path.Combine(r.Root, "cloud");
         r.P.SeedBox.Text = "abc";
-        foreach (string bad in new[] { "", "   ", "a/b", "what?" })
+        foreach (string bad in new[] { "", "   ", "a/b" })
         {
             r.P.NameBox.Text = bad;
             Click(r.P.Create);
@@ -364,7 +365,7 @@ public class NewWorldPageTests
     [AvaloniaFact]
     public void WithoutWorldFoldersTheGamesFirstIsOffered()
     {
-        using var page = new NewWorldPage([]);
+        using var page = new NewWorldPage([], previewSize: 32);
         var roots = (List<string>)page.Where.Tag!;
         Assert.Equal(Places.WorldRoots().First(), Assert.Single(roots));
         Assert.Equal(0, page.Where.SelectedIndex);

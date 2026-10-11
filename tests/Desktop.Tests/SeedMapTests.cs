@@ -21,7 +21,7 @@ public class SeedMapTests
     /// <summary>
     /// A small preview of a seed, with its generator (for the close look).
     /// </summary>
-    private static SeedPreview.Preview Preview(string seed = "abc") => SeedPreview.Make(seed, 64, cancel: TestContext.Current.CancellationToken);
+    private static SeedPreview.Preview Preview(string seed = "abc", int size = 64) => SeedPreview.Make(seed, size, cancel: TestContext.Current.CancellationToken);
 
     /// <summary>
     /// A map alone in a shown window of that size, laid out and drawn once (so the pointer can hit it).
@@ -203,7 +203,8 @@ public class SeedMapTests
     public async Task ZoomedInThePartInViewIsSampledAgainAndDroppedZoomedOut()
     {
         var (_, map) = Open(160, 120);
-        var p = Preview();
+        // Cells fine enough that all the world in view is coarser than them.
+        var p = Preview(size: 128);
         map.Show(p);
         // A metre a pixel, far finer than the preview's cells: sampled again after the view settles.
         map.LookAt(p.Stats.Start.X, p.Stats.Start.Z, 1);
