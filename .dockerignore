@@ -1,0 +1,3 @@
+# Build output of a local build stays out of the fuzzing image (.clusterfuzzlite/Dockerfile).
+**/bin/
+**/obj/

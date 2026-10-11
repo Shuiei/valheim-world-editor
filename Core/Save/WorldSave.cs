@@ -626,6 +626,17 @@ public sealed class WorldSave
         return save;
     }
 
+    /// <summary>The objects of one chunk file, read alone: the fuzz tests' way in.</summary>
+    internal static WorldSave ReadChunk(Stream stream)
+    {
+        WorldSave save = new() { Directory = "", SaveNumber = 0 };
+        ChunkFile file = new() { Chunk = 0, Size = 0, Version = 0, IndexCount = 0 };
+        using ValheimReader pkg = new(stream);
+        save.ReadObjects(pkg, file);
+        save.Chunks.Add(file);
+        return save;
+    }
+
     /// <summary>Reads every object of one chunk file.</summary>
     private void LoadChunk(string path, ChunkFile file)
     {

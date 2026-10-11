@@ -322,8 +322,15 @@ public sealed class ZoneDb
     /// <summary>Reads a .db2 file.</summary>
     public static ZoneDb Load(string path)
     {
+        using FileStream file = File.OpenRead(path);
+        return Load(file);
+    }
+
+    // A .db2 file's content.
+    public static ZoneDb Load(Stream stream)
+    {
         ZoneDb db = new();
-        using BinaryReader r = new(File.OpenRead(path));
+        using BinaryReader r = new(stream);
         db.FileVersion = r.ReadInt32();
         db.NetTime = r.ReadDouble();
         int len = r.ReadInt32();
