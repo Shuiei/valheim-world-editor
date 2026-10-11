@@ -9,7 +9,7 @@
 | `Core/App/` | Settings (`AppSettings`), the log (`Log`), the game's files (`GameLook`, `GameBundles`, `GameLookData`, `GameShader`, `GameTextures`), Regrow, search, blueprint formats, servers and SSH (`ServerConfig`, `Tunnel`), the local game (`LocalGame`), characters, zone statistics, folders (`Places`). |
 | `Core/Save/` | Save reader (`WorldSave`, `ValheimReader`), writer (`WorldWriter`), new worlds (`WorldCreator`), object building (`ZdoTools`: copies and blank objects), the `.db2` zone list, and live mode (`LiveBridge`, `LiveSync`). |
 | `Core/Editing/` | Pending changes: terrain per zone, deleted and added objects, zone resets (`EditStore`); heights of a block of zones (`HeightGrid`). |
-| `Core/WorldGen/` | Valheim's world generator (bit-exact base terrain), map data, location flattening, the build-piece catalogue (`pieces.json`), the prefab catalogue (`prefabs.json`), the vegetation rules (`vegetation.json`) (the game data the editor reads from the player's Valheim, the terrain modifiers and object data names, is not kept: `Core/App/GameData.cs`). |
+| `Core/WorldGen/` | Valheim's world generator (bit-exact base terrain), map data, location flattening, the build-piece catalogue (`pieces.json`), the prefab catalogue (`prefabs.json`), the vegetation rules (`vegetation.json`) (the game data the editor reads from the player's Valheim, the terrain modifiers, object data names and cave rocks, is not kept: `Core/App/GameData.cs`). |
 | `plugin/WorldEditorBridge/` | The BepInEx plugin for live mode (.NET Framework 4.7.2). |
 | `tests/Desktop.Tests/` | Every test (xUnit v3, Avalonia's headless mode), see [Tests](#tests). `tests/fixtures/` holds the test world. |
 | `tools/WorldCheck/` | Developer checks of the generator and the writer, saved objects byte by byte, and new worlds from a seed, see below. |
@@ -166,10 +166,9 @@ item stand's rule and each armour stand's slots, for the inspector's Holds / Wea
 blueprint library), `piece-place.json.gz` (the hammer's placement flags, snap points and colliders,
 for the Workshop's Build), `piece-support.json` (materials and collider boxes for the stability
 check), `vegetation.json` (the game's vegetation rules for Regrow nature,
-ZoneSystem's and the location lists', with the random draws each kind makes when it is created),
-`cave-rocks.json` (the cave roof rocks' meshes) and `dungeon-rooms.json.gz` (the Dungeon tool's
-catalogue: each dungeon kind's themes and space, and each room's size, openings and the objects the
-game makes in it with the random parts that decide them). The files are written exactly as before (`Core/App/CatalogueJson.cs`: the same
+ZoneSystem's and the location lists', with the random draws each kind makes when it is created) and
+`dungeon-rooms.json.gz` (the Dungeon tool's catalogue: each dungeon kind's themes and space, and each
+room's size, openings and the objects the game makes in it with the random parts that decide them). The files are written exactly as before (`Core/App/CatalogueJson.cs`: the same
 number format, key order and separators), so a new export shows in git only what the game changed.
 
 Some of the game's data is not kept in the repository at all: the editor reads it from the player's
@@ -182,6 +181,8 @@ it. The kinds so far:
   rather than through every object (about 4 s).
 - `zdo-keys`: the names of object data keys for the object inspector, from the string literals of
   `assembly_valheim.dll` (the save only keeps their hashes).
+- `cave-rocks`: the meshes of the rocks the Path tool's Cave hangs as its roof, from the two prefabs'
+  bundle only (found with the game files' index; under a second).
 
 The tests use trimmed copies, `tests/fixtures/<kind>.json` (what they meet; the driver's
 `gamedata <folder>` gives them to the smoke tests). After a game update, make them again with

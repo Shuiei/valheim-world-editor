@@ -1,43 +1,23 @@
 using System.Numerics;
-using System.Reflection;
-using System.Text.Json;
+using TerrainEditor.Terrain;
 
 namespace TerrainEditor.Desktop;
 
 // A cave's roof of the game's boulders (the Path tool's Cave): each boulder upside down, turned, tilted
-// and sized at random, and hung by its real underside (the game's mesh, cave-rocks.json) so it clears the headroom
+// and sized at random, and hung by its real underside (the game's mesh, CaveRocks) so it clears the headroom
 // over the whole floor beneath it. Boulders are added until the floor and the foot of the walls are
 // covered, then the walls are raised into the rock wherever its underside is above them: no daylight
 // at the sides.
 public static class CaveRoof
 {
-	private sealed record Shape(Vector3[] V, int[] T);
-
-	private static readonly Lazy<Dictionary<string, Shape>> Shapes = new(Load);
-
 	// A boulder of the roof: world position, Unity Euler rotation (degrees), scale, prefab.
 	public sealed record Rock(string Prefab, Vector3 Position, Vector3 Rotation, float Scale);
 
 	// The roof's boulders, and the walls' new heights (grid point → height it is raised to, at least).
 	public sealed record Result(List<Rock> Rocks, Dictionary<int, float> Seal, int Uncovered);
 
-	private static Dictionary<string, Shape> Load()
-	{
-		using Stream s = typeof(TerrainEditor.Terrain.PrefabCatalog).Assembly.GetManifestResourceStream("TerrainEditor.cave-rocks.json")
-			?? throw new InvalidOperationException("cave-rocks.json is not embedded");
-		using JsonDocument doc = JsonDocument.Parse(s);
-		var shapes = new Dictionary<string, Shape>();
-		foreach (JsonProperty p in doc.RootElement.EnumerateObject())
-		{
-			var v = p.Value.GetProperty("v").EnumerateArray().Select(a => new Vector3(a[0].GetSingle(), a[1].GetSingle(), a[2].GetSingle())).ToArray();
-			var t = p.Value.GetProperty("t").EnumerateArray().Select(a => a.GetInt32()).ToArray();
-			shapes[p.Name] = new Shape(v, t);
-		}
-		return shapes;
-	}
-
 	// The rock4 boulders share one model (coast, forest, heath).
-	private static Shape ShapeOf(string prefab) => Shapes.Value[prefab.StartsWith("rock4_", StringComparison.Ordinal) ? "rock4_forest" : prefab];
+	private static CaveRocks.Shape ShapeOf(string prefab) => CaveRocks.Of(prefab.StartsWith("rock4_", StringComparison.Ordinal) ? "rock4_forest" : prefab);
 
 	// The underside of a boulder (its pivot at height 0) over the grid: the lowest point of the model
 	// above each grid point it covers. (px, pz): the pivot in grid coordinates.

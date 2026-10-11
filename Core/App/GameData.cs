@@ -13,13 +13,14 @@ namespace TerrainEditor.App;
 public static class GameData
 {
 	// One kind: its name (the files' <name>.json), how it is read from the game (Valheim's folder, its
-	// bundles folder -> JSON), and who takes it.
-	private sealed record Kind(string Name, Func<string, string, string> Read, Action<string> Use);
+	// bundles -> JSON), and who takes it.
+	private sealed record Kind(string Name, Func<string, GameBundles, string> Read, Action<string> Use);
 
 	private static readonly Kind[] Kinds =
 	{
-		new("terrain-modifiers", (_, bundles) => GameCatalogues.TerrainModifiersJson(bundles), TerrainModifiers.Use),
+		new("terrain-modifiers", (_, bundles) => GameCatalogues.TerrainModifiersJson(bundles.Folder), TerrainModifiers.Use),
 		new("zdo-keys", (valheim, _) => GameCatalogues.ZdoKeysJson(valheim), ZdoKeys.Use),
+		new("cave-rocks", (_, bundles) => GameCatalogues.CaveRocksJson(bundles), CaveRocks.Use),
 	};
 
 	public static string CacheFile(string kind) => Path.Combine(AppSettings.UserDataDir, $"game-{kind}.json");
@@ -58,7 +59,7 @@ public static class GameData
 			var read = new List<(Kind, string)>();
 			foreach (var kind in Kinds)
 			{
-				if (Load(kind, valheim, bundles.Folder, CacheFile(kind.Name)) is not string json)
+				if (Load(kind, valheim, bundles, CacheFile(kind.Name)) is not string json)
 				{
 					return false;
 				}
@@ -108,11 +109,11 @@ public static class GameData
 
 	// A kind as JSON, from its cache when the game and the editor are unchanged, else read from the game
 	// (and kept); null when it cannot be read.
-	private static string? Load(Kind kind, string valheim, string bundles, string? cacheFile)
+	private static string? Load(Kind kind, string valheim, GameBundles bundles, string? cacheFile)
 	{
 		try
 		{
-			string stamp = kind.Name + " " + Stamp(valheim, bundles);
+			string stamp = kind.Name + " " + Stamp(valheim, bundles.Folder);
 			if (cacheFile != null && Cached(cacheFile, stamp) is { } cached)
 			{
 				Console.WriteLine($"Game data {kind.Name}: from the cache.");
@@ -177,7 +178,7 @@ public static class GameData
 		foreach (var kind in Kinds)
 		{
 			string path = Path.Combine(folder, kind.Name + ".json");
-			string? json = File.Exists(path) ? Load(kind, ValheimOf(bundles.Folder), bundles.Folder, null) : null;
+			string? json = File.Exists(path) ? Load(kind, ValheimOf(bundles.Folder), bundles, null) : null;
 			if (json == null)
 			{
 				Console.Error.WriteLine(File.Exists(path) ? $"The game's {kind.Name} could not be read (see the log)." : $"{path} is missing.");
