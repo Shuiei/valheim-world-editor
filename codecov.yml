@@ -1,0 +1,29 @@
+# Codecov (https://app.codecov.io/gh/Shuiei/valheim-world-editor): merges the coverage the six test
+# containers of CircleCI's core-tests and app-tests send (tools/ci-tests.sh), and checks it on every
+# pull request. Which code counts is set by tests/coverage.runsettings. Reference:
+# https://docs.codecov.com/docs/codecovyml-reference
+codecov:
+  require_ci_to_pass: true
+  notify:
+    # core-tests' three containers and app-tests' three (their parallelism): no check or comment on
+    # part of the tests.
+    after_n_builds: 6
+
+coverage:
+  precision: 2
+  round: down
+  status:
+    # The whole editor's line coverage: the check fails under 95%.
+    project:
+      default:
+        target: 95%
+        threshold: 0%
+    # The lines a pull request adds or changes: shown, not blocking.
+    patch:
+      default:
+        target: 95%
+        informational: true
+
+comment:
+  layout: "condensed_header, diff, flags, files"
+  after_n_builds: 6

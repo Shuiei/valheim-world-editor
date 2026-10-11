@@ -1,6 +1,7 @@
 # Valheim World Editor
 
 [![CircleCI](https://dl.circleci.com/status-badge/img/gh/Shuiei/valheim-world-editor/tree/main.svg?style=svg)](https://dl.circleci.com/status-badge/redirect/gh/Shuiei/valheim-world-editor/tree/main)
+[![Codecov](https://codecov.io/gh/Shuiei/valheim-world-editor/graph/badge.svg)](https://codecov.io/gh/Shuiei/valheim-world-editor)
 [![Latest release](https://img.shields.io/github/v/release/Shuiei/valheim-world-editor)](https://github.com/Shuiei/valheim-world-editor/releases/latest)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/Shuiei/valheim-world-editor/badge)](https://scorecard.dev/viewer/?uri=github.com/Shuiei/valheim-world-editor)
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/15376/badge)](https://www.bestpractices.dev/projects/15376)

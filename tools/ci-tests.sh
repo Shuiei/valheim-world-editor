@@ -5,6 +5,8 @@
 # Usage: tools/ci-tests.sh list <project>                   the project's test classes, one per line
 #        tools/ci-tests.sh run <project> <name> <class>...  runs those classes (no visual tests),
 #                                                           results in /tmp/test-results/<name>/results.xml
+#                                                           and their coverage (Cobertura) under
+#                                                           /tmp/coverage/<name>-<node>
 # <project> is a test project (tests/Core.Tests/Core.Tests.csproj, tests/Desktop.Tests/Desktop.Tests.csproj).
 # Needs the tests built (-c Release). Every test runs, so one run shows every failure; a test stuck 5
 # minutes ends the run (with a dump).
@@ -24,7 +26,11 @@ case "${1:?list or run}" in
     shift 3
     # FullyQualifiedName~<class>. matches that class's tests only (a class name ends at the dot).
     filter="Category!=Visual&($(printf 'FullyQualifiedName~%s.|' "$@" | sed 's/|$//'))"
+    # The coverage of this container's share, which the job sends to Codecov (merged there with the
+    # other containers').
     dotnet test "$project" -c Release --no-build --filter "$filter" --blame-hang-timeout 5m \
+      --settings tests/coverage.runsettings --collect "Code Coverage" \
+      --results-directory "/tmp/coverage/$name-${CIRCLE_NODE_INDEX:-0}" \
       --logger "junit;LogFilePath=/tmp/test-results/$name/results.xml" --logger "console;verbosity=normal"
     ;;
   *)
