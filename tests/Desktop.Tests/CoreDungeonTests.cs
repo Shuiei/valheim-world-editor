@@ -6,8 +6,10 @@ using Xunit;
 
 namespace WorldEditor.Tests;
 
-// Dungeons as the Dungeon tool edits them: the room list in a dungeon object, and the game's rules for
-// joining rooms at their openings, checked against a Frost Cave the game generated itself.
+/// <summary>
+/// Dungeons as the Dungeon tool edits them: the room list in a dungeon object, and the game's rules for joining rooms
+/// at their openings, checked against a Frost Cave the game generated itself.
+/// </summary>
 public class CoreDungeonTests
 {
     // The room list (roomData) of a Frost Cave of a real world (30 rooms, DG_Cave at 0, 5165.02, -2654),
@@ -16,8 +18,14 @@ public class CoreDungeonTests
 
     private static readonly Vector3 CaveAt = new(0, 5165.023f, -2654);
 
+    /// <summary>
+    /// The rooms of the generated Frost Cave.
+    /// </summary>
     private static List<Dungeons.Placed> Cave() => Dungeons.Read(Convert.FromBase64String(GeneratedCave));
 
+    /// <summary>
+    /// Whether two rotations are the same turn (either sign, nearly exactly).
+    /// </summary>
     private static bool Same(Quaternion a, Quaternion b) => MathF.Abs(Quaternion.Dot(Quaternion.Normalize(a), Quaternion.Normalize(b))) > 0.99999f;
 
     [Fact]
@@ -214,6 +222,9 @@ public class CoreDungeonTests
         Assert.Null(Dungeons.RollDoor(cave, shrine with { DoorAllowed = false }, () => 0f));
     }
 
+    /// <summary>
+    /// Positions equal when within this distance of each other.
+    /// </summary>
     private sealed class Vector3Comparer(float tolerance) : IEqualityComparer<Vector3>
     {
         public bool Equals(Vector3 a, Vector3 b) => Vector3.Distance(a, b) <= tolerance;

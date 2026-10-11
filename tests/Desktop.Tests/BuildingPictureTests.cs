@@ -6,8 +6,10 @@ using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
-// A blueprint's picture (BuildingPicture) without the game's models: its pieces' boxes, filling the
-// middle and leaving the corners clear; and what a building costs in game (PieceCost).
+/// <summary>
+/// A blueprint's picture (BuildingPicture) without the game's models: its pieces' boxes, filling the middle and leaving
+/// the corners clear; and what a building costs in game (PieceCost).
+/// </summary>
 public class BuildingPictureTests
 {
     private static readonly List<BuildingPicture.Piece> Hut =

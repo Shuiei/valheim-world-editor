@@ -5,12 +5,16 @@ using Xunit;
 
 namespace WorldEditor.Tests;
 
-// The data inside a save at its edges: the zone list's keys, locations and trailing bytes; an
-// object's values (two-byte counts, the old pre-chunk format, setting and removing values); the edit
-// store with zones it cannot use; and objects copied from templates holding only some kinds of data.
+/// <summary>
+/// The data inside a save at its edges: the zone list's keys, locations and trailing bytes; an object's values
+/// (two-byte counts, the old pre-chunk format, setting and removing values); the edit store with zones it cannot use;
+/// and objects copied from templates holding only some kinds of data.
+/// </summary>
 public class CoreSaveDataTests
 {
-    // A zone list as the live bridge sends it: two generated zones, two global keys, three locations.
+    /// <summary>
+    /// A zone list as the live bridge sends it: two generated zones, two global keys, three locations.
+    /// </summary>
     private static ZoneDb Package()
     {
         using var ms = new MemoryStream();
@@ -189,7 +193,9 @@ public class CoreSaveDataTests
         Assert.Throws<ArgumentException>(e.Sanitize);
     }
 
-    // A chest holding only text and its builder, saved into a copy of the test world.
+    /// <summary>
+    /// A chest holding only text and its builder, saved into a copy of the test world.
+    /// </summary>
     private static (WorldSave World, int Id) TextChest(TempWorld w, string scale)
     {
         var world = w.Load();

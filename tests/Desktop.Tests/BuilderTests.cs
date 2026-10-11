@@ -5,7 +5,9 @@ using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
-// Built by, and making pieces player built (the test world's chest has no builder).
+/// <summary>
+/// Built by, and making pieces player built (the test world's chest has no builder).
+/// </summary>
 [Collection("World files")]
 public class BuilderTests
 {

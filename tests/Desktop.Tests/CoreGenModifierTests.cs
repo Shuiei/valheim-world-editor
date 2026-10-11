@@ -5,14 +5,19 @@ using Xunit;
 
 namespace WorldEditor.Tests;
 
-// The game's runtime terrain modifiers (TerrainModifiers, Heightmap.ApplyModifiers) on a flat 30 m
-// zone: the hoe's raise and dig (round and square, the 8 m limit of what players do), cultivating
-// (smoothing kept within 1 m of the levelled ground), a location's flattening and its rotation,
-// which zones a modifier reaches, the game's order, and what does not count as a modifier.
+/// <summary>
+/// The game's runtime terrain modifiers (TerrainModifiers, Heightmap.ApplyModifiers) on a flat 30 m zone: the hoe's
+/// raise and dig (round and square, the 8 m limit of what players do), cultivating (smoothing kept within 1 m of the
+/// levelled ground), a location's flattening and its rotation, which zones a modifier reaches, the game's order, and
+/// what does not count as a modifier.
+/// </summary>
 public class CoreGenModifierTests
 {
     private const int N = 65;
 
+    /// <summary>
+    /// A world holding only these placed objects.
+    /// </summary>
     private static WorldSave World(params PlacedObject[] placed)
     {
         var w = new WorldSave { Directory = "none", SaveNumber = 1 };
@@ -20,13 +25,24 @@ public class CoreGenModifierTests
         return w;
     }
 
+    /// <summary>
+    /// A network object of this prefab at x, y, z, made at this time.
+    /// </summary>
     private static PlacedObject Net(string prefab, float x, float y, float z, long time = 0) => new(StableHash.Of(prefab), 0, new Vector3(x, y, z), Vector3.Zero, time);
 
+    /// <summary>
+    /// A location at x, y, z, turned by this angle.
+    /// </summary>
     private static PlacedObject Loc(string location, float x, float y, float z, float turn = 0) => new(0, StableHash.Of(location), new Vector3(x, y, z), new Vector3(0, turn, 0), 0);
 
+    /// <summary>
+    /// A zone's 65 × 65 heights, all 30 m.
+    /// </summary>
     private static float[] Flat() => [.. Enumerable.Repeat(30f, N * N)];
 
-    // The vertex of zone 0, 0 at world x, z (the zone spans -32..32).
+    /// <summary>
+    /// The vertex of zone 0, 0 at world x, z (the zone spans -32..32).
+    /// </summary>
     private static float At(float[] h, int x, int z) => h[(z + 32) * N + x + 32];
 
     [Fact]

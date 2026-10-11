@@ -5,9 +5,11 @@ using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
-// Live mode without a game: a stand-in for the WorldEditorBridge plugin, answering like it does (the
-// web tests' FakeBridge, with the calls the native app makes too: the world snapshot, the players, the
-// ground). It records what the editor sends.
+/// <summary>
+/// Live mode without a game: a stand-in for the WorldEditorBridge plugin, answering like it does (the web tests'
+/// FakeBridge, with the calls the native app makes too: the world snapshot, the players, the ground). It records what
+/// the editor sends.
+/// </summary>
 public sealed class FakeGame : IDisposable
 {
     private readonly HttpListener _listener = new();
@@ -19,8 +21,10 @@ public sealed class FakeGame : IDisposable
     public string Players { get; set; } = "[{\"name\":\"Ada\",\"x\":10,\"y\":30,\"z\":-20,\"yaw\":0},{\"name\":\"Bjorn\",\"x\":-40,\"y\":31,\"z\":5,\"yaw\":90}]";
     private int _snapshots;
     public int Snapshots => _snapshots;
-    // A label of its own for each game opened (what the window shows; the history kept on disk goes by
-    // it), so tests running together never share one.
+    /// <summary>
+    /// A label of its own for each game opened (what the window shows; the history kept on disk goes by it), so tests
+    /// running together never share one.
+    /// </summary>
     public static string Label() => "test " + Guid.NewGuid().ToString("N")[..8];
     public List<(int X, int Z)> Terrain { get; } = [];
     public List<(int Destroy, int Create)> ObjectCalls { get; } = [];
@@ -220,6 +224,9 @@ public sealed class FakeGame : IDisposable
         }
     }
 
+    /// <summary>
+    /// A local TCP port free right now.
+    /// </summary>
     public static int FreePort()
     {
         var l = new TcpListener(IPAddress.Loopback, 0);
@@ -229,5 +236,6 @@ public sealed class FakeGame : IDisposable
         return p;
     }
 
+    /// <inheritdoc/>
     public void Dispose() => _listener.Close();
 }

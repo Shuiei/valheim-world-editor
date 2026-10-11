@@ -15,13 +15,19 @@ using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
-// The last web editor features in the native app: the Area tool's cut and fill following every change
-// of the ground, the Place tool's fit (spacing for kinds wider than it), the chooser's Shift + click,
-// Untick all, all / none rows and folding categories (remembered), the green markers on new objects
-// not saved or applied yet, and placing a kind switched off in View switching it on.
+/// <summary>
+/// The last web editor features in the native app: the Area tool's cut and fill following every change of the ground,
+/// the Place tool's fit (spacing for kinds wider than it), the chooser's Shift + click, Untick all, all / none rows and
+/// folding categories (remembered), the green markers on new objects not saved or applied yet, and placing a kind
+/// switched off in View switching it on.
+/// </summary>
 [Collection("World files")]
 public class ParityLastTests
 {
+    /// <summary>
+    /// A main window on its own copy of the test world (zone 0, 0) in the given tool, with the given memory and the
+    /// Place panel's memory emptied; deleted when disposed.
+    /// </summary>
     private sealed class Run : IDisposable
     {
         public MainWindow W { get; }
@@ -46,17 +52,27 @@ public class ParityLastTests
             P.Memory.Recent.Clear();
         }
 
+        /// <inheritdoc/>
         public void Dispose() => Directory.Delete(Path.GetDirectoryName(Dir)!, recursive: true);
     }
 
+    /// <summary>
+    /// Clicks the button and runs the posted work it starts.
+    /// </summary>
     private static void Click(Button b)
     {
         b.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         Dispatcher.UIThread.RunJobs();
     }
 
+    /// <summary>
+    /// The kind chooser's tick boxes.
+    /// </summary>
     private static List<CheckBox> Ticks(Run r) => [.. r.P.List.GetLogicalDescendants().OfType<CheckBox>()];
 
+    /// <summary>
+    /// Chooses these kinds, as ticking them in the panel does.
+    /// </summary>
     private static void Choose(Run r, params string[] names)
     {
         r.T.Chosen.Clear();
@@ -100,6 +116,9 @@ public class ParityLastTests
 
     // ---- Fit
 
+    /// <summary>
+    /// A Place tool with these kinds chosen, each with a model box this wide in metres, at 100 % size.
+    /// </summary>
     private static PlaceTool FitTool(params (string Name, float Width)[] kinds)
     {
         var t = new PlaceTool { ModelBox = n => kinds.FirstOrDefault(k => k.Name == n) is { Name: not null } k ? (new Vector3(-k.Width / 2, 0, -1), new Vector3(k.Width / 2, 3, 1)) : null };
@@ -384,6 +403,9 @@ public class ParityLastTests
 
     // ---- Markers on new objects
 
+    /// <summary>
+    /// A new object of this kind at grid point (x, z) of the area, on the ground at 30 m.
+    /// </summary>
     private static NewObject Tree(EditSession s, string name, float x, float z) => new(0, StableHash.Of(name), new Vector3(x + s.Scene.X0 * 64 - 32, 30, z + s.Scene.Z0 * 64 - 32), Vector3.Zero, 1f);
 
     [AvaloniaFact]

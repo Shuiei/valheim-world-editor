@@ -6,9 +6,14 @@ using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
-// The Path tool: a line, and an action along it with a width and a soft edge.
+/// <summary>
+/// The Path tool: a line, and an action along it with a width and a soft edge.
+/// </summary>
 public class PathTests
 {
+    /// <summary>
+    /// A Path tool with these points.
+    /// </summary>
     private static PathTool Line(params (float X, float Z)[] pts)
     {
         var p = new PathTool();
@@ -19,8 +24,14 @@ public class PathTests
         return p;
     }
 
+    /// <summary>
+    /// The ground height at grid point (x, z).
+    /// </summary>
     private static float H(EditSession s, int x, int z) => s.Scene.Heights[z * s.Scene.W + x];
 
+    /// <summary>
+    /// Applies the path's action to the ground as one step; returns the zones changed.
+    /// </summary>
     private static List<int> Apply(EditSession s, PathTool p) =>
         s.EditGround("Path", g => { var (t, r, _) = p.Apply(g, s.Brush, s.Scene.Water); return (t, r); });
 
@@ -141,6 +152,10 @@ public class PathTests
         Assert.True(middle.Max() - middle.Min() > 0.1f, "bumps");
     }
 
+    /// <summary>
+    /// A shown main window editing a flat 2 × 2 zone area in the Path tool, looking straight down; with the screen
+    /// point of a grid point.
+    /// </summary>
     private static (MainWindow W, EditSession S, Func<float, float, Avalonia.Point> Screen) Open()
     {
         // Wide, and the line kept near the middle: the tool panels cover the sides.
@@ -160,6 +175,9 @@ public class PathTests
         return (w, s, Screen);
     }
 
+    /// <summary>
+    /// A left click at this screen point, with these keys held.
+    /// </summary>
     private static void Click(MainWindow w, Avalonia.Point at, RawInputModifiers mods = RawInputModifiers.None)
     {
         w.MouseDown(at, MouseButton.Left, mods);

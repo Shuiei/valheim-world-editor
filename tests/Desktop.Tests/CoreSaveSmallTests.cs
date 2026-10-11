@@ -6,9 +6,11 @@ using Xunit;
 
 namespace WorldEditor.Tests;
 
-// The save code's small parts at their edges: sectors and chunks at the world's border, item counts
-// written in one or two bytes, heightmap pictures that cannot be read (and why), item formats older
-// than the editor reads, the plugin's error answers, and a new object of a kind the game cannot make.
+/// <summary>
+/// The save code's small parts at their edges: sectors and chunks at the world's border, item counts written in one or
+/// two bytes, heightmap pictures that cannot be read (and why), item formats older than the editor reads, the plugin's
+/// error answers, and a new object of a kind the game cannot make.
+/// </summary>
 public class CoreSaveSmallTests
 {
     [Theory]
@@ -46,9 +48,14 @@ public class CoreSaveSmallTests
         }
     }
 
-    // A 2 × 2 heightmap picture, then changed in its header (the reader does not check checksums).
+    /// <summary>
+    /// A 2 × 2 heightmap picture, then changed in its header (the reader does not check checksums).
+    /// </summary>
     private static byte[] Picture() => Png.WriteGray16(2, 2, [0, 1000, 2000, 65535]);
 
+    /// <summary>
+    /// Why the PNG reader refuses these bytes.
+    /// </summary>
     private static string Refused(byte[] bytes) => Assert.Throws<InvalidDataException>(() => Png.Read(bytes)).Message;
 
     [Fact]

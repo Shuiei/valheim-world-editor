@@ -4,12 +4,16 @@ using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
-// Edge cases of the editor's small rules: every formula function and comparison, every Mask paint
-// rule and its warnings, stamps and the Place tool's memory when their files are broken or cannot be
-// written, the game's biome colours, finding a world by folder or name, and the overlays' markers,
-// square rings and styles.
+/// <summary>
+/// Edge cases of the editor's small rules: every formula function and comparison, every Mask paint rule and its
+/// warnings, stamps and the Place tool's memory when their files are broken or cannot be written, the game's biome
+/// colours, finding a world by folder or name, and the overlays' markers, square rings and styles.
+/// </summary>
 public class LogicEdgeTests
 {
+    /// <summary>
+    /// A formula of x and z, evaluated at x, z.
+    /// </summary>
     private static double Eval(string text, double x = 0, double z = 0)
     {
         var f = Formula.Compile(text, ["x", "z"]);
@@ -52,6 +56,9 @@ public class LogicEdgeTests
         Assert.Equal(double.NegativeInfinity, Eval("max()"));
     }
 
+    /// <summary>
+    /// A flat zone at 30 m with four points painted (dirt, fields, paved, a faint paint) and one bare.
+    /// </summary>
     private static Ground PaintedGround(out int dirt, out int fields, out int paved, out int faint, out int bare)
     {
         var g = new Ground(65, 65, 0, 0, 1);

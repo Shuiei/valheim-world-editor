@@ -3,10 +3,12 @@ using Xunit;
 
 namespace WorldEditor.Tests;
 
-// The ported world generator against values recorded in the real game (tests/fixtures/
-// worldgen-reference.txt, written by the TerrainDump client plugin for seed 5DCcdIcuYJ, world
-// generator version 2): Unity's random numbers and Perlin noise, 3000 heights and biomes, eight whole
-// zones and the count of lakes, rivers and streams, every value compared bit for bit.
+/// <summary>
+/// The ported world generator against values recorded in the real game (tests/fixtures/ worldgen-reference.txt, written
+/// by the TerrainDump client plugin for seed 5DCcdIcuYJ, world generator version 2): Unity's random numbers and Perlin
+/// noise, 3000 heights and biomes, eight whole zones and the count of lakes, rivers and streams, every value compared
+/// bit for bit.
+/// </summary>
 [Collection("World files")]
 public class CoreGenReferenceTests
 {

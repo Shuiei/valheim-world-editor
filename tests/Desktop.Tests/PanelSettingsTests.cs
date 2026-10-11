@@ -8,16 +8,24 @@ using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
-// The Settings window: what it shows from the settings, Browse (the folder picker), Automatic, adding
-// and taking out folders, a wrong choice explained without closing, Save keeping the choices, Cancel
-// keeping nothing, and "~" in a path. It saves to the tests' settings file, so it runs alone.
+/// <summary>
+/// The Settings window: what it shows from the settings, Browse (the folder picker), Automatic, adding and taking out
+/// folders, a wrong choice explained without closing, Save keeping the choices, Cancel keeping nothing, and "~" in a
+/// path. It saves to the tests' settings file, so it runs alone.
+/// </summary>
 [Collection("DataDir")]
 public class PanelSettingsTests
 {
+    /// <summary>
+    /// A temporary folder for the folders the Settings window is given; deleted when disposed.
+    /// </summary>
     private sealed class Temp : IDisposable
     {
         public string Root { get; } = Path.Combine(Path.GetTempPath(), "vwe-settings-ui-" + Guid.NewGuid().ToString("N")[..8]);
 
+        /// <summary>
+        /// A new folder of this name in the temporary folder.
+        /// </summary>
         public string Dir(string name)
         {
             string d = Path.Combine(Root, name);
@@ -25,7 +33,9 @@ public class PanelSettingsTests
             return d;
         }
 
-        // A folder that looks like the game's (valheim_Data/StreamingAssets/SoftRef/Bundles).
+        /// <summary>
+        /// A folder that looks like the game's (valheim_Data/StreamingAssets/SoftRef/Bundles).
+        /// </summary>
         public string Game()
         {
             string g = Dir("Valheim");
@@ -33,6 +43,7 @@ public class PanelSettingsTests
             return g;
         }
 
+        /// <inheritdoc/>
         public void Dispose()
         {
             try
@@ -45,6 +56,9 @@ public class PanelSettingsTests
         }
     }
 
+    /// <summary>
+    /// A shown 900 × 700 window to own the Settings window.
+    /// </summary>
     private static Window Owner()
     {
         var w = new Window { Width = 900, Height = 700 };
@@ -52,19 +66,33 @@ public class PanelSettingsTests
         return w;
     }
 
-    // The folders' boxes (not Claude's port and command).
+    /// <summary>
+    /// The folders' boxes (not Claude's port and command).
+    /// </summary>
     private static List<TextBox> Boxes(Window d) => [.. d.GetLogicalDescendants().OfType<TextBox>().Where(b => b.Name?.StartsWith("Claude", StringComparison.Ordinal) != true)];
 
+    /// <summary>
+    /// The text box with this name.
+    /// </summary>
     private static TextBox Named(Window d, string name) => d.GetLogicalDescendants().OfType<TextBox>().Single(b => b.Name == name);
 
+    /// <summary>
+    /// The buttons with this label.
+    /// </summary>
     private static List<Button> Buttons(Window d, string label) => [.. d.GetLogicalDescendants().OfType<Button>().Where(b => b.Content as string == label)];
 
+    /// <summary>
+    /// Clicks the button and runs the posted work it starts.
+    /// </summary>
     private static void Click(Button b)
     {
         b.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         Dispatcher.UIThread.RunJobs();
     }
 
+    /// <summary>
+    /// Every text block's text in the window, joined with " | ".
+    /// </summary>
     private static string Texts(Window d) => string.Join(" | ", d.GetLogicalDescendants().OfType<TextBlock>().Select(t => t.Text));
 
     [AvaloniaFact]

@@ -8,8 +8,10 @@ using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
-// The Mountain tool (shapes made from a seed, past the game's ±8 m) and the Path tool's Cave (a trench
-// roofed with the game's boulders), with their presets.
+/// <summary>
+/// The Mountain tool (shapes made from a seed, past the game's ±8 m) and the Path tool's Cave (a trench roofed with the
+/// game's boulders), with their presets.
+/// </summary>
 public class MountainCaveTests
 {
     private static readonly MountainSpec Peak = new(MountainKind.Peak, 80, 60, 0.6f, 0, 42);
@@ -147,6 +149,9 @@ public class MountainCaveTests
         Assert.Null(s.Mountain(20, 20, Peak, clear: true, "Mountain: test"));
     }
 
+    /// <summary>
+    /// A straight 100 m Cave line across the area (8 m wide, fixed seed), with the given depth and headroom in metres.
+    /// </summary>
     private static PathTool CaveLine(float depth = 7.5f, float headroom = 4.5f)
     {
         var path = new PathTool { Act = PathTool.Action.Cave, Width = 8, Soft = 2.5f, CaveDepth = depth, Headroom = headroom, Seed = 3, Curved = false };
@@ -211,9 +216,14 @@ public class MountainCaveTests
         Assert.Empty(CaveRoof.Build(shallow, shallow.PlanCave(s.Ground), s.Ground.W, s.Ground.H, -32, -32, (_, _) => PathTool.CaveRock.Auto).Rocks);
     }
 
+    /// <summary>
+    /// Raises the button's click (no posted work run).
+    /// </summary>
     private static void Click(Button b) => b.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
 
-    // The rail's button showing this name.
+    /// <summary>
+    /// The rail's button showing this name.
+    /// </summary>
     private static Button RailButton(MainWindow w, string name) => w.Tools.Rail.GetLogicalDescendants().OfType<Button>()
         .First(b => b.GetLogicalDescendants().OfType<TextBlock>().Any(t => t.Text == name));
 

@@ -7,10 +7,15 @@ using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
-// The tool rail's buttons and keys, its Forget stamp with no loaded picture, and the Path panel's
-// natural-look sliders (bumps and their size).
+/// <summary>
+/// The tool rail's buttons and keys, its Forget stamp with no loaded picture, and the Path panel's natural-look sliders
+/// (bumps and their size).
+/// </summary>
 public class PanelToolsTests
 {
+    /// <summary>
+    /// A shown main window editing a flat 2 × 2 zone area.
+    /// </summary>
     private static MainWindow Open()
     {
         var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
@@ -21,6 +26,9 @@ public class PanelToolsTests
         return w;
     }
 
+    /// <summary>
+    /// Clicks the button and runs the posted work it starts.
+    /// </summary>
     private static void Click(Button b)
     {
         b.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));

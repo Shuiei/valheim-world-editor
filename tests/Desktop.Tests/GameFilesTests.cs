@@ -3,9 +3,10 @@ using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
-// The game's own files read on a computer with Valheim (skipped elsewhere, as in CI): the terrain and
-// the map. Run alone:
-// dotnet test tests/Desktop.Tests --filter Category=Game
+/// <summary>
+/// The game's own files read on a computer with Valheim (skipped elsewhere, as in CI): the terrain and the map. Run
+/// alone: dotnet test tests/Desktop.Tests --filter Category=Game
+/// </summary>
 [Trait("Category", "Game")]
 public class GameFilesTests
 {

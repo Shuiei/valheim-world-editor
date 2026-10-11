@@ -7,7 +7,9 @@ using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
-// The object inspector on the test world's chest: its contents and data, edited and saved.
+/// <summary>
+/// The object inspector on the test world's chest: its contents and data, edited and saved.
+/// </summary>
 [Collection("World files")]
 public class InspectorTests
 {

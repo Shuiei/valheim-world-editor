@@ -9,16 +9,22 @@ using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
-// The Dungeon tool on the test world (zone 0, 0), with a Frost Cave of one room made there (the test
-// world has no dungeon): the panel lists it, a room picked and clicked onto an open end joins there, the
-// open ends close with end caps, a selected room is deleted, and each change is one step of the history
-// that rewrites the dungeon object's room list.
+/// <summary>
+/// The Dungeon tool on the test world (zone 0, 0), with a Frost Cave of one room made there (the test world has no
+/// dungeon): the panel lists it, a room picked and clicked onto an open end joins there, the open ends close with end
+/// caps, a selected room is deleted, and each change is one step of the history that rewrites the dungeon object's room
+/// list.
+/// </summary>
 [Collection("World files")]
 public class DungeonToolTests
 {
     private static readonly int Cave = StableHash.Of("DG_Cave");
     private static readonly Vector3 At = new(10, 5100, 10);
 
+    /// <summary>
+    /// A window on a copy of the test world with a one-room Frost Cave committed at At and the Dungeon tool on; Said
+    /// keeps the tool's last message.
+    /// </summary>
     private sealed class Run : IDisposable
     {
         public MainWindow W { get; } = new(load: false) { Width = 1600, Height = 1000 };
@@ -50,9 +56,14 @@ public class DungeonToolTests
         public void Dispose() => Directory.Delete(Path.GetDirectoryName(Dir)!, recursive: true);
     }
 
+    /// <summary>
+    /// Clicks a button.
+    /// </summary>
     private static void Click(Button b) => b.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
 
-    // The room list the dungeon object holds now (what Save to world writes).
+    /// <summary>
+    /// The room list the dungeon object holds now (what Save to world writes).
+    /// </summary>
     private static List<Dungeons.Placed> Saved(Run r)
     {
         var d = r.T.Dungeon!;

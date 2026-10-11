@@ -6,9 +6,11 @@ using Xunit.v3;
 
 namespace TerrainEditor.Desktop.Tests;
 
-// Every window a test opens is closed when that test ends (tests run in parallel: only its own). Avalonia keeps open windows, and with them
-// each test's world, scene and models: the tests never closed theirs, so the run's memory grew to
-// about 10 GB and CI (4 GB) ran out of it.
+/// <summary>
+/// Every window a test opens is closed when that test ends (tests run in parallel: only its own). Avalonia keeps open
+/// windows, and with them each test's world, scene and models: the tests never closed theirs, so the run's memory grew
+/// to about 10 GB and CI (4 GB) ran out of it.
+/// </summary>
 [AttributeUsage(AttributeTargets.Assembly)]
 public sealed class CloseWindowsAfterEachTestAttribute : BeforeAfterTestAttribute
 {
@@ -17,7 +19,9 @@ public sealed class CloseWindowsAfterEachTestAttribute : BeforeAfterTestAttribut
     private static int _hooked;
     private static volatile int _uiThread = -1;
 
-    // Called once, when the tests' Avalonia app is built: notes every window as it opens and closes.
+    /// <summary>
+    /// Called once, when the tests' Avalonia app is built: notes every window as it opens and closes.
+    /// </summary>
     internal static void Hook()
     {
         if (Interlocked.Exchange(ref _hooked, 1) != 0)
@@ -40,6 +44,9 @@ public sealed class CloseWindowsAfterEachTestAttribute : BeforeAfterTestAttribut
     // Windows of tests that have ended, waiting to be closed on Avalonia's thread.
     private static readonly List<Window> Ended = [];
 
+    /// <summary>
+    /// Takes the ended test's windows off the open list and, on Avalonia's thread, closes every window waiting.
+    /// </summary>
     public override void After(MethodInfo methodUnderTest, IXunitTest test)
     {
         lock (Open)

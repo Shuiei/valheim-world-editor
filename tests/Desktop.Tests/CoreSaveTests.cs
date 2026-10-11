@@ -5,8 +5,9 @@ using Xunit;
 
 namespace WorldEditor.Tests;
 
-// The save reader and writer on the test world: what is saved must read back exactly, and nothing
-// else may change.
+/// <summary>
+/// The save reader and writer on the test world: what is saved must read back exactly, and nothing else may change.
+/// </summary>
 public class SaveTests
 {
     [Fact]
@@ -158,7 +159,9 @@ public class SaveTests
         Assert.DoesNotContain(again.Objects, o => (int)MathF.Floor((o.Position.X + 32f) / 64f) == zx && (int)MathF.Floor((o.Position.Z + 32f) / 64f) == zz && o.Prefab == prefab);
     }
 
-    // Bytes before the data sections: flags (2), position (12), prefab (4), rotation (0, 2 or 4).
+    /// <summary>
+    /// Bytes before the data sections: flags (2), position (12), prefab (4), rotation (0, 2 or 4).
+    /// </summary>
     private static int DataStart(byte[] zdo)
     {
         ushort flags = BitConverter.ToUInt16(zdo, 0);
@@ -189,7 +192,9 @@ public class SaveTests
     }
 }
 
-// Restoring an area from a backup: objects come back with all their data.
+/// <summary>
+/// Restoring an area from a backup: objects come back with all their data.
+/// </summary>
 public class BackupTests
 {
     [Fact]

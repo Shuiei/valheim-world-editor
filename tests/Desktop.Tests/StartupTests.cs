@@ -5,9 +5,11 @@ using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
-// How the app starts: the command line (a world folder, a live game with its token, an area in the
-// editor, the tests' data folder), the log that copies everything said, the data folder's override
-// (the copied game files stay where they are), the window's icon and the documentation link.
+/// <summary>
+/// How the app starts: the command line (a world folder, a live game with its token, an area in the editor, the tests'
+/// data folder), the log that copies everything said, the data folder's override (the copied game files stay where they
+/// are), the window's icon and the documentation link.
+/// </summary>
 [Collection("DataDir")]
 public sealed class StartupTests : IDisposable
 {
@@ -15,6 +17,7 @@ public sealed class StartupTests : IDisposable
     private readonly string? _token = Environment.GetEnvironmentVariable("WORLD_BRIDGE_TOKEN");
     private readonly string _dir = Path.Combine(Path.GetTempPath(), "vwe-startup-" + Guid.NewGuid().ToString("N")[..8]);
 
+    /// <inheritdoc/>
     public void Dispose()
     {
         AppSettings.PathOverride = _settings;

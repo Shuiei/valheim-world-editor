@@ -7,11 +7,13 @@ using Xunit;
 
 namespace WorldEditor.Tests;
 
-// What the app finds in a player's home folder, on a pretend home (HOME and the XDG folders point at a
-// temporary folder, put back afterwards): settings, Valheim's world folders and old single-file worlds,
-// characters, the BepInEx folders of the game and of mod managers, the plugin's status, free ports,
-// and the SSH tunnel's checks before it connects (its key files, a closed port, a server that does
-// not speak SSH). Nothing here reads the real home, ~/.ssh or the real settings.
+/// <summary>
+/// What the app finds in a player's home folder, on a pretend home (HOME and the XDG folders point at a temporary
+/// folder, put back afterwards): settings, Valheim's world folders and old single-file worlds, characters, the BepInEx
+/// folders of the game and of mod managers, the plugin's status, free ports, and the SSH tunnel's checks before it
+/// connects (its key files, a closed port, a server that does not speak SSH). Nothing here reads the real home, ~/.ssh
+/// or the real settings.
+/// </summary>
 [Collection("DataDir")]
 public sealed class CoreAppHomeTests : IDisposable
 {
@@ -35,7 +37,9 @@ public sealed class CoreAppHomeTests : IDisposable
         LocalGame.SearchDefaultPlaces = false;
     }
 
-    // A folder that looks like the game's (for the tests that look in the default places).
+    /// <summary>
+    /// A folder that looks like the game's (for the tests that look in the default places).
+    /// </summary>
     private string FakeValheim()
     {
         string valheim = Local("Steam", "Valheim");
@@ -43,6 +47,9 @@ public sealed class CoreAppHomeTests : IDisposable
         return valheim;
     }
 
+    /// <summary>
+    /// Puts the environment variables, overridden paths and default-places search back, and deletes the pretend home.
+    /// </summary>
     public void Dispose()
     {
         foreach (var (k, v) in _old)
@@ -62,8 +69,14 @@ public sealed class CoreAppHomeTests : IDisposable
         }
     }
 
+    /// <summary>
+    /// A path inside the pretend home.
+    /// </summary>
     private string Local(params string[] parts) => Path.Combine([_home, .. parts]);
 
+    /// <summary>
+    /// Copies the test world into this folder.
+    /// </summary>
     private static void CopyWorld(string to)
     {
         using var w = new TempWorld();
@@ -210,7 +223,9 @@ public sealed class CoreAppHomeTests : IDisposable
 
     // ---- Characters.
 
-    // A character file as the game writes it, around the bits that are read: name, id, seed.
+    /// <summary>
+    /// A character file as the game writes it, around the bits that are read: name, id, seed.
+    /// </summary>
     private static byte[] Fch(string name, long id, string seed = "AbCdEfGh", byte[]? before = null)
     {
         var b = new List<byte>(before ?? [0x26, 0x00, 0x00, 0x00, 0x05])
@@ -297,6 +312,9 @@ public sealed class CoreAppHomeTests : IDisposable
 
     // ---- The game's BepInEx and the plugin.
 
+    /// <summary>
+    /// Puts the WorldEditorBridge plugin in a BepInEx folder, with its config (port and token) when a port is given.
+    /// </summary>
     private static void Plugin(string bepInEx, int? port = null, string? token = null)
     {
         Directory.CreateDirectory(Path.Combine(bepInEx, "plugins", "Tie-WorldEditorBridge"));
@@ -343,6 +361,9 @@ public sealed class CoreAppHomeTests : IDisposable
         Assert.False(bepInEx || plugin);
     }
 
+    /// <summary>
+    /// A local HTTP server giving every request the same status code and body, on a free port, once started.
+    /// </summary>
     private sealed class Status(int code, string body) : IDisposable
     {
         private readonly HttpListener _l = new();
@@ -492,6 +513,9 @@ public sealed class CoreAppHomeTests : IDisposable
 		-----END OPENSSH PRIVATE KEY-----
 		""";
 
+    /// <summary>
+    /// A tunnel request with token "token" and nothing else set beyond what is given.
+    /// </summary>
     private static Tunnel.Request Req(string host, int port, string user = "valheim", string? password = null, string? key = null, string? phrase = null) =>
         new(host, port, user, password, key, phrase, "token", null, false, null);
 

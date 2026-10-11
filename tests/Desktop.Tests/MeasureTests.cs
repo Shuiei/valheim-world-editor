@@ -6,7 +6,9 @@ using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
-// The Measure tool: a tape between two points of the ground.
+/// <summary>
+/// The Measure tool: a tape between two points of the ground.
+/// </summary>
 public class MeasureTests
 {
     [Fact]

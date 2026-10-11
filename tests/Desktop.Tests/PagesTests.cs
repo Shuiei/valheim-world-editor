@@ -7,10 +7,15 @@ using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
-// One open world shared by every area, and the pages: start, map, editor.
+/// <summary>
+/// One open world shared by every area, and the pages: start, map, editor.
+/// </summary>
 [Collection("World files")]
 public class PagesTests
 {
+    /// <summary>
+    /// Deletes the world copy's folder (the one holding the world).
+    /// </summary>
     private static void Done(string dir) => Directory.Delete(Path.GetDirectoryName(dir)!, recursive: true);
 
     [Fact]
