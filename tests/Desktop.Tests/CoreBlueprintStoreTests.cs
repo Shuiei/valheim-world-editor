@@ -4,11 +4,16 @@ using Xunit;
 
 namespace WorldEditor.Tests;
 
-// Saved copies (blueprints): files in a folder, listed with their size and content.
+/// <summary>
+/// Saved copies (blueprints): files in a folder, listed with their size and content.
+/// </summary>
 public sealed class BlueprintTests : IDisposable
 {
     private readonly string _dir = Path.Combine(Path.GetTempPath(), "vwe-bp-" + Guid.NewGuid().ToString("N")[..10]);
 
+    /// <summary>
+    /// Deletes the temporary blueprint folder.
+    /// </summary>
     public void Dispose()
     {
         try
@@ -20,6 +25,9 @@ public sealed class BlueprintTests : IDisposable
         }
     }
 
+    /// <summary>
+    /// A 3 × 2 clipboard copy holding this many beeches, with ground in one cell or none.
+    /// </summary>
     private static JsonObject Clip(int objects, bool ground) => new()
     {
         ["w"] = 3,

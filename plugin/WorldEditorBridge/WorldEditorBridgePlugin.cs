@@ -16,70 +16,100 @@ using UnityEngine;
 
 namespace WorldEditorBridge;
 
-// Live bridge for the Valheim world editor. Runs on the dedicated server (or a host) and answers on a
-// local HTTP port, protected by a token:
-//   GET /snapshot   the whole persistent world: world info, ZoneSystem data (generated zones, locations)
-//                   and every persistent object in the save file's chunk format, gzip-compressed
-//   GET /players    connected players and their positions (JSON)
-//   GET /status     plugin and world info (JSON)
-//   POST /terrain   new terrain data for zones: int count, then per zone int x, int z, int length + TCData
-//                   (TerrainComp.Save format); every player's game reloads those zones' ground
-//   POST /objects   int n + n x (long user, uint id) objects to destroy, then int m + m x (int length +
-//                   object in save format) objects to create; answers with the new objects' ids
-//   POST /zones/reset  int n + n x (int x, int z, bool keep buildings, bool reset ground): the zones'
-//                   objects are removed and the zones are generated again (at once where players are)
-// Game objects are only read on Unity's main thread; the HTTP thread waits for the answer.
+/// <summary>
+/// Live bridge for the Valheim world editor. Runs on the dedicated server (or a host) and answers on a
+/// local HTTP port, protected by a token:
+/// <code>
+///   GET /snapshot   the whole persistent world: world info, ZoneSystem data (generated zones, locations)
+///                   and every persistent object in the save file's chunk format, gzip-compressed
+///   GET /players    connected players and their positions (JSON)
+///   GET /status     plugin and world info (JSON)
+///   POST /terrain   new terrain data for zones: int count, then per zone int x, int z, int length + TCData
+///                   (TerrainComp.Save format); every player's game reloads those zones' ground
+///   POST /objects   int n + n x (long user, uint id) objects to destroy, then int m + m x (int length +
+///                   object in save format) objects to create; answers with the new objects' ids
+///   POST /zones/reset  int n + n x (int x, int z, bool keep buildings, bool reset ground): the zones'
+///                   objects are removed and the zones are generated again (at once where players are)
+///   POST /watch     int n + n x (int x, int z): one change number per zone (JSON)
+///   POST /zone      the same zone list: those zones' saved objects, gzip-compressed
+/// </code>
+/// Game objects are only read on Unity's main thread; the HTTP thread waits for the answer.
+/// </summary>
 [BepInPlugin(PluginGuid, "WorldEditorBridge", Version)]
 [SuppressMessage("Design", "CA1001:Types that own disposable fields should be disposable", Justification = "Unity owns its lifetime; OnDestroy stops the listener.")]
 public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
 {
+    /// <summary>BepInEx plugin id; it also names the settings file in BepInEx/config.</summary>
     public const string PluginGuid = "Tie.WorldEditorBridge";
 
-    // The id before 0.41.0, which named the settings file.
+    /// <summary>The id before 0.41.0, which named the settings file (Awake moves that file to the new name).</summary>
     private const string OldGuid = "local.worldeditorbridge";
 
+    /// <summary>The plugin's version: the editor's, from the build. /status reports it.</summary>
     public const string Version = BuildInfo.Version;
 
+    /// <summary>Format version written after "VWEB" at the start of a snapshot.</summary>
     private const int SnapshotVersion = 1;
 
+    /// <summary>Address the listener binds to (Http.BindAddress).</summary>
     private ConfigEntry<string> _bind;
 
+    /// <summary>TCP port of the bridge (Http.Port).</summary>
     private ConfigEntry<int> _port;
 
+    /// <summary>
+    /// Secret every request must carry (X-Bridge-Token header or ?token=); made on first start when empty.
+    /// </summary>
     private ConfigEntry<string> _token;
 
+    /// <summary>The HTTP listener on the bind address and port (also localhost when bound to 127.0.0.1).</summary>
     private HttpListener _listener;
 
+    /// <summary>The background thread accepting requests (<c>Serve</c>).</summary>
     private Thread _thread;
 
+    /// <summary>Cleared by OnDestroy so that <c>Serve</c> stops.</summary>
     private volatile bool _running;
 
+    /// <summary>Work the HTTP threads hand to Unity's main thread; <c>Update</c> runs it.</summary>
     private readonly ConcurrentQueue<Job> _jobs = new();
 
+    /// <summary>ZDOMan's private dictionary of every object the game knows, by id.</summary>
     private static readonly FieldInfo ObjectsById = typeof(ZDOMan).GetField("m_objectsByID", BindingFlags.Instance | BindingFlags.NonPublic);
 
+    /// <summary>ZoneSystem's private set of the zones already generated.</summary>
     private static readonly FieldInfo GeneratedZones = typeof(ZoneSystem).GetField("m_generatedZones", BindingFlags.Instance | BindingFlags.NonPublic);
 
-    // ZDO keeps its rotation as Euler angles; reading them avoids a quaternion round trip.
+    /// <summary>ZDO keeps its rotation as Euler angles; reading them avoids a quaternion round trip.</summary>
     private static readonly FieldInfo ZdoRotation = typeof(ZDO).GetField("m_rotation", BindingFlags.Instance | BindingFlags.NonPublic);
 
+    /// <summary>ZoneSystem's private set of the world's global keys, written into the snapshot.</summary>
     private static readonly FieldInfo GlobalKeys = typeof(ZoneSystem).GetField("m_globalKeys", BindingFlags.Instance | BindingFlags.NonPublic);
 
+    /// <summary>One piece of work for the main thread and its outcome, which the HTTP thread waits for.</summary>
     [SuppressMessage("Design", "CA1001:Types that own disposable fields should be disposable", Justification = "Both threads hold Done; it is left to the GC, as before.")]
     private sealed class Job
     {
+        /// <summary>Runs on the main thread; returns the response body.</summary>
         public Func<byte[]> Work;
 
+        /// <summary>What <c>Work</c> returned.</summary>
         public byte[] Result;
 
+        /// <summary>What <c>Work</c> threw, thrown again on the HTTP thread.</summary>
         public Exception Error;
 
+        /// <summary>Set once <c>Work</c> has run (or failed).</summary>
         public readonly ManualResetEventSlim Done = new(false);
 
-        // 0 waiting, 1 taken by the main thread, 2 given up by the caller (never runs).
+        /// <summary>0 waiting, 1 taken by the main thread, 2 given up by the caller (never runs).</summary>
         public int State;
     }
 
+    /// <summary>
+    /// Moves the settings made under the old id, binds the settings (making a token when there is none) and starts
+    /// listening on its own thread. Unity calls it by name.
+    /// </summary>
     [SuppressMessage("CodeQuality", "IDE0051:Remove unused private members", Justification = "Unity calls it by name.")]
     private void Awake()
     {
@@ -132,6 +162,7 @@ public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
         }
     }
 
+    /// <summary>Stops the listener, which ends <c>Serve</c>. Unity calls it by name.</summary>
     [SuppressMessage("CodeQuality", "IDE0051:Remove unused private members", Justification = "Unity calls it by name.")]
     private void OnDestroy()
     {
@@ -145,6 +176,10 @@ public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
         }
     }
 
+    /// <summary>
+    /// Runs at most four queued jobs per frame on Unity's main thread, skipping those their caller gave up on.
+    /// Unity calls it by name.
+    /// </summary>
     [SuppressMessage("CodeQuality", "IDE0051:Remove unused private members", Justification = "Unity calls it by name.")]
     private void Update()
     {
@@ -167,6 +202,15 @@ public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
         }
     }
 
+    /// <summary>
+    /// Runs <paramref name="work"/> on Unity's main thread and waits for it. Given up on after the timeout, a job
+    /// never runs later (the editor, told it failed, sends it again: objects would be made twice); one the main
+    /// thread already took is waited for, as it is quick once started.
+    /// </summary>
+    /// <param name="work">Reads or changes the game; returns the response body.</param>
+    /// <param name="timeoutMs">Milliseconds to wait before giving up on a job the main thread has not taken yet.</param>
+    /// <returns>What <paramref name="work"/> returned; what it threw is thrown here, and a
+    /// <see cref="TimeoutException"/> when the game did not take the job in time.</returns>
     private byte[] OnMainThread(Func<byte[]> work, int timeoutMs = 30000)
     {
         Job job = new() { Work = work };
@@ -188,6 +232,9 @@ public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
         return job.Result;
     }
 
+    /// <summary>
+    /// The listener thread's loop: each request is answered on the thread pool, until the plugin stops.
+    /// </summary>
     private void Serve()
     {
         while (_running)
@@ -209,6 +256,10 @@ public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
         }
     }
 
+    /// <summary>
+    /// Answers one request by its path, after checking the token and that this game hosts a loaded world (a client
+    /// connected to someone else's server only knows the objects around it). A failure answers 500 with its message.
+    /// </summary>
     private void Handle(HttpListenerContext ctx)
     {
         HttpListenerResponse res = ctx.Response;
@@ -331,6 +382,7 @@ public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
         }
     }
 
+    /// <summary>A request body, read to its end.</summary>
     private static byte[] ReadAll(Stream s)
     {
         using MemoryStream ms = new();
@@ -338,10 +390,14 @@ public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
         return ms.ToArray();
     }
 
+    /// <summary>Prefab hash of _TerrainCompiler, the per-zone object holding the zone's ground edits (TCData).</summary>
     private static readonly int TerrainCompilerPrefab = "_TerrainCompiler".GetStableHashCode();
 
-    // Sets the terrain data of each zone's terrain compiler object (creating it when the zone has
-    // none). The game syncs the object to everyone, and TerrainComp reloads when its data changes.
+    /// <summary>
+    /// POST /terrain: sets the terrain data of each zone's terrain compiler object (creating it when the zone has
+    /// none). The game syncs the object to everyone, and TerrainComp reloads when its data changes.
+    /// </summary>
+    /// <returns>JSON: how many zones were applied and how many compilers were made.</returns>
     private byte[] ApplyTerrain(byte[] body)
     {
         ZPackage pkg = new(body);
@@ -379,12 +435,16 @@ public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
         return Encoding.UTF8.GetBytes($"{{\"applied\":{applied},\"created\":{created}}}");
     }
 
-    // Destroys objects (as their owner, so every peer drops them) and creates new ones from objects in
-    // the save file format (flags, position, prefab, rotation, data), like ZDO.Load but for a new object.
-    // Editors from 1.15.4 add each destroyed object's prefab and position: another mod may have made it
-    // again under a new ZDOID (ServersideQoL does, for build pieces, plants, fires and more), and then
-    // the object of that prefab at that place goes instead. Without this, undoing a placed piece found
-    // it "already gone" while every player kept seeing the new one.
+    /// <summary>
+    /// POST /objects: destroys objects (as their owner, so every peer drops them) and creates new ones from objects
+    /// in the save file format (flags, position, prefab, rotation, data), like ZDO.Load but for a new object.
+    /// Editors from 1.15.4 add each destroyed object's prefab and position: another mod may have made it again under
+    /// a new ZDOID (ServersideQoL does, for build pieces, plants, fires and more), and then the object of that prefab
+    /// at that place goes instead. Without this, undoing a placed piece found it "already gone" while every player
+    /// kept seeing the new one.
+    /// </summary>
+    /// <returns>JSON: destroyed (refound included), refound, missing (already gone) and the created objects' ids as
+    /// "user:id" strings, in the order they were sent.</returns>
     private byte[] ApplyObjects(byte[] body)
     {
         ZPackage pkg = new(body);
@@ -445,8 +505,13 @@ public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
         return Encoding.UTF8.GetBytes($"{{\"destroyed\":{destroyed + refound},\"refound\":{refound},\"missing\":{missing},\"created\":[{ids}]}}");
     }
 
-    // The objects of these prefabs at these places (within 10 cm: a re-made object keeps its position),
-    // each at most once; returns how many were found and destroyed.
+    /// <summary>
+    /// Destroys the objects of these prefabs at these places (within 10 cm: a re-made object keeps its position),
+    /// each at most once.
+    /// </summary>
+    /// <param name="wanted">Prefab hash and position of each object to find.</param>
+    /// <param name="session">This game's session id, made the objects' owner so the destroy reaches every peer.</param>
+    /// <returns>How many were found and destroyed.</returns>
     private static int DestroyAtPlace(List<(int Prefab, Vector3 Position)> wanted, long session)
     {
         Dictionary<int, List<Vector3>> byPrefab = [];
@@ -480,11 +545,15 @@ public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
         return found;
     }
 
+    /// <summary>Prefab hash of players' tombstones, which a zone reset always keeps.</summary>
     private static readonly int TombstonePrefab = "Player_tombstone".GetStableHashCode();
 
-    // Like the editor's offline reset: every saved object of the zones goes (player-built pieces stay when
-    // asked, the ground edits only when asked, players' tombstones always stay), the zones are no longer
-    // marked as generated and their locations as not placed, so the game builds them again.
+    /// <summary>
+    /// POST /zones/reset, like the editor's offline reset: every saved object of the zones goes (player-built pieces
+    /// stay when asked, the ground edits only when asked, players' tombstones always stay), the zones are no longer
+    /// marked as generated and their locations as not placed, so the game builds them again.
+    /// </summary>
+    /// <returns>JSON: zones reset, objects removed and locations to place again.</returns>
     private byte[] ResetZones(byte[] body)
     {
         ZPackage pkg = new(body);
@@ -531,8 +600,11 @@ public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
         return Encoding.UTF8.GetBytes($"{{\"zones\":{zones.Count},\"destroyed\":{destroyed},\"locations\":{locations}}}");
     }
 
-    // An object as the save writes it (ZDO.Save), read whole into what makes it: nothing is made in the
-    // game until that is called.
+    /// <summary>
+    /// An object as the save writes it (ZDO.Save), read whole into what makes it: nothing is made in the game until
+    /// that is called.
+    /// </summary>
+    /// <returns>Creates the object (main thread only), relinking it when it had a link, and returns it.</returns>
     private static Func<ZDO> ReadSaveFormat(ZPackage p)
     {
         int flags = p.ReadUShort();
@@ -598,7 +670,7 @@ public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
         };
     }
 
-    // Like ZNetView.Awake for the _TerrainCompiler prefab, at the zone centre.
+    /// <summary>Like ZNetView.Awake for the _TerrainCompiler prefab, at the zone centre.</summary>
     private static ZDO CreateTerrainCompiler(Vector2s zone)
     {
         GameObject prefab = ZNetScene.instance.GetPrefab(TerrainCompilerPrefab);
@@ -613,6 +685,7 @@ public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
         return zdo;
     }
 
+    /// <summary>Writes a whole response and closes it.</summary>
     private static void Reply(HttpListenerResponse res, int code, string type, byte[] body)
     {
         res.StatusCode = code;
@@ -622,10 +695,15 @@ public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
         res.OutputStream.Close();
     }
 
+    /// <summary>A JSON string literal (only backslashes and quotes are escaped).</summary>
     private static string Json(string s) => "\"" + s.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"";
 
+    /// <summary>A float for JSON: round-trip form, invariant culture.</summary>
     private static string F(float v) => v.ToString("R", CultureInfo.InvariantCulture);
 
+    /// <summary>
+    /// GET /status: plugin version, world and seed names, object and player counts and the network time, as JSON.
+    /// </summary>
     private byte[] Status()
     {
         World w = ZNet.World;
@@ -634,6 +712,10 @@ public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
         return Encoding.UTF8.GetBytes(json);
     }
 
+    /// <summary>
+    /// GET /players: each connected player's name, position and yaw (degrees), as a JSON array. The position is the
+    /// character object's when the server has it, else the one the player reported.
+    /// </summary>
     private byte[] Players()
     {
         StringBuilder sb = new("[");
@@ -653,10 +735,15 @@ public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
         return Encoding.UTF8.GetBytes(sb.Append(']').ToString());
     }
 
-    // Snapshot layout (all little endian, strings as .NET BinaryWriter strings):
-    //   "VWEB" int version, string world, string seedName, int seed, int worldGenVersion, double netTime
-    //   int length + ZoneSystem package (as ZoneSystem.Save writes it, uncompressed)
-    //   short 41, int count, count objects (ZDO.Save chunk format), then count x (long user, uint id)
+    /// <summary>
+    /// GET /snapshot. Layout (all little endian, strings as .NET BinaryWriter strings):
+    /// <code>
+    ///   "VWEB" int version, string world, string seedName, int seed, int worldGenVersion, double netTime
+    ///   int length + ZoneSystem package (as ZoneSystem.Save writes it, uncompressed)
+    ///   short 41, int count, count objects (ZDO.Save chunk format), then count x (long user, uint id)
+    /// </code>
+    /// Only persistent objects are written; the HTTP thread gzips it.
+    /// </summary>
     private byte[] Snapshot()
     {
         World w = ZNet.World;
@@ -698,7 +785,7 @@ public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
         return pkg.GetArray();
     }
 
-    // Same layout as ZoneSystem.Save: generated zones, location version, global keys, locations.
+    /// <summary>Same layout as ZoneSystem.Save: generated zones, location version, global keys, locations.</summary>
     private static byte[] ZoneSystemData()
     {
         ZoneSystem zs = ZoneSystem.instance;
@@ -732,12 +819,13 @@ public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
     // ---- What changes in the zones the editor shows (it asks every few seconds: only those zones are
     // read, from the game's own per-zone lists, never the whole world).
 
+    /// <summary>ZDOMan's private per-zone object lists, indexed by ZoneSystem.SectorToIndex.</summary>
     private static readonly FieldInfo ObjectsBySector = typeof(ZDOMan).GetField("m_objectsBySector", BindingFlags.Instance | BindingFlags.NonPublic);
 
-    // Portals are kept apart from the zone lists, in their own (by zone too).
+    /// <summary>Portals are kept apart from the zone lists, in their own (by zone too).</summary>
     private static readonly FieldInfo PortalObjects = typeof(ZDOMan).GetField("m_portalObjects", BindingFlags.Instance | BindingFlags.NonPublic);
 
-    // Zones asked for: int count, then int x, int z each (outside the world: left out).
+    /// <summary>Zones asked for: int count, then int x, int z each (outside the world: left out).</summary>
     private static List<Vector2s> ReadZones(byte[] body)
     {
         ZPackage pkg = new(body);
@@ -754,8 +842,10 @@ public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
         return zones;
     }
 
-    // The saved objects of a zone (persistent ZDOs), as the game keeps them by zone: its list, and its
-    // portals (kept apart).
+    /// <summary>
+    /// The saved objects of a zone (persistent ZDOs), as the game keeps them by zone: its list, and its portals
+    /// (kept apart).
+    /// </summary>
     private static IEnumerable<ZDO> ZoneZdos(Vector2s zone)
     {
         var bySector = (List<ZDO>[])ObjectsBySector.GetValue(ZDOMan.instance);
@@ -775,13 +865,17 @@ public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
         }
     }
 
-    // Kinds that move by themselves (creatures, ships, carts, items: they sync their transform): their
-    // moves are not changes to the world worth reading again.
+    /// <summary>Cache of <c>Moves</c>, by prefab hash.</summary>
     private static readonly Dictionary<int, bool> Movers = [];
 
-    // And kinds that rewrite their data on their own every few seconds while a player is near (fires and
-    // torches their fuel time, smelters, cooking stations, beehives, fermenters, sap collectors): that is
-    // not a change worth reading their zone again for (they would be read at every look).
+    /// <summary>
+    /// Kinds whose own changes <c>Watch</c> leaves out. Kinds that move by themselves (creatures, ships, carts, items:
+    /// they sync their transform): their moves are not changes to the world worth reading again. And kinds that
+    /// rewrite their data on their own every few seconds while a player is near (fires and torches their fuel time,
+    /// smelters, cooking stations, beehives, fermenters, sap collectors): that is not a change worth reading their
+    /// zone again for (they would be read at every look).
+    /// </summary>
+    /// <returns>True for those kinds; false for others and for prefabs the game does not know.</returns>
     private static bool Moves(int prefab)
     {
         if (!Movers.TryGetValue(prefab, out bool moves))
@@ -796,9 +890,12 @@ public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
         return moves;
     }
 
-    // One number per zone that changes when an object there is made, removed or changed (its data or
-    // place; a mover or a ticking kind only when made or removed): the editor reads a zone again when it
-    // changes, and then sees every object as it is.
+    /// <summary>
+    /// POST /watch: one number per zone that changes when an object there is made, removed or changed (its data or
+    /// place; a mover or a ticking kind only when made or removed): the editor reads a zone again when it changes,
+    /// and then sees every object as it is.
+    /// </summary>
+    /// <returns>JSON <c>{"zones":[[x,z,"number"],...]}</c>, the number as a string (it is a 64-bit unsigned).</returns>
     private static byte[] Watch(byte[] body)
     {
         StringBuilder sb = new("{\"zones\":[");
@@ -820,8 +917,10 @@ public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
         return Encoding.UTF8.GetBytes(sb.Append("]}").ToString());
     }
 
-    // The saved objects of the zones asked for, in the snapshot's format: int count, then for each its
-    // ZDOID (long, uint) and its bytes (int length, bytes).
+    /// <summary>
+    /// POST /zone: the saved objects of the zones asked for, in the snapshot's format: int count, then for each its
+    /// ZDOID (long, uint) and its bytes (int length, bytes). The HTTP thread gzips it.
+    /// </summary>
     private static byte[] ZoneObjects(byte[] body)
     {
         var links = SnapshotLinks();
@@ -846,14 +945,21 @@ public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
         return pkg.GetArray();
     }
 
-    // Links between objects (a spawner and what it spawned, two portals...), as the save writes them: a
-    // hash on the object holding the link and the same hash, marked Target, on its target. The hash is
-    // kept with both objects' ids (main thread only), so an object made again from the snapshot (an
-    // undone delete) gets its link back, and links to it follow it to its new id.
+    /// <summary>
+    /// Links between objects (a spawner and what it spawned, two portals...), as the save writes them: a hash on the
+    /// object holding the link and the same hash, marked Target, on its target. The hash is kept with both objects'
+    /// ids (main thread only), so an object made again from the snapshot (an undone delete) gets its link back, and
+    /// links to it follow it to its new id.
+    /// </summary>
     private static readonly Dictionary<int, (ZDOExtraData.ConnectionType Type, ZDOID Source, ZDOID Target)> Links = [];
 
+    /// <summary>The hash of the link <paramref name="source"/> holds, from its id; odd, so never 0.</summary>
     private static int LinkHash(ZDOID source) => unchecked((int)(source.UserID * 486187739L) ^ (int)source.ID * 16777619) | 1;
 
+    /// <summary>
+    /// The link each object carries in the save (type and hash), recording every link in <c>Links</c> on the way.
+    /// An object both holding a link and the target of one carries the one it holds. Main thread only.
+    /// </summary>
     private static Dictionary<ZDOID, (ZDOExtraData.ConnectionType Type, int Hash)> SnapshotLinks()
     {
         var of = new Dictionary<ZDOID, (ZDOExtraData.ConnectionType, int)>();
@@ -884,9 +990,11 @@ public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
         return of;
     }
 
-    // An object made again from the snapshot (its old link: type and hash) in place of one that is gone
-    // (an undone delete, a move): its link back, and the links to its old id now to it. A copy of an
-    // object still there (a paste) takes no link: it would take the original's.
+    /// <summary>
+    /// An object made again from the snapshot (its old link: type and hash) in place of one that is gone (an undone
+    /// delete, a move): its link back, and the links to its old id now to it. A copy of an object still there (a
+    /// paste) takes no link: it would take the original's.
+    /// </summary>
     private static void Relink(ZDO made, ZDOExtraData.ConnectionType type, int hash)
     {
         if (!Links.TryGetValue(hash, out var link))
@@ -921,7 +1029,12 @@ public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
         }
     }
 
-    // Mirrors ZDO.Save (world version 41), reading the live data instead of the save-time copy.
+    /// <summary>
+    /// Mirrors ZDO.Save (world version 41), reading the live data instead of the save-time copy.
+    /// </summary>
+    /// <param name="pkg">Where the object is written.</param>
+    /// <param name="zdo">The object.</param>
+    /// <param name="links">Each linked object's link, from <c>SnapshotLinks</c>.</param>
     private static void WriteZdo(ZPackage pkg, ZDO zdo, Dictionary<ZDOID, (ZDOExtraData.ConnectionType Type, int Hash)> links)
     {
         ZDOExtraData.GetData(zdo.m_uid, out var floats, out var vec3s, out var quats, out var ints, out var longs, out var strings, out var bytes, out ZDOConnection _);
@@ -1000,6 +1113,7 @@ public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
         Section(pkg, bytes, pkg.Write);
     }
 
+    /// <summary>One typed data section of ZDO.Save: item count, then key and value of each; nothing when empty.</summary>
     private static void Section<T>(ZPackage pkg, List<KeyValuePair<int, T>> items, Action<T> write)
     {
         if (items.Count == 0)

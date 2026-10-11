@@ -5,17 +5,25 @@ using Xunit;
 
 namespace WorldEditor.Tests;
 
-// The game's hammer (Hammer, after Player.UpdatePlacementGhost and FindClosestSnapPoints) with the
-// game's own pieces: on the ground a piece rests on its colliders; pointed at a wall's top, the next
-// wall stands on it; near a wall's end, beside it; turned as asked; never right where the same piece
-// stands; rugs (clip everything) at the point itself.
+/// <summary>
+/// The game's hammer (Hammer, after Player.UpdatePlacementGhost and FindClosestSnapPoints) with the game's own pieces:
+/// on the ground a piece rests on its colliders; pointed at a wall's top, the next wall stands on it; near a wall's
+/// end, beside it; turned as asked; never right where the same piece stands; rugs (clip everything) at the point
+/// itself.
+/// </summary>
 public class CoreHammerTests
 {
     private const float Ground = 30;
     private static readonly Quaternion None = Quaternion.Identity;
 
+    /// <summary>
+    /// Asserts two points are within a millimetre.
+    /// </summary>
     private static void Near(Vector3 want, Vector3 got) => Assert.True(Vector3.Distance(want, got) < 1e-3f, $"{want} != {got}");
 
+    /// <summary>
+    /// The hammer's hit looking straight down at x, z from 50 m above the ground.
+    /// </summary>
     private static Hammer.Hit Down(float x, float z, IEnumerable<Hammer.Placed> pieces)
     {
         var o = new Vector3(x, Ground + 50, z);

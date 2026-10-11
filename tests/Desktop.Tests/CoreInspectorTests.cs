@@ -7,7 +7,9 @@ using Xunit;
 
 namespace WorldEditor.Tests;
 
-// The object inspector: reading every object of the test world, chest contents, and edits that are saved.
+/// <summary>
+/// The object inspector: reading every object of the test world, chest contents, and edits that are saved.
+/// </summary>
 public class InspectorTests
 {
     [Fact]
@@ -116,7 +118,9 @@ public class InspectorTests
     }
 }
 
-// Searching the whole world for kinds, items in containers and texts.
+/// <summary>
+/// Searching the whole world for kinds, items in containers and texts.
+/// </summary>
 public class SearchTests
 {
     [Fact]
@@ -165,7 +169,9 @@ public class SearchTests
     }
 }
 
-// The map's zone filter: generated zones with their buildings, edits and distance to buildings.
+/// <summary>
+/// The map's zone filter: generated zones with their buildings, edits and distance to buildings.
+/// </summary>
 public class ZoneStatsTests
 {
     [Fact]
@@ -209,13 +215,18 @@ public class ZoneStatsTests
     }
 }
 
-// New pieces are player built: they get the chosen builder as "creator", like pieces built in the game.
-// Opening worlds sets the builder for new pieces (WorldSave.Builder): one world at a time.
+/// <summary>
+/// New pieces are player built: they get the chosen builder as "creator", like pieces built in the game. Opening worlds
+/// sets the builder for new pieces (WorldSave.Builder): one world at a time.
+/// </summary>
 [Collection("World files")]
 public class BuilderTests
 {
     private static readonly int CreatorKey = StableHash.Of("creator");
 
+    /// <summary>
+    /// The "creator" an object holds (0: none).
+    /// </summary>
     private static long CreatorOf(byte[] bytes) => ZdoData.Parse(bytes).LongList.FirstOrDefault(l => l.Key == CreatorKey).Value;
 
     [Fact]

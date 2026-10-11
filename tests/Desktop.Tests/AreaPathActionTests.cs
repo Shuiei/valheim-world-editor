@@ -3,13 +3,21 @@ using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
-// Every ground action of the Area and Path tools on a flat area (30 m): what it does inside, that the
-// outside is untouched, that the Mask stops it, and the shapes' own edges (a path drawn freehand, an
-// area's last point taken back, a polygon closed with Enter).
+/// <summary>
+/// Every ground action of the Area and Path tools on a flat area (30 m): what it does inside, that the outside is
+/// untouched, that the Mask stops it, and the shapes' own edges (a path drawn freehand, an area's last point taken
+/// back, a polygon closed with Enter).
+/// </summary>
 public class AreaPathActionTests
 {
+    /// <summary>
+    /// The height at grid point (x, z) of the area.
+    /// </summary>
     private static float H(EditSession s, int x, int z) => s.Scene.Heights[z * s.Scene.W + x];
 
+    /// <summary>
+    /// A box selection between two grid corners, with a hard edge.
+    /// </summary>
     private static AreaTool Box(float x0, float z0, float x1, float z1)
     {
         var a = new AreaTool { Soft = 0 };
@@ -18,10 +26,15 @@ public class AreaPathActionTests
         return a;
     }
 
+    /// <summary>
+    /// Runs a ground action of the Area tool as one edit step; returns what EditGround returns.
+    /// </summary>
     private static List<int> Area(EditSession s, AreaTool a, AreaTool.GroundAction act, float height = 0, float amount = 2, float[]? paint = null, Func<int, float>? mask = null) =>
         s.EditGround($"Area: {act}", g => a.Apply(g, s.Brush, act, height, amount, paint ?? new float[4], mask));
 
-    // Bumpy ground: a 1 m ripple raised over the whole area.
+    /// <summary>
+    /// Bumpy ground: a 1 m ripple raised over the whole area.
+    /// </summary>
     private static EditSession Bumpy()
     {
         var s = EditTests.Flat(2);
@@ -29,6 +42,10 @@ public class AreaPathActionTests
         return s;
     }
 
+    /// <summary>
+    /// How uneven the ground is over a grid rectangle (corners included): the standard deviation of its heights, in
+    /// metres.
+    /// </summary>
     private static double Spread(EditSession s, int x0, int z0, int x1, int z1)
     {
         var v = new List<double>();
@@ -143,6 +160,9 @@ public class AreaPathActionTests
         Assert.Equal(2, box.Points.Count);
     }
 
+    /// <summary>
+    /// A straight, hard-edged path across the area (grid x 20 to 108 at z 64) doing this action.
+    /// </summary>
     private static PathTool Line(PathTool.Action act, float width = 8)
     {
         var p = new PathTool { Act = act, Width = width, Soft = 0, Amount = 2, Curved = false };
@@ -151,6 +171,9 @@ public class AreaPathActionTests
         return p;
     }
 
+    /// <summary>
+    /// Runs the path as one edit step, through the mask if one is given.
+    /// </summary>
     private static List<int> Apply(EditSession s, PathTool p, Func<int, float>? mask = null) =>
         s.EditGround("Path", g => { var (t, r, _) = p.Apply(g, s.Brush, s.Scene.Water, mask); return (t, r); });
 

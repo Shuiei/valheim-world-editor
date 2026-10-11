@@ -8,9 +8,14 @@ using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
-// The Area tool: a box or polygon selection, and the actions done inside it.
+/// <summary>
+/// The Area tool: a box or polygon selection, and the actions done inside it.
+/// </summary>
 public class AreaTests
 {
+    /// <summary>
+    /// A box selection between two grid corners, with this soft edge.
+    /// </summary>
     private static AreaTool Box(float x0, float z0, float x1, float z1, float soft = 0)
     {
         var a = new AreaTool { Soft = soft };
@@ -19,6 +24,9 @@ public class AreaTests
         return a;
     }
 
+    /// <summary>
+    /// The height at grid point (x, z) of the area.
+    /// </summary>
     private static float H(EditSession s, int x, int z) => s.Scene.Heights[z * s.Scene.W + x];
 
     [Fact]
@@ -94,6 +102,10 @@ public class AreaTests
 
     private static readonly int Beech = StableHash.Of("Beech1"), Rock = StableHash.Of("rock4_coast"), Wall = StableHash.Of("wood_wall_half");
 
+    /// <summary>
+    /// A window on a flat area holding three trees and rocks, a wall and a far tree, with the Area tool on and a box
+    /// from grid (50, 50) to (70, 70) around the first four.
+    /// </summary>
     private static (MainWindow W, EditSession S) Open()
     {
         var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
@@ -220,10 +232,15 @@ public class AreaTests
     }
 }
 
-// Regrow and Restore from a backup, on a copy of the test world.
+/// <summary>
+/// Regrow and Restore from a backup, on a copy of the test world.
+/// </summary>
 [Collection("World files")]
 public class AreaWorldTests
 {
+    /// <summary>
+    /// A window on zone 0, 0 of a copy of the test world, with the Area tool selecting the whole zone.
+    /// </summary>
     private static (MainWindow W, EditSession S, string Dir) Open()
     {
         string dir = EditTests.CopyFixture();
@@ -240,6 +257,9 @@ public class AreaWorldTests
         return (w, scene.Session!, dir);
     }
 
+    /// <summary>
+    /// Deletes the copy of the test world (its temporary parent folder).
+    /// </summary>
     private static void Done(string dir) => Directory.Delete(Path.GetDirectoryName(dir)!, recursive: true);
 
     // Saving offline is like Apply live: the area and its history stay, the steps saved; an undo is

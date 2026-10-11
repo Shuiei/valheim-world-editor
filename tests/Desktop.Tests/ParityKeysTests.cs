@@ -9,13 +9,19 @@ using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
-// The web editor's keys and mouse in the native app: [ ] brush size, H for the View tool, Space +
-// left drag and Shift + right drag sliding the view whatever the tool (and Space never pressing the
-// focused button), Alt + wheel turning the selection, the paste and the Place preview as , and . do
-// (zooming when there is nothing to turn), the help listing them, and Naturalize's New pattern.
+/// <summary>
+/// The web editor's keys and mouse in the native app: [ ] brush size, H for the View tool, Space + left drag and Shift
+/// + right drag sliding the view whatever the tool (and Space never pressing the focused button), Alt + wheel turning
+/// the selection, the paste and the Place preview as , and . do (zooming when there is nothing to turn), the help
+/// listing them, and Naturalize's New pattern.
+/// </summary>
 [Collection("World files")]
 public class ParityKeysTests
 {
+    /// <summary>
+    /// A shown main window editing a flat 2 × 2 zone area with these objects, looking straight down; with the screen
+    /// point of a grid point (on the ground at 30 m).
+    /// </summary>
     private static (MainWindow W, EditSession S, Func<float, float, Avalonia.Point> Screen) Open(params WorldScene.Thing[] things)
     {
         var w = new MainWindow(load: false) { Width = 1000, Height = 1000 };
@@ -33,6 +39,9 @@ public class ParityKeysTests
         return (w, s, Screen);
     }
 
+    /// <summary>
+    /// A half wood wall at grid (40, 40).
+    /// </summary>
     private static WorldScene.Thing Wall() => new(11, StableHash.Of("wood_wall_half"), new Vector3(40 - 32, 30, 40 - 32), Vector3.Zero, 0, true);
 
     // ---- [ ] brush size.

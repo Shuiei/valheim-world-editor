@@ -4,11 +4,16 @@ using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
-// Reading the game's files without the game: textures decoded and bled, Unity's left-handed matrices
-// and meshes mirrored into the view's space, materials judged as the old exporter did, the terrain
-// shader's OpenGL program adapted, SMOL-V refused when it is not.
+/// <summary>
+/// Reading the game's files without the game: textures decoded and bled, Unity's left-handed matrices and meshes
+/// mirrored into the view's space, materials judged as the old exporter did, the terrain shader's OpenGL program
+/// adapted, SMOL-V refused when it is not.
+/// </summary>
 public class CoreGameFilesTests
 {
+    /// <summary>
+    /// A texture level of this Unity format, size and bytes.
+    /// </summary>
     private static GameBundles.TextureLevel Level(int format, int w, int h, params byte[] data) => new("t", format, w, h, data);
 
     [Fact]
@@ -71,6 +76,9 @@ public class CoreGameFilesTests
         Assert.Equal(new uint[] { 0, 0, 0 }, mesh.Submeshes[0]);
     }
 
+    /// <summary>
+    /// A material with this shader and, when given, _Mode, _Cull and _Color; with a _MainTex unless texture is false.
+    /// </summary>
     private static GameBundles.Material Mat(string shader, float? mode = null, float? cull = null, float[]? color = null, bool texture = true)
     {
         var floats = new Dictionary<string, float>();

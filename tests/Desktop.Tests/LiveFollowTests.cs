@@ -6,18 +6,25 @@ using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
-// Live: the editor follows the game in the zones it shows. A stand-in game says what each zone holds
-// now; what changed there (objects made, removed or changed, ground dug) comes into the open world
-// and area without undo steps, and ground the editor changed itself is kept and asked about on apply.
+/// <summary>
+/// Live: the editor follows the game in the zones it shows. A stand-in game says what each zone holds now; what changed
+/// there (objects made, removed or changed, ground dug) comes into the open world and area without undo steps, and
+/// ground the editor changed itself is kept and asked about on apply.
+/// </summary>
 public class LiveFollowTests
 {
     private static readonly Func<Formula.Env, double> Two = Formula.Compile("2", []);
     private static readonly int TCData = StableHash.Of("TCData");
 
-    // What the game has in a zone, as the world was read (its objects' ZDOIDs and bytes).
+    /// <summary>
+    /// What the game has in a zone, as the world was read (its objects' ZDOIDs and bytes).
+    /// </summary>
     private static List<(long, uint, byte[])> AsRead(WorldSave w, (int X, int Z) zone) =>
         [.. Enumerable.Range(0, w.ObjectRefs.Count).Where(id => !w.Vanished.Contains(id) && w.ObjectRefs[id].Zone == zone).Select(id => (w.ObjectRefs[id].LiveId.User, w.ObjectRefs[id].LiveId.Id, w.ObjectBytes(id)))];
 
+    /// <summary>
+    /// A stand-in game, the world opened live from it, and zone 0, 0 as the area.
+    /// </summary>
     private static async Task<(FakeGame Game, WorldSession World, EditSession Area)> Open()
     {
         var game = new FakeGame();
@@ -26,13 +33,21 @@ public class LiveFollowTests
         return (game, world, area);
     }
 
-    // One look at the game: read and merged (null: nothing changed).
+    /// <summary>
+    /// One look at the game: read and merged (null: nothing changed).
+    /// </summary>
     private static async Task<WorldSession.Followed?> Follow(WorldSession w, params (int, int)[] zones) =>
         await w.FetchGame(zones) is { } f ? w.MergeGame(f) : null;
 
+    /// <summary>
+    /// The index in the scene of a saved, non-piece object of zone 0, 0 (after skipping this many).
+    /// </summary>
     private static int Tree(EditSession s, int skip = 0) =>
         s.Scene.Things.Select((t, i) => (t, i)).Where(x => !x.t.Piece && x.t.Id >= 0 && s.Scene.World.ObjectRefs[x.t.Id].Zone == (0, 0)).Skip(skip).First().i;
 
+    /// <summary>
+    /// An object's ZDOID in the game.
+    /// </summary>
     private static (long, uint) Zdo(WorldSave w, int id) => w.ObjectRefs[id].LiveId;
 
     [Fact]
@@ -192,7 +207,9 @@ public class LiveFollowTests
         Assert.Equal((0, 0, 0, 0), world.Pending);
     }
 
-    // The game's ground for zone 0, 0: its terrain object's bytes with this data.
+    /// <summary>
+    /// The game's ground for zone 0, 0: its terrain object's bytes with this data.
+    /// </summary>
     private static List<(long, uint, byte[])> Dug(WorldSave w, ZoneEdit ground)
     {
         var src = w.TerrainZones.First(t => t.ZoneX == 0 && t.ZoneZ == 0).Source!;

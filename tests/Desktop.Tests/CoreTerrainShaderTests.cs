@@ -3,12 +3,16 @@ using Xunit;
 
 namespace WorldEditor.Tests;
 
-// The terrain shader from Valheim for Windows (no OpenGL programs): its Vulkan program, as SPIR-V,
-// turned into the GLSL the OpenGL path makes. The game's own shader cannot be shipped with the tests:
-// a small SPIR-V module checks that SPIRV-Cross loads and runs, and a cut-down SPIRV-Cross output
-// checks the changes made to it.
+/// <summary>
+/// The terrain shader from Valheim for Windows (no OpenGL programs): its Vulkan program, as SPIR-V, turned into the
+/// GLSL the OpenGL path makes. The game's own shader cannot be shipped with the tests: a small SPIR-V module checks
+/// that SPIRV-Cross loads and runs, and a cut-down SPIRV-Cross output checks the changes made to it.
+/// </summary>
 public class CoreTerrainShaderTests
 {
+    /// <summary>
+    /// The small SPIR-V module the tests turn into GLSL.
+    /// </summary>
     private static byte[] WhiteFragment() => TerrainShader.WhiteFragment();
 
     [Fact]

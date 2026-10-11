@@ -7,25 +7,35 @@ using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
-// The Select tool with the mouse, looking straight down on a flat area: clicking and drawing zones,
-// dragging, double-clicking a building, Same kind, Drop and snapping. The view's object boxes come
-// from the pieces' own boxes (headless tests draw nothing, so the view is given them).
+/// <summary>
+/// The Select tool with the mouse, looking straight down on a flat area: clicking and drawing zones, dragging,
+/// double-clicking a building, Same kind, Drop and snapping. The view's object boxes come from the pieces' own boxes
+/// (headless tests draw nothing, so the view is given them).
+/// </summary>
 [Collection("World files")]
 public class SelectMouseTests
 {
     private static readonly int Wall = StableHash.Of("wood_wall_half"), Floor = StableHash.Of("wood_floor"), Beech = StableHash.Of("Beech1");
 
+    /// <summary>
+    /// The window, its edit session and the view's size, with the Select tool's mouse driven at world points.
+    /// </summary>
     private sealed record View(MainWindow W, EditSession S, Avalonia.Size Size)
     {
         public SelectTool Tool => W.View.SelectTool;
 
-        // Where a world point is on screen.
+        /// <summary>
+        /// Where a world point is on screen.
+        /// </summary>
         public Avalonia.Point At(float x, float y, float z)
         {
             var q = Vector4.Transform(new Vector4(x - S.Scene.Cx, y, -(z - S.Scene.Cz), 1), W.View.ViewProj);
             return new Avalonia.Point((q.X / q.W + 1) / 2 * Size.Width, (1 - q.Y / q.W) / 2 * Size.Height);
         }
 
+        /// <summary>
+        /// A click at world point (x, z) on the ground, with Shift held and as many clicks as given.
+        /// </summary>
         public void Click(float x, float z, bool shift = false, int clicks = 1)
         {
             var p = At(x, 30, z);
@@ -33,6 +43,9 @@ public class SelectMouseTests
             Tool.Up(p, Size, shift);
         }
 
+        /// <summary>
+        /// A drag along these world points on the ground, with Shift held or not.
+        /// </summary>
         public void Drag(bool shift, params (float X, float Z)[] path)
         {
             Tool.Down(At(path[0].X, 30, path[0].Z), Size, shift, false, 1);
@@ -48,7 +61,9 @@ public class SelectMouseTests
         public WorldScene.Thing Last => S.Scene.Things[^1];
     }
 
-    // A box around a thing in view space: a piece's own box, or 1 × 5 × 1 m for a tree.
+    /// <summary>
+    /// A box around a thing in view space: a piece's own box, or 1 × 5 × 1 m for a tree.
+    /// </summary>
     private static (int, Vector3, Vector3) Box(WorldScene s, int i)
     {
         var t = s.Things[i];
@@ -58,6 +73,10 @@ public class SelectMouseTests
         return (i, new Vector3(p.X + x0 - s.Cx, p.Y + y0, -(p.Z + z1 - s.Cz)), new Vector3(p.X + x1 - s.Cx, p.Y + y1, -(p.Z + z0 - s.Cz)));
     }
 
+    /// <summary>
+    /// A shown main window editing a flat 2 × 2 zone area with these objects (given their boxes) in the Select tool,
+    /// looking straight down on the middle.
+    /// </summary>
     private static View Open(params WorldScene.Thing[] things)
     {
         var w = new MainWindow(load: false) { Width = 1000, Height = 1000 };
@@ -73,6 +92,9 @@ public class SelectMouseTests
         return new View(w, s, w.View.Bounds.Size);
     }
 
+    /// <summary>
+    /// A thing of this kind at world point (x, y, z): a building piece, or a tree when not.
+    /// </summary>
     private static WorldScene.Thing T(int id, int prefab, float x, float y, float z, bool piece = true) => new(id, prefab, new Vector3(x, y, z), Vector3.Zero, piece ? 0 : 1, piece);
 
     // Shift + click: the row from the last object clicked (w1, Shift + click w3: w1, w2, w3), not what

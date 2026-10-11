@@ -10,18 +10,24 @@ using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
-// Every control explains itself when hovered, as the web editor's did (Tips): each button, switch,
-// list, slider and text field of the editor (with every tool, Area action and Place mode, the Mask,
-// the right-hand panels), the map page, the start page and Settings has a tip, shown or not yet (a
-// hidden one shows in another state). The few without one are listed below with the reason.
+/// <summary>
+/// Every control explains itself when hovered, as the web editor's did (Tips): each button, switch, list, slider and
+/// text field of the editor (with every tool, Area action and Place mode, the Mask, the right-hand panels), the map
+/// page, the start page and Settings has a tip, shown or not yet (a hidden one shows in another state). The few without
+/// one are listed below with the reason.
+/// </summary>
 [Collection("World files")]
 public class TipsTests
 {
-    // Controls left without a tip, with the reason. None today: even a dialog's answers say what
-    // they do and their key.
+    /// <summary>
+    /// Controls left without a tip, with the reason. None today: even a dialog's answers say what they do and their
+    /// key.
+    /// </summary>
     private static bool Exempt(Control _) => false;
 
-    // The controls shown without a tip, described so they can be found in the code.
+    /// <summary>
+    /// The controls shown without a tip, described so they can be found in the code.
+    /// </summary>
     internal static List<string> Untipped(Control root)
     {
         var missing = new List<string>();
@@ -39,6 +45,9 @@ public class TipsTests
         return missing;
     }
 
+    /// <summary>
+    /// The text a control's content shows, through text blocks and panels.
+    /// </summary>
     private static string Text(object? o) => o switch
     {
         string s => s,
@@ -48,6 +57,9 @@ public class TipsTests
         _ => "",
     };
 
+    /// <summary>
+    /// A control described for the failure message: its kind, its text, the label beside it and its parents.
+    /// </summary>
     internal static string Describe(Control c)
     {
         string what = c switch
@@ -67,12 +79,18 @@ public class TipsTests
         return $"{c.GetType().Name} '{what}' (label: {label}) in {string.Join("/", c.GetLogicalAncestors().OfType<Control>().Take(4).Select(a => a.GetType().Name))}";
     }
 
+    /// <summary>
+    /// Clicks the button and runs the posted work it starts.
+    /// </summary>
     private static void Click(Button b)
     {
         b.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         Dispatcher.UIThread.RunJobs();
     }
 
+    /// <summary>
+    /// Adds the controls under <c>root</c> that have no tip, after the posted work is run.
+    /// </summary>
     private static void Check(HashSet<string> missing, Control root)
     {
         Dispatcher.UIThread.RunJobs();
@@ -82,6 +100,9 @@ public class TipsTests
         }
     }
 
+    /// <summary>
+    /// Fails, listing them, when any control was found without a tip.
+    /// </summary>
     private static void NoneMissing(HashSet<string> missing) => Assert.True(missing.Count == 0, $"{missing.Count} control(s) without a tip:\n" + string.Join("\n", missing.OrderBy(m => m)));
 
     [AvaloniaFact]

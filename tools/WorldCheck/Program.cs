@@ -255,6 +255,7 @@ switch (args[0])
         return 2;
 }
 
+// The world generator for a seed name, as a new world of this game version would have it (no save needed).
 static ValheimGen.WorldGenerator Look(string seedName)
 {
     return ValheimGen.WorldGenerator.Create(new ValheimGen.World { m_seedName = seedName, m_seed = WorldCreator.SeedOf(seedName), m_worldGenVersion = WorldCreator.WorldGenVersion });
