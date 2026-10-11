@@ -23,14 +23,19 @@ public static class GameModifiers
 
 	// The game's modifiers in use (TerrainModifiers.Use) for this game folder: from the cache, else read
 	// from the game; already in use, nothing to do. False when they cannot be had: no Valheim, or its
-	// files could not be read. Modifiers given by the tests (TerrainModifiers.Use) count as had.
+	// files could not be read. Modifiers given by the tests (TerrainModifiers.Use) count as had, whatever
+	// game folder the tests stand in.
 	public static bool Ensure(GameBundles? bundles)
 	{
 		lock (Lock)
 		{
+			if (TerrainModifiers.Loaded && _usedFolder == null)
+			{
+				return true;
+			}
 			if (bundles == null)
 			{
-				return TerrainModifiers.Loaded && _usedFolder == null;
+				return false;
 			}
 			if (TerrainModifiers.Loaded && _usedFolder == bundles.Folder)
 			{
