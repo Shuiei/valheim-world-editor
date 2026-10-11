@@ -7,7 +7,8 @@ namespace ValheimGen;
 
 // Where the game will lay out a seed's locations (start temple, traders, bosses, dungeons...) when its
 // world first loads, before the world exists: ZoneSystem.GenerateLocations replayed with the game's
-// rules (WorldGen/locations.json) on the editor's copy of its generator.
+// rules on the editor's copy of its generator. The rules are read from the game's files when Valheim
+// is found (GameLocations, then Use); WorldGen/locations.json is a copy for when it is not.
 //
 // The game picks each try's zone from a biome map of the world (AltBiomeWorldData: 2048 x 2048 points
 // 12 m apart, each biome's points listed in the order its flood fill met them), then checks the spot
@@ -63,30 +64,56 @@ public static class SeedLocations
 		public List<string> blockLocationNames { get; set; } = new();
 	}
 
-	private sealed class Data
+	// The game's rules: its locations in its order (ZoneSystem's list, the location lists, the alt
+	// biomes' additions) and the alt biomes.
+	public sealed class RuleSet
 	{
 		public List<Rule> locations { get; set; } = new();
 		public List<AltBiomeRule> altBiomes { get; set; } = new();
+
+		// As locations.json keeps them: one location or alt biome a line.
+		public string ToJson() =>
+			"{\"locations\": [\n" + string.Join(",\n", locations.Select(l => JsonSerializer.Serialize(l, JsonOptions))) +
+			"\n],\n\"altBiomes\": [\n" + string.Join(",\n", altBiomes.Select(a => JsonSerializer.Serialize(a, JsonOptions))) + "\n]}\n";
+
+		public static RuleSet FromJson(string json) => JsonSerializer.Deserialize<RuleSet>(json) ?? throw new JsonException("no rules");
 	}
 
-	private static readonly Lazy<Data> Rules = new(() =>
+	private static readonly JsonSerializerOptions JsonOptions = new() { DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull };
+
+	// The rules in use and what follows from them, swapped whole (a search running keeps its own).
+	private sealed class State(RuleSet rules)
+	{
+		public RuleSet Rules { get; } = rules;
+		public List<Rule> Ordered { get; } = rules.locations.OrderByDescending(l => l.prioritized != 0).Where(l => l.enable != 0 && l.quantity != 0).ToList();
+		public HashSet<string> Blocked { get; } = rules.altBiomes.SelectMany(a => a.blockLocationNames).ToHashSet();
+	}
+
+	public static RuleSet Embedded { get; } = LoadEmbedded();
+
+	private static RuleSet LoadEmbedded()
 	{
 		using Stream s = Assembly.GetExecutingAssembly().GetManifestResourceStream("TerrainEditor.locations.json")
 			?? throw new InvalidOperationException("locations.json is not embedded");
-		return JsonSerializer.Deserialize<Data>(s)!;
-	});
+		using var reader = new StreamReader(s);
+		return RuleSet.FromJson(reader.ReadToEnd());
+	}
+
+	private static volatile State _state = new(Embedded);
+
+	// The rules read from the game in place of the copy (or the copy again: Use(Embedded)).
+	public static void Use(RuleSet rules) => _state = new State(rules);
+
+	public static RuleSet Current => _state.Rules;
 
 	// One location instance the game will register: its kind and where (y: the generator's ground height).
 	public sealed record Placed(Rule Rule, float X, float Y, float Z);
 
 	// The kinds whose spots depend on the alt biomes (added by one, or blocked by one somewhere).
-	public static bool Uncertain(Rule r) => r.altBiome != null || Rules.Value.altBiomes.Any(a => a.blockLocationNames.Contains(r.name));
+	public static bool Uncertain(Rule r) => r.altBiome != null || _state.Blocked.Contains(r.name);
 
 	// The game's order: prioritized kinds first, otherwise as listed; disabled and empty kinds left out.
-	public static IReadOnlyList<Rule> Ordered { get; } = Rules.Value.locations
-		.OrderByDescending(l => l.prioritized != 0)
-		.Where(l => l.enable != 0 && l.quantity != 0)
-		.ToList();
+	public static IReadOnlyList<Rule> Ordered => _state.Ordered;
 
 	public enum Which
 	{
@@ -99,11 +126,12 @@ public static class SeedLocations
 	// whichever is asked). parallel: the biome map on every core but one.
 	public static List<Placed> Place(WorldGenerator gen, Which which = Which.Prioritized, bool parallel = false, CancellationToken cancel = default)
 	{
-		var rules = Ordered.Take(which switch
+		var state = _state;
+		var rules = state.Ordered.Take(which switch
 		{
 			Which.Start => 1,
-			Which.Prioritized => Ordered.Count(r => r.prioritized != 0),
-			_ => Ordered.Count,
+			Which.Prioritized => state.Ordered.Count(r => r.prioritized != 0),
+			_ => state.Ordered.Count,
 		}).ToList();
 		// The biomes these kinds can draw a zone from (RandomBiome's slips included).
 		var needed = Heightmap.Biome.None;
@@ -130,7 +158,7 @@ public static class SeedLocations
 		{
 			Rnd.state = saved;
 		}
-		return placer.Instances.Values.Where(p => !Uncertain(p.Rule)).ToList();
+		return placer.Instances.Values.Where(p => p.Rule.altBiome == null && !state.Blocked.Contains(p.Rule.name)).ToList();
 	}
 
 	// AltBiomeWorldData's points (GenerateBiomePoints) and the order its flood fill lists them in

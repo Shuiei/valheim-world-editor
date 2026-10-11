@@ -14,6 +14,17 @@ public class CoreSeedLocationsTests
 		Assert.Contains(placed, p => p.Rule.prefab == prefab && MathF.Abs(p.X - x) < 0.01f && MathF.Abs(p.Z - z) < 0.01f);
 
 	[Fact]
+	public void TheRulesRoundTripAndCanBeSwapped()
+	{
+		var copy = SeedLocations.Embedded;
+		var again = SeedLocations.RuleSet.FromJson(copy.ToJson());
+		Assert.Equal(copy.locations.Select(l => (l.prefab, l.quantity, l.biome, l.altBiome)), again.locations.Select(l => (l.prefab, l.quantity, l.biome, l.altBiome)));
+		Assert.Equal(copy.ToJson(), again.ToJson());
+		Assert.Contains(copy.altBiomes, a => a.blockLocationNames.Contains("WoodFarm1"));
+		Assert.Equal("StartTemple", SeedLocations.Ordered[0].prefab);
+	}
+
+	[Fact]
 	public void TheStartIsWhereTheGamePutsItsTemple()
 	{
 		var start = Assert.Single(SeedLocations.Place(Seed(), SeedLocations.Which.Start, cancel: TestContext.Current.CancellationToken));

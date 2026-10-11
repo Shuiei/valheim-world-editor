@@ -219,7 +219,13 @@ public sealed class NewWorldPage : IDisposable
 		}
 		var cancel = _preview = new CancellationTokenSource();
 		Stats.Text = "Looking at the world…";
-		Pending = Task.Run(() => SeedPreview.Make(seed, 200, parallel: true, landmarks: true, cancel.Token), cancel.Token).ContinueWith(t =>
+		// The game's own location rules first (read once, the first time in a few seconds).
+		var rules = GameLocations.UseGameRules(GameLook.Bundles);
+		Pending = Task.Run(async () =>
+		{
+			await rules.ConfigureAwait(false);
+			return SeedPreview.Make(seed, 200, parallel: true, landmarks: true, cancel.Token);
+		}, cancel.Token).ContinueWith(t =>
 		{
 			if (cancel.IsCancellationRequested || t.Status != TaskStatus.RanToCompletion)
 			{
@@ -406,7 +412,12 @@ public sealed class NewWorldPage : IDisposable
 		Stop.IsVisible = Progress.IsVisible = true;
 		Progress.Value = 0;
 		Found.Children.Clear();
-		Pending = Task.Run(() => SeedPreview.Search(wishes, count, 12, 96, (done, total) => Dispatcher.UIThread.Post(() => Progress.Value = (double)done / total), cancel.Token))
+		var rules = GameLocations.UseGameRules(GameLook.Bundles);
+		Pending = Task.Run(async () =>
+		{
+			await rules.ConfigureAwait(false);
+			return SeedPreview.Search(wishes, count, 12, 96, (done, total) => Dispatcher.UIThread.Post(() => Progress.Value = (double)done / total), cancel.Token);
+		})
 			.ContinueWith(t =>
 			{
 				Find.IsEnabled = true;

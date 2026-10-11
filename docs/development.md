@@ -9,7 +9,7 @@
 | `Core/App/` | Settings (`AppSettings`), the log (`Log`), the game's files (`GameLook`, `GameBundles`, `GameLookData`, `GameShader`, `GameTextures`), Regrow, search, blueprint formats, servers and SSH (`ServerConfig`, `Tunnel`), the local game (`LocalGame`), characters, zone statistics, folders (`Places`). |
 | `Core/Save/` | Save reader (`WorldSave`, `ValheimReader`), writer (`WorldWriter`), new worlds (`WorldCreator`), object building (`ZdoTools`: copies and blank objects), the `.db2` zone list, and live mode (`LiveBridge`, `LiveSync`). |
 | `Core/Editing/` | Pending changes: terrain per zone, deleted and added objects, zone resets (`EditStore`); heights of a block of zones (`HeightGrid`). |
-| `Core/WorldGen/` | Valheim's world generator (bit-exact base terrain), map data, location flattening, the build-piece catalogue (`pieces.json`), the prefab catalogue (`prefabs.json`), the vegetation rules (`vegetation.json`), the location rules (`locations.json`, for the New world page's start, bosses and traders) and the object data names (`zdo-keys.json`). |
+| `Core/WorldGen/` | Valheim's world generator (bit-exact base terrain), map data, location flattening, the build-piece catalogue (`pieces.json`), the prefab catalogue (`prefabs.json`), the vegetation rules (`vegetation.json`), a copy of the location rules (`locations.json`, for the New world page's start, bosses and traders, read from the game when it is found) and the object data names (`zdo-keys.json`). |
 | `plugin/WorldEditorBridge/` | The BepInEx plugin for live mode (.NET Framework 4.7.2). |
 | `tests/Desktop.Tests/` | Every test (xUnit v3, Avalonia's headless mode), see [Tests](#tests). `tests/fixtures/` holds the test world. |
 | `tools/WorldCheck/` | Developer checks of the generator and the writer, and new worlds from a seed, see below. |
@@ -156,10 +156,7 @@ station build ranges); each takes the output file as argument and the bundle fol
 by `make_cab_index.py` (once, and again after a game update; `pip install -r
 tools/asset-export/requirements.txt` first). `scan_vegetation.py Core/WorldGen/vegetation.json` makes the game's vegetation rules
 for Regrow nature (ZoneSystem's and the location lists', with the random draws each kind makes when
-it is created). `scan_locations.py Core/WorldGen/locations.json` makes the game's location rules (ZoneSystem's
-list, the location lists in the order the game's log shows them waking, the alt biomes; prefab names
-from the SoftRef manifest): after a game update, check the log's "Added N locations" lines against
-its `ORDER`. `scan_grown.py Core/WorldGen/prefabs.json` (run after `scan_prefabs.py`) adds what
+it is created). `scan_grown.py Core/WorldGen/prefabs.json` (run after `scan_prefabs.py`) adds what
 each sapling grows into (grown crops and trees keep their sapling's grow radius).
 `scan_stands.py Core/WorldGen/prefabs.json` (also after `scan_prefabs.py`) adds what stands may hold:
 each item's type, attach points, variants and durability, each item stand's rule (types, items it also
@@ -173,6 +170,13 @@ string literals of `assembly_valheim.dll` (the save only keeps their hashes).
 `scan_dungeon_rooms.py Core/WorldGen/dungeon-rooms.json` (then gzip it to `dungeon-rooms.json.gz`)
 makes the Dungeon tool's catalogue: each dungeon kind's themes and space, and each room's size,
 openings and the objects the game makes in it with the random parts that decide them.
+
+The game's location rules (for the New world page's start, bosses and traders) are read by the editor
+itself, in C# (`Core/App/GameLocations.cs`), from the player's Valheim, and kept in the data folder
+until the game changes. `Core/WorldGen/locations.json` is a copy for when Valheim is not found (and for
+the tests): after a game update, make it again with `ValheimWorldEditor --export-locations
+Core/WorldGen/locations.json`, and check the game log's "Added N locations" lines against
+`GameLocations.Order` (when they change, reading fails and the copy is used).
 
 ## WorldCheck
 
