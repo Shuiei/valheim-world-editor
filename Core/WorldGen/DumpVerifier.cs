@@ -208,11 +208,11 @@ public static class BaseTerrain
 		for (int k = 0; k < num; k++)
 		{
 			float wy = (float)((double)vz + k * (double)scale);
-			float t = DUtils.SmoothStep(0f, 1f, (float)((double)k / Width));
+			float t = GenMath.Smooth(0f, 1f, (float)((double)k / Width));
 			for (int l = 0; l < num; l++)
 			{
 				float wx = (float)((double)vx + l * (double)scale);
-				float t2 = DUtils.SmoothStep(0f, 1f, (float)((double)l / Width));
+				float t2 = GenMath.Smooth(0f, 1f, (float)((double)l / Width));
 				float h;
 				Color m;
 				if (b3 == b1 && b2 == b1 && b4 == b1)
@@ -225,7 +225,7 @@ public static class BaseTerrain
 					float h2 = gen.GetBiomeHeight(b2, wx, wy, out Color m2);
 					float h3 = gen.GetBiomeHeight(b3, wx, wy, out Color m3);
 					float h4 = gen.GetBiomeHeight(b4, wx, wy, out Color m4);
-					h = DUtils.Lerp(DUtils.Lerp(h1, h2, t2), DUtils.Lerp(h3, h4, t2), t);
+					h = GenMath.Lerp(GenMath.Lerp(h1, h2, t2), GenMath.Lerp(h3, h4, t2), t);
 					m = Lerp(Lerp(m1, m2, t2), Lerp(m3, m4, t2), t);
 				}
 				heights[k * num + l] = h;

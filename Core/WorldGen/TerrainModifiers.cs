@@ -177,7 +177,7 @@ public sealed class TerrainModifiers
 				{
 					num5 = power != 3f ? MathF.Pow(num5, power) : (float)((double)num5 * num5 * num5);
 					float t = (float)(1.0 - num5);
-					float v = ValheimGen.DUtils.Lerp(h[i * n + j], b, t);
+					float v = ValheimGen.GenMath.Lerp(h[i * n + j], b, t);
 					if (player)
 					{
 						float lo = levelOnly![i * n + j];
