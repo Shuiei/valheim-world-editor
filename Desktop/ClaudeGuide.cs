@@ -12,6 +12,11 @@ public static class ClaudeGuide
 		You are connected to Valheim World Editor, running on the user's computer. You change the world or
 		the Workshop open in it, as the user would, and the user watches in the 3D view.
 
+		The tools are named here without a prefix (run_script, build_roof...). Your client may show them
+		with the server's name in front (in Claude Code: mcp__valheim-editor__run_script), and may load them
+		only when asked: when one is "not available", look it up first (tool search, e.g. "valheim-editor
+		run_script"), then call it by the name it shows.
+
 		Work like this: editor_state first; open what is needed (open_world, open_area, open_workshop);
 		look (describe_area, list_objects, screenshot, area_map); change in small steps; after each step,
 		look again (screenshot, area_map; support_check for buildings) and fix what is wrong.
