@@ -4,8 +4,8 @@ using Rnd = ValheimGen.UnityEngine.Random;
 
 namespace WorldEditor.Tests;
 
-// The small stand-ins the ported generator uses for Unity: vectors and their operators, Mathf, the
-// random number generator at its edges (backwards ranges, the unit circle), DUtils' remapping, and
+// The small stand-ins the generator uses for Unity: vectors and their operators, Mathf, the random
+// number generator at its edges (backwards ranges, the unit circle), GenMath's remapping, and
 // the piece catalogue's footprints for the map.
 [Collection("World files")]
 public class CoreGenHelperTests
@@ -69,9 +69,9 @@ public class CoreGenHelperTests
 		Assert.Equal(0, Mathf.Clamp(-9, 0, 3));
 		Assert.Equal(2, Mathf.Clamp(2, 0, 3));
 		Assert.Equal(1f, Mathf.Cos(0f));
-		Assert.Equal(0.5, DUtils.InverseLerp(10, 20, 15));
+		Assert.Equal(0.5, GenMath.InverseLerp(10, 20, 15));
 		// An empty range: 0, not a division by zero.
-		Assert.Equal(0.0, DUtils.InverseLerp(10, 10, 15));
+		Assert.Equal(0.0, GenMath.InverseLerp(10, 10, 15));
 	}
 
 	[Fact]

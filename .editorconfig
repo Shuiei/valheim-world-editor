@@ -36,9 +36,10 @@ csharp_preserve_single_line_statements = true
 csharp_preserve_single_line_blocks = true
 dotnet_sort_system_directives_first = true
 
-# The world generator imitates Unity's own types (Vector2.x, sqrMagnitude, Random.state...) so the
-# game's decompiled code runs unchanged and stays bit-exact with the game (verified by WorldCheck);
-# their public fields, Unity's names and its operators stay as Unity has them.
+# The world generator works with stand-ins for Unity's own types (Vector2.x, sqrMagnitude,
+# Random.state...) so its formulas keep Unity's operations and precision and stay bit-exact with the
+# game (verified by WorldCheck); their public fields, Unity's names and its operators stay as Unity
+# has them.
 [Core/WorldGen/{UnityShim,UnityNative}.cs]
 dotnet_diagnostic.CA1051.severity = none
 dotnet_diagnostic.CA1708.severity = none

@@ -242,6 +242,5 @@ dotnet-coverage collect -s tests/Desktop.Tests/coverage.config -f cobertura -o c
 tools/release.sh /tmp/dist && tools/check-package.sh /tmp/dist/*.tar.gz
 ```
 
-The coverage counts only our own code: `coverage.config` leaves out FastNoise and the generator
-decompiled from Valheim (`WorldGenerator.cs`, `DUtils.cs`), which the test against the game's values
-checks as a whole.
+The coverage counts only our own code: `coverage.config` leaves out the FastNoise library, which the
+test against the game's values checks along with the world generator.
