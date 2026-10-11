@@ -324,51 +324,43 @@ public static class SeedLocations
 			AboveSea[biome] = above.ToArray();
 		}
 
-		// AltBiomeWorldData.RandomBiomeFromBiomes, slips included (Plains gives Black Forest, the ocean
-		// is tested with the Meadows bit).
-		public static Heightmap.Biome RandomBiome(Heightmap.Biome biome)
+		// How the game turns a set of biomes into one to draw a point from: a single biome is itself;
+		// otherwise a random step along this walk, counting only the steps whose biome is in the set
+		// (and never reaching the last one: the draw stops one short). Two of the game's steps give
+		// another biome than the one they test (Plains gives Black Forest; the eighth step tests
+		// Meadows and gives the ocean); past the walk, Mistlands.
+		private static readonly (Heightmap.Biome Test, Heightmap.Biome Gives)[] Walk =
 		{
-			if ((biome & (biome - 1)) == 0)
+			(Heightmap.Biome.Meadows, Heightmap.Biome.Meadows),
+			(Heightmap.Biome.Swamp, Heightmap.Biome.Swamp),
+			(Heightmap.Biome.Mountain, Heightmap.Biome.Mountain),
+			(Heightmap.Biome.BlackForest, Heightmap.Biome.BlackForest),
+			(Heightmap.Biome.Plains, Heightmap.Biome.BlackForest),
+			(Heightmap.Biome.AshLands, Heightmap.Biome.AshLands),
+			(Heightmap.Biome.DeepNorth, Heightmap.Biome.DeepNorth),
+			(Heightmap.Biome.Meadows, Heightmap.Biome.Ocean),
+		};
+
+		private static readonly Heightmap.Biome[] Counted = ByIndex.Skip(1).ToArray();
+
+		public static Heightmap.Biome RandomBiome(Heightmap.Biome set)
+		{
+			if (System.Numerics.BitOperations.IsPow2((uint)set) || set == 0)
 			{
-				return biome;
+				return set;
 			}
-			int count = 0;
-			foreach (Heightmap.Biome b in new[] { Heightmap.Biome.Meadows, Heightmap.Biome.Swamp, Heightmap.Biome.Mountain, Heightmap.Biome.BlackForest, Heightmap.Biome.Plains, Heightmap.Biome.AshLands, Heightmap.Biome.DeepNorth, Heightmap.Biome.Ocean, Heightmap.Biome.Mistlands })
+			int steps = Rnd.Range(0, Counted.Count(b => (set & b) != 0) - 1);
+			foreach (var (test, gives) in Walk)
 			{
-				count += (biome & b) != 0 ? 1 : 0;
-			}
-			int pick = Rnd.Range(0, count - 1);
-			if ((biome & Heightmap.Biome.Meadows) != 0 && pick-- == 0)
-			{
-				return Heightmap.Biome.Meadows;
-			}
-			if ((biome & Heightmap.Biome.Swamp) != 0 && pick-- == 0)
-			{
-				return Heightmap.Biome.Swamp;
-			}
-			if ((biome & Heightmap.Biome.Mountain) != 0 && pick-- == 0)
-			{
-				return Heightmap.Biome.Mountain;
-			}
-			if ((biome & Heightmap.Biome.BlackForest) != 0 && pick-- == 0)
-			{
-				return Heightmap.Biome.BlackForest;
-			}
-			if ((biome & Heightmap.Biome.Plains) != 0 && pick-- == 0)
-			{
-				return Heightmap.Biome.BlackForest;
-			}
-			if ((biome & Heightmap.Biome.AshLands) != 0 && pick-- == 0)
-			{
-				return Heightmap.Biome.AshLands;
-			}
-			if ((biome & Heightmap.Biome.DeepNorth) != 0 && pick-- == 0)
-			{
-				return Heightmap.Biome.DeepNorth;
-			}
-			if ((biome & Heightmap.Biome.Meadows) != 0 && pick-- == 0)
-			{
-				return Heightmap.Biome.Ocean;
+				if ((set & test) == 0)
+				{
+					continue;
+				}
+				if (steps == 0)
+				{
+					return gives;
+				}
+				steps--;
 			}
 			return Heightmap.Biome.Mistlands;
 		}
@@ -384,215 +376,218 @@ public static class SeedLocations
 		}
 	}
 
-	// ZoneSystem's GenerateLocationsTimeSliced for one kind, on a world no zone of which is generated yet.
+	// Lays out kinds one after another as the game does when a world first loads (no zone made yet):
+	// for each kind, zones drawn at random (near the middle, or from the biome map), a few spots tried
+	// in each, the first spot that passes every check kept, until the kind has its number or its tries
+	// run out. The checks and the random draws come in the game's order: a draw more or less, and every
+	// later spot of the kind moves.
 	private sealed class Placer(WorldGenerator gen, Func<BiomeMap> map)
 	{
+		// The instances by zone (one a zone), and the same by prefab and by group, for the distance checks.
 		public readonly Dictionary<(int X, int Y), Placed> Instances = new();
-		private readonly Dictionary<string, List<Placed>> byPrefab = new();
-		private readonly Dictionary<string, List<Placed>> byGroup = new();
-		private readonly Dictionary<string, List<Placed>> byGroupMax = new();
-		private readonly List<float> surround = new();
+		private readonly Neighbours _byPrefab = new(), _byGroup = new(), _byGroupMax = new();
+		// The vegetation sums of the kind's spots so far (the "stands out" check).
+		private readonly List<float> _sums = new();
 
-		private static (int X, int Y) Zone(float x, float z) =>
-			((int)MathF.Floor((float)((x + 32.0) / 64.0)), (int)MathF.Floor((float)((z + 32.0) / 64.0)));
+		private const int SpotsAZone = 6;
 
 		public void Generate(Rule rule)
 		{
 			Rnd.InitState(gen.GetSeed() + StableHash.Of(rule.prefab));
-			float maxRadius = MathF.Max(rule.exteriorRadius, rule.interiorRadius);
-			int attempts = rule.prioritized != 0 ? 60000 : 12000;
-			int placed = Instances.Values.Count(p => p.Rule.prefab == rule.prefab);
-			float maxRange = 10000f;
-			surround.Clear();
-			if (rule.unique != 0 && placed > 0)
+			int have = Instances.Values.Count(p => p.Rule.prefab == rule.prefab);
+			_sums.Clear();
+			if (rule.unique != 0 && have > 0)
 			{
 				return;
 			}
-			if (rule.centerFirst != 0)
-			{
-				maxRange = rule.minDistance;
-			}
 			var biomes = (Heightmap.Biome)rule.biome;
-			for (int i = 0; i < attempts && placed < rule.quantity; i++)
+			float margin = MathF.Max(rule.exteriorRadius, rule.interiorRadius);
+			// Kinds laid out from the middle out (the start temple): the reach grows a metre a try.
+			float reach = rule.minDistance;
+			for (int left = rule.prioritized != 0 ? 60000 : 12000; left > 0 && have < rule.quantity; left--)
 			{
-				(int X, int Y) zone;
-				if (rule.centerFirst != 0)
-				{
-					zone = RandomZone(maxRange);
-					maxRange++;
-				}
-				else
-				{
-					var (px, pz) = map().RandomPoint(biomes, rule.minAltitude >= 0f);
-					zone = Zone(px, pz);
-				}
-				if (Instances.ContainsKey(zone))
+				var zone = rule.centerFirst != 0 ? ZoneNearMiddle(reach++) : ZoneOf(map().RandomPoint(biomes, rule.minAltitude >= 0f));
+				if (Instances.ContainsKey(zone) || ((Heightmap.BiomeArea)rule.biomeArea & gen.GetBiomeArea(new Vector2s(zone.X * 64, zone.Y * 64))) == 0)
 				{
 					continue;
 				}
-				if (((Heightmap.BiomeArea)rule.biomeArea & gen.GetBiomeArea(new Vector2s(zone.X * 64, zone.Y * 64))) == 0)
+				for (int s = 0; s < SpotsAZone; s++)
 				{
-					continue;
-				}
-				for (int j = 0; j < 6; j++)
-				{
-					if (TryPoint(rule, zone, maxRadius, biomes))
+					if (TrySpot(rule, biomes, zone, margin))
 					{
-						placed++;
+						have++;
 						break;
 					}
 				}
 			}
 		}
 
-		// One try at a random point of the zone: registered when every check passes.
-		private bool TryPoint(Rule rule, (int X, int Y) zone, float maxRadius, Heightmap.Biome biomes)
+		private static (int X, int Y) ZoneOf((float X, float Z) p) =>
+			((int)MathF.Floor((float)((p.X + 32.0) / 64.0)), (int)MathF.Floor((float)((p.Z + 32.0) / 64.0)));
+
+		// A zone whose corner lies within reach of the middle (and inside the world).
+		private static (int X, int Y) ZoneNearMiddle(float reach)
 		{
-			float x = zone.X * 64f + Rnd.Range(-32f + maxRadius, 32f - maxRadius);
-			float z = zone.Y * 64f + Rnd.Range(-32f + maxRadius, 32f - maxRadius);
-			var p = new Vector3(x, 0f, z);
-			float magnitude = p.magnitude;
-			if ((rule.minDistance != 0f && magnitude < rule.minDistance) || (rule.maxDistance != 0f && magnitude > rule.maxDistance))
+			int n = (int)reach / 64;
+			while (true)
+			{
+				var zone = (X: Rnd.Range(-n, n), Y: Rnd.Range(-n, n));
+				float cx = zone.X * 64f, cy = zone.Y * 64f;
+				if (MathF.Sqrt(cx * cx + cy * cy) < 10000f)
+				{
+					return zone;
+				}
+			}
+		}
+
+		// One spot of the zone (kept far enough from its edges for the kind's size), checked step by step.
+		private bool TrySpot(Rule rule, Heightmap.Biome biomes, (int X, int Y) zone, float margin)
+		{
+			var spot = new Vector3(zone.X * 64f + Rnd.Range(-32f + margin, 32f - margin), 0f, zone.Y * 64f + Rnd.Range(-32f + margin, 32f - margin));
+			if (!AtRightDistance(rule, spot) || !OnRightGround(rule, biomes, ref spot, out float vegetation) || !FlatEnough(rule, spot))
 			{
 				return false;
 			}
-			var biome = gen.GetBiome(p);
+			// The steps after the slope's (which draws from the random sequence) must stay after it.
+			if (!RightNeighbours(rule, spot) || !RightVegetation(rule, vegetation) || rule.altBiome != null || !StandsOut(rule, spot))
+			{
+				return false;
+			}
+			Register(rule, spot);
+			return true;
+		}
+
+		// From the middle of the world: the kind's ring.
+		private static bool AtRightDistance(Rule rule, Vector3 spot)
+		{
+			float fromMiddle = spot.magnitude;
+			return !(rule.minDistance != 0f && fromMiddle < rule.minDistance) && !(rule.maxDistance != 0f && fromMiddle > rule.maxDistance);
+		}
+
+		// The biome, the height above the sea, the forest and the distance from the middle on the ground
+		// (spot.y set to the ground; vegetation: how green the ground is there).
+		private bool OnRightGround(Rule rule, Heightmap.Biome biomes, ref Vector3 spot, out float vegetation)
+		{
+			vegetation = 0;
+			var biome = gen.GetBiome(spot);
 			if ((biomes & biome) == 0)
 			{
 				return false;
 			}
-			// GetHeight, with the biome just found.
-			p.y = gen.GetBiomeHeight(biome, p.x, p.z, out Color mask);
-			float altitude = (float)(p.y - 30.0);
-			if (altitude < rule.minAltitude || altitude > rule.maxAltitude)
+			spot.y = gen.GetBiomeHeight(biome, spot.x, spot.z, out Color mask);
+			vegetation = mask.a;
+			float aboveSea = (float)(spot.y - 30.0);
+			if (aboveSea < rule.minAltitude || aboveSea > rule.maxAltitude)
 			{
 				return false;
 			}
 			if (rule.inForest != 0)
 			{
-				float forest = WorldGenerator.GetForestFactor(p);
+				float forest = WorldGenerator.GetForestFactor(spot);
 				if (forest < rule.forestTresholdMin || forest > rule.forestTresholdMax)
 				{
 					return false;
 				}
 			}
-			if (rule.minDistanceFromCenter > 0f || rule.maxDistanceFromCenter > 0f)
+			if (rule.minDistanceFromCenter <= 0f && rule.maxDistanceFromCenter <= 0f)
 			{
-				float d = MathF.Sqrt(p.x * p.x + p.z * p.z);
-				if ((rule.minDistanceFromCenter > 0f && d < rule.minDistanceFromCenter) || (rule.maxDistanceFromCenter > 0f && d > rule.maxDistanceFromCenter))
-				{
-					return false;
-				}
+				return true;
 			}
-			gen.GetTerrainDelta(p, rule.exteriorRadius, out float delta, out _);
-			if (delta > rule.maxTerrainDelta || delta < rule.minTerrainDelta)
-			{
-				return false;
-			}
-			if (rule.minDistanceFromSimilar > 0f && InRange(rule.prefab, rule.group, p, rule.minDistanceFromSimilar, false))
-			{
-				return false;
-			}
-			if (rule.maxDistanceFromSimilar > 0f && !InRange(rule.prefab, rule.groupMax, p, rule.maxDistanceFromSimilar, true))
-			{
-				return false;
-			}
-			if ((rule.minimumVegetation > 0f && mask.a <= rule.minimumVegetation) || (rule.maximumVegetation < 1f && mask.a >= rule.maximumVegetation))
-			{
-				return false;
-			}
-			// Alt biomes: not known (see the top). A kind an alt biome adds needs one here; one it blocks is
-			// refused there. Both are left out of the result; treating every spot as plain keeps the
-			// others' order of draws.
-			if (rule.altBiome != null)
-			{
-				return false;
-			}
-			if (rule.surroundCheckVegetation != 0)
-			{
-				float sum = 0f;
-				for (int layer = 0; layer < rule.surroundCheckLayers; layer++)
-				{
-					float r = (float)(layer + 1) / rule.surroundCheckLayers * rule.surroundCheckDistance;
-					for (int k = 0; k < 6; k++)
-					{
-						float f = k / 6f * MathF.PI * 2f;
-						gen.GetHeight(p.x + MathF.Sin(f) * r, p.z + MathF.Cos(f) * r, out Color m);
-						sum += m.a * ((rule.surroundCheckDistance - r) / (rule.surroundCheckDistance * 2f));
-					}
-				}
-				surround.Add(sum);
-				if (surround.Count < 10)
-				{
-					return false;
-				}
-				float max = surround.Max(), average = surround.Average();
-				if (sum < average + (max - average) * rule.surroundBetterThanAverage)
-				{
-					return false;
-				}
-			}
-			Register(rule, p);
-			return true;
+			float flat = MathF.Sqrt(spot.x * spot.x + spot.z * spot.z);
+			return !(rule.minDistanceFromCenter > 0f && flat < rule.minDistanceFromCenter) && !(rule.maxDistanceFromCenter > 0f && flat > rule.maxDistanceFromCenter);
 		}
 
-		private static (int X, int Y) RandomZone(float range)
+		// The ground's rise across the kind's size (the generator samples it at random points).
+		private bool FlatEnough(Rule rule, Vector3 spot)
 		{
-			int n = (int)range / 64;
-			while (true)
-			{
-				int x = Rnd.Range(-n, n), y = Rnd.Range(-n, n);
-				float zx = x * 64f, zy = y * 64f;
-				if (MathF.Sqrt(zx * zx + zy * zy) < 10000f)
-				{
-					return (x, y);
-				}
-			}
+			gen.GetTerrainDelta(spot, rule.exteriorRadius, out float rise, out _);
+			return rise >= rule.minTerrainDelta && rise <= rule.maxTerrainDelta;
 		}
 
-		private void Register(Rule rule, Vector3 p)
+		// Far enough from its own prefab or group, and near enough to its "max" group when it needs one.
+		private bool RightNeighbours(Rule rule, Vector3 spot)
 		{
-			var zone = Zone(p.x, p.z);
-			if (!Instances.TryAdd(zone, new Placed(rule, p.x, p.y, p.z)))
+			if (rule.minDistanceFromSimilar > 0f && (_byPrefab.Within(rule.prefab, spot, rule.minDistanceFromSimilar) || (rule.group.Length > 0 && _byGroup.Within(rule.group, spot, rule.minDistanceFromSimilar))))
+			{
+				return false;
+			}
+			return !(rule.maxDistanceFromSimilar > 0f && !_byPrefab.Within(rule.prefab, spot, rule.maxDistanceFromSimilar) && !(rule.groupMax.Length > 0 && _byGroupMax.Within(rule.groupMax, spot, rule.maxDistanceFromSimilar)));
+		}
+
+		private static bool RightVegetation(Rule rule, float vegetation) =>
+			!(rule.minimumVegetation > 0f && vegetation <= rule.minimumVegetation) && !(rule.maximumVegetation < 1f && vegetation >= rule.maximumVegetation);
+
+		// Kinds that want the greenest spots: the vegetation on rings around the spot (nearer counts
+		// more) must beat the average of the kind's spots so far by a share of the way to the best; the
+		// first ten spots only set the bar.
+		private bool StandsOut(Rule rule, Vector3 spot)
+		{
+			if (rule.surroundCheckVegetation == 0)
+			{
+				return true;
+			}
+			float total = 0f, far = rule.surroundCheckDistance;
+			for (int ring = 1; ring <= rule.surroundCheckLayers; ring++)
+			{
+				float r = (float)ring / rule.surroundCheckLayers * far;
+				float weight = (far - r) / (far * 2f);
+				for (int k = 0; k < 6; k++)
+				{
+					float angle = k / 6f * MathF.PI * 2f;
+					gen.GetHeight(spot.x + MathF.Sin(angle) * r, spot.z + MathF.Cos(angle) * r, out Color around);
+					total += around.a * weight;
+				}
+			}
+			_sums.Add(total);
+			if (_sums.Count < 10)
+			{
+				return false;
+			}
+			float best = _sums.Max(), average = _sums.Average();
+			return total >= average + (best - average) * rule.surroundBetterThanAverage;
+		}
+
+		private void Register(Rule rule, Vector3 spot)
+		{
+			var placed = new Placed(rule, spot.x, spot.y, spot.z);
+			if (!Instances.TryAdd(ZoneOf((spot.x, spot.z)), placed))
 			{
 				return;
 			}
-			var placed = Instances[zone];
-			Add(byPrefab, rule.prefab, placed);
-			Add(byGroup, rule.group, placed);
-			Add(byGroupMax, rule.groupMax, placed);
-			static void Add(Dictionary<string, List<Placed>> d, string key, Placed p)
+			_byPrefab.Add(rule.prefab, placed);
+			_byGroup.Add(rule.group, placed);
+			_byGroupMax.Add(rule.groupMax, placed);
+		}
+	}
+
+	// Instances by a name (prefab or group), for "is one within this distance" (3D, as the game measures).
+	private sealed class Neighbours
+	{
+		private readonly Dictionary<string, List<Placed>> _byName = new();
+
+		public void Add(string name, Placed p)
+		{
+			if (!_byName.TryGetValue(name, out var list))
 			{
-				if (!d.TryGetValue(key, out var list))
-				{
-					d[key] = list = new();
-				}
-				list.Add(p);
+				_byName[name] = list = new();
 			}
+			list.Add(p);
 		}
 
-		// HaveLocationInRange: one of the same prefab, or of the group, within radius.
-		private bool InRange(string prefab, string group, Vector3 p, float radius, bool maxGroup)
+		public bool Within(string name, Vector3 at, float distance)
 		{
-			bool Any(List<Placed> l)
+			if (!_byName.TryGetValue(name, out var list))
 			{
-				foreach (Placed o in l)
-				{
-					float dx = o.X - p.x, dy = o.Y - p.y, dz = o.Z - p.z;
-					if (dx * dx + dy * dy + dz * dz < radius * radius)
-					{
-						return true;
-					}
-				}
 				return false;
 			}
-			if (byPrefab.TryGetValue(prefab, out var same) && Any(same))
+			float limit = distance * distance;
+			foreach (var p in list)
 			{
-				return true;
-			}
-			if (group.Length > 0 && (maxGroup ? byGroupMax : byGroup).TryGetValue(group, out var g) && Any(g))
-			{
-				return true;
+				float dx = p.X - at.x, dy = p.Y - at.y, dz = p.Z - at.z;
+				if (dx * dx + dy * dy + dz * dz < limit)
+				{
+					return true;
+				}
 			}
 			return false;
 		}
