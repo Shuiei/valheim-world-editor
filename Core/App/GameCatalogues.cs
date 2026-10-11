@@ -8,15 +8,15 @@ namespace TerrainEditor.App;
 
 // The catalogues in Core/WorldGen (in git, embedded in the app) made again from the game's files, for
 // developers after a game update: --export-catalogues <folder> [name ...]. Each catalogue is what the
-// editor needs of one kind of game component (pieces, prefabs, vegetation, dungeons...), read from
-// every asset bundle. The bundles are read once, in the order of their file names, each in the order
-// it lists its files and objects: the order entries come in, and which one wins when a name is found
-// twice. What needs names from other bundles (what saplings grow into, the build tools' pieces, the
-// vegetation's prefabs) reads them after. The files are written as they always were (CatalogueJson),
-// so making them again shows in git only what the game changed.
+// editor needs of one kind of game component (prefabs, pieces' colliders, vegetation, dungeons...),
+// read from every asset bundle. The bundles are read once, in the order of their file names, each in
+// the order it lists its files and objects: the order entries come in, and which one wins when a name
+// is found twice. What needs names from other bundles (what saplings grow into, the vegetation's
+// prefabs) reads them after. The files are written as they always were (CatalogueJson), so making
+// them again shows in git only what the game changed.
 public static partial class GameCatalogues
 {
-	public static readonly string[] All = { "prefabs", "pieces", "piece-place", "piece-support", "vegetation", "dungeon-rooms" };
+	public static readonly string[] All = { "prefabs", "piece-place", "piece-support", "vegetation", "dungeon-rooms" };
 
 	// Written gzipped (the largest).
 	private static readonly string[] Gzipped = { "piece-place", "dungeon-rooms" };
@@ -72,15 +72,12 @@ public static partial class GameCatalogues
 	private static Dictionary<string, string> Make(string valheim, GameBundles bundles, HashSet<string> names)
 	{
 		var made = new Dictionary<string, string>();
-		// The build tools' pieces are kept to those that are prefabs: pieces.json needs prefabs too.
-		var prefabs = names.Contains("prefabs") || names.Contains("pieces") ? new PrefabScan() : null;
-		var pieces = names.Contains("pieces") ? new PieceScan() : null;
-		var tools = names.Contains("pieces") ? new ToolScan() : null;
+		var prefabs = names.Contains("prefabs") ? new PrefabScan() : null;
 		var place = names.Contains("piece-place") ? new PlaceScan() : null;
 		var support = names.Contains("piece-support") ? new SupportScan() : null;
 		var vegetation = names.Contains("vegetation") ? new VegetationScan() : null;
 		var dungeons = names.Contains("dungeon-rooms") ? new DungeonScan() : null;
-		var scans = new IScan?[] { prefabs, pieces, tools, place, support, vegetation, dungeons }.OfType<IScan>().ToList();
+		var scans = new IScan?[] { prefabs, place, support, vegetation, dungeons }.OfType<IScan>().ToList();
 		if (scans.Count > 0)
 		{
 			using var game = new Game(bundles.Folder);
@@ -101,15 +98,10 @@ public static partial class GameCatalogues
 					Console.WriteLine($"{i} of {game.Bundles.Count} bundles read");
 				}
 			}
-			if (prefabs != null && names.Contains("prefabs"))
+			if (prefabs != null)
 			{
 				prefabs.Finish(game);
 				made["prefabs"] = CatalogueJson.Write(prefabs.Json(), new Style(",", ":", SortKeys: true));
-			}
-			if (pieces != null)
-			{
-				tools!.Finish(game, pieces.Entries, prefabs!.Names);
-				made["pieces"] = CatalogueJson.Write(pieces.Entries, new Style());
 			}
 			if (place != null)
 			{
@@ -131,23 +123,45 @@ public static partial class GameCatalogues
 		return made;
 	}
 
-	// The terrain modifiers of the game's prefabs, for the editor to read at its start (GameData):
-	// found from the TerrainModifier scripts up to their prefabs (ModifierScan), not by reading every
-	// object of every bundle as the catalogues do (seconds, not minutes).
-	public static string TerrainModifiersJson(string bundlesFolder)
+	// What the editor reads of the bundles at its start (GameData), each kind found from the scripts it
+	// needs up to their prefabs, not by reading every object of every bundle as the catalogues do
+	// (seconds, not minutes). Every kind asked for is read in one pass: each bundle opened once and
+	// given to each kind's reader.
+	public static readonly string[] AtStart = { "terrain-modifiers", "pieces", "piece-cost" };
+
+	// The kinds named (of AtStart), as their JSON.
+	public static Dictionary<string, string> ReadAtStart(GameBundles bundles, IReadOnlyList<string> kinds)
 	{
-		using var game = new Game(bundlesFolder);
+		var scans = kinds.Select(k => (Kind: k, Scan: k switch
+		{
+			"terrain-modifiers" => (IStartScan)new ModifierScan(),
+			"pieces" => new PieceScan(),
+			"piece-cost" => new CostScan(Localization.English(bundles.Folder)),
+			_ => throw new ArgumentException($"no kind {k} is read at the start"),
+		})).ToList();
+		using var game = new Game(bundles.Folder);
 		game.IndexCabs();
-		var scan = new ModifierScan();
 		foreach (string name in game.Bundles)
 		{
 			using var b = game.Open(name);
 			if (b != null)
 			{
-				scan.Read(b, game);
+				foreach (var (_, scan) in scans)
+				{
+					scan.Read(b, game);
+				}
 			}
 		}
-		return CatalogueJson.Write(scan.Entries, new Style(",", Indent: 0));
+		return scans.ToDictionary(s => s.Kind, s => s.Scan.Json());
+	}
+
+	// One kind's reading of every bundle at the editor's start (the game's other bundles are found
+	// through game), and its JSON.
+	private interface IStartScan
+	{
+		void Read(Bundle b, Game game);
+
+		string Json();
 	}
 
 	// One catalogue's reading of every bundle.
@@ -321,6 +335,10 @@ public static partial class GameCatalogues
 		{
 			_am = am;
 			_bundle = bundle;
+			if (bundle.file.DataReader.BaseStream is not BlockCache)
+			{
+				bundle.file.DataReader = new AssetsFileReader(new BlockCache(bundle.file.DataReader.BaseStream)) { BigEndian = bundle.file.DataReader.BigEndian };
+			}
 			var dirs = bundle.file.BlockAndDirInfo.DirectoryInfos;
 			for (int i = 0; i < dirs.Count; i++)
 			{
@@ -361,6 +379,25 @@ public static partial class GameCatalogues
 			}
 			return _fields[(f, pid)] = field;
 		}
+
+		// These objects' fields read now, in the order of their files (the bundle is read in blocks: much
+		// faster than one by one in another order); Field then has them.
+		public void ReadInOrder(IEnumerable<long> pids)
+		{
+			var objects = pids.Distinct().Where(_byId.ContainsKey).Select(p => (File: _byId[p], Pid: p))
+				.OrderBy(o => Files.IndexOf(o.File)).ThenBy(o => o.File.Assets.file.GetAssetInfo(o.Pid)!.GetAbsoluteByteOffset(o.File.Assets.file)).ToList();
+			// Backwards every other time: what the last read left in the block cache comes first.
+			if (_backwards = !_backwards)
+			{
+				objects.Reverse();
+			}
+			foreach (var (f, pid) in objects)
+			{
+				Field(f, pid);
+			}
+		}
+
+		private bool _backwards = true;
 
 		// The file that has this path id (where two have it: the later one).
 		public Inner? FileWith(long pid) => _byId.GetValueOrDefault(pid);
@@ -418,6 +455,93 @@ public static partial class GameCatalogues
 			}
 			_am.UnloadBundleFile(_bundle);
 		}
+	}
+
+	// A bundle's data through a larger cache of its blocks than AssetsTools keeps (23 blocks of 128 KiB):
+	// the readers at the editor's start go back and forth between thousands of them in the largest
+	// bundle, each decompressed again when it is read after leaving the cache. The block used longest
+	// ago goes first.
+	private sealed class BlockCache : Stream
+	{
+		private const int Size = 1 << 17;
+		private const int Most = 512;
+
+		private readonly Stream _inner;
+		private readonly Dictionary<long, LinkedListNode<(long Index, byte[] Data)>> _blocks = new();
+		// Last used first.
+		private readonly LinkedList<(long Index, byte[] Data)> _order = new();
+
+		public BlockCache(Stream inner) => _inner = inner;
+
+		public override bool CanRead => true;
+
+		public override bool CanSeek => true;
+
+		public override bool CanWrite => false;
+
+		public override long Length => _inner.Length;
+
+		public override long Position { get; set; }
+
+		public override int Read(byte[] buffer, int offset, int count)
+		{
+			int done = 0;
+			while (done < count && Position < Length)
+			{
+				long index = Position / Size;
+				byte[] block = Block(index);
+				int at = (int)(Position - index * Size);
+				int n = Math.Min(count - done, block.Length - at);
+				if (n <= 0)
+				{
+					break;
+				}
+				Buffer.BlockCopy(block, at, buffer, offset + done, n);
+				done += n;
+				Position += n;
+			}
+			return done;
+		}
+
+		private byte[] Block(long index)
+		{
+			if (_blocks.TryGetValue(index, out var kept))
+			{
+				_order.Remove(kept);
+				_order.AddFirst(kept);
+				return kept.Value.Data;
+			}
+			int size = (int)Math.Min(Size, Length - index * Size);
+			byte[]? block = null;
+			if (_blocks.Count >= Most)
+			{
+				var old = _order.Last!.Value;
+				_order.RemoveLast();
+				_blocks.Remove(old.Index);
+				// Its memory used again (blocks are large objects, which the runtime frees late).
+				block = old.Data.Length == size ? old.Data : null;
+			}
+			block ??= new byte[size];
+			_inner.Position = index * Size;
+			_inner.ReadExactly(block);
+			_blocks[index] = _order.AddFirst((index, block));
+			return block;
+		}
+
+		public override long Seek(long offset, SeekOrigin origin) => Position = origin switch
+		{
+			SeekOrigin.Begin => offset,
+			SeekOrigin.Current => Position + offset,
+			_ => Length + offset,
+		};
+
+		public override void Flush()
+		{
+		}
+
+		public override void SetLength(long value) => throw new NotSupportedException();
+
+		public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
 	}
 
 	// ---- Values, as the catalogues have them.

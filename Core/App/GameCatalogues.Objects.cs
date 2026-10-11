@@ -40,8 +40,6 @@ public static partial class GameCatalogues
 		private readonly Dictionary<string, (List<long> Types, List<Ref> Take, List<Ref> Refuse)> _stands = new();
 		private readonly Dictionary<string, List<object?>> _armour = new();
 
-		public IReadOnlySet<string> Names => _prefabs.Keys.ToHashSet();
-
 		public Dict Json()
 		{
 			var d = new Dict();
@@ -428,9 +426,11 @@ public static partial class GameCatalogues
 
 	// The TerrainModifiers of locations and networked prefabs (active and enabled ones, in the prefab's
 	// frame), as TerrainModifiers.Use takes them: read at the editor's start (GameData).
-	private sealed class ModifierScan
+	private sealed class ModifierScan : IStartScan
 	{
 		public Dict Entries { get; } = new();
+
+		public string Json() => CatalogueJson.Write(Entries, new CatalogueJson.Style(",", Indent: 0));
 
 		// From each TerrainModifier (told by its script, its fields the only ones read whole) up its parents
 		// to the prefab, rather than down every prefab's objects (some locations have tens of thousands).

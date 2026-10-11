@@ -14,7 +14,7 @@ public static class PieceCost
 
 	private sealed record Data(Dictionary<string, Info> Pieces, Dictionary<string, string> Items);
 
-	// The pieces and items, as GameCatalogues.PieceCostJson writes them.
+	// The pieces and items, as GameCatalogues' CostScan writes them.
 	public static void Use(string json)
 	{
 		using JsonDocument doc = JsonDocument.Parse(json);

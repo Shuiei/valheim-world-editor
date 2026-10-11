@@ -49,7 +49,6 @@ public static class ObjectKinds
 	private static readonly Regex Ore = new(@"minerock|copper|tin|silver|vein|obsidian|mudpile|guck|leviathan|tar|flametal", RegexOptions.IgnoreCase);
 	private static readonly Regex Rock = new(@"rock|stone|ice|boulder|cliff|pillar", RegexOptions.IgnoreCase);
 	private static readonly Regex Bush = new(@"bush|shrub|fern|ormbunke|vines|cloudberry", RegexOptions.IgnoreCase);
-	private static readonly HashSet<string> PieceNames = new(PieceCatalog.Names, StringComparer.Ordinal);
 
 	// builtPiece: a building piece a player placed (it has a builder); the same piece without one is
 	// part of a ruin. tamed: a creature a player tamed (wild ones stay in Other objects).
@@ -70,7 +69,7 @@ public static class ObjectKinds
 		if (PrefabCatalog.IsRunestoneName(name)) return ObjectKind.Runestones;
 		// A dungeon (its rooms are drawn from its data, see Dungeons) and the rooms themselves.
 		if (name.StartsWith("DG_", StringComparison.Ordinal) || Editing.Dungeons.RoomOf(name) != null) return ObjectKind.Dungeons;
-		if (PieceNames.Contains(name) || Ruin.IsMatch(name)) return ObjectKind.Ruins;
+		if (PieceCatalog.Has(name) || Ruin.IsMatch(name)) return ObjectKind.Ruins;
 		if (Pickable.IsMatch(name)) return ObjectKind.Pickables;
 		if (Tree.IsMatch(name)) return ObjectKind.Trees;
 		if (Tomb.IsMatch(name)) return ObjectKind.Other;
