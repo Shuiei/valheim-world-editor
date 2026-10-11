@@ -50,7 +50,7 @@ public class DungeonGenTests
     }
 
     /// <summary>
-    /// Checked in CoreDungeonHolds*Tests: the slowest check (the stability of every piece), split in classes of two
+    /// Checked in DungeonGenHolds*Tests: the slowest check (the stability of every piece), split in classes of two
     /// styles that run side by side.
     /// </summary>
     internal static void MadeOfTheGamesObjectsAndHolds(string style, string biome, int size, int levels, int seed)
@@ -68,12 +68,12 @@ public class DungeonGenTests
         Assert.Empty(real);
     }
 
-    // A style added later is checked too: the CoreDungeonHolds*Tests classes cover every style.
+    // A style added later is checked too: the DungeonGenHolds*Tests classes cover every style.
     [Fact]
     public void TheHoldingChecksCoverEveryStyle()
     {
         var styles = typeof(DungeonGenTests).Assembly.GetTypes()
-            .Where(t => t.Name.StartsWith("CoreDungeonHolds", StringComparison.Ordinal))
+            .Where(t => t.Name.StartsWith("DungeonGenHolds", StringComparison.Ordinal))
             .SelectMany(t => t.GetMethods().SelectMany(m => m.GetCustomAttributes(typeof(MemberDataAttribute), false)))
             .SelectMany(a => ((MemberDataAttribute)a).Arguments.OfType<string>())
             .ToList();
