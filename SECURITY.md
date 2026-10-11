@@ -22,6 +22,22 @@ token (see [Safety](README.md#safety)). Anything that lets another computer reac
 the token, or makes a world, blueprint or settings file run code or write outside its folder is a
 vulnerability.
 
+## Checking a download
+
+Each file on the [releases page](https://github.com/Shuiei/valheim-world-editor/releases) has a
+`<file>.sigstore.json` beside it: its [Sigstore](https://www.sigstore.dev/) signature, made by this
+repository's release workflow (`.github/workflows/sign-release.yml`). With
+[cosign](https://docs.sigstore.dev/cosign/system_config/installation/), download both and run:
+
+```sh
+cosign verify-blob ValheimWorldEditor-v1.19.0-linux-x64.tar.gz \
+  --bundle ValheimWorldEditor-v1.19.0-linux-x64.tar.gz.sigstore.json \
+  --certificate-identity-regexp '^https://github.com/Shuiei/valheim-world-editor/\.github/workflows/sign-release\.yml@' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+```
+
+`Verified OK` means the file is the one the release was signed with, byte for byte.
+
 ## Supported versions
 
 Only the [latest release](https://github.com/Shuiei/valheim-world-editor/releases/latest) gets
