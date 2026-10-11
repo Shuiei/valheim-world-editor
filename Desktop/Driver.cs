@@ -449,6 +449,8 @@ public static class Driver
             matches = w.MapPage?.Matches.Count ?? 0,
             detail = w.MapPage?.Map.DetailShown ?? false,
             models = w.View.Models != null,
+            // The game's look copied from Valheim and in use (else plain colours: no Valheim, as in CI).
+            gameLook = w.View.GameLookLoaded,
             modelParts = w.View.LastStats?.Instances ?? 0,
             modelsLoading = w.View.LastStats?.PendingModels ?? 0,
         });
