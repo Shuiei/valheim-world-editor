@@ -11,7 +11,7 @@
   </PropertyGroup>
   <ItemGroup>
     <!-- The window's shots brought to its size and saved as JPEG: the SkiaSharp the app has through Avalonia. -->
-    <PackageReference Include="SkiaSharp" Version="3.119.4" />
-    <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="3.119.4" />
+    <PackageReference Include="SkiaSharp" Version="4.153.1" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="4.153.1" />
   </ItemGroup>
 </Project>
