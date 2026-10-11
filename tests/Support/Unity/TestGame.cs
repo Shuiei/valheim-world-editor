@@ -139,9 +139,9 @@ public sealed class TestGame : IDisposable
         {
             Directory.Delete(Root, recursive: true);
         }
-        catch (IOException)
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {
-            // Left for the system's cleaning.
+            // Left for the system's cleaning (on Windows a file still held open, or read-only, is refused as access).
         }
     }
 }
