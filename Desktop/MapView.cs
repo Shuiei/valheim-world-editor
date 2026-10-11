@@ -205,20 +205,27 @@ public sealed class MapView : OpenGlControlBase, IDisposable
             {
                 return;
             }
-            if (_data == data)
+            // Kept on the UI thread, where Show and Dispose change _data: only if this world is still the one shown.
+            Dispatcher.UIThread.Post(() =>
             {
+                if (_data != data)
+                {
+                    return;
+                }
                 _global = g;
-                Dispatcher.UIThread.Post(() => { Status?.Invoke(""); RequestNextFrameRendering(); });
-            }
+                Status?.Invoke("");
+                RequestNextFrameRendering();
+            });
         }, build.Token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
         RequestNextFrameRendering();
     }
 
     /// <summary>
-    /// Stops the world map's build, if one runs.
+    /// Stops the world map's build, if one runs; one that finishes anyway is not shown.
     /// </summary>
     private void StopBuild()
     {
+        _data = null;
         _build?.Cancel();
         _build?.Dispose();
         _build = null;
@@ -725,10 +732,14 @@ public sealed class MapView : OpenGlControlBase, IDisposable
             try
             {
                 var layers = data.Detail(x0, z0, size, version);
-                if (_data == data)
+                // As the world map: kept on the UI thread, only if this world is still the one shown.
+                Dispatcher.UIThread.Post(() =>
                 {
-                    _detail = (layers, x0, z0, size, version);
-                }
+                    if (_data == data)
+                    {
+                        _detail = (layers, x0, z0, size, version);
+                    }
+                });
             }
             finally
             {
