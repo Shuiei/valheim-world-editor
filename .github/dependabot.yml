@@ -45,3 +45,14 @@ updates:
       # The scripts rely on UnityPy 1.25's API: newer versions need checking against the game's
       # files first (see docs/development.md).
       - dependency-name: UnityPy
+
+  # The GitHub Actions workflows (Scorecard, dependency review). Actions are pinned to commits;
+  # Dependabot moves the pin and the version comment together.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 3
+    groups:
+      actions:
+        patterns: ["*"]
