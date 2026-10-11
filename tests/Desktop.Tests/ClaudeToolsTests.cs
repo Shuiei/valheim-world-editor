@@ -196,7 +196,22 @@ public class ClaudeToolsTests
 		await r.T.SelectObjects(new[] { 1, 2 }, focus: false);
 		Assert.Equal(2, J(await r.T.GetSelection()).GetArrayLength());
 		int chest = J(await r.T.PlacePieces(new[] { new ClaudeTools.PieceSpec { Prefab = "piece_chest_wood", X = -10, Z = -10 } })).GetProperty("placed")[0].GetProperty("id").GetInt32();
-		Assert.StartsWith("Changed", await r.T.SetContents(chest, new[] { new ClaudeTools.ItemSpec { Item = "Coins", Stack = 50 } }));
+		string filled = await r.T.SetContents(chest, new[] { new ClaudeTools.ItemSpec { Item = "Coins", Stack = 50 } });
+		Assert.StartsWith("Changed", filled);
+		// Changed, the chest is a new object: its id is the one given back.
+		chest = int.Parse(filled[(filled.LastIndexOf(' ') + 1)..].TrimEnd('.'), System.Globalization.CultureInfo.InvariantCulture);
+		// Stands: food lying flat, then emptied; an armour stand dressed and posed; what a stand refuses.
+		int tray = J(await r.T.PlacePieces(new[] { new ClaudeTools.PieceSpec { Prefab = "itemstandh", X = -12, Z = -10 } })).GetProperty("placed")[0].GetProperty("id").GetInt32();
+		string held = await r.T.SetContents(tray, new[] { new ClaudeTools.ItemSpec { Item = "CookedMeat" } });
+		Assert.StartsWith("Changed", held);
+		tray = int.Parse(held[(held.LastIndexOf(' ') + 1)..].TrimEnd('.'), System.Globalization.CultureInfo.InvariantCulture);
+		Assert.Equal("CookedMeat", TerrainEditor.App.StandData.ReadItemStand(TerrainEditor.Save.ZdoData.Parse(TerrainEditor.App.ObjectData.Bytes(s.Scene.World!, s.Edits, s.Scene.Things[tray].Id)!)).Item?.Item);
+		Assert.Contains("cannot hang", await r.T.SetContents(tray, new[] { new ClaudeTools.ItemSpec { Item = "Wood" } }));
+		Assert.Contains("holds one item", await r.T.SetContents(tray, new[] { new ClaudeTools.ItemSpec { Item = "CookedMeat" }, new ClaudeTools.ItemSpec { Item = "FishCooked" } }));
+		Assert.StartsWith("Changed", await r.T.SetContents(tray, Array.Empty<ClaudeTools.ItemSpec>()));
+		int dummy = J(await r.T.PlacePieces(new[] { new ClaudeTools.PieceSpec { Prefab = "ArmorStand", X = -14, Z = -10 } })).GetProperty("placed")[0].GetProperty("id").GetInt32();
+		Assert.StartsWith("Changed", await r.T.SetContents(dummy, new[] { new ClaudeTools.ItemSpec { Item = "HelmetBronze" }, new ClaudeTools.ItemSpec { Item = "SwordIron", Quality = 2 } }, pose: 1));
+		Assert.Contains("not an item stand", await r.T.SetContents(chest, orientation: 1));
 		Assert.Contains("not a sign", await r.T.SetContents(1, text: "hello"));
 		Assert.Contains("not a creature", await r.T.SetContents(1, stars: 2));
 		// Then the user again; Take back removes only Claude's.
