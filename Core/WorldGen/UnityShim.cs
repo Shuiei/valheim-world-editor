@@ -1,7 +1,7 @@
 #nullable disable
 
-// Minimal stand-ins for the Unity types the decompiled world generator uses. Arithmetic matches
-// Unity's managed implementations (single-precision float math).
+// Minimal stand-ins for the Unity types the world generator works with. Arithmetic matches Unity's
+// managed implementations (single-precision float math).
 namespace ValheimGen;
 
 public struct Vector2

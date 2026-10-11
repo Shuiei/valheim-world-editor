@@ -3,20 +3,22 @@
 Valheim World Editor and WorldEditorBridge are under the [MIT License](LICENSE), Copyright (c) 2026
 Shuiei, except for the parts below.
 
-## Valheim's own code and data
+## Valheim's data
 
 Valheim is made by Iron Gate AB and published by Coffee Stain. This project is not affiliated with
-or endorsed by them. These files come from the game and remain theirs; the MIT License does not
+or endorsed by them. The repository holds none of the game's code: the world generator
+(`Core/WorldGen/WorldGenerator*.cs`, `GenMath.cs`) and the location placement (`SeedLocations.cs`)
+are written for the editor, following the game's formulas and rules so that they give the same
+terrain and places (checked against values recorded in the game).
+
+These files hold data read from the game's files, which remains theirs; the MIT License does not
 cover them:
 
-- `Core/WorldGen/WorldGenerator.cs` and `Core/WorldGen/DUtils.cs`: decompiled from the game, so
-  the editor generates terrain exactly like it. `Core/WorldGen/SeedLocations.cs` follows the game's
-  location placement (ZoneSystem, AltBiomeWorldData) the same way, so a new world's locations are
-  known before the game makes them; its rules are read from the player's game, and
-  `tests/fixtures/locations.json` holds some of them for the tests.
-- The data read from the game's files in `Core/WorldGen/`: `prefabs.json`, `pieces.json`,
-  `piece-cost.json`, `piece-place.json.gz`, `piece-support.json`, `vegetation.json`,
-  `cave-rocks.json`, `terrain-modifiers.json`, `zdo-keys.json` and `dungeon-rooms.json.gz`.
+- In `Core/WorldGen/`: `prefabs.json`, `pieces.json`, `piece-cost.json`, `piece-place.json.gz`,
+  `piece-support.json`, `vegetation.json`, `cave-rocks.json`, `terrain-modifiers.json`,
+  `zdo-keys.json` and `dungeon-rooms.json.gz`.
+- `tests/fixtures/locations.json`: some of the game's location rules, for the tests (the editor
+  reads them from the player's game).
 
 The game's textures and models are not in this repository or in the releases: the editor copies
 them from the player's own Valheim install, on their computer.
