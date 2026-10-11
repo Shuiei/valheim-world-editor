@@ -9,8 +9,8 @@ using V3 = (double X, double Y, double Z);
 
 namespace TerrainEditor.App;
 
-// The catalogues of the game's other objects: prefabs, vegetation, terrain modifiers, cave rocks, and
-// the names of object data.
+// The catalogues of the game's other objects: prefabs, vegetation, cave rocks and the names of object
+// data; and the terrain modifiers the editor reads at its start.
 public static partial class GameCatalogues
 {
 	private const int LodGroupType = (int)AssetClassID.LODGroup;
@@ -426,96 +426,140 @@ public static partial class GameCatalogues
 		}
 	}
 
-	// terrain-modifiers.json: the TerrainModifiers of locations and networked prefabs (active and
-	// enabled ones, in the prefab's frame).
-	private sealed class ModifierScan : IScan
+	// The TerrainModifiers of locations and networked prefabs (active and enabled ones, in the prefab's
+	// frame), as TerrainModifiers.Use takes them: read at the editor's start (GameModifiers).
+	private sealed class ModifierScan
 	{
 		public Dict Entries { get; } = new();
 
-		private static string? Kind(AssetTypeValueField m) =>
-			Has(m, "m_levelOffset") && Has(m, "m_smoothPower") ? "mod"
-			: Has(m, "m_exteriorRadius") && Has(m, "m_noBuild") ? "loc"
-			: Has(m, "m_persistent") && Has(m, "m_distant") && Has(m, "m_type") ? "znv"
-			: null;
-
-		public void Read(Bundle b)
+		// From each TerrainModifier (told by its script, its fields the only ones read whole) up its parents
+		// to the prefab, rather than down every prefab's objects (some locations have tens of thousands).
+		// A prefab is kept when it is a location or networked; its modifiers in the order of a walk down
+		// it: by their place under the prefab (the child indices), then on their object. Inactive or
+		// disabled ones are left out.
+		public void Read(Bundle b, Game game)
 		{
+			var found = new Dictionary<long, List<(List<int> Path, int Index, Dict Entry)>>();
 			foreach (var (f, info) in b.Objects)
 			{
-				if (info.TypeId != GameObjectType || b.Field(f, info.PathId) is not { } go || RootComponents(b, go) is not { } comps)
+				if (info.TypeId != MonoBehaviourType || game.ScriptClass(b, f, info) != "TerrainModifier" || b.Field(f, info.PathId) is not { } m
+					|| Up(b, m["m_GameObject.m_PathID"].AsLong) is not var (root, chain, active, index))
 				{
 					continue;
 				}
-				var kinds = comps.Where(c => c.Type == MonoBehaviourType).Select(c => Kind(c.F)).ToHashSet();
-				if (!kinds.Contains("loc") && !kinds.Contains("znv"))
+				if (!active || Num(Get(m, "m_Enabled", 1L)) != 1)
 				{
 					continue;
 				}
-				var mods = new List<object?>();
-				Walk(b, info.PathId, info.PathId, default, Quat.Root, (1, 1, 1), true, mods);
-				if (mods.Count > 0)
+				// The object's frame, from the prefab's down (chain: the objects' Transforms below it).
+				var (p, r, s) = (default(V3), Quat.Root, (V3)(1.0, 1.0, 1.0));
+				foreach (var tr in chain)
 				{
-					Entries[go["m_Name"].AsString] = new Dict { ["location"] = kinds.Contains("loc"), ["modifiers"] = mods };
+					(p, r, s) = ChildFrame(tr, p, r, s);
 				}
+				var g = b.Field(m["m_GameObject.m_PathID"].AsLong)!;
+				int place = g["m_Component.Array"].Children.FindIndex(c => c["component.m_PathID"].AsLong == info.PathId);
+				(found.TryGetValue(root, out var list) ? list : found[root] = new()).Add((index, place, Entry(m, chain.Count == 0, p)));
+			}
+			if (found.Count == 0)
+			{
+				return;
+			}
+			foreach (var (f, info) in b.Objects)
+			{
+				if (!found.TryGetValue(info.PathId, out var mods) || b.Field(f, info.PathId) is not { } go)
+				{
+					continue;
+				}
+				var kinds = b.ComponentIds(go).Where(c => c.Type == MonoBehaviourType).Select(c => game.ScriptClass(b, c.Pid)).ToHashSet();
+				if (!kinds.Contains("Location") && !kinds.Contains("ZNetView"))
+				{
+					continue;
+				}
+				mods.Sort((x, y) => Order(x.Path, y.Path) is var c and not 0 ? c : x.Index.CompareTo(y.Index));
+				Entries[go["m_Name"].AsString] = new Dict { ["location"] = kinds.Contains("Location"), ["modifiers"] = mods.Select(x => (object?)x.Entry).ToList() };
+			}
+
+			static int Order(List<int> a, List<int> c)
+			{
+				for (int i = 0; i < Math.Min(a.Count, c.Count); i++)
+				{
+					if (a[i] != c[i])
+					{
+						return a[i].CompareTo(c[i]);
+					}
+				}
+				return a.Count.CompareTo(c.Count);
 			}
 		}
 
-		private static void Walk(Bundle b, long root, long goPid, V3 pos, Quat rot, V3 scale, bool active, List<object?> mods)
+		// From an object up to its prefab root: the root, the Transforms from below the root down to the
+		// object, whether all of them are active (the root too), and the child index at each step. Null
+		// when something on the way cannot be read.
+		private static (long Root, List<AssetTypeValueField> Chain, bool Active, List<int> Index)? Up(Bundle b, long goPid)
 		{
-			if (b.Field(goPid) is not { } g)
+			var chain = new List<AssetTypeValueField>();
+			var index = new List<int>();
+			bool active = true;
+			for (int guard = 0; guard < 1000; guard++)
 			{
-				return;
-			}
-			bool act = active && Active(g);
-			AssetTypeValueField? tr = null;
-			var ms = new List<AssetTypeValueField>();
-			foreach (var (t, _, f) in b.Components(g))
-			{
-				if (t == TransformType)
+				if (b.Field(goPid) is not { } go)
 				{
-					tr = f;
+					return null;
 				}
-				else if (t == MonoBehaviourType && Kind(f) == "mod")
+				active &= Active(go);
+				AssetTypeValueField? tr = null;
+				long trPid = 0;
+				foreach (var (t, pid) in b.ComponentIds(go))
 				{
-					ms.Add(f);
+					if (t == TransformType && b.Field(pid) is { } f)
+					{
+						(tr, trPid) = (f, pid);
+					}
 				}
-			}
-			if (tr == null)
-			{
-				return;
-			}
-			var (p, r, s) = goPid == root ? (default(V3), Quat.Root, (V3)(1.0, 1.0, 1.0)) : ChildFrame(tr, pos, rot, scale);
-			foreach (var m in ms)
-			{
-				if (!act || Num(Get(m, "m_Enabled", 1L)) != 1)
+				if (tr == null)
 				{
-					continue;
+					return null;
 				}
-				mods.Add(new Dict
+				long father = tr["m_Father.m_PathID"].AsLong;
+				if (father == 0)
 				{
-					["pos"] = goPid == root ? Origin() : new List<object?> { R(p.X, 4), R(p.Y, 4), R(p.Z, 4) },
-					["level"] = Py(m["m_level"]),
-					["levelOffset"] = Py(m["m_levelOffset"]),
-					["levelRadius"] = Py(m["m_levelRadius"]),
-					["square"] = Py(m["m_square"]),
-					["smooth"] = Py(m["m_smooth"]),
-					["smoothRadius"] = Py(m["m_smoothRadius"]),
-					["smoothPower"] = Py(m["m_smoothPower"]),
-					["paintCleared"] = Py(m["m_paintCleared"]),
-					["paintType"] = Py(m["m_paintType"]),
-					["paintRadius"] = Py(m["m_paintRadius"]),
-					["paintStrength"] = Get(m, "m_paintStrength", 1.0),
-					["paintHeightCheck"] = Py(m["m_paintHeightCheck"]),
-					["sortOrder"] = Py(m["m_sortOrder"]),
-					["player"] = Py(m["m_playerModifiction"]),
-					["useTerrainCompiler"] = Get(m, "m_useTerrainCompiler", 0L),
-				});
+					chain.Reverse();
+					index.Reverse();
+					return (goPid, chain, active, index);
+				}
+				if (b.Field(father) is not { } parent)
+				{
+					return null;
+				}
+				chain.Add(tr);
+				index.Add(parent["m_Children.Array"].Children.FindIndex(c => c["m_PathID"].AsLong == trPid));
+				goPid = parent["m_GameObject.m_PathID"].AsLong;
 			}
-			foreach (long child in ChildObjects(b, tr))
-			{
-				Walk(b, root, child, p, r, s, act, mods);
-			}
+			return null;
 		}
+
+		// One modifier as the catalogue has it (pos: where it is in the prefab's frame).
+		private static Dict Entry(AssetTypeValueField m, bool atRoot, V3 p) => new()
+		{
+			["pos"] = atRoot ? Origin() : new List<object?> { R(p.X, 4), R(p.Y, 4), R(p.Z, 4) },
+			["level"] = Py(m["m_level"]),
+			["levelOffset"] = Py(m["m_levelOffset"]),
+			["levelRadius"] = Py(m["m_levelRadius"]),
+			["square"] = Py(m["m_square"]),
+			["smooth"] = Py(m["m_smooth"]),
+			["smoothRadius"] = Py(m["m_smoothRadius"]),
+			["smoothPower"] = Py(m["m_smoothPower"]),
+			["paintCleared"] = Py(m["m_paintCleared"]),
+			["paintType"] = Py(m["m_paintType"]),
+			["paintRadius"] = Py(m["m_paintRadius"]),
+			["paintStrength"] = Get(m, "m_paintStrength", 1.0),
+			["paintHeightCheck"] = Py(m["m_paintHeightCheck"]),
+			["sortOrder"] = Py(m["m_sortOrder"]),
+			["player"] = Py(m["m_playerModifiction"]),
+			["useTerrainCompiler"] = Get(m, "m_useTerrainCompiler", 0L),
+		};
+
 	}
 
 	// cave-rocks.json: the cave roof rocks' shapes, each prefab's mesh in its own frame (the model's scale

@@ -16,7 +16,7 @@ namespace TerrainEditor.App;
 // so making them again shows in git only what the game changed.
 public static partial class GameCatalogues
 {
-	public static readonly string[] All = { "prefabs", "pieces", "piece-cost", "piece-place", "piece-support", "vegetation", "cave-rocks", "terrain-modifiers", "zdo-keys", "dungeon-rooms" };
+	public static readonly string[] All = { "prefabs", "pieces", "piece-cost", "piece-place", "piece-support", "vegetation", "cave-rocks", "zdo-keys", "dungeon-rooms" };
 
 	// Written gzipped (the largest).
 	private static readonly string[] Gzipped = { "piece-place", "dungeon-rooms" };
@@ -80,9 +80,8 @@ public static partial class GameCatalogues
 		var place = names.Contains("piece-place") ? new PlaceScan() : null;
 		var support = names.Contains("piece-support") ? new SupportScan() : null;
 		var vegetation = names.Contains("vegetation") ? new VegetationScan() : null;
-		var modifiers = names.Contains("terrain-modifiers") ? new ModifierScan() : null;
 		var dungeons = names.Contains("dungeon-rooms") ? new DungeonScan() : null;
-		var scans = new IScan?[] { prefabs, pieces, tools, cost, place, support, vegetation, modifiers, dungeons }.OfType<IScan>().ToList();
+		var scans = new IScan?[] { prefabs, pieces, tools, cost, place, support, vegetation, dungeons }.OfType<IScan>().ToList();
 		if (scans.Count > 0)
 		{
 			using var game = new Game(bundles.Folder);
@@ -129,10 +128,6 @@ public static partial class GameCatalogues
 			{
 				made["vegetation"] = CatalogueJson.Write(vegetation.Finish(game), new Style(",", Indent: 0));
 			}
-			if (modifiers != null)
-			{
-				made["terrain-modifiers"] = CatalogueJson.Write(modifiers.Entries, new Style(",", Indent: 0));
-			}
 			if (dungeons != null)
 			{
 				made["dungeon-rooms"] = CatalogueJson.Write(dungeons.Json(), new Style(",", ":"));
@@ -147,6 +142,25 @@ public static partial class GameCatalogues
 			made["zdo-keys"] = CatalogueJson.Write(ZdoKeyNames(valheim), new Style(",", ":", SortKeys: true));
 		}
 		return made;
+	}
+
+	// The terrain modifiers of the game's prefabs, for the editor to read at its start (GameModifiers):
+	// found from the TerrainModifier scripts up to their prefabs (ModifierScan), not by reading every
+	// object of every bundle as the catalogues do (seconds, not minutes).
+	public static string TerrainModifiersJson(string bundlesFolder)
+	{
+		using var game = new Game(bundlesFolder);
+		game.IndexCabs();
+		var scan = new ModifierScan();
+		foreach (string name in game.Bundles)
+		{
+			using var b = game.Open(name);
+			if (b != null)
+			{
+				scan.Read(b, game);
+			}
+		}
+		return CatalogueJson.Write(scan.Entries, new Style(",", Indent: 0));
 	}
 
 	// One catalogue's reading of every bundle.
@@ -196,6 +210,68 @@ public static partial class GameCatalogues
 			}
 		}
 
+		// Every bundle's internal files, from their headers only (what Open fills as it goes): for
+		// references into bundles not opened yet.
+		public void IndexCabs()
+		{
+			foreach (string name in Bundles)
+			{
+				try
+				{
+					var b = _am.LoadBundleFile(Path.Combine(_dir, name), false);
+					foreach (var d in b.file.BlockAndDirInfo.DirectoryInfos)
+					{
+						CabBundle[d.Name.ToLowerInvariant()] = name;
+					}
+					_am.UnloadBundleFile(b);
+				}
+				catch (Exception e) when (e is IOException or InvalidDataException or NotImplementedException or NotSupportedException or IndexOutOfRangeException or ArgumentException)
+				{
+					// Not a bundle.
+				}
+			}
+		}
+
+		// The class of each script (MonoScript) met, by where it is; and the bundles opened for them.
+		private readonly Dictionary<Ref, string?> _scripts = new();
+		private readonly Dictionary<string, Bundle?> _scriptBundles = new(StringComparer.Ordinal);
+
+		// A MonoBehaviour's class ("TerrainModifier", "ZNetView"...), from the script its file lists for
+		// it: nothing of the object itself is read. Null when it cannot be told.
+		public string? ScriptClass(Bundle b, Bundle.Inner f, AssetFileInfo info)
+		{
+			var file = f.Assets.file;
+			ushort index = info.GetScriptIndex(file);
+			if (index == 0xffff || index >= file.Metadata.ScriptTypes.Count)
+			{
+				return null;
+			}
+			var script = file.Metadata.ScriptTypes[index];
+			if (f.FileOf(script.FileId) is not string cab)
+			{
+				return null;
+			}
+			var r = new Ref(cab, script.PathId);
+			if (_scripts.TryGetValue(r, out string? cached))
+			{
+				return cached;
+			}
+			Bundle? sb = b.Files.Any(x => x.Cab == cab) ? b : null;
+			if (sb == null && CabBundle.TryGetValue(cab, out string? name))
+			{
+				// Scripts are in a few bundles: kept open until the end.
+				if (!_scriptBundles.TryGetValue(name, out sb))
+				{
+					_scriptBundles[name] = sb = Open(name);
+				}
+			}
+			var inner = sb?.Files.FirstOrDefault(x => x.Cab == cab);
+			return _scripts[r] = inner == null ? null : sb!.Field(inner, r.PathId)?["m_ClassName"].AsString;
+		}
+
+		public string? ScriptClass(Bundle b, long pid) =>
+			b.FileWith(pid) is { } f && f.Assets.file.GetAssetInfo(pid) is { } info ? ScriptClass(b, f, info) : null;
+
 		// Each reference's object, read in the bundle that has its file (each bundle opened once);
 		// references to files no bundle has are left out.
 		public void Visit(IEnumerable<Ref> refs, Action<Bundle, Bundle.Inner, long> visit)
@@ -219,6 +295,10 @@ public static partial class GameCatalogues
 
 		public void Dispose()
 		{
+			foreach (var b in _scriptBundles.Values)
+			{
+				b?.Dispose();
+			}
 			_am.UnloadAllAssetsFiles(true);
 			_am.UnloadAllBundleFiles();
 		}
@@ -294,6 +374,13 @@ public static partial class GameCatalogues
 			}
 			return _fields[(f, pid)] = field;
 		}
+
+		// The file that has this path id (where two have it: the later one).
+		public Inner? FileWith(long pid) => _byId.GetValueOrDefault(pid);
+
+		// A GameObject's components as (type, path id), nothing read.
+		public IEnumerable<(int Type, long Pid)> ComponentIds(AssetTypeValueField go) =>
+			go["m_Component.Array"].Children.Select(c => c["component.m_PathID"].AsLong).Select(pid => (TypeOf(pid), pid)).Where(c => c.Item1 >= 0);
 
 		// By path id anywhere in the bundle.
 		public AssetTypeValueField? Field(long pid) => _byId.TryGetValue(pid, out var f) ? Field(f, pid) : null;

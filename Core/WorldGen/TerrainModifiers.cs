@@ -1,5 +1,4 @@
 using System.Numerics;
-using System.Reflection;
 using System.Text.Json;
 using TerrainEditor.Save;
 
@@ -7,8 +6,9 @@ namespace TerrainEditor.Terrain;
 
 // Runtime terrain modifiers (TerrainModifier components) that the game applies to every zone's
 // heightmap before the saved terrain edits: the flattening around locations, plus a few network
-// prefabs. Their settings were extracted from the game's asset bundles (terrain-modifiers.json);
-// placement comes from the world save. The maths mirrors Heightmap.ApplyModifiers.
+// prefabs. Their settings are read from the player's own Valheim (GameModifiers; the tests use
+// tests/fixtures/terrain-modifiers.json): the editor keeps no copy, which would go out of date.
+// Placement comes from the world save. The maths mirrors Heightmap.ApplyModifiers.
 public sealed class TerrainModifiers
 {
 	public sealed record Modifier(
@@ -21,7 +21,19 @@ public sealed class TerrainModifiers
 
 	private sealed record Template(Vector3 Offset, bool Level, float LevelOffset, float LevelRadius, bool Square, bool Smooth, float SmoothRadius, float SmoothPower, bool PaintCleared, float PaintRadius, int SortOrder, bool Player);
 
-	private static readonly Dictionary<int, (string Name, bool Location, List<Template> Mods)> Prefabs = LoadPrefabs();
+	// None until Use: no world opens before then (GameModifiers).
+	private static volatile Dictionary<int, (string Name, bool Location, List<Template> Mods)> Prefabs = new();
+
+	// Whether the game's modifiers are known (Use was given them).
+	public static bool Loaded { get; private set; }
+
+	// The modifiers of the game's prefabs, as terrain-modifiers.json has them (name -> location flag
+	// and modifiers): from the game (GameModifiers) or the tests' copy.
+	public static void Use(string json)
+	{
+		Prefabs = Parse(json);
+		Loaded = true;
+	}
 
 	public static IEnumerable<int> NetworkPrefabHashes => Prefabs.Where(p => !p.Value.Location).Select(p => p.Key);
 
@@ -196,11 +208,9 @@ public sealed class TerrainModifiers
 		return (float)Math.Sqrt(fx * fx + fy * fy);
 	}
 
-	private static Dictionary<int, (string, bool, List<Template>)> LoadPrefabs()
+	private static Dictionary<int, (string, bool, List<Template>)> Parse(string json)
 	{
-		using Stream s = Assembly.GetExecutingAssembly().GetManifestResourceStream("TerrainEditor.terrain-modifiers.json")
-			?? throw new InvalidOperationException("terrain-modifiers.json is not embedded");
-		using JsonDocument doc = JsonDocument.Parse(s);
+		using JsonDocument doc = JsonDocument.Parse(json);
 		Dictionary<int, (string, bool, List<Template>)> result = new();
 		foreach (JsonProperty p in doc.RootElement.EnumerateObject())
 		{
