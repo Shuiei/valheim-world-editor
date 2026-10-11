@@ -193,7 +193,25 @@ public static class GameData
 		}
 	}
 
-	private static readonly JsonSerializerOptions Indented = new() { WriteIndented = true };
+	// A copy written one entry per line (an entry's value on its line, compact): small, and a game
+	// update shows in git entry by entry. A few groups of entries (piece-cost's items and pieces) are
+	// opened the same way.
+	private static string Lines(JsonElement e, string indent = "")
+	{
+		string inner = indent + "  ";
+		if (e.ValueKind == JsonValueKind.Object)
+		{
+			var props = e.EnumerateObject().ToList();
+			bool groups = props.Count is > 0 and <= 4 && props.All(p => p.Value.ValueKind == JsonValueKind.Object);
+			var lines = props.Select(p => inner + JsonSerializer.Serialize(p.Name) + ": " + (groups ? Lines(p.Value, inner) : p.Value.GetRawText()));
+			return props.Count == 0 ? "{}" : "{\n" + string.Join(",\n", lines) + "\n" + indent + "}";
+		}
+		if (e.ValueKind == JsonValueKind.Array && e.GetArrayLength() > 0)
+		{
+			return "[\n" + string.Join(",\n", e.EnumerateArray().Select(x => inner + x.GetRawText())) + "\n" + indent + "]";
+		}
+		return e.GetRawText();
+	}
 
 	// The tests' copies (<folder>/<kind>.json) made again from the game, each keeping the entries it
 	// already has: --export-test-data <folder>.
@@ -226,7 +244,7 @@ public static class GameData
 			using var copy = JsonDocument.Parse(File.ReadAllText(path));
 			using var game = JsonDocument.Parse(read[kind.Name]);
 			var trimmed = (kind.Trim ?? Entries)(game.RootElement, copy.RootElement);
-			File.WriteAllText(path, JsonSerializer.Serialize(trimmed, Indented) + "\n");
+			File.WriteAllText(path, Lines(JsonSerializer.SerializeToElement(trimmed)) + "\n");
 			var kept = Kept(copy.RootElement, kind.Trim == null);
 			var now = Kept(JsonSerializer.SerializeToElement(trimmed), kind.Trim == null);
 			Console.WriteLine($"{path}: {now.Count} of {kept.Count} entries" + (now.Count < kept.Count ? $" (not in the game any more: {string.Join(", ", kept.Except(now))})" : ""));
