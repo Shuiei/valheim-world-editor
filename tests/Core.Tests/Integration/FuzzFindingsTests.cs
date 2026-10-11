@@ -4,8 +4,10 @@ using Xunit;
 
 namespace WorldEditor.Tests;
 
-// Inputs the fuzz targets (tests/Fuzz) found that broke a reader, minimized: each must now be refused
-// as damaged (InvalidDataException, EndOfStreamException...), not fail with an unrelated error.
+/// <summary>
+/// Inputs the fuzz targets (tests/Fuzz) found that broke a reader, minimized: each must now be refused as damaged
+/// (InvalidDataException, EndOfStreamException...), not fail with an unrelated error.
+/// </summary>
 public class FuzzFindingsTests
 {
     private static void Refused(Action read)
