@@ -222,9 +222,20 @@ public static class Options
                     TerrainEditor.App.LocalGame.SearchDefaultPlaces = false;
                     break;
                 case "--gamedata":
+                {
                     // As the driver's gamedata, but before a world given on the command line opens.
-                    TerrainEditor.App.GameData.UseCopies(Path.GetFullPath(Value(args, ref i)));
+                    string folder = Path.GetFullPath(Value(args, ref i));
+                    try
+                    {
+                        TerrainEditor.App.GameData.UseCopies(folder);
+                    }
+                    catch (Exception e) when (e is IOException or UnauthorizedAccessException or System.Text.Json.JsonException)
+                    {
+                        // A folder missing, or one of its files: a command-line error, not a crash.
+                        throw new ArgumentException($"--gamedata {folder} cannot be read: {e.Message}", e);
+                    }
                     break;
+                }
                 case "--zone":
                     Direct = true;
                     string[] p = Value(args, ref i).Split(',');
