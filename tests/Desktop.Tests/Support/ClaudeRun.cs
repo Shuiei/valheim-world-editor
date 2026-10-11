@@ -49,6 +49,9 @@ internal sealed class ClaudeRun : IDisposable
 
     public void Dispose()
     {
+        // Closed here, not only by the hook after the test (which waits for a test ending on Avalonia's thread), and
+        // without the question about unsaved changes, which Ask answers No.
+        W.CloseWithoutAsking();
         Game?.Dispose();
         foreach (string d in new[] { Path.GetDirectoryName(Dir)!, Homestead })
         {
