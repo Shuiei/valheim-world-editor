@@ -78,7 +78,8 @@ public sealed class BuildPanelLibraryTests : IDisposable
         var said = Assert.IsType<TextBlock>(Assert.Single(p.Tiles.Children));
         Assert.Equal("No piece matches.", said.Text);
         p.Search.Text = "wall";
-        Assert.All(p.Tiles.Children, Assert.IsNotType<TextBlock>);
-        Assert.NotEmpty(p.Tiles.Children);
+        // Pieces (under their stations' headings), not the word that none matches.
+        Assert.Contains(p.Tiles.Children, c => c is not TextBlock);
+        Assert.DoesNotContain(p.Tiles.Children, c => c is TextBlock { Text: "No piece matches." });
     }
 }
