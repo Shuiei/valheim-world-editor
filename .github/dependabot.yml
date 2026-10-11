@@ -2,12 +2,14 @@
 # into one pull request; CircleCI runs the tests on each.
 version: 2
 updates:
-  # The app (Core, Desktop: Avalonia, SkiaSharp, SSH.NET) and the developer checks (WorldCheck).
+  # The app (Core, Desktop: Avalonia, SkiaSharp, SSH.NET), the developer checks (WorldCheck) and the
+  # documentation's pictures (DocsScreenshots: SkiaSharp, kept with the app's).
   - package-ecosystem: nuget
     directories:
       - /Core
       - /Desktop
       - /tools/WorldCheck
+      - /tools/DocsScreenshots
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
@@ -31,20 +33,6 @@ updates:
         update-types: ["version-update:semver-major"]
       - dependency-name: xunit.runner.visualstudio
         update-types: ["version-update:semver-major"]
-
-  # The Python packages of the developer scripts that make the editor's data files (tools/asset-export).
-  - package-ecosystem: pip
-    directory: /tools/asset-export
-    schedule:
-      interval: weekly
-    open-pull-requests-limit: 3
-    groups:
-      exporter:
-        patterns: ["*"]
-    ignore:
-      # The scripts rely on UnityPy 1.25's API: newer versions need checking against the game's
-      # files first (see docs/development.md).
-      - dependency-name: UnityPy
 
   # The GitHub Actions workflows (Scorecard, dependency review). Actions are pinned to commits;
   # Dependabot moves the pin and the version comment together.

@@ -13,9 +13,12 @@ using TerrainEditor.Save;
 //                                 a new world from a seed, its middle generated radius zones out
 //                                 (refuses a folder that already holds a world)
 //   look <seed> [metres]          the biomes and water around the middle of a seed's world
+//   objects <world> [prefab]      the most common kinds of saved objects; with a prefab (name or
+//                                 hash), each of its objects with its saved bytes, to check them
+//                                 byte by byte
 if (args.Length < 2)
 {
-	Console.Error.WriteLine("usage: WorldCheck verify <dump> [seed] | verify-ingame <world> <file> | selftest-save <world copy> | inspect <world> | summary <world> | create <folder> <name> <seed> [radius] [--flat] | look <seed> [metres]");
+	Console.Error.WriteLine("usage: WorldCheck verify <dump> [seed] | verify-ingame <world> <file> | selftest-save <world copy> | inspect <world> | summary <world> | create <folder> <name> <seed> [radius] [--flat] | look <seed> [metres] | objects <world> [prefab]");
 	return 2;
 }
 if (args[0] == "create")
@@ -202,6 +205,22 @@ switch (args[0])
 				var deltas = Enumerable.Range(0, zone.LevelDelta.Length).Where(i => zone.ModifiedHeight[i]).Select(i => zone.LevelDelta[i] + zone.SmoothDelta[i]).ToList();
 				Console.WriteLine($"  zone ({zone.ZoneX},{zone.ZoneZ}) center ({zone.Center.X:0},{zone.Center.Z:0}): {deltas.Count} of {zone.ModifiedHeight.Length} heights edited" + (deltas.Count > 0 ? $" [{deltas.Min():0.00} .. {deltas.Max():0.00} m]" : "") + $", {zone.ModifiedPaint.Count(p => p)} of {zone.ModifiedPaint.Length} painted, grid {zone.HeightWidth}/{zone.PaintWidth}");
 			}
+		return 0;
+	}
+	case "objects":
+	{
+		if (args.Length < 3)
+		{
+			foreach (var kind in world.Objects.GroupBy(o => o.Prefab).OrderByDescending(g => g.Count()).Take(30))
+				Console.WriteLine($"  prefab {kind.Key}: {kind.Count():N0} objects");
+			return 0;
+		}
+		int prefab = StableHash.OfName(args[2]);
+		foreach (var o in world.Objects.Where(o => o.Prefab == prefab))
+		{
+			byte[] bytes = world.ObjectBytes(o.Id);
+			Console.WriteLine($"  object {o.Id} at ({o.Position.X:0.00}, {o.Position.Y:0.00}, {o.Position.Z:0.00}), {bytes.Length} B: {Convert.ToHexString(bytes)}");
+		}
 		return 0;
 	}
 	default:

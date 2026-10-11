@@ -5,7 +5,7 @@ using TerrainEditor.Save;
 namespace TerrainEditor.Terrain;
 
 // Every game prefab with a ZNetView, extracted from the game's asset bundles
-// (tools/asset-export/scan_prefabs.py): what a new object of it needs in the save. This lets the
+// (--export-catalogues, GameCatalogues.cs): what a new object of it needs in the save. This lets the
 // editor create any kind of object, also ones that do not exist anywhere in the world yet.
 public static class PrefabCatalog
 {

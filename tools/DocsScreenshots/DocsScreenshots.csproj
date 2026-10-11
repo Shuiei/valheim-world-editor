@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- The documentation's pictures (docs/images), taken in the app through its driver (not shipped):
+       dotnet run, project tools/DocsScreenshots, then the worlds' folder and the scenes (see Program.cs). -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <RootNamespace>TerrainEditor.DocsScreenshots</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- The window's shots brought to its size and saved as JPEG: the SkiaSharp the app has through Avalonia. -->
+    <PackageReference Include="SkiaSharp" Version="3.119.4" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="3.119.4" />
+  </ItemGroup>
+</Project>

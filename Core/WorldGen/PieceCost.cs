@@ -4,7 +4,7 @@ namespace TerrainEditor.Terrain;
 
 // What build pieces cost in game, for the blueprint library: each piece's English name, its resources
 // (item and amount, as the hammer takes them) and the crafting station that must be near to build it
-// (piece-cost.json, tools/asset-export/scan_piece_cost.py, from the game's Piece components).
+// (piece-cost.json, --export-catalogues, from the game's Piece components).
 public static class PieceCost
 {
 	public sealed record Info(string Name, string? Station, (string Item, int Amount)[] Resources);

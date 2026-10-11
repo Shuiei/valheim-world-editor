@@ -28,6 +28,14 @@ public static class Program
 			Environment.ExitCode = TerrainEditor.App.GameLocations.Export(args.ElementAtOrDefault(export + 1));
 			return;
 		}
+		// --export-catalogues <folder> [name ...]: the catalogues in Core/WorldGen made again from the
+		// game's files (for developers, after a game update).
+		int catalogues = Array.IndexOf(args, "--export-catalogues");
+		if (catalogues >= 0)
+		{
+			Environment.ExitCode = TerrainEditor.App.GameCatalogues.Export(args[(catalogues + 1)..]);
+			return;
+		}
 		Options.Parse(args);
 		// Everything said also goes to ValheimWorldEditor.log in the data folder (a window app has no console on Windows).
 		TerrainEditor.App.Log.Start(BuildInfo.Version);
