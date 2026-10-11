@@ -131,23 +131,44 @@ public static partial class GameCatalogues
 		return made;
 	}
 
-	// The terrain modifiers of the game's prefabs, for the editor to read at its start (GameData):
-	// found from the TerrainModifier scripts up to their prefabs (ModifierScan), not by reading every
-	// object of every bundle as the catalogues do (seconds, not minutes).
-	public static string TerrainModifiersJson(string bundlesFolder)
+	// What the editor reads of the bundles at its start (GameData), each kind found from the scripts it
+	// needs up to their prefabs, not by reading every object of every bundle as the catalogues do
+	// (seconds, not minutes). Every kind asked for is read in one pass: each bundle opened once and
+	// given to each kind's reader.
+	public static readonly string[] AtStart = { "terrain-modifiers", "piece-cost" };
+
+	// The kinds named (of AtStart), as their JSON.
+	public static Dictionary<string, string> ReadAtStart(GameBundles bundles, IReadOnlyList<string> kinds)
 	{
-		using var game = new Game(bundlesFolder);
+		var scans = kinds.Select(k => (Kind: k, Scan: k switch
+		{
+			"terrain-modifiers" => (IStartScan)new ModifierScan(),
+			"piece-cost" => new CostScan(Localization.English(bundles.Folder)),
+			_ => throw new ArgumentException($"no kind {k} is read at the start"),
+		})).ToList();
+		using var game = new Game(bundles.Folder);
 		game.IndexCabs();
-		var scan = new ModifierScan();
 		foreach (string name in game.Bundles)
 		{
 			using var b = game.Open(name);
 			if (b != null)
 			{
-				scan.Read(b, game);
+				foreach (var (_, scan) in scans)
+				{
+					scan.Read(b, game);
+				}
 			}
 		}
-		return CatalogueJson.Write(scan.Entries, new Style(",", Indent: 0));
+		return scans.ToDictionary(s => s.Kind, s => s.Scan.Json());
+	}
+
+	// One kind's reading of every bundle at the editor's start (the game's other bundles are found
+	// through game), and its JSON.
+	private interface IStartScan
+	{
+		void Read(Bundle b, Game game);
+
+		string Json();
 	}
 
 	// One catalogue's reading of every bundle.

@@ -193,35 +193,19 @@ public static partial class GameCatalogues
 		}
 	}
 
-	// What build pieces cost, for the editor to read at its start (GameData): the prefabs found from the
-	// Piece scripts (told by their class, nothing else read), not by reading every GameObject.
-	public static string PieceCostJson(GameBundles bundles)
-	{
-		using var game = new Game(bundles.Folder);
-		game.IndexCabs();
-		var scan = new CostScan(Localization.English(bundles.Folder));
-		foreach (string name in game.Bundles)
-		{
-			using var b = game.Open(name);
-			if (b != null)
-			{
-				scan.Read(b, game);
-			}
-		}
-		return CatalogueJson.Write(scan.Json(), new CatalogueJson.Style(",", ":", SortKeys: true, Ascii: false));
-	}
-
 	// Each piece's English name, the crafting station it needs nearby and its resources (item and amount,
 	// and whether it is given back), items by prefab name with their English names, for the blueprint
 	// library's material cost.
-	private sealed class CostScan
+	// What build pieces cost, read at the editor's start (GameData): the prefabs are found from the Piece
+	// scripts (told by their class, nothing else read), not by reading every GameObject.
+	private sealed class CostScan : IStartScan
 	{
 		private readonly Dictionary<string, string> _english;
 		private readonly Dict _pieces = new(), _items = new();
 
 		public CostScan(Dictionary<string, string> english) => _english = english;
 
-		public Dict Json() => new() { ["pieces"] = _pieces, ["items"] = _items };
+		public string Json() => CatalogueJson.Write(new Dict { ["pieces"] = _pieces, ["items"] = _items }, new CatalogueJson.Style(",", ":", SortKeys: true, Ascii: false));
 
 		private string En(string? token)
 		{

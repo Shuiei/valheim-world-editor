@@ -173,18 +173,21 @@ number format, key order and separators), so a new export shows in git only what
 Some of the game's data is not kept in the repository at all: the editor reads it from the player's
 Valheim at its start (`Core/App/GameData.cs`, one entry per kind), in seconds, and keeps each kind in
 the data folder (`game-<kind>.json`) until the game's files change. No world or Workshop opens without
-it. The kinds so far:
+it. The kinds found in the bundles are read together, in one pass over them (each bundle opened once
+and given to each kind's reader, `GameCatalogues.ReadAtStart`): each new kind adds little to the
+first start after a game update. The kinds so far:
 
 - `terrain-modifiers`: how locations and a few objects shape the ground before the saved edits, found
   from each `TerrainModifier` script (told by the script its file lists for it) up to its prefab,
-  rather than through every object (about 4 s).
+  rather than through every object.
 - `zdo-keys`: the names of object data keys for the object inspector, from the string literals of
   `assembly_valheim.dll` (the save only keeps their hashes).
 - `cave-rocks`: the meshes of the rocks the Path tool's Cave hangs as its roof, from the two prefabs'
   bundle only (found with the game files' index; under a second).
 - `piece-cost`: each piece's English name, station and resources, for the blueprint library and the
   Workshop's Build, found from each `Piece` script up to its prefab, with the English texts of
-  `resources.assets` (about 5 s). Its test copy keeps the pieces it has and the items they take.
+  `resources.assets` (with `terrain-modifiers`, about 6 s). Its test copy keeps the pieces it has and
+  the items they take.
 
 The tests use trimmed copies, `tests/fixtures/<kind>.json` (what they meet; the driver's
 `gamedata <folder>` gives them to the smoke tests). After a game update, make them again with
