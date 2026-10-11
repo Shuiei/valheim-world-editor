@@ -102,11 +102,17 @@ public class GameBundlesFilesTests
             r.Missing(999);
         });
         b.Prefab("Stone");
-        // A bundle whose objects' fields are not described (no type trees): nothing known of its prefab, no error.
+        // A bundle whose objects' fields are not described (no type trees): its table of contents neither, so its
+        // prefab is not found; read first (its name comes first), so no other bundle's type tree stands in.
         var bare = game.Bundle("bare", typeTrees: false);
         bare.Prefab("Bare", r => r.Mono("ZNetView", new Fields { ["m_persistent"] = true }));
         game.Save();
-        var bundles = new GameBundles(game.BundlesDir, null);
+        // An index kept from before names a prefab in it: what its root has is not known either.
+        string cache = Path.Combine(game.Root, "index.json");
+        var bundles = new GameBundles(game.BundlesDir, cache);
+        Assert.DoesNotContain("Bare", bundles.Index.Keys);
+        File.WriteAllText(cache, File.ReadAllText(cache).Replace("\"Prefabs\":{", "\"Prefabs\":{\"Kept\":\"bare:1\",", StringComparison.Ordinal));
+        Assert.Equal(new GameBundles.Kind(false, false, false), new GameBundles(game.BundlesDir, cache).KindOf("Kept"));
 
         Assert.Equal(new GameBundles.Kind(true, true, false), bundles.KindOf("Wolf"));
         Assert.Equal(new GameBundles.Kind(true, false, true), bundles.KindOf("Coin"));
@@ -114,7 +120,7 @@ public class GameBundlesFilesTests
         // Asked again: the same answer, kept.
         Assert.Same(bundles.KindOf("Wolf"), bundles.KindOf("Wolf"));
         Assert.Null(bundles.KindOf("Nothing"));
-        Assert.Equal(new GameBundles.Kind(false, false, false), bundles.KindOf("Bare"));
+        Assert.Null(bundles.KindOf("Bare"));
         Assert.Empty(bundles.MonoBehaviours("bare"));
         Assert.Equal(4, bundles.MonoBehaviours("things").Count);
     }

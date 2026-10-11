@@ -400,7 +400,8 @@ public sealed class GameBundles
                 _cab[d.Name.Split('.')[0]] = bundle;
             }
             var a = _am.LoadAssetsFileFromBundle(b, 0, false);
-            var ab = a.file.GetAssetsOfType(AssetClassID.AssetBundle).FirstOrDefault();
+            // Without type trees its table of contents is not described either: nothing listed.
+            var ab = a.file.Metadata.TypeTreeEnabled ? a.file.GetAssetsOfType(AssetClassID.AssetBundle).FirstOrDefault() : null;
             if (ab != null)
             {
                 foreach (var c in _am.GetBaseField(a, ab)["m_Container.Array"].Children)
