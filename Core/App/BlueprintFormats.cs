@@ -283,7 +283,7 @@ public static class BlueprintFormats
     public static JsonArray DataJson(IEnumerable<Editing.ObjectField> fields) => [.. fields.Select(f => (JsonNode)f.ToString()).ToArray()];
 
     public static List<Editing.ObjectField>? DataOf(JsonNode? data) =>
-        data is JsonArray a && a.Count > 0 ? a.Select(n => Editing.ObjectField.Parse((string?)n ?? "")).OfType<Editing.ObjectField>().ToList() : null;
+        data is JsonArray a && a.Count > 0 ? [.. a.Select(n => Editing.ObjectField.Parse((string?)n ?? "")).OfType<Editing.ObjectField>()] : null;
 
     private static bool Covers(TerrainMod t, float x, float z)
     {

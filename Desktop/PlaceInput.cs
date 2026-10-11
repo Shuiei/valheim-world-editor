@@ -147,7 +147,7 @@ public sealed class PlaceInput
     private int SegmentAt(Point at)
     {
         var dense = Tool.Mode == PlaceTool.Modes.Zone
-            ? ShownPoints() is { Count: > 0 } z ? z.Append(z[0]).Select((p, i) => (P: p, Seg: i)).ToList() : []
+            ? ShownPoints() is { Count: > 0 } z ? [.. z.Append(z[0]).Select((p, i) => (P: p, Seg: i))] : []
             : Tool.LineCurve();
         int best = -1;
         double bd = 8;

@@ -47,7 +47,7 @@ public sealed partial class DungeonTool
     public List<Dungeons.Joint> DoorJoints => Derive()?.Joints ?? [];
 
     // The scene's doors (of the dungeon's door kinds) standing at a joint.
-    public List<int> DoorsAt(Dungeons.Joint j) => Derive() is { } c && c.Doors.TryGetValue(Spot(j.Position), out var at) ? at.ToList() : [];
+    public List<int> DoorsAt(Dungeons.Joint j) => Derive() is { } c && c.Doors.TryGetValue(Spot(j.Position), out var at) ? [.. at] : [];
 
     // How many pairs of the open dungeon's rooms overlap.
     public int OverlappingPairs => Derive()?.Overlapping ?? 0;
