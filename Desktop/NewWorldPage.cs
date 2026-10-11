@@ -77,6 +77,7 @@ public sealed class NewWorldPage : IDisposable
 	internal Task Pending { get; private set; } = Task.CompletedTask;
 
 	private CancellationTokenSource? _search, _preview, _dungeons;
+	private bool _dungeonWait;
 	private readonly DispatcherTimer _wait = new() { Interval = TimeSpan.FromMilliseconds(350) };
 
 	private static NumericUpDown Near(double metres) => new()
@@ -139,9 +140,14 @@ public sealed class NewWorldPage : IDisposable
 			t.Tip("newWorld.showDungeons");
 			t.IsCheckedChanged += (_, _) =>
 			{
-				if (t.IsChecked == true && DungeonMarks == null && _dungeons == null && Shown != null)
+				if (t.IsChecked == true && DungeonMarks == null && Shown != null)
 				{
-					FindDungeons(Shown);
+					// Already being looked for (since the seed was shown): only waited for.
+					if (_dungeons == null)
+					{
+						FindDungeons(Shown);
+					}
+					WaitForDungeons(Shown);
 				}
 				PlaceDots();
 			};
@@ -359,27 +365,42 @@ public sealed class NewWorldPage : IDisposable
 		ShowInfo(p);
 		PlaceMarks();
 		PlaceDots();
-		// A kind still switched on: this seed's looked for too.
-		if (DungeonMarks == null && ShowDungeons.Values.Any(t => t.IsChecked == true))
+		// Looked for at once, out of sight (so a switch turned on later shows them at once, or sooner),
+		// with the loading sign when a kind is switched on already.
+		if (DungeonMarks == null)
 		{
 			FindDungeons(p);
+			if (ShowDungeons.Values.Any(t => t.IsChecked == true))
+			{
+				WaitForDungeons(p);
+			}
 		}
 	}
 
-	// The seed's dungeons looked for (a few seconds: the game's smaller locations come first in its
-	// order), with the loading sign; kept for the seed.
+	// A dungeon kind switched on before they are found: the loading sign until they are.
+	private void WaitForDungeons(SeedPreview.Preview p)
+	{
+		if (_dungeons == null)
+		{
+			return;
+		}
+		_dungeonWait = true;
+		Loading.IsVisible = true;
+		LoadingText.Text = $"Finding {p.Seed}'s dungeons…";
+	}
+
+	// The seed's dungeons looked for (a few seconds, on one core: the game's smaller locations come first
+	// in its order; what the preview laid out is gone on from), kept for the seed.
 	private void FindDungeons(SeedPreview.Preview p)
 	{
 		StopDungeons();
-		if (p.Generator is not { } gen || p.Landmarks == null)
+		if (p.Layout is not { } layout || p.Landmarks == null)
 		{
 			return;
 		}
 		var cancel = _dungeons = new CancellationTokenSource();
 		FillDungeons();
-		Loading.IsVisible = true;
-		LoadingText.Text = $"Finding {p.Seed}'s dungeons…";
-		Task.Run(() => SeedPreview.FindDungeons(gen, parallel: true, cancel.Token), cancel.Token).ContinueWith(t =>
+		Task.Run(() => SeedPreview.FindDungeons(layout, cancel.Token), cancel.Token).ContinueWith(t =>
 		{
 			if (cancel.IsCancellationRequested || Shown != p)
 			{
@@ -387,7 +408,11 @@ public sealed class NewWorldPage : IDisposable
 			}
 			cancel.Dispose();
 			_dungeons = null;
-			Loading.IsVisible = false;
+			if (_dungeonWait)
+			{
+				_dungeonWait = false;
+				Loading.IsVisible = false;
+			}
 			DungeonMarks = t.Status == TaskStatus.RanToCompletion ? t.Result : new();
 			if (_dungeonsSeen.Count >= 20)
 			{
@@ -401,6 +426,7 @@ public sealed class NewWorldPage : IDisposable
 
 	private void StopDungeons()
 	{
+		_dungeonWait = false;
 		_dungeons?.Cancel();
 		_dungeons?.Dispose();
 		_dungeons = null;
@@ -422,7 +448,6 @@ public sealed class NewWorldPage : IDisposable
 		}
 		if (DungeonMarks == null && _dungeons == null)
 		{
-			_dungeonList.Children.Add(Ui.Hint("Switch a kind on, on the map (Dungeons), to look for them: a few seconds."));
 			return;
 		}
 		if (DungeonMarks == null)

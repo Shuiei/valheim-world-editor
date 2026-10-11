@@ -51,10 +51,14 @@ public static class SeedPreview
 
 	// Where the seed's dungeons will be (Kind "dungeon", Name the Dungeons kind). The game's smaller
 	// locations before them are laid out too: a few seconds.
-	public static List<Landmark> FindDungeons(WorldGenerator gen, bool parallel = false, CancellationToken cancel = default)
+	public static List<Landmark> FindDungeons(WorldGenerator gen, bool parallel = false, CancellationToken cancel = default) =>
+		FindDungeons(new SeedLocations.Layout(gen, parallel), cancel);
+
+	// The same, going on from a layout under way (a preview's: what it laid out is not done again).
+	public static List<Landmark> FindDungeons(SeedLocations.Layout layout, CancellationToken cancel = default)
 	{
 		var byPrefab = Dungeons.SelectMany(d => d.Prefabs.Select(p => (p, d.Name))).ToDictionary(x => x.p, x => x.Name);
-		return SeedLocations.PlaceKinds(gen, byPrefab.Keys, parallel, cancel)
+		return layout.PlaceKinds(byPrefab.Keys, cancel)
 			.Select(p => new Landmark(byPrefab[p.Rule.prefab], "dungeon", p.X, p.Z, false))
 			.ToList();
 	}
@@ -80,8 +84,9 @@ public static class SeedPreview
 
 	// Size x Size cells of Cell metres over the world, row 0 the south: biome (index in Biomes, 255
 	// ocean or outside), ground height.
-	// Generator: the seed's, for a closer look at a part (Sample).
-	public sealed record Preview(string Seed, int Size, float Cell, byte[] Biome, float[] Height, Stats Stats, IReadOnlyList<Landmark>? Landmarks = null, WorldGenerator? Generator = null)
+	// Generator: the seed's, for a closer look at a part (Sample); Layout: its locations laid out so far,
+	// to go on from (FindDungeons).
+	public sealed record Preview(string Seed, int Size, float Cell, byte[] Biome, float[] Height, Stats Stats, IReadOnlyList<Landmark>? Landmarks = null, WorldGenerator? Generator = null, SeedLocations.Layout? Layout = null)
 	{
 		public (float X, float Z) CellCenter(int i, int j) => (-Radius + (i + 0.5f) * Cell, -Radius + (j + 0.5f) * Cell);
 	}
@@ -103,7 +108,8 @@ public static class SeedPreview
 		var gen = Generator(seedName);
 		float cell = 2 * Radius / size;
 		var (biome, height) = Sample(gen, -Radius, -Radius, cell, size, size, parallel, cancel);
-		var placed = SeedLocations.Place(gen, landmarks ? SeedLocations.Which.Prioritized : SeedLocations.Which.Start, parallel, cancel);
+		var layout = new SeedLocations.Layout(gen, parallel);
+		var placed = layout.Place(landmarks ? SeedLocations.Which.Prioritized : SeedLocations.Which.Start, cancel);
 		var marks = new List<Landmark>();
 		foreach (var p in placed)
 		{
@@ -125,7 +131,7 @@ public static class SeedPreview
 					.DefaultIfEmpty(float.PositiveInfinity).Min()),
 			};
 		}
-		return new Preview(seedName, size, cell, biome, height, stats, landmarks ? marks : null, gen);
+		return new Preview(seedName, size, cell, biome, height, stats, landmarks ? marks : null, gen, layout);
 	}
 
 	// The generator sampled on w x h cells of cell metres from (x0, z0) (row 0 the south): each cell's

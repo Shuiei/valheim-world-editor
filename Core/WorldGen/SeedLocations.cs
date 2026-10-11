@@ -121,60 +121,87 @@ public static class SeedLocations
 
 	// The seed's location instances, the uncertain kinds left out (a kind's instances are the same
 	// whichever is asked). parallel: the biome map on every core but one.
-	public static List<Placed> Place(WorldGenerator gen, Which which = Which.Prioritized, bool parallel = false, CancellationToken cancel = default)
-	{
-		var state = _state;
-		int count = which switch
-		{
-			Which.Start => 1,
-			Which.Prioritized => state.Ordered.Count(r => r.prioritized != 0),
-			_ => state.Ordered.Count,
-		};
-		return Run(gen, state, count, parallel, cancel).Where(p => !Uncertain(state, p.Rule)).ToList();
-	}
+	public static List<Placed> Place(WorldGenerator gen, Which which = Which.Prioritized, bool parallel = false, CancellationToken cancel = default) =>
+		new Layout(gen, parallel).Place(which, cancel);
 
 	// The instances of these kinds (prefab names), the game's kinds before them laid out too (a few
 	// seconds when it goes past the prioritized ones). A kind an alt biome blocks somewhere is given
 	// everywhere (close to the game: an alt biome covers a few areas only).
-	public static List<Placed> PlaceKinds(WorldGenerator gen, IReadOnlyCollection<string> prefabs, bool parallel = false, CancellationToken cancel = default)
-	{
-		var state = _state;
-		int count = state.Ordered.FindLastIndex(r => prefabs.Contains(r.prefab)) + 1;
-		return Run(gen, state, count, parallel, cancel).Where(p => prefabs.Contains(p.Rule.prefab) && p.Rule.altBiome == null).ToList();
-	}
+	public static List<Placed> PlaceKinds(WorldGenerator gen, IReadOnlyCollection<string> prefabs, bool parallel = false, CancellationToken cancel = default) =>
+		new Layout(gen, parallel).PlaceKinds(prefabs, cancel);
 
 	private static bool Uncertain(State state, Rule r) => r.altBiome != null || state.Blocked.Contains(r.name);
 
-	// The first count kinds of the game's order laid out.
-	private static List<Placed> Run(WorldGenerator gen, State state, int count, bool parallel, CancellationToken cancel)
+	// A seed's layout under way, kept to go on later without starting again (the dungeons after the
+	// start, bosses and traders): the game's kinds laid out in its order so far, and its biome map.
+	// One caller at a time.
+	public sealed class Layout
 	{
-		var rules = state.Ordered.Take(count).ToList();
-		// The biomes these kinds can draw a zone from (RandomBiome's slips included).
-		var needed = Heightmap.Biome.None;
-		foreach (Rule r in rules.Where(r => r.centerFirst == 0))
+		private readonly WorldGenerator _gen;
+		private readonly bool _parallel;
+		private readonly State _state = SeedLocations._state;
+		private readonly object _sync = new();
+		private BiomeMap? _map;
+		private Placer _placer;
+		private int _done;
+		private CancellationToken _cancel;
+
+		// parallel: the biome map on every core but one.
+		public Layout(WorldGenerator gen, bool parallel = false)
 		{
-			var b = (Heightmap.Biome)r.biome;
-			needed |= b;
-			if ((b & (b - 1)) != 0)
+			_gen = gen;
+			_parallel = parallel;
+			_placer = NewPlacer();
+		}
+
+		private Placer NewPlacer() => new(_gen, () => _map ??= new BiomeMap(_gen, _parallel, _cancel));
+
+		public List<Placed> Place(Which which, CancellationToken cancel = default)
+		{
+			int count = which switch
 			{
-				needed |= ((b & Heightmap.Biome.Meadows) != 0 ? Heightmap.Biome.Ocean : 0) | ((b & Heightmap.Biome.Plains) != 0 ? Heightmap.Biome.BlackForest : 0);
+				Which.Start => 1,
+				Which.Prioritized => _state.Ordered.Count(r => r.prioritized != 0),
+				_ => _state.Ordered.Count,
+			};
+			return Until(count, cancel).Where(p => !Uncertain(_state, p.Rule)).ToList();
+		}
+
+		public List<Placed> PlaceKinds(IReadOnlyCollection<string> prefabs, CancellationToken cancel = default)
+		{
+			int count = _state.Ordered.FindLastIndex(r => prefabs.Contains(r.prefab)) + 1;
+			return Until(count, cancel).Where(p => prefabs.Contains(p.Rule.prefab) && p.Rule.altBiome == null).ToList();
+		}
+
+		// The first count kinds of the game's order laid out (those already done kept): every instance
+		// so far. Stopped half way, it starts again next time (a kind half laid out is no use).
+		private List<Placed> Until(int count, CancellationToken cancel)
+		{
+			lock (_sync)
+			{
+				_cancel = cancel;
+				Rnd.State saved = Rnd.state;
+				try
+				{
+					for (; _done < Math.Min(count, _state.Ordered.Count); _done++)
+					{
+						cancel.ThrowIfCancellationRequested();
+						_placer.Generate(_state.Ordered[_done]);
+					}
+				}
+				catch (OperationCanceledException)
+				{
+					_placer = NewPlacer();
+					_done = 0;
+					throw;
+				}
+				finally
+				{
+					Rnd.state = saved;
+				}
+				return _placer.Instances.Values.ToList();
 			}
 		}
-		var placer = new Placer(gen, new Lazy<BiomeMap>(() => new BiomeMap(gen, needed, parallel, cancel)));
-		Rnd.State saved = Rnd.state;
-		try
-		{
-			foreach (Rule rule in rules)
-			{
-				cancel.ThrowIfCancellationRequested();
-				placer.Generate(rule);
-			}
-		}
-		finally
-		{
-			Rnd.state = saved;
-		}
-		return placer.Instances.Values.ToList();
 	}
 
 	// AltBiomeWorldData's points (GenerateBiomePoints) and the order its flood fill lists them in
@@ -200,17 +227,11 @@ public static class SeedLocations
 
 		public static int Index(Heightmap.Biome b) => Array.IndexOf(ByIndex, b);
 
-		// needed: the biomes whose points are listed (the others' lists stay empty).
-		public BiomeMap(WorldGenerator gen, Heightmap.Biome needed, bool parallel, CancellationToken cancel)
+		// One byte a point: the biome index, at or above sea level, met by the fill.
+		private readonly byte[] _cell = new byte[Size * Size];
+
+		public BiomeMap(WorldGenerator gen, bool parallel, CancellationToken cancel)
 		{
-			var listed = new bool[ByIndex.Length];
-			for (int b = 0; b < ByIndex.Length; b++)
-			{
-				listed[b] = (needed & ByIndex[b]) != 0;
-			}
-			// One byte a point (many seeds are looked at side by side): the biome index, at or above sea
-			// level, met by the fill.
-			var cell = new byte[Size * Size];
 			var options = new ParallelOptions { CancellationToken = cancel, MaxDegreeOfParallelism = parallel ? Math.Max(1, Environment.ProcessorCount - 1) : 1 };
 			Parallel.For(0, Size, options, i =>
 			{
@@ -221,99 +242,86 @@ public static class SeedLocations
 					int k = j + i * Size;
 					if (wx * wx + wy * wy > 110250000f)
 					{
-						cell[k] = Sea;
+						_cell[k] = Sea;
 						continue;
 					}
 					Heightmap.Biome b = gen.GetBiome(wx, wy);
-					cell[k] = (byte)(Index(b) | (gen.GetBiomeHeight(b, wx, wy, out _) >= 30f ? Above : 0));
+					_cell[k] = (byte)(Index(b) | (gen.GetBiomeHeight(b, wx, wy, out _) >= 30f ? Above : 0));
 				}
 			});
-			// Sizes first: every point is listed once.
-			var count = new int[ByIndex.Length];
-			var countAbove = new int[ByIndex.Length];
-			for (int k = 0; k < cell.Length; k++)
+		}
+
+		// A biome's points listed the first time they are asked for. Its order depends on its own points
+		// only (the game's fill never crosses into another biome), so each is listed alone.
+		private void List(int biome)
+		{
+			if (All[biome] != null)
 			{
-				int b = cell[k] & BiomeBits;
-				if (!listed[b])
-				{
-					continue;
-				}
-				count[b]++;
-				countAbove[b] += (cell[k] & Above) != 0 ? 1 : 0;
+				return;
 			}
-			var n = new int[ByIndex.Length];
-			var nAbove = new int[ByIndex.Length];
-			for (int b = 0; b < ByIndex.Length; b++)
-			{
-				All[b] = new int[count[b]];
-				AboveSea[b] = new int[countAbove[b]];
-			}
+			var all = new List<int>();
+			var above = new List<int>();
 			void Add(int x, int y)
 			{
-				int k = x + y * Size, b = cell[k] & BiomeBits;
-				if (!listed[b])
+				all.Add(x | (y << 16));
+				if ((_cell[x + y * Size] & Above) != 0)
 				{
-					return;
-				}
-				All[b][n[b]++] = x | (y << 16);
-				if ((cell[k] & Above) != 0)
-				{
-					AboveSea[b][nAbove[b]++] = x | (y << 16);
+					above.Add(x | (y << 16));
 				}
 			}
-			// Ashlands, Deep North and the ocean: one sector each, in rows.
-			for (int y = 0; y < Size; y++)
+			bool Is(int x, int y) => (_cell[x + y * Size] & BiomeBits) == biome;
+			if (biome is Ash or North or Sea)
 			{
-				for (int x = 0; x < Size; x++)
+				// Ashlands, Deep North and the ocean: one sector each, in rows.
+				for (int y = 0; y < Size; y++)
 				{
-					int b = cell[x + y * Size] & BiomeBits;
-					if (b is Ash or North or Sea)
+					for (int x = 0; x < Size; x++)
 					{
-						cell[x + y * Size] |= Visited;
-						Add(x, y);
-					}
-				}
-			}
-			// The rest: each area flood filled from its first point in rows. That first point is not
-			// listed (the game only lists the points its fill reaches).
-			var stack = new Stack<int>(1024);
-			for (int y = 0; y < Size; y++)
-			{
-				for (int x = 0; x < Size; x++)
-				{
-					if ((cell[x + y * Size] & Visited) != 0)
-					{
-						continue;
-					}
-					cell[x + y * Size] |= Visited;
-					stack.Push(x | (y << 16));
-					while (stack.Count > 0)
-					{
-						int c = stack.Pop();
-						int cx = c & 0xFFFF, cy = c >> 16;
-						int b = cell[cx + cy * Size] & BiomeBits;
-						Fill(cx + 1, cy);
-						Fill(cx - 1, cy);
-						Fill(cx, cy + 1);
-						Fill(cx, cy - 1);
-						void Fill(int fx, int fy)
+						if (Is(x, y))
 						{
-							if (fx >= 0 && fy >= 0 && fx < Size && fy < Size && (cell[fx + fy * Size] & Visited) == 0 && (cell[fx + fy * Size] & BiomeBits) == b)
-							{
-								cell[fx + fy * Size] |= Visited;
-								Add(fx, fy);
-								stack.Push(fx | (fy << 16));
-							}
+							Add(x, y);
 						}
 					}
 				}
 			}
-			// The first points left out: trim the lists to what was listed.
-			for (int b = 0; b < ByIndex.Length; b++)
+			else
 			{
-				Array.Resize(ref All[b], n[b]);
-				Array.Resize(ref AboveSea[b], nAbove[b]);
+				// Each area flood filled from its first point in rows. That first point is not listed (the
+				// game only lists the points its fill reaches).
+				var stack = new Stack<int>(1024);
+				for (int y = 0; y < Size; y++)
+				{
+					for (int x = 0; x < Size; x++)
+					{
+						if (!Is(x, y) || (_cell[x + y * Size] & Visited) != 0)
+						{
+							continue;
+						}
+						_cell[x + y * Size] |= Visited;
+						stack.Push(x | (y << 16));
+						while (stack.Count > 0)
+						{
+							int c = stack.Pop();
+							int cx = c & 0xFFFF, cy = c >> 16;
+							Fill(cx + 1, cy);
+							Fill(cx - 1, cy);
+							Fill(cx, cy + 1);
+							Fill(cx, cy - 1);
+						}
+					}
+				}
+				void Fill(int fx, int fy)
+				{
+					if (fx >= 0 && fy >= 0 && fx < Size && fy < Size && Is(fx, fy) && (_cell[fx + fy * Size] & Visited) == 0)
+					{
+						_cell[fx + fy * Size] |= Visited;
+						Add(fx, fy);
+						stack.Push(fx | (fy << 16));
+					}
+				}
 			}
+			All[biome] = all.ToArray();
+			AboveSea[biome] = above.ToArray();
 		}
 
 		// AltBiomeWorldData.RandomBiomeFromBiomes, slips included (Plains gives Black Forest, the ocean
@@ -369,6 +377,7 @@ public static class SeedLocations
 		public (float X, float Z) RandomPoint(Heightmap.Biome biomes, bool aboveSea)
 		{
 			int b = Index(RandomBiome(biomes));
+			List(b);
 			int[] list = aboveSea && AboveSea[b].Length > 0 ? AboveSea[b] : All[b];
 			int p = list[Rnd.Range(0, list.Length)];
 			return (MapToWorld(p & 0xFFFF), MapToWorld(p >> 16));
@@ -376,7 +385,7 @@ public static class SeedLocations
 	}
 
 	// ZoneSystem's GenerateLocationsTimeSliced for one kind, on a world no zone of which is generated yet.
-	private sealed class Placer(WorldGenerator gen, Lazy<BiomeMap> map)
+	private sealed class Placer(WorldGenerator gen, Func<BiomeMap> map)
 	{
 		public readonly Dictionary<(int X, int Y), Placed> Instances = new();
 		private readonly Dictionary<string, List<Placed>> byPrefab = new();
@@ -414,7 +423,7 @@ public static class SeedLocations
 				}
 				else
 				{
-					var (px, pz) = map.Value.RandomPoint(biomes, rule.minAltitude >= 0f);
+					var (px, pz) = map().RandomPoint(biomes, rule.minAltitude >= 0f);
 					zone = Zone(px, pz);
 				}
 				if (Instances.ContainsKey(zone))
