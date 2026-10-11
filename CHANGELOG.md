@@ -26,6 +26,8 @@ the plugin is unchanged in versions without that part.
   [docs/new-world.md](docs/new-world.md).
 
 ### Changed
+- **The world map** of a world opened again (Reload, or back to the worlds and in again) shows at once:
+  the last world's map is kept instead of being worked out again (seconds).
 - **The editor reads how the game's locations shape the ground, the game's objects (what new ones
   need in the save, containers, wards, saplings, what stands hold), the build pieces (their
   footprints, snap points, build tools, what holds them up and how the hammer places them), the names

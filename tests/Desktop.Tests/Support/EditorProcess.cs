@@ -97,7 +97,8 @@ public class EditorProcess : IDisposable
         {
             _p!.StandardInput.WriteLine(command);
             _p.StandardInput.Flush();
-            string? answer = Next(TimeSpan.FromSeconds(120));
+            // Longer than the editor's own wait for a picture (Driver.PictureWait), so its error comes back.
+            string? answer = Next(TimeSpan.FromMinutes(4));
             Assert.NotNull(answer);
             Assert.True(answer!.StartsWith("@@ ok ", StringComparison.Ordinal), $"{command}: {answer}");
             return JsonDocument.Parse(answer["@@ ok ".Length..]).RootElement.Clone();

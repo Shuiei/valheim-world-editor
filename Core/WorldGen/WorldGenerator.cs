@@ -116,6 +116,11 @@ public sealed partial class WorldGenerator
     /// </summary>
     public int GetSeed() => _world.m_seed;
 
+    /// <summary>
+    /// What the generator's ground depends on: two generators with the same make the same world.
+    /// </summary>
+    internal (int Seed, int Version, bool Menu) Identity => (_world.m_seed, _world.m_worldGenVersion, _world.m_menu);
+
     // ---- Heights.
 
     /// <summary>

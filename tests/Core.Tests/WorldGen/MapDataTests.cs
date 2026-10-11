@@ -147,6 +147,18 @@ public class MapDataTests
         Assert.Equal(255, g.Biome[mid * 4 + 3]);
     }
 
+    // The same world opened again (Reload, or back to the worlds and in again): its world map is the one built
+    // before, not built again; edits never change it (base terrain only).
+    [Fact]
+    public void TheGlobalMapOfAWorldOpenedAgainIsNotBuiltAgain()
+    {
+        using var w = new TempWorld();
+        var (_, terrain, edits) = Open(w);
+        var first = new MapData(terrain, edits).Global;
+        var (_, again, againEdits) = Open(w);
+        Assert.Same(first, new MapData(again, againEdits).Global);
+    }
+
     [Fact]
     public void TheOverviewIsAPngOfTheRequestedSize()
     {

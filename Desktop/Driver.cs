@@ -48,6 +48,12 @@ namespace TerrainEditor.Desktop;
 /// </remarks>
 public static class Driver
 {
+    /// <summary>
+    /// How long a picture may wait for the view to be ready: the world map's first build on a slow computer (CI's
+    /// two cores, slower still while its coverage is measured) takes more than a minute.
+    /// </summary>
+    private static readonly TimeSpan PictureWait = TimeSpan.FromMinutes(3);
+
     /// <summary>The View panel's 3D resolution choices, in their list's order.</summary>
     private static readonly string[] Resolutions = ["sharp", "balanced", "fast"];
 
@@ -179,7 +185,7 @@ public static class Driver
                 await w.MapPage.ShowMatching();
                 return State(w);
             case "picture":
-                await (w.MapShown ? w.MapPage!.Map.Picture(a[1]) : w.View.Picture(a[1])).WaitAsync(TimeSpan.FromSeconds(60));
+                await (w.MapShown ? w.MapPage!.Map.Picture(a[1]) : w.View.Picture(a[1])).WaitAsync(PictureWait);
                 return State(w);
             case "shot":
             {
@@ -189,7 +195,7 @@ public static class Driver
                 {
                     if (w.MapShown || w.Session != null)
                     {
-                        await (w.MapShown ? w.MapPage!.Map.Picture(glPicture) : w.View.Picture(glPicture)).WaitAsync(TimeSpan.FromSeconds(60));
+                        await (w.MapShown ? w.MapPage!.Map.Picture(glPicture) : w.View.Picture(glPicture)).WaitAsync(PictureWait);
                     }
                     await WindowShot.Save(w, a[1]);
                 }
