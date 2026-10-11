@@ -6,7 +6,7 @@ namespace TerrainEditor.Terrain;
 
 // Runtime terrain modifiers (TerrainModifier components) that the game applies to every zone's
 // heightmap before the saved terrain edits: the flattening around locations, plus a few network
-// prefabs. Their settings are read from the player's own Valheim (GameModifiers; the tests use
+// prefabs. Their settings are read from the player's own Valheim (GameData; the tests use
 // tests/fixtures/terrain-modifiers.json): the editor keeps no copy, which would go out of date.
 // Placement comes from the world save. The maths mirrors Heightmap.ApplyModifiers.
 public sealed class TerrainModifiers
@@ -21,14 +21,14 @@ public sealed class TerrainModifiers
 
 	private sealed record Template(Vector3 Offset, bool Level, float LevelOffset, float LevelRadius, bool Square, bool Smooth, float SmoothRadius, float SmoothPower, bool PaintCleared, float PaintRadius, int SortOrder, bool Player);
 
-	// None until Use: no world opens before then (GameModifiers).
+	// None until Use: no world opens before then (GameData).
 	private static volatile Dictionary<int, (string Name, bool Location, List<Template> Mods)> Prefabs = new();
 
 	// Whether the game's modifiers are known (Use was given them).
 	public static bool Loaded { get; private set; }
 
 	// The modifiers of the game's prefabs, as terrain-modifiers.json has them (name -> location flag
-	// and modifiers): from the game (GameModifiers) or the tests' copy.
+	// and modifiers): from the game (GameData) or the tests' copy.
 	public static void Use(string json)
 	{
 		Prefabs = Parse(json);

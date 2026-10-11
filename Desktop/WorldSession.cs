@@ -99,13 +99,13 @@ public sealed class WorldSession : IDisposable
 		HistoryFile.Delete(this);
 	}
 
-	// The game's terrain modifiers, needed before any world opens: refused without Valheim (the ground
-	// near locations, and the edits saved there, depend on them).
+	// The game's data, needed before any world opens: refused without Valheim (the ground near
+	// locations, and the edits saved there, depend on it).
 	private static void NeedGame()
 	{
-		if (!GameModifiers.Ensure(GameLook.Bundles))
+		if (!GameData.Ensure(GameLook.Bundles))
 		{
-			throw new InvalidOperationException(GameModifiers.Missing);
+			throw new InvalidOperationException(GameData.Missing);
 		}
 		WorldSave.ModifierPrefabs = TerrainModifiers.NetworkPrefabHashes.ToHashSet();
 	}

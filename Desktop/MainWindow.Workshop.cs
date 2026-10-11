@@ -171,15 +171,15 @@ public partial class MainWindow
 	internal async Task OpenWorkshop(string? path)
 	{
 		// The game's files are needed here too (its pieces, and how ground discs shape the plot).
-		if (!await Task.Run(() => GameModifiers.Ensure(GameLook.Bundles)))
+		if (!await Task.Run(() => GameData.Ensure(GameLook.Bundles)))
 		{
 			if (_world == null && !_inWorkshop)
 			{
-				ShowStart(GameModifiers.Missing);
+				ShowStart(GameData.Missing);
 			}
 			else
 			{
-				_message.Text = GameModifiers.Missing;
+				_message.Text = GameData.Missing;
 			}
 			return;
 		}

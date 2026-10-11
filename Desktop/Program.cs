@@ -20,13 +20,12 @@ public static class Program
 			ClaudeRelay.Run();
 			return;
 		}
-		// --export-terrain-modifiers <file>: the tests' copy of the game's terrain modifiers made again,
-		// keeping the prefabs it lists (for developers, after a game update:
-		// tests/fixtures/terrain-modifiers.json).
-		int exportModifiers = Array.IndexOf(args, "--export-terrain-modifiers");
-		if (exportModifiers >= 0)
+		// --export-test-data <folder>: the tests' copies of the game's data made again, each keeping the
+		// entries it has (for developers, after a game update: tests/fixtures).
+		int exportData = Array.IndexOf(args, "--export-test-data");
+		if (exportData >= 0)
 		{
-			Environment.ExitCode = TerrainEditor.App.GameModifiers.Export(args.ElementAtOrDefault(exportModifiers + 1));
+			Environment.ExitCode = TerrainEditor.App.GameData.Export(args.ElementAtOrDefault(exportData + 1));
 			return;
 		}
 		// --export-locations <file>: the tests' copy of the game's location rules made again (for

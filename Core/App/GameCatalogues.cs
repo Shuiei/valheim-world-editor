@@ -16,7 +16,7 @@ namespace TerrainEditor.App;
 // so making them again shows in git only what the game changed.
 public static partial class GameCatalogues
 {
-	public static readonly string[] All = { "prefabs", "pieces", "piece-cost", "piece-place", "piece-support", "vegetation", "cave-rocks", "zdo-keys", "dungeon-rooms" };
+	public static readonly string[] All = { "prefabs", "pieces", "piece-cost", "piece-place", "piece-support", "vegetation", "cave-rocks", "dungeon-rooms" };
 
 	// Written gzipped (the largest).
 	private static readonly string[] Gzipped = { "piece-place", "dungeon-rooms" };
@@ -137,14 +137,10 @@ public static partial class GameCatalogues
 		{
 			made["cave-rocks"] = CatalogueJson.Write(CaveRocks(bundles), new Style(",", ":"));
 		}
-		if (names.Contains("zdo-keys"))
-		{
-			made["zdo-keys"] = CatalogueJson.Write(ZdoKeyNames(valheim), new Style(",", ":", SortKeys: true));
-		}
 		return made;
 	}
 
-	// The terrain modifiers of the game's prefabs, for the editor to read at its start (GameModifiers):
+	// The terrain modifiers of the game's prefabs, for the editor to read at its start (GameData):
 	// found from the TerrainModifier scripts up to their prefabs (ModifierScan), not by reading every
 	// object of every bundle as the catalogues do (seconds, not minutes).
 	public static string TerrainModifiersJson(string bundlesFolder)
