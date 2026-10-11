@@ -54,4 +54,9 @@ public class FuzzFindingsTests
     [Fact]
     public void PngShortHeader() =>
         Refused(() => Png.Read(Convert.FromHexString("89504e470d0a1a0a000000004948445200006082")));
+
+    // Terrain data that unpacks to far more than any zone's (17 MiB of zeros in 17 KB).
+    [Fact]
+    public void TerrainDataTooLarge() =>
+        Refused(() => TerrainZone.Decode(default, 0, Gzip(new byte[17 << 20])));
 }

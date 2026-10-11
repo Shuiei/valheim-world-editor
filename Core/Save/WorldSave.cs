@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.IO.Compression;
 using System.Numerics;
 
 namespace TerrainEditor.Save;
@@ -585,6 +584,10 @@ public sealed class WorldSave
         TerrainZones.RemoveAll(z => z.Source is { } src && sources.Contains((src.File, src.Start)));
     }
 
+    // The largest live snapshot read, unpacked: the biggest worlds' saves are a few hundred megabytes,
+    // and one array cannot pass 2 GiB anyway.
+    private const int MaxSnapshot = 1536 << 20;
+
     /// <summary>Loads a world from a WorldEditorBridge snapshot (gzip-compressed, snapshot version 1).</summary>
     /// <param name="gzipped">The snapshot as <c>LiveBridge.Snapshot</c> returns it.</param>
     /// <param name="source">What to show as the world's <c>Directory</c>.</param>
@@ -593,14 +596,9 @@ public sealed class WorldSave
     /// </exception>
     public static WorldSave LoadLive(byte[] gzipped, string source)
     {
-        using MemoryStream raw = new();
-        using (GZipStream gz = new(new MemoryStream(gzipped), CompressionMode.Decompress))
-        {
-            gz.CopyTo(raw);
-        }
-        raw.Position = 0;
-        WorldSave save = new() { Directory = source, SaveNumber = 0, IsLive = true, LiveBytes = raw.ToArray() };
-        using ValheimReader pkg = new(raw);
+        byte[] raw = CheckedReads.Gunzip(gzipped, MaxSnapshot);
+        WorldSave save = new() { Directory = source, SaveNumber = 0, IsLive = true, LiveBytes = raw };
+        using ValheimReader pkg = new(new MemoryStream(raw));
         if (pkg.ReadInt() != 0x42455756)
         {
             throw new InvalidDataException("not a WorldEditorBridge snapshot");
@@ -994,19 +992,16 @@ public sealed class TerrainZone
     /// <summary>Points per row of the paint grid.</summary>
     public int PaintWidth => (int)Math.Round(Math.Sqrt(ModifiedPaint.Length));
 
+    // The largest terrain data read, unpacked: a zone's is about 110 KB (65 x 65 heights and paints).
+    private const int MaxData = 16 << 20;
+
     /// <summary>Mirrors TerrainComp.Load.</summary>
     /// <param name="center">The terrain compiler object's position.</param>
     /// <param name="prefab">Its prefab hash.</param>
     /// <param name="compressed">The gzip-compressed TCData value.</param>
     public static TerrainZone Decode(Vector3 center, int prefab, byte[] compressed)
     {
-        using MemoryStream raw = new();
-        using (GZipStream gzip = new(new MemoryStream(compressed), CompressionMode.Decompress))
-        {
-            gzip.CopyTo(raw);
-        }
-        raw.Position = 0;
-        using ValheimReader pkg = new(raw);
+        using ValheimReader pkg = new(new MemoryStream(CheckedReads.Gunzip(compressed, MaxData)));
         pkg.ReadInt();
         int operations = pkg.ReadInt();
         pkg.ReadVector3();
