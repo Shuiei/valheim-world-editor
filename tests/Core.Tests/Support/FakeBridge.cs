@@ -18,6 +18,11 @@ public sealed class FakeBridge : IDisposable
 
     public int Status { get; set; } = 200;
 
+    /// <summary>
+    /// How many destroyed objects another mod had made again (found at their place), as the plugin tells.
+    /// </summary>
+    public int Refound { get; set; }
+
     public List<(int Destroy, int Create)> ObjectCalls { get; } = [];
 
     public List<(long, uint)> Destroyed { get; } = [];
@@ -78,7 +83,7 @@ public sealed class FakeBridge : IDisposable
                 {
                     ObjectCalls.Add((destroy, create));
                 }
-                body = $"{{\"destroyed\":{destroy},\"missing\":0,\"created\":[{string.Join(",", ids.Select(i => $"\"{i}\""))}]}}";
+                body = $"{{\"destroyed\":{destroy},\"missing\":0,\"refound\":{Refound},\"created\":[{string.Join(",", ids.Select(i => $"\"{i}\""))}]}}";
             }
             else if (status == 200 && ctx.Request.Url!.AbsolutePath == "/zones/reset")
             {

@@ -201,4 +201,19 @@ public class UpliftTests
         // Persistent (kept in the save), a solid object like the game's own proxies.
         Assert.Equal(0x100 | (2 << 10), z.BaseFlags & 0xFF00 & ~0x1000 & ~0x2000);
     }
+
+    [Fact]
+    public void LiftInZonesTheGameHasNotGeneratedIsDropped()
+    {
+        using var w = new TempWorld();
+        var o = Open.Of(w.Load());
+        // On the edge of the saved zones: zone 15 is generated, 16 is not.
+        const float Cx = 15 * 64 + 32, Cz = 300;
+        o.Lift(Cx, Cz, Bell(Cx, Cz, 20, 40));
+        var plan = Uplift.Make(o.World, o.Terrain, o.Edits, o.NextId)!;
+        Assert.True(plan.Ungenerated > 0, plan.Describe());
+        Assert.Contains(plan.Zones, e => e.ZoneX >= 16);
+        Assert.All(plan.Zones.Where(e => e.ZoneX >= 16), e => Assert.False(e.HasLift));
+        Assert.Contains("not generated yet", plan.Describe());
+    }
 }

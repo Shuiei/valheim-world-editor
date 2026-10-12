@@ -97,4 +97,13 @@ public class StabilityTests
         Assert.Equal(1000, r.Support[1], 1);
         Assert.Contains(2, r.Falls);
     }
+
+    [Fact]
+    public void EveryMaterialHasTheGamesSupport()
+    {
+        // Ancient and ice, the strongest and a stone-like one; an unknown material gives no support at all.
+        Assert.Equal((5000f, 100f, 0.25f, 1f / 15f), Stability.Material(6));
+        Assert.Equal((1000f, 100f, 1f / 3f, 0.125f), Stability.Material(7));
+        Assert.Equal((0f, 0f, 0f, 0f), Stability.Material(99));
+    }
 }

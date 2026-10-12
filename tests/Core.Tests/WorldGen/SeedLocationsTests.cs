@@ -91,4 +91,57 @@ public class SeedLocationsTests
         SeedLocations.Place(Seed(), SeedLocations.Which.Start, cancel: TestContext.Current.CancellationToken);
         Assert.Equal(before, ValheimGen.UnityEngine.Random.value);
     }
+
+    [Fact]
+    public void AltBiomesRoundTripWithTheRules()
+    {
+        var rules = new SeedLocations.RuleSet
+        {
+            locations = [new SeedLocations.Rule { prefab = "MadeUpRuin", name = "Made-up ruin" }],
+            altBiomes = [new SeedLocations.AltBiomeRule { name = "MadeUpMeadows", blockLocationNames = ["Made-up ruin"] }],
+        };
+        var again = SeedLocations.RuleSet.FromJson(rules.ToJson());
+        var alt = Assert.Single(again.altBiomes);
+        Assert.Equal("MadeUpMeadows", alt.name);
+        Assert.Equal(["Made-up ruin"], alt.blockLocationNames);
+        Assert.Equal(rules.ToJson(), again.ToJson());
+        Assert.Throws<System.Text.Json.JsonException>(() => SeedLocations.RuleSet.FromJson("null"));
+    }
+
+    [Fact]
+    public void EveryKindOrTheKindsAskedForAreLaidOut()
+    {
+        Fixtures.UseLocations();
+        var cancel = TestContext.Current.CancellationToken;
+        var all = new SeedLocations.Layout(Seed()).Place(SeedLocations.Which.All, cancel);
+        Assert.True(all.Count >= SeedLocations.Place(Seed(), SeedLocations.Which.Prioritized, cancel: cancel).Count);
+        Assert.Contains(SeedLocations.PlaceKinds(Seed(), ["StartTemple"], cancel: cancel), p => p.Rule.prefab == "StartTemple");
+    }
+
+    [Fact]
+    public void AStoppedLayoutKeepsNothingOfItAndStartsAgain()
+    {
+        Fixtures.UseLocations();
+        var layout = new SeedLocations.Layout(Seed());
+        using var stopped = new CancellationTokenSource();
+        stopped.Cancel();
+        Assert.Throws<OperationCanceledException>(() => layout.Place(SeedLocations.Which.Prioritized, stopped.Token));
+        var start = Assert.Single(layout.Place(SeedLocations.Which.Start, TestContext.Current.CancellationToken));
+        Assert.Equal("StartTemple", start.Rule.prefab);
+    }
+
+    [Fact]
+    public void ARandomBiomeIsOneOfTheSet()
+    {
+        ValheimGen.UnityEngine.Random.InitState(7);
+        var two = Heightmap.Biome.Meadows | Heightmap.Biome.Swamp;
+        for (int i = 0; i < 20; i++)
+        {
+            var b = SeedLocations.BiomeMap.RandomBiome(two);
+            Assert.True(b is Heightmap.Biome.Meadows or Heightmap.Biome.Swamp, b.ToString());
+        }
+        // A single biome, or none: no draw.
+        Assert.Equal(Heightmap.Biome.Plains, SeedLocations.BiomeMap.RandomBiome(Heightmap.Biome.Plains));
+        Assert.Equal(Heightmap.Biome.None, SeedLocations.BiomeMap.RandomBiome(Heightmap.Biome.None));
+    }
 }
