@@ -14,34 +14,53 @@ namespace TerrainEditor.Desktop.Tests;
 public sealed class ProgramTests
 {
     /// <summary>
-    /// Runs the app with these arguments, its input closed at once; its exit code, output and errors.
+    /// Runs the app with these arguments, its input closed at once, its settings and data in an empty folder of its own
+    /// (never the user's, deleted after); its exit code, output and errors.
     /// </summary>
     private static async Task<(int Code, string Output, string Error)> Run(params string[] args)
     {
-        // The copy beside the tests, so that its coverage adds to theirs (EditorApp).
-        string app = EditorApp.Path;
-        var psi = new ProcessStartInfo(EditorApp.Dotnet) { RedirectStandardInput = true, RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false };
-        psi.ArgumentList.Add(app);
-        foreach (string a in args)
-        {
-            psi.ArgumentList.Add(a);
-        }
-        using var p = Process.Start(psi)!;
-        p.StandardInput.Close();
-        using var cancel = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
-        cancel.CancelAfter(TimeSpan.FromMinutes(2));
-        var output = p.StandardOutput.ReadToEndAsync(cancel.Token);
-        var error = p.StandardError.ReadToEndAsync(cancel.Token);
+        string home = Path.Combine(Path.GetTempPath(), "vwe-program-" + Guid.NewGuid().ToString("N")[..8]);
+        Directory.CreateDirectory(home);
         try
         {
-            await p.WaitForExitAsync(cancel.Token);
+            // The copy beside the tests, so that its coverage adds to theirs (EditorApp).
+            string app = EditorApp.Path;
+            var psi = new ProcessStartInfo(EditorApp.Dotnet) { RedirectStandardInput = true, RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false };
+            psi.ArgumentList.Add(app);
+            foreach (string a in args)
+            {
+                psi.ArgumentList.Add(a);
+            }
+            psi.Environment["XDG_DATA_HOME"] = home;
+            psi.Environment["HOME"] = home;
+            psi.Environment["LOCALAPPDATA"] = home;
+            using var p = Process.Start(psi)!;
+            p.StandardInput.Close();
+            using var cancel = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+            cancel.CancelAfter(TimeSpan.FromMinutes(2));
+            var output = p.StandardOutput.ReadToEndAsync(cancel.Token);
+            var error = p.StandardError.ReadToEndAsync(cancel.Token);
+            try
+            {
+                await p.WaitForExitAsync(cancel.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                p.Kill();
+                throw;
+            }
+            return (p.ExitCode, await output, await error);
         }
-        catch (OperationCanceledException)
+        finally
         {
-            p.Kill();
-            throw;
+            try
+            {
+                Directory.Delete(home, true);
+            }
+            catch (IOException)
+            {
+            }
         }
-        return (p.ExitCode, await output, await error);
     }
 
     [Fact]
