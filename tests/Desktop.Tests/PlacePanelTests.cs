@@ -152,13 +152,16 @@ public class PlacePanelTests
         Choose(r, "Beech1", "Oak1");
         var sliders = r.P.Mix.GetLogicalDescendants().OfType<Slider>().ToList();
         Assert.Equal(2, sliders.Count);
-        sliders[1].Value = 9;
-        Assert.Equal(9, r.T.WeightOf("Oak1"));
-        // The rows stay while it moves (a dragged slider is kept); only the shares change.
+        // A slider is the kind's share: the other one follows, so they make 100%.
+        sliders[1].Value = 70;
+        Assert.Equal(70, r.T.WeightOf("Oak1"));
+        Assert.Equal(70, r.P.Memory.Weights["Oak1"]);
+        Assert.Equal(30, r.T.WeightOf("Beech1"));
+        Assert.Equal(30, sliders[0].Value);
+        // The rows stay while it moves (a dragged slider is kept).
         Assert.Equal(sliders, r.P.Mix.GetLogicalDescendants().OfType<Slider>());
-        Assert.Contains($"{9f / (r.T.WeightOf("Beech1") + 9) * 100:0}%", Texts(r.P.Mix));
-        Assert.Equal(9, r.P.Memory.Weights["Oak1"]);
-        Assert.Contains("%", Texts(r.P.Mix));
+        Assert.Contains("70%", Texts(r.P.Mix));
+        Assert.Contains("30%", Texts(r.P.Mix));
         Click(r.P.Mix.GetLogicalDescendants().OfType<Button>().First(b => (string)b.Content! == "✕"));
         Assert.Equal(new[] { "Oak1" }, r.T.Chosen);
         // One kind: no weight to set, its share still shown.
@@ -167,6 +170,25 @@ public class PlacePanelTests
         // None: said so.
         Choose(r);
         Assert.Contains("None yet", Texts(r.P.Mix));
+    }
+
+    [AvaloniaFact]
+    public void TheOtherSharesFollowInProportion()
+    {
+        using var r = new Run();
+        // Even to start with (the tests' memory may hold weights from others).
+        r.T.Weights.Clear();
+        Choose(r, "Beech1", "Oak1", "Birch1");
+        var sliders = r.P.Mix.GetLogicalDescendants().OfType<Slider>().ToList();
+        sliders[1].Value = 20;
+        sliders[2].Value = 60;
+        // Beech and Oak shared the other 40% as they stood (more Beech than Oak), each at least 1%.
+        Assert.Equal(100, r.T.Chosen.Sum(r.T.WeightOf));
+        Assert.Equal(60, r.T.WeightOf("Birch1"));
+        Assert.Equal(r.T.Chosen.Select(n => (double)r.T.WeightOf(n)), sliders.Select(s => s.Value));
+        Assert.True(r.T.WeightOf("Beech1") > r.T.WeightOf("Oak1"));
+        sliders[0].Value = 98;
+        Assert.Equal([98, 1, 1], r.T.Chosen.Select(r.T.WeightOf));
     }
 
     [AvaloniaFact]

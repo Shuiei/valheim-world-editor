@@ -26,7 +26,8 @@ the plugin is unchanged in versions without that part.
 - **Kind names with an underscore** (Pickable_Flax) showed without it in the Choose kinds list and on
   the Favourite and Recent buttons (PickableFlax).
 - **The Place panel's weight sliders** let go of the mouse at each step of a drag (every row was
-  made again): a drag now runs smoothly, and only the shares change as it moves.
+  made again): a drag now runs smoothly. Each slider is now the kind's share in %, and the other
+  kinds' sliders move with it, keeping their proportions, so the shares always make 100%.
 - **Previews over the sea** (the mountain, placed and pasted objects, rings and lines) were hidden
   wherever water was behind them in the 3D view: they now show over the water.
 

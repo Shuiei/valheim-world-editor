@@ -65,8 +65,12 @@ public sealed class PlacePanel
     internal Button KindsButton { get; } = new() { Content = ChooseKindsText, FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Center };
     /// <summary>How many kinds are chosen, after the SELECTED KINDS heading.</summary>
     private readonly TextBlock _mixCount = new() { FontSize = 10, Foreground = Ui.Muted, VerticalAlignment = VerticalAlignment.Center };
-    /// <summary>Each chosen kind's share, as shown on its row (updated in place while a weight slider moves).</summary>
-    private readonly Dictionary<string, TextBlock> _shares = [];
+    /// <summary>
+    /// Each chosen kind's share text and slider (none for a single kind), updated in place while a slider moves.
+    /// </summary>
+    private readonly Dictionary<string, (TextBlock Share, Slider? Slider)> _shares = [];
+    /// <summary>Set while the other sliders follow a moved one, so their own change events leave the weights alone.</summary>
+    private bool _sharing;
     /// <summary>Filters the list of kinds by name.</summary>
     internal TextBox Search { get; } = new() { PlaceholderText = "Search kinds (oak, rock, bush…)", FontSize = 12 };
     /// <summary>The kinds this world can place, by category.</summary>
@@ -789,15 +793,26 @@ public sealed class PlacePanel
             var g = new Grid { ColumnDefinitions = new ColumnDefinitions("*,80,40,Auto"), ColumnSpacing = 4, MinHeight = 30 };
             g.Children.Add(new TextBlock { Text = n, FontSize = 12, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis });
             var pct = new TextBlock { FontSize = 11, Foreground = Ui.Muted, VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Right, Text = $"{T.WeightOf(n) / total * 100:0}%" };
+            Slider? w = null;
             if (names.Count > 1)
             {
-                var w = new Slider { Minimum = 1, Maximum = 10, TickFrequency = 1, IsSnapToTickEnabled = true, Value = T.WeightOf(n), VerticalAlignment = VerticalAlignment.Center };
-                ToolTip.SetTip(w, $"Weight of {n}: {Tips.Of("place.weight")}");
-                // Only the shares change: rebuilding the rows would drop the slider being dragged.
-                w.ValueChanged += (_, e) => { T.Weights[n] = (int)e.NewValue; ShowShares(); Remember(); T.NewLayout(); };
+                // The slider is the kind's share in %: each of the others keeps at least 1%.
+                w = new Slider { Minimum = 1, Maximum = 100 - (names.Count - 1), TickFrequency = 1, IsSnapToTickEnabled = true, Value = Math.Round(T.WeightOf(n) / total * 100), VerticalAlignment = VerticalAlignment.Center };
+                ToolTip.SetTip(w, $"Share of {n}: {Tips.Of("place.weight")}");
+                // Rows stay (rebuilding them would drop the slider being dragged); the others follow.
+                w.ValueChanged += (_, e) =>
+                {
+                    if (_sharing)
+                    {
+                        return;
+                    }
+                    Share(n, (int)Math.Round(e.NewValue));
+                    Remember();
+                    T.NewLayout();
+                };
                 g.Children.Add(Col(w, 1));
             }
-            _shares[n] = pct;
+            _shares[n] = (pct, w);
             g.Children.Add(Col(pct, 2));
             var x = new Button { Content = "✕", FontSize = 11, Padding = new Thickness(6, 2), VerticalAlignment = VerticalAlignment.Center };
             ToolTip.SetTip(x, $"{Tips.Of("place.unchoose")} ({n})");
@@ -807,13 +822,46 @@ public sealed class PlacePanel
         }
     }
 
+    /// <summary>
+    /// A kind's slider moved to <paramref name="percent"/>: the other kinds share the rest in their current
+    /// proportions (whole percents, each at least 1, summing to 100), and their sliders and shares follow.
+    /// </summary>
+    private void Share(string kind, int percent)
+    {
+        var others = _shares.Keys.Where(k => k != kind).ToList();
+        int rest = 100 - percent;
+        float before = others.Sum(T.WeightOf);
+        var raw = others.Select(k => before > 0 ? rest * T.WeightOf(k) / before : (float)rest / others.Count).ToList();
+        var whole = raw.Select(r => Math.Max(1, (int)MathF.Floor(r))).ToList();
+        // What rounding down left over goes to the largest remainders.
+        foreach (int i in Enumerable.Range(0, others.Count).OrderByDescending(i => raw[i] - MathF.Floor(raw[i])).Take(Math.Max(0, rest - whole.Sum())))
+        {
+            whole[i]++;
+        }
+        T.Weights[kind] = percent;
+        for (int i = 0; i < others.Count; i++)
+        {
+            T.Weights[others[i]] = whole[i];
+        }
+        _sharing = true;
+        foreach (string k in others)
+        {
+            if (_shares[k].Slider is { } s)
+            {
+                s.Value = T.WeightOf(k);
+            }
+        }
+        _sharing = false;
+        ShowShares();
+    }
+
     /// <summary>Writes each chosen kind's share of the weights on its row.</summary>
     private void ShowShares()
     {
         float total = _shares.Keys.Sum(T.WeightOf);
-        foreach (var (n, pct) in _shares)
+        foreach (var (n, row) in _shares)
         {
-            pct.Text = $"{T.WeightOf(n) / total * 100:0}%";
+            row.Share.Text = $"{T.WeightOf(n) / total * 100:0}%";
         }
     }
 
