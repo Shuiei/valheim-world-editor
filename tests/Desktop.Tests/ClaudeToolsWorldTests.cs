@@ -167,6 +167,7 @@ public class ClaudeToolsWorldTests
         await r.OpenArea();
         Assert.StartsWith("The rectangle touches no zone of the open area", await r.T.ResetZones(500, 500, 510, 510));
         Assert.Equal("None of those zones was marked for reset.", await r.T.ResetZones(0, 0, 10, 10, cancel: true));
+        Assert.DoesNotContain("unmarked", r.W.MessageText.Text, StringComparison.Ordinal);
         // Half outside the one-zone area: only its own zone.
         Assert.StartsWith("Marked 1 zone(s) for reset when saved (0, 0), the players' buildings kept.", await r.T.ResetZones(0, 0, 100, 10));
         Assert.Equal("Claude: reset 1 zone(s)", r.W.Session!.UndoLabel);

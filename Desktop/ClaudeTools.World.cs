@@ -225,8 +225,12 @@ public sealed partial class ClaudeTools
         if (cancel)
         {
             int n = s.UnmarkResets(zones, $"Claude: cancelled reset of {zones.Count} zone(s)");
+            if (n == 0)
+            {
+                return "None of those zones was marked for reset.";
+            }
             _w.AfterClaudeEdit($"Claude unmarked {n} zone(s).");
-            return n == 0 ? "None of those zones was marked for reset." : $"Unmarked {n} zone(s). Now pending: {Pending()}";
+            return $"Unmarked {n} zone(s). Now pending: {Pending()}";
         }
         s.MarkResets(zones, keepBuildings, ground, $"Claude: reset {zones.Count} zone(s)");
         _w.AfterClaudeEdit($"Claude marked {zones.Count} zone(s) for reset; Ctrl+Z cancels.");
