@@ -11,9 +11,9 @@
 #                  test runs, failing or not; a test stuck for 5 minutes (10 under coverage) ends its run.
 #                  On main only, each test container keeps its code coverage for the coverage job;
 #                  branches run the tests without it (several times faster).
-#   coverage       on main only, once core-tests and app-tests have both passed: sends the six
-#                  containers' coverage to Codecov together, which merges it (codecov.yml) and fails
-#                  its own check (codecov/project) under 95% line coverage. A failed or partial test
+#   coverage       on main only, once core-tests and app-tests have both passed: merges the six
+#                  containers' coverage into one report and sends it to Codecov (codecov.yml), which
+#                  fails its own check (codecov/project) under 95% line coverage. A failed or partial test
 #                  run sends nothing, so Codecov never shows the coverage of part of the tests.
 #   packages       the Windows and Linux release packages: they build, hold no source code or game
 #                  files (the plugin is left out: it builds against the game's own DLLs), and the
@@ -190,10 +190,12 @@ jobs:
 
   # The coverage of every test container, sent to Codecov in one go: the job runs on main only, once
   # core-tests and app-tests have both passed (workflows), so Codecov gets all six containers' coverage
-  # or none. The six are sent as one upload (one request: it arrives whole or not at all, never one
-  # project's without the other's). The orb's fail_on_error does nothing (its set_codecov_envs.sh empties
-  # CODECOV_FAIL_ON_ERROR, so the CLI never fails the step): a missing report is caught before, and a
-  # failed upload leaves Codecov with the last full figure.
+  # or none. The six reports are merged here into one (Microsoft's dotnet-coverage, whose total the step
+  # prints) and that one file is sent: Codecov, given the six in one upload, kept only part of the app
+  # tests' coverage (main showed about 68% where the merged reports give the real figure). The orb's
+  # fail_on_error does nothing (its set_codecov_envs.sh empties CODECOV_FAIL_ON_ERROR, so the CLI never
+  # fails the step): a missing report is caught before, and a failed upload leaves Codecov with the last
+  # full figure.
   coverage:
     executor: dotnet
     steps:
@@ -205,17 +207,24 @@ jobs:
       - attach_workspace:
           at: /tmp/coverage
       - run:
-          name: Every container's coverage report is there, grouped by project
+          name: Every container's coverage report is there, merged into one
+          # dotnet-coverage is built for .NET 8: DOTNET_ROLL_FORWARD runs it on the image's .NET 10.
+          environment:
+            DOTNET_ROLL_FORWARD: Major
           command: |
+            reports=()
             for project in core app; do
-              mkdir -p "/tmp/upload/$project"
               for node in 0 1 2; do
-                report=$(ls /tmp/coverage/$project-$node/coverage.*.cobertura.xml) \
+                found=$(ls /tmp/coverage/$project-$node/coverage.*.cobertura.xml) \
                   || { echo "No coverage report from $project-tests' container $node."; exit 1; }
-                for r in $report; do cp "$r" "/tmp/upload/$project/$node-$(basename "$r")"; done
+                for r in $found; do reports+=("$r"); done
               done
             done
-            ls -R /tmp/upload
+            dotnet tool install dotnet-coverage --version 18.11.2 --tool-path /tmp/tools > /dev/null
+            mkdir -p /tmp/upload
+            /tmp/tools/dotnet-coverage merge -f cobertura -o /tmp/upload/coverage.cobertura.xml "${reports[@]}"
+            # The merged total, as Codecov should show it (lines covered of lines measured).
+            grep -m 1 -o '<coverage [^>]*>' /tmp/upload/coverage.cobertura.xml
       - codecov/upload:
           dir: /tmp/upload
           plugins: noop
