@@ -476,7 +476,8 @@ public class WorldControlsTests
         r.Raise();
         var (yaw, pitch, distance, world) = r.W.View.WorldCamera!.Value;
         r.W.AreaSizeBox.SelectedIndex = 2;
-        await TestWindows.Until(() => r.W.View.Scene!.Size == 7);
+        // 49 zones to make: over 15 s under coverage on CI's two cores.
+        await TestWindows.Until(() => r.W.View.Scene!.Size == 7, 60000);
         Assert.Equal((-3, -3), (r.W.View.Scene!.X0, r.W.View.Scene.Z0));
         Assert.Equal(world.X, r.W.View.WorldCamera!.Value.World.X, 3);
         Assert.Equal(1, r.W.World!.Pending.Zones);
