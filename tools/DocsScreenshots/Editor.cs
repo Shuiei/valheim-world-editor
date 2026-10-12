@@ -28,6 +28,14 @@ public sealed class Editor : IDisposable
     private readonly FakeGame? _game;
     /// <summary>The driven app.</summary>
     private readonly Process _p;
+    /// <summary>The stand-in home's data folder (its settings, log and game data).</summary>
+    private readonly string _data;
+
+    /// <summary>
+    /// Where the game data read by the scenes' editors is kept between scenes and runs (never this computer's own
+    /// data folder).
+    /// </summary>
+    private static string GameDataCache => Path.Combine(Path.GetTempPath(), "vwe-docs-gamedata");
 
     /// <summary>
     /// Makes the stand-in home and starts the app in it, driven, and waits until it is ready.
@@ -47,29 +55,32 @@ public sealed class Editor : IDisposable
         _home = Directory.CreateTempSubdirectory("vwe-docs-home-").FullName;
         _width = width;
         // The stand-in home's own data folder (~/.local/share/ValheimWorldEditor): the start page shows
-        // it as such. The index of the game's files and the game data read from them are the real ones
-        // (made again if stale).
+        // it as such. The index of the game's files and the game data read from them are copied in: the
+        // ones the last scene kept (GameDataCache), else this computer's. The game data is stamped with
+        // the build that read it, so a new build reads the game again, once: the next scenes get it.
         string data = Path.Combine(_home, ".local", "share");
-        string ours = Path.Combine(data, "ValheimWorldEditor");
-        Directory.CreateDirectory(ours);
+        _data = Path.Combine(data, "ValheimWorldEditor");
+        Directory.CreateDirectory(_data);
         string mineDir = Path.Combine(UserHome, ".local", "share", "ValheimWorldEditor");
-        foreach (string mine in Directory.Exists(mineDir) ? Directory.GetFiles(mineDir, "game-*.json") : [])
+        string from = Directory.Exists(GameDataCache) && Directory.GetFiles(GameDataCache, "game-*.json").Length > 0 ? GameDataCache : mineDir;
+        foreach (string mine in Directory.Exists(from) ? Directory.GetFiles(from, "game-*.json") : [])
         {
-            File.CreateSymbolicLink(Path.Combine(ours, Path.GetFileName(mine)), mine);
+            File.Copy(mine, Path.Combine(_data, Path.GetFileName(mine)));
         }
         // A stand-in Valheim in the home's Steam library ("Found automatically" in Settings); the app is
-        // driven, so it never looks for Steam outside this home. Its bundles are this computer's
-        // Valheim's (read only), for the game's look.
+        // driven, so it never looks for Steam outside this home. Its game data is this computer's
+        // Valheim's (read only): the bundles for the game's look, the game's assembly and assets for
+        // the pieces, objects and rules the app reads from the game.
         string valheim = Path.Combine(_home, ".local", "share", "Steam", "steamapps", "common", "Valheim");
-        string bundles = Path.Combine(valheim, "valheim_Data", "StreamingAssets", "SoftRef", "Bundles");
-        Directory.CreateDirectory(Path.GetDirectoryName(bundles)!);
-        if (RealBundles() is string real)
+        string gameData = Path.Combine(valheim, "valheim_Data");
+        Directory.CreateDirectory(valheim);
+        if (RealGameData() is string real)
         {
-            Directory.CreateSymbolicLink(bundles, real);
+            Directory.CreateSymbolicLink(gameData, real);
         }
         else
         {
-            Directory.CreateDirectory(bundles);
+            Directory.CreateDirectory(Path.Combine(gameData, "StreamingAssets", "SoftRef", "Bundles"));
         }
         // Worlds in Valheim's own folder, as a player has them (links to the read-only originals).
         string local = Path.Combine(_home, ".config", "unity3d", "IronGate", "Valheim", "worlds_local");
@@ -97,7 +108,7 @@ public sealed class Editor : IDisposable
                 Name = Path.GetFileName(Path.GetFullPath(w)),
                 Opened = (now - TimeSpan.FromHours(3) - TimeSpan.FromDays(i)).ToString("yyyy-MM-ddTHH:mm:ss.ffffff"),
             });
-            File.WriteAllText(Path.Combine(ours, "settings.json"), JsonSerializer.Serialize(new { Recent = opened }));
+            File.WriteAllText(Path.Combine(_data, "settings.json"), JsonSerializer.Serialize(new { Recent = opened }));
         }
         string bep = Path.Combine(_home, ".config", "r2modmanPlus-local", "Valheim", "profiles", "Default", "BepInEx");
         if (gameWorld != null)
@@ -242,6 +253,18 @@ public sealed class Editor : IDisposable
         _game?.Dispose();
         try
         {
+            // The game data as this build read it, for the next scenes.
+            Directory.CreateDirectory(GameDataCache);
+            foreach (string f in Directory.GetFiles(_data, "game-*.json"))
+            {
+                File.Copy(f, Path.Combine(GameDataCache, Path.GetFileName(f)), overwrite: true);
+            }
+        }
+        catch (IOException)
+        {
+        }
+        try
+        {
             Directory.Delete(_home, recursive: true);
         }
         catch (IOException)
@@ -250,10 +273,10 @@ public sealed class Editor : IDisposable
     }
 
     /// <summary>
-    /// This computer's Valheim bundles folder (the app's settings first, then the usual Steam places), links
+    /// This computer's Valheim valheim_Data folder (the app's settings first, then the usual Steam places), links
     /// resolved; null when none is found.
     /// </summary>
-    private static string? RealBundles()
+    private static string? RealGameData()
     {
         var places = new List<string>();
         try
@@ -274,8 +297,8 @@ public sealed class Editor : IDisposable
         }
         foreach (string v in places)
         {
-            var b = new DirectoryInfo(Path.Combine(v, "valheim_Data", "StreamingAssets", "SoftRef", "Bundles"));
-            if (b.Exists)
+            var b = new DirectoryInfo(Path.Combine(v, "valheim_Data"));
+            if (b.Exists && Directory.Exists(Path.Combine(b.FullName, "StreamingAssets", "SoftRef", "Bundles")))
             {
                 return b.ResolveLinkTarget(returnFinalTarget: true)?.FullName ?? b.FullName;
             }

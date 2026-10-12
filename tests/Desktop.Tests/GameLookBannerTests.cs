@@ -37,6 +37,17 @@ public class GameLookBannerTests
         Assert.False(b.View.IsVisible);
     }
 
+    // At each start the kept index and caches are checked (running, nothing read): no card, before or after.
+    [AvaloniaFact]
+    public void CheckingTheKeptLookAtStartShowsNothing()
+    {
+        var (b, _, set) = Banner(new("running", "Reading the game's files (a few seconds, only after a game update).", "/games/valheim", null, null, Reading: false));
+        Assert.False(b.View.IsVisible);
+        set(new("ready", null, "/games/valheim", null, 1));
+        b.Refresh();
+        Assert.False(b.View.IsVisible);
+    }
+
     [AvaloniaFact]
     public void TheCopyShowsItsProgressThenSaysWhenItIsDone()
     {

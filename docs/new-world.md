@@ -35,6 +35,10 @@ be elsewhere (the game's alt biomes move a few). These are exactly where the gam
 ruins and the like, are not shown: some of them depend on an alt biome, such as Dark Meadows, that the
 game picks at random each time it loads a world.)
 
+![A seed's world: the start, the bosses' altars and the traders' spots, with the seed's facts beside it](images/new-world.jpg)
+
+![The same seed with four kinds of dungeon shown](images/new-world-dungeons.jpg)
+
 Beside the map, the seed's world as lists (click a trader's or boss's row to see the nearest on the
 map):
 
@@ -67,6 +71,8 @@ world for each seed.
 Choose how many seeds to try (60, 150 or 400) and press **Find seeds**. The best appear as small
 maps with their score; click one to see it large. **Stop** keeps what was found so far. A search
 looks at each seed more coarsely than the large map, so small islands may be missed.
+
+![Find a seed: the best seeds found, each with its small map and score](images/new-world-find.jpg)
 
 ## Creating the world
 
