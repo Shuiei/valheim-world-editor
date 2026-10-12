@@ -12,6 +12,16 @@ the plugin is unchanged in versions without that part.
   `open_area` opens up to 17 × 17. Large areas are slow to open and draw: meant for big works and
   for testing the editor's speed.
 
+### Fixed
+- **Unsaved marks** kept their green dots after **Save to world**; they now go once saved, as after
+  **Apply live**.
+- **Areas with very many new objects** were slow at every frame: the green dots were made again for
+  each object at each frame (a 17 × 17 area with 2.3 million new objects drew one frame a second or
+  less). They are now kept on the graphics card and made again only when objects change.
+- **Scripts on areas with very many objects** waited over a second before running (each object's
+  kind was worked out again), and after a save of many new objects each change was slow to count
+  what is pending.
+
 ## v1.21.0 — unreleased
 
 ### Changed

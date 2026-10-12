@@ -163,7 +163,7 @@ public sealed class GlView : OpenGlControlBase
     public void SetShown(ObjectKind k, bool on)
     {
         _shown[(int)k] = on;
-        Wake();
+        RefreshNewMarkers();
     }
     /// <summary>Whether the water is drawn.</summary>
     private volatile bool _showWater = true;
@@ -323,6 +323,7 @@ public sealed class GlView : OpenGlControlBase
         }
         SelectionDone();
         _sceneDirty = true;
+        _marksDirty = true;
         _lookFiles = null;
         // The game look is set up for the area's own textures (mask, heights): again for a new one. The
         // old one's textures go at the next frame (only the drawing may touch the graphics card).
@@ -338,6 +339,7 @@ public sealed class GlView : OpenGlControlBase
         {
             scene.Session.Changed += Wake;
             scene.Session.ThingsChanged += OnThingsChanged;
+            scene.Session.ThingsReset += RefreshNewMarkers;
             // Read again after a save: new indices, so the selection goes at once (not at the next frame).
             scene.Session.ThingsReset += () =>
             {
@@ -1017,6 +1019,7 @@ public sealed class GlView : OpenGlControlBase
         }
         _selectionDirty = true;
         _overlaysDirty = true;
+        _marksDirty = true;
         SendKindCounts(s);
         Wake();
     }
@@ -1736,7 +1739,7 @@ public sealed class GlView : OpenGlControlBase
             DrawSpawnMarkers(s, vp);
             if (ShowNewMarkers)
             {
-                DrawNewMarkers(s, vp);
+                DrawNewMarkers(s, vp, rh);
             }
         }
         _gl.BindVertexArray(0);
@@ -2928,7 +2931,8 @@ public sealed class GlView : OpenGlControlBase
     }
 
     /// <summary>
-    /// Whether a new object (id &lt; 0) is in the game already (live: applied); such objects lose their marker.
+    /// Whether a new object (id &lt; 0) is in the world already (saved, or live: applied); such objects lose their
+    /// marker. Call <c>RefreshNewMarkers</c> when that changes.
     /// </summary>
     public Func<int, bool> InGame { get; set; } = _ => false;
 
@@ -3107,23 +3111,71 @@ public sealed class GlView : OpenGlControlBase
         }
     }
 
-    /// <summary>The new objects' markers on the graphics card.</summary>
-    private uint _markVao, _markVbo;
-    /// <summary>The new objects' green dots (<c>NewMarkers</c>), about 9 pixels across at any distance.</summary>
-    private void DrawNewMarkers(WorldScene s, Matrix4x4 vp)
+    /// <summary>The new objects' markers on the graphics card, and their program.</summary>
+    private uint _markVao, _markVbo, _markProg;
+    /// <summary>How many markers the buffer holds.</summary>
+    private int _markCount;
+    /// <summary>
+    /// The markers are found and sent to the graphics card again at the next frame (things changed, a kind shown or
+    /// hidden, a save or apply); otherwise the buffer is drawn as it is: a large area can hold millions of new objects.
+    /// </summary>
+    private volatile bool _marksDirty = true;
+
+    /// <summary>Has the new objects' markers found again at the next frame (after a save or apply, say).</summary>
+    public void RefreshNewMarkers()
     {
-        var marks = NewMarkers(s);
-        if (marks.Count == 0)
+        _marksDirty = true;
+        Wake();
+    }
+
+    /// <summary>
+    /// The new objects' green dots (<c>NewMarkers</c>), about 10 pixels across at any distance: one point each, kept
+    /// on the graphics card until they change.
+    /// </summary>
+    /// <param name="s">The scene.</param>
+    /// <param name="vp">The camera's view and projection.</param>
+    /// <param name="height">The drawing's height in pixels.</param>
+    private unsafe void DrawNewMarkers(WorldScene s, Matrix4x4 vp, int height)
+    {
+        if (_markProg == 0)
+        {
+            _markProg = Program(Shaders.MarkVs, Shaders.MarkFs);
+            _markVao = _own.VertexArray();
+            _markVbo = _own.Buffer();
+            _gl.BindVertexArray(_markVao);
+            _gl.BindBuffer(BufferTargetARB.ArrayBuffer, _markVbo);
+            _gl.EnableVertexAttribArray(0);
+            _gl.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 12, (void*)0);
+        }
+        if (_marksDirty)
+        {
+            _marksDirty = false;
+            var marks = NewMarkers(s);
+            _markCount = marks.Count;
+            _gl.BindBuffer(BufferTargetARB.ArrayBuffer, _markVbo);
+            fixed (Vector3* p = System.Runtime.InteropServices.CollectionsMarshal.AsSpan(marks))
+            {
+                _gl.BufferData(BufferTargetARB.ArrayBuffer, (nuint)(marks.Count * 12), p, BufferUsageARB.StaticDraw);
+            }
+        }
+        if (_markCount == 0)
         {
             return;
         }
-        var tri = new List<float>(marks.Count * 8 * 9);
-        foreach (var c in marks)
+        if (!_es)
         {
-            // About 9 pixels across at any distance.
-            Disc(tri, c, 0.0058f);
+            // Desktop OpenGL takes the size from the shader only when asked (OpenGL ES always does).
+            _gl.Enable(EnableCap.ProgramPointSize);
         }
-        DrawLines(ref _markVao, ref _markVbo, [.. tri], vp, new Vector4(0x5d / 255f, 1, 0x8a / 255f, 1), PrimitiveType.Triangles);
+        _gl.Disable(EnableCap.DepthTest);
+        _gl.UseProgram(_markProg);
+        _gl.UniformMatrix4(_gl.GetUniformLocation(_markProg, "uViewProj"), 1, false, (float*)&vp);
+        _gl.Uniform4(_gl.GetUniformLocation(_markProg, "uColor"), 0x5d / 255f, 1, 0x8a / 255f, 1);
+        // As the discs they replace: 1.16% of the distance across, under the 60° field of view.
+        _gl.Uniform1(_gl.GetUniformLocation(_markProg, "uSize"), MathF.Max(3, 0.0116f / (2 * MathF.Tan(MathF.PI / 6)) * height));
+        _gl.BindVertexArray(_markVao);
+        _gl.DrawArrays(PrimitiveType.Points, 0, (uint)_markCount);
+        _gl.Enable(EnableCap.DepthTest);
     }
 
     /// <summary>The Path tool's lines on the graphics card: centre line, edges, points.</summary>
