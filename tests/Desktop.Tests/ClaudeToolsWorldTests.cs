@@ -1,13 +1,14 @@
 using Avalonia.Headless.XUnit;
+using TerrainEditor.App;
 using TerrainEditor.Save;
 using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
 /// <summary>
-/// Claude's tools for the whole world and for copies (ClaudeTools.World): searching the world, its locations, copies
-/// in a row or a ring, and a blueprint of the library put into a world's area; and the helpers they use (Known,
-/// LocationName).
+/// Claude's tools for the whole world and for copies (ClaudeTools.World): searching the world, its locations, zones
+/// marked for reset, a seed previewed and a world made, copies in a row or a ring, and a blueprint of the library put
+/// into a world's area; and the helpers they use (Known, LocationName, ZonesOf, SeedPicture).
 /// </summary>
 [Collection("World files")]
 public class ClaudeToolsWorldTests
@@ -124,6 +125,78 @@ public class ClaudeToolsWorldTests
         {
             Assert.Equal(90, p.GetProperty("yaw").GetSingle(), 1);
             Assert.True(p.GetProperty("y").GetSingle() >= 49.5f);
+        }
+    }
+
+    // ZonesOf: the 64 m zones a rectangle touches, given corner to corner either way; zone 0 runs from -32 to 32.
+    [Fact]
+    public void ARectangleTouchesItsZones()
+    {
+        Assert.Equal([(0, 0)], ClaudeTools.ZonesOf(-31, -31, 31, 31));
+        Assert.Equal([(-1, 0), (0, 0), (-1, 1), (0, 1)], ClaudeTools.ZonesOf(10, 40, -40, 10));
+    }
+
+    // In the Workshop, or outside the area: said. Zones of the area marked (buildings kept), then unmarked; nothing
+    // marked: said.
+    [AvaloniaFact]
+    public async Task ZonesAreMarkedForResetAndUnmarked()
+    {
+        using var r = new ClaudeRun();
+        await r.T.OpenWorkshop();
+        Assert.Equal("Zones are reset in a world, not on the Workshop's plot.", await r.T.ResetZones(0, 0, 10, 10));
+        await r.OpenArea();
+        Assert.StartsWith("The rectangle touches no zone of the open area", await r.T.ResetZones(500, 500, 510, 510));
+        Assert.Equal("None of those zones was marked for reset.", await r.T.ResetZones(0, 0, 10, 10, cancel: true));
+        // Half outside the one-zone area: only its own zone.
+        Assert.StartsWith("Marked 1 zone(s) for reset when saved (0, 0), the players' buildings kept.", await r.T.ResetZones(0, 0, 100, 10));
+        Assert.Equal("Claude: reset 1 zone(s)", r.W.Session!.UndoLabel);
+        Assert.Single(r.W.Session.Resets);
+        Assert.StartsWith("Unmarked 1 zone(s).", await r.T.ResetZones(0, 0, 10, 10, cancel: true));
+        Assert.Empty(r.W.Session.Resets);
+    }
+
+    // SeedPicture: a 640-pixel square JPEG.
+    [Fact]
+    public void ASeedsPictureIsASquare()
+    {
+        var p = SeedPreview.Make("abc", 32, cancel: TestContext.Current.CancellationToken);
+        using var bitmap = SkiaSharp.SKBitmap.Decode(ClaudeTools.SeedPicture(p));
+        Assert.Equal((640, 640), (bitmap.Width, bitmap.Height));
+    }
+
+    // A bad seed is said; a seed's preview gives its land, start and biomes, with a picture.
+    [AvaloniaFact]
+    public async Task ASeedIsPreviewed()
+    {
+        var bad = await ClaudeTools.PreviewSeed("12345678901");
+        Assert.True(bad.IsError);
+        var good = await ClaudeTools.PreviewSeed(" abc ");
+        var text = ClaudeRun.J(Assert.IsType<ModelContextProtocol.Protocol.TextContentBlock>(good.Content[0]).Text);
+        Assert.Equal("abc", text.GetProperty("seed").GetString());
+        Assert.InRange(text.GetProperty("land").GetSingle(), 0.01f, 1);
+        Assert.NotEmpty(text.GetProperty("biomes").EnumerateArray());
+        Assert.IsType<ModelContextProtocol.Protocol.ImageContentBlock>(good.Content[1]);
+    }
+
+    // A world made in the folder given is opened on its map; a name taken there is refused (Check) and nothing
+    // changes.
+    [AvaloniaFact]
+    public async Task ANewWorldIsMadeAndOpened()
+    {
+        using var r = new ClaudeRun();
+        string root = Path.Combine(Path.GetTempPath(), "vwe-claude-world-" + Guid.NewGuid().ToString("N")[..8]);
+        Directory.CreateDirectory(root);
+        try
+        {
+            string made = await r.T.CreateWorld("Fresh", "abc", root);
+            Assert.StartsWith("Made Fresh (seed abc).", made);
+            Assert.Equal("Fresh", r.W.World!.World.Name);
+            Assert.StartsWith("There is a world called Fresh already in ", await r.T.CreateWorld("Fresh", "xyz", root));
+        }
+        finally
+        {
+            await r.W.LeaveWorld();
+            Directory.Delete(root, true);
         }
     }
 }

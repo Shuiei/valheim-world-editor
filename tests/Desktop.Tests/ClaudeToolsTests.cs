@@ -286,7 +286,8 @@ public class ClaudeToolsTests
             foreach (string name in new[] { "editor_state", "open_world", "open_area", "screenshot", "area_map", "run_script", "place_pieces", "support_check", "generate_dungeon",
                 "building_guide", "get_selection", "select_objects", "flatten", "paint_area", "road", "forest", "set_contents", "build_floor", "build_walls", "build_roof",
                 "move_objects", "set_transform", "replace_objects", "get_object", "set_object_data",
-                "search_world", "list_locations", "copy_objects", "add_blueprint", "shape_ground", "regrow_nature", "ground_at" })
+                "search_world", "list_locations", "copy_objects", "add_blueprint", "shape_ground", "regrow_nature", "ground_at",
+                "dig_path", "reset_zones", "preview_seed", "create_world" })
             {
                 Assert.Contains($"\"{name}\"", listed);
             }

@@ -27,6 +27,11 @@ the plugin is unchanged in versions without that part.
   `Roll`, `Scale`); `Objects.Place` takes `pitch`, `roll` and `snap` (pieces meet the pieces there as
   the hammer makes them); and `Objects.Move` moves, turns or sizes an object that is there, keeping
   what it holds, in the script's one undo step.
+- **Claude digs along lines, resets zones and makes worlds**: `dig_path` runs the Path tool along a
+  line (a river or moat, a cave roofed with boulders, a ramp, a flattened or smoothed way);
+  `reset_zones` marks zones for reset (or unmarks them) as the Area tool does; `preview_seed` shows what
+  a seed's world will be like (a map, and where the start, traders and bosses will be) and
+  `create_world` makes and opens a new world.
 - **Claude reads the ground exactly**: `ground_at` gives the height at points (now and as generated),
   the biome and any water there; `list_objects` also gives tilts and size when an object has them.
 

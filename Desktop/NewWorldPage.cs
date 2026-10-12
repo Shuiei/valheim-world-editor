@@ -1151,24 +1151,37 @@ public sealed class NewWorldPage : IDisposable
         string name = (NameBox.Text ?? "").Trim(), seed = (SeedBox.Text ?? "").Trim();
         var roots = (List<string>)Where.Tag!;
         string root = roots[Math.Max(0, Where.SelectedIndex)];
-        if (name.Length == 0 || name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+        if (Check(root, name, seed) is string problem)
         {
-            Problem.Text = "Give the world a name that can be a file name (no / \\ : * ? \" < > |).";
-            return;
-        }
-        if (seed.Length is 0 or > 10)
-        {
-            Problem.Text = "The seed is 1 to 10 characters, as in the game.";
-            return;
-        }
-        string folder = Path.Combine(root, name);
-        if (Directory.Exists(folder) || File.Exists(Path.Combine(root, name + ".fwl")))
-        {
-            Problem.Text = $"There is a world called {name} already in {Ui.Tilde(root)}: choose another name.";
+            Problem.Text = problem;
             return;
         }
         Problem.Text = "";
         StopAll();
-        CreateRequested?.Invoke(folder, name, seed);
+        CreateRequested?.Invoke(Path.Combine(root, name), name, seed);
+    }
+
+    /// <summary>
+    /// Why a world of that name and seed cannot be made in that worlds folder (a name that cannot be a file name, a
+    /// seed not of 1 to 10 characters, a world of that name there already), or null when it can.
+    /// </summary>
+    /// <param name="root">The worlds folder.</param>
+    /// <param name="name">The world's name, trimmed.</param>
+    /// <param name="seed">The seed, trimmed.</param>
+    internal static string? Check(string root, string name, string seed)
+    {
+        if (name.Length == 0 || name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+        {
+            return "Give the world a name that can be a file name (no / \\ : * ? \" < > |).";
+        }
+        if (seed.Length is 0 or > 10)
+        {
+            return "The seed is 1 to 10 characters, as in the game.";
+        }
+        if (Directory.Exists(Path.Combine(root, name)) || File.Exists(Path.Combine(root, name + ".fwl")))
+        {
+            return $"There is a world called {name} already in {Ui.Tilde(root)}: choose another name.";
+        }
+        return null;
     }
 }

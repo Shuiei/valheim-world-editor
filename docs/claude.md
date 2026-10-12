@@ -50,6 +50,7 @@ The editor must be running for Claude to reach it. Turn the switch off and nothi
 |---|---|
 | `editor_state` | What is open: the start page, a world's map, an area in 3D or the Workshop; the area's bounds; what is pending |
 | `list_worlds`, `open_world` | The worlds on this computer; open one (offline). Refused while the open world has changes not saved |
+| `preview_seed`, `create_world` | What a seed's world will be like (a map of its biomes; where the start, traders and bosses will be), as the New world page shows it; make a new world of a name and seed and open it |
 | `open_area` | Open the area around a point in 3D (1 to 17 zones of 64 m across) |
 | `describe_area`, `list_objects` | Heights, biomes and objects of the area; objects by kind, name or place, with their ids |
 | `ground_at` | The ground's exact height at points (now and as generated), its biome and any water there |
@@ -67,6 +68,8 @@ The editor must be running for Claude to reach it. Turn the switch off and nothi
 | `run_script` | A C# script on the area, as the [Script tool](scripting.md) runs it (`script_reference` gives Claude the API): ground, paint, objects; a dry run says what it would change |
 | `flatten`, `paint_area`, `road`, `forest` | Level a rectangle, paint ground, lay a road through points, plant trees or rocks |
 | `shape_ground` | The Area tool's ground actions over a rectangle: smooth, naturalize, erode, restore, raise, lower |
+| `dig_path` | The Path tool along a line: a river or moat, a cave roofed with boulders, a ramp, a flattened, raised, lowered or smoothed way |
+| `reset_zones` | Mark zones for reset when you save (the game generates them anew), or unmark them |
 | `regrow_nature` | Regrow the trees, rocks, bushes and pickables the game grows there, where nothing stands |
 | `build_floor`, `build_walls`, `build_roof` | A floor, walls with doors and a gable roof (26° or 45°, thatch or shingle, gable ends closed) over a rectangle, from the game's pieces |
 | `set_contents` | Fill a chest, put an item on an item stand (food on a flat one, a trophy or weapon on a wall) or dress an armour stand, write a sign, give a creature stars |

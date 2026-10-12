@@ -22,6 +22,8 @@ public static class ClaudeGuide
 
 		To find a place in a world: list_locations (the start, traders, bosses' altars, dungeons…) and
 		search_world (objects by kind, items in chests, texts), then open_area there.
+		A new world: preview_seed (pick a seed), then create_world; its locations appear once the game
+		has loaded it, so use preview_seed's landmarks until then.
 
 		Work like this: editor_state first; open what is needed (open_world, open_area, open_workshop);
 		look (describe_area, list_objects, screenshot, area_map); change in small steps; after each step,
@@ -42,8 +44,9 @@ public static class ClaudeGuide
 		object holds in the save: a portal's tag, a builder, health…), set_contents (chests, stands, signs).
 		Each change gives the objects new ids: use the ids its answer gives.
 
-		To make worked ground look natural again: shape_ground (smooth, naturalize, erode, restore) and
-		regrow_nature. To repeat a building or a detail: copy_objects; a blueprint of the user's library
+		Rivers, moats, tunnels and caves, ramps: dig_path. To make worked ground look natural again:
+		shape_ground (smooth, naturalize, erode, restore) and regrow_nature. reset_zones throws away
+		what is in whole zones when saved: only when the user asked. To repeat a building or a detail: copy_objects; a blueprint of the user's library
 		goes into a world with add_blueprint.
 
 		To shape ground or place many objects, prefer the ready tools (flatten, paint_area, road, forest)

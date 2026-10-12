@@ -281,7 +281,8 @@ public sealed partial class MainWindow : Window
     /// <summary>
     /// Makes a world in <paramref name="folder"/> and opens it; on failure the New world page says why.
     /// </summary>
-    internal async Task CreateWorld(string folder, string name, string seed)
+    /// <returns>Null when made, else why it could not be.</returns>
+    internal async Task<string?> CreateWorld(string folder, string name, string seed)
     {
         Busy($"Making the world {name}…");
         try
@@ -297,13 +298,14 @@ public sealed partial class MainWindow : Window
             {
                 p.Problem.Text = $"Could not make the world: {ex.Message}";
             }
-            return;
+            return $"Could not make the world: {ex.Message}";
         }
         Busy(null);
         NewWorld?.Dispose();
         NewWorld = null;
         await OpenWorld(() => Task.Run(() => WorldSession.Open(folder)), $"Opening {name}…");
         MessageText.Text = $"Made {name} (seed {seed}). The game lays out its start, traders and dungeons the first time it loads it, and makes each place as players reach it: play it before reshaping an area here.";
+        return null;
     }
 
     /// <summary>
@@ -1175,7 +1177,9 @@ public sealed partial class MainWindow : Window
         bool clamped = false;
         if (path.Act == PathTool.Action.Cave)
         {
-            ApplyCave(s, path);
+            MessageText.Text = ApplyCave(s, path, s.Brush, s.MaskNow());
+            PathPanel.Refresh();
+            UpdateSaveBar();
             return;
         }
         var touched = s.EditGround($"Path: {PathTool.Label(path.Act)}", g =>
@@ -1195,7 +1199,13 @@ public sealed partial class MainWindow : Window
     /// <summary>
     /// The Cave action: the trench, the trees and rocks in it taken away and the roof's boulders, in one undo step.
     /// </summary>
-    private void ApplyCave(EditSession s, PathTool path)
+    /// <param name="s">The session the cave goes into, one undo step.</param>
+    /// <param name="path">The line, its width, soft edge, depth, headroom, rock and seed.</param>
+    /// <param name="brush">The brush whose noise roughens a natural line.</param>
+    /// <param name="mask">Which ground may change (null: all of it).</param>
+    /// <param name="label">The history's name for the step; null: "Cave along" and its length.</param>
+    /// <returns>What was done, for the status line.</returns>
+    internal static string ApplyCave(EditSession s, PathTool path, Brush brush, Func<int, float>? mask, string? label = null)
     {
         var scene = s.Scene;
         var cave = path.PlanCave(s.Ground);
@@ -1245,9 +1255,9 @@ public sealed partial class MainWindow : Window
         }
         bool clamped = false;
         int open = 0;
-        s.Commit($"Cave along {PathTool.Length(cave.Curve):0} m", g =>
+        s.Commit(label ?? $"Cave along {PathTool.Length(cave.Curve):0} m", g =>
         {
-            var (t, rect, c) = path.Apply(g, s.Brush, water, s.MaskNow(), cave);
+            var (t, rect, c) = path.Apply(g, brush, water, mask, cave);
             clamped = c;
             // The walls up into the rock where its underside is above them (no daylight at the sides).
             foreach (var (p, top) in built.Seal)
@@ -1264,15 +1274,13 @@ public sealed partial class MainWindow : Window
             }
             return (t, (rect.X0 - 4, rect.Z0 - 4, rect.X1 + 4, rect.Z1 + 4));
         }, remove, roof);
-        MessageText.Text = built.Uncovered > 0 && roof.Count > 0
+        return built.Uncovered > 0 && roof.Count > 0
             ? $"Dug a cave roofed with {roof.Count} boulder(s), but {built.Uncovered} point(s) of its floor stay open to the sky (at the area's edge?)."
             : roof.Count == 0
             ? "Dug the cave's trench, but it is nowhere deep enough for a roof: make Depth larger than Headroom by 1.5 m, or the line longer (its ends slope up to the ground)."
             : $"Dug a cave {PathTool.Length(cave.Curve):0} m long, roofed with {roof.Count} boulder(s){(remove.Count > 0 ? $"; {remove.Count} tree(s) and rock(s) in the way taken away" : "")}."
                 + (open > 0 ? $" At {open} point(s) the walls could not rise to the rock (the game's ±8 m: No limit in the brush options lets them)." : "")
                 + (clamped ? " Part of it reached the game's ±8 m limit (switch on No limit in the brush options to dig deeper)." : " Ctrl+Z takes it back.");
-        PathPanel.Refresh();
-        UpdateSaveBar();
     }
 
     /// <summary>

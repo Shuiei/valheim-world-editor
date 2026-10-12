@@ -976,31 +976,7 @@ public sealed class AreaPanel
         {
             return;
         }
-        var marked = session.Resets.Select(r => (r.X, r.Z)).ToHashSet();
-        var resets = zones.Select(z => (new ZoneReset(z.X, z.Z, keep, ground), marked.Contains(z), true)).ToArray();
-        Func<Ground, (List<int>, (int, int, int, int))>? clearGround = !ground ? null : g =>
-        {
-            var touched = new List<int>();
-            foreach (var (zx, zz) in zones)
-            {
-                int gx0 = (zx - g.X0) * 64, gz0 = (zz - g.Z0) * 64;
-                for (int k = 0; k <= 64; k++)
-                {
-                    for (int l = 0; l <= 64; l++)
-                    {
-                        int gx = gx0 + l, gz = gz0 + k, p = gz * g.W + gx;
-                        if (gx < g.W && gz < g.H && (g.Mod[p] != 0 || g.PMod[p] != 0 || g.Lift[p] != 0))
-                        {
-                            g.Mod[p] = g.PMod[p] = 0;
-                            g.Level[p] = g.Smooth[p] = g.Lift[p] = 0;
-                            touched.Add(p);
-                        }
-                    }
-                }
-            }
-            return (touched, (0, 0, g.W - 1, g.H - 1));
-        };
-        session.Commit($"Reset {zones.Count} zone(s)", clearGround, [], [], resets);
+        session.MarkResets(zones, keep, ground, $"Reset {zones.Count} zone(s)");
         Message?.Invoke($"{zones.Count} zone(s) marked for reset (red outline). Save to apply; Ctrl+Z cancels.");
     }
 
@@ -1011,15 +987,14 @@ public sealed class AreaPanel
         {
             return;
         }
-        var marked = session.Resets.ToDictionary(r => (r.X, r.Z));
-        var zones = Area.ZonesUnder(session.Ground).Where(marked.ContainsKey).ToList();
-        if (zones.Count == 0)
+        var marked = session.Resets.Select(r => (r.X, r.Z)).ToHashSet();
+        int count = Area.ZonesUnder(session.Ground).Count(marked.Contains);
+        if (count == 0)
         {
             Message?.Invoke("No zone marked for reset under the selection.");
             return;
         }
-        session.Commit($"Cancelled reset of {zones.Count} zone(s)", null, [], [],
-            [.. zones.Select(z => (marked[z], true, false))]);
-        Message?.Invoke($"Reset cancelled for {zones.Count} zone(s).");
+        session.UnmarkResets(Area.ZonesUnder(session.Ground), $"Cancelled reset of {count} zone(s)");
+        Message?.Invoke($"Reset cancelled for {count} zone(s).");
     }
 }

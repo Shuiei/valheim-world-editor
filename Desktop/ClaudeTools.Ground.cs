@@ -79,6 +79,117 @@ public sealed partial class ClaudeTools
         return touched.Count == 0 ? "Nothing changed." : $"{AreaTool.Label(act)}: {touched.Count} ground point(s) changed. Now pending: {Pending()}";
     });
 
+    /// <summary>The Path tool's actions dig_path takes, by name.</summary>
+    internal static readonly Dictionary<string, PathTool.Action> PathActions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["river"] = PathTool.Action.River,
+        ["cave"] = PathTool.Action.Cave,
+        ["ramp"] = PathTool.Action.Ramp,
+        ["flatten"] = PathTool.Action.Flatten,
+        ["raise"] = PathTool.Action.Raise,
+        ["lower"] = PathTool.Action.Lower,
+        ["smooth"] = PathTool.Action.Smooth,
+    };
+
+    /// <summary>
+    /// The Path tool on a line of world points of the scene (in grid points), with the values given; ramp's ends and
+    /// flatten's height default to the ground at the line's ends.
+    /// </summary>
+    internal static PathTool LineOver(WorldScene scene, float[][] points, PathTool.Action act, float width, float soft, float? depth, float headroom,
+        float? height, float amount, bool natural, bool curved, PathTool.CaveRock rock, int seed)
+    {
+        float ox = scene.X0 * 64f - 32f, oz = scene.Z0 * 64f - 32f;
+        var path = new PathTool
+        {
+            Act = act,
+            Width = Math.Clamp(width, 1, 64),
+            Soft = Math.Clamp(soft, 0, 32),
+            Amount = MathF.Max(0, amount),
+            Natural = natural,
+            Curved = curved,
+            Rock = rock,
+            Seed = seed,
+            Headroom = Math.Clamp(headroom, 2, 30),
+            RampEdited = true,
+        };
+        path.Points.AddRange(points.Select(p => new Vector2(p[0] - ox, p[1] - oz)));
+        float first = GroundAt(scene, points[0][0], points[0][1]), last = GroundAt(scene, points[^1][0], points[^1][1]);
+        (path.Start, path.End) = (height ?? first, height is null ? last : height.Value);
+        path.Height = height ?? first;
+        if (act == PathTool.Action.Cave)
+        {
+            path.CaveDepth = Math.Clamp(depth ?? 7.5f, 2, 40);
+        }
+        else
+        {
+            path.Depth = Math.Clamp(depth ?? 2, 0, 30);
+        }
+        return path;
+    }
+
+    /// <summary>dig_path: a Path tool action along a line of points, as one pending step.</summary>
+    [McpServerTool(Name = "dig_path", Title = "A river, cave, ramp or flattened way along a line")]
+    [Description("Changes the ground along a line of points of the open area as the Path tool does, a smooth curve through them (curved: false for straight stretches): river (digs a bed depth metres below the water level, so the sea fills it: a river, canal or moat), cave (digs a trench depth metres deep and roofs it over with the game's boulders, headroom metres high inside: a walkable tunnel or cave; its ends slope up to the ground; trees and rocks in the way go), ramp (a slope from the ground at the first point to the ground at the last, or height for both), flatten (to height, default: the ground at the first point), raise or lower (by amount), smooth. width metres wide, fading out over soft metres beyond. natural: true gives a varying width, ragged edges and bumps. One pending step.")]
+    public Task<string> DigPath(
+        [Description("river, cave, ramp, flatten, raise, lower or smooth.")] string action,
+        [Description("The line's points, in order: [[x, z], [x, z], …] (at least 2).")] float[][] points,
+        [Description("Width, metres (default 8).")] float width = 8,
+        [Description("Soft edge beyond the width, metres (default 4).")] float soft = 4,
+        [Description("river: metres below the water level (default 2); cave: metres below the ground in the middle (default 7.5; more than headroom + 1.5 for a roof).")] float? depth = null,
+        [Description("cave: headroom inside, metres (default 4.5).")] float headroom = 4.5f,
+        [Description("flatten: the height; ramp: one height for both ends (optional: the ground at the ends).")] float? height = null,
+        [Description("raise and lower: metres (default 2).")] float amount = 2,
+        [Description("A varying width, ragged edges and bumps (default false).")] bool natural = false,
+        [Description("A smooth curve through the points (default true).")] bool curved = true,
+        [Description("cave: the roof's boulders: auto (by biome), forest, coast, heath or mountain.")] string rock = "auto",
+        [Description("Any number: another roof and natural pattern with the same choices.")] int seed = 1) => OnUi(() =>
+    {
+        if (CannotEdit() is string why)
+        {
+            return why;
+        }
+        if (!PathActions.TryGetValue(action, out var act))
+        {
+            return "The action is river, cave, ramp, flatten, raise, lower or smooth.";
+        }
+        if (points.Length < 2 || points.Any(p => p.Length < 2))
+        {
+            return "A line needs at least 2 points, each [x, z].";
+        }
+        if (!Enum.TryParse<PathTool.CaveRock>(rock, true, out var caveRock))
+        {
+            return "The rock is auto, forest, coast, heath or mountain.";
+        }
+        var s = _w.Session!;
+        var (minX, minZ, maxX, maxZ) = Bounds(s.Scene);
+        if (points.FirstOrDefault(p => p[0] < minX || p[0] > maxX || p[1] < minZ || p[1] > maxZ) is { } outside)
+        {
+            return $"({outside[0]}, {outside[1]}) is outside the open area (x {minX} to {maxX}, z {minZ} to {maxZ}).";
+        }
+        var path = LineOver(s.Scene, points, act, width, soft, depth, headroom, height, amount, natural, curved, caveRock, seed);
+        var brush = new Brush { Noise = new Noise(seed) };
+        string label = $"Claude: {action.ToLowerInvariant()} along a line";
+        string said;
+        if (act == PathTool.Action.Cave)
+        {
+            said = MainWindow.ApplyCave(s, path, brush, null, label);
+        }
+        else
+        {
+            bool clamped = false;
+            var touched = s.EditGround(label, g =>
+            {
+                var (t, rect, c) = path.Apply(g, brush, s.Scene.Water, null);
+                clamped = c;
+                return (t, rect);
+            });
+            said = touched.Count == 0 ? "Nothing changed along the line."
+                : $"{PathTool.Label(act)} along {PathTool.Length(path.Curve()):0} m: {touched.Count} ground point(s).{(clamped ? " Part of it reached the game's ±8 m limit." : "")}";
+        }
+        _w.AfterClaudeEdit(said);
+        return said + " Now pending: " + Pending();
+    });
+
     /// <summary>The most points ground_at answers for at once.</summary>
     private const int MostPoints = 500;
 

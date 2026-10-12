@@ -23,7 +23,7 @@ public class MainWindowNewWorldTests
             Assert.NotNull(w.NewWorld);
             Assert.EndsWith("· A new world", w.Title);
             string folder = Path.Combine(dir, "Fresh");
-            await w.CreateWorld(folder, "Fresh", "abc");
+            Assert.Null(await w.CreateWorld(folder, "Fresh", "abc"));
             // The page is gone; the world is open on its map.
             Assert.Null(w.NewWorld);
             Assert.NotNull(w.World);
@@ -53,7 +53,7 @@ public class MainWindowNewWorldTests
             w.Show();
             w.ShowNewWorld();
             var page = w.NewWorld!;
-            await w.CreateWorld(dir, "CITest", "abc");
+            Assert.StartsWith("Could not make the world:", await w.CreateWorld(dir, "CITest", "abc"));
             Assert.Same(page, w.NewWorld);
             Assert.Null(w.World);
             Assert.StartsWith("Could not make the world:", page.Problem.Text);

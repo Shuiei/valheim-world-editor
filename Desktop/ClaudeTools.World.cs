@@ -165,6 +165,155 @@ public sealed partial class ClaudeTools
         });
     });
 
+    /// <summary>The zones (world column, row) a world rectangle touches.</summary>
+    internal static List<(int X, int Z)> ZonesOf(float x0, float z0, float x1, float z1)
+    {
+        static int Zone(float v) => (int)MathF.Floor((v + 32) / 64);
+        var zones = new List<(int X, int Z)>();
+        for (int zz = Zone(MathF.Min(z0, z1)); zz <= Zone(MathF.Max(z0, z1)); zz++)
+        {
+            for (int zx = Zone(MathF.Min(x0, x1)); zx <= Zone(MathF.Max(x0, x1)); zx++)
+            {
+                zones.Add((zx, zz));
+            }
+        }
+        return zones;
+    }
+
+    /// <summary>reset_zones: zones of the open area marked for reset when saving (or unmarked), as one pending step.</summary>
+    [McpServerTool(Name = "reset_zones", Title = "Give zones back to the world generator")]
+    [Description("Marks the 64 m zones a rectangle of the open area touches for reset, as the Area tool's Reset zones does: when the user saves (or applies live), every tree, rock, ruin and dungeon entrance in them is taken away (the players' buildings too unless keepBuildings), and Valheim generates them anew the next time a player comes near; with ground, their ground edits are undone at once. It throws away what is there: do it only when the user asked for it, and say which zones. cancel: true unmarks them instead. One pending step (Ctrl+Z, or cancel, takes it back).")]
+    public Task<string> ResetZones(
+        [Description("West edge (x).")] float x0, [Description("South edge (z).")] float z0,
+        [Description("East edge (x).")] float x1, [Description("North edge (z).")] float z1,
+        [Description("Keep the pieces players built (default true).")] bool keepBuildings = true,
+        [Description("Also undo the zones' ground edits (default false).")] bool ground = false,
+        [Description("Unmark them instead (default false).")] bool cancel = false) => OnUi(() =>
+    {
+        if (CannotEdit() is string why)
+        {
+            return why;
+        }
+        if (_w.InWorkshop)
+        {
+            return "Zones are reset in a world, not on the Workshop's plot.";
+        }
+        var s = _w.Session!;
+        var scene = s.Scene;
+        var zones = ZonesOf(x0, z0, x1, z1).Where(z => z.X >= scene.X0 && z.X < scene.X0 + scene.ZonesX && z.Z >= scene.Z0 && z.Z < scene.Z0 + scene.ZonesZ).ToList();
+        if (zones.Count == 0)
+        {
+            return "The rectangle touches no zone of the open area (editor_state gives its bounds).";
+        }
+        string list = string.Join(" · ", zones.Select(z => $"{z.X}, {z.Z}"));
+        if (cancel)
+        {
+            int n = s.UnmarkResets(zones, $"Claude: cancelled reset of {zones.Count} zone(s)");
+            _w.AfterClaudeEdit($"Claude unmarked {n} zone(s).");
+            return n == 0 ? "None of those zones was marked for reset." : $"Unmarked {n} zone(s). Now pending: {Pending()}";
+        }
+        s.MarkResets(zones, keepBuildings, ground, $"Claude: reset {zones.Count} zone(s)");
+        _w.AfterClaudeEdit($"Claude marked {zones.Count} zone(s) for reset; Ctrl+Z cancels.");
+        return $"Marked {zones.Count} zone(s) for reset when saved ({list}){(keepBuildings ? ", the players' buildings kept" : ", the players' buildings too")}{(ground ? ", their ground edits undone" : "")}. Now pending: {Pending()}";
+    });
+
+    // ---- New worlds.
+
+    /// <summary>preview_seed: what a seed's world will be like, with a map of its biomes and landmarks.</summary>
+    [McpServerTool(Name = "preview_seed", ReadOnly = true, Title = "Preview a seed")]
+    [Description("What a world of this seed will be like, as the New world page shows it, without making it: a map of its biomes (north up, 10 km round the middle) with the start (white), traders (yellow) and bosses' altars (red), how much of it is land and in each biome, how far each biome is from the start, and where the start, traders and bosses will be. Use it to pick a seed before create_world; a new world's locations are only laid out by the game when it first loads it, so list_locations has none until then: these predictions stand in for them.")]
+    public static async Task<ModelContextProtocol.Protocol.CallToolResult> PreviewSeed(
+        [Description("The seed: 1 to 10 characters, as in the game.")] string seed)
+    {
+        seed = seed.Trim();
+        if (seed.Length is 0 or > 10)
+        {
+            return new() { IsError = true, Content = { new ModelContextProtocol.Protocol.TextContentBlock { Text = "The seed is 1 to 10 characters, as in the game." } } };
+        }
+        var p = await Task.Run(() => TerrainEditor.App.SeedPreview.Make(seed, 160, parallel: true, landmarks: true));
+        var st = p.Stats;
+        string text = ToJson(new
+        {
+            seed,
+            land = MathF.Round(st.Land, 3),
+            biomes = st.Shares.OrderByDescending(b => b.Value).Select(b => new { biome = b.Key.ToString(), share = MathF.Round(b.Value, 3) }),
+            start = new { x = MathF.Round(st.Start.X), z = MathF.Round(st.Start.Z), temple = st.TempleStart },
+            fromStart = st.Distance.Where(d => float.IsFinite(d.Value)).Select(d => new { biome = d.Key.ToString(), metres = MathF.Round(d.Value), sameLand = st.SameLand.GetValueOrDefault(d.Key) }),
+            landmarks = (p.Landmarks ?? []).Select(l => new { name = l.Name, kind = l.Kind, x = MathF.Round(l.X), z = MathF.Round(l.Z), oneOfSeveral = l.OneOf }),
+            note = p.Landmarks == null ? "The game's location rules could not be read: no landmarks." : null,
+        });
+        return new()
+        {
+            Content =
+            {
+                new ModelContextProtocol.Protocol.TextContentBlock { Text = text },
+                ModelContextProtocol.Protocol.ImageContentBlock.FromBytes(SeedPicture(p), "image/jpeg"),
+            },
+        };
+    }
+
+    /// <summary>A seed preview's biomes as a 640-pixel picture, north up, with its start, traders and bosses as dots.</summary>
+    internal static byte[] SeedPicture(TerrainEditor.App.SeedPreview.Preview p)
+    {
+        const int Side = 640;
+        using var cells = new SkiaSharp.SKBitmap(p.Size, p.Size);
+        for (int j = 0; j < p.Size; j++)
+        {
+            for (int i = 0; i < p.Size; i++)
+            {
+                var (r, g, b) = SeedMap.Shade(p.Biome[j * p.Size + i], p.Height[j * p.Size + i]);
+                // Row 0 is the south: drawn at the bottom.
+                cells.SetPixel(i, p.Size - 1 - j, new SkiaSharp.SKColor(r, g, b));
+            }
+        }
+        using var sheet = new SkiaSharp.SKBitmap(Side, Side);
+        using (var canvas = new SkiaSharp.SKCanvas(sheet))
+        {
+            using (var image = SkiaSharp.SKImage.FromBitmap(cells))
+            {
+                canvas.DrawImage(image, SkiaSharp.SKRect.Create(0, 0, Side, Side), new SkiaSharp.SKSamplingOptions(SkiaSharp.SKFilterMode.Nearest));
+            }
+            float k = Side / (2 * TerrainEditor.App.SeedPreview.Radius);
+            using var dot = new SkiaSharp.SKPaint { IsAntialias = true };
+            using var rim = new SkiaSharp.SKPaint { IsAntialias = true, Color = SkiaSharp.SKColors.Black, Style = SkiaSharp.SKPaintStyle.Stroke, StrokeWidth = 1 };
+            foreach (var l in p.Landmarks ?? [])
+            {
+                dot.Color = l.Kind switch { "start" => SkiaSharp.SKColors.White, "trader" => SkiaSharp.SKColors.Gold, _ => SkiaSharp.SKColors.Red };
+                float x = (l.X + TerrainEditor.App.SeedPreview.Radius) * k, y = Side - (l.Z + TerrainEditor.App.SeedPreview.Radius) * k;
+                canvas.DrawCircle(x, y, 4, dot);
+                canvas.DrawCircle(x, y, 4, rim);
+            }
+        }
+        using var final = SkiaSharp.SKImage.FromBitmap(sheet);
+        return final.Encode(SkiaSharp.SKEncodedImageFormat.Jpeg, 85).ToArray();
+    }
+
+    /// <summary>create_world: a new world of a name and seed in the first worlds folder, then opened (the New world page's Create).</summary>
+    [McpServerTool(Name = "create_world", Title = "Make a new world")]
+    [Description("Makes a new world, as the New world page's Create does: its name, its seed (preview_seed first), in the game's worlds folder (or the one given, from list_worlds' folders), and opens it on its map. Nothing existing is changed: a name already taken is refused, and so is leaving a world or the Workshop with changes not saved. The game lays out the start, traders and dungeons the first time it loads the world, and makes each place as players reach it: shaping an area before anyone played there works, but locations come later.")]
+    public Task<string> CreateWorld(
+        [Description("The world's name (it must be a valid file name).")] string name,
+        [Description("The seed: 1 to 10 characters, as in the game.")] string seed,
+        [Description("The worlds folder to make it in (optional: the game's).")] string? folder = null) => OnUi(async () =>
+    {
+        if (Unsaved() is string why)
+        {
+            return why;
+        }
+        name = name.Trim();
+        seed = seed.Trim();
+        string root = folder ?? NewWorldPage.Roots().FirstOrDefault() ?? TerrainEditor.App.Places.WorldRoots().First();
+        if (NewWorldPage.Check(root, name, seed) is string problem)
+        {
+            return problem;
+        }
+        if (await _w.CreateWorld(Path.Combine(root, name), name, seed) is string failed)
+        {
+            return failed;
+        }
+        return _w.World?.World.Name == name ? $"{_w.MessageText.Text} {ToJson(StateOf(_w))}" : $"Made {name}, but it could not be opened: {_w.MessageText.Text}";
+    });
+
     // ---- Copies.
 
     /// <summary>
