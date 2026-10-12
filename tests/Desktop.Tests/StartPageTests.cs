@@ -199,22 +199,56 @@ public class StartPageTests
     }
 
     [AvaloniaFact]
-    public void RefreshFindsTheWorldsAgain()
+    public async Task RefreshFindsTheWorldsAgain()
     {
         using var r = new Run();
         List<Worlds.Info> found = [];
         r.P.FindWorlds = _ => found;
-        r.P.FillWorlds();
+        r.P.SetMode("offline");
         Assert.Contains("No worlds found on this computer", Texts(r.P.WorldCards));
         // A world folder added while the page is open shows after Refresh, and goes once removed.
         found = [new Worlds.Info("Added", "/somewhere", DateTime.Now, 1, "a test folder", true, null)];
         Click(r.P.RefreshWorlds);
+        await r.P.WorldsCheck!;
         Assert.Single(r.P.WorldCards.Children.OfType<Button>());
         Assert.Contains("Added", Texts(r.P.WorldCards));
         found = [];
         Click(r.P.RefreshWorlds);
+        await r.P.WorldsCheck!;
         Assert.Empty(r.P.WorldCards.Children.OfType<Button>());
         Assert.Contains("No worlds found on this computer", Texts(r.P.WorldCards));
+    }
+
+    [AvaloniaFact]
+    public async Task ALookOvertakenByALaterOneShowsNothing()
+    {
+        using var r = new Run();
+        var older = new Worlds.Info("Older", "/older", DateTime.Now, 1, "a test folder", true, null);
+        var newer = new Worlds.Info("Newer", "/newer", DateTime.Now, 1, "a test folder", true, null);
+        using var started = new ManualResetEventSlim();
+        using var release = new ManualResetEventSlim();
+        bool slow = true;
+        r.P.FindWorlds = _ =>
+        {
+            if (!slow)
+            {
+                return [newer];
+            }
+            started.Set();
+            release.Wait();
+            return [older];
+        };
+        // A slow look starts, then the page lists the worlds again before it ends.
+        var check = r.P.CheckWorlds();
+        Assert.True(started.Wait(TimeSpan.FromSeconds(10)));
+        slow = false;
+        r.P.SetMode("offline");
+        Assert.Contains("Newer", Texts(r.P.WorldCards));
+        // The slow look ends: its older worlds do not replace the newer list.
+        release.Set();
+        await check;
+        Assert.Contains("Newer", Texts(r.P.WorldCards));
+        Assert.DoesNotContain("Older", Texts(r.P.WorldCards));
     }
 
     [AvaloniaFact]

@@ -102,8 +102,10 @@ public sealed class StartPage
     private readonly DispatcherTimer _worldsTimer = new() { Interval = TimeSpan.FromSeconds(3) };
     /// <summary>The worlds as last shown (path, save, usable), so an unchanged look redraws nothing.</summary>
     private string _worldsKey = "";
-    /// <summary>The look for the worlds running (see <see cref="CheckWorlds"/>).</summary>
-    private Task? _worldsCheck;
+    /// <summary>The look for the worlds running, or the last one (Refresh's or the timer's; see <see cref="CheckWorlds"/>).</summary>
+    internal Task? WorldsCheck { get; private set; }
+    /// <summary>Counts the looks for the worlds, so a look overtaken by a later one shows nothing.</summary>
+    private int _worldsLook;
 
     /// <summary>Homestead (the building library's in-game side): found in the game's BepInEx or not.</summary>
     internal TextBlock HomesteadText { get; } = new() { TextWrapping = TextWrapping.Wrap, FontSize = 12 };
@@ -202,12 +204,12 @@ public sealed class StartPage
         };
         _worldsTimer.Tick += async (_, _) =>
         {
-            if (_worldsCheck is { IsCompleted: false })
+            if (WorldsCheck is { IsCompleted: false })
             {
                 return;
             }
-            _worldsCheck = CheckWorlds();
-            await _worldsCheck;
+            WorldsCheck = CheckWorlds();
+            await WorldsCheck;
         };
 
         // A dedicated server.
@@ -220,7 +222,11 @@ public sealed class StartPage
         PathBox.Tip("start.folder");
         openPath.Click += (_, _) => OpenFolder(PathBox.Text ?? "");
         RefreshWorlds.Tip("start.refreshWorlds");
-        RefreshWorlds.Click += (_, _) => FillWorlds();
+        RefreshWorlds.Click += async (_, _) =>
+        {
+            WorldsCheck = CheckWorlds();
+            await WorldsCheck;
+        };
         OfflinePanel.Children.Add(RefreshWorlds);
         OfflinePanel.Children.Add(WorldCards);
         OfflinePanel.Children.Add(Hint("Close Valheim (or stop the server) before you save changes into a world: a running game writes over the files. Each save is read back and checked before the old one is removed."));
@@ -722,14 +728,20 @@ public sealed class StartPage
     }
 
     /// <summary>A card per world found on this computer (worlds that cannot be opened greyed out, with why).</summary>
-    internal void FillWorlds() => ShowWorlds(FindWorlds(_settings));
+    internal void FillWorlds()
+    {
+        _worldsLook++;
+        ShowWorlds(FindWorlds(_settings));
+    }
 
     /// <summary>
     /// Looks for the worlds again away from the window's thread (a slow drive does not freeze it) and shows
-    /// them when they changed: a world folder added or removed, or a world saved again.
+    /// them when they changed: a world folder added or removed, or a world saved again. A look that a later
+    /// one (Refresh, or the page shown again) overtook shows nothing: its worlds are older.
     /// </summary>
     internal async Task CheckWorlds()
     {
+        int look = ++_worldsLook;
         List<Worlds.Info> worlds;
         try
         {
@@ -739,7 +751,7 @@ public sealed class StartPage
         {
             return; // A folder changing while it is read (or the settings while they are walked): the next look sees it.
         }
-        if (Mode == "offline" && WorldsKey(worlds) != _worldsKey)
+        if (look == _worldsLook && Mode == "offline" && WorldsKey(worlds) != _worldsKey)
         {
             ShowWorlds(worlds);
         }
