@@ -15,8 +15,8 @@ Under **KINDS** the panel lists the kinds you chose, each with a ✕ to drop it.
 
 | Control | What it does |
 |---|---|
-| **Search kinds** | Filters the list by name (oak, rock, bush…). Searching opens every category with a match. |
-| **Tick boxes** | Every ticked kind is used; each placement picks one of them at random. The list is grouped by kind of object (trees, rocks, bushes, pickables…), each category folding open or shut with a click on its name; the number after it is how many of its kinds are ticked, of how many. Which categories are open is remembered (Trees at first). |
+| **Search kinds** | Filters the list by name (oak, rock, bush…); spawn points and nests also by the creature they spawn (boar finds Spawner_Boar). Searching opens every category with a match. |
+| **Tick boxes** | Every ticked kind is used; each placement picks one of them at random. The list is grouped by kind of object (trees, rocks, bushes, pickables, ruins, furniture, spawn points…), each category folding open or shut with a click on its name; the number after it is how many of its kinds are ticked, of how many. Which categories are open is remembered (Trees at first). |
 | **Weights** | In the panel, with two or more kinds chosen, a slider per kind (1–10) sets how often it is used, with its share: Beech 3, Birch 1 gives three beeches for one birch. Remembered. |
 | **Preset** | Loads a mix: its kinds with their weights, and its Density, Spacing, Clumping, Size, Tilt and facing. Built in: Meadows woods, Black forest, Swamp, Berry patch, Forest floor, Meadows rocks. Kinds a world cannot place are left out. |
 | **Save as preset…** / **Delete** | Saves the chosen kinds, weights and those settings under a name (kept in the editor's data folder); Delete removes one of yours, after asking. |
@@ -27,8 +27,34 @@ Under **KINDS** the panel lists the kinds you chose, each with a ✕ to drop it.
 | Favourite and Recent buttons | A click ticks or unticks that kind; **Shift + click** places only that kind. **all** / **none** after the row's name tick or untick every kind of the row. Both lists are kept in the editor's data folder. |
 
 The list has every placeable kind in the game (about 1,500), including kinds your world has none
-of yet. Creatures, dropped items and effects are left out. Kinds without an extracted model show as
+of yet. Creatures and dropped items are left out. Kinds without an extracted model show as
 boxes in the preview.
+
+Its categories, in order: **Trees & logs**, **Rocks**, **Bushes & shrubs**, **Pickables**, **Ore &
+deposits**, **Ruins & structures**, **Furniture & props**, **Bones & remains**, **Spawn points**,
+**Creature nests**, **Creatures & NPCs** (traders, birds), **Effects & markers** (mist, music, boss
+event zones) and **Other objects**, which only keeps what fits none of them (tombstones...).
+
+## Spawn points
+
+The game's invisible spawn points (`Spawner_Boar`, `Spawner_Draugr`, ...) are what puts creatures in
+camps, villages and dungeons: each spawns its creature where it stands. They are under **Spawn
+points**, each with what it spawns under its name, read from your game:
+
+- the creature and its stars (`Boar · 0–2 ★`);
+- **spawns once**: the creature is spawned the first time a player comes near, and never again once it
+  dies (most of the game's spawn points); **back 60 min after it dies**: it comes back (the
+  `*_respawn_*` ones, `Spawner_Location_*`, `Spawner_imp_respawn`, `Spawner_Fish4`);
+- **by night only** for the few that wait for the night; **when an event wakes it** for the
+  `TriggerSpawner_` ones.
+
+Which creature, its stars and its respawn time are the game's, set per spawn point kind: pick the
+kind that spawns what you want. **Creature nests** are the visible ones (greydwarf nests, bone piles,
+Elaking holes...) that keep spawning creatures around themselves until destroyed.
+
+In the 3D view, spawn points show as orange boxes (red when their creature comes back) and nests as
+purple ones, each with a marker of the same colour above it, seen through anything in front, within
+250 m of the camera. View → **Spawn points** and **Creature nests** show or hide them.
 
 ## Modes
 

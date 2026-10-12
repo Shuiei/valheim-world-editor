@@ -4,6 +4,7 @@ using Avalonia.Headless.XUnit;
 using Avalonia.Interactivity;
 using Avalonia.LogicalTree;
 using Avalonia.Threading;
+using TerrainEditor.App;
 using TerrainEditor.Terrain;
 using WorldEditor.Tests;
 using Xunit;
@@ -226,5 +227,23 @@ public class PlacePanelTests
         Assert.Equal("Nothing to place yet: + Add kinds, or a preset.", r.P.Note.Text);
         Choose(r, "sapling_turnip");
         Assert.Contains("only grows on cultivated ground", r.P.Note.Text);
+    }
+
+    [AvaloniaFact]
+    public void SpawnPointsHaveTheirOwnCategoryWithWhatTheySpawnAndAreFoundByTheirCreature()
+    {
+        using var r = new Run();
+        Assert.Equal(ObjectKind.SpawnPoints, r.P.Creatable().Single(c => c.Name == "Spawner_Boar").Kind);
+        Assert.Equal(ObjectKind.Nests, r.P.Creatable().Single(c => c.Name == "Spawner_GreydwarfNest").Kind);
+        Click(r.P.KindsButton);
+        Assert.Contains("SPAWN POINTS", Texts(r.P.List));
+        Assert.Contains("CREATURE NESTS", Texts(r.P.List));
+        // A creature's name finds the spawn points and nests that spawn it, each with what it spawns under its name.
+        r.P.Search.Text = "Greydwarf_Shaman";
+        var names = Ticks(r).Select(b => (string)b.Content!).ToList();
+        Assert.Contains("Spawner_Greydwarf_Shaman", names);
+        Assert.Contains("Spawner_GreydwarfNest", names);
+        Assert.Contains("Greydwarf_Shaman · 0–2 ★ · spawns once", Texts(r.P.List));
+        Assert.Contains("Greydwarf, Greydwarf_Elite, Greydwarf_Shaman · up to 3 around, within 4 m", Texts(r.P.List));
     }
 }
