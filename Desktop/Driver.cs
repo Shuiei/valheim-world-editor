@@ -95,7 +95,7 @@ public static class Driver
     }
 
     /// <summary>Runs one command; its answer's JSON (usually <see cref="State"/>). Throws for an unknown or failed command.</summary>
-    private static async Task<string> Run(MainWindow w, string cmd)
+    internal static async Task<string> Run(MainWindow w, string cmd)
     {
         string[] a = cmd.Split(' ', 2);
         string[] args = a.Length > 1 ? a[1].Split(' ') : [];
