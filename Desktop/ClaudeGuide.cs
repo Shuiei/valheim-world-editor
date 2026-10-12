@@ -20,6 +20,9 @@ public static class ClaudeGuide
 		only when asked: when one is "not available", look it up first (tool search, e.g. "valheim-editor
 		run_script"), then call it by the name it shows.
 
+		Blueprints: save_blueprint saves the Workshop's building to the user's library (never replace one
+		without asking), open_workshop loads one onto the plot, add_blueprint adds one to the plot or a world.
+
 		To find a place in a world: list_locations (the start, traders, bosses' altars, dungeons…) and
 		search_world (objects by kind, items in chests, texts), then open_area there.
 		A new world: preview_seed (pick a seed), then create_world; its locations appear once the game
@@ -39,7 +42,7 @@ public static class ClaudeGuide
 		outside them). The Workshop is a blank 192 m plot whose ground is at y = 34, its middle at x = 0, z = 0.
 
 		Every change is one step of the history, labelled "Claude: ...", and stays pending: you never save a
-		world, apply anything to a live game or save a blueprint; the user does, or takes your changes back
+		world or apply anything to a live game; the user does, or takes your changes back
 		(Ctrl+Z, or History > Take back Claude's changes). Opening another world over unsaved changes is refused:
 		ask the user. While the world is live with Auto on, you can change nothing: ask the user to turn
 		Auto off.

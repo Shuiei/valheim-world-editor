@@ -1191,7 +1191,7 @@ public sealed partial class ClaudeTools
 
     /// <summary>open_workshop: the blank plot, optionally with a library blueprint; refused while there are unsaved changes.</summary>
     [McpServerTool(Name = "open_workshop", Title = "Open the Workshop")]
-    [Description("Opens the Workshop: a blank 192 m plot (ground at y = 34, its middle at x = 0, z = 0) to build a blueprint on, optionally with a blueprint of the library on it (list_blueprints). Refused while a world or the Workshop has changes not saved. The user saves the building as a blueprint.")]
+    [Description("Opens the Workshop: a blank 192 m plot (ground at y = 34, its middle at x = 0, z = 0) to build a blueprint on, optionally with a blueprint of the library on it (list_blueprints): this is how a blueprint is loaded. Refused while a world or the Workshop has changes not saved (save_blueprint saves the Workshop's building).")]
     public Task<string> OpenWorkshop([Description("A blueprint's name from list_blueprints (optional: an empty plot).")] string? blueprint = null) => OnUi(async () =>
     {
         if (Unsaved() is string why)
@@ -1209,6 +1209,24 @@ public sealed partial class ClaudeTools
         }
         await _w.OpenWorkshop(path);
         return ToJson(StateOf(_w));
+    });
+
+    /// <summary>save_blueprint: the Workshop's building saved as a blueprint of the library (MainWindow.SaveWorkshopAs).</summary>
+    [McpServerTool(Name = "save_blueprint", Title = "Save the Workshop's building as a blueprint")]
+    [Description("Saves the building on the Workshop's plot as a blueprint of the user's library (Homestead's), as the Workshop's Save blueprint does: its name, a description and tags, with what its objects hold (chest contents, stands' items) and a picture. After it, the Workshop holds nothing unsaved, so another blueprint can be opened (open_workshop). Refused when pieces would fall in game (support_check; evenIfFalling saves anyway) and when another blueprint of that name exists: replacing one (overwrite) is the user's call, ask first.")]
+    public Task<string> SaveBlueprint(
+        [Description("The blueprint's name (also its file's).")] string name,
+        [Description("A few words about it, shown in the library (optional).")] string description = "",
+        [Description("Words to find it by (optional), e.g. [\"house\", \"log\"].")] string[]? tags = null,
+        [Description("Replace a blueprint of that name (only when the user said so; default false).")] bool overwrite = false,
+        [Description("Save even if pieces would fall in game (default false).")] bool evenIfFalling = false) => OnUi(() =>
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return "Give the blueprint a name.";
+        }
+        var details = new TerrainEditor.App.Homestead.Details(name.Trim(), description.Trim(), [.. (tags ?? []).Select(t => t.Trim()).Where(t => t.Length > 0)]);
+        return _w.SaveWorkshopAs(details, overwrite, evenIfFalling) is string problem ? problem : _w.MessageText.Text + " " + ToJson(StateOf(_w));
     });
 
     /// <summary>list_blueprints: Homestead's library, filtered by words of the name, description or tags.</summary>

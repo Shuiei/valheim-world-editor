@@ -359,15 +359,59 @@ public partial class MainWindow
         var clip = Workshop.Building(s.Scene, _workshopName ?? "My building", _workshopLift);
         if (await Blueprints.SaveBuilding(clip, _workshopDetails ?? new Homestead.Details(_workshopName ?? "My building", "", []), _workshopFile) is { } details)
         {
-            string saved = details.Name;
-            _workshopName = saved;
-            _workshopDetails = details;
-            _workshopFile = Path.Combine(Blueprints.Status.Folder, Homestead.FileName(saved));
-            BuildPanel.RenderLibrary();
-            _workshopSaved = s.Edits.Version;
-            _title.Text = $"Workshop · {saved}";
-            UpdateSaveBar();
+            WorkshopSavedAs(s, details);
         }
+    }
+
+    /// <summary>The plot's building is saved under these details: the Workshop takes its name and is no longer dirty.</summary>
+    private void WorkshopSavedAs(EditSession s, Homestead.Details details)
+    {
+        _workshopName = details.Name;
+        _workshopDetails = details;
+        _workshopFile = Path.Combine(Blueprints.Status.Folder, Homestead.FileName(details.Name));
+        BuildPanel.RenderLibrary();
+        _workshopSaved = s.Edits.Version;
+        _title.Text = $"Workshop · {details.Name}";
+        UpdateSaveBar();
+    }
+
+    /// <summary>
+    /// Save blueprint without asking (Claude's save_blueprint): the plot's building under these details. Refused when
+    /// there is no building piece, when pieces would fall in game (unless evenIfFalling), or when another blueprint of
+    /// that name exists (unless overwrite; the one the building was opened from or last saved as may always be saved
+    /// over).
+    /// </summary>
+    /// <returns>Null when saved, else why not.</returns>
+    internal string? SaveWorkshopAs(Homestead.Details details, bool overwrite, bool evenIfFalling)
+    {
+        if (!InWorkshop || Session is not { } s)
+        {
+            return "Blueprints are saved from the Workshop: open_workshop first.";
+        }
+        View.SelectTool.Commit();
+        if (Workshop.Pieces(s.Scene) == 0)
+        {
+            return "There is no building piece on the plot to save.";
+        }
+        RefreshSupport();
+        if (LastSupport is { Breaking: > 0 } r && !evenIfFalling)
+        {
+            return $"{r.Breaking} piece(s) would fall in game (support_check lists them): fix them, or save anyway with evenIfFalling.";
+        }
+        // The library's folder as it is now (Homestead may have been installed or moved since).
+        Blueprints.Refresh();
+        string path = Path.Combine(Blueprints.Status.Folder, Homestead.FileName(details.Name));
+        if (File.Exists(path) && !overwrite && !string.Equals(path, _workshopFile, StringComparison.Ordinal))
+        {
+            return $"There is a blueprint called {details.Name} already: ask the user before replacing it (overwrite), or choose another name.";
+        }
+        var clip = Workshop.Building(s.Scene, details.Name, _workshopLift);
+        if (Blueprints.SaveBuildingAs(clip, details) is string problem)
+        {
+            return problem;
+        }
+        WorkshopSavedAs(s, details);
+        return null;
     }
 
     /// <summary>

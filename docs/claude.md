@@ -7,8 +7,9 @@ watch it happen in the 3D view.
 
 Whatever Claude changes stays **pending**, like your own changes: one step of the history each
 (Ctrl+Z takes it back), shown in the save bar. In **History**, Claude's steps carry a *Claude* tag,
-and **Take back Claude's changes** removes all of them while keeping yours, even those you made after. Claude never saves a world, never applies anything to a
-live game and never saves a blueprint: you do, when you like what you see.
+and **Take back Claude's changes** removes all of them while keeping yours, even those you made after. Claude never saves a world and never
+applies anything to a live game: you do, when you like what you see. It saves the Workshop's building as a
+blueprint when asked (`save_blueprint`), and never replaces one unless told to.
 
 ## Turning it on
 
@@ -81,6 +82,7 @@ The editor must be running for Claude to reach it. Turn the switch off and nothi
 | `replace_objects` | Swap objects for another kind where they stand (a birch for a beech, stone walls for wooden ones) |
 | `get_object`, `set_object_data` | Everything an object is and holds, as the inspector shows it; change its values: a portal's tag (to link two portals), a builder, a ward's permitted players, health, fuel, a creature's level or tamed state |
 | `support_check` | The Workshop's support check: which pieces would fall |
+| `save_blueprint` | Save the Workshop's building as a blueprint of your library (with its picture); it never replaces one unless told to |
 | `open_workshop`, `add_blueprint` | The Workshop, empty or with a blueprint; add a blueprint of your library to the plot or to a world's area, turned as asked |
 | `copy_objects` | Copies of objects, once or in a row or a ring (a row of houses, a fence, pillars round a hall) |
 | `generate_dungeon` | A dungeon on the plot, or above a point of the world with its portals |

@@ -289,13 +289,14 @@ public class ClaudeToolsTests
                 "search_world", "list_locations", "copy_objects", "add_blueprint", "shape_ground", "regrow_nature", "ground_at",
                 "dig_path", "reset_zones", "preview_seed", "create_world", "stamp", "import_heightmap",
                 "list_dungeons", "dungeon_rooms", "add_dungeon_room", "remove_dungeon_room", "close_dungeon_ends", "set_dungeon_door",
-                "list_controls", "set_control" })
+                "list_controls", "set_control", "save_blueprint" })
             {
                 Assert.Contains($"\"{name}\"", listed);
             }
-            // No tool saves, applies live or saves a blueprint.
-            Assert.DoesNotContain("\"save", listed);
+            // No tool saves a world or applies live; saving a blueprint is a tool.
+            Assert.DoesNotContain("\"save_world", listed);
             Assert.DoesNotContain("apply_live", listed);
+            Assert.Contains("\"save_blueprint\"", listed);
         }
         finally
         {

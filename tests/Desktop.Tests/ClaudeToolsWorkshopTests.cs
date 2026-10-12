@@ -84,4 +84,34 @@ public class ClaudeToolsWorkshopTests
         Assert.Contains("building piece(s) on the plot", made);
         Assert.True(ClaudeRun.J(await r.T.EditorState()).GetProperty("area").GetProperty("objects").GetInt32() > 0, made);
     }
+
+    // save_blueprint: outside the Workshop, with no name or no piece: said. Saved, the Workshop holds nothing unsaved
+    // and another blueprint opens; a name taken is refused unless overwrite; pieces that would fall are refused
+    // unless evenIfFalling.
+    [AvaloniaFact]
+    public async Task TheBuildingIsSavedAsABlueprintAndAnotherOpened()
+    {
+        using var r = new ClaudeRun();
+        Assert.StartsWith("Blueprints are saved from the Workshop", await r.T.SaveBlueprint("Hut"));
+        await r.T.OpenWorkshop();
+        Assert.Equal("Give the blueprint a name.", await r.T.SaveBlueprint(" "));
+        Assert.Equal("There is no building piece on the plot to save.", await r.T.SaveBlueprint("Hut"));
+        await r.T.PlacePieces([new ClaudeTools.PieceSpec { Prefab = "wood_floor", X = 0, Z = 0 }]);
+        Assert.StartsWith("Saved the blueprint “Hut”", await r.T.SaveBlueprint("Hut", "A floor", ["test"]));
+        Assert.False(r.W.WorkshopDirty);
+        Assert.True(File.Exists(Path.Combine(r.Homestead, "Hut.blueprint")));
+        Assert.Equal("Hut", ClaudeRun.J(await r.T.ListBlueprints("Hut"))[0].GetProperty("name").GetString());
+
+        // A second building, another name taken: refused, then replaced on purpose.
+        r.Hut("Tower", "Tall");
+        await r.T.PlacePieces([new ClaudeTools.PieceSpec { Prefab = "wood_floor", X = 6, Z = 0 }]);
+        Assert.StartsWith("There is a blueprint called Tower already", await r.T.SaveBlueprint("Tower"));
+        Assert.StartsWith("Saved the blueprint “Tower”", await r.T.SaveBlueprint("Tower", overwrite: true));
+
+        // A wall in the air would fall.
+        await r.T.PlacePieces([new ClaudeTools.PieceSpec { Prefab = "woodwall", X = 20, Z = 20, Y = 60, Snap = false }]);
+        Assert.Contains("would fall in game", await r.T.SaveBlueprint("Floating"));
+        Assert.StartsWith("Saved the blueprint “Floating”", await r.T.SaveBlueprint("Floating", evenIfFalling: true));
+        Assert.Equal("workshop", ClaudeRun.J(await r.T.OpenWorkshop("Hut")).GetProperty("page").GetString());
+    }
 }

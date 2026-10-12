@@ -40,6 +40,9 @@ the plugin is unchanged in versions without that part.
 - **Claude edits the game's dungeons**: `list_dungeons` and `dungeon_rooms` show a dungeon's rooms, open
   ends and door joints; `add_dungeon_room`, `remove_dungeon_room`, `close_dungeon_ends` and
   `set_dungeon_door` change it as the Dungeon tool does.
+- **Claude saves blueprints**: `save_blueprint` saves the Workshop's building to the library (as Save
+  blueprint does, with what objects hold and a picture), refusing to replace one unless told to;
+  `open_workshop` loads one.
 - **Claude uses every control of the editor**: `list_controls` lists every switch, dropdown, slider,
   number and text box and button the editor shows (the View panel's switches, the Workshop's Cut and
   Support check, each tool's settings, the rail of tools) with its value, and `set_control` sets one as
