@@ -13,6 +13,11 @@ the plugin is unchanged in versions without that part.
 
 ## v1.20.1 — unreleased
 
+### Changed
+- **While the game's look is prepared** (start page), every action is greyed out until it is done:
+  worlds, servers, the Workshop, a new world and Settings. A world opened meanwhile missed the game's
+  look. The side menu still moves between the pages.
+
 ### Fixed
 - **Rocks that shape the ground** (the Plains' tall rock pillars, coast, heath, forest and copper
   boulders) were missing from the 3D view and the object lists: the editor only used them for the
