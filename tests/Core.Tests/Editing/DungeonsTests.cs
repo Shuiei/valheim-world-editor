@@ -231,4 +231,40 @@ public class DungeonsTests
 
         public int GetHashCode(Vector3 v) => 0;
     }
+
+    [Fact]
+    public void TheDungeonsOfASaveAreFoundWithTheirRoomCounts()
+    {
+        var world = WorldSave.LoadLive(File.ReadAllBytes(Fixtures.Snapshot), "live");
+        Assert.Empty(Dungeons.In(world));
+        var at = new Vector3(640, 30, 640);
+        List<Dungeons.Placed> rooms =
+        [
+            new(StableHash.Of("cave_new_entrance02"), at + new Vector3(0, 5000, 0), Quaternion.Identity),
+            new(StableHash.Of("cave_new_endcap02"), at + new Vector3(0, 5000, 8), Quaternion.Identity),
+        ];
+        world.MergeLive([(10, 10)],
+        [
+            (4242, 1, MadeObjects.Dungeon("DG_Cave", at, rooms)),
+            // A room list too short to hold its count: no rooms read, the dungeon still found.
+            (4242, 2, MadeObjects.Dungeon("DG_Cave", at + new Vector3(10, 0, 0), [1, 2])),
+            // Not a dungeon.
+            (4242, 3, MadeObjects.Zdo("Beech1", at + new Vector3(20, 0, 0))),
+        ], _ => false, _ => false);
+        var found = Dungeons.In(world).OrderBy(f => f.Position.X).ToList();
+        Assert.Equal(2, found.Count);
+        Assert.All(found, f => Assert.Equal("DG_Cave", f.Kind.Name));
+        Assert.Equal(at, found[0].Position);
+        Assert.Equal(2, found[0].Rooms);
+        Assert.Equal(0, found[1].Rooms);
+    }
+
+    [Fact]
+    public void ARoomOfNoKnownPrefabCountsAsInside()
+    {
+        var cave = Dungeons.KindOf(StableHash.Of("DG_Cave"))!;
+        var unknown = new Dungeons.Placed(StableHash.Of("no_such_room"), CaveAt + new Vector3(9999, 0, 9999), Quaternion.Identity);
+        Assert.Null(unknown.Room);
+        Assert.True(Dungeons.Inside(cave, CaveAt, unknown));
+    }
 }

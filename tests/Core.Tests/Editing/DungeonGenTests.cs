@@ -197,4 +197,87 @@ public class DungeonGenTests
         Assert.True(r.Rooms!.Count > 5);
         Assert.Empty(Dungeons.Openings(r.Rooms, freeOnly: true));
     }
+
+    /// <summary>
+    /// A two-level Swamp crypt (its boss: a Draugr elite), with settings changed.
+    /// </summary>
+    private static DungeonGen.Result Crypt(Func<DungeonGen.Settings, DungeonGen.Settings>? change = null) =>
+        DungeonGen.Make((change ?? (s => s))(new DungeonGen.Settings(Biome: "Swamp", Style: "Crypt", Size: 2, Levels: 2, Seed: 4)));
+
+    /// <summary>
+    /// The distinct prefabs of a dungeon's objects that pass the test.
+    /// </summary>
+    private static HashSet<string> Prefabs(DungeonGen.Result r, Func<string, bool> which) => [.. r.Items.Select(i => i.Prefab).Where(which)];
+
+    [Fact]
+    public void ChosenFoesAndBossTakeTheBiomesPlace()
+    {
+        static bool Spawner(string p) => p.StartsWith("Spawner_", StringComparison.Ordinal);
+        Assert.Contains("Spawner_Blob", Prefabs(Crypt(), Spawner));
+        // Foes by creature or spawner name; one of no biome is taken as it is.
+        var foes = Prefabs(Crypt(s => s with { Foes = ["Draugr", "Spawner_MadeUp"] }), Spawner);
+        Assert.Contains("Spawner_Draugr", foes);
+        Assert.Contains("Spawner_MadeUp", foes);
+        Assert.DoesNotContain("Spawner_Blob", foes);
+        // The boss: the biome's, another, or none.
+        Assert.Contains("Draugr_Elite", Prefabs(Crypt(), p => !Spawner(p)));
+        var troll = Prefabs(Crypt(s => s with { Boss = "Troll" }), p => !Spawner(p));
+        Assert.Contains("Troll", troll);
+        Assert.DoesNotContain("Draugr_Elite", troll);
+        Assert.DoesNotContain("Draugr_Elite", Prefabs(Crypt(s => s with { Boss = "" }), p => !Spawner(p)));
+    }
+
+    [Fact]
+    public void FewerLightsWithoutLightAndLessRubbleWithoutDecay()
+    {
+        static int Lights(DungeonGen.Result r) => r.Items.Count(i => i.Prefab.Contains("torch", StringComparison.Ordinal) || i.Prefab.Contains("brazier", StringComparison.OrdinalIgnoreCase));
+        var plain = Crypt();
+        Assert.True(Lights(Crypt(s => s with { Light = 0 })) < Lights(plain));
+        Assert.True(Crypt(s => s with { Decay = 0 }).Items.Count < plain.Items.Count);
+        Assert.True(Crypt(s => s with { Decay = 1 }).Items.Count > plain.Items.Count);
+    }
+
+    [Fact]
+    public void ASmallCryptWithoutRoomForItsArenaSaysSo()
+    {
+        var r = DungeonGen.Make(new DungeonGen.Settings(Biome: "Meadows", Style: "Crypt", Size: 1, Levels: 2, Seed: 1));
+        Assert.Contains("no room for the boss arena", r.Notes);
+    }
+
+    [Fact]
+    public void AKindWithNoRoomsToJoinIsMadeACave()
+    {
+        var r = DungeonGen.Make(new DungeonGen.Settings(Made: DungeonGen.Made.Rooms, Kind: "DG_GoblinCamp", Size: 2, Seed: 3));
+        Assert.Equal("DG_Cave", r.Kind!.Name);
+        Assert.Contains(r.Notes, n => n.Contains("a cave instead", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void TheGamesRoomsLootAndFoesFollowTheSettings()
+    {
+        static DungeonGen.Result Cave(Func<DungeonGen.Settings, DungeonGen.Settings> change) =>
+            DungeonGen.Make(change(new DungeonGen.Settings(Made: DungeonGen.Made.Rooms, Biome: "Mountain", Size: 3, Seed: 3)));
+        static int Chests(DungeonGen.Result r) => r.Items.Count(i => i.Prefab.StartsWith("TreasureChest_", StringComparison.Ordinal));
+        int chests = Chests(Cave(s => s));
+        Assert.True(chests > 0);
+        // No loot: every chest taken; twice the loot: a second chest beside each.
+        Assert.Equal(0, Chests(Cave(s => s with { Loot = 0 })));
+        Assert.Equal(2 * chests, Chests(Cave(s => s with { Loot = 2 })));
+        // Chosen foes in the rooms' spawners' places.
+        var spawners = Cave(s => s with { Foes = ["Spawner_MadeUp"] }).Items.Where(i => i.Prefab.StartsWith("Spawner_", StringComparison.Ordinal)).Select(i => i.Prefab).Distinct();
+        Assert.Equal(["Spawner_MadeUp"], spawners);
+    }
+
+    [Fact]
+    public void AnythingElseHighUpTakesItsOwnSpotAndAnEmptyDungeonStaysPut()
+    {
+        var r = Make("Crypt", "Swamp", 2, 1, 4);
+        var origin = new Vector3(100, 5000, 100);
+        // A rock (not a dungeon) right where the dungeon would go: it goes higher.
+        var taken = DungeonGen.Taken([(StableHash.Of("Rock_3"), origin)], []);
+        Assert.Equal(new DungeonGen.Box(origin - Vector3.One, origin + Vector3.One), Assert.Single(taken));
+        Assert.True(DungeonGen.Clear(origin, r, taken).Y > origin.Y);
+        var empty = new DungeonGen.Result([], Vector3.Zero, null, null, []);
+        Assert.Equal(origin, DungeonGen.Clear(origin, empty, taken));
+    }
 }

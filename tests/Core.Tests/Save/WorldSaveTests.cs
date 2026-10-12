@@ -246,4 +246,35 @@ public class WorldSaveTests
         await reader;
         Assert.NotNull(world.MergeLive([(0, 0)], [], _ => false, _ => false));
     }
+
+    [Fact]
+    public void LiveAPlayersPieceAndAPlacedLocationComeAndGo()
+    {
+        var world = WorldSave.LoadLive(File.ReadAllBytes(Fixtures.Snapshot), "live");
+        var at = new Vector3(640, 30, 640);
+        // ZDOIDs of a user the snapshot has none of.
+        List<(long, uint, byte[])> made =
+        [
+            (4242, 1, MadeObjects.Piece("woodwall", at, 777, "Astrid")),
+            (4242, 2, MadeObjects.Location(at + new Vector3(5, 0, 5), MadeObjects.MadeUpLocation)),
+        ];
+        var came = world.MergeLive([(10, 10)], made, _ => false, _ => false)!;
+        Assert.Equal(2, came.Added.Count);
+        // A placed location shapes the ground as the game runs.
+        Assert.True(came.Modifiers);
+        Assert.Equal(1, world.Creators[777]);
+        Assert.Equal(777, world.TopBuilder);
+        Assert.Equal("Astrid", world.PlayerNames[777]);
+        Assert.Contains(world.Pieces, p => p.Prefab == Fixtures.Hash("woodwall"));
+        Assert.Contains(world.Locations, l => l.Location == MadeObjects.MadeUpLocation);
+        Assert.Contains(world.Placed, p => p.Location == MadeObjects.MadeUpLocation);
+        // Gone from the game: out of every list, its builder's count down.
+        var gone = world.MergeLive([(10, 10)], [], _ => false, _ => false)!;
+        Assert.Equal(2, gone.Vanished.Count);
+        Assert.True(gone.Modifiers);
+        Assert.Equal(0, world.Creators[777]);
+        Assert.DoesNotContain(world.Pieces, p => p.Prefab == Fixtures.Hash("woodwall"));
+        Assert.DoesNotContain(world.Locations, l => l.Location == MadeObjects.MadeUpLocation);
+        Assert.DoesNotContain(world.Placed, p => p.Location == MadeObjects.MadeUpLocation);
+    }
 }
