@@ -344,7 +344,10 @@ public sealed partial class MainWindow
         {
             _followBusy = false;
         }
-        return (x0, z0, zonesX, zonesZ);
+        // A failed open leaves the old area: nothing grew.
+        return View.Scene is { } ns && (ns.X0, ns.Z0, ns.ZonesX, ns.ZonesZ) == (x0, z0, zonesX, zonesZ)
+            ? (x0, z0, zonesX, zonesZ)
+            : null;
     }
 
     /// <summary>Says why Follow does nothing, once while the reason stays.</summary>
