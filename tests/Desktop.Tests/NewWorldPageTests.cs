@@ -241,14 +241,22 @@ public class NewWorldPageTests
         await TestWindows.Until(() => r.P.DungeonMarks != null, 120000);
         var first = r.P.DungeonMarks;
         r.P.ShowDungeons["Frost caves"].IsChecked = true;
-        // Another seed: the loading sign says the dungeons are being found, until they are.
+        // Another seed: the loading sign says the dungeons are being found, until they are. Seen when the sign says so
+        // (the dungeons can be found before the next look at the page).
+        (bool NoMarks, bool Sign, string Info)? waiting = null;
+        r.P.LoadingText.PropertyChanged += (_, e) =>
+        {
+            if (e.Property == TextBlock.TextProperty && r.P.LoadingText.Text == "Finding abc's dungeons…")
+            {
+                waiting = (r.P.DungeonMarks == null, r.P.Loading.IsVisible, Texts(r.P.Info));
+            }
+        };
         OnUi(() => r.P.ShowSeed("abc"));
-        await TestWindows.Until(() => r.P.Shown?.Seed == "abc", 60000);
-        Assert.Null(r.P.DungeonMarks);
-        Assert.True(r.P.Loading.IsVisible);
-        Assert.Equal("Finding abc's dungeons…", r.P.LoadingText.Text);
-        Assert.Contains("Finding the dungeons (a few seconds)…", Texts(r.P.Info));
-        await TestWindows.Until(() => r.P.DungeonMarks != null && !r.P.Loading.IsVisible, 120000);
+        await TestWindows.Until(() => r.P.DungeonMarks != null && r.P.Shown?.Seed == "abc" && !r.P.Loading.IsVisible, 120000);
+        Assert.NotNull(waiting);
+        Assert.True(waiting.Value.NoMarks);
+        Assert.True(waiting.Value.Sign);
+        Assert.Contains("Finding the dungeons (a few seconds)…", waiting.Value.Info);
         Assert.Equal(r.P.DungeonMarks!.Count(m => m.Name == "Frost caves"), r.P.Map.Dots.Count);
         // Back to the first seed: its dungeons are known at once.
         OnUi(() => r.P.ShowSeed(Seed));
