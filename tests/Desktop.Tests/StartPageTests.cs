@@ -218,6 +218,32 @@ public class StartPageTests
     }
 
     [AvaloniaFact]
+    public async Task AWorldAddedOrRemovedShowsByItself()
+    {
+        using var r = new Run();
+        List<Worlds.Info> found = [new Worlds.Info("First", "/first", DateTime.Now, 1, "a test folder", true, null)];
+        r.P.FindWorlds = _ => found;
+        r.P.SetMode("offline");
+        var first = Assert.Single(r.P.WorldCards.Children.OfType<Button>());
+        // Nothing changed: the cards stay as they are (no redraw under the mouse).
+        await r.P.CheckWorlds();
+        Assert.Same(first, Assert.Single(r.P.WorldCards.Children.OfType<Button>()));
+        // A world folder added, then one removed, shows without Refresh.
+        found = [.. found, new Worlds.Info("Second", "/second", DateTime.Now, 1, "a test folder", true, null)];
+        await r.P.CheckWorlds();
+        Assert.Equal(2, r.P.WorldCards.Children.OfType<Button>().Count());
+        Assert.Contains("Second", Texts(r.P.WorldCards));
+        found = [found[1]];
+        await r.P.CheckWorlds();
+        Assert.DoesNotContain("First", Texts(r.P.WorldCards));
+        // Another page shows: the worlds are not drawn behind it.
+        r.P.SetMode("home");
+        found = [];
+        await r.P.CheckWorlds();
+        Assert.Contains("Second", Texts(r.P.WorldCards));
+    }
+
+    [AvaloniaFact]
     public void AFolderTypedWithAHomeTildeIsUnderstood()
     {
         using var r = new Run();

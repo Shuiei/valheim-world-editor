@@ -4,11 +4,14 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
-## v1.21.0 — unreleased
+## v1.22.0 — unreleased
 
 ### Added
-- **Refresh on A saved world**: looks for the worlds again, so world folders added or removed while
-  the editor runs show without going to another page and back.
+- **A saved world keeps its list up to date**: world folders added or removed while the editor runs
+  (or a world saved again) show by themselves within a few seconds, without going to another page
+  and back. **Refresh** looks for them at once.
+
+## v1.21.0 — unreleased
 
 ### Changed
 - **Follow grows the area** instead of moving it: when you look near the area's edge, a row of zones
