@@ -8,8 +8,9 @@ can see how many and how it looks before you click.
 
 ## Choosing what to place
 
-Under **KINDS** the panel lists the kinds you chose, each with a ✕ to drop it. **+ Add kinds** opens
-**Choose kinds**, a list of every kind in a card beside the panel; **Done** closes it.
+Under **SELECTED KINDS** the panel lists the kinds you chose, each on a row with its share and a ✕ to
+drop it ("None yet" while there are none). **Choose kinds…** under them opens **Choose kinds**, a list
+of every kind in a card beside the panel; **Done** closes it.
 
 ![Choose kinds, beside the Place panel](images/place-chooser.jpg)
 
@@ -18,12 +19,12 @@ Under **KINDS** the panel lists the kinds you chose, each with a ✕ to drop it.
 | **Search kinds** | Filters the list by name (oak, rock, bush…). Searching opens every category with a match. |
 | **Tick boxes** | Every ticked kind is used; each placement picks one of them at random. The list is grouped by kind of object (trees, rocks, bushes, pickables…), each category folding open or shut with a click on its name; the number after it is how many of its kinds are ticked, of how many. Which categories are open is remembered (Trees at first). |
 | **Weights** | In the panel, with two or more kinds chosen, a slider per kind (1–10) sets how often it is used, with its share: Beech 3, Birch 1 gives three beeches for one birch. Remembered. |
-| **Preset** | Loads a mix: its kinds with their weights, and its Density, Spacing, Clumping, Size, Tilt and facing. Built in: Meadows woods, Black forest, Swamp, Berry patch, Forest floor, Meadows rocks. Kinds a world cannot place are left out. |
+| **Choose a preset** | Loads a mix: its kinds with their weights, and its Density, Spacing, Clumping, Size, Tilt and facing. Built in: Meadows woods, Black forest, Swamp, Berry patch, Forest floor, Meadows rocks. Kinds a world cannot place are left out. **None** (the default) loads nothing; choosing it after a preset unticks the preset's kinds. |
 | **Save as preset…** / **Delete** | Saves the chosen kinds, weights and those settings under a name (kept in the editor's data folder); Delete removes one of yours, after asking. |
 | **Pick from world** | Eyedropper: click an object in the world to place only its kind; **Shift + click** adds it to the ticked kinds (or takes it away when it is ticked). `Esc` cancels. |
 | **Untick all** | Unticks every kind. |
 | **Favourites** | Click the ☆ after a kind in the list to star it; starred kinds show as buttons above the list. |
-| **Recent** | The last eight kinds you placed, newest first, as buttons above the list. |
+| **Recent** | The last eight kinds you placed, newest first, as buttons above the list, after the kinds chosen now (so what is chosen always shows there). |
 | Favourite and Recent buttons | A click ticks or unticks that kind; **Shift + click** places only that kind. **all** / **none** after the row's name tick or untick every kind of the row. Both lists are kept in the editor's data folder. |
 
 The list has every placeable kind in the game (about 1,500), including kinds your world has none

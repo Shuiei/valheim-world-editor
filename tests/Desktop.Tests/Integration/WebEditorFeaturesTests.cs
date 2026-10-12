@@ -281,7 +281,7 @@ public class WebEditorFeaturesTests
         Assert.Equal(new[] { kinds[2] }, r.T.Chosen);
         // The chips show what is ticked.
         var chips = r.P.Favourites.Children.OfType<ToggleButton>().ToList();
-        Assert.Equal(kinds, chips.Select(c => (string)c.Content!));
+        Assert.Equal(kinds, chips.Select(c => (string)c.Tag!));
         Assert.Equal([false, false, true], chips.Select(c => c.IsChecked == true));
     }
 
@@ -295,14 +295,14 @@ public class WebEditorFeaturesTests
         Click(r.P.KindsButton);
         r.W.UpdateLayout();
         Point At(ToggleButton chip) => chip.TranslatePoint(new Point(chip.Bounds.Width / 2, chip.Bounds.Height / 2), r.W)!.Value;
-        var chip = r.P.Favourites.Children.OfType<ToggleButton>().Single(c => (string)c.Content! == kinds[1]);
+        var chip = r.P.Favourites.Children.OfType<ToggleButton>().Single(c => (string)c.Tag! == kinds[1]);
         r.W.MouseDown(At(chip), MouseButton.Left, RawInputModifiers.Shift);
         r.W.MouseUp(At(chip), MouseButton.Left, RawInputModifiers.Shift);
         Dispatcher.UIThread.RunJobs();
         Assert.Equal(new[] { kinds[1] }, r.T.Chosen);
         // Without Shift: added.
         r.W.UpdateLayout();
-        chip = r.P.Favourites.Children.OfType<ToggleButton>().Single(c => (string)c.Content! == kinds[0]);
+        chip = r.P.Favourites.Children.OfType<ToggleButton>().Single(c => (string)c.Tag! == kinds[0]);
         r.W.MouseDown(At(chip), MouseButton.Left);
         r.W.MouseUp(At(chip), MouseButton.Left);
         Dispatcher.UIThread.RunJobs();
@@ -330,7 +330,7 @@ public class WebEditorFeaturesTests
         Click(r.P.UntickAllButton);
         Assert.Empty(r.T.Chosen);
         Assert.Empty(r.P.Memory.Chosen);
-        Assert.Equal("Nothing to place yet: + Add kinds, or a preset.", r.P.Note.Text);
+        Assert.Equal("Nothing to place yet: Choose kinds… below, or a preset.", r.P.Note.Text);
     }
 
     [AvaloniaFact]
@@ -346,12 +346,12 @@ public class WebEditorFeaturesTests
         // Trees open (the default), the others folded: only the trees' boxes are made.
         Assert.True(r.P.Groups[ObjectKind.Trees].IsExpanded);
         Assert.False(r.P.Groups[ObjectKind.Rocks].IsExpanded);
-        Assert.Equal(trees, Ticks(r).Select(b => (string)b.Content!));
+        Assert.Equal(trees, Ticks(r).Select(b => (string)b.Tag!));
         string Count(ObjectKind k) => ((Grid)r.P.Groups[k].Header!).Children.OfType<TextBlock>().Last().Text!;
         Assert.Equal($"1 / {trees.Count}", Count(ObjectKind.Trees));
         Assert.Equal($"{rocks.Count}", Count(ObjectKind.Rocks));
         // Ticking in the list counts at once.
-        Ticks(r).First(b => (string)b.Content! == trees[^1]).IsChecked = true;
+        Ticks(r).First(b => (string)b.Tag! == trees[^1]).IsChecked = true;
         Assert.Equal($"{(trees.Count > 1 ? 2 : 1)} / {trees.Count}", Count(ObjectKind.Trees));
         // Opening a category makes its boxes and is remembered.
         int changed = 0;

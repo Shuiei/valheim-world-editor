@@ -139,6 +139,9 @@ public sealed class ToolPanel
         (BrushTool.PaintDirt, "6"), (BrushTool.PaintCultivated, "7"), (BrushTool.PaintPaved, "8"), (BrushTool.PaintClear, "9"),
     ];
 
+    /// <summary>A paint brush (the rail's Paint section), not a sculpt one.</summary>
+    private static bool IsPaint(BrushTool t) => t is BrushTool.PaintDirt or BrushTool.PaintCultivated or BrushTool.PaintPaved or BrushTool.PaintClear;
+
     /// <summary>The rail's short names (the web editor's).</summary>
     private static string RailLabel(BrushTool t) => t switch
     {
@@ -237,26 +240,38 @@ public sealed class ToolPanel
             return b;
         }
         void Cap(string text) => rail.Children.Add(new TextBlock { Text = text.ToUpperInvariant(), FontSize = 9, Foreground = Ui.Muted, LetterSpacing = 0.7, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, rail.Children.Count == 0 ? 0 : 5, 0, 1) });
-        Cap("Sculpt");
-        foreach (var (t, key) in Keys)
+        // A brush's rail button, with its key.
+        void AddBrush(BrushTool t, string key)
         {
-            if (t == BrushTool.PaintDirt)
-            {
-                Cap("Paint");
-            }
             var (icon, swatch) = Look(t);
             var b = Make(RailLabel(t), key, icon, swatch);
             ToolTip.SetTip(b, $"{Brush.Label(t)} ({key}): {Brush.Help(t)}");
             b.Click += (_, _) => Choose(t);
             _buttons[t] = b;
         }
-        Cap("Other");
+        // Sculpt, then the tools that draw on the world (Area, Path, Place), Paint, the tools that make things, and
+        // last the tools that only look or pick.
+        Cap("Sculpt");
+        foreach (var (t, key) in Keys.Where(k => !IsPaint(k.Tool)))
+        {
+            AddBrush(t, key);
+        }
+        Cap("Edit");
         _areaButton = Make("Area", "B", "area");
         ToolTip.SetTip(_areaButton, "Area (B): select a box or polygon, then change the ground, remove, select or replace objects, or reset its zones.");
         _areaButton.Click += (_, _) => ChooseMode(ToolMode.Area);
         _pathButton = Make("Path", "P", "path");
         ToolTip.SetTip(_pathButton, "Path (P): draw a line, then flatten, ramp, raise, lower, smooth, dig a river or paint along it.");
         _pathButton.Click += (_, _) => ChooseMode(ToolMode.Path);
+        _placeButton = Make("Place", "T", "place");
+        ToolTip.SetTip(_placeButton, "Place (T): paint trees, rocks or bushes with a brush, or put walls, fences and other pieces along lines, circles, rectangles, grids and zones.");
+        _placeButton.Click += (_, _) => ChooseMode(ToolMode.Place);
+        Cap("Paint");
+        foreach (var (t, key) in Keys.Where(k => IsPaint(k.Tool)))
+        {
+            AddBrush(t, key);
+        }
+        Cap("Create");
         _shapeButton = Make("Shape", "G", "shape");
         ToolTip.SetTip(_shapeButton, "Shape (G): click to put a mound, cone, mesa, crater, moat or bowl into the ground, or any shape you write as a formula.");
         _shapeButton.Click += (_, _) => ChooseMode(ToolMode.Shape);
@@ -279,9 +294,7 @@ public sealed class ToolPanel
         BlueprintsButton = Make("Blueprints", "", "paste");
         BlueprintsButton.Tip("tools.blueprints");
         BlueprintsButton.Click += (_, _) => ChooseMode(ToolMode.Blueprints);
-        _placeButton = Make("Place", "T", "place");
-        ToolTip.SetTip(_placeButton, "Place (T): paint trees, rocks or bushes with a brush, or put walls, fences and other pieces along lines, circles, rectangles, grids and zones.");
-        _placeButton.Click += (_, _) => ChooseMode(ToolMode.Place);
+        Cap("Tools");
         SelectButton = Make("Select", "E", "select");
         ToolTip.SetTip(SelectButton, "Select (E): click objects, or drag on the ground around them; then move, turn, lift or delete them.");
         SelectButton.Click += (_, _) => ChooseSelect();

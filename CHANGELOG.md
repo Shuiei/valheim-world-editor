@@ -4,6 +4,23 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## Unreleased
+
+### Changed
+- **The tool rail** is in sections, in a clearer order: **Sculpt**, **Edit** (Area, Path, Place),
+  **Paint**, **Create** (Shape, Mountain, Cave, Dungeon, Script, Blueprints) and last **Tools**
+  (Select, Measure, View).
+- **The Place panel** is in sections with headings: **Line shape** (Points, Circle, Rectangle, right
+  under the modes, with how to draw it), **Choose a preset**, **Selected kinds**, **Objects** and the
+  mode's own settings. The preset list starts on **None**; choosing None after a preset unticks its
+  kinds. The selected kinds are on rows of one layout in a box, each with its share (100% for one
+  kind), and **Choose kinds…** opens the list under them. The **Recent** row also shows the kinds
+  chosen now, and its **all** / **none** buttons are larger. **Tilt** starts at 0.
+
+### Fixed
+- **Kind names with an underscore** (Pickable_Flax) showed without it in the Choose kinds list and on
+  the Favourite and Recent buttons (PickableFlax).
+
 ## v1.20.0 — 2026-10-11
 
 ### Added
