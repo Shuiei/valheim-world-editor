@@ -27,12 +27,16 @@ public class ClaudeToolsWorldTests
         Assert.False(ClaudeTools.Known.ContainsKey("WoodHouse1"));
     }
 
-    // LocationName: the rules' name first, then the prefab catalogue's; neither: none.
+    // LocationName: the rules' name first, then the known locations' (the start, traders, bosses, dungeons: named
+    // even before the game's rules are read), then the prefab catalogue's; none of them: none.
     [Fact]
     public void LocationsAreNamedFromTheRulesFirst()
     {
         var rules = new Dictionary<int, string> { [StableHash.Of("MyPlace")] = "MyPlace" };
         Assert.Equal("MyPlace", ClaudeTools.LocationName(StableHash.Of("MyPlace"), rules));
+        Assert.Equal("StartTemple", ClaudeTools.LocationName(StableHash.Of("StartTemple"), []));
+        Assert.Equal("Eikthyrnir", ClaudeTools.LocationName(StableHash.Of("Eikthyrnir"), []));
+        Assert.Equal("Crypt2", ClaudeTools.LocationName(StableHash.Of("Crypt2"), []));
         Assert.Null(ClaudeTools.LocationName(StableHash.Of("no such location at all"), rules));
     }
 

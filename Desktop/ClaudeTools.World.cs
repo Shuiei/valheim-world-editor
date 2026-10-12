@@ -108,19 +108,35 @@ public sealed partial class ClaudeTools
         return known;
     }
 
-    /// <summary>The game's location names by hash: the location rules read from the game, and the prefab catalogue.</summary>
+    /// <summary>The known locations' game names by hash (<see cref="Known"/>), named even without the game's rules.</summary>
+    private static readonly Dictionary<int, string> KnownByHash = Known.Keys.ToDictionary(Save.StableHash.Of, k => k);
+
+    /// <summary>
+    /// The game's location names by hash: the location rules read from the game, then the known locations, then the
+    /// prefab catalogue.
+    /// </summary>
     internal static string? LocationName(int hash, Dictionary<int, string> rules) =>
-        rules.TryGetValue(hash, out string? n) ? n : Terrain.PrefabCatalog.NameOf(hash);
+        rules.TryGetValue(hash, out string? n) ? n : KnownByHash.TryGetValue(hash, out n) ? n : Terrain.PrefabCatalog.NameOf(hash);
+
+    /// <summary>The game's location rules in use (read from the game once, as the New world page does).</summary>
+    private static Task GameRules() => TerrainEditor.App.GameLocations.UseGameRules(TerrainEditor.App.GameLook.Bundles);
 
     /// <summary>list_locations: the world's locations from its zone file (or, without one, those of zones generated).</summary>
     [McpServerTool(Name = "list_locations", ReadOnly = true, Title = "The world's locations")]
     [Description("The locations the game laid out in the open world: the start, the traders (Haldor, Hildir, the Bog Witch), the bosses' altars (Eikthyr, the Elder, Bonemass, Moder, Yagluth, the Queen, Fader), dungeon entrances (burial chambers, troll caves, sunken crypts, frost caves, infested mines…), villages, towers, runestones and the rest: game name, what players call it, kind (start, trader, boss, dungeon, other), world x, y, z, and whether its zone is generated yet (visited in game). Filter by words of the name, what or kind (\"boss\", \"trader\", \"Haldor\", \"crypt\"), and/or near a point; nearest first when near a point. Use it to find where to open_area.")]
-    public Task<string> ListLocations(
+    public async Task<string> ListLocations(
         [Description("Words to match in the name, what players call it or its kind (optional).")] string? query = null,
         [Description("World x of a point to look near (optional, with z).")] float? x = null,
         [Description("World z of that point.")] float? z = null,
         [Description("How far from it, metres (default 2000).")] float radius = 2000,
-        [Description("At most this many (default 100).")] int limit = 100) => OnUi(() =>
+        [Description("At most this many (default 100).")] int limit = 100)
+    {
+        await GameRules();
+        return await OnUi(() => Locations(query, x, z, radius, limit));
+    }
+
+    /// <summary>list_locations' answer, once the game's rules are read (on the window's thread).</summary>
+    private string Locations(string? query, float? x, float? z, float radius, int limit)
     {
         if (_w.World?.World is not { } world)
         {
@@ -163,7 +179,7 @@ public sealed partial class ClaudeTools
                 generated = l.Generated,
             }),
         });
-    });
+    }
 
     /// <summary>The zones (world column, row) a world rectangle touches.</summary>
     internal static List<(int X, int Z)> ZonesOf(float x0, float z0, float x1, float z1)
@@ -230,6 +246,7 @@ public sealed partial class ClaudeTools
         {
             return new() { IsError = true, Content = { new ModelContextProtocol.Protocol.TextContentBlock { Text = "The seed is 1 to 10 characters, as in the game." } } };
         }
+        await GameRules();
         var p = await Task.Run(() => TerrainEditor.App.SeedPreview.Make(seed, 160, parallel: true, landmarks: true));
         var st = p.Stats;
         string text = ToJson(new
