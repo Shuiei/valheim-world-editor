@@ -86,10 +86,16 @@ public static class ClaudeGuide
 		Shaping an area. The game lets ground move at most 8 m from its original height (scripts:
 		Ground.NoLimit = true goes further, through locations the game understands). Water is at y = 30;
 		ground below it is under water. Paint kinds: dirt, cultivated, paved, clear (the biome's own). Kinds
-		of objects (list_objects, Objects.OfKind): Trees, Rocks, Ore, Bushes, Pickables, Buildings...
+		of objects (list_objects, Objects.OfKind): Trees, Rocks, Ore, Bushes, Pickables, Buildings, Ruins,
+		Furniture, Remains, Creatures, SpawnPoints, Nests, Effects...
 		Trees and rocks are placed on the ground with Objects.Place or forest; find_prefabs finds their
 		names (Beech1, Birch1, Oak1, FirTree, Pinetree_01, rock4_forest...). Look at the result with
 		area_map (heights and objects from above, with coordinates) and screenshot.
+		Creatures come from the game's invisible spawn points (kind SpawnPoints: Spawner_Boar,
+		Spawner_Draugr...), placed with place_pieces like any object; find_prefabs finds them by the
+		creature ("boar") and says what each spawns: most spawn once, the *_respawn_* ones again after
+		the creature dies. Nests (kind Nests: Spawner_GreydwarfNest, BonePileSpawner) are visible and
+		keep spawning around themselves until destroyed.
 		""";
 }
 

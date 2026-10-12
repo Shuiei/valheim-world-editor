@@ -91,12 +91,24 @@ public static partial class GameCatalogues
             /// An ArmorStand (m_slots, m_poseCount).
             /// </summary>
             Armour = 512,
+            /// <summary>
+            /// A CreatureSpawner (m_creaturePrefab, m_respawnTimeMinuts): an invisible spawn point.
+            /// </summary>
+            Spawner = 1024,
+            /// <summary>
+            /// A TriggerSpawner (m_creaturePrefabs, m_spawnChance): an invisible spawn point an event wakes.
+            /// </summary>
+            Trigger = 2048,
+            /// <summary>
+            /// A SpawnArea (m_prefabs, m_spawnIntervalSec): a nest or pile that spawns creatures around it.
+            /// </summary>
+            Nest = 4096,
         }
 
         /// <summary>
         /// Read whole on a prefab's root.
         /// </summary>
-        private const Role OnRoot = Role.Net | Role.Plant | Role.Container | Role.Ward | Role.Station;
+        private const Role OnRoot = Role.Net | Role.Plant | Role.Container | Role.Ward | Role.Station | Role.Spawner | Role.Trigger | Role.Nest;
 
         /// <summary>
         /// Read whole wherever they are.
@@ -120,6 +132,9 @@ public static partial class GameCatalogues
             r |= All("m_itemData", "m_autoPickup") ? Role.Drop : 0;
             r |= All("m_supportedTypes", "m_attachOther") ? Role.Stand : 0;
             r |= All("m_slots", "m_poseCount") ? Role.Armour : 0;
+            r |= All("m_creaturePrefab", "m_respawnTimeMinuts") ? Role.Spawner : 0;
+            r |= All("m_creaturePrefabs", "m_spawnChance") ? Role.Trigger : 0;
+            r |= All("m_prefabs", "m_spawnIntervalSec") ? Role.Nest : 0;
             return r;
         }
 
@@ -155,6 +170,11 @@ public static partial class GameCatalogues
         /// What each armour stand slot takes, by prefab name.
         /// </summary>
         private readonly Dictionary<string, List<object?>> _armour = [];
+        /// <summary>
+        /// Spawn points and nests: the creatures they name, by prefab name, and the key they are written under
+        /// ("cs" for spawn points, "sa" for nests).
+        /// </summary>
+        private readonly Dictionary<string, (string Key, List<Ref> Creatures)> _spawns = [];
 
         /// <summary>
         /// Reads the bundle's prefabs (networked roots) and what its saplings, items and stands say; see the class
@@ -286,7 +306,7 @@ public static partial class GameCatalogues
             {
                 if (info.TypeId == GameObjectType && roots.Contains(info.PathId))
                 {
-                    ReadPrefab(b, new Ref(f.Cab, info.PathId), tree.GameObjects[(f, info.PathId)], role);
+                    ReadPrefab(b, f, new Ref(f.Cab, info.PathId), tree.GameObjects[(f, info.PathId)], role);
                 }
             }
             // Each item's children's names.
@@ -303,10 +323,15 @@ public static partial class GameCatalogues
 
         /// <summary>
         /// Adds the entry of a networked root (its name and components), when its ZNetView can be read; the first
-        /// root of a name is kept.
+        /// root of a name is kept. A spawn point (CreatureSpawner) also gets its respawn time in minutes ("rt", 0
+        /// when it spawns once), its level range ("lv": min, max) and when it spawns ("day", "night": 0 when it
+        /// does not); a spawn point an event wakes (TriggerSpawner) is marked ("trig"); a nest (SpawnArea) gets
+        /// the radius it spawns in ("sr") and how many it keeps around ("max"). The creatures they name are filled
+        /// in by <c>Json</c>.
         /// </summary>
-        private void ReadPrefab(Bundle b, Ref at, (string Name, (int File, long Pid)[] Components) go, Dictionary<long, Role> roles)
+        private void ReadPrefab(Bundle b, Bundle.Inner f, Ref at, (string Name, (int File, long Pid)[] Components) go, Dictionary<long, Role> roles)
         {
+            (string Key, List<Ref> Creatures)? spawns = null;
             bool creature = false, item = false;
             AssetTypeValueField? znv = null, plant = null;
             var extra = new Dict();
@@ -340,6 +365,27 @@ public static partial class GameCatalogues
                 {
                     extra["build"] = R(Num(Py(c["m_rangeBuild"])), 2);
                 }
+                List<Ref> Refs(IEnumerable<AssetTypeValueField> pptrs) => [.. pptrs.Select(p => Bundle.RefOf(f, p)).OfType<Ref>()];
+                if ((r & Role.Spawner) != 0)
+                {
+                    extra["rt"] = R(Num(Py(c["m_respawnTimeMinuts"])), 2);
+                    extra["lv"] = new List<object?> { Int(Get(c, "m_minLevel", 1L)), Int(Get(c, "m_maxLevel", 1L)) };
+                    extra["day"] = Int(Get(c, "m_spawnAtDay", 1L));
+                    extra["night"] = Int(Get(c, "m_spawnAtNight", 1L));
+                    spawns = ("cs", Refs([c["m_creaturePrefab"]]));
+                }
+                else if ((r & Role.Trigger) != 0)
+                {
+                    extra["trig"] = 1L;
+                    extra["lv"] = new List<object?> { Int(Get(c, "m_minLevel", 1L)), Int(Get(c, "m_maxLevel", 1L)) };
+                    spawns = ("cs", Refs(c["m_creaturePrefabs"]["Array"].Children));
+                }
+                else if ((r & Role.Nest) != 0)
+                {
+                    extra["sr"] = R(Num(Get(c, "m_spawnRadius", 0L)), 2);
+                    extra["max"] = Int(Get(c, "m_maxNear", 0L));
+                    spawns = ("sa", Refs(c["m_prefabs"]["Array"].Children.Select(d => d["m_prefab"])));
+                }
             }
             if (znv == null)
             {
@@ -368,6 +414,10 @@ public static partial class GameCatalogues
             foreach (var (k, v) in extra)
             {
                 entry[k] = v;
+            }
+            if (spawns != null)
+            {
+                _spawns[name] = spawns.Value;
             }
             _prefabs[name] = entry;
         }
@@ -471,6 +521,14 @@ public static partial class GameCatalogues
                 if (_prefabs.TryGetValue(owner, out var entry) && grown.Count > 0)
                 {
                     entry["grows"] = grown;
+                }
+            }
+            foreach (var (owner, (key, refs)) in _spawns)
+            {
+                var creatures = refs.Where(_names.ContainsKey).Select(r => _names[r]).Distinct().ToList();
+                if (_prefabs.TryGetValue(owner, out var entry) && creatures.Count > 0)
+                {
+                    entry[key] = creatures;
                 }
             }
             foreach (var (n, e) in _items)

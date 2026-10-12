@@ -69,7 +69,51 @@ public class ObjectKindsTests
         var (_, _, tamePosition, _, _) = Assert.Single(boars, b => world.Tamed.Contains(b.Id));
         Assert.Equal(14, tamePosition.X, 0.01f);
         Assert.Equal(ObjectKind.Animals, ObjectKinds.Of("Boar", false, tamed: true));
-        Assert.Equal(ObjectKind.Other, ObjectKinds.Of("Boar", false));
+        Assert.Equal(ObjectKind.Creatures, ObjectKinds.Of("Boar", false));
+    }
+
+    [Theory]
+    [InlineData("Spawner_Boar", ObjectKind.SpawnPoints)]
+    [InlineData("Spawner_Skeleton_respawn_30", ObjectKind.SpawnPoints)]
+    [InlineData("TriggerSpawner_Seeker", ObjectKind.SpawnPoints)]
+    [InlineData("Spawner_GreydwarfNest", ObjectKind.Nests)]
+    [InlineData("BonePileSpawner", ObjectKind.Nests)]
+    [InlineData("Spawner_Hole_double", ObjectKind.Nests)]
+    [InlineData("Spawner_NotInTheGame", ObjectKind.SpawnPoints)]
+    [InlineData("Greydwarf", ObjectKind.Creatures)]
+    [InlineData("Haldor", ObjectKind.Creatures)]
+    [InlineData("Crow", ObjectKind.Creatures)]
+    [InlineData("vfx_swamp_mist", ObjectKind.Effects)]
+    [InlineData("Music_FulingCamp", ObjectKind.Effects)]
+    [InlineData("eventzone_eikthyr", ObjectKind.Effects)]
+    [InlineData("giant_helmet1_destruction", ObjectKind.Effects)]
+    [InlineData("giant_skull", ObjectKind.Remains)]
+    [InlineData("Wolf_Ragdoll", ObjectKind.Remains)]
+    [InlineData("TrollFrost_Dead", ObjectKind.Remains)]
+    [InlineData("dvergrprops_crate", ObjectKind.Furniture)]
+    [InlineData("Morkhalla_Table", ObjectKind.Furniture)]
+    [InlineData("prop_ashwood_bed", ObjectKind.Furniture)]
+    [InlineData("Morkhalla_Floor_4x4", ObjectKind.Ruins)]
+    [InlineData("Ashlands_Wall_2x2", ObjectKind.Ruins)]
+    [InlineData("dvergrtown_arch", ObjectKind.Ruins)]
+    [InlineData("AshlandsTree1", ObjectKind.Trees)]
+    [InlineData("FirTree_Big_plantable_Stub", ObjectKind.Trees)]
+    [InlineData("YggaShoot1", ObjectKind.Trees)]
+    [InlineData("UnstableLavaRock", ObjectKind.Rocks)]
+    [InlineData("rock4_forest_frac", ObjectKind.Rocks)]
+    [InlineData("WallSnow1", ObjectKind.Rocks)]
+    [InlineData("VineAsh", ObjectKind.Bushes)]
+    [InlineData("LootSpawner_pineforest", ObjectKind.Pickables)]
+    [InlineData("Fire", ObjectKind.Other)]
+    [InlineData("Player_tombstone", ObjectKind.Other)]
+    public void EachObjectHasTheKindItLooksLike(string name, ObjectKind want) => Assert.Equal(want, ObjectKinds.Of(name, false));
+
+    [Fact]
+    public void EveryKindHasItsOwnLabel()
+    {
+        Assert.Equal(ObjectKinds.All.Length, ObjectKinds.All.Select(ObjectKinds.Label).Distinct().Count());
+        Assert.Equal("Spawn points", ObjectKinds.Label(ObjectKind.SpawnPoints));
+        Assert.Equal("Other objects", ObjectKinds.Label(ObjectKind.Other));
     }
 
     [Fact]

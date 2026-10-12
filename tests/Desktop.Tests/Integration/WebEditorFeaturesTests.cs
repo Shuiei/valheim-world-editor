@@ -434,6 +434,36 @@ public class WebEditorFeaturesTests
     }
 
     [AvaloniaFact]
+    public void SpawnPointsAndNestsCarryAMarkerOfTheirColourWhileTheirKindIsShown()
+    {
+        using var r = new Run();
+        var s = r.S;
+        // Spawn points and nests are off at first (spoilers).
+        Assert.False(r.W.View.IsShown(ObjectKind.SpawnPoints));
+        Assert.False(r.W.View.IsShown(ObjectKind.Nests));
+        var added = s.Commit("Placed", null, [], [(Tree(s, "Spawner_Boar", 20, 20), false), (Tree(s, "Spawner_Skeleton_respawn_30", 24, 20), false),
+            (Tree(s, "Spawner_GreydwarfNest", 28, 20), false), (Tree(s, "Beech1", 32, 20), false)]);
+        Dispatcher.UIThread.RunJobs();
+        // Placing them switches their kinds on, so that what was placed shows.
+        Assert.True(r.W.View.IsShown(ObjectKind.SpawnPoints));
+        Assert.True(r.W.View.IsShown(ObjectKind.Nests));
+        var boar = s.Scene.Things[added[0]];
+        var at = new Vector3(boar.Position.X - s.Scene.Cx, boar.Position.Y + 2.4f, -(boar.Position.Z - s.Scene.Cz));
+        r.W.View.SetCamera(at + new Vector3(0, 20, 20), at, 1.5f);
+        var marks = r.W.View.SpawnMarkers(s.Scene);
+        Assert.Equal(3, marks.Count);
+        Assert.Contains((at, GlView.SpawnColour(false)), marks);
+        Assert.Contains(marks, m => m.Colour == GlView.SpawnColour(true));
+        Assert.Contains(marks, m => m.Colour == GlView.NestColour);
+        // Switched off in View: their markers go.
+        r.W.KindBoxes[ObjectKind.Nests].IsChecked = false;
+        Assert.Equal(2, r.W.View.SpawnMarkers(s.Scene).Count);
+        // Too far from the camera: none.
+        r.W.View.SetCamera(at + new Vector3(0, 0, GlView.SpawnMarkerRange + 50), at, 1.5f);
+        Assert.Empty(r.W.View.SpawnMarkers(s.Scene));
+    }
+
+    [AvaloniaFact]
     public async Task AppliedObjectsLoseTheirMarkerInLiveMode()
     {
         using var game = new FakeGame();
