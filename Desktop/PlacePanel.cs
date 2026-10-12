@@ -14,12 +14,16 @@ namespace TerrainEditor.Desktop;
 /// </summary>
 public sealed class PlacePanel
 {
-    /// <summary>The preset list's first entry, which loads nothing.</summary>
-    private static readonly string[] ChoosePreset = ["Choose a preset…"];
+    /// <summary>The preset list's first entry: no preset (choosing it again unticks the preset's kinds).</summary>
+    private static readonly string[] NoPreset = ["None"];
+    /// <summary>The kinds button's text while the list of kinds is closed.</summary>
+    internal const string ChooseKindsText = "Choose kinds…";
+    /// <summary>The kinds button's text while the list of kinds is open.</summary>
+    internal const string DoneText = "Done";
 
     /// <summary>The panel itself, shown over the view while the Place tool is on.</summary>
     public Control Card { get; }
-    /// <summary>The list of kinds to choose from, beside the panel (hidden until + Add kinds).</summary>
+    /// <summary>The list of kinds to choose from, beside the panel (hidden until Choose kinds…).</summary>
     public Control Chooser { get; }
     /// <summary>The Place tool's input, for placing shapes and the preview count.</summary>
     private readonly PlaceInput _input;
@@ -38,7 +42,7 @@ public sealed class PlacePanel
     internal Dictionary<PlaceTool.Modes, Button> ModeButtons { get; } = [];
     /// <summary>Line mode: one button per shape (Points, Circle, Rectangle).</summary>
     internal Dictionary<PlaceTool.LineShapes, Button> ShapeButtons { get; } = [];
-    /// <summary>The presets: "Choose a preset…", the built-in ones, then your own.</summary>
+    /// <summary>The presets: "None", the built-in ones, then your own.</summary>
     internal ComboBox PresetBox { get; }
     /// <summary>Saves the chosen kinds, weights and scatter settings as your own preset.</summary>
     internal Button SavePresetButton { get; } = new() { Content = "Save as preset…", FontSize = 12 };
@@ -59,7 +63,15 @@ public sealed class PlacePanel
     /// <summary>The chosen kinds, each with its weight slider and share, and a button to unchoose it.</summary>
     internal StackPanel Mix { get; } = new() { Spacing = 3 };
     /// <summary>Shows or hides the list of kinds.</summary>
-    internal Button KindsButton { get; } = new() { Content = "+ Add kinds", FontSize = 12 };
+    internal Button KindsButton { get; } = new() { Content = ChooseKindsText, FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Center };
+    /// <summary>How many kinds are chosen, after the SELECTED KINDS heading.</summary>
+    private readonly TextBlock _mixCount = new() { FontSize = 10, Foreground = Ui.Muted, VerticalAlignment = VerticalAlignment.Center };
+    /// <summary>
+    /// Each chosen kind's share text and slider (none for a single kind), updated in place while a slider moves.
+    /// </summary>
+    private readonly Dictionary<string, (TextBlock Share, Slider? Slider)> _shares = [];
+    /// <summary>Set while the other sliders follow a moved one, so their own change events leave the weights alone.</summary>
+    private bool _sharing;
     /// <summary>Filters the list of kinds by name.</summary>
     internal TextBox Search { get; } = new() { PlaceholderText = "Search kinds (oak, rock, bush…)", FontSize = 12 };
     /// <summary>The kinds this world can place, by category.</summary>
@@ -156,8 +168,12 @@ public sealed class PlacePanel
     internal Button FitButton { get; } = new() { Content = "fit", FontSize = 11, Padding = new Thickness(6, 2), VerticalAlignment = VerticalAlignment.Center };
     /// <summary>The fit hint and its button, shown only when a chosen kind is wider than the spacing.</summary>
     private readonly Control _fitRow;
+    /// <summary>Brush mode's hint: how the scatter works, or (One at a time) that a click places one.</summary>
+    private readonly TextBlock _brushHint;
     /// <summary>Rows and groups that <see cref="Sync"/> shows or hides by mode, shape and what is chosen.</summary>
-    private readonly Control _elevRow, _pieceBox, _attachRow, _brushRows, _scatterRows, _patchRow, _facingRows, _lineBox, _snapRows, _freeLineRows, _loopRow, _layersRow, _gridRow, _shapeRow, _undoRow, _brushHint;
+    private readonly Control _elevRow, _pieceBox, _attachRow, _brushRows, _scatterRows, _patchRow, _facingRows, _lineShapeBox, _lineBox, _snapRows, _freeLineRows, _loopRow, _layersRow, _gridRow, _shapeRow, _undoRow;
+    /// <summary>The heading of the mode's own settings (Brush, Along the line, Grid, Zone fill).</summary>
+    private readonly TextBlock _modeHead = Head("");
     /// <summary>Line mode: how to draw the chosen shape.</summary>
     private readonly TextBlock _lineHintText = new() { FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
 
@@ -175,8 +191,28 @@ public sealed class PlacePanel
         return s;
     }
 
-    /// <summary>A small flat button like a link (the all / none of the chips).</summary>
-    private static Button Link(string text) => new() { Content = text, FontSize = 10, Padding = new Thickness(4, 0), Background = Brushes.Transparent, Foreground = Ui.Muted };
+    /// <summary>A small flat button (the all / none of the chips).</summary>
+    private static Button Link(string text) => new() { Content = text, FontSize = 11, Padding = new Thickness(9, 2), MinHeight = 22, VerticalAlignment = VerticalAlignment.Center, Background = Brushes.Transparent, Foreground = Ui.Muted };
+
+    /// <summary>
+    /// A kind's name as a button's or box's content: a text block, since a plain string's underscores would be taken
+    /// as access keys and vanish (Pickable_Flax shown as PickableFlax). The name itself goes in the control's Tag.
+    /// </summary>
+    private static TextBlock Plain(string text) => new() { Text = text };
+
+    /// <summary>A section's heading: small muted capitals.</summary>
+    private static TextBlock Head(string text) => new() { Text = text.ToUpperInvariant(), FontSize = 10, FontWeight = FontWeight.SemiBold, Foreground = Ui.Muted, LetterSpacing = 0.6, VerticalAlignment = VerticalAlignment.Center };
+
+    /// <summary>A section of the panel: its heading (and what goes after it, on the right), then its rows.</summary>
+    private static StackPanel Section(Control head, params Control[] rows)
+    {
+        var s = new StackPanel { Spacing = 6, Margin = new Thickness(0, 8, 0, 0), Children = { head } };
+        s.Children.AddRange(rows);
+        return s;
+    }
+
+    /// <summary>A section of the panel with a plain heading.</summary>
+    private static StackPanel Section(string title, params Control[] rows) => Section(Head(title), rows);
 
     /// <summary>A labelled row: the label, the input, and optionally something after it (a value or a unit).</summary>
     private static Grid Row(string label, Control input, Control? after = null)
@@ -272,8 +308,18 @@ public sealed class PlacePanel
         PresetBox.SelectionChanged += (_, _) =>
         {
             DeletePresetButton.IsEnabled = PresetAt(PresetBox.SelectedIndex) is { Own: true };
-            if (_filling || PresetAt(PresetBox.SelectedIndex) is not { } chosen)
+            if (_filling)
             {
+                return;
+            }
+            if (PresetAt(PresetBox.SelectedIndex) is not { } chosen)
+            {
+                // None, after a preset: its kinds are unticked.
+                if (PresetBox.SelectedIndex == 0 && T.Chosen.Count > 0)
+                {
+                    T.Chosen.Clear();
+                    Chosen();
+                }
                 return;
             }
             var known = Creatable().Select(c => c.Name).ToHashSet();
@@ -311,7 +357,7 @@ public sealed class PlacePanel
             Memory.Save();
             FillPresets();
         };
-        KindsButton.Click += (_, _) => { Chooser!.IsVisible = !Chooser.IsVisible; KindsButton.Content = Chooser.IsVisible ? "Done" : "+ Add kinds"; FillList(); };
+        KindsButton.Click += (_, _) => { Chooser!.IsVisible = !Chooser.IsVisible; KindsButton.Content = Chooser.IsVisible ? DoneText : ChooseKindsText; FillList(); };
         Search.PropertyChanged += (_, e) => { if (e.Property == TextBox.TextProperty) { FillList(); } };
         PickButton.Click += (_, _) =>
         {
@@ -336,8 +382,8 @@ public sealed class PlacePanel
         RecentNoneButton.Tip("place.recentNone");
         FavAllButton.Click += (_, _) => TickRow(Memory.Favourites, true);
         FavNoneButton.Click += (_, _) => TickRow(Memory.Favourites, false);
-        RecentAllButton.Click += (_, _) => TickRow(Memory.Recent, true);
-        RecentNoneButton.Click += (_, _) => TickRow(Memory.Recent, false);
+        RecentAllButton.Click += (_, _) => TickRow(RecentShown(), true);
+        RecentNoneButton.Click += (_, _) => TickRow(RecentShown(), false);
         ElevationBox.SelectionChanged += (_, _) => { if (!_filling) { t.Elevation = (PlaceTool.Elevations)Math.Max(0, ElevationBox.SelectedIndex); t.Notify(); } Sync(); };
         ElevBox.ValueChanged += (_, e) => { if (!_filling) { t.Elev = (float)(e.NewValue ?? 0); t.Notify(); } };
         SnapToBox.IsCheckedChanged += (_, _) => { t.SnapTo = SnapToBox.IsChecked == true; t.Notify(); };
@@ -368,7 +414,7 @@ public sealed class PlacePanel
         var roV = new TextBlock();
         RotationSlider = Slide(-180, 180, 1, t.Rotation, roV, v => $"{v:0}°", v => { if (!_filling) { t.Rotation = v; t.Notify(); } });
         RandomYawBox.IsCheckedChanged += (_, _) => { t.RandomYaw = RandomYawBox.IsChecked == true; t.Notify(); };
-        SingleBox.IsCheckedChanged += (_, _) => { if (!_filling) { t.OneAtATime = SingleBox.IsChecked == true; t.OneAtATimeByHand = true; t.Notify(); } };
+        SingleBox.IsCheckedChanged += (_, _) => { if (!_filling) { t.OneAtATime = SingleBox.IsChecked == true; t.OneAtATimeByHand = true; Sync(); t.Notify(); } };
         EndToEndBox.IsCheckedChanged += (_, _) => { if (!_filling) { t.EndToEnd = EndToEndBox.IsChecked == true; t.EndToEndByHand = true; Sync(); t.Notify(); } };
         LayersBox.ValueChanged += (_, e) => { t.Layers = (int)(e.NewValue ?? 1); t.Notify(); };
         LoopBox.IsCheckedChanged += (_, _) => { t.Loop = LoopBox.IsChecked == true; t.Notify(); };
@@ -385,11 +431,11 @@ public sealed class PlacePanel
         var ceV = new TextBlock();
         CellSlider = Slide(1, PlaceTool.MaxCell, 0.5, t.Cell, ceV, v => $"{v:0.#} m", v => { t.Cell = v; t.Notify(); });
         CellSlider.Tip("place.cell");
-        var shapes = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 2 };
+        var shapes = new UniformGrid { Rows = 1, ColumnSpacing = 4 };
         foreach (var (ls, label, tip) in new[] { (PlaceTool.LineShapes.Points, "Points", "Click points along the way, or hold and drag to draw freely"),
             (PlaceTool.LineShapes.Circle, "Circle", "Press at the centre and drag out to the size you want"), (PlaceTool.LineShapes.Rect, "Rectangle", "Press at one corner and drag to the opposite corner") })
         {
-            var b = new Button { Content = label, FontSize = 12 };
+            var b = new Button { Content = label, FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Center };
             ToolTip.SetTip(b, tip);
             b.Click += (_, _) => { t.LineShape = ls; t.ClearShape(); Sync(); };
             ShapeButtons[ls] = b;
@@ -413,7 +459,7 @@ public sealed class PlacePanel
         _elevRow = Row("Height", ElevBox, new TextBlock { Text = " m", FontSize = 12, VerticalAlignment = VerticalAlignment.Center });
         _attachRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 2, Children = { BesideButton, OnTopButton } };
         _pieceBox = new StackPanel { Spacing = 4, Children = { SnapToBox, _attachRow } };
-        _brushRows = new StackPanel { Spacing = 4, Children = { Row("Brush size", SizeSlider, sizeV) } };
+        _brushRows = new StackPanel { Spacing = 4, Children = { Row("Brush size", SizeSlider, sizeV), SingleBox } };
         _patchRow = Row("Patch size", PatchSlider, paV);
         _scatterRows = new StackPanel { Spacing = 4, Children = { Row("Density", DensitySlider, densV), Row("Spacing", SpacingSlider, spV), Row("Clumping", ClumpSlider, clV), _patchRow } };
         _facingRows = new StackPanel
@@ -431,7 +477,8 @@ public sealed class PlacePanel
         _loopRow = LoopBox;
         _snapRows = new StackPanel { Spacing = 4, Children = { EndToEndBox, _layersRow } };
         _freeLineRows = new StackPanel { Spacing = 4, Children = { Row("Every", EverySlider, evV), Row("Wiggle", WiggleSlider, wiV), AlongBox } };
-        _lineBox = new StackPanel { Spacing = 4, Children = { shapes, _snapRows, _loopRow, _freeLineRows, CurveBox, _lineHintText } };
+        _lineShapeBox = Section("Line shape", shapes, _lineHintText);
+        _lineBox = new StackPanel { Spacing = 4, Children = { _snapRows, _loopRow, _freeLineRows, CurveBox } };
         _gridRow = Row("Spacing", CellSlider, ceV);
         _shapeRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Children = { PlaceButton, ClearButton } };
         _fitRow = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 6, Children = { FitText, Col(FitButton, 1) } };
@@ -445,27 +492,16 @@ public sealed class PlacePanel
             {
                 new TextBlock { Text = "Place", FontSize = 14, FontWeight = FontWeight.SemiBold },
                 modes,
-                Row("Preset", PresetBox),
-                new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Children = { SavePresetButton, DeletePresetButton } },
-                new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Children = { new TextBlock { Text = "KINDS", FontSize = 10, Foreground = Ui.Muted, VerticalAlignment = VerticalAlignment.Center }, Col(KindsButton, 1) } },
-                Mix,
-                Note,
-                Row("Elevation", ElevationBox),
-                _elevRow,
-                _pieceBox,
-                GrowBox,
-                _brushRows,
-                _scatterRows,
-                _facingRows,
-                SingleBox,
-                _lineBox,
-                _gridRow,
-                _fitRow,
-                _shapeRow,
-                _undoRow,
-                NewLayoutButton,
-                Info,
-                _brushHint,
+                _lineShapeBox,
+                Section("Choose a preset", PresetBox, new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Children = { SavePresetButton, DeletePresetButton } }),
+                Section(
+                    new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { Head("Selected kinds"), _mixCount } },
+                    new Border { Background = Ui.Panel2, BorderBrush = Ui.Line, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(7), Padding = new Thickness(8, 4), Child = Mix },
+                    Note,
+                    KindsButton),
+                Section("Objects", Row("Elevation", ElevationBox), _elevRow, _pieceBox, GrowBox, _facingRows),
+                Section(_modeHead, _brushRows, _scatterRows, _lineBox, _gridRow, _fitRow),
+                new StackPanel { Spacing = 6, Margin = new Thickness(0, 8, 0, 0), Children = { _shapeRow, _undoRow, NewLayoutButton, Info, _brushHint } },
             },
         }, 320);
         Chooser = CardOf(new StackPanel
@@ -500,7 +536,7 @@ public sealed class PlacePanel
     private void FillPresets(string? select = null)
     {
         _filling = true;
-        PresetBox.ItemsSource = ChoosePreset.Concat(PlaceTool.BuiltIn.Select(p => p.Name)).Concat(Memory.Presets.Select(p => $"Yours: {p.Name}")).ToList();
+        PresetBox.ItemsSource = NoPreset.Concat(PlaceTool.BuiltIn.Select(p => p.Name)).Concat(Memory.Presets.Select(p => $"Yours: {p.Name}")).ToList();
         int own = Memory.Presets.FindIndex(p => p.Name == select);
         PresetBox.SelectedIndex = own >= 0 ? 1 + PlaceTool.BuiltIn.Length + own : 0;
         DeletePresetButton.IsEnabled = own >= 0;
@@ -519,9 +555,16 @@ public sealed class PlacePanel
     private static StackPanel ChipHead(string title, Button all, Button none) => new()
     {
         Orientation = Orientation.Horizontal,
-        Spacing = 2,
-        Children = { new TextBlock { Text = title, FontSize = 10, Foreground = Ui.Muted, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 4, 0) }, all, none },
+        Spacing = 4,
+        Margin = new Thickness(0, 6, 0, 2),
+        Children = { new TextBlock { Text = title, FontSize = 10, Foreground = Ui.Muted, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 6, 0) }, all, none },
     };
+
+    /// <summary>
+    /// The Recent row's kinds: the chosen kinds that are not among them yet, then the ones placed lately (newest
+    /// first), so what is chosen always shows.
+    /// </summary>
+    private List<string> RecentShown() => [.. T.Chosen.Where(n => !Memory.Recent.Contains(n)).Concat(Memory.Recent)];
 
     /// <summary>all / none: tick or untick every kind of the row (those this world can place).</summary>
     private void TickRow(IEnumerable<string> names, bool on)
@@ -565,12 +608,12 @@ public sealed class PlacePanel
     private void RenderChips()
     {
         var known = Creatable().Select(c => c.Name).ToHashSet();
-        foreach (var (panel, list, box) in new[] { (Favourites, Memory.Favourites, _favBox), (Recent, Memory.Recent, _recentBox) })
+        foreach (var (panel, list, box) in new[] { (Favourites, Memory.Favourites, _favBox), (Recent, RecentShown(), _recentBox) })
         {
             panel.Children.Clear();
             foreach (string? n in list.Where(n => known.Count == 0 || known.Contains(n)))
             {
-                var b = new ToggleButton { Content = n, IsChecked = T.Chosen.Contains(n), FontSize = 11, Padding = new Thickness(6, 2) }.Tip(ReferenceEquals(panel, Favourites) ? "place.favourite" : "place.recent");
+                var b = new ToggleButton { Content = Plain(n), Tag = n, IsChecked = T.Chosen.Contains(n), FontSize = 11, Padding = new Thickness(8, 3) }.Tip(ReferenceEquals(panel, Favourites) ? "place.favourite" : "place.recent");
                 b.AddHandler(Avalonia.Input.InputElement.PointerPressedEvent, (_, e) => _shiftPress = e.KeyModifiers.HasFlag(Avalonia.Input.KeyModifiers.Shift), Avalonia.Interactivity.RoutingStrategies.Tunnel, handledEventsToo: true);
                 b.AddHandler(Avalonia.Input.InputElement.KeyDownEvent, (_, _) => _shiftPress = false, Avalonia.Interactivity.RoutingStrategies.Tunnel, handledEventsToo: true);
                 b.Click += (_, _) =>
@@ -669,7 +712,7 @@ public sealed class PlacePanel
                 }
                 foreach (string? n in names)
                 {
-                    var box = new CheckBox { Content = n, IsChecked = T.Chosen.Contains(n), FontSize = 12 }.Tip("place.kind");
+                    var box = new CheckBox { Content = Plain(n), Tag = n, IsChecked = T.Chosen.Contains(n), FontSize = 12 }.Tip("place.kind");
                     box.IsCheckedChanged += (_, _) =>
                     {
                         if (box.IsChecked == true)
@@ -745,31 +788,102 @@ public sealed class PlacePanel
     }
 
     /// <summary>
-    /// Fills the mix: each chosen kind, with a weight slider (1 to 10) and its share when there are several.
+    /// Fills the mix: each chosen kind on a row of the same layout, with its share, a button to unchoose it, and a weight
+    /// slider (1 to 10) when there are several; "None yet" while nothing is chosen.
     /// </summary>
     private void RenderMix()
     {
         Mix.Children.Clear();
+        _shares.Clear();
         var names = T.Chosen.ToList();
+        _mixCount.Text = names.Count > 0 ? $"{names.Count}" : "";
+        if (names.Count == 0)
+        {
+            Mix.Children.Add(new TextBlock { Text = "None yet", FontSize = 12, Foreground = Ui.Muted, Margin = new Thickness(0, 4) });
+            return;
+        }
         float total = names.Sum(T.WeightOf);
         foreach (string? n in names)
         {
-            var g = new Grid { ColumnDefinitions = new ColumnDefinitions("*,80,36,24") };
+            var g = new Grid { ColumnDefinitions = new ColumnDefinitions("*,80,40,Auto"), ColumnSpacing = 4, MinHeight = 30 };
             g.Children.Add(new TextBlock { Text = n, FontSize = 12, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis });
-            var pct = new TextBlock { FontSize = 11, Foreground = Ui.Muted, VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Right, Text = names.Count > 1 ? $"{T.WeightOf(n) / total * 100:0}%" : "" };
+            var pct = new TextBlock { FontSize = 11, Foreground = Ui.Muted, VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Right, Text = $"{T.WeightOf(n) / total * 100:0}%" };
+            Slider? w = null;
             if (names.Count > 1)
             {
-                var w = new Slider { Minimum = 1, Maximum = 10, TickFrequency = 1, IsSnapToTickEnabled = true, Value = T.WeightOf(n) };
-                ToolTip.SetTip(w, $"Weight of {n}: {Tips.Of("place.weight")}");
-                w.ValueChanged += (_, e) => { T.Weights[n] = (int)e.NewValue; RenderMix(); Remember(); T.NewLayout(); };
+                // The slider is the kind's share in %, the equal share in its middle (it ends at twice that, each of the
+                // others keeping at least 1%); a share past its end shows at the end, the real one in the text.
+                w = new Slider { Minimum = 1, Maximum = MaxShare(names.Count), TickFrequency = 1, IsSnapToTickEnabled = true, Value = Math.Round(T.WeightOf(n) / total * 100), VerticalAlignment = VerticalAlignment.Center };
+                ToolTip.SetTip(w, $"Share of {n}: {Tips.Of("place.weight")}");
+                // Rows stay (rebuilding them would drop the slider being dragged); the others follow.
+                w.ValueChanged += (_, e) =>
+                {
+                    if (_sharing)
+                    {
+                        return;
+                    }
+                    Share(n, (int)Math.Round(e.NewValue));
+                    Remember();
+                    T.NewLayout();
+                };
                 g.Children.Add(Col(w, 1));
             }
+            _shares[n] = (pct, w);
             g.Children.Add(Col(pct, 2));
-            var x = new Button { Content = "✕", FontSize = 11, Padding = new Thickness(4, 0) };
+            var x = new Button { Content = "✕", FontSize = 11, Padding = new Thickness(6, 2), VerticalAlignment = VerticalAlignment.Center };
             ToolTip.SetTip(x, $"{Tips.Of("place.unchoose")} ({n})");
             x.Click += (_, _) => { T.Chosen.Remove(n); Chosen(); };
             g.Children.Add(Col(x, 3));
             Mix.Children.Add(g);
+        }
+    }
+
+    /// <summary>
+    /// A kind's slider moved to <paramref name="percent"/>: the other kinds share the rest in their current
+    /// proportions (whole percents, each at least 1, summing to 100), and their sliders and shares follow.
+    /// </summary>
+    private void Share(string kind, int percent)
+    {
+        var others = _shares.Keys.Where(k => k != kind).ToList();
+        int rest = 100 - percent;
+        float before = others.Sum(T.WeightOf);
+        var raw = others.Select(k => before > 0 ? rest * T.WeightOf(k) / before : (float)rest / others.Count).ToList();
+        var whole = raw.Select(r => Math.Max(1, (int)MathF.Floor(r))).ToList();
+        // What rounding down left over goes to the largest remainders.
+        foreach (int i in Enumerable.Range(0, others.Count).OrderByDescending(i => raw[i] - MathF.Floor(raw[i])).Take(Math.Max(0, rest - whole.Sum())))
+        {
+            whole[i]++;
+        }
+        T.Weights[kind] = percent;
+        for (int i = 0; i < others.Count; i++)
+        {
+            T.Weights[others[i]] = whole[i];
+        }
+        _sharing = true;
+        foreach (string k in others)
+        {
+            if (_shares[k].Slider is { } s)
+            {
+                s.Value = T.WeightOf(k);
+            }
+        }
+        _sharing = false;
+        ShowShares();
+    }
+
+    /// <summary>
+    /// The end of the share sliders with this many kinds: twice the equal share, so the equal share is in the middle
+    /// (99% for 2 kinds, 67% for 3, 50% for 4), leaving the others at least 1% each.
+    /// </summary>
+    internal static int MaxShare(int kinds) => Math.Min(100 - (kinds - 1), (int)Math.Round(200.0 / kinds));
+
+    /// <summary>Writes each chosen kind's share of the weights on its row.</summary>
+    private void ShowShares()
+    {
+        float total = _shares.Keys.Sum(T.WeightOf);
+        foreach (var (n, row) in _shares)
+        {
+            row.Share.Text = $"{T.WeightOf(n) / total * 100:0}%";
         }
     }
 
@@ -831,10 +945,18 @@ public sealed class PlacePanel
         _attachRow.IsVisible = m == PlaceTool.Modes.Brush;
         GrowBox.IsVisible = t.GrowMatters;
         _brushRows.IsVisible = m == PlaceTool.Modes.Brush;
-        _scatterRows.IsVisible = m is PlaceTool.Modes.Brush or PlaceTool.Modes.Zone;
+        _modeHead.Text = m switch
+        {
+            PlaceTool.Modes.Line => "ALONG THE LINE",
+            PlaceTool.Modes.Grid => "GRID",
+            PlaceTool.Modes.Zone => "ZONE FILL",
+            _ => "BRUSH",
+        };
+        // One at a time places only what the click shows: nothing to scatter.
+        _scatterRows.IsVisible = m == PlaceTool.Modes.Zone || m == PlaceTool.Modes.Brush && !t.OneAtATime;
         _patchRow.IsVisible = t.Clump > 0;
         _facingRows.IsVisible = !endToEnd;
-        SingleBox.IsVisible = m == PlaceTool.Modes.Brush;
+        _lineShapeBox.IsVisible = line;
         _lineBox.IsVisible = line;
         _layersRow.IsVisible = endToEnd;
         _loopRow.IsVisible = line && t.LineShape == PlaceTool.LineShapes.Points;
@@ -845,6 +967,9 @@ public sealed class PlacePanel
         _shapeRow.IsVisible = m != PlaceTool.Modes.Brush;
         _undoRow.IsVisible = m is PlaceTool.Modes.Line or PlaceTool.Modes.Zone && t.Points.Count > 0;
         _brushHint.IsVisible = m == PlaceTool.Modes.Brush;
+        _brushHint.Text = t.OneAtATime
+            ? "A click places one object exactly at the cursor; dragging adds no more. Shift + drag removes the chosen kinds. The Mask applies."
+            : "Density is objects per 100 m². Spacing keeps them apart (also from what is already there). Shift + drag removes the chosen kinds. The Mask applies.";
         _lineHintText.Text = t.LineShape switch
         {
             PlaceTool.LineShapes.Circle => "Press at the centre and drag out to the size; let go to see it, Enter places it. With End to end the size snaps so whole pieces close the ring.",
@@ -852,7 +977,7 @@ public sealed class PlacePanel
             _ => "Click points along the route, or hold and drag to draw freely. Then drag a point to move it, drag the line to add a point, Ctrl + click a point to remove it; Backspace removes the last point.",
         };
         var cult = t.NeedCultivated;
-        Note.Text = t.Chosen.Count == 0 ? "Nothing to place yet: + Add kinds, or a preset."
+        Note.Text = t.Chosen.Count == 0 ? $"Nothing to place yet: {ChooseKindsText} below, or a preset."
             : cult.Count > 0 ? $"{string.Join(", ", cult)} only grow{(cult.Count > 1 ? "" : "s")} on cultivated ground (paint it with Cultivate first)." : "";
         Note.IsVisible = Note.Text != "";
         ShowFit();
