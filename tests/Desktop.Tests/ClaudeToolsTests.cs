@@ -284,7 +284,8 @@ public class ClaudeToolsTests
             tools.Headers.Add("MCP-Protocol-Version", "2025-06-18");
             string listed = await (await http.SendAsync(tools, ct)).Content.ReadAsStringAsync(ct);
             foreach (string name in new[] { "editor_state", "open_world", "open_area", "screenshot", "area_map", "run_script", "place_pieces", "support_check", "generate_dungeon",
-                "building_guide", "get_selection", "select_objects", "flatten", "paint_area", "road", "forest", "set_contents", "build_floor", "build_walls", "build_roof" })
+                "building_guide", "get_selection", "select_objects", "flatten", "paint_area", "road", "forest", "set_contents", "build_floor", "build_walls", "build_roof",
+                "move_objects", "set_transform", "replace_objects", "get_object", "set_object_data" })
             {
                 Assert.Contains($"\"{name}\"", listed);
             }

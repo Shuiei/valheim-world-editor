@@ -34,6 +34,11 @@ public static class ClaudeGuide
 		ask the user. While the world is live with Auto on, you can change nothing: ask the user to turn
 		Auto off.
 
+		To change objects already there: move_objects (a group, turned round its middle), set_transform
+		(exact place, turn, size), replace_objects (another kind), get_object and set_object_data (what an
+		object holds in the save: a portal's tag, a builder, health…), set_contents (chests, stands, signs).
+		Each change gives the objects new ids: use the ids its answer gives.
+
 		To shape ground or place many objects, prefer the ready tools (flatten, paint_area, road, forest)
 		or run_script (read script_reference first; dryRun shows what a script would change). To build,
 		prefer build_floor, build_walls and build_roof, then place_pieces for details; read building_guide

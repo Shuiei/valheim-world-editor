@@ -787,15 +787,23 @@ public sealed class EditSession
     /// (chest contents, builder...), like the web editor's moves. Rotations are Euler angles in degrees.
     /// </summary>
     /// <returns>The copies' indices.</returns>
-    public List<int> Move(IReadOnlyList<(int Index, System.Numerics.Vector3 Position, System.Numerics.Vector3 Rotation)> moves, string? label = null)
+    public List<int> Move(IReadOnlyList<(int Index, System.Numerics.Vector3 Position, System.Numerics.Vector3 Rotation)> moves, string? label = null) =>
+        Transform([.. moves.Select(m => (m.Index, m.Position, m.Rotation, Scene.Things[m.Index].Scale))], label);
+
+    /// <summary>
+    /// Moves, turns and sizes things as one undo step, as Move does, each with its own scale (zero: the prefab's own).
+    /// </summary>
+    /// <returns>The copies' indices, in the order of the things not gone.</returns>
+    public List<int> Transform(IReadOnlyList<(int Index, System.Numerics.Vector3 Position, System.Numerics.Vector3 Rotation, float Scale)> moves, string? label = null)
     {
         var live = moves.Where(m => !Scene.Things[m.Index].Gone).ToList();
         var adds = live.Select(m =>
         {
             var t = Scene.Things[m.Index];
-            // A copy of an object of this session keeps what that one was copied from.
+            // A copy of an object of this session keeps what that one was copied from, and its values (the
+            // Workshop's objects and generated dungeons carry theirs there).
             var from = t.Id < 0 ? Edits.FindAdded(t.Id) : null;
-            return (new NewObject(0, t.Prefab, m.Position, m.Rotation, t.Scale, t.Id < 0 ? from?.SourceId : t.Id, t.Id < 0 && (from?.Fresh ?? true), from?.Raw), t.Piece);
+            return (new NewObject(0, t.Prefab, m.Position, m.Rotation, m.Scale, t.Id < 0 ? from?.SourceId : t.Id, t.Id < 0 && (from?.Fresh ?? true), from?.Raw, from?.Data), t.Piece);
         }).ToList();
         return Commit(label ?? $"Moved {live.Count}", null, [.. live.Select(m => m.Index)], adds);
     }

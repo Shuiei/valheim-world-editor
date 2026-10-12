@@ -4,6 +4,20 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.24.0 — unreleased
+
+### Added
+- **Claude changes objects already there**: `move_objects` moves and turns objects as one group (a
+  building keeps its shape; with `ground`, each stays as high above the ground as it was);
+  `set_transform` puts each object exactly (place, turn, tilt, size); `replace_objects` swaps them for
+  another kind; `get_object` gives everything an object is and holds, as the inspector shows it; and
+  `set_object_data` changes its values (a portal's tag, a builder, a ward's permitted players, health,
+  fuel, a creature's level…). Objects keep what they hold when moved.
+
+### Fixed
+- **Moving objects on the Workshop's plot** (or a generated dungeon's, before saving) lost what they
+  held: a chest's contents, a sign's text. They keep it now.
+
 ## v1.23.0 — unreleased
 
 ### Changed

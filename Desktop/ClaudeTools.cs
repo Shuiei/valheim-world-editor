@@ -14,7 +14,7 @@ namespace TerrainEditor.Desktop;
 /// Each tool's description for Claude is its <c>[Description]</c> attribute; the summaries here are for the code.
 /// </remarks>
 [McpServerToolType]
-public sealed class ClaudeTools
+public sealed partial class ClaudeTools
 {
     /// <summary>The editor's window, whose world, session and view the tools work on.</summary>
     private readonly MainWindow _w;
@@ -1164,48 +1164,13 @@ public sealed class ClaudeTools
             return "Nothing to change: give items, text, stars, an orientation or a pose.";
         }
         string name = _w.NameOfPrefab(t.Prefab) ?? "object";
-        try
+        var (copy, problem) = Rewrite(id, set, inv, $"Claude: filled {name}");
+        if (copy is not int newId)
         {
-            Editing.NewObject replacement;
-            // (The Workshop's plot has no world files behind it: its objects carry their values.)
-            if (!_w.InWorkshop && s.Scene.World is { } world && TerrainEditor.App.ObjectData.Bytes(world, s.Edits, t.Id) is { } bytes)
-            {
-                // A world's object: its own data, changed (as the inspector does).
-                var z = TerrainEditor.App.ObjectData.Edited(bytes, set, inv);
-                replacement = new(0, z.Prefab, z.Position, z.Rotation, 0, null, false, z.Serialize());
-            }
-            else
-            {
-                // On the Workshop's plot: its values, with these.
-                var fields = (s.Edits.FindAdded(t.Id)?.Data ?? []).ToList();
-                void Put(string section, string key, string? value)
-                {
-                    int k = Save.StableHash.Of(key);
-                    fields.RemoveAll(f => f.Key == k);
-                    if (value != null)
-                    {
-                        fields.Add(new(section, k, value));
-                    }
-                }
-                foreach (var f in set)
-                {
-                    Put(f.Section, f.Key, f.Value);
-                }
-                if (inv != null)
-                {
-                    Put("bytes", "items", Convert.ToBase64String(TerrainEditor.App.ObjectData.BuildInventory(inv).Write()));
-                    Put("ints", "addedDefaultItems", "1");
-                }
-                replacement = new(0, t.Prefab, t.Position, t.Rotation, t.Scale, Data: fields);
-            }
-            var copies = s.Commit($"Claude: filled {name}", null, [id], [(replacement, t.Piece)]);
-            _w.AfterClaudeEdit($"Claude changed what {name} holds; Ctrl+Z puts it back.");
-            return $"Changed {name}; its id is now {copies[0]}.";
+            return problem!;
         }
-        catch (Exception ex) when (ex is FormatException or ArgumentException or OverflowException)
-        {
-            return $"Could not change it: {ex.Message}";
-        }
+        _w.AfterClaudeEdit($"Claude changed what {name} holds; Ctrl+Z puts it back.");
+        return $"Changed {name}; its id is now {newId}.";
     });
 
     /// <summary>open_workshop: the blank plot, optionally with a library blueprint; refused while there are unsaved changes.</summary>
