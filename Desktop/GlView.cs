@@ -1318,8 +1318,15 @@ public sealed class GlView : OpenGlControlBase
         var g = r.Group;
         if (r.Model == null)
         {
-            // No model copied for this kind: a box stands in, as in the web editor.
-            AddBatch(g, BoxMesh(), 0, new ModelStore.MaterialData(new Vector4(0.35f, 0.3f, 0.25f, 1), null, 0, false, new Vector4(1, 1, 0, 0)),
+            // No model copied for this kind: a box stands in, as in the web editor (spawn points and nests in their
+            // markers' colours).
+            var tint = g.Kind switch
+            {
+                ObjectKind.SpawnPoints => SpawnColour(false),
+                ObjectKind.Nests => NestColour,
+                _ => new Vector4(0.35f, 0.3f, 0.25f, 1),
+            };
+            AddBatch(g, BoxMesh(), 0, new ModelStore.MaterialData(tint, null, 0, false, new Vector4(1, 1, 0, 0)),
                 Matrix4x4.CreateScale(1, 2, 1) * Matrix4x4.CreateTranslation(0, 1, 0));
         }
         else
@@ -1726,6 +1733,7 @@ public sealed class GlView : OpenGlControlBase
             DrawPlace(s, vp);
             DrawDungeon(s, vp);
             // Over everything, the water too.
+            DrawSpawnMarkers(s, vp);
             if (ShowNewMarkers)
             {
                 DrawNewMarkers(s, vp);
@@ -2999,6 +3007,106 @@ public sealed class GlView : OpenGlControlBase
         return new Vector3((1 - s + s * r) * v, (1 - s + s * g) * v, (1 - s + s * b) * v);
     }
 
+    /// <summary>How far from the camera spawn points and nests get a marker, metres.</summary>
+    internal const float SpawnMarkerRange = 250;
+
+    /// <summary>The marker colour of spawn points: orange for one that spawns once, red for one whose creature comes back.</summary>
+    internal static Vector4 SpawnColour(bool respawns) => respawns ? new Vector4(0.95f, 0.2f, 0.25f, 1) : new Vector4(1f, 0.6f, 0.15f, 1);
+
+    /// <summary>The marker colour of nests: purple.</summary>
+    internal static readonly Vector4 NestColour = new(0.7f, 0.4f, 0.95f, 1);
+
+    /// <summary>
+    /// Spawn points and nests within <see cref="SpawnMarkerRange"/> of the camera, for the kinds shown: where their
+    /// marker goes (above the stand-in box) and its colour (<see cref="SpawnColour"/>, <see cref="NestColour"/>).
+    /// They have no model in the game (spawn points are invisible), so the marker shows where they are through
+    /// anything in front.
+    /// </summary>
+    internal List<(Vector3 At, Vector4 Colour)> SpawnMarkers(WorldScene s)
+    {
+        var list = new List<(Vector3, Vector4)>();
+        bool points = _shown[(int)ObjectKind.SpawnPoints], nests = _shown[(int)ObjectKind.Nests];
+        if (!points && !nests)
+        {
+            return list;
+        }
+        var colours = new Dictionary<int, Vector4?>();
+        lock (s.Things)
+        {
+            lock (_objLock)
+            {
+                for (int i = 0; i < s.Things.Count && i < _kinds.Length; i++)
+                {
+                    var k = _kinds[i];
+                    if (k is not (ObjectKind.SpawnPoints or ObjectKind.Nests) || (k == ObjectKind.SpawnPoints ? !points : !nests))
+                    {
+                        continue;
+                    }
+                    var t = s.Things[i];
+                    var at = new Vector3(t.Position.X - s.Cx, t.Position.Y + 2.4f, -(t.Position.Z - s.Cz));
+                    if (t.Gone || Vector3.DistanceSquared(at, _lastEye) > SpawnMarkerRange * SpawnMarkerRange)
+                    {
+                        continue;
+                    }
+                    if (!colours.TryGetValue(t.Prefab, out var c))
+                    {
+                        var spawn = Terrain.PrefabCatalog.SpawnOf(t.Prefab);
+                        c = colours[t.Prefab] = k == ObjectKind.Nests ? NestColour : SpawnColour(spawn?.Respawns == true);
+                    }
+                    list.Add((at, c!.Value));
+                }
+            }
+        }
+        return list;
+    }
+
+    /// <summary>The spawn markers on the graphics card, one buffer per colour.</summary>
+    private readonly Dictionary<Vector4, (uint Vao, uint Vbo)> _spawnMarkGl = [];
+
+    /// <summary>
+    /// The spawn points' and nests' markers (<c>SpawnMarkers</c>): a disc of the same size on screen above each, with
+    /// a line down to the object, drawn over everything.
+    /// </summary>
+    private void DrawSpawnMarkers(WorldScene s, Matrix4x4 vp)
+    {
+        foreach (var byColour in SpawnMarkers(s).GroupBy(m => m.Colour))
+        {
+            var tri = new List<float>();
+            var lines = new List<float>();
+            foreach (var (c, _) in byColour)
+            {
+                Disc(tri, c, 0.008f);
+                lines.AddRange([c.X, c.Y, c.Z, c.X, c.Y - 2.4f, c.Z]);
+            }
+            var (vao, vbo) = _spawnMarkGl.GetValueOrDefault(byColour.Key);
+            DrawLines(ref vao, ref vbo, [.. tri], vp, byColour.Key, PrimitiveType.Triangles);
+            DrawLines(ref vao, ref vbo, [.. lines], vp, byColour.Key, width: 2);
+            _spawnMarkGl[byColour.Key] = (vao, vbo);
+        }
+    }
+
+    /// <summary>
+    /// Adds a little disc facing the camera to a triangle list, the same size on screen at any distance (its radius
+    /// this much of the distance).
+    /// </summary>
+    private void Disc(List<float> tri, Vector3 c, float size)
+    {
+        var f = Vector3.Normalize(c - _lastEye);
+        var right = Vector3.Normalize(Vector3.Cross(f, Vector3.UnitY) is var x && x.LengthSquared() > 1e-6f ? x : Vector3.UnitX);
+        var up = Vector3.Cross(right, f);
+        float r = Vector3.Distance(_lastEye, c) * size;
+        for (int k = 0; k < 8; k++)
+        {
+            float a0 = k * MathF.Tau / 8, a1 = (k + 1) * MathF.Tau / 8;
+            foreach (var v in new[] { c, c + r * (MathF.Cos(a0) * right + MathF.Sin(a0) * up), c + r * (MathF.Cos(a1) * right + MathF.Sin(a1) * up) })
+            {
+                tri.Add(v.X);
+                tri.Add(v.Y);
+                tri.Add(v.Z);
+            }
+        }
+    }
+
     /// <summary>The new objects' markers on the graphics card.</summary>
     private uint _markVao, _markVbo;
     /// <summary>The new objects' green dots (<c>NewMarkers</c>), about 9 pixels across at any distance.</summary>
@@ -3012,21 +3120,8 @@ public sealed class GlView : OpenGlControlBase
         var tri = new List<float>(marks.Count * 8 * 9);
         foreach (var c in marks)
         {
-            // About 9 pixels across at any distance: a little disc facing the camera.
-            var f = Vector3.Normalize(c - _lastEye);
-            var right = Vector3.Normalize(Vector3.Cross(f, Vector3.UnitY) is var x && x.LengthSquared() > 1e-6f ? x : Vector3.UnitX);
-            var up = Vector3.Cross(right, f);
-            float r = Vector3.Distance(_lastEye, c) * 0.0058f;
-            for (int k = 0; k < 8; k++)
-            {
-                float a0 = k * MathF.Tau / 8, a1 = (k + 1) * MathF.Tau / 8;
-                foreach (var v in new[] { c, c + r * (MathF.Cos(a0) * right + MathF.Sin(a0) * up), c + r * (MathF.Cos(a1) * right + MathF.Sin(a1) * up) })
-                {
-                    tri.Add(v.X);
-                    tri.Add(v.Y);
-                    tri.Add(v.Z);
-                }
-            }
+            // About 9 pixels across at any distance.
+            Disc(tri, c, 0.0058f);
         }
         DrawLines(ref _markVao, ref _markVbo, [.. tri], vp, new Vector4(0x5d / 255f, 1, 0x8a / 255f, 1), PrimitiveType.Triangles);
     }

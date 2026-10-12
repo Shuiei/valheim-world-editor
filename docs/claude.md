@@ -56,7 +56,7 @@ The editor must be running for Claude to reach it. Turn the switch off and nothi
 | `area_map` | A map of the area from above, drawn from its data: heights, water, painted ground, objects, a grid in world metres |
 | `get_selection`, `select_objects` | What you selected in the editor ("these trees"); Claude selecting objects to show you which it means |
 | `building_guide` | How Valheim's pieces fit and hold (the 2 m grid, roofs, support), from the game's data |
-| `find_prefabs`, `piece_info` | The game's objects and building pieces: names, sizes, snap points, cost |
+| `find_prefabs`, `piece_info` | The game's objects and building pieces: names, sizes, snap points, cost; spawn points and nests with what they spawn |
 | `list_blueprints` | Your blueprint library |
 
 | Changing | |

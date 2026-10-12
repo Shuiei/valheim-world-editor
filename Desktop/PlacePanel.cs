@@ -4,6 +4,7 @@ using Avalonia.Controls.Primitives;
 using Avalonia.Layout;
 using Avalonia.Media;
 using TerrainEditor.App;
+using TerrainEditor.Terrain;
 
 namespace TerrainEditor.Desktop;
 
@@ -656,8 +657,18 @@ public sealed class PlacePanel
         return _creatable;
     }
 
+    /// <summary>
+    /// Whether a kind matches the search: by its name, or for spawn points and nests by a creature they spawn.
+    /// </summary>
+    internal static bool Matches(string name, string q) =>
+        name.Contains(q, StringComparison.OrdinalIgnoreCase) || PrefabCatalog.SpawnOf(name) is { } spawn && spawn.Creatures.Any(c => c.Contains(q, StringComparison.OrdinalIgnoreCase));
+
     /// <summary>The list's categories, in order.</summary>
-    private static readonly ObjectKind[] Order = [ObjectKind.Trees, ObjectKind.Rocks, ObjectKind.Bushes, ObjectKind.Pickables, ObjectKind.Ore, ObjectKind.Other, ObjectKind.Ruins, ObjectKind.Buildings];
+    private static readonly ObjectKind[] Order =
+    [
+        ObjectKind.Trees, ObjectKind.Rocks, ObjectKind.Bushes, ObjectKind.Pickables, ObjectKind.Ore, ObjectKind.Ruins, ObjectKind.Furniture, ObjectKind.Remains,
+        ObjectKind.SpawnPoints, ObjectKind.Nests, ObjectKind.Creatures, ObjectKind.Effects, ObjectKind.Buildings, ObjectKind.Other,
+    ];
 
     /// <summary>
     /// Fills the list of kinds (while it shows), filtered by the search: a folding category per kind of object, its
@@ -674,7 +685,7 @@ public sealed class PlacePanel
         Groups.Clear();
         foreach (var k in Order)
         {
-            var names = Creatable().Where(c => c.Kind == k && (q == "" || c.Name.Contains(q, StringComparison.OrdinalIgnoreCase))).Select(c => c.Name).OrderBy(n => n, StringComparer.OrdinalIgnoreCase).ToList();
+            var names = Creatable().Where(c => c.Kind == k && (q == "" || Matches(c.Name, q))).Select(c => c.Name).OrderBy(n => n, StringComparer.OrdinalIgnoreCase).ToList();
             if (names.Count == 0)
             {
                 continue;
@@ -723,7 +734,11 @@ public sealed class PlacePanel
                     var star = new Button { Content = fav ? "★" : "☆", FontSize = 12, Padding = new Thickness(4, 0), Background = Brushes.Transparent };
                     ToolTip.SetTip(star, fav ? "Remove from favourites" : "Add to favourites");
                     star.Click += (_, _) => { Memory.ToggleFavourite(n); FillList(); RenderChips(); };
-                    body.Children.Add(new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Children = { box, Col(star, 1) } });
+                    var row = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Children = { box, Col(star, 1) } };
+                    // Spawn points and nests: what they spawn, under their name.
+                    body.Children.Add(PrefabCatalog.SpawnOf(n) is { } spawn
+                        ? new StackPanel { Children = { row, new TextBlock { Text = spawn.Summary(), FontSize = 10.5, Foreground = Ui.Muted, Margin = new Thickness(26, -4, 0, 2), TextWrapping = TextWrapping.Wrap } } }
+                        : row);
                 }
             }
             Fill();

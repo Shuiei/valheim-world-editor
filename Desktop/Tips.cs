@@ -497,15 +497,21 @@ public static class Tips
     {
         ObjectKind.Buildings => "Pieces built by players.",
         ObjectKind.Ruins => "Ruins, dungeon entrances and other generated structures (spoiler).",
-        ObjectKind.Trees => "Trees, logs and stumps.",
+        ObjectKind.Furniture => "The game's furniture and props found in villages, dungeons and camps: tables, rugs, banners, crates, webs (spoiler).",
+        ObjectKind.Trees => "Trees, logs, stumps and branches.",
         ObjectKind.Rocks => "Rocks and boulders.",
         ObjectKind.Ore => "Copper, tin, silver and other deposits (spoiler).",
         ObjectKind.Bushes => "Bushes, shrubs and ferns.",
         ObjectKind.Pickables => "Mushrooms, berries, flowers, stones and other things to pick up.",
-        ObjectKind.Animals => "Boars, wolves, lox, hens, deer and other creatures players tamed (wild ones are under Other objects).",
+        ObjectKind.Remains => "Bones, skulls, carcasses and the giants' remains.",
+        ObjectKind.Animals => "Boars, wolves, lox, hens, deer and other creatures players tamed (wild ones are under Creatures & NPCs).",
+        ObjectKind.Creatures => "Wild creatures, traders and birds.",
+        ObjectKind.SpawnPoints => "Invisible spawn points: each spawns its creature where it stands, once or again after it dies. Shown as a marker with the creature's name (spoiler).",
+        ObjectKind.Nests => "Greydwarf nests, bone piles and other nests that spawn creatures around themselves until destroyed (spoiler).",
         ObjectKind.Runestones => "The world's runestones. They can be picked and deleted (the game builds them from their location, so they cannot be moved or copied).",
         ObjectKind.Dungeons => "The rooms of Frost Caves, crypts and other dungeons, high above their entrances (5000 m up, where the game keeps them). Edit them with the Dungeon tool.",
-        _ => "Everything else the save holds.",
+        ObjectKind.Effects => "Mist, music, boss event zones and other effects and markers of the game's (mostly invisible).",
+        _ => "Everything that fits no other kind, such as tombstones.",
     };
 
     /// <summary>An overlay layer's tip (the View panel's overlay switches).</summary>
