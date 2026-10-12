@@ -176,6 +176,9 @@ jobs:
 
   app-tests:
     executor: dotnet
+    # Four cores: the visual tests' editor reads the world map and its close-ups on several threads, and on
+    # main the coverage measures it too (on two cores a close-up took minutes).
+    resource_class: large
     # The window tests run one at a time (one UI thread): more containers is what makes them faster.
     parallelism: 3
     steps:
