@@ -24,7 +24,7 @@ page; the panel also says the world's name, seed, save number and how many objec
 | **Zone grid** | Draws the 64 m zone grid. |
 | **Clouds (as in game)** | Draws the drifting cloud shadows of the in-game map. |
 | **Edit in 3D** | Opens the 3D editor around the clicked spot. |
-| **Size** (next to Edit in 3D) | How much ground the editor loads: 3 × 3 zones (192 m), 5 × 5 (320 m) or 7 × 7 (448 m). Bigger areas are slower to load and draw. |
+| **Size** (next to Edit in 3D) | How much ground the editor loads: 3 × 3 zones (192 m), 5 × 5 (320 m), 7 × 7 (448 m), 9 × 9 (576 m), 13 × 13 (832 m) or 17 × 17 (1088 m). Bigger areas are slower to load and draw. |
 | **Save to world…** / **Apply live** / **Discard** | Same as in the editor: write or throw away the pending changes. The line above them says what is pending. |
 | **Reload from the game** | Live mode only: load the world again from the running game. |
 

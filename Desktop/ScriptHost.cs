@@ -120,9 +120,26 @@ public static class ScriptHost
             locked[p] = g.Locked(p % g.W, p / g.W);
         }
         List<(int, string, Vector3, string, bool)> things;
+        // Name and kind once per kind of thing, not per thing: an area can hold millions, and a kind is
+        // found by matching the name against patterns.
+        var known = new Dictionary<(int, bool, bool), (string Name, string Kind)>();
         lock (scene.Things)
         {
-            things = [.. scene.Things.Select((t, i) => (t, i)).Where(x => !x.t.Gone).Select(x => (x.i, nameOf(x.t.Prefab) ?? "", x.t.Position, ObjectKinds.Of(nameOf(x.t.Prefab), x.t.Piece, x.t.Tamed).ToString(), x.t.Piece))];
+            things = new(scene.Things.Count);
+            for (int i = 0; i < scene.Things.Count; i++)
+            {
+                var t = scene.Things[i];
+                if (t.Gone)
+                {
+                    continue;
+                }
+                if (!known.TryGetValue((t.Prefab, t.Piece, t.Tamed), out var nk))
+                {
+                    string? name = nameOf(t.Prefab);
+                    nk = known[(t.Prefab, t.Piece, t.Tamed)] = (name ?? "", ObjectKinds.Of(name, t.Piece, t.Tamed).ToString());
+                }
+                things.Add((i, nk.Name, t.Position, nk.Kind, t.Piece));
+            }
         }
         var world = scene.World;
         return new Snapshot(g.W, g.H, scene.X0 * 64f - 32f, scene.Z0 * 64f - 32f, (float[])scene.Heights.Clone(), original, (int[])scene.Biomes.Clone(), (byte[])scene.Mask.Clone(), locked,

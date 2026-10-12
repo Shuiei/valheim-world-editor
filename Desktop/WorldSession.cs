@@ -179,13 +179,20 @@ public sealed class WorldSession : IDisposable
                 return (Edits.ChangedZoneCount, Edits.DeletedCount, Edits.AddedCount, Edits.ResetCount);
             }
             // Saved already: what differs from that save (an undo after it is pending too).
+            // Counted against the saved sets only (no set of the current ones): after a save with millions of
+            // new objects this runs at every change. Both lists hold each object once.
             var deleted = Edits.Deleted;
-            var added = Edits.Added.ToHashSet();
-            int del = deleted.Count(i => !_savedDeleted.Contains(i)) + _savedDeleted.Count(i => !deleted.Contains(i));
-            int add = added.Count(o => !_savedAdded.Contains(o)) + _savedAdded.Count(o => !added.Contains(o));
+            var added = Edits.Added;
+            int keptDel = deleted.Count(_savedDeleted.Contains), keptAdd = added.Count(_savedAdded.Contains);
+            int del = deleted.Count - keptDel + _savedDeleted.Count - keptDel;
+            int add = added.Count - keptAdd + _savedAdded.Count - keptAdd;
             return (Edits.ChangedZoneCount, del, add, Edits.ResetCount);
         }
     }
+
+    /// <summary>Offline: whether a new object is in the last save as it is now (not changed since).</summary>
+    /// <param name="id">The new object's id (negative).</param>
+    public bool IsSaved(int id) => _lastSave != null && Edits.FindAdded(id) is { } o && _savedAdded.Contains(o);
 
     // Offline, once saved: the open world saves again from the save it was opened from (kept until the
     // world is left), with every change since; the zones and objects of the last save, the files it
