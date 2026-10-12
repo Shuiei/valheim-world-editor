@@ -48,10 +48,13 @@ public static class HistoryFile
         {
             return null;
         }
-        string latest = Directory.GetFiles(w.World.Directory, "_main.*.chunks")
+        // The newest save; none left (removed while the world is open): no stamp.
+        string? latest = Directory.GetFiles(w.World.Directory, "_main.*.chunks")
             .Select(f => (File: f, Parts: Path.GetFileName(f).Split('.')))
             .Where(p => p.Parts.Length == 3 && int.TryParse(p.Parts[1], out _))
-            .MaxBy(p => int.Parse(p.Parts[1], System.Globalization.CultureInfo.InvariantCulture)).File;
+            .OrderBy(p => int.Parse(p.Parts[1], System.Globalization.CultureInfo.InvariantCulture))
+            .Select(p => p.File)
+            .LastOrDefault();
         if (latest == null)
         {
             return null;

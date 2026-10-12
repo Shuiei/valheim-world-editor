@@ -52,6 +52,8 @@ the plugin is unchanged in versions without that part.
   then opened another). A dungeon made for settings that changed since is no longer shown.
 - **My game** (start page) says when your game could not be checked (a folder that cannot be read,
   for instance), and the log has the error, where before the card only stopped changing.
+- **The history kept on disk** failed when the world's saves were removed while it was open (the
+  game or another tool cleaning the folder): it is now kept without comparing it to a save.
 - **Zone grid** (map) on a scaled screen (200 %, for instance) showed from twice as far out, its
   lines cramped together: it now shows from the same zoom on every screen.
 
