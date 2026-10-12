@@ -543,7 +543,9 @@ public sealed class GlView : OpenGlControlBase
         _pathVao = _pathVbo = _pathEdgeVao = _pathEdgeVbo = _pathDotVao = _pathDotVbo = 0;
         _placeRingVao = _placeRingVbo = _hoverBoxVao = _hoverBoxVbo = 0;
         _pathBandVao = _pathBandVbo = _pathSoftVao = _pathSoftVbo = _pathPreviewVao = _pathPreviewVbo = _pathPreviewSoftVao = _pathPreviewSoftVbo = 0;
-        _markVao = _markVbo = 0;
+        _markVao = _markVbo = _markProg = 0;
+        _markCount = 0;
+        _marksDirty = true;
         _placeVao = _placeVbo = _placeShapeVao = _placeShapeVbo = 0;
         _areaVao = _areaVbo = _resetVao = _resetVbo = 0;
         _measureVao = _measureVbo = _lassoVao = _lassoVbo = _ringVao = _ringVbo = _lineVao = _lineVbo = 0;
