@@ -1409,6 +1409,12 @@ public sealed partial class MainWindow : Window
                 parts.Add($"{ch.Add.Count:N0} object(s) placed");
             }
 
+            int moves = ch.Moves.Keys.Count(i => !ch.Remove.Contains(i));
+            if (moves > 0)
+            {
+                parts.Add($"{moves:N0} moved");
+            }
+
             if (ch.Remove.Count > 0)
             {
                 parts.Add($"{ch.Remove.Count:N0} taken away");

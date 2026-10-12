@@ -60,6 +60,28 @@ public class MainWindowScriptTests
         Assert.False(s.Scene.Things[0].Gone);
     }
 
+    // Moves are counted in what a script changed, except those of objects it also took away.
+    [AvaloniaFact]
+    public async Task AScriptThatOnlyMovesSaysHowManyMoved()
+    {
+        var (w, _) = Open();
+        var r = await w.RunScriptCode("""
+            foreach (var o in Objects.All)
+                Objects.Move(o, y: o.Y + 1);
+            """, "Script: test");
+        Assert.True(r.Changed);
+        Assert.StartsWith("The script changed 1 moved in ", r.Message);
+
+        var gone = await w.RunScriptCode("""
+            foreach (var o in Objects.All)
+            {
+                Objects.Move(o, y: o.Y + 1);
+                Objects.Remove(o);
+            }
+            """, "Script: test", apply: false);
+        Assert.Equal("Dry run: the script would change 1 taken away; nothing changed.", gone.Message);
+    }
+
     [AvaloniaFact]
     public async Task OneScriptAtATimeAndNothingChangesWhenTheAreaChangedMeanwhile()
     {
