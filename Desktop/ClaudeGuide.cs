@@ -44,6 +44,8 @@ public static class ClaudeGuide
 		object holds in the save: a portal's tag, a builder, health…), set_contents (chests, stands, signs).
 		Each change gives the objects new ids: use the ids its answer gives.
 
+		The game's dungeons (Frost Caves, crypts, mines), 5000 m above their entrances: list_dungeons,
+		dungeon_rooms, then add_dungeon_room, remove_dungeon_room, close_dungeon_ends, set_dungeon_door.
 		Rivers, moats, tunnels and caves, ramps: dig_path. Hills, mesas, craters, dunes: stamp; a
 		heightmap picture: import_heightmap. A mask keeps a change to some ground (gentle slopes, low
 		ground, a biome, paved ground). To make worked ground look natural again:

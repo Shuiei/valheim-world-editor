@@ -287,7 +287,8 @@ public class ClaudeToolsTests
                 "building_guide", "get_selection", "select_objects", "flatten", "paint_area", "road", "forest", "set_contents", "build_floor", "build_walls", "build_roof",
                 "move_objects", "set_transform", "replace_objects", "get_object", "set_object_data",
                 "search_world", "list_locations", "copy_objects", "add_blueprint", "shape_ground", "regrow_nature", "ground_at",
-                "dig_path", "reset_zones", "preview_seed", "create_world", "stamp", "import_heightmap" })
+                "dig_path", "reset_zones", "preview_seed", "create_world", "stamp", "import_heightmap",
+                "list_dungeons", "dungeon_rooms", "add_dungeon_room", "remove_dungeon_room", "close_dungeon_ends", "set_dungeon_door" })
             {
                 Assert.Contains($"\"{name}\"", listed);
             }

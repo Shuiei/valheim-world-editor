@@ -37,6 +37,9 @@ the plugin is unchanged in versions without that part.
   `import_heightmap` puts a heightmap picture into a rectangle; `shape_ground` also paints; and
   `shape_ground`, `dig_path`, `stamp` and `import_heightmap` take a mask, as the Mask panel's (heights,
   slopes, biomes, paint).
+- **Claude edits the game's dungeons**: `list_dungeons` and `dungeon_rooms` show a dungeon's rooms, open
+  ends and door joints; `add_dungeon_room`, `remove_dungeon_room`, `close_dungeon_ends` and
+  `set_dungeon_door` change it as the Dungeon tool does.
 - **Claude reads the ground exactly**: `ground_at` gives the height at points (now and as generated),
   the biome and any water there; `list_objects` also gives tilts and size when an object has them.
 
