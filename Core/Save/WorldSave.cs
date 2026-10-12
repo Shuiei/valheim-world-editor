@@ -711,6 +711,8 @@ public sealed class WorldSave
         objRef.Prefab = prefab;
         objRef.Position = position;
         bool tracked = prefab == LocationProxyPrefab || ModifierPrefabs.Contains(prefab);
+        // Objects that shape the ground (rock4_coast, HeathRockPillar...) are still shown; tools' marks are not.
+        bool shown = prefab != LocationProxyPrefab && !(tracked && Terrain.TerrainModifiers.IsGroundMark(prefab));
         int location = 0;
         long timeCreated = 0;
         long creator = 0, owner = 0, playerId = 0;
@@ -721,7 +723,7 @@ public sealed class WorldSave
             objRef.End = pkg.Position;
             Templates.TryAdd(prefab, id);
             file.Objects.Add((start, pkg.Position));
-            if (!tracked && prefab != LocationProxyPrefab)
+            if (shown)
             {
                 Objects.Add((id, prefab, position, rotation, scale));
             }
@@ -856,7 +858,7 @@ public sealed class WorldSave
             Creators[creator] = Creators.GetValueOrDefault(creator) + 1;
             Pieces.Add((id, prefab, position, rotation.Y));
         }
-        else if (!tracked && !terrain && prefab != LocationProxyPrefab)
+        else if (shown && !terrain)
         {
             Objects.Add((id, prefab, position, rotation, scale));
         }
