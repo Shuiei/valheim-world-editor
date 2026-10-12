@@ -25,7 +25,7 @@ public static class ClaudeGuide
 		look again (screenshot, area_map; support_check for buildings) and fix what is wrong.
 
 		Coordinates are the game's, in metres: x east, z north, y up. The world is made of 64 m zones; an
-		area opened in 3D is 1 to 5 zones across (editor_state gives its bounds, and nothing can be put
+		area opened in 3D is 1 to 17 zones across (editor_state gives its bounds, and nothing can be put
 		outside them). The Workshop is a blank 192 m plot whose ground is at y = 34, its middle at x = 0, z = 0.
 
 		Every change is one step of the history, labelled "Claude: ...", and stays pending: you never save a

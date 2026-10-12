@@ -739,7 +739,7 @@ public sealed partial class MainWindow : Window
         }
         session.Mask = Mask;
         // New objects keep a green marker until saved, or until the game has them (live).
-        View.InGame = id => session.Scene.Owner?.IsLive == true && session.Scene.Owner.LiveSync.IsLive(id);
+        View.InGame = id => session.Scene.Owner is { } owner && (owner.IsLive ? owner.LiveSync.IsLive(id) : owner.IsSaved(id));
         // What is placed stays visible: its kinds switched off in View are switched on.
         session.ThingsAdded += indices => Dispatcher.UIThread.Post(() => ShowKindsOf(session.Scene, indices));
         session.Changed += () => Dispatcher.UIThread.Post(() =>
@@ -903,6 +903,8 @@ public sealed partial class MainWindow : Window
         {
             MessageText.Text = "Could not save: " + ex.Message;
         }
+        // Saved objects lose their green marks.
+        View.RefreshNewMarkers();
         UpdateSaveBar();
     }
 
