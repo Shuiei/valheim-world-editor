@@ -47,6 +47,15 @@ for Windows or Linux. Unpack it and start it. You don't need to install anything
   you make, no mod needed.
 - **Build inside a dungeon** with the hammer's pieces, on the rooms' floors.
 
+**New worlds**
+- **See a seed's world before it exists**: its land and biomes, and exactly where the game will put
+  the start, the bosses' altars, the traders (Haldor, the Bog Witch, Hildir) and the dungeons.
+- **Find a seed** with what you want near the start: Swamp, Mountain or Plains within a distance,
+  every early biome on foot, a trader or the first bosses close by. Then make the world: a normal
+  one, that everyone joins without any mod.
+
+![A seed's world before it exists: the start, the bosses' altars and the traders](docs/images/new-world.jpg)
+
 **Objects**
 - **Place anything the game has**: trees, rocks, bushes, crops and building pieces. Use a brush,
   lines, circles, grids or whole zones; the brush follows the game's growing rules.

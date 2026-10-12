@@ -4,26 +4,13 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
-## Unreleased
+## v1.20.0 — 2026-10-11
 
 ### Added
 - **The start page** has a side menu: **Home**, then **Edit a world** (my game, a dedicated server,
   a saved world) apart from **Create** (the Workshop, a new world). Home shows the game when it runs,
   with **Edit live**, and what you opened last: saved worlds, blueprints (with their pictures) and the
   servers that connect in one click. The Workshop's page lists every blueprint to open.
-- **A new world** (Create, on the start page): makes a new world, a normal one that players join
-  without any mod (crossplay included). The seed's world shows before it is made, from the editor's
-  copy of the game's generator (on **Generate world**, Enter or **Roll**): its land and biomes, and exactly where the game will put the start
-  temple, the bosses' altars and the traders' spots (Haldor, the Bog Witch, Hildir), with how far
-  each is from the start and whether you need to sail to each biome. **Find a seed** tries many
-  random seeds and keeps the best, listed to fill the window, for what you ask: the start on a large landmass, land around it,
-  Swamp, Mountain or Plains within a distance, every early biome on foot, a trader or the first five
-  bosses within a distance. The map zooms (wheel, drag, double click) and stays sharp; switches in
-  its corner show or hide each kind of mark, and the seed's facts are listed beside it. The
-  **Dungeons** switches show where the burial chambers, troll caves, sunken crypts, frost caves,
-  infested mines, charred fortresses and Hildir's dungeons will be, with how many lie near the start.
-  The rules are read from your Valheim, so they follow game updates. See
-  [docs/new-world.md](docs/new-world.md).
 
 ### Changed
 - **The world map** of a world opened again (Reload, or back to the worlds and in again) shows at once:
@@ -36,10 +23,11 @@ the plugin is unchanged in versions without that part.
   instead of keeping its own copy, which went out of date with game updates: they always match your
   version of the game. It takes a few seconds the first time and after a game update. Valheim is now
   needed: without it, no world or Workshop opens (the start page asks for its folder).
-- **The world generator is about a third faster** (worlds' map previews, Regrow nature, new worlds),
-  with the same results to the bit.
 
 ### Fixed
+- **The start page** said "Preparing the game's look" at every start, then "The game's look is ready"
+  for the rest of the session, while the editor only checked what it had kept from the last time:
+  it now says so only when it really reads the game's files (the first time and after a game update).
 - **Settings > Claude** could still say the editor could not listen on its port after Claude was
   turned off: the last start's problem stayed shown. It is cleared when the switch is off.
 - **Script tool:** Ctrl+Enter in the code box runs the script again, as its button says; the box took
@@ -64,6 +52,31 @@ the plugin is unchanged in versions without that part.
   game or another tool cleaning the folder): it is now kept without comparing it to a save.
 - **Zone grid** (map) on a scaled screen (200 %, for instance) showed from twice as far out, its
   lines cramped together: it now shows from the same zoom on every screen.
+
+## v1.19.0 — 2026-10-11
+
+### Added
+- **A new world** (on the start page): makes a new world, a normal one that players join
+  without any mod (crossplay included). The seed's world shows before it is made, from the editor's
+  copy of the game's generator (on **Generate world**, Enter or **Roll**): its land and biomes, and exactly where the game will put the start
+  temple, the bosses' altars and the traders' spots (Haldor, the Bog Witch, Hildir), with how far
+  each is from the start and whether you need to sail to each biome. **Find a seed** tries many
+  random seeds and keeps the best, listed to fill the window, for what you ask: the start on a large landmass, land around it,
+  Swamp, Mountain or Plains within a distance, every early biome on foot, a trader or the first five
+  bosses within a distance. The map zooms (wheel, drag, double click) and stays sharp; switches in
+  its corner show or hide each kind of mark, and the seed's facts are listed beside it. The
+  **Dungeons** switches show where the burial chambers, troll caves, sunken crypts, frost caves,
+  infested mines, charred fortresses and Hildir's dungeons will be, with how many lie near the start.
+  The rules are read from your Valheim, so they follow game updates. See
+  [docs/new-world.md](docs/new-world.md).
+
+### Changed
+- **The world generator is about a third faster** (worlds' map previews, Regrow nature, new worlds),
+  with the same results to the bit.
+
+### WorldEditorBridge
+- **A failed request's log line** keeps the request's path on one line: line breaks in it could make
+  it look like several lines in the game's log.
 
 ## v1.18.0 — 2026-10-10
 

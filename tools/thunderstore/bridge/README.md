@@ -33,11 +33,17 @@ and everyone online sees it appear, as if a very fast Viking had done it by hand
   and nothing changes in the game until you apply it.
 - **Dress the hall.** Fill chests, write signs, hang weapons and trophies on item stands, set the
   table with food that stays put, and dress armour stands.
+- **Start a new world on the right seed.** See a seed's world before it exists: the start, the
+  bosses' altars, the traders and the dungeons, exactly where the game will put them. Let the editor
+  search seeds for what you want near the start, then make the world (a normal one: this mod is not
+  needed to play it).
 - **Tidy up.** Plant a forest, clear the rocks off a field, remove every tree in an area, find the
   chest that holds the last of your black metal.
 
 Every change can be undone, even after it is applied, and the history is still there the next time
 you open the world.
+
+![A seed's world before it exists, with the start, the bosses' altars and the traders](https://raw.githubusercontent.com/Shuiei/valheim-world-editor/main/docs/images/new-world.jpg)
 
 ## How it works
 

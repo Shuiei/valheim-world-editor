@@ -459,6 +459,8 @@ public static class Driver
             gameLook = w.View.GameLookLoaded,
             modelParts = w.View.LastStats?.Instances ?? 0,
             modelsLoading = w.View.LastStats?.PendingModels ?? 0,
+            // The start page's game look banner: "running" while the game's files are read.
+            look = w.StartPage?.LookBanner.Shown ?? "",
         });
     }
 }
