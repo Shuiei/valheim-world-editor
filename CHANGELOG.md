@@ -23,6 +23,12 @@ the plugin is unchanged in versions without that part.
 - **Claude weathers and regrows ground**: `shape_ground` runs the Area tool's ground actions over a
   rectangle (smooth, naturalize, erode, restore, raise, lower), and `regrow_nature` regrows what the
   game grows there.
+- **Scripts move, tilt and snap objects**: objects carry their turn, tilts and size (`Yaw`, `Pitch`,
+  `Roll`, `Scale`); `Objects.Place` takes `pitch`, `roll` and `snap` (pieces meet the pieces there as
+  the hammer makes them); and `Objects.Move` moves, turns or sizes an object that is there, keeping
+  what it holds, in the script's one undo step.
+- **Claude reads the ground exactly**: `ground_at` gives the height at points (now and as generated),
+  the biome and any water there; `list_objects` also gives tilts and size when an object has them.
 
 ### Fixed
 - **Moving objects on the Workshop's plot** (or a generated dungeon's, before saving) lost what they

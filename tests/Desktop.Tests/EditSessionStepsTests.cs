@@ -7,7 +7,7 @@ namespace TerrainEditor.Desktop.Tests;
 /// <summary>
 /// An edit session's smaller rules: deleting what is already gone makes no step, a shape whose formula fails at some
 /// points counts them and leaves them, the changed rectangle is given once, the game's changes wait for a stroke
-/// to end, and a moved object added in the session keeps its values and takes its new size.
+/// to end, things moved, turned and sized in one step, and the copy that stands for a moved thing.
 /// </summary>
 public class EditSessionStepsTests
 {
@@ -60,16 +60,29 @@ public class EditSessionStepsTests
     }
 
     [Fact]
-    public void AMovedObjectKeepsItsValuesAndTakesItsSize()
+    public void ThingsAreMovedTurnedAndSizedInOneStep()
     {
-        var s = TestScenes.Flat(1);
-        var text = new Editing.ObjectField("strings", StableHash.Of("text"), "Hello");
-        int sign = s.Commit("Put", null, [], [(new Editing.NewObject(0, StableHash.Of("sign"), new Vector3(20, 30, 20), Vector3.Zero, 0, Data: [text]), true)])[0];
-        int moved = s.Transform([(sign, new Vector3(25, 30, 20), new Vector3(0, 90, 0), 2f)], "Moved")[0];
-        Assert.True(s.Scene.Things[sign].Gone);
+        var s = TestScenes.Flat(1, Rock());
+        int moved = s.Transform([(0, new Vector3(5, 30, 0), new Vector3(0, 90, 0), 2f)], "Moved")[0];
+        Assert.True(s.Scene.Things[0].Gone);
         var t = s.Scene.Things[moved];
-        Assert.Equal((new Vector3(25, 30, 20), new Vector3(0, 90, 0), 2f), (t.Position, t.Rotation, t.Scale));
-        Assert.Equal([text], s.Edits.FindAdded(t.Id)!.Data!);
+        Assert.Equal((new Vector3(5, 30, 0), new Vector3(0, 90, 0), 2f), (t.Position, t.Rotation, t.Scale));
+        Assert.Single(s.UndoList);
         Assert.Equal("Moved", s.UndoLabel);
+    }
+
+    [Fact]
+    public void AMovedCopyKeepsWhatTheThingHolds()
+    {
+        var s = TestScenes.Flat(1, Rock());
+        // A thing of the world: copied from it, with its data.
+        var (fromWorld, piece) = s.MovedCopy(0, new Vector3(1, 30, 1), Vector3.Zero, 0);
+        Assert.Equal((3, false, false), (fromWorld.SourceId, fromWorld.Fresh, piece));
+        // One added in the session: its values and its own source go with it.
+        var text = new Editing.ObjectField("strings", StableHash.Of("text"), "Hello");
+        int sign = s.Commit("Put", null, [], [(new Editing.NewObject(0, StableHash.Of("sign"), new Vector3(20, 30, 20), Vector3.Zero, 0, 3, false, Data: [text]), true)])[0];
+        var (copy, isPiece) = s.MovedCopy(sign, new Vector3(25, 30, 20), new Vector3(0, 90, 0), 2);
+        Assert.Equal((3, false, true, 2f), (copy.SourceId, copy.Fresh, isPiece, copy.Scale));
+        Assert.Equal([text], copy.Data!);
     }
 }

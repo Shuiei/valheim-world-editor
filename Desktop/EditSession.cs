@@ -797,15 +797,24 @@ public sealed class EditSession
     public List<int> Transform(IReadOnlyList<(int Index, System.Numerics.Vector3 Position, System.Numerics.Vector3 Rotation, float Scale)> moves, string? label = null)
     {
         var live = moves.Where(m => !Scene.Things[m.Index].Gone).ToList();
-        var adds = live.Select(m =>
-        {
-            var t = Scene.Things[m.Index];
-            // A copy of an object of this session keeps what that one was copied from, and its values (the
-            // Workshop's objects and generated dungeons carry theirs there).
-            var from = t.Id < 0 ? Edits.FindAdded(t.Id) : null;
-            return (new NewObject(0, t.Prefab, m.Position, m.Rotation, m.Scale, t.Id < 0 ? from?.SourceId : t.Id, t.Id < 0 && (from?.Fresh ?? true), from?.Raw, from?.Data), t.Piece);
-        }).ToList();
+        var adds = live.Select(m => MovedCopy(m.Index, m.Position, m.Rotation, m.Scale)).ToList();
         return Commit(label ?? $"Moved {live.Count}", null, [.. live.Select(m => m.Index)], adds);
+    }
+
+    /// <summary>
+    /// The copy that stands for a thing moved, turned or sized (to Commit in place of it): it keeps the thing's own
+    /// data (chest contents, builder…) and, for an object added in this session, what that was copied from and its
+    /// values (the Workshop's objects and generated dungeons carry theirs there).
+    /// </summary>
+    /// <param name="index">The thing, an index into the scene's things.</param>
+    /// <param name="position">Its new place.</param>
+    /// <param name="rotation">Its new turn, Euler angles in degrees.</param>
+    /// <param name="scale">Its new size (zero: the prefab's own).</param>
+    internal (NewObject Object, bool Piece) MovedCopy(int index, System.Numerics.Vector3 position, System.Numerics.Vector3 rotation, float scale)
+    {
+        var t = Scene.Things[index];
+        var from = t.Id < 0 ? Edits.FindAdded(t.Id) : null;
+        return (new NewObject(0, t.Prefab, position, rotation, scale, t.Id < 0 ? from?.SourceId : t.Id, t.Id < 0 && (from?.Fresh ?? true), from?.Raw, from?.Data), t.Piece);
     }
 
     /// <summary>

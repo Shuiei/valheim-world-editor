@@ -52,6 +52,7 @@ The editor must be running for Claude to reach it. Turn the switch off and nothi
 | `list_worlds`, `open_world` | The worlds on this computer; open one (offline). Refused while the open world has changes not saved |
 | `open_area` | Open the area around a point in 3D (1 to 17 zones of 64 m across) |
 | `describe_area`, `list_objects` | Heights, biomes and objects of the area; objects by kind, name or place, with their ids |
+| `ground_at` | The ground's exact height at points (now and as generated), its biome and any water there |
 | `screenshot` | A picture of the 3D view (from any camera, or four views of a place in one picture) or of the map, so Claude sees what it did |
 | `area_map` | A map of the area from above, drawn from its data: heights, water, painted ground, objects, a grid in world metres |
 | `get_selection`, `select_objects` | What you selected in the editor ("these trees"); Claude selecting objects to show you which it means |

@@ -4,9 +4,9 @@ using Xunit;
 namespace TerrainEditor.Desktop.Tests;
 
 /// <summary>
-/// Claude's Area tool ground actions and regrowing nature (ClaudeTools.Ground): what each refuses, a rectangle raised
-/// and restored, smoothed and eroded as one step each, and only the kinds asked regrown inside the rectangle; and the
-/// helpers they use (GroundActions, BoxOver).
+/// Claude's Area tool ground actions, regrowing nature and reading the ground (ClaudeTools.Ground): what each refuses,
+/// a rectangle raised and restored, smoothed and eroded as one step each, only the kinds asked regrown inside the
+/// rectangle, and the ground's height at points; and the helpers they use (GroundActions, BoxOver).
 /// </summary>
 [Collection("World files")]
 public class ClaudeToolsGroundTests
@@ -82,5 +82,24 @@ public class ClaudeToolsGroundTests
         Assert.All(grown, t => Assert.Equal(TerrainEditor.App.ObjectKind.Trees, TerrainEditor.App.ObjectKinds.Of(Terrain.PrefabCatalog.DisplayName(t.Prefab), false)));
         Assert.All(grown, t => Assert.True(t.Position.X is >= -25 and <= 0 && t.Position.Z is >= -25 and <= 0));
         Assert.StartsWith("Claude: regrew", w.W.Session.UndoLabel);
+    }
+
+    // ground_at: no area, no points or too many are said; a point outside is named; inside, the height now (raised
+    // 2 m) against the generated one, and the biome.
+    [AvaloniaFact]
+    public async Task TheGroundIsReadAtPoints()
+    {
+        using var r = new ClaudeRun();
+        Assert.StartsWith("No area is open", await r.T.GroundAtPoints([[0f, 0f]]));
+        await r.OpenArea();
+        Assert.Equal("Give 1 to 500 points, each [x, z].", await r.T.GroundAtPoints([]));
+        Assert.Equal("Give 1 to 500 points, each [x, z].", await r.T.GroundAtPoints([[0f]]));
+        await r.T.ShapeGround("raise", -5, -5, 5, 5, edge: 0, amount: 2);
+        var at = ClaudeRun.J(await r.T.GroundAtPoints([[0f, 0f], [500f, 0f]]));
+        var p = at[0];
+        Assert.Equal(p.GetProperty("original").GetSingle() + 2, p.GetProperty("height").GetSingle(), 2);
+        Assert.False(string.IsNullOrEmpty(p.GetProperty("biome").GetString()));
+        Assert.True(p.GetProperty("water").GetSingle() >= 0);
+        Assert.Equal("outside the area", at[1].GetProperty("error").GetString());
     }
 }

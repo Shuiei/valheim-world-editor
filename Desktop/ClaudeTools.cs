@@ -120,7 +120,7 @@ public sealed partial class ClaudeTools
 
     /// <summary>list_objects: objects of the open area, filtered by kind, name and distance (limit clamped to 1 to 2000).</summary>
     [McpServerTool(Name = "list_objects", ReadOnly = true, Title = "List objects")]
-    [Description("Objects of the open area: id, name, kind, position (x, y, z), turn (yaw in degrees) and whether a player built it. Filter by kind (Buildings, Trees, Rocks…), by a word of the name, and/or near a point; at most limit of them, nearest first when near a point.")]
+    [Description("Objects of the open area: id, name, kind, position (x, y, z), turn (yaw in degrees), tilts (pitch, roll) and size (scale) when it has them, and whether a player built it. Filter by kind (Buildings, Trees, Rocks…), by a word of the name, and/or near a point; at most limit of them, nearest first when near a point.")]
     public Task<string> ListObjects(
         [Description("A kind, as describe_area counts them (optional).")] string? kind = null,
         [Description("A word the name must hold (optional).")] string? name = null,
@@ -192,18 +192,34 @@ public sealed partial class ClaudeTools
         return $"Selected {ok.Count}{(ok.Count < ids.Length ? $" ({ids.Length - ok.Count} id(s) were not objects of the area)" : "")}.";
     });
 
-    /// <summary>An object as the tools give it: id (its index in the scene), name, kind, position, yaw, built.</summary>
-    private object Describe(WorldScene.Thing t, int i) => new
+    /// <summary>
+    /// An object as the tools give it: id (its index in the scene), name, kind, position, yaw, built; its tilts and
+    /// size only when it has them (most objects stand upright at the prefab's own size).
+    /// </summary>
+    private Dictionary<string, object?> Describe(WorldScene.Thing t, int i)
     {
-        id = i,
-        name = _w.NameOfPrefab(t.Prefab),
-        kind = KindOf(t),
-        x = MathF.Round(t.Position.X, 2),
-        y = MathF.Round(t.Position.Y, 2),
-        z = MathF.Round(t.Position.Z, 2),
-        yaw = MathF.Round(t.Rotation.Y, 1),
-        built = t.Piece,
-    };
+        var d = new Dictionary<string, object?>
+        {
+            ["id"] = i,
+            ["name"] = _w.NameOfPrefab(t.Prefab),
+            ["kind"] = KindOf(t),
+            ["x"] = MathF.Round(t.Position.X, 2),
+            ["y"] = MathF.Round(t.Position.Y, 2),
+            ["z"] = MathF.Round(t.Position.Z, 2),
+            ["yaw"] = MathF.Round(t.Rotation.Y, 1),
+            ["built"] = t.Piece,
+        };
+        if (MathF.Abs(t.Rotation.X) >= 0.05f || MathF.Abs(t.Rotation.Z) >= 0.05f)
+        {
+            d["pitch"] = MathF.Round(t.Rotation.X, 1);
+            d["roll"] = MathF.Round(t.Rotation.Z, 1);
+        }
+        if (t.Scale > 0 && MathF.Abs(t.Scale - 1) >= 1e-3f)
+        {
+            d["scale"] = MathF.Round(t.Scale, 3);
+        }
+        return d;
+    }
 
     /// <summary>
     /// screenshot: the 3D view (from the camera given, else as it is) or the map, as a JPEG no wider than 1280
@@ -520,7 +536,7 @@ public sealed partial class ClaudeTools
 
     /// <summary>script_reference: the script API's source.</summary>
     [McpServerTool(Name = "script_reference", ReadOnly = true, Title = "The script API")]
-    [Description("The C# API run_script scripts use, as its source with comments: Area (bounds, points), Ground (Height, Set, Raise, Lower, Paint, Shape, Mountain, Biome), Objects (All, OfKind, Near, Place, Remove, CanPlace), Noise, Rnd, Print. Read it before writing a script.")]
+    [Description("The C# API run_script scripts use, as its source with comments: Area (bounds, points), Ground (Height, Set, Raise, Lower, Paint, Shape, Mountain, Biome), Objects (All, OfKind, Near, Place with tilts and snapping, Move, Remove, CanPlace), Noise, Rnd, Print. Read it before writing a script.")]
     public static string ScriptReference() => ScriptHost.ApiSource;
 
     // ---- Changing (pending changes only, one step of the history each).

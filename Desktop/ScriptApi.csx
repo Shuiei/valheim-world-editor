@@ -14,9 +14,10 @@ public static class __Host
 	public static Func<float, float, string> Biome = null!;
 	public static Action<float, float, string, float> Paint = null!;
 	public static Action<float, float, string, float, float, float, float, int> Mountain = null!;
-	public static Func<(int Id, string Prefab, float X, float Y, float Z, string Kind, bool Building)[]> Objects = null!;
+	public static Func<(int Id, string Prefab, float X, float Y, float Z, string Kind, bool Building, float Pitch, float Yaw, float Roll, float Scale)[]> Objects = null!;
 	public static Action<int> Remove = null!;
-	public static Action<string, float, float, float, float, float> Place = null!;
+	public static Action<string, float, float, float, float, float, float, float, bool> Place = null!;
+	public static Action<int, float, float, float, float, float, float, float> Move = null!;
 	public static Func<string, bool> CanPlace = null!;
 	public static Func<float, float, int, float> Noise = null!;
 	public static Action<string> Print = null!;
@@ -107,15 +108,23 @@ public static class Ground
 		__Host.Mountain(x, z, preset, height, radius, rough, turn, seed);
 }
 
-// A thing in the area: a tree, rock, building piece...
-public sealed record Obj(int Id, string Prefab, float X, float Y, float Z, string Kind, bool Building);
+// A thing in the area: a tree, rock, building piece... Yaw, Pitch and Roll are its turn and tilts in
+// degrees; Scale its size (1: the prefab's own).
+public sealed record Obj(int Id, string Prefab, float X, float Y, float Z, string Kind, bool Building)
+{
+	public float Yaw { get; init; }
+	public float Pitch { get; init; }
+	public float Roll { get; init; }
+	public float Scale { get; init; } = 1;
+}
 
 public static class Objects
 {
 	private static List<Obj>? _all;
 
 	// Everything in the area (as it was when the script started).
-	public static IReadOnlyList<Obj> All => _all ??= __Host.Objects().Select(o => new Obj(o.Id, o.Prefab, o.X, o.Y, o.Z, o.Kind, o.Building)).ToList();
+	public static IReadOnlyList<Obj> All => _all ??= __Host.Objects()
+		.Select(o => new Obj(o.Id, o.Prefab, o.X, o.Y, o.Z, o.Kind, o.Building) { Yaw = o.Yaw, Pitch = o.Pitch, Roll = o.Roll, Scale = o.Scale }).ToList();
 
 	// Kinds: Buildings, Ruins, Trees, Rocks, Ore, Bushes, Pickables, Animals, Runestones, Other.
 	public static IEnumerable<Obj> OfKind(string kind) => All.Where(o => string.Equals(o.Kind, kind, StringComparison.OrdinalIgnoreCase));
@@ -126,9 +135,16 @@ public static class Objects
 
 	// A new object of the game's (its prefab name: "Beech1", "rock4_forest", "piece_chest_wood"...).
 	// y: its height (by default on the ground there, as the ground is when the script ends).
-	// yaw: its turn in degrees; scale: its size (0 keeps the prefab's own).
-	public static void Place(string prefab, float x, float z, float yaw = 0, float scale = 0, float y = float.NaN) =>
-		__Host.Place(prefab, x, z, yaw, scale, y);
+	// yaw: its turn in degrees (0: its front faces north, 90: east); pitch, roll: its tilts in degrees;
+	// scale: its size (0 keeps the prefab's own). snap: a building piece snaps to the snap points of the
+	// pieces there (and of those placed before it) within 0.5 m, as the game's hammer does.
+	public static void Place(string prefab, float x, float z, float yaw = 0, float scale = 0, float y = float.NaN, float pitch = 0, float roll = 0, bool snap = false) =>
+		__Host.Place(prefab, x, z, yaw, scale, y, pitch, roll, snap);
+
+	// Moves, turns or sizes an object that is there; what is left out (NaN) stays as it is. It keeps what
+	// it holds (chest contents, builder...).
+	public static void Move(Obj o, float x = float.NaN, float z = float.NaN, float y = float.NaN, float yaw = float.NaN, float pitch = float.NaN, float roll = float.NaN, float scale = float.NaN) =>
+		__Host.Move(o.Id, x, z, y, yaw, pitch, roll, scale);
 
 	// Whether the editor can make objects of this prefab.
 	public static bool CanPlace(string prefab) => __Host.CanPlace(prefab);

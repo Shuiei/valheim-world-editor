@@ -5,7 +5,8 @@ namespace TerrainEditor.Desktop.Tests;
 
 /// <summary>
 /// Claude's looking tools (ClaudeTools): what each says with nothing open, the worlds on this computer, objects found by
-/// name and near a point, objects selected for the user, and what can be placed, with the building pieces' sizes.
+/// name and near a point (with tilts and size when they have them), objects selected for the user, and what can be
+/// placed, with the building pieces' sizes.
 /// </summary>
 [Collection("World files")]
 public class ClaudeToolsLookingTests
@@ -123,5 +124,25 @@ public class ClaudeToolsLookingTests
         string guide = ClaudeTools.BuildingGuide();
         Assert.StartsWith(ClaudeGuide.Building, guide);
         Assert.EndsWith(ClaudeGuide.Shaping, guide);
+    }
+
+    // An upright object at its own size is listed without tilts or size; a tilted, larger one with them.
+    [AvaloniaFact]
+    public async Task ObjectsAreListedWithTiltsAndSizeWhenTheyHaveThem()
+    {
+        using var r = new ClaudeRun();
+        await r.OpenArea();
+        await r.T.PlacePieces([new ClaudeTools.PieceSpec { Prefab = "Beech1", X = 4, Z = 4 }]);
+        await r.T.PlacePieces([new ClaudeTools.PieceSpec { Prefab = "rock4_forest", X = -4, Z = 4, Pitch = 10 }]);
+        int rock = ClaudeRun.J(await r.T.ListObjects(name: "rock4_forest", x: -4, z: 4, radius: 1))[0].GetProperty("id").GetInt32();
+        await r.T.SetTransform([new ClaudeTools.TransformSpec { Id = rock, Scale = 2 }]);
+
+        var tree = ClaudeRun.J(await r.T.ListObjects(name: "Beech1", x: 4, z: 4, radius: 1))[0];
+        Assert.False(tree.TryGetProperty("pitch", out _));
+        Assert.False(tree.TryGetProperty("scale", out _));
+        var tilted = ClaudeRun.J(await r.T.ListObjects(name: "rock4_forest", x: -4, z: 4, radius: 1))[0];
+        Assert.Equal(10, tilted.GetProperty("pitch").GetSingle(), 1);
+        Assert.Equal(0, tilted.GetProperty("roll").GetSingle(), 1);
+        Assert.Equal(2, tilted.GetProperty("scale").GetSingle(), 3);
     }
 }
