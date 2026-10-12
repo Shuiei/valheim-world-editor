@@ -6,7 +6,8 @@ namespace TerrainEditor.Desktop.Tests;
 
 /// <summary>
 /// A main window with a flat area (or the session given), its Blueprints panel pointed at a temporary folder for
-/// Homestead's and the older blueprints, and whether Homestead is installed; the folder is deleted when disposed.
+/// Homestead's and the older blueprints, and whether Homestead is installed, its questions answered Yes; the folder is
+/// deleted when disposed.
 /// </summary>
 internal sealed class BlueprintsPanelRun : IDisposable
 {
@@ -26,6 +27,9 @@ internal sealed class BlueprintsPanelRun : IDisposable
         B.Store = new BlueprintStore(Path.Combine(Dir, "older"));
         B.FindHomestead = () => new Homestead.Status(Installed, Installed ? "1.3.2" : null, Installed ? new() { "test profile" } : new(), Homestead);
         B.Message += t => Said = t;
+        // Its questions answered Yes, not asked in a dialog: headless, nobody would answer it and the test would wait
+        // for ever (a test that wants No says so).
+        B.Confirm = _ => Task.FromResult(true);
     }
 
     /// <summary>
