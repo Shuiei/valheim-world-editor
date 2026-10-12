@@ -20,7 +20,7 @@
     <PackageReference Include="FsCheck.Xunit.v3" Version="3.3.4" />
     <PackageReference Include="xunit.v3" Version="3.2.2" />
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />
-    <PackageReference Include="JunitXml.TestLogger" Version="7.1.0" />
+    <PackageReference Include="JunitXml.TestLogger" Version="8.0.0" />
     <!-- The map's overview picture decoded with its transparency (MapDataTests). -->
     <PackageReference Include="SkiaSharp" Version="4.153.1" />
     <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="4.153.1" />
