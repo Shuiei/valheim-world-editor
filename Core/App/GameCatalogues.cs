@@ -337,7 +337,8 @@ public static partial class GameCatalogues
         /// </summary>
         public AssetTypeValueField? Read(Inner f, long pid)
         {
-            if (f.Assets.file.GetAssetInfo(pid) is { } info)
+            // Without type trees no object's fields are described (the editor has no class database).
+            if (f.Assets.file.Metadata.TypeTreeEnabled && f.Assets.file.GetAssetInfo(pid) is { } info)
             {
                 try
                 {
@@ -411,6 +412,10 @@ public static partial class GameCatalogues
         /// </summary>
         public AssetTypeTemplateField? Template(Inner f, AssetFileInfo info)
         {
+            if (!f.Assets.file.Metadata.TypeTreeEnabled)
+            {
+                return null;
+            }
             try
             {
                 return _am.CreateTemplateBaseField(f.Assets, info.TypeId, info.GetScriptIndex(f.Assets.file));

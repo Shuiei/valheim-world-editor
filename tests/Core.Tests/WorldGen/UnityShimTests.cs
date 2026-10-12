@@ -142,5 +142,10 @@ public class UnityShimTests
         var data = new AltBiomeWorldData();
         Assert.False(data.IsReady);
         Assert.Null(data.PointSectors);
+        Assert.Equal(0, AltBiomeWorldData.WorldSpaceToMapSpace(1234.5f));
+        Assert.Equal(Heightmap.Biome.BlackForest, BiomeSector.EmptyBlackForest.Biome);
+        Assert.Equal(Heightmap.Biome.Meadows, BiomeSector.EmptyMeadows.Biome);
+        // The game's log: nothing written offline.
+        ZLog.Log("ignored");
     }
 }

@@ -4,7 +4,6 @@ using System.Text;
 using System.Text.Json;
 using Avalonia.Headless.XUnit;
 using TerrainEditor.Save;
-using WorldEditor.Tests;
 using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
@@ -19,54 +18,6 @@ namespace TerrainEditor.Desktop.Tests;
 public class ClaudeToolsTests
 {
     /// <summary>
-    /// A window on a copy of the test world with its Claude tools, questions answered No, settings never saved, Auto
-    /// apply and area follow off, and a Homestead folder of its own; OpenLive opens a stand-in game instead.
-    /// </summary>
-    private sealed class Run : IDisposable
-    {
-        public MainWindow W { get; } = new(load: false) { Width = 1600, Height = 1000 };
-        public string Dir { get; } = Fixtures.CopyFixture();
-        public string Homestead { get; } = Path.Combine(Path.GetTempPath(), "vwe-claude-" + Guid.NewGuid().ToString("N")[..8]);
-        public FakeGame? Game { get; private set; }
-        public ClaudeTools T { get; }
-
-        public Run()
-        {
-            W.Show();
-            W.Tell = _ => Task.CompletedTask;
-            W.Ask = (_, _, _, _) => Task.FromResult(false);
-            W.SaveSettings = _ => { };
-            W.Settings.AutoApply = W.Settings.AreaFollow = false;
-            W.Blueprints.FindHomestead = () => new TerrainEditor.App.Homestead.Status(true, "1.3.2", ["test"], Homestead);
-            T = new ClaudeTools(W);
-        }
-
-        public async Task OpenLive()
-        {
-            Game = new FakeGame();
-            var game = Game;
-            await W.OpenWorld(() => WorldSession.OpenLive(new LiveBridge(game.Url, game.Token), FakeGame.Label()), "Opening…");
-            W.MapPage?.Stop();
-            await W.EditArea(0, 0, 1);
-        }
-
-        public void Dispose()
-        {
-            Game?.Dispose();
-            foreach (string d in new[] { Path.GetDirectoryName(Dir)!, Homestead })
-            {
-                try
-                {
-                    Directory.Delete(d, true);
-                }
-                catch
-                {
-                }
-            }
-        }
-    }
-
-    /// <summary>
     /// A tool's JSON answer, parsed.
     /// </summary>
     private static JsonElement J(string json) => JsonDocument.Parse(json).RootElement;
@@ -74,7 +25,7 @@ public class ClaudeToolsTests
     [AvaloniaFact]
     public async Task AWorldIsLookedAtAndShapedWithPendingSteps()
     {
-        using var r = new Run();
+        using var r = new ClaudeRun();
         var state = J(await r.T.EditorState());
         Assert.Equal("start", state.GetProperty("page").GetString());
         Assert.Equal("map", J(await r.T.OpenWorld(r.Dir)).GetProperty("page").GetString());
@@ -106,7 +57,7 @@ public class ClaudeToolsTests
     [AvaloniaFact]
     public async Task LiveWithAutoOnClaudeChangesNothing()
     {
-        using var r = new Run();
+        using var r = new ClaudeRun();
         await r.OpenLive();
         r.W.Settings.AutoApply = true;
         Assert.Contains("Auto on", await r.T.RunScript("Ground.Raise(0, 0, 3);"));
@@ -123,7 +74,7 @@ public class ClaudeToolsTests
     [AvaloniaFact]
     public async Task PiecesSnapAsTheHammersAndTheSupportCheckNamesWhatFalls()
     {
-        using var r = new Run();
+        using var r = new ClaudeRun();
         var state = J(await r.T.OpenWorkshop());
         Assert.Equal("workshop", state.GetProperty("page").GetString());
         // A wall, then one 0.3 m off where it would join: it snaps to its edge. A floor up in the air
@@ -171,7 +122,7 @@ public class ClaudeToolsTests
         Assert.Equal(4, roof.Count(p => p.Prefab == "wood_roof_top_45"));
         Assert.Throws<ArgumentException>(() => ClaudeBuilder.Roof(-4, -3, 4, 3, 38, 30, "thatch", true));
         Assert.Throws<ArgumentException>(() => ClaudeBuilder.Walls(-4, -3, 4, 3, 34, 4, "wood", [new ClaudeBuilder.Door("up", 0)]));
-        using var r = new Run();
+        using var r = new ClaudeRun();
         await r.T.OpenWorkshop();
         Assert.Contains("\"problems\":[]", await r.T.BuildFloor(-4, -3, 4, 3));
         Assert.Contains("\"problems\":[]", await r.T.BuildWalls(-4, -3, 4, 3, doors: [new ClaudeTools.DoorSpec { Side = "south", At = 0 }]));
@@ -188,7 +139,7 @@ public class ClaudeToolsTests
     [AvaloniaFact]
     public async Task ReadyTasksSelectionContentsAndTakingBack()
     {
-        using var r = new Run();
+        using var r = new ClaudeRun();
         await r.T.OpenWorld(r.Dir);
         await r.T.OpenArea(0, 0, 1);
         var s = r.W.Session!;
@@ -287,7 +238,7 @@ public class ClaudeToolsTests
     [AvaloniaFact]
     public async Task TheServerAnswersOnlyWithTheTokenOnThisComputer()
     {
-        using var r = new Run();
+        using var r = new ClaudeRun();
         var probe = new System.Net.Sockets.TcpListener(IPAddress.Loopback, 0);
         probe.Start();
         int port = ((IPEndPoint)probe.LocalEndpoint).Port;

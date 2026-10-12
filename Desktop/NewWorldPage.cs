@@ -41,13 +41,17 @@ public sealed class NewWorldPage : IDisposable
     /// </summary>
     internal TextBox NameBox { get; } = new() { Text = "", PlaceholderText = "My world", FontSize = 13 };
     /// <summary>
-    /// The seed, up to 10 characters; its world is shown after a short typing pause.
+    /// The seed, up to 10 characters; its world is shown when Generate is pressed.
     /// </summary>
     internal TextBox SeedBox { get; } = new() { FontSize = 13, MaxLength = 10, PlaceholderText = "Up to 10 letters or digits" };
     /// <summary>
     /// Puts a random seed in the seed box.
     /// </summary>
     internal Button Roll { get; } = new() { Content = "Roll", FontSize = 12 };
+    /// <summary>
+    /// Shows the seed box's world; greyed while that world is the one shown.
+    /// </summary>
+    internal Button Generate { get; } = new Button { Content = "Generate world", FontSize = 12, IsEnabled = false }.Classed("primary");
     /// <summary>
     /// Which of the game's world folders to create the world in; its <c>Tag</c> holds the full paths.
     /// </summary>
@@ -186,6 +190,14 @@ public sealed class NewWorldPage : IDisposable
     /// The search's results, as pictures to click.
     /// </summary>
     internal WrapPanel Found { get; } = new() { ItemSpacing = 6, LineSpacing = 6 };
+    /// <summary>
+    /// The least height of the found seeds' list, in pixels: two rows of pictures.
+    /// </summary>
+    private const double MinResults = 330;
+    /// <summary>
+    /// The least space between two found seeds, in pixels.
+    /// </summary>
+    private const double MinGap = 6;
 
     /// <summary>
     /// The preview shown (null while it is made).
@@ -213,9 +225,13 @@ public sealed class NewWorldPage : IDisposable
     /// </summary>
     private string? _dungeonError;
     /// <summary>
-    /// The typing pause before a typed seed is looked at.
+    /// The seed shown or being made (Generate is greyed while the seed box holds it), or null.
     /// </summary>
-    private readonly DispatcherTimer _wait = new() { Interval = TimeSpan.FromMilliseconds(350) };
+    private string? _generated;
+    /// <summary>
+    /// The seed's map, in cells on a side.
+    /// </summary>
+    private readonly int _previewSize;
 
     /// <summary>
     /// A distance box: 0..8000 m in steps of 250.
@@ -241,8 +257,10 @@ public sealed class NewWorldPage : IDisposable
     /// </summary>
     /// <param name="roots">The world folders to offer (tests); null for the game's own. With none, the first the game
     /// would use.</param>
-    public NewWorldPage(IReadOnlyList<string>? roots = null)
+    /// <param name="previewSize">The seed's map, in cells on a side (tests: smaller is quicker).</param>
+    public NewWorldPage(IReadOnlyList<string>? roots = null, int previewSize = 512)
     {
+        _previewSize = previewSize;
         Loading = new Border
         {
             Background = Ui.Panel,
@@ -270,6 +288,7 @@ public sealed class NewWorldPage : IDisposable
         NameBox.Tip("newWorld.name");
         SeedBox.Tip("newWorld.seed");
         Roll.Tip("newWorld.roll");
+        Generate.Tip("newWorld.generate");
         Where.Tip("newWorld.where");
         Create.Tip("newWorld.create");
         BigLand.Tip("newWorld.bigLand");
@@ -312,23 +331,29 @@ public sealed class NewWorldPage : IDisposable
         Map.ViewChanged += MoveMarks;
         Map.Hovered += (x, z) => Readout.Text = $"{x:0}, {z:0}";
         Find.Tip("newWorld.find");
-        Roll.Click += (_, _) => SeedBox.Text = SeedPreview.RandomSeed();
-        SeedBox.TextChanged += (_, _) =>
+        Roll.Click += (_, _) =>
         {
-            _wait.Stop();
-            _wait.Start();
-            // At once, while the typing pause is waited for: the change is seen.
-            SetLoading(SeedBox.Text?.Trim() ?? "");
+            SeedBox.Text = SeedPreview.RandomSeed();
+            ShowSeed(SeedBox.Text);
         };
-        _wait.Tick += (_, _) => { _wait.Stop(); ShowSeed(SeedBox.Text?.Trim() ?? ""); };
+        SeedBox.TextChanged += (_, _) => FitGenerate();
+        SeedBox.KeyDown += (_, e) =>
+        {
+            if (e.Key == Key.Enter && Generate.IsEnabled)
+            {
+                ShowSeed(SeedBox.Text?.Trim() ?? "");
+            }
+        };
+        Generate.Click += (_, _) => ShowSeed(SeedBox.Text?.Trim() ?? "");
         Create.Click += (_, _) => AskCreate();
         Find.Click += (_, _) => StartSearch();
         Stop.Click += (_, _) => _search?.Cancel();
         static Control Row(string label, Control c) => new DockPanel { Children = { new TextBlock { Text = label, Width = 90, FontSize = 12, VerticalAlignment = VerticalAlignment.Center }, c } };
         static Control Metres(string label, NumericUpDown n) => new DockPanel { Children = { new TextBlock { Text = label, Width = 120, FontSize = 12, VerticalAlignment = VerticalAlignment.Center }, new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { n, new TextBlock { Text = "m", VerticalAlignment = VerticalAlignment.Center } } } } };
-        var seedRow = new DockPanel { Children = { new TextBlock { Text = "Seed", Width = 90, FontSize = 12, VerticalAlignment = VerticalAlignment.Center }, Roll, SeedBox } };
+        var seedRow = new DockPanel { Children = { new TextBlock { Text = "Seed", Width = 90, FontSize = 12, VerticalAlignment = VerticalAlignment.Center }, Generate, Roll, SeedBox } };
+        DockPanel.SetDock(Generate, Dock.Right);
         DockPanel.SetDock(Roll, Dock.Right);
-        Roll.Margin = new Thickness(6, 0, 0, 0);
+        Generate.Margin = Roll.Margin = new Thickness(6, 0, 0, 0);
         var world = Ui.Card(new StackPanel
         {
             Spacing = 8,
@@ -361,10 +386,48 @@ public sealed class NewWorldPage : IDisposable
                 Metres("Bosses 1–5 within", Bosses),
                 findRow,
                 Progress,
-                new ScrollViewer { MaxHeight = 330, Content = Found },
             },
         });
-        var left = new ScrollViewer { Content = new StackPanel { Spacing = 10, Children = { world, search } }, Padding = new Thickness(0, 0, 10, 0) };
+        Found.Children.Add(Ui.Hint("The seeds found show here, best first: click one to look at it."));
+        var results = new ScrollViewer { Content = Found, Height = 330 };
+        var found = Ui.Card(new StackPanel
+        {
+            Spacing = 6,
+            Children = { new TextBlock { Text = "Found seeds", FontSize = 15, FontWeight = FontWeight.SemiBold }, results },
+        });
+        // At the top, not stretched to the window: its height is what it holds.
+        var column = new StackPanel { Spacing = 10, VerticalAlignment = VerticalAlignment.Top, Children = { world, search, found } };
+        var left = new ScrollViewer { Content = column, Padding = new Thickness(0, 0, 10, 0) };
+        // The found seeds take the height the window has left, never less than two rows of them.
+        void FitResults()
+        {
+            double rest = column.Bounds.Height - results.Height;
+            double height = Math.Max(MinResults, left.Bounds.Height - rest);
+            if (column.Bounds.Height > 0 && Math.Abs(height - results.Height) > 1)
+            {
+                results.Height = height;
+            }
+        }
+        // As many seeds in a row as fit, the same space between them and at both sides.
+        void SpaceResults()
+        {
+            double width = results.Viewport.Width, tile = Found.Children.OfType<Button>().FirstOrDefault()?.Bounds.Width ?? 0;
+            if (width <= 0 || tile <= 0)
+            {
+                return;
+            }
+            int n = Math.Max(1, (int)((width - MinGap) / (tile + MinGap)));
+            double gap = Math.Max(0, Math.Floor((width - n * tile) / (n + 1)));
+            if (Math.Abs(gap - Found.ItemSpacing) > 0.5)
+            {
+                Found.ItemSpacing = gap;
+                Found.Margin = new Thickness(gap, 0, 0, 0);
+            }
+        }
+        left.PropertyChanged += (_, e) => { if (e.Property == Visual.BoundsProperty) { FitResults(); } };
+        column.PropertyChanged += (_, e) => { if (e.Property == Visual.BoundsProperty) { FitResults(); } };
+        results.PropertyChanged += (_, e) => { if (e.Property == ScrollViewer.ViewportProperty) { SpaceResults(); } };
+        Found.LayoutUpdated += (_, _) => SpaceResults();
         static Button ZoomButton(string text, string tip) => new Button { Content = text, FontSize = 13, Width = 30, Height = 30, Padding = new Thickness(0), HorizontalContentAlignment = HorizontalAlignment.Center }.Tip(tip);
         var zoomIn = ZoomButton("+", "newWorld.zoomIn");
         var zoomOut = ZoomButton("−", "newWorld.zoomOut");
@@ -411,7 +474,7 @@ public sealed class NewWorldPage : IDisposable
         right.Children.Add(map);
         Grid.SetColumn(info, 2);
         right.Children.Add(info);
-        var body = new Grid { ColumnDefinitions = new ColumnDefinitions("440,14,*") };
+        var body = new Grid { ColumnDefinitions = new ColumnDefinitions("470,14,*") };
         body.Children.Add(left);
         Grid.SetColumn(right, 2);
         body.Children.Add(right);
@@ -434,7 +497,15 @@ public sealed class NewWorldPage : IDisposable
         StopDungeons();
         Loading.IsVisible = false;
         FillDungeons();
+        // A seed being made is dropped: the one shown is the world on the map again.
+        _generated = Shown?.Seed;
+        FitGenerate();
     }
+
+    /// <summary>
+    /// Generate lit unless the seed box's world is the one shown or being made.
+    /// </summary>
+    private void FitGenerate() => Generate.IsEnabled = (SeedBox.Text?.Trim() ?? "") != _generated;
 
     /// <summary>
     /// Leaving the page: what runs is stopped.
@@ -442,7 +513,6 @@ public sealed class NewWorldPage : IDisposable
     public void Dispose()
     {
         StopAll();
-        _wait.Stop();
         Map.Dispose();
         _search?.Dispose();
         _preview?.Dispose();
@@ -456,6 +526,8 @@ public sealed class NewWorldPage : IDisposable
     {
         _preview?.Cancel();
         Problem.Text = "";
+        _generated = seed;
+        FitGenerate();
         if (seed.Length is 0 or > 10)
         {
             Note("The seed is 1 to 10 characters, as in the game.");
@@ -477,7 +549,7 @@ public sealed class NewWorldPage : IDisposable
         Pending = Task.Run(async () =>
         {
             await rules.ConfigureAwait(false);
-            return SeedPreview.Make(seed, 512, parallel: true, landmarks: true, cancel.Token);
+            return SeedPreview.Make(seed, _previewSize, parallel: true, landmarks: true, cancel.Token);
         }, cancel.Token).ContinueWith(t =>
         {
             // A newer seed asked for since: that one's answer will come.
@@ -490,6 +562,9 @@ public sealed class NewWorldPage : IDisposable
             {
                 Note($"The seed could not be looked at: {t.Exception?.GetBaseException().Message}");
                 Console.WriteLine($"New world: seed {seed} could not be looked at: {t.Exception?.GetBaseException()}");
+                // Not shown: Generate can try it again.
+                _generated = Shown?.Seed;
+                FitGenerate();
                 return;
             }
             Show(t.Result);
@@ -518,8 +593,9 @@ public sealed class NewWorldPage : IDisposable
         foreach (var b in Found.Children.OfType<Button>())
         {
             bool chosen = Equals(b.Tag, seed);
-            b.BorderBrush = chosen ? Ui.Accent : null;
-            b.BorderThickness = new Thickness(chosen ? 2 : 0);
+            // The same thickness for all, so the chosen one is not wider than the others.
+            b.BorderBrush = chosen ? Ui.Accent : Brushes.Transparent;
+            b.BorderThickness = new Thickness(2);
         }
     }
 
@@ -1047,7 +1123,6 @@ public sealed class NewWorldPage : IDisposable
             {
                 // Looked at at once (no typing pause to wait for).
                 SeedBox.Text = p.Seed;
-                _wait.Stop();
                 ShowSeed(p.Seed);
             };
             Found.Children.Add(b);

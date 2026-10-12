@@ -86,12 +86,22 @@ public sealed class VisualTests(EditorProcess editor) : IDisposable
     }
 
     /// <summary>
-    /// Fails when the picture is flat or has few colours.
+    /// The 3D view draws with the game's look (copied from Valheim), else in plain colours (no Valheim, as in CI).
     /// </summary>
-    private static void ShowsSomething(Look l)
+    private bool GameLook => editor.Send("state").GetProperty("gameLook").GetBoolean();
+
+    /// <summary>
+    /// Fails when the picture is flat or has few colours. The 3D view in plain colours (flat-shaded ground, one colour
+    /// a kind of object) has far fewer than the map or the game's textures, but is still no flat fill.
+    /// </summary>
+    private void ShowsSomething(Look l)
     {
-        Assert.True(l.Spread > 12, $"the picture is flat (brightness spread {l.Spread:0.0})");
-        Assert.True(l.Colours > 300, $"the picture has few colours ({l.Colours})");
+        var s = editor.Send("state");
+        bool plain = s.GetProperty("page").GetString() == "editor" && !s.GetProperty("gameLook").GetBoolean();
+        double spread = plain ? 4 : 12;
+        int colours = plain ? 20 : 300;
+        Assert.True(l.Spread > spread, $"the picture is flat (brightness spread {l.Spread:0.0})");
+        Assert.True(l.Colours > colours, $"the picture has few colours ({l.Colours})");
     }
 
     /// <summary>
@@ -369,7 +379,7 @@ public sealed class VisualTests(EditorProcess editor) : IDisposable
             editor.Send("look res fast");
             var fast = Picture("res-fast");
             Assert.True(fast.Spread > sharp.Spread * 0.7, $"brightness spread {sharp.Spread:0.0} sharp, {fast.Spread:0.0} fast");
-            Assert.True(fast.Colours > 300, $"the picture has few colours ({fast.Colours})");
+            ShowsSomething(fast);
             Assert.True(Math.Abs(fast.Mean - sharp.Mean) < 10, $"brightness {sharp.Mean:0} sharp, {fast.Mean:0} fast");
             Assert.True(fast.Dark < 0.2, $"{fast.Dark:P0} of the picture is black");
             editor.Send("look res balanced");
@@ -379,6 +389,12 @@ public sealed class VisualTests(EditorProcess editor) : IDisposable
             editor.Send("look seethrough on");
             ShowsSomething(Picture("see-through"));
             editor.Send("look seethrough off");
+            // Without Valheim (CI) the view is in plain colours already: nothing to switch.
+            if (!GameLook)
+            {
+                Clean();
+                return;
+            }
             int objects = editor.Send("look game off").GetProperty("objects").GetInt32();
             // Plain colours and boxes: far fewer colours than the game's textures, still not dark.
             var plain = Picture("plain");

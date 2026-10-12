@@ -32,6 +32,9 @@ public sealed class SeedMap : Control, IDisposable
     /// <summary>Where the drag last was, while dragging.</summary>
     private Point? _drag;
 
+    /// <summary>Whether a close look is drawn over the world (tests).</summary>
+    internal bool HasCloseLook => _close != null;
+
     /// <summary>The world x at the middle of the view.</summary>
     public float CenterX { get; private set; }
     /// <summary>The world z at the middle of the view.</summary>

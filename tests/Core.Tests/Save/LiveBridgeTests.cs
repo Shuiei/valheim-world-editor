@@ -115,4 +115,30 @@ public class LiveBridgeTests
         Assert.Contains("\"zones\":2", reply);
         Assert.Equal(new[] { (3, -2, true, false), (-7, 9, false, true) }, bridge.Resets);
     }
+
+    [Fact]
+    public async Task AnErrorFromTheGameSaysWhatFailed()
+    {
+        using var bridge = new FakeBridge { Status = 500 };
+        using var live = new LiveBridge($"http://127.0.0.1:{bridge.Port}", bridge.Token);
+        var e = await Assert.ThrowsAsync<InvalidOperationException>(() => live.Watch([(1, 2)]));
+        Assert.StartsWith("bridge watch: 500", e.Message);
+        // Not found: the plugin is older than the call.
+        bridge.Status = 404;
+        e = await Assert.ThrowsAsync<InvalidOperationException>(() => live.ZoneObjects([(1, 2)]));
+        Assert.Contains("too old for zone", e.Message);
+    }
+
+    [Fact]
+    public async Task ObjectsAnotherModMadeAgainAreToldOf()
+    {
+        using var bridge = new FakeBridge { Refound = 1 };
+        var world = WorldSave.LoadLive(File.ReadAllBytes(Fixtures.Snapshot), "test");
+        var edits = new EditStore(world);
+        var sync = new LiveSync();
+        using var live = new LiveBridge($"http://127.0.0.1:{bridge.Port}", bridge.Token);
+        edits.SetDeleted([world.Objects.First(o => o.Prefab == Fixtures.Hash("Beech1")).Id], true);
+        string said = await sync.Apply(world, edits, live);
+        Assert.Contains("1 made again by another mod", said);
+    }
 }

@@ -13,10 +13,10 @@ the plugin is unchanged in versions without that part.
   servers that connect in one click. The Workshop's page lists every blueprint to open.
 - **A new world** (Create, on the start page): makes a new world, a normal one that players join
   without any mod (crossplay included). The seed's world shows before it is made, from the editor's
-  copy of the game's generator: its land and biomes, and exactly where the game will put the start
+  copy of the game's generator (on **Generate world**, Enter or **Roll**): its land and biomes, and exactly where the game will put the start
   temple, the bosses' altars and the traders' spots (Haldor, the Bog Witch, Hildir), with how far
   each is from the start and whether you need to sail to each biome. **Find a seed** tries many
-  random seeds and keeps the best for what you ask: the start on a large landmass, land around it,
+  random seeds and keeps the best, listed to fill the window, for what you ask: the start on a large landmass, land around it,
   Swamp, Mountain or Plains within a distance, every early biome on foot, a trader or the first five
   bosses within a distance. The map zooms (wheel, drag, double click) and stays sharp; switches in
   its corner show or hide each kind of mark, and the seed's facts are listed beside it. The
@@ -26,6 +26,8 @@ the plugin is unchanged in versions without that part.
   [docs/new-world.md](docs/new-world.md).
 
 ### Changed
+- **The world map** of a world opened again (Reload, or back to the worlds and in again) shows at once:
+  the last world's map is kept instead of being worked out again (seconds).
 - **The editor reads how the game's locations shape the ground, the game's objects (what new ones
   need in the save, containers, wards, saplings, what stands hold), the build pieces (their
   footprints, snap points, build tools, what holds them up and how the hammer places them), the names
@@ -38,6 +40,12 @@ the plugin is unchanged in versions without that part.
   with the same results to the bit.
 
 ### Fixed
+- **Settings > Claude** could still say the editor could not listen on its port after Claude was
+  turned off: the last start's problem stayed shown. It is cleared when the switch is off.
+- **Script tool:** Ctrl+Enter in the code box runs the script again, as its button says; the box took
+  the key for itself first.
+- **The world map** zoomed out a little from the closest views (3 to 6 m a pixel, on a wide window)
+  read its close-up again on every frame, keeping a core busy for nothing.
 - **Preparing the game's look** (start page) shows how far it is and what it reads, the game's bundles
   one by one: the bar stood still at the start until the look was ready.
 - **The world map** no longer holds up the rest of the editor while it is built: it took every
@@ -52,6 +60,8 @@ the plugin is unchanged in versions without that part.
   then opened another). A dungeon made for settings that changed since is no longer shown.
 - **My game** (start page) says when your game could not be checked (a folder that cannot be read,
   for instance), and the log has the error, where before the card only stopped changing.
+- **The history kept on disk** failed when the world's saves were removed while it was open (the
+  game or another tool cleaning the folder): it is now kept without comparing it to a save.
 - **Zone grid** (map) on a scaled screen (200 %, for instance) showed from twice as far out, its
   lines cramped together: it now shows from the same zoom on every screen.
 
