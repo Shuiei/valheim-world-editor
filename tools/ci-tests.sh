@@ -21,11 +21,14 @@ set -euo pipefail
 # crash was on a thread of no test).
 crash_result() {
   local log=$1 folder=$2 code report class
-  code=$(grep -o 'crashed with exit code [0-9]*' "$log" | head -n 1 | grep -o '[0-9]*$')
-  report=$(sed -n '/^Fatal error\./,/^\[xUnit\.net/p' "$log" | head -n 60)
-  # "   at WorldEditor.Tests.SomeTests.AMethod()" or "...SomeTests+<AMethod>d__4.MoveNext()": SomeTests.
+  # Each read stops by itself (no `| head`, which would end the writer early: a long report would fail the
+  # pipeline under pipefail, before the result is written).
+  code=$(grep -m 1 -o 'crashed with exit code [0-9]*' "$log" | grep -o '[0-9]*$')
+  report=$(awk '/^Fatal error\./ { on = 1 } on { print; if (++n == 60 || /^\[xUnit\.net/) exit }' "$log")
+  # "   at WorldEditor.Tests.SomeTests.AMethod()" or "...SomeTests+<AMethod>d__4.MoveNext()": SomeTests
+  # (the nested part stands in for a method, so both lose only their last name).
   class=$(printf '%s\n' "$report" | grep -E -o '^ +at (TerrainEditor\.Desktop\.Tests|WorldEditor\.Tests)\.[A-Za-z0-9_.+<>]+' \
-    | head -n 1 | sed -E 's/^ +at //; s/\+.*//; s/\.[A-Za-z0-9_]+$//' || true)
+    | head -n 1 | sed -E 's/^ +at //; s/\+.*/.x/; s/\.[A-Za-z0-9_]+$//' || true)
   [ -n "$class" ] || class=TestHost
   mkdir -p "$folder"
   {
