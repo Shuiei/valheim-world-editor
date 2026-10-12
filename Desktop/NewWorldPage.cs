@@ -216,6 +216,18 @@ public sealed class NewWorldPage : IDisposable
     /// The typing pause before a typed seed is looked at.
     /// </summary>
     private readonly DispatcherTimer _wait = new() { Interval = TimeSpan.FromMilliseconds(350) };
+    /// <summary>
+    /// The seed's map, in cells on a side.
+    /// </summary>
+    private readonly int _previewSize;
+    /// <summary>
+    /// The seed last asked for (shown or being made).
+    /// </summary>
+    private string? _asked;
+    /// <summary>
+    /// The latest seed preview started (done once it is shown, failed or dropped).
+    /// </summary>
+    private Task _making = Task.CompletedTask;
 
     /// <summary>
     /// A distance box: 0..8000 m in steps of 250.
@@ -241,8 +253,10 @@ public sealed class NewWorldPage : IDisposable
     /// </summary>
     /// <param name="roots">The world folders to offer (tests); null for the game's own. With none, the first the game
     /// would use.</param>
-    public NewWorldPage(IReadOnlyList<string>? roots = null)
+    /// <param name="previewSize">The seed's map, in cells on a side (tests: smaller is quicker).</param>
+    public NewWorldPage(IReadOnlyList<string>? roots = null, int previewSize = 512)
     {
+        _previewSize = previewSize;
         Loading = new Border
         {
             Background = Ui.Panel,
@@ -315,6 +329,32 @@ public sealed class NewWorldPage : IDisposable
         Roll.Click += (_, _) => SeedBox.Text = SeedPreview.RandomSeed();
         SeedBox.TextChanged += (_, _) =>
         {
+            // The box told of a seed already asked for (the text box tells of a change after it is made: the first
+            // seed, a search result clicked): not looked at again.
+            if ((SeedBox.Text?.Trim() ?? "") == _asked)
+            {
+                // Typed back to it before the pause ended: the wait dropped (else it looks at it again), and the sign
+                // as it was for that seed.
+                if (_wait.IsEnabled)
+                {
+                    _wait.Stop();
+                    if (Shown?.Seed == _asked)
+                    {
+                        SetLoading(null);
+                        MarkFound(_asked);
+                    }
+                    else if (_making.IsCompleted)
+                    {
+                        // Its preview failed (or was dropped): nothing left to take the sign away, so made again.
+                        ShowSeed(_asked);
+                    }
+                    else
+                    {
+                        SetLoading(_asked);
+                    }
+                }
+                return;
+            }
             _wait.Stop();
             _wait.Start();
             // At once, while the typing pause is waited for: the change is seen.
@@ -454,6 +494,7 @@ public sealed class NewWorldPage : IDisposable
     /// </summary>
     internal void ShowSeed(string seed)
     {
+        _asked = seed;
         _preview?.Cancel();
         Problem.Text = "";
         if (seed.Length is 0 or > 10)
@@ -474,10 +515,10 @@ public sealed class NewWorldPage : IDisposable
         }
         // The game's own location rules first (read once, the first time in a few seconds).
         var rules = GameLocations.UseGameRules(GameLook.Bundles);
-        Pending = Task.Run(async () =>
+        Pending = _making = Task.Run(async () =>
         {
             await rules.ConfigureAwait(false);
-            return SeedPreview.Make(seed, 512, parallel: true, landmarks: true, cancel.Token);
+            return SeedPreview.Make(seed, _previewSize, parallel: true, landmarks: true, cancel.Token);
         }, cancel.Token).ContinueWith(t =>
         {
             // A newer seed asked for since: that one's answer will come.
