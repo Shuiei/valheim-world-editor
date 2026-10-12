@@ -50,11 +50,9 @@ public class EditorProcess : IDisposable
             Why = "no display to open the editor on";
             return;
         }
-        string root = Path.GetFullPath(Path.Combine(Fixtures.Root, "..", ".."));
-        string config = AppContext.BaseDirectory.Contains($"{Path.DirectorySeparatorChar}Release{Path.DirectorySeparatorChar}") ? "Release" : "Debug";
-        string app = Path.Combine(root, "Desktop", "bin", config, "net10.0", "ValheimWorldEditor.dll");
-        string dotnet = Path.GetFullPath(Path.Combine(System.Runtime.InteropServices.RuntimeEnvironment.GetRuntimeDirectory(), "..", "..", "..", OperatingSystem.IsWindows() ? "dotnet.exe" : "dotnet"));
-        var psi = new ProcessStartInfo(dotnet) { RedirectStandardInput = true, RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false };
+        // The copy beside the tests, so that its coverage adds to theirs (EditorApp).
+        string app = EditorApp.Path;
+        var psi = new ProcessStartInfo(EditorApp.Dotnet) { RedirectStandardInput = true, RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false };
         // The game's data from the tests' copies, as the tests in this process have it (Fixtures.UseGameData): the
         // same with or without Valheim on the computer (CI has none).
         foreach (string a in new[] { app, "--data", Data, "--gamedata", Fixtures.Root, "--driver" }.Concat(extra))

@@ -21,4 +21,18 @@ coverage:
     # No patch check and no pull request comment: pull requests send no coverage.
     patch: off
 
+# The app (Desktop/) checked on its own too, so the core's higher coverage cannot hide the app's gaps:
+# its own check (codecov/project/desktop) fails under 95% line coverage, a partly run line (a branch
+# never taken) counting as uncovered.
+component_management:
+  individual_components:
+    - component_id: desktop
+      name: Desktop
+      paths:
+        - Desktop/**
+      statuses:
+        - type: project
+          target: 95%
+          threshold: 0%
+
 comment: false

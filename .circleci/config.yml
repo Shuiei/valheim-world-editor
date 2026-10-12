@@ -190,9 +190,9 @@ jobs:
 
   # The coverage of every test container, sent to Codecov in one go: the job runs on main only, once
   # core-tests and app-tests have both passed (workflows), so Codecov gets all six containers' coverage
-  # or none. The six reports are merged here into one (Microsoft's dotnet-coverage, whose total the step
-  # prints) and that one file is sent: Codecov, given the six in one upload, kept only part of the app
-  # tests' coverage (main showed about 68% where the merged reports give the real figure). The orb's
+  # or none. The six reports are merged here into one (tools/MergeCoverage, whose total the step prints)
+  # and that one file is sent: Codecov, given the six in one upload, kept only part of the app tests'
+  # coverage, and Microsoft's dotnet-coverage merge dropped the lines' branch counts. The orb's
   # fail_on_error does nothing (its set_codecov_envs.sh empties CODECOV_FAIL_ON_ERROR, so the CLI never
   # fails the step): a missing report is caught before, and a failed upload leaves Codecov with the last
   # full figure.
@@ -208,9 +208,6 @@ jobs:
           at: /tmp/coverage
       - run:
           name: Every container's coverage report is there, merged into one
-          # dotnet-coverage is built for .NET 8: DOTNET_ROLL_FORWARD runs it on the image's .NET 10.
-          environment:
-            DOTNET_ROLL_FORWARD: Major
           command: |
             reports=()
             for project in core app; do
@@ -220,11 +217,9 @@ jobs:
                 for r in $found; do reports+=("$r"); done
               done
             done
-            dotnet tool install dotnet-coverage --version 18.11.2 --tool-path /tmp/tools > /dev/null
             mkdir -p /tmp/upload
-            /tmp/tools/dotnet-coverage merge -f cobertura -o /tmp/upload/coverage.cobertura.xml "${reports[@]}"
-            # The merged total, as Codecov should show it (lines covered of lines measured).
-            grep -m 1 -o '<coverage [^>]*>' /tmp/upload/coverage.cobertura.xml
+            # Prints the merged total, as Codecov should show it (lines run of lines measured).
+            dotnet run --project tools/MergeCoverage -c Release -- /tmp/upload/coverage.cobertura.xml "${reports[@]}"
       - codecov/upload:
           dir: /tmp/upload
           plugins: noop
