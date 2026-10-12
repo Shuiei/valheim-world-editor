@@ -100,6 +100,15 @@ public class ClaudeToolsLookingTests
         Assert.Empty(ClaudeRun.J(await ClaudeTools.FindPrefabs("beech1", piecesOnly: true)).EnumerateArray());
         Assert.Single(ClaudeRun.J(await ClaudeTools.FindPrefabs("wood", limit: 1)).EnumerateArray());
 
+        // Spawn points by the creature they spawn, with what they spawn.
+        var boar = ClaudeRun.J(await ClaudeTools.FindPrefabs("boar")).EnumerateArray().ToList();
+        var spawner = Assert.Single(boar, p => p.GetProperty("prefab").GetString() == "Spawner_Boar");
+        Assert.Equal("SpawnPoints", spawner.GetProperty("kind").GetString());
+        Assert.Equal("Boar · 0–2 ★ · spawns once", spawner.GetProperty("spawns").GetString());
+        var nest = Assert.Single(ClaudeRun.J(await ClaudeTools.FindPrefabs("greydwarf_shaman")).EnumerateArray(), p => p.GetProperty("prefab").GetString() == "Spawner_GreydwarfNest");
+        Assert.Equal("Nests", nest.GetProperty("kind").GetString());
+        Assert.All(beech, p => Assert.False(p.TryGetProperty("spawns", out _)));
+
         var coins = ClaudeRun.J(await ClaudeTools.FindPrefabs("coins", items: true)).EnumerateArray().ToList();
         Assert.Contains(coins, i => i.GetProperty("item").GetString() == "Coins");
 

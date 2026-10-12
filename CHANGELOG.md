@@ -11,6 +11,13 @@ the plugin is unchanged in versions without that part.
   6 m where the ground was taken past ±8 m): they hid the real locations. The "location(s) here"
   note no longer counts them either.
 
+## v1.20.1 — unreleased
+
+### Fixed
+- **Rocks that shape the ground** (the Plains' tall rock pillars, coast, heath, forest and copper
+  boulders) were missing from the 3D view and the object lists: the editor only used them for the
+  ground they flatten. They now show and can be selected like other rocks.
+
 ## v1.20.0 — 2026-10-11
 
 ### Added

@@ -460,7 +460,7 @@ public sealed class ClaudeTools
 
     /// <summary>find_prefabs: building pieces (with name, tool, size and cost) and other placeable objects, or items, by words of the name.</summary>
     [McpServerTool(Name = "find_prefabs", ReadOnly = true, Title = "Find what can be placed")]
-    [Description("Searches the game's objects by name (prefab names such as Beech1, rock4_forest, woodwall, stone_floor_2x2): what can be placed in a world, and the building pieces with their English name, tool (hammer for building pieces), size and cost. Every word must match.")]
+    [Description("Searches the game's objects by name (prefab names such as Beech1, rock4_forest, woodwall, stone_floor_2x2): what can be placed in a world, and the building pieces with their English name, tool (hammer for building pieces), size and cost. Every word must match. Spawn points (kind SpawnPoints: invisible, each spawns its creature where it stands, once or again after it dies) and nests (kind Nests) are also found by the creature they spawn (\"boar\" finds Spawner_Boar), with what they spawn; place them with place_pieces.")]
     public static Task<string> FindPrefabs(
         [Description("Words of the name, e.g. \"stone wall\", \"pine\", \"roof 26\".")] string query,
         [Description("Only building pieces (the hammer's): true; anything: false.")] bool piecesOnly = false,
@@ -478,8 +478,10 @@ public sealed class ClaudeTools
             .Where(x => x.p is { Tool: not null } && (Match(x.n) || Match(Terrain.PieceCost.PieceName(x.n))))
             .Select(x => (object)new { prefab = x.n, name = Terrain.PieceCost.PieceName(x.n), tool = x.p!.Tool, size = SizeOf(x.p!), cost = Terrain.PieceCost.Of([x.n]).Describe(4) });
         var others = piecesOnly ? [] : Terrain.PrefabCatalog.Placeable
-            .Where(i => Terrain.PieceCatalog.Get(Save.StableHash.Of(i.Name)) == null && Match(i.Name))
-            .Select(i => (object)new { prefab = i.Name, kind = TerrainEditor.App.ObjectKinds.Of(i.Name, false).ToString() });
+            .Where(i => Terrain.PieceCatalog.Get(Save.StableHash.Of(i.Name)) == null && (Match(i.Name) || Terrain.PrefabCatalog.SpawnOf(i.Name) is { } sp && Match(string.Join(" ", sp.Creatures))))
+            .Select(i => Terrain.PrefabCatalog.SpawnOf(i.Name) is { } sp
+                ? (object)new { prefab = i.Name, kind = TerrainEditor.App.ObjectKinds.Of(i.Name, false).ToString(), spawns = sp.Summary() }
+                : new { prefab = i.Name, kind = TerrainEditor.App.ObjectKinds.Of(i.Name, false).ToString() });
         return ToJson(pieces.Concat(others).Take(Math.Clamp(limit, 1, 500)));
     });
 

@@ -420,6 +420,10 @@ public sealed class InspectorPanel
         _title.Text = name ?? $"Prefab {z.Prefab}";
         int id = Index is int ix && s != null ? s.Scene.Things[ix].Id : 0;
         _where.Text = $"Object {id} · x {z.Position.X:0.00}, y {z.Position.Y:0.00}, z {z.Position.Z:0.00} · turned {z.Rotation.Y:0.0}°{(z.Connection != null ? " · has a connection (kept)" : "")}";
+        if (PrefabCatalog.SpawnOf(z.Prefab) is { } spawn)
+        {
+            _where.Text += $"\n{(spawn.Nest ? "Nest" : "Spawn point")}: {spawn.Summary()}";
+        }
         RenderItems();
         RenderStand();
         Fields.Children.Clear();
