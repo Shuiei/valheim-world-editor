@@ -262,7 +262,7 @@ public static class Tips
         ["place.clearShape"] = "Remove the drawn line, box or zone (Esc).",
         ["place.undoPoint"] = "Remove the last point you clicked (Backspace). Ctrl + click any point to remove that one.",
         ["place.newLayout"] = "New random choices for the preview: positions, kinds, sizes and facings (R).",
-        ["place.weight"] = "How much of what is placed is this kind, in %. The other kinds' sliders follow, keeping their proportions, so the shares always make 100%.",
+        ["place.weight"] = "How much of what is placed is this kind, in %. The other kinds' sliders follow, keeping their proportions, so the shares always make 100%. An equal share is in the middle.",
         ["place.unchoose"] = "Stop placing this kind.",
         ["place.fit"] = "Set the spacing to the widest ticked kind, so they stand side by side without overlapping.",
 

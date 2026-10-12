@@ -27,7 +27,8 @@ the plugin is unchanged in versions without that part.
   the Favourite and Recent buttons (PickableFlax).
 - **The Place panel's weight sliders** let go of the mouse at each step of a drag (every row was
   made again): a drag now runs smoothly. Each slider is now the kind's share in %, and the other
-  kinds' sliders move with it, keeping their proportions, so the shares always make 100%.
+  kinds' sliders move with it, keeping their proportions, so the shares always make 100%. An equal
+  share sits in the middle of the slider, whatever the number of kinds.
 - **Previews over the sea** (the mountain, placed and pasted objects, rings and lines) were hidden
   wherever water was behind them in the 3D view: they now show over the water.
 

@@ -796,8 +796,9 @@ public sealed class PlacePanel
             Slider? w = null;
             if (names.Count > 1)
             {
-                // The slider is the kind's share in %: each of the others keeps at least 1%.
-                w = new Slider { Minimum = 1, Maximum = 100 - (names.Count - 1), TickFrequency = 1, IsSnapToTickEnabled = true, Value = Math.Round(T.WeightOf(n) / total * 100), VerticalAlignment = VerticalAlignment.Center };
+                // The slider is the kind's share in %, the equal share in its middle (it ends at twice that, each of the
+                // others keeping at least 1%); a share past its end shows at the end, the real one in the text.
+                w = new Slider { Minimum = 1, Maximum = MaxShare(names.Count), TickFrequency = 1, IsSnapToTickEnabled = true, Value = Math.Round(T.WeightOf(n) / total * 100), VerticalAlignment = VerticalAlignment.Center };
                 ToolTip.SetTip(w, $"Share of {n}: {Tips.Of("place.weight")}");
                 // Rows stay (rebuilding them would drop the slider being dragged); the others follow.
                 w.ValueChanged += (_, e) =>
@@ -854,6 +855,12 @@ public sealed class PlacePanel
         _sharing = false;
         ShowShares();
     }
+
+    /// <summary>
+    /// The end of the share sliders with this many kinds: twice the equal share, so the equal share is in the middle
+    /// (99% for 2 kinds, 67% for 3, 50% for 4), leaving the others at least 1% each.
+    /// </summary>
+    internal static int MaxShare(int kinds) => Math.Min(100 - (kinds - 1), (int)Math.Round(200.0 / kinds));
 
     /// <summary>Writes each chosen kind's share of the weights on its row.</summary>
     private void ShowShares()

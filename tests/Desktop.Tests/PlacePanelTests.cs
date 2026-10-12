@@ -187,8 +187,30 @@ public class PlacePanelTests
         Assert.Equal(60, r.T.WeightOf("Birch1"));
         Assert.Equal(r.T.Chosen.Select(n => (double)r.T.WeightOf(n)), sliders.Select(s => s.Value));
         Assert.True(r.T.WeightOf("Beech1") > r.T.WeightOf("Oak1"));
+        // Its end is twice the equal share (67% for three): no further.
         sliders[0].Value = 98;
-        Assert.Equal([98, 1, 1], r.T.Chosen.Select(r.T.WeightOf));
+        Assert.Equal(67, r.T.WeightOf("Beech1"));
+        Assert.Equal(100, r.T.Chosen.Sum(r.T.WeightOf));
+    }
+
+    [AvaloniaFact]
+    public void EqualSharesSitInTheSlidersMiddle()
+    {
+        using var r = new Run();
+        Assert.Equal(99, PlacePanel.MaxShare(2));
+        Assert.Equal(67, PlacePanel.MaxShare(3));
+        Assert.Equal(50, PlacePanel.MaxShare(4));
+        Assert.Equal(40, PlacePanel.MaxShare(5));
+        r.T.Weights.Clear();
+        foreach (string[] kinds in new[] { new[] { "Beech1", "Oak1" }, ["Beech1", "Oak1", "Birch1"], ["Beech1", "Oak1", "Birch1", "FirTree"] })
+        {
+            Choose(r, kinds);
+            Assert.All(r.P.Mix.GetLogicalDescendants().OfType<Slider>(), s =>
+            {
+                Assert.Equal(PlacePanel.MaxShare(kinds.Length), s.Maximum);
+                Assert.InRange(s.Value - (s.Maximum + s.Minimum) / 2, -1, 1);
+            });
+        }
     }
 
     [AvaloniaFact]
