@@ -33,7 +33,11 @@ public class SeedPreviewTests
         Assert.Null(p.Landmarks);
         Assert.True(s.Distance[Heightmap.Biome.BlackForest] < s.Distance[Heightmap.Biome.DeepNorth]);
         Assert.InRange(s.StartContinent, 0.0001f, 1);
-        Assert.True(took < TimeSpan.FromSeconds(20), $"took {took}");
+        // Its speed, but not under coverage (CI on main), which makes it several times slower.
+        if (Environment.GetEnvironmentVariable("VWE_COVERAGE") != "1")
+        {
+            Assert.True(took < TimeSpan.FromSeconds(20), $"took {took}");
+        }
         // The same seed, the same world.
         Assert.Equal(p.Biome, SeedPreview.Make("abc", 128, cancel: TestContext.Current.CancellationToken).Biome);
         Assert.NotEqual(p.Biome, SeedPreview.Make("abd", 128, cancel: TestContext.Current.CancellationToken).Biome);
