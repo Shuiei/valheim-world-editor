@@ -42,7 +42,18 @@ public static class Program
             Environment.ExitCode = TerrainEditor.App.GameLocations.Export(args.ElementAtOrDefault(export + 1));
             return;
         }
-        Options.Parse(args);
+        // A command line that cannot be read (an option without its value, a number that is none): said, and the
+        // editor does not start.
+        try
+        {
+            Options.Parse(args);
+        }
+        catch (Exception e) when (e is ArgumentException or FormatException or OverflowException or IndexOutOfRangeException)
+        {
+            Console.Error.WriteLine($"ValheimWorldEditor: {e.Message}");
+            Environment.ExitCode = 2;
+            return;
+        }
         // Everything said also goes to ValheimWorldEditor.log in the data folder (a window app has no console on Windows).
         TerrainEditor.App.Log.Start(BuildInfo.Version);
         AppDomain.CurrentDomain.UnhandledException += (_, e) => Options.Say($"crash: {e.ExceptionObject}");
@@ -124,6 +135,8 @@ public sealed class App : Application
 ///   --driver                                           driven by another program (see Driver)
 ///   --window &lt;width&gt;x&lt;height&gt;                          the window's size (the documentation's pictures)
 ///   --data &lt;folder&gt;                                    settings and memory kept there (tests)
+///   --gamedata &lt;folder&gt;                                the game's data from the tests' copies (tests/fixtures):
+///                                                      where there is no Valheim (CI), so that worlds open
 ///   --mcp-stdio                                        no window: relays Claude's MCP messages on stdin/stdout to
 ///                                                      the running editor (Claude Desktop; see ClaudeRelay)
 /// </code>
@@ -164,6 +177,13 @@ public static class Options
     public static void Say(string line) => Console.WriteLine(line);
 
     /// <summary>
+    /// The value after the option at <paramref name="i"/> (moved past it); an option given last, without its value, is a
+    /// command-line error.
+    /// </summary>
+    private static string Value(string[] args, ref int i) =>
+        ++i < args.Length ? args[i] : throw new ArgumentException($"{args[i - 1]} needs a value after it.");
+
+    /// <summary>
     /// Reads the command line, starting from the defaults each time (the tests parse several in one process). --data
     /// also points the settings, servers, Place memory and stamps there.
     /// </summary>
@@ -182,7 +202,7 @@ public static class Options
             switch (args[i])
             {
                 case "--world":
-                    World = args[++i];
+                    World = Value(args, ref i);
                     Direct = true;
                     break;
                 case "--driver":
@@ -191,7 +211,7 @@ public static class Options
                     TerrainEditor.App.GameLook.SearchOutsideHome = false;
                     break;
                 case "--data":
-                    Data = Path.GetFullPath(args[++i]);
+                    Data = Path.GetFullPath(Value(args, ref i));
                     Directory.CreateDirectory(Data);
                     TerrainEditor.App.AppSettings.PathOverride = Path.Combine(Data, "settings.json");
                     TerrainEditor.App.ServerConfig.PathOverride = Path.Combine(Data, "servers.cfg");
@@ -201,27 +221,42 @@ public static class Options
                     // The tests' editor: "My game" never finds the player's own profiles.
                     TerrainEditor.App.LocalGame.SearchDefaultPlaces = false;
                     break;
+                case "--gamedata":
+                {
+                    // As the driver's gamedata, but before a world given on the command line opens.
+                    string folder = Path.GetFullPath(Value(args, ref i));
+                    try
+                    {
+                        TerrainEditor.App.GameData.UseCopies(folder);
+                    }
+                    catch (Exception e) when (e is IOException or UnauthorizedAccessException or System.Text.Json.JsonException)
+                    {
+                        // A folder missing, or one of its files: a command-line error, not a crash.
+                        throw new ArgumentException($"--gamedata {folder} cannot be read: {e.Message}", e);
+                    }
+                    break;
+                }
                 case "--zone":
                     Direct = true;
-                    string[] p = args[++i].Split(',');
+                    string[] p = Value(args, ref i).Split(',');
                     ZoneX = int.Parse(p[0]);
                     ZoneZ = int.Parse(p[1]);
                     break;
                 case "--size":
-                    Size = Math.Clamp(int.Parse(args[++i]), 1, 9);
+                    Size = Math.Clamp(int.Parse(Value(args, ref i)), 1, 9);
                     break;
                 case "--window":
                 {
-                    string[] wh = args[++i].Split('x');
+                    string[] wh = Value(args, ref i).Split('x');
                     WindowWidth = Math.Clamp(int.Parse(wh[0]), 640, 7680);
                     WindowHeight = Math.Clamp(int.Parse(wh[1]), 480, 4320);
                     break;
                 }
                 case "--live":
-                    LiveUrl = args[++i];
+                    LiveUrl = Value(args, ref i);
                     break;
                 case "--token":
-                    LiveToken = args[++i];
+                    LiveToken = Value(args, ref i);
                     break;
                 default:
                     if (!args[i].StartsWith("--"))

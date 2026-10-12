@@ -721,7 +721,11 @@ public sealed class MapView : OpenGlControlBase, IDisposable
         int size = Math.Clamp((int)MathF.Ceiling(MathF.Max(w, h) * mpp * 1.3f / 64) * 64, 64, 2048);
         int x0 = (int)MathF.Floor((Center.X - size / 2f) / 64) * 64, z0 = (int)MathF.Floor((Center.Y - size / 2f) / 64) * 64;
         int version = _session.Edits.Version;
-        if (_detail is { } d && d.X0 <= Center.X - w * mpp / 2 && d.Z0 <= Center.Y - h * mpp / 2 && d.X0 + d.Size >= Center.X + w * mpp / 2 && d.Z0 + d.Size >= Center.Y + h * mpp / 2 && d.Version == version)
+        if (_detail is { } d && d.Version == version
+            && ((d.X0 <= Center.X - w * mpp / 2 && d.Z0 <= Center.Y - h * mpp / 2 && d.X0 + d.Size >= Center.X + w * mpp / 2 && d.Z0 + d.Size >= Center.Y + h * mpp / 2)
+                // The largest close-up can be narrower than the view: the one there is that one, not asked for again
+                // each frame.
+                || (d.X0 == x0 && d.Z0 == z0 && d.Size == size)))
         {
             return;
         }

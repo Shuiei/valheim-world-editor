@@ -50,6 +50,25 @@ public sealed class StartupTests : IDisposable
     }
 
     [Fact]
+    public void AnOptionGivenLastWithoutItsValueIsAnError()
+    {
+        foreach (string option in new[] { "--world", "--data", "--gamedata", "--zone", "--size", "--window", "--live", "--token" })
+        {
+            var e = Assert.Throws<ArgumentException>(() => Options.Parse(["/worlds/Midgard", option]));
+            Assert.Equal($"{option} needs a value after it.", e.Message);
+        }
+    }
+
+    [Fact]
+    public void AGameDataFolderThatCannotBeReadIsAnError()
+    {
+        string missing = Path.Combine(Path.GetTempPath(), "vwe-no-gamedata-" + Guid.NewGuid().ToString("N")[..8]);
+        var e = Assert.Throws<ArgumentException>(() => Options.Parse(["--gamedata", missing]));
+        Assert.StartsWith($"--gamedata {missing} cannot be read: ", e.Message);
+        Assert.IsAssignableFrom<IOException>(e.InnerException);
+    }
+
+    [Fact]
     public void ALiveGameTakesItsTokenFromTheLineOrTheEnvironment()
     {
         Environment.SetEnvironmentVariable("WORLD_BRIDGE_TOKEN", null);
