@@ -85,6 +85,25 @@ public class ValheimReaderTests
     }
 
     [Fact]
+    public void ARockThatShapesTheGroundIsStillAnObject()
+    {
+        var before = WorldSave.ModifierPrefabs;
+        try
+        {
+            WorldSave.ModifierPrefabs = [.. TerrainEditor.Terrain.TerrainModifiers.NetworkPrefabHashes];
+            using var w = new TempWorld();
+            var rock = At(w, "rock4_coast", 4, 4);
+            var world = SaveAndRead(w, rock);
+            Assert.Contains(world.Placed, p => p.Prefab == rock.Prefab);
+            Assert.Contains(world.Objects, o => o.Prefab == rock.Prefab);
+        }
+        finally
+        {
+            WorldSave.ModifierPrefabs = before;
+        }
+    }
+
+    [Fact]
     public void OwnersAndPlayersNamesAreRead()
     {
         using var w = new TempWorld();
