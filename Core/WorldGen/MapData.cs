@@ -136,9 +136,43 @@ public sealed class MapData
     }
 
     /// <summary>
-    /// Builds the overview from the generator alone, rows in parallel.
+    /// The last overview built, by its generator's identity: the same world opened again (Reload, back to the
+    /// worlds and in again) takes it as it is instead of building it again (seconds).
+    /// </summary>
+    private static ((int Seed, int Version, bool Menu) Key, Layers Layers)? _lastGlobal;
+
+    /// <summary>
+    /// Guards <see cref="_lastGlobal"/>.
+    /// </summary>
+    private static readonly Lock LastGlobalLock = new();
+
+    /// <summary>
+    /// The overview: the last one built if it is this world's, else built from the generator.
     /// </summary>
     private Layers BuildGlobal()
+    {
+        // Cancelled before it starts: thrown as a build would, kept overview or not.
+        _cancel.ThrowIfCancellationRequested();
+        var key = Generator.Identity;
+        lock (LastGlobalLock)
+        {
+            if (_lastGlobal is { } last && last.Key == key)
+            {
+                return last.Layers;
+            }
+        }
+        var layers = BuildGlobalRows();
+        lock (LastGlobalLock)
+        {
+            _lastGlobal = (key, layers);
+        }
+        return layers;
+    }
+
+    /// <summary>
+    /// Builds the overview from the generator alone, rows in parallel.
+    /// </summary>
+    private Layers BuildGlobalRows()
     {
         int n = GlobalSize;
         Layers layers = new(n, n);
