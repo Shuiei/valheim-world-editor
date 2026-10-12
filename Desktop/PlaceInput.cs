@@ -134,8 +134,8 @@ public sealed class PlaceInput
             _view.Select(s.Removed);
             return;
         }
-        // Building (the Workshop): a click puts one piece; a drag does not paint more.
-        if (Tool.Building)
+        // Building (the Workshop) or One at a time: a click puts one; a drag does not paint more.
+        if (Tool.Building || Tool.OneAtATime)
         {
             return;
         }

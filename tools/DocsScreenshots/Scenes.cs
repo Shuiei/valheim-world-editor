@@ -196,7 +196,7 @@ public sealed class Scenes
     /// <summary>The Place tool's kinds: exactly these.</summary>
     private static void Kinds(Editor e, params string[] names)
     {
-        e.Send("click + Add kinds");
+        e.Send("click Choose kinds…");
         e.Send("click Untick all");
         foreach (string n in names)
         {
@@ -620,7 +620,7 @@ public sealed class Scenes
     {
         Bare(e);
         e.Send("key T");
-        e.Send("click + Add kinds");
+        e.Send("click Choose kinds…");
         Camera(e, 0, 0, 200, 40, 55);
         e.Shot(Out("place-chooser.jpg"));
     }
