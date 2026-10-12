@@ -451,6 +451,8 @@ public static class Driver
             yaw = w.View.Camera.Yaw,
             distance = w.View.Camera.Distance,
             targetX = w.View.Camera.Target.X,
+            // The open area: its south-west zone and its size in zones.
+            area = w.View.Scene is { } sc ? new[] { sc.X0, sc.Z0, sc.ZonesX, sc.ZonesZ } : null,
             mapX = w.MapPage?.Map.Center.X ?? 0,
             mapScale = w.MapPage?.Map.MetersPerPixel ?? 0,
             pins = w.MapPage?.Map.Pins.Count ?? 0,

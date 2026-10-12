@@ -1799,7 +1799,7 @@ public sealed class GlView : OpenGlControlBase
         {
             _frames.RemoveAt(0);
         }
-        Perf?.Frame(now, work, camMoved, busy: now - _wokeAt < 1000, $"view {pw}×{ph} px · {_gl.GetStringS(StringName.Renderer)} · {Scene?.Name} · {Scene?.Things.Count} objects · area {Scene?.Size}×{Scene?.Size} zones");
+        Perf?.Frame(now, work, camMoved, busy: now - _wokeAt < 1000, $"view {pw}×{ph} px · {_gl.GetStringS(StringName.Renderer)} · {Scene?.Name} · {Scene?.Things.Count} objects · area {Scene?.ZonesX}×{Scene?.ZonesZ} zones");
         if (now - _statsAt >= 500)
         {
             _statsAt = now;
@@ -3554,8 +3554,8 @@ public sealed class GlView : OpenGlControlBase
     private uint _ringVao, _ringVbo, _previewVao, _previewVbo;
     /// <summary>The mountain preview's lines, kept while the pointer stays on the same grid point.</summary>
     private float[] _previewSegs = [];
-    /// <summary>The grid point (and area width) the mountain preview was made for; null to make it again.</summary>
-    private (int X, int Z, int W)? _previewKey;
+    /// <summary>The grid point (and area size) the mountain preview was made for; null to make it again.</summary>
+    private (int X, int Z, int W, int H)? _previewKey;
 
     /// <summary>Whether a Mountain click at a grid point fits in the open area (what EditSession.Mountain needs).</summary>
     internal static bool MountainFits(WorldScene s, float gx, float gz, float reach) => gx - reach >= 1 && gz - reach >= 1 && gx + reach <= s.W - 2 && gz + reach <= s.H - 2;
@@ -3599,7 +3599,7 @@ public sealed class GlView : OpenGlControlBase
         DrawLines(ref _ringVao, ref _ringVbo, [.. data], vp, fits ? new Vector4(1, 1, 1, 1) : new Vector4(1, 0.35f, 0.3f, 1), width: 1.2f);
         if (Tool == null && Mode == ToolMode.Mountain && fits && MountainPreview is { } shape)
         {
-            var key = ((int)MathF.Round(h.X), (int)MathF.Round(h.Z), s.W);
+            var key = ((int)MathF.Round(h.X), (int)MathF.Round(h.Z), s.W, s.H);
             if (_previewKey != key)
             {
                 _previewKey = key;
