@@ -346,8 +346,9 @@ public sealed class PlaceInput
             if (!s.Dragging && Point.Distance(at, s.From) > 6)
             {
                 s.Dragging = true;
-                // Painting: the ground under the click gets the preview too, then the brush adds more.
-                if (!s.Erase)
+                // Painting: the ground under the click gets the preview too, then the brush adds more. Building keeps
+                // its one piece where it is: the click puts it, however far the mouse went (EndStroke).
+                if (!s.Erase && !Tool.Building)
                 {
                     s.Added.AddRange(s.Stamp);
                     s.Stamp.Clear();

@@ -12,6 +12,10 @@ the plugin is unchanged in versions without that part.
   of the app's tests went uncounted), and the containers' reports are merged without losing which
   branches ran. The app (`Desktop/`) now has its own 95% coverage check, and many new tests cover its
   untested lines and branches.
+- **Workshop**: a click that moved the mouse a little before letting go placed nothing; it now puts
+  the piece the preview shows.
+- **Discard** that has to read the world again no longer fails without a word when the world's files
+  cannot be read: it says why and keeps the area open.
 
 ## v1.22.0 — unreleased
 
