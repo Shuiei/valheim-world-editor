@@ -329,6 +329,7 @@ public static class Tips
         ["start.folder"] = "A world folder: the one with the _main.<n>.chunks files.",
         ["start.browse"] = "Choose the folder.",
         ["start.open"] = "Open this world folder.",
+        ["start.refreshWorlds"] = "Look for the worlds now (the list also follows the worlds added or removed by itself, every few seconds).",
         ["start.world"] = "Open this world (offline: close the game first).",
         ["start.host"] = "The server's address (name or IP), or user@address.",
         ["start.sshPort"] = "The server's SSH port (22 unless it was changed).",

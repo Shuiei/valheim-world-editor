@@ -199,6 +199,90 @@ public class StartPageTests
     }
 
     [AvaloniaFact]
+    public async Task RefreshFindsTheWorldsAgain()
+    {
+        using var r = new Run();
+        List<Worlds.Info> found = [];
+        r.P.FindWorlds = _ => found;
+        r.P.SetMode("offline");
+        Assert.Contains("No worlds found on this computer", Texts(r.P.WorldCards));
+        // A world folder added while the page is open shows after Refresh, and goes once removed.
+        found = [new Worlds.Info("Added", "/somewhere", DateTime.Now, 1, "a test folder", true, null)];
+        Click(r.P.RefreshWorlds);
+        await r.P.WorldsCheck!;
+        Assert.Single(r.P.WorldCards.Children.OfType<Button>());
+        Assert.Contains("Added", Texts(r.P.WorldCards));
+        found = [];
+        Click(r.P.RefreshWorlds);
+        await r.P.WorldsCheck!;
+        Assert.Empty(r.P.WorldCards.Children.OfType<Button>());
+        Assert.Contains("No worlds found on this computer", Texts(r.P.WorldCards));
+    }
+
+    [AvaloniaFact]
+    public async Task ALookOvertakenByALaterOneShowsNothing()
+    {
+        using var r = new Run();
+        var older = new Worlds.Info("Older", "/older", DateTime.Now, 1, "a test folder", true, null);
+        var newer = new Worlds.Info("Newer", "/newer", DateTime.Now, 1, "a test folder", true, null);
+        using var started = new ManualResetEventSlim();
+        using var release = new ManualResetEventSlim();
+        bool slow = true;
+        r.P.FindWorlds = _ =>
+        {
+            if (!slow)
+            {
+                return [newer];
+            }
+            started.Set();
+            release.Wait();
+            return [older];
+        };
+        // A slow look starts, then the page lists the worlds again before it ends.
+        var check = r.P.CheckWorlds();
+        Assert.True(started.Wait(TimeSpan.FromSeconds(10)));
+        slow = false;
+        r.P.SetMode("offline");
+        Assert.Contains("Newer", Texts(r.P.WorldCards));
+        // The slow look ends: its older worlds do not replace the newer list.
+        release.Set();
+        await check;
+        Assert.Contains("Newer", Texts(r.P.WorldCards));
+        Assert.DoesNotContain("Older", Texts(r.P.WorldCards));
+    }
+
+    [AvaloniaFact]
+    public async Task AWorldAddedOrRemovedShowsByItself()
+    {
+        using var r = new Run();
+        List<Worlds.Info> found = [new Worlds.Info("First", "/first", DateTime.Now, 1, "a test folder", true, null)];
+        r.P.FindWorlds = _ => found;
+        r.P.SetMode("offline");
+        var first = Assert.Single(r.P.WorldCards.Children.OfType<Button>());
+        // Nothing changed: the cards stay as they are (no redraw under the mouse).
+        await r.P.CheckWorlds();
+        Assert.Same(first, Assert.Single(r.P.WorldCards.Children.OfType<Button>()));
+        // A world folder added, then one removed, shows without Refresh.
+        found = [.. found, new Worlds.Info("Second", "/second", DateTime.Now, 1, "a test folder", true, null)];
+        await r.P.CheckWorlds();
+        Assert.Equal(2, r.P.WorldCards.Children.OfType<Button>().Count());
+        Assert.Contains("Second", Texts(r.P.WorldCards));
+        found = [found[1]];
+        await r.P.CheckWorlds();
+        Assert.DoesNotContain("First", Texts(r.P.WorldCards));
+        // The same world under another name, or found elsewhere (a recent world now): its card says so.
+        found = [found[0] with { Name = "Renamed", Where = "recent" }];
+        await r.P.CheckWorlds();
+        Assert.Contains("Renamed", Texts(r.P.WorldCards));
+        Assert.Contains("recent", Texts(r.P.WorldCards));
+        // Another page shows: the worlds are not drawn behind it.
+        r.P.SetMode("home");
+        found = [];
+        await r.P.CheckWorlds();
+        Assert.Contains("Renamed", Texts(r.P.WorldCards));
+    }
+
+    [AvaloniaFact]
     public void AFolderTypedWithAHomeTildeIsUnderstood()
     {
         using var r = new Run();
