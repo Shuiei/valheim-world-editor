@@ -38,6 +38,10 @@ the plugin is unchanged in versions without that part.
   with the same results to the bit.
 
 ### Fixed
+- **Settings > Claude** could still say the editor could not listen on its port after Claude was
+  turned off: the last start's problem stayed shown. It is cleared when the switch is off.
+- **Script tool:** Ctrl+Enter in the code box runs the script again, as its button says; the box took
+  the key for itself first.
 - **Preparing the game's look** (start page) shows how far it is and what it reads, the game's bundles
   one by one: the bar stood still at the start until the look was ready.
 - **The world map** no longer holds up the rest of the editor while it is built: it took every
