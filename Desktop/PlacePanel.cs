@@ -163,8 +163,10 @@ public sealed class PlacePanel
     internal Button FitButton { get; } = new() { Content = "fit", FontSize = 11, Padding = new Thickness(6, 2), VerticalAlignment = VerticalAlignment.Center };
     /// <summary>The fit hint and its button, shown only when a chosen kind is wider than the spacing.</summary>
     private readonly Control _fitRow;
+    /// <summary>Brush mode's hint: how the scatter works, or (One at a time) that a click places one.</summary>
+    private readonly TextBlock _brushHint;
     /// <summary>Rows and groups that <see cref="Sync"/> shows or hides by mode, shape and what is chosen.</summary>
-    private readonly Control _elevRow, _pieceBox, _attachRow, _brushRows, _scatterRows, _patchRow, _facingRows, _lineShapeBox, _lineBox, _snapRows, _freeLineRows, _loopRow, _layersRow, _gridRow, _shapeRow, _undoRow, _brushHint;
+    private readonly Control _elevRow, _pieceBox, _attachRow, _brushRows, _scatterRows, _patchRow, _facingRows, _lineShapeBox, _lineBox, _snapRows, _freeLineRows, _loopRow, _layersRow, _gridRow, _shapeRow, _undoRow;
     /// <summary>The heading of the mode's own settings (Brush, Along the line, Grid, Zone fill).</summary>
     private readonly TextBlock _modeHead = Head("");
     /// <summary>Line mode: how to draw the chosen shape.</summary>
@@ -407,7 +409,7 @@ public sealed class PlacePanel
         var roV = new TextBlock();
         RotationSlider = Slide(-180, 180, 1, t.Rotation, roV, v => $"{v:0}°", v => { if (!_filling) { t.Rotation = v; t.Notify(); } });
         RandomYawBox.IsCheckedChanged += (_, _) => { t.RandomYaw = RandomYawBox.IsChecked == true; t.Notify(); };
-        SingleBox.IsCheckedChanged += (_, _) => { if (!_filling) { t.OneAtATime = SingleBox.IsChecked == true; t.OneAtATimeByHand = true; t.Notify(); } };
+        SingleBox.IsCheckedChanged += (_, _) => { if (!_filling) { t.OneAtATime = SingleBox.IsChecked == true; t.OneAtATimeByHand = true; Sync(); t.Notify(); } };
         EndToEndBox.IsCheckedChanged += (_, _) => { if (!_filling) { t.EndToEnd = EndToEndBox.IsChecked == true; t.EndToEndByHand = true; Sync(); t.Notify(); } };
         LayersBox.ValueChanged += (_, e) => { t.Layers = (int)(e.NewValue ?? 1); t.Notify(); };
         LoopBox.IsCheckedChanged += (_, _) => { t.Loop = LoopBox.IsChecked == true; t.Notify(); };
@@ -880,7 +882,8 @@ public sealed class PlacePanel
             PlaceTool.Modes.Zone => "ZONE FILL",
             _ => "BRUSH",
         };
-        _scatterRows.IsVisible = m is PlaceTool.Modes.Brush or PlaceTool.Modes.Zone;
+        // One at a time places only what the click shows: nothing to scatter.
+        _scatterRows.IsVisible = m == PlaceTool.Modes.Zone || m == PlaceTool.Modes.Brush && !t.OneAtATime;
         _patchRow.IsVisible = t.Clump > 0;
         _facingRows.IsVisible = !endToEnd;
         _lineShapeBox.IsVisible = line;
@@ -894,6 +897,9 @@ public sealed class PlacePanel
         _shapeRow.IsVisible = m != PlaceTool.Modes.Brush;
         _undoRow.IsVisible = m is PlaceTool.Modes.Line or PlaceTool.Modes.Zone && t.Points.Count > 0;
         _brushHint.IsVisible = m == PlaceTool.Modes.Brush;
+        _brushHint.Text = t.OneAtATime
+            ? "A click places one object exactly at the cursor; dragging adds no more. Shift + drag removes the chosen kinds. The Mask applies."
+            : "Density is objects per 100 m². Spacing keeps them apart (also from what is already there). Shift + drag removes the chosen kinds. The Mask applies.";
         _lineHintText.Text = t.LineShape switch
         {
             PlaceTool.LineShapes.Circle => "Press at the centre and drag out to the size; let go to see it, Enter places it. With End to end the size snaps so whole pieces close the ring.",

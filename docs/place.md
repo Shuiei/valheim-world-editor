@@ -35,7 +35,7 @@ boxes in the preview.
 
 | Mode | How it works |
 |---|---|
-| **Brush** | The preview follows the cursor, inside the brush's outline. A **click** places exactly what the preview shows; a **drag** keeps adding objects under the brush. **Shift + drag** removes the ticked kinds under the brush. |
+| **Brush** | The preview follows the cursor, inside the brush's outline. A **click** places exactly what the preview shows; a **drag** keeps adding objects under the brush (not with **One at a time**). **Shift + drag** removes the ticked kinds under the brush. |
 | **Line** | Click points along a route (or hold and drag), or draw a **Circle** or a **Rectangle**. Objects go every *N* metres along it, or **end to end** like the game's hammer snaps them. |
 | **Grid** | Drag a box. One object goes in the middle of each cell; the box gets as many whole cells as fit best (at least one), centred in it. |
 | **Zone** | Click points around a zone (or hold and drag to draw it freely); it closes by itself. Drag a point to move it, drag the outline to add a point, **Ctrl + click** a point to remove it. Objects go at random spots inside it (**Density**, **Spacing**). |
@@ -119,7 +119,7 @@ The Place tool's settings are remembered between runs.
 | **Tilt** | All | Random lean of each object, up to this many degrees. |
 | **Rotation** | All | Turns the preview layout and every object's facing (degrees). `,` `.` or Alt + wheel change it by 1° (Shift: 15°). |
 | **Random facing (off: all face the rotation)** | All | On: each object faces a random direction. Off: they all face the Rotation. |
-| **One at a time, exactly at the cursor** | Brush | Places one object exactly under the cursor per click; only an object right on that spot blocks it. |
+| **One at a time, exactly at the cursor** | Brush | Places one object exactly under the cursor per click; only an object right on that spot blocks it. A drag adds no more, so Density, Spacing, Clumping and Patch size are hidden while it is on (Brush size stays: Shift + drag still removes inside it). |
 | **Leave saplings and crops room to grow** | All, only shown when a sapling, a crop or a tree that grows from one is ticked | Keeps saplings and crops at least their in-game grow radius (0.5 m for crops, 2–3 m for tree saplings) away from everything, including each other, so they can grow. Grown crops (Pickable_Carrot...) and trees that grow from saplings (Beech1, Oak1...) keep the room their sapling needs, like a planted field or orchard. Bushes do not grow from anything in the game: use **Spacing** for them. Off: place them as tightly as you like. |
 | **Every** | Line | Distance between two objects along the line (m). |
 | **Wiggle** | Line | Random sideways offset from the line, up to this many metres. |

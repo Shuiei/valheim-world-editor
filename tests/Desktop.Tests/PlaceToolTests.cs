@@ -266,6 +266,22 @@ public class PlaceToolTests
     }
 
     [AvaloniaFact]
+    public void OneAtATimeDoesNotPaintByDragging()
+    {
+        var (w, s, screen) = Open();
+        w.PlaceInput.Tool.OneAtATime = true;
+        w.PlaceInput.Tool.Density = 20;
+        w.MouseMove(screen(64, 64));
+        w.MouseDown(screen(64, 64), MouseButton.Left);
+        w.MouseMove(screen(70, 64));
+        // Long enough for a drag step to scatter several without One at a time.
+        Thread.Sleep(80);
+        typeof(PlaceInput).GetMethod("Paint", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.Invoke(w.PlaceInput, null);
+        w.MouseUp(screen(70, 64), MouseButton.Left);
+        Assert.Equal(1, s.Pending.Added);
+    }
+
+    [AvaloniaFact]
     public void ShiftDragRemovesTheChosenKinds()
     {
         var (w, s, screen) = Open();

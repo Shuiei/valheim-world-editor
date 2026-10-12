@@ -16,6 +16,8 @@ the plugin is unchanged in versions without that part.
   kinds. The selected kinds are on rows of one layout in a box, each with its share (100% for one
   kind), and **Choose kinds…** opens the list under them. The **Recent** row also shows the kinds
   chosen now, and its **all** / **none** buttons are larger. **Tilt** starts at 0.
+- **Place's One at a time** places only the object at the cursor: a drag no longer scatters more, and
+  Density, Spacing and Clumping hide while it is on.
 
 ### Fixed
 - **Kind names with an underscore** (Pickable_Flax) showed without it in the Choose kinds list and on

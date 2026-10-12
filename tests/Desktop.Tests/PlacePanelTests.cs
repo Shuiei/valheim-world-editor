@@ -170,6 +170,29 @@ public class PlacePanelTests
     }
 
     [AvaloniaFact]
+    public void OneAtATimeHidesTheScatterSettings()
+    {
+        using var r = new Run();
+        Choose(r, "Beech1");
+        r.W.UpdateLayout();
+        Assert.True(r.P.DensitySlider.IsEffectivelyVisible);
+        r.P.SingleBox.IsChecked = true;
+        Assert.True(r.T.OneAtATime);
+        // A click places only the one at the cursor: Density, Spacing and Clumping would do nothing.
+        Assert.False(r.P.DensitySlider.IsEffectivelyVisible);
+        Assert.False(r.P.SpacingSlider.IsEffectivelyVisible);
+        Assert.False(r.P.ClumpSlider.IsEffectivelyVisible);
+        Assert.True(r.P.SizeSlider.IsEffectivelyVisible);
+        Assert.Contains("dragging adds no more", Texts(r.P.Card));
+        // The Zone still scatters.
+        Click(r.P.ModeButtons[PlaceTool.Modes.Zone]);
+        Assert.True(r.P.DensitySlider.IsEffectivelyVisible);
+        Click(r.P.ModeButtons[PlaceTool.Modes.Brush]);
+        r.P.SingleBox.IsChecked = false;
+        Assert.True(r.P.DensitySlider.IsEffectivelyVisible);
+    }
+
+    [AvaloniaFact]
     public void NoneAfterAPresetUnticksItsKinds()
     {
         using var r = new Run();

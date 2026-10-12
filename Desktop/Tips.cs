@@ -249,7 +249,7 @@ public static class Tips
         ["place.beside"] = "Snap end to end with the piece next to the cursor, at its level.",
         ["place.onTop"] = "Snap on top of the piece under the cursor.",
         ["place.layers"] = "Stack the line this many pieces high, each layer on top of the one below.",
-        ["place.single"] = "Place one object exactly under the cursor per click (only an object right on the spot blocks it).",
+        ["place.single"] = "Place one object exactly under the cursor per click (only an object right on the spot blocks it); a drag adds no more, so Density, Spacing and Clumping are hidden.",
         ["place.grow"] = "Keep saplings and crops at least their in-game grow radius away from everything, so they can grow; grown crops and trees keep the room their sapling needs.",
         ["place.endToEnd"] = "Line: each object starts exactly where the last one ends, turned along the line, like the game's hammer snaps pieces (fences, walls, stakes, floors...). Switches itself on when every ticked kind is a piece the game snaps.",
         ["place.loop"] = "Line: go back to the first point at the end, to fence a zone in.",
