@@ -6,6 +6,12 @@ the plugin is unchanged in versions without that part.
 
 ## v1.20.1 — unreleased
 
+### Changed
+- **Follow grows the area** instead of moving it: when you look near the area's edge, a row of zones
+  is added on that side and the zones already open stay (a 3 × 3 area becomes 4 × 3, then 4 × 4…).
+  Past 9 zones one way, it moves that way instead. The arrows move the grown area as it is; the size
+  box makes it square again.
+
 ### Fixed
 - **Rocks that shape the ground** (the Plains' tall rock pillars, coast, heath, forest and copper
   boulders) were missing from the 3D view and the object lists: the editor only used them for the

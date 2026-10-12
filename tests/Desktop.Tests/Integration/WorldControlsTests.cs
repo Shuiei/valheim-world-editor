@@ -462,7 +462,7 @@ public class WorldControlsTests
         Assert.Equal(-1, r.W.View.Scene!.X0);
         await r.W.MoveArea(-1, 0);
         Assert.Equal(-2, r.W.View.Scene!.X0);
-        Assert.Equal(3, r.W.View.Scene.Size);
+        Assert.Equal((3, 3), (r.W.View.Scene.ZonesX, r.W.View.Scene.ZonesZ));
     }
 
     // The area made bigger (or smaller) on the fly, around the same middle zone, keeping the view and
@@ -477,19 +477,19 @@ public class WorldControlsTests
         var (yaw, pitch, distance, world) = r.W.View.WorldCamera!.Value;
         r.W.AreaSizeBox.SelectedIndex = 2;
         // 49 zones to make: over 15 s under coverage on CI's two cores.
-        await TestWindows.Until(() => r.W.View.Scene!.Size == 7, 60000);
+        await TestWindows.Until(() => r.W.View.Scene!.ZonesX == 7, 60000);
         Assert.Equal((-3, -3), (r.W.View.Scene!.X0, r.W.View.Scene.Z0));
         Assert.Equal(world.X, r.W.View.WorldCamera!.Value.World.X, 3);
         Assert.Equal(1, r.W.World!.Pending.Zones);
         await r.W.ResizeArea(5);
-        Assert.Equal((5, -2), (r.W.View.Scene!.Size, r.W.View.Scene.X0));
+        Assert.Equal((5, 5, -2), (r.W.View.Scene!.ZonesX, r.W.View.Scene.ZonesZ, r.W.View.Scene.X0));
         Assert.Equal(1, r.W.AreaSizeBox.SelectedIndex);
         // Something selected: it waits, and says why.
         r.W.View.Select([0]);
         if (r.W.View.Selected.Count > 0)
         {
             await r.W.ResizeArea(7);
-            Assert.Equal(5, r.W.View.Scene!.Size);
+            Assert.Equal(5, r.W.View.Scene!.ZonesX);
             Assert.StartsWith("The area cannot change size now", r.W.MessageText.Text);
             Assert.Equal(1, r.W.AreaSizeBox.SelectedIndex);
         }
@@ -514,47 +514,61 @@ public class WorldControlsTests
     }
 
     [AvaloniaFact]
-    public async Task FollowMovesTheAreaWhenTheViewNearsItsEdge()
+    public async Task FollowGrowsTheAreaWhenTheViewNearsItsEdge()
     {
         using var r = new Run();
         await r.Open();
-        // Off: nothing moves.
+        // Off: nothing changes.
         LookAt(r.W, 28, 0);
         Assert.Null(await r.W.CheckFollow());
         r.W.SetFollow(true);
         Assert.True(r.W.Settings.AreaFollow);
         Assert.Equal(1, r.Saves);
         Assert.Contains("on", r.W.FollowButton.Classes);
-        Assert.Contains("Follow: the area moves", r.W.MessageText.Text);
+        Assert.Contains("Follow: the area grows", r.W.MessageText.Text);
         // In the middle: stays.
         LookAt(r.W, 0, 0);
         Assert.Null(await r.W.CheckFollow());
-        // Within 12 m of the east edge: one zone east, the view where it was.
+        // Within 12 m of the east edge: a zone more east, zone 0 kept, the view where it was.
         LookAt(r.W, 25, 3);
-        Assert.Equal((1, 0), await r.W.CheckFollow());
-        Assert.Equal(1, r.W.View.Scene!.X0);
+        Assert.Equal((0, 0, 2, 1), await r.W.CheckFollow());
+        Assert.Equal((0, 0, 2, 1), (r.W.View.Scene!.X0, r.W.View.Scene.Z0, r.W.View.Scene.ZonesX, r.W.View.Scene.ZonesZ));
         Assert.Equal(25, r.W.View.WorldCamera!.Value.World.X, 2);
-        // Near a corner: both ways (the view is in zone 1, 0; south-west corner of the area at 32..96).
-        LookAt(r.W, 36, -27);
-        Assert.Equal((0, -1), await r.W.CheckFollow());
+        // Near the south-east corner (the area is x -32..96, z -32..32): both ways.
+        LookAt(r.W, 90, -27);
+        Assert.Equal((0, -1, 3, 2), await r.W.CheckFollow());
+        Assert.Equal(90, r.W.View.WorldCamera!.Value.World.X, 2);
         // Off again (the button): stays.
         Click(r.W.FollowButton);
         Assert.False(r.W.Settings.AreaFollow);
         Assert.Contains("Follow is off", r.W.MessageText.Text);
-        LookAt(r.W, 25 - 64, -64);
+        LookAt(r.W, -25, -64);
         Assert.Null(await r.W.CheckFollow());
     }
 
     [AvaloniaFact]
-    public async Task FollowInALargerAreaGoesToTheZoneUnderTheView()
+    public async Task FollowInALargerAreaGrowsItByOneRow()
     {
         using var r = new Run();
         await r.Open(0, 0, 3);
         r.W.SetFollow(true);
-        // West edge of zones -1..1 is at -96: the view at -88 is in zone -1, so the middle goes there.
+        // West edge of zones -1..1 is at -96: the view at -88 adds zone column -2.
         LookAt(r.W, -88, 0);
-        Assert.Equal((-1, 0), await r.W.CheckFollow());
-        Assert.Equal(-2, r.W.View.Scene!.X0);
+        Assert.Equal((-2, -1, 4, 3), await r.W.CheckFollow());
+        Assert.Equal(4, r.W.View.Scene!.ZonesX);
+    }
+
+    [Fact]
+    public void FollowGrowsUpToTheMostZonesThenMoves()
+    {
+        int first = 0, count = MainWindow.MaxFollowZones - 1;
+        Assert.False(MainWindow.Grow(ref first, ref count, up: false));
+        Assert.Equal((-1, MainWindow.MaxFollowZones), (first, count));
+        // At the most: it moves, leaving the far row behind.
+        Assert.True(MainWindow.Grow(ref first, ref count, up: true));
+        Assert.Equal((0, MainWindow.MaxFollowZones), (first, count));
+        Assert.True(MainWindow.Grow(ref first, ref count, up: false));
+        Assert.Equal((-1, MainWindow.MaxFollowZones), (first, count));
     }
 
     [AvaloniaFact]
@@ -585,8 +599,8 @@ public class WorldControlsTests
         Assert.Equal("a stroke is on", r.W.MoveBlocker());
         r.W.Session.EndStroke();
         Assert.Null(r.W.MoveBlocker());
-        // Nothing in the way: it moves.
-        Assert.Equal((1, 0), await r.W.CheckFollow());
+        // Nothing in the way: it grows.
+        Assert.Equal((0, 0, 2, 1), await r.W.CheckFollow());
     }
 
     [AvaloniaFact]

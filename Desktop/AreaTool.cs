@@ -462,7 +462,7 @@ public sealed class AreaTool
             {
                 continue;
             }
-            int zx = Math.Min(g.Size - 1, p % g.W / 64), zz = Math.Min(g.Size - 1, p / g.W / 64);
+            int zx = Math.Min(g.ZonesX - 1, p % g.W / 64), zz = Math.Min(g.ZonesZ - 1, p / g.W / 64);
             set.Add((g.X0 + zx, g.Z0 + zz));
         }
         return [.. set];

@@ -1063,7 +1063,7 @@ public sealed class EditSession
             }
             var missing = k.Ids.Values.SelectMany(v => v).Where(id => !index.ContainsKey(id)).Distinct().ToList();
             var found = missing.Count > 0 ? find(missing) : [];
-            float minX = Scene.X0 * 64f - 32f, maxX = (Scene.X0 + Scene.Size - 1) * 64f + 32f, minZ = Scene.Z0 * 64f - 32f, maxZ = (Scene.Z0 + Scene.Size - 1) * 64f + 32f;
+            float minX = Scene.X0 * 64f - 32f, maxX = (Scene.X0 + Scene.ZonesX - 1) * 64f + 32f, minZ = Scene.Z0 * 64f - 32f, maxZ = (Scene.Z0 + Scene.ZonesZ - 1) * 64f + 32f;
             int? Thing(int id)
             {
                 if (index.TryGetValue(id, out int i))
@@ -1098,7 +1098,7 @@ public sealed class EditSession
             List<(int X, int Z)>? Zones(List<(int X, int Z)> zones)
             {
                 var r = zones.Select(z => (X: z.X + k.X0 - Scene.X0, Z: z.Z + k.Z0 - Scene.Z0)).ToList();
-                return r.All(z => z.X >= 0 && z.Z >= 0 && z.X < Scene.Size && z.Z < Scene.Size) ? r : null;
+                return r.All(z => z.X >= 0 && z.Z >= 0 && z.X < Scene.ZonesX && z.Z < Scene.ZonesZ) ? r : null;
             }
             var map = new Dictionary<Change, Change>();
             Change? Fit(Change c)
@@ -1166,7 +1166,7 @@ public sealed class EditSession
             var world = Scene.World;
             var gone = f.Merged.Vanished.Concat(f.Ours).ToHashSet();
             var update = f.Merged.Updated.Concat(f.Merged.Added).ToHashSet();
-            float minX = Scene.X0 * 64f - 32f, maxX = (Scene.X0 + Scene.Size - 1) * 64f + 32f, minZ = Scene.Z0 * 64f - 32f, maxZ = (Scene.Z0 + Scene.Size - 1) * 64f + 32f;
+            float minX = Scene.X0 * 64f - 32f, maxX = (Scene.X0 + Scene.ZonesX - 1) * 64f + 32f, minZ = Scene.Z0 * 64f - 32f, maxZ = (Scene.Z0 + Scene.ZonesZ - 1) * 64f + 32f;
             bool Inside(System.Numerics.Vector3 p) => p.X >= minX && p.X < maxX && p.Z >= minZ && p.Z < maxZ;
             // The objects as the world has them now, by id (those changed or new).
             var now = WorldScene.FindThings(world, Edits, update);
@@ -1246,7 +1246,7 @@ public sealed class EditSession
         _undo.Clear();
         _redo.Clear();
         // Saving gives objects new ids: read them again.
-        var things = WorldScene.ReadThings(fresh, Scene.X0, Scene.Z0, Scene.Size, Edits.Deleted, Edits.Added);
+        var things = WorldScene.ReadThings(fresh, Scene.X0, Scene.Z0, Scene.ZonesX, Scene.ZonesZ, Edits.Deleted, Edits.Added);
         lock (Scene.Things)
         {
             Scene.Things.Clear();

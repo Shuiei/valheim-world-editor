@@ -113,12 +113,16 @@ public static class Overlays
         }
 
         // Zone borders, every 2 m along each zone edge, just above the ground.
-        for (int i = 0; i <= s.Size; i++)
+        for (int i = 0; i <= Math.Max(s.ZonesX, s.ZonesZ); i++)
         {
             foreach (bool vertical in new[] { true, false })
             {
+                if (i > (vertical ? s.ZonesX : s.ZonesZ))
+                {
+                    continue;
+                }
                 var pts = new List<Vector3>();
-                for (int t = 0; t < s.W; t += 2)
+                for (int t = 0; t < (vertical ? s.H : s.W); t += 2)
                 {
                     int gx = vertical ? i * 64 : t, gz = vertical ? t : i * 64;
                     if (gx < s.W && gz < s.H)
@@ -179,9 +183,9 @@ public static class Overlays
         if (modifiers != null)
         {
             var seen = new HashSet<TerrainModifiers.Modifier>();
-            for (int zz = s.Z0; zz < s.Z0 + s.Size; zz++)
+            for (int zz = s.Z0; zz < s.Z0 + s.ZonesZ; zz++)
             {
-                for (int zx = s.X0; zx < s.X0 + s.Size; zx++)
+                for (int zx = s.X0; zx < s.X0 + s.ZonesX; zx++)
                 {
                     foreach (var m in modifiers.InZone(zx, zz).Where(m => !m.Player && !m.Disc && (m.Level || m.Smooth)))
                     {
