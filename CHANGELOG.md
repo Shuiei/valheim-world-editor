@@ -29,6 +29,13 @@ the plugin is unchanged in versions without that part.
 - **Previews over the sea** (the mountain, placed and pasted objects, rings and lines) were hidden
   wherever water was behind them in the 3D view: they now show over the water.
 
+## v1.20.2 — unreleased
+
+### Fixed
+- **Location markers** no longer put a post on every invisible ground disc of No limit (one every
+  6 m where the ground was taken past ±8 m): they hid the real locations. The "location(s) here"
+  note no longer counts them either.
+
 ## v1.20.1 — unreleased
 
 ### Changed
