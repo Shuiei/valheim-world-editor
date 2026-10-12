@@ -1,14 +1,14 @@
-# Codecov (https://app.codecov.io/gh/Shuiei/valheim-world-editor): merges the coverage the six test
-# containers of CircleCI's core-tests and app-tests send on main (tools/ci-tests.sh; branches send
-# none), and checks it on each of main's commits. Which code counts is set by tests/coverage.runsettings.
+# Codecov (https://app.codecov.io/gh/Shuiei/valheim-world-editor): merges the coverage of the six test
+# containers of CircleCI's core-tests and app-tests, which CircleCI's coverage job sends on main once
+# both have passed (tools/ci-tests.sh; branches send none), and checks it on each of main's commits. Which code counts is set by tests/coverage.runsettings.
 # Reference:
 # https://docs.codecov.com/docs/codecovyml-reference
 codecov:
   require_ci_to_pass: true
   notify:
-    # core-tests' three containers and app-tests' three (their parallelism): no check or comment on
-    # part of the tests.
-    after_n_builds: 6
+    # The coverage job's two uploads (core-tests' three containers, app-tests' three): no check or
+    # comment on part of the tests.
+    after_n_builds: 2
 
 coverage:
   precision: 2

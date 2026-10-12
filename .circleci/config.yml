@@ -9,9 +9,12 @@
 #                  with warnings as errors; CircleCI shares the test classes out by their last times
 #                  and can rerun only the failed ones (circleci tests run, tools/ci-tests.sh). Every
 #                  test runs, failing or not; a test stuck for 5 minutes ends its run.
-#                  On main only, each test container sends its code coverage to Codecov, which merges
-#                  the six (codecov.yml) and fails its own check (codecov/project) under 95% line
-#                  coverage; branches run the tests without it (several times faster).
+#                  On main only, each test container keeps its code coverage for the coverage job;
+#                  branches run the tests without it (several times faster).
+#   coverage       on main only, once core-tests and app-tests have both passed: sends the six
+#                  containers' coverage to Codecov together, which merges it (codecov.yml) and fails
+#                  its own check (codecov/project) under 95% line coverage. A failed or partial test
+#                  run sends nothing, so Codecov never shows the coverage of part of the tests.
 #   packages       the Windows and Linux release packages: they build, hold no source code or game
 #                  files (the plugin is left out: it builds against the game's own DLLs), and the
 #                  Linux one starts and draws the test world (tools/smoke-test.sh, under Xvfb)
@@ -55,8 +58,8 @@ commands:
     steps:
       - checkout
       - run:
-          name: OpenSSH server (the tunnel's tests), fonts (Avalonia headless) and gpg (Codecov's CLI)
-          command: apt-get update -qq && apt-get install -y -qq openssh-server libfontconfig1 gnupg > /dev/null && mkdir -p /run/sshd
+          name: OpenSSH server (the tunnel's tests) and fonts (Avalonia headless)
+          command: apt-get update -qq && apt-get install -y -qq openssh-server libfontconfig1 > /dev/null && mkdir -p /run/sshd
       - when:
           condition: << parameters.display >>
           steps:
@@ -107,10 +110,9 @@ commands:
                 key: nuget-v2-{{ checksum "Directory.Build.props" }}-{{ checksum "Core/ValheimWorldEditor.Core.csproj" }}-{{ checksum "Desktop/ValheimWorldEditor.Desktop.csproj" }}-{{ checksum "tests/Core.Tests/Core.Tests.csproj" }}-{{ checksum "tests/Desktop.Tests/Desktop.Tests.csproj" }}
                 paths:
                   - ~/.nuget/packages
-      # On main, the coverage of this container's tests, merged with the other containers' by Codecov
-      # (its check waits for every container's). The orb's fail_on_error does nothing (its
-      # set_codecov_envs.sh empties CODECOV_FAIL_ON_ERROR, so the CLI never fails the step): a missing
-      # report is caught here instead.
+      # On main, the coverage of this container's tests, kept for the coverage job (which sends it with
+      # the other containers'). Only when its tests passed: a container with a failed test keeps
+      # nothing, and its job fails, so the coverage job does not run.
       - when:
           condition:
             equal: [main, << pipeline.git.branch >>]
@@ -120,11 +122,10 @@ commands:
                 command: |
                   ls /tmp/coverage/<< parameters.results >>-*/coverage.*.cobertura.xml \
                     || { echo "No coverage report: Codecov would get nothing from this container."; exit 1; }
-            - codecov/upload:
-                dir: /tmp/coverage
-                flags: << parameters.results >>
-                plugins: noop
-                when: on_success
+            - persist_to_workspace:
+                root: /tmp/coverage
+                paths:
+                  - << parameters.results >>-*/coverage.*.cobertura.xml
       - store_test_results:
           path: /tmp/test-results
       - store_artifacts:
@@ -184,6 +185,42 @@ jobs:
           results: app
           display: true
 
+  # The coverage of every test container, sent to Codecov in one go: the job runs on main only, once
+  # core-tests and app-tests have both passed (workflows), so Codecov gets all six containers' coverage
+  # or none. Each project's three are sent as one upload with its flag (core, app): two uploads
+  # (codecov.yml waits for both). The orb's fail_on_error does nothing (its set_codecov_envs.sh empties
+  # CODECOV_FAIL_ON_ERROR, so the CLI never fails the step): a missing report is caught before.
+  coverage:
+    executor: dotnet
+    steps:
+      # Codecov's CLI reads the commit and the repository's files from the checkout.
+      - checkout
+      - run:
+          name: gpg (Codecov's CLI is checked against its signature)
+          command: apt-get update -qq && apt-get install -y -qq gnupg > /dev/null
+      - attach_workspace:
+          at: /tmp/coverage
+      - run:
+          name: Every container's coverage report is there, grouped by project
+          command: |
+            for project in core app; do
+              mkdir -p "/tmp/upload/$project"
+              for node in 0 1 2; do
+                report=$(ls /tmp/coverage/$project-$node/coverage.*.cobertura.xml) \
+                  || { echo "No coverage report from $project-tests' container $node."; exit 1; }
+                for r in $report; do cp "$r" "/tmp/upload/$project/$node-$(basename "$r")"; done
+              done
+            done
+            ls -R /tmp/upload
+      - codecov/upload:
+          dir: /tmp/upload/core
+          flags: core
+          plugins: noop
+      - codecov/upload:
+          dir: /tmp/upload/app
+          flags: app
+          plugins: noop
+
   packages:
     executor: dotnet
     steps:
@@ -238,7 +275,8 @@ jobs:
             tools\smoke-test.ps1 C:\smoke\ValheimWorldEditor\ValheimWorldEditor.exe tests\fixtures\CITest
 
 workflows:
-  # Side by side; only windows-smoke waits, for the Windows package that packages makes.
+  # Side by side; windows-smoke waits for the Windows package that packages makes, and coverage (main
+  # only) for both test jobs to pass.
   test:
     jobs:
       - packages
@@ -248,3 +286,10 @@ workflows:
       - windows-smoke:
           requires:
             - packages
+      - coverage:
+          requires:
+            - core-tests
+            - app-tests
+          filters:
+            branches:
+              only: main
