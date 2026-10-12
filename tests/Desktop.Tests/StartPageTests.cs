@@ -199,6 +199,25 @@ public class StartPageTests
     }
 
     [AvaloniaFact]
+    public void RefreshFindsTheWorldsAgain()
+    {
+        using var r = new Run();
+        List<Worlds.Info> found = [];
+        r.P.FindWorlds = _ => found;
+        r.P.FillWorlds();
+        Assert.Contains("No worlds found on this computer", Texts(r.P.WorldCards));
+        // A world folder added while the page is open shows after Refresh, and goes once removed.
+        found = [new Worlds.Info("Added", "/somewhere", DateTime.Now, 1, "a test folder", true, null)];
+        Click(r.P.RefreshWorlds);
+        Assert.Single(r.P.WorldCards.Children.OfType<Button>());
+        Assert.Contains("Added", Texts(r.P.WorldCards));
+        found = [];
+        Click(r.P.RefreshWorlds);
+        Assert.Empty(r.P.WorldCards.Children.OfType<Button>());
+        Assert.Contains("No worlds found on this computer", Texts(r.P.WorldCards));
+    }
+
+    [AvaloniaFact]
     public void AFolderTypedWithAHomeTildeIsUnderstood()
     {
         using var r = new Run();

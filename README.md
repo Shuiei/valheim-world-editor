@@ -219,7 +219,7 @@ have your own tunnel (`ssh -L`, PuTTY)? Use **More options → I made my own tun
 1. **Close Valheim, or stop the server** that uses the world. A running game saves over the files
    the editor writes.
 2. On the start page, **A saved world**: click the world (the worlds you opened last are on **Home**
-   too). Worlds in Valheim's usual folders are listed by themselves; for another one (a copy of a server's world, for example) use **Another world
+   too). Worlds in Valheim's usual folders are listed by themselves (**Refresh** looks again after you add or remove one); for another one (a copy of a server's world, for example) use **Another world
    folder** with **Browse…** or by typing it (`<savedir>/worlds_local/<World>` for a server).
 3. Edit, then **Save to world**. The editor writes your changes as the next save and reads them back
    to check them (if they do not read back right, the new files are removed and nothing changed).

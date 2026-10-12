@@ -88,6 +88,8 @@ public sealed class StartPage
     private readonly TextBlock _gameTag = new() { FontSize = 11, Foreground = new SolidColorBrush(Color.FromRgb(123, 196, 127)), VerticalAlignment = VerticalAlignment.Center };
     /// <summary>A card per world found on this computer.</summary>
     internal WrapPanel WorldCards { get; } = new() { ItemSpacing = 10, LineSpacing = 10 };
+    /// <summary>Looks for the worlds again (folders added or removed while the editor runs).</summary>
+    internal Button RefreshWorlds { get; } = new Button { Content = Icons.With("reload", "Refresh"), FontSize = 12, HorizontalAlignment = HorizontalAlignment.Left }.Classed("ghost");
     /// <summary>Another world folder to open.</summary>
     internal TextBox PathBox { get; } = new() { PlaceholderText = "Folder of the world (with _main.<n>.chunks files)", FontSize = 13 };
     /// <summary>Why that folder cannot be opened.</summary>
@@ -202,6 +204,9 @@ public sealed class StartPage
         var openPath = new Button { Content = "Open" }.Classed("primary").Tip("start.open");
         PathBox.Tip("start.folder");
         openPath.Click += (_, _) => OpenFolder(PathBox.Text ?? "");
+        RefreshWorlds.Tip("start.refreshWorlds");
+        RefreshWorlds.Click += (_, _) => FillWorlds();
+        OfflinePanel.Children.Add(RefreshWorlds);
         OfflinePanel.Children.Add(WorldCards);
         OfflinePanel.Children.Add(Hint("Close Valheim (or stop the server) before you save changes into a world: a running game writes over the files. Each save is read back and checked before the old one is removed."));
         OfflinePanel.Children.Add(Card(new StackPanel

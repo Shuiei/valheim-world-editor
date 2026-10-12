@@ -6,6 +6,10 @@ the plugin is unchanged in versions without that part.
 
 ## v1.21.0 — unreleased
 
+### Added
+- **Refresh on A saved world**: looks for the worlds again, so world folders added or removed while
+  the editor runs show without going to another page and back.
+
 ### Changed
 - **Follow grows the area** instead of moving it: when you look near the area's edge, a row of zones
   is added on that side and the zones already open stay (a 3 × 3 area becomes 4 × 3, then 4 × 4…).
