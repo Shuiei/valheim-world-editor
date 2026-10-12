@@ -52,16 +52,20 @@ case "${1:?list or run}" in
     filter=$(printf 'FullyQualifiedName~%s.|' "$@" | sed 's/|$//')
     # On main only, the coverage of this container's share, which the job sends to Codecov (merged
     # there with the other containers'): it makes the tests several times slower.
+    # A test stuck 5 minutes ends the run; under coverage, 10: the world generator's tests share the
+    # container's two cores with the others for minutes there (one took 300 s on main, the old limit).
     coverage=()
+    hang=5m
     if [ "${VWE_COVERAGE:-}" = 1 ]; then
       coverage=(--settings tests/coverage.runsettings --collect "Code Coverage"
         --results-directory "/tmp/coverage/$name-${CIRCLE_NODE_INDEX:-0}")
+      hang=10m
     fi
     # The run's output is kept too: a test process that crashes leaves no failed test in the results (only
     # the tests done before it), so the crash is written there as one (crash_result).
     log=$(mktemp)
     status=0
-    dotnet test "$project" -c Release --no-build --filter "$filter" --blame-hang-timeout 5m "${coverage[@]}" \
+    dotnet test "$project" -c Release --no-build --filter "$filter" --blame-hang-timeout "$hang" "${coverage[@]}" \
       --logger "junit;LogFilePath=/tmp/test-results/$name/results.xml" --logger "console;verbosity=normal" 2>&1 \
       | tee "$log" || status=$?
     if grep -q 'Test process crashed with exit code' "$log"; then
