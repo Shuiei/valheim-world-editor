@@ -96,7 +96,9 @@ public static class GameLook
     /// <param name="Valheim">The Valheim folder.</param>
     /// <param name="LastLine">What is being read, while running; else null.</param>
     /// <param name="Progress">The progress (0..1, null when not known).</param>
-    public sealed record Snapshot(string State, string? Message, string? Valheim, string? LastLine, double? Progress);
+    /// <param name="Reading">While running: whether the game's files are being read (false while only the kept index
+    /// and caches are checked, a moment at each start).</param>
+    public sealed record Snapshot(string State, string? Message, string? Valheim, string? LastLine, double? Progress, bool Reading = true);
 
     /// <summary>
     /// The state as it is now.
@@ -107,7 +109,7 @@ public static class GameLook
         {
             bool running = State == "running";
             var told = running && _told is { } t && ReferenceEquals(t.Game, _bundles) ? t : null;
-            return new Snapshot(State, Message, ValheimPath, told?.Step, State == "ready" ? 1 : told?.Progress);
+            return new Snapshot(State, Message, ValheimPath, told?.Step, State == "ready" ? 1 : told?.Progress, !running || told != null);
         }
     }
 

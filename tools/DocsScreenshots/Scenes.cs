@@ -51,6 +51,7 @@ public sealed class Scenes
             ("workshop", Workshop),
             ("map", Map),
             ("start", Start),
+            ("new-world", NewWorld),
         ];
     }
 
@@ -724,6 +725,49 @@ public sealed class Scenes
         e.Shot(Out("map.jpg"));
     }
 
+    /// <summary>
+    /// Waits (up to 3 minutes) until the start page no longer reads the game's look, then a moment for the page to
+    /// settle.
+    /// </summary>
+    private static void WaitForLook(Editor e)
+    {
+        var watch = System.Diagnostics.Stopwatch.StartNew();
+        while (e.Send("wait 500").GetProperty("look").GetString() is "" or "running" && watch.Elapsed < TimeSpan.FromMinutes(3))
+        {
+        }
+        e.Send("wait 1500");
+    }
+
+    // ---- A new world (Create on the start page, no world opened).
+
+    /// <summary>
+    /// new-world.jpg (a seed's world before it exists: the start, the bosses' altars and the traders),
+    /// new-world-dungeons.jpg (the same seed with the dungeons shown) and new-world-find.jpg (Find a seed's
+    /// results).
+    /// </summary>
+    private void NewWorld(Editor e)
+    {
+        WaitForLook(e);
+        e.Send("click A new world");
+        e.Send("click Make a new world");
+        e.Send("wait 1500");
+        e.Send("type My world|Fjordheim");
+        e.Send("type Up to 10|5DCcdIcuYJ");
+        e.Send("click Generate world");
+        e.Send("wait 15000");
+        e.Shot(Out("new-world.jpg"));
+        foreach (string d in new[] { "Burial chambers", "Troll caves", "Sunken crypts", "Frost caves" })
+        {
+            e.Send($"check {d}|on");
+        }
+        e.Send("wait 30000");
+        e.Shot(Out("new-world-dungeons.jpg"));
+        // 150 seeds (the default) take well under a minute here.
+        e.Send("click Find seeds");
+        e.Send("wait 50000");
+        e.Shot(Out("new-world-find.jpg"));
+    }
+
     // ---- The start page and its settings (no world opened).
 
     /// <summary>
@@ -732,8 +776,9 @@ public sealed class Scenes
     /// </summary>
     private void Start(Editor e)
     {
-        // Home: the running game (the stand-in plugin) and the worlds opened before.
-        e.Send("wait 3000");
+        // Home: the running game (the stand-in plugin) and the worlds opened before, once the game's
+        // look is read (its bar would be in every picture).
+        WaitForLook(e);
         e.Shot(Out("start-home.jpg"));
         e.Send("click My game");
         e.Send("wait 1500");
