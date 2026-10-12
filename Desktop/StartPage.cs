@@ -137,6 +137,7 @@ public sealed class StartPage
     {
         _settings = settings;
         LookBanner = new GameLookBanner(settings) { PickFolder = t => PickFolder(t), OpenLog = OpenLog };
+        LookBanner.BusyChanged += _ => ShowBusy();
         var settingsButton = new Button { Content = Icons.With("settings", "Settings"), FontSize = 13 }.Classed("ghost");
         settingsButton.Tip("start.settings");
         DocsLink.Tip("start.docs");
@@ -282,6 +283,7 @@ public sealed class StartPage
         };
         Grid.SetColumn(main, 1);
         View = new Grid { Background = Ui.Bg, ColumnDefinitions = new ColumnDefinitions("260,*"), Children = { side, main } };
+        _busyOff = [HomePanel, GamePanel, ServerPanel, OfflinePanel, WorkshopPanel, NewWorldPanel, settingsButton];
         // Homestead's state for the Workshop (looked for away from the window's thread).
         _ = Task.Run(() => Homestead.Find(settings)).ContinueWith(t =>
         {
@@ -292,6 +294,22 @@ public sealed class StartPage
         }, TaskScheduler.FromCurrentSynchronizationContext());
         // Home first: it shows the game when it runs and what was opened last.
         SetMode("home");
+    }
+
+    /// <summary>What is turned off while the game's files are read: every page's actions, and Settings (which can change the game folder).</summary>
+    private readonly Control[] _busyOff;
+
+    /// <summary>
+    /// Greys out every action while the game's files are read (LookBanner.Busy), and gives them back once it is done:
+    /// what is opened meanwhile would miss the game's look. The side menu still moves between the pages.
+    /// </summary>
+    private void ShowBusy()
+    {
+        foreach (var c in _busyOff)
+        {
+            c.IsEnabled = !LookBanner.Busy;
+            c.Opacity = LookBanner.Busy ? 0.45 : 1;
+        }
     }
 
     /// <summary>Puts a control in a grid column and returns it.</summary>

@@ -37,6 +37,15 @@ public sealed class GameLookBanner
     private bool _sawRunning;
 
     /// <summary>
+    /// Whether the game's files are being read: the start page turns its actions off meanwhile.
+    /// </summary>
+    internal bool Busy { get; private set; }
+    /// <summary>
+    /// Busy changed (raised by Refresh).
+    /// </summary>
+    internal event Action<bool>? BusyChanged;
+
+    /// <summary>
     /// The card's heading.
     /// </summary>
     internal TextBlock Title { get; } = new() { FontWeight = FontWeight.SemiBold, TextWrapping = TextWrapping.Wrap };
@@ -180,7 +189,7 @@ public sealed class GameLookBanner
                 Bar.IsVisible = LastLine.IsVisible = true;
                 Bar.Value = s.Progress ?? 0;
                 LastLine.Text = s.LastLine ?? "";
-                Hint.Text = "You can already pick a world and edit: areas opened once this is done have the game's look.";
+                Hint.Text = "Worlds, servers and the Workshop can be opened once this is done.";
                 break;
             case "missing":
                 Title.Text = "Get the game's look";
@@ -208,5 +217,11 @@ public sealed class GameLookBanner
         Error.IsVisible = Error.Text?.Length > 0;
         // Running without reading (the kept index and caches checked, at each start): nothing to say.
         _card.IsVisible = s.State == "running" ? s.Reading : s.State != "ready" || _sawRunning;
+        bool busy = s.State == "running" && s.Reading;
+        if (busy != Busy)
+        {
+            Busy = busy;
+            BusyChanged?.Invoke(busy);
+        }
     }
 }
