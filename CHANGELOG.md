@@ -18,6 +18,9 @@ the plugin is unchanged in versions without that part.
   chosen now, and its **all** / **none** buttons are larger. **Tilt** starts at 0.
 - **Place's One at a time** places only the object at the cursor: a drag no longer scatters more, and
   Density, Spacing and Clumping hide while it is on.
+- **While the game's look is prepared** (start page), every action is greyed out until it is done:
+  worlds, servers, the Workshop, a new world and Settings. A world opened meanwhile missed the game's
+  look. The side menu still moves between the pages.
 
 ### Fixed
 - **Kind names with an underscore** (Pickable_Flax) showed without it in the Choose kinds list and on
