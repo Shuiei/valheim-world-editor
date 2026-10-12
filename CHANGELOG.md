@@ -4,7 +4,7 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
-## v1.22.1 — unreleased
+## v1.23.1 — unreleased
 
 ### Fixed
 - **Code coverage** on Codecov counts every test again: the tests that start the editor in a process
@@ -16,6 +16,27 @@ the plugin is unchanged in versions without that part.
   the piece the preview shows.
 - **Discard** that has to read the world again no longer fails without a word when the world's files
   cannot be read: it says why and keeps the area open.
+
+## v1.23.0 — unreleased
+
+### Changed
+- **Larger areas**: the area can now be 9 × 9, 13 × 13 or 17 × 17 zones (up to 1088 m across), from
+  the map's size box and the top bar's; Follow grows it up to 17 zones each way, and Claude's
+  `open_area` opens up to 17 × 17. Large areas are slow to open and draw: meant for big works and
+  for testing the editor's speed.
+- **Faster drawing of large areas**: only the parts of the area in view are drawn (in 128 m cells),
+  and small objects stop being drawn far away (past 400 times their size, a few pixels). A 17 × 17
+  area with 2.3 million objects went from 31 to about 75 frames a second.
+
+### Fixed
+- **Unsaved marks** kept their green dots after **Save to world**; they now go once saved, as after
+  **Apply live**.
+- **Areas with very many new objects** were slow at every frame: the green dots were made again for
+  each object at each frame (a 17 × 17 area with 2.3 million new objects drew one frame a second or
+  less). They are now kept on the graphics card and made again only when objects change.
+- **Scripts on areas with very many objects** waited over a second before running (each object's
+  kind was worked out again), and after a save of many new objects each change was slow to count
+  what is pending.
 
 ## v1.22.0 — unreleased
 
