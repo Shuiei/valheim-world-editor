@@ -486,6 +486,8 @@ public sealed partial class MainWindow
                 SaveButton.IsEnabled = false;
                 MessageText.Text = "Applying to the running game…";
                 var o = await s.ApplyLive(ConfirmOverGame);
+                // Applied objects lose their green marks.
+                View.RefreshNewMarkers();
                 MessageText.Text = o.Message;
                 if (o.Declined)
                 {

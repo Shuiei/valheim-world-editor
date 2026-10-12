@@ -784,8 +784,6 @@ public sealed partial class MainWindow : Window
             WorkshopSaveBar(s);
             return;
         }
-        // Saved or applied objects lose their green marks.
-        View.RefreshNewMarkers();
         PendingText.Text = s.PendingText;
         var (z, d, a, r) = s.Pending;
         bool dirty = z + d + a + r > 0;
@@ -905,6 +903,8 @@ public sealed partial class MainWindow : Window
         {
             MessageText.Text = "Could not save: " + ex.Message;
         }
+        // Saved objects lose their green marks.
+        View.RefreshNewMarkers();
         UpdateSaveBar();
     }
 
