@@ -6,8 +6,9 @@ namespace TerrainEditor.Desktop.Tests;
 
 /// <summary>
 /// An edit session's smaller rules: deleting what is already gone makes no step, a shape whose formula fails at some
-/// points counts them and leaves them, the changed rectangle is given once, and the game's changes wait for a stroke
-/// to end.
+/// points counts them and leaves them, the changed rectangle is given once, the game's changes wait for a stroke
+/// to end, things moved, turned and sized in one step, the copy that stands for a moved thing, and zones marked for
+/// reset and unmarked.
 /// </summary>
 public class EditSessionStepsTests
 {
@@ -57,5 +58,63 @@ public class EditSessionStepsTests
         Assert.False(s.TakeGameChanges(none));
         s.EndStroke();
         Assert.True(s.TakeGameChanges(none));
+    }
+
+    [Fact]
+    public void ThingsAreMovedTurnedAndSizedInOneStep()
+    {
+        var s = TestScenes.Flat(1, Rock());
+        int moved = s.Transform([(0, new Vector3(5, 30, 0), new Vector3(0, 90, 0), 2f)], "Moved")[0];
+        Assert.True(s.Scene.Things[0].Gone);
+        var t = s.Scene.Things[moved];
+        Assert.Equal((new Vector3(5, 30, 0), new Vector3(0, 90, 0), 2f), (t.Position, t.Rotation, t.Scale));
+        Assert.Single(s.UndoList);
+        Assert.Equal("Moved", s.UndoLabel);
+    }
+
+    [Fact]
+    public void AMovedCopyKeepsWhatTheThingHolds()
+    {
+        var s = TestScenes.Flat(1, Rock());
+        // A thing of the world: copied from it, with its data.
+        var (fromWorld, piece) = s.MovedCopy(0, new Vector3(1, 30, 1), Vector3.Zero, 0);
+        Assert.Equal((3, false, false), (fromWorld.SourceId, fromWorld.Fresh, piece));
+        // One added in the session: its values and its own source go with it.
+        var text = new Editing.ObjectField("strings", StableHash.Of("text"), "Hello");
+        int sign = s.Commit("Put", null, [], [(new Editing.NewObject(0, StableHash.Of("sign"), new Vector3(20, 30, 20), Vector3.Zero, 0, 3, false, Data: [text]), true)])[0];
+        var (copy, isPiece) = s.MovedCopy(sign, new Vector3(25, 30, 20), new Vector3(0, 90, 0), 2);
+        Assert.Equal((3, false, true, 2f), (copy.SourceId, copy.Fresh, isPiece, copy.Scale));
+        Assert.Equal([text], copy.Data!);
+    }
+
+    [Fact]
+    public void ZonesMarkedForResetLoseTheirGroundEditsInOneStep()
+    {
+        var s = TestScenes.Flat(2);
+        s.Shape(10, 10, _ => 1, 3, 0, "Bump");
+        float H() => s.Ground.HeightOf(10 * s.Ground.W + 10);
+        Assert.Equal(31, H(), 3);
+        s.MarkResets([(0, 0), (1, 0)], keepBuildings: true, ground: true, "Reset");
+        Assert.Equal([new Editing.ZoneReset(0, 0, true, true), new Editing.ZoneReset(1, 0, true, true)], s.Resets.OrderBy(r => r.X));
+        Assert.Equal(30, H(), 3);
+        Assert.True(s.Undo());
+        Assert.Empty(s.Resets);
+        Assert.Equal(31, H(), 3);
+        // Without ground, the ground stays.
+        s.MarkResets([(0, 0)], keepBuildings: false, ground: false, "Reset");
+        Assert.Equal(31, H(), 3);
+        Assert.Equal(new Editing.ZoneReset(0, 0, false, false), Assert.Single(s.Resets));
+    }
+
+    [Fact]
+    public void OnlyMarkedZonesAreUnmarked()
+    {
+        var s = TestScenes.Flat(2);
+        Assert.Equal(0, s.UnmarkResets([(0, 0)], "Unmark"));
+        Assert.Empty(s.UndoList);
+        s.MarkResets([(0, 0), (1, 1)], true, false, "Reset");
+        Assert.Equal(1, s.UnmarkResets([(0, 0), (0, 0), (1, 0)], "Unmark"));
+        Assert.Equal((1, 1), (s.Resets.Single().X, s.Resets.Single().Z));
+        Assert.Equal("Unmark", s.UndoLabel);
     }
 }

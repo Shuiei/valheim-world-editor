@@ -4,6 +4,57 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.24.0 — unreleased
+
+### Added
+- **Claude changes objects already there**: `move_objects` moves and turns objects as one group (a
+  building keeps its shape; with `ground`, each stays as high above the ground as it was);
+  `set_transform` puts each object exactly (place, turn, tilt, size); `replace_objects` swaps them for
+  another kind; `get_object` gives everything an object is and holds, as the inspector shows it; and
+  `set_object_data` changes its values (a portal's tag, a builder, a ward's permitted players, health,
+  fuel, a creature's level…). Objects keep what they hold when moved.
+- **Claude finds places in a world**: `list_locations` lists the world's locations (the start, the
+  traders, the bosses' altars, dungeon entrances, villages…) with what players call them, and
+  `search_world` searches every object as the map's Search does (by kind, items in containers, texts).
+- **Claude copies and puts blueprints into worlds**: `copy_objects` makes copies once or in a row or a
+  ring; `add_blueprint` now puts a blueprint of the library into a world's area too (not only the
+  Workshop's plot), turned as asked, and its step is one of Claude's (History's **Take back Claude's
+  changes** takes it).
+- **Claude weathers and regrows ground**: `shape_ground` runs the Area tool's ground actions over a
+  rectangle (smooth, naturalize, erode, restore, raise, lower), and `regrow_nature` regrows what the
+  game grows there.
+- **Scripts move, tilt and snap objects**: objects carry their turn, tilts and size (`Yaw`, `Pitch`,
+  `Roll`, `Scale`); `Objects.Place` takes `pitch`, `roll` and `snap` (pieces meet the pieces there as
+  the hammer makes them); and `Objects.Move` moves, turns or sizes an object that is there, keeping
+  what it holds, in the script's one undo step.
+- **Claude digs along lines, resets zones and makes worlds**: `dig_path` runs the Path tool along a
+  line (a river or moat, a cave roofed with boulders, a ramp, a flattened or smoothed way);
+  `reset_zones` marks zones for reset (or unmarks them) as the Area tool does; `preview_seed` shows what
+  a seed's world will be like (a map, and where the start, traders and bosses will be) and
+  `create_world` makes and opens a new world.
+- **Claude stamps, imports heightmaps and masks its ground work**: `stamp` presses a stamp into the
+  ground (Mountain, Mesa, Crater rim, Dunes, Rocky ground, the user's own, or any PNG);
+  `import_heightmap` puts a heightmap picture into a rectangle; `shape_ground` also paints; and
+  `shape_ground`, `dig_path`, `stamp` and `import_heightmap` take a mask, as the Mask panel's (heights,
+  slopes, biomes, paint).
+- **Claude edits the game's dungeons**: `list_dungeons` and `dungeon_rooms` show a dungeon's rooms, open
+  ends and door joints; `add_dungeon_room`, `remove_dungeon_room`, `close_dungeon_ends` and
+  `set_dungeon_door` change it as the Dungeon tool does.
+- **Claude saves blueprints**: `save_blueprint` saves the Workshop's building to the library (as Save
+  blueprint does, with what objects hold and a picture), refusing to replace one unless told to;
+  `open_workshop` loads one.
+- **Claude uses every control of the editor**: `list_controls` lists every switch, dropdown, slider,
+  number and text box and button the editor shows (the View panel's switches, the Workshop's Cut and
+  Support check, each tool's settings, the rail of tools) with its value, and `set_control` sets one as
+  the user would. Saving, applying live, discarding, reloading, writing or deleting the user's files and
+  connecting to the live game are refused.
+- **Claude reads the ground exactly**: `ground_at` gives the height at points (now and as generated),
+  the biome and any water there; `list_objects` also gives tilts and size when an object has them.
+
+### Fixed
+- **Moving objects on the Workshop's plot** (or a generated dungeon's, before saving) lost what they
+  held: a chest's contents, a sign's text. They keep it now.
+
 ## v1.23.1 — unreleased
 
 ### Fixed
