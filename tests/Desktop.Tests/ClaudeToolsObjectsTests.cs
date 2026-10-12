@@ -1,3 +1,4 @@
+using System.Numerics;
 using System.Text.Json;
 using Avalonia.Headless.XUnit;
 using Xunit;
@@ -7,7 +8,7 @@ namespace TerrainEditor.Desktop.Tests;
 /// <summary>
 /// Claude's tools for objects already there (ClaudeTools.Objects): moving and turning a group, exact places and sizes,
 /// replacing with another kind, and reading and changing an object's values, in a world and on the Workshop's plot;
-/// and the helpers they share (Turned, Bounds, Usable, Rewrite).
+/// and the helpers they share (Turned, Wrapped, Bounds, Usable, Rewrite).
 /// </summary>
 [Collection("World files")]
 public class ClaudeToolsObjectsTests
@@ -143,6 +144,14 @@ public class ClaudeToolsObjectsTests
         (x, z) = ClaudeTools.Turned(3, -2, 360);
         Assert.Equal(3, x, 3);
         Assert.Equal(-2, z, 3);
+    }
+
+    // Wrapped: each angle brought within 0 to 360 degrees, either way round.
+    [Fact]
+    public void AnglesAreBroughtWithinATurn()
+    {
+        Assert.Equal(new Vector3(0, 23, 350), ClaudeTools.Wrapped(new Vector3(360, 383, -10)));
+        Assert.Equal(new Vector3(90, 0, 180), ClaudeTools.Wrapped(new Vector3(90, -720, 540)));
     }
 
     // Bounds: the open zone around (0, 0) is 64 m across, centred on it.

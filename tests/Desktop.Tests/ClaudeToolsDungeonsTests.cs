@@ -10,7 +10,7 @@ namespace TerrainEditor.Desktop.Tests;
 /// Claude's dungeon tools (ClaudeTools.Dungeons) on the test world's zone 0, 0 with a one-room Frost Cave made there:
 /// what each says when there is no dungeon or a wrong index, the dungeon listed with its rooms, open ends and the rooms
 /// it can take, a room added and taken out, the open ends capped and a door put in and out, each a step named for
-/// Claude, with the dungeon's new id given.
+/// Claude, with the dungeon's new id given; and how opening types are named (TypeName).
 /// </summary>
 [Collection("World files")]
 public class ClaudeToolsDungeonsTests
@@ -115,5 +115,13 @@ public class ClaudeToolsDungeonsTests
         Assert.Equal("There is a door there already.", await r.T.SetDungeonDoor(id, 0));
         await r.T.SetDungeonDoor(id, 0, door: false);
         Assert.Equal("Claude: removed a dungeon door", r.W.Session.UndoLabel);
+    }
+
+    // TypeName: the game's plain openings (no type) read "plain"; others as they are.
+    [Fact]
+    public void OpeningTypesAreNamed()
+    {
+        Assert.Equal("plain", ClaudeTools.TypeName(""));
+        Assert.Equal("cave", ClaudeTools.TypeName("cave"));
     }
 }

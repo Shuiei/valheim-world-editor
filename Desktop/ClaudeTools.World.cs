@@ -388,7 +388,7 @@ public sealed partial class ClaudeTools
                 float cy = t.Position.Y + dy * k + (ground ? GroundAt(scene, cx, cz) - GroundAt(scene, t.Position.X, t.Position.Z) : 0);
                 // As the Select tool's copy: what it was copied from (its kind's data, its builder), fresh.
                 var added = t.Id < 0 ? s.Edits.FindAdded(t.Id) : null;
-                adds.Add((new Editing.NewObject(0, t.Prefab, new Vector3(cx, cy, cz), t.Rotation + new Vector3(0, turn * k, 0), t.Scale,
+                adds.Add((new Editing.NewObject(0, t.Prefab, new Vector3(cx, cy, cz), Wrapped(t.Rotation + new Vector3(0, turn * k, 0)), t.Scale,
                     t.Id >= 0 ? t.Id : added?.SourceId, true, Data: added?.Data), t.Piece));
                 from.Add(i);
             }

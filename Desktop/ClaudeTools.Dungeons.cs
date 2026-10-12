@@ -40,6 +40,9 @@ public sealed partial class ClaudeTools
         return (tool, null);
     }
 
+    /// <summary>An opening's type as Claude reads it: the game's plain openings have none ("plain").</summary>
+    internal static string TypeName(string type) => type.Length == 0 ? "plain" : type;
+
     /// <summary>A rotation's turn round the vertical, in degrees.</summary>
     private static float YawOf(System.Numerics.Quaternion q) => MathF.Round(TerrainEditor.App.BlueprintFormats.ToEuler(q).Y, 1);
 
@@ -86,10 +89,10 @@ public sealed partial class ClaudeTools
             id,
             kind = DungeonTool.KindName(d.Kind),
             rooms = d.Rooms.Select((r, i) => new { index = i, name = r.Name, x = MathF.Round(r.Position.X, 2), y = MathF.Round(r.Position.Y, 2), z = MathF.Round(r.Position.Z, 2), yaw = YawOf(r.Rotation) }),
-            openEnds = tool.FreeEnds.Select((e, i) => new { index = i, type = e.Type, room = e.Room, x = MathF.Round(e.Position.X, 2), y = MathF.Round(e.Position.Y, 2), z = MathF.Round(e.Position.Z, 2), entrance = e.Entrance }),
-            doorJoints = tool.DoorJoints.Select((j, i) => new { index = i, rooms = new[] { j.First, j.Second }, type = j.Type, door = tool.DoorsAt(j).Count > 0 }),
+            openEnds = tool.FreeEnds.Select((e, i) => new { index = i, type = TypeName(e.Type), room = e.Room, x = MathF.Round(e.Position.X, 2), y = MathF.Round(e.Position.Y, 2), z = MathF.Round(e.Position.Z, 2), entrance = e.Entrance }),
+            doorJoints = tool.DoorJoints.Select((j, i) => new { index = i, rooms = new[] { j.First, j.Second }, type = TypeName(j.Type), door = tool.DoorsAt(j).Count > 0 }),
             overlappingPairs = tool.OverlappingPairs,
-            canTake = tool.Palette.Select(r => new { name = r.Name, openings = r.Openings.Select(o => o.Type).Distinct(), endCap = r.EndCap, entrance = r.Entrance }),
+            canTake = tool.Palette.Select(r => new { name = r.Name, openings = r.Openings.Select(o => TypeName(o.Type)).Distinct(), endCap = r.EndCap, entrance = r.Entrance }),
         });
     });
 
@@ -132,7 +135,7 @@ public sealed partial class ClaudeTools
         }
         if (tool.PlaceAt(end, room, join) is not { } placed)
         {
-            return $"{room} has no opening of type {tool.FreeEnds[end].Type} to join there.";
+            return $"{room} has no opening of type {TypeName(tool.FreeEnds[end].Type)} to join there.";
         }
         tool.WithContents = contents;
         tool.WithDoors = doors;

@@ -69,6 +69,13 @@ public sealed partial class ClaudeTools
         };
     }
 
+    /// <summary>Euler angles each brought within 0 to 360 degrees (a turn of 383 is one of 23).</summary>
+    internal static Vector3 Wrapped(Vector3 euler)
+    {
+        static float W(float a) => (a % 360 + 360) % 360;
+        return new Vector3(W(euler.X), W(euler.Y), W(euler.Z));
+    }
+
     /// <summary>A point turned round the vertical by degrees, as the game's yaw turns (90: north becomes east).</summary>
     internal static (float X, float Z) Turned(float x, float z, float degrees)
     {
@@ -121,7 +128,7 @@ public sealed partial class ClaudeTools
                 return $"Nothing moved: {i} ({_w.NameOfPrefab(t.Prefab)}) would go to ({x:0.##}, {z:0.##}), outside the area (x {minX} to {maxX}, z {minZ} to {maxZ}).";
             }
             float y = t.Position.Y + dy + (ground ? GroundAt(scene, x, z) - GroundAt(scene, t.Position.X, t.Position.Z) : 0);
-            moves.Add((i, new Vector3(x, y, z), t.Rotation + new Vector3(0, turn, 0), t.Scale));
+            moves.Add((i, new Vector3(x, y, z), Wrapped(t.Rotation + new Vector3(0, turn, 0)), t.Scale));
         }
         var copies = s.Transform(moves, label.StartsWith("Claude", StringComparison.Ordinal) ? label : "Claude: " + label);
         _w.AfterClaudeEdit($"Claude moved {copies.Count} object(s); Ctrl+Z puts them back.");
@@ -198,7 +205,7 @@ public sealed partial class ClaudeTools
                 problems.Add($"{o.Id}: a scale of {sc} is not between {MinScale} and {MaxScale}");
                 continue;
             }
-            var rot = new Vector3(o.Pitch ?? t.Rotation.X, o.Yaw ?? t.Rotation.Y, o.Roll ?? t.Rotation.Z);
+            var rot = Wrapped(new Vector3(o.Pitch ?? t.Rotation.X, o.Yaw ?? t.Rotation.Y, o.Roll ?? t.Rotation.Z));
             float y = o.Y ?? (o.OnGround && _w.NameOfPrefab(t.Prefab) is string n
                 ? GroundAt(scene, x, z) - Editing.Hammer.Bottom(n, TerrainEditor.App.BlueprintFormats.FromEuler(rot))
                 : t.Position.Y);
