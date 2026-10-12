@@ -10,7 +10,8 @@ using System.Xml.Linq;
 // so two reports that each took half are not counted as all (never more than a report shows). Microsoft's
 // dotnet-coverage merge was not used: it drops the branch counts of the lines it merges (Codecov then shows every
 // line with branches as fully run), and its merge of the collector's own format lost lines that one report ran.
-// Prints the merged totals (lines run of lines measured), as Codecov should show them.
+// Prints the merged totals: the lines covered as Codecov counts them (run, every branch on them taken), which its
+// check compares with its target, and the lines run at all.
 if (args.Length < 2)
 {
     Console.Error.WriteLine("usage: MergeCoverage <merged.xml> <report.xml>...");
@@ -38,7 +39,7 @@ foreach (string report in args[1..])
     }
 }
 
-int linesValid = 0, linesCovered = 0, branchesValid = 0, branchesCovered = 0;
+int linesValid = 0, linesCovered = 0, linesFull = 0, branchesValid = 0, branchesCovered = 0;
 var classes = new XElement("classes");
 foreach ((string file, SortedDictionary<int, Line> lines) in files)
 {
@@ -49,6 +50,11 @@ foreach ((string file, SortedDictionary<int, Line> lines) in files)
         if (line.Hits > 0)
         {
             linesCovered++;
+            // As Codecov counts a line covered: run, and every branch on it taken.
+            if (line.Taken == line.Branches)
+            {
+                linesFull++;
+            }
         }
         branchesValid += line.Branches;
         branchesCovered += line.Taken;
@@ -71,7 +77,8 @@ var merged = new XDocument(
         new XAttribute("branches-valid", branchesValid),
         new XElement("packages", new XElement("package", new XAttribute("name", "merged"), classes))));
 merged.Save(args[0]);
-Console.WriteLine($"Merged {args.Length - 1} report(s): {linesCovered} of {linesValid} lines run ({100.0 * linesCovered / Math.Max(linesValid, 1):F2}%), {branchesCovered} of {branchesValid} branches.");
+Console.WriteLine($"Merged {args.Length - 1} report(s): {linesFull} of {linesValid} lines covered as Codecov counts them ({100.0 * linesFull / Math.Max(linesValid, 1):F2}%: run, every branch taken); "
+    + $"{linesCovered} run at all ({100.0 * linesCovered / Math.Max(linesValid, 1):F2}%); {branchesCovered} of {branchesValid} branches taken.");
 return 0;
 
 /// <summary>One source line's coverage: how many times it ran, and of its branches (none for a plain line), how many
