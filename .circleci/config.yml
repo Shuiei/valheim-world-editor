@@ -65,11 +65,15 @@ commands:
                 command: |
                   apt-get install -y -qq --no-install-recommends xvfb xauth libgl1 libglx-mesa0 libgl1-mesa-dri libegl1 libegl-mesa0 \
                     libgles2 libx11-6 libxrandr2 libxi6 libxcursor1 libice6 libsm6 > /dev/null
-            # For the rest of the job (the tests' step finds it at :99).
+            # For the rest of the job (the tests' step finds it at :99). The image's keyboard layouts name
+            # keys newer than its X libraries know: the keymap compiler's warnings about them (harmless,
+            # not fatal) are left out, anything else Xvfb says is kept.
             - run:
                 name: The virtual screen
                 background: true
-                command: Xvfb :99 -screen 0 1600x1000x24 -nolisten tcp
+                command: |
+                  Xvfb :99 -screen 0 1600x1000x24 -nolisten tcp 2>&1 \
+                    | grep --line-buffered -v -E 'Could not resolve keysym|^The XKEYBOARD keymap compiler \(xkbcomp\) reports:$|^Errors from xkbcomp are not fatal to the X server$'
       - restore_cache:
           keys:
             - nuget-v2-{{ checksum "Directory.Build.props" }}-{{ checksum "Core/ValheimWorldEditor.Core.csproj" }}-{{ checksum "Desktop/ValheimWorldEditor.Desktop.csproj" }}-{{ checksum "tests/Core.Tests/Core.Tests.csproj" }}-{{ checksum "tests/Desktop.Tests/Desktop.Tests.csproj" }}
