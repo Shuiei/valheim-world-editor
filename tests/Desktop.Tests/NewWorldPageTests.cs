@@ -505,4 +505,72 @@ public class NewWorldPageTests
         using var plain = NewWorldPage.Draw(p, 16, startDot: false);
         Assert.Equal(new PixelSize(16, 16), plain.PixelSize);
     }
+
+    [AvaloniaFact]
+    public async Task ADungeonKindSwitchedOnWhileTheyAreBeingFoundWaitsForThem()
+    {
+        using var r = new Run();
+        await r.Look(Seed);
+        var sunken = r.P.ShowDungeons["Sunken crypts"];
+        // Switched on while the seed's dungeons are still being looked for: the loading sign until they are found.
+        bool early = r.P.DungeonMarks == null;
+        sunken.IsChecked = true;
+        if (early)
+        {
+            Assert.True(r.P.Loading.IsVisible);
+            Assert.Equal($"Finding {Seed}'s dungeons…", r.P.LoadingText.Text);
+        }
+        await TestWindows.Until(() => r.P.DungeonMarks != null && !r.P.Loading.IsVisible, 120000);
+        Assert.Equal(r.P.DungeonMarks!.Count(m => m.Name == "Sunken crypts"), r.P.Map.Dots.Count);
+    }
+
+    [AvaloniaFact]
+    public async Task ASearchStartedAgainDropsTheFirstAndItsPictures()
+    {
+        using var r = new Run();
+        await r.Look("abc");
+        r.P.Count.SelectedIndex = 0;
+        Click(r.P.Find);
+        await TestWindows.Until(() => r.P.Progress.Value > 0, 120000);
+        Click(r.P.Stop);
+        await TestWindows.Until(() => r.P.Find.IsEnabled, 120000);
+        Assert.NotEmpty(r.P.Found.Children.OfType<Button>());
+        // The longest search, started twice (the second stops the first) and stopped at once: the pictures go.
+        r.P.Count.SelectedIndex = 2;
+        OnUi(() =>
+        {
+            r.P.StartSearch();
+            r.P.StartSearch();
+        });
+        Assert.Empty(r.P.Found.Children.OfType<Button>());
+        Click(r.P.Stop);
+        await TestWindows.Until(() => r.P.Pending.IsCompleted, 120000);
+        Settle();
+        Assert.True(r.P.Find.IsEnabled);
+        Assert.False(r.P.Stop.IsVisible);
+    }
+
+    [AvaloniaFact]
+    public void CreateWithEmptyBoxesOrNoListenerAsksNothing()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "vwe-newworld-" + Guid.NewGuid().ToString("N")[..8]);
+        Directory.CreateDirectory(root);
+        try
+        {
+            using var page = new NewWorldPage([root], previewSize: 32);
+            page.NameBox.Text = null;
+            page.SeedBox.Text = null;
+            page.AskCreate();
+            Assert.StartsWith("Give the world a name that can be a file name", page.Problem.Text);
+            // A good world asked for with nobody listening: nothing happens, no problem said.
+            page.NameBox.Text = "Fresh";
+            page.SeedBox.Text = "abc";
+            page.AskCreate();
+            Assert.Equal("", page.Problem.Text);
+        }
+        finally
+        {
+            Directory.Delete(root, true);
+        }
+    }
 }

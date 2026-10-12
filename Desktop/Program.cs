@@ -82,7 +82,7 @@ public static class Program
     /// SIGTERM or SIGHUP: closes the tunnel, then shuts the app down on the UI thread (instead of the process ending at
     /// once).
     /// </summary>
-    private static void Quit(System.Runtime.InteropServices.PosixSignalContext c)
+    internal static void Quit(System.Runtime.InteropServices.PosixSignalContext c)
     {
         c.Cancel = true;
         Options.Say($"quit: {c.Signal}");
