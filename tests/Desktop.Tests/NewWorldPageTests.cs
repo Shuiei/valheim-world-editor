@@ -56,8 +56,7 @@ public class NewWorldPageTests
         }
 
         /// <summary>
-        /// Shows this seed at once and waits until its world is shown (the seed box left alone: typing in it would show
-        /// the seed again after the typing pause).
+        /// Shows this seed at once and waits until its world is shown (the seed box left alone).
         /// </summary>
         public async Task Look(string seed)
         {
@@ -265,19 +264,35 @@ public class NewWorldPageTests
     }
 
     [AvaloniaFact]
-    public async Task ATypedSeedIsLookedAtAfterAPauseAndABadOneIsSaid()
+    public async Task ATypedSeedIsLookedAtOnGenerateAndABadOneIsSaid()
     {
         using var r = new Run();
-        // At once (once the text box has told of the change): the loading sign for the seed typed.
-        r.P.SeedBox.Text = "abc";
-        Dispatcher.UIThread.RunJobs();
+        await TestWindows.Until(() => r.P.Shown != null && !r.P.Loading.IsVisible, 60000);
+        // The seed shown: nothing to generate.
+        Assert.False(r.P.Generate.IsEnabled);
+        // Typed: not looked at yet, Generate lit.
+        OnUi(() => r.P.SeedBox.Text = "abc");
+        Assert.True(r.P.Generate.IsEnabled);
+        Assert.False(r.P.Loading.IsVisible);
+        Assert.NotEqual("abc", r.P.Shown?.Seed);
+        // Generate: looked at, the button greyed again.
+        Click(r.P.Generate);
         Assert.True(r.P.Loading.IsVisible);
         Assert.Equal("Looking at abc's world…", r.P.LoadingText.Text);
+        Assert.False(r.P.Generate.IsEnabled);
         await TestWindows.Until(() => r.P.Shown?.Seed == "abc" && !r.P.Loading.IsVisible, 60000);
-        // Roll: another random seed of ten characters.
+        // Enter in the box does the same.
+        OnUi(() => r.P.SeedBox.Text = "abcd");
+        OnUi(() => r.P.SeedBox.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Enter }));
+        Assert.False(r.P.Generate.IsEnabled);
+        await TestWindows.Until(() => r.P.Shown?.Seed == "abcd" && !r.P.Loading.IsVisible, 60000);
+        // Roll: another random seed of ten characters, looked at at once.
         Click(r.P.Roll);
-        Assert.NotEqual("abc", r.P.SeedBox.Text);
+        Assert.NotEqual("abcd", r.P.SeedBox.Text);
         Assert.Equal(10, r.P.SeedBox.Text!.Length);
+        Settle();
+        Assert.False(r.P.Generate.IsEnabled);
+        await TestWindows.Until(() => r.P.Shown?.Seed == r.P.SeedBox.Text && !r.P.Loading.IsVisible, 60000);
         // No seed, or one too long: said, nothing shown.
         foreach (string bad in new[] { "", "12345678901" })
         {
@@ -314,7 +329,8 @@ public class NewWorldPageTests
         Assert.Equal(best.Seed, r.P.SeedBox.Text);
         await TestWindows.Until(() => r.P.Shown?.Seed == best.Seed && !r.P.Loading.IsVisible, 60000);
         Assert.Equal(new Thickness(2), buttons[0].BorderThickness);
-        Assert.All(buttons.Skip(1), b => Assert.Equal(new Thickness(0), b.BorderThickness));
+        // The others as thick, unseen: the chosen one no wider than they are.
+        Assert.All(buttons.Skip(1), b => Assert.Equal((new Thickness(2), Brushes.Transparent), (b.BorderThickness, b.BorderBrush)));
     }
 
     [AvaloniaFact]
@@ -336,25 +352,24 @@ public class NewWorldPageTests
     }
 
     [AvaloniaFact]
-    public async Task ASeedTypedBackBeforeThePauseIsNotLookedAtAgain()
+    public async Task ASeedTypedBackToTheOneShownNeedsNoGenerate()
     {
         using var r = new Run();
         await r.Look(Seed);
-        var shown = r.P.Shown;
-        // Another seed typed: the sign tells of it at once, while the typing pause is waited for.
-        OnUi(() => r.P.SeedBox.Text = "abc");
-        Assert.True(r.P.Loading.IsVisible);
-        // Back to the seed shown before the pause ends: the sign gone, and nothing looked at once the pause is over.
         OnUi(() => r.P.SeedBox.Text = Seed);
-        Assert.False(r.P.Loading.IsVisible);
-        await Task.Delay(800, TestContext.Current.CancellationToken);
-        Settle();
+        Assert.False(r.P.Generate.IsEnabled);
+        var shown = r.P.Shown;
+        // Another seed typed: Generate lit, nothing looked at; back to the one shown: greyed again.
+        OnUi(() => r.P.SeedBox.Text = "abc");
+        Assert.True(r.P.Generate.IsEnabled);
+        OnUi(() => r.P.SeedBox.Text = Seed);
+        Assert.False(r.P.Generate.IsEnabled);
         Assert.False(r.P.Loading.IsVisible);
         Assert.Same(shown, r.P.Shown);
     }
 
     [AvaloniaFact]
-    public async Task ASeedTypedBackWhoseLookWasDroppedIsLookedAtAgain()
+    public async Task ASeedWhoseLookWasDroppedCanBeGeneratedAgain()
     {
         using var r = new Run();
         await r.Look(Seed);
@@ -367,11 +382,12 @@ public class NewWorldPageTests
         });
         await TestWindows.Until(() => r.P.Pending.IsCompleted, 60000);
         Settle();
-        // Typed away and back before the pause ends: nothing is making it, so it is looked at again. One key each, as
-        // typed: the box tells of a change after it is made, and two changes told together both read "abc".
-        OnUi(() => r.P.SeedBox.Text = "abcd");
-        OnUi(() => r.P.SeedBox.Text = "abc");
+        // Its world is not the one on the map: Generate lit, and it is looked at.
+        Assert.Equal(Seed, r.P.Shown?.Seed);
+        Assert.True(r.P.Generate.IsEnabled);
+        Click(r.P.Generate);
         await TestWindows.Until(() => r.P.Shown?.Seed == "abc" && !r.P.Loading.IsVisible, 60000);
+        Assert.False(r.P.Generate.IsEnabled);
     }
 
     [AvaloniaFact]
