@@ -21,7 +21,7 @@ public sealed partial class ClaudeTools
     private const float MinScale = 0.05f, MaxScale = 20f;
 
     /// <summary>The open area's bounds in world metres.</summary>
-    private static (float MinX, float MinZ, float MaxX, float MaxZ) Bounds(WorldScene scene)
+    internal static (float MinX, float MinZ, float MaxX, float MaxZ) Bounds(WorldScene scene)
     {
         float minX = scene.X0 * 64f - 32f, minZ = scene.Z0 * 64f - 32f;
         return (minX, minZ, minX + scene.ZonesX * 64f, minZ + scene.ZonesZ * 64f);
@@ -31,7 +31,7 @@ public sealed partial class ClaudeTools
     /// The things of these ids that can be moved or changed (indices into the scene's things, each once), and why the
     /// others cannot: not an object of the area, or a runestone (the game builds it from its location).
     /// </summary>
-    private static (List<int> Ok, List<string> Problems) Usable(WorldScene scene, IEnumerable<int> ids)
+    internal static (List<int> Ok, List<string> Problems) Usable(WorldScene scene, IEnumerable<int> ids)
     {
         var ok = new List<int>();
         var problems = new List<string>();
@@ -437,7 +437,7 @@ public sealed partial class ClaudeTools
     /// are), as one pending step: from its saved bytes in a world, from its values on the Workshop's plot.
     /// </summary>
     /// <returns>The copy's id, or why nothing changed.</returns>
-    private (int? Id, string? Problem) Rewrite(int id, List<TerrainEditor.App.FieldChange> set, List<TerrainEditor.App.ItemUpload>? inv, string label)
+    internal (int? Id, string? Problem) Rewrite(int id, List<TerrainEditor.App.FieldChange> set, List<TerrainEditor.App.ItemUpload>? inv, string label)
     {
         var s = _w.Session!;
         var t = s.Scene.Things[id];

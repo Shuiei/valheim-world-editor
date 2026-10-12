@@ -6,7 +6,8 @@ namespace TerrainEditor.Desktop.Tests;
 
 /// <summary>
 /// Claude's tools for objects already there (ClaudeTools.Objects): moving and turning a group, exact places and sizes,
-/// replacing with another kind, and reading and changing an object's values, in a world and on the Workshop's plot.
+/// replacing with another kind, and reading and changing an object's values, in a world and on the Workshop's plot;
+/// and the helpers they share (Turned, Bounds, Usable, Rewrite).
 /// </summary>
 [Collection("World files")]
 public class ClaudeToolsObjectsTests
@@ -38,7 +39,6 @@ public class ClaudeToolsObjectsTests
         chest = NewId(await r.T.SetContents(chest, [new ClaudeTools.ItemSpec { Item = "Coins", Stack = 25 }]));
 
         Assert.Equal("Nothing to do: give dx, dy, dz, turn or ground.", await r.T.MoveObjects([chest, sign]));
-        Assert.StartsWith("Nothing moved: -1: not an object of the area", await r.T.MoveObjects([-1], dx: 1));
         Assert.Contains("outside the area", await r.T.MoveObjects([chest, sign], dx: 100));
 
         var moved = ClaudeRun.J(await r.T.MoveObjects([chest, sign, -5], dz: 2, turn: 90)).GetProperty("moved");
@@ -130,22 +130,79 @@ public class ClaudeToolsObjectsTests
         Assert.Equal("home", Value(after, "tag")!.Value.GetProperty("value").GetString());
     }
 
-    // On the Workshop's plot (no world files behind it): a chest filled, moved and given a value keeps its contents
-    // and values through each change.
+    // Turned as yaw turns: a quarter turn takes north to east and east to south; a whole turn changes nothing.
+    [Fact]
+    public void PointsTurnAsYawTurns()
+    {
+        var (x, z) = ClaudeTools.Turned(0, 1, 90);
+        Assert.Equal(1, x, 4);
+        Assert.Equal(0, z, 4);
+        (x, z) = ClaudeTools.Turned(1, 0, 90);
+        Assert.Equal(0, x, 4);
+        Assert.Equal(-1, z, 4);
+        (x, z) = ClaudeTools.Turned(3, -2, 360);
+        Assert.Equal(3, x, 3);
+        Assert.Equal(-2, z, 3);
+    }
+
+    // Bounds: the open zone around (0, 0) is 64 m across, centred on it.
     [AvaloniaFact]
-    public async Task ThePlotsObjectsKeepTheirValuesWhenMoved()
+    public async Task TheAreasBoundsAreItsZones()
+    {
+        using var r = new ClaudeRun();
+        await r.OpenArea();
+        Assert.Equal((-32f, -32f, 32f, 32f), ClaudeTools.Bounds(r.W.Session!.Scene));
+    }
+
+    // Usable: each object once; ids out of range and objects taken away are named, not kept.
+    [AvaloniaFact]
+    public async Task OnlyObjectsOfTheAreaAreUsable()
+    {
+        using var r = new ClaudeRun();
+        await r.OpenArea();
+        int a = Placed(await r.T.PlacePieces([new ClaudeTools.PieceSpec { Prefab = "Beech1", X = 1, Z = 1 }]));
+        int gone = Placed(await r.T.PlacePieces([new ClaudeTools.PieceSpec { Prefab = "Beech1", X = 3, Z = 3 }]));
+        await r.T.RemoveObjects([gone]);
+        var (ok, problems) = ClaudeTools.Usable(r.W.Session!.Scene, [a, a, gone, -1, 1_000_000]);
+        Assert.Equal([a], ok);
+        Assert.Equal([$"{gone}: not an object of the area", "-1: not an object of the area", "1000000: not an object of the area"], problems);
+    }
+
+    // Rewrite in a world: the copy holds the new value, in one step named as asked; a value that does not fit its
+    // kind is said and nothing changes.
+    [AvaloniaFact]
+    public async Task AWorldsObjectIsRewrittenWithItsNewValues()
+    {
+        using var r = new ClaudeRun();
+        await r.OpenArea();
+        int sign = Placed(await r.T.PlacePieces([new ClaudeTools.PieceSpec { Prefab = "sign", X = 2, Z = 2 }]));
+        var s = r.W.Session!;
+        var (none, problem) = r.T.Rewrite(sign, [new("ints", "level", "many")], null, "Claude: bad");
+        Assert.Null(none);
+        Assert.StartsWith("Could not change it: ", problem);
+        Assert.NotEqual("Claude: bad", s.UndoLabel);
+
+        var (id, _) = r.T.Rewrite(sign, [new("strings", "text", "Hello")], null, "Claude: test");
+        Assert.Equal("Claude: test", s.UndoLabel);
+        Assert.True(s.Scene.Things[sign].Gone);
+        byte[] bytes = TerrainEditor.App.ObjectData.Bytes(s.Scene.World!, s.Edits, s.Scene.Things[id!.Value].Id)!;
+        Assert.Contains("Hello", System.Text.Encoding.UTF8.GetString(bytes));
+    }
+
+    // Rewrite on the plot: the values go with the piece, a value set again replaced, contents written with the
+    // default-loot mark.
+    [AvaloniaFact]
+    public async Task APlotsObjectIsRewrittenWithItsNewValues()
     {
         using var r = new ClaudeRun();
         await r.T.OpenWorkshop();
         int chest = Placed(await r.T.PlacePieces([new ClaudeTools.PieceSpec { Prefab = "piece_chest_wood", X = 0, Z = 0 }]));
-        chest = NewId(await r.T.SetContents(chest, [new ClaudeTools.ItemSpec { Item = "Amber", Stack = 3 }]));
-        chest = ClaudeRun.J(await r.T.MoveObjects([chest], dx: 6)).GetProperty("moved")[0].GetProperty("id").GetInt32();
-        chest = NewId(await r.T.SetObjectData(chest, [new ClaudeTools.FieldSpec { Section = "strings", Key = "creatorName", Value = "Thor" }]));
-
-        var o = ClaudeRun.J(await r.T.GetObject(chest));
-        Assert.Equal(6, o.GetProperty("x").GetSingle(), 2);
-        Assert.Equal("Amber", o.GetProperty("contents")[0].GetProperty("item").GetString());
-        Assert.Equal("Thor", Value(o, "creatorName")!.Value.GetProperty("value").GetString());
-        Assert.Equal(5, o.GetProperty("slots").GetProperty("columns").GetInt32());
+        var s = r.W.Session!;
+        int id = r.T.Rewrite(chest, [new("strings", "creatorName", "Odin")], [new("Wood", null, Stack: 5)], "Claude: test").Id!.Value;
+        id = r.T.Rewrite(id, [new("strings", "creatorName", "Thor")], null, "Claude: test").Id!.Value;
+        var data = s.Edits.FindAdded(s.Scene.Things[id].Id)!.Data!;
+        Assert.Single(data, f => f.Key == TerrainEditor.Save.StableHash.Of("creatorName") && f.Value == "Thor");
+        Assert.Contains(data, f => f.Key == TerrainEditor.App.ObjectData.ItemsKey);
+        Assert.Contains(data, f => f.Key == TerrainEditor.App.ObjectData.AddedDefaultItemsKey && f.Value == "1");
     }
 }
