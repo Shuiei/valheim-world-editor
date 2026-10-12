@@ -6,7 +6,8 @@ without any mod, console players on crossplay included.
 
 ## Seeing a seed
 
-Type a seed (up to 10 letters and digits) or press **Roll** for a random one. The map on the right
+Type a seed (up to 10 letters and digits) and press **Generate world** (or Enter), or
+press **Roll** for a random one, shown at once. The button is greyed while the seed's world is the one shown. The map on the right
 shows that seed's world as the game will make it, from the editor's copy of the game's world
 generator: land coloured by biome, sea shaded by depth, north up. The mouse wheel zooms where the
 pointer is, dragging moves the map, and a double click (or the bottom right buttons) shows all of it
