@@ -9,8 +9,8 @@ the plugin is unchanged in versions without that part.
 ### Changed
 - **Follow grows the area** instead of moving it: when you look near the area's edge, a row of zones
   is added on that side and the zones already open stay (a 3 × 3 area becomes 4 × 3, then 4 × 4…).
-  Past 9 zones one way, it moves that way instead. The arrows move the grown area as it is; the size
-  box makes it square again.
+  It never leaves zones behind, and stops at 16 zones each way (about 1 km). The arrows move the
+  grown area as it is; the size box makes it square again.
 
 ### Fixed
 - **Rocks that shape the ground** (the Plains' tall rock pillars, coast, heath, forest and copper

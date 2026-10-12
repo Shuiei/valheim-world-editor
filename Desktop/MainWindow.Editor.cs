@@ -38,10 +38,10 @@ public sealed partial class MainWindow
     /// <summary>The sizes the area can have, in zones across.</summary>
     internal static readonly int[] AreaSizes = [3, 5, 7];
     /// <summary>
-    /// The most zones Follow grows the area to, each way; past it the area moves instead (its far row is left
-    /// behind).
+    /// The most zones Follow grows the area to, each way (about 1 km); there it stops growing that way. It never
+    /// leaves zones behind.
     /// </summary>
-    internal const int MaxFollowZones = 9;
+    internal const int MaxFollowZones = 16;
     /// <summary>True while <c>ShowAreaSize</c> sets the size box, so its change is not taken for the user's.</summary>
     private bool _fillingSize;
     /// <summary>The note about the area's locations.</summary>
@@ -70,6 +70,8 @@ public sealed partial class MainWindow
     private readonly DispatcherTimer _gameTimer = new() { Interval = TimeSpan.FromSeconds(2) };
     /// <summary>Why Follow last waited, so the same reason is not said again at every tick.</summary>
     private string _followSaid = "";
+    /// <summary>True while Follow opens the grown area, so the ticks in between do not open it again.</summary>
+    private bool _followBusy;
     /// <summary>The editor's settings, loaded when the window is made.</summary>
     internal AppSettings Settings { get; } = AppSettings.Load();
     /// <summary>Writes the settings (Auto, Follow); tests keep them in memory, so no other window reads them.</summary>
@@ -303,12 +305,12 @@ public sealed partial class MainWindow
 
     /// <summary>
     /// Follow: when the view's centre comes within 12 m of the area's edge, the area grows by a row of zones on that
-    /// side (both sides near a corner), keeping the zones it has; past <c>MaxFollowZones</c> one way, it moves that
-    /// way instead, leaving the far row behind. The new block (south-west zone and size), or null.
+    /// side (both sides near a corner), keeping every zone it has, up to <c>MaxFollowZones</c> each way. The new
+    /// block (south-west zone and size), or null.
     /// </summary>
     internal async Task<(int X0, int Z0, int ZonesX, int ZonesZ)?> CheckFollow()
     {
-        if (!Settings.AreaFollow || _pages.Content != _editorPage || View.Scene is not { Owner: not null } s)
+        if (_followBusy || !Settings.AreaFollow || _pages.Content != _editorPage || View.Scene is not { Owner: not null } s)
         {
             return null;
         }
@@ -321,34 +323,52 @@ public sealed partial class MainWindow
         }
         if (MoveBlocker() is string why)
         {
-            if (_followSaid != why)
-            {
-                MessageText.Text = $"Follow waits: {why}.";
-            }
-            _followSaid = why;
+            SayFollow($"Follow waits: {why}.");
             return null;
         }
         int x0 = s.X0, z0 = s.Z0, zonesX = s.ZonesX, zonesZ = s.ZonesZ;
         // The view mirrors z: north is -t.Z.
-        bool moved = (nearX && Grow(ref x0, ref zonesX, t.X > 0)) | (nearZ && Grow(ref z0, ref zonesZ, t.Z < 0));
-        MessageText.Text = moved ? "Moving the area…" : "Growing the area…";
-        await OpenBlockKeepingView(x0, z0, zonesX, zonesZ);
+        bool grown = (nearX && Grow(ref x0, ref zonesX, t.X > 0)) | (nearZ && Grow(ref z0, ref zonesZ, t.Z < 0));
+        if (!grown)
+        {
+            SayFollow($"The area is as large as Follow makes it ({MaxFollowZones} zones each way): move it with the arrows, or open another from the map.");
+            return null;
+        }
+        MessageText.Text = "Growing the area…";
+        _followBusy = true;
+        try
+        {
+            await OpenBlockKeepingView(x0, z0, zonesX, zonesZ);
+        }
+        finally
+        {
+            _followBusy = false;
+        }
         return (x0, z0, zonesX, zonesZ);
     }
 
+    /// <summary>Says why Follow does nothing, once while the reason stays.</summary>
+    private void SayFollow(string text)
+    {
+        if (_followSaid != text)
+        {
+            MessageText.Text = text;
+        }
+        _followSaid = text;
+    }
+
     /// <summary>
-    /// One row of zones more on one side of a run of zones (first zone, count), up to <c>MaxFollowZones</c>;
-    /// past it the run moves that way instead. True when it moved.
+    /// One row of zones more on one side of a run of zones (first zone, count), up to <c>MaxFollowZones</c>.
+    /// True when it grew.
     /// </summary>
     internal static bool Grow(ref int first, ref int count, bool up)
     {
-        if (count < MaxFollowZones)
+        if (count >= MaxFollowZones)
         {
-            first -= up ? 0 : 1;
-            count++;
             return false;
         }
-        first += up ? 1 : -1;
+        first -= up ? 0 : 1;
+        count++;
         return true;
     }
 

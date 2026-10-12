@@ -559,15 +559,15 @@ public class WorldControlsTests
     }
 
     [Fact]
-    public void FollowGrowsUpToTheMostZonesThenMoves()
+    public void FollowGrowsUpToTheMostZonesAndKeepsThem()
     {
         int first = 0, count = MainWindow.MaxFollowZones - 1;
-        Assert.False(MainWindow.Grow(ref first, ref count, up: false));
-        Assert.Equal((-1, MainWindow.MaxFollowZones), (first, count));
-        // At the most: it moves, leaving the far row behind.
-        Assert.True(MainWindow.Grow(ref first, ref count, up: true));
-        Assert.Equal((0, MainWindow.MaxFollowZones), (first, count));
         Assert.True(MainWindow.Grow(ref first, ref count, up: false));
+        Assert.Equal((-1, MainWindow.MaxFollowZones), (first, count));
+        // At the most: it stops, no zone left behind.
+        Assert.False(MainWindow.Grow(ref first, ref count, up: true));
+        Assert.Equal((-1, MainWindow.MaxFollowZones), (first, count));
+        Assert.False(MainWindow.Grow(ref first, ref count, up: false));
         Assert.Equal((-1, MainWindow.MaxFollowZones), (first, count));
     }
 
