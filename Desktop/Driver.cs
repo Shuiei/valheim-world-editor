@@ -50,9 +50,11 @@ public static class Driver
 {
     /// <summary>
     /// How long a picture may wait for the view to be ready: the world map's first build on a slow computer (CI's
-    /// two cores, slower still while its coverage is measured) takes more than a minute.
+    /// two cores) takes more than a minute. VWE_PICTURE_WAIT (seconds) gives longer: the tests under coverage, which
+    /// measures this app too.
     /// </summary>
-    private static readonly TimeSpan PictureWait = TimeSpan.FromMinutes(3);
+    private static readonly TimeSpan PictureWait = TimeSpan.FromSeconds(
+        int.TryParse(Environment.GetEnvironmentVariable("VWE_PICTURE_WAIT"), out int s) && s > 0 ? s : 180);
 
     /// <summary>The View panel's 3D resolution choices, in their list's order.</summary>
     private static readonly string[] Resolutions = ["sharp", "balanced", "fast"];
