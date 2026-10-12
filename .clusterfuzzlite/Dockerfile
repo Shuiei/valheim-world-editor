@@ -1,6 +1,7 @@
 # ClusterFuzzLite's build image for the .NET fuzz targets (tests/Fuzz): its C++ builder, plus .NET,
 # SharpFuzz's instrumentation tool and libfuzzer-dotnet (libFuzzer's driver for .NET programs).
-FROM gcr.io/oss-fuzz-base/base-builder:v1
+# The image is pinned by digest; Dependabot moves the digest when v1 changes.
+FROM gcr.io/oss-fuzz-base/base-builder:v1@sha256:b867812795e2dd4516002f889a9c9f5ac4c549589b9f6b38f3b7a4c6627efaa9
 RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates libicu-dev zip && rm -rf /var/lib/apt/lists/*
 RUN curl -sSL https://dot.net/v1/dotnet-install.sh -o /tmp/dotnet-install.sh \
  && bash /tmp/dotnet-install.sh --channel 10.0 --install-dir /opt/dotnet \
