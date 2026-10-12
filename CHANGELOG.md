@@ -11,6 +11,9 @@ the plugin is unchanged in versions without that part.
   the map's size box and the top bar's; Follow grows it up to 17 zones each way, and Claude's
   `open_area` opens up to 17 × 17. Large areas are slow to open and draw: meant for big works and
   for testing the editor's speed.
+- **Faster drawing of large areas**: only the parts of the area in view are drawn (in 128 m cells),
+  and small objects stop being drawn far away (past 400 times their size, a few pixels). A 17 × 17
+  area with 2.3 million objects went from 31 to about 75 frames a second.
 
 ### Fixed
 - **Unsaved marks** kept their green dots after **Save to world**; they now go once saved, as after
