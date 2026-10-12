@@ -225,9 +225,13 @@ public sealed class NewWorldPage : IDisposable
     /// </summary>
     private string? _dungeonError;
     /// <summary>
-    /// The seed last asked to be shown, or null.
+    /// The seed shown or being made (Generate is greyed while the seed box holds it), or null.
     /// </summary>
     private string? _generated;
+    /// <summary>
+    /// The seed's map, in cells on a side.
+    /// </summary>
+    private readonly int _previewSize;
 
     /// <summary>
     /// A distance box: 0..8000 m in steps of 250.
@@ -253,8 +257,10 @@ public sealed class NewWorldPage : IDisposable
     /// </summary>
     /// <param name="roots">The world folders to offer (tests); null for the game's own. With none, the first the game
     /// would use.</param>
-    public NewWorldPage(IReadOnlyList<string>? roots = null)
+    /// <param name="previewSize">The seed's map, in cells on a side (tests: smaller is quicker).</param>
+    public NewWorldPage(IReadOnlyList<string>? roots = null, int previewSize = 512)
     {
+        _previewSize = previewSize;
         Loading = new Border
         {
             Background = Ui.Panel,
@@ -330,7 +336,7 @@ public sealed class NewWorldPage : IDisposable
             SeedBox.Text = SeedPreview.RandomSeed();
             ShowSeed(SeedBox.Text);
         };
-        SeedBox.TextChanged += (_, _) => Generate.IsEnabled = (SeedBox.Text?.Trim() ?? "") != _generated;
+        SeedBox.TextChanged += (_, _) => FitGenerate();
         SeedBox.KeyDown += (_, e) =>
         {
             if (e.Key == Key.Enter && Generate.IsEnabled)
@@ -491,7 +497,15 @@ public sealed class NewWorldPage : IDisposable
         StopDungeons();
         Loading.IsVisible = false;
         FillDungeons();
+        // A seed being made is dropped: the one shown is the world on the map again.
+        _generated = Shown?.Seed;
+        FitGenerate();
     }
+
+    /// <summary>
+    /// Generate lit unless the seed box's world is the one shown or being made.
+    /// </summary>
+    private void FitGenerate() => Generate.IsEnabled = (SeedBox.Text?.Trim() ?? "") != _generated;
 
     /// <summary>
     /// Leaving the page: what runs is stopped.
@@ -513,7 +527,7 @@ public sealed class NewWorldPage : IDisposable
         _preview?.Cancel();
         Problem.Text = "";
         _generated = seed;
-        Generate.IsEnabled = false;
+        FitGenerate();
         if (seed.Length is 0 or > 10)
         {
             Note("The seed is 1 to 10 characters, as in the game.");
@@ -535,7 +549,7 @@ public sealed class NewWorldPage : IDisposable
         Pending = Task.Run(async () =>
         {
             await rules.ConfigureAwait(false);
-            return SeedPreview.Make(seed, 512, parallel: true, landmarks: true, cancel.Token);
+            return SeedPreview.Make(seed, _previewSize, parallel: true, landmarks: true, cancel.Token);
         }, cancel.Token).ContinueWith(t =>
         {
             // A newer seed asked for since: that one's answer will come.
@@ -548,6 +562,9 @@ public sealed class NewWorldPage : IDisposable
             {
                 Note($"The seed could not be looked at: {t.Exception?.GetBaseException().Message}");
                 Console.WriteLine($"New world: seed {seed} could not be looked at: {t.Exception?.GetBaseException()}");
+                // Not shown: Generate can try it again.
+                _generated = Shown?.Seed;
+                FitGenerate();
                 return;
             }
             Show(t.Result);

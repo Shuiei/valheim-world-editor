@@ -56,7 +56,7 @@ public class GameBundlesTests
         Assert.Equal(new byte[] { 10, 20, 30, 0 }, none);
     }
 
-    private const string Fragment = """
+    internal const string Fragment = """
 		#ifdef FRAGMENT
 		#version 150
 		uniform 	vec4 _Time;

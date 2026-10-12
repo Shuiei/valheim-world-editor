@@ -386,7 +386,7 @@ public static class Hammer
     /// A ray against a collider, in the piece's frame: the distance along d (unit length) and the surface's
     /// normal; null when it misses.
     /// </summary>
-    private static (float, Vector3)? RayShape(Vector3 o, Vector3 d, Shape s) => s switch
+    internal static (float, Vector3)? RayShape(Vector3 o, Vector3 d, Shape s) => s switch
     {
         Box b => RayBox(o, d, b),
         Sphere sp => RaySphere(o, d, sp.C, sp.R),
