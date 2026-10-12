@@ -256,7 +256,8 @@ the stand-in game `FakeGame`, the `DataDir` collection), compiled into both proj
   each test opening a fresh copy of the test world. They need a display and skip without one. One
   group starts the app with `VWE_GPU_BUDGET=1`: the models and textures on the graphics card past
   that many bytes (1 GiB by default) are let go when another area opens, so every area reads its
-  models again.
+  models again. Their groups are non-parallel collections: each app runs alone, after the other tests,
+  since its map keeps every core but one busy (on CI's two cores, under coverage, pictures timed out).
 - **The user's files are never touched.** Module initializers (`TestFiles` in `tests/Support`, and
   `TestApp` for the app's own) point the settings, servers, Place memory, stamps, preferences, saved
   selections and the data folder at temporary files before any test runs, and turn off the search of
