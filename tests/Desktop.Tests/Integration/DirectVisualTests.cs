@@ -24,7 +24,7 @@ public sealed class DirectVisualTests(DirectEditorProcess editor)
         Assert.Equal("editor", s.GetProperty("page").GetString());
         Assert.True(s.GetProperty("objects").GetInt32() > 0);
         string bench = editor.Send("bench 1").GetProperty("bench").GetString()!;
-        Assert.Matches(@"^\d+ fps over \d+\.\d s, work .* ms, gaps median \d+ ms, 95% \d+ ms, max \d+ ms, view \d+×\d+ px$", bench);
+        Assert.Matches(@"^\d+ fps over \d+\.\d s, work .* ms, gaps median \d+ ms, 95% \d+ ms, max \d+ ms, view \d+×\d+ px, [\d,]+ of [\d,]+ instances drawn in the last frame, [\d,]+ draw calls, [\d,]+ batches$", bench);
         Assert.Equal(0, editor.Send("state").GetProperty("glErrors").GetInt32());
         // What it said is in its log, in the tests' data folder.
         string log = File.ReadAllText(Path.Combine(editor.Data, "ValheimWorldEditor.log"));
