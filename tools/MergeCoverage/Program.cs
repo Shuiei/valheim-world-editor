@@ -39,43 +39,66 @@ foreach (string report in args[1..])
     }
 }
 
+static string Rate(int part, int whole) => (whole == 0 ? 1.0 : (double)part / whole).ToString(CultureInfo.InvariantCulture);
+
+// Cobertura's DTD requires line-rate, branch-rate and complexity on the coverage, each package and each class; the
+// reports carry no complexity worth adding up, so it is written as 0.
 int linesValid = 0, linesCovered = 0, linesFull = 0, branchesValid = 0, branchesCovered = 0;
 var classes = new XElement("classes");
 foreach ((string file, SortedDictionary<int, Line> lines) in files)
 {
     var written = new XElement("lines");
+    int fileValid = 0, fileCovered = 0, fileBranchesValid = 0, fileBranchesCovered = 0;
     foreach ((int number, Line line) in lines)
     {
-        linesValid++;
+        fileValid++;
         if (line.Hits > 0)
         {
-            linesCovered++;
+            fileCovered++;
             // As Codecov counts a line covered: run, and every branch on it taken.
             if (line.Taken == line.Branches)
             {
                 linesFull++;
             }
         }
-        branchesValid += line.Branches;
-        branchesCovered += line.Taken;
+        fileBranchesValid += line.Branches;
+        fileBranchesCovered += line.Taken;
         written.Add(line.Write(number));
     }
-    classes.Add(new XElement("class", new XAttribute("name", file), new XAttribute("filename", file), new XElement("methods"), written));
+    linesValid += fileValid;
+    linesCovered += fileCovered;
+    branchesValid += fileBranchesValid;
+    branchesCovered += fileBranchesCovered;
+    classes.Add(new XElement(
+        "class",
+        new XAttribute("name", file),
+        new XAttribute("filename", file),
+        new XAttribute("line-rate", Rate(fileCovered, fileValid)),
+        new XAttribute("branch-rate", Rate(fileBranchesCovered, fileBranchesValid)),
+        new XAttribute("complexity", 0),
+        new XElement("methods"),
+        written));
 }
 
-static string Rate(int part, int whole) => (whole == 0 ? 1.0 : (double)part / whole).ToString(CultureInfo.InvariantCulture);
 var merged = new XDocument(
     new XElement(
         "coverage",
         new XAttribute("line-rate", Rate(linesCovered, linesValid)),
         new XAttribute("branch-rate", Rate(branchesCovered, branchesValid)),
+        new XAttribute("complexity", 0),
         new XAttribute("version", "1.9"),
         new XAttribute("timestamp", DateTimeOffset.UtcNow.ToUnixTimeSeconds()),
         new XAttribute("lines-covered", linesCovered),
         new XAttribute("lines-valid", linesValid),
         new XAttribute("branches-covered", branchesCovered),
         new XAttribute("branches-valid", branchesValid),
-        new XElement("packages", new XElement("package", new XAttribute("name", "merged"), classes))));
+        new XElement("packages", new XElement(
+            "package",
+            new XAttribute("name", "merged"),
+            new XAttribute("line-rate", Rate(linesCovered, linesValid)),
+            new XAttribute("branch-rate", Rate(branchesCovered, branchesValid)),
+            new XAttribute("complexity", 0),
+            classes))));
 merged.Save(args[0]);
 Console.WriteLine($"Merged {args.Length - 1} report(s): {linesFull} of {linesValid} lines covered as Codecov counts them ({100.0 * linesFull / Math.Max(linesValid, 1):F2}%: run, every branch taken); "
     + $"{linesCovered} run at all ({100.0 * linesCovered / Math.Max(linesValid, 1):F2}%); {branchesCovered} of {branchesValid} branches taken.");
