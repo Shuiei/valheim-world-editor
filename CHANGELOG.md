@@ -4,6 +4,19 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.23.1 — unreleased
+
+### Fixed
+- **Code coverage** on Codecov counts every test again: the tests that start the editor in a process
+  of their own no longer wipe out what the other tests in their CI container covered (about a third
+  of the app's tests went uncounted), and the containers' reports are merged without losing which
+  branches ran. The app (`Desktop/`) now has its own 95% coverage check, and many new tests cover its
+  untested lines and branches.
+- **Workshop**: a click that moved the mouse a little before letting go placed nothing; it now puts
+  the piece the preview shows.
+- **Discard** that has to read the world again no longer fails without a word when the world's files
+  cannot be read: it says why and keeps the area open.
+
 ## v1.23.0 — unreleased
 
 ### Changed

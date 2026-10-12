@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- CI's coverage job: merges the test containers' Cobertura reports into the one Codecov gets
+       (dotnet run, project tools/MergeCoverage, then the merged file and the reports; see Program.cs). -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <RootNamespace>TerrainEditor.MergeCoverage</RootNamespace>
+  </PropertyGroup>
+</Project>
