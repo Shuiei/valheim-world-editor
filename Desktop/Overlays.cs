@@ -59,8 +59,12 @@ public static class Overlays
     {
         float ox = s.X0 * 64f - 32f, oz = s.Z0 * 64f - 32f;
         float minX = ox - 40, maxX = ox + s.W + 40, minZ = oz - 40, maxZ = oz + s.H + 40;
-        return (s.World?.Locations ?? []).Count(l => l.Position.X >= minX && l.Position.X <= maxX && l.Position.Z >= minZ && l.Position.Z <= maxZ);
+        return RealLocations(s).Count(l => l.Position.X >= minX && l.Position.X <= maxX && l.Position.Z >= minZ && l.Position.Z <= maxZ);
     }
+
+    /// <summary>The world's locations without the invisible ground discs of No limit (not places to show).</summary>
+    private static IEnumerable<(Vector3 Position, int Location)> RealLocations(WorldScene s) =>
+        (s.World?.Locations ?? []).Where(l => !Editing.Uplift.IsDisc(l.Location));
 
     /// <summary>Builds every layer's lines for the scene, following the ground height.</summary>
     /// <param name="s">The scene to draw over.</param>
@@ -133,7 +137,7 @@ public static class Overlays
         // Location markers: a post 14 m tall at each location in or near the area.
         float minX = ox - 40, maxX = ox + s.W + 40, minZ = oz - 40, maxZ = oz + s.H + 40;
         int locations = 0;
-        foreach (var (p, _) in s.World?.Locations ?? [])
+        foreach (var (p, _) in RealLocations(s))
         {
             if (p.X < minX || p.X > maxX || p.Z < minZ || p.Z > maxZ)
             {

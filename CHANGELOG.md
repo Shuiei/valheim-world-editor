@@ -4,6 +4,13 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.20.2 — unreleased
+
+### Fixed
+- **Location markers** no longer put a post on every invisible ground disc of No limit (one every
+  6 m where the ground was taken past ±8 m): they hid the real locations. The "location(s) here"
+  note no longer counts them either.
+
 ## v1.20.1 — unreleased
 
 ### Changed
