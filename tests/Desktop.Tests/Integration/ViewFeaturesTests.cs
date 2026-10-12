@@ -244,7 +244,8 @@ public class ViewFeaturesTests
     {
         var (w, _, _) = Open();
         var texts = Avalonia.LogicalTree.LogicalExtensions.GetLogicalDescendants(w).OfType<TextBlock>().Select(t => t.Text).ToList();
-        int look = texts.IndexOf("LOOK"), objects = texts.IndexOf("OBJECTS"), ground = texts.IndexOf("GROUND (GAME LOOK)");
+        // The Place panel has an Objects section too: look for the View panel's headings after its LOOK.
+        int look = texts.IndexOf("LOOK"), objects = texts.IndexOf("OBJECTS", look + 1), ground = texts.IndexOf("GROUND (GAME LOOK)", look + 1);
         Assert.True(look >= 0 && objects > look && ground > objects, $"{look} {objects} {ground}");
         Assert.Contains("3D resolution", texts);
     }

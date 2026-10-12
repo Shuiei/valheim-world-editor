@@ -116,7 +116,7 @@ public class PlacePanelTests
         tick.IsChecked = false;
         Assert.DoesNotContain("Beech1", r.T.Chosen);
         // The star makes it a favourite: a chip appears; clicking the chip ticks the kind.
-        var star = r.P.List.GetLogicalDescendants().OfType<Button>().First(b => (string)b.Content! == "☆");
+        var star = r.P.List.GetLogicalDescendants().OfType<Button>().First(b => b.Content is "☆");
         Click(star);
         Assert.Contains("Beech1", r.P.Memory.Favourites);
         var chip = r.P.Favourites.Children.OfType<ToggleButton>().Single();
@@ -125,7 +125,7 @@ public class PlacePanelTests
         Dispatcher.UIThread.RunJobs();
         Assert.Contains("Beech1", r.T.Chosen);
         // Starred again: no longer a favourite.
-        Click(r.P.List.GetLogicalDescendants().OfType<Button>().First(b => (string)b.Content! == "★"));
+        Click(r.P.List.GetLogicalDescendants().OfType<Button>().First(b => b.Content is "★"));
         Assert.DoesNotContain("Beech1", r.P.Memory.Favourites);
         Click(r.P.KindsButton);
         Assert.False(r.P.Chooser.IsVisible);
@@ -163,7 +163,7 @@ public class PlacePanelTests
         Assert.Equal(sliders, r.P.Mix.GetLogicalDescendants().OfType<Slider>());
         Assert.Contains("70%", Texts(r.P.Mix));
         Assert.Contains("30%", Texts(r.P.Mix));
-        Click(r.P.Mix.GetLogicalDescendants().OfType<Button>().First(b => (string)b.Content! == "✕"));
+        Click(r.P.Mix.GetLogicalDescendants().OfType<Button>().First(b => b.Content is "✕"));
         Assert.Equal(new[] { "Oak1" }, r.T.Chosen);
         // One kind: no weight to set, its share still shown.
         Assert.Empty(r.P.Mix.GetLogicalDescendants().OfType<Slider>());
