@@ -551,11 +551,7 @@ public partial class MainWindow
     /// </summary>
     private void EnterBuilding()
     {
-        // Building in a dungeon ends first: its kept settings are the ones the Workshop keeps.
-        if (BuildingInDungeon)
-        {
-            BuildInDungeon(false);
-        }
+        // Building in a dungeon has ended already (ShowEditor's Edit ends it), so the settings kept are the Place tool's own.
         _kept ??= KeepPlaceTool();
         Tools.SetWorkshop(true);
         View.SetOverlay(Overlays.Layer.Borders, false);

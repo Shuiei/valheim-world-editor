@@ -299,8 +299,8 @@ tools/release.sh /tmp/dist && tools/check-package.sh /tmp/dist/*.tar.gz
 ```
 
 **Coverage**: on `main` only, each test container keeps its coverage, and once `core-tests` and
-`app-tests` have both passed, the `coverage` job merges all six into one report (`dotnet-coverage
-merge`, whose total its log shows) and sends that one file to
+`app-tests` have both passed, the `coverage` job merges all six into one report (`tools/MergeCoverage`,
+whose total its log shows: a line's hits added up, its branches all taken when one report took them all) and sends that one file to
 [Codecov](https://app.codecov.io/gh/Shuiei/valheim-world-editor) (`codecov.yml`), which checks each of main's commits. A failed test sends nothing, so Codecov keeps the last full
 coverage rather than show part of it (rerun main's workflow from the start, not "Rerun failed tests",
 which would send only the rerun classes' coverage): `codecov/project` fails when the editor's line coverage is under
@@ -312,7 +312,9 @@ The coverage counts only our own code (`tests/coverage.runsettings`, for both te
 and the app, not the tests, the libraries or generated code, and not the FastNoise library either, which
 the test against the game's values checks along with the world generator. Code that CI cannot run (it
 needs a display, the game's files or a real game) can be left out with
-`[ExcludeFromCodeCoverage(Justification = "...")]`.
+`[ExcludeFromCodeCoverage(Justification = "...")]`. A test that starts the editor in a process of its own
+starts the copy in the tests' folder (`EditorApp.Path`): the collector measures that process too, but one
+started from `Desktop/bin` would replace the test process's coverage of the app with its own.
 
 ## Fuzzing
 

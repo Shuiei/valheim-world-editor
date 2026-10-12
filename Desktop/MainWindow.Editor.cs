@@ -415,7 +415,7 @@ public sealed partial class MainWindow
         {
             await Task.Run(w.Discard);
         }
-        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or IOException or InvalidOperationException)
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or IOException or InvalidDataException or UnauthorizedAccessException or InvalidOperationException)
         {
             MessageText.Text = "Could not read the world again: " + ex.Message;
             Busy(null);

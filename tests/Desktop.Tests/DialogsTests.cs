@@ -9,7 +9,7 @@ namespace TerrainEditor.Desktop.Tests;
 
 /// <summary>
 /// The small modal windows (Dialogs): a question answered with either button, a message with only OK, and a line of
-/// text typed, kept or cancelled. They are real windows owned by the main one: the tests find them there and press
+/// text typed, kept or cancelled, a blueprint's details likewise. They are real windows owned by the main one: the tests find them there and press
 /// their buttons.
 /// </summary>
 public class DialogsTests
@@ -93,5 +93,45 @@ public class DialogsTests
         Assert.Equal("", d.GetLogicalDescendants().OfType<TextBox>().Single().Text);
         Press(d, "Cancel");
         Assert.Null(await typed);
+    }
+
+    [AvaloniaFact]
+    public async Task ABlueprintsDetailsAreTypedKeptOrCancelled()
+    {
+        var owner = Owner();
+        var asked = Dialogs.AskBlueprint(owner, new("Hut", "A small hut", ["house", "wood"]), "20 Wood");
+        var d = TestWindows.Shown(owner);
+        Assert.Equal("Blueprint", d.Title);
+        var boxes = d.GetLogicalDescendants().OfType<TextBox>().ToList();
+        Assert.Equal(["Hut", "A small hut", "house, wood"], boxes.Select(b => b.Text));
+        Assert.Contains(d.GetLogicalDescendants().OfType<TextBlock>(), t => t.Text == "Cost in game: 20 Wood");
+        // The tags are split on commas and semicolons, each once.
+        boxes[0].Text = "Longhouse";
+        boxes[1].Text = "Two floors";
+        boxes[2].Text = "stone, , Viking;stone";
+        Press(d, "Save");
+        var kept = await asked;
+        Assert.NotNull(kept);
+        Assert.Equal("Longhouse", kept.Name);
+        Assert.Equal("Two floors", kept.Description);
+        Assert.Equal(["stone", "Viking"], kept.Tags);
+        Assert.Empty(owner.OwnedWindows);
+
+        // Boxes emptied to nothing: empty details.
+        asked = Dialogs.AskBlueprint(owner, new("Hut", "", []), "nothing");
+        d = TestWindows.Shown(owner);
+        foreach (var box in d.GetLogicalDescendants().OfType<TextBox>())
+        {
+            box.Text = null;
+        }
+        Press(d, "Save");
+        kept = await asked;
+        Assert.NotNull(kept);
+        Assert.Equal(("", ""), (kept.Name, kept.Description));
+        Assert.Empty(kept.Tags);
+
+        asked = Dialogs.AskBlueprint(owner, new("Hut", "", []), "nothing");
+        Press(TestWindows.Shown(owner), "Cancel");
+        Assert.Null(await asked);
     }
 }

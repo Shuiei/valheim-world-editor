@@ -103,7 +103,7 @@ public static class Mountain
             int n = 3 + rnd.Next(3);
             for (int i = 0; i < n; i++)
             {
-                float t = n == 1 ? 0 : -0.62f + 1.24f * i / (n - 1) + ((float)rnd.NextDouble() - 0.5f) * 0.12f;
+                float t = -0.62f + 1.24f * i / (n - 1) + ((float)rnd.NextDouble() - 0.5f) * 0.12f;
                 bumps.Add((t, ((float)rnd.NextDouble() - 0.5f) * 0.12f, 0.34f + (float)rnd.NextDouble() * 0.12f, 0.55f + (float)rnd.NextDouble() * 0.45f));
             }
         }
