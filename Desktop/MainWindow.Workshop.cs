@@ -393,8 +393,8 @@ public partial class MainWindow
         {
             return "There is no building piece on the plot to save.";
         }
-        RefreshSupport();
-        if (LastSupport is { Breaking: > 0 } r && !evenIfFalling)
+        // Worked out even when the Support check is off: its switch only shows the colours.
+        if (SolveSupport(s).Result is { Breaking: > 0 } r && !evenIfFalling)
         {
             return $"{r.Breaking} piece(s) would fall in game (support_check lists them): fix them, or save anyway with evenIfFalling.";
         }
@@ -426,6 +426,26 @@ public partial class MainWindow
             View.ShowSupport(null);
             return;
         }
+        var (r, index) = SolveSupport(s);
+        LastSupport = r;
+        LastSupportThings = index;
+        var show = new Dictionary<int, float>();
+        for (int k = 0; k < index.Count; k++)
+        {
+            if (!r.Free[k])
+            {
+                show[index[k]] = r.Breaks[k] ? -2 : r.Colour[k];
+            }
+        }
+        View.ShowSupport(show);
+    }
+
+    /// <summary>
+    /// The support check over the plot's building pieces (Stability), whether or not its colours are shown.
+    /// </summary>
+    /// <returns>The result, and the scene's index of each piece it was worked out for.</returns>
+    private (Stability.Result Result, List<int> Index) SolveSupport(EditSession s)
+    {
         var index = new List<int>();
         var pieces = new List<Stability.Piece>();
         lock (s.Scene.Things)
@@ -443,18 +463,7 @@ public partial class MainWindow
             }
         }
         var terrain = _workshopTerrain;
-        var r = Stability.Solve(pieces, (x, z) => Workshop.GroundAt(terrain, x, z));
-        LastSupport = r;
-        LastSupportThings = index;
-        var show = new Dictionary<int, float>();
-        for (int k = 0; k < index.Count; k++)
-        {
-            if (!r.Free[k])
-            {
-                show[index[k]] = r.Breaks[k] ? -2 : r.Colour[k];
-            }
-        }
-        View.ShowSupport(show);
+        return (Stability.Solve(pieces, (x, z) => Workshop.GroundAt(terrain, x, z)), index);
     }
 
     /// <summary>

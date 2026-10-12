@@ -87,7 +87,7 @@ public class ClaudeToolsWorkshopTests
 
     // save_blueprint: outside the Workshop, with no name or no piece: said. Saved, the Workshop holds nothing unsaved
     // and another blueprint opens; a name taken is refused unless overwrite; pieces that would fall are refused
-    // unless evenIfFalling.
+    // unless evenIfFalling, whether the Support check is on or off.
     [AvaloniaFact]
     public async Task TheBuildingIsSavedAsABlueprintAndAnotherOpened()
     {
@@ -108,8 +108,9 @@ public class ClaudeToolsWorkshopTests
         Assert.StartsWith("There is a blueprint called Tower already", await r.T.SaveBlueprint("Tower"));
         Assert.StartsWith("Saved the blueprint “Tower”", await r.T.SaveBlueprint("Tower", overwrite: true));
 
-        // A wall in the air would fall.
+        // A wall in the air would fall, even with the Support check's colours off.
         await r.T.PlacePieces([new ClaudeTools.PieceSpec { Prefab = "woodwall", X = 20, Z = 20, Y = 60, Snap = false }]);
+        r.W.SupportBox.IsChecked = false;
         Assert.Contains("would fall in game", await r.T.SaveBlueprint("Floating"));
         Assert.StartsWith("Saved the blueprint “Floating”", await r.T.SaveBlueprint("Floating", evenIfFalling: true));
         Assert.Equal("workshop", ClaudeRun.J(await r.T.OpenWorkshop("Hut")).GetProperty("page").GetString());
