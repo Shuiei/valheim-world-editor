@@ -1,0 +1,117 @@
+using Avalonia.Controls;
+using Avalonia.Headless.XUnit;
+using Xunit;
+
+namespace TerrainEditor.Desktop.Tests;
+
+/// <summary>
+/// Claude's tools for the editor's own controls (ClaudeTools.Controls): the Workshop's Cut slider and Support check
+/// found and set, blocked controls refused; and the helpers they use (KindOf, LabelOf, ControlsOf, ValueOf, Set,
+/// Blocked).
+/// </summary>
+[Collection("World files")]
+public class ClaudeToolsControlsTests
+{
+    // KindOf: each kind of control by its most specific type; others are not controls Claude sets.
+    [AvaloniaFact]
+    public void ControlsAreKnownByKind()
+    {
+        Assert.Equal("switch", ClaudeTools.KindOf(new CheckBox()));
+        Assert.Equal("radio", ClaudeTools.KindOf(new RadioButton()));
+        Assert.Equal("toggle", ClaudeTools.KindOf(new Avalonia.Controls.Primitives.ToggleButton()));
+        Assert.Equal("button", ClaudeTools.KindOf(new Button()));
+        Assert.Equal("dropdown", ClaudeTools.KindOf(new ComboBox()));
+        Assert.Equal("slider", ClaudeTools.KindOf(new Slider()));
+        Assert.Equal("number", ClaudeTools.KindOf(new NumericUpDown()));
+        Assert.Equal("text", ClaudeTools.KindOf(new TextBox()));
+        Assert.Null(ClaudeTools.KindOf(new TextBlock()));
+    }
+
+    // LabelOf: the content's text, a text box's placeholder, the text block just before it in its panel, else the
+    // first sentence of its tip.
+    [AvaloniaFact]
+    public void ControlsAreLabelledByWhatTheUserReads()
+    {
+        Assert.Equal("Snap", ClaudeTools.LabelOf(new CheckBox { Content = "Snap" }));
+        Assert.Equal("Find…", ClaudeTools.LabelOf(new TextBox { PlaceholderText = "Find…" }));
+        var slider = new Slider();
+        _ = new StackPanel { Children = { new TextBlock { Text = "Strength" }, slider } };
+        Assert.Equal("Strength", ClaudeTools.LabelOf(slider));
+        var tipped = new NumericUpDown().Tip("workshop.cut");
+        Assert.Equal(((string)ToolTip.GetTip(tipped)!).Split(". ")[0], ClaudeTools.LabelOf(tipped));
+    }
+
+    // ControlsOf: tip keys as ids, labels otherwise, a number after an id already taken; ValueOf reads each kind.
+    [AvaloniaFact]
+    public void ControlsHaveIdsAndValues()
+    {
+        var root = new StackPanel
+        {
+            Children =
+            {
+                new CheckBox { Content = "Show water", IsChecked = true }.Tip("view.water"),
+                new Button { Content = "Go" }, new Button { Content = "Go" },
+                new ComboBox { ItemsSource = new[] { "Fast", "Sharp" }, SelectedIndex = 1 },
+                new Slider { Minimum = 0, Maximum = 40, Value = 7 },
+            },
+        };
+        var list = ClaudeTools.ControlsOf(root);
+        Assert.Equal(["view.water", "~go", "~go#2", "~dropdown", "~slider"], list.Select(c => c.Id));
+        Assert.Equal([true, null, null, "Sharp", 7.0], list.Select(c => ClaudeTools.ValueOf(c.Control)));
+    }
+
+    // Set: a switch on and off, a dropdown by text or number, a slider clamped, a text, a button clicked; wrong
+    // values are said. Blocked: the window's Save and Discard, blocked keys, and blocked labels of untipped buttons.
+    [AvaloniaFact]
+    public void ControlsAreSetAndBlockedOnesRefused()
+    {
+        var w = new MainWindow(load: false);
+        var t = new ClaudeTools(w);
+        static ClaudeTools.Ctl C(string id, Control c) => new(id, ClaudeTools.KindOf(c)!, ClaudeTools.LabelOf(c), c);
+        var box = new CheckBox();
+        Assert.Null(t.Set(C("a", box), "on", false));
+        Assert.True(box.IsChecked);
+        Assert.StartsWith("a is a switch: give true or false", t.Set(C("a", box), "maybe", false));
+        var combo = new ComboBox { ItemsSource = new[] { "Fast", "Sharp" } };
+        Assert.Null(t.Set(C("b", combo), "sharp", false));
+        Assert.Equal(1, combo.SelectedIndex);
+        Assert.Null(t.Set(C("b", combo), "0", false));
+        Assert.Equal(0, combo.SelectedIndex);
+        Assert.Equal("b has no option \"Slow\": Fast, Sharp.", t.Set(C("b", combo), "Slow", false));
+        var slider = new Slider { Minimum = 0, Maximum = 40 };
+        Assert.Null(t.Set(C("c", slider), "99", false));
+        Assert.Equal(40, slider.Value);
+        var text = new TextBox();
+        Assert.Null(t.Set(C("d", text), "Beech", true));
+        Assert.Equal("Beech", text.Text);
+        int clicks = 0;
+        var button = new Button { Content = "Go" };
+        button.Click += (_, _) => clicks++;
+        Assert.Null(t.Set(C("e", button), "click", false));
+        Assert.Equal(1, clicks);
+        Assert.Equal("e is a button: give click.", t.Set(C("e", button), "true", false));
+
+        Assert.NotNull(t.Blocked(C("save", w.SaveButton)));
+        Assert.NotNull(t.Blocked(C("auto", new CheckBox().Tip("top.auto"))));
+        Assert.NotNull(t.Blocked(C("~delete", new Button { Content = "Delete" })));
+        Assert.Null(t.Blocked(C("~go", button)));
+        Assert.StartsWith("save is not Claude's to use", t.Set(C("save", w.SaveButton), "click", false));
+        w.CloseWithoutAsking();
+    }
+
+    // In the Workshop: the Cut slider and the Support check are listed and set as the user would; an unknown id is said.
+    [AvaloniaFact]
+    public async Task TheWorkshopsCutAndSupportCheckAreSet()
+    {
+        using var r = new ClaudeRun();
+        await r.T.OpenWorkshop();
+        var listed = ClaudeRun.J(await r.T.ListControls("workshop"));
+        Assert.Contains(listed.GetProperty("controls").EnumerateArray(), c => c.GetProperty("id").GetString() == "workshop.cut");
+        var cut = ClaudeRun.J(await r.T.SetControl("workshop.cut", "12"));
+        Assert.Equal(12, cut.GetProperty("value").GetDouble());
+        Assert.Equal(12, r.W.CutSlider.Value);
+        await r.T.SetControl("workshop.support", "false");
+        Assert.False(r.W.SupportBox.IsChecked);
+        Assert.StartsWith("No control nothing.here now", await r.T.SetControl("nothing.here", "1"));
+    }
+}

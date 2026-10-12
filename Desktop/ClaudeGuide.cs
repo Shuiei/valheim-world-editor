@@ -25,6 +25,11 @@ public static class ClaudeGuide
 		A new world: preview_seed (pick a seed), then create_world; its locations appear once the game
 		has loaded it, so use preview_seed's landmarks until then.
 
+		Every control of the editor is yours to use too, as the user would: list_controls lists them
+		(View switches, the Workshop's Cut and Support check, every tool's settings, the rail of tools,
+		buttons) with their ids and values, set_control sets one. Use them to see what you need (hide
+		trees, cut the roofs away, switch off the support colours) and put them back when done.
+
 		Work like this: editor_state first; open what is needed (open_world, open_area, open_workshop);
 		look (describe_area, list_objects, screenshot, area_map); change in small steps; after each step,
 		look again (screenshot, area_map; support_check for buildings) and fix what is wrong.

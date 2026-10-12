@@ -57,6 +57,7 @@ The editor must be running for Claude to reach it. Turn the switch off and nothi
 | `screenshot` | A picture of the 3D view (from any camera, or four views of a place in one picture) or of the map, so Claude sees what it did |
 | `area_map` | A map of the area from above, drawn from its data: heights, water, painted ground, objects, a grid in world metres |
 | `get_selection`, `select_objects` | What you selected in the editor ("these trees"); Claude selecting objects to show you which it means |
+| `list_controls`, `set_control` | Every control of the editor (View switches, the Workshop's Cut and Support check, each tool's settings, the rail of tools, buttons): listed with their values, and set as you would. Saving, applying live, discarding, reloading, writing or deleting your files and connecting to the live game stay yours |
 | `building_guide` | How Valheim's pieces fit and hold (the 2 m grid, roofs, support), from the game's data |
 | `find_prefabs`, `piece_info` | The game's objects and building pieces: names, sizes, snap points, cost; spawn points and nests with what they spawn |
 | `list_blueprints` | Your blueprint library |
