@@ -58,7 +58,7 @@ public class ClaudeToolsWorldTests
         Assert.Equal(7, nearest.GetProperty("x").GetSingle(), 1);
     }
 
-    // The locations: those asked for by kind are all of that kind, each with its place.
+    // The locations: the list stops at the limit; those asked for are of that kind or have the word in their name.
     [AvaloniaFact]
     public async Task TheWorldsLocationsAreListed()
     {
@@ -67,9 +67,10 @@ public class ClaudeToolsWorldTests
         // The test world has more locations than one answer gives: the list stops at the limit, the count does not.
         var all = ClaudeRun.J(await r.T.ListLocations(limit: 2000));
         Assert.Equal(Math.Min(all.GetProperty("count").GetInt32(), 2000), all.GetProperty("locations").GetArrayLength());
+        // "boss" finds the bosses' altars by kind, and what has it in its name (the start's BossStone_… stones).
         foreach (var l in ClaudeRun.J(await r.T.ListLocations("boss")).GetProperty("locations").EnumerateArray())
         {
-            Assert.Equal("boss", l.GetProperty("kind").GetString());
+            Assert.True(l.GetProperty("kind").GetString() == "boss" || l.GetProperty("name").GetString()!.Contains("boss", StringComparison.OrdinalIgnoreCase), l.ToString());
         }
         foreach (var l in ClaudeRun.J(await r.T.ListLocations(x: 0, z: 0, radius: 500)).GetProperty("locations").EnumerateArray())
         {
