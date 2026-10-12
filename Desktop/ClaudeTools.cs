@@ -1206,25 +1206,67 @@ public sealed partial class ClaudeTools
             .Select(e => new { name = e.Name, pieces = e.Pieces, cost = Terrain.PieceCost.Of(e.Kinds).Describe(4), description = e.Description, tags = e.Tags }));
     });
 
-    /// <summary>add_blueprint: a library blueprint onto the Workshop's plot, with what is there.</summary>
-    [McpServerTool(Name = "add_blueprint", Title = "Add a blueprint to the plot")]
-    [Description("Adds a blueprint of the library to the Workshop's plot, with what is there, centred on x, z (default: the plot's middle), standing on the ground; one step of the history.")]
+    /// <summary>
+    /// add_blueprint: a library blueprint onto the Workshop's plot, with what is there, or into the open area of a
+    /// world, its lowest piece on the ground at its middle (or at y); taken back when a piece would leave the area.
+    /// </summary>
+    [McpServerTool(Name = "add_blueprint", Title = "Add a blueprint")]
+    [Description("Adds a blueprint of the library (list_blueprints) to the Workshop's plot or to the open area of a world, with what is there: centred on x, z (default: the plot's or the area's middle), turned by turn degrees (as yaw: 90 turns north to east), its lowest piece at height y (default: the ground at its middle; level the ground first with flatten for a building on a slope). One pending step; refused when a piece would be outside the area. Kinds the game does not know (mods) are left out and named.")]
     public Task<string> AddBlueprint(
         [Description("The blueprint's name (list_blueprints).")] string blueprint,
         [Description("World x of its middle (optional).")] float? x = null,
-        [Description("World z of its middle (optional).")] float? z = null) => OnUi(() =>
+        [Description("World z of its middle (optional).")] float? z = null,
+        [Description("Degrees to turn it round its middle (default 0).")] float turn = 0,
+        [Description("In a world: the height of its lowest piece (optional: the ground at its middle).")] float? y = null) => OnUi(() =>
     {
-        if (!_w.InWorkshop)
+        if (CannotEdit() is string why)
         {
-            return "Blueprints are added in the Workshop: open_workshop first.";
+            return why;
         }
         string path = Path.Combine(_w.Blueprints.Status.Folder, TerrainEditor.App.Homestead.FileName(blueprint));
         if (!File.Exists(path))
         {
             return $"No blueprint \"{blueprint}\" in the library (list_blueprints).";
         }
-        _w.AddToWorkshop(path, x is float ax && z is float az ? new System.Numerics.Vector2(ax, az) : null);
-        return _w.MessageText.Text + " Now pending: " + Pending();
+        string label = $"Claude: added {blueprint}";
+        if (_w.InWorkshop)
+        {
+            _w.AddToWorkshop(path, x is float ax && z is float az ? new System.Numerics.Vector2(ax, az) : null, turn, label);
+            return _w.MessageText.Text + " Now pending: " + Pending();
+        }
+        var s = _w.Session!;
+        var scene = s.Scene;
+        float cx = x ?? scene.Cx, cz = z ?? scene.Cz;
+        var (minX, minZ, maxX, maxZ) = Bounds(scene);
+        if (cx < minX || cx > maxX || cz < minZ || cz > maxZ)
+        {
+            return $"({cx}, {cz}) is outside the open area (x {minX} to {maxX}, z {minZ} to {maxZ}): open_area there first.";
+        }
+        int before = scene.Things.Count;
+        (int Placed, List<string> Unknown, float Lift, Dictionary<(int, int), float> Terrain) added;
+        try
+        {
+            added = Workshop.Add(s, path, null, new System.Numerics.Vector2(cx, cz), turn, y ?? GroundAt(scene, cx, cz), label);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or FormatException or JsonException)
+        {
+            return "Could not read that blueprint: " + ex.Message;
+        }
+        if (added.Placed == 0)
+        {
+            return "Nothing added: the blueprint has no piece this world can have.";
+        }
+        var outside = Enumerable.Range(before, scene.Things.Count - before).Select(i => scene.Things[i].Position)
+            .Where(p => p.X < minX || p.X > maxX || p.Z < minZ || p.Z > maxZ).ToList();
+        if (outside.Count > 0)
+        {
+            s.Undo();
+            return $"Nothing added: {outside.Count} piece(s) would be outside the area (x {minX} to {maxX}, z {minZ} to {maxZ}). Open a larger area (open_area) or put it further in.";
+        }
+        _w.AfterClaudeEdit($"Claude added “{blueprint}”: {added.Placed} piece(s); Ctrl+Z takes it back.");
+        return $"Added {added.Placed} piece(s) of \"{blueprint}\", ids {before} to {scene.Things.Count - 1}."
+            + (added.Unknown.Count > 0 ? $" Left out (unknown kinds): {string.Join(", ", added.Unknown.Take(10))}." : "")
+            + " Now pending: " + Pending();
     });
 
     /// <summary>

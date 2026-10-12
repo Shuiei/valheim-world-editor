@@ -20,6 +20,9 @@ public static class ClaudeGuide
 		only when asked: when one is "not available", look it up first (tool search, e.g. "valheim-editor
 		run_script"), then call it by the name it shows.
 
+		To find a place in a world: list_locations (the start, traders, bosses' altars, dungeons…) and
+		search_world (objects by kind, items in chests, texts), then open_area there.
+
 		Work like this: editor_state first; open what is needed (open_world, open_area, open_workshop);
 		look (describe_area, list_objects, screenshot, area_map); change in small steps; after each step,
 		look again (screenshot, area_map; support_check for buildings) and fix what is wrong.
@@ -38,6 +41,10 @@ public static class ClaudeGuide
 		(exact place, turn, size), replace_objects (another kind), get_object and set_object_data (what an
 		object holds in the save: a portal's tag, a builder, health…), set_contents (chests, stands, signs).
 		Each change gives the objects new ids: use the ids its answer gives.
+
+		To make worked ground look natural again: shape_ground (smooth, naturalize, erode, restore) and
+		regrow_nature. To repeat a building or a detail: copy_objects; a blueprint of the user's library
+		goes into a world with add_blueprint.
 
 		To shape ground or place many objects, prefer the ready tools (flatten, paint_area, road, forest)
 		or run_script (read script_reference first; dryRun shows what a script would change). To build,

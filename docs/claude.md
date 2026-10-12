@@ -58,11 +58,15 @@ The editor must be running for Claude to reach it. Turn the switch off and nothi
 | `building_guide` | How Valheim's pieces fit and hold (the 2 m grid, roofs, support), from the game's data |
 | `find_prefabs`, `piece_info` | The game's objects and building pieces: names, sizes, snap points, cost; spawn points and nests with what they spawn |
 | `list_blueprints` | Your blueprint library |
+| `search_world` | Every object of the world by kind, items in containers or texts (signs, portal tags…), as the map's Search |
+| `list_locations` | The world's locations: the start, traders, bosses' altars, dungeon entrances, villages…, with what players call them |
 
 | Changing | |
 |---|---|
 | `run_script` | A C# script on the area, as the [Script tool](scripting.md) runs it (`script_reference` gives Claude the API): ground, paint, objects; a dry run says what it would change |
 | `flatten`, `paint_area`, `road`, `forest` | Level a rectangle, paint ground, lay a road through points, plant trees or rocks |
+| `shape_ground` | The Area tool's ground actions over a rectangle: smooth, naturalize, erode, restore, raise, lower |
+| `regrow_nature` | Regrow the trees, rocks, bushes and pickables the game grows there, where nothing stands |
 | `build_floor`, `build_walls`, `build_roof` | A floor, walls with doors and a gable roof (26° or 45°, thatch or shingle, gable ends closed) over a rectangle, from the game's pieces |
 | `set_contents` | Fill a chest, put an item on an item stand (food on a flat one, a trophy or weapon on a wall) or dress an armour stand, write a sign, give a creature stars |
 | `place_pieces`, `remove_objects` | Put down building pieces and other objects (they snap like the game's hammer); take objects away |
@@ -70,7 +74,8 @@ The editor must be running for Claude to reach it. Turn the switch off and nothi
 | `replace_objects` | Swap objects for another kind where they stand (a birch for a beech, stone walls for wooden ones) |
 | `get_object`, `set_object_data` | Everything an object is and holds, as the inspector shows it; change its values: a portal's tag (to link two portals), a builder, a ward's permitted players, health, fuel, a creature's level or tamed state |
 | `support_check` | The Workshop's support check: which pieces would fall |
-| `open_workshop`, `add_blueprint` | The Workshop, empty or with a blueprint; add a blueprint to the plot |
+| `open_workshop`, `add_blueprint` | The Workshop, empty or with a blueprint; add a blueprint of your library to the plot or to a world's area, turned as asked |
+| `copy_objects` | Copies of objects, once or in a row or a ring (a row of houses, a fence, pillars round a hall) |
 | `generate_dungeon` | A dungeon on the plot, or above a point of the world with its portals |
 | `undo`, `redo` | As Ctrl+Z and Ctrl+Y |
 

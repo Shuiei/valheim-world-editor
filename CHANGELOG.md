@@ -13,6 +13,16 @@ the plugin is unchanged in versions without that part.
   another kind; `get_object` gives everything an object is and holds, as the inspector shows it; and
   `set_object_data` changes its values (a portal's tag, a builder, a ward's permitted players, health,
   fuel, a creature's level…). Objects keep what they hold when moved.
+- **Claude finds places in a world**: `list_locations` lists the world's locations (the start, the
+  traders, the bosses' altars, dungeon entrances, villages…) with what players call them, and
+  `search_world` searches every object as the map's Search does (by kind, items in containers, texts).
+- **Claude copies and puts blueprints into worlds**: `copy_objects` makes copies once or in a row or a
+  ring; `add_blueprint` now puts a blueprint of the library into a world's area too (not only the
+  Workshop's plot), turned as asked, and its step is one of Claude's (History's **Take back Claude's
+  changes** takes it).
+- **Claude weathers and regrows ground**: `shape_ground` runs the Area tool's ground actions over a
+  rectangle (smooth, naturalize, erode, restore, raise, lower), and `regrow_nature` regrows what the
+  game grows there.
 
 ### Fixed
 - **Moving objects on the Workshop's plot** (or a generated dungeon's, before saving) lost what they

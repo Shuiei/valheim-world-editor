@@ -31,7 +31,7 @@ public class ClaudeToolsLookingTests
         Assert.StartsWith("No area is open", await t.SetContents(1, text: "hello"));
         Assert.StartsWith("No area is open", await t.GenerateDungeon());
         Assert.Contains("open_workshop first", await t.SupportCheck());
-        Assert.Contains("open_workshop first", await t.AddBlueprint("Hut"));
+        Assert.StartsWith("No area is open", await t.AddBlueprint("Hut"));
         var map = await t.AreaMap();
         Assert.True(map.IsError);
         Assert.Equal("No area is open.", Assert.IsType<ModelContextProtocol.Protocol.TextContentBlock>(Assert.Single(map.Content)).Text);

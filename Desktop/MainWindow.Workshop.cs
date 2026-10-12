@@ -193,9 +193,10 @@ public partial class MainWindow
     }
 
     /// <summary>
-    /// A blueprint added to the building on the plot (at a world point x, z; null: the middle). Only in the Workshop.
+    /// A blueprint added to the building on the plot (at a world point x, z; null: the middle), turned by degrees,
+    /// as one step named label (null: "Added" and its name). Only in the Workshop.
     /// </summary>
-    internal void AddToWorkshop(string path, Vector2? at)
+    internal void AddToWorkshop(string path, Vector2? at, float turn = 0, string? label = null)
     {
         if (!InWorkshop || Session is not { } s)
         {
@@ -203,7 +204,7 @@ public partial class MainWindow
         }
         try
         {
-            var (placed, unknown, _, terrain) = Workshop.Add(s, path, null, at);
+            var (placed, unknown, _, terrain) = Workshop.Add(s, path, null, at, turn, label: label);
             foreach (var (cell, y) in terrain)
             {
                 _workshopTerrain[cell] = _workshopTerrain.TryGetValue(cell, out float was) ? MathF.Min(was, y) : y;
