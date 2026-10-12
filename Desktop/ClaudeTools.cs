@@ -23,7 +23,15 @@ public sealed class ClaudeTools
     internal ClaudeTools(MainWindow window)
     {
         _w = window;
+        ViewPicture = _w.View.Picture;
+        MapPicture = path => _w.MapPage!.Map.Picture(path);
     }
+
+    /// <summary>Saves a picture of the 3D view as a PNG file (the view's, drawn by OpenGL; tests give their own).</summary>
+    internal Func<string, Task> ViewPicture { get; set; }
+
+    /// <summary>Saves a picture of the world's map as a PNG file (the map's, drawn by OpenGL; tests give their own).</summary>
+    internal Func<string, Task> MapPicture { get; set; }
 
     /// <summary>Compact JSON for the answers.</summary>
     private static readonly JsonSerializerOptions Json = new() { WriteIndented = false };
@@ -223,7 +231,7 @@ public sealed class ClaudeTools
             {
                 if (_w.MapShown)
                 {
-                    await _w.MapPage!.Map.Picture(path).WaitAsync(TimeSpan.FromSeconds(60));
+                    await MapPicture(path).WaitAsync(TimeSpan.FromSeconds(60));
                     return null;
                 }
                 if (_w.Session == null)
@@ -234,7 +242,7 @@ public sealed class ClaudeTools
                 {
                     _w.View.Orbit(cx, cz, yaw, pitch, distance, height);
                 }
-                await _w.View.Picture(path).WaitAsync(TimeSpan.FromSeconds(60));
+                await ViewPicture(path).WaitAsync(TimeSpan.FromSeconds(60));
                 return null;
             });
             if (problem != null)
@@ -269,7 +277,7 @@ public sealed class ClaudeTools
                         }
                         float cx = x ?? scene.Cx, cz = z ?? scene.Cz;
                         _w.View.Orbit(cx, cz, yaw, pitch, distance, height);
-                        await _w.View.Picture(path).WaitAsync(TimeSpan.FromSeconds(60));
+                        await ViewPicture(path).WaitAsync(TimeSpan.FromSeconds(60));
                         return null;
                     });
                     if (problem != null)

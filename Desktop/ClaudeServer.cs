@@ -75,8 +75,9 @@ public sealed class ClaudeServer
                 await _running._app.StopAsync();
                 await _running._app.DisposeAsync();
                 _running = null;
-                Status = null;
             }
+            // Said again below for this start; none when off (not the last start's problem).
+            Status = null;
             if (!settings.ClaudeConnect)
             {
                 return null;
