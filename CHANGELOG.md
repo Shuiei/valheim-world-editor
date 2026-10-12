@@ -4,6 +4,14 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.22.0 — unreleased
+
+### Changed
+- **Larger areas**: the area can now be 9 × 9, 13 × 13 or 17 × 17 zones (up to 1088 m across), from
+  the map's size box and the top bar's; Follow grows it up to 17 zones each way, and Claude's
+  `open_area` opens up to 17 × 17. Large areas are slow to open and draw: meant for big works and
+  for testing the editor's speed.
+
 ## v1.21.0 — unreleased
 
 ### Changed

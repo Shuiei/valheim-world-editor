@@ -114,7 +114,7 @@ public sealed class MapPage : IDisposable
     /// <summary>
     /// The area to open: 3, 5 or 7 zones a side.
     /// </summary>
-    internal ComboBox SizeBox { get; } = new() { ItemsSource = new[] { "3 × 3 zones (192 m)", "5 × 5 zones (320 m)", "7 × 7 zones (448 m)" }, SelectedIndex = 1, FontSize = 12 };
+    internal ComboBox SizeBox { get; } = new() { ItemsSource = MainWindow.AreaSizes.Select(n => $"{n} × {n} zones ({n * 64} m)").ToArray(), SelectedIndex = 1, FontSize = 12 };
     /// <summary>
     /// The picked spot's box, hidden until a spot is picked.
     /// </summary>
@@ -138,7 +138,7 @@ public sealed class MapPage : IDisposable
     /// <summary>
     /// The area to open, in zones a side.
     /// </summary>
-    public int Size => new[] { 3, 5, 7 }[Math.Max(0, SizeBox.SelectedIndex)];
+    public int Size => MainWindow.AreaSizes[Math.Max(0, SizeBox.SelectedIndex)];
     /// <summary>
     /// Live: asks the game for the players online every five seconds.
     /// </summary>

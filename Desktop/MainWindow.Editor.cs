@@ -36,12 +36,12 @@ public sealed partial class MainWindow
     /// <summary>The area's size, changed on the fly (around the same middle zone).</summary>
     internal ComboBox AreaSizeBox { get; } = new() { ItemsSource = AreaSizes.Select(n => $"{n} × {n}").ToArray(), FontSize = 11.5, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(4, 0) };
     /// <summary>The sizes the area can have, in zones across.</summary>
-    internal static readonly int[] AreaSizes = [3, 5, 7];
+    internal static readonly int[] AreaSizes = [3, 5, 7, 9, 13, 17];
     /// <summary>
-    /// The most zones Follow grows the area to, each way (about 1 km); there it stops growing that way. It never
-    /// leaves zones behind.
+    /// The most zones Follow grows the area to, each way (about 1 km, the largest area size); there it stops growing
+    /// that way. It never leaves zones behind.
     /// </summary>
-    internal const int MaxFollowZones = 16;
+    internal const int MaxFollowZones = 17;
     /// <summary>True while <c>ShowAreaSize</c> sets the size box, so its change is not taken for the user's.</summary>
     private bool _fillingSize;
     /// <summary>The note about the area's locations.</summary>

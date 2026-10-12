@@ -50,7 +50,7 @@ The editor must be running for Claude to reach it. Turn the switch off and nothi
 |---|---|
 | `editor_state` | What is open: the start page, a world's map, an area in 3D or the Workshop; the area's bounds; what is pending |
 | `list_worlds`, `open_world` | The worlds on this computer; open one (offline). Refused while the open world has changes not saved |
-| `open_area` | Open the area around a point in 3D (1 to 5 zones of 64 m across) |
+| `open_area` | Open the area around a point in 3D (1 to 17 zones of 64 m across) |
 | `describe_area`, `list_objects` | Heights, biomes and objects of the area; objects by kind, name or place, with their ids |
 | `screenshot` | A picture of the 3D view (from any camera, or four views of a place in one picture) or of the map, so Claude sees what it did |
 | `area_map` | A map of the area from above, drawn from its data: heights, water, painted ground, objects, a grid in world metres |

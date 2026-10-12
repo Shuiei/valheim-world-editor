@@ -2,7 +2,7 @@
 
 ![The 3D editor](images/overview.jpg)
 
-The editor shows an area of 3 × 3, 5 × 5 or 7 × 7 zones (a zone is 64 × 64 m) around the spot you
+The editor shows an area of 3 × 3, 5 × 5, 7 × 7, 9 × 9, 13 × 13 or 17 × 17 zones (a zone is 64 × 64 m) around the spot you
 opened from the [world map](map.md). The window has five parts:
 
 - **Top bar**: **Map**, the world's name and the area, the area arrows and **Follow**, undo and
@@ -30,7 +30,7 @@ place and the clipboard.
 | Move around | `W` `A` `S` `D` or the arrow keys |
 | See it as a player | `F`: **Walk** with your eyes 1.8 m above the ground (or the water), like a player; `F` again: **Fly** (Space up, C down); `F` again: back to the usual view. WASD move where you look, Shift runs, right drag looks around. The status bar says which. |
 | Go to the next area | The **◀ ▲ ▼ ▶** arrows next to "Area" move it one zone (64 m). The camera stays where it is in the world, and your unsaved changes stay pending. History steps that fit the new area come along; the others are left out (the changes themselves stay). |
-| Let the area follow you | **Follow** (next to the arrows): when the point you look at comes within 12 m of the area's edge, the area grows that way by itself: a row of zones is added on that side (both sides near a corner) and the zones already open stay, so a 3 × 3 area becomes 4 × 3, then 4 × 4 and so on. It never leaves zones behind; it stops at 16 zones each way (about 1 km). It waits, and says why, while something would be lost: a stroke, a path being drawn, selected objects, changes being sent to the game. Remembered. |
+| Let the area follow you | **Follow** (next to the arrows): when the point you look at comes within 12 m of the area's edge, the area grows that way by itself: a row of zones is added on that side (both sides near a corner) and the zones already open stay, so a 3 × 3 area becomes 4 × 3, then 4 × 4 and so on. It never leaves zones behind; it stops at 17 zones each way (about 1 km). It waits, and says why, while something would be lost: a stroke, a path being drawn, selected objects, changes being sent to the game. Remembered. |
 | Back to the map | **Map** at the top left. What is not saved stays pending. |
 
 ## Top bar

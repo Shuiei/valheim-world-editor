@@ -71,20 +71,20 @@ public sealed class ClaudeTools
         return _w.World != null ? ToJson(StateOf(_w)) : "Could not open it: " + _w.MessageText.Text;
     });
 
-    /// <summary>open_area: opens the zones around a world point in 3D (size clamped to 1 to 5 zones).</summary>
+    /// <summary>open_area: opens the zones around a world point in 3D (size clamped to 1 to 17 zones).</summary>
     [McpServerTool(Name = "open_area", Title = "Open an area in 3D")]
-    [Description("Opens the square area around a point of the open world in the 3D editor, where it can be looked at and changed. The world is made of 64 m zones; size is how many zones across (1 to 5; 3 = 192 m is usual). Changes made in another area stay pending.")]
+    [Description("Opens the square area around a point of the open world in the 3D editor, where it can be looked at and changed. The world is made of 64 m zones; size is how many zones across (1 to 17; 3 = 192 m is usual; large areas are slow to open and draw). Changes made in another area stay pending.")]
     public Task<string> OpenArea(
         [Description("World x (east) of the area's middle, in metres.")] float x,
         [Description("World z (north) of the area's middle, in metres.")] float z,
-        [Description("Zones across: 1 to 5.")] int size = 3) => OnUi(async () =>
+        [Description("Zones across: 1 to 17.")] int size = 3) => OnUi(async () =>
     {
         if (_w.World == null)
         {
             return "Open a world first (open_world).";
         }
         int zx = (int)MathF.Floor((x + 32) / 64), zz = (int)MathF.Floor((z + 32) / 64);
-        await _w.EditArea(zx, zz, Math.Clamp(size, 1, 5));
+        await _w.EditArea(zx, zz, Math.Clamp(size, 1, MainWindow.MaxFollowZones));
         return ToJson(StateOf(_w));
     });
 
