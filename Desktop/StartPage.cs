@@ -88,6 +88,8 @@ public sealed class StartPage
     private readonly TextBlock _gameTag = new() { FontSize = 11, Foreground = new SolidColorBrush(Color.FromRgb(123, 196, 127)), VerticalAlignment = VerticalAlignment.Center };
     /// <summary>A card per world found on this computer.</summary>
     internal WrapPanel WorldCards { get; } = new() { ItemSpacing = 10, LineSpacing = 10 };
+    /// <summary>Looks for the worlds again (folders added or removed while the editor runs).</summary>
+    internal Button RefreshWorlds { get; } = new Button { Content = Icons.With("reload", "Refresh"), FontSize = 12, HorizontalAlignment = HorizontalAlignment.Left }.Classed("ghost");
     /// <summary>Another world folder to open.</summary>
     internal TextBox PathBox { get; } = new() { PlaceholderText = "Folder of the world (with _main.<n>.chunks files)", FontSize = 13 };
     /// <summary>Why that folder cannot be opened.</summary>
@@ -96,6 +98,14 @@ public sealed class StartPage
     private readonly TextBlock _lastError = new() { Foreground = new SolidColorBrush(Color.FromRgb(224, 96, 75)), TextWrapping = TextWrapping.Wrap, IsVisible = false };
     /// <summary>Polls whether the game runs (on Home and My game): every 2.5 s, 5 s while it runs.</summary>
     private readonly DispatcherTimer _gameTimer = new() { Interval = TimeSpan.FromSeconds(2.5) };
+    /// <summary>Looks for the worlds again every 3 s while A saved world shows, so added or removed worlds show by themselves.</summary>
+    private readonly DispatcherTimer _worldsTimer = new() { Interval = TimeSpan.FromSeconds(3) };
+    /// <summary>The worlds as last shown (path, save, usable), so an unchanged look redraws nothing.</summary>
+    private string _worldsKey = "";
+    /// <summary>The look for the worlds running, or the last one (Refresh's or the timer's; see <see cref="CheckWorlds"/>).</summary>
+    internal Task? WorldsCheck { get; private set; }
+    /// <summary>Counts the looks for the worlds, so a look overtaken by a later one shows nothing.</summary>
+    private int _worldsLook;
 
     /// <summary>Homestead (the building library's in-game side): found in the game's BepInEx or not.</summary>
     internal TextBlock HomesteadText { get; } = new() { TextWrapping = TextWrapping.Wrap, FontSize = 12 };
@@ -192,6 +202,15 @@ public sealed class StartPage
             }
             await PollGame();
         };
+        _worldsTimer.Tick += async (_, _) =>
+        {
+            if (WorldsCheck is { IsCompleted: false })
+            {
+                return;
+            }
+            WorldsCheck = CheckWorlds();
+            await WorldsCheck;
+        };
 
         // A dedicated server.
         BuildServerPanel();
@@ -202,6 +221,13 @@ public sealed class StartPage
         var openPath = new Button { Content = "Open" }.Classed("primary").Tip("start.open");
         PathBox.Tip("start.folder");
         openPath.Click += (_, _) => OpenFolder(PathBox.Text ?? "");
+        RefreshWorlds.Tip("start.refreshWorlds");
+        RefreshWorlds.Click += async (_, _) =>
+        {
+            WorldsCheck = CheckWorlds();
+            await WorldsCheck;
+        };
+        OfflinePanel.Children.Add(RefreshWorlds);
         OfflinePanel.Children.Add(WorldCards);
         OfflinePanel.Children.Add(Hint("Close Valheim (or stop the server) before you save changes into a world: a running game writes over the files. Each save is read back and checked before the old one is removed."));
         OfflinePanel.Children.Add(Card(new StackPanel
@@ -354,6 +380,7 @@ public sealed class StartPage
         WorkshopPanel.IsVisible = mode == "workshop";
         NewWorldPanel.IsVisible = mode == "new";
         _gameTimer.Stop();
+        _worldsTimer.Stop();
         // The game is watched on Home too (it offers to edit it live).
         if (mode is "game" or "home")
         {
@@ -375,11 +402,16 @@ public sealed class StartPage
         if (mode == "offline")
         {
             FillWorlds();
+            _worldsTimer.Start();
         }
     }
 
-    /// <summary>Stops polling the game (the page is left).</summary>
-    public void Stop() => _gameTimer.Stop();
+    /// <summary>Stops polling the game and the worlds (the page is left).</summary>
+    public void Stop()
+    {
+        _gameTimer.Stop();
+        _worldsTimer.Stop();
+    }
 
     // ---- My game: is Valheim running with the plugin?
     /// <summary>The game's state as last shown (state, world, players, where), so an unchanged poll redraws nothing.</summary>
@@ -698,8 +730,42 @@ public sealed class StartPage
     /// <summary>A card per world found on this computer (worlds that cannot be opened greyed out, with why).</summary>
     internal void FillWorlds()
     {
+        _worldsLook++;
+        ShowWorlds(FindWorlds(_settings));
+    }
+
+    /// <summary>
+    /// Looks for the worlds again away from the window's thread (a slow drive does not freeze it) and shows
+    /// them when they changed: a world folder added or removed, or a world saved again. A look that a later
+    /// one (Refresh, or the page shown again) overtook shows nothing: its worlds are older.
+    /// </summary>
+    internal async Task CheckWorlds()
+    {
+        int look = ++_worldsLook;
+        List<Worlds.Info> worlds;
+        try
+        {
+            worlds = await Task.Run(() => FindWorlds(_settings));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
+        {
+            return; // A folder changing while it is read (or the settings while they are walked): the next look sees it.
+        }
+        if (look == _worldsLook && Mode == "offline" && WorldsKey(worlds) != _worldsKey)
+        {
+            ShowWorlds(worlds);
+        }
+    }
+
+    /// <summary>What a list of worlds shows (every detail on a card), to compare one look with the last.</summary>
+    private static string WorldsKey(List<Worlds.Info> worlds) =>
+        string.Join('\n', worlds.Select(w => $"{w.Path}|{w.Name}|{w.Where}|{w.SaveNumber}|{w.Saved.Ticks}|{w.Usable}|{w.Problem}"));
+
+    /// <summary>A card per world given.</summary>
+    private void ShowWorlds(List<Worlds.Info> worlds)
+    {
+        _worldsKey = WorldsKey(worlds);
         WorldCards.Children.Clear();
-        var worlds = FindWorlds(_settings);
         if (worlds.Count == 0)
         {
             WorldCards.Children.Add(Hint("No worlds found on this computer. Choose a folder below, or add world folders in Settings."));
