@@ -85,6 +85,23 @@ public class ClaudeToolsObjectsTests
         Assert.Equal(1.5, o.GetProperty("scale").GetSingle(), 2);
     }
 
+    // On the ground at a new size: its lowest point at that size touches the ground.
+    [AvaloniaFact]
+    public async Task AnObjectSizedOnTheGroundStandsOnItsScaledBottom()
+    {
+        using var r = new ClaudeRun();
+        await r.OpenArea();
+        int pole = Placed(await r.T.PlacePieces([new ClaudeTools.PieceSpec { Prefab = "piece_maypole", X = 10, Z = 10 }]));
+        var one = ClaudeRun.J(await r.T.SetTransform([new ClaudeTools.TransformSpec { Id = pole, OnGround = true }]));
+        pole = one.GetProperty("placed")[0].GetProperty("id").GetInt32();
+        float y1 = ClaudeRun.J(await r.T.GetObject(pole)).GetProperty("y").GetSingle();
+        var two = ClaudeRun.J(await r.T.SetTransform([new ClaudeTools.TransformSpec { Id = pole, Scale = 2, OnGround = true }]));
+        float y2 = ClaudeRun.J(await r.T.GetObject(two.GetProperty("placed")[0].GetProperty("id").GetInt32())).GetProperty("y").GetSingle();
+        float bottom = Editing.Hammer.Bottom("piece_maypole", Quaternion.Identity);
+        Assert.NotEqual(0, bottom);
+        Assert.Equal(y1 - bottom, y2, 2);
+    }
+
     // Objects become another kind where they are; an unknown kind is said and nothing changes.
     [AvaloniaFact]
     public async Task ObjectsAreReplacedWithAnotherKind()

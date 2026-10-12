@@ -206,10 +206,12 @@ public sealed partial class ClaudeTools
                 continue;
             }
             var rot = Wrapped(new Vector3(o.Pitch ?? t.Rotation.X, o.Yaw ?? t.Rotation.Y, o.Roll ?? t.Rotation.Z));
+            float scale = o.Scale ?? t.Scale;
+            // A scale of 0 is the prefab's own size.
             float y = o.Y ?? (o.OnGround && _w.NameOfPrefab(t.Prefab) is string n
-                ? GroundAt(scene, x, z) - Editing.Hammer.Bottom(n, TerrainEditor.App.BlueprintFormats.FromEuler(rot))
+                ? GroundAt(scene, x, z) - Editing.Hammer.Bottom(n, TerrainEditor.App.BlueprintFormats.FromEuler(rot), scale > 0 ? scale : 1)
                 : t.Position.Y);
-            moves.Add((o.Id, new Vector3(x, y, z), rot, o.Scale ?? t.Scale));
+            moves.Add((o.Id, new Vector3(x, y, z), rot, scale));
         }
         if (moves.Count == 0)
         {
