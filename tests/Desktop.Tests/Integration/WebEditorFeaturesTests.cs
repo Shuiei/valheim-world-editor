@@ -438,17 +438,18 @@ public class WebEditorFeaturesTests
     {
         using var r = new Run();
         var s = r.S;
+        // Spawn points and nests are off at first (spoilers).
+        Assert.False(r.W.View.IsShown(ObjectKind.SpawnPoints));
+        Assert.False(r.W.View.IsShown(ObjectKind.Nests));
         var added = s.Commit("Placed", null, [], [(Tree(s, "Spawner_Boar", 20, 20), false), (Tree(s, "Spawner_Skeleton_respawn_30", 24, 20), false),
             (Tree(s, "Spawner_GreydwarfNest", 28, 20), false), (Tree(s, "Beech1", 32, 20), false)]);
         Dispatcher.UIThread.RunJobs();
+        // Placing them switches their kinds on, so that what was placed shows.
+        Assert.True(r.W.View.IsShown(ObjectKind.SpawnPoints));
+        Assert.True(r.W.View.IsShown(ObjectKind.Nests));
         var boar = s.Scene.Things[added[0]];
         var at = new Vector3(boar.Position.X - s.Scene.Cx, boar.Position.Y + 2.4f, -(boar.Position.Z - s.Scene.Cz));
         r.W.View.SetCamera(at + new Vector3(0, 20, 20), at, 1.5f);
-        // Spawn points and nests are off at first (spoilers).
-        Assert.False(r.W.View.IsShown(ObjectKind.SpawnPoints));
-        Assert.Empty(r.W.View.SpawnMarkers(s.Scene));
-        r.W.KindBoxes[ObjectKind.SpawnPoints].IsChecked = true;
-        r.W.KindBoxes[ObjectKind.Nests].IsChecked = true;
         var marks = r.W.View.SpawnMarkers(s.Scene);
         Assert.Equal(3, marks.Count);
         Assert.Contains((at, GlView.SpawnColour(false)), marks);
