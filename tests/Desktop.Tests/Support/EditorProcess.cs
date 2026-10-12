@@ -18,6 +18,11 @@ public class EditorProcess : IDisposable
     // A line asked for and not come yet (its wait timed out): the next wait takes it, as the stream allows one
     // read at a time.
     private Task<string?>? _reading;
+    // Commands whose answer has not come (their wait timed out): read off before the next command, so that a late
+    // answer is never taken for the next one's.
+    private int _owed;
+    // An owed answer did not come either: the editor no longer answers, the next commands fail at once.
+    private bool _stuck;
 
     /// <summary>
     /// How long the editor's picture may wait for its view (VWE_PICTURE_WAIT, see Driver.PictureWait): longer under
@@ -106,11 +111,24 @@ public class EditorProcess : IDisposable
     {
         lock (_sendLock)
         {
+            Assert.False(_stuck, $"{command}: the editor stopped answering (an earlier command's answer never came)");
+            for (; _owed > 0; _owed--)
+            {
+                if (Next(PictureWait + TimeSpan.FromMinutes(1)) == null)
+                {
+                    _stuck = true;
+                    Assert.Fail($"{command}: the editor stopped answering (an earlier command's answer never came)");
+                }
+            }
             _p!.StandardInput.WriteLine(command);
             _p.StandardInput.Flush();
             // Longer than the editor's own wait for a picture (Driver.PictureWait), so its error comes back.
             string? answer = Next(PictureWait + TimeSpan.FromMinutes(1));
-            Assert.NotNull(answer);
+            if (answer == null)
+            {
+                _owed++;
+            }
+            Assert.True(answer != null, $"{command}: no answer from the editor");
             Assert.True(answer!.StartsWith("@@ ok ", StringComparison.Ordinal), $"{command}: {answer}");
             return JsonDocument.Parse(answer["@@ ok ".Length..]).RootElement.Clone();
         }
