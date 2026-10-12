@@ -4,7 +4,7 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
-## v1.22.0 — unreleased
+## v1.23.0 — unreleased
 
 ### Changed
 - **Larger areas**: the area can now be 9 × 9, 13 × 13 or 17 × 17 zones (up to 1088 m across), from
@@ -24,6 +24,13 @@ the plugin is unchanged in versions without that part.
 - **Scripts on areas with very many objects** waited over a second before running (each object's
   kind was worked out again), and after a save of many new objects each change was slow to count
   what is pending.
+
+## v1.22.0 — unreleased
+
+### Added
+- **A saved world keeps its list up to date**: world folders added or removed while the editor runs
+  (or a world saved again) show by themselves within a few seconds, without going to another page
+  and back. **Refresh** looks for them at once.
 
 ## v1.21.0 — unreleased
 

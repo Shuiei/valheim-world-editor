@@ -299,9 +299,9 @@ tools/release.sh /tmp/dist && tools/check-package.sh /tmp/dist/*.tar.gz
 ```
 
 **Coverage**: on `main` only, each test container keeps its coverage, and once `core-tests` and
-`app-tests` have both passed, the `coverage` job sends all six to
-[Codecov](https://app.codecov.io/gh/Shuiei/valheim-world-editor), which merges them (`codecov.yml`)
-and checks each of main's commits. A failed test sends nothing, so Codecov keeps the last full
+`app-tests` have both passed, the `coverage` job merges all six into one report (`dotnet-coverage
+merge`, whose total its log shows) and sends that one file to
+[Codecov](https://app.codecov.io/gh/Shuiei/valheim-world-editor) (`codecov.yml`), which checks each of main's commits. A failed test sends nothing, so Codecov keeps the last full
 coverage rather than show part of it (rerun main's workflow from the start, not "Rerun failed tests",
 which would send only the rerun classes' coverage): `codecov/project` fails when the editor's line coverage is under
 **95%**. Pull requests run the tests without coverage, several times faster, so they get no coverage
