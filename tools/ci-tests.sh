@@ -28,12 +28,16 @@ case "${1:?list or run}" in
     filter=$(printf 'FullyQualifiedName~%s.|' "$@" | sed 's/|$//')
     # On main only, the coverage of this container's share, which the job sends to Codecov (merged
     # there with the other containers'): it makes the tests several times slower.
+    # A test stuck 5 minutes ends the run; under coverage, 10: the world generator's tests share the
+    # container's two cores with the others for minutes there (one took 300 s on main, the old limit).
     coverage=()
+    hang=5m
     if [ "${VWE_COVERAGE:-}" = 1 ]; then
       coverage=(--settings tests/coverage.runsettings --collect "Code Coverage"
         --results-directory "/tmp/coverage/$name-${CIRCLE_NODE_INDEX:-0}")
+      hang=10m
     fi
-    dotnet test "$project" -c Release --no-build --filter "$filter" --blame-hang-timeout 5m "${coverage[@]}" \
+    dotnet test "$project" -c Release --no-build --filter "$filter" --blame-hang-timeout "$hang" "${coverage[@]}" \
       --logger "junit;LogFilePath=/tmp/test-results/$name/results.xml" --logger "console;verbosity=normal"
     if [ "${VWE_COVERAGE:-}" = 1 ]; then
       # The report is named after the machine and the time (_<host>_<date>.cobertura.xml), which Codecov's
