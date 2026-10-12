@@ -190,4 +190,60 @@ public class WorldSaveTests
         Assert.Contains(after.ObjectRefs, o => o.Prefab == Fixtures.Hash("Player_tombstone"));
         Assert.DoesNotContain(after.Objects, o => o.Prefab == Fixtures.Hash("Beech1") && (int)MathF.Floor((o.Position.X + 32) / 64) == x && (int)MathF.Floor((o.Position.Z + 32) / 64) == z);
     }
+
+    [Fact]
+    public void LiveAnObjectMadeAgainIsFollowedUnderItsNewZdoid()
+    {
+        var world = WorldSave.LoadLive(File.ReadAllBytes(Fixtures.Snapshot), "live");
+        int id = Enumerable.Range(0, world.ObjectRefs.Count).First(i => !world.ObjectRefs[i].IsTerrain);
+        var zone = world.ObjectRefs[id].Zone;
+        var ids = Enumerable.Range(0, world.ObjectRefs.Count).Where(i => world.ObjectRefs[i].Zone == zone).ToList();
+        List<(long, uint, byte[])> Zone() => [.. ids.Select(i => (world.ObjectRefs[i].LiveId.User, world.ObjectRefs[i].LiveId.Id, world.ObjectBytes(i)))];
+        // The zone as the game has it: nothing new, nothing gone.
+        var same = world.MergeLive([zone], Zone(), _ => false, _ => false)!;
+        Assert.Empty(same.Added);
+        Assert.Empty(same.Vanished);
+        // The editor made it again in the game (an applied delete undone): the game sends it under its new ZDOID, and
+        // it is the same object, not a new one.
+        int count = world.ObjectRefs.Count;
+        world.SetLiveId(id, (999, 7));
+        Assert.Equal((999L, 7u), world.ObjectRefs[id].LiveId);
+        var again = world.MergeLive([zone], Zone(), _ => false, _ => false)!;
+        Assert.Empty(again.Added);
+        Assert.Empty(again.Vanished);
+        Assert.Equal(count, world.ObjectRefs.Count);
+        // Gone from the game, then made again: its new ZDOID kept.
+        world.MergeLive([zone], [.. Zone().Where(o => o.Item2 != 7u)], _ => false, _ => false);
+        Assert.Contains(id, world.Vanished);
+        world.SetLiveId(id, (5, 5));
+        Assert.Equal((5L, 5u), world.ObjectRefs[id].LiveId);
+    }
+
+    [Fact]
+    public async Task LiveAMergeWaitsWhileTheWorldsListsAreReadElsewhere()
+    {
+        var world = WorldSave.LoadLive(File.ReadAllBytes(Fixtures.Snapshot), "live");
+        using var held = new ManualResetEventSlim();
+        using var release = new ManualResetEventSlim();
+        var reader = Task.Run(() =>
+        {
+            lock (world.Sync)
+            {
+                held.Set();
+                release.Wait(TestContext.Current.CancellationToken);
+            }
+        }, TestContext.Current.CancellationToken);
+        held.Wait(TestContext.Current.CancellationToken);
+        try
+        {
+            // Busy: no merge now (the caller tries again later).
+            Assert.Null(world.MergeLive([(0, 0)], [], _ => false, _ => false));
+        }
+        finally
+        {
+            release.Set();
+        }
+        await reader;
+        Assert.NotNull(world.MergeLive([(0, 0)], [], _ => false, _ => false));
+    }
 }
