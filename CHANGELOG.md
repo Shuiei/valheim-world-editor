@@ -4,6 +4,13 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.20.2 — unreleased
+
+### Fixed
+- **Location markers** no longer put a post on every invisible ground disc of No limit (one every
+  6 m where the ground was taken past ±8 m): they hid the real locations. The "location(s) here"
+  note no longer counts them either.
+
 ## v1.20.1 — unreleased
 
 ### Changed
@@ -11,6 +18,9 @@ the plugin is unchanged in versions without that part.
   is added on that side and the zones already open stay (a 3 × 3 area becomes 4 × 3, then 4 × 4…).
   It never leaves zones behind, and stops at 16 zones each way (about 1 km). The arrows move the
   grown area as it is; the size box makes it square again.
+- **While the game's look is prepared** (start page), every action is greyed out until it is done:
+  worlds, servers, the Workshop, a new world and Settings. A world opened meanwhile missed the game's
+  look. The side menu still moves between the pages.
 
 ### Fixed
 - **Rocks that shape the ground** (the Plains' tall rock pillars, coast, heath, forest and copper
