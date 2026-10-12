@@ -1,6 +1,9 @@
 using System.Numerics;
+using Avalonia.Controls;
+using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Input;
+using Avalonia.VisualTree;
 using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
@@ -20,14 +23,42 @@ public class GlViewCameraTests
         var w = new MainWindow(load: false) { Width = 800, Height = 600 };
         w.Show();
         w.View.Show(TestScenes.FlatScene(), null);
+        // Something has the focus, as after any click: with none the window's arrow keys only move the focus.
+        Assert.True(w.GetVisualDescendants().OfType<Button>().First(b => b.IsEffectivelyVisible && b.Focusable).Focus());
         return (w, w.View);
     }
 
     /// <summary>
-    /// A key going down or up on the window itself (as the editor's driver sends them), whatever has the focus.
+    /// A key going down or up as the keyboard sends it (to what has the focus): one raised on the window itself with
+    /// nothing focused is taken by the arrow keys' focus moves before the view sees it.
     /// </summary>
-    private static void Hold(MainWindow w, Key key, bool down) =>
-        w.RaiseEvent(new KeyEventArgs { RoutedEvent = down ? InputElement.KeyDownEvent : InputElement.KeyUpEvent, Key = key, Source = w });
+    private static void Hold(MainWindow w, Key key, bool down)
+    {
+        PhysicalKey physical = key switch
+        {
+            Key.Up => PhysicalKey.ArrowUp,
+            Key.Down => PhysicalKey.ArrowDown,
+            Key.Left => PhysicalKey.ArrowLeft,
+            Key.Right => PhysicalKey.ArrowRight,
+            Key.LeftShift => PhysicalKey.ShiftLeft,
+            Key.RightShift => PhysicalKey.ShiftRight,
+            Key.Space => PhysicalKey.Space,
+            Key.W => PhysicalKey.W,
+            Key.A => PhysicalKey.A,
+            Key.S => PhysicalKey.S,
+            Key.D => PhysicalKey.D,
+            Key.C => PhysicalKey.C,
+            _ => PhysicalKey.None,
+        };
+        if (down)
+        {
+            w.KeyPress(key, RawInputModifiers.None, physical, null);
+        }
+        else
+        {
+            w.KeyRelease(key, RawInputModifiers.None, physical, null);
+        }
+    }
 
     /// <summary>
     /// How far the eyes went along the ground with these keys held for a step of a whole second (a step is never
