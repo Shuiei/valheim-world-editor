@@ -4,7 +4,7 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
-## Unreleased
+## v1.21.0 — unreleased
 
 ### Changed
 - **The tool rail** is in sections, in a clearer order: **Sculpt**, **Edit** (Area, Path, Place),
