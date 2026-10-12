@@ -2505,7 +2505,7 @@ public sealed partial class MainWindow : Window
             if (Tools.Mode != ToolMode.Place)
             {
                 PlacePanel.Chooser.IsVisible = false;
-                PlacePanel.KindsButton.Content = "+ Add kinds";
+                PlacePanel.KindsButton.Content = PlacePanel.ChooseKindsText;
             }
             PlaceInput.Refresh();
             MaskPanel.Card.IsVisible = !InWorkshop && Tools.Mode is ToolMode.Brush or ToolMode.Path or ToolMode.Area or ToolMode.Shape or ToolMode.Mountain or ToolMode.Place;

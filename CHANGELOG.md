@@ -11,6 +11,27 @@ the plugin is unchanged in versions without that part.
   is added on that side and the zones already open stay (a 3 × 3 area becomes 4 × 3, then 4 × 4…).
   It never leaves zones behind, and stops at 16 zones each way (about 1 km). The arrows move the
   grown area as it is; the size box makes it square again.
+- **The tool rail** is in sections, in a clearer order: **Sculpt**, **Edit** (Area, Path, Place),
+  **Paint**, **Create** (Shape, Mountain, Cave, Dungeon, Script, Blueprints) and last **Tools**
+  (Select, Measure, View).
+- **The Place panel** is in sections with headings: **Line shape** (Points, Circle, Rectangle, right
+  under the modes, with how to draw it), **Choose a preset**, **Selected kinds**, **Objects** and the
+  mode's own settings. The preset list starts on **None**; choosing None after a preset unticks its
+  kinds. The selected kinds are on rows of one layout in a box, each with its share (100% for one
+  kind), and **Choose kinds…** opens the list under them. The **Recent** row also shows the kinds
+  chosen now, and its **all** / **none** buttons are larger. **Tilt** starts at 0.
+- **Place's One at a time** places only the object at the cursor: a drag no longer scatters more, and
+  Density, Spacing and Clumping hide while it is on.
+
+### Fixed
+- **Kind names with an underscore** (Pickable_Flax) showed without it in the Choose kinds list and on
+  the Favourite and Recent buttons (PickableFlax).
+- **The Place panel's weight sliders** let go of the mouse at each step of a drag (every row was
+  made again): a drag now runs smoothly. Each slider is now the kind's share in %, and the other
+  kinds' sliders move with it, keeping their proportions, so the shares always make 100%. An equal
+  share sits in the middle of the slider, whatever the number of kinds.
+- **Previews over the sea** (the mountain, placed and pasted objects, rings and lines) were hidden
+  wherever water was behind them in the 3D view: they now show over the water.
 
 ## v1.20.2 — unreleased
 

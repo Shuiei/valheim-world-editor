@@ -1698,19 +1698,7 @@ public sealed class GlView : OpenGlControlBase
             {
                 DrawRooms(s);
             }
-            _ghostsDrawn = DrawGhosts(s);
-            DrawOverlays(vp);
-            DrawSelection(vp);
-            DrawHoverObject(vp);
-            DrawBrush(s, vp);
-            DrawLasso(s, vp);
-            DrawGizmo(s, vp);
-            DrawMeasure(s, vp);
-            DrawPlayers(s, vp);
-            DrawPath(s, vp);
-            DrawArea(s, vp);
-            DrawPlace(s, vp);
-            DrawDungeon(s, vp);
+            // The water before the previews and the tools' marks, so they show over it.
             if (ShowWater)
             {
                 if (look != null)
@@ -1731,6 +1719,19 @@ public sealed class GlView : OpenGlControlBase
                     _gl.Disable(EnableCap.Blend);
                 }
             }
+            _ghostsDrawn = DrawGhosts(s);
+            DrawOverlays(vp);
+            DrawSelection(vp);
+            DrawHoverObject(vp);
+            DrawBrush(s, vp);
+            DrawLasso(s, vp);
+            DrawGizmo(s, vp);
+            DrawMeasure(s, vp);
+            DrawPlayers(s, vp);
+            DrawPath(s, vp);
+            DrawArea(s, vp);
+            DrawPlace(s, vp);
+            DrawDungeon(s, vp);
             // Over everything, the water too.
             DrawSpawnMarkers(s, vp);
             if (ShowNewMarkers)

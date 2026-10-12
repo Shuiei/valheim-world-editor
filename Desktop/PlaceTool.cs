@@ -92,7 +92,7 @@ public sealed class PlaceTool
     /// <summary>The largest random scale, in percent (at least SizeMin).</summary>
     public float SizeMax { get; set; } = 120;
     /// <summary>The most an object leans at random about x and z, in degrees.</summary>
-    public float Tilt { get; set; } = 3;
+    public float Tilt { get; set; }
     /// <summary>
     /// The turn added to every object's facing, in degrees from -180 to 180; the brush layout turns with it too.
     /// </summary>

@@ -8,7 +8,7 @@ opened from the [world map](map.md). The window has five parts:
 - **Top bar**: **Map**, the world's name and the area, the area arrows and **Follow**, undo and
   redo, what is pending, **Discard** and **Save to world** (or **Apply live**), and the
   **History**, **View** and **?** buttons.
-- **Tool rail** (left): every tool, with its shortcut key in the corner.
+- **Tool rail** (left): every tool, with its shortcut key in the corner, in sections: **Sculpt** (the ground brushes), **Edit** (Area, Path, Place), **Paint**, **Create** (Shape, Mountain, Cave, Dungeon, Script, Blueprints) and **Tools** (Select, Measure, View).
 - **Tool panel** (next to the rail): the current tool's name, a line saying what it does and how,
   and its settings. The [Mask](masks.md) has its own card next to it.
 - **Right-hand panel**: **View** (`V`), **History** (`L`) or the help (`?`), one at a time.

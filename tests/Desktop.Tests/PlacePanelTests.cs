@@ -105,31 +105,31 @@ public class PlacePanelTests
         int all = Ticks(r).Count;
         r.P.Search.Text = "beech";
         Assert.InRange(Ticks(r).Count, 1, all - 1);
-        Assert.All(Ticks(r), b => Assert.Contains("beech", ((string)b.Content!).ToLowerInvariant()));
+        Assert.All(Ticks(r), b => Assert.Contains("beech", ((string)b.Tag!).ToLowerInvariant()));
         r.P.Search.Text = "no kind is called this";
         Assert.Empty(Ticks(r));
         r.P.Search.Text = "Beech1";
-        var tick = Ticks(r).First(b => (string)b.Content! == "Beech1");
+        var tick = Ticks(r).First(b => (string)b.Tag! == "Beech1");
         tick.IsChecked = true;
         Assert.Contains("Beech1", r.T.Chosen);
         Assert.Contains("Beech1", r.P.Memory.Chosen);
         tick.IsChecked = false;
         Assert.DoesNotContain("Beech1", r.T.Chosen);
         // The star makes it a favourite: a chip appears; clicking the chip ticks the kind.
-        var star = r.P.List.GetLogicalDescendants().OfType<Button>().First(b => (string)b.Content! == "☆");
+        var star = r.P.List.GetLogicalDescendants().OfType<Button>().First(b => b.Content is "☆");
         Click(star);
         Assert.Contains("Beech1", r.P.Memory.Favourites);
         var chip = r.P.Favourites.Children.OfType<ToggleButton>().Single();
-        Assert.Equal("Beech1", chip.Content);
+        Assert.Equal("Beech1", chip.Tag);
         chip.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         Dispatcher.UIThread.RunJobs();
         Assert.Contains("Beech1", r.T.Chosen);
         // Starred again: no longer a favourite.
-        Click(r.P.List.GetLogicalDescendants().OfType<Button>().First(b => (string)b.Content! == "★"));
+        Click(r.P.List.GetLogicalDescendants().OfType<Button>().First(b => b.Content is "★"));
         Assert.DoesNotContain("Beech1", r.P.Memory.Favourites);
         Click(r.P.KindsButton);
         Assert.False(r.P.Chooser.IsVisible);
-        Assert.Equal("+ Add kinds", r.P.KindsButton.Content);
+        Assert.Equal(PlacePanel.ChooseKindsText, r.P.KindsButton.Content);
     }
 
     [AvaloniaFact]
@@ -140,7 +140,7 @@ public class PlacePanelTests
         // Placing notes the kinds as recent (the input's Placed event); the chip ticks the kind.
         var raise = typeof(PlaceInput).GetField("Placed", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(r.W.PlaceInput) as Action<IReadOnlyList<string>>;
         raise!(["Oak1"]);
-        var chip = r.P.Recent.Children.OfType<ToggleButton>().Single(c => (string)c.Content! == "Oak1");
+        var chip = r.P.Recent.Children.OfType<ToggleButton>().Single(c => (string)c.Tag! == "Oak1");
         chip.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         Dispatcher.UIThread.RunJobs();
         Assert.Contains("Oak1", r.T.Chosen);
@@ -153,14 +153,116 @@ public class PlacePanelTests
         Choose(r, "Beech1", "Oak1");
         var sliders = r.P.Mix.GetLogicalDescendants().OfType<Slider>().ToList();
         Assert.Equal(2, sliders.Count);
-        sliders[1].Value = 9;
-        Assert.Equal(9, r.T.WeightOf("Oak1"));
-        Assert.Equal(9, r.P.Memory.Weights["Oak1"]);
-        Assert.Contains("%", Texts(r.P.Mix));
-        Click(r.P.Mix.GetLogicalDescendants().OfType<Button>().First(b => (string)b.Content! == "✕"));
+        // A slider is the kind's share: the other one follows, so they make 100%.
+        sliders[1].Value = 70;
+        Assert.Equal(70, r.T.WeightOf("Oak1"));
+        Assert.Equal(70, r.P.Memory.Weights["Oak1"]);
+        Assert.Equal(30, r.T.WeightOf("Beech1"));
+        Assert.Equal(30, sliders[0].Value);
+        // The rows stay while it moves (a dragged slider is kept).
+        Assert.Equal(sliders, r.P.Mix.GetLogicalDescendants().OfType<Slider>());
+        Assert.Contains("70%", Texts(r.P.Mix));
+        Assert.Contains("30%", Texts(r.P.Mix));
+        Click(r.P.Mix.GetLogicalDescendants().OfType<Button>().First(b => b.Content is "✕"));
         Assert.Equal(new[] { "Oak1" }, r.T.Chosen);
-        // One kind: no weight to set.
+        // One kind: no weight to set, its share still shown.
         Assert.Empty(r.P.Mix.GetLogicalDescendants().OfType<Slider>());
+        Assert.Contains("100%", Texts(r.P.Mix));
+        // None: said so.
+        Choose(r);
+        Assert.Contains("None yet", Texts(r.P.Mix));
+    }
+
+    [AvaloniaFact]
+    public void TheOtherSharesFollowInProportion()
+    {
+        using var r = new Run();
+        // Even to start with (the tests' memory may hold weights from others).
+        r.T.Weights.Clear();
+        Choose(r, "Beech1", "Oak1", "Birch1");
+        var sliders = r.P.Mix.GetLogicalDescendants().OfType<Slider>().ToList();
+        sliders[1].Value = 20;
+        sliders[2].Value = 60;
+        // Beech and Oak shared the other 40% as they stood (more Beech than Oak), each at least 1%.
+        Assert.Equal(100, r.T.Chosen.Sum(r.T.WeightOf));
+        Assert.Equal(60, r.T.WeightOf("Birch1"));
+        Assert.Equal(r.T.Chosen.Select(n => (double)r.T.WeightOf(n)), sliders.Select(s => s.Value));
+        Assert.True(r.T.WeightOf("Beech1") > r.T.WeightOf("Oak1"));
+        // Its end is twice the equal share (67% for three): no further.
+        sliders[0].Value = 98;
+        Assert.Equal(67, r.T.WeightOf("Beech1"));
+        Assert.Equal(100, r.T.Chosen.Sum(r.T.WeightOf));
+    }
+
+    [AvaloniaFact]
+    public void EqualSharesSitInTheSlidersMiddle()
+    {
+        using var r = new Run();
+        Assert.Equal(99, PlacePanel.MaxShare(2));
+        Assert.Equal(67, PlacePanel.MaxShare(3));
+        Assert.Equal(50, PlacePanel.MaxShare(4));
+        Assert.Equal(40, PlacePanel.MaxShare(5));
+        r.T.Weights.Clear();
+        foreach (string[] kinds in new[] { new[] { "Beech1", "Oak1" }, ["Beech1", "Oak1", "Birch1"], ["Beech1", "Oak1", "Birch1", "FirTree"] })
+        {
+            Choose(r, kinds);
+            Assert.All(r.P.Mix.GetLogicalDescendants().OfType<Slider>(), s =>
+            {
+                Assert.Equal(PlacePanel.MaxShare(kinds.Length), s.Maximum);
+                Assert.InRange(s.Value - (s.Maximum + s.Minimum) / 2, -1, 1);
+            });
+        }
+    }
+
+    [AvaloniaFact]
+    public void OneAtATimeHidesTheScatterSettings()
+    {
+        using var r = new Run();
+        Choose(r, "Beech1");
+        r.W.UpdateLayout();
+        Assert.True(r.P.DensitySlider.IsEffectivelyVisible);
+        r.P.SingleBox.IsChecked = true;
+        Assert.True(r.T.OneAtATime);
+        // A click places only the one at the cursor: Density, Spacing and Clumping would do nothing.
+        Assert.False(r.P.DensitySlider.IsEffectivelyVisible);
+        Assert.False(r.P.SpacingSlider.IsEffectivelyVisible);
+        Assert.False(r.P.ClumpSlider.IsEffectivelyVisible);
+        Assert.True(r.P.SizeSlider.IsEffectivelyVisible);
+        Assert.Contains("dragging adds no more", Texts(r.P.Card));
+        // The Zone still scatters.
+        Click(r.P.ModeButtons[PlaceTool.Modes.Zone]);
+        Assert.True(r.P.DensitySlider.IsEffectivelyVisible);
+        Click(r.P.ModeButtons[PlaceTool.Modes.Brush]);
+        r.P.SingleBox.IsChecked = false;
+        Assert.True(r.P.DensitySlider.IsEffectivelyVisible);
+    }
+
+    [AvaloniaFact]
+    public void NoneAfterAPresetUnticksItsKinds()
+    {
+        using var r = new Run();
+        Assert.Equal("None", r.P.PresetBox.SelectedItem);
+        r.P.PresetBox.SelectedIndex = 1;
+        Assert.NotEmpty(r.T.Chosen);
+        r.P.PresetBox.SelectedIndex = 0;
+        Assert.Empty(r.T.Chosen);
+        Assert.Empty(r.P.Memory.Chosen);
+    }
+
+    [AvaloniaFact]
+    public void TheChosenKindsShowInTheRecentRow()
+    {
+        using var r = new Run();
+        r.P.Memory.Recent.Add("Oak1");
+        Choose(r, "Beech1");
+        var chips = r.P.Recent.Children.OfType<ToggleButton>().ToList();
+        Assert.Equal(["Beech1", "Oak1"], chips.Select(c => (string)c.Tag!));
+        Assert.Equal([true, false], chips.Select(c => c.IsChecked == true));
+        // The name shows whole: its underscores are not taken as access keys.
+        string named = r.P.Creatable().First(c => c.Name.Contains('_', StringComparison.Ordinal)).Name;
+        Choose(r, named);
+        var chip = r.P.Recent.Children.OfType<ToggleButton>().Single(c => (string)c.Tag! == named);
+        Assert.Equal(named, ((TextBlock)chip.Content!).Text);
     }
 
     [AvaloniaFact]
@@ -224,7 +326,7 @@ public class PlacePanelTests
         Assert.Contains("Press at one corner and drag", Texts(r.P.Card));
         Choose(r);
         Assert.Equal("Tick at least one kind to place.", r.P.Info.Text);
-        Assert.Equal("Nothing to place yet: + Add kinds, or a preset.", r.P.Note.Text);
+        Assert.Equal("Nothing to place yet: Choose kinds… below, or a preset.", r.P.Note.Text);
         Choose(r, "sapling_turnip");
         Assert.Contains("only grows on cultivated ground", r.P.Note.Text);
     }
@@ -240,7 +342,7 @@ public class PlacePanelTests
         Assert.Contains("CREATURE NESTS", Texts(r.P.List));
         // A creature's name finds the spawn points and nests that spawn it, each with what it spawns under its name.
         r.P.Search.Text = "Greydwarf_Shaman";
-        var names = Ticks(r).Select(b => (string)b.Content!).ToList();
+        var names = Ticks(r).Select(b => (string)b.Tag!).ToList();
         Assert.Contains("Spawner_Greydwarf_Shaman", names);
         Assert.Contains("Spawner_GreydwarfNest", names);
         Assert.Contains("Greydwarf_Shaman · 0–2 ★ · spawns once", Texts(r.P.List));
