@@ -154,6 +154,9 @@ public class PlacePanelTests
         Assert.Equal(2, sliders.Count);
         sliders[1].Value = 9;
         Assert.Equal(9, r.T.WeightOf("Oak1"));
+        // The rows stay while it moves (a dragged slider is kept); only the shares change.
+        Assert.Equal(sliders, r.P.Mix.GetLogicalDescendants().OfType<Slider>());
+        Assert.Contains($"{9f / (r.T.WeightOf("Beech1") + 9) * 100:0}%", Texts(r.P.Mix));
         Assert.Equal(9, r.P.Memory.Weights["Oak1"]);
         Assert.Contains("%", Texts(r.P.Mix));
         Click(r.P.Mix.GetLogicalDescendants().OfType<Button>().First(b => (string)b.Content! == "✕"));

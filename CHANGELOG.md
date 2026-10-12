@@ -20,6 +20,8 @@ the plugin is unchanged in versions without that part.
 ### Fixed
 - **Kind names with an underscore** (Pickable_Flax) showed without it in the Choose kinds list and on
   the Favourite and Recent buttons (PickableFlax).
+- **The Place panel's weight sliders** let go of the mouse at each step of a drag (every row was
+  made again): a drag now runs smoothly, and only the shares change as it moves.
 
 ## v1.20.0 — 2026-10-11
 

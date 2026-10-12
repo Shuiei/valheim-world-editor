@@ -65,6 +65,8 @@ public sealed class PlacePanel
     internal Button KindsButton { get; } = new() { Content = ChooseKindsText, FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Center };
     /// <summary>How many kinds are chosen, after the SELECTED KINDS heading.</summary>
     private readonly TextBlock _mixCount = new() { FontSize = 10, Foreground = Ui.Muted, VerticalAlignment = VerticalAlignment.Center };
+    /// <summary>Each chosen kind's share, as shown on its row (updated in place while a weight slider moves).</summary>
+    private readonly Dictionary<string, TextBlock> _shares = [];
     /// <summary>Filters the list of kinds by name.</summary>
     internal TextBox Search { get; } = new() { PlaceholderText = "Search kinds (oak, rock, bush…)", FontSize = 12 };
     /// <summary>The kinds this world can place, by category.</summary>
@@ -771,6 +773,7 @@ public sealed class PlacePanel
     private void RenderMix()
     {
         Mix.Children.Clear();
+        _shares.Clear();
         var names = T.Chosen.ToList();
         _mixCount.Text = names.Count > 0 ? $"{names.Count}" : "";
         if (names.Count == 0)
@@ -788,15 +791,27 @@ public sealed class PlacePanel
             {
                 var w = new Slider { Minimum = 1, Maximum = 10, TickFrequency = 1, IsSnapToTickEnabled = true, Value = T.WeightOf(n), VerticalAlignment = VerticalAlignment.Center };
                 ToolTip.SetTip(w, $"Weight of {n}: {Tips.Of("place.weight")}");
-                w.ValueChanged += (_, e) => { T.Weights[n] = (int)e.NewValue; RenderMix(); Remember(); T.NewLayout(); };
+                // Only the shares change: rebuilding the rows would drop the slider being dragged.
+                w.ValueChanged += (_, e) => { T.Weights[n] = (int)e.NewValue; ShowShares(); Remember(); T.NewLayout(); };
                 g.Children.Add(Col(w, 1));
             }
+            _shares[n] = pct;
             g.Children.Add(Col(pct, 2));
             var x = new Button { Content = "✕", FontSize = 11, Padding = new Thickness(6, 2), VerticalAlignment = VerticalAlignment.Center };
             ToolTip.SetTip(x, $"{Tips.Of("place.unchoose")} ({n})");
             x.Click += (_, _) => { T.Chosen.Remove(n); Chosen(); };
             g.Children.Add(Col(x, 3));
             Mix.Children.Add(g);
+        }
+    }
+
+    /// <summary>Writes each chosen kind's share of the weights on its row.</summary>
+    private void ShowShares()
+    {
+        float total = _shares.Keys.Sum(T.WeightOf);
+        foreach (var (n, pct) in _shares)
+        {
+            pct.Text = $"{T.WeightOf(n) / total * 100:0}%";
         }
     }
 
