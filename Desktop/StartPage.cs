@@ -757,9 +757,9 @@ public sealed class StartPage
         }
     }
 
-    /// <summary>What a list of worlds shows, to compare one look with the last.</summary>
+    /// <summary>What a list of worlds shows (every detail on a card), to compare one look with the last.</summary>
     private static string WorldsKey(List<Worlds.Info> worlds) =>
-        string.Join('\n', worlds.Select(w => $"{w.Path}|{w.SaveNumber}|{w.Saved.Ticks}|{w.Usable}|{w.Problem}"));
+        string.Join('\n', worlds.Select(w => $"{w.Path}|{w.Name}|{w.Where}|{w.SaveNumber}|{w.Saved.Ticks}|{w.Usable}|{w.Problem}"));
 
     /// <summary>A card per world given.</summary>
     private void ShowWorlds(List<Worlds.Info> worlds)

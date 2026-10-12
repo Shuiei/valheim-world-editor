@@ -270,11 +270,16 @@ public class StartPageTests
         found = [found[1]];
         await r.P.CheckWorlds();
         Assert.DoesNotContain("First", Texts(r.P.WorldCards));
+        // The same world under another name, or found elsewhere (a recent world now): its card says so.
+        found = [found[0] with { Name = "Renamed", Where = "recent" }];
+        await r.P.CheckWorlds();
+        Assert.Contains("Renamed", Texts(r.P.WorldCards));
+        Assert.Contains("recent", Texts(r.P.WorldCards));
         // Another page shows: the worlds are not drawn behind it.
         r.P.SetMode("home");
         found = [];
         await r.P.CheckWorlds();
-        Assert.Contains("Second", Texts(r.P.WorldCards));
+        Assert.Contains("Renamed", Texts(r.P.WorldCards));
     }
 
     [AvaloniaFact]
