@@ -7,7 +7,7 @@ namespace TerrainEditor.Desktop.Tests;
 
 /// <summary>
 /// The Script tool: C# scripts compiled in the app and run on a snapshot of the open area, their changes going in as
-/// one undo step.
+/// one undo step; and its helpers for moving objects (Move) and snapping new pieces (SnapPieces).
 /// </summary>
 public class ScriptHostTests
 {
@@ -176,5 +176,68 @@ public class ScriptHostTests
         cancel.Cancel();
         Assert.ThrowsAny<OperationCanceledException>(() => Run(s, "foreach (var (x, z) in Area.Points()) Ground.Raise(x, z, 1);", cancel.Token));
         Assert.Equal(30, At(s, 10, 10), 3);
+    }
+
+    /// <summary>A wooden wall standing at (20, 31, 20), its front north, as thing 0 of a flat 1-zone area.</summary>
+    private static EditSession Wall() =>
+        TestScenes.Flat(1, new WorldScene.Thing(7, StableHash.Of("woodwall"), new Vector3(20, 31, 20), Vector3.Zero, 0, true));
+
+    // Objects as scripts see them carry their turn and size; a new one is put down tilted; one there is moved, turned
+    // and sized in the same undo step as the rest.
+    [Fact]
+    public void ObjectsAreSeenTurnedAndAreMovedInTheSameStep()
+    {
+        var tree = new WorldScene.Thing(5, StableHash.Of("Beech1"), new Vector3(10, 30, 10), new Vector3(0, 45, 0), 1.5f, false);
+        var s = TestScenes.Flat(2, tree);
+        var ch = Run(s, """
+			var t = Objects.All.Single();
+			Print($"{t.Yaw:0} {t.Scale * 10:0}");
+			Objects.Move(t, x: 12, yaw: 90, scale: 2);
+			Objects.Place("rock4_forest", 20, 20, yaw: 10, pitch: 5, roll: -5);
+			Ground.Raise(30, 30, 1);
+			""");
+        Assert.Equal("45 15", ch.Output.ToString().Trim());
+        ScriptHost.Apply(s, ch, "Script: test");
+        Assert.Single(s.UndoList);
+        Assert.True(s.Scene.Things[0].Gone);
+        var rock = s.Scene.Things.Single(t => !t.Gone && t.Prefab == StableHash.Of("rock4_forest"));
+        Assert.Equal(new Vector3(5, 10, -5), rock.Rotation);
+        var moved = s.Scene.Things.Single(t => !t.Gone && t.Prefab == StableHash.Of("Beech1"));
+        Assert.Equal((new Vector3(12, 30, 10), new Vector3(0, 90, 0), 2f), (moved.Position, moved.Rotation, moved.Scale));
+    }
+
+    // Move: what is left out stays (as it was, or as an earlier Move left it); an object not in the area, or a size
+    // not above 0, is refused.
+    [Fact]
+    public void AMoveKeepsWhatIsLeftOut()
+    {
+        var snap = ScriptHost.Take(Wall(), Terrain.PrefabCatalog.NameOf);
+        var ch = new ScriptHost.Changes();
+        ScriptHost.Move(snap, ch, 0, 25, float.NaN, float.NaN, float.NaN, float.NaN, float.NaN, float.NaN);
+        ScriptHost.Move(snap, ch, 0, float.NaN, float.NaN, 33, 90, float.NaN, float.NaN, 2);
+        Assert.Equal((new Vector3(25, 33, 20), new Vector3(0, 90, 0), 2f), ch.Moves[0]);
+        Assert.Throws<ArgumentException>(() => ScriptHost.Move(snap, ch, 9, 0, 0, 0, 0, 0, 0, 1));
+        Assert.Throws<ArgumentException>(() => ScriptHost.Move(snap, ch, 0, 0, 0, 0, 0, 0, 0, 0));
+    }
+
+    // SnapPieces: a wall placed with snap 0.3 m off meets the one standing; without snap it stays; a wall the script
+    // took away is not snapped to.
+    [Fact]
+    public void NewPiecesSnapToThePiecesStanding()
+    {
+        var snap = ScriptHost.Take(Wall(), Terrain.PrefabCatalog.NameOf);
+        int wall = StableHash.Of("woodwall");
+        var ch = new ScriptHost.Changes();
+        ch.Add.Add((wall, "woodwall", new Vector3(22.3f, 31, 20), Vector3.Zero, 0, true));
+        ch.Add.Add((wall, "woodwall", new Vector3(17.7f, 31, 20), Vector3.Zero, 0, false));
+        ScriptHost.SnapPieces(snap, ch);
+        Assert.Equal(22, ch.Add[0].Position.X, 3);
+        Assert.Equal(17.7f, ch.Add[1].Position.X, 3);
+
+        var gone = new ScriptHost.Changes();
+        gone.Remove.Add(0);
+        gone.Add.Add((wall, "woodwall", new Vector3(22.3f, 31, 20), Vector3.Zero, 0, true));
+        ScriptHost.SnapPieces(snap, gone);
+        Assert.Equal(22.3f, gone.Add[0].Position.X, 3);
     }
 }

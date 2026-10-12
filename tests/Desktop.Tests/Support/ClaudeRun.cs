@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using TerrainEditor.Save;
 using WorldEditor.Tests;
 
@@ -42,6 +43,25 @@ internal sealed class ClaudeRun : IDisposable
     {
         await T.OpenWorld(Dir);
         await T.OpenArea(0, 0, 1);
+    }
+
+    /// <summary>A blueprint of a floor and a wall on it in the run's Homestead folder.</summary>
+    public void Hut(string name, string description, params string[] tags)
+    {
+        static JsonNode Piece(string prefab, float x, float y) => new JsonObject
+        {
+            ["name"] = prefab,
+            ["dx"] = x,
+            ["dy"] = y,
+            ["dz"] = 0,
+            ["rx"] = 0,
+            ["ry"] = 0,
+            ["rz"] = 0,
+            ["scale"] = 0,
+        };
+        Directory.CreateDirectory(Homestead);
+        var clip = new JsonObject { ["objects"] = new JsonArray(Piece("wood_floor", 0, 0), Piece("woodwall", 0, 1)) };
+        File.WriteAllText(Path.Combine(Homestead, TerrainEditor.App.Homestead.FileName(name)), TerrainEditor.App.Homestead.Write(clip, name, "Tester", null, DateTime.Now, description, tags));
     }
 
     /// <summary>A tool's JSON answer, parsed.</summary>

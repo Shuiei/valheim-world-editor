@@ -439,20 +439,31 @@ public sealed class BlueprintsPanel
         {
             return null;
         }
-        string name = details.Name;
+        return SaveBuildingAs(clip, details) == null ? details : null;
+    }
+
+    /// <summary>
+    /// A building written as a Homestead blueprint with these details, without asking (replacing one of that name),
+    /// with its picture; Message tells what was done.
+    /// </summary>
+    /// <returns>Null when saved, else why not.</returns>
+    internal string? SaveBuildingAs(JsonObject clip, Homestead.Details details)
+    {
+        Status = FindHomestead();
         try
         {
             WriteHomestead(clip, details, null);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            Message?.Invoke($"Could not save the blueprint: {ex.Message}");
-            return null;
+            string problem = $"Could not save the blueprint: {ex.Message}";
+            Message?.Invoke(problem);
+            return problem;
         }
         int count = (clip["objects"] as JsonArray)?.Count ?? 0;
-        Message?.Invoke($"Saved the blueprint “{name}” ({count} piece(s)) for Homestead.{Reminder}");
+        Message?.Invoke($"Saved the blueprint “{details.Name}” ({count} piece(s)) for Homestead.{Reminder}");
         Refresh();
-        return details;
+        return null;
     }
 
     /// <summary>

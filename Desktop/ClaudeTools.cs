@@ -14,7 +14,7 @@ namespace TerrainEditor.Desktop;
 /// Each tool's description for Claude is its <c>[Description]</c> attribute; the summaries here are for the code.
 /// </remarks>
 [McpServerToolType]
-public sealed class ClaudeTools
+public sealed partial class ClaudeTools
 {
     /// <summary>The editor's window, whose world, session and view the tools work on.</summary>
     private readonly MainWindow _w;
@@ -120,7 +120,7 @@ public sealed class ClaudeTools
 
     /// <summary>list_objects: objects of the open area, filtered by kind, name and distance (limit clamped to 1 to 2000).</summary>
     [McpServerTool(Name = "list_objects", ReadOnly = true, Title = "List objects")]
-    [Description("Objects of the open area: id, name, kind, position (x, y, z), turn (yaw in degrees) and whether a player built it. Filter by kind (Buildings, Trees, Rocks…), by a word of the name, and/or near a point; at most limit of them, nearest first when near a point.")]
+    [Description("Objects of the open area: id, name, kind, position (x, y, z), turn (yaw in degrees), tilts (pitch, roll) and size (scale) when it has them, and whether a player built it. Filter by kind (Buildings, Trees, Rocks…), by a word of the name, and/or near a point; at most limit of them, nearest first when near a point.")]
     public Task<string> ListObjects(
         [Description("A kind, as describe_area counts them (optional).")] string? kind = null,
         [Description("A word the name must hold (optional).")] string? name = null,
@@ -192,18 +192,34 @@ public sealed class ClaudeTools
         return $"Selected {ok.Count}{(ok.Count < ids.Length ? $" ({ids.Length - ok.Count} id(s) were not objects of the area)" : "")}.";
     });
 
-    /// <summary>An object as the tools give it: id (its index in the scene), name, kind, position, yaw, built.</summary>
-    private object Describe(WorldScene.Thing t, int i) => new
+    /// <summary>
+    /// An object as the tools give it: id (its index in the scene), name, kind, position, yaw, built; its tilts and
+    /// size only when it has them (most objects stand upright at the prefab's own size).
+    /// </summary>
+    private Dictionary<string, object?> Describe(WorldScene.Thing t, int i)
     {
-        id = i,
-        name = _w.NameOfPrefab(t.Prefab),
-        kind = KindOf(t),
-        x = MathF.Round(t.Position.X, 2),
-        y = MathF.Round(t.Position.Y, 2),
-        z = MathF.Round(t.Position.Z, 2),
-        yaw = MathF.Round(t.Rotation.Y, 1),
-        built = t.Piece,
-    };
+        var d = new Dictionary<string, object?>
+        {
+            ["id"] = i,
+            ["name"] = _w.NameOfPrefab(t.Prefab),
+            ["kind"] = KindOf(t),
+            ["x"] = MathF.Round(t.Position.X, 2),
+            ["y"] = MathF.Round(t.Position.Y, 2),
+            ["z"] = MathF.Round(t.Position.Z, 2),
+            ["yaw"] = MathF.Round(t.Rotation.Y, 1),
+            ["built"] = t.Piece,
+        };
+        if (MathF.Abs(t.Rotation.X) >= 0.05f || MathF.Abs(t.Rotation.Z) >= 0.05f)
+        {
+            d["pitch"] = MathF.Round(t.Rotation.X, 1);
+            d["roll"] = MathF.Round(t.Rotation.Z, 1);
+        }
+        if (t.Scale > 0 && MathF.Abs(t.Scale - 1) >= 1e-3f)
+        {
+            d["scale"] = MathF.Round(t.Scale, 3);
+        }
+        return d;
+    }
 
     /// <summary>
     /// screenshot: the 3D view (from the camera given, else as it is) or the map, as a JPEG no wider than 1280
@@ -520,7 +536,7 @@ public sealed class ClaudeTools
 
     /// <summary>script_reference: the script API's source.</summary>
     [McpServerTool(Name = "script_reference", ReadOnly = true, Title = "The script API")]
-    [Description("The C# API run_script scripts use, as its source with comments: Area (bounds, points), Ground (Height, Set, Raise, Lower, Paint, Shape, Mountain, Biome), Objects (All, OfKind, Near, Place, Remove, CanPlace), Noise, Rnd, Print. Read it before writing a script.")]
+    [Description("The C# API run_script scripts use, as its source with comments: Area (bounds, points), Ground (Height, Set, Raise, Lower, Paint, Shape, Mountain, Biome), Objects (All, OfKind, Near, Place with tilts and snapping, Move, Remove, CanPlace), Noise, Rnd, Print. Read it before writing a script.")]
     public static string ScriptReference() => ScriptHost.ApiSource;
 
     // ---- Changing (pending changes only, one step of the history each).
@@ -1164,53 +1180,18 @@ public sealed class ClaudeTools
             return "Nothing to change: give items, text, stars, an orientation or a pose.";
         }
         string name = _w.NameOfPrefab(t.Prefab) ?? "object";
-        try
+        var (copy, problem) = Rewrite(id, set, inv, $"Claude: filled {name}");
+        if (copy is not int newId)
         {
-            Editing.NewObject replacement;
-            // (The Workshop's plot has no world files behind it: its objects carry their values.)
-            if (!_w.InWorkshop && s.Scene.World is { } world && TerrainEditor.App.ObjectData.Bytes(world, s.Edits, t.Id) is { } bytes)
-            {
-                // A world's object: its own data, changed (as the inspector does).
-                var z = TerrainEditor.App.ObjectData.Edited(bytes, set, inv);
-                replacement = new(0, z.Prefab, z.Position, z.Rotation, 0, null, false, z.Serialize());
-            }
-            else
-            {
-                // On the Workshop's plot: its values, with these.
-                var fields = (s.Edits.FindAdded(t.Id)?.Data ?? []).ToList();
-                void Put(string section, string key, string? value)
-                {
-                    int k = Save.StableHash.Of(key);
-                    fields.RemoveAll(f => f.Key == k);
-                    if (value != null)
-                    {
-                        fields.Add(new(section, k, value));
-                    }
-                }
-                foreach (var f in set)
-                {
-                    Put(f.Section, f.Key, f.Value);
-                }
-                if (inv != null)
-                {
-                    Put("bytes", "items", Convert.ToBase64String(TerrainEditor.App.ObjectData.BuildInventory(inv).Write()));
-                    Put("ints", "addedDefaultItems", "1");
-                }
-                replacement = new(0, t.Prefab, t.Position, t.Rotation, t.Scale, Data: fields);
-            }
-            var copies = s.Commit($"Claude: filled {name}", null, [id], [(replacement, t.Piece)]);
-            _w.AfterClaudeEdit($"Claude changed what {name} holds; Ctrl+Z puts it back.");
-            return $"Changed {name}; its id is now {copies[0]}.";
+            return problem!;
         }
-        catch (Exception ex) when (ex is FormatException or ArgumentException or OverflowException)
-        {
-            return $"Could not change it: {ex.Message}";
-        }
+        _w.AfterClaudeEdit($"Claude changed what {name} holds; Ctrl+Z puts it back.");
+        return $"Changed {name}; its id is now {newId}.";
     });
 
     /// <summary>open_workshop: the blank plot, optionally with a library blueprint; refused while there are unsaved changes.</summary>
     [McpServerTool(Name = "open_workshop", Title = "Open the Workshop")]
-    [Description("Opens the Workshop: a blank 192 m plot (ground at y = 34, its middle at x = 0, z = 0) to build a blueprint on, optionally with a blueprint of the library on it (list_blueprints). Refused while a world or the Workshop has changes not saved. The user saves the building as a blueprint.")]
+    [Description("Opens the Workshop: a blank 192 m plot (ground at y = 34, its middle at x = 0, z = 0) to build a blueprint on, optionally with a blueprint of the library on it (list_blueprints): this is how a blueprint is loaded. Refused while a world or the Workshop has changes not saved (save_blueprint saves the Workshop's building).")]
     public Task<string> OpenWorkshop([Description("A blueprint's name from list_blueprints (optional: an empty plot).")] string? blueprint = null) => OnUi(async () =>
     {
         if (Unsaved() is string why)
@@ -1230,6 +1211,24 @@ public sealed class ClaudeTools
         return ToJson(StateOf(_w));
     });
 
+    /// <summary>save_blueprint: the Workshop's building saved as a blueprint of the library (MainWindow.SaveWorkshopAs).</summary>
+    [McpServerTool(Name = "save_blueprint", Title = "Save the Workshop's building as a blueprint")]
+    [Description("Saves the building on the Workshop's plot as a blueprint of the user's library (Homestead's), as the Workshop's Save blueprint does: its name, a description and tags, with what its objects hold (chest contents, stands' items) and a picture. After it, the Workshop holds nothing unsaved, so another blueprint can be opened (open_workshop). Refused when pieces would fall in game (support_check; evenIfFalling saves anyway) and when another blueprint of that name exists: replacing one (overwrite) is the user's call, ask first.")]
+    public Task<string> SaveBlueprint(
+        [Description("The blueprint's name (also its file's).")] string name,
+        [Description("A few words about it, shown in the library (optional).")] string description = "",
+        [Description("Words to find it by (optional), e.g. [\"house\", \"log\"].")] string[]? tags = null,
+        [Description("Replace a blueprint of that name (only when the user said so; default false).")] bool overwrite = false,
+        [Description("Save even if pieces would fall in game (default false).")] bool evenIfFalling = false) => OnUi(() =>
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return "Give the blueprint a name.";
+        }
+        var details = new TerrainEditor.App.Homestead.Details(name.Trim(), description.Trim(), [.. (tags ?? []).Select(t => t.Trim()).Where(t => t.Length > 0)]);
+        return _w.SaveWorkshopAs(details, overwrite, evenIfFalling) is string problem ? problem : _w.MessageText.Text + " " + ToJson(StateOf(_w));
+    });
+
     /// <summary>list_blueprints: Homestead's library, filtered by words of the name, description or tags.</summary>
     [McpServerTool(Name = "list_blueprints", ReadOnly = true, Title = "The blueprint library")]
     [Description("The user's blueprints (Homestead's library): name, pieces, cost, description, tags. Open one in the Workshop (open_workshop) or add it to the plot (add_blueprint).")]
@@ -1241,25 +1240,67 @@ public sealed class ClaudeTools
             .Select(e => new { name = e.Name, pieces = e.Pieces, cost = Terrain.PieceCost.Of(e.Kinds).Describe(4), description = e.Description, tags = e.Tags }));
     });
 
-    /// <summary>add_blueprint: a library blueprint onto the Workshop's plot, with what is there.</summary>
-    [McpServerTool(Name = "add_blueprint", Title = "Add a blueprint to the plot")]
-    [Description("Adds a blueprint of the library to the Workshop's plot, with what is there, centred on x, z (default: the plot's middle), standing on the ground; one step of the history.")]
+    /// <summary>
+    /// add_blueprint: a library blueprint onto the Workshop's plot, with what is there, or into the open area of a
+    /// world, its lowest piece on the ground at its middle (or at y); taken back when a piece would leave the area.
+    /// </summary>
+    [McpServerTool(Name = "add_blueprint", Title = "Add a blueprint")]
+    [Description("Adds a blueprint of the library (list_blueprints) to the Workshop's plot or to the open area of a world, with what is there: centred on x, z (default: the plot's or the area's middle), turned by turn degrees (as yaw: 90 turns north to east), its lowest piece at height y (default: the ground at its middle; level the ground first with flatten for a building on a slope). One pending step; refused when a piece would be outside the area. Kinds the game does not know (mods) are left out and named.")]
     public Task<string> AddBlueprint(
         [Description("The blueprint's name (list_blueprints).")] string blueprint,
         [Description("World x of its middle (optional).")] float? x = null,
-        [Description("World z of its middle (optional).")] float? z = null) => OnUi(() =>
+        [Description("World z of its middle (optional).")] float? z = null,
+        [Description("Degrees to turn it round its middle (default 0).")] float turn = 0,
+        [Description("In a world: the height of its lowest piece (optional: the ground at its middle).")] float? y = null) => OnUi(() =>
     {
-        if (!_w.InWorkshop)
+        if (CannotEdit() is string why)
         {
-            return "Blueprints are added in the Workshop: open_workshop first.";
+            return why;
         }
         string path = Path.Combine(_w.Blueprints.Status.Folder, TerrainEditor.App.Homestead.FileName(blueprint));
         if (!File.Exists(path))
         {
             return $"No blueprint \"{blueprint}\" in the library (list_blueprints).";
         }
-        _w.AddToWorkshop(path, x is float ax && z is float az ? new System.Numerics.Vector2(ax, az) : null);
-        return _w.MessageText.Text + " Now pending: " + Pending();
+        string label = $"Claude: added {blueprint}";
+        if (_w.InWorkshop)
+        {
+            _w.AddToWorkshop(path, x is float ax && z is float az ? new System.Numerics.Vector2(ax, az) : null, turn, label);
+            return _w.MessageText.Text + " Now pending: " + Pending();
+        }
+        var s = _w.Session!;
+        var scene = s.Scene;
+        float cx = x ?? scene.Cx, cz = z ?? scene.Cz;
+        var (minX, minZ, maxX, maxZ) = Bounds(scene);
+        if (cx < minX || cx > maxX || cz < minZ || cz > maxZ)
+        {
+            return $"({cx}, {cz}) is outside the open area (x {minX} to {maxX}, z {minZ} to {maxZ}): open_area there first.";
+        }
+        int before = scene.Things.Count;
+        (int Placed, List<string> Unknown, float Lift, Dictionary<(int, int), float> Terrain) added;
+        try
+        {
+            added = Workshop.Add(s, path, null, new System.Numerics.Vector2(cx, cz), turn, y ?? GroundAt(scene, cx, cz), label);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or FormatException or JsonException)
+        {
+            return "Could not read that blueprint: " + ex.Message;
+        }
+        if (added.Placed == 0)
+        {
+            return "Nothing added: the blueprint has no piece this world can have.";
+        }
+        var outside = Enumerable.Range(before, scene.Things.Count - before).Select(i => scene.Things[i].Position)
+            .Where(p => p.X < minX || p.X > maxX || p.Z < minZ || p.Z > maxZ).ToList();
+        if (outside.Count > 0)
+        {
+            s.Undo();
+            return $"Nothing added: {outside.Count} piece(s) would be outside the area (x {minX} to {maxX}, z {minZ} to {maxZ}). Open a larger area (open_area) or put it further in.";
+        }
+        _w.AfterClaudeEdit($"Claude added “{blueprint}”: {added.Placed} piece(s); Ctrl+Z takes it back.");
+        return $"Added {added.Placed} piece(s) of \"{blueprint}\", ids {before} to {scene.Things.Count - 1}."
+            + (added.Unknown.Count > 0 ? $" Left out (unknown kinds): {string.Join(", ", added.Unknown.Take(10))}." : "")
+            + " Now pending: " + Pending();
     });
 
     /// <summary>

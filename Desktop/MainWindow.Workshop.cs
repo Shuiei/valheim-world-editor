@@ -193,9 +193,10 @@ public partial class MainWindow
     }
 
     /// <summary>
-    /// A blueprint added to the building on the plot (at a world point x, z; null: the middle). Only in the Workshop.
+    /// A blueprint added to the building on the plot (at a world point x, z; null: the middle), turned by degrees,
+    /// as one step named label (null: "Added" and its name). Only in the Workshop.
     /// </summary>
-    internal void AddToWorkshop(string path, Vector2? at)
+    internal void AddToWorkshop(string path, Vector2? at, float turn = 0, string? label = null)
     {
         if (!InWorkshop || Session is not { } s)
         {
@@ -203,7 +204,7 @@ public partial class MainWindow
         }
         try
         {
-            var (placed, unknown, _, terrain) = Workshop.Add(s, path, null, at);
+            var (placed, unknown, _, terrain) = Workshop.Add(s, path, null, at, turn, label: label);
             foreach (var (cell, y) in terrain)
             {
                 _workshopTerrain[cell] = _workshopTerrain.TryGetValue(cell, out float was) ? MathF.Min(was, y) : y;
@@ -358,15 +359,59 @@ public partial class MainWindow
         var clip = Workshop.Building(s.Scene, _workshopName ?? "My building", _workshopLift);
         if (await Blueprints.SaveBuilding(clip, _workshopDetails ?? new Homestead.Details(_workshopName ?? "My building", "", []), _workshopFile) is { } details)
         {
-            string saved = details.Name;
-            _workshopName = saved;
-            _workshopDetails = details;
-            _workshopFile = Path.Combine(Blueprints.Status.Folder, Homestead.FileName(saved));
-            BuildPanel.RenderLibrary();
-            _workshopSaved = s.Edits.Version;
-            _title.Text = $"Workshop · {saved}";
-            UpdateSaveBar();
+            WorkshopSavedAs(s, details);
         }
+    }
+
+    /// <summary>The plot's building is saved under these details: the Workshop takes its name and is no longer dirty.</summary>
+    private void WorkshopSavedAs(EditSession s, Homestead.Details details)
+    {
+        _workshopName = details.Name;
+        _workshopDetails = details;
+        _workshopFile = Path.Combine(Blueprints.Status.Folder, Homestead.FileName(details.Name));
+        BuildPanel.RenderLibrary();
+        _workshopSaved = s.Edits.Version;
+        _title.Text = $"Workshop · {details.Name}";
+        UpdateSaveBar();
+    }
+
+    /// <summary>
+    /// Save blueprint without asking (Claude's save_blueprint): the plot's building under these details. Refused when
+    /// there is no building piece, when pieces would fall in game (unless evenIfFalling), or when another blueprint of
+    /// that name exists (unless overwrite; the one the building was opened from or last saved as may always be saved
+    /// over).
+    /// </summary>
+    /// <returns>Null when saved, else why not.</returns>
+    internal string? SaveWorkshopAs(Homestead.Details details, bool overwrite, bool evenIfFalling)
+    {
+        if (!InWorkshop || Session is not { } s)
+        {
+            return "Blueprints are saved from the Workshop: open_workshop first.";
+        }
+        View.SelectTool.Commit();
+        if (Workshop.Pieces(s.Scene) == 0)
+        {
+            return "There is no building piece on the plot to save.";
+        }
+        // Worked out even when the Support check is off: its switch only shows the colours.
+        if (SolveSupport(s).Result is { Breaking: > 0 } r && !evenIfFalling)
+        {
+            return $"{r.Breaking} piece(s) would fall in game (support_check lists them): fix them, or save anyway with evenIfFalling.";
+        }
+        // The library's folder as it is now (Homestead may have been installed or moved since).
+        Blueprints.Refresh();
+        string path = Path.Combine(Blueprints.Status.Folder, Homestead.FileName(details.Name));
+        if (File.Exists(path) && !overwrite && !string.Equals(path, _workshopFile, StringComparison.Ordinal))
+        {
+            return $"There is a blueprint called {details.Name} already: ask the user before replacing it (overwrite), or choose another name.";
+        }
+        var clip = Workshop.Building(s.Scene, details.Name, _workshopLift);
+        if (Blueprints.SaveBuildingAs(clip, details) is string problem)
+        {
+            return problem;
+        }
+        WorkshopSavedAs(s, details);
+        return null;
     }
 
     /// <summary>
@@ -381,6 +426,26 @@ public partial class MainWindow
             View.ShowSupport(null);
             return;
         }
+        var (r, index) = SolveSupport(s);
+        LastSupport = r;
+        LastSupportThings = index;
+        var show = new Dictionary<int, float>();
+        for (int k = 0; k < index.Count; k++)
+        {
+            if (!r.Free[k])
+            {
+                show[index[k]] = r.Breaks[k] ? -2 : r.Colour[k];
+            }
+        }
+        View.ShowSupport(show);
+    }
+
+    /// <summary>
+    /// The support check over the plot's building pieces (Stability), whether or not its colours are shown.
+    /// </summary>
+    /// <returns>The result, and the scene's index of each piece it was worked out for.</returns>
+    private (Stability.Result Result, List<int> Index) SolveSupport(EditSession s)
+    {
         var index = new List<int>();
         var pieces = new List<Stability.Piece>();
         lock (s.Scene.Things)
@@ -398,18 +463,7 @@ public partial class MainWindow
             }
         }
         var terrain = _workshopTerrain;
-        var r = Stability.Solve(pieces, (x, z) => Workshop.GroundAt(terrain, x, z));
-        LastSupport = r;
-        LastSupportThings = index;
-        var show = new Dictionary<int, float>();
-        for (int k = 0; k < index.Count; k++)
-        {
-            if (!r.Free[k])
-            {
-                show[index[k]] = r.Breaks[k] ? -2 : r.Colour[k];
-            }
-        }
-        View.ShowSupport(show);
+        return (Stability.Solve(pieces, (x, z) => Workshop.GroundAt(terrain, x, z)), index);
     }
 
     /// <summary>

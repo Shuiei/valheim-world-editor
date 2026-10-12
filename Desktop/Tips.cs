@@ -477,12 +477,19 @@ public static class Tips
     /// <summary>The tip for a key; throws <c>KeyNotFoundException</c> for an unknown key, so a typo is caught at once.</summary>
     public static string Of(string key) => Texts.TryGetValue(key, out string? t) ? t : throw new KeyNotFoundException("No tip " + key);
 
+    /// <summary>Each control's tip key, as Tip gave it (Claude finds controls by it: ClaudeTools.Controls).</summary>
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<Control, string> Keys = [];
+
     /// <summary>The control explains itself on hover: sets its tooltip to the key's tip and returns it.</summary>
     public static T Tip<T>(this T c, string key) where T : Control
     {
         ToolTip.SetTip(c, Of(key));
+        Keys.AddOrUpdate(c, key);
         return c;
     }
+
+    /// <summary>The tip key a control was given (Tip), or null.</summary>
+    public static string? KeyOf(Control c) => Keys.TryGetValue(c, out string? k) ? k : null;
 
     /// <summary>A row's label tells the same as its control (nothing when the control has no tip yet).</summary>
     public static void Label(Control label, Control input)

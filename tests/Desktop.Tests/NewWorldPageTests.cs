@@ -390,33 +390,44 @@ public class NewWorldPageTests
         Assert.False(r.P.Generate.IsEnabled);
     }
 
+    // Check: a name that cannot be a file name, a seed not of 1 to 10 characters, a world of that name there already
+    // (as a folder or as the game's .fwl) are refused; a new name and seed are not.
+    [Fact]
+    public void CheckRefusesBadNamesSeedsAndWorldsThere()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "vwe-check-" + Guid.NewGuid().ToString("N")[..8]);
+        Directory.CreateDirectory(Path.Combine(root, "Home"));
+        File.WriteAllText(Path.Combine(root, "Hall.fwl"), "");
+        try
+        {
+            foreach (string bad in new[] { "", "a/b" })
+            {
+                Assert.StartsWith("Give the world a name that can be a file name", NewWorldPage.Check(root, bad, "abc"));
+            }
+            Assert.Equal("The seed is 1 to 10 characters, as in the game.", NewWorldPage.Check(root, "New", ""));
+            Assert.Equal("The seed is 1 to 10 characters, as in the game.", NewWorldPage.Check(root, "New", "12345678901"));
+            Assert.StartsWith("There is a world called Home already in ", NewWorldPage.Check(root, "Home", "abc"));
+            Assert.StartsWith("There is a world called Hall already in ", NewWorldPage.Check(root, "Hall", "abc"));
+            Assert.Null(NewWorldPage.Check(root, "New", "abc"));
+        }
+        finally
+        {
+            Directory.Delete(root, true);
+        }
+    }
+
+    // Create: what Check says is shown and nothing is made; a new name is asked for, trimmed, in the folder chosen.
     [AvaloniaFact]
-    public void CreateChecksTheNameTheSeedAndThatTheWorldIsNew()
+    public void CreateShowsWhatIsWrongOrAsksForTheWorld()
     {
         using var r = new Run();
-        string local = Path.Combine(r.Root, "local"), cloud = Path.Combine(r.Root, "cloud");
-        r.P.SeedBox.Text = "abc";
-        foreach (string bad in new[] { "", "   ", "a/b" })
-        {
-            r.P.NameBox.Text = bad;
-            Click(r.P.Create);
-            Assert.StartsWith("Give the world a name that can be a file name", r.P.Problem.Text);
-        }
-        r.P.NameBox.Text = "Home";
-        r.P.SeedBox.Text = "";
-        r.P.AskCreate();
-        Assert.Equal("The seed is 1 to 10 characters, as in the game.", r.P.Problem.Text);
-        // A world of that name already there, as a folder or as the game's .fwl.
+        string cloud = Path.Combine(r.Root, "cloud");
         r.P.SeedBox.Text = " abc ";
-        Directory.CreateDirectory(Path.Combine(local, "Home"));
-        r.P.AskCreate();
-        Assert.StartsWith("There is a world called Home already in ", r.P.Problem.Text);
-        File.WriteAllText(Path.Combine(cloud, "Home.fwl"), "");
-        r.P.Where.SelectedIndex = 1;
-        r.P.AskCreate();
-        Assert.StartsWith("There is a world called Home already in ", r.P.Problem.Text);
+        r.P.NameBox.Text = "a/b";
+        Click(r.P.Create);
+        Assert.StartsWith("Give the world a name that can be a file name", r.P.Problem.Text);
         Assert.Empty(r.Created);
-        // A new name: asked for, trimmed, in the folder chosen.
+        r.P.Where.SelectedIndex = 1;
         r.P.NameBox.Text = " New home ";
         r.P.AskCreate();
         Assert.Equal("", r.P.Problem.Text);

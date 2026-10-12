@@ -14,7 +14,7 @@ namespace TerrainEditor.Desktop.Tests;
 /// The Dungeon tool on the test world (zone 0, 0), with a Frost Cave of one room made there (the test world has no
 /// dungeon): the panel lists it, a room picked and clicked onto an open end joins there, the open ends close with end
 /// caps, a selected room is deleted, and each change is one step of the history that rewrites the dungeon object's room
-/// list.
+/// list; a room placed at an open end without the pointer (PlaceAt), and changes named as asked.
 /// </summary>
 [Collection("World files")]
 public class DungeonToolTests
@@ -305,5 +305,44 @@ public class DungeonToolTests
         Assert.Equal(1, r.T.Selected);
         r.T.Delete();
         Assert.Equal(0, Doors());
+    }
+
+    // PlaceAt: the room joined at an open end by the join-th of its fitting openings, counting round either way, as
+    // Preview places it; no such end, no such room, or no fitting opening: nothing.
+    [AvaloniaFact]
+    public void ARoomIsPlacedAtAnOpenEndWithoutThePointer()
+    {
+        using var r = new Run();
+        r.T.Choose("cave_new_crossroads01");
+        r.PointAt(r.T.FreeEnds[0]);
+        r.T.Turn();
+        Assert.Equal(r.T.Preview, r.T.PlaceAt(0, "cave_new_crossroads01", 1));
+        int fitting = Dungeons.Matching(Dungeons.RoomOf("cave_new_crossroads01")!, r.T.FreeEnds[0].Type).Count();
+        Assert.Equal(r.T.PlaceAt(0, "cave_new_crossroads01", 1), r.T.PlaceAt(0, "cave_new_crossroads01", 1 + fitting));
+        Assert.Equal(r.T.PlaceAt(0, "cave_new_crossroads01", fitting - 1), r.T.PlaceAt(0, "cave_new_crossroads01", -1));
+        Assert.Null(r.T.PlaceAt(3, "cave_new_crossroads01", 0));
+        Assert.Null(r.T.PlaceAt(0, "no_such_room", 0));
+    }
+
+    // Add, Remove, CloseOpenEnds and ToggleDoor name their step as asked.
+    [AvaloniaFact]
+    public void ChangesAreNamedAsAsked()
+    {
+        using var r = new Run();
+        var s = r.Scene.Session!;
+        Assert.True(r.T.Add(r.T.PlaceAt(0, "cave_new_corridor03", 0)!, "Mine: a corridor"));
+        Assert.Equal("Mine: a corridor", s.UndoLabel);
+        var joint = r.T.DoorJoints[0];
+        if (r.T.DoorsAt(joint).Count > 0)
+        {
+            r.T.ToggleDoor(r.T.Dungeon!, joint);
+        }
+        r.T.ToggleDoor(r.T.Dungeon!, joint, "Mine: a door");
+        Assert.Equal("Mine: a door", s.UndoLabel);
+        Assert.True(r.T.Remove(1, "Mine: no corridor"));
+        Assert.Equal("Mine: no corridor", s.UndoLabel);
+        Assert.False(r.T.Remove(9));
+        r.T.CloseOpenEnds("Mine: capped");
+        Assert.Equal("Mine: capped", s.UndoLabel);
     }
 }

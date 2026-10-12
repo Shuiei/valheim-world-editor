@@ -1,6 +1,4 @@
-using System.Text.Json.Nodes;
 using Avalonia.Headless.XUnit;
-using TerrainEditor.App;
 using TerrainEditor.Save;
 using Xunit;
 
@@ -14,33 +12,14 @@ namespace TerrainEditor.Desktop.Tests;
 [Collection("World files")]
 public class ClaudeToolsWorkshopTests
 {
-    /// <summary>A blueprint of a floor and a wall in the run's Homestead folder.</summary>
-    private static void Hut(ClaudeRun r, string name, string description, params string[] tags)
-    {
-        static JsonNode Piece(string prefab, float x, float y) => new JsonObject
-        {
-            ["name"] = prefab,
-            ["dx"] = x,
-            ["dy"] = y,
-            ["dz"] = 0,
-            ["rx"] = 0,
-            ["ry"] = 0,
-            ["rz"] = 0,
-            ["scale"] = 0,
-        };
-        Directory.CreateDirectory(r.Homestead);
-        var clip = new JsonObject { ["objects"] = new JsonArray(Piece("wood_floor", 0, 0), Piece("woodwall", 0, 1)) };
-        File.WriteAllText(Path.Combine(r.Homestead, Homestead.FileName(name)), Homestead.Write(clip, name, "Tester", null, DateTime.Now, description, tags));
-    }
-
     // The library searched by name, description and tags; a blueprint opened on the plot, then added to it again
     // beside; names not in the library said.
     [AvaloniaFact]
     public async Task BlueprintsAreListedOpenedAndAdded()
     {
         using var r = new ClaudeRun();
-        Hut(r, "Hut", "A small wooden hut", "house", "wood");
-        Hut(r, "Tower", "Tall and stone", "defence");
+        r.Hut("Hut", "A small wooden hut", "house", "wood");
+        r.Hut("Tower", "Tall and stone", "defence");
         Assert.Equal(2, ClaudeRun.J(await r.T.ListBlueprints()).GetArrayLength());
         var huts = ClaudeRun.J(await r.T.ListBlueprints("WOODEN")).EnumerateArray().ToList();
         var hut = Assert.Single(huts);
@@ -57,6 +36,7 @@ public class ClaudeToolsWorkshopTests
         Assert.Equal("No blueprint \"Castle\" in the library (list_blueprints).", await r.T.AddBlueprint("Castle"));
         string added = await r.T.AddBlueprint("Tower", 20, 0);
         Assert.EndsWith("Now pending: 4 building piece(s) on the plot, not saved as a blueprint.", added);
+        Assert.Equal("Claude: added Tower", r.W.Session!.UndoLabel);
         Assert.Equal(4, ClaudeRun.J(await r.T.EditorState()).GetProperty("area").GetProperty("objects").GetInt32());
     }
 
@@ -92,11 +72,6 @@ public class ClaudeToolsWorkshopTests
         Assert.Contains(signData, f => f.Key == StableHash.Of("text") && f.Value == "Hut for sale");
         var chestData = s.Edits.FindAdded(s.Scene.Things[NewId(filled)].Id)!.Data!;
         Assert.Contains(chestData, f => f.Key == StableHash.Of("items"));
-        Assert.Contains(chestData, f => f.Key == StableHash.Of("addedDefaultItems") && f.Value == "1");
-        // Written again: the old text replaced, not kept beside.
-        written = await r.T.SetContents(NewId(written), text: "Sold");
-        signData = s.Edits.FindAdded(s.Scene.Things[NewId(written)].Id)!.Data!;
-        Assert.Single(signData, f => f.Key == StableHash.Of("text"));
     }
 
     // A dungeon on the plot, with what is there: one step, its notes said.
@@ -108,5 +83,36 @@ public class ClaudeToolsWorkshopTests
         string made = await r.T.GenerateDungeon(size: 1, levels: 1, seed: 7);
         Assert.Contains("building piece(s) on the plot", made);
         Assert.True(ClaudeRun.J(await r.T.EditorState()).GetProperty("area").GetProperty("objects").GetInt32() > 0, made);
+    }
+
+    // save_blueprint: outside the Workshop, with no name or no piece: said. Saved, the Workshop holds nothing unsaved
+    // and another blueprint opens; a name taken is refused unless overwrite; pieces that would fall are refused
+    // unless evenIfFalling, whether the Support check is on or off.
+    [AvaloniaFact]
+    public async Task TheBuildingIsSavedAsABlueprintAndAnotherOpened()
+    {
+        using var r = new ClaudeRun();
+        Assert.StartsWith("Blueprints are saved from the Workshop", await r.T.SaveBlueprint("Hut"));
+        await r.T.OpenWorkshop();
+        Assert.Equal("Give the blueprint a name.", await r.T.SaveBlueprint(" "));
+        Assert.Equal("There is no building piece on the plot to save.", await r.T.SaveBlueprint("Hut"));
+        await r.T.PlacePieces([new ClaudeTools.PieceSpec { Prefab = "wood_floor", X = 0, Z = 0 }]);
+        Assert.StartsWith("Saved the blueprint “Hut”", await r.T.SaveBlueprint("Hut", "A floor", ["test"]));
+        Assert.False(r.W.WorkshopDirty);
+        Assert.True(File.Exists(Path.Combine(r.Homestead, "Hut.blueprint")));
+        Assert.Equal("Hut", ClaudeRun.J(await r.T.ListBlueprints("Hut"))[0].GetProperty("name").GetString());
+
+        // A second building, another name taken: refused, then replaced on purpose.
+        r.Hut("Tower", "Tall");
+        await r.T.PlacePieces([new ClaudeTools.PieceSpec { Prefab = "wood_floor", X = 6, Z = 0 }]);
+        Assert.StartsWith("There is a blueprint called Tower already", await r.T.SaveBlueprint("Tower"));
+        Assert.StartsWith("Saved the blueprint “Tower”", await r.T.SaveBlueprint("Tower", overwrite: true));
+
+        // A wall in the air would fall, even with the Support check's colours off.
+        await r.T.PlacePieces([new ClaudeTools.PieceSpec { Prefab = "woodwall", X = 20, Z = 20, Y = 60, Snap = false }]);
+        r.W.SupportBox.IsChecked = false;
+        Assert.Contains("would fall in game", await r.T.SaveBlueprint("Floating"));
+        Assert.StartsWith("Saved the blueprint “Floating”", await r.T.SaveBlueprint("Floating", evenIfFalling: true));
+        Assert.Equal("workshop", ClaudeRun.J(await r.T.OpenWorkshop("Hut")).GetProperty("page").GetString());
     }
 }

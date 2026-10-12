@@ -5,7 +5,7 @@ using Xunit;
 namespace TerrainEditor.Desktop.Tests;
 
 /// <summary>
-/// Heightmaps: the area's ground out to a picture and back.
+/// Heightmaps: the area's ground out to a picture and back, and a picture's values put into the ground (PutHeights).
 /// </summary>
 public class AreaPanelHeightmapTests
 {
@@ -86,5 +86,21 @@ public class AreaPanelHeightmapTests
                 Directory.Delete(dir, recursive: true);
             }
         }
+    }
+
+    // PutHeights: black at lo, white at hi, faded by each point's weight; points outside the picture left alone; the
+    // game's ±8 m holds, and fully weighted points it stops are counted.
+    [Fact]
+    public void APicturesValuesGoIntoTheGroundFadedByWeight()
+    {
+        var g = TestScenes.Flat(1).Ground;
+        int Pt(int x) => 10 * g.W + x;
+        var (touched, clamped) = AreaPanel.PutHeights(g, [0, 1, 1], 10, 10, 3, 1, [(Pt(10), 1), (Pt(11), 0.25f), (Pt(12), 1), (Pt(13), 1)], 30, 50);
+        Assert.Equal([Pt(10), Pt(11), Pt(12)], touched);
+        Assert.Equal(1, clamped);
+        Assert.Equal(30, g.HeightOf(Pt(10)), 3);
+        Assert.Equal(35, g.HeightOf(Pt(11)), 3);
+        Assert.Equal(38, g.HeightOf(Pt(12)), 3);
+        Assert.Equal(30, g.HeightOf(Pt(13)), 3);
     }
 }
