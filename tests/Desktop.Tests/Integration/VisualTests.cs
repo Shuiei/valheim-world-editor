@@ -28,7 +28,7 @@ public sealed class VisualTests(EditorProcess editor) : IDisposable
     }
 
     /// <summary>
-    /// A fresh copy of the test world, opened (its map shown).
+    /// A fresh copy of the test world, opened (its map shown, the whole world in view).
     /// </summary>
     private JsonElement Open()
     {
@@ -39,8 +39,16 @@ public sealed class VisualTests(EditorProcess editor) : IDisposable
         {
             File.Copy(f, Path.Combine(world, Path.GetFileName(f)));
         }
-        return editor.Send($"world {world}");
+        var opened = editor.Send($"world {world}");
+        // A world opens where the map was last looked at: the last test's view (a close-up when it failed zoomed in).
+        editor.Send(FormattableString.Invariant($"mapview 0 0 {WholeWorld}"));
+        return opened;
     }
+
+    /// <summary>
+    /// Metres a pixel with the whole world in view (as the map shows a world first).
+    /// </summary>
+    private const float WholeWorld = 10500 * 2 / 900f;
 
     /// <summary>
     /// How much a picture shows: average brightness, its spread, distinct colours (5 bits a channel) and share of
