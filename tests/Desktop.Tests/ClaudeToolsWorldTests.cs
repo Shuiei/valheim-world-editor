@@ -64,8 +64,9 @@ public class ClaudeToolsWorldTests
     {
         using var r = new ClaudeRun();
         await r.OpenArea();
+        // The test world has more locations than one answer gives: the list stops at the limit, the count does not.
         var all = ClaudeRun.J(await r.T.ListLocations(limit: 2000));
-        Assert.Equal(all.GetProperty("count").GetInt32(), all.GetProperty("locations").GetArrayLength());
+        Assert.Equal(Math.Min(all.GetProperty("count").GetInt32(), 2000), all.GetProperty("locations").GetArrayLength());
         foreach (var l in ClaudeRun.J(await r.T.ListLocations("boss")).GetProperty("locations").EnumerateArray())
         {
             Assert.Equal("boss", l.GetProperty("kind").GetString());
@@ -113,10 +114,24 @@ public class ClaudeToolsWorldTests
     {
         using var r = new ClaudeRun();
         r.Hut("Shed", "A shed");
+        // A fence 12 m long round its anchor: put 6 m from the area's edge, one end is outside.
+        static System.Text.Json.Nodes.JsonNode Post(float dx) => new System.Text.Json.Nodes.JsonObject
+        {
+            ["name"] = "wood_pole2",
+            ["dx"] = dx,
+            ["dy"] = 1,
+            ["dz"] = 0,
+            ["rx"] = 0,
+            ["ry"] = 0,
+            ["rz"] = 0,
+            ["scale"] = 0,
+        };
+        var clip = new System.Text.Json.Nodes.JsonObject { ["objects"] = new System.Text.Json.Nodes.JsonArray(Post(-6), Post(6)) };
+        File.WriteAllText(Path.Combine(r.Homestead, Homestead.FileName("Fence")), Homestead.Write(clip, "Fence", "Tester", null, DateTime.Now));
         await r.OpenArea();
         var w = r.W.World!;
         Assert.StartsWith("(500, 0) is outside the open area", await r.T.AddBlueprint("Shed", 500, 0));
-        Assert.StartsWith("Nothing added: ", await r.T.AddBlueprint("Shed", 31.9f, 0));
+        Assert.StartsWith("Nothing added: 1 piece(s) would be outside the area", await r.T.AddBlueprint("Fence", 28, 0));
         Assert.Equal(0, w.Pending.Added);
 
         string added = await r.T.AddBlueprint("Shed", 10, 10, turn: 90, y: 50);

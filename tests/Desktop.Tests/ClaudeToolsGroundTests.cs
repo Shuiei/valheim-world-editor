@@ -54,8 +54,9 @@ public class ClaudeToolsGroundTests
         Assert.StartsWith("Raise: ", await r.T.ShapeGround("raise", -10, -10, 10, 10, edge: 0, amount: 3));
         Assert.Equal(was + 3, H(), 2);
         Assert.Equal("Claude: raise", s.UndoLabel);
+        // Restored: the ground the game generated (the test world's own ground there was edited already).
         await r.T.ShapeGround("restore", -10, -10, 10, 10, edge: 0);
-        Assert.Equal(was, H(), 2);
+        Assert.Equal(s.Ground.Original(32 * s.Ground.W + 32), H(), 2);
         Assert.Equal("Claude: restore the ground", s.UndoLabel);
 
         Assert.StartsWith("Smooth: ", await r.T.ShapeGround("smooth", -20, -20, 20, 20));
@@ -88,8 +89,8 @@ public class ClaudeToolsGroundTests
         Assert.StartsWith("Claude: regrew", w.W.Session.UndoLabel);
     }
 
-    // ground_at: no area, no points or too many are said; a point outside is named; inside, the height now (raised
-    // 2 m) against the generated one, and the biome.
+    // ground_at: no area, no points or too many are said; a point outside is named; inside, the height now (2 m
+    // higher after a raise of 2 m) and the generated one (unchanged), and the biome.
     [AvaloniaFact]
     public async Task TheGroundIsReadAtPoints()
     {
@@ -98,10 +99,14 @@ public class ClaudeToolsGroundTests
         await r.OpenArea();
         Assert.Equal("Give 1 to 500 points, each [x, z].", await r.T.GroundAtPoints([]));
         Assert.Equal("Give 1 to 500 points, each [x, z].", await r.T.GroundAtPoints([[0f]]));
+        var before = ClaudeRun.J(await r.T.GroundAtPoints([[0f, 0f]]))[0];
         await r.T.ShapeGround("raise", -5, -5, 5, 5, edge: 0, amount: 2);
         var at = ClaudeRun.J(await r.T.GroundAtPoints([[0f, 0f], [500f, 0f]]));
         var p = at[0];
-        Assert.Equal(p.GetProperty("original").GetSingle() + 2, p.GetProperty("height").GetSingle(), 2);
+        // Raised 2 m from where it was; the generated height stays the generator's.
+        Assert.Equal(before.GetProperty("height").GetSingle() + 2, p.GetProperty("height").GetSingle(), 2);
+        Assert.Equal(before.GetProperty("original").GetSingle(), p.GetProperty("original").GetSingle(), 3);
+        Assert.Equal(r.W.Session!.Ground.Original(32 * r.W.Session.Ground.W + 32), p.GetProperty("original").GetSingle(), 2);
         Assert.False(string.IsNullOrEmpty(p.GetProperty("biome").GetString()));
         Assert.True(p.GetProperty("water").GetSingle() >= 0);
         Assert.Equal("outside the area", at[1].GetProperty("error").GetString());
