@@ -322,4 +322,54 @@ public class StartPageTests
             File.SetUnixFileMode(cfg, UnixFileMode.UserRead | UnixFileMode.UserWrite);
         }
     }
+
+    [AvaloniaFact]
+    public void HomesteadInstalledIsSaidWithWhereItIs()
+    {
+        using var r = new Run();
+        r.P.ShowHomestead(new Homestead.Status(true, "1.4.0", ["Steam", "Steam", "r2modman"], "/somewhere"));
+        Assert.Equal("Homestead 1.4.0 is installed (Steam, r2modman): the editor's blueprints show in its hammer tab, to build in game.", r.P.HomesteadText.Text);
+    }
+
+    [AvaloniaFact]
+    public async Task ASavedServerWithItsPasswordIsATileThatConnects()
+    {
+        using var game = new FakeGame();
+        using var r = new Run();
+        ServerConfig.Remember(new ServerConfig.Server { Name = "Valhalla", Host = "203.0.113.10", SshPort = 22, User = "valheim", Password = "pw", Token = game.Token });
+        r.Tunnel(game.Port, game.Token);
+        r.P.FillHome();
+        var tile = r.P.RecentTiles.Children.OfType<Button>().Single(b => Texts(b).Contains("Valhalla"));
+        Assert.Contains("Server · connects in one click", Texts(tile));
+        Click(tile);
+        await TestWindows.Until(() => r.Tunnels.Count == 1);
+        Assert.Equal(("203.0.113.10", "valheim", "pw", game.Token), (r.Tunnels[0].Host, r.Tunnels[0].User, r.Tunnels[0].Password, r.Tunnels[0].Token));
+    }
+
+    [AvaloniaFact]
+    public async Task AGameThatCannotBeCheckedSaysWhyUntilItCanBe()
+    {
+        if (!OperatingSystem.IsLinux())
+        {
+            return;
+        }
+        using var r = new Run();
+        string config = Path.Combine(r.Temp, "BepInEx", "config");
+        Directory.CreateDirectory(config);
+        string cfg = Path.Combine(config, LocalGame.ConfigName);
+        // A link to nothing: there as a file, but it cannot be read (even by root).
+        File.CreateSymbolicLink(cfg, Path.Combine(r.Temp, "missing.cfg"));
+        r.Settings.BepInExFolders.Add(r.Temp);
+        await r.P.PollGame();
+        Assert.Contains("Your game could not be checked", Texts(r.P.GamePanel));
+        // Checked again the same way: said once.
+        await r.P.PollGame();
+        Assert.Contains("Your game could not be checked", Texts(r.P.GamePanel));
+        // Readable again: the failure goes.
+        File.Delete(cfg);
+        File.WriteAllText(cfg, $"Port = {FakeGame.FreePort()}\nToken = t\n");
+        await r.P.PollGame();
+        Assert.DoesNotContain("Your game could not be checked", Texts(r.P.GamePanel));
+        Assert.Contains("Start Valheim and load your world", Texts((Control)r.P.GameState.Content!));
+    }
 }

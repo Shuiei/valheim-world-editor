@@ -107,6 +107,16 @@ public class EditorProcess : IDisposable
     /// </summary>
     public JsonElement Send(string command)
     {
+        string answer = Answer(command);
+        Assert.True(answer.StartsWith("@@ ok ", StringComparison.Ordinal), $"{command}: {answer}");
+        return JsonDocument.Parse(answer["@@ ok ".Length..]).RootElement.Clone();
+    }
+
+    /// <summary>
+    /// Sends a command; its answer line, "@@ ok ..." or the editor's error (only no answer at all fails the test).
+    /// </summary>
+    public string Answer(string command)
+    {
         lock (_sendLock)
         {
             Assert.False(_stuck, $"{command}: the editor stopped answering (an earlier command's answer never came)");
@@ -127,8 +137,7 @@ public class EditorProcess : IDisposable
                 _owed++;
             }
             Assert.True(answer != null, $"{command}: no answer from the editor");
-            Assert.True(answer!.StartsWith("@@ ok ", StringComparison.Ordinal), $"{command}: {answer}");
-            return JsonDocument.Parse(answer["@@ ok ".Length..]).RootElement.Clone();
+            return answer!;
         }
     }
 
