@@ -69,4 +69,44 @@ public class PrefabCatalogTests
         Assert.Contains(PieceCatalog.WithSnaps, i => i.Name == "wood_fence");
         Assert.True(PieceCatalog.WithSnaps.Count() > 50);
     }
+
+    [Fact]
+    public void SpawnPointsKnowTheirCreatureLevelsAndRespawn()
+    {
+        var boar = PrefabCatalog.SpawnOf("Spawner_Boar")!;
+        Assert.Equal(["Boar"], boar.Creatures);
+        Assert.False(boar.Nest);
+        Assert.False(boar.Respawns);
+        Assert.Equal((1, 3), boar.Levels);
+        Assert.Equal("Boar · 0–2 ★ · spawns once", boar.Summary());
+        Assert.True(PrefabCatalog.IsSpawnPoint("Spawner_Boar"));
+        Assert.False(PrefabCatalog.IsNest("Spawner_Boar"));
+        // Placed like any other object.
+        Assert.NotNull(PrefabCatalog.Get(Fixtures.Hash("Spawner_Boar")));
+
+        var back = PrefabCatalog.SpawnOf("Spawner_Skeleton_respawn_30")!;
+        Assert.True(back.Respawns);
+        Assert.Equal("Skeleton · 0–2 ★ · back 60 min after it dies", back.Summary());
+        Assert.Equal("Skeleton_NoArcher · 0–2 ★ · spawns once · by night only", PrefabCatalog.SpawnOf("Spawner_Skeleton_night_noarcher")!.Summary());
+        // The game's data says 3 to 1: the game never rolls above level 1 then.
+        var draugr = PrefabCatalog.SpawnOf("Spawner_Draugr")!;
+        Assert.Equal((1, 1), draugr.Levels);
+        Assert.Equal("Draugr · spawns once", draugr.Summary());
+        Assert.Equal("Seeker, SeekerBrood · when an event wakes it", PrefabCatalog.SpawnOf("TriggerSpawner_Seeker")!.Summary());
+        Assert.Null(PrefabCatalog.SpawnOf("Beech1"));
+    }
+
+    [Fact]
+    public void NestsKnowWhatTheySpawnAroundThem()
+    {
+        var nest = PrefabCatalog.SpawnOf("Spawner_GreydwarfNest")!;
+        Assert.True(nest.Nest);
+        Assert.False(nest.Respawns);
+        Assert.Equal(["Greydwarf", "Greydwarf_Elite", "Greydwarf_Shaman"], nest.Creatures);
+        Assert.Equal(3, nest.MaxNear);
+        Assert.Equal(4f, nest.Radius);
+        Assert.True(PrefabCatalog.IsNest("Spawner_GreydwarfNest"));
+        Assert.False(PrefabCatalog.IsSpawnPoint("Spawner_GreydwarfNest"));
+        Assert.Equal("Skeleton · up to 2 around, within 2.3 m", PrefabCatalog.SpawnOf("BonePileSpawner")!.Summary());
+    }
 }

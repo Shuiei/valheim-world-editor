@@ -94,7 +94,7 @@ name, its position `X`, `Y`, `Z`, its `Kind` and whether it is a `Building` (a p
 | | |
 |---|---|
 | `Objects.All` | Every object of the area. |
-| `Objects.OfKind("Trees")` | Those of a kind: `Buildings`, `Ruins`, `Trees`, `Rocks`, `Ore`, `Bushes`, `Pickables`, `Animals` (tamed), `Runestones`, `Other`. |
+| `Objects.OfKind("Trees")` | Those of a kind: `Buildings`, `Ruins`, `Furniture`, `Trees`, `Rocks`, `Ore`, `Bushes`, `Pickables`, `Remains`, `Animals` (tamed), `Creatures` (wild, traders, birds), `SpawnPoints`, `Nests`, `Runestones`, `Dungeons`, `Effects`, `Other`. |
 | `Objects.Near(x, z, radius)` | Those within the radius of a point. |
 | `Objects.Remove(o)` | Takes it away. |
 | `Objects.Place("Beech1", x, z, yaw:, scale:, y:)` | A new object of the game, by its prefab name (`Beech1`, `Pinetree_01`, `rock4_forest`, `piece_chest_wood`...: the names the Place tool lists). It stands on the ground as the script leaves it, unless you give a height `y`. `yaw` turns it (degrees), `scale` sizes it (`0.5f` half, `2` double; the default keeps the game's own size). Building pieces are the chosen builder's, as with the Place tool. |
