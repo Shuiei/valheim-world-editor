@@ -34,6 +34,9 @@ public sealed partial class ClaudeTools
         "area.saveBlueprint", "place.savePreset", "place.deletePreset", "script.save",
         "blueprints.import", "blueprints.getHomestead", "build.add", "build.open",
         "start.game", "start.server", "start.editLive", "start.home",
+        "start.connect", "start.connectUrl", "start.savedConnect", "start.savedForget",
+        "dungeon.gen.openOnPlot", "dungeon.gen.addToPlot", "dungeon.gen.workshop",
+        "select.forget", "brush.forgetStamp", "area.export",
     ];
 
     /// <summary>Labels of controls without a tip key that Claude never sets (the same kinds of actions).</summary>

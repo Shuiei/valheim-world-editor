@@ -93,6 +93,9 @@ public class ClaudeToolsControlsTests
 
         Assert.NotNull(t.Blocked(C("save", w.SaveButton)));
         Assert.NotNull(t.Blocked(C("auto", new CheckBox().Tip("top.auto"))));
+        Assert.NotNull(t.Blocked(C("export", new Button { Content = "Export" }.Tip("area.export"))));
+        Assert.NotNull(t.Blocked(C("forget", new Button { Content = "forget" }.Tip("start.savedForget"))));
+        Assert.NotNull(t.Blocked(C("plot", new Button { Content = "Open" }.Tip("dungeon.gen.openOnPlot"))));
         Assert.NotNull(t.Blocked(C("~delete", new Button { Content = "Delete" })));
         Assert.Null(t.Blocked(C("~go", button)));
         Assert.StartsWith("save is not Claude's to use", t.Set(C("save", w.SaveButton), "click", false));
