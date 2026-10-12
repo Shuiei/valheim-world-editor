@@ -433,7 +433,18 @@ public sealed partial class MainWindow : Window
     /// <param name="x">The middle zone, east.</param>
     /// <param name="z">The middle zone, north.</param>
     /// <param name="size">The area's side, in zones.</param>
-    internal async Task EditArea(int x, int z, int size)
+    internal Task EditArea(int x, int z, int size) => EditBlock(x - size / 2, z - size / 2, size, size, (x, z));
+
+    /// <summary>
+    /// A block of zones of the world in the 3D editor (it need not be square: Follow grows it); an object the map's
+    /// search found at <paramref name="spot"/> is selected, the camera on it.
+    /// </summary>
+    /// <param name="x0">The south-west zone, east.</param>
+    /// <param name="z0">The south-west zone, north.</param>
+    /// <param name="zonesX">Zones west to east.</param>
+    /// <param name="zonesZ">Zones south to north.</param>
+    /// <param name="spot">The map's chosen zone the area was opened around, if it was.</param>
+    internal async Task EditBlock(int x0, int z0, int zonesX, int zonesZ, (int X, int Z)? spot = null)
     {
         if (World is not { } world)
         {
@@ -441,13 +452,13 @@ public sealed partial class MainWindow : Window
         }
         View.SelectTool.Commit();
         KeepHistory();
-        Busy($"Loading {size} × {size} zones around zone {x}, {z}…");
+        Busy($"Loading {zonesX} × {zonesZ} zones…");
         try
         {
-            var scene = await Task.Run(() => WorldScene.Load(world, x, z, size));
+            var scene = await Task.Run(() => WorldScene.LoadBlock(world, x0, z0, zonesX, zonesZ));
             await ShowEditor(scene);
             // Found by the map's search: selected, the camera on it (items and texts: in the inspector).
-            if (MapPage?.Target is var (id, inspect) && MapPage.Spot == (x, z))
+            if (MapPage?.Target is var (id, inspect) && spot != null && MapPage.Spot == spot)
             {
                 int i = scene.Things.FindIndex(t => t.Id == id && !t.Gone);
                 if (i >= 0)
@@ -498,8 +509,7 @@ public sealed partial class MainWindow : Window
         }
         MapButton.IsVisible = scene.Owner != null && !Options.Direct;
         _title.Text = scene.Name;
-        int mid = scene.Size / 2;
-        _subtitle.Text = $"{scene.Size} × {scene.Size} zones around zone {scene.X0 + mid}, {scene.Z0 + mid} · {scene.Things.Count(t => !t.Gone):N0} objects";
+        _subtitle.Text = $"{scene.ZonesX} × {scene.ZonesZ} zones, from zone {scene.X0}, {scene.Z0} to {scene.X0 + scene.ZonesX - 1}, {scene.Z0 + scene.ZonesZ - 1} · {scene.Things.Count(t => !t.Gone):N0} objects";
         Title = $"{scene.Name} · Valheim World Editor {BuildInfo.Version}";
         _pages.Content = _editorPage;
         EditorOpened(scene);

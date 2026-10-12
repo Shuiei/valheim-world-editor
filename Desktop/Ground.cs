@@ -14,17 +14,19 @@ namespace TerrainEditor.Desktop;
 public sealed class Ground
 {
     /// <summary>
-    /// Grid points across (Size × 64 + 1 when read from zones: neighbouring zones share their edge points).
+    /// Grid points across (ZonesX × 64 + 1 when read from zones: neighbouring zones share their edge points).
     /// </summary>
     public int W { get; }
-    /// <summary>Grid points down, as <c>W</c>.</summary>
+    /// <summary>Grid points down (ZonesZ × 64 + 1), as <c>W</c>.</summary>
     public int H { get; }
     /// <summary>The block's first zone (world zone X).</summary>
     public int X0 { get; }
     /// <summary>The block's first zone (world zone Z).</summary>
     public int Z0 { get; }
-    /// <summary>The block's size in zones (it is square).</summary>
-    public int Size { get; }
+    /// <summary>The block's size in zones, west to east.</summary>
+    public int ZonesX { get; }
+    /// <summary>The block's size in zones, south to north.</summary>
+    public int ZonesZ { get; }
     /// <summary>The generated height per point, in metres.</summary>
     public float[] Base { get; }
     /// <summary>The level change per point (metres, used where <c>Mod</c> is set).</summary>
@@ -61,14 +63,16 @@ public sealed class Ground
     /// <param name="h">Points down.</param>
     /// <param name="x0">The block's first zone (X).</param>
     /// <param name="z0">The block's first zone (Z).</param>
-    /// <param name="size">The block's size in zones.</param>
-    public Ground(int w, int h, int x0, int z0, int size)
+    /// <param name="zonesX">The block's size in zones, west to east.</param>
+    /// <param name="zonesZ">The block's size in zones, south to north.</param>
+    public Ground(int w, int h, int x0, int z0, int zonesX, int zonesZ)
     {
         W = w;
         H = h;
         X0 = x0;
         Z0 = z0;
-        Size = size;
+        ZonesX = zonesX;
+        ZonesZ = zonesZ;
         int n = w * h;
         Base = new float[n];
         Level = new float[n];
@@ -81,14 +85,24 @@ public sealed class Ground
         _loaded = Snapshot();
     }
 
+    /// <summary>An empty, unchanged ground of a square block of <paramref name="size"/> × <paramref name="size"/> zones.</summary>
+    /// <param name="w">Points across.</param>
+    /// <param name="h">Points down.</param>
+    /// <param name="x0">The block's first zone (X).</param>
+    /// <param name="z0">The block's first zone (Z).</param>
+    /// <param name="size">The block's size in zones, both ways.</param>
+    public Ground(int w, int h, int x0, int z0, int size)
+        : this(w, h, x0, z0, size, size)
+    {
+    }
+
     /// <summary>
-    /// The block of <paramref name="size"/> × <paramref name="size"/> zones from (x0, z0): generated ground plus its
+    /// The block of <paramref name="zonesX"/> × <paramref name="zonesZ"/> zones from (x0, z0): generated ground plus its
     /// edits.
     /// </summary>
-    public static Ground Read(TerrainService terrain, EditStore edits, int x0, int z0, int size)
+    public static Ground Read(TerrainService terrain, EditStore edits, int x0, int z0, int zonesX, int zonesZ)
     {
-        int w = size * 64 + 1;
-        var g = new Ground(w, w, x0, z0, size);
+        var g = new Ground(zonesX * 64 + 1, zonesZ * 64 + 1, x0, z0, zonesX, zonesZ);
         g.ReadBase(terrain);
         g.TakeEdits(edits);
         return g;
@@ -97,9 +111,9 @@ public sealed class Ground
     /// <summary>The generated ground and paint (again when the ground discs changed: Uplift).</summary>
     public void ReadBase(TerrainService terrain)
     {
-        for (int zz = 0; zz < Size; zz++)
+        for (int zz = 0; zz < ZonesZ; zz++)
         {
-            for (int zx = 0; zx < Size; zx++)
+            for (int zx = 0; zx < ZonesX; zx++)
             {
                 float[] b = terrain.BaseZone(X0 + zx, Z0 + zz);
                 float[] m = terrain.BaseMask(X0 + zx, Z0 + zz);
@@ -123,9 +137,9 @@ public sealed class Ground
     public void TakeEdits(EditStore edits)
     {
         _own.Clear();
-        for (int zz = 0; zz < Size; zz++)
+        for (int zz = 0; zz < ZonesZ; zz++)
         {
-            for (int zx = 0; zx < Size; zx++)
+            for (int zx = 0; zx < ZonesX; zx++)
             {
                 var e = edits.Get(X0 + zx, Z0 + zz);
                 _own[(zx, zz)] = e;
@@ -214,7 +228,7 @@ public sealed class Ground
             {
                 foreach (int zz in new[] { gz / 64, (int)Math.Floor((gz - 1) / 64.0) })
                 {
-                    if (zx >= 0 && zx < Size && zz >= 0 && zz < Size)
+                    if (zx >= 0 && zx < ZonesX && zz >= 0 && zz < ZonesZ)
                     {
                         set.Add((zx, zz));
                     }

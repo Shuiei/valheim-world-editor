@@ -7,6 +7,10 @@ the plugin is unchanged in versions without that part.
 ## v1.21.0 — unreleased
 
 ### Changed
+- **Follow grows the area** instead of moving it: when you look near the area's edge, a row of zones
+  is added on that side and the zones already open stay (a 3 × 3 area becomes 4 × 3, then 4 × 4…).
+  It never leaves zones behind, and stops at 16 zones each way (about 1 km). The arrows move the
+  grown area as it is; the size box makes it square again.
 - **The tool rail** is in sections, in a clearer order: **Sculpt**, **Edit** (Area, Path, Place),
   **Paint**, **Create** (Shape, Mountain, Cave, Dungeon, Script, Blueprints) and last **Tools**
   (Select, Measure, View).

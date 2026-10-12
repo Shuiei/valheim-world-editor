@@ -657,7 +657,7 @@ public sealed class AreaPanel
         {
             return null;
         }
-        int x1 = s.X0 + s.Size - 1, z1 = s.Z0 + s.Size - 1;
+        int x1 = s.X0 + s.ZonesX - 1, z1 = s.Z0 + s.ZonesZ - 1;
         byte[] png = Heightmaps.Encode(s.W, s.H, s.Heights, $"{world.Name} zones {s.X0},{s.Z0} to {x1},{z1}", out float min, out float max);
         string dir = folder ?? HeightmapFolder ?? Path.Combine(AppSettings.DataDir, "heightmaps");
         string safe = string.Concat(world.Name.Select(c => char.IsLetterOrDigit(c) || c is '-' or '_' ? c : '_'));
@@ -860,7 +860,7 @@ public sealed class AreaPanel
         Func<Ground, (List<int>, (int, int, int, int))>? ground = BackupGroundBox.IsChecked != true ? null : g =>
         {
             // The backup's ground edits over the block.
-            var bk = new Ground(g.W, g.H, g.X0, g.Z0, g.Size);
+            var bk = new Ground(g.W, g.H, g.X0, g.Z0, g.ZonesX, g.ZonesZ);
             Array.Copy(g.Base, bk.Base, g.Base.Length);
             bk.TakeEdits(be);
             var touched = new List<int>();
@@ -921,7 +921,7 @@ public sealed class AreaPanel
         {
             float ox = s.X0 * 64f - 32f, oz = s.Z0 * 64f - 32f;
             // Runestones are left as they are on both sides (a location proxy cannot be copied back).
-            var wanted = WorldScene.ReadThings(bw, s.X0, s.Z0, s.Size, new HashSet<int>())
+            var wanted = WorldScene.ReadThings(bw, s.X0, s.Z0, s.ZonesX, s.ZonesZ, new HashSet<int>())
                 .Where(o => !o.Runestone && AreaTool.Inside(poly, o.Position.X - ox, o.Position.Z - oz) && Area.Kinds.Contains(KindOf(o))).ToList();
             var current = ThingsInside(poly, chosenKindsOnly: true, includeHidden: true).Where(i => !s.Things[i].Runestone).ToList();
             // Unchanged since the backup (same kind, place and facing): kept as they are.
