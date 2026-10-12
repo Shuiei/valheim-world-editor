@@ -6,9 +6,8 @@
 codecov:
   require_ci_to_pass: true
   notify:
-    # The coverage job's two uploads (core-tests' three containers, app-tests' three): no check or
-    # comment on part of the tests.
-    after_n_builds: 2
+    # The coverage job's one upload (core-tests' three containers and app-tests' three together).
+    after_n_builds: 1
 
 coverage:
   precision: 2

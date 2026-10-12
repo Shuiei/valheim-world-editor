@@ -187,9 +187,10 @@ jobs:
 
   # The coverage of every test container, sent to Codecov in one go: the job runs on main only, once
   # core-tests and app-tests have both passed (workflows), so Codecov gets all six containers' coverage
-  # or none. Each project's three are sent as one upload with its flag (core, app): two uploads
-  # (codecov.yml waits for both). The orb's fail_on_error does nothing (its set_codecov_envs.sh empties
-  # CODECOV_FAIL_ON_ERROR, so the CLI never fails the step): a missing report is caught before.
+  # or none. The six are sent as one upload (one request: it arrives whole or not at all, never one
+  # project's without the other's). The orb's fail_on_error does nothing (its set_codecov_envs.sh empties
+  # CODECOV_FAIL_ON_ERROR, so the CLI never fails the step): a missing report is caught before, and a
+  # failed upload leaves Codecov with the last full figure.
   coverage:
     executor: dotnet
     steps:
@@ -213,12 +214,7 @@ jobs:
             done
             ls -R /tmp/upload
       - codecov/upload:
-          dir: /tmp/upload/core
-          flags: core
-          plugins: noop
-      - codecov/upload:
-          dir: /tmp/upload/app
-          flags: app
+          dir: /tmp/upload
           plugins: noop
 
   packages:
