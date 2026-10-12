@@ -24,6 +24,8 @@ the plugin is unchanged in versions without that part.
   the Favourite and Recent buttons (PickableFlax).
 - **The Place panel's weight sliders** let go of the mouse at each step of a drag (every row was
   made again): a drag now runs smoothly, and only the shares change as it moves.
+- **Previews over the sea** (the mountain, placed and pasted objects, rings and lines) were hidden
+  wherever water was behind them in the 3D view: they now show over the water.
 
 ## v1.20.0 — 2026-10-11
 
