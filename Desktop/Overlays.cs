@@ -64,7 +64,7 @@ public static class Overlays
 
     /// <summary>The world's locations without the invisible ground discs of No limit (not places to show).</summary>
     private static IEnumerable<(Vector3 Position, int Location)> RealLocations(WorldScene s) =>
-        (s.World?.Locations ?? []).Where(l => !TerrainEditor.Editing.Uplift.IsDisc(l.Location));
+        (s.World?.Locations ?? []).Where(l => !Editing.Uplift.IsDisc(l.Location));
 
     /// <summary>Builds every layer's lines for the scene, following the ground height.</summary>
     /// <param name="s">The scene to draw over.</param>
