@@ -6,8 +6,8 @@ namespace TerrainEditor.Desktop.Tests;
 /// <summary>
 /// Claude's Area tool ground actions, regrowing nature and reading the ground (ClaudeTools.Ground): what each refuses,
 /// a rectangle raised and restored, smoothed and eroded as one step each, only the kinds asked regrown inside the
-/// rectangle, the ground's height at points, and rivers and caves along a line; and the helpers they use
-/// (GroundActions, BoxOver, PathActions, LineOver).
+/// rectangle, the ground's height at points, rivers and caves along a line, stamps and heightmaps, all within a mask
+/// when given; and the helpers they use (GroundActions, Paints, BoxOver, PathActions, LineOver, MaskOf, StampsOffered).
 /// </summary>
 [Collection("World files")]
 public class ClaudeToolsGroundTests
@@ -18,8 +18,10 @@ public class ClaudeToolsGroundTests
     {
         Assert.Equal(AreaTool.GroundAction.Natural, ClaudeTools.GroundActions["Naturalize"]);
         Assert.Equal(AreaTool.GroundAction.Erode, ClaudeTools.GroundActions["erode"]);
-        Assert.False(ClaudeTools.GroundActions.ContainsKey("paint"));
-        Assert.Equal(6, ClaudeTools.GroundActions.Count);
+        Assert.Equal(AreaTool.GroundAction.Paint, ClaudeTools.GroundActions["paint"]);
+        Assert.Equal(7, ClaudeTools.GroundActions.Count);
+        Assert.Equal(BrushTool.PaintPaved, ClaudeTools.Paints["Paved"]);
+        Assert.Equal(4, ClaudeTools.Paints.Count);
     }
 
     // BoxOver: a world rectangle given corner to corner either way becomes the Area tool's box in grid points, with
@@ -42,7 +44,8 @@ public class ClaudeToolsGroundTests
         using var r = new ClaudeRun();
         await r.OpenArea();
         var s = r.W.Session!;
-        Assert.Equal("The action is smooth, naturalize, erode, restore, raise or lower.", await r.T.ShapeGround("paint", 0, 0, 4, 4));
+        Assert.Equal("The action is smooth, naturalize, erode, restore, raise, lower or paint.", await r.T.ShapeGround("melt", 0, 0, 4, 4));
+        Assert.Equal("The paint is dirt, cultivated, paved or clear.", await r.T.ShapeGround("paint", 0, 0, 4, 4, paint: "lava"));
         Assert.StartsWith("The rectangle is outside the open area", await r.T.ShapeGround("smooth", 100, 100, 120, 120));
         Assert.Equal((0, 0, 0, 0), r.W.World!.Pending);
 
@@ -157,5 +160,83 @@ public class ClaudeToolsGroundTests
 
         await r.T.DigPath("cave", [[-20f, 15f], [20f, 15f]], depth: 8, headroom: 4);
         Assert.Equal("Claude: cave along a line", s.UndoLabel);
+    }
+
+    // MaskOf: no spec, no mask; wrong biomes and paints, and settings that let nothing through, are said; heights
+    // and biomes pass or stop each point (the flat test ground is at 30 m).
+    [Fact]
+    public void AMaskSpecBecomesTheMask()
+    {
+        var s = TestScenes.Flat(1);
+        Assert.Equal((null, null), ClaudeTools.MaskOf(null, s));
+        Assert.StartsWith("Lava: the biomes are Meadows, Black Forest", ClaudeTools.MaskOf(new ClaudeTools.MaskSpec { Biomes = ["Lava"] }, s).Problem);
+        Assert.StartsWith("The mask's paint is any", ClaudeTools.MaskOf(new ClaudeTools.MaskSpec { Paint = "wet" }, s).Problem);
+        Assert.StartsWith("The mask lets nothing through: Height min is above max", ClaudeTools.MaskOf(new ClaudeTools.MaskSpec { HeightMin = 40, HeightMax = 20 }, s).Problem);
+        Assert.Equal(1, ClaudeTools.MaskOf(new ClaudeTools.MaskSpec { HeightMax = 35 }, s).Mask!(100));
+        Assert.Equal(0, ClaudeTools.MaskOf(new ClaudeTools.MaskSpec { HeightMin = 35 }, s).Mask!(100));
+        // A Black Forest point: found by the biome's name, spaces and case aside.
+        s.Scene.Biomes[100] = 8;
+        Assert.Equal(1, ClaudeTools.MaskOf(new ClaudeTools.MaskSpec { Biomes = ["blackforest"] }, s).Mask!(100));
+        Assert.Equal(0, ClaudeTools.MaskOf(new ClaudeTools.MaskSpec { Biomes = ["Meadows"] }, s).Mask!(100));
+    }
+
+    // Painting a rectangle: with a mask that stops all of it, nothing changes; without, one step named for Claude.
+    [AvaloniaFact]
+    public async Task GroundIsPaintedWhereTheMaskLetsIt()
+    {
+        using var r = new ClaudeRun();
+        await r.OpenArea();
+        Assert.Equal("Nothing changed.", await r.T.ShapeGround("paint", -5, -5, 5, 5, paint: "paved", mask: new ClaudeTools.MaskSpec { HeightMin = 5000 }));
+        Assert.StartsWith("Paint: ", await r.T.ShapeGround("paint", -5, -5, 5, 5, paint: "paved"));
+        Assert.Equal("Claude: paint paved", r.W.Session!.UndoLabel);
+    }
+
+    // StampsOffered: the built-in stamps first.
+    [Fact]
+    public void TheBuiltInStampsComeFirst()
+    {
+        Assert.Equal(Stamps.BuiltIn.Select(st => st.Name), ClaudeTools.StampsOffered().Take(Stamps.BuiltIn.Length).Select(st => st.Name));
+    }
+
+    // stamp: an unknown stamp and a point outside are said; a mountain stamped raises the ground at its middle, one
+    // step named for Claude.
+    [AvaloniaFact]
+    public async Task AStampIsPressedIntoTheGround()
+    {
+        using var r = new ClaudeRun();
+        await r.OpenArea();
+        Assert.StartsWith("No stamp \"Volcano\": Mountain, ", await r.T.Stamp("Volcano", 0, 0));
+        Assert.StartsWith("(500, 0) is outside the open area", await r.T.Stamp("Mountain", 500, 0));
+        async Task<float> H() => ClaudeRun.J(await r.T.GroundAtPoints([[0f, 0f]]))[0].GetProperty("height").GetSingle();
+        float before = await H();
+        Assert.StartsWith("Stamped ", await r.T.Stamp("mountain", 0, 0, radius: 15, height: 5));
+        Assert.True(await H() > before + 2);
+        Assert.Equal("Claude: stamp mountain", r.W.Session!.UndoLabel);
+    }
+
+    // import_heightmap: a file that is not there is said; an exported heightmap of the area, put back after the
+    // ground was raised, brings it down again.
+    [AvaloniaFact]
+    public async Task AHeightmapIsImported()
+    {
+        using var r = new ClaudeRun();
+        await r.OpenArea();
+        Assert.StartsWith("That picture cannot be used: ", await r.T.ImportHeightmap(Path.Combine(r.Homestead, "none.png"), -20, -20, 20, 20));
+        var scene = r.W.Session!.Scene;
+        float before = ClaudeRun.J(await r.T.GroundAtPoints([[0f, 0f]]))[0].GetProperty("height").GetSingle();
+        byte[] png = TerrainEditor.App.Heightmaps.Encode(scene.W, scene.H, scene.Heights, "test", out _, out _);
+        string path = Path.Combine(Path.GetTempPath(), $"vwe-heightmap-{Guid.NewGuid():N}.png");
+        await File.WriteAllBytesAsync(path, png, TestContext.Current.CancellationToken);
+        try
+        {
+            await r.T.ShapeGround("raise", -10, -10, 10, 10, edge: 0, amount: 4);
+            Assert.StartsWith("Imported ", await r.T.ImportHeightmap(path, -32, -32, 32, 32, edge: 0));
+            Assert.Equal("Claude: heightmap import", r.W.Session.UndoLabel);
+            Assert.Equal(before, ClaudeRun.J(await r.T.GroundAtPoints([[0f, 0f]]))[0].GetProperty("height").GetSingle(), 1);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
     }
 }

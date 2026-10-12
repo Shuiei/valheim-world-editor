@@ -32,6 +32,11 @@ the plugin is unchanged in versions without that part.
   `reset_zones` marks zones for reset (or unmarks them) as the Area tool does; `preview_seed` shows what
   a seed's world will be like (a map, and where the start, traders and bosses will be) and
   `create_world` makes and opens a new world.
+- **Claude stamps, imports heightmaps and masks its ground work**: `stamp` presses a stamp into the
+  ground (Mountain, Mesa, Crater rim, Dunes, Rocky ground, the user's own, or any PNG);
+  `import_heightmap` puts a heightmap picture into a rectangle; `shape_ground` also paints; and
+  `shape_ground`, `dig_path`, `stamp` and `import_heightmap` take a mask, as the Mask panel's (heights,
+  slopes, biomes, paint).
 - **Claude reads the ground exactly**: `ground_at` gives the height at points (now and as generated),
   the biome and any water there; `list_objects` also gives tilts and size when an object has them.
 

@@ -731,28 +731,41 @@ public sealed class AreaPanel
         int clamped = 0;
         var touched = session.EditGround("Heightmap import", g =>
         {
-            var list = new List<int>();
-            foreach (var (pt, w) in p.Cells)
-            {
-                int gx = pt % g.W, gz = pt / g.W, ix = gx - p.X0, iz = gz - p.Z0;
-                if (g.Locked(gx, gz) || ix < 0 || iz < 0 || ix >= p.W || iz >= p.H)
-                {
-                    continue;
-                }
-                float want = lo + p.Values[iz * p.W + ix] * (hi - lo), h = g.HeightOf(pt);
-                g.SetHeight(pt, h + (want - h) * w);
-                if (w > 0.999f && MathF.Abs(g.HeightOf(pt) - want) > 0.05f)
-                {
-                    clamped++;
-                }
-                list.Add(pt);
-            }
+            var (list, c) = PutHeights(g, p.Values, p.X0, p.Z0, p.W, p.H, p.Cells, lo, hi);
+            clamped = c;
             return (list, (0, 0, g.W - 1, g.H - 1));
         });
         _picture = null;
         _pictureBox.IsVisible = false;
         Message?.Invoke(clamped > 0 ? $"Imported, but {clamped} point(s) could not reach their height: the game keeps the ground within ±8 m of the original (red points)."
             : $"Imported the heightmap into {touched.Count} point(s). Ctrl+Z undoes it.");
+    }
+
+    /// <summary>
+    /// A heightmap's values (0 black to 1 white, w × h from grid point x0, z0) into the ground from lo to hi, each
+    /// point faded by its weight; locked points and those outside the picture are left alone.
+    /// </summary>
+    /// <returns>The points changed, and how many fully weighted ones the game's ±8 m kept from their height.</returns>
+    internal static (List<int> Touched, int Clamped) PutHeights(Ground g, float[] values, int x0, int z0, int w, int h, List<(int G, float W)> cells, float lo, float hi)
+    {
+        var list = new List<int>();
+        int clamped = 0;
+        foreach (var (pt, wt) in cells)
+        {
+            int gx = pt % g.W, gz = pt / g.W, ix = gx - x0, iz = gz - z0;
+            if (g.Locked(gx, gz) || ix < 0 || iz < 0 || ix >= w || iz >= h)
+            {
+                continue;
+            }
+            float want = lo + values[iz * w + ix] * (hi - lo), now = g.HeightOf(pt);
+            g.SetHeight(pt, now + (want - now) * wt);
+            if (wt > 0.999f && MathF.Abs(g.HeightOf(pt) - want) > 0.05f)
+            {
+                clamped++;
+            }
+            list.Add(pt);
+        }
+        return (list, clamped);
     }
 
     /// <summary>

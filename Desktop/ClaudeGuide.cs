@@ -44,7 +44,9 @@ public static class ClaudeGuide
 		object holds in the save: a portal's tag, a builder, health…), set_contents (chests, stands, signs).
 		Each change gives the objects new ids: use the ids its answer gives.
 
-		Rivers, moats, tunnels and caves, ramps: dig_path. To make worked ground look natural again:
+		Rivers, moats, tunnels and caves, ramps: dig_path. Hills, mesas, craters, dunes: stamp; a
+		heightmap picture: import_heightmap. A mask keeps a change to some ground (gentle slopes, low
+		ground, a biome, paved ground). To make worked ground look natural again:
 		shape_ground (smooth, naturalize, erode, restore) and regrow_nature. reset_zones throws away
 		what is in whole zones when saved: only when the user asked. To repeat a building or a detail: copy_objects; a blueprint of the user's library
 		goes into a world with add_blueprint.

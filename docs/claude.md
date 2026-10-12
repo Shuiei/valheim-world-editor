@@ -67,8 +67,10 @@ The editor must be running for Claude to reach it. Turn the switch off and nothi
 |---|---|
 | `run_script` | A C# script on the area, as the [Script tool](scripting.md) runs it (`script_reference` gives Claude the API): ground, paint, objects; a dry run says what it would change |
 | `flatten`, `paint_area`, `road`, `forest` | Level a rectangle, paint ground, lay a road through points, plant trees or rocks |
-| `shape_ground` | The Area tool's ground actions over a rectangle: smooth, naturalize, erode, restore, raise, lower |
+| `shape_ground` | The Area tool's ground actions over a rectangle: smooth, naturalize, erode, restore, raise, lower, paint |
+| `stamp`, `import_heightmap` | Press a stamp (Mountain, Mesa, Crater rim, Dunes, Rocky ground, your own) into the ground; put a heightmap picture into a rectangle |
 | `dig_path` | The Path tool along a line: a river or moat, a cave roofed with boulders, a ramp, a flattened, raised, lowered or smoothed way |
+| (masks) | `shape_ground`, `dig_path`, `stamp` and `import_heightmap` take a mask, as the Mask panel: only some heights, slopes, biomes or paint |
 | `reset_zones` | Mark zones for reset when you save (the game generates them anew), or unmark them |
 | `regrow_nature` | Regrow the trees, rocks, bushes and pickables the game grows there, where nothing stands |
 | `build_floor`, `build_walls`, `build_roof` | A floor, walls with doors and a gable roof (26° or 45°, thatch or shingle, gable ends closed) over a rectangle, from the game's pieces |

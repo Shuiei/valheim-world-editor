@@ -21,7 +21,77 @@ public sealed partial class ClaudeTools
         ["restore"] = AreaTool.GroundAction.Restore,
         ["raise"] = AreaTool.GroundAction.Raise,
         ["lower"] = AreaTool.GroundAction.Lower,
+        ["paint"] = AreaTool.GroundAction.Paint,
     };
+
+    /// <summary>The paints, by name, as the paint brushes put them down.</summary>
+    internal static readonly Dictionary<string, BrushTool> Paints = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["dirt"] = BrushTool.PaintDirt,
+        ["cultivated"] = BrushTool.PaintCultivated,
+        ["paved"] = BrushTool.PaintPaved,
+        ["clear"] = BrushTool.PaintClear,
+    };
+
+    /// <summary>Which ground a change may touch, as the Mask panel's settings; what is left out does not limit.</summary>
+    public sealed class MaskSpec
+    {
+        /// <summary>Lowest ground height that passes, metres.</summary>
+        [Description("Lowest ground height that changes, metres (optional).")]
+        public float? HeightMin { get; set; }
+
+        /// <summary>Highest ground height that passes, metres.</summary>
+        [Description("Highest ground height that changes, metres (optional).")]
+        public float? HeightMax { get; set; }
+
+        /// <summary>Smallest slope that passes, degrees.</summary>
+        [Description("Smallest slope that changes, degrees (optional; e.g. 30: only steep ground).")]
+        public float? SlopeMin { get; set; }
+
+        /// <summary>Largest slope that passes, degrees.</summary>
+        [Description("Largest slope that changes, degrees (optional; e.g. 15: only gentle ground).")]
+        public float? SlopeMax { get; set; }
+
+        /// <summary>The biomes that pass; none: all.</summary>
+        [Description("Only in these biomes (optional): Meadows, Black Forest, Swamp, Mountain, Plains, Mistlands, Ashlands, Deep North, Ocean.")]
+        public string[]? Biomes { get; set; }
+
+        /// <summary>The rule on painted ground.</summary>
+        [Description("By paint (optional): any, unpainted, painted, dirt, cultivated or paved.")]
+        public string? Paint { get; set; }
+    }
+
+    /// <summary>The Mask over the session's ground for a spec (null: no mask), or why the spec is wrong.</summary>
+    internal static (Func<int, float>? Mask, string? Problem) MaskOf(MaskSpec? spec, EditSession s)
+    {
+        if (spec == null)
+        {
+            return (null, null);
+        }
+        var mask = new Mask { On = true, HeightMin = spec.HeightMin, HeightMax = spec.HeightMax, SlopeMin = spec.SlopeMin, SlopeMax = spec.SlopeMax };
+        foreach (string b in spec.Biomes ?? [])
+        {
+            var found = Mask.BiomeNames.Where(n => string.Equals(n.Name.Replace(" ", "", StringComparison.Ordinal), b.Replace(" ", "", StringComparison.Ordinal), StringComparison.OrdinalIgnoreCase)).ToList();
+            if (found.Count == 0)
+            {
+                return (null, $"{b}: the biomes are {string.Join(", ", Mask.BiomeNames.Select(n => n.Name))}.");
+            }
+            mask.Biomes.Add(found[0].Biome);
+        }
+        if (spec.Paint != null)
+        {
+            if (!Enum.TryParse<Mask.PaintRule>(spec.Paint, true, out var rule))
+            {
+                return (null, "The mask's paint is any, unpainted, painted, dirt, cultivated or paved.");
+            }
+            mask.Paint = rule;
+        }
+        if (mask.Warning() is { Length: > 0 } warning)
+        {
+            return (null, "The mask lets nothing through: " + warning);
+        }
+        return (mask.For(s.Ground, s.Scene.Biomes), null);
+    }
 
     /// <summary>
     /// The Area tool's box over a world rectangle of the scene (its corners in grid points), with a soft edge of
@@ -38,9 +108,9 @@ public sealed partial class ClaudeTools
 
     /// <summary>shape_ground: an Area tool ground action over a rectangle, as one pending step.</summary>
     [McpServerTool(Name = "shape_ground", Title = "Smooth, naturalize, erode or restore ground")]
-    [Description("Changes the ground of a rectangle of the open area as the Area tool does, fading in over a soft edge going inwards: smooth (evens out bumps and steps), naturalize (natural-looking bumps, bumps metres high and bumpSize metres wide: what made-up ground needs to look real), erode (weathers it: slopes settle to restAngle degrees and rain cuts gullies), restore (back to the ground the game generated, paint taken away), raise or lower (by amount metres). One pending step. The game's ±8 m limit from the original ground holds.")]
+    [Description("Changes the ground of a rectangle of the open area as the Area tool does, fading in over a soft edge going inwards: smooth (evens out bumps and steps), naturalize (natural-looking bumps, bumps metres high and bumpSize metres wide: what made-up ground needs to look real), erode (weathers it: slopes settle to restAngle degrees and rain cuts gullies), restore (back to the ground the game generated, paint taken away), raise or lower (by amount metres), paint (with paint: dirt, cultivated, paved or clear). A mask limits it to some ground, as the Mask panel does (heights, slopes, biomes, paint): paint only the gentle slopes, smooth only the steep ones, raise only what is below a height. One pending step. The game's ±8 m limit from the original ground holds.")]
     public Task<string> ShapeGround(
-        [Description("smooth, naturalize, erode, restore, raise or lower.")] string action,
+        [Description("smooth, naturalize, erode, restore, raise, lower or paint.")] string action,
         [Description("West edge (x).")] float x0, [Description("South edge (z).")] float z0,
         [Description("East edge (x).")] float x1, [Description("North edge (z).")] float z1,
         [Description("The soft edge, metres inwards from the rectangle's sides (default 3; 0: hard).")] float edge = 3,
@@ -48,7 +118,9 @@ public sealed partial class ClaudeTools
         [Description("naturalize: how high the bumps are, metres (default 1.2).")] float bumps = 1.2f,
         [Description("naturalize: how wide the bumps are, metres (default 16).")] float bumpSize = 16,
         [Description("erode: the slope ground settles to, degrees (default 33).")] float restAngle = 33,
-        [Description("naturalize and erode: any number, another pattern with the same choices.")] int seed = 1) => OnUi(() =>
+        [Description("naturalize and erode: any number, another pattern with the same choices.")] int seed = 1,
+        [Description("paint: dirt, cultivated, paved or clear.")] string paint = "dirt",
+        [Description("Which ground may change (optional: all of it).")] MaskSpec? mask = null) => OnUi(() =>
     {
         if (CannotEdit() is string why)
         {
@@ -56,9 +128,18 @@ public sealed partial class ClaudeTools
         }
         if (!GroundActions.TryGetValue(action, out var act))
         {
-            return "The action is smooth, naturalize, erode, restore, raise or lower.";
+            return "The action is smooth, naturalize, erode, restore, raise, lower or paint.";
+        }
+        if (!Paints.TryGetValue(paint, out var paintTool))
+        {
+            return "The paint is dirt, cultivated, paved or clear.";
         }
         var s = _w.Session!;
+        var (only, wrong) = MaskOf(mask, s);
+        if (wrong != null)
+        {
+            return wrong;
+        }
         var (minX, minZ, maxX, maxZ) = Bounds(s.Scene);
         if (MathF.Max(x0, x1) < minX || MathF.Min(x0, x1) > maxX || MathF.Max(z0, z1) < minZ || MathF.Min(z0, z1) > maxZ)
         {
@@ -73,8 +154,8 @@ public sealed partial class ClaudeTools
             RestAngle = Math.Clamp(restAngle, 5, 80),
             Random = new Random(seed),
         };
-        string name = AreaTool.Label(act).ToLowerInvariant();
-        var touched = s.EditGround($"Claude: {name}", g => box.Apply(g, brush, act, 0, MathF.Max(0, amount), [0, 0, 0, 1]));
+        string name = act == AreaTool.GroundAction.Paint ? $"paint {paint.ToLowerInvariant()}" : AreaTool.Label(act).ToLowerInvariant();
+        var touched = s.EditGround($"Claude: {name}", g => box.Apply(g, brush, act, 0, MathF.Max(0, amount), Brush.PaintOf(paintTool)!, only));
         _w.AfterClaudeEdit($"Claude's {name}: {touched.Count} ground point(s); Ctrl+Z takes it back.");
         return touched.Count == 0 ? "Nothing changed." : $"{AreaTool.Label(act)}: {touched.Count} ground point(s) changed. Now pending: {Pending()}";
     });
@@ -142,7 +223,8 @@ public sealed partial class ClaudeTools
         [Description("A varying width, ragged edges and bumps (default false).")] bool natural = false,
         [Description("A smooth curve through the points (default true).")] bool curved = true,
         [Description("cave: the roof's boulders: auto (by biome), forest, coast, heath or mountain.")] string rock = "auto",
-        [Description("Any number: another roof and natural pattern with the same choices.")] int seed = 1) => OnUi(() =>
+        [Description("Any number: another roof and natural pattern with the same choices.")] int seed = 1,
+        [Description("Which ground may change (optional: all of it).")] MaskSpec? mask = null) => OnUi(() =>
     {
         if (CannotEdit() is string why)
         {
@@ -166,20 +248,25 @@ public sealed partial class ClaudeTools
         {
             return $"({outside[0]}, {outside[1]}) is outside the open area (x {minX} to {maxX}, z {minZ} to {maxZ}).";
         }
+        var (only, wrong) = MaskOf(mask, s);
+        if (wrong != null)
+        {
+            return wrong;
+        }
         var path = LineOver(s.Scene, points, act, width, soft, depth, headroom, height, amount, natural, curved, caveRock, seed);
         var brush = new Brush { Noise = new Noise(seed) };
         string label = $"Claude: {action.ToLowerInvariant()} along a line";
         string said;
         if (act == PathTool.Action.Cave)
         {
-            said = MainWindow.ApplyCave(s, path, brush, null, label);
+            said = MainWindow.ApplyCave(s, path, brush, only, label);
         }
         else
         {
             bool clamped = false;
             var touched = s.EditGround(label, g =>
             {
-                var (t, rect, c) = path.Apply(g, brush, s.Scene.Water, null);
+                var (t, rect, c) = path.Apply(g, brush, s.Scene.Water, only);
                 clamped = c;
                 return (t, rect);
             });
@@ -188,6 +275,113 @@ public sealed partial class ClaudeTools
         }
         _w.AfterClaudeEdit(said);
         return said + " Now pending: " + Pending();
+    });
+
+    /// <summary>The stamps offered: the built-in ones, then those the user loaded (by name or label).</summary>
+    internal static List<Stamps.Stamp> StampsOffered() => [.. Stamps.BuiltIn, .. Stamps.LoadKept()];
+
+    /// <summary>stamp: a stamp's picture pressed into the ground at a point, raised or lowered, as one pending step.</summary>
+    [McpServerTool(Name = "stamp", Title = "Press a stamp into the ground")]
+    [Description("Presses a stamp into the ground of the open area as the Raise or Lower brush does with a stamp shape and Stamp once: the stamp's picture (white high, black untouched) radius metres round x, z, height metres up (negative: down, a hollow), turned by turn degrees. Stamps: Mountain, Mesa (flat top), Crater rim, Dunes, Rocky ground, and those the user loaded (a picture's name, or a PNG file's path to use any greyscale picture). A mask limits it to some ground. One pending step; the game's ±8 m limit holds.")]
+    public Task<string> Stamp(
+        [Description("The stamp's name (Mountain, Mesa, Crater rim, Dunes, Rocky ground, a loaded one), or the path of a PNG picture.")] string stamp,
+        [Description("World x of its middle.")] float x,
+        [Description("World z of its middle.")] float z,
+        [Description("Radius, metres (half its side).")] float radius = 20,
+        [Description("Metres up at its whitest (negative: down).")] float height = 4,
+        [Description("Degrees to turn it (default 0).")] float turn = 0,
+        [Description("Which ground may change (optional: all of it).")] MaskSpec? mask = null) => OnUi(() =>
+    {
+        if (CannotEdit() is string why)
+        {
+            return why;
+        }
+        float[]? data = StampsOffered().FirstOrDefault(st => st.Label.StartsWith(stamp, StringComparison.OrdinalIgnoreCase) || st.Name.Equals(stamp, StringComparison.OrdinalIgnoreCase))?.Data;
+        if (data == null && File.Exists(stamp))
+        {
+            try
+            {
+                data = Stamps.FromPicture(File.ReadAllBytes(stamp));
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                return $"That picture cannot be read: {ex.Message}";
+            }
+        }
+        if (data == null)
+        {
+            return $"No stamp \"{stamp}\": {string.Join(", ", StampsOffered().Select(st => st.Label))}, or a PNG picture's path.";
+        }
+        var s = _w.Session!;
+        var (minX, minZ, maxX, maxZ) = Bounds(s.Scene);
+        if (x < minX || x > maxX || z < minZ || z > maxZ)
+        {
+            return $"({x}, {z}) is outside the open area (x {minX} to {maxX}, z {minZ} to {maxZ}).";
+        }
+        var (only, wrong) = MaskOf(mask, s);
+        if (wrong != null)
+        {
+            return wrong;
+        }
+        var brush = new Brush { Shape = BrushShape.Stamp, StampData = data, Radius = Math.Clamp(radius, 2, 500), Turn = turn };
+        float ox = s.Scene.X0 * 64f - 32f, oz = s.Scene.Z0 * 64f - 32f;
+        bool clamped = false;
+        var touched = s.EditGround($"Claude: stamp {stamp}", g =>
+        {
+            var (t, rect, c) = Sculpt.StampOnce(g, brush, x - ox, z - oz, height, only);
+            clamped = c;
+            return (t, rect);
+        });
+        _w.AfterClaudeEdit($"Claude pressed a stamp into {touched.Count} ground point(s); Ctrl+Z takes it back.");
+        return touched.Count == 0 ? "Nothing changed." : $"Stamped {touched.Count} ground point(s){(clamped ? "; part of it reached the game's ±8 m limit" : "")}. Now pending: {Pending()}";
+    });
+
+    /// <summary>import_heightmap: a greyscale picture's heights into a rectangle of the ground, as one pending step.</summary>
+    [McpServerTool(Name = "import_heightmap", Title = "Import a heightmap")]
+    [Description("Puts a heightmap picture (a PNG file on this computer, greyscale: black low, white high) into the ground of a rectangle of the open area, as the Area tool's Heightmap import does: stretched over the rectangle, from lowest (black) to highest (white) metres, fading in over a soft edge going inwards. Pictures the editor exported carry their own lowest and highest; otherwise they default to the range of the ground there now. A mask limits it to some ground. One pending step; the game's ±8 m limit holds.")]
+    public Task<string> ImportHeightmap(
+        [Description("The PNG picture's path.")] string path,
+        [Description("West edge (x).")] float x0, [Description("South edge (z).")] float z0,
+        [Description("East edge (x).")] float x1, [Description("North edge (z).")] float z1,
+        [Description("Height of black, metres (optional).")] float? lowest = null,
+        [Description("Height of white, metres (optional).")] float? highest = null,
+        [Description("The soft edge, metres inwards (default 3; 0: hard).")] float edge = 3,
+        [Description("Which ground may change (optional: all of it).")] MaskSpec? mask = null) => OnUi(() =>
+    {
+        if (CannotEdit() is string why)
+        {
+            return why;
+        }
+        var s = _w.Session!;
+        var (only, wrong) = MaskOf(mask, s);
+        if (wrong != null)
+        {
+            return wrong;
+        }
+        if (BoxOver(s.Scene, x0, z0, x1, z1, edge).WeightsIn(s.Ground.W, s.Ground.H, only) is not { Cells.Count: > 0 } a)
+        {
+            return "The rectangle holds no ground of the open area.";
+        }
+        int w = a.X1 - a.X0 + 1, h = a.Z1 - a.Z0 + 1;
+        TerrainEditor.App.Heightmaps.Picture pic;
+        try
+        {
+            pic = TerrainEditor.App.Heightmaps.Read(File.ReadAllBytes(path), w, h);
+        }
+        catch (Exception ex) when (ex is InvalidDataException or IOException or UnauthorizedAccessException)
+        {
+            return $"That picture cannot be used: {ex.Message}";
+        }
+        float lo = lowest ?? pic.Min ?? a.Cells.Min(c => s.Ground.HeightOf(c.G)), hi = highest ?? pic.Max ?? a.Cells.Max(c => s.Ground.HeightOf(c.G));
+        int clamped = 0;
+        var touched = s.EditGround("Claude: heightmap import", g =>
+        {
+            var (list, c) = AreaPanel.PutHeights(g, pic.Values, a.X0, a.Z0, w, h, a.Cells, lo, hi);
+            clamped = c;
+            return (list, (0, 0, g.W - 1, g.H - 1));
+        });
+        _w.AfterClaudeEdit($"Claude imported a heightmap into {touched.Count} ground point(s); Ctrl+Z takes it back.");
+        return $"Imported {pic.Width} × {pic.Height} into {w} × {h} m, {lo:0.##} to {hi:0.##} m: {touched.Count} ground point(s){(clamped > 0 ? $", {clamped} kept from their height by the game's ±8 m" : "")}. Now pending: {Pending()}";
     });
 
     /// <summary>The most points ground_at answers for at once.</summary>
