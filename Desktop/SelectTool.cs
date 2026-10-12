@@ -266,13 +266,9 @@ public sealed class SelectTool
     }
 
     /// <summary>Shows the move in progress in the view (as previews) and says how far it went.</summary>
-    private void Preview()
+    /// <param name="m">The move in progress.</param>
+    private void Preview(Move m)
     {
-        var m = _move;
-        if (m == null)
-        {
-            return;
-        }
         GroundBlock(m);
         Snap(m);
         var shown = new Dictionary<int, WorldScene.Thing>();
@@ -345,7 +341,7 @@ public sealed class SelectTool
         {
             m.Turn -= 360;
         }
-        Preview();
+        Preview(m);
         Later();
     }
 
@@ -357,7 +353,7 @@ public sealed class SelectTool
             return;
         }
         m.Dy += metres;
-        Preview();
+        Preview(m);
         Later();
     }
 
@@ -417,7 +413,7 @@ public sealed class SelectTool
             it.Lift = y - ground - m.Dy;
         }
         m.Dropped = true;
-        Preview();
+        Preview(m);
         Later();
         Message?.Invoke($"Dropped {m.Items.Count} object(s): {onObjects} onto other objects, {m.Items.Count - onObjects} onto the ground.", false);
     }
@@ -581,9 +577,10 @@ public sealed class SelectTool
         while (queue.Count > 0)
         {
             var b = boxes[queue.Pop()];
+            // Each of a box's cells is in the grid: the box itself was put in every one.
             foreach (var c in Cells(b))
             {
-                foreach (int o in grid.GetValueOrDefault(c) ?? [])
+                foreach (int o in grid[c])
                 {
                     if (!seen.Contains(o) && Touch(boxes[o], b))
                     {
@@ -754,7 +751,7 @@ public sealed class SelectTool
                     default: mv.Dy += by; break;
                 }
             }
-            Preview();
+            Preview(mv);
             return;
         }
         if (_lasso is { } l)
@@ -783,7 +780,7 @@ public sealed class SelectTool
         {
             m.Dx = g2.X - d.From.X;
             m.Dz = g2.Z - d.From.Z;
-            Preview();
+            Preview(m);
         }
     }
 

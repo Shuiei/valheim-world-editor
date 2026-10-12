@@ -431,14 +431,13 @@ public sealed class GameLookGl
     /// <param name="img">The picture.</param>
     /// <param name="mipmaps">Whether it gets mipmaps (and trilinear filtering).</param>
     /// <param name="repeat">Whether it repeats (else it is clamped at its edges).</param>
-    /// <param name="srgb">Whether its colours are sRGB (turned linear when sampled).</param>
-    private unsafe uint Tex2D(Image img, bool mipmaps = true, bool repeat = true, bool srgb = false)
+    private unsafe uint Tex2D(Image img, bool mipmaps = true, bool repeat = true)
     {
         uint t = _own.Texture();
         _gl.BindTexture(TextureTarget.Texture2D, t);
         fixed (byte* p = img.Rgba)
         {
-            _gl.TexImage2D(TextureTarget.Texture2D, 0, srgb ? InternalFormat.Srgb8Alpha8 : InternalFormat.Rgba8, (uint)img.Width, (uint)img.Height, 0, PixelFormat.Rgba, PixelType.UnsignedByte, p);
+            _gl.TexImage2D(TextureTarget.Texture2D, 0, InternalFormat.Rgba8, (uint)img.Width, (uint)img.Height, 0, PixelFormat.Rgba, PixelType.UnsignedByte, p);
         }
         if (mipmaps)
         {
