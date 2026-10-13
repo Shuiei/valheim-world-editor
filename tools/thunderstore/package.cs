@@ -4,18 +4,21 @@
 //       from the editor's CHANGELOG.md (the editor and the plugin share one version and one changelog).
 //       Each version is split in two: what changed in the plugin (the "### WorldEditorBridge" part of
 //       the version, or "unchanged") and what changed in the editor, with a link to that editor on
-//       GitHub (mod sites do not host programs). Only versioned sections are kept; the older history is
-//       in the full changelog on GitHub.
+//       GitHub (mod sites do not host programs). Only versioned sections are kept, newest first, as many
+//       as fit in Thunderstore's 100,000 characters; the older history is in the full changelog on GitHub.
 //   check <folder>
 //       The package folder follows Thunderstore's rules: name a-z A-Z 0-9 _, description up to 250
 //       characters, a Major.Minor.Patch version, dependencies as Team-Name-1.2.3, a 256x256 PNG icon
-//       and a README.md in UTF-8.
+//       and a README.md and CHANGELOG.md in UTF-8, each up to 100,000 characters.
 using System.Buffers.Binary;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
 const string Repo = "https://github.com/Shuiei/valheim-world-editor";
+
+// The most characters Thunderstore takes in a package's README.md or CHANGELOG.md.
+const int MaxMarkdown = 100_000;
 
 try
 {
@@ -51,6 +54,8 @@ static string Changelog(string text, string version, HashSet<string> tags)
         $"[releases page]({Repo}/releases)). This mod page only hosts the plugin.", "",
         "Each version below says what changed in this plugin, then what changed in the editor.", "",
     };
+    string older = $"Older history: [the full changelog]({Repo}/blob/main/CHANGELOG.md).";
+    int length = Length(lines) + Length([older]);
     foreach (string sec in Regex.Split(text, "^(?=## )", RegexOptions.Multiline))
     {
         var m = Regex.Match(sec, @"^## v([0-9]+\.[0-9]+\.[0-9]+)\b(.*)");
@@ -64,17 +69,27 @@ static string Changelog(string text, string version, HashSet<string> tags)
         string[] parts = Regex.Split(nl >= 0 ? sec[(nl + 1)..] : "", "^(?=### )", RegexOptions.Multiline);
         var plugin = parts.Where(p => p.StartsWith("### WorldEditorBridge", StringComparison.Ordinal)).ToList();
         var editor = parts.Where(p => p.StartsWith("### ", StringComparison.Ordinal) && !p.StartsWith("### WorldEditorBridge", StringComparison.Ordinal)).ToList();
-        lines.AddRange([$"## {v}{title}", "", "### WorldEditorBridge (this plugin)", ""]);
-        lines.Add(plugin.Count > 0 ? plugin[0][(plugin[0].IndexOf('\n') + 1)..].Trim('\n') : "Unchanged: only the version number follows the editor's.");
-        lines.AddRange(["", "### Valheim World Editor", ""]);
+        List<string> block =
+        [
+            $"## {v}{title}", "", "### WorldEditorBridge (this plugin)", "",
+            plugin.Count > 0 ? plugin[0][(plugin[0].IndexOf('\n') + 1)..].Trim('\n') : "Unchanged: only the version number follows the editor's.",
+            "", "### Valheim World Editor", "",
+        ];
         if (v == version || tags.Contains($"v{v}"))
         {
-            lines.AddRange([$"Download: [Valheim World Editor v{v}]({Repo}/releases/tag/v{v})", ""]);
+            block.AddRange([$"Download: [Valheim World Editor v{v}]({Repo}/releases/tag/v{v})", ""]);
         }
-        lines.Add(editor.Count > 0 ? string.Join("\n\n", editor.Select(p => ("#" + p).Trim('\n'))) : "No change.");
-        lines.Add("");
+        block.Add(editor.Count > 0 ? string.Join("\n\n", editor.Select(p => ("#" + p).Trim('\n'))) : "No change.");
+        block.Add("");
+        // Versions are newest first: once one does not fit, the rest is left to the full changelog.
+        length += Length(block);
+        if (length > MaxMarkdown)
+        {
+            break;
+        }
+        lines.AddRange(block);
     }
-    lines.Add($"Older history: [the full changelog]({Repo}/blob/main/CHANGELOG.md).");
+    lines.Add(older);
     return string.Join("\n", lines).TrimEnd('\n') + "\n";
 }
 
@@ -92,15 +107,23 @@ static void Check(string dir)
     ReadOnlySpan<byte> signature = [0x89, (byte)'P', (byte)'N', (byte)'G', 0x0D, 0x0A, 0x1A, 0x0A];
     Require(png.Length >= 24 && png.AsSpan(0, 8).SequenceEqual(signature)
         && BinaryPrimitives.ReadUInt32BigEndian(png.AsSpan(16)) == 256 && BinaryPrimitives.ReadUInt32BigEndian(png.AsSpan(20)) == 256, "icon must be a 256x256 PNG");
-    try
+    foreach (string name in new[] { "README.md", "CHANGELOG.md" })
     {
-        new UTF8Encoding(false, throwOnInvalidBytes: true).GetString(File.ReadAllBytes(Path.Combine(dir, "README.md")));
-    }
-    catch (DecoderFallbackException)
-    {
-        throw new InvalidDataException("README.md is not UTF-8");
+        string markdown;
+        try
+        {
+            markdown = new UTF8Encoding(false, throwOnInvalidBytes: true).GetString(File.ReadAllBytes(Path.Combine(dir, name)));
+        }
+        catch (DecoderFallbackException)
+        {
+            throw new InvalidDataException($"{name} is not UTF-8");
+        }
+        Require(markdown.EnumerateRunes().Count() <= MaxMarkdown, $"{name} is longer than {MaxMarkdown} characters");
     }
 }
+
+// The characters lines take once joined with line breaks, as the mod sites count them (one per Unicode character).
+static int Length(IEnumerable<string> lines) => lines.Sum(l => l.EnumerateRunes().Count() + 1);
 
 // Throws InvalidDataException with what when ok is false.
 static void Require(bool ok, string what)
