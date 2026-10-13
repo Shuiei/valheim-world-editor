@@ -19,7 +19,7 @@ updates:
       app:
         patterns: ["*"]
 
-  # The C# tests (xUnit, test SDK, JUnit logger; SkiaSharp for Core's).
+  # The C# tests (xUnit, JUnit logger, coverage and hang dump; SkiaSharp for Core's).
   - package-ecosystem: nuget
     directories:
       - /tests/Core.Tests
@@ -33,9 +33,7 @@ updates:
     ignore:
       # The window tests run through Avalonia.Headless.XUnit, built against xUnit 3 (12.1.3 needs
       # xunit.v3.extensibility.core 3.2.2): xUnit 4 waits until an Avalonia release supports it.
-      - dependency-name: xunit.v3
-        update-types: ["version-update:semver-major"]
-      - dependency-name: xunit.runner.visualstudio
+      - dependency-name: xunit.v3.mtp-v2
         update-types: ["version-update:semver-major"]
       # FsCheck.Xunit.v3 3.4 needs xUnit 4 too.
       - dependency-name: FsCheck.Xunit.v3
