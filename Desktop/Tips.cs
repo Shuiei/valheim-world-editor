@@ -295,7 +295,8 @@ public static class Tips
         ["map.apply"] = "Send every pending change to the running game (everyone sees it at once).",
         ["map.discard"] = "Forget every change that is not saved or applied yet: the world is read again.",
         ["map.reload"] = "Load the world again from the running game.",
-        ["map.buildings"] = "Draw the footprint of every player-built piece on the map.",
+        ["map.buildings"] = "Draw the footprint of every player-built piece on the map, with the pieces of a ruin built onto (a patched tower).",
+        ["map.ruins"] = "Draw the pieces of the world's ruins too, fainter (spoiler).",
         ["map.grid"] = "Lines between the 64 m zones.",
         ["map.edited"] = "Outline the zones with changes waiting to be saved or applied, and the zones marked for reset.",
         ["map.paint"] = "When zoomed in close, show the painted ground (dirt, paved, cultivated) as the game does.",
@@ -504,7 +505,7 @@ public static class Tips
     /// <summary>The object kinds' tips, as the View panel and the Area chips switch them.</summary>
     public static string Kind(ObjectKind k) => k switch
     {
-        ObjectKind.Buildings => "Pieces built by players.",
+        ObjectKind.Buildings => "Pieces built by players, with the pieces of a ruin they built onto (a patched tower).",
         ObjectKind.Ruins => "Ruins, dungeon entrances and other generated structures (spoiler).",
         ObjectKind.Furniture => "The game's furniture and props found in villages, dungeons and camps: tables, rugs, banners, crates, webs (spoiler).",
         ObjectKind.Trees => "Trees, logs, stumps and branches.",

@@ -98,6 +98,11 @@ public sealed class WorldScene
         public bool Tamed { get; init; }
 
         /// <summary>
+        /// A ruin's piece (no builder) joined to a player's building (JoinedRuins): shown with Your buildings.
+        /// </summary>
+        public bool Joined { get; init; }
+
+        /// <summary>
         /// A runestone: in the save a location proxy, listed under the location's name. It can be
         /// picked and deleted, not moved or copied (see PrefabCatalog.RunestoneLocations).
         /// </summary>
@@ -355,6 +360,16 @@ public sealed class WorldScene
             if (Inside(n.Position) && n.Prefab != WorldSave.LocationProxyPrefab)
             {
                 things.Add(new Thing(n.Id, n.Prefab, n.Position, n.Rotation, n.Scale, PieceCatalog.Get(n.Prefab)?.Tool != null) { Tamed = TamedOf(world, n) });
+            }
+        }
+        // The ruins' pieces joined to a building (the world's and this session's built pieces), found over the whole
+        // world: the building may be just outside the area.
+        var joined = JoinedRuins.InWorld(world, deleted, (added ?? []).Where(n => PieceCatalog.Get(n.Prefab)?.Tool != null).Select(n => n.Position));
+        for (int i = 0; i < things.Count; i++)
+        {
+            if (!things[i].Piece && joined.Contains(things[i].Id))
+            {
+                things[i] = things[i] with { Joined = true };
             }
         }
         return things;

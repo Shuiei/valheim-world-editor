@@ -792,15 +792,21 @@ public sealed class GlView : OpenGlControlBase
         _overlaysDirty = true;
     }
 
+    /// <summary>
+    /// A thing's group: by prefab, built or not, tamed or not. A ruin's piece joined to a building counts as built (shown
+    /// with Your buildings), in a group apart from the same prefab's other ruin pieces.
+    /// </summary>
+    private static (int Prefab, bool Piece, bool Tamed) KeyOf(WorldScene.Thing t) => (t.Prefab, t.Piece || t.Joined, t.Tamed);
+
     /// <summary>The group a thing belongs to (made, and its model read, if it is the first of its kind).</summary>
     private Group GroupOf(WorldScene s, int i, bool start = true)
     {
         var t = s.Things[i];
-        var key = (t.Prefab, t.Piece, t.Tamed);
+        var key = KeyOf(t);
         EnsureSize(i + 1);
         if (!_groups.TryGetValue(key, out var g))
         {
-            g = _groups[key] = new Group { Key = key, Kind = ObjectKinds.Of(NameOf(t.Prefab), t.Piece, t.Tamed) };
+            g = _groups[key] = new Group { Key = key, Kind = ObjectKinds.Of(NameOf(t.Prefab), t.Piece || t.Joined, t.Tamed) };
             if (start)
             {
                 Interlocked.Increment(ref _pending);
@@ -1073,7 +1079,7 @@ public sealed class GlView : OpenGlControlBase
             foreach (int i in old.Keys.Concat(_previews.Keys))
             {
                 var t = s.Things[i];
-                if (_groups.TryGetValue((t.Prefab, t.Piece, t.Tamed), out var g))
+                if (_groups.TryGetValue(KeyOf(t), out var g))
                 {
                     MarkDirty(g);
                 }
@@ -4137,7 +4143,7 @@ public sealed class GlView : OpenGlControlBase
             foreach (var (i, lo, hi) in boxes)
             {
                 var t = s.Things[i];
-                _kinds[i] = ObjectKinds.Of(NameOf(t.Prefab), t.Piece, t.Tamed);
+                _kinds[i] = ObjectKinds.Of(NameOf(t.Prefab), t.Piece || t.Joined, t.Tamed);
                 _bounds[i] = (lo, hi);
                 _boundsAt[i] = t.Position;
                 _known[i] = !t.Gone;

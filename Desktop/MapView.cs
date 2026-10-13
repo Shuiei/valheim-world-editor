@@ -102,7 +102,8 @@ public sealed class MapView : OpenGlControlBase, IDisposable
     /// </summary>
     public (int X, int Z, int Size)? Chosen { get; set; }
     /// <summary>
-    /// Draw player-built pieces as their footprints (dots further out; none beyond 10 m a pixel).
+    /// Draw player-built pieces, and the ruins' pieces joined to them, as their footprints (dots further out; none
+    /// beyond 10 m a pixel).
     /// </summary>
     public bool ShowBuildings { get; set; } = true;
     /// <summary>
@@ -110,9 +111,22 @@ public sealed class MapView : OpenGlControlBase, IDisposable
     /// </summary>
     private volatile float[]? _pieces;
     /// <summary>
-    /// Piece indices, lowest first, so roofs are drawn over what is under them.
+    /// Draw the ruins' pieces too (builder-less pieces generated with the world: spoilers), fainter than buildings.
+    /// The ones joined to a player's building are drawn with it (<c>ShowBuildings</c>) whatever this is.
     /// </summary>
-    private int[] _pieceOrder = [];
+    public bool ShowRuins { get; set; }
+    /// <summary>
+    /// The ruins' pieces (PieceCatalog.EncodeRuins), read with the player-built ones; same layout.
+    /// </summary>
+    private volatile float[]? _ruins;
+    /// <summary>
+    /// For each ruin piece, whether it is joined to a player's building (JoinedRuins).
+    /// </summary>
+    private bool[] _ruinJoined = [];
+    /// <summary>
+    /// Player-built and ruin piece indices, lowest top first, so roofs are drawn over what is under them.
+    /// </summary>
+    private (bool Ruin, int Index)[] _pieceOrder = [];
     /// <summary>
     /// How many player-built pieces were read.
     /// </summary>
@@ -263,8 +277,12 @@ public sealed class MapView : OpenGlControlBase, IDisposable
         Task.Run(() =>
         {
             float[] data = PieceCatalog.Encode(world, deleted);
+            var (ruins, joined) = PieceCatalog.EncodeRuins(world, deleted);
+            const int S = PieceCatalog.Stride;
             // Lower pieces first so roofs end up on top, like looking down from above.
-            int[] order = [.. Enumerable.Range(0, data.Length / PieceCatalog.Stride).OrderBy(i => data[i * PieceCatalog.Stride + 8])];
+            (bool Ruin, int Index)[] order = [.. Enumerable.Range(0, data.Length / S).Select(i => (Ruin: false, Index: i))
+                .Concat(Enumerable.Range(0, ruins.Length / S).Select(i => (Ruin: true, Index: i)))
+                .OrderBy(e => (e.Ruin ? ruins : data)[e.Index * S + 8])];
             Dispatcher.UIThread.Post(() =>
             {
                 if (_session != s)
@@ -272,6 +290,8 @@ public sealed class MapView : OpenGlControlBase, IDisposable
                     return;
                 }
                 _pieceOrder = order;
+                _ruins = ruins;
+                _ruinJoined = joined;
                 _pieces = data;
                 _buildingsKey = default;
                 PiecesRead?.Invoke();
@@ -821,9 +841,9 @@ public sealed class MapView : OpenGlControlBase, IDisposable
 
     /// <summary>
     /// Built once per zoom kind: footprints close up (edges very close), dots of two pixels further out. What the
-    /// building shapes were last built for (the pieces, the kind, and for dots the zoom).
+    /// building shapes were last built for (the pieces, the kind, for dots the zoom, and which are shown).
     /// </summary>
-    private (float[]? Pieces, int Kind, float Mpp) _buildingsKey;
+    private (float[]? Pieces, int Kind, float Mpp, bool Buildings, bool Ruins) _buildingsKey;
     /// <summary>
     /// The building shapes last built: footprints or dots, and close up their edges.
     /// </summary>
@@ -835,24 +855,36 @@ public sealed class MapView : OpenGlControlBase, IDisposable
     /// </summary>
     private void DrawBuildings()
     {
-        float[]? pc = _pieces;
+        float[]? built = _pieces;
+        float[] ruins = _ruins ?? [];
         float mpp = MetersPerPixel;
-        if (pc == null || !ShowBuildings || mpp > 10)
+        if (built == null || !ShowBuildings && !ShowRuins || mpp > 10)
         {
             return;
         }
         int kind = mpp < 0.8f ? 2 : mpp < 2.5f ? 1 : 0;
-        if (_buildingsKey.Pieces != pc || _buildingsKey.Kind != kind || (kind == 0 && _buildingsKey.Mpp != mpp))
+        if (_buildingsKey.Pieces != built || _buildingsKey.Kind != kind || (kind == 0 && _buildingsKey.Mpp != mpp) || _buildingsKey.Buildings != ShowBuildings || _buildingsKey.Ruins != ShowRuins)
         {
-            _buildingsKey = (pc, kind, mpp);
+            _buildingsKey = (built, kind, mpp, ShowBuildings, ShowRuins);
             var fill = new List<float>();
             var edge = new List<float>();
             const int S = PieceCatalog.Stride;
-            foreach (int i in _pieceOrder)
+            foreach (var (ruin, i) in _pieceOrder)
             {
+                // A ruin's piece joined to a building is drawn with it; the other ruins' fainter.
+                bool joined = ruin && _ruinJoined[i], faint = ruin && !joined;
+                if (!(faint ? ShowRuins : ShowBuildings))
+                {
+                    continue;
+                }
+                float[] pc = ruin ? ruins : built;
                 int o = i * S;
                 float px = pc[o], pz = pc[o + 2];
                 var style = PieceStyle[Math.Clamp((int)pc[o + 9], 0, PieceStyle.Length - 1)];
+                if (faint)
+                {
+                    style = (style.Fill with { W = style.Fill.W * 0.55f }, style.Edge with { W = style.Edge.W * 0.55f });
+                }
                 if (kind == 0)
                 {
                     float r = mpp;

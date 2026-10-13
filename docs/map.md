@@ -18,7 +18,8 @@ page; the panel also says the world's name, seed, save number and how many objec
 
 | Control | What it does |
 |---|---|
-| **Show buildings** | Draws the footprint of every player-built piece. The number is how many pieces the world has. |
+| **Show buildings** | Draws the footprint of every player-built piece, with the pieces of a ruin built onto (as in the 3D view's **Your buildings**). The number is how many player-built pieces the world has. |
+| **Show ruins** | Draws the pieces of the world's ruins too, fainter (stone towers, ruined houses, Ashlands and Mistlands ruins). Off at first: a spoiler. |
 | **Outline edited zones** | Outlines the zones whose ground was edited, in game or in the editor. |
 | **Show painted ground** | When zoomed in, draws dirt, paved and cultivated ground (fields). |
 | **Zone grid** | Draws the 64 m zone grid. |

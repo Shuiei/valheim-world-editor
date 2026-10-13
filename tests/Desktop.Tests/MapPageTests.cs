@@ -9,7 +9,7 @@ namespace TerrainEditor.Desktop.Tests;
 /// <summary>
 /// The map page's edges on the test world: nothing happens without a world, the players' line when the game errors or
 /// sends garbage, the biomes' names, the cursor's line when the mouse is over the map, an empty search and one that
-/// fails, and the zone filter's messages and questions.
+/// fails, the zone filter's messages and questions, and Show ruins.
 /// </summary>
 [Collection("World files")]
 public class MapPageTests
@@ -51,6 +51,19 @@ public class MapPageTests
         Assert.Equal("Zone 0, 0 · ", m.PickTitle.Text);
         Assert.Empty(m.Matches);
         Assert.Equal("", m.SearchInfo.Text ?? "");
+    }
+
+    // Show ruins: off at first; it switches the map's ruins on and off.
+    [AvaloniaFact]
+    public void ShowRuinsSwitchesTheMapsRuins()
+    {
+        var m = new MapPage();
+        Assert.False(m.RuinsBox.IsChecked);
+        Assert.False(m.Map.ShowRuins);
+        m.RuinsBox.IsChecked = true;
+        Assert.True(m.Map.ShowRuins);
+        m.RuinsBox.IsChecked = false;
+        Assert.False(m.Map.ShowRuins);
     }
 
     [AvaloniaFact]
