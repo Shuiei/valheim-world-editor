@@ -129,7 +129,7 @@ The sections below cover each step in more detail.
 
 Nothing else: no Python, no .NET, no `ssh` command. Everything the editor needs comes in the
 download: one program file, drawn with OpenGL (any graphics driver of the last ten years; on
-Windows it falls back to Direct3D when the driver has no OpenGL).
+Windows through Direct3D, like games, or the driver's own OpenGL when chosen in **Settings**).
 
 ### Install and start
 
@@ -245,6 +245,8 @@ elsewhere, set them in **Settings** on the start page:
   manager with its own data folder). Used to find the plugin for **My game**.
 - **World folders**: a world, or a folder of worlds (a server's `<savedir>/worlds_local` copy, a
   backup folder…). Always listed under **A saved world**.
+- **Drawing** (Windows): **Draw with the graphics driver's OpenGL**. Off by default: the editor
+  draws through Direct3D, as games do. Taken when the editor starts again.
 
 For a **dedicated server**, the server form has an optional **Server's Valheim folder** (the
 folder with its `BepInEx`, for example `/home/valheim/server`). With it the editor reads the
@@ -326,6 +328,12 @@ Only the plugin, [WorldEditorBridge](https://thunderstore.io/c/valheim/p/Tie/Wor
 is there. The editor is a program, not a mod, so it is only on the
 [releases page](https://github.com/Shuiei/valheim-world-editor/releases/latest). Use the same version
 of both.
+
+**The 3D view or the map flickers, objects come and go, or lines cross the window (Windows).**
+That is the graphics driver. Update it; on a laptop with two graphics chips, choose the faster one for
+`ValheimWorldEditor.exe` (Windows' Settings › System › Display › Graphics, or the NVIDIA / AMD control
+panel). If it still happens, switch **Draw with the graphics driver's OpenGL** in **Settings**
+(**Drawing**), then start the editor again.
 
 **Something is wrong or missing.**
 [Open an issue](https://github.com/Shuiei/valheim-world-editor/issues) and attach the editor's log:

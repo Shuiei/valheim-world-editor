@@ -59,6 +59,12 @@ public sealed class AppSettings
     public bool ClaudeConnect { get; set; }
 
     /// <summary>
+    /// Windows: draw with the graphics driver's own OpenGL first instead of Direct3D (ANGLE); taken when the editor
+    /// starts.
+    /// </summary>
+    public bool DriverOpenGl { get; set; }
+
+    /// <summary>
     /// The local port the MCP server for Claude listens on.
     /// </summary>
     public int ClaudePort { get; set; } = 5731;

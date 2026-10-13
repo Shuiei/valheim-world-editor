@@ -293,6 +293,8 @@ public sealed class MapView : OpenGlControlBase, IDisposable
         _gl = GL.GetApi(gl.GetProcAddress);
         _own = new GlObjects(_gl);
         _es = GlVersion.Type == GlProfileType.OpenGLES;
+        // In the log, as the 3D view's: what draws the map.
+        Options.Say($"map: OpenGL {(_es ? "ES " : "")}{GlVersion.Major}.{GlVersion.Minor}: {_gl.GetStringS(StringName.Renderer)}");
         _prog = Program(MapShader.Vertex, MapShader.Fragment);
         _vao = _own.VertexArray();
         _gl.BindVertexArray(_vao);
