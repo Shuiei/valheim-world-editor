@@ -50,7 +50,11 @@ public sealed class TestDllTests : IDisposable
         var strings = new List<string>();
         for (var h = MetadataTokens.UserStringHandle(1); !h.IsNil; h = md.GetNextHandle(h))
         {
-            strings.Add(md.GetUserString(h));
+            // The heap ends with padding, read as an empty string.
+            if (md.GetUserString(h) is { Length: > 0 } s)
+            {
+                strings.Add(s);
+            }
         }
         Assert.Equal(["MBParentId", "hello world"], strings);
     }
