@@ -8,7 +8,7 @@ namespace TerrainEditor.Desktop;
 
 /// <summary>
 /// Settings: folders on this computer (the web start page's settings): the Valheim game folder, more
-/// BepInEx folders to look for the plugin in, more world folders to list; and Claude's connection.
+/// BepInEx folders to look for the plugin in, more world folders to list; Claude's connection; on Windows, what draws.
 /// </summary>
 public static class SettingsDialog
 {
@@ -68,11 +68,14 @@ public static class SettingsDialog
     /// <summary>Tests: what a changed game folder starts (reading the game's files otherwise).</summary>
     internal static Action<AppSettings> CheckGameLook { get; set; } = GameLook.Check;
 
+    /// <summary>Whether the Drawing part is shown (Windows only; tests set it).</summary>
+    internal static bool OnWindows { get; set; } = OperatingSystem.IsWindows();
+
     /// <summary>Tests: the folder picker (null: the system's).</summary>
     internal static Func<string, Task<string?>>? PickFolder { get; set; }
 
     /// <summary>Shows the Settings dialog over <paramref name="owner"/> and waits for it to close.</summary>
-    /// <returns>True when the user saved (the folders and Claude's connection settings), false when cancelled or closed.</returns>
+    /// <returns>True when the user saved (the folders, Claude's connection settings and what draws), false when cancelled or closed.</returns>
     public static async Task<bool> Show(Window owner, AppSettings settings)
     {
         bool saved = false;
@@ -161,6 +164,19 @@ public static class SettingsDialog
         {
             claudeDetails.Children.Add(Hint(status));
         }
+        // What draws (Windows): taken at the next start.
+        var driverGl = new CheckBox { Content = "Draw with the graphics driver's OpenGL", IsChecked = settings.DriverOpenGl }.Classed("switch").Tip("settings.driverGl");
+        var drawing = new StackPanel
+        {
+            Spacing = 6,
+            IsVisible = OnWindows,
+            Children =
+            {
+                H2("Drawing"),
+                driverGl,
+                Hint("Off (the default): the editor draws through Direct3D, like games do. On: through the graphics driver's OpenGL, as earlier versions did; try it if the 3D view or the map draws wrongly or slowly. Taken when the editor starts again."),
+            },
+        };
         var error = new TextBlock { Foreground = new SolidColorBrush(Color.FromRgb(224, 96, 75)), TextWrapping = TextWrapping.Wrap };
         var save = new Button { Content = "Save", IsDefault = true }.Tip("settings.save");
         save.Click += (_, _) =>
@@ -173,6 +189,7 @@ public static class SettingsDialog
             settings.ClaudeConnect = claude.IsChecked == true;
             settings.ClaudePort = claudePort;
             settings.ClaudeToken = token;
+            settings.DriverOpenGl = driverGl.IsChecked == true;
             if (Apply(settings, valheim.Text, readBep(), readWorlds()) is string problem)
             {
                 error.Text = problem;
@@ -206,6 +223,7 @@ public static class SettingsDialog
                     claude,
                     Hint("Lets Claude (Claude Code, Claude Desktop) look at the world or the Workshop open in the editor and change it from a prompt: shape the ground, place objects, build. Only from this computer, with the token below. What it changes stays pending, like your own changes: you save, apply live or save the blueprint."),
                     claudeDetails,
+                    drawing,
                     error,
                     new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 12, 0, 0), Children = { cancel, save } },
                 },

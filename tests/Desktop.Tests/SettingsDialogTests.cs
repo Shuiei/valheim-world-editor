@@ -10,8 +10,8 @@ namespace TerrainEditor.Desktop.Tests;
 
 /// <summary>
 /// The Settings window: what it shows from the settings, Browse (the folder picker), Automatic, adding and taking out
-/// folders, a wrong choice explained without closing, Save keeping the choices, Cancel keeping nothing, and "~" in a
-/// path. It saves to the tests' settings file, so it runs alone.
+/// folders, a wrong choice explained without closing, Save keeping the choices, Cancel keeping nothing, "~" in a path,
+/// and what draws on Windows. It saves to the tests' settings file, so it runs alone.
 /// </summary>
 [Collection("DataDir")]
 public class SettingsDialogTests
@@ -151,6 +151,38 @@ public class SettingsDialogTests
         Assert.True(kept.ClaudeConnect);
         Assert.Equal(6000, kept.ClaudePort);
         Assert.Equal(token, kept.ClaudeToken);
+    }
+
+    // Drawing: only on Windows; the driver's OpenGL off at first, saved when chosen.
+    [AvaloniaFact]
+    public async Task WindowsChoosesWhatDraws()
+    {
+        using var t = new Temp();
+        bool was = SettingsDialog.OnWindows;
+        try
+        {
+            static CheckBox DriverGl(Window d) => d.GetLogicalDescendants().OfType<CheckBox>().Single(c => c.Content as string == "Draw with the graphics driver's OpenGL");
+            var owner = Owner();
+            SettingsDialog.OnWindows = false;
+            var shown = SettingsDialog.Show(owner, new AppSettings());
+            var d = TestWindows.Shown(owner);
+            Assert.False(DriverGl(d).IsEffectivelyVisible);
+            Click(Buttons(d, "Cancel").Single());
+            Assert.False(await shown);
+            SettingsDialog.OnWindows = true;
+            shown = SettingsDialog.Show(owner, new AppSettings());
+            d = TestWindows.Shown(owner);
+            Assert.True(DriverGl(d).IsEffectivelyVisible);
+            Assert.False(DriverGl(d).IsChecked);
+            DriverGl(d).IsChecked = true;
+            Click(Buttons(d, "Save").Single());
+            Assert.True(await shown);
+            Assert.True(AppSettings.Load().DriverOpenGl);
+        }
+        finally
+        {
+            SettingsDialog.OnWindows = was;
+        }
     }
 
     [AvaloniaFact]

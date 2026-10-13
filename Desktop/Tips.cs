@@ -401,6 +401,7 @@ public static class Tips
         ["newWorld.zoomOut"] = "Farther.",
         ["newWorld.fit"] = "All of the world.",
         ["newWorld.find"] = "Look through that many random seeds with the game's generator (in the background) and show the best.",
+        ["settings.driverGl"] = "Windows: on, the 3D view and the map draw with the graphics driver's own OpenGL; off (the default), with Direct3D. Taken when the editor starts again.",
         ["settings.claude"] = "On: the editor takes Claude's requests (MCP) on this computer, from callers with the token below. Off: none.",
         ["settings.claudePort"] = "The port Claude connects to, on 127.0.0.1 (this computer only).",
         ["settings.claudeCommand"] = "The command that adds the editor to Claude Code (claude mcp add). It holds the token: keep it to yourself.",

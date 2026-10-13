@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using Avalonia;
 using Avalonia.Headless.XUnit;
 using Avalonia.Threading;
 using Xunit;
@@ -9,7 +10,8 @@ namespace TerrainEditor.Desktop.Tests;
 /// <summary>
 /// The app's start (Program), run as the app is (ValheimWorldEditor.dll in a process of its own): the jobs that end at
 /// once (Claude's relay with nothing to relay, the exports not told where to write) and a command line that cannot be
-/// read, none of which opens a window; and the handler of SIGTERM and SIGHUP.
+/// read, none of which opens a window; the handler of SIGTERM and SIGHUP; and the order Windows tries its ways of
+/// drawing in.
 /// </summary>
 public sealed class ProgramTests
 {
@@ -89,6 +91,14 @@ public sealed class ProgramTests
         Assert.Equal(2, code);
         Assert.Equal("ValheimWorldEditor: --world needs a value after it.", error.Trim());
         Assert.Equal("", output);
+    }
+
+    // Direct3D (ANGLE) first unless the driver's OpenGL is chosen in Settings; software last either way.
+    [Fact]
+    public void WindowsDrawsThroughDirect3DUnlessTheDriversOpenGlIsChosen()
+    {
+        Assert.Equal([Win32RenderingMode.AngleEgl, Win32RenderingMode.Wgl, Win32RenderingMode.Software], Program.WindowsRendering(driverOpenGl: false));
+        Assert.Equal([Win32RenderingMode.Wgl, Win32RenderingMode.AngleEgl, Win32RenderingMode.Software], Program.WindowsRendering(driverOpenGl: true));
     }
 
     [AvaloniaFact]
