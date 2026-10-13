@@ -362,29 +362,17 @@ public sealed class WorldScene
                 things.Add(new Thing(n.Id, n.Prefab, n.Position, n.Rotation, n.Scale, PieceCatalog.Get(n.Prefab)?.Tool != null) { Tamed = TamedOf(world, n) });
             }
         }
-        MarkJoined(things);
-        return things;
-    }
-
-    /// <summary>
-    /// Marks the ruins' pieces (pieces of the catalogue that are not building pieces here: no builder) that are joined
-    /// to the building pieces (JoinedRuins).
-    /// </summary>
-    internal static void MarkJoined(List<Thing> things)
-    {
-        var ruins = Enumerable.Range(0, things.Count).Where(i => !things[i].Piece && PieceCatalog.Get(things[i].Prefab) != null).ToList();
-        if (ruins.Count == 0)
+        // The ruins' pieces joined to a building (the world's and this session's built pieces), found over the whole
+        // world: the building may be just outside the area.
+        var joined = JoinedRuins.InWorld(world, deleted, (added ?? []).Where(n => PieceCatalog.Get(n.Prefab)?.Tool != null).Select(n => n.Position));
+        for (int i = 0; i < things.Count; i++)
         {
-            return;
-        }
-        bool[] joined = JoinedRuins.Find([.. things.Where(t => t.Piece).Select(t => t.Position)], [.. ruins.Select(i => things[i].Position)]);
-        for (int r = 0; r < ruins.Count; r++)
-        {
-            if (joined[r])
+            if (!things[i].Piece && joined.Contains(things[i].Id))
             {
-                things[ruins[r]] = things[ruins[r]] with { Joined = true };
+                things[i] = things[i] with { Joined = true };
             }
         }
+        return things;
     }
 
     /// <summary>

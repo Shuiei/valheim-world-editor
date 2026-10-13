@@ -51,17 +51,21 @@ public class WorldSceneThingsTests
         Assert.False(things[2].Piece);
     }
 
-    // A ruin's piece (a catalogue piece with no builder) touching the area's building is joined to it; one apart
-    // is not; a tree never is.
+    // A ruin's piece (a catalogue piece with no builder) touching the area's building is joined to it, and one at
+    // the area's edge touching a building just outside it, or a piece added in this session; one apart is not.
     [Fact]
-    public void AnAreasRuinPiecesJoinedToItsBuildingsAreMarked()
+    public void AnAreasRuinPiecesJoinedToBuildingsAreMarked()
     {
         var world = World();
         int stone = StableHash.Of("stone_wall_2x1");
         world.Objects.Add((6, stone, new Vector3(10, 31, -6), Vector3.Zero, Vector3.One));
         world.Objects.Add((7, stone, new Vector3(-20, 31, 20), Vector3.Zero, Vector3.One));
-        var things = WorldScene.ReadThings(world, 0, 0, 1, 1, new HashSet<int>());
-        Assert.Equal([6], things.Where(t => t.Joined).Select(t => t.Id));
+        world.Objects.Add((8, stone, new Vector3(31, 31, 0), Vector3.Zero, Vector3.One));
+        world.Pieces.Add((9, Wall, new Vector3(34, 31, 0), 0));
+        world.Objects.Add((10, stone, new Vector3(-28, 31, -28), Vector3.Zero, Vector3.One));
+        var added = new List<NewObject> { new(-1, Wall, new Vector3(-30, 31, -30), Vector3.Zero, 1) };
+        var things = WorldScene.ReadThings(world, 0, 0, 1, 1, new HashSet<int>(), added);
+        Assert.Equal([6, 8, 10], things.Where(t => t.Joined).Select(t => t.Id).Order());
         Assert.Contains(things, t => t.Id == 7 && !t.Joined);
     }
 

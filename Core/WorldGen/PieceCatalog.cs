@@ -122,11 +122,11 @@ public static class PieceCatalog
     public static (float[] Data, bool[] Joined) EncodeRuins(WorldSave world, ICollection<int> deleted)
     {
         List<(int Id, int Prefab, System.Numerics.Vector3 Position, System.Numerics.Vector3 Rotation)> ruins;
-        List<System.Numerics.Vector3> built;
+        HashSet<int> joined;
         lock (world.Sync)
         {
             ruins = [.. world.Objects.Where(o => !deleted.Contains(o.Id) && Get(o.Prefab) != null).Select(o => (o.Id, o.Prefab, o.Position, o.Rotation))];
-            built = [.. world.Pieces.Where(p => !deleted.Contains(p.Id)).Select(p => p.Position)];
+            joined = App.JoinedRuins.InWorld(world, deleted);
         }
         List<float> data = new(ruins.Count * Stride);
         foreach (var (id, prefab, pos, rot) in ruins)
@@ -134,7 +134,7 @@ public static class PieceCatalog
             Info info = Get(prefab)!;
             data.AddRange([pos.X, pos.Y, pos.Z, rot.Y, info.MinX, info.MaxX, info.MinZ, info.MaxZ, pos.Y + info.MaxY, info.Category, pos.Y + info.MinY, info.Index, id]);
         }
-        return ([.. data], App.JoinedRuins.Find(built, [.. ruins.Select(r => r.Position)]));
+        return ([.. data], [.. ruins.Select(r => joined.Contains(r.Id))]);
     }
 
     /// <summary>
