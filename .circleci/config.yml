@@ -1,0 +1,36 @@
+# The pipeline's start (a setup workflow, CircleCI's dynamic configuration): says whether a release is
+# due, then runs .circleci/continue.yml, where the tests, the packages and the release are.
+# A release is due on main when VERSION's CHANGELOG heading has its date (not "unreleased") and VERSION
+# is not tagged yet: the release workflow then runs the tests and waits for an approval
+# (docs/development.md#releasing).
+version: 2.1
+setup: true
+
+orbs:
+  # CircleCI's orb that hands the pipeline on to another configuration. Any 1.x.
+  continuation: circleci/continuation@1
+
+jobs:
+  setup:
+    executor: continuation/default
+    steps:
+      - checkout
+      - run:
+          name: Is a release due?
+          command: |
+            release=false
+            version=$(tr -d '[:space:]' < VERSION)
+            if [ "$CIRCLE_BRANCH" = main ] && grep -q "^## v$version — [0-9]" CHANGELOG.md \
+              && [ -z "$(git ls-remote --tags origin "refs/tags/v$version")" ]; then
+              release=true
+            fi
+            echo "Release of v$version due: $release"
+            echo "{\"release\": $release}" > /tmp/parameters.json
+      - continuation/continue:
+          configuration_path: .circleci/continue.yml
+          parameters: /tmp/parameters.json
+
+workflows:
+  setup:
+    jobs:
+      - setup

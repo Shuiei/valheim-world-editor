@@ -1,4 +1,5 @@
-# Valheim World Editor: tests and build checks on every push and pull request.
+# Valheim World Editor: tests and build checks on every push and pull request, and the release on main.
+# The pipeline starts in .circleci/config.yml, which says whether a release is due (the release parameter).
 #   code-analysis  the editor (Core, Desktop) builds with no .NET analyzer warning (warnings are
 #                  errors) and is formatted as .editorconfig says (dotnet format)
 #   core-tests     the core's tests on three containers (saves, the world generator against the game's
@@ -19,11 +20,26 @@
 #                  files (the plugin is left out: it builds against the game's own DLLs), and the
 #                  Linux one starts and draws the test world (tools/smoke-test.sh, under Xvfb)
 #   windows-smoke  the Windows package does the same on a Windows machine (tools/smoke-test.ps1)
+# When a release is due (main, VERSION's CHANGELOG heading dated, no tag for it yet), the same jobs run
+# in the release workflow, followed by:
+#   hold-release   waits for someone to approve it in CircleCI (the release context is restricted)
+#   github-release builds the plugin's zip (tools/thunderstore.sh, against a Valheim dedicated server
+#                  from SteamCMD and BepInExPack_Valheim), tags the commit and makes the GitHub release
+#                  with the packages tested above (the Sign release workflow on GitHub signs them)
+#   publish-*      the plugin on Thunderstore and Hexium, and the plugin and the editor on Nexus Mods
+#                  (tools/release/publish.cs, tools/release/sites.json), side by side
+# How to release: docs/development.md#releasing.
 # Security and bug patterns (CodeQL) are checked by GitHub's code scanning, set up on GitHub itself.
-# What CI cannot cover: the plugin build and reading the game's data (both need Valheim's files), the
-# game's look in the visual tests (copied from Valheim: CI's editor draws plain colours) and live mode
-# against a real game.
+# What CI cannot cover: the plugin build (outside a release) and reading the game's data (both need
+# Valheim's files), the game's look in the visual tests (copied from Valheim: CI's editor draws plain
+# colours) and live mode against a real game.
 version: 2.1
+
+parameters:
+  # Set by .circleci/config.yml: true on main when VERSION is ready to be released and not tagged yet.
+  release:
+    type: boolean
+    default: false
 
 orbs:
   # Codecov's official orb: uploads the coverage with Codecov's CLI, checked against its signature
@@ -255,11 +271,12 @@ jobs:
           steps:
             - store_artifacts:
                 path: /tmp/dist
-      # The Windows package for windows-smoke, in the same workflow.
+      # The Windows package for windows-smoke, and both for the release, in the same workflow.
       - persist_to_workspace:
           root: /tmp/dist
           paths:
             - "*.zip"
+            - "*.tar.gz"
 
   windows-smoke:
     machine:
@@ -277,10 +294,99 @@ jobs:
             Expand-Archive (Get-Item C:\dist\ValheimWorldEditor-*-win-x64.zip).FullName -DestinationPath C:\smoke
             tools\smoke-test.ps1 C:\smoke\ValheimWorldEditor\ValheimWorldEditor.exe tests\fixtures\CITest
 
+  # The GitHub release, made from the packages packages made and windows-smoke tested (the workspace). The
+  # plugin builds here against the game's own DLLs: a Valheim dedicated server (free, anonymous SteamCMD)
+  # and the BepInExPack_Valheim the plugin's manifest depends on; nothing of them is kept. The release
+  # notes: docs/releases/v<version>.md, else the CHANGELOG's sections since the last tag.
+  github-release:
+    executor: dotnet
+    steps:
+      - checkout
+      - attach_workspace:
+          at: /tmp/dist
+      - run:
+          name: Tools (zip, SteamCMD's 32-bit libraries, GitHub's CLI)
+          command: |
+            apt-get update -qq && apt-get install -y -qq zip unzip lib32gcc-s1 > /dev/null
+            gh=2.63.2
+            curl -fsSLO "https://github.com/cli/cli/releases/download/v$gh/gh_${gh}_linux_amd64.tar.gz"
+            curl -fsSL "https://github.com/cli/cli/releases/download/v$gh/gh_${gh}_checksums.txt" | grep "gh_${gh}_linux_amd64.tar.gz" | sha256sum -c -
+            tar -xzf "gh_${gh}_linux_amd64.tar.gz" -C /usr/local --strip-components=1
+      - run:
+          name: Still to be released
+          command: |
+            git fetch -q --tags origin
+            version=$(tr -d '[:space:]' < VERSION)
+            if git rev-parse -q --verify "refs/tags/v$version" > /dev/null; then
+              echo "v$version is tagged already (released from another pipeline?)."; exit 1
+            fi
+            ls /tmp/dist/ValheimWorldEditor-v$version-linux-x64.tar.gz /tmp/dist/ValheimWorldEditor-v$version-win-x64.zip
+      - run:
+          name: The game's DLLs (Valheim dedicated server, SteamCMD) and BepInEx
+          no_output_timeout: 20m
+          command: |
+            mkdir -p /tmp/steamcmd && curl -fsSL https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz | tar -xz -C /tmp/steamcmd
+            # SteamCMD sometimes stops after updating itself: tried again.
+            for try in 1 2 3; do
+              /tmp/steamcmd/steamcmd.sh +force_install_dir /tmp/valheim +login anonymous +app_update 896660 +quit \
+                && [ -f /tmp/valheim/valheim_server_Data/Managed/assembly_valheim.dll ] && break
+              [ $try = 3 ] && exit 1
+            done
+            pack=$(grep -o 'denikson-BepInExPack_Valheim-[0-9.]*' tools/thunderstore/bridge/manifest.json | sed 's/.*-//')
+            curl -fsSL -o /tmp/bepinex.zip "https://thunderstore.io/package/download/denikson/BepInExPack_Valheim/$pack/"
+            unzip -q /tmp/bepinex.zip -d /tmp/bepinex
+      - run:
+          name: The plugin's zip
+          environment:
+            ValheimDir: /tmp/valheim
+            BepInExDir: /tmp/bepinex/BepInExPack_Valheim/BepInEx
+          command: tools/thunderstore.sh /tmp/dist
+      - run:
+          name: The release notes
+          command: |
+            version=$(tr -d '[:space:]' < VERSION)
+            last=$(git tag -l 'v*' --sort=-v:refname | head -1)
+            dotnet run tools/release/publish.cs -- notes CHANGELOG.md "$version" "${last:--}" /tmp/dist/notes.md "docs/releases/v$version.md"
+      - run:
+          name: Tag and GitHub release
+          command: |
+            version=$(tr -d '[:space:]' < VERSION)
+            # A release made with this token (not GitHub Actions' own) starts the Sign release workflow.
+            GH_TOKEN=$GITHUB_TOKEN gh release create "v$version" --repo "$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME" \
+              --target "$CIRCLE_SHA1" --title "v$version" --notes-file /tmp/dist/notes.md \
+              /tmp/dist/ValheimWorldEditor-v$version-win-x64.zip /tmp/dist/ValheimWorldEditor-v$version-linux-x64.tar.gz \
+              /tmp/dist/WorldEditorBridge-$version.zip
+      - store_artifacts:
+          path: /tmp/dist/notes.md
+      - persist_to_workspace:
+          root: /tmp/dist
+          paths:
+            - WorldEditorBridge-*.zip
+            - notes.md
+
+  # The plugin on one mod site, or the plugin and the editor on Nexus Mods (tools/release/publish.cs).
+  publish:
+    executor: dotnet
+    parameters:
+      site:
+        type: string
+      options:
+        type: string
+        default: ""
+    steps:
+      - checkout
+      - attach_workspace:
+          at: /tmp/dist
+      - run:
+          name: Publish on << parameters.site >>
+          command: dotnet run tools/release/publish.cs -- << parameters.site >> /tmp/dist << parameters.options >>
+
 workflows:
   # Side by side; windows-smoke waits for the Windows package that packages makes, and coverage (main
   # only) for both test jobs to pass.
   test:
+    when:
+      not: << pipeline.parameters.release >>
     jobs:
       - packages
       - code-analysis
@@ -296,3 +402,52 @@ workflows:
           filters:
             branches:
               only: main
+
+  # The test workflow's jobs (keep both lists alike), then the release once approved: the release
+  # context's secrets (GITHUB_TOKEN, THUNDERSTORE_TOKEN, HEXIUM_TOKEN, NEXUS_API_KEY) reach only the
+  # jobs after the approval.
+  release:
+    when: << pipeline.parameters.release >>
+    jobs:
+      - packages
+      - code-analysis
+      - core-tests
+      - app-tests
+      - windows-smoke:
+          requires:
+            - packages
+      - coverage:
+          requires:
+            - core-tests
+            - app-tests
+      - hold-release:
+          type: approval
+          requires:
+            - packages
+            - code-analysis
+            - core-tests
+            - app-tests
+            - windows-smoke
+      - github-release:
+          context: release
+          requires:
+            - hold-release
+      - publish:
+          name: publish-thunderstore
+          site: thunderstore
+          context: release
+          requires:
+            - github-release
+      - publish:
+          name: publish-hexium
+          site: hexium
+          context: release
+          requires:
+            - github-release
+      - publish:
+          name: publish-nexus
+          site: nexus
+          options: --notes /tmp/dist/notes.md
+          context: release
+          requires:
+            - github-release

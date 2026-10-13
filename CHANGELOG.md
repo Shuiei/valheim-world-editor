@@ -4,6 +4,15 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.25.2 — unreleased
+
+### Changed
+- **Releases are made by CI after approval**: once a release's CHANGELOG headings are dated and merged,
+  CircleCI tests main, waits for the maintainer's approval, then tags it, publishes the GitHub release
+  with the packages it tested, and publishes the plugin on Thunderstore and Hexium and the plugin and
+  the editor on Nexus Mods (see docs/development.md, Releasing). The plugin now builds against any
+  Valheim dedicated server and BepInEx folder (`ValheimDir`, `BepInExDir`).
+
 ## v1.25.1 — 2026-10-12
 
 ### Fixed
