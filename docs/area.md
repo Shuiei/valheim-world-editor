@@ -92,7 +92,8 @@ A blueprint is a building kept as a file, to paste into any world or build in ga
 | **Save blueprint…** | Saves the clipboard's objects (what the Area or Select tool copied last) as a Homestead blueprint, with a name, description and tags. Copied ground is not kept: Homestead blueprints hold pieces only. A blueprint with the same name is replaced, after asking. |
 | **Blueprints…** | Opens the library (also the **Blueprints** button of the tool rail): each blueprint with its picture, cost, description and tags, the ones made in the Workshop too. **Paste** puts it on the clipboard and starts pasting. See [The library](workshop.md#the-library-blueprints-panel). |
 
-Sign texts and items on item stands are not carried over: pasted objects are always fresh ones.
+Pasted objects keep what the blueprint holds (sign texts, items on item stands, chest contents); its
+pieces are the builder chosen in View → Building → **Built by**.
 Pasted into a world, the objects are made like the ones you plant: copies of an object of the same
 kind in that world, or new objects for kinds it has none of. Kinds the game does not know (from
 mods) are left out, and the editor says which.
