@@ -3,7 +3,7 @@
 #                  errors) and is formatted as .editorconfig says (dotnet format)
 #   core-tests     the core's tests on three containers (saves, the world generator against the game's
 #                  values, live mode against a stand-in bridge, the SSH tunnel against a local sshd), and
-#   app-tests      the app's windows, headless, on three containers, and the visual tests: the real
+#   app-tests      the app's windows, headless, on six containers, and the visual tests: the real
 #                  editor drawing with OpenGL on a virtual screen (Xvfb, Mesa's software OpenGL),
 #                  driven by the tests. Each builds its test project (tests/Core.Tests, tests/Desktop.Tests)
 #                  with warnings as errors; CircleCI shares the test classes out by their last times
@@ -11,7 +11,7 @@
 #                  test runs, failing or not; a test stuck for 5 minutes (10 under coverage) ends its run.
 #                  On main only, each test container keeps its code coverage for the coverage job;
 #                  branches run the tests without it (several times faster).
-#   coverage       on main only, once core-tests and app-tests have both passed: merges the six
+#   coverage       on main only, once core-tests and app-tests have both passed: merges the nine
 #                  containers' coverage into one report and sends it to Codecov (codecov.yml), which
 #                  fails its own check (codecov/project) under 95% line coverage. A failed or partial test
 #                  run sends nothing, so Codecov never shows the coverage of part of the tests.
@@ -180,7 +180,9 @@ jobs:
     # main the coverage measures it too (on two cores a close-up took minutes).
     resource_class: large
     # The window tests run one at a time (one UI thread): more containers is what makes them faster.
-    parallelism: 3
+    # Six keep the job about as long as packages and code-analysis on branches (each container also
+    # spends about 1.5 minutes setting up and building). The coverage job expects this many reports.
+    parallelism: 6
     steps:
       - test-classes:
           project: tests/Desktop.Tests/Desktop.Tests.csproj
@@ -189,13 +191,13 @@ jobs:
           display: true
 
   # The coverage of every test container, sent to Codecov in one go: the job runs on main only, once
-  # core-tests and app-tests have both passed (workflows), so Codecov gets all six containers' coverage
-  # or none. The six reports are merged here into one (tools/MergeCoverage, whose total the step prints)
-  # and that one file is sent: Codecov, given the six in one upload, kept only part of the app tests'
-  # coverage, and Microsoft's dotnet-coverage merge dropped the lines' branch counts. The orb's
-  # fail_on_error does nothing (its set_codecov_envs.sh empties CODECOV_FAIL_ON_ERROR, so the CLI never
-  # fails the step): a missing report is caught before, and a failed upload leaves Codecov with the last
-  # full figure.
+  # core-tests and app-tests have both passed (workflows), so Codecov gets all nine containers' coverage
+  # (core-tests' three, app-tests' six) or none. The nine reports are merged here into one
+  # (tools/MergeCoverage, whose total the step prints) and that one file is sent: Codecov, given the
+  # reports in one upload, kept only part of the app tests' coverage, and Microsoft's dotnet-coverage
+  # merge dropped the lines' branch counts. The orb's fail_on_error does nothing (its
+  # set_codecov_envs.sh empties CODECOV_FAIL_ON_ERROR, so the CLI never fails the step): a missing
+  # report is caught before, and a failed upload leaves Codecov with the last full figure.
   coverage:
     executor: dotnet
     steps:
@@ -210,8 +212,10 @@ jobs:
           name: Every container's coverage report is there, merged into one
           command: |
             reports=()
-            for project in core app; do
-              for node in 0 1 2; do
+            # Each test job's containers, as its parallelism says: core-tests 3, app-tests 6.
+            for project in core:3 app:6; do
+              count=${project#*:} project=${project%:*}
+              for node in $(seq 0 $((count - 1))); do
                 found=$(ls /tmp/coverage/$project-$node/coverage.*.cobertura.xml) \
                   || { echo "No coverage report from $project-tests' container $node."; exit 1; }
                 for r in $found; do reports+=("$r"); done

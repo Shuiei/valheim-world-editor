@@ -277,7 +277,7 @@ CircleCI (`.circleci/config.yml`) runs on every push and pull request:
 | Job | What it checks |
 |---|---|
 | `core-tests` | `tests/Core.Tests`, with OpenSSH's server installed (`VWE_NEED_SSHD=1`), on three containers (the world generator's tests run several times slower under coverage). |
-| `app-tests` | `tests/Desktop.Tests` without the visual tests, on three containers. Both test jobs let CircleCI share the classes out by their last times (`circleci tests run`, `tools/ci-tests.sh`), so **Rerun failed tests** runs only the classes that failed; every test runs, failing or not. |
+| `app-tests` | `tests/Desktop.Tests` without the visual tests, on six containers. Both test jobs let CircleCI share the classes out by their last times (`circleci tests run`, `tools/ci-tests.sh`), so **Rerun failed tests** runs only the classes that failed; every test runs, failing or not. |
 | `packages` | Both release packages build (without the plugin), and `tools/check-package.sh` finds everything they need and no source code, debug files or game files. |
 
 Not covered by CI: the visual tests (no display), building the plugin and reading the game's data
@@ -299,7 +299,7 @@ tools/release.sh /tmp/dist && tools/check-package.sh /tmp/dist/*.tar.gz
 ```
 
 **Coverage**: on `main` only, each test container keeps its coverage, and once `core-tests` and
-`app-tests` have both passed, the `coverage` job merges all six into one report (`tools/MergeCoverage`,
+`app-tests` have both passed, the `coverage` job merges all nine into one report (`tools/MergeCoverage`,
 whose total its log shows: a line's hits added up, its branches all taken when one report took them all) and sends that one file to
 [Codecov](https://app.codecov.io/gh/Shuiei/valheim-world-editor) (`codecov.yml`), which checks each of main's commits. A failed test sends nothing, so Codecov keeps the last full
 coverage rather than show part of it (rerun main's workflow from the start, not "Rerun failed tests",
