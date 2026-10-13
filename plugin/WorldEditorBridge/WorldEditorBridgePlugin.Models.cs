@@ -89,12 +89,17 @@ public sealed partial class WorldEditorBridgePlugin
                 continue;
             }
             Matrix4x4 m = toRoot * r.transform.localToWorldMatrix;
+            Bounds b = mesh.bounds;
+            // A degenerate transform gives NaN or infinity, which is not JSON: such a part is left out.
+            if (!Enumerable.Range(0, 16).All(i => Finite(m[i / 4, i % 4])) || !Finite(b.center) || !Finite(b.extents))
+            {
+                continue;
+            }
             string matrix = string.Join(",", Enumerable.Range(0, 16).Select(i => R6(m[i / 4, i % 4])));
             Material[] mats = r.sharedMaterials;
             for (int sub = 0; sub < mesh.subMeshCount && sub < mats.Length; sub++)
             {
                 Material mat = mats[sub];
-                Bounds b = mesh.bounds;
                 StringBuilder part = new($"{{\"mesh\":{Json(mesh.name)},\"v\":{mesh.vertexCount},\"b\":[{R6(b.center.x)},{R6(b.center.y)},{R6(b.center.z)},{R6(b.extents.x)},{R6(b.extents.y)},{R6(b.extents.z)}],\"sub\":{sub}");
                 if (mat)
                 {

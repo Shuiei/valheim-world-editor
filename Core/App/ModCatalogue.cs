@@ -111,8 +111,9 @@ public static class ModCatalogue
         if (changed)
         {
             var next = now with { Models = models };
-            _data = next;
+            // Kept first, as Take does.
             SafeFile.WriteAllText(FilePath, Write(next));
+            _data = next;
         }
         return taken;
     }

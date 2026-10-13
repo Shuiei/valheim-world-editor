@@ -117,8 +117,9 @@ public sealed partial class WorldEditorBridgePlugin
                 return m.Groups[1].Value;
             }
         }
-        catch (IOException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
+            // An unreadable manifest: the folder's name.
         }
         int dash = folder.IndexOf('-');
         return dash > 0 && dash < folder.Length - 1 ? folder.Substring(dash + 1) : folder;
@@ -323,7 +324,10 @@ public sealed partial class WorldEditorBridgePlugin
     }
 
     /// <summary>Whether a point's coordinates are all numbers (not NaN or infinite), as JSON needs.</summary>
-    private static bool Finite(Vector3 p) => !float.IsNaN(p.x) && !float.IsInfinity(p.x) && !float.IsNaN(p.y) && !float.IsInfinity(p.y) && !float.IsNaN(p.z) && !float.IsInfinity(p.z);
+    private static bool Finite(Vector3 p) => Finite(p.x) && Finite(p.y) && Finite(p.z);
+
+    /// <summary>Whether a number is one (not NaN or infinite), as JSON needs.</summary>
+    private static bool Finite(float v) => !float.IsNaN(v) && !float.IsInfinity(v);
 
     /// <summary>Whether a child and every parent up to the root is active (the root's own state does not count).</summary>
     private static bool ActiveUnder(Transform t, Transform root)
