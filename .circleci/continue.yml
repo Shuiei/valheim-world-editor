@@ -309,9 +309,9 @@ jobs:
       - attach_workspace:
           at: /tmp/dist
       - run:
-          name: Tools (zip, SteamCMD's 32-bit libraries, GitHub's CLI)
+          name: Tools (zip, SteamCMD's 32-bit libraries, GitHub's CLI, SSH for git fetch)
           command: |
-            apt-get update -qq && apt-get install -y -qq zip unzip lib32gcc-s1 > /dev/null
+            apt-get update -qq && apt-get install -y -qq zip unzip lib32gcc-s1 openssh-client > /dev/null
             gh=2.63.2
             curl -fsSLO "https://github.com/cli/cli/releases/download/v$gh/gh_${gh}_linux_amd64.tar.gz"
             curl -fsSL "https://github.com/cli/cli/releases/download/v$gh/gh_${gh}_checksums.txt" | grep "gh_${gh}_linux_amd64.tar.gz" | sha256sum -c -
