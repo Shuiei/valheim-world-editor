@@ -1,4 +1,5 @@
 using System.Numerics;
+using TerrainEditor.App;
 using TerrainEditor.Editing;
 using TerrainEditor.Save;
 using Xunit;
@@ -7,8 +8,8 @@ namespace TerrainEditor.Desktop.Tests;
 
 /// <summary>
 /// The things of an area read from a save: its objects, building pieces and added objects inside it (not deleted ones,
-/// nor the invisible ground discs), and things found by id wherever they are, gone or not; and the first world on this
-/// computer found when none is named.
+/// nor the invisible ground discs), and things found by id wherever they are, gone or not; a ship's parts drawn where
+/// the mod builds them; and the first world on this computer found when none is named.
 /// </summary>
 public class WorldSceneThingsTests
 {
@@ -91,6 +92,34 @@ public class WorldSceneThingsTests
         Assert.True(found[5].Gone);
         Assert.True(found[5].Piece);
         Assert.Equal(new Vector3(7, 30, 7), found[5].Position);
+    }
+
+    // A ValheimRAFT ship's part, stored at its root, is drawn at its offset in the root's frame, the root leaning as
+    // stored (a building piece read keeps only its turn about y); found by id the same way; with its root deleted,
+    // where it is stored.
+    [Fact]
+    public void AShipsPartIsDrawnWhereTheModBuildsIt()
+    {
+        var world = World();
+        var at = new Vector3(10, 30, 10);
+        world.Pieces.Add((6, Wall, at, 90));
+        world.Pieces.Add((7, Wall, at, 0));
+        for (int i = 6; i < 8; i++)
+        {
+            world.ObjectRefs.Add(new ObjectRef { File = new ChunkFile(), Start = 0, Prefab = Wall, Position = at, IsPiece = true });
+        }
+        world.VehicleLinks[6] = (new VehicleLink(500, 0, 0, Vector3.Zero, null, null, 0), new Vector3(10, 90, 0));
+        world.VehicleLinks[7] = (new VehicleLink(0, 500, 0, new Vector3(2, 0, 0), Vector3.Zero, null, 0), Vector3.Zero);
+        var things = WorldScene.ReadThings(world, 0, 0, 1, 1, new HashSet<int>());
+        Assert.Equal(new Vector3(10, 90, 0), things.Single(t => t.Id == 6).Rotation);
+        var part = things.Single(t => t.Id == 7);
+        Assert.True(Vector3.Distance(new Vector3(10, 30, 8), part.Position) < 1e-3f, part.Position.ToString());
+        Assert.Equal(10, part.Rotation.X, 2);
+        Assert.Equal(90, part.Rotation.Y, 2);
+        var edits = new EditStore(world);
+        Assert.Equal(part, WorldScene.FindThings(world, edits, [7])[7]);
+        edits.SetDeleted([6], true);
+        Assert.Equal(at, WorldScene.FindThings(world, edits, [7])[7].Position);
     }
 
     [Fact]

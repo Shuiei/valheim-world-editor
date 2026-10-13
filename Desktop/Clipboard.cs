@@ -139,10 +139,13 @@ public sealed class CopyData
         {
             return null;
         }
+        // A vehicle's parts go with it (ValheimRAFT); it takes no ground (it does not stand on it).
+        var (chosen, parts, _) = s.Session?.WithVehicles(objects) ?? ([.. objects], [], 0);
+        objects = chosen;
         float reference = a.Cells.Average(c => g.HeightOf(c.G));
         int w = a.X1 - a.X0 + 1, h = a.Z1 - a.Z0 + 1;
         float ox = s.X0 * 64f - 32f, oz = s.Z0 * 64f - 32f;
-        float[] foot = Footprint(objects.Select(i => s.Things[i]), w, h, ox + a.X0, oz + a.Z0,
+        float[] foot = Footprint(objects.Where(i => !parts.Contains(i)).Select(i => s.Things[i]), w, h, ox + a.X0, oz + a.Z0,
             (x, z) => g.HeightOf(Math.Clamp((int)MathF.Round(z - oz), 0, g.H - 1) * g.W + Math.Clamp((int)MathF.Round(x - ox), 0, g.W - 1)));
         float[] rel = [.. Enumerable.Repeat(float.NaN, w * h)];
         float[] wt = new float[w * h];
@@ -178,13 +181,17 @@ public sealed class CopyData
     /// <param name="groundAt">The ground's height at a world point (x, z).</param>
     public static CopyData? FromThings(WorldScene s, IReadOnlyList<int> things, Func<int, string?> nameOf, Func<float, float, float> groundAt)
     {
-        var list = things.Select(i => s.Things[i]).Where(t => !t.Gone && (s.World == null || s.World.CanCreate(t.Prefab))).ToList();
+        // A vehicle's parts go with it (ValheimRAFT), as one block; it takes no ground (it does not stand on it).
+        var (chosen, parts, _) = s.Session?.WithVehicles(things) ?? ([.. things], [], 0);
+        var shown = chosen.Where(i => !s.Things[i].Gone && (s.World == null || s.World.CanCreate(s.Things[i].Prefab))).ToList();
+        var list = shown.Select(i => s.Things[i]).ToList();
         if (list.Count == 0)
         {
             return null;
         }
+        var grounded = shown.Where(i => !parts.Contains(i)).Select(i => s.Things[i]).ToList();
         // The ground goes on whole metres: the grid around the pieces, its middle on a metre or half (none without pieces).
-        var ext = list.Select(t => Extent(t.Prefab, t.Position, t.Rotation, t.Scale)).OfType<(float X0, float Z0, float X1, float Z1, float Bottom)>().ToList();
+        var ext = grounded.Select(t => Extent(t.Prefab, t.Position, t.Rotation, t.Scale)).OfType<(float X0, float Z0, float X1, float Z1, float Bottom)>().ToList();
         float reach = Margin + Blend;
         int bx0 = ext.Count == 0 ? 0 : (int)MathF.Floor(ext.Min(e => e.X0) - reach), bx1 = ext.Count == 0 ? 0 : (int)MathF.Ceiling(ext.Max(e => e.X1) + reach);
         int bz0 = ext.Count == 0 ? 0 : (int)MathF.Floor(ext.Min(e => e.Z0) - reach), bz1 = ext.Count == 0 ? 0 : (int)MathF.Ceiling(ext.Max(e => e.Z1) + reach);
@@ -198,14 +205,15 @@ public sealed class CopyData
         // keep the building's shape: their height from the ground at the selection's middle (pieces
         // following the ground one by one would come apart on a slope).
         float mid = groundAt(cx, cz);
-        var objs = list.Select(t =>
+        var objs = shown.Select(i =>
         {
-            bool piece = t.Piece || PieceCatalog.Get(t.Prefab) != null;
+            var t = s.Things[i];
+            bool piece = t.Piece || PieceCatalog.Get(t.Prefab) != null || parts.Contains(i);
             return new Obj(t.Prefab, nameOf(t.Prefab) ?? t.Prefab.ToString(), t.Position.X - cx, t.Position.Z - cz,
                 t.Position.Y - (piece ? mid : groundAt(t.Position.X, t.Position.Z)), t.Rotation, t.Scale, SourceOf(s, t), Follow: !piece, Data: DataOf(s, t));
         }).ToList();
         int w = bx1 - bx0 + 1, h = bz1 - bz0 + 1;
-        float[] foot = ext.Count == 0 ? [0f] : Footprint(list, w, h, bx0, bz0, groundAt);
+        float[] foot = ext.Count == 0 ? [0f] : Footprint(grounded, w, h, bx0, bz0, groundAt);
         return new CopyData
         {
             W = w,
@@ -439,7 +447,11 @@ public sealed class PasteTool
     /// <param name="g">The ground to change.</param>
     /// <param name="at">The grid point pasted at.</param>
     /// <param name="mask">The Mask's weight per grid point (null: none).</param>
-    public (List<int> Touched, (int X0, int Z0, int X1, int Z1) Rect, List<(NewObject, bool)> Add) Apply(Ground g, Vector2 at, Func<int, float>? mask = null)
+    /// <param name="vehicleIds">
+    /// The PersistentIDs in use (ValheimRAFT): each pasted vehicle gets ids of its own (see Vehicles.Remap); null: none
+    /// known.
+    /// </param>
+    public (List<int> Touched, (int X0, int Z0, int X1, int Z1) Rect, List<(NewObject, bool)> Add) Apply(Ground g, Vector2 at, Func<int, float>? mask = null, ISet<int>? vehicleIds = null)
     {
         var c = Clip!;
         var touched = new List<int>();
@@ -454,8 +466,11 @@ public sealed class PasteTool
         bool up = Direction == Along.Up;
         bool limit = g.NoLimit;
         g.NoLimit = true;
+        // Where each copy's objects start in the list.
+        var copyStarts = new List<int>();
         for (int k = 0; k < Count; k++)
         {
+            copyStarts.Add(add.Count);
             var (ca, lift) = CopyAt(at, k);
             float anchor = (up ? baseH : g.HeightOf(Index(g, ca)) + Offset) + lift;
             int x0 = Math.Max(1, (int)MathF.Floor(ca.X - half)), x1 = Math.Min(g.W - 2, (int)MathF.Ceiling(ca.X + half));
@@ -531,7 +546,33 @@ public sealed class PasteTool
                 (bx0, bx1, bz0, bz1) = (Math.Min(bx0, rect.X0), Math.Max(bx1, rect.X1), Math.Min(bz0, rect.Z0), Math.Max(bz1, rect.Z1));
             }
         }
-        return (touched, (Math.Min(bx0, bx1) - 1, Math.Min(bz0, bz1) - 1, bx1 + 1, bz1 + 1), add);
+        return (touched, (Math.Min(bx0, bx1) - 1, Math.Min(bz0, bz1) - 1, bx1 + 1, bz1 + 1), OwnVehicles(add, copyStarts, vehicleIds ?? new HashSet<int>()));
+    }
+
+    /// <summary>
+    /// Each copy's ValheimRAFT vehicles made its own (new ids, parts stored at their root; see Vehicles.Remap): two
+    /// vehicles under one id would share their parts in the game.
+    /// </summary>
+    /// <param name="add">The objects of every copy.</param>
+    /// <param name="copyStarts">Where each copy's objects start in the list.</param>
+    /// <param name="taken">The PersistentIDs in use; the new ones are added.</param>
+    private List<(NewObject, bool)> OwnVehicles(List<(NewObject O, bool Piece)> add, List<int> copyStarts, ISet<int> taken)
+    {
+        var made = new List<(NewObject, bool)>();
+        for (int k = 0; k < copyStarts.Count; k++)
+        {
+            int end = k + 1 < copyStarts.Count ? copyStarts[k + 1] : add.Count;
+            var copy = add.GetRange(copyStarts[k], end - copyStarts[k]);
+            var own = Vehicles.Remap([.. copy.Select(c => c.O)], taken, Mirror);
+            for (int j = 0; j < copy.Count; j++)
+            {
+                if (own[j] is { } o)
+                {
+                    made.Add((o, copy[j].Piece));
+                }
+            }
+        }
+        return made;
     }
 
     /// <summary>
@@ -547,6 +588,11 @@ public sealed class PasteTool
         var to = new Dictionary<(int, int), float>();
         foreach (var (o, _) in placed)
         {
+            // A vehicle does not stand on the ground: none is dug under it.
+            if (Vehicles.With(null, o.Data) != null)
+            {
+                continue;
+            }
             if (CopyData.Extent(o.Prefab, o.Position, o.Rotation, o.Scale) is not var (ax, az, bx, bz, bottom)
                 || bottom < g.HeightOf(Index(g, new Vector2(o.Position.X - ox, o.Position.Z - oz))) - HiddenDepth)
             {

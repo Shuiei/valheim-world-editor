@@ -9,7 +9,7 @@ namespace TerrainEditor.Desktop.Tests;
 
 /// <summary>
 /// The Select tool with the mouse, looking straight down on a flat area: clicking and drawing zones, dragging,
-/// double-clicking a building, Same kind, Drop and snapping. The view's object boxes come from the pieces' own boxes
+/// double-clicking a building or a ship (ValheimRAFT), Same kind, Drop and snapping. The view's object boxes come from the pieces' own boxes
 /// (headless tests draw nothing, so the view is given them).
 /// </summary>
 [Collection("World files")]
@@ -213,6 +213,41 @@ public class SelectToolMouseTests
         v.W.View.Select([4]);
         v.Tool.WholeBuilding();
         Assert.StartsWith("Select a building piece first", said);
+    }
+
+    // A ValheimRAFT ship (TestScenes.AddShip): a double click on a part selects the whole vehicle; a part dragged
+    // takes it all along, kept afloat (its height as it was), every part stored at the root's new place; deleted, the
+    // whole ship goes.
+    [AvaloniaFact]
+    public void AShipsPartBringsTheWholeShip()
+    {
+        var v = Open(T(1, Beech, 10, 30, 10, false));
+        var ship = TestScenes.AddShip(v.S);
+        v.W.View.SetBoxes(ship.Select(i => Box(v.S.Scene, i)));
+        string? said = null;
+        v.Tool.Message += (t, _) => said = t;
+        v.Click(40, 38, clicks: 2);
+        Assert.Equal(ship.Order(), v.Selected.Order());
+        Assert.Equal("Selected the whole vehicle: 5 part(s).", said);
+        v.W.View.Select([]);
+        v.Click(40, 38);
+        Assert.Equal([ship[1]], v.Selected);
+        v.Drag(false, (40, 38), (43, 38), (45, 38));
+        Assert.All(ship, i => Assert.True(v.S.Scene.Things[i].Gone));
+        Assert.StartsWith("Moved 5 object(s) (a whole vehicle", said);
+        var copies = Enumerable.Range(ship[^1] + 1, 5).ToList();
+        Assert.Equal(copies, v.Selected.Order());
+        var root = v.S.Scene.Things[Assert.Single(copies, i => v.S.Scene.Things[i].Prefab == TestScenes.ShipRoot)];
+        Assert.Equal(45, root.Position.X, 1);
+        Assert.Equal(40, root.Position.Z, 1);
+        Assert.Equal(30, root.Position.Y, 3);
+        Assert.All(copies, i => Assert.Equal(root.Position, v.S.Edits.FindAdded(v.S.Scene.Things[i].Id)!.Position));
+        Assert.Contains(copies, i => Vector3.Distance(v.S.Scene.Things[i].Position, root.Position + new Vector3(4, 1, -1)) < 1e-3f);
+        // One part deleted: the whole ship goes.
+        v.W.View.Select([copies[0]]);
+        v.Tool.Delete();
+        Assert.All(copies, i => Assert.True(v.S.Scene.Things[i].Gone));
+        Assert.StartsWith("Deleted 5 object(s) (a whole vehicle: a vehicle's parts never go alone)", said);
     }
 
     [AvaloniaFact]

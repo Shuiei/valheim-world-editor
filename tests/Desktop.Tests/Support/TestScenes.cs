@@ -1,5 +1,7 @@
+using System.Numerics;
 using TerrainEditor.Editing;
 using TerrainEditor.Save;
+using WorldEditor.Tests;
 
 namespace TerrainEditor.Desktop.Tests;
 
@@ -62,4 +64,35 @@ internal static class TestScenes
         OceanDepth = new float[65 * 65],
         Limit = new float[65 * 65],
     };
+
+    /// <summary>The ship's root's PersistentID (AddShip).</summary>
+    internal const int ShipId = 500;
+
+    /// <summary>The prefab standing in for the ship's root (AddShip).</summary>
+    internal static readonly int ShipRoot = StableHash.Of("stone_wall_2x1");
+
+    /// <summary>The ship's swivel's PersistentID (AddShip).</summary>
+    internal const int SwivelId = 501;
+
+    /// <summary>
+    /// A ValheimRAFT ship added to the session in one step, every part stored at its root as the game saves them: a root
+    /// (a stone wall standing in for the mod's ship, which the test data does not know) at (x, 30, z) turned 90°, floors 2 m east and west of it in its frame
+    /// (south and north in the world), a swivel 4 m north of it and 1 m up (east in the world) and a floor 1 m east on
+    /// the swivel (south of it in the world).
+    /// </summary>
+    /// <returns>Their indices: the root, the two floors, the swivel, the floor on it.</returns>
+    internal static List<int> AddShip(EditSession s, float x = 40, float z = 40)
+    {
+        var at = new Vector3(x, 30, z);
+        int floor = StableHash.Of("wood_floor");
+        (NewObject, bool) Part(byte[] raw) => (new NewObject(0, floor, at, Vector3.Zero, 0, null, false, raw), true);
+        return s.Commit("A ship", null, [],
+        [
+            (new NewObject(0, ShipRoot, at, new Vector3(0, 90, 0), 0, null, false, MadeObjects.VehicleRoot("stone_wall_2x1", at, new Vector3(0, 90, 0), ShipId)), true),
+            Part(MadeObjects.VehiclePart("wood_floor", at, ShipId, new Vector3(2, 0, 0), Vector3.Zero)),
+            Part(MadeObjects.VehiclePart("wood_floor", at, ShipId, new Vector3(-2, 0, 0), Vector3.Zero)),
+            Part(MadeObjects.VehiclePart("wood_floor", at, ShipId, new Vector3(0, 1, 4), Vector3.Zero, persistentId: SwivelId)),
+            Part(MadeObjects.VehiclePart("wood_floor", at, ShipId, new Vector3(1, 0, 0), Vector3.Zero, SwivelId)),
+        ]);
+    }
 }

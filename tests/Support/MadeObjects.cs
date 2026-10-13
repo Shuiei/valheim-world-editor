@@ -7,7 +7,8 @@ namespace WorldEditor.Tests;
 /// <summary>
 /// Objects made in code, as the game sends them live (WorldEditorBridge /zone: a ZDO's bytes in the save's format), for
 /// what the test world does not hold: a player's piece (with its builder), a placed location (a LocationProxy naming
-/// it) and a dungeon with its room list. Made-up content: only the prefab names are the game's.
+/// it), a dungeon with its room list, and a ValheimRAFT vehicle's root and parts. Made-up content: only the prefab and
+/// data names are the game's and the mod's.
 /// </summary>
 public static class MadeObjects
 {
@@ -47,4 +48,33 @@ public static class MadeObjects
 
     /// <inheritdoc cref="Dungeon(string, Vector3, IReadOnlyList{Dungeons.Placed})"/>
     public static byte[] Dungeon(string prefab, Vector3 position, byte[] roomData) => Zdo(prefab, position, z => z.ByteList.Add((Dungeons.RoomDataKey, roomData)));
+
+    /// <summary>
+    /// A vehicle's root (ValheimRAFT): its PersistentID, at a place and turned (Euler degrees) as stored.
+    /// </summary>
+    public static byte[] VehicleRoot(string prefab, Vector3 position, Vector3 rotation, int persistentId) => Zdo(prefab, position, z =>
+    {
+        z.Rotation = rotation;
+        z.IntList.Add((StableHash.Of("PersistentID"), persistentId));
+    });
+
+    /// <summary>
+    /// A vehicle's part, stored at its root's position as the game saves it: its vehicle's PersistentID, its offset and
+    /// turn in its parent's frame, and, given, the swivel it is on and its own PersistentID.
+    /// </summary>
+    public static byte[] VehiclePart(string prefab, Vector3 rootPosition, int parent, Vector3 offset, Vector3 euler, int swivel = 0, int persistentId = 0) =>
+        Zdo(prefab, rootPosition, z =>
+        {
+            z.IntList.Add((StableHash.Of("MBParentId"), parent));
+            if (swivel != 0)
+            {
+                z.IntList.Add((StableHash.Of("SwivelParentId"), swivel));
+            }
+            if (persistentId != 0)
+            {
+                z.IntList.Add((StableHash.Of("PersistentID"), persistentId));
+            }
+            z.Vec3List.Add((StableHash.Of("MBPosition"), offset));
+            z.Vec3List.Add((StableHash.Of("MBRotationVec"), euler));
+        });
 }

@@ -206,7 +206,7 @@ public sealed class EditSession
         AddChange(removal);
         if (removal.Things.Length > 0)
         {
-            ThingsChanged?.Invoke([.. removal.Things.Select(t => t.Index)]);
+            Notify(removal.Things.Select(t => t.Index));
         }
         Edited();
         return $"Removed “{c.Label}”; everything else is kept. Ctrl+Z brings it back.";
@@ -719,7 +719,7 @@ public sealed class EditSession
         }
         if (c.Things.Length > 0)
         {
-            ThingsChanged?.Invoke([.. c.Things.Select(t => t.Index)]);
+            Notify(c.Things.Select(t => t.Index));
         }
         Edited();
         return true;
@@ -766,19 +766,20 @@ public sealed class EditSession
     }
 
     /// <summary>
-    /// Removes things from the world (on the next save) as one undo step; those already gone are skipped.
+    /// Removes things from the world (on the next save) as one undo step; those already gone are skipped. A
+    /// ValheimRAFT vehicle's root takes its parts with it.
     /// </summary>
     /// <param name="indices">Indices into the scene's things.</param>
     public void Delete(IReadOnlyCollection<int> indices)
     {
-        int[] live = [.. indices.Where(i => !Scene.Things[i].Gone).Distinct()];
+        int[] live = [.. WithVehicles(indices, anyPart: false).Indices.Where(i => !Scene.Things[i].Gone).Distinct()];
         if (live.Length == 0)
         {
             return;
         }
         SetGone(live.Select(i => (i, true)));
         AddChange(new Change($"Deleted {live.Length}", [], NoPoints, NoPoints, []) { Things = [.. live.Select(i => (i, false, true))] });
-        ThingsChanged?.Invoke(live);
+        Notify(live);
         Edited();
     }
 
@@ -792,11 +793,14 @@ public sealed class EditSession
 
     /// <summary>
     /// Moves, turns and sizes things as one undo step, as Move does, each with its own scale (zero: the prefab's own).
+    /// A part of a ValheimRAFT vehicle never moves alone: its whole vehicle moves (see WholeVehicleMoves).
     /// </summary>
-    /// <returns>The copies' indices, in the order of the things not gone.</returns>
+    /// <returns>
+    /// The copies' indices, in the order of the things not gone; then those of the vehicles' other parts moved with them.
+    /// </returns>
     public List<int> Transform(IReadOnlyList<(int Index, System.Numerics.Vector3 Position, System.Numerics.Vector3 Rotation, float Scale)> moves, string? label = null)
     {
-        var live = moves.Where(m => !Scene.Things[m.Index].Gone).ToList();
+        var live = WholeVehicleMoves([.. moves.Where(m => !Scene.Things[m.Index].Gone)]);
         var adds = live.Select(m => MovedCopy(m.Index, m.Position, m.Rotation, m.Scale)).ToList();
         return Commit(label ?? $"Moved {live.Count}", null, [.. live.Select(m => m.Index)], adds);
     }
@@ -815,6 +819,195 @@ public sealed class EditSession
         var t = Scene.Things[index];
         var from = t.Id < 0 ? Edits.FindAdded(t.Id) : null;
         return (new NewObject(0, t.Prefab, position, rotation, scale, t.Id < 0 ? from?.SourceId : t.Id, t.Id < 0 && (from?.Fresh ?? true), from?.Raw, from?.Data), t.Piece);
+    }
+
+    // ---- ValheimRAFT's vehicles: a root and its parts, stored at the root and built by the mod from their offsets.
+
+    /// <summary>The vehicles (ValheimRAFT) as they are now: the world's objects and this session's.</summary>
+    public VehicleIndex ReadVehicles()
+    {
+        var world = Scene.World;
+        lock (world.Sync)
+        {
+            return VehicleIndex.Of(world, Edits.Deleted, Edits.Added);
+        }
+    }
+
+    /// <summary>The scene's things not gone, by object id (the first one when two have it).</summary>
+    private Dictionary<int, int> ShownById()
+    {
+        var at = new Dictionary<int, int>();
+        var list = Scene.Things;
+        lock (list)
+        {
+            for (int i = 0; i < list.Count; i++)
+            {
+                if (!list[i].Gone)
+                {
+                    at.TryAdd(list[i].Id, i);
+                }
+            }
+        }
+        return at;
+    }
+
+    /// <summary>
+    /// Things with the rest of the ValheimRAFT vehicles they belong to: each vehicle's parts in the area come after the
+    /// things given (which keep their order).
+    /// </summary>
+    /// <param name="indices">Indices into the scene's things.</param>
+    /// <param name="anyPart">Any part brings its whole vehicle (the Select tool); false: only a root brings its parts.</param>
+    /// <returns>The things, which of them are vehicles' parts (roots too), and how many vehicles they hold.</returns>
+    public (List<int> Indices, HashSet<int> Parts, int Vehicles) WithVehicles(IEnumerable<int> indices, bool anyPart = true)
+    {
+        var list = indices.ToList();
+        var parts = new HashSet<int>();
+        var vehicles = ReadVehicles();
+        if (vehicles.IsEmpty)
+        {
+            return (list, parts, 0);
+        }
+        var things = Scene.Things;
+        var at = ShownById();
+        var have = list.ToHashSet();
+        var roots = new HashSet<int>();
+        foreach (int i in list.ToList())
+        {
+            if (i < 0 || i >= things.Count || vehicles.Get(things[i].Id) == null)
+            {
+                continue;
+            }
+            int id = things[i].Id;
+            var group = vehicles.Group(id);
+            if (group.Count < 2 || !anyPart && group[0] != id || !roots.Add(group[0]))
+            {
+                continue;
+            }
+            parts.Add(i);
+            foreach (int part in group)
+            {
+                if (at.TryGetValue(part, out int k))
+                {
+                    parts.Add(k);
+                    if (have.Add(k))
+                    {
+                        list.Add(k);
+                    }
+                }
+            }
+        }
+        return (list, parts, roots.Count);
+    }
+
+    /// <summary>
+    /// Moves of things made moves of whole ValheimRAFT vehicles: a vehicle's root goes where its move puts it (or, when
+    /// only parts of it were moved, where the first of them takes it along), and each of its parts is stored at the
+    /// root's new place with its own turn as it was, its offset unchanged, as the game saves them: the mod builds the
+    /// vehicle there again. Other moves are left as they are; the ones given come first, in their order.
+    /// </summary>
+    /// <param name="moves">The moves (index into the scene's things, new place, turn and scale).</param>
+    private List<(int Index, System.Numerics.Vector3 Position, System.Numerics.Vector3 Rotation, float Scale)> WholeVehicleMoves(
+        List<(int Index, System.Numerics.Vector3 Position, System.Numerics.Vector3 Rotation, float Scale)> moves)
+    {
+        var vehicles = ReadVehicles();
+        if (vehicles.IsEmpty)
+        {
+            return moves;
+        }
+        var things = Scene.Things;
+        var at = ShownById();
+        var result = new List<(int Index, System.Numerics.Vector3 Position, System.Numerics.Vector3 Rotation, float Scale)>(moves);
+        var slot = new Dictionary<int, int>();
+        for (int k = 0; k < result.Count; k++)
+        {
+            slot.TryAdd(result[k].Index, k);
+        }
+        void Set(int index, System.Numerics.Vector3 position, System.Numerics.Vector3 rotation, float scale)
+        {
+            if (slot.TryGetValue(index, out int k))
+            {
+                result[k] = (index, position, rotation, scale);
+            }
+            else
+            {
+                slot[index] = result.Count;
+                result.Add((index, position, rotation, scale));
+            }
+        }
+        var done = new HashSet<int>();
+        foreach (var m in moves)
+        {
+            var t = things[m.Index];
+            if (vehicles.Get(t.Id) == null || vehicles.Group(t.Id) is not { Count: > 1 } group || !done.Add(group[0])
+                || !at.TryGetValue(group[0], out int rootIndex))
+            {
+                continue;
+            }
+            var root = things[rootIndex];
+            System.Numerics.Vector3 position, rotation;
+            float scale;
+            if (slot.TryGetValue(rootIndex, out int k))
+            {
+                (_, position, rotation, scale) = result[k];
+            }
+            else
+            {
+                // The part's own move, from where it is drawn to where it goes, taken by the whole vehicle.
+                var turn = BlueprintFormats.FromEuler(m.Rotation) * System.Numerics.Quaternion.Inverse(BlueprintFormats.FromEuler(t.Rotation));
+                position = m.Position + System.Numerics.Vector3.Transform(root.Position - t.Position, turn);
+                rotation = BlueprintFormats.ToEuler(turn * BlueprintFormats.FromEuler(root.Rotation));
+                scale = root.Scale;
+            }
+            Set(rootIndex, position, rotation, scale);
+            foreach (int id in group.Skip(1))
+            {
+                if (at.TryGetValue(id, out int i))
+                {
+                    Set(i, position, vehicles.Get(id)!.Rotation, slot.TryGetValue(i, out int j) ? result[j].Scale : things[i].Scale);
+                }
+            }
+        }
+        return result;
+    }
+
+    /// <summary>
+    /// After objects came, went or changed: the parts of ValheimRAFT vehicles drawn where the mod puts them now (their
+    /// root or swivel may have moved, gone or come back).
+    /// </summary>
+    /// <returns>The things placed again, indices into the scene's things.</returns>
+    private List<int> PlaceVehicles()
+    {
+        var moved = new List<int>();
+        var vehicles = ReadVehicles();
+        if (vehicles.IsEmpty)
+        {
+            return moved;
+        }
+        var list = Scene.Things;
+        lock (list)
+        {
+            for (int i = 0; i < list.Count; i++)
+            {
+                var t = list[i];
+                var placed = t.Gone ? t : WorldScene.Placed(t, vehicles);
+                if (placed != t)
+                {
+                    list[i] = placed;
+                    moved.Add(i);
+                }
+            }
+        }
+        return moved;
+    }
+
+    /// <summary>Raises ThingsChanged for these things and the vehicles' parts placed again after them.</summary>
+    private void Notify(IEnumerable<int> indices)
+    {
+        int[] all = [.. indices.Concat(PlaceVehicles()).Distinct()];
+        if (all.Length > 0)
+        {
+            ThingsChanged?.Invoke(all);
+        }
     }
 
     /// <summary>
@@ -890,7 +1083,7 @@ public sealed class EditSession
         AddChange(new Change(label, points, before, after, zones) { Things = [.. changes], Resets = resets ?? [] });
         if (changes.Count > 0)
         {
-            ThingsChanged?.Invoke([.. changes.Select(c => c.Item1)]);
+            Notify(changes.Select(c => c.Item1));
         }
         if (indices.Count > 0)
         {
@@ -1290,7 +1483,8 @@ public sealed class EditSession
         }
         if (changed.Count > 0)
         {
-            ThingsChanged?.Invoke(changed);
+            // A vehicle's root moved in the game: its parts are drawn where it is now.
+            Notify(changed);
         }
         Changed?.Invoke();
         return true;

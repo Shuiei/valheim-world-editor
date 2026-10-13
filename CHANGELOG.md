@@ -4,6 +4,15 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.31.0 — unreleased
+
+### Added
+- **ValheimRAFT vehicles**: a ship's (or land vehicle's) pieces are drawn where the mod builds them, around its root,
+  turned and leaning with it, instead of in a pile where the game saves them. A vehicle is moved, turned, copied and
+  deleted whole: a double click on a part selects it, and any part brings the rest along (the Select tool, copy and
+  paste, Claude's tools). Each pasted copy gets ids of its own, so the game keeps the copies apart. See
+  [Vehicles](docs/select.md#vehicles-valheimraft).
+
 ## v1.30.0 — unreleased
 
 ### Added

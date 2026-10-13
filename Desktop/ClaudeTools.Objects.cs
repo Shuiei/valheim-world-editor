@@ -88,7 +88,7 @@ public sealed partial class ClaudeTools
     /// keeping each the same height above the ground.
     /// </summary>
     [McpServerTool(Name = "move_objects", Title = "Move and turn objects")]
-    [Description("Moves objects of the open area (by id) together, as the Select tool does: shifted by dx, dy, dz metres and turned by turn degrees round the vertical (as yaw turns: 90 = a quarter turn clockwise seen from above), all round one point (default: their middle), so that a building moved whole keeps its shape. ground: true keeps each one as high above the ground as it was (the ground where it ends up). Each object keeps what it holds (chest contents, builder…) but gets a new id: the answer gives them. Refused when one would leave the area. One pending step.")]
+    [Description("Moves objects of the open area (by id) together, as the Select tool does: shifted by dx, dy, dz metres and turned by turn degrees round the vertical (as yaw turns: 90 = a quarter turn clockwise seen from above), all round one point (default: their middle), so that a building moved whole keeps its shape. ground: true keeps each one as high above the ground as it was (the ground where it ends up). A part of a ValheimRAFT vehicle (ship) brings its whole vehicle. Each object keeps what it holds (chest contents, builder…) but gets a new id: the answer gives them. Refused when one would leave the area. One pending step.")]
     public Task<string> MoveObjects(
         [Description("Their ids (list_objects, get_selection).")] int[] ids,
         [Description("Metres east (negative: west).")] float dx = 0,
@@ -106,11 +106,13 @@ public sealed partial class ClaudeTools
         }
         var s = _w.Session!;
         var scene = s.Scene;
-        var (ok, problems) = Usable(scene, ids);
-        if (ok.Count == 0)
+        var (usable, problems) = Usable(scene, ids);
+        if (usable.Count == 0)
         {
             return "Nothing moved: " + string.Join("; ", problems);
         }
+        // A vehicle's part never moves alone (ValheimRAFT): the whole vehicle does, as one block.
+        var (ok, _, vehicles) = s.WithVehicles(usable);
         if (dx == 0 && dy == 0 && dz == 0 && turn % 360 == 0 && !ground)
         {
             return "Nothing to do: give dx, dy, dz, turn or ground.";
@@ -132,7 +134,7 @@ public sealed partial class ClaudeTools
         }
         var copies = s.Transform(moves, label.StartsWith("Claude", StringComparison.Ordinal) ? label : "Claude: " + label);
         _w.AfterClaudeEdit($"Claude moved {copies.Count} object(s); Ctrl+Z puts them back.");
-        return ToJson(new { moved = copies.Select((c, k) => Moved(scene, moves[k].Index, c)), problems, pending = Pending() });
+        return ToJson(new { moved = copies.Take(moves.Count).Select((c, k) => Moved(scene, moves[k].Index, c)), wholeVehicles = vehicles, problems, pending = Pending() });
     });
 
     /// <summary>A place, turn or size for one object (set_transform); what is left out stays as it is.</summary>
@@ -177,7 +179,7 @@ public sealed partial class ClaudeTools
 
     /// <summary>set_transform: exact places, turns and sizes, each object its own (see <see cref="TransformSpec"/>).</summary>
     [McpServerTool(Name = "set_transform", Title = "Place, turn or size objects exactly")]
-    [Description("Puts objects of the open area (by id) exactly where given: position, yaw, pitch, roll and size, each object its own; what is left out stays as it is. Each keeps what it holds but gets a new id (the answer gives them). Objects that would leave the area are left out and named. One pending step.")]
+    [Description("Puts objects of the open area (by id) exactly where given: position, yaw, pitch, roll and size, each object its own; what is left out stays as it is. A part of a ValheimRAFT vehicle (ship) takes its whole vehicle along (its root first when both are given). Each keeps what it holds but gets a new id (the answer gives them). Objects that would leave the area are left out and named. One pending step.")]
     public Task<string> SetTransform(
         [Description("The objects and their new values.")] TransformSpec[] objects,
         [Description("A few words for the history.")] string label = "Claude: placed exactly") => OnUi(() =>
@@ -219,7 +221,8 @@ public sealed partial class ClaudeTools
         }
         var copies = s.Transform(moves, label.StartsWith("Claude", StringComparison.Ordinal) ? label : "Claude: " + label);
         _w.AfterClaudeEdit($"Claude placed {copies.Count} object(s); Ctrl+Z puts them back.");
-        return ToJson(new { placed = copies.Select((c, k) => Moved(scene, moves[k].Index, c)), problems, pending = Pending() });
+        // Then come the other parts of the vehicles moved (ValheimRAFT), which went along.
+        return ToJson(new { placed = copies.Take(moves.Count).Select((c, k) => Moved(scene, moves[k].Index, c)), alongWithVehicles = copies.Count - moves.Count, problems, pending = Pending() });
     });
 
     /// <summary>replace_objects: objects become another kind, where they are and turned as they are (as the Area tool's Replace).</summary>

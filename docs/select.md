@@ -21,6 +21,7 @@ each one from its location whenever the zone loads, so deleting one removes that
 | **Shift + drag** or **Ctrl + drag** | Adds what is inside the zone to the selection. |
 | **Click on empty ground** / `Esc` | Clears the selection. |
 | **Double-click a building piece** | Selects the whole building: every piece connected to it through pieces that touch (walls, floors, roofs, beams...). Pieces standing apart are not taken. A chest (any container) is the exception: a double click selects it alone and opens its data, its contents. |
+| **Double-click a vehicle's part** | Selects the whole [vehicle](#vehicles-valheimraft) (a ValheimRAFT ship): its root and every part on it. |
 | **Whole building** | Adds every piece connected to the selected pieces. |
 | **Same kind** | Selects every shown object in the area of the kinds selected now (select one beech, then all the beeches). |
 | **Invert** | Selects every shown object in the area that is not selected now. |
@@ -67,6 +68,24 @@ typed values are exact, so nothing snaps on top of them.
 | **Make player built** | Gives the selected pieces that have no builder the player chosen in View → Building → **Built by**, so the game treats them as player built (see [Player-built pieces](editor-basics.md#player-built-pieces)). Other objects are left as they are. One undo step. |
 | **Replace with** + **Replace the selection** | Replaces every selected object by the chosen kind, at the same place and facing. **pick** fills the list from the world: click an object to use its kind (`Esc` cancels). |
 | `Ctrl+C` | Copies the selection; `Ctrl+V` pastes it with the [paste tool](area.md#copy-and-paste). Copies keep everything the originals hold (a chest's contents, a sign's text, who built them). Trees and the like keep their height above the ground where they land; building pieces keep the building's shape and take the ground under them along (see [Copy and paste](area.md#copy-and-paste)). |
+
+## Vehicles (ValheimRAFT)
+
+ValheimRAFT's ships and land vehicles are a root object and the pieces built on it. The game saves
+every piece at the root's position; the mod builds each one again at its place on the vehicle (its
+offset and turn in the root's frame, kept in its data; a piece on a swivel, in the swivel's frame).
+The editor draws them the same way, so a ship looks as it does in game, turned and leaning with its
+root. A piece whose root is not in the world stays where it is saved.
+
+- **Moved whole.** A vehicle's part never moves, turns or goes alone: selecting any part and
+  moving, turning or deleting takes the whole vehicle (the status bar says so). A moved vehicle
+  keeps its height (a ship stays afloat) and does not snap; its parts are saved at the root's new
+  place, their offsets unchanged, and the mod builds it there.
+- **Copied whole.** `Ctrl+C` on any part copies the whole vehicle, without the ground under it.
+  Each paste (and each of its repeats) is a vehicle of its own: the root, swivels, masts and rope
+  anchors get new ids, and every part, sail, switch and rope follows them. Two vehicles under one id
+  would share their pieces in the game. What was only aboard (carts, characters) is not copied; a part copied without its root is pasted as an ordinary piece.
+- Claude's tools (move, copy, take away) do the same.
 
 ## Inspecting and changing an object's data
 

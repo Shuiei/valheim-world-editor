@@ -101,6 +101,12 @@ public sealed class WorldSave
     /// <summary>Objects that are tamed creatures (by id).</summary>
     public HashSet<int> Tamed { get; } = [];
 
+    /// <summary>
+    /// The objects of ValheimRAFT's vehicles (by id): what their data says of their place in a vehicle, and their turn as
+    /// stored (Pieces keep only the turn about y; a vehicle's root may lean).
+    /// </summary>
+    public Dictionary<int, (App.VehicleLink Link, Vector3 Rotation)> VehicleLinks { get; } = [];
+
     /// <summary>Player-built pieces (objects with a creator): prefab, position and Y rotation in degrees.</summary>
     public List<(int Id, int Prefab, Vector3 Position, float RotationY)> Pieces { get; } = [];
 
@@ -554,6 +560,7 @@ public sealed class WorldSave
         {
             ObjectRef o = ObjectRefs[id];
             Tamed.Remove(id);
+            VehicleLinks.Remove(id);
             if (o.Creator != 0 && Creators.TryGetValue(o.Creator, out int n))
             {
                 Creators[o.Creator] = n - 1;
@@ -718,6 +725,11 @@ public sealed class WorldSave
         long creator = 0, owner = 0, playerId = 0;
         // Zero = not stored: the object keeps its prefab's own scale.
         Vector3 scale = Vector3.Zero;
+        // A vehicle's link (ValheimRAFT): its ids, and its place and turn in its parent's frame.
+        int persistentId = 0, parent = 0, swivel = 0, aboard = 0;
+        Vector3 offset = Vector3.Zero;
+        Vector3? euler = null;
+        Quaternion? oldTurn = null;
         if ((flags & 0xFF) == 0)
         {
             objRef.End = pkg.Position;
@@ -762,9 +774,29 @@ public sealed class WorldSave
                 {
                     scale = value;
                 }
+                else if (key == App.Vehicles.OffsetKey)
+                {
+                    offset = value;
+                }
+                else if (key == App.Vehicles.EulerKey)
+                {
+                    euler = value;
+                }
             }
         }
-        Skip(pkg, worldVersion, flags, Quats, p => p.SkipQuaternion());
+        if ((flags & Quats) != 0)
+        {
+            int n = pkg.ReadNumItems(worldVersion);
+            for (int i = 0; i < n; i++)
+            {
+                int key = pkg.ReadInt();
+                Quaternion value = pkg.ReadQuaternion();
+                if (key == App.Vehicles.OldTurnKey)
+                {
+                    oldTurn = value;
+                }
+            }
+        }
         if ((flags & Ints) != 0)
         {
             int n = pkg.ReadNumItems(worldVersion);
@@ -780,6 +812,22 @@ public sealed class WorldSave
                 else if (key == TamedKey && value != 0)
                 {
                     Tamed.Add(id);
+                }
+                else if (key == App.Vehicles.PersistentIdKey)
+                {
+                    persistentId = value;
+                }
+                else if (key == App.Vehicles.ParentKey)
+                {
+                    parent = value;
+                }
+                else if (key == App.Vehicles.SwivelKey)
+                {
+                    swivel = value;
+                }
+                else if (key == App.Vehicles.AboardKey)
+                {
+                    aboard = value;
                 }
             }
         }
@@ -846,6 +894,11 @@ public sealed class WorldSave
             Placed.Add(new PlacedObject(prefab, location, position, rotation, timeCreated));
         }
         bool terrain = TerrainZones.Count > 0 && TerrainZones[^1].Source is { } last && last.File == file && last.Start == start;
+        var link = new App.VehicleLink(persistentId, parent, swivel, offset, euler, oldTurn, aboard);
+        if (!link.IsEmpty)
+        {
+            VehicleLinks[id] = (link, rotation);
+        }
         objRef.IsPiece = creator != 0;
         objRef.Creator = creator;
         objRef.IsTerrain = terrain;
@@ -878,21 +931,6 @@ public sealed class WorldSave
             TerrainZones[^1].Source = src with { End = end };
         }
         return id;
-    }
-
-    /// <summary>Skips one data section (count, then key and value each) when its flag is set.</summary>
-    private static void Skip(ValheimReader pkg, int worldVersion, ushort flags, ushort flag, Action<ValheimReader> readValue)
-    {
-        if ((flags & flag) == 0)
-        {
-            return;
-        }
-        int n = pkg.ReadNumItems(worldVersion);
-        for (int i = 0; i < n; i++)
-        {
-            pkg.ReadInt();
-            readValue(pkg);
-        }
     }
 }
 

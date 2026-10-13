@@ -109,6 +109,16 @@ public sealed class WorldScene
         public bool Runestone => PrefabCatalog.IsRunestone(Prefab);
     }
 
+    /// <summary>
+    /// A thing as drawn: a part of a ValheimRAFT vehicle where the mod builds it (at its offset from its parent, the
+    /// parent where its own parent puts it...), its root turned as stored (leaning too). Others are left as they are.
+    /// What is stored stays: the game keeps a vehicle's parts at its root.
+    /// </summary>
+    /// <param name="t">The thing, as read from the save or made for an added object.</param>
+    /// <param name="vehicles">The vehicles as they are now.</param>
+    public static Thing Placed(Thing t, VehicleIndex vehicles) =>
+        vehicles.Pose(t.Id) is var (position, rotation) ? t with { Position = position, Rotation = rotation } : t;
+
     /// <summary>A new object is tamed when it is a moved tamed creature (a move keeps the object's own data).</summary>
     public static bool TamedOf(WorldSave world, NewObject n) => !n.Fresh && n.SourceId is int s && world.Tamed.Contains(s);
 
@@ -283,13 +293,15 @@ public sealed class WorldScene
     {
         var want = ids.ToHashSet();
         var deleted = edits.Deleted;
-        var added = edits.Added.Select(n => n.Id).ToHashSet();
+        var addedNow = edits.Added;
+        var added = addedNow.Select(n => n.Id).ToHashSet();
+        var vehicles = VehicleIndex.Of(world, deleted, addedNow);
         var found = new Dictionary<int, Thing>();
         foreach (int id in want.Where(i => i < 0))
         {
             if (edits.FindAdded(id) is { } n)
             {
-                found[id] = new Thing(n.Id, n.Prefab, n.Position, n.Rotation, n.Scale, PieceCatalog.Get(n.Prefab)?.Tool != null) { Gone = !added.Contains(id), Tamed = TamedOf(world, n) };
+                found[id] = Placed(new Thing(n.Id, n.Prefab, n.Position, n.Rotation, n.Scale, PieceCatalog.Get(n.Prefab)?.Tool != null) { Gone = !added.Contains(id), Tamed = TamedOf(world, n) }, vehicles);
             }
         }
         if (want.Any(i => i >= 0))
@@ -298,14 +310,14 @@ public sealed class WorldScene
             {
                 if (want.Contains(id))
                 {
-                    found[id] = new Thing(id, prefab, p, r, sc.X, false) { Gone = deleted.Contains(id), Tamed = world.Tamed.Contains(id) };
+                    found[id] = Placed(new Thing(id, prefab, p, r, sc.X, false) { Gone = deleted.Contains(id), Tamed = world.Tamed.Contains(id) }, vehicles);
                 }
             }
             foreach (var (id, prefab, p, ry) in world.Pieces)
             {
                 if (want.Contains(id))
                 {
-                    found[id] = new Thing(id, prefab, p, new Vector3(0, ry, 0), 0, true) { Gone = deleted.Contains(id) };
+                    found[id] = Placed(new Thing(id, prefab, p, new Vector3(0, ry, 0), 0, true) { Gone = deleted.Contains(id) }, vehicles);
                 }
             }
             // Live: removed in the game since (gone for good, but still in the history).
@@ -340,31 +352,33 @@ public sealed class WorldScene
         float minX = x0 * 64f - 32f, maxX = (x0 + zonesX - 1) * 64f + 32f, minZ = z0 * 64f - 32f, maxZ = (z0 + zonesZ - 1) * 64f + 32f;
         bool Inside(Vector3 p) => p.X >= minX && p.X < maxX && p.Z >= minZ && p.Z < maxZ;
         var things = new List<Thing>();
+        List<NewObject> addedNow = [.. added ?? []];
+        var vehicles = VehicleIndex.Of(world, deleted, addedNow);
         foreach (var (id, prefab, p, r, sc) in world.Objects)
         {
             if (Inside(p) && !deleted.Contains(id))
             {
-                things.Add(new Thing(id, prefab, p, r, sc.X, false) { Tamed = world.Tamed.Contains(id) });
+                things.Add(Placed(new Thing(id, prefab, p, r, sc.X, false) { Tamed = world.Tamed.Contains(id) }, vehicles));
             }
         }
         foreach (var (id, prefab, p, ry) in world.Pieces)
         {
             if (Inside(p) && !deleted.Contains(id))
             {
-                things.Add(new Thing(id, prefab, p, new Vector3(0, ry, 0), 0, true));
+                things.Add(Placed(new Thing(id, prefab, p, new Vector3(0, ry, 0), 0, true), vehicles));
             }
         }
         // Not the ground discs for No limit ground (invisible: they are just the ground).
-        foreach (var n in added ?? [])
+        foreach (var n in addedNow)
         {
             if (Inside(n.Position) && n.Prefab != WorldSave.LocationProxyPrefab)
             {
-                things.Add(new Thing(n.Id, n.Prefab, n.Position, n.Rotation, n.Scale, PieceCatalog.Get(n.Prefab)?.Tool != null) { Tamed = TamedOf(world, n) });
+                things.Add(Placed(new Thing(n.Id, n.Prefab, n.Position, n.Rotation, n.Scale, PieceCatalog.Get(n.Prefab)?.Tool != null) { Tamed = TamedOf(world, n) }, vehicles));
             }
         }
         // The ruins' pieces joined to a building (the world's and this session's built pieces), found over the whole
         // world: the building may be just outside the area.
-        var joined = JoinedRuins.InWorld(world, deleted, (added ?? []).Where(n => PieceCatalog.Get(n.Prefab)?.Tool != null).Select(n => n.Position));
+        var joined = JoinedRuins.InWorld(world, deleted, addedNow.Where(n => PieceCatalog.Get(n.Prefab)?.Tool != null).Select(n => n.Position));
         for (int i = 0; i < things.Count; i++)
         {
             if (!things[i].Piece && joined.Contains(things[i].Id))
