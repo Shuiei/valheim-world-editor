@@ -619,7 +619,7 @@ static string Shorten(string text) => text.Length > 500 ? text[..500] + "…" : 
 
 static string Token(string name) => Environment.GetEnvironmentVariable(name) is { Length: > 0 } token
     ? token
-    : throw new InvalidOperationException($"{name} is not set (CircleCI: the release context).");
+    : throw new InvalidOperationException($"{name} is not set (CircleCI: the mod-token context).");
 
 static string Text(JsonNode node, string key) => (string?)node[key] ?? throw new InvalidDataException($"tools/release/sites.json: no {key}.");
 
