@@ -15,15 +15,25 @@ public static class ZdoKeys
     private static volatile Dictionary<int, string> _byHash = [];
 
     /// <summary>
+    /// Names from the player's mods' code (ModKeys), for the keys the game's code has no name for.
+    /// </summary>
+    private static volatile IReadOnlyDictionary<int, string> _mods = new Dictionary<int, string>();
+
+    /// <summary>
+    /// Takes the names found in the mods' code, by hash (the game's own names still come first).
+    /// </summary>
+    public static void UseMods(IReadOnlyDictionary<int, string> names) => _mods = names;
+
+    /// <summary>
     /// Takes the names by hash, as GameCatalogues.ZdoKeysJson writes them (hash keys as decimal text).
     /// </summary>
     public static void Use(string json) =>
         _byHash = JsonSerializer.Deserialize<Dictionary<string, string>>(json)!.ToDictionary(kv => int.Parse(kv.Key, System.Globalization.CultureInfo.InvariantCulture), kv => kv.Value);
 
     /// <summary>
-    /// The name a key hash stands for; null when the game code has no key with that hash.
+    /// The name a key hash stands for: the game's code's, else a mod's; null when neither has a key with that hash.
     /// </summary>
-    public static string? NameOf(int key) => _byHash.TryGetValue(key, out string? n) ? n : null;
+    public static string? NameOf(int key) => _byHash.TryGetValue(key, out string? n) ? n : _mods.GetValueOrDefault(key);
 
     /// <summary>
     /// A key given by name or as a number ("text", "-1234"): a number is taken as the hash itself, a name is hashed.

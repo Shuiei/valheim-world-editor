@@ -139,6 +139,8 @@ public sealed class WorldSession : IDisposable
             throw new InvalidOperationException(GameData.Missing);
         }
         WorldSave.ModifierPrefabs = [.. TerrainModifiers.NetworkPrefabHashes];
+        // The data names the player's mods keep on objects, for the inspector (read again only when a mod changes).
+        ModKeys.Refresh(AppSettings.Load());
     }
 
     /// <summary>A world on this computer (its folder). Throws when the game's data is missing.</summary>

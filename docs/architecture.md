@@ -148,6 +148,10 @@ no data tables. Everything is read at run time from the player's install:
   over `prefabs`, `pieces` and `piece-cost` each time it uses those kinds (the game's own entries
   win; entries not in the editor's format are left out, and should the merged data still fail, the
   game's own is used alone). `GameData.AddMods` takes a new report and uses the kinds again.
+- Mods' data names: `Core/App/ModKeys.cs` reads the string literals of every DLL in the plugins
+  folders (`GameCatalogues.KeyNamesIn`, as `zdo-keys` reads `assembly_valheim.dll`), keeps them in
+  `mod-zdo-keys.json` (user data folder) until a DLL changes, and gives them to `ZdoKeys.UseMods`;
+  the game's own names come first. `WorldSession.NeedGame` refreshes them as a world opens.
 - Mods' models: `Desktop/BundleModels.cs` draws a mod prefab from `ModCatalogue.ModelOf` (what the
   game reported, `POST /models`), finding each part's mesh and material by name (`GameBundles.Named`,
   a names index over a bundles folder kept as `<index>-names.json`) in the mods' bundles first, then

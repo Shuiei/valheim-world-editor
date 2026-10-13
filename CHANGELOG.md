@@ -4,6 +4,15 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.29.0 — unreleased
+
+### Added
+- **Mods' data by name in the inspector**: the values mods keep on objects (ValheimRAFT's
+  `MBParentId`, a mod's levels or owners...) show by their names instead of numbers. Like the
+  game's own, the names are found in the string literals of the mods' code, read from the DLLs in
+  your Valheim folder and mod manager profiles (never run), and kept until a mod changes. The
+  game's own name still comes first when both have one.
+
 ## v1.28.0 — unreleased
 
 ### Added
