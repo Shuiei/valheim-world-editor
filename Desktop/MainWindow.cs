@@ -2382,7 +2382,7 @@ public sealed partial class MainWindow : Window
         View.Paste.Changed += () =>
         {
             var c = View.Paste.Clip;
-            AreaPanel.ClipInfo.Text = c == null ? "Copies the ground (shape and paint) and the shown objects inside the selection."
+            AreaPanel.ClipInfo.Text = c == null ? "Copies the shown objects inside the selection, with the ground under their buildings."
                 : $"Clipboard{(c.Name != null ? $" ({c.Name})" : "")}: {c.W} × {c.H} m, {c.Objects.Count} object(s).";
         };
         AreaPanel.Confirm = text => Dialogs.Ask(this, "Reset zones", text, "Reset when saving");

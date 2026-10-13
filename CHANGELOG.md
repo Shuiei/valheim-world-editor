@@ -22,7 +22,8 @@ the plugin is unchanged in versions without that part.
     foundations set into the ground), and ignores pieces hidden far underground (a mod's crafting
     stations 10 km down made it dig a 400 m pit).
   - A paste must fit in the open area: past it the ground could not be pasted nor the trees cleared,
-    yet the pieces were placed there. It is now refused with a message.
+    yet the pieces were placed there. It is now refused with a message, and its outline turns red
+    while it does not fit.
   - The ground and the objects of a paste line up exactly (the click point is moved by half a metre
     at most), not up to half a metre apart.
   - Claude's `copy_objects` also keeps what the originals hold.

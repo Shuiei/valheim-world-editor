@@ -64,7 +64,7 @@ The **Copy and paste** action shows these buttons; `Ctrl+C` and `Ctrl+V` work wi
 | Control | What it does |
 |---|---|
 | **Copy (Ctrl+C)** | Copies the shown objects inside the selection, and the ground their buildings stand on: under each piece and a metre around it, as it is (shape and paint), fading into the ground where it is pasted over three more metres. The rest of the selection's ground is not copied: a pasted town sits in the land where it lands. The Select tool's copy takes the ground under its pieces too (without paint). The copy is remembered, so you can paste it in another area, another world, or after restarting the editor. |
-| **Paste (Ctrl+V)** | Switches to pasting: the outline and the objects (orange dots) follow the cursor; click to place. You can paste several copies; `Esc` stops. The paste must fit in the open area (the ground and the site can only be worked there): open a bigger area around the place first when it does not. |
+| **Paste (Ctrl+V)** | Switches to pasting: the outline and the objects (orange dots) follow the cursor; click to place. You can paste several copies; `Esc` stops. The paste must fit in the open area (the ground and the site can only be worked there): its outline turns red when it does not; open a bigger area around the place first. |
 
 While pasting:
 

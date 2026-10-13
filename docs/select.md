@@ -66,7 +66,7 @@ typed values are exact, so nothing snaps on top of them.
 | **Delete** (`Del`) | Removes the selected objects. `Ctrl+Z` brings them back. |
 | **Make player built** | Gives the selected pieces that have no builder the player chosen in View → Building → **Built by**, so the game treats them as player built (see [Player-built pieces](editor-basics.md#player-built-pieces)). Other objects are left as they are. One undo step. |
 | **Replace with** + **Replace the selection** | Replaces every selected object by the chosen kind, at the same place and facing. **pick** fills the list from the world: click an object to use its kind (`Esc` cancels). |
-| `Ctrl+C` | Copies the selection; `Ctrl+V` pastes it with the [paste tool](area.md#copy-and-paste). Copies are new, independent objects (a copied chest is empty). Pasted objects keep their height above the ground where they land. |
+| `Ctrl+C` | Copies the selection; `Ctrl+V` pastes it with the [paste tool](area.md#copy-and-paste). Copies keep everything the originals hold (a chest's contents, a sign's text, who built them). Trees and the like keep their height above the ground where they land; building pieces keep the building's shape and take the ground under them along (see [Copy and paste](area.md#copy-and-paste)). |
 
 ## Inspecting and changing an object's data
 

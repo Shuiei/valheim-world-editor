@@ -295,7 +295,7 @@ public sealed class AreaPanel
         PasteButton.Click += (_, _) => PasteAsked?.Invoke();
         SaveBlueprintButton.Click += (_, _) => SaveBlueprintAsked?.Invoke();
         LibraryButton.Click += (_, _) => LibraryAsked?.Invoke();
-        ClipInfo.Text = "Copies the ground (shape and paint) and the shown objects inside the selection.";
+        ClipInfo.Text = "Copies the shown objects inside the selection, with the ground under their buildings.";
         ExportButton.Click += (_, _) => Message?.Invoke(ExportHeightmap() ?? "");
         ExportButton.Tip("area.export");
         ImportButton.Click += async (_, _) => { if (await PickPicture() is string path) { LoadPicture(path); } };
