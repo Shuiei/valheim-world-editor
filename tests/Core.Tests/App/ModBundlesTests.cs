@@ -1,0 +1,237 @@
+using System.Reflection;
+using System.Reflection.Metadata;
+using System.Reflection.Metadata.Ecma335;
+using System.Reflection.PortableExecutable;
+using AssetsTools.NET;
+using AssetsTools.NET.Extra;
+using TerrainEditor.App;
+using WorldEditor.Tests.Unity;
+using Xunit;
+
+namespace WorldEditor.Tests;
+
+/// <summary>
+/// The mods' asset bundles (ModBundles) found in the BepInEx plugins folders of the settings, as files of their own or
+/// embedded in a mod's DLL, copied into the data folder (the newest of the same one in several folders) and read from
+/// there; copied again only when the mods change; an LZMA bundle packed again as LZ4. Runs alone, in a pretend home
+/// (the data folder's environment variables point at a temporary folder, put back afterwards), without the player's
+/// own Valheim and profiles.
+/// </summary>
+[Collection("DataDir")]
+public sealed class ModBundlesTests : IDisposable
+{
+    private static readonly string[] Vars = ["HOME", "XDG_CONFIG_HOME", "XDG_DATA_HOME", "LOCALAPPDATA"];
+    private readonly Dictionary<string, string?> _old = Vars.ToDictionary(v => v, Environment.GetEnvironmentVariable);
+    private readonly bool _defaults = LocalGame.SearchDefaultPlaces;
+    private readonly string _home = Path.Combine(Path.GetTempPath(), "vwe-modbundles-" + Guid.NewGuid().ToString("N")[..8]);
+
+    public ModBundlesTests()
+    {
+        Directory.CreateDirectory(_home);
+        Environment.SetEnvironmentVariable("HOME", _home);
+        Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", Path.Combine(_home, ".config"));
+        Environment.SetEnvironmentVariable("XDG_DATA_HOME", Path.Combine(_home, ".local", "share"));
+        Environment.SetEnvironmentVariable("LOCALAPPDATA", Path.Combine(_home, "AppData", "Local"));
+        // Only the folders a test gives.
+        LocalGame.SearchDefaultPlaces = false;
+    }
+
+    /// <summary>
+    /// Puts the environment and the default places' search back, and deletes the pretend home.
+    /// </summary>
+    public void Dispose()
+    {
+        foreach (var (k, v) in _old)
+        {
+            Environment.SetEnvironmentVariable(k, v);
+        }
+        LocalGame.SearchDefaultPlaces = _defaults;
+        try
+        {
+            Directory.Delete(_home, true);
+        }
+        catch (IOException)
+        {
+        }
+    }
+
+    /// <summary>
+    /// A profile's BepInEx plugins folder in the pretend home (made).
+    /// </summary>
+    private string Plugins(string profile)
+    {
+        string plugins = Path.Combine(_home, profile, "BepInEx", "plugins");
+        Directory.CreateDirectory(plugins);
+        return plugins;
+    }
+
+    /// <summary>
+    /// Settings that name these profiles' BepInEx folders.
+    /// </summary>
+    private AppSettings Settings(params string[] profiles) => new() { BepInExFolders = [.. profiles.Select(p => Path.Combine(_home, p, "BepInEx"))] };
+
+    /// <summary>
+    /// A bundle (LZ4 unless stored) with one mesh of this name.
+    /// </summary>
+    private static byte[] Bundle(string name, string mesh, bool lz4 = true)
+    {
+        var b = new TestBundle(name);
+        new TestMesh { Name = mesh, Positions = [0, 0, 0, 1, 0, 0, 0, 1, 0], Submeshes = [[0, 1, 2]] }.Add(b);
+        return b.ToBytes(lz4);
+    }
+
+    /// <summary>
+    /// Writes a .NET assembly (a DLL with no code) holding these manifest resources, as a mod embeds its bundles.
+    /// </summary>
+    private static void Dll(string path, params (string Name, byte[] Bytes)[] resources)
+    {
+        var md = new MetadataBuilder();
+        string name = Path.GetFileNameWithoutExtension(path);
+        md.AddModule(0, md.GetOrAddString(name + ".dll"), md.GetOrAddGuid(Guid.NewGuid()), default, default);
+        md.AddAssembly(md.GetOrAddString(name), new Version(1, 0, 0, 0), default, default, 0, AssemblyHashAlgorithm.None);
+        md.AddTypeDefinition(default, default, md.GetOrAddString("<Module>"), default, MetadataTokens.FieldDefinitionHandle(1), MetadataTokens.MethodDefinitionHandle(1));
+        var blob = new BlobBuilder();
+        foreach (var (resource, bytes) in resources)
+        {
+            md.AddManifestResource(ManifestResourceAttributes.Public, md.GetOrAddString(resource), default, (uint)blob.Count);
+            blob.WriteInt32(bytes.Length);
+            blob.WriteBytes(bytes);
+            blob.Align(8);
+        }
+        var pe = new ManagedPEBuilder(PEHeaderBuilder.CreateLibraryHeader(), new MetadataRootBuilder(md), new BlobBuilder(), managedResources: blob);
+        var image = new BlobBuilder();
+        pe.Serialize(image);
+        File.WriteAllBytes(path, image.ToArray());
+    }
+
+    /// <summary>
+    /// A bundle's compression, as AssetsTools reads it.
+    /// </summary>
+    private static AssetBundleCompressionType CompressionOf(byte[] bundle)
+    {
+        var file = new AssetBundleFile();
+        file.Read(new AssetsFileReader(new MemoryStream(bundle)));
+        var type = file.GetCompressionType();
+        file.Close();
+        return type;
+    }
+
+    [Fact]
+    public void BundleFilesAndBundlesInDllsAreCopiedAndRead()
+    {
+        string plugins = Plugins("Default");
+        byte[] own = Bundle("finebundle", "fine_plank");
+        byte[] loose = Bundle("loose", "loose_beam");
+        Dll(Path.Combine(plugins, "FineMod.dll"), ("FineMod.Assets.finebundle", own), ("FineMod.Assets.icons.txt", "not a bundle"u8.ToArray()));
+        Directory.CreateDirectory(Path.Combine(plugins, "Other", "assets"));
+        File.WriteAllBytes(Path.Combine(plugins, "Other", "assets", "loose bundle"), loose);
+
+        var reader = ModBundles.Reader(Settings("Default"))!;
+
+        Assert.Equal(ModBundles.Folder, reader.Folder);
+        Assert.StartsWith(_home, ModBundles.Folder, StringComparison.Ordinal);
+        Assert.Equal(["FineMod.FineMod.Assets.finebundle", "loose_bundle"], Directory.GetFiles(ModBundles.Folder).Select(Path.GetFileName).Order(StringComparer.Ordinal));
+        Assert.Equal(own, File.ReadAllBytes(Path.Combine(ModBundles.Folder, "FineMod.FineMod.Assets.finebundle")));
+        Assert.Equal(loose, File.ReadAllBytes(Path.Combine(ModBundles.Folder, "loose_bundle")));
+        Assert.Single(reader.Named(AssetClassID.Mesh, "fine_plank"));
+        Assert.Single(reader.Named(AssetClassID.Mesh, "loose_beam"));
+    }
+
+    [Fact]
+    public void WithoutBundlesThereIsNoReader()
+    {
+        string plugins = Plugins("Plain");
+        // A mod with no bundle in it, a DLL that is not .NET, files that are not bundles.
+        Dll(Path.Combine(plugins, "PlainMod.dll"), ("PlainMod.readme.txt", "UnityFX and more"u8.ToArray()));
+        File.WriteAllBytes(Path.Combine(plugins, "native.dll"), [.. "UnityFS"u8, .. new byte[64]]);
+        File.WriteAllText(Path.Combine(plugins, "notes.txt"), "UnityF");
+        File.WriteAllText(Path.Combine(plugins, "config.json"), "{\"bundle\": \"UnityFS\"}");
+
+        Assert.Empty(ModBundles.Find(Settings("Plain")));
+        Assert.Null(ModBundles.Reader(Settings("Plain")));
+        // No plugins folder at all.
+        Directory.CreateDirectory(Path.Combine(_home, "Empty", "BepInEx"));
+        Assert.Null(ModBundles.Reader(Settings("Empty")));
+    }
+
+    [Fact]
+    public void TheNewestOfTheSameModInSeveralFoldersIsCopied()
+    {
+        string older = Path.Combine(Plugins("Old"), "FineMod.dll");
+        string newer = Path.Combine(Plugins("New"), "FineMod.dll");
+        byte[] before = Bundle("finebundle", "old_plank");
+        byte[] after = Bundle("finebundle", "new_plank");
+        Dll(older, ("FineMod.finebundle", before));
+        Dll(newer, ("FineMod.finebundle", after));
+        File.SetLastWriteTimeUtc(older, DateTime.UtcNow.AddDays(-10));
+
+        // Whichever folder comes first.
+        foreach (var settings in (AppSettings[])[Settings("Old", "New"), Settings("New", "Old")])
+        {
+            var source = Assert.Single(ModBundles.Find(settings));
+            Assert.Equal(newer, source.Path);
+        }
+        var reader = ModBundles.Reader(Settings("Old", "New"))!;
+        Assert.Equal(after, File.ReadAllBytes(Path.Combine(ModBundles.Folder, "FineMod.FineMod.finebundle")));
+        Assert.Empty(reader.Named(AssetClassID.Mesh, "old_plank"));
+    }
+
+    [Fact]
+    public void TheCopiesAreKeptWhileTheModsAreUnchanged()
+    {
+        string dll = Path.Combine(Plugins("Default"), "FineMod.dll");
+        Dll(dll, ("FineMod.finebundle", Bundle("finebundle", "fine_plank")));
+        var settings = Settings("Default");
+        var first = ModBundles.Reader(settings)!;
+        string marker = Path.Combine(ModBundles.Folder, "marker");
+        File.WriteAllText(marker, "left by the test");
+
+        // Asked again: the same reader.
+        Assert.Same(first, ModBundles.Reader(settings));
+        // After another set of mods (none here, so nothing copied), the kept copies are read again, not copied.
+        Assert.Null(ModBundles.Reader(Settings()));
+        var again = ModBundles.Reader(settings)!;
+        Assert.NotSame(first, again);
+        Assert.True(File.Exists(marker));
+        Assert.True(File.Exists(Path.Combine(AppSettings.UserDataDir, "mod-bundles.json")));
+        // A mod changed: copied again, the folder emptied first.
+        File.SetLastWriteTimeUtc(dll, DateTime.UtcNow.AddDays(-1));
+        Assert.NotNull(ModBundles.Reader(settings));
+        Assert.False(File.Exists(marker));
+        Assert.True(File.Exists(Path.Combine(ModBundles.Folder, "FineMod.FineMod.finebundle")));
+    }
+
+    [Fact]
+    public void AnLzmaBundleIsPackedAgainAsLz4()
+    {
+        byte[] stored = Bundle("lzma", "packed_plank", lz4: false);
+        var file = new AssetBundleFile();
+        file.Read(new AssetsFileReader(new MemoryStream(stored)));
+        using var packed = new MemoryStream();
+        file.Pack(new AssetsFileWriter(packed), AssetBundleCompressionType.LZMA);
+        file.Close();
+        byte[] lzma = packed.ToArray();
+        Assert.Equal(AssetBundleCompressionType.LZMA, CompressionOf(lzma));
+
+        byte[] lz4 = ModBundles.Lz4(lzma);
+
+        Assert.Equal(AssetBundleCompressionType.LZ4, CompressionOf(lz4));
+        // It reads as the same bundle.
+        string dir = Path.Combine(_home, "bundles");
+        Directory.CreateDirectory(dir);
+        File.WriteAllBytes(Path.Combine(dir, "lzma"), lz4);
+        var bundles = new GameBundles(dir, null);
+        var mesh = Assert.Single(bundles.Named(AssetClassID.Mesh, "packed_plank"));
+        Assert.Equal(3, bundles.VertexCountOf(mesh));
+    }
+
+    [Fact]
+    public void AnLz4OrStoredBundleIsLeftAsItIs()
+    {
+        byte[] lz4 = Bundle("lz4", "plank");
+        byte[] stored = Bundle("stored", "plank", lz4: false);
+
+        Assert.Same(lz4, ModBundles.Lz4(lz4));
+        Assert.Same(stored, ModBundles.Lz4(stored));
+    }
+}

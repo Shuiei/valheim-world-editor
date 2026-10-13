@@ -3,7 +3,8 @@ namespace WorldEditor.Tests.Unity;
 /// <summary>
 /// A made-up mesh as Unity stores it: vertex channels (position, normal, first UV) in one or two streams, each stream
 /// 16-byte aligned after the one before, the channels of a vertex side by side; an index buffer of 16- or 32-bit
-/// indices; submeshes as ranges of it. Written into a bundle by <c>Add</c>.
+/// indices; submeshes as ranges of it; or all of it packed in bits (Unity's mesh compression). Written into a bundle by
+/// <c>Add</c>.
 /// </summary>
 public sealed class TestMesh
 {
@@ -79,9 +80,75 @@ public sealed class TestMesh
     public ((double X, double Y, double Z) Center, (double X, double Y, double Z) Extent) Bounds { get; init; }
 
     /// <summary>
-    /// How many compressed vertices it says it has (more than 0: a compressed mesh).
+    /// Written with Unity's mesh compression: positions, normals (x and y, and the sign of z), uv and the indices packed
+    /// in bits in m_CompressedMesh, no vertex bytes nor index buffer (the submeshes' firstByte as an index buffer's).
     /// </summary>
-    public uint Compressed { get; init; }
+    public bool Compressed { get; init; }
+
+    /// <summary>
+    /// The bits per number of a compressed mesh's positions, normals and uv.
+    /// </summary>
+    public int CompressedBits { get; init; } = 10;
+
+    /// <summary>
+    /// Numbers packed as Unity packs them: each a step of their range (lowest to highest) in <c>CompressedBits</c>.
+    /// </summary>
+    private Fields PackFloats(float[] values)
+    {
+        float start = values.Length == 0 ? 0 : values.Min(), range = values.Length == 0 ? 0 : values.Max() - start;
+        uint max = (1u << CompressedBits) - 1;
+        var steps = values.Select(v => range > 0 ? (uint)Math.Round((v - start) / range * max) : 0u).ToList();
+        return new Fields { ["m_NumItems"] = (uint)values.Length, ["m_Range"] = range, ["m_Start"] = start, ["m_Data"] = Bits(steps, CompressedBits), ["m_BitSize"] = CompressedBits };
+    }
+
+    /// <summary>
+    /// Integers packed in as few bits as the largest needs.
+    /// </summary>
+    private static Fields PackInts(IReadOnlyList<uint> values)
+    {
+        int bits = Math.Max(1, 32 - System.Numerics.BitOperations.LeadingZeroCount(values.DefaultIfEmpty(0u).Max()));
+        return new Fields { ["m_NumItems"] = (uint)values.Count, ["m_Data"] = Bits(values, bits), ["m_BitSize"] = bits };
+    }
+
+    /// <summary>
+    /// Numbers of so many bits each, one after the other, the low bits first (Unity's PackedBitVector).
+    /// </summary>
+    private static byte[] Bits(IEnumerable<uint> values, int bits)
+    {
+        var list = values.ToList();
+        byte[] data = new byte[(list.Count * bits + 7) / 8];
+        int at = 0;
+        foreach (uint v in list)
+        {
+            for (int b = 0; b < bits; b++, at++)
+            {
+                if ((v >> b & 1) != 0)
+                {
+                    data[at >> 3] |= (byte)(1 << (at & 7));
+                }
+            }
+        }
+        return data;
+    }
+
+    /// <summary>
+    /// The compressed mesh: positions, uv, normals' x and y with their z's signs (1: positive), the indices.
+    /// </summary>
+    private Fields CompressedMesh(IEnumerable<int> indices)
+    {
+        var c = new Fields { ["m_Vertices"] = PackFloats(Positions), ["m_Triangles"] = PackInts([.. indices.Select(i => (uint)i)]) };
+        if (Uv != null)
+        {
+            c["m_UV"] = PackFloats(Uv);
+        }
+        if (Normals != null)
+        {
+            int n = Normals.Length / 3;
+            c["m_Normals"] = PackFloats([.. Enumerable.Range(0, n).SelectMany(v => new[] { Normals[v * 3], Normals[v * 3 + 1] })]);
+            c["m_NormalSigns"] = PackInts([.. Enumerable.Range(0, n).Select(v => Normals[v * 3 + 2] >= 0 ? 1u : 0u)]);
+        }
+        return c;
+    }
 
     /// <summary>
     /// The bytes per component of a format.
@@ -174,9 +241,11 @@ public sealed class TestMesh
             ["m_Name"] = Name,
             ["m_SubMeshes"] = subs,
             ["m_IndexFormat"] = Wide ? 1 : 0,
-            ["m_IndexBuffer"] = indices.ToArray(),
-            ["m_VertexData"] = new Fields { ["m_VertexCount"] = (uint)n, ["m_Channels"] = channels, ["m_DataSize"] = Streamed ? [] : data.ToArray() },
-            ["m_CompressedMesh"] = new Fields { ["m_Vertices"] = new Fields { ["m_NumItems"] = Compressed } },
+            ["m_IndexBuffer"] = Compressed ? [] : indices.ToArray(),
+            ["m_VertexData"] = Compressed
+                ? new Fields { ["m_VertexCount"] = (uint)n, ["m_DataSize"] = Array.Empty<byte>() }
+                : new Fields { ["m_VertexCount"] = (uint)n, ["m_Channels"] = channels, ["m_DataSize"] = Streamed ? [] : data.ToArray() },
+            ["m_CompressedMesh"] = Compressed ? CompressedMesh(Submeshes.SelectMany(i => i)) : null,
             ["m_LocalAABB"] = new Fields { ["m_Center"] = Fields.Vector3(Bounds.Center.X, Bounds.Center.Y, Bounds.Center.Z), ["m_Extent"] = Fields.Vector3(Bounds.Extent.X, Bounds.Extent.Y, Bounds.Extent.Z) },
         };
         if (Streamed)

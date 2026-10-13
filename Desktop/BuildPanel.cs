@@ -67,6 +67,14 @@ public sealed class BuildPanel
     private readonly PlaceInput _input;
     /// <summary>The tab buttons.</summary>
     private readonly WrapPanel _tabs = new() { ItemSpacing = 3, LineSpacing = 3 };
+    /// <summary>On the Mods tab, one button per mod: the tab lists one mod's pieces at a time.</summary>
+    private readonly WrapPanel _modRow = new() { ItemSpacing = 3, LineSpacing = 3, IsVisible = false };
+    /// <summary>The mod whose pieces the Mods tab lists (a <see cref="ModGroup"/>).</summary>
+    private string? _mod;
+    /// <summary>The tiles' pictures still being drawn, by prefab: set when drawn.</summary>
+    private readonly Dictionary<string, List<Image>> _waiting = [];
+    /// <summary>At most this many tiles are listed at once (a mod can add thousands of pieces): the search narrows.</summary>
+    internal const int MaxTiles = 300;
     /// <summary>The tab shown (a category of <see cref="Tabs"/>).</summary>
     private int _tab = 2;
     /// <summary>The pieces' pictures by prefab, once drawn.</summary>
@@ -102,8 +110,14 @@ public sealed class BuildPanel
         [.. PieceCatalog.Names.Select(n => (n, PieceCatalog.Get(StableHash.Of(n))))
             .Where(p => p.Item2 is { IsBuildPiece: true })
             .Select(p => (p.n, PieceCost.PieceName(p.n), ModCatalogue.IsModded(p.n) ? Mods : p.Item2!.Tool switch { "cultivator" => Plants, "feaster" => Feasts, _ => p.Item2.Category }))
-            .OrderBy(p => StationRank(PieceCost.Get(p.n)?.Station)).ThenBy(p => PieceCost.Get(p.n)?.Station ?? "", StringComparer.OrdinalIgnoreCase)
+            .OrderBy(p => ModGroup(p.n), StringComparer.OrdinalIgnoreCase).ThenBy(p => StationRank(PieceCost.Get(p.n)?.Station)).ThenBy(p => PieceCost.Get(p.n)?.Station ?? "", StringComparer.OrdinalIgnoreCase)
             .ThenBy(p => p.Item2, StringComparer.OrdinalIgnoreCase)];
+
+    /// <summary>
+    /// The mod a piece of the Mods tab is listed under ("Other mods" when the game did not say); empty for the game's
+    /// own pieces. A mod that adds many (PlanBuild's plans of every piece) does not bury the others.
+    /// </summary>
+    internal static string ModGroup(string prefab) => ModCatalogue.IsModded(prefab) ? ModCatalogue.ModOf(prefab) ?? "Other mods" : "";
 
     /// <summary>
     /// A station's rank, to list pieces by the station they need, in the order players get them (none first:
@@ -202,6 +216,7 @@ public sealed class BuildPanel
             {
                 Search,
                 _tabs,
+                _modRow,
                 new ScrollViewer { MaxHeight = 360, Content = Tiles },
                 Chosen,
                 Cost,
@@ -456,6 +471,34 @@ public sealed class BuildPanel
         }
     }
 
+    /// <summary>
+    /// The Mods tab's row of mods (shown when its pieces come from more than one): a button per mod with its number of
+    /// pieces, the chosen one on (the first, when none is chosen yet or it has none any more).
+    /// </summary>
+    /// <param name="list">The Mods tab's pieces; empty: the row hidden (another tab, or a search).</param>
+    private void ShowMods(List<(string Prefab, string Name, int Category)> list)
+    {
+        var mods = list.GroupBy(p => ModGroup(p.Prefab)).Select(g => (Mod: g.Key, Count: g.Count())).ToList();
+        _modRow.IsVisible = mods.Count > 1;
+        if (!_modRow.IsVisible)
+        {
+            return;
+        }
+        if (_mod == null || !mods.Any(m => m.Mod == _mod))
+        {
+            _mod = mods[0].Mod;
+        }
+        _modRow.Children.Clear();
+        foreach (var (mod, count) in mods)
+        {
+            var b = new Button { Content = $"{mod} ({count})", FontSize = 11, Padding = new Thickness(7, 2), Tag = mod };
+            b.Classes.Set("on", mod == _mod);
+            ToolTip.SetTip(b, $"The pieces {mod} adds.");
+            b.Click += (_, _) => { _mod = mod; Render(); };
+            _modRow.Children.Add(b);
+        }
+    }
+
     /// <summary>Fills the tiles with the tab's pieces, or with those matching the search across all tabs.</summary>
     internal void Render()
     {
@@ -473,23 +516,41 @@ public sealed class BuildPanel
         var list = pieces.Where(p => q.Length > 0
             ? q.Split(' ', StringSplitOptions.RemoveEmptyEntries).All(w => p.Name.Contains(w, StringComparison.OrdinalIgnoreCase) || p.Prefab.Contains(w, StringComparison.OrdinalIgnoreCase))
             : p.Category == _tab).ToList();
+        ShowMods(q.Length == 0 && _tab == Mods ? list : []);
+        if (_modRow.IsVisible)
+        {
+            list = [.. list.Where(p => ModGroup(p.Prefab) == _mod)];
+        }
+        _waiting.Clear();
         if (list.Count == 0)
         {
             Tiles.Children.Add(new TextBlock { Text = "No piece matches.", FontSize = 11, Foreground = Ui.Muted });
             return;
         }
+        int all = list.Count;
+        list = [.. list.Take(MaxTiles)];
         string? chosen = Tool.Chosen.Count == 1 ? Tool.Chosen[0] : null;
         string? group = "?";
         foreach (var (prefab, name, _) in list)
         {
-            // A heading where the station changes.
+            // A heading where the station changes (on the Mods tab, the mod or the station).
             string? station = PieceCost.Get(prefab)?.Station;
-            if (station != group)
+            string mod = ModGroup(prefab);
+            string heading = (mod.Length > 0 ? mod + " · " : "") + (station ?? "No station needed");
+            if (heading != group)
             {
-                group = station;
-                Tiles.Children.Add(new TextBlock { Text = station ?? "No station needed", Width = 320, FontSize = 11, FontWeight = FontWeight.SemiBold, Foreground = Ui.Muted, Margin = new Thickness(2, 4, 0, 0) });
+                group = heading;
+                Tiles.Children.Add(new TextBlock { Text = heading, Width = 320, FontSize = 11, FontWeight = FontWeight.SemiBold, Foreground = Ui.Muted, Margin = new Thickness(2, 4, 0, 0) });
             }
             var image = new Image { Width = 64, Height = 64, Source = Picture(prefab) };
+            if (image.Source == null)
+            {
+                if (!_waiting.TryGetValue(prefab, out var images))
+                {
+                    _waiting[prefab] = images = [];
+                }
+                images.Add(image);
+            }
             var b = new Button
             {
                 Tag = prefab,
@@ -508,6 +569,10 @@ public sealed class BuildPanel
             b.Classes.Set("on", prefab == chosen);
             b.Click += (_, _) => Choose(prefab);
             Tiles.Children.Add(b);
+        }
+        if (all > list.Count)
+        {
+            Tiles.Children.Add(new TextBlock { Text = $"Showing {list.Count} of {all}: search to find the others.", Width = 320, FontSize = 11, Foreground = Ui.Muted, Margin = new Thickness(2, 4, 0, 0), TextWrapping = TextWrapping.Wrap });
         }
     }
 
@@ -572,9 +637,12 @@ public sealed class BuildPanel
                 {
                     using var ms = new MemoryStream(png);
                     _pictures[prefab] = new Bitmap(ms);
-                    foreach (var b in Tiles.Children.OfType<Button>().Where(b => b.Tag as string == prefab))
+                    if (_waiting.Remove(prefab, out var images))
                     {
-                        ((b.Content as StackPanel)!.Children[0] as Image)!.Source = _pictures[prefab];
+                        foreach (var image in images)
+                        {
+                            image.Source = _pictures[prefab];
+                        }
                     }
                 });
             });

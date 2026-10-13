@@ -33,6 +33,8 @@ namespace WorldEditorBridge;
 ///   POST /watch     int n + n x (int x, int z): one change number per zone (JSON)
 ///   POST /zone      the same zone list: those zones' saved objects, gzip-compressed
 ///   GET /catalogue  every prefab the game knows, mods' too (JSON, see WorldEditorBridgePlugin.Catalogue.cs)
+///   POST /models    prefab names, one per line: what the game draws of each (JSON, see
+///                   WorldEditorBridgePlugin.Models.cs)
 /// </code>
 /// Game objects are only read on Unity's main thread; the HTTP thread waits for the answer.
 /// </summary>
@@ -316,6 +318,17 @@ public sealed partial class WorldEditorBridgePlugin : BaseUnityPlugin
                     }
                     byte[] body = ReadAll(ctx.Request.InputStream);
                     Reply(res, 200, "application/json", OnMainThread(() => ApplyObjects(body)));
+                    break;
+                }
+                case "/models":
+                {
+                    if (ctx.Request.HttpMethod != "POST")
+                    {
+                        Reply(res, 405, "text/plain", Encoding.UTF8.GetBytes("POST only"));
+                        break;
+                    }
+                    byte[] body = ReadAll(ctx.Request.InputStream);
+                    Reply(res, 200, "application/json", OnMainThread(() => Models(body), 120000));
                     break;
                 }
                 case "/zones/reset":

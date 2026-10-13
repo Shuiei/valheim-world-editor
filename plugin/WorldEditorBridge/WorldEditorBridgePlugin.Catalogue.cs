@@ -2,9 +2,11 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using System.Text.RegularExpressions;
 using UnityEngine;
 
 namespace WorldEditorBridge;
@@ -71,7 +73,7 @@ public sealed partial class WorldEditorBridgePlugin
                 Type t = p.GetType();
                 if (t.GetProperty("Prefab")?.GetValue(p) is GameObject go && go && t.GetProperty("SourceMod")?.GetValue(p) is BepInEx.BepInPlugin mod)
                 {
-                    mods[go.name] = mod.Name;
+                    mods[go.name] = ModName(mod);
                 }
             }
         }
@@ -80,6 +82,46 @@ public sealed partial class WorldEditorBridgePlugin
             Logger.LogWarning($"WorldEditorBridge could not ask Jötunn which mod adds each prefab: {ex.Message}");
         }
         return mods;
+    }
+
+    /// <summary>
+    /// A mod's name as players know it: the package it was installed from (the folder it is in under plugins, as mod
+    /// managers make them: its manifest.json's name, else the folder's name without its "Author-"), else the
+    /// plugin's own name. A package can hold several plugins, and Jötunn names the one that added a prefab
+    /// (ValheimRAFT's are added by its "Inventory Patch Detector").
+    /// </summary>
+    private static string ModName(BepInEx.BepInPlugin plugin)
+    {
+        if (!BepInEx.Bootstrap.Chainloader.PluginInfos.TryGetValue(plugin.GUID, out BepInEx.PluginInfo info) || string.IsNullOrEmpty(info.Location))
+        {
+            return plugin.Name;
+        }
+        string plugins = Path.GetFullPath(BepInEx.Paths.PluginPath).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+        string dll = Path.GetFullPath(info.Location);
+        if (!dll.StartsWith(plugins, StringComparison.OrdinalIgnoreCase))
+        {
+            return plugin.Name;
+        }
+        string[] parts = dll.Substring(plugins.Length).Split(Path.DirectorySeparatorChar);
+        if (parts.Length < 2)
+        {
+            return plugin.Name;
+        }
+        string folder = parts[0];
+        try
+        {
+            string manifest = Path.Combine(plugins + folder, "manifest.json");
+            if (File.Exists(manifest)
+                && Regex.Match(File.ReadAllText(manifest), "\"name\"\\s*:\\s*\"([^\"]+)\"") is { Success: true } m)
+            {
+                return m.Groups[1].Value;
+            }
+        }
+        catch (IOException)
+        {
+        }
+        int dash = folder.IndexOf('-');
+        return dash > 0 && dash < folder.Length - 1 ? folder.Substring(dash + 1) : folder;
     }
 
     /// <summary>

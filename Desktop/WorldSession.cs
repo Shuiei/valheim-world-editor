@@ -163,8 +163,9 @@ public sealed class WorldSession : IDisposable
     }
 
     /// <summary>
-    /// Learns the prefabs the game's mods add (GET /catalogue), before the world is read so its objects get their
-    /// names. A plugin too old to tell, or a report that cannot be read, leaves what is known as it is.
+    /// Learns the prefabs the game's mods add (GET /catalogue) and what the game draws of them (POST /models), before
+    /// the world is read so its objects get their names and models. A plugin too old to tell, or a report that cannot
+    /// be read, leaves what is known as it is.
     /// </summary>
     private static async Task LearnMods(LiveBridge live)
     {
@@ -173,6 +174,11 @@ public sealed class WorldSession : IDisposable
             string report = await live.Catalogue();
             int mods = await Task.Run(() => GameData.AddMods(report));
             Console.WriteLine($"mod catalogue: the game has {mods} mod prefabs ({ModCatalogue.Count} known in all).");
+            if (mods > 0)
+            {
+                string models = await live.Models(ModCatalogue.Names);
+                Console.WriteLine($"mod catalogue: {ModCatalogue.TakeModels(models)} models from the game.");
+            }
         }
         catch (Exception e) when (e is InvalidOperationException or HttpRequestException or TaskCanceledException or System.Text.Json.JsonException or IOException or UnauthorizedAccessException)
         {

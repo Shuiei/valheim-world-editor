@@ -10,7 +10,8 @@ namespace WorldEditor.Tests;
 /// <summary>
 /// The mods' prefabs a game reports (WorldEditorBridge's GET /catalogue): only those that are not the game's own are
 /// kept, in the data folder, the newest report of each winning; entries not in the editor's format are left out; they
-/// are laid over the game's data without changing the game's own entries, and GameData uses them at once. Runs alone
+/// are laid over the game's data without changing the game's own entries, and GameData uses them at once. The models
+/// the game reports of them (POST /models) are kept with them, of known mod prefabs only, and read back by name. Runs alone
 /// (the catalogues are shared), in a data folder of its own; the tests' copies are in use again afterwards.
 /// </summary>
 [Collection("DataDir")]
@@ -200,6 +201,140 @@ public sealed class ModCatalogueTests : IDisposable
         ModCatalogue.Load();
 
         Assert.Equal(0, ModCatalogue.Count);
+    }
+
+    /// <summary>
+    /// A model as the plugin reports it (POST /models): this root scale and these parts.
+    /// </summary>
+    private static string ModelJson(string scale, params string[] parts) => $$"""{"s":[{{scale}}],"p":[{{string.Join(",", parts)}}]}""";
+
+    /// <summary>
+    /// A model's part: this mesh (name, vertices, submesh), material (null: none) and matrix (a move of (1, 2, 3)
+    /// unless given).
+    /// </summary>
+    private static string PartJson(string mesh, int vertices, int sub, string? material, string matrix = "1,0,0,1,0,1,0,2,0,0,1,3,0,0,0,1") =>
+        $$"""{"mesh":"{{mesh}}","v":{{vertices}},"sub":{{sub}},{{(material == null ? "" : $"\"mat\":\"{material}\",")}}"m":[{{matrix}}]}""";
+
+    [Fact]
+    public void OnlyTheModelsOfKnownModPrefabsAreTaken()
+    {
+        ModCatalogue.Take(Report(), Vanilla);
+        string model = ModelJson("1,1,1", PartJson("wall", 24, 0, "fine_wood"));
+
+        int taken = ModCatalogue.TakeModels($$"""{"bfp_finewall":{{model}},"wood_fence":{{model}},"nothing_known":{{model}}}""");
+
+        Assert.Equal(1, taken);
+        Assert.NotNull(ModCatalogue.ModelOf("bfp_finewall"));
+        Assert.Null(ModCatalogue.ModelOf("wood_fence"));
+        Assert.Null(ModCatalogue.ModelOf("nothing_known"));
+    }
+
+    [Fact]
+    public void AModelGivesItsPartsAsTheGameDrawsThem()
+    {
+        ModCatalogue.Take(Report(), Vanilla);
+        ModCatalogue.TakeModels($$"""{"bfp_finewall":{{ModelJson("2,1.5,1", PartJson("wall Instance", 24, 1, "fine_wood (Instance)"), PartJson("trim", 8, 0, null))}}}""");
+
+        var model = ModCatalogue.ModelOf("bfp_finewall")!;
+
+        Assert.Equal(new[] { 2f, 1.5f, 1f }, model.RootScale);
+        Assert.Equal(2, model.Parts.Count);
+        var wall = model.Parts[0];
+        Assert.Equal(("wall", 24, 1, "fine_wood"), (wall.Mesh, wall.Vertices, wall.Sub, wall.Material));
+        Assert.Equal(new[] { 1f, 0, 0, 1, 0, 1, 0, 2, 0, 0, 1, 3, 0, 0, 0, 1 }, wall.Matrix);
+        Assert.Null(model.Parts[1].Material);
+        Assert.Null(ModCatalogue.ModelOf("vfx_bfp_hit"));
+    }
+
+    [Fact]
+    public void APartGivesItsMeshsBoundsWhenTheGameToldThem()
+    {
+        ModCatalogue.Take(Report(), Vanilla);
+        const string Identity = "1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1";
+        ModCatalogue.TakeModels($$$"""
+            {"bfp_finewall":{"s":[1,1,1],"p":[
+              {"mesh":"wall","v":24,"sub":0,"b":[0,1.5,0,1,1.5,0.25],"m":[{{{Identity}}}]},
+              {"mesh":"trim","v":8,"sub":0,"m":[{{{Identity}}}]}
+            ]}}
+            """);
+
+        var parts = ModCatalogue.ModelOf("bfp_finewall")!.Parts;
+
+        Assert.Equal(new[] { 0f, 1.5f, 0f, 1f, 1.5f, 0.25f }, parts[0].Bounds);
+        Assert.Null(parts[1].Bounds);
+    }
+
+    [Theory]
+    [InlineData("wall", "wall")]
+    [InlineData("wall Instance", "wall")]
+    [InlineData("fine_wood (Instance)", "fine_wood")]
+    [InlineData("fine_wood (Instance) (Instance)", "fine_wood")]
+    [InlineData("wall Instance Instance", "wall")]
+    [InlineData("Instance", "Instance")]
+    public void APlainNameIsWithoutWhatUnityAddsToCopies(string name, string plain)
+    {
+        Assert.Equal(plain, ModCatalogue.Plain(name));
+    }
+
+    [Theory]
+    [InlineData("""[1,2]""")]
+    [InlineData("""{"s":[1,1],"p":[]}""")]
+    [InlineData("""{"s":[1,1,"1"],"p":[]}""")]
+    [InlineData("""{"s":[1,1,1]}""")]
+    [InlineData("""{"s":[1,1,1],"p":[{"v":3,"sub":0,"m":[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]}]}""")]
+    [InlineData("""{"s":[1,1,1],"p":[{"mesh":"x","v":3.5,"sub":0,"m":[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]}]}""")]
+    [InlineData("""{"s":[1,1,1],"p":[{"mesh":"x","v":3,"m":[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]}]}""")]
+    [InlineData("""{"s":[1,1,1],"p":[{"mesh":"x","v":3,"sub":0,"mat":4,"m":[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]}]}""")]
+    [InlineData("""{"s":[1,1,1],"p":[{"mesh":"x","v":3,"sub":0,"m":[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0]}]}""")]
+    [InlineData("""{"s":[1,1,1],"p":[3]}""")]
+    [InlineData("""{"s":[1,1,1],"p":[{"mesh":"x","v":3,"sub":0,"b":[0,0,0,1,1],"m":[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]}]}""")]
+    [InlineData("""{"s":[1,1,1],"p":[{"mesh":"x","v":3,"sub":0,"b":[0,0,0,1,1,"1"],"m":[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]}]}""")]
+    [InlineData("""{"s":[1,1,1],"p":[{"mesh":"x","v":3,"sub":0,"b":"box","m":[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]}]}""")]
+    public void ModelsNotInTheExpectedFormAreLeftOut(string model)
+    {
+        ModCatalogue.Take(Report(), Vanilla);
+
+        int taken = ModCatalogue.TakeModels($$"""{"bfp_finewall":{{model}},"vfx_bfp_hit":{{ModelJson("1,1,1")}}}""");
+
+        Assert.Equal(1, taken);
+        Assert.Null(ModCatalogue.ModelOf("bfp_finewall"));
+        Assert.Empty(ModCatalogue.ModelOf("vfx_bfp_hit")!.Parts);
+    }
+
+    [Theory]
+    [InlineData("not json")]
+    [InlineData("[1,2]")]
+    public void ModelsThatAreNotAJsonObjectThrow(string json)
+    {
+        Assert.ThrowsAny<JsonException>(() => ModCatalogue.TakeModels(json));
+    }
+
+    [Fact]
+    public void TheModelsAreKeptWithTheCatalogue()
+    {
+        ModCatalogue.Take(Report(), Vanilla);
+        string models = $$"""{"bfp_finewall":{{ModelJson("1,1,1", PartJson("wall", 24, 0, "fine_wood"))}}}""";
+        ModCatalogue.TakeModels(models);
+        DateTime written = File.GetLastWriteTimeUtc(ModCatalogue.FilePath);
+
+        // The same again: taken, nothing written.
+        Assert.Equal(1, ModCatalogue.TakeModels(models));
+        Assert.Equal(written, File.GetLastWriteTimeUtc(ModCatalogue.FilePath));
+        ModCatalogue.Forget();
+        ModCatalogue.Load();
+
+        Assert.Equal("wall", ModCatalogue.ModelOf("bfp_finewall")!.Parts[0].Mesh);
+    }
+
+    [Fact]
+    public void ANewerReportKeepsTheModelsThereWere()
+    {
+        ModCatalogue.Take(Report(), Vanilla);
+        ModCatalogue.TakeModels($$"""{"bfp_finewall":{{ModelJson("1,1,1", PartJson("wall", 24, 0, "fine_wood"))}}}""");
+
+        ModCatalogue.Take(Report("[[\"Wood\",2,1]]"), Vanilla);
+
+        Assert.Equal("wall", ModCatalogue.ModelOf("bfp_finewall")!.Parts[0].Mesh);
     }
 
     [Fact]

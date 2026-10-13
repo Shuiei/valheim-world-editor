@@ -158,8 +158,20 @@ object comes from (with Jötunn installed, which knows; else "From a mod").
 
 What the editor learns is kept (`mod-catalogue.json` in the editor's data folder), so a modded
 server's world opened afterwards from its files, offline, shows them too. Each connection adds to it;
-a mod's newer pieces replace their older entries. The mods' own models are not drawn yet. Needs
-WorldEditorBridge 1.26.0 or newer; with an older one the world opens as before.
+a mod's newer pieces replace their older entries. Needs WorldEditorBridge 1.26.0 or newer; with an
+older one the world opens as before.
+
+Their models are drawn as in game (WorldEditorBridge 1.27.0 or newer): the game tells what it draws
+of each mod object, and the editor finds those meshes, materials and textures in the mods' own
+files, which it reads from your Valheim folder and your mod manager profiles (the same mods must be
+installed there, as players need them anyway), else in Valheim's. The first time, the mods' bundles
+are copied out of their DLLs into the editor's data folder (`mod-bundles`, a few seconds; again only
+when a mod changes). Meshes a mod builds in code while the game runs (ValheimRAFT's sails, for
+example) cannot be found and are not drawn, and crunched textures (OdinsKingdom's stone, for
+example) are not read yet: those pieces show untextured.
+
+The Workshop's **Mods** tab lists one mod's pieces at a time: choose the mod in the row under the
+tabs (each with its number of pieces). At most 300 pieces show at once; search to find the others.
 
 ## Undo after applying
 

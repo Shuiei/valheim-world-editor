@@ -76,8 +76,20 @@ public static class UnityTypes
     private static UnityField Aabb(string name) => Struct("AABB", name, Vector3("m_Center"), Vector3("m_Extent"));
 
     /// <summary>
-    /// A mesh: its name, submeshes, index format and buffer, vertex data (channels and bytes), compressed vertices,
-    /// bounds and data kept out of it.
+    /// Numbers packed in bits (Unity's PackedBitVector): how many, their range and start, the bits, bits per number.
+    /// </summary>
+    private static UnityField PackedFloats(string name) =>
+        Struct("PackedBitVector", name, Of("unsigned int", "m_NumItems"), Of("float", "m_Range"), Of("float", "m_Start"), List("m_Data", Of("UInt8", "data"), align: true), Of("UInt8", "m_BitSize", align: true));
+
+    /// <summary>
+    /// Integers packed in bits (Unity's PackedBitVector without range): how many, the bits, bits per number.
+    /// </summary>
+    private static UnityField PackedInts(string name) =>
+        Struct("PackedBitVector", name, Of("unsigned int", "m_NumItems"), List("m_Data", Of("UInt8", "data"), align: true), Of("UInt8", "m_BitSize", align: true));
+
+    /// <summary>
+    /// A mesh: its name, submeshes, index format and buffer, vertex data (channels and bytes), compressed mesh
+    /// (positions, uv, normals, their signs and triangles packed in bits), bounds and data kept out of it.
     /// </summary>
     public static readonly UnityField Mesh = Struct("Mesh", "Base",
         Text("m_Name"),
@@ -95,7 +107,8 @@ public static class UnityTypes
             Of("unsigned int", "m_VertexCount"),
             List("m_Channels", Struct("ChannelInfo", "data", Of("UInt8", "stream"), Of("UInt8", "offset"), Of("UInt8", "format"), Of("UInt8", "dimension"))),
             Bytes("m_DataSize")),
-        Struct("CompressedMesh", "m_CompressedMesh", Struct("PackedBitVector", "m_Vertices", Of("unsigned int", "m_NumItems"))),
+        Struct("CompressedMesh", "m_CompressedMesh",
+            PackedFloats("m_Vertices"), PackedFloats("m_UV"), PackedFloats("m_Normals"), PackedInts("m_NormalSigns"), PackedInts("m_Triangles")),
         Aabb("m_LocalAABB"),
         StreamData());
 
