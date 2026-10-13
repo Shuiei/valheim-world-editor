@@ -80,147 +80,162 @@ public sealed class FakeGame : IDisposable
             {
                 return;
             }
-            byte[] body = [];
-            string type = "application/json";
-            int status = ctx.Request.Headers["X-Bridge-Token"] == Token ? 200 : 401;
-            string path = ctx.Request.Url!.AbsolutePath;
-            try
+            // Each request on its own: a held one (HoldTerrain) or a broken connection never keeps the others
+            // from being answered.
+            _ = Task.Run(() => Answer(ctx));
+        }
+    }
+
+    /// <summary>One request, answered as the plugin would.</summary>
+    private async Task Answer(HttpListenerContext ctx)
+    {
+        byte[] body = [];
+        string type = "application/json";
+        int status = ctx.Request.Headers["X-Bridge-Token"] == Token ? 200 : 401;
+        string path = ctx.Request.Url!.AbsolutePath;
+        try
+        {
+            if (status != 200)
             {
-                if (status != 200)
+                body = Encoding.UTF8.GetBytes("{\"error\":\"token\"}");
+            }
+            else if (Fail.TryGetValue(path, out int failed))
+            {
+                status = failed;
+                body = Encoding.UTF8.GetBytes("broken");
+            }
+            else if (path == "/status")
+            {
+                body = Encoding.UTF8.GetBytes("{\"plugin\":\"0.3.0\",\"world\":\"CITest\",\"players\":2}");
+            }
+            else if (path == "/snapshot")
+            {
+                Interlocked.Increment(ref _snapshots);
+                body = _snapshot;
+                type = "application/octet-stream";
+            }
+            else if (path == "/players")
+            {
+                body = Encoding.UTF8.GetBytes(Players);
+            }
+            else if (path == "/terrain")
+            {
+                using var r = new BinaryReader(ctx.Request.InputStream);
+                int n = r.ReadInt32();
+                lock (Terrain)
                 {
-                    body = Encoding.UTF8.GetBytes("{\"error\":\"token\"}");
-                }
-                else if (Fail.TryGetValue(path, out int failed))
-                {
-                    status = failed;
-                    body = Encoding.UTF8.GetBytes("broken");
-                }
-                else if (path == "/status")
-                {
-                    body = Encoding.UTF8.GetBytes("{\"plugin\":\"0.3.0\",\"world\":\"CITest\",\"players\":2}");
-                }
-                else if (path == "/snapshot")
-                {
-                    Interlocked.Increment(ref _snapshots);
-                    body = _snapshot;
-                    type = "application/octet-stream";
-                }
-                else if (path == "/players")
-                {
-                    body = Encoding.UTF8.GetBytes(Players);
-                }
-                else if (path == "/terrain")
-                {
-                    using var r = new BinaryReader(ctx.Request.InputStream);
-                    int n = r.ReadInt32();
-                    lock (Terrain)
-                    {
-                        for (int i = 0; i < n; i++)
-                        {
-                            int x = r.ReadInt32(), z = r.ReadInt32();
-                            r.ReadBytes(r.ReadInt32());
-                            Terrain.Add((x, z));
-                        }
-                    }
-                    if (HoldTerrain is { } hold)
-                    {
-                        TerrainArrived.TrySetResult();
-                        await hold.Task;
-                    }
-                    body = Encoding.UTF8.GetBytes($"{{\"zones\":{n}}}");
-                }
-                else if (path == "/objects")
-                {
-                    using var r = new BinaryReader(ctx.Request.InputStream);
-                    int destroy = r.ReadInt32();
-                    for (int i = 0; i < destroy; i++)
-                    {
-                        r.ReadInt64();
-                        r.ReadUInt32();
-                    }
-                    int create = r.ReadInt32();
-                    var ids = new List<string>();
-                    for (int i = 0; i < create; i++)
-                    {
-                        r.ReadBytes(r.ReadInt32());
-                        ids.Add($"\"77:{_next++}\"");
-                    }
-                    lock (ObjectCalls)
-                    {
-                        ObjectCalls.Add((destroy, create));
-                    }
-                    body = Encoding.UTF8.GetBytes($"{{\"destroyed\":{destroy - Missing},\"missing\":{Missing},\"created\":[{string.Join(",", ids)}]}}");
-                }
-                else if (path is "/watch" or "/zone")
-                {
-                    using var r = new BinaryReader(ctx.Request.InputStream);
-                    int n = r.ReadInt32();
-                    var asked = new List<(int, int)>();
                     for (int i = 0; i < n; i++)
                     {
-                        asked.Add((r.ReadInt32(), r.ReadInt32()));
-                    }
-                    lock (Zones)
-                    {
-                        if (path == "/watch")
-                        {
-                            // Zones not set are left out (as the plugin leaves out zones outside the world):
-                            // the editor then has nothing to read again there.
-                            body = Encoding.UTF8.GetBytes("{\"zones\":[" + string.Join(",", asked.Where(Zones.ContainsKey).Select(z => $"[{z.Item1},{z.Item2},\"{Zones[z].Digest}\"]")) + "]}");
-                        }
-                        else
-                        {
-                            Interlocked.Increment(ref _zoneReads);
-                            var all = asked.SelectMany(z => Zones.TryGetValue(z, out var e) ? e.Objects : []).ToList();
-                            using var raw = new MemoryStream();
-                            using (var w = new BinaryWriter(raw, Encoding.UTF8, leaveOpen: true))
-                            {
-                                w.Write(all.Count);
-                                foreach (var (user, id, bytes) in all)
-                                {
-                                    w.Write(user);
-                                    w.Write(id);
-                                    w.Write(bytes.Length);
-                                    w.Write(bytes);
-                                }
-                            }
-                            using var packed = new MemoryStream();
-                            using (var gz = new System.IO.Compression.GZipStream(packed, System.IO.Compression.CompressionLevel.Fastest, leaveOpen: true))
-                            {
-                                gz.Write(raw.ToArray());
-                            }
-                            body = packed.ToArray();
-                            type = "application/octet-stream";
-                        }
+                        int x = r.ReadInt32(), z = r.ReadInt32();
+                        r.ReadBytes(r.ReadInt32());
+                        Terrain.Add((x, z));
                     }
                 }
-                else if (path == "/zones/reset")
+                if (HoldTerrain is { } hold)
                 {
-                    using var r = new BinaryReader(ctx.Request.InputStream);
-                    int n = r.ReadInt32();
-                    lock (Resets)
-                    {
-                        for (int i = 0; i < n; i++)
-                        {
-                            Resets.Add((r.ReadInt32(), r.ReadInt32(), r.ReadBoolean(), r.ReadBoolean()));
-                        }
-                    }
-                    body = Encoding.UTF8.GetBytes($"{{\"zones\":{n},\"destroyed\":0,\"locations\":0}}");
+                    TerrainArrived.TrySetResult();
+                    await hold.Task;
                 }
-                else
-                {
-                    status = 404;
-                }
+                body = Encoding.UTF8.GetBytes($"{{\"zones\":{n}}}");
             }
-            catch (Exception ex)
+            else if (path == "/objects")
             {
-                status = 500;
-                body = Encoding.UTF8.GetBytes(ex.Message);
+                using var r = new BinaryReader(ctx.Request.InputStream);
+                int destroy = r.ReadInt32();
+                for (int i = 0; i < destroy; i++)
+                {
+                    r.ReadInt64();
+                    r.ReadUInt32();
+                }
+                int create = r.ReadInt32();
+                var ids = new List<string>();
+                for (int i = 0; i < create; i++)
+                {
+                    r.ReadBytes(r.ReadInt32());
+                    ids.Add($"\"77:{Interlocked.Increment(ref _next) - 1}\"");
+                }
+                lock (ObjectCalls)
+                {
+                    ObjectCalls.Add((destroy, create));
+                }
+                body = Encoding.UTF8.GetBytes($"{{\"destroyed\":{destroy - Missing},\"missing\":{Missing},\"created\":[{string.Join(",", ids)}]}}");
             }
+            else if (path is "/watch" or "/zone")
+            {
+                using var r = new BinaryReader(ctx.Request.InputStream);
+                int n = r.ReadInt32();
+                var asked = new List<(int, int)>();
+                for (int i = 0; i < n; i++)
+                {
+                    asked.Add((r.ReadInt32(), r.ReadInt32()));
+                }
+                lock (Zones)
+                {
+                    if (path == "/watch")
+                    {
+                        // Zones not set are left out (as the plugin leaves out zones outside the world):
+                        // the editor then has nothing to read again there.
+                        body = Encoding.UTF8.GetBytes("{\"zones\":[" + string.Join(",", asked.Where(Zones.ContainsKey).Select(z => $"[{z.Item1},{z.Item2},\"{Zones[z].Digest}\"]")) + "]}");
+                    }
+                    else
+                    {
+                        Interlocked.Increment(ref _zoneReads);
+                        var all = asked.SelectMany(z => Zones.TryGetValue(z, out var e) ? e.Objects : []).ToList();
+                        using var raw = new MemoryStream();
+                        using (var w = new BinaryWriter(raw, Encoding.UTF8, leaveOpen: true))
+                        {
+                            w.Write(all.Count);
+                            foreach (var (user, id, bytes) in all)
+                            {
+                                w.Write(user);
+                                w.Write(id);
+                                w.Write(bytes.Length);
+                                w.Write(bytes);
+                            }
+                        }
+                        using var packed = new MemoryStream();
+                        using (var gz = new System.IO.Compression.GZipStream(packed, System.IO.Compression.CompressionLevel.Fastest, leaveOpen: true))
+                        {
+                            gz.Write(raw.ToArray());
+                        }
+                        body = packed.ToArray();
+                        type = "application/octet-stream";
+                    }
+                }
+            }
+            else if (path == "/zones/reset")
+            {
+                using var r = new BinaryReader(ctx.Request.InputStream);
+                int n = r.ReadInt32();
+                lock (Resets)
+                {
+                    for (int i = 0; i < n; i++)
+                    {
+                        Resets.Add((r.ReadInt32(), r.ReadInt32(), r.ReadBoolean(), r.ReadBoolean()));
+                    }
+                }
+                body = Encoding.UTF8.GetBytes($"{{\"zones\":{n},\"destroyed\":0,\"locations\":0}}");
+            }
+            else
+            {
+                status = 404;
+            }
+        }
+        catch (Exception ex)
+        {
+            status = 500;
+            body = Encoding.UTF8.GetBytes(ex.Message);
+        }
+        try
+        {
             ctx.Response.StatusCode = status;
             ctx.Response.ContentType = type;
             await ctx.Response.OutputStream.WriteAsync(body);
             ctx.Response.Close();
+        }
+        // The editor gave up on the answer (its connection closed), or the game was disposed meanwhile.
+        catch (Exception ex) when (ex is HttpListenerException or IOException or ObjectDisposedException)
+        {
         }
     }
 
