@@ -87,7 +87,8 @@ them.
 2. Pick **Dungeon** on the tool rail. The panel lists the area's dungeons, with their kind and number
    of rooms.
 3. **Go inside** takes the view up to the dungeon and cuts its roofs away, so you look down into its
-   rooms. The **Cut** slider sets how high above the floor the cut is; 0 shows the roofs again.
+   rooms. The **Cut** slider sets how high above the floor the cut is; its right end shows the roofs again,
+   its left end cuts at the floor.
 
 Up there the camera no longer follows the ground: orbit, slide and fly around the rooms as usual.
 **Dungeon rooms** in the View panel shows or hides them.

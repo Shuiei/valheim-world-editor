@@ -78,6 +78,11 @@ public class DungeonPanelInfoTests
             Assert.Equal(4, p.CutSlider.Value);
             float? cut = At.Y - 3 + 4;
             Assert.Equal(cut, w.View.CutY);
+            // The left end cuts at the floor, the right end shows the roofs.
+            p.CutSlider.Value = 0;
+            Assert.Equal(At.Y - 3, w.View.CutY);
+            p.CutSlider.Value = DungeonPanel.CutOff;
+            Assert.Null(w.View.CutY);
             // Another tool: the cut off.
             w.Tools.ChooseMode(ToolMode.Select);
             Assert.Null(w.View.CutY);
