@@ -104,7 +104,8 @@ public sealed class GameBundles
     /// <param name="Networked">A ZNetView: a saved, networked object.</param>
     /// <param name="Creature">A Character: a creature.</param>
     /// <param name="Item">An ItemDrop: an item.</param>
-    public sealed record Kind(bool Networked, bool Creature, bool Item);
+    /// <param name="Location">A Location: a place the world generator puts (a ruin, a camp, an altar...).</param>
+    public sealed record Kind(bool Networked, bool Creature, bool Item, bool Location = false);
 
     /// <summary>
     /// The lock all readers take: one reader at a time.
@@ -263,7 +264,7 @@ public sealed class GameBundles
             }
             try
             {
-                bool znv = false, creature = false, item = false;
+                bool znv = false, creature = false, item = false, location = false;
                 // A root that cannot be read (its bundle without type trees): nothing known of it.
                 foreach (var (t, _, f) in Read(at.Bundle, at.PathId) is { } root ? Components(at.Bundle, root) : [])
                 {
@@ -274,8 +275,9 @@ public sealed class GameBundles
                     znv |= Has(f, "m_persistent") && Has(f, "m_distant") && Has(f, "m_type");
                     creature |= Has(f, "m_runSpeed");
                     item |= Has(f, "m_itemData");
+                    location |= Has(f, "m_exteriorRadius");
                 }
-                return _kinds[name] = new Kind(znv, creature, item);
+                return _kinds[name] = new Kind(znv, creature, item, location);
             }
             finally
             {
@@ -642,13 +644,13 @@ public sealed class GameBundles
 
     /// <summary>
     /// A prefab's model: what the game draws of it. Left out: the worn and broken looks of pieces
-    /// (WearNTear), lower levels of detail, inactive objects, disabled renderers; for dungeon rooms also
-    /// their networked objects (saved objects of their own) and random parts not there half the time.
-    /// Skinned meshes (animated stations) are drawn in their bind pose at the renderer.
+    /// (WearNTear), lower levels of detail, inactive objects, disabled renderers; for dungeon rooms and
+    /// locations also their networked objects (saved objects of their own) and random parts not there half
+    /// the time. Skinned meshes (animated stations) are drawn in their bind pose at the renderer.
     /// </summary>
     /// <param name="name">The prefab name.</param>
-    /// <param name="room">A dungeon room: leave out its networked objects and its random parts not there half the
-    /// time.</param>
+    /// <param name="room">A dungeon room or a location: leave out its networked objects and its random parts not
+    /// there half the time.</param>
     /// <returns>The model, or null when the game has no such prefab.</returns>
     public Model? LoadModel(string name, bool room)
     {

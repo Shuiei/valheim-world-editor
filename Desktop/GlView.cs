@@ -871,7 +871,7 @@ public sealed class GlView : OpenGlControlBase
 
     /// <summary>
     /// Models at places that are not things of the scene, one draw per model part: see-through (ghost:
-    /// the Place and Paste previews) or solid (dungeon rooms). Kinds whose model is not read yet, or that
+    /// the Place and Paste previews) or solid (dungeon rooms, locations' parts). Kinds whose model is not read yet, or that
     /// have none, are skipped (and left out of <paramref name="drawn"/>).
     /// </summary>
     private unsafe void DrawInstances(WorldScene s, IEnumerable<(int Prefab, Vector3 Position, Vector3 Rotation, float Scale)> shown, bool ghost, HashSet<int>? drawn = null)
@@ -971,6 +971,19 @@ public sealed class GlView : OpenGlControlBase
         if (shown.Count > 0)
         {
             DrawInstances(s, shown, ghost: false);
+        }
+    }
+
+    /// <summary>
+    /// The parts of the area's locations that are not saved objects (see LocationParts), drawn like objects with the
+    /// Ruins &amp; structures kind; they cannot be picked.
+    /// </summary>
+    private void DrawLocations(WorldScene s)
+    {
+        var shown = LocationParts.Of(s);
+        if (shown.Count > 0)
+        {
+            DrawInstances(s, shown.Select(l => (l.Location, l.Position, l.Rotation, 0f)), ghost: false);
         }
     }
 
@@ -1909,6 +1922,10 @@ public sealed class GlView : OpenGlControlBase
             if (_shown[(int)ObjectKind.Dungeons])
             {
                 DrawRooms(s);
+            }
+            if (_shown[(int)ObjectKind.Ruins])
+            {
+                DrawLocations(s);
             }
             // The water before the previews and the tools' marks, so they show over it.
             if (ShowWater)

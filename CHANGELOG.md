@@ -4,7 +4,7 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
-## v1.24.2 — unreleased
+## v1.25.1 — unreleased
 
 ### Fixed
 - **A ruin you built onto shows whole** (#115): the stones of a ruined tower patched with wood
@@ -13,6 +13,16 @@ the plugin is unchanged in versions without that part.
   pieces, and the ones touching those, now count as your building: under **Your buildings** in the
   3D view and drawn with **Show buildings** on the map. The map also has **Show ruins** (off at
   first) to draw every ruin, fainter.
+
+## v1.25.0 — unreleased
+
+### Added
+- **The game's locations are drawn whole**: the parts of a location that are not objects of the save
+  (a crypt entrance's rocks, the trader's camp, a boss's altar, a troll cave's walls, the rune tablets
+  of ruins) show in the 3D view with **Ruins & structures**. The save keeps only a marker for each
+  location, and the game makes these parts again from it each time the zone loads, so they cannot be
+  picked or changed. A part the game keeps only by chance is drawn when it is there at least half the
+  time.
 
 ## v1.24.1 — unreleased
 
