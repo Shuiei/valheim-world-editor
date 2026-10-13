@@ -265,6 +265,9 @@ public class KeysAndMouseTests
         w.Tools.ChooseMode(ToolMode.Place);
         w.PlaceTool.Chosen.Clear();
         w.PlaceTool.Chosen.Add("Beech1");
+        // The window's Place panel took the kinds remembered by earlier tests (pieces from the Workshop turn
+        // One at a time and End to end on): set again for the kinds chosen here, as choosing them in the panel does.
+        w.PlaceTool.AutoSnap();
         float d = w.View.Camera.Distance;
         w.MouseWheel(screen(64, 64), new Avalonia.Vector(0, -1), RawInputModifiers.Alt);
         Assert.Equal(1, w.PlaceTool.Rotation, 3);
