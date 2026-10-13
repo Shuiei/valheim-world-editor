@@ -47,7 +47,7 @@ public sealed class ModCatalogueTests : IDisposable
     /// A report as the plugin writes it: a vanilla fence (as the game has it, changed by a mod), a modded wall with its
     /// piece, cost and mod, and a modded effect (not saved: no piece).
     /// </summary>
-    private static string Report(string wallCost = "[[\"FineWood\",4,1]]") => $$"""
+    private static string Report(string wallCost = "[[\"BFP_Plank\",4,1]]") => $$"""
         {
           "version": 1,
           "prefabs": {
@@ -64,7 +64,7 @@ public sealed class ModCatalogueTests : IDisposable
               "wood_fence": {"n":"Fence","r":[]},
               "bfp_finewall": {"n":"Fine wood wall","r":{{wallCost}},"st":"Workbench"}
             },
-            "items": {"FineWood": "Fine Wood", "Wood": "Wood"}
+            "items": {"BFP_Plank": "Fine Plank", "Wood": "Wood"}
           },
           "mods": {"bfp_finewall": "FineWoodPieces", "wood_fence": "SomeMod"}
         }
@@ -97,7 +97,7 @@ public sealed class ModCatalogueTests : IDisposable
         Assert.Equal("FineWoodPieces", ModCatalogue.ModOf("bfp_finewall"));
         // Only the items the mods' costs take are kept.
         var kept = JsonNode.Parse(File.ReadAllText(ModCatalogue.FilePath))!;
-        Assert.Equal(["FineWood"], kept["cost"]!["items"]!.AsObject().Select(kv => kv.Key));
+        Assert.Equal(["BFP_Plank"], kept["cost"]!["items"]!.AsObject().Select(kv => kv.Key));
     }
 
     [Fact]
@@ -237,7 +237,7 @@ public sealed class ModCatalogueTests : IDisposable
         Assert.Equal("BFP_FineHammer", piece.Tool);
         Assert.Equal(2, piece.Snaps.Length);
         Assert.Equal("Fine wood wall", PieceCost.PieceName("bfp_finewall"));
-        Assert.Equal("Fine Wood", PieceCost.ItemName("FineWood"));
+        Assert.Equal("Fine Plank", PieceCost.ItemName("BFP_Plank"));
         // Not saved: known by name, not offered for placing.
         Assert.Null(PrefabCatalog.Get(StableHash.Of("vfx_bfp_hit")));
         Assert.Equal("vfx_bfp_hit", PrefabCatalog.NameOf(StableHash.Of("vfx_bfp_hit")));
