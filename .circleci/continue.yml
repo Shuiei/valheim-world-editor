@@ -111,9 +111,12 @@ commands:
             # A test stuck 5 minutes ends the run with a dump (tests/testconfig.json). On main only, the
             # coverage of this container's share, kept for the coverage job: it makes the tests several
             # times slower, so a test is stuck after 10 minutes there (the world generator's tests share
-            # the container's two cores with the others for minutes; one took 300 s on main).
+            # the container's two cores with the others for minutes; one took 300 s on main). VWE_COVERAGE
+            # tells the tests so: the editor's pictures may wait longer (EditorProcess), speeds are not
+            # checked (SeedPreviewTests).
             coverage=""
             if [ "$CIRCLE_BRANCH" = main ]; then
+              export VWE_COVERAGE=1
               coverage="--coverage --coverage-output-format cobertura --coverage-settings $PWD/tests/coverage.runsettings"
               coverage+=" --coverage-output /tmp/coverage/<< parameters.results >>-$CIRCLE_NODE_INDEX/coverage.cobertura.xml"
               coverage+=" --hangdump-timeout 10m"
