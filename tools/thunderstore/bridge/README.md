@@ -129,8 +129,9 @@ In `BepInEx/config/Tie.WorldEditorBridge.cfg`:
 
 ## Support
 
-The editor and this mod are free and open source. If they saved you some work, you can
-[buy me a coffee](https://buymeacoffee.com/tieboo).
+The editor and this mod are free and open source. If they saved you some work:
+
+[![Buy me a coffee](https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png)](https://buymeacoffee.com/tieboo)
 
 ## License
 
