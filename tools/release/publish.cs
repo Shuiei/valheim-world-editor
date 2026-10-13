@@ -351,7 +351,9 @@ static async Task PublishNexus(HttpClient http, JsonNode site, Release release, 
         var versions = (await V3(http, Get($"{url}/v3/mod-files/{modFile}/versions", auth)))!["versions"]!.AsArray();
         if (versions.Any(v => (string?)v!["version"] == release.Version && (string?)v["category"] is not ("removed" or "archived")))
         {
-            throw new InvalidOperationException($"{Name}: file {modFile} has a version {release.Version} already. Raise VERSION: no site takes a version twice.");
+            // An earlier run that stopped part way published this one: the rerun does the rest.
+            Console.WriteLine($"{Name}: file {modFile} has version {release.Version} already (an earlier run): skipped.");
+            continue;
         }
 
         // Nexus takes .zip, .rar and .7z only; the plugin goes where Vortex and a hand install put it.
@@ -364,6 +366,11 @@ static async Task PublishNexus(HttpClient http, JsonNode site, Release release, 
         };
         uploads.Add((file, archive));
         Console.WriteLine($"{Name}: {Path.GetFileName(archive)} ({new FileInfo(archive).Length / 1024} KiB) → file {modFile}, \"{Template(file, "name", release)}\".");
+    }
+
+    if (uploads.Count == 0)
+    {
+        throw new InvalidOperationException($"{Name}: every file has a version {release.Version} already. Raise VERSION: no site takes a version twice.");
     }
 
     if (dryRun)
