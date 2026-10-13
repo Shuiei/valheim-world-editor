@@ -56,7 +56,8 @@ internal sealed class BundleModels : ModelStore.ISource
 
     /// <summary>
     /// World objects with a model of their own: saved (networked) objects that are not build pieces,
-    /// creatures, items or ragdolls; also runestones (their location's model) and tameable creatures.
+    /// creatures, items or ragdolls; also locations (runestones, and the parts of ruins, camps and altars the
+    /// game makes again from a location proxy, see LocationParts) and tameable creatures.
     /// </summary>
     /// <returns>The prefab's name, or null when it is not drawn as an object model.</returns>
     public string? ObjectName(int prefab) => _objectNames.GetOrAdd(prefab, p =>
@@ -65,14 +66,18 @@ internal sealed class BundleModels : ModelStore.ISource
         {
             return null;
         }
-        bool extra = name.StartsWith("Runestone_", StringComparison.Ordinal) || kind.Creature && Tameable.Contains(name);
+        bool extra = kind.Location || name.StartsWith("Runestone_", StringComparison.Ordinal) || kind.Creature && Tameable.Contains(name);
         return extra || kind.Networked && !kind.Creature && !kind.Item && !name.EndsWith("_ragdoll", StringComparison.Ordinal) ? name : null;
     });
 
-    /// <summary>A prefab's model, its parts placed in the view's space; dungeon rooms are read as rooms. Null: none.</summary>
+    /// <summary>
+    /// A prefab's model, its parts placed in the view's space; dungeon rooms and locations are read as rooms (without
+    /// their saved objects, drawn as objects of their own). Null: none.
+    /// </summary>
     public ModelStore.Model? Model(string name)
     {
-        if (_game.LoadModel(name, room: Editing.Dungeons.RoomOf(name) != null) is not { } m)
+        bool room = Editing.Dungeons.RoomOf(name) != null || _game.KindOf(name) is { Location: true };
+        if (_game.LoadModel(name, room) is not { } m)
         {
             return null;
         }

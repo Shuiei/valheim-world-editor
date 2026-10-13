@@ -4,6 +4,16 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.25.0 — unreleased
+
+### Added
+- **The game's locations are drawn whole**: the parts of a location that are not objects of the save
+  (a crypt entrance's rocks, the trader's camp, a boss's altar, a troll cave's walls, the rune tablets
+  of ruins) show in the 3D view with **Ruins & structures**. The save keeps only a marker for each
+  location, and the game makes these parts again from it each time the zone loads, so they cannot be
+  picked or changed. A part the game keeps only by chance is drawn when it is there at least half the
+  time.
+
 ## v1.24.0 — unreleased
 
 ### Added
