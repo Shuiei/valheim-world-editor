@@ -1,7 +1,7 @@
 # Notice
 
 Valheim World Editor and WorldEditorBridge are under the [MIT License](LICENSE), Copyright (c) 2026
-Shuiei, except for the parts below.
+Thibault Bene, except for the parts below.
 
 ## Valheim's data
 
