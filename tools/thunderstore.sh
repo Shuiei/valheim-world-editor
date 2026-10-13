@@ -6,7 +6,7 @@
 # repository's LICENSE (MIT).
 # The same zip goes to the GitHub release, Thunderstore and Hexium; the editor itself is on GitHub
 # releases only (Thunderstore does not host programs).
-# Usage: tools/thunderstore.sh <dist>   (needs the .NET 10 SDK and zip; the plugin builds against the
+# Usage: ValheimDir=<server> tools/thunderstore.sh <dist>   (needs the .NET 10 SDK and zip; the plugin builds against the
 # game's and BepInEx's DLLs, see its project file)
 # Upload the zip at https://thunderstore.io/c/valheim/create/
 set -euo pipefail
@@ -16,6 +16,7 @@ ts="$repo/tools/thunderstore"
 work=$(mktemp -d); trap 'rm -rf "$work"' EXIT
 mkdir -p "$dist"
 
+[[ -n ${ValheimDir:-} ]] || { echo "Set ValheimDir to a Valheim dedicated server's folder (and BepInExDir if its BepInEx is elsewhere): the plugin builds against their DLLs" >&2; exit 1; }
 version=$(tr -d '[:space:]' < "$repo/VERSION")
 [[ $version =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "VERSION is not Major.Minor.Patch" >&2; exit 1; }
 
