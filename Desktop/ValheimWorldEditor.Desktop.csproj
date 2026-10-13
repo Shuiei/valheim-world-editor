@@ -22,7 +22,7 @@
     <Description>A world editor for Valheim: shape the ground, build, place and move objects, edit dungeons, offline or live.</Description>
     <Company>Shuiei</Company>
     <Authors>Shuiei</Authors>
-    <Copyright>Copyright (c) 2026 Shuiei</Copyright>
+    <Copyright>Copyright (c) 2026 Thibault Bene</Copyright>
   </PropertyGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="Desktop.Tests" />
