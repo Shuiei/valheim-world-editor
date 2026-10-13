@@ -393,6 +393,11 @@ public sealed class SelectTool
         int onObjects = 0;
         // A linked group keeps its height (a ship stays afloat): its parts do not drop.
         var dropping = m.Items.Where(it => !it.Linked).ToList();
+        if (dropping.Count == 0)
+        {
+            Message?.Invoke($"Nothing to drop: a {m.Noun} keeps its height.", true);
+            return;
+        }
         foreach (var it in dropping)
         {
             var p = Target(m, it);
@@ -453,7 +458,9 @@ public sealed class SelectTool
         {
             return null;
         }
-        var things = _view.Selected.Where(i => i < s.Things.Count).Select(i => s.Things[i]).Where(t => !t.Gone).ToList();
+        // With the rest of the linked groups (a ship), as a move takes them: the middle is the whole group's.
+        var chosen = Session?.WithLinked(_view.Selected).Indices ?? [.. _view.Selected];
+        var things = chosen.Where(i => i >= 0 && i < s.Things.Count).Select(i => s.Things[i]).Where(t => !t.Gone).ToList();
         if (things.Count == 0)
         {
             return null;

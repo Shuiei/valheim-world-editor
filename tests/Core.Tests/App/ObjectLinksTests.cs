@@ -10,8 +10,9 @@ namespace WorldEditor.Tests;
 /// Objects mods link into one, by ValheimRAFT's vehicles (the manifest the editor ships for it): a link read from an
 /// object's data (and set over by new values), a part drawn at its offset in its root's frame (on a swivel, in the
 /// swivel's), turned and leaning as the mod builds it, a part whose parent is missing or whose chain loops left where it
-/// is stored, and a group's parts found from any of them.
+/// is stored, and a group's parts found from any of them. Runs alone (the manifests' rules are shared).
 /// </summary>
+[Collection("DataDir")]
 public class ObjectLinksTests
 {
     private const int Root = 10, Swivel = 11;

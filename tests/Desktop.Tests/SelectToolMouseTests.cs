@@ -232,6 +232,13 @@ public class SelectToolMouseTests
         v.W.View.Select([]);
         v.Click(40, 38);
         Assert.Equal([ship[1]], v.Selected);
+        // Exact place shows the whole ship's middle (as a move takes it); End drops nothing (a ship keeps its height).
+        var (x, y, z, _, count) = v.Tool.Where()!.Value;
+        Assert.Equal((5, 41.6f, 30f, 39.8f), (count, MathF.Round(x, 3), MathF.Round(y, 3), MathF.Round(z, 3)));
+        v.Tool.Drop();
+        Assert.Equal("Nothing to drop: a vehicle keeps its height.", said);
+        v.Tool.Cancel();
+        Assert.All(ship, i => Assert.False(v.S.Scene.Things[i].Gone));
         v.Drag(false, (40, 38), (43, 38), (45, 38));
         Assert.All(ship, i => Assert.True(v.S.Scene.Things[i].Gone));
         Assert.StartsWith("Moved 5 object(s) (a whole vehicle", said);

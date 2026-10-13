@@ -238,7 +238,8 @@ public sealed class ModManifestsTests : IDisposable
         Assert.True(ModManifests.IsHidden("p"));
     }
 
-    // ValheimRAFT ships no manifest; the editor's own says how its vehicles link. One the mod ships wins, however old.
+    // ValheimRAFT ships no manifest; the editor's own says how its vehicles link. One the mod ships wins, however old,
+    // and takes the shipped rule's place: first, before another mod's rule read earlier.
     [Fact]
     public void TheEditorShipsValheimRaftsLinksAndTheModsOwnWins()
     {
@@ -260,9 +261,13 @@ public sealed class ModManifestsTests : IDisposable
             }
             """);
         File.SetLastWriteTimeUtc(own, new DateTime(2001, 1, 1, 0, 0, 0, DateTimeKind.Utc));
+        File.SetLastWriteTimeUtc(Manifest("Carts", Carts), new DateTime(2000, 1, 1, 0, 0, 0, DateTimeKind.Utc));
         ModManifests.Refresh(Settings);
 
-        Assert.Contains(StableHash.Of("TestReference"), Assert.Single(ObjectLinks.Current.Rules).ReferenceKeys);
+        var rules = ObjectLinks.Current.Rules;
+        Assert.Equal(2, rules.Count);
+        Assert.Contains(StableHash.Of("TestReference"), rules[0].ReferenceKeys);
+        Assert.Equal("cart", rules[1].Name);
         ModManifests.Forget();
         Assert.DoesNotContain(StableHash.Of("TestReference"), Assert.Single(ObjectLinks.Current.Rules).ReferenceKeys);
     }

@@ -537,16 +537,18 @@ public sealed class PasteTool
             }
         }
         g.NoLimit = limit;
+        // Each copy's groups made its own first: a part pasted without its root is an ordinary piece, dug for below.
+        var made = OwnGroups(add, copyStarts, linkIds ?? new HashSet<int>());
         if (ClearSite && Objects)
         {
-            var (dug, rect) = Clear(g, add, shaped, mask);
+            var (dug, rect) = Clear(g, made, shaped, mask);
             touched.AddRange(dug);
             if (dug.Count > 0)
             {
                 (bx0, bx1, bz0, bz1) = (Math.Min(bx0, rect.X0), Math.Max(bx1, rect.X1), Math.Min(bz0, rect.Z0), Math.Max(bz1, rect.Z1));
             }
         }
-        return (touched, (Math.Min(bx0, bx1) - 1, Math.Min(bz0, bz1) - 1, bx1 + 1, bz1 + 1), OwnGroups(add, copyStarts, linkIds ?? new HashSet<int>()));
+        return (touched, (Math.Min(bx0, bx1) - 1, Math.Min(bz0, bz1) - 1, bx1 + 1, bz1 + 1), made);
     }
 
     /// <summary>
@@ -583,10 +585,13 @@ public sealed class PasteTool
     {
         float ox = g.X0 * 64 - 32, oz = g.Z0 * 64 - 32;
         var to = new Dictionary<(int, int), float>();
-        foreach (var (o, _) in placed)
+        // A linked group (its parts, and what they hang on) does not stand on the ground: none is dug under it.
+        var links = placed.Select(p => ObjectLinks.With(null, p.O.Data)).ToList();
+        var held = links.Where(l => l is { Holder: not 0 }).Select(l => l!.Holder).ToHashSet();
+        for (int k = 0; k < placed.Count; k++)
         {
-            // A linked group does not stand on the ground: none is dug under it.
-            if (ObjectLinks.With(null, o.Data) != null)
+            var o = placed[k].O;
+            if (links[k] is { } l && (l.Holder != 0 || held.Contains(l.Id)))
             {
                 continue;
             }

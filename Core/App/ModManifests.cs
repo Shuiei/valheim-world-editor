@@ -64,6 +64,23 @@ public static class ModManifests
             })];
     });
 
+    /// <summary>
+    /// What the shipped manifests say, read once: each refresh starts from a copy, so their rules stay the same
+    /// instances (links read by them stay valid).
+    /// </summary>
+    private static readonly Lazy<Notes> ShippedOnce = new(() =>
+    {
+        var notes = new Notes([], [], []);
+        foreach (var (name, json) in Shipped.Value)
+        {
+            if (!Read(json, notes))
+            {
+                throw new InvalidDataException($"shipped mod manifest {name}: not a worldeditor.json this editor reads.");
+            }
+        }
+        return notes;
+    });
+
     /// <summary>What is in use, swapped in whole: at first, the shipped manifests'.</summary>
     private static volatile Notes _notes = ShippedNotes();
 
@@ -84,17 +101,11 @@ public static class ModManifests
     /// <summary>How the manifests say objects link into one (ObjectLinks).</summary>
     public static LinkSet Links => _notes.LinkSet;
 
-    /// <summary>What the shipped manifests say (a shipped one that cannot be read is a bug: it throws).</summary>
+    /// <summary>A copy of what the shipped manifests say (a shipped one that cannot be read is a bug: it throws).</summary>
     private static Notes ShippedNotes()
     {
-        var notes = new Notes([], [], []);
-        foreach (var (name, json) in Shipped.Value)
-        {
-            if (!Read(json, notes))
-            {
-                throw new InvalidDataException($"shipped mod manifest {name}: not a worldeditor.json this editor reads.");
-            }
-        }
+        var once = ShippedOnce.Value;
+        var notes = new Notes(new(once.Data), new(once.Prefabs), new(once.Links));
         notes.LinkSet = new LinkSet([.. notes.Links.Values]);
         return notes;
     }
@@ -193,7 +204,7 @@ public static class ModManifests
             {
                 if (e is JsonObject o && Link(o) is var (id, rule))
                 {
-                    notes.Links.Remove(id);
+                    // In place of one of the same id, where it stood: the first rule an object matches wins.
                     notes.Links[id] = rule;
                 }
             }
