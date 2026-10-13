@@ -122,6 +122,27 @@ public class UnityShimTests
         Assert.Equal(6f, less[S - 1]);
     }
 
+    // The ruins' pieces: builder-less objects the catalogue knows (not other objects, not deleted ones), packed as
+    // the built ones, with whether each is joined to a building.
+    [Fact]
+    public void TheMapsRuinPiecesSayWhichAreJoinedToABuilding()
+    {
+        var world = new TerrainEditor.Save.WorldSave { Directory = "none", SaveNumber = 1 };
+        int wall = TerrainEditor.Save.StableHash.Of("stone_wall_2x1"), beech = TerrainEditor.Save.StableHash.Of("Beech1");
+        world.Pieces.Add((1, TerrainEditor.Save.StableHash.Of("wood_wall_half"), new System.Numerics.Vector3(0, 30, 0), 0f));
+        world.Objects.Add((2, wall, new System.Numerics.Vector3(2, 30, 0), new System.Numerics.Vector3(0, 90, 0), System.Numerics.Vector3.One));
+        world.Objects.Add((3, wall, new System.Numerics.Vector3(100, 30, 0), System.Numerics.Vector3.Zero, System.Numerics.Vector3.One));
+        world.Objects.Add((4, wall, new System.Numerics.Vector3(102, 30, 0), System.Numerics.Vector3.Zero, System.Numerics.Vector3.One));
+        world.Objects.Add((5, beech, new System.Numerics.Vector3(1, 30, 0), System.Numerics.Vector3.Zero, System.Numerics.Vector3.One));
+        const int S = TerrainEditor.Terrain.PieceCatalog.Stride;
+        var (data, joined) = TerrainEditor.Terrain.PieceCatalog.EncodeRuins(world, [4]);
+        Assert.Equal(2 * S, data.Length);
+        var info = TerrainEditor.Terrain.PieceCatalog.Get(wall)!;
+        Assert.Equal(new[] { 2f, 30f, 0f, 90f, info.MinX, info.MaxX, info.MinZ, info.MaxZ, 30 + info.MaxY, info.Category, 30 + info.MinY, info.Index, 2f }, data[..S]);
+        Assert.Equal(3f, data[2 * S - 1]);
+        Assert.Equal([true, false], joined);
+    }
+
     [Fact]
     public void TheOverviewColoursWaterByDepthAndUnknownGroundGrey()
     {
