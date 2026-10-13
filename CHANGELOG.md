@@ -128,6 +128,16 @@ the plugin is unchanged in versions without that part.
 
 ## v1.21.0 — 2026-10-12
 
+### Added
+- **Spawn points and creature nests** (the invisible points the game's camps, villages and dungeons
+  spawn their creatures from) have their own kinds in the Place list and the View panel, each saying
+  what it spawns (`Boar · 0–2 ★ · spawns once`); Place's search finds them by creature. In the 3D
+  view they are orange boxes (red when the creature comes back) and nests purple ones, with a marker
+  above each, seen within 250 m; they are off at first, as ruins are. The inspector and Claude's
+  `find_prefabs` say what they spawn.
+- **Objects are sorted into real kinds**: Furniture & props, Bones & remains, Creatures & NPCs and
+  Effects & markers join the lists; **Other objects** went from about 470 kinds to a handful.
+
 ### Changed
 - **Follow grows the area** instead of moving it: when you look near the area's edge, a row of zones
   is added on that side and the zones already open stay (a 3 × 3 area becomes 4 × 3, then 4 × 4…).
