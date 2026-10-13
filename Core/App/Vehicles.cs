@@ -473,7 +473,7 @@ public sealed class VehicleIndex
     /// <summary>
     /// Where the mod puts an object (position in metres, turn as Unity Euler degrees): a piece at its offset in its
     /// parent's frame, the parent where its own parent puts it, and so on up to the root, which is where it is stored.
-    /// An object whose parent is missing (or whose chain loops) stays where it is stored. Null for an object with no
+    /// An object whose parent, or any parent up its chain, is missing (or whose chain loops) stays where it is stored. Null for an object with no
     /// link.
     /// </summary>
     public (Vector3 Position, Vector3 Rotation)? Pose(int id)
@@ -482,7 +482,8 @@ public sealed class VehicleIndex
         {
             return null;
         }
-        if (Chain(m) is not { Count: > 1 } chain)
+        // The top hanging on something missing (a swivel whose vehicle is gone): the mod never places the chain.
+        if (Chain(m) is not { Count: > 1 } chain || chain[^1].Link.Holder != 0)
         {
             return (m.Position, m.Rotation);
         }
