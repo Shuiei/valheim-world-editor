@@ -14,6 +14,16 @@ the plugin is unchanged in versions without that part.
   picked or changed. A part the game keeps only by chance is drawn when it is there at least half the
   time.
 
+## v1.24.1 — unreleased
+
+### Fixed
+- **Windows: objects that came and went, black lines across the window** (#115): with some graphics
+  drivers (older ones, laptops with two graphics chips) the 3D view and the map showed old frames in
+  between new ones, and lines crossed the buttons. The editor now draws through Direct3D on Windows,
+  as games do; **Settings › Drawing › Draw with the graphics driver's OpenGL** goes back to the
+  driver's OpenGL (taken at the next start). The log says what draws the map, as it did for the 3D
+  view.
+
 ## v1.24.0 — unreleased
 
 ### Added
