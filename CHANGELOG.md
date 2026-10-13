@@ -4,6 +4,30 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.25.3 — unreleased
+
+### Fixed
+- **A pasted town stands as it was copied**: copying a whole town and pasting it elsewhere left it
+  half fallen down in game, its chests empty and trees growing through its floors.
+  - Copy no longer takes the whole selection's ground, only the ground the buildings stand on (under
+    each piece and a metre around, blended into the new place over three metres): the town sits in
+    the land where it is pasted, its foundations and cellars supported as they were. The Select
+    tool's copy takes the ground under its pieces too.
+  - Pasted objects keep everything the originals held: chests their contents, signs their text,
+    pieces their builder and health (a pasted chest was an empty chest). A copy saved as a
+    blueprint keeps the contents, not the builder.
+  - That ground goes past the game's ±8 m when the new place needs it; it stopped at 8 m, and
+    pieces left floating fell in game.
+  - **Clear the site** no longer digs where the copied ground is pasted (it dug trenches around
+    foundations set into the ground), and ignores pieces hidden far underground (a mod's crafting
+    stations 10 km down made it dig a 400 m pit).
+  - A paste must fit in the open area: past it the ground could not be pasted nor the trees cleared,
+    yet the pieces were placed there. It is now refused with a message, and its outline turns red
+    while it does not fit.
+  - The ground and the objects of a paste line up exactly (the click point is moved by half a metre
+    at most), not up to half a metre apart.
+  - Claude's `copy_objects` also keeps what the originals hold.
+
 ## v1.25.2 — 2026-10-12
 
 ### Changed

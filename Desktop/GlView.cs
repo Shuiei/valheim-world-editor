@@ -3717,7 +3717,9 @@ public sealed class GlView : OpenGlControlBase
                 float x = o.X - (s.W - 1) / 2f, z = -(o.Z - (s.H - 1) / 2f);
                 data.AddRange([x, o.Y, z, x, o.Y + 1.2f, z, x - 0.3f, o.Y + 0.5f, z, x + 0.3f, o.Y + 0.5f, z]);
             }
-            DrawLines(ref _areaVao, ref _areaVbo, [.. data], vp, new Vector4(1, 0.76f, 0.29f, 1));
+            // Red where it would be refused: past the open area.
+            var colour = Paste.Fits(pat, s.W, s.H) ? new Vector4(1, 0.76f, 0.29f, 1) : new Vector4(0.95f, 0.3f, 0.25f, 1);
+            DrawLines(ref _areaVao, ref _areaVbo, [.. data], vp, colour);
         }
         if (Mode == ToolMode.Area)
         {

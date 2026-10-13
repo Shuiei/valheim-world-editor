@@ -36,6 +36,35 @@ public static class ObjectData
         return w.NewObjectBytes(n, m => w.IsLive ? w.LiveSource(m.File) : (files.TryGetValue(m.File, out byte[]? f) ? f : files[m.File] = File.ReadAllBytes(Path.Combine(w.Directory, m.File.FileName))));
     }
 
+    /// <summary>The keys of an object's own scale, which a copy takes from its own size instead.</summary>
+    private static readonly int ScaleKey = StableHash.Of("scale"), ScaleScalarKey = StableHash.Of("scaleScalar");
+
+    /// <summary>
+    /// Every value an object's saved bytes hold, as fields to set on a copy of it (a chest's contents, a sign's
+    /// text, health, a creature's stars...), but its scale.
+    /// </summary>
+    /// <param name="bytes">The object's saved bytes.</param>
+    /// <param name="builder">Its builder too ("creator"; with none, a field taking the copy's away).</param>
+    public static List<ObjectField> Fields(byte[] bytes, bool builder)
+    {
+        var z = ZdoData.Parse(bytes);
+        var ci = CultureInfo.InvariantCulture;
+        static string S(float v) => v.ToString("R", CultureInfo.InvariantCulture);
+        var list = new List<ObjectField>();
+        list.AddRange(z.FloatList.Where(f => f.Key != ScaleScalarKey).Select(f => new ObjectField("floats", f.Key, S(f.Value))));
+        list.AddRange(z.Vec3List.Where(f => f.Key != ScaleKey).Select(f => new ObjectField("vec3", f.Key, $"{S(f.Value.X)} {S(f.Value.Y)} {S(f.Value.Z)}")));
+        list.AddRange(z.QuatList.Select(f => new ObjectField("quats", f.Key, $"{S(f.Value.X)} {S(f.Value.Y)} {S(f.Value.Z)} {S(f.Value.W)}")));
+        list.AddRange(z.IntList.Select(f => new ObjectField("ints", f.Key, f.Value.ToString(ci))));
+        list.AddRange(z.LongList.Where(f => builder || f.Key != ObjectField.CreatorKey).Select(f => new ObjectField("longs", f.Key, f.Value.ToString(ci))));
+        list.AddRange(z.StringList.Select(f => new ObjectField("strings", f.Key, f.Value)));
+        list.AddRange(z.ByteList.Select(f => new ObjectField("bytes", f.Key, Convert.ToBase64String(f.Value))));
+        if (builder && !z.LongList.Any(f => f.Key == ObjectField.CreatorKey))
+        {
+            list.Add(ObjectField.NoBuilder);
+        }
+        return list;
+    }
+
     /// <summary>
     /// A container's contents from a list of items, each value clamped to what the save holds (stack and
     /// quality 1..65535, slot and world level 0..255).

@@ -169,7 +169,7 @@ public static class Tips
         ["area.from"] = "The kind of object to replace.",
         ["area.to"] = "The kind to put in its place.",
         ["area.pick"] = "Pick the kind from the world: click an object to put its kind in the list (Esc cancels).",
-        ["area.copy"] = "Copy the ground shape, paint and shown objects inside the selection (Ctrl+C).",
+        ["area.copy"] = "Copy the shown objects inside the selection, with the ground and paint under their buildings (Ctrl+C).",
         ["area.paste"] = "Paste the copy (Ctrl+V): click to place it, here or in another area.",
         ["area.saveBlueprint"] = "Save the clipboard as a blueprint: a file with a name, kept in the editor's data folder, that can be pasted into any world.",
         ["area.library"] = "Open the list of saved blueprints, with a picture of each: paste one, or delete it.",
@@ -203,7 +203,7 @@ public static class Tips
         ["areaAct.Reset"] = "On save, the zones under the selection lose their trees, rocks, ruins and dungeon entrances; the game generates them again when someone goes there.",
 
         // ---- Paste
-        ["paste.ground"] = "Paste the copied ground shape and paint.",
+        ["paste.ground"] = "Paste the ground the buildings stood on (under each piece and a metre around), blended into the ground here.",
         ["paste.objects"] = "Paste the copied objects.",
         ["paste.offset"] = "Move the pasted ground and objects up or down (m); Ctrl + wheel too (Shift: 0.1 m). Lower a building into a hill: Clear the site digs the ground in its way.",
         ["paste.turn"] = "Turn the paste a quarter turn (R). , and . or Alt + wheel turn it by 1° (Shift: 15°).",
@@ -419,7 +419,7 @@ public static class Tips
         ["build.snap"] = "On: as the game's hammer, the piece moves so its nearest snap point meets one of a piece already there (within half a metre). Off: it stays where it touches what you point at (the game's Alt).",
         ["build.grid"] = "Where you point at the ground is rounded to this grid (from the middle of the plot) before the piece is put there; pieces pointed at are not. Off: as in the game.",
         ["workshop.cut"] = "See the building from a height: nothing above it is shown (metres above the plot), and you can point at what is inside, to build there. Left: off.",
-        ["paste.clearSite"] = "Where a pasted building (its pieces) stands: the ground in its way, a mountain, a mound, is dug down to its lowest piece, a metre around it too; never raised. Trees, rocks, bushes and pickables there are taken away. One undo step with the paste.",
+        ["paste.clearSite"] = "Where a pasted building (its pieces) stands: the ground in its way, a mountain, a mound, is dug down to its lowest piece, a metre around it too; never raised, nor dug where the copied ground is pasted. Trees, rocks, bushes and pickables there are taken away. One undo step with the paste.",
         ["history.earlier"] = "Made in an earlier session of the editor: the history is kept with the world after each save or Apply live, and comes back when you open it again. When the world may have changed since (live, or saved by the game), you are asked once before undoing or redoing these steps.",
         ["tools.blueprints"] = "Your blueprints (Homestead's, the Workshop's): paste one into this area.",
         ["tools.dungeon"] = "Dungeon: edit the rooms of a Frost Cave, crypt or other dungeon of this area. Add rooms at their openings, delete them, close the open ends: the game builds the rooms from the list you make.",

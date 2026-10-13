@@ -231,17 +231,8 @@ public static class Workshop
         bool ruin = s.Ruin;
         if (s.Session is { } session && ObjectData.Bytes(s.World, session.Edits, t.Id) is { } bytes)
         {
-            var z = ZdoData.Parse(bytes);
-            ruin |= WorldSave.Builder != 0 && PieceCatalog.Get(t.Prefab)?.Tool != null && !z.LongList.Any(f => f.Key == ObjectField.CreatorKey);
-            var ci = System.Globalization.CultureInfo.InvariantCulture;
-            static string S(float v) => v.ToString("R", System.Globalization.CultureInfo.InvariantCulture);
-            list.AddRange(z.FloatList.Where(f => f.Key != StableHash.Of("scaleScalar")).Select(f => new ObjectField("floats", f.Key, S(f.Value))));
-            list.AddRange(z.Vec3List.Where(f => f.Key != StableHash.Of("scale")).Select(f => new ObjectField("vec3", f.Key, $"{S(f.Value.X)} {S(f.Value.Y)} {S(f.Value.Z)}")));
-            list.AddRange(z.QuatList.Select(f => new ObjectField("quats", f.Key, $"{S(f.Value.X)} {S(f.Value.Y)} {S(f.Value.Z)} {S(f.Value.W)}")));
-            list.AddRange(z.IntList.Select(f => new ObjectField("ints", f.Key, f.Value.ToString(ci))));
-            list.AddRange(z.LongList.Where(f => f.Key != ObjectField.CreatorKey).Select(f => new ObjectField("longs", f.Key, f.Value.ToString(ci))));
-            list.AddRange(z.StringList.Select(f => new ObjectField("strings", f.Key, f.Value)));
-            list.AddRange(z.ByteList.Select(f => new ObjectField("bytes", f.Key, Convert.ToBase64String(f.Value))));
+            ruin |= WorldSave.Builder != 0 && PieceCatalog.Get(t.Prefab)?.Tool != null && !ZdoData.Parse(bytes).LongList.Any(f => f.Key == ObjectField.CreatorKey);
+            list.AddRange(ObjectData.Fields(bytes, builder: false));
         }
         if (ruin)
         {

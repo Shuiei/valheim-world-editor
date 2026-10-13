@@ -1,4 +1,5 @@
 using System.Numerics;
+using TerrainEditor.App;
 using TerrainEditor.Editing;
 using TerrainEditor.Save;
 using TerrainEditor.Terrain;
@@ -99,6 +100,30 @@ public class ObjectDataTests
         Assert.Equal(42, InventoryData.Read(saved.GetBytes(StableHash.Of("items"))!).Items.Single().Stack);
         // Everything else the chest held is kept.
         Assert.Equal(z.LongList, saved.LongList);
+    }
+
+    // What a copy of an object is given: every value it holds but its scale; its builder only when asked,
+    // and then "no builder" for one nobody built (a ruin's piece stays a ruin's).
+    [Fact]
+    public void FieldsAreEverythingAnObjectHoldsButItsScale()
+    {
+        using var w = new TempWorld();
+        WorldSave world = w.Load();
+        int chest = world.Objects.First(o => o.Prefab == Fixtures.Hash("piece_chest_wood")).Id;
+        var z = ZdoData.Parse(world.ObjectBytes(chest));
+        z.Set("strings", StableHash.Of("text"), "Hello");
+        z.Set("vec3", StableHash.Of("scale"), "2 2 2");
+        z.Set("longs", ObjectField.CreatorKey, "123");
+        var fields = ObjectData.Fields(z.Serialize(), builder: true);
+        Assert.Contains(new ObjectField("strings", StableHash.Of("text"), "Hello"), fields);
+        Assert.Contains(new ObjectField("longs", ObjectField.CreatorKey, "123"), fields);
+        Assert.DoesNotContain(fields, f => f.Key == StableHash.Of("scale"));
+        Assert.Equal(z.ByteList.Count, fields.Count(f => f.Section == "bytes"));
+        Assert.DoesNotContain(ObjectData.Fields(z.Serialize(), builder: false), f => f.Key == ObjectField.CreatorKey);
+
+        z.Set("longs", ObjectField.CreatorKey, null);
+        Assert.Contains(ObjectField.NoBuilder, ObjectData.Fields(z.Serialize(), builder: true));
+        Assert.DoesNotContain(ObjectField.NoBuilder, ObjectData.Fields(z.Serialize(), builder: false));
     }
 
     [Fact]
