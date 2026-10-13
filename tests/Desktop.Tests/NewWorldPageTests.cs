@@ -28,6 +28,13 @@ public class NewWorldPageTests
     private const string Seed = "5DCcdIcuYJ";
 
     /// <summary>
+    /// How long a seed's world may take to show, in milliseconds. About 40 s on CI, but the first seed a run shows also
+    /// reads the location rules and compiles the generator, and main's runs measure coverage, which slows it all: that
+    /// took the first test past 60 s on every main run.
+    /// </summary>
+    private const int SeedWait = 180000;
+
+    /// <summary>
     /// A page in a shown window, with its own world folders (temporary, deleted when disposed), and the worlds it asked
     /// to create.
     /// </summary>
@@ -61,7 +68,7 @@ public class NewWorldPageTests
         public async Task Look(string seed)
         {
             OnUi(() => P.ShowSeed(seed));
-            await TestWindows.Until(() => P.Shown?.Seed == seed && !P.Loading.IsVisible, 60000);
+            await TestWindows.Until(() => P.Shown?.Seed == seed && !P.Loading.IsVisible, SeedWait);
             Settle();
         }
 
@@ -259,7 +266,7 @@ public class NewWorldPageTests
         Assert.Equal(r.P.DungeonMarks!.Count(m => m.Name == "Frost caves"), r.P.Map.Dots.Count);
         // Back to the first seed: its dungeons are known at once.
         OnUi(() => r.P.ShowSeed(Seed));
-        await TestWindows.Until(() => r.P.Shown?.Seed == Seed, 60000);
+        await TestWindows.Until(() => r.P.Shown?.Seed == Seed, SeedWait);
         Assert.Same(first, r.P.DungeonMarks);
     }
 
@@ -267,7 +274,7 @@ public class NewWorldPageTests
     public async Task ATypedSeedIsLookedAtOnGenerateAndABadOneIsSaid()
     {
         using var r = new Run();
-        await TestWindows.Until(() => r.P.Shown != null && !r.P.Loading.IsVisible, 60000);
+        await TestWindows.Until(() => r.P.Shown != null && !r.P.Loading.IsVisible, SeedWait);
         // The seed shown: nothing to generate.
         Assert.False(r.P.Generate.IsEnabled);
         // Typed: not looked at yet, Generate lit.
@@ -280,19 +287,19 @@ public class NewWorldPageTests
         Assert.True(r.P.Loading.IsVisible);
         Assert.Equal("Looking at abc's world…", r.P.LoadingText.Text);
         Assert.False(r.P.Generate.IsEnabled);
-        await TestWindows.Until(() => r.P.Shown?.Seed == "abc" && !r.P.Loading.IsVisible, 60000);
+        await TestWindows.Until(() => r.P.Shown?.Seed == "abc" && !r.P.Loading.IsVisible, SeedWait);
         // Enter in the box does the same.
         OnUi(() => r.P.SeedBox.Text = "abcd");
         OnUi(() => r.P.SeedBox.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Enter }));
         Assert.False(r.P.Generate.IsEnabled);
-        await TestWindows.Until(() => r.P.Shown?.Seed == "abcd" && !r.P.Loading.IsVisible, 60000);
+        await TestWindows.Until(() => r.P.Shown?.Seed == "abcd" && !r.P.Loading.IsVisible, SeedWait);
         // Roll: another random seed of ten characters, looked at at once.
         Click(r.P.Roll);
         Assert.NotEqual("abcd", r.P.SeedBox.Text);
         Assert.Equal(10, r.P.SeedBox.Text!.Length);
         Settle();
         Assert.False(r.P.Generate.IsEnabled);
-        await TestWindows.Until(() => r.P.Shown?.Seed == r.P.SeedBox.Text && !r.P.Loading.IsVisible, 60000);
+        await TestWindows.Until(() => r.P.Shown?.Seed == r.P.SeedBox.Text && !r.P.Loading.IsVisible, SeedWait);
         // No seed, or one too long: said, nothing shown.
         foreach (string bad in new[] { "", "12345678901" })
         {
@@ -327,7 +334,7 @@ public class NewWorldPageTests
         // A result clicked: its seed in the box, looked at at once, its picture framed.
         Click(buttons[0]);
         Assert.Equal(best.Seed, r.P.SeedBox.Text);
-        await TestWindows.Until(() => r.P.Shown?.Seed == best.Seed && !r.P.Loading.IsVisible, 60000);
+        await TestWindows.Until(() => r.P.Shown?.Seed == best.Seed && !r.P.Loading.IsVisible, SeedWait);
         Assert.Equal(new Thickness(2), buttons[0].BorderThickness);
         // The others as thick, unseen: the chosen one no wider than they are.
         Assert.All(buttons.Skip(1), b => Assert.Equal((new Thickness(2), Brushes.Transparent), (b.BorderThickness, b.BorderBrush)));
@@ -380,13 +387,13 @@ public class NewWorldPageTests
             r.P.ShowSeed("abc");
             r.P.StopAll();
         });
-        await TestWindows.Until(() => r.P.Pending.IsCompleted, 60000);
+        await TestWindows.Until(() => r.P.Pending.IsCompleted, SeedWait);
         Settle();
         // Its world is not the one on the map: Generate lit, and it is looked at.
         Assert.Equal(Seed, r.P.Shown?.Seed);
         Assert.True(r.P.Generate.IsEnabled);
         Click(r.P.Generate);
-        await TestWindows.Until(() => r.P.Shown?.Seed == "abc" && !r.P.Loading.IsVisible, 60000);
+        await TestWindows.Until(() => r.P.Shown?.Seed == "abc" && !r.P.Loading.IsVisible, SeedWait);
         Assert.False(r.P.Generate.IsEnabled);
     }
 
