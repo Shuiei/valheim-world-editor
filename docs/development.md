@@ -84,8 +84,10 @@ program (with its DLLs on Windows) and the readmes;
 game files or plugin. The plugin is its own package: `tools/thunderstore.sh <folder>` builds
 `WorldEditorBridge-<version>.zip` (for the release page, Thunderstore and Hexium).
 
-The plugin: build `plugin/WorldEditorBridge/WorldEditorBridge.csproj` after pointing its
-`HintPath`s at your BepInEx `core` folder and the game's `*_Data/Managed` folder.
+The plugin: build `plugin/WorldEditorBridge/WorldEditorBridge.csproj` with `ValheimDir` set to a
+Valheim dedicated server's folder (it reads `valheim_server_Data/Managed`) and, if its BepInEx is
+elsewhere, `BepInExDir` to a BepInEx folder (its `core`), as MSBuild properties (`-p:ValheimDir=...`)
+or environment variables: `ValheimDir=<server> tools/thunderstore.sh <folder>`.
 
 Thunderstore (team `Tie`): only the plugin, `WorldEditorBridge`. Thunderstore does not host
 programs (it rejected the editor packages of 0.3.3), so the editor is only on the GitHub releases
