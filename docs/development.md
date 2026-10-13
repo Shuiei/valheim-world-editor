@@ -84,8 +84,9 @@ program (with its DLLs on Windows) and the readmes;
 game files or plugin. The plugin is its own package: `tools/thunderstore.sh <folder>` builds
 `WorldEditorBridge-<version>.zip` (for the release page, Thunderstore and Hexium).
 
-The plugin: build `plugin/WorldEditorBridge/WorldEditorBridge.csproj` after pointing its
-`HintPath`s at your BepInEx `core` folder and the game's `*_Data/Managed` folder.
+The plugin: build `plugin/WorldEditorBridge/WorldEditorBridge.csproj` with `ValheimDir` set to a
+Valheim dedicated server's folder (it reads `valheim_server_Data/Managed`) and `BepInExDir` to a
+BepInEx folder (its `core`), as MSBuild properties (`-p:ValheimDir=...`) or environment variables.
 
 Thunderstore (team `Tie`): only the plugin, `WorldEditorBridge`. Thunderstore does not host
 programs (it rejected the editor packages of 0.3.3), so the editor is only on the GitHub releases
@@ -102,20 +103,53 @@ https://thunderstore.io/c/valheim/create/.
 
 One version number for everything: the `VERSION` file. `Directory.Build.props` reads it into the
 editor and the plugin (`BuildInfo.Version`: the start page, the window title, the log, the plugin's
-BepInEx version and its `/status`), and both release scripts name their packages after it. For a
-release:
+BepInEx version and its `/status`), and both release scripts name their packages after it. Each pull
+request raises it: a feature the minor version, a fix the patch, with a `## v<version> — unreleased`
+section in `CHANGELOG.md` (a test checks there is one). Put changes to the plugin under a
+`### WorldEditorBridge` part of that section. The plugin package's changelog is made from it: each
+version shows the plugin's part (or "unchanged") and then the editor's. Keep the BepInExPack
+dependency in `tools/thunderstore/*/manifest.json` current.
 
-1. Raise `VERSION` (Major.Minor.Patch).
-2. Add a `## v<version>` section to `CHANGELOG.md` (a test checks it). Put changes to the plugin
-   under a `### WorldEditorBridge` part of that section. The Thunderstore package's changelog is made
-   from it: each version shows the plugin's part (or "unchanged") and then the editor's.
-3. Keep the BepInExPack dependency in the `tools/thunderstore/*/manifest.json` current.
-4. `tools/release.sh <folder>` and `tools/thunderstore.sh <folder>`; tag `v<version>`, publish the
-   GitHub release, upload the Thunderstore zip (Thunderstore refuses a version it already has).
-   Publishing the release signs its files (`.github/workflows/sign-release.yml`, Sigstore): each
-   gets a `<file>.sigstore.json` on the release a minute later. Attach every file before publishing
-   (`gh release create` with the files does); a file added afterwards is signed by running the
-   workflow by hand (Actions > Sign release, with the tag).
+## Releasing
+
+CircleCI makes the release once you approve it (`.circleci/config.yml`, `.circleci/continue.yml`):
+
+1. In a pull request, date the `CHANGELOG.md` headings to release (`## v1.25.1 — 2026-10-12` instead
+   of `— unreleased`). Optionally, write the GitHub release's notes in `docs/releases/v<version>.md`;
+   without it the notes are the CHANGELOG's sections since the last release.
+2. Merge it. On main, a dated heading for `VERSION` with no `v<version>` tag yet makes the pipeline
+   a release one: the usual jobs, then **hold-release** waits.
+3. In CircleCI, open that pipeline's workflow (`release`) and approve **hold-release**. Then:
+   - **github-release** builds the plugin's zip (against a Valheim dedicated server downloaded with
+     SteamCMD and the BepInExPack its manifest names), tags the commit `v<version>` and publishes
+     the GitHub release with the two editor packages the pipeline tested and the plugin. Publishing
+     signs the files (`.github/workflows/sign-release.yml`, Sigstore): each gets a
+     `<file>.sigstore.json` a minute later.
+   - **publish-thunderstore**, **publish-hexium** and **publish-nexus** then publish side by side
+     (`tools/release/publish.cs`, with the sites' settings in `tools/release/sites.json`): the
+     plugin on Thunderstore and Hexium (team `Tie`), and a new version of each of the three files of
+     the Nexus Mods page (the plugin, the Windows and the Linux editor, repacked as a zip: Nexus
+     takes no `.tar.gz`), with the notes as the mod's changelog.
+
+A version already on a site fails its job: no site takes a version twice. A failed job can be rerun
+from CircleCI (Rerun from failed); the others are done. Still by hand: **unhide** the new version on
+Hexium (its Versions page on hexium.gg; uploads arrive hidden and the API cannot unhide them), and
+the Nexus page's description and pictures (no API changes them).
+
+The release jobs' secrets are in CircleCI's **release** context, restricted to the maintainer (only
+they can approve): `GITHUB_TOKEN` (a GitHub token with Contents read and write on this repository),
+`THUNDERSTORE_TOKEN` (a service account of team Tie, from old.thunderstore.io's team settings),
+`HEXIUM_TOKEN` (a team API token, from the team page on hexium.gg) and `NEXUS_API_KEY` (a personal
+API key, nexusmods.com/settings/api-keys).
+
+To check the publishing without publishing:
+`dotnet run tools/release/publish.cs -- <thunderstore|hexium|nexus> <folder> --dry-run`, with the
+packages in the folder and the site's token in the environment. It checks the token, that the version
+is not on the site yet, the categories and the files.
+
+By hand, without CI: `tools/release.sh <folder>` and `tools/thunderstore.sh <folder>`, then tag
+`v<version>` and `gh release create` with every file (a file added after publishing is signed by
+running Actions > Sign release by hand, with the tag), then `publish.cs` for each site.
 
 ## The game's files
 
@@ -277,7 +311,7 @@ CircleCI (`.circleci/config.yml`) runs on every push and pull request:
 | Job | What it checks |
 |---|---|
 | `core-tests` | `tests/Core.Tests`, with OpenSSH's server installed (`VWE_NEED_SSHD=1`), on three containers (the world generator's tests run several times slower under coverage). |
-| `app-tests` | `tests/Desktop.Tests` without the visual tests, on three containers. Both test jobs let CircleCI share the classes out by their last times (`circleci tests run`, `tools/ci-tests.sh`), so **Rerun failed tests** runs only the classes that failed; every test runs, failing or not. |
+| `app-tests` | `tests/Desktop.Tests` without the visual tests, on six containers. Both test jobs let CircleCI share the classes out by their last times (`circleci tests run`, `tools/ci-tests.sh`), so **Rerun failed tests** runs only the classes that failed; every test runs, failing or not. |
 | `packages` | Both release packages build (without the plugin), and `tools/check-package.sh` finds everything they need and no source code, debug files or game files. |
 
 Not covered by CI: the visual tests (no display), building the plugin and reading the game's data
@@ -299,7 +333,7 @@ tools/release.sh /tmp/dist && tools/check-package.sh /tmp/dist/*.tar.gz
 ```
 
 **Coverage**: on `main` only, each test container keeps its coverage, and once `core-tests` and
-`app-tests` have both passed, the `coverage` job merges all six into one report (`tools/MergeCoverage`,
+`app-tests` have both passed, the `coverage` job merges all nine into one report (`tools/MergeCoverage`,
 whose total its log shows: a line's hits added up, its branches all taken when one report took them all) and sends that one file to
 [Codecov](https://app.codecov.io/gh/Shuiei/valheim-world-editor) (`codecov.yml`), which checks each of main's commits. A failed test sends nothing, so Codecov keeps the last full
 coverage rather than show part of it (rerun main's workflow from the start, not "Rerun failed tests",

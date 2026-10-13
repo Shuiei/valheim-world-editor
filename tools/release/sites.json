@@ -1,0 +1,46 @@
+{
+  "thunderstore": {
+    "url": "https://thunderstore.io",
+    "team": "Tie",
+    "community": "valheim",
+    "categories": ["tools", "server-side", "deep-north-update"]
+  },
+  "hexium": {
+    "url": "https://valheim.hexium.gg",
+    "team": "Tie",
+    "community": "valheim",
+    "categories": ["Tools", "Open Source"],
+    "installLocation": "server"
+  },
+  "nexus": {
+    "url": "https://api.nexusmods.com",
+    "game": "valheim",
+    "modId": 4348,
+    "files": [
+      {
+        "package": "bridge",
+        "modFileId": "8118330",
+        "name": "WorldEditorBridge {version}",
+        "description": "WorldEditorBridge {version}: the plugin. Install on: host (game or dedicated server). Players who join need nothing.",
+        "allowModManagerDownload": true,
+        "updateModVersion": true
+      },
+      {
+        "package": "windows",
+        "modFileId": "8118339",
+        "name": "Valheim World Editor {version} (Windows)",
+        "description": "Valheim World Editor {version}: the editor for Windows (unpack and start, no install). A program, not a mod: download it by hand.",
+        "allowModManagerDownload": false,
+        "updateModVersion": false
+      },
+      {
+        "package": "linux",
+        "modFileId": "8118351",
+        "name": "Valheim World Editor {version} (Linux)",
+        "description": "Valheim World Editor {version}: the editor for Linux (unpack and start, no install). A program, not a mod: download it by hand.",
+        "allowModManagerDownload": false,
+        "updateModVersion": false
+      }
+    ]
+  }
+}
