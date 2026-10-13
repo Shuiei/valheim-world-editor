@@ -22,7 +22,7 @@
 #   windows-smoke  the Windows package does the same on a Windows machine (tools/smoke-test.ps1)
 # When a release is due (main, VERSION's CHANGELOG heading dated, no tag for it yet), the same jobs run
 # in the release workflow, followed by:
-#   hold-release   waits for someone to approve it in CircleCI (the release context is restricted)
+#   hold-release   waits for someone to approve it in CircleCI (the mod-token context is restricted)
 #   github-release builds the plugin's zip (tools/thunderstore.sh, against a Valheim dedicated server
 #                  from SteamCMD and BepInExPack_Valheim), tags the commit and makes the GitHub release
 #                  with the packages tested above (the Sign release workflow on GitHub signs them)
@@ -407,7 +407,7 @@ workflows:
             branches:
               only: main
 
-  # The test workflow's jobs (keep both lists alike), then the release once approved: the release
+  # The test workflow's jobs (keep both lists alike), then the release once approved: the mod-token
   # context's secrets (GITHUB_TOKEN, THUNDERSTORE_TOKEN, HEXIUM_TOKEN, NEXUS_API_KEY) reach only the
   # jobs after the approval.
   release:
@@ -433,25 +433,25 @@ workflows:
             - app-tests
             - windows-smoke
       - github-release:
-          context: release
+          context: mod-token
           requires:
             - hold-release
       - publish:
           name: publish-thunderstore
           site: thunderstore
-          context: release
+          context: mod-token
           requires:
             - github-release
       - publish:
           name: publish-hexium
           site: hexium
-          context: release
+          context: mod-token
           requires:
             - github-release
       - publish:
           name: publish-nexus
           site: nexus
           options: --notes /tmp/dist/notes.md
-          context: release
+          context: mod-token
           requires:
             - github-release
