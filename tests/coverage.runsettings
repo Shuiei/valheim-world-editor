@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Coverage of both test projects (dotnet test's --coverage-settings, as
+<!-- Coverage of both test projects (the coverage settings dotnet test is given, as
      .circleci/continue.yml runs them), written as Cobertura for Codecov (codecov.yml).
      Only code written for the editor counts: the core and the app, not the tests, the libraries or
      generated code. Left out too: Jordan Peck's FastNoise library (which WorldGeneratorReferenceTests
