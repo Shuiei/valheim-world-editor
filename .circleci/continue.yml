@@ -1,7 +1,8 @@
 # Valheim World Editor: tests and build checks on every push and pull request, and the release on main.
 # The pipeline starts in .circleci/config.yml, which says whether a release is due (the release parameter).
 #   code-analysis  the editor (Core, Desktop) builds with no .NET analyzer warning (warnings are
-#                  errors) and is formatted as .editorconfig says (dotnet format)
+#                  errors) and is formatted as .editorconfig says (dotnet format); every XML file of
+#                  the repository (projects, coverage settings) is well formed (xmllint)
 #   core-tests     the core's tests on three containers (saves, the world generator against the game's
 #                  values, live mode against a stand-in bridge, the SSH tunnel against a local sshd), and
 #   app-tests      the app's windows, headless, on six containers, and the visual tests: the real
@@ -212,6 +213,14 @@ jobs:
             - nuget-v2-{{ checksum "Directory.Build.props" }}-{{ checksum "Core/ValheimWorldEditor.Core.csproj" }}-{{ checksum "Desktop/ValheimWorldEditor.Desktop.csproj" }}-{{ checksum "tests/Core.Tests/Core.Tests.csproj" }}-{{ checksum "tests/Desktop.Tests/Desktop.Tests.csproj" }}
             # Else main's latest (a branch whose packages changed restores only what it adds).
             - nuget-v2-
+      # Every XML file of the repository is well formed: the builds read only the projects they build, and
+      # nothing reads tests/coverage.runsettings before the tests on main (a "--" in its comment once made
+      # every test container there refuse its options).
+      - run:
+          name: XML files are well formed (projects, coverage settings)
+          command: |
+            apt-get update -qq && apt-get install -y -qq libxml2-utils > /dev/null
+            git ls-files -z '*.csproj' '*.props' '*.targets' '*.runsettings' '*.xml' | xargs -0 xmllint --noout
       - run:
           name: Analyzers (every warning is an error)
           command: dotnet build Desktop/ValheimWorldEditor.Desktop.csproj -c Release -warnaserror
