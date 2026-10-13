@@ -114,8 +114,9 @@ public static class ModCatalogue
         }
         if (changed)
         {
-            _data = next;
+            // Kept first: should writing fail, nothing is in use that a retry would take for already known.
             SafeFile.WriteAllText(FilePath, Write(next));
+            _data = next;
         }
         return (mods, changed);
     }

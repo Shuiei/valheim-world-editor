@@ -101,6 +101,19 @@ public sealed class ModCatalogueTests : IDisposable
     }
 
     [Fact]
+    public void AReportThatCannotBeKeptIsNotUsed()
+    {
+        // A folder where the file goes: it cannot be written.
+        Directory.CreateDirectory(ModCatalogue.FilePath);
+
+        Assert.ThrowsAny<Exception>(() => ModCatalogue.Take(Report(), Vanilla));
+
+        Assert.Equal(0, ModCatalogue.Count);
+        Directory.Delete(ModCatalogue.FilePath);
+        Assert.True(ModCatalogue.Take(Report(), Vanilla).Changed);
+    }
+
+    [Fact]
     public void TheSameReportAgainChangesNothing()
     {
         ModCatalogue.Take(Report(), Vanilla);

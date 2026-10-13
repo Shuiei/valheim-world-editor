@@ -242,9 +242,10 @@ public sealed partial class WorldEditorBridgePlugin
         List<Vector3> snaps = [];
         foreach (Transform t in go.GetComponentsInChildren<Transform>(true))
         {
-            if (t != root && (t.CompareTag("snappoint") || t.name.IndexOf("snappoint", StringComparison.OrdinalIgnoreCase) >= 0))
+            if (t != root && (t.CompareTag("snappoint") || t.name.IndexOf("snappoint", StringComparison.OrdinalIgnoreCase) >= 0)
+                && toRoot.MultiplyPoint3x4(t.position) is var p && Finite(p))
             {
-                snaps.Add(toRoot.MultiplyPoint3x4(t.position));
+                snaps.Add(p);
             }
         }
         if (snaps.Count > 0)
@@ -267,7 +268,8 @@ public sealed partial class WorldEditorBridgePlugin
                 max = Vector3.Max(max, p);
             }
         }
-        if (min.x <= max.x)
+        // A degenerate transform (zero scale) gives no box: NaN or infinity is not JSON.
+        if (min.x <= max.x && Finite(min) && Finite(max))
         {
             sb.Append($",\"box\":[{R(min.x)},{R(max.x)},{R(min.z)},{R(max.z)},{R(min.y)},{R(max.y)}]");
         }
@@ -277,6 +279,9 @@ public sealed partial class WorldEditorBridgePlugin
         }
         return sb.Append('}').ToString();
     }
+
+    /// <summary>Whether a point's coordinates are all numbers (not NaN or infinite), as JSON needs.</summary>
+    private static bool Finite(Vector3 p) => !float.IsNaN(p.x) && !float.IsInfinity(p.x) && !float.IsNaN(p.y) && !float.IsInfinity(p.y) && !float.IsNaN(p.z) && !float.IsInfinity(p.z);
 
     /// <summary>Whether a child and every parent up to the root is active (the root's own state does not count).</summary>
     private static bool ActiveUnder(Transform t, Transform root)
