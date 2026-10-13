@@ -64,15 +64,15 @@ The **Copy and paste** action shows these buttons; `Ctrl+C` and `Ctrl+V` work wi
 | Control | What it does |
 |---|---|
 | **Copy (Ctrl+C)** | Copies the ground shape, the paint and the shown objects inside the selection. The copy is remembered, so you can paste it in another area, another world, or after restarting the editor. |
-| **Paste (Ctrl+V)** | Switches to pasting: the outline and the objects (orange dots) follow the cursor; click to place. You can paste several copies; `Esc` stops. |
+| **Paste (Ctrl+V)** | Switches to pasting: the outline and the objects (orange dots) follow the cursor; click to place. You can paste several copies; `Esc` stops. The paste must fit in the open area (the ground and the site can only be worked there): open a bigger area around the place first when it does not. |
 
 While pasting:
 
 | Control | What it does |
 |---|---|
-| **Ground shape and paint** | Paste the copied ground. The shape is kept relative to the point you click. |
-| **Objects** | Paste the copied objects. They are new, independent objects: a pasted chest is an empty chest. |
-| **Clear the site** | Where the pasted building stands (its pieces, by their real shape, and a metre around), the ground in its way is dug down to its lowest piece, so a building pasted into a hill or a mound is not buried in it; lower ground is left as it is. Trees, rocks, bushes and pickables there are taken away. In the same undo step. |
+| **Ground shape and paint** | Paste the copied ground. The shape is kept relative to the point you click, past the game's ±8 m when needed (ground discs, as **No limit**), so a building stands on the ground it was built on. |
+| **Objects** | Paste the copied objects. They keep everything the originals held: a chest's contents, a sign's text, health, and who built them. A copy saved as a blueprint keeps the contents but not the builder (pasted, its pieces are the chosen builder's). |
+| **Clear the site** | Where the pasted building stands (its pieces, by their real shape, and a metre around), the ground in its way is dug down to its lowest piece, so a building pasted into a hill or a mound is not buried in it; lower ground is left as it is. Where the copied ground is pasted in full nothing is dug: the building stands on it as it stood on the original. Pieces hidden far underground (mods keep crafting stations there) are ignored. Trees, rocks, bushes and pickables there are taken away. In the same undo step. |
 | **Height** | Moves the pasted ground and objects up or down (m). |
 | **Turn 90° (R)** | A quarter turn. `,` and `.` or Alt + wheel turn by 1° (Shift: 15°), to any angle. |
 | **Mirror (F)** | Mirrors the paste. |

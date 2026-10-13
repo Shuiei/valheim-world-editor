@@ -238,4 +238,98 @@ public class ClipboardTests
         var tree = add.Select(a => a.Item1).Single(o => o.Prefab == Beech);
         Assert.Equal(GroundAt(tree.Position.X, tree.Position.Z), tree.Position.Y, 2);
     }
+
+    // A pasted object keeps what its original holds (a sign's text, its builder), however long after
+    // the copy it is pasted; saved as a blueprint, the builder is left out.
+    [Fact]
+    public void PastedObjectsKeepWhatTheOriginalsHold()
+    {
+        var s = TestScenes.Flat();
+        var text = new Editing.ObjectField("strings", StableHash.Of("text"), "Hello");
+        var builder = new Editing.ObjectField("longs", Editing.ObjectField.CreatorKey, "42");
+        int sign = s.Commit("Sign", null, [], [(new Editing.NewObject(0, StableHash.Of("sign"), new Vector3(8, 31, 8), Vector3.Zero, 0, Data: [text, builder]), true)])[0];
+        var clip = CopyData.FromThings(s.Scene, [sign], _ => "sign", (_, _) => 30)!;
+        var (_, _, add) = new PasteTool { Clip = clip }.Apply(s.Ground, new Vector2(90, 90));
+        var data = Assert.Single(add).Item1.Data!;
+        Assert.Contains(text, data);
+        Assert.Contains(builder, data);
+        var kept = Assert.Single(clip.WithoutBuilders().Objects).Data!;
+        Assert.Contains(text, kept);
+        Assert.DoesNotContain(builder, kept);
+    }
+
+    // The copied ground goes in whole, past the game's ±8 m (No limit off): a building copied on a
+    // 12 m mound stands on a 12 m mound.
+    [Fact]
+    public void TheCopiedGroundGoesPastTheGamesLimit()
+    {
+        var s = TestScenes.Flat();
+        s.Ground.NoLimit = true;
+        s.Shape(40, 40, Formula.Compile("h * smooth(1 - d / r)", ["d", "r", "h"]), 8, 12, "mound");
+        s.Ground.NoLimit = false;
+        Assert.Equal(42, H(s, 40, 40), 1);
+        var paste = new PasteTool { Clip = CopyData.FromArea(Box(30, 30, 50, 50), s.Ground, s.Scene, [], _ => null) };
+        s.Commit("Paste", g => { var (t, r, _) = paste.Apply(g, new Vector2(90, 90)); return (t, r); }, [], []);
+        Assert.Equal(H(s, 40, 40) - H(s, 34, 40), H(s, 90, 90) - H(s, 84, 90), 1);
+        Assert.False(s.Ground.NoLimit);
+    }
+
+    // Clear the site leaves the copied ground alone (a wall set a metre into it stays so, no trench
+    // dug round it) and pieces hidden far underground (a mod's stations) dig nothing.
+    [Fact]
+    public void ClearingTheSiteKeepsTheCopiedGroundAndSkipsHiddenPieces()
+    {
+        int wall = StableHash.Of("woodwall");
+        var s = TestScenes.Flat(2, new WorldScene.Thing(1, wall, new Vector3(40 - 32, 30, 40 - 32), Vector3.Zero, 0, true));
+        var paste = new PasteTool { Clip = CopyData.FromArea(Box(34, 34, 46, 46), s.Ground, s.Scene, [0], _ => "woodwall") };
+        paste.Apply(s.Ground, new Vector2(90, 90));
+        Assert.NotEmpty(paste.Site);
+        Assert.Equal(30, s.Ground.HeightOf(90 * s.Ground.W + 90), 3);
+
+        s.Shape(60, 60, Formula.Compile("h * smooth(1 - d / r)", ["d", "r", "h"]), 6, 3, "mound");
+        float before = s.Ground.HeightOf(60 * s.Ground.W + 60);
+        paste.Clip = new CopyData
+        {
+            W = 1,
+            H = 1,
+            Rel = [float.NaN],
+            Wt = [0f],
+            Pnt = [-1f, -1, -1, -1],
+            Objects = [new CopyData.Obj(wall, "woodwall", 0, 0, -9000, Vector3.Zero, 0, null)],
+            Poly = [new(-2, -2), new(2, -2), new(2, 2), new(-2, 2)],
+        };
+        paste.Apply(s.Ground, new Vector2(60, 60));
+        Assert.Empty(paste.Site);
+        Assert.Equal(before, s.Ground.HeightOf(60 * s.Ground.W + 60), 3);
+    }
+
+    // A paste that goes past the open area is refused: there the ground could not be pasted nor the
+    // site cleared.
+    [AvaloniaFact]
+    public void APastePastTheOpenAreaIsRefused()
+    {
+        var w = new MainWindow(load: false) { Width = 1200, Height = 900 };
+        w.Show();
+        var s = Area();
+        w.View.Show(s.Scene, null);
+        w.Edit(s);
+        w.View.Paste.Clip = CopyData.FromArea(Box(32, 32, 48, 48), s.Ground, s.Scene, [0], _ => "Beech1");
+        Assert.True(w.View.Paste.Fits(new Vector2(90, 90), s.Ground.W, s.Ground.H));
+        Assert.False(w.View.Paste.Fits(new Vector2(5, 90), s.Ground.W, s.Ground.H));
+        w.PasteAt(new Vector2(5, 90));
+        Assert.StartsWith("Not pasted: it goes past the open area", w.MessageText.Text);
+        Assert.Equal(0, s.Pending.Added);
+    }
+
+    // The ground goes in a whole metre at a time: the point pasted at moves (half a metre at most) so
+    // that the copy's ground points land on the ground's, turned too, and its objects stand where they did.
+    [Fact]
+    public void ThePastePointLinesTheCopysGroundUp()
+    {
+        var clip = new CopyData { W = 2, H = 1, Rel = [0, 0], Wt = [1, 1], Pnt = [-1, -1, -1, -1, -1, -1, -1, -1], Objects = [], Poly = [new(-1, -1), new(1, -1), new(1, 1), new(-1, 1)] };
+        var paste = new PasteTool { Clip = clip };
+        Assert.Equal(new Vector2(10.5f, 20), paste.CopyAt(new Vector2(10.3f, 20.2f), 0).At);
+        paste.TurnBy(90);
+        Assert.Equal(new Vector2(10, 20.5f), Round(paste.CopyAt(new Vector2(10.3f, 20.2f), 0).At));
+    }
 }
