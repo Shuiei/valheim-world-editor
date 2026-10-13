@@ -1,0 +1,6 @@
+{
+  "commandLineOptions": {
+    "hangdump": true,
+    "hangdump-timeout": "5m"
+  }
+}

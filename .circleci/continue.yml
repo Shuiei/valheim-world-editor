@@ -8,7 +8,7 @@
 #                  editor drawing with OpenGL on a virtual screen (Xvfb, Mesa's software OpenGL),
 #                  driven by the tests. Each builds its test project (tests/Core.Tests, tests/Desktop.Tests)
 #                  with warnings as errors; CircleCI shares the test classes out by their last times
-#                  and can rerun only the failed ones (circleci tests run, tools/ci-tests.sh). Every
+#                  and can rerun only the failed ones (circleci tests run). Every
 #                  test runs, failing or not; a test stuck for 5 minutes (10 under coverage) ends its run.
 #                  On main only, each test container keeps its code coverage for the coverage job;
 #                  branches run the tests without it (several times faster).
@@ -107,16 +107,69 @@ commands:
           environment:
             VWE_NEED_SSHD: "1"
           command: |
-            # Coverage on main only (Codecov reports main's).
-            if [ "$CIRCLE_BRANCH" = main ]; then export VWE_COVERAGE=1; fi
+            # A test stuck 5 minutes ends the run with a dump (tests/testconfig.json). On main only, the
+            # coverage of this container's share, kept for the coverage job: it makes the tests several
+            # times slower, so a test is stuck after 10 minutes there (the world generator's tests share
+            # the container's two cores with the others for minutes; one took 300 s on main).
+            coverage=""
+            if [ "$CIRCLE_BRANCH" = main ]; then
+              coverage="--coverage --coverage-output-format cobertura --coverage-settings $PWD/tests/coverage.runsettings"
+              coverage+=" --coverage-output /tmp/coverage/<< parameters.results >>-$CIRCLE_NODE_INDEX/coverage.cobertura.xml"
+              coverage+=" --hangdump-timeout 10m"
+            fi
             # The virtual screen, where there is one (it starts in the background: a moment): the visual
             # tests draw on it, else they skip.
             if command -v Xvfb > /dev/null; then
               for _ in $(seq 100); do [ -e /tmp/.X11-unix/X99 ] && break; sleep 0.1; done
               export DISPLAY=:99
             fi
-            tools/ci-tests.sh list << parameters.project >> \
-              | circleci tests run --command="xargs tools/ci-tests.sh run << parameters.project >> << parameters.results >>" --split-by=timings --timings-type=classname --verbose
+            # Every test's full name (a theory's with its values in brackets), down to its class (a nested
+            # one as Outer+Inner); circleci tests run gives this container's share, each as a --filter-class.
+            # The results (JUnit) for CircleCI; the run's own files (a stuck test's dump: hundreds of MB)
+            # in /tmp/test-runs, out of the artifacts; its output in /tmp/test-runs/output.log, for the
+            # next step.
+            mkdir -p /tmp/test-runs
+            dotnet test --project << parameters.project >> -c Release --no-build --no-ansi --no-progress --list-tests \
+              | sed -n 's/^  \([A-Za-z_]\)/\1/p' | sed 's/(.*//; s/\.[^.]*$//' | sort -u \
+              | circleci tests run --split-by=timings --timings-type=classname --verbose --command="sed 's/^/--filter-class=/' \
+                  | xargs dotnet test --project << parameters.project >> -c Release --no-build --no-ansi --no-progress --output Detailed \
+                      --results-directory /tmp/test-runs $coverage \
+                      --report-spekt-junit --report-spekt-junit-filename /tmp/test-results/<< parameters.results >>/results.xml" \
+              2>&1 | tee /tmp/test-runs/output.log
+      # A test process that crashed, or was stopped stuck, writes no results: one failed test in their
+      # place, so CircleCI shows it and "Rerun failed tests" runs its class again. Its class is the stuck
+      # test's (the hang dump's log: "[00:05:00] WorldEditor.Tests.SomeTests.AMethod"), else the test
+      # class on the crash's stack (in the process's error output: "   at WorldEditor.Tests.SomeTests+<AMethod>d__4.MoveNext()": the
+      # nested part stands in for a method), else TestHost; its text, the end of the run's output.
+      - run:
+          name: A crashed or stuck test process, as a failed test
+          when: on_fail
+          command: |
+            results=/tmp/test-results/<< parameters.results >>
+            log=/tmp/test-runs/output.log
+            if [ -e "$results/results.xml" ] || [ ! -e "$log" ]; then exit 0; fi
+            stuck=$(cat /tmp/test-runs/*_hang.log 2> /dev/null || true)
+            if [ -n "$stuck" ]; then
+              what="A test was stuck: the test process was stopped (with a dump)"
+              class=$(printf '%s\n' "$stuck" | sed -n -E '1s/^\[[0-9:.]+\] +//; 1s/\(.*//; 1s/\.[A-Za-z0-9_]+$//p')
+            else
+              what="The test process crashed ($(grep -m 1 -o '^Exit code: [0-9]*' "$log" || echo 'no exit code'))"
+              class=$(sed -n '/^  Error output: /,$p' "$log" \
+                | grep -E -o '^ +at (TerrainEditor\.Desktop\.Tests|WorldEditor\.Tests)\.[A-Za-z0-9_.+<>]+' \
+                | head -n 1 | sed -E 's/^ +at //; s/\+.*/.x/; s/\.[A-Za-z0-9_]+$//' || true)
+            fi
+            report=$( { printf '%s\n' "$stuck"; tail -n 80 "$log"; } | sed 's/]]>/]]]]><![CDATA[>/g')
+            mkdir -p "$results"
+            cat > "$results/crash.xml" \<<EOF
+            <?xml version="1.0" encoding="utf-8"?>
+            <testsuites>
+              <testsuite name="${class:-TestHost}" tests="1" failures="1" errors="0">
+                <testcase classname="${class:-TestHost}" name="$what" time="0">
+                  <failure message="$what: the tests still running were not finished."><![CDATA[$report]]></failure>
+                </testcase>
+              </testsuite>
+            </testsuites>
+            EOF
       # Saved from main only: branches reuse main's (each cache is kept 15 days and billed).
       - when:
           condition:
@@ -136,12 +189,12 @@ commands:
             - run:
                 name: This container's coverage report is there
                 command: |
-                  ls /tmp/coverage/<< parameters.results >>-*/coverage.*.cobertura.xml \
+                  ls /tmp/coverage/<< parameters.results >>-*/coverage.cobertura.xml \
                     || { echo "No coverage report: Codecov would get nothing from this container."; exit 1; }
             - persist_to_workspace:
                 root: /tmp/coverage
                 paths:
-                  - << parameters.results >>-*/coverage.*.cobertura.xml
+                  - << parameters.results >>-*/coverage.cobertura.xml
       - store_test_results:
           path: /tmp/test-results
       - store_artifacts:
@@ -232,9 +285,9 @@ jobs:
             for project in core:3 app:6; do
               count=${project#*:} project=${project%:*}
               for node in $(seq 0 $((count - 1))); do
-                found=$(ls /tmp/coverage/$project-$node/coverage.*.cobertura.xml) \
-                  || { echo "No coverage report from $project-tests' container $node."; exit 1; }
-                for r in $found; do reports+=("$r"); done
+                report=/tmp/coverage/$project-$node/coverage.cobertura.xml
+                [ -e "$report" ] || { echo "No coverage report from $project-tests' container $node."; exit 1; }
+                reports+=("$report")
               done
             done
             mkdir -p /tmp/upload
