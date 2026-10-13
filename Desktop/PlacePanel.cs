@@ -262,7 +262,7 @@ public sealed class PlacePanel
         if (Memory.Chosen.Count > 0)
         {
             t.Chosen.Clear();
-            t.Chosen.AddRange(Memory.Chosen);
+            t.Chosen.AddRange(Memory.Chosen.Where(n => !ModManifests.IsHidden(n)));
         }
         foreach (var (k, w) in Memory.Weights)
         {
@@ -644,16 +644,20 @@ public sealed class PlacePanel
 
     /// <summary>The kinds that can be placed in this world, with their kind of object (for the list's order).</summary>
     private List<(string Name, ObjectKind Kind)> _creatable = [];
+    /// <summary>The world and the manifests <c>_creatable</c> was worked out from.</summary>
+    private (Save.WorldSave? World, int Manifests) _creatableFrom;
     /// <summary>
-    /// The kinds that can be placed in this world, with their kind of object; worked out once from the open world
-    /// (empty while none).
+    /// The kinds that can be placed in this world, with their kind of object; worked out again for another world or
+    /// when the mods' manifests change (empty while no world is open).
     /// </summary>
     internal List<(string Name, ObjectKind Kind)> Creatable()
     {
-        if (_creatable.Count == 0 && _scene()?.World is { } w)
+        if (_scene()?.World is { } w && _creatableFrom != (w, ModManifests.Generation))
         {
-            // Not the prefabs a mod's manifest asks not to offer (its tools, effects, helpers).
+            _creatableFrom = (w, ModManifests.Generation);
+            // Not the prefabs a mod's manifest asks not to offer (its tools, effects, helpers), nor chosen any more.
             _creatable = [.. w.Creatable.Select(p => _nameOf(p)).Where(n => n != null && !ModManifests.IsHidden(n)).Distinct().Select(n => (n!, ObjectKinds.Of(n, false)))];
+            T.Chosen.RemoveAll(ModManifests.IsHidden);
         }
         return _creatable;
     }

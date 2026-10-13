@@ -454,7 +454,8 @@ public sealed class InspectorPanel
                     Dirty();
                 }
             };
-            var rm = new Button { Content = f.Removed ? "↺" : "✕", FontSize = 11, Padding = new Thickness(4, 0) };
+            // A value a mod's manifest shows only cannot be removed either.
+            var rm = new Button { Content = f.Removed ? "↺" : "✕", FontSize = 11, Padding = new Thickness(4, 0), IsEnabled = note?.ReadOnly != true };
             rm.Tip(f.Removed ? "inspect.keepValue" : "inspect.removeValue");
             rm.Click += (_, _) => { f.Removed = !f.Removed; Render(); };
             var label = new TextBlock { Text = Label(f), FontSize = 11, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis, TextDecorations = f.Removed ? TextDecorations.Strikethrough : null };
