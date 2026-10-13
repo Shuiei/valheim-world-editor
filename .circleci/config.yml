@@ -1,302 +1,36 @@
-# Valheim World Editor: tests and build checks on every push and pull request.
-#   code-analysis  the editor (Core, Desktop) builds with no .NET analyzer warning (warnings are
-#                  errors) and is formatted as .editorconfig says (dotnet format)
-#   core-tests     the core's tests on three containers (saves, the world generator against the game's
-#                  values, live mode against a stand-in bridge, the SSH tunnel against a local sshd), and
-#   app-tests      the app's windows, headless, on six containers, and the visual tests: the real
-#                  editor drawing with OpenGL on a virtual screen (Xvfb, Mesa's software OpenGL),
-#                  driven by the tests. Each builds its test project (tests/Core.Tests, tests/Desktop.Tests)
-#                  with warnings as errors; CircleCI shares the test classes out by their last times
-#                  and can rerun only the failed ones (circleci tests run, tools/ci-tests.sh). Every
-#                  test runs, failing or not; a test stuck for 5 minutes (10 under coverage) ends its run.
-#                  On main only, each test container keeps its code coverage for the coverage job;
-#                  branches run the tests without it (several times faster).
-#   coverage       on main only, once core-tests and app-tests have both passed: merges the nine
-#                  containers' coverage into one report and sends it to Codecov (codecov.yml), which
-#                  fails its own check (codecov/project) under 95% line coverage. A failed or partial test
-#                  run sends nothing, so Codecov never shows the coverage of part of the tests.
-#   packages       the Windows and Linux release packages: they build, hold no source code or game
-#                  files (the plugin is left out: it builds against the game's own DLLs), and the
-#                  Linux one starts and draws the test world (tools/smoke-test.sh, under Xvfb)
-#   windows-smoke  the Windows package does the same on a Windows machine (tools/smoke-test.ps1)
-# Security and bug patterns (CodeQL) are checked by GitHub's code scanning, set up on GitHub itself.
-# What CI cannot cover: the plugin build and reading the game's data (both need Valheim's files), the
-# game's look in the visual tests (copied from Valheim: CI's editor draws plain colours) and live mode
-# against a real game.
+# The pipeline's start (a setup workflow, CircleCI's dynamic configuration): says whether a release is
+# due, then runs .circleci/continue.yml, where the tests, the packages and the release are.
+# A release is due on main when VERSION's CHANGELOG heading has its date (not "unreleased") and VERSION
+# is not tagged yet: the release workflow then runs the tests and waits for an approval
+# (docs/development.md#releasing).
 version: 2.1
+setup: true
 
 orbs:
-  # Codecov's official orb: uploads the coverage with Codecov's CLI, checked against its signature
-  # (needs gpg). The token is the project's CODECOV_TOKEN. Any 6.x (the latest); a new major version is
-  # taken by hand.
-  codecov: codecov/codecov@6
-
-executors:
-  dotnet:
-    docker:
-      - image: mcr.microsoft.com/dotnet/sdk:10.0
-    resource_class: medium
-
-commands:
-  # One test project's classes, shared out between the job's containers by
-  # CircleCI by the time each class took in the last runs (circleci tests run). It also gives the job
-  # "Rerun failed tests": a rerun runs only the classes that failed. Every test runs (a failure does
-  # not stop the others); a test stuck 5 minutes ends the run (with a dump; 10 under coverage, on main),
-  # and silence ends the step a minute after that.
-  test-classes:
-    parameters:
-      project:
-        type: string
-      what:
-        type: string
-      results:
-        type: string
-      display:
-        description: A virtual screen with OpenGL (Xvfb, Mesa's software renderer) for the visual tests.
-        type: boolean
-        default: false
-    steps:
-      - checkout
-      - run:
-          name: OpenSSH server (the tunnel's tests) and fonts (Avalonia headless)
-          command: apt-get update -qq && apt-get install -y -qq openssh-server libfontconfig1 > /dev/null && mkdir -p /run/sshd
-      - when:
-          condition: << parameters.display >>
-          steps:
-            - run:
-                name: Xvfb and Mesa's software OpenGL (the visual tests' virtual screen)
-                command: |
-                  apt-get install -y -qq --no-install-recommends xvfb xauth libgl1 libglx-mesa0 libgl1-mesa-dri libegl1 libegl-mesa0 \
-                    libgles2 libx11-6 libxrandr2 libxi6 libxcursor1 libice6 libsm6 > /dev/null
-            # For the rest of the job (the tests' step finds it at :99). The image's keyboard layouts name
-            # keys newer than its X libraries know: the keymap compiler's warnings about them (harmless,
-            # not fatal) are left out, anything else Xvfb says is kept.
-            - run:
-                name: The virtual screen
-                background: true
-                command: |
-                  Xvfb :99 -screen 0 1600x1000x24 -nolisten tcp 2>&1 \
-                    | grep --line-buffered -v -E 'Could not resolve keysym|^The XKEYBOARD keymap compiler \(xkbcomp\) reports:$|^Errors from xkbcomp are not fatal to the X server$'
-      - restore_cache:
-          keys:
-            - nuget-v2-{{ checksum "Directory.Build.props" }}-{{ checksum "Core/ValheimWorldEditor.Core.csproj" }}-{{ checksum "Desktop/ValheimWorldEditor.Desktop.csproj" }}-{{ checksum "tests/Core.Tests/Core.Tests.csproj" }}-{{ checksum "tests/Desktop.Tests/Desktop.Tests.csproj" }}
-            # Else main's latest (a branch whose packages changed restores only what it adds).
-            - nuget-v2-
-      - run:
-          name: Build the tests (every warning is an error)
-          command: dotnet build << parameters.project >> -c Release -warnaserror
-      - run:
-          name: << parameters.what >>
-          no_output_timeout: 11m
-          environment:
-            VWE_NEED_SSHD: "1"
-          command: |
-            # Coverage on main only (Codecov reports main's).
-            if [ "$CIRCLE_BRANCH" = main ]; then export VWE_COVERAGE=1; fi
-            # The virtual screen, where there is one (it starts in the background: a moment): the visual
-            # tests draw on it, else they skip.
-            if command -v Xvfb > /dev/null; then
-              for _ in $(seq 100); do [ -e /tmp/.X11-unix/X99 ] && break; sleep 0.1; done
-              export DISPLAY=:99
-            fi
-            tools/ci-tests.sh list << parameters.project >> \
-              | circleci tests run --command="xargs tools/ci-tests.sh run << parameters.project >> << parameters.results >>" --split-by=timings --timings-type=classname --verbose
-      # Saved from main only: branches reuse main's (each cache is kept 15 days and billed).
-      - when:
-          condition:
-            equal: [main, << pipeline.git.branch >>]
-          steps:
-            - save_cache:
-                key: nuget-v2-{{ checksum "Directory.Build.props" }}-{{ checksum "Core/ValheimWorldEditor.Core.csproj" }}-{{ checksum "Desktop/ValheimWorldEditor.Desktop.csproj" }}-{{ checksum "tests/Core.Tests/Core.Tests.csproj" }}-{{ checksum "tests/Desktop.Tests/Desktop.Tests.csproj" }}
-                paths:
-                  - ~/.nuget/packages
-      # On main, the coverage of this container's tests, kept for the coverage job (which sends it with
-      # the other containers'). Only when its tests passed: a container with a failed test keeps
-      # nothing, and its job fails, so the coverage job does not run.
-      - when:
-          condition:
-            equal: [main, << pipeline.git.branch >>]
-          steps:
-            - run:
-                name: This container's coverage report is there
-                command: |
-                  ls /tmp/coverage/<< parameters.results >>-*/coverage.*.cobertura.xml \
-                    || { echo "No coverage report: Codecov would get nothing from this container."; exit 1; }
-            - persist_to_workspace:
-                root: /tmp/coverage
-                paths:
-                  - << parameters.results >>-*/coverage.*.cobertura.xml
-      - store_test_results:
-          path: /tmp/test-results
-      - store_artifacts:
-          path: /tmp/test-results
+  # CircleCI's orb that hands the pipeline on to another configuration. Any 1.x.
+  continuation: circleci/continuation@1
 
 jobs:
-  code-analysis:
-    executor: dotnet
-    steps:
-      - checkout
-      # One NuGet cache for both jobs that build (code-analysis, native-tests), made again on main when a
-      # project's packages change.
-      - restore_cache:
-          keys:
-            - nuget-v2-{{ checksum "Directory.Build.props" }}-{{ checksum "Core/ValheimWorldEditor.Core.csproj" }}-{{ checksum "Desktop/ValheimWorldEditor.Desktop.csproj" }}-{{ checksum "tests/Core.Tests/Core.Tests.csproj" }}-{{ checksum "tests/Desktop.Tests/Desktop.Tests.csproj" }}
-            # Else main's latest (a branch whose packages changed restores only what it adds).
-            - nuget-v2-
-      - run:
-          name: Analyzers (every warning is an error)
-          command: dotnet build Desktop/ValheimWorldEditor.Desktop.csproj -c Release -warnaserror
-      - run:
-          name: Formatting (dotnet format, as .editorconfig says)
-          command: |
-            for p in Core/ValheimWorldEditor.Core.csproj Desktop/ValheimWorldEditor.Desktop.csproj; do
-              dotnet format whitespace "$p" --verify-no-changes --no-restore
-              dotnet format style "$p" --verify-no-changes --no-restore
-            done
-      # Saved from main only: branches reuse main's (each cache is kept 15 days and billed).
-      - when:
-          condition:
-            equal: [main, << pipeline.git.branch >>]
-          steps:
-            - save_cache:
-                key: nuget-v2-{{ checksum "Directory.Build.props" }}-{{ checksum "Core/ValheimWorldEditor.Core.csproj" }}-{{ checksum "Desktop/ValheimWorldEditor.Desktop.csproj" }}-{{ checksum "tests/Core.Tests/Core.Tests.csproj" }}-{{ checksum "tests/Desktop.Tests/Desktop.Tests.csproj" }}
-                paths:
-                  - ~/.nuget/packages
-
-  core-tests:
-    executor: dotnet
-    # The world generator's and dungeons' tests run several times slower under coverage (on main):
-    # three containers keep the job about as long as app-tests.
-    parallelism: 3
-    steps:
-      - test-classes:
-          project: tests/Core.Tests/Core.Tests.csproj
-          what: Core tests (saves, world generator, live mode, SSH tunnel)
-          results: core
-
-  app-tests:
-    executor: dotnet
-    # Four cores: the visual tests' editor reads the world map and its close-ups on several threads, and on
-    # main the coverage measures it too (on two cores a close-up took minutes).
-    resource_class: large
-    # The window tests run one at a time (one UI thread): more containers is what makes them faster.
-    # Six keep the job about as long as packages and code-analysis on branches (each container also
-    # spends about 1.5 minutes setting up and building). The coverage job expects this many reports.
-    parallelism: 6
-    steps:
-      - test-classes:
-          project: tests/Desktop.Tests/Desktop.Tests.csproj
-          what: App tests (the windows, headless; the real editor drawing, on the virtual screen)
-          results: app
-          display: true
-
-  # The coverage of every test container, sent to Codecov in one go: the job runs on main only, once
-  # core-tests and app-tests have both passed (workflows), so Codecov gets all nine containers' coverage
-  # (core-tests' three, app-tests' six) or none. The nine reports are merged here into one
-  # (tools/MergeCoverage, whose total the step prints) and that one file is sent: Codecov, given the
-  # reports in one upload, kept only part of the app tests' coverage, and Microsoft's dotnet-coverage
-  # merge dropped the lines' branch counts. The orb's fail_on_error does nothing (its
-  # set_codecov_envs.sh empties CODECOV_FAIL_ON_ERROR, so the CLI never fails the step): a missing
-  # report is caught before, and a failed upload leaves Codecov with the last full figure.
-  coverage:
-    executor: dotnet
-    steps:
-      # Codecov's CLI reads the commit and the repository's files from the checkout.
-      - checkout
-      - run:
-          name: gpg (Codecov's CLI is checked against its signature)
-          command: apt-get update -qq && apt-get install -y -qq gnupg > /dev/null
-      - attach_workspace:
-          at: /tmp/coverage
-      - run:
-          name: Every container's coverage report is there, merged into one
-          command: |
-            reports=()
-            # Each test job's containers, as its parallelism says: core-tests 3, app-tests 6.
-            for project in core:3 app:6; do
-              count=${project#*:} project=${project%:*}
-              for node in $(seq 0 $((count - 1))); do
-                found=$(ls /tmp/coverage/$project-$node/coverage.*.cobertura.xml) \
-                  || { echo "No coverage report from $project-tests' container $node."; exit 1; }
-                for r in $found; do reports+=("$r"); done
-              done
-            done
-            mkdir -p /tmp/upload
-            # Prints the merged total, as Codecov should show it (lines run with every branch taken, of lines measured).
-            dotnet run --project tools/MergeCoverage -c Release -- /tmp/upload/coverage.cobertura.xml "${reports[@]}"
-      - codecov/upload:
-          dir: /tmp/upload
-          plugins: noop
-
-  packages:
-    executor: dotnet
+  setup:
+    executor: continuation/default
     steps:
       - checkout
       - run:
-          name: Tools for packaging
-          command: apt-get update -qq && apt-get install -y -qq zip > /dev/null
-      - run:
-          name: Build the release packages
-          command: tools/release.sh /tmp/dist
-      - run:
-          name: Check what is in them
-          command: for p in /tmp/dist/*; do tools/check-package.sh "$p"; done
-      - run:
-          name: Smoke test of the Linux package (Xvfb, Mesa's software OpenGL)
-          no_output_timeout: 5m
+          name: Is a release due?
           command: |
-            apt-get install -y -qq xvfb xauth mesa-utils libgl1 libglx-mesa0 libgl1-mesa-dri libegl1 libegl-mesa0 libgles2 \
-              libx11-6 libxrandr2 libxi6 libxcursor1 libice6 libsm6 libfontconfig1 > /dev/null
-            mkdir -p /tmp/smoke && tar -C /tmp/smoke -xzf /tmp/dist/ValheimWorldEditor-*-linux-x64.tar.gz
-            # The OpenGL the virtual screen offers (Mesa's software renderer, llvmpipe).
-            xvfb-run -a -s "-screen 0 1600x1000x24" glxinfo -B | grep -E 'renderer|version' || true
-            xvfb-run -a -s "-screen 0 1600x1000x24" tools/smoke-test.sh /tmp/smoke/ValheimWorldEditor/ValheimWorldEditor tests/fixtures/CITest
-      # The packages kept as artifacts only for main (releases take them from there: about 135 MB a
-      # run, kept 30 days); other branches only test them.
-      - when:
-          condition:
-            equal: [main, << pipeline.git.branch >>]
-          steps:
-            - store_artifacts:
-                path: /tmp/dist
-      # The Windows package for windows-smoke, in the same workflow.
-      - persist_to_workspace:
-          root: /tmp/dist
-          paths:
-            - "*.zip"
-
-  windows-smoke:
-    machine:
-      image: windows-server-2022-gui:current
-    resource_class: windows.medium
-    shell: powershell.exe -ExecutionPolicy Bypass
-    steps:
-      - checkout
-      - attach_workspace:
-          at: C:\dist
-      - run:
-          name: Smoke test of the Windows package
-          no_output_timeout: 5m
-          command: |
-            Expand-Archive (Get-Item C:\dist\ValheimWorldEditor-*-win-x64.zip).FullName -DestinationPath C:\smoke
-            tools\smoke-test.ps1 C:\smoke\ValheimWorldEditor\ValheimWorldEditor.exe tests\fixtures\CITest
+            release=false
+            version=$(tr -d '[:space:]' < VERSION)
+            if [ "$CIRCLE_BRANCH" = main ] && grep -q "^## v$version — [0-9]" CHANGELOG.md \
+              && [ -z "$(git ls-remote --tags origin "refs/tags/v$version")" ]; then
+              release=true
+            fi
+            echo "Release of v$version due: $release"
+            echo "{\"release\": $release}" > /tmp/parameters.json
+      - continuation/continue:
+          configuration_path: .circleci/continue.yml
+          parameters: /tmp/parameters.json
 
 workflows:
-  # Side by side; windows-smoke waits for the Windows package that packages makes, and coverage (main
-  # only) for both test jobs to pass.
-  test:
+  setup:
     jobs:
-      - packages
-      - code-analysis
-      - core-tests
-      - app-tests
-      - windows-smoke:
-          requires:
-            - packages
-      - coverage:
-          requires:
-            - core-tests
-            - app-tests
-          filters:
-            branches:
-              only: main
+      - setup
