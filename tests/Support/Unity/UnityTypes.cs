@@ -113,6 +113,32 @@ public static class UnityTypes
         StreamData());
 
     /// <summary>
+    /// A mesh as another Unity version lays it out: one more field after its name, so read with <see cref="Mesh"/>'s
+    /// layout it is misread (as the mods' bundles, built by different Unity versions, would be).
+    /// </summary>
+    public static readonly UnityField MeshOfAnotherVersion = Struct("Mesh", "Base",
+        Text("m_Name"),
+        Of("int", "m_AnotherVersionsField"),
+        List("m_SubMeshes", Struct("SubMesh", "data",
+            Of("unsigned int", "firstByte"),
+            Of("unsigned int", "indexCount"),
+            Of("int", "topology"),
+            Of("unsigned int", "baseVertex"),
+            Of("unsigned int", "firstVertex"),
+            Of("unsigned int", "vertexCount"),
+            Aabb("localAABB"))),
+        Of("int", "m_IndexFormat"),
+        List("m_IndexBuffer", Of("UInt8", "data"), align: true),
+        Struct("VertexData", "m_VertexData",
+            Of("unsigned int", "m_VertexCount"),
+            List("m_Channels", Struct("ChannelInfo", "data", Of("UInt8", "stream"), Of("UInt8", "offset"), Of("UInt8", "format"), Of("UInt8", "dimension"))),
+            Bytes("m_DataSize")),
+        Struct("CompressedMesh", "m_CompressedMesh",
+            PackedFloats("m_Vertices"), PackedFloats("m_UV"), PackedFloats("m_Normals"), PackedInts("m_NormalSigns"), PackedInts("m_Triangles")),
+        Aabb("m_LocalAABB"),
+        StreamData());
+
+    /// <summary>
     /// A texture: its name, size, format, mip count, pixels and data kept out of it.
     /// </summary>
     public static readonly UnityField Texture2D = Struct("Texture2D", "Base",

@@ -114,7 +114,7 @@ public sealed class GameBundles
     /// <summary>
     /// AssetsTools.NET's manager, which holds the open bundles and their type trees.
     /// </summary>
-    private readonly AssetsManager _am = new() { UseTemplateFieldCache = true, UseRefTypeManagerCache = true, UseQuickLookup = true };
+    private readonly AssetsManager _am;
     /// <summary>
     /// Where the index is kept (null: not kept).
     /// </summary>
@@ -164,8 +164,12 @@ public sealed class GameBundles
     /// </summary>
     /// <param name="dir">The bundles folder.</param>
     /// <param name="cacheFile">Where the index is kept (null: not kept).</param>
-    public GameBundles(string dir, string? cacheFile)
+    /// <param name="mixedVersions">The bundles were built by different Unity versions (the mods' bundles): the layout
+    /// of each kind of object is then read from each bundle, not kept from the first one read (AssetsTools keeps it by
+    /// kind alone, and another version's layout misreads the object).</param>
+    public GameBundles(string dir, string? cacheFile, bool mixedVersions = false)
     {
+        _am = new() { UseTemplateFieldCache = !mixedVersions, UseRefTypeManagerCache = true, UseQuickLookup = true };
         Folder = dir;
         _cacheFile = cacheFile;
         foreach (string f in Directory.GetFiles(dir))
@@ -603,7 +607,7 @@ public sealed class GameBundles
 
     /// <summary>
     /// A mesh's bounds as Unity keeps them (m_LocalAABB: centre and extent, x, y, z each), null when it cannot be read
-    /// (to tell apart meshes of the same name).
+    /// (to tell apart meshes of the same name; one that cannot be read is not a candidate).
     /// </summary>
     public float[]? BoundsOf(Where mesh)
     {
@@ -619,6 +623,10 @@ public sealed class GameBundles
                 var e = m["m_LocalAABB.m_Extent"];
                 return [c["x"].AsFloat, c["y"].AsFloat, c["z"].AsFloat, e["x"].AsFloat, e["y"].AsFloat, e["z"].AsFloat];
             }
+            catch (Exception e) when (e is IOException or InvalidDataException or NotImplementedException or NotSupportedException or IndexOutOfRangeException or ArgumentException)
+            {
+                return null;
+            }
             finally
             {
                 _fields.Clear();
@@ -627,7 +635,8 @@ public sealed class GameBundles
     }
 
     /// <summary>
-    /// A mesh's vertex count, -1 when it cannot be read (to tell apart meshes of the same name).
+    /// A mesh's vertex count, -1 when it cannot be read (to tell apart meshes of the same name; one that cannot be read
+    /// is not a candidate).
     /// </summary>
     public int VertexCountOf(Where mesh)
     {
@@ -636,6 +645,10 @@ public sealed class GameBundles
             try
             {
                 return Read(mesh.Bundle, mesh.PathId) is { } m ? (int)m["m_VertexData.m_VertexCount"].AsUInt : -1;
+            }
+            catch (Exception e) when (e is IOException or InvalidDataException or NotImplementedException or NotSupportedException or IndexOutOfRangeException or ArgumentException)
+            {
+                return -1;
             }
             finally
             {

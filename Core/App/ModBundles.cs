@@ -66,7 +66,8 @@ public static class ModBundles
                 if (sources.Count > 0)
                 {
                     Copy(sources, stamp);
-                    reader = new GameBundles(Folder, IndexFile);
+                    // Mods are built with different Unity versions (2019 to 6000 among those tried).
+                    reader = new GameBundles(Folder, IndexFile, mixedVersions: true);
                 }
             }
             catch (Exception e) when (e is IOException or UnauthorizedAccessException or BadImageFormatException or InvalidDataException or NotSupportedException or NotImplementedException)

@@ -76,6 +76,29 @@ public class GameBundlesFilesTests
         Assert.Null(GameBundles.ForGame(Path.Combine(game.Root, "valheim_Data"), null));
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void BundlesOfDifferentUnityVersionsReadTogether(bool otherFirst)
+    {
+        using var game = new TestGame();
+        var plain = game.Bundle("plain_mod");
+        long mesh = new TestMesh { Name = "plank", Positions = [0, 0, 0, 1, 0, 0, 0, 1, 0], Submeshes = [[0, 1, 2]] }.Add(plain);
+        var older = game.Bundle("older_mod");
+        long other = new TestMesh { Name = "plank", AnotherVersion = true, Positions = [0, 0, 0, 2, 0, 0, 0, 2, 0, 2, 2, 0], Submeshes = [[0, 1, 2, 1, 3, 2]] }.Add(older);
+        game.Save();
+        var bundles = new GameBundles(game.BundlesDir, null, mixedVersions: true);
+        GameBundles.Where a = new("plain_mod", mesh), b = new("older_mod", other);
+
+        // Either read first, each with its own bundle's layout.
+        foreach (var at in otherFirst ? [b, a] : (GameBundles.Where[])[a, b])
+        {
+            Assert.Equal(at == a ? 3 : 4, bundles.VertexCountOf(at));
+            Assert.Equal(at == a ? 3 : 4, bundles.LoadMesh(at)!.VertexCount);
+        }
+        Assert.NotNull(bundles.BoundsOf(b));
+    }
+
     [Fact]
     public void MeshesMaterialsAndTexturesAreFoundByName()
     {

@@ -15,6 +15,11 @@ public sealed class TestMesh
     public string Name { get; init; } = "mesh";
 
     /// <summary>
+    /// Written with another Unity version's layout (<see cref="UnityTypes.MeshOfAnotherVersion"/>).
+    /// </summary>
+    public bool AnotherVersion { get; init; }
+
+    /// <summary>
     /// Three floats per vertex.
     /// </summary>
     public required float[] Positions { get; init; }
@@ -252,6 +257,10 @@ public sealed class TestMesh
         {
             values["m_StreamData"] = b.StreamData(b.Resource([.. data]), data.Count);
         }
-        return b.Assets.Add(UnityClass.Mesh, UnityTypes.Mesh, values, pathId: pathId);
+        if (AnotherVersion)
+        {
+            values["m_AnotherVersionsField"] = 7;
+        }
+        return b.Assets.Add(UnityClass.Mesh, AnotherVersion ? UnityTypes.MeshOfAnotherVersion : UnityTypes.Mesh, values, pathId: pathId);
     }
 }
