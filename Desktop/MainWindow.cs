@@ -281,7 +281,8 @@ public sealed partial class MainWindow : Window
     /// <summary>
     /// Makes a world in <paramref name="folder"/> and opens it; on failure the New world page says why.
     /// </summary>
-    internal async Task CreateWorld(string folder, string name, string seed)
+    /// <returns>Null when made, else why it could not be.</returns>
+    internal async Task<string?> CreateWorld(string folder, string name, string seed)
     {
         Busy($"Making the world {name}…");
         try
@@ -297,13 +298,14 @@ public sealed partial class MainWindow : Window
             {
                 p.Problem.Text = $"Could not make the world: {ex.Message}";
             }
-            return;
+            return $"Could not make the world: {ex.Message}";
         }
         Busy(null);
         NewWorld?.Dispose();
         NewWorld = null;
         await OpenWorld(() => Task.Run(() => WorldSession.Open(folder)), $"Opening {name}…");
         MessageText.Text = $"Made {name} (seed {seed}). The game lays out its start, traders and dungeons the first time it loads it, and makes each place as players reach it: play it before reshaping an area here.";
+        return null;
     }
 
     /// <summary>
@@ -433,7 +435,18 @@ public sealed partial class MainWindow : Window
     /// <param name="x">The middle zone, east.</param>
     /// <param name="z">The middle zone, north.</param>
     /// <param name="size">The area's side, in zones.</param>
-    internal async Task EditArea(int x, int z, int size)
+    internal Task EditArea(int x, int z, int size) => EditBlock(x - size / 2, z - size / 2, size, size, (x, z));
+
+    /// <summary>
+    /// A block of zones of the world in the 3D editor (it need not be square: Follow grows it); an object the map's
+    /// search found at <paramref name="spot"/> is selected, the camera on it.
+    /// </summary>
+    /// <param name="x0">The south-west zone, east.</param>
+    /// <param name="z0">The south-west zone, north.</param>
+    /// <param name="zonesX">Zones west to east.</param>
+    /// <param name="zonesZ">Zones south to north.</param>
+    /// <param name="spot">The map's chosen zone the area was opened around, if it was.</param>
+    internal async Task EditBlock(int x0, int z0, int zonesX, int zonesZ, (int X, int Z)? spot = null)
     {
         if (World is not { } world)
         {
@@ -441,13 +454,13 @@ public sealed partial class MainWindow : Window
         }
         View.SelectTool.Commit();
         KeepHistory();
-        Busy($"Loading {size} × {size} zones around zone {x}, {z}…");
+        Busy($"Loading {zonesX} × {zonesZ} zones…");
         try
         {
-            var scene = await Task.Run(() => WorldScene.Load(world, x, z, size));
+            var scene = await Task.Run(() => WorldScene.LoadBlock(world, x0, z0, zonesX, zonesZ));
             await ShowEditor(scene);
             // Found by the map's search: selected, the camera on it (items and texts: in the inspector).
-            if (MapPage?.Target is var (id, inspect) && MapPage.Spot == (x, z))
+            if (MapPage?.Target is var (id, inspect) && spot != null && MapPage.Spot == spot)
             {
                 int i = scene.Things.FindIndex(t => t.Id == id && !t.Gone);
                 if (i >= 0)
@@ -498,8 +511,7 @@ public sealed partial class MainWindow : Window
         }
         MapButton.IsVisible = scene.Owner != null && !Options.Direct;
         _title.Text = scene.Name;
-        int mid = scene.Size / 2;
-        _subtitle.Text = $"{scene.Size} × {scene.Size} zones around zone {scene.X0 + mid}, {scene.Z0 + mid} · {scene.Things.Count(t => !t.Gone):N0} objects";
+        _subtitle.Text = $"{scene.ZonesX} × {scene.ZonesZ} zones, from zone {scene.X0}, {scene.Z0} to {scene.X0 + scene.ZonesX - 1}, {scene.Z0 + scene.ZonesZ - 1} · {scene.Things.Count(t => !t.Gone):N0} objects";
         Title = $"{scene.Name} · Valheim World Editor {BuildInfo.Version}";
         _pages.Content = _editorPage;
         EditorOpened(scene);
@@ -729,7 +741,7 @@ public sealed partial class MainWindow : Window
         }
         session.Mask = Mask;
         // New objects keep a green marker until saved, or until the game has them (live).
-        View.InGame = id => session.Scene.Owner?.IsLive == true && session.Scene.Owner.LiveSync.IsLive(id);
+        View.InGame = id => session.Scene.Owner is { } owner && (owner.IsLive ? owner.LiveSync.IsLive(id) : owner.IsSaved(id));
         // What is placed stays visible: its kinds switched off in View are switched on.
         session.ThingsAdded += indices => Dispatcher.UIThread.Post(() => ShowKindsOf(session.Scene, indices));
         session.Changed += () => Dispatcher.UIThread.Post(() =>
@@ -893,6 +905,8 @@ public sealed partial class MainWindow : Window
         {
             MessageText.Text = "Could not save: " + ex.Message;
         }
+        // Saved objects lose their green marks.
+        View.RefreshNewMarkers();
         UpdateSaveBar();
     }
 
@@ -1163,7 +1177,9 @@ public sealed partial class MainWindow : Window
         bool clamped = false;
         if (path.Act == PathTool.Action.Cave)
         {
-            ApplyCave(s, path);
+            MessageText.Text = ApplyCave(s, path, s.Brush, s.MaskNow());
+            PathPanel.Refresh();
+            UpdateSaveBar();
             return;
         }
         var touched = s.EditGround($"Path: {PathTool.Label(path.Act)}", g =>
@@ -1183,7 +1199,13 @@ public sealed partial class MainWindow : Window
     /// <summary>
     /// The Cave action: the trench, the trees and rocks in it taken away and the roof's boulders, in one undo step.
     /// </summary>
-    private void ApplyCave(EditSession s, PathTool path)
+    /// <param name="s">The session the cave goes into, one undo step.</param>
+    /// <param name="path">The line, its width, soft edge, depth, headroom, rock and seed.</param>
+    /// <param name="brush">The brush whose noise roughens a natural line.</param>
+    /// <param name="mask">Which ground may change (null: all of it).</param>
+    /// <param name="label">The history's name for the step; null: "Cave along" and its length.</param>
+    /// <returns>What was done, for the status line.</returns>
+    internal static string ApplyCave(EditSession s, PathTool path, Brush brush, Func<int, float>? mask, string? label = null)
     {
         var scene = s.Scene;
         var cave = path.PlanCave(s.Ground);
@@ -1233,9 +1255,9 @@ public sealed partial class MainWindow : Window
         }
         bool clamped = false;
         int open = 0;
-        s.Commit($"Cave along {PathTool.Length(cave.Curve):0} m", g =>
+        s.Commit(label ?? $"Cave along {PathTool.Length(cave.Curve):0} m", g =>
         {
-            var (t, rect, c) = path.Apply(g, s.Brush, water, s.MaskNow(), cave);
+            var (t, rect, c) = path.Apply(g, brush, water, mask, cave);
             clamped = c;
             // The walls up into the rock where its underside is above them (no daylight at the sides).
             foreach (var (p, top) in built.Seal)
@@ -1252,15 +1274,13 @@ public sealed partial class MainWindow : Window
             }
             return (t, (rect.X0 - 4, rect.Z0 - 4, rect.X1 + 4, rect.Z1 + 4));
         }, remove, roof);
-        MessageText.Text = built.Uncovered > 0 && roof.Count > 0
+        return built.Uncovered > 0 && roof.Count > 0
             ? $"Dug a cave roofed with {roof.Count} boulder(s), but {built.Uncovered} point(s) of its floor stay open to the sky (at the area's edge?)."
             : roof.Count == 0
             ? "Dug the cave's trench, but it is nowhere deep enough for a roof: make Depth larger than Headroom by 1.5 m, or the line longer (its ends slope up to the ground)."
             : $"Dug a cave {PathTool.Length(cave.Curve):0} m long, roofed with {roof.Count} boulder(s){(remove.Count > 0 ? $"; {remove.Count} tree(s) and rock(s) in the way taken away" : "")}."
                 + (open > 0 ? $" At {open} point(s) the walls could not rise to the rock (the game's ±8 m: No limit in the brush options lets them)." : "")
                 + (clamped ? " Part of it reached the game's ±8 m limit (switch on No limit in the brush options to dig deeper)." : " Ctrl+Z takes it back.");
-        PathPanel.Refresh();
-        UpdateSaveBar();
     }
 
     /// <summary>
@@ -1387,6 +1407,12 @@ public sealed partial class MainWindow : Window
             if (ch.Add.Count > 0)
             {
                 parts.Add($"{ch.Add.Count:N0} object(s) placed");
+            }
+
+            int moves = ch.Moves.Keys.Count(i => !ch.Remove.Contains(i));
+            if (moves > 0)
+            {
+                parts.Add($"{moves:N0} moved");
             }
 
             if (ch.Remove.Count > 0)
@@ -2495,7 +2521,7 @@ public sealed partial class MainWindow : Window
             if (Tools.Mode != ToolMode.Place)
             {
                 PlacePanel.Chooser.IsVisible = false;
-                PlacePanel.KindsButton.Content = "+ Add kinds";
+                PlacePanel.KindsButton.Content = PlacePanel.ChooseKindsText;
             }
             PlaceInput.Refresh();
             MaskPanel.Card.IsVisible = !InWorkshop && Tools.Mode is ToolMode.Brush or ToolMode.Path or ToolMode.Area or ToolMode.Shape or ToolMode.Mountain or ToolMode.Place;

@@ -108,7 +108,7 @@ public sealed class ScriptPanel
                     new TextBlock
                     {
                         Text = "C#, run on the open area: Area (its corners, Points(), Water), Ground (Height, Original, Set, Raise, Lower, Paint, Biome, Shape, Mountain; "
-                            + "NoLimit is on), Objects (All, OfKind, Near, Place, Remove, CanPlace), Noise.At, Rnd (Seed, Range, Chance, Pick), Print. "
+                            + "NoLimit is on), Objects (All, OfKind, Near, Place, Move, Remove, CanPlace), Noise.At, Rnd (Seed, Range, Chance, Pick), Print. "
                             + "Coordinates are world metres. Everything the script changes is one undo step. "
                             + "Scripts are programs: they can do anything a program can on this computer, so run only ones you trust.",
                         FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap,

@@ -2,13 +2,13 @@
 
 ![The 3D editor](images/overview.jpg)
 
-The editor shows an area of 3 × 3, 5 × 5 or 7 × 7 zones (a zone is 64 × 64 m) around the spot you
+The editor shows an area of 3 × 3, 5 × 5, 7 × 7, 9 × 9, 13 × 13 or 17 × 17 zones (a zone is 64 × 64 m) around the spot you
 opened from the [world map](map.md). The window has five parts:
 
 - **Top bar**: **Map**, the world's name and the area, the area arrows and **Follow**, undo and
   redo, what is pending, **Discard** and **Save to world** (or **Apply live**), and the
   **History**, **View** and **?** buttons.
-- **Tool rail** (left): every tool, with its shortcut key in the corner.
+- **Tool rail** (left): every tool, with its shortcut key in the corner, in sections: **Sculpt** (the ground brushes), **Edit** (Area, Path, Place), **Paint**, **Create** (Shape, Mountain, Cave, Dungeon, Script, Blueprints) and **Tools** (Select, Measure, View).
 - **Tool panel** (next to the rail): the current tool's name, a line saying what it does and how,
   and its settings. The [Mask](masks.md) has its own card next to it.
 - **Right-hand panel**: **View** (`V`), **History** (`L`) or the help (`?`), one at a time.
@@ -30,7 +30,7 @@ place and the clipboard.
 | Move around | `W` `A` `S` `D` or the arrow keys |
 | See it as a player | `F`: **Walk** with your eyes 1.8 m above the ground (or the water), like a player; `F` again: **Fly** (Space up, C down); `F` again: back to the usual view. WASD move where you look, Shift runs, right drag looks around. The status bar says which. |
 | Go to the next area | The **◀ ▲ ▼ ▶** arrows next to "Area" move it one zone (64 m). The camera stays where it is in the world, and your unsaved changes stay pending. History steps that fit the new area come along; the others are left out (the changes themselves stay). |
-| Let the area follow you | **Follow** (next to the arrows): when the point you look at comes within 12 m of the area's edge, the area moves there by itself. It waits, and says why, while something would be lost: a stroke, a path being drawn, selected objects, changes being sent to the game. Remembered. |
+| Let the area follow you | **Follow** (next to the arrows): when the point you look at comes within 12 m of the area's edge, the area grows that way by itself: a row of zones is added on that side (both sides near a corner) and the zones already open stay, so a 3 × 3 area becomes 4 × 3, then 4 × 4 and so on. It never leaves zones behind; it stops at 17 zones each way (about 1 km). It waits, and says why, while something would be lost: a stroke, a path being drawn, selected objects, changes being sent to the game. Remembered. |
 | Back to the map | **Map** at the top left. What is not saved stays pending. |
 
 ## Top bar
@@ -91,7 +91,7 @@ worlds that only the editor saved since are not asked about.
 | Look | **Game look** | Draws the world with the game's own textures, models, water and sky. Off: plain colours and boxes. Remembered. |
 | | **See-through buildings** | Draws players' buildings faint, to see the ground and objects inside or behind them. Trees and rocks stay solid. Remembered. |
 | | **3D resolution** | How many pixels the 3D view draws: **Sharp (the screen's)**, **Balanced** or **Fast**. Fewer pixels give more frames per second on slow computers; the status bar says the size. Remembered. |
-| Objects | **Your buildings**, **Ruins & structures**, **Trees & logs**, **Rocks**, **Ore & deposits**, **Bushes & shrubs**, **Pickables**, **Tamed animals**, **Runestones**, **Other objects** | Show or hide each kind. **Tamed animals** are the creatures players tamed (wild ones are under Other objects). The number is how many there are in the area. Ruins, ore, bushes, pickables and other objects are off at first, so the editor does not spoil what is still to be found. Placing or pasting a kind that is off switches it on, so what you placed stays visible (the message says so). |
+| Objects | **Your buildings**, **Ruins & structures**, **Furniture & props**, **Trees & logs**, **Rocks**, **Ore & deposits**, **Bushes & shrubs**, **Pickables**, **Bones & remains**, **Tamed animals**, **Creatures & NPCs**, **Spawn points**, **Creature nests**, **Runestones**, **Dungeon rooms**, **Effects & markers**, **Other objects** | Show or hide each kind. **Ruins & structures** also shows the parts of the game's locations that are not objects of the save (a crypt entrance's rocks, the trader's camp, a boss's altar, a troll cave's walls): the game makes them again from the location each time the zone loads, so they cannot be picked or changed here. **Tamed animals** are the creatures players tamed (wild ones are under Creatures & NPCs). **Spawn points** are the game's invisible spawn points, shown with a marker (see [Spawn points](place.md#spawn-points)). The number is how many there are in the area. Only your buildings, trees, rocks, tamed animals, runestones and dungeon rooms are on at first, so the editor does not spoil what is still to be found. A ruin you built onto (a stone tower patched with wood) counts as your building: its pieces that touch yours, and the ones touching those, are under **Your buildings**; the rest of the world's ruins stay under Ruins & structures. Placing or pasting a kind that is off switches it on, so what you placed stays visible (the message says so). |
 | | **Water** | The sea and lake surface. |
 | Overlays | **Zone borders** | The 64 m zone lines. |
 | | **Location markers** | A post on every location (villages, the trader, dungeon entrances…). |
@@ -186,7 +186,7 @@ Workshop (**Start**). Its side menu:
 | **Home** | Where you left off: when Valheim is running with the WorldEditorBridge plugin, its world and **Edit live**; then the saved worlds and blueprints you opened or saved last (blueprints with their pictures), newest first, and the saved servers that connect in one click (password saved, or a key file). Click one to open it. |
 | **My game** | Your game, live: what is missing (BepInEx, the plugin, a first start), or the world it runs with and **Edit live**. *running* shows beside it while the game runs. See [live mode](live-mode.md). |
 | **A dedicated server** | The saved servers (**Connect**, **edit**, **forget**) and the form to connect to another one. See [live mode](live-mode.md#a-dedicated-server). |
-| **A saved world** | The worlds on this computer, to open with the game closed, and **Another world folder**. |
+| **A saved world** | The worlds on this computer, to open with the game closed (the list follows the world folders you add or remove; **Refresh** looks for them at once), and **Another world folder**. |
 | **The Workshop** | **Open the Workshop**, whether Homestead is installed, and every blueprint, newest first: click one to open it in the Workshop. See [the Workshop](workshop.md). |
 | **A new world** | **Make a new world**: a seed's world before it exists, and a search for one that suits you. See [a new world](new-world.md). |
 

@@ -36,7 +36,12 @@ public sealed partial class MainWindow
     /// <summary>The area's size, changed on the fly (around the same middle zone).</summary>
     internal ComboBox AreaSizeBox { get; } = new() { ItemsSource = AreaSizes.Select(n => $"{n} × {n}").ToArray(), FontSize = 11.5, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(4, 0) };
     /// <summary>The sizes the area can have, in zones across.</summary>
-    internal static readonly int[] AreaSizes = [3, 5, 7];
+    internal static readonly int[] AreaSizes = [3, 5, 7, 9, 13, 17];
+    /// <summary>
+    /// The most zones Follow grows the area to, each way (about 1 km, the largest area size); there it stops growing
+    /// that way. It never leaves zones behind.
+    /// </summary>
+    internal const int MaxFollowZones = 17;
     /// <summary>True while <c>ShowAreaSize</c> sets the size box, so its change is not taken for the user's.</summary>
     private bool _fillingSize;
     /// <summary>The note about the area's locations.</summary>
@@ -65,6 +70,8 @@ public sealed partial class MainWindow
     private readonly DispatcherTimer _gameTimer = new() { Interval = TimeSpan.FromSeconds(2) };
     /// <summary>Why Follow last waited, so the same reason is not said again at every tick.</summary>
     private string _followSaid = "";
+    /// <summary>True while Follow opens the grown area, so the ticks in between do not open it again.</summary>
+    private bool _followBusy;
     /// <summary>The editor's settings, loaded when the window is made.</summary>
     internal AppSettings Settings { get; } = AppSettings.Load();
     /// <summary>Writes the settings (Auto, Follow); tests keep them in memory, so no other window reads them.</summary>
@@ -175,7 +182,7 @@ public sealed partial class MainWindow
     private void EditorOpened(WorldScene scene)
     {
         AreaNav.IsVisible = scene.Owner != null;
-        ShowAreaSize(scene.Size);
+        ShowAreaSize(scene.ZonesX, scene.ZonesZ);
         int n = Overlays.LocationsNear(scene);
         LocationText.Text = n == 0 ? "" : $"{n} location(s) here. The ground already includes the flattening the game does around them (turn on Location markers in View to see where).";
         LocationNote.IsVisible = n > 0;
@@ -208,7 +215,8 @@ public sealed partial class MainWindow
     // ---- Moving the area. The edits and the history stay with the world, the view comes along.
 
     /// <summary>
-    /// Moves the area by zones (+X east, +Z north), keeping the view; the edits and the history stay with the world.
+    /// Moves the area by zones (+X east, +Z north), keeping its size and the view; the edits and the history stay
+    /// with the world.
     /// </summary>
     internal async Task MoveArea(int dx, int dz)
     {
@@ -216,48 +224,50 @@ public sealed partial class MainWindow
         {
             return;
         }
-        int mid = s.Size / 2;
-        await OpenAreaKeepingView(s.X0 + mid + dx, s.Z0 + mid + dz, s.Size);
+        await OpenBlockKeepingView(s.X0 + dx, s.Z0 + dz, s.ZonesX, s.ZonesZ);
     }
 
     /// <summary>
-    /// Opens the area centred on zone (zx, zz); when it did open there, the camera stays where it was in the world.
+    /// Opens the block of zones from (x0, z0); when it did open, the camera stays where it was in the world.
     /// </summary>
-    private async Task OpenAreaKeepingView(int zx, int zz, int size)
+    private async Task OpenBlockKeepingView(int x0, int z0, int zonesX, int zonesZ)
     {
         var cam = View.WorldCamera;
-        await EditArea(zx, zz, size);
-        if (View.Scene is { } ns && ns.X0 + ns.Size / 2 == zx && ns.Z0 + ns.Size / 2 == zz && cam != null)
+        await EditBlock(x0, z0, zonesX, zonesZ);
+        if (View.Scene is { } ns && (ns.X0, ns.Z0, ns.ZonesX, ns.ZonesZ) == (x0, z0, zonesX, zonesZ) && cam != null)
         {
             View.WorldCamera = cam;
         }
     }
 
-    /// <summary>The area made bigger or smaller around its middle zone: the edits, the history and the view stay.</summary>
+    /// <summary>
+    /// The area made a square of <paramref name="size"/> zones around its middle zone: the edits, the history and the
+    /// view stay.
+    /// </summary>
     internal async Task ResizeArea(int size)
     {
-        if (View.Scene is not { Owner: not null } s || s.Size == size)
+        if (View.Scene is not { Owner: not null } s || (s.ZonesX == size && s.ZonesZ == size))
         {
             return;
         }
         if (MoveBlocker() is string why)
         {
             MessageText.Text = $"The area cannot change size now: {why}.";
-            ShowAreaSize(s.Size);
+            ShowAreaSize(s.ZonesX, s.ZonesZ);
             return;
         }
-        int mid = s.Size / 2;
+        int mx = s.X0 + s.ZonesX / 2, mz = s.Z0 + s.ZonesZ / 2;
         MessageText.Text = $"Opening {size} × {size} zones…";
-        await OpenAreaKeepingView(s.X0 + mid, s.Z0 + mid, size);
+        await OpenBlockKeepingView(mx - size / 2, mz - size / 2, size, size);
     }
 
     /// <summary>Shows the area's size in the size box without resizing.</summary>
-    private void ShowAreaSize(int size)
+    private void ShowAreaSize(int zonesX, int zonesZ)
     {
         _fillingSize = true;
-        AreaSizeBox.SelectedIndex = Array.IndexOf(AreaSizes, size);
-        // A size not in the list (1 × 1, from the command line) shows as it is.
-        AreaSizeBox.PlaceholderText = $"{size} × {size}";
+        AreaSizeBox.SelectedIndex = zonesX == zonesZ ? Array.IndexOf(AreaSizes, zonesX) : -1;
+        // A size not in the list (1 × 1 from the command line, or grown by Follow) shows as it is.
+        AreaSizeBox.PlaceholderText = $"{zonesX} × {zonesZ}";
         _fillingSize = false;
     }
 
@@ -267,7 +277,7 @@ public sealed partial class MainWindow
         Settings.AreaFollow = on;
         SaveSettings(Settings);
         FollowButton.Classes.Set("on", on);
-        MessageText.Text = on ? "Follow: the area moves by itself when you look near its edge." : "Follow is off: move the area with the arrows.";
+        MessageText.Text = on ? "Follow: the area grows by itself when you look near its edge." : "Follow is off: move the area with the arrows.";
         _followSaid = "";
     }
 
@@ -294,12 +304,13 @@ public sealed partial class MainWindow
     }
 
     /// <summary>
-    /// Follow: when the view's centre comes within 12 m of the area's edge, the area moves to the zone
-    /// under it (one zone on when that is the middle one already). The zone it moves to, or null.
+    /// Follow: when the view's centre comes within 12 m of the area's edge, the area grows by a row of zones on that
+    /// side (both sides near a corner), keeping every zone it has, up to <c>MaxFollowZones</c> each way. The new
+    /// block (south-west zone and size), or null.
     /// </summary>
-    internal async Task<(int X, int Z)?> CheckFollow()
+    internal async Task<(int X0, int Z0, int ZonesX, int ZonesZ)?> CheckFollow()
     {
-        if (!Settings.AreaFollow || _pages.Content != _editorPage || View.Scene is not { Owner: not null } s)
+        if (_followBusy || !Settings.AreaFollow || _pages.Content != _editorPage || View.Scene is not { Owner: not null } s)
         {
             return null;
         }
@@ -312,43 +323,56 @@ public sealed partial class MainWindow
         }
         if (MoveBlocker() is string why)
         {
-            if (_followSaid != why)
-            {
-                MessageText.Text = $"Follow waits: {why}.";
-            }
-            _followSaid = why;
+            SayFollow($"Follow waits: {why}.");
             return null;
         }
-        float wx = t.X + s.Cx, wz = -t.Z + s.Cz;
-        int czx = s.X0 + s.Size / 2, czz = s.Z0 + s.Size / 2;
-        int zx = (int)MathF.Floor((wx + 32) / 64), zz = (int)MathF.Floor((wz + 32) / 64);
-        if (nearX && zx == czx)
+        int x0 = s.X0, z0 = s.Z0, zonesX = s.ZonesX, zonesZ = s.ZonesZ;
+        // The view mirrors z: north is -t.Z.
+        bool grown = (nearX && Grow(ref x0, ref zonesX, t.X > 0)) | (nearZ && Grow(ref z0, ref zonesZ, t.Z < 0));
+        if (!grown)
         {
-            zx += Math.Sign(wx - czx * 64);
-        }
-
-        if (nearZ && zz == czz)
-        {
-            zz += Math.Sign(wz - czz * 64);
-        }
-
-        if (!nearX)
-        {
-            zx = czx;
-        }
-
-        if (!nearZ)
-        {
-            zz = czz;
-        }
-
-        if (zx == czx && zz == czz)
-        {
+            SayFollow($"The area is as large as Follow makes it ({MaxFollowZones} zones each way): move it with the arrows, or open another from the map.");
             return null;
         }
-        MessageText.Text = "Moving the area…";
-        await OpenAreaKeepingView(zx, zz, s.Size);
-        return (zx, zz);
+        MessageText.Text = "Growing the area…";
+        _followBusy = true;
+        try
+        {
+            await OpenBlockKeepingView(x0, z0, zonesX, zonesZ);
+        }
+        finally
+        {
+            _followBusy = false;
+        }
+        // A failed open leaves the old area: nothing grew.
+        return View.Scene is { } ns && (ns.X0, ns.Z0, ns.ZonesX, ns.ZonesZ) == (x0, z0, zonesX, zonesZ)
+            ? (x0, z0, zonesX, zonesZ)
+            : null;
+    }
+
+    /// <summary>Says why Follow does nothing, once while the reason stays.</summary>
+    private void SayFollow(string text)
+    {
+        if (_followSaid != text)
+        {
+            MessageText.Text = text;
+        }
+        _followSaid = text;
+    }
+
+    /// <summary>
+    /// One row of zones more on one side of a run of zones (first zone, count), up to <c>MaxFollowZones</c>.
+    /// True when it grew.
+    /// </summary>
+    internal static bool Grow(ref int first, ref int count, bool up)
+    {
+        if (count >= MaxFollowZones)
+        {
+            return false;
+        }
+        first -= up ? 0 : 1;
+        count++;
+        return true;
     }
 
     // ---- Discard and Reload, here in the editor.
@@ -391,7 +415,7 @@ public sealed partial class MainWindow
         {
             await Task.Run(w.Discard);
         }
-        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or IOException or InvalidOperationException)
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or IOException or InvalidDataException or UnauthorizedAccessException or InvalidOperationException)
         {
             MessageText.Text = "Could not read the world again: " + ex.Message;
             Busy(null);
@@ -433,7 +457,7 @@ public sealed partial class MainWindow
     private async Task ReopenArea(WorldScene old)
     {
         Session = null;
-        await OpenAreaKeepingView(old.X0 + old.Size / 2, old.Z0 + old.Size / 2, old.Size);
+        await OpenBlockKeepingView(old.X0, old.Z0, old.ZonesX, old.ZonesZ);
     }
 
     // ---- Live: Apply (the button, and every change when Auto is on). Calls while one runs are merged.
@@ -462,6 +486,8 @@ public sealed partial class MainWindow
                 SaveButton.IsEnabled = false;
                 MessageText.Text = "Applying to the running game…";
                 var o = await s.ApplyLive(ConfirmOverGame);
+                // Applied objects lose their green marks.
+                View.RefreshNewMarkers();
                 MessageText.Text = o.Message;
                 if (o.Declined)
                 {
@@ -515,9 +541,9 @@ public sealed partial class MainWindow
             if (_gameFetched == null && !s.Stroking)
             {
                 var zones = new List<(int, int)>();
-                for (int z = 0; z < s.Scene.Size; z++)
+                for (int z = 0; z < s.Scene.ZonesZ; z++)
                 {
-                    for (int x = 0; x < s.Scene.Size; x++)
+                    for (int x = 0; x < s.Scene.ZonesX; x++)
                     {
                         zones.Add((s.Scene.X0 + x, s.Scene.Z0 + z));
                     }
@@ -683,7 +709,7 @@ public sealed partial class MainWindow
         if (!(gx > 2 && gz > 2 && gx < s.W - 3 && gz < s.H - 3) && s.Owner != null)
         {
             int zx = (int)MathF.Floor((p.World.X + 32) / 64), zz = (int)MathF.Floor((p.World.Z + 32) / 64);
-            await EditArea(zx, zz, s.Size);
+            await EditBlock(zx - s.ZonesX / 2, zz - s.ZonesZ / 2, s.ZonesX, s.ZonesZ);
         }
         View.Focus(p.World);
         MessageText.Text = $"Looking at {name}.";

@@ -163,7 +163,7 @@ public sealed class GlView : OpenGlControlBase
     public void SetShown(ObjectKind k, bool on)
     {
         _shown[(int)k] = on;
-        Wake();
+        RefreshNewMarkers();
     }
     /// <summary>Whether the water is drawn.</summary>
     private volatile bool _showWater = true;
@@ -323,6 +323,7 @@ public sealed class GlView : OpenGlControlBase
         }
         SelectionDone();
         _sceneDirty = true;
+        _marksDirty = true;
         _lookFiles = null;
         // The game look is set up for the area's own textures (mask, heights): again for a new one. The
         // old one's textures go at the next frame (only the drawing may touch the graphics card).
@@ -338,6 +339,7 @@ public sealed class GlView : OpenGlControlBase
         {
             scene.Session.Changed += Wake;
             scene.Session.ThingsChanged += OnThingsChanged;
+            scene.Session.ThingsReset += RefreshNewMarkers;
             // Read again after a save: new indices, so the selection goes at once (not at the next frame).
             scene.Session.ThingsReset += () =>
             {
@@ -427,6 +429,15 @@ public sealed class GlView : OpenGlControlBase
         public uint Texture;
         /// <summary>Its material (colour, cut-out, two-sided…).</summary>
         public ModelStore.MaterialData Material = null!;
+        /// <summary>
+        /// Its instances by area cell (<see cref="CellSize"/>): they are sorted by cell, each cell a run of them, so
+        /// only the cells in view are drawn.
+        /// </summary>
+        public (int Cell, int Start, int Count)[] Cells = [];
+        /// <summary>The model's size (its box's diagonal, metres): small ones are not drawn far away.</summary>
+        public float Size = 1;
+        /// <summary>The instance its vertex array's instance attributes point at now.</summary>
+        public int PointedAt;
     }
     /// <summary>Every batch drawn.</summary>
     private readonly List<Batch> _batches = [];
@@ -532,7 +543,9 @@ public sealed class GlView : OpenGlControlBase
         _pathVao = _pathVbo = _pathEdgeVao = _pathEdgeVbo = _pathDotVao = _pathDotVbo = 0;
         _placeRingVao = _placeRingVbo = _hoverBoxVao = _hoverBoxVbo = 0;
         _pathBandVao = _pathBandVbo = _pathSoftVao = _pathSoftVbo = _pathPreviewVao = _pathPreviewVbo = _pathPreviewSoftVao = _pathPreviewSoftVbo = 0;
-        _markVao = _markVbo = 0;
+        _markVao = _markVbo = _markProg = 0;
+        _markCount = 0;
+        _marksDirty = true;
         _placeVao = _placeVbo = _placeShapeVao = _placeShapeVbo = 0;
         _areaVao = _areaVbo = _resetVao = _resetVbo = 0;
         _measureVao = _measureVbo = _lassoVao = _lassoVbo = _ringVao = _ringVbo = _lineVao = _lineVbo = 0;
@@ -779,15 +792,21 @@ public sealed class GlView : OpenGlControlBase
         _overlaysDirty = true;
     }
 
+    /// <summary>
+    /// A thing's group: by prefab, built or not, tamed or not. A ruin's piece joined to a building counts as built (shown
+    /// with Your buildings), in a group apart from the same prefab's other ruin pieces.
+    /// </summary>
+    private static (int Prefab, bool Piece, bool Tamed) KeyOf(WorldScene.Thing t) => (t.Prefab, t.Piece || t.Joined, t.Tamed);
+
     /// <summary>The group a thing belongs to (made, and its model read, if it is the first of its kind).</summary>
     private Group GroupOf(WorldScene s, int i, bool start = true)
     {
         var t = s.Things[i];
-        var key = (t.Prefab, t.Piece, t.Tamed);
+        var key = KeyOf(t);
         EnsureSize(i + 1);
         if (!_groups.TryGetValue(key, out var g))
         {
-            g = _groups[key] = new Group { Key = key, Kind = ObjectKinds.Of(NameOf(t.Prefab), t.Piece, t.Tamed) };
+            g = _groups[key] = new Group { Key = key, Kind = ObjectKinds.Of(NameOf(t.Prefab), t.Piece || t.Joined, t.Tamed) };
             if (start)
             {
                 Interlocked.Increment(ref _pending);
@@ -852,7 +871,7 @@ public sealed class GlView : OpenGlControlBase
 
     /// <summary>
     /// Models at places that are not things of the scene, one draw per model part: see-through (ghost:
-    /// the Place and Paste previews) or solid (dungeon rooms). Kinds whose model is not read yet, or that
+    /// the Place and Paste previews) or solid (dungeon rooms, locations' parts). Kinds whose model is not read yet, or that
     /// have none, are skipped (and left out of <paramref name="drawn"/>).
     /// </summary>
     private unsafe void DrawInstances(WorldScene s, IEnumerable<(int Prefab, Vector3 Position, Vector3 Rotation, float Scale)> shown, bool ghost, HashSet<int>? drawn = null)
@@ -923,6 +942,7 @@ public sealed class GlView : OpenGlControlBase
                 {
                     _gl.VertexAttribPointer(3 + c, 4, VertexAttribPointerType.Float, false, 64, (void*)(c * 16));
                 }
+                b.PointedAt = 0;
             }
         }
         _gl.Uniform1(_gl.GetUniformLocation(_objectProg, "uGhost"), 0f);
@@ -951,6 +971,19 @@ public sealed class GlView : OpenGlControlBase
         if (shown.Count > 0)
         {
             DrawInstances(s, shown, ghost: false);
+        }
+    }
+
+    /// <summary>
+    /// The parts of the area's locations that are not saved objects (see LocationParts), drawn like objects with the
+    /// Ruins &amp; structures kind; they cannot be picked.
+    /// </summary>
+    private void DrawLocations(WorldScene s)
+    {
+        var shown = LocationParts.Of(s);
+        if (shown.Count > 0)
+        {
+            DrawInstances(s, shown.Select(l => (l.Location, l.Position, l.Rotation, 0f)), ghost: false);
         }
     }
 
@@ -1017,6 +1050,7 @@ public sealed class GlView : OpenGlControlBase
         }
         _selectionDirty = true;
         _overlaysDirty = true;
+        _marksDirty = true;
         SendKindCounts(s);
         Wake();
     }
@@ -1045,7 +1079,7 @@ public sealed class GlView : OpenGlControlBase
             foreach (int i in old.Keys.Concat(_previews.Keys))
             {
                 var t = s.Things[i];
-                if (_groups.TryGetValue((t.Prefab, t.Piece, t.Tamed), out var g))
+                if (_groups.TryGetValue(KeyOf(t), out var g))
                 {
                     MarkDirty(g);
                 }
@@ -1149,10 +1183,88 @@ public sealed class GlView : OpenGlControlBase
     private readonly Lock _objLock = new();
 
     /// <summary>A group's instances (and its things' boxes) from where its things are now.</summary>
+    /// <summary>The side of the area's cells objects are drawn by (metres): only cells in view are drawn.</summary>
+    internal const float CellSize = 128;
+    /// <summary>
+    /// A model is not drawn in cells farther than this many times its size (a 1 m chest past 400 m is two or three
+    /// pixels), and never nearer than <see cref="MinCullDistance"/>.
+    /// </summary>
+    internal const float CullPerMetre = 400;
+    /// <summary>Models are drawn within this distance whatever their size.</summary>
+    internal const float MinCullDistance = 150;
+    /// <summary>The scene the cells were made for (another one makes them again).</summary>
+    private WorldScene? _cellScene;
+    /// <summary>The cells across and down the area.</summary>
+    private int _cellsX, _cellsZ;
+    /// <summary>
+    /// Each cell's box in view space: the boxes of every object put in it (grown only, until the area is read
+    /// again), so a tall or wide one standing over the cell's edge is still drawn when it shows.
+    /// </summary>
+    private (Vector3 Min, Vector3 Max)[] _cellBounds = [];
+    /// <summary>This frame: each cell in view or not, and its distance from the eye.</summary>
+    private bool[] _cellSeen = [];
+    /// <summary>This frame: each cell's distance from the eye (0 inside it).</summary>
+    private float[] _cellDistance = [];
+
+    /// <summary>The cells for this scene, made when it is new.</summary>
+    private void EnsureCells(WorldScene s)
+    {
+        if (_cellScene == s)
+        {
+            return;
+        }
+        _cellScene = s;
+        _cellsX = Math.Max(1, (int)MathF.Ceiling(s.W / CellSize));
+        _cellsZ = Math.Max(1, (int)MathF.Ceiling(s.H / CellSize));
+        _cellBounds = new (Vector3, Vector3)[_cellsX * _cellsZ];
+        Array.Fill(_cellBounds, (new Vector3(float.MaxValue), new Vector3(float.MinValue)));
+        _cellSeen = new bool[_cellBounds.Length];
+        _cellDistance = new float[_cellBounds.Length];
+    }
+
+    /// <summary>The cell a view-space point is in (points outside go to the nearest edge cell).</summary>
+    private int CellOf(WorldScene s, Vector3 p)
+    {
+        int x = Math.Clamp((int)MathF.Floor((p.X + (s.W - 1) / 2f) / CellSize), 0, _cellsX - 1);
+        int z = Math.Clamp((int)MathF.Floor((p.Z + (s.H - 1) / 2f) / CellSize), 0, _cellsZ - 1);
+        return z * _cellsX + x;
+    }
+
+    /// <summary>
+    /// Which cells the camera sees this frame (their box against the view's six planes), and how far each is.
+    /// </summary>
+    private void SeeCells(Matrix4x4 vp, Vector3 eye)
+    {
+        // The planes of a row-vector projection: the fourth column plus or minus each of the others.
+        Span<Vector4> planes =
+        [
+            new(vp.M14 + vp.M11, vp.M24 + vp.M21, vp.M34 + vp.M31, vp.M44 + vp.M41),
+            new(vp.M14 - vp.M11, vp.M24 - vp.M21, vp.M34 - vp.M31, vp.M44 - vp.M41),
+            new(vp.M14 + vp.M12, vp.M24 + vp.M22, vp.M34 + vp.M32, vp.M44 + vp.M42),
+            new(vp.M14 - vp.M12, vp.M24 - vp.M22, vp.M34 - vp.M32, vp.M44 - vp.M42),
+            new(vp.M14 + vp.M13, vp.M24 + vp.M23, vp.M34 + vp.M33, vp.M44 + vp.M43),
+            new(vp.M14 - vp.M13, vp.M24 - vp.M23, vp.M34 - vp.M33, vp.M44 - vp.M43),
+        ];
+        for (int c = 0; c < _cellBounds.Length; c++)
+        {
+            var (min, max) = _cellBounds[c];
+            bool seen = min.X <= max.X;
+            for (int k = 0; k < 6 && seen; k++)
+            {
+                var pl = planes[k];
+                // The box's corner farthest along the plane's normal: outside when even it is behind.
+                var far = new Vector3(pl.X >= 0 ? max.X : min.X, pl.Y >= 0 ? max.Y : min.Y, pl.Z >= 0 ? max.Z : min.Z);
+                seen = pl.X * far.X + pl.Y * far.Y + pl.Z * far.Z + pl.W >= 0;
+            }
+            _cellSeen[c] = seen;
+            _cellDistance[c] = seen ? Vector3.Distance(eye, Vector3.Clamp(eye, min, max)) : float.MaxValue;
+        }
+    }
+
     private unsafe void Rebuild(WorldScene s, Group g)
     {
-        var list = new List<Matrix4x4>();
-        var tints = new List<Vector3>();
+        EnsureCells(s);
+        var list = new List<(int Cell, Matrix4x4 M, Vector3 Tint)>();
         var support = _support;
         var previews = _previews;
         lock (s.Things)
@@ -1163,35 +1275,139 @@ public sealed class GlView : OpenGlControlBase
                 {
                     var t = previews.TryGetValue(i, out var p) ? p : s.Things[i];
                     var m = Placement(s, t, g.RootScale);
-                    if (g.Box is { } box)
+                    // Without its model's box yet: a metre around it (the stand-in box).
+                    (Vector3 Min, Vector3 Max) bounds = g.Box is { } box ? Picking.Transform(box.Min, box.Max, m) : (m.Translation - Vector3.One, m.Translation + Vector3.One);
+                    if (g.Box != null)
                     {
-                        _bounds[i] = Picking.Transform(box.Min, box.Max, m);
+                        _bounds[i] = bounds;
                         _boundsAt[i] = t.Position;
                     }
                     _known[i] = !t.Gone && g.Box != null;
                     if (!t.Gone)
                     {
-                        list.Add(m);
-                        tints.Add(support != null && support.TryGetValue(i, out float sv) ? SupportTint(sv) : Vector3.Zero);
+                        int cell = CellOf(s, m.Translation);
+                        var (cmin, cmax) = _cellBounds[cell];
+                        _cellBounds[cell] = (Vector3.Min(cmin, bounds.Min), Vector3.Max(cmax, bounds.Max));
+                        list.Add((cell, m, support != null && support.TryGetValue(i, out float sv) ? SupportTint(sv) : Vector3.Zero));
                     }
                 }
             }
         }
+        // By cell, so each cell's instances are one run of the buffer.
+        list.Sort((a, b) => a.Cell.CompareTo(b.Cell));
+        var cells = new List<(int Cell, int Start, int Count)>();
+        for (int k = 0; k < list.Count; k++)
+        {
+            if (cells.Count > 0 && cells[^1].Cell == list[k].Cell)
+            {
+                cells[^1] = cells[^1] with { Count = cells[^1].Count + 1 };
+            }
+            else
+            {
+                cells.Add((list[k].Cell, k, 1));
+            }
+        }
+        float size = g.Box is { } gb ? Vector3.Distance(gb.Min, gb.Max) * MathF.Max(g.RootScale.X, MathF.Max(g.RootScale.Y, g.RootScale.Z)) : 1;
+        var data = new Matrix4x4[list.Count];
         foreach (var (b, pre) in g.Batches)
         {
-            var data = list.Select((m, k) =>
+            for (int k = 0; k < list.Count; k++)
             {
-                var w = pre * m;
-                (w.M14, w.M24, w.M34) = (tints[k].X, tints[k].Y, tints[k].Z);
-                return w;
-            }).ToArray();
+                var w = pre * list[k].M;
+                (w.M14, w.M24, w.M34) = (list[k].Tint.X, list[k].Tint.Y, list[k].Tint.Z);
+                data[k] = w;
+            }
             _gl.BindBuffer(BufferTargetARB.ArrayBuffer, b.InstanceVbo);
             fixed (Matrix4x4* ptr = data)
             {
                 _gl.BufferData(BufferTargetARB.ArrayBuffer, (nuint)(data.Length * 64), ptr, BufferUsageARB.DynamicDraw);
             }
             b.Instances = data.Length;
+            b.Cells = [.. cells];
+            b.Size = size;
         }
+    }
+
+    /// <summary>Instances drawn in the last frame (after culling), for the frame-rate measure.</summary>
+    private int _drawnInstances;
+    /// <summary>Draw calls of objects in the last frame, for the frame-rate measure.</summary>
+    private int _drawCalls;
+    /// <summary>
+    /// Batches with at most this many instances are drawn whole when any of their cells shows: splitting them
+    /// costs more calls than the instances it saves.
+    /// </summary>
+    internal const int SmallBatch = 2048;
+
+    /// <summary>
+    /// Draws a batch's instances in the cells in view and near enough for its size (its vertex array bound), each
+    /// run of neighbouring cells at once. OpenGL ES 3.0 and OpenGL 4.0 cannot start at an instance, so the
+    /// instance attributes are pointed at the run's first one. Returns how many instances were drawn.
+    /// </summary>
+    private unsafe int DrawCells(Batch b)
+    {
+        if (b.Instances == 0)
+        {
+            return 0;
+        }
+        bool culled = _cellSeen.Length == _cellsX * _cellsZ && _cellScene != null;
+        float reach = MathF.Max(MinCullDistance, b.Size * CullPerMetre);
+        int start = -1, count = 0, drawn = 0;
+        _gl.BindBuffer(BufferTargetARB.ArrayBuffer, b.InstanceVbo);
+        void Flush()
+        {
+            if (count == 0)
+            {
+                return;
+            }
+            if (b.PointedAt != start)
+            {
+                for (uint c = 0; c < 4; c++)
+                {
+                    _gl.VertexAttribPointer(3 + c, 4, VertexAttribPointerType.Float, false, 64, (void*)((start * 64L) + (c * 16)));
+                }
+                b.PointedAt = start;
+            }
+            _gl.DrawElementsInstanced(PrimitiveType.Triangles, (uint)b.IndexCount, DrawElementsType.UnsignedInt, (void*)0, (uint)count);
+            _drawCalls++;
+            drawn += count;
+            count = 0;
+        }
+        bool Shows(int cell) => !culled || cell >= _cellSeen.Length || _cellSeen[cell] && _cellDistance[cell] <= reach;
+        if (b.Instances <= SmallBatch || b.Cells.Length == 1)
+        {
+            foreach (var (cell, _, _) in b.Cells)
+            {
+                if (Shows(cell))
+                {
+                    start = 0;
+                    count = b.Instances;
+                    Flush();
+                    break;
+                }
+            }
+            return drawn;
+        }
+        foreach (var (cell, first, n) in b.Cells)
+        {
+            bool shows = Shows(cell);
+            if (!shows)
+            {
+                Flush();
+                continue;
+            }
+            if (count > 0 && start + count == first)
+            {
+                count += n;
+            }
+            else
+            {
+                Flush();
+                start = first;
+                count = n;
+            }
+        }
+        Flush();
+        return drawn;
     }
 
     /// <summary>Every model and texture off the graphics card (after DropObjects: no batch uses them).</summary>
@@ -1229,6 +1445,8 @@ public sealed class GlView : OpenGlControlBase
             _own.DeleteBuffer(b.InstanceVbo);
         }
         _batches.Clear();
+        // The cells' boxes are made again with the objects.
+        _cellScene = null;
         while (_ready.TryDequeue(out var dropped))
         {
             UploadTextures(dropped);
@@ -1318,8 +1536,15 @@ public sealed class GlView : OpenGlControlBase
         var g = r.Group;
         if (r.Model == null)
         {
-            // No model copied for this kind: a box stands in, as in the web editor.
-            AddBatch(g, BoxMesh(), 0, new ModelStore.MaterialData(new Vector4(0.35f, 0.3f, 0.25f, 1), null, 0, false, new Vector4(1, 1, 0, 0)),
+            // No model copied for this kind: a box stands in, as in the web editor (spawn points and nests in their
+            // markers' colours).
+            var tint = g.Kind switch
+            {
+                ObjectKind.SpawnPoints => SpawnColour(false),
+                ObjectKind.Nests => NestColour,
+                _ => new Vector4(0.35f, 0.3f, 0.25f, 1),
+            };
+            AddBatch(g, BoxMesh(), 0, new ModelStore.MaterialData(tint, null, 0, false, new Vector4(1, 1, 0, 0)),
                 Matrix4x4.CreateScale(1, 2, 1) * Matrix4x4.CreateTranslation(0, 1, 0));
         }
         else
@@ -1638,6 +1863,12 @@ public sealed class GlView : OpenGlControlBase
             bool seeThrough = _seeThrough;
             int uSee = _gl.GetUniformLocation(_objectProg, "uSeeThrough");
             _gl.Uniform2(_gl.GetUniformLocation(_objectProg, "uCut"), CutY != null ? 1f : 0f, CutY ?? 0f);
+            if (_cellScene == s)
+            {
+                SeeCells(vp, eye);
+            }
+            int drawn = 0;
+            _drawCalls = 0;
             // Opaque first; see-through buildings after, blended over everything and not hiding
             // what is behind them.
             foreach (bool pass in seeThrough ? new[] { false, true } : [false])
@@ -1677,7 +1908,7 @@ public sealed class GlView : OpenGlControlBase
                     _gl.Uniform4(uUv, m.UvTransform.X, m.UvTransform.Y, m.UvTransform.Z, m.UvTransform.W);
                     _gl.BindTexture(TextureTarget.Texture2D, b.Texture);
                     _gl.BindVertexArray(b.Vao);
-                    _gl.DrawElementsInstanced(PrimitiveType.Triangles, (uint)b.IndexCount, DrawElementsType.UnsignedInt, (void*)0, (uint)b.Instances);
+                    drawn += DrawCells(b);
                 }
                 if (pass)
                 {
@@ -1686,24 +1917,17 @@ public sealed class GlView : OpenGlControlBase
                     _gl.Disable(EnableCap.Blend);
                 }
             }
+            _drawnInstances = drawn;
 
             if (_shown[(int)ObjectKind.Dungeons])
             {
                 DrawRooms(s);
             }
-            _ghostsDrawn = DrawGhosts(s);
-            DrawOverlays(vp);
-            DrawSelection(vp);
-            DrawHoverObject(vp);
-            DrawBrush(s, vp);
-            DrawLasso(s, vp);
-            DrawGizmo(s, vp);
-            DrawMeasure(s, vp);
-            DrawPlayers(s, vp);
-            DrawPath(s, vp);
-            DrawArea(s, vp);
-            DrawPlace(s, vp);
-            DrawDungeon(s, vp);
+            if (_shown[(int)ObjectKind.Ruins])
+            {
+                DrawLocations(s);
+            }
+            // The water before the previews and the tools' marks, so they show over it.
             if (ShowWater)
             {
                 if (look != null)
@@ -1724,10 +1948,24 @@ public sealed class GlView : OpenGlControlBase
                     _gl.Disable(EnableCap.Blend);
                 }
             }
+            _ghostsDrawn = DrawGhosts(s);
+            DrawOverlays(vp);
+            DrawSelection(vp);
+            DrawHoverObject(vp);
+            DrawBrush(s, vp);
+            DrawLasso(s, vp);
+            DrawGizmo(s, vp);
+            DrawMeasure(s, vp);
+            DrawPlayers(s, vp);
+            DrawPath(s, vp);
+            DrawArea(s, vp);
+            DrawPlace(s, vp);
+            DrawDungeon(s, vp);
             // Over everything, the water too.
+            DrawSpawnMarkers(s, vp);
             if (ShowNewMarkers)
             {
-                DrawNewMarkers(s, vp);
+                DrawNewMarkers(s, vp, rh);
             }
         }
         _gl.BindVertexArray(0);
@@ -1790,7 +2028,7 @@ public sealed class GlView : OpenGlControlBase
         {
             _frames.RemoveAt(0);
         }
-        Perf?.Frame(now, work, camMoved, busy: now - _wokeAt < 1000, $"view {pw}×{ph} px · {_gl.GetStringS(StringName.Renderer)} · {Scene?.Name} · {Scene?.Things.Count} objects · area {Scene?.Size}×{Scene?.Size} zones");
+        Perf?.Frame(now, work, camMoved, busy: now - _wokeAt < 1000, $"view {pw}×{ph} px · {_gl.GetStringS(StringName.Renderer)} · {Scene?.Name} · {Scene?.Things.Count} objects · area {Scene?.ZonesX}×{Scene?.ZonesZ} zones");
         if (now - _statsAt >= 500)
         {
             _statsAt = now;
@@ -1855,7 +2093,7 @@ public sealed class GlView : OpenGlControlBase
             {
                 _bench = null;
                 var gaps = bench.Frames.Zip(bench.Frames.Skip(1), (a, b) => b - a).OrderBy(g => g).ToList();
-                bench.Done.SetResult($"{bench.Frames.Count / ((now - bench.From) / 1000.0):0} fps over {(now - bench.From) / 1000.0:0.0} s, work {_frames.Average(f => f.Work):0.0} ms, gaps median {gaps[gaps.Count / 2]} ms, 95% {gaps[gaps.Count * 95 / 100]} ms, max {gaps[^1]} ms, view {pw}×{ph} px");
+                bench.Done.SetResult($"{bench.Frames.Count / ((now - bench.From) / 1000.0):0} fps over {(now - bench.From) / 1000.0:0.0} s, work {_frames.Average(f => f.Work):0.0} ms, gaps median {gaps[gaps.Count / 2]} ms, 95% {gaps[gaps.Count * 95 / 100]} ms, max {gaps[^1]} ms, view {pw}×{ph} px, {_drawnInstances:N0} of {_batches.Sum(b => b.Instances):N0} instances drawn in the last frame, {_drawCalls:N0} draw calls, {_batches.Count:N0} batches");
             }
             RequestNextFrameRendering();
         }
@@ -2919,7 +3157,8 @@ public sealed class GlView : OpenGlControlBase
     }
 
     /// <summary>
-    /// Whether a new object (id &lt; 0) is in the game already (live: applied); such objects lose their marker.
+    /// Whether a new object (id &lt; 0) is in the world already (saved, or live: applied); such objects lose their
+    /// marker. Call <c>RefreshNewMarkers</c> when that changes.
     /// </summary>
     public Func<int, bool> InGame { get; set; } = _ => false;
 
@@ -2998,36 +3237,171 @@ public sealed class GlView : OpenGlControlBase
         return new Vector3((1 - s + s * r) * v, (1 - s + s * g) * v, (1 - s + s * b) * v);
     }
 
-    /// <summary>The new objects' markers on the graphics card.</summary>
-    private uint _markVao, _markVbo;
-    /// <summary>The new objects' green dots (<c>NewMarkers</c>), about 9 pixels across at any distance.</summary>
-    private void DrawNewMarkers(WorldScene s, Matrix4x4 vp)
+    /// <summary>How far from the camera spawn points and nests get a marker, metres.</summary>
+    internal const float SpawnMarkerRange = 250;
+
+    /// <summary>The marker colour of spawn points: orange for one that spawns once, red for one whose creature comes back.</summary>
+    internal static Vector4 SpawnColour(bool respawns) => respawns ? new Vector4(0.95f, 0.2f, 0.25f, 1) : new Vector4(1f, 0.6f, 0.15f, 1);
+
+    /// <summary>The marker colour of nests: purple.</summary>
+    internal static readonly Vector4 NestColour = new(0.7f, 0.4f, 0.95f, 1);
+
+    /// <summary>
+    /// Spawn points and nests within <see cref="SpawnMarkerRange"/> of the camera, for the kinds shown: where their
+    /// marker goes (above the stand-in box) and its colour (<see cref="SpawnColour"/>, <see cref="NestColour"/>).
+    /// They have no model in the game (spawn points are invisible), so the marker shows where they are through
+    /// anything in front.
+    /// </summary>
+    internal List<(Vector3 At, Vector4 Colour)> SpawnMarkers(WorldScene s)
     {
-        var marks = NewMarkers(s);
-        if (marks.Count == 0)
+        var list = new List<(Vector3, Vector4)>();
+        bool points = _shown[(int)ObjectKind.SpawnPoints], nests = _shown[(int)ObjectKind.Nests];
+        if (!points && !nests)
         {
-            return;
+            return list;
         }
-        var tri = new List<float>(marks.Count * 8 * 9);
-        foreach (var c in marks)
+        var colours = new Dictionary<int, Vector4?>();
+        lock (s.Things)
         {
-            // About 9 pixels across at any distance: a little disc facing the camera.
-            var f = Vector3.Normalize(c - _lastEye);
-            var right = Vector3.Normalize(Vector3.Cross(f, Vector3.UnitY) is var x && x.LengthSquared() > 1e-6f ? x : Vector3.UnitX);
-            var up = Vector3.Cross(right, f);
-            float r = Vector3.Distance(_lastEye, c) * 0.0058f;
-            for (int k = 0; k < 8; k++)
+            lock (_objLock)
             {
-                float a0 = k * MathF.Tau / 8, a1 = (k + 1) * MathF.Tau / 8;
-                foreach (var v in new[] { c, c + r * (MathF.Cos(a0) * right + MathF.Sin(a0) * up), c + r * (MathF.Cos(a1) * right + MathF.Sin(a1) * up) })
+                for (int i = 0; i < s.Things.Count && i < _kinds.Length; i++)
                 {
-                    tri.Add(v.X);
-                    tri.Add(v.Y);
-                    tri.Add(v.Z);
+                    var k = _kinds[i];
+                    if (k is not (ObjectKind.SpawnPoints or ObjectKind.Nests) || (k == ObjectKind.SpawnPoints ? !points : !nests))
+                    {
+                        continue;
+                    }
+                    var t = s.Things[i];
+                    var at = new Vector3(t.Position.X - s.Cx, t.Position.Y + 2.4f, -(t.Position.Z - s.Cz));
+                    if (t.Gone || Vector3.DistanceSquared(at, _lastEye) > SpawnMarkerRange * SpawnMarkerRange)
+                    {
+                        continue;
+                    }
+                    if (!colours.TryGetValue(t.Prefab, out var c))
+                    {
+                        var spawn = Terrain.PrefabCatalog.SpawnOf(t.Prefab);
+                        c = colours[t.Prefab] = k == ObjectKind.Nests ? NestColour : SpawnColour(spawn?.Respawns == true);
+                    }
+                    list.Add((at, c!.Value));
                 }
             }
         }
-        DrawLines(ref _markVao, ref _markVbo, [.. tri], vp, new Vector4(0x5d / 255f, 1, 0x8a / 255f, 1), PrimitiveType.Triangles);
+        return list;
+    }
+
+    /// <summary>The spawn markers on the graphics card, one buffer per colour.</summary>
+    private readonly Dictionary<Vector4, (uint Vao, uint Vbo)> _spawnMarkGl = [];
+
+    /// <summary>
+    /// The spawn points' and nests' markers (<c>SpawnMarkers</c>): a disc of the same size on screen above each, with
+    /// a line down to the object, drawn over everything.
+    /// </summary>
+    private void DrawSpawnMarkers(WorldScene s, Matrix4x4 vp)
+    {
+        foreach (var byColour in SpawnMarkers(s).GroupBy(m => m.Colour))
+        {
+            var tri = new List<float>();
+            var lines = new List<float>();
+            foreach (var (c, _) in byColour)
+            {
+                Disc(tri, c, 0.008f);
+                lines.AddRange([c.X, c.Y, c.Z, c.X, c.Y - 2.4f, c.Z]);
+            }
+            var (vao, vbo) = _spawnMarkGl.GetValueOrDefault(byColour.Key);
+            DrawLines(ref vao, ref vbo, [.. tri], vp, byColour.Key, PrimitiveType.Triangles);
+            DrawLines(ref vao, ref vbo, [.. lines], vp, byColour.Key, width: 2);
+            _spawnMarkGl[byColour.Key] = (vao, vbo);
+        }
+    }
+
+    /// <summary>
+    /// Adds a little disc facing the camera to a triangle list, the same size on screen at any distance (its radius
+    /// this much of the distance).
+    /// </summary>
+    private void Disc(List<float> tri, Vector3 c, float size)
+    {
+        var f = Vector3.Normalize(c - _lastEye);
+        var right = Vector3.Normalize(Vector3.Cross(f, Vector3.UnitY) is var x && x.LengthSquared() > 1e-6f ? x : Vector3.UnitX);
+        var up = Vector3.Cross(right, f);
+        float r = Vector3.Distance(_lastEye, c) * size;
+        for (int k = 0; k < 8; k++)
+        {
+            float a0 = k * MathF.Tau / 8, a1 = (k + 1) * MathF.Tau / 8;
+            foreach (var v in new[] { c, c + r * (MathF.Cos(a0) * right + MathF.Sin(a0) * up), c + r * (MathF.Cos(a1) * right + MathF.Sin(a1) * up) })
+            {
+                tri.Add(v.X);
+                tri.Add(v.Y);
+                tri.Add(v.Z);
+            }
+        }
+    }
+
+    /// <summary>The new objects' markers on the graphics card, and their program.</summary>
+    private uint _markVao, _markVbo, _markProg;
+    /// <summary>How many markers the buffer holds.</summary>
+    private int _markCount;
+    /// <summary>
+    /// The markers are found and sent to the graphics card again at the next frame (things changed, a kind shown or
+    /// hidden, a save or apply); otherwise the buffer is drawn as it is: a large area can hold millions of new objects.
+    /// </summary>
+    private volatile bool _marksDirty = true;
+
+    /// <summary>Has the new objects' markers found again at the next frame (after a save or apply, say).</summary>
+    public void RefreshNewMarkers()
+    {
+        _marksDirty = true;
+        Wake();
+    }
+
+    /// <summary>
+    /// The new objects' green dots (<c>NewMarkers</c>), about 10 pixels across at any distance: one point each, kept
+    /// on the graphics card until they change.
+    /// </summary>
+    /// <param name="s">The scene.</param>
+    /// <param name="vp">The camera's view and projection.</param>
+    /// <param name="height">The drawing's height in pixels.</param>
+    private unsafe void DrawNewMarkers(WorldScene s, Matrix4x4 vp, int height)
+    {
+        if (_markProg == 0)
+        {
+            _markProg = Program(Shaders.MarkVs, Shaders.MarkFs);
+            _markVao = _own.VertexArray();
+            _markVbo = _own.Buffer();
+            _gl.BindVertexArray(_markVao);
+            _gl.BindBuffer(BufferTargetARB.ArrayBuffer, _markVbo);
+            _gl.EnableVertexAttribArray(0);
+            _gl.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 12, (void*)0);
+        }
+        if (_marksDirty)
+        {
+            _marksDirty = false;
+            var marks = NewMarkers(s);
+            _markCount = marks.Count;
+            _gl.BindBuffer(BufferTargetARB.ArrayBuffer, _markVbo);
+            fixed (Vector3* p = System.Runtime.InteropServices.CollectionsMarshal.AsSpan(marks))
+            {
+                _gl.BufferData(BufferTargetARB.ArrayBuffer, (nuint)(marks.Count * 12), p, BufferUsageARB.StaticDraw);
+            }
+        }
+        if (_markCount == 0)
+        {
+            return;
+        }
+        if (!_es)
+        {
+            // Desktop OpenGL takes the size from the shader only when asked (OpenGL ES always does).
+            _gl.Enable(EnableCap.ProgramPointSize);
+        }
+        _gl.Disable(EnableCap.DepthTest);
+        _gl.UseProgram(_markProg);
+        _gl.UniformMatrix4(_gl.GetUniformLocation(_markProg, "uViewProj"), 1, false, (float*)&vp);
+        _gl.Uniform4(_gl.GetUniformLocation(_markProg, "uColor"), 0x5d / 255f, 1, 0x8a / 255f, 1);
+        // As the discs they replace: 1.16% of the distance across, under the 60° field of view.
+        _gl.Uniform1(_gl.GetUniformLocation(_markProg, "uSize"), MathF.Max(3, 0.0116f / (2 * MathF.Tan(MathF.PI / 6)) * height));
+        _gl.BindVertexArray(_markVao);
+        _gl.DrawArrays(PrimitiveType.Points, 0, (uint)_markCount);
+        _gl.Enable(EnableCap.DepthTest);
     }
 
     /// <summary>The Path tool's lines on the graphics card: centre line, edges, points.</summary>
@@ -3458,8 +3832,8 @@ public sealed class GlView : OpenGlControlBase
     private uint _ringVao, _ringVbo, _previewVao, _previewVbo;
     /// <summary>The mountain preview's lines, kept while the pointer stays on the same grid point.</summary>
     private float[] _previewSegs = [];
-    /// <summary>The grid point (and area width) the mountain preview was made for; null to make it again.</summary>
-    private (int X, int Z, int W)? _previewKey;
+    /// <summary>The grid point (and area size) the mountain preview was made for; null to make it again.</summary>
+    private (int X, int Z, int W, int H)? _previewKey;
 
     /// <summary>Whether a Mountain click at a grid point fits in the open area (what EditSession.Mountain needs).</summary>
     internal static bool MountainFits(WorldScene s, float gx, float gz, float reach) => gx - reach >= 1 && gz - reach >= 1 && gx + reach <= s.W - 2 && gz + reach <= s.H - 2;
@@ -3503,7 +3877,7 @@ public sealed class GlView : OpenGlControlBase
         DrawLines(ref _ringVao, ref _ringVbo, [.. data], vp, fits ? new Vector4(1, 1, 1, 1) : new Vector4(1, 0.35f, 0.3f, 1), width: 1.2f);
         if (Tool == null && Mode == ToolMode.Mountain && fits && MountainPreview is { } shape)
         {
-            var key = ((int)MathF.Round(h.X), (int)MathF.Round(h.Z), s.W);
+            var key = ((int)MathF.Round(h.X), (int)MathF.Round(h.Z), s.W, s.H);
             if (_previewKey != key)
             {
                 _previewKey = key;
@@ -3769,7 +4143,7 @@ public sealed class GlView : OpenGlControlBase
             foreach (var (i, lo, hi) in boxes)
             {
                 var t = s.Things[i];
-                _kinds[i] = ObjectKinds.Of(NameOf(t.Prefab), t.Piece, t.Tamed);
+                _kinds[i] = ObjectKinds.Of(NameOf(t.Prefab), t.Piece || t.Joined, t.Tamed);
                 _bounds[i] = (lo, hi);
                 _boundsAt[i] = t.Position;
                 _known[i] = !t.Gone;

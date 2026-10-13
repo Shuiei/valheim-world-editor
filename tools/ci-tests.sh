@@ -5,6 +5,7 @@
 # Usage: tools/ci-tests.sh list <project>                   the project's test classes, one per line
 #        tools/ci-tests.sh run <project> <name> <class>...  runs those classes,
 #                                                           results in /tmp/test-results/<name>/results.xml
+#                                                           (and crash-*.xml when the test process crashes)
 #                                                           and, with VWE_COVERAGE=1 (CI on main), their
 #                                                           coverage (Cobertura) as
 #                                                           /tmp/coverage/<name>-<node>/coverage.<n>.cobertura.xml
@@ -13,6 +14,32 @@
 # minutes ends the run (with a dump). The visual tests (Category=Visual: the real editor, drawing with
 # OpenGL) need a display: app-tests gives them one (Xvfb, Mesa's software OpenGL); without one they skip.
 set -euo pipefail
+
+# A crashed test process as a failed test in JUnit (crash-<n>.xml in <folder>), from the run's output <log>:
+# the runtime's report (from "Fatal error.") as its text, and the test class on its stack as its class, so
+# CircleCI shows it among the failures and "Rerun failed tests" runs that class again ("TestHost" when the
+# crash was on a thread of no test).
+crash_result() {
+  local log=$1 folder=$2 code report class
+  # Each read stops by itself (no `| head`, which would end the writer early: a long report would fail the
+  # pipeline under pipefail, before the result is written).
+  code=$(grep -m 1 -o 'crashed with exit code [0-9]*' "$log" | grep -o '[0-9]*$')
+  report=$(awk '/^Fatal error\./ { on = 1 } on { print; if (++n == 60 || /^\[xUnit\.net/) exit }' "$log")
+  # "   at WorldEditor.Tests.SomeTests.AMethod()" or "...SomeTests+<AMethod>d__4.MoveNext()": SomeTests
+  # (the nested part stands in for a method, so both lose only their last name).
+  class=$(printf '%s\n' "$report" | grep -E -o '^ +at (TerrainEditor\.Desktop\.Tests|WorldEditor\.Tests)\.[A-Za-z0-9_.+<>]+' \
+    | head -n 1 | sed -E 's/^ +at //; s/\+.*/.x/; s/\.[A-Za-z0-9_]+$//' || true)
+  [ -n "$class" ] || class=TestHost
+  mkdir -p "$folder"
+  {
+    printf '<?xml version="1.0" encoding="utf-8"?>\n<testsuites>\n'
+    printf '  <testsuite name="%s" tests="1" failures="1" errors="0">\n' "$class"
+    printf '    <testcase classname="%s" name="The test process crashed (exit code %s)" time="0">\n' "$class" "${code:-?}"
+    printf '      <failure message="The test process crashed (exit code %s): the tests still running were not finished."><![CDATA[%s]]></failure>\n' \
+      "${code:-?}" "${report//]]>/]]]]><![CDATA[>}"
+    printf '    </testcase>\n  </testsuite>\n</testsuites>\n'
+  } > "$(mktemp "$folder/crash-XXXXXX.xml")"
+}
 
 case "${1:?list or run}" in
   list)
@@ -28,13 +55,26 @@ case "${1:?list or run}" in
     filter=$(printf 'FullyQualifiedName~%s.|' "$@" | sed 's/|$//')
     # On main only, the coverage of this container's share, which the job sends to Codecov (merged
     # there with the other containers'): it makes the tests several times slower.
+    # A test stuck 5 minutes ends the run; under coverage, 10: the world generator's tests share the
+    # container's two cores with the others for minutes there (one took 300 s on main, the old limit).
     coverage=()
+    hang=5m
     if [ "${VWE_COVERAGE:-}" = 1 ]; then
       coverage=(--settings tests/coverage.runsettings --collect "Code Coverage"
         --results-directory "/tmp/coverage/$name-${CIRCLE_NODE_INDEX:-0}")
+      hang=10m
     fi
-    dotnet test "$project" -c Release --no-build --filter "$filter" --blame-hang-timeout 5m "${coverage[@]}" \
-      --logger "junit;LogFilePath=/tmp/test-results/$name/results.xml" --logger "console;verbosity=normal"
+    # The run's output is kept too: a test process that crashes leaves no failed test in the results (only
+    # the tests done before it), so the crash is written there as one (crash_result).
+    log=$(mktemp)
+    status=0
+    dotnet test "$project" -c Release --no-build --filter "$filter" --blame-hang-timeout "$hang" "${coverage[@]}" \
+      --logger "junit;LogFilePath=/tmp/test-results/$name/results.xml" --logger "console;verbosity=normal" 2>&1 \
+      | tee "$log" || status=$?
+    if grep -q 'Test process crashed with exit code' "$log"; then
+      crash_result "$log" "/tmp/test-results/$name"
+    fi
+    rm -f "$log"
     if [ "${VWE_COVERAGE:-}" = 1 ]; then
       # The report is named after the machine and the time (_<host>_<date>.cobertura.xml), which Codecov's
       # CLI does not take for coverage: renamed coverage.<n>.cobertura.xml (its *coverage*.* pattern),
@@ -49,6 +89,7 @@ case "${1:?list or run}" in
         mv "$report" "$out/coverage.$n.cobertura.xml"
       done
     fi
+    exit "$status"
     ;;
   *)
     echo "usage: tools/ci-tests.sh list <project> | run <project> <name> <class>..." >&2

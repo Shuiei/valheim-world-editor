@@ -28,6 +28,13 @@ public class NewWorldPageTests
     private const string Seed = "5DCcdIcuYJ";
 
     /// <summary>
+    /// How long a seed's world may take to show, in milliseconds. About 40 s on CI, but the first seed a run shows also
+    /// reads the location rules and compiles the generator, and main's runs measure coverage, which slows it all: that
+    /// took the first test past 60 s on every main run.
+    /// </summary>
+    private const int SeedWait = 180000;
+
+    /// <summary>
     /// A page in a shown window, with its own world folders (temporary, deleted when disposed), and the worlds it asked
     /// to create.
     /// </summary>
@@ -61,7 +68,7 @@ public class NewWorldPageTests
         public async Task Look(string seed)
         {
             OnUi(() => P.ShowSeed(seed));
-            await TestWindows.Until(() => P.Shown?.Seed == seed && !P.Loading.IsVisible, 60000);
+            await TestWindows.Until(() => P.Shown?.Seed == seed && !P.Loading.IsVisible, SeedWait);
             Settle();
         }
 
@@ -259,7 +266,7 @@ public class NewWorldPageTests
         Assert.Equal(r.P.DungeonMarks!.Count(m => m.Name == "Frost caves"), r.P.Map.Dots.Count);
         // Back to the first seed: its dungeons are known at once.
         OnUi(() => r.P.ShowSeed(Seed));
-        await TestWindows.Until(() => r.P.Shown?.Seed == Seed, 60000);
+        await TestWindows.Until(() => r.P.Shown?.Seed == Seed, SeedWait);
         Assert.Same(first, r.P.DungeonMarks);
     }
 
@@ -267,7 +274,7 @@ public class NewWorldPageTests
     public async Task ATypedSeedIsLookedAtOnGenerateAndABadOneIsSaid()
     {
         using var r = new Run();
-        await TestWindows.Until(() => r.P.Shown != null && !r.P.Loading.IsVisible, 60000);
+        await TestWindows.Until(() => r.P.Shown != null && !r.P.Loading.IsVisible, SeedWait);
         // The seed shown: nothing to generate.
         Assert.False(r.P.Generate.IsEnabled);
         // Typed: not looked at yet, Generate lit.
@@ -280,19 +287,19 @@ public class NewWorldPageTests
         Assert.True(r.P.Loading.IsVisible);
         Assert.Equal("Looking at abc's world…", r.P.LoadingText.Text);
         Assert.False(r.P.Generate.IsEnabled);
-        await TestWindows.Until(() => r.P.Shown?.Seed == "abc" && !r.P.Loading.IsVisible, 60000);
+        await TestWindows.Until(() => r.P.Shown?.Seed == "abc" && !r.P.Loading.IsVisible, SeedWait);
         // Enter in the box does the same.
         OnUi(() => r.P.SeedBox.Text = "abcd");
         OnUi(() => r.P.SeedBox.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Enter }));
         Assert.False(r.P.Generate.IsEnabled);
-        await TestWindows.Until(() => r.P.Shown?.Seed == "abcd" && !r.P.Loading.IsVisible, 60000);
+        await TestWindows.Until(() => r.P.Shown?.Seed == "abcd" && !r.P.Loading.IsVisible, SeedWait);
         // Roll: another random seed of ten characters, looked at at once.
         Click(r.P.Roll);
         Assert.NotEqual("abcd", r.P.SeedBox.Text);
         Assert.Equal(10, r.P.SeedBox.Text!.Length);
         Settle();
         Assert.False(r.P.Generate.IsEnabled);
-        await TestWindows.Until(() => r.P.Shown?.Seed == r.P.SeedBox.Text && !r.P.Loading.IsVisible, 60000);
+        await TestWindows.Until(() => r.P.Shown?.Seed == r.P.SeedBox.Text && !r.P.Loading.IsVisible, SeedWait);
         // No seed, or one too long: said, nothing shown.
         foreach (string bad in new[] { "", "12345678901" })
         {
@@ -327,7 +334,7 @@ public class NewWorldPageTests
         // A result clicked: its seed in the box, looked at at once, its picture framed.
         Click(buttons[0]);
         Assert.Equal(best.Seed, r.P.SeedBox.Text);
-        await TestWindows.Until(() => r.P.Shown?.Seed == best.Seed && !r.P.Loading.IsVisible, 60000);
+        await TestWindows.Until(() => r.P.Shown?.Seed == best.Seed && !r.P.Loading.IsVisible, SeedWait);
         Assert.Equal(new Thickness(2), buttons[0].BorderThickness);
         // The others as thick, unseen: the chosen one no wider than they are.
         Assert.All(buttons.Skip(1), b => Assert.Equal((new Thickness(2), Brushes.Transparent), (b.BorderThickness, b.BorderBrush)));
@@ -380,43 +387,54 @@ public class NewWorldPageTests
             r.P.ShowSeed("abc");
             r.P.StopAll();
         });
-        await TestWindows.Until(() => r.P.Pending.IsCompleted, 60000);
+        await TestWindows.Until(() => r.P.Pending.IsCompleted, SeedWait);
         Settle();
         // Its world is not the one on the map: Generate lit, and it is looked at.
         Assert.Equal(Seed, r.P.Shown?.Seed);
         Assert.True(r.P.Generate.IsEnabled);
         Click(r.P.Generate);
-        await TestWindows.Until(() => r.P.Shown?.Seed == "abc" && !r.P.Loading.IsVisible, 60000);
+        await TestWindows.Until(() => r.P.Shown?.Seed == "abc" && !r.P.Loading.IsVisible, SeedWait);
         Assert.False(r.P.Generate.IsEnabled);
     }
 
+    // Check: a name that cannot be a file name, a seed not of 1 to 10 characters, a world of that name there already
+    // (as a folder or as the game's .fwl) are refused; a new name and seed are not.
+    [Fact]
+    public void CheckRefusesBadNamesSeedsAndWorldsThere()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "vwe-check-" + Guid.NewGuid().ToString("N")[..8]);
+        Directory.CreateDirectory(Path.Combine(root, "Home"));
+        File.WriteAllText(Path.Combine(root, "Hall.fwl"), "");
+        try
+        {
+            foreach (string bad in new[] { "", "a/b" })
+            {
+                Assert.StartsWith("Give the world a name that can be a file name", NewWorldPage.Check(root, bad, "abc"));
+            }
+            Assert.Equal("The seed is 1 to 10 characters, as in the game.", NewWorldPage.Check(root, "New", ""));
+            Assert.Equal("The seed is 1 to 10 characters, as in the game.", NewWorldPage.Check(root, "New", "12345678901"));
+            Assert.StartsWith("There is a world called Home already in ", NewWorldPage.Check(root, "Home", "abc"));
+            Assert.StartsWith("There is a world called Hall already in ", NewWorldPage.Check(root, "Hall", "abc"));
+            Assert.Null(NewWorldPage.Check(root, "New", "abc"));
+        }
+        finally
+        {
+            Directory.Delete(root, true);
+        }
+    }
+
+    // Create: what Check says is shown and nothing is made; a new name is asked for, trimmed, in the folder chosen.
     [AvaloniaFact]
-    public void CreateChecksTheNameTheSeedAndThatTheWorldIsNew()
+    public void CreateShowsWhatIsWrongOrAsksForTheWorld()
     {
         using var r = new Run();
-        string local = Path.Combine(r.Root, "local"), cloud = Path.Combine(r.Root, "cloud");
-        r.P.SeedBox.Text = "abc";
-        foreach (string bad in new[] { "", "   ", "a/b" })
-        {
-            r.P.NameBox.Text = bad;
-            Click(r.P.Create);
-            Assert.StartsWith("Give the world a name that can be a file name", r.P.Problem.Text);
-        }
-        r.P.NameBox.Text = "Home";
-        r.P.SeedBox.Text = "";
-        r.P.AskCreate();
-        Assert.Equal("The seed is 1 to 10 characters, as in the game.", r.P.Problem.Text);
-        // A world of that name already there, as a folder or as the game's .fwl.
+        string cloud = Path.Combine(r.Root, "cloud");
         r.P.SeedBox.Text = " abc ";
-        Directory.CreateDirectory(Path.Combine(local, "Home"));
-        r.P.AskCreate();
-        Assert.StartsWith("There is a world called Home already in ", r.P.Problem.Text);
-        File.WriteAllText(Path.Combine(cloud, "Home.fwl"), "");
-        r.P.Where.SelectedIndex = 1;
-        r.P.AskCreate();
-        Assert.StartsWith("There is a world called Home already in ", r.P.Problem.Text);
+        r.P.NameBox.Text = "a/b";
+        Click(r.P.Create);
+        Assert.StartsWith("Give the world a name that can be a file name", r.P.Problem.Text);
         Assert.Empty(r.Created);
-        // A new name: asked for, trimmed, in the folder chosen.
+        r.P.Where.SelectedIndex = 1;
         r.P.NameBox.Text = " New home ";
         r.P.AskCreate();
         Assert.Equal("", r.P.Problem.Text);
@@ -493,5 +511,73 @@ public class NewWorldPageTests
         Assert.Equal(new PixelSize(40, 40), bmp.PixelSize);
         using var plain = NewWorldPage.Draw(p, 16, startDot: false);
         Assert.Equal(new PixelSize(16, 16), plain.PixelSize);
+    }
+
+    [AvaloniaFact]
+    public async Task ADungeonKindSwitchedOnWhileTheyAreBeingFoundWaitsForThem()
+    {
+        using var r = new Run();
+        await r.Look(Seed);
+        var sunken = r.P.ShowDungeons["Sunken crypts"];
+        // Switched on while the seed's dungeons are still being looked for: the loading sign until they are found.
+        bool early = r.P.DungeonMarks == null;
+        sunken.IsChecked = true;
+        if (early)
+        {
+            Assert.True(r.P.Loading.IsVisible);
+            Assert.Equal($"Finding {Seed}'s dungeons…", r.P.LoadingText.Text);
+        }
+        await TestWindows.Until(() => r.P.DungeonMarks != null && !r.P.Loading.IsVisible, 120000);
+        Assert.Equal(r.P.DungeonMarks!.Count(m => m.Name == "Sunken crypts"), r.P.Map.Dots.Count);
+    }
+
+    [AvaloniaFact]
+    public async Task ASearchStartedAgainDropsTheFirstAndItsPictures()
+    {
+        using var r = new Run();
+        await r.Look("abc");
+        r.P.Count.SelectedIndex = 0;
+        Click(r.P.Find);
+        await TestWindows.Until(() => r.P.Progress.Value > 0, 120000);
+        Click(r.P.Stop);
+        await TestWindows.Until(() => r.P.Find.IsEnabled, 120000);
+        Assert.NotEmpty(r.P.Found.Children.OfType<Button>());
+        // The longest search, started twice (the second stops the first) and stopped at once: the pictures go.
+        r.P.Count.SelectedIndex = 2;
+        OnUi(() =>
+        {
+            r.P.StartSearch();
+            r.P.StartSearch();
+        });
+        Assert.Empty(r.P.Found.Children.OfType<Button>());
+        Click(r.P.Stop);
+        await TestWindows.Until(() => r.P.Pending.IsCompleted, 120000);
+        Settle();
+        Assert.True(r.P.Find.IsEnabled);
+        Assert.False(r.P.Stop.IsVisible);
+    }
+
+    [AvaloniaFact]
+    public void CreateWithEmptyBoxesOrNoListenerAsksNothing()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "vwe-newworld-" + Guid.NewGuid().ToString("N")[..8]);
+        Directory.CreateDirectory(root);
+        try
+        {
+            using var page = new NewWorldPage([root], previewSize: 32);
+            page.NameBox.Text = null;
+            page.SeedBox.Text = null;
+            page.AskCreate();
+            Assert.StartsWith("Give the world a name that can be a file name", page.Problem.Text);
+            // A good world asked for with nobody listening: nothing happens, no problem said.
+            page.NameBox.Text = "Fresh";
+            page.SeedBox.Text = "abc";
+            page.AskCreate();
+            Assert.Equal("", page.Problem.Text);
+        }
+        finally
+        {
+            Directory.Delete(root, true);
+        }
     }
 }

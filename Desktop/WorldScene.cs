@@ -8,7 +8,7 @@ using Vector3 = System.Numerics.Vector3;
 namespace TerrainEditor.Desktop;
 
 /// <summary>
-/// What the 3D view shows: a square block of zones of a world, its ground (heights and biomes, edits
+/// What the 3D view shows: a rectangular block of zones of a world, its ground (heights and biomes, edits
 /// included) and the objects and building pieces in it. Read once from the save through the shared
 /// library, the same way the web editor's session does.
 /// </summary>
@@ -30,11 +30,13 @@ public sealed class WorldScene
     public int X0 { get; init; }
     /// <summary>The block's south-west zone, z.</summary>
     public int Z0 { get; init; }
-    /// <summary>The block's size in zones across (it is square).</summary>
-    public int Size { get; init; }
-    /// <summary>Grid points west to east (Size × 64 + 1).</summary>
+    /// <summary>The block's size in zones, west to east.</summary>
+    public int ZonesX { get; init; }
+    /// <summary>The block's size in zones, south to north.</summary>
+    public int ZonesZ { get; init; }
+    /// <summary>Grid points west to east (ZonesX × 64 + 1).</summary>
     public int W { get; init; }
-    /// <summary>Grid points south to north (Size × 64 + 1).</summary>
+    /// <summary>Grid points south to north (ZonesZ × 64 + 1).</summary>
     public int H { get; init; }
     /// <summary>The ground height in metres per grid point, edits included, row by row from the south (z × W + x).</summary>
     public required float[] Heights { get; init; }
@@ -96,6 +98,11 @@ public sealed class WorldScene
         public bool Tamed { get; init; }
 
         /// <summary>
+        /// A ruin's piece (no builder) joined to a player's building (JoinedRuins): shown with Your buildings.
+        /// </summary>
+        public bool Joined { get; init; }
+
+        /// <summary>
         /// A runestone: in the save a location proxy, listed under the location's name. It can be
         /// picked and deleted, not moved or copied (see PrefabCatalog.RunestoneLocations).
         /// </summary>
@@ -150,16 +157,29 @@ public sealed class WorldScene
     /// <param name="zz">The middle zone, z.</param>
     /// <param name="size">Zones across.</param>
     /// <param name="readMs">How long the save took to read, for <c>LoadInfo</c>.</param>
-    public static WorldScene Load(WorldSession owner, int zx, int zz, int size, long readMs = 0)
+    public static WorldScene Load(WorldSession owner, int zx, int zz, int size, long readMs = 0) =>
+        LoadBlock(owner, zx - size / 2, zz - size / 2, size, size, readMs);
+
+    /// <summary>
+    /// An area (zonesX × zonesZ zones from its south-west zone x0, z0) of an open world, with its edit session; the
+    /// world's kept history is fitted to it, and it becomes the world's current area.
+    /// </summary>
+    /// <param name="owner">The open world.</param>
+    /// <param name="x0">The south-west zone, x.</param>
+    /// <param name="z0">The south-west zone, z.</param>
+    /// <param name="zonesX">Zones west to east.</param>
+    /// <param name="zonesZ">Zones south to north.</param>
+    /// <param name="readMs">How long the save took to read, for <c>LoadInfo</c>.</param>
+    public static WorldScene LoadBlock(WorldSession owner, int x0, int z0, int zonesX, int zonesZ, long readMs = 0)
     {
         var watch = System.Diagnostics.Stopwatch.StartNew();
         var world = owner.World;
         var edits = owner.Edits;
         var modifiers = owner.Modifiers;
         var terrain = owner.Terrain;
-        int x0 = zx - size / 2, z0 = zz - size / 2, x1 = x0 + size - 1, z1 = z0 + size - 1;
+        int x1 = x0 + zonesX - 1, z1 = z0 + zonesZ - 1;
         // The zones' generated ground in parallel (the slow part), then the grid with the edits.
-        var keys = (from z in Enumerable.Range(z0, size) from x in Enumerable.Range(x0, size) select (x, z)).ToArray();
+        var keys = (from z in Enumerable.Range(z0, zonesZ) from x in Enumerable.Range(x0, zonesX) select (x, z)).ToArray();
         Parallel.ForEach(keys, k => terrain.BaseZone(k.x, k.z));
         var (w, h, heights) = HeightGrid.Read(terrain, edits, x0, z0, x1, z1);
         int[] biomes = new int[w * h];
@@ -193,9 +213,9 @@ public sealed class WorldScene
             }
         }
         // Heightmap.UpdateCornerDepths: each zone gets max(0, 30 - height) at its corners, blended across it.
-        for (int zz2 = 0; zz2 < size; zz2++)
+        for (int zz2 = 0; zz2 < zonesZ; zz2++)
         {
-            for (int zx2 = 0; zx2 < size; zx2++)
+            for (int zx2 = 0; zx2 < zonesX; zx2++)
             {
                 float D(int gx, int gz) => MathF.Max(0, 30 - heights[gz * w + gx]);
                 int ax = zx2 * 64, az = zz2 * 64;
@@ -211,14 +231,15 @@ public sealed class WorldScene
             }
         }
         float minX = x0 * 64f - 32f, maxX = x1 * 64f + 32f, minZ = z0 * 64f - 32f, maxZ = z1 * 64f + 32f;
-        var things = ReadThings(world, x0, z0, size, edits.Deleted, edits.Added);
+        var things = ReadThings(world, x0, z0, zonesX, zonesZ, edits.Deleted, edits.Added);
         var scene = new WorldScene
         {
             World = world,
             Name = world.Name,
             X0 = x0,
             Z0 = z0,
-            Size = size,
+            ZonesX = zonesX,
+            ZonesZ = zonesZ,
             W = w,
             H = h,
             Heights = heights,
@@ -233,9 +254,9 @@ public sealed class WorldScene
             Modifiers = modifiers,
             Terrain = terrain,
             Owner = owner,
-            LoadInfo = $"{world.Name}: read in {readMs} ms, {size}×{size} zones and {things.Count:N0} objects ready in {watch.ElapsedMilliseconds} ms",
+            LoadInfo = $"{world.Name}: read in {readMs} ms, {zonesX}×{zonesZ} zones and {things.Count:N0} objects ready in {watch.ElapsedMilliseconds} ms",
         };
-        scene.Session = new EditSession(scene, Ground.Read(terrain, edits, x0, z0, size), edits);
+        scene.Session = new EditSession(scene, Ground.Read(terrain, edits, x0, z0, zonesX, zonesZ), edits);
         owner?.Area = scene.Session;
         // The world's history (made in other areas), fitted to this one.
         if (owner?.History is { } kept)
@@ -301,21 +322,22 @@ public sealed class WorldScene
     /// <param name="world">The save.</param>
     /// <param name="x0">The block's south-west zone, x.</param>
     /// <param name="z0">The block's south-west zone, z.</param>
-    /// <param name="size">Zones across.</param>
+    /// <param name="zonesX">Zones west to east.</param>
+    /// <param name="zonesZ">Zones south to north.</param>
     /// <param name="deleted">Ids of deleted objects, left out.</param>
     /// <param name="added">Objects added in this session (other areas of the world may have placed or moved some here).</param>
-    public static List<Thing> ReadThings(WorldSave world, int x0, int z0, int size, ICollection<int> deleted, IEnumerable<NewObject>? added = null)
+    public static List<Thing> ReadThings(WorldSave world, int x0, int z0, int zonesX, int zonesZ, ICollection<int> deleted, IEnumerable<NewObject>? added = null)
     {
         lock (world.Sync)
         {
-            return ReadThingsIn(world, x0, z0, size, deleted, added);
+            return ReadThingsIn(world, x0, z0, zonesX, zonesZ, deleted, added);
         }
     }
 
     /// <summary><c>ReadThings</c>' work, with the world's lock held.</summary>
-    private static List<Thing> ReadThingsIn(WorldSave world, int x0, int z0, int size, ICollection<int> deleted, IEnumerable<NewObject>? added)
+    private static List<Thing> ReadThingsIn(WorldSave world, int x0, int z0, int zonesX, int zonesZ, ICollection<int> deleted, IEnumerable<NewObject>? added)
     {
-        float minX = x0 * 64f - 32f, maxX = (x0 + size - 1) * 64f + 32f, minZ = z0 * 64f - 32f, maxZ = (z0 + size - 1) * 64f + 32f;
+        float minX = x0 * 64f - 32f, maxX = (x0 + zonesX - 1) * 64f + 32f, minZ = z0 * 64f - 32f, maxZ = (z0 + zonesZ - 1) * 64f + 32f;
         bool Inside(Vector3 p) => p.X >= minX && p.X < maxX && p.Z >= minZ && p.Z < maxZ;
         var things = new List<Thing>();
         foreach (var (id, prefab, p, r, sc) in world.Objects)
@@ -338,6 +360,16 @@ public sealed class WorldScene
             if (Inside(n.Position) && n.Prefab != WorldSave.LocationProxyPrefab)
             {
                 things.Add(new Thing(n.Id, n.Prefab, n.Position, n.Rotation, n.Scale, PieceCatalog.Get(n.Prefab)?.Tool != null) { Tamed = TamedOf(world, n) });
+            }
+        }
+        // The ruins' pieces joined to a building (the world's and this session's built pieces), found over the whole
+        // world: the building may be just outside the area.
+        var joined = JoinedRuins.InWorld(world, deleted, (added ?? []).Where(n => PieceCatalog.Get(n.Prefab)?.Tool != null).Select(n => n.Position));
+        for (int i = 0; i < things.Count; i++)
+        {
+            if (!things[i].Piece && joined.Contains(things[i].Id))
+            {
+                things[i] = things[i] with { Joined = true };
             }
         }
         return things;

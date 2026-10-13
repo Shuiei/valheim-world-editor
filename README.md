@@ -47,6 +47,15 @@ for Windows or Linux. Unpack it and start it. You don't need to install anything
   you make, no mod needed.
 - **Build inside a dungeon** with the hammer's pieces, on the rooms' floors.
 
+**New worlds**
+- **See a seed's world before it exists**: its land and biomes, and exactly where the game will put
+  the start, the bosses' altars, the traders (Haldor, the Bog Witch, Hildir) and the dungeons.
+- **Find a seed** with what you want near the start: Swamp, Mountain or Plains within a distance,
+  every early biome on foot, a trader or the first bosses close by. Then make the world: a normal
+  one, that everyone joins without any mod.
+
+![A seed's world before it exists: the start, the bosses' altars and the traders](docs/images/new-world.jpg)
+
 **Objects**
 - **Place anything the game has**: trees, rocks, bushes, crops and building pieces. Use a brush,
   lines, circles, grids or whole zones; the brush follows the game's growing rules.
@@ -120,7 +129,7 @@ The sections below cover each step in more detail.
 
 Nothing else: no Python, no .NET, no `ssh` command. Everything the editor needs comes in the
 download: one program file, drawn with OpenGL (any graphics driver of the last ten years; on
-Windows it falls back to Direct3D when the driver has no OpenGL).
+Windows through Direct3D, like games, or the driver's own OpenGL when chosen in **Settings**).
 
 ### Install and start
 
@@ -210,7 +219,7 @@ have your own tunnel (`ssh -L`, PuTTY)? Use **More options → I made my own tun
 1. **Close Valheim, or stop the server** that uses the world. A running game saves over the files
    the editor writes.
 2. On the start page, **A saved world**: click the world (the worlds you opened last are on **Home**
-   too). Worlds in Valheim's usual folders are listed by themselves; for another one (a copy of a server's world, for example) use **Another world
+   too). Worlds in Valheim's usual folders are listed by themselves (the list follows the worlds you add or remove; **Refresh** looks at once); for another one (a copy of a server's world, for example) use **Another world
    folder** with **Browse…** or by typing it (`<savedir>/worlds_local/<World>` for a server).
 3. Edit, then **Save to world**. The editor writes your changes as the next save and reads them back
    to check them (if they do not read back right, the new files are removed and nothing changed).
@@ -236,6 +245,8 @@ elsewhere, set them in **Settings** on the start page:
   manager with its own data folder). Used to find the plugin for **My game**.
 - **World folders**: a world, or a folder of worlds (a server's `<savedir>/worlds_local` copy, a
   backup folder…). Always listed under **A saved world**.
+- **Drawing** (Windows): **Draw with the graphics driver's OpenGL**. Off by default: the editor
+  draws through Direct3D, as games do. Taken when the editor starts again.
 
 For a **dedicated server**, the server form has an optional **Server's Valheim folder** (the
 folder with its `BepInEx`, for example `/home/valheim/server`). With it the editor reads the
@@ -317,6 +328,12 @@ Only the plugin, [WorldEditorBridge](https://thunderstore.io/c/valheim/p/Tie/Wor
 is there. The editor is a program, not a mod, so it is only on the
 [releases page](https://github.com/Shuiei/valheim-world-editor/releases/latest). Use the same version
 of both.
+
+**The 3D view or the map flickers, objects come and go, or lines cross the window (Windows).**
+That is the graphics driver. Update it; on a laptop with two graphics chips, choose the faster one for
+`ValheimWorldEditor.exe` (Windows' Settings › System › Display › Graphics, or the NVIDIA / AMD control
+panel). If it still happens, switch **Draw with the graphics driver's OpenGL** in **Settings**
+(**Drawing**), then start the editor again.
 
 **Something is wrong or missing.**
 [Open an issue](https://github.com/Shuiei/valheim-world-editor/issues) and attach the editor's log:

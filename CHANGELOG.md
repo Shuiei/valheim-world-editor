@@ -4,26 +4,202 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
-## Unreleased
+## v1.25.2 — 2026-10-12
+
+### Changed
+- **Releases are made by CI after approval**: once a release's CHANGELOG headings are dated and merged,
+  CircleCI tests main, waits for the maintainer's approval, then tags it, publishes the GitHub release
+  with the packages it tested, and publishes the plugin on Thunderstore and Hexium and the plugin and
+  the editor on Nexus Mods (see docs/development.md, Releasing). The plugin now builds against any
+  Valheim dedicated server and BepInEx folder (`ValheimDir`, `BepInExDir`).
+
+## v1.25.1 — 2026-10-12
+
+### Fixed
+- **A ruin you built onto shows whole** (#115): the stones of a ruined tower patched with wood
+  were hidden (they are the ruin's, under Ruins & structures, off at first so ruins are not
+  spoiled), so only the wood showed, in the 3D view and on the map. A ruin's pieces that touch your
+  pieces, and the ones touching those, now count as your building: under **Your buildings** in the
+  3D view and drawn with **Show buildings** on the map. The map also has **Show ruins** (off at
+  first) to draw every ruin, fainter.
+
+## v1.25.0 — 2026-10-12
+
+### Added
+- **The game's locations are drawn whole**: the parts of a location that are not objects of the save
+  (a crypt entrance's rocks, the trader's camp, a boss's altar, a troll cave's walls, the rune tablets
+  of ruins) show in the 3D view with **Ruins & structures**. The save keeps only a marker for each
+  location, and the game makes these parts again from it each time the zone loads, so they cannot be
+  picked or changed. A part the game keeps only by chance is drawn when it is there at least half the
+  time.
+
+## v1.24.1 — 2026-10-12
+
+### Fixed
+- **Windows: objects that came and went, black lines across the window** (#115): with some graphics
+  drivers (older ones, laptops with two graphics chips) the 3D view and the map showed old frames in
+  between new ones, and lines crossed the buttons. The editor now draws through Direct3D on Windows,
+  as games do; **Settings › Drawing › Draw with the graphics driver's OpenGL** goes back to the
+  driver's OpenGL (taken at the next start). The log says what draws the map, as it did for the 3D
+  view.
+
+## v1.24.0 — 2026-10-12
+
+### Added
+- **Claude changes objects already there**: `move_objects` moves and turns objects as one group (a
+  building keeps its shape; with `ground`, each stays as high above the ground as it was);
+  `set_transform` puts each object exactly (place, turn, tilt, size); `replace_objects` swaps them for
+  another kind; `get_object` gives everything an object is and holds, as the inspector shows it; and
+  `set_object_data` changes its values (a portal's tag, a builder, a ward's permitted players, health,
+  fuel, a creature's level…). Objects keep what they hold when moved.
+- **Claude finds places in a world**: `list_locations` lists the world's locations (the start, the
+  traders, the bosses' altars, dungeon entrances, villages…) with what players call them, and
+  `search_world` searches every object as the map's Search does (by kind, items in containers, texts).
+- **Claude copies and puts blueprints into worlds**: `copy_objects` makes copies once or in a row or a
+  ring; `add_blueprint` now puts a blueprint of the library into a world's area too (not only the
+  Workshop's plot), turned as asked, and its step is one of Claude's (History's **Take back Claude's
+  changes** takes it).
+- **Claude weathers and regrows ground**: `shape_ground` runs the Area tool's ground actions over a
+  rectangle (smooth, naturalize, erode, restore, raise, lower), and `regrow_nature` regrows what the
+  game grows there.
+- **Scripts move, tilt and snap objects**: objects carry their turn, tilts and size (`Yaw`, `Pitch`,
+  `Roll`, `Scale`); `Objects.Place` takes `pitch`, `roll` and `snap` (pieces meet the pieces there as
+  the hammer makes them); and `Objects.Move` moves, turns or sizes an object that is there, keeping
+  what it holds, in the script's one undo step.
+- **Claude digs along lines, resets zones and makes worlds**: `dig_path` runs the Path tool along a
+  line (a river or moat, a cave roofed with boulders, a ramp, a flattened or smoothed way);
+  `reset_zones` marks zones for reset (or unmarks them) as the Area tool does; `preview_seed` shows what
+  a seed's world will be like (a map, and where the start, traders and bosses will be) and
+  `create_world` makes and opens a new world.
+- **Claude stamps, imports heightmaps and masks its ground work**: `stamp` presses a stamp into the
+  ground (Mountain, Mesa, Crater rim, Dunes, Rocky ground, the user's own, or any PNG);
+  `import_heightmap` puts a heightmap picture into a rectangle; `shape_ground` also paints; and
+  `shape_ground`, `dig_path`, `stamp` and `import_heightmap` take a mask, as the Mask panel's (heights,
+  slopes, biomes, paint).
+- **Claude edits the game's dungeons**: `list_dungeons` and `dungeon_rooms` show a dungeon's rooms, open
+  ends and door joints; `add_dungeon_room`, `remove_dungeon_room`, `close_dungeon_ends` and
+  `set_dungeon_door` change it as the Dungeon tool does.
+- **Claude saves blueprints**: `save_blueprint` saves the Workshop's building to the library (as Save
+  blueprint does, with what objects hold and a picture), refusing to replace one unless told to;
+  `open_workshop` loads one.
+- **Claude uses every control of the editor**: `list_controls` lists every switch, dropdown, slider,
+  number and text box and button the editor shows (the View panel's switches, the Workshop's Cut and
+  Support check, each tool's settings, the rail of tools) with its value, and `set_control` sets one as
+  the user would. Saving, applying live, discarding, reloading, writing or deleting the user's files and
+  connecting to the live game are refused.
+- **Claude reads the ground exactly**: `ground_at` gives the height at points (now and as generated),
+  the biome and any water there; `list_objects` also gives tilts and size when an object has them.
+
+### Fixed
+- **Moving objects on the Workshop's plot** (or a generated dungeon's, before saving) lost what they
+  held: a chest's contents, a sign's text. They keep it now.
+
+## v1.23.1 — 2026-10-12
+
+### Fixed
+- **Code coverage** on Codecov counts every test again: the tests that start the editor in a process
+  of their own no longer wipe out what the other tests in their CI container covered (about a third
+  of the app's tests went uncounted), and the containers' reports are merged without losing which
+  branches ran. The app (`Desktop/`) now has its own 95% coverage check, and many new tests cover its
+  untested lines and branches.
+- **Workshop**: a click that moved the mouse a little before letting go placed nothing; it now puts
+  the piece the preview shows.
+- **Discard** that has to read the world again no longer fails without a word when the world's files
+  cannot be read: it says why and keeps the area open.
+
+## v1.23.0 — 2026-10-12
+
+### Changed
+- **Larger areas**: the area can now be 9 × 9, 13 × 13 or 17 × 17 zones (up to 1088 m across), from
+  the map's size box and the top bar's; Follow grows it up to 17 zones each way, and Claude's
+  `open_area` opens up to 17 × 17. Large areas are slow to open and draw: meant for big works and
+  for testing the editor's speed.
+- **Faster drawing of large areas**: only the parts of the area in view are drawn (in 128 m cells),
+  and small objects stop being drawn far away (past 400 times their size, a few pixels). A 17 × 17
+  area with 2.3 million objects went from 31 to about 75 frames a second.
+
+### Fixed
+- **Unsaved marks** kept their green dots after **Save to world**; they now go once saved, as after
+  **Apply live**.
+- **Areas with very many new objects** were slow at every frame: the green dots were made again for
+  each object at each frame (a 17 × 17 area with 2.3 million new objects drew one frame a second or
+  less). They are now kept on the graphics card and made again only when objects change.
+- **Scripts on areas with very many objects** waited over a second before running (each object's
+  kind was worked out again), and after a save of many new objects each change was slow to count
+  what is pending.
+
+## v1.22.0 — 2026-10-12
+
+### Added
+- **A saved world keeps its list up to date**: world folders added or removed while the editor runs
+  (or a world saved again) show by themselves within a few seconds, without going to another page
+  and back. **Refresh** looks for them at once.
+
+## v1.21.0 — 2026-10-12
+
+### Added
+- **Spawn points and creature nests** (the invisible points the game's camps, villages and dungeons
+  spawn their creatures from) have their own kinds in the Place list and the View panel, each saying
+  what it spawns (`Boar · 0–2 ★ · spawns once`); Place's search finds them by creature. In the 3D
+  view they are orange boxes (red when the creature comes back) and nests purple ones, with a marker
+  above each, seen within 250 m; they are off at first, as ruins are. The inspector and Claude's
+  `find_prefabs` say what they spawn.
+- **Objects are sorted into real kinds**: Furniture & props, Bones & remains, Creatures & NPCs and
+  Effects & markers join the lists; **Other objects** went from about 470 kinds to a handful.
+
+### Changed
+- **Follow grows the area** instead of moving it: when you look near the area's edge, a row of zones
+  is added on that side and the zones already open stay (a 3 × 3 area becomes 4 × 3, then 4 × 4…).
+  It never leaves zones behind, and stops at 16 zones each way (about 1 km). The arrows move the
+  grown area as it is; the size box makes it square again.
+- **The tool rail** is in sections, in a clearer order: **Sculpt**, **Edit** (Area, Path, Place),
+  **Paint**, **Create** (Shape, Mountain, Cave, Dungeon, Script, Blueprints) and last **Tools**
+  (Select, Measure, View).
+- **The Place panel** is in sections with headings: **Line shape** (Points, Circle, Rectangle, right
+  under the modes, with how to draw it), **Choose a preset**, **Selected kinds**, **Objects** and the
+  mode's own settings. The preset list starts on **None**; choosing None after a preset unticks its
+  kinds. The selected kinds are on rows of one layout in a box, each with its share (100% for one
+  kind), and **Choose kinds…** opens the list under them. The **Recent** row also shows the kinds
+  chosen now, and its **all** / **none** buttons are larger. **Tilt** starts at 0.
+- **Place's One at a time** places only the object at the cursor: a drag no longer scatters more, and
+  Density, Spacing and Clumping hide while it is on.
+
+### Fixed
+- **Kind names with an underscore** (Pickable_Flax) showed without it in the Choose kinds list and on
+  the Favourite and Recent buttons (PickableFlax).
+- **The Place panel's weight sliders** let go of the mouse at each step of a drag (every row was
+  made again): a drag now runs smoothly. Each slider is now the kind's share in %, and the other
+  kinds' sliders move with it, keeping their proportions, so the shares always make 100%. An equal
+  share sits in the middle of the slider, whatever the number of kinds.
+- **Previews over the sea** (the mountain, placed and pasted objects, rings and lines) were hidden
+  wherever water was behind them in the 3D view: they now show over the water.
+
+## v1.20.2 — 2026-10-12
+
+### Fixed
+- **Location markers** no longer put a post on every invisible ground disc of No limit (one every
+  6 m where the ground was taken past ±8 m): they hid the real locations. The "location(s) here"
+  note no longer counts them either.
+
+## v1.20.1 — 2026-10-12
+
+### Changed
+- **While the game's look is prepared** (start page), every action is greyed out until it is done:
+  worlds, servers, the Workshop, a new world and Settings. A world opened meanwhile missed the game's
+  look. The side menu still moves between the pages.
+
+### Fixed
+- **Rocks that shape the ground** (the Plains' tall rock pillars, coast, heath, forest and copper
+  boulders) were missing from the 3D view and the object lists: the editor only used them for the
+  ground they flatten. They now show and can be selected like other rocks.
+
+## v1.20.0 — 2026-10-11
 
 ### Added
 - **The start page** has a side menu: **Home**, then **Edit a world** (my game, a dedicated server,
   a saved world) apart from **Create** (the Workshop, a new world). Home shows the game when it runs,
   with **Edit live**, and what you opened last: saved worlds, blueprints (with their pictures) and the
   servers that connect in one click. The Workshop's page lists every blueprint to open.
-- **A new world** (Create, on the start page): makes a new world, a normal one that players join
-  without any mod (crossplay included). The seed's world shows before it is made, from the editor's
-  copy of the game's generator (on **Generate world**, Enter or **Roll**): its land and biomes, and exactly where the game will put the start
-  temple, the bosses' altars and the traders' spots (Haldor, the Bog Witch, Hildir), with how far
-  each is from the start and whether you need to sail to each biome. **Find a seed** tries many
-  random seeds and keeps the best, listed to fill the window, for what you ask: the start on a large landmass, land around it,
-  Swamp, Mountain or Plains within a distance, every early biome on foot, a trader or the first five
-  bosses within a distance. The map zooms (wheel, drag, double click) and stays sharp; switches in
-  its corner show or hide each kind of mark, and the seed's facts are listed beside it. The
-  **Dungeons** switches show where the burial chambers, troll caves, sunken crypts, frost caves,
-  infested mines, charred fortresses and Hildir's dungeons will be, with how many lie near the start.
-  The rules are read from your Valheim, so they follow game updates. See
-  [docs/new-world.md](docs/new-world.md).
 
 ### Changed
 - **The world map** of a world opened again (Reload, or back to the worlds and in again) shows at once:
@@ -36,10 +212,11 @@ the plugin is unchanged in versions without that part.
   instead of keeping its own copy, which went out of date with game updates: they always match your
   version of the game. It takes a few seconds the first time and after a game update. Valheim is now
   needed: without it, no world or Workshop opens (the start page asks for its folder).
-- **The world generator is about a third faster** (worlds' map previews, Regrow nature, new worlds),
-  with the same results to the bit.
 
 ### Fixed
+- **The start page** said "Preparing the game's look" at every start, then "The game's look is ready"
+  for the rest of the session, while the editor only checked what it had kept from the last time:
+  it now says so only when it really reads the game's files (the first time and after a game update).
 - **Settings > Claude** could still say the editor could not listen on its port after Claude was
   turned off: the last start's problem stayed shown. It is cleared when the switch is off.
 - **Script tool:** Ctrl+Enter in the code box runs the script again, as its button says; the box took
@@ -64,6 +241,31 @@ the plugin is unchanged in versions without that part.
   game or another tool cleaning the folder): it is now kept without comparing it to a save.
 - **Zone grid** (map) on a scaled screen (200 %, for instance) showed from twice as far out, its
   lines cramped together: it now shows from the same zoom on every screen.
+
+## v1.19.0 — 2026-10-11
+
+### Added
+- **A new world** (on the start page): makes a new world, a normal one that players join
+  without any mod (crossplay included). The seed's world shows before it is made, from the editor's
+  copy of the game's generator (on **Generate world**, Enter or **Roll**): its land and biomes, and exactly where the game will put the start
+  temple, the bosses' altars and the traders' spots (Haldor, the Bog Witch, Hildir), with how far
+  each is from the start and whether you need to sail to each biome. **Find a seed** tries many
+  random seeds and keeps the best, listed to fill the window, for what you ask: the start on a large landmass, land around it,
+  Swamp, Mountain or Plains within a distance, every early biome on foot, a trader or the first five
+  bosses within a distance. The map zooms (wheel, drag, double click) and stays sharp; switches in
+  its corner show or hide each kind of mark, and the seed's facts are listed beside it. The
+  **Dungeons** switches show where the burial chambers, troll caves, sunken crypts, frost caves,
+  infested mines, charred fortresses and Hildir's dungeons will be, with how many lie near the start.
+  The rules are read from your Valheim, so they follow game updates. See
+  [docs/new-world.md](docs/new-world.md).
+
+### Changed
+- **The world generator is about a third faster** (worlds' map previews, Regrow nature, new worlds),
+  with the same results to the bit.
+
+### WorldEditorBridge
+- **A failed request's log line** keeps the request's path on one line: line breaks in it could make
+  it look like several lines in the game's log.
 
 ## v1.18.0 — 2026-10-10
 

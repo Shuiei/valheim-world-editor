@@ -27,13 +27,23 @@ public sealed class GameLookBanner
     /// </summary>
     private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromSeconds(0.5) };
     /// <summary>
-    /// The state last shown, so the path box is filled only when it changes.
+    /// The state last shown ("running" while the game's files are read, "missing", "failed"...), so the path box is
+    /// filled only when it changes; the test driver reports it.
     /// </summary>
-    private string _state = "";
+    internal string Shown { get; private set; } = "";
     /// <summary>
     /// Whether the files were read while the card was up: then "ready" is said too, else the card stays hidden.
     /// </summary>
     private bool _sawRunning;
+
+    /// <summary>
+    /// Whether the game's files are being read: the start page turns its actions off meanwhile.
+    /// </summary>
+    internal bool Busy { get; private set; }
+    /// <summary>
+    /// Busy changed (raised by Refresh).
+    /// </summary>
+    internal event Action<bool>? BusyChanged;
 
     /// <summary>
     /// The card's heading.
@@ -167,19 +177,19 @@ public sealed class GameLookBanner
     internal void Refresh()
     {
         var s = Read();
-        bool changed = s.State != _state;
-        _state = s.State;
+        bool changed = s.State != Shown;
+        Shown = s.State;
         Bar.IsVisible = LastLine.IsVisible = PathRow.IsVisible = Retry.IsVisible = ShowLog.IsVisible = Steps.IsVisible = false;
         switch (s.State)
         {
-            case "running":
+            case "running" when s.Reading:
                 _sawRunning = true;
                 Title.Text = "Preparing the game's look";
                 Message.Text = s.Message ?? "Reading the game's files (a few seconds, only after a game update).";
                 Bar.IsVisible = LastLine.IsVisible = true;
                 Bar.Value = s.Progress ?? 0;
                 LastLine.Text = s.LastLine ?? "";
-                Hint.Text = "You can already pick a world and edit: areas opened once this is done have the game's look.";
+                Hint.Text = "Worlds, servers and the Workshop can be opened once this is done.";
                 break;
             case "missing":
                 Title.Text = "Get the game's look";
@@ -205,6 +215,13 @@ public sealed class GameLookBanner
         }
         Hint.IsVisible = Hint.Text.Length > 0;
         Error.IsVisible = Error.Text?.Length > 0;
-        _card.IsVisible = s.State != "ready" || _sawRunning;
+        // Running without reading (the kept index and caches checked, at each start): nothing to say.
+        _card.IsVisible = s.State == "running" ? s.Reading : s.State != "ready" || _sawRunning;
+        bool busy = s.State == "running" && s.Reading;
+        if (busy != Busy)
+        {
+            Busy = busy;
+            BusyChanged?.Invoke(busy);
+        }
     }
 }

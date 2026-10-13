@@ -284,13 +284,19 @@ public class ClaudeToolsTests
             tools.Headers.Add("MCP-Protocol-Version", "2025-06-18");
             string listed = await (await http.SendAsync(tools, ct)).Content.ReadAsStringAsync(ct);
             foreach (string name in new[] { "editor_state", "open_world", "open_area", "screenshot", "area_map", "run_script", "place_pieces", "support_check", "generate_dungeon",
-                "building_guide", "get_selection", "select_objects", "flatten", "paint_area", "road", "forest", "set_contents", "build_floor", "build_walls", "build_roof" })
+                "building_guide", "get_selection", "select_objects", "flatten", "paint_area", "road", "forest", "set_contents", "build_floor", "build_walls", "build_roof",
+                "move_objects", "set_transform", "replace_objects", "get_object", "set_object_data",
+                "search_world", "list_locations", "copy_objects", "add_blueprint", "shape_ground", "regrow_nature", "ground_at",
+                "dig_path", "reset_zones", "preview_seed", "create_world", "stamp", "import_heightmap",
+                "list_dungeons", "dungeon_rooms", "add_dungeon_room", "remove_dungeon_room", "close_dungeon_ends", "set_dungeon_door",
+                "list_controls", "set_control", "save_blueprint" })
             {
                 Assert.Contains($"\"{name}\"", listed);
             }
-            // No tool saves, applies live or saves a blueprint.
-            Assert.DoesNotContain("\"save", listed);
+            // No tool saves a world or applies live; saving a blueprint is a tool.
+            Assert.DoesNotContain("\"save_world", listed);
             Assert.DoesNotContain("apply_live", listed);
+            Assert.Contains("\"save_blueprint\"", listed);
         }
         finally
         {

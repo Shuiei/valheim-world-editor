@@ -73,9 +73,12 @@ public static class ScriptHost
         /// <summary>Things to take away, indices into the scene's things.</summary>
         public HashSet<int> Remove { get; } = [];
         /// <summary>
-        /// New objects: prefab hash, world position (NaN height: on the ground at the end), yaw in degrees and scale.
+        /// New objects: prefab hash and name, world position (NaN height: on the ground at the end), rotation (Euler
+        /// degrees), scale, and whether it snaps to the pieces there as the hammer does.
         /// </summary>
-        public List<(int Prefab, Vector3 Position, float Yaw, float Scale)> Add { get; } = [];
+        public List<(int Prefab, string Name, Vector3 Position, Vector3 Rotation, float Scale, bool Snap)> Add { get; } = [];
+        /// <summary>Things moved, turned or sized: index into the scene's things, its new place, rotation and scale.</summary>
+        public Dictionary<int, (Vector3 Position, Vector3 Rotation, float Scale)> Moves { get; } = [];
         /// <summary>What the script printed (2000 lines at most).</summary>
         public StringBuilder Output { get; } = new();
         /// <summary>
@@ -83,7 +86,7 @@ public static class ScriptHost
         /// </summary>
         public bool NoLimit { get; set; } = true;
         /// <summary>The script changed nothing.</summary>
-        public bool Empty => Heights.Count == 0 && Paint.Count == 0 && Remove.Count == 0 && Add.Count == 0;
+        public bool Empty => Heights.Count == 0 && Paint.Count == 0 && Remove.Count == 0 && Add.Count == 0 && Moves.Count == 0;
     }
 
     /// <summary>The area as the script sees it: taken on the window's thread before the script runs.</summary>
@@ -96,14 +99,14 @@ public static class ScriptHost
     /// <param name="Biomes">The biome of each grid point.</param>
     /// <param name="Mask">The paint, four bytes per grid point.</param>
     /// <param name="Locked">Grid points the script must leave alone.</param>
-    /// <param name="Things">The objects standing: index into the scene's things, prefab name, position, kind of object
-    /// and whether it is a player-built piece.</param>
+    /// <param name="Things">The objects standing: index into the scene's things, prefab name, position, kind of object,
+    /// whether it is a player-built piece, its rotation (Euler degrees) and scale (zero: the prefab's own).</param>
     /// <param name="Water">The water level.</param>
     /// <param name="Seed">The world's seed (0 without a world).</param>
     /// <param name="World">The world's name.</param>
     /// <param name="CanCreate">Whether the editor can make a prefab (by hash).</param>
     public sealed record Snapshot(int W, int H, float Ox, float Oz, float[] Heights, float[] Original, int[] Biomes, byte[] Mask, bool[] Locked,
-        List<(int Index, string Prefab, Vector3 Position, string Kind, bool Piece)> Things, float Water, int Seed, string World, Func<int, bool> CanCreate);
+        List<(int Index, string Prefab, Vector3 Position, string Kind, bool Piece, Vector3 Rotation, float Scale)> Things, float Water, int Seed, string World, Func<int, bool> CanCreate);
 
     /// <summary>Takes the snapshot of the session's area, on the window's thread.</summary>
     /// <param name="s">The edit session.</param>
@@ -119,10 +122,27 @@ public static class ScriptHost
             original[p] = g.Original(p);
             locked[p] = g.Locked(p % g.W, p / g.W);
         }
-        List<(int, string, Vector3, string, bool)> things;
+        List<(int, string, Vector3, string, bool, Vector3, float)> things;
+        // Name and kind once per kind of thing, not per thing: an area can hold millions, and a kind is
+        // found by matching the name against patterns.
+        var known = new Dictionary<(int, bool, bool), (string Name, string Kind)>();
         lock (scene.Things)
         {
-            things = [.. scene.Things.Select((t, i) => (t, i)).Where(x => !x.t.Gone).Select(x => (x.i, nameOf(x.t.Prefab) ?? "", x.t.Position, ObjectKinds.Of(nameOf(x.t.Prefab), x.t.Piece, x.t.Tamed).ToString(), x.t.Piece))];
+            things = new(scene.Things.Count);
+            for (int i = 0; i < scene.Things.Count; i++)
+            {
+                var t = scene.Things[i];
+                if (t.Gone)
+                {
+                    continue;
+                }
+                if (!known.TryGetValue((t.Prefab, t.Piece, t.Tamed), out var nk))
+                {
+                    string? name = nameOf(t.Prefab);
+                    nk = known[(t.Prefab, t.Piece, t.Tamed)] = (name ?? "", ObjectKinds.Of(name, t.Piece, t.Tamed).ToString());
+                }
+                things.Add((i, nk.Name, t.Position, nk.Kind, t.Piece, t.Rotation, t.Scale));
+            }
         }
         var world = scene.World;
         return new Snapshot(g.W, g.H, scene.X0 * 64f - 32f, scene.Z0 * 64f - 32f, (float[])scene.Heights.Clone(), original, (int[])scene.Biomes.Clone(), (byte[])scene.Mask.Clone(), locked,
@@ -230,19 +250,20 @@ public static class ScriptHost
                     }
                 }
             }));
-            Fill("Objects", new Func<(int, string, float, float, float, string, bool)[]>(() =>
-                snap.Things.Select(t => (t.Index, t.Prefab, t.Position.X, t.Position.Y, t.Position.Z, t.Kind, t.Piece)).ToArray()));
+            Fill("Objects", new Func<(int, string, float, float, float, string, bool, float, float, float, float)[]>(() =>
+                [.. snap.Things.Select(t => (t.Index, t.Prefab, t.Position.X, t.Position.Y, t.Position.Z, t.Kind, t.Piece, t.Rotation.X, t.Rotation.Y, t.Rotation.Z, t.Scale > 0 ? t.Scale : 1))]));
             Fill("Remove", new Action<int>(i => ch.Remove.Add(i)));
             Fill("CanPlace", new Func<string, bool>(name => snap.CanCreate(StableHash.Of(name))));
-            Fill("Place", new Action<string, float, float, float, float, float>((name, x, z, yaw, scale, y) =>
+            Fill("Place", new Action<string, float, float, float, float, float, float, float, bool>((name, x, z, yaw, scale, y, pitch, roll, snapIt) =>
             {
                 int prefab = StableHash.Of(name);
                 if (!snap.CanCreate(prefab))
                 {
                     throw new ArgumentException($"the editor cannot make a “{name}” (a prefab name, like Beech1 or rock4_forest)");
                 }
-                ch.Add.Add((prefab, new Vector3(x, y, z), yaw, scale));
+                ch.Add.Add((prefab, name, new Vector3(x, y, z), new Vector3(pitch, yaw, roll), scale, snapIt));
             }));
+            Fill("Move", new Action<int, float, float, float, float, float, float, float>((index, x, z, y, yaw, pitch, roll, scale) => Move(snap, ch, index, x, z, y, yaw, pitch, roll, scale)));
             Fill("Noise", new Func<float, float, int, float>((x, z, seed) =>
             {
                 lock (noises)
@@ -288,11 +309,64 @@ public static class ScriptHost
                     ch.Add[i] = a with { Position = a.Position with { Y = Sample(heights, a.Position.X, a.Position.Z) } };
                 }
             }
+            SnapPieces(snap, ch);
             return ch;
         }
         finally
         {
             alc.Unload();
+        }
+    }
+
+    /// <summary>
+    /// A script's Objects.Move: the thing's new place, rotation and scale noted (NaN keeps a value: as it was, or as an
+    /// earlier Move of the script left it).
+    /// </summary>
+    /// <exception cref="ArgumentException">No such thing in the area, or a scale not above 0.</exception>
+    internal static void Move(Snapshot snap, Changes ch, int index, float x, float z, float y, float yaw, float pitch, float roll, float scale)
+    {
+        if (!snap.Things.Exists(t => t.Index == index))
+        {
+            throw new ArgumentException($"no object {index} in the area (Objects.All gives them)");
+        }
+        if (!float.IsNaN(scale) && (!float.IsFinite(scale) || scale <= 0))
+        {
+            throw new ArgumentException($"a scale of {scale}: give a size above 0 (1: the prefab's own)");
+        }
+        var t = snap.Things.Find(t => t.Index == index);
+        var (p, r, sc) = ch.Moves.TryGetValue(index, out var m) ? m : (t.Position, t.Rotation, t.Scale);
+        static float Or(float v, float was) => float.IsNaN(v) ? was : v;
+        ch.Moves[index] = (new Vector3(Or(x, p.X), Or(y, p.Y), Or(z, p.Z)), new Vector3(Or(pitch, r.X), Or(yaw, r.Y), Or(roll, r.Z)), Or(scale, sc));
+    }
+
+    /// <summary>
+    /// The new pieces placed with snap moved to meet the snap points of the pieces standing (where the script left
+    /// them; those it took away do not count) and of those placed before them, as the game's hammer does.
+    /// </summary>
+    internal static void SnapPieces(Snapshot snap, Changes ch)
+    {
+        if (!ch.Add.Any(a => a.Snap))
+        {
+            return;
+        }
+        var placed = new List<Hammer.Placed>();
+        foreach (var t in snap.Things)
+        {
+            if (!ch.Remove.Contains(t.Index) && Hammer.Get(t.Prefab) != null)
+            {
+                var (p, r, _) = ch.Moves.TryGetValue(t.Index, out var m) ? m : (t.Position, t.Rotation, t.Scale);
+                placed.Add(new(t.Index, t.Prefab, p, BlueprintFormats.FromEuler(r)));
+            }
+        }
+        for (int i = 0; i < ch.Add.Count; i++)
+        {
+            var a = ch.Add[i];
+            var q = BlueprintFormats.FromEuler(a.Rotation);
+            if (a.Snap && Hammer.Get(a.Name) != null)
+            {
+                ch.Add[i] = a with { Position = Hammer.Snap(a.Name, q, a.Position, placed).Position };
+            }
+            placed.Add(new(-1 - i, a.Name, ch.Add[i].Position, q));
         }
     }
 
@@ -311,7 +385,10 @@ public static class ScriptHost
     public static int Apply(EditSession s, Changes ch, string label)
     {
         int clamped = 0;
-        var adds = ch.Add.Select(a => (new NewObject(0, a.Prefab, a.Position, new Vector3(0, a.Yaw, 0), a.Scale), PieceCatalog.Get(a.Prefab)?.Tool != null)).ToList();
+        var adds = ch.Add.Select(a => (new NewObject(0, a.Prefab, a.Position, a.Rotation, a.Scale), PieceCatalog.Get(a.Prefab)?.Tool != null)).ToList();
+        // Moved things: replaced by copies where they go (those also taken away are only taken away).
+        var moved = ch.Moves.Where(m => !ch.Remove.Contains(m.Key) && m.Key >= 0 && m.Key < s.Scene.Things.Count && !s.Scene.Things[m.Key].Gone).ToList();
+        adds.AddRange(moved.Select(m => s.MovedCopy(m.Key, m.Value.Position, m.Value.Rotation, m.Value.Scale)));
         s.Commit(label, g =>
         {
             var touched = new List<int>();
@@ -333,7 +410,7 @@ public static class ScriptHost
                 touched.Add(p);
             }
             return (touched, touched.Count == 0 ? (0, 0, 0, 0) : (touched.Min(p => p % g.W) - 1, touched.Min(p => p / g.W) - 1, touched.Max(p => p % g.W) + 1, touched.Max(p => p / g.W) + 1));
-        }, [.. ch.Remove], adds);
+        }, [.. ch.Remove, .. moved.Select(m => m.Key)], adds);
         return clamped;
     }
 }

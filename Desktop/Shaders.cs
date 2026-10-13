@@ -103,6 +103,26 @@ public static class Shaders
 		void main() { frag = uColor; }
 		""";
 
+    /// <summary>The new objects' markers: one point each, <c>uSize</c> pixels across.</summary>
+    public const string MarkVs = """
+		layout(location = 0) in vec3 aPos;
+		uniform mat4 uViewProj;
+		uniform float uSize;
+		void main() { gl_Position = uViewProj * vec4(aPos, 1.0); gl_PointSize = uSize; }
+		""";
+
+    /// <summary>The markers' fragment shader: a round dot of one colour.</summary>
+    public const string MarkFs = """
+		uniform vec4 uColor;
+		out vec4 frag;
+		void main()
+		{
+			vec2 d = gl_PointCoord * 2.0 - 1.0;
+			if (dot(d, d) > 1.0) discard;
+			frag = uColor;
+		}
+		""";
+
     /// <summary>The water plane's vertex shader: position only.</summary>
     public const string WaterVs = """
 		layout(location = 0) in vec3 aPos;

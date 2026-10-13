@@ -15,6 +15,20 @@ public class EditorProcess : IDisposable
 {
     private readonly Process? _p;
     private readonly Lock _sendLock = new();
+    // A line asked for and not come yet (its wait timed out): the next wait takes it, as the stream allows one
+    // read at a time.
+    private Task<string?>? _reading;
+    // Commands whose answer has not come (their wait timed out): read off before the next command, so that a late
+    // answer is never taken for the next one's.
+    private int _owed;
+    // An owed answer did not come either: the editor no longer answers, the next commands fail at once.
+    private bool _stuck;
+
+    /// <summary>
+    /// How long the editor's picture may wait for its view (VWE_PICTURE_WAIT, see Driver.PictureWait): longer under
+    /// coverage (CI on main), which measures the editor too and makes its close-ups minutes long.
+    /// </summary>
+    private static readonly TimeSpan PictureWait = TimeSpan.FromMinutes(Environment.GetEnvironmentVariable("VWE_COVERAGE") == "1" ? 8 : 3);
 
     public string? Why { get; }
     public bool Available => _p != null;
@@ -36,17 +50,16 @@ public class EditorProcess : IDisposable
             Why = "no display to open the editor on";
             return;
         }
-        string root = Path.GetFullPath(Path.Combine(Fixtures.Root, "..", ".."));
-        string config = AppContext.BaseDirectory.Contains($"{Path.DirectorySeparatorChar}Release{Path.DirectorySeparatorChar}") ? "Release" : "Debug";
-        string app = Path.Combine(root, "Desktop", "bin", config, "net10.0", "ValheimWorldEditor.dll");
-        string dotnet = Path.GetFullPath(Path.Combine(System.Runtime.InteropServices.RuntimeEnvironment.GetRuntimeDirectory(), "..", "..", "..", OperatingSystem.IsWindows() ? "dotnet.exe" : "dotnet"));
-        var psi = new ProcessStartInfo(dotnet) { RedirectStandardInput = true, RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false };
+        // The copy beside the tests, so that its coverage adds to theirs (EditorApp).
+        string app = EditorApp.Path;
+        var psi = new ProcessStartInfo(EditorApp.Dotnet) { RedirectStandardInput = true, RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false };
         // The game's data from the tests' copies, as the tests in this process have it (Fixtures.UseGameData): the
         // same with or without Valheim on the computer (CI has none).
         foreach (string a in new[] { app, "--data", Data, "--gamedata", Fixtures.Root, "--driver" }.Concat(extra))
         {
             psi.ArgumentList.Add(a);
         }
+        psi.Environment["VWE_PICTURE_WAIT"] = ((int)PictureWait.TotalSeconds).ToString(System.Globalization.CultureInfo.InvariantCulture);
         foreach (var (k, v) in env ?? new Dictionary<string, string>())
         {
             psi.Environment[k] = v;
@@ -71,11 +84,12 @@ public class EditorProcess : IDisposable
         var watch = Stopwatch.StartNew();
         while (watch.Elapsed < timeout)
         {
-            var read = _p!.StandardOutput.ReadLineAsync();
+            var read = _reading ??= _p!.StandardOutput.ReadLineAsync();
             if (!read.Wait(timeout - watch.Elapsed))
             {
                 return null;
             }
+            _reading = null;
             if (read.Result == null)
             {
                 return null;
@@ -93,15 +107,37 @@ public class EditorProcess : IDisposable
     /// </summary>
     public JsonElement Send(string command)
     {
+        string answer = Answer(command);
+        Assert.True(answer.StartsWith("@@ ok ", StringComparison.Ordinal), $"{command}: {answer}");
+        return JsonDocument.Parse(answer["@@ ok ".Length..]).RootElement.Clone();
+    }
+
+    /// <summary>
+    /// Sends a command; its answer line, "@@ ok ..." or the editor's error (only no answer at all fails the test).
+    /// </summary>
+    public string Answer(string command)
+    {
         lock (_sendLock)
         {
+            Assert.False(_stuck, $"{command}: the editor stopped answering (an earlier command's answer never came)");
+            for (; _owed > 0; _owed--)
+            {
+                if (Next(PictureWait + TimeSpan.FromMinutes(1)) == null)
+                {
+                    _stuck = true;
+                    Assert.Fail($"{command}: the editor stopped answering (an earlier command's answer never came)");
+                }
+            }
             _p!.StandardInput.WriteLine(command);
             _p.StandardInput.Flush();
             // Longer than the editor's own wait for a picture (Driver.PictureWait), so its error comes back.
-            string? answer = Next(TimeSpan.FromMinutes(4));
-            Assert.NotNull(answer);
-            Assert.True(answer!.StartsWith("@@ ok ", StringComparison.Ordinal), $"{command}: {answer}");
-            return JsonDocument.Parse(answer["@@ ok ".Length..]).RootElement.Clone();
+            string? answer = Next(PictureWait + TimeSpan.FromMinutes(1));
+            if (answer == null)
+            {
+                _owed++;
+            }
+            Assert.True(answer != null, $"{command}: no answer from the editor");
+            return answer!;
         }
     }
 

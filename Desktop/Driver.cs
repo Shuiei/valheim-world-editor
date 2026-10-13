@@ -50,9 +50,11 @@ public static class Driver
 {
     /// <summary>
     /// How long a picture may wait for the view to be ready: the world map's first build on a slow computer (CI's
-    /// two cores, slower still while its coverage is measured) takes more than a minute.
+    /// two cores) takes more than a minute. VWE_PICTURE_WAIT (seconds) gives longer: the tests under coverage, which
+    /// measures this app too.
     /// </summary>
-    private static readonly TimeSpan PictureWait = TimeSpan.FromMinutes(3);
+    private static readonly TimeSpan PictureWait = TimeSpan.FromSeconds(
+        int.TryParse(Environment.GetEnvironmentVariable("VWE_PICTURE_WAIT"), out int s) && s > 0 ? s : 180);
 
     /// <summary>The View panel's 3D resolution choices, in their list's order.</summary>
     private static readonly string[] Resolutions = ["sharp", "balanced", "fast"];
@@ -449,6 +451,8 @@ public static class Driver
             yaw = w.View.Camera.Yaw,
             distance = w.View.Camera.Distance,
             targetX = w.View.Camera.Target.X,
+            // The open area: its south-west zone and its size in zones.
+            area = w.View.Scene is { } sc ? new[] { sc.X0, sc.Z0, sc.ZonesX, sc.ZonesZ } : null,
             mapX = w.MapPage?.Map.Center.X ?? 0,
             mapScale = w.MapPage?.Map.MetersPerPixel ?? 0,
             pins = w.MapPage?.Map.Pins.Count ?? 0,
@@ -459,6 +463,8 @@ public static class Driver
             gameLook = w.View.GameLookLoaded,
             modelParts = w.View.LastStats?.Instances ?? 0,
             modelsLoading = w.View.LastStats?.PendingModels ?? 0,
+            // The start page's game look banner: "running" while the game's files are read.
+            look = w.StartPage?.LookBanner.Shown ?? "",
         });
     }
 }

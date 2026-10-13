@@ -32,7 +32,7 @@ public static class PrefabCatalog
     /// <summary>
     /// None until Use: no world or Workshop opens before then (GameData).
     /// </summary>
-    private static volatile Data _catalogue = new([], [], [], [], [], [], [], [], [], []);
+    private static volatile Data _catalogue = new([], [], [], [], [], [], [], [], [], [], []);
 
     /// <summary>
     /// What Use read, swapped in whole so readers never see half of it.
@@ -50,9 +50,10 @@ public static class PrefabCatalog
     /// <param name="ItemStands">See <see cref="ItemStandOf"/>.</param>
     /// <param name="ArmourStands">See <see cref="ArmourSlotsOf"/>.</param>
     /// <param name="Grow">The room saplings and what they grow into need (see GrowRoom).</param>
+    /// <param name="Spawns">See <see cref="SpawnOf(int)"/>.</param>
     private sealed record Data(Dictionary<int, Info> ByHash, Dictionary<int, string> AllNames, List<string> ItemNames, Dictionary<int, Info> Extra, HashSet<int> Creatures,
         Dictionary<string, (float Radius, string Sapling)> GrownFrom, Dictionary<int, ItemKind> ItemKinds, Dictionary<int, StandRule> ItemStands, Dictionary<int, int[][]> ArmourStands,
-        Dictionary<string, (float Radius, bool Cultivated)> Grow);
+        Dictionary<string, (float Radius, bool Cultivated)> Grow, Dictionary<int, SpawnKind> Spawns);
 
     /// <summary>
     /// Whether a prefab (by hash) is a creature.
@@ -168,6 +169,80 @@ public static class PrefabCatalog
     /// </summary>
     public static int[][]? ArmourSlotsOf(int prefab) => _catalogue.ArmourStands.GetValueOrDefault(prefab);
 
+    /// <summary>
+    /// What a spawner makes: an invisible spawn point (CreatureSpawner, or a TriggerSpawner an event wakes) or a
+    /// nest (SpawnArea: a greydwarf nest, a bone pile...) that spawns around itself.
+    /// </summary>
+    /// <param name="Creatures">The creatures' prefab names (one for a CreatureSpawner).</param>
+    /// <param name="Nest">A nest (SpawnArea), not a spawn point.</param>
+    /// <param name="Trigger">A spawn point an event wakes (TriggerSpawner), not one that spawns by itself.</param>
+    /// <param name="RespawnMinutes">A CreatureSpawner's time before its creature comes back once dead; 0 when it
+    /// spawns its creature once.</param>
+    /// <param name="MinLevel">The lowest level (1 = no star).</param>
+    /// <param name="MaxLevel">The highest level, as the game's data has it (see <see cref="Levels"/>).</param>
+    /// <param name="Day">Spawns by day.</param>
+    /// <param name="Night">Spawns by night.</param>
+    /// <param name="Radius">A nest's radius it spawns in.</param>
+    /// <param name="MaxNear">How many creatures a nest keeps around.</param>
+    public sealed record SpawnKind(IReadOnlyList<string> Creatures, bool Nest, bool Trigger, float RespawnMinutes, int MinLevel, int MaxLevel, bool Day, bool Night, float Radius, int MaxNear)
+    {
+        /// <summary>
+        /// Whether the creature comes back after it dies.
+        /// </summary>
+        public bool Respawns => !Nest && !Trigger && RespawnMinutes > 0;
+
+        /// <summary>
+        /// The levels the creature can have, as the game rolls them (CreatureSpawner.Spawn): from the lowest up to
+        /// the highest, and none above 1 when the highest is 1 (some spawners have 3 to 1: always level 1).
+        /// </summary>
+        public (int Min, int Max) Levels => MaxLevel > 1 ? (Math.Min(MinLevel, MaxLevel), MaxLevel) : (1, 1);
+
+        /// <summary>
+        /// One line on what it spawns: "Boar · 0–2 ★ · spawns once", "Draugr · 0–2 ★ · back 60 min after it dies ·
+        /// by night only", "Greydwarf, Greydwarf_Elite · up to 3 around, within 5 m".
+        /// </summary>
+        public string Summary()
+        {
+            var parts = new List<string> { string.Join(", ", Creatures) };
+            if (Nest)
+            {
+                parts.Add(MaxNear > 0 ? FormattableString.Invariant($"up to {MaxNear} around, within {Radius:0.#} m") : FormattableString.Invariant($"within {Radius:0.#} m"));
+                return string.Join(" · ", parts);
+            }
+            var (lo, hi) = Levels;
+            if (hi > 1)
+            {
+                parts.Add(lo == hi ? $"{lo - 1} ★" : $"{lo - 1}–{hi - 1} ★");
+            }
+            parts.Add(Trigger ? "when an event wakes it" : Respawns ? FormattableString.Invariant($"back {RespawnMinutes:0.#} min after it dies") : "spawns once");
+            if (Day != Night)
+            {
+                parts.Add(Night ? "by night only" : "by day only");
+            }
+            return string.Join(" · ", parts);
+        }
+    }
+
+    /// <summary>
+    /// What a spawn point or nest makes; null for anything else.
+    /// </summary>
+    public static SpawnKind? SpawnOf(int prefab) => _catalogue.Spawns.GetValueOrDefault(prefab);
+
+    /// <summary>
+    /// What a spawn point or nest makes, by prefab name; null for anything else.
+    /// </summary>
+    public static SpawnKind? SpawnOf(string name) => SpawnOf(StableHash.Of(name));
+
+    /// <summary>
+    /// Whether a prefab is an invisible spawn point (a CreatureSpawner or TriggerSpawner), not a nest.
+    /// </summary>
+    public static bool IsSpawnPoint(string name) => SpawnOf(name) is { Nest: false };
+
+    /// <summary>
+    /// Whether a prefab is a nest that spawns creatures around itself (a SpawnArea).
+    /// </summary>
+    public static bool IsNest(string name) => SpawnOf(name) is { Nest: true };
+
 #pragma warning disable IDE1006 // named as the JSON keys they are read from
     /// <summary>
     /// One prefab as PrefabScan writes it (flags as 0 or 1).
@@ -195,8 +270,18 @@ public static class PrefabCatalog
     /// <param name="isi">Item stand: items it takes whatever their type.</param>
     /// <param name="isu">Item stand: items it refuses.</param>
     /// <param name="as">Armour stand: item types per slot.</param>
+    /// <param name="cs">Spawn point: the creatures it spawns.</param>
+    /// <param name="sa">Nest: the creatures it spawns.</param>
+    /// <param name="trig">Spawn point an event wakes.</param>
+    /// <param name="rt">Spawn point: respawn time, minutes.</param>
+    /// <param name="lv">Spawn point: lowest and highest level.</param>
+    /// <param name="day">Spawn point: spawns by day.</param>
+    /// <param name="night">Spawn point: spawns by night.</param>
+    /// <param name="sr">Nest: radius it spawns in.</param>
+    /// <param name="max">Nest: how many it keeps around.</param>
     private sealed record Entry(int p, int d, int t, int c = 0, int i = 0, double gr = 0, int cult = 0, int cw = 0, int ch = 0, double ward = 0, double build = 0, string[]? grows = null,
-        int it = -1, int ao = 0, int var = 0, int at = 0, int ats = 0, double dur = 0, double durl = 0, int[]? @is = null, string[]? isi = null, string[]? isu = null, int[][]? @as = null);
+        int it = -1, int ao = 0, int var = 0, int at = 0, int ats = 0, double dur = 0, double durl = 0, int[]? @is = null, string[]? isi = null, string[]? isu = null, int[][]? @as = null,
+        string[]? cs = null, string[]? sa = null, int trig = 0, double rt = 0, int[]? lv = null, int day = 1, int night = 1, double sr = 0, int max = 0);
 #pragma warning restore IDE1006
 
     /// <summary>
@@ -205,7 +290,7 @@ public static class PrefabCatalog
     public static void Use(string json)
     {
         var all = JsonSerializer.Deserialize<Dictionary<string, Entry>>(json)!;
-        var d = new Data([], [], [], [], [], [], [], [], [], []);
+        var d = new Data([], [], [], [], [], [], [], [], [], [], []);
         foreach (var (name, e) in all)
         {
             int hash = StableHash.Of(name);
@@ -229,6 +314,10 @@ public static class PrefabCatalog
             if (e.@as != null)
             {
                 d.ArmourStands[hash] = e.@as;
+            }
+            if ((e.cs ?? e.sa) is { } spawned)
+            {
+                d.Spawns[hash] = new SpawnKind(spawned, e.sa != null, e.trig != 0, (float)e.rt, e.lv?.ElementAtOrDefault(0) ?? 1, e.lv?.ElementAtOrDefault(1) ?? 1, e.day != 0, e.night != 0, (float)e.sr, e.max);
             }
             // Save-file flags: persistent 0x100, distant 0x200, object type in bits 10-11.
             ushort flags = (ushort)((e.p != 0 ? 0x100 : 0) | (e.d != 0 ? 0x200 : 0) | ((e.t & 3) << 10));

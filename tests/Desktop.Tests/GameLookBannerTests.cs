@@ -37,6 +37,17 @@ public class GameLookBannerTests
         Assert.False(b.View.IsVisible);
     }
 
+    // At each start the kept index and caches are checked (running, nothing read): no card, before or after.
+    [AvaloniaFact]
+    public void CheckingTheKeptLookAtStartShowsNothing()
+    {
+        var (b, _, set) = Banner(new("running", "Reading the game's files (a few seconds, only after a game update).", "/games/valheim", null, null, Reading: false));
+        Assert.False(b.View.IsVisible);
+        set(new("ready", null, "/games/valheim", null, 1));
+        b.Refresh();
+        Assert.False(b.View.IsVisible);
+    }
+
     [AvaloniaFact]
     public void TheCopyShowsItsProgressThenSaysWhenItIsDone()
     {
@@ -47,7 +58,8 @@ public class GameLookBannerTests
         Assert.True(b.Bar.IsVisible);
         Assert.Equal(0.04, b.Bar.Value, 3);
         Assert.Equal("scan: 10/100 bundles", b.LastLine.Text);
-        Assert.Contains("You can already pick a world", b.Hint.Text);
+        Assert.Contains("can be opened once this is done", b.Hint.Text);
+        Assert.True(b.Busy);
         Assert.False(b.Steps.IsVisible);
         // Its progress follows.
         set(new("running", null, "/games/valheim", "120/400 models", 0.6));
@@ -62,6 +74,31 @@ public class GameLookBannerTests
         Assert.Equal("The game's look is ready.", b.Title.Text);
         Assert.False(b.Bar.IsVisible);
         Assert.False(b.Hint.IsVisible);
+        Assert.False(b.Busy);
+    }
+
+    // While the game's files are read, every page's actions and Settings are greyed out; the side menu still works.
+    [AvaloniaFact]
+    public void TheStartPagesActionsWaitForTheLook()
+    {
+        var page = new StartPage(new AppSettings());
+        var now = new GameLook.Snapshot("running", null, "/games/valheim", null, 0.3);
+        page.LookBanner.Read = () => now;
+        page.LookBanner.Refresh();
+        Assert.False(page.HomePanel.IsEnabled);
+        Assert.False(page.OfflinePanel.IsEnabled);
+        Assert.False(page.NewBuildingButton.IsEffectivelyEnabled);
+        Assert.False(page.NewWorldButton.IsEffectivelyEnabled);
+        Assert.True(page.ModeButtons["offline"].IsEffectivelyEnabled);
+        Assert.True(page.LogLink.IsEffectivelyEnabled);
+        now = new("ready", null, "/games/valheim", null, 1);
+        page.LookBanner.Refresh();
+        Assert.True(page.HomePanel.IsEnabled);
+        Assert.True(page.NewWorldButton.IsEffectivelyEnabled);
+        // Checking the kept look at start (nothing read) turns nothing off.
+        now = new("running", null, "/games/valheim", null, null, Reading: false);
+        page.LookBanner.Refresh();
+        Assert.True(page.HomePanel.IsEnabled);
     }
 
     [AvaloniaFact]

@@ -321,23 +321,25 @@ public sealed partial class DungeonTool
     /// <summary>
     /// Where the chosen room would go at the hovered opening; null when nothing would be added.
     /// </summary>
-    public Dungeons.Placed? Preview
+    public Dungeons.Placed? Preview => Chosen != null && HoverEnd is int e ? PlaceAt(e, Chosen, Join) : null;
+
+    /// <summary>
+    /// Where a room would go at a free opening of the open dungeon, joined by the join-th of its openings that fit
+    /// (counting round); null when there is no such opening or room, or none of its openings fits.
+    /// </summary>
+    /// <param name="end">The free opening, an index into FreeEnds.</param>
+    /// <param name="room">The room's name.</param>
+    /// <param name="join">Which of its fitting openings joins.</param>
+    public Dungeons.Placed? PlaceAt(int end, string room, int join)
     {
-        get
+        var ends = FreeEnds;
+        if (end < 0 || end >= ends.Count || Dungeons.RoomOf(room) is not { } r)
         {
-            if (Chosen == null || HoverEnd is not int e || Dungeons.RoomOf(Chosen) is not { } room)
-            {
-                return null;
-            }
-            var ends = FreeEnds;
-            if (e >= ends.Count)
-            {
-                return null;
-            }
-            var end = ends[e];
-            var matching = Dungeons.Matching(room, end.Type).ToList();
-            return matching.Count == 0 ? null : Dungeons.Attach(room, matching[Join % matching.Count], end.Position, end.Rotation);
+            return null;
         }
+        var e = ends[end];
+        var matching = Dungeons.Matching(r, e.Type).ToList();
+        return matching.Count == 0 ? null : Dungeons.Attach(r, matching[(join % matching.Count + matching.Count) % matching.Count], e.Position, e.Rotation);
     }
 
     /// <summary>
@@ -379,28 +381,9 @@ public sealed partial class DungeonTool
     /// <returns>Whether the click did something (false: it was over nothing).</returns>
     public bool Click()
     {
-        if (Preview is { } p && Dungeon is { } d)
+        if (Preview is { } p && Dungeon != null)
         {
-            string? problem = Problem(p);
-            var rooms = d.Rooms.ToList();
-            rooms.Add(p);
-            var made = ContentsOf(d, [p]);
-            string with = made.Count > 0 ? $" with {made.Count} object(s)" : "";
-            // Its door, as the game rolls one where a room joins (on the opening it took).
-            if (WithDoors)
-            {
-                foreach (var j in Dungeons.Joints(rooms).Where(j => j.Second == rooms.Count - 1))
-                {
-                    if (Dungeons.RollDoor(d.Kind, j, Random) is string door)
-                    {
-                        with += with.Length == 0 ? " with a door" : " and a door";
-                        made.Add((new NewObject(0, StableHash.Of(door), j.Position, BlueprintFormats.ToEuler(j.Rotation), 0), false));
-                    }
-                }
-            }
-            // Selected before the change is told (Changed): the panel shows Delete for it at once.
-            Selected = rooms.Count - 1;
-            Commit(d, rooms, $"Dungeon: added {p.Name}", problem == null ? $"Added {p.Name}{with}." : $"Added {p.Name}{with}. {problem}", add: made);
+            Add(p);
             return true;
         }
         if (HoverJoint is int ji && Dungeon is { } dj && ji < DoorJoints.Count)
@@ -422,9 +405,54 @@ public sealed partial class DungeonTool
     /// joints.
     /// </summary>
     /// <returns>False when no room is selected.</returns>
-    public bool Delete()
+    public bool Delete() => Selected is int i && Remove(i);
+
+    /// <summary>
+    /// Adds a placed room to the open dungeon as one step of the history, with its contents (WithContents) and the
+    /// door the game would roll where it joins (WithDoors); it is selected. Message tells what was done.
+    /// </summary>
+    /// <param name="p">The room, placed (PlaceAt, Preview).</param>
+    /// <param name="label">The history's name for the step; null: "Dungeon: added" and its name.</param>
+    /// <returns>False when no dungeon is open.</returns>
+    public bool Add(Dungeons.Placed p, string? label = null)
     {
-        if (Selected is not int i || Dungeon is not { } d || i >= d.Rooms.Count)
+        if (Dungeon is not { } d)
+        {
+            return false;
+        }
+        string? problem = Problem(p);
+        var rooms = d.Rooms.ToList();
+        rooms.Add(p);
+        var made = ContentsOf(d, [p]);
+        string with = made.Count > 0 ? $" with {made.Count} object(s)" : "";
+        // Its door, as the game rolls one where a room joins (on the opening it took).
+        if (WithDoors)
+        {
+            foreach (var j in Dungeons.Joints(rooms).Where(j => j.Second == rooms.Count - 1))
+            {
+                if (Dungeons.RollDoor(d.Kind, j, Random) is string door)
+                {
+                    with += with.Length == 0 ? " with a door" : " and a door";
+                    made.Add((new NewObject(0, StableHash.Of(door), j.Position, BlueprintFormats.ToEuler(j.Rotation), 0), false));
+                }
+            }
+        }
+        // Selected before the change is told (Changed): the panel shows Delete for it at once.
+        Selected = rooms.Count - 1;
+        Commit(d, rooms, label ?? $"Dungeon: added {p.Name}", problem == null ? $"Added {p.Name}{with}." : $"Added {p.Name}{with}. {problem}", add: made);
+        return true;
+    }
+
+    /// <summary>
+    /// Removes a room of the open dungeon as one step of the history, with the objects in it (Inside) and the doors
+    /// at its joints. Message tells what was done.
+    /// </summary>
+    /// <param name="i">The room, an index into the dungeon's rooms.</param>
+    /// <param name="label">The history's name for the step; null: "Dungeon: removed" and its name.</param>
+    /// <returns>False when no dungeon is open or there is no such room.</returns>
+    public bool Remove(int i, string? label = null)
+    {
+        if (Dungeon is not { } d || i < 0 || i >= d.Rooms.Count)
         {
             return false;
         }
@@ -440,7 +468,7 @@ public sealed partial class DungeonTool
         {
             inside.AddRange(DoorsAt(j).Where(k => !inside.Contains(k)));
         }
-        Commit(d, rooms, $"Dungeon: removed {name}", $"Removed {name}" + (inside.Count > 0 ? $" and the {inside.Count} object(s) in it" : "") +
+        Commit(d, rooms, label ?? $"Dungeon: removed {name}", $"Removed {name}" + (inside.Count > 0 ? $" and the {inside.Count} object(s) in it" : "") +
             ". Its neighbours' openings are open now: Close open ends caps them.", inside);
         return true;
     }
@@ -488,8 +516,9 @@ public sealed partial class DungeonTool
     /// opening has that type and is not an entrance (the game's end caps, highest EndCapPrio first, as
     /// DungeonGenerator.PlaceEndCaps prefers).
     /// </summary>
+    /// <param name="label">The history's name for the step; null: "Dungeon: closed" and how many.</param>
     /// <returns>How many end caps were added.</returns>
-    public int CloseOpenEnds()
+    public int CloseOpenEnds(string? label = null)
     {
         if (Dungeon is not { } d)
         {
@@ -511,7 +540,7 @@ public sealed partial class DungeonTool
         }
         if (added > 0)
         {
-            Commit(d, rooms, $"Dungeon: closed {added} open end(s)", $"Closed {added} open end(s) with end caps." + (left > 0 ? $" {left} have no end cap of their type." : ""),
+            Commit(d, rooms, label ?? $"Dungeon: closed {added} open end(s)", $"Closed {added} open end(s) with end caps." + (left > 0 ? $" {left} have no end cap of their type." : ""),
                 add: ContentsOf(d, rooms.Skip(before)));
         }
         else
@@ -525,7 +554,10 @@ public sealed partial class DungeonTool
     /// A door at a joint: the one there taken away, or the dungeon's door for that kind of opening put there (facing as
     /// the first room's opening, where the game puts it).
     /// </summary>
-    public void ToggleDoor(DungeonRooms.Dungeon d, Dungeons.Joint j)
+    /// <param name="d">The dungeon.</param>
+    /// <param name="j">The joint.</param>
+    /// <param name="label">The history's name for the step; null: "Dungeon: added a door" or "removed a door".</param>
+    public void ToggleDoor(DungeonRooms.Dungeon d, Dungeons.Joint j, string? label = null)
     {
         if (Scene?.Session is not { } s)
         {
@@ -534,12 +566,12 @@ public sealed partial class DungeonTool
         var there = DoorsAt(j);
         if (there.Count > 0)
         {
-            s.Commit("Dungeon: removed a door", null, there, []);
+            s.Commit(label ?? "Dungeon: removed a door", null, there, []);
             Message?.Invoke("Removed the door. Ctrl+Z puts it back.");
         }
         else if (Dungeons.DoorsFor(d.Kind, j.Type).FirstOrDefault() is { Prefab: { Length: > 0 } door })
         {
-            s.Commit("Dungeon: added a door", null, [], [(new NewObject(0, StableHash.Of(door), j.Position, BlueprintFormats.ToEuler(j.Rotation), 0), false)]);
+            s.Commit(label ?? "Dungeon: added a door", null, [], [(new NewObject(0, StableHash.Of(door), j.Position, BlueprintFormats.ToEuler(j.Rotation), 0), false)]);
             Message?.Invoke($"Added a door ({door}). Click it again to take it away.");
         }
         Changed?.Invoke();

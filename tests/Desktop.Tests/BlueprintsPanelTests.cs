@@ -264,4 +264,29 @@ public class BlueprintsPanelTests
         Assert.Equal(2, r.Listed.Count);
         Assert.Contains(r.Listed, e => e.Name.StartsWith("Gate", StringComparison.Ordinal) && e.Name != "Gate");
     }
+
+    // SaveBuildingAs: written without a question under the details given (replacing one of that name), with its
+    // picture, and said; a folder that cannot be written is said and nothing is saved.
+    [AvaloniaFact]
+    public void ABuildingIsSavedUnderTheDetailsGiven()
+    {
+        using var r = new BlueprintsPanelRun();
+        var clip = new System.Text.Json.Nodes.JsonObject
+        {
+            ["objects"] = new System.Text.Json.Nodes.JsonArray(new System.Text.Json.Nodes.JsonObject { ["name"] = "woodwall", ["dx"] = 0, ["dy"] = 1, ["dz"] = 0, ["rx"] = 0, ["ry"] = 0, ["rz"] = 0, ["scale"] = 0 }),
+        };
+        Assert.Null(r.B.SaveBuildingAs(clip, new Homestead.Details("Hut", "A hut", ["house"])));
+        string path = Path.Combine(r.Homestead, "Hut.blueprint");
+        Assert.True(File.Exists(path));
+        Assert.True(File.Exists(Path.ChangeExtension(path, ".png")));
+        Assert.Contains("#Description:A hut", File.ReadAllText(path));
+        Assert.StartsWith("Saved the blueprint “Hut” (1 piece(s))", r.Said);
+        // Saved again: replaced.
+        Assert.Null(r.B.SaveBuildingAs(clip, new Homestead.Details("Hut", "Changed", [])));
+        Assert.Contains("#Description:Changed", File.ReadAllText(path));
+        // A folder that is a file: not written.
+        File.WriteAllText(Path.Combine(r.Dir, "blocked"), "");
+        r.B.FindHomestead = () => new Homestead.Status(true, "1.3.2", ["test"], Path.Combine(r.Dir, "blocked"));
+        Assert.StartsWith("Could not save the blueprint", r.B.SaveBuildingAs(clip, new Homestead.Details("Other", "", [])));
+    }
 }

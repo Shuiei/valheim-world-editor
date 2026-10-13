@@ -23,8 +23,8 @@ public static class Tips
         ["top.history"] = "Every change of this session: roll back to any point, or remove one change (L).",
         ["top.view"] = "Show or hide kinds of things in the world, and the look options (V).",
         ["top.help"] = "Mouse controls and keyboard shortcuts (?).",
-        ["top.areaSize"] = "The area's size: 3 × 3, 5 × 5 or 7 × 7 zones around the same middle zone, changed on the fly. What you changed and the history stay.",
-        ["top.follow"] = "Follow the view: when the point you look at comes near the edge of the area, the area moves there by itself (it waits while a path, shape, selection or stroke is unfinished).",
+        ["top.areaSize"] = "The area's size: 3 × 3 up to 17 × 17 zones around the same middle zone, changed on the fly (an area Follow grew shows its own size). What you changed and the history stay.",
+        ["top.follow"] = "Follow the view: when the point you look at comes near the edge of the area, the area grows that way by itself, keeping the zones it has (up to 17 zones each way); it waits while a path, shape, selection or stroke is unfinished.",
         ["top.west"] = "Move the area one zone (64 m) west. Pending changes stay.",
         ["top.north"] = "Move the area one zone (64 m) north. Pending changes stay.",
         ["top.south"] = "Move the area one zone (64 m) south. Pending changes stay.",
@@ -218,7 +218,7 @@ public static class Tips
         ["place.line"] = "Place objects at a fixed spacing along a line you draw.",
         ["place.grid"] = "Drag a box: one object in the middle of each cell.",
         ["place.zone"] = "Draw a zone freely, then fill it by scatter or by a grid.",
-        ["place.preset"] = "Load a mix: its kinds with their weights, and its Density, Spacing, Size, Tilt and facing. Built-in looks, and the ones you saved.",
+        ["place.preset"] = "Load a mix: its kinds with their weights, and its Density, Spacing, Size, Tilt and facing. Built-in looks, and the ones you saved. None, after a preset, unticks its kinds.",
         ["place.savePreset"] = "Save the chosen kinds, their weights and the Density, Spacing, Size, Tilt and facing settings under a name.",
         ["place.deletePreset"] = "Delete the chosen preset (only your own).",
         ["place.kinds"] = "Open or close the list of kinds to choose from: search, favourites, recent kinds, or pick one in the world.",
@@ -226,12 +226,12 @@ public static class Tips
         ["place.kind"] = "Tick to place this kind (with the others ticked); ☆ keeps it among the favourites.",
         ["place.pick"] = "Pick a kind from the world: click an object to place only that kind. Shift + click adds it to the ticked kinds. Esc cancels.",
         ["place.favourite"] = "A starred kind. Click: tick or untick it (Shift + click: place only this kind).",
-        ["place.recent"] = "A kind you placed lately. Click: tick or untick it (Shift + click: place only this kind).",
+        ["place.recent"] = "A kind you placed lately, or one chosen now. Click: tick or untick it (Shift + click: place only this kind).",
         ["place.untickAll"] = "Untick every kind.",
         ["place.favAll"] = "Tick every favourite.",
         ["place.favNone"] = "Untick every favourite.",
-        ["place.recentAll"] = "Tick every recent kind.",
-        ["place.recentNone"] = "Untick every recent kind.",
+        ["place.recentAll"] = "Tick every kind of the Recent row.",
+        ["place.recentNone"] = "Untick every kind of the Recent row (the chosen kinds show there too, so: untick all).",
         ["place.group"] = "Open or fold this category: ticked / all kinds in it. Searching opens every category with a match.",
         ["place.size"] = "Brush radius in metres. [ and ] change it.",
         ["place.density"] = "Brush and zone scatter: objects per 100 m².",
@@ -249,7 +249,7 @@ public static class Tips
         ["place.beside"] = "Snap end to end with the piece next to the cursor, at its level.",
         ["place.onTop"] = "Snap on top of the piece under the cursor.",
         ["place.layers"] = "Stack the line this many pieces high, each layer on top of the one below.",
-        ["place.single"] = "Place one object exactly under the cursor per click (only an object right on the spot blocks it).",
+        ["place.single"] = "Place one object exactly under the cursor per click (only an object right on the spot blocks it); a drag adds no more, so Density, Spacing and Clumping are hidden.",
         ["place.grow"] = "Keep saplings and crops at least their in-game grow radius away from everything, so they can grow; grown crops and trees keep the room their sapling needs.",
         ["place.endToEnd"] = "Line: each object starts exactly where the last one ends, turned along the line, like the game's hammer snaps pieces (fences, walls, stakes, floors...). Switches itself on when every ticked kind is a piece the game snaps.",
         ["place.loop"] = "Line: go back to the first point at the end, to fence a zone in.",
@@ -262,7 +262,7 @@ public static class Tips
         ["place.clearShape"] = "Remove the drawn line, box or zone (Esc).",
         ["place.undoPoint"] = "Remove the last point you clicked (Backspace). Ctrl + click any point to remove that one.",
         ["place.newLayout"] = "New random choices for the preview: positions, kinds, sizes and facings (R).",
-        ["place.weight"] = "How often this kind is used compared to the other ticked kinds (Beech 3, Birch 1: three beeches for one birch).",
+        ["place.weight"] = "How much of what is placed is this kind, in %. The other kinds' sliders follow, keeping their proportions, so the shares always make 100%. An equal share is in the middle.",
         ["place.unchoose"] = "Stop placing this kind.",
         ["place.fit"] = "Set the spacing to the widest ticked kind, so they stand side by side without overlapping.",
 
@@ -295,7 +295,8 @@ public static class Tips
         ["map.apply"] = "Send every pending change to the running game (everyone sees it at once).",
         ["map.discard"] = "Forget every change that is not saved or applied yet: the world is read again.",
         ["map.reload"] = "Load the world again from the running game.",
-        ["map.buildings"] = "Draw the footprint of every player-built piece on the map.",
+        ["map.buildings"] = "Draw the footprint of every player-built piece on the map, with the pieces of a ruin built onto (a patched tower).",
+        ["map.ruins"] = "Draw the pieces of the world's ruins too, fainter (spoiler).",
         ["map.grid"] = "Lines between the 64 m zones.",
         ["map.edited"] = "Outline the zones with changes waiting to be saved or applied, and the zones marked for reset.",
         ["map.paint"] = "When zoomed in close, show the painted ground (dirt, paved, cultivated) as the game does.",
@@ -329,6 +330,7 @@ public static class Tips
         ["start.folder"] = "A world folder: the one with the _main.<n>.chunks files.",
         ["start.browse"] = "Choose the folder.",
         ["start.open"] = "Open this world folder.",
+        ["start.refreshWorlds"] = "Look for the worlds now (the list also follows the worlds added or removed by itself, every few seconds).",
         ["start.world"] = "Open this world (offline: close the game first).",
         ["start.host"] = "The server's address (name or IP), or user@address.",
         ["start.sshPort"] = "The server's SSH port (22 unless it was changed).",
@@ -400,6 +402,7 @@ public static class Tips
         ["newWorld.zoomOut"] = "Farther.",
         ["newWorld.fit"] = "All of the world.",
         ["newWorld.find"] = "Look through that many random seeds with the game's generator (in the background) and show the best.",
+        ["settings.driverGl"] = "Windows: on, the 3D view and the map draw with the graphics driver's own OpenGL; off (the default), with Direct3D. Taken when the editor starts again.",
         ["settings.claude"] = "On: the editor takes Claude's requests (MCP) on this computer, from callers with the token below. Off: none.",
         ["settings.claudePort"] = "The port Claude connects to, on 127.0.0.1 (this computer only).",
         ["settings.claudeCommand"] = "The command that adds the editor to Claude Code (claude mcp add). It holds the token: keep it to yourself.",
@@ -476,12 +479,19 @@ public static class Tips
     /// <summary>The tip for a key; throws <c>KeyNotFoundException</c> for an unknown key, so a typo is caught at once.</summary>
     public static string Of(string key) => Texts.TryGetValue(key, out string? t) ? t : throw new KeyNotFoundException("No tip " + key);
 
+    /// <summary>Each control's tip key, as Tip gave it (Claude finds controls by it: ClaudeTools.Controls).</summary>
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<Control, string> Keys = [];
+
     /// <summary>The control explains itself on hover: sets its tooltip to the key's tip and returns it.</summary>
     public static T Tip<T>(this T c, string key) where T : Control
     {
         ToolTip.SetTip(c, Of(key));
+        Keys.AddOrUpdate(c, key);
         return c;
     }
+
+    /// <summary>The tip key a control was given (Tip), or null.</summary>
+    public static string? KeyOf(Control c) => Keys.TryGetValue(c, out string? k) ? k : null;
 
     /// <summary>A row's label tells the same as its control (nothing when the control has no tip yet).</summary>
     public static void Label(Control label, Control input)
@@ -495,17 +505,23 @@ public static class Tips
     /// <summary>The object kinds' tips, as the View panel and the Area chips switch them.</summary>
     public static string Kind(ObjectKind k) => k switch
     {
-        ObjectKind.Buildings => "Pieces built by players.",
+        ObjectKind.Buildings => "Pieces built by players, with the pieces of a ruin they built onto (a patched tower).",
         ObjectKind.Ruins => "Ruins, dungeon entrances and other generated structures (spoiler).",
-        ObjectKind.Trees => "Trees, logs and stumps.",
+        ObjectKind.Furniture => "The game's furniture and props found in villages, dungeons and camps: tables, rugs, banners, crates, webs (spoiler).",
+        ObjectKind.Trees => "Trees, logs, stumps and branches.",
         ObjectKind.Rocks => "Rocks and boulders.",
         ObjectKind.Ore => "Copper, tin, silver and other deposits (spoiler).",
         ObjectKind.Bushes => "Bushes, shrubs and ferns.",
         ObjectKind.Pickables => "Mushrooms, berries, flowers, stones and other things to pick up.",
-        ObjectKind.Animals => "Boars, wolves, lox, hens, deer and other creatures players tamed (wild ones are under Other objects).",
+        ObjectKind.Remains => "Bones, skulls, carcasses and the giants' remains.",
+        ObjectKind.Animals => "Boars, wolves, lox, hens, deer and other creatures players tamed (wild ones are under Creatures & NPCs).",
+        ObjectKind.Creatures => "Wild creatures, traders and birds.",
+        ObjectKind.SpawnPoints => "Invisible spawn points: each spawns its creature where it stands, once or again after it dies. Shown as a marker with the creature's name (spoiler).",
+        ObjectKind.Nests => "Greydwarf nests, bone piles and other nests that spawn creatures around themselves until destroyed (spoiler).",
         ObjectKind.Runestones => "The world's runestones. They can be picked and deleted (the game builds them from their location, so they cannot be moved or copied).",
         ObjectKind.Dungeons => "The rooms of Frost Caves, crypts and other dungeons, high above their entrances (5000 m up, where the game keeps them). Edit them with the Dungeon tool.",
-        _ => "Everything else the save holds.",
+        ObjectKind.Effects => "Mist, music, boss event zones and other effects and markers of the game's (mostly invisible).",
+        _ => "Everything that fits no other kind, such as tombstones.",
     };
 
     /// <summary>An overlay layer's tip (the View panel's overlay switches).</summary>

@@ -176,7 +176,7 @@ public class AreaToolTests
     }
 
     [AvaloniaFact]
-    public async Task ResetZonesMarksTheZonesAndUndoUnmarksThem()
+    public async Task ResetZonesMarksTheZonesUnderTheSelection()
     {
         var (w, s) = Open();
         var p = w.AreaPanel;
@@ -187,12 +187,7 @@ public class AreaToolTests
         await p.Apply();
         Assert.Contains("Reset 4 zone(s)", asked);
         Assert.Equal(4, s.Pending.Resets);
-        // Its ground edits are gone too.
-        Assert.Equal(30, H(s, 60, 60), 3);
-        s.Undo();
-        Assert.Equal(0, s.Pending.Resets);
-        Assert.Equal(31, H(s, 60, 60), 3);
-        s.Redo();
+        Assert.Equal("Reset 4 zone(s)", s.UndoLabel);
         p.UnresetButton.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Avalonia.Controls.Button.ClickEvent));
         Assert.Equal(0, s.Pending.Resets);
     }

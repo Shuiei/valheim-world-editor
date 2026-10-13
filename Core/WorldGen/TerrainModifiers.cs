@@ -85,6 +85,14 @@ public sealed class TerrainModifiers
     public static IEnumerable<int> NetworkPrefabHashes => _prefabs.Where(p => !p.Value.Location).Select(p => p.Key);
 
     /// <summary>
+    /// Whether the prefab is a mark players' tools leave on the ground (raise, digg, path...): a network prefab whose
+    /// modifiers are all player-made. Other modifier prefabs (rock4_coast, HeathRockPillar...) are things to see.
+    /// </summary>
+    /// <param name="prefab">The prefab hash.</param>
+    public static bool IsGroundMark(int prefab) =>
+        _prefabs.TryGetValue(prefab, out var p) && !p.Location && p.Mods.Count > 0 && p.Mods.TrueForAll(m => m.Player);
+
+    /// <summary>
     /// The modifiers touching each zone, in the order the game applies them.
     /// </summary>
     private readonly Dictionary<(int, int), List<Modifier>> _byZone = [];

@@ -59,8 +59,12 @@ public static class Overlays
     {
         float ox = s.X0 * 64f - 32f, oz = s.Z0 * 64f - 32f;
         float minX = ox - 40, maxX = ox + s.W + 40, minZ = oz - 40, maxZ = oz + s.H + 40;
-        return (s.World?.Locations ?? []).Count(l => l.Position.X >= minX && l.Position.X <= maxX && l.Position.Z >= minZ && l.Position.Z <= maxZ);
+        return RealLocations(s).Count(l => l.Position.X >= minX && l.Position.X <= maxX && l.Position.Z >= minZ && l.Position.Z <= maxZ);
     }
+
+    /// <summary>The world's locations without the invisible ground discs of No limit (not places to show).</summary>
+    private static IEnumerable<(Vector3 Position, int Location)> RealLocations(WorldScene s) =>
+        (s.World?.Locations ?? []).Where(l => !Editing.Uplift.IsDisc(l.Location));
 
     /// <summary>Builds every layer's lines for the scene, following the ground height.</summary>
     /// <param name="s">The scene to draw over.</param>
@@ -113,12 +117,16 @@ public static class Overlays
         }
 
         // Zone borders, every 2 m along each zone edge, just above the ground.
-        for (int i = 0; i <= s.Size; i++)
+        for (int i = 0; i <= Math.Max(s.ZonesX, s.ZonesZ); i++)
         {
             foreach (bool vertical in new[] { true, false })
             {
+                if (i > (vertical ? s.ZonesX : s.ZonesZ))
+                {
+                    continue;
+                }
                 var pts = new List<Vector3>();
-                for (int t = 0; t < s.W; t += 2)
+                for (int t = 0; t < (vertical ? s.H : s.W); t += 2)
                 {
                     int gx = vertical ? i * 64 : t, gz = vertical ? t : i * 64;
                     if (gx < s.W && gz < s.H)
@@ -133,7 +141,7 @@ public static class Overlays
         // Location markers: a post 14 m tall at each location in or near the area.
         float minX = ox - 40, maxX = ox + s.W + 40, minZ = oz - 40, maxZ = oz + s.H + 40;
         int locations = 0;
-        foreach (var (p, _) in s.World?.Locations ?? [])
+        foreach (var (p, _) in RealLocations(s))
         {
             if (p.X < minX || p.X > maxX || p.Z < minZ || p.Z > maxZ)
             {
@@ -179,9 +187,9 @@ public static class Overlays
         if (modifiers != null)
         {
             var seen = new HashSet<TerrainModifiers.Modifier>();
-            for (int zz = s.Z0; zz < s.Z0 + s.Size; zz++)
+            for (int zz = s.Z0; zz < s.Z0 + s.ZonesZ; zz++)
             {
-                for (int zx = s.X0; zx < s.X0 + s.Size; zx++)
+                for (int zx = s.X0; zx < s.X0 + s.ZonesX; zx++)
                 {
                     foreach (var m in modifiers.InZone(zx, zz).Where(m => !m.Player && !m.Disc && (m.Level || m.Smooth)))
                     {

@@ -88,6 +88,10 @@ public sealed class MapPage : IDisposable
     /// </summary>
     internal CheckBox BuildingsBox { get; } = new() { Content = "Show buildings (player-built pieces)", IsChecked = true, FontSize = 12 };
     /// <summary>
+    /// Show ruins: the pieces of the world's ruins too (spoilers; off at first).
+    /// </summary>
+    internal CheckBox RuinsBox { get; } = new() { Content = "Show ruins (spoilers)", IsChecked = false, FontSize = 12 };
+    /// <summary>
     /// Show the zone grid.
     /// </summary>
     internal CheckBox GridBox { get; } = new() { Content = "Zone grid", FontSize = 12 };
@@ -114,7 +118,7 @@ public sealed class MapPage : IDisposable
     /// <summary>
     /// The area to open: 3, 5 or 7 zones a side.
     /// </summary>
-    internal ComboBox SizeBox { get; } = new() { ItemsSource = new[] { "3 × 3 zones (192 m)", "5 × 5 zones (320 m)", "7 × 7 zones (448 m)" }, SelectedIndex = 1, FontSize = 12 };
+    internal ComboBox SizeBox { get; } = new() { ItemsSource = MainWindow.AreaSizes.Select(n => $"{n} × {n} zones ({n * 64} m)").ToArray(), SelectedIndex = 1, FontSize = 12 };
     /// <summary>
     /// The picked spot's box, hidden until a spot is picked.
     /// </summary>
@@ -138,7 +142,7 @@ public sealed class MapPage : IDisposable
     /// <summary>
     /// The area to open, in zones a side.
     /// </summary>
-    public int Size => new[] { 3, 5, 7 }[Math.Max(0, SizeBox.SelectedIndex)];
+    public int Size => MainWindow.AreaSizes[Math.Max(0, SizeBox.SelectedIndex)];
     /// <summary>
     /// Live: asks the game for the players online every five seconds.
     /// </summary>
@@ -289,6 +293,8 @@ public sealed class MapPage : IDisposable
         ReloadButton.Tip("map.reload");
         BuildingsBox.Tip("map.buildings");
         BuildingsBox.IsCheckedChanged += (_, _) => { Map.ShowBuildings = BuildingsBox.IsChecked == true; Map.RequestNextFrameRendering(); };
+        RuinsBox.Tip("map.ruins");
+        RuinsBox.IsCheckedChanged += (_, _) => { Map.ShowRuins = RuinsBox.IsChecked == true; Map.RequestNextFrameRendering(); };
         GridBox.IsCheckedChanged += (_, _) => { Map.ShowGrid = GridBox.IsChecked == true; Map.RequestNextFrameRendering(); };
         EditedBox.IsCheckedChanged += (_, _) => { Map.ShowEdited = EditedBox.IsChecked == true; Map.RequestNextFrameRendering(); };
         PaintBox.IsCheckedChanged += (_, _) => { Map.ShowPaint = PaintBox.IsChecked == true; Map.RequestNextFrameRendering(); };
@@ -395,7 +401,7 @@ public sealed class MapPage : IDisposable
                         _liveBox,
                         _changesBox,
                         H2("Map"),
-                        new StackPanel { Children = { BuildingsBox, EditedBox, PaintBox, GridBox, CloudsBox } },
+                        new StackPanel { Children = { BuildingsBox, RuinsBox, EditedBox, PaintBox, GridBox, CloudsBox } },
                         _pickBox,
                         new TextBlock { Text = "Click the map to pick a spot, drag to move, wheel to zoom.", FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap },
                         search,

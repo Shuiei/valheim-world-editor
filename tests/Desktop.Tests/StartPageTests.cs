@@ -199,6 +199,90 @@ public class StartPageTests
     }
 
     [AvaloniaFact]
+    public async Task RefreshFindsTheWorldsAgain()
+    {
+        using var r = new Run();
+        List<Worlds.Info> found = [];
+        r.P.FindWorlds = _ => found;
+        r.P.SetMode("offline");
+        Assert.Contains("No worlds found on this computer", Texts(r.P.WorldCards));
+        // A world folder added while the page is open shows after Refresh, and goes once removed.
+        found = [new Worlds.Info("Added", "/somewhere", DateTime.Now, 1, "a test folder", true, null)];
+        Click(r.P.RefreshWorlds);
+        await r.P.WorldsCheck!;
+        Assert.Single(r.P.WorldCards.Children.OfType<Button>());
+        Assert.Contains("Added", Texts(r.P.WorldCards));
+        found = [];
+        Click(r.P.RefreshWorlds);
+        await r.P.WorldsCheck!;
+        Assert.Empty(r.P.WorldCards.Children.OfType<Button>());
+        Assert.Contains("No worlds found on this computer", Texts(r.P.WorldCards));
+    }
+
+    [AvaloniaFact]
+    public async Task ALookOvertakenByALaterOneShowsNothing()
+    {
+        using var r = new Run();
+        var older = new Worlds.Info("Older", "/older", DateTime.Now, 1, "a test folder", true, null);
+        var newer = new Worlds.Info("Newer", "/newer", DateTime.Now, 1, "a test folder", true, null);
+        using var started = new ManualResetEventSlim();
+        using var release = new ManualResetEventSlim();
+        bool slow = true;
+        r.P.FindWorlds = _ =>
+        {
+            if (!slow)
+            {
+                return [newer];
+            }
+            started.Set();
+            release.Wait();
+            return [older];
+        };
+        // A slow look starts, then the page lists the worlds again before it ends.
+        var check = r.P.CheckWorlds();
+        Assert.True(started.Wait(TimeSpan.FromSeconds(10)));
+        slow = false;
+        r.P.SetMode("offline");
+        Assert.Contains("Newer", Texts(r.P.WorldCards));
+        // The slow look ends: its older worlds do not replace the newer list.
+        release.Set();
+        await check;
+        Assert.Contains("Newer", Texts(r.P.WorldCards));
+        Assert.DoesNotContain("Older", Texts(r.P.WorldCards));
+    }
+
+    [AvaloniaFact]
+    public async Task AWorldAddedOrRemovedShowsByItself()
+    {
+        using var r = new Run();
+        List<Worlds.Info> found = [new Worlds.Info("First", "/first", DateTime.Now, 1, "a test folder", true, null)];
+        r.P.FindWorlds = _ => found;
+        r.P.SetMode("offline");
+        var first = Assert.Single(r.P.WorldCards.Children.OfType<Button>());
+        // Nothing changed: the cards stay as they are (no redraw under the mouse).
+        await r.P.CheckWorlds();
+        Assert.Same(first, Assert.Single(r.P.WorldCards.Children.OfType<Button>()));
+        // A world folder added, then one removed, shows without Refresh.
+        found = [.. found, new Worlds.Info("Second", "/second", DateTime.Now, 1, "a test folder", true, null)];
+        await r.P.CheckWorlds();
+        Assert.Equal(2, r.P.WorldCards.Children.OfType<Button>().Count());
+        Assert.Contains("Second", Texts(r.P.WorldCards));
+        found = [found[1]];
+        await r.P.CheckWorlds();
+        Assert.DoesNotContain("First", Texts(r.P.WorldCards));
+        // The same world under another name, or found elsewhere (a recent world now): its card says so.
+        found = [found[0] with { Name = "Renamed", Where = "recent" }];
+        await r.P.CheckWorlds();
+        Assert.Contains("Renamed", Texts(r.P.WorldCards));
+        Assert.Contains("recent", Texts(r.P.WorldCards));
+        // Another page shows: the worlds are not drawn behind it.
+        r.P.SetMode("home");
+        found = [];
+        await r.P.CheckWorlds();
+        Assert.Contains("Renamed", Texts(r.P.WorldCards));
+    }
+
+    [AvaloniaFact]
     public void AFolderTypedWithAHomeTildeIsUnderstood()
     {
         using var r = new Run();
@@ -237,5 +321,55 @@ public class StartPageTests
         {
             File.SetUnixFileMode(cfg, UnixFileMode.UserRead | UnixFileMode.UserWrite);
         }
+    }
+
+    [AvaloniaFact]
+    public void HomesteadInstalledIsSaidWithWhereItIs()
+    {
+        using var r = new Run();
+        r.P.ShowHomestead(new Homestead.Status(true, "1.4.0", ["Steam", "Steam", "r2modman"], "/somewhere"));
+        Assert.Equal("Homestead 1.4.0 is installed (Steam, r2modman): the editor's blueprints show in its hammer tab, to build in game.", r.P.HomesteadText.Text);
+    }
+
+    [AvaloniaFact]
+    public async Task ASavedServerWithItsPasswordIsATileThatConnects()
+    {
+        using var game = new FakeGame();
+        using var r = new Run();
+        ServerConfig.Remember(new ServerConfig.Server { Name = "Valhalla", Host = "203.0.113.10", SshPort = 22, User = "valheim", Password = "pw", Token = game.Token });
+        r.Tunnel(game.Port, game.Token);
+        r.P.FillHome();
+        var tile = r.P.RecentTiles.Children.OfType<Button>().Single(b => Texts(b).Contains("Valhalla"));
+        Assert.Contains("Server · connects in one click", Texts(tile));
+        Click(tile);
+        await TestWindows.Until(() => r.Tunnels.Count == 1);
+        Assert.Equal(("203.0.113.10", "valheim", "pw", game.Token), (r.Tunnels[0].Host, r.Tunnels[0].User, r.Tunnels[0].Password, r.Tunnels[0].Token));
+    }
+
+    [AvaloniaFact]
+    public async Task AGameThatCannotBeCheckedSaysWhyUntilItCanBe()
+    {
+        if (!OperatingSystem.IsLinux())
+        {
+            return;
+        }
+        using var r = new Run();
+        string config = Path.Combine(r.Temp, "BepInEx", "config");
+        Directory.CreateDirectory(config);
+        string cfg = Path.Combine(config, LocalGame.ConfigName);
+        // A link to nothing: there as a file, but it cannot be read (even by root).
+        File.CreateSymbolicLink(cfg, Path.Combine(r.Temp, "missing.cfg"));
+        r.Settings.BepInExFolders.Add(r.Temp);
+        await r.P.PollGame();
+        Assert.Contains("Your game could not be checked", Texts(r.P.GamePanel));
+        // Checked again the same way: said once.
+        await r.P.PollGame();
+        Assert.Contains("Your game could not be checked", Texts(r.P.GamePanel));
+        // Readable again: the failure goes.
+        File.Delete(cfg);
+        File.WriteAllText(cfg, $"Port = {FakeGame.FreePort()}\nToken = t\n");
+        await r.P.PollGame();
+        Assert.DoesNotContain("Your game could not be checked", Texts(r.P.GamePanel));
+        Assert.Contains("Start Valheim and load your world", Texts((Control)r.P.GameState.Content!));
     }
 }

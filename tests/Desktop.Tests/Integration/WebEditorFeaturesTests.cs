@@ -281,7 +281,7 @@ public class WebEditorFeaturesTests
         Assert.Equal(new[] { kinds[2] }, r.T.Chosen);
         // The chips show what is ticked.
         var chips = r.P.Favourites.Children.OfType<ToggleButton>().ToList();
-        Assert.Equal(kinds, chips.Select(c => (string)c.Content!));
+        Assert.Equal(kinds, chips.Select(c => (string)c.Tag!));
         Assert.Equal([false, false, true], chips.Select(c => c.IsChecked == true));
     }
 
@@ -295,14 +295,14 @@ public class WebEditorFeaturesTests
         Click(r.P.KindsButton);
         r.W.UpdateLayout();
         Point At(ToggleButton chip) => chip.TranslatePoint(new Point(chip.Bounds.Width / 2, chip.Bounds.Height / 2), r.W)!.Value;
-        var chip = r.P.Favourites.Children.OfType<ToggleButton>().Single(c => (string)c.Content! == kinds[1]);
+        var chip = r.P.Favourites.Children.OfType<ToggleButton>().Single(c => (string)c.Tag! == kinds[1]);
         r.W.MouseDown(At(chip), MouseButton.Left, RawInputModifiers.Shift);
         r.W.MouseUp(At(chip), MouseButton.Left, RawInputModifiers.Shift);
         Dispatcher.UIThread.RunJobs();
         Assert.Equal(new[] { kinds[1] }, r.T.Chosen);
         // Without Shift: added.
         r.W.UpdateLayout();
-        chip = r.P.Favourites.Children.OfType<ToggleButton>().Single(c => (string)c.Content! == kinds[0]);
+        chip = r.P.Favourites.Children.OfType<ToggleButton>().Single(c => (string)c.Tag! == kinds[0]);
         r.W.MouseDown(At(chip), MouseButton.Left);
         r.W.MouseUp(At(chip), MouseButton.Left);
         Dispatcher.UIThread.RunJobs();
@@ -330,7 +330,7 @@ public class WebEditorFeaturesTests
         Click(r.P.UntickAllButton);
         Assert.Empty(r.T.Chosen);
         Assert.Empty(r.P.Memory.Chosen);
-        Assert.Equal("Nothing to place yet: + Add kinds, or a preset.", r.P.Note.Text);
+        Assert.Equal("Nothing to place yet: Choose kinds… below, or a preset.", r.P.Note.Text);
     }
 
     [AvaloniaFact]
@@ -346,12 +346,12 @@ public class WebEditorFeaturesTests
         // Trees open (the default), the others folded: only the trees' boxes are made.
         Assert.True(r.P.Groups[ObjectKind.Trees].IsExpanded);
         Assert.False(r.P.Groups[ObjectKind.Rocks].IsExpanded);
-        Assert.Equal(trees, Ticks(r).Select(b => (string)b.Content!));
+        Assert.Equal(trees, Ticks(r).Select(b => (string)b.Tag!));
         string Count(ObjectKind k) => ((Grid)r.P.Groups[k].Header!).Children.OfType<TextBlock>().Last().Text!;
         Assert.Equal($"1 / {trees.Count}", Count(ObjectKind.Trees));
         Assert.Equal($"{rocks.Count}", Count(ObjectKind.Rocks));
         // Ticking in the list counts at once.
-        Ticks(r).First(b => (string)b.Content! == trees[^1]).IsChecked = true;
+        Ticks(r).First(b => (string)b.Tag! == trees[^1]).IsChecked = true;
         Assert.Equal($"{(trees.Count > 1 ? 2 : 1)} / {trees.Count}", Count(ObjectKind.Trees));
         // Opening a category makes its boxes and is remembered.
         int changed = 0;
@@ -431,6 +431,36 @@ public class WebEditorFeaturesTests
         Assert.Single(r.W.View.NewMarkers(s.Scene));
         // Objects that were in the world already never have one.
         Assert.DoesNotContain(s.Scene.Things.Where(x => x.Id >= 0), x => marks.Contains(new Vector3(x.Position.X - s.Scene.Cx, x.Position.Y + 0.4f, -(x.Position.Z - s.Scene.Cz))));
+    }
+
+    [AvaloniaFact]
+    public void SpawnPointsAndNestsCarryAMarkerOfTheirColourWhileTheirKindIsShown()
+    {
+        using var r = new Run();
+        var s = r.S;
+        // Spawn points and nests are off at first (spoilers).
+        Assert.False(r.W.View.IsShown(ObjectKind.SpawnPoints));
+        Assert.False(r.W.View.IsShown(ObjectKind.Nests));
+        var added = s.Commit("Placed", null, [], [(Tree(s, "Spawner_Boar", 20, 20), false), (Tree(s, "Spawner_Skeleton_respawn_30", 24, 20), false),
+            (Tree(s, "Spawner_GreydwarfNest", 28, 20), false), (Tree(s, "Beech1", 32, 20), false)]);
+        Dispatcher.UIThread.RunJobs();
+        // Placing them switches their kinds on, so that what was placed shows.
+        Assert.True(r.W.View.IsShown(ObjectKind.SpawnPoints));
+        Assert.True(r.W.View.IsShown(ObjectKind.Nests));
+        var boar = s.Scene.Things[added[0]];
+        var at = new Vector3(boar.Position.X - s.Scene.Cx, boar.Position.Y + 2.4f, -(boar.Position.Z - s.Scene.Cz));
+        r.W.View.SetCamera(at + new Vector3(0, 20, 20), at, 1.5f);
+        var marks = r.W.View.SpawnMarkers(s.Scene);
+        Assert.Equal(3, marks.Count);
+        Assert.Contains((at, GlView.SpawnColour(false)), marks);
+        Assert.Contains(marks, m => m.Colour == GlView.SpawnColour(true));
+        Assert.Contains(marks, m => m.Colour == GlView.NestColour);
+        // Switched off in View: their markers go.
+        r.W.KindBoxes[ObjectKind.Nests].IsChecked = false;
+        Assert.Equal(2, r.W.View.SpawnMarkers(s.Scene).Count);
+        // Too far from the camera: none.
+        r.W.View.SetCamera(at + new Vector3(0, 0, GlView.SpawnMarkerRange + 50), at, 1.5f);
+        Assert.Empty(r.W.View.SpawnMarkers(s.Scene));
     }
 
     [AvaloniaFact]

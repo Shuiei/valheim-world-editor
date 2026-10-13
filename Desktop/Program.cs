@@ -62,15 +62,13 @@ public static class Program
         // then the app ends (changes not saved are lost, as when the computer turns off).
         using var term = System.Runtime.InteropServices.PosixSignalRegistration.Create(System.Runtime.InteropServices.PosixSignal.SIGTERM, Quit);
         using var hup = System.Runtime.InteropServices.PosixSignalRegistration.Create(System.Runtime.InteropServices.PosixSignal.SIGHUP, Quit);
-        // Windows: the graphics driver's own OpenGL (WGL) first, ANGLE (OpenGL ES on Direct3D 11) when
-        // that fails, drawing in software last.
         // VWE_TRACE=1: Avalonia's warnings on the console.
         if (Environment.GetEnvironmentVariable("VWE_TRACE") == "1")
         {
             System.Diagnostics.Trace.Listeners.Add(new System.Diagnostics.ConsoleTraceListener());
         }
         AppBuilder.Configure<App>().UsePlatformDetect().LogToTrace(Avalonia.Logging.LogEventLevel.Warning)
-            .With(new Win32PlatformOptions { RenderingMode = [Win32RenderingMode.Wgl, Win32RenderingMode.AngleEgl, Win32RenderingMode.Software] })
+            .With(new Win32PlatformOptions { RenderingMode = WindowsRendering(TerrainEditor.App.AppSettings.Load().DriverOpenGl) })
             // Linux: Avalonia turns OpenGL off for software renderers (Mesa's llvmpipe, VMware's
             // SVGA3D), where its own drawing is faster without it; the 3D view and the map need
             // OpenGL, so they were blank in virtual machines and without GPU drivers.
@@ -82,13 +80,25 @@ public static class Program
     /// SIGTERM or SIGHUP: closes the tunnel, then shuts the app down on the UI thread (instead of the process ending at
     /// once).
     /// </summary>
-    private static void Quit(System.Runtime.InteropServices.PosixSignalContext c)
+    internal static void Quit(System.Runtime.InteropServices.PosixSignalContext c)
     {
         c.Cancel = true;
         Options.Say($"quit: {c.Signal}");
         TerrainEditor.App.Tunnel.Close();
         Avalonia.Threading.Dispatcher.UIThread.Post(() => (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.Shutdown());
     }
+
+    /// <summary>
+    /// How Windows draws, in the order tried: ANGLE (OpenGL ES on Direct3D 11) first, then the graphics driver's own
+    /// OpenGL (WGL), drawing in software last. Old or laptop drivers' OpenGL showed old frames (objects coming and going)
+    /// and black lines across the window (issue #115); Direct3D drivers are the ones games use. Settings' "Draw with the
+    /// graphics driver's OpenGL" puts WGL first again, for a driver whose Direct3D draws worse.
+    /// </summary>
+    /// <param name="driverOpenGl">Whether the driver's OpenGL is tried first.</param>
+    /// <returns>The modes, the first that works taken.</returns>
+    internal static Win32RenderingMode[] WindowsRendering(bool driverOpenGl) => driverOpenGl
+        ? [Win32RenderingMode.Wgl, Win32RenderingMode.AngleEgl, Win32RenderingMode.Software]
+        : [Win32RenderingMode.AngleEgl, Win32RenderingMode.Wgl, Win32RenderingMode.Software];
 }
 
 /// <summary>The Avalonia application: the Fluent theme in dark with the editor's styles, and the main window.</summary>

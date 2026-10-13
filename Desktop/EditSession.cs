@@ -787,17 +787,34 @@ public sealed class EditSession
     /// (chest contents, builder...), like the web editor's moves. Rotations are Euler angles in degrees.
     /// </summary>
     /// <returns>The copies' indices.</returns>
-    public List<int> Move(IReadOnlyList<(int Index, System.Numerics.Vector3 Position, System.Numerics.Vector3 Rotation)> moves, string? label = null)
+    public List<int> Move(IReadOnlyList<(int Index, System.Numerics.Vector3 Position, System.Numerics.Vector3 Rotation)> moves, string? label = null) =>
+        Transform([.. moves.Select(m => (m.Index, m.Position, m.Rotation, Scene.Things[m.Index].Scale))], label);
+
+    /// <summary>
+    /// Moves, turns and sizes things as one undo step, as Move does, each with its own scale (zero: the prefab's own).
+    /// </summary>
+    /// <returns>The copies' indices, in the order of the things not gone.</returns>
+    public List<int> Transform(IReadOnlyList<(int Index, System.Numerics.Vector3 Position, System.Numerics.Vector3 Rotation, float Scale)> moves, string? label = null)
     {
         var live = moves.Where(m => !Scene.Things[m.Index].Gone).ToList();
-        var adds = live.Select(m =>
-        {
-            var t = Scene.Things[m.Index];
-            // A copy of an object of this session keeps what that one was copied from.
-            var from = t.Id < 0 ? Edits.FindAdded(t.Id) : null;
-            return (new NewObject(0, t.Prefab, m.Position, m.Rotation, t.Scale, t.Id < 0 ? from?.SourceId : t.Id, t.Id < 0 && (from?.Fresh ?? true), from?.Raw), t.Piece);
-        }).ToList();
+        var adds = live.Select(m => MovedCopy(m.Index, m.Position, m.Rotation, m.Scale)).ToList();
         return Commit(label ?? $"Moved {live.Count}", null, [.. live.Select(m => m.Index)], adds);
+    }
+
+    /// <summary>
+    /// The copy that stands for a thing moved, turned or sized (to Commit in place of it): it keeps the thing's own
+    /// data (chest contents, builder…) and, for an object added in this session, what that was copied from and its
+    /// values (the Workshop's objects and generated dungeons carry theirs there).
+    /// </summary>
+    /// <param name="index">The thing, an index into the scene's things.</param>
+    /// <param name="position">Its new place.</param>
+    /// <param name="rotation">Its new turn, Euler angles in degrees.</param>
+    /// <param name="scale">Its new size (zero: the prefab's own).</param>
+    internal (NewObject Object, bool Piece) MovedCopy(int index, System.Numerics.Vector3 position, System.Numerics.Vector3 rotation, float scale)
+    {
+        var t = Scene.Things[index];
+        var from = t.Id < 0 ? Edits.FindAdded(t.Id) : null;
+        return (new NewObject(0, t.Prefab, position, rotation, scale, t.Id < 0 ? from?.SourceId : t.Id, t.Id < 0 && (from?.Fresh ?? true), from?.Raw, from?.Data), t.Piece);
     }
 
     /// <summary>
@@ -887,6 +904,57 @@ public sealed class EditSession
     /// The zones marked to be given back to the world generator (to draw them).
     /// </summary>
     public List<ZoneReset> Resets => Edits.Resets;
+
+    /// <summary>
+    /// Marks zones for reset when saving (Reset zones), as one undo step: the generator makes them again, their trees,
+    /// rocks, ruins and dungeon entrances gone (and the players' buildings unless kept); with ground, their ground
+    /// edits in the area are undone now too.
+    /// </summary>
+    /// <param name="zones">The zones (world zone column and row).</param>
+    /// <param name="keepBuildings">Keep the pieces players built.</param>
+    /// <param name="ground">Also undo their ground edits.</param>
+    /// <param name="label">The history's name for the step.</param>
+    public void MarkResets(IReadOnlyCollection<(int X, int Z)> zones, bool keepBuildings, bool ground, string label)
+    {
+        var marked = Resets.Select(r => (r.X, r.Z)).ToHashSet();
+        var resets = zones.Select(z => (new ZoneReset(z.X, z.Z, keepBuildings, ground), marked.Contains(z), true)).ToArray();
+        Func<Ground, (List<int>, (int, int, int, int))>? clearGround = !ground ? null : g =>
+        {
+            var touched = new List<int>();
+            foreach (var (zx, zz) in zones)
+            {
+                int gx0 = (zx - g.X0) * 64, gz0 = (zz - g.Z0) * 64;
+                for (int k = 0; k <= 64; k++)
+                {
+                    for (int l = 0; l <= 64; l++)
+                    {
+                        int gx = gx0 + l, gz = gz0 + k, p = gz * g.W + gx;
+                        if (gx >= 0 && gz >= 0 && gx < g.W && gz < g.H && (g.Mod[p] != 0 || g.PMod[p] != 0 || g.Lift[p] != 0))
+                        {
+                            g.Mod[p] = g.PMod[p] = 0;
+                            g.Level[p] = g.Smooth[p] = g.Lift[p] = 0;
+                            touched.Add(p);
+                        }
+                    }
+                }
+            }
+            return (touched, (0, 0, g.W - 1, g.H - 1));
+        };
+        Commit(label, clearGround, [], [], resets);
+    }
+
+    /// <summary>Unmarks those of these zones that are marked for reset, as one undo step.</summary>
+    /// <returns>How many were unmarked (none: no step).</returns>
+    public int UnmarkResets(IEnumerable<(int X, int Z)> zones, string label)
+    {
+        var marked = Resets.ToDictionary(r => (r.X, r.Z));
+        var found = zones.Where(marked.ContainsKey).Distinct().ToList();
+        if (found.Count > 0)
+        {
+            Commit(label, null, [], [], [.. found.Select(z => (marked[z], true, false))]);
+        }
+        return found.Count;
+    }
 
     /// <summary>
     /// The zones to the edit store, as the web page uploads them.
@@ -1063,7 +1131,7 @@ public sealed class EditSession
             }
             var missing = k.Ids.Values.SelectMany(v => v).Where(id => !index.ContainsKey(id)).Distinct().ToList();
             var found = missing.Count > 0 ? find(missing) : [];
-            float minX = Scene.X0 * 64f - 32f, maxX = (Scene.X0 + Scene.Size - 1) * 64f + 32f, minZ = Scene.Z0 * 64f - 32f, maxZ = (Scene.Z0 + Scene.Size - 1) * 64f + 32f;
+            float minX = Scene.X0 * 64f - 32f, maxX = (Scene.X0 + Scene.ZonesX - 1) * 64f + 32f, minZ = Scene.Z0 * 64f - 32f, maxZ = (Scene.Z0 + Scene.ZonesZ - 1) * 64f + 32f;
             int? Thing(int id)
             {
                 if (index.TryGetValue(id, out int i))
@@ -1098,7 +1166,7 @@ public sealed class EditSession
             List<(int X, int Z)>? Zones(List<(int X, int Z)> zones)
             {
                 var r = zones.Select(z => (X: z.X + k.X0 - Scene.X0, Z: z.Z + k.Z0 - Scene.Z0)).ToList();
-                return r.All(z => z.X >= 0 && z.Z >= 0 && z.X < Scene.Size && z.Z < Scene.Size) ? r : null;
+                return r.All(z => z.X >= 0 && z.Z >= 0 && z.X < Scene.ZonesX && z.Z < Scene.ZonesZ) ? r : null;
             }
             var map = new Dictionary<Change, Change>();
             Change? Fit(Change c)
@@ -1166,7 +1234,7 @@ public sealed class EditSession
             var world = Scene.World;
             var gone = f.Merged.Vanished.Concat(f.Ours).ToHashSet();
             var update = f.Merged.Updated.Concat(f.Merged.Added).ToHashSet();
-            float minX = Scene.X0 * 64f - 32f, maxX = (Scene.X0 + Scene.Size - 1) * 64f + 32f, minZ = Scene.Z0 * 64f - 32f, maxZ = (Scene.Z0 + Scene.Size - 1) * 64f + 32f;
+            float minX = Scene.X0 * 64f - 32f, maxX = (Scene.X0 + Scene.ZonesX - 1) * 64f + 32f, minZ = Scene.Z0 * 64f - 32f, maxZ = (Scene.Z0 + Scene.ZonesZ - 1) * 64f + 32f;
             bool Inside(System.Numerics.Vector3 p) => p.X >= minX && p.X < maxX && p.Z >= minZ && p.Z < maxZ;
             // The objects as the world has them now, by id (those changed or new).
             var now = WorldScene.FindThings(world, Edits, update);
@@ -1246,7 +1314,7 @@ public sealed class EditSession
         _undo.Clear();
         _redo.Clear();
         // Saving gives objects new ids: read them again.
-        var things = WorldScene.ReadThings(fresh, Scene.X0, Scene.Z0, Scene.Size, Edits.Deleted, Edits.Added);
+        var things = WorldScene.ReadThings(fresh, Scene.X0, Scene.Z0, Scene.ZonesX, Scene.ZonesZ, Edits.Deleted, Edits.Added);
         lock (Scene.Things)
         {
             Scene.Things.Clear();

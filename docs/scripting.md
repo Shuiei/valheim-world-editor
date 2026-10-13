@@ -89,15 +89,17 @@ The open area.
 ### Objects
 
 What stands in the area, as it was when the script started. Each object (`Obj`) has its `Prefab`
-name, its position `X`, `Y`, `Z`, its `Kind` and whether it is a `Building` (a piece a player built).
+name, its position `X`, `Y`, `Z`, its turn `Yaw` and tilts `Pitch` and `Roll` (degrees), its size `Scale`
+(1: the game's own), its `Kind` and whether it is a `Building` (a piece a player built).
 
 | | |
 |---|---|
 | `Objects.All` | Every object of the area. |
-| `Objects.OfKind("Trees")` | Those of a kind: `Buildings`, `Ruins`, `Trees`, `Rocks`, `Ore`, `Bushes`, `Pickables`, `Animals` (tamed), `Runestones`, `Other`. |
+| `Objects.OfKind("Trees")` | Those of a kind: `Buildings`, `Ruins`, `Furniture`, `Trees`, `Rocks`, `Ore`, `Bushes`, `Pickables`, `Remains`, `Animals` (tamed), `Creatures` (wild, traders, birds), `SpawnPoints`, `Nests`, `Runestones`, `Dungeons`, `Effects`, `Other`. |
 | `Objects.Near(x, z, radius)` | Those within the radius of a point. |
 | `Objects.Remove(o)` | Takes it away. |
-| `Objects.Place("Beech1", x, z, yaw:, scale:, y:)` | A new object of the game, by its prefab name (`Beech1`, `Pinetree_01`, `rock4_forest`, `piece_chest_wood`...: the names the Place tool lists). It stands on the ground as the script leaves it, unless you give a height `y`. `yaw` turns it (degrees), `scale` sizes it (`0.5f` half, `2` double; the default keeps the game's own size). Building pieces are the chosen builder's, as with the Place tool. |
+| `Objects.Place("Beech1", x, z, yaw:, scale:, y:, pitch:, roll:, snap:)` | A new object of the game, by its prefab name (`Beech1`, `Pinetree_01`, `rock4_forest`, `piece_chest_wood`...: the names the Place tool lists). It stands on the ground as the script leaves it, unless you give a height `y`. `yaw` turns it (degrees), `pitch` and `roll` tilt it, `scale` sizes it (`0.5f` half, `2` double; the default keeps the game's own size). With `snap: true` a building piece snaps to the pieces there (and those placed before it) within 0.5 m, as the hammer does. Building pieces are the chosen builder's, as with the Place tool. |
+| `Objects.Move(o, x:, z:, y:, yaw:, pitch:, roll:, scale:)` | Moves, turns or sizes an object that is there; what you leave out stays as it is. It keeps what it holds (chest contents, builder...). |
 | `Objects.CanPlace("Beech1")` | Whether the editor knows how to make that object. |
 
 ### Noise and random numbers

@@ -30,7 +30,8 @@ public static class Workshop
             Name = title,
             X0 = -(Zones / 2),
             Z0 = -(Zones / 2),
-            Size = Zones,
+            ZonesX = Zones,
+            ZonesZ = Zones,
             W = w,
             H = w,
             Heights = [.. Enumerable.Repeat(Ground, w * w)],
@@ -70,12 +71,16 @@ public static class Workshop
     /// <param name="text">The file's text when already read; null reads <paramref name="path"/>.</param>
     /// <param name="at">Where its anchor goes (world x, z); null for the plot's middle, which also takes the
     /// blueprint's ruin flag.</param>
+    /// <param name="turn">Degrees it is turned round its anchor, as yaw turns (90: north becomes east).</param>
+    /// <param name="ground">The height its lowest point goes to; null: the plot's ground.</param>
+    /// <param name="label">The history's name for the step; null: "Opened" or "Added" and the blueprint's name.</param>
     /// <returns>
     /// How many were put, the kinds the editor cannot make, how far it was lifted (saving it back
     /// takes that off: Homestead's anchor keeps its height), and the ground it stood on (GroundAt), lowest height
     /// per whole metre (x, z).
     /// </returns>
-    public static (int Placed, List<string> Unknown, float Lift, Dictionary<(int, int), float> Terrain) Add(EditSession s, string path, string? text, Vector2? at)
+    public static (int Placed, List<string> Unknown, float Lift, Dictionary<(int, int), float> Terrain) Add(EditSession s, string path, string? text, Vector2? at,
+        float turn = 0, float? ground = null, string? label = null)
     {
         text ??= File.ReadAllText(path);
         var parsed = BlueprintFormats.Parse(Path.GetFileName(path), text);
@@ -93,14 +98,18 @@ public static class Workshop
             shift = homestead ? new Vector3(0, -low, 0)
                 : new Vector3(-(known.Min(p => p.Position.X) + known.Max(p => p.Position.X)) / 2, -low, -(known.Min(p => p.Position.Z) + known.Max(p => p.Position.Z)) / 2);
         }
-        var anchor = at is { } w ? new Vector3(w.X, Ground, w.Y) : Anchor(s.Scene);
+        var anchor = at is { } w ? new Vector3(w.X, ground ?? Ground, w.Y) : Anchor(s.Scene) with { Y = ground ?? Ground };
+        // Turned round the anchor: the pieces' places from it, and their own turns.
+        var spin = Matrix4x4.CreateRotationY(turn * MathF.PI / 180f);
+        Vector3 At(Vector3 fromAnchor) => anchor + Vector3.Transform(fromAnchor, spin);
+        Vector3 Euler(Vector3 e) => e with { Y = e.Y + turn };
         if (at == null)
         {
             s.Scene.Ruin = parsed.Ruin;
         }
-        var adds = known.Select(p => (new NewObject(0, StableHash.Of(p.Name), anchor + p.Position + shift, p.Euler, MathF.Abs(p.Scale - 1) < 1e-3f ? 0 : p.Scale, Data: p.Data),
+        var adds = known.Select(p => (new NewObject(0, StableHash.Of(p.Name), At(p.Position + shift), Euler(p.Euler), MathF.Abs(p.Scale - 1) < 1e-3f ? 0 : p.Scale, Data: p.Data),
             PieceCatalog.Get(StableHash.Of(p.Name))?.Tool != null)).ToList();
-        s.Commit($"{(at == null ? "Opened" : "Added")} {parsed.Name}", null, [], adds);
+        s.Commit(label ?? $"{(at == null ? "Opened" : "Added")} {parsed.Name}", null, [], adds);
         // The ground it stood on in game, for the support check: Homestead's terrain contacts when the file
         // has them, else the bottom of its lowest piece at each spot (the terrain reached each post).
         var contacts = text.Split('\n').Select(l => l.Trim()).Where(l => l.StartsWith("#HomesteadTerrainContact:", StringComparison.OrdinalIgnoreCase))
@@ -108,7 +117,7 @@ public static class Workshop
             .Select(f => (Ok: float.TryParse(f[0], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float x)
                 & float.TryParse(f[1], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float y)
                 & float.TryParse(f[2], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float z), P: new Vector3(x, y, z)))
-            .Where(c => c.Ok).Select(c => anchor + c.P + shift).ToList();
+            .Where(c => c.Ok).Select(c => At(c.P + shift)).ToList();
         var terrain = new Dictionary<(int, int), float>();
         void Lowest(int cx, int cz, float y) => terrain[(cx, cz)] = terrain.TryGetValue((cx, cz), out float was) ? MathF.Min(was, y) : y;
         if (contacts.Count > 0)
@@ -128,13 +137,13 @@ public static class Workshop
         {
             foreach (var p in built)
             {
-                var rot = BlueprintFormats.FromEuler(p.Euler);
+                var rot = BlueprintFormats.FromEuler(Euler(p.Euler));
                 var pts = Hammer.Outline(p.Name, rot, p.Scale > 0 ? p.Scale : 1).ToList();
                 if (pts.Count == 0)
                 {
                     continue;
                 }
-                var o = anchor + p.Position + shift;
+                var o = At(p.Position + shift);
                 float bottom = o.Y + pts.Min(v => v.Y);
                 int x0 = (int)MathF.Floor(o.X + pts.Min(v => v.X)), x1 = (int)MathF.Floor(o.X + pts.Max(v => v.X));
                 int z0 = (int)MathF.Floor(o.Z + pts.Min(v => v.Z)), z1 = (int)MathF.Floor(o.Z + pts.Max(v => v.Z));
