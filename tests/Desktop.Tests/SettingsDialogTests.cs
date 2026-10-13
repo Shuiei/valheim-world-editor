@@ -194,6 +194,9 @@ public class SettingsDialogTests
         var shown = SettingsDialog.Show(owner, settings);
         var d = TestWindows.Shown(owner);
         Boxes(d)[0].Text = t.Dir("NotTheGame");
+        // The other choices made too: not kept either.
+        d.GetLogicalDescendants().OfType<CheckBox>().Single(c => c.Content as string == "Allow Claude to connect").IsChecked = true;
+        d.GetLogicalDescendants().OfType<CheckBox>().Single(c => c.Content as string == "Draw with the graphics driver's OpenGL").IsChecked = true;
         Click(Buttons(d, "Save").Single());
         Assert.Contains("The Valheim folder must be the game's folder", Texts(d));
         Assert.Single(owner.OwnedWindows);
@@ -201,6 +204,9 @@ public class SettingsDialogTests
         Click(Buttons(d, "Cancel").Single());
         Assert.False(await shown);
         Assert.Null(settings.ValheimPath);
+        Assert.False(settings.ClaudeConnect);
+        Assert.Null(settings.ClaudeToken);
+        Assert.False(settings.DriverOpenGl);
     }
 
     [AvaloniaFact]

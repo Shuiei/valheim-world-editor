@@ -186,12 +186,16 @@ public static class SettingsDialog
                 error.Text = "The port for Claude must be a number from 1024 to 65535.";
                 return;
             }
+            // Set before Apply, which saves them with the folders; taken back when the folders are refused, so a
+            // Cancel after that keeps nothing.
+            var before = (settings.ClaudeConnect, settings.ClaudePort, settings.ClaudeToken, settings.DriverOpenGl);
             settings.ClaudeConnect = claude.IsChecked == true;
             settings.ClaudePort = claudePort;
             settings.ClaudeToken = token;
             settings.DriverOpenGl = driverGl.IsChecked == true;
             if (Apply(settings, valheim.Text, readBep(), readWorlds()) is string problem)
             {
+                (settings.ClaudeConnect, settings.ClaudePort, settings.ClaudeToken, settings.DriverOpenGl) = before;
                 error.Text = problem;
                 return;
             }
