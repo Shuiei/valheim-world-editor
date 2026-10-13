@@ -4,7 +4,7 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
-## v1.25.1 — unreleased
+## v1.25.1 — 2026-10-12
 
 ### Fixed
 - **A ruin you built onto shows whole** (#115): the stones of a ruined tower patched with wood
@@ -14,7 +14,7 @@ the plugin is unchanged in versions without that part.
   3D view and drawn with **Show buildings** on the map. The map also has **Show ruins** (off at
   first) to draw every ruin, fainter.
 
-## v1.25.0 — unreleased
+## v1.25.0 — 2026-10-12
 
 ### Added
 - **The game's locations are drawn whole**: the parts of a location that are not objects of the save
@@ -24,7 +24,7 @@ the plugin is unchanged in versions without that part.
   picked or changed. A part the game keeps only by chance is drawn when it is there at least half the
   time.
 
-## v1.24.1 — unreleased
+## v1.24.1 — 2026-10-12
 
 ### Fixed
 - **Windows: objects that came and went, black lines across the window** (#115): with some graphics
@@ -34,7 +34,7 @@ the plugin is unchanged in versions without that part.
   driver's OpenGL (taken at the next start). The log says what draws the map, as it did for the 3D
   view.
 
-## v1.24.0 — unreleased
+## v1.24.0 — 2026-10-12
 
 ### Added
 - **Claude changes objects already there**: `move_objects` moves and turns objects as one group (a
@@ -85,7 +85,7 @@ the plugin is unchanged in versions without that part.
 - **Moving objects on the Workshop's plot** (or a generated dungeon's, before saving) lost what they
   held: a chest's contents, a sign's text. They keep it now.
 
-## v1.23.1 — unreleased
+## v1.23.1 — 2026-10-12
 
 ### Fixed
 - **Code coverage** on Codecov counts every test again: the tests that start the editor in a process
@@ -98,7 +98,7 @@ the plugin is unchanged in versions without that part.
 - **Discard** that has to read the world again no longer fails without a word when the world's files
   cannot be read: it says why and keeps the area open.
 
-## v1.23.0 — unreleased
+## v1.23.0 — 2026-10-12
 
 ### Changed
 - **Larger areas**: the area can now be 9 × 9, 13 × 13 or 17 × 17 zones (up to 1088 m across), from
@@ -119,14 +119,24 @@ the plugin is unchanged in versions without that part.
   kind was worked out again), and after a save of many new objects each change was slow to count
   what is pending.
 
-## v1.22.0 — unreleased
+## v1.22.0 — 2026-10-12
 
 ### Added
 - **A saved world keeps its list up to date**: world folders added or removed while the editor runs
   (or a world saved again) show by themselves within a few seconds, without going to another page
   and back. **Refresh** looks for them at once.
 
-## v1.21.0 — unreleased
+## v1.21.0 — 2026-10-12
+
+### Added
+- **Spawn points and creature nests** (the invisible points the game's camps, villages and dungeons
+  spawn their creatures from) have their own kinds in the Place list and the View panel, each saying
+  what it spawns (`Boar · 0–2 ★ · spawns once`); Place's search finds them by creature. In the 3D
+  view they are orange boxes (red when the creature comes back) and nests purple ones, with a marker
+  above each, seen within 250 m; they are off at first, as ruins are. The inspector and Claude's
+  `find_prefabs` say what they spawn.
+- **Objects are sorted into real kinds**: Furniture & props, Bones & remains, Creatures & NPCs and
+  Effects & markers join the lists; **Other objects** went from about 470 kinds to a handful.
 
 ### Changed
 - **Follow grows the area** instead of moving it: when you look near the area's edge, a row of zones
@@ -155,14 +165,14 @@ the plugin is unchanged in versions without that part.
 - **Previews over the sea** (the mountain, placed and pasted objects, rings and lines) were hidden
   wherever water was behind them in the 3D view: they now show over the water.
 
-## v1.20.2 — unreleased
+## v1.20.2 — 2026-10-12
 
 ### Fixed
 - **Location markers** no longer put a post on every invisible ground disc of No limit (one every
   6 m where the ground was taken past ±8 m): they hid the real locations. The "location(s) here"
   note no longer counts them either.
 
-## v1.20.1 — unreleased
+## v1.20.1 — 2026-10-12
 
 ### Changed
 - **While the game's look is prepared** (start page), every action is greyed out until it is done:

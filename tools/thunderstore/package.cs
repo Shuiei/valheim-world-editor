@@ -22,7 +22,7 @@ try
     switch (args.FirstOrDefault())
     {
         case "changelog" when args.Length >= 4:
-            File.WriteAllText(args[2], Changelog(File.ReadAllText(args[1]), args[3], args[4..].ToHashSet()), new UTF8Encoding(false));
+            File.WriteAllText(args[2], Changelog(File.ReadAllText(args[1]), args[3], [.. args[4..]]), new UTF8Encoding(false));
             return 0;
         case "check" when args.Length == 2:
             Check(args[1]);
@@ -55,7 +55,9 @@ static string Changelog(string text, string version, HashSet<string> tags)
     {
         var m = Regex.Match(sec, @"^## v([0-9]+\.[0-9]+\.[0-9]+)\b(.*)");
         if (!m.Success)
+        {
             continue;
+        }
         string v = m.Groups[1].Value, title = m.Groups[2].Value;
         // The version's parts ("### Added", "### WorldEditorBridge"...).
         int nl = sec.IndexOf('\n');
@@ -66,7 +68,9 @@ static string Changelog(string text, string version, HashSet<string> tags)
         lines.Add(plugin.Count > 0 ? plugin[0][(plugin[0].IndexOf('\n') + 1)..].Trim('\n') : "Unchanged: only the version number follows the editor's.");
         lines.AddRange(["", "### Valheim World Editor", ""]);
         if (v == version || tags.Contains($"v{v}"))
+        {
             lines.AddRange([$"Download: [Valheim World Editor v{v}]({Repo}/releases/tag/v{v})", ""]);
+        }
         lines.Add(editor.Count > 0 ? string.Join("\n\n", editor.Select(p => ("#" + p).Trim('\n'))) : "No change.");
         lines.Add("");
     }
@@ -102,5 +106,7 @@ static void Check(string dir)
 static void Require(bool ok, string what)
 {
     if (!ok)
+    {
         throw new InvalidDataException(what);
+    }
 }
