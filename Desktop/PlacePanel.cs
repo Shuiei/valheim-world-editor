@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Avalonia.Threading;
 using TerrainEditor.App;
 using TerrainEditor.Terrain;
 
@@ -657,7 +658,12 @@ public sealed class PlacePanel
             _creatableFrom = (w, ModManifests.Generation);
             // Not the prefabs a mod's manifest asks not to offer (its tools, effects, helpers), nor chosen any more.
             _creatable = [.. w.Creatable.Select(p => _nameOf(p)).Where(n => n != null && !ModManifests.IsHidden(n)).Distinct().Select(n => (n!, ObjectKinds.Of(n, false)))];
-            T.Chosen.RemoveAll(ModManifests.IsHidden);
+            if (T.Chosen.RemoveAll(ModManifests.IsHidden) > 0)
+            {
+                // What is chosen changed: shown again, and the tool told.
+                Dispatcher.UIThread.Post(Fill);
+                T.Notify();
+            }
         }
         return _creatable;
     }

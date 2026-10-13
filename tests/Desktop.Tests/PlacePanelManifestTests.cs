@@ -15,10 +15,16 @@ namespace TerrainEditor.Desktop.Tests;
 public sealed class PlacePanelManifestTests : IDisposable
 {
     private readonly bool _defaults = LocalGame.SearchDefaultPlaces;
+    private readonly string? _dataDir = AppSettings.DataDirOverride;
     private readonly string _dir = Path.Combine(Path.GetTempPath(), "vwe-placemanifest-" + Guid.NewGuid().ToString("N")[..8]);
     private readonly string _world = Fixtures.CopyFixture();
 
-    public PlacePanelManifestTests() => LocalGame.SearchDefaultPlaces = false;
+    public PlacePanelManifestTests()
+    {
+        LocalGame.SearchDefaultPlaces = false;
+        // The window's Place panel reads its memory from the data folder: one of the test's own.
+        AppSettings.DataDirOverride = Path.Combine(_dir, "data");
+    }
 
     /// <summary>
     /// Forgets the manifests, puts the default places' search back, and deletes the folders.
@@ -27,6 +33,7 @@ public sealed class PlacePanelManifestTests : IDisposable
     {
         ModManifests.Forget();
         LocalGame.SearchDefaultPlaces = _defaults;
+        AppSettings.DataDirOverride = _dataDir;
         foreach (string dir in (string[])[_dir, Path.GetDirectoryName(_world)!])
         {
             try

@@ -193,6 +193,11 @@ public sealed class InspectorPanel
                 Message?.Invoke("Type the name of the value to add (for example text for a sign).");
                 return;
             }
+            if (ReadOnlyKey(key))
+            {
+                Message?.Invoke($"{key} is shown only: the mod that keeps it says it must not be changed.");
+                return;
+            }
             Added.Add((Sections[Math.Max(0, AddSection.SelectedIndex)].Section, key, AddValue.Text ?? ""));
             AddKey.Text = AddValue.Text = "";
             Render();
@@ -855,6 +860,9 @@ public sealed class InspectorPanel
         return null;
     }
 
+    /// <summary>Whether a key typed to add (a name, or a hash as a number) is one a mod's manifest shows only.</summary>
+    private static bool ReadOnlyKey(string key) => ModManifests.DataOf(ZdoKeys.NameOf(ZdoKeys.Parse(key)) ?? key)?.ReadOnly == true;
+
     /// <summary>The changes made: values set (null: removed), and the contents when they changed.</summary>
     internal (List<FieldChange> Set, List<ItemUpload>? Inventory) Changes()
     {
@@ -870,7 +878,8 @@ public sealed class InspectorPanel
                 set.Add(new FieldChange(f.Section, f.Key.ToString(CultureInfo.InvariantCulture), f.Now));
             }
         }
-        foreach (var (section, key, value) in Added)
+        // A value a mod's manifest shows only is never set, by name or by number.
+        foreach (var (section, key, value) in Added.Where(a => !ReadOnlyKey(a.Key)))
         {
             set.Add(new FieldChange(section, key, value));
         }
