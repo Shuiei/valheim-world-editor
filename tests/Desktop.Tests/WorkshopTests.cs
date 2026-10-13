@@ -492,7 +492,10 @@ public class WorkshopTests
         Assert.Equal(Workshop.Ground + 6, w.PlaceTool.CutY);
         Assert.Equal("Cut at 6 m", w.CutText.Text);
         w.CutSlider.Value = 0;
+        Assert.Equal(Workshop.Ground, w.PlaceTool.CutY);
+        w.CutSlider.Value = MainWindow.CutOff;
         Assert.Null(w.PlaceTool.CutY);
+        Assert.Equal("Cut: off", w.CutText.Text);
         w.CutSlider.Value = 3;
         await w.LeaveWorkshop();
         Assert.False(w.CutBox.IsVisible);

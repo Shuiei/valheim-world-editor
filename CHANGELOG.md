@@ -7,6 +7,9 @@ the plugin is unchanged in versions without that part.
 ## v1.25.3 — unreleased
 
 ### Fixed
+- **The Cut sliders start at their right end, with no cut**: the Workshop's and the Dungeon tool's
+  started at the left end, where no cut was. Now the right end is off and the left end cuts at the
+  ground (the Workshop) or the floor (a dungeon), so sliding left takes away from the top down.
 - **A pasted town stands as it was copied**: copying a whole town and pasting it elsewhere left it
   half fallen down in game, its chests empty and trees growing through its floors.
   - Copy no longer takes the whole selection's ground, only the ground the buildings stand on (under

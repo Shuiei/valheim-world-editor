@@ -29,8 +29,10 @@ public sealed class DungeonPanel
     internal Button BuildHere { get; } = new() { Content = "Build here", FontSize = 12 };
     /// <summary>Build here was clicked: the window switches to building in the dungeon.</summary>
     public event Action? BuildAsked;
-    /// <summary>The roof cut, 0 (off) to 30 m above the floor of the dungeon's entrance.</summary>
-    internal Slider CutSlider { get; } = new() { Minimum = 0, Maximum = 30, Value = 0, SmallChange = 1, TickFrequency = 1, IsSnapToTickEnabled = true };
+    /// <summary>The roof cut, 0 to 30 m above the floor of the dungeon's entrance; the right end (<see cref="CutOff"/>) is off.</summary>
+    internal Slider CutSlider { get; } = new() { Minimum = 0, Maximum = CutOff, Value = CutOff, SmallChange = 1, TickFrequency = 1, IsSnapToTickEnabled = true };
+    /// <summary>The cut slider's right end: no cut, the roofs shown.</summary>
+    internal const double CutOff = 30;
     /// <summary>The cut slider's label.</summary>
     private readonly TextBlock _cutText = new() { FontSize = 12 };
     /// <summary>Filters the rooms by name.</summary>
@@ -155,7 +157,7 @@ public sealed class DungeonPanel
                 },
             },
         };
-        SetCut(0);
+        SetCut(CutOff);
     }
 
     /// <summary>The area's dungeons again (on entering the tool, and after an edit or undo).</summary>
@@ -233,7 +235,7 @@ public sealed class DungeonPanel
         }
         var p = d.Rooms.Count > 0 ? d.Rooms.Aggregate(System.Numerics.Vector3.Zero, (a, r) => a + r.Position) / d.Rooms.Count : d.Thing.Position;
         _view.Orbit(p.X, p.Z, 30, 55, 70, p.Y);
-        if (CutSlider.Value == 0)
+        if (CutSlider.Value >= CutOff)
         {
             CutSlider.Value = 4;
         }
@@ -242,14 +244,14 @@ public sealed class DungeonPanel
 
     /// <summary>
     /// Cuts the view's roofs away above a height: from about the floor of the dungeon's entrance (3 m under the
-    /// dungeon object); 0 metres: off.
+    /// dungeon object); <see cref="CutOff"/> metres: off.
     /// </summary>
     private void SetCut(double metres)
     {
         // From about the floor of the dungeon's entrance (3 m under the dungeon object, as in the game's caves).
-        float? y = metres > 0 && Tool.Dungeon is { } d ? d.Thing.Position.Y - 3 + (float)metres : null;
+        float? y = metres < CutOff && Tool.Dungeon is { } d ? d.Thing.Position.Y - 3 + (float)metres : null;
         _view.CutY = y;
-        _cutText.Text = metres > 0 ? $"Cut {metres:0} m above the floor" : "Cut: off (roofs shown)";
+        _cutText.Text = metres < CutOff ? $"Cut {metres:0} m above the floor" : "Cut: off (roofs shown)";
     }
 
     /// <summary>Leaving the tool: the cut off.</summary>
