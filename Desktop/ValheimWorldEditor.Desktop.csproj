@@ -20,7 +20,7 @@
     <Product>Valheim World Editor</Product>
     <AssemblyTitle>Valheim World Editor</AssemblyTitle>
     <Description>A world editor for Valheim: shape the ground, build, place and move objects, edit dungeons, offline or live.</Description>
-    <Company>Shuiei</Company>
+    <Company>Valheim World Editor</Company>
     <Authors>Thibault Bene</Authors>
     <Copyright>Copyright (c) 2026 Thibault Bene</Copyright>
   </PropertyGroup>
