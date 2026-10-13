@@ -1352,8 +1352,14 @@ public sealed class GameBundles
     }
 
     /// <summary>
+    /// Unity's crunched TextureFormats, DXT1Crunched and DXT5Crunched: read with <see cref="Crunch"/>, given as DXT1
+    /// and DXT5 levels.
+    /// </summary>
+    private const int Dxt1Crunched = 28, Dxt5Crunched = 29;
+
+    /// <summary>
     /// The largest mip level no wider or taller than maxSize (the smallest there is when none is). Null when the object
-    /// is not a Texture2D or its format is not one <c>FormatLayout</c> reads.
+    /// is not a Texture2D or its format is not one <c>FormatLayout</c> reads or a crunched one (DXT1 or DXT5 then).
     /// </summary>
     public TextureLevel? LoadTexture(Where at, int maxSize)
     {
@@ -1366,6 +1372,10 @@ public sealed class GameBundles
                     return null;
                 }
                 int format = t["m_TextureFormat"].AsInt, w = t["m_Width"].AsInt, h = t["m_Height"].AsInt, mips = Math.Max(1, t["m_MipCount"].AsInt);
+                if (format is Dxt1Crunched or Dxt5Crunched)
+                {
+                    return LoadCrunched(at.Bundle, t, maxSize);
+                }
                 if (FormatLayout(format).Bytes == 0 || w <= 0 || h <= 0)
                 {
                     return null;
@@ -1401,6 +1411,42 @@ public sealed class GameBundles
                 _fields.Clear();
             }
         }
+    }
+
+    /// <summary>
+    /// A crunched texture's level for <c>LoadTexture</c>: its data, whole, is one crn file holding every level; the
+    /// level is picked from the crn file's own size and levels and unpacked to DXT1 or DXT5 blocks. Null when the crn
+    /// file is broken, or made by a Unity older than 2017.3 (crunch's original format, not read).
+    /// </summary>
+    private TextureLevel? LoadCrunched(string bundle, AssetTypeValueField t, int maxSize)
+    {
+        byte[] crn = t["m_StreamData.size"].AsUInt > 0 ? StreamBytes(bundle, t["m_StreamData"]) : t["image data"].AsByteArray;
+        if (!UnityCrunchFormat(Open(bundle).Assets.file.Metadata.UnityVersion) || Crunch.Read(crn) is not { } info)
+        {
+            return null;
+        }
+        int w = info.Width, h = info.Height, level = 0;
+        while (level < info.Levels - 1 && Math.Max(w, h) > maxSize)
+        {
+            w = Math.Max(1, w / 2);
+            h = Math.Max(1, h / 2);
+            level++;
+        }
+        return Crunch.Unpack(crn, level) is { } blocks ? new TextureLevel(t["m_Name"].AsString, info.Dxt5 ? 12 : 10, w, h, blocks) : null;
+    }
+
+    /// <summary>
+    /// Whether a file of this Unity version crunches in Unity's format (2017.3 and later): true too when the version
+    /// is not given (stripped bundles say 0.0.0).
+    /// </summary>
+    internal static bool UnityCrunchFormat(string unityVersion)
+    {
+        string[] parts = unityVersion.Split('.');
+        if (parts.Length < 2 || !int.TryParse(parts[0], out int major) || !int.TryParse(parts[1], out int minor) || major == 0)
+        {
+            return true;
+        }
+        return major > 2017 || (major == 2017 && minor >= 3);
     }
 
     /// <summary>
