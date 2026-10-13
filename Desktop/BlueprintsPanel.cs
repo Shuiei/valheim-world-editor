@@ -405,14 +405,14 @@ public sealed class BlueprintsPanel
             return null;
         }
         Status = FindHomestead();
-        var json = CopyFormat.ToJson(clip);
+        var json = CopyFormat.ToJson(clip.WithoutBuilders());
         if (await Ask(Named(clip.Name ?? $"Blueprint {DateTime.Now:yyyy-MM-dd HH.mm}"), json) is not { } details)
         {
             return null;
         }
         string name = details.Name;
         clip.Name = name;
-        json = CopyFormat.ToJson(clip);
+        json = CopyFormat.ToJson(clip.WithoutBuilders());
         try
         {
             WriteHomestead(json, details, _scene()?.World?.Name);

@@ -1013,6 +1013,13 @@ public sealed partial class MainWindow : Window
         {
             return;
         }
+        // Past the open area the ground could not be shaped nor the site cleared: the building would stand
+        // on whatever is there, among the trees.
+        if (!View.Paste.Fits(at, s.Ground.W, s.Ground.H))
+        {
+            MessageText.Text = "Not pasted: it goes past the open area. Open a bigger area around the place (the map), then paste again.";
+            return;
+        }
         // The objects' heights come from the ground as the paste leaves it: the ground step fills the list,
         // which Commit reads after it (one undo step for both).
         var add = new List<(Editing.NewObject, bool)>();
@@ -2375,7 +2382,7 @@ public sealed partial class MainWindow : Window
         View.Paste.Changed += () =>
         {
             var c = View.Paste.Clip;
-            AreaPanel.ClipInfo.Text = c == null ? "Copies the ground (shape and paint) and the shown objects inside the selection."
+            AreaPanel.ClipInfo.Text = c == null ? "Copies the shown objects inside the selection, with the ground under their buildings."
                 : $"Clipboard{(c.Name != null ? $" ({c.Name})" : "")}: {c.W} × {c.H} m, {c.Objects.Count} object(s).";
         };
         AreaPanel.Confirm = text => Dialogs.Ask(this, "Reset zones", text, "Reset when saving");

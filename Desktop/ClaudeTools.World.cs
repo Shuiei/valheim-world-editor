@@ -342,7 +342,7 @@ public sealed partial class ClaudeTools
     /// step further), new independent objects as the Select tool's copy makes them.
     /// </summary>
     [McpServerTool(Name = "copy_objects", Title = "Copy objects")]
-    [Description("Copies objects of the open area (by id) as one group, as the editor's copy and paste does: shifted by dx, dy, dz metres and turned by turn degrees round one point (default: their middle), copies times in a row, each copy a step further (a row of houses, a fence, a ring of pillars with turn and a pivot). Copies are new objects of the same kinds, sizes and builder; what the originals hold (chest contents, text, portal tags) is not copied. ground: true keeps each copy as high above the ground as its original. Refused when a copy would leave the area. One pending step; the answer gives the new ids.")]
+    [Description("Copies objects of the open area (by id) as one group, as the editor's copy and paste does: shifted by dx, dy, dz metres and turned by turn degrees round one point (default: their middle), copies times in a row, each copy a step further (a row of houses, a fence, a ring of pillars with turn and a pivot). Copies are new objects of the same kinds and sizes, with all the originals hold (builder, chest contents, text, portal tags, health). ground: true keeps each copy as high above the ground as its original. Refused when a copy would leave the area. One pending step; the answer gives the new ids.")]
     public Task<string> CopyObjects(
         [Description("Their ids (list_objects, get_selection).")] int[] ids,
         [Description("Metres east of each copy from the one before (negative: west).")] float dx = 0,
@@ -390,10 +390,11 @@ public sealed partial class ClaudeTools
                     return $"Nothing copied: copy {k} of {i} ({_w.NameOfPrefab(t.Prefab)}) would be at ({cx:0.##}, {cz:0.##}), outside the area (x {minX} to {maxX}, z {minZ} to {maxZ}).";
                 }
                 float cy = t.Position.Y + dy * k + (ground ? GroundAt(scene, cx, cz) - GroundAt(scene, t.Position.X, t.Position.Z) : 0);
-                // As the Select tool's copy: what it was copied from (its kind's data, its builder), fresh.
+                // As the Select tool's copy: what it was copied from, with all it holds.
                 var added = t.Id < 0 ? s.Edits.FindAdded(t.Id) : null;
+                var data = scene.World != null && TerrainEditor.App.ObjectData.Bytes(scene.World, s.Edits, t.Id) is { } bytes ? TerrainEditor.App.ObjectData.Fields(bytes, builder: true) : added?.Data;
                 adds.Add((new Editing.NewObject(0, t.Prefab, new Vector3(cx, cy, cz), Wrapped(t.Rotation + new Vector3(0, turn * k, 0)), t.Scale,
-                    t.Id >= 0 ? t.Id : added?.SourceId, true, Data: added?.Data), t.Piece));
+                    t.Id >= 0 ? t.Id : added?.SourceId, true, Data: data), t.Piece));
                 from.Add(i);
             }
         }
