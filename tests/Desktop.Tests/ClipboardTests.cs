@@ -151,9 +151,10 @@ public class ClipboardTests
         w.KeyPress(Key.R, RawInputModifiers.None, PhysicalKey.R, "r");
         Assert.Equal(90, w.View.Paste.Turn);
         Assert.Contains("turned 90°", w.PastePanel.Info.Text);
+        int zones = s.Pending.Zones;
         w.PasteAt(new Vector2(90, 90));
-        // A tree alone: no ground goes with it.
-        Assert.Equal((0, 0, 1, 0), s.Pending);
+        // A tree alone: no ground goes with it (the zone pending is the mound's).
+        Assert.Equal((zones, 0, 1, 0), s.Pending);
         w.KeyPress(Key.Escape, RawInputModifiers.None, PhysicalKey.Escape, null);
         Assert.Equal(ToolMode.Area, w.View.Mode);
     }
