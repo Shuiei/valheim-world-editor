@@ -170,6 +170,7 @@ public class PlaceToolMouseTests
             v.Tool.LineShape = shape;
             v.Tool.Chosen.Clear();
             v.Tool.Chosen.Add("wood_wall_half");
+            v.Tool.AutoSnap();
             // A click without dragging explains how.
             v.Click(64, 64);
             Assert.StartsWith(shape == PlaceTool.LineShapes.Circle ? "Press at the centre" : "Press at a corner", v.Said);
