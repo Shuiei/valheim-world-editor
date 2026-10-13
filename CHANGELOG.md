@@ -4,6 +4,24 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.32.0 — unreleased
+
+### Added
+- **Unity's cylinder, sphere and capsule**: mods' pieces built from them (as from Unity's cube, quad and plane
+  already) are drawn.
+
+### Fixed
+- **Glass and other see-through materials are drawn see-through**, blended over what is behind them, instead of cut
+  out at half (which hid glass less than half opaque) or drawn opaque. Crystal windows are no longer invisible: the
+  game's own Crystal Wall 1x1 and the mods' glass using its crystal material (PressurePlate's Crystal Pressure Plate)
+  show, and nearly clear glass (VALKEA, CoreWoodExtras, MoreGatesExtended) shows as a tint. GlassPieces' glass is no
+  longer an opaque frosted pane. The game's own see-through materials (its ships' glass, gems, some ice) are drawn
+  see-through too; its other objects look as before. Building pictures blend them the same way.
+- Mods' materials keeping their texture under another name than `_MainTex` (`_Albedo`, `_BaseMap`...) are drawn
+  with it (VALKEA's dried grass).
+- Mods' sounds and effects (prefabs the game draws nothing of) are no longer offered in Place; those already in a
+  world still show.
+
 ## v1.31.0 — unreleased
 
 ### Added

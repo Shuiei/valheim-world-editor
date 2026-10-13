@@ -99,7 +99,11 @@ public sealed class ModelStoreTests : IDisposable
         Assert.True(mat.DoubleSided);
         Assert.Equal("t.png", mat.Map);
         Assert.Equal(new Vector4(2, 3, 0.1f, 0.2f), mat.UvTransform);
-        Assert.Equal(0.5f, store.Material("glass").Cutoff, 4);
+        // See-through: blended, not cut out.
+        var glass = store.Material("glass");
+        Assert.True(glass.Transparent);
+        Assert.Equal(0, glass.Cutoff);
+        Assert.False(mat.Transparent);
         var none = store.Material("unknown");
         Assert.Equal(Vector4.One, none.Color);
         Assert.Equal(0, none.Cutoff);

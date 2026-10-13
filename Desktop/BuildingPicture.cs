@@ -53,6 +53,10 @@ public static class BuildingPicture
         public Vector4 UvTransform;
         /// <summary>The alpha cutoff, 0 to 1: texels less opaque are not drawn (0: none).</summary>
         public float Cutoff;
+        /// <summary>
+        /// A see-through material's alpha (times its texture's), blended over what is drawn before it; 0: opaque.
+        /// </summary>
+        public float Alpha;
     }
 
     /// <summary>A PNG of the pieces, size × size pixels.</summary>
@@ -105,8 +109,15 @@ public static class BuildingPicture
             uint[] idx = mesh.Submeshes[part.Sub];
             Vector3 P(uint i) => Vector3.Transform(new Vector3(v[i * 8], v[i * 8 + 1], v[i * 8 + 2]), m);
             Vector2 U(uint i) => new(v[i * 8 + 6], v[i * 8 + 7]);
+            // A mesh wound both ways has each triangle twice: once is enough (no faces are culled here), and see-through
+            // twice would look twice as thick.
+            var once = new HashSet<(uint, uint, uint)>();
             for (int t = 0; t + 2 < idx.Length; t += 3)
             {
+                if (mesh.BothWays && !once.Add(Corners(idx[t], idx[t + 1], idx[t + 2])))
+                {
+                    continue;
+                }
                 tris.Add(new Tri
                 {
                     A = P(idx[t]),
@@ -119,11 +130,16 @@ public static class BuildingPicture
                     Texture = tex,
                     UvTransform = mat.UvTransform,
                     Cutoff = mat.Cutoff,
+                    Alpha = mat.Transparent ? mat.Color.W : 0,
                 });
             }
         }
         return tris.Count > before;
     }
+
+    /// <summary>A triangle's corners in order, whichever way it is wound.</summary>
+    private static (uint, uint, uint) Corners(uint a, uint b, uint c) =>
+        (Math.Min(a, Math.Min(b, c)), Math.Max(Math.Min(a, b), Math.Min(Math.Max(a, b), c)), Math.Max(a, Math.Max(b, c)));
 
     /// <summary>The piece's colliders as boxes in its material's colour (a stand-in box when the game has none).</summary>
     private static void AddBoxes(List<Tri> tris, Piece p)
@@ -184,7 +200,8 @@ public static class BuildingPicture
             Vector3 Screen(Vector3 c) => new(n / 2f + (c.X - mx) * scale, n / 2f - (c.Y - my) * scale, -c.Z);
             float[] depth = new float[n * n];
             Array.Fill(depth, float.MaxValue);
-            for (int i = 0; i < tris.Count; i++)
+            // Opaque triangles first, then the see-through ones over them.
+            foreach (int i in Enumerable.Range(0, tris.Count).OrderBy(i => tris[i].Alpha > 0))
             {
                 var t = tris[i];
                 var normal = Vector3.Cross(t.B - t.A, t.C - t.A);
@@ -212,7 +229,7 @@ public static class BuildingPicture
 
     /// <summary>
     /// Rasterises one triangle (screen space, z the depth) into the picture, with the depth test, the texture and
-    /// its cutoff, times the shade.
+    /// its cutoff, times the shade; a see-through one blended over what is there, leaving the depth as it is.
     /// </summary>
     private static void Fill(Vector3 a, Vector3 b, Vector3 c, Tri t, float shade, int n, float[] depth, byte[] rgba)
     {
@@ -246,6 +263,7 @@ public static class BuildingPicture
                     continue;
                 }
                 var colour = t.Colour;
+                float alpha = t.Alpha;
                 if (tex != null)
                 {
                     var uv = wa * t.Ua + wb * t.Ub + wc * t.Uc;
@@ -257,9 +275,26 @@ public static class BuildingPicture
                         continue;
                     }
                     colour = new Vector3(tex.Rgba[ti] * colour.X, tex.Rgba[ti + 1] * colour.Y, tex.Rgba[ti + 2] * colour.Z) / 255f;
+                    alpha *= tex.Rgba[ti + 3] / 255f;
+                }
+                colour *= shade;
+                if (t.Alpha > 0)
+                {
+                    // Over what is there (the background is clear): the alphas added up, the colours mixed by them.
+                    float below = rgba[at * 4 + 3] / 255f * (1 - alpha), total = alpha + below;
+                    if (total <= 0)
+                    {
+                        continue;
+                    }
+                    var under = new Vector3(rgba[at * 4], rgba[at * 4 + 1], rgba[at * 4 + 2]);
+                    colour = (colour * alpha + under * below) / total;
+                    rgba[at * 4] = (byte)Math.Clamp(colour.X, 0, 255);
+                    rgba[at * 4 + 1] = (byte)Math.Clamp(colour.Y, 0, 255);
+                    rgba[at * 4 + 2] = (byte)Math.Clamp(colour.Z, 0, 255);
+                    rgba[at * 4 + 3] = (byte)Math.Clamp(total * 255, 0, 255);
+                    continue;
                 }
                 depth[at] = z;
-                colour *= shade;
                 rgba[at * 4] = (byte)Math.Clamp(colour.X, 0, 255);
                 rgba[at * 4 + 1] = (byte)Math.Clamp(colour.Y, 0, 255);
                 rgba[at * 4 + 2] = (byte)Math.Clamp(colour.Z, 0, 255);

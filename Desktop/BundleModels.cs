@@ -129,7 +129,16 @@ internal sealed class BundleModels : ModelStore.ISource
         ["Cube"] = [0, 0, 0, 0.5f, 0.5f, 0.5f],
         ["Quad"] = [0, 0, 0, 0.5f, 0.5f, 0],
         ["Plane"] = [0, 0, 0, 5, 0, 5],
+        ["Cylinder"] = [0, 0, 0, 0.5f, 1, 0.5f],
+        ["Sphere"] = [0, 0, 0, 0.5f, 0.5f, 0.5f],
+        ["Capsule"] = [0, 0, 0, 0.5f, 1, 0.5f],
     };
+
+    /// <summary>How many sides the round primitives (cylinder, sphere, capsule) are made with around their axis.</summary>
+    private const int RoundSides = 24;
+
+    /// <summary>How many rings of quads make a hemisphere of the sphere or the capsule, pole to equator.</summary>
+    private const int HalfRings = 8;
 
     /// <summary>
     /// A part's mesh: of the meshes so named (the mods' bundles first, then the game's), one with the bounds the game
@@ -171,13 +180,18 @@ internal sealed class BundleModels : ModelStore.ISource
 
     /// <summary>
     /// One of Unity's own primitives (see <see cref="Primitives"/>) as GameBundles reads meshes: a box or a flat square,
-    /// each face with its own vertices, normal and uv (0 to 1), seen from both sides (its material may cull either).
+    /// each face with its own vertices, normal and uv (0 to 1), or a round one (see <see cref="RoundMesh"/>); seen from
+    /// both sides (its material may cull either).
     /// </summary>
     internal static GameBundles.Mesh? PrimitiveMesh(string name)
     {
         if (!Primitives.TryGetValue(name, out float[]? b))
         {
             return null;
+        }
+        if (name is "Cylinder" or "Sphere" or "Capsule")
+        {
+            return RoundMesh(name);
         }
         var pos = new List<float>();
         var nor = new List<float>();
@@ -211,6 +225,66 @@ internal sealed class BundleModels : ModelStore.ISource
         {
             // Flat: a quad (x, y) or a plane (x, z).
             Face(Vector3.Zero, new(e.X, 0, 0), e.Y > 0 ? new(0, e.Y, 0) : new(0, 0, e.Z));
+        }
+        return new GameBundles.Mesh(name, pos.Count / 3, [.. pos], [.. nor], [.. uv], [[.. idx]]);
+    }
+
+    /// <summary>
+    /// Unity's cylinder (radius 0.5, 2 high, with flat ends), sphere (radius 0.5) or capsule (radius 0.5, 2 high, round
+    /// ends), centred on the origin, upright: a profile (distance from the axis, height, and the normal's two parts)
+    /// turned about y in <see cref="RoundSides"/> steps, normals outward, u around (0 to 1) and v along the profile (0 to
+    /// 1, the ends' discs each 0 to 1 from rim to centre), each triangle wound both ways.
+    /// </summary>
+    private static GameBundles.Mesh RoundMesh(string name)
+    {
+        var pos = new List<float>();
+        var nor = new List<float>();
+        var uv = new List<float>();
+        var idx = new List<int>();
+        void Turn(IReadOnlyList<(float R, float Y, float Nr, float Ny)> profile)
+        {
+            int first = pos.Count / 3, rows = profile.Count;
+            for (int j = 0; j <= RoundSides; j++)
+            {
+                float a = 2 * MathF.PI * j / RoundSides, cos = MathF.Cos(a), sin = MathF.Sin(a);
+                for (int i = 0; i < rows; i++)
+                {
+                    var (r, y, nr, ny) = profile[i];
+                    pos.AddRange([r * cos, y, r * sin]);
+                    var n = Vector3.Normalize(new Vector3(nr * cos, ny, nr * sin));
+                    nor.AddRange([n.X, n.Y, n.Z]);
+                    uv.AddRange([(float)j / RoundSides, (float)i / (rows - 1)]);
+                }
+            }
+            for (int j = 0; j < RoundSides; j++)
+            {
+                for (int i = 0; i + 1 < rows; i++)
+                {
+                    int a = first + j * rows + i, b = a + rows;
+                    idx.AddRange([a, b, b + 1, a, b + 1, a + 1, a, b + 1, b, a, a + 1, b + 1]);
+                }
+            }
+        }
+        // A hemisphere's rings, from the equator (latitude 0) to the pole (90°) of the side the sign gives, the centre at
+        // that height.
+        IEnumerable<(float, float, float, float)> Half(float centre, int sign) => Enumerable.Range(0, HalfRings + 1).Select(k =>
+        {
+            float lat = sign * MathF.PI / 2 * k / HalfRings;
+            return (0.5f * MathF.Cos(lat), centre + 0.5f * MathF.Sin(lat), MathF.Cos(lat), MathF.Sin(lat));
+        });
+        switch (name)
+        {
+            case "Cylinder":
+                Turn([(0.5f, -1, 1, 0), (0.5f, 1, 1, 0)]);
+                Turn([(0.5f, 1, 0, 1), (0, 1, 0, 1)]);
+                Turn([(0.5f, -1, 0, -1), (0, -1, 0, -1)]);
+                break;
+            case "Sphere":
+                Turn([.. Half(0, -1).Reverse(), .. Half(0, 1).Skip(1)]);
+                break;
+            default:
+                Turn([.. Half(-0.5f, -1).Reverse(), .. Half(0.5f, 1)]);
+                break;
         }
         return new GameBundles.Mesh(name, pos.Count / 3, [.. pos], [.. nor], [.. uv], [[.. idx]]);
     }
@@ -288,7 +362,7 @@ internal sealed class BundleModels : ModelStore.ISource
     {
         if (id.StartsWith(Primitive))
         {
-            return PrimitiveMesh(id[1..]) is { } own ? ViewMesh(own) : null;
+            return PrimitiveMesh(id[1..]) is { } own ? ViewMesh(own) with { BothWays = true } : null;
         }
         if (Source(id) is not var (game, key) || GameBundles.Where.FromKey(key) is not { } at || game.LoadMesh(at) is not { } m)
         {
@@ -342,27 +416,53 @@ internal sealed class BundleModels : ModelStore.ISource
     }
 
     /// <summary>
-    /// As the exporter judged a material: Unity Standard-style blend modes (_Mode 1: cut out; 2, 3:
-    /// transparent, drawn cut out at half), vegetation always cut out and seen from both sides.
+    /// The least alpha a see-through material is drawn with, and refracting glass's: glass the game draws all but clear
+    /// still shows, as a tint; refracting glass tints what is behind it (by its colour and texture) instead of covering
+    /// it, whatever its colour's alpha.
+    /// </summary>
+    internal const float LeastAlpha = 0.3f;
+
+    /// <summary>
+    /// The names a material's main texture is kept under, in the order looked for: Unity Standard's, then those of other
+    /// shaders mods use (URP, HDRP, their own).
+    /// </summary>
+    internal static readonly string[] MainTextures = ["_MainTex", "_Albedo", "_BaseMap", "_BaseColorMap", "_MainTexture", "_Diffuse", "_BaseTexture"];
+
+    /// <summary>
+    /// How a material is drawn: cut out (Unity Standard's _Mode 1, cut-out shaders, vegetation, which is also seen from
+    /// both sides), see-through (Standard's fade and transparent modes, _Mode 2 and 3, and transparent, glass and
+    /// particle shaders: blended by an alpha no lower than <see cref="LeastAlpha"/>, that alpha for refracting glass
+    /// (a glass shader that distorts what is behind it)), else opaque. A _Mode 2 or 3 left on a shader that has no such
+    /// modes (the game's own pieces and rocks keep one) cuts out at half, as the exporter did.
     /// </summary>
     internal static ModelStore.MaterialData ViewMaterial(GameBundles.Material m)
     {
-        bool vegetation = m.Shader.Contains("Vegetation", StringComparison.Ordinal);
+        string shader = m.Shader;
+        bool vegetation = shader.Contains("Vegetation", StringComparison.Ordinal);
         float mode = m.Floats.GetValueOrDefault("_Mode", 0);
-        bool cut = mode == 1 || vegetation || m.Shader.Contains("Grass", StringComparison.Ordinal);
-        bool transparent = mode is 2 or 3 || m.Shader.Contains("transparent", StringComparison.OrdinalIgnoreCase);
-        float cutoff = cut ? (m.Floats.GetValueOrDefault("_Cutoff", 0.5f) is float c and not 0 ? MathF.Round(c, 3) : 0.5f) : transparent ? 0.5f : 0f;
+        bool cut = mode == 1 || vegetation || shader.Contains("Grass", StringComparison.Ordinal) || shader.Contains("Cutout", StringComparison.OrdinalIgnoreCase);
+        bool standard = shader.StartsWith("Standard", StringComparison.Ordinal) || shader.StartsWith("Autodesk Interactive", StringComparison.Ordinal);
+        bool glass = shader.Contains("Glass", StringComparison.OrdinalIgnoreCase);
+        bool seeThrough = !cut && (standard && mode is 2 or 3 || glass
+            || shader.Contains("transparent", StringComparison.OrdinalIgnoreCase) || shader.Contains("Particles", StringComparison.Ordinal));
+        bool halfCut = !cut && !seeThrough && mode is 2 or 3;
+        float cutoff = cut ? (m.Floats.GetValueOrDefault("_Cutoff", 0.5f) is float c and not 0 ? MathF.Round(c, 3) : 0.5f) : halfCut ? 0.5f : 0f;
         bool doubleSided = m.Floats.GetValueOrDefault("_Cull", 2) == 0 || vegetation;
         float[] col = m.Colors.GetValueOrDefault("_Color") ?? [1f, 1f, 1f, 1f];
-        var color = new Vector4(ModelStore.Linear(col[0]), ModelStore.Linear(col[1]), ModelStore.Linear(col[2]), col[3]);
+        float alpha = col[3];
+        if (seeThrough)
+        {
+            alpha = glass && shader.Contains("Distort", StringComparison.OrdinalIgnoreCase) ? LeastAlpha : Math.Max(alpha, LeastAlpha);
+        }
+        var color = new Vector4(ModelStore.Linear(col[0]), ModelStore.Linear(col[1]), ModelStore.Linear(col[2]), alpha);
         string? map = null;
         var uv = new Vector4(1, 1, 0, 0);
-        if (m.Textures.GetValueOrDefault("_MainTex") is { Texture: { } tex } main)
+        if (MainTextures.Select(m.Textures.GetValueOrDefault).FirstOrDefault(t => t?.Texture != null) is { Texture: { } tex } main)
         {
-            map = tex.Key + (cut || transparent ? "|cut" : "");
+            map = tex.Key + (cut || seeThrough || halfCut ? "|cut" : "");
             uv = new Vector4(main.ScaleX, main.ScaleY, main.OffsetX, main.OffsetY);
         }
-        return new ModelStore.MaterialData(color, map, cutoff, doubleSided, uv);
+        return new ModelStore.MaterialData(color, map, cutoff, doubleSided, uv, seeThrough);
     }
 
     /// <summary>
