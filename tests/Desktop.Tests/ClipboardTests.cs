@@ -41,31 +41,53 @@ public class ClipboardTests
         return a;
     }
 
-    [Fact]
-    public void CopyKeepsTheGroundsShapeAndTheObjects()
+    /// <summary>
+    /// Area() with a wall on the mound's top, beside the tree (thing 1).
+    /// </summary>
+    private static EditSession Walled()
     {
         var s = Area();
-        var c = CopyData.FromArea(Box(32, 32, 48, 48), s.Ground, s.Scene, [0], _ => "Beech1")!;
+        s.Scene.Things.Add(new WorldScene.Thing(2, StableHash.Of("woodwall"), new Vector3(8, H(s, 40, 40) + 1, 8), Vector3.Zero, 0, true));
+        return s;
+    }
+
+    // Copy takes the objects and the ground their buildings stand on: as it is under a piece and a metre
+    // around, fading out over three more; the rest of the selection's ground stays behind. A tree alone
+    // takes none. The Select tool's copy takes the same.
+    [Fact]
+    public void CopyTakesTheGroundUnderTheBuildingsOnly()
+    {
+        var s = Walled();
+        var c = CopyData.FromArea(Box(32, 32, 48, 48), s.Ground, s.Scene, [0, 1], n => n == Beech ? "Beech1" : "woodwall")!;
         Assert.Equal(19, c.W);
-        var o = Assert.Single(c.Objects);
-        Assert.Equal(new Vector2(0, 0), new Vector2(o.Dx, o.Dz));
-        Assert.Equal(1, o.SourceId);
-        // The middle is 3 m higher than the edges.
-        int mid = 9 * c.W + 9, edge = 9 * c.W + 1;
-        Assert.Equal(3, c.Rel[mid] - c.Rel[edge], 2);
-        Assert.True(float.IsNaN(c.Rel[0]));
+        Assert.Equal(2, c.Objects.Count);
+        var tree = c.Objects[0];
+        Assert.Equal(new Vector2(0, 0), new Vector2(tree.Dx, tree.Dz));
+        Assert.Equal(1, tree.SourceId);
+        int mid = 9 * c.W + 9;
+        Assert.Equal(1, c.Wt[mid]);
+        Assert.Equal(H(s, 40, 40) - H(s, 39, 40), c.Rel[mid] - c.Rel[mid - 1], 2);
+        Assert.InRange(c.Wt[9 * c.W + 13], 0.01f, 0.99f);
+        Assert.True(float.IsNaN(c.Rel[9 * c.W + 1]));
+        Assert.All(CopyData.FromArea(Box(32, 32, 48, 48), s.Ground, s.Scene, [0], _ => "Beech1")!.Rel, r => Assert.True(float.IsNaN(r)));
+
+        float ox = s.Scene.X0 * 64f - 32f, oz = s.Scene.Z0 * 64f - 32f;
+        var sel = CopyData.FromThings(s.Scene, [1], _ => "woodwall", (x, z) => H(s, (int)MathF.Round(x - ox), (int)MathF.Round(z - oz)))!;
+        Assert.Equal(1, sel.Wt[sel.W / 2 + sel.H / 2 * sel.W]);
+        Assert.True(float.IsNaN(sel.Rel[0]));
     }
 
     [Fact]
-    public void PastingPutsTheMoundAndTheTreeElsewhereInOneStep()
+    public void PastingPutsTheBuildingWithItsGroundElsewhereInOneStep()
     {
-        var s = Area();
-        var paste = new PasteTool { Clip = CopyData.FromArea(Box(32, 32, 48, 48), s.Ground, s.Scene, [0], _ => "Beech1") };
+        var s = Walled();
+        var paste = new PasteTool { Clip = CopyData.FromArea(Box(32, 32, 48, 48), s.Ground, s.Scene, [0, 1], n => n == Beech ? "Beech1" : "woodwall") };
         var add = new List<(Editing.NewObject, bool)>();
         var added = s.Commit("Paste", g => { var (t, r, a) = paste.Apply(g, new Vector2(90, 90)); add.AddRange(a); return (t, r); }, [], add);
-        // The shape is kept inside (the box's edge points get half: no soft edge).
-        Assert.Equal(H(s, 40, 40) - H(s, 36, 40), H(s, 90, 90) - H(s, 86, 90), 2);
-        var tree = s.Scene.Things[Assert.Single(added)];
+        // The ground under the wall is kept; further off, the flat ground stays.
+        Assert.Equal(H(s, 40, 40) - H(s, 38, 40), H(s, 90, 90) - H(s, 88, 90), 2);
+        Assert.Equal(30, H(s, 82, 90), 3);
+        var tree = s.Scene.Things[added[0]];
         Assert.Equal(new Vector2(90 - 32, 90 - 32), new Vector2(tree.Position.X, tree.Position.Z));
         // It stood on the mound's top; it still does (the paste is relative to the ground clicked).
         Assert.Equal(H(s, 90, 90), tree.Position.Y, 2);
@@ -130,7 +152,8 @@ public class ClipboardTests
         Assert.Equal(90, w.View.Paste.Turn);
         Assert.Contains("turned 90°", w.PastePanel.Info.Text);
         w.PasteAt(new Vector2(90, 90));
-        Assert.Equal((4, 0, 1, 0), (s.Pending.Zones > 0 ? 4 : 0, s.Pending.Deleted, s.Pending.Added, s.Pending.Resets));
+        // A tree alone: no ground goes with it.
+        Assert.Equal((0, 0, 1, 0), s.Pending);
         w.KeyPress(Key.Escape, RawInputModifiers.None, PhysicalKey.Escape, null);
         Assert.Equal(ToolMode.Area, w.View.Mode);
     }
@@ -258,8 +281,8 @@ public class ClipboardTests
         Assert.DoesNotContain(builder, kept);
     }
 
-    // The copied ground goes in whole, past the game's ±8 m (No limit off): a building copied on a
-    // 12 m mound stands on a 12 m mound.
+    // The copied ground goes in whole, past the game's ±8 m (No limit off): a wall copied on a 12 m
+    // mound's top stands on that top, more than 8 m above the flat ground it is pasted on.
     [Fact]
     public void TheCopiedGroundGoesPastTheGamesLimit()
     {
@@ -268,9 +291,11 @@ public class ClipboardTests
         s.Shape(40, 40, Formula.Compile("h * smooth(1 - d / r)", ["d", "r", "h"]), 8, 12, "mound");
         s.Ground.NoLimit = false;
         Assert.Equal(42, H(s, 40, 40), 1);
-        var paste = new PasteTool { Clip = CopyData.FromArea(Box(30, 30, 50, 50), s.Ground, s.Scene, [], _ => null) };
+        s.Scene.Things.Add(new WorldScene.Thing(1, StableHash.Of("woodwall"), new Vector3(8, 43, 8), Vector3.Zero, 0, true));
+        var paste = new PasteTool { Clip = CopyData.FromArea(Box(30, 30, 50, 50), s.Ground, s.Scene, [0], _ => "woodwall") };
         s.Commit("Paste", g => { var (t, r, _) = paste.Apply(g, new Vector2(90, 90)); return (t, r); }, [], []);
-        Assert.Equal(H(s, 40, 40) - H(s, 34, 40), H(s, 90, 90) - H(s, 84, 90), 1);
+        Assert.Equal(H(s, 40, 40) - H(s, 38, 40), H(s, 90, 90) - H(s, 88, 90), 1);
+        Assert.True(H(s, 90, 90) > 38.5f);
         Assert.False(s.Ground.NoLimit);
     }
 

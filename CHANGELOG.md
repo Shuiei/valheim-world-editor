@@ -9,11 +9,15 @@ the plugin is unchanged in versions without that part.
 ### Fixed
 - **A pasted town stands as it was copied**: copying a whole town and pasting it elsewhere left it
   half fallen down in game, its chests empty and trees growing through its floors.
+  - Copy no longer takes the whole selection's ground, only the ground the buildings stand on (under
+    each piece and a metre around, blended into the new place over three metres): the town sits in
+    the land where it is pasted, its foundations and cellars supported as they were. The Select
+    tool's copy takes the ground under its pieces too.
   - Pasted objects keep everything the originals held: chests their contents, signs their text,
     pieces their builder and health (a pasted chest was an empty chest). A copy saved as a
     blueprint keeps the contents, not the builder.
-  - The copied ground goes past the game's ±8 m when the new place needs it, so the pieces stand on
-    the ground they stood on; it stopped at 8 m and pieces left floating fell in game.
+  - That ground goes past the game's ±8 m when the new place needs it; it stopped at 8 m, and
+    pieces left floating fell in game.
   - **Clear the site** no longer digs where the copied ground is pasted (it dug trenches around
     foundations set into the ground), and ignores pieces hidden far underground (a mod's crafting
     stations 10 km down made it dig a 400 m pit).

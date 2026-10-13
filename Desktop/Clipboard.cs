@@ -8,7 +8,8 @@ namespace TerrainEditor.Desktop;
 /// <summary>
 /// What Copy keeps, like the web editor's clipboard (editor/area.js): the ground's shape relative to its
 /// average height (NaN: not copied), each point's weight (the soft edge), its paint (-1: not painted),
-/// the objects relative to the middle, and the outline. W × H grid points around the middle.
+/// the objects relative to the middle, and the outline. W × H grid points around the middle. The ground
+/// is only the buildings' (see Footprint): the rest of the land stays where it was copied from.
 /// </summary>
 public sealed class CopyData
 {
@@ -62,7 +63,71 @@ public sealed class CopyData
         Name = Name,
     };
 
-    /// <summary>The ground and the shown objects inside an Area selection; null without a selection.</summary>
+    /// <summary>
+    /// The ground a building stands on is copied with it: under each piece and this far (metres) around it, as it is,
+    /// so its foundations, cellar and floors stand on the ground they stood on...
+    /// </summary>
+    public const float Margin = 1f;
+
+    /// <summary>...then blending into the ground where it is pasted over this many metres.</summary>
+    public const float Blend = 3f;
+
+    /// <summary>
+    /// The place a building piece takes, from its colliders as the game has them: its rectangle in world x, z (turned
+    /// and scaled) and its bottom; null for what is not a building piece or has no colliders.
+    /// </summary>
+    /// <param name="prefab">Its prefab hash.</param>
+    /// <param name="position">Where it is.</param>
+    /// <param name="rotation">Its turn, Unity Euler degrees.</param>
+    /// <param name="scale">Its scale (0: its own).</param>
+    public static (float X0, float Z0, float X1, float Z1, float Bottom)? Extent(int prefab, Vector3 position, Vector3 rotation, float scale)
+    {
+        string? name = PrefabCatalog.NameOf(prefab);
+        if (name == null || !Workshop.Buildable(name))
+        {
+            return null;
+        }
+        var pts = Hammer.Outline(name, BlueprintFormats.FromEuler(rotation), scale > 0 ? scale : 1).ToList();
+        return pts.Count == 0 ? null
+            : (position.X + pts.Min(v => v.X), position.Z + pts.Min(v => v.Z), position.X + pts.Max(v => v.X), position.Z + pts.Max(v => v.Z), position.Y + pts.Min(v => v.Y));
+    }
+
+    /// <summary>
+    /// How much of the ground at each point of a w × h grid (world x0, z0 at its first point) goes with the building
+    /// pieces among the things: 1 under a piece and Margin around it, fading to 0 over Blend. Pieces hidden far below
+    /// the ground (PasteTool.HiddenDepth) take none.
+    /// </summary>
+    private static float[] Footprint(IEnumerable<WorldScene.Thing> things, int w, int h, float x0, float z0, Func<float, float, float> groundAt)
+    {
+        float[] foot = new float[w * h];
+        foreach (var t in things)
+        {
+            if (Extent(t.Prefab, t.Position, t.Rotation, t.Scale) is not var (ax, az, bx, bz, bottom)
+                || bottom < groundAt(t.Position.X, t.Position.Z) - PasteTool.HiddenDepth)
+            {
+                continue;
+            }
+            (ax, az, bx, bz) = (ax - Margin - x0, az - Margin - z0, bx + Margin - x0, bz + Margin - z0);
+            for (int gz = Math.Max(0, (int)MathF.Floor(az - Blend)); gz <= Math.Min(h - 1, (int)MathF.Ceiling(bz + Blend)); gz++)
+            {
+                for (int gx = Math.Max(0, (int)MathF.Floor(ax - Blend)); gx <= Math.Min(w - 1, (int)MathF.Ceiling(bx + Blend)); gx++)
+                {
+                    float dx = MathF.Max(0, MathF.Max(ax - gx, gx - bx)), dz = MathF.Max(0, MathF.Max(az - gz, gz - bz));
+                    float k = 1 - MathF.Sqrt(dx * dx + dz * dz) / Blend;
+                    if (k > foot[gz * w + gx])
+                    {
+                        foot[gz * w + gx] = k;
+                    }
+                }
+            }
+        }
+        return foot;
+    }
+
+    /// <summary>
+    /// The shown objects inside an Area selection, with the ground their buildings stand on (Footprint); null without
+    /// a selection.
+    /// </summary>
     /// <param name="area">The selection.</param>
     /// <param name="g">The ground.</param>
     /// <param name="s">The scene the objects are in.</param>
@@ -76,28 +141,36 @@ public sealed class CopyData
         }
         float reference = a.Cells.Average(c => g.HeightOf(c.G));
         int w = a.X1 - a.X0 + 1, h = a.Z1 - a.Z0 + 1;
+        float ox = s.X0 * 64f - 32f, oz = s.Z0 * 64f - 32f;
+        float[] foot = Footprint(objects.Select(i => s.Things[i]), w, h, ox + a.X0, oz + a.Z0,
+            (x, z) => g.HeightOf(Math.Clamp((int)MathF.Round(z - oz), 0, g.H - 1) * g.W + Math.Clamp((int)MathF.Round(x - ox), 0, g.W - 1)));
         float[] rel = [.. Enumerable.Repeat(float.NaN, w * h)];
         float[] wt = new float[w * h];
         float[] pnt = [.. Enumerable.Repeat(-1f, w * h * 4)];
         foreach (var (p, k) in a.Cells)
         {
             int gx = p % g.W, gz = p / g.W, i = (gz - a.Z0) * w + gx - a.X0;
+            if (foot[i] <= 0)
+            {
+                continue;
+            }
             rel[i] = g.HeightOf(p) - reference;
-            wt[i] = k;
+            wt[i] = k * foot[i];
             if (g.PMod[p] != 0)
             {
                 Array.Copy(g.Paint, p * 4, pnt, i * 4, 4);
             }
         }
-        float cx = (a.X0 + a.X1) / 2f, cz = (a.Z0 + a.Z1) / 2f, ox = s.X0 * 64f - 32f, oz = s.Z0 * 64f - 32f;
+        float cx = (a.X0 + a.X1) / 2f, cz = (a.Z0 + a.Z1) / 2f;
         var objs = objects.Select(i => s.Things[i]).Where(t => s.World == null || s.World.CanCreate(t.Prefab)).Select(t => new Obj(t.Prefab, nameOf(t.Prefab) ?? t.Prefab.ToString(),
             t.Position.X - ox - cx, t.Position.Z - oz - cz, t.Position.Y - reference, t.Rotation, t.Scale, SourceOf(s, t), Data: DataOf(s, t))).ToList();
         return new CopyData { W = w, H = h, Rel = rel, Wt = wt, Pnt = pnt, Objects = objs, Poly = [.. a.Poly.Select(p => p - new Vector2(cx, cz))] };
     }
 
     /// <summary>
-    /// Objects only (Select tool's copy): each keeps its height above the ground where it lands; building pieces keep
-    /// the building's shape instead. Null when none can be copied.
+    /// The Select tool's copy: trees and the like each keep their height above the ground where they land; building
+    /// pieces keep the building's shape instead, with the ground they stand on (Footprint, without paint). Null when
+    /// none can be copied.
     /// </summary>
     /// <param name="s">The scene the objects are in.</param>
     /// <param name="things">The objects, as indices into the scene's things.</param>
@@ -110,8 +183,17 @@ public sealed class CopyData
         {
             return null;
         }
-        float cx = list.Average(t => t.Position.X), cz = list.Average(t => t.Position.Z);
+        // The ground goes on whole metres: the grid around the pieces, its middle on a metre or half (none without pieces).
+        var ext = list.Select(t => Extent(t.Prefab, t.Position, t.Rotation, t.Scale)).OfType<(float X0, float Z0, float X1, float Z1, float Bottom)>().ToList();
+        float reach = Margin + Blend;
+        int bx0 = ext.Count == 0 ? 0 : (int)MathF.Floor(ext.Min(e => e.X0) - reach), bx1 = ext.Count == 0 ? 0 : (int)MathF.Ceiling(ext.Max(e => e.X1) + reach);
+        int bz0 = ext.Count == 0 ? 0 : (int)MathF.Floor(ext.Min(e => e.Z0) - reach), bz1 = ext.Count == 0 ? 0 : (int)MathF.Ceiling(ext.Max(e => e.Z1) + reach);
+        float cx = ext.Count == 0 ? list.Average(t => t.Position.X) : (bx0 + bx1) / 2f, cz = ext.Count == 0 ? list.Average(t => t.Position.Z) : (bz0 + bz1) / 2f;
         float x0 = list.Min(t => t.Position.X) - cx - 1, x1 = list.Max(t => t.Position.X) - cx + 1, z0 = list.Min(t => t.Position.Z) - cz - 1, z1 = list.Max(t => t.Position.Z) - cz + 1;
+        if (ext.Count > 0)
+        {
+            (x0, x1, z0, z1) = (MathF.Min(x0, bx0 - cx), MathF.Max(x1, bx1 - cx), MathF.Min(z0, bz0 - cz), MathF.Max(z1, bz1 - cz));
+        }
         // Trees, rocks and the like keep their height above the ground where each lands; building pieces
         // keep the building's shape: their height from the ground at the selection's middle (pieces
         // following the ground one by one would come apart on a slope).
@@ -122,13 +204,15 @@ public sealed class CopyData
             return new Obj(t.Prefab, nameOf(t.Prefab) ?? t.Prefab.ToString(), t.Position.X - cx, t.Position.Z - cz,
                 t.Position.Y - (piece ? mid : groundAt(t.Position.X, t.Position.Z)), t.Rotation, t.Scale, SourceOf(s, t), Follow: !piece, Data: DataOf(s, t));
         }).ToList();
+        int w = bx1 - bx0 + 1, h = bz1 - bz0 + 1;
+        float[] foot = ext.Count == 0 ? [0f] : Footprint(list, w, h, bx0, bz0, groundAt);
         return new CopyData
         {
-            W = 1,
-            H = 1,
-            Rel = [float.NaN],
-            Wt = new float[1],
-            Pnt = [-1f, -1, -1, -1],
+            W = w,
+            H = h,
+            Rel = [.. foot.Select((k, i) => k > 0 ? groundAt(bx0 + i % w, bz0 + i / w) - mid : float.NaN)],
+            Wt = foot,
+            Pnt = [.. Enumerable.Repeat(-1f, w * h * 4)],
             Objects = objs,
             Poly = [new(x0, z0), new(x1, z0), new(x1, z1), new(x0, z1)],
         };
@@ -463,23 +547,13 @@ public sealed class PasteTool
         var to = new Dictionary<(int, int), float>();
         foreach (var (o, _) in placed)
         {
-            string? name = PrefabCatalog.NameOf(o.Prefab);
-            if (name == null || !Workshop.Buildable(name))
+            if (CopyData.Extent(o.Prefab, o.Position, o.Rotation, o.Scale) is not var (ax, az, bx, bz, bottom)
+                || bottom < g.HeightOf(Index(g, new Vector2(o.Position.X - ox, o.Position.Z - oz))) - HiddenDepth)
             {
                 continue;
             }
-            var pts = Hammer.Outline(name, TerrainEditor.App.BlueprintFormats.FromEuler(o.Rotation), o.Scale > 0 ? o.Scale : 1).ToList();
-            if (pts.Count == 0)
-            {
-                continue;
-            }
-            float bottom = o.Position.Y + pts.Min(v => v.Y);
-            if (bottom < g.HeightOf(Index(g, new Vector2(o.Position.X - ox, o.Position.Z - oz))) - HiddenDepth)
-            {
-                continue;
-            }
-            int x0 = (int)MathF.Floor(o.Position.X - ox + pts.Min(v => v.X)) - 1, x1 = (int)MathF.Ceiling(o.Position.X - ox + pts.Max(v => v.X)) + 1;
-            int z0 = (int)MathF.Floor(o.Position.Z - oz + pts.Min(v => v.Z)) - 1, z1 = (int)MathF.Ceiling(o.Position.Z - oz + pts.Max(v => v.Z)) + 1;
+            int x0 = (int)MathF.Floor(ax - ox) - 1, x1 = (int)MathF.Ceiling(bx - ox) + 1;
+            int z0 = (int)MathF.Floor(az - oz) - 1, z1 = (int)MathF.Ceiling(bz - oz) + 1;
             for (int gz = Math.Max(1, z0); gz <= Math.Min(g.H - 2, z1); gz++)
             {
                 for (int gx = Math.Max(1, x0); gx <= Math.Min(g.W - 2, x1); gx++)
