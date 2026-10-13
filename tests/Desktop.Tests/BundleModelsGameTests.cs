@@ -19,7 +19,7 @@ public class BundleModelsGameTests
     private const int Rgba32 = 4;
 
     /// <summary>
-    /// A game with networked objects of every kind, a model with a mesh, a material and a texture.
+    /// A game with networked objects of every kind, a location, a model with a mesh, a material and a texture.
     /// </summary>
     private static TestGame Game(out long mesh, out long material, out long texture)
     {
@@ -57,6 +57,17 @@ public class BundleModelsGameTests
         b.Prefab("vwe_test_ragdoll", Net);
         b.Prefab("Runestone_vwe_test");
         b.Prefab("vwe_test_rock");
+        // A location: its own rocks, and a chest saved as an object of its own.
+        b.Prefab("vwe_test_camp", r =>
+        {
+            r.Mono("Location", new Fields { ["m_exteriorRadius"] = 10.0 });
+            r.Child("rocks", c => c.Renderer(Fields.Ref(m), [Fields.Ref(mat)]));
+            r.Child("chest", c =>
+            {
+                Net(c);
+                c.Renderer(Fields.Ref(m), [Fields.Ref(mat)]);
+            });
+        });
         game.Save();
         (mesh, material, texture) = (m, mat, t);
         return game;
@@ -75,6 +86,8 @@ public class BundleModelsGameTests
         Assert.Null(Name("vwe_test_coin"));
         Assert.Null(Name("vwe_test_ragdoll"));
         Assert.Equal("Runestone_vwe_test", Name("Runestone_vwe_test"));
+        // Locations are, for their parts the game makes again from a location proxy.
+        Assert.Equal("vwe_test_camp", Name("vwe_test_camp"));
         // Not networked, or not in the game.
         Assert.Null(Name("vwe_test_rock"));
         Assert.Null(Name("vwe_test_nothing"));
@@ -95,6 +108,8 @@ public class BundleModelsGameTests
         Assert.Equal(new Vector3(0, 1, 0), Vector3.Transform(Vector3.Zero, part.Matrix));
         Assert.Equal(Vector3.One, model.RootScale);
         Assert.Null(models.Model("vwe_test_nothing"));
+        // A location is read as a room: without its saved objects (the chest), drawn as objects of their own.
+        Assert.Single(models.Model("vwe_test_camp")!.Parts);
 
         // z mirrored, an up normal (the mesh has none).
         var m = models.Mesh($"models:{mesh}")!;
