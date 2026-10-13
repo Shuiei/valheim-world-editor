@@ -570,8 +570,10 @@ public sealed class PlacePanel
     /// <summary>all / none: tick or untick every kind of the row (those this world can place).</summary>
     private void TickRow(IEnumerable<string> names, bool on)
     {
+        // With no world open, every kind (nothing to check them against).
         var known = Creatable().Select(c => c.Name).ToHashSet();
-        foreach (string? n in names.Where(n => known.Count == 0 || known.Contains(n)).ToList())
+        bool open = _scene()?.World != null;
+        foreach (string? n in names.Where(n => !open || known.Contains(n)).ToList())
         {
             if (on && !T.Chosen.Contains(n))
             {
@@ -588,6 +590,11 @@ public sealed class PlacePanel
     /// <summary>A kind chosen from a chip or the world: add (or take away if ticked), or place only it.</summary>
     internal void Choose(string name, bool add)
     {
+        // Not a kind no longer offered (a chip shown before the mods' manifests or catalogue changed).
+        if (_scene()?.World != null && NotOffered(name))
+        {
+            return;
+        }
         if (!add)
         {
             T.Chosen.Clear();
@@ -608,11 +615,13 @@ public sealed class PlacePanel
     /// </summary>
     private void RenderChips()
     {
+        // With no world open, every kind (nothing to check them against).
         var known = Creatable().Select(c => c.Name).ToHashSet();
+        bool open = _scene()?.World != null;
         foreach (var (panel, list, box) in new[] { (Favourites, Memory.Favourites, _favBox), (Recent, RecentShown(), _recentBox) })
         {
             panel.Children.Clear();
-            foreach (string? n in list.Where(n => known.Count == 0 || known.Contains(n)))
+            foreach (string? n in list.Where(n => !open || known.Contains(n)))
             {
                 var b = new ToggleButton { Content = Plain(n), Tag = n, IsChecked = T.Chosen.Contains(n), FontSize = 11, Padding = new Thickness(8, 3) }.Tip(ReferenceEquals(panel, Favourites) ? "place.favourite" : "place.recent");
                 b.AddHandler(Avalonia.Input.InputElement.PointerPressedEvent, (_, e) => _shiftPress = e.KeyModifiers.HasFlag(Avalonia.Input.KeyModifiers.Shift), Avalonia.Interactivity.RoutingStrategies.Tunnel, handledEventsToo: true);
@@ -665,6 +674,8 @@ public sealed class PlacePanel
                 Dispatcher.UIThread.Post(Fill);
                 T.Notify();
             }
+            // The chips show only what is offered.
+            Dispatcher.UIThread.Post(RenderChips);
         }
         return _creatable;
     }

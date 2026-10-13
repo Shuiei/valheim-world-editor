@@ -130,7 +130,8 @@ public static class BuildingPicture
                     Texture = tex,
                     UvTransform = mat.UvTransform,
                     Cutoff = mat.Cutoff,
-                    Alpha = mat.Transparent ? mat.Color.W : 0,
+                    // As the view draws it: never fully clear (a material file may say 0).
+                    Alpha = mat.Transparent ? Math.Max(mat.Color.W, BundleModels.LeastAlpha) : 0,
                 });
             }
         }
