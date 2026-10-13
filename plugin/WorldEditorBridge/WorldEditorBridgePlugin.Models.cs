@@ -108,10 +108,9 @@ public sealed partial class WorldEditorBridgePlugin
                     {
                         part.Append(",\"tex\":").Append(Json(tex.name));
                     }
-                    if (mat.HasProperty("_Color"))
+                    if (mat.HasProperty("_Color") && mat.GetColor("_Color") is var colour && Finite(colour.r) && Finite(colour.g) && Finite(colour.b) && Finite(colour.a))
                     {
-                        Color c = mat.GetColor("_Color");
-                        part.Append($",\"col\":[{R6(c.r)},{R6(c.g)},{R6(c.b)},{R6(c.a)}]");
+                        part.Append($",\"col\":[{R6(colour.r)},{R6(colour.g)},{R6(colour.b)},{R6(colour.a)}]");
                     }
                 }
                 parts.Add(part.Append($",\"m\":[{matrix}]}}").ToString());
