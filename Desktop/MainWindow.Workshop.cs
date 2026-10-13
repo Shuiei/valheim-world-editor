@@ -16,9 +16,13 @@ public partial class MainWindow
 {
     /// <summary>
     /// The cut: the building seen from a height (1 m steps, a half wall's height), to build inside it. 0..40 m above
-    /// the plot; 0 is off.
+    /// the plot, 0 the ground; the right end (<see cref="CutOff"/>) is off.
     /// </summary>
-    internal Slider CutSlider { get; } = new() { Minimum = 0, Maximum = 40, SmallChange = 1, LargeChange = 2, TickFrequency = 1, IsSnapToTickEnabled = true, Width = 120, VerticalAlignment = VerticalAlignment.Center };
+    internal Slider CutSlider { get; } = new() { Minimum = 0, Maximum = CutOff, Value = CutOff, SmallChange = 1, LargeChange = 2, TickFrequency = 1, IsSnapToTickEnabled = true, Width = 120, VerticalAlignment = VerticalAlignment.Center };
+    /// <summary>
+    /// The cut slider's right end: no cut.
+    /// </summary>
+    internal const double CutOff = 40;
     /// <summary>
     /// The cut's height, or that it is off.
     /// </summary>
@@ -611,7 +615,7 @@ public partial class MainWindow
         View.SetOverlay(Overlays.Layer.Borders, false);
         View.ShowNewMarkers = false;
         CutBox.IsVisible = true;
-        CutSlider.Value = 0;
+        CutSlider.Value = CutOff;
         // Solid pieces (the View panel and its See-through switch are away).
         View.SeeThroughBuildings = false;
         ShowRight(null);
@@ -634,7 +638,7 @@ public partial class MainWindow
         Tools.SetWorkshop(false);
         View.SetOverlay(Overlays.Layer.Borders, k.Borders);
         CutBox.IsVisible = false;
-        CutSlider.Value = 0;
+        CutSlider.Value = CutOff;
         View.ShowNewMarkers = UnsavedBox.IsChecked == true;
         View.SeeThroughBuildings = SeeThroughBox.IsChecked == true;
         ViewButton.IsVisible = true;
@@ -644,15 +648,15 @@ public partial class MainWindow
     }
 
     /// <summary>
-    /// The cut at so many metres above the plot (0: none): nothing drawn above it, and the cursor goes through what it
-    /// hides.
+    /// The cut at so many metres above the plot (0: the ground; <see cref="CutOff"/>: none): nothing drawn above it,
+    /// and the cursor goes through what it hides.
     /// </summary>
     private void SetCut(float metres)
     {
-        float? y = metres > 0 ? Workshop.Ground + metres : null;
+        float? y = metres < CutOff ? Workshop.Ground + metres : null;
         View.CutY = y;
         PlaceTool.CutY = y;
-        CutText.Text = metres > 0 ? $"Cut at {metres:0} m" : "Cut: off";
+        CutText.Text = metres < CutOff ? $"Cut at {metres:0} m" : "Cut: off";
         PlaceInput.Refresh();
     }
 }

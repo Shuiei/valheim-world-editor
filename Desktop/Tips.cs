@@ -418,7 +418,7 @@ public static class Tips
         ["build.search"] = "Find a piece by its name in every tab (wall, roof, stone floor…).",
         ["build.snap"] = "On: as the game's hammer, the piece moves so its nearest snap point meets one of a piece already there (within half a metre). Off: it stays where it touches what you point at (the game's Alt).",
         ["build.grid"] = "Where you point at the ground is rounded to this grid (from the middle of the plot) before the piece is put there; pieces pointed at are not. Off: as in the game.",
-        ["workshop.cut"] = "See the building from a height: nothing above it is shown (metres above the plot), and you can point at what is inside, to build there. Left: off.",
+        ["workshop.cut"] = "See the building from a height: nothing above it is shown (metres above the plot), and you can point at what is inside, to build there. Right end: off; left end: the ground.",
         ["paste.clearSite"] = "Where a pasted building (its pieces) stands: the ground in its way, a mountain, a mound, is dug down to its lowest piece, a metre around it too; never raised, nor dug where the copied ground is pasted. Trees, rocks, bushes and pickables there are taken away. One undo step with the paste.",
         ["history.earlier"] = "Made in an earlier session of the editor: the history is kept with the world after each save or Apply live, and comes back when you open it again. When the world may have changed since (live, or saved by the game), you are asked once before undoing or redoing these steps.",
         ["tools.blueprints"] = "Your blueprints (Homestead's, the Workshop's): paste one into this area.",
