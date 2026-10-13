@@ -15,7 +15,7 @@ replaced. Tests from that time check that what it did still works (`KeysAndMouse
 |---|---|---|
 | `Core/ValheimWorldEditor.Core.csproj` | `TerrainEditor.App`, `.Save`, `.Editing`, `.Terrain`, `ValheimGen` | Everything that is not the window: reading and writing saves, pending changes, the world generator, live mode's client, the game data read from Valheim, settings, blueprints, SSH. No Avalonia. |
 | `Desktop/ValheimWorldEditor.Desktop.csproj` | `TerrainEditor.Desktop` | The program, `ValheimWorldEditor`: the Avalonia window, the pages, the 3D view and the map (OpenGL through Silk.NET), the tools and panels, the Script tool (Roslyn), the Claude MCP server (ASP.NET Core). |
-| `plugin/WorldEditorBridge/` | `WorldEditorBridge` | The BepInEx plugin for live mode: one file, `WorldEditorBridgePlugin.cs`, .NET Framework 4.7.2, inside the game. It shares no code with the editor, only a byte format and `VERSION`. |
+| `plugin/WorldEditorBridge/` | `WorldEditorBridge` | The BepInEx plugin for live mode: `WorldEditorBridgePlugin.cs` (and `WorldEditorBridgePlugin.Catalogue.cs` for `GET /catalogue`), .NET Framework 4.7.2, inside the game. It shares no code with the editor, only a byte format and `VERSION`. |
 | `tests/Core.Tests/` | `WorldEditor.Tests` | Core's tests (xUnit v3), laid out like `Core/`. |
 | `tests/Desktop.Tests/` | `TerrainEditor.Desktop.Tests` | The app's tests, xUnit v3 with Avalonia's headless mode, laid out like `Desktop/`. |
 | `tests/Support/` | `WorldEditor.Tests` | Helpers compiled into both test projects: the test world, the fixtures, a stand-in game. |
@@ -143,6 +143,11 @@ no data tables. Everything is read at run time from the player's install:
   Most are read in one pass over the bundles (`GameCatalogues.ReadAtStart`, the `AtStart` list); the
   others have their own reader.
 - Without them no world or Workshop opens (`WorldSession.NeedGame`, `GameData.Missing`).
+- Mods' prefabs are not in the game's files: `Core/App/ModCatalogue.cs` keeps those a live game
+  reported (`GET /catalogue`, `mod-catalogue.json` in the data folder), and `GameData` lays them
+  over `prefabs`, `pieces` and `piece-cost` each time it uses those kinds (the game's own entries
+  win; entries not in the editor's format are left out, and should the merged data still fail, the
+  game's own is used alone). `GameData.AddMods` takes a new report and uses the kinds again.
 - The tests run without Valheim on trimmed copies in `tests/fixtures/<kind>.json`
   (`GameData.UseCopies`; the driver's `gamedata <folder>`), made again after a game update with
   `ValheimWorldEditor --export-test-data tests/fixtures`. Those copies are the game's data:
@@ -201,7 +206,7 @@ token in the `X-Bridge-Token` header. For a dedicated server the editor opens it
 
 | Side | Owns |
 |---|---|
-| Plugin, `plugin/WorldEditorBridge/WorldEditorBridgePlugin.cs` | Listening, the token, refusing when the game does not host the world (409) or has no world (503). Every request is queued and run on Unity's main thread (`OnMainThread`, a few per frame in `Update`); a job the caller gave up on never runs later. Creating and destroying ZDOs, terrain, zone resets, in the game. |
+| Plugin, `plugin/WorldEditorBridge/WorldEditorBridgePlugin.cs` (and `.Catalogue.cs`, `GET /catalogue`) | Listening, the token, refusing when the game does not host the world (409) or has no world (503). Every request is queued and run on Unity's main thread (`OnMainThread`, a few per frame in `Update`); a job the caller gave up on never runs later. Creating and destroying ZDOs, terrain, zone resets, in the game. |
 | Editor, `Core/Save/LiveBridge.cs` | The HTTP client: one method per endpoint. |
 | Editor, `Core/Save/LiveSync.cs` | What the game already has: which world objects are destroyed there, and the live ZDOID of each object the editor created. Each apply sends only the difference, so undo after apply works (a deleted object comes back from its snapshot bytes; a placed one is destroyed). |
 | Editor, `Desktop/WorldSession.cs` | `ApplyLive` (one at a time: ground, then objects, then resets, after which the world is read again), and following the game (`FetchGame` off the window's thread, `MergeGame` on it). |
@@ -216,6 +221,7 @@ The endpoints (the plugin's header comment lists them with their byte layouts):
 | `POST /objects` | Objects to destroy (ZDOID) and to create (save bytes); answers the new ZDOIDs, and how many were refound at their place after another mod made them again. |
 | `POST /zones/reset` | Zones to generate again. |
 | `POST /watch`, `POST /zone` | One digest per zone; the objects of the zones whose digest changed (the editor asks every 2 s). |
+| `GET /catalogue` | JSON: every prefab with a ZNetView the game knows, mods' too, in GameData's formats (prefabs, pieces, piece-cost) and the mod of each (Jötunn's `ModQuery`, when installed). `WorldSession.OpenLive` hands it to `GameData.AddMods`; `ModCatalogue` keeps the ones that are not the game's own in `mod-catalogue.json` (data folder) and lays them over the game's data (the game's entries win). |
 
 Changing the protocol means changing both sides in one pull request, under one `VERSION`. An
 editor meets older plugins in the wild: a missing endpoint answers 404, and the editor says the

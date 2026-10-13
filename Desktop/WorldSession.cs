@@ -156,9 +156,28 @@ public sealed class WorldSession : IDisposable
     public static async Task<WorldSession> OpenLive(LiveBridge live, string label)
     {
         await Task.Run(NeedGame);
+        await LearnMods(live);
         var world = await live.LoadWorld();
         WorldSave.Builder = Builders.Default(world);
         return From(world, live, label);
+    }
+
+    /// <summary>
+    /// Learns the prefabs the game's mods add (GET /catalogue), before the world is read so its objects get their
+    /// names. A plugin too old to tell, or a report that cannot be read, leaves what is known as it is.
+    /// </summary>
+    private static async Task LearnMods(LiveBridge live)
+    {
+        try
+        {
+            string report = await live.Catalogue();
+            int mods = await Task.Run(() => GameData.AddMods(report));
+            Console.WriteLine($"mod catalogue: the game has {mods} mod prefabs ({ModCatalogue.Count} known in all).");
+        }
+        catch (Exception e) when (e is InvalidOperationException or HttpRequestException or TaskCanceledException or System.Text.Json.JsonException or IOException or UnauthorizedAccessException)
+        {
+            Console.WriteLine($"mod catalogue: not read from the game ({e.Message}).");
+        }
     }
 
     /// <summary>
