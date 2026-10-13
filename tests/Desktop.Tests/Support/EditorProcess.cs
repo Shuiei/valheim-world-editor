@@ -9,7 +9,7 @@ namespace TerrainEditor.Desktop.Tests;
 /// The real editor, drawing with OpenGL: one editor process for the whole group (started once, driven with --driver
 /// commands), each test opening a fresh copy of the test world. Needs a display (and a graphics card or Mesa's software
 /// renderer); without one the tests skip. Its settings and memory go to a test folder (--data), never the user's. Run
-/// only these: --filter Category=Visual; skip them: --filter Category!=Visual.
+/// only these: --filter-trait Category=Visual; skip them: --filter-not-trait Category=Visual.
 /// </summary>
 public class EditorProcess : IDisposable
 {

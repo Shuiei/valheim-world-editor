@@ -5,7 +5,7 @@ namespace WorldEditor.Tests;
 
 /// <summary>
 /// The game's own files read on a computer with Valheim (skipped elsewhere, as in CI): the terrain and the map. Run
-/// alone: dotnet test tests/Core.Tests --filter Category=Game
+/// alone: dotnet test --project tests/Core.Tests --filter-trait Category=Game
 /// </summary>
 [Trait("Category", "Game")]
 public class GameFilesTests
