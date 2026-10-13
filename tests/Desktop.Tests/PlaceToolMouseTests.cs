@@ -70,6 +70,9 @@ public class PlaceToolMouseTests
         w.View.SetCamera(new Vector3(0, 150, 1), Vector3.Zero, 1.6f);
         w.PlaceTool.Chosen.Clear();
         w.PlaceTool.Chosen.Add("Beech1");
+        // The window's Place panel took the kinds remembered by earlier tests (pieces from the Workshop turn
+        // One at a time and End to end on): set again for the kinds chosen here, as choosing them in the panel does.
+        w.PlaceTool.AutoSnap();
         w.PlaceTool.Mode = mode;
         var v = new View(w, s, new Avalonia.Size(1600, 1000));
         w.PlaceInput.Message += t => v.Said = t;
@@ -167,6 +170,7 @@ public class PlaceToolMouseTests
             v.Tool.LineShape = shape;
             v.Tool.Chosen.Clear();
             v.Tool.Chosen.Add("wood_wall_half");
+            v.Tool.AutoSnap();
             // A click without dragging explains how.
             v.Click(64, 64);
             Assert.StartsWith(shape == PlaceTool.LineShapes.Circle ? "Press at the centre" : "Press at a corner", v.Said);

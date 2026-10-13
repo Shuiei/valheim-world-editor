@@ -137,6 +137,9 @@ public class TipsTests
         w.Tools.ChooseMode(ToolMode.Place);
         w.PlaceTool.Chosen.Clear();
         w.PlaceTool.Chosen.AddRange(["Beech1", "woodwall"]);
+        // The window's Place panel took the kinds remembered by earlier tests (pieces from the Workshop turn
+        // One at a time and End to end on): set again for the kinds chosen here, as choosing them in the panel does.
+        w.PlaceTool.AutoSnap();
         foreach (var m in Enum.GetValues<PlaceTool.Modes>())
         {
             Click(w.PlacePanel.ModeButtons[m]);

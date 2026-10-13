@@ -108,6 +108,9 @@ public class SelectAndPlaceInputTests
         w.View.SetCamera(new Vector3(0, 150, 1), Vector3.Zero, 1.6f);
         w.PlaceTool.Chosen.Clear();
         w.PlaceTool.Chosen.Add("Beech1");
+        // The window's Place panel took the kinds remembered by earlier tests (pieces from the Workshop turn
+        // One at a time and End to end on): set again for the kinds chosen here, as choosing them in the panel does.
+        w.PlaceTool.AutoSnap();
         w.PlaceTool.Brush.Radius = 12;
         w.PlaceTool.Density = 5;
         var size = new Avalonia.Size(1600, 1000);
