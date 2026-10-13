@@ -102,6 +102,7 @@ public class GameBundlesFilesTests
             r.Missing(999);
         });
         b.Prefab("Stone");
+        b.Prefab("Ruin", r => r.Mono("Location", new Fields { ["m_exteriorRadius"] = 12.0 }));
         // A bundle whose objects' fields are not described (no type trees): its table of contents neither, so its
         // prefab is not found; read first (its name comes first), so no other bundle's type tree stands in.
         var bare = game.Bundle("bare", typeTrees: false);
@@ -117,12 +118,13 @@ public class GameBundlesFilesTests
         Assert.Equal(new GameBundles.Kind(true, true, false), bundles.KindOf("Wolf"));
         Assert.Equal(new GameBundles.Kind(true, false, true), bundles.KindOf("Coin"));
         Assert.Equal(new GameBundles.Kind(false, false, false), bundles.KindOf("Stone"));
+        Assert.Equal(new GameBundles.Kind(false, false, false, Location: true), bundles.KindOf("Ruin"));
         // Asked again: the same answer, kept.
         Assert.Same(bundles.KindOf("Wolf"), bundles.KindOf("Wolf"));
         Assert.Null(bundles.KindOf("Nothing"));
         Assert.Null(bundles.KindOf("Bare"));
         Assert.Empty(bundles.MonoBehaviours("bare"));
-        Assert.Equal(4, bundles.MonoBehaviours("things").Count);
+        Assert.Equal(5, bundles.MonoBehaviours("things").Count);
     }
 
     /// <summary>
