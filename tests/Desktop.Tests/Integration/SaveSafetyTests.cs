@@ -105,7 +105,12 @@ public class SaveSafetyTests
         s.Shape(32, 32, Two, 3, 0, "raise");
         game.HoldTerrain = new(TaskCreationOptions.RunContinuationsAsynchronously);
         var applying = s.ApplyLive();
-        await game.TerrainArrived.Task;
+        // An Apply that fails before the ground reaches the game fails the test (with its message) instead of
+        // waiting for ground that never comes.
+        if (await Task.WhenAny(game.TerrainArrived.Task, applying) == applying)
+        {
+            Assert.Fail("The Apply ended before the ground reached the game: " + (await applying).Message);
+        }
         s.Shape(34, 34, Two, 3, 0, "raise");
         game.HoldTerrain.SetResult();
         var o = await applying;
