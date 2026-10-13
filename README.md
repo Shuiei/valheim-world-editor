@@ -360,12 +360,13 @@ dotnet publish Desktop/ValheimWorldEditor.Desktop.csproj -c Release -r linux-x64
 
 Use `-r win-x64` for Windows. `tools/release.sh <folder>` builds the complete release packages
 (the program and its README); `tools/thunderstore.sh <folder>` the
-plugin's (`WorldEditorBridge-<version>.zip`). The tests, as CircleCI runs
-them on every push (the visual tests need a display and are left out):
+plugin's (`WorldEditorBridge-<version>.zip`). The tests, which CircleCI runs
+on every push (the app's visual tests need a display, which CI gives them; without one they skip, or
+leave them out with `--filter-not-trait Category=Visual`):
 
 ```sh
 dotnet test --project tests/Core.Tests/Core.Tests.csproj -c Release
-dotnet test --project tests/Desktop.Tests/Desktop.Tests.csproj -c Release --filter-not-trait Category=Visual
+dotnet test --project tests/Desktop.Tests/Desktop.Tests.csproj -c Release
 ```
 
 See [docs/development.md](docs/development.md).

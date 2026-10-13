@@ -306,15 +306,15 @@ The **test world** is `tests/fixtures/CITest`: a brand-new world made by a dedic
 filled live through the editor (ground edits, trees, rocks, bushes, pickables, a crop, floors, walls,
 chests). `tests/fixtures/CITest.snapshot` is the same world as the plugin sends it.
 
-CircleCI (`.circleci/config.yml`) runs on every push and pull request:
+CircleCI (`.circleci/continue.yml`) runs on every push and pull request:
 
 | Job | What it checks |
 |---|---|
 | `core-tests` | `tests/Core.Tests`, with OpenSSH's server installed (`VWE_NEED_SSHD=1`), on three containers (the world generator's tests run several times slower under coverage). |
-| `app-tests` | `tests/Desktop.Tests` without the visual tests, on six containers. Both test jobs let CircleCI share the classes out by their last times (`circleci tests run`, each class a `--filter-class`), so **Rerun failed tests** runs only the classes that failed; every test runs, failing or not. A test stuck 5 minutes is dumped and stopped (`tests/testconfig.json`); a crashed or stopped test process shows as one failed test of its class. |
+| `app-tests` | `tests/Desktop.Tests` on six containers, the visual tests included: they draw on a virtual screen (Xvfb, Mesa's software OpenGL), so CI checks the shapes they draw but not the game's look (CI has no Valheim: its editor draws plain colours). Both test jobs let CircleCI share the classes out by their last times (`circleci tests run`, each class a `--filter-class`), so **Rerun failed tests** runs only the classes that failed; every test runs, failing or not. A test stuck 5 minutes is dumped and stopped (`tests/testconfig.json`); a crashed or stopped test process shows as one failed test of its class. |
 | `packages` | Both release packages build (without the plugin), and `tools/check-package.sh` finds everything they need and no source code, debug files or game files. |
 
-Not covered by CI: the visual tests (no display), building the plugin and reading the game's data
+Not covered by CI: the game's look in the visual tests, building the plugin and reading the game's data
 (both need Valheim's own files: the tests use their copies in `tests/fixtures`), and live mode
 against a real game.
 
