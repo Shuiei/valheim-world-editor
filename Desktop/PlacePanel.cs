@@ -652,7 +652,8 @@ public sealed class PlacePanel
     {
         if (_creatable.Count == 0 && _scene()?.World is { } w)
         {
-            _creatable = [.. w.Creatable.Select(p => _nameOf(p)).Where(n => n != null).Distinct().Select(n => (n!, ObjectKinds.Of(n, false)))];
+            // Not the prefabs a mod's manifest asks not to offer (its tools, effects, helpers).
+            _creatable = [.. w.Creatable.Select(p => _nameOf(p)).Where(n => n != null && !ModManifests.IsHidden(n)).Distinct().Select(n => (n!, ObjectKinds.Of(n, false)))];
         }
         return _creatable;
     }

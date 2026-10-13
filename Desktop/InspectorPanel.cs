@@ -408,8 +408,8 @@ public sealed class InspectorPanel
     /// <summary>The stand's items and orientation or pose in a short text form, to tell whether they changed.</summary>
     private string StandKey() => Stand == null ? "" : string.Join(";", Stand.Select(r => $"{r.Name},{r.Quality},{r.Variant}")) + "|" + StandWay.ToString(CultureInfo.InvariantCulture);
 
-    /// <summary>A value's label: the plain one, else its name, else its key's hash.</summary>
-    private static string Label(Field f) => f.Name is string n ? Labels.TryGetValue(n, out string? l) ? l : n : $"#{f.Key}";
+    /// <summary>A value's label: the plain one, else a mod's manifest's, else its name, else its key's hash.</summary>
+    private static string Label(Field f) => f.Name is string n ? Labels.TryGetValue(n, out string? l) ? l : ModManifests.DataOf(n)?.Label ?? n : $"#{f.Key}";
 
     /// <summary>Builds the whole card again from what is shown and changed.</summary>
     private void Render()
@@ -438,8 +438,14 @@ public sealed class InspectorPanel
         foreach (var f in FieldList)
         {
             bool isItems = f.Section == "bytes" && f.Key == ObjectData.ItemsKey && Items != null && _inventoryError == null;
+            // A mod's manifest can ask for a value to be shown only, and tell what it is.
+            var note = ModManifests.DataOf(f.Name);
             bool ro = f.Section == "bytes";
-            var box = new TextBox { Text = isItems ? "see Contents above" : ro ? f.Note : f.Now, IsReadOnly = ro, FontSize = 11, Opacity = f.Removed ? 0.5 : 1 }.Tip("inspect.value");
+            var box = new TextBox { Text = isItems ? "see Contents above" : ro ? f.Note : f.Now, IsReadOnly = ro || note?.ReadOnly == true, FontSize = 11, Opacity = f.Removed ? 0.5 : 1 }.Tip("inspect.value");
+            if (note?.Help is string help)
+            {
+                ToolTip.SetTip(box, help);
+            }
             box.PropertyChanged += (_, e) =>
             {
                 if (e.Property == TextBox.TextProperty && !ro)

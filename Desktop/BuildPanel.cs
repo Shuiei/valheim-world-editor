@@ -85,14 +85,15 @@ public sealed class BuildPanel
     /// <summary>
     /// Everything players build: the hammer's pieces, the cultivator's, the serving tray's and the mods' (prefab,
     /// English name, tab). The hoe's are ground edits, not pieces. Ordered by station, then by name. Worked out again
-    /// when the game's data changes (mods' pieces learned from a live game).
+    /// when the game's data changes (mods' pieces learned from a live game) or the mods' manifests do (pieces not
+    /// offered, groups).
     /// </summary>
     internal static List<(string Prefab, string Name, int Category)> Pieces
     {
         get
         {
             var made = _pieceList;
-            int now = GameData.Generation;
+            var now = (GameData.Generation, ModManifests.Generation);
             if (made.Generation != now)
             {
                 made = (now, ListPieces());
@@ -103,14 +104,14 @@ public sealed class BuildPanel
     }
 
     /// <summary>What <see cref="Pieces"/> last worked out, and from which data.</summary>
-    private static (int Generation, List<(string Prefab, string Name, int Category)> List) _pieceList = (-1, []);
+    private static ((int Data, int Manifests) Generation, List<(string Prefab, string Name, int Category)> List) _pieceList = ((-1, -1), []);
 
     /// <summary>Works out <see cref="Pieces"/>.</summary>
     private static List<(string Prefab, string Name, int Category)> ListPieces() =>
         [.. PieceCatalog.Names.Select(n => (n, PieceCatalog.Get(StableHash.Of(n))))
-            .Where(p => p.Item2 is { IsBuildPiece: true })
+            .Where(p => p.Item2 is { IsBuildPiece: true } && !ModManifests.IsHidden(p.n))
             .Select(p => (p.n, PieceCost.PieceName(p.n), ModCatalogue.IsModded(p.n) ? Mods : p.Item2!.Tool switch { "cultivator" => Plants, "feaster" => Feasts, _ => p.Item2.Category }))
-            .OrderBy(p => ModGroup(p.n), StringComparer.OrdinalIgnoreCase).ThenBy(p => StationRank(PieceCost.Get(p.n)?.Station)).ThenBy(p => PieceCost.Get(p.n)?.Station ?? "", StringComparer.OrdinalIgnoreCase)
+            .OrderBy(p => ModGroup(p.n), StringComparer.OrdinalIgnoreCase).ThenBy(p => PieceGroup(p.n) ?? "", StringComparer.OrdinalIgnoreCase).ThenBy(p => StationRank(PieceCost.Get(p.n)?.Station)).ThenBy(p => PieceCost.Get(p.n)?.Station ?? "", StringComparer.OrdinalIgnoreCase)
             .ThenBy(p => p.Item2, StringComparer.OrdinalIgnoreCase)];
 
     /// <summary>
@@ -118,6 +119,12 @@ public sealed class BuildPanel
     /// own pieces. A mod that adds many (PlanBuild's plans of every piece) does not bury the others.
     /// </summary>
     internal static string ModGroup(string prefab) => ModCatalogue.IsModded(prefab) ? ModCatalogue.ModOf(prefab) ?? "Other mods" : "";
+
+    /// <summary>
+    /// The group a mod's manifest puts a mod piece in (the Mods tab's heading in place of its station); null for the
+    /// game's own pieces and when the manifest says none.
+    /// </summary>
+    internal static string? PieceGroup(string prefab) => ModCatalogue.IsModded(prefab) ? ModManifests.PrefabOf(prefab)?.Group : null;
 
     /// <summary>
     /// A station's rank, to list pieces by the station they need, in the order players get them (none first:
@@ -536,7 +543,7 @@ public sealed class BuildPanel
             // A heading where the station changes (on the Mods tab, the mod or the station).
             string? station = PieceCost.Get(prefab)?.Station;
             string mod = ModGroup(prefab);
-            string heading = (mod.Length > 0 ? mod + " · " : "") + (station ?? "No station needed");
+            string heading = (mod.Length > 0 ? mod + " · " : "") + (PieceGroup(prefab) ?? station ?? "No station needed");
             if (heading != group)
             {
                 group = heading;

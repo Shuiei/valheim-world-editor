@@ -139,8 +139,18 @@ public sealed class WorldSession : IDisposable
             throw new InvalidOperationException(GameData.Missing);
         }
         WorldSave.ModifierPrefabs = [.. TerrainModifiers.NetworkPrefabHashes];
-        // The data names the player's mods keep on objects, for the inspector (read again only when a mod changes).
-        ModKeys.Refresh(AppSettings.Load());
+        ReadModFiles();
+    }
+
+    /// <summary>
+    /// What the editor reads from the player's mods as a world or the Workshop opens: the data names their code holds
+    /// (ModKeys, read again only when a mod changes) and their worldeditor.json manifests (ModManifests).
+    /// </summary>
+    public static void ReadModFiles()
+    {
+        var settings = AppSettings.Load();
+        ModKeys.Refresh(settings);
+        ModManifests.Refresh(settings);
     }
 
     /// <summary>A world on this computer (its folder). Throws when the game's data is missing.</summary>
