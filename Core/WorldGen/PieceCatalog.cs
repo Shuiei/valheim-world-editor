@@ -113,6 +113,31 @@ public static class PieceCatalog
     }
 
     /// <summary>
+    /// The ruins' pieces (building pieces without a builder: generated with the world) packed as
+    /// <see cref="Encode"/> packs the player-built ones, leaving out deleted objects; and which of them are joined to
+    /// a player-built piece (<see cref="App.JoinedRuins"/>).
+    /// </summary>
+    /// <param name="world">The world; its object and piece lists are copied under its lock.</param>
+    /// <param name="deleted">Object ids to leave out.</param>
+    public static (float[] Data, bool[] Joined) EncodeRuins(WorldSave world, ICollection<int> deleted)
+    {
+        List<(int Id, int Prefab, System.Numerics.Vector3 Position, System.Numerics.Vector3 Rotation)> ruins;
+        List<System.Numerics.Vector3> built;
+        lock (world.Sync)
+        {
+            ruins = [.. world.Objects.Where(o => !deleted.Contains(o.Id) && Get(o.Prefab) != null).Select(o => (o.Id, o.Prefab, o.Position, o.Rotation))];
+            built = [.. world.Pieces.Where(p => !deleted.Contains(p.Id)).Select(p => p.Position)];
+        }
+        List<float> data = new(ruins.Count * Stride);
+        foreach (var (id, prefab, pos, rot) in ruins)
+        {
+            Info info = Get(prefab)!;
+            data.AddRange([pos.X, pos.Y, pos.Z, rot.Y, info.MinX, info.MaxX, info.MinZ, info.MaxZ, pos.Y + info.MaxY, info.Category, pos.Y + info.MinY, info.Index, id]);
+        }
+        return ([.. data], App.JoinedRuins.Find(built, [.. ruins.Select(r => r.Position)]));
+    }
+
+    /// <summary>
     /// Takes the pieces by name, as GameCatalogues' PieceScan writes them.
     /// </summary>
     public static void Use(string json)

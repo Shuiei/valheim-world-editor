@@ -98,6 +98,11 @@ public sealed class WorldScene
         public bool Tamed { get; init; }
 
         /// <summary>
+        /// A ruin's piece (no builder) joined to a player's building (JoinedRuins): shown with Your buildings.
+        /// </summary>
+        public bool Joined { get; init; }
+
+        /// <summary>
         /// A runestone: in the save a location proxy, listed under the location's name. It can be
         /// picked and deleted, not moved or copied (see PrefabCatalog.RunestoneLocations).
         /// </summary>
@@ -357,7 +362,29 @@ public sealed class WorldScene
                 things.Add(new Thing(n.Id, n.Prefab, n.Position, n.Rotation, n.Scale, PieceCatalog.Get(n.Prefab)?.Tool != null) { Tamed = TamedOf(world, n) });
             }
         }
+        MarkJoined(things);
         return things;
+    }
+
+    /// <summary>
+    /// Marks the ruins' pieces (pieces of the catalogue that are not building pieces here: no builder) that are joined
+    /// to the building pieces (JoinedRuins).
+    /// </summary>
+    internal static void MarkJoined(List<Thing> things)
+    {
+        var ruins = Enumerable.Range(0, things.Count).Where(i => !things[i].Piece && PieceCatalog.Get(things[i].Prefab) != null).ToList();
+        if (ruins.Count == 0)
+        {
+            return;
+        }
+        bool[] joined = JoinedRuins.Find([.. things.Where(t => t.Piece).Select(t => t.Position)], [.. ruins.Select(i => things[i].Position)]);
+        for (int r = 0; r < ruins.Count; r++)
+        {
+            if (joined[r])
+            {
+                things[ruins[r]] = things[ruins[r]] with { Joined = true };
+            }
+        }
     }
 
     /// <summary>

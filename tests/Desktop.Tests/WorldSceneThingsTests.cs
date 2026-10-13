@@ -51,6 +51,20 @@ public class WorldSceneThingsTests
         Assert.False(things[2].Piece);
     }
 
+    // A ruin's piece (a catalogue piece with no builder) touching the area's building is joined to it; one apart
+    // is not; a tree never is.
+    [Fact]
+    public void AnAreasRuinPiecesJoinedToItsBuildingsAreMarked()
+    {
+        var world = World();
+        int stone = StableHash.Of("stone_wall_2x1");
+        world.Objects.Add((6, stone, new Vector3(10, 31, -6), Vector3.Zero, Vector3.One));
+        world.Objects.Add((7, stone, new Vector3(-20, 31, 20), Vector3.Zero, Vector3.One));
+        var things = WorldScene.ReadThings(world, 0, 0, 1, 1, new HashSet<int>());
+        Assert.Equal([6], things.Where(t => t.Joined).Select(t => t.Id));
+        Assert.Contains(things, t => t.Id == 7 && !t.Joined);
+    }
+
     [Fact]
     public void ThingsAreFoundByIdGoneOrNot()
     {

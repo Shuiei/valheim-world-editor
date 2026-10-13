@@ -88,6 +88,10 @@ public sealed class MapPage : IDisposable
     /// </summary>
     internal CheckBox BuildingsBox { get; } = new() { Content = "Show buildings (player-built pieces)", IsChecked = true, FontSize = 12 };
     /// <summary>
+    /// Show ruins: the pieces of the world's ruins too (spoilers; off at first).
+    /// </summary>
+    internal CheckBox RuinsBox { get; } = new() { Content = "Show ruins (spoilers)", IsChecked = false, FontSize = 12 };
+    /// <summary>
     /// Show the zone grid.
     /// </summary>
     internal CheckBox GridBox { get; } = new() { Content = "Zone grid", FontSize = 12 };
@@ -289,6 +293,8 @@ public sealed class MapPage : IDisposable
         ReloadButton.Tip("map.reload");
         BuildingsBox.Tip("map.buildings");
         BuildingsBox.IsCheckedChanged += (_, _) => { Map.ShowBuildings = BuildingsBox.IsChecked == true; Map.RequestNextFrameRendering(); };
+        RuinsBox.Tip("map.ruins");
+        RuinsBox.IsCheckedChanged += (_, _) => { Map.ShowRuins = RuinsBox.IsChecked == true; Map.RequestNextFrameRendering(); };
         GridBox.IsCheckedChanged += (_, _) => { Map.ShowGrid = GridBox.IsChecked == true; Map.RequestNextFrameRendering(); };
         EditedBox.IsCheckedChanged += (_, _) => { Map.ShowEdited = EditedBox.IsChecked == true; Map.RequestNextFrameRendering(); };
         PaintBox.IsCheckedChanged += (_, _) => { Map.ShowPaint = PaintBox.IsChecked == true; Map.RequestNextFrameRendering(); };
@@ -395,7 +401,7 @@ public sealed class MapPage : IDisposable
                         _liveBox,
                         _changesBox,
                         H2("Map"),
-                        new StackPanel { Children = { BuildingsBox, EditedBox, PaintBox, GridBox, CloudsBox } },
+                        new StackPanel { Children = { BuildingsBox, RuinsBox, EditedBox, PaintBox, GridBox, CloudsBox } },
                         _pickBox,
                         new TextBlock { Text = "Click the map to pick a spot, drag to move, wheel to zoom.", FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap },
                         search,
