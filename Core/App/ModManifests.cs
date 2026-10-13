@@ -1,16 +1,18 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using TerrainEditor.Save;
 
 namespace TerrainEditor.App;
 
 /// <summary>
 /// What mod authors can tell the editor about their mod, in a worldeditor.json shipped with it (anywhere in its
 /// folder under BepInEx/plugins; docs/modding.md, docs/worldeditor.schema.json): labels, help and read-only flags for
-/// the data their objects keep (the inspector), prefabs the editor should not offer (tools, effects, helpers), and
-/// groups for their pieces (the Build panel's Mods tab). Everything else the editor learns by itself (ModCatalogue,
-/// ModKeys). Read from the plugins folders the editor knows (LocalGame.BepInExFolders) as a world or the Workshop
-/// opens; of two manifests saying something of the same name, the newest file's wins. A file that is not a manifest
-/// is skipped.
+/// the data their objects keep (the inspector), prefabs the editor should not offer (tools, effects, helpers), groups
+/// for their pieces (the Build panel's Mods tab), and how their objects link into one (ObjectLinks: a ship and its
+/// pieces). Everything else the editor learns by itself (ModCatalogue, ModKeys). Read from the plugins folders the
+/// editor knows (LocalGame.BepInExFolders) as a world or the Workshop opens, over the manifests the editor ships for
+/// mods that have none (Core/Mods, embedded); of two manifests saying something of the same name, a mod's own wins
+/// over a shipped one, and the newest file's over an older one. A file that is not a manifest is skipped.
 /// </summary>
 public static class ModManifests
 {
@@ -43,10 +45,27 @@ public static class ModManifests
     /// </summary>
     /// <param name="Data">By data key name.</param>
     /// <param name="Prefabs">By prefab name.</param>
-    private sealed record Notes(Dictionary<string, DataNote> Data, Dictionary<string, PrefabNote> Prefabs);
+    /// <param name="Links">How objects link into one, by the name of the id key (in the order first read).</param>
+    private sealed record Notes(Dictionary<string, DataNote> Data, Dictionary<string, PrefabNote> Prefabs, OrderedDictionary<string, LinkRule> Links)
+    {
+        /// <summary>The link rules, with the keys they read.</summary>
+        public LinkSet LinkSet { get; set; } = LinkSet.Empty;
+    }
 
-    /// <summary>What is in use, swapped in whole.</summary>
-    private static volatile Notes _notes = new([], []);
+    /// <summary>The manifests the editor ships (resource name, text), read once.</summary>
+    private static readonly Lazy<List<(string Name, string Json)>> Shipped = new(() =>
+    {
+        var asm = typeof(ModManifests).Assembly;
+        return [.. asm.GetManifestResourceNames().Where(n => n.StartsWith("mods/", StringComparison.Ordinal)).Order(StringComparer.Ordinal)
+            .Select(n =>
+            {
+                using var r = new StreamReader(asm.GetManifestResourceStream(n)!);
+                return (n, r.ReadToEnd());
+            })];
+    });
+
+    /// <summary>What is in use, swapped in whole: at first, the shipped manifests'.</summary>
+    private static volatile Notes _notes = ShippedNotes();
 
     /// <summary>Counts each time what is in use is replaced, for lists worked out from it to be worked out again.</summary>
     public static int Generation => _generation;
@@ -61,6 +80,24 @@ public static class ModManifests
 
     /// <summary>Whether a manifest asks for a prefab not to be offered.</summary>
     public static bool IsHidden(string? prefab) => PrefabOf(prefab)?.Hidden == true;
+
+    /// <summary>How the manifests say objects link into one (ObjectLinks).</summary>
+    public static LinkSet Links => _notes.LinkSet;
+
+    /// <summary>What the shipped manifests say (a shipped one that cannot be read is a bug: it throws).</summary>
+    private static Notes ShippedNotes()
+    {
+        var notes = new Notes([], [], []);
+        foreach (var (name, json) in Shipped.Value)
+        {
+            if (!Read(json, notes))
+            {
+                throw new InvalidDataException($"shipped mod manifest {name}: not a worldeditor.json this editor reads.");
+            }
+        }
+        notes.LinkSet = new LinkSet([.. notes.Links.Values]);
+        return notes;
+    }
 
     /// <summary>
     /// Reads every manifest in the plugins folders and uses what they say (nothing when there is none). Never throws.
@@ -84,7 +121,7 @@ public static class ModManifests
                 // A folder that cannot be listed: its manifests are not read.
             }
         }
-        var notes = new Notes([], []);
+        var notes = ShippedNotes();
         int read = 0;
         // Oldest first: a newer file's notes replace an older one's.
         foreach (var file in files.DistinctBy(f => f.FullName).OrderBy(f => f.LastWriteTimeUtc))
@@ -105,15 +142,16 @@ public static class ModManifests
                 Console.WriteLine($"mod manifest {file.FullName}: not read ({e.Message}).");
             }
         }
+        notes.LinkSet = new LinkSet([.. notes.Links.Values]);
         _notes = notes;
         _generation++;
         return read;
     }
 
-    /// <summary>Nothing in use any more (the tests).</summary>
+    /// <summary>Only the shipped manifests in use (the tests).</summary>
     internal static void Forget()
     {
-        _notes = new([], []);
+        _notes = ShippedNotes();
         _generation++;
     }
 
@@ -149,6 +187,62 @@ public static class ModManifests
                 }
             }
         }
+        if (root["links"] is JsonArray links)
+        {
+            foreach (var e in links)
+            {
+                if (e is JsonObject o && Link(o) is var (id, rule))
+                {
+                    notes.Links.Remove(id);
+                    notes.Links[id] = rule;
+                }
+            }
+        }
+        return true;
+    }
+
+    /// <summary>
+    /// A link rule (ObjectLinks) and the name of its id key; null when it is not in the expected form: "id", "parents"
+    /// (at least one) and "offset" given; "rotation", "rotationQuaternion", "references", "dropOnCopy", "name" and
+    /// "storedAt" ("root", the default, or "own") optional.
+    /// </summary>
+    private static (string Id, LinkRule Rule)? Link(JsonObject o)
+    {
+        if (!Text(o["id"], out string? id) || id == null || !Names(o["parents"], out string[] parents) || parents.Length == 0
+            || !Text(o["offset"], out string? offset) || offset == null || !Text(o["rotation"], out string? euler)
+            || !Text(o["rotationQuaternion"], out string? quat) || !Names(o["references"], out string[] references)
+            || !Names(o["dropOnCopy"], out string[] drops) || !Text(o["name"], out string? name) || !Text(o["storedAt"], out string? stored)
+            || stored is not (null or "root" or "own"))
+        {
+            return null;
+        }
+        static int Key(string? n) => n == null ? 0 : StableHash.Of(n);
+        return (id, new LinkRule(name ?? LinkRule.DefaultName, Key(id), [.. parents.Select(Key)], Key(offset), Key(euler), Key(quat),
+            [.. references.Select(Key)], [.. drops.Select(Key)], stored != "own"));
+    }
+
+    /// <summary>An optional list of names: absent (empty) or an array of at most 32 texts.</summary>
+    private static bool Names(JsonNode? n, out string[] names)
+    {
+        names = [];
+        if (n is null)
+        {
+            return true;
+        }
+        if (n is not JsonArray a || a.Count > 32)
+        {
+            return false;
+        }
+        var list = new List<string>();
+        foreach (var e in a)
+        {
+            if (!Text(e, out string? s) || s == null)
+            {
+                return false;
+            }
+            list.Add(s);
+        }
+        names = [.. list];
         return true;
     }
 

@@ -7,11 +7,14 @@ the plugin is unchanged in versions without that part.
 ## v1.31.0 — unreleased
 
 ### Added
-- **ValheimRAFT vehicles**: a ship's (or land vehicle's) pieces are drawn where the mod builds them, around its root,
-  turned and leaning with it, instead of in a pile where the game saves them. A vehicle is moved, turned, copied and
-  deleted whole: a double click on a part selects it, and any part brings the rest along (the Select tool, copy and
-  paste, Claude's tools). Each pasted copy gets ids of its own, so the game keeps the copies apart. See
-  [Vehicles](docs/select.md#vehicles-valheimraft).
+- **Linked objects**: objects a mod builds out of others (a ValheimRAFT ship and the pieces on it) are drawn where the
+  mod builds them, around their root, turned and leaning with it, instead of in a pile where the game saves them. Such
+  a group is moved, turned, copied and deleted whole: a double click on a part selects it, and any part brings the
+  rest along (the Select tool, copy and paste, Claude's tools). Each pasted copy gets ids of its own, so the game keeps
+  the copies apart. The editor knows no mod: a mod says how its objects link in the `links` of its `worldeditor.json`,
+  and the editor ships one for ValheimRAFT, which has none (the mod's own would win). See
+  [Linked objects](docs/select.md#linked-objects-ships-and-other-mods-groups) and
+  [for mod authors](docs/modding.md#linked-objects).
 
 ## v1.30.0 — unreleased
 

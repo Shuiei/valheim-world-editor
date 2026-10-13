@@ -108,8 +108,9 @@ public class WorldSceneThingsTests
         {
             world.ObjectRefs.Add(new ObjectRef { File = new ChunkFile(), Start = 0, Prefab = Wall, Position = at, IsPiece = true });
         }
-        world.VehicleLinks[6] = (new VehicleLink(500, 0, 0, Vector3.Zero, null, null, 0), new Vector3(10, 90, 0));
-        world.VehicleLinks[7] = (new VehicleLink(0, 500, 0, new Vector3(2, 0, 0), Vector3.Zero, null, 0), Vector3.Zero);
+        var raft = ObjectLinks.Current.Rules.Single(r => r.IdKey == StableHash.Of("PersistentID"));
+        world.Links[6] = (new ObjectLink(raft, 500, [0, 0], Vector3.Zero, null, null), new Vector3(10, 90, 0));
+        world.Links[7] = (new ObjectLink(raft, 0, [0, 500], new Vector3(2, 0, 0), Vector3.Zero, null), Vector3.Zero);
         var things = WorldScene.ReadThings(world, 0, 0, 1, 1, new HashSet<int>());
         Assert.Equal(new Vector3(10, 90, 0), things.Single(t => t.Id == 6).Rotation);
         var part = things.Single(t => t.Id == 7);

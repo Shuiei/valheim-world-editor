@@ -21,11 +21,11 @@ public class ClaudeToolsVehiclesTests
         var copied = ClaudeRun.J(await r.T.CopyObjects([ship[1]], dx: 10, copies: 2)).GetProperty("copied");
         Assert.Equal(10, copied.GetArrayLength());
         // Two copies, each with ids of its own: the ship's two (root, swivel) and two more each.
-        Assert.Equal(6, s.ReadVehicles().Ids.Count);
+        Assert.Equal(6, s.ReadLinks().Ids.Count);
 
         var moved = ClaudeRun.J(await r.T.MoveObjects([ship[2]], dz: 3));
         Assert.Equal(5, moved.GetProperty("moved").GetArrayLength());
-        Assert.Equal(1, moved.GetProperty("wholeVehicles").GetInt32());
+        Assert.Equal(1, moved.GetProperty("wholeGroups").GetInt32());
         int part = moved.GetProperty("moved")[0].GetProperty("id").GetInt32();
 
         Assert.StartsWith("Took 5 away, with 1 whole vehicle(s).", await r.T.RemoveObjects([part]));

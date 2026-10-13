@@ -1,6 +1,7 @@
 using System.Numerics;
 using Avalonia;
 using Avalonia.Threading;
+using TerrainEditor.App;
 using TerrainEditor.Terrain;
 
 namespace TerrainEditor.Desktop;
@@ -76,8 +77,8 @@ public sealed class SelectTool
         public float Lift, Bottom;
         /// <summary>A building piece (moves with the block on the ground, can snap).</summary>
         public bool Piece;
-        /// <summary>A part of a ValheimRAFT vehicle: moves with it as one, keeping its height (a ship stays afloat).</summary>
-        public bool Vehicle;
+        /// <summary>A part of a linked group (ObjectLinks: a ship): moves with it as one, keeping its height (a ship stays afloat).</summary>
+        public bool Linked;
     }
 
     /// <summary>A move of the selection, shown live until it is committed.</summary>
@@ -97,8 +98,10 @@ public sealed class SelectTool
         public string? Snapped;
         /// <summary>The snap points of the pieces around (within 60 m), gathered once per move.</summary>
         public List<(Vector3 P, string Name)>? Others;
-        /// <summary>How many whole ValheimRAFT vehicles the move takes (their parts were added to the selection's).</summary>
-        public int Vehicles;
+        /// <summary>How many whole linked groups the move takes (their parts were added to the selection's).</summary>
+        public int Groups;
+        /// <summary>What such a group is called ("vehicle").</summary>
+        public string Noun = LinkRule.DefaultName;
     }
 
     /// <summary>The move in progress, if any.</summary>
@@ -125,8 +128,8 @@ public sealed class SelectTool
         }
         var items = new List<Item>();
         int runestones = 0;
-        // A vehicle's part never moves alone: the whole vehicle goes.
-        var (chosen, parts, vehicles) = Session?.WithVehicles(_view.Selected) ?? ([.. _view.Selected], [], 0);
+        // A linked group's part never moves alone: the whole group goes.
+        var (chosen, parts, groups, noun) = Session?.WithLinked(_view.Selected) ?? ([.. _view.Selected], [], 0, LinkRule.DefaultName);
         foreach (int i in chosen)
         {
             var t = s.Things[i];
@@ -148,7 +151,7 @@ public sealed class SelectTool
                 Lift = t.Position.Y - GroundAt(t.Position.X, t.Position.Z),
                 Bottom = snaps is { Length: > 0 } ? snaps.Min(p => p[1]) : 0,
                 Piece = IsPiece(t),
-                Vehicle = parts.Contains(i),
+                Linked = parts.Contains(i),
             });
         }
         if (items.Count == 0)
@@ -159,7 +162,7 @@ public sealed class SelectTool
             }
             return null;
         }
-        return _move = new Move { Items = items, Cx = items.Average(it => it.Thing.Position.X), Cz = items.Average(it => it.Thing.Position.Z), Vehicles = vehicles };
+        return _move = new Move { Items = items, Cx = items.Average(it => it.Thing.Position.X), Cz = items.Average(it => it.Thing.Position.Z), Groups = groups, Noun = noun };
     }
 
     /// <summary>
@@ -176,7 +179,7 @@ public sealed class SelectTool
         float t = m.Turn * D, c = MathF.Cos(t), sn = MathF.Sin(t), ox = it.Thing.Position.X - m.Cx, oz = it.Thing.Position.Z - m.Cz;
         float sx = shift ? m.Sx : 0, sy = shift ? m.Sy : 0, sz = shift ? m.Sz : 0;
         float x = m.Cx + ox * c + oz * sn + m.Dx + sx, z = m.Cz - ox * sn + oz * c + m.Dz + sz;
-        if (it.Vehicle)
+        if (it.Linked)
         {
             return new Vector3(x, it.Thing.Position.Y + m.Dy + sy, z);
         }
@@ -194,7 +197,7 @@ public sealed class SelectTool
     private void GroundBlock(Move m)
     {
         m.Block = 0;
-        var pieces = m.Items.Where(it => it.Piece && !it.Vehicle).ToList();
+        var pieces = m.Items.Where(it => it.Piece && !it.Linked).ToList();
         if (pieces.Count == 0 || !OnGround || m.Dropped)
         {
             return;
@@ -220,7 +223,7 @@ public sealed class SelectTool
         m.Sx = m.Sy = m.Sz = 0;
         m.Snapped = null;
         var s = Scene!;
-        if (!SnapToPieces || m.NoSnap || m.Dropped || !m.Items.Any(it => !it.Vehicle && PieceCatalog.Get(it.Thing.Prefab)?.Snaps.Length > 0))
+        if (!SnapToPieces || m.NoSnap || m.Dropped || !m.Items.Any(it => !it.Linked && PieceCatalog.Get(it.Thing.Prefab)?.Snaps.Length > 0))
         {
             return;
         }
@@ -246,7 +249,7 @@ public sealed class SelectTool
             }
         }
         (float D, Vector3 M, Vector3 O, string Name)? best = null;
-        foreach (var it in m.Items.Where(it => !it.Vehicle))
+        foreach (var it in m.Items.Where(it => !it.Linked))
         {
             var at = Target(m, it, shift: false);
             foreach (var mp in SnapsAt(it.Thing.Prefab, at, it.Thing.Rotation + new Vector3(0, m.Turn, 0)))
@@ -268,7 +271,7 @@ public sealed class SelectTool
         m.Sx = b.O.X - b.M.X;
         m.Sz = b.O.Z - b.M.Z;
         // Heights follow the ground where the pieces end up, so the height is matched after the shift.
-        var first = m.Items.First(it => !it.Vehicle && PieceCatalog.Get(it.Thing.Prefab)?.Snaps.Length > 0);
+        var first = m.Items.First(it => !it.Linked && PieceCatalog.Get(it.Thing.Prefab)?.Snaps.Length > 0);
         float before = Target(m, first, shift: false).Y;
         m.Sy = 0;
         float after = Target(m, first).Y;
@@ -289,7 +292,7 @@ public sealed class SelectTool
         }
         _view.SetPreviews(shown);
         float moved = MathF.Sqrt(m.Dx * m.Dx + m.Dz * m.Dz);
-        Message?.Invoke($"Moving {m.Items.Count} object(s){WholeVehicles(m.Vehicles)}: {moved:0.0} m{(m.Turn != 0 ? $", turned {m.Turn:0.#}°" : "")}{(m.Dy != 0 ? $", {(m.Dy > 0 ? "+" : "")}{m.Dy:0.00} m" : "")}{(m.Snapped != null ? $" · snapped to {m.Snapped}" : "")}", false);
+        Message?.Invoke($"Moving {m.Items.Count} object(s){WholeGroups(m.Groups, m.Noun)}: {moved:0.0} m{(m.Turn != 0 ? $", turned {m.Turn:0.#}°" : "")}{(m.Dy != 0 ? $", {(m.Dy > 0 ? "+" : "")}{m.Dy:0.00} m" : "")}{(m.Snapped != null ? $" · snapped to {m.Snapped}" : "")}", false);
     }
 
     /// <summary>
@@ -315,14 +318,15 @@ public sealed class SelectTool
         var moves = m.Items.Select(it => (it.Index, Target(m, it), it.Thing.Rotation + new Vector3(0, m.Turn, 0))).ToList();
         var copies = session.Move(moves, $"Moved {moves.Count}");
         _view.Select(copies);
-        Message?.Invoke($"Moved {copies.Count} object(s){WholeVehicles(m.Vehicles)}. Ctrl+Z puts them back.", false);
+        Message?.Invoke($"Moved {copies.Count} object(s){WholeGroups(m.Groups, m.Noun)}. Ctrl+Z puts them back.", false);
     }
 
-    /// <summary>What a message adds when whole vehicles go along ("" when none).</summary>
-    /// <param name="count">How many vehicles.</param>
+    /// <summary>What a message adds when whole linked groups go along ("" when none).</summary>
+    /// <param name="count">How many groups.</param>
+    /// <param name="noun">What a group is called ("vehicle").</param>
     /// <param name="verb">What their parts never do alone.</param>
-    private static string WholeVehicles(int count, string verb = "move") =>
-        count == 0 ? "" : $" ({(count == 1 ? "a whole vehicle" : $"{count} whole vehicles")}: a vehicle's parts never {verb} alone)";
+    private static string WholeGroups(int count, string noun, string verb = "move") =>
+        count == 0 ? "" : $" ({(count == 1 ? $"a whole {noun}" : $"{count} whole {noun}s")}: a {noun}'s parts never {verb} alone)";
 
     /// <summary>Puts a move back (Esc); false when there was none.</summary>
     public bool Cancel()
@@ -387,8 +391,8 @@ public sealed class SelectTool
         var s = Scene!;
         var sel = m.Items.Select(it => it.Index).ToHashSet();
         int onObjects = 0;
-        // A vehicle keeps its height (a ship stays afloat): its parts do not drop.
-        var dropping = m.Items.Where(it => !it.Vehicle).ToList();
+        // A linked group keeps its height (a ship stays afloat): its parts do not drop.
+        var dropping = m.Items.Where(it => !it.Linked).ToList();
         foreach (var it in dropping)
         {
             var p = Target(m, it);
@@ -491,11 +495,11 @@ public sealed class SelectTool
             Message?.Invoke("Select objects to delete first.", true);
             return;
         }
-        // A vehicle's part never goes alone: the whole vehicle does.
-        var (sel, _, vehicles) = session.WithVehicles(_view.Selected);
+        // A linked group's part never goes alone: the whole group does.
+        var (sel, _, groups, noun) = session.WithLinked(_view.Selected);
         session.Delete(sel);
         _view.Select([]);
-        Message?.Invoke($"Deleted {sel.Count} object(s){WholeVehicles(vehicles, "go")}. Ctrl+Z brings them back; they leave the world when it is saved.", false);
+        Message?.Invoke($"Deleted {sel.Count} object(s){WholeGroups(groups, noun, "go")}. Ctrl+Z brings them back; they leave the world when it is saved.", false);
     }
 
     // ---- More ways to select.
@@ -701,14 +705,14 @@ public sealed class SelectTool
         }
         int? hit = alt ? null : _view.ObjectAt(at, size);
         var ground = _view.WorldAt(at, size);
-        // A double click on a vehicle's part: the whole vehicle; on a building piece: the whole building;
+        // A double click on a linked group's part (a ship): the whole group; on a building piece: the whole building;
         // on a chest, the chest alone (its inspector opens: GlView.InspectAsked).
         if (clicks >= 2 && hit is int dbl && !(PrefabCatalog.Details(s.Things[dbl].Prefab)?.ContainerW > 0))
         {
-            if (Session?.WithVehicles([dbl]) is { Vehicles: > 0 } v)
+            if (Session?.WithLinked([dbl]) is { Groups: > 0 } v)
             {
                 _view.Select(v.Indices);
-                Message?.Invoke($"Selected the whole vehicle: {v.Indices.Count} part(s).", false);
+                Message?.Invoke($"Selected the whole {v.Noun}: {v.Indices.Count} part(s).", false);
                 return;
             }
             if (IsPiece(s.Things[dbl]))

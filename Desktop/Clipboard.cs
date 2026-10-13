@@ -139,8 +139,8 @@ public sealed class CopyData
         {
             return null;
         }
-        // A vehicle's parts go with it (ValheimRAFT); it takes no ground (it does not stand on it).
-        var (chosen, parts, _) = s.Session?.WithVehicles(objects) ?? ([.. objects], [], 0);
+        // A linked group's parts go with it (ObjectLinks: a ship); it takes no ground (it does not stand on it).
+        var (chosen, parts, _, _) = s.Session?.WithLinked(objects) ?? ([.. objects], [], 0, LinkRule.DefaultName);
         objects = chosen;
         float reference = a.Cells.Average(c => g.HeightOf(c.G));
         int w = a.X1 - a.X0 + 1, h = a.Z1 - a.Z0 + 1;
@@ -181,8 +181,8 @@ public sealed class CopyData
     /// <param name="groundAt">The ground's height at a world point (x, z).</param>
     public static CopyData? FromThings(WorldScene s, IReadOnlyList<int> things, Func<int, string?> nameOf, Func<float, float, float> groundAt)
     {
-        // A vehicle's parts go with it (ValheimRAFT), as one block; it takes no ground (it does not stand on it).
-        var (chosen, parts, _) = s.Session?.WithVehicles(things) ?? ([.. things], [], 0);
+        // A linked group's parts go with it (ObjectLinks: a ship), as one block; it takes no ground (it does not stand on it).
+        var (chosen, parts, _, _) = s.Session?.WithLinked(things) ?? ([.. things], [], 0, LinkRule.DefaultName);
         var shown = chosen.Where(i => !s.Things[i].Gone && (s.World == null || s.World.CanCreate(s.Things[i].Prefab))).ToList();
         var list = shown.Select(i => s.Things[i]).ToList();
         if (list.Count == 0)
@@ -447,11 +447,11 @@ public sealed class PasteTool
     /// <param name="g">The ground to change.</param>
     /// <param name="at">The grid point pasted at.</param>
     /// <param name="mask">The Mask's weight per grid point (null: none).</param>
-    /// <param name="vehicleIds">
-    /// The PersistentIDs in use (ValheimRAFT): each pasted vehicle gets ids of its own (see Vehicles.Remap); null: none
+    /// <param name="linkIds">
+    /// The linked groups' ids in use (ObjectLinks): each pasted group gets ids of its own (see ObjectLinks.Remap); null: none
     /// known.
     /// </param>
-    public (List<int> Touched, (int X0, int Z0, int X1, int Z1) Rect, List<(NewObject, bool)> Add) Apply(Ground g, Vector2 at, Func<int, float>? mask = null, ISet<int>? vehicleIds = null)
+    public (List<int> Touched, (int X0, int Z0, int X1, int Z1) Rect, List<(NewObject, bool)> Add) Apply(Ground g, Vector2 at, Func<int, float>? mask = null, ISet<int>? linkIds = null)
     {
         var c = Clip!;
         var touched = new List<int>();
@@ -546,30 +546,27 @@ public sealed class PasteTool
                 (bx0, bx1, bz0, bz1) = (Math.Min(bx0, rect.X0), Math.Max(bx1, rect.X1), Math.Min(bz0, rect.Z0), Math.Max(bz1, rect.Z1));
             }
         }
-        return (touched, (Math.Min(bx0, bx1) - 1, Math.Min(bz0, bz1) - 1, bx1 + 1, bz1 + 1), OwnVehicles(add, copyStarts, vehicleIds ?? new HashSet<int>()));
+        return (touched, (Math.Min(bx0, bx1) - 1, Math.Min(bz0, bz1) - 1, bx1 + 1, bz1 + 1), OwnGroups(add, copyStarts, linkIds ?? new HashSet<int>()));
     }
 
     /// <summary>
-    /// Each copy's ValheimRAFT vehicles made its own (new ids, parts stored at their root; see Vehicles.Remap): two
-    /// vehicles under one id would share their parts in the game.
+    /// Each copy's linked groups made its own (new ids, parts stored as their mod saves them; see ObjectLinks.Remap):
+    /// two groups under one id would share their parts in the game.
     /// </summary>
     /// <param name="add">The objects of every copy.</param>
     /// <param name="copyStarts">Where each copy's objects start in the list.</param>
     /// <param name="taken">The PersistentIDs in use; the new ones are added.</param>
-    private List<(NewObject, bool)> OwnVehicles(List<(NewObject O, bool Piece)> add, List<int> copyStarts, ISet<int> taken)
+    private List<(NewObject, bool)> OwnGroups(List<(NewObject O, bool Piece)> add, List<int> copyStarts, ISet<int> taken)
     {
         var made = new List<(NewObject, bool)>();
         for (int k = 0; k < copyStarts.Count; k++)
         {
             int end = k + 1 < copyStarts.Count ? copyStarts[k + 1] : add.Count;
             var copy = add.GetRange(copyStarts[k], end - copyStarts[k]);
-            var own = Vehicles.Remap([.. copy.Select(c => c.O)], taken, Mirror);
+            var own = ObjectLinks.Remap([.. copy.Select(c => c.O)], taken, Mirror);
             for (int j = 0; j < copy.Count; j++)
             {
-                if (own[j] is { } o)
-                {
-                    made.Add((o, copy[j].Piece));
-                }
+                made.Add((own[j], copy[j].Piece));
             }
         }
         return made;
@@ -588,8 +585,8 @@ public sealed class PasteTool
         var to = new Dictionary<(int, int), float>();
         foreach (var (o, _) in placed)
         {
-            // A vehicle does not stand on the ground: none is dug under it.
-            if (Vehicles.With(null, o.Data) != null)
+            // A linked group does not stand on the ground: none is dug under it.
+            if (ObjectLinks.With(null, o.Data) != null)
             {
                 continue;
             }

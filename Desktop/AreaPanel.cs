@@ -578,8 +578,8 @@ public sealed class AreaPanel
                     Message?.Invoke("No objects of the chosen kinds inside the selection.");
                     return;
                 }
-                // A vehicle's root takes its parts with it (ValheimRAFT).
-                var list = session.WithVehicles(inside, anyPart: false).Indices;
+                // A linked group's root takes its parts with it (ObjectLinks: a ship).
+                var list = session.WithLinked(inside, anyPart: false).Indices;
                 session.Commit($"Area: removed {list.Count} object(s)", null, list, []);
                 Message?.Invoke($"Removed {list.Count} object(s). Ctrl+Z brings them back.");
                 break;

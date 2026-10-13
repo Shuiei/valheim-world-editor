@@ -21,6 +21,26 @@
         "additionalProperties": false
       }
     },
+    "links": {
+      "type": "array",
+      "description": "How the mod links its objects into one (a ship and its pieces): each rule's keys are data keys, as the mod's code names them.",
+      "items": {
+        "type": "object",
+        "required": ["id", "parents", "offset"],
+        "properties": {
+          "name": { "$ref": "#/$defs/text", "description": "What one group is called in the editor's messages (default: group)." },
+          "id": { "$ref": "#/$defs/text", "description": "Int data key of an object's own id, which its parts name." },
+          "parents": { "$ref": "#/$defs/keys", "minItems": 1, "description": "Int data keys naming what a part hangs on, the first one set winning." },
+          "offset": { "$ref": "#/$defs/text", "description": "Vec3 data key of a part's place in the frame of what it hangs on, in metres." },
+          "rotation": { "$ref": "#/$defs/text", "description": "Vec3 data key of a part's turn in that frame, Unity Euler degrees." },
+          "rotationQuaternion": { "$ref": "#/$defs/text", "description": "Quaternion data key of that turn, used when rotation is not stored." },
+          "storedAt": { "enum": ["root", "own"], "description": "Where the game saves a part: at its group's root (default) or where it stands." },
+          "references": { "$ref": "#/$defs/keys", "description": "Other int data keys naming an object's id: a pasted copy's follow the new ids." },
+          "dropOnCopy": { "$ref": "#/$defs/keys", "description": "Data keys a pasted copy leaves out." }
+        },
+        "additionalProperties": false
+      }
+    },
     "prefabs": {
       "type": "object",
       "description": "By prefab name.",
@@ -35,6 +55,7 @@
     }
   },
   "$defs": {
-    "text": { "type": "string", "minLength": 1, "maxLength": 200 }
+    "text": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "keys": { "type": "array", "maxItems": 32, "items": { "$ref": "#/$defs/text" } }
   }
 }

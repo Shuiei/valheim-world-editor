@@ -1,0 +1,22 @@
+{
+  // ValheimRAFT (zolantris), which ships no worldeditor.json: its vehicles (ships, land vehicles) are a root
+  // holding a PersistentID and the pieces built on it, each saved at the root and built by the mod from its
+  // offset and turn (MBPosition, MBRotationVec; MBRotation in older versions). A piece on a swivel names the
+  // swivel first. Ropes name their anchors inside a byte array the editor cannot rewrite: copies leave them out,
+  // as they leave out what was only aboard (characters, carts). A worldeditor.json shipped with the mod wins.
+  "$schema": "https://raw.githubusercontent.com/Shuiei/valheim-world-editor/main/docs/worldeditor.schema.json",
+  "version": 1,
+  "links": [
+    {
+      "name": "vehicle",
+      "id": "PersistentID",
+      "parents": ["SwivelParentId", "MBParentId"],
+      "offset": "MBPosition",
+      "rotation": "MBRotationVec",
+      "rotationQuaternion": "MBRotation",
+      "storedAt": "root",
+      "references": ["SailParentId", "MBCultivatableParentId", "Mechanism_swivelTargetId"],
+      "dropOnCopy": ["MBRopeAnchor_Ropes", "VehicleTempPieceParentId"]
+    }
+  ]
+}

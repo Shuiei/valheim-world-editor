@@ -102,10 +102,11 @@ public sealed class WorldSave
     public HashSet<int> Tamed { get; } = [];
 
     /// <summary>
-    /// The objects of ValheimRAFT's vehicles (by id): what their data says of their place in a vehicle, and their turn as
-    /// stored (Pieces keep only the turn about y; a vehicle's root may lean).
+    /// The objects mods link into one (by id; App.ObjectLinks, by the rules in use as the world was read): what their
+    /// data says of their place in their group, and their turn as stored (Pieces keep only the turn about y; a group's
+    /// root may lean).
     /// </summary>
-    public Dictionary<int, (App.VehicleLink Link, Vector3 Rotation)> VehicleLinks { get; } = [];
+    public Dictionary<int, (App.ObjectLink Link, Vector3 Rotation)> Links { get; } = [];
 
     /// <summary>Player-built pieces (objects with a creator): prefab, position and Y rotation in degrees.</summary>
     public List<(int Id, int Prefab, Vector3 Position, float RotationY)> Pieces { get; } = [];
@@ -560,7 +561,7 @@ public sealed class WorldSave
         {
             ObjectRef o = ObjectRefs[id];
             Tamed.Remove(id);
-            VehicleLinks.Remove(id);
+            Links.Remove(id);
             if (o.Creator != 0 && Creators.TryGetValue(o.Creator, out int n))
             {
                 Creators[o.Creator] = n - 1;
@@ -725,11 +726,11 @@ public sealed class WorldSave
         long creator = 0, owner = 0, playerId = 0;
         // Zero = not stored: the object keeps its prefab's own scale.
         Vector3 scale = Vector3.Zero;
-        // A vehicle's link (ValheimRAFT): its ids, and its place and turn in its parent's frame.
-        int persistentId = 0, parent = 0, swivel = 0, aboard = 0;
-        Vector3 offset = Vector3.Zero;
-        Vector3? euler = null;
-        Quaternion? oldTurn = null;
+        // The values mods link objects by (App.ObjectLinks): ids, and a part's place and turn in its parent's frame.
+        var links = App.ObjectLinks.Current;
+        List<(int Key, int Value)>? linkInts = null;
+        List<(int Key, Vector3 Value)>? linkVec3s = null;
+        List<(int Key, Quaternion Value)>? linkQuats = null;
         if ((flags & 0xFF) == 0)
         {
             objRef.End = pkg.Position;
@@ -774,13 +775,9 @@ public sealed class WorldSave
                 {
                     scale = value;
                 }
-                else if (key == App.Vehicles.OffsetKey)
+                else if (links.Vec3Keys.Contains(key))
                 {
-                    offset = value;
-                }
-                else if (key == App.Vehicles.EulerKey)
-                {
-                    euler = value;
+                    (linkVec3s ??= []).Add((key, value));
                 }
             }
         }
@@ -791,9 +788,9 @@ public sealed class WorldSave
             {
                 int key = pkg.ReadInt();
                 Quaternion value = pkg.ReadQuaternion();
-                if (key == App.Vehicles.OldTurnKey)
+                if (links.QuatKeys.Contains(key))
                 {
-                    oldTurn = value;
+                    (linkQuats ??= []).Add((key, value));
                 }
             }
         }
@@ -813,21 +810,9 @@ public sealed class WorldSave
                 {
                     Tamed.Add(id);
                 }
-                else if (key == App.Vehicles.PersistentIdKey)
+                else if (links.IntKeys.Contains(key))
                 {
-                    persistentId = value;
-                }
-                else if (key == App.Vehicles.ParentKey)
-                {
-                    parent = value;
-                }
-                else if (key == App.Vehicles.SwivelKey)
-                {
-                    swivel = value;
-                }
-                else if (key == App.Vehicles.AboardKey)
-                {
-                    aboard = value;
+                    (linkInts ??= []).Add((key, value));
                 }
             }
         }
@@ -894,10 +879,9 @@ public sealed class WorldSave
             Placed.Add(new PlacedObject(prefab, location, position, rotation, timeCreated));
         }
         bool terrain = TerrainZones.Count > 0 && TerrainZones[^1].Source is { } last && last.File == file && last.Start == start;
-        var link = new App.VehicleLink(persistentId, parent, swivel, offset, euler, oldTurn, aboard);
-        if (!link.IsEmpty)
+        if (linkInts != null && App.ObjectLinks.Read(links, linkInts, linkVec3s, linkQuats) is { } link)
         {
-            VehicleLinks[id] = (link, rotation);
+            Links[id] = (link, rotation);
         }
         objRef.IsPiece = creator != 0;
         objRef.Creator = creator;

@@ -278,10 +278,10 @@ public class WorldSaveTests
         Assert.DoesNotContain(world.Placed, p => p.Location == MadeObjects.MadeUpLocation);
     }
 
-    // A ValheimRAFT vehicle's root and part: their links read (the root's whole turn too), read again when the game
-    // changes them, gone with them.
+    // A ValheimRAFT vehicle's root and part (linked by the manifest the editor ships): their links read (the root's
+    // whole turn too), read again when the game changes them, gone with them.
     [Fact]
-    public void LiveVehicleLinksComeChangeAndGoWithTheirObjects()
+    public void LiveLinksComeChangeAndGoWithTheirObjects()
     {
         var world = WorldSave.LoadLive(File.ReadAllBytes(Fixtures.Snapshot), "live");
         var at = new Vector3(640, 30, 640);
@@ -290,17 +290,18 @@ public class WorldSaveTests
         var part = ZdoData.Parse(MadeObjects.VehiclePart("wood_floor", at, 7, new Vector3(1, 2, 3), new Vector3(0, 45, 0), 8));
         part.QuatList.Add((StableHash.Of("MBRotation"), new Quaternion(0.1f, 0.2f, 0.3f, 0.9f)));
         var came = world.MergeLive([(10, 10)], [(4242, 1, root), (4242, 2, part.Serialize())], _ => false, _ => false)!;
-        var (link, rotation) = world.VehicleLinks[came.Added[0]];
+        var (link, rotation) = world.Links[came.Added[0]];
         Assert.Equal(7, link.Id);
         Assert.Equal(new Vector3(10, 90, 0), rotation);
-        link = world.VehicleLinks[came.Added[1]].Link;
-        Assert.Equal((0, 7, 8, new Vector3(1, 2, 3), new Vector3(0, 45, 0)), (link.Id, link.Parent, link.Swivel, link.Offset, link.Euler));
-        Assert.Equal(new Quaternion(0.1f, 0.2f, 0.3f, 0.9f), link.OldTurn);
+        link = world.Links[came.Added[1]].Link;
+        Assert.Equal((0, new Vector3(1, 2, 3), new Vector3(0, 45, 0)), (link.Id, link.Offset, link.Euler));
+        Assert.Equal([8, 7], link.Parents);
+        Assert.Equal(new Quaternion(0.1f, 0.2f, 0.3f, 0.9f), link.Quat);
         // The part taken off the vehicle in the game; then both gone.
         var changed = world.MergeLive([(10, 10)], [(4242, 1, root), (4242, 2, MadeObjects.Zdo("wood_floor", at))], _ => false, _ => false)!;
         Assert.Equal([came.Added[1]], changed.Updated);
-        Assert.False(world.VehicleLinks.ContainsKey(came.Added[1]));
+        Assert.False(world.Links.ContainsKey(came.Added[1]));
         world.MergeLive([(10, 10)], [], _ => false, _ => false);
-        Assert.Empty(world.VehicleLinks);
+        Assert.Empty(world.Links);
     }
 }

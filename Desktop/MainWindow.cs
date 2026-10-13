@@ -1029,10 +1029,10 @@ public sealed partial class MainWindow : Window
         var paste = View.Paste;
         string label = paste.Count > 1 ? $"Paste ×{paste.Count}" : "Paste";
         float ox = s.Scene.X0 * 64f - 32f, oz = s.Scene.Z0 * 64f - 32f;
-        var vehicleIds = s.ReadVehicles().Ids;
+        var linkIds = s.ReadLinks().Ids;
         s.Commit(label, g =>
         {
-            var (t, rect, a) = paste.Apply(g, at, s.MaskNow(), vehicleIds);
+            var (t, rect, a) = paste.Apply(g, at, s.MaskNow(), linkIds);
             add.AddRange(a);
             touched = t.Count;
             if (paste.Site.Count > 0)

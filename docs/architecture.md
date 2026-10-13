@@ -114,7 +114,7 @@ plot that is no world: it has nothing to save; its building becomes a Homestead 
 | Save | `WorldSave`, `ValheimReader`, `WorldWriter`, `WorldCreator`, `ZdoTools`, `ZdoData`, `InventoryData`, `ChunkMath` (`Core/Save/`) | Byte formats follow the game's `ZPackage`. |
 | Pending changes | `EditStore`, `ZoneEdit`, `NewObject`, `ObjectField`, `ZoneReset`, `HeightGrid`, `Uplift` (`Core/Editing/`) | `EditStore` takes its own lock: strokes and buttons use it from different threads. |
 | Building, dungeons | `Hammer`, `Stability`, `Dungeons`, `DungeonGen`, `DungeonPlan`, `DungeonDresser` (`Core/Editing/`) | The hammer's snapping, the support check and the room joining, from the game's data. |
-| Mods' objects | `Vehicles`, `VehicleLink`, `VehicleIndex` (`Core/App/Vehicles.cs`), `ModKeys`, `ModManifests`, `ModCatalogue` (`Core/App/`) | ValheimRAFT's vehicles (below); mods' data names, manifests and prefabs. |
+| Mods' objects | `ObjectLinks`, `LinkRule`, `LinkSet`, `ObjectLink`, `LinkIndex` (`Core/App/ObjectLinks.cs`), `ModKeys`, `ModManifests`, `ModCatalogue` (`Core/App/`), shipped manifests (`Core/Mods/`) | Objects mods link into one (below); mods' data names, manifests and prefabs. |
 | Game data | `GameLook`, `GameBundles`, `GameData`, `GameCatalogues*`, `GameLocations`, `GameTextures`, `Crunch`, `GameShader`, `TerrainShader` (`Core/App/`) | Below. |
 | Live | `LiveBridge`, `LiveSync` (`Core/Save/`), `Tunnel`, `ServerConfig`, `LocalGame` (`Core/App/`) | Below. |
 | Claude, scripts | `ClaudeServer`, `ClaudeTools`, `ClaudeBuilder`, `ClaudeGuide`, `ClaudeRelay`, `ScriptHost`, `ScriptApi.csx` (`Desktop/`) | Below. |
@@ -314,17 +314,21 @@ either breaks it, the user's own scripts and the docs.
   through `Uplift`'s ground discs (`EditStore.MaxLift`).
 - Settings and servers are written through `Core/App/SafeFile.cs` (temporary file, then moved over).
 
-**ValheimRAFT's vehicles** (`Core/App/Vehicles.cs`, user docs in [select.md](select.md#vehicles-valheimraft)): the
-game saves a vehicle's parts at its root's position, and the mod builds each from the offset and turn in its data
-(`MBParentId`, `MBPosition`, `MBRotationVec`; on a swivel, `SwivelParentId`). `WorldSave.VehicleLinks` keeps each
-object's link (and its whole stored turn: `Pieces` keep only the turn about y); `VehicleIndex` is the vehicles as they
-are now (saved objects not deleted, and `NewObject`s through `Vehicles.LinkOf`), giving a part's `Pose` and a
-vehicle's `Group`. Only the drawn place changes: `WorldScene.Placed` gives a `Thing` its pose (in `ReadThings`,
-`FindThings`, and `EditSession.PlaceVehicles` after every change of things), while `ObjectRef.Position` and
-`NewObject.Position` stay the stored ones (live refinding, zones, the writer). A part never moves alone
-(`EditSession.WholeVehicleMoves` in `Transform`; `EditSession.WithVehicles` for the Select tool, copies, Claude's
-tools); a pasted copy gets new PersistentIDs with every reference rewritten (`Vehicles.Remap`): two vehicles under
-one id would share their parts in the game.
+**Objects mods link into one** (`Core/App/ObjectLinks.cs`, user docs in
+[select.md](select.md#linked-objects-ships-and-other-mods-groups), mod authors' in
+[modding.md](modding.md#linked-objects)): nothing in the code knows a mod. A `LinkRule` comes from the `links` of a
+mod's `worldeditor.json` (`ModManifests`), or from one the editor ships for a mod that has none (`Core/Mods/*.json`,
+embedded, read first: a mod's own file wins); it names the data keys of an object's id, of what a part hangs on, of
+its offset and turn in that one's frame, of other ids a copy rewrites and of values a copy leaves out, and whether the
+game saves parts at their root (ValheimRAFT) or where they are drawn. `WorldSave.Links` keeps each object's
+`ObjectLink`, read by the rules in use as the world was read (the manifests are read before; its whole stored turn
+too: `Pieces` keep only the turn about y); `LinkIndex` is the groups as they are now (saved objects not deleted, and
+`NewObject`s through `ObjectLinks.LinkOf`), giving a part's `Pose` and a group's `Group`. Only the drawn place
+changes: `WorldScene.Placed` gives a `Thing` its pose (in `ReadThings`, `FindThings`, and `EditSession.PlaceLinked`
+after every change of things), while `ObjectRef.Position` and `NewObject.Position` stay the stored ones (live
+refinding, zones, the writer). A part never moves alone (`EditSession.WholeGroupMoves` in `Transform`;
+`EditSession.WithLinked` for the Select tool, copies, Claude's tools); a pasted copy gets new ids with every
+reference rewritten (`ObjectLinks.Remap`): two groups under one id would share their parts in the game.
 
 **Names that are file formats.** Some names are read back from files or by other programs; renaming
 them in a refactor loses users' data or breaks a client:

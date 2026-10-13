@@ -1002,7 +1002,7 @@ public sealed partial class ClaudeTools
 
     /// <summary>remove_objects: takes objects away by id, as one pending step.</summary>
     [McpServerTool(Name = "remove_objects", Title = "Take objects away")]
-    [Description("Takes objects of the open area (or the plot) away, by their ids (list_objects, place_pieces), as one step of the history (pending). A part of a ValheimRAFT vehicle (ship) takes its whole vehicle away.")]
+    [Description("Takes objects of the open area (or the plot) away, by their ids (list_objects, place_pieces), as one step of the history (pending). A part of a group a mod links into one (a ValheimRAFT ship) takes its whole group away.")]
     public Task<string> RemoveObjects([Description("Their ids.")] int[] ids) => OnUi(() =>
     {
         if (CannotEdit() is string why)
@@ -1016,12 +1016,12 @@ public sealed partial class ClaudeTools
         {
             return "None of those ids is an object of the area.";
         }
-        // A vehicle's part never goes alone (ValheimRAFT): the whole vehicle does.
-        var (ok, _, vehicles) = session.WithVehicles(given);
+        // A linked group's part never goes alone (ObjectLinks: a ship): the whole group does.
+        var (ok, _, groups, noun) = session.WithLinked(given);
         session.Commit($"Claude: took {ok.Count} away", null, ok, []);
         _w.AfterClaudeEdit($"Claude took {ok.Count} object(s) away; Ctrl+Z puts them back.");
         return $"Took {ok.Count} away{(given.Count < ids.Length ? $" ({ids.Length - given.Count} id(s) were not objects of the area)" : "")}"
-            + $"{(vehicles > 0 ? $", with {vehicles} whole vehicle(s)" : "")}. Now pending: {Pending()}";
+            + $"{(groups > 0 ? $", with {groups} whole {noun}(s)" : "")}. Now pending: {Pending()}";
     });
 
     /// <summary>support_check: the Workshop's support check, the pieces that would fall and the weakest still standing.</summary>

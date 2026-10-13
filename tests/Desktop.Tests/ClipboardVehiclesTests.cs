@@ -2,17 +2,21 @@ using System.Globalization;
 using System.Numerics;
 using TerrainEditor.App;
 using TerrainEditor.Editing;
+using TerrainEditor.Save;
 using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
 /// <summary>
-/// Copying and pasting ValheimRAFT vehicles: a part copied brings its whole vehicle, without the ground under it (it
+/// Copying and pasting ValheimRAFT vehicles (linked by the manifest the editor ships): a part copied brings its whole vehicle, without the ground under it (it
 /// does not stand on it); each paste is a vehicle of its own (new PersistentIDs, its parts naming its root), drawn in
 /// the ship's shape and stored at its root.
 /// </summary>
 public class ClipboardVehiclesTests
 {
+    // ValheimRAFT's data keys.
+    private static readonly int IdKey = StableHash.Of("PersistentID"), SwivelKey = StableHash.Of("SwivelParentId");
+
     /// <summary>An int value of an added thing's data (null when it has none).</summary>
     private static int? IntOf(EditSession s, int index, int key) =>
         s.Edits.FindAdded(s.Scene.Things[index].Id)!.Data?.FirstOrDefault(f => f.Key == key && f.Section == "ints")?.Value is { } v
@@ -22,7 +26,7 @@ public class ClipboardVehiclesTests
     private static List<int> PasteAt(EditSession s, PasteTool paste, Vector2 at)
     {
         var add = new List<(NewObject, bool)>();
-        var ids = s.ReadVehicles().Ids;
+        var ids = s.ReadLinks().Ids;
         return s.Commit("Paste", g => { var (t, r, a) = paste.Apply(g, at, null, ids); add.AddRange(a); return (t, r); }, [], add);
     }
 
@@ -36,7 +40,7 @@ public class ClipboardVehiclesTests
         // As one block, its height its own (not following the ground), and no ground.
         Assert.All(clip.Objects, o => Assert.False(o.Follow));
         Assert.All(clip.Rel, r => Assert.True(float.IsNaN(r)));
-        Assert.All(clip.Objects, o => Assert.Contains(o.Data!, f => Vehicles.IsLinkKey(f.Key)));
+        Assert.All(clip.Objects, o => Assert.Contains(o.Data!, f => ObjectLinks.IsLinkKey(f.Key)));
     }
 
     [Fact]
@@ -51,13 +55,13 @@ public class ClipboardVehiclesTests
             var added = PasteAt(s, paste, at);
             Assert.Equal(5, added.Count);
             int root = Assert.Single(added, i => s.Scene.Things[i].Prefab == TestScenes.ShipRoot);
-            int id = IntOf(s, root, Vehicles.PersistentIdKey)!.Value;
+            int id = IntOf(s, root, IdKey)!.Value;
             roots.Add(id);
             var parts = added.Where(i => i != root).ToList();
-            Assert.All(parts, i => Assert.Equal(id, IntOf(s, i, Vehicles.ParentKey)));
-            int swivel = Assert.Single(parts, i => IntOf(s, i, Vehicles.PersistentIdKey) != null);
-            Assert.NotEqual(TestScenes.SwivelId, IntOf(s, swivel, Vehicles.PersistentIdKey));
-            Assert.Equal(IntOf(s, swivel, Vehicles.PersistentIdKey), IntOf(s, Assert.Single(parts, i => IntOf(s, i, Vehicles.SwivelKey) != null), Vehicles.SwivelKey));
+            Assert.All(parts, i => Assert.Equal(id, IntOf(s, i, StableHash.Of("MBParentId"))));
+            int swivel = Assert.Single(parts, i => IntOf(s, i, IdKey) != null);
+            Assert.NotEqual(TestScenes.SwivelId, IntOf(s, swivel, IdKey));
+            Assert.Equal(IntOf(s, swivel, IdKey), IntOf(s, Assert.Single(parts, i => IntOf(s, i, SwivelKey) != null), SwivelKey));
             // Drawn as the ship is, round its root; stored at it.
             var r = s.Scene.Things[root].Position;
             foreach (var d in new[] { new Vector3(0, 0, -2), new Vector3(0, 0, 2), new Vector3(4, 1, 0), new Vector3(4, 1, -1) })
@@ -68,6 +72,6 @@ public class ClipboardVehiclesTests
         }
         Assert.Equal(3, roots.Append(TestScenes.ShipId).Distinct().Count());
         // The original stays as it was.
-        Assert.Equal(TestScenes.ShipId, s.ReadVehicles().Get(s.Scene.Things[ship[0]].Id)!.Link.Id);
+        Assert.Equal(TestScenes.ShipId, s.ReadLinks().Get(s.Scene.Things[ship[0]].Id)!.Link.Id);
     }
 }

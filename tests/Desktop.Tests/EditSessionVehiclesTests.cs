@@ -6,7 +6,7 @@ using Xunit;
 namespace TerrainEditor.Desktop.Tests;
 
 /// <summary>
-/// ValheimRAFT's vehicles in an edit session: parts drawn where the mod builds them (stored at the root), a part
+/// ValheimRAFT's vehicles (linked by the manifest the editor ships) in an edit session: parts drawn where the mod builds them (stored at the root), a part
 /// moved taking its whole vehicle along (the parts stored at the root's new place), a root deleted taking its parts, a
 /// root gone leaving its parts where they are stored, and a saved ship read back where it was drawn.
 /// </summary>
@@ -76,12 +76,12 @@ public class EditSessionVehiclesTests
         Assert.Equal([ship[2]], ship.Where(i => s.Scene.Things[i].Gone));
         // The Select tool's way: any part brings the whole vehicle.
         s.Undo();
-        var (all, parts, vehicles) = s.WithVehicles([ship[4], 99]);
+        var (all, parts, groups, noun) = s.WithLinked([ship[4], 99]);
         Assert.Equal([ship[4], 99], all.Take(2));
         Assert.Equal(ship.Order(), all.Where(i => i != 99).Order());
         Assert.Equal(ship.Order(), parts.Order());
-        Assert.Equal(1, vehicles);
-        Assert.Equal([ship[4]], s.WithVehicles([ship[4]], anyPart: false).Indices);
+        Assert.Equal((1, "vehicle"), (groups, noun));
+        Assert.Equal([ship[4]], s.WithLinked([ship[4]], anyPart: false).Indices);
     }
 
     [Fact]
@@ -107,15 +107,15 @@ public class EditSessionVehiclesTests
             Assert.True(s.Save().Saved);
             var world = WorldSave.Load(dir);
             var things = WorldScene.ReadThings(world, 0, 0, 1, 1, new HashSet<int>());
-            var floors = things.Where(t => t.Prefab == StableHash.Of("wood_floor") && world.VehicleLinks.ContainsKey(t.Id)).Select(t => t.Position).ToList();
+            var floors = things.Where(t => t.Prefab == StableHash.Of("wood_floor") && world.Links.ContainsKey(t.Id)).Select(t => t.Position).ToList();
             Assert.Equal(4, floors.Count);
             foreach (var p in ShipAt(0, 0).Skip(1))
             {
                 Assert.Contains(floors, f => Vector3.Distance(f, p) < 0.01f);
             }
-            var root = Assert.Single(things, t => t.Prefab == TestScenes.ShipRoot && world.VehicleLinks.ContainsKey(t.Id));
+            var root = Assert.Single(things, t => t.Prefab == TestScenes.ShipRoot && world.Links.ContainsKey(t.Id));
             Assert.Equal(new Vector3(0, 90, 0), root.Rotation);
-            Assert.Equal(TestScenes.ShipId, world.VehicleLinks[root.Id].Link.Id);
+            Assert.Equal(TestScenes.ShipId, world.Links[root.Id].Link.Id);
         }
         finally
         {

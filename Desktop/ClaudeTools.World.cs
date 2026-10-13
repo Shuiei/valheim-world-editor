@@ -342,7 +342,7 @@ public sealed partial class ClaudeTools
     /// step further), new independent objects as the Select tool's copy makes them.
     /// </summary>
     [McpServerTool(Name = "copy_objects", Title = "Copy objects")]
-    [Description("Copies objects of the open area (by id) as one group, as the editor's copy and paste does: shifted by dx, dy, dz metres and turned by turn degrees round one point (default: their middle), copies times in a row, each copy a step further (a row of houses, a fence, a ring of pillars with turn and a pivot). Copies are new objects of the same kinds and sizes, with all the originals hold (builder, chest contents, text, portal tags, health). A part of a ValheimRAFT vehicle (ship) brings its whole vehicle, and each copy is a vehicle of its own. ground: true keeps each copy as high above the ground as its original. Refused when a copy would leave the area. One pending step; the answer gives the new ids.")]
+    [Description("Copies objects of the open area (by id) as one group, as the editor's copy and paste does: shifted by dx, dy, dz metres and turned by turn degrees round one point (default: their middle), copies times in a row, each copy a step further (a row of houses, a fence, a ring of pillars with turn and a pivot). Copies are new objects of the same kinds and sizes, with all the originals hold (builder, chest contents, text, portal tags, health). A part of a group a mod links into one (a ValheimRAFT ship) brings its whole group, and each copy is a group of its own. ground: true keeps each copy as high above the ground as its original. Refused when a copy would leave the area. One pending step; the answer gives the new ids.")]
     public Task<string> CopyObjects(
         [Description("Their ids (list_objects, get_selection).")] int[] ids,
         [Description("Metres east of each copy from the one before (negative: west).")] float dx = 0,
@@ -366,9 +366,9 @@ public sealed partial class ClaudeTools
         {
             return "Nothing copied: " + string.Join("; ", problems);
         }
-        // A vehicle's parts go with it (ValheimRAFT); each copy gets ids of its own below.
-        var ok = s.WithVehicles(usable).Indices;
-        var vehicleIds = s.ReadVehicles().Ids;
+        // A linked group's parts go with it (ObjectLinks: a ship); each copy gets ids of its own below.
+        var ok = s.WithLinked(usable).Indices;
+        var linkIds = s.ReadLinks().Ids;
         if (copies is < 1 or > 100)
         {
             return "copies is 1 to 100.";
@@ -400,14 +400,11 @@ public sealed partial class ClaudeTools
                 copy.Add((new Editing.NewObject(0, t.Prefab, new Vector3(cx, cy, cz), Wrapped(t.Rotation + new Vector3(0, turn * k, 0)), t.Scale,
                     t.Id >= 0 ? t.Id : added?.SourceId, true, Data: data), t.Piece, i));
             }
-            var own = TerrainEditor.App.Vehicles.Remap([.. copy.Select(c => c.O)], vehicleIds);
+            var own = TerrainEditor.App.ObjectLinks.Remap([.. copy.Select(c => c.O)], linkIds);
             for (int j = 0; j < copy.Count; j++)
             {
-                if (own[j] is { } o)
-                {
-                    adds.Add((o, copy[j].Piece));
-                    from.Add(copy[j].From);
-                }
+                adds.Add((own[j], copy[j].Piece));
+                from.Add(copy[j].From);
             }
         }
         var made = s.Commit(label.StartsWith("Claude", StringComparison.Ordinal) ? label : "Claude: " + label, null, [], adds);
