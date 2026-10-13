@@ -127,6 +127,12 @@ In `BepInEx/config/Tie.WorldEditorBridge.cfg`:
 - [Report a problem or suggest an idea](https://github.com/Shuiei/valheim-world-editor/issues)
 - [What changed in each version](https://github.com/Shuiei/valheim-world-editor/blob/main/CHANGELOG.md)
 
+## Support
+
+The editor and this mod are free and open source. If they saved you some work:
+
+[![Buy me a coffee](https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png)](https://buymeacoffee.com/tieboo)
+
 ## License
 
 [MIT](https://github.com/Shuiei/valheim-world-editor/blob/main/LICENSE), © 2026 Shuiei. The source
