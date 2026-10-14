@@ -21,9 +21,11 @@
 #                  files (the plugin is left out: it builds against the game's own DLLs), and the
 #                  Linux one starts and draws the test world (tools/smoke-test.sh, under Xvfb)
 #   windows-smoke  the Windows package does the same on a Windows machine (tools/smoke-test.ps1)
-# When a release is due (main, VERSION's CHANGELOG heading dated, no tag for it yet), the same jobs run
-# in the release workflow, followed by:
+# When a release is due (main, VERSION's CHANGELOG heading dated, no tag for it yet), the release
+# workflow runs instead, and nothing in it runs before the approval (the tests ran on the pull request,
+# which main's ruleset keeps up to date with main, so the merged commit's tree is the one they tested):
 #   hold-release   waits for someone to approve it in CircleCI (the mod-token context is restricted)
+#   packages, windows-smoke   as above: the packages to release, and the Windows one smoke-tested
 #   github-release signs the Windows program (Authenticode, tools/sign-windows.sh: the maintainer's
 #                  Certum certificate through SimplySign's cloud), builds the plugin's zip
 #                  (tools/thunderstore.sh, against a Valheim dedicated server from SteamCMD and
@@ -495,35 +497,25 @@ workflows:
             branches:
               only: main
 
-  # The test workflow's jobs (keep both lists alike), then the release once approved: the mod-token
-  # context's secrets (GITHUB_TOKEN, THUNDERSTORE_TOKEN, HEXIUM_TOKEN, NEXUS_API_KEY, CERTUM_EMAIL,
-  # CERTUM_OTP) reach only the jobs after the approval.
+  # The approval first, so nothing runs for a release nobody approves; then only what the release needs:
+  # the packages (the tests ran on the pull request, on the same tree) and the Windows smoke test, then
+  # the release. The mod-token context's secrets (GITHUB_TOKEN, THUNDERSTORE_TOKEN, HEXIUM_TOKEN,
+  # NEXUS_API_KEY, CERTUM_EMAIL, CERTUM_OTP) reach only the release jobs.
   release:
     when: << pipeline.parameters.release >>
     jobs:
-      - packages
-      - code-analysis
-      - core-tests
-      - app-tests
+      - hold-release:
+          type: approval
+      - packages:
+          requires:
+            - hold-release
       - windows-smoke:
           requires:
             - packages
-      - coverage:
-          requires:
-            - core-tests
-            - app-tests
-      - hold-release:
-          type: approval
-          requires:
-            - packages
-            - code-analysis
-            - core-tests
-            - app-tests
-            - windows-smoke
       - github-release:
           context: mod-token
           requires:
-            - hold-release
+            - windows-smoke
       - publish:
           name: publish-thunderstore
           site: thunderstore

@@ -118,8 +118,12 @@ CircleCI makes the release once you approve it (`.circleci/config.yml`, `.circle
    of `— unreleased`). Optionally, write the GitHub release's notes in `docs/releases/v<version>.md`;
    without it the notes are the CHANGELOG's sections since the last release.
 2. Merge it. On main, a dated heading for `VERSION` with no `v<version>` tag yet makes the pipeline
-   a release one: the usual jobs, then **hold-release** waits.
-3. In CircleCI, open that pipeline's workflow (`release`) and approve **hold-release**. Then:
+   a release one: **hold-release** waits at once, before anything runs. The tests are not run again:
+   they ran on the pull request, on the same tree (main's ruleset keeps a pull request up to date
+   with main before it merges).
+3. In CircleCI, open that pipeline's workflow (`release`) and approve **hold-release**. Then
+   **packages** builds the editor packages and **windows-smoke** tries the Windows one, as on every
+   push, and:
    - **github-release** signs the Windows program (`tools/sign-windows.sh`: Authenticode, with the
      maintainer's Certum code-signing certificate through SimplySign's cloud, timestamped by Certum),
      builds the plugin's zip (against a Valheim dedicated server downloaded with SteamCMD and the
