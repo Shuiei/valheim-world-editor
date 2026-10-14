@@ -109,13 +109,14 @@ public sealed class WorldSession : IDisposable
     {
         if (Area == null && History != null)
         {
-            // Applied is part of a step's hash: the ids are keyed again once it is set.
+            // Applied is part of a step's hash: the ids and frames are keyed again once it is set.
             var ids = History.Ids.ToList();
+            var frames = History.Frames?.ToList();
             foreach (var c in History.Undo)
             {
                 c.Applied = true;
             }
-            History = History with { Ids = ids.ToDictionary(p => p.Key, p => p.Value) };
+            History = History with { Ids = ids.ToDictionary(p => p.Key, p => p.Value), Frames = frames?.ToDictionary(p => p.Key, p => p.Value) };
         }
     }
 

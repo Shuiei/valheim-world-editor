@@ -4,6 +4,15 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.35.2 — unreleased
+
+### Fixed
+- **Opening another area erased the history made before it.** The steps that did not fit the new area (all of them,
+  after a paste or any edit in another part of the world) were dropped, so they could never be undone again, there
+  or anywhere. They are now kept aside, each in the frame of the area it was made in, and come back when that area
+  is opened again; only a step partly in the new area still stops the older ones from being undone there. The
+  History panel says how many steps are kept aside, and the history file keeps them too.
+
 ## v1.35.1 — unreleased
 
 ### Fixed

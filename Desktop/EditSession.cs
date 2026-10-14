@@ -219,6 +219,41 @@ public sealed class EditSession
     /// The history: what can be undone (the next undo last) and what can be redone (the next redo last).
     /// </summary>
     private readonly List<Change> _undo = [], _redo = [];
+
+    /// <summary>
+    /// Steps of the world's history made in other areas, which cannot be undone here: kept as they came (each with the
+    /// frame its points are in and its objects' ids) to go back into the world's history untouched (Export), so they
+    /// come back where they were made.
+    /// </summary>
+    private readonly List<(Change Change, Frame Frame, int[] Ids)> _shelvedUndo = [], _shelvedRedo = [];
+
+    /// <summary>
+    /// Where each step stands in the order they were made, this area's and the kept-aside ones together (Export puts
+    /// them back in that order, whichever list they are in); the kept history's order on Import, then as they come.
+    /// By reference: a change is its own step.
+    /// </summary>
+    private readonly Dictionary<Change, long> _order = new(ReferenceEqualityComparer.Instance);
+
+    /// <summary>The order the next step not seen yet gets.</summary>
+    private long _nextOrder;
+
+    /// <summary>A step's place in the order they were made; a step not seen yet comes after every other.</summary>
+    private long OrderOf(Change c) => _order.TryGetValue(c, out long o) ? o : _order[c] = _nextOrder++;
+
+    /// <summary>
+    /// How many steps of the world's history were made in other areas and are kept aside here (they can be undone
+    /// or redone where they were made).
+    /// </summary>
+    public int Shelved
+    {
+        get
+        {
+            lock (_lock)
+            {
+                return _shelvedUndo.Count + _shelvedRedo.Count;
+            }
+        }
+    }
     /// <summary>
     /// How many steps the undo list keeps; the oldest go first.
     /// </summary>
@@ -596,6 +631,7 @@ public sealed class EditSession
             _undo.RemoveAt(0);
         }
         _redo.Clear();
+        _shelvedRedo.Clear();
     }
 
     /// <summary>
@@ -762,6 +798,7 @@ public sealed class EditSession
                 _undo.RemoveAt(0);
             }
             _redo.Clear();
+            _shelvedRedo.Clear();
         }
     }
 
@@ -1235,10 +1272,7 @@ public sealed class EditSession
             else if (result.Saved)
             {
                 Ground.TakeEdits(Edits);
-                foreach (var c in _undo)
-                {
-                    c.Applied = true;
-                }
+                MarkApplied(_undo);
             }
         }
         if (reread)
@@ -1247,6 +1281,19 @@ public sealed class EditSession
         }
         Changed?.Invoke();
         return result;
+    }
+
+    /// <summary>
+    /// Marks these steps, and those kept aside from other areas, as saved or applied: the world's pending changes are
+    /// one set, so a save or an apply from any area takes the steps of every area with it (and Discard must not undo
+    /// them where they were made). Under the lock.
+    /// </summary>
+    private void MarkApplied(IEnumerable<Change> steps)
+    {
+        foreach (var c in steps.Concat(_shelvedUndo.Select(s => s.Change)))
+        {
+            c.Applied = true;
+        }
     }
 
     /// <summary>
@@ -1276,10 +1323,7 @@ public sealed class EditSession
                 Ground.TakeEdits(Edits);
                 if (o.Done)
                 {
-                    foreach (var c in before)
-                    {
-                        c.Applied = true;
-                    }
+                    MarkApplied(before);
                 }
             }
         }
@@ -1306,36 +1350,92 @@ public sealed class EditSession
     /// <param name="X0">That area's first zone x.</param>
     /// <param name="Z0">That area's first zone z.</param>
     /// <param name="Ids">For each change, the ids of its things, in the order of its Things.</param>
-    public sealed record Kept(List<Change> Undo, List<Change> Redo, int Ox, int Oz, int W, int X0, int Z0, Dictionary<Change, int[]> Ids);
+    /// <param name="Frames">
+    /// The frame of each change made in another area than the kept one (null, or a change not in it: the kept frame).
+    /// </param>
+    public sealed record Kept(List<Change> Undo, List<Change> Redo, int Ox, int Oz, int W, int X0, int Z0, Dictionary<Change, int[]> Ids, Dictionary<Change, Frame>? Frames = null)
+    {
+        /// <summary>The frame a change's points and zones are in: its own when it has one, else the kept one.</summary>
+        public Frame FrameOf(Change c) => Frames != null && Frames.TryGetValue(c, out var f) ? f : new Frame(Ox, Oz, W, X0, Z0);
+    }
+
+    /// <summary>The area a kept change's points and zones are indices in.</summary>
+    /// <param name="Ox">The world x in metres of the grid's first point.</param>
+    /// <param name="Oz">Its world z in metres.</param>
+    /// <param name="W">The grid's width (ground points are its indices).</param>
+    /// <param name="X0">The area's first zone x.</param>
+    /// <param name="Z0">The area's first zone z.</param>
+    public readonly record struct Frame(int Ox, int Oz, int W, int X0, int Z0);
 
     /// <summary>
-    /// The history as Kept: ground points by world position and objects by id, to follow the world to the next area.
+    /// The history as Kept: this area's steps (ground points by world position and objects by id) and those made in
+    /// other areas together, in the order they were made, each in the frame it came in, to follow the world to the
+    /// next area.
     /// </summary>
     public Kept Export()
     {
         lock (_lock)
         {
+            var frame = new Frame(Scene.X0 * 64 - 32, Scene.Z0 * 64 - 32, Ground.W, Scene.X0, Scene.Z0);
             var ids = new Dictionary<Change, int[]>();
+            var frames = new Dictionary<Change, Frame>();
+            foreach (var (c, f, cids) in _shelvedUndo.Concat(_shelvedRedo))
+            {
+                ids[c] = cids;
+                frames[c] = f;
+            }
             foreach (var c in _undo.Concat(_redo))
             {
                 ids[c] = [.. c.Things.Select(t => Scene.Things[t.Index].Id)];
+                frames[c] = frame;
             }
-            return new Kept([.. _undo], [.. _redo], Scene.X0 * 64 - 32, Scene.Z0 * 64 - 32, Ground.W, Scene.X0, Scene.Z0, ids);
+            // Steps made here since the last import come after every other, the undo list's in its order, then the
+            // redo list's from its last (the next redo, the oldest of them) to its first.
+            foreach (var c in _undo)
+            {
+                OrderOf(c);
+            }
+            for (int i = _redo.Count - 1; i >= 0; i--)
+            {
+                OrderOf(_redo[i]);
+            }
+            foreach (var c in _order.Keys.Where(c => !ids.ContainsKey(c)).ToList())
+            {
+                _order.Remove(c);
+            }
+            var undo = _shelvedUndo.Select(s => s.Change).Concat(_undo).OrderBy(OrderOf).ToList();
+            var redo = _shelvedRedo.Select(s => s.Change).Concat(_redo).OrderByDescending(OrderOf).ToList();
+            return new Kept(undo, redo, frame.Ox, frame.Oz, frame.W, frame.X0, frame.Z0, ids, frames);
         }
     }
 
+    /// <summary>Where a kept change stands to this area.</summary>
+    private enum Standing
+    {
+        /// <summary>Its ground and objects are all in the area: it can be undone here.</summary>
+        Fits,
+        /// <summary>None of them is in the area (made elsewhere): kept aside, it comes back where it was made.</summary>
+        Outside,
+        /// <summary>Some are in the area, some not: it cannot be undone here, nor can what came before it.</summary>
+        Straddles,
+    }
+
     /// <summary>
-    /// The kept history fitted to this area: a change whose ground or objects are not all in it (and every change
-    /// before it) is left out, as it could not be undone here. Objects it needs that the area does not show (deleted,
-    /// or added and undone) come back as gone things.
+    /// The kept history fitted to this area: a change whose ground and objects are all in it can be undone here; one
+    /// made wholly elsewhere is kept aside (Shelved) and goes back into the world's history as it came; one partly in
+    /// the area, and every change before it, is kept aside too, as nothing older could be undone under it. Objects a
+    /// fitted change needs that the area does not show (deleted, or added and undone) come back as gone things.
     /// </summary>
     /// <param name="k">The kept history.</param>
     /// <param name="find">Finds things of the world by id (those this area does not have).</param>
-    /// <returns>How many were left out.</returns>
+    /// <returns>How many were kept aside.</returns>
     public int Import(Kept k, Func<IReadOnlyCollection<int>, Dictionary<int, WorldScene.Thing>> find)
     {
         lock (_lock)
         {
+            _shelvedUndo.Clear();
+            _shelvedRedo.Clear();
+            _order.Clear();
             int ox = Scene.X0 * 64 - 32, oz = Scene.Z0 * 64 - 32;
             var index = new Dictionary<int, int>();
             for (int i = 0; i < Scene.Things.Count; i++)
@@ -1362,43 +1462,47 @@ public sealed class EditSession
                 }
                 return null;
             }
-            int[]? Points(int[] pts)
+            // The points in this area's grid (-1 for one outside it, or locked), and how many are in.
+            (int[] Points, int Inside) Points(int[] pts, Frame f)
             {
                 int[] r = new int[pts.Length];
+                int inside = 0;
                 for (int n = 0; n < pts.Length; n++)
                 {
-                    int gx = pts[n] % k.W + k.Ox - ox, gz = pts[n] / k.W + k.Oz - oz;
-                    if (gx < 0 || gz < 0 || gx >= Ground.W || gz >= Ground.H || Ground.Locked(gx, gz))
-                    {
-                        return null;
-                    }
-                    r[n] = gz * Ground.W + gx;
+                    int gx = pts[n] % f.W + f.Ox - ox, gz = pts[n] / f.W + f.Oz - oz;
+                    bool inArea = gx >= 0 && gz >= 0 && gx < Ground.W && gz < Ground.H && !Ground.Locked(gx, gz);
+                    r[n] = inArea ? gz * Ground.W + gx : -1;
+                    inside += inArea ? 1 : 0;
                 }
-                return r;
+                return (r, inside);
             }
-            List<(int X, int Z)>? Zones(List<(int X, int Z)> zones)
+            // The zones relative to this area, and how many are in it.
+            (List<(int X, int Z)> Zones, int Inside) Zones(List<(int X, int Z)> zones, Frame f)
             {
-                var r = zones.Select(z => (X: z.X + k.X0 - Scene.X0, Z: z.Z + k.Z0 - Scene.Z0)).ToList();
-                return r.All(z => z.X >= 0 && z.Z >= 0 && z.X < Scene.ZonesX && z.Z < Scene.ZonesZ) ? r : null;
+                var r = zones.Select(z => (X: z.X + f.X0 - Scene.X0, Z: z.Z + f.Z0 - Scene.Z0)).ToList();
+                return (r, r.Count(z => z.X >= 0 && z.Z >= 0 && z.X < Scene.ZonesX && z.Z < Scene.ZonesZ));
             }
             var map = new Dictionary<Change, Change>();
-            Change? Fit(Change c)
+            (Standing Standing, Change? Fitted) Fit(Change c)
             {
-                if (Points(c.Points) is not { } pts || Zones(c.Zones) is not { } zones)
-                {
-                    return null;
-                }
+                var f = k.FrameOf(c);
+                var (pts, ptsIn) = Points(c.Points, f);
+                var (zones, zonesIn) = Zones(c.Zones, f);
                 int[] ids = k.Ids[c];
                 var things = new (int, bool, bool)[ids.Length];
+                int thingsIn = 0;
                 for (int n = 0; n < ids.Length; n++)
                 {
-                    if (Thing(ids[n]) is not int i)
-                    {
-                        return null;
-                    }
-                    things[n] = (i, c.Things[n].Before, c.Things[n].After);
+                    int? i = Thing(ids[n]);
+                    things[n] = (i ?? -1, c.Things[n].Before, c.Things[n].After);
+                    thingsIn += i != null ? 1 : 0;
                 }
-                var f = new Change(c.Label, pts, c.Before, c.After, zones)
+                int inside = ptsIn + zonesIn + thingsIn, total = pts.Length + zones.Count + ids.Length;
+                if (inside < total)
+                {
+                    return (inside == 0 ? Standing.Outside : Standing.Straddles, null);
+                }
+                var fitted = new Change(c.Label, pts, c.Before, c.After, zones)
                 {
                     Things = things,
                     Resets = c.Resets,
@@ -1408,21 +1512,56 @@ public sealed class EditSession
                     Earlier = c.Earlier,
                     RevertOf = c.RevertOf != null && map.TryGetValue(c.RevertOf, out var r) ? r : null,
                 };
-                map[c] = f;
-                return f;
+                map[c] = fitted;
+                return (Standing.Fits, fitted);
             }
-            // Oldest first, so a removal finds the change it took out; then keep the newest that fit.
+            (Change, Frame, int[]) Aside(Change c) => (c, k.FrameOf(c), k.Ids[c]);
+            // Oldest first, so a removal finds the change it took out. A straddling change takes every change before
+            // it aside with it; after the last one, those that fit are undoable here and the others kept aside.
             var undo = k.Undo.Select(Fit).ToList();
-            int start = undo.FindLastIndex(c => c == null) + 1;
+            int start = undo.FindLastIndex(u => u.Standing == Standing.Straddles) + 1;
             _undo.Clear();
-            _undo.AddRange(undo.Skip(start)!);
-            // The redo list has the next redo last; fitted oldest first too. One that does not fit is
-            // dropped with every change after it (they could only be redone after it).
+            _shelvedUndo.AddRange(k.Undo.Take(start).Select(Aside));
+            for (int n = start; n < undo.Count; n++)
+            {
+                if (undo[n].Fitted is { } fitted)
+                {
+                    _undo.Add(fitted);
+                }
+                else
+                {
+                    _shelvedUndo.Add(Aside(k.Undo[n]));
+                }
+            }
+            // The redo list has the next redo last; fitted oldest first too. A straddling change takes every change
+            // after it (earlier in the list) aside with it: they could only be redone after it.
             var redo = Enumerable.Reverse(k.Redo).Select(Fit).Reverse().ToList();
-            int end = redo.FindLastIndex(c => c == null);
+            int end = redo.FindLastIndex(u => u.Standing == Standing.Straddles);
             _redo.Clear();
-            _redo.AddRange(redo.Skip(end + 1)!);
-            return start + end + 1;
+            _shelvedRedo.AddRange(k.Redo.Take(end + 1).Select(Aside));
+            for (int n = end + 1; n < redo.Count; n++)
+            {
+                if (redo[n].Fitted is { } fitted)
+                {
+                    _redo.Add(fitted);
+                }
+                else
+                {
+                    _shelvedRedo.Add(Aside(k.Redo[n]));
+                }
+            }
+            // The order they were made in, as the kept history has it: the undo list oldest first, then the redo list
+            // from its last (the next redo) to its first; a fitted step under its copy, one kept aside as it came.
+            for (int n = 0; n < undo.Count; n++)
+            {
+                _order[n >= start && undo[n].Fitted is { } f ? f : k.Undo[n]] = n;
+            }
+            for (int n = 0; n < redo.Count; n++)
+            {
+                _order[n > end && redo[n].Fitted is { } f ? f : k.Redo[n]] = undo.Count + redo.Count - 1 - n;
+            }
+            _nextOrder = undo.Count + redo.Count;
+            return _shelvedUndo.Count + _shelvedRedo.Count;
         }
     }
 
@@ -1527,6 +1666,8 @@ public sealed class EditSession
         Touch((0, 0, Ground.W - 1, Ground.H - 1));
         _undo.Clear();
         _redo.Clear();
+        _shelvedUndo.Clear();
+        _shelvedRedo.Clear();
         // Saving gives objects new ids: read them again.
         var things = WorldScene.ReadThings(fresh, Scene.X0, Scene.Z0, Scene.ZonesX, Scene.ZonesZ, Edits.Deleted, Edits.Added);
         lock (Scene.Things)

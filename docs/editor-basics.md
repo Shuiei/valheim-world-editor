@@ -29,7 +29,7 @@ place and the clipboard.
 | Slide the view | Middle mouse drag, Space + left drag, Shift + right drag (in any tool), or the **View** tool (`H` or `Esc`) |
 | Move around | `W` `A` `S` `D` or the arrow keys |
 | See it as a player | `F`: **Walk** with your eyes 1.8 m above the ground (or the water), like a player; `F` again: **Fly** (Space up, C down); `F` again: back to the usual view. WASD move where you look, Shift runs, right drag looks around. The status bar says which. |
-| Go to the next area | The **◀ ▲ ▼ ▶** arrows next to "Area" move it one zone (64 m). The camera stays where it is in the world, and your unsaved changes stay pending. History steps that fit the new area come along; the others are left out (the changes themselves stay). |
+| Go to the next area | The **◀ ▲ ▼ ▶** arrows next to "Area" move it one zone (64 m). The camera stays where it is in the world, and your unsaved changes stay pending. History steps that fit the new area come along; the others are kept and come back when you open the area they were made in (the History panel says how many are kept aside). |
 | Let the area follow you | **Follow** (next to the arrows): when the point you look at comes within 12 m of the area's edge, the area grows that way by itself: a row of zones is added on that side (both sides near a corner) and the zones already open stay, so a 3 × 3 area becomes 4 × 3, then 4 × 4 and so on. It never leaves zones behind; it stops at 17 zones each way (about 1 km). It waits, and says why, while something would be lost: a stroke, a path being drawn, selected objects, changes being sent to the game. Remembered. |
 | Back to the map | **Map** at the top left. What is not saved stays pending. |
 
@@ -66,9 +66,12 @@ Changes already applied to the game are tagged.
 Applied changes (live) can still be undone; the next apply then sends the undo.
 
 The history follows you from area to area (the arrows, Follow, the map): it stays with the pending
-changes. A change that touched ground outside the new area is left out, with every change before
-it, since it could not be undone from there. Saving and Apply live keep it: undo a step and save
-(or apply) again to take it back. Zone resets and No limit ground read the world again, which starts
+changes. A step made wholly in another area is kept aside while this one is open (the panel says how
+many) and comes back, undoable, when you open the area it was made in. A step partly outside the
+open area cannot be undone from there, nor can the steps made before it: they are kept aside too,
+until an area holding all of it opens. A new edit drops the redo list, the kept-aside part included,
+as it always did. Saving and Apply live keep it: undo a step and save (or apply) again to take it
+back. Zone resets and No limit ground read the world again, which starts
 a new history; so does reloading from the game.
 
 ### Kept after the editor closes
