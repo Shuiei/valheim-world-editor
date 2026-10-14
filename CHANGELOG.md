@@ -4,6 +4,14 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.35.3 — unreleased
+
+### WorldEditorBridge
+- The plugin's log says more of each apply, for when a change does not show for every player: the apply line adds
+  how many objects the game knew before and after and how many peers are connected, and a second later a new line
+  says how many of the destroyed objects the game still has and how many were made again at their place (an object
+  of the same prefab within 10 cm). See [What the plugin logs](docs/live-mode.md#what-the-plugin-logs).
+
 ## v1.35.2 — unreleased
 
 ### Fixed

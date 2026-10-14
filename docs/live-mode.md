@@ -189,6 +189,23 @@ Applied changes can still be undone: undo (or Remove in History) and apply again
 comes back as a copy of what it was when the snapshot was taken; a placed object is removed from
 the game again.
 
+## What the plugin logs
+
+The server's (or game's) `BepInEx/LogOutput.log` says what each apply did, for when a change does not
+show for every player:
+
+- `WorldEditorBridge: destroyed N object(s) (M found again at their place under a new id, K already
+  gone), created C; A -> B object(s) known, P peer(s)` — one line per apply of objects: how many
+  objects the game knew before and after it (the destroyed ones go on the game's next update, so B
+  still counts them) and how many players are connected.
+- `WorldEditorBridge: 1 s after the apply: S of N destroyed object(s) still exist, R made again at
+  their place; B object(s), P peer(s)` — a second later. A destroyed object the game still has, or
+  another object of the same prefab standing within 10 cm of where it stood, means something on the
+  server made it again (a mod, most likely); none means the server did its part, and what a player
+  still sees is that player's own game.
+- `WorldEditorBridge: applied terrain to N zone(s) (C new)` and `WorldEditorBridge: reset N zone(s):
+  …` for the ground and for zone resets.
+
 ## Limits
 
 - **Zone resets** need WorldEditorBridge 0.10.0 or newer on the server. The game generates a reset
