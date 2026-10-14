@@ -113,7 +113,7 @@ public static class GameScripts
             Of("float", "m_paintRadius"),
             Of("float", "m_paintStrength"),
         ],
-        ["Location"] = [Of("float", "m_exteriorRadius")],
+        ["Location"] = [Of("float", "m_exteriorRadius"), Bool("m_clearArea"), Bool("m_applyRandomDamage"), Bool("m_hasInterior")],
         ["Room"] =
         [
             Of("int", "m_theme"),

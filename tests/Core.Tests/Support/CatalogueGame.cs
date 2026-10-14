@@ -223,7 +223,7 @@ public static class CatalogueGame
     {
         b.Prefab("Village", r =>
         {
-            r.Mono("Location", new Fields { ["m_exteriorRadius"] = 20.0 });
+            r.Mono("Location", new Fields { ["m_exteriorRadius"] = 20.0, ["m_clearArea"] = true, ["m_applyRandomDamage"] = false, ["m_hasInterior"] = false });
             r.Child("houses", c =>
             {
                 c.Position = (10, 0, 0);
@@ -243,6 +243,12 @@ public static class CatalogueGame
             {
                 c.Mono("TerrainModifier", Modifier(3), enabled: false);
                 c.Mono("TerrainModifier", Modifier(4, level: false));
+            });
+            // A networked object of its own (a saved object when the location is spawned), named as an instance.
+            r.Child("Shrine (1)", c =>
+            {
+                c.Position = (0, 0, -3);
+                c.Mono("ZNetView", new Fields { ["m_persistent"] = true });
             });
         });
         b.Prefab("Kiln", r =>

@@ -184,6 +184,8 @@ public sealed class WorldCreatorTests : IDisposable
     [Fact]
     public void TheLocationsOfTheGeneratedZonesAreSpawnedLikeTheGames()
     {
+        // The game's location rules, as the editor has them once Valheim is found (CI has no game).
+        Fixtures.UseLocations();
         var made = WorldCreator.Create(Folder("Temple"), "Temple", Seed, radius: 1);
         var w = WorldSave.Load(Folder("Temple"));
         var terrain = new ValheimGen.TerrainService(w);
@@ -200,7 +202,7 @@ public sealed class WorldCreatorTests : IDisposable
         Assert.InRange(System.Numerics.Vector3.Distance(stoneAt, templeAt), 1f, 30f);
         Assert.Equal(5, w.Objects.Count(o => TerrainEditor.Terrain.PrefabCatalog.Get(o.Prefab)?.Name.StartsWith("BossStone_", StringComparison.Ordinal) == true));
         // Nothing grows on the ground the temple clears: what stands within its radius is its own (and its proxy).
-        var temple = TerrainEditor.Editing.LocationPrefabs.Get("StartTemple")!;
+        var temple = LocationPrefabs.Get("StartTemple")!;
         Assert.InRange(w.Objects.Count(o => System.Numerics.Vector3.Distance(o.Position, templeAt) < 25f && o.Prefab != StableHash.Of("_ZoneCtrl")), 2, temple.Contents.Length + 1);
         // One zone control in each generated zone, at its middle, as the game makes (its creatures spawn from it).
         var ctrls = w.Objects.Where(o => o.Prefab == StableHash.Of("_ZoneCtrl")).Select(o => (o.Position.X, o.Position.Y, o.Position.Z)).Order().ToList();
@@ -211,7 +213,7 @@ public sealed class WorldCreatorTests : IDisposable
             Assert.InRange(site.Zone.X, -16, 16);
             Assert.InRange(site.Zone.Z, -16, 16);
             Assert.Equal(ChunkMath.SectorOf(site.Position.X, site.Position.Z), site.Zone);
-            var prefab = TerrainEditor.Editing.LocationPrefabs.Get(site.Name);
+            var prefab = LocationPrefabs.Get(site.Name);
             Assert.Equal(prefab is { Interior: false }, site.Objects != null);
             if (site.Objects is { } objects)
             {
