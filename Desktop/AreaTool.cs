@@ -387,8 +387,9 @@ public sealed class AreaTool
 
     /// <summary>
     /// Cut and fill (each point stands for 1 m²): what Flatten, Raise or Lower would move within the
-    /// game's ±8 m limit (and what is out of its reach; all of it with No limit on), and how much the
-    /// ground inside has been raised and dug since it was generated.
+    /// game's ±8 m limit (and what is out of its reach; with No limit on, within the lift's ±400 m of the
+    /// generated ground, as <see cref="Ground.SetHeight"/> keeps it), and how much the ground inside has
+    /// been raised and dug since it was generated.
     /// </summary>
     /// <returns>The text for the panel, empty while there is no selection.</returns>
     public string Volume(Ground g, GroundAction act, float height, float amount, Func<int, float>? mask = null)
@@ -399,7 +400,6 @@ public sealed class AreaTool
         }
         static string M3(double v) => v >= 1000 ? $"{v / 1000:0.0}k m³" : $"{Math.Round(v)} m³";
         double up = 0, down = 0, cut = 0, fill = 0, outOfReach = 0, raise = 0, lower = 0;
-        float limit = g.NoLimit ? float.PositiveInfinity : EditStore.MaxLevel;
         foreach (var (p, w) in a.Cells)
         {
             if (g.Locked(p % g.W, p / g.W))
@@ -416,7 +416,11 @@ public sealed class AreaTool
                 down -= d;
             }
 
-            float want = h + (height - h) * w, got = Math.Clamp(want, b - limit, b + limit);
+            // What SetHeight can reach: No limit moves the lift (±MaxLift round the generated ground, the
+            // edit within the limit kept as it is), the limit the edit (±MaxLevel round the lifted ground).
+            float lo = g.NoLimit ? g.Base[p] + (h - b) - EditStore.MaxLift : b - EditStore.MaxLevel;
+            float hi = g.NoLimit ? g.Base[p] + (h - b) + EditStore.MaxLift : b + EditStore.MaxLevel;
+            float want = h + (height - h) * w, got = Math.Clamp(want, lo, hi);
             if (got > h)
             {
                 fill += got - h;
@@ -427,12 +431,12 @@ public sealed class AreaTool
             }
 
             outOfReach += MathF.Abs(want - got);
-            raise += MathF.Max(0, MathF.Min(b + limit, h + amount * w) - h);
-            lower += MathF.Max(0, h - MathF.Max(b - limit, h - amount * w));
+            raise += MathF.Max(0, MathF.Min(hi, h + amount * w) - h);
+            lower += MathF.Max(0, h - MathF.Max(lo, h - amount * w));
         }
         string first = act switch
         {
-            GroundAction.Flatten => $"Flatten to {height:0.#} m: dig {M3(cut)}, fill {M3(fill)}{(outOfReach >= 1 ? $" ({M3(outOfReach)} out of reach: ±8 m limit)" : "")}.",
+            GroundAction.Flatten => $"Flatten to {height:0.#} m: dig {M3(cut)}, fill {M3(fill)}{(outOfReach >= 1 ? $" ({M3(outOfReach)} out of reach: {(g.NoLimit ? "±400 m lift" : "±8 m")} limit)" : "")}.",
             GroundAction.Raise => $"Raise {amount:0.#} m: fill {M3(raise)}.",
             GroundAction.Lower => $"Lower {amount:0.#} m: dig {M3(lower)}.",
             _ => "",

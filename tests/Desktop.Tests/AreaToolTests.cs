@@ -101,6 +101,9 @@ public class AreaToolTests
         Assert.NotEqual(Fill(raise), Fill(raiseAll));
         Assert.Equal(Fill(flattenAll), Fill(raiseAll));
         Assert.Equal(Fill(raiseAll).Replace("fill", "dig"), System.Text.RegularExpressions.Regex.Match(a.Volume(s.Ground, AreaTool.GroundAction.Lower, 0, 30), @"dig [\d.k]+ m³").Value);
+        // The lift stops at ±400 m of the generated ground: 500 m up is 100 m out of reach.
+        Assert.Contains("out of reach: ±400 m lift limit", a.Volume(s.Ground, AreaTool.GroundAction.Flatten, 530, 0));
+        Assert.Equal(Fill(a.Volume(s.Ground, AreaTool.GroundAction.Raise, 0, 400)), Fill(a.Volume(s.Ground, AreaTool.GroundAction.Raise, 0, 500)));
     }
 
     // Restore over No limit ground (a mountain, held as lift past the ±8 m limit) brings it back down
