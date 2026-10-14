@@ -4616,24 +4616,59 @@ public sealed class GlView : OpenGlControlBase
 
     /// <summary>The line shader (made at first use), and the selection's lines on the graphics card.</summary>
     private uint _lineProg, _lineVao, _lineVbo;
-    /// <summary>The selected objects' boxes, orange, seen through what is in front of them.</summary>
+    /// <summary>
+    /// Over this many selected objects, one box round them all instead of a box each: thousands of boxes
+    /// over a stacked structure make a solid blob that hides it.
+    /// </summary>
+    internal const int BoxEachUpTo = 500;
+
+    /// <summary>
+    /// The selection's box lines: a box round each object (12 edges, two points each), or, past
+    /// <see cref="BoxEachUpTo"/> objects, one box round all of them.
+    /// </summary>
+    /// <param name="bounds">The selected objects' boxes.</param>
+    internal static float[] SelectionBoxes(IReadOnlyList<(Vector3 Min, Vector3 Max)> bounds)
+    {
+        var v = new List<float>();
+        void Box(Vector3 lo, Vector3 hi)
+        {
+            Vector3 C(int k) => new((k & 1) == 0 ? lo.X : hi.X, (k & 2) == 0 ? lo.Y : hi.Y, (k & 4) == 0 ? lo.Z : hi.Z);
+            foreach (var (a, b) in new[] { (0, 1), (2, 3), (4, 5), (6, 7), (0, 2), (1, 3), (4, 6), (5, 7), (0, 4), (1, 5), (2, 6), (3, 7) })
+            {
+                var p = C(a); var q = C(b);
+                v.AddRange([p.X, p.Y, p.Z, q.X, q.Y, q.Z]);
+            }
+        }
+        if (bounds.Count > BoxEachUpTo)
+        {
+            Vector3 lo = bounds[0].Min, hi = bounds[0].Max;
+            foreach (var (min, max) in bounds)
+            {
+                lo = Vector3.Min(lo, min);
+                hi = Vector3.Max(hi, max);
+            }
+            Box(lo, hi);
+        }
+        else
+        {
+            foreach (var (lo, hi) in bounds)
+            {
+                Box(lo, hi);
+            }
+        }
+        return [.. v];
+    }
+
+    /// <summary>
+    /// The selected objects' boxes, orange, seen through what is in front of them (one box round a large
+    /// selection, <see cref="SelectionBoxes"/>).
+    /// </summary>
     private unsafe void DrawSelection(Matrix4x4 vp)
     {
         if (_selectionDirty)
         {
             _selectionDirty = false;
-            var v = new List<float>();
-            foreach (int i in Selected)
-            {
-                var (lo, hi) = _bounds[i];
-                Vector3 C(int k) => new((k & 1) == 0 ? lo.X : hi.X, (k & 2) == 0 ? lo.Y : hi.Y, (k & 4) == 0 ? lo.Z : hi.Z);
-                foreach (var (a, b) in new[] { (0, 1), (2, 3), (4, 5), (6, 7), (0, 2), (1, 3), (4, 6), (5, 7), (0, 4), (1, 5), (2, 6), (3, 7) })
-                {
-                    var p = C(a); var q = C(b);
-                    v.AddRange([p.X, p.Y, p.Z, q.X, q.Y, q.Z]);
-                }
-            }
-            _selectionSegs = [.. v];
+            _selectionSegs = SelectionBoxes([.. Selected.Where(i => i < _bounds.Length).Select(i => _bounds[i])]);
         }
         // Seen through what is in front of it, like the web editor's selection.
         DrawLines(ref _lineVao, ref _lineVbo, _selectionSegs, vp, new Vector4(1, 0.66f, 0.2f, 1));

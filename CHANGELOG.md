@@ -4,6 +4,13 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.37.1 — unreleased
+
+### Changed
+- **A large selection is marked by one box.** Past 500 selected objects the 3D view draws one orange box round
+  them all instead of one round each: a whole stacked structure selected at once (tens of thousands of pieces)
+  was a solid orange blob that hid it. Up to 500 the boxes are drawn as before.
+
 ## v1.37.0 — 2026-10-14
 
 ### Added
