@@ -28,17 +28,19 @@ if (args[0] == "create")
         Console.Error.WriteLine("create needs <folder> <name> <seed> [radius] [--flat]");
         return 2;
     }
-    // The game's prefabs, for the new world's objects.
-    if (!GameData.Ensure(GameBundles.ForGame(GameLook.FindValheim(AppSettings.Load().ValheimPath), GameLook.IndexFile)))
+    // The game's prefabs and location prefabs, for the new world's objects, and its location rules, for where they go.
+    var game = GameBundles.ForGame(GameLook.FindValheim(AppSettings.Load().ValheimPath), GameLook.IndexFile);
+    if (!GameData.Ensure(game))
     {
         Console.Error.WriteLine(GameData.Missing);
         return 1;
     }
+    GameLocations.UseGameRules(game).Wait();
     try
     {
         int radius = args.Length > 4 && args[4] != "--flat" ? int.Parse(args[4], CultureInfo.InvariantCulture) : 0;
         var made = WorldCreator.Create(args[1], args[2], args[3], radius, flat: args.Contains("--flat"));
-        Console.WriteLine($"Created '{args[2]}' (seed {args[3]} = {made.Seed}) in {made.Directory}: {made.Zones} zones generated, {made.Objects:N0} objects."
+        Console.WriteLine($"Created '{args[2]}' (seed {args[3]} = {made.Seed}) in {made.Directory}: {made.Zones} zones generated, {made.Objects:N0} objects, {made.Locations} locations."
             + (made.Flat is var (fx, fz) ? $" Zone {fx}, {fz}: the most even dry Meadows ({made.FlatSpan:0.0} m from lowest to highest), left bare." : ""));
         return 0;
     }

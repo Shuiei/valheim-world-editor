@@ -143,7 +143,8 @@ public static class ZdoBuilder
     /// <param name="position">World position in metres.</param>
     /// <param name="euler">Unity Euler angles in degrees.</param>
     /// <param name="scale">Uniform scale; stored only when above 0 and not 1.</param>
-    public static byte[] Blank(int prefab, ushort baseFlags, Vector3 position, Vector3 euler, float scale)
+    /// <param name="ints">Int data to store (key hash, value), such as a location proxy's location and seed; none by default.</param>
+    public static byte[] Blank(int prefab, ushort baseFlags, Vector3 position, Vector3 euler, float scale, IReadOnlyList<(int Key, int Value)>? ints = null)
     {
         euler = new Vector3(Wrap(euler.X), Wrap(euler.Y), Wrap(euler.Z));
         bool rotated = euler.LengthSquared() > 1e-6f;
@@ -155,6 +156,10 @@ public static class ZdoBuilder
         if (scale > 0f && MathF.Abs(scale - 1f) > 1e-4f)
         {
             flags |= Vec3;
+        }
+        if (ints is { Count: > 0 })
+        {
+            flags |= Ints;
         }
         using MemoryStream ms = new();
         using BinaryWriter w = new(ms);
@@ -170,6 +175,15 @@ public static class ZdoBuilder
             WriteNumItems(w, 1);
             w.Write(ScaleKey);
             w.Write(scale); w.Write(scale); w.Write(scale);
+        }
+        if ((flags & Ints) != 0)
+        {
+            WriteNumItems(w, ints!.Count);
+            foreach (var (key, value) in ints)
+            {
+                w.Write(key);
+                w.Write(value);
+            }
         }
         w.Flush();
         return ms.ToArray();

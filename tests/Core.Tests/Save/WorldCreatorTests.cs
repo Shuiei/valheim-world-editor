@@ -14,15 +14,20 @@ public sealed class WorldCreatorTests : IDisposable
 {
     private readonly string _dir = Path.Combine(Path.GetTempPath(), "vwe-newworld-" + Guid.NewGuid().ToString("N")[..8]);
 
+    // The location rules in use before the test: a test that installs the fixture's rules (process-wide) leaves them
+    // as it found them.
+    private readonly ValheimGen.SeedLocations.RuleSet _rules = ValheimGen.SeedLocations.Current;
+
     // The test world's seed and unique id (tests/fixtures/CITest).
     private const string Seed = "GbXfypqU3G";
     private const long FixtureUid = 0x8d9ed32b;
 
     /// <summary>
-    /// Deletes the temporary folder.
+    /// Puts the location rules back and deletes the temporary folder.
     /// </summary>
     public void Dispose()
     {
+        ValheimGen.SeedLocations.Use(_rules);
         try
         {
             Directory.Delete(_dir, true);
@@ -132,6 +137,8 @@ public sealed class WorldCreatorTests : IDisposable
     [Fact]
     public void ABareZoneIsTheMostEvenDryMeadowsWithNothingOnItAndItsGroundUntouched()
     {
+        // With the game's location rules, so the zones holding a location are known and kept off.
+        Fixtures.UseLocations();
         var made = WorldCreator.Create(Folder("Bare"), "Bare", Seed, radius: 4, flat: true);
         var (fx, fz) = Assert.NotNull(made.Flat);
         var w = WorldSave.Load(Folder("Bare"));
@@ -143,10 +150,13 @@ public sealed class WorldCreatorTests : IDisposable
         Assert.True(h.Min() >= ValheimGen.TerrainService.WaterLevel + 1.5f, $"lowest {h.Min()}");
         Assert.Equal(h.Max() - h.Min(), made.FlatSpan, 3);
         Assert.Equal(ValheimGen.Heightmap.Biome.Meadows, terrain.BiomeAt(fx * 64, fz * 64));
-        // The most even such zone.
-        Assert.Equal((fx, fz, made.FlatSpan), WorldCreator.FlattestZone(terrain, 4));
-        // Nothing on it (the vegetation grew everywhere else), and its ground has no edit.
-        Assert.DoesNotContain(w.Objects, o => (int)MathF.Floor((o.Position.X + 32) / 64) == fx && (int)MathF.Floor((o.Position.Z + 32) / 64) == fz && o.Prefab != StableHash.Of("_TerrainCompiler"));
+        // The most even such zone holding no location.
+        var taken = WorldCreator.Sites(terrain, w.Seed, 4).Select(s => s.Zone).ToHashSet();
+        Assert.Equal((fx, fz, made.FlatSpan), WorldCreator.FlattestZone(terrain, 4, taken));
+        // Nothing on it but the game's own zone control (the vegetation grew everywhere else), no location in it, and
+        // its ground has no edit.
+        Assert.DoesNotContain(w.Objects, o => (int)MathF.Floor((o.Position.X + 32) / 64) == fx && (int)MathF.Floor((o.Position.Z + 32) / 64) == fz && o.Prefab != StableHash.Of("_TerrainCompiler") && o.Prefab != StableHash.Of("_ZoneCtrl"));
+        Assert.DoesNotContain(w.Locations, l => (int)MathF.Floor((l.Position.X + 32) / 64) == fx && (int)MathF.Floor((l.Position.Z + 32) / 64) == fz);
         Assert.True(w.ObjectCount > 100);
         Assert.All(w.TerrainZones, z => Assert.DoesNotContain(true, z.ModifiedHeight));
         // Without generated zones around it, no bare zone (and nothing written).
@@ -176,6 +186,49 @@ public sealed class WorldCreatorTests : IDisposable
         foreach (var c in w.Chunks)
         {
             Assert.Equal(File.ReadAllBytes(Path.Combine(Folder("Grown"), c.FileName)), File.ReadAllBytes(Path.Combine(Folder("Again"), c.FileName)));
+        }
+    }
+
+    [Fact]
+    public void TheLocationsOfTheGeneratedZonesAreSpawnedLikeTheGames()
+    {
+        // The game's location rules, as the editor has them once Valheim is found (CI has no game); put back by Dispose.
+        Fixtures.UseLocations();
+        var made = WorldCreator.Create(Folder("Temple"), "Temple", Seed, radius: 1);
+        var w = WorldSave.Load(Folder("Temple"));
+        var terrain = new ValheimGen.TerrainService(w);
+        // The start temple stands within a zone of the middle: its proxy says which location it is and where, its
+        // boss stones are objects of their own around it, and the zone file lists it as placed, the rest of the
+        // seed's locations left for the game to lay out.
+        var start = Assert.Single(ValheimGen.SeedLocations.Place(terrain.Generator, ValheimGen.SeedLocations.Which.Start, cancel: TestContext.Current.CancellationToken));
+        var (templeAt, templeHash) = Assert.Single(w.Locations, l => l.Location == StableHash.Of("StartTemple"));
+        Assert.Equal(new System.Numerics.Vector3(start.X, start.Y, start.Z), templeAt);
+        Assert.Contains(w.Zones!.Locations, l => l.Hash == templeHash && l.Position == templeAt && l.Placed);
+        Assert.False(w.Zones.LocationsGenerated);
+        Assert.True(made.Locations >= 1, $"{made.Locations} locations");
+        var (_, _, stoneAt, _, _) = Assert.Single(w.Objects, o => o.Prefab == StableHash.Of("BossStone_Eikthyr"));
+        Assert.InRange(System.Numerics.Vector3.Distance(stoneAt, templeAt), 1f, 30f);
+        Assert.Equal(5, w.Objects.Count(o => TerrainEditor.Terrain.PrefabCatalog.Get(o.Prefab)?.Name.StartsWith("BossStone_", StringComparison.Ordinal) == true));
+        // Nothing grows on the ground the temple clears: what stands within its radius is its own (and its proxy).
+        var temple = LocationPrefabs.Get("StartTemple")!;
+        Assert.InRange(w.Objects.Count(o => System.Numerics.Vector3.Distance(o.Position, templeAt) < 25f && o.Prefab != StableHash.Of("_ZoneCtrl")), 2, temple.Contents.Length + 1);
+        // One zone control in each generated zone, at its middle, as the game makes (its creatures spawn from it).
+        var ctrls = w.Objects.Where(o => o.Prefab == StableHash.Of("_ZoneCtrl")).Select(o => (o.Position.X, o.Position.Y, o.Position.Z)).Order().ToList();
+        Assert.Equal(Enumerable.Range(-1, 3).SelectMany(z => Enumerable.Range(-1, 3).Select(x => (x * 64f, 0f, z * 64f))).Order().ToList(), ctrls);
+        // Every site of a wider ring is in a generated zone, and has objects just when the editor can make its kind.
+        foreach (var site in WorldCreator.Sites(terrain, w.Seed, 16))
+        {
+            Assert.InRange(site.Zone.X, -16, 16);
+            Assert.InRange(site.Zone.Z, -16, 16);
+            Assert.Equal(ChunkMath.SectorOf(site.Position.X, site.Position.Z), site.Zone);
+            var prefab = LocationPrefabs.Get(site.Name);
+            Assert.Equal(prefab is { Interior: false }, site.Objects != null);
+            if (site.Objects is { } objects)
+            {
+                // Its proxy last, where it stands.
+                Assert.Equal(site.Position, objects[^1].At);
+                Assert.Equal(WorldSave.LocationProxyPrefab, BitConverter.ToInt32(objects[^1].Zdo, 14));
+            }
         }
     }
 

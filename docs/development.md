@@ -235,8 +235,10 @@ time and after a game update). The kinds:
   and each room's size, openings and the objects the game makes in it with the random parts that
   decide them, found from the `Room` and `DungeonGenerator` scripts up to their prefabs. A room's
   tree is read raw, a level at a time; of its scripts only those that matter, where it is active, and
-  the many `ZNetView`s and `RandomSpawn`s raw too (about 2 s). Its test copy keeps every dungeon kind
-  and the rooms it has (those of the kinds the tests generate: the biomes' own and the Frost Caves).
+  the many `ZNetView`s and `RandomSpawn`s raw too (about 2 s). Location prefabs (`Location` script)
+  are read the same way, for what the game makes of one it spawns (new worlds' generated zones). Its
+  test copy keeps every dungeon kind, the rooms it has (those of the kinds the tests generate: the
+  biomes' own and the Frost Caves) and the locations it has (the start temple, a crypt's entrance).
 
 The tests use trimmed copies, `tests/fixtures/<kind>.json` (what they meet; the driver's
 `gamedata <folder>` gives them to the smoke tests). After a game update, make them again with

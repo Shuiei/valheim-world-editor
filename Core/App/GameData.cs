@@ -40,7 +40,11 @@ public static class GameData
         new("cave-rocks", (_, bundles) => GameCatalogues.CaveRocksJson(bundles), CaveRocks.Use),
         new("piece-cost", null, PieceCost.Use, TrimPieceCost),
         new("vegetation", (_, bundles) => GameCatalogues.VegetationJson(bundles), Regrow.Use, TrimVegetation),
-        new("dungeon-rooms", null, Editing.Dungeons.Use, TrimDungeons),
+        new("dungeon-rooms", null, json =>
+        {
+            Editing.Dungeons.Use(json);
+            Editing.LocationPrefabs.Use(json);
+        }, TrimDungeons),
     ];
 
     /// <summary>
@@ -439,12 +443,13 @@ public static class GameData
     }
 
     /// <summary>
-    /// dungeon-rooms: every dungeon kind, and the rooms the copy has.
+    /// dungeon-rooms: every dungeon kind, and the rooms and the locations the copy has.
     /// </summary>
     private static Dictionary<string, object> TrimDungeons(JsonElement game, JsonElement copy) => new()
     {
         ["dungeons"] = game.GetProperty("dungeons"),
         ["rooms"] = Entries(game.GetProperty("rooms"), copy.GetProperty("rooms")),
+        ["locations"] = copy.TryGetProperty("locations", out var locations) ? Entries(game.GetProperty("locations"), locations) : [],
     };
 
     /// <summary>
