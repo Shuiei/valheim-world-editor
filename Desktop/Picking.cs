@@ -59,6 +59,75 @@ public static class Picking
         return t0;
     }
 
+    /// <summary>
+    /// Where the ray meets a triangle (distance along it, at least 0.1 mm), or null; Möller–Trumbore, both sides
+    /// (meshes are picked from whichever side they are seen, and the game's rooms from inside and out).
+    /// </summary>
+    public static float? HitTriangle(Vector3 o, Vector3 d, Vector3 a, Vector3 b, Vector3 c)
+    {
+        Vector3 e1 = b - a, e2 = c - a, p = Vector3.Cross(d, e2);
+        float det = Vector3.Dot(e1, p);
+        if (MathF.Abs(det) < 1e-9f)
+        {
+            return null;
+        }
+        float inv = 1f / det;
+        Vector3 s = o - a;
+        float u = Vector3.Dot(s, p) * inv;
+        if (u is < 0 or > 1)
+        {
+            return null;
+        }
+        var q = Vector3.Cross(s, e1);
+        float v = Vector3.Dot(d, q) * inv;
+        if (v < 0 || u + v > 1)
+        {
+            return null;
+        }
+        float t = Vector3.Dot(e2, q) * inv;
+        return t > 1e-4f ? t : null;
+    }
+
+    /// <summary>
+    /// How far along the ray (d normalised) a mesh placed by a matrix is first met, or null: the ray is taken into
+    /// the mesh's own frame, tried against its box, then against every triangle.
+    /// </summary>
+    /// <param name="o">The ray's origin.</param>
+    /// <param name="d">The ray's direction, normalised.</param>
+    /// <param name="positions">The mesh's vertex positions, three floats each.</param>
+    /// <param name="indices">The triangles to try, three vertex indices each.</param>
+    /// <param name="bounds">The mesh's box, in its own frame.</param>
+    /// <param name="m">Where the mesh is placed (its frame into the ray's).</param>
+    public static float? HitMesh(Vector3 o, Vector3 d, float[] positions, uint[] indices, (Vector3 Min, Vector3 Max) bounds, Matrix4x4 m)
+    {
+        if (!Matrix4x4.Invert(m, out var inv))
+        {
+            return null;
+        }
+        var lo = Vector3.Transform(o, inv);
+        var ld = Vector3.TransformNormal(d, inv);
+        if (HitBox(lo, ld, bounds.Min - new Vector3(0.01f), bounds.Max + new Vector3(0.01f)) == null)
+        {
+            return null;
+        }
+        float best = float.MaxValue;
+        for (int i = 0; i + 2 < indices.Length; i += 3)
+        {
+            if (HitTriangle(lo, ld, At(indices[i]), At(indices[i + 1]), At(indices[i + 2])) is float t && t < best)
+            {
+                best = t;
+            }
+        }
+        if (best == float.MaxValue)
+        {
+            return null;
+        }
+        // Back in the ray's frame: the distance there (the mesh's frame may be scaled).
+        return Vector3.Distance(o, Vector3.Transform(lo + ld * best, m));
+
+        Vector3 At(uint i) => new(positions[i * 3], positions[i * 3 + 1], positions[i * 3 + 2]);
+    }
+
     /// <summary>The box around a box moved by a matrix (its eight corners).</summary>
     public static (Vector3 Min, Vector3 Max) Transform(Vector3 min, Vector3 max, Matrix4x4 m)
     {

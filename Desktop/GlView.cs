@@ -431,6 +431,10 @@ public sealed class GlView : OpenGlControlBase
         public uint Texture;
         /// <summary>Its material (colour, cut-out, two-sided…).</summary>
         public ModelStore.MaterialData Material = null!;
+        /// <summary>Its mesh (a key of <c>_pickMeshes</c>) and which of its submeshes: picking tries the triangles.</summary>
+        public string MeshId = "";
+        /// <summary>See <see cref="MeshId"/>.</summary>
+        public int Sub;
         /// <summary>
         /// Its mesh has every triangle wound both ways: back faces are culled whatever the material, each side drawn once.
         /// </summary>
@@ -505,6 +509,12 @@ public sealed class GlView : OpenGlControlBase
     /// Each mesh on the graphics card, by name: its vertex buffer, and an index buffer and count per part.
     /// </summary>
     private readonly Dictionary<string, (uint Vbo, uint[] Ebos, int[] Counts)> _meshGl = [];
+    /// <summary>
+    /// A mesh kept for picking: its vertex positions (three floats each) and its submeshes' triangles, its box.
+    /// </summary>
+    private sealed record PickMesh(float[] Positions, uint[][] Submeshes, (Vector3 Min, Vector3 Max) Bounds);
+    /// <summary>The meshes on the graphics card, kept in a small form so a click can be tried against their triangles.</summary>
+    private readonly ConcurrentDictionary<string, PickMesh> _pickMeshes = [];
     /// <summary>The meshes on the graphics card whose triangles are all there wound both ways (MeshData.BothWays).</summary>
     private readonly HashSet<string> _bothWays = [];
     /// <summary>
@@ -575,6 +585,7 @@ public sealed class GlView : OpenGlControlBase
         _shapesDirty = true;
         _shapesGeneration = -1;
         _meshGl.Clear();
+        _pickMeshes.Clear();
         _bothWays.Clear();
         _onGpu.Clear();
         _gpuBytes = 0;
@@ -1259,9 +1270,12 @@ public sealed class GlView : OpenGlControlBase
                     // No model: the stand-in box.
                     (lo, hi) = (new Vector3(-0.5f, 0, -0.5f), new Vector3(0.5f, 2, 0.5f));
                 }
-                g.RootScale = model?.RootScale ?? Vector3.One;
-                g.HasModel = model != null;
-                g.Box = (lo, hi);
+                lock (_groups)
+                {
+                    g.RootScale = model?.RootScale ?? Vector3.One;
+                    g.HasModel = model != null;
+                    g.Box = (lo, hi);
+                }
                 _ready.Enqueue(new ReadyModel(g, model, meshes, mats, images));
             }
             catch (Exception ex)
@@ -1530,6 +1544,7 @@ public sealed class GlView : OpenGlControlBase
             }
         }
         _meshGl.Clear();
+        _pickMeshes.Clear();
         _bothWays.Clear();
         _onGpu.Clear();
         lock (_textures)
@@ -1899,10 +1914,13 @@ public sealed class GlView : OpenGlControlBase
                 {
                     continue;
                 }
-                AddBatch(g, mesh, part.Sub, r.Materials[part.Material], part.Matrix, _bothWays.Contains(part.Mesh));
+                AddBatch(g, mesh, part.Sub, r.Materials[part.Material], part.Matrix, _bothWays.Contains(part.Mesh), part.Mesh);
             }
         }
-        g.Ready = true;
+        lock (_groups)
+        {
+            g.Ready = true;
+        }
         if (Scene is { } s)
         {
             Rebuild(s, g);
@@ -1947,6 +1965,14 @@ public sealed class GlView : OpenGlControlBase
         {
             _bothWays.Add(id);
         }
+        float[] positions = new float[md.Vertices.Length / 8 * 3];
+        for (int v = 0; v < positions.Length / 3; v++)
+        {
+            positions[v * 3] = md.Vertices[v * 8];
+            positions[v * 3 + 1] = md.Vertices[v * 8 + 1];
+            positions[v * 3 + 2] = md.Vertices[v * 8 + 2];
+        }
+        _pickMeshes[id] = new PickMesh(positions, md.Submeshes, md.Bounds);
         Models?.Forget(id);
         return _meshGl[id] = (vbo, ebos, counts);
     }
@@ -1982,9 +2008,9 @@ public sealed class GlView : OpenGlControlBase
     /// A batch for one part of a group's model: the mesh part, its material, and the part's matrix within the model;
     /// <paramref name="bothWays"/>: the mesh has every triangle wound both ways (see <see cref="Batch.BothWays"/>).
     /// </summary>
-    private unsafe void AddBatch(Group g, (uint Vbo, uint[] Ebos, int[] Counts) mesh, int sub, ModelStore.MaterialData mat, Matrix4x4 pre, bool bothWays = false)
+    private unsafe void AddBatch(Group g, (uint Vbo, uint[] Ebos, int[] Counts) mesh, int sub, ModelStore.MaterialData mat, Matrix4x4 pre, bool bothWays = false, string meshId = "")
     {
-        var b = new Batch { Kind = g.Kind, Material = mat, IndexCount = mesh.Counts[sub], Instances = 0, BothWays = bothWays };
+        var b = new Batch { Kind = g.Kind, Material = mat, IndexCount = mesh.Counts[sub], Instances = 0, BothWays = bothWays, MeshId = meshId, Sub = sub };
         lock (_textures)
         {
             b.Texture = mat.Map != null && _textures.TryGetValue(mat.Map, out uint t) ? t : 0;
@@ -2009,7 +2035,10 @@ public sealed class GlView : OpenGlControlBase
         }
         _gl.BindVertexArray(0);
         _batches.Add(b);
-        g.Batches.Add((b, pre));
+        lock (_groups)
+        {
+            g.Batches.Add((b, pre));
+        }
     }
 
     // ---------------------------------------------------------------- drawing
@@ -4270,6 +4299,37 @@ public sealed class GlView : OpenGlControlBase
     // ---- Selection: the objects picked (indices into the scene's things), drawn as orange boxes.
     /// <summary>Each thing's box in view space (for picking and the selection), by thing index.</summary>
     private (Vector3 Min, Vector3 Max)[] _bounds = [];
+
+    /// <summary>
+    /// What a thing's outline marks (selected, or under the pointer): its box, except for a standing tree,
+    /// where it is a column round the root the full height of the tree (a tenth of the crown's width
+    /// across, 0.5 to 2 m either way), so the outline shows the trunk, not the whole crown. A log or a
+    /// stump (wider than tall) keeps its box.
+    /// </summary>
+    /// <param name="kind">The thing's View kind.</param>
+    /// <param name="box">Its box, in view space.</param>
+    /// <param name="root">Where it stands (its position), in view space.</param>
+    internal static (Vector3 Min, Vector3 Max) OutlineBox(ObjectKind kind, (Vector3 Min, Vector3 Max) box, Vector3 root)
+    {
+        if (kind != ObjectKind.Trees)
+        {
+            return box;
+        }
+        float w = MathF.Max(box.Max.X - box.Min.X, box.Max.Z - box.Min.Z);
+        if (box.Max.Y - box.Min.Y < 0.6f * w)
+        {
+            return box;
+        }
+        float r = Math.Clamp(0.1f * w, 0.5f, 2f);
+        return (new Vector3(root.X - r, box.Min.Y, root.Z - r), new Vector3(root.X + r, box.Max.Y, root.Z + r));
+    }
+
+    /// <summary>A thing's outline box (<see cref="OutlineBox"/>), under the objects lock.</summary>
+    private (Vector3 Min, Vector3 Max) OutlineBoxOf(WorldScene s, int i)
+    {
+        var at = _boundsAt[i];
+        return OutlineBox(_kinds[i], _bounds[i], new Vector3(at.X - s.Cx, at.Y, -(at.Z - s.Cz)));
+    }
     /// <summary>Whether a thing's box is known (its model read, and it is not gone).</summary>
     private bool[] _known = [];
     /// <summary>Where each thing was when its box was made (a move's preview may be ahead of the boxes).</summary>
@@ -4328,8 +4388,11 @@ public sealed class GlView : OpenGlControlBase
     }
 
     /// <summary>
-    /// The shown object under a point of the view (null: the ground or nothing is nearer), like the web
-    /// editor: the nearest box the ray enters, unless the ground is hit first (half a metre of slack).
+    /// The shown object under a point of the view (null: the ground or nothing is nearer): the nearest one
+    /// whose drawn shape the ray meets, unless the ground is hit first (half a metre of slack). The boxes say
+    /// which objects to try; then the triangles of each one's model decide, so a click between a tree's
+    /// branches finds the chest under them. Cut-out parts (leaves, bushes, grass) count only when nothing
+    /// solid is met along the ray; an object without its model yet is its stand-in box.
     /// </summary>
     internal int? ObjectAt(Point at, Size size)
     {
@@ -4339,8 +4402,7 @@ public sealed class GlView : OpenGlControlBase
             return null;
         }
         var (o, d) = Picking.Ray(_lastViewProj, (float)(at.X / size.Width * 2 - 1), (float)(1 - at.Y / size.Height * 2));
-        float best = float.MaxValue;
-        int? hit = null;
+        var boxes = new List<(float T, int I)>();
         for (int i = 0; i < _bounds.Length; i++)
         {
             // Not what the cut hides (whole above it).
@@ -4348,17 +4410,99 @@ public sealed class GlView : OpenGlControlBase
             {
                 continue;
             }
-            if (Picking.HitBox(o, d, _bounds[i].Min, _bounds[i].Max) is float t && t < best)
+            if (Picking.HitBox(o, d, _bounds[i].Min, _bounds[i].Max) is float t)
             {
-                best = t;
-                hit = i;
+                boxes.Add((t, i));
             }
         }
+        boxes.Sort((a, b) => a.T.CompareTo(b.T));
+        float bestSolid = float.MaxValue, bestCut = float.MaxValue;
+        int? solid = null, cutOut = null;
+        foreach (var (t, i) in boxes)
+        {
+            if (t > bestSolid)
+            {
+                // Its box is entered past the nearest solid hit: nothing of it can be nearer.
+                break;
+            }
+            var (so, cu) = MeshHit(s, i, o, d, t);
+            if (so is float a && a < bestSolid)
+            {
+                bestSolid = a;
+                solid = i;
+            }
+            if (cu is float c && c < bestCut)
+            {
+                bestCut = c;
+                cutOut = i;
+            }
+        }
+        int? hit = solid ?? cutOut;
+        float best = solid != null ? bestSolid : bestCut;
         if (hit != null && Picking.HitGround(s, o, d, best + 1) is float g && g + 0.5f < best)
         {
             return null;
         }
         return hit;
+    }
+
+    /// <summary>
+    /// How far along the ray a thing's drawn shape is met: by its solid parts, and by its cut-out parts
+    /// (leaves, bushes, grass), null each where the ray misses them. Without its model (the stand-in
+    /// box), its box's distance counts as solid.
+    /// </summary>
+    /// <param name="s">The scene.</param>
+    /// <param name="i">The thing's index.</param>
+    /// <param name="o">The ray's origin (view space).</param>
+    /// <param name="d">The ray's direction, normalised.</param>
+    /// <param name="box">Where the ray enters the thing's box.</param>
+    private (float? Solid, float? CutOut) MeshHit(WorldScene s, int i, Vector3 o, Vector3 d, float box)
+    {
+        WorldScene.Thing t;
+        lock (s.Things)
+        {
+            if (i >= s.Things.Count)
+            {
+                return (box, null);
+            }
+            t = _previews.TryGetValue(i, out var p) ? p : s.Things[i];
+        }
+        // A copy of the group's parts: the drawing thread adds them as the model comes in.
+        (Batch Batch, Matrix4x4 Pre)[] batches;
+        Vector3 rootScale;
+        lock (_groups)
+        {
+            if (!_groups.TryGetValue(KeyOf(t), out var g) || !g.HasModel || !g.Ready || g.Batches.Count == 0)
+            {
+                return (box, null);
+            }
+            rootScale = g.RootScale;
+            batches = [.. g.Batches];
+        }
+        var m = Placement(s, t, rootScale);
+        float? solid = null, cutOut = null;
+        bool any = false;
+        foreach (var (b, pre) in batches)
+        {
+            if (!_pickMeshes.TryGetValue(b.MeshId, out var pm) || b.Sub >= pm.Submeshes.Length)
+            {
+                continue;
+            }
+            any = true;
+            if (Picking.HitMesh(o, d, pm.Positions, pm.Submeshes[b.Sub], pm.Bounds, pre * m) is not float h)
+            {
+                continue;
+            }
+            if (b.Material.Cutoff > 0)
+            {
+                cutOut = cutOut is float c && c < h ? c : h;
+            }
+            else
+            {
+                solid = solid is float a && a < h ? a : h;
+            }
+        }
+        return any ? (solid, cutOut) : (box, null);
     }
 
     /// <summary>
@@ -4672,11 +4816,11 @@ public sealed class GlView : OpenGlControlBase
     /// </summary>
     private unsafe void DrawSelection(Matrix4x4 vp)
     {
-        if (_selectionDirty)
+        if (_selectionDirty && Scene is { } s)
         {
             _selectionDirty = false;
             // Only things whose box is known: one without its model yet has no box to draw (it is drawn once it has).
-            _selectionSegs = SelectionBoxes([.. Selected.Where(i => i < _bounds.Length && _known[i]).Select(i => _bounds[i])]);
+            _selectionSegs = SelectionBoxes([.. Selected.Where(i => i < _bounds.Length && _known[i]).Select(i => OutlineBoxOf(s, i))]);
         }
         // Seen through what is in front of it, like the web editor's selection.
         DrawLines(ref _lineVao, ref _lineVbo, _selectionSegs, vp, new Vector4(1, 0.66f, 0.2f, 1));
@@ -4709,7 +4853,7 @@ public sealed class GlView : OpenGlControlBase
         {
             return;
         }
-        var (lo, hi) = _bounds[i];
+        var (lo, hi) = OutlineBoxOf(sc, i);
         Vector3 C(int k) => new((k & 1) == 0 ? lo.X : hi.X, (k & 2) == 0 ? lo.Y : hi.Y, (k & 4) == 0 ? lo.Z : hi.Z);
         var v = new List<float>();
         foreach (var (a, b) in new[] { (0, 1), (2, 3), (4, 5), (6, 7), (0, 2), (1, 3), (4, 6), (5, 7), (0, 4), (1, 5), (2, 6), (3, 7) })

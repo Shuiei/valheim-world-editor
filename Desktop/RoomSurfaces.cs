@@ -92,7 +92,7 @@ public static class RoomSurfaces
                 var c = mesh.Corners;
                 for (int i = 0; i + 2 < c.Length; i += 3)
                 {
-                    if (Triangle(lo, ld, c[i], c[i + 1], c[i + 2]) is float t && t < best && o.Y + d.Y * t <= maxY)
+                    if (Picking.HitTriangle(lo, ld, c[i], c[i + 1], c[i + 2]) is float t && t < best && o.Y + d.Y * t <= maxY)
                     {
                         best = t;
                     }
@@ -100,34 +100,5 @@ public static class RoomSurfaces
             }
         }
         return best < float.MaxValue ? best : null;
-    }
-
-    /// <summary>
-    /// Where the ray meets a triangle (distance along it, at least 0.1 mm), or null; Möller–Trumbore, both sides (the
-    /// game's rooms are seen from inside and out).
-    /// </summary>
-    private static float? Triangle(Vector3 o, Vector3 d, Vector3 a, Vector3 b, Vector3 c)
-    {
-        Vector3 e1 = b - a, e2 = c - a, p = Vector3.Cross(d, e2);
-        float det = Vector3.Dot(e1, p);
-        if (MathF.Abs(det) < 1e-9f)
-        {
-            return null;
-        }
-        float inv = 1f / det;
-        Vector3 s = o - a;
-        float u = Vector3.Dot(s, p) * inv;
-        if (u is < 0 or > 1)
-        {
-            return null;
-        }
-        var q = Vector3.Cross(s, e1);
-        float v = Vector3.Dot(d, q) * inv;
-        if (v < 0 || u + v > 1)
-        {
-            return null;
-        }
-        float t = Vector3.Dot(e2, q) * inv;
-        return t > 1e-4f ? t : null;
     }
 }
