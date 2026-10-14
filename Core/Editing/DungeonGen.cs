@@ -333,7 +333,8 @@ public static class DungeonGen
         // Arriving in the entrance room, near its middle (the floor is found where it is placed).
         var arrival = rooms[0].Position;
         notes.Add($"{Describe(kind)}: {rooms.Count} rooms, {items.Count} objects");
-        return new Result(items, arrival, kind, rooms, notes, Dungeon: dungeon);
+        string name = string.IsNullOrWhiteSpace(s.Name) ? NameFor(s.Seed, null, s.Biome) : s.Name!;
+        return new Result(items, arrival, kind, rooms, notes, name, Dungeon: dungeon);
     }
 
     /// <summary>A dungeon kind's name as shown, without the DG_ prefix.</summary>
