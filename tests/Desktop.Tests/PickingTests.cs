@@ -87,9 +87,12 @@ public class PickingTests
         s.Cut[((s.H - 1) / 2 * s.W) + ((s.W - 1) / 2)] = 1;
 
         Assert.True(Picking.CutAt(s, 0, 0));
-        // Between a cut point and uncut ones, as the shader blends: cut up to half way, ground past it.
+        // Between a cut point and uncut ones, as the shader blends over the triangle: cut up to half way along an
+        // edge, ground past it; and 0.25 east, 0.3 south of the cut point is ground (0.45 on its triangle, though
+        // a blend over the whole cell would say 0.525).
         Assert.True(Picking.CutAt(s, 0.4f, 0));
         Assert.False(Picking.CutAt(s, 0.6f, 0));
+        Assert.False(Picking.CutAt(s, 0.25f, -0.3f));
         Assert.False(Picking.CutAt(s, 3, 3));
         Assert.Null(Picking.HitGround(s, new Vector3(0, 100, 0), down));
         Assert.Equal(70, Picking.HitGround(s, new Vector3(3, 100, 3), down)!.Value, 1);

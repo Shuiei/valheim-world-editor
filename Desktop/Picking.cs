@@ -125,7 +125,8 @@ public static class Picking
 
     /// <summary>
     /// Whether the ground is cut away (left undrawn by a mod's extension) under a view-space point (x, z): the cut
-    /// values between the grid points, as the terrain shader blends them, past a half.
+    /// values blended over the terrain's triangle there (each grid cell is two, split from its east to its south
+    /// point, as BuildTerrain makes them), past a half, as the terrain shader leaves them out.
     /// </summary>
     public static bool CutAt(WorldScene s, float x, float z)
     {
@@ -141,7 +142,10 @@ public static class Picking
         int x0 = Math.Min((int)gx, s.W - 2), z0 = Math.Min((int)gz, s.H - 2);
         float tx = gx - x0, tz = gz - z0;
         float C(int a, int b) => s.Cut[b * s.W + a];
-        return (C(x0, z0) * (1 - tx) + C(x0 + 1, z0) * tx) * (1 - tz) + (C(x0, z0 + 1) * (1 - tx) + C(x0 + 1, z0 + 1) * tx) * tz >= 0.5f;
+        float value = tx + tz <= 1
+            ? C(x0, z0) * (1 - tx - tz) + C(x0 + 1, z0) * tx + C(x0, z0 + 1) * tz
+            : C(x0 + 1, z0 + 1) * (tx + tz - 1) + C(x0 + 1, z0) * (1 - tz) + C(x0, z0 + 1) * (1 - tx);
+        return value > 0.5f;
     }
 
     /// <summary>Whether a view-space point (x, z) is over the area's ground.</summary>
