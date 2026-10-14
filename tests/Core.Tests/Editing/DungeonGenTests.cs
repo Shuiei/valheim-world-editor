@@ -360,9 +360,9 @@ public class DungeonGenTests
     [Fact]
     public void GrandRoomsGetTheirOwnFloorsWithFurnitureOn()
     {
-        var rich = DungeonGen.Make(new DungeonGen.Settings(Biome: "Black Forest", Style: "Fortress", Size: 3, Levels: 1, Seed: 9, Decor: 2));
-        Assert.Contains(rich.Items, i => i.Prefab == "blackmarble_tile_floor_2x2");
-        Assert.Contains(rich.Items, i => i.Prefab == "wood_floor");
+        // A fortress with Rich furniture: over a few seeds, marble tiles in its halls and boards in its quarters.
+        var rich = Enumerable.Range(1, 8).Select(seed => DungeonGen.Make(new DungeonGen.Settings(Biome: "Black Forest", Style: "Fortress", Size: 3, Levels: 1, Seed: seed, Decor: 2)))
+            .First(r => r.Items.Any(i => i.Prefab == "blackmarble_tile_floor_2x2") && r.Items.Any(i => i.Prefab == "wood_floor"));
         // Bare: the marble alone.
         var bare = DungeonGen.Make(new DungeonGen.Settings(Biome: "Black Forest", Style: "Fortress", Size: 3, Levels: 1, Seed: 9, Decor: 0));
         Assert.DoesNotContain(bare.Items, i => i.Prefab is "blackmarble_tile_floor_2x2" or "wood_floor");

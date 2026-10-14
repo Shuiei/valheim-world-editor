@@ -223,6 +223,38 @@ internal sealed class DungeonDresser
         }
 
         /// <summary>
+        /// The room's nooks: its tiles walled on three sides (an alcove, a niche), each by its middle (u, v) and the way
+        /// out of it into the room (local yaw).
+        /// </summary>
+        public List<(float U, float V, float Yaw)> Nooks()
+        {
+            var nooks = new List<(float, float, float)>();
+            for (int a = 0; a < S.Across; a++)
+            {
+                for (int b = 0; b < S.Deep; b++)
+                {
+                    if (!S.Has(S.TileAt(a, b)))
+                    {
+                        continue;
+                    }
+                    var open = new List<(int, int)>();
+                    foreach (var (da, db) in new[] { (0, -1), (0, 1), (-1, 0), (1, 0) })
+                    {
+                        if (!WallBeyond(a, b, da, db))
+                        {
+                            open.Add((da, db));
+                        }
+                    }
+                    if (open.Count == 1)
+                    {
+                        nooks.Add((2 * a + 1 - S.Across, 2 * b + 1 - S.Deep, MathF.Atan2(open[0].Item1, open[0].Item2) * 180 / MathF.PI));
+                    }
+                }
+            }
+            return nooks;
+        }
+
+        /// <summary>
         /// The room's walls as straight runs on their inner face: where each starts (u, v), which way it runs
         /// (du, dv, unit), how long it is (metres) and the way into the room from it (local yaw). The four walls of
         /// a whole box; more for a shaped room, round its notches; none where a corridor opens into another.
@@ -793,6 +825,48 @@ internal sealed class DungeonDresser
         {
             KeyChest(f);
             Elite(f, 0, f.HalfD * 0.3f, 180);
+        }
+        Nooks(f);
+    }
+
+    /// <summary>
+    /// What stands in the room's alcoves and niches, facing out: in crypts a sarcophagus, bones or a statue; in a
+    /// temple a statue with a candle; in a keep or a prison an armour or weapon stand or a barrel; in a hold crates
+    /// and a lantern; in a warren a totem or straw. A brazier now and then, whatever the style.
+    /// </summary>
+    private void Nooks(Frame f)
+    {
+        foreach (var (u, v, yaw) in f.Nooks())
+        {
+            if (Chance(0.2))
+            {
+                Brazier(f, u, v);
+                continue;
+            }
+            switch (_style.Name)
+            {
+                case "Crypt" or "Catacombs" or "Ruins":
+                    Put(f, One("crypt_skeleton_chest", "crypt_skeleton_chest", "skull_pile", "bone_stack", "StatueEvil", "StatueDeer"), u, v, yaw + 90, 0.6f);
+                    break;
+                case "Temple":
+                    if (Put(f, One("StatueFreya", "StatueThor", "StatueSeed"), u, v, yaw, 0.6f) && !_s.Respawn)
+                    {
+                        _o.Add("Candle_resin", f.W(u + 0.6f, v + 0.4f, f.Top + Lift), f.Yaw(R(0, 360)));
+                    }
+                    break;
+                case "Fortress" or "Prison":
+                    Put(f, One("ArmorStand_Male", "Morkhalla_WeaponStand", "barrell", "piece_chest_wood"), u, v, yaw, 0.6f);
+                    break;
+                case "Dvergr hold":
+                    Put(f, One("dvergrprops_crate", "dvergrprops_barrel", "dvergrprops_lantern_standing", "dvergrprops_crate_long"), u, v, yaw, 0.6f);
+                    break;
+                case "Goblin warren":
+                    Put(f, One("goblin_totempole", "goblin_strawpile", "skull_pile", "goblin_trashpile"), u, v, yaw, 0.6f);
+                    break;
+                default:
+                    Put(f, One("skull_pile", "barrell", "StatueDeer"), u, v, yaw, 0.6f);
+                    break;
+            }
         }
     }
 
