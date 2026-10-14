@@ -44,10 +44,6 @@ public sealed class InspectorPanelManifestTests : IDisposable
     [AvaloniaFact]
     public void ReadOnlyContentsAreShownOnlyAndTheirChangesNotApplied()
     {
-        string folder = Path.Combine(_dir, "BepInEx", "plugins", "Mod");
-        Directory.CreateDirectory(folder);
-        File.WriteAllText(Path.Combine(folder, ModManifests.FileName), """{ "version": 1, "data": { "items": { "readOnly": true } } }""");
-        ModManifests.Refresh(new AppSettings { BepInExFolders = [Path.Combine(_dir, "BepInEx")] });
         var world = WorldSave.Load(_world);
         var at = world.Objects.First(o => o.Prefab == Chest).Position;
         var scene = WorldScene.Load(_world, (int)MathF.Floor((at.X + 32) / 64), (int)MathF.Floor((at.Z + 32) / 64), 1);
@@ -55,6 +51,11 @@ public sealed class InspectorPanelManifestTests : IDisposable
         w.Show();
         w.View.Show(scene, null);
         w.Edit(scene.Session!);
+        // After the world opened: opening one reads the manifests again, from the app's own settings.
+        string folder = Path.Combine(_dir, "BepInEx", "plugins", "Mod");
+        Directory.CreateDirectory(folder);
+        File.WriteAllText(Path.Combine(folder, ModManifests.FileName), """{ "version": 1, "data": { "items": { "readOnly": true } } }""");
+        ModManifests.Refresh(new AppSettings { BepInExFolders = [Path.Combine(_dir, "BepInEx")] });
         var ins = w.Inspector;
         Assert.True(ins.Open(scene.Things.FindIndex(t => t.Prefab == Chest)));
         Assert.NotNull(ins.Items);
