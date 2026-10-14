@@ -568,6 +568,10 @@ public sealed class GlView : OpenGlControlBase
         _lowFbo = _lowColor = _lowDepth = 0;
         _lowW = _lowH = 0;
         _batches.Clear();
+        // The extensions' shapes went with the context: made again for the next one.
+        _shapeBatches.Clear();
+        _shapesDirty = true;
+        _shapesGeneration = -1;
         _meshGl.Clear();
         _bothWays.Clear();
         _onGpu.Clear();
