@@ -93,7 +93,12 @@ public class PickingTests
         Assert.False(Picking.CutAt(s, 3, 3));
         Assert.Null(Picking.HitGround(s, new Vector3(0, 100, 0), down));
         Assert.Equal(70, Picking.HitGround(s, new Vector3(3, 100, 3), down)!.Value, 1);
-        // A slanting ray into the hole and out of it below the ground: no ground met on the hole's far side.
+        // A slanting ray into the hole and out of it below the ground: no ground met on the hole's far side; one
+        // that reaches the ground just past the hole's edge, after passing over the cut, meets it there.
         Assert.Null(Picking.HitGround(s, new Vector3(-0.2f, 30.2f, 0), Vector3.Normalize(new Vector3(1, -1, 0)), 20));
+        float? past = Picking.HitGround(s, new Vector3(-0.4f, 30.1f, 0), Vector3.Normalize(new Vector3(10, -1, 0)), 20);
+        Assert.NotNull(past);
+        float x = -0.4f + past.Value * 10 / MathF.Sqrt(101);
+        Assert.InRange(x, 0.5f, 0.7f);
     }
 }

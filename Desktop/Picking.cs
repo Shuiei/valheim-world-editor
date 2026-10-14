@@ -83,24 +83,19 @@ public static class Picking
     /// <param name="maxDist">How far along the ray to look, in metres.</param>
     public static float? HitGround(WorldScene s, Vector3 o, Vector3 d, float maxDist = 4000)
     {
-        // No ground where a mod's extension cuts it (the ray goes on, into the hole); a crossing is one from over
-        // uncut ground to under it: a ray leaving a hole below the ground met no ground.
-        (float Below, bool Cut) Sample(float t)
+        // The height map is crossed wherever it is; where a mod's extension cuts the ground away, the crossing is
+        // no hit (the ray goes on, into the hole), and the next crossing counts.
+        float Below(float t)
         {
             var p = o + d * t;
-            if (!Inside(s, p.X, p.Z))
-            {
-                return (float.PositiveInfinity, false);
-            }
-            return CutAt(s, p.X, p.Z) ? (float.PositiveInfinity, true) : (p.Y - HeightAt(s, p.X, p.Z), false);
+            return Inside(s, p.X, p.Z) ? p.Y - HeightAt(s, p.X, p.Z) : float.PositiveInfinity;
         }
-        float Below(float t) => Sample(t).Below;
         float prev = 0;
-        var (above, cut) = Sample(0);
+        float above = Below(0);
         for (float t = 0.5f; t <= maxDist; t += 0.5f)
         {
-            var (b, cutNow) = Sample(t);
-            if (b <= 0 && above > 0 && !cut && !cutNow)
+            float b = Below(t);
+            if (b <= 0 && above > 0)
             {
                 float lo = prev, hi = t;
                 for (int i = 0; i < 20; i++)
@@ -115,10 +110,15 @@ public static class Picking
                         hi = mid;
                     }
                 }
-                return (lo + hi) / 2;
+                float hit = (lo + hi) / 2;
+                var at = o + d * hit;
+                if (!CutAt(s, at.X, at.Z))
+                {
+                    return hit;
+                }
             }
             prev = t;
-            (above, cut) = (b, cutNow);
+            above = b;
         }
         return null;
     }
