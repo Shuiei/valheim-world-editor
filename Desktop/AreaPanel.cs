@@ -173,6 +173,8 @@ public sealed class AreaPanel
     // Copy and paste: the window copies, pastes and keeps blueprints.
     /// <summary>Asks the window to copy the selection.</summary>
     internal Button CopyButton { get; } = new() { Content = "Copy (Ctrl+C)", FontSize = 12 };
+    /// <summary>Asks the window to cut: copy, then remove the originals.</summary>
+    internal Button CutButton { get; } = new() { Content = "Cut (Ctrl+X)", FontSize = 12 };
     /// <summary>Asks the window to paste.</summary>
     internal Button PasteButton { get; } = new() { Content = "Paste (Ctrl+V)", FontSize = 12 };
     /// <summary>Asks the window to save the selection as a blueprint.</summary>
@@ -181,8 +183,8 @@ public sealed class AreaPanel
     internal Button LibraryButton { get; } = new() { Content = "Blueprints…", FontSize = 12 };
     /// <summary>What copying takes.</summary>
     internal TextBlock ClipInfo { get; } = new() { FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
-    /// <summary>The Copy and paste buttons, handled by the window.</summary>
-    public event Action? CopyAsked, PasteAsked, SaveBlueprintAsked, LibraryAsked;
+    /// <summary>The Copy, Cut and paste buttons, handled by the window.</summary>
+    public event Action? CopyAsked, CutAsked, PasteAsked, SaveBlueprintAsked, LibraryAsked;
 
     // Heightmap: export the area, or import a picture into the selection (or the whole area).
     /// <summary>Writes the area's heightmap (see <see cref="ExportHeightmap"/>).</summary>
@@ -271,6 +273,7 @@ public sealed class AreaPanel
         BackupGroundBox.Tip("area.backupGround");
         BackupObjectsBox.Tip("area.backupObjects");
         CopyButton.Tip("area.copy");
+        CutButton.Tip("area.cut");
         PasteButton.Tip("area.paste");
         SaveBlueprintButton.Tip("area.saveBlueprint");
         LibraryButton.Tip("area.library");
@@ -299,6 +302,7 @@ public sealed class AreaPanel
         }
         ApplyButton.Click += async (_, _) => await Apply();
         CopyButton.Click += (_, _) => CopyAsked?.Invoke();
+        CutButton.Click += (_, _) => CutAsked?.Invoke();
         PasteButton.Click += (_, _) => PasteAsked?.Invoke();
         SaveBlueprintButton.Click += (_, _) => SaveBlueprintAsked?.Invoke();
         LibraryButton.Click += (_, _) => LibraryAsked?.Invoke();
@@ -370,7 +374,7 @@ public sealed class AreaPanel
                     For(Row("Replace", FromBox), Act.Replace),
                     For(Row("with", ToBox, ToPickButton), Act.Replace),
                     For(Help("Puts back what the game grows here: its own trees, rocks, bushes and pickables for the biome, by its vegetation rules, for the kinds chosen above."), Act.Regrow),
-                    For(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Children = { CopyButton, PasteButton } }, Act.Copy),
+                    For(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Children = { CopyButton, CutButton, PasteButton } }, Act.Copy),
                     For(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Children = { SaveBlueprintButton, LibraryButton } }, Act.Copy),
                     For(ClipInfo, Act.Copy),
                     For(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Children = { ExportButton, ImportButton } }, Act.Heightmap),

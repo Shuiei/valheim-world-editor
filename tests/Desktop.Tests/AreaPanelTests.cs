@@ -403,14 +403,16 @@ public class AreaPanelTests
         using var r = new Run();
         var asked = new List<string>();
         r.P.CopyAsked += () => asked.Add("copy");
+        r.P.CutAsked += () => asked.Add("cut");
         r.P.PasteAsked += () => asked.Add("paste");
         r.P.SaveBlueprintAsked += () => asked.Add("save");
         r.P.LibraryAsked += () => asked.Add("library");
         Click(r.P.CopyButton);
+        Click(r.P.CutButton);
         Click(r.P.PasteButton);
         Click(r.P.SaveBlueprintButton);
         Click(r.P.LibraryButton);
-        Assert.Equal(new[] { "copy", "paste", "save", "library" }, asked);
+        Assert.Equal(new[] { "copy", "cut", "paste", "save", "library" }, asked);
     }
 
     [AvaloniaFact]

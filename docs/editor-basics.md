@@ -162,7 +162,7 @@ the start page's menu opens it: attach it when you report a problem.
 | `R` | Paste: turn 90°. Place: a new random layout |
 | `Alt` + click | Pick the ground height (Flatten, Path) |
 | `Alt` + `Shift` + click | Set the mask's height range around a spot |
-| `Ctrl+C` / `Ctrl+V` | Copy (Area, Select) / paste |
+| `Ctrl+C` / `Ctrl+X` / `Ctrl+V` | Copy or cut (Area, Select) / paste |
 | `Del` | Delete the selected objects |
 | `I` | Inspect the selected object |
 | `PgUp` / `PgDn` / `End` | Lift, lower or drop the selection |

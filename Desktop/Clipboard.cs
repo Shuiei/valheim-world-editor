@@ -29,6 +29,11 @@ public sealed class CopyData
     public required List<Vector2> Poly { get; init; }
     /// <summary>The blueprint's name, when it came from or went to one.</summary>
     public string? Name { get; set; }
+    /// <summary>
+    /// The scene indices of the objects the copy was made from (the same order as <see cref="Objects"/>), for a cut
+    /// to remove right after. Only meant in the scene it came from; not saved with the copy.
+    /// </summary>
+    public IReadOnlyList<int> Taken { get; init; } = [];
 
     /// <summary>An object of a copy.</summary>
     /// <param name="Prefab">Its prefab hash.</param>
@@ -165,9 +170,10 @@ public sealed class CopyData
             }
         }
         float cx = (a.X0 + a.X1) / 2f, cz = (a.Z0 + a.Z1) / 2f;
-        var objs = objects.Select(i => s.Things[i]).Where(t => s.World == null || s.World.CanCreate(t.Prefab)).Select(t => new Obj(t.Prefab, nameOf(t.Prefab) ?? t.Prefab.ToString(),
+        var taken = objects.Where(i => s.World == null || s.World.CanCreate(s.Things[i].Prefab)).ToList();
+        var objs = taken.Select(i => s.Things[i]).Select(t => new Obj(t.Prefab, nameOf(t.Prefab) ?? t.Prefab.ToString(),
             t.Position.X - ox - cx, t.Position.Z - oz - cz, t.Position.Y - reference, t.Rotation, t.Scale, SourceOf(s, t), Data: DataOf(s, t))).ToList();
-        return new CopyData { W = w, H = h, Rel = rel, Wt = wt, Pnt = pnt, Objects = objs, Poly = [.. a.Poly.Select(p => p - new Vector2(cx, cz))] };
+        return new CopyData { W = w, H = h, Rel = rel, Wt = wt, Pnt = pnt, Objects = objs, Poly = [.. a.Poly.Select(p => p - new Vector2(cx, cz))], Taken = taken };
     }
 
     /// <summary>
@@ -223,6 +229,7 @@ public sealed class CopyData
             Pnt = [.. Enumerable.Repeat(-1f, w * h * 4)],
             Objects = objs,
             Poly = [new(x0, z0), new(x1, z0), new(x1, z1), new(x0, z1)],
+            Taken = shown,
         };
     }
 
