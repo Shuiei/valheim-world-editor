@@ -11,6 +11,12 @@ the plugin is unchanged in versions without that part.
   them all instead of one round each: a whole stacked structure selected at once (tens of thousands of pieces)
   was a solid orange blob that hid it. Up to 500 the boxes are drawn as before.
 
+## v1.37.1 — unreleased
+
+### Changed
+- **The green dot on each unsaved object is much smaller.** It was about 1% of the view's height across (11 pixels at
+  1080p, 21 at 4K) and covered small objects; it is now 5 pixels at 1080p, 9 at 4K, with a soft edge so it stays round.
+
 ## v1.37.0 — 2026-10-14
 
 ### Added

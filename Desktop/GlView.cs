@@ -3677,8 +3677,8 @@ public sealed class GlView : OpenGlControlBase
     }
 
     /// <summary>
-    /// The new objects' green dots (<c>NewMarkers</c>), about 10 pixels across at any distance: one point each, kept
-    /// on the graphics card until they change.
+    /// The new objects' green dots (<c>NewMarkers</c>), a few pixels across at any distance (5 at 1080p, 9 at 4K):
+    /// one point each, kept on the graphics card until they change.
     /// </summary>
     /// <param name="s">The scene.</param>
     /// <param name="vp">The camera's view and projection.</param>
@@ -3716,13 +3716,17 @@ public sealed class GlView : OpenGlControlBase
             _gl.Enable(EnableCap.ProgramPointSize);
         }
         _gl.Disable(EnableCap.DepthTest);
+        // The dot's soft edge blends over what is under it.
+        _gl.Enable(EnableCap.Blend);
+        _gl.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
         _gl.UseProgram(_markProg);
         _gl.UniformMatrix4(_gl.GetUniformLocation(_markProg, "uViewProj"), 1, false, (float*)&vp);
         _gl.Uniform4(_gl.GetUniformLocation(_markProg, "uColor"), 0x5d / 255f, 1, 0x8a / 255f, 1);
-        // As the discs they replace: 1.16% of the distance across, under the 60° field of view.
-        _gl.Uniform1(_gl.GetUniformLocation(_markProg, "uSize"), MathF.Max(3, 0.0116f / (2 * MathF.Tan(MathF.PI / 6)) * height));
+        // A small mark, not a blob: 0.43% of the height (5 pixels at 1080p, 9 at 4K), never under 3.
+        _gl.Uniform1(_gl.GetUniformLocation(_markProg, "uSize"), MathF.Max(3, 0.0043f * height));
         _gl.BindVertexArray(_markVao);
         _gl.DrawArrays(PrimitiveType.Points, 0, (uint)_markCount);
+        _gl.Disable(EnableCap.Blend);
         _gl.Enable(EnableCap.DepthTest);
     }
 
