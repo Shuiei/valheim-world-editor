@@ -341,7 +341,9 @@ public sealed class VisualTests(EditorProcess editor) : IDisposable
         var close = Picture("map-close");
         Assert.True(editor.Send("state").GetProperty("detail").GetBoolean(), "the close-up detail is not shown");
         Assert.True(close.Spread > 12 && close.Colours > 150, $"{close}");
-        s = Do("search Beech", "mapview 0 0 3");
+        // The pins and the zone matches, from 6 m a pixel: no close-up is built from there (under coverage, on
+        // main, the largest close-up took minutes), and the buildings still draw up to 10 m a pixel.
+        s = Do("search Beech", "mapview 0 0 6");
         Assert.True(s.GetProperty("pins").GetInt32() > 0, s.ToString());
         s = Do("zones");
         Assert.True(s.GetProperty("matches").GetInt32() > 0, s.ToString());
