@@ -2,12 +2,13 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
+using TerrainEditor.Editing;
 
 namespace TerrainEditor.Desktop;
 
 /// <summary>
-/// The Dungeon tool's panel: which dungeon of the area, going inside and cutting its roofs away, the
-/// rooms it can take, and the changes (turn, delete, close the open ends).
+/// The Dungeon tool's panel: which dungeon of the area, going inside and cutting its roofs away (and back
+/// down to its entrance), the rooms it can take, and the changes (turn, delete, close the open ends).
 /// </summary>
 public sealed class DungeonPanel
 {
@@ -25,6 +26,8 @@ public sealed class DungeonPanel
     internal ComboBox DungeonBox { get; } = new() { HorizontalAlignment = HorizontalAlignment.Stretch, FontSize = 12 };
     /// <summary>The camera into the dungeon (see <see cref="Inside"/>).</summary>
     internal Button GoInside { get; } = new() { Content = "Go inside", FontSize = 12 };
+    /// <summary>The camera back down to the dungeon's entrance on the ground (see <see cref="Outside"/>).</summary>
+    internal Button GoOutside { get; } = new() { Content = "Go to entrance", FontSize = 12 };
     /// <summary>Build with the hammer's pieces in this dungeon (<see cref="BuildAsked"/>).</summary>
     internal Button BuildHere { get; } = new() { Content = "Build here", FontSize = 12 };
     /// <summary>Build here was clicked: the window switches to building in the dungeon.</summary>
@@ -73,6 +76,7 @@ public sealed class DungeonPanel
         _view = view;
         DungeonBox.Tip("dungeon.which");
         GoInside.Tip("dungeon.inside");
+        GoOutside.Tip("dungeon.outside");
         BuildHere.Tip("dungeon.build");
         BuildHere.Click += (_, _) => BuildAsked?.Invoke();
         CutSlider.Tip("dungeon.cut");
@@ -94,6 +98,7 @@ public sealed class DungeonPanel
             }
         };
         GoInside.Click += (_, _) => Inside();
+        GoOutside.Click += (_, _) => Outside();
         CutSlider.ValueChanged += (_, e) => SetCut(e.NewValue);
         Filter.TextChanged += (_, _) => FillRooms();
         Rooms.SelectionChanged += (_, _) =>
@@ -113,7 +118,7 @@ public sealed class DungeonPanel
             Children =
             {
                 DungeonBox,
-                new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { GoInside, BuildHere } },
+                new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { GoInside, GoOutside, BuildHere } },
                 new StackPanel { Spacing = 2, Children = { _cutText, CutSlider } },
                 new TextBlock { Text = "ROOMS", FontSize = 11, Foreground = Ui.Muted, FontWeight = FontWeight.SemiBold },
                 Filter, Rooms, Contents, Doors,
@@ -221,6 +226,55 @@ public sealed class DungeonPanel
         Info.Text = text;
         DeleteButton.IsEnabled = Tool.Selected != null;
         CloseEnds.IsEnabled = open > 0;
+    }
+
+    /// <summary>
+    /// Makes the dungeon whose object stands at <paramref name="at"/> the one edited (listed first when it was not
+    /// listed yet); false when the area has none there.
+    /// </summary>
+    internal bool Select(System.Numerics.Vector3 at)
+    {
+        if (!_shown.Any(d => System.Numerics.Vector3.DistanceSquared(d.Thing.Position, at) < 0.01f))
+        {
+            Reload();
+        }
+        int i = _shown.FindIndex(d => System.Numerics.Vector3.DistanceSquared(d.Thing.Position, at) < 0.01f);
+        if (i < 0)
+        {
+            return false;
+        }
+        DungeonBox.SelectedIndex = i;
+        if (Tool.Dungeon is not { } d || System.Numerics.Vector3.DistanceSquared(d.Thing.Position, at) >= 0.01f)
+        {
+            Tool.Open(_shown[i]);
+            FillRooms();
+        }
+        return true;
+    }
+
+    /// <summary>
+    /// The camera back down to the dungeon's entrance on the ground: the dungeon location in its zone (the game lays a
+    /// dungeon out over its entrance's zone), else the ground straight under it. Nothing cut away.
+    /// </summary>
+    internal void Outside()
+    {
+        if (Tool.Dungeon is not { } d || _view.Scene is not { } s)
+        {
+            return;
+        }
+        var p = d.Thing.Position;
+        var zone = DungeonEntrances.ZoneCentre(p);
+        var entrance = LocationParts.Of(s).FirstOrDefault(l => DungeonGen.DungeonLocations.Contains(l.Location) && DungeonEntrances.ZoneCentre(l.Position) == zone);
+        float x = entrance.Location != 0 ? entrance.Position.X : p.X, z = entrance.Location != 0 ? entrance.Position.Z : p.Z;
+        ShowRoofs();
+        _view.Orbit(x, z, _view.Camera.Yaw * 180f / MathF.PI, 55, 40);
+    }
+
+    /// <summary>The cut off: the roofs shown (the slider at its right end).</summary>
+    internal void ShowRoofs()
+    {
+        CutSlider.Value = CutOff;
+        SetCut(CutOff);
     }
 
     /// <summary>

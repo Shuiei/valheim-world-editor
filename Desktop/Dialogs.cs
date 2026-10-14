@@ -107,11 +107,13 @@ public static class Dialogs
         var name = new TextBox { Text = start.Name }.Tip("dialog.blueprintName");
         var description = new TextBox { Text = start.Description, AcceptsReturn = false, TextWrapping = TextWrapping.Wrap, MinHeight = 54, PlaceholderText = "What it is, how to build it…" }.Tip("dialog.blueprintDescription");
         var tags = new TextBox { Text = string.Join(", ", start.Tags), PlaceholderText = "house, viking, stone" }.Tip("dialog.blueprintTags");
+        var dungeon = new CheckBox { Content = "A dungeon: pasted into a world, it goes 5000 m up behind an entrance on the ground", IsChecked = start.Dungeon, FontSize = 12 }.Tip("dialog.blueprintDungeon");
         var ok = new Button { Content = "Save", IsDefault = true };
         ToolTip.SetTip(ok, "Keep these details (Enter).");
         ok.Click += (_, _) =>
         {
-            result = new TerrainEditor.App.Homestead.Details(name.Text ?? "", (description.Text ?? "").Replace('\n', ' ').Replace('\r', ' '), TerrainEditor.App.Homestead.Details.ParseTags(tags.Text));
+            result = new TerrainEditor.App.Homestead.Details(name.Text ?? "", (description.Text ?? "").Replace('\n', ' ').Replace('\r', ' '), TerrainEditor.App.Homestead.Details.ParseTags(tags.Text))
+                .WithDungeon(dungeon.IsChecked == true);
             dialog.Close();
         };
         var cancel = new Button { Content = "Cancel", IsCancel = true }.Tip("dialog.cancel");
@@ -126,6 +128,7 @@ public static class Dialogs
                 Label("Name"), name,
                 Label("Description"), description,
                 Label("Tags (separated by commas)"), tags,
+                dungeon,
                 new TextBlock { Text = "Cost in game: " + cost, FontSize = 12, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 6, 0, 0) },
                 new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 8, 0, 0), Children = { ok, cancel } },
             },

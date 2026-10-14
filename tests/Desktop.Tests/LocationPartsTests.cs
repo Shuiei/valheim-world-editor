@@ -50,4 +50,23 @@ public class LocationPartsTests
         }
         Assert.Equal([Camp, Crypt], LocationParts.Of(s).Select(l => l.Location));
     }
+
+    [Fact]
+    public void AProxyAddedInTheSessionIsDrawnToo()
+    {
+        var session = TestScenes.Flat();
+        var s = session.Scene;
+        static byte[] Proxy(int location, Vector3 at) => ZdoBuilder.Blank(WorldSave.LocationProxyPrefab, 0x0B00, at, Vector3.Zero, 0f, [(WorldSave.LocationKey, location), (StableHash.Of("seed"), 7)]);
+        // A crypt's entrance added (a generated dungeon's), a ground disc added, and one outside the area.
+        session.Commit("entrances", null, [],
+        [
+            (new NewObject(0, WorldSave.LocationProxyPrefab, new Vector3(12, 30, 12), new Vector3(0, 90, 0), 0, Fresh: false, Raw: Proxy(Crypt, new Vector3(12, 30, 12))), false),
+            (new NewObject(0, WorldSave.LocationProxyPrefab, new Vector3(20, 30, 20), Vector3.Zero, 0, Fresh: false, Raw: Proxy(Uplift.Disc, new Vector3(20, 30, 20))), false),
+            (new NewObject(0, WorldSave.LocationProxyPrefab, new Vector3(200, 30, 20), Vector3.Zero, 0, Fresh: false, Raw: Proxy(Crypt, new Vector3(200, 30, 20))), false),
+        ]);
+        Assert.Equal([new(Crypt, new Vector3(12, 30, 12), new Vector3(0, 90, 0))], LocationParts.Of(s));
+        // Undone: gone.
+        Assert.True(session.Undo());
+        Assert.Empty(LocationParts.Of(s));
+    }
 }

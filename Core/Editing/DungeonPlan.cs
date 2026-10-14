@@ -191,7 +191,7 @@ internal sealed class DungeonPlanner
     /// <summary>Makes the whole plan into <see cref="_plan"/>.</summary>
     private void Build()
     {
-        int levels = Math.Clamp(_s.Levels, 1, 4);
+        int levels = Math.Clamp(_s.Levels, 1, DungeonGen.MaxLevels);
         int perLevel = new[] { 5, 8, 12, 17 }[Math.Clamp(_s.Size, 1, 4) - 1];
         for (int k = 0; k < levels; k++)
         {

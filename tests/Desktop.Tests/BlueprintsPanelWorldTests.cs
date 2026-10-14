@@ -28,4 +28,21 @@ public class BlueprintsPanelWorldTests
             Directory.Delete(Path.GetDirectoryName(dir)!, recursive: true);
         }
     }
+
+    [AvaloniaFact]
+    public void ABlueprintTaggedADungeonIsPastedAsOne()
+    {
+        using var r = new BlueprintsPanelRun();
+        Directory.CreateDirectory(r.Homestead);
+        var clip = BlueprintsPanelRun.Clip("Crypt", "stone_wall_2x1", "portal_wood");
+        File.WriteAllText(Path.Combine(r.Homestead, TerrainEditor.App.Homestead.FileName("Crypt")),
+            TerrainEditor.App.Homestead.Write(CopyFormat.ToJson(clip), "Crypt", "test", null, DateTime.Now, "A crypt", ["Dungeon", "stone"]));
+        r.Keep("Hut", "stone_wall_2x1");
+        r.B.Paste("hs:" + TerrainEditor.App.Homestead.FileName("Crypt"));
+        Assert.True(r.W.View.Paste.Clip!.Dungeon);
+        Assert.Contains("click where its entrance goes", r.Said);
+        r.B.Paste("hs:" + TerrainEditor.App.Homestead.FileName("Hut"));
+        Assert.False(r.W.View.Paste.Clip!.Dungeon);
+        Assert.Contains("click to place it", r.Said);
+    }
 }

@@ -267,4 +267,21 @@ public class DungeonsTests
         Assert.Null(unknown.Room);
         Assert.True(Dungeons.Inside(cave, CaveAt, unknown));
     }
+
+    [Fact]
+    public void TheFirstRoomIsPlacedWhereTheGamePlacesIt()
+    {
+        // The game puts the entrance room's way in at the dungeon object, facing its way (PlaceStartRoom): the real
+        // cave's first room, placed again from its dungeon object.
+        var real = Cave()[0];
+        var start = Dungeons.PlaceStart(real.Room!, CaveAt, Quaternion.Identity);
+        Assert.Equal(real.Hash, start.Hash);
+        Assert.True(Vector3.Distance(real.Position, start.Position) < 0.01f, start.Position.ToString());
+        Assert.True(Same(real.Rotation, start.Rotation));
+        // Turned: the way in turns with it. A room without openings stands at the object itself.
+        var turned = Dungeons.PlaceStart(real.Room!, CaveAt, Quaternion.CreateFromAxisAngle(Vector3.UnitY, MathF.PI / 2));
+        Assert.True(Vector3.Distance(CaveAt, turned.At(real.Room!.Openings.First(o => o.Entrance)).Position) < 0.01f);
+        var bare = new Dungeons.Room("bare", 1, 1, new Vector3(4, 4, 4), false, false, false, 0, 1f, false, true, [], [], [], [], []);
+        Assert.Equal(CaveAt, Dungeons.PlaceStart(bare, CaveAt, Quaternion.Identity).Position);
+    }
 }

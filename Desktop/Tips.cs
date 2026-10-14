@@ -441,7 +441,7 @@ public static class Tips
         ["dungeon.gen.style"] = "Which rooms it has and how they are laid out: a crypt's burial chambers and chapels, a fortress's barracks and throne room, a prison's cell blocks...",
         ["dungeon.gen.walls"] = "What its walls are made of.",
         ["dungeon.gen.size"] = "About how many rooms each level has.",
-        ["dungeon.gen.levels"] = "Levels one under another, joined by stairs. The boss waits on the last.",
+        ["dungeon.gen.levels"] = "Levels one under another, joined by stairs, up to 16. The boss waits on the last.",
         ["dungeon.gen.monsters"] = "How many monsters: none, or fewer or more than usual.",
         ["dungeon.gen.respawn"] = "On: monster spawners, whose monsters come back a while after being killed. Off: the monsters themselves, once (the boss is always once).",
         ["dungeon.gen.boss"] = "Who waits in the arena: the biome's own, another, or nobody.",
@@ -456,12 +456,15 @@ public static class Tips
         ["dungeon.gen.seed"] = "Any number: each makes another dungeon with the same choices.",
         ["dungeon.gen.level"] = "Shows this level in the plan.",
         ["dungeon.gen.randomize"] = "Another seed.",
-        ["dungeon.gen.place"] = "Puts it 5000 m above the middle of the view, where the game keeps its dungeons, with a portal on the ground here leading in (and one back out). Ctrl+Z takes it all back.",
+        ["dungeon.gen.place"] = "Puts its entrance on the ground at the middle of the view, facing you (the entrance of its kind: a burial chamber's mound, a Frost Cave's mouth, a sunken crypt's door...), and the dungeon 5000 m above, where the game keeps its dungeons. The entrance's door leads up into it and the door up there back out. Without an entrance of its kind, a portal pair instead. The view stays here: Go to the dungeon takes it up. Ctrl+Z takes it all back.",
+        ["dungeon.gen.toDungeon"] = "Takes the view up to the dungeon last placed, looking down into its first level with the roofs cut away.",
+        ["dungeon.gen.toEntrance"] = "Takes the view back down to the entrance of the dungeon last placed, on the ground.",
         ["dungeon.gen.openOnPlot"] = "This dungeon alone on the plot (asks first when what is there is not saved). Its blueprint is kept in your Library; what its objects hold (the key in its chest, signs, the boss) goes with it.",
         ["dungeon.gen.addToPlot"] = "Add this dungeon to the plot, in its middle, with what is there (one undo step). Its blueprint is kept in your Library.",
         ["dungeon.gen.workshop"] = "Opens it as a blueprint in the Workshop, to change it there. The blueprint keeps what its objects hold (the key in its chest, signs, the boss): placed in a world from the editor, it comes back whole. Built in game with Homestead, it is only the objects.",
         ["dungeon.which"] = "The dungeons of this area: the game keeps each one's rooms 5000 m above its entrance.",
         ["dungeon.inside"] = "Takes the view up to the dungeon and cuts its roofs away, to look down into its rooms.",
+        ["dungeon.outside"] = "Takes the view back down to the dungeon's entrance on the ground (the ground under the dungeon when none is known), nothing cut away.",
         ["dungeon.build"] = "Build with the hammer's pieces in this dungeon: they go on the rooms' floors and snap to each other. Pieces on a room's floor hold in game; pieces hanging in the air in a dungeon fall.",
         ["dungeon.cut"] = "Hides what is higher than this above the dungeon's floor, to see into the rooms. Right end: off, the roofs shown; left end: the floor.",
         ["dungeon.find"] = "Shows only the rooms whose name has these letters.",
@@ -476,6 +479,7 @@ public static class Tips
         ["dialog.blueprintName"] = "The blueprint's name: Homestead lists it under this name in its hammer tab. Its file is named after it.",
         ["dialog.blueprintDescription"] = "A few words about it, shown in the library (and to people you share the file with).",
         ["dialog.blueprintTags"] = "Words to find it by, separated by commas: house, viking, stone, gate… The library's search looks through them.",
+        ["dialog.blueprintDungeon"] = "On: the blueprint is a dungeon (the tag \"dungeon\"). Pasted into a world from the Blueprints tab, the entrance of the biome's dungeon goes where you click and the building 5000 m above it, where the game keeps its dungeons; a portal in the building marks where its door out opens (without one: its middle). Off: it is pasted on the ground.",
     };
 
     /// <summary>The tip for a key; throws <c>KeyNotFoundException</c> for an unknown key, so a typo is caught at once.</summary>

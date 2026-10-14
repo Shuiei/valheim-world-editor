@@ -49,4 +49,30 @@ public class DungeonGenPanelButtonsTests
         Assert.True(levels[1].IsChecked);
         Assert.All(levels.Where(b => b != levels[1]), b => Assert.False(b.IsChecked));
     }
+
+    [AvaloniaFact]
+    public void LevelsGoUpToTheMostAndTheGoToButtonsWaitForAPlacedDungeon()
+    {
+        var p = new DungeonGenPanel();
+        Assert.Equal(DungeonGen.MaxLevels, p.Levels.ItemCount);
+        Assert.Equal("16 levels", (string)p.Levels.Items[^1]!);
+        p.Levels.SelectedIndex = DungeonGen.MaxLevels - 1;
+        Assert.Equal(DungeonGen.MaxLevels, p.Settings().Levels);
+        // Nowhere to go until a dungeon is placed; then both buttons ask the window.
+        Assert.False(p.ToDungeon.IsEnabled);
+        Assert.False(p.ToEntrance.IsEnabled);
+        var asked = new List<string>();
+        p.DungeonAsked += () => asked.Add("dungeon");
+        p.EntranceAsked += () => asked.Add("entrance");
+        p.Placed(true);
+        Assert.True(p.ToDungeon.IsEnabled && p.ToEntrance.IsEnabled);
+        p.ToDungeon.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        p.ToEntrance.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        Assert.Equal(["dungeon", "entrance"], asked);
+        p.Placed(false);
+        Assert.False(p.ToDungeon.IsEnabled);
+        // In the Workshop there is no world to go to: the buttons are not shown.
+        var plot = new DungeonGenPanel(inWorkshop: true);
+        Assert.DoesNotContain(plot.ToDungeon, plot.View.GetLogicalDescendants());
+    }
 }

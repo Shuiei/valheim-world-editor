@@ -255,6 +255,24 @@ public static class Dungeons
     }
 
     /// <summary>
+    /// Places a dungeon's first room the game's way (DungeonGenerator.PlaceStartRoom): its way in (the entrance
+    /// opening, else its first opening, else its own origin) at the dungeon object, facing the way the object does.
+    /// </summary>
+    /// <param name="room">The first room.</param>
+    /// <param name="position">The dungeon object's place.</param>
+    /// <param name="rotation">The dungeon object's turn.</param>
+    public static Placed PlaceStart(Room room, Vector3 position, Quaternion rotation)
+    {
+        var way = room.Openings.FirstOrDefault(o => o.Entrance) ?? room.Openings.FirstOrDefault();
+        if (way == null)
+        {
+            return new Placed(room.Hash, position, Quaternion.Normalize(rotation));
+        }
+        Quaternion rot = rotation * Quaternion.Inverse(way.Rotation);
+        return new Placed(room.Hash, position - Vector3.Transform(way.Position, rot), Quaternion.Normalize(rot));
+    }
+
+    /// <summary>
     /// The openings a room can join an open one of this type with: those of the same type (an end cap's
     /// only opening too), never the entrance's way in.
     /// </summary>

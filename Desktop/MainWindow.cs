@@ -720,11 +720,12 @@ public sealed partial class MainWindow : Window
     /// </summary>
     internal void Edit(EditSession session)
     {
-        // Another area: building in the last one's dungeon (and its cut) ends.
+        // Another area: building in the last one's dungeon (and its cut) ends, and its placed dungeon is no more to go to.
         if (BuildingInDungeon)
         {
             BuildInDungeon(false);
         }
+        LastPlaced = null;
         Session = session;
         session.Brush = Tools.Brush;
         MountainPanel.FitTo(session.Ground.W);
@@ -1049,6 +1050,12 @@ public sealed partial class MainWindow : Window
     {
         if (Session is not { } s || View.Paste.Clip == null)
         {
+            return;
+        }
+        // A dungeon blueprint: its entrance where the click is, the pieces 5000 m above.
+        if (View.Paste.Clip.Dungeon)
+        {
+            PasteDungeon(View.Paste.Clip, at);
             return;
         }
         // Past the open area the ground could not be shaped nor the site cleared: the building would stand
@@ -2405,6 +2412,8 @@ public sealed partial class MainWindow : Window
         DungeonPanel = new DungeonPanel(View);
         DungeonPanel.BuildAsked += () => BuildInDungeon(true);
         DungeonPanel.Gen.PlaceAsked += PlaceGenerated;
+        DungeonPanel.Gen.DungeonAsked += GoToDungeon;
+        DungeonPanel.Gen.EntranceAsked += GoToEntrance;
         DungeonPanel.Gen.WorkshopAsked += async s =>
         {
             try

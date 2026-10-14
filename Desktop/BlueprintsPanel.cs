@@ -324,7 +324,7 @@ public sealed class BlueprintsPanel
     }
 
     /// <summary>A blueprint as a copy (the clipboard format), its name and the world it came from, or null.</summary>
-    private (JsonObject Clip, string Name, string? World)? Load(string id)
+    private (JsonObject Clip, string Name, string? World, bool Dungeon)? Load(string id)
     {
         if (id.StartsWith(HomesteadId, StringComparison.Ordinal))
         {
@@ -333,16 +333,18 @@ public sealed class BlueprintsPanel
             {
                 return null;
             }
-            var parsed = BlueprintFormats.Parse(path, File.ReadAllText(path));
+            string text = File.ReadAllText(path);
+            var parsed = BlueprintFormats.Parse(path, text);
             var world = _scene()?.World;
             var clip = BlueprintFormats.ToClip(parsed, n => world?.CanCreate(StableHash.OfName(n)) ?? Terrain.PrefabCatalog.Get(StableHash.OfName(n)) != null, out _);
-            return (clip, parsed.Name, null);
+            // A dungeon by its tags: pasted, it goes up behind an entrance.
+            return (clip, parsed.Name, null, new Homestead.Details(parsed.Name, "", Homestead.Details.ParseTags(TagsOf(text))).Dungeon);
         }
         if (Store.Read(id) is not string json || JsonNode.Parse(json) is not JsonObject doc || doc["clip"] is not JsonObject c)
         {
             return null;
         }
-        return (c, (string?)doc["name"] ?? id, (string?)doc["world"]);
+        return (c, (string?)doc["name"] ?? id, (string?)doc["world"], false);
     }
 
     /// <summary>Writes a Homestead blueprint and its picture (named after the blueprint, replacing one of that name).</summary>
@@ -508,7 +510,7 @@ public sealed class BlueprintsPanel
     /// </summary>
     public void Paste(string id)
     {
-        if (Load(id) is not var (clip, name, from))
+        if (Load(id) is not var (clip, name, from, dungeon))
         {
             Message?.Invoke("That blueprint could not be read.");
             Refresh();
@@ -516,20 +518,22 @@ public sealed class BlueprintsPanel
         }
         var world = _scene()?.World;
         var data = CopyFormat.FromJson(clip, name, keepSources: world != null && from == world.Name);
+        data.Dungeon = dungeon;
         var missing = data.Objects.Where(o => world != null && !world.CanCreate(o.Prefab)).Select(o => o.Name).Distinct().ToList();
         data.Objects.RemoveAll(o => missing.Contains(o.Name));
         _paste.Clip = data;
         _paste.Notify();
         Card.IsVisible = false;
         Pasting?.Invoke();
-        Message?.Invoke($"“{name}” is on the clipboard: click to place it.{(missing.Count > 0 ? $" {missing.Count} kind(s) are unknown here and are left out: {string.Join(", ", missing.Take(5))}{(missing.Count > 5 ? "…" : "")}." : "")}");
+        string how = dungeon ? "click where its entrance goes: a dungeon, it goes 5000 m above, behind the entrance of the biome there." : "click to place it.";
+        Message?.Invoke($"“{name}” is on the clipboard: {how}{(missing.Count > 0 ? $" {missing.Count} kind(s) are unknown here and are left out: {string.Join(", ", missing.Take(5))}{(missing.Count > 5 ? "…" : "")}." : "")}");
     }
 
     /// <summary>An older editor blueprint as a Homestead blueprint (objects only).</summary>
     /// <returns>The name it was saved under (numbered when taken), null when not saved.</returns>
     public string? ToHomestead(string id)
     {
-        if (Load(id) is not var (clip, name, world))
+        if (Load(id) is not var (clip, name, world, _))
         {
             Message?.Invoke("That blueprint could not be read.");
             return null;
@@ -580,7 +584,7 @@ public sealed class BlueprintsPanel
     /// <returns>The file written, null when not.</returns>
     public string? Export(string id, string format)
     {
-        if (Load(id) is not var (clip, name, _))
+        if (Load(id) is not var (clip, name, _, _))
         {
             Message?.Invoke("Could not export that blueprint.");
             return null;

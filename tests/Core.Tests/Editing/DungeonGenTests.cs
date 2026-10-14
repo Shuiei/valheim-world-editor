@@ -280,4 +280,34 @@ public class DungeonGenTests
         var empty = new DungeonGen.Result([], Vector3.Zero, null, null, []);
         Assert.Equal(origin, DungeonGen.Clear(origin, empty, taken));
     }
+
+    [Fact]
+    public void TheGamesRoomsAreLaidOutFromADungeonObjectWhenOneIsGiven()
+    {
+        // A Frost Cave from its dungeon object at the zone's middle, as the game lays its own out from the cave's
+        // entrance: the first room's way in at the object, the rooms in world metres, in the zone's box.
+        var pose = new DungeonEntrances.Pose(new Vector3(0, 5165.023f, -2654), Quaternion.Identity);
+        var r = DungeonGen.Make(new DungeonGen.Settings(Made: DungeonGen.Made.Rooms, Biome: "Mountain", Size: 2, Seed: 3), 0, pose);
+        Assert.Equal(pose, r.Dungeon);
+        var first = r.Rooms![0];
+        Assert.True(first.Room!.Entrance);
+        Assert.True(Vector3.Distance(pose.Position, first.At(first.Room.Openings.First(o => o.Entrance)).Position) < 0.01f);
+        Assert.All(r.Rooms, p => Assert.True(Dungeons.Inside(r.Kind!, pose.Position, p), p.Name));
+        Assert.All(r.Items, i => Assert.True(i.Position.Y > 5000));
+        Assert.True(Vector3.Distance(r.Arrival, pose.Position) < 20, r.Arrival.ToString());
+        // The same rooms as from the origin, moved and turned there.
+        var plain = DungeonGen.Make(new DungeonGen.Settings(Made: DungeonGen.Made.Rooms, Biome: "Mountain", Size: 2, Seed: 3));
+        Assert.Null(plain.Dungeon);
+        Assert.Equal(plain.Rooms!.Count, r.Rooms.Count);
+    }
+
+    [Fact]
+    public void ManyLevelsAreAllMadeDownToTheBoss()
+    {
+        var r = DungeonGen.Make(new DungeonGen.Settings(Size: 1, Levels: 8, Seed: 21));
+        Assert.Equal(Enumerable.Range(0, 8), r.Map!.Select(m => m.Level).Distinct().Order());
+        Assert.Equal(7, r.Map!.First(m => m.Name == "Arena").Level);
+        // Beyond the most: the most.
+        Assert.Equal(DungeonGen.MaxLevels, DungeonGen.Make(new DungeonGen.Settings(Size: 1, Levels: 99, Seed: 21)).Map!.Select(m => m.Level).Distinct().Count());
+    }
 }

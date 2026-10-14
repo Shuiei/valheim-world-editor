@@ -28,8 +28,8 @@ arena in red, treasure in gold, the room with the key in green, doorways as dots
   - *Goblin warren*: dens and totem halls.
   - *Ruins*: a mix, crumbling.
 - **Walls**: stone, black marble, wood, stave, grausten, Dvergr metal or goblin palisade.
-- **Size** and **Levels**: about how many rooms, on how many levels joined by stairs. The boss
-  waits on the last level.
+- **Size** and **Levels**: about how many rooms, on how many levels (up to 16) joined by stairs.
+  The boss waits on the last level.
 - **Monsters**: how many. **Monsters come back** puts the game's spawners, whose monsters return a
   while after dying. Without it, the monsters themselves are placed, once. The boss is always placed
   once, with a star more for more monsters.
@@ -61,17 +61,29 @@ What it is like:
   door, and the stairs between levels have doors too.
 - **Some rooms rise through two levels**: great halls, chapels and the arena.
 
-**Place in the world** puts it 5000 m above the middle of the view, where the game keeps its own
-dungeons. It goes higher if something is already up there. A portal on the ground there leads in,
-and its twin in the entrance hall leads back. Both are written linked, under a tag such as *dg123*.
-Like everything else in the editor, it is one step of the history (Ctrl+Z takes it all back) until
-you **Save to world** or **Apply live**. The dungeon is written as a ruin, with no builder, like the
-game's own: monsters leave its walls alone, and taking it apart gives back a third of the materials.
+**Place in the world** puts its **entrance** on the ground at the middle of the view, facing you,
+and the dungeon 5000 m above it, where the game keeps its own dungeons. The entrance is the game's
+own for the biome: a burial chamber's mound in the Meadows and the Black Forest, a sunken crypt's
+door in the Swamp, a Frost Cave's mouth in the Mountains and the Deep North, an infested mine's in
+the Mistlands, a Morgen hole in the Ashlands. Its door leads up into the dungeon and the door up
+there leads back out, as in the game's own dungeons; the dungeon is laid out where the game lays
+that entrance's own (a Frost Cave's goes to the middle of the zone). The Plains have no dungeon of
+their own: there a portal on the ground leads in and its twin in the entrance hall leads back, both
+written linked under a tag such as *dg123*. One dungeon fits over a zone (64 × 64 m): with one there
+already, the editor says so and places nothing.
+
+The view stays at the entrance. **Go to the dungeon** takes it up, looking down into the first level
+with the roofs cut away; **Go to the entrance** brings it back down. Like everything else in the
+editor, it is one step of the history (Ctrl+Z takes it all back) until you **Save to world** or
+**Apply live**. The dungeon is written as a ruin, with no builder, like the game's own: monsters leave
+its walls alone, and taking it apart gives back a third of the materials.
 
 **Open in the Workshop** opens it as a blueprint (in the game's Homestead folder), to change it there:
 open a chest to change what it holds, move rooms' furniture, add your own touches. The blueprint
 keeps what its objects hold (the key in its chest, the signs, the boss and its stars) and that it is
-a ruin. Placed in a world from the editor, it comes back whole. Built in game with Homestead, it is
+a ruin. It is tagged *dungeon*, and a **portal** stands in its entrance hall where players arrive:
+pasted into a world from the Blueprints tab, it goes up behind an entrance as a generated dungeon
+does (see [Dungeons from blueprints](#dungeons-from-blueprints)). Built in game with Homestead, it is
 only the objects: no key, no boss.
 
 From the Workshop itself, the Build panel's **Library** has **Generate dungeon…**: the same choices
@@ -81,6 +93,22 @@ All of a dungeon of building pieces holds in the game, high in the sky. Its floo
 black marble slabs, the one piece the game never asks for support, and everything else stands on
 them.
 
+## Dungeons from blueprints
+
+Any blueprint can be a dungeon. In the Workshop, switch **A dungeon** on when you save it (the
+Blueprints tab's **Details** has the same switch; it is the tag *dungeon*). Pasted into a world from
+the Blueprints tab, such a blueprint is not put on the ground: the entrance of the biome's dungeon
+goes where you click, facing you, and the building 5000 m above it, as **Place in the world** does
+for a generated dungeon.
+
+Put a **portal** in the building where players should arrive, facing the way they should look: the
+entrance's door out opens there, and the portal itself is left out. Without a portal, players arrive
+at the building's middle, facing north. Where the biome has no dungeon of its own (the Plains), the
+portal stays, linked to one on the ground.
+
+Pieces hold in the sky only on what the game never asks support for: black marble floors
+(`blackmarble_floor_large`) make the ground of a dungeon of pieces, and everything else stands on them.
+
 ## Opening a dungeon
 
 1. Open the area over a dungeon's entrance (the map's **Location markers** show the entrances).
@@ -88,7 +116,8 @@ them.
    of rooms.
 3. **Go inside** takes the view up to the dungeon and cuts its roofs away, so you look down into its
    rooms. The **Cut** slider sets how high above the floor the cut is; its right end shows the roofs again,
-   its left end cuts at the floor.
+   its left end cuts at the floor. **Go to entrance** takes the view back down to the dungeon's entrance
+   on the ground, with nothing cut.
 
 Up there the camera no longer follows the ground: orbit, slide and fly around the rooms as usual.
 **Dungeon rooms** in the View panel shows or hides them.
