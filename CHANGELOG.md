@@ -4,6 +4,14 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.37.0 — 2026-10-14
+
+### Added
+- **No limit under the Area tool's Flatten, Raise and Lower.** The **No limit: past the game's ±8 m** switch now shows
+  with those three actions too, the same switch as the one at the bottom of the brush options (one follows the
+  other), so an area can be flattened, raised or lowered past the limit without leaving the panel. The cut and fill
+  line counts all of it then, with nothing "out of reach".
+
 ## v1.36.0 — 2026-10-14
 
 ### Added

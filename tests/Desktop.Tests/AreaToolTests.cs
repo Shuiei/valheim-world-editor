@@ -86,6 +86,23 @@ public class AreaToolTests
         Assert.Equal(new[] { (0, 0), (1, 0), (0, 1), (1, 1) }.OrderBy(z => z), a.ZonesUnder(s.Ground).OrderBy(z => z));
     }
 
+    [Fact]
+    public void VolumeCountsEverythingWithNoLimit()
+    {
+        var s = TestScenes.Flat(2);
+        var a = Box(40, 40, 80, 80);
+        static string Fill(string text) => System.Text.RegularExpressions.Regex.Match(text, @"fill [\d.k]+ m³").Value;
+        // 30 m up on 30 m ground: the limit reaches 8 m of it, No limit all of it.
+        string flatten = a.Volume(s.Ground, AreaTool.GroundAction.Flatten, 60, 0), raise = a.Volume(s.Ground, AreaTool.GroundAction.Raise, 0, 30);
+        Assert.Contains("out of reach: ±8 m limit", flatten);
+        s.Ground.NoLimit = true;
+        string flattenAll = a.Volume(s.Ground, AreaTool.GroundAction.Flatten, 60, 0), raiseAll = a.Volume(s.Ground, AreaTool.GroundAction.Raise, 0, 30);
+        Assert.DoesNotContain("out of reach", flattenAll);
+        Assert.NotEqual(Fill(raise), Fill(raiseAll));
+        Assert.Equal(Fill(flattenAll), Fill(raiseAll));
+        Assert.Equal(Fill(raiseAll).Replace("fill", "dig"), System.Text.RegularExpressions.Regex.Match(a.Volume(s.Ground, AreaTool.GroundAction.Lower, 0, 30), @"dig [\d.k]+ m³").Value);
+    }
+
     // Restore over No limit ground (a mountain, held as lift past the ±8 m limit) brings it back down
     // too (it changed nothing to be seen).
     [Fact]

@@ -1,5 +1,6 @@
 using System.Numerics;
 using TerrainEditor.App;
+using TerrainEditor.Editing;
 
 namespace TerrainEditor.Desktop;
 
@@ -386,8 +387,8 @@ public sealed class AreaTool
 
     /// <summary>
     /// Cut and fill (each point stands for 1 m²): what Flatten, Raise or Lower would move within the
-    /// game's ±8 m limit (and what is out of its reach), and how much the ground inside has been raised
-    /// and dug since it was generated.
+    /// game's ±8 m limit (and what is out of its reach; all of it with No limit on), and how much the
+    /// ground inside has been raised and dug since it was generated.
     /// </summary>
     /// <returns>The text for the panel, empty while there is no selection.</returns>
     public string Volume(Ground g, GroundAction act, float height, float amount, Func<int, float>? mask = null)
@@ -398,6 +399,7 @@ public sealed class AreaTool
         }
         static string M3(double v) => v >= 1000 ? $"{v / 1000:0.0}k m³" : $"{Math.Round(v)} m³";
         double up = 0, down = 0, cut = 0, fill = 0, outOfReach = 0, raise = 0, lower = 0;
+        float limit = g.NoLimit ? float.PositiveInfinity : EditStore.MaxLevel;
         foreach (var (p, w) in a.Cells)
         {
             if (g.Locked(p % g.W, p / g.W))
@@ -414,7 +416,7 @@ public sealed class AreaTool
                 down -= d;
             }
 
-            float want = h + (height - h) * w, got = Math.Clamp(want, b - 8, b + 8);
+            float want = h + (height - h) * w, got = Math.Clamp(want, b - limit, b + limit);
             if (got > h)
             {
                 fill += got - h;
@@ -425,8 +427,8 @@ public sealed class AreaTool
             }
 
             outOfReach += MathF.Abs(want - got);
-            raise += MathF.Max(0, MathF.Min(b + 8, h + amount * w) - h);
-            lower += MathF.Max(0, h - MathF.Max(b - 8, h - amount * w));
+            raise += MathF.Max(0, MathF.Min(b + limit, h + amount * w) - h);
+            lower += MathF.Max(0, h - MathF.Max(b - limit, h - amount * w));
         }
         string first = act switch
         {

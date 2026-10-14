@@ -140,9 +140,10 @@ under it. The Mask and the ±8 m limit apply; one click is one undo step.
 
 ## No limit
 
-The **No limit: past the game's ±8 m** switch, at the bottom of the brush options, lets every ground
-tool (the brushes, Path, Area, pasting) move the ground as far as you like: mountains, cliffs,
-canyons. It is off each time the editor starts.
+The **No limit: past the game's ±8 m** switch, at the bottom of the brush options (and under the
+[Area](area.md#ground) tool's Flatten, Raise and Lower, the same switch), lets every ground tool
+(the brushes, Path, Area, pasting) move the ground as far as you like: mountains, cliffs, canyons.
+It is off each time the editor starts.
 
 The game itself never stores ground more than 8 m from the generated ground, but it does level the
 ground under its locations (villages, dungeons...) without that limit, and counts that ground as

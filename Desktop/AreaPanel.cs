@@ -108,6 +108,13 @@ public sealed class AreaPanel
     internal NumericUpDown AmountBox { get; } = new() { Value = 2, Increment = 0.1m, FormatString = "0.0#", FontSize = 12 };
     /// <summary>Paint: which paint (one of <c>Paints</c>).</summary>
     internal ComboBox PaintBox { get; } = new() { ItemsSource = Paints.Select(p => p.Label).ToArray(), SelectedIndex = 0, FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch };
+    /// <summary>
+    /// Flatten, Raise and Lower: No limit, the ground goes past the game's ±8 m (the brush options' switch, the
+    /// same one shown here; the window keeps the two together).
+    /// </summary>
+    internal CheckBox NoLimitBox { get; } = new() { Content = "No limit: past the game's ±8 m", FontSize = 12 };
+    /// <summary>No limit was switched here (on: true).</summary>
+    public event Action<bool>? NoLimitChanged;
     /// <summary>Flatten, Raise and Lower: the cut and fill the action would move.</summary>
     internal TextBlock VolumeText { get; } = new() { FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
     /// <summary>One toggle per object kind: the kinds the object actions (and a backup restore) work on.</summary>
@@ -306,6 +313,8 @@ public sealed class AreaPanel
         ToPickButton.Tip("area.pick");
         ToPickButton.Click += (_, _) => PickKindAsked?.Invoke("Replace", UsePicked);
         Area.Changed += Refresh;
+        NoLimitBox.Tip("brush.noLimit");
+        NoLimitBox.IsCheckedChanged += (_, _) => NoLimitChanged?.Invoke(NoLimitBox.IsChecked == true);
 
         Control Row(string label, Control input, Control? after = null)
         {
@@ -351,6 +360,7 @@ public sealed class AreaPanel
                     For(Row("Height", HeightBox, AverageButton), Act.Flatten),
                     For(Row("Amount", AmountBox, new TextBlock { Text = " m", FontSize = 12, VerticalAlignment = VerticalAlignment.Center }), Act.Raise, Act.Lower),
                     For(Row("Paint", PaintBox), Act.Paint),
+                    For(NoLimitBox, Act.Flatten, Act.Raise, Act.Lower),
                     For(VolumeText, Act.Flatten, Act.Raise, Act.Lower),
                     For(Help("Evens out bumps inside the selection."), Act.Smooth),
                     For(Help("Natural-looking bumps, with the Bumps and Size of the Naturalize brush."), Act.Natural),
