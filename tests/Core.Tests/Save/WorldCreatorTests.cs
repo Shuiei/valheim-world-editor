@@ -14,15 +14,20 @@ public sealed class WorldCreatorTests : IDisposable
 {
     private readonly string _dir = Path.Combine(Path.GetTempPath(), "vwe-newworld-" + Guid.NewGuid().ToString("N")[..8]);
 
+    // The location rules in use before the test: a test that installs the fixture's rules (process-wide) leaves them
+    // as it found them.
+    private readonly ValheimGen.SeedLocations.RuleSet _rules = ValheimGen.SeedLocations.Current;
+
     // The test world's seed and unique id (tests/fixtures/CITest).
     private const string Seed = "GbXfypqU3G";
     private const long FixtureUid = 0x8d9ed32b;
 
     /// <summary>
-    /// Deletes the temporary folder.
+    /// Puts the location rules back and deletes the temporary folder.
     /// </summary>
     public void Dispose()
     {
+        ValheimGen.SeedLocations.Use(_rules);
         try
         {
             Directory.Delete(_dir, true);
@@ -132,6 +137,8 @@ public sealed class WorldCreatorTests : IDisposable
     [Fact]
     public void ABareZoneIsTheMostEvenDryMeadowsWithNothingOnItAndItsGroundUntouched()
     {
+        // With the game's location rules, so the zones holding a location are known and kept off.
+        Fixtures.UseLocations();
         var made = WorldCreator.Create(Folder("Bare"), "Bare", Seed, radius: 4, flat: true);
         var (fx, fz) = Assert.NotNull(made.Flat);
         var w = WorldSave.Load(Folder("Bare"));
@@ -143,8 +150,9 @@ public sealed class WorldCreatorTests : IDisposable
         Assert.True(h.Min() >= ValheimGen.TerrainService.WaterLevel + 1.5f, $"lowest {h.Min()}");
         Assert.Equal(h.Max() - h.Min(), made.FlatSpan, 3);
         Assert.Equal(ValheimGen.Heightmap.Biome.Meadows, terrain.BiomeAt(fx * 64, fz * 64));
-        // The most even such zone.
-        Assert.Equal((fx, fz, made.FlatSpan), WorldCreator.FlattestZone(terrain, 4));
+        // The most even such zone holding no location.
+        var taken = WorldCreator.Sites(terrain, w.Seed, 4).Select(s => s.Zone).ToHashSet();
+        Assert.Equal((fx, fz, made.FlatSpan), WorldCreator.FlattestZone(terrain, 4, taken));
         // Nothing on it but the game's own zone control (the vegetation grew everywhere else), no location in it, and
         // its ground has no edit.
         Assert.DoesNotContain(w.Objects, o => (int)MathF.Floor((o.Position.X + 32) / 64) == fx && (int)MathF.Floor((o.Position.Z + 32) / 64) == fz && o.Prefab != StableHash.Of("_TerrainCompiler") && o.Prefab != StableHash.Of("_ZoneCtrl"));
@@ -184,7 +192,7 @@ public sealed class WorldCreatorTests : IDisposable
     [Fact]
     public void TheLocationsOfTheGeneratedZonesAreSpawnedLikeTheGames()
     {
-        // The game's location rules, as the editor has them once Valheim is found (CI has no game).
+        // The game's location rules, as the editor has them once Valheim is found (CI has no game); put back by Dispose.
         Fixtures.UseLocations();
         var made = WorldCreator.Create(Folder("Temple"), "Temple", Seed, radius: 1);
         var w = WorldSave.Load(Folder("Temple"));
