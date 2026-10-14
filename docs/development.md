@@ -16,7 +16,7 @@ How the parts fit and the rules to keep when changing them: [architecture.md](ar
 | `tests/Core.Tests/`, `tests/Desktop.Tests/` | Core's tests and the app's (xUnit v3, the app's in Avalonia's headless mode), laid out like `Core/` and `Desktop/`, see [Tests](#tests). `tests/Support/` holds the helpers both share, `tests/fixtures/` the test world. |
 | `tools/WorldCheck/` | Developer checks of the generator and the writer, saved objects byte by byte, and new worlds from a seed, see below. |
 | `tools/DocsScreenshots/` | `Scenes.cs` builds and takes the pictures in `docs/images/`, through `Editor.cs`, which drives the app. |
-| `tools/release.sh`, `tools/check-package.sh` | The release packages, and their check. |
+| `tools/release.sh`, `tools/check-package.sh`, `tools/sign-windows.sh` | The release packages, their check, and the Windows program's signature. |
 
 ## Command line
 
@@ -120,10 +120,12 @@ CircleCI makes the release once you approve it (`.circleci/config.yml`, `.circle
 2. Merge it. On main, a dated heading for `VERSION` with no `v<version>` tag yet makes the pipeline
    a release one: the usual jobs, then **hold-release** waits.
 3. In CircleCI, open that pipeline's workflow (`release`) and approve **hold-release**. Then:
-   - **github-release** builds the plugin's zip (against a Valheim dedicated server downloaded with
-     SteamCMD and the BepInExPack its manifest names), tags the commit `v<version>` and publishes
-     the GitHub release with the two editor packages the pipeline tested and the plugin. Publishing
-     signs the files (`.github/workflows/sign-release.yml`, Sigstore): each gets a
+   - **github-release** signs the Windows program (`tools/sign-windows.sh`: Authenticode, with the
+     maintainer's Certum code-signing certificate through SimplySign's cloud, timestamped by Certum),
+     builds the plugin's zip (against a Valheim dedicated server downloaded with SteamCMD and the
+     BepInExPack its manifest names), tags the commit `v<version>` and publishes the GitHub release
+     with the two editor packages the pipeline tested (the Windows one signed) and the plugin.
+     Publishing signs the files (`.github/workflows/sign-release.yml`, Sigstore): each gets a
      `<file>.sigstore.json` a minute later.
    - **publish-thunderstore**, **publish-hexium** and **publish-nexus** then publish side by side
      (`tools/release/publish.cs`, with the sites' settings in `tools/release/sites.json`): the
@@ -136,19 +138,24 @@ from CircleCI (Rerun from failed); the others are done. Still by hand: **unhide*
 Hexium (its Versions page on hexium.gg; uploads arrive hidden and the API cannot unhide them), and
 the Nexus page's description and pictures (no API changes them).
 
-The release jobs' secrets are in CircleCI's **release** context, restricted to the maintainer (only
+The release jobs' secrets are in CircleCI's **mod-token** context, restricted to the maintainer (only
 they can approve): `GITHUB_TOKEN` (a GitHub token with Contents read and write on this repository),
 `THUNDERSTORE_TOKEN` (a service account of team Tie, from old.thunderstore.io's team settings),
-`HEXIUM_TOKEN` (a team API token, from the team page on hexium.gg) and `NEXUS_API_KEY` (a personal
-API key, nexusmods.com/settings/api-keys).
+`HEXIUM_TOKEN` (a team API token, from the team page on hexium.gg), `NEXUS_API_KEY` (a personal
+API key, nexusmods.com/settings/api-keys), and for the Windows signature `CERTUM_EMAIL` (the Certum
+account) and `CERTUM_OTP` (the account's SimplySign TOTP seed: the `otpauth://` URI behind the QR
+code SimplySign shows when a device is enrolled, as secret as a private key: with it and the e-mail
+anyone can sign as the maintainer; to revoke it, enrol SimplySign again for a new one).
 
 To check the publishing without publishing:
 `dotnet run tools/release/publish.cs -- <thunderstore|hexium|nexus> <folder> --dry-run`, with the
 packages in the folder and the site's token in the environment. It checks the token, that the version
 is not on the site yet, the categories and the files.
 
-By hand, without CI: `tools/release.sh <folder>` and `tools/thunderstore.sh <folder>`, then tag
-`v<version>` and `gh release create` with every file (a file added after publishing is signed by
+By hand, without CI: `tools/release.sh <folder>`, `tools/sign-windows.sh <folder>/<the win-x64 zip>`
+(with [ssign](https://github.com/Le-Syl21/ssign) installed, `CERTUM_EMAIL` and `CERTUM_TOKEN`, the
+current six-digit code from the SimplySign app, in the environment) and `tools/thunderstore.sh <folder>`,
+then tag `v<version>` and `gh release create` with every file (a file added after publishing is signed by
 running Actions > Sign release by hand, with the tag), then `publish.cs` for each site.
 
 ## The game's files

@@ -4,6 +4,15 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.36.0 — unreleased
+
+### Added
+- **The Windows program is signed.** `ValheimWorldEditor.exe` in the Windows package carries an Authenticode
+  signature, made when the release is built with the maintainer's code-signing certificate (Certum, through
+  SimplySign's cloud) and timestamped, so Windows names the publisher in the file's properties and in its
+  "Windows protected your PC" prompt, which goes away as SmartScreen gets to know the signature. How it is
+  made and checked: [Releasing](docs/development.md#releasing), [SECURITY.md](SECURITY.md#checking-a-download).
+
 ## v1.35.4 — unreleased
 
 ### Fixed
