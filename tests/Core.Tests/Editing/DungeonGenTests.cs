@@ -295,10 +295,10 @@ public class DungeonGenTests
         Assert.All(r.Rooms, p => Assert.True(Dungeons.Inside(r.Kind!, pose.Position, p), p.Name));
         Assert.All(r.Items, i => Assert.True(i.Position.Y > 5000));
         Assert.True(Vector3.Distance(r.Arrival, pose.Position) < 20, r.Arrival.ToString());
-        // The same rooms as from the origin, moved and turned there.
+        // From the origin: no dungeon object, the first room there, facing +z.
         var plain = DungeonGen.Make(new DungeonGen.Settings(Made: DungeonGen.Made.Rooms, Biome: "Mountain", Size: 2, Seed: 3));
         Assert.Null(plain.Dungeon);
-        Assert.Equal(plain.Rooms!.Count, r.Rooms.Count);
+        Assert.Equal(Vector3.Zero, plain.Rooms![0].Position);
     }
 
     [Fact]

@@ -12,6 +12,7 @@ namespace WorldEditor.Tests;
 /// show (World20118's crypts: the dungeon object 1 m behind the entrance, turned with it; a Frost Cave at 0, -2624:
 /// its dungeon at 0, 5165, -2654).
 /// </summary>
+[Collection("World files")]
 public class DungeonEntrancesTests
 {
     /// <summary>A turn about the vertical, degrees.</summary>

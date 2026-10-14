@@ -243,10 +243,11 @@ public static class DungeonGen
         var normal = all.Where(r => !r.Entrance && !r.EndCap && !r.Divider && r.Openings.Length > 0).ToList();
         var caps = all.Where(r => r.EndCap && r.Openings.Length == 1).ToList();
         var rooms = new List<Dungeons.Placed>();
-        // From the dungeon object, as the game lays its rooms out: the first room's way in at it.
+        // From the dungeon object, as the game lays its rooms out (the first room's way in at it); without one, the
+        // first room at the origin, facing +z.
         var origin = dungeon?.Position ?? Vector3.Zero;
         var first = entrances.Count > 0 ? entrances[rnd.Next(entrances.Count)] : normal[rnd.Next(normal.Count)];
-        rooms.Add(Dungeons.PlaceStart(first, origin, dungeon?.Rotation ?? Quaternion.Identity));
+        rooms.Add(dungeon is { } at ? Dungeons.PlaceStart(first, at.Position, at.Rotation) : new Dungeons.Placed(first.Hash, origin, Quaternion.Identity));
         int target = 2 + 6 * Math.Clamp(s.Size, 1, 4);
         for (int tries = 0; rooms.Count < target && tries < target * 40; tries++)
         {

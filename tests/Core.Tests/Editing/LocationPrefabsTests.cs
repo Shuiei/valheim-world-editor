@@ -8,7 +8,9 @@ namespace WorldEditor.Tests;
 /// <summary>
 /// The game's location prefabs as the dungeon scan describes them (tests/fixtures/dungeon-rooms.json: the start temple
 /// and a crypt's entrance), and what the game makes of one when it spawns it.
+/// One test takes the catalogue away for a moment: in the "World files" collection, so nothing reads it meanwhile.
 /// </summary>
+[Collection("World files")]
 public class LocationPrefabsTests
 {
     [Fact]

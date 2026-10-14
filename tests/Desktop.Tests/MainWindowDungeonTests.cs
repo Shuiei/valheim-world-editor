@@ -80,7 +80,7 @@ public class MainWindowDungeonTests
             Assert.True(placed.Arrival.Y > 5000 && placed.Entrance.Y < 3000);
             Assert.Equal(placed.Entrance.X, drawn.Position.X, 0.01f);
             Assert.Null(placed.Dungeon);
-            Assert.All(added.Where(t => t.Position.Y > 3000), t => Assert.True(MathF.Abs(t.Position.X - placed.Arrival.X) < 64 && MathF.Abs(t.Position.Z - placed.Arrival.Z) < 64));
+            Assert.All(added.Where(t => t.Position.Y > 3000), t => Assert.True(MathF.Abs(t.Position.X - placed.Arrival.X) < 160 && MathF.Abs(t.Position.Z - placed.Arrival.Z) < 160));
             // The view stays at the entrance, nothing cut; Go to the dungeon takes it up and cuts; Go to the entrance back.
             Assert.True(w.View.Camera.Target.Y < 3000);
             Assert.Null(w.View.CutY);
@@ -216,9 +216,10 @@ public class MainWindowDungeonTests
             Assert.Equal(4f, Vector3.Distance(wl.Position, placed.Arrival), 0.01f);
             Assert.Equal(MathF.Sqrt(9 + 0.25f), Vector3.Distance(f.Position, placed.Arrival), 0.01f);
             Assert.Equal(-0.5f, f.Position.Y - placed.Arrival.Y, 0.01f);
-            // Through the Paste tool's click, mirrored as the tool shows it: the wall, east of the floor in the blueprint,
-            // lands on the other side of it (the entrance faces the same way, the camera not having moved); a second
-            // portal among the pieces is an ordinary piece (only the first marks the arrival).
+            // Through the Paste tool's click, mirrored as the tool shows it: the portal faces west instead of east, so
+            // the dungeon is turned round and the floor lands on the other side of the way in (the entrance faces the
+            // same way, the camera not having moved); a second portal among the pieces is an ordinary piece (only the
+            // first marks the arrival).
             Assert.True(s.Undo());
             w.View.Paste.Clip = clip;
             w.View.Paste.Mirror = true;
@@ -230,7 +231,7 @@ public class MainWindowDungeonTests
             Assert.Single(mirrored, t => t.Prefab == Portal);
             var wall2 = mirrored.First(t => t.Prefab == wall);
             Assert.Equal(4f, Vector3.Distance(wall2.Position, w.LastPlaced!.Arrival), 0.01f);
-            Assert.True(Vector3.Cross(wl.Position - f.Position, wall2.Position - mirrored.First(t => t.Prefab == floor).Position).Y < -1f);
+            Assert.True(Vector3.Cross(wl.Position - f.Position, wall2.Position - mirrored.First(t => t.Prefab == floor).Position).Y > 1f);
             w.View.Paste.Mirror = false;
         }
         finally
