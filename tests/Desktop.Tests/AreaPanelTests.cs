@@ -107,6 +107,33 @@ public class AreaPanelTests
     }
 
     [AvaloniaFact]
+    public void NoLimitShowsUnderFlattenRaiseAndLowerAndIsTheBrushSwitch()
+    {
+        using var r = new Run();
+        foreach (var act in new[] { AreaPanel.Act.Flatten, AreaPanel.Act.Raise, AreaPanel.Act.Lower })
+        {
+            r.P.Choose(act);
+            Assert.True(r.P.NoLimitBox.IsVisible);
+        }
+        r.P.Choose(AreaPanel.Act.Smooth);
+        Assert.False(r.P.NoLimitBox.IsVisible);
+        // Flatten far above the ground: the limit leaves most of it out of reach, until No limit is on.
+        r.P.Choose(AreaPanel.Act.Flatten);
+        r.P.HeightBox.Value = (decimal)(r.H(32, 32) + 100);
+        Assert.Contains("out of reach", r.P.VolumeText.Text);
+        r.P.NoLimitBox.IsChecked = true;
+        Assert.True(r.W.Tools.NoLimitBox.IsChecked);
+        Assert.True(r.S.Ground.NoLimit);
+        Assert.StartsWith("No limit", r.Said);
+        Assert.DoesNotContain("out of reach", r.P.VolumeText.Text);
+        // The brush options' switch moves this one too.
+        r.W.Tools.NoLimitBox.IsChecked = false;
+        Assert.False(r.P.NoLimitBox.IsChecked);
+        Assert.False(r.S.Ground.NoLimit);
+        Assert.Contains("out of reach", r.P.VolumeText.Text);
+    }
+
+    [AvaloniaFact]
     public async Task PaintIsAppliedWithTheKindChosenInItsList()
     {
         using var r = new Run();
