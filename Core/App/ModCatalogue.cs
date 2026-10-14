@@ -113,13 +113,25 @@ public static class ModCatalogue
             var next = now with { Models = models };
             // Kept first, as Take does.
             SafeFile.WriteAllText(FilePath, Write(next));
-            _data = next;
+            Use(next);
         }
         return taken;
     }
 
-    /// <summary>What is known now, swapped in whole.</summary>
+    /// <summary>What is known now, swapped in whole (<see cref="Use"/>).</summary>
     private static volatile Data _data = Empty();
+
+    /// <summary>Counts each time what is known is replaced, for lists worked out from it to be worked out again.</summary>
+    public static int Generation => _generation;
+    /// <summary>Backs <see cref="Generation"/>.</summary>
+    private static volatile int _generation;
+
+    /// <summary>Puts what is known in use, counting it in <see cref="Generation"/>.</summary>
+    private static void Use(Data next)
+    {
+        _data = next;
+        _generation++;
+    }
 
     /// <summary>How many mod prefabs are known.</summary>
     public static int Count => _data.Prefabs.Count;
@@ -140,19 +152,19 @@ public static class ModCatalogue
     {
         try
         {
-            _data = File.Exists(FilePath) ? Read(File.ReadAllText(FilePath)) : Empty();
+            Use(File.Exists(FilePath) ? Read(File.ReadAllText(FilePath)) : Empty());
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException or InvalidOperationException)
         {
             Console.WriteLine($"mod catalogue: {FilePath} could not be read ({e.Message}); starting without it.");
-            _data = Empty();
+            Use(Empty());
         }
     }
 
     /// <summary>
     /// Nothing known any more (the tests).
     /// </summary>
-    internal static void Forget() => _data = Empty();
+    internal static void Forget() => Use(Empty());
 
     /// <summary>
     /// Takes a game's report (GET /catalogue): its prefabs that are not the game's own (<paramref name="vanilla"/>)
@@ -198,7 +210,7 @@ public static class ModCatalogue
         {
             // Kept first: should writing fail, nothing is in use that a retry would take for already known.
             SafeFile.WriteAllText(FilePath, Write(next));
-            _data = next;
+            Use(next);
         }
         return (mods, changed);
     }

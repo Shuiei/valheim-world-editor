@@ -152,7 +152,9 @@ no data tables. Everything is read at run time from the player's install:
 - Mods' manifests: `Core/App/ModManifests.cs` reads every `worldeditor.json` in the plugins folders
   (docs/modding.md, docs/worldeditor.schema.json) as a world or the Workshop opens
   (`WorldSession.ReadModFiles`): data labels, read-only flags and help for `InspectorPanel`, hidden
-  prefabs left out of `PlacePanel` and `BuildPanel`, groups for the Mods tab.
+  prefabs left out of `PlacePanel` and `BuildPanel`, groups for the Mods tab. `PlacePanel` also leaves
+  out a mod's helpers, prefabs whose reported model has no parts (sounds, effects; `PlacePanel.NotOffered`),
+  and works its list out again when `ModManifests.Generation` or `ModCatalogue.Generation` changes.
 - Mods' data names: `Core/App/ModKeys.cs` reads the string literals of every DLL in the plugins
   folders (`GameCatalogues.KeyNamesIn`, as `zdo-keys` reads `assembly_valheim.dll`), keeps them in
   `mod-zdo-keys.json` (user data folder) until a DLL changes, and gives them to `ZdoKeys.UseMods`;
@@ -161,8 +163,9 @@ no data tables. Everything is read at run time from the player's install:
   game reported, `POST /models`), finding each part's mesh and material by name (`GameBundles.Named`,
   a names index over a bundles folder kept as `<index>-names.json`) in the mods' bundles first, then
   the game's; same-named meshes are told apart by their bounds (`GameBundles.BoundsOf`) and vertex
-  count, Unity's built-in Cube, Quad and Plane (in no bundle) are made (`BundleModels.PrimitiveMesh`,
-  ids starting "~"), and a mod's placeholder material (`JVLmock_`/`_REPLACE_` names, Jötunn mock
+  count, Unity's built-in Cube, Quad, Plane, Cylinder, Sphere and Capsule (in no bundle) are made
+  (`BundleModels.PrimitiveMesh`, ids starting "~", each triangle wound both ways: `MeshData.BothWays`, which
+  `GlView` draws with back faces culled so each side shows once), and a mod's placeholder material (`JVLmock_`/`_REPLACE_` names, Jötunn mock
   shaders) gives way to the game's. Compressed meshes are unpacked (`GameBundles.ReadCompressedMesh`);
   crunched textures (formats 28, 29: one crn file holding every level) are unpacked to DXT1 or DXT5
   blocks by `Core/App/Crunch.cs` (a port of crunch's decoder, Unity's format; `GameBundles.LoadTexture`
@@ -171,6 +174,16 @@ no data tables. Everything is read at run time from the player's install:
   ones packed again as LZ4) from the plugins folders `LocalGame.BepInExFolders` lists into
   `mod-bundles` (user data folder), read by a second `GameBundles`. Ids in the mods' bundles start
   with "+".
+- Materials (`BundleModels.ViewMaterial`, the game's and the mods'): the main texture is `_MainTex`, else
+  the first of `_Albedo`, `_BaseMap`, `_BaseColorMap`, `_MainTexture`, `_Diffuse`, `_BaseTexture` the
+  material has. Cut out: Standard's `_Mode` 1, cut-out shaders, vegetation and grass (at `_Cutoff`).
+  See-through (`MaterialData.Transparent`): Standard's `_Mode` 2 and 3 (fade, transparent) and
+  transparent, glass and particle shaders, no cutoff, their alpha at least `BundleModels.LeastAlpha`
+  (glass the game draws all but clear still shows as a tint; refracting glass is drawn at that). A `_Mode`
+  2 or 3 left on a shader without modes (the game's pieces and rocks keep one) still cuts out at half.
+  `GlView` draws see-through batches after every opaque one (`DrawGlass`; rooms' and locations' in
+  `DrawInstances`), blended, depth tested without writing depth (`uBlend` in the object shader);
+  `BuildingPicture` blends them over the opaque triangles the same way.
 - The tests run without Valheim on trimmed copies in `tests/fixtures/<kind>.json`
   (`GameData.UseCopies`; the driver's `gamedata <folder>`), made again after a game update with
   `ValheimWorldEditor --export-test-data tests/fixtures`. Those copies are the game's data:

@@ -76,6 +76,13 @@ public sealed class ModelStore
     public sealed record MeshData(float[] Vertices, uint[][] Submeshes)
     {
         /// <summary>
+        /// Every triangle is there wound both ways (Unity's primitives, made to show whatever their material culls):
+        /// drawn with back faces culled, it still shows from both sides, each side once (twice, a see-through material
+        /// would look twice as thick).
+        /// </summary>
+        public bool BothWays { get; init; }
+
+        /// <summary>
         /// The mesh's box (its vertices' smallest and largest coordinates).
         /// </summary>
         public (Vector3 Min, Vector3 Max) Bounds { get; } = BoundsOf(Vertices);
@@ -107,7 +114,9 @@ public sealed class ModelStore
     /// <param name="Cutoff">Alpha below which pixels are dropped; 0 draws them all.</param>
     /// <param name="DoubleSided">Draw both faces.</param>
     /// <param name="UvTransform">Texture scale (x, y) then offset (z, w), applied as uv * scale + offset.</param>
-    public sealed record MaterialData(Vector4 Color, string? Map, float Cutoff, bool DoubleSided, Vector4 UvTransform);
+    /// <param name="Transparent">See-through (glass, water): blended with what is behind it by its alpha (the colour's
+    /// times the texture's), after the opaque objects; false: opaque, or cut out at <paramref name="Cutoff"/>.</param>
+    public sealed record MaterialData(Vector4 Color, string? Map, float Cutoff, bool DoubleSided, Vector4 UvTransform, bool Transparent = false);
     /// <summary>
     /// A texture's pixels.
     /// </summary>
@@ -346,10 +355,10 @@ public sealed class ModelStore
         {
             var m = _materials[id] as JsonObject;
             float[] c = m?["color"]?.AsArray().Select(x => x!.GetValue<float>()).ToArray() ?? [1f, 1f, 1f, 1f];
-            float cutoff = m?["cutoff"]?.GetValue<float>() ?? (m?["transparent"]?.GetValue<bool>() == true ? 0.5f : 0f);
+            float cutoff = m?["cutoff"]?.GetValue<float>() ?? 0f;
             float[] uv = m?["uv"]?.AsArray().Select(x => x!.GetValue<float>()).ToArray() ?? [1f, 1f, 0f, 0f];
             return new MaterialData(new Vector4(Linear(c[0]), Linear(c[1]), Linear(c[2]), c.Length > 3 ? c[3] : 1f), m?["map"]?.GetValue<string>(),
-                cutoff, m?["doubleSided"]?.GetValue<bool>() == true, new Vector4(uv[0], uv[1], uv[2], uv[3]));
+                cutoff, m?["doubleSided"]?.GetValue<bool>() == true, new Vector4(uv[0], uv[1], uv[2], uv[3]), m?["transparent"]?.GetValue<bool>() == true);
         }
 
         /// <summary>

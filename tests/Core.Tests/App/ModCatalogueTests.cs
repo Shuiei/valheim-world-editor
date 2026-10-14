@@ -11,8 +11,9 @@ namespace WorldEditor.Tests;
 /// The mods' prefabs a game reports (WorldEditorBridge's GET /catalogue): only those that are not the game's own are
 /// kept, in the data folder, the newest report of each winning; entries not in the editor's format are left out; they
 /// are laid over the game's data without changing the game's own entries, and GameData uses them at once. The models
-/// the game reports of them (POST /models) are kept with them, of known mod prefabs only, and read back by name. Runs alone
-/// (the catalogues are shared), in a data folder of its own; the tests' copies are in use again afterwards.
+/// the game reports of them (POST /models) are kept with them, of known mod prefabs only, and read back by name; each
+/// change is counted. Runs alone (the catalogues are shared), in a data folder of its own; the tests' copies are in use
+/// again afterwards.
 /// </summary>
 [Collection("DataDir")]
 public sealed class ModCatalogueTests : IDisposable
@@ -244,6 +245,23 @@ public sealed class ModCatalogueTests : IDisposable
         Assert.Equal(new[] { 1f, 0, 0, 1, 0, 1, 0, 2, 0, 0, 1, 3, 0, 0, 0, 1 }, wall.Matrix);
         Assert.Null(model.Parts[1].Material);
         Assert.Null(ModCatalogue.ModelOf("vfx_bfp_hit"));
+    }
+
+    [Fact]
+    public void TheGenerationCountsEachChangeOfWhatIsKnown()
+    {
+        int before = ModCatalogue.Generation;
+
+        ModCatalogue.Take(Report(), Vanilla);
+        Assert.Equal(before + 1, ModCatalogue.Generation);
+        // Nothing new: the same.
+        ModCatalogue.Take(Report(), Vanilla);
+        Assert.Equal(before + 1, ModCatalogue.Generation);
+        ModCatalogue.TakeModels($$"""{"bfp_finewall":{{ModelJson("1,1,1")}}}""");
+        Assert.Equal(before + 2, ModCatalogue.Generation);
+        ModCatalogue.Load();
+        ModCatalogue.Forget();
+        Assert.Equal(before + 4, ModCatalogue.Generation);
     }
 
     [Fact]

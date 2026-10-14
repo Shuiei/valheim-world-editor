@@ -162,6 +162,7 @@ public sealed class BundleModelsModsTests : IDisposable
             ("Cube", 24, "0,0,0,0.5,0.5,0.5"),
             ("Quad", 4, "0,0,0,0.5,0.5,0"),
             ("Plane", 121, "0,0,0,5.04,0,5"),
+            ("Cylinder", 88, "0,0,0,0.5,1,0.5"),
             ("Cube", 24, "0,0,0,1,1,1"));
 
         var parts = Models().Model("bfp_finewall")!.Parts;
@@ -179,6 +180,7 @@ public sealed class BundleModelsModsTests : IDisposable
                 "~Cube",
                 "~Quad",
                 "~Plane",
+                "~Cylinder",
             ],
             parts.Select(p => p.Mesh));
     }
@@ -213,8 +215,12 @@ public sealed class BundleModelsModsTests : IDisposable
     {
         var models = Models();
 
-        Assert.Equal(24 * 8, models.Mesh("~Cube")!.Vertices.Length);
-        Assert.Null(models.Mesh("~Sphere"));
+        var cube = models.Mesh("~Cube")!;
+        Assert.Equal(24 * 8, cube.Vertices.Length);
+        // Each triangle wound both ways, which the view knows.
+        Assert.True(cube.BothWays);
+        Assert.False(models.Mesh($"+finemod:{_modBeam}")!.BothWays);
+        Assert.Null(models.Mesh("~Torus"));
     }
 
     [Fact]

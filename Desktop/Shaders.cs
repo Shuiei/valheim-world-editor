@@ -53,8 +53,8 @@ public static class Shaders
 
     /// <summary>
     /// The objects' fragment shader. Lit like the game look's day (sun, flat ambient, fog), in view space (the
-    /// sun's z mirrored); also draws the Place tool's ghosts, see-through buildings, the Workshop's cut and the
-    /// support check's tint.
+    /// sun's z mirrored); also draws see-through materials (glass) by their alpha, the Place tool's ghosts, see-through
+    /// buildings, the Workshop's cut and the support check's tint.
     /// </summary>
     public const string ObjectFs = GameLookGl.Common + """
 		in vec3 vNor; in vec2 vUv; in vec3 vPos; in vec3 vTint;
@@ -64,6 +64,8 @@ public static class Shaders
 		uniform float uGhost;
 		// See-through buildings (View): drawn faint.
 		uniform float uSeeThrough;
+		// A see-through material (glass): its alpha, the colour's times the texture's, is the fragment's (else opaque).
+		uniform float uBlend;
 		// The Workshop's cut: x on (1), y the height above which nothing is drawn (not the ghosts).
 		uniform vec2 uCut;
 		uniform vec3 uSun, uSunColor, uAmbient, uEye;
@@ -85,7 +87,7 @@ public static class Shaders
 			vec3 toCam = uEye - vPos;
 			vec3 v = normalize(toCam);
 			col += vec3(0.15, 0.25, 0.35) * uGhost;
-			frag = vec4(toSRGB(applyFogDir(col, length(toCam), -vec3(v.x, v.y, -v.z), vec3(uSun.x, uSun.y, -uSun.z))), (1.0 - 0.5 * uGhost) * (1.0 - 0.6 * uSeeThrough));
+			frag = vec4(toSRGB(applyFogDir(col, length(toCam), -vec3(v.x, v.y, -v.z), vec3(uSun.x, uSun.y, -uSun.z))), (uBlend > 0.5 ? c.a : 1.0) * (1.0 - 0.5 * uGhost) * (1.0 - 0.6 * uSeeThrough));
 		}
 		""";
 

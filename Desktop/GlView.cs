@@ -430,6 +430,10 @@ public sealed class GlView : OpenGlControlBase
         /// <summary>Its material (colour, cut-out, two-sided…).</summary>
         public ModelStore.MaterialData Material = null!;
         /// <summary>
+        /// Its mesh has every triangle wound both ways: back faces are culled whatever the material, each side drawn once.
+        /// </summary>
+        public bool BothWays;
+        /// <summary>
         /// Its instances by area cell (<see cref="CellSize"/>): they are sorted by cell, each cell a run of them, so
         /// only the cells in view are drawn.
         /// </summary>
@@ -490,6 +494,8 @@ public sealed class GlView : OpenGlControlBase
     /// Each mesh on the graphics card, by name: its vertex buffer, and an index buffer and count per part.
     /// </summary>
     private readonly Dictionary<string, (uint Vbo, uint[] Ebos, int[] Counts)> _meshGl = [];
+    /// <summary>The meshes on the graphics card whose triangles are all there wound both ways (MeshData.BothWays).</summary>
+    private readonly HashSet<string> _bothWays = [];
     /// <summary>
     /// Meshes on the graphics card (read by the loaders on worker threads), and about how much the
     /// models and their textures take there. Past the budget, opening another area lets them all go
@@ -554,6 +560,7 @@ public sealed class GlView : OpenGlControlBase
         _lowW = _lowH = 0;
         _batches.Clear();
         _meshGl.Clear();
+        _bothWays.Clear();
         _onGpu.Clear();
         _gpuBytes = 0;
         lock (_textures)
@@ -882,14 +889,8 @@ public sealed class GlView : OpenGlControlBase
         }
         _gl.UseProgram(_objectProg);
         _gl.Uniform1(_gl.GetUniformLocation(_objectProg, "uGhost"), ghost ? 1f : 0f);
-        if (ghost)
-        {
-            _gl.Enable(EnableCap.Blend);
-            _gl.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
-            _gl.DepthMask(false);
-        }
-        int uColor = _gl.GetUniformLocation(_objectProg, "uColor"), uCut = _gl.GetUniformLocation(_objectProg, "uCutoff"),
-            uHasMap = _gl.GetUniformLocation(_objectProg, "uHasMap"), uUv = _gl.GetUniformLocation(_objectProg, "uUv");
+        var u = MaterialUniforms.Of(_gl, _objectProg);
+        var models = new List<(Group Group, List<Matrix4x4> Placements)>();
         foreach (var byKind in shown.GroupBy(o => o.Prefab))
         {
             int prefab = byKind.Key;
@@ -900,58 +901,133 @@ public sealed class GlView : OpenGlControlBase
                 continue;
             }
             drawn?.Add(prefab);
-            var mats = byKind.Select(o => Placement(s, new WorldScene.Thing(0, prefab, o.Position, o.Rotation, o.Scale, piece), g.RootScale)).ToList();
-            foreach (var (b, pre) in g.Batches)
+            models.Add((g, byKind.Select(o => Placement(s, new WorldScene.Thing(0, prefab, o.Position, o.Rotation, o.Scale, piece), g.RootScale)).ToList()));
+        }
+        // Ghosts are see-through whole; solid models draw their opaque parts first, then their see-through ones (glass)
+        // blended over them.
+        foreach (bool glass in ghost ? [true] : new[] { false, true })
+        {
+            if (glass)
             {
-                var data = mats.Select(m => pre * m).ToArray();
-                _gl.BindVertexArray(b.Vao);
-                _gl.BindBuffer(BufferTargetARB.ArrayBuffer, _ghostVbo);
-                fixed (Matrix4x4* p = data)
+                _gl.Enable(EnableCap.Blend);
+                _gl.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
+                _gl.DepthMask(false);
+            }
+            foreach (var (g, placements) in models)
+            {
+                foreach (var (b, pre) in g.Batches)
                 {
-                    _gl.BufferData(BufferTargetARB.ArrayBuffer, (nuint)(data.Length * 64), p, BufferUsageARB.DynamicDraw);
-                }
-                for (uint c = 0; c < 4; c++)
-                {
-                    _gl.VertexAttribPointer(3 + c, 4, VertexAttribPointerType.Float, false, 64, (void*)(c * 16));
-                }
-                var m = b.Material;
-                if (b.Texture == 0 && m.Map != null)
-                {
-                    lock (_textures)
+                    if (!ghost && b.Material.Transparent != glass)
                     {
-                        _textures.TryGetValue(m.Map, out b.Texture);
+                        continue;
                     }
+                    var data = placements.Select(m => pre * m).ToArray();
+                    _gl.BindVertexArray(b.Vao);
+                    _gl.BindBuffer(BufferTargetARB.ArrayBuffer, _ghostVbo);
+                    fixed (Matrix4x4* p = data)
+                    {
+                        _gl.BufferData(BufferTargetARB.ArrayBuffer, (nuint)(data.Length * 64), p, BufferUsageARB.DynamicDraw);
+                    }
+                    for (uint c = 0; c < 4; c++)
+                    {
+                        _gl.VertexAttribPointer(3 + c, 4, VertexAttribPointerType.Float, false, 64, (void*)(c * 16));
+                    }
+                    UseMaterial(b, u);
+                    _gl.DrawElementsInstanced(PrimitiveType.Triangles, (uint)b.IndexCount, DrawElementsType.UnsignedInt, (void*)0, (uint)data.Length);
+                    // The batch's own instances again.
+                    _gl.BindBuffer(BufferTargetARB.ArrayBuffer, b.InstanceVbo);
+                    for (uint c = 0; c < 4; c++)
+                    {
+                        _gl.VertexAttribPointer(3 + c, 4, VertexAttribPointerType.Float, false, 64, (void*)(c * 16));
+                    }
+                    b.PointedAt = 0;
                 }
-                if (m.DoubleSided)
-                {
-                    _gl.Disable(EnableCap.CullFace);
-                }
-                else
-                {
-                    _gl.Enable(EnableCap.CullFace);
-                }
-                _gl.Uniform4(uColor, m.Color.X, m.Color.Y, m.Color.Z, m.Color.W);
-                _gl.Uniform1(uCut, m.Cutoff);
-                _gl.Uniform1(uHasMap, b.Texture != 0 ? 1 : 0);
-                _gl.Uniform4(uUv, m.UvTransform.X, m.UvTransform.Y, m.UvTransform.Z, m.UvTransform.W);
-                _gl.BindTexture(TextureTarget.Texture2D, b.Texture);
-                _gl.DrawElementsInstanced(PrimitiveType.Triangles, (uint)b.IndexCount, DrawElementsType.UnsignedInt, (void*)0, (uint)data.Length);
-                // The batch's own instances again.
-                _gl.BindBuffer(BufferTargetARB.ArrayBuffer, b.InstanceVbo);
-                for (uint c = 0; c < 4; c++)
-                {
-                    _gl.VertexAttribPointer(3 + c, 4, VertexAttribPointerType.Float, false, 64, (void*)(c * 16));
-                }
-                b.PointedAt = 0;
             }
         }
         _gl.Uniform1(_gl.GetUniformLocation(_objectProg, "uGhost"), 0f);
-        if (ghost)
+        _gl.DepthMask(true);
+        _gl.Disable(EnableCap.Blend);
+        _gl.BindVertexArray(0);
+    }
+
+    /// <summary>The object shader's uniforms a batch's material sets (their locations in the program).</summary>
+    /// <param name="Color">The colour (uColor).</param>
+    /// <param name="Cutoff">The alpha cutoff (uCutoff).</param>
+    /// <param name="HasMap">Whether there is a texture (uHasMap).</param>
+    /// <param name="Uv">The texture's scale and offset (uUv).</param>
+    /// <param name="Blend">Whether the material is see-through (uBlend).</param>
+    private readonly record struct MaterialUniforms(int Color, int Cutoff, int HasMap, int Uv, int Blend)
+    {
+        /// <summary>The locations in this program.</summary>
+        public static MaterialUniforms Of(GL gl, uint program) => new(gl.GetUniformLocation(program, "uColor"), gl.GetUniformLocation(program, "uCutoff"),
+            gl.GetUniformLocation(program, "uHasMap"), gl.GetUniformLocation(program, "uUv"), gl.GetUniformLocation(program, "uBlend"));
+    }
+
+    /// <summary>
+    /// Sets the object shader up for a batch's material: its texture (looked up again until it is on the graphics card),
+    /// its back faces culled or not (always for a mesh wound both ways), its colour, cutoff and uv, and whether it is
+    /// blended (see-through).
+    /// </summary>
+    private void UseMaterial(Batch b, MaterialUniforms u)
+    {
+        var m = b.Material;
+        if (b.Texture == 0 && m.Map != null)
+        {
+            lock (_textures)
+            {
+                _textures.TryGetValue(m.Map, out b.Texture);
+            }
+        }
+        if (m.DoubleSided && !b.BothWays)
+        {
+            _gl.Disable(EnableCap.CullFace);
+        }
+        else
+        {
+            _gl.Enable(EnableCap.CullFace);
+        }
+        _gl.Uniform4(u.Color, m.Color.X, m.Color.Y, m.Color.Z, m.Color.W);
+        _gl.Uniform1(u.Cutoff, m.Cutoff);
+        _gl.Uniform1(u.HasMap, b.Texture != 0 ? 1 : 0);
+        _gl.Uniform4(u.Uv, m.UvTransform.X, m.UvTransform.Y, m.UvTransform.Z, m.UvTransform.W);
+        _gl.Uniform1(u.Blend, m.Transparent ? 1f : 0f);
+        _gl.BindTexture(TextureTarget.Texture2D, b.Texture);
+    }
+
+    /// <summary>
+    /// The things' see-through materials (glass), last of the objects: blended over what is drawn, behind them too, and
+    /// not hiding what is drawn after. Buildings drawn see-through (View) had theirs drawn with them. Returns the
+    /// instances drawn.
+    /// </summary>
+    private int DrawGlass(MaterialUniforms u, bool seeThrough)
+    {
+        int drawn = 0;
+        bool started = false;
+        foreach (var b in _batches)
+        {
+            if (!b.Material.Transparent || !_shown[(int)b.Kind] || seeThrough && b.Kind == ObjectKind.Buildings)
+            {
+                continue;
+            }
+            if (!started)
+            {
+                started = true;
+                _gl.UseProgram(_objectProg);
+                _gl.Enable(EnableCap.Blend);
+                _gl.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
+                _gl.DepthMask(false);
+            }
+            UseMaterial(b, u);
+            _gl.BindVertexArray(b.Vao);
+            drawn += DrawCells(b);
+        }
+        if (started)
         {
             _gl.DepthMask(true);
             _gl.Disable(EnableCap.Blend);
+            _gl.BindVertexArray(0);
         }
-        _gl.BindVertexArray(0);
+        return drawn;
     }
 
     /// <summary>
@@ -1422,6 +1498,7 @@ public sealed class GlView : OpenGlControlBase
             }
         }
         _meshGl.Clear();
+        _bothWays.Clear();
         _onGpu.Clear();
         lock (_textures)
         {
@@ -1562,7 +1639,7 @@ public sealed class GlView : OpenGlControlBase
                 {
                     continue;
                 }
-                AddBatch(g, mesh, part.Sub, r.Materials[part.Material], part.Matrix);
+                AddBatch(g, mesh, part.Sub, r.Materials[part.Material], part.Matrix, _bothWays.Contains(part.Mesh));
             }
         }
         g.Ready = true;
@@ -1606,6 +1683,10 @@ public sealed class GlView : OpenGlControlBase
         }
         _gpuBytes += md.Vertices.Length * 4L + md.Submeshes.Sum(x => x.Length * 4L);
         _onGpu[id] = true;
+        if (md.BothWays)
+        {
+            _bothWays.Add(id);
+        }
         Models?.Forget(id);
         return _meshGl[id] = (vbo, ebos, counts);
     }
@@ -1638,11 +1719,12 @@ public sealed class GlView : OpenGlControlBase
     }
 
     /// <summary>
-    /// A batch for one part of a group's model: the mesh part, its material, and the part's matrix within the model.
+    /// A batch for one part of a group's model: the mesh part, its material, and the part's matrix within the model;
+    /// <paramref name="bothWays"/>: the mesh has every triangle wound both ways (see <see cref="Batch.BothWays"/>).
     /// </summary>
-    private unsafe void AddBatch(Group g, (uint Vbo, uint[] Ebos, int[] Counts) mesh, int sub, ModelStore.MaterialData mat, Matrix4x4 pre)
+    private unsafe void AddBatch(Group g, (uint Vbo, uint[] Ebos, int[] Counts) mesh, int sub, ModelStore.MaterialData mat, Matrix4x4 pre, bool bothWays = false)
     {
-        var b = new Batch { Kind = g.Kind, Material = mat, IndexCount = mesh.Counts[sub], Instances = 0 };
+        var b = new Batch { Kind = g.Kind, Material = mat, IndexCount = mesh.Counts[sub], Instances = 0, BothWays = bothWays };
         lock (_textures)
         {
             b.Texture = mat.Map != null && _textures.TryGetValue(mat.Map, out uint t) ? t : 0;
@@ -1856,8 +1938,7 @@ public sealed class GlView : OpenGlControlBase
             _gl.Uniform1(_gl.GetUniformLocation(_objectProg, "uFogDensity"), GameLookGl.FogDensity);
             _gl.Uniform1(_gl.GetUniformLocation(_objectProg, "uFogStart"), GameLookGl.FogStart);
             V3("uEye", eye);
-            int uColor = _gl.GetUniformLocation(_objectProg, "uColor"), uCut = _gl.GetUniformLocation(_objectProg, "uCutoff"),
-                uHasMap = _gl.GetUniformLocation(_objectProg, "uHasMap"), uUv = _gl.GetUniformLocation(_objectProg, "uUv");
+            var u = MaterialUniforms.Of(_gl, _objectProg);
             _gl.Uniform1(_gl.GetUniformLocation(_objectProg, "uMap"), 0);
             _gl.ActiveTexture(TextureUnit.Texture0);
             bool seeThrough = _seeThrough;
@@ -1870,7 +1951,7 @@ public sealed class GlView : OpenGlControlBase
             int drawn = 0;
             _drawCalls = 0;
             // Opaque first; see-through buildings after, blended over everything and not hiding
-            // what is behind them.
+            // what is behind them; see-through materials (glass) last (DrawGlass).
             foreach (bool pass in seeThrough ? new[] { false, true } : [false])
             {
                 if (pass)
@@ -1882,31 +1963,11 @@ public sealed class GlView : OpenGlControlBase
                 }
                 foreach (var b in _batches)
                 {
-                    if (!_shown[(int)b.Kind] || seeThrough && (b.Kind == ObjectKind.Buildings) != pass)
+                    if (!_shown[(int)b.Kind] || seeThrough && (b.Kind == ObjectKind.Buildings) != pass || !pass && b.Material.Transparent)
                     {
                         continue;
                     }
-                    var m = b.Material;
-                    if (b.Texture == 0 && m.Map != null)
-                    {
-                        lock (_textures)
-                        {
-                            _textures.TryGetValue(m.Map, out b.Texture);
-                        }
-                    }
-                    if (m.DoubleSided)
-                    {
-                        _gl.Disable(EnableCap.CullFace);
-                    }
-                    else
-                    {
-                        _gl.Enable(EnableCap.CullFace);
-                    }
-                    _gl.Uniform4(uColor, m.Color.X, m.Color.Y, m.Color.Z, m.Color.W);
-                    _gl.Uniform1(uCut, m.Cutoff);
-                    _gl.Uniform1(uHasMap, b.Texture != 0 ? 1 : 0);
-                    _gl.Uniform4(uUv, m.UvTransform.X, m.UvTransform.Y, m.UvTransform.Z, m.UvTransform.W);
-                    _gl.BindTexture(TextureTarget.Texture2D, b.Texture);
+                    UseMaterial(b, u);
                     _gl.BindVertexArray(b.Vao);
                     drawn += DrawCells(b);
                 }
@@ -1917,7 +1978,6 @@ public sealed class GlView : OpenGlControlBase
                     _gl.Disable(EnableCap.Blend);
                 }
             }
-            _drawnInstances = drawn;
 
             if (_shown[(int)ObjectKind.Dungeons])
             {
@@ -1927,6 +1987,7 @@ public sealed class GlView : OpenGlControlBase
             {
                 DrawLocations(s);
             }
+            _drawnInstances = drawn + DrawGlass(u, seeThrough);
             // The water before the previews and the tools' marks, so they show over it.
             if (ShowWater)
             {

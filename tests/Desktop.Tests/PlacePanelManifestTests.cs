@@ -8,8 +8,8 @@ namespace TerrainEditor.Desktop.Tests;
 
 /// <summary>
 /// The Place panel and the mods' manifests: a prefab a manifest hides is no longer offered nor chosen once the manifests
-/// change (the list is worked out again), and is not chosen again from the panel's memory; shown again once no manifest
-/// hides it. Runs alone (the manifests are shared).
+/// change (the list is worked out again), and is not chosen again from the panel's memory or a chip; shown again once no
+/// manifest hides it. Runs alone (the manifests are shared).
 /// </summary>
 [Collection("DataDir")]
 public sealed class PlacePanelManifestTests : IDisposable
@@ -69,6 +69,9 @@ public sealed class PlacePanelManifestTests : IDisposable
         Hide(kind);
 
         Assert.DoesNotContain(p.Creatable(), c => c.Name == kind);
+        Assert.DoesNotContain(kind, input.Tool.Chosen);
+        // A chip still showing it (or a click on one) does not choose it again.
+        p.ChipClicked(kind, shift: false);
         Assert.DoesNotContain(kind, input.Tool.Chosen);
         // Not chosen again from the memory either.
         var tool = new PlaceTool { Scene = () => scene };
