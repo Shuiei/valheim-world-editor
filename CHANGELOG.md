@@ -12,6 +12,15 @@ the plugin is unchanged in versions without that part.
   step, so a paste moves a build instead of doubling it. The ground where it stood stays as it is. Docs:
   [Copy and paste](docs/area.md#copy-and-paste), [Select](docs/select.md).
 
+## v1.37.4 — unreleased
+
+### Fixed
+- **Spikes and an orange wedge in the 3D view after a visit to the map.** Opening the map and coming back to the 3D
+  view throws its OpenGL context away and makes a new one; the spawn-point and nest markers, the Dungeon tool's marks
+  and the Mountain tool's preview kept their old buffer names, which in the new context named other things, so the markers
+  were drawn into them each frame: models torn into spikes (gone while their kind was hidden, back when shown), and an
+  orange wedge across the view. Those names are now forgotten with the rest.
+
 ## v1.37.3 — 2026-10-14
 
 ### Changed
