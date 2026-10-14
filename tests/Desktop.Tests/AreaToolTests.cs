@@ -115,9 +115,12 @@ public class AreaToolTests
         s.Ground.Mod[q] = 0;
         s.Ground.Smooth[q] = 0;
         s.Ground.NoLimit = true;
-        // The lift stops at ±400 m of the generated ground: 500 m up is 100 m out of reach.
+        // The lift stops at ±400 m of the generated ground: 500 m up is 100 m out of reach. Checked on the one
+        // point (weight 1): the box's outline runs through its edge points, which get half the amount, so
+        // 500 m lifts them more than 400 m does.
         Assert.Contains("out of reach: ±400 m lift limit", a.Volume(s.Ground, AreaTool.GroundAction.Flatten, 530, 0));
-        Assert.Equal(Fill(a.Volume(s.Ground, AreaTool.GroundAction.Raise, 0, 400)), Fill(a.Volume(s.Ground, AreaTool.GroundAction.Raise, 0, 500)));
+        Assert.Contains("fill 400 m³", one.Volume(s.Ground, AreaTool.GroundAction.Raise, 0, 400));
+        Assert.Contains("fill 400 m³", one.Volume(s.Ground, AreaTool.GroundAction.Raise, 0, 500));
     }
 
     // Restore over No limit ground (a mountain, held as lift past the ±8 m limit) brings it back down
