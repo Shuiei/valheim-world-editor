@@ -2316,6 +2316,12 @@ public sealed partial class MainWindow : Window
         Tools.NoLimitChanged += on =>
         {
             Session?.Ground.NoLimit = on;
+            // The Area panel shows the same switch under Flatten, Raise and Lower.
+            if (AreaPanel != null)
+            {
+                AreaPanel.NoLimitBox.IsChecked = on;
+                AreaPanel.RefreshVolume();
+            }
             MessageText.Text = on ? "No limit: the ground tools go past the game's ±8 m. Saving turns that ground into ground discs every player's game counts as generated ground." : "The ground tools keep to the game's ±8 m.";
         };
         Tools.LoadStampAsked += async () =>
@@ -2372,6 +2378,7 @@ public sealed partial class MainWindow : Window
         PathPanel.ApplyAsked += ApplyPath;
         AreaPanel = new AreaPanel(View, () => Session, prefab => _models?.NameOf(prefab) ?? Terrain.PrefabCatalog.DisplayName(prefab));
         AreaPanel.Message += t => { MessageText.Text = t; UpdateSaveBar(); };
+        AreaPanel.NoLimitChanged += on => Tools.NoLimitBox.IsChecked = on;
         AreaPanel.PickKindAsked += PickKind;
         AreaPanel.SwitchToSelect += Tools.ChooseSelect;
         AreaPanel.CopyAsked += Copy;
