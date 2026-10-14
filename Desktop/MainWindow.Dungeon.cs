@@ -444,7 +444,7 @@ public partial class MainWindow
                 path = Path.Combine(folder, Homestead.FileName($"{r.Name} ({n})"));
             }
             await File.WriteAllTextAsync(path, Homestead.Write(new System.Text.Json.Nodes.JsonObject { ["objects"] = objects }, r.Name, "Valheim World Editor", null, DateTime.Now,
-                $"A generated dungeon (seed {settings.Seed}): " + string.Join(" ", r.Notes) + " The portal marks where players arrive: the entrance's door out opens there.", DungeonTags));
+                $"A generated dungeon (seed {settings.Seed}): {string.Join(" ", r.Notes).TrimEnd('.')}. The portal marks where players arrive: the entrance's door out opens there.", DungeonTags));
             return path;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)

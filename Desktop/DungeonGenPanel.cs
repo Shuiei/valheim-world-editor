@@ -36,6 +36,8 @@ public sealed class DungeonGenPanel
     public event Action? DungeonAsked;
     /// <summary>Go to the entrance: the view back down to its entrance.</summary>
     public event Action? EntranceAsked;
+    /// <summary>Whether a dungeon placed in the area can be gone to changed (<see cref="Placed"/>).</summary>
+    public event Action<bool>? PlacedChanged;
 
     /// <summary>Made of building pieces or of the game's own rooms (not shown in the Workshop).</summary>
     internal ComboBox Made { get; } = Combo("Building pieces", "The game's own rooms");
@@ -233,15 +235,27 @@ public sealed class DungeonGenPanel
         if (!inWorkshop)
         {
             ((StackPanel)View).Children.Add(actions);
-            ((StackPanel)View).Children.Add(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { ToDungeon, ToEntrance } });
         }
         DockPanel.SetDock(Randomize, Dock.Right);
         _wait.Tick += (_, _) => Make();
         Changed();
     }
 
-    /// <summary>Whether a dungeon placed in the area can be gone to: the Go to buttons follow.</summary>
-    public void Placed(bool yes) => ToDungeon.IsEnabled = ToEntrance.IsEnabled = yes;
+    /// <summary>
+    /// Whether a dungeon placed in the area can be gone to: the Go to buttons follow (the Dungeon panel shows them
+    /// outside this panel, so they stay in sight once the dungeon made is folded away).
+    /// </summary>
+    public void Placed(bool yes)
+    {
+        ToDungeon.IsEnabled = ToEntrance.IsEnabled = yes;
+        PlacedChanged?.Invoke(yes);
+    }
+
+    /// <summary>The last making failed (nothing to place): the game's data may not have been read yet.</summary>
+    internal bool Failed => _result == null && !_wait.IsEnabled && Pending.IsCompleted;
+
+    /// <summary>Makes the dungeon again for the settings shown (after the usual pause).</summary>
+    internal void Remake() => Changed();
 
     /// <summary>The settings shown.</summary>
     public DungeonGen.Settings Settings()

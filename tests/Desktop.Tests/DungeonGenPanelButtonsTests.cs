@@ -62,17 +62,19 @@ public class DungeonGenPanelButtonsTests
         Assert.False(p.ToDungeon.IsEnabled);
         Assert.False(p.ToEntrance.IsEnabled);
         var asked = new List<string>();
+        var placed = new List<bool>();
         p.DungeonAsked += () => asked.Add("dungeon");
         p.EntranceAsked += () => asked.Add("entrance");
+        p.PlacedChanged += placed.Add;
         p.Placed(true);
         Assert.True(p.ToDungeon.IsEnabled && p.ToEntrance.IsEnabled);
+        Assert.Equal([true], placed);
         p.ToDungeon.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         p.ToEntrance.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         Assert.Equal(["dungeon", "entrance"], asked);
         p.Placed(false);
         Assert.False(p.ToDungeon.IsEnabled);
-        // In the Workshop there is no world to go to: the buttons are not shown.
-        var plot = new DungeonGenPanel(inWorkshop: true);
-        Assert.DoesNotContain(plot.ToDungeon, plot.View.GetLogicalDescendants());
+        // The buttons are the Dungeon panel's to show (under the generator, once a dungeon is placed).
+        Assert.DoesNotContain(p.ToDungeon, p.View.GetLogicalDescendants());
     }
 }

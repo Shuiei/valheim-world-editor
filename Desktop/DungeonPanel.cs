@@ -18,6 +18,8 @@ public sealed class DungeonPanel
     internal DungeonGenPanel Gen { get; } = new();
     /// <summary>The generator's expander.</summary>
     private readonly Expander _generate;
+    /// <summary>The generator's Go to the dungeon and Go to the entrance, under its expander: shown once a dungeon is placed.</summary>
+    private readonly StackPanel _go;
     /// <summary>The view: its dungeon tool, camera and roof cut.</summary>
     private readonly GlView _view;
     /// <summary>The view's Dungeon tool the panel drives.</summary>
@@ -134,6 +136,8 @@ public sealed class DungeonPanel
             IsExpanded = true,
         };
         _generate.Tip("dungeon.gen");
+        _go = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, IsVisible = false, Children = { Gen.ToDungeon, Gen.ToEntrance } };
+        Gen.PlacedChanged += yes => _go.IsVisible = yes;
         Card = new Border
         {
             Background = Ui.Panel,
@@ -154,7 +158,7 @@ public sealed class DungeonPanel
                     Children =
                     {
                         new TextBlock { Text = "Dungeon", FontSize = 14, FontWeight = FontWeight.SemiBold },
-                        _generate,
+                        _generate, _go,
                         new TextBlock { FontSize = 12, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap,
                             Text = "Editing this area's dungeons: pick a room below, then click a green opening to add it there. Click a room to select it, an orange or blue square (where rooms meet) to put a door there or take it away." },
                         _empty, _body,
@@ -182,6 +186,11 @@ public sealed class DungeonPanel
         _empty.IsVisible = _shown.Count == 0;
         _body.IsVisible = _shown.Count > 0;
         _generate.IsExpanded = _shown.Count == 0;
+        // Made before the game's data was read (nothing to place): made again now.
+        if (Gen.Failed)
+        {
+            Gen.Remake();
+        }
         FillRooms();
         Refresh();
         // Back from Build here or another tool: the cut the slider shows.
