@@ -39,5 +39,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../../Core/ValheimWorldEditor.Core.csproj" />
+    <!-- The SDK's sample extension: tested here, and loaded as a mod's would be (ModExtensionsTests). -->
+    <ProjectReference Include="../../samples/ValheimRAFT.WorldEditor/ValheimRAFT.WorldEditor.csproj" />
   </ItemGroup>
 </Project>

@@ -416,6 +416,22 @@ public sealed class InspectorPanel
     /// <summary>A value's label: the plain one, else a mod's manifest's, else its name, else its key's hash.</summary>
     private static string Label(Field f) => f.Name is string n ? Labels.TryGetValue(n, out string? l) ? l : ModManifests.DataOf(n)?.Label ?? n : $"#{f.Key}";
 
+    /// <summary>
+    /// A byte-array value as a running mod extension reads it (ModExtensions.Decode); null when none does (or for
+    /// another kind of value).
+    /// </summary>
+    internal string? Decoded(Field f)
+    {
+        if (f.Section != "bytes" || _z is not { } z || z.GetBytes(f.Key) is not { } bytes)
+        {
+            return null;
+        }
+        var s = _session();
+        WorldScene.Thing? t = Index is int ix && s != null && ix < s.Scene.Things.Count ? s.Scene.Things[ix] : null;
+        var view = new ObjectView(PrefabCatalog.NameOf(z.Prefab) ?? "", t?.Position ?? z.Position, t?.Rotation ?? z.Rotation, z);
+        return ModExtensions.Decode(f.Key, view, bytes);
+    }
+
     /// <summary>Builds the whole card again from what is shown and changed.</summary>
     private void Render()
     {
@@ -466,7 +482,11 @@ public sealed class InspectorPanel
             var label = new TextBlock { Text = Label(f), FontSize = 11, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis, TextDecorations = f.Removed ? TextDecorations.Strikethrough : null };
             ToolTip.SetTip(label, $"{f.Name} · {Sections.FirstOrDefault(x => x.Section == f.Section).Name ?? "data"} · key {f.Key}");
             var row = new Grid { ColumnDefinitions = new ColumnDefinitions("*,170,Auto"), ColumnSpacing = 4, Children = { label, Col(box, 1), Col(rm, 2) } };
-            Fields.Children.Add(f.Note != null && !ro ? new StackPanel { Children = { row, new TextBlock { Text = f.Note, FontSize = 10, Foreground = Ui.Muted } } } : row);
+            // Under a value: its note, or bytes as a mod's extension reads them.
+            string? under = !ro ? f.Note : isItems ? null : Decoded(f);
+            Fields.Children.Add(under != null
+                ? new StackPanel { Children = { row, new TextBlock { Text = under, FontSize = 10, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap } } }
+                : row);
         }
         foreach (var a in Added.ToList())
         {

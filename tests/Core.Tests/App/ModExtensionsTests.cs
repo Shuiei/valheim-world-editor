@@ -1,0 +1,145 @@
+using TerrainEditor.App;
+using ValheimWorldEditor.Sdk;
+using Xunit;
+
+namespace WorldEditor.Tests;
+
+/// <summary>
+/// Mods' editor extensions (ModExtensions): offered by a worldeditor.json ("extension", inside the mod's folder only),
+/// off until allowed, run once allowed (the SDK sample's DLL, loaded as a mod's would be), off again when the file
+/// changes; a DLL that is no extension, or one needing a newer editor, not run, with why; a hook that throws turns its
+/// extension off without failing the editor. Runs alone (the manifests and extensions are shared).
+/// </summary>
+[Collection("DataDir")]
+public sealed class ModExtensionsTests : IDisposable
+{
+    private readonly bool _defaults = LocalGame.SearchDefaultPlaces;
+    private readonly string _dir = Path.Combine(Path.GetTempPath(), "vwe-extensions-" + Guid.NewGuid().ToString("N")[..8]);
+
+    public ModExtensionsTests()
+    {
+        LocalGame.SearchDefaultPlaces = false;
+    }
+
+    /// <summary>Forgets the manifests and extensions, puts the default places' search back, and deletes the folder.</summary>
+    public void Dispose()
+    {
+        ModExtensions.Forget();
+        ModManifests.Forget();
+        LocalGame.SearchDefaultPlaces = _defaults;
+        try
+        {
+            Directory.Delete(_dir, true);
+        }
+        catch (IOException)
+        {
+        }
+    }
+
+    /// <summary>Settings naming the test's BepInEx folder (and nothing allowed).</summary>
+    private AppSettings Settings { get; } = new();
+
+    /// <summary>A mod folder under plugins with a manifest naming its extension, and the DLL copied in (given).</summary>
+    private string Mod(string mod, string extension, string? dllFrom)
+    {
+        Settings.BepInExFolders = [Path.Combine(_dir, "BepInEx")];
+        string folder = Path.Combine(_dir, "BepInEx", "plugins", mod);
+        Directory.CreateDirectory(folder);
+        File.WriteAllText(Path.Combine(folder, ModManifests.FileName), $$"""{ "version": 1, "extension": "{{extension}}" }""");
+        string dll = Path.GetFullPath(Path.Combine(folder, extension));
+        if (dllFrom != null)
+        {
+            File.Copy(dllFrom, dll, true);
+        }
+        return dll;
+    }
+
+    /// <summary>The sample extension's DLL, built with the tests.</summary>
+    private static string Sample => Path.Combine(AppContext.BaseDirectory, "ValheimRAFT.WorldEditor.dll");
+
+    /// <summary>Reads the manifests, then runs the extensions.</summary>
+    private int Refresh()
+    {
+        ModManifests.Refresh(Settings);
+        return ModExtensions.Refresh(Settings);
+    }
+
+    [Fact]
+    public void AnOfferedExtensionRunsOnlyOnceAllowedAndUntilItsFileChanges()
+    {
+        string dll = Mod("zolantris-ValheimRAFT", "ValheimRAFT.WorldEditor.dll", Sample);
+
+        Assert.Equal(0, Refresh());
+        var offered = Assert.Single(ModExtensions.Offered);
+        Assert.Equal((dll, "zolantris-ValheimRAFT", ModExtensions.Status.Off), (offered.Dll, offered.Mod, offered.State));
+        Assert.Empty(ModExtensions.RewrittenKeys);
+
+        ModExtensions.Allow(Settings, offered, true);
+        Assert.Equal(1, Refresh());
+        Assert.Equal(ModExtensions.Status.Running, Assert.Single(ModExtensions.Offered).State);
+        Assert.Contains(TerrainEditor.Save.StableHash.Of("MBRopeAnchor_Ropes"), ModExtensions.RewrittenKeys);
+        Assert.True(ModExtensions.HasShapes(TerrainEditor.Save.StableHash.Of("MBSail")));
+
+        // Another file under the same name (a mod update): other code, off until allowed again.
+        File.AppendAllText(dll, " ");
+        Assert.Equal(0, Refresh());
+        Assert.Equal(ModExtensions.Status.Off, Assert.Single(ModExtensions.Offered).State);
+        Assert.False(ModExtensions.HasShapes(TerrainEditor.Save.StableHash.Of("MBSail")));
+    }
+
+    [Fact]
+    public void ADllThatIsNoExtensionDoesNotRunAndSaysWhy()
+    {
+        // A .NET assembly not marked as an extension (the SDK itself), and a file that is no assembly.
+        Mod("NotMarked", "Plain.dll", typeof(IWorldEditorExtension).Assembly.Location);
+        string junk = Mod("Junk", "Junk.dll", null);
+        File.WriteAllText(junk, "not a DLL");
+        Refresh();
+        foreach (var x in ModExtensions.Offered)
+        {
+            ModExtensions.Allow(Settings, x, true);
+        }
+
+        Assert.Equal(0, Refresh());
+
+        Assert.All(ModExtensions.Offered, x => Assert.Equal(ModExtensions.Status.Failed, x.State));
+        Assert.Contains("not marked as an extension", ModExtensions.Offered.Single(x => x.Mod == "NotMarked").Error);
+        Assert.NotNull(ModExtensions.Offered.Single(x => x.Mod == "Junk").Error);
+    }
+
+    [Theory]
+    [InlineData("../Elsewhere.dll")]
+    [InlineData("Notes.txt")]
+    public void AnExtensionOutsideItsModsFolderOrNoDllIsNotOffered(string extension)
+    {
+        Mod("Mod", extension, null);
+
+        Refresh();
+
+        Assert.Empty(ModExtensions.Offered);
+    }
+
+    /// <summary>An extension whose decoder throws.</summary>
+    private sealed class Throwing : IWorldEditorExtension, IDataDecoder
+    {
+        public void Register(IExtensionRegistry registry) => registry.AddDecoder("k", this);
+
+        public string? Describe(IObjectView obj, byte[] value) => throw new InvalidOperationException("broken");
+    }
+
+    [Fact]
+    public void AHookThatThrowsTurnsItsExtensionOff()
+    {
+        ModExtensions.UseForTests(("Broken", new Throwing()));
+        int before = ModExtensions.Generation;
+        var view = new ObjectView("", default, default, new TerrainEditor.Save.ZdoData());
+
+        Assert.Null(ModExtensions.Decode(TerrainEditor.Save.StableHash.Of("k"), view, [1]));
+
+        var x = Assert.Single(ModExtensions.Offered);
+        Assert.Equal(ModExtensions.Status.Failed, x.State);
+        Assert.Contains("broken", x.Error);
+        Assert.NotEqual(before, ModExtensions.Generation);
+        Assert.Null(ModExtensions.Decode(TerrainEditor.Save.StableHash.Of("k"), view, [1]));
+    }
+}

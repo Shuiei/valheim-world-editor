@@ -26,6 +26,12 @@ public sealed class AppSettings
     public List<string> WorldFolders { get; set; } = [];
 
     /// <summary>
+    /// The mods' editor extensions allowed to run (ModExtensions): each DLL's full path and the SHA-256 of the file as
+    /// it was allowed. A changed file runs only once allowed again: it is other code.
+    /// </summary>
+    public Dictionary<string, string> Extensions { get; set; } = [];
+
+    /// <summary>
     /// The worlds opened lately, newest first, at most 12 (see <c>AddRecent</c>).
     /// </summary>
     public List<RecentWorld> Recent { get; set; } = [];

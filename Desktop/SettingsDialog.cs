@@ -164,6 +164,32 @@ public static class SettingsDialog
         {
             claudeDetails.Children.Add(Hint(status));
         }
+        // The mods' editor extensions: found again now (a mod installed since), each allowed or not.
+        ModManifests.Refresh(settings);
+        ModExtensions.Refresh(settings);
+        var extensionBoxes = new List<(CheckBox Box, ModExtensions.Extension Extension)>();
+        var extensions = new StackPanel { Spacing = 4 };
+        foreach (var x in ModExtensions.Offered)
+        {
+            var box = new CheckBox { Content = $"{x.Mod} · {Path.GetFileName(x.Dll)}", IsChecked = x.State != ModExtensions.Status.Off }.Classed("switch").Tip("settings.extension");
+            ToolTip.SetTip(box, $"{Ui.Tilde(x.Dll)}\nSHA-256 {x.Sha256}");
+            extensionBoxes.Add((box, x));
+            extensions.Children.Add(box);
+            string? state = x.State switch
+            {
+                ModExtensions.Status.Running => "Running.",
+                ModExtensions.Status.Failed => $"Not running: {x.Error}.",
+                _ => x.Error != null ? $"Off: {x.Error}." : null,
+            };
+            if (state != null)
+            {
+                extensions.Children.Add(new TextBlock { Text = state, FontSize = 11, Foreground = muted, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(28, 0, 0, 4) });
+            }
+        }
+        if (extensionBoxes.Count == 0)
+        {
+            extensions.Children.Add(Hint("No mod in the folders above offers one."));
+        }
         // What draws (Windows): taken at the next start.
         var driverGl = new CheckBox { Content = "Draw with the graphics driver's OpenGL", IsChecked = settings.DriverOpenGl }.Classed("switch").Tip("settings.driverGl");
         var drawing = new StackPanel
@@ -189,6 +215,11 @@ public static class SettingsDialog
             // Set before Apply, which saves them with the folders; taken back when the folders are refused, so a
             // Cancel after that keeps nothing.
             var before = (settings.ClaudeConnect, settings.ClaudePort, settings.ClaudeToken, settings.DriverOpenGl);
+            var allowedBefore = new Dictionary<string, string>(settings.Extensions);
+            foreach (var (box, x) in extensionBoxes)
+            {
+                ModExtensions.Allow(settings, x, box.IsChecked == true);
+            }
             settings.ClaudeConnect = claude.IsChecked == true;
             settings.ClaudePort = claudePort;
             settings.ClaudeToken = token;
@@ -196,9 +227,12 @@ public static class SettingsDialog
             if (Apply(settings, valheim.Text, readBep(), readWorlds()) is string problem)
             {
                 (settings.ClaudeConnect, settings.ClaudePort, settings.ClaudeToken, settings.DriverOpenGl) = before;
+                settings.Extensions = allowedBefore;
                 error.Text = problem;
                 return;
             }
+            // The extensions turned on run now, those turned off stop.
+            ModExtensions.Refresh(settings);
             saved = true;
             dialog.Close();
         };
@@ -227,6 +261,9 @@ public static class SettingsDialog
                     claude,
                     Hint("Lets Claude (Claude Code, Claude Desktop) look at the world or the Workshop open in the editor and change it from a prompt: shape the ground, place objects, build. Only from this computer, with the token below. What it changes stays pending, like your own changes: you save, apply live or save the blueprint."),
                     claudeDetails,
+                    H2("Mod extensions"),
+                    Hint("Mods can offer an extension that teaches the editor more of them (how to draw their pieces, read their data, copy them). It is the mod's own code, run inside the editor with your rights: turn on only those of mods you trust. A file that changes (a mod update) is turned off until you turn it on again."),
+                    extensions,
                     drawing,
                     error,
                     new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 12, 0, 0), Children = { cancel, save } },

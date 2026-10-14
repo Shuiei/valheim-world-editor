@@ -263,4 +263,47 @@ public class SettingsDialogTests
         string? problem = SettingsDialog.Apply(settings, null, ["\"~/no-such-folder-for-vwe-tests\""], []);
         Assert.Contains(Path.Combine(home, "no-such-folder-for-vwe-tests"), problem);
     }
+
+    // A mod in a BepInEx folder offering an extension (here a file that is no DLL): listed off, turned on and saved
+    // with its file's hash, then shown as not running, with why.
+    [AvaloniaFact]
+    public async Task AModsExtensionIsTurnedOnAndSavedWithItsFile()
+    {
+        using var t = new Temp();
+        bool defaults = LocalGame.SearchDefaultPlaces;
+        LocalGame.SearchDefaultPlaces = false;
+        try
+        {
+            string mod = t.Dir("BepInEx/plugins/SomeMod");
+            File.WriteAllText(Path.Combine(mod, ModManifests.FileName), """{ "version": 1, "extension": "SomeMod.WorldEditor.dll" }""");
+            string dll = Path.Combine(mod, "SomeMod.WorldEditor.dll");
+            File.WriteAllText(dll, "not a DLL");
+            var settings = new AppSettings { BepInExFolders = { Path.Combine(t.Root, "BepInEx") } };
+            var owner = Owner();
+            var shown = SettingsDialog.Show(owner, settings);
+            var d = TestWindows.Shown(owner);
+            var box = d.GetLogicalDescendants().OfType<CheckBox>().Single(c => c.Content as string == "SomeMod · SomeMod.WorldEditor.dll");
+            Assert.False(box.IsChecked);
+
+            box.IsChecked = true;
+            Click(Buttons(d, "Save").Single());
+
+            Assert.True(await shown);
+            Assert.Equal(ModExtensions.Sha256Of(dll), AppSettings.Load().Extensions[dll]);
+            Assert.Equal(ModExtensions.Status.Failed, Assert.Single(ModExtensions.Offered).State);
+            // Shown again: on, and why it does not run.
+            shown = SettingsDialog.Show(owner, settings);
+            d = TestWindows.Shown(owner);
+            Assert.True(d.GetLogicalDescendants().OfType<CheckBox>().Single(c => c.Content as string == "SomeMod · SomeMod.WorldEditor.dll").IsChecked);
+            Assert.Contains("Not running: ", Texts(d));
+            Click(Buttons(d, "Cancel").Single());
+            Assert.False(await shown);
+        }
+        finally
+        {
+            LocalGame.SearchDefaultPlaces = defaults;
+            ModExtensions.Forget();
+            ModManifests.Forget();
+        }
+    }
 }

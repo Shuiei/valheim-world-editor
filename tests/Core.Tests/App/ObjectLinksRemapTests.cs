@@ -10,8 +10,9 @@ namespace WorldEditor.Tests;
 /// <summary>
 /// A pasted copy of linked objects made a group of its own, by the example vehicle mod (tests/Support/ExampleMod): new ids unique in the world, every reference following them (parents, swivels, masts, switches), its parts
 /// stored at its root, what copies leave out gone (ropes, what was only aboard), parts whose parent was not copied let
-/// go, a mirrored copy's parts mirrored in their frames.
+/// go, a mirrored copy's parts mirrored in their frames. Runs alone (an extension running elsewhere would keep the ropes).
 /// </summary>
+[Collection("DataDir")]
 public class ObjectLinksRemapTests
 {
     private const int Root = 10, Swivel = 11, Mast = 12, AnchorA = 13, AnchorB = 14;

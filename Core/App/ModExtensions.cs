@@ -1,0 +1,380 @@
+using System.Reflection;
+using System.Runtime.Loader;
+using System.Security.Cryptography;
+using TerrainEditor.Save;
+using ValheimWorldEditor.Sdk;
+
+namespace TerrainEditor.App;
+
+/// <summary>
+/// Mods' editor extensions (ValheimWorldEditor.Sdk; docs/modding.md#extensions): a DLL a mod offers in its
+/// worldeditor.json (ModManifests.Extensions), which runs in the editor only once the user allows it in Settings, and
+/// then only that file (AppSettings.Extensions keeps its SHA-256: a changed DLL is other code and asks again). Each is
+/// loaded in a context of its own, sharing the editor's SDK, and registers hooks: byte decoders for the inspector,
+/// rewriters of pasted copies, shapes to draw. Read as a world or the Workshop opens, after the manifests. A hook that
+/// throws turns its extension off until the editor starts again; the editor never fails because of one.
+/// </summary>
+public static class ModExtensions
+{
+    /// <summary>What became of an offered extension.</summary>
+    public enum Status
+    {
+        /// <summary>Not allowed (the user has not turned it on, or the file changed since).</summary>
+        Off,
+
+        /// <summary>Allowed, loaded and its hooks in use.</summary>
+        Running,
+
+        /// <summary>Allowed but it could not run, or a hook of it threw (see <see cref="Extension.Error"/>).</summary>
+        Failed,
+    }
+
+    /// <summary>An extension a mod offers.</summary>
+    /// <param name="Dll">Its DLL's full path.</param>
+    /// <param name="Mod">The mod offering it (its folder under plugins).</param>
+    /// <param name="Sha256">The file's SHA-256, lower-case hex ("" when it cannot be read).</param>
+    /// <param name="State">What became of it.</param>
+    /// <param name="Error">Why it does not run, for <see cref="Status.Failed"/>.</param>
+    public sealed record Extension(string Dll, string Mod, string Sha256, Status State, string? Error);
+
+    /// <summary>One loaded extension: what it registered.</summary>
+    private sealed class Loaded(string mod)
+    {
+        /// <summary>The mod offering it, for messages.</summary>
+        public string Mod { get; } = mod;
+
+        /// <summary>Its byte decoders, by data key hash.</summary>
+        public Dictionary<int, IDataDecoder> Decoders { get; } = [];
+
+        /// <summary>Its copy rewriters, with the data key hashes each handles.</summary>
+        public List<(ICopyRewriter Rewriter, HashSet<int> Keys)> Rewriters { get; } = [];
+
+        /// <summary>Its shape providers, by prefab hash.</summary>
+        public Dictionary<int, List<IShapeProvider>> Shapes { get; } = [];
+
+        /// <summary>Why it was turned off (a hook threw); null while it runs.</summary>
+        public string? Fault { get; set; }
+    }
+
+    /// <summary>The extensions in use and what is known of the offered ones, swapped in whole.</summary>
+    /// <param name="Offered">Every offered extension.</param>
+    /// <param name="Running">The loaded ones whose hooks are in use, by DLL path.</param>
+    private sealed record State(IReadOnlyList<Extension> Offered, IReadOnlyDictionary<string, Loaded> Running)
+    {
+        /// <summary>Every data key a running rewriter handles.</summary>
+        public HashSet<int> RewrittenKeys { get; } = [.. Running.Values.SelectMany(l => l.Rewriters).SelectMany(r => r.Keys)];
+    }
+
+    /// <summary>Extensions loaded in this run, by file hash: an allowed file is loaded once (a .NET context stays).</summary>
+    private static readonly Dictionary<string, (Loaded? Loaded, string? Error)> LoadedFiles = [];
+
+    /// <summary>Serialises refreshing and loading.</summary>
+    private static readonly Lock Lock = new();
+
+    /// <summary>What is in use.</summary>
+    private static volatile State _state = new([], new Dictionary<string, Loaded>());
+
+    /// <summary>Counts each time what is in use changes, for what is worked out from it (drawn shapes) to be redone.</summary>
+    public static int Generation => _generation;
+
+    /// <summary>Backs <see cref="Generation"/>.</summary>
+    private static volatile int _generation;
+
+    /// <summary>The extensions the mods offer, and what became of each.</summary>
+    public static IReadOnlyList<Extension> Offered => _state.Offered;
+
+    /// <summary>
+    /// Every data key a running extension rewrites in pasted copies (a manifest's dropOnCopy leaves those alone).
+    /// </summary>
+    public static IReadOnlySet<int> RewrittenKeys => _state.RewrittenKeys;
+
+    /// <summary>
+    /// Runs the allowed extensions among those the manifests offer (ModManifests.Refresh first), loading each allowed
+    /// file once per run. Never throws.
+    /// </summary>
+    /// <returns>How many run.</returns>
+    public static int Refresh(AppSettings settings)
+    {
+        lock (Lock)
+        {
+            var offered = new List<Extension>();
+            var running = new Dictionary<string, Loaded>(StringComparer.Ordinal);
+            foreach (var o in ModManifests.Extensions.OrderBy(o => o.Mod, StringComparer.OrdinalIgnoreCase))
+            {
+                string sha = Sha256Of(o.Dll);
+                if (sha == "" || !settings.Extensions.TryGetValue(o.Dll, out string? allowed) || !string.Equals(allowed, sha, StringComparison.OrdinalIgnoreCase))
+                {
+                    offered.Add(new Extension(o.Dll, o.Mod, sha, Status.Off, sha == "" ? "the file cannot be read" : null));
+                    Console.WriteLine($"extension {o.Mod} ({Path.GetFileName(o.Dll)}): offered, off (Settings, Mod extensions).");
+                    continue;
+                }
+                if (!LoadedFiles.TryGetValue(sha, out var made))
+                {
+                    made = Load(o.Dll, o.Mod);
+                    LoadedFiles[sha] = made;
+                }
+                if (made.Loaded is { Fault: null } l)
+                {
+                    running[o.Dll] = l;
+                    offered.Add(new Extension(o.Dll, o.Mod, sha, Status.Running, null));
+                    Console.WriteLine($"extension {o.Mod} ({Path.GetFileName(o.Dll)}): running.");
+                }
+                else
+                {
+                    string why = made.Error ?? made.Loaded?.Fault ?? "it did not load";
+                    offered.Add(new Extension(o.Dll, o.Mod, sha, Status.Failed, why));
+                    Console.WriteLine($"extension {o.Mod} ({Path.GetFileName(o.Dll)}): not running ({why}).");
+                }
+            }
+            _state = new State(offered, running);
+            _generation++;
+            return running.Count;
+        }
+    }
+
+    /// <summary>
+    /// Allows an offered extension to run (its file as it is now), or takes that away, in the settings (saved by the
+    /// caller); it runs or stops at the next <see cref="Refresh"/>.
+    /// </summary>
+    public static void Allow(AppSettings settings, Extension extension, bool allow)
+    {
+        if (allow && extension.Sha256 != "")
+        {
+            settings.Extensions[extension.Dll] = extension.Sha256;
+        }
+        else
+        {
+            settings.Extensions.Remove(extension.Dll);
+        }
+    }
+
+    /// <summary>A file's SHA-256 as lower-case hex; "" when it cannot be read.</summary>
+    internal static string Sha256Of(string path)
+    {
+        try
+        {
+            using var f = File.OpenRead(path);
+            return Convert.ToHexStringLower(SHA256.HashData(f));
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            return "";
+        }
+    }
+
+    /// <summary>Loads an extension in a context of its own and lets it register its hooks.</summary>
+    private static (Loaded? Loaded, string? Error) Load(string dll, string mod)
+    {
+        try
+        {
+            var context = new ExtensionContext(dll);
+            var asm = context.LoadFromAssemblyPath(dll);
+            if (asm.GetCustomAttribute<WorldEditorExtensionAttribute>() is not { } mark)
+            {
+                return (null, "it is not marked as an extension ([assembly: WorldEditorExtension])");
+            }
+            if (mark.ApiVersion > SdkInfo.ApiVersion)
+            {
+                return (null, $"it needs a newer editor (API {mark.ApiVersion}; this one has {SdkInfo.ApiVersion})");
+            }
+            if (!typeof(IWorldEditorExtension).IsAssignableFrom(mark.Entry) || Activator.CreateInstance(mark.Entry) is not IWorldEditorExtension entry)
+            {
+                return (null, $"its entry {mark.Entry.FullName} is not an IWorldEditorExtension");
+            }
+            var loaded = new Loaded(mod);
+            entry.Register(new Registry(loaded));
+            return (loaded, null);
+        }
+        catch (Exception e)
+        {
+            // Whatever the extension's code throws while loading: it does not run.
+            return (null, $"{e.GetType().Name}: {e.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Runs one hook of an extension; when it throws, the extension is turned off (until the editor starts again) and
+    /// <paramref name="fallback"/> is the result.
+    /// </summary>
+    private static T Guard<T>(Loaded l, Func<T> hook, T fallback)
+    {
+        if (l.Fault != null)
+        {
+            return fallback;
+        }
+        try
+        {
+            return hook();
+        }
+        catch (Exception e)
+        {
+            TurnOff(l, $"{e.GetType().Name}: {e.Message}");
+            return fallback;
+        }
+    }
+
+    /// <summary>Turns an extension off after a hook threw: its hooks are no longer used.</summary>
+    private static void TurnOff(Loaded l, string why)
+    {
+        lock (Lock)
+        {
+            if (l.Fault != null)
+            {
+                return;
+            }
+            l.Fault = why;
+            Console.WriteLine($"extension {l.Mod}: turned off ({why}).");
+            var s = _state;
+            string? dll = s.Running.FirstOrDefault(r => r.Value == l).Key;
+            _state = new State(
+                [.. s.Offered.Select(o => o.Dll == dll ? o with { State = Status.Failed, Error = why } : o)],
+                s.Running.Where(r => r.Value != l).ToDictionary(r => r.Key, r => r.Value, StringComparer.Ordinal));
+            _generation++;
+        }
+    }
+
+    /// <summary>
+    /// A byte-array value as the running extensions read it (the first that reads it); null when none does.
+    /// </summary>
+    /// <param name="key">The data key's hash.</param>
+    /// <param name="obj">The object holding it.</param>
+    /// <param name="value">The value.</param>
+    public static string? Decode(int key, IObjectView obj, byte[] value)
+    {
+        foreach (var l in _state.Running.Values)
+        {
+            if (l.Decoders.TryGetValue(key, out var d) && Guard(l, () => d.Describe(obj, value), null) is { } text)
+            {
+                return text;
+            }
+        }
+        return null;
+    }
+
+    /// <summary>Whether a running extension draws shapes at all.</summary>
+    public static bool AnyShapes => _state.Running.Values.Any(l => l.Shapes.Count > 0);
+
+    /// <summary>Whether a running extension draws shapes for a prefab.</summary>
+    public static bool HasShapes(int prefab) => _state.Running.Values.Any(l => l.Shapes.ContainsKey(prefab));
+
+    /// <summary>The shapes running extensions draw for an object of a prefab (none when none does).</summary>
+    public static List<Shape> ShapesOf(int prefab, IObjectView obj)
+    {
+        var shapes = new List<Shape>();
+        foreach (var l in _state.Running.Values)
+        {
+            foreach (var p in l.Shapes.GetValueOrDefault(prefab) ?? [])
+            {
+                shapes.AddRange(Guard(l, () => p.ShapesOf(obj)?.Where(Valid).ToList() ?? [], []));
+            }
+        }
+        return shapes;
+    }
+
+    /// <summary>Whether a shape can be drawn: whole triangles of corners it has, finite corners.</summary>
+    private static bool Valid(Shape s) =>
+        s.Vertices != null && s.Triangles != null && s.Triangles.Length % 3 == 0
+        && s.Triangles.All(i => i >= 0 && i < s.Vertices.Length)
+        && s.Vertices.All(v => float.IsFinite(v.X) && float.IsFinite(v.Y) && float.IsFinite(v.Z));
+
+    /// <summary>
+    /// Lets the running extensions rewrite one object of a pasted copy: each rewriter handling a key it holds.
+    /// </summary>
+    /// <param name="copy">The object, changed in place.</param>
+    /// <param name="ids">The copy's new ids for the originals'.</param>
+    public static void Rewrite(CopyView copy, IIdMap ids)
+    {
+        foreach (var l in _state.Running.Values)
+        {
+            foreach (var (rewriter, keys) in l.Rewriters)
+            {
+                if (keys.Any(copy.Holds))
+                {
+                    Guard(l, () =>
+                    {
+                        rewriter.Rewrite(copy, ids);
+                        return true;
+                    }, false);
+                }
+            }
+        }
+    }
+
+    /// <summary>Extensions in use for the tests (registered in code, not loaded), until <see cref="Forget"/>.</summary>
+    internal static void UseForTests(params (string Mod, IWorldEditorExtension Entry)[] extensions)
+    {
+        lock (Lock)
+        {
+            var running = new Dictionary<string, Loaded>(StringComparer.Ordinal);
+            foreach (var (mod, entry) in extensions)
+            {
+                var l = new Loaded(mod);
+                entry.Register(new Registry(l));
+                running[mod] = l;
+            }
+            _state = new State([.. running.Keys.Select(m => new Extension(m, m, "", Status.Running, null))], running);
+            _generation++;
+        }
+    }
+
+    /// <summary>No extension in use (the tests).</summary>
+    internal static void Forget()
+    {
+        lock (Lock)
+        {
+            _state = new State([], new Dictionary<string, Loaded>());
+            _generation++;
+        }
+    }
+
+    /// <summary>Where one extension registers its hooks.</summary>
+    private sealed class Registry(Loaded loaded) : IExtensionRegistry
+    {
+        /// <inheritdoc/>
+        public int ApiVersion => SdkInfo.ApiVersion;
+
+        /// <inheritdoc/>
+        public string EditorVersion => typeof(ModExtensions).Assembly.GetName().Version?.ToString(3) ?? "";
+
+        /// <inheritdoc/>
+        public void AddDecoder(string key, IDataDecoder decoder) => loaded.Decoders[StableHash.Of(key)] = decoder;
+
+        /// <inheritdoc/>
+        public void AddCopyRewriter(ICopyRewriter rewriter, params string[] keys) => loaded.Rewriters.Add((rewriter, [.. keys.Select(StableHash.Of)]));
+
+        /// <inheritdoc/>
+        public void AddShapes(IShapeProvider provider, params string[] prefabs)
+        {
+            foreach (string p in prefabs)
+            {
+                int h = StableHash.Of(p);
+                (loaded.Shapes.TryGetValue(h, out var list) ? list : loaded.Shapes[h] = []).Add(provider);
+            }
+        }
+
+        /// <inheritdoc/>
+        public void Log(string message) => Console.WriteLine($"extension {loaded.Mod}: {message}");
+    }
+
+    /// <summary>
+    /// An extension's own load context: the SDK is the editor's (one set of types), anything else the extension needs
+    /// comes from its folder.
+    /// </summary>
+    private sealed class ExtensionContext(string dll) : AssemblyLoadContext("extension " + Path.GetFileName(dll))
+    {
+        /// <summary>The extension's folder.</summary>
+        private readonly string _folder = Path.GetDirectoryName(dll)!;
+
+        /// <inheritdoc/>
+        protected override Assembly? Load(AssemblyName name)
+        {
+            if (name.Name == typeof(IWorldEditorExtension).Assembly.GetName().Name)
+            {
+                return typeof(IWorldEditorExtension).Assembly;
+            }
+            string path = Path.Combine(_folder, name.Name + ".dll");
+            // Else the editor's own (the framework's assemblies, System.Numerics.Vectors...).
+            return File.Exists(path) ? LoadFromAssemblyPath(path) : null;
+        }
+    }
+}

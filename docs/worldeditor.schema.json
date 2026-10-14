@@ -21,6 +21,7 @@
         "additionalProperties": false
       }
     },
+    "extension": { "$ref": "#/$defs/text", "pattern": "\\.dll$", "description": "The mod's editor extension: a DLL, relative to this file's folder and inside it. Runs once the player allows it (Settings, Mod extensions)." },
     "links": {
       "type": "array",
       "description": "How the mod links its objects into one (a ship and its pieces): each rule's keys are data keys, as the mod's code names them.",

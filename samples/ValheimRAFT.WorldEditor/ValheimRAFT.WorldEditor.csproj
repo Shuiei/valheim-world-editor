@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- A sample editor extension (docs/modding.md#extensions), for ValheimRAFT (zolantris): its ropes
+       read in the inspector and rewritten in pasted copies, its custom sails drawn from their corners.
+       The editor never loads it by itself: a mod ships its own extension and names it in its
+       worldeditor.json. Built and tested with the editor's tests; offered to the mod's author. -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <LangVersion>12.0</LangVersion>
+    <Nullable>enable</Nullable>
+    <AssemblyName>ValheimRAFT.WorldEditor</AssemblyName>
+    <RootNamespace>ValheimRAFT.WorldEditor</RootNamespace>
+  </PropertyGroup>
+  <!-- Compiled against, not shipped: the editor gives its own copy. In the editor's repository, its
+       SDK project; from the SDK's zip, the DLL beside the samples folder. -->
+  <ItemGroup Condition="Exists('../../Sdk/ValheimWorldEditor.Sdk.csproj')">
+    <ProjectReference Include="../../Sdk/ValheimWorldEditor.Sdk.csproj" Private="false" />
+  </ItemGroup>
+  <ItemGroup Condition="!Exists('../../Sdk/ValheimWorldEditor.Sdk.csproj')">
+    <Reference Include="ValheimWorldEditor.Sdk" HintPath="../../ValheimWorldEditor.Sdk.dll" Private="false" />
+    <PackageReference Include="System.Numerics.Vectors" Version="4.5.0" />
+  </ItemGroup>
+</Project>

@@ -96,7 +96,7 @@ commands:
                     | grep --line-buffered -v -E 'Could not resolve keysym|^The XKEYBOARD keymap compiler \(xkbcomp\) reports:$|^Errors from xkbcomp are not fatal to the X server$'
       - restore_cache:
           keys:
-            - nuget-v2-{{ checksum "Directory.Build.props" }}-{{ checksum "Core/ValheimWorldEditor.Core.csproj" }}-{{ checksum "Desktop/ValheimWorldEditor.Desktop.csproj" }}-{{ checksum "tests/Core.Tests/Core.Tests.csproj" }}-{{ checksum "tests/Desktop.Tests/Desktop.Tests.csproj" }}
+            - nuget-v2-{{ checksum "Directory.Build.props" }}-{{ checksum "Core/ValheimWorldEditor.Core.csproj" }}-{{ checksum "Desktop/ValheimWorldEditor.Desktop.csproj" }}-{{ checksum "tests/Core.Tests/Core.Tests.csproj" }}-{{ checksum "tests/Desktop.Tests/Desktop.Tests.csproj" }}-{{ checksum "Sdk/ValheimWorldEditor.Sdk.csproj" }}
             # Else main's latest (a branch whose packages changed restores only what it adds).
             - nuget-v2-
       - run:
@@ -180,7 +180,7 @@ commands:
             equal: [main, << pipeline.git.branch >>]
           steps:
             - save_cache:
-                key: nuget-v2-{{ checksum "Directory.Build.props" }}-{{ checksum "Core/ValheimWorldEditor.Core.csproj" }}-{{ checksum "Desktop/ValheimWorldEditor.Desktop.csproj" }}-{{ checksum "tests/Core.Tests/Core.Tests.csproj" }}-{{ checksum "tests/Desktop.Tests/Desktop.Tests.csproj" }}
+                key: nuget-v2-{{ checksum "Directory.Build.props" }}-{{ checksum "Core/ValheimWorldEditor.Core.csproj" }}-{{ checksum "Desktop/ValheimWorldEditor.Desktop.csproj" }}-{{ checksum "tests/Core.Tests/Core.Tests.csproj" }}-{{ checksum "tests/Desktop.Tests/Desktop.Tests.csproj" }}-{{ checksum "Sdk/ValheimWorldEditor.Sdk.csproj" }}
                 paths:
                   - ~/.nuget/packages
       # On main, the coverage of this container's tests, kept for the coverage job (which sends it with
@@ -213,7 +213,7 @@ jobs:
       # project's packages change.
       - restore_cache:
           keys:
-            - nuget-v2-{{ checksum "Directory.Build.props" }}-{{ checksum "Core/ValheimWorldEditor.Core.csproj" }}-{{ checksum "Desktop/ValheimWorldEditor.Desktop.csproj" }}-{{ checksum "tests/Core.Tests/Core.Tests.csproj" }}-{{ checksum "tests/Desktop.Tests/Desktop.Tests.csproj" }}
+            - nuget-v2-{{ checksum "Directory.Build.props" }}-{{ checksum "Core/ValheimWorldEditor.Core.csproj" }}-{{ checksum "Desktop/ValheimWorldEditor.Desktop.csproj" }}-{{ checksum "tests/Core.Tests/Core.Tests.csproj" }}-{{ checksum "tests/Desktop.Tests/Desktop.Tests.csproj" }}-{{ checksum "Sdk/ValheimWorldEditor.Sdk.csproj" }}
             # Else main's latest (a branch whose packages changed restores only what it adds).
             - nuget-v2-
       # Every XML file of the repository is well formed: the builds read only the projects they build, and
@@ -240,7 +240,7 @@ jobs:
             equal: [main, << pipeline.git.branch >>]
           steps:
             - save_cache:
-                key: nuget-v2-{{ checksum "Directory.Build.props" }}-{{ checksum "Core/ValheimWorldEditor.Core.csproj" }}-{{ checksum "Desktop/ValheimWorldEditor.Desktop.csproj" }}-{{ checksum "tests/Core.Tests/Core.Tests.csproj" }}-{{ checksum "tests/Desktop.Tests/Desktop.Tests.csproj" }}
+                key: nuget-v2-{{ checksum "Directory.Build.props" }}-{{ checksum "Core/ValheimWorldEditor.Core.csproj" }}-{{ checksum "Desktop/ValheimWorldEditor.Desktop.csproj" }}-{{ checksum "tests/Core.Tests/Core.Tests.csproj" }}-{{ checksum "tests/Desktop.Tests/Desktop.Tests.csproj" }}-{{ checksum "Sdk/ValheimWorldEditor.Sdk.csproj" }}
                 paths:
                   - ~/.nuget/packages
 
@@ -411,6 +411,9 @@ jobs:
             BepInExDir: /tmp/bepinex/BepInExPack_Valheim/BepInEx
           command: tools/thunderstore.sh /tmp/dist
       - run:
+          name: The SDK for mod authors' zip
+          command: tools/sdk.sh /tmp/dist
+      - run:
           name: The release notes
           command: |
             version=$(tr -d '[:space:]' < VERSION)
@@ -424,7 +427,7 @@ jobs:
             GH_TOKEN=$GITHUB_TOKEN gh release create "v$version" --repo "$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME" \
               --target "$CIRCLE_SHA1" --title "v$version" --notes-file /tmp/dist/notes.md \
               /tmp/dist/ValheimWorldEditor-v$version-win-x64.zip /tmp/dist/ValheimWorldEditor-v$version-linux-x64.tar.gz \
-              /tmp/dist/WorldEditorBridge-$version.zip
+              /tmp/dist/WorldEditorBridge-$version.zip /tmp/dist/ValheimWorldEditor.Sdk-$version.zip
       - store_artifacts:
           path: /tmp/dist/notes.md
       - persist_to_workspace:
