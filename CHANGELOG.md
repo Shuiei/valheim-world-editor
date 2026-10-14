@@ -4,6 +4,12 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.37.1 — unreleased
+
+### Changed
+- **The green dot on each unsaved object is much smaller.** It was about 1% of the view's height across (11 pixels at
+  1080p, 21 at 4K) and covered small objects; it is now 5 pixels at 1080p, 9 at 4K, with a soft edge so it stays round.
+
 ## v1.37.0 — 2026-10-14
 
 ### Added
