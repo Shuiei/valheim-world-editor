@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- What a mod's own BepInEx plugin builds against to take part in live mode (docs/modding.md#live-mode):
+       a registry the WorldEditorBridge plugin reads. No game or Unity types, so a game update cannot
+       break it; netstandard2.0, so the game's Mono loads it. Shipped with the bridge
+       (plugins/WorldEditorBridge.Api.dll) and in the SDK's zip. Add, do not rename: mods' plugins
+       bind to it (BridgeApi.Version). -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <LangVersion>12.0</LangVersion>
+    <Nullable>enable</Nullable>
+    <AssemblyName>WorldEditorBridge.Api</AssemblyName>
+    <RootNamespace>WorldEditorBridge.Api</RootNamespace>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+  </PropertyGroup>
+</Project>

@@ -46,6 +46,17 @@ public interface IExtensionRegistry
     /// <param name="prefabs">The prefabs it cuts for.</param>
     void AddGroundCuts(IGroundCutter cutter, params string[] prefabs);
 
+    /// <summary>
+    /// Told when the editor connects to a game and when that ends. With the game, the extension can call the routes
+    /// its mod's own plugin registered with the WorldEditorBridge (WorldEditorBridge.Api): what only the running game
+    /// knows, or work only it can do.
+    /// </summary>
+    /// <param name="listener">What is told.</param>
+    void AddLiveListener(ILiveListener listener);
+
+    /// <summary>The editor, for what an extension asks of it outside its hooks: the game connected, a redraw.</summary>
+    IEditorHost Host { get; }
+
     /// <summary>Writes a line to the editor's log (Settings → Open log), named after the extension.</summary>
     void Log(string message);
 }

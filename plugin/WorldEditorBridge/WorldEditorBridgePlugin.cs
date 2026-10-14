@@ -13,6 +13,7 @@ using System.Threading;
 using BepInEx;
 using BepInEx.Configuration;
 using UnityEngine;
+using WorldEditorBridge.Api;
 
 namespace WorldEditorBridge;
 
@@ -35,6 +36,9 @@ namespace WorldEditorBridge;
 ///   GET /catalogue  every prefab the game knows, mods' too (JSON, see WorldEditorBridgePlugin.Catalogue.cs)
 ///   POST /models    prefab names, one per line: what the game draws of each (JSON, see
 ///                   WorldEditorBridgePlugin.Models.cs)
+///   GET /mods       the mods' plugins registered with the bridge (WorldEditorBridge.Api; JSON, see
+///                   WorldEditorBridgePlugin.Mods.cs)
+///   POST /mods/&lt;id&gt;/&lt;name&gt;  a call to one of a mod's own routes, answered by its plugin
 /// </code>
 /// Game objects are only read on Unity's main thread; the HTTP thread waits for the answer.
 /// </summary>
@@ -287,8 +291,29 @@ public sealed partial class WorldEditorBridgePlugin : BaseUnityPlugin
                 Reply(res, 409, "text/plain", Encoding.UTF8.GetBytes("this game is connected to a server: install WorldEditorBridge on that server, or host the world yourself"));
                 return;
             }
-            switch (ctx.Request.Url.AbsolutePath)
+            string path = ctx.Request.Url.AbsolutePath;
+            if (path.StartsWith("/mods/", StringComparison.Ordinal))
             {
+                if (ctx.Request.HttpMethod != "POST")
+                {
+                    Reply(res, 405, "text/plain", Encoding.UTF8.GetBytes("POST only"));
+                    return;
+                }
+                // A mod's body is bounded, and refused before it is held whole.
+                byte[] body = ctx.Request.ContentLength64 > MaxModBody ? null : ReadAtMost(ctx.Request.InputStream, MaxModBody);
+                if (body == null)
+                {
+                    Reply(res, 413, "text/plain", Encoding.UTF8.GetBytes("the body is too large"));
+                    return;
+                }
+                CallMod(res, path, body);
+                return;
+            }
+            switch (path)
+            {
+                case "/mods":
+                    Reply(res, 200, "application/json", Encoding.UTF8.GetBytes(Mods()));
+                    break;
                 case "/status":
                     Reply(res, 200, "application/json", OnMainThread(Status));
                     break;
@@ -306,7 +331,7 @@ public sealed partial class WorldEditorBridgePlugin : BaseUnityPlugin
                         break;
                     }
                     byte[] body = ReadAll(ctx.Request.InputStream);
-                    Reply(res, 200, "application/json", OnMainThread(() => ApplyTerrain(body)));
+                    Reply(res, 200, "application/json", OnMainThread(() => Applied(ApplyTerrain(body))));
                     break;
                 }
                 case "/objects":
@@ -317,7 +342,7 @@ public sealed partial class WorldEditorBridgePlugin : BaseUnityPlugin
                         break;
                     }
                     byte[] body = ReadAll(ctx.Request.InputStream);
-                    Reply(res, 200, "application/json", OnMainThread(() => ApplyObjects(body)));
+                    Reply(res, 200, "application/json", OnMainThread(() => Applied(ApplyObjects(body))));
                     break;
                 }
                 case "/models":
@@ -339,7 +364,7 @@ public sealed partial class WorldEditorBridgePlugin : BaseUnityPlugin
                         break;
                     }
                     byte[] body = ReadAll(ctx.Request.InputStream);
-                    Reply(res, 200, "application/json", OnMainThread(() => ResetZones(body)));
+                    Reply(res, 200, "application/json", OnMainThread(() => Applied(ResetZones(body))));
                     break;
                 }
                 case "/watch":
@@ -409,6 +434,23 @@ public sealed partial class WorldEditorBridgePlugin : BaseUnityPlugin
         return ms.ToArray();
     }
 
+    /// <summary>A stream's bytes, up to a limit; null once more than that came (reading stops there).</summary>
+    private static byte[] ReadAtMost(Stream s, int limit)
+    {
+        using MemoryStream ms = new();
+        byte[] buffer = new byte[64 << 10];
+        int n;
+        while ((n = s.Read(buffer, 0, buffer.Length)) > 0)
+        {
+            if (ms.Length + n > limit)
+            {
+                return null;
+            }
+            ms.Write(buffer, 0, n);
+        }
+        return ms.ToArray();
+    }
+
     /// <summary>Prefab hash of _TerrainCompiler, the per-zone object holding the zone's ground edits (TCData).</summary>
     private static readonly int TerrainCompilerPrefab = "_TerrainCompiler".GetStableHashCode();
 
@@ -416,8 +458,8 @@ public sealed partial class WorldEditorBridgePlugin : BaseUnityPlugin
     /// POST /terrain: sets the terrain data of each zone's terrain compiler object (creating it when the zone has
     /// none). The game syncs the object to everyone, and TerrainComp reloads when its data changes.
     /// </summary>
-    /// <returns>JSON: how many zones were applied and how many compilers were made.</returns>
-    private byte[] ApplyTerrain(byte[] body)
+    /// <returns>JSON: how many zones were applied and how many compilers were made; and what the mods are told.</returns>
+    private (byte[] Json, AppliedChanges Changes) ApplyTerrain(byte[] body)
     {
         ZPackage pkg = new(body);
         int count = pkg.ReadInt();
@@ -436,10 +478,12 @@ public sealed partial class WorldEditorBridgePlugin : BaseUnityPlugin
             }
         }
         int applied = 0, created = 0;
+        List<Zone> zones = [];
         for (int i = 0; i < count; i++)
         {
             int zx = pkg.ReadInt(), zz = pkg.ReadInt();
             byte[] data = pkg.ReadByteArray();
+            zones.Add(new Zone(zx, zz));
             Vector2s key = new((short)zx, (short)zz);
             if (!compilers.TryGetValue(key, out ZDO tc))
             {
@@ -451,7 +495,7 @@ public sealed partial class WorldEditorBridgePlugin : BaseUnityPlugin
             applied++;
         }
         Logger.LogInfo($"WorldEditorBridge: applied terrain to {applied} zone(s) ({created} new)");
-        return Encoding.UTF8.GetBytes($"{{\"applied\":{applied},\"created\":{created}}}");
+        return (Encoding.UTF8.GetBytes($"{{\"applied\":{applied},\"created\":{created}}}"), new AppliedChanges([], [], zones, []));
     }
 
     /// <summary>
@@ -463,8 +507,8 @@ public sealed partial class WorldEditorBridgePlugin : BaseUnityPlugin
     /// kept seeing the new one.
     /// </summary>
     /// <returns>JSON: destroyed (refound included), refound, missing (already gone) and the created objects' ids as
-    /// "user:id" strings, in the order they were sent.</returns>
-    private byte[] ApplyObjects(byte[] body)
+    /// "user:id" strings, in the order they were sent; and what the mods are told.</returns>
+    private (byte[] Json, AppliedChanges Changes) ApplyObjects(byte[] body)
     {
         ZPackage pkg = new(body);
         long session = ZDOMan.GetSessionID();
@@ -493,6 +537,7 @@ public sealed partial class WorldEditorBridgePlugin : BaseUnityPlugin
         }
         int destroyed = 0, refound = 0;
         List<int> lost = [];
+        List<AppliedObject> gone = [];
         for (int i = 0; i < destroyCount; i++)
         {
             ZDO zdo = ZDOMan.instance.GetZDO(destroyIds[i]);
@@ -501,19 +546,22 @@ public sealed partial class WorldEditorBridgePlugin : BaseUnityPlugin
                 lost.Add(i);
                 continue;
             }
+            gone.Add(Applied(zdo));
             zdo.SetOwner(session);
             ZDOMan.instance.DestroyZDO(zdo);
             destroyed++;
         }
         if (lost.Count > 0 && where != null)
         {
-            refound = DestroyAtPlace([.. lost.Select(i => where[i])], session);
+            refound = DestroyAtPlace([.. lost.Select(i => where[i])], session, gone);
         }
         int missing = lost.Count - refound;
         StringBuilder ids = new();
+        List<AppliedObject> made = [];
         for (int i = 0; i < createCount; i++)
         {
             ZDO zdo = creates[i]();
+            made.Add(Applied(zdo));
             if (i > 0)
             {
                 ids.Append(',');
@@ -521,7 +569,8 @@ public sealed partial class WorldEditorBridgePlugin : BaseUnityPlugin
             ids.Append('"').Append(zdo.m_uid.UserID.ToString(CultureInfo.InvariantCulture)).Append(':').Append(zdo.m_uid.ID.ToString(CultureInfo.InvariantCulture)).Append('"');
         }
         Logger.LogInfo($"WorldEditorBridge: destroyed {destroyed + refound} object(s) ({refound} found again at their place under a new id, {missing} already gone), created {createCount}");
-        return Encoding.UTF8.GetBytes($"{{\"destroyed\":{destroyed + refound},\"refound\":{refound},\"missing\":{missing},\"created\":[{ids}]}}");
+        return (Encoding.UTF8.GetBytes($"{{\"destroyed\":{destroyed + refound},\"refound\":{refound},\"missing\":{missing},\"created\":[{ids}]}}"),
+            new AppliedChanges(made, gone, [], []));
     }
 
     /// <summary>
@@ -530,8 +579,9 @@ public sealed partial class WorldEditorBridgePlugin : BaseUnityPlugin
     /// </summary>
     /// <param name="wanted">Prefab hash and position of each object to find.</param>
     /// <param name="session">This game's session id, made the objects' owner so the destroy reaches every peer.</param>
+    /// <param name="gone">Where the objects destroyed are added, for the mods' listeners.</param>
     /// <returns>How many were found and destroyed.</returns>
-    private static int DestroyAtPlace(List<(int Prefab, Vector3 Position)> wanted, long session)
+    private static int DestroyAtPlace(List<(int Prefab, Vector3 Position)> wanted, long session, List<AppliedObject> gone)
     {
         Dictionary<int, List<Vector3>> byPrefab = [];
         foreach (var (prefab, pos) in wanted)
@@ -557,6 +607,7 @@ public sealed partial class WorldEditorBridgePlugin : BaseUnityPlugin
                 continue;
             }
             places.RemoveAt(at);
+            gone.Add(Applied(zdo));
             zdo.SetOwner(session);
             ZDOMan.instance.DestroyZDO(zdo);
             found++;
@@ -573,7 +624,7 @@ public sealed partial class WorldEditorBridgePlugin : BaseUnityPlugin
     /// marked as generated and their locations as not placed, so the game builds them again.
     /// </summary>
     /// <returns>JSON: zones reset, objects removed and locations to place again.</returns>
-    private byte[] ResetZones(byte[] body)
+    private (byte[] Json, AppliedChanges Changes) ResetZones(byte[] body)
     {
         ZPackage pkg = new(body);
         int count = pkg.ReadInt();
@@ -616,7 +667,8 @@ public sealed partial class WorldEditorBridgePlugin : BaseUnityPlugin
             }
         }
         Logger.LogInfo($"WorldEditorBridge: reset {zones.Count} zone(s): {destroyed} object(s) removed, {locations} location(s) to place again");
-        return Encoding.UTF8.GetBytes($"{{\"zones\":{zones.Count},\"destroyed\":{destroyed},\"locations\":{locations}}}");
+        return (Encoding.UTF8.GetBytes($"{{\"zones\":{zones.Count},\"destroyed\":{destroyed},\"locations\":{locations}}}"),
+            new AppliedChanges([], [], [], [.. zones.Keys.Select(z => new Zone(z.x, z.y))]));
     }
 
     /// <summary>

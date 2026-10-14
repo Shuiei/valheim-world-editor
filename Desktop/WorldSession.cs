@@ -171,9 +171,35 @@ public sealed class WorldSession : IDisposable
     {
         await Task.Run(NeedGame);
         await LearnMods(live);
+        var mods = await BridgeMods(live);
         var world = await live.LoadWorld();
         WorldSave.Builder = Builders.Default(world);
-        return From(world, live, label);
+        var session = From(world, live, label);
+        // Once the session is there to end it (Dispose): a world that failed to load leaves no game connected.
+        ModExtensions.LiveConnected(new LiveGame(live, mods));
+        return session;
+    }
+
+    /// <summary>
+    /// The mods' plugins registered with the bridge (GET /mods; none from an older plugin, or when it cannot be asked:
+    /// the extensions still get the game), for ModExtensions.LiveConnected once the session is open.
+    /// </summary>
+    private static async Task<List<string>> BridgeMods(LiveBridge live)
+    {
+        List<string> mods = [];
+        try
+        {
+            (_, mods) = await live.Mods();
+            if (mods.Count > 0)
+            {
+                Console.WriteLine($"bridge mods: {string.Join(", ", mods)}.");
+            }
+        }
+        catch (Exception e) when (e is InvalidOperationException or HttpRequestException or TaskCanceledException or System.Text.Json.JsonException)
+        {
+            Console.WriteLine($"bridge mods: not read from the game ({e.Message}).");
+        }
+        return mods;
     }
 
     /// <summary>
@@ -372,6 +398,10 @@ public sealed class WorldSession : IDisposable
     /// </summary>
     public void Dispose()
     {
+        if (Live != null)
+        {
+            ModExtensions.LiveDisconnected();
+        }
         PruneSaves();
         Live?.Dispose();
         _applying.Dispose();

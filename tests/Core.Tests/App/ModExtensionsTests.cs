@@ -143,4 +143,55 @@ public sealed class ModExtensionsTests : IDisposable
         Assert.NotEqual(before, ModExtensions.Generation);
         Assert.Null(ModExtensions.Decode(TerrainEditor.Save.StableHash.Of("k"), view, [1]));
     }
+
+    /// <summary>A game with one mod and an echoing route.</summary>
+    private sealed class FakeLive : ILiveGame
+    {
+        public IReadOnlyList<string> Mods => ["ExampleVehicles"];
+
+        public Task<byte[]> CallAsync(string modId, string name, byte[] body, CancellationToken cancel = default) => Task.FromResult<byte[]>([.. body]);
+    }
+
+    /// <summary>An extension keeping what its live listener was told.</summary>
+    private sealed class Watching : IWorldEditorExtension, ILiveListener
+    {
+        public List<string> Told { get; } = [];
+
+        public IExtensionRegistry? Registry { get; private set; }
+
+        public void Register(IExtensionRegistry registry)
+        {
+            Registry = registry;
+            registry.AddLiveListener(this);
+        }
+
+        public void OnConnected(ILiveGame live) => Told.Add("connected " + string.Join(",", live.Mods));
+
+        public void OnDisconnected() => Told.Add("disconnected");
+    }
+
+    // The editor connected to a game: the listeners told, the host's game set (and gone again), a redraw asked for
+    // counted in the generation. A game opened over another ends the first.
+    [Fact]
+    public void LiveListenersAreToldOfTheGameAndTheHostGivesIt()
+    {
+        var w = new Watching();
+        ModExtensions.UseForTests(("Watcher", w));
+        Assert.Null(w.Registry!.Host.Live);
+
+        ModExtensions.LiveConnected(new FakeLive());
+        Assert.Equal(["connected ExampleVehicles"], w.Told);
+        Assert.Same(ModExtensions.Host.Live, w.Registry.Host.Live);
+        Assert.Equal("ExampleVehicles", Assert.Single(w.Registry.Host.Live!.Mods));
+
+        int before = ModExtensions.Generation;
+        w.Registry.Host.Redraw();
+        Assert.NotEqual(before, ModExtensions.Generation);
+
+        ModExtensions.LiveConnected(new FakeLive());
+        ModExtensions.LiveDisconnected();
+        ModExtensions.LiveDisconnected();
+        Assert.Equal(["connected ExampleVehicles", "disconnected", "connected ExampleVehicles", "disconnected"], w.Told);
+        Assert.Null(w.Registry.Host.Live);
+    }
 }
