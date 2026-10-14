@@ -27,6 +27,8 @@ each one from its location whenever the zone loads, so deleting one removes that
 | **Invert** | Selects every shown object in the area that is not selected now. |
 | **Saved selections**: **Keep…** | Keeps the selection under a name, for this world (in the editor's data folder). Pick it in the list, then **Select** (or **Add** it to the current selection) to get it back, also after the world was saved; **Forget** removes it, after asking. Objects are found again by kind and place (within a few centimetres), so moved or deleted ones are counted as missing. |
 
+![A click at the foot of a beech: before, its crown box took the click; after, the rock under the crown is picked](images/select-under-tree.jpg)
+
 ![Drawing a selection zone](images/select-zone-drawing.jpg)
 ![Everything inside selected](images/select-zone.jpg)
 
