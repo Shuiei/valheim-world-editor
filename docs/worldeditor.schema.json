@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Shuiei/valheim-world-editor/main/docs/worldeditor.schema.json",
+  "title": "Valheim World Editor mod manifest (worldeditor.json)",
+  "description": "What a Valheim mod tells the Valheim World Editor about itself. See docs/modding.md.",
+  "type": "object",
+  "required": ["version"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "version": { "const": 1, "description": "The format's version." },
+    "data": {
+      "type": "object",
+      "description": "By data key, as the mod's code names it.",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "label": { "$ref": "#/$defs/text", "description": "How the inspector names the value." },
+          "readOnly": { "type": "boolean", "description": "The inspector shows the value but does not let it be changed." },
+          "help": { "$ref": "#/$defs/text", "description": "What the value is, shown when pointing at it." }
+        },
+        "additionalProperties": false
+      }
+    },
+    "prefabs": {
+      "type": "object",
+      "description": "By prefab name.",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "hidden": { "type": "boolean", "description": "Not offered in Place or the Workshop's Build panel." },
+          "group": { "$ref": "#/$defs/text", "description": "The heading the piece is listed under in the Build panel's Mods tab." }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "$defs": {
+    "text": { "type": "string", "minLength": 1, "maxLength": 200 }
+  }
+}

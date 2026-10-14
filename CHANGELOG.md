@@ -4,6 +4,15 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.30.0 — unreleased
+
+### Added
+- **worldeditor.json for mod authors**: a mod can ship an optional `worldeditor.json` telling the
+  editor what it cannot guess: labels, help and a read-only flag for the data its objects keep
+  (the inspector), prefabs not to offer in Place and the Build panel (its tools, effects, helpers),
+  and groups for its pieces in the Mods tab. See [For mod authors](docs/modding.md) and the
+  [schema](docs/worldeditor.schema.json).
+
 ## v1.29.0 — unreleased
 
 ### Added

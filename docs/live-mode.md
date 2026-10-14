@@ -169,6 +169,9 @@ are copied out of their DLLs into the editor's data folder (`mod-bundles`, a few
 when a mod changes). Meshes a mod builds in code while the game runs (ValheimRAFT's sails, for
 example) cannot be found and are not drawn: those pieces show untextured.
 
+A mod can also ship a `worldeditor.json` for what the editor cannot guess (its data's labels, helpers
+not to offer, groups for its pieces): see [For mod authors](modding.md).
+
 The Workshop's **Mods** tab lists one mod's pieces at a time: choose the mod in the row under the
 tabs (each with its number of pieces). At most 300 pieces show at once; search to find the others.
 

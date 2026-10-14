@@ -231,7 +231,17 @@ public partial class MainWindow
     internal async Task OpenWorkshop(string? path)
     {
         // The game's files are needed here too (its pieces, and how ground discs shape the plot).
-        if (!await Task.Run(() => GameData.Ensure(GameLook.Bundles)))
+        bool ready = await Task.Run(() =>
+        {
+            if (!GameData.Ensure(GameLook.Bundles))
+            {
+                return false;
+            }
+            // The player's mods' data names and manifests (their pieces' groups, the ones not offered).
+            WorldSession.ReadModFiles();
+            return true;
+        });
+        if (!ready)
         {
             if (World == null && !InWorkshop)
             {

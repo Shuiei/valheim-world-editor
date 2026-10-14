@@ -13,7 +13,8 @@ namespace TerrainEditor.Desktop.Tests;
 /// Mods tab whatever their tool (a mod's own hammer too) and category, and the Workshop counts them as built; a
 /// mod's hoe pieces are ground edits, not listed. The Mods tab groups them by mod: one mod's at a time, chosen on a row
 /// of mods when there are several (hidden on other tabs and while searching), and no more than MaxTiles at once. Runs
-/// alone (the catalogues are shared), in a data folder of its own; the tests' copies are in use again afterwards.
+/// alone (the catalogues are shared), in a data folder of its own; the tests' copies are in use again afterwards. A
+/// mod's worldeditor.json hides pieces from the panel and groups the others under its own headings.
 /// </summary>
 [Collection("DataDir")]
 public sealed class BuildPanelModsTests : IDisposable
@@ -34,6 +35,7 @@ public sealed class BuildPanelModsTests : IDisposable
     public void Dispose()
     {
         ModCatalogue.Forget();
+        ModManifests.Forget();
         GameData.UseCopies(Fixtures.Root);
         AppSettings.DataDirOverride = _dataDir;
         try
@@ -154,6 +156,26 @@ public sealed class BuildPanelModsTests : IDisposable
         // Another tab: no row.
         Click(Tab(tabs, 2));
         Assert.False(mods.IsVisible);
+    }
+
+    [AvaloniaFact]
+    public void AManifestHidesAPieceAndGroupsTheOthers()
+    {
+        GameData.AddMods(ModPieces(("zzmod_tool", "AlphaMod"), ("zzmod_rib", "AlphaMod"), ("zzmod_wall", "AlphaMod")));
+        string plugins = Path.Combine(_dir, "BepInEx", "plugins", "Author-AlphaMod");
+        Directory.CreateDirectory(plugins);
+        File.WriteAllText(Path.Combine(plugins, ModManifests.FileName), """
+            { "version": 1, "prefabs": { "zzmod_tool": { "hidden": true }, "zzmod_rib": { "group": "Hulls" } } }
+            """);
+        ModManifests.Refresh(new AppSettings { BepInExFolders = [Path.Combine(_dir, "BepInEx")] });
+        var (p, tabs, _) = Panel();
+
+        Click(Tab(tabs, BuildPanel.Mods));
+
+        Assert.DoesNotContain(BuildPanel.Pieces, x => x.Prefab == "zzmod_tool");
+        Assert.Equal(["zzmod_wall", "zzmod_rib"], Listed(p));
+        var headings = p.Tiles.Children.OfType<TextBlock>().Select(t => t.Text).ToList();
+        Assert.Equal(["AlphaMod · No station needed", "AlphaMod · Hulls"], headings);
     }
 
     [AvaloniaFact]

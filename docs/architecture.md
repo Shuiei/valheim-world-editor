@@ -148,6 +148,10 @@ no data tables. Everything is read at run time from the player's install:
   over `prefabs`, `pieces` and `piece-cost` each time it uses those kinds (the game's own entries
   win; entries not in the editor's format are left out, and should the merged data still fail, the
   game's own is used alone). `GameData.AddMods` takes a new report and uses the kinds again.
+- Mods' manifests: `Core/App/ModManifests.cs` reads every `worldeditor.json` in the plugins folders
+  (docs/modding.md, docs/worldeditor.schema.json) as a world or the Workshop opens
+  (`WorldSession.ReadModFiles`): data labels, read-only flags and help for `InspectorPanel`, hidden
+  prefabs left out of `PlacePanel` and `BuildPanel`, groups for the Mods tab.
 - Mods' data names: `Core/App/ModKeys.cs` reads the string literals of every DLL in the plugins
   folders (`GameCatalogues.KeyNamesIn`, as `zdo-keys` reads `assembly_valheim.dll`), keeps them in
   `mod-zdo-keys.json` (user data folder) until a DLL changes, and gives them to `ZdoKeys.UseMods`;

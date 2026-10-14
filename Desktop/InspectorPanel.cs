@@ -193,6 +193,11 @@ public sealed class InspectorPanel
                 Message?.Invoke("Type the name of the value to add (for example text for a sign).");
                 return;
             }
+            if (ReadOnlyKey(key))
+            {
+                Message?.Invoke($"{key} is shown only: the mod that keeps it says it must not be changed.");
+                return;
+            }
             Added.Add((Sections[Math.Max(0, AddSection.SelectedIndex)].Section, key, AddValue.Text ?? ""));
             AddKey.Text = AddValue.Text = "";
             Render();
@@ -408,8 +413,8 @@ public sealed class InspectorPanel
     /// <summary>The stand's items and orientation or pose in a short text form, to tell whether they changed.</summary>
     private string StandKey() => Stand == null ? "" : string.Join(";", Stand.Select(r => $"{r.Name},{r.Quality},{r.Variant}")) + "|" + StandWay.ToString(CultureInfo.InvariantCulture);
 
-    /// <summary>A value's label: the plain one, else its name, else its key's hash.</summary>
-    private static string Label(Field f) => f.Name is string n ? Labels.TryGetValue(n, out string? l) ? l : n : $"#{f.Key}";
+    /// <summary>A value's label: the plain one, else a mod's manifest's, else its name, else its key's hash.</summary>
+    private static string Label(Field f) => f.Name is string n ? Labels.TryGetValue(n, out string? l) ? l : ModManifests.DataOf(n)?.Label ?? n : $"#{f.Key}";
 
     /// <summary>Builds the whole card again from what is shown and changed.</summary>
     private void Render()
@@ -438,8 +443,14 @@ public sealed class InspectorPanel
         foreach (var f in FieldList)
         {
             bool isItems = f.Section == "bytes" && f.Key == ObjectData.ItemsKey && Items != null && _inventoryError == null;
+            // A mod's manifest can ask for a value to be shown only, and tell what it is.
+            var note = ModManifests.DataOf(f.Name);
             bool ro = f.Section == "bytes";
-            var box = new TextBox { Text = isItems ? "see Contents above" : ro ? f.Note : f.Now, IsReadOnly = ro, FontSize = 11, Opacity = f.Removed ? 0.5 : 1 }.Tip("inspect.value");
+            var box = new TextBox { Text = isItems ? "see Contents above" : ro ? f.Note : f.Now, IsReadOnly = ro || note?.ReadOnly == true, FontSize = 11, Opacity = f.Removed ? 0.5 : 1 }.Tip("inspect.value");
+            if (note?.Help is string help)
+            {
+                ToolTip.SetTip(box, help);
+            }
             box.PropertyChanged += (_, e) =>
             {
                 if (e.Property == TextBox.TextProperty && !ro)
@@ -448,7 +459,8 @@ public sealed class InspectorPanel
                     Dirty();
                 }
             };
-            var rm = new Button { Content = f.Removed ? "↺" : "✕", FontSize = 11, Padding = new Thickness(4, 0) };
+            // A value a mod's manifest shows only cannot be removed either.
+            var rm = new Button { Content = f.Removed ? "↺" : "✕", FontSize = 11, Padding = new Thickness(4, 0), IsEnabled = note?.ReadOnly != true };
             rm.Tip(f.Removed ? "inspect.keepValue" : "inspect.removeValue");
             rm.Click += (_, _) => { f.Removed = !f.Removed; Render(); };
             var label = new TextBlock { Text = Label(f), FontSize = 11, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis, TextDecorations = f.Removed ? TextDecorations.Strikethrough : null };
@@ -476,6 +488,8 @@ public sealed class InspectorPanel
     private void RenderItems()
     {
         ItemsBox.Children.Clear();
+        // A mod's manifest can ask for the contents (the "items" value) to be shown only.
+        ItemsBox.IsEnabled = !ItemsReadOnly;
         if (Items == null)
         {
             return;
@@ -848,6 +862,12 @@ public sealed class InspectorPanel
         return null;
     }
 
+    /// <summary>Whether a key typed to add (a name, or a hash as a number) is one a mod's manifest shows only.</summary>
+    private static bool ReadOnlyKey(string key) => ModManifests.DataOf(ZdoKeys.NameOf(ZdoKeys.Parse(key)) ?? key)?.ReadOnly == true;
+
+    /// <summary>Whether a mod's manifest asks for the contents to be shown only (its "items" value read-only).</summary>
+    private static bool ItemsReadOnly => ModManifests.DataOf("items")?.ReadOnly == true;
+
     /// <summary>The changes made: values set (null: removed), and the contents when they changed.</summary>
     internal (List<FieldChange> Set, List<ItemUpload>? Inventory) Changes()
     {
@@ -863,11 +883,12 @@ public sealed class InspectorPanel
                 set.Add(new FieldChange(f.Section, f.Key.ToString(CultureInfo.InvariantCulture), f.Now));
             }
         }
-        foreach (var (section, key, value) in Added)
+        // A value a mod's manifest shows only is never set, by name or by number.
+        foreach (var (section, key, value) in Added.Where(a => !ReadOnlyKey(a.Key)))
         {
             set.Add(new FieldChange(section, key, value));
         }
-        var inv = Items != null && _inventoryError == null && ItemsKey() != _itemsAtOpen ? Items.Select(i => i.Upload()).ToList() : null;
+        var inv = Items != null && _inventoryError == null && !ItemsReadOnly && ItemsKey() != _itemsAtOpen ? Items.Select(i => i.Upload()).ToList() : null;
         _standError = null;
         if (Stand != null && _z != null && StandKey() != _standAtOpen)
         {
