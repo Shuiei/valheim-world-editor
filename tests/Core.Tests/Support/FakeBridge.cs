@@ -30,6 +30,12 @@ public sealed class FakeBridge : IDisposable
 
     public List<(int X, int Z, bool Keep, bool Ground)> Resets { get; } = [];
 
+    /// <summary>
+    /// The editor's port of the connection each request came on, in order: the same port twice is one connection
+    /// used again.
+    /// </summary>
+    public List<int> Connections { get; } = [];
+
     private uint _next = 1000;
 
     public FakeBridge()
@@ -53,6 +59,7 @@ public sealed class FakeBridge : IDisposable
             {
                 return;
             }
+            Connections.Add(ctx.Request.RemoteEndPoint.Port);
             string body = "";
             int status = ctx.Request.Headers["X-Bridge-Token"] == Token ? Status : 401;
             if (status == 200 && ctx.Request.Url!.AbsolutePath == "/status")
@@ -98,6 +105,8 @@ public sealed class FakeBridge : IDisposable
             byte[] bytes = Encoding.UTF8.GetBytes(body);
             ctx.Response.StatusCode = status;
             ctx.Response.ContentType = "application/json";
+            // With its length, as the plugin sends it: the connection stays open for the next request.
+            ctx.Response.ContentLength64 = bytes.Length;
             await ctx.Response.OutputStream.WriteAsync(bytes);
             ctx.Response.Close();
         }

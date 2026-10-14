@@ -4,6 +4,14 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.35.4 — unreleased
+
+### Fixed
+- **Live mode could lose a request with "Connection reset by peer".** The game's web server closes a connection it
+  has answered on after 15 seconds without another request, and a request the editor sent on it at that moment was
+  reset: a look at the game or an apply failed, and one of the live tests now and then. The editor now opens a new
+  connection after 10 seconds unused, before the game closes the old one.
+
 ## v1.35.3 — unreleased
 
 ### WorldEditorBridge
