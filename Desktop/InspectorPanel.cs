@@ -488,6 +488,8 @@ public sealed class InspectorPanel
     private void RenderItems()
     {
         ItemsBox.Children.Clear();
+        // A mod's manifest can ask for the contents (the "items" value) to be shown only.
+        ItemsBox.IsEnabled = !ItemsReadOnly;
         if (Items == null)
         {
             return;
@@ -863,6 +865,9 @@ public sealed class InspectorPanel
     /// <summary>Whether a key typed to add (a name, or a hash as a number) is one a mod's manifest shows only.</summary>
     private static bool ReadOnlyKey(string key) => ModManifests.DataOf(ZdoKeys.NameOf(ZdoKeys.Parse(key)) ?? key)?.ReadOnly == true;
 
+    /// <summary>Whether a mod's manifest asks for the contents to be shown only (its "items" value read-only).</summary>
+    private static bool ItemsReadOnly => ModManifests.DataOf("items")?.ReadOnly == true;
+
     /// <summary>The changes made: values set (null: removed), and the contents when they changed.</summary>
     internal (List<FieldChange> Set, List<ItemUpload>? Inventory) Changes()
     {
@@ -883,7 +888,7 @@ public sealed class InspectorPanel
         {
             set.Add(new FieldChange(section, key, value));
         }
-        var inv = Items != null && _inventoryError == null && ItemsKey() != _itemsAtOpen ? Items.Select(i => i.Upload()).ToList() : null;
+        var inv = Items != null && _inventoryError == null && !ItemsReadOnly && ItemsKey() != _itemsAtOpen ? Items.Select(i => i.Upload()).ToList() : null;
         _standError = null;
         if (Stand != null && _z != null && StandKey() != _standAtOpen)
         {
