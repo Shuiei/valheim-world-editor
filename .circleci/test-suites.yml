@@ -1,0 +1,31 @@
+# The test suites CircleCI's testsuite CLI runs (Smarter Testing), one per test project: core-tests
+# and app-tests in .circleci/continue.yml each run "circleci testsuite run" on its suite, after
+# building the project. A test atom is a test class (its full name, a nested one as Outer+Inner):
+#   discover  lists them, one a line, from the built project (dotnet test --list-tests prints each
+#             test's full name, indented, a theory's with its values in brackets: cut down to the class)
+#   run       runs a batch of them (on stdin, one a line) through .circleci/run-tests.sh, which gives
+#             each to dotnet test as a --filter-class and writes the results (JUnit) where the CLI asks
+# The options: the CLI keeps the results itself (store-test-results: the Tests tab, the timings, and
+# "Rerun failed tests" running only the failed classes), and the containers take classes from one
+# shared queue as they finish, longest first (dynamic test splitting: paid, above the plan's
+# allowance). Test impact analysis is not on: it needs each test's coverage as LCOV or Go's format,
+# which .NET's coverage does not write.
+# Check a change with "circleci testsuite doctor 'core tests'" (it runs the suite).
+---
+name: core tests
+discover: >-
+  dotnet test --project tests/Core.Tests/Core.Tests.csproj -c Release --no-build --no-ansi --no-progress --list-tests
+  | sed -n 's/^  \([A-Za-z_]\)/\1/p' | sed 's/(.*//; s/\.[^.]*$//' | sort -u
+run: bash .circleci/run-tests.sh core tests/Core.Tests/Core.Tests.csproj "<< outputs.junit >>"
+options:
+  store-test-results: true
+  dynamic-test-splitting: true
+---
+name: app tests
+discover: >-
+  dotnet test --project tests/Desktop.Tests/Desktop.Tests.csproj -c Release --no-build --no-ansi --no-progress --list-tests
+  | sed -n 's/^  \([A-Za-z_]\)/\1/p' | sed 's/(.*//; s/\.[^.]*$//' | sort -u
+run: bash .circleci/run-tests.sh app tests/Desktop.Tests/Desktop.Tests.csproj "<< outputs.junit >>"
+options:
+  store-test-results: true
+  dynamic-test-splitting: true
