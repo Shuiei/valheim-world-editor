@@ -138,6 +138,21 @@ public class MainWindowKeysTests
     }
 
     [AvaloniaFact]
+    public void CtrlXOnAnEmptyAreaCopiesTheGroundAndCutsNothing()
+    {
+        var (w, s) = Open();
+        w.Tools.ChooseMode(ToolMode.Area);
+        w.View.Area.Points.Add(new Vector2(32, 32));
+        w.View.Area.Points.Add(new Vector2(48, 48));
+        Press(w, Key.X, PhysicalKey.X, "x", RawInputModifiers.Control);
+        Assert.Empty(w.View.Paste.Clip!.Objects);
+        Assert.Empty(w.View.Paste.Clip.Taken);
+        Assert.Contains("no objects to cut here", w.MessageText.Text);
+        // Nothing was taken away, so there is nothing to undo.
+        Assert.False(s.CanUndo);
+    }
+
+    [AvaloniaFact]
     public void ARunestoneIsNotInspectedNorAreTwoObjects()
     {
         var stone = new WorldScene.Thing(4, StableHash.Of("Runestone_Meadows"), new Vector3(0, 30, 0), Vector3.Zero, 1, false);

@@ -973,6 +973,12 @@ public sealed partial class MainWindow : Window
         {
             return;
         }
+        // An area with nothing in it copies its ground only: nothing to take away, no undo step.
+        if (clip.Taken.Count == 0)
+        {
+            MessageText.Text = $"Copied {clip.W} × {clip.H} m of ground: no objects to cut here. Ctrl+V to paste it, here or in another area.";
+            return;
+        }
         s.Delete(clip.Taken);
         if (Tools.Mode == ToolMode.Select)
         {
