@@ -52,13 +52,17 @@ if [ ! -e "$junit" ]; then
       | grep -E -o '^ +at (TerrainEditor\.Desktop\.Tests|WorldEditor\.Tests)\.[A-Za-z0-9_.+<>]+' \
       | head -n 1 | sed -E 's/^ +at //; s/\+.*/.x/; s/\.[A-Za-z0-9_]+$//' || true)
   fi
-  report_text=$( { printf '%s\n' "$stuck"; tail -n 80 "$log"; } | sed 's/]]>/]]]]><![CDATA[>/g')
+  # Well-formed XML: no control bytes (not even in CDATA), the class (a generic one has < >) escaped.
+  report_text=$( { printf '%s\n' "$stuck"; tail -n 80 "$log"; } \
+    | LC_ALL=C tr -d '\000-\010\013\014\016-\037' | sed 's/]]>/]]]]><![CDATA[>/g')
+  class=$(printf '%s' "${class:-TestHost}" | LC_ALL=C tr -d '\000-\037' \
+    | sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g' -e 's/"/\&quot;/g')
   mkdir -p "$(dirname "$junit")"
   cat > "$junit" <<EOF
 <?xml version="1.0" encoding="utf-8"?>
 <testsuites>
-  <testsuite name="${class:-TestHost}" tests="1" failures="1" errors="0">
-    <testcase classname="${class:-TestHost}" name="$what" time="0">
+  <testsuite name="$class" tests="1" failures="1" errors="0">
+    <testcase classname="$class" name="$what" time="0">
       <failure message="$what: the tests still running were not finished."><![CDATA[$report_text]]></failure>
     </testcase>
   </testsuite>
