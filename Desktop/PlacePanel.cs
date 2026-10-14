@@ -674,8 +674,9 @@ public sealed class PlacePanel
                 Dispatcher.UIThread.Post(Fill);
                 T.Notify();
             }
-            // The chips show only what is offered.
+            // The chips, and the list while it shows, show only what is offered.
             Dispatcher.UIThread.Post(RenderChips);
+            Dispatcher.UIThread.Post(FillList);
         }
         return _creatable;
     }
@@ -749,6 +750,12 @@ public sealed class PlacePanel
                     {
                         if (box.IsChecked == true)
                         {
+                            // A kind no longer offered since the list was filled (the mods' catalogue changed): not chosen.
+                            if (NotOffered(n))
+                            {
+                                box.IsChecked = false;
+                                return;
+                            }
                             if (!T.Chosen.Contains(n))
                             {
                                 T.Chosen.Add(n);
