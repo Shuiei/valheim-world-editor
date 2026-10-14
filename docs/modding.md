@@ -182,7 +182,7 @@ internal static class BridgeLink
 
 | Hook | What the bridge does with it |
 |---|---|
-| `AddListener(modId, IBridgeListener)` | `OnApplied(AppliedChanges)` is called on the game's main thread right after each of the editor's applies: the objects made and destroyed (ZDOID, prefab, position), the zones whose ground was rewritten, the zones reset. Put your things together again here. An exception is logged and changes nothing of what the editor did. |
+| `AddListener(modId, IBridgeListener)` | `OnApplied(AppliedChanges)` is called on the game's main thread right after each of the editor's applies: the objects made and destroyed (ZDOID, prefab, position), the objects moved under their own ZDOID (`Moved`, from 1.40.0: where each stood and stands now), the zones whose ground was rewritten, the zones reset. Put your things together again here. An exception is logged and changes nothing of what the editor did. |
 | `AddRoutes(modId, IBridgeRoutes)` | `Handle(name, body)` answers `POST /mods/<modId>/<name>` on the main thread, in whatever bytes you and your editor extension agree on; `null` is 404, an exception 500 with its message. The editor waits 30 seconds at most. |
 
 The mod id is yours (your plugin's id is a good one): letters, digits, dots, dashes and underscores.

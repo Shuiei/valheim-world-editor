@@ -30,6 +30,15 @@ public sealed class FakeBridge : IDisposable
 
     public List<(int X, int Z, bool Keep, bool Ground)> Resets { get; } = [];
 
+    /// <summary>The features its status lists ("move": it takes moves).</summary>
+    public List<string> Features { get; } = [];
+
+    /// <summary>Whether it moves objects in place (else, as when a player has both places loaded, makes them again).</summary>
+    public bool MoveInPlace { get; set; } = true;
+
+    /// <summary>The moves sent: the object (ZDOID, prefab, place), its new place and turn.</summary>
+    public List<(long User, uint Id, int Prefab, Vector3 From, Vector3 To, Vector3 Rotation)> Moves { get; } = [];
+
     /// <summary>
     /// The editor's port of the connection each request came on, in order: the same port twice is one connection
     /// used again.
@@ -64,11 +73,14 @@ public sealed class FakeBridge : IDisposable
             int status = ctx.Request.Headers["X-Bridge-Token"] == Token ? Status : 401;
             if (status == 200 && ctx.Request.Url!.AbsolutePath == "/status")
             {
-                body = "{\"plugin\":\"0.3.0\",\"world\":\"CITest\",\"players\":0}";
+                body = "{\"plugin\":\"0.3.0\",\"world\":\"CITest\",\"players\":0,\"features\":[" + string.Join(",", Features.Select(f => $"\"{f}\"")) + "]}";
             }
             else if (status == 200 && ctx.Request.Url!.AbsolutePath == "/objects")
             {
-                using var r = new BinaryReader(ctx.Request.InputStream);
+                using var all = new MemoryStream();
+                await ctx.Request.InputStream.CopyToAsync(all);
+                all.Position = 0;
+                using var r = new BinaryReader(all);
                 int destroy = r.ReadInt32();
                 for (int i = 0; i < destroy; i++)
                 {
@@ -86,11 +98,28 @@ public sealed class FakeBridge : IDisposable
                 {
                     Places.Add((r.ReadInt32(), new Vector3(r.ReadSingle(), r.ReadSingle(), r.ReadSingle())));
                 }
+                // The moves, last: each object moved in place keeps its id, one made again gets a new one.
+                var moved = new List<string>();
+                if (all.Position < all.Length)
+                {
+                    int n = r.ReadInt32();
+                    for (int i = 0; i < n; i++)
+                    {
+                        long user = r.ReadInt64();
+                        uint id = r.ReadUInt32();
+                        int prefab = r.ReadInt32();
+                        Vector3 V() => new(r.ReadSingle(), r.ReadSingle(), r.ReadSingle());
+                        Vector3 from = V(), to = V(), turn = V();
+                        r.ReadBytes(r.ReadInt32());
+                        Moves.Add((user, id, prefab, from, to, turn));
+                        moved.Add(MoveInPlace ? $"{{\"id\":\"{user}:{id}\",\"inPlace\":true}}" : $"{{\"id\":\"77:{_next++}\",\"inPlace\":false}}");
+                    }
+                }
                 lock (ObjectCalls)
                 {
                     ObjectCalls.Add((destroy, create));
                 }
-                body = $"{{\"destroyed\":{destroy},\"missing\":0,\"refound\":{Refound},\"created\":[{string.Join(",", ids.Select(i => $"\"{i}\""))}]}}";
+                body = $"{{\"destroyed\":{destroy},\"missing\":0,\"refound\":{Refound},\"created\":[{string.Join(",", ids.Select(i => $"\"{i}\""))}],\"moves\":[{string.Join(",", moved)}]}}";
             }
             else if (status == 200 && ctx.Request.Url!.AbsolutePath == "/zones/reset")
             {

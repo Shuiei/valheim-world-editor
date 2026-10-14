@@ -11,11 +11,24 @@ public sealed class AppliedChanges
     /// <param name="terrainZones">The zones whose ground was rewritten.</param>
     /// <param name="resetZones">The zones emptied to be generated again.</param>
     public AppliedChanges(IReadOnlyList<AppliedObject> created, IReadOnlyList<AppliedObject> destroyed, IReadOnlyList<Zone> terrainZones, IReadOnlyList<Zone> resetZones)
+        : this(created, destroyed, terrainZones, resetZones, [])
+    {
+    }
+
+    /// <summary>One call's changes, objects moved in place included.</summary>
+    /// <param name="created">The objects made.</param>
+    /// <param name="destroyed">The objects destroyed (those found again under another id included).</param>
+    /// <param name="terrainZones">The zones whose ground was rewritten.</param>
+    /// <param name="resetZones">The zones emptied to be generated again.</param>
+    /// <param name="moved">The objects moved under their own ids.</param>
+    public AppliedChanges(IReadOnlyList<AppliedObject> created, IReadOnlyList<AppliedObject> destroyed, IReadOnlyList<Zone> terrainZones, IReadOnlyList<Zone> resetZones,
+        IReadOnlyList<AppliedMove> moved)
     {
         Created = created;
         Destroyed = destroyed;
         TerrainZones = terrainZones;
         ResetZones = resetZones;
+        Moved = moved;
     }
 
     /// <summary>The objects made: find them with ZDOMan.instance.GetZDO(new ZDOID(user, id)).</summary>
@@ -29,9 +42,34 @@ public sealed class AppliedChanges
 
     /// <summary>The zones emptied, to be generated again when a player comes.</summary>
     public IReadOnlyList<Zone> ResetZones { get; }
+
+    /// <summary>
+    /// The objects moved (and turned) under their own ids, from 1.40.0: the same ZDO stands somewhere else now. An
+    /// object moved where a player has both places loaded is made again there instead, and is in Created and Destroyed.
+    /// </summary>
+    public IReadOnlyList<AppliedMove> Moved { get; }
 }
 
-/// <summary>An object the editor made or destroyed.</summary>
+/// <summary>An object the editor moved under its own id.</summary>
+public sealed class AppliedMove
+{
+    /// <summary>A move.</summary>
+    /// <param name="from">The object where it stood.</param>
+    /// <param name="to">The object where it stands now (the same ZDOID).</param>
+    public AppliedMove(AppliedObject from, AppliedObject to)
+    {
+        From = from;
+        To = to;
+    }
+
+    /// <summary>The object where it stood.</summary>
+    public AppliedObject From { get; }
+
+    /// <summary>The object where it stands now: find it with ZDOMan.instance.GetZDO(new ZDOID(To.User, To.Id)).</summary>
+    public AppliedObject To { get; }
+}
+
+/// <summary>An object the editor made, destroyed or moved.</summary>
 public sealed class AppliedObject
 {
     /// <summary>An object.</summary>

@@ -4,6 +4,23 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.40.0 — unreleased
+
+### Added
+- **Moved objects stay the same objects in live mode.** An object moved or turned in the editor (the Select tool's
+  move, or a Cut then pasted) moves in the running game under its own id when nothing else about it changed, instead
+  of being taken away and made again. Mods that keep track of objects while the game runs keep knowing it: a chest's
+  label sign from a sign mod is no longer doubled after a live move, and a chest keeps what is in it as the game has
+  it. Undo after applying moves it back. When a player has both its old and new place loaded (a player's game would
+  not show a standing object moving), it is made again as before, and the message after Apply live says how many.
+  Docs: [Moving things](docs/live-mode.md#moving-things).
+
+### WorldEditorBridge
+- `/objects` takes objects to move: each moves under its own ZDOID (sent to every player at once), or is made again
+  at its new place where a player has both places loaded. `/status` lists `"features":["move"]`; editors only send
+  moves to a plugin that lists it. Mods' listeners get the moves in `AppliedChanges.Moved` (`AppliedMove`: where the
+  object stood and stands now); the old `AppliedChanges` constructor stays.
+
 ## v1.38.0 — unreleased
 
 ### Added

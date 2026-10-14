@@ -24,11 +24,13 @@ namespace WorldEditorBridge;
 ///   GET /snapshot   the whole persistent world: world info, ZoneSystem data (generated zones, locations)
 ///                   and every persistent object in the save file's chunk format, gzip-compressed
 ///   GET /players    connected players and their positions (JSON)
-///   GET /status     plugin and world info (JSON)
+///   GET /status     plugin and world info, and the features this plugin has ("move"), as JSON
 ///   POST /terrain   new terrain data for zones: int count, then per zone int x, int z, int length + TCData
 ///                   (TerrainComp.Save format); every player's game reloads those zones' ground
 ///   POST /objects   int n + n x (long user, uint id) objects to destroy, then int m + m x (int length +
-///                   object in save format) objects to create; answers with the new objects' ids
+///                   object in save format) objects to create, then each destroyed object's prefab and place,
+///                   then int k + k x (long user, uint id, int prefab, place, new place, turn, int length + object
+///                   in save format) objects to move; answers with the new and moved objects' ids
 ///   POST /zones/reset  int n + n x (int x, int z, bool keep buildings, bool reset ground): the zones'
 ///                   objects are removed and the zones are generated again (at once where players are)
 ///   POST /watch     int n + n x (int x, int z): one change number per zone (JSON)
@@ -517,9 +519,15 @@ public sealed partial class WorldEditorBridgePlugin : BaseUnityPlugin
     /// a new ZDOID (ServersideQoL does, for build pieces, plants, fires and more), and then the object of that prefab
     /// at that place goes instead. Without this, undoing a placed piece found it "already gone" while every player
     /// kept seeing the new one.
+    /// Editors from 1.40.0 then send objects to move (to a plugin listing "move" in its status): each one's ZDOID, prefab
+    /// and place, its new place and turn, and itself at the new place in the save format. It moves under its own ZDOID,
+    /// so what other mods know of it holds, unless a player has both places loaded: a player's game puts a standing
+    /// object where it is once, as it comes into range, and would not show it moving; then it is made again at its new
+    /// place from those bytes and destroyed where it was, as before.
     /// </summary>
     /// <returns>JSON: destroyed (refound included), refound, missing (already gone) and the created objects' ids as
-    /// "user:id" strings, in the order they were sent; and what the mods are told.</returns>
+    /// "user:id" strings, in the order they were sent; each move's object id and whether it moved in place; and what the
+    /// mods are told.</returns>
     private (byte[] Json, AppliedChanges Changes) ApplyObjects(byte[] body)
     {
         ZPackage pkg = new(body);
@@ -549,6 +557,16 @@ public sealed partial class WorldEditorBridgePlugin : BaseUnityPlugin
                 where[i] = (pkg.ReadInt(), pkg.ReadVector3());
             }
         }
+        var moves = new List<(ZDOID Id, int Prefab, Vector3 From, Vector3 To, Vector3 Rotation, Func<ZDO> Fallback)>();
+        if (pkg.GetPos() < pkg.Size())
+        {
+            int moveCount = pkg.ReadInt();
+            for (int i = 0; i < moveCount; i++)
+            {
+                moves.Add((new ZDOID(pkg.ReadLong(), pkg.ReadUInt()), pkg.ReadInt(), pkg.ReadVector3(), pkg.ReadVector3(), pkg.ReadVector3(),
+                    ReadSaveFormat(new ZPackage(pkg.ReadByteArray()))));
+            }
+        }
         int destroyed = 0, refound = 0;
         List<int> lost = [];
         List<AppliedObject> gone = [];
@@ -570,8 +588,10 @@ public sealed partial class WorldEditorBridgePlugin : BaseUnityPlugin
             refound = DestroyAtPlace([.. lost.Select(i => where[i])], session, gone);
         }
         int missing = lost.Count - refound;
-        StringBuilder ids = new();
         List<AppliedObject> made = [];
+        var (movesJson, moved, inPlace, movedMissing) = Move(moves, session, gone, made);
+        missing += movedMissing;
+        StringBuilder ids = new();
         for (int i = 0; i < createCount; i++)
         {
             ZDO zdo = creates[i]();
@@ -584,13 +604,159 @@ public sealed partial class WorldEditorBridgePlugin : BaseUnityPlugin
         }
         // The game drops a destroyed object on its next update, so the count after is the one before plus what was
         // created; the check a second later says whether the destroyed ones went.
-        Logger.LogInfo($"WorldEditorBridge: destroyed {destroyed + refound} object(s) ({refound} found again at their place under a new id, {missing} already gone), created {createCount}; {before} -> {all.Count} object(s) known, {Peers()} peer(s)");
+        string movedText = moves.Count > 0 ? $", moved {inPlace} in place and {moves.Count - inPlace} by making it again (a player had both places loaded, or it was gone)" : "";
+        Logger.LogInfo($"WorldEditorBridge: destroyed {destroyed + refound} object(s) ({refound} found again at their place under a new id, {missing} already gone), created {createCount}{movedText}; {before} -> {all.Count} object(s) known, {Peers()} peer(s)");
         if (gone.Count > 0)
         {
             _destroyChecks.Enqueue((Time.realtimeSinceStartup + 1f, gone, made));
         }
-        return (Encoding.UTF8.GetBytes($"{{\"destroyed\":{destroyed + refound},\"refound\":{refound},\"missing\":{missing},\"created\":[{ids}]}}"),
-            new AppliedChanges(made, gone, [], []));
+        return (Encoding.UTF8.GetBytes($"{{\"destroyed\":{destroyed + refound},\"refound\":{refound},\"missing\":{missing},\"created\":[{ids}],\"moves\":[{movesJson}]}}"),
+            new AppliedChanges(made, gone, [], [], moved));
+    }
+
+    /// <summary>
+    /// Moves objects (<see cref="ApplyObjects"/>): in place under their own ZDOIDs, or, where a player has both places
+    /// loaded or the object is gone, made again at the new place (and destroyed where it was).
+    /// </summary>
+    /// <param name="moves">Each object's ZDOID, prefab and place, new place and turn (Euler degrees), and itself at the new place.</param>
+    /// <param name="session">This game's session id, made the objects' owner so the change reaches every peer.</param>
+    /// <param name="gone">Where objects destroyed are added, for the mods' listeners.</param>
+    /// <param name="made">Where objects made are added, for the mods' listeners.</param>
+    /// <returns>Each move's object id and whether it moved in place (JSON, in the order sent); the moves in place; how
+    /// many; how many objects were gone (made again all the same).</returns>
+    private static (string Json, List<AppliedMove> Moved, int InPlace, int Missing) Move(
+        List<(ZDOID Id, int Prefab, Vector3 From, Vector3 To, Vector3 Rotation, Func<ZDO> Fallback)> moves, long session,
+        List<AppliedObject> gone, List<AppliedObject> made)
+    {
+        var objects = new ZDO[moves.Count];
+        List<int> lost = [];
+        for (int i = 0; i < moves.Count; i++)
+        {
+            objects[i] = ZDOMan.instance.GetZDO(moves[i].Id);
+            if (objects[i] == null)
+            {
+                lost.Add(i);
+            }
+        }
+        // Made again under a new ZDOID by another mod (as for destroys): the object of that prefab at that place.
+        if (lost.Count > 0)
+        {
+            ZDO[] found = FindAtPlace([.. lost.Select(i => (moves[i].Prefab, moves[i].From))]);
+            for (int k = 0; k < lost.Count; k++)
+            {
+                objects[lost[k]] = found[k];
+            }
+        }
+        StringBuilder json = new();
+        List<AppliedMove> moved = [];
+        int missing = 0;
+        for (int i = 0; i < moves.Count; i++)
+        {
+            ZDO zdo = objects[i];
+            var (_, _, _, to, rotation, fallback) = moves[i];
+            ZDO result;
+            bool inPlace = zdo != null && !LoadedAtBoth(zdo.GetPosition(), to, zdo.Distant);
+            if (inPlace)
+            {
+                AppliedObject from = Applied(zdo);
+                zdo.SetOwner(session);
+                zdo.SetPosition(to);
+                zdo.SetRotation(Quaternion.Euler(rotation));
+                // Players' games far from both places drop the object or show it at its new place once they have
+                // its new data: sent to every peer now, not only to those near where it stands.
+                ZDOMan.instance.ForceSendZDO(zdo.m_uid);
+                moved.Add(new AppliedMove(from, Applied(zdo)));
+                result = zdo;
+            }
+            else
+            {
+                result = fallback();
+                made.Add(Applied(result));
+                if (zdo != null)
+                {
+                    gone.Add(Applied(zdo));
+                    zdo.SetOwner(session);
+                    ZDOMan.instance.DestroyZDO(zdo);
+                }
+                else
+                {
+                    missing++;
+                }
+            }
+            if (i > 0)
+            {
+                json.Append(',');
+            }
+            json.Append("{\"id\":\"").Append(result.m_uid.UserID.ToString(CultureInfo.InvariantCulture)).Append(':')
+                .Append(result.m_uid.ID.ToString(CultureInfo.InvariantCulture)).Append("\",\"inPlace\":").Append(inPlace ? "true" : "false").Append('}');
+        }
+        return (json.ToString(), moved, moved.Count, missing);
+    }
+
+    /// <summary>
+    /// Whether a player's game (or this game's own, when it is not a dedicated server) has both places loaded: it
+    /// would keep showing an object moved between them where it stood, since a game puts a standing object where it is
+    /// only as it comes into range.
+    /// </summary>
+    /// <param name="from">Where the object stands.</param>
+    /// <param name="to">Where it goes.</param>
+    /// <param name="distant">The object is seen from afar (the game loads such ones in a wider area).</param>
+    private static bool LoadedAtBoth(Vector3 from, Vector3 to, bool distant)
+    {
+        // The zones round a player whose objects its game shows (the simulation distance the server gives every
+        // player): a square as wide, a little more than the game's own round area.
+        SimulationDistance range = ZNet.instance.GetSyncedSimulationDistance();
+        int area = distant ? range.TotalSimulationDistance : range.NearSimulationDistance;
+        Vector2s a = ZoneSystem.GetZone(from), b = ZoneSystem.GetZone(to);
+        bool Near(Vector2s zone, Vector2s at) => Math.Abs(zone.x - at.x) <= area && Math.Abs(zone.y - at.y) <= area;
+        bool Both(Vector3 at)
+        {
+            Vector2s z = ZoneSystem.GetZone(at);
+            return Near(a, z) && Near(b, z);
+        }
+        foreach (ZNetPeer peer in ZNet.instance.GetPeers())
+        {
+            if (Both(peer.GetRefPos()))
+            {
+                return true;
+            }
+        }
+        return !ZNet.instance.IsDedicated() && Both(ZNet.instance.GetReferencePosition());
+    }
+
+    /// <summary>
+    /// The objects of these prefabs at these places (within 10 cm: a re-made object keeps its position), each at most
+    /// once; null where none is.
+    /// </summary>
+    /// <param name="wanted">Prefab hash and position of each object to find.</param>
+    private static ZDO[] FindAtPlace(List<(int Prefab, Vector3 Position)> wanted)
+    {
+        var found = new ZDO[wanted.Count];
+        Dictionary<int, List<int>> byPrefab = [];
+        for (int i = 0; i < wanted.Count; i++)
+        {
+            if (!byPrefab.TryGetValue(wanted[i].Prefab, out var list))
+            {
+                byPrefab[wanted[i].Prefab] = list = [];
+            }
+            list.Add(i);
+        }
+        var dict = (Dictionary<ZDOID, ZDO>)ObjectsById.GetValue(ZDOMan.instance);
+        foreach (ZDO zdo in dict.Values)
+        {
+            if (!byPrefab.TryGetValue(zdo.GetPrefab(), out var list) || list.Count == 0)
+            {
+                continue;
+            }
+            Vector3 p = zdo.GetPosition();
+            int at = list.FindIndex(i => (wanted[i].Position - p).sqrMagnitude < 0.01f);
+            if (at >= 0)
+            {
+                found[list[at]] = zdo;
+                list.RemoveAt(at);
+            }
+        }
+        return found;
     }
 
     /// <summary>How many peers (players' games) are connected to this game.</summary>
@@ -884,13 +1050,14 @@ public sealed partial class WorldEditorBridgePlugin : BaseUnityPlugin
     private static string F(float v) => v.ToString("R", CultureInfo.InvariantCulture);
 
     /// <summary>
-    /// GET /status: plugin version, world and seed names, object and player counts and the network time, as JSON.
+    /// GET /status: plugin version, world and seed names, object and player counts, the network time and the features
+    /// this plugin has (editors look for "move" before sending moves to /objects), as JSON.
     /// </summary>
     private byte[] Status()
     {
         World w = ZNet.World;
         var dict = (Dictionary<ZDOID, ZDO>)ObjectsById.GetValue(ZDOMan.instance);
-        string json = $"{{\"plugin\":{Json(Version)},\"world\":{Json(w?.m_name ?? "")},\"seedName\":{Json(w?.m_seedName ?? "")},\"objects\":{dict.Count},\"players\":{ZNet.instance.GetPlayerList().Count},\"netTime\":{ZNet.instance.GetTimeSeconds().ToString("R", CultureInfo.InvariantCulture)}}}";
+        string json = $"{{\"plugin\":{Json(Version)},\"world\":{Json(w?.m_name ?? "")},\"seedName\":{Json(w?.m_seedName ?? "")},\"objects\":{dict.Count},\"players\":{ZNet.instance.GetPlayerList().Count},\"netTime\":{ZNet.instance.GetTimeSeconds().ToString("R", CultureInfo.InvariantCulture)},\"features\":[\"move\"]}}";
         return Encoding.UTF8.GetBytes(json);
     }
 
