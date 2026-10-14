@@ -1387,7 +1387,10 @@ public sealed class GlView : OpenGlControlBase
                         _bounds[i] = bounds;
                         _boundsAt[i] = t.Position;
                     }
-                    _known[i] = !t.Gone && g.Box != null;
+                    bool known = !t.Gone && g.Box != null;
+                    // A box known for the first time: the selection's outline (which left it out) is made again.
+                    _selectionDirty |= known && !_known[i];
+                    _known[i] = known;
                     if (!t.Gone)
                     {
                         int cell = CellOf(s, m.Translation);
@@ -4672,7 +4675,8 @@ public sealed class GlView : OpenGlControlBase
         if (_selectionDirty)
         {
             _selectionDirty = false;
-            _selectionSegs = SelectionBoxes([.. Selected.Where(i => i < _bounds.Length).Select(i => _bounds[i])]);
+            // Only things whose box is known: one without its model yet has no box to draw (it is drawn once it has).
+            _selectionSegs = SelectionBoxes([.. Selected.Where(i => i < _bounds.Length && _known[i]).Select(i => _bounds[i])]);
         }
         // Seen through what is in front of it, like the web editor's selection.
         DrawLines(ref _lineVao, ref _lineVbo, _selectionSegs, vp, new Vector4(1, 0.66f, 0.2f, 1));
