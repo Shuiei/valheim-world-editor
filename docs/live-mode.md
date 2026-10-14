@@ -167,8 +167,7 @@ files, which it reads from your Valheim folder and your mod manager profiles (th
 installed there, as players need them anyway), else in Valheim's. The first time, the mods' bundles
 are copied out of their DLLs into the editor's data folder (`mod-bundles`, a few seconds; again only
 when a mod changes). Meshes a mod builds in code while the game runs (ValheimRAFT's sails, for
-example) cannot be found and are not drawn, and crunched textures (OdinsKingdom's stone, for
-example) are not read yet: those pieces show untextured.
+example) cannot be found and are not drawn: those pieces show untextured.
 
 The Workshop's **Mods** tab lists one mod's pieces at a time: choose the mod in the row under the
 tabs (each with its number of pieces). At most 300 pieces show at once; search to find the others.

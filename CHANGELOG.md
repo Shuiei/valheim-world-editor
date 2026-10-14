@@ -4,6 +4,13 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.28.0 — unreleased
+
+### Added
+- **Crunched textures read**: textures mods keep crunched (Unity's DXT1 and DXT5 Crunched formats)
+  are now read, so pieces that showed untextured, like OdinsKingdom's stone walls, are drawn with
+  their textures.
+
 ## v1.27.0 — unreleased
 
 ### Added

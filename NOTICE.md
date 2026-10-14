@@ -30,6 +30,11 @@ them from the player's own Valheim install, on their computer.
   is kept in the file).
 - `Core/App/Smolv.cs`: a C# port of the decoder in [SMOL-V](https://github.com/aras-p/smol-v),
   MIT License, Copyright (c) 2016-2024 Aras Pranckevicius.
+- `Core/App/Crunch.cs`: a C# port of the DXT1 and DXT5 decoding in crunch's `crn_decomp.h`
+  ([DaemonEngine/crunch](https://github.com/DaemonEngine/crunch), the Unity format of
+  [Unity-Technologies/crunch](https://github.com/Unity-Technologies/crunch/tree/unity)), zlib
+  License, Copyright (c) 2010-2016 Richard Geldreich, Jr. and Binomial LLC (its notice is kept in
+  the file).
 - [SPIRV-Cross](https://github.com/KhronosGroup/SPIRV-Cross) (Apache License 2.0), through Silk.NET's
   native build of it, turns the terrain shader from Valheim for Windows into GLSL.
 - Libraries the editor is built with, each under its own license: [Avalonia](https://github.com/AvaloniaUI/Avalonia)

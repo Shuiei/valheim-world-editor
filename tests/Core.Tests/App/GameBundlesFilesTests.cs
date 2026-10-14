@@ -10,8 +10,8 @@ namespace WorldEditor.Tests;
 /// The game's bundles read by GameBundles, on bundles made by the tests (Unity's formats, made-up objects): the index
 /// of prefabs and named assets and the file it is kept in, meshes, materials and textures found by name (their names
 /// kept beside the index), a mesh's vertex count and bounds, what a prefab's root has, models (what is drawn of a
-/// prefab, a dungeon room), meshes (compressed ones too), materials, textures, texture arrays, shaders and scripts'
-/// fields. Bundles without type trees are read as having no fields rather than failing.
+/// prefab, a dungeon room), meshes (compressed ones too), materials, textures (crunched ones too), texture arrays,
+/// shaders and scripts' fields. Bundles without type trees are read as having no fields rather than failing.
 /// </summary>
 public class GameBundlesFilesTests
 {
@@ -532,6 +532,47 @@ public class GameBundlesFilesTests
         Assert.Null(bundles.LoadTexture(new("textures", tooShort), 1024));
         Assert.Null(bundles.LoadTexture(new("textures", mat), 1024));
         Assert.Null(bundles.LoadTexture(new("textures", 4242), 1024));
+    }
+
+    [Fact]
+    public void CrunchedTexturesGiveTheirLevelAsDxtBlocks()
+    {
+        using var game = new TestGame();
+        var b = game.Bundle("crunched");
+        // The crn files of CrunchTests: DXT1 64 x 64 in 7 levels, DXT5 48 x 20 in 6; the Texture2D's own size and mip
+        // count are not used (the crn file has its own).
+        byte[] dxt1 = File.ReadAllBytes(Path.Combine(Fixtures.Root, "crunch-dxt1.crn"));
+        byte[] dxt5 = File.ReadAllBytes(Path.Combine(Fixtures.Root, "crunch-dxt5.crn"));
+        long kept = TestAssets.Texture(b, "kept", 48, 20, 29, 1, dxt5);
+        long streamed = TestAssets.Texture(b, "streamed", 64, 64, 28, 1, dxt1, streamed: true);
+        long broken = TestAssets.Texture(b, "broken", 64, 64, 28, 7, dxt1[..500]);
+        game.Save();
+        var bundles = new GameBundles(game.BundlesDir, null);
+
+        var top = bundles.LoadTexture(new("crunched", kept), 1024)!;
+        Assert.Equal(("kept", 12, 48, 20), (top.Name, top.Format, top.Width, top.Height));
+        Assert.Equal(Crunch.Unpack(dxt5, 0), top.Data);
+        var mid = bundles.LoadTexture(new("crunched", kept), 24)!;
+        Assert.Equal((24, 10), (mid.Width, mid.Height));
+        Assert.Equal(Crunch.Unpack(dxt5, 1), mid.Data);
+        var least = bundles.LoadTexture(new("crunched", streamed), 0)!;
+        Assert.Equal((10, 1, 1), (least.Format, least.Width, least.Height));
+        Assert.Equal(Crunch.Unpack(dxt1, 6), least.Data);
+        Assert.Equal(GameBundles.LevelSize(10, 32, 32), bundles.LoadTexture(new("crunched", streamed), 32)!.Data.Length);
+        Assert.Null(bundles.LoadTexture(new("crunched", broken), 1024));
+    }
+
+    [Fact]
+    public void CrunchedTexturesAreReadFromUnity2017Point3On()
+    {
+        Assert.False(GameBundles.UnityCrunchFormat("5.6.7f1"));
+        Assert.False(GameBundles.UnityCrunchFormat("2017.2.5f1"));
+        Assert.True(GameBundles.UnityCrunchFormat("2017.3.0f3"));
+        Assert.True(GameBundles.UnityCrunchFormat("2022.3.62f1"));
+        Assert.True(GameBundles.UnityCrunchFormat("6000.0.74f1"));
+        // Not given (stripped bundles): taken as new.
+        Assert.True(GameBundles.UnityCrunchFormat("0.0.0"));
+        Assert.True(GameBundles.UnityCrunchFormat(""));
     }
 
     [Fact]

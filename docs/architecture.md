@@ -114,7 +114,7 @@ plot that is no world: it has nothing to save; its building becomes a Homestead 
 | Save | `WorldSave`, `ValheimReader`, `WorldWriter`, `WorldCreator`, `ZdoTools`, `ZdoData`, `InventoryData`, `ChunkMath` (`Core/Save/`) | Byte formats follow the game's `ZPackage`. |
 | Pending changes | `EditStore`, `ZoneEdit`, `NewObject`, `ObjectField`, `ZoneReset`, `HeightGrid`, `Uplift` (`Core/Editing/`) | `EditStore` takes its own lock: strokes and buttons use it from different threads. |
 | Building, dungeons | `Hammer`, `Stability`, `Dungeons`, `DungeonGen`, `DungeonPlan`, `DungeonDresser` (`Core/Editing/`) | The hammer's snapping, the support check and the room joining, from the game's data. |
-| Game data | `GameLook`, `GameBundles`, `GameData`, `GameCatalogues*`, `GameLocations`, `GameTextures`, `GameShader`, `TerrainShader` (`Core/App/`) | Below. |
+| Game data | `GameLook`, `GameBundles`, `GameData`, `GameCatalogues*`, `GameLocations`, `GameTextures`, `Crunch`, `GameShader`, `TerrainShader` (`Core/App/`) | Below. |
 | Live | `LiveBridge`, `LiveSync` (`Core/Save/`), `Tunnel`, `ServerConfig`, `LocalGame` (`Core/App/`) | Below. |
 | Claude, scripts | `ClaudeServer`, `ClaudeTools`, `ClaudeBuilder`, `ClaudeGuide`, `ClaudeRelay`, `ScriptHost`, `ScriptApi.csx` (`Desktop/`) | Below. |
 | Remembered | `AppSettings` (`settings.json`), `ServerConfig` (`servers.cfg`), `Prefs` (`prefs.json`), `PlaceMemory`, `Stamps`, `SavedSelections`, `Places` | All in the data folder (`AppSettings.UserDataDir`), pointed elsewhere by `--data` and by the tests. |
@@ -155,7 +155,9 @@ no data tables. Everything is read at run time from the player's install:
   count, Unity's built-in Cube, Quad and Plane (in no bundle) are made (`BundleModels.PrimitiveMesh`,
   ids starting "~"), and a mod's placeholder material (`JVLmock_`/`_REPLACE_` names, Jötunn mock
   shaders) gives way to the game's. Compressed meshes are unpacked (`GameBundles.ReadCompressedMesh`);
-  crunched textures (formats 28, 29) are not read. `Core/App/ModBundles.cs` copies the
+  crunched textures (formats 28, 29: one crn file holding every level) are unpacked to DXT1 or DXT5
+  blocks by `Core/App/Crunch.cs` (a port of crunch's decoder, Unity's format; `GameBundles.LoadTexture`
+  picks the level, `GameTextures.Rgba` decodes it as any DXT one). `Core/App/ModBundles.cs` copies the
   mods' bundles (files of their own, or manifest resources of their DLLs starting "UnityFS"; LZMA
   ones packed again as LZ4) from the plugins folders `LocalGame.BepInExFolders` lists into
   `mod-bundles` (user data folder), read by a second `GameBundles`. Ids in the mods' bundles start
