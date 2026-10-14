@@ -130,7 +130,7 @@ public static class Shaders
 			vec2 d = gl_PointCoord * 2.0 - 1.0;
 			float r = length(d);
 			float w = fwidth(r);
-			float a = 1.0 - smoothstep(1.0 - 2.0 * w, 1.0, r);
+			float a = 1.0 - smoothstep(1.0 - w, 1.0, r);
 			if (a <= 0.0) discard;
 			frag = vec4(uColor.rgb, uColor.a * a);
 		}
