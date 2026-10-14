@@ -4,7 +4,7 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
-## v1.36.0 — unreleased
+## v1.36.0 — 2026-10-14
 
 ### Added
 - **The Windows program is signed.** `ValheimWorldEditor.exe` in the Windows package carries an Authenticode
@@ -13,7 +13,7 @@ the plugin is unchanged in versions without that part.
   "Windows protected your PC" prompt, which goes away as SmartScreen gets to know the signature. How it is
   made and checked: [Releasing](docs/development.md#releasing), [SECURITY.md](SECURITY.md#checking-a-download).
 
-## v1.35.4 — unreleased
+## v1.35.4 — 2026-10-14
 
 ### Fixed
 - **Live mode could lose a request with "Connection reset by peer".** The game's web server closes a connection it
@@ -21,7 +21,7 @@ the plugin is unchanged in versions without that part.
   reset: a look at the game or an apply failed, and one of the live tests now and then. The editor now opens a new
   connection after 10 seconds unused, before the game closes the old one.
 
-## v1.35.3 — unreleased
+## v1.35.3 — 2026-10-14
 
 ### WorldEditorBridge
 - The plugin's log says more of each apply, for when a change does not show for every player: the apply line adds
@@ -29,7 +29,7 @@ the plugin is unchanged in versions without that part.
   says how many of the destroyed objects the game still has and how many other objects of their prefab stand within
   10 cm of their place (made again, or there all along). See [What the plugin logs](docs/live-mode.md#what-the-plugin-logs).
 
-## v1.35.2 — unreleased
+## v1.35.2 — 2026-10-14
 
 ### Fixed
 - **Opening another area erased the history made before it.** The steps that did not fit the new area (all of them,
@@ -38,7 +38,7 @@ the plugin is unchanged in versions without that part.
   is opened again; only a step partly in the new area still stops the older ones from being undone there. The
   History panel says how many steps are kept aside, and the history file keeps them too.
 
-## v1.35.1 — unreleased
+## v1.35.1 — 2026-10-14
 
 ### Fixed
 - **Worlds made with generated zones had no locations and no creatures in them.** `WorldCheck create <radius>` (the
@@ -50,7 +50,7 @@ the plugin is unchanged in versions without that part.
   generated zone has its zone control. A zone with a dungeon's entrance (an interior the game lays out) is left to
   the game. Worlds the editor's **New world** page makes are not affected: they leave every zone to the game.
 
-## v1.35.0 — unreleased
+## v1.35.0 — 2026-10-14
 
 ### Added
 - **Live mode for mods' own plugins (the bridge API)**: a mod's BepInEx plugin can register with the WorldEditorBridge
@@ -65,7 +65,7 @@ the plugin is unchanged in versions without that part.
   one of a mod's routes. Every apply (`/objects`, `/terrain`, `/zones/reset`) tells the registered listeners what
   changed. Older editors see no difference.
 
-## v1.34.0 — unreleased
+## v1.34.0 — 2026-10-14
 
 ### Added
 - **Ground cuts for mod extensions**: an extension can leave the ground undrawn inside outlines it gives for its
@@ -73,7 +73,7 @@ the plugin is unchanged in versions without that part.
   click goes through the hole to what is in it. The SDK's sample mod's pits show how. See
   [Extensions](docs/modding.md#extensions).
 
-## v1.33.0 — unreleased
+## v1.33.0 — 2026-10-14
 
 ### Added
 - **Editor extensions for mods (the SDK)**: a mod can ship a small DLL, built against the editor's SDK
@@ -84,7 +84,7 @@ the plugin is unchanged in versions without that part.
   A sample extension of a made-up mod shows every hook. See
   [Extensions](docs/modding.md#extensions).
 
-## v1.32.0 — unreleased
+## v1.32.0 — 2026-10-14
 
 ### Added
 - **Unity's cylinder, sphere and capsule**: mods' pieces built from them (as from Unity's cube, quad and plane
@@ -102,7 +102,7 @@ the plugin is unchanged in versions without that part.
 - Mods' sounds and effects (prefabs the game draws nothing of) are no longer offered in Place; those already in a
   world still show.
 
-## v1.31.0 — unreleased
+## v1.31.0 — 2026-10-14
 
 ### Added
 - **Linked objects**: objects a mod builds out of others (a ship and the pieces built on it) are drawn where the mod
@@ -113,7 +113,7 @@ the plugin is unchanged in versions without that part.
   [Linked objects](docs/select.md#linked-objects-ships-and-other-mods-groups) and
   [for mod authors](docs/modding.md#linked-objects).
 
-## v1.30.0 — unreleased
+## v1.30.0 — 2026-10-14
 
 ### Added
 - **worldeditor.json for mod authors**: a mod can ship an optional `worldeditor.json` telling the
@@ -122,7 +122,7 @@ the plugin is unchanged in versions without that part.
   and groups for its pieces in the Mods tab. See [For mod authors](docs/modding.md) and the
   [schema](docs/worldeditor.schema.json).
 
-## v1.29.0 — unreleased
+## v1.29.0 — 2026-10-14
 
 ### Added
 - **Mods' data by name in the inspector**: the values mods keep on objects (ValheimRAFT's
@@ -131,14 +131,14 @@ the plugin is unchanged in versions without that part.
   your Valheim folder and mod manager profiles (never run), and kept until a mod changes. The
   game's own name still comes first when both have one.
 
-## v1.28.0 — unreleased
+## v1.28.0 — 2026-10-14
 
 ### Added
 - **Crunched textures read**: textures mods keep crunched (Unity's DXT1 and DXT5 Crunched formats)
   are now read, so pieces that showed untextured, like OdinsKingdom's stone walls, are drawn with
   their textures.
 
-## v1.27.0 — unreleased
+## v1.27.0 — 2026-10-14
 
 ### Added
 - **Modded pieces drawn as in game**: a mod's pieces and objects learned from a live game are drawn
@@ -162,7 +162,7 @@ the plugin is unchanged in versions without that part.
   plugin inside it that added the prefab (ValheimRAFT's pieces were listed under "Inventory Patch
   Detector").
 
-## v1.26.0 — unreleased
+## v1.26.0 — 2026-10-14
 
 ### Added
 - **Modded games' objects**: opening a live world now asks the game for the objects its mods add
@@ -177,7 +177,7 @@ the plugin is unchanged in versions without that part.
 - New `GET /catalogue`: every saved kind of object the game knows, mods' ones included, with which
   mod adds it (asked of Jötunn when it is installed).
 
-## v1.25.3 — unreleased
+## v1.25.3 — 2026-10-14
 
 ### Fixed
 - **The Cut sliders start at their right end, with no cut**: the Workshop's and the Dungeon tool's
