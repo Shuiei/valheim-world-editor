@@ -514,7 +514,7 @@ public sealed class GlView : OpenGlControlBase
     /// </summary>
     private sealed record PickMesh(float[] Positions, uint[][] Submeshes, (Vector3 Min, Vector3 Max) Bounds);
     /// <summary>The meshes on the graphics card, kept in a small form so a click can be tried against their triangles.</summary>
-    private readonly Dictionary<string, PickMesh> _pickMeshes = [];
+    private readonly ConcurrentDictionary<string, PickMesh> _pickMeshes = [];
     /// <summary>The meshes on the graphics card whose triangles are all there wound both ways (MeshData.BothWays).</summary>
     private readonly HashSet<string> _bothWays = [];
     /// <summary>
@@ -1270,9 +1270,12 @@ public sealed class GlView : OpenGlControlBase
                     // No model: the stand-in box.
                     (lo, hi) = (new Vector3(-0.5f, 0, -0.5f), new Vector3(0.5f, 2, 0.5f));
                 }
-                g.RootScale = model?.RootScale ?? Vector3.One;
-                g.HasModel = model != null;
-                g.Box = (lo, hi);
+                lock (_groups)
+                {
+                    g.RootScale = model?.RootScale ?? Vector3.One;
+                    g.HasModel = model != null;
+                    g.Box = (lo, hi);
+                }
                 _ready.Enqueue(new ReadyModel(g, model, meshes, mats, images));
             }
             catch (Exception ex)
@@ -1914,7 +1917,10 @@ public sealed class GlView : OpenGlControlBase
                 AddBatch(g, mesh, part.Sub, r.Materials[part.Material], part.Matrix, _bothWays.Contains(part.Mesh), part.Mesh);
             }
         }
-        g.Ready = true;
+        lock (_groups)
+        {
+            g.Ready = true;
+        }
         if (Scene is { } s)
         {
             Rebuild(s, g);
@@ -2029,7 +2035,10 @@ public sealed class GlView : OpenGlControlBase
         }
         _gl.BindVertexArray(0);
         _batches.Add(b);
-        g.Batches.Add((b, pre));
+        lock (_groups)
+        {
+            g.Batches.Add((b, pre));
+        }
     }
 
     // ---------------------------------------------------------------- drawing
@@ -4458,14 +4467,22 @@ public sealed class GlView : OpenGlControlBase
             }
             t = _previews.TryGetValue(i, out var p) ? p : s.Things[i];
         }
-        if (!_groups.TryGetValue(KeyOf(t), out var g) || !g.HasModel || !g.Ready || g.Batches.Count == 0)
+        // A copy of the group's parts: the drawing thread adds them as the model comes in.
+        (Batch Batch, Matrix4x4 Pre)[] batches;
+        Vector3 rootScale;
+        lock (_groups)
         {
-            return (box, null);
+            if (!_groups.TryGetValue(KeyOf(t), out var g) || !g.HasModel || !g.Ready || g.Batches.Count == 0)
+            {
+                return (box, null);
+            }
+            rootScale = g.RootScale;
+            batches = [.. g.Batches];
         }
-        var m = Placement(s, t, g.RootScale);
+        var m = Placement(s, t, rootScale);
         float? solid = null, cutOut = null;
         bool any = false;
-        foreach (var (b, pre) in g.Batches)
+        foreach (var (b, pre) in batches)
         {
             if (!_pickMeshes.TryGetValue(b.MeshId, out var pm) || b.Sub >= pm.Submeshes.Length)
             {
