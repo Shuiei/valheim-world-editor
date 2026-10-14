@@ -78,7 +78,7 @@ The editor must be running for Claude to reach it. Turn the switch off and nothi
 | `build_floor`, `build_walls`, `build_roof` | A floor, walls with doors and a gable roof (26° or 45°, thatch or shingle, gable ends closed) over a rectangle, from the game's pieces |
 | `set_contents` | Fill a chest, put an item on an item stand (food on a flat one, a trophy or weapon on a wall) or dress an armour stand, write a sign, give a creature stars |
 | `place_pieces`, `remove_objects` | Put down building pieces and other objects (they snap like the game's hammer); take objects away |
-| `move_objects`, `set_transform` | Move and turn objects as one group (a building keeps its shape, optionally following the ground), or put each exactly: place, turn, tilt, size. They keep what they hold. A part of a group a mod links into one (a ValheimRAFT ship) brings its whole group (also for copies and taking away) |
+| `move_objects`, `set_transform` | Move and turn objects as one group (a building keeps its shape, optionally following the ground), or put each exactly: place, turn, tilt, size. They keep what they hold. A part of a group a mod links into one (a ship and the pieces on it) brings its whole group (also for copies and taking away) |
 | `replace_objects` | Swap objects for another kind where they stand (a birch for a beech, stone walls for wooden ones) |
 | `get_object`, `set_object_data` | Everything an object is and holds, as the inspector shows it; change its values: a portal's tag (to link two portals), a builder, a ward's permitted players, health, fuel, a creature's level or tamed state |
 | `support_check` | The Workshop's support check: which pieces would fall |

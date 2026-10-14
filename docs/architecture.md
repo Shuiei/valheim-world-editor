@@ -114,7 +114,7 @@ plot that is no world: it has nothing to save; its building becomes a Homestead 
 | Save | `WorldSave`, `ValheimReader`, `WorldWriter`, `WorldCreator`, `ZdoTools`, `ZdoData`, `InventoryData`, `ChunkMath` (`Core/Save/`) | Byte formats follow the game's `ZPackage`. |
 | Pending changes | `EditStore`, `ZoneEdit`, `NewObject`, `ObjectField`, `ZoneReset`, `HeightGrid`, `Uplift` (`Core/Editing/`) | `EditStore` takes its own lock: strokes and buttons use it from different threads. |
 | Building, dungeons | `Hammer`, `Stability`, `Dungeons`, `DungeonGen`, `DungeonPlan`, `DungeonDresser` (`Core/Editing/`) | The hammer's snapping, the support check and the room joining, from the game's data. |
-| Mods' objects | `ObjectLinks`, `LinkRule`, `LinkSet`, `ObjectLink`, `LinkIndex` (`Core/App/ObjectLinks.cs`), `ModKeys`, `ModManifests`, `ModCatalogue` (`Core/App/`), shipped manifests (`Core/Mods/`) | Objects mods link into one (below); mods' data names, manifests and prefabs. |
+| Mods' objects | `ObjectLinks`, `LinkRule`, `LinkSet`, `ObjectLink`, `LinkIndex` (`Core/App/ObjectLinks.cs`), `ModKeys`, `ModManifests`, `ModCatalogue` (`Core/App/`) | Objects mods link into one (below); mods' data names, manifests and prefabs. |
 | Game data | `GameLook`, `GameBundles`, `GameData`, `GameCatalogues*`, `GameLocations`, `GameTextures`, `Crunch`, `GameShader`, `TerrainShader` (`Core/App/`) | Below. |
 | Live | `LiveBridge`, `LiveSync` (`Core/Save/`), `Tunnel`, `ServerConfig`, `LocalGame` (`Core/App/`) | Below. |
 | Claude, scripts | `ClaudeServer`, `ClaudeTools`, `ClaudeBuilder`, `ClaudeGuide`, `ClaudeRelay`, `ScriptHost`, `ScriptApi.csx` (`Desktop/`) | Below. |
@@ -317,10 +317,10 @@ either breaks it, the user's own scripts and the docs.
 **Objects mods link into one** (`Core/App/ObjectLinks.cs`, user docs in
 [select.md](select.md#linked-objects-ships-and-other-mods-groups), mod authors' in
 [modding.md](modding.md#linked-objects)): nothing in the code knows a mod. A `LinkRule` comes from the `links` of a
-mod's `worldeditor.json` (`ModManifests`), or from one the editor ships for a mod that has none (`Core/Mods/*.json`,
-embedded, read first: a mod's own file wins); it names the data keys of an object's id, of what a part hangs on, of
-its offset and turn in that one's frame, of other ids a copy rewrites and of values a copy leaves out, and whether the
-game saves parts at their root (ValheimRAFT) or where they are drawn. `WorldSave.Links` keeps each object's
+mod's `worldeditor.json` (`ModManifests`; the editor ships none for any mod, its tests give their example mod's through
+`ModManifests.Base`); it names the data keys of an object's id, of what a part hangs on, of its offset and turn in that
+one's frame, of other ids a copy rewrites and of values a copy leaves out, and whether the game saves parts at their
+root or where they are drawn. `WorldSave.Links` keeps each object's
 `ObjectLink`, read by the rules in use as the world was read (the manifests are read before; its whole stored turn
 too: `Pieces` keep only the turn about y); `LinkIndex` is the groups as they are now (saved objects not deleted, and
 `NewObject`s through `ObjectLinks.LinkOf`), giving a part's `Pose` and a group's `Group`. Only the drawn place

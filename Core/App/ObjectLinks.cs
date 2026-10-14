@@ -7,8 +7,8 @@ using TerrainEditor.Save;
 namespace TerrainEditor.App;
 
 /// <summary>
-/// How a mod links its objects into one (a ship and the pieces built on it...), as a mod's worldeditor.json tells it
-/// (ModManifests; the editor ships some for mods that do not, Core/Mods): an object holds an id of its own, its parts
+/// How a mod links its objects into one (a ship and the pieces built on it...), as its worldeditor.json tells it
+/// (ModManifests): an object holds an id of its own, its parts
 /// name that id as what they hang on and keep their place and turn in its frame. Every key is a data key, as the
 /// mod's code names it.
 /// </summary>

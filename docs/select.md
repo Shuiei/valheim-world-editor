@@ -21,7 +21,7 @@ each one from its location whenever the zone loads, so deleting one removes that
 | **Shift + drag** or **Ctrl + drag** | Adds what is inside the zone to the selection. |
 | **Click on empty ground** / `Esc` | Clears the selection. |
 | **Double-click a building piece** | Selects the whole building: every piece connected to it through pieces that touch (walls, floors, roofs, beams...). Pieces standing apart are not taken. A chest (any container) is the exception: a double click selects it alone and opens its data, its contents. |
-| **Double-click a linked object's part** | Selects its whole [group](#linked-objects-ships-and-other-mods-groups) (a ValheimRAFT ship): its root and every part on it. |
+| **Double-click a linked object's part** | Selects its whole [group](#linked-objects-ships-and-other-mods-groups) (a ship mod's vessel): its root and every part on it. |
 | **Whole building** | Adds every piece connected to the selected pieces. |
 | **Same kind** | Selects every shown object in the area of the kinds selected now (select one beech, then all the beeches). |
 | **Invert** | Selects every shown object in the area that is not selected now. |
@@ -71,26 +71,26 @@ typed values are exact, so nothing snaps on top of them.
 
 ## Linked objects (ships and other mods' groups)
 
-Some mods build objects out of others: ValheimRAFT's ships and land vehicles are a root object and
-the pieces built on it. The game saves such a piece with the id of what it hangs on (the root, or a
-part of it such as a swivel) and its offset and turn in that one's frame; the mod builds it there
-when the group loads. A mod tells the editor which data says so in its
-[worldeditor.json](modding.md#linked-objects), and the editor ships one for ValheimRAFT, which has
-none. The editor draws these groups as the mod builds them, so a ship looks as it does in game,
-turned and leaning with its root. A part whose root is not in the world stays where it is saved.
+Some mods build objects out of others: a ship mod's vessel is a root object and the pieces built
+on it. The game saves such a piece with the id of what it hangs on (the root, or a part of it such
+as a swivel) and its offset and turn in that one's frame; the mod builds it there when the group
+loads. A mod tells the editor which data says so in its
+[worldeditor.json](modding.md#linked-objects); the editor knows no mod by itself. It then draws
+these groups as the mod builds them, so a ship looks as it does in game, turned and leaning with
+its root. A part whose root is not in the world stays where it is saved.
 
 - **Moved whole.** A group's part never moves, turns or goes alone: selecting any part and moving,
   turning or deleting takes the whole group (the status bar says so, in the mod's words: "a whole
   vehicle"). A double click on a part selects the group. A moved group keeps its height (a ship
-  stays afloat) and does not snap; its parts are saved as the mod saves them (ValheimRAFT: at the
-  root's new place, their offsets unchanged), and the mod builds it there.
+  stays afloat) and does not snap; its parts are saved as the mod saves them (at the root's new
+  place, their offsets unchanged, when that is how the mod keeps them), and the mod builds it there.
 - **Copied whole.** `Ctrl+C` on any part copies the whole group, without the ground under it. Each
   paste (and each of its repeats) is a group of its own: every id the group holds gets a new one,
-  and every part, and every value the mod says names one (ValheimRAFT's sails, switches, planters),
+  and every part, and every value the mod says names one (a sail's mast, a switch's target),
   follows. Two groups under one id would share their parts in the game. Values a mod says copies
-  leave out are left out (ValheimRAFT's ropes, which name their anchors in a way the editor cannot
-  rewrite, and what was only aboard: carts, characters). A part copied without its root is pasted as
-  an ordinary piece.
+  leave out are left out (ids packed in a form only the mod's own [extension](modding.md#extensions)
+  could rewrite, what was only aboard: carts, characters). A part copied without its root is pasted
+  as an ordinary piece.
 - Claude's tools (move, copy, take away) do the same.
 
 ## Inspecting and changing an object's data

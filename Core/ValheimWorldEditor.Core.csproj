@@ -17,10 +17,6 @@
     <InternalsVisibleTo Include="Fuzz" />
   </ItemGroup>
   <ItemGroup>
-    <!-- The worldeditor.json manifests the editor ships for mods that have none (App/ModManifests.cs). -->
-    <EmbeddedResource Include="Mods/*.json" LogicalName="mods/%(Filename)%(Extension)" />
-  </ItemGroup>
-  <ItemGroup>
     <!-- The game's models and textures, read from its asset bundles (App/GameBundles.cs, GameTextures.cs). -->
     <PackageReference Include="AssetsTools.NET" Version="3.0.5" />
     <PackageReference Include="BCnEncoder.Net" Version="2.3.0" />

@@ -7,7 +7,7 @@ using Xunit;
 namespace WorldEditor.Tests;
 
 /// <summary>
-/// Objects mods link into one, by ValheimRAFT's vehicles (the manifest the editor ships for it): a link read from an
+/// Objects mods link into one, by the example vehicle mod (tests/Support/ExampleMod): a link read from an
 /// object's data (and set over by new values), a part drawn at its offset in its root's frame (on a swivel, in the
 /// swivel's), turned and leaning as the mod builds it, a part whose parent is missing or whose chain loops left where it
 /// is stored, and a group's parts found from any of them. Runs alone (the manifests' rules are shared).
@@ -17,18 +17,15 @@ public class ObjectLinksTests
 {
     private const int Root = 10, Swivel = 11;
 
-    /// <summary>ValheimRAFT's rule, as the editor ships it.</summary>
-    internal static LinkRule Raft => ObjectLinks.Current.Rules.Single(r => r.IdKey == StableHash.Of("PersistentID"));
-
     /// <summary>A link to a parent (and a swivel), with an offset and an Euler turn in its frame.</summary>
-    private static ObjectLink Part(int parent, Vector3 offset, Vector3 euler, int swivel = 0, int id = 0) => new(Raft, id, [swivel, parent], offset, euler, null);
+    private static ObjectLink Part(int parent, Vector3 offset, Vector3 euler, int swivel = 0, int id = 0) => new(ExampleMod.Rule, id, [swivel, parent], offset, euler, null);
 
     /// <summary>A root's link: its id alone.</summary>
-    private static ObjectLink RootLink(int id) => new(Raft, id, [0, 0], Vector3.Zero, null, null);
+    private static ObjectLink RootLink(int id) => new(ExampleMod.Rule, id, [0, 0], Vector3.Zero, null, null);
 
     /// <summary>
-    /// A ship's root at (100, 30, 200) turned 90° (id 1, PersistentID 10); a part 2 m east and 1 m up of it in its frame
-    /// (2); a swivel 3 m north of it (3, PersistentID 11); a part 1 m east on the swivel, turned 90° more (4); a part
+    /// A ship's root at (100, 30, 200) turned 90° (id 1, id 10); a part 2 m east and 1 m up of it in its frame
+    /// (2); a swivel 3 m north of it (3, id 11); a part 1 m east on the swivel, turned 90° more (4); a part
     /// leaning 30° (5); a part turned by the old quaternion only (6); and more if given. The parts are stored at the root.
     /// </summary>
     private static LinkIndex Ship(params LinkIndex.Member[] more)
@@ -42,7 +39,7 @@ public class ObjectLinksTests
             new(3, at, Vector3.Zero, Part(Root, new Vector3(0, 0, 3), Vector3.Zero, id: Swivel)),
             new(4, at, Vector3.Zero, Part(Root, new Vector3(1, 0, 0), new Vector3(0, 90, 0), swivel: Swivel)),
             new(5, at, Vector3.Zero, Part(Root, Vector3.Zero, new Vector3(30, 0, 0))),
-            new(6, at, Vector3.Zero, new ObjectLink(Raft, 0, [0, Root], Vector3.Zero, null, yaw)),
+            new(6, at, Vector3.Zero, new ObjectLink(ExampleMod.Rule, 0, [0, Root], Vector3.Zero, null, yaw)),
             .. more,
         ]);
     }
@@ -61,9 +58,9 @@ public class ObjectLinksTests
     public void ALinkIsReadFromAnObjectsDataTheEulerTurnFirst()
     {
         var z = ZdoData.Parse(MadeObjects.VehiclePart("wood_floor", Vector3.Zero, Root, new Vector3(1, 2, 3), new Vector3(0, 45, 0), Swivel, 12));
-        z.QuatList.Add((StableHash.Of("MBRotation"), Quaternion.Identity));
+        z.QuatList.Add((StableHash.Of(ExampleMod.TurnQuatKey), Quaternion.Identity));
         var link = ObjectLinks.Read(z)!;
-        Assert.Same(Raft, link.Rule);
+        Assert.Same(ExampleMod.Rule, link.Rule);
         Assert.Equal((12, new Vector3(1, 2, 3)), (link.Id, link.Offset));
         Assert.Equal([Swivel, Root], link.Parents);
         // On a swivel (its first parent key): it hangs on the swivel, turned by its Euler angles, not the quaternion.
@@ -71,11 +68,11 @@ public class ObjectLinksTests
         SameTurn(new Vector3(0, 45, 0), BlueprintFormats.ToEuler(link.Turn));
         // Only aboard for now (characters, carts): no part, the mod keeps it where it is.
         var aboard = ZdoData.Parse(MadeObjects.Zdo("Cart", Vector3.Zero));
-        aboard.IntList.Add((StableHash.Of("VehicleTempPieceParentId"), Root));
+        aboard.IntList.Add((StableHash.Of(ExampleMod.AboardKey), Root));
         Assert.Null(ObjectLinks.Read(aboard));
         // No group's data: no link; a damaged quaternion turns nothing.
         Assert.Null(ObjectLinks.Read(ZdoData.Parse(MadeObjects.Zdo("wood_floor", Vector3.Zero))));
-        Assert.Equal(Quaternion.Identity, new ObjectLink(Raft, 0, [0, Root], Vector3.Zero, null, default(Quaternion)).Turn);
+        Assert.Equal(Quaternion.Identity, new ObjectLink(ExampleMod.Rule, 0, [0, Root], Vector3.Zero, null, default(Quaternion)).Turn);
     }
 
     [Fact]
@@ -85,14 +82,14 @@ public class ObjectLinksTests
         Assert.Same(start, ObjectLinks.With(start, [new ObjectField("ints", StableHash.Of("tamed"), "1")]));
         var moved = ObjectLinks.With(start,
         [
-            new ObjectField("vec3", StableHash.Of("MBPosition"), "4 5 6"),
-            new ObjectField("ints", StableHash.Of("PersistentID"), "77"),
-            new ObjectField("ints", StableHash.Of("SwivelParentId"), "not a number"),
+            new ObjectField("vec3", StableHash.Of(ExampleMod.OffsetKey), "4 5 6"),
+            new ObjectField("ints", StableHash.Of(ExampleMod.IdKey), "77"),
+            new ObjectField("ints", StableHash.Of(ExampleMod.MountKey), "not a number"),
         ])!;
         Assert.Equal((77, Root, new Vector3(4, 5, 6)), (moved.Id, moved.Holder, moved.Offset));
         Assert.Equal([0, Root], moved.Parents);
         // Its parent taken away: nothing of a group left.
-        Assert.Null(ObjectLinks.With(start, [new ObjectField("ints", StableHash.Of("MBParentId"), null)]));
+        Assert.Null(ObjectLinks.With(start, [new ObjectField("ints", StableHash.Of(ExampleMod.VehicleKey), null)]));
     }
 
     // An object added in this session: moved, it keeps its saved link; edited, its bytes say; a fresh copy has only
@@ -109,7 +106,7 @@ public class ObjectLinksTests
         Assert.Null(ObjectLinks.LinkOf(world, new NewObject(-2, floor, at, Vector3.Zero, 0, saved)));
         byte[] raw = MadeObjects.VehiclePart("wood_floor", at, 99, Vector3.Zero, Vector3.Zero);
         Assert.Equal(99, ObjectLinks.LinkOf(world, new NewObject(-3, floor, at, Vector3.Zero, 0, Raw: raw))!.Holder);
-        Assert.Equal(5, ObjectLinks.LinkOf(world, new NewObject(-4, floor, at, Vector3.Zero, 0, Data: [new ObjectField("ints", StableHash.Of("MBParentId"), "5")]))!.Holder);
+        Assert.Equal(5, ObjectLinks.LinkOf(world, new NewObject(-4, floor, at, Vector3.Zero, 0, Data: [new ObjectField("ints", StableHash.Of(ExampleMod.VehicleKey), "5")]))!.Holder);
     }
 
     [Fact]
@@ -190,7 +187,7 @@ public class ObjectLinksTests
         var ix = LinkIndex.Of(world, [], []);
         Near(at + new Vector3(0, 0, -2), ix.Pose(part)!.Value.Position);
         // The root moved 10 m east (a copy keeping its data in its place).
-        var moved = new NewObject(-1, StableHash.Of("ValheimVehicles_WaterVehicleShip"), at + new Vector3(10, 0, 0), new Vector3(0, 90, 0), 0, root, Fresh: false);
+        var moved = new NewObject(-1, StableHash.Of(ExampleMod.Hull), at + new Vector3(10, 0, 0), new Vector3(0, 90, 0), 0, root, Fresh: false);
         ix = LinkIndex.Of(world, [root], [moved]);
         Near(at + new Vector3(10, 0, -2), ix.Pose(part)!.Value.Position);
         Assert.Equal([-1, part], ix.Group(part));

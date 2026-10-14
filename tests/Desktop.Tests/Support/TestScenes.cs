@@ -65,17 +65,17 @@ internal static class TestScenes
         Limit = new float[65 * 65],
     };
 
-    /// <summary>The ship's root's PersistentID (AddShip).</summary>
+    /// <summary>The ship's root's id (AddShip).</summary>
     internal const int ShipId = 500;
 
     /// <summary>The prefab standing in for the ship's root (AddShip).</summary>
     internal static readonly int ShipRoot = StableHash.Of("stone_wall_2x1");
 
-    /// <summary>The ship's swivel's PersistentID (AddShip).</summary>
+    /// <summary>The ship's swivel's id (AddShip).</summary>
     internal const int SwivelId = 501;
 
     /// <summary>
-    /// A ValheimRAFT ship added to the session in one step, every part stored at its root as the game saves them: a root
+    /// A ship (the example vehicle mod's) added to the session in one step, every part stored at its root as the game saves them: a root
     /// (a stone wall standing in for the mod's ship, which the test data does not know) at (x, 30, z) turned 90°, floors 2 m east and west of it in its frame
     /// (south and north in the world), a swivel 4 m north of it and 1 m up (east in the world) and a floor 1 m east on
     /// the swivel (south of it in the world).

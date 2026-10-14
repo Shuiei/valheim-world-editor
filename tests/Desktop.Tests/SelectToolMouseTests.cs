@@ -9,7 +9,7 @@ namespace TerrainEditor.Desktop.Tests;
 
 /// <summary>
 /// The Select tool with the mouse, looking straight down on a flat area: clicking and drawing zones, dragging,
-/// double-clicking a building or a ship (ValheimRAFT), Same kind, Drop and snapping. The view's object boxes come from the pieces' own boxes
+/// double-clicking a building or a ship (the example vehicle mod's), Same kind, Drop and snapping. The view's object boxes come from the pieces' own boxes
 /// (headless tests draw nothing, so the view is given them).
 /// </summary>
 [Collection("World files")]
@@ -215,7 +215,7 @@ public class SelectToolMouseTests
         Assert.StartsWith("Select a building piece first", said);
     }
 
-    // A ValheimRAFT ship (TestScenes.AddShip): a double click on a part selects the whole vehicle; a part dragged
+    // A ship (the example vehicle mod's) (TestScenes.AddShip): a double click on a part selects the whole vehicle; a part dragged
     // takes it all along, kept afloat (its height as it was), every part stored at the root's new place; deleted, the
     // whole ship goes.
     [AvaloniaFact]

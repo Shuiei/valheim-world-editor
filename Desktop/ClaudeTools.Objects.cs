@@ -88,7 +88,7 @@ public sealed partial class ClaudeTools
     /// keeping each the same height above the ground.
     /// </summary>
     [McpServerTool(Name = "move_objects", Title = "Move and turn objects")]
-    [Description("Moves objects of the open area (by id) together, as the Select tool does: shifted by dx, dy, dz metres and turned by turn degrees round the vertical (as yaw turns: 90 = a quarter turn clockwise seen from above), all round one point (default: their middle), so that a building moved whole keeps its shape. ground: true keeps each one as high above the ground as it was (the ground where it ends up). A part of a group a mod links into one (a ValheimRAFT ship) brings its whole group. Each object keeps what it holds (chest contents, builder…) but gets a new id: the answer gives them. Refused when one would leave the area. One pending step.")]
+    [Description("Moves objects of the open area (by id) together, as the Select tool does: shifted by dx, dy, dz metres and turned by turn degrees round the vertical (as yaw turns: 90 = a quarter turn clockwise seen from above), all round one point (default: their middle), so that a building moved whole keeps its shape. ground: true keeps each one as high above the ground as it was (the ground where it ends up). A part of a group a mod links into one (a ship and the pieces built on it) brings its whole group. Each object keeps what it holds (chest contents, builder…) but gets a new id: the answer gives them. Refused when one would leave the area. One pending step.")]
     public Task<string> MoveObjects(
         [Description("Their ids (list_objects, get_selection).")] int[] ids,
         [Description("Metres east (negative: west).")] float dx = 0,
@@ -179,7 +179,7 @@ public sealed partial class ClaudeTools
 
     /// <summary>set_transform: exact places, turns and sizes, each object its own (see <see cref="TransformSpec"/>).</summary>
     [McpServerTool(Name = "set_transform", Title = "Place, turn or size objects exactly")]
-    [Description("Puts objects of the open area (by id) exactly where given: position, yaw, pitch, roll and size, each object its own; what is left out stays as it is. A part of a group a mod links into one (a ValheimRAFT ship) takes its whole group along (its root first when both are given). Each keeps what it holds but gets a new id (the answer gives them). Objects that would leave the area are left out and named. One pending step.")]
+    [Description("Puts objects of the open area (by id) exactly where given: position, yaw, pitch, roll and size, each object its own; what is left out stays as it is. A part of a group a mod links into one (a ship and the pieces built on it) takes its whole group along (its root first when both are given). Each keeps what it holds but gets a new id (the answer gives them). Objects that would leave the area are left out and named. One pending step.")]
     public Task<string> SetTransform(
         [Description("The objects and their new values.")] TransformSpec[] objects,
         [Description("A few words for the history.")] string label = "Claude: placed exactly") => OnUi(() =>

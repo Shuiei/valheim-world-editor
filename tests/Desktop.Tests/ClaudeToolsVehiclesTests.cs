@@ -4,7 +4,7 @@ using Xunit;
 namespace TerrainEditor.Desktop.Tests;
 
 /// <summary>
-/// Claude's tools on a ValheimRAFT ship (TestScenes.AddShip): a part given brings the whole ship, moved, copied (each
+/// Claude's tools on a ship (TestScenes.AddShip): a part given brings the whole ship, moved, copied (each
 /// copy a ship of its own) or taken away.
 /// </summary>
 [Collection("World files")]

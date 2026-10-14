@@ -8,8 +8,7 @@ using Xunit;
 namespace WorldEditor.Tests;
 
 /// <summary>
-/// A pasted copy of linked objects made a group of its own, by a ValheimRAFT vehicle (the manifest the editor ships for
-/// it): new ids unique in the world, every reference following them (parents, swivels, masts, switches), its parts
+/// A pasted copy of linked objects made a group of its own, by the example vehicle mod (tests/Support/ExampleMod): new ids unique in the world, every reference following them (parents, swivels, masts, switches), its parts
 /// stored at its root, what copies leave out gone (ropes, what was only aboard), parts whose parent was not copied let
 /// go, a mirrored copy's parts mirrored in their frames.
 /// </summary>
@@ -19,10 +18,10 @@ public class ObjectLinksRemapTests
 
     private static readonly int Floor = StableHash.Of("wood_floor");
 
-    // ValheimRAFT's data keys.
-    private static readonly int IdKey = StableHash.Of("PersistentID"), ParentKey = StableHash.Of("MBParentId"), SwivelKey = StableHash.Of("SwivelParentId"),
-        OffsetKey = StableHash.Of("MBPosition"), EulerKey = StableHash.Of("MBRotationVec"), SailParentKey = StableHash.Of("SailParentId"),
-        SwivelTargetKey = StableHash.Of("Mechanism_swivelTargetId"), RopesKey = StableHash.Of("MBRopeAnchor_Ropes"), AboardKey = StableHash.Of("VehicleTempPieceParentId");
+    // The example mod's data keys.
+    private static readonly int IdKey = StableHash.Of(ExampleMod.IdKey), ParentKey = StableHash.Of(ExampleMod.VehicleKey), SwivelKey = StableHash.Of(ExampleMod.MountKey),
+        OffsetKey = StableHash.Of(ExampleMod.OffsetKey), EulerKey = StableHash.Of(ExampleMod.TurnKey), SailParentKey = StableHash.Of(ExampleMod.TargetKey),
+        SwivelTargetKey = StableHash.Of(ExampleMod.DrivesKey), RopesKey = StableHash.Of(ExampleMod.PackedKey), AboardKey = StableHash.Of(ExampleMod.AboardKey);
 
     /// <summary>An int value as data text.</summary>
     private static ObjectField Int(int key, int value) => new("ints", key, value.ToString(CultureInfo.InvariantCulture));

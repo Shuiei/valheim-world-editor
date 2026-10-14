@@ -16,13 +16,13 @@ opens. The file is optional and only adds to what the editor learns by itself.
   "$schema": "https://raw.githubusercontent.com/Shuiei/valheim-world-editor/main/docs/worldeditor.schema.json",
   "version": 1,
   "data": {
-    "MBParentId": { "label": "Parent vehicle", "readOnly": true, "help": "The vehicle this piece is part of." },
-    "MBPosition": { "label": "Place on the vehicle", "readOnly": true }
+    "MyMod_Vehicle": { "label": "Parent vehicle", "readOnly": true, "help": "The vehicle this piece is part of." },
+    "MyMod_Offset": { "label": "Place on the vehicle", "readOnly": true }
   },
   "prefabs": {
-    "ValheimVehicles_BoundaryChunk": { "hidden": true },
-    "ValheimVehicles_hull_rib_wood": { "group": "Hulls" },
-    "MBRaftMast": { "group": "Masts and sails" }
+    "MyMod_BoundaryMarker": { "hidden": true },
+    "MyMod_hull_rib_wood": { "group": "Hulls" },
+    "MyMod_Mast": { "group": "Masts and sails" }
   }
 }
 ```
@@ -37,7 +37,7 @@ opens. The file is optional and only adds to what the editor learns by itself.
 
 Texts are at most 200 characters. Comments and trailing commas are allowed. An entry not in this
 form is left out; the rest of the file still counts. When two files say something of the same name,
-the newest file wins; a mod's own file always wins over one the editor ships.
+the newest file wins.
 
 The [schema](worldeditor.schema.json) lets code editors check the file and complete its keys (the
 `$schema` line above).
@@ -57,14 +57,14 @@ each part keeps, in its data, the id of what it hangs on and its offset and turn
   "links": [
     {
       "name": "vehicle",
-      "id": "PersistentID",
-      "parents": ["SwivelParentId", "MBParentId"],
-      "offset": "MBPosition",
-      "rotation": "MBRotationVec",
-      "rotationQuaternion": "MBRotation",
+      "id": "MyMod_Id",
+      "parents": ["MyMod_Mount", "MyMod_Vehicle"],
+      "offset": "MyMod_Offset",
+      "rotation": "MyMod_Turn",
+      "rotationQuaternion": "MyMod_TurnQuaternion",
       "storedAt": "root",
-      "references": ["SailParentId", "MBCultivatableParentId", "Mechanism_swivelTargetId"],
-      "dropOnCopy": ["MBRopeAnchor_Ropes", "VehicleTempPieceParentId"]
+      "references": ["MyMod_SailMast", "MyMod_SwitchTarget"],
+      "dropOnCopy": ["MyMod_PackedRopes", "MyMod_Aboard"]
     }
   ]
 }
@@ -84,6 +84,5 @@ each part keeps, in its data, the id of what it hangs on and its offset and turn
 
 Every pasted group gets new ids that no object in the world holds, so the game never takes two
 copies for one. Data keys are named as your code names them, as in `data`. An object takes the
-first rule whose `id` or `parents` it holds; a rule is known by its `id`, so your file's rule
-replaces one the editor ships for your mod (the editor ships one for ValheimRAFT, above, which has
-no file of its own).
+first rule whose `id` or `parents` it holds; a rule is known by its `id`: a newer file's rule of
+the same `id` replaces an older one's, in its place.

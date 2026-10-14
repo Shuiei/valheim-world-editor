@@ -10,9 +10,9 @@ namespace TerrainEditor.App;
 /// the data their objects keep (the inspector), prefabs the editor should not offer (tools, effects, helpers), groups
 /// for their pieces (the Build panel's Mods tab), and how their objects link into one (ObjectLinks: a ship and its
 /// pieces). Everything else the editor learns by itself (ModCatalogue, ModKeys). Read from the plugins folders the
-/// editor knows (LocalGame.BepInExFolders) as a world or the Workshop opens, over the manifests the editor ships for
-/// mods that have none (Core/Mods, embedded); of two manifests saying something of the same name, a mod's own wins
-/// over a shipped one, and the newest file's over an older one. A file that is not a manifest is skipped.
+/// editor knows (LocalGame.BepInExFolders) as a world or the Workshop opens; of two manifests saying something of the
+/// same name, the newest file's wins. A file that is not a manifest is skipped. The editor ships none for any mod:
+/// supporting a mod is its author's to do.
 /// </summary>
 public static class ModManifests
 {
@@ -52,37 +52,27 @@ public static class ModManifests
         public LinkSet LinkSet { get; set; } = LinkSet.Empty;
     }
 
-    /// <summary>The manifests the editor ships (resource name, text), read once.</summary>
-    private static readonly Lazy<List<(string Name, string Json)>> Shipped = new(() =>
-    {
-        var asm = typeof(ModManifests).Assembly;
-        return [.. asm.GetManifestResourceNames().Where(n => n.StartsWith("mods/", StringComparison.Ordinal)).Order(StringComparer.Ordinal)
-            .Select(n =>
-            {
-                using var r = new StreamReader(asm.GetManifestResourceStream(n)!);
-                return (n, r.ReadToEnd());
-            })];
-    });
-
     /// <summary>
-    /// What the shipped manifests say, read once: each refresh starts from a copy, so their rules stay the same
-    /// instances (links read by them stay valid).
+    /// Manifests read before the mods' own, as a mod's would be: none in the editor. The tests give their made-up
+    /// example mod's here (before anything is read), so every test sees it whatever another test refreshes.
     /// </summary>
-    private static readonly Lazy<Notes> ShippedOnce = new(() =>
+    internal static IReadOnlyList<string> Base
     {
-        var notes = new Notes([], [], []);
-        foreach (var (name, json) in Shipped.Value)
+        get;
+        set
         {
-            if (!Read(json, notes))
-            {
-                throw new InvalidDataException($"shipped mod manifest {name}: not a worldeditor.json this editor reads.");
-            }
+            field = value;
+            _baseNotes = null;
+            _notes = BaseNotes();
+            _generation++;
         }
-        return notes;
-    });
+    } = [];
 
-    /// <summary>What is in use, swapped in whole: at first, the shipped manifests'.</summary>
-    private static volatile Notes _notes = ShippedNotes();
+    /// <summary>What <see cref="Base"/> says, read once: each refresh starts from a copy, so its rules stay the same instances.</summary>
+    private static Notes? _baseNotes;
+
+    /// <summary>What is in use, swapped in whole.</summary>
+    private static volatile Notes _notes = new([], [], []);
 
     /// <summary>Counts each time what is in use is replaced, for lists worked out from it to be worked out again.</summary>
     public static int Generation => _generation;
@@ -101,10 +91,21 @@ public static class ModManifests
     /// <summary>How the manifests say objects link into one (ObjectLinks).</summary>
     public static LinkSet Links => _notes.LinkSet;
 
-    /// <summary>A copy of what the shipped manifests say (a shipped one that cannot be read is a bug: it throws).</summary>
-    private static Notes ShippedNotes()
+    /// <summary>A copy of what <see cref="Base"/> says (a manifest there that cannot be read is a bug: it throws).</summary>
+    private static Notes BaseNotes()
     {
-        var once = ShippedOnce.Value;
+        if (_baseNotes is not { } once)
+        {
+            once = new Notes([], [], []);
+            foreach (string json in Base)
+            {
+                if (!Read(json, once))
+                {
+                    throw new InvalidDataException("a base manifest is not a worldeditor.json this editor reads.");
+                }
+            }
+            _baseNotes = once;
+        }
         var notes = new Notes(new(once.Data), new(once.Prefabs), new(once.Links));
         notes.LinkSet = new LinkSet([.. notes.Links.Values]);
         return notes;
@@ -132,7 +133,7 @@ public static class ModManifests
                 // A folder that cannot be listed: its manifests are not read.
             }
         }
-        var notes = ShippedNotes();
+        var notes = BaseNotes();
         int read = 0;
         // Oldest first: a newer file's notes replace an older one's.
         foreach (var file in files.DistinctBy(f => f.FullName).OrderBy(f => f.LastWriteTimeUtc))
@@ -159,10 +160,10 @@ public static class ModManifests
         return read;
     }
 
-    /// <summary>Only the shipped manifests in use (the tests).</summary>
+    /// <summary>Only <see cref="Base"/> in use (the tests).</summary>
     internal static void Forget()
     {
-        _notes = ShippedNotes();
+        _notes = BaseNotes();
         _generation++;
     }
 

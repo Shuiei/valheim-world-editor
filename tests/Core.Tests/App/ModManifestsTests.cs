@@ -10,8 +10,8 @@ namespace WorldEditor.Tests;
 /// The mods' worldeditor.json manifests (ModManifests) in the settings' plugins folders, at any depth: what they say of
 /// data keys (label, read-only, help), prefabs (hidden, group) and how objects link into one (links, used by
 /// ObjectLinks); comments and trailing commas allowed; a file of another version, or not JSON, skipped; entries not in
-/// the expected form left out; the newest file winning a name two say something of, a mod's own over one the editor
-/// ships. Runs alone, without the player's own Valheim and profiles.
+/// the expected form left out; the newest file winning a name two say something of. Runs alone, without the player's
+/// own Valheim and profiles.
 /// </summary>
 [Collection("DataDir")]
 public sealed class ModManifestsTests : IDisposable
@@ -57,13 +57,13 @@ public sealed class ModManifestsTests : IDisposable
     [Fact]
     public void AManifestNamesDataAndHidesAndGroupsPrefabs()
     {
-        Manifest("zolantris-ValheimRAFT/Assets", """
+        Manifest("SomeMod/Assets", """
             {
               // Comments and trailing commas are fine.
               "version": 1,
               "data": {
-                "MBParentId": { "label": "Parent vehicle", "readOnly": true, "help": "The vehicle this piece is part of." },
-                "MBPosition": { "label": "Place on the vehicle" },
+                "Mod_Parent": { "label": "Parent vehicle", "readOnly": true, "help": "The vehicle this piece is part of." },
+                "Mod_Place": { "label": "Place on the vehicle" },
               },
               "prefabs": {
                 "BoundaryChunk": { "hidden": true },
@@ -74,9 +74,9 @@ public sealed class ModManifestsTests : IDisposable
 
         Assert.Equal(1, ModManifests.Refresh(Settings));
 
-        Assert.Equal(new ModManifests.DataNote("Parent vehicle", true, "The vehicle this piece is part of."), ModManifests.DataOf("MBParentId"));
-        Assert.Equal(new ModManifests.DataNote("Place on the vehicle", false, null), ModManifests.DataOf("MBPosition"));
-        Assert.Null(ModManifests.DataOf("MBRotation"));
+        Assert.Equal(new ModManifests.DataNote("Parent vehicle", true, "The vehicle this piece is part of."), ModManifests.DataOf("Mod_Parent"));
+        Assert.Equal(new ModManifests.DataNote("Place on the vehicle", false, null), ModManifests.DataOf("Mod_Place"));
+        Assert.Null(ModManifests.DataOf("Mod_Turn"));
         Assert.Null(ModManifests.DataOf(null));
         Assert.True(ModManifests.IsHidden("BoundaryChunk"));
         Assert.False(ModManifests.IsHidden("hull_rib"));
@@ -176,7 +176,7 @@ public sealed class ModManifestsTests : IDisposable
         """;
 
     [Fact]
-    public void AManifestsLinksAreUsedAfterTheShippedOnes()
+    public void AManifestsLinksComeAfterTheBaseOnes()
     {
         Manifest("Carts", Carts);
 
@@ -238,28 +238,27 @@ public sealed class ModManifestsTests : IDisposable
         Assert.True(ModManifests.IsHidden("p"));
     }
 
-    // ValheimRAFT ships no manifest; the editor's own says how its vehicles link. One the mod ships wins, however old,
-    // and takes the shipped rule's place: first, before another mod's rule read earlier.
+    // The editor ships no manifest for any mod; the tests' example mod stands in (ModManifests.Base). A newer file's
+    // rule of the same id key replaces an older one's in its place: first stays first.
     [Fact]
-    public void TheEditorShipsValheimRaftsLinksAndTheModsOwnWins()
+    public void TheEditorShipsNoManifestAndANewerRuleTakesAnOlderOnesPlace()
     {
-        var raft = Assert.Single(ObjectLinks.Current.Rules);
-        Assert.Equal(("vehicle", StableHash.Of("PersistentID"), true), (raft.Name, raft.IdKey, raft.StoredAtRoot));
-        Assert.Equal([StableHash.Of("SwivelParentId"), StableHash.Of("MBParentId")], raft.ParentKeys);
-        Assert.Contains(StableHash.Of("MBRopeAnchor_Ropes"), raft.DropKeys);
+        var example = ExampleMod.Rule;
+        Assert.Equal(("vehicle", StableHash.Of(ExampleMod.IdKey), true), (example.Name, example.IdKey, example.StoredAtRoot));
+        ModManifests.Base = [];
+        try
+        {
+            Assert.Empty(ObjectLinks.Current.Rules);
+            Assert.Equal(0, ModManifests.Refresh(Settings));
+            Assert.Empty(ObjectLinks.Current.Rules);
+        }
+        finally
+        {
+            ModManifests.Base = [ExampleMod.Manifest];
+        }
 
-        // The same rule and one reference more (the editor's rule keeps working in tests running alongside).
-        string own = Manifest("zolantris-ValheimRAFT", """
-            {
-              "version": 1,
-              "links": [{
-                "name": "vehicle", "id": "PersistentID", "parents": ["SwivelParentId", "MBParentId"], "offset": "MBPosition",
-                "rotation": "MBRotationVec", "rotationQuaternion": "MBRotation",
-                "references": ["SailParentId", "MBCultivatableParentId", "Mechanism_swivelTargetId", "TestReference"],
-                "dropOnCopy": ["MBRopeAnchor_Ropes", "VehicleTempPieceParentId"]
-              }]
-            }
-            """);
+        // The same rule and one reference more, newer than the carts' file.
+        string own = Manifest("ExampleVehicles", ExampleMod.Manifest.Replace($""""{ExampleMod.DrivesKey}"]"""", $""""{ExampleMod.DrivesKey}", "TestReference"]"""", StringComparison.Ordinal));
         File.SetLastWriteTimeUtc(own, new DateTime(2001, 1, 1, 0, 0, 0, DateTimeKind.Utc));
         File.SetLastWriteTimeUtc(Manifest("Carts", Carts), new DateTime(2000, 1, 1, 0, 0, 0, DateTimeKind.Utc));
         ModManifests.Refresh(Settings);

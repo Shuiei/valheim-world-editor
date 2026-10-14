@@ -2,6 +2,7 @@ using System.Numerics;
 using TerrainEditor.App;
 using TerrainEditor.Editing;
 using TerrainEditor.Save;
+using WorldEditor.Tests;
 using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
@@ -94,7 +95,7 @@ public class WorldSceneThingsTests
         Assert.Equal(new Vector3(7, 30, 7), found[5].Position);
     }
 
-    // A ValheimRAFT ship's part, stored at its root, is drawn at its offset in the root's frame, the root leaning as
+    // A ship (the example vehicle mod's)'s part, stored at its root, is drawn at its offset in the root's frame, the root leaning as
     // stored (a building piece read keeps only its turn about y); found by id the same way; with its root deleted,
     // where it is stored.
     [Fact]
@@ -108,9 +109,9 @@ public class WorldSceneThingsTests
         {
             world.ObjectRefs.Add(new ObjectRef { File = new ChunkFile(), Start = 0, Prefab = Wall, Position = at, IsPiece = true });
         }
-        var raft = ObjectLinks.Current.Rules.Single(r => r.IdKey == StableHash.Of("PersistentID"));
-        world.Links[6] = (new ObjectLink(raft, 500, [0, 0], Vector3.Zero, null, null), new Vector3(10, 90, 0));
-        world.Links[7] = (new ObjectLink(raft, 0, [0, 500], new Vector3(2, 0, 0), Vector3.Zero, null), Vector3.Zero);
+        var rule = ExampleMod.Rule;
+        world.Links[6] = (new ObjectLink(rule, 500, [0, 0], Vector3.Zero, null, null), new Vector3(10, 90, 0));
+        world.Links[7] = (new ObjectLink(rule, 0, [0, 500], new Vector3(2, 0, 0), Vector3.Zero, null), Vector3.Zero);
         var things = WorldScene.ReadThings(world, 0, 0, 1, 1, new HashSet<int>());
         Assert.Equal(new Vector3(10, 90, 0), things.Single(t => t.Id == 6).Rotation);
         var part = things.Single(t => t.Id == 7);

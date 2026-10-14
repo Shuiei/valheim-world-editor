@@ -7,7 +7,7 @@ namespace WorldEditor.Tests;
 /// <summary>
 /// Objects made in code, as the game sends them live (WorldEditorBridge /zone: a ZDO's bytes in the save's format), for
 /// what the test world does not hold: a player's piece (with its builder), a placed location (a LocationProxy naming
-/// it), a dungeon with its room list, and a ValheimRAFT vehicle's root and parts. Made-up content: only the prefab and
+/// it), a dungeon with its room list, and a vehicle's root and parts. Made-up content: only the prefab and
 /// data names are the game's and the mod's.
 /// </summary>
 public static class MadeObjects
@@ -50,31 +50,31 @@ public static class MadeObjects
     public static byte[] Dungeon(string prefab, Vector3 position, byte[] roomData) => Zdo(prefab, position, z => z.ByteList.Add((Dungeons.RoomDataKey, roomData)));
 
     /// <summary>
-    /// A vehicle's root (ValheimRAFT): its PersistentID, at a place and turned (Euler degrees) as stored.
+    /// A vehicle's root (the example vehicle mod's): its id, at a place and turned (Euler degrees) as stored.
     /// </summary>
     public static byte[] VehicleRoot(string prefab, Vector3 position, Vector3 rotation, int persistentId) => Zdo(prefab, position, z =>
     {
         z.Rotation = rotation;
-        z.IntList.Add((StableHash.Of("PersistentID"), persistentId));
+        z.IntList.Add((StableHash.Of(ExampleMod.IdKey), persistentId));
     });
 
     /// <summary>
-    /// A vehicle's part, stored at its root's position as the game saves it: its vehicle's PersistentID, its offset and
-    /// turn in its parent's frame, and, given, the swivel it is on and its own PersistentID.
+    /// A vehicle's part, stored at its root's position as the game saves it: its vehicle's id, its offset and
+    /// turn in its parent's frame, and, given, the swivel it is on and its own id.
     /// </summary>
     public static byte[] VehiclePart(string prefab, Vector3 rootPosition, int parent, Vector3 offset, Vector3 euler, int swivel = 0, int persistentId = 0) =>
         Zdo(prefab, rootPosition, z =>
         {
-            z.IntList.Add((StableHash.Of("MBParentId"), parent));
+            z.IntList.Add((StableHash.Of(ExampleMod.VehicleKey), parent));
             if (swivel != 0)
             {
-                z.IntList.Add((StableHash.Of("SwivelParentId"), swivel));
+                z.IntList.Add((StableHash.Of(ExampleMod.MountKey), swivel));
             }
             if (persistentId != 0)
             {
-                z.IntList.Add((StableHash.Of("PersistentID"), persistentId));
+                z.IntList.Add((StableHash.Of(ExampleMod.IdKey), persistentId));
             }
-            z.Vec3List.Add((StableHash.Of("MBPosition"), offset));
-            z.Vec3List.Add((StableHash.Of("MBRotationVec"), euler));
+            z.Vec3List.Add((StableHash.Of(ExampleMod.OffsetKey), offset));
+            z.Vec3List.Add((StableHash.Of(ExampleMod.TurnKey), euler));
         });
 }

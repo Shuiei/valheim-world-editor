@@ -6,7 +6,7 @@ using Xunit;
 namespace TerrainEditor.Desktop.Tests;
 
 /// <summary>
-/// ValheimRAFT's vehicles (linked by the manifest the editor ships) in an edit session: parts drawn where the mod builds them (stored at the root), a part
+/// the example vehicle mod's vehicles (tests/Support/ExampleMod) in an edit session: parts drawn where the mod builds them (stored at the root), a part
 /// moved taking its whole vehicle along (the parts stored at the root's new place), a root deleted taking its parts, a
 /// root gone leaving its parts where they are stored, and a saved ship read back where it was drawn.
 /// </summary>

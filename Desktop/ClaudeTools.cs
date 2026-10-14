@@ -1002,7 +1002,7 @@ public sealed partial class ClaudeTools
 
     /// <summary>remove_objects: takes objects away by id, as one pending step.</summary>
     [McpServerTool(Name = "remove_objects", Title = "Take objects away")]
-    [Description("Takes objects of the open area (or the plot) away, by their ids (list_objects, place_pieces), as one step of the history (pending). A part of a group a mod links into one (a ValheimRAFT ship) takes its whole group away.")]
+    [Description("Takes objects of the open area (or the plot) away, by their ids (list_objects, place_pieces), as one step of the history (pending). A part of a group a mod links into one (a ship and the pieces built on it) takes its whole group away.")]
     public Task<string> RemoveObjects([Description("Their ids.")] int[] ids) => OnUi(() =>
     {
         if (CannotEdit() is string why)

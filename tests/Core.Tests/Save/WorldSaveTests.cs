@@ -278,7 +278,7 @@ public class WorldSaveTests
         Assert.DoesNotContain(world.Placed, p => p.Location == MadeObjects.MadeUpLocation);
     }
 
-    // A ValheimRAFT vehicle's root and part (linked by the manifest the editor ships): their links read (the root's
+    // A vehicle's root and part (the example mod's): their links read (the root's
     // whole turn too), read again when the game changes them, gone with them.
     [Fact]
     public void LiveLinksComeChangeAndGoWithTheirObjects()
@@ -288,7 +288,7 @@ public class WorldSaveTests
         byte[] root = MadeObjects.VehicleRoot("ValheimVehicles_WaterVehicleShip", at, new Vector3(10, 90, 0), 7);
         // The part also keeps the turn as older versions of the mod did.
         var part = ZdoData.Parse(MadeObjects.VehiclePart("wood_floor", at, 7, new Vector3(1, 2, 3), new Vector3(0, 45, 0), 8));
-        part.QuatList.Add((StableHash.Of("MBRotation"), new Quaternion(0.1f, 0.2f, 0.3f, 0.9f)));
+        part.QuatList.Add((StableHash.Of(ExampleMod.TurnQuatKey), new Quaternion(0.1f, 0.2f, 0.3f, 0.9f)));
         var came = world.MergeLive([(10, 10)], [(4242, 1, root), (4242, 2, part.Serialize())], _ => false, _ => false)!;
         var (link, rotation) = world.Links[came.Added[0]];
         Assert.Equal(7, link.Id);

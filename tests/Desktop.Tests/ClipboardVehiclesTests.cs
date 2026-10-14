@@ -3,19 +3,20 @@ using System.Numerics;
 using TerrainEditor.App;
 using TerrainEditor.Editing;
 using TerrainEditor.Save;
+using WorldEditor.Tests;
 using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
 /// <summary>
-/// Copying and pasting ValheimRAFT vehicles (linked by the manifest the editor ships): a part copied brings its whole vehicle, without the ground under it (it
-/// does not stand on it); each paste is a vehicle of its own (new PersistentIDs, its parts naming its root), drawn in
+/// Copying and pasting the example vehicle mod's vehicles (tests/Support/ExampleMod): a part copied brings its whole vehicle, without the ground under it (it
+/// does not stand on it); each paste is a vehicle of its own (new ids, its parts naming its root), drawn in
 /// the ship's shape and stored at its root.
 /// </summary>
 public class ClipboardVehiclesTests
 {
-    // ValheimRAFT's data keys.
-    private static readonly int IdKey = StableHash.Of("PersistentID"), SwivelKey = StableHash.Of("SwivelParentId");
+    // The example mod's data keys.
+    private static readonly int IdKey = StableHash.Of(ExampleMod.IdKey), SwivelKey = StableHash.Of(ExampleMod.MountKey);
 
     /// <summary>An int value of an added thing's data (null when it has none).</summary>
     private static int? IntOf(EditSession s, int index, int key) =>
@@ -58,7 +59,7 @@ public class ClipboardVehiclesTests
             int id = IntOf(s, root, IdKey)!.Value;
             roots.Add(id);
             var parts = added.Where(i => i != root).ToList();
-            Assert.All(parts, i => Assert.Equal(id, IntOf(s, i, StableHash.Of("MBParentId"))));
+            Assert.All(parts, i => Assert.Equal(id, IntOf(s, i, StableHash.Of(ExampleMod.VehicleKey))));
             int swivel = Assert.Single(parts, i => IntOf(s, i, IdKey) != null);
             Assert.NotEqual(TestScenes.SwivelId, IntOf(s, swivel, IdKey));
             Assert.Equal(IntOf(s, swivel, IdKey), IntOf(s, Assert.Single(parts, i => IntOf(s, i, SwivelKey) != null), SwivelKey));
