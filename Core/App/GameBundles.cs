@@ -554,10 +554,12 @@ public sealed class GameBundles
         foreach (string bundle in _files.Keys.Order(StringComparer.Ordinal))
         {
             // A bundle that cannot be read (a mod's, damaged or unusual) is skipped: the others' names still count.
+            BundleFileInstance? b = null;
+            AssetsFileInstance? a = null;
             try
             {
-                var b = _am.LoadBundleFile(_files[bundle], false);
-                var a = _am.LoadAssetsFileFromBundle(b, 0, false);
+                b = _am.LoadBundleFile(_files[bundle], false);
+                a = _am.LoadAssetsFileFromBundle(b, 0, false);
                 var reader = a.file.Reader;
                 foreach (var info in a.file.AssetInfos)
                 {
@@ -579,16 +581,27 @@ public sealed class GameBundles
                     }
                     list.Add(new Where(bundle, info.PathId));
                 }
-                if (!_open.ContainsKey(bundle))
-                {
-                    _am.UnloadAssetsFile(a);
-                    _am.UnloadBundleFile(b);
-                }
             }
             catch (Exception e) when (e is IOException or InvalidDataException or NotImplementedException or NotSupportedException or EndOfStreamException
                 or IndexOutOfRangeException or ArgumentException or NullReferenceException or OverflowException)
             {
                 Console.WriteLine($"game files: the names of {bundle} could not be read ({e.Message}), skipped");
+            }
+            finally
+            {
+                // Closed again, read whole or not (a file kept open could not be replaced later), unless kept for
+                // reading its assets.
+                if (!_open.ContainsKey(bundle))
+                {
+                    if (a != null)
+                    {
+                        _am.UnloadAssetsFile(a);
+                    }
+                    if (b != null)
+                    {
+                        _am.UnloadBundleFile(b);
+                    }
+                }
             }
         }
         Console.WriteLine($"game files: {named.Count} mesh, material and texture names read from {_files.Count} bundles in {sw.ElapsedMilliseconds} ms");

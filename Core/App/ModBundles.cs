@@ -21,6 +21,9 @@ public static class ModBundles
     /// <summary>What the copies were made from (their sources' paths, sizes and times): copied again when it changes.</summary>
     private static string StampFile => Path.Combine(AppSettings.UserDataDir, "mod-bundles.json");
 
+    /// <summary>The names of the sources that could not be copied last time (JSON), to try again next time.</summary>
+    private static string FailedFile => Path.Combine(AppSettings.UserDataDir, "mod-bundles-failed.json");
+
     /// <summary>The bundles' index, kept as the game's is (GameBundles).</summary>
     private static string IndexFile => Path.Combine(AppSettings.UserDataDir, "mod-bundles-index.json");
 
@@ -213,17 +216,29 @@ public static class ModBundles
     /// </summary>
     private static void Copy(List<Source> sources, string stamp)
     {
-        if (File.Exists(StampFile) && File.ReadAllText(StampFile) == stamp && Directory.Exists(Folder))
+        bool same = File.Exists(StampFile) && File.ReadAllText(StampFile) == stamp && Directory.Exists(Folder);
+        // The same sources as last time: only those that could not be copied then are tried again (a passing
+        // error), the rest stays as copied.
+        var retry = same && File.Exists(FailedFile) ? (JsonSerializer.Deserialize<List<string>>(File.ReadAllText(FailedFile)) ?? []).ToHashSet(StringComparer.Ordinal) : [];
+        if (same && retry.Count == 0)
         {
             return;
         }
-        if (Directory.Exists(Folder))
+        if (!same)
         {
-            Directory.Delete(Folder, true);
+            if (Directory.Exists(Folder))
+            {
+                Directory.Delete(Folder, true);
+            }
+            Directory.CreateDirectory(Folder);
         }
-        Directory.CreateDirectory(Folder);
+        var failed = new List<string>();
         foreach (var s in sources)
         {
+            if (same && !retry.Contains(s.Name))
+            {
+                continue;
+            }
             try
             {
                 byte[] bytes = s.Resource == null ? File.ReadAllBytes(s.Path) : FromDll(s.Path, s.Resource) ?? [];
@@ -233,14 +248,23 @@ public static class ModBundles
                 }
             }
             // Whatever a damaged or unusual bundle makes the reader throw: that bundle alone is left out (the others
-            // and the stamp still go), else no mod's model would be drawn.
+            // still go), else no mod's model would be drawn; it is tried again next time.
             catch (Exception e) when (e is not OutOfMemoryException)
             {
                 Console.WriteLine($"mod bundles: {s.Name} could not be copied ({e.Message}).");
+                failed.Add(s.Name);
             }
         }
         SafeFile.WriteAllText(StampFile, stamp);
-        Console.WriteLine($"mod bundles: {sources.Count} copied into {Folder}.");
+        if (failed.Count > 0)
+        {
+            SafeFile.WriteAllText(FailedFile, JsonSerializer.Serialize(failed));
+        }
+        else if (File.Exists(FailedFile))
+        {
+            File.Delete(FailedFile);
+        }
+        Console.WriteLine($"mod bundles: {sources.Count - failed.Count} copied into {Folder}{(failed.Count > 0 ? $", {failed.Count} not (tried again next time)" : "")}.");
     }
 
     /// <summary>An embedded resource of a DLL, by name.</summary>
