@@ -568,7 +568,12 @@ public sealed class GlView : OpenGlControlBase
         _terrainVao = _terrainIndexCount = _waterVao = _terrainVbo = _terrainExtraVbo = _terrainCutVbo = 0;
         _boxVbo = _boxEbo = _ghostVbo = 0;
         _pathVao = _pathVbo = _pathEdgeVao = _pathEdgeVbo = _pathDotVao = _pathDotVbo = 0;
-        _placeRingVao = _placeRingVbo = _hoverBoxVao = _hoverBoxVbo = 0;
+        _placeRingVao = _placeRingVbo = _hoverBoxVao = _hoverBoxVbo = _previewVao = _previewVbo = 0;
+        _dungeonVao = _dungeonVbo = _dungeonPickVao = _dungeonPickVbo = _dungeonAddVao = _dungeonAddVbo = 0;
+        _dungeonDoorVao = _dungeonDoorVbo = _dungeonJointVao = _dungeonJointVbo = 0;
+        // A kept name drew the spawn markers into whatever the new context had given that number (an object batch:
+        // models torn into spikes, an orange wedge across the view) until the view was opened again.
+        _spawnMarkGl.Clear();
         _pathBandVao = _pathBandVbo = _pathSoftVao = _pathSoftVbo = _pathPreviewVao = _pathPreviewVbo = _pathPreviewSoftVao = _pathPreviewSoftVbo = 0;
         _markVao = _markVbo = _markProg = 0;
         _markCount = 0;
