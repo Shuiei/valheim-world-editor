@@ -156,6 +156,20 @@ public static class SeedLocations
         /// </summary>
         public float maxAltitude { get; set; }
         /// <summary>
+        /// 1: turned along the slope it stands on when spawned (ZoneLocation.m_slopeRotation), before randomRotation
+        /// is looked at.
+        /// </summary>
+        public int slopeRotation { get; set; }
+        /// <summary>
+        /// 1: turned by a random multiple of 22.5° when spawned (ZoneLocation.m_randomRotation), rolled from the
+        /// zone's seed.
+        /// </summary>
+        public int randomRotation { get; set; }
+        /// <summary>
+        /// 1: stands at the water's level, not the ground's (ZoneLocation.m_snapToWater).
+        /// </summary>
+        public int snapToWater { get; set; }
+        /// <summary>
         /// The alt biome that adds it; null for the game's own kinds.
         /// </summary>
         public string? altBiome { get; set; }

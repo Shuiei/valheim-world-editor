@@ -1,5 +1,7 @@
+using System.Numerics;
 using TerrainEditor.App;
 using TerrainEditor.Editing;
+using Rnd = ValheimGen.UnityEngine.Random;
 
 namespace TerrainEditor.Save;
 
@@ -9,8 +11,11 @@ namespace TerrainEditor.Save;
 /// chunk index (.chunks) and the commit marker (.ok), written last. The ground is the seed's own (the world generator);
 /// the zones within <c>radius</c> of the middle are generated with the game's vegetation rules (Regrow), the rest is
 /// left for the game to generate; zone 0, 0 also gets an unedited terrain compiler object, so the editor can save
-/// ground edits. Location instances (the start altar, villages, dungeons...) are not placed: the world is marked as not
-/// having them yet, so the game lays them out when it first loads it.
+/// ground edits. The seed's locations in the generated zones (the start temple, altars, ruins...) are spawned as the
+/// game would spawn them (Sites), and each generated zone gets its zone control object, as the game's own have; a zone
+/// whose location the editor cannot make (a dungeon's entrance, whose interior the game lays out) is left whole to the
+/// game. The world is marked as not having its locations laid out yet, so the game lays out the rest when it first
+/// loads it.
 /// </summary>
 public static class WorldCreator
 {
@@ -35,22 +40,30 @@ public static class WorldCreator
     /// <param name="FlatSpan">
     /// How many metres the bare zone's ground spans from lowest to highest (0 without one).
     /// </param>
-    public sealed record Created(string Directory, int Seed, int Zones, int Objects, (int X, int Z)? Flat = null, float FlatSpan = 0);
+    /// <param name="Locations">How many locations were spawned in the generated zones.</param>
+    public sealed record Created(string Directory, int Seed, int Zones, int Objects, (int X, int Z)? Flat = null, float FlatSpan = 0, int Locations = 0);
 
     /// <summary>
-    /// The most even zone of dry Meadows within <c>radius</c> zones of the middle (not on its edge): the one whose
-    /// ground spans the fewest metres. Null when none is wholly above the water.
+    /// The most even zone of dry Meadows within <c>radius</c> zones of the middle (not on its edge), none of
+    /// <paramref name="avoid"/>: the one whose ground spans the fewest metres. Null when none is wholly above the water.
     /// </summary>
+    /// <param name="terrain">The world's terrain.</param>
+    /// <param name="radius">How far from the middle to look, in zones.</param>
+    /// <param name="avoid">Zones not to take (those holding a location); none by default.</param>
     /// <returns>
     /// The zone and its ground's span in metres (dry: its lowest point at least 1.5 m above the water).
     /// </returns>
-    public static (int X, int Z, float Span)? FlattestZone(ValheimGen.TerrainService terrain, int radius)
+    public static (int X, int Z, float Span)? FlattestZone(ValheimGen.TerrainService terrain, int radius, IReadOnlySet<(int X, int Z)>? avoid = null)
     {
         (int, int, float)? best = null;
         for (int z = -radius + 1; z < radius; z++)
         {
             for (int x = -radius + 1; x < radius; x++)
             {
+                if (avoid?.Contains((x, z)) == true)
+                {
+                    continue;
+                }
                 float[] h = terrain.BaseZone(x, z);
                 float lo = h.Min(), hi = h.Max();
                 if (lo < ValheimGen.TerrainService.WaterLevel + 1.5f || best is { } b && hi - lo >= b.Item3)
@@ -130,40 +143,81 @@ public static class WorldCreator
         var db = ZoneDb.Empty(SaveFileVersion, LocationVersion, Tail());
         db.Save(main + ".db2");
 
-        int objects = 0, zones = 0;
+        int objects = 0, zones = 0, placed = 0;
         (int X, int Z, float Span)? flatZone = null;
         if (radius > 0)
         {
-            // The game's vegetation on the seed's own ground, zone by zone, in base chunk files.
+            // The game's vegetation on the seed's own ground, zone by zone, in base chunk files, and the seed's
+            // locations in those zones as the game would spawn them. A zone whose location the editor cannot make is
+            // left whole to the game: nothing grows in it, and it is not marked generated.
             var empty = WorldSave.Load(folder);
             var terrain = new ValheimGen.TerrainService(empty);
+            var sites = Sites(terrain, seed, radius);
+            var left = sites.Where(s => s.Objects == null).Select(s => s.Zone).ToHashSet();
             var spots = Regrow.Zones(terrain, new EditStore(empty), seed, -radius, -radius, radius, radius);
+            (int X, int Z)? bare = null;
             if (flat)
             {
-                flatZone = FlattestZone(terrain, radius) ?? throw new InvalidOperationException("No zone of dry, even Meadows near the middle: try another seed or a larger radius.");
-                var (fx, fz, _) = flatZone.Value;
-                // Nothing grows on it.
-                spots = [.. spots.Where(s => (int)MathF.Floor((s.X + 32) / 64) != fx || (int)MathF.Floor((s.Z + 32) / 64) != fz)];
+                flatZone = FlattestZone(terrain, radius, sites.Select(s => s.Zone).ToHashSet()) ?? throw new InvalidOperationException("No zone of dry, even Meadows near the middle: try another seed or a larger radius.");
+                bare = (flatZone.Value.X, flatZone.Value.Z);
+            }
+            // Nothing grows on the bare zone, in the zones left to the game, or on the ground a location clears.
+            bool Grows(Regrow.Spot s)
+            {
+                var zone = ChunkMath.SectorOf(s.X, s.Z);
+                return zone != bare && !left.Contains(zone)
+                    && !sites.Any(l => l.Clear > 0f && (s.X - l.Position.X) * (s.X - l.Position.X) + (s.Z - l.Position.Z) * (s.Z - l.Position.Z) < l.Clear * l.Clear);
             }
             var byChunk = new SortedDictionary<ushort, List<byte[]>>();
-            foreach (var s in spots)
+            // An object into its zone's base chunk file (never the portals' chunk).
+            void Add(float x, float z, byte[] zdo)
             {
-                int prefab = StableHash.Of(s.Name);
-                if (Terrain.PrefabCatalog.Get(prefab) is not { } info)
-                {
-                    continue;
-                }
-                var (sx, sz) = ChunkMath.SectorOf(s.X, s.Z);
+                var (sx, sz) = ChunkMath.SectorOf(x, z);
                 ushort chunk = ChunkMath.BaseChunk(sx, sz);
                 if (chunk == ChunkMath.PortalChunk)
                 {
-                    continue;
+                    return;
                 }
-                (byChunk.TryGetValue(chunk, out var list) ? list : byChunk[chunk] = []).Add(ZdoBuilder.Blank(prefab, info.Flags, new System.Numerics.Vector3(s.X, s.Y, s.Z), new System.Numerics.Vector3(s.Rx, s.Ry, s.Rz), s.Scale));
+                (byChunk.TryGetValue(chunk, out var list) ? list : byChunk[chunk] = []).Add(zdo);
                 objects++;
             }
-            // One terrain compiler object, with no edit, in the middle zone: the writer copies it for
-            // every zone whose ground is edited later (the game makes the first one on the first edit).
+            foreach (var s in spots.Where(Grows))
+            {
+                int prefab = StableHash.Of(s.Name);
+                if (Terrain.PrefabCatalog.Get(prefab) is { } info)
+                {
+                    Add(s.X, s.Z, ZdoBuilder.Blank(prefab, info.Flags, new Vector3(s.X, s.Y, s.Z), new Vector3(s.Rx, s.Ry, s.Rz), s.Scale));
+                }
+            }
+            foreach (var site in sites)
+            {
+                if (site.Objects is { } made)
+                {
+                    foreach (var (at, zdo) in made)
+                    {
+                        Add(at.X, at.Z, zdo);
+                    }
+                    db.Locations.Add((site.Hash, site.Position, true));
+                    placed++;
+                }
+            }
+            // The game's own objects of a generated zone: a zone control in each (its creatures spawn from it), and one
+            // terrain compiler object, with no edit, in the middle zone: the writer copies it for every zone whose
+            // ground is edited later (the game makes the first one on the first edit).
+            ushort ctrlFlags = Terrain.PrefabCatalog.Get(ZoneCtrl)?.Flags ?? 0x0100;
+            for (int z = -radius; z <= radius; z++)
+            {
+                for (int x = -radius; x <= radius; x++)
+                {
+                    if (left.Contains((x, z)))
+                    {
+                        continue;
+                    }
+                    Add(x * 64f, z * 64f, ZdoBuilder.Blank(ZoneCtrl, ctrlFlags, new Vector3(x * 64f, 0f, z * 64f), Vector3.Zero, 0f));
+                    db.Generated.Add(((short)x, (short)z));
+                    zones++;
+                }
+            }
             ushort middle = ChunkMath.BaseChunk(0, 0);
             (byChunk.TryGetValue(middle, out var mid) ? mid : byChunk[middle] = []).Add(EmptyTerrainObject());
             objects++;
@@ -174,19 +228,121 @@ public static class WorldCreator
                 index.Add((chunk, list.Count));
             }
             WriteIndex(main + ".chunks", index);
-            for (int z = -radius; z <= radius; z++)
-            {
-                for (int x = -radius; x <= radius; x++)
-                {
-                    db.Generated.Add(((short)x, (short)z));
-                    zones++;
-                }
-            }
             db.Save(main + ".db2");
         }
         // Written last, like the game: only then is the save complete.
         File.WriteAllBytes(main + ".ok", BitConverter.GetBytes(SaveFileVersion));
-        return new Created(folder, seed, zones, objects, flatZone is var (cx, cz, _) ? (cx, cz) : null, flatZone?.Span ?? 0);
+        return new Created(folder, seed, zones, objects, flatZone is var (cx, cz, _) ? (cx, cz) : null, flatZone?.Span ?? 0, placed);
+    }
+
+    /// <summary>Prefab hash of the game's zone control object (one in every generated zone).</summary>
+    private static readonly int ZoneCtrl = StableHash.Of("_ZoneCtrl");
+
+    /// <summary>Int data key of a location proxy's seed.</summary>
+    private static readonly int SeedKey = StableHash.Of("seed");
+
+    /// <summary>A location of the seed in a zone to generate.</summary>
+    /// <param name="Zone">Its zone.</param>
+    /// <param name="Name">Its kind's prefab name.</param>
+    /// <param name="Hash">The name's stable hash: its proxy's location, the zone file's entry.</param>
+    /// <param name="Position">Where it stands, world metres (the water's level when its kind snaps to the water).</param>
+    /// <param name="Clear">How far around it the vegetation is cleared (0: not cleared).</param>
+    /// <param name="Objects">
+    /// What is written for it (its networked objects, then its proxy), each with where it is; null when its zone is left
+    /// to the game.
+    /// </param>
+    internal sealed record Site((int X, int Z) Zone, string Name, int Hash, Vector3 Position, float Clear, List<(Vector3 At, byte[] Zdo)>? Objects);
+
+    /// <summary>
+    /// The seed's locations within <paramref name="radius"/> zones of the middle, as the game would spawn them when it
+    /// generates their zones (ZoneSystem.PlaceLocations and SpawnLocation): laid out by SeedLocations (none when the
+    /// game's rules are not read), stood on the generator's ground or the water, turned along the slope or at random
+    /// from the zone's seed as their kind asks, with their networked objects (those their random parts keep, rolled
+    /// from that seed) and a location proxy. A location with an interior (a dungeon's entrance: the game lays out its
+    /// rooms itself) or one the game's files do not describe has no objects: its zone is left to the game.
+    /// </summary>
+    /// <param name="terrain">The new world's terrain (its generator).</param>
+    /// <param name="seed">The world's seed number.</param>
+    /// <param name="radius">How far from the middle the zones are generated.</param>
+    internal static List<Site> Sites(ValheimGen.TerrainService terrain, int seed, int radius)
+    {
+        var sites = new List<Site>();
+        if (!ValheimGen.SeedLocations.Available)
+        {
+            return sites;
+        }
+        ushort proxyFlags = Terrain.PrefabCatalog.Get(WorldSave.LocationProxyPrefab)?.Flags ?? 0x0B00;
+        Rnd.State was = Rnd.state;
+        try
+        {
+            foreach (var p in ValheimGen.SeedLocations.Place(terrain.Generator, ValheimGen.SeedLocations.Which.All))
+            {
+                var zone = ChunkMath.SectorOf(p.X, p.Z);
+                if (Math.Abs(zone.X) > radius || Math.Abs(zone.Z) > radius)
+                {
+                    continue;
+                }
+                int hash = StableHash.Of(p.Rule.prefab);
+                var position = new Vector3(p.X, p.Rule.snapToWater != 0 ? ValheimGen.TerrainService.WaterLevel : p.Y, p.Z);
+                if (LocationPrefabs.Get(p.Rule.prefab) is not { Interior: false } prefab)
+                {
+                    sites.Add(new Site(zone, p.Rule.prefab, hash, position, 0f, null));
+                    continue;
+                }
+                int zoneSeed = LocationPrefabs.ZoneSeed(seed, zone.X, zone.Z);
+                float yaw = Yaw(p.Rule, terrain, position, zoneSeed);
+                var objects = new List<(Vector3 At, byte[] Zdo)>();
+                foreach (var m in LocationPrefabs.Made(prefab, position, Quaternion.CreateFromAxisAngle(Vector3.UnitY, yaw * MathF.PI / 180f), zoneSeed))
+                {
+                    int made = StableHash.Of(m.Prefab);
+                    if (Terrain.PrefabCatalog.Get(made) is { } info)
+                    {
+                        objects.Add((m.Position, ZdoBuilder.Blank(made, info.Flags, m.Position, BlueprintFormats.ToEuler(m.Rotation), 0f)));
+                    }
+                }
+                objects.Add((position, ZdoBuilder.Blank(WorldSave.LocationProxyPrefab, proxyFlags, position, new Vector3(0f, yaw, 0f), 0f, [(WorldSave.LocationKey, hash), (SeedKey, zoneSeed)])));
+                sites.Add(new Site(zone, p.Rule.prefab, hash, position, prefab.ClearArea ? p.Rule.exteriorRadius : 0f, objects));
+            }
+        }
+        finally
+        {
+            Rnd.state = was;
+        }
+        return sites;
+    }
+
+    /// <summary>
+    /// The turn (degrees about the vertical) the game gives a location it spawns: along the slope under it when its
+    /// kind asks (facing across the ground's normal, Quaternion.LookRotation of the normal crossed with up), else a
+    /// random multiple of 22.5° from the zone's seed when its kind asks (the zone's first draw), else none. Rolled on
+    /// the shared Unity random, which the caller puts back.
+    /// </summary>
+    private static float Yaw(ValheimGen.SeedLocations.Rule rule, ValheimGen.TerrainService terrain, Vector3 at, int zoneSeed)
+    {
+        if (rule.slopeRotation != 0)
+        {
+            Vector3 n = Normal(terrain, at.X, at.Z);
+            return MathF.Atan2(-n.Z, n.X) * 180f / MathF.PI;
+        }
+        if (rule.randomRotation != 0)
+        {
+            Rnd.InitState(zoneSeed);
+            return Rnd.Range(0, 16) * 22.5f;
+        }
+        return 0f;
+    }
+
+    /// <summary>The ground's normal at a world point, from the generator's heights a metre apart around it.</summary>
+    private static Vector3 Normal(ValheimGen.TerrainService terrain, float x, float z)
+    {
+        float H(float wx, float wz)
+        {
+            var (zx, zz) = ChunkMath.SectorOf(wx, wz);
+            float[] h = terrain.BaseZone(zx, zz);
+            int ix = Math.Clamp((int)MathF.Round(wx - (zx * 64f - 32f)), 0, 64), iz = Math.Clamp((int)MathF.Round(wz - (zz * 64f - 32f)), 0, 64);
+            return h[iz * 65 + ix];
+        }
+        return Vector3.Normalize(new Vector3(H(x - 1f, z) - H(x + 1f, z), 2f, H(x, z - 1f) - H(x, z + 1f)));
     }
 
     /// <summary>Prefab hash of the game's per-zone terrain compiler object.</summary>
@@ -199,7 +355,7 @@ public static class WorldCreator
     internal static byte[] EmptyTerrainObject()
     {
         ushort flags = Terrain.PrefabCatalog.Get(TerrainCompiler)?.Flags ?? 0x0D00;
-        var z = ZdoData.Parse(ZdoBuilder.Blank(TerrainCompiler, flags, System.Numerics.Vector3.Zero, System.Numerics.Vector3.Zero, 0f));
+        var z = ZdoData.Parse(ZdoBuilder.Blank(TerrainCompiler, flags, Vector3.Zero, Vector3.Zero, 0f));
         z.SmallPosition = true;
         z.SetBytes(StableHash.Of("TCData"), WorldWriter.EncodeTerrain(new ZoneEdit(0, 0)));
         return z.Serialize();

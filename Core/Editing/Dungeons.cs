@@ -139,14 +139,11 @@ public static class Dungeons
         {
             JsonElement r = p.Value;
             bool B(string k) => r.GetProperty(k).GetInt32() != 0;
+            var (contents, spawns, picks, nodes) = Parts(r);
             rooms[StableHash.Of(p.Name)] = new Room(p.Name, StableHash.Of(p.Name), r.GetProperty("theme").GetInt32(), V(r.GetProperty("size"), 0),
                 B("endCap"), B("entrance"), B("divider"), r.GetProperty("endCapPrio").GetInt32(), r.GetProperty("weight").GetSingle(), B("perimeter"), B("enabled"),
                 [.. r.GetProperty("openings").EnumerateArray().Select(o => new Opening(o[0].GetString() ?? "", o[1].GetInt32() != 0, o[2].GetInt32() != 0, V(o, 4), Q(o, 7), o[3].GetInt32() != 0))],
-                [.. r.GetProperty("contents").EnumerateArray().Select(c => new Content(c[0].GetString() ?? "", V(c, 1), Q(c, 4), c[8].GetInt32()))],
-                [.. r.GetProperty("spawns").EnumerateArray().Select(x => new Spawn(x[0].GetInt32(), x[1].GetSingle(), x[2].GetInt32(), x[3].GetInt32(), x[4].GetInt32(), x[5].GetInt32()))],
-                [.. r.GetProperty("picks").EnumerateArray().Select(x => new Pick(x[0].GetInt32(), x[1].GetInt32(),
-                    [.. x[2].EnumerateArray().Select(c => (c[0].GetInt32(), c[1].GetSingle()))], x[3].GetInt32(), x[4].GetInt32()))],
-                [.. r.GetProperty("nodes").EnumerateArray().Select(n => n.GetInt32())]);
+                contents, spawns, picks, nodes);
         }
         var kinds = new Dictionary<int, Kind>();
         foreach (JsonProperty p in doc.RootElement.GetProperty("dungeons").EnumerateObject())
@@ -160,6 +157,21 @@ public static class Dungeons
             };
         }
         return new Catalog(rooms, kinds);
+    }
+
+    /// <summary>
+    /// The contents, spawns, picks and nodes of a room's or a location's JSON entry (what the scan writes of a
+    /// prefab's tree).
+    /// </summary>
+    internal static (Content[] Contents, Spawn[] Spawns, Pick[] Picks, int[] Nodes) Parts(JsonElement r)
+    {
+        static Vector3 V(JsonElement a, int i) => new(a[i].GetSingle(), a[i + 1].GetSingle(), a[i + 2].GetSingle());
+        static Quaternion Q(JsonElement a, int i) => new(a[i].GetSingle(), a[i + 1].GetSingle(), a[i + 2].GetSingle(), a[i + 3].GetSingle());
+        return ([.. r.GetProperty("contents").EnumerateArray().Select(c => new Content(c[0].GetString() ?? "", V(c, 1), Q(c, 4), c[8].GetInt32()))],
+            [.. r.GetProperty("spawns").EnumerateArray().Select(x => new Spawn(x[0].GetInt32(), x[1].GetSingle(), x[2].GetInt32(), x[3].GetInt32(), x[4].GetInt32(), x[5].GetInt32()))],
+            [.. r.GetProperty("picks").EnumerateArray().Select(x => new Pick(x[0].GetInt32(), x[1].GetInt32(),
+                [.. x[2].EnumerateArray().Select(c => (c[0].GetInt32(), c[1].GetSingle()))], x[3].GetInt32(), x[4].GetInt32()))],
+            [.. r.GetProperty("nodes").EnumerateArray().Select(n => n.GetInt32())]);
     }
 
     // ---- The room list.
@@ -475,23 +487,45 @@ public static class Dungeons
     /// </summary>
     public static List<Made> Contents(Placed p, Kind kind, Vector3 dungeonPosition, int worldSeed)
     {
-        var made = new List<Made>();
         if (p.Room is not { } room || room.Contents.Length == 0)
         {
-            return made;
+            return [];
         }
         Vector3 v = kind.CustomInterior ? p.Position - dungeonPosition : p.Position;
         int seed = unchecked((int)v.X * 4271 + (int)v.Y * 9187 + (int)v.Z * 2134 + (kind.BaseSeed ? Seed(worldSeed, dungeonPosition) : 0));
-        bool[] off = new bool[room.Nodes.Length];
+        return Replay(room.Contents, room.Spawns, room.Picks, room.Nodes, kind.Themes, p.Position.Y, seed, p.Position, p.Rotation);
+    }
+
+    /// <summary>
+    /// What the game makes with a room or a location it spawns: its networked objects, those its random parts keep,
+    /// rolled the game's way (Random.InitState with the seed, then each RandomSpawn's chance, then each RandomObject's
+    /// pick, in order), moved and turned with it. The shared Unity random state is put back after.
+    /// </summary>
+    /// <param name="contents">Its networked objects, in its frame.</param>
+    /// <param name="spawns">Its RandomSpawn parts, in the order the game rolls them.</param>
+    /// <param name="picks">Its RandomObject parts, rolled after the spawns.</param>
+    /// <param name="nodes">Each random part's parent node (-1: the prefab itself).</param>
+    /// <param name="themes">The dungeon's themes a part may require (every bit set: none is checked, as for a location).</param>
+    /// <param name="y">The elevation the parts' limits are checked against.</param>
+    /// <param name="seed">What the rolls start from.</param>
+    /// <param name="position">Where it stands, world metres.</param>
+    /// <param name="rotation">Its turn.</param>
+    internal static List<Made> Replay(Content[] contents, Spawn[] spawns, Pick[] picks, int[] nodes, int themes, float y, int seed, Vector3 position, Quaternion rotation)
+    {
+        var made = new List<Made>();
+        if (contents.Length == 0)
+        {
+            return made;
+        }
+        bool[] off = new bool[nodes.Length];
         var was = Rnd.state;
         try
         {
             Rnd.InitState(seed);
-            float y = p.Position.Y;
-            foreach (var s in room.Spawns)
+            foreach (var s in spawns)
             {
                 bool spawned = Rnd.Range(0f, 100f) <= s.Chance;
-                if (s.Theme != 0 && (kind.Themes & s.Theme) == 0 || y < s.MinY || y > s.MaxY)
+                if (s.Theme != 0 && (themes & s.Theme) == 0 || y < s.MinY || y > s.MaxY)
                 {
                     spawned = false;
                 }
@@ -501,7 +535,7 @@ public static class Dungeons
                     Set(s.Off, spawned);
                 }
             }
-            foreach (var pick in room.Picks)
+            foreach (var pick in picks)
             {
                 float total = pick.Choices.Sum(c => c.Weight), roll = Rnd.Range(0f, total), sum = 0;
                 int? chosen = null;
@@ -514,7 +548,7 @@ public static class Dungeons
                         break;
                     }
                 }
-                if (pick.Theme != 0 && (kind.Themes & pick.Theme) == 0 || y < pick.MinY || y > pick.MaxY)
+                if (pick.Theme != 0 && (themes & pick.Theme) == 0 || y < pick.MinY || y > pick.MaxY)
                 {
                     chosen = null;
                 }
@@ -532,16 +566,16 @@ public static class Dungeons
         {
             Rnd.state = was;
         }
-        foreach (var c in room.Contents)
+        foreach (var c in contents)
         {
             bool shown = true;
-            for (int n = c.Node; n >= 0 && shown; n = room.Nodes[n])
+            for (int n = c.Node; n >= 0 && shown; n = nodes[n])
             {
                 shown = !off[n];
             }
             if (shown)
             {
-                made.Add(new Made(c.Prefab, p.ToWorld(c.Position), Quaternion.Normalize(p.Rotation * c.Rotation)));
+                made.Add(new Made(c.Prefab, position + Vector3.Transform(c.Position, rotation), Quaternion.Normalize(rotation * c.Rotation)));
             }
         }
         return made;

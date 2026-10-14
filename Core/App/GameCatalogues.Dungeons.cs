@@ -29,16 +29,20 @@ public static partial class GameCatalogues
     /// room's tree is read raw, level by level; of its scripts only those that matter (told once per
     /// script by their fields in the type tree) where it is active, the ZNetViews and RandomSpawns raw.
     /// The first room of a name is kept, the last dungeon (as the bundles come, in name order).
+    /// A location prefab (a root with a Location script: the start temple, an altar, ruins, a camp...) is read
+    /// like a room, for the zones a new world generates itself (WorldCreator): contents, spawns, picks and
+    /// nodes, with the Location's clearArea, randomDamage (m_applyRandomDamage) and interior (m_hasInterior:
+    /// a dungeon's entrance). The first of a name is kept.
     /// </summary>
     private sealed class DungeonScan : IStartScan
     {
         /// <summary>
-        /// The dungeons and the rooms found, by prefab name.
+        /// The dungeons, the rooms and the locations found, by prefab name.
         /// </summary>
-        private readonly Dictionary<string, Dict> _dungeons = [], _rooms = [];
+        private readonly Dictionary<string, Dict> _dungeons = [], _rooms = [], _locations = [];
 
         /// <summary>
-        /// The "dungeon-rooms" JSON: {"dungeons": ..., "rooms": ...}, each sorted by name, compact.
+        /// The "dungeon-rooms" JSON: {"dungeons": ..., "rooms": ..., "locations": ...}, each sorted by name, compact.
         /// </summary>
         public string Json()
         {
@@ -51,7 +55,7 @@ public static partial class GameCatalogues
                 }
                 return res;
             }
-            return CatalogueJson.Write(new Dict { ["dungeons"] = Sorted(_dungeons), ["rooms"] = Sorted(_rooms) }, new CatalogueJson.Style(",", ":"));
+            return CatalogueJson.Write(new Dict { ["dungeons"] = Sorted(_dungeons), ["rooms"] = Sorted(_rooms), ["locations"] = Sorted(_locations) }, new CatalogueJson.Style(",", ":"));
         }
 
         /// <summary>
@@ -64,6 +68,7 @@ public static partial class GameCatalogues
             : f.Contains("m_chanceToSpawn") && f.Contains("m_OffObject") ? "spawn"
             : f.Contains("m_objects") && f.Contains("m_dungeonRequireTheme") && !f.Contains("m_chanceToSpawn") ? "pick"
             : f.Contains("m_algorithm") && f.Contains("m_themes") && f.Contains("m_maxRooms") ? "generator"
+            : f.Contains("m_exteriorRadius") && f.Contains("m_clearArea") ? "location"
             : null;
 
         /// <summary>
@@ -521,8 +526,8 @@ public static partial class GameCatalogues
         }
 
         /// <summary>
-        /// Finds the Room and DungeonGenerator scripts of a bundle, up to their prefab roots, and reads each dungeon
-        /// and each room not met yet.
+        /// Finds the Room, DungeonGenerator and Location scripts of a bundle, up to their prefab roots, and reads each
+        /// dungeon, each room and each location not met yet.
         /// </summary>
         public void Read(Bundle b, Game game)
         {
@@ -530,10 +535,10 @@ public static partial class GameCatalogues
             var rooms = new HashSet<long>();
             foreach (var (f, info) in b.Objects)
             {
-                if (info.TypeId == MonoBehaviourType && game.ScriptClass(b, f, info) is string c and ("Room" or "DungeonGenerator") && Layout.First(f, info) is (0, var go))
+                if (info.TypeId == MonoBehaviourType && game.ScriptClass(b, f, info) is string c and ("Room" or "DungeonGenerator" or "Location") && Layout.First(f, info) is (0, var go))
                 {
                     owners.Add((f, go));
-                    if (c == "Room")
+                    if (c != "DungeonGenerator")
                     {
                         rooms.Add(go);
                     }
@@ -546,7 +551,7 @@ public static partial class GameCatalogues
             var roots = Layout.Roots(owners);
             Layout.Check(b, owners[0].Item2, roots);
             var open = new Open(b);
-            // The rooms' trees (a dungeon needs only its root).
+            // The rooms' and locations' trees (a dungeon needs only its root).
             if (roots.Where(rooms.Contains).ToList() is { Count: > 0 } trees)
             {
                 open.ReadTrees(trees);
@@ -589,6 +594,10 @@ public static partial class GameCatalogues
                 {
                     _rooms[name] = new RoomReader(open, info.PathId).Read(room);
                 }
+                if (kinds.TryGetValue("location", out var location) && !_locations.ContainsKey(name))
+                {
+                    _locations[name] = new RoomReader(open, info.PathId).ReadLocation(location);
+                }
             }
         }
 
@@ -615,7 +624,7 @@ public static partial class GameCatalogues
         }
 
         /// <summary>
-        /// One room prefab's openings, contents and random parts.
+        /// One room or location prefab's openings, contents and random parts.
         /// </summary>
         private sealed class RoomReader
         {
@@ -663,6 +672,26 @@ public static partial class GameCatalogues
                     ["perimeter"] = Int(Get(room, "m_perimeter", 0L)),
                     ["enabled"] = Int(Get(room, "m_enabled", 1L)),
                     ["openings"] = _openings,
+                    ["contents"] = _contents,
+                    ["spawns"] = _spawns,
+                    ["picks"] = _picks,
+                    ["nodes"] = _nodes,
+                };
+                Walk(_root, default, Quat.Root, true);
+                return info;
+            }
+
+            /// <summary>
+            /// A location's JSON: what of its Location script the game spawns it by, then contents, spawns, picks and
+            /// nodes from a walk over its tree, as a room's.
+            /// </summary>
+            public Dict ReadLocation(AssetTypeValueField location)
+            {
+                var info = new Dict
+                {
+                    ["clearArea"] = Int(Get(location, "m_clearArea", 0L)),
+                    ["randomDamage"] = Int(Get(location, "m_applyRandomDamage", 0L)),
+                    ["interior"] = Int(Get(location, "m_hasInterior", 0L)),
                     ["contents"] = _contents,
                     ["spawns"] = _spawns,
                     ["picks"] = _picks,

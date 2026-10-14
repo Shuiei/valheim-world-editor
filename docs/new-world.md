@@ -81,4 +81,7 @@ folder) and press **Create world**. The editor writes the world's files and open
 
 The game lays out the start temple, traders, bosses and dungeons the first time it loads the world,
 and makes each area as players reach it. The editor can only reshape areas the game has made, so
-play the world (or walk around) before editing a part of it.
+play the world (or walk around) before editing a part of it. (A world made with generated zones, as
+the development tool `WorldCheck create` makes them, has those zones ready: their vegetation, their
+locations spawned as the game would spawn them, and the game's own zone objects; a dungeon's entrance
+leaves its zone to the game.)

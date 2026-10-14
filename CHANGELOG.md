@@ -4,6 +4,18 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.35.1 — unreleased
+
+### Fixed
+- **Worlds made with generated zones had no locations and no creatures in them.** `WorldCheck create <radius>` (the
+  documentation's, the benchmark's and the demo worlds) marked the zones around the middle as generated, with their
+  vegetation, but the game spawns a zone's location (the start temple, an altar, ruins...) and its zone control
+  object, which its creatures spawn from, only when it generates the zone itself: so neither ever appeared, in the
+  game or in the editor. The creator now spawns them as the game would: every location the seed lays out in those
+  zones stands there with its stones, chests and spawners and its location proxy, on cleared ground, and every
+  generated zone has its zone control. A zone with a dungeon's entrance (an interior the game lays out) is left to
+  the game. Worlds the editor's **New world** page makes are not affected: they leave every zone to the game.
+
 ## v1.35.0 — unreleased
 
 ### Added
