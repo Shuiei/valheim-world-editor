@@ -67,6 +67,73 @@ public class EditSessionOtherAreasTests
     }
 
     [AvaloniaFact]
+    public void StepsKeptAsideAndThisAreasGoBackInTheOrderTheyWereMade()
+    {
+        string dir = Fixtures.CopyFixture();
+        try
+        {
+            var first = WorldScene.Load(dir, 0, 0, 1);
+            var owner = first.Owner!;
+            var a = first.Session!;
+            Raise(a, "Raise here");
+            owner.History = a.Export();
+            var b = WorldScene.Load(owner, 3, 3, 1).Session!;
+            Raise(b, "Raise there");
+            // Back in the first area: its older step is undoable, the newer one kept aside; leaving again, the newer
+            // one must still come after it, whichever list each was in.
+            owner.History = b.Export();
+            var again = WorldScene.Load(owner, 0, 0, 1).Session!;
+            Assert.Equal("Raise here", Assert.Single(again.UndoList).Label);
+            Assert.Equal(1, again.Shelved);
+            var kept = again.Export();
+            Assert.Equal(new[] { "Raise here", "Raise there" }, kept.Undo.Select(c => c.Label).ToArray());
+            // An area holding both: the newer step is undone first.
+            owner.History = kept;
+            var both = WorldScene.LoadBlock(owner, 0, 0, 4, 4).Session!;
+            Assert.Equal(new[] { "Raise here", "Raise there" }, both.UndoList.Select(c => c.Label).ToArray());
+            float near = both.Scene.Heights[32 * both.Scene.W + 32];
+            Assert.True(both.Undo());
+            Assert.Equal("Raise there", Assert.Single(both.RedoList).Label);
+            Assert.Equal(near, both.Scene.Heights[32 * both.Scene.W + 32], 3);
+        }
+        finally
+        {
+            Done(dir);
+        }
+    }
+
+    [AvaloniaFact]
+    public void ANewEditDropsTheRedoKeptAsideFromAnotherAreaToo()
+    {
+        string dir = Fixtures.CopyFixture();
+        try
+        {
+            var first = WorldScene.Load(dir, 0, 0, 1);
+            var owner = first.Owner!;
+            var a = first.Session!;
+            Raise(a, "Raise here");
+            Assert.True(a.Undo());
+            Assert.Single(a.RedoList);
+            // In another area the undone step is kept aside (as a redo); an edit there drops it, as a redo of the same
+            // area would be.
+            owner.History = a.Export();
+            var b = WorldScene.Load(owner, 3, 3, 1).Session!;
+            Assert.Equal(1, b.Shelved);
+            Raise(b, "Raise there");
+            Assert.Equal(0, b.Shelved);
+            owner.History = b.Export();
+            var again = WorldScene.Load(owner, 0, 0, 1).Session!;
+            Assert.Empty(again.RedoList);
+            Assert.False(again.CanRedo);
+            Assert.Equal(1, again.Shelved);
+        }
+        finally
+        {
+            Done(dir);
+        }
+    }
+
+    [AvaloniaFact]
     public void AStepPartlyInTheAreaStillKeepsTheOlderOnesFromBeingUndoneThere()
     {
         string dir = Fixtures.CopyFixture();

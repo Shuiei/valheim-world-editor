@@ -66,9 +66,12 @@ Changes already applied to the game are tagged.
 Applied changes (live) can still be undone; the next apply then sends the undo.
 
 The history follows you from area to area (the arrows, Follow, the map): it stays with the pending
-changes. A change that touched ground outside the new area is left out, with every change before
-it, since it could not be undone from there. Saving and Apply live keep it: undo a step and save
-(or apply) again to take it back. Zone resets and No limit ground read the world again, which starts
+changes. A step made wholly in another area is kept aside while this one is open (the panel says how
+many) and comes back, undoable, when you open the area it was made in. A step partly outside the
+open area cannot be undone from there, nor can the steps made before it: they are kept aside too,
+until an area holding all of it opens. A new edit drops the redo list, the kept-aside part included,
+as it always did. Saving and Apply live keep it: undo a step and save (or apply) again to take it
+back. Zone resets and No limit ground read the world again, which starts
 a new history; so does reloading from the game.
 
 ### Kept after the editor closes

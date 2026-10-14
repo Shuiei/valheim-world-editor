@@ -228,6 +228,19 @@ public sealed class EditSession
     private readonly List<(Change Change, Frame Frame, int[] Ids)> _shelvedUndo = [], _shelvedRedo = [];
 
     /// <summary>
+    /// Where each step stands in the order they were made, this area's and the kept-aside ones together (Export puts
+    /// them back in that order, whichever list they are in); the kept history's order on Import, then as they come.
+    /// By reference: a change is its own step.
+    /// </summary>
+    private readonly Dictionary<Change, long> _order = new(ReferenceEqualityComparer.Instance);
+
+    /// <summary>The order the next step not seen yet gets.</summary>
+    private long _nextOrder;
+
+    /// <summary>A step's place in the order they were made; a step not seen yet comes after every other.</summary>
+    private long OrderOf(Change c) => _order.TryGetValue(c, out long o) ? o : _order[c] = _nextOrder++;
+
+    /// <summary>
     /// How many steps of the world's history were made in other areas and are kept aside here (they can be undone
     /// or redone where they were made).
     /// </summary>
@@ -618,6 +631,7 @@ public sealed class EditSession
             _undo.RemoveAt(0);
         }
         _redo.Clear();
+        _shelvedRedo.Clear();
     }
 
     /// <summary>
@@ -784,6 +798,7 @@ public sealed class EditSession
                 _undo.RemoveAt(0);
             }
             _redo.Clear();
+            _shelvedRedo.Clear();
         }
     }
 
@@ -1346,8 +1361,9 @@ public sealed class EditSession
     public readonly record struct Frame(int Ox, int Oz, int W, int X0, int Z0);
 
     /// <summary>
-    /// The history as Kept: this area's steps (ground points by world position and objects by id) after those made in
-    /// other areas, each in the frame it came in, to follow the world to the next area.
+    /// The history as Kept: this area's steps (ground points by world position and objects by id) and those made in
+    /// other areas together, in the order they were made, each in the frame it came in, to follow the world to the
+    /// next area.
     /// </summary>
     public Kept Export()
     {
@@ -1366,7 +1382,23 @@ public sealed class EditSession
                 ids[c] = [.. c.Things.Select(t => Scene.Things[t.Index].Id)];
                 frames[c] = frame;
             }
-            return new Kept([.. _shelvedUndo.Select(s => s.Change), .. _undo], [.. _shelvedRedo.Select(s => s.Change), .. _redo], frame.Ox, frame.Oz, frame.W, frame.X0, frame.Z0, ids, frames);
+            // Steps made here since the last import come after every other, the undo list's in its order, then the
+            // redo list's from its last (the next redo, the oldest of them) to its first.
+            foreach (var c in _undo)
+            {
+                OrderOf(c);
+            }
+            for (int i = _redo.Count - 1; i >= 0; i--)
+            {
+                OrderOf(_redo[i]);
+            }
+            foreach (var c in _order.Keys.Where(c => !ids.ContainsKey(c)).ToList())
+            {
+                _order.Remove(c);
+            }
+            var undo = _shelvedUndo.Select(s => s.Change).Concat(_undo).OrderBy(OrderOf).ToList();
+            var redo = _shelvedRedo.Select(s => s.Change).Concat(_redo).OrderByDescending(OrderOf).ToList();
+            return new Kept(undo, redo, frame.Ox, frame.Oz, frame.W, frame.X0, frame.Z0, ids, frames);
         }
     }
 
@@ -1396,6 +1428,7 @@ public sealed class EditSession
         {
             _shelvedUndo.Clear();
             _shelvedRedo.Clear();
+            _order.Clear();
             int ox = Scene.X0 * 64 - 32, oz = Scene.Z0 * 64 - 32;
             var index = new Dictionary<int, int>();
             for (int i = 0; i < Scene.Things.Count; i++)
@@ -1510,6 +1543,17 @@ public sealed class EditSession
                     _shelvedRedo.Add(Aside(k.Redo[n]));
                 }
             }
+            // The order they were made in, as the kept history has it: the undo list oldest first, then the redo list
+            // from its last (the next redo) to its first; a fitted step under its copy, one kept aside as it came.
+            for (int n = 0; n < undo.Count; n++)
+            {
+                _order[n >= start && undo[n].Fitted is { } f ? f : k.Undo[n]] = n;
+            }
+            for (int n = 0; n < redo.Count; n++)
+            {
+                _order[n > end && redo[n].Fitted is { } f ? f : k.Redo[n]] = undo.Count + redo.Count - 1 - n;
+            }
+            _nextOrder = undo.Count + redo.Count;
             return _shelvedUndo.Count + _shelvedRedo.Count;
         }
     }
