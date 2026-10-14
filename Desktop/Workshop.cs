@@ -160,7 +160,7 @@ public static class Workshop
     }
 
     /// <summary>Pieces players build: the hammer's, the cultivator's, the serving tray's (not the hoe's rocks).</summary>
-    public static bool Buildable(string prefab) => PieceCatalog.Get(StableHash.Of(prefab))?.Tool is "hammer" or "cultivator" or "feaster";
+    public static bool Buildable(string prefab) => PieceCatalog.Get(StableHash.Of(prefab))?.IsBuildPiece == true;
 
     /// <summary>
     /// The ground the support check counts at a world point: the plot's, or (higher) the ground a

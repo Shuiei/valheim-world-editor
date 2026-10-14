@@ -6,6 +6,7 @@ using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
+using TerrainEditor.App;
 using TerrainEditor.Save;
 using TerrainEditor.Terrain;
 
@@ -43,15 +44,18 @@ public sealed class BuildPanel
     /// <summary>The game's models, for the pictures (null: each piece's boxes).</summary>
     internal Func<ModelStore?> Models { get; set; } = () => null;
 
-    /// <summary>The tab numbers of the cultivator's pieces (plants) and the serving tray's (feasts): not hammer categories.</summary>
-    internal const int Plants = 100, Feasts = 101;
+    /// <summary>
+    /// The tab numbers of the cultivator's pieces (plants), the serving tray's (feasts) and the mods' (whatever their
+    /// tool and category): not hammer categories.
+    /// </summary>
+    internal const int Plants = 100, Feasts = 101, Mods = 102;
     /// <summary>
     /// The hammer's tabs (Piece.PieceCategory), in its order, then the cultivator's and the serving
-    /// tray's pieces (plants, feasts).
+    /// tray's pieces (plants, feasts), then the mods' (shown when the game has some).
     /// </summary>
     internal static readonly (int Category, string Name)[] Tabs =
     [
-        (2, "Building"), (3, "Heavy building"), (4, "Furniture"), (1, "Crafting"), (0, "Misc"), (5, "More"), (Plants, "Plants"), (Feasts, "Feasts"),
+        (2, "Building"), (3, "Heavy building"), (4, "Furniture"), (1, "Crafting"), (0, "Misc"), (5, "More"), (Plants, "Plants"), (Feasts, "Feasts"), (Mods, "Mods"),
     ];
 
     /// <summary>The grid steps behind <see cref="GridBox"/>'s entries, in metres (0: off).</summary>
@@ -71,15 +75,35 @@ public sealed class BuildPanel
     private readonly HashSet<string> _drawing = [];
 
     /// <summary>
-    /// Everything players build: the hammer's pieces, the cultivator's and the serving tray's (prefab,
-    /// English name, tab). The hoe's are ground edits, not pieces. Ordered by station, then by name.
+    /// Everything players build: the hammer's pieces, the cultivator's, the serving tray's and the mods' (prefab,
+    /// English name, tab). The hoe's are ground edits, not pieces. Ordered by station, then by name. Worked out again
+    /// when the game's data changes (mods' pieces learned from a live game).
     /// </summary>
-    internal static readonly Lazy<List<(string Prefab, string Name, int Category)>> Pieces = new(() =>
+    internal static List<(string Prefab, string Name, int Category)> Pieces
+    {
+        get
+        {
+            var made = _pieceList;
+            int now = GameData.Generation;
+            if (made.Generation != now)
+            {
+                made = (now, ListPieces());
+                _pieceList = made;
+            }
+            return made.List;
+        }
+    }
+
+    /// <summary>What <see cref="Pieces"/> last worked out, and from which data.</summary>
+    private static (int Generation, List<(string Prefab, string Name, int Category)> List) _pieceList = (-1, []);
+
+    /// <summary>Works out <see cref="Pieces"/>.</summary>
+    private static List<(string Prefab, string Name, int Category)> ListPieces() =>
         [.. PieceCatalog.Names.Select(n => (n, PieceCatalog.Get(StableHash.Of(n))))
-            .Where(p => p.Item2 is { Tool: "hammer" or "cultivator" or "feaster" })
-            .Select(p => (p.n, PieceCost.PieceName(p.n), p.Item2!.Tool switch { "cultivator" => Plants, "feaster" => Feasts, _ => p.Item2.Category }))
+            .Where(p => p.Item2 is { IsBuildPiece: true })
+            .Select(p => (p.n, PieceCost.PieceName(p.n), ModCatalogue.IsModded(p.n) ? Mods : p.Item2!.Tool switch { "cultivator" => Plants, "feaster" => Feasts, _ => p.Item2.Category }))
             .OrderBy(p => StationRank(PieceCost.Get(p.n)?.Station)).ThenBy(p => PieceCost.Get(p.n)?.Station ?? "", StringComparer.OrdinalIgnoreCase)
-            .ThenBy(p => p.Item2, StringComparer.OrdinalIgnoreCase)]);
+            .ThenBy(p => p.Item2, StringComparer.OrdinalIgnoreCase)];
 
     /// <summary>
     /// A station's rank, to list pieces by the station they need, in the order players get them (none first:
@@ -109,6 +133,7 @@ public sealed class BuildPanel
             {
                 Plants => "The cultivator's pieces: crops, saplings and flowers.",
                 Feasts => "The serving tray's pieces: feasts.",
+                Mods => "The pieces the game's mods add, whatever their tool (learned from a live game).",
                 _ => $"The pieces of the hammer's {name} tab.",
             });
             b.Click += (_, _) => { _tab = cat; Search.Text = ""; Render(); };
@@ -279,7 +304,7 @@ public sealed class BuildPanel
     internal void RenderLibrary()
     {
         LibraryList.Children.Clear();
-        var all = TerrainEditor.App.Homestead.List(Folder());
+        var all = Homestead.List(Folder());
         string q = LibrarySearch.Text?.Trim() ?? "";
         var list = all.Where(e => q.Split(' ', StringSplitOptions.RemoveEmptyEntries).All(w => e.Name.Contains(w, StringComparison.OrdinalIgnoreCase)
             || e.Description.Contains(w, StringComparison.OrdinalIgnoreCase) || e.Tags.Any(t => t.Contains(w, StringComparison.OrdinalIgnoreCase)))).ToList();
@@ -304,7 +329,7 @@ public sealed class BuildPanel
     /// One blueprint in the Library: its picture (drawn from its pieces when it has none), name, pieces and cost,
     /// Open and Add; dragged a few pixels it is dropped onto the plot.
     /// </summary>
-    private Border LibraryRow(TerrainEditor.App.Homestead.Entry e)
+    private Border LibraryRow(Homestead.Entry e)
     {
         Bitmap? pic = null;
         if (e.Picture != null)
@@ -400,9 +425,10 @@ public sealed class BuildPanel
         t.OnTop = false;
         t.GridStep = Grids[Math.Max(0, GridBox.SelectedIndex)];
         _input.TurnStep = Turns[Math.Max(0, TurnBox.SelectedIndex)];
-        if (!(t.Chosen.Count == 1 && Pieces.Value.Any(p => p.Prefab == t.Chosen[0])))
+        var pieces = Pieces;
+        if (!(t.Chosen.Count == 1 && pieces.Any(p => p.Prefab == t.Chosen[0])))
         {
-            Choose(Pieces.Value.FirstOrDefault(p => p.Prefab == "woodwall").Prefab ?? Pieces.Value[0].Prefab);
+            Choose(pieces.FirstOrDefault(p => p.Prefab == "woodwall").Prefab ?? pieces[0].Prefab);
         }
         t.Notify();
         Render();
@@ -435,11 +461,16 @@ public sealed class BuildPanel
     {
         Tiles.Children.Clear();
         string q = Search.Text?.Trim() ?? "";
+        var pieces = Pieces;
         foreach (var b in _tabs.Children.OfType<Button>())
         {
             b.Classes.Set("on", q.Length == 0 && (int)b.Tag! == _tab);
+            if ((int)b.Tag! == Mods)
+            {
+                b.IsVisible = pieces.Any(p => p.Category == Mods);
+            }
         }
-        var list = Pieces.Value.Where(p => q.Length > 0
+        var list = pieces.Where(p => q.Length > 0
             ? q.Split(' ', StringSplitOptions.RemoveEmptyEntries).All(w => p.Name.Contains(w, StringComparison.OrdinalIgnoreCase) || p.Prefab.Contains(w, StringComparison.OrdinalIgnoreCase))
             : p.Category == _tab).ToList();
         if (list.Count == 0)
@@ -503,7 +534,7 @@ public sealed class BuildPanel
         {
             try
             {
-                var bp = TerrainEditor.App.BlueprintFormats.Parse(path, File.ReadAllText(path));
+                var bp = BlueprintFormats.Parse(path, File.ReadAllText(path));
                 return BuildingPicture.Draw([.. bp.Pieces.Select(p => new BuildingPicture.Piece(p.Name, p.Position, p.Euler, p.Scale))], models, 128);
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)

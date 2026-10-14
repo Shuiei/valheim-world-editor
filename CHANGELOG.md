@@ -4,6 +4,21 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.26.0 — unreleased
+
+### Added
+- **Modded games' objects**: opening a live world now asks the game for the objects its mods add
+  (building pieces, furniture, stations...), which the editor cannot find in Valheim's files. Their
+  objects get their names and can be placed, the Workshop's Build panel lists the mods' pieces on a
+  new **Mods** tab with their cost (whatever tool builds them in game: a mod's own hammer too), and
+  the inspector says which mod an object comes from (when Jötunn is installed). What was learned is kept in `mod-catalogue.json`, so
+  a modded server's world read offline afterwards shows them too. The mods' models are not drawn
+  yet. See [Modded games](docs/live-mode.md#modded-games).
+
+### WorldEditorBridge
+- New `GET /catalogue`: every saved kind of object the game knows, mods' ones included, with which
+  mod adds it (asked of Jötunn when it is installed).
+
 ## v1.25.3 — unreleased
 
 ### Fixed

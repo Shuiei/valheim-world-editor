@@ -43,6 +43,12 @@ public sealed class LiveBridge(string url, string token) : IDisposable
     /// <summary>The connected players and their positions, as the plugin's JSON array.</summary>
     public async Task<string> Players() => await (await Get("players")).Content.ReadAsStringAsync();
 
+    /// <summary>
+    /// Every prefab the running game knows, mods' too, as the plugin's JSON (ModCatalogue reads it); a plugin older
+    /// than 1.26.0 answers 404.
+    /// </summary>
+    public async Task<string> Catalogue() => await (await Get("catalogue")).Content.ReadAsStringAsync();
+
     /// <summary>Plugin and world info, as the plugin's JSON.</summary>
     public async Task<string> Status() => await (await Get("status")).Content.ReadAsStringAsync();
 

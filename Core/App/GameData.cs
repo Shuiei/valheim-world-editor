@@ -72,6 +72,19 @@ public static class GameData
     /// </summary>
     private static string? _from;
     /// <summary>
+    /// The game's own JSON of the kinds the mods' prefabs are laid over (ModCatalogue.Kinds), as last used: what
+    /// AddMods lays them over again.
+    /// </summary>
+    private static readonly Dictionary<string, string> Own = [];
+
+    /// <summary>
+    /// Counts each time the data in use changes (a game's data, the tests' copies, mods' prefabs learned), for lists
+    /// worked out from it to be worked out again.
+    /// </summary>
+    public static int Generation => _generation;
+    /// <summary>Backs <see cref="Generation"/>.</summary>
+    private static volatile int _generation;
+    /// <summary>
     /// <c>_from</c> when the tests' copies are in use.
     /// </summary>
     private const string Copies = "(copies)";
@@ -103,11 +116,13 @@ public static class GameData
             {
                 return false;
             }
+            ModCatalogue.Load();
             foreach (var kind in Kinds)
             {
-                kind.Use(read[kind.Name]);
+                Use(kind, read[kind.Name]);
             }
             _from = bundles.Folder;
+            _generation++;
             return true;
         }
     }
@@ -122,9 +137,68 @@ public static class GameData
         {
             foreach (var kind in Kinds)
             {
-                kind.Use(File.ReadAllText(Path.Combine(folder, kind.Name + ".json")));
+                Use(kind, File.ReadAllText(Path.Combine(folder, kind.Name + ".json")));
             }
             _from = Copies;
+            _generation++;
+        }
+    }
+
+    /// <summary>
+    /// A kind's data in use, with the mods' prefabs laid over it when it is one of theirs (ModCatalogue.Kinds). Should
+    /// the mods' entries make it fail, the game's own data is used alone.
+    /// </summary>
+    private static void Use(Kind kind, string json)
+    {
+        if (!ModCatalogue.Kinds.ContainsKey(kind.Name))
+        {
+            kind.Use(json);
+            return;
+        }
+        Own[kind.Name] = json;
+        string merged = ModCatalogue.Merge(kind.Name, json);
+        if (ReferenceEquals(merged, json))
+        {
+            kind.Use(json);
+            return;
+        }
+        try
+        {
+            kind.Use(merged);
+        }
+        catch (Exception e) when (e is JsonException or InvalidOperationException or KeyNotFoundException or FormatException or InvalidCastException)
+        {
+            Console.WriteLine($"Game data {kind.Name}: the mods' prefabs could not be used ({e.Message}); the game's own only.");
+            kind.Use(json);
+        }
+    }
+
+    /// <summary>
+    /// Takes a running game's prefabs (WorldEditorBridge's GET /catalogue): those that are not the game's own are
+    /// kept (ModCatalogue) and, when they change what is known, laid over the data in use. Returns how many mod
+    /// prefabs the game has. Before any data is in use, they are only kept.
+    /// </summary>
+    /// <exception cref="JsonException">The report is not a JSON object.</exception>
+    public static int AddMods(string report)
+    {
+        lock (Lock)
+        {
+            if (!Own.TryGetValue("prefabs", out string? prefabs))
+            {
+                return 0;
+            }
+            using var doc = JsonDocument.Parse(prefabs);
+            var vanilla = doc.RootElement.EnumerateObject().Select(p => p.Name).ToHashSet(StringComparer.Ordinal);
+            var (mods, changed) = ModCatalogue.Take(report, vanilla);
+            if (changed)
+            {
+                foreach (var kind in Kinds.Where(k => Own.ContainsKey(k.Name)))
+                {
+                    Use(kind, Own[kind.Name]);
+                }
+                _generation++;
+            }
+            return mods;
         }
     }
 

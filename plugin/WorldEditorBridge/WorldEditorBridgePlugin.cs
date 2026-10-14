@@ -32,12 +32,14 @@ namespace WorldEditorBridge;
 ///                   objects are removed and the zones are generated again (at once where players are)
 ///   POST /watch     int n + n x (int x, int z): one change number per zone (JSON)
 ///   POST /zone      the same zone list: those zones' saved objects, gzip-compressed
+///   GET /catalogue  every prefab the game knows, mods' too (JSON, see WorldEditorBridgePlugin.Catalogue.cs)
 /// </code>
 /// Game objects are only read on Unity's main thread; the HTTP thread waits for the answer.
 /// </summary>
 [BepInPlugin(PluginGuid, "WorldEditorBridge", Version)]
+[BepInDependency(JotunnGuid, BepInDependency.DependencyFlags.SoftDependency)]
 [SuppressMessage("Design", "CA1001:Types that own disposable fields should be disposable", Justification = "Unity owns its lifetime; OnDestroy stops the listener.")]
-public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
+public sealed partial class WorldEditorBridgePlugin : BaseUnityPlugin
 {
     /// <summary>BepInEx plugin id; it also names the settings file in BepInEx/config.</summary>
     public const string PluginGuid = "Tie.WorldEditorBridge";
@@ -142,6 +144,7 @@ public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
             _token.Value = Convert.ToBase64String(b).Replace('+', 'A').Replace('/', 'B').TrimEnd('=');
             Config.Save();
         }
+        EnableModQuery();
         try
         {
             _listener = new HttpListener();
@@ -289,6 +292,9 @@ public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
                     break;
                 case "/players":
                     Reply(res, 200, "application/json", OnMainThread(Players));
+                    break;
+                case "/catalogue":
+                    Reply(res, 200, "application/json", OnMainThread(Catalogue, 120000));
                     break;
                 case "/terrain":
                 {
@@ -695,8 +701,22 @@ public sealed class WorldEditorBridgePlugin : BaseUnityPlugin
         res.OutputStream.Close();
     }
 
-    /// <summary>A JSON string literal (only backslashes and quotes are escaped).</summary>
-    private static string Json(string s) => "\"" + s.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"";
+    /// <summary>A JSON string literal: backslashes, quotes and control characters escaped.</summary>
+    private static string Json(string s)
+    {
+        StringBuilder sb = new("\"");
+        foreach (char c in s)
+        {
+            _ = c switch
+            {
+                '\\' => sb.Append("\\\\"),
+                '"' => sb.Append("\\\""),
+                < ' ' => sb.Append("\\u").Append(((int)c).ToString("x4", CultureInfo.InvariantCulture)),
+                _ => sb.Append(c),
+            };
+        }
+        return sb.Append('"').ToString();
+    }
 
     /// <summary>A float for JSON: round-trip form, invariant culture.</summary>
     private static string F(float v) => v.ToString("R", CultureInfo.InvariantCulture);

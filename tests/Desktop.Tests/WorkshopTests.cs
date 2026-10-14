@@ -256,8 +256,8 @@ public class WorkshopTests
         Assert.True(w.PlaceInput.Key(Avalonia.Input.Key.OemPeriod, false, false));
         Assert.Equal(45, w.PlaceTool.Rotation);
         // Everything players build: the cultivator's and the serving tray's pieces too.
-        Assert.Contains(BuildPanel.Pieces.Value, p => p.Category == BuildPanel.Plants);
-        Assert.Contains(BuildPanel.Pieces.Value, p => p.Category == BuildPanel.Feasts);
+        Assert.Contains(BuildPanel.Pieces, p => p.Category == BuildPanel.Plants);
+        Assert.Contains(BuildPanel.Pieces, p => p.Category == BuildPanel.Feasts);
         w.BuildPanel.SnapBox.IsChecked = false;
         Assert.False(w.PlaceTool.SnapTo);
         await w.LeaveWorkshop();
@@ -273,7 +273,7 @@ public class WorkshopTests
     [Fact]
     public void BuildPiecesAreTheHammersByStationThenName()
     {
-        var pieces = BuildPanel.Pieces.Value;
+        var pieces = BuildPanel.Pieces;
         Assert.Contains(pieces, p => p.Prefab == "woodwall" && p.Name == "Wood Wall" && p.Category == 2);
         Assert.DoesNotContain(pieces, p => p.Prefab == "Beech1");
         for (int i = 1; i < pieces.Count; i++)

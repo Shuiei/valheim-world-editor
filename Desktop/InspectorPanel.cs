@@ -424,6 +424,10 @@ public sealed class InspectorPanel
         {
             _where.Text += $"\n{(spawn.Nest ? "Nest" : "Spawn point")}: {spawn.Summary()}";
         }
+        if (name != null && ModCatalogue.IsModded(name))
+        {
+            _where.Text += ModCatalogue.ModOf(name) is string mod ? $"\nFrom the mod {mod}" : "\nFrom a mod";
+        }
         RenderItems();
         RenderStand();
         Fields.Children.Clear();

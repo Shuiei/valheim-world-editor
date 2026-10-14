@@ -36,6 +36,11 @@ public static class PieceCatalog
         /// null for pieces players cannot build (parts of ruins and dungeons).
         /// </summary>
         public string? Tool { get; init; }
+
+        /// <summary>
+        /// Whether players build it: in a build tool's menu (the game's or a mod's), not the hoe's (ground edits).
+        /// </summary>
+        public bool IsBuildPiece => Tool is not null and not "hoe";
     }
 
     /// <summary>

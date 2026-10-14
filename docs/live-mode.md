@@ -147,6 +147,20 @@ The status bar says what came from the game ("From the game: 2 object(s) made or
 Following needs this version of the WorldEditorBridge plugin on the server; with an older one the
 editor says so, and **Reload** reads the world again.
 
+## Modded games
+
+Mods make most of their objects while the game runs, so the editor cannot find them in Valheim's
+files. When a live world opens, the editor asks the game for every object it knows and keeps those
+that are not Valheim's own: a modded game's objects then have their names, the Place list offers
+them, the Workshop's Build panel lists the mods' building pieces on a **Mods** tab with their cost
+(whatever tool builds them in game: a mod's own hammer too), and the inspector says which mod an
+object comes from (with Jötunn installed, which knows; else "From a mod").
+
+What the editor learns is kept (`mod-catalogue.json` in the editor's data folder), so a modded
+server's world opened afterwards from its files, offline, shows them too. Each connection adds to it;
+a mod's newer pieces replace their older entries. The mods' own models are not drawn yet. Needs
+WorldEditorBridge 1.26.0 or newer; with an older one the world opens as before.
+
 ## Undo after applying
 
 Applied changes can still be undone: undo (or Remove in History) and apply again. A deleted object
