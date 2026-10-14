@@ -48,15 +48,36 @@ arena in red, treasure in gold, the room with the key in green, doorways as dots
 What it is like:
 
 - **The layout reads like a building.** Rooms open in the middle of their walls and line up along
-  axes, with corridors running straight between them. Side rooms often come in pairs on either side
-  of a hall.
-- **Every room is furnished for its purpose.**
-  - Halls have columns, a runner rug and a throne or an altar at the far end.
-  - Chapels have pews facing an altar between two statues.
-  - Burial chambers have rows of sarcophagi; ossuaries have bones along every wall.
-  - Feast halls have long tables with food, benches and a hearth.
+  axes, with corridors between them; side rooms often come in pairs on either side of a hall. Some
+  corridors bend on the way (often in catacombs, warrens and holds), and some rooms are entered on
+  their long side.
+- **Rooms take shapes.** Besides plain boxes there are crossings and shrines with their corners
+  notched, chapels, halls and throne rooms that narrow into an apse, store rooms and quarters that
+  lose a corner or neck in at the door, and arenas notched into an octagon. The walls, the beams
+  and the furniture follow the shape.
+- **Every room is furnished for its purpose, and not always the same way.** Each kind of room has
+  two to four furnishings, picked by the seed:
+  - Halls: colonnades with an altar at the far end; a mead hall round a fire with trestle tables;
+    a hall of the dead with a sarcophagus on a dais between statues; or a bare, echoing hall of
+    fallen pillars.
+  - Chapels: pews facing an altar between two statues; a raised altar in a ring of braziers; or a
+    nave of rugs and candles under long hangings.
+  - Burial chambers: rows of sarcophagi; one tomb on a dais among skulls and candles; or sarcophagi
+    set at odd angles among the bones. Ossuaries: bones along the walls, a heap in the middle, or
+    stacks in rows. Galleries: niches, standing sarcophagi, statues, or bare and cobwebbed.
+  - Barracks: beds along the walls with a table; bedrolls round a fire with a weapon stand; or
+    bunks with chests at their feet. Store rooms: stock along the walls, stacked in a corner with a
+    cart, or shelves in rows. Studies: shelves round a table, in aisles, or a scriptorium of desks.
+  - Feast halls: long tables down the middle, or the high table on a dais before a fire. Throne
+    rooms: colonnades, a war room with a long table, or fallen columns round the dais.
+  - Arenas: a ring of columns round the boss; the boss enthroned on a dais over heaps of skulls; or
+    a crypt of columns and sarcophagi under chains.
   - Cell blocks have barred cells on each side of an aisle.
-  - The arena has a ring of columns and a great rug, with the boss in the middle.
+- **Rooms are lit differently**: standing torches along the walls, sconces on them, or a brazier
+  or two in the corners; the dark leaves most rooms unlit.
+- **Floors and ceilings vary.** In a stone dungeon the grand rooms get black marble tiles and the
+  lived-in ones wooden boards, half the time. Raised stone daises with steps, pilasters along the
+  walls, chains and hooks hanging from the roofs, cobwebs in the corners.
 - **Doors close every room.** Monsters do not open doors, so each room's monsters wait behind its
   door, and the stairs between levels have doors too.
 - **Some rooms rise through two levels**: great halls, chapels and the arena.

@@ -4,6 +4,29 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.42.0 — unreleased
+
+### Changed
+- **Generated dungeons vary far more.** Rooms were all boxes entered in the middle of a wall, each kind furnished one
+  way, torches along every wall. Now:
+  - **Room shapes**: crossings, shrines, tombs and arenas with their corners notched (an octagon's feel), chapels,
+    halls and throne rooms ending in an apse, store rooms, quarters, barracks and the like with a corner cut away or
+    a neck at the door. Walls, beams, the plan's map and the furnishing follow the shape; twins mirror it.
+  - **Bent corridors**: a corridor may run ahead, turn, and enter its room from the side (often in catacombs,
+    warrens, holds and ruins; seldom in a temple). Some rooms are entered on their long side.
+  - **Two to four furnishings per kind of room**, picked by the seed: a mead hall, a hall of the dead, a bare hall of
+    fallen pillars; a chapel's raised altar in a ring of braziers or a nave of rugs and candles; a tomb on a dais;
+    bedrolls round a fire; stock stacked in a corner with a cart; shelves in aisles; a scriptorium; a war room; the
+    boss enthroned over heaps of skulls; a drill room; a dolmen shrine; and more. New props: cobwebs in the corners,
+    chains and hooks from the roofs, bedrolls, weapon stands, training dummies, an archery target, dolmens, candles
+    (where monsters do not come back), a cart, a bath, a round table.
+  - **Lighting styles** per room: standing torches, wall sconces, or braziers in the corners; corridors likewise.
+  - **Floors**: in a stone or grausten dungeon, grand rooms get black marble tiles and lived-in rooms wooden boards,
+    half the time (Furniture at Furnished or Rich). Stone pieces stand on the marble through them, as the game's
+    support asks.
+  - Lights and decay draw from random streams of their own, so turning Light or Ruin changes nothing else about a
+    dungeon. The tests' copies of the game's data gain the new props.
+
 ## v1.41.0 — unreleased
 
 ### Added

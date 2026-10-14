@@ -455,14 +455,18 @@ internal sealed class DungeonDresser
         }
     }
 
-    /// <summary>Chains hanging from the roof here and there, a hook and chain in a tall room.</summary>
+    /// <summary>Hooks on chains hanging from the roof of a tall room, here and there (a low room gets none: nothing to hang).</summary>
     private void Chains(Frame f, int n)
     {
+        if (f.H < 8)
+        {
+            return;
+        }
         for (int i = 0; i < n; i++)
         {
             if (Spot(f, 0.3f, 1.5f) is var (u, v))
             {
-                _o.Add(f.H >= 8 && Chance(0.5) ? "dvergrprops_hooknchain" : "Morkhalla_Chain", f.W(u, v, f.Top + f.H - (f.H >= 8 ? 2.5f : 0.05f)), f.Yaw(R(0, 360)));
+                _o.Add("dvergrprops_hooknchain", f.W(u, v, f.Top + f.H - 2.5f), f.Yaw(R(0, 360)));
             }
         }
     }
