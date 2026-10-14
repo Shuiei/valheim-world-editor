@@ -32,7 +32,6 @@ opens. The file is optional and only adds to what the editor learns by itself.
 | `version` | The format's version: `1`. A file of a later version, or without one, is skipped. |
 | `data` | By data key, as your code names it (the name whose hash the game saves): `label`, how the inspector names the value (else its key); `readOnly`, the inspector shows it but does not let it be changed (values the mod sets itself and that would break if edited); `help`, what it is, shown when pointing at the value. |
 | `prefabs` | By prefab name: `hidden`, not offered in Place or the Workshop's Build panel (your tools, effects, helpers; objects of it already in a world still show); `group`, the heading the piece is listed under in the Build panel's **Mods** tab (else its crafting station). |
-
 | `links` | How your objects link into one (below). |
 
 Texts are at most 200 characters. Comments and trailing commas are allowed. An entry not in this
