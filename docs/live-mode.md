@@ -175,6 +175,14 @@ not to offer, groups for its pieces): see [For mod authors](modding.md).
 The Workshop's **Mods** tab lists one mod's pieces at a time: choose the mod in the row under the
 tabs (each with its number of pieces). At most 300 pieces show at once; search to find the others.
 
+### Mods' own plugins
+
+A mod whose plugin registered with the bridge (its author did, through the bridge's API: see
+[Live mode for mods](modding.md#live-mode)) is told what the editor applied, right away, so what it
+builds out of its objects while the game runs (a ship from its pieces) is put together again at
+once; and its editor extension can ask that plugin for what only the running game knows. The
+editor's log (Settings → Open log) names the mods registered when a game is opened.
+
 ## Undo after applying
 
 Applied changes can still be undone: undo (or Remove in History) and apply again. A deleted object

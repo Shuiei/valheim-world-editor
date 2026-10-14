@@ -226,11 +226,13 @@ jobs:
             git ls-files -z '*.csproj' '*.props' '*.targets' '*.runsettings' '*.xml' | xargs -0 xmllint --noout
       - run:
           name: Analyzers (every warning is an error)
-          command: dotnet build Desktop/ValheimWorldEditor.Desktop.csproj -c Release -warnaserror
+          command: |
+            dotnet build Desktop/ValheimWorldEditor.Desktop.csproj -c Release -warnaserror
+            dotnet build plugin/WorldEditorBridge.Api/WorldEditorBridge.Api.csproj -c Release -warnaserror
       - run:
           name: Formatting (dotnet format, as .editorconfig says)
           command: |
-            for p in Core/ValheimWorldEditor.Core.csproj Desktop/ValheimWorldEditor.Desktop.csproj; do
+            for p in Core/ValheimWorldEditor.Core.csproj Desktop/ValheimWorldEditor.Desktop.csproj Sdk/ValheimWorldEditor.Sdk.csproj plugin/WorldEditorBridge.Api/WorldEditorBridge.Api.csproj samples/ExampleVehicles.WorldEditor/ExampleVehicles.WorldEditor.csproj; do
               dotnet format whitespace "$p" --verify-no-changes --no-restore
               dotnet format style "$p" --verify-no-changes --no-restore
             done
@@ -410,6 +412,12 @@ jobs:
             ValheimDir: /tmp/valheim
             BepInExDir: /tmp/bepinex/BepInExPack_Valheim/BepInEx
           command: tools/thunderstore.sh /tmp/dist
+      - run:
+          name: The SDK's sample plugin builds (never shipped)
+          environment:
+            ValheimDir: /tmp/valheim
+            BepInExDir: /tmp/bepinex/BepInExPack_Valheim/BepInEx
+          command: dotnet build samples/ExampleVehicles.Bridge/ExampleVehicles.Bridge.csproj -c Release -warnaserror
       - run:
           name: The SDK for mod authors' zip
           command: tools/sdk.sh /tmp/dist

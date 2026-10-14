@@ -1,3 +1,4 @@
+using System.Text.Json;
 namespace TerrainEditor.Save;
 
 /// <summary>
@@ -226,6 +227,47 @@ public sealed class LiveBridge(string url, string token) : IDisposable
         return ms.ToArray();
     }
 
+    /// <summary>
+    /// The mods' plugins registered with the bridge (WorldEditorBridge.Api: routes to call, listeners told of changes),
+    /// and the bridge's API version; none and 0 from a plugin older than 1.35.0.
+    /// </summary>
+    public async Task<(int Api, List<string> Mods)> Mods()
+    {
+        using HttpRequestMessage req = new(HttpMethod.Get, "mods");
+        req.Headers.Add("X-Bridge-Token", token);
+        using HttpResponseMessage res = await _http.SendAsync(req);
+        if (res.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            return (0, []);
+        }
+        if (!res.IsSuccessStatusCode)
+        {
+            throw new InvalidOperationException($"bridge mods: {(int)res.StatusCode} {await res.Content.ReadAsStringAsync()}");
+        }
+        using var doc = JsonDocument.Parse(await res.Content.ReadAsByteArrayAsync());
+        int api = doc.RootElement.TryGetProperty("api", out var a) ? a.GetInt32() : 0;
+        var mods = doc.RootElement.TryGetProperty("mods", out var m) ? m.EnumerateArray().Select(e => e.GetString()).OfType<string>().ToList() : [];
+        return (api, mods);
+    }
+
+    /// <summary>
+    /// Calls a mod's route in the game (POST /mods/{modId}/{name}, answered by the mod's plugin) and gives back its
+    /// answer's bytes. 404 means no such mod or route (the plugin's answer says which), not an old plugin: the caller
+    /// asked <see cref="Mods"/> first.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">The bridge answered with an error status (its message given).</exception>
+    public async Task<byte[]> Call(string modId, string name, byte[] body, CancellationToken cancel = default)
+    {
+        using HttpRequestMessage req = new(HttpMethod.Post, $"mods/{Uri.EscapeDataString(modId)}/{Uri.EscapeDataString(name)}") { Content = new ByteArrayContent(body) };
+        req.Headers.Add("X-Bridge-Token", token);
+        using HttpResponseMessage res = await _http.SendAsync(req, cancel);
+        if (!res.IsSuccessStatusCode)
+        {
+            throw new InvalidOperationException($"bridge mods/{modId}/{name}: {(int)res.StatusCode} {await res.Content.ReadAsStringAsync(cancel)}");
+        }
+        return await res.Content.ReadAsByteArrayAsync(cancel);
+    }
+
     /// <summary>A POST request with the token and a binary body.</summary>
     /// <exception cref="InvalidOperationException">
     /// The bridge answered with an error status (404 means the plugin is too old for that endpoint).
@@ -251,7 +293,7 @@ public sealed class LiveBridge(string url, string token) : IDisposable
     public async Task<Dictionary<(int X, int Z), ulong>> Watch(IReadOnlyCollection<(int X, int Z)> zones)
     {
         using var res = await Post("watch", ZoneList(zones));
-        using var doc = System.Text.Json.JsonDocument.Parse(await res.Content.ReadAsStringAsync());
+        using var doc = JsonDocument.Parse(await res.Content.ReadAsStringAsync());
         var digests = new Dictionary<(int, int), ulong>();
         foreach (var z in doc.RootElement.GetProperty("zones").EnumerateArray())
         {

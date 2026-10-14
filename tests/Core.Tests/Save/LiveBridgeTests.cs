@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Sockets;
 using System.Numerics;
+using System.Text;
 using TerrainEditor.Editing;
 using TerrainEditor.Save;
 using Xunit;
@@ -140,5 +141,27 @@ public class LiveBridgeTests
         edits.SetDeleted([world.Objects.First(o => o.Prefab == Fixtures.Hash("Beech1")).Id], true);
         string said = await sync.Apply(world, edits, live);
         Assert.Contains("1 made again by another mod", said);
+    }
+
+    // The mods' plugins registered with the bridge, and a call to one of their routes: its answer's bytes; no such
+    // route or mod, and a plugin too old to have /mods (none registered, API 0), each told apart.
+    [Fact]
+    public async Task ModsAreListedAndTheirRoutesCalled()
+    {
+        using var game = new FakeGame();
+        game.Mods!.Add("ExampleVehicles");
+        game.Routes[("ExampleVehicles", "ping")] = body => [.. Encoding.UTF8.GetBytes("pong "), .. body];
+        using var live = new LiveBridge(game.Url, game.Token);
+
+        var (api, mods) = await live.Mods();
+        Assert.Equal((1, (List<string>)["ExampleVehicles"]), (api, mods));
+        Assert.Equal("pong hi", Encoding.UTF8.GetString(await live.Call("ExampleVehicles", "ping", Encoding.UTF8.GetBytes("hi"), TestContext.Current.CancellationToken)));
+        var missing = await Assert.ThrowsAsync<InvalidOperationException>(() => live.Call("ExampleVehicles", "nothing", [], TestContext.Current.CancellationToken));
+        Assert.Contains("has no route nothing", missing.Message);
+        var unknown = await Assert.ThrowsAsync<InvalidOperationException>(() => live.Call("Other", "ping", [], TestContext.Current.CancellationToken));
+        Assert.Contains("no mod Other", unknown.Message);
+
+        game.Mods = null;
+        Assert.Equal((0, (List<string>)[]), await live.Mods());
     }
 }

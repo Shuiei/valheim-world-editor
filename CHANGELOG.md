@@ -4,6 +4,21 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.35.0 — unreleased
+
+### Added
+- **Live mode for mods' own plugins (the bridge API)**: a mod's BepInEx plugin can register with the WorldEditorBridge
+  (`WorldEditorBridge.Api.dll`, shipped with it and in the SDK's zip): it is told what the editor applied, right after,
+  on the game's main thread (to put its things together again at once instead of on the next load), and it answers
+  calls on routes of its own. In the editor, a mod's extension gets the game it is connected to (`Host.Live`): which
+  mods registered, and calls to their routes, for what only the running game knows; and it can ask for its shapes to
+  be drawn again. The SDK's sample shows both halves. See [Live mode for mods](docs/modding.md#live-mode).
+
+### WorldEditorBridge
+- `GET /mods` lists the mods' plugins registered with the bridge and the API version; `POST /mods/<id>/<name>` calls
+  one of a mod's routes. Every apply (`/objects`, `/terrain`, `/zones/reset`) tells the registered listeners what
+  changed. Older editors see no difference.
+
 ## v1.34.0 — unreleased
 
 ### Added

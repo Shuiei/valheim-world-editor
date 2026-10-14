@@ -17,6 +17,8 @@ replaced. Tests from that time check that what it did still works (`KeysAndMouse
 | `Desktop/ValheimWorldEditor.Desktop.csproj` | `TerrainEditor.Desktop` | The program, `ValheimWorldEditor`: the Avalonia window, the pages, the 3D view and the map (OpenGL through Silk.NET), the tools and panels, the Script tool (Roslyn), the Claude MCP server (ASP.NET Core). |
 | `Sdk/ValheimWorldEditor.Sdk.csproj` | `ValheimWorldEditor.Sdk` | What mods' editor extensions are built against (netstandard2.0): `IWorldEditorExtension`, `IExtensionRegistry`, the hooks' interfaces, `IObjectView`, `Shape`. Only what the editor hands over, nothing of the editor; Core references it, and extensions load against the editor's copy. Released as `ValheimWorldEditor.Sdk-<version>.zip` (`tools/sdk.sh`). Add, do not rename: built extensions bind to it. |
 | `samples/ExampleVehicles.WorldEditor/` | `ExampleVehicles.WorldEditor` | The SDK's sample extension, a made-up mod's (packed ids, sails, cables, pits), built and tested with Core's tests, never loaded by the editor by itself. The editor holds nothing for any real mod. |
+| `plugin/WorldEditorBridge.Api/` | `WorldEditorBridge.Api` | What mods' own plugins build against to take part in live mode (netstandard2.0, no game types): `BridgeApi` (a registry), `IBridgeListener`, `IBridgeRoutes`, `AppliedChanges`. Shipped beside the plugin and in the SDK's zip; the plugin references it. Add, do not rename. |
+| `samples/ExampleVehicles.Bridge/` | `ExampleVehicles.Bridge` | The SDK's sample plugin (the game side of the made-up mod): registers a listener and routes. Built in the release job against the game's DLLs, never shipped. |
 | `plugin/WorldEditorBridge/` | `WorldEditorBridge` | The BepInEx plugin for live mode: `WorldEditorBridgePlugin.cs` (and `WorldEditorBridgePlugin.Catalogue.cs`, `.Models.cs` for `GET /catalogue`, `POST /models`), .NET Framework 4.7.2, inside the game. It shares no code with the editor, only a byte format and `VERSION`. |
 | `tests/Core.Tests/` | `WorldEditor.Tests` | Core's tests (xUnit v3), laid out like `Core/`. |
 | `tests/Desktop.Tests/` | `TerrainEditor.Desktop.Tests` | The app's tests, xUnit v3 with Avalonia's headless mode, laid out like `Desktop/`. |
@@ -268,6 +270,15 @@ plugin is too old instead of failing (`LiveBridge`). Keep old endpoints and fiel
 a `### WorldEditorBridge` part to the version's `CHANGELOG.md` section. Tests use a stand-in game
 (`tests/Support/FakeGame.cs`, `LiveBridgeTests`, `LiveTests`, `LiveFollowTests`); CI never runs
 the real plugin, so test it in a local game or a local server.
+
+**Mods' plugins in live mode** (`WorldEditorBridgePlugin.Mods.cs`, mod authors' docs in
+[modding.md](modding.md#live-mode)): `BridgeApi` (the API assembly) is a static registry mods' plugins fill from their
+`Awake`; the plugin lists it on `GET /mods` (`{"api", "mods"}`), calls a mod's `IBridgeRoutes.Handle` on
+`POST /mods/<id>/<name>` (on the main thread; null 404, an exception 500, a body over 16 MB 413) and, after each
+apply, hands every `IBridgeListener` the `AppliedChanges` (the handlers return their JSON and the changes together:
+`Applied`), each guarded. On the editor's side, `LiveBridge.Mods` (404 means an old plugin: none) and `LiveBridge.Call`
+(404 means no such mod or route); `WorldSession.LearnBridgeMods` tells `ModExtensions.LiveConnected` as a live world
+opens, `Dispose` tells `LiveDisconnected`; extensions see it as `IEditorHost.Live` (`LiveGame`) and `ILiveListener`.
 
 **The plugin is Unity code.** Unity calls `Awake`, `Update` and `OnDestroy` by name: they look unused
 to the analyzers (IDE0051), and `dotnet format` deleted them once; they carry a `SuppressMessage`

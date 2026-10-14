@@ -147,3 +147,53 @@ Rules:
 - The editor ships no extension, and no manifest, for any mod: supporting a mod in the editor is
   its author's to do, with these. The sample is a made-up mod's.
 
+## Live mode
+
+Connected to a running game (live mode), the editor applies its changes through the WorldEditorBridge
+plugin, which destroys and makes objects in the game. A mod that builds things out of its objects
+while the game runs (a vehicle from its parts, a tunnel from what was dug) only sees them on the
+next load, unless its own plugin takes part. The bridge offers mods' plugins two things, through
+`WorldEditorBridge.Api.dll` (shipped with the bridge, in its `plugins` folder, and in the SDK's zip;
+no game or Unity type in it, so a game update cannot break it):
+
+```csharp
+[BepInPlugin("MyMod", "My Mod", "1.0.0")]
+[BepInDependency(BridgeApi.BridgeGuid, BepInDependency.DependencyFlags.SoftDependency)]
+public sealed class MyModPlugin : BaseUnityPlugin
+{
+    private void Awake()
+    {
+        if (Chainloader.PluginInfos.ContainsKey(BridgeApi.BridgeGuid))
+        {
+            BridgeLink.Register();   // a class of its own: this plugin loads without the bridge
+        }
+    }
+}
+
+internal static class BridgeLink
+{
+    public static void Register()
+    {
+        BridgeApi.AddListener("MyMod", new Listener());   // told what the editor applied
+        BridgeApi.AddRoutes("MyMod", new Routes());       // answers the editor's calls
+    }
+}
+```
+
+| Hook | What the bridge does with it |
+|---|---|
+| `AddListener(modId, IBridgeListener)` | `OnApplied(AppliedChanges)` is called on the game's main thread right after each of the editor's applies: the objects made and destroyed (ZDOID, prefab, position), the zones whose ground was rewritten, the zones reset. Put your things together again here. An exception is logged and changes nothing of what the editor did. |
+| `AddRoutes(modId, IBridgeRoutes)` | `Handle(name, body)` answers `POST /mods/<modId>/<name>` on the main thread, in whatever bytes you and your editor extension agree on; `null` is 404, an exception 500 with its message. The editor waits 30 seconds at most. |
+
+The mod id is yours (your plugin's id is a good one): letters, digits, dots, dashes and underscores.
+`BridgeApi.Version` is the API's version; a bridge runs plugins built against its version or an
+earlier one, and additions keep it.
+
+**On the editor's side**, your extension gets the game through `registry.Host.Live` (`ILiveGame`:
+the mods registered with the bridge, and `CallAsync(modId, name, body)` to your routes), null when
+the editor is not connected; `registry.AddLiveListener` tells it when a game is connected and when
+that ends. Ask the game for what only it knows (what your mod built in code), keep it, and call
+`registry.Host.Redraw()` for your shapes and cuts to be made again. The sample's
+`samples/ExampleVehicles.Bridge` (the plugin) and `LiveLink` in `samples/ExampleVehicles.WorldEditor`
+(the extension) show both halves; the plugin builds against the game's DLLs like any BepInEx plugin.
+

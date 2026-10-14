@@ -2,7 +2,8 @@
 # Build the plugin's package into <dist>: WorldEditorBridge-<version>.zip, from
 # tools/thunderstore/bridge/ (manifest.json and the mod page's README.md), the editor's CHANGELOG.md
 # (through tools/thunderstore/package.cs), Desktop/Assets/icon.png, the plugin built here
-# (plugins/WorldEditorBridge.dll), tools/plugin-readme.txt (README.txt, for installing by hand) and the
+# (plugins/WorldEditorBridge.dll, with plugins/WorldEditorBridge.Api.dll, what mods' plugins register with:
+# docs/modding.md#live-mode), tools/plugin-readme.txt (README.txt, for installing by hand) and the
 # repository's LICENSE (MIT).
 # The same zip goes to the GitHub release, Thunderstore and Hexium; the editor itself is on GitHub
 # releases only (Thunderstore does not host programs).
@@ -37,7 +38,7 @@ package() {   # $1 package name, $2 its folder in tools/thunderstore; the files 
 
 mkdir -p "$work/WorldEditorBridge/plugins"
 "${DOTNET:-dotnet}" build "$repo/plugin/WorldEditorBridge/WorldEditorBridge.csproj" -c Release -p:DebugType=none -o "$work/build" >/dev/null
-cp "$work/build/WorldEditorBridge.dll" "$work/WorldEditorBridge/plugins/"
+cp "$work/build/WorldEditorBridge.dll" "$work/build/WorldEditorBridge.Api.dll" "$work/WorldEditorBridge/plugins/"
 sed "s/@VERSION@/$version/g" "$repo/tools/plugin-readme.txt" > "$work/WorldEditorBridge/README.txt"
 rm -rf "$repo/plugin/WorldEditorBridge/bin" "$repo/plugin/WorldEditorBridge/obj"
 package WorldEditorBridge bridge

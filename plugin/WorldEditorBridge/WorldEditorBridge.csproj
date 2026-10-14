@@ -13,6 +13,8 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net472" Version="1.0.3" PrivateAssets="all" />
+    <!-- The registry mods' plugins fill (BridgeApi), shipped beside the plugin. -->
+    <ProjectReference Include="../WorldEditorBridge.Api/WorldEditorBridge.Api.csproj" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="BepInEx"><HintPath>$(BepInExDir)/core/BepInEx.dll</HintPath><Private>false</Private></Reference>

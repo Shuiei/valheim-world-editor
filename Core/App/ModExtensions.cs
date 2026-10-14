@@ -12,7 +12,7 @@ namespace TerrainEditor.App;
 /// then only that file (AppSettings.Extensions keeps its SHA-256: a changed DLL is other code and asks again; the
 /// bytes hashed are the bytes loaded). Each is one DLL, loaded in a context of its own that gives it the editor's SDK
 /// and the framework and nothing from its folder, and registers hooks: byte decoders for the inspector,
-/// rewriters of pasted copies, shapes to draw, ground cuts. Read as a world or the Workshop opens, after the manifests. A hook that
+/// rewriters of pasted copies, shapes to draw, ground cuts, live listeners (LiveConnected). Read as a world or the Workshop opens, after the manifests. A hook that
 /// throws turns its extension off until the editor starts again; the editor never fails because of one.
 /// </summary>
 public static class ModExtensions
@@ -55,6 +55,9 @@ public static class ModExtensions
 
         /// <summary>Its ground cutters, by prefab hash.</summary>
         public Dictionary<int, List<IGroundCutter>> Cutters { get; } = [];
+
+        /// <summary>Its live listeners.</summary>
+        public List<ILiveListener> LiveListeners { get; } = [];
 
         /// <summary>Why it was turned off (a hook threw); null while it runs.</summary>
         public string? Fault { get; set; }
@@ -314,6 +317,67 @@ public static class ModExtensions
     private static bool ValidCut(GroundCut c) =>
         c.Outline is { Length: >= 3 } && c.Outline.All(p => float.IsFinite(p.X) && float.IsFinite(p.Y));
 
+    /// <summary>The editor as extensions ask it (IEditorHost).</summary>
+    public static IEditorHost Host { get; } = new EditorHost();
+
+    /// <summary>The game the editor is connected to, as extensions see it; null when it is not.</summary>
+    private static volatile ILiveGame? _live;
+
+    /// <summary>
+    /// The editor connected to a game (or opened another): the running extensions' live listeners are told, and
+    /// <see cref="IEditorHost.Live"/> is it from now on. Never throws.
+    /// </summary>
+    public static void LiveConnected(ILiveGame live)
+    {
+        LiveDisconnected();
+        _live = live;
+        foreach (var l in _state.Running.Values)
+        {
+            foreach (var listener in l.LiveListeners.ToList())
+            {
+                Guard(l, () =>
+                {
+                    listener.OnConnected(live);
+                    return true;
+                }, false);
+            }
+        }
+    }
+
+    /// <summary>The connection ended: the listeners are told, and <see cref="IEditorHost.Live"/> is null. Never throws.</summary>
+    public static void LiveDisconnected()
+    {
+        if (_live == null)
+        {
+            return;
+        }
+        _live = null;
+        foreach (var l in _state.Running.Values)
+        {
+            foreach (var listener in l.LiveListeners.ToList())
+            {
+                Guard(l, () =>
+                {
+                    listener.OnDisconnected();
+                    return true;
+                }, false);
+            }
+        }
+    }
+
+    /// <summary>Asks for the shapes and cuts to be made again (IEditorHost.Redraw): a generation more.</summary>
+    public static void Redraw() => _generation++;
+
+    /// <summary>What an extension asks of the editor.</summary>
+    private sealed class EditorHost : IEditorHost
+    {
+        /// <inheritdoc/>
+        public ILiveGame? Live => _live;
+
+        /// <inheritdoc/>
+        public void Redraw() => ModExtensions.Redraw();
+    }
+
     /// <summary>A world with nothing to find in it.</summary>
     public static IWorldView NoWorld { get; } = new EmptyWorld();
 
@@ -418,6 +482,12 @@ public static class ModExtensions
                 (loaded.Cutters.TryGetValue(h, out var list) ? list : loaded.Cutters[h] = []).Add(cutter);
             }
         }
+
+        /// <inheritdoc/>
+        public void AddLiveListener(ILiveListener listener) => loaded.LiveListeners.Add(listener);
+
+        /// <inheritdoc/>
+        public IEditorHost Host => ModExtensions.Host;
 
         /// <inheritdoc/>
         public void Log(string message) => Console.WriteLine($"extension {loaded.Mod}: {message}");

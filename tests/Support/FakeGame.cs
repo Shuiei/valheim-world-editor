@@ -32,6 +32,12 @@ public sealed class FakeGame : IDisposable
     private uint _next = 1000;
     // Answer this path with this status (an error from the game, or an older plugin without it).
     public Dictionary<string, int> Fail { get; } = [];
+
+    /// <summary>The mods' plugins registered with the bridge (GET /mods); null: a plugin too old to have /mods (404).</summary>
+    public List<string>? Mods { get; set; } = [];
+
+    /// <summary>The mods' routes (POST /mods/id/name): the answer to a body, by mod id and route name.</summary>
+    public Dictionary<(string Mod, string Name), Func<byte[], byte[]>> Routes { get; } = [];
     // Set: ground sent to the game waits for it before the game answers (TerrainArrived says it came).
     public TaskCompletionSource? HoldTerrain { get; set; }
     public TaskCompletionSource TerrainArrived { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -201,6 +207,41 @@ public sealed class FakeGame : IDisposable
                         body = packed.ToArray();
                         type = "application/octet-stream";
                     }
+                }
+            }
+            else if (path == "/mods")
+            {
+                if (Mods == null)
+                {
+                    status = 404;
+                    type = "text/plain";
+                    body = Encoding.UTF8.GetBytes("unknown path");
+                }
+                else
+                {
+                    body = Encoding.UTF8.GetBytes("{\"api\":1,\"mods\":[" + string.Join(",", Mods.Select(m => $"\"{m}\"")) + "]}");
+                }
+            }
+            else if (path.StartsWith("/mods/", StringComparison.Ordinal))
+            {
+                string[] parts = path.Split('/');
+                using var ms = new MemoryStream();
+                await ctx.Request.InputStream.CopyToAsync(ms);
+                type = "text/plain";
+                if (Mods == null || parts.Length != 4 || !Mods.Contains(parts[2]))
+                {
+                    status = 404;
+                    body = Encoding.UTF8.GetBytes($"no mod {(parts.Length > 2 ? parts[2] : "")} is registered with the bridge");
+                }
+                else if (!Routes.TryGetValue((parts[2], parts[3]), out var route))
+                {
+                    status = 404;
+                    body = Encoding.UTF8.GetBytes($"the mod {parts[2]} has no route {parts[3]}");
+                }
+                else
+                {
+                    type = "application/octet-stream";
+                    body = route(ms.ToArray());
                 }
             }
             else if (path == "/zones/reset")
