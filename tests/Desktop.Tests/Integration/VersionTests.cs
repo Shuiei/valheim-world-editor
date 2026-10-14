@@ -22,7 +22,7 @@ public class VersionTests
     public void VersionIsMajorMinorPatch() => Assert.Matches(@"^\d+\.\d+\.\d+$", Version);
 
     [Fact]
-    public void TheEditorHasTheVersionOfTheVersionFile() => Assert.Equal(Version, typeof(TerrainEditor.Desktop.MainWindow).Assembly.GetName().Version!.ToString(3));
+    public void TheEditorHasTheVersionOfTheVersionFile() => Assert.Equal(Version, typeof(MainWindow).Assembly.GetName().Version!.ToString(3));
 
     [Fact]
     public void TheChangelogHasASectionForIt()

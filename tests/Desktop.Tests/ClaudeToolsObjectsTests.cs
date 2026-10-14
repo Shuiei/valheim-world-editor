@@ -227,7 +227,7 @@ public class ClaudeToolsObjectsTests
         int id = r.T.Rewrite(chest, [new("strings", "creatorName", "Odin")], [new("Wood", null, Stack: 5)], "Claude: test").Id!.Value;
         id = r.T.Rewrite(id, [new("strings", "creatorName", "Thor")], null, "Claude: test").Id!.Value;
         var data = s.Edits.FindAdded(s.Scene.Things[id].Id)!.Data!;
-        Assert.Single(data, f => f.Key == TerrainEditor.Save.StableHash.Of("creatorName") && f.Value == "Thor");
+        Assert.Single(data, f => f.Key == Save.StableHash.Of("creatorName") && f.Value == "Thor");
         Assert.Contains(data, f => f.Key == TerrainEditor.App.ObjectData.ItemsKey);
         Assert.Contains(data, f => f.Key == TerrainEditor.App.ObjectData.AddedDefaultItemsKey && f.Value == "1");
     }

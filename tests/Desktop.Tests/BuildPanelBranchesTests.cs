@@ -38,7 +38,7 @@ public sealed class BuildPanelBranchesTests : IDisposable
         new(left ? RawInputModifiers.LeftMouseButton : RawInputModifiers.None, left ? PointerUpdateKind.LeftButtonPressed : PointerUpdateKind.Other);
 
     /// <summary>A new mouse pointer.</summary>
-    private static Avalonia.Input.Pointer NewPointer() => new(Avalonia.Input.Pointer.GetNextFreeId(), PointerType.Mouse, true);
+    private static Pointer NewPointer() => new(Pointer.GetNextFreeId(), PointerType.Mouse, true);
 
     /// <summary>The left button pressed on a row (on <paramref name="source"/>, the row or one of its buttons).</summary>
     private static void Press(Border row, object source) =>

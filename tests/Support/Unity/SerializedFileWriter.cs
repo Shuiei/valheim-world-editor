@@ -144,7 +144,7 @@ public sealed class SerializedFileWriter
     /// </summary>
     public byte[] ToBytes()
     {
-        const int header = 48;
+        const int HeaderSize = 48;
         // Each object's data starts aligned to 8 bytes.
         long[] offsets = new long[_objects.Count];
         long at = 0;
@@ -157,7 +157,7 @@ public sealed class SerializedFileWriter
         // The objects' table, in the metadata, has their offsets.
         byte[] metadata = Metadata(offsets);
         // The objects' data starts aligned to 16 bytes after the metadata.
-        long dataOffset = Align(header + metadata.Length, 16);
+        long dataOffset = Align(HeaderSize + metadata.Length, 16);
         long fileSize = dataOffset + at;
         byte[] file = new byte[fileSize];
         var span = file.AsSpan();
@@ -167,7 +167,7 @@ public sealed class SerializedFileWriter
         BinaryPrimitives.WriteUInt32BigEndian(span[20..], (uint)metadata.Length);
         BinaryPrimitives.WriteInt64BigEndian(span[24..], fileSize);
         BinaryPrimitives.WriteInt64BigEndian(span[32..], dataOffset);
-        metadata.CopyTo(span[header..]);
+        metadata.CopyTo(span[HeaderSize..]);
         for (int i = 0; i < _objects.Count; i++)
         {
             _objects[i].Data.CopyTo(span[(int)(dataOffset + offsets[i])..]);
