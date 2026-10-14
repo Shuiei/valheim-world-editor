@@ -9,8 +9,8 @@ the plugin is unchanged in versions without that part.
 ### WorldEditorBridge
 - The plugin's log says more of each apply, for when a change does not show for every player: the apply line adds
   how many objects the game knew before and after and how many peers are connected, and a second later a new line
-  says how many of the destroyed objects the game still has and how many were made again at their place (an object
-  of the same prefab within 10 cm). See [What the plugin logs](docs/live-mode.md#what-the-plugin-logs).
+  says how many of the destroyed objects the game still has and how many other objects of their prefab stand within
+  10 cm of their place (made again, or there all along). See [What the plugin logs](docs/live-mode.md#what-the-plugin-logs).
 
 ## v1.35.2 — unreleased
 
