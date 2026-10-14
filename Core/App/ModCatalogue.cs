@@ -31,10 +31,92 @@ public static class ModCatalogue
     /// <param name="Costs">Piece costs by name (PieceCost's "pieces").</param>
     /// <param name="Items">Item names by prefab name (PieceCost's "items"), for the costs' items.</param>
     /// <param name="Mods">The mod that adds each prefab, when the game knew it (with Jötunn).</param>
-    private sealed record Data(Dictionary<string, JsonNode> Prefabs, Dictionary<string, JsonNode> Pieces, Dictionary<string, JsonNode> Costs, Dictionary<string, string> Items, Dictionary<string, string> Mods);
+    /// <param name="Models">What the game draws of each prefab (GET /models), when it was asked.</param>
+    private sealed record Data(Dictionary<string, JsonNode> Prefabs, Dictionary<string, JsonNode> Pieces, Dictionary<string, JsonNode> Costs, Dictionary<string, string> Items, Dictionary<string, string> Mods,
+        Dictionary<string, JsonNode> Models);
 
     /// <summary>Nothing known: before Load, and when the kept file is missing or cannot be read.</summary>
-    private static Data Empty() => new([], [], [], [], []);
+    private static Data Empty() => new([], [], [], [], [], []);
+
+    /// <summary>
+    /// One part of a mod prefab's model, as the game draws it: found by name in the mods' and the game's bundles.
+    /// </summary>
+    /// <param name="Mesh">The mesh's name (without the " Instance" of a copy made while the game runs).</param>
+    /// <param name="Vertices">The mesh's vertex count, to tell apart meshes of the same name.</param>
+    /// <param name="Sub">The submesh drawn.</param>
+    /// <param name="Material">The material's name (without " (Instance)"), when it has one.</param>
+    /// <param name="Matrix">Its place in the prefab's frame: Unity's matrix, row by row (as GameBundles.Part's).</param>
+    /// <param name="Bounds">The mesh's bounds, centre and extent (x, y, z each), when the game told them.</param>
+    public sealed record ModelPart(string Mesh, int Vertices, int Sub, string? Material, float[] Matrix, float[]? Bounds = null);
+
+    /// <summary>
+    /// What the game draws of a mod prefab.
+    /// </summary>
+    /// <param name="RootScale">The prefab root's scale.</param>
+    /// <param name="Parts">Its parts.</param>
+    public sealed record Model(float[] RootScale, IReadOnlyList<ModelPart> Parts);
+
+    /// <summary>
+    /// What the game draws of a mod prefab, as it reported it; null when it was not asked or the prefab is not a mod's.
+    /// </summary>
+    public static Model? ModelOf(string prefab)
+    {
+        if (_data.Models.GetValueOrDefault(prefab) is not JsonObject o)
+        {
+            return null;
+        }
+        static float[] Floats(JsonNode? n) => [.. n!.AsArray().Select(x => (float)x!.GetValue<double>())];
+        var parts = o["p"]!.AsArray().Select(p => new ModelPart(
+            Plain(p!["mesh"]!.GetValue<string>()), p["v"]!.GetValue<int>(), p["sub"]!.GetValue<int>(),
+            p["mat"] is { } m ? Plain(m.GetValue<string>()) : null, Floats(p["m"]), p["b"] is { } b ? Floats(b) : null)).ToList();
+        return new Model(Floats(o["s"]), parts);
+    }
+
+    /// <summary>
+    /// A name without what Unity adds to the copies made while the game runs (" (Instance)", " Instance").
+    /// </summary>
+    internal static string Plain(string name)
+    {
+        foreach (string end in (string[])[" (Instance)", " Instance"])
+        {
+            while (name.EndsWith(end, StringComparison.Ordinal))
+            {
+                name = name[..^end.Length];
+            }
+        }
+        return name;
+    }
+
+    /// <summary>
+    /// Takes a game's models (POST /models) of the mod prefabs known: each replaces the one there was, and the whole is
+    /// kept. Models not in the expected form, and of prefabs that are not known mods' ones, are left out.
+    /// </summary>
+    /// <returns>How many models were taken.</returns>
+    /// <exception cref="JsonException">The answer is not a JSON object.</exception>
+    public static int TakeModels(string json)
+    {
+        var root = JsonNode.Parse(json) as JsonObject ?? throw new JsonException("the models are not a JSON object");
+        var now = _data;
+        var models = new Dictionary<string, JsonNode>(now.Models);
+        int taken = 0;
+        bool changed = false;
+        foreach (var (name, e) in Entries(root))
+        {
+            if (now.Prefabs.ContainsKey(name) && IsModel(e))
+            {
+                taken++;
+                changed |= Put(models, name, e.DeepClone());
+            }
+        }
+        if (changed)
+        {
+            var next = now with { Models = models };
+            // Kept first, as Take does.
+            SafeFile.WriteAllText(FilePath, Write(next));
+            _data = next;
+        }
+        return taken;
+    }
 
     /// <summary>What is known now, swapped in whole.</summary>
     private static volatile Data _data = Empty();
@@ -85,7 +167,7 @@ public static class ModCatalogue
     {
         var got = Read(report);
         var now = _data;
-        var next = new Data(new(now.Prefabs), new(now.Pieces), new(now.Costs), new(now.Items), new(now.Mods));
+        var next = new Data(new(now.Prefabs), new(now.Pieces), new(now.Costs), new(now.Items), new(now.Mods), new(now.Models));
         int mods = 0;
         bool changed = false;
         foreach (var (name, entry) in got.Prefabs)
@@ -217,6 +299,13 @@ public static class ModCatalogue
                 d.Mods[name] = mod;
             }
         }
+        foreach (var (name, e) in Entries(root["models"]))
+        {
+            if (d.Prefabs.ContainsKey(name) && IsModel(e))
+            {
+                d.Models[name] = e.DeepClone();
+            }
+        }
         return d;
     }
 
@@ -232,6 +321,7 @@ public static class ModCatalogue
             ["pieces"] = Obj(d.Pieces),
             ["cost"] = new JsonObject { ["pieces"] = Obj(d.Costs), ["items"] = Obj(Texts(d.Items)) },
             ["mods"] = Obj(Texts(d.Mods)),
+            ["models"] = Obj(d.Models),
         };
         return root.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
     }
@@ -275,6 +365,18 @@ public static class ModCatalogue
         }
         return true;
     }
+
+    /// <summary>
+    /// A model: "s" three numbers, "p" a list of parts with a string "mesh", integers "v" and "sub", a string "mat" and
+    /// "b" six numbers when there, and "m" 16 numbers.
+    /// </summary>
+    private static bool IsModel(JsonNode e) =>
+        e is JsonObject o && o["s"] is JsonArray s && s.Count == 3 && s.All(x => Num(x))
+        && o["p"] is JsonArray parts && parts.All(p => p is JsonObject part
+            && part["mesh"] is { } mesh && Text(mesh) != null && Num(part["v"], true) && Num(part["sub"], true)
+            && (part["mat"] is null || Text(part["mat"]!) != null)
+            && (part["b"] is null || part["b"] is JsonArray b && b.Count == 6 && b.All(x => Num(x)))
+            && part["m"] is JsonArray m && m.Count == 16 && m.All(x => Num(x)));
 
     /// <summary>
     /// A piece entry: an integer "cat"; "box" six numbers; "snap" a list of points (three numbers); "tool" a string.

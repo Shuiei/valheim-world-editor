@@ -4,6 +4,30 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.27.0 — unreleased
+
+### Added
+- **Modded pieces drawn as in game**: a mod's pieces and objects learned from a live game are drawn
+  with their own models and textures (in the 3D view, the Workshop and the Build panel's pictures),
+  no longer as boxes. The game tells what it draws of each (mods make most of theirs while it runs,
+  from copies of the game's pieces and placeholders it swaps for the game's meshes and materials),
+  and the editor finds those meshes, materials and textures by name in the mods' own bundles, which
+  it copies out of their DLLs from your Valheim and mod manager profiles, else in the game's.
+  Meshes of the same name are told apart by their size, Unity's own cubes and planes that mods use
+  are made by the editor, and compressed meshes (some mods' bundles) are read. Meshes a mod builds
+  in code while the game runs (ValheimRAFT's sails) are not drawn, and crunched textures
+  (OdinsKingdom's stone) are not read yet: those pieces show untextured.
+- **Mods tab by mod**: the Build panel's Mods tab lists one mod's pieces at a time, chosen in a row
+  of the game's mods with their number of pieces, at most 300 at once (search for the others), so a
+  mod that adds thousands (PlanBuild's plans) neither buries the others nor slows the panel.
+
+### WorldEditorBridge
+- New `POST /models`: what the game draws of some prefabs, by the names of their meshes and
+  materials, with their sizes.
+- `GET /catalogue` names a prefab's mod as it was installed (its package's name), not after the
+  plugin inside it that added the prefab (ValheimRAFT's pieces were listed under "Inventory Patch
+  Detector").
+
 ## v1.26.0 — unreleased
 
 ### Added

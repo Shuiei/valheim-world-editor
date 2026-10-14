@@ -114,7 +114,7 @@ public sealed class GameBundles
     /// <summary>
     /// AssetsTools.NET's manager, which holds the open bundles and their type trees.
     /// </summary>
-    private readonly AssetsManager _am = new() { UseTemplateFieldCache = true, UseRefTypeManagerCache = true, UseQuickLookup = true };
+    private readonly AssetsManager _am;
     /// <summary>
     /// Where the index is kept (null: not kept).
     /// </summary>
@@ -164,8 +164,12 @@ public sealed class GameBundles
     /// </summary>
     /// <param name="dir">The bundles folder.</param>
     /// <param name="cacheFile">Where the index is kept (null: not kept).</param>
-    public GameBundles(string dir, string? cacheFile)
+    /// <param name="mixedVersions">The bundles were built by different Unity versions (the mods' bundles): the layout
+    /// of each kind of object is then read from each bundle, not kept from the first one read (AssetsTools keeps it by
+    /// kind alone, and another version's layout misreads the object).</param>
+    public GameBundles(string dir, string? cacheFile, bool mixedVersions = false)
     {
+        _am = new() { UseTemplateFieldCache = !mixedVersions, UseRefTypeManagerCache = true, UseQuickLookup = true };
         Folder = dir;
         _cacheFile = cacheFile;
         foreach (string f in Directory.GetFiles(dir))
@@ -468,6 +472,203 @@ public sealed class GameBundles
     {
         var go = Read(w.Bundle, w.PathId);
         return go != null && Components(w.Bundle, go).Any(c => c.Type == (int)AssetClassID.MonoBehaviour && Has(c.F, "m_persistent") && Has(c.F, "m_distant"));
+    }
+
+    // ---- Assets by name.
+
+    /// <summary>
+    /// The kinds of objects <see cref="Named"/> finds: what a model is made of.
+    /// </summary>
+    private static readonly AssetClassID[] NamedKinds = [AssetClassID.Mesh, AssetClassID.Material, AssetClassID.Texture2D];
+
+    /// <summary>
+    /// "kind:name" -&gt; the objects so named (kind: Unity's class id); null until built or read from its kept file.
+    /// </summary>
+    private Dictionary<string, List<Where>>? _named;
+
+    /// <summary>
+    /// The meshes, materials or textures of that name, in every bundle (several: the same name in several bundles, or
+    /// twice in one). Asked first, the names are read from every bundle (seconds, once; kept in a file next to the
+    /// index until the bundles change).
+    /// </summary>
+    /// <param name="kind">Mesh, Material or Texture2D.</param>
+    /// <param name="name">The object's name (m_Name).</param>
+    public IReadOnlyList<Where> Named(AssetClassID kind, string name)
+    {
+        lock (_sync)
+        {
+            return EnsureNamed().GetValueOrDefault($"{(int)kind}:{name}") ?? [];
+        }
+    }
+
+    /// <summary>
+    /// Makes sure the names are there (see <see cref="Named"/>).
+    /// </summary>
+    public void EnsureNamesRead()
+    {
+        lock (_sync)
+        {
+            EnsureNamed();
+        }
+    }
+
+    /// <summary>
+    /// Where the names are kept: beside the index's file (none when the index is not kept).
+    /// </summary>
+    private string? NamesFile => _cacheFile == null ? null : Path.Combine(Path.GetDirectoryName(_cacheFile)!, Path.GetFileNameWithoutExtension(_cacheFile) + "-names.json");
+
+    /// <summary>
+    /// The names: there already, read from their kept file while the bundles are unchanged, else read from the bundles
+    /// (and kept).
+    /// </summary>
+    private Dictionary<string, List<Where>> EnsureNamed()
+    {
+        if (_named != null)
+        {
+            return _named;
+        }
+        string now = JsonSerializer.Serialize(BundlesNow());
+        string? file = NamesFile;
+        if (file != null && File.Exists(file))
+        {
+            try
+            {
+                using var doc = JsonDocument.Parse(File.ReadAllText(file));
+                if (doc.RootElement.GetProperty("Bundles").GetRawText().Replace(" ", "", StringComparison.Ordinal) == now)
+                {
+                    var kept = new Dictionary<string, List<Where>>();
+                    foreach (var p in doc.RootElement.GetProperty("Names").EnumerateObject())
+                    {
+                        kept[p.Name] = [.. p.Value.EnumerateArray().Select(k => Where.FromKey(k.GetString() ?? "")).OfType<Where>()];
+                    }
+                    return _named = kept;
+                }
+            }
+            catch (Exception e) when (e is JsonException or IOException or KeyNotFoundException or InvalidOperationException)
+            {
+                Console.WriteLine($"game files: the names cache could not be read ({e.Message}), reading the bundles again");
+            }
+        }
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        var named = new Dictionary<string, List<Where>>();
+        foreach (string bundle in _files.Keys.Order(StringComparer.Ordinal))
+        {
+            // A bundle that cannot be read (a mod's, damaged or unusual) is skipped: the others' names still count.
+            BundleFileInstance? b = null;
+            AssetsFileInstance? a = null;
+            try
+            {
+                b = _am.LoadBundleFile(_files[bundle], false);
+                a = _am.LoadAssetsFileFromBundle(b, 0, false);
+                var reader = a.file.Reader;
+                foreach (var info in a.file.AssetInfos)
+                {
+                    if (Array.IndexOf(NamedKinds, (AssetClassID)info.TypeId) < 0)
+                    {
+                        continue;
+                    }
+                    // m_Name is a named object's first field: nothing else read.
+                    reader.Position = info.GetAbsoluteByteOffset(a.file);
+                    int n = reader.ReadInt32();
+                    if (n is <= 0 or > 256)
+                    {
+                        continue;
+                    }
+                    string key = $"{info.TypeId}:{System.Text.Encoding.UTF8.GetString(reader.ReadBytes(n))}";
+                    if (!named.TryGetValue(key, out var list))
+                    {
+                        named[key] = list = [];
+                    }
+                    list.Add(new Where(bundle, info.PathId));
+                }
+            }
+            catch (Exception e) when (e is IOException or InvalidDataException or NotImplementedException or NotSupportedException or EndOfStreamException
+                or IndexOutOfRangeException or ArgumentException or NullReferenceException or OverflowException)
+            {
+                Console.WriteLine($"game files: the names of {bundle} could not be read ({e.Message}), skipped");
+            }
+            finally
+            {
+                // Closed again, read whole or not (a file kept open could not be replaced later), unless kept for
+                // reading its assets.
+                if (!_open.ContainsKey(bundle))
+                {
+                    if (a != null)
+                    {
+                        _am.UnloadAssetsFile(a);
+                    }
+                    if (b != null)
+                    {
+                        _am.UnloadBundleFile(b);
+                    }
+                }
+            }
+        }
+        Console.WriteLine($"game files: {named.Count} mesh, material and texture names read from {_files.Count} bundles in {sw.ElapsedMilliseconds} ms");
+        if (file != null)
+        {
+            try
+            {
+                SafeFile.WriteAllText(file, JsonSerializer.Serialize(new { Bundles = BundlesNow(), Names = named.ToDictionary(kv => kv.Key, kv => kv.Value.Select(w => w.Key)) }));
+            }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+            {
+                Console.WriteLine($"game files: the names could not be kept ({e.Message})");
+            }
+        }
+        return _named = named;
+    }
+
+    /// <summary>
+    /// A mesh's bounds as Unity keeps them (m_LocalAABB: centre and extent, x, y, z each), null when it cannot be read
+    /// (to tell apart meshes of the same name; one that cannot be read is not a candidate).
+    /// </summary>
+    public float[]? BoundsOf(Where mesh)
+    {
+        lock (_sync)
+        {
+            try
+            {
+                if (Read(mesh.Bundle, mesh.PathId) is not { } m || !Has(m, "m_LocalAABB"))
+                {
+                    return null;
+                }
+                var c = m["m_LocalAABB.m_Center"];
+                var e = m["m_LocalAABB.m_Extent"];
+                return [c["x"].AsFloat, c["y"].AsFloat, c["z"].AsFloat, e["x"].AsFloat, e["y"].AsFloat, e["z"].AsFloat];
+            }
+            catch (Exception e) when (e is IOException or InvalidDataException or NotImplementedException or NotSupportedException or IndexOutOfRangeException or ArgumentException)
+            {
+                return null;
+            }
+            finally
+            {
+                _fields.Clear();
+            }
+        }
+    }
+
+    /// <summary>
+    /// A mesh's vertex count, -1 when it cannot be read (to tell apart meshes of the same name; one that cannot be read
+    /// is not a candidate).
+    /// </summary>
+    public int VertexCountOf(Where mesh)
+    {
+        lock (_sync)
+        {
+            try
+            {
+                return Read(mesh.Bundle, mesh.PathId) is { } m ? (int)m["m_VertexData.m_VertexCount"].AsUInt : -1;
+            }
+            catch (Exception e) when (e is IOException or InvalidDataException or NotImplementedException or NotSupportedException or IndexOutOfRangeException or ArgumentException)
+            {
+                return -1;
+            }
+            finally
+            {
+                _fields.Clear();
+            }
+        }
     }
 
     // ---- Reading objects.
@@ -874,8 +1075,8 @@ public sealed class GameBundles
     private static readonly int[] FormatSize = [4, 2, 1, 1, 2, 2, 1, 1, 2, 2, 4, 4];
 
     /// <summary>
-    /// A mesh's vertices and triangles, null when there is no such object. Throws NotSupportedException for a
-    /// compressed mesh.
+    /// A mesh's vertices and triangles, null when there is no such object (a compressed mesh too: Unity's mesh
+    /// compression, which some mods' bundles use).
     /// </summary>
     public Mesh? LoadMesh(Where at)
     {
@@ -900,7 +1101,7 @@ public sealed class GameBundles
         string name = m["m_Name"].AsString;
         if (Has(m, "m_CompressedMesh") && m["m_CompressedMesh.m_Vertices.m_NumItems"].AsUInt > 0)
         {
-            throw new NotSupportedException($"mesh {name} is compressed");
+            return ReadCompressedMesh(name, m);
         }
         var vd = m["m_VertexData"];
         int n = (int)vd["m_VertexCount"].AsUInt;
@@ -975,6 +1176,109 @@ public sealed class GameBundles
             subs.Add(idx);
         }
         return new Mesh(name, n, Channel(0, 3) ?? new float[n * 3], Channel(1, 3), Channel(4, 2), [.. subs]);
+    }
+
+    /// <summary>
+    /// A compressed mesh (Unity's mesh compression: positions, normals, uv and triangles packed in bits, each value
+    /// a step of its range): positions, normals (two parts and the sign of the third), the first uv channel, and the
+    /// triangles cut into the submeshes as an uncompressed mesh's index buffer would be.
+    /// </summary>
+    private static Mesh ReadCompressedMesh(string name, AssetTypeValueField m)
+    {
+        var c = m["m_CompressedMesh"];
+        float[] positions = UnpackFloats(c["m_Vertices"]);
+        int n = positions.Length / 3;
+        float[]? normals = null;
+        float[] packedNormals = UnpackFloats(c["m_Normals"]);
+        if (packedNormals.Length >= n * 2 && n > 0)
+        {
+            int[] signs = UnpackInts(c["m_NormalSigns"]);
+            normals = new float[n * 3];
+            for (int v = 0; v < n; v++)
+            {
+                float x = packedNormals[v * 2], y = packedNormals[v * 2 + 1];
+                float z = MathF.Sqrt(Math.Max(0, 1 - x * x - y * y));
+                if (v < signs.Length && signs[v] == 0)
+                {
+                    z = -z;
+                }
+                float len = MathF.Sqrt(x * x + y * y + z * z);
+                if (len > 0)
+                {
+                    (x, y, z) = (x / len, y / len, z / len);
+                }
+                (normals[v * 3], normals[v * 3 + 1], normals[v * 3 + 2]) = (x, y, z);
+            }
+        }
+        float[] uvs = UnpackFloats(c["m_UV"]);
+        // The first channel comes first (m_UVInfo says which channels follow).
+        float[]? uv = uvs.Length >= n * 2 ? uvs[..(n * 2)] : null;
+        int[] triangles = UnpackInts(c["m_Triangles"]);
+        bool wide = m["m_IndexFormat"].AsInt == 1;
+        var subs = new List<int[]>();
+        foreach (var sm in m["m_SubMeshes.Array"].Children)
+        {
+            int first = (int)sm["firstByte"].AsUInt / (wide ? 4 : 2), count = (int)sm["indexCount"].AsUInt, baseV = (int)sm["baseVertex"].AsUInt;
+            if (sm["topology"].AsInt != 0 || first + count > triangles.Length)
+            {
+                subs.Add([]);
+                continue;
+            }
+            subs.Add([.. triangles.AsSpan(first, count - count % 3).ToArray().Select(i => baseV + i)]);
+        }
+        return new Mesh(name, n, positions, normals, uv, [.. subs]);
+    }
+
+    /// <summary>
+    /// A PackedBitVector of numbers: each m_BitSize bits (little end first) a step of m_Range from m_Start.
+    /// </summary>
+    private static float[] UnpackFloats(AssetTypeValueField v)
+    {
+        int bits = v["m_BitSize"].AsByte;
+        float range = v["m_Range"].AsFloat, start = v["m_Start"].AsFloat;
+        int[] raw = Unpack(v, bits);
+        float max = bits >= 32 ? uint.MaxValue : (1u << bits) - 1;
+        float[] res = new float[raw.Length];
+        for (int i = 0; i < raw.Length; i++)
+        {
+            res[i] = max > 0 ? start + range * ((uint)raw[i] / max) : start;
+        }
+        return res;
+    }
+
+    /// <summary>A PackedBitVector of integers (each m_BitSize bits, little end first).</summary>
+    private static int[] UnpackInts(AssetTypeValueField v) => Unpack(v, v["m_BitSize"].AsByte);
+
+    /// <summary>The m_NumItems values of <paramref name="bits"/> bits each packed in m_Data, as Unity packs them.</summary>
+    private static int[] Unpack(AssetTypeValueField v, int bits)
+    {
+        int count = (int)v["m_NumItems"].AsUInt;
+        byte[] data = v["m_Data.Array"].AsByteArray;
+        if (count <= 0 || bits is <= 0 or > 32 || (long)count * bits > (long)data.Length * 8)
+        {
+            return [];
+        }
+        int[] res = new int[count];
+        int index = 0, bit = 0;
+        for (int i = 0; i < count; i++)
+        {
+            uint x = 0;
+            int got = 0;
+            while (got < bits)
+            {
+                x |= (uint)(data[index] >> bit) << got;
+                int take = Math.Min(bits - got, 8 - bit);
+                bit += take;
+                got += take;
+                if (bit == 8)
+                {
+                    index++;
+                    bit = 0;
+                }
+            }
+            res[i] = (int)(bits == 32 ? x : x & ((1u << bits) - 1));
+        }
+        return res;
     }
 
     // ---- Materials and textures.

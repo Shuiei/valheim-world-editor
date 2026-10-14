@@ -2,9 +2,11 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using System.Text.RegularExpressions;
 using UnityEngine;
 
 namespace WorldEditorBridge;
@@ -59,6 +61,8 @@ public sealed partial class WorldEditorBridgePlugin
     private Dictionary<string, string> PrefabMods()
     {
         Dictionary<string, string> mods = [];
+        // A mod's name once per plugin (a manifest read), not once per prefab: a mod adds thousands.
+        Dictionary<string, string> names = [];
         try
         {
             var query = Type.GetType("Jotunn.Utils.ModQuery, Jotunn");
@@ -71,7 +75,11 @@ public sealed partial class WorldEditorBridgePlugin
                 Type t = p.GetType();
                 if (t.GetProperty("Prefab")?.GetValue(p) is GameObject go && go && t.GetProperty("SourceMod")?.GetValue(p) is BepInEx.BepInPlugin mod)
                 {
-                    mods[go.name] = mod.Name;
+                    if (!names.TryGetValue(mod.GUID, out string name))
+                    {
+                        names[mod.GUID] = name = ModName(mod);
+                    }
+                    mods[go.name] = name;
                 }
             }
         }
@@ -80,6 +88,47 @@ public sealed partial class WorldEditorBridgePlugin
             Logger.LogWarning($"WorldEditorBridge could not ask Jötunn which mod adds each prefab: {ex.Message}");
         }
         return mods;
+    }
+
+    /// <summary>
+    /// A mod's name as players know it: the package it was installed from (the folder it is in under plugins, as mod
+    /// managers make them: its manifest.json's name, else the folder's name without its "Author-"), else the
+    /// plugin's own name. A package can hold several plugins, and Jötunn names the one that added a prefab
+    /// (ValheimRAFT's are added by its "Inventory Patch Detector").
+    /// </summary>
+    private static string ModName(BepInEx.BepInPlugin plugin)
+    {
+        if (!BepInEx.Bootstrap.Chainloader.PluginInfos.TryGetValue(plugin.GUID, out BepInEx.PluginInfo info) || string.IsNullOrEmpty(info.Location))
+        {
+            return plugin.Name;
+        }
+        string plugins = Path.GetFullPath(BepInEx.Paths.PluginPath).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+        string dll = Path.GetFullPath(info.Location);
+        if (!dll.StartsWith(plugins, StringComparison.OrdinalIgnoreCase))
+        {
+            return plugin.Name;
+        }
+        string[] parts = dll.Substring(plugins.Length).Split(Path.DirectorySeparatorChar);
+        if (parts.Length < 2)
+        {
+            return plugin.Name;
+        }
+        string folder = parts[0];
+        try
+        {
+            string manifest = Path.Combine(plugins + folder, "manifest.json");
+            if (File.Exists(manifest)
+                && Regex.Match(File.ReadAllText(manifest), "\"name\"\\s*:\\s*\"([^\"]+)\"") is { Success: true } m)
+            {
+                return m.Groups[1].Value;
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // An unreadable manifest: the folder's name.
+        }
+        int dash = folder.IndexOf('-');
+        return dash > 0 && dash < folder.Length - 1 ? folder.Substring(dash + 1) : folder;
     }
 
     /// <summary>
@@ -281,7 +330,10 @@ public sealed partial class WorldEditorBridgePlugin
     }
 
     /// <summary>Whether a point's coordinates are all numbers (not NaN or infinite), as JSON needs.</summary>
-    private static bool Finite(Vector3 p) => !float.IsNaN(p.x) && !float.IsInfinity(p.x) && !float.IsNaN(p.y) && !float.IsInfinity(p.y) && !float.IsNaN(p.z) && !float.IsInfinity(p.z);
+    private static bool Finite(Vector3 p) => Finite(p.x) && Finite(p.y) && Finite(p.z);
+
+    /// <summary>Whether a number is one (not NaN or infinite), as JSON needs.</summary>
+    private static bool Finite(float v) => !float.IsNaN(v) && !float.IsInfinity(v);
 
     /// <summary>Whether a child and every parent up to the root is active (the root's own state does not count).</summary>
     private static bool ActiveUnder(Transform t, Transform root)
