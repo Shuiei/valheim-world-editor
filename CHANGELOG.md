@@ -4,7 +4,7 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
-## v1.37.3 — unreleased
+## v1.37.3 — 2026-10-14
 
 ### Changed
 - **A click finds an object by its drawn shape.** A click found the nearest box round an object, so a chest, a stone
@@ -16,14 +16,14 @@ the plugin is unchanged in versions without that part.
   tree is a column round its trunk, the full height of the tree, instead of the box round its whole crown. Logs and
   stumps keep their box.
 
-## v1.37.2 — unreleased
+## v1.37.2 — 2026-10-14
 
 ### Changed
 - **A large selection is marked by one box.** Past 500 selected objects the 3D view draws one orange box round
   them all instead of one round each: a whole stacked structure selected at once (tens of thousands of pieces)
   was a solid orange blob that hid it. Up to 500 the boxes are drawn as before.
 
-## v1.37.1 — unreleased
+## v1.37.1 — 2026-10-14
 
 ### Changed
 - **The green dot on each unsaved object is much smaller.** It was about 1% of the view's height across (11 pixels at
