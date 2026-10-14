@@ -134,6 +134,36 @@ public class EditSessionOtherAreasTests
     }
 
     [AvaloniaFact]
+    public void SavingFromAnotherAreaMarksTheStepsKeptAsideAsSaved()
+    {
+        string dir = Fixtures.CopyFixture();
+        try
+        {
+            var first = WorldScene.Load(dir, 0, 0, 1);
+            var owner = first.Owner!;
+            var a = first.Session!;
+            Raise(a, "Raise here");
+            Assert.Equal(1, a.UnappliedSteps);
+            // Saved from another area: the world's pending changes go together, the first area's step among them.
+            owner.History = a.Export();
+            var b = WorldScene.Load(owner, 3, 3, 1).Session!;
+            Raise(b, "Raise there");
+            Assert.True(b.Save().Saved);
+            Assert.Equal(0, b.UnappliedSteps);
+            // Back in the first area: its step is saved too, so Discard has nothing to undo there.
+            owner.History = b.Export();
+            var again = WorldScene.Load(owner, 0, 0, 1).Session!;
+            Assert.True(Assert.Single(again.UndoList).Applied);
+            Assert.Equal(0, again.UnappliedSteps);
+            Assert.Equal(0, again.UndoUnapplied());
+        }
+        finally
+        {
+            Done(dir);
+        }
+    }
+
+    [AvaloniaFact]
     public void AStepPartlyInTheAreaStillKeepsTheOlderOnesFromBeingUndoneThere()
     {
         string dir = Fixtures.CopyFixture();

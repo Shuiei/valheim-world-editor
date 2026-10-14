@@ -1272,10 +1272,7 @@ public sealed class EditSession
             else if (result.Saved)
             {
                 Ground.TakeEdits(Edits);
-                foreach (var c in _undo)
-                {
-                    c.Applied = true;
-                }
+                MarkApplied(_undo);
             }
         }
         if (reread)
@@ -1284,6 +1281,19 @@ public sealed class EditSession
         }
         Changed?.Invoke();
         return result;
+    }
+
+    /// <summary>
+    /// Marks these steps, and those kept aside from other areas, as saved or applied: the world's pending changes are
+    /// one set, so a save or an apply from any area takes the steps of every area with it (and Discard must not undo
+    /// them where they were made). Under the lock.
+    /// </summary>
+    private void MarkApplied(IEnumerable<Change> steps)
+    {
+        foreach (var c in steps.Concat(_shelvedUndo.Select(s => s.Change)))
+        {
+            c.Applied = true;
+        }
     }
 
     /// <summary>
@@ -1313,10 +1323,7 @@ public sealed class EditSession
                 Ground.TakeEdits(Edits);
                 if (o.Done)
                 {
-                    foreach (var c in before)
-                    {
-                        c.Applied = true;
-                    }
+                    MarkApplied(before);
                 }
             }
         }
