@@ -101,6 +101,20 @@ public class AreaToolTests
         Assert.NotEqual(Fill(raise), Fill(raiseAll));
         Assert.Equal(Fill(flattenAll), Fill(raiseAll));
         Assert.Equal(Fill(raiseAll).Replace("fill", "dig"), System.Text.RegularExpressions.Regex.Match(a.Volume(s.Ground, AreaTool.GroundAction.Lower, 0, 30), @"dig [\d.k]+ m³").Value);
+        // Smoothing kept by the game's limit takes from the reach on its side: a point smoothed 1 m up gets down
+        // to 7 m below the generated ground, not 8, as SetHeight has it.
+        s.Ground.NoLimit = false;
+        int q = 60 * s.Ground.W + 60;
+        s.Ground.Mod[q] = 1;
+        s.Ground.Smooth[q] = 1;
+        var one = Box(59.5f, 59.5f, 60.5f, 60.5f);
+        Assert.True(s.Ground.SetHeight(q, 20));
+        Assert.Equal(23, s.Ground.HeightOf(q), 3);
+        s.Ground.Level[q] = 0;
+        Assert.Contains("dig 8 m³", one.Volume(s.Ground, AreaTool.GroundAction.Lower, 0, 30));
+        s.Ground.Mod[q] = 0;
+        s.Ground.Smooth[q] = 0;
+        s.Ground.NoLimit = true;
         // The lift stops at ±400 m of the generated ground: 500 m up is 100 m out of reach.
         Assert.Contains("out of reach: ±400 m lift limit", a.Volume(s.Ground, AreaTool.GroundAction.Flatten, 530, 0));
         Assert.Equal(Fill(a.Volume(s.Ground, AreaTool.GroundAction.Raise, 0, 400)), Fill(a.Volume(s.Ground, AreaTool.GroundAction.Raise, 0, 500)));

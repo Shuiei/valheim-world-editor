@@ -417,9 +417,11 @@ public sealed class AreaTool
             }
 
             // What SetHeight can reach: No limit moves the lift (±MaxLift round the generated ground, the
-            // edit within the limit kept as it is), the limit the edit (±MaxLevel round the lifted ground).
-            float lo = g.NoLimit ? g.Base[p] + (h - b) - EditStore.MaxLift : b - EditStore.MaxLevel;
-            float hi = g.NoLimit ? g.Base[p] + (h - b) + EditStore.MaxLift : b + EditStore.MaxLevel;
+            // edit within the limit kept as it is), the limit the level part (±MaxLevel round the lifted
+            // ground, the smoothing part kept: it takes that much of the reach on its side).
+            float smooth = g.Mod[p] != 0 ? g.Smooth[p] : 0;
+            float lo = g.NoLimit ? g.Base[p] + (h - b) - EditStore.MaxLift : b - EditStore.MaxLevel + MathF.Max(0, smooth);
+            float hi = g.NoLimit ? g.Base[p] + (h - b) + EditStore.MaxLift : b + EditStore.MaxLevel + MathF.Min(0, smooth);
             float want = h + (height - h) * w, got = Math.Clamp(want, lo, hi);
             if (got > h)
             {
