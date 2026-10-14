@@ -956,9 +956,48 @@ public sealed partial class MainWindow : Window
     /// </summary>
     internal void Copy()
     {
-        if (Session is not { } s)
+        if (CopyToClipboard() is { } clip)
+        {
+            MessageText.Text = Tools.Mode == ToolMode.Select ? $"Copied {clip.Objects.Count} object(s). Ctrl+V to paste (R turns, F mirrors)."
+                : $"Copied {clip.W} × {clip.H} m and {clip.Objects.Count} object(s). Ctrl+V to paste, here or in another area.";
+        }
+    }
+
+    /// <summary>
+    /// Ctrl+X: <see cref="Copy"/>, then the objects copied leave the world (one undo step), to be pasted elsewhere.
+    /// The ground stays as it is: a cut moves what was built, not the land under it.
+    /// </summary>
+    internal void Cut()
+    {
+        if (Session is not { } s || CopyToClipboard() is not { } clip)
         {
             return;
+        }
+        // An area with nothing in it copies its ground only: nothing to take away, no undo step.
+        if (clip.Taken.Count == 0)
+        {
+            MessageText.Text = $"Copied {clip.W} × {clip.H} m of ground: no objects to cut here. Ctrl+V to paste it, here or in another area.";
+            return;
+        }
+        s.Delete(clip.Taken);
+        if (Tools.Mode == ToolMode.Select)
+        {
+            View.Select([]);
+        }
+        MessageText.Text = $"Cut {clip.Objects.Count} object(s): gone from here (Ctrl+Z brings them back). Ctrl+V to paste them, here or in another area"
+            + (Tools.Mode == ToolMode.Select ? " (R turns, F mirrors)." : "; the ground stays as it is.");
+        UpdateSaveBar();
+    }
+
+    /// <summary>
+    /// Puts the Area selection (ground and shown objects) or the Select tool's objects on the clipboard.
+    /// </summary>
+    /// <returns>The copy, or null (the message says what was missing).</returns>
+    private CopyData? CopyToClipboard()
+    {
+        if (Session is not { } s)
+        {
+            return null;
         }
         CopyData? clip;
         if (Tools.Mode == ToolMode.Select)
@@ -968,7 +1007,7 @@ public sealed partial class MainWindow : Window
             if (clip == null)
             {
                 MessageText.Text = "Select objects to copy first.";
-                return;
+                return null;
             }
         }
         else
@@ -979,13 +1018,12 @@ public sealed partial class MainWindow : Window
             if (clip == null)
             {
                 MessageText.Text = "Select an area first.";
-                return;
+                return null;
             }
         }
         View.Paste.Clip = clip;
         View.Paste.Notify();
-        MessageText.Text = Tools.Mode == ToolMode.Select ? $"Copied {clip.Objects.Count} object(s). Ctrl+V to paste (R turns, F mirrors)."
-            : $"Copied {clip.W} × {clip.H} m and {clip.Objects.Count} object(s). Ctrl+V to paste, here or in another area.";
+        return clip;
     }
 
     /// <summary>
@@ -1654,7 +1692,7 @@ public sealed partial class MainWindow : Window
             ("Middle drag", "Slide the view (also Space + left drag, Shift + right drag, the View tool)"), ("W A S D", "Move around"),
             ("F", "Walk at eye height · fly (Space up, C down) · back to the usual view"), ("1–9, 0, O", "Sculpt and paint tools (O: Erode)"),
             ("B / P / T / G", "Area, Path, Place, Shape"), ("E / M / H", "Select, Measure, View (Esc too)"), ("[  ]", "Brush size"),
-            ("Ctrl+C / Ctrl+V", "Copy the area / paste it (R turns 90°, , . turn 1°, F mirrors)"),
+            ("Ctrl+C / Ctrl+X / Ctrl+V", "Copy or cut the area or selection / paste it (R turns 90°, , . turn 1°, F mirrors)"),
             ("Alt + wheel", "Turn the selection, the paste or the Place preview (, . too; Shift: 15°)"), ("Place: R", "New layout"),
             ("Alt + click", "Pick the ground height"), ("Del", "Delete the selected objects"), ("I", "Inspect the selected object"),
             ("PgUp / PgDn / End", "Lift, lower or drop the selection"),
@@ -1911,6 +1949,11 @@ public sealed partial class MainWindow : Window
         else if (ctrl && e.Key == Avalonia.Input.Key.C && Tools.Mode is ToolMode.Area or ToolMode.Select)
         {
             Copy();
+            e.Handled = true;
+        }
+        else if (ctrl && e.Key == Avalonia.Input.Key.X && Tools.Mode is ToolMode.Area or ToolMode.Select)
+        {
+            Cut();
             e.Handled = true;
         }
         else if (ctrl && e.Key == Avalonia.Input.Key.V)
@@ -2382,6 +2425,7 @@ public sealed partial class MainWindow : Window
         AreaPanel.PickKindAsked += PickKind;
         AreaPanel.SwitchToSelect += Tools.ChooseSelect;
         AreaPanel.CopyAsked += Copy;
+        AreaPanel.CutAsked += Cut;
         AreaPanel.PasteAsked += StartPaste;
         AreaPanel.SaveBlueprintAsked += async () => await Blueprints.Save();
         // The library is a tool of the rail: its panel takes the place of the tool's options.

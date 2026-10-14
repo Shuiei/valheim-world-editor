@@ -241,12 +241,18 @@ public class WindowFlowTests
         Assert.False(w.Session.CanUndo);
         w.KeyPress(Key.Y, RawInputModifiers.Control, PhysicalKey.Y, "y");
         Assert.True(w.Session.CanUndo);
-        // Copy and paste with nothing to work on.
+        // Copy, cut and paste with nothing to work on.
         w.Tools.ChooseMode(ToolMode.Area);
         w.Copy();
         Assert.Equal("Select an area first.", w.MessageText.Text);
+        w.MessageText.Text = "";
+        w.Cut();
+        Assert.Equal("Select an area first.", w.MessageText.Text);
         w.Tools.ChooseSelect();
         w.Copy();
+        Assert.Equal("Select objects to copy first.", w.MessageText.Text);
+        w.MessageText.Text = "";
+        w.Cut();
         Assert.Equal("Select objects to copy first.", w.MessageText.Text);
         w.StartPaste();
         Assert.Equal("Copy an area first (Area tool, Ctrl+C).", w.MessageText.Text);

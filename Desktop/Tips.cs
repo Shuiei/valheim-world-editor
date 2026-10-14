@@ -170,6 +170,7 @@ public static class Tips
         ["area.to"] = "The kind to put in its place.",
         ["area.pick"] = "Pick the kind from the world: click an object to put its kind in the list (Esc cancels).",
         ["area.copy"] = "Copy the shown objects inside the selection, with the ground and paint under their buildings (Ctrl+C).",
+        ["area.cut"] = "Copy, then remove the originals from the world (Ctrl+X): paste them elsewhere with Ctrl+V. Ctrl+Z brings them back; the ground stays as it is.",
         ["area.paste"] = "Paste the copy (Ctrl+V): click to place it, here or in another area.",
         ["area.saveBlueprint"] = "Save the clipboard as a blueprint: a file with a name, kept in the editor's data folder, that can be pasted into any world.",
         ["area.library"] = "Open the list of saved blueprints, with a picture of each: paste one, or delete it.",

@@ -4,6 +4,14 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.38.0 — unreleased
+
+### Added
+- **Cut and paste.** **Cut (Ctrl+X)**, beside Copy in the Area tool's **Copy and paste** action and on the Select
+  tool's selection, makes the same copy as Ctrl+C and then takes the objects copied out of the world, as one undo
+  step, so a paste moves a build instead of doubling it. The ground where it stood stays as it is. Docs:
+  [Copy and paste](docs/area.md#copy-and-paste), [Select](docs/select.md).
+
 ## v1.37.4 — unreleased
 
 ### Fixed

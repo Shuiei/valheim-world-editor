@@ -61,6 +61,7 @@ public class ClipboardTests
         var c = CopyData.FromArea(Box(32, 32, 48, 48), s.Ground, s.Scene, [0, 1], n => n == Beech ? "Beech1" : "woodwall")!;
         Assert.Equal(19, c.W);
         Assert.Equal(2, c.Objects.Count);
+        Assert.Equal([0, 1], c.Taken);
         var tree = c.Objects[0];
         Assert.Equal(new Vector2(0, 0), new Vector2(tree.Dx, tree.Dz));
         Assert.Equal(1, tree.SourceId);
@@ -75,6 +76,7 @@ public class ClipboardTests
         var sel = CopyData.FromThings(s.Scene, [1], _ => "woodwall", (x, z) => H(s, (int)MathF.Round(x - ox), (int)MathF.Round(z - oz)))!;
         Assert.Equal(1, sel.Wt[sel.W / 2 + sel.H / 2 * sel.W]);
         Assert.True(float.IsNaN(sel.Rel[0]));
+        Assert.Equal([1], sel.Taken);
     }
 
     [Fact]
