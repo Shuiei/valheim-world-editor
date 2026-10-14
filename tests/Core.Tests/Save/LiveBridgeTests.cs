@@ -14,6 +14,23 @@ namespace WorldEditor.Tests;
 [Collection("Timed answers")]
 public class LiveBridgeTests
 {
+    // The plugin's HttpListener closes a connection left 15 s without a request; a request sent on it at that
+    // moment is reset. So a connection is used again for the next request only while it has not sat idle.
+    [Fact]
+    public async Task AConnectionLeftIdleIsNotUsedAgain()
+    {
+        using var bridge = new FakeBridge();
+        using var live = new LiveBridge($"http://127.0.0.1:{bridge.Port}", bridge.Token, idle: TimeSpan.FromMilliseconds(300));
+        await live.Players();
+        await live.Players();
+        Assert.Single(bridge.Connections.Distinct());
+        await Task.Delay(1000, TestContext.Current.CancellationToken);
+        await live.Players();
+        Assert.Equal(3, bridge.Connections.Count);
+        Assert.Equal(2, bridge.Connections.Distinct().Count());
+        Assert.True(LiveBridge.ConnectionIdle < TimeSpan.FromSeconds(15), "under the listener's 15 s");
+    }
+
     [Fact]
     public async Task CheckAcceptsAnAnsweringBridge()
     {
