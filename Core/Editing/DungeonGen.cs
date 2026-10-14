@@ -85,8 +85,9 @@ public static class DungeonGen
     /// The rectangles (metres) its floor is made of when it is not its whole box (a corner cut away, notched corners,
     /// an apse); null for a whole box.
     /// </param>
+    /// <param name="Nooks">Its recesses (metres): the alcoves off a room, the niches off a corridor; among its parts too.</param>
     public sealed record PlanRoom(string Name, int Level, float Y, float X0, float Z0, float X1, float Z1, bool Corridor, bool Main, bool Key,
-        IReadOnlyList<(float X0, float Z0, float X1, float Z1)>? Parts = null)
+        IReadOnlyList<(float X0, float Z0, float X1, float Z1)>? Parts = null, IReadOnlyList<(float X0, float Z0, float X1, float Z1)>? Nooks = null)
     {
         /// <summary>Its floor as rectangles: its parts, or its whole box.</summary>
         public IReadOnlyList<(float X0, float Z0, float X1, float Z1)> Floor => Parts ?? [(X0, Z0, X1, Z1)];
@@ -352,7 +353,7 @@ public static class DungeonGen
     /// the arena, the treasury, the entrance) get black marble tiles half the time, and quarters, barracks, dens and
     /// studies wooden boards (with Decor 1 or more; the shell lays them).
     /// </summary>
-    private static void Floors(DungeonPlan plan, DungeonKit.Material mat, Settings s, Random rnd)
+    private static void Floors(DungeonPlan plan, Material mat, Settings s, Random rnd)
     {
         if (s.Decor < 1 || mat.Name is not ("Stone" or "Grausten"))
         {
@@ -360,8 +361,8 @@ public static class DungeonGen
         }
         foreach (var sp in plan.Spaces.Where(sp => sp.IsRoom))
         {
-            bool grand = sp.Room is DungeonKit.Room.Hall or DungeonKit.Room.Throne or DungeonKit.Room.Chapel or DungeonKit.Room.Boss or DungeonKit.Room.Treasury or DungeonKit.Room.Entrance;
-            bool lived = sp.Room is DungeonKit.Room.Quarters or DungeonKit.Room.Barracks or DungeonKit.Room.Den or DungeonKit.Room.Library;
+            bool grand = sp.Room is Room.Hall or Room.Throne or Room.Chapel or Room.Boss or Room.Treasury or Room.Entrance;
+            bool lived = sp.Room is Room.Quarters or Room.Barracks or Room.Den or Room.Library;
             if (grand && rnd.NextDouble() < 0.5)
             {
                 (sp.Floor, sp.FloorTop) = ("blackmarble_tile_floor_2x2", 0.19f);
@@ -426,7 +427,8 @@ public static class DungeonGen
         var e = plan.Entrance;
         var arrival = new Vector3(e.CenterX, 0.05f, 2 * e.Z0 + 1.7f);
         var map = plan.Spaces.Select(sp => new PlanRoom(sp.Name, sp.Level, DungeonPlan.FloorY(sp.Level), 2 * sp.X0, 2 * sp.Z0, 2 * (sp.X0 + sp.W), 2 * (sp.Z0 + sp.H),
-            sp.Corridor, sp.Main, sp.KeyChest, sp.Shape == DungeonPlan.Shape.Rect ? null : Runs(sp))).ToList();
+            sp.Corridor, sp.Main, sp.KeyChest, sp.Shape == DungeonPlan.Shape.Rect ? null : Runs(sp),
+            sp.Recesses.Count == 0 ? null : sp.Recesses.Select(n => (2f * n.Tiles.Min(t => t.I), 2f * n.Tiles.Min(t => t.J), 2f * (n.Tiles.Max(t => t.I) + 1), 2f * (n.Tiles.Max(t => t.J) + 1))).ToList())).ToList();
         var index = plan.Spaces.Select((sp, i) => (sp, i)).ToDictionary(p => p.sp, p => p.i);
         var doors = plan.Doors.Select(d => new PlanDoor(d.A.Level, d.Center.X, d.Center.Z, d.Kind.ToString(), index[d.A], index[d.B])).ToList();
         foreach (var foot in plan.Spaces.Where(sp => sp.Room == Room.StairBottom && sp.Parent != null))

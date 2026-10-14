@@ -33,6 +33,10 @@ internal sealed class DungeonDresser
     private readonly Foe? _boss;
     /// <summary>The dungeon's name, for the entrance's sign.</summary>
     private readonly string _name;
+    /// <summary>The lights the room being furnished asked for: 0 none, 1 the usual, 2 whatever the settings (important).</summary>
+    private int _lights;
+    /// <summary>Whether the room being furnished asked for its decay.</summary>
+    private bool _decayed;
 
     /// <summary>Sets up a dresser for one dungeon.</summary>
     private DungeonDresser(Material mat, Biome b, Style style, DungeonGen.Settings s, Random rnd, DungeonOut o, string name)
@@ -223,17 +227,32 @@ internal sealed class DungeonDresser
         }
 
         /// <summary>
-        /// The room's nooks: its tiles walled on three sides (an alcove, a niche), each by its middle (u, v) and the way
-        /// out of it into the room (local yaw).
+        /// The room's nooks: its recesses (an alcove off a room, a niche off a corridor), each by its middle (u, v), the
+        /// way out of it into the room (local yaw) and how many tiles wide it is; then any other tile walled on three
+        /// sides, as a nook of one tile.
         /// </summary>
-        public List<(float U, float V, float Yaw)> Nooks()
+        public List<(float U, float V, float Yaw, int Width)> Nooks()
         {
-            var nooks = new List<(float, float, float)>();
+            var nooks = new List<(float, float, float, int)>();
+            var inRecess = new HashSet<(int, int)>();
+            foreach (var (tiles, out_) in S.Recesses)
+            {
+                inRecess.UnionWith(tiles);
+                // The tiles' middles (world: a tile (i, j) spans 2i..2i+2), taken into the frame; the way back is -out.
+                var (u, v) = (0f, 0f);
+                foreach (var (i, j) in tiles)
+                {
+                    var (tu, tv) = Local(2 * i + 1, 2 * j + 1);
+                    (u, v) = (u + tu / tiles.Count, v + tv / tiles.Count);
+                }
+                float du = -(out_.X * A.X + out_.Z * A.Z), dv = -(out_.X * D.X + out_.Z * D.Z);
+                nooks.Add((u, v, MathF.Atan2(du, dv) * 180 / MathF.PI, tiles.Count));
+            }
             for (int a = 0; a < S.Across; a++)
             {
                 for (int b = 0; b < S.Deep; b++)
                 {
-                    if (!S.Has(S.TileAt(a, b)))
+                    if (!S.Has(S.TileAt(a, b)) || inRecess.Contains(S.TileAt(a, b)))
                     {
                         continue;
                     }
@@ -247,7 +266,7 @@ internal sealed class DungeonDresser
                     }
                     if (open.Count == 1)
                     {
-                        nooks.Add((2 * a + 1 - S.Across, 2 * b + 1 - S.Deep, MathF.Atan2(open[0].Item1, open[0].Item2) * 180 / MathF.PI));
+                        nooks.Add((2 * a + 1 - S.Across, 2 * b + 1 - S.Deep, MathF.Atan2(open[0].Item1, open[0].Item2) * 180 / MathF.PI, 1));
                     }
                 }
             }
@@ -356,13 +375,13 @@ internal sealed class DungeonDresser
     /// </summary>
     /// <returns>False when the spot is not free (and it is not forced): nothing is placed.</returns>
     private bool Put(Frame f, string prefab, float u, float v, float yaw, float r, float y = 0, bool force = false,
-        IReadOnlyList<(string, string, string)>? data = null)
+        IReadOnlyList<(string, string, string)>? data = null, bool take = true)
     {
         if (!force && !f.Free(u, v, r) || force && !f.Inside(u, v))
         {
             return false;
         }
-        if (r > 0)
+        if (r > 0 && take)
         {
             f.Take(u, v, r);
         }
@@ -389,12 +408,17 @@ internal sealed class DungeonDresser
         return false;
     }
 
-    /// <summary>Somewhere free in the room for a circle of radius r, margin metres from the walls; null after 30 tries.</summary>
-    private (float U, float V)? Spot(Frame f, float r, float margin = 0.8f)
+    /// <summary>
+    /// Somewhere free in the room for a circle of radius r, margin metres from the walls; null after 30 tries. The
+    /// tries are drawn from rnd when given (a stream of the room's own), else from the dungeon's.
+    /// </summary>
+    private (float U, float V)? Spot(Frame f, float r, float margin = 0.8f, Random? rnd = null)
     {
+        rnd ??= _rnd;
         for (int i = 0; i < 30; i++)
         {
-            float u = R(-f.HalfA + margin + r, f.HalfA - margin - r), v = R(-f.HalfD + margin + r, f.HalfD - margin - r);
+            float u = -f.HalfA + margin + r + (float)rnd.NextDouble() * 2 * (f.HalfA - margin - r);
+            float v = -f.HalfD + margin + r + (float)rnd.NextDouble() * 2 * (f.HalfD - margin - r);
             if (f.Free(u, v, r))
             {
                 return (u, v);
@@ -474,15 +498,17 @@ internal sealed class DungeonDresser
         }
     }
 
-    /// <summary>Cobwebs up in some of the corners, more in a decayed dungeon.</summary>
+    /// <summary>Cobwebs up in some of the corners, more in a decayed dungeon (from a stream of the room's own: the decay setting moves nothing else).</summary>
     private void Webs(Frame f, float chance)
     {
+        var rnd = Local(f, 3);
+        string[] webs = ["morkhalla_web_corner", "vertical_web"];
         foreach (var (u, v, yaw, convex) in f.Corners())
         {
-            if (convex && Chance(chance))
+            if (convex && rnd.NextDouble() < chance)
             {
                 var (cu, cv) = In((u, v, yaw), 0.35f);
-                _o.Add(One("morkhalla_web_corner", "vertical_web"), f.W(cu, cv, f.Top + f.H - R(1.2f, 2.2f)), f.Yaw(yaw + 180));
+                _o.Add(webs[rnd.Next(webs.Length)], f.W(cu, cv, f.Top + f.H - 1.2f - (float)rnd.NextDouble()), f.Yaw(yaw + 180));
             }
         }
     }
@@ -523,14 +549,20 @@ internal sealed class DungeonDresser
     /// <summary>The biome's standing torch; a castle torch is now and then unlit in a decayed dungeon (by rnd's chance).</summary>
     private string TorchOf(Random rnd) => _decay > 0 && _b.Torch.StartsWith("CastleKit_groundtorch", StringComparison.Ordinal) && rnd.NextDouble() < _decay * 0.5 ? "CastleKit_groundtorch_unlit" : _b.Torch;
 
-    /// <summary>The biome's brazier at (u, v), if the spot is free.</summary>
-    private void Brazier(Frame f, float u, float v) => Put(f, _b.Brazier, u, v, 0, 0.6f, force: false);
+    /// <summary>The biome's brazier at (u, v), if the spot is free (a light's brazier keeps no room for itself: see <see cref="PlaceLights"/>).</summary>
+    private void Brazier(Frame f, float u, float v, bool take = true) => Put(f, _b.Brazier, u, v, 0, 0.6f, force: false, take: take);
 
     /// <summary>
-    /// Torches along the walls, closer the brighter the settings' Light. In the dark (Light 0) most rooms
-    /// get none, unless important.
+    /// Asks for the room's lights (torches along the walls, closer the brighter the settings' Light; in the dark,
+    /// Light 0, most rooms get none unless important). They are placed once the room is furnished.
     /// </summary>
-    private void Lights(Frame f, bool important = false)
+    private void Lights(bool important = false) => _lights = Math.Max(_lights, important ? 2 : 1);
+
+    /// <summary>
+    /// The room's lights, after everything else: they take free spots but keep none, so that the settings' Light
+    /// changes nothing but them (their stream is the room's own, their spots never move what comes later).
+    /// </summary>
+    private void PlaceLights(Frame f, bool important)
     {
         var rnd = Local(f, 1);
         if (_s.Light <= 0 && !important && rnd.NextDouble() >= 0.3)
@@ -548,14 +580,14 @@ internal sealed class DungeonDresser
                 foreach (var (u, v, yaw, convex) in f.Corners().Where(c => c.Convex).OrderBy(_ => rnd.Next()).Take(_s.Light >= 2 ? 4 : 2))
                 {
                     var (bu, bv) = In((u, v, yaw), 1.1f);
-                    Brazier(f, bu, bv);
+                    Brazier(f, bu, bv, take: false);
                 }
                 break;
             default:
                 foreach (var s in f.WallSpots(step, 2.5f))
                 {
                     var (u, v) = In(s, 0.7f);
-                    Put(f, TorchOf(rnd), u, v, s.Yaw, 0.4f);
+                    Put(f, TorchOf(rnd), u, v, s.Yaw, 0.4f, take: false);
                 }
                 break;
         }
@@ -628,8 +660,14 @@ internal sealed class DungeonDresser
         }
     }
 
-    /// <summary>Rubble in the corners, broken walls and pots, now and then a fallen pillar: more the more decayed.</summary>
-    private void Decay(Frame f)
+    /// <summary>Asks for the room's decay (rubble, broken walls and pots, a fallen pillar): placed once the room is furnished.</summary>
+    private void Decay() => _decayed = true;
+
+    /// <summary>
+    /// Rubble in the corners, broken walls and pots, now and then a fallen pillar: more the more decayed. After
+    /// everything else, from a stream of the room's own, so that the settings' Decay changes nothing but the decay.
+    /// </summary>
+    private void PlaceDecay(Frame f)
     {
         if (_decay <= 0)
         {
@@ -783,9 +821,13 @@ internal sealed class DungeonDresser
     /// <summary>Dresses a space for what it is, and puts the key chest and its guard in if it holds the key.</summary>
     private void Furnish(Frame f)
     {
+        _lights = 0;
+        _decayed = false;
         if (f.S.Corridor)
         {
             Corridor(f);
+            Nooks(f);
+            Finish(f);
             return;
         }
         switch (f.S.Room)
@@ -827,20 +869,146 @@ internal sealed class DungeonDresser
             Elite(f, 0, f.HalfD * 0.3f, 180);
         }
         Nooks(f);
+        Finish(f);
+    }
+
+    /// <summary>
+    /// The last touches, once everything that keeps a spot stands: the lights the room asked for, then its decay.
+    /// Each from a stream of its own, neither keeping a spot, so that the settings' Light and Decay change nothing
+    /// else (decay's rubble may lie over an unkept torch's foot; the torch is thin).
+    /// </summary>
+    private void Finish(Frame f)
+    {
+        if (f.S.Corridor)
+        {
+            CorridorLights(f, Local(f, 1));
+            var decay = Local(f, 2);
+            if (_decay > 0.3f && decay.NextDouble() < _decay * 0.3 && Spot(f, 0.8f, rnd: decay) is var (ru, rv))
+            {
+                string[] heaps = ["Morkhalla_Rubble2", "Morkhalla_Rubble3", "Morkhalla_Stonepile"];
+                Put(f, heaps[decay.Next(heaps.Length)], ru, rv, (float)decay.NextDouble() * 360, 0.9f, take: false);
+            }
+            return;
+        }
+        if (_lights > 0)
+        {
+            PlaceLights(f, _lights == 2);
+        }
+        if (_decayed)
+        {
+            PlaceDecay(f);
+        }
+    }
+
+    /// <summary>A point d metres along the wall from a spot facing yaw (to its right for d &gt; 0).</summary>
+    private static (float U, float V) Beside((float U, float V, float Yaw) s, float d) =>
+        (s.U + d * MathF.Cos(s.Yaw * MathF.PI / 180), s.V - d * MathF.Sin(s.Yaw * MathF.PI / 180));
+
+    /// <summary>
+    /// A wide alcove's furniture, by the style: a sarcophagus across it with a skull beside, a statue between two
+    /// candles, a bed in its bay with a chest at its foot, a shelf and crates, a totem on straw. False when the
+    /// style's choice has no place there (the single nook's piece is then tried).
+    /// </summary>
+    private bool Alcove(Frame f, float u, float v, float yaw)
+    {
+        // An alcove is a tile deep less its wall: the big piece stands at its middle, a touch out, and is not refused
+        // for being near the walls (the planner keeps alcoves clear of doorways and other rooms).
+        var spot = (u, v, yaw);
+        var (bu, bv) = In(spot, 0.15f);
+        switch (_style.Name)
+        {
+            case "Crypt" or "Catacombs" or "Ruins":
+                switch (_rnd.Next(3))
+                {
+                    case 0:
+                        if (!Put(f, "crypt_skeleton_chest", bu, bv, yaw + 90, 0.8f, force: true))
+                        {
+                            return false;
+                        }
+                        var (su, sv) = Beside(spot, 1.4f);
+                        Put(f, One("skull_pile", "Skull1", "Candle_resin"), su, sv, R(0, 360), 0.3f);
+                        return true;
+                    case 1:
+                        if (!Put(f, _decay > 0.4f ? One("StatueThor_broken_top", "StatueFreya_broken_left") : One("StatueEvil", "StatueThor", "StatueFreya"), bu, bv, yaw, 0.7f, force: true))
+                        {
+                            return false;
+                        }
+                        foreach (int side in new[] { -1, 1 })
+                        {
+                            var (cu, cv) = Beside(spot, side * 1.1f);
+                            Put(f, _s.Respawn ? "skull_pile" : "Candle_resin", cu, cv, R(0, 360), 0.25f);
+                        }
+                        return true;
+                    default:
+                        foreach (int side in new[] { -1, 1 })
+                        {
+                            var (ou, ov) = Beside((bu, bv, yaw), side * 0.9f);
+                            Put(f, One("bone_stack", "skull_pile", "LargeBone"), ou, ov, R(0, 360), 0.4f);
+                        }
+                        return true;
+                }
+            case "Temple":
+                if (!Put(f, One("StatueFreya", "StatueThor", "StatueSeed"), bu, bv, yaw, 0.7f, force: true))
+                {
+                    return false;
+                }
+                foreach (int side in new[] { -1, 1 })
+                {
+                    var (cu, cv) = Beside(spot, side * 1.1f);
+                    Put(f, _s.Respawn ? "skull_pile" : "Candle_resin", cu, cv, R(0, 360), 0.25f);
+                }
+                return true;
+            case "Fortress" or "Prison":
+                if (Chance(0.5))
+                {
+                    // A sleeping bay: a bed along the back, a chest at its foot.
+                    if (!Put(f, "bed", bu, bv, yaw + 90, 0.9f, force: true))
+                    {
+                        return false;
+                    }
+                    var (cu, cv) = Beside((u, v, yaw), 1.5f);
+                    Put(f, "piece_chest_wood", cu, cv, yaw, 0.4f);
+                    return true;
+                }
+                foreach (int side in new[] { -1, 1 })
+                {
+                    var (ou, ov) = Beside((bu, bv, yaw), side * 0.9f);
+                    Put(f, side < 0 ? "Morkhalla_WeaponStand" : One("ArmorStand_Male", "ArmorStand_Female"), ou, ov, yaw, 0.5f);
+                }
+                return true;
+            case "Dvergr hold":
+                if (!Put(f, Chance(0.5) ? "dvergrprops_shelf" : "dvergrprops_bed", bu, bv, yaw + (Chance(0.5) ? 0 : 90), 0.8f, force: true))
+                {
+                    return false;
+                }
+                var (ku, kv) = Beside(spot, 1.3f);
+                Put(f, One("dvergrprops_crate", "dvergrprops_barrel", "dvergrprops_lantern_standing"), ku, kv, R(0, 360), 0.4f);
+                return true;
+            case "Goblin warren":
+                Put(f, "goblin_strawpile", u, v, R(0, 360), 0, force: true);
+                return Put(f, One("goblin_totempole", "goblin_bed", "goblin_trashpile"), bu, bv, yaw, 0.7f, force: true);
+            default:
+                return false;
+        }
     }
 
     /// <summary>
     /// What stands in the room's alcoves and niches, facing out: in crypts a sarcophagus, bones or a statue; in a
     /// temple a statue with a candle; in a keep or a prison an armour or weapon stand or a barrel; in a hold crates
-    /// and a lantern; in a warren a totem or straw. A brazier now and then, whatever the style.
+    /// and a lantern; in a warren a totem or straw. A brazier now and then, whatever the style. A wide alcove gets
+    /// the bigger things (a sarcophagus across it, a bench, a pair of statues) with a candle or a skull beside.
     /// </summary>
     private void Nooks(Frame f)
     {
-        foreach (var (u, v, yaw) in f.Nooks())
+        foreach (var (u, v, yaw, width) in f.Nooks())
         {
             if (Chance(0.2))
             {
                 Brazier(f, u, v);
+                continue;
+            }
+            if (width >= 2 && Alcove(f, u, v, yaw))
+            {
                 continue;
             }
             switch (_style.Name)
@@ -883,28 +1051,6 @@ internal sealed class DungeonDresser
     /// </summary>
     private void Corridor(Frame f)
     {
-        float step = _s.Light >= 2 ? 6 : _s.Light == 1 ? 9 : 16;
-        var light = Local(f, 1);
-        bool sconces = _mat.Name is "Stone" or "Marble" or "Grausten" && light.NextDouble() < 0.4;
-        // Torches along the walls (where there are walls: not where another corridor opens in), every other spot.
-        int k = light.Next(2);
-        foreach (var sp in f.WallSpots(step / 2, 2.5f).Where(sp => sp.Yaw is 90 or -90))
-        {
-            if (k++ % 2 != 0)
-            {
-                continue;
-            }
-            if (sconces)
-            {
-                var (wu, wv) = In(sp, 0.25f);
-                _o.Add("piece_walltorch", f.W(wu, wv, f.Top + 2.1f), f.Yaw(sp.Yaw));
-            }
-            else
-            {
-                var (tu, tv) = In(sp, 0.5f);
-                Put(f, TorchOf(light), tu, tv, sp.Yaw, 0.35f);
-            }
-        }
         // Pilasters every 8 m along a long straight corridor, a beam of wall between them like an arch.
         if (f.S.Shape == DungeonPlan.Shape.Rect && f.HalfD >= 6 && Chance(0.45))
         {
@@ -925,12 +1071,39 @@ internal sealed class DungeonDresser
             Put(f, _decay > 0.4f ? One("StatueThor_broken_top", "StatueFreya_broken_left") : One("StatueThor", "StatueFreya", "StatueDeer"), su, sv, R(0, 360), 0.9f);
         }
         Clutter(f, 0.02f);
-        if (_decay > 0.3f && Chance(_decay * 0.3) && Spot(f, 0.8f) is var (ru, rv))
-        {
-            Put(f, One("Morkhalla_Rubble2", "Morkhalla_Rubble3", "Morkhalla_Stonepile"), ru, rv, R(0, 360), 0.9f);
-        }
         Webs(f, 0.1f + _decay * 0.4f);
         Foes(f, 0.25f);
+        // Its lights and a heap of rubble, last, each from a stream of the corridor's own (see Finish).
+        _lights = 1;
+        _decayed = true;
+    }
+
+    /// <summary>
+    /// A corridor's lights: torches along the walls (where there are walls: not where another corridor opens in),
+    /// every other spot, closer the brighter; sconces instead, now and then, on stone.
+    /// </summary>
+    private void CorridorLights(Frame f, Random light)
+    {
+        float step = _s.Light >= 2 ? 6 : _s.Light == 1 ? 9 : 16;
+        bool sconces = _mat.Name is "Stone" or "Marble" or "Grausten" && light.NextDouble() < 0.4;
+        int k = light.Next(2);
+        foreach (var sp in f.WallSpots(step / 2, 2.5f).Where(sp => sp.Yaw is 90 or -90))
+        {
+            if (k++ % 2 != 0)
+            {
+                continue;
+            }
+            if (sconces)
+            {
+                var (wu, wv) = In(sp, 0.25f);
+                _o.Add("piece_walltorch", f.W(wu, wv, f.Top + 2.1f), f.Yaw(sp.Yaw));
+            }
+            else
+            {
+                var (tu, tv) = In(sp, 0.5f);
+                Put(f, TorchOf(light), tu, tv, sp.Yaw, 0.35f, take: false);
+            }
+        }
     }
 
     /// <summary>The top or the foot of the stairs: the stairs' side kept free, torches on the other.</summary>
@@ -986,7 +1159,7 @@ internal sealed class DungeonDresser
             Pilasters(f, 4);
         }
         Hangings(f, 2, Drapes);
-        Lights(f, important: true);
+        Lights(important: true);
         Clutter(f, 0.01f);
     }
 
@@ -1092,10 +1265,10 @@ internal sealed class DungeonDresser
                 _o.Add(_b.Name == "Ashlands" ? "CharredBanner1" : "cloth_hanging_long", f.W(side * 3f, f.HalfD - 0.15f, f.Top - 0.25f), f.Yaw(180));
             }
         }
-        Lights(f);
+        Lights();
         Foes(f, 1.1f);
         Clutter(f, 0.012f);
-        Decay(f);
+        Decay();
     }
 
     /// <summary>The set piece at the far end of a hall: an altar, a throne, a statue, a table.</summary>
@@ -1195,10 +1368,10 @@ internal sealed class DungeonDresser
             }
         }
         Hangings(f, 2, Drapes);
-        Lights(f);
+        Lights();
         Foes(f, 0.6f);
         Clutter(f, 0.015f);
-        Decay(f);
+        Decay();
     }
 
     /// <summary>
@@ -1257,10 +1430,10 @@ internal sealed class DungeonDresser
             Webs(f, 0.8f);
             Chains(f, 1);
         }
-        Lights(f);
+        Lights();
         Foes(f, 0.8f);
         Clutter(f, 0.01f);
-        Decay(f);
+        Decay();
     }
 
     /// <summary>
@@ -1317,13 +1490,13 @@ internal sealed class DungeonDresser
         {
             Put(f, "skull_pile", cu * (f.HalfA - 0.7f), cv * (f.HalfD - 0.7f), R(0, 360), 0.6f);
         }
-        Lights(f);
+        Lights();
         Hangings(f, 1);
         // The dead do not rest here.
         var sleepers = _b.Name == "Swamp" ? new[] { new Foe("Spawner_Draugr", "Draugr_sleeping"), new Foe("Spawner_Draugr_Ranged", "Draugr_Ranged_sleeping") } : null;
         Foes(f, 1.1f, sleepers);
         Clutter(f, 0.02f);
-        Decay(f);
+        Decay();
     }
 
     /// <summary>
@@ -1369,9 +1542,9 @@ internal sealed class DungeonDresser
             Put(f, _b.Name == "Swamp" ? "Spawner_DraugrPile" : _b.Name is "Black Forest" or "Meadows" ? "BonePileSpawner" : "BonePileSpawner_swamp", 0, R(-1, 1), R(0, 360), 1.3f);
         }
         Clutter(f, 0.04f, "Skull1", "LargeBone", "LargeBone_half01", "Skull1");
-        Lights(f);
+        Lights();
         Foes(f, 0.4f);
-        Decay(f);
+        Decay();
     }
 
     /// <summary>
@@ -1451,10 +1624,10 @@ internal sealed class DungeonDresser
             }
         }
         Hangings(f, 2, Drapes);
-        Lights(f, important: true);
+        Lights(important: true);
         Foes(f, 0.7f);
         Clutter(f, 0.008f);
-        Decay(f);
+        Decay();
     }
 
     /// <summary>
@@ -1506,7 +1679,7 @@ internal sealed class DungeonDresser
         Hangings(f, 2);
         Foes(f, 0.9f);
         Clutter(f, 0.01f);
-        Decay(f);
+        Decay();
     }
 
     /// <summary>
@@ -1543,7 +1716,7 @@ internal sealed class DungeonDresser
         Hangings(f, 2);
         Elite(f, 0, -0.8f, 180);
         Clutter(f, 0.015f);
-        Decay(f);
+        Decay();
     }
 
     /// <summary>
@@ -1618,11 +1791,11 @@ internal sealed class DungeonDresser
         }
         Hangings(f, 4, "piece_banner01", "piece_banner02", "piece_banner05", "piece_banner06", "piece_banner09", "piece_banner10");
         Trophies(f, 2);
-        Lights(f, important: true);
+        Lights(important: true);
         Elite(f, -1.8f, f.HalfD - 6.5f, 180);
         Elite(f, 1.8f, f.HalfD - 6.5f, 180);
         Foes(f, 0.6f);
-        Decay(f);
+        Decay();
     }
 
     /// <summary>n trophies on item stands on the walls.</summary>
@@ -1709,10 +1882,10 @@ internal sealed class DungeonDresser
                 break;
         }
         Hangings(f, 1, Drapes);
-        Lights(f);
+        Lights();
         Foes(f, 1.5f);
         Clutter(f, 0.01f);
-        Decay(f);
+        Decay();
     }
 
     /// <summary>An armoury: armour stands along the walls with a work table; or weapon stands in rows with a target and a dummy. Trophies, a chest.</summary>
@@ -1740,9 +1913,9 @@ internal sealed class DungeonDresser
         }
         Trophies(f, 2);
         Chest(f, 0, -1.6f, 180);
-        Lights(f);
+        Lights();
         Foes(f, 0.6f);
-        Decay(f);
+        Decay();
     }
 
     /// <summary>The feast laid out on tables, the biome's where the game has one.</summary>
@@ -1800,10 +1973,10 @@ internal sealed class DungeonDresser
             Trophies(f, 2);
         }
         Hangings(f, 3, Drapes);
-        Lights(f);
+        Lights();
         Foes(f, 1.2f);
         Clutter(f, 0.008f);
-        Decay(f);
+        Decay();
     }
 
     /// <summary>A kitchen: hearth and cauldron, preparation and butcher's tables, stores by the walls.</summary>
@@ -1821,10 +1994,10 @@ internal sealed class DungeonDresser
             var (u, v) = In(s, 0.6f);
             Put(f, One("barrell", "CargoCrate", "prop_wood_stack"), u, v, R(0, 360), 0.6f);
         }
-        Lights(f);
+        Lights();
         Foes(f, 0.5f);
         Clutter(f, 0.01f);
-        Decay(f);
+        Decay();
     }
 
     /// <summary>
@@ -1881,9 +2054,9 @@ internal sealed class DungeonDresser
             ChestAgainstWall(f);
         }
         Webs(f, 0.3f);
-        Lights(f);
+        Lights();
         Foes(f, 0.3f);
-        Decay(f);
+        Decay();
     }
 
     /// <summary>A forge: forge and workbench pieces, wood, and metal bars when there is loot.</summary>
@@ -1900,10 +2073,10 @@ internal sealed class DungeonDresser
         {
             Put(f, _b.Bars, f.HalfA - 1.2f, -(f.HalfD - 1.2f), R(0, 360), 0.5f);
         }
-        Lights(f);
+        Lights();
         Foes(f, 0.5f);
         Clutter(f, 0.01f);
-        Decay(f);
+        Decay();
     }
 
     /// <summary>
@@ -1957,9 +2130,9 @@ internal sealed class DungeonDresser
                 Chest(f, 0, f.HalfD - 0.9f, 180);
                 break;
         }
-        Lights(f);
+        Lights();
         Foes(f, 0.3f);
-        Decay(f);
+        Decay();
     }
 
     /// <summary>A block of cells either side of an aisle 4 m wide, each 4 m along it behind a grate.</summary>
@@ -2025,9 +2198,9 @@ internal sealed class DungeonDresser
             _o.Add("dvergrprops_hooknchain", f.W(-1.5f, -1.5f, f.Top + f.H - 2.5f), f.Yaw(0));
         }
         Clutter(f, 0.04f, "Skull1", "LargeBone", "Pickable_ForestCryptRemains01", "skull_pile");
-        Lights(f);
+        Lights();
         Foes(f, 0.7f);
-        Decay(f);
+        Decay();
     }
 
     /// <summary>A guard room: a table with stools and armour stands or barrels; or a drill room with weapon stands, a dummy and a target. An elite guard.</summary>
@@ -2053,10 +2226,10 @@ internal sealed class DungeonDresser
             Put(f, "piece_logbench01", -(f.HalfA - 0.6f), -1, 90, 0.6f);
             Put(f, "ArmorStand_Male", -(f.HalfA - 0.8f), f.HalfD - 1.2f, 135, 0.6f);
         }
-        Lights(f, important: true);
+        Lights(important: true);
         Elite(f, 0, f.HalfD - 1.6f, 180);
         Foes(f, 1f);
-        Decay(f);
+        Decay();
     }
 
     /// <summary>The treasury: treasure piles and stacks, metal bars, chests, braziers in the corners.</summary>
@@ -2205,7 +2378,7 @@ internal sealed class DungeonDresser
             }
         }
         Clutter(f, 0.012f, "Skull1", "LargeBone", "lox_ribs", "skull_pile");
-        Lights(f, important: true);
+        Lights(important: true);
     }
 
     /// <summary>The antechamber: braziers either side of the boss's gate, a warning sign at the key gate, elite guards.</summary>
@@ -2230,7 +2403,7 @@ internal sealed class DungeonDresser
         Clutter(f, 0.02f, "Skull1", "skull_pile", "LargeBone");
         Elite(f, -1.6f, 0, 180);
         Elite(f, 1.6f, 0, 180);
-        Lights(f, important: true);
+        Lights(important: true);
     }
 
     /// <summary>A goblin den: straw and beds by the walls round a trash pile and a totem; or a fire in the middle with the straw round it.</summary>
@@ -2259,10 +2432,10 @@ internal sealed class DungeonDresser
         }
         Put(f, "goblin_totempole", 0, f.HalfD - 0.6f, 180, 0.6f);
         Put(f, "goblin_banner", -(f.HalfA - 0.6f), f.HalfD - 1.2f, 90, 0.6f);
-        Lights(f);
+        Lights();
         Foes(f, 1.5f);
         Clutter(f, 0.025f);
-        Decay(f);
+        Decay();
     }
 
     /// <summary>A totem hall: a brazier ringed by totem poles; or a row of totems along the far wall over a bone-strewn floor; skull piles, shamans if there are any.</summary>
@@ -2297,7 +2470,7 @@ internal sealed class DungeonDresser
         Foes(f, 1f, [.. _foes.Where(x => x.Creature.Contains("Shaman", StringComparison.Ordinal)).DefaultIfEmpty(_foes[0])]);
         Foes(f, 0.6f);
         Clutter(f, 0.02f);
-        Decay(f);
+        Decay();
     }
 
     /// <summary>A mine gallery: timber frames every 6 m, crates and tools by the walls, loot lying about.</summary>
@@ -2316,10 +2489,10 @@ internal sealed class DungeonDresser
             Put(f, One("dvergrprops_crate", "dvergrprops_barrel", "dvergrprops_pickaxe", "dvergrprops_crate_long"), u, v, s.Yaw + R(-20, 20), 0.6f);
         }
         Pickables(f, 1.5f);
-        Lights(f);
+        Lights();
         Foes(f, 0.8f);
         Clutter(f, 0.01f);
-        Decay(f);
+        Decay();
     }
 
     /// <summary>A workshop: work tables with stools and a lantern, workbench pieces, shelves.</summary>
@@ -2338,9 +2511,9 @@ internal sealed class DungeonDresser
             Put(f, "dvergrprops_shelf", u, v, s.Yaw, 0.6f);
         }
         Clutter(f, 0.02f, "dvergrprops_crate", "dvergrprops_barrel", "dvergrprops_pickaxe");
-        Lights(f);
+        Lights();
         Foes(f, 0.6f);
-        Decay(f);
+        Decay();
     }
 
     /// <summary>Quarters: two beds with a wardrobe and a table; or one bed in a corner, a rug, a bath and a chest.</summary>
@@ -2375,10 +2548,10 @@ internal sealed class DungeonDresser
         {
             ChestAgainstWall(f);
         }
-        Lights(f);
+        Lights();
         Foes(f, 0.6f);
         Clutter(f, 0.01f);
-        Decay(f);
+        Decay();
     }
 
     /// <summary>A hidden cache: two chests (whatever the Loot), treasure, bars, a brazier.</summary>

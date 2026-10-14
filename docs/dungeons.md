@@ -75,7 +75,7 @@ What it is like:
   - Cell blocks have barred cells on each side of an aisle.
 - **Rooms are lit differently**: standing torches along the walls, sconces on them, or a brazier
   or two in the corners; the dark leaves most rooms unlit.
-- **Floors and ceilings vary.** In a stone dungeon the grand rooms get black marble tiles and the
+- **Floors and ceilings vary.** In a stone or grausten dungeon the grand rooms get black marble tiles and the
   lived-in ones wooden boards, half the time. Raised stone daises with steps, pilasters along the
   walls, chains and hooks hanging from the roofs, cobwebs in the corners.
 - **Doors close every room.** Monsters do not open doors, so each room's monsters wait behind its

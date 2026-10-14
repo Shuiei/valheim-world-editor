@@ -55,6 +55,8 @@ internal sealed class DungeonPlan
         public bool KeyChest;
         /// <summary>The tiles it covers (for a room, its whole box).</summary>
         public readonly HashSet<(int I, int J)> Tiles = [];
+        /// <summary>Its recesses (alcoves off a room, niches off a corridor): each one's tiles and the way out of the space into it.</summary>
+        public readonly List<(List<(int I, int J)> Tiles, (int X, int Z) Out)> Recesses = [];
         /// <summary>Its box (tiles, world axes).</summary>
         public int X0, Z0, W, H;
         /// <summary>The way in.</summary>
@@ -814,6 +816,7 @@ internal sealed class DungeonPlanner
                     s.Tiles.Add(t);
                     l.Owner[t] = s;
                 }
+                s.Recesses.Add((outside, dir));
                 int x0 = Math.Min(s.X0, outside.Min(t => t.Item1)), z0 = Math.Min(s.Z0, outside.Min(t => t.Item2));
                 int x1 = Math.Max(s.X0 + s.W - 1, outside.Max(t => t.Item1)), z1 = Math.Max(s.Z0 + s.H - 1, outside.Max(t => t.Item2));
                 (s.X0, s.Z0, s.W, s.H) = (x0, z0, x1 - x0 + 1, z1 - z0 + 1);
