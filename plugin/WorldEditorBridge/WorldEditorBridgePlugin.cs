@@ -85,6 +85,13 @@ public sealed partial class WorldEditorBridgePlugin : BaseUnityPlugin
     /// <summary>ZDOMan's private dictionary of every object the game knows, by id.</summary>
     private static readonly FieldInfo ObjectsById = typeof(ZDOMan).GetField("m_objectsByID", BindingFlags.Instance | BindingFlags.NonPublic);
 
+    /// <summary>
+    /// The objects each apply destroyed, looked at again a second later (<c>Update</c>, <c>CheckDestroyed</c>): whether
+    /// the game still has any, or another of the same prefab stands at its place; with the objects the apply created,
+    /// which are not such. Main thread only.
+    /// </summary>
+    private readonly Queue<(float Due, List<AppliedObject> Gone, List<AppliedObject> Made)> _destroyChecks = new();
+
     /// <summary>ZoneSystem's private set of the zones already generated.</summary>
     private static readonly FieldInfo GeneratedZones = typeof(ZoneSystem).GetField("m_generatedZones", BindingFlags.Instance | BindingFlags.NonPublic);
 
@@ -192,6 +199,11 @@ public sealed partial class WorldEditorBridgePlugin : BaseUnityPlugin
     [SuppressMessage("CodeQuality", "IDE0051:Remove unused private members", Justification = "Unity calls it by name.")]
     private void Update()
     {
+        if (_destroyChecks.Count > 0 && Time.realtimeSinceStartup >= _destroyChecks.Peek().Due)
+        {
+            var (_, gone, made) = _destroyChecks.Dequeue();
+            CheckDestroyed(gone, made);
+        }
         // At most a few jobs per frame; each is quick except the snapshot.
         for (int i = 0; i < 4 && _jobs.TryDequeue(out Job job); i++)
         {
@@ -512,6 +524,8 @@ public sealed partial class WorldEditorBridgePlugin : BaseUnityPlugin
     {
         ZPackage pkg = new(body);
         long session = ZDOMan.GetSessionID();
+        var all = (Dictionary<ZDOID, ZDO>)ObjectsById.GetValue(ZDOMan.instance);
+        int before = all.Count;
         int destroyCount = pkg.ReadInt();
         var destroyIds = new ZDOID[destroyCount];
         for (int i = 0; i < destroyCount; i++)
@@ -568,9 +582,92 @@ public sealed partial class WorldEditorBridgePlugin : BaseUnityPlugin
             }
             ids.Append('"').Append(zdo.m_uid.UserID.ToString(CultureInfo.InvariantCulture)).Append(':').Append(zdo.m_uid.ID.ToString(CultureInfo.InvariantCulture)).Append('"');
         }
-        Logger.LogInfo($"WorldEditorBridge: destroyed {destroyed + refound} object(s) ({refound} found again at their place under a new id, {missing} already gone), created {createCount}");
+        // The game drops a destroyed object on its next update, so the count after is the one before plus what was
+        // created; the check a second later says whether the destroyed ones went.
+        Logger.LogInfo($"WorldEditorBridge: destroyed {destroyed + refound} object(s) ({refound} found again at their place under a new id, {missing} already gone), created {createCount}; {before} -> {all.Count} object(s) known, {Peers()} peer(s)");
+        if (gone.Count > 0)
+        {
+            _destroyChecks.Enqueue((Time.realtimeSinceStartup + 1f, gone, made));
+        }
         return (Encoding.UTF8.GetBytes($"{{\"destroyed\":{destroyed + refound},\"refound\":{refound},\"missing\":{missing},\"created\":[{ids}]}}"),
             new AppliedChanges(made, gone, [], []));
+    }
+
+    /// <summary>How many peers (players' games) are connected to this game.</summary>
+    private static int Peers() => ZNet.instance?.GetPeers().Count ?? 0;
+
+    /// <summary>
+    /// Logs, a second after an apply destroyed objects, how many of them the game still has and how many other objects
+    /// of the same prefab stand within 10 cm of their places (made again by something on the server, or standing
+    /// there all along; the objects the same apply created are not counted), with the object and peer counts: what a
+    /// "the pieces stayed for the players" report needs. One pass over the game's objects, each looked up by the metre
+    /// cell of its place, so a large apply costs no more than a small one per object.
+    /// </summary>
+    /// <param name="gone">The objects the apply destroyed.</param>
+    /// <param name="made">The objects the same apply created.</param>
+    private void CheckDestroyed(List<AppliedObject> gone, List<AppliedObject> made)
+    {
+        if (ZDOMan.instance == null)
+        {
+            return;
+        }
+        var dict = (Dictionary<ZDOID, ZDO>)ObjectsById.GetValue(ZDOMan.instance);
+        HashSet<ZDOID> ids = [];
+        foreach (AppliedObject o in made)
+        {
+            ids.Add(new ZDOID(o.User, o.Id));
+        }
+        // The destroyed places by prefab and metre cell: an object is checked against those of its own cell and the
+        // eight around it only.
+        Dictionary<(int Prefab, int X, int Z), List<Vector3>> cells = [];
+        HashSet<int> prefabs = [];
+        int still = 0;
+        foreach (AppliedObject o in gone)
+        {
+            ZDOID id = new(o.User, o.Id);
+            ids.Add(id);
+            if (dict.ContainsKey(id))
+            {
+                still++;
+            }
+            Vector3 p = new(o.X, o.Y, o.Z);
+            var key = (o.Prefab, Mathf.FloorToInt(p.x), Mathf.FloorToInt(p.z));
+            if (!cells.TryGetValue(key, out var list))
+            {
+                cells[key] = list = [];
+            }
+            list.Add(p);
+            prefabs.Add(o.Prefab);
+        }
+        bool Near(int prefab, Vector3 p)
+        {
+            int cx = Mathf.FloorToInt(p.x), cz = Mathf.FloorToInt(p.z);
+            for (int dx = -1; dx <= 1; dx++)
+            {
+                for (int dz = -1; dz <= 1; dz++)
+                {
+                    if (cells.TryGetValue((prefab, cx + dx, cz + dz), out var list))
+                    {
+                        int at = list.FindIndex(w => (w - p).sqrMagnitude < 0.01f);
+                        if (at >= 0)
+                        {
+                            list.RemoveAt(at);
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+        int nearby = 0;
+        foreach (ZDO zdo in dict.Values)
+        {
+            if (!ids.Contains(zdo.m_uid) && prefabs.Contains(zdo.GetPrefab()) && Near(zdo.GetPrefab(), zdo.GetPosition()))
+            {
+                nearby++;
+            }
+        }
+        Logger.LogInfo($"WorldEditorBridge: 1 s after the apply: {still} of {gone.Count} destroyed object(s) still exist, {nearby} other object(s) of their prefab within 10 cm of their place (made again, or there all along); {dict.Count} object(s), {Peers()} peer(s)");
     }
 
     /// <summary>
