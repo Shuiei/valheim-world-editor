@@ -24,6 +24,7 @@ if command -v osslsigncode > /dev/null; then
 else
   echo "osslsigncode is not installed: the signature was not checked."
 fi
-rm "$zip"
-(cd "$work" && zip -qr "$zip" ValheimWorldEditor)
+# The package is replaced only once the new zip is complete.
+(cd "$work" && zip -qr "$zip.signed" ValheimWorldEditor)
+mv -f "$zip.signed" "$zip"
 echo "signed  $(basename "$zip")"

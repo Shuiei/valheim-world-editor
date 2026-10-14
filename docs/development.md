@@ -138,7 +138,7 @@ from CircleCI (Rerun from failed); the others are done. Still by hand: **unhide*
 Hexium (its Versions page on hexium.gg; uploads arrive hidden and the API cannot unhide them), and
 the Nexus page's description and pictures (no API changes them).
 
-The release jobs' secrets are in CircleCI's **release** context, restricted to the maintainer (only
+The release jobs' secrets are in CircleCI's **mod-token** context, restricted to the maintainer (only
 they can approve): `GITHUB_TOKEN` (a GitHub token with Contents read and write on this repository),
 `THUNDERSTORE_TOKEN` (a service account of team Tie, from old.thunderstore.io's team settings),
 `HEXIUM_TOKEN` (a team API token, from the team page on hexium.gg), `NEXUS_API_KEY` (a personal
