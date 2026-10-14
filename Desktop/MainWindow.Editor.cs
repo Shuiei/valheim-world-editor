@@ -183,6 +183,8 @@ public sealed partial class MainWindow
     {
         AreaNav.IsVisible = scene.Owner != null;
         ShowAreaSize(scene.ZonesX, scene.ZonesZ);
+        // The history is this area's now (an open panel showed the last area's).
+        History.Refresh();
         int n = Overlays.LocationsNear(scene);
         LocationText.Text = n == 0 ? "" : $"{n} location(s) here. The ground already includes the flattening the game does around them (turn on Location markers in View to see where).";
         LocationNote.IsVisible = n > 0;

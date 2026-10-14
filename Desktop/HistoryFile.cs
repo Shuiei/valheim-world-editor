@@ -159,19 +159,21 @@ public static class HistoryFile
                 o.Write(c.Removed);
                 o.Write(c.Applied);
                 o.Write(c.RevertOf != null && order.TryGetValue(c.RevertOf, out int r) ? r : -1);
+                // Each step's points and zones are in the frame of the area it was made in.
+                var f = k.FrameOf(c);
                 o.Write(c.Points.Length);
                 foreach (int p in c.Points)
                 {
-                    o.Write(p % k.W + k.Ox);
-                    o.Write(p / k.W + k.Oz);
+                    o.Write(p % f.W + f.Ox);
+                    o.Write(p / f.W + f.Oz);
                 }
                 WriteState(o, c.Before);
                 WriteState(o, c.After);
                 o.Write(c.Zones.Count);
                 foreach (var (x, z) in c.Zones)
                 {
-                    o.Write(x + k.X0);
-                    o.Write(z + k.Z0);
+                    o.Write(x + f.X0);
+                    o.Write(z + f.Z0);
                 }
                 int[] cids = k.Ids[c];
                 var kept = Enumerable.Range(0, cids.Length).Where(n => index.ContainsKey(cids[n])).ToList();

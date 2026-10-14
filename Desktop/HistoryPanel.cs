@@ -125,16 +125,29 @@ public sealed class HistoryPanel
         if (s == null || undo.Count + redo.Count == 0)
         {
             Rows.Children.Add(new TextBlock { Text = "No changes yet in this session.", FontSize = 12, Foreground = Ui.Muted });
-            return;
         }
-        // Undone changes on top (the next redo just above the current change).
-        foreach (var c in redo)
+        else
         {
-            Rows.Children.Add(Row(s, c, undone: true, current: false));
+            // Undone changes on top (the next redo just above the current change).
+            foreach (var c in redo)
+            {
+                Rows.Children.Add(Row(s, c, undone: true, current: false));
+            }
+            for (int i = undo.Count - 1; i >= 0; i--)
+            {
+                Rows.Children.Add(Row(s, undo[i], undone: false, current: i == undo.Count - 1));
+            }
         }
-        for (int i = undo.Count - 1; i >= 0; i--)
+        // Steps made in other areas: not undoable here, kept for where they were made.
+        if (s is { Shelved: > 0 and var aside })
         {
-            Rows.Children.Add(Row(s, undo[i], undone: false, current: i == undo.Count - 1));
+            Rows.Children.Add(new TextBlock
+            {
+                Text = $"{aside} step(s) made in other areas are kept: open those areas to undo them.",
+                FontSize = 11,
+                Foreground = Ui.Muted,
+                TextWrapping = TextWrapping.Wrap,
+            });
         }
     }
 
