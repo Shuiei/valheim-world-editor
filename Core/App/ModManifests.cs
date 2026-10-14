@@ -8,8 +8,8 @@ namespace TerrainEditor.App;
 /// What mod authors can tell the editor about their mod, in a worldeditor.json shipped with it (anywhere in its
 /// folder under BepInEx/plugins; docs/modding.md, docs/worldeditor.schema.json): labels, help and read-only flags for
 /// the data their objects keep (the inspector), prefabs the editor should not offer (tools, effects, helpers), groups
-/// for their pieces (the Build panel's Mods tab), and how their objects link into one (ObjectLinks: a ship and its
-/// pieces). Everything else the editor learns by itself (ModCatalogue, ModKeys). Read from the plugins folders the
+/// for their pieces (the Build panel's Mods tab), how their objects link into one (ObjectLinks: a ship and its
+/// pieces), and the editor extension they offer (ModExtensions). Everything else the editor learns by itself (ModCatalogue, ModKeys). Read from the plugins folders the
 /// editor knows (LocalGame.BepInExFolders) as a world or the Workshop opens; of two manifests saying something of the
 /// same name, the newest file's wins. A file that is not a manifest is skipped. The editor ships none for any mod:
 /// supporting a mod is its author's to do.
@@ -33,6 +33,11 @@ public static class ModManifests
     /// <param name="Help">What it is, shown when pointing at it.</param>
     public sealed record DataNote(string? Label, bool ReadOnly, string? Help);
 
+    /// <summary>An editor extension a mod offers (its manifest's "extension").</summary>
+    /// <param name="Dll">The extension's DLL, its full path (inside the mod's folder).</param>
+    /// <param name="Mod">The mod, as its folder under plugins is named.</param>
+    public sealed record Offered(string Dll, string Mod);
+
     /// <summary>
     /// What a manifest says of a prefab.
     /// </summary>
@@ -46,7 +51,9 @@ public static class ModManifests
     /// <param name="Data">By data key name.</param>
     /// <param name="Prefabs">By prefab name.</param>
     /// <param name="Links">How objects link into one, by the name of the id key (in the order first read).</param>
-    private sealed record Notes(Dictionary<string, DataNote> Data, Dictionary<string, PrefabNote> Prefabs, OrderedDictionary<string, LinkRule> Links)
+    /// <param name="Extensions">The extensions mods offer (ModExtensions), by their DLL's full path.</param>
+    private sealed record Notes(Dictionary<string, DataNote> Data, Dictionary<string, PrefabNote> Prefabs, OrderedDictionary<string, LinkRule> Links,
+        Dictionary<string, Offered> Extensions)
     {
         /// <summary>The link rules, with the keys they read.</summary>
         public LinkSet LinkSet { get; set; } = LinkSet.Empty;
@@ -72,7 +79,7 @@ public static class ModManifests
     private static Notes? _baseNotes;
 
     /// <summary>What is in use, swapped in whole.</summary>
-    private static volatile Notes _notes = new([], [], []);
+    private static volatile Notes _notes = new([], [], [], []);
 
     /// <summary>Counts each time what is in use is replaced, for lists worked out from it to be worked out again.</summary>
     public static int Generation => _generation;
@@ -91,22 +98,25 @@ public static class ModManifests
     /// <summary>How the manifests say objects link into one (ObjectLinks).</summary>
     public static LinkSet Links => _notes.LinkSet;
 
+    /// <summary>The editor extensions mods offer (ModExtensions decides which run), in no particular order.</summary>
+    public static IReadOnlyCollection<Offered> Extensions => _notes.Extensions.Values;
+
     /// <summary>A copy of what <see cref="Base"/> says (a manifest there that cannot be read is a bug: it throws).</summary>
     private static Notes BaseNotes()
     {
         if (_baseNotes is not { } once)
         {
-            once = new Notes([], [], []);
+            once = new Notes([], [], [], []);
             foreach (string json in Base)
             {
-                if (!Read(json, once))
+                if (!Read(json, once, null))
                 {
                     throw new InvalidDataException("a base manifest is not a worldeditor.json this editor reads.");
                 }
             }
             _baseNotes = once;
         }
-        var notes = new Notes(new(once.Data), new(once.Prefabs), new(once.Links));
+        var notes = new Notes(new(once.Data), new(once.Prefabs), new(once.Links), new(once.Extensions));
         notes.LinkSet = new LinkSet([.. notes.Links.Values]);
         return notes;
     }
@@ -117,7 +127,7 @@ public static class ModManifests
     /// <returns>How many manifests were read.</returns>
     public static int Refresh(AppSettings settings)
     {
-        var files = new List<FileInfo>();
+        var files = new List<(FileInfo File, string Plugins)>();
         foreach (var (dir, _) in LocalGame.BepInExFolders(settings))
         {
             string plugins = Path.Combine(dir, "plugins");
@@ -125,7 +135,7 @@ public static class ModManifests
             {
                 if (Directory.Exists(plugins))
                 {
-                    files.AddRange(Directory.EnumerateFiles(plugins, FileName, SearchOption.AllDirectories).Select(f => new FileInfo(f)));
+                    files.AddRange(Directory.EnumerateFiles(plugins, FileName, SearchOption.AllDirectories).Select(f => (new FileInfo(f), plugins)));
                 }
             }
             catch (Exception e) when (e is IOException or UnauthorizedAccessException)
@@ -136,11 +146,15 @@ public static class ModManifests
         var notes = BaseNotes();
         int read = 0;
         // Oldest first: a newer file's notes replace an older one's.
-        foreach (var file in files.DistinctBy(f => f.FullName).OrderBy(f => f.LastWriteTimeUtc))
+        foreach (var (file, plugins) in files.DistinctBy(f => f.File.FullName).OrderBy(f => f.File.LastWriteTimeUtc))
         {
             try
             {
-                if (file.Length <= MaxFile && Read(File.ReadAllText(file.FullName), notes))
+                // The mod: its folder right under plugins (the manifest's own when it lies there).
+                string folder = file.DirectoryName!;
+                string relative = Path.GetRelativePath(plugins, folder);
+                string mod = relative == "." ? Path.GetFileName(folder) : relative.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)[0];
+                if (file.Length <= MaxFile && Read(File.ReadAllText(file.FullName), notes, (folder, mod)))
                 {
                     read++;
                 }
@@ -171,8 +185,11 @@ public static class ModManifests
     /// Adds what a manifest says to <paramref name="notes"/>; false (nothing added) when it is not a manifest of a
     /// version this editor reads. Entries not in the expected form are left out.
     /// </summary>
+    /// <param name="json">The manifest's text.</param>
+    /// <param name="notes">What is added to.</param>
+    /// <param name="from">The manifest's folder and its mod (null for one given in code, which offers no extension).</param>
     /// <exception cref="JsonException">Not JSON.</exception>
-    private static bool Read(string json, Notes notes)
+    private static bool Read(string json, Notes notes, (string Folder, string Mod)? from)
     {
         if (JsonNode.Parse(json, documentOptions: new JsonDocumentOptions { CommentHandling = JsonCommentHandling.Skip, AllowTrailingCommas = true }) is not JsonObject root
             || root["version"] is not JsonValue v || !v.TryGetValue(out int version) || version < 1 || version > Version)
@@ -197,6 +214,16 @@ public static class ModManifests
                 {
                     notes.Prefabs[name] = new PrefabNote(hidden, group);
                 }
+            }
+        }
+        if (from is var (folder, mod) && Text(root["extension"], out string? dll) && dll != null)
+        {
+            // A DLL inside the mod's own folder only.
+            string path = Path.GetFullPath(Path.Combine(folder, dll));
+            if (path.StartsWith(Path.GetFullPath(folder) + Path.DirectorySeparatorChar, StringComparison.Ordinal)
+                && path.EndsWith(".dll", StringComparison.OrdinalIgnoreCase))
+            {
+                notes.Extensions[path] = new Offered(path, mod);
             }
         }
         if (root["links"] is JsonArray links)

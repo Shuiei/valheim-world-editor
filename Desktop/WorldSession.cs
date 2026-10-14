@@ -144,13 +144,15 @@ public sealed class WorldSession : IDisposable
 
     /// <summary>
     /// What the editor reads from the player's mods as a world or the Workshop opens: the data names their code holds
-    /// (ModKeys, read again only when a mod changes) and their worldeditor.json manifests (ModManifests).
+    /// (ModKeys, read again only when a mod changes), their worldeditor.json manifests (ModManifests) and the editor
+    /// extensions they offer that the user allowed (ModExtensions).
     /// </summary>
     public static void ReadModFiles()
     {
         var settings = AppSettings.Load();
         ModKeys.Refresh(settings);
         ModManifests.Refresh(settings);
+        ModExtensions.Refresh(settings);
     }
 
     /// <summary>A world on this computer (its folder). Throws when the game's data is missing.</summary>

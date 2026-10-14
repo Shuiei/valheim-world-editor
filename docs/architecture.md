@@ -15,6 +15,8 @@ replaced. Tests from that time check that what it did still works (`KeysAndMouse
 |---|---|---|
 | `Core/ValheimWorldEditor.Core.csproj` | `TerrainEditor.App`, `.Save`, `.Editing`, `.Terrain`, `ValheimGen` | Everything that is not the window: reading and writing saves, pending changes, the world generator, live mode's client, the game data read from Valheim, settings, blueprints, SSH. No Avalonia. |
 | `Desktop/ValheimWorldEditor.Desktop.csproj` | `TerrainEditor.Desktop` | The program, `ValheimWorldEditor`: the Avalonia window, the pages, the 3D view and the map (OpenGL through Silk.NET), the tools and panels, the Script tool (Roslyn), the Claude MCP server (ASP.NET Core). |
+| `Sdk/ValheimWorldEditor.Sdk.csproj` | `ValheimWorldEditor.Sdk` | What mods' editor extensions are built against (netstandard2.0): `IWorldEditorExtension`, `IExtensionRegistry`, the hooks' interfaces, `IObjectView`, `Shape`. Only what the editor hands over, nothing of the editor; Core references it, and extensions load against the editor's copy. Released as `ValheimWorldEditor.Sdk-<version>.zip` (`tools/sdk.sh`). Add, do not rename: built extensions bind to it. |
+| `samples/ExampleVehicles.WorldEditor/` | `ExampleVehicles.WorldEditor` | The SDK's sample extension, a made-up mod's (packed ids, sails, cables), built and tested with Core's tests, never loaded by the editor by itself. The editor holds nothing for any real mod. |
 | `plugin/WorldEditorBridge/` | `WorldEditorBridge` | The BepInEx plugin for live mode: `WorldEditorBridgePlugin.cs` (and `WorldEditorBridgePlugin.Catalogue.cs`, `.Models.cs` for `GET /catalogue`, `POST /models`), .NET Framework 4.7.2, inside the game. It shares no code with the editor, only a byte format and `VERSION`. |
 | `tests/Core.Tests/` | `WorldEditor.Tests` | Core's tests (xUnit v3), laid out like `Core/`. |
 | `tests/Desktop.Tests/` | `TerrainEditor.Desktop.Tests` | The app's tests, xUnit v3 with Avalonia's headless mode, laid out like `Desktop/`. |
@@ -114,7 +116,7 @@ plot that is no world: it has nothing to save; its building becomes a Homestead 
 | Save | `WorldSave`, `ValheimReader`, `WorldWriter`, `WorldCreator`, `ZdoTools`, `ZdoData`, `InventoryData`, `ChunkMath` (`Core/Save/`) | Byte formats follow the game's `ZPackage`. |
 | Pending changes | `EditStore`, `ZoneEdit`, `NewObject`, `ObjectField`, `ZoneReset`, `HeightGrid`, `Uplift` (`Core/Editing/`) | `EditStore` takes its own lock: strokes and buttons use it from different threads. |
 | Building, dungeons | `Hammer`, `Stability`, `Dungeons`, `DungeonGen`, `DungeonPlan`, `DungeonDresser` (`Core/Editing/`) | The hammer's snapping, the support check and the room joining, from the game's data. |
-| Mods' objects | `ObjectLinks`, `LinkRule`, `LinkSet`, `ObjectLink`, `LinkIndex` (`Core/App/ObjectLinks.cs`), `ModKeys`, `ModManifests`, `ModCatalogue` (`Core/App/`) | Objects mods link into one (below); mods' data names, manifests and prefabs. |
+| Mods' objects | `ObjectLinks`, `LinkRule`, `LinkSet`, `ObjectLink`, `LinkIndex` (`Core/App/ObjectLinks.cs`), `ModKeys`, `ModManifests`, `ModCatalogue`, `ModExtensions`, `ObjectView`, `CopyView` (`Core/App/`) | Objects mods link into one, mods' extensions (below); mods' data names, manifests and prefabs. |
 | Game data | `GameLook`, `GameBundles`, `GameData`, `GameCatalogues*`, `GameLocations`, `GameTextures`, `Crunch`, `GameShader`, `TerrainShader` (`Core/App/`) | Below. |
 | Live | `LiveBridge`, `LiveSync` (`Core/Save/`), `Tunnel`, `ServerConfig`, `LocalGame` (`Core/App/`) | Below. |
 | Claude, scripts | `ClaudeServer`, `ClaudeTools`, `ClaudeBuilder`, `ClaudeGuide`, `ClaudeRelay`, `ScriptHost`, `ScriptApi.csx` (`Desktop/`) | Below. |
@@ -326,6 +328,19 @@ either breaks it, the user's own scripts and the docs.
 - Ground edits are clamped as the game clamps them (`EditStore.MaxLevel`, ±8 m); beyond that only
   through `Uplift`'s ground discs (`EditStore.MaxLift`).
 - Settings and servers are written through `Core/App/SafeFile.cs` (temporary file, then moved over).
+
+**Mods' editor extensions** (`Core/App/ModExtensions.cs`, mod authors' docs in
+[modding.md](modding.md#extensions)): a DLL a mod's `worldeditor.json` names (`"extension"`, inside its folder;
+`ModManifests.Extensions`) runs only when `AppSettings.Extensions` holds its path with the SHA-256 of the file as it is
+(Settings, Mod extensions: `ModExtensions.Allow`); each allowed file is loaded once per run, in an `AssemblyLoadContext`
+of its own that hands it the editor's `ValheimWorldEditor.Sdk` (one set of SDK types), and registers its hooks. They are
+used through `ModExtensions` only: `Decode` (the inspector's `Decoded`), `Rewrite` (`ObjectLinks.Remap`, after the
+links, over a `CopyView`; `RewrittenKeys` are not dropped by `dropOnCopy`) and `ShapesOf` (`GlView.RebuildShapes`,
+batches of their own in view space among `_batches`, made again when things or `ModExtensions.Generation` change; its
+`ShapeWorld` finds objects by a links rule's id through `LinkIndex.Holder`, for shapes reaching another object).
+Every call goes through `Guard`: a hook that throws turns its extension off (`Status.Failed`), never the editor. Hooks
+run on any thread; what is in use is swapped in whole (`State`). The SDK's sample (`samples/`) is tested in
+`tests/Core.Tests/Samples/` and loaded as a mod's DLL in `ModExtensionsTests`.
 
 **Objects mods link into one** (`Core/App/ObjectLinks.cs`, user docs in
 [select.md](select.md#linked-objects-ships-and-other-mods-groups), mod authors' in

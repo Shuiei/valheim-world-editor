@@ -3,6 +3,7 @@ using System.Numerics;
 using System.Runtime.CompilerServices;
 using TerrainEditor.Editing;
 using TerrainEditor.Save;
+using TerrainEditor.Terrain;
 
 namespace TerrainEditor.App;
 
@@ -264,7 +265,10 @@ public static class ObjectLinks
         // What has no link but names another object, or holds what copies leave out (a sail on a mast standing on its
         // own), is looked at too.
         var links = copy.Select(o => With(null, o.Data) ?? Named(set, o.Data)).ToList();
-        if (links.All(l => l == null))
+        // Values extensions rewrite (ModExtensions): theirs to decide, not dropped.
+        var rewritten = ModExtensions.RewrittenKeys;
+        bool rewrite = rewritten.Count > 0 && copy.Any(o => o.Data?.Any(f => f.Value != null && rewritten.Contains(f.Key)) == true);
+        if (links.All(l => l == null) && !rewrite)
         {
             return [.. copy];
         }
@@ -347,14 +351,35 @@ public static class ObjectLinks
             }
             for (int k = 0; k < data.Count; k++)
             {
-                if (rule.DropKeys.Contains(data[k].Key))
+                if (rule.DropKeys.Contains(data[k].Key) && !rewritten.Contains(data[k].Key))
                 {
                     data[k] = data[k] with { Value = null };
                 }
             }
             result[i] = o with { Position = position, Data = data };
         }
+        if (rewrite)
+        {
+            // Then the extensions, with the copy's new ids.
+            var map = new IdMap(ids);
+            for (int i = 0; i < result.Length; i++)
+            {
+                if (result[i] is { Data: { } data } o && data.Any(f => f.Value != null && rewritten.Contains(f.Key)))
+                {
+                    var view = new CopyView(PrefabCatalog.NameOf(o.Prefab) ?? "", o.Position, o.Rotation, [.. data], o.Scale);
+                    ModExtensions.Rewrite(view, map);
+                    result[i] = o with { Data = view.Data };
+                }
+            }
+        }
         return result;
+    }
+
+    /// <summary>A copy's new ids for the originals' (ICopyRewriter).</summary>
+    private sealed class IdMap(Dictionary<int, int> ids) : ValheimWorldEditor.Sdk.IIdMap
+    {
+        /// <inheritdoc/>
+        public bool TryGetNew(int oldId, out int newId) => ids.TryGetValue(oldId, out newId);
     }
 
     /// <summary>
@@ -536,6 +561,11 @@ public sealed class LinkIndex
 
     /// <summary>An object with a link, by id; null when it has none.</summary>
     public Member? Get(int id) => _members.GetValueOrDefault(id);
+
+    /// <summary>The object holding an id of a rule's (the first read when two hold it); null when none does.</summary>
+    /// <param name="idKey">The rule's id key (hash): an id under another key is not it.</param>
+    /// <param name="id">The id.</param>
+    public Member? Holder(int idKey, int id) => _holders.TryGetValue(id, out int o) && _members[o] is { } m && m.Link.Rule.IdKey == idKey ? m : null;
 
     /// <summary>What the group an object belongs to is called (its root's rule's name); null for one with no link.</summary>
     public string? NameOf(int id) => Get(RootOf(id))?.Link.Rule.Name;

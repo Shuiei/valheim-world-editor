@@ -279,7 +279,7 @@ the folder.
 | [Measure and overlays](docs/measure.md) | Distances, slopes, slope colours, height lines |
 | [Script](docs/scripting.md) | C# scripts that shape, paint and populate an area: how to write them, everything they can use, recipes |
 | [Live mode](docs/live-mode.md) | Editing a running server |
-| [For mod authors](docs/modding.md) | What the editor learns from building mods by itself, and the optional `worldeditor.json` a mod can ship |
+| [For mod authors](docs/modding.md) | What the editor learns from building mods by itself, the optional `worldeditor.json` a mod can ship, and editor extensions (the SDK) |
 | [Claude](docs/claude.md) | Letting Claude shape the world or build in the Workshop from a prompt (MCP) |
 | [Development](docs/development.md) | Project layout, extracting the game files, tests |
 

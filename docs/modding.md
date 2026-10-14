@@ -33,6 +33,7 @@ opens. The file is optional and only adds to what the editor learns by itself.
 | `data` | By data key, as your code names it (the name whose hash the game saves): `label`, how the inspector names the value (else its key); `readOnly`, the inspector shows it but does not let it be changed (values the mod sets itself and that would break if edited); `help`, what it is, shown when pointing at the value. |
 | `prefabs` | By prefab name: `hidden`, not offered in Place or the Workshop's Build panel (your tools, effects, helpers; objects of it already in a world still show); `group`, the heading the piece is listed under in the Build panel's **Mods** tab (else its crafting station). |
 | `links` | How your objects link into one (below). |
+| `extension` | Your editor extension's DLL, relative to the file's folder and inside it (see [Extensions](#extensions)). |
 
 Texts are at most 200 characters. Comments and trailing commas are allowed. An entry not in this
 form is left out; the rest of the file still counts. When two files say something of the same name,
@@ -85,3 +86,62 @@ Every pasted group gets new ids that no object in the world holds, so the game n
 copies for one. Data keys are named as your code names them, as in `data`. An object takes the
 first rule whose `id` or `parents` it holds; a rule is known by its `id`: a newer file's rule of
 the same `id` replaces an older one's, in its place.
+
+## Extensions
+
+What a file cannot say, code can. A mod can ship an **editor extension**: a small DLL, built
+against the editor's SDK, that the editor loads to read and draw the mod's objects. It does not
+run in the game, and it never sees the game's or Unity's code: only the objects' data, as the
+editor has it.
+
+- **Get the SDK** from a [release](https://github.com/Shuiei/valheim-world-editor/releases):
+  `ValheimWorldEditor.Sdk-<version>.zip` holds `ValheimWorldEditor.Sdk.dll` (netstandard2.0, with
+  its documentation file), and a whole sample to start from: the extension of a made-up mod,
+  "Example Vehicles" (`samples/ExampleVehicles.WorldEditor`, with its `worldeditor.json`; it
+  builds as it is), showing every hook: packed ids read and rewritten, sails drawn from their
+  corners, cables drawn from post to post.
+- **Build a netstandard2.0 class library** referencing `ValheimWorldEditor.Sdk.dll` (not copied
+  to your output: the editor gives its own) and nothing else but the framework: an extension is
+  one DLL, the editor loads no other from your folder. Mark the assembly and give it an entry:
+
+```csharp
+[assembly: WorldEditorExtension(typeof(MyMod.EditorExtension))]
+
+public sealed class EditorExtension : IWorldEditorExtension
+{
+    public void Register(IExtensionRegistry registry)
+    {
+        registry.AddDecoder("MyMod_Packed", new PackedReader());          // inspector
+        registry.AddCopyRewriter(new PackedIds(), "MyMod_Packed");      // paste
+        registry.AddShapes(new BannerCloth(), "MyMod_Banner");          // 3D view
+    }
+}
+```
+
+- **Ship it** with your mod and name it in your `worldeditor.json`:
+  `"extension": "MyMod.WorldEditor.dll"`.
+
+| Hook | What the editor does with it |
+|---|---|
+| `AddDecoder(key, IDataDecoder)` | The inspector shows a byte-array value in your words, under the value (instead of only its size). |
+| `AddCopyRewriter(ICopyRewriter, keys)` | Each object of a pasted copy holding one of the keys is handed to you after the editor's own linking (`links`), with the copy's new ids for the originals' (`IIdMap`): rewrite ids you keep in your own form. The keys are yours: `dropOnCopy` no longer takes them out. |
+| `AddShapes(IShapeProvider, prefabs)` | Objects of the prefabs are drawn with your shapes too: triangles in the object's frame (or in the world's: `WorldSpace`), one colour each (alpha below 1: see-through), for what your mod builds while the game runs (a sail from its corners, a cloth). The `IWorldView` given finds another object by an id it holds (`TryFind`, for ids under a `links` rule's `id` key), for a rope or a cable reaching it. |
+
+Objects come as `IObjectView`: the prefab's name, the place, turn (Euler angles and a quaternion)
+and size as drawn, and every value of its data by key (`TryGetInt`, `TryGetVector3`,
+`TryGetBytes`…). Keys and prefabs are named as your code names them.
+
+Rules:
+
+- **The player decides.** An extension is code running in the editor with the player's rights, so
+  it runs only once the player turns it on in **Settings → Mod extensions**, and only that file: a
+  changed DLL (an update) is off until turned on again.
+- **Hooks are called from several threads at once** and often (every redraw of the shapes, every
+  pasted object): keep no state between calls, and be quick. A hook that throws turns the extension
+  off until the editor starts again (Settings says why); the editor goes on without it.
+- **Versions.** `SdkInfo.ApiVersion` is the API's version; an editor runs extensions built against
+  its version or an earlier one. New hooks come as additions; the version changes only when the API
+  breaks.
+- The editor ships no extension, and no manifest, for any mod: supporting a mod in the editor is
+  its author's to do, with these. The sample is a made-up mod's.
+
