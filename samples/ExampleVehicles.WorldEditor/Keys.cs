@@ -26,4 +26,10 @@ public static class Keys
 
     /// <summary>The post's prefab, cables running from post to post.</summary>
     public const string Post = "example_post";
+
+    /// <summary>The pit's prefab, a hole dug in the ground.</summary>
+    public const string Pit = "example_pit";
+
+    /// <summary>Float: a pit's radius, in metres.</summary>
+    public const string Radius = "ExampleVehicles_Radius";
 }

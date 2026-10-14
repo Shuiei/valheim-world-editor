@@ -413,6 +413,8 @@ public sealed class GlView : OpenGlControlBase
     private uint _terrainVao, _terrainIndexCount, _waterVao, _terrainVbo, _terrainExtraVbo;
     /// <summary>More of the ground's and the water's buffers.</summary>
     private uint _terrainEbo, _terrainBiomeVbo, _waterVbo, _waterEbo;
+    /// <summary>One float per grid point: 1 where a mod's extension cuts the ground (GroundCuts), sent with the shapes.</summary>
+    private uint _terrainCutVbo;
     /// <summary>The scene changed: the ground and the water are built again at the next frame.</summary>
     private bool _sceneDirty;
 
@@ -553,7 +555,7 @@ public sealed class GlView : OpenGlControlBase
         _own.DeleteAll();
         _terrainEbo = _terrainBiomeVbo = _waterVbo = _waterEbo = 0;
         _terrainProg = _objectProg = _waterProg = _lineProg = 0;
-        _terrainVao = _terrainIndexCount = _waterVao = _terrainVbo = _terrainExtraVbo = 0;
+        _terrainVao = _terrainIndexCount = _waterVao = _terrainVbo = _terrainExtraVbo = _terrainCutVbo = 0;
         _boxVbo = _boxEbo = _ghostVbo = 0;
         _pathVao = _pathVbo = _pathEdgeVao = _pathEdgeVbo = _pathDotVao = _pathDotVbo = 0;
         _placeRingVao = _placeRingVbo = _hoverBoxVao = _hoverBoxVbo = 0;
@@ -686,11 +688,11 @@ public sealed class GlView : OpenGlControlBase
     {
         _own.DeleteVertexArray(_terrainVao);
         _own.DeleteVertexArray(_waterVao);
-        foreach (uint b in new[] { _terrainVbo, _terrainEbo, _terrainBiomeVbo, _terrainExtraVbo, _waterVbo, _waterEbo })
+        foreach (uint b in new[] { _terrainVbo, _terrainEbo, _terrainBiomeVbo, _terrainExtraVbo, _terrainCutVbo, _waterVbo, _waterEbo })
         {
             _own.DeleteBuffer(b);
         }
-        _terrainVao = _waterVao = _terrainVbo = _terrainEbo = _terrainBiomeVbo = _terrainExtraVbo = _waterVbo = _waterEbo = 0;
+        _terrainVao = _waterVao = _terrainVbo = _terrainEbo = _terrainBiomeVbo = _terrainExtraVbo = _terrainCutVbo = _waterVbo = _waterEbo = 0;
     }
 
     /// <summary>
@@ -755,6 +757,19 @@ public sealed class GlView : OpenGlControlBase
         _gl.VertexAttribPointer(5, 1, VertexAttribPointerType.Float, false, 16, (void*)8);
         _gl.EnableVertexAttribArray(6);
         _gl.VertexAttribPointer(6, 1, VertexAttribPointerType.Float, false, 16, (void*)12);
+        // Where the ground is cut (none until the extensions' shapes are made: RebuildShapes).
+        if (s.Cut.Length != w * h)
+        {
+            s.Cut = new float[w * h];
+        }
+        uint cv = _terrainCutVbo = _own.Buffer();
+        _gl.BindBuffer(BufferTargetARB.ArrayBuffer, cv);
+        fixed (float* p = s.Cut)
+        {
+            _gl.BufferData(BufferTargetARB.ArrayBuffer, (nuint)(s.Cut.Length * 4), p, BufferUsageARB.DynamicDraw);
+        }
+        _gl.EnableVertexAttribArray(7);
+        _gl.VertexAttribPointer(7, 1, VertexAttribPointerType.Float, false, 4, (void*)0);
         _terrainIndexCount = (uint)idx.Length;
         // The sea: one quad over the area, at the water level.
         float hw = w / 2f + 400, hh = h / 2f + 400, y = s.Water;
@@ -1563,7 +1578,9 @@ public sealed class GlView : OpenGlControlBase
     /// <summary>
     /// The shapes the mods' running extensions draw for the area's things (ModExtensions.ShapesOf), made again: in view
     /// space, one batch per kind of object, colour and sidedness, each a single instance the object passes draw like any
-    /// model (see-through ones with the glass). Their data read from the world and this session's objects.
+    /// model (see-through ones with the glass). And where they cut the ground (ModExtensions.CutsOf): the grid points
+    /// inside their outlines marked (WorldScene.Cut) and sent to the terrain. Their data read from the world and this
+    /// session's objects.
     /// </summary>
     private unsafe void RebuildShapes(WorldScene s)
     {
@@ -1578,8 +1595,15 @@ public sealed class GlView : OpenGlControlBase
             _own.DeleteBuffer(b.OwnEbo);
         }
         _shapeBatches.Clear();
-        if (s.World is not { } world || s.Session is not { } session || !ModExtensions.AnyShapes)
+        if (s.Cut.Length != s.W * s.H)
         {
+            s.Cut = new float[s.W * s.H];
+        }
+        bool wasCut = Array.Exists(s.Cut, c => c != 0);
+        Array.Clear(s.Cut);
+        if (s.World is not { } world || s.Session is not { } session || !ModExtensions.AnyShapes && !ModExtensions.AnyCuts)
+        {
+            SendCuts(s, wasCut);
             return;
         }
         var meshes = new Dictionary<(ObjectKind Kind, Vector4 Color, bool BothSides), (List<float> V, List<uint> I)>();
@@ -1588,9 +1612,10 @@ public sealed class GlView : OpenGlControlBase
         {
             all = [.. s.Things.Where(t => !t.Gone)];
         }
-        var things = all.Where(t => ModExtensions.HasShapes(t.Prefab)).ToList();
+        var things = all.Where(t => ModExtensions.HasShapes(t.Prefab) || ModExtensions.HasCuts(t.Prefab)).ToList();
         if (things.Count == 0)
         {
+            SendCuts(s, wasCut);
             return;
         }
         var around = new ShapeWorld(world, session, all);
@@ -1609,6 +1634,16 @@ public sealed class GlView : OpenGlControlBase
             {
                 var p = worldSpace ? v : t.Position + Vector3.Transform(v * scale, q);
                 return new Vector3(p.X - s.Cx, p.Y, -(p.Z - s.Cz));
+            }
+            // Grid coordinates of a point on the ground (x, z in the object's frame, or the world's).
+            Vector2 Grid(Vector2 p, bool worldSpace)
+            {
+                var v = worldSpace ? new Vector3(p.X, 0, p.Y) : t.Position + Vector3.Transform(new Vector3(p.X, 0, p.Y) * scale, q);
+                return new Vector2(v.X - s.Cx + (s.W - 1) / 2f, v.Z - s.Cz + (s.H - 1) / 2f);
+            }
+            foreach (var cut in ModExtensions.CutsOf(t.Prefab, view, around))
+            {
+                GroundCuts.Mark(s.Cut, s.W, s.H, [.. cut.Outline.Select(p => Grid(p, cut.WorldSpace))]);
             }
             foreach (var shape in ModExtensions.ShapesOf(t.Prefab, view, around))
             {
@@ -1689,6 +1724,24 @@ public sealed class GlView : OpenGlControlBase
             _gl.BindVertexArray(0);
             _batches.Add(b);
             _shapeBatches.Add(b);
+        }
+        SendCuts(s, wasCut);
+    }
+
+    /// <summary>Sends the ground's cuts to the terrain, when there are any or there were.</summary>
+    /// <param name="s">The scene.</param>
+    /// <param name="wasCut">Whether the ground was cut before this rebuild.</param>
+    private unsafe void SendCuts(WorldScene s, bool wasCut)
+    {
+        if (_terrainCutVbo == 0 || !wasCut && !Array.Exists(s.Cut, c => c != 0))
+        {
+            return;
+        }
+        _gl.BindVertexArray(0);
+        _gl.BindBuffer(BufferTargetARB.ArrayBuffer, _terrainCutVbo);
+        fixed (float* p = s.Cut)
+        {
+            _gl.BufferSubData(BufferTargetARB.ArrayBuffer, 0, (nuint)(s.Cut.Length * 4), p);
         }
     }
 

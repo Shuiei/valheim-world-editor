@@ -38,6 +38,14 @@ public interface IExtensionRegistry
     /// <param name="prefabs">The prefabs it draws for.</param>
     void AddShapes(IShapeProvider provider, params string[] prefabs);
 
+    /// <summary>
+    /// Leaves the ground undrawn where an object opens it: the mouth of a tunnel or a pit the mod digs while the game
+    /// runs, so that what the mod builds below (<see cref="AddShapes"/>) shows.
+    /// </summary>
+    /// <param name="cutter">Gives an object's cuts.</param>
+    /// <param name="prefabs">The prefabs it cuts for.</param>
+    void AddGroundCuts(IGroundCutter cutter, params string[] prefabs);
+
     /// <summary>Writes a line to the editor's log (Settings → Open log), named after the extension.</summary>
     void Log(string message);
 }

@@ -99,7 +99,7 @@ editor has it.
   its documentation file), and a whole sample to start from: the extension of a made-up mod,
   "Example Vehicles" (`samples/ExampleVehicles.WorldEditor`, with its `worldeditor.json`; it
   builds as it is), showing every hook: packed ids read and rewritten, sails drawn from their
-  corners, cables drawn from post to post.
+  corners, cables drawn from post to post, the ground cut round its pits.
 - **Build a netstandard2.0 class library** referencing `ValheimWorldEditor.Sdk.dll` (not copied
   to your output: the editor gives its own) and nothing else but the framework: an extension is
   one DLL, the editor loads no other from your folder. Mark the assembly and give it an entry:
@@ -114,6 +114,7 @@ public sealed class EditorExtension : IWorldEditorExtension
         registry.AddDecoder("MyMod_Packed", new PackedReader());          // inspector
         registry.AddCopyRewriter(new PackedIds(), "MyMod_Packed");      // paste
         registry.AddShapes(new BannerCloth(), "MyMod_Banner");          // 3D view
+        registry.AddGroundCuts(new Cellars(), "MyMod_Hatch");           // the ground
     }
 }
 ```
@@ -125,6 +126,7 @@ public sealed class EditorExtension : IWorldEditorExtension
 |---|---|
 | `AddDecoder(key, IDataDecoder)` | The inspector shows a byte-array value in your words, under the value (instead of only its size). |
 | `AddCopyRewriter(ICopyRewriter, keys)` | Each object of a pasted copy holding one of the keys is handed to you after the editor's own linking (`links`), with the copy's new ids for the originals' (`IIdMap`): rewrite ids you keep in your own form. The keys are yours: `dropOnCopy` no longer takes them out. |
+| `AddGroundCuts(IGroundCutter, prefabs)` | The ground is not drawn inside the outlines you give for objects of the prefabs (`GroundCut`: points on the ground in the object's frame, or in the world's), as over the mouth of a tunnel or a pit your mod digs while the game runs; a click goes through the hole. The editor's ground is a height map, so the hole shows what you draw below it (shapes) and the height map's underside. |
 | `AddShapes(IShapeProvider, prefabs)` | Objects of the prefabs are drawn with your shapes too: triangles in the object's frame (or in the world's: `WorldSpace`), one colour each (alpha below 1: see-through), for what your mod builds while the game runs (a sail from its corners, a cloth). The `IWorldView` given finds another object by an id it holds (`TryFind`, for ids under a `links` rule's `id` key), for a rope or a cable reaching it. |
 
 Objects come as `IObjectView`: the prefab's name, the place, turn (Euler angles and a quaternion)
@@ -136,8 +138,8 @@ Rules:
 - **The player decides.** An extension is code running in the editor with the player's rights, so
   it runs only once the player turns it on in **Settings → Mod extensions**, and only that file: a
   changed DLL (an update) is off until turned on again.
-- **Hooks are called from several threads at once** and often (every redraw of the shapes, every
-  pasted object): keep no state between calls, and be quick. A hook that throws turns the extension
+- **Hooks are called from several threads at once** and often (every redraw of the shapes and
+  cuts, every pasted object): keep no state between calls, and be quick. A hook that throws turns the extension
   off until the editor starts again (Settings says why); the editor goes on without it.
 - **Versions.** `SdkInfo.ApiVersion` is the API's version; an editor runs extensions built against
   its version or an earlier one. New hooks come as additions; the version changes only when the API

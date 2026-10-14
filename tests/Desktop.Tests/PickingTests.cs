@@ -72,4 +72,36 @@ public class PickingTests
         // A ray that leaves the area above the ground hits nothing (it hit 1000 m down past the edge).
         Assert.Null(Picking.HitGround(s, new Vector3(0, 25, 0), Vector3.Normalize(new Vector3(1, -0.3f, 0))));
     }
+
+    // A ray straight down on flat ground hits it; where a mod's extension cuts the ground (WorldScene.Cut), it goes
+    // through: no ground is hit there (nor past the area).
+    [Fact]
+    public void ARayGoesThroughCutGround()
+    {
+        var s = TestScenes.Flat(2).Scene;
+        var down = new Vector3(0, -1, 0);
+        Assert.Equal(70, Picking.HitGround(s, new Vector3(0, 100, 0), down)!.Value, 1);
+        Assert.False(Picking.CutAt(s, 0, 0));
+
+        s.Cut = new float[s.W * s.H];
+        s.Cut[((s.H - 1) / 2 * s.W) + ((s.W - 1) / 2)] = 1;
+
+        Assert.True(Picking.CutAt(s, 0, 0));
+        // Between a cut point and uncut ones, as the shader blends over the triangle: cut up to half way along an
+        // edge, ground past it; and 0.25 east, 0.3 south of the cut point is ground (0.45 on its triangle, though
+        // a blend over the whole cell would say 0.525).
+        Assert.True(Picking.CutAt(s, 0.4f, 0));
+        Assert.False(Picking.CutAt(s, 0.6f, 0));
+        Assert.False(Picking.CutAt(s, 0.25f, -0.3f));
+        Assert.False(Picking.CutAt(s, 3, 3));
+        Assert.Null(Picking.HitGround(s, new Vector3(0, 100, 0), down));
+        Assert.Equal(70, Picking.HitGround(s, new Vector3(3, 100, 3), down)!.Value, 1);
+        // A slanting ray into the hole and out of it below the ground: no ground met on the hole's far side; one
+        // that reaches the ground just past the hole's edge, after passing over the cut, meets it there.
+        Assert.Null(Picking.HitGround(s, new Vector3(-0.2f, 30.2f, 0), Vector3.Normalize(new Vector3(1, -1, 0)), 20));
+        float? past = Picking.HitGround(s, new Vector3(-0.4f, 30.1f, 0), Vector3.Normalize(new Vector3(10, -1, 0)), 20);
+        Assert.NotNull(past);
+        float x = -0.4f + past.Value * 10 / MathF.Sqrt(101);
+        Assert.InRange(x, 0.5f, 0.7f);
+    }
 }

@@ -83,6 +83,8 @@ public static class Picking
     /// <param name="maxDist">How far along the ray to look, in metres.</param>
     public static float? HitGround(WorldScene s, Vector3 o, Vector3 d, float maxDist = 4000)
     {
+        // The height map is crossed wherever it is; where a mod's extension cuts the ground away, the crossing is
+        // no hit (the ray goes on, into the hole), and the next crossing counts.
         float Below(float t)
         {
             var p = o + d * t;
@@ -108,12 +110,42 @@ public static class Picking
                         hi = mid;
                     }
                 }
-                return (lo + hi) / 2;
+                float hit = (lo + hi) / 2;
+                var at = o + d * hit;
+                if (!CutAt(s, at.X, at.Z))
+                {
+                    return hit;
+                }
             }
             prev = t;
             above = b;
         }
         return null;
+    }
+
+    /// <summary>
+    /// Whether the ground is cut away (left undrawn by a mod's extension) under a view-space point (x, z): the cut
+    /// values blended over the terrain's triangle there (each grid cell is two, split from its east to its south
+    /// point, as BuildTerrain makes them), past a half, as the terrain shader leaves them out.
+    /// </summary>
+    public static bool CutAt(WorldScene s, float x, float z)
+    {
+        if (s.Cut.Length != s.W * s.H)
+        {
+            return false;
+        }
+        float gx = x + (s.W - 1) / 2f, gz = -z + (s.H - 1) / 2f;
+        if (gx < 0 || gz < 0 || gx > s.W - 1 || gz > s.H - 1)
+        {
+            return false;
+        }
+        int x0 = Math.Min((int)gx, s.W - 2), z0 = Math.Min((int)gz, s.H - 2);
+        float tx = gx - x0, tz = gz - z0;
+        float C(int a, int b) => s.Cut[b * s.W + a];
+        float value = tx + tz <= 1
+            ? C(x0, z0) * (1 - tx - tz) + C(x0 + 1, z0) * tx + C(x0, z0 + 1) * tz
+            : C(x0 + 1, z0 + 1) * (tx + tz - 1) + C(x0 + 1, z0) * (1 - tz) + C(x0, z0 + 1) * (1 - tx);
+        return value > 0.5f;
     }
 
     /// <summary>Whether a view-space point (x, z) is over the area's ground.</summary>
