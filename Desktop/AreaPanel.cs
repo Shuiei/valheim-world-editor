@@ -572,12 +572,14 @@ public sealed class AreaPanel
         {
             case Act.Remove:
             {
-                var list = ThingsInside(poly, chosenKindsOnly: true);
-                if (list.Count == 0)
+                var inside = ThingsInside(poly, chosenKindsOnly: true);
+                if (inside.Count == 0)
                 {
                     Message?.Invoke("No objects of the chosen kinds inside the selection.");
                     return;
                 }
+                // A linked group's root takes its parts with it (ObjectLinks: a ship).
+                var list = session.WithLinked(inside, anyPart: false).Indices;
                 session.Commit($"Area: removed {list.Count} object(s)", null, list, []);
                 Message?.Invoke($"Removed {list.Count} object(s). Ctrl+Z brings them back.");
                 break;

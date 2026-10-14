@@ -101,6 +101,13 @@ public sealed class WorldSave
     /// <summary>Objects that are tamed creatures (by id).</summary>
     public HashSet<int> Tamed { get; } = [];
 
+    /// <summary>
+    /// The objects mods link into one (by id; App.ObjectLinks, by the rules in use as the world was read): what their
+    /// data says of their place in their group, and their turn as stored (Pieces keep only the turn about y; a group's
+    /// root may lean).
+    /// </summary>
+    public Dictionary<int, (App.ObjectLink Link, Vector3 Rotation)> Links { get; } = [];
+
     /// <summary>Player-built pieces (objects with a creator): prefab, position and Y rotation in degrees.</summary>
     public List<(int Id, int Prefab, Vector3 Position, float RotationY)> Pieces { get; } = [];
 
@@ -554,6 +561,7 @@ public sealed class WorldSave
         {
             ObjectRef o = ObjectRefs[id];
             Tamed.Remove(id);
+            Links.Remove(id);
             if (o.Creator != 0 && Creators.TryGetValue(o.Creator, out int n))
             {
                 Creators[o.Creator] = n - 1;
@@ -718,6 +726,11 @@ public sealed class WorldSave
         long creator = 0, owner = 0, playerId = 0;
         // Zero = not stored: the object keeps its prefab's own scale.
         Vector3 scale = Vector3.Zero;
+        // The values mods link objects by (App.ObjectLinks): ids, and a part's place and turn in its parent's frame.
+        var links = App.ObjectLinks.Current;
+        List<(int Key, int Value)>? linkInts = null;
+        List<(int Key, Vector3 Value)>? linkVec3s = null;
+        List<(int Key, Quaternion Value)>? linkQuats = null;
         if ((flags & 0xFF) == 0)
         {
             objRef.End = pkg.Position;
@@ -762,9 +775,25 @@ public sealed class WorldSave
                 {
                     scale = value;
                 }
+                else if (links.Vec3Keys.Contains(key))
+                {
+                    (linkVec3s ??= []).Add((key, value));
+                }
             }
         }
-        Skip(pkg, worldVersion, flags, Quats, p => p.SkipQuaternion());
+        if ((flags & Quats) != 0)
+        {
+            int n = pkg.ReadNumItems(worldVersion);
+            for (int i = 0; i < n; i++)
+            {
+                int key = pkg.ReadInt();
+                Quaternion value = pkg.ReadQuaternion();
+                if (links.QuatKeys.Contains(key))
+                {
+                    (linkQuats ??= []).Add((key, value));
+                }
+            }
+        }
         if ((flags & Ints) != 0)
         {
             int n = pkg.ReadNumItems(worldVersion);
@@ -780,6 +809,10 @@ public sealed class WorldSave
                 else if (key == TamedKey && value != 0)
                 {
                     Tamed.Add(id);
+                }
+                else if (links.IntKeys.Contains(key))
+                {
+                    (linkInts ??= []).Add((key, value));
                 }
             }
         }
@@ -846,6 +879,10 @@ public sealed class WorldSave
             Placed.Add(new PlacedObject(prefab, location, position, rotation, timeCreated));
         }
         bool terrain = TerrainZones.Count > 0 && TerrainZones[^1].Source is { } last && last.File == file && last.Start == start;
+        if (linkInts != null && App.ObjectLinks.Read(links, linkInts, linkVec3s, linkQuats) is { } link)
+        {
+            Links[id] = (link, rotation);
+        }
         objRef.IsPiece = creator != 0;
         objRef.Creator = creator;
         objRef.IsTerrain = terrain;
@@ -878,21 +915,6 @@ public sealed class WorldSave
             TerrainZones[^1].Source = src with { End = end };
         }
         return id;
-    }
-
-    /// <summary>Skips one data section (count, then key and value each) when its flag is set.</summary>
-    private static void Skip(ValheimReader pkg, int worldVersion, ushort flags, ushort flag, Action<ValheimReader> readValue)
-    {
-        if ((flags & flag) == 0)
-        {
-            return;
-        }
-        int n = pkg.ReadNumItems(worldVersion);
-        for (int i = 0; i < n; i++)
-        {
-            pkg.ReadInt();
-            readValue(pkg);
-        }
     }
 }
 

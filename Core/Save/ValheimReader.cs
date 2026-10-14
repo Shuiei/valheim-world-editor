@@ -54,8 +54,8 @@ public sealed class ValheimReader(Stream stream) : IDisposable
     /// <summary>Three floats: x, y, z.</summary>
     public Vector3 ReadVector3() => new(ReadSingle(), ReadSingle(), ReadSingle());
 
-    /// <summary>Skips a full quaternion (four floats) the editor does not need.</summary>
-    public void SkipQuaternion() => _reader.BaseStream.Seek(16, SeekOrigin.Current);
+    /// <summary>A quaternion: x, y, z, then w.</summary>
+    public Quaternion ReadQuaternion() => new(ReadSingle(), ReadSingle(), ReadSingle(), ReadSingle());
 
     /// <summary>A Vector2s: two shorts, such as a sector's x and y.</summary>
     public (short X, short Y) ReadVector2s() => (_reader.ReadInt16(), _reader.ReadInt16());

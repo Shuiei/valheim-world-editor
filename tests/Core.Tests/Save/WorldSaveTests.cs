@@ -277,4 +277,31 @@ public class WorldSaveTests
         Assert.DoesNotContain(world.Locations, l => l.Location == MadeObjects.MadeUpLocation);
         Assert.DoesNotContain(world.Placed, p => p.Location == MadeObjects.MadeUpLocation);
     }
+
+    // A vehicle's root and part (the example mod's): their links read (the root's
+    // whole turn too), read again when the game changes them, gone with them.
+    [Fact]
+    public void LiveLinksComeChangeAndGoWithTheirObjects()
+    {
+        var world = WorldSave.LoadLive(File.ReadAllBytes(Fixtures.Snapshot), "live");
+        var at = new Vector3(640, 30, 640);
+        byte[] root = MadeObjects.VehicleRoot("ValheimVehicles_WaterVehicleShip", at, new Vector3(10, 90, 0), 7);
+        // The part also keeps the turn as older versions of the mod did.
+        var part = ZdoData.Parse(MadeObjects.VehiclePart("wood_floor", at, 7, new Vector3(1, 2, 3), new Vector3(0, 45, 0), 8));
+        part.QuatList.Add((StableHash.Of(ExampleMod.TurnQuatKey), new Quaternion(0.1f, 0.2f, 0.3f, 0.9f)));
+        var came = world.MergeLive([(10, 10)], [(4242, 1, root), (4242, 2, part.Serialize())], _ => false, _ => false)!;
+        var (link, rotation) = world.Links[came.Added[0]];
+        Assert.Equal(7, link.Id);
+        Assert.Equal(new Vector3(10, 90, 0), rotation);
+        link = world.Links[came.Added[1]].Link;
+        Assert.Equal((0, new Vector3(1, 2, 3), new Vector3(0, 45, 0)), (link.Id, link.Offset, link.Euler));
+        Assert.Equal([8, 7], link.Parents);
+        Assert.Equal(new Quaternion(0.1f, 0.2f, 0.3f, 0.9f), link.Quat);
+        // The part taken off the vehicle in the game; then both gone.
+        var changed = world.MergeLive([(10, 10)], [(4242, 1, root), (4242, 2, MadeObjects.Zdo("wood_floor", at))], _ => false, _ => false)!;
+        Assert.Equal([came.Added[1]], changed.Updated);
+        Assert.False(world.Links.ContainsKey(came.Added[1]));
+        world.MergeLive([(10, 10)], [], _ => false, _ => false);
+        Assert.Empty(world.Links);
+    }
 }
