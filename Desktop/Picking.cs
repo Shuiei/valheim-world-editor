@@ -83,18 +83,24 @@ public static class Picking
     /// <param name="maxDist">How far along the ray to look, in metres.</param>
     public static float? HitGround(WorldScene s, Vector3 o, Vector3 d, float maxDist = 4000)
     {
-        // No ground where a mod's extension cuts it (the ray goes on, into the hole).
-        float Below(float t)
+        // No ground where a mod's extension cuts it (the ray goes on, into the hole); a crossing is one from over
+        // uncut ground to under it: a ray leaving a hole below the ground met no ground.
+        (float Below, bool Cut) Sample(float t)
         {
             var p = o + d * t;
-            return Inside(s, p.X, p.Z) && !CutAt(s, p.X, p.Z) ? p.Y - HeightAt(s, p.X, p.Z) : float.PositiveInfinity;
+            if (!Inside(s, p.X, p.Z))
+            {
+                return (float.PositiveInfinity, false);
+            }
+            return CutAt(s, p.X, p.Z) ? (float.PositiveInfinity, true) : (p.Y - HeightAt(s, p.X, p.Z), false);
         }
+        float Below(float t) => Sample(t).Below;
         float prev = 0;
-        float above = Below(0);
+        var (above, cut) = Sample(0);
         for (float t = 0.5f; t <= maxDist; t += 0.5f)
         {
-            float b = Below(t);
-            if (b <= 0 && above > 0)
+            var (b, cutNow) = Sample(t);
+            if (b <= 0 && above > 0 && !cut && !cutNow)
             {
                 float lo = prev, hi = t;
                 for (int i = 0; i < 20; i++)
@@ -112,20 +118,30 @@ public static class Picking
                 return (lo + hi) / 2;
             }
             prev = t;
-            above = b;
+            (above, cut) = (b, cutNow);
         }
         return null;
     }
 
-    /// <summary>Whether the ground is cut away (left undrawn by a mod's extension) under a view-space point (x, z).</summary>
+    /// <summary>
+    /// Whether the ground is cut away (left undrawn by a mod's extension) under a view-space point (x, z): the cut
+    /// values between the grid points, as the terrain shader blends them, past a half.
+    /// </summary>
     public static bool CutAt(WorldScene s, float x, float z)
     {
         if (s.Cut.Length != s.W * s.H)
         {
             return false;
         }
-        int gx = (int)MathF.Round(x + (s.W - 1) / 2f), gz = (int)MathF.Round(-z + (s.H - 1) / 2f);
-        return gx >= 0 && gz >= 0 && gx < s.W && gz < s.H && s.Cut[gz * s.W + gx] >= 0.5f;
+        float gx = x + (s.W - 1) / 2f, gz = -z + (s.H - 1) / 2f;
+        if (gx < 0 || gz < 0 || gx > s.W - 1 || gz > s.H - 1)
+        {
+            return false;
+        }
+        int x0 = Math.Min((int)gx, s.W - 2), z0 = Math.Min((int)gz, s.H - 2);
+        float tx = gx - x0, tz = gz - z0;
+        float C(int a, int b) => s.Cut[b * s.W + a];
+        return (C(x0, z0) * (1 - tx) + C(x0 + 1, z0) * tx) * (1 - tz) + (C(x0, z0 + 1) * (1 - tx) + C(x0 + 1, z0 + 1) * tx) * tz >= 0.5f;
     }
 
     /// <summary>Whether a view-space point (x, z) is over the area's ground.</summary>

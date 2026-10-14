@@ -87,8 +87,13 @@ public class PickingTests
         s.Cut[((s.H - 1) / 2 * s.W) + ((s.W - 1) / 2)] = 1;
 
         Assert.True(Picking.CutAt(s, 0, 0));
+        // Between a cut point and uncut ones, as the shader blends: cut up to half way, ground past it.
+        Assert.True(Picking.CutAt(s, 0.4f, 0));
+        Assert.False(Picking.CutAt(s, 0.6f, 0));
         Assert.False(Picking.CutAt(s, 3, 3));
         Assert.Null(Picking.HitGround(s, new Vector3(0, 100, 0), down));
         Assert.Equal(70, Picking.HitGround(s, new Vector3(3, 100, 3), down)!.Value, 1);
+        // A slanting ray into the hole and out of it below the ground: no ground met on the hole's far side.
+        Assert.Null(Picking.HitGround(s, new Vector3(-0.2f, 30.2f, 0), Vector3.Normalize(new Vector3(1, -1, 0)), 20));
     }
 }
