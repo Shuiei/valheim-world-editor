@@ -1033,19 +1033,7 @@ public static partial class GameCatalogues
     {
         string dll = DataFolders.Select(d => Path.Combine(valheim, d, "Managed", "assembly_valheim.dll")).FirstOrDefault(File.Exists)
             ?? throw new FileNotFoundException("assembly_valheim.dll is not in the game's folder");
-        var names = new HashSet<string>(StringComparer.Ordinal);
-        using (var pe = new PEReader(File.OpenRead(dll)))
-        {
-            var md = pe.GetMetadataReader();
-            for (var h = MetadataTokens.UserStringHandle(1); !h.IsNil; h = md.GetNextHandle(h))
-            {
-                string s = md.GetUserString(h);
-                if (KeyName.IsMatch(s))
-                {
-                    names.Add(s);
-                }
-            }
-        }
+        var names = KeyNamesIn(dll);
         // Built at run time by the game.
         for (int i = 0; i < 64; i++)
         {
@@ -1058,20 +1046,53 @@ public static partial class GameCatalogues
                 names.Add($"{i}_{n}");
             }
         }
-        // ZDOID values are kept as two longs, name + "_u" and name + "_i".
-        foreach (string n in names.ToList())
-        {
-            names.Add(n + "_u");
-            names.Add(n + "_i");
-        }
         var table = new Dict();
-        foreach (string n in names.OrderBy(n => n.Length).ThenBy(n => n, StringComparer.Ordinal))
+        foreach (var (hash, n) in ByHash(names))
         {
-            string key = StableHash.Of(n).ToString(System.Globalization.CultureInfo.InvariantCulture);
-            if (!table.ContainsKey(key))
+            table[hash.ToString(System.Globalization.CultureInfo.InvariantCulture)] = n;
+        }
+        return table;
+    }
+
+    /// <summary>
+    /// The string literals of a .NET assembly that look like data names (<c>KeyName</c>): the user strings of its
+    /// metadata, read as bytes (the assembly is not loaded). Empty for a file that is not a .NET assembly.
+    /// </summary>
+    internal static HashSet<string> KeyNamesIn(string dll)
+    {
+        var names = new HashSet<string>(StringComparer.Ordinal);
+        using var pe = new PEReader(File.OpenRead(dll));
+        if (!pe.HasMetadata)
+        {
+            return names;
+        }
+        var md = pe.GetMetadataReader();
+        for (var h = MetadataTokens.UserStringHandle(1); !h.IsNil; h = md.GetNextHandle(h))
+        {
+            string s = md.GetUserString(h);
+            if (KeyName.IsMatch(s))
             {
-                table[key] = n;
+                names.Add(s);
             }
+        }
+        return names;
+    }
+
+    /// <summary>
+    /// Names by their stable hash, with the "_u" and "_i" each name gets for a ZDOID value (kept as two longs); the
+    /// shortest name wins a shared hash.
+    /// </summary>
+    internal static Dictionary<int, string> ByHash(IEnumerable<string> names)
+    {
+        var all = new HashSet<string>(StringComparer.Ordinal);
+        foreach (string n in names)
+        {
+            all.UnionWith([n, n + "_u", n + "_i"]);
+        }
+        var table = new Dictionary<int, string>();
+        foreach (string n in all.OrderBy(n => n.Length).ThenBy(n => n, StringComparer.Ordinal))
+        {
+            table.TryAdd(StableHash.Of(n), n);
         }
         return table;
     }

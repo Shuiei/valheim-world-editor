@@ -1,7 +1,3 @@
-using System.Reflection;
-using System.Reflection.Metadata;
-using System.Reflection.Metadata.Ecma335;
-using System.Reflection.PortableExecutable;
 using AssetsTools.NET;
 using AssetsTools.NET.Extra;
 using TerrainEditor.App;
@@ -81,30 +77,6 @@ public sealed class ModBundlesTests : IDisposable
     }
 
     /// <summary>
-    /// Writes a .NET assembly (a DLL with no code) holding these manifest resources, as a mod embeds its bundles.
-    /// </summary>
-    private static void Dll(string path, params (string Name, byte[] Bytes)[] resources)
-    {
-        var md = new MetadataBuilder();
-        string name = Path.GetFileNameWithoutExtension(path);
-        md.AddModule(0, md.GetOrAddString(name + ".dll"), md.GetOrAddGuid(Guid.NewGuid()), default, default);
-        md.AddAssembly(md.GetOrAddString(name), new Version(1, 0, 0, 0), default, default, 0, AssemblyHashAlgorithm.None);
-        md.AddTypeDefinition(default, default, md.GetOrAddString("<Module>"), default, MetadataTokens.FieldDefinitionHandle(1), MetadataTokens.MethodDefinitionHandle(1));
-        var blob = new BlobBuilder();
-        foreach (var (resource, bytes) in resources)
-        {
-            md.AddManifestResource(ManifestResourceAttributes.Public, md.GetOrAddString(resource), default, (uint)blob.Count);
-            blob.WriteInt32(bytes.Length);
-            blob.WriteBytes(bytes);
-            blob.Align(8);
-        }
-        var pe = new ManagedPEBuilder(PEHeaderBuilder.CreateLibraryHeader(), new MetadataRootBuilder(md), new BlobBuilder(), managedResources: blob);
-        var image = new BlobBuilder();
-        pe.Serialize(image);
-        File.WriteAllBytes(path, image.ToArray());
-    }
-
-    /// <summary>
     /// A bundle's compression, as AssetsTools reads it.
     /// </summary>
     private static AssetBundleCompressionType CompressionOf(byte[] bundle)
@@ -122,7 +94,7 @@ public sealed class ModBundlesTests : IDisposable
         string plugins = Plugins("Default");
         byte[] own = Bundle("finebundle", "fine_plank");
         byte[] loose = Bundle("loose", "loose_beam");
-        Dll(Path.Combine(plugins, "FineMod.dll"), ("FineMod.Assets.finebundle", own), ("FineMod.Assets.icons.txt", "not a bundle"u8.ToArray()));
+        TestDll.Write(Path.Combine(plugins, "FineMod.dll"), [("FineMod.Assets.finebundle", own), ("FineMod.Assets.icons.txt", "not a bundle"u8.ToArray())]);
         Directory.CreateDirectory(Path.Combine(plugins, "Other", "assets"));
         File.WriteAllBytes(Path.Combine(plugins, "Other", "assets", "loose bundle"), loose);
 
@@ -142,7 +114,7 @@ public sealed class ModBundlesTests : IDisposable
     {
         string plugins = Plugins("Plain");
         // A mod with no bundle in it, a DLL that is not .NET, files that are not bundles.
-        Dll(Path.Combine(plugins, "PlainMod.dll"), ("PlainMod.readme.txt", "UnityFX and more"u8.ToArray()));
+        TestDll.Write(Path.Combine(plugins, "PlainMod.dll"), [("PlainMod.readme.txt", "UnityFX and more"u8.ToArray())]);
         File.WriteAllBytes(Path.Combine(plugins, "native.dll"), [.. "UnityFS"u8, .. new byte[64]]);
         File.WriteAllText(Path.Combine(plugins, "notes.txt"), "UnityF");
         File.WriteAllText(Path.Combine(plugins, "config.json"), "{\"bundle\": \"UnityFS\"}");
@@ -161,8 +133,8 @@ public sealed class ModBundlesTests : IDisposable
         string newer = Path.Combine(Plugins("New"), "FineMod.dll");
         byte[] before = Bundle("finebundle", "old_plank");
         byte[] after = Bundle("finebundle", "new_plank");
-        Dll(older, ("FineMod.finebundle", before));
-        Dll(newer, ("FineMod.finebundle", after));
+        TestDll.Write(older, [("FineMod.finebundle", before)]);
+        TestDll.Write(newer, [("FineMod.finebundle", after)]);
         File.SetLastWriteTimeUtc(older, DateTime.UtcNow.AddDays(-10));
 
         // Whichever folder comes first.
@@ -180,7 +152,7 @@ public sealed class ModBundlesTests : IDisposable
     public void TheCopiesAreKeptWhileTheModsAreUnchanged()
     {
         string dll = Path.Combine(Plugins("Default"), "FineMod.dll");
-        Dll(dll, ("FineMod.finebundle", Bundle("finebundle", "fine_plank")));
+        TestDll.Write(dll, [("FineMod.finebundle", Bundle("finebundle", "fine_plank"))]);
         var settings = Settings("Default");
         var first = ModBundles.Reader(settings)!;
         string marker = Path.Combine(ModBundles.Folder, "marker");
