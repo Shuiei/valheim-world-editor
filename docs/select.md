@@ -13,7 +13,7 @@ each one from its location whenever the zone loads, so deleting one removes that
 
 | Action | What it does |
 |---|---|
-| **Click** an object | Selects it (and only it). The yellow box marks selected objects; a blue box shows what is under the cursor. A click finds an object by its drawn shape, not the box round it, so a chest or a stone under a tree's branches can be clicked; leaves and other cut-out foliage count only where nothing solid is behind them. A standing tree is outlined by a column round its trunk rather than its whole crown. |
+| **Click** an object | Selects it (and only it). The yellow box marks selected objects; a blue box shows what is under the cursor. Past 500 selected objects one box marks them all, so a big stacked structure does not vanish under its boxes. A click finds an object by its drawn shape, not the box round it, so a chest or a stone under a tree's branches can be clicked; leaves and other cut-out foliage count only where nothing solid is behind them. A standing tree is outlined by a column round its trunk rather than its whole crown. |
 | **Ctrl + click** | Adds an object to the selection, or takes it out. Dragging any selected object then moves them all together. |
 | **Shift + click** | Selects the row from the last object clicked to this one: click wall 1, then Shift + click wall 3, and walls 1, 2 and 3 are selected (the objects on the line between them). |
 | **Drag on empty ground** | Draws a zone; everything shown inside it is selected when you let go. |
