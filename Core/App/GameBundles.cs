@@ -553,41 +553,42 @@ public sealed class GameBundles
         var named = new Dictionary<string, List<Where>>();
         foreach (string bundle in _files.Keys.Order(StringComparer.Ordinal))
         {
-            BundleFileInstance b;
+            // A bundle that cannot be read (a mod's, damaged or unusual) is skipped: the others' names still count.
             try
             {
-                b = _am.LoadBundleFile(_files[bundle], false);
-            }
-            catch (Exception e) when (e is IOException or InvalidDataException or NotImplementedException or NotSupportedException)
-            {
-                continue;
-            }
-            var a = _am.LoadAssetsFileFromBundle(b, 0, false);
-            var reader = a.file.Reader;
-            foreach (var info in a.file.AssetInfos)
-            {
-                if (Array.IndexOf(NamedKinds, (AssetClassID)info.TypeId) < 0)
+                var b = _am.LoadBundleFile(_files[bundle], false);
+                var a = _am.LoadAssetsFileFromBundle(b, 0, false);
+                var reader = a.file.Reader;
+                foreach (var info in a.file.AssetInfos)
                 {
-                    continue;
+                    if (Array.IndexOf(NamedKinds, (AssetClassID)info.TypeId) < 0)
+                    {
+                        continue;
+                    }
+                    // m_Name is a named object's first field: nothing else read.
+                    reader.Position = info.GetAbsoluteByteOffset(a.file);
+                    int n = reader.ReadInt32();
+                    if (n is <= 0 or > 256)
+                    {
+                        continue;
+                    }
+                    string key = $"{info.TypeId}:{System.Text.Encoding.UTF8.GetString(reader.ReadBytes(n))}";
+                    if (!named.TryGetValue(key, out var list))
+                    {
+                        named[key] = list = [];
+                    }
+                    list.Add(new Where(bundle, info.PathId));
                 }
-                // m_Name is a named object's first field: nothing else read.
-                reader.Position = info.GetAbsoluteByteOffset(a.file);
-                int n = reader.ReadInt32();
-                if (n is <= 0 or > 256)
+                if (!_open.ContainsKey(bundle))
                 {
-                    continue;
+                    _am.UnloadAssetsFile(a);
+                    _am.UnloadBundleFile(b);
                 }
-                string key = $"{info.TypeId}:{System.Text.Encoding.UTF8.GetString(reader.ReadBytes(n))}";
-                if (!named.TryGetValue(key, out var list))
-                {
-                    named[key] = list = [];
-                }
-                list.Add(new Where(bundle, info.PathId));
             }
-            if (!_open.ContainsKey(bundle))
+            catch (Exception e) when (e is IOException or InvalidDataException or NotImplementedException or NotSupportedException or EndOfStreamException
+                or IndexOutOfRangeException or ArgumentException or NullReferenceException or OverflowException)
             {
-                _am.UnloadAssetsFile(a);
-                _am.UnloadBundleFile(b);
+                Console.WriteLine($"game files: the names of {bundle} could not be read ({e.Message}), skipped");
             }
         }
         Console.WriteLine($"game files: {named.Count} mesh, material and texture names read from {_files.Count} bundles in {sw.ElapsedMilliseconds} ms");

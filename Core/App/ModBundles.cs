@@ -232,7 +232,9 @@ public static class ModBundles
                     File.WriteAllBytes(Path.Combine(Folder, s.Name), Lz4(bytes));
                 }
             }
-            catch (Exception e) when (e is IOException or UnauthorizedAccessException or BadImageFormatException or InvalidDataException or NotSupportedException or NotImplementedException or ArgumentException or EndOfStreamException)
+            // Whatever a damaged or unusual bundle makes the reader throw: that bundle alone is left out (the others
+            // and the stamp still go), else no mod's model would be drawn.
+            catch (Exception e) when (e is not OutOfMemoryException)
             {
                 Console.WriteLine($"mod bundles: {s.Name} could not be copied ({e.Message}).");
             }

@@ -61,6 +61,8 @@ public sealed partial class WorldEditorBridgePlugin
     private Dictionary<string, string> PrefabMods()
     {
         Dictionary<string, string> mods = [];
+        // A mod's name once per plugin (a manifest read), not once per prefab: a mod adds thousands.
+        Dictionary<string, string> names = [];
         try
         {
             var query = Type.GetType("Jotunn.Utils.ModQuery, Jotunn");
@@ -73,7 +75,11 @@ public sealed partial class WorldEditorBridgePlugin
                 Type t = p.GetType();
                 if (t.GetProperty("Prefab")?.GetValue(p) is GameObject go && go && t.GetProperty("SourceMod")?.GetValue(p) is BepInEx.BepInPlugin mod)
                 {
-                    mods[go.name] = ModName(mod);
+                    if (!names.TryGetValue(mod.GUID, out string name))
+                    {
+                        names[mod.GUID] = name = ModName(mod);
+                    }
+                    mods[go.name] = name;
                 }
             }
         }
