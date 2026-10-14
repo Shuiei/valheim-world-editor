@@ -47,7 +47,9 @@ public sealed class MapViewVisualTests(EditorProcess editor) : IDisposable
         try
         {
             editor.Send("check Zone grid|on");
-            Assert.Equal(4, editor.Send("mapview 0 0 4").GetProperty("mapScale").GetSingle(), 3);
+            // The grid draws under 8 m a pixel; from 6 m no close-up is built for the picture (under coverage, on
+            // main, the largest close-up took minutes).
+            Assert.Equal(7, editor.Send("mapview 0 0 7").GetProperty("mapScale").GetSingle(), 3);
             string path = Path.Combine(_dir, "grid.png");
             editor.Send($"picture {path}");
             Assert.True(new FileInfo(path).Length > 0);
