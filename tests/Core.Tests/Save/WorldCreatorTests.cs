@@ -14,20 +14,15 @@ public sealed class WorldCreatorTests : IDisposable
 {
     private readonly string _dir = Path.Combine(Path.GetTempPath(), "vwe-newworld-" + Guid.NewGuid().ToString("N")[..8]);
 
-    // The location rules in use before the test: a test that installs the fixture's rules (process-wide) leaves them
-    // as it found them.
-    private readonly ValheimGen.SeedLocations.RuleSet _rules = ValheimGen.SeedLocations.Current;
-
     // The test world's seed and unique id (tests/fixtures/CITest).
     private const string Seed = "GbXfypqU3G";
     private const long FixtureUid = 0x8d9ed32b;
 
     /// <summary>
-    /// Puts the location rules back and deletes the temporary folder.
+    /// Deletes the temporary folder.
     /// </summary>
     public void Dispose()
     {
-        ValheimGen.SeedLocations.Use(_rules);
         try
         {
             Directory.Delete(_dir, true);
@@ -192,7 +187,9 @@ public sealed class WorldCreatorTests : IDisposable
     [Fact]
     public void TheLocationsOfTheGeneratedZonesAreSpawnedLikeTheGames()
     {
-        // The game's location rules, as the editor has them once Valheim is found (CI has no game); put back by Dispose.
+        // The game's location rules, as the editor has them once Valheim is found (CI has no game). They are process-wide
+        // and stay installed: putting the rules found before back (empty, when this class was made first) raced the
+        // other classes that install them and test a layout of them.
         Fixtures.UseLocations();
         var made = WorldCreator.Create(Folder("Temple"), "Temple", Seed, radius: 1);
         var w = WorldSave.Load(Folder("Temple"));
