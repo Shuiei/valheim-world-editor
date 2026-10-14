@@ -4,7 +4,7 @@ namespace ValheimWorldEditor.Sdk;
 
 /// <summary>
 /// Triangles drawn for an object, in its own frame (metres; x right, y up, z forward, as the game's local
-/// space), in one colour.
+/// space; or in the world's, see <see cref="WorldSpace"/>), in one colour.
 /// </summary>
 public sealed class Shape
 {
@@ -30,4 +30,10 @@ public sealed class Shape
 
     /// <summary>Seen from both sides (a sail, a cloth); else only from the front.</summary>
     public bool BothSides { get; set; }
+
+    /// <summary>
+    /// Its corners are world positions (a rope from this object to another), not in the object's frame: the object's
+    /// place, turn and size are not applied.
+    /// </summary>
+    public bool WorldSpace { get; set; }
 }

@@ -9,8 +9,9 @@ namespace TerrainEditor.App;
 /// <summary>
 /// Mods' editor extensions (ValheimWorldEditor.Sdk; docs/modding.md#extensions): a DLL a mod offers in its
 /// worldeditor.json (ModManifests.Extensions), which runs in the editor only once the user allows it in Settings, and
-/// then only that file (AppSettings.Extensions keeps its SHA-256: a changed DLL is other code and asks again). Each is
-/// loaded in a context of its own, sharing the editor's SDK, and registers hooks: byte decoders for the inspector,
+/// then only that file (AppSettings.Extensions keeps its SHA-256: a changed DLL is other code and asks again; the
+/// bytes hashed are the bytes loaded). Each is one DLL, loaded in a context of its own that gives it the editor's SDK
+/// and the framework and nothing from its folder, and registers hooks: byte decoders for the inspector,
 /// rewriters of pasted copies, shapes to draw. Read as a world or the Workshop opens, after the manifests. A hook that
 /// throws turns its extension off until the editor starts again; the editor never fails because of one.
 /// </summary>
@@ -101,7 +102,9 @@ public static class ModExtensions
             var running = new Dictionary<string, Loaded>(StringComparer.Ordinal);
             foreach (var o in ModManifests.Extensions.OrderBy(o => o.Mod, StringComparer.OrdinalIgnoreCase))
             {
-                string sha = Sha256Of(o.Dll);
+                // Read once: what is hashed is what is loaded (a file rewritten in between would run unallowed).
+                byte[] bytes = BytesOf(o.Dll);
+                string sha = bytes.Length == 0 ? "" : Convert.ToHexStringLower(SHA256.HashData(bytes));
                 if (sha == "" || !settings.Extensions.TryGetValue(o.Dll, out string? allowed) || !string.Equals(allowed, sha, StringComparison.OrdinalIgnoreCase))
                 {
                     offered.Add(new Extension(o.Dll, o.Mod, sha, Status.Off, sha == "" ? "the file cannot be read" : null));
@@ -110,7 +113,7 @@ public static class ModExtensions
                 }
                 if (!LoadedFiles.TryGetValue(sha, out var made))
                 {
-                    made = Load(o.Dll, o.Mod);
+                    made = Load(o.Dll, bytes, o.Mod);
                     LoadedFiles[sha] = made;
                 }
                 if (made.Loaded is { Fault: null } l)
@@ -151,24 +154,31 @@ public static class ModExtensions
     /// <summary>A file's SHA-256 as lower-case hex; "" when it cannot be read.</summary>
     internal static string Sha256Of(string path)
     {
+        byte[] bytes = BytesOf(path);
+        return bytes.Length == 0 ? "" : Convert.ToHexStringLower(SHA256.HashData(bytes));
+    }
+
+    /// <summary>A file's bytes; none when it cannot be read.</summary>
+    private static byte[] BytesOf(string path)
+    {
         try
         {
-            using var f = File.OpenRead(path);
-            return Convert.ToHexStringLower(SHA256.HashData(f));
+            return File.ReadAllBytes(path);
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {
-            return "";
+            return [];
         }
     }
 
-    /// <summary>Loads an extension in a context of its own and lets it register its hooks.</summary>
-    private static (Loaded? Loaded, string? Error) Load(string dll, string mod)
+    /// <summary>Loads an extension (from the bytes hashed) in a context of its own and lets it register its hooks.</summary>
+    private static (Loaded? Loaded, string? Error) Load(string dll, byte[] bytes, string mod)
     {
         try
         {
             var context = new ExtensionContext(dll);
-            var asm = context.LoadFromAssemblyPath(dll);
+            using var stream = new MemoryStream(bytes, writable: false);
+            var asm = context.LoadFromStream(stream);
             if (asm.GetCustomAttribute<WorldEditorExtensionAttribute>() is not { } mark)
             {
                 return (null, "it is not marked as an extension ([assembly: WorldEditorExtension])");
@@ -258,17 +268,34 @@ public static class ModExtensions
     public static bool HasShapes(int prefab) => _state.Running.Values.Any(l => l.Shapes.ContainsKey(prefab));
 
     /// <summary>The shapes running extensions draw for an object of a prefab (none when none does).</summary>
-    public static List<Shape> ShapesOf(int prefab, IObjectView obj)
+    /// <param name="prefab">The prefab's hash.</param>
+    /// <param name="obj">The object, as drawn.</param>
+    /// <param name="world">The world around it (<see cref="NoWorld"/>: nothing to find).</param>
+    public static List<Shape> ShapesOf(int prefab, IObjectView obj, IWorldView world)
     {
         var shapes = new List<Shape>();
         foreach (var l in _state.Running.Values)
         {
             foreach (var p in l.Shapes.GetValueOrDefault(prefab) ?? [])
             {
-                shapes.AddRange(Guard(l, () => p.ShapesOf(obj)?.Where(Valid).ToList() ?? [], []));
+                shapes.AddRange(Guard(l, () => p.ShapesOf(obj, world)?.Where(Valid).ToList() ?? [], []));
             }
         }
         return shapes;
+    }
+
+    /// <summary>A world with nothing to find in it.</summary>
+    public static IWorldView NoWorld { get; } = new EmptyWorld();
+
+    /// <summary>Finds nothing.</summary>
+    private sealed class EmptyWorld : IWorldView
+    {
+        /// <inheritdoc/>
+        public bool TryFind(string idKey, int id, out IObjectView obj)
+        {
+            obj = null!;
+            return false;
+        }
     }
 
     /// <summary>Whether a shape can be drawn: whole triangles of corners it has, finite corners.</summary>
@@ -357,24 +384,14 @@ public static class ModExtensions
     }
 
     /// <summary>
-    /// An extension's own load context: the SDK is the editor's (one set of types), anything else the extension needs
-    /// comes from its folder.
+    /// An extension's own load context: the SDK is the editor's (one set of types), the rest the framework's. Nothing
+    /// is loaded from the extension's folder: the player allowed one file, and another DLL there (a helper the
+    /// extension references, changed by an update) would run unallowed. An extension is one DLL.
     /// </summary>
     private sealed class ExtensionContext(string dll) : AssemblyLoadContext("extension " + Path.GetFileName(dll))
     {
-        /// <summary>The extension's folder.</summary>
-        private readonly string _folder = Path.GetDirectoryName(dll)!;
-
         /// <inheritdoc/>
-        protected override Assembly? Load(AssemblyName name)
-        {
-            if (name.Name == typeof(IWorldEditorExtension).Assembly.GetName().Name)
-            {
-                return typeof(IWorldEditorExtension).Assembly;
-            }
-            string path = Path.Combine(_folder, name.Name + ".dll");
-            // Else the editor's own (the framework's assemblies, System.Numerics.Vectors...).
-            return File.Exists(path) ? LoadFromAssemblyPath(path) : null;
-        }
+        protected override Assembly? Load(AssemblyName name) =>
+            name.Name == typeof(IWorldEditorExtension).Assembly.GetName().Name ? typeof(IWorldEditorExtension).Assembly : null;
     }
 }

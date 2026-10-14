@@ -96,10 +96,13 @@ editor has it.
 
 - **Get the SDK** from a [release](https://github.com/Shuiei/valheim-world-editor/releases):
   `ValheimWorldEditor.Sdk-<version>.zip` holds `ValheimWorldEditor.Sdk.dll` (netstandard2.0, with
-  its documentation file), and a whole sample: an extension for ValheimRAFT's ropes and sails
-  (`samples/ValheimRAFT.WorldEditor`, which builds as it is).
+  its documentation file), and a whole sample to start from: the extension of a made-up mod,
+  "Example Vehicles" (`samples/ExampleVehicles.WorldEditor`, with its `worldeditor.json`; it
+  builds as it is), showing every hook: packed ids read and rewritten, sails drawn from their
+  corners, cables drawn from post to post.
 - **Build a netstandard2.0 class library** referencing `ValheimWorldEditor.Sdk.dll` (not copied
-  to your output: the editor gives its own), mark the assembly and give it an entry:
+  to your output: the editor gives its own) and nothing else but the framework: an extension is
+  one DLL, the editor loads no other from your folder. Mark the assembly and give it an entry:
 
 ```csharp
 [assembly: WorldEditorExtension(typeof(MyMod.EditorExtension))]
@@ -122,11 +125,11 @@ public sealed class EditorExtension : IWorldEditorExtension
 |---|---|
 | `AddDecoder(key, IDataDecoder)` | The inspector shows a byte-array value in your words, under the value (instead of only its size). |
 | `AddCopyRewriter(ICopyRewriter, keys)` | Each object of a pasted copy holding one of the keys is handed to you after the editor's own linking (`links`), with the copy's new ids for the originals' (`IIdMap`): rewrite ids you keep in your own form. The keys are yours: `dropOnCopy` no longer takes them out. |
-| `AddShapes(IShapeProvider, prefabs)` | Objects of the prefabs are drawn with your shapes too: triangles in the object's frame, one colour each (alpha below 1: see-through), for what your mod builds while the game runs (a sail from its corners, a cloth). |
+| `AddShapes(IShapeProvider, prefabs)` | Objects of the prefabs are drawn with your shapes too: triangles in the object's frame (or in the world's: `WorldSpace`), one colour each (alpha below 1: see-through), for what your mod builds while the game runs (a sail from its corners, a cloth). The `IWorldView` given finds another object by an id it holds (`TryFind`, for ids under a `links` rule's `id` key), for a rope or a cable reaching it. |
 
-Objects come as `IObjectView`: the prefab's name, the place and turn as drawn, and every value of
-its data by key (`TryGetInt`, `TryGetVector3`, `TryGetBytes`…). Keys and prefabs are named as your
-code names them.
+Objects come as `IObjectView`: the prefab's name, the place, turn (Euler angles and a quaternion)
+and size as drawn, and every value of its data by key (`TryGetInt`, `TryGetVector3`,
+`TryGetBytes`…). Keys and prefabs are named as your code names them.
 
 Rules:
 
@@ -139,6 +142,6 @@ Rules:
 - **Versions.** `SdkInfo.ApiVersion` is the API's version; an editor runs extensions built against
   its version or an earlier one. New hooks come as additions; the version changes only when the API
   breaks.
-- The editor never ships extensions of its own for mods: the ValheimRAFT one is a sample, offered
-  to its author.
+- The editor ships no extension, and no manifest, for any mod: supporting a mod in the editor is
+  its author's to do, with these. The sample is a made-up mod's.
 

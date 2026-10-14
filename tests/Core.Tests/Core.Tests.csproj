@@ -40,6 +40,10 @@
   <ItemGroup>
     <ProjectReference Include="../../Core/ValheimWorldEditor.Core.csproj" />
     <!-- The SDK's sample extension: tested here, and loaded as a mod's would be (ModExtensionsTests). -->
-    <ProjectReference Include="../../samples/ValheimRAFT.WorldEditor/ValheimRAFT.WorldEditor.csproj" />
+    <ProjectReference Include="../../samples/ExampleVehicles.WorldEditor/ExampleVehicles.WorldEditor.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- The sample's manifest, checked against the tests' example mod (ExampleVehiclesExtensionTests). -->
+    <Content Include="../../samples/ExampleVehicles.WorldEditor/worldeditor.json" Link="Samples/worldeditor.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

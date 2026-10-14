@@ -12,7 +12,7 @@ the plugin is unchanged in versions without that part.
   teaches the editor what a file cannot: reading the mod's packed data in the inspector, rewriting the ids it keeps
   in pasted copies, drawing what the mod builds in code (a sail from its corners). An extension runs only once you
   turn it on in **Settings → Mod extensions**, and only that file: an updated DLL waits until you turn it on again.
-  A sample extension for ValheimRAFT (ropes, custom sails) shows how. See
+  A sample extension of a made-up mod shows every hook. See
   [Extensions](docs/modding.md#extensions).
 
 ## v1.32.0 — unreleased

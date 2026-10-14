@@ -79,7 +79,7 @@ public static class ModManifests
     private static Notes? _baseNotes;
 
     /// <summary>What is in use, swapped in whole.</summary>
-    private static volatile Notes _notes = new([], [], []);
+    private static volatile Notes _notes = new([], [], [], []);
 
     /// <summary>Counts each time what is in use is replaced, for lists worked out from it to be worked out again.</summary>
     public static int Generation => _generation;

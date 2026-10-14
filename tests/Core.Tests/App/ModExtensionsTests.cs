@@ -55,7 +55,7 @@ public sealed class ModExtensionsTests : IDisposable
     }
 
     /// <summary>The sample extension's DLL, built with the tests.</summary>
-    private static string Sample => Path.Combine(AppContext.BaseDirectory, "ValheimRAFT.WorldEditor.dll");
+    private static string Sample => Path.Combine(AppContext.BaseDirectory, "ExampleVehicles.WorldEditor.dll");
 
     /// <summary>Reads the manifests, then runs the extensions.</summary>
     private int Refresh()
@@ -67,24 +67,24 @@ public sealed class ModExtensionsTests : IDisposable
     [Fact]
     public void AnOfferedExtensionRunsOnlyOnceAllowedAndUntilItsFileChanges()
     {
-        string dll = Mod("zolantris-ValheimRAFT", "ValheimRAFT.WorldEditor.dll", Sample);
+        string dll = Mod("ExampleVehicles", "ExampleVehicles.WorldEditor.dll", Sample);
 
         Assert.Equal(0, Refresh());
         var offered = Assert.Single(ModExtensions.Offered);
-        Assert.Equal((dll, "zolantris-ValheimRAFT", ModExtensions.Status.Off), (offered.Dll, offered.Mod, offered.State));
+        Assert.Equal((dll, "ExampleVehicles", ModExtensions.Status.Off), (offered.Dll, offered.Mod, offered.State));
         Assert.Empty(ModExtensions.RewrittenKeys);
 
         ModExtensions.Allow(Settings, offered, true);
         Assert.Equal(1, Refresh());
         Assert.Equal(ModExtensions.Status.Running, Assert.Single(ModExtensions.Offered).State);
-        Assert.Contains(TerrainEditor.Save.StableHash.Of("MBRopeAnchor_Ropes"), ModExtensions.RewrittenKeys);
-        Assert.True(ModExtensions.HasShapes(TerrainEditor.Save.StableHash.Of("MBSail")));
+        Assert.Contains(TerrainEditor.Save.StableHash.Of(ExampleMod.PackedKey), ModExtensions.RewrittenKeys);
+        Assert.True(ModExtensions.HasShapes(TerrainEditor.Save.StableHash.Of("example_sail")));
 
         // Another file under the same name (a mod update): other code, off until allowed again.
         File.AppendAllText(dll, " ");
         Assert.Equal(0, Refresh());
         Assert.Equal(ModExtensions.Status.Off, Assert.Single(ModExtensions.Offered).State);
-        Assert.False(ModExtensions.HasShapes(TerrainEditor.Save.StableHash.Of("MBSail")));
+        Assert.False(ModExtensions.HasShapes(TerrainEditor.Save.StableHash.Of("example_sail")));
     }
 
     [Fact]

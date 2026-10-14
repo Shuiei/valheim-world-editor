@@ -366,7 +366,7 @@ public static class ObjectLinks
             {
                 if (result[i] is { Data: { } data } o && data.Any(f => f.Value != null && rewritten.Contains(f.Key)))
                 {
-                    var view = new CopyView(PrefabCatalog.NameOf(o.Prefab) ?? "", o.Position, o.Rotation, [.. data]);
+                    var view = new CopyView(PrefabCatalog.NameOf(o.Prefab) ?? "", o.Position, o.Rotation, [.. data], o.Scale);
                     ModExtensions.Rewrite(view, map);
                     result[i] = o with { Data = view.Data };
                 }
@@ -561,6 +561,11 @@ public sealed class LinkIndex
 
     /// <summary>An object with a link, by id; null when it has none.</summary>
     public Member? Get(int id) => _members.GetValueOrDefault(id);
+
+    /// <summary>The object holding an id of a rule's (the first read when two hold it); null when none does.</summary>
+    /// <param name="idKey">The rule's id key (hash): an id under another key is not it.</param>
+    /// <param name="id">The id.</param>
+    public Member? Holder(int idKey, int id) => _holders.TryGetValue(id, out int o) && _members[o] is { } m && m.Link.Rule.IdKey == idKey ? m : null;
 
     /// <summary>What the group an object belongs to is called (its root's rule's name); null for one with no link.</summary>
     public string? NameOf(int id) => Get(RootOf(id))?.Link.Rule.Name;

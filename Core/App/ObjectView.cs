@@ -9,7 +9,8 @@ namespace TerrainEditor.App;
 /// <param name="position">Where it is drawn.</param>
 /// <param name="rotation">Its turn as drawn, Unity Euler degrees.</param>
 /// <param name="data">Its data.</param>
-public sealed class ObjectView(string prefab, Vector3 position, Vector3 rotation, ZdoData data) : IObjectView
+/// <param name="scale">Its size (0 or 1: the prefab's own).</param>
+public sealed class ObjectView(string prefab, Vector3 position, Vector3 rotation, ZdoData data, float scale = 1) : IObjectView
 {
     /// <inheritdoc/>
     public string Prefab => prefab;
@@ -19,6 +20,12 @@ public sealed class ObjectView(string prefab, Vector3 position, Vector3 rotation
 
     /// <inheritdoc/>
     public Vector3 Rotation => rotation;
+
+    /// <inheritdoc/>
+    public Quaternion Orientation => BlueprintFormats.FromEuler(rotation);
+
+    /// <inheritdoc/>
+    public float Scale => scale > 0 ? scale : 1;
 
     /// <summary>The first value of a key in a list of values.</summary>
     private static bool Find<T>(List<(int Key, T Value)> list, string key, out T value)

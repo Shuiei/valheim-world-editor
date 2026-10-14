@@ -17,6 +17,12 @@ public interface IObjectView
     /// <summary>Its turn as drawn, Unity Euler degrees.</summary>
     Vector3 Rotation { get; }
 
+    /// <summary>Its turn as drawn, as a quaternion (the Euler angles applied as Unity does: z, then x, then y).</summary>
+    Quaternion Orientation { get; }
+
+    /// <summary>Its size, the same along every axis (1: the prefab's own).</summary>
+    float Scale { get; }
+
     /// <summary>An int value; false when it has none.</summary>
     bool TryGetInt(string key, out int value);
 

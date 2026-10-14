@@ -16,7 +16,7 @@ replaced. Tests from that time check that what it did still works (`KeysAndMouse
 | `Core/ValheimWorldEditor.Core.csproj` | `TerrainEditor.App`, `.Save`, `.Editing`, `.Terrain`, `ValheimGen` | Everything that is not the window: reading and writing saves, pending changes, the world generator, live mode's client, the game data read from Valheim, settings, blueprints, SSH. No Avalonia. |
 | `Desktop/ValheimWorldEditor.Desktop.csproj` | `TerrainEditor.Desktop` | The program, `ValheimWorldEditor`: the Avalonia window, the pages, the 3D view and the map (OpenGL through Silk.NET), the tools and panels, the Script tool (Roslyn), the Claude MCP server (ASP.NET Core). |
 | `Sdk/ValheimWorldEditor.Sdk.csproj` | `ValheimWorldEditor.Sdk` | What mods' editor extensions are built against (netstandard2.0): `IWorldEditorExtension`, `IExtensionRegistry`, the hooks' interfaces, `IObjectView`, `Shape`. Only what the editor hands over, nothing of the editor; Core references it, and extensions load against the editor's copy. Released as `ValheimWorldEditor.Sdk-<version>.zip` (`tools/sdk.sh`). Add, do not rename: built extensions bind to it. |
-| `samples/ValheimRAFT.WorldEditor/` | `ValheimRAFT.WorldEditor` | The SDK's sample extension (ValheimRAFT's ropes and sails), built and tested with Core's tests, never loaded by the editor by itself. |
+| `samples/ExampleVehicles.WorldEditor/` | `ExampleVehicles.WorldEditor` | The SDK's sample extension, a made-up mod's (packed ids, sails, cables), built and tested with Core's tests, never loaded by the editor by itself. The editor holds nothing for any real mod. |
 | `plugin/WorldEditorBridge/` | `WorldEditorBridge` | The BepInEx plugin for live mode: `WorldEditorBridgePlugin.cs` (and `WorldEditorBridgePlugin.Catalogue.cs`, `.Models.cs` for `GET /catalogue`, `POST /models`), .NET Framework 4.7.2, inside the game. It shares no code with the editor, only a byte format and `VERSION`. |
 | `tests/Core.Tests/` | `WorldEditor.Tests` | Core's tests (xUnit v3), laid out like `Core/`. |
 | `tests/Desktop.Tests/` | `TerrainEditor.Desktop.Tests` | The app's tests, xUnit v3 with Avalonia's headless mode, laid out like `Desktop/`. |
@@ -336,7 +336,8 @@ either breaks it, the user's own scripts and the docs.
 of its own that hands it the editor's `ValheimWorldEditor.Sdk` (one set of SDK types), and registers its hooks. They are
 used through `ModExtensions` only: `Decode` (the inspector's `Decoded`), `Rewrite` (`ObjectLinks.Remap`, after the
 links, over a `CopyView`; `RewrittenKeys` are not dropped by `dropOnCopy`) and `ShapesOf` (`GlView.RebuildShapes`,
-batches of their own in view space among `_batches`, made again when things or `ModExtensions.Generation` change).
+batches of their own in view space among `_batches`, made again when things or `ModExtensions.Generation` change; its
+`ShapeWorld` finds objects by a links rule's id through `LinkIndex.Holder`, for shapes reaching another object).
 Every call goes through `Guard`: a hook that throws turns its extension off (`Status.Failed`), never the editor. Hooks
 run on any thread; what is in use is swapped in whole (`State`). The SDK's sample (`samples/`) is tested in
 `tests/Core.Tests/Samples/` and loaded as a mod's DLL in `ModExtensionsTests`.

@@ -32,7 +32,7 @@ public interface IExtensionRegistry
 
     /// <summary>
     /// Draws more of an object than its prefab's model: shapes the mod builds in code while the game runs (a sail
-    /// from its corners, a rope).
+    /// from its corners, a rope to another object).
     /// </summary>
     /// <param name="provider">Gives an object's shapes.</param>
     /// <param name="prefabs">The prefabs it draws for.</param>

@@ -14,7 +14,8 @@ namespace TerrainEditor.App;
 /// <param name="position">Where it is pasted.</param>
 /// <param name="rotation">Its turn, Unity Euler degrees.</param>
 /// <param name="data">Its values; changed in place (a value taken away is kept with a null value, as copies do).</param>
-public sealed class CopyView(string prefab, Vector3 position, Vector3 rotation, List<ObjectField> data) : ICopy
+/// <param name="scale">Its size (0 or 1: the prefab's own).</param>
+public sealed class CopyView(string prefab, Vector3 position, Vector3 rotation, List<ObjectField> data, float scale = 1) : ICopy
 {
     /// <inheritdoc/>
     public string Prefab => prefab;
@@ -24,6 +25,12 @@ public sealed class CopyView(string prefab, Vector3 position, Vector3 rotation, 
 
     /// <inheritdoc/>
     public Vector3 Rotation => rotation;
+
+    /// <inheritdoc/>
+    public Quaternion Orientation => BlueprintFormats.FromEuler(rotation);
+
+    /// <inheritdoc/>
+    public float Scale => scale > 0 ? scale : 1;
 
     /// <summary>Its values, as changed.</summary>
     public List<ObjectField> Data => data;
