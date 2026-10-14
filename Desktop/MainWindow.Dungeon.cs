@@ -151,9 +151,10 @@ public partial class MainWindow
 
     /// <summary>
     /// A dungeon blueprint pasted (the Paste tool's click, the clipboard's copy tagged as a dungeon): its pieces into the
-    /// world above the ground at the grid point clicked, behind the entrance of the biome there (<see cref="PlaceDungeon"/>).
-    /// A portal among its pieces marks where a player arrives, facing its way, and is left out (the entrance's door out
-    /// stands there); without one, a player arrives at the blueprint's middle, facing north.
+    /// world above the ground at the grid point clicked, behind the entrance of the biome there (<see cref="PlaceDungeon"/>),
+    /// turned and mirrored as the Paste tool shows them (its height offset does not apply: the dungeon's height is the
+    /// game's). The first portal among its pieces marks where a player arrives, facing its way, and is left out (the
+    /// entrance's door out stands there); without one, a player arrives at the blueprint's middle, facing north.
     /// </summary>
     /// <param name="clip">The copy on the clipboard.</param>
     /// <param name="at">The grid point clicked.</param>
@@ -165,9 +166,18 @@ public partial class MainWindow
         }
         float ox = s.Scene.X0 * 64f - 32f, oz = s.Scene.Z0 * 64f - 32f;
         var ground = GroundAt(scene, ox + at.X, oz + at.Y);
-        var marker = clip.Objects.FirstOrDefault(o => o.Name == "portal_wood");
-        var pieces = clip.Objects.Where(o => o != marker)
-            .Select(o => new DungeonPiece(o.Prefab, new Vector3(o.Dx, o.Dy, o.Dz), BlueprintFormats.FromEuler(o.Rotation), o.Scale, o.Data, Terrain.PieceCatalog.Get(o.Prefab)?.Tool != null)).ToList();
+        // Turned and mirrored as the Paste tool pastes (PasteTool.Apply).
+        var paste = View.Paste;
+        Vector3 Place(CopyData.Obj o)
+        {
+            var p = paste.Xf(new Vector2(o.Dx, o.Dz));
+            return new Vector3(p.X, o.Dy, p.Y);
+        }
+        Vector3 Turned(CopyData.Obj o) => new(paste.Mirror ? -o.Rotation.X : o.Rotation.X, (paste.Mirror ? -o.Rotation.Y : o.Rotation.Y) - paste.Turn, paste.Mirror ? -o.Rotation.Z : o.Rotation.Z);
+        int markerAt = clip.Objects.FindIndex(o => o.Name == "portal_wood");
+        var marker = markerAt >= 0 ? clip.Objects[markerAt] : null;
+        var pieces = clip.Objects.Where((o, i) => i != markerAt)
+            .Select(o => new DungeonPiece(o.Prefab, Place(o), BlueprintFormats.FromEuler(Turned(o)), o.Scale, o.Data, Terrain.PieceCatalog.Get(o.Prefab)?.Tool != null)).ToList();
         if (pieces.Count == 0)
         {
             MessageText.Text = "Nothing to paste: the blueprint has no piece this world can have.";
@@ -176,7 +186,7 @@ public partial class MainWindow
         string biome = BiomeName(scene.Terrain?.BiomeAt(ground.X, ground.Z));
         string name = clip.Name ?? "dungeon";
         PlaceDungeon(scene, s, ground, new DungeonToPlace(name, "Pasted", biome, $"dg{Math.Abs(StableHash.Of(name)) % 100000}", pieces,
-            marker == null ? Vector3.Zero : new Vector3(marker.Dx, marker.Dy, marker.Dz), marker?.Rotation.Y ?? 0f, null));
+            marker == null ? Vector3.Zero : Place(marker), marker == null ? 0f : Turned(marker).Y, null));
     }
 
     /// <summary>The biome's name as the dungeon generator knows it (the Black Forest's for none, or the sea's).</summary>

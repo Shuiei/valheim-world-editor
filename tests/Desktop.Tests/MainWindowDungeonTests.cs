@@ -216,12 +216,22 @@ public class MainWindowDungeonTests
             Assert.Equal(4f, Vector3.Distance(wl.Position, placed.Arrival), 0.01f);
             Assert.Equal(MathF.Sqrt(9 + 0.25f), Vector3.Distance(f.Position, placed.Arrival), 0.01f);
             Assert.Equal(-0.5f, f.Position.Y - placed.Arrival.Y, 0.01f);
-            // Through the Paste tool's click, the same.
+            // Through the Paste tool's click, mirrored as the tool shows it: the wall, east of the floor in the blueprint,
+            // lands on the other side of it (the entrance faces the same way, the camera not having moved); a second
+            // portal among the pieces is an ordinary piece (only the first marks the arrival).
             Assert.True(s.Undo());
             w.View.Paste.Clip = clip;
+            w.View.Paste.Mirror = true;
+            clip.Objects.Add(clip.Objects[2] with { Dx = 2, Dz = 5 });
             w.PasteAt(new Vector2(40, 40));
             Assert.StartsWith("Pasted Deep hall:", w.MessageText.Text);
-            Assert.Contains(s.Scene.Things.Skip(things), t => !t.Gone && t.Position.Y > 3000);
+            var mirrored = s.Scene.Things.Skip(things).Where(t => !t.Gone && t.Position.Y > 3000).ToList();
+            Assert.Equal(3, mirrored.Count);
+            Assert.Single(mirrored, t => t.Prefab == Portal);
+            var wall2 = mirrored.First(t => t.Prefab == wall);
+            Assert.Equal(4f, Vector3.Distance(wall2.Position, w.LastPlaced!.Arrival), 0.01f);
+            Assert.True(Vector3.Cross(wl.Position - f.Position, wall2.Position - mirrored.First(t => t.Prefab == floor).Position).Y < -1f);
+            w.View.Paste.Mirror = false;
         }
         finally
         {
