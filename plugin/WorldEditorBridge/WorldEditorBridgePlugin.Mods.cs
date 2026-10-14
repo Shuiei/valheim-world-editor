@@ -36,7 +36,7 @@ public sealed partial class WorldEditorBridgePlugin
 
     /// <summary>
     /// POST /mods/&lt;id&gt;/&lt;name&gt;: the mod's answer (application/octet-stream); 404 when no such mod or route is
-    /// registered, 413 for a body too large.
+    /// registered (said without repeating the path: nothing of a request is written back), 413 for a body too large.
     /// </summary>
     private void CallMod(HttpListenerResponse res, string path, byte[] body)
     {
@@ -56,13 +56,13 @@ public sealed partial class WorldEditorBridgePlugin
         IBridgeRoutes routes = BridgeApi.RoutesOf(id);
         if (routes == null)
         {
-            Reply(res, 404, "text/plain", Encoding.UTF8.GetBytes($"no mod {id} is registered with the bridge"));
+            Reply(res, 404, "text/plain", Encoding.UTF8.GetBytes("no mod of that id is registered with the bridge (GET /mods lists them)"));
             return;
         }
         byte[] answer = OnMainThread(() => routes.Handle(name, body));
         if (answer == null)
         {
-            Reply(res, 404, "text/plain", Encoding.UTF8.GetBytes($"the mod {id} has no route {name}"));
+            Reply(res, 404, "text/plain", Encoding.UTF8.GetBytes("the mod has no route of that name"));
             return;
         }
         Reply(res, 200, "application/octet-stream", answer);

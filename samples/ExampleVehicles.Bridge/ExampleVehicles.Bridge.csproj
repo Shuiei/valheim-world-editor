@@ -15,8 +15,14 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net472" Version="1.0.3" PrivateAssets="all" />
-    <!-- Compiled against, not shipped: the bridge's package holds it. -->
+  </ItemGroup>
+  <!-- Compiled against, not shipped: the bridge's package holds it. In the editor's repository, its
+       project; from the SDK's zip, the DLL beside the samples folder. -->
+  <ItemGroup Condition="Exists('../../plugin/WorldEditorBridge.Api/WorldEditorBridge.Api.csproj')">
     <ProjectReference Include="../../plugin/WorldEditorBridge.Api/WorldEditorBridge.Api.csproj" Private="false" />
+  </ItemGroup>
+  <ItemGroup Condition="!Exists('../../plugin/WorldEditorBridge.Api/WorldEditorBridge.Api.csproj')">
+    <Reference Include="WorldEditorBridge.Api" HintPath="../../WorldEditorBridge.Api.dll" Private="false" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="BepInEx"><HintPath>$(BepInExDir)/core/BepInEx.dll</HintPath><Private>false</Private></Reference>

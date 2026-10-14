@@ -171,17 +171,20 @@ public sealed class WorldSession : IDisposable
     {
         await Task.Run(NeedGame);
         await LearnMods(live);
-        await LearnBridgeMods(live);
+        var mods = await BridgeMods(live);
         var world = await live.LoadWorld();
         WorldSave.Builder = Builders.Default(world);
-        return From(world, live, label);
+        var session = From(world, live, label);
+        // Once the session is there to end it (Dispose): a world that failed to load leaves no game connected.
+        ModExtensions.LiveConnected(new LiveGame(live, mods));
+        return session;
     }
 
     /// <summary>
-    /// Tells the mods' extensions of the game (ModExtensions.LiveConnected), with the mods' plugins registered with the
-    /// bridge (GET /mods; none from an older plugin, or when it cannot be asked: the extensions still get the game).
+    /// The mods' plugins registered with the bridge (GET /mods; none from an older plugin, or when it cannot be asked:
+    /// the extensions still get the game), for ModExtensions.LiveConnected once the session is open.
     /// </summary>
-    private static async Task LearnBridgeMods(LiveBridge live)
+    private static async Task<List<string>> BridgeMods(LiveBridge live)
     {
         List<string> mods = [];
         try
@@ -196,7 +199,7 @@ public sealed class WorldSession : IDisposable
         {
             Console.WriteLine($"bridge mods: not read from the game ({e.Message}).");
         }
-        ModExtensions.LiveConnected(new LiveGame(live, mods));
+        return mods;
     }
 
     /// <summary>

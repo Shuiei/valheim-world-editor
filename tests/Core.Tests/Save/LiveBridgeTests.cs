@@ -154,14 +154,17 @@ public class LiveBridgeTests
         using var live = new LiveBridge(game.Url, game.Token);
 
         var (api, mods) = await live.Mods();
-        Assert.Equal((1, (List<string>)["ExampleVehicles"]), (api, mods));
+        Assert.Equal(1, api);
+        Assert.Equal(["ExampleVehicles"], mods);
         Assert.Equal("pong hi", Encoding.UTF8.GetString(await live.Call("ExampleVehicles", "ping", Encoding.UTF8.GetBytes("hi"), TestContext.Current.CancellationToken)));
         var missing = await Assert.ThrowsAsync<InvalidOperationException>(() => live.Call("ExampleVehicles", "nothing", [], TestContext.Current.CancellationToken));
-        Assert.Contains("has no route nothing", missing.Message);
+        Assert.Contains("mods/ExampleVehicles/nothing: 404 the mod has no route of that name", missing.Message);
         var unknown = await Assert.ThrowsAsync<InvalidOperationException>(() => live.Call("Other", "ping", [], TestContext.Current.CancellationToken));
-        Assert.Contains("no mod Other", unknown.Message);
+        Assert.Contains("mods/Other/ping: 404 no mod of that id", unknown.Message);
 
         game.Mods = null;
-        Assert.Equal((0, (List<string>)[]), await live.Mods());
+        var (oldApi, oldMods) = await live.Mods();
+        Assert.Equal(0, oldApi);
+        Assert.Empty(oldMods);
     }
 }

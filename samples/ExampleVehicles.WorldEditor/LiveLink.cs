@@ -17,19 +17,27 @@ public sealed class LiveLink(IExtensionRegistry registry) : ILiveListener
     public const string ModId = "ExampleVehicles";
 
     /// <inheritdoc/>
-    public async void OnConnected(ILiveGame live)
+    public void OnConnected(ILiveGame live)
     {
         if (!live.Mods.Contains(ModId))
         {
             registry.Log("the game has no Example Vehicles plugin registered with the bridge");
             return;
         }
+        // The call goes on after this returns: a task of its own, which catches everything (an exception after an
+        // await is nobody else's to catch, and would bring the editor down).
+        _ = PingAsync(live);
+    }
+
+    /// <summary>Calls the plugin's "ping" and logs its answer, or why there was none.</summary>
+    private async System.Threading.Tasks.Task PingAsync(ILiveGame live)
+    {
         try
         {
             byte[] answer = await live.CallAsync(ModId, "ping", Encoding.UTF8.GetBytes("hello"));
             registry.Log("the game says: " + Encoding.UTF8.GetString(answer));
         }
-        catch (System.Exception e) when (e is System.InvalidOperationException or System.Net.Http.HttpRequestException or System.Threading.Tasks.TaskCanceledException)
+        catch (System.Exception e)
         {
             registry.Log("the game did not answer: " + e.Message);
         }

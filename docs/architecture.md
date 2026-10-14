@@ -277,8 +277,8 @@ the real plugin, so test it in a local game or a local server.
 `POST /mods/<id>/<name>` (on the main thread; null 404, an exception 500, a body over 16 MB 413) and, after each
 apply, hands every `IBridgeListener` the `AppliedChanges` (the handlers return their JSON and the changes together:
 `Applied`), each guarded. On the editor's side, `LiveBridge.Mods` (404 means an old plugin: none) and `LiveBridge.Call`
-(404 means no such mod or route); `WorldSession.LearnBridgeMods` tells `ModExtensions.LiveConnected` as a live world
-opens, `Dispose` tells `LiveDisconnected`; extensions see it as `IEditorHost.Live` (`LiveGame`) and `ILiveListener`.
+(404 means no such mod or route); `WorldSession.OpenLive` asks `BridgeMods` and tells `ModExtensions.LiveConnected` once the
+session is made (a world that fails to load connects nothing), `Dispose` tells `LiveDisconnected`; extensions see it as `IEditorHost.Live` (`LiveGame`) and `ILiveListener`.
 
 **The plugin is Unity code.** Unity calls `Awake`, `Update` and `OnDestroy` by name: they look unused
 to the analyzers (IDE0051), and `dotnet format` deleted them once; they carry a `SuppressMessage`

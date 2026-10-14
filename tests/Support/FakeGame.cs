@@ -231,12 +231,12 @@ public sealed class FakeGame : IDisposable
                 if (Mods == null || parts.Length != 4 || !Mods.Contains(parts[2]))
                 {
                     status = 404;
-                    body = Encoding.UTF8.GetBytes($"no mod {(parts.Length > 2 ? parts[2] : "")} is registered with the bridge");
+                    body = Encoding.UTF8.GetBytes("no mod of that id is registered with the bridge (GET /mods lists them)");
                 }
                 else if (!Routes.TryGetValue((parts[2], parts[3]), out var route))
                 {
                     status = 404;
-                    body = Encoding.UTF8.GetBytes($"the mod {parts[2]} has no route {parts[3]}");
+                    body = Encoding.UTF8.GetBytes("the mod has no route of that name");
                 }
                 else
                 {
