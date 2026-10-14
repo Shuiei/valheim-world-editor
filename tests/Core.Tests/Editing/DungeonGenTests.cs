@@ -130,7 +130,7 @@ public class DungeonGenTests
             for (int j = i + 1; j < map.Count; j++)
             {
                 var (a, b) = (map[i], map[j]);
-                bool overlap = a.Level == b.Level && a.X0 < b.X1 - 0.01f && b.X0 < a.X1 - 0.01f && a.Z0 < b.Z1 - 0.01f && b.Z0 < a.Z1 - 0.01f;
+                bool overlap = a.Level == b.Level && a.Floor.Any(p => b.Floor.Any(q => p.X0 < q.X1 - 0.01f && q.X0 < p.X1 - 0.01f && p.Z0 < q.Z1 - 0.01f && q.Z0 < p.Z1 - 0.01f));
                 Assert.False(overlap && !(a.Corridor && b.Corridor), $"{a.Name} and {b.Name} overlap");
             }
         }
@@ -139,8 +139,9 @@ public class DungeonGenTests
             // On the edge of both rooms' boxes.
             foreach (var room in new[] { map[d.A], map[d.B] })
             {
-                bool onEdge = (MathF.Abs(d.X - room.X0) < 0.01f || MathF.Abs(d.X - room.X1) < 0.01f) && d.Z > room.Z0 && d.Z < room.Z1
-                    || (MathF.Abs(d.Z - room.Z0) < 0.01f || MathF.Abs(d.Z - room.Z1) < 0.01f) && d.X > room.X0 && d.X < room.X1;
+                // On a side of one of its parts (a shaped room's doorway may straddle two parts along one wall).
+                bool onEdge = room.Floor.Any(p => (MathF.Abs(d.X - p.X0) < 0.01f || MathF.Abs(d.X - p.X1) < 0.01f) && d.Z >= p.Z0 - 0.01f && d.Z <= p.Z1 + 0.01f
+                    || (MathF.Abs(d.Z - p.Z0) < 0.01f || MathF.Abs(d.Z - p.Z1) < 0.01f) && d.X >= p.X0 - 0.01f && d.X <= p.X1 + 0.01f);
                 Assert.True(onEdge, $"a {d.Kind} doorway at {d.X}, {d.Z} is not on the edge of {room.Name}");
             }
         }
@@ -240,8 +241,10 @@ public class DungeonGenTests
     [Fact]
     public void ASmallCryptWithoutRoomForItsArenaSaysSo()
     {
-        var r = DungeonGen.Make(new DungeonGen.Settings(Biome: "Meadows", Style: "Crypt", Size: 1, Levels: 2, Seed: 1));
-        Assert.Contains("no room for the boss arena", r.Notes);
+        // Small crypts of two levels: some seeds leave no room on the last level for the antechamber and the arena.
+        var made = Enumerable.Range(1, 80).Select(seed => DungeonGen.Make(new DungeonGen.Settings(Biome: "Meadows", Style: "Crypt", Size: 1, Levels: 2, Seed: seed))).ToList();
+        Assert.Contains(made, r => r.Notes.Contains("no room for the boss arena"));
+        Assert.Contains(made, r => !r.Notes.Contains("no room for the boss arena"));
     }
 
     [Fact]

@@ -370,18 +370,22 @@ public sealed class DungeonGenPanel
         {
             var fill = r.Corridor ? Color.Parse("#3a3f4a") : r.Key ? Color.Parse("#2f7d4a") : r.Name == "Arena" ? Color.Parse("#8a2b2b")
                 : r.Name is "Treasury" or "Hidden cache" ? Color.Parse("#9a8424") : r.Main ? Color.Parse("#7a5c3a") : Color.Parse("#5a4632");
-            var rect = new Rectangle
+            // A shaped room: its parts, each without an outline (they would cut it up), then its outline is its parts' edges.
+            foreach (var (px0, pz0, px1, pz1) in r.Floor)
             {
-                Width = Math.Max(1, (r.X1 - r.X0) * scale),
-                Height = Math.Max(1, (r.Z1 - r.Z0) * scale),
-                Fill = new SolidColorBrush(fill),
-                Stroke = r.Corridor ? null : new SolidColorBrush(Color.Parse("#b8b2a8")),
-                StrokeThickness = 0.6,
-            };
-            ToolTip.SetTip(rect, r.Name);
-            Canvas.SetLeft(rect, X(r.X0));
-            Canvas.SetTop(rect, Y(r.Z1));
-            _plan.Children.Add(rect);
+                var rect = new Rectangle
+                {
+                    Width = Math.Max(1, (px1 - px0) * scale),
+                    Height = Math.Max(1, (pz1 - pz0) * scale),
+                    Fill = new SolidColorBrush(fill),
+                    Stroke = r.Corridor ? null : new SolidColorBrush(Color.Parse("#b8b2a8")),
+                    StrokeThickness = r.Parts == null ? 0.6 : 0.3,
+                };
+                ToolTip.SetTip(rect, r.Name);
+                Canvas.SetLeft(rect, X(px0));
+                Canvas.SetTop(rect, Y(pz1));
+                _plan.Children.Add(rect);
+            }
         }
         foreach (var d in _result.Doors!.Where(d => d.Level == _level))
         {

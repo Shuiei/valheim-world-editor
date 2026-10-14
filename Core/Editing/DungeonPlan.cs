@@ -4,18 +4,39 @@ namespace TerrainEditor.Editing;
 
 /// <summary>
 /// The layout of a generated dungeon: levels of rooms and corridors on a 2 m grid (tiles), and the
-/// doorways between them. Rooms are rectangles, entered in the middle of a side (Dir: the way in) and
+/// doorways between them. Rooms are boxes, entered in the middle of a side (Dir: the way in) and
 /// joined to the room they come from wall to wall or by a straight corridor, so the plan reads like
-/// a building: axes, wings, twins on both sides. Then loops: rooms far apart on the way that happen to
+/// a building: axes, wings, twins on both sides; some take another shape within their box (a corner
+/// cut away, the corners notched, an apse). Then loops: rooms far apart on the way that happen to
 /// lie close are joined, so there is more than one way round (Jaquays). Floor and roof slabs cover
 /// whole 8 m cells, so what needs a cell to itself (a stairwell, a hall two floors high) is aligned to
 /// cells and keeps them. Level k's floor is 6k m below the first.
 /// </summary>
 internal sealed class DungeonPlan
 {
+    /// <summary>The shape of a room's floor within its box.</summary>
+    public enum Shape
+    {
+        /// <summary>The whole box.</summary>
+        Rect,
+        /// <summary>The four corners notched: a cross, an octagon's feel.</summary>
+        Cross,
+        /// <summary>The two far corners notched: the far end narrows like an apse.</summary>
+        Apse,
+        /// <summary>One near corner cut away: an L.</summary>
+        L,
+        /// <summary>Both near corners cut away: a neck at the way in, then the full width.</summary>
+        T,
+    }
+
     /// <summary>A room or a corridor of the plan.</summary>
     public sealed class Space
     {
+        /// <summary>Its floor's shape within its box (a corridor: whatever its tiles are).</summary>
+        public Shape Shape;
+        /// <summary>A floor finish of its own over the marble (null: the material's, if any), and how far its top is above the marble.</summary>
+        public string? Floor;
+        public float FloorTop;
         /// <summary>Its number in the order spaces were made.</summary>
         public int Id;
         /// <summary>The level it is on, 0 the first.</summary>
@@ -59,6 +80,18 @@ internal sealed class DungeonPlan
 
         /// <summary>Tiles deep (along Dir).</summary>
         public int Deep => Dir.X != 0 ? W : H;
+
+        /// <summary>The tile at (a across from the left of the way in, b deep from the way in) of its box.</summary>
+        public (int, int) TileAt(int a, int b) => Dir switch
+        {
+            (0, 1) => (X0 + a, Z0 + b),
+            (0, -1) => (X0 + W - 1 - a, Z0 + H - 1 - b),
+            (1, 0) => (X0 + b, Z0 + H - 1 - a),
+            _ => (X0 + W - 1 - b, Z0 + a),
+        };
+
+        /// <summary>Whether a tile is one of its own.</summary>
+        public bool Has((int, int) t) => Tiles.Contains(t);
     }
 
     /// <summary>A 4 m doorway: A's tiles T1 and T2 along its side, B beyond (Dir from A to B).</summary>
@@ -472,7 +505,73 @@ internal sealed class DungeonPlanner
     /// <param name="Shift">Tiles the room is shifted across from centred.</param>
     /// <param name="Length">The corridor's length (tiles).</param>
     /// <param name="Tall">The room rises through two floors.</param>
-    private sealed record Placement((int X0, int Z0, int W, int H) Box, List<(int, int)> Corridor, (int, int) T1, (int, int) T2, (int X, int Z) Dir, int Shift, int Length, bool Tall);
+    /// <param name="Shape">The room's shape within its box.</param>
+    /// <param name="Tiles">The room's tiles (its box, less what the shape cuts away).</param>
+    /// <param name="E1">The corridor's first tile at its far end, where the room's doorway is (T1 when there is no corridor).</param>
+    /// <param name="E2">Its second.</param>
+    /// <param name="EndDir">The way into the room from there (Dir unless the corridor bends).</param>
+    private sealed record Placement((int X0, int Z0, int W, int H) Box, List<(int, int)> Corridor, (int, int) T1, (int, int) T2, (int X, int Z) Dir, int Shift, int Length, bool Tall,
+        DungeonPlan.Shape Shape, List<(int, int)> Tiles, (int, int) E1, (int, int) E2, (int X, int Z) EndDir);
+
+    /// <summary>
+    /// The tiles of a room of this shape in a box entered along dir: the whole box less the corners the shape
+    /// cuts (n tiles square: 1, or 2 in a big room), never the two middle tiles at the way in.
+    /// </summary>
+    /// <param name="box">The room's box.</param>
+    /// <param name="dir">The way in.</param>
+    /// <param name="shape">Its shape.</param>
+    public static List<(int, int)> ShapeTiles((int X0, int Z0, int W, int H) box, (int X, int Z) dir, DungeonPlan.Shape shape)
+    {
+        var probe = new DungeonPlan.Space { X0 = box.X0, Z0 = box.Z0, W = box.W, H = box.H, Dir = dir };
+        int across = probe.Across, deep = probe.Deep;
+        int n = across >= 10 && deep >= 10 ? 2 : 1;
+        bool Cut(int a, int b) => shape switch
+        {
+            DungeonPlan.Shape.Cross => (a < n || a >= across - n) && (b < n || b >= deep - n),
+            DungeonPlan.Shape.Apse => (a < n || a >= across - n) && b >= deep - n,
+            DungeonPlan.Shape.L => a < across / 2 - 1 && b < deep / 2,
+            DungeonPlan.Shape.T => (a < across / 2 - 1 || a > across / 2) && b < deep / 2,
+            _ => false,
+        };
+        var tiles = new List<(int, int)>();
+        for (int a = 0; a < across; a++)
+        {
+            for (int b = 0; b < deep; b++)
+            {
+                if (!Cut(a, b))
+                {
+                    tiles.Add(probe.TileAt(a, b));
+                }
+            }
+        }
+        return tiles;
+    }
+
+    /// <summary>
+    /// A shape for a room of this kind and size, by chance: crossings, shrines, arenas and tombs are often
+    /// notched at the corners, chapels, halls and throne rooms end in an apse, store rooms and quarters lose a
+    /// corner or neck in at the door; long rooms, cell blocks, stairs and the entrance stay whole.
+    /// </summary>
+    private DungeonPlan.Shape ShapeFor(Room room, int across, int deep)
+    {
+        if (across < 6 || deep < 6)
+        {
+            return DungeonPlan.Shape.Rect;
+        }
+        double roll = _rnd.NextDouble();
+        return room switch
+        {
+            Room.Hub or Room.Shrine or Room.Totem => roll < 0.45 ? DungeonPlan.Shape.Cross : DungeonPlan.Shape.Rect,
+            Room.Boss => roll < 0.6 ? DungeonPlan.Shape.Cross : DungeonPlan.Shape.Rect,
+            Room.Tomb or Room.Treasury => roll < 0.35 ? DungeonPlan.Shape.Cross : DungeonPlan.Shape.Rect,
+            Room.Chapel => roll < 0.45 ? DungeonPlan.Shape.Apse : roll < 0.6 ? DungeonPlan.Shape.Cross : DungeonPlan.Shape.Rect,
+            Room.Hall or Room.Throne => roll < 0.35 ? DungeonPlan.Shape.Apse : DungeonPlan.Shape.Rect,
+            Room.Burial or Room.Ossuary => roll < 0.3 ? DungeonPlan.Shape.L : DungeonPlan.Shape.Rect,
+            Room.Store or Room.Quarters or Room.Workshop or Room.Guard or Room.Library or Room.Kitchen or Room.Armory or Room.Barracks or Room.Den or Room.Torture =>
+                roll < 0.3 ? DungeonPlan.Shape.L : roll < 0.42 && across >= 8 ? DungeonPlan.Shape.T : DungeonPlan.Shape.Rect,
+            _ => DungeonPlan.Shape.Rect,
+        };
+    }
 
     /// <summary>
     /// Tries to place a room of w × d tiles (across, deep) off side dir of parent, at slot t1/t2, with a
@@ -481,7 +580,7 @@ internal sealed class DungeonPlanner
     /// </summary>
     /// <returns>Null when it does not fit.</returns>
     private Placement? TryPlace(DungeonPlan.Level l, (int I, int J) t1, (int I, int J) t2, (int X, int Z) dir, int w, int d, int len, int shift,
-        bool aligned, bool tall)
+        bool aligned, bool tall, DungeonPlan.Shape shape = DungeonPlan.Shape.Rect)
     {
         var (x, z) = (t2.I - t1.I, t2.J - t1.J); // across, t1 to t2
         var corridor = new List<(int, int)>();
@@ -524,8 +623,61 @@ internal sealed class DungeonPlanner
                 return null;
             }
         }
-        return new Placement(box, corridor, t1, t2, dir, shift, len, tall);
+        // A shaped room keeps its whole box clear (what it cuts away stays empty, walled off), its tiles being
+        // what it floors; the way in must be whole.
+        var tiles = shape == DungeonPlan.Shape.Rect ? [.. Box(box)] : ShapeTiles(box, dir, shape);
+        if (shape != DungeonPlan.Shape.Rect && (!tiles.Contains(row0) || !tiles.Contains(Add(t2, dir, len + 1))))
+        {
+            return null;
+        }
+        return new Placement(box, corridor, t1, t2, dir, shift, len, tall, shape, tiles, Add(t1, dir, len), Add(t2, dir, len), dir);
     }
+
+    /// <summary>
+    /// Tries to place a room off parent's slot t1/t2 at the end of a corridor that bends: len tiles ahead, an elbow,
+    /// then len2 tiles to the right (side 1) or the left (-1), the room entered that way, wall to wall.
+    /// </summary>
+    /// <returns>Null when it does not fit.</returns>
+    private Placement? TryPlaceBent(DungeonPlan.Level l, (int I, int J) t1, (int I, int J) t2, (int X, int Z) dir, int w, int d, int len, int side, int len2, int shift,
+        bool aligned, bool tall, DungeonPlan.Shape shape)
+    {
+        var across = (X: t2.I - t1.I, Z: t2.J - t1.J);
+        var turn = side > 0 ? across : (X: -across.X, Z: -across.Z);
+        var corridor = new List<(int, int)>();
+        for (int k = 1; k <= len; k++)
+        {
+            corridor.Add(Add(t1, dir, k));
+            corridor.Add(Add(t2, dir, k));
+        }
+        // The elbow: two rows over both columns; the leg runs on from the column on the turn's side.
+        var (a1, a2, b1, b2) = (Add(t1, dir, len + 1), Add(t1, dir, len + 2), Add(t2, dir, len + 1), Add(t2, dir, len + 2));
+        corridor.AddRange([a1, a2, b1, b2]);
+        var (s1, s2) = side > 0 ? (b1, b2) : (a1, a2);
+        for (int m = 1; m <= len2; m++)
+        {
+            corridor.Add(Add(s1, turn, m));
+            corridor.Add(Add(s2, turn, m));
+        }
+        if (corridor.Any(c => !Free(l, c)))
+        {
+            return null;
+        }
+        var (e1, e2) = (Add(s1, turn, len2), Add(s2, turn, len2));
+        var p = TryPlace(l, e1, e2, turn, w, d, 0, shift, aligned, tall, shape);
+        if (p == null || Box(p.Box).Any(corridor.Contains))
+        {
+            return null;
+        }
+        return p with { Corridor = corridor, T1 = t1, T2 = t2, Dir = dir, Length = len + 2 + len2, E1 = e1, E2 = e2, EndDir = turn };
+    }
+
+    /// <summary>How often a corridor to a room bends on the way, for the style: often in catacombs, warrens and holds, seldom in a temple.</summary>
+    private float BendChance => _style.Name switch
+    {
+        "Catacombs" or "Goblin warren" or "Dvergr hold" or "Ruins" => 0.4f,
+        "Temple" => 0.1f,
+        _ => 0.25f,
+    };
 
     /// <summary>
     /// Places a room of a kind off parent, trying many sides, slots, sizes and corridors and keeping the best
@@ -566,29 +718,40 @@ internal sealed class DungeonPlanner
                 continue;
             }
             int w = Even(spec.WMin, spec.WMax), d = Even(spec.DMin, spec.DMax);
+            // Now and then a room is entered on its long side.
+            if (spec.WMax != spec.WMin && spec.DMax > spec.WMax && room is not (Room.Gallery or Room.Mine or Room.Cells or Room.Feast or Room.Entrance) && _rnd.NextDouble() < 0.25)
+            {
+                (w, d) = (d, w);
+            }
             if (tall)
             {
                 w = Math.Max(8, (w + 3) / 4 * 4);
                 d = Math.Max(8, (d + 3) / 4 * 4);
             }
+            var shape = ShapeFor(room, w, d);
             bool wall = _rnd.NextDouble() < 0.25 && _style.CorridorMin <= 1 && parent.Room != Room.StairBottom;
             int len = wall ? 0 : _rnd.Next(_style.CorridorMin, _style.CorridorMax + 1);
             int shift = _rnd.NextDouble() < 0.75 || room == Room.Cells ? 0 : _rnd.Next(-(w / 2 - 1), w / 2);
+            bool bend = len > 0 && !tall && room != Room.Cells && _rnd.NextDouble() < BendChance * (main ? 0.5f : 1f);
             Placement? p = null;
-            if (tall)
+            if (bend)
+            {
+                p = TryPlaceBent(l, t1, t2, dir, w, d, Math.Max(1, len), _rnd.Next(2) * 2 - 1, _rnd.Next(2, 6), shift, aligned: false, tall: false, shape);
+            }
+            else if (tall)
             {
                 // Aligned to cells: try nearby shifts and lengths.
                 for (int dl = 0; dl < 4 && p == null; dl++)
                 {
                     for (int sh = -(w / 2 - 1); sh <= w / 2 - 1 && p == null; sh++)
                     {
-                        p = TryPlace(l, t1, t2, dir, w, d, len + dl, sh, aligned: true, tall: true);
+                        p = TryPlace(l, t1, t2, dir, w, d, len + dl, sh, aligned: true, tall: true, shape);
                     }
                 }
             }
             else
             {
-                p = TryPlace(l, t1, t2, dir, w, d, len, shift, aligned: false, tall: false);
+                p = TryPlace(l, t1, t2, dir, w, d, len, shift, aligned: false, tall: false, shape);
             }
             if (p == null)
             {
@@ -607,7 +770,8 @@ internal sealed class DungeonPlanner
         {
             return null;
         }
-        var n = NewSpace(l, room, best.Dir, best.Box);
+        var n = NewSpace(l, room, best.EndDir, best.Box, best.Shape == DungeonPlan.Shape.Rect ? null : best.Tiles);
+        n.Shape = best.Shape;
         n.Parent = parent;
         n.Tall = best.Tall;
         Join(l, parent, n, best, door);
@@ -626,8 +790,13 @@ internal sealed class DungeonPlanner
         }
         var c = NewCorridor(l, p.Corridor, p.Dir);
         c.Parent = parent;
+        if (p.EndDir != p.Dir)
+        {
+            // A bent corridor: its box is more than its tiles.
+            c.Shape = DungeonPlan.Shape.L;
+        }
         Connect(parent, c, p.T1, p.T2, p.Dir, door == Door.Secret ? Door.Secret : null);
-        Connect(c, n, Add(p.T1, p.Dir, p.Length), Add(p.T2, p.Dir, p.Length), p.Dir, door == Door.Secret ? Door.Open : door);
+        Connect(c, n, p.E1, p.E2, p.EndDir, door == Door.Secret ? Door.Open : door);
     }
 
     /// <summary>
@@ -642,7 +811,7 @@ internal sealed class DungeonPlanner
             return null;
         }
         var first = parent.Doors.FirstOrDefault(d => d.A == parent && (d.B == n || d.B.Corridor && d.B.Doors.Any(x => x.B == n)));
-        if (first == null)
+        if (first == null || first.B.Corridor && first.B.Shape != DungeonPlan.Shape.Rect)
         {
             return null;
         }
@@ -665,7 +834,14 @@ internal sealed class DungeonPlanner
         {
             return null;
         }
-        var twin = NewSpace(l, n.Room, dir, p.Box);
+        // The same shape, mirrored across the parent (an L becomes its mirror image).
+        var tiles = n.Shape == DungeonPlan.Shape.Rect ? null : n.Tiles.Select(Mirror).ToList();
+        if (tiles != null && (tiles.Any(t => !Box(p.Box).Contains(t)) || !tiles.Contains(Add(o1, dir, p.Length + 1)) || !tiles.Contains(Add(o2, dir, p.Length + 1))))
+        {
+            tiles = null;
+        }
+        var twin = NewSpace(l, n.Room, dir, p.Box, tiles);
+        twin.Shape = tiles == null ? DungeonPlan.Shape.Rect : n.Shape;
         twin.Parent = parent;
         Join(l, parent, twin, p, null);
         return twin;
