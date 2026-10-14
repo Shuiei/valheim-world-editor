@@ -299,7 +299,13 @@ public sealed partial class WorldEditorBridgePlugin : BaseUnityPlugin
                     Reply(res, 405, "text/plain", Encoding.UTF8.GetBytes("POST only"));
                     return;
                 }
-                byte[] body = ReadAll(ctx.Request.InputStream);
+                // A mod's body is bounded, and refused before it is held whole.
+                byte[] body = ctx.Request.ContentLength64 > MaxModBody ? null : ReadAtMost(ctx.Request.InputStream, MaxModBody);
+                if (body == null)
+                {
+                    Reply(res, 413, "text/plain", Encoding.UTF8.GetBytes("the body is too large"));
+                    return;
+                }
                 CallMod(res, path, body);
                 return;
             }
@@ -425,6 +431,23 @@ public sealed partial class WorldEditorBridgePlugin : BaseUnityPlugin
     {
         using MemoryStream ms = new();
         s.CopyTo(ms);
+        return ms.ToArray();
+    }
+
+    /// <summary>A stream's bytes, up to a limit; null once more than that came (reading stops there).</summary>
+    private static byte[] ReadAtMost(Stream s, int limit)
+    {
+        using MemoryStream ms = new();
+        byte[] buffer = new byte[64 << 10];
+        int n;
+        while ((n = s.Read(buffer, 0, buffer.Length)) > 0)
+        {
+            if (ms.Length + n > limit)
+            {
+                return null;
+            }
+            ms.Write(buffer, 0, n);
+        }
         return ms.ToArray();
     }
 

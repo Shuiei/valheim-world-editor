@@ -13,7 +13,7 @@ namespace WorldEditorBridge;
 /// </summary>
 public sealed partial class WorldEditorBridgePlugin
 {
-    /// <summary>A call's body larger than this is refused.</summary>
+    /// <summary>A call's body larger than this is refused (before it is read whole: Handle).</summary>
     private const int MaxModBody = 16 << 20;
 
     /// <summary>GET /mods: the bridge's API version and the ids registered (JSON).</summary>
@@ -36,7 +36,7 @@ public sealed partial class WorldEditorBridgePlugin
 
     /// <summary>
     /// POST /mods/&lt;id&gt;/&lt;name&gt;: the mod's answer (application/octet-stream); 404 when no such mod or route is
-    /// registered (said without repeating the path: nothing of a request is written back), 413 for a body too large.
+    /// registered (said without repeating the path: nothing of a request is written back).
     /// </summary>
     private void CallMod(HttpListenerResponse res, string path, byte[] body)
     {
@@ -45,11 +45,6 @@ public sealed partial class WorldEditorBridgePlugin
         if (parts.Length != 4 || !BridgeApi.IsValidId(parts[2]) || !BridgeApi.IsValidId(parts[3]))
         {
             Reply(res, 404, "text/plain", Encoding.UTF8.GetBytes("a mod's route is /mods/<mod id>/<route name>"));
-            return;
-        }
-        if (body.Length > MaxModBody)
-        {
-            Reply(res, 413, "text/plain", Encoding.UTF8.GetBytes("the body is too large"));
             return;
         }
         string id = parts[2], name = parts[3];
