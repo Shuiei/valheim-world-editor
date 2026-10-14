@@ -70,9 +70,28 @@ What it is like:
     cart, or shelves in rows. Studies: shelves round a table, in aisles, or a scriptorium of desks.
   - Feast halls: long tables down the middle, or the high table on a dais before a fire. Throne
     rooms: colonnades, a war room with a long table, or fallen columns round the dais.
-  - Arenas: a ring of columns round the boss; the boss enthroned on a dais over heaps of skulls; or
-    a crypt of columns and sarcophagi under chains.
+  - Arenas: a ring of columns round the boss; the boss enthroned on a dais over heaps of skulls; a
+    crypt of columns and sarcophagi under chains; or a pit, the floor sunk a metre below ledges
+    round the walls. Shrines can be sunk the same way, the idol down in a ring of candles.
   - Cell blocks have barred cells on each side of an aisle.
+- **Rooms are built up inside, not just furnished.** In a stone or grausten dungeon a great hall,
+  throne room or chapel may carry a loft over the way in: a deck 4 m up on posts, with a rail and
+  stairs up one side, braziers and a sentinel on it. A burial chamber may hold a vault, an inner
+  chamber of walls against the far wall with the sarcophagus inside and candles at its opening.
+  Alcoves off a room hold a sarcophagus across, a statue between candles, a bed in its bay or a
+  shelf and crates; niches off a corridor a single statue, a stand or a barrel.
+- **Things come in groups that belong together.** Beside its main feature, a room has one or two
+  clusters in its corners that suit it: a camp (bedroll, fire, firewood), a meal (table, seats,
+  food), a scribe's desk (table, chair, candles, chest), stores (crates stacked, barrels), an
+  armoury (weapon and armour stands), an altar (statue, candles, offerings), bones, a workbench.
+- **One piece a room is remembered by.** Big rooms may get a hero piece that stands once in the
+  whole dungeon: a dolmen, a fallen giant's statue in parts, a grave slab, a giant's skull or ribs
+  in a warren, an altar of crystal in a hold, a cart in a keep.
+- **Corridors are not all the same corridor.** A long one may be closed midway by a gate under a
+  band of wall (an iron gate in a crypt, a door in a keep, a sliding door in a hold), half
+  collapsed (rubble, broken wall, a fallen pillar, the way open along one side), lined with bones
+  along both walls (catacombs), carpeted with a runner (keeps, temples, holds), hung with vines
+  (crypts, ruins) or edged with sharpened stakes (warrens).
 - **Rooms are lit differently**: standing torches along the walls, sconces on them, or a brazier
   or two in the corners; the dark leaves most rooms unlit.
 - **Floors and ceilings vary.** In a stone or grausten dungeon the grand rooms get black marble tiles and the

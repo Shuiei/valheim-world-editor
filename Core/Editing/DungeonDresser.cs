@@ -9,7 +9,7 @@ namespace TerrainEditor.Editing;
 /// on their walls and lies on their floors, their decay, who guards them and what they hold. Each room
 /// is dressed in its own frame: u across (right of the way in), v deep (0 its middle, the way in behind).
 /// </summary>
-internal sealed class DungeonDresser
+internal sealed partial class DungeonDresser
 {
     /// <summary>
     /// What stands on a floor goes 5 cm up: a piece whose middle of mass is right on a floor's surface
@@ -1065,6 +1065,7 @@ internal sealed class DungeonDresser
                 InnerWall(f, -f.HalfA, v, f.HalfA, v, 3, f.H);
             }
         }
+        CorridorKind(f);
         // A statue in a bay, a few bones, rubble, cobwebs.
         if (Chance(0.25) && Spot(f, 0.8f, 0.6f) is var (su, sv))
         {
@@ -1159,6 +1160,7 @@ internal sealed class DungeonDresser
             Pilasters(f, 4);
         }
         Hangings(f, 2, Drapes);
+        Clusters(f, 1, StyleClusters);
         Lights(important: true);
         Clutter(f, 0.01f);
     }
@@ -1175,12 +1177,16 @@ internal sealed class DungeonDresser
         {
             case 0:
                 // Colonnades, a feature at the far end, braziers and banners between the columns.
+                if (Chance(0.5))
+                {
+                    Loft(f);
+                }
                 if (cols)
                 {
                     for (float v = -f.HalfD + 3; v <= f.HalfD - 3; v += 4)
                     {
-                        Column(f, -(f.HalfA - 2.2f), v);
-                        Column(f, f.HalfA - 2.2f, v);
+                        Pillar(f, -(f.HalfA - 2.2f), v);
+                        Pillar(f, f.HalfA - 2.2f, v);
                     }
                 }
                 Feature(f, f.HalfD - 2.2f);
@@ -1216,6 +1222,10 @@ internal sealed class DungeonDresser
                 break;
             case 2:
                 // The hall of the dead: a dais at the far end bearing a sarcophagus between two statues, columns.
+                if (Chance(0.4))
+                {
+                    Loft(f);
+                }
                 Plinth(f, 0, f.HalfD - 3, 6, 4);
                 Steps(f, 0, f.HalfD - 6, 180, 6);
                 _o.Add("crypt_skeleton_chest", f.W(0, f.HalfD - 3, f.F + 1 + Lift * 2), f.Yaw(90));
@@ -1224,8 +1234,8 @@ internal sealed class DungeonDresser
                 _o.Add(statues[1], f.W(2.3f, f.HalfD - 2.4f, f.F + 1 + Lift * 2), f.Yaw(180));
                 for (float v = -f.HalfD + 3; v <= f.HalfD - 8; v += 4)
                 {
-                    Column(f, -(f.HalfA - 2.2f), v);
-                    Column(f, f.HalfA - 2.2f, v);
+                    Pillar(f, -(f.HalfA - 2.2f), v);
+                    Pillar(f, f.HalfA - 2.2f, v);
                     Put(f, "skull_pile", -(f.HalfA - 0.7f), v + 2, R(0, 360), 0.5f);
                     Put(f, "skull_pile", f.HalfA - 0.7f, v + 2, R(0, 360), 0.5f);
                 }
@@ -1265,6 +1275,7 @@ internal sealed class DungeonDresser
                 _o.Add(_b.Name == "Ashlands" ? "CharredBanner1" : "cloth_hanging_long", f.W(side * 3f, f.HalfD - 0.15f, f.Top - 0.25f), f.Yaw(180));
             }
         }
+        Clusters(f, 2, StyleClusters);
         Lights();
         Foes(f, 1.1f);
         Clutter(f, 0.012f);
@@ -1285,7 +1296,10 @@ internal sealed class DungeonDresser
                 Put(f, "dvergrprops_lantern_standing", 0.5f, v - 0.6f, 0, 0, y: 0.78f, force: true);
                 break;
             default:
-                Put(f, f.S.Tall ? "StatueEvil" : One("Ashlands_Altar", "offeraltar_FrozenKing_bossroom"), 0, v, 180, 1.6f);
+                if (!(Chance(0.4) && PutHero(f, 0, v, 180)))
+                {
+                    Put(f, f.S.Tall ? "StatueEvil" : One("Ashlands_Altar", "offeraltar_FrozenKing_bossroom"), 0, v, 180, 1.6f);
+                }
                 Brazier(f, -2.2f, v - 0.6f);
                 Brazier(f, 2.2f, v - 0.6f);
                 break;
@@ -1331,7 +1345,10 @@ internal sealed class DungeonDresser
         switch (_rnd.Next(4))
         {
             case 0:
-                Put(f, _decay > 0.4f ? One("StatueThor_broken_top", "StatueFreya_broken_left") : One("StatueThor", "StatueFreya", "StatueDeer", "StatueSeed"), 0, 0, 180, 1.4f);
+                if (!(Chance(0.35) && PutHero(f, 0, 0, 180, 1.8f)))
+                {
+                    Put(f, _decay > 0.4f ? One("StatueThor_broken_top", "StatueFreya_broken_left") : One("StatueThor", "StatueFreya", "StatueDeer", "StatueSeed"), 0, 0, 180, 1.4f);
+                }
                 break;
             case 1:
                 for (int i = 0; i < 4; i++)
@@ -1368,6 +1385,7 @@ internal sealed class DungeonDresser
             }
         }
         Hangings(f, 2, Drapes);
+        Clusters(f, 1, StyleClusters);
         Lights();
         Foes(f, 0.6f);
         Clutter(f, 0.015f);
@@ -1443,8 +1461,19 @@ internal sealed class DungeonDresser
     /// </summary>
     private void Burial(Frame f)
     {
-        switch (_rnd.Next(3))
+        switch (_rnd.Next(f.HalfA >= 3.4f && f.HalfD >= 3.4f ? 4 : 3))
         {
+            case 3:
+                // The vault: an inner chamber against the far wall holding the sarcophagus, the dead's goods about it.
+                Vault(f, 4, 3.5f);
+                _o.Add("crypt_skeleton_chest", f.W(0, f.HalfD - 1.75f, f.Top + Lift), f.Yaw(90));
+                f.Take(0, f.HalfD - 1.75f, 1.3f);
+                Put(f, One("piece_chest_wood", "barrell", "piece_pot2_cracked"), -1.2f, f.HalfD - 0.7f, R(0, 360), 0.3f, force: true);
+                Put(f, "skull_pile", 1.3f, f.HalfD - 0.7f, R(0, 360), 0.3f, force: true);
+                Brazier(f, -(f.HalfA - 1), -(f.HalfD - 1));
+                Brazier(f, f.HalfA - 1, -(f.HalfD - 1));
+                Clutter(f, 0.02f, "Skull1", "LargeBone", "bone_stack");
+                break;
             case 0:
                 float uRow = Math.Max(2.2f, f.HalfA / 2 + 0.3f);
                 for (float v = -f.HalfD + 2.2f; v <= f.HalfD - 1.6f; v += 2.4f)
@@ -1490,6 +1519,7 @@ internal sealed class DungeonDresser
         {
             Put(f, "skull_pile", cu * (f.HalfA - 0.7f), cv * (f.HalfD - 0.7f), R(0, 360), 0.6f);
         }
+        Clusters(f, 1, "bones", "altar");
         Lights();
         Hangings(f, 1);
         // The dead do not rest here.
@@ -1542,6 +1572,7 @@ internal sealed class DungeonDresser
             Put(f, _b.Name == "Swamp" ? "Spawner_DraugrPile" : _b.Name is "Black Forest" or "Meadows" ? "BonePileSpawner" : "BonePileSpawner_swamp", 0, R(-1, 1), R(0, 360), 1.3f);
         }
         Clutter(f, 0.04f, "Skull1", "LargeBone", "LargeBone_half01", "Skull1");
+        Clusters(f, 1, "bones");
         Lights();
         Foes(f, 0.4f);
         Decay();
@@ -1561,6 +1592,10 @@ internal sealed class DungeonDresser
         switch (variant)
         {
             case 0:
+                if (Chance(0.4))
+                {
+                    Loft(f);
+                }
                 Put(f, altar, 0, far, 180, 1.4f);
                 Put(f, statues[0], -2.6f, far + 0.3f, 180, 0.6f);
                 Put(f, statues[1], 2.6f, far + 0.3f, 180, 0.6f);
@@ -1624,6 +1659,7 @@ internal sealed class DungeonDresser
             }
         }
         Hangings(f, 2, Drapes);
+        Clusters(f, 1, "altar");
         Lights(important: true);
         Foes(f, 0.7f);
         Clutter(f, 0.008f);
@@ -1636,8 +1672,18 @@ internal sealed class DungeonDresser
     /// </summary>
     private void Shrine(Frame f)
     {
-        switch (_rnd.Next(3))
+        switch (_rnd.Next(_mat.Name is "Stone" or "Grausten" or "Marble" ? 4 : 3))
         {
+            case 3:
+                // Sunken: ledges round a lower floor, the idol down in the middle in a ring of candles or skulls.
+                Ledges(f);
+                Put(f, One("StatueSeed", "StatueEvil", "StatueDeer", "MountainGraveStone01"), 0, 0, 180, 1.2f, force: true);
+                for (int i = 0; i < 6; i++)
+                {
+                    float a = i * MathF.PI / 3;
+                    Put(f, _s.Respawn ? "skull_pile" : "Candle_resin", 1.7f * MathF.Cos(a), 1.7f * MathF.Sin(a), R(0, 360), 0.2f);
+                }
+                break;
             case 0:
                 Put(f, f.S.Tall ? "StatueEvil" : One("StatueSeed", "blackmarble_altar_crystal", "StatueDeer"), 0, 0, 180, 1.3f, y: 0);
                 float r = Math.Min(f.HalfA, f.HalfD) - 1.6f;
@@ -1676,6 +1722,7 @@ internal sealed class DungeonDresser
                 break;
         }
         Pickables(f, 0.6f);
+        Clusters(f, 1, "altar");
         Hangings(f, 2);
         Foes(f, 0.9f);
         Clutter(f, 0.01f);
@@ -1730,12 +1777,16 @@ internal sealed class DungeonDresser
         switch (variant)
         {
             case 0:
+                if (Chance(0.5))
+                {
+                    Loft(f);
+                }
                 if (f.HalfA >= 5)
                 {
                     for (float v = -f.HalfD + 3; v <= f.HalfD - 7; v += 4)
                     {
-                        Column(f, -(f.HalfA - 2.4f), v);
-                        Column(f, f.HalfA - 2.4f, v);
+                        Pillar(f, -(f.HalfA - 2.4f), v);
+                        Pillar(f, f.HalfA - 2.4f, v);
                     }
                 }
                 Runner(f, -f.HalfD + 1.2f, f.HalfD - 6.2f);
@@ -1791,6 +1842,7 @@ internal sealed class DungeonDresser
         }
         Hangings(f, 4, "piece_banner01", "piece_banner02", "piece_banner05", "piece_banner06", "piece_banner09", "piece_banner10");
         Trophies(f, 2);
+        Clusters(f, 1, "armoury");
         Lights(important: true);
         Elite(f, -1.8f, f.HalfD - 6.5f, 180);
         Elite(f, 1.8f, f.HalfD - 6.5f, 180);
@@ -1882,6 +1934,7 @@ internal sealed class DungeonDresser
                 break;
         }
         Hangings(f, 1, Drapes);
+        Clusters(f, 2, "stores", "armoury", "camp");
         Lights();
         Foes(f, 1.5f);
         Clutter(f, 0.01f);
@@ -2130,6 +2183,7 @@ internal sealed class DungeonDresser
                 Chest(f, 0, f.HalfD - 0.9f, 180);
                 break;
         }
+        Clusters(f, 1, "scribe");
         Lights();
         Foes(f, 0.3f);
         Decay();
@@ -2226,6 +2280,7 @@ internal sealed class DungeonDresser
             Put(f, "piece_logbench01", -(f.HalfA - 0.6f), -1, 90, 0.6f);
             Put(f, "ArmorStand_Male", -(f.HalfA - 0.8f), f.HalfD - 1.2f, 135, 0.6f);
         }
+        Clusters(f, 1, "meal", "armoury");
         Lights(important: true);
         Elite(f, 0, f.HalfD - 1.6f, 180);
         Foes(f, 1f);
@@ -2269,9 +2324,21 @@ internal sealed class DungeonDresser
     private void Boss(Frame f)
     {
         float r = Math.Min(f.HalfA, f.HalfD) - 3.5f;
-        int variant = _rnd.Next(3);
+        int variant = _rnd.Next(_mat.Name is "Stone" or "Grausten" or "Marble" ? 4 : 3);
         switch (variant)
         {
+            case 3:
+                // The pit: ledges round a sunken floor, columns at its corners, the master down in the middle.
+                Ledges(f);
+                foreach (var (cu, cv) in new[] { (-1, -1), (1, -1), (-1, 1), (1, 1) })
+                {
+                    Pillar(f, cu * (f.S.Across - 3), cv * (f.S.Deep - 3));
+                }
+                if (f.S.Tall)
+                {
+                    _o.Add("StatueEvil", f.W(0, f.HalfD - 1.1f, f.F + 1 + Lift * 2 + DungeonProps.Foot("StatueEvil")), f.Yaw(180));
+                }
+                break;
             case 0:
                 // A ring of columns, braziers between, the master in the middle.
                 for (int i = 0; i < 8; i++)
@@ -2331,7 +2398,7 @@ internal sealed class DungeonDresser
         }
         if (f.S.Tall)
         {
-            if (variant != 1)
+            if (variant is not (1 or 3))
             {
                 Put(f, "StatueEvil", 0, f.HalfD - 1.6f, 180, 1.6f);
             }
@@ -2430,8 +2497,12 @@ internal sealed class DungeonDresser
             Put(f, "goblin_trashpile", -(f.HalfA - 1.4f), f.HalfD - 1.4f, R(0, 360), 1.4f);
             Put(f, "lox_ribs", f.HalfA - 1.4f, -(f.HalfD - 1.4f), R(0, 360), 0.8f);
         }
-        Put(f, "goblin_totempole", 0, f.HalfD - 0.6f, 180, 0.6f);
+        if (!(Chance(0.4) && PutHero(f, 0, f.HalfD - 2, 180, 1.8f)))
+        {
+            Put(f, "goblin_totempole", 0, f.HalfD - 0.6f, 180, 0.6f);
+        }
         Put(f, "goblin_banner", -(f.HalfA - 0.6f), f.HalfD - 1.2f, 90, 0.6f);
+        Clusters(f, 2, "camp", "bones");
         Lights();
         Foes(f, 1.5f);
         Clutter(f, 0.025f);
@@ -2458,7 +2529,7 @@ internal sealed class DungeonDresser
             }
             Brazier(f, -2, f.HalfD - 3);
             Brazier(f, 2, f.HalfD - 3);
-            Put(f, "giant_skull", 0, f.HalfD - 3.4f, 180, 1.4f);
+            PutHero(f, 0, f.HalfD - 3.4f, 180, 1.6f);
             Clutter(f, 0.03f, "Skull1", "LargeBone", "lox_ribs");
         }
         foreach (var s in f.WallSpots(3, 3).OrderBy(_ => _rnd.Next()).Take(3))
@@ -2466,6 +2537,7 @@ internal sealed class DungeonDresser
             var (u, v) = In(s, 0.5f);
             Put(f, "skull_pile", u, v, R(0, 360), 0.6f);
         }
+        Clusters(f, 1, "bones", "altar");
         Hangings(f, 2);
         Foes(f, 1f, [.. _foes.Where(x => x.Creature.Contains("Shaman", StringComparison.Ordinal)).DefaultIfEmpty(_foes[0])]);
         Foes(f, 0.6f);
@@ -2489,6 +2561,7 @@ internal sealed class DungeonDresser
             Put(f, One("dvergrprops_crate", "dvergrprops_barrel", "dvergrprops_pickaxe", "dvergrprops_crate_long"), u, v, s.Yaw + R(-20, 20), 0.6f);
         }
         Pickables(f, 1.5f);
+        Clusters(f, 1, "stores");
         Lights();
         Foes(f, 0.8f);
         Clutter(f, 0.01f);
@@ -2511,6 +2584,7 @@ internal sealed class DungeonDresser
             Put(f, "dvergrprops_shelf", u, v, s.Yaw, 0.6f);
         }
         Clutter(f, 0.02f, "dvergrprops_crate", "dvergrprops_barrel", "dvergrprops_pickaxe");
+        Clusters(f, 1, "workshop", "stores");
         Lights();
         Foes(f, 0.6f);
         Decay();
@@ -2548,6 +2622,7 @@ internal sealed class DungeonDresser
         {
             ChestAgainstWall(f);
         }
+        Clusters(f, 1, "scribe", "camp");
         Lights();
         Foes(f, 0.6f);
         Clutter(f, 0.01f);

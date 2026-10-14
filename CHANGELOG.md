@@ -24,6 +24,17 @@ the plugin is unchanged in versions without that part.
   - **Floors**: in a stone or grausten dungeon, grand rooms get black marble tiles and lived-in rooms wooden boards,
     half the time (Furniture at Furnished or Rich). Stone pieces stand on the marble through them, as the game's
     support asks.
+  - **Built up inside**: in stone and grausten dungeons a great hall, throne room or chapel may carry a loft over
+    the way in (a deck on posts 4 m up, a rail, stairs up one side, braziers and a sentinel on it); arenas and
+    shrines may be sunk a metre below ledges round the walls; a burial chamber may hold a vault, an inner chamber
+    with the sarcophagus inside. Alcoves off rooms and niches off corridors are furnished (a sarcophagus across, a
+    statue between candles, a bed in its bay, a shelf and crates; a single piece in a niche).
+  - **Clusters**: beside its main feature a room gets one or two groups of things that belong together in its
+    corners: a camp, a meal, a scribe's desk, stores, an armoury, an altar, bones, a workbench.
+  - **Hero pieces**: big rooms may get one piece that stands once in the whole dungeon: a dolmen, a fallen giant's
+    statue in parts, a grave slab, a giant's skull or ribs, an altar of crystal, a cart.
+  - **Corridor kinds**: a gate midway under a band of wall, a half collapse, bones along both walls, a runner, vines,
+    sharpened stakes.
   - Lights and decay draw from random streams of their own, so turning Light or Ruin changes nothing else about a
     dungeon. The tests' copies of the game's data gain the new props.
 
