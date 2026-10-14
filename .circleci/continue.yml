@@ -24,9 +24,11 @@
 # When a release is due (main, VERSION's CHANGELOG heading dated, no tag for it yet), the same jobs run
 # in the release workflow, followed by:
 #   hold-release   waits for someone to approve it in CircleCI (the mod-token context is restricted)
-#   github-release builds the plugin's zip (tools/thunderstore.sh, against a Valheim dedicated server
-#                  from SteamCMD and BepInExPack_Valheim), tags the commit and makes the GitHub release
-#                  with the packages tested above (the Sign release workflow on GitHub signs them)
+#   github-release signs the Windows program (Authenticode, tools/sign-windows.sh: the maintainer's
+#                  Certum certificate through SimplySign's cloud), builds the plugin's zip
+#                  (tools/thunderstore.sh, against a Valheim dedicated server from SteamCMD and
+#                  BepInExPack_Valheim), tags the commit and makes the GitHub release with the packages
+#                  tested above (the Sign release workflow on GitHub adds Sigstore signatures to them)
 #   publish-*      the plugin on Thunderstore and Hexium, and the plugin and the editor on Nexus Mods
 #                  (tools/release/publish.cs, tools/release/sites.json), side by side
 # How to release: docs/development.md#releasing.
@@ -376,13 +378,18 @@ jobs:
       - attach_workspace:
           at: /tmp/dist
       - run:
-          name: Tools (zip, SteamCMD's 32-bit libraries, GitHub's CLI, SSH for git fetch)
+          name: Tools (zip, SteamCMD's 32-bit libraries, GitHub's CLI, SSH for git fetch, ssign and osslsigncode)
           command: |
-            apt-get update -qq && apt-get install -y -qq zip unzip lib32gcc-s1 openssh-client > /dev/null
+            apt-get update -qq && apt-get install -y -qq zip unzip lib32gcc-s1 openssh-client osslsigncode > /dev/null
             gh=2.63.2
             curl -fsSLO "https://github.com/cli/cli/releases/download/v$gh/gh_${gh}_linux_amd64.tar.gz"
             curl -fsSL "https://github.com/cli/cli/releases/download/v$gh/gh_${gh}_checksums.txt" | grep "gh_${gh}_linux_amd64.tar.gz" | sha256sum -c -
             tar -xzf "gh_${gh}_linux_amd64.tar.gz" -C /usr/local --strip-components=1
+            # ssign signs with the Certum certificate (its releases publish no checksums: this one's, taken when it was pinned).
+            ssign=0.1.7
+            curl -fsSLO "https://github.com/Le-Syl21/ssign/releases/download/v$ssign/ssign-linux-x86_64.tar.gz"
+            echo "fefab025b283f96e078d50705add3c46b0981d0f3235bc84e25c0249c709fc6b  ssign-linux-x86_64.tar.gz" | sha256sum -c -
+            tar -xzf ssign-linux-x86_64.tar.gz -C /usr/local/bin ssign
       - run:
           name: Still to be released
           command: |
@@ -392,6 +399,11 @@ jobs:
               echo "v$version is tagged already (released from another pipeline?)."; exit 1
             fi
             ls /tmp/dist/ValheimWorldEditor-v$version-linux-x64.tar.gz /tmp/dist/ValheimWorldEditor-v$version-win-x64.zip
+      # After windows-smoke, which ran the unsigned program: the signature changes nothing in how it runs,
+      # and the context's secrets (CERTUM_EMAIL, CERTUM_OTP) reach only the jobs after the approval.
+      - run:
+          name: Sign the Windows program (Authenticode)
+          command: tools/sign-windows.sh /tmp/dist/ValheimWorldEditor-v$(tr -d '[:space:]' < VERSION)-win-x64.zip
       - run:
           name: The game's DLLs (Valheim dedicated server, SteamCMD) and BepInEx
           no_output_timeout: 20m
@@ -484,8 +496,8 @@ workflows:
               only: main
 
   # The test workflow's jobs (keep both lists alike), then the release once approved: the mod-token
-  # context's secrets (GITHUB_TOKEN, THUNDERSTORE_TOKEN, HEXIUM_TOKEN, NEXUS_API_KEY) reach only the
-  # jobs after the approval.
+  # context's secrets (GITHUB_TOKEN, THUNDERSTORE_TOKEN, HEXIUM_TOKEN, NEXUS_API_KEY, CERTUM_EMAIL,
+  # CERTUM_OTP) reach only the jobs after the approval.
   release:
     when: << pipeline.parameters.release >>
     jobs:

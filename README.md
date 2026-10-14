@@ -141,7 +141,8 @@ Windows through Direct3D, like games, or the driver's own OpenGL when chosen in 
    on the same page, or from a mod manager (below).
 3. Double-click **ValheimWorldEditor** (`ValheimWorldEditor.exe` on Windows). It opens in its own
    window, on the start page's **Home**. (Windows may say "Windows protected your PC" the first
-   time: the program is not signed. Click "More info", then "Run anyway".)
+   time, until SmartScreen knows the editor's signature: "More info" shows its publisher, then
+   "Run anyway".)
 
 The editor reads the game's look (textures, models, the terrain and map) and how its locations shape
 the ground straight from your Valheim install: nothing is copied, so it always matches your version of
