@@ -4,6 +4,18 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.37.3 — unreleased
+
+### Changed
+- **A click finds an object by its drawn shape.** A click found the nearest box round an object, so a chest, a stone
+  or any object under a tree's branches could not be clicked: the box round the tree's whole crown was in the way. The
+  boxes now only say which objects to try; the triangles of their models decide, so what you see under the pointer is
+  what you get. Leaves, bushes and other cut-out foliage count only where nothing solid is behind them along the
+  click. An object whose model is not in yet is still its stand-in box.
+- **A standing tree is outlined by its trunk.** The selection outline (and the one under the pointer) of a standing
+  tree is a column round its trunk, the full height of the tree, instead of the box round its whole crown. Logs and
+  stumps keep their box.
+
 ## v1.37.1 — unreleased
 
 ### Changed
