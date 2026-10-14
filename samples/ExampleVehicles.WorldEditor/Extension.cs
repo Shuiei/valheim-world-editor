@@ -15,6 +15,7 @@ public sealed class Extension : IWorldEditorExtension
         registry.AddCopyRewriter(packed, Keys.Packed);
         registry.AddShapes(new Sails(), Keys.Sail);
         registry.AddShapes(new Cables(), Keys.Post);
+        registry.AddGroundCuts(new Pits(), Keys.Pit);
         registry.Log($"ready (editor {registry.EditorVersion}, API {registry.ApiVersion})");
     }
 }

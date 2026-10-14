@@ -13,17 +13,22 @@ public static class Shaders
 		layout(location = 0) in vec3 aPos;
 		layout(location = 1) in vec3 aNor;
 		layout(location = 2) in vec3 aCol;
+		layout(location = 7) in float aCut;
 		uniform mat4 uViewProj;
-		out vec3 vNor; out vec3 vCol; out float vY;
-		void main() { vNor = aNor; vCol = aCol; vY = aPos.y; gl_Position = uViewProj * vec4(aPos, 1.0); }
+		out vec3 vNor; out vec3 vCol; out float vY; out float vCut;
+		void main() { vNor = aNor; vCol = aCol; vY = aPos.y; vCut = aCut; gl_Position = uViewProj * vec4(aPos, 1.0); }
 		""";
 
-    /// <summary>The plain terrain's fragment shader: vertex colour lit by the sun with a fixed ambient.</summary>
+    /// <summary>
+    /// The plain terrain's fragment shader: vertex colour lit by the sun with a fixed ambient; nothing where a mod's
+    /// extension cuts the ground (GroundCuts).
+    /// </summary>
     public const string TerrainFs = """
-		in vec3 vNor; in vec3 vCol; in float vY;
+		in vec3 vNor; in vec3 vCol; in float vY; in float vCut;
 		uniform vec3 uSun;
 		out vec4 frag;
 		void main() {
+			if (vCut > 0.5) discard;
 			float l = 0.35 + 0.8 * max(dot(normalize(vNor), uSun), 0.0);
 			frag = vec4(pow(vCol * l, vec3(1.0 / 2.2)), 1.0);
 		}

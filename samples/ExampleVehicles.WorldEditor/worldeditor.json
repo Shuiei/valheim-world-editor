@@ -11,7 +11,8 @@
     "example_boundary": { "hidden": true },
     "example_hull": { "group": "Hulls" },
     "example_sail": { "group": "Sails and cables" },
-    "example_post": { "group": "Sails and cables" }
+    "example_post": { "group": "Sails and cables" },
+    "example_pit": { "group": "Digging" }
   },
   "links": [
     {

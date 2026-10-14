@@ -83,10 +83,11 @@ public static class Picking
     /// <param name="maxDist">How far along the ray to look, in metres.</param>
     public static float? HitGround(WorldScene s, Vector3 o, Vector3 d, float maxDist = 4000)
     {
+        // No ground where a mod's extension cuts it (the ray goes on, into the hole).
         float Below(float t)
         {
             var p = o + d * t;
-            return Inside(s, p.X, p.Z) ? p.Y - HeightAt(s, p.X, p.Z) : float.PositiveInfinity;
+            return Inside(s, p.X, p.Z) && !CutAt(s, p.X, p.Z) ? p.Y - HeightAt(s, p.X, p.Z) : float.PositiveInfinity;
         }
         float prev = 0;
         float above = Below(0);
@@ -114,6 +115,17 @@ public static class Picking
             above = b;
         }
         return null;
+    }
+
+    /// <summary>Whether the ground is cut away (left undrawn by a mod's extension) under a view-space point (x, z).</summary>
+    public static bool CutAt(WorldScene s, float x, float z)
+    {
+        if (s.Cut.Length != s.W * s.H)
+        {
+            return false;
+        }
+        int gx = (int)MathF.Round(x + (s.W - 1) / 2f), gz = (int)MathF.Round(-z + (s.H - 1) / 2f);
+        return gx >= 0 && gz >= 0 && gx < s.W && gz < s.H && s.Cut[gz * s.W + gx] >= 0.5f;
     }
 
     /// <summary>Whether a view-space point (x, z) is over the area's ground.</summary>

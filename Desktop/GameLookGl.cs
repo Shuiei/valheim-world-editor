@@ -144,6 +144,7 @@ public sealed class GameLookGl
 		layout(location = 4) in vec2 maskUV;
 		layout(location = 5) in float oceanDepth;
 		layout(location = 6) in float limitTint;
+		layout(location = 7) in float cutAway;
 		uniform mat4 uViewProj;
 		uniform vec3 uOffset;
 		uniform vec3 _WorldSpaceCameraPos;
@@ -156,6 +157,7 @@ public sealed class GameLookGl
 		out vec3 vs_TEXCOORD4;
 		out vec3 vs_TEXCOORD6;
 		out float vLimit;
+		out float vCut;
 		void main() {
 		  vec3 wp = vec3(position.x + uOffset.x, position.y, uOffset.z - position.z);
 		  vec3 n = normalize(vec3(normal.x, normal.y, -normal.z));
@@ -171,13 +173,15 @@ public sealed class GameLookGl
 		  vs_depth = oceanDepth;
 		  vs_maskUV = maskUV;
 		  vLimit = limitTint;
+		  vCut = cutAway;
 		  gl_Position = uViewProj * vec4(position, 1.0);
 		}
 		""";
 
     /// <summary>
-    /// The terrain fragment shader's main, after the game's shader: runs its G-buffer pass, lights it like Unity's
-    /// deferred Standard BRDF, then the view's slope colours, contour lines and limit marks, and the fog.
+    /// The terrain fragment shader's main, after the game's shader: nothing where the ground is cut, else its G-buffer
+    /// pass, lit like Unity's deferred Standard BRDF, then the view's slope colours, contour lines and limit marks, and
+    /// the fog.
     /// </summary>
     private const string TerrainMain = """
 		uniform vec3 uSunDir;
@@ -186,8 +190,11 @@ public sealed class GameLookGl
 		uniform float uContour;
 		uniform float uLimit;
 		in float vLimit;
+		in float vCut;
 		out vec4 fragColor;
 		void main() {
+		  // Where a mod's extension cuts the ground (GroundCuts): nothing.
+		  if (vCut > 0.5) discard;
 		  valheimGBuffer();
 		  vec3 albedo = SV_Target0.rgb;
 		  vec3 specColor = SV_Target1.rgb;

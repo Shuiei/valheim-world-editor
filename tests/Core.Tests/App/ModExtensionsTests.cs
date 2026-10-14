@@ -79,6 +79,7 @@ public sealed class ModExtensionsTests : IDisposable
         Assert.Equal(ModExtensions.Status.Running, Assert.Single(ModExtensions.Offered).State);
         Assert.Contains(TerrainEditor.Save.StableHash.Of(ExampleMod.PackedKey), ModExtensions.RewrittenKeys);
         Assert.True(ModExtensions.HasShapes(TerrainEditor.Save.StableHash.Of("example_sail")));
+        Assert.True(ModExtensions.HasCuts(TerrainEditor.Save.StableHash.Of("example_pit")));
 
         // Another file under the same name (a mod update): other code, off until allowed again.
         File.AppendAllText(dll, " ");

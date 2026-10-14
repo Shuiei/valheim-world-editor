@@ -72,4 +72,23 @@ public class PickingTests
         // A ray that leaves the area above the ground hits nothing (it hit 1000 m down past the edge).
         Assert.Null(Picking.HitGround(s, new Vector3(0, 25, 0), Vector3.Normalize(new Vector3(1, -0.3f, 0))));
     }
+
+    // A ray straight down on flat ground hits it; where a mod's extension cuts the ground (WorldScene.Cut), it goes
+    // through: no ground is hit there (nor past the area).
+    [Fact]
+    public void ARayGoesThroughCutGround()
+    {
+        var s = TestScenes.Flat(2).Scene;
+        var down = new Vector3(0, -1, 0);
+        Assert.Equal(70, Picking.HitGround(s, new Vector3(0, 100, 0), down)!.Value, 1);
+        Assert.False(Picking.CutAt(s, 0, 0));
+
+        s.Cut = new float[s.W * s.H];
+        s.Cut[((s.H - 1) / 2 * s.W) + ((s.W - 1) / 2)] = 1;
+
+        Assert.True(Picking.CutAt(s, 0, 0));
+        Assert.False(Picking.CutAt(s, 3, 3));
+        Assert.Null(Picking.HitGround(s, new Vector3(0, 100, 0), down));
+        Assert.Equal(70, Picking.HitGround(s, new Vector3(3, 100, 3), down)!.Value, 1);
+    }
 }

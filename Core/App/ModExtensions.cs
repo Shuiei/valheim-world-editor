@@ -12,7 +12,7 @@ namespace TerrainEditor.App;
 /// then only that file (AppSettings.Extensions keeps its SHA-256: a changed DLL is other code and asks again; the
 /// bytes hashed are the bytes loaded). Each is one DLL, loaded in a context of its own that gives it the editor's SDK
 /// and the framework and nothing from its folder, and registers hooks: byte decoders for the inspector,
-/// rewriters of pasted copies, shapes to draw. Read as a world or the Workshop opens, after the manifests. A hook that
+/// rewriters of pasted copies, shapes to draw, ground cuts. Read as a world or the Workshop opens, after the manifests. A hook that
 /// throws turns its extension off until the editor starts again; the editor never fails because of one.
 /// </summary>
 public static class ModExtensions
@@ -52,6 +52,9 @@ public static class ModExtensions
 
         /// <summary>Its shape providers, by prefab hash.</summary>
         public Dictionary<int, List<IShapeProvider>> Shapes { get; } = [];
+
+        /// <summary>Its ground cutters, by prefab hash.</summary>
+        public Dictionary<int, List<IGroundCutter>> Cutters { get; } = [];
 
         /// <summary>Why it was turned off (a hook threw); null while it runs.</summary>
         public string? Fault { get; set; }
@@ -284,6 +287,33 @@ public static class ModExtensions
         return shapes;
     }
 
+    /// <summary>Whether a running extension cuts the ground at all.</summary>
+    public static bool AnyCuts => _state.Running.Values.Any(l => l.Cutters.Count > 0);
+
+    /// <summary>Whether a running extension cuts the ground for a prefab.</summary>
+    public static bool HasCuts(int prefab) => _state.Running.Values.Any(l => l.Cutters.ContainsKey(prefab));
+
+    /// <summary>Where running extensions leave the ground undrawn for an object of a prefab (none when none does).</summary>
+    /// <param name="prefab">The prefab's hash.</param>
+    /// <param name="obj">The object, as drawn.</param>
+    /// <param name="world">The world around it.</param>
+    public static List<GroundCut> CutsOf(int prefab, IObjectView obj, IWorldView world)
+    {
+        var cuts = new List<GroundCut>();
+        foreach (var l in _state.Running.Values)
+        {
+            foreach (var c in l.Cutters.GetValueOrDefault(prefab) ?? [])
+            {
+                cuts.AddRange(Guard(l, () => c.CutsOf(obj, world)?.Where(ValidCut).ToList() ?? [], []));
+            }
+        }
+        return cuts;
+    }
+
+    /// <summary>Whether a cut can be made: an outline of at least three finite points.</summary>
+    private static bool ValidCut(GroundCut c) =>
+        c.Outline is { Length: >= 3 } && c.Outline.All(p => float.IsFinite(p.X) && float.IsFinite(p.Y));
+
     /// <summary>A world with nothing to find in it.</summary>
     public static IWorldView NoWorld { get; } = new EmptyWorld();
 
@@ -376,6 +406,16 @@ public static class ModExtensions
             {
                 int h = StableHash.Of(p);
                 (loaded.Shapes.TryGetValue(h, out var list) ? list : loaded.Shapes[h] = []).Add(provider);
+            }
+        }
+
+        /// <inheritdoc/>
+        public void AddGroundCuts(IGroundCutter cutter, params string[] prefabs)
+        {
+            foreach (string p in prefabs)
+            {
+                int h = StableHash.Of(p);
+                (loaded.Cutters.TryGetValue(h, out var list) ? list : loaded.Cutters[h] = []).Add(cutter);
             }
         }
 

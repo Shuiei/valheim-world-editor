@@ -4,6 +4,14 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.34.0 — unreleased
+
+### Added
+- **Ground cuts for mod extensions**: an extension can leave the ground undrawn inside outlines it gives for its
+  objects (the mouth of a tunnel, a pit the mod digs while the game runs), so what the mod builds below shows; a
+  click goes through the hole to what is in it. The SDK's sample mod's pits show how. See
+  [Extensions](docs/modding.md#extensions).
+
 ## v1.33.0 — unreleased
 
 ### Added

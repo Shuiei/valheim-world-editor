@@ -13,7 +13,8 @@ namespace WorldEditor.Tests;
 /// The SDK's sample extension (samples/ExampleVehicles.WorldEditor), through the editor's hooks: packed ids read as
 /// the mod keeps them and shown in words; with it running, a pasted vehicle's packed ids follow the copy's objects
 /// (instead of being left out); sails drawn from their three or four corners in their colour; a cable drawn from a
-/// post to the post it names, found through the world. Its worldeditor.json links as the tests' example mod does.
+/// post to the post it names, found through the world; the ground left undrawn round a pit, as wide as it says. Its
+/// worldeditor.json links as the tests' example mod does.
 /// Runs alone (the extensions are shared).
 /// </summary>
 [Collection("DataDir")]
@@ -142,5 +143,17 @@ public sealed class ExampleVehiclesExtensionTests : IDisposable
         Assert.Equal("ExampleVehicles.WorldEditor.dll", (string?)sample["extension"]);
         var expected = System.Text.Json.Nodes.JsonNode.Parse(ExampleMod.Manifest)!["links"];
         Assert.True(System.Text.Json.Nodes.JsonNode.DeepEquals(expected, sample["links"]));
+    }
+
+    [Fact]
+    public void ThePitsOutlineIsAsWideAsItSays()
+    {
+        int prefab = StableHash.Of(Keys.Pit);
+        var cut = Assert.Single(ModExtensions.CutsOf(prefab, View(Keys.Pit, default, default, z => z.FloatList.Add((StableHash.Of(Keys.Radius), 3))), ModExtensions.NoWorld));
+        Assert.False(cut.WorldSpace);
+        Assert.Equal(16, cut.Outline.Length);
+        Assert.All(cut.Outline, p => Assert.Equal(3, p.Length(), 3));
+        // No radius kept: the default one.
+        Assert.All(Assert.Single(ModExtensions.CutsOf(prefab, View(Keys.Pit, default, default), ModExtensions.NoWorld)).Outline, p => Assert.Equal(1.5f, p.Length(), 3));
     }
 }

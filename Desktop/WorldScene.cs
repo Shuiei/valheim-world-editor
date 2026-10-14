@@ -71,6 +71,12 @@ public sealed class WorldScene
     public required float[] OceanDepth { get; init; }
     /// <summary>1 at grid points at the ±8 m edit limit, 0 elsewhere.</summary>
     public required float[] Limit { get; init; }
+
+    /// <summary>
+    /// Where mods' extensions cut the ground, per grid point (1: not drawn, see GroundCuts), made with their shapes
+    /// (GlView.RebuildShapes); empty until then.
+    /// </summary>
+    public float[] Cut { get; set; } = [];
     /// <summary>A line on how the block was read (timings, zones, objects), for the status bar.</summary>
     public string LoadInfo { get; init; } = "";
     /// <summary>Editing the ground (null in tests that only draw).</summary>
