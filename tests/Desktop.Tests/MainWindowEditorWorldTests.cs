@@ -156,6 +156,37 @@ public class MainWindowEditorWorldTests
         Assert.StartsWith("The world was read again, but the area could not be opened again. Could not open that area: ", Assert.Single(r.Told));
     }
 
+    // While the area opens again, another is asked for (an arrow move) and fails too: the last one asked for sends the
+    // editor to the map, said once.
+    [AvaloniaFact]
+    public async Task AnotherAreaFailingDuringAReopenGoesToTheMapToo()
+    {
+        using var r = new WorldWindowRun();
+        await r.Open();
+        var bad = new WorldScene
+        {
+            World = r.W.World!.World,
+            Name = "test",
+            ZonesX = -1,
+            ZonesZ = -1,
+            Heights = [],
+            Biomes = [],
+            Things = [],
+            BiomeColor = [],
+            Mask = [],
+            OceanDepth = [],
+            Limit = [],
+        };
+        var reopen = r.W.ReopenArea(bad);
+        var other = r.W.EditBlock(0, 0, -1, -1);
+        Assert.False(await reopen);
+        Assert.False(await other);
+        Assert.True(r.W.MapShown);
+        Assert.Null(r.W.Session);
+        Assert.False(r.W.IsBusy);
+        Assert.StartsWith("Could not open that area: ", Assert.Single(r.Told));
+    }
+
     // The old area still the world's (a live Reload keeps it): it is no longer, so its history is not kept over the
     // world read again.
     [AvaloniaFact]

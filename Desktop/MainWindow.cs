@@ -474,8 +474,12 @@ public sealed partial class MainWindow : Window
     /// <param name="zonesX">Zones west to east.</param>
     /// <param name="zonesZ">Zones south to north.</param>
     /// <param name="spot">The map's chosen zone the area was opened around, if it was.</param>
-    /// <returns>Whether the block was opened (no: the failure is said in the status bar).</returns>
-    internal async Task<bool> EditBlock(int x0, int z0, int zonesX, int zonesZ, (int X, int Z)? spot = null)
+    /// <param name="context">Said before the failure, when it cannot be opened.</param>
+    /// <returns>
+    /// Whether the block was opened (no: the failure is said in the status bar; when this was the last area asked for
+    /// and the 3D editor is left with no area open, the map is shown and the failure in a dialog).
+    /// </returns>
+    internal async Task<bool> EditBlock(int x0, int z0, int zonesX, int zonesZ, (int X, int Z)? spot = null, string? context = null)
     {
         if (World is not { } world)
         {
@@ -485,6 +489,7 @@ public sealed partial class MainWindow : Window
         View.SelectTool.Commit();
         var left = KeepHistory();
         Busy($"Loading {zonesX} × {zonesZ} zones…");
+        string failed;
         try
         {
             var scene = await Task.Run(() => WorldScene.LoadBlock(world, x0, z0, zonesX, zonesZ));
@@ -519,13 +524,21 @@ public sealed partial class MainWindow : Window
         catch (Exception ex)
         {
             Unleave(left, navigation);
-            MessageText.Text = "Could not open that area: " + ex.Message;
-            return false;
+            failed = context + "Could not open that area: " + ex.Message;
+            MessageText.Text = failed;
         }
         finally
         {
             Busy(null);
         }
+        // The last area asked for failed with none open behind the 3D editor (closed for this one, or for another that
+        // failed too): the map, not tools that silently do nothing, and why in a dialog (the map has no status bar).
+        if (navigation == _navigation && Session == null && _pages.Content == _editorPage)
+        {
+            ShowMap();
+            await Tell(failed);
+        }
+        return false;
     }
 
     /// <summary>

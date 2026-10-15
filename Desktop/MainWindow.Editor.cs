@@ -232,11 +232,16 @@ public sealed partial class MainWindow
     /// <summary>
     /// Opens the block of zones from (x0, z0); when it did open, the camera stays where it was in the world.
     /// </summary>
+    /// <param name="x0">The south-west zone, east.</param>
+    /// <param name="z0">The south-west zone, north.</param>
+    /// <param name="zonesX">Zones west to east.</param>
+    /// <param name="zonesZ">Zones south to north.</param>
+    /// <param name="context">Said before the failure, when it cannot be opened (see <see cref="EditBlock"/>).</param>
     /// <returns>Whether the block was opened.</returns>
-    private async Task<bool> OpenBlockKeepingView(int x0, int z0, int zonesX, int zonesZ)
+    private async Task<bool> OpenBlockKeepingView(int x0, int z0, int zonesX, int zonesZ, string? context = null)
     {
         var cam = View.WorldCamera;
-        bool opened = await EditBlock(x0, z0, zonesX, zonesZ);
+        bool opened = await EditBlock(x0, z0, zonesX, zonesZ, context: context);
         if (View.Scene is { } ns && (ns.X0, ns.Z0, ns.ZonesX, ns.ZonesZ) == (x0, z0, zonesX, zonesZ) && cam != null)
         {
             View.WorldCamera = cam;
@@ -467,8 +472,8 @@ public sealed partial class MainWindow
     }
 
     /// <summary>
-    /// The same area again (the world was read again), the view where it was. When it cannot be opened, the map (the
-    /// old area shows the world as it was before), and the failure in a dialog.
+    /// The same area again (the world was read again), the view where it was. When it cannot be opened (nor another
+    /// area asked for meanwhile), the map (the old area shows the world as it was before), and the failure in a dialog.
     /// </summary>
     /// <returns>Whether the area was opened again.</returns>
     internal async Task<bool> ReopenArea(WorldScene old)
@@ -479,19 +484,7 @@ public sealed partial class MainWindow
         {
             w.Area = null;
         }
-        long navigation = _navigation;
-        if (await OpenBlockKeepingView(old.X0, old.Z0, old.ZonesX, old.ZonesZ))
-        {
-            return true;
-        }
-        // Not when the map or another area was asked for while it loaded: that one stands.
-        if (Session == null && _navigation == navigation + 1)
-        {
-            string why = MessageText.Text ?? "";
-            ShowMap();
-            await Tell($"The world was read again, but the area could not be opened again. {why}");
-        }
-        return false;
+        return await OpenBlockKeepingView(old.X0, old.Z0, old.ZonesX, old.ZonesZ, "The world was read again, but the area could not be opened again. ");
     }
 
     // ---- Live: Apply (the button, and every change when Auto is on). Calls while one runs are merged.
