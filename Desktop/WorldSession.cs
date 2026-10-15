@@ -587,7 +587,8 @@ public sealed class WorldSession : IDisposable
                 var partly = new Outcome(true, $"Applied to the running game: {string.Join("; ", done)}; but then it failed ({ex.Message}): Apply live again for the rest.", false)
                 {
                     Lifted = lift != null,
-                    Unsent = objectsDone ? LiveParts.Resets : LiveParts.Objects | LiveParts.Resets,
+                    // Resets only while some are still to send: a reset unmarked since leaves none, though steps keep it.
+                    Unsent = (objectsDone ? LiveParts.None : LiveParts.Objects) | (Edits.ResetCount > 0 ? LiveParts.Resets : LiveParts.None),
                 };
                 MarkHistoryApplied(partly.Sent);
                 KeepHistory();

@@ -78,11 +78,30 @@ public sealed class WorldSessionTests : IDisposable
         game.Fail["/objects"] = 500;
         var o = await s.ApplyLive();
         Assert.True(o.Done, o.Message);
-        Assert.Equal(WorldSession.LiveParts.Objects | WorldSession.LiveParts.Resets, o.Unsent);
+        Assert.Equal(WorldSession.LiveParts.Objects, o.Unsent);
         Assert.Contains("zone(s) of ground", o.Message);
         Assert.Contains("but then it failed", o.Message);
         Assert.Equal(0, world.Edits.ChangedZoneCount);
         Assert.Equal([true, false], s.UndoList.Select(c => c.Applied));
+    }
+
+    // A zone reset marked and then unmarked leaves none to send: after a partial Apply live its steps are applied, and
+    // so are the steps after them that went in.
+    [Fact]
+    public async Task AResetUnmarkedSinceIsNotCountedAsUnsent()
+    {
+        using var game = new FakeGame();
+        using var world = await WorldSession.OpenLive(new LiveBridge(game.Url, game.Token), FakeGame.Label());
+        var s = WorldScene.Load(world, 0, 0, 1).Session!;
+        s.MarkResets([(0, 0)], false, false, "Reset");
+        s.UnmarkResets([(0, 0)], "Keep");
+        s.Shape(10, 10, Formula.Compile("2", []), 3, 0, "raise");
+        s.Delete([s.Scene.Things.FindIndex(t => t.Id >= 0 && !t.Gone)]);
+        game.Fail["/objects"] = 500;
+        var o = await s.ApplyLive();
+        Assert.True(o.Done, o.Message);
+        Assert.Equal(WorldSession.LiveParts.Objects, o.Unsent);
+        Assert.Equal([true, true, true, false], s.UndoList.Select(c => c.Applied));
     }
 
     [Fact]
