@@ -172,7 +172,7 @@ public class StartPageTests
     {
         using var game = new FakeGame();
         using var r = new Run();
-        ServerConfig.Remember(new ServerConfig.Server { Name = "Valhalla", Host = "203.0.113.10", User = "valheim", Password = "pw", Token = game.Token });
+        ServerConfig.Remember(new ServerConfig.Server { Name = "Valhalla", Host = "203.0.113.10", User = "valheim", Password = " pw ", Token = game.Token });
         ServerConfig.Remember(new ServerConfig.Server { Name = "Bare", Host = "203.0.113.11", User = "admin" });
         r.Tunnel(game.Port, game.Token);
         // Another server's secrets typed in the form before.
@@ -183,7 +183,8 @@ public class StartPageTests
         Click(edits[1]);
         await r.P.ConnectNew();
         var t = Assert.Single(r.Tunnels);
-        Assert.Equal(("203.0.113.10", "pw", game.Token, null, null, true), (t.Host, t.Password, t.Token, t.Passphrase, t.BridgePort, t.SavePassword));
+        // The saved password is sent as it is saved, spaces at its ends included.
+        Assert.Equal(("203.0.113.10", " pw ", game.Token, null, null, true), (t.Host, t.Password, t.Token, t.Passphrase, t.BridgePort, t.SavePassword));
         // A server with nothing saved leaves them empty to type, the password not to be saved.
         (r.P.SPass.Text, r.P.SToken.Text) = ("other", "other token");
         Click(edits[0]);

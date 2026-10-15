@@ -12,7 +12,8 @@ the plugin is unchanged in versions without that part.
   they were: a password and token typed for one server were sent to the edited one on Connect, and a saved password
   was dropped from the file because **Save password** stayed unticked. **edit** now fills the whole form from the
   saved server: its own saved password and token (empty when not saved), no passphrase or port, and **Save
-  password** ticked when its password was saved.
+  password** ticked when its password was saved. The password is sent as typed or saved, spaces at its ends
+  included.
 
 ## v1.45.12 — unreleased
 
