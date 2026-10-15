@@ -120,6 +120,22 @@ public sealed class TunnelTests : IClassFixture<LocalSshd>, IDisposable
     }
 
     [Fact]
+    public async Task ACloseWhileConnectingLeavesNoTunnelOpen()
+    {
+        _ssh.Need();
+        // Start waits on the SSH handshake; the editor quits meanwhile.
+        var start = Tunnel.Start(Req(bridge: BridgePort));
+        Tunnel.Close();
+        var r = await start;
+        Assert.Equal("The connection was closed while it was being made.", r.Error);
+        Assert.Equal(0, r.LocalPort);
+        Assert.False(Tunnel.Open);
+        // A later connection is kept.
+        Assert.Null((await Tunnel.Start(Req(bridge: BridgePort))).Error);
+        Assert.True(Tunnel.Open);
+    }
+
+    [Fact]
     public async Task AKeyTheServerDoesNotKnowOrAPasswordItDoesNotTakeIsRefused()
     {
         _ssh.Need();

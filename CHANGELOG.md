@@ -4,6 +4,16 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.25 — unreleased
+
+### Fixed
+- **Clicking Connect twice could open two connections to the server.** Connecting to a server (the form, a saved
+  server, its Home tile, or a bridge address) takes a few seconds, and nothing stopped a second click meanwhile: both
+  opened an SSH tunnel and a world, the first tunnel stayed open unseen until the editor closed, and a failed attempt
+  could close the other one's tunnel. A click while connecting now does nothing, and tunnels are made one at a time.
+  Quitting or going back to Home while a connection is being made now shuts that tunnel as soon as it connects,
+  instead of leaving it open until the editor exits.
+
 ## v1.45.24 — unreleased
 
 ### Fixed
