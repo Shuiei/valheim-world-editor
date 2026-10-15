@@ -492,7 +492,7 @@ public sealed partial class ClaudeTools
         var pieces = Terrain.PieceCatalog.Names
             .Select(n => (n, p: Terrain.PieceCatalog.Get(Save.StableHash.Of(n))))
             .Where(x => x.p is { Tool: not null } && (Match(x.n) || Match(Terrain.PieceCost.PieceName(x.n))))
-            .Select(x => (object)new { prefab = x.n, name = Terrain.PieceCost.PieceName(x.n), tool = x.p!.Tool, size = SizeOf(x.p!), cost = Terrain.PieceCost.Of([x.n]).Describe(4) });
+            .Select(x => (object)new { prefab = x.n, name = Terrain.PieceCost.PieceName(x.n), tool = x.p!.Tool, size = SizeOf(x.p!), cost = Terrain.PieceCost.Of([x.n]).Describe(4, english: true) });
         var others = piecesOnly ? [] : Terrain.PrefabCatalog.Placeable
             .Where(i => Terrain.PieceCatalog.Get(Save.StableHash.Of(i.Name)) == null && (Match(i.Name) || Terrain.PrefabCatalog.SpawnOf(i.Name) is { } sp && Match(string.Join(" ", sp.Creatures))))
             .Select(i => Terrain.PrefabCatalog.SpawnOf(i.Name) is { } sp
@@ -524,7 +524,7 @@ public sealed partial class ClaudeTools
             size = SizeOf(p),
             bounds = new { minX = p.MinX, maxX = p.MaxX, minY = p.MinY, maxY = p.MaxY, minZ = p.MinZ, maxZ = p.MaxZ },
             snaps = p.Snaps,
-            cost = Terrain.PieceCost.Of([n]).Describe(8),
+            cost = Terrain.PieceCost.Of([n]).Describe(8, english: true),
             station = cost?.Station,
         };
     })));
@@ -1240,7 +1240,7 @@ public sealed partial class ClaudeTools
         string[] words = (query ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries);
         return ToJson(TerrainEditor.App.Homestead.List(_w.Blueprints.Status.Folder)
             .Where(e => words.All(w => e.Name.Contains(w, StringComparison.OrdinalIgnoreCase) || e.Description.Contains(w, StringComparison.OrdinalIgnoreCase) || e.Tags.Any(t => t.Contains(w, StringComparison.OrdinalIgnoreCase))))
-            .Select(e => new { name = e.Name, pieces = e.Pieces, cost = Terrain.PieceCost.Of(e.Kinds).Describe(4), description = e.Description, tags = e.Tags }));
+            .Select(e => new { name = e.Name, pieces = e.Pieces, cost = Terrain.PieceCost.Of(e.Kinds).Describe(4, english: true), description = e.Description, tags = e.Tags }));
     });
 
     /// <summary>

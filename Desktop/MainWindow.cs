@@ -800,8 +800,8 @@ public sealed partial class MainWindow : Window
         _liveBadge.IsVisible = s.IsLive;
         UndoButton.IsEnabled = s.CanUndo;
         RedoButton.IsEnabled = s.CanRedo;
-        ToolTip.SetTip(UndoButton, s.UndoLabel is string u ? $"Undo {u} (Ctrl+Z)" : "Nothing to undo");
-        ToolTip.SetTip(RedoButton, s.RedoLabel is string rl ? $"Redo {rl} (Ctrl+Shift+Z)" : "Nothing to redo");
+        ToolTip.SetTip(UndoButton, s.UndoLabel is string u ? Lang.T("top.undoNamed", u) : Lang.T("top.undoNone"));
+        ToolTip.SetTip(RedoButton, s.RedoLabel is string rl ? Lang.T("top.redoNamed", rl) : Lang.T("top.redoNone"));
         UpdateEditorWorld(s, dirty);
     }
 
@@ -1607,8 +1607,8 @@ public sealed partial class MainWindow : Window
             }
         };
         MapButton.Tip("top.map");
-        ToolTip.SetTip(UndoButton, "Undo the last change (Ctrl+Z).");
-        ToolTip.SetTip(RedoButton, "Redo the change you just undid (Ctrl+Y or Ctrl+Shift+Z).");
+        ToolTip.SetTip(UndoButton, Lang.T("top.undo"));
+        ToolTip.SetTip(RedoButton, Lang.T("top.redo"));
         HistoryButton.Click += (_, _) => ShowRight(History.Card.IsVisible ? null : History.Card);
         History.Closed += () => HistoryButton.Classes.Set("on", false);
         HistoryButton.Tip("top.history");
@@ -1619,7 +1619,7 @@ public sealed partial class MainWindow : Window
         RedoButton.Click += async (_, _) => await Redo();
         SaveButton.Click += async (_, _) => await Save();
         SaveButton.Tip("top.save");
-        ToolTip.SetTip(_liveBadge, "Connected to the running game through the WorldEditorBridge plugin");
+        ToolTip.SetTip(_liveBadge, Lang.T("top.liveBadge"));
         _pendingPill.Child = PendingText;
         var names = new StackPanel { VerticalAlignment = VerticalAlignment.Center, Children = { _title, _subtitle } };
         var bar = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto") };
@@ -2488,7 +2488,7 @@ public sealed partial class MainWindow : Window
         Background = Ui.Bg;
         var record = new CheckBox { Content = "Record frame rates", FontSize = 12.5 };
         record.IsCheckedChanged += (_, _) => { _perf.On = record.IsChecked == true; _perf.Restart(); if (!_perf.On) { _perf.Flush(); } };
-        ToolTip.SetTip(record, $"{Tips.Of("view.perf")} The file: {Ui.Tilde(PerfLog.FilePath)}");
+        ToolTip.SetTip(record, Lang.T("view.perfFile", Tips.Of("view.perf"), Ui.Tilde(PerfLog.FilePath)));
         HelpCard = Help(record);
         ConfirmSave = text => Dialogs.Ask(this, "Save into the world", text, "Save");
         Ask = (title, text, yes, no) => Dialogs.Ask(this, title, text, yes, no);

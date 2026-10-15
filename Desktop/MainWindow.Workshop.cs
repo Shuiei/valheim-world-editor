@@ -498,8 +498,8 @@ public partial class MainWindow
         WorkshopCost = cost.Describe(5);
         _subtitle.Text = Workshop.Pieces(s.Scene) == 0 ? "A blank plot: only the building is kept in the blueprint" : "Cost: " + WorkshopCost;
         ToolTip.SetTip(_subtitle, cost.Materials.Count == 0 ? null
-            : string.Join("\n", cost.Materials.Select(m => $"{m.Name}: {m.Amount}")) + (cost.Stations.Count > 0 ? $"\nNear: {string.Join(", ", cost.Stations)}" : "")
-                + (cost.Unknown.Count > 0 ? $"\nNo recipe known for: {string.Join(", ", cost.Unknown.Keys.Take(5))}" : ""));
+            : string.Join("\n", cost.Materials.Select(m => $"{m.Name}: {m.Amount}")) + (cost.Stations.Count > 0 ? "\n" + Lang.T("workshop.near", string.Join(", ", cost.Stations)) : "")
+                + (cost.Unknown.Count > 0 ? "\n" + Lang.T("workshop.noRecipe", string.Join(", ", cost.Unknown.Keys.Take(5))) : ""));
     }
 
     /// <summary>

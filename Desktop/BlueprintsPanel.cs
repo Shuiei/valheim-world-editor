@@ -299,11 +299,11 @@ public sealed class BlueprintsPanel
             var cost = Terrain.PieceCost.Of(e.Kinds);
             List.Children.Add(Row(PictureFile(e.Picture), e.Name, meta, act =>
             {
-                act("Paste", "Put this blueprint on the clipboard and start pasting it", () => Paste(id));
-                act("Edit", "Open it in the Workshop, a blank plot, to change it", () => EditAsked?.Invoke(e.Path));
-                act("Details", "Change its name, description and tags", async () => await EditDetails(e));
-                act(".vbuild", "Write it as a .vbuild file (BuildShare and older tools)", () => Export(id, "vbuild"));
-                act("Delete", "Delete this blueprint (its file and picture): Homestead loses it too", async () => await Delete(id, e.Name));
+                act("Paste", Lang.T("blueprints.tip.paste"), () => Paste(id));
+                act("Edit", Lang.T("blueprints.tip.edit"), () => EditAsked?.Invoke(e.Path));
+                act("Details", Lang.T("blueprints.tip.details"), async () => await EditDetails(e));
+                act(".vbuild", Lang.T("blueprints.tip.vbuild"), () => Export(id, "vbuild"));
+                act("Delete", Lang.T("blueprints.tip.delete"), async () => await Delete(id, e.Name));
             }, "Cost: " + cost.Describe(), e.Description, e.Tags));
         }
         if (older.Count > 0)
@@ -315,10 +315,10 @@ public sealed class BlueprintsPanel
             string meta = $"{b.W} × {b.H} m · {b.Objects} object(s){(b.Ground ? " · ground" : "")}{(b.World != null ? $" · from {b.World}" : "")}{(b.Source != null ? $" · {b.Source}" : "")}";
             List.Children.Add(Row(Picture(b.Thumb), b.Name, meta, act =>
             {
-                act("Paste", "Put this blueprint on the clipboard and start pasting it", () => Paste(b.Id));
-                act("To Homestead", "Save it as a Homestead blueprint (objects only), to build it in game", () => ToHomestead(b.Id));
-                act(".vbuild", "Write it as a .vbuild file", () => Export(b.Id, "vbuild"));
-                act("Delete", "Delete this blueprint file", async () => await Delete(b.Id, b.Name));
+                act("Paste", Lang.T("blueprints.tip.paste"), () => Paste(b.Id));
+                act("To Homestead", Lang.T("blueprints.tip.toHomestead"), () => ToHomestead(b.Id));
+                act(".vbuild", Lang.T("blueprints.tip.vbuildOld"), () => Export(b.Id, "vbuild"));
+                act("Delete", Lang.T("blueprints.tip.deleteOld"), async () => await Delete(b.Id, b.Name));
             }));
         }
     }
