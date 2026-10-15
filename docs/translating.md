@@ -19,12 +19,14 @@ are added: the new ones show in English until translated.
 2. Translate the values, never the keys. `lang.name` is the language's own name ("Français"), as
    Settings lists it.
 3. Keep each `{0}`, `{1}`… : the editor puts a value there (a folder, a number). Their order in the
-   sentence can change. A text whose places differ from the English is not used (English shows).
+   sentence can change. A text whose places differ from the English, or with a stray `{` or `}`,
+   is not used.
 4. Choose the language in **Settings**, restart the editor and look. Keys you leave out, or delete
    from your copy, show in English.
 
 The same folder also takes corrections: a file there with the code of a catalogue the editor
-carries is laid over it, text by text.
+carries is laid over it, text by text. There, a key you leave out (or a text that is not used)
+keeps the carried translation; English shows only where neither has the text.
 
 To have a catalogue carried by the editor, open a pull request adding it to `Core/Lang/` (keys
 only from `en.json`; `LangTests` checks them).

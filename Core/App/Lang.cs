@@ -100,9 +100,9 @@ public static partial class Lang
     }
 
     /// <summary>
-    /// The catalogue of <paramref name="code"/>: the carried one with the user's file over it, its texts checked against
-    /// the English (those of no English key, or that do not take the English one's values, are left out); null when
-    /// there is none.
+    /// The catalogue of <paramref name="code"/>: the carried one with the user's file over it, each one's texts checked
+    /// against the English first (those of no English key, or that do not take the English one's values, are left out,
+    /// so a broken correction leaves the carried text); null when there is none.
     /// </summary>
     internal static Dictionary<string, string>? Load(string code)
     {
@@ -112,15 +112,9 @@ public static partial class Lang
         {
             return null;
         }
-        var texts = Merge(carried ?? [], user);
-        foreach (string key in texts.Keys.ToList())
-        {
-            if (!English.TryGetValue(key, out string? en) || !Fits(en, texts[key]))
-            {
-                texts.Remove(key);
-            }
-        }
-        return texts;
+        static Dictionary<string, string> Checked(Dictionary<string, string>? texts) =>
+            (texts ?? []).Where(kv => English.TryGetValue(kv.Key, out string? en) && Fits(en, kv.Value)).ToDictionary();
+        return Merge(Checked(carried), Checked(user));
     }
 
     /// <summary>
