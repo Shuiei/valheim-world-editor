@@ -128,6 +128,18 @@ public sealed partial class LangTests : IDisposable
         Assert.False(Lang.Fits("{0} m", "{0} m {"));
     }
 
+    // A text without places is never formatted, so a translation of it may hold braces (Fits lets them through)
+    // even when the code asks for it with an empty list of values, as PieceCost.Describe does.
+    [Fact]
+    public void ATextWithoutPlacesIsNotFormattedEvenWhenAskedWithNoValues()
+    {
+        Write("fr", new() { [Lang.NameKey] = "Français", ["cost.free"] = "Gratuit {sans}" });
+        Lang.Use("fr");
+        Assert.Equal("Gratuit {sans}", Lang.T("cost.free", []));
+        Assert.Equal("Free", Lang.En("cost.free", []));
+        Assert.Equal("World folder not found: /x", Lang.T("settings.worldNotFound", "/x"));
+    }
+
     [Fact]
     public void TheComputersLanguageIsPickedFromItsLocales()
     {
