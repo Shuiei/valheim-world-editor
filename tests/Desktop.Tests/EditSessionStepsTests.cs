@@ -139,4 +139,16 @@ public class EditSessionStepsTests
         Assert.True(s.Undo());
         Assert.Equal(wiped, Assert.Single(s.Resets));
     }
+
+    // Removing an older reset step while a later step marked the zone again keeps the later marking.
+    [Fact]
+    public void RemovingAnOlderMarkingKeepsALaterOne()
+    {
+        var s = TestScenes.Flat(2);
+        var later = new Editing.ZoneReset(0, 0, KeepBuildings: true, Ground: false);
+        s.MarkResets([(0, 0)], keepBuildings: false, ground: false, "Wipe");
+        s.MarkResets([(0, 0)], keepBuildings: true, ground: false, "Keep");
+        Assert.StartsWith("Removed", s.RemoveChange(s.UndoList[^2]));
+        Assert.Equal(later, Assert.Single(s.Resets));
+    }
 }

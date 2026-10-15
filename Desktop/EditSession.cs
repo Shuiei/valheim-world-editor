@@ -189,9 +189,15 @@ public sealed class EditSession
             }
             int[] pts = c.Points;
             var things = c.Things.Select(t => (t.Index, Scene.Things[t.Index].Gone, t.Before)).Where(t => t.Gone != t.Before).ToArray();
+            // A zone goes back only while it is still marked as the step left it (as paint): a later step's marking stays.
             var marked = Edits.Resets.ToDictionary(r => (r.X, r.Z));
             var resets = c.Resets.GroupBy(r => (r.Reset.X, r.Reset.Z))
-                .SelectMany(z => ResetEntries(marked.GetValueOrDefault(z.Key), z.Where(r => r.Before).Select(r => r.Reset).FirstOrDefault()))
+                .SelectMany(z =>
+                {
+                    ZoneReset? now = marked.GetValueOrDefault(z.Key);
+                    ZoneReset? left = z.Where(r => r.After).Select(r => r.Reset).FirstOrDefault();
+                    return ResetEntries(now, now == left ? z.Where(r => r.Before).Select(r => r.Reset).FirstOrDefault() : now);
+                })
                 .ToArray();
             removal = new Change($"Removed: {c.Label}", pts, Pick(start, pts), Pick(g.Snapshot(), pts), c.Zones) { Things = things, Resets = resets, RevertOf = c };
             if (pts.Length > 0)
