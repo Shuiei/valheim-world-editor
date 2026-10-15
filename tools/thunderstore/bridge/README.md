@@ -88,9 +88,10 @@ mod is never exposed to the internet, and you have nothing else to set up.
 ## Modded games
 
 Open a modded game live and the editor asks it for the pieces and objects its mods add. They get
-their names, are drawn with the mods' own models and textures, and can be placed, or built from the
-Workshop's **Mods** tab with their cost. What the editor learned is kept, so the same world opened
-offline afterwards shows them too. Mod authors can teach the editor more about their mod, up to
+their names, are drawn with the mods' own models and textures (read from the mods' files on the
+editor's computer; a mesh a mod builds in code while the game runs shows untextured), and can be
+placed, or built from the Workshop's **Mods** tab with their cost. What the editor learned is kept,
+so the same world opened offline afterwards shows them too. Mod authors can teach the editor more about their mod, up to
 hooks for their own plugin in live mode: see
 [For mod authors](https://github.com/Shuiei/valheim-world-editor/blob/main/docs/modding.md).
 
