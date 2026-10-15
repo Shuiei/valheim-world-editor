@@ -4,6 +4,15 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.38 — unreleased
+
+### Fixed
+- **A cache that could not be written stopped every world from opening.** At its start the editor reads what it needs
+  from the game and keeps it in its data folder for the next start. When keeping it failed (a full disk, a read-only
+  data folder, two editors writing at once), the data it had just read was thrown away too: no world opened, the log
+  said the game could not be read, and each try read the whole game again. On the New world page the bosses and
+  traders were lost the same way. A cache that cannot be written is now only logged, and the data read is used.
+
 ## v1.45.37 — unreleased
 
 ### Fixed

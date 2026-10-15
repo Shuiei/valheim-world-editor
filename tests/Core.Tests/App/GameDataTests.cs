@@ -127,10 +127,24 @@ public sealed class GameDataTests : IDisposable
         string stamp = GameData.Stamp(valheim, bundles.Folder);
         Assert.Equal("zdo-keys " + stamp + "\n" + keys, File.ReadAllText(file));
         Assert.Equal(keys, GameData.Load(bundles, cache: true)!["zdo-keys"]);
-        // A cache that cannot be written (a folder in its place): nothing is had.
+        // A cache that cannot be written (a folder in its place): what was read is had all the same.
         File.Delete(file);
         Directory.CreateDirectory(file);
-        Assert.Null(GameData.Load(bundles, cache: true));
+        Assert.Equal(keys, GameData.Load(bundles, cache: true)?["zdo-keys"]);
+    }
+
+    [Fact]
+    public void ACacheThatCannotBeWrittenIsOnlyLogged()
+    {
+        string file = GameData.CacheFile("prefabs");
+        Assert.True(GameData.KeepCache(file, "kept"));
+        Assert.Equal("kept", File.ReadAllText(file));
+        // A folder in its place: not kept, nothing thrown, and no half-written file left.
+        File.Delete(file);
+        Directory.CreateDirectory(file);
+        Assert.False(GameData.KeepCache(file, "lost"));
+        Assert.True(Directory.Exists(file));
+        Assert.False(File.Exists(file + ".part"));
     }
 
     [Fact]

@@ -184,11 +184,7 @@ public static class GameLocations
             }
             if (rules != null && cacheFile != null)
             {
-                // Written whole or not at all (a crash half way leaves the old file, or none).
-                Directory.CreateDirectory(Path.GetDirectoryName(cacheFile)!);
-                string part = cacheFile + ".part";
-                File.WriteAllText(part, stamp + "\n" + rules.ToJson());
-                File.Move(part, cacheFile, overwrite: true);
+                GameData.KeepCache(cacheFile, stamp + "\n" + rules.ToJson());
             }
             return rules;
         }
