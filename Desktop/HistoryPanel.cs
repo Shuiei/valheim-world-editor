@@ -99,7 +99,10 @@ public sealed class HistoryPanel
         {
             s.RemoveChange(c);
         }
-        Message?.Invoke($"Took back {steps.Count} change(s) Claude made; yours are kept.");
+        // A step refused (RemoveChange: a later step of yours moved or deleted what it added) is not marked Removed.
+        int kept = steps.Count(c => !c.Removed);
+        Message?.Invoke($"Took back {steps.Count - kept} change(s) Claude made; yours are kept."
+            + (kept > 0 ? $" {kept} could not be taken back: a later step moved or deleted what they added (undo instead)." : ""));
         Refresh();
     }
 

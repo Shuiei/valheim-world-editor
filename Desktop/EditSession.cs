@@ -151,7 +151,8 @@ public sealed class EditSession
     /// <summary>
     /// Takes out one change and keeps everything done after it: its height change is taken off the points it touched
     /// (later edits there stay), paint goes back where nothing repainted it since, its objects and zone resets go back.
-    /// The removal is itself a change that can be undone.
+    /// The removal is itself a change that can be undone. A change whose added objects a later step moved or deleted
+    /// is refused: taking it out would bring back what it replaced beside the later step's copies (undo instead).
     /// </summary>
     /// <returns>A message for the status line ("" during a stroke, when nothing was done).</returns>
     public string RemoveChange(Change c)
@@ -166,6 +167,10 @@ public sealed class EditSession
             if (_stroke != null)
             {
                 return "";
+            }
+            if (c.Things.Any(t => t.Before && !t.After && Scene.Things[t.Index].Gone))
+            {
+                return "That change cannot be removed: a later step moved or deleted what it added. Undo back to it instead.";
             }
             var g = Ground;
             var start = g.Snapshot();

@@ -4,6 +4,15 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.44 — unreleased
+
+### Fixed
+- **Removing a move from the history could leave two copies of the object.** A move replaces its object by a copy.
+  Removing that move from the history (Remove, or "Take back Claude's changes") after a later step had moved the
+  copy again brought the original back while the later copy stayed; removing a Place whose object was moved since
+  left the moved copy. A change whose added objects a later step moved or deleted is now refused with a message
+  ("undo back to it instead"), and "Take back Claude's changes" says how many were left for that reason.
+
 ## v1.45.43 — unreleased
 
 ### Fixed

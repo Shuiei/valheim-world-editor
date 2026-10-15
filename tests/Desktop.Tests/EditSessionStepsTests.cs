@@ -140,6 +140,27 @@ public class EditSessionStepsTests
         Assert.Equal(wiped, Assert.Single(s.Resets));
     }
 
+    // A move replaces its object by a copy. Removing the move while a later step moved the copy again would bring the
+    // original back beside the later copy (two rocks): it is refused, and neither rock changes.
+    [Fact]
+    public void RemovingAMoveWhoseCopyMovedAgainIsRefused()
+    {
+        var s = TestScenes.Flat(1, Rock());
+        int first = s.Move([(0, new Vector3(4, 30, 0), Vector3.Zero)], "Claude: moved")[0];
+        int second = s.Move([(first, new Vector3(8, 30, 0), Vector3.Zero)])[0];
+        Assert.StartsWith("That change cannot be removed:", s.RemoveChange(s.UndoList[^2]));
+        Assert.False(s.UndoList[^2].Removed);
+        Assert.True(s.Scene.Things[0].Gone);
+        Assert.True(s.Scene.Things[first].Gone);
+        Assert.False(s.Scene.Things[second].Gone);
+        Assert.Equal(1, s.Scene.Things.Count(t => !t.Gone));
+        // Taking the later move out first makes the first one removable.
+        Assert.StartsWith("Removed", s.RemoveChange(s.UndoList[^1]));
+        Assert.StartsWith("Removed", s.RemoveChange(s.UndoList[^3]));
+        Assert.False(s.Scene.Things[0].Gone);
+        Assert.Equal(1, s.Scene.Things.Count(t => !t.Gone));
+    }
+
     // Removing an older reset step while a later step marked the zone again keeps the later marking.
     [Fact]
     public void RemovingAnOlderMarkingKeepsALaterOne()
