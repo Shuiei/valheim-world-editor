@@ -267,7 +267,9 @@ jobs:
             if [ "$CIRCLE_BRANCH" = main ]; then
               tools/format-check.sh $projects
             else
-              git fetch -q origin main
+              # checkout fetched this branch alone; main over https (the image has no ssh, and the
+              # repository is public).
+              git fetch -q "https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git" main:refs/remotes/origin/main
               tools/format-check.sh --since origin/main $projects
             fi
 
