@@ -11,7 +11,8 @@ the plugin is unchanged in versions without that part.
   thousands of metres across read the ground at every metre under it and laid out millions of pieces on the
   window's thread, freezing the editor for minutes, and one far enough out (beyond about 16,000 km) never finished.
   The rectangle must now be within the open area, and a layout of more than 5000 pieces (walls thousands of rows
-  high among them) is refused before it is laid out, with a message to build it in parts.
+  high among them) is refused before it is laid out, and before the ground under it is read, with a message to
+  build it in parts.
 
 ## v1.45.5 — unreleased
 

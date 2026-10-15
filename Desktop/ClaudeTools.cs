@@ -895,12 +895,17 @@ public sealed partial class ClaudeTools
     /// <summary>The highest ground under a rectangle (every metre); edgesOnly: only within a metre of its edges.</summary>
     private static float HighestGround(WorldScene scene, float x0, float z0, float x1, float z1, bool edgesOnly = false)
     {
+        (float lx, float hx, float lz, float hz) = (MathF.Min(x0, x1), MathF.Max(x0, x1), MathF.Min(z0, z1), MathF.Max(z0, z1));
+        // Whole-metre steps counted in integers: adding 1 to a float that large would not move it on.
+        int nx = (int)MathF.Floor(hx - lx), nz = (int)MathF.Floor(hz - lz);
         float best = float.MinValue;
-        for (float x = MathF.Min(x0, x1); x <= MathF.Max(x0, x1); x += 1)
+        for (int i = 0; i <= nx; i++)
         {
-            for (float z = MathF.Min(z0, z1); z <= MathF.Max(z0, z1); z += 1)
+            float x = lx + i;
+            for (int j = 0; j <= nz; j++)
             {
-                bool edge = x - MathF.Min(x0, x1) < 1 || MathF.Max(x0, x1) - x < 1 || z - MathF.Min(z0, z1) < 1 || MathF.Max(z0, z1) - z < 1;
+                float z = lz + j;
+                bool edge = i < 1 || hx - x < 1 || j < 1 || hz - z < 1;
                 if (!edgesOnly || edge)
                 {
                     best = MathF.Max(best, GroundAt(scene, x, z));
@@ -978,7 +983,12 @@ public sealed partial class ClaudeTools
         [Description("East edge (x).")] float x1, [Description("North edge (z).")] float z1,
         [Description("wood or stone.")] string material = "wood",
         [Description("Height of its top (optional).")] float? y = null) =>
-        Build(x0, z0, x1, z1, scene => ClaudeBuilder.Floor(x0, z0, x1, z1, y ?? HighestGround(scene, x0, z0, x1, z1), material), $"floor of {material}");
+        Build(x0, z0, x1, z1, scene =>
+        {
+            // Too many tiles is refused before the ground under them is read.
+            ClaudeBuilder.CheckFloor(x0, z0, x1, z1);
+            return ClaudeBuilder.Floor(x0, z0, x1, z1, y ?? HighestGround(scene, x0, z0, x1, z1), material);
+        }, $"floor of {material}");
 
     /// <summary>
     /// build_walls: <see cref="ClaudeBuilder.Walls"/>, from the top of a floor in the rectangle by default, else the
@@ -993,8 +1003,13 @@ public sealed partial class ClaudeTools
         [Description("wood or stone.")] string material = "wood",
         [Description("Doors (optional).")] DoorSpec[]? doors = null,
         [Description("Height of the walls' bottom (optional).")] float? y = null) =>
-        Build(x0, z0, x1, z1, scene => ClaudeBuilder.Walls(x0, z0, x1, z1, y ?? HighestPieceTop(scene, x0, z0, x1, z1, "floor") ?? HighestGround(scene, x0, z0, x1, z1, edgesOnly: true),
-            height, material, [.. (doors ?? []).Select(d => new ClaudeBuilder.Door(d.Side, d.At))]), $"walls of {material}");
+        Build(x0, z0, x1, z1, scene =>
+        {
+            // Too many pieces is refused before the ground under them is read.
+            ClaudeBuilder.CheckWalls(x0, z0, x1, z1, height, material);
+            return ClaudeBuilder.Walls(x0, z0, x1, z1, y ?? HighestPieceTop(scene, x0, z0, x1, z1, "floor") ?? HighestGround(scene, x0, z0, x1, z1, edgesOnly: true),
+                height, material, [.. (doors ?? []).Select(d => new ClaudeBuilder.Door(d.Side, d.At))]);
+        }, $"walls of {material}");
 
     /// <summary>build_roof: <see cref="ClaudeBuilder.Roof"/>, its eave at the top of the pieces in the rectangle by default.</summary>
     [McpServerTool(Name = "build_roof", Title = "Build a roof")]

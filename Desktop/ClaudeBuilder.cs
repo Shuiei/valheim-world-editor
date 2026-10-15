@@ -32,6 +32,49 @@ public static class ClaudeBuilder
     /// <summary>How many 2 m pieces <see cref="Across"/> puts across a span (at least one).</summary>
     private static float Count(float from, float to) => MathF.Max(1, MathF.Ceiling(MathF.Abs(to - from) / 2 - 0.01f));
 
+    /// <summary>The floor tile for a material; anything but wood or stone throws <see cref="ArgumentException"/>.</summary>
+    private static string FloorPrefab(string material) => material.ToLowerInvariant() switch
+    {
+        "stone" => "stone_floor_2x2",
+        "wood" => "wood_floor",
+        _ => throw new ArgumentException("A floor is wood or stone."),
+    };
+
+    /// <summary>The wall piece and its row height for a material; anything but wood or stone throws <see cref="ArgumentException"/>.</summary>
+    private static (string Prefab, float Row) WallKind(string material) => material.ToLowerInvariant() switch
+    {
+        "stone" => ("stone_wall_2x1", 1f),
+        "wood" => ("woodwall", 2f),
+        _ => throw new ArgumentException("Walls are wood or stone."),
+    };
+
+    /// <summary>How many rows of row metres make up height (whole rows, at least one).</summary>
+    private static float Rows(float height, float row) => MathF.Max(1, MathF.Round(height / row));
+
+    /// <summary>
+    /// Throws <see cref="ArgumentException"/> when <see cref="Floor"/> over the rectangle would be more than
+    /// <see cref="MaxPieces"/> tiles: needs no height, so a caller checks it before working one out from the ground.
+    /// </summary>
+    /// <param name="x0">One corner, x.</param>
+    /// <param name="z0">One corner, z.</param>
+    /// <param name="x1">The opposite corner, x.</param>
+    /// <param name="z1">The opposite corner, z.</param>
+    public static void CheckFloor(float x0, float z0, float x1, float z1) => Limit((double)Count(x0, x1) * Count(z0, z1));
+
+    /// <summary>
+    /// Throws <see cref="ArgumentException"/> when <see cref="Walls"/> on the rectangle would be more than
+    /// <see cref="MaxPieces"/> pieces (or the material is not wood or stone): needs no bottom, so a caller checks it
+    /// before working one out from the ground.
+    /// </summary>
+    /// <param name="x0">One corner, x.</param>
+    /// <param name="z0">One corner, z.</param>
+    /// <param name="x1">The opposite corner, x.</param>
+    /// <param name="z1">The opposite corner, z.</param>
+    /// <param name="height">How tall, in metres.</param>
+    /// <param name="material">"wood" or "stone" (any case).</param>
+    public static void CheckWalls(float x0, float z0, float x1, float z1, float height, string material) =>
+        Limit((double)Rows(height, WallKind(material).Row) * 2 * (Count(x0, x1) + Count(z0, z1)));
+
     /// <summary>A piece's bounds and snap points; throws <see cref="ArgumentException"/> for a prefab that is not a piece.</summary>
     private static PieceCatalog.Info Info(string prefab) =>
         PieceCatalog.Get(StableHash.Of(prefab)) ?? throw new ArgumentException($"{prefab} is not a piece the editor knows.");
@@ -61,13 +104,8 @@ public static class ClaudeBuilder
     /// <exception cref="ArgumentException">Also when it would be more than <see cref="MaxPieces"/> tiles.</exception>
     public static List<ClaudeTools.PieceSpec> Floor(float x0, float z0, float x1, float z1, float top, string material)
     {
-        string prefab = material.ToLowerInvariant() switch
-        {
-            "stone" => "stone_floor_2x2",
-            "wood" => "wood_floor",
-            _ => throw new ArgumentException("A floor is wood or stone."),
-        };
-        Limit((double)Count(x0, x1) * Count(z0, z1));
+        string prefab = FloorPrefab(material);
+        CheckFloor(x0, z0, x1, z1);
         float y = top - Info(prefab).MaxY;
         return [.. (from x in Across(x0, x1) from z in Across(z0, z1) select P(prefab, x, y, z, 0))];
     }
@@ -88,15 +126,9 @@ public static class ClaudeBuilder
     public static List<ClaudeTools.PieceSpec> Walls(float x0, float z0, float x1, float z1, float bottom, float height, string material, IReadOnlyList<Door> doors)
     {
         (float lx, float hx, float lz, float hz) = (MathF.Min(x0, x1), MathF.Max(x0, x1), MathF.Min(z0, z1), MathF.Max(z0, z1));
-        (string prefab, float row) = material.ToLowerInvariant() switch
-        {
-            "stone" => ("stone_wall_2x1", 1f),
-            "wood" => ("woodwall", 2f),
-            _ => throw new ArgumentException("Walls are wood or stone."),
-        };
-        float rowsWanted = MathF.Max(1, MathF.Round(height / row));
-        Limit((double)rowsWanted * 2 * (Count(lx, hx) + Count(lz, hz)));
-        int rows = (int)rowsWanted;
+        (string prefab, float row) = WallKind(material);
+        CheckWalls(x0, z0, x1, z1, height, material);
+        int rows = (int)Rows(height, row);
         var info = Info(prefab);
         var door = Info("wood_door");
         var list = new List<ClaudeTools.PieceSpec>();
