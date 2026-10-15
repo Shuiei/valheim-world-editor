@@ -225,6 +225,27 @@ public class MapPageTests
         }
     }
 
+    // Zone counts still being read when the same world is shown again (after a save or a discard) are from before: dropped,
+    // and read again when next asked.
+    [AvaloniaFact]
+    public async Task ZoneCountsReadBeforeTheWorldIsShownAgainAreDropped()
+    {
+        using var r = new Run();
+        await r.Open();
+        r.M.NoBuildBox.IsChecked = false;
+        r.M.OnlyGenBox.IsChecked = false;
+        r.M.NoEditBox.IsChecked = false;
+        // Shown again before the counts come back (they come back on this thread, after it).
+        var showing = r.M.ShowMatching();
+        r.M.Show(r.W.World!);
+        await showing;
+        Assert.Empty(r.M.Matches);
+        var again = r.M.ShowMatching();
+        Assert.Equal("Reading every zone…", r.M.ZoneInfo.Text);
+        await again;
+        Assert.NotEmpty(r.M.Matches);
+    }
+
     [AvaloniaFact]
     public async Task UnmarkingBeforeTheZonesAreReadStillWorks()
     {

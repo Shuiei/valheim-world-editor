@@ -236,6 +236,10 @@ public sealed class MapPage : IDisposable
     /// </summary>
     private int[]? _stats;
     /// <summary>
+    /// Counts each time the zone counts are thrown away (Show): counts read before that are not kept.
+    /// </summary>
+    private int _statsGeneration;
+    /// <summary>
     /// Whether matches are shown, so changing the filter shows them again at once.
     /// </summary>
     private bool _filtered;
@@ -508,6 +512,7 @@ public sealed class MapPage : IDisposable
         }
         // Saved, discarded, reloaded or edited since: the zone counts are read again when next asked.
         _stats = null;
+        _statsGeneration++;
         var w = session.World;
         Meta.Text = session.IsLive
             ? $"{w.Name} · live ({session.Label}) · seed {w.SeedName} · {w.ObjectCount:N0} objects"
@@ -728,7 +733,8 @@ public sealed class MapPage : IDisposable
 
     /// <summary>
     /// Every zone's counts, read once (in the background) until the world changes; null when no world is shown, or when
-    /// another world was shown while they were read (they are that world's: dropped).
+    /// a world was shown again while they were read (another world, or the same one saved or discarded: they are from
+    /// before, dropped).
     /// </summary>
     private async Task<int[]?> Stats()
     {
@@ -738,9 +744,10 @@ public sealed class MapPage : IDisposable
         }
         if (_stats == null)
         {
+            int generation = _statsGeneration;
             ZoneInfo.Text = "Reading every zone…";
             int[] stats = await Task.Run(() => ZoneStats.Compute(s.World, s.Edits, (x, z) => (int)s.Terrain.BiomeAt(x * 64f, z * 64f)));
-            if (_session != s)
+            if (_session != s || _statsGeneration != generation)
             {
                 return null;
             }
