@@ -197,6 +197,23 @@ public class SelectToolMouseTests
     }
 
     [AvaloniaFact]
+    public void AWallDraggedFarSnapsToTheWallWhereItEnds()
+    {
+        // Two walls 80 m apart, seen from high enough for both to be on screen.
+        var v = Open(T(1, Wall, 0, 30, 40), T(2, Wall, 80, 30, 40));
+        var c = new Vector3(40 - v.S.Scene.Cx, 30, -(40 - v.S.Scene.Cz));
+        v.W.View.SetCamera(c + new Vector3(0, 120, 0.01f), c, 1);
+        v.Click(0, 40);
+        Assert.Equal([0], v.Selected);
+        // The first step of the drag gathers the pieces within 60 m (none); its east end is then brought 0.4 m
+        // from the other wall's west end, 80 m away: it closes the gap.
+        v.Drag(false, (0, 40), (4, 40), (77.6f, 40.2f));
+        var moved = v.Last;
+        Assert.Equal(78, moved.Position.X, 2);
+        Assert.Equal(40, moved.Position.Z, 2);
+    }
+
+    [AvaloniaFact]
     public void ADoubleClickSelectsTheWholeBuilding()
     {
         // Two walls end to end and a floor against them: one building; a wall further off is another.

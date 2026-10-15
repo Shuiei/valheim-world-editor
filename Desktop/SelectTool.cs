@@ -97,8 +97,13 @@ public sealed class SelectTool
         public bool Dropped, NoSnap;
         /// <summary>The name of the piece the selection snapped to, for the message; null when not snapped.</summary>
         public string? Snapped;
-        /// <summary>The snap points of the pieces around (within 60 m), gathered once per move.</summary>
+        /// <summary>
+        /// The snap points of the pieces around (within 60 m of where the selection's middle was when they were
+        /// gathered: Ox, Oz), gathered again once the middle is more than 30 m from there.
+        /// </summary>
         public List<(Vector3 P, string Name)>? Others;
+        /// <summary>Where the selection's middle was when <see cref="Others"/> were gathered.</summary>
+        public float Ox, Oz;
         /// <summary>How many whole linked groups the move takes (their parts were added to the selection's).</summary>
         public int Groups;
         /// <summary>What such a group is called ("vehicle").</summary>
@@ -237,10 +242,14 @@ public sealed class SelectTool
         {
             return;
         }
-        if (m.Others == null)
+        // The pieces around where the selection is now; gathered again once it has moved far from where they were
+        // gathered, so a long drag still snaps to what stands at its end.
+        float cx = m.Cx + m.Dx, cz = m.Cz + m.Dz;
+        if (m.Others == null || MathF.Sqrt(MathF.Pow(cx - m.Ox, 2) + MathF.Pow(cz - m.Oz, 2)) > 30)
         {
             var sel = m.Items.Select(it => it.Index).ToHashSet();
             m.Others = [];
+            (m.Ox, m.Oz) = (cx, cz);
             for (int i = 0; i < s.Things.Count; i++)
             {
                 var t = s.Things[i];
@@ -248,7 +257,7 @@ public sealed class SelectTool
                 {
                     continue;
                 }
-                if (MathF.Sqrt(MathF.Pow(t.Position.X - m.Cx - m.Dx, 2) + MathF.Pow(t.Position.Z - m.Cz - m.Dz, 2)) > 60)
+                if (MathF.Sqrt(MathF.Pow(t.Position.X - cx, 2) + MathF.Pow(t.Position.Z - cz, 2)) > 60)
                 {
                     continue;
                 }
