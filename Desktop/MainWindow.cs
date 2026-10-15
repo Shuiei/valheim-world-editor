@@ -492,6 +492,7 @@ public sealed partial class MainWindow : Window
         string failed;
         try
         {
+            await BeforeLoad();
             var scene = await Task.Run(() => WorldScene.LoadBlock(world, x0, z0, zonesX, zonesZ));
             if (!await ShowEditor(scene, () => navigation == _navigation))
             {
@@ -540,6 +541,11 @@ public sealed partial class MainWindow : Window
         }
         return false;
     }
+
+    /// <summary>
+    /// Awaited before an area's zones are read (tests hold loads there to order them).
+    /// </summary>
+    internal Func<Task> BeforeLoad { get; set; } = () => Task.CompletedTask;
 
     /// <summary>
     /// Shows a loaded area (or the Workshop's plot) in the 3D editor, the game's models opened first if they are not

@@ -177,9 +177,17 @@ public class MainWindowEditorWorldTests
             OceanDepth = [],
             Limit = [],
         };
+        // Both loads held, so the arrow move is asked for while the reopen loads and fails after it.
+        var first = new TaskCompletionSource();
+        var second = new TaskCompletionSource();
+        var gates = new Queue<Task>([first.Task, second.Task]);
+        r.W.BeforeLoad = gates.Dequeue;
         var reopen = r.W.ReopenArea(bad);
         var other = r.W.EditBlock(0, 0, -1, -1);
+        first.SetResult();
         Assert.False(await reopen);
+        Assert.False(r.W.MapShown);
+        second.SetResult();
         Assert.False(await other);
         Assert.True(r.W.MapShown);
         Assert.Null(r.W.Session);
