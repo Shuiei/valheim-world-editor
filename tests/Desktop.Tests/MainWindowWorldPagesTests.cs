@@ -8,9 +8,9 @@ namespace TerrainEditor.Desktop.Tests;
 
 /// <summary>
 /// The window's world pages and the map's actions: what does nothing without a world or an area, the file pickers with
-/// nobody to choose, an area that cannot be loaded, Discard, Leave, Reload and Save from the map (offline and live, and
-/// a game that stops answering), quitting over changes not applied, and errors said once in a dialog away from the 3D
-/// editor.
+/// nobody to choose, an area that cannot be loaded, the map closing the area, Discard, Leave, Reload and Save from the
+/// map (offline and live, and a game that stops answering), quitting over changes not applied, and errors said once in a
+/// dialog away from the 3D editor.
 /// </summary>
 [Collection("World files")]
 public class MainWindowWorldPagesTests
@@ -63,10 +63,106 @@ public class MainWindowWorldPagesTests
         var scene = r.W.View.Scene;
         await r.W.ResizeArea(1);
         Assert.Same(scene, r.W.View.Scene);
+        var s = r.W.Session;
         await r.W.EditBlock(0, 0, -1, -1);
         Assert.StartsWith("Could not open that area: ", r.Said);
         Assert.False(r.W.IsBusy);
         Assert.Same(scene, r.W.View.Scene);
+        // The area shown stays open: its edits and history go on in it.
+        Assert.Same(s, r.W.Session);
+        Assert.Same(s, r.W.World!.Area);
+    }
+
+    // The map shown while another area loads: that load failing does not open the area left again behind the map.
+    [AvaloniaFact]
+    public async Task AnAreaThatFailsToLoadAfterTheMapWasShownLeavesTheAreaClosed()
+    {
+        using var r = new WorldWindowRun();
+        await r.Open();
+        var load = r.W.EditBlock(0, 0, -1, -1);
+        r.W.ShowMap();
+        await load;
+        Assert.StartsWith("Could not open that area: ", r.Said);
+        Assert.True(r.W.MapShown);
+        Assert.Null(r.W.Session);
+        Assert.Null(r.W.World!.Area);
+        Assert.NotNull(r.W.World.History);
+    }
+
+    // The map shown while an area loads: the area loaded is not shown over the map, nor kept as the world's area.
+    [AvaloniaFact]
+    public async Task AnAreaLoadedAfterTheMapWasShownIsNotShown()
+    {
+        using var r = new WorldWindowRun();
+        await r.Open();
+        var scene = r.W.View.Scene!;
+        var load = r.W.EditBlock(scene.X0, scene.Z0, scene.ZonesX, scene.ZonesZ);
+        r.W.ShowMap();
+        await load;
+        Assert.Equal("That area was not opened: the map or another area was asked for while it loaded.", r.Said);
+        Assert.True(r.W.MapShown);
+        Assert.Same(scene, r.W.View.Scene);
+        Assert.Null(r.W.Session);
+        Assert.Null(r.W.World!.Area);
+    }
+
+    // Two areas asked for at once: the first is dropped, the second shown is the world's area whichever loaded last.
+    [AvaloniaFact]
+    public async Task OfTwoAreasAskedForAtOnceTheSecondIsShownAndIsTheWorldsArea()
+    {
+        using var r = new WorldWindowRun();
+        await r.Open();
+        var scene = r.W.View.Scene!;
+        var first = r.W.EditBlock(scene.X0, scene.Z0, scene.ZonesX, scene.ZonesZ);
+        var second = r.W.EditBlock(4, 0, 1, 1);
+        await Task.WhenAll(first, second);
+        Assert.NotNull(r.W.Session);
+        Assert.Equal((4, 0), (r.W.View.Scene!.X0, r.W.View.Scene.Z0));
+        Assert.NotSame(scene, r.W.View.Scene);
+        Assert.Same(r.W.View.Scene, r.W.Session.Scene);
+        Assert.Same(r.W.Session, r.W.World!.Area);
+    }
+
+    // The world left while areas load: neither the one loaded nor the one left (when the other fails) is opened.
+    [AvaloniaFact]
+    public async Task AreasLoadingWhenTheWorldIsLeftAreNotOpened()
+    {
+        using var r = new WorldWindowRun();
+        await r.Open();
+        var scene = r.W.View.Scene!;
+        var load = r.W.EditBlock(scene.X0, scene.Z0, scene.ZonesX, scene.ZonesZ);
+        await r.W.LeaveWorld();
+        await load;
+        Assert.Null(r.W.World);
+        Assert.Null(r.W.Session);
+        Assert.False(r.W.MapShown);
+
+        await r.Open();
+        var failing = r.W.EditBlock(0, 0, -1, -1);
+        await r.W.LeaveWorld();
+        await failing;
+        Assert.Null(r.W.World);
+        Assert.Null(r.W.Session);
+    }
+
+    // The map closes the area: a script still running in it changes nothing, and its history stays with the world.
+    [AvaloniaFact]
+    public async Task TheMapClosesTheAreaSoAScriptStillRunningChangesNothing()
+    {
+        using var r = new WorldWindowRun();
+        await r.Open();
+        var s = r.W.Session!;
+        var run = r.W.RunScriptCode("Ground.Raise(32, 32, 1);", "Script: late");
+        r.W.ShowMap();
+        Assert.Null(r.W.Session);
+        Assert.Null(r.W.World!.Area);
+        Assert.NotNull(r.W.World.History);
+        var outcome = await run;
+        Assert.False(outcome.Changed);
+        // It compiled and ran, and only then found its area closed.
+        Assert.Equal("The area was closed while the script ran: nothing changed.", outcome.Message);
+        Assert.Empty(s.UndoList);
+        Assert.Equal((0, 0, 0, 0), r.W.World.Pending);
     }
 
     [AvaloniaFact]

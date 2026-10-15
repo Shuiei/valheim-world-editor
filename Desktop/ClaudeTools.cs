@@ -1362,13 +1362,19 @@ public sealed partial class ClaudeTools
     {
         var settings = new Editing.DungeonGen.Settings(Biome: biome, Style: style, Walls: walls, Size: Math.Clamp(size, 1, 4), Levels: Math.Clamp(levels, 1, Editing.DungeonGen.MaxLevels),
             Monsters: Math.Clamp(monsters, 0, 3), Loot: Math.Clamp(loot, 0, 2), Light: Math.Clamp(light, 0, 2), Decor: Math.Clamp(decor, 0, 2), Seed: seed, Name: name);
-        if (await OnUi(CannotEdit) is string why)
+        var (why, opened) = await OnUi(() => (CannotEdit(), _w.Session));
+        if (why != null)
         {
             return why;
         }
         var result = await Task.Run(() => Editing.DungeonGen.Make(settings));
         return await OnUi(async () =>
         {
+            // The map shown or another area opened while it was made: it goes nowhere.
+            if (_w.Session != opened || opened == null)
+            {
+                return "The area was closed (or another opened) while the dungeon was made: nothing was placed.";
+            }
             if (_w.InWorkshop)
             {
                 await _w.GeneratedOntoPlot(settings, result, add: true);
@@ -1378,7 +1384,7 @@ public sealed partial class ClaudeTools
                 if (x is float px && z is float pz)
                 {
                     // Above a point of the open area (its ground is the area's).
-                    var sc = _w.Session!.Scene;
+                    var sc = opened.Scene;
                     float minX = sc.X0 * 64f - 32f, minZ = sc.Z0 * 64f - 32f;
                     if (px < minX || pz < minZ || px > minX + sc.ZonesX * 64f || pz > minZ + sc.ZonesZ * 64f)
                     {

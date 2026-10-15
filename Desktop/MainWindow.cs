@@ -389,6 +389,7 @@ public sealed partial class MainWindow : Window
             ShowStart();
             return;
         }
+        _navigation++;
         View.SelectTool.Commit();
         KeepHistory();
         _playersTimer.Stop();
@@ -418,14 +419,41 @@ public sealed partial class MainWindow : Window
     }
 
     /// <summary>
-    /// Leaving an area: its history stays with the world, for the next area opened.
+    /// Leaving an area: its history stays with the world, for the next area opened, and the area is closed, so work
+    /// awaited in it (a script, Grow) finds it gone and changes nothing.
     /// </summary>
-    private void KeepHistory()
+    /// <returns>The area left, or null when none was open in the 3D editor.</returns>
+    private EditSession? KeepHistory()
     {
         if (Session is { Scene.Owner: { } owner } s && _pages.Content == _editorPage)
         {
             owner.History = s.Export();
             owner.Area = null;
+            Session = null;
+            return s;
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// Counts the map shown, the areas asked for and the world left: an area load that finished after one of those is
+    /// not shown, and one that failed leaves the area it left closed.
+    /// </summary>
+    private long _navigation;
+
+    /// <summary>
+    /// Another area could not be opened: the one left (still shown) is open again, its history its own, unless the map
+    /// or another area was asked for meanwhile.
+    /// </summary>
+    /// <param name="left">What <see cref="KeepHistory"/> returned.</param>
+    /// <param name="navigation">The <see cref="_navigation"/> count of the failed load.</param>
+    private void Unleave(EditSession? left, long navigation)
+    {
+        if (left is { Scene.Owner: { } owner } && navigation == _navigation && World == owner && _pages.Content == _editorPage
+            && Session == null && View.Scene == left.Scene)
+        {
+            owner.Area = left;
+            Session = left;
         }
     }
 
@@ -452,13 +480,25 @@ public sealed partial class MainWindow : Window
         {
             return;
         }
+        long navigation = ++_navigation;
         View.SelectTool.Commit();
-        KeepHistory();
+        var left = KeepHistory();
         Busy($"Loading {zonesX} × {zonesZ} zones…");
         try
         {
             var scene = await Task.Run(() => WorldScene.LoadBlock(world, x0, z0, zonesX, zonesZ));
-            await ShowEditor(scene);
+            if (!await ShowEditor(scene, () => navigation == _navigation))
+            {
+                // The map or another area was asked for while it loaded: it is not shown, nor the world's area.
+                if (world.Area == scene.Session)
+                {
+                    world.Area = Session;
+                }
+                MessageText.Text = "That area was not opened: the map or another area was asked for while it loaded.";
+                return;
+            }
+            // Shown: the world's area, even if a load dropped meanwhile had reset it.
+            world.Area = scene.Session;
             // Found by the map's search: selected, the camera on it (items and texts: in the inspector).
             if (MapPage?.Target is var (id, inspect) && spot != null && MapPage.Spot == spot)
             {
@@ -476,6 +516,7 @@ public sealed partial class MainWindow : Window
         }
         catch (Exception ex)
         {
+            Unleave(left, navigation);
             MessageText.Text = "Could not open that area: " + ex.Message;
         }
         finally
@@ -488,7 +529,10 @@ public sealed partial class MainWindow : Window
     /// Shows a loaded area (or the Workshop's plot) in the 3D editor, the game's models opened first if they are not
     /// yet.
     /// </summary>
-    internal async Task ShowEditor(WorldScene scene)
+    /// <param name="scene">The area or plot.</param>
+    /// <param name="stillWanted">Asked once the models are open: false, nothing is shown.</param>
+    /// <returns>Whether it was shown.</returns>
+    internal async Task<bool> ShowEditor(WorldScene scene, Func<bool>? stillWanted = null)
     {
         if (_models == null && _modelsLoading != null)
         {
@@ -496,6 +540,10 @@ public sealed partial class MainWindow : Window
             _modelsLoading = null;
         }
         _models ??= await Task.Run(ModelStore.Open);
+        if (stillWanted?.Invoke() == false)
+        {
+            return false;
+        }
         ResetWorkshop();
         // Lines and shapes drawn in the last area are left behind.
         View.Path.Clear();
@@ -515,6 +563,7 @@ public sealed partial class MainWindow : Window
         Title = $"{scene.Name} · Valheim World Editor {BuildInfo.Version}";
         _pages.Content = _editorPage;
         EditorOpened(scene);
+        return true;
     }
 
     /// <summary>
@@ -639,6 +688,8 @@ public sealed partial class MainWindow : Window
         {
             return;
         }
+        // An area still loading in it is not opened, nor the one left open again.
+        _navigation++;
         World?.Dispose();
         World = null;
         Session = null;
@@ -1443,7 +1494,10 @@ public sealed partial class MainWindow : Window
             var ch = await Task.Run(() => ScriptHost.Run(image, pdb, snap, cancel.Token), cancel.Token);
             if (Session != s)
             {
-                return new(false, ch.Output + "Another area was opened while the script ran: nothing changed.", "Another area was opened while the script ran: nothing changed.");
+                string gone = Session == null
+                    ? "The area was closed while the script ran: nothing changed."
+                    : "Another area was opened while the script ran: nothing changed.";
+                return new(false, ch.Output + gone, gone);
             }
             // Its heights and object numbers are those of the area when it started: changed since (a
             // stroke, an undo, a save that read the world again), they would undo that or hit other objects.

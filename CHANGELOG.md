@@ -4,6 +4,17 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.30 — unreleased
+
+### Fixed
+- **A change finished after going to the map could not be undone.** Going to the map handed the area's history to
+  the world but left the area open behind it, so a script, a Claude change or Grow still running finished in it: the
+  change went into the world but its undo step stayed in the closed area, and the history found on reopening lacked
+  it. Going to the map (or opening another area) now closes the area, so such work changes nothing and says so (a
+  script: "The area was closed while the script ran"); an area that fails to open leaves the one shown open as
+  before, unless the map or another area was asked for (or the world left) while it loaded; an area that finishes
+  loading after that is not shown over them.
+
 ## v1.45.29 — unreleased
 
 ### Fixed
