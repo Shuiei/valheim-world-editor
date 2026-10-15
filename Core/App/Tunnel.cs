@@ -176,7 +176,7 @@ public static class Tunnel
                         }
                         catch (Exception ex) when (KeyUnreadable(ex))
                         {
-                            Console.WriteLine($"tunnel: {k} skipped, it could not be read ({ex.GetType().Name}: {ex.Message}).");
+                            Console.WriteLine($"tunnel: {Path.GetFileName(k)} skipped, it could not be read ({ex.GetType().Name}).");
                         }
                     }
                 }
