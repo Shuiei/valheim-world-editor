@@ -7,12 +7,12 @@ the plugin is unchanged in versions without that part.
 ## v1.45.14 — unreleased
 
 ### Fixed
-- **In another language, Claude could use the Blueprints buttons that write or delete files.** Claude is kept from the window's buttons that save,
-  write or delete the user's files. The Blueprints rows' buttons (**Details**, **.vbuild**, **To Homestead**,
-  **Delete**) had no tip key, so they were recognised by their English label only: shown in another language, they
-  were no longer blocked. And Claude's ids for controls without a tip key were made from the label as shown, so they
-  changed with the language, and letters outside a–z were dropped. These buttons now have tip keys and are blocked
-  by key, and the other ids and label checks use the label's English text.
+- **In another language, Claude could use the Blueprints buttons that write or delete files.** Claude is kept from
+  the window's buttons that save, write or delete the user's files. The Blueprints rows' buttons (**Details**,
+  **.vbuild**, **To Homestead**, **Delete**) had no tip key, so they were recognised by their English label only:
+  shown in another language, they were no longer blocked. And Claude's ids for controls without a tip key were made
+  from the label as shown, so they changed with the language, and letters outside a–z were dropped. These buttons
+  now have tip keys and are blocked by key, and the other ids and label checks use the label's English text.
 
 ## v1.45.13 — unreleased
 
