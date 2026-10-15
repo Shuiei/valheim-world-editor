@@ -4,15 +4,15 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
-## v1.43.0 — unreleased
+## v1.43.0 — 2026-10-14
 
 ### Changed
 - **Generated dungeons read more like buildings.** Side rooms grow in wings of their kin (a kitchen by the feast
   hall, cells by the guard room, an ossuary by the burial chamber, a forge by the workshop); a room's purpose sets
-  its light (grand rooms closest lit, the dead's and the cells dimmest); each level down holds a fifth of the top level's loot and
-  foes more; a corridor's niche now and then hides a foe; dvergr open doorways carry the dvergr arch.
+  its light (grand rooms closest lit, the dead's and the cells dimmest); each level down holds a fifth more of the top level's loot
+  and foes; a corridor's niche now and then hides a foe; dvergr open doorways carry the dvergr arch.
 
-## v1.42.0 — unreleased
+## v1.42.0 — 2026-10-14
 
 ### Changed
 - **Generated dungeons vary far more.** Rooms were all boxes entered in the middle of a wall, each kind furnished one
@@ -57,7 +57,7 @@ the plugin is unchanged in versions without that part.
   - Lights and decay draw from random streams of their own, so turning Light or Ruin changes nothing else about a
     dungeon. The tests' copies of the game's data gain the new props.
 
-## v1.41.0 — unreleased
+## v1.41.0 — 2026-10-14
 
 ### Added
 - **A placed dungeon gets the entrance of its kind on the ground.** **Place in the world** now puts the game's own
@@ -82,7 +82,7 @@ the plugin is unchanged in versions without that part.
 - The game-data scan reads each location's teleport doors and interior anchor (the tests' copy of `dungeon-rooms.json`
   is made again, and keeps the Frost Cave's entrance too).
 
-## v1.40.0 — unreleased
+## v1.40.0 — 2026-10-14
 
 ### Added
 - **Moved objects stay the same objects in live mode.** An object moved or turned in the editor (the Select tool's
@@ -99,7 +99,7 @@ the plugin is unchanged in versions without that part.
   moves to a plugin that lists it. Mods' listeners get the moves in `AppliedChanges.Moved` (`AppliedMove`: where the
   object stood and stands now); the old `AppliedChanges` constructor stays.
 
-## v1.38.0 — unreleased
+## v1.38.0 — 2026-10-14
 
 ### Added
 - **Cut and paste.** **Cut (Ctrl+X)**, beside Copy in the Area tool's **Copy and paste** action and on the Select
@@ -107,7 +107,7 @@ the plugin is unchanged in versions without that part.
   step, so a paste moves a build instead of doubling it. The ground where it stood stays as it is. Docs:
   [Copy and paste](docs/area.md#copy-and-paste), [Select](docs/select.md).
 
-## v1.37.4 — unreleased
+## v1.37.4 — 2026-10-14
 
 ### Fixed
 - **Spikes and an orange wedge in the 3D view after a visit to the map.** Opening the map and coming back to the 3D
