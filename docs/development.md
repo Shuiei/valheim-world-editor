@@ -145,7 +145,7 @@ CircleCI makes the release once you approve it (`.circleci/config.yml`, `.circle
    with main before it merges).
 3. In CircleCI, open that pipeline's workflow (`release`) and approve **hold-release**. Then
    **packages** builds the editor packages and **windows-smoke** tries the Windows one, as on every
-   push, and:
+   push to main, and:
    - **github-release** signs the Windows program (`tools/sign-windows.sh`: Authenticode, with the
      maintainer's Certum code-signing certificate through SimplySign's cloud, timestamped by Certum),
      builds the plugin's zip (against a Valheim dedicated server downloaded with SteamCMD and the
@@ -341,13 +341,16 @@ The **test world** is `tests/fixtures/CITest`: a brand-new world made by a dedic
 filled live through the editor (ground edits, trees, rocks, bushes, pickables, a crop, floors, walls,
 chests). `tests/fixtures/CITest.snapshot` is the same world as the plugin sends it.
 
-CircleCI (`.circleci/continue.yml`) runs on every push and pull request:
+CircleCI (`.circleci/continue.yml`) runs on every push and pull request (`packages` and
+`windows-smoke` on main only: they are slow, and the packaging they check seldom changes):
 
 | Job | What it checks |
 |---|---|
+| `code-analysis` | `Desktop` (with `Core` and `Sdk`) and `WorldEditorBridge.Api` build with every analyzer warning an error, and the repository's XML files are well formed. |
+| `formatting` | `tools/format-check.sh`: the five projects are formatted as `.editorconfig` says (`dotnet format whitespace` and `style`), on two containers. A pull request checks only the projects with a changed file (all of them when `.editorconfig`, `Directory.Build.props` or `global.json` changed); main checks all of them. |
 | `core-tests` | `tests/Core.Tests`, with OpenSSH's server installed (`VWE_NEED_SSHD=1`), on three containers (the world generator's tests run several times slower under coverage). |
 | `app-tests` | `tests/Desktop.Tests` on six containers, the visual tests included: they draw on a virtual screen (Xvfb, Mesa's software OpenGL), so CI checks the shapes they draw but not the game's look (CI has no Valheim: its editor draws plain colours). Both test jobs let CircleCI share the classes out by their last times (`circleci tests run`, each class a `--filter-class`), so **Rerun failed tests** runs only the classes that failed; every test runs, failing or not. A test stuck 5 minutes is dumped and stopped (`tests/testconfig.json`); a crashed or stopped test process shows as one failed test of its class. |
-| `packages` | Both release packages build (without the plugin), and `tools/check-package.sh` finds everything they need and no source code, debug files or game files. |
+| `packages` | On main only: the release packages build (without the plugin), and `tools/check-package.sh` finds everything they need and no source code, debug files or game files. |
 
 Not covered by CI: the game's look in the visual tests, building the plugin and reading the game's data
 (both need Valheim's own files: the tests use their copies in `tests/fixtures`), and live mode
