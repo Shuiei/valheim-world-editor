@@ -77,9 +77,14 @@ public static class ScriptHost
         /// <summary>The call added, parsed once.</summary>
         private static readonly StatementSyntax Check = SyntaxFactory.ParseStatement("global::__Host.Check();");
 
-        /// <summary>The statement with the Check before it, both in a block of their own.</summary>
+        /// <summary>
+        /// The statement with the Check before it, both in a block of their own. The statement's trivia (comments,
+        /// line breaks, #if and other directives) goes around the block, not into it: a directive stays at the start
+        /// of its own line.
+        /// </summary>
         private static BlockSyntax Checked(StatementSyntax statement) =>
-            SyntaxFactory.Block(SyntaxFactory.Token(default, SyntaxKind.OpenBraceToken, default), [Check, statement], SyntaxFactory.Token(default, SyntaxKind.CloseBraceToken, default));
+            SyntaxFactory.Block(SyntaxFactory.Token(default, SyntaxKind.OpenBraceToken, default), [Check, statement.WithoutTrivia()], SyntaxFactory.Token(default, SyntaxKind.CloseBraceToken, default))
+                .WithLeadingTrivia(statement.GetLeadingTrivia()).WithTrailingTrivia(statement.GetTrailingTrivia());
 
         /// <inheritdoc/>
         public override SyntaxNode? VisitWhileStatement(WhileStatementSyntax node)
@@ -119,9 +124,7 @@ public static class ScriptHost
         /// <inheritdoc/>
         public override SyntaxNode? VisitGotoStatement(GotoStatementSyntax node)
         {
-            var n = (GotoStatementSyntax)base.VisitGotoStatement(node)!;
-            // Its leading trivia (comments, indentation) stays in front of the block.
-            return Checked(n.WithoutLeadingTrivia()).WithLeadingTrivia(n.GetLeadingTrivia());
+            return Checked((GotoStatementSyntax)base.VisitGotoStatement(node)!);
         }
     }
 

@@ -208,6 +208,14 @@ public class ScriptHostTests
         Assert.StartsWith("line 4: ", Assert.Single(errors));
     }
 
+    // The checks put into loops keep #if and the other directives at the start of their own lines: next to a loop's
+    // body, before it or after it, the script still compiles.
+    [Theory]
+    [InlineData("while (true)\n#if true\n    break;\n#endif\nPrint(1);\n")]
+    [InlineData("while (false) { }\n#if true\nPrint(1);\n#endif\n")]
+    [InlineData("int n = 0;\nagain: n++;\n#if true\nif (n < 3) goto again;\n#endif\nPrint(n);\n")]
+    public void LoopsNextToDirectivesStillCompile(string code) => Assert.Empty(ScriptHost.Compile(code).Errors);
+
     /// <summary>A wooden wall standing at (20, 31, 20), its front north, as thing 0 of a flat 1-zone area.</summary>
     private static EditSession Wall() =>
         TestScenes.Flat(1, new WorldScene.Thing(7, StableHash.Of("woodwall"), new Vector3(20, 31, 20), Vector3.Zero, 0, true));
