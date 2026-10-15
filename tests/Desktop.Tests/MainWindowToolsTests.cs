@@ -1,4 +1,5 @@
 using System.Numerics;
+using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using TerrainEditor.Save;
 using WorldEditor.Tests;
@@ -146,10 +147,19 @@ public class MainWindowToolsTests
             w.MountainPanel.RadiusSlider.Value = 25;
             w.MountainPanel.GrowBox.IsChecked = true;
             int steps = s.UndoList.Count;
-            var putting = w.PutMountain((s.Ground.W - 1) / 2f, (s.Ground.H - 1) / 2f);
-            // Ctrl+Z while the game's trees are worked out: they would grow in the air where the mountain was.
-            s.Undo();
-            await putting;
+            // Ctrl+Z while the game's trees are worked out (as soon as it says so, whenever the work ends): they would
+            // grow in the air where the mountain was.
+            bool undone = false;
+            w.MessageText.PropertyChanged += (_, e) =>
+            {
+                if (e.Property == TextBlock.TextProperty && !undone && w.MessageText.Text?.EndsWith("Working out what the game grows here…", StringComparison.Ordinal) == true)
+                {
+                    undone = true;
+                    s.Undo();
+                }
+            };
+            await w.PutMountain((s.Ground.W - 1) / 2f, (s.Ground.H - 1) / 2f);
+            Assert.True(undone);
             Assert.EndsWith("Nothing grew on it: the area changed while its trees were worked out.", w.MessageText.Text);
             Assert.Equal(steps, s.UndoList.Count);
         }
