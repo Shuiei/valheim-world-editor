@@ -4,6 +4,15 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.17 — unreleased
+
+### Fixed
+- **Objects you had just applied live could vanish from the editor as if players had removed them.** The editor
+  reads what changed in the game every few seconds. A read that started before an Apply live, and came back once it
+  was done, did not have the objects the apply had just made, so they counted as removed in the game: the editor
+  dropped them while they stayed in the game, and undo could no longer reach them. Such a read, or one taken while
+  an Apply live was under way, is now dropped and the zone read again.
+
 ## v1.45.16 — unreleased
 
 ### Fixed
