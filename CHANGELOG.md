@@ -4,6 +4,14 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.15 — unreleased
+
+### Fixed
+- **Other users of the computer could read Claude's token.** The settings file, which keeps the token Claude
+  connects with when **Allow Claude to connect** is on, was written with the default permissions: on Linux and macOS,
+  with a home folder others can enter, they could read the token and use the editor's Claude tools. It is now
+  written so only you can read it, as the saved servers file already was.
+
 ## v1.45.14 — unreleased
 
 ### Fixed
