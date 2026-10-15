@@ -1059,6 +1059,10 @@ public sealed class TerrainZone
     // The largest terrain data read, unpacked: a zone's is about 110 KB (65 x 65 heights and paints).
     private const int MaxData = 16 << 20;
 
+    // The most height or paint points taken: the game's grid is 65 x 65, so damaged data that claims more is refused
+    // before its arrays are made (16 MB of data could otherwise ask for some 270 MB).
+    private const int MaxPoints = 257 * 257;
+
     /// <summary>Mirrors TerrainComp.Load.</summary>
     /// <param name="center">The terrain compiler object's position.</param>
     /// <param name="prefab">Its prefab hash.</param>
@@ -1070,7 +1074,7 @@ public sealed class TerrainZone
         int operations = pkg.ReadInt();
         pkg.ReadVector3();
         pkg.ReadSingle();
-        int heights = pkg.ReadCount(1);
+        int heights = Points(pkg.ReadCount(1), "height");
         bool[] modified = new bool[heights];
         float[] level = new float[heights];
         float[] smooth = new float[heights];
@@ -1083,7 +1087,7 @@ public sealed class TerrainZone
                 smooth[i] = pkg.ReadSingle();
             }
         }
-        int paints = pkg.ReadCount(1);
+        int paints = Points(pkg.ReadCount(1), "paint");
         bool[] painted = new bool[paints];
         var paint = new Vector4[paints];
         for (int i = 0; i < paints; i++)
@@ -1106,4 +1110,8 @@ public sealed class TerrainZone
             Paint = paint
         };
     }
+
+    /// <summary>A grid's point count, checked against <see cref="MaxPoints"/>.</summary>
+    /// <exception cref="InvalidDataException">The count is larger than any terrain grid.</exception>
+    private static int Points(int count, string grid) => count <= MaxPoints ? count : throw new InvalidDataException($"{count} {grid} points in a terrain object (at most {MaxPoints})");
 }
