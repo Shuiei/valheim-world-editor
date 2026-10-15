@@ -486,7 +486,16 @@ public sealed partial class MainWindow : Window
         try
         {
             var scene = await Task.Run(() => WorldScene.LoadBlock(world, x0, z0, zonesX, zonesZ));
-            await ShowEditor(scene);
+            if (!await ShowEditor(scene, () => navigation == _navigation))
+            {
+                // The map or another area was asked for while it loaded: it is not shown, nor the world's area.
+                if (world.Area == scene.Session)
+                {
+                    world.Area = Session;
+                }
+                MessageText.Text = "That area was not opened: the map or another area was asked for while it loaded.";
+                return;
+            }
             // Found by the map's search: selected, the camera on it (items and texts: in the inspector).
             if (MapPage?.Target is var (id, inspect) && spot != null && MapPage.Spot == spot)
             {
@@ -517,7 +526,10 @@ public sealed partial class MainWindow : Window
     /// Shows a loaded area (or the Workshop's plot) in the 3D editor, the game's models opened first if they are not
     /// yet.
     /// </summary>
-    internal async Task ShowEditor(WorldScene scene)
+    /// <param name="scene">The area or plot.</param>
+    /// <param name="stillWanted">Asked once the models are open: false, nothing is shown.</param>
+    /// <returns>Whether it was shown.</returns>
+    internal async Task<bool> ShowEditor(WorldScene scene, Func<bool>? stillWanted = null)
     {
         if (_models == null && _modelsLoading != null)
         {
@@ -525,6 +537,10 @@ public sealed partial class MainWindow : Window
             _modelsLoading = null;
         }
         _models ??= await Task.Run(ModelStore.Open);
+        if (stillWanted?.Invoke() == false)
+        {
+            return false;
+        }
         ResetWorkshop();
         // Lines and shapes drawn in the last area are left behind.
         View.Path.Clear();
@@ -544,6 +560,7 @@ public sealed partial class MainWindow : Window
         Title = $"{scene.Name} · Valheim World Editor {BuildInfo.Version}";
         _pages.Content = _editorPage;
         EditorOpened(scene);
+        return true;
     }
 
     /// <summary>

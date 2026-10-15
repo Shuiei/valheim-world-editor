@@ -89,6 +89,23 @@ public class MainWindowWorldPagesTests
         Assert.NotNull(r.W.World.History);
     }
 
+    // The map shown while an area loads: the area loaded is not shown over the map, nor kept as the world's area.
+    [AvaloniaFact]
+    public async Task AnAreaLoadedAfterTheMapWasShownIsNotShown()
+    {
+        using var r = new WorldWindowRun();
+        await r.Open();
+        var scene = r.W.View.Scene!;
+        var load = r.W.EditBlock(scene.X0, scene.Z0, scene.ZonesX, scene.ZonesZ);
+        r.W.ShowMap();
+        await load;
+        Assert.Equal("That area was not opened: the map or another area was asked for while it loaded.", r.Said);
+        Assert.True(r.W.MapShown);
+        Assert.Same(scene, r.W.View.Scene);
+        Assert.Null(r.W.Session);
+        Assert.Null(r.W.World!.Area);
+    }
+
     // The map closes the area: a script still running in it changes nothing, and its history stays with the world.
     [AvaloniaFact]
     public async Task TheMapClosesTheAreaSoAScriptStillRunningChangesNothing()
