@@ -11,7 +11,7 @@ the plugin is unchanged in versions without that part.
   world's dungeons read each dungeon's room list. A dungeon whose data could not be read in some ways (a bad text
   length, a world file that could not be read) stopped the whole list, and every dungeon was read in the newest
   save layout, so in worlds saved before chunk files their room counts were wrong. Each dungeon is now read in its
-  own world version, and one that cannot be read is listed with no rooms.
+  own world version, and one that cannot be read is listed with no rooms, with a line in the log saying which and why.
 
 ## v1.45.23 — unreleased
 
