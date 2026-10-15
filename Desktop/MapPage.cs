@@ -178,9 +178,13 @@ public sealed class MapPage : IDisposable
     /// </summary>
     private List<WorldSearch.Hit> _hits = [];
     /// <summary>
-    /// What the last search looked for: "kinds", "items" or "texts".
+    /// What the pinned results were searched for: "kinds", "items" or "texts".
     /// </summary>
     private string _searchWhat = "kinds";
+    /// <summary>
+    /// Searches started so far: only the latest one's results are shown.
+    /// </summary>
+    private int _searches;
 
     // Zone filter.
     /// <summary>
@@ -666,7 +670,9 @@ public sealed class MapPage : IDisposable
             return;
         }
         string q = SearchBox.Text?.Trim() ?? "";
-        _searchWhat = SearchWhat.SelectedIndex switch { 1 => "items", 2 => "texts", _ => "kinds" };
+        string what = SearchWhat.SelectedIndex switch { 1 => "items", 2 => "texts", _ => "kinds" };
+        // A search still running is dropped when it ends: this one (or the cleared box) is newer.
+        int search = ++_searches;
         if (q.Length == 0)
         {
             _hits = [];
@@ -677,7 +683,6 @@ public sealed class MapPage : IDisposable
             return;
         }
         SearchInfo.Text = "Searching…";
-        string what = _searchWhat;
         WorldSearch.Result res;
         try
         {
@@ -685,9 +690,18 @@ public sealed class MapPage : IDisposable
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            SearchInfo.Text = "Search failed: " + ex.Message;
+            if (search == _searches && _session == s)
+            {
+                SearchInfo.Text = "Search failed: " + ex.Message;
+            }
             return;
         }
+        // Another search started meanwhile, or another world is shown: these results are not wanted.
+        if (search != _searches || _session != s)
+        {
+            return;
+        }
+        _searchWhat = what;
         _hits = res.Hits;
         Map.Pins = [.. _hits.Select(h => new Vector2(h.X, h.Z))];
         Map.PinChosen = -1;
