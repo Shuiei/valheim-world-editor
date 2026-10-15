@@ -109,12 +109,22 @@ public class MainWindowDungeonBuildTests
         await r.W.OpenWorkshop(null);
         var plot = r.W.Session!;
         int steps = plot.UndoList.Count;
+        // The blueprint's file is written, then held until another plot is shown.
+        var written = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var held = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        r.W.WriteBlueprintFile = async (path, text) =>
+        {
+            await File.WriteAllTextAsync(path, text);
+            written.SetResult();
+            await held.Task;
+        };
         var settings = new DungeonGen.Settings(Size: 1, Levels: 1, Seed: 9, Name: "Moved crypt");
         var adding = r.W.GeneratedOntoPlot(settings, DungeonGen.Make(settings), add: true);
-        // The blueprint is being written (the rest waits for the window's thread): another plot is shown.
+        await written.Task;
         var other = TestScenes.Flat();
         r.W.View.Show(other.Scene, null);
         r.W.Edit(other);
+        held.SetResult();
         await adding;
         Assert.Equal("The Workshop changed while the dungeon was written: nothing placed. Its blueprint is in the Library.", r.W.MessageText.Text);
         Assert.Empty(other.UndoList);
