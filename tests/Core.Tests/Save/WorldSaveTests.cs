@@ -304,4 +304,32 @@ public class WorldSaveTests
         world.MergeLive([(10, 10)], [], _ => false, _ => false);
         Assert.Empty(world.Links);
     }
+
+    [Fact]
+    public void LiveANewObjectIsBuiltFromTheBytesOfAModelReadSinceTheSnapshot()
+    {
+        var world = WorldSave.LoadLive(File.ReadAllBytes(Fixtures.Snapshot), "live");
+        var at = new Vector3(640, 30, 640);
+        var came = world.MergeLive([(10, 10)], [(4242, 1, MadeObjects.Piece("woodwall", at, 777, "Astrid"))], _ => false, _ => false)!;
+        int model = came.Added[0];
+        ObjectRef o = world.ObjectRefs[model];
+        // The model's offsets are in its own read, not in the snapshot.
+        Assert.Equal(world.ObjectBytes(model), world.SourceReader()(o)[(int)o.Start..(int)o.End]);
+        byte[]? copy = world.NewObjectBytes(new NewObject(-1, o.Prefab, at + new Vector3(2, 0, 0), Vector3.Zero, 0f, model), world.SourceReader());
+        Assert.NotNull(copy);
+        var z = ZdoData.Parse(copy);
+        Assert.Equal((o.Prefab, at + new Vector3(2, 0, 0)), (z.Prefab, z.Position));
+    }
+
+    [Fact]
+    public void SourceReaderReadsEachChunkFileOnce()
+    {
+        using var w = new TempWorld();
+        WorldSave world = w.Load();
+        ObjectRef o = world.ObjectRefs.First(r => !r.IsTerrain);
+        Func<ObjectRef, byte[]> read = world.SourceReader();
+        byte[] first = read(o);
+        Assert.Same(first, read(o));
+        Assert.Equal(world.ObjectBytes(world.ObjectRefs.IndexOf(o)), first[(int)o.Start..(int)o.End]);
+    }
 }

@@ -164,7 +164,7 @@ public static class WorldWriter
             created++;
         }
         // New objects: a copy of the first object of the same prefab, in the chunk file of their zone.
-        Dictionary<ChunkFile, byte[]> sources = [];
+        Func<ObjectRef, byte[]> source = world.SourceReader();
         int addedCount = 0;
         foreach (NewObject n in added)
         {
@@ -175,7 +175,7 @@ public static class WorldWriter
                 skipped.Add($"a new object at {n.Position.X:F0}, {n.Position.Z:F0}: zone {zx}, {zz} {(ChunkMath.InWorld(zx, zz) ? "is not generated yet" : "is outside the world")}");
                 continue;
             }
-            byte[]? bytes = world.NewObjectBytes(n, m => sources.TryGetValue(m.File, out byte[]? src) ? src : sources[m.File] = File.ReadAllBytes(Path.Combine(world.Directory, m.File.FileName)));
+            byte[]? bytes = world.NewObjectBytes(n, source);
             if (bytes == null)
             {
                 skipped.Add($"a new object at {n.Position.X:F0}, {n.Position.Z:F0}: unknown kind of object");

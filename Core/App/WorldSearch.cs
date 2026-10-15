@@ -103,8 +103,7 @@ public static class WorldSearch
 
         // Items and texts: only objects with byte arrays (containers) or strings are read.
         ushort needed = what == "items" ? ZdoData.ByteArrays : ZdoData.Strings;
-        Dictionary<ChunkFile, byte[]> files = [];
-        byte[] Source(ObjectRef o) => world.IsLive ? world.LiveSource(o.File) : (files.TryGetValue(o.File, out byte[]? f) ? f : files[o.File] = File.ReadAllBytes(Path.Combine(world.Directory, o.File.FileName)));
+        Func<ObjectRef, byte[]> source = world.SourceReader();
         IEnumerable<(int Id, Func<byte[]> Bytes)> Candidates()
         {
             for (int id = 0; id < world.ObjectRefs.Count; id++)
@@ -112,12 +111,12 @@ public static class WorldSearch
                 ObjectRef o = world.ObjectRefs[id];
                 if (!deleted.Contains(id) && !world.Vanished.Contains(id) && !o.IsTerrain && (o.Flags & needed) != 0)
                 {
-                    yield return (id, () => Source(o)[(int)o.Start..(int)o.End]);
+                    yield return (id, () => source(o)[(int)o.Start..(int)o.End]);
                 }
             }
             foreach (NewObject n in edits.Added)
             {
-                yield return (n.Id, () => world.NewObjectBytes(n, Source) ?? []);
+                yield return (n.Id, () => world.NewObjectBytes(n, source) ?? []);
             }
         }
         foreach (var (id, bytes) in Candidates())
