@@ -12,7 +12,8 @@ the plugin is unchanged in versions without that part.
   **.vbuild**, **To Homestead**, **Delete**) had no tip key, so they were recognised by their English label only:
   shown in another language, they were no longer blocked. And Claude's ids for controls without a tip key were made
   from the label as shown, so they changed with the language, and letters outside a–z were dropped. These buttons
-  now have tip keys and are blocked by key, and the other ids and label checks use the label's English text.
+  now have tip keys and are blocked by key, and the other ids and label checks use the label's English text. The
+  Select tool's **Delete** is blocked by its key too, so a translated text that reads "Delete" cannot unblock it.
 
 ## v1.45.13 — unreleased
 

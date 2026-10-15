@@ -38,7 +38,7 @@ public sealed partial class ClaudeTools
         "start.game", "start.server", "start.editLive", "start.home",
         "start.connect", "start.connectUrl", "start.savedConnect", "start.savedForget",
         "dungeon.gen.openOnPlot", "dungeon.gen.addToPlot", "dungeon.gen.workshop",
-        "select.forget", "brush.forgetStamp", "area.export",
+        "select.delete", "select.forget", "brush.forgetStamp", "area.export",
         "blueprints.details", "blueprints.vbuild", "blueprints.vbuildOld", "blueprints.toHomestead",
         "blueprints.delete", "blueprints.deleteOld",
     ];

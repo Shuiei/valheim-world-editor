@@ -97,8 +97,9 @@ public class ClaudeToolsControlsTests
         Assert.NotNull(t.Blocked(C("forget", new Button { Content = "forget" }.Tip("start.savedForget"))));
         Assert.NotNull(t.Blocked(C("plot", new Button { Content = "Open" }.Tip("dungeon.gen.openOnPlot"))));
         Assert.NotNull(t.Blocked(C("~delete", new Button { Content = "Delete" })));
-        // The Blueprints rows' buttons that write or delete files, by their key whatever their label's language.
-        string[] writing = ["blueprints.details", "blueprints.vbuild", "blueprints.vbuildOld", "blueprints.toHomestead", "blueprints.delete", "blueprints.deleteOld"];
+        // The Blueprints rows' buttons that write or delete files and Select's Delete, by their key whatever their
+        // label's language.
+        string[] writing = ["select.delete", "blueprints.details", "blueprints.vbuild", "blueprints.vbuildOld", "blueprints.toHomestead", "blueprints.delete", "blueprints.deleteOld"];
         Assert.All(writing, k => Assert.NotNull(t.Blocked(C(k, new Button { Content = "Supprimer" }.Tip(k)))));
         Assert.Null(t.Blocked(C("blueprints.paste", new Button { Content = "Coller" }.Tip("blueprints.paste"))));
         Assert.Null(t.Blocked(C("~go", button)));
