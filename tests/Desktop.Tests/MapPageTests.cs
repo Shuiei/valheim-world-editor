@@ -8,7 +8,7 @@ namespace TerrainEditor.Desktop.Tests;
 
 /// <summary>
 /// The map page's edges on the test world: nothing happens without a world, the players' line when the game errors or
-/// sends garbage, the biomes' names, the cursor's line when the mouse is over the map, an empty search and one that
+/// sends garbage (or is slow, while another world is shown), the biomes' names, the cursor's line when the mouse is over the map, an empty search and one that
 /// fails, the zone filter's messages and questions (kept with their world when another is shown), and Show ruins.
 /// </summary>
 [Collection("World files")]
@@ -79,6 +79,36 @@ public class MapPageTests
             await TestWindows.Until(() => w.MapPage!.LiveText.Text == "Live world · the game does not answer right now.");
             w.MapPage!.Stop();
         }
+    }
+
+    // A game slow to answer gets one players question at a time, and its answer, come after another world is
+    // shown, does not put its players on that world's map.
+    [AvaloniaFact]
+    public async Task PlayersAreAskedOnceAtATimeAndAnOldWorldsAnswerIsDropped()
+    {
+        using var slow = new FakeGame { HoldPlayers = new(TaskCreationOptions.RunContinuationsAsynchronously) };
+        using var other = new FakeGame { Players = "[{\"name\":\"Cyd\",\"x\":0,\"y\":30,\"z\":0,\"yaw\":0}]" };
+        var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
+        w.Show();
+        await w.OpenWorld(() => WorldSession.OpenLive(new LiveBridge(slow.Url, slow.Token), FakeGame.Label()), "Connecting…");
+        var m = w.MapPage!;
+        await TestWindows.Until(() => slow.PlayerReads == 1);
+        // The timer's next ticks while the first question waits: no more questions.
+        for (int i = 0; i < 3; i++)
+        {
+            await m.PollPlayers();
+        }
+        Assert.Equal(1, slow.PlayerReads);
+        // Another world shown; then the slow game answers.
+        using var session = await WorldSession.OpenLive(new LiveBridge(other.Url, other.Token), FakeGame.Label());
+        m.Show(session);
+        await TestWindows.Until(() => m.LiveText.Text == "Live world · 1 player(s) online: Cyd");
+        slow.HoldPlayers.SetResult();
+        await Task.Delay(300);
+        Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+        Assert.Equal("Live world · 1 player(s) online: Cyd", m.LiveText.Text);
+        Assert.Equal(["Cyd"], m.Map.Players.Select(p => p.Name));
+        m.Stop();
     }
 
     [AvaloniaFact]
