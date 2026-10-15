@@ -51,4 +51,40 @@ public class EditStoreTests
         edits.MarkResetsApplied(sent);
         Assert.Equal(again, Assert.Single(edits.Resets));
     }
+
+    // What changed in the zones and the object lists after a mark is undone by restoring it.
+    [Fact]
+    public void RestoreBringsBackTheZonesAndObjectsAsMarked()
+    {
+        var world = WorldSave.LoadLive(File.ReadAllBytes(Fixtures.Snapshot), "test");
+        var edits = new EditStore(world);
+        var zone = Assert.Single(world.TerrainZones);
+        var placed = new NewObject(-1, 1, System.Numerics.Vector3.Zero, System.Numerics.Vector3.Zero, 1f);
+        var gone = placed with { Id = -2 };
+        edits.AddObjects([placed, gone]);
+        edits.SetDeleted([gone.Id], true);
+        var lifted = edits.Get(zone.ZoneX, zone.ZoneZ)!;
+        lifted.Lift[0] = 20f;
+        edits.Put(lifted);
+        var mark = edits.Mark();
+        var flat = edits.Get(zone.ZoneX, zone.ZoneZ)!;
+        Array.Clear(flat.Lift);
+        edits.Put(flat);
+        edits.Put(new ZoneEdit(zone.ZoneX + 1, zone.ZoneZ) { Lift = { [0] = 5f } });
+        edits.SetDeleted([5, placed.Id], true);
+        edits.AddObjects([placed with { Id = -3 }]);
+        int version = edits.Version;
+        edits.Restore(mark);
+        Assert.True(edits.Version > version);
+        Assert.Equal(20f, edits.Get(zone.ZoneX, zone.ZoneZ)!.Lift[0]);
+        Assert.True(edits.Get(zone.ZoneX, zone.ZoneZ)!.Changed);
+        Assert.Null(edits.Get(zone.ZoneX + 1, zone.ZoneZ));
+        Assert.Empty(edits.Deleted);
+        Assert.Equal(placed, Assert.Single(edits.Added));
+        Assert.Equal(gone, edits.FindAdded(gone.Id));
+        // The mark is a copy: restoring did not hand out its zones.
+        edits.Put(flat);
+        edits.Restore(mark);
+        Assert.Equal(20f, edits.Get(zone.ZoneX, zone.ZoneZ)!.Lift[0]);
+    }
 }

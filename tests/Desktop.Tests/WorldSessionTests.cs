@@ -64,4 +64,60 @@ public sealed class WorldSessionTests : IDisposable
         await world.ApplyLive();
         Assert.Single(game.Resets);
     }
+
+    [Fact]
+    public async Task NoLimitGroundStaysAsItWasWhenNothingWasApplied()
+    {
+        using var game = new FakeGame();
+        using var world = await WorldSession.OpenLive(new LiveBridge(game.Url, game.Token), FakeGame.Label());
+        var lifted = world.Edits.Get(0, 0) ?? new ZoneEdit(0, 0);
+        for (int i = 0; i < EditStore.Cells; i++)
+        {
+            lifted.Lift[i] = 20f;
+        }
+        world.Edits.Put(lifted);
+        var modifiers = world.Modifiers;
+        int added = world.Edits.AddedCount, deleted = world.Edits.DeletedCount;
+        // The game turns the ground down before reading it (no world loaded): nothing went in, so the lift is not
+        // turned into ground discs.
+        game.Fail["/terrain"] = 503;
+        var o = await world.ApplyLive();
+        Assert.False(o.Done, o.Message);
+        Assert.False(o.Lifted);
+        Assert.True(world.Edits.Get(0, 0)!.HasLift);
+        Assert.Equal(added, world.Edits.AddedCount);
+        Assert.Equal(deleted, world.Edits.DeletedCount);
+        Assert.Same(modifiers, world.Modifiers);
+        // Once the game answers, the lift goes in as ground discs.
+        game.Fail.Remove("/terrain");
+        o = await world.ApplyLive();
+        Assert.True(o.Done, o.Message);
+        Assert.True(o.Lifted);
+        Assert.False(world.Edits.Get(0, 0)!.HasLift);
+    }
+
+    [Fact]
+    public async Task NoLimitGroundStaysAsDiscsWhenTheGameMayHaveTakenTheGround()
+    {
+        using var game = new FakeGame();
+        using var world = await WorldSession.OpenLive(new LiveBridge(game.Url, game.Token), FakeGame.Label());
+        var lifted = world.Edits.Get(0, 0) ?? new ZoneEdit(0, 0);
+        for (int i = 0; i < EditStore.Cells; i++)
+        {
+            lifted.Lift[i] = 20f;
+        }
+        world.Edits.Put(lifted);
+        // The plugin failed while setting the ground (500): some zones may be in the game, so the discs stay and the
+        // area is read again (Lifted); the next Apply live sends the ground again.
+        game.Fail["/terrain"] = 500;
+        var o = await world.ApplyLive();
+        Assert.False(o.Done, o.Message);
+        Assert.True(o.Lifted);
+        Assert.False(world.Edits.Get(0, 0)!.HasLift);
+        game.Fail.Remove("/terrain");
+        int sent = game.Terrain.Count;
+        o = await world.ApplyLive();
+        Assert.True(o.Done, o.Message);
+        Assert.True(game.Terrain.Count > sent);
+    }
 }
