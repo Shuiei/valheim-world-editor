@@ -10,17 +10,14 @@ namespace TerrainEditor.Save;
 /// </summary>
 internal static partial class DirectorySync
 {
-    /// <summary>EINVAL (the same on Linux and macOS).</summary>
-    private const int Einval = 22;
-
-    /// <summary>EROFS (the same on Linux and macOS).</summary>
-    private const int Erofs = 30;
-
     /// <summary>fcntl's F_FULLFSYNC on macOS (sys/fcntl.h).</summary>
     private const int FullFsync = 51;
 
-    /// <summary>Flushes the names in this directory to disk (the files created in it, renamed or removed).</summary>
-    /// <exception cref="IOException">The directory could not be opened or flushed.</exception>
+    /// <summary>
+    /// Flushes the names in this directory to disk (the files created in it, renamed or removed). Every failure is an
+    /// error, a file system that cannot flush a directory too: what was written there is not known to be on disk.
+    /// </summary>
+    /// <exception cref="IOException">The directory could not be opened, flushed or closed.</exception>
     public static void Flush(string dir)
     {
         if (OperatingSystem.IsWindows())
@@ -32,25 +29,19 @@ internal static partial class DirectorySync
         {
             throw new IOException($"Could not open {dir} to flush it (errno {Marshal.GetLastPInvokeError()}).");
         }
-        try
+        int flushed = OperatingSystem.IsMacOS() ? Fcntl(fd, FullFsync) : Fsync(fd);
+        int flushError = flushed != 0 ? Marshal.GetLastPInvokeError() : 0;
+        int closed = Close(fd);
+        int closeError = closed != 0 ? Marshal.GetLastPInvokeError() : 0;
+        if (flushed != 0)
         {
-            int done = OperatingSystem.IsMacOS() ? Fcntl(fd, FullFsync) : Fsync(fd);
-            if (done != 0 && Marshal.GetLastPInvokeError() is int errno && !CannotFlush(errno))
-            {
-                throw new IOException($"Could not flush {dir} to disk (errno {errno}).");
-            }
+            throw new IOException($"Could not flush {dir} to disk (errno {flushError}).");
         }
-        finally
+        if (closed != 0)
         {
-            _ = Close(fd);
+            throw new IOException($"Could not close {dir} after flushing it (errno {closeError}).");
         }
     }
-
-    /// <summary>
-    /// The file system has no flush for it (EINVAL, ENOTSUP, EROFS): nothing more can be done there, and .NET's
-    /// FileStream.Flush(true) passes over the same errors for the files themselves.
-    /// </summary>
-    private static bool CannotFlush(int errno) => errno is Einval or Erofs || errno == (OperatingSystem.IsMacOS() ? 45 : 95);
 
     /// <summary>open(2), read only.</summary>
     [LibraryImport("libc", EntryPoint = "open", SetLastError = true, StringMarshalling = StringMarshalling.Utf8)]
