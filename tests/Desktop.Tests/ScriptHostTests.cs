@@ -251,8 +251,8 @@ public class ScriptHostTests
         Assert.NotEmpty((await run).Heights);
     }
 
-    // The whole-metre offsets within reach that can land in a span: short however large the reach, none when there is
-    // nothing to count.
+    // The whole-metre offsets within reach that can land in a span: short however large the reach, kept up to 2^24 m,
+    // none when there is nothing to count.
     [Fact]
     public void OffsetsAreCountedOnlyWhereTheyCanLand()
     {
@@ -260,6 +260,8 @@ public class ScriptHostTests
         Assert.Equal((-11, 10), ScriptHost.Offsets(0.5f, 1e9f, -10, 10));
         Assert.Equal((-11, 10), ScriptHost.Offsets(0.5f, float.PositiveInfinity, -10, 10));
         Assert.Equal((-5, 2), ScriptHost.Offsets(0, 5, -100, 2));
+        // Far off: the offsets that land and can be counted (up to 2^24 m) are kept.
+        Assert.Equal((-16777216, -16777154), ScriptHost.Offsets(16777218f, 16777218f, 0, 64));
         foreach (var (c, reach) in new[] { (0f, -1f), (0f, float.NaN), (float.NaN, 5f), (1e9f, 5f), (-1e30f, 1e31f) })
         {
             var (from, to) = ScriptHost.Offsets(c, reach, -10, 10);

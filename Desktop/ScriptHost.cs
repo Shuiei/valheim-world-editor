@@ -392,8 +392,8 @@ public static class ScriptHost
 
     /// <summary>
     /// The whole-metre offsets from c, within reach of it, that can land within min..max: a short range of integers to
-    /// count, however large reach is. Empty (From above To) when reach is not a size or c is too far off (beyond
-    /// 2^24 m) for whole metres to count.
+    /// count, however large reach is, and never beyond 2^24 m (where whole metres stop counting). Empty (From above
+    /// To) when reach is not a size or none of them lands within min..max.
     /// </summary>
     /// <param name="c">The middle, on one axis.</param>
     /// <param name="reach">How far from it to go.</param>
@@ -405,8 +405,10 @@ public static class ScriptHost
         {
             return (0, -1);
         }
-        double from = Math.Max(-Math.Ceiling(reach), Math.Floor(min - (double)c)), to = Math.Min(Math.Floor(reach), Math.Ceiling(max - (double)c));
-        return from <= to && from >= -(1 << 24) && to <= 1 << 24 ? ((int)from, (int)to) : (0, -1);
+        // Offsets past 2^24 m are left out: those that can still be counted are kept.
+        double from = Math.Max(Math.Max(-Math.Ceiling(reach), Math.Floor(min - (double)c)), -(1 << 24));
+        double to = Math.Min(Math.Min(Math.Floor(reach), Math.Ceiling(max - (double)c)), 1 << 24);
+        return from <= to ? ((int)from, (int)to) : (0, -1);
     }
 
     /// <summary>
