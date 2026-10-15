@@ -4,6 +4,16 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.39 — unreleased
+
+### Fixed
+- **The start page could say "Reading the game's files" for ever, or "ready" when it was not.** When the editor
+  could not take one kind of the game's data (after a game update changed it), the error escaped the reading: the
+  start page stayed on its progress bar, the kinds before it used the new data and those after it the old, and no
+  failure was logged. When the game's files were already read, a failure to get its data still showed "ready". The
+  editor now logs what failed, counts none of the data as had (it is taken again next time), and the start page says
+  some of the game's data could not be read.
+
 ## v1.45.38 — unreleased
 
 ### Fixed

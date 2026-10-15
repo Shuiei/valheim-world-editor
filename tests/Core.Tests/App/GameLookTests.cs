@@ -167,6 +167,30 @@ public sealed class GameLookTests : IDisposable
     }
 
     [Fact]
+    public async Task AReadGameWhoseDataCannotBeHadEndsFailed()
+    {
+        var settings = new AppSettings { ValheimPath = FakeValheim(Path.Combine(_home, "Valheim")) };
+        GameLook.Check(settings);
+        Assert.Equal("failed", await Settled());
+        try
+        {
+            // Its files read, so ready at once; its game data neither in use, cached nor readable (no game code).
+            GameData.Forget();
+            GameLook.Check(settings);
+            for (int i = 0; i < 300 && GameLook.State == "ready"; i++)
+            {
+                await Task.Delay(100, TestContext.Current.CancellationToken);
+            }
+            Assert.Equal("failed", GameLook.State);
+            Assert.Contains("game's data", GameLook.Message);
+        }
+        finally
+        {
+            GameData.UseCopies(Fixtures.Root);
+        }
+    }
+
+    [Fact]
     public void TheCopyOlderEditorsMadeIsDeleted()
     {
         Directory.CreateDirectory(Path.Combine(GameLook.Dir, "models"));

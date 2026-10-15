@@ -144,7 +144,19 @@ public static class GameLook
             {
                 Set("ready", null);
                 // The rest of the game data too, ready before a world is opened (from the caches: at once).
-                Task.Run(() => GameData.Ensure(game));
+                Task.Run(() =>
+                {
+                    if (!GameData.Ensure(game))
+                    {
+                        lock (Lock)
+                        {
+                            if (ReferenceEquals(_bundles, game))
+                            {
+                                Set("failed", DataUnread);
+                            }
+                        }
+                    }
+                });
                 return;
             }
             Set("running", "Reading the game's files (a few seconds, only after a game update).");
@@ -159,11 +171,12 @@ public static class GameLook
                 game.EnsureIndexed((done, count) => Report(0.1 * done / Math.Max(1, count), $"Indexing the game's bundles: {done} of {count}"));
                 int n = game.Index.Count;
                 (state, message) = n == 0 ? ("failed", "No models were found in the game's files.")
-                    : !GameData.Ensure(game, (p, step) => Report(0.1 + (0.9 * p), step)) ? ("failed", "Some of the game's data could not be read (see the log).")
+                    : !GameData.Ensure(game, (p, step) => Report(0.1 + (0.9 * p), step)) ? ("failed", DataUnread)
                     : ("ready", "The game's look is ready.");
             }
-            catch (Exception e) when (e is IOException or InvalidDataException or UnauthorizedAccessException or NotSupportedException or NotImplementedException)
+            catch (Exception e)
             {
+                // Whatever fails, the state leaves "running": the start page would wait for ever.
                 Console.WriteLine($"game look: {e}");
                 (state, message) = ("failed", "The game's files could not be read: " + e.Message);
             }
@@ -176,6 +189,11 @@ public static class GameLook
             }
         });
     }
+
+    /// <summary>
+    /// The message when the game data (GameData.Ensure) cannot be had.
+    /// </summary>
+    private const string DataUnread = "Some of the game's data could not be read (see the log).";
 
     /// <summary>
     /// Use this Valheim folder: kept in the settings, then read. The problem, or null.
