@@ -278,6 +278,31 @@ public class WorldSaveTests
         Assert.DoesNotContain(world.Placed, p => p.Location == MadeObjects.MadeUpLocation);
     }
 
+    [Fact]
+    public void LiveAZdoidListedTwiceIsOneObjectWithItsLastBytes()
+    {
+        var world = WorldSave.LoadLive(File.ReadAllBytes(Fixtures.Snapshot), "live");
+        var at = new Vector3(640, 30, 640);
+        var moved = at + new Vector3(1, 0, 0);
+        // New to the editor: one id, not two (the first would never vanish).
+        var came = world.MergeLive([(10, 10)],
+            [(4242, 1, MadeObjects.Piece("woodwall", at, 777, "Astrid")), (4242, 1, MadeObjects.Piece("woodwall", moved, 777, "Astrid"))],
+            _ => false, _ => false)!;
+        int id = Assert.Single(came.Added);
+        Assert.Equal(moved, world.ObjectRefs[id].Position);
+        // Known: read again once, not twice.
+        var changed = world.MergeLive([(10, 10)],
+            [(4242, 1, MadeObjects.Piece("woodwall", at, 777, "Astrid")), (4242, 1, MadeObjects.Piece("woodwall", at, 777, "Astrid"))],
+            _ => false, _ => false)!;
+        Assert.Equal([id], changed.Updated);
+        Assert.Single(world.Pieces, p => p.Id == id);
+        Assert.Equal(1, world.Creators[777]);
+        // Gone: the one object vanishes and nothing stays behind.
+        var gone = world.MergeLive([(10, 10)], [], _ => false, _ => false)!;
+        Assert.Equal([id], gone.Vanished);
+        Assert.Equal(0, world.Creators[777]);
+    }
+
     // A vehicle's root and part (the example mod's): their links read (the root's
     // whole turn too), read again when the game changes them, gone with them.
     [Fact]
