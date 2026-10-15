@@ -98,6 +98,11 @@ What it is like:
   pieces a room is remembered by are measured to fit: standing stones, memorial stones, a wisp fountain,
   an eternal pyre, a sled, a crane in a tall hold, the fallen giant's statue in parts. Ashlands
   ruins have windows in their upper walls; Ashlands gates and mountain gates are their own.
+- **Rooms stand in wings.** A side room often grows off the last one placed, and what it is leans to
+  what that one is: a kitchen by the feast hall, cells and a torture chamber by the guard room, an
+  ossuary and a tomb by the burial chamber, a forge by the workshop and the store. The grand rooms are
+  lit closest, the rooms of the dead and the cells dimmest; a level down holds a fifth more loot and
+  foes than the one above; and a corridor's niche now and then hides a foe.
 - **Some rooms are nearly bare**, one piece and a light in the dark: a pacing beat between the full
   rooms. Clutter never puts the same thing twice running, and some rooms are tidier than others.
 - **Dead ends.** A corridor or two lead nowhere but a cache at the far end: the biome's chest, loot

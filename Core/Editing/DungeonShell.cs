@@ -258,7 +258,7 @@ internal static class DungeonShell
                 if (mat.Arch is { } arch && arch != "stone_arch")
                 {
                     Frame(2);
-                    o.Add(arch, At(c, f + (arch == "blackmarble_arch" ? 3 : 2)), yaw);
+                    o.Add(arch, At(c, f + (arch is "blackmarble_arch" or "dvergrtown_arch" ? 3 : 2)), yaw);
                 }
                 else
                 {

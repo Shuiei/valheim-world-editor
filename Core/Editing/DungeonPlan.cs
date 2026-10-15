@@ -308,23 +308,27 @@ internal sealed class DungeonPlanner
             }
             // Rooms off the way: wings, some with a twin across, some leading further.
             int sides = perLevel - mainCount;
+            DungeonPlan.Space? wing = null;
             for (int i = 0, tries = 0; i < sides && tries < sides * 6; tries++)
             {
-                var room = Pick(_style.Side);
-                if (SpecOf(room).Unique && _used.Contains(room))
-                {
-                    continue;
-                }
-                var parent = SideParent(l);
+                // Wings: a side room often grows off the last one, and what it is leans to what that one is (a kitchen
+                // by the feast hall, cells by the guard room, an ossuary by the burial chamber: rooms that belong together).
+                var parent = wing != null && CanParent(wing) && _rnd.NextDouble() < 0.55 ? wing : SideParent(l);
                 if (parent == null)
                 {
                     break;
+                }
+                var room = Pick([.. _style.Side.Select(s => (s.Room, s.Weight * (Kin(parent.Room).Contains(s.Room) ? 5f : 1f)))]);
+                if (SpecOf(room).Unique && _used.Contains(room))
+                {
+                    continue;
                 }
                 var n = Attach(l, parent, room, main: false);
                 if (n == null)
                 {
                     continue;
                 }
+                wing = n;
                 i++;
                 if (_rnd.NextDouble() < _style.Symmetry && Twin(l, n) != null)
                 {
@@ -438,6 +442,32 @@ internal sealed class DungeonPlanner
         l.Spaces.Where(s => CanParent(s) && (!main || s.Main)).OrderBy(_ => _rnd.Next()).FirstOrDefault() ?? l.Spaces[0];
 
     /// <summary>A space to put a side room off, weighted towards crossings and long halls; null when none can lead on.</summary>
+    /// <summary>The kinds of room that belong beside a kind: what a wing is made of.</summary>
+    public static Room[] Kin(Room room) => room switch
+    {
+        Room.Kitchen => [Room.Feast, Room.Store],
+        Room.Feast => [Room.Kitchen, Room.Store, Room.Quarters],
+        Room.Store => [Room.Kitchen, Room.Forge, Room.Workshop, Room.Barracks, Room.Mine],
+        Room.Barracks => [Room.Guard, Room.Armory, Room.Feast, Room.Store],
+        Room.Guard => [Room.Cells, Room.Barracks, Room.Armory],
+        Room.Armory => [Room.Barracks, Room.Guard, Room.Forge],
+        Room.Cells => [Room.Torture, Room.Guard],
+        Room.Torture => [Room.Cells, Room.Guard],
+        Room.Library => [Room.Quarters, Room.Chapel, Room.Workshop],
+        Room.Quarters => [Room.Library, Room.Kitchen, Room.Feast],
+        Room.Chapel => [Room.Shrine, Room.Tomb, Room.Library],
+        Room.Shrine => [Room.Chapel, Room.Tomb, Room.Ossuary],
+        Room.Burial => [Room.Ossuary, Room.Tomb, Room.Shrine],
+        Room.Ossuary => [Room.Burial, Room.Tomb],
+        Room.Tomb => [Room.Burial, Room.Shrine, Room.Ossuary],
+        Room.Forge => [Room.Workshop, Room.Store, Room.Mine, Room.Armory],
+        Room.Workshop => [Room.Forge, Room.Store, Room.Library],
+        Room.Mine => [Room.Workshop, Room.Store, Room.Forge],
+        Room.Den => [Room.Totem, Room.Store, Room.Den],
+        Room.Totem => [Room.Den, Room.Cells],
+        _ => [],
+    };
+
     private DungeonPlan.Space? SideParent(DungeonPlan.Level l)
     {
         var options = l.Spaces.Where(s => CanParent(s) && s.Room != Room.Antechamber)
