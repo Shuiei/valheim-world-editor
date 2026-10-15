@@ -326,10 +326,16 @@ public class WorldSaveTests
     {
         using var w = new TempWorld();
         WorldSave world = w.Load();
-        ObjectRef o = world.ObjectRefs.First(r => !r.IsTerrain);
+        // Two objects of one chunk file share its bytes; an object of the other file has its own.
+        var byFile = world.ObjectRefs.GroupBy(r => r.File).OrderByDescending(g => g.Count()).ToList();
+        Assert.True(byFile.Count >= 2 && byFile[0].Count() >= 2);
+        ObjectRef o = byFile[0].First(), sameFile = byFile[0].Skip(1).First(), otherFile = byFile[1].First();
         Func<ObjectRef, byte[]> read = world.SourceReader();
         byte[] first = read(o);
         Assert.Same(first, read(o));
+        Assert.Same(first, read(sameFile));
+        Assert.NotSame(first, read(otherFile));
         Assert.Equal(world.ObjectBytes(world.ObjectRefs.IndexOf(o)), first[(int)o.Start..(int)o.End]);
+        Assert.Equal(world.ObjectBytes(world.ObjectRefs.IndexOf(otherFile)), read(otherFile)[(int)otherFile.Start..(int)otherFile.End]);
     }
 }
