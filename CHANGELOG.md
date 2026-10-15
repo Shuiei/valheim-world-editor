@@ -12,6 +12,8 @@ the plugin is unchanged in versions without that part.
   is complete, flushed to disk, and removes the previous save. The two copies were not flushed, so after a power
   cut the marker could be on disk next to an empty or cut-short .db2 or .fwl2, with the previous save already gone.
   The copies are now flushed to disk before the marker is written, as the other files of the save already were.
+  On Linux and macOS the save folder is flushed too (a file's name is only safe on disk once its folder is),
+  before the marker and again before the previous save is removed.
 
 ## v1.45.19 — unreleased
 
