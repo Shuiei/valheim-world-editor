@@ -7,7 +7,7 @@ namespace TerrainEditor.Desktop.Tests;
 
 /// <summary>
 /// The Area panel on a copy of the test world: paint brought back from a backup onto unpainted ground (fully inside,
-/// part way at the soft edge), a restore when the selection was dropped, and the eyedropper's kind put in the With list.
+/// part way at the soft edge), a restore when the selection was dropped or under the Mask, and the eyedropper's kind put in the With list.
 /// </summary>
 [Collection("World files")]
 public class AreaPanelBackupTests
@@ -83,6 +83,32 @@ public class AreaPanelBackupTests
             w.View.Area.Clear();
             await p.RestoreBackup(s, poly, backup);
             Assert.Equal("Nothing to restore: the selection is as it was in the backup.", w.MessageText.Text);
+        }
+        finally
+        {
+            Directory.Delete(Path.GetDirectoryName(dir)!, recursive: true);
+        }
+    }
+
+    // With the Mask on, objects where it lets nothing through are left alone on both sides: unchanged ones are not
+    // brought back on top of themselves.
+    [AvaloniaFact]
+    public async Task ARestoreUnderTheMaskLeavesUnchangedObjectsAlone()
+    {
+        var (w, s, dir) = Open();
+        string backup = dir.TrimEnd(Path.DirectorySeparatorChar) + "_same";
+        try
+        {
+            TempWorld.CopyDir(dir, backup);
+            var p = w.AreaPanel;
+            var poly = w.View.Area.Polygon()!;
+            Assert.NotEmpty(p.ThingsInside(poly, chosenKindsOnly: true, includeHidden: true));
+            int things = s.Scene.Things.Count;
+            s.Mask.On = true;
+            s.Mask.HeightMin = 10000;
+            await p.RestoreBackup(s, poly, backup);
+            Assert.Equal("Nothing to restore: the selection is as it was in the backup.", w.MessageText.Text);
+            Assert.Equal(things, s.Scene.Things.Count);
         }
         finally
         {

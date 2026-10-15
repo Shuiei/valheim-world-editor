@@ -4,6 +4,14 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.11 — unreleased
+
+### Fixed
+- **Restore from backup with the Mask on doubled objects.** The objects in the backup were picked by the selection
+  and the kinds chosen only, those in the area also by the Mask: an unchanged tree or rock where the Mask lets
+  nothing through was found in the backup but not in the area, so it was brought back on top of itself. Both
+  sides are now picked alike, so objects where the Mask lets nothing through are left as they are.
+
 ## v1.45.10 — unreleased
 
 ### Fixed
