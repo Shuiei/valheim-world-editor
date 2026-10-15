@@ -4,6 +4,15 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.5 — unreleased
+
+### Fixed
+- **Moving objects past the area's edge sank them about 1000 m, or threw others up.** With **Put on ground** on, the
+  Select tool's move (dragging, **Move there**, **Move by**) took the ground past the edge of the open area, where
+  the editor has none, as 1000 m below sea level: a moved object or block of building pieces went there, or the
+  rest of the selection was lifted by as much to make up for it, and the save wrote those heights. Past the edge an
+  object now keeps its own height, and only the ground inside the area places the rest.
+
 ## v1.45.4 — unreleased
 
 ### Fixed
