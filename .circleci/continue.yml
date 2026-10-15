@@ -1,8 +1,12 @@
 # Valheim World Editor: tests and build checks on every push and pull request, and the release on main.
 # The pipeline starts in .circleci/config.yml, which says whether a release is due (the release parameter).
-#   code-analysis  the editor (Core, Desktop) builds with no .NET analyzer warning (warnings are
-#                  errors) and is formatted as .editorconfig says (dotnet format); every XML file of
-#                  the repository (projects, coverage settings) is well formed (xmllint)
+#   code-analysis  the editor (Core, Desktop, Sdk) and the plugin's API build with no .NET analyzer
+#                  warning (warnings are errors); every XML file of the repository (projects, coverage
+#                  settings) is well formed (xmllint)
+#   formatting     the editor's projects are formatted as .editorconfig says (dotnet format,
+#                  tools/format-check.sh) on two containers; a branch checks only the projects it
+#                  changed since main (every one when .editorconfig or a build property changed),
+#                  main checks all of them
 #   core-tests     the core's tests on three containers (saves, the world generator against the game's
 #                  values, live mode against a stand-in bridge, the SSH tunnel against a local sshd), and
 #   app-tests      the app's windows, headless, on six containers, and the visual tests: the real
@@ -17,10 +21,12 @@
 #                  containers' coverage into one report and sends it to Codecov (codecov.yml), which
 #                  fails its own check (codecov/project) under 95% line coverage. A failed or partial test
 #                  run sends nothing, so Codecov never shows the coverage of part of the tests.
-#   packages       the Windows and Linux release packages: they build, hold no source code or game
-#                  files (the plugin is left out: it builds against the game's own DLLs), and the
-#                  Linux one starts and draws the test world (tools/smoke-test.sh, under Xvfb)
-#   windows-smoke  the Windows package does the same on a Windows machine (tools/smoke-test.ps1)
+#   packages       on main only: the Windows, Linux and Mac release packages build, hold no source
+#                  code or game files (the plugin is left out: it builds against the game's own DLLs),
+#                  and the Linux one starts and draws the test world (tools/smoke-test.sh, under Xvfb)
+#   windows-smoke  on main only: the Windows package does the same on a Windows machine
+#                  (tools/smoke-test.ps1). Both are slow and what they check (tools/release.sh, the
+#                  packaging) seldom changes, so branches and pull requests run the tests only.
 # When a release is due (main, VERSION's CHANGELOG heading dated, no tag for it yet), the release
 # workflow runs instead, and nothing in it runs before the approval (the tests ran on the pull request,
 # which main's ruleset keeps up to date with main, so the merged commit's tree is the one they tested):
@@ -59,6 +65,16 @@ executors:
     resource_class: medium
 
 commands:
+  # The NuGet cache, one for every job that builds or restores (code-analysis, formatting, the test
+  # jobs), made again on main when a project's packages change (code-analysis saves it).
+  restore-nuget:
+    steps:
+      - restore_cache:
+          keys:
+            - nuget-v2-{{ checksum "Directory.Build.props" }}-{{ checksum "Core/ValheimWorldEditor.Core.csproj" }}-{{ checksum "Desktop/ValheimWorldEditor.Desktop.csproj" }}-{{ checksum "tests/Core.Tests/Core.Tests.csproj" }}-{{ checksum "tests/Desktop.Tests/Desktop.Tests.csproj" }}-{{ checksum "Sdk/ValheimWorldEditor.Sdk.csproj" }}
+            # Else main's latest (a branch whose packages changed restores only what it adds).
+            - nuget-v2-
+
   # One test project's classes, shared out between the job's containers by
   # CircleCI by the time each class took in the last runs (circleci tests run). It also gives the job
   # "Rerun failed tests": a rerun runs only the classes that failed. Every test runs (a failure does
@@ -98,11 +114,7 @@ commands:
                 command: |
                   Xvfb :99 -screen 0 1600x1000x24 -nolisten tcp 2>&1 \
                     | grep --line-buffered -v -E 'Could not resolve keysym|^The XKEYBOARD keymap compiler \(xkbcomp\) reports:$|^Errors from xkbcomp are not fatal to the X server$'
-      - restore_cache:
-          keys:
-            - nuget-v2-{{ checksum "Directory.Build.props" }}-{{ checksum "Core/ValheimWorldEditor.Core.csproj" }}-{{ checksum "Desktop/ValheimWorldEditor.Desktop.csproj" }}-{{ checksum "tests/Core.Tests/Core.Tests.csproj" }}-{{ checksum "tests/Desktop.Tests/Desktop.Tests.csproj" }}-{{ checksum "Sdk/ValheimWorldEditor.Sdk.csproj" }}
-            # Else main's latest (a branch whose packages changed restores only what it adds).
-            - nuget-v2-
+      - restore-nuget
       - run:
           name: Build the tests (every warning is an error)
           command: dotnet build << parameters.project >> -c Release -warnaserror
@@ -213,13 +225,7 @@ jobs:
     executor: dotnet
     steps:
       - checkout
-      # One NuGet cache for both jobs that build (code-analysis, native-tests), made again on main when a
-      # project's packages change.
-      - restore_cache:
-          keys:
-            - nuget-v2-{{ checksum "Directory.Build.props" }}-{{ checksum "Core/ValheimWorldEditor.Core.csproj" }}-{{ checksum "Desktop/ValheimWorldEditor.Desktop.csproj" }}-{{ checksum "tests/Core.Tests/Core.Tests.csproj" }}-{{ checksum "tests/Desktop.Tests/Desktop.Tests.csproj" }}-{{ checksum "Sdk/ValheimWorldEditor.Sdk.csproj" }}
-            # Else main's latest (a branch whose packages changed restores only what it adds).
-            - nuget-v2-
+      - restore-nuget
       # Every XML file of the repository is well formed: the builds read only the projects they build, and
       # nothing reads tests/coverage.runsettings before the tests on main (a "--" in its comment once made
       # every test container there refuse its options).
@@ -233,13 +239,6 @@ jobs:
           command: |
             dotnet build Desktop/ValheimWorldEditor.Desktop.csproj -c Release -warnaserror
             dotnet build plugin/WorldEditorBridge.Api/WorldEditorBridge.Api.csproj -c Release -warnaserror
-      - run:
-          name: Formatting (dotnet format, as .editorconfig says)
-          command: |
-            for p in Core/ValheimWorldEditor.Core.csproj Desktop/ValheimWorldEditor.Desktop.csproj Sdk/ValheimWorldEditor.Sdk.csproj plugin/WorldEditorBridge.Api/WorldEditorBridge.Api.csproj samples/ExampleVehicles.WorldEditor/ExampleVehicles.WorldEditor.csproj; do
-              dotnet format whitespace "$p" --verify-no-changes --no-restore
-              dotnet format style "$p" --verify-no-changes --no-restore
-            done
       # Saved from main only: branches reuse main's (each cache is kept 15 days and billed).
       - when:
           condition:
@@ -249,6 +248,30 @@ jobs:
                 key: nuget-v2-{{ checksum "Directory.Build.props" }}-{{ checksum "Core/ValheimWorldEditor.Core.csproj" }}-{{ checksum "Desktop/ValheimWorldEditor.Desktop.csproj" }}-{{ checksum "tests/Core.Tests/Core.Tests.csproj" }}-{{ checksum "tests/Desktop.Tests/Desktop.Tests.csproj" }}-{{ checksum "Sdk/ValheimWorldEditor.Sdk.csproj" }}
                 paths:
                   - ~/.nuget/packages
+
+  # dotnet format on the five projects takes twice as long as the analyzers' build, so it is a job of
+  # its own, on two containers: Desktop (loads Core and Sdk too) with Sdk on one, the rest on the other.
+  formatting:
+    executor: dotnet
+    parallelism: 2
+    steps:
+      - checkout
+      - restore-nuget
+      - run:
+          name: Formatting (dotnet format, as .editorconfig says)
+          command: |
+            case $CIRCLE_NODE_INDEX in
+              0) projects="Desktop/ValheimWorldEditor.Desktop.csproj Sdk/ValheimWorldEditor.Sdk.csproj" ;;
+              *) projects="Core/ValheimWorldEditor.Core.csproj plugin/WorldEditorBridge.Api/WorldEditorBridge.Api.csproj samples/ExampleVehicles.WorldEditor/ExampleVehicles.WorldEditor.csproj" ;;
+            esac
+            if [ "$CIRCLE_BRANCH" = main ]; then
+              tools/format-check.sh $projects
+            else
+              # checkout fetched this branch alone; main over https (the image has no ssh, and the
+              # repository is public).
+              git fetch -q "https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git" main:refs/remotes/origin/main
+              tools/format-check.sh --since origin/main $projects
+            fi
 
   core-tests:
     executor: dotnet
@@ -267,8 +290,8 @@ jobs:
     # main the coverage measures it too (on two cores a close-up took minutes).
     resource_class: large
     # The window tests run one at a time (one UI thread): more containers is what makes them faster.
-    # Six keep the job about as long as packages and code-analysis on branches (each container also
-    # spends about 1.5 minutes setting up and building). The coverage job expects this many reports.
+    # Six keep the job about as long as code-analysis on branches (each container also spends about
+    # 1.5 minutes setting up and building). The coverage job expects this many reports.
     parallelism: 6
     steps:
       - test-classes:
@@ -344,14 +367,10 @@ jobs:
             # The OpenGL the virtual screen offers (Mesa's software renderer, llvmpipe).
             xvfb-run -a -s "-screen 0 1600x1000x24" glxinfo -B | grep -E 'renderer|version' || true
             xvfb-run -a -s "-screen 0 1600x1000x24" tools/smoke-test.sh /tmp/smoke/ValheimWorldEditor/ValheimWorldEditor tests/fixtures/CITest
-      # The packages kept as artifacts only for main (releases take them from there: about 135 MB a
-      # run, kept 30 days); other branches only test them.
-      - when:
-          condition:
-            equal: [main, << pipeline.git.branch >>]
-          steps:
-            - store_artifacts:
-                path: /tmp/dist
+      # The packages kept as artifacts (releases take them from there: about 135 MB a run, kept
+      # 30 days).
+      - store_artifacts:
+          path: /tmp/dist
       # The Windows package for windows-smoke, and both for the release, in the same workflow.
       - persist_to_workspace:
           root: /tmp/dist
@@ -483,19 +502,28 @@ jobs:
           command: dotnet run tools/release/publish.cs -- << parameters.site >> /tmp/dist << parameters.options >>
 
 workflows:
-  # Side by side; windows-smoke waits for the Windows package that packages makes, and coverage (main
-  # only) for both test jobs to pass.
+  # Side by side; windows-smoke waits for the Windows package that packages makes, and coverage for
+  # both test jobs to pass. Branches and pull requests run code-analysis, formatting and the two test
+  # jobs: packages, windows-smoke and coverage are main's. Main's ruleset requires those four checks
+  # of a pull request, and no other: it must stay in step with this list.
   test:
     when:
       not: << pipeline.parameters.release >>
     jobs:
-      - packages
+      - packages:
+          filters:
+            branches:
+              only: main
       - code-analysis
+      - formatting
       - core-tests
       - app-tests
       - windows-smoke:
           requires:
             - packages
+          filters:
+            branches:
+              only: main
       - coverage:
           requires:
             - core-tests
