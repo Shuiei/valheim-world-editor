@@ -497,6 +497,38 @@ public class AreaPanelTests
     }
 
     [AvaloniaFact]
+    public async Task APictureReadIsDroppedWhenTheSelectionChangesAndRefusedForAnotherArea()
+    {
+        using var r = new Run();
+        string folder = Path.Combine(Path.GetDirectoryName(r.Dir)!, "maps");
+        r.P.HeightmapFolder = folder;
+        Click(r.P.ExportButton);
+        string png = Assert.Single(Directory.GetFiles(folder, "*.png"));
+        r.P.PickPicture = () => Task.FromResult<string?>(png);
+        Click(r.P.ImportButton);
+        await TestWindows.Until(() => r.P.PictureInfo.Text?.Contains("the selection") == true);
+        // The selection changes: the picture was fitted to the old one.
+        r.Select(2, 2, 30, 30);
+        Assert.Equal("The picture read was dropped: the selection changed. Import it again.", r.Said);
+        Click(r.P.PutButton);
+        Assert.False(r.S.CanUndo);
+        // Read again, then another area opens without the selection changing: its grid indices are the old ground's.
+        Click(r.P.ImportButton);
+        await TestWindows.Until(() => r.P.PictureInfo.Text?.Contains("the selection") == true);
+        var scene = WorldScene.Load(r.Dir, 0, 0, 1);
+        r.W.View.Show(scene, null);
+        r.W.Edit(scene.Session!);
+        Click(r.P.PutButton);
+        Assert.Equal("The picture was fitted to another area: import it again.", r.Said);
+        Assert.False(scene.Session!.CanUndo);
+        Assert.False(r.S.CanUndo);
+        // Dropped: putting again does nothing.
+        r.W.MessageText.Text = "";
+        Click(r.P.PutButton);
+        Assert.Equal("", r.Said);
+    }
+
+    [AvaloniaFact]
     public void CopyPasteAndBlueprintButtonsAskTheWindow()
     {
         using var r = new Run();
