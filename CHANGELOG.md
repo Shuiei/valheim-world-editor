@@ -4,6 +4,15 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.18 — unreleased
+
+### Fixed
+- **A save or Apply live that failed still turned No limit ground into ground discs and cleared the undo history.**
+  Saving or applying first turns ground past the game's ±8 m into ground discs and ordinary changes. When the save
+  then failed (a full disk) or the game refused the ground, that was kept: the area was read again, its undo history
+  went, and the No limit ground was now discs that nothing had written. When nothing was written or sent, the No
+  limit ground is now put back as it was, and the area and its history stay.
+
 ## v1.45.17 — unreleased
 
 ### Fixed

@@ -1334,7 +1334,7 @@ public sealed class EditSession
             var o = owner.Save();
             result = o.Saved!;
             // Read again only when the world was (zone resets) or No limit ground became ground discs
-            // (also when the save then failed): the ground under the area is not the same any more.
+            // (a failed save puts it back): the ground under the area is not the same any more.
             // Otherwise, as after Apply live, the area and its history stay; the steps are saved.
             reread = o.Reloaded || o.Lifted;
             if (reread)

@@ -301,19 +301,45 @@ public sealed class WorldSession : IDisposable
         public bool Declined { get; init; }
     }
 
+    /// <summary>No limit ground turned into ground discs (<see cref="LiftToDiscs"/>), with what to put back if nothing goes out.</summary>
+    /// <param name="Plan">The discs and edits made.</param>
+    /// <param name="Before">The edits as they were.</param>
+    /// <param name="Modifiers">The flattening modifiers as they were.</param>
+    /// <param name="Version">The edits' version just after: changed since, they are not put back.</param>
+    private sealed record Lifting(Uplift.Plan Plan, EditStore.Checkpoint Before, TerrainModifiers Modifiers, int Version);
+
     /// <summary>
     /// No limit ground waiting (lifts): turned into ground discs and ordinary edits (Uplift), the ground
     /// worked out again with them. Null when there was none.
     /// </summary>
-    public Uplift.Plan? LiftToDiscs()
+    private Lifting? LiftToDiscs()
     {
         var plan = Uplift.Make(World, Terrain, Edits, NextId);
-        if (plan != null)
+        if (plan == null)
         {
-            Uplift.Apply(plan, Edits);
-            UseModifiers(new TerrainModifiers(Uplift.PlacedNow(World, Edits)));
+            return null;
         }
-        return plan;
+        var before = Edits.Mark();
+        var modifiers = Modifiers;
+        Uplift.Apply(plan, Edits);
+        UseModifiers(new TerrainModifiers(Uplift.PlacedNow(World, Edits)));
+        return new Lifting(plan, before, modifiers, Edits.Version);
+    }
+
+    /// <summary>
+    /// A save or apply that wrote or sent nothing: the No limit ground it turned into discs is put back as it was,
+    /// unless the edits changed since (a stroke drawn while the game answered).
+    /// </summary>
+    /// <returns>Put back.</returns>
+    private bool Unlift(Lifting lift)
+    {
+        if (Edits.Version != lift.Version)
+        {
+            return false;
+        }
+        Edits.Restore(lift.Before);
+        UseModifiers(lift.Modifiers);
+        return true;
     }
 
     /// <summary>Switches the session and its generator to new flattening modifiers.</summary>
@@ -339,12 +365,30 @@ public sealed class WorldSession : IDisposable
         {
             return new Outcome(false, newer, false, new WorldWriter.Result(false, newer, null, 0, 0, []));
         }
-        var plan = LiftToDiscs();
+        var lift = LiftToDiscs();
         var zones = Edits.All().Where(e => e.Changed).Select(e => (e.ZoneX, e.ZoneZ)).ToHashSet();
         zones.UnionWith(_savedZones);
         var changed = Edits.All().Where(e => zones.Contains((e.ZoneX, e.ZoneZ))).ToList();
-        bool reread = plan != null || Edits.ResetCount > 0;
-        var result = WorldWriter.Save(World, changed, Edits.Deleted, Edits.Added, Edits.Resets, new WorldWriter.Options(KeepBase: !reread, Drop: _lastSave, Latest: known));
+        bool reread = lift != null || Edits.ResetCount > 0;
+        WorldWriter.Result result;
+        try
+        {
+            result = WorldWriter.Save(World, changed, Edits.Deleted, Edits.Added, Edits.Resets, new WorldWriter.Options(KeepBase: !reread, Drop: _lastSave, Latest: known));
+        }
+        catch
+        {
+            if (lift != null)
+            {
+                Unlift(lift);
+            }
+            throw;
+        }
+        // Not saved: the No limit ground stays as it was (the area and its history too).
+        if (!result.Saved && lift != null)
+        {
+            Unlift(lift);
+            lift = null;
+        }
         if (result.Saved && reread)
         {
             World = WorldSave.Load(World.Directory);
@@ -366,8 +410,8 @@ public sealed class WorldSession : IDisposable
             MarkHistoryApplied();
             KeepHistory();
         }
-        string message = plan != null ? $"{result.Message} No limit ground: {plan.Describe()}." : result.Message;
-        return new Outcome(result.Saved, message, result.Saved && reread, result with { Message = message }) { Lifted = plan != null };
+        string message = lift != null ? $"{result.Message} No limit ground: {lift.Plan.Describe()}." : result.Message;
+        return new Outcome(result.Saved, message, result.Saved && reread, result with { Message = message }) { Lifted = lift != null };
     }
 
     /// <summary>Leaving an offline world it saved: the save it was opened from goes (only the latest stays).</summary>
@@ -445,11 +489,14 @@ public sealed class WorldSession : IDisposable
         var live = Live!;
         var done = new List<string>();
         bool reloaded = false;
-        var plan = LiftToDiscs();
+        var lift = LiftToDiscs();
+        var plan = lift?.Plan;
         if (plan != null)
         {
             done.Add($"No limit ground: {plan.Describe()}");
         }
+        // Until the ground went in, a failure has sent nothing: the No limit ground is put back as it was.
+        bool sent = false;
         try
         {
             // Copies as sent: edits made while the game answers are not marked as applied.
@@ -457,6 +504,7 @@ public sealed class WorldSession : IDisposable
             if (zones.Count > 0)
             {
                 await live.ApplyTerrain(zones.Select(e => (e.ZoneX, e.ZoneZ, WorldWriter.EncodeTerrain(e))).ToList());
+                sent = true;
                 Edits.MarkApplied(zones);
                 done.Add($"{zones.Count} zone(s) of ground");
             }
@@ -501,7 +549,8 @@ public sealed class WorldSession : IDisposable
         // The game answering with an error (InvalidOperationException from the bridge) is reported too.
         catch (Exception ex) when (GameFailed(ex))
         {
-            return new Outcome(false, "Could not apply live: " + ex.Message, false) { Lifted = plan != null };
+            bool lifted = lift != null && (sent || !Unlift(lift));
+            return new Outcome(false, "Could not apply live: " + ex.Message, false) { Lifted = lifted };
         }
     }
 
