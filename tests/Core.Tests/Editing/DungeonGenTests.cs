@@ -431,8 +431,9 @@ public class DungeonGenTests
         // Over a few keeps and crypts: a loft over the way in of some great hall or throne room (its rail and the top
         // of its stairs 3 m up), a sunken shrine or arena (ledges a metre up round the room), a burial vault (walls of
         // the material well inside the room's box), a corridor closed by a gate midway, bones along another.
-        var keeps = Enumerable.Range(1, 16).Select(seed => DungeonGen.Make(new DungeonGen.Settings(Biome: "Black Forest", Style: "Fortress", Size: 3, Levels: 1, Seed: seed))).ToList();
-        var crypts = Enumerable.Range(1, 16).Select(seed => DungeonGen.Make(new DungeonGen.Settings(Biome: "Black Forest", Style: "Crypt", Size: 3, Levels: 2, Seed: seed))).ToList();
+        // Lofts are rare (a tall room 12 m deep with free sides, half the time): 24 seeds of each.
+        var keeps = Enumerable.Range(1, 24).Select(seed => DungeonGen.Make(new DungeonGen.Settings(Biome: "Black Forest", Style: "Fortress", Size: 3, Levels: 1, Seed: seed))).ToList();
+        var crypts = Enumerable.Range(1, 24).Select(seed => DungeonGen.Make(new DungeonGen.Settings(Biome: "Black Forest", Style: "Crypt", Size: 3, Levels: 2, Seed: seed))).ToList();
         static IEnumerable<DungeonGen.Item> In(DungeonGen.Result r, DungeonGen.PlanRoom m, float inset = 0) =>
             r.Items.Where(i => i.Position.X > m.X0 + inset && i.Position.X < m.X1 - inset && i.Position.Z > m.Z0 + inset && i.Position.Z < m.Z1 - inset && i.Position.Y >= m.Y - 0.5f && i.Position.Y < m.Y + 11);
         var lofts = keeps.Concat(crypts).SelectMany(r => r.Map!.Where(m => m.Name is "Great hall" or "Throne room" or "Chapel").Select(m => In(r, m).ToList()))
@@ -447,5 +448,37 @@ public class DungeonGenTests
         var corridors = crypts.SelectMany(r => r.Map!.Where(m => m.Corridor).Select(m => In(r, m).Select(i => i.Prefab).ToList())).ToList();
         Assert.True(corridors.Any(p => p.Any(n => n.StartsWith("dungeon_sunkencrypt_irongate", StringComparison.Ordinal))), "no gated corridor");
         Assert.True(corridors.Any(p => p.Count(n => n is "skull_pile" or "bone_stack") >= 4), $"bones: {string.Join(",", corridors.Select(p => p.Count(n => n is "skull_pile" or "bone_stack")))}");
+    }
+
+    [Fact]
+    public void DeadEndsHoldACacheAndSomeRoomsStandNearlyBare()
+    {
+        // Over a few crypts: some corridors lead nowhere (one doorway, no stairs) and each ends in the biome's chest;
+        // and a few rooms of the ordinary kinds stand nearly bare: one piece, a light, little else.
+        var crypts = Enumerable.Range(1, 16).Select(seed => DungeonGen.Make(new DungeonGen.Settings(Biome: "Black Forest", Style: "Crypt", Size: 3, Levels: 2, Seed: seed))).ToList();
+        static IEnumerable<DungeonGen.Item> In(DungeonGen.Result r, DungeonGen.PlanRoom m) =>
+            r.Items.Where(i => i.Position.X > m.X0 && i.Position.X < m.X1 && i.Position.Z > m.Z0 && i.Position.Z < m.Z1 && i.Position.Y >= m.Y - 0.5f && i.Position.Y < m.Y + 11);
+        var deadEnds = new List<(DungeonGen.Result R, DungeonGen.PlanRoom M)>();
+        foreach (var r in crypts)
+        {
+            var map = r.Map!.ToList();
+            for (int k = 0; k < map.Count; k++)
+            {
+                if (map[k].Corridor && r.Doors!.Count(d => d.A == k || d.B == k) == 1)
+                {
+                    deadEnds.Add((r, map[k]));
+                }
+            }
+        }
+        Assert.True(deadEnds.Count >= 3, $"{deadEnds.Count} dead ends");
+        Assert.All(deadEnds, e => Assert.Contains(In(e.R, e.M), i => i.Prefab.StartsWith("TreasureChest_", StringComparison.Ordinal)));
+        // Nearly bare: of what is not the shell (walls, slabs, columns, beams, doors) nor light, cobweb or rubble, at most five things.
+        static bool Furniture(DungeonGen.Item i) =>
+            !i.Prefab.StartsWith("stone_wall", StringComparison.Ordinal) && !i.Prefab.StartsWith("blackmarble", StringComparison.Ordinal) && i.Prefab != "stone_pillar"
+            && !i.Prefab.StartsWith("dungeon_", StringComparison.Ordinal) && !i.Prefab.Contains("torch", StringComparison.OrdinalIgnoreCase) && !i.Prefab.Contains("brazier", StringComparison.OrdinalIgnoreCase)
+            && !i.Prefab.Contains("web", StringComparison.Ordinal) && !i.Prefab.Contains("Rubble", StringComparison.Ordinal) && !i.Prefab.StartsWith("Spawner_", StringComparison.Ordinal);
+        var ordinary = crypts.SelectMany(r => r.Map!.Where(m => !m.Corridor && m.Name is "Great hall" or "Gallery" or "Burial chamber" or "Ossuary" or "Tomb").Select(m => In(r, m).Count(Furniture))).ToList();
+        Assert.True(ordinary.Count(n => n <= 5) >= 2, $"bare rooms: {string.Join(",", ordinary.Order().Take(10))}");
+        Assert.True(ordinary.Count(n => n > 8) >= ordinary.Count / 2, "most rooms are full");
     }
 }

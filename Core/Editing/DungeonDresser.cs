@@ -361,6 +361,13 @@ internal sealed partial class DungeonDresser
     /// <summary>One of the names at random.</summary>
     private string One(params string[] list) => list[_rnd.Next(list.Length)];
 
+    /// <summary>One of the names at random, not the one just used when there is a choice (repeated detail is what the eye tires of first).</summary>
+    private string Another(string[] list, string last)
+    {
+        int k = _rnd.Next(list.Length);
+        return list.Length > 1 && list[k] == last ? list[(k + 1) % list.Length] : list[k];
+    }
+
     /// <summary>True with chance p (0 to 1).</summary>
     private bool Chance(double p) => _rnd.NextDouble() < p;
 
@@ -599,9 +606,11 @@ internal sealed partial class DungeonDresser
     {
         string[] options = choice.Length > 0 ? choice : _b.Hanging;
         var spots = f.WallSpots(3.2f, 3f).OrderBy(_ => _rnd.Next()).Take(count).ToList();
+        string last = "";
         foreach (var s in spots)
         {
-            Hang(f, One(options), s);
+            last = Another(options, last);
+            Hang(f, last, s);
         }
     }
 
@@ -644,19 +653,23 @@ internal sealed partial class DungeonDresser
     private void Clutter(Frame f, float perArea, params string[] choice)
     {
         string[] options = choice.Length > 0 ? choice : _b.Clutter;
-        int n = Count(f.Area * perArea * (0.5f + 0.5f * _s.Decor));
+        // Some rooms are bare, some cluttered (a density of the room's own), and nothing stands twice running.
+        int n = Count(f.Area * perArea * (0.5f + 0.5f * _s.Decor) * R(0.5f, 1.5f));
         var walls = f.WallSpots(1.3f, 2.5f).OrderBy(_ => _rnd.Next()).ToList();
+        string last = "";
         for (int i = 0; i < n; i++)
         {
+            string thing = Another(options, last);
             if (i < walls.Count && Chance(0.7))
             {
                 var (u, v) = In(walls[i], R(0.5f, 1.1f));
-                Put(f, One(options), u, v, R(0, 360), 0.45f);
+                Put(f, thing, u, v, R(0, 360), 0.45f);
             }
             else if (Spot(f, 0.5f) is var (u, v))
             {
-                Put(f, One(options), u, v, R(0, 360), 0.45f);
+                Put(f, thing, u, v, R(0, 360), 0.45f);
             }
+            last = thing;
         }
     }
 
@@ -826,6 +839,13 @@ internal sealed partial class DungeonDresser
         if (f.S.Corridor)
         {
             Corridor(f);
+            Nooks(f);
+            Finish(f);
+            return;
+        }
+        if (Sparse(f))
+        {
+            Bare(f);
             Nooks(f);
             Finish(f);
             return;
@@ -1051,6 +1071,10 @@ internal sealed partial class DungeonDresser
     /// </summary>
     private void Corridor(Frame f)
     {
+        if (f.S.DeadEnd)
+        {
+            Cache(f);
+        }
         // Pilasters every 8 m along a long straight corridor, a beam of wall between them like an arch.
         if (f.S.Shape == DungeonPlan.Shape.Rect && f.HalfD >= 6 && Chance(0.45))
         {
@@ -1085,6 +1109,11 @@ internal sealed partial class DungeonDresser
     /// </summary>
     private void CorridorLights(Frame f, Random light)
     {
+        // Catacombs and prisons keep some corridors dark between their lit rooms (the contrast is the point), unless Bright.
+        if (_style.Name is "Catacombs" or "Prison" && _s.Light < 2 && light.NextDouble() < 0.4)
+        {
+            return;
+        }
         float step = _s.Light >= 2 ? 6 : _s.Light == 1 ? 9 : 16;
         bool sconces = _mat.Name is "Stone" or "Marble" or "Grausten" && light.NextDouble() < 0.4;
         int k = light.Next(2);
@@ -1883,7 +1912,7 @@ internal sealed partial class DungeonDresser
                         {
                             continue;
                         }
-                        if (Put(f, Bed, u, v, side < 0 ? 90 : -90, 0.75f) && Chance(0.5))
+                        if (Put(f, Bed, u, v, (side < 0 ? 90 : -90) + R(-7, 7), 0.75f) && Chance(0.5))
                         {
                             Put(f, "dvergrprops_crate", side * (f.HalfA - 2.7f), v, 0, 0.5f);
                         }

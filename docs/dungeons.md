@@ -87,6 +87,10 @@ What it is like:
 - **One piece a room is remembered by.** Big rooms may get a hero piece that stands once in the
   whole dungeon: a dolmen, a fallen giant's statue in parts, a grave slab, a giant's skull or ribs
   in a warren, an altar of crystal in a hold, a cart in a keep.
+- **Some rooms are nearly bare**, one piece and a light in the dark: a pacing beat between the full
+  rooms. Clutter never puts the same thing twice running, and some rooms are tidier than others.
+- **Dead ends.** A corridor or two lead nowhere but a cache at the far end: the biome's chest, loot
+  lying about, sometimes a guard. In catacombs and prisons some corridors stay dark between lit rooms.
 - **Corridors are not all the same corridor.** A long one may be closed midway by a gate under a
   band of wall (an iron gate in a crypt, a door in a keep, a sliding door in a hold), half
   collapsed (rubble, broken wall, a fallen pillar, the way open along one side), lined with bones

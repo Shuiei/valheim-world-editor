@@ -34,7 +34,10 @@ the plugin is unchanged in versions without that part.
   - **Hero pieces**: big rooms may get one piece that stands once in the whole dungeon: a dolmen, a fallen giant's
     statue in parts, a grave slab, a giant's skull or ribs, an altar of crystal, a cart.
   - **Corridor kinds**: a gate midway under a band of wall, a half collapse, bones along both walls, a runner, vines,
-    sharpened stakes.
+    sharpened stakes. **Dead ends**: corridors that lead nowhere but a cache (the biome's chest, loot, sometimes a
+    guard). Catacombs and prisons keep some corridors dark between lit rooms.
+  - **Pacing**: a few rooms stand nearly bare (one piece, a light); clutter never repeats the same thing twice
+    running, and rooms differ in how tidy they are.
   - Lights and decay draw from random streams of their own, so turning Light or Ruin changes nothing else about a
     dungeon. The tests' copies of the game's data gain the new props.
 

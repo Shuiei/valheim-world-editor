@@ -263,9 +263,11 @@ internal static class DungeonShell
                 }
                 break;
             case Door.Grand:
+                // Over the gates (wood) a timber tympanum, not stone: stone on wood holds no better than wood's
+                // best, which is stone's least, and the wall over a gate into a tall room would fall.
                 o.Add("darkwood_gate", At(c - 1, f), yaw);
                 o.Add("darkwood_gate", At(c + 1, f), yaw + 180);
-                Fill(mat, o, alongZ, line, c - 2, c + 2, f + 4, h);
+                Fill(mat.Name is "Wood" or "Stave" or "Dvergr" or "Goblin" ? mat : MaterialOf("Wood"), o, alongZ, line, c - 2, c + 2, f + 4, h);
                 break;
             case Door.Wood:
                 Frame(3);
