@@ -7,6 +7,7 @@ out/
 # Image viewer (RawTherapee) settings written beside pictures
 *.pp3
 
-# Claude Code: keep only the shared skills
+# Claude Code: keep only the shared skills and docs
 .claude/*
 !.claude/skills/
+!.claude/docs/
