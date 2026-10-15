@@ -300,16 +300,11 @@ public static class GameData
                 Console.WriteLine($"Game data {what}: read from the game's bundles in {watch.ElapsedMilliseconds} ms.");
                 read.AddRange(pass);
             }
-            // Kept: written whole or not at all (a crash half way leaves the old file, or none).
             if (cache)
             {
                 foreach (string name in read)
                 {
-                    what = name;
-                    string file = CacheFile(name);
-                    Directory.CreateDirectory(Path.GetDirectoryName(file)!);
-                    File.WriteAllText(file + ".part", name + " " + stamp + "\n" + json[name]);
-                    File.Move(file + ".part", file, overwrite: true);
+                    KeepCache(CacheFile(name), name + " " + stamp + "\n" + json[name]);
                 }
             }
             return json;
@@ -319,6 +314,36 @@ public static class GameData
             // Anything in the game's files can fail the reading: no world opens then.
             Console.WriteLine($"The game's {what} could not be read ({e.GetType().Name}: {e.Message}).");
             return null;
+        }
+    }
+
+    /// <summary>
+    /// Keeps a cache, written whole or not at all (a crash half way leaves the old file, or none). One that cannot be
+    /// written (a full disk, a read-only folder, another editor writing it too) is only logged: what was read is used
+    /// all the same, and read again next time.
+    /// </summary>
+    /// <returns>False when it could not be written.</returns>
+    internal static bool KeepCache(string file, string text)
+    {
+        string part = file + ".part";
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(file)!);
+            File.WriteAllText(part, text);
+            File.Move(part, file, overwrite: true);
+            return true;
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            Console.WriteLine($"{Path.GetFileName(file)} could not be kept ({e.GetType().Name}: {e.Message}); it is read again next time.");
+            try
+            {
+                File.Delete(part);
+            }
+            catch (Exception d) when (d is IOException or UnauthorizedAccessException)
+            {
+            }
+            return false;
         }
     }
 
