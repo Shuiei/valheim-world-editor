@@ -60,13 +60,23 @@ public class MainWindowEditorWorldTests
             asked++;
             return Task.FromResult(true);
         };
+        // The result stays on screen until this is set: the veil stays up with it, whenever the write ends.
+        var read = new TaskCompletionSource();
+        r.W.Tell = text =>
+        {
+            r.Told.Add(text);
+            return read.Task;
+        };
         var saving = r.W.Save();
-        // The save is being written: the veil is up, Ctrl+S does not ask again, and the area does not move.
+        // The save is being written (or its result read): the veil is up, Ctrl+S does not ask again, and the area does
+        // not move.
         Assert.True(r.W.IsBusy);
         r.W.KeyPress(Key.S, RawInputModifiers.Control, PhysicalKey.S, "s");
         Assert.Equal(1, asked);
         Assert.Equal("the world is being saved or read", r.W.MoveBlocker());
+        read.SetResult();
         await saving;
+        Assert.Single(r.Told);
         Assert.False(r.W.IsBusy);
         Assert.Null(r.W.MoveBlocker());
         Assert.Equal((0, 0, 0, 0), r.W.World!.Pending);

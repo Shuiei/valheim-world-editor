@@ -896,7 +896,6 @@ public sealed partial class MainWindow : Window
         try
         {
             var res = await Task.Run(s.Save);
-            Busy(null);
             string msg = res.Message;
             if (res.Skipped.Count > 0)
             {
@@ -912,9 +911,11 @@ public sealed partial class MainWindow : Window
         }
         finally
         {
+            // Down only once the result has been read: until then Follow and the keys still wait.
             Busy(null);
         }
-        // Saved objects lose their green marks.
+        // Saved objects lose their green marks; after a failure the marks and the save bar show what is still unsaved
+        // (and the Save button comes back).
         View.RefreshNewMarkers();
         UpdateSaveBar();
     }
