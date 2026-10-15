@@ -17,6 +17,11 @@ game as you work.
 for Windows or Linux, or macOS on Apple silicon (experimental). Unpack it and start it. You don't need to install
 anything else.
 
+Also on [Nexus Mods](https://www.nexusmods.com/valheim/mods/4348) (the editor and its plugin). The
+WorldEditorBridge plugin, for mod managers, is on
+[Thunderstore](https://thunderstore.io/c/valheim/p/Tie/WorldEditorBridge/) and
+[Hexium](https://valheim.hexium.gg/mods/Tie/WorldEditorBridge).
+
 ## What you can do
 
 **Terrain**
