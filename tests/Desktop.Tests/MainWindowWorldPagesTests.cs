@@ -71,6 +71,12 @@ public class MainWindowWorldPagesTests
         // The area shown stays open: its edits and history go on in it.
         Assert.Same(s, r.W.Session);
         Assert.Same(s, r.W.World!.Area);
+        // In the 3D editor the status bar says it; on the map (no status bar there), a dialog does.
+        Assert.Empty(r.Told);
+        r.W.ShowMap();
+        await r.W.EditBlock(0, 0, -1, -1);
+        Assert.StartsWith("Could not open that area: ", Assert.Single(r.Told));
+        Assert.True(r.W.MapShown);
     }
 
     // The map shown while another area loads: that load failing does not open the area left again behind the map.
@@ -100,6 +106,7 @@ public class MainWindowWorldPagesTests
         r.W.ShowMap();
         await load;
         Assert.Equal("That area was not opened: the map or another area was asked for while it loaded.", r.Said);
+        Assert.Equal("That area was not opened: the map or another area was asked for while it loaded.", Assert.Single(r.Told));
         Assert.True(r.W.MapShown);
         Assert.Same(scene, r.W.View.Scene);
         Assert.Null(r.W.Session);
@@ -143,6 +150,8 @@ public class MainWindowWorldPagesTests
         await failing;
         Assert.Null(r.W.World);
         Assert.Null(r.W.Session);
+        // Said only in the status bar: no dialog about a world no longer open.
+        Assert.Empty(r.Told);
     }
 
     // The map closes the area: a script still running in it changes nothing, and its history stays with the world.
@@ -240,6 +249,7 @@ public class MainWindowWorldPagesTests
         r.StopGame();
         await r.W.ReloadWorld();
         Assert.StartsWith("Could not reach the game: ", r.Said);
+        Assert.StartsWith("Could not reach the game: ", r.Told[^1]);
         Assert.False(r.W.IsBusy);
     }
 }

@@ -4,6 +4,16 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.32 — unreleased
+
+### Fixed
+- **Errors on the map went unseen.** Opening an area that failed to load (or was dropped because the map was shown
+  while it loaded), or a Discard or Reload from the map that failed, said why only in the 3D editor's status bar,
+  which the map does not show: the "Loading…" veil flashed and nothing else happened, and the message turned up
+  later, out of context, when an area was opened. The advice after making a new world did the same. On the map these
+  now show in a dialog too (not for a world left meanwhile). The window's message dialogs are titled "Valheim World
+  Editor", as the map's are, instead of "Save" whatever they said.
+
 ## v1.45.31 — unreleased
 
 ### Fixed

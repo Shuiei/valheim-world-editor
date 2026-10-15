@@ -304,7 +304,16 @@ public sealed partial class MainWindow : Window
         NewWorld?.Dispose();
         NewWorld = null;
         await OpenWorld(() => Task.Run(() => WorldSession.Open(folder)), $"Opening {name}…");
-        MessageText.Text = $"Made {name} (seed {seed}). The game lays out its start, traders and dungeons the first time it loads it, and makes each place as players reach it: play it before reshaping an area here.";
+        string made = $"Made {name} (seed {seed}). The game lays out its start, traders and dungeons the first time it loads it, and makes each place as players reach it: play it before reshaping an area here.";
+        // Opened: on its map, where the status bar is not shown.
+        if (World != null)
+        {
+            Say(made);
+        }
+        else
+        {
+            MessageText.Text = made;
+        }
         return null;
     }
 
@@ -501,7 +510,7 @@ public sealed partial class MainWindow : Window
                 {
                     world.Area = Session;
                 }
-                MessageText.Text = "That area was not opened: the map or another area was asked for while it loaded.";
+                Report("That area was not opened: the map or another area was asked for while it loaded.");
                 return false;
             }
             // Shown: the world's area, even if a load dropped meanwhile had reset it.
@@ -526,7 +535,7 @@ public sealed partial class MainWindow : Window
         {
             Unleave(left, navigation);
             failed = context + "Could not open that area: " + ex.Message;
-            MessageText.Text = failed;
+            Report(failed);
         }
         finally
         {
@@ -540,6 +549,19 @@ public sealed partial class MainWindow : Window
             await Tell(failed);
         }
         return false;
+
+        // The world left meanwhile: only the status bar, no dialog about a world no longer open.
+        void Report(string text)
+        {
+            if (World == world)
+            {
+                Say(text);
+            }
+            else
+            {
+                MessageText.Text = text;
+            }
+        }
     }
 
     /// <summary>
@@ -669,7 +691,7 @@ public sealed partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            MessageText.Text = "Could not read the world again: " + ex.Message;
+            Say("Could not read the world again: " + ex.Message);
         }
         finally
         {
@@ -694,7 +716,7 @@ public sealed partial class MainWindow : Window
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or IOException)
         {
-            MessageText.Text = "Could not reach the game: " + ex.Message;
+            Say("Could not reach the game: " + ex.Message);
         }
         Busy(null);
         MapPage?.Show(w);
@@ -718,6 +740,20 @@ public sealed partial class MainWindow : Window
         Tunnel.Close();
         ShowStart();
     }
+    /// <summary>
+    /// Says something in the status bar and, away from the 3D editor (its status bar not shown), in a dialog too, not
+    /// waited for.
+    /// </summary>
+    /// <param name="text">What to say.</param>
+    private void Say(string text)
+    {
+        MessageText.Text = text;
+        if (_pages.Content != _editorPage)
+        {
+            _ = Tell(text);
+        }
+    }
+
     /// <summary>
     /// An error no part of the window caught (App): said in the status bar, so the editor stays open with the changes
     /// not saved yet.
@@ -767,7 +803,7 @@ public sealed partial class MainWindow : Window
     /// </summary>
     internal Func<string, string, string, string, Task<bool>> Ask { get; set; }
     /// <summary>
-    /// Tells the user something in a dialog (tests replace it).
+    /// Tells the user something in a dialog titled with the app's name, as the map's are (tests replace it).
     /// </summary>
     internal Func<string, Task> Tell { get; set; }
     /// <summary>
@@ -2588,7 +2624,7 @@ public sealed partial class MainWindow : Window
         HelpCard = Help(record);
         ConfirmSave = text => Dialogs.Ask(this, "Save into the world", text, "Save");
         Ask = (title, text, yes, no) => Dialogs.Ask(this, title, text, yes, no);
-        Tell = text => Dialogs.Tell(this, "Save", text);
+        Tell = text => Dialogs.Tell(this, "Valheim World Editor", text);
         var tools = new StackPanel
         {
             Orientation = Orientation.Horizontal,

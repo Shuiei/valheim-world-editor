@@ -138,6 +138,7 @@ public class WindowFlowTests
         Directory.Delete(r.Dir, recursive: true);
         await r.W.DiscardWorld();
         Assert.StartsWith("Could not read the world again: ", r.W.MessageText.Text);
+        Assert.StartsWith("Could not read the world again: ", r.Told[^1]);
         await r.W.SaveWorld();
         Assert.StartsWith("Could not save", r.Told.Last());
         Assert.Equal(1, r.W.World!.Pending.Zones);

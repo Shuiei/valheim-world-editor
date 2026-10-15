@@ -19,6 +19,8 @@ public class MainWindowNewWorldTests
         try
         {
             w.Show();
+            var told = new List<string>();
+            w.Tell = text => { told.Add(text); return Task.CompletedTask; };
             w.ShowNewWorld();
             Assert.NotNull(w.NewWorld);
             Assert.EndsWith("· A new world", w.Title);
@@ -29,6 +31,8 @@ public class MainWindowNewWorldTests
             Assert.NotNull(w.World);
             Assert.True(w.MapShown);
             Assert.StartsWith("Made Fresh (seed abc).", w.MessageText.Text);
+            // Said on the map too, where the status bar is not shown.
+            Assert.StartsWith("Made Fresh (seed abc).", Assert.Single(told));
             Assert.True(File.Exists(Path.Combine(folder, "Fresh.fwl")) || Directory.EnumerateFiles(folder).Any());
         }
         finally
