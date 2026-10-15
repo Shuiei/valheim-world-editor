@@ -236,8 +236,8 @@ public partial class MainWindow
         }
         var near = world.Locations.Where(l => MathF.Abs(l.Position.X - at.X) < 600 && MathF.Abs(l.Position.Z - at.Z) < 600);
         var taken = DungeonGen.Taken(high, near);
-        var files = new Dictionary<ChunkFile, byte[]>();
-        byte[]? Blank(NewObject n) => world.NewObjectBytes(n, m => world.LiveBytes ?? (files.TryGetValue(m.File, out byte[]? f) ? f : files[m.File] = File.ReadAllBytes(Path.Combine(world.Directory, m.File.FileName))));
+        Func<ObjectRef, byte[]> source = world.SourceReader();
+        byte[]? Blank(NewObject n) => world.NewObjectBytes(n, source);
         bool Known(int prefab) => world.ModelFor(prefab, null) != null || Terrain.PrefabCatalog.Details(prefab) != null;
         var adds = new List<(NewObject, bool)>();
         // The entrance of its kind, when the game's files describe one with a door out; its front toward the camera.

@@ -4,6 +4,15 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.16 — unreleased
+
+### Fixed
+- **A dungeon placed on a live world could be built from the wrong object's data.** On a live world, objects the
+  game sent since the snapshot (read when you follow the game) keep their data in their own read, not in the
+  snapshot. Placing a dungeon copied its objects from the snapshot whatever their model was, so a model read since
+  gave the dungeon another object's bytes, or failed. It now copies each model from where its data is, as saving,
+  Apply live, search and the inspector already did; they now share one reader.
+
 ## v1.45.15 — unreleased
 
 ### Fixed

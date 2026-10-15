@@ -304,4 +304,38 @@ public class WorldSaveTests
         world.MergeLive([(10, 10)], [], _ => false, _ => false);
         Assert.Empty(world.Links);
     }
+
+    [Fact]
+    public void LiveANewObjectIsBuiltFromTheBytesOfAModelReadSinceTheSnapshot()
+    {
+        var world = WorldSave.LoadLive(File.ReadAllBytes(Fixtures.Snapshot), "live");
+        var at = new Vector3(640, 30, 640);
+        var came = world.MergeLive([(10, 10)], [(4242, 1, MadeObjects.Piece("woodwall", at, 777, "Astrid"))], _ => false, _ => false)!;
+        int model = came.Added[0];
+        ObjectRef o = world.ObjectRefs[model];
+        // The model's offsets are in its own read, not in the snapshot.
+        Assert.Equal(world.ObjectBytes(model), world.SourceReader()(o)[(int)o.Start..(int)o.End]);
+        byte[]? copy = world.NewObjectBytes(new NewObject(-1, o.Prefab, at + new Vector3(2, 0, 0), Vector3.Zero, 0f, model), world.SourceReader());
+        Assert.NotNull(copy);
+        var z = ZdoData.Parse(copy);
+        Assert.Equal((o.Prefab, at + new Vector3(2, 0, 0)), (z.Prefab, z.Position));
+    }
+
+    [Fact]
+    public void SourceReaderReadsEachChunkFileOnce()
+    {
+        using var w = new TempWorld();
+        WorldSave world = w.Load();
+        // Two objects of one chunk file share its bytes; an object of the other file has its own.
+        var byFile = world.ObjectRefs.GroupBy(r => r.File).OrderByDescending(g => g.Count()).ToList();
+        Assert.True(byFile.Count >= 2 && byFile[0].Count() >= 2);
+        ObjectRef o = byFile[0].First(), sameFile = byFile[0].Skip(1).First(), otherFile = byFile[1].First();
+        Func<ObjectRef, byte[]> read = world.SourceReader();
+        byte[] first = read(o);
+        Assert.Same(first, read(o));
+        Assert.Same(first, read(sameFile));
+        Assert.NotSame(first, read(otherFile));
+        Assert.Equal(world.ObjectBytes(world.ObjectRefs.IndexOf(o)), first[(int)o.Start..(int)o.End]);
+        Assert.Equal(world.ObjectBytes(world.ObjectRefs.IndexOf(otherFile)), read(otherFile)[(int)otherFile.Start..(int)otherFile.End]);
+    }
 }

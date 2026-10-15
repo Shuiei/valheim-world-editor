@@ -279,7 +279,7 @@ public sealed class LiveSync
             // New objects not in the game yet, and ones that were removed again (undo, delete).
             foreach (NewObject n in added.Values.Where(n => !_liveIds.ContainsKey(n.Id) && !moved.Contains(n.Id)))
             {
-                byte[]? bytes = world.NewObjectBytes(n, m => world.LiveSource(m.File));
+                byte[]? bytes = world.NewObjectBytes(n, world.SourceReader());
                 if (bytes == null)
                 {
                     call.Skipped.Add($"unknown kind of object at {n.Position.X:F0}, {n.Position.Z:F0}");
@@ -483,7 +483,7 @@ public sealed class LiveSync
             }
             foreach (NewObject n in list)
             {
-                if (n.Prefab != o.Prefab || world.NewObjectBytes(n, m => world.LiveSource(m.File)) is not { } bytes)
+                if (n.Prefab != o.Prefab || world.NewObjectBytes(n, world.SourceReader()) is not { } bytes)
                 {
                     continue;
                 }

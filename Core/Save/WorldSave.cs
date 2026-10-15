@@ -227,6 +227,21 @@ public sealed class WorldSave
     }
 
     /// <summary>
+    /// A reader of the bytes an object's offsets point into, for <see cref="NewObjectBytes"/>: live, its own
+    /// (<see cref="LiveSource"/>: the snapshot, or the bytes of a read since); else its whole chunk file, read once per
+    /// reader.
+    /// </summary>
+    public Func<ObjectRef, byte[]> SourceReader()
+    {
+        if (LiveBytes != null)
+        {
+            return o => LiveSource(o.File);
+        }
+        Dictionary<ChunkFile, byte[]> files = [];
+        return o => files.TryGetValue(o.File, out byte[]? f) ? f : files[o.File] = File.ReadAllBytes(Path.Combine(Directory, o.File.FileName));
+    }
+
+    /// <summary>
     /// The saved bytes of an object of the save (id &gt;= 0): from its chunk file, or from the live snapshot.
     /// </summary>
     public byte[] ObjectBytes(int id)
