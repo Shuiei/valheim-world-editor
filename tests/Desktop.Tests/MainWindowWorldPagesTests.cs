@@ -122,6 +122,28 @@ public class MainWindowWorldPagesTests
         Assert.Same(r.W.Session, r.W.World!.Area);
     }
 
+    // The world left while areas load: neither the one loaded nor the one left (when the other fails) is opened.
+    [AvaloniaFact]
+    public async Task AreasLoadingWhenTheWorldIsLeftAreNotOpened()
+    {
+        using var r = new WorldWindowRun();
+        await r.Open();
+        var scene = r.W.View.Scene!;
+        var load = r.W.EditBlock(scene.X0, scene.Z0, scene.ZonesX, scene.ZonesZ);
+        await r.W.LeaveWorld();
+        await load;
+        Assert.Null(r.W.World);
+        Assert.Null(r.W.Session);
+        Assert.False(r.W.MapShown);
+
+        await r.Open();
+        var failing = r.W.EditBlock(0, 0, -1, -1);
+        await r.W.LeaveWorld();
+        await failing;
+        Assert.Null(r.W.World);
+        Assert.Null(r.W.Session);
+    }
+
     // The map closes the area: a script still running in it changes nothing, and its history stays with the world.
     [AvaloniaFact]
     public async Task TheMapClosesTheAreaSoAScriptStillRunningChangesNothing()

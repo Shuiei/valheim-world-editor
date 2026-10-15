@@ -436,8 +436,8 @@ public sealed partial class MainWindow : Window
     }
 
     /// <summary>
-    /// Counts the map shown and the areas asked for: an area load that failed after another was asked for, or after the
-    /// map was shown, leaves the area it left closed.
+    /// Counts the map shown, the areas asked for and the world left: an area load that finished after one of those is
+    /// not shown, and one that failed leaves the area it left closed.
     /// </summary>
     private long _navigation;
 
@@ -449,7 +449,8 @@ public sealed partial class MainWindow : Window
     /// <param name="navigation">The <see cref="_navigation"/> count of the failed load.</param>
     private void Unleave(EditSession? left, long navigation)
     {
-        if (left is { Scene.Owner: { } owner } && navigation == _navigation && Session == null && View.Scene == left.Scene)
+        if (left is { Scene.Owner: { } owner } && navigation == _navigation && World == owner && _pages.Content == _editorPage
+            && Session == null && View.Scene == left.Scene)
         {
             owner.Area = left;
             Session = left;
@@ -687,6 +688,8 @@ public sealed partial class MainWindow : Window
         {
             return;
         }
+        // An area still loading in it is not opened, nor the one left open again.
+        _navigation++;
         World?.Dispose();
         World = null;
         Session = null;
