@@ -140,7 +140,8 @@ public sealed class LiveSync
     /// moves in the game under its own ZDOID, so what mods know of it holds; moved back the same way on undo. With a
     /// bridge that does a call once (1.45.3 on), a call whose answer was lost (the connection dropped or timed out after
     /// the game did it) is sent again first under the same id, and the game answers with what it did instead of doing it
-    /// twice; the changes since follow in a call of their own.
+    /// twice; the changes since follow in a call of their own. If the game started again since (another run of the
+    /// plugin, which does not know what the last one did), the apply fails instead until the world is read again.
     /// </summary>
     /// <returns>A one-line summary for the user, or "" when there was nothing to send.</returns>
     public async Task<string> Apply(WorldSave world, EditStore edits, LiveBridge live)
@@ -153,12 +154,22 @@ public sealed class LiveSync
         }
         if (unanswered != null)
         {
+            // The game started again since: the new run does not know what the last one did, so the call may be in
+            // the world already (saved before the game stopped). Not sent again until the world is read again.
+            if (await live.Run() != unanswered.Run)
+            {
+                throw new InvalidOperationException("the game started again after an apply whose answer was lost, so whether it was done is unknown: reload the world from the game before applying again, so no object is made twice");
+            }
             said.Add(await Send(world, live, unanswered));
         }
         Call call = Plan(world, edits, await live.CanMove());
         if (!call.Empty)
         {
-            call.Id = await live.CanCallOnce() ? Guid.NewGuid().ToString("N") : null;
+            if (await live.CanCallOnce())
+            {
+                call.Id = Guid.NewGuid().ToString("N");
+                call.Run = await live.Run();
+            }
             said.Add(await Send(world, live, call));
         }
         return string.Join("; ", said);
@@ -172,6 +183,9 @@ public sealed class LiveSync
     {
         /// <summary>The call's id, for a plugin that does a call once (<see cref="LiveBridge.CanCallOnce"/>); null: none.</summary>
         public string? Id { get; set; }
+
+        /// <summary>The plugin's run the call went to (<see cref="LiveBridge.Run"/>), with an id.</summary>
+        public string Run { get; set; } = "";
 
         /// <summary>The game objects to destroy.</summary>
         public List<LiveTarget> Destroy { get; } = [];

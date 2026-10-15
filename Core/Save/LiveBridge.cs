@@ -166,6 +166,16 @@ public sealed class LiveBridge(string url, string token, TimeSpan? idle = null) 
     /// </summary>
     public Task<bool> CanCallOnce() => Has("once");
 
+    /// <summary>
+    /// This run of the plugin, asked now: a new id each time the game starts (1.45.3 on; "" before). A call whose answer
+    /// was lost is sent again under its id only to the run it went to: another run does not know what that one did.
+    /// </summary>
+    public async Task<string> Run()
+    {
+        using var doc = JsonDocument.Parse(await Status());
+        return doc.RootElement.TryGetProperty("run", out var r) && r.ValueKind == JsonValueKind.String ? r.GetString()! : "";
+    }
+
     /// <summary>Whether the plugin's status lists this feature; asked once, a check that fails says no.</summary>
     /// <param name="feature">The feature's name in the status.</param>
     private async Task<bool> Has(string feature)

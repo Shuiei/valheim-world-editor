@@ -45,6 +45,9 @@ public sealed class FakeBridge : IDisposable
     /// </summary>
     public List<int> Connections { get; } = [];
 
+    /// <summary>This run of the plugin, as its status tells; a new one stands for the game started again.</summary>
+    public string Run { get; set; } = "run1";
+
     /// <summary>The next objects call is done, but its answer is cut off on the way (as a dropped tunnel would).</summary>
     public bool LoseNextAnswer { get; set; }
 
@@ -79,7 +82,7 @@ public sealed class FakeBridge : IDisposable
             int status = ctx.Request.Headers["X-Bridge-Token"] == Token ? Status : 401;
             if (status == 200 && ctx.Request.Url!.AbsolutePath == "/status")
             {
-                body = "{\"plugin\":\"0.3.0\",\"world\":\"CITest\",\"players\":0,\"features\":[" + string.Join(",", Features.Select(f => $"\"{f}\"")) + "]}";
+                body = "{\"plugin\":\"0.3.0\",\"world\":\"CITest\",\"players\":0,\"features\":[" + string.Join(",", Features.Select(f => $"\"{f}\"")) + "],\"run\":\"" + Run + "\"}";
             }
             else if (status == 200 && ctx.Request.Url!.AbsolutePath == "/objects" && ctx.Request.Headers["X-Call-Id"] is { } done && _answers.TryGetValue(done, out string? again))
             {

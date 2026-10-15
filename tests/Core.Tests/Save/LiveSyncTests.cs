@@ -198,4 +198,21 @@ public class LiveSyncTests
         Assert.Equal("", await t.Sync.Apply(t.World, t.Edits, t.Game));
         Assert.Single(t.Bridge.ObjectCalls);
     }
+
+    // The game started again after a call whose answer was lost: the new run does not know whether the last one did it,
+    // so the apply fails without sending anything until the world is read again.
+    [Fact]
+    public async Task ACallWhoseAnswerWasLostIsNotSentToTheGameStartedAgain()
+    {
+        using var t = new Live(canMove: false);
+        t.Bridge.Features.Add("once");
+        t.MoveTree(-1, new Vector3(4, 0, 2));
+        t.Bridge.LoseNextAnswer = true;
+        await Assert.ThrowsAnyAsync<Exception>(() => t.Sync.Apply(t.World, t.Edits, t.Game));
+        t.Bridge.Run = "run2";
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => t.Sync.Apply(t.World, t.Edits, t.Game));
+        Assert.Single(t.Bridge.ObjectCalls);
+        Assert.False(t.Sync.IsLive(-1));
+    }
 }

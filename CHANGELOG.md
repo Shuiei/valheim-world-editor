@@ -17,7 +17,8 @@ the plugin is unchanged in versions without that part.
 ### WorldEditorBridge
 - `/objects` takes an `X-Call-Id` header: a call already done under that id (one of the last 16) is answered again
   with what was done, not done twice. `/status` lists `"once"` among its features; editors only send ids to a plugin
-  that lists it.
+  that lists it. `/status` also gives `"run"`, a new id each time the game starts: a call whose answer was lost is not
+  sent again to a game started since (it no longer knows what it did); the apply fails until the world is reloaded.
 
 ## v1.45.2 — unreleased
 

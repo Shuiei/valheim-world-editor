@@ -24,7 +24,8 @@ namespace WorldEditorBridge;
 ///   GET /snapshot   the whole persistent world: world info, ZoneSystem data (generated zones, locations)
 ///                   and every persistent object in the save file's chunk format, gzip-compressed
 ///   GET /players    connected players and their positions (JSON)
-///   GET /status     plugin and world info, and the features this plugin has ("move", "once"), as JSON
+///   GET /status     plugin and world info, the features this plugin has ("move", "once") and this run of it
+///                   (a new id each time the game starts), as JSON
 ///   POST /terrain   new terrain data for zones: int count, then per zone int x, int z, int length + TCData
 ///                   (TerrainComp.Save format); every player's game reloads those zones' ground
 ///   POST /objects   int n + n x (long user, uint id) objects to destroy, then int m + m x (int length +
@@ -623,6 +624,12 @@ public sealed partial class WorldEditorBridgePlugin : BaseUnityPlugin
     private readonly List<(string Id, byte[] Answer)> _calls = [];
 
     /// <summary>
+    /// This run of the plugin (a new one each time the game starts), in /status: <see cref="_calls"/> is lost with the
+    /// game, so an editor whose call's answer was lost does not send it again to another run, which would do it twice.
+    /// </summary>
+    private readonly string _run = Guid.NewGuid().ToString("N");
+
+    /// <summary>
     /// POST /objects, done once per call id (the X-Call-Id header, from editors 1.45.3 on): a call sent again because
     /// its answer was lost on the way (a dropped tunnel, the editor giving up waiting) is answered with what was done
     /// the first time instead of being done twice, which would make every new object twice. A call without an id is
@@ -1093,14 +1100,14 @@ public sealed partial class WorldEditorBridgePlugin : BaseUnityPlugin
 
     /// <summary>
     /// GET /status: plugin version, world and seed names, object and player counts, the network time and the features
-    /// this plugin has (editors look for "move" before sending moves to /objects, and "once" before sending call ids), as
-    /// JSON.
+    /// this plugin has (editors look for "move" before sending moves to /objects, and "once" before sending call ids), and
+    /// this run of it (<see cref="_run"/>), as JSON.
     /// </summary>
     private byte[] Status()
     {
         World w = ZNet.World;
         var dict = (Dictionary<ZDOID, ZDO>)ObjectsById.GetValue(ZDOMan.instance);
-        string json = $"{{\"plugin\":{Json(Version)},\"world\":{Json(w?.m_name ?? "")},\"seedName\":{Json(w?.m_seedName ?? "")},\"objects\":{dict.Count},\"players\":{ZNet.instance.GetPlayerList().Count},\"netTime\":{ZNet.instance.GetTimeSeconds().ToString("R", CultureInfo.InvariantCulture)},\"features\":[\"move\",\"once\"]}}";
+        string json = $"{{\"plugin\":{Json(Version)},\"world\":{Json(w?.m_name ?? "")},\"seedName\":{Json(w?.m_seedName ?? "")},\"objects\":{dict.Count},\"players\":{ZNet.instance.GetPlayerList().Count},\"netTime\":{ZNet.instance.GetTimeSeconds().ToString("R", CultureInfo.InvariantCulture)},\"features\":[\"move\",\"once\"],\"run\":{Json(_run)}}}";
         return Encoding.UTF8.GetBytes(json);
     }
 
