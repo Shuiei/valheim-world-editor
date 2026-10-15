@@ -303,9 +303,18 @@ public sealed class WorldSession : IDisposable
         /// </summary>
         public LiveParts Unsent { get; init; }
 
-        /// <summary>Whether the game has all a step did: nothing of it is in the parts that did not go in.</summary>
+        /// <summary>Live, with <see cref="LiveParts.Resets"/> in <see cref="Unsent"/>: the zones whose reset did not go in.</summary>
+        public IReadOnlySet<(int X, int Z)> UnsentResets { get; init; } = new HashSet<(int X, int Z)>();
+
+        /// <summary>
+        /// Whether the game has all a step did: nothing of it is in the parts that did not go in (a step's reset of a
+        /// zone not waiting any more, unmarked since, is not). With the objects not sent after No limit ground became
+        /// ground discs, no step has all it did: the discs are not in the game, and no step says which made them.
+        /// </summary>
         public bool Sent(EditSession.Change c) =>
-            (!Unsent.HasFlag(LiveParts.Objects) || c.Things.Length == 0) && (!Unsent.HasFlag(LiveParts.Resets) || c.Resets.Length == 0);
+            !(Lifted && Unsent.HasFlag(LiveParts.Objects))
+            && (!Unsent.HasFlag(LiveParts.Objects) || c.Things.Length == 0)
+            && !c.Resets.Any(r => UnsentResets.Contains((r.Reset.X, r.Reset.Z)));
     }
 
     /// <summary>The parts of an Apply live sent after the ground.</summary>
@@ -584,11 +593,13 @@ public sealed class WorldSession : IDisposable
             if (sent)
             {
                 // Some parts went in: said, and the steps the game has all of are applied.
+                var resets = Edits.Resets.Select(r => (r.X, r.Z)).ToHashSet();
                 var partly = new Outcome(true, $"Applied to the running game: {string.Join("; ", done)}; but then it failed ({ex.Message}): Apply live again for the rest.", false)
                 {
                     Lifted = lift != null,
                     // Resets only while some are still to send: a reset unmarked since leaves none, though steps keep it.
-                    Unsent = (objectsDone ? LiveParts.None : LiveParts.Objects) | (Edits.ResetCount > 0 ? LiveParts.Resets : LiveParts.None),
+                    Unsent = (objectsDone ? LiveParts.None : LiveParts.Objects) | (resets.Count > 0 ? LiveParts.Resets : LiveParts.None),
+                    UnsentResets = resets,
                 };
                 MarkHistoryApplied(partly.Sent);
                 KeepHistory();
