@@ -95,6 +95,8 @@ public class AreaToolTests
         Assert.Equal([(0, 0)], Box(40, 40, 55, 55, soft: 20).ZonesUnder(s.Ground));
         Assert.Equal(new[] { (0, 0), (1, 0), (0, 1), (1, 1) }.OrderBy(z => z), Box(56, 56, 72, 72, soft: 20).ZonesUnder(s.Ground).OrderBy(z => z));
         Assert.Equal([(0, 0)], Box(40, 40, 55, 55).ZonesUnder(s.Ground));
+        // A grid point on the zones' shared edge belongs to both.
+        Assert.Equal(new[] { (0, 0), (1, 0) }.OrderBy(z => z), Box(63.5f, 10.5f, 64.5f, 11.5f, soft: 20).ZonesUnder(s.Ground).OrderBy(z => z));
     }
 
     [Fact]
