@@ -83,7 +83,9 @@ ground discs that the game levels when it loads the zone (see [No limit](terrain
 For **Remove objects**, **Select objects**, **Replace objects**, **Regrow nature** and **Restore from a
 backup**, a row of **kind chips** chooses which kinds of objects the action works on. Each chip shows how
 many objects of its kind are inside ("Trees & logs 42"). "hidden" means the kind is switched off in the
-[View panel](editor-basics.md#view-panel), so its objects are not counted and not removed. At first the
+[View panel](editor-basics.md#view-panel), so its objects are not counted and the action leaves them
+alone (except **Restore from a backup**, which removes the unmatched objects of its chosen kinds even
+when hidden: see [below](#restore-from-a-backup)). At first the
 chips **Trees & logs**, **Rocks**, **Bushes & shrubs** and **Pickables** are on. Choose **Your buildings**
 to act on player-built pieces, and **Ore & deposits** for copper, tin, silver and the like.
 

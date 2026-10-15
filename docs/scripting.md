@@ -314,8 +314,8 @@ A loop over a whole 17 × 17 area is about 1.2 million points: a few seconds of 
 **Stop**, and the 2-minute limit, end a script the next time it starts a new row of
 `Area.Points()`, `Ground.Shape` or `Ground.Mountain`. Nothing it did is kept. A loop of your own
 that uses none of these (a `while` or `for` loop with only `Ground.Set` and `Ground.Height` in it)
-cannot be stopped there: the editor waits for it to finish. Avoid endless loops; a loop over
-`Area.Points()` can always be stopped.
+cannot be stopped there: the editor waits for it to finish. Avoid endless loops: a loop over
+`Area.Points()` is stopped at its next row, so only once the row it is on has finished.
 
 ## Good to know
 

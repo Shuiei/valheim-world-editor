@@ -33,7 +33,7 @@ foreach (string name in names)
     var started = Stopwatch.StartNew();
     if (name == "live" && live is not { Length: 2 })
     {
-        Console.WriteLine("live: skipped ($DOCS_LIVE not set)");
+        Console.WriteLine("live: skipped ($DOCS_LIVE must be \"<bridge address> <token>\")");
         continue;
     }
     // Each scene in a fresh editor: nothing carries over, nothing is saved.

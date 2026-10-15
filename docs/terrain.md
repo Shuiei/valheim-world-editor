@@ -300,7 +300,7 @@ In it:
 | `n(x, z)` | Smooth noise from about -1 to 1, from the brushes' pattern (**New pattern** in Naturalize changes it). Use `n(x / 10, z / 10)` for wide bumps. |
 | `pi` | 3.14159… |
 | Functions | `abs`, `atan2(y, x)`, `bell(t)` (1 at 0, fading out by about ±1), `ceil`, `clamp(v, a, b)`, `cos`, `exp`, `floor`, `log`, `max(…)` and `min(…)` (any number of values), `pow(a, b)`, `round`, `sign`, `sin`, `smooth(t)` (0 below 0, 1 above 1, a smooth S between), `sqrt`, `tan`. |
-| Operators | `+ - * / %`, `^` (power), comparisons `< > <= >= == !=` (1 or 0), `&&`, `||`, `!`, and `a ? b : c`. |
+| Operators | `+ - * / %`, `^` (power), comparisons `< > <= >= == !=` (1 or 0), `&&`, `\|\|`, `!`, and `a ? b : c`. |
 
 The presets show how it works. Mound is `h * smooth(1 - d / r)`, Cone `h * max(0, 1 - d / r)`, Bowl
 `-h * smooth(1 - (d / r) ^ 2)`, and Moat `-h * bell((d - 0.75 * r) / (0.12 * r))` (a ditch at three quarters of the

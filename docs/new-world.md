@@ -143,7 +143,7 @@ seed's places must be laid out too.
 
 | Control | What it does |
 |---|---|
-| **Name** | The world's name, as the game lists it. It is also its folder's name, so it cannot hold `/ \ : * ? " < > |`. |
+| **Name** | The world's name, as the game lists it. It is also its folder's name, so it cannot hold `/ \ : * ? " < > \|`. |
 | **Saved in** | Which of the game's world folders it goes in: your local worlds (`worlds_local`) or the Steam cloud worlds folder (`worlds`), those that exist on this computer (on Linux also Valheim's folder when it runs through Proton). The game lists the worlds of its own folders. |
 | **Create world** | Checks the name and seed, makes the world and opens its map. A world of the same name already in that folder is never written over: you are asked for another name. |
 
