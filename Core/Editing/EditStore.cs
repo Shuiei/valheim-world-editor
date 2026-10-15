@@ -386,6 +386,25 @@ public sealed class EditStore
     }
 
     /// <summary>
+    /// Live: the zone resets as they were sent to the game (a copy taken when sending), done there and no longer
+    /// pending. A zone marked again with other options while they were on the way stays marked, to be sent next.
+    /// </summary>
+    public void MarkResetsApplied(IEnumerable<ZoneReset> sent)
+    {
+        lock (_lock)
+        {
+            foreach (ZoneReset reset in sent)
+            {
+                if (_resets.TryGetValue((reset.X, reset.Z), out ZoneReset? now) && now == reset)
+                {
+                    _resets.Remove((reset.X, reset.Z));
+                }
+            }
+            Version++;
+        }
+    }
+
+    /// <summary>
     /// Marks saved objects to be left out of the save, or not. An added object (negative id) is moved to the
     /// trash instead, or back from it.
     /// </summary>
