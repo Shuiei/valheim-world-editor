@@ -4,6 +4,31 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.41.0 — unreleased
+
+### Added
+- **A placed dungeon gets the entrance of its kind on the ground.** **Place in the world** now puts the game's own
+  dungeon entrance for the biome (a burial chamber's mound, a sunken crypt's door, a Frost Cave's mouth, an infested
+  mine's, a Morgen hole) on the ground at the middle of the view, facing you, and the dungeon 5000 m above it, laid out
+  where the game lays that entrance's own (a Frost Cave's at the middle of the zone, as the game does). Its door leads
+  up and the door up there leads back out, as in the game's dungeons. Where the biome has no dungeon of its own (the
+  Plains), the portal pair stays. One dungeon fits over a zone: with one there already, nothing is placed and the
+  editor says so.
+- **Go to the dungeon and Go to the entrance.** The view no longer jumps 5000 m up when a dungeon is placed: it stays
+  at the entrance, and two buttons under Place in the world take it up into the dungeon and back down. The Dungeon
+  panel's **Go to entrance** does the same for any dungeon of the area, next to Go inside.
+- **Up to 16 levels.** Levels went up to 4; the stairs go down as far as 16 now.
+- **Dungeon blueprints.** A blueprint can be a dungeon: switch **A dungeon** on when saving it in the Workshop (or in
+  the Blueprints tab's Details; it is the tag `dungeon`). Pasted into a world from the Blueprints tab, it goes 5000 m up
+  behind the entrance of the biome's dungeon where you click, as a generated dungeon does. A portal in the building
+  marks where players arrive and the way they face (the entrance's door out opens there); generated dungeons opened
+  in the Workshop carry that portal and the tag already.
+- **Claude's `generate_dungeon`** places the entrance the same way, and takes up to 16 levels.
+
+### Changed
+- The game-data scan reads each location's teleport doors and interior anchor (the tests' copy of `dungeon-rooms.json`
+  is made again, and keeps the Frost Cave's entrance too).
+
 ## v1.40.0 — unreleased
 
 ### Added

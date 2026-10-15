@@ -1308,16 +1308,16 @@ public sealed partial class ClaudeTools
 
     /// <summary>
     /// generate_dungeon: a dungeon from the Dungeon panel's settings (clamped to their ranges), onto the Workshop's plot
-    /// or 5000 m above a point of the open world with a portal pair.
+    /// or 5000 m above a point of the open world, behind the entrance of its kind there (a portal pair when it has none).
     /// </summary>
     [McpServerTool(Name = "generate_dungeon", Title = "Generate a dungeon")]
-    [Description("Generates a dungeon, as the Dungeon panel does, and puts it on the Workshop's plot (with what is there) or, in a world, 5000 m above the point x, z (where the game keeps its dungeons) with a linked portal pair on the ground there. One step of the history (pending).")]
+    [Description("Generates a dungeon, as the Dungeon panel does, and puts it on the Workshop's plot (with what is there) or, in a world, 5000 m above the point x, z (where the game keeps its dungeons), behind the entrance of its kind on the ground there (its biome's dungeon location: a burial chamber's mound, a Frost Cave's mouth; a linked portal pair when the biome has none). The view stays at the entrance. One step of the history (pending).")]
     public async Task<string> GenerateDungeon(
         [Description("Its biome: Meadows, Black Forest, Swamp, Mountain, Plains, Mistlands, Ashlands, Deep North.")] string biome = "Black Forest",
         [Description("Its style (optional: the biome's): Crypt, Catacombs, Temple, Fortress, Prison, Dvergr hold, Goblin warren, Ruins.")] string? style = null,
         [Description("Its wall material (optional: the biome's).")] string? walls = null,
         [Description("Rooms per level: 1 small to 4 huge.")] int size = 2,
-        [Description("Levels, 1 to 4.")] int levels = 2,
+        [Description("Levels, 1 to 16.")] int levels = 2,
         [Description("Monsters: 0 none to 3 (1 usual).")] float monsters = 1,
         [Description("Chests and treasure: 0 none to 2 (1 usual).")] float loot = 1,
         [Description("Light: 0 dark, 1 dim, 2 bright.")] int light = 1,
@@ -1327,7 +1327,7 @@ public sealed partial class ClaudeTools
         [Description("In a world: x of the point of the open area it goes above (optional: the view's middle).")] float? x = null,
         [Description("In a world: z of that point.")] float? z = null)
     {
-        var settings = new Editing.DungeonGen.Settings(Biome: biome, Style: style, Walls: walls, Size: Math.Clamp(size, 1, 4), Levels: Math.Clamp(levels, 1, 4),
+        var settings = new Editing.DungeonGen.Settings(Biome: biome, Style: style, Walls: walls, Size: Math.Clamp(size, 1, 4), Levels: Math.Clamp(levels, 1, Editing.DungeonGen.MaxLevels),
             Monsters: Math.Clamp(monsters, 0, 3), Loot: Math.Clamp(loot, 0, 2), Light: Math.Clamp(light, 0, 2), Decor: Math.Clamp(decor, 0, 2), Seed: seed, Name: name);
         if (await OnUi(CannotEdit) is string why)
         {

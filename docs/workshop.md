@@ -93,7 +93,7 @@ wall 3: walls 1, 2 and 3); dragging any selected piece moves them all. Ctrl+Z an
 
 | Control | What it does |
 |---|---|
-| **Save blueprint** | Keeps the building as a Homestead blueprint. Only building pieces are kept: trees, rocks and items on the plot are left out. Asks for its name, a description and tags, and shows what it costs. Saving a blueprint you opened writes over it; another name makes a new one (replacing one of that name only after asking). |
+| **Save blueprint** | Keeps the building as a Homestead blueprint. Only building pieces are kept: trees, rocks and items on the plot are left out. Asks for its name, a description and tags, whether it is a **dungeon** (pasted into a world, it goes 5000 m up behind an entrance on the ground: see [Dungeons from blueprints](dungeons.md#dungeons-from-blueprints)), and shows what it costs. Saving a blueprint you opened writes over it; another name makes a new one (replacing one of that name only after asking). |
 | **Support check** | Tints each piece in the colours the game's build mode gives its structural support: **light blue** on the ground, then **green** through **yellow** to **red** as support runs out (red: it would fall). The piece's own look still shows through. |
 | **Cut** | Sees the building from a height: nothing above it is shown (in metres above the plot, a metre at a time), and the cursor goes through what is hidden, so you can build inside. Right end: off; left end: the ground. |
 | **Start** | Back to the start page (asks first when the building is not saved). |
@@ -131,7 +131,7 @@ description or tags.
 |---|---|
 | **Paste** | Puts it on the clipboard and starts pasting it into the open world. |
 | **Edit** | Opens it in the Workshop. |
-| **Details** | Changes its name, description and tags (the file and picture are renamed with it). |
+| **Details** | Changes its name, description and tags, and whether it is a dungeon (the file and picture are renamed with it). |
 | **.vbuild** | Writes it as a `.vbuild` file (BuildShare and older tools). |
 | **Delete** | Removes its file and picture, after asking. Homestead loses it too. |
 | **Import file…** | Reads a `.blueprint` (Homestead, PlanBuild) or `.vbuild` file and keeps it as a Homestead blueprint. Pieces the game does not know (from other mods) are left out. |

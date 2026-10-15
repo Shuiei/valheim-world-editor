@@ -32,8 +32,9 @@ public static class LocationParts
     private static readonly ConditionalWeakTable<WorldScene, Cache> Caches = [];
 
     /// <summary>
-    /// The area's locations whose parts are drawn: every location proxy in it, but runestones (objects of the area
-    /// already), the invisible ground discs of No limit ground and proxies deleted in this session.
+    /// The area's locations whose parts are drawn: every location proxy in it, those added in this session too (a
+    /// generated dungeon's entrance), but runestones (objects of the area already), the invisible ground discs of No
+    /// limit ground and proxies deleted in this session.
     /// </summary>
     public static IReadOnlyList<Shown> Of(WorldScene s)
     {
@@ -48,16 +49,17 @@ public static class LocationParts
         {
             return c.Locations;
         }
-        var found = Find(s, world, s.Session?.Edits.Deleted ?? []);
+        var found = Find(s, world, s.Session?.Edits.Deleted ?? [], s.Session?.Edits.Added ?? []);
         Caches.AddOrUpdate(s, new Cache(world, version, count, found));
         return found;
     }
 
-    /// <summary>The locations of <see cref="Of"/>, found in the save.</summary>
+    /// <summary>The locations of <see cref="Of"/>, found in the save and among the session's added objects.</summary>
     /// <param name="s">The area.</param>
     /// <param name="world">Its save.</param>
     /// <param name="deleted">The saved objects deleted in this session (by id).</param>
-    internal static List<Shown> Find(WorldScene s, WorldSave world, ICollection<int> deleted)
+    /// <param name="added">The objects added in this session: its location proxies (with their bytes) count.</param>
+    internal static List<Shown> Find(WorldScene s, WorldSave world, ICollection<int> deleted, IEnumerable<NewObject> added)
     {
         float minX = s.X0 * 64f - 32f, maxX = (s.X0 + s.ZonesX - 1) * 64f + 32f, minZ = s.Z0 * 64f - 32f, maxZ = (s.Z0 + s.ZonesZ - 1) * 64f + 32f;
         bool Inside(Vector3 p) => p.X >= minX && p.X < maxX && p.Z >= minZ && p.Z < maxZ;
@@ -74,6 +76,15 @@ public static class LocationParts
                 {
                     list.Add(new Shown(p.Location, p.Position, p.Rotation));
                 }
+            }
+        }
+        foreach (var n in added)
+        {
+            if (n.Prefab == WorldSave.LocationProxyPrefab && n.Raw != null && Inside(n.Position)
+                && ZdoData.Parse(n.Raw).IntList.FirstOrDefault(i => i.Key == WorldSave.LocationKey).Value is int location and not 0
+                && !Uplift.IsDisc(location) && !PrefabCatalog.IsRunestone(location))
+            {
+                list.Add(new Shown(location, n.Position, n.Rotation));
             }
         }
         return list;

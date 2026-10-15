@@ -25,8 +25,34 @@ public static class LocationPrefabs
     /// <param name="Spawns">Its RandomSpawn parts, rolled in order.</param>
     /// <param name="Picks">Its RandomObject parts, rolled after the spawns.</param>
     /// <param name="Nodes">Each random part's parent node (-1: the prefab itself).</param>
+    /// <param name="CustomInterior">
+    /// The game moves its interior (everything under its interior transform: its dungeon and the door out of it) to
+    /// the middle of the zone, turned square to the world (Location.m_useCustomInteriorTransform).
+    /// </param>
+    /// <param name="Teleports">
+    /// Its teleport doors, in its own frame: the one at the ground leads into the interior, the one 5000 m up leads out.
+    /// Each faces the way a player stands on arriving through it.
+    /// </param>
+    /// <param name="InteriorAt">Where its interior transform stands in its own frame; null when it has none.</param>
     public sealed record Prefab(string Name, int Hash, bool ClearArea, bool RandomDamage, bool Interior,
-        Dungeons.Content[] Contents, Dungeons.Spawn[] Spawns, Dungeons.Pick[] Picks, int[] Nodes);
+        Dungeons.Content[] Contents, Dungeons.Spawn[] Spawns, Dungeons.Pick[] Picks, int[] Nodes,
+        bool CustomInterior = false, IReadOnlyList<Frame>? Teleports = null, Frame? InteriorAt = null)
+    {
+        /// <summary>Its teleport doors (none when the game's files do not describe them).</summary>
+        public IReadOnlyList<Frame> Doors => Teleports ?? [];
+
+        /// <summary>The door out of its interior (the teleport 5000 m up in the prefab), or null when it has none.</summary>
+        public Frame? Exit => Doors.FirstOrDefault(t => t.Position.Y > 1000f);
+
+        /// <summary>The door into its interior (the teleport at the ground), or null when it has none.</summary>
+        public Frame? Entrance => Doors.FirstOrDefault(t => t.Position.Y <= 1000f);
+    }
+
+    /// <summary>A place and a turn in a location's own frame: a teleport door (which faces the way a player arriving
+    /// through it stands, one metre ahead), or its interior transform.</summary>
+    /// <param name="Position">Where it stands.</param>
+    /// <param name="Rotation">Which way it is turned.</param>
+    public sealed record Frame(Vector3 Position, Quaternion Rotation);
 
     /// <summary>The prefabs read, by name. None until Use: no world is made before then (GameData).</summary>
     private static volatile Dictionary<string, Prefab> _all = new(StringComparer.Ordinal);
@@ -75,7 +101,13 @@ public static class LocationPrefabs
             JsonElement l = p.Value;
             bool B(string k) => l.GetProperty(k).GetInt32() != 0;
             var (contents, spawns, picks, nodes) = Dungeons.Parts(l);
-            all[p.Name] = new Prefab(p.Name, StableHash.Of(p.Name), B("clearArea"), B("randomDamage"), B("interior"), contents, spawns, picks, nodes);
+            // Teleports and the interior's place: of scans since v1.39; older copies have neither.
+            static Vector3 V(JsonElement a, int i) => new(a[i].GetSingle(), a[i + 1].GetSingle(), a[i + 2].GetSingle());
+            static Quaternion Q(JsonElement a, int i) => new(a[i].GetSingle(), a[i + 1].GetSingle(), a[i + 2].GetSingle(), a[i + 3].GetSingle());
+            var teleports = l.TryGetProperty("teleports", out var ts) ? ts.EnumerateArray().Select(t => new Frame(V(t, 0), Q(t, 3))).ToList() : [];
+            Frame? interiorAt = l.TryGetProperty("interiorAt", out var at) && at.ValueKind == JsonValueKind.Array ? new Frame(V(at, 0), Q(at, 3)) : null;
+            bool custom = l.TryGetProperty("customInterior", out var c) && c.GetInt32() != 0;
+            all[p.Name] = new Prefab(p.Name, StableHash.Of(p.Name), B("clearArea"), B("randomDamage"), B("interior"), contents, spawns, picks, nodes, custom, teleports, interiorAt);
         }
         return all;
     }

@@ -85,7 +85,7 @@ The editor must be running for Claude to reach it. Turn the switch off and nothi
 | `save_blueprint` | Save the Workshop's building as a blueprint of your library (with its picture); it never replaces one unless told to |
 | `open_workshop`, `add_blueprint` | The Workshop, empty or with a blueprint; add a blueprint of your library to the plot or to a world's area, turned as asked |
 | `copy_objects` | Copies of objects, once or in a row or a ring (a row of houses, a fence, pillars round a hall) |
-| `generate_dungeon` | A dungeon on the plot, or above a point of the world with its portals |
+| `generate_dungeon` | A dungeon on the plot, or above a point of the world behind the entrance of its kind (portals where the biome has none) |
 | `list_dungeons`, `dungeon_rooms` | The game's dungeons in the area (Frost Caves, crypts, mines…): their rooms, open ends, door joints and the rooms they can take |
 | `add_dungeon_room`, `remove_dungeon_room`, `close_dungeon_ends`, `set_dungeon_door` | Change a game dungeon as the Dungeon tool does: a room at an open end (with what the game puts in it), a room taken out, end caps on every open end, a door at a joint |
 | `undo`, `redo` | As Ctrl+Z and Ctrl+Y |

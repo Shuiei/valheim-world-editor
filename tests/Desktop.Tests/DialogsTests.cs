@@ -105,6 +105,10 @@ public class DialogsTests
         var boxes = d.GetLogicalDescendants().OfType<TextBox>().ToList();
         Assert.Equal(["Hut", "A small hut", "house, wood"], boxes.Select(b => b.Text));
         Assert.Contains(d.GetLogicalDescendants().OfType<TextBlock>(), t => t.Text == "Cost in game: 20 Wood");
+        // Not a dungeon; switched on, the tag goes with the others.
+        var dungeon = Assert.Single(d.GetLogicalDescendants().OfType<CheckBox>());
+        Assert.False(dungeon.IsChecked);
+        dungeon.IsChecked = true;
         // The tags are split on commas and semicolons, each once.
         boxes[0].Text = "Longhouse";
         boxes[1].Text = "Two floors";
@@ -114,8 +118,19 @@ public class DialogsTests
         Assert.NotNull(kept);
         Assert.Equal("Longhouse", kept.Name);
         Assert.Equal("Two floors", kept.Description);
-        Assert.Equal(["stone", "Viking"], kept.Tags);
+        Assert.Equal(["stone", "Viking", "dungeon"], kept.Tags);
+        Assert.True(kept.Dungeon);
         Assert.Empty(owner.OwnedWindows);
+
+        // A dungeon's details: the switch on; off, the tag goes.
+        asked = Dialogs.AskBlueprint(owner, new("Crypt", "", ["dungeon", "generated"]), "nothing");
+        d = TestWindows.Shown(owner);
+        dungeon = Assert.Single(d.GetLogicalDescendants().OfType<CheckBox>());
+        Assert.True(dungeon.IsChecked);
+        dungeon.IsChecked = false;
+        Press(d, "Save");
+        kept = await asked;
+        Assert.Equal(["generated"], kept!.Tags);
 
         // Boxes emptied to nothing: empty details.
         asked = Dialogs.AskBlueprint(owner, new("Hut", "", []), "nothing");

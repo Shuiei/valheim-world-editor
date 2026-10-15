@@ -11,8 +11,9 @@ namespace TerrainEditor.Desktop;
 /// <summary>
 /// Generating a dungeon (the Dungeon panel's Generate): its settings, a plan of what they make (made
 /// again at each change; the same settings and seed always make the same dungeon), and where it goes:
-/// into the world above the view's centre, a portal pair joining it to the ground, or into the
-/// Workshop as a blueprint. In the Workshop (the Build panel's Generate dungeon) it is made of building
+/// into the world above the view's centre, behind an entrance of its kind on the ground there (a portal
+/// pair when it has none), or into the Workshop as a blueprint; and, once placed, the view up to it and
+/// back to its entrance. In the Workshop (the Build panel's Generate dungeon) it is made of building
 /// pieces only, and goes onto the plot: alone (Open on the plot) or with what is there (Add to the plot).
 /// </summary>
 public sealed class DungeonGenPanel
@@ -31,6 +32,12 @@ public sealed class DungeonGenPanel
     public event Action<DungeonGen.Settings>? WorkshopAsked;
     /// <summary>In the Workshop: the dungeon made onto the plot (true: added to what is there).</summary>
     public event Action<DungeonGen.Settings, DungeonGen.Result, bool>? PlotAsked;
+    /// <summary>Go to the dungeon: the view up to the dungeon last placed.</summary>
+    public event Action? DungeonAsked;
+    /// <summary>Go to the entrance: the view back down to its entrance.</summary>
+    public event Action? EntranceAsked;
+    /// <summary>Whether a dungeon placed in the area can be gone to changed (<see cref="Placed"/>).</summary>
+    public event Action<bool>? PlacedChanged;
 
     /// <summary>Made of building pieces or of the game's own rooms (not shown in the Workshop).</summary>
     internal ComboBox Made { get; } = Combo("Building pieces", "The game's own rooms");
@@ -42,8 +49,8 @@ public sealed class DungeonGenPanel
     internal ComboBox Walls { get; } = Combo(["The biome's", .. DungeonKit.Materials.Select(m => m.Name)]);
     /// <summary>Rooms per level: Small to Huge (1 to 4).</summary>
     internal ComboBox Size { get; } = Combo("Small", "Medium", "Large", "Huge");
-    /// <summary>Levels, 1 to 4.</summary>
-    internal ComboBox Levels { get; } = Combo("1 level", "2 levels", "3 levels", "4 levels");
+    /// <summary>Levels, 1 to <see cref="DungeonGen.MaxLevels"/>.</summary>
+    internal ComboBox Levels { get; } = Combo([.. Enumerable.Range(1, DungeonGen.MaxLevels).Select(n => n == 1 ? "1 level" : $"{n} levels")]);
     /// <summary>Monsters, 0 (none) to 3 times the usual.</summary>
     internal Slider Monsters { get; } = Slide(0, 3, 1, 0.25);
     /// <summary>Monsters come back (spawners).</summary>
@@ -78,6 +85,10 @@ public sealed class DungeonGenPanel
     internal Button OpenOnPlot { get; } = new() { Content = "Open on the plot", FontSize = 12 };
     /// <summary>In the Workshop: the dungeon added to what is on the plot (<see cref="PlotAsked"/>, true).</summary>
     internal Button AddToPlot { get; } = new() { Content = "Add to the plot", FontSize = 12 };
+    /// <summary>The view up to the dungeon last placed (<see cref="DungeonAsked"/>); enabled once one is placed in the area.</summary>
+    internal Button ToDungeon { get; } = new() { Content = "Go to the dungeon", FontSize = 12, IsEnabled = false };
+    /// <summary>The view back to its entrance on the ground (<see cref="EntranceAsked"/>); enabled with <see cref="ToDungeon"/>.</summary>
+    internal Button ToEntrance { get; } = new() { Content = "Go to the entrance", FontSize = 12, IsEnabled = false };
     /// <summary>What the dungeon made holds (its notes), or why it could not be made.</summary>
     internal TextBlock Summary { get; } = new() { FontSize = 12, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
     /// <summary>The sliders' labels, with their values.</summary>
@@ -152,6 +163,10 @@ public sealed class DungeonGenPanel
         ToWorkshop.Tip("dungeon.gen.workshop");
         OpenOnPlot.Tip("dungeon.gen.openOnPlot");
         AddToPlot.Tip("dungeon.gen.addToPlot");
+        ToDungeon.Tip("dungeon.gen.toDungeon");
+        ToEntrance.Tip("dungeon.gen.toEntrance");
+        ToDungeon.Click += (_, _) => DungeonAsked?.Invoke();
+        ToEntrance.Click += (_, _) => EntranceAsked?.Invoke();
         foreach (var c in new Control[] { Made, Biome, Style, Walls, Size, Levels, Boss, Light, Decor })
         {
             ((ComboBox)c).SelectionChanged += (_, _) => Changed();
@@ -225,6 +240,22 @@ public sealed class DungeonGenPanel
         _wait.Tick += (_, _) => Make();
         Changed();
     }
+
+    /// <summary>
+    /// Whether a dungeon placed in the area can be gone to: the Go to buttons follow (the Dungeon panel shows them
+    /// outside this panel, so they stay in sight once the dungeon made is folded away).
+    /// </summary>
+    public void Placed(bool yes)
+    {
+        ToDungeon.IsEnabled = ToEntrance.IsEnabled = yes;
+        PlacedChanged?.Invoke(yes);
+    }
+
+    /// <summary>The last making failed (nothing to place): the game's data may not have been read yet.</summary>
+    internal bool Failed => _result == null && !_wait.IsEnabled && Pending.IsCompleted;
+
+    /// <summary>Makes the dungeon again for the settings shown (after the usual pause).</summary>
+    internal void Remake() => Changed();
 
     /// <summary>The settings shown.</summary>
     public DungeonGen.Settings Settings()

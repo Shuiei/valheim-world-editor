@@ -30,6 +30,11 @@ public sealed class CopyData
     /// <summary>The blueprint's name, when it came from or went to one.</summary>
     public string? Name { get; set; }
     /// <summary>
+    /// A dungeon blueprint (tagged so): pasted into a world, its pieces go 5000 m up behind an entrance on the ground
+    /// where the click is, as a generated dungeon does (MainWindow.PasteDungeon), not onto the ground.
+    /// </summary>
+    public bool Dungeon { get; set; }
+    /// <summary>
     /// The scene indices of the objects the copy was made from (the same order as <see cref="Objects"/>), for a cut
     /// to remove right after. Only meant in the scene it came from; not saved with the copy.
     /// </summary>
@@ -66,6 +71,7 @@ public sealed class CopyData
         Objects = [.. Objects.Select(o => o.Data == null ? o : o with { Data = [.. o.Data.Where(f => f.Key != ObjectField.CreatorKey || f == ObjectField.NoBuilder)] })],
         Poly = Poly,
         Name = Name,
+        Dungeon = Dungeon,
     };
 
     /// <summary>
