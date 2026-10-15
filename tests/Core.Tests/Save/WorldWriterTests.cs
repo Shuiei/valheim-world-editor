@@ -112,24 +112,24 @@ public class WorldWriterTests
         AssertSame(before, w.Dir);
     }
 
-    // A terrain object in another layout ahead of a usable one: the usable one is copied.
+    // A terrain object in another layout ahead of a usable one: the usable one is copied. The fixture has one terrain
+    // object, so a byte copy of it is saved first; then the first of the two is marked as in another layout.
     [Fact]
     public void NewGroundCopiesATerrainObjectInTheShortLayout()
     {
         using var w = new TempWorld();
         var world = w.Load();
-        var (x, z) = FreshZone(world);
         var t = world.TerrainZones[0];
-        world.TerrainZones.Insert(0, new TerrainZone
-        {
-            Center = new System.Numerics.Vector3(5000, 0, 5000),
-            Source = t.Source! with { Flags = (ushort)(t.Source.Flags & ~0x2000) },
-            ModifiedHeight = t.ModifiedHeight,
-            LevelDelta = t.LevelDelta,
-            SmoothDelta = t.SmoothDelta,
-            ModifiedPaint = t.ModifiedPaint,
-            Paint = t.Paint,
-        });
+        int id = world.ObjectRefs.FindIndex(o => o.IsTerrain && o.File == t.Source!.File && o.Start == t.Source.Start);
+        Assert.True(id >= 0);
+        var copy = new NewObject(-1, t.Prefab, t.Center, System.Numerics.Vector3.Zero, 0f, Raw: world.ObjectBytes(id));
+        var first = WorldWriter.Save(world, [], added: [copy]);
+        Assert.True(first.Saved, first.Message);
+        world = w.Load();
+        Assert.Equal(2, world.TerrainZones.Count(q => q.Source != null));
+        var (x, z) = FreshZone(world);
+        var other = world.TerrainZones.First(q => q.Source != null);
+        other.Source = other.Source! with { Flags = (ushort)(other.Source.Flags & ~0x2000) };
         var r = WorldWriter.Save(world, [Raised(x, z, 1.5f, 100)]);
         Assert.True(r.Saved, r.Message);
         Assert.Equal(1.5f, WorldSave.Load(w.Dir).TerrainZones.Single(q => q.ZoneX == x && q.ZoneZ == z).LevelDelta[100], 4);
